@@ -569,7 +569,10 @@ test('у вложений есть правило: результат обяза
 test('правила задачника пронумерованы сплошь и без повторов', () => {
   const rules = curatorInstructions('Антон', true);
   const numbers = [...rules.matchAll(/(?:^|\n)\s*З(\d+)\./g)].map((m) => Number(m[1]));
-  assert.ok(numbers.length >= 39, `правил всего ${numbers.length}`);
+  // Порог низкий намеренно: 2026-08-03 из блока вырезали тринадцать дублей, и
+  // тест не должен мешать резать дальше. Он стережёт сплошную нумерацию, а не
+  // объём — за объёмом следит отдельный тест «блок правил не раздувается».
+  assert.ok(numbers.length >= 25, `правил всего ${numbers.length}`);
   const sorted = [...numbers].sort((a, b) => a - b);
   assert.deepEqual(sorted, numbers, 'правила идут не по порядку');
   assert.deepEqual(sorted, sorted.map((_, i) => i + 1), 'в нумерации правил дыра или повтор');

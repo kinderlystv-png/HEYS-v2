@@ -79,6 +79,20 @@ function transcriptHeadingError(path, block) {
   return null;
 }
 
+/**
+ * Рабочий день задачника, а не календарное число. Сутки кончаются в 3 утра —
+ * та же граница, что в дневнике HEYS. Мысль, записанная в час ночи, относится
+ * к дню, который человек ещё живёт; закрывать в это время надо его же.
+ *
+ * От `moscowDate` отличается только сдвигом: та отвечает на «какое сейчас
+ * число», эта — на «какой сейчас день». После полуночи это разные ответы.
+ */
+const DAY_START_HOUR = 3;
+
+function taskDay(nowMs = Date.now()) {
+  return moscowDate(nowMs - DAY_START_HOUR * 60 * 60 * 1000);
+}
+
 function normalizePath(path) {
   const raw = String(path || '').trim().replace(/\\/g, '/');
   if (!raw) return null;
@@ -141,6 +155,15 @@ function moscowDate(nowMs = Date.now()) {
   });
   const parts = Object.fromEntries(fmt.formatToParts(new Date(nowMs)).map((p) => [p.type, p.value]));
   return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+/** Час и минута по Москве — для отметок, где важен не день, а момент. */
+function moscowTime(nowMs = Date.now()) {
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: MOSCOW_TZ, hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(new Date(nowMs)).map((p) => [p.type, p.value]));
+  return `${parts.hour}:${parts.minute}`;
 }
 
 /** Пустой файл — валидное состояние: месяц журнала мог ещё не начаться. */
@@ -699,24 +722,91 @@ function taskAddress(path, title) {
   return { project, hash, ref: `${project}/${hash}` };
 }
 
-/** Открытые вопросы задачника: вложенные строки `открыто:` под задачами. */
-function collectOpenQuestions(files) {
+/**
+ * До какого дня задача отложена решением: вложенная строка `вернуться: …`.
+ *
+ * Это не «подвисло», а принятый ответ «не сейчас», и разбор здесь ровно тот
+ * же, что на доске (`BACK_RE` в build_board.py): дата `ГГГГ-ММ-ДД` или `ДД.ММ`,
+ * дальше через тире может идти причина — она не разбирается. Год у короткой
+ * формы берётся ближайший, в котором эта дата ещё не прошла: «вернуться: 01.09»
+ * в декабре значит сентябрь следующего года, а не позапрошлый месяц.
+ */
+const TASK_BACK_RE = /^\s*вернуться:\s*(\d{4}-\d{2}-\d{2}|\d{1,2}\.\d{1,2})/i;
+
+function taskBackDate(children, { today } = {}) {
+  const base = /^\d{4}-\d{2}-\d{2}$/.test(String(today || '')) ? String(today) : null;
+  for (const child of children || []) {
+    const match = TASK_BACK_RE.exec(String(child || ''));
+    if (!match) continue;
+    const raw = match[1];
+    if (!raw.includes('.')) return raw;
+    // Короткая форма без года разрешается только когда известно «сегодня»:
+    // угадывать год от системных часов здесь нечем и незачем.
+    if (!base) continue;
+    const [day, month] = raw.split('.').map(Number);
+    if (!(month >= 1 && month <= 12 && day >= 1 && day <= 31)) continue;
+    const [thisYear, thisMonth, thisDay] = base.split('-').map(Number);
+    const year = (month < thisMonth || (month === thisMonth && day < thisDay)) ? thisYear + 1 : thisYear;
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+  return null;
+}
+
+/**
+ * Открытые вопросы задачника: вложенные строки `открыто:` под задачами.
+ *
+ * Вместе с вопросом отдаются срок и дата заведения ЗАДАЧИ, а не вопроса:
+ * своей даты у строки `открыто:` нет и взять её неоткуда. Отбор на планёрку
+ * ранжирует именно по ним, и подменять отсутствующую дату сегодняшней нельзя —
+ * тогда старое и новое перемешаются, а разобрать это потом будет нечем.
+ *
+ * `back` — перенос самой задачи, унаследованный вопросом. Отложили переделку
+ * склада до сентября — до сентября молчат и все её вопросы: спрашивать «нужен
+ * ли насос» про то, к чему решено не возвращаться, значит мозолить глаза тем,
+ * что уже решено отложить. Отсюда вопрос не выкидывается: снимать его вправе
+ * только ответ, а сворачивает перенос — и разворачивает сам, когда день пришёл.
+ */
+function collectOpenQuestions(files, { today = null } = {}) {
   const out = [];
   for (const file of files) {
     for (const task of parseTasks(file)) {
+      const back = taskBackDate(task.children, { today });
       for (const child of task.children) {
         if (/^открыто:/i.test(child)) {
+          const address = taskAddress(file.path, task.title);
+          const question = child.replace(/^открыто:\s*/i, '');
           out.push({
             path: file.path,
-            ...taskAddress(file.path, task.title),
+            ...address,
             task: task.title,
-            question: child.replace(/^открыто:\s*/i, ''),
+            question,
+            due: task.due || null,
+            created: task.created || null,
+            done: Boolean(task.done),
+            back,
+            line: task.line || 0,
+            key: questionKey(address.ref || file.path, question),
           });
         }
       }
     }
   }
   return out;
+}
+
+/**
+ * Ключ вопроса для памяти прохода. Считается от адреса задачи и текста вопроса,
+ * потому что больше не от чего: строка `открыто:` не нумерована и не датирована.
+ * Побочный эффект принят сознательно — переписал формулировку, и вопрос для
+ * ротации стал новым. Это честнее обратного: молча считать переписанный вопрос
+ * уже показанным.
+ */
+function questionKey(ref, question) {
+  return require('node:crypto')
+    .createHash('md5')
+    .update(`${ref}|${String(question || '').trim()}`, 'utf8')
+    .digest('hex')
+    .slice(0, 8);
 }
 
 /** Ожидания от людей: вложенные строки `ждём:` и `при встрече:`. */
@@ -1279,7 +1369,14 @@ function repeatedThoughts(files, { minTimes = 3, minDates = 2 } = {}) {
 // ответа не поднимается две недели — оно и так висит на доске.
 
 const STATE_KEY = `${KEY_PREFIX}agent_state`;
-const PROPOSAL_COOLDOWN_DAYS = { proposed: 14, declined: 30, accepted: 90 };
+// `later` — это его «вернёмся к этому», а не «ещё не отвечал»: срок совпадает
+// с `proposed`, но статус отдельный. Иначе ответ «позже» неотличим от молчания,
+// и стоит однажды сдвинуть срок непрочитанного предложения — вместе с ним
+// молча уедет и то, о чём он прямо просил вернуться.
+const PROPOSAL_COOLDOWN_DAYS = { proposed: 14, later: 14, declined: 30, accepted: 90 };
+
+/** Предложение, на которое ответа по существу ещё нет: своё же, но не закрытое. */
+const PROPOSAL_OPEN_STATUSES = new Set(['proposed', 'later']);
 
 function ensureState(raw) {
   const base = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? raw : {};
@@ -1288,10 +1385,36 @@ function ensureState(raw) {
   const proposals = (base.proposals && typeof base.proposals === 'object' && !Array.isArray(base.proposals))
     ? base.proposals
     : {};
+  // За какой день уже спрошено про деньги. Хранится дата, а не флаг: планёрка
+  // бывает не каждый день, и «спрашивал вчера» не значит «спрашивал про этот
+  // день». Одна дата — один вопрос, сколько бы раз за утро ни звали повестку.
+  const nudge = (base.money_nudge && typeof base.money_nudge === 'object' && !Array.isArray(base.money_nudge))
+    ? base.money_nudge
+    : null;
+  // Ротация простых вопросов и их спячка. Оба живут здесь, а не в файлах
+  // задачника: «этот уже спрашивали сегодня утром» и «про этот молчим до 17-го»
+  // — состояние прохода, а не запись, которую он ведёт руками. Строка
+  // «открыто:» от этого не меняется вовсе.
+  const rota = (base.question_rota && typeof base.question_rota === 'object' && !Array.isArray(base.question_rota))
+    ? base.question_rota
+    : {};
+  const rotaShown = (rota.shown && typeof rota.shown === 'object' && !Array.isArray(rota.shown)) ? rota.shown : {};
+  const sleep = (base.question_sleep && typeof base.question_sleep === 'object' && !Array.isArray(base.question_sleep))
+    ? base.question_sleep
+    : {};
+  // Отметки о сверке стенограмм здесь нет намеренно: она живёт в самом файле
+  // стенограммы. Дата в памяти отвечала одинаково неверно на все три случая —
+  // вторая планёрка за день, ночная работа во вчерашнем файле и пропущенная
+  // планёрка, — потому что помнила день, а не место, где кончилось прочитанное.
   return {
     version: 1,
     seen: { at: Number(seen.at) || 0, files: { ...files } },
     proposals: { ...proposals },
+    money_nudge: (nudge && typeof nudge.date === 'string' && nudge.date)
+      ? { date: nudge.date, at: Number(nudge.at) || 0 }
+      : null,
+    question_rota: { shown: { ...rotaShown } },
+    question_sleep: { ...sleep },
     updatedAt: Number(base.updatedAt) || 0,
   };
 }
@@ -1354,6 +1477,196 @@ function answerProposal(state, key, { status = 'declined', nowMs = Date.now(), n
     proposals: {
       ...state.proposals,
       [key]: { ...prev, status, answeredAt: nowMs, note: note || prev.note || null },
+    },
+    updatedAt: nowMs,
+  };
+}
+
+// ── Пять простых вопросов на планёрку ────────────────────────────────────
+//
+// К 2026-08-03 на доске 29 строк «открыто:», и разбираются они плохо не потому,
+// что трудные, а потому что лежат все сразу: список, который нельзя закрыть за
+// один заход, перестают открывать целиком. Планёрка берёт из них пять таких, на
+// которые он отвечает не вставая, — и спрашивает их вслух каждое утро и вечер.
+//
+// Простой вопрос — это выбор из двух или «да/нет»: не надо ничего считать и не
+// нужен другой человек. Смысл кодом не прочитать, поэтому отбор идёт по форме
+// записи, а она видна:
+//
+//   ЗА — в вопросе есть развилка: «… или …», частица «ли», либо он кончается
+//   «?» и не начинается с вопросительного слова (тогда это «да/нет»).
+//   «Какая площадь у склада» развилки не несёт, и ответом на него будет не
+//   решение, а поход с рулеткой.
+//
+//   ПРОТИВ — три вещи, каждая делает вопрос неотвечаемым на месте: нужен другой
+//   человек («согласовать», «спросить», родня, имя собственное), надо посчитать
+//   или замерить, и длина — формулировка длиннее SIMPLE_QUESTION_MAX_LEN это уже
+//   не вопрос, а сложенный в строку кусок разбора.
+//
+// Планка проверена на живом задачнике: из 29 вопросов простыми признаны 17.
+// Она намеренно осторожная — пропустить простой вопрос дешевле, чем каждое утро
+// подсовывать ему тот, на который нельзя ответить без рулетки и созвона.
+//
+// Границы слов пишутся классами букв, а не `\b`: в JS `\b` считает буквой
+// только ASCII, поэтому `\bбрат\b` не совпадает НИ С ЧЕМ. На этом уже один раз
+// потеряли отсев по родне.
+
+/** Длиннее этого — не вопрос, а кусок разбора: ответить на месте нельзя. */
+const SIMPLE_QUESTION_MAX_LEN = 140;
+/** Сколько простых вопросов уходит в одну планёрку. */
+const SIMPLE_QUESTION_LIMIT = 5;
+/**
+ * Спячка по умолчанию. Две планёрки в день и пул около двух десятков означают,
+ * что круг проходится примерно за двое суток. Две недели — это ~7 кругов: вопрос
+ * гарантированно замолкает, но не исчезает. Срок тот же, что у «вернёмся к
+ * этому» у предложений (PROPOSAL_COOLDOWN_DAYS.later) — это одно и то же по сути.
+ */
+const QUESTION_SLEEP_DAYS = 14;
+
+const CHOICE_RE = /\sили\s/i;
+const CHOICE_LI_RE = /(?:^|\s)ли(?=[\s,.?!;:]|$)/i;
+const OPEN_WH_RE = /(?:^|\s)(как(?:ой|ая|ое|ие|ого|ому|ую|им|ом)?|сколько|насколько|где|куда|откуда|когда|почему|зачем|что|чего|чем|кто|кого|кому)(?=[\s,.?!;:]|$)/i;
+const NEEDS_PERSON_RE = /(?<![а-яё])(согласов|спрос|уточнить у|договор|кто-то другой|кто-нибудь|брат|сестр|жена|жены|муж|мужа|мама|мамы|папа|папы|собственник|арендодател|подрядчик)/i;
+const NEEDS_COUNT_RE = /(?<![а-яё])(сколько|посчит|подсчит|пересчит|не считается|замер|измер|собрать данные|список|объём|смет[ауы])/i;
+
+/**
+ * Имя собственное в середине вопроса — признак того, что в деле есть кто-то
+ * ещё. Первое слово и слово после точки, «?», тире или кавычки не в счёт: там
+ * заглавная буква стоит по грамматике, а не по имени. Топоним сюда тоже
+ * попадает («пока ты в Суперлэнде») — и это не промах: место, где он будет не
+ * один, ровно так же делает вопрос несамостоятельным.
+ */
+function mentionsProperName(text) {
+  const s = String(text || '');
+  const re = /[А-ЯЁ][а-яё]{2,}/g;
+  let match;
+  while ((match = re.exec(s))) {
+    if (match.index === 0) continue;
+    const before = s.slice(0, match.index).replace(/\s+$/, '');
+    if (!before || /[.?!:;—–«"(]$/.test(before)) continue;
+    return true;
+  }
+  return false;
+}
+
+/** Простой ли вопрос — и если нет, то почему. Причина нужна отладке и тестам. */
+function isSimpleQuestion(question) {
+  const text = String(question || '').trim();
+  if (!text) return { simple: false, reason: 'пусто' };
+  if ([...text].length > SIMPLE_QUESTION_MAX_LEN) return { simple: false, reason: 'слишком длинный' };
+  const choice = CHOICE_RE.test(text) || CHOICE_LI_RE.test(text);
+  const yesNo = !choice && /\?\s*$/.test(text) && !OPEN_WH_RE.test(text);
+  if (!choice && !yesNo) return { simple: false, reason: 'нет развилки' };
+  if (NEEDS_PERSON_RE.test(text) || mentionsProperName(text)) return { simple: false, reason: 'нужен другой человек' };
+  if (NEEDS_COUNT_RE.test(text)) return { simple: false, reason: 'надо посчитать' };
+  return { simple: true, reason: null };
+}
+
+/**
+ * Порядок: ближе срок задачи — выше. Задача без срока идёт после всех, у кого
+ * срок есть: «когда-нибудь» не может обгонять «послезавтра». При равных сроках
+ * выше тот вопрос, что старше, — а своей даты у него нет, поэтому старшинство
+ * берётся сначала по дате заведения задачи, потом по месту в файле: строки
+ * дописываются вниз, и верхняя действительно старше. Два вопроса под ОДНОЙ
+ * задачей неразличимы по всем четырём признакам — их разводит устойчивость
+ * сортировки: порядок сбора равен порядку строк в файле, и он сохраняется.
+ */
+function compareSimpleQuestions(a, b) {
+  if (Boolean(a.due) !== Boolean(b.due)) return a.due ? -1 : 1;
+  if (a.due && b.due && a.due !== b.due) return a.due < b.due ? -1 : 1;
+  if (Boolean(a.created) !== Boolean(b.created)) return a.created ? -1 : 1;
+  if (a.created && b.created && a.created !== b.created) return a.created < b.created ? -1 : 1;
+  if (a.path !== b.path) return a.path < b.path ? -1 : 1;
+  return (a.line || 0) - (b.line || 0);
+}
+
+/**
+ * Пятёрка на эту планёрку.
+ *
+ * Ротация нужна ровно затем, чтобы вторая планёрка дня не повторила первую.
+ * Память хранит показанное, но круг не бесконечен: если незаданных осталось
+ * меньше пяти, круг начинается заново и добор идёт с начала списка. Молчать
+ * нельзя — планёрка без вопросов не уменьшает число открытых.
+ *
+ * Отвеченный вопрос уходит из ротации сам: строки `открыто:` под задачей больше
+ * нет, значит нет и вопроса в пуле. Отдельного «снять с ротации» не существует
+ * и заводить его не надо — иначе появится вторая запись о том же, и они
+ * разойдутся.
+ */
+function pickSimpleQuestions(questions, state, { today, limit = SIMPLE_QUESTION_LIMIT } = {}) {
+  const cap = Math.max(1, Number(limit) || SIMPLE_QUESTION_LIMIT);
+  const sleep = (state && state.question_sleep) || {};
+  const shown = (state && state.question_rota && state.question_rota.shown) || {};
+
+  const pool = [];
+  const sleeping = [];
+  for (const item of questions) {
+    // Задача закрыта, а строка «открыто:» под ней осталась — это остаток, а не
+    // вопрос: спрашивать про решённое значит тратить его время впустую. Строку
+    // при этом никто не трогает, её судьба — отдельный разговор.
+    if (item.done) continue;
+    if (!isSimpleQuestion(item.question).simple) continue;
+    // Спячка вопроса и перенос его задачи — разные вещи: там отложен один
+    // вопрос, здесь вся задача целиком. Сработали обе — молчим до более
+    // поздней из дат, иначе ранняя разбудила бы вопрос раньше времени.
+    const nap = sleep[item.key];
+    const until = today
+      ? [nap && nap.until, item.back].filter((date) => date && date > today).sort().pop() || null
+      : null;
+    if (until) {
+      sleeping.push({ ...item, until, deferred: Boolean(item.back && item.back === until) });
+      continue;
+    }
+    pool.push(item);
+  }
+  pool.sort(compareSimpleQuestions);
+
+  const picked = pool.filter((item) => !shown[item.key]).slice(0, cap);
+  let roundReset = false;
+  if (picked.length < cap && pool.length > picked.length) {
+    roundReset = true;
+    const taken = new Set(picked.map((item) => item.key));
+    for (const item of pool) {
+      if (picked.length >= cap) break;
+      if (taken.has(item.key)) continue;
+      picked.push(item);
+    }
+    picked.sort(compareSimpleQuestions);
+  }
+  return {
+    picked,
+    sleeping,
+    pool: pool.length,
+    round_reset: roundReset,
+    keys: questions.map((item) => item.key),
+  };
+}
+
+/**
+ * Запомнить показанное. Заодно выкидывает из памяти ключи, которых в задачнике
+ * больше нет: отвеченный вопрос не должен занимать место в ротации вечно.
+ * Начался новый круг — старые отметки стираются целиком, иначе он не начнётся.
+ */
+function rememberShownQuestions(state, { picked = [], keys = [], reset = false, nowMs = Date.now() } = {}) {
+  const alive = new Set(keys);
+  const prev = (state.question_rota && state.question_rota.shown) || {};
+  const shown = reset ? {} : Object.fromEntries(Object.entries(prev).filter(([key]) => alive.has(key)));
+  for (const item of picked) shown[item.key] = nowMs;
+  const sleep = Object.fromEntries(Object.entries(state.question_sleep || {}).filter(([key]) => alive.has(key)));
+  return { ...state, question_rota: { shown }, question_sleep: sleep, updatedAt: nowMs };
+}
+
+/**
+ * Отправить вопрос в спячку. Строку `открыто:` это не трогает намеренно:
+ * «не трогать» — это «не спрашивай пока», а не «вопроса больше нет». Удалять
+ * его вправе только он сам, и делается это через tasks_resolve.
+ */
+function sleepQuestion(state, item, { until, nowMs = Date.now() } = {}) {
+  return {
+    ...state,
+    question_sleep: {
+      ...(state.question_sleep || {}),
+      [item.key]: { until, at: nowMs, question: item.question, ref: item.ref || null },
     },
     updatedAt: nowMs,
   };
@@ -1503,6 +1816,458 @@ function transcriptReminder(status) {
   return null;
 }
 
+// ── Ревизия стенограмм перед планёркой ───────────────────────────────────
+//
+// Планёрка начиналась с повестки, а повестка собрана только из того, что уже
+// заведено. Всё, что за день обсудили и не завели, до неё не доходило вовсе и
+// пропадало молча — стенограмма единственное место, где оно осталось.
+//
+// Отметка о сверке лежит в САМОМ файле стенограммы, а не в памяти прохода.
+// Причина простая: планёрок бывает две за день, ночная работа попадает во
+// вчерашний файл (сутки задачника кончаются в 3 утра), а планёрку могли
+// пропустить вовсе. Дата в памяти на все три случая отвечает одинаково
+// неверно — «сегодня уже сверено», хотя сверен был другой текст. Отметка в
+// файле отвечает на единственный вопрос, который тут важен: где кончается
+// прочитанное. Всё, что ниже последней отметки, — несверенный хвост.
+//
+// Побочный эффект намеренный: отметки копятся и получается журнал сверок,
+// который владелец читает глазами вместе со стенограммой.
+//
+// Сравнить хвост с задачником код по-прежнему не может: «это уже завели» —
+// суждение о смысле, а не совпадение строк. Он делает две вещи: приносит
+// материал (какие хвосты и какого размера) и подсовывает кандидатов на
+// потерю — подсказку против невнимательности, не результат сверки.
+
+/** Заголовок обмена вида «## 14:20» или «## 14:20–15:00» — с временем внутри. */
+const TRANSCRIPT_ENTRY_RE = /^##\s*(~?\d{1,2}:\d{2}(?:\s*[–—-]\s*~?\d{1,2}:\d{2})?)\s*$/;
+
+/**
+ * Размер стенограммы: сколько в ней обменов и сколько непустых строк.
+ *
+ * Пустые строки не считаются намеренно: между блоками их столько же, сколько
+ * блоков, и число «строк» с ними говорит про разметку, а не про разговор.
+ *
+ * `last_entry` — время последнего обмена по заголовку. Заголовки старых
+ * стенограмм бывают темой, а не временем (проверка появилась позже файлов):
+ * такой файл отдаёт `last_entry: null`, а не выдуманное время.
+ */
+function transcriptShape(text) {
+  const raw = String(text || '');
+  const lines = raw.split('\n');
+  const headings = lines.filter((line) => /^##\s+\S/.test(line));
+  const times = headings
+    .map((line) => (TRANSCRIPT_ENTRY_RE.exec(line.trim()) || [])[1] || null)
+    .filter(Boolean);
+  return {
+    sections: headings.length,
+    lines: lines.filter((line) => line.trim()).length,
+    last_entry: times.length ? times[times.length - 1] : null,
+  };
+}
+
+/**
+ * Отметка о сверке. Заголовок блока обязан быть временем — иначе он не пройдёт
+ * `transcriptHeadingError`, и формат стенограммы разъедется на второй же
+ * отметке. Всё отличие от обычного обмена — в первой строке тела: она начинается
+ * жирным «Сверено с доской» и дальше несёт дату, время и итог.
+ *
+ * Дата в строке не дублирует имя файла: отметка часто ложится во ВЧЕРАШНИЙ
+ * файл (ночная работа) и делается уже сегодня. Без даты выходило бы, что
+ * вчерашний разговор сверили вчера же.
+ */
+const REVIEW_MARK_RE = /^\*\*Сверено с доской\*\*\s*·\s*(\d{4}-\d{2}-\d{2})\s+(\d{1,2}:\d{2})\s*·\s*(.*)$/;
+
+/** Сколько дней назад заглядывать: планёрку могли пропустить не один раз. */
+const REVIEW_WINDOW_DAYS = 7;
+
+function reviewMarkLine({ date, time, summary }) {
+  return `**Сверено с доской** · ${date} ${padTime(time)} · ${String(summary || '').trim()}`;
+}
+
+function reviewMarkBlock({ date, time, summary }) {
+  return `## ${padTime(time)}\n\n${reviewMarkLine({ date, time, summary })}`;
+}
+
+/** Дописать отметку в конец стенограммы. */
+function appendReviewMark(text, mark) {
+  return appendBlock(text, reviewMarkBlock(mark));
+}
+
+/**
+ * Несверенный хвост файла: всё, что стоит НИЖЕ последней отметки.
+ *
+ * Отметок нет вовсе — хвост это весь файл: сверять его никто не начинал.
+ * Отметок несколько — считается последняя, а не первая: между ними текст уже
+ * прочитан. Отметка в последней строке — хвост пустой, и день в блок не идёт.
+ */
+function transcriptTail(text) {
+  const lines = String(text || '').split('\n');
+  let marks = 0;
+  let last = null;
+  let cut = 0;
+  lines.forEach((line, i) => {
+    const match = REVIEW_MARK_RE.exec(line.trim());
+    if (!match) return;
+    marks += 1;
+    last = { date: match[1], time: padTime(match[2]), summary: match[3].trim() };
+    cut = i + 1;
+  });
+  return { text: lines.slice(cut).join('\n'), marks, last_mark: last };
+}
+
+/** Что за день известно: размер несверенного хвоста и последняя отметка. */
+function dayReviewDay(file, date) {
+  const text = (file && typeof file.text === 'string') ? file.text : '';
+  const tail = transcriptTail(text);
+  const shape = transcriptShape(tail.text);
+  return {
+    date,
+    path: transcriptPath(date),
+    exists: Boolean(text.trim()),
+    marks: tail.marks,
+    last_mark: tail.last_mark,
+    sections: shape.sections,
+    lines: shape.lines,
+    last_entry: shape.last_entry,
+    unreviewed: Boolean(tail.text.trim()),
+  };
+}
+
+/** Несверенные хвосты окна — материал для кандидатов. Наружу не отдаётся. */
+function reviewTails(entries) {
+  return (entries || [])
+    .map(({ date, file }) => ({ date, text: transcriptTail((file && file.text) || '').text }))
+    .filter((tail) => tail.text.trim());
+}
+
+/**
+ * Что читать перед этой планёркой.
+ *
+ * Дни без несверенного хвоста в ответ не попадают вовсе: показывать «за 30
+ * июля всё сверено» семь раз подряд значит превратить блок в фон. Отдельным
+ * случаем — сегодняшней стенограммы нет: сверять не с чем, и это не тишина, а
+ * находка.
+ */
+function dayReviewStatus(entries, { date, candidates = null } = {}) {
+  const days = (entries || []).map(({ date: day, file }) => dayReviewDay(file, day));
+  const today = days.find((day) => day.date === date) || dayReviewDay(null, date);
+  const unreviewed = days
+    .filter((day) => day.unreviewed)
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return {
+    date,
+    path: today.path,
+    window_days: REVIEW_WINDOW_DAYS,
+    today_missing: !today.exists,
+    days: unreviewed,
+    candidates: candidates || emptyReviewCandidates(),
+    needed: unreviewed.length > 0 || !today.exists,
+  };
+}
+
+/** Строка про один день хвоста: откуда читать и сколько там. */
+function reviewDayLine(day) {
+  const size = [
+    `обменов ${day.sections}`,
+    `строк ${day.lines}`,
+    day.last_entry ? `последняя запись ${day.last_entry}` : null,
+  ].filter(Boolean).join(', ');
+  const from = day.last_mark
+    ? `после отметки ${day.last_mark.date} ${day.last_mark.time}`
+    : 'отметок нет — файл целиком';
+  return `${day.path} — ${from} (${size})`;
+}
+
+/**
+ * Блок «Ревизия» — или null, когда несверенного хвоста нет нигде.
+ *
+ * Кандидаты идут последними и названы кандидатами: код не знает, завели это
+ * или нет, он знает только, что похожего в задачнике не нашлось. Поставить их
+ * выше требования прочитать хвост значит получить ревизию по списку из четырёх
+ * строк — а теряется как раз то, что в список не попало.
+ */
+function dayReviewBlock(status) {
+  if (!status || !status.needed) return null;
+  const head = status.days.length
+    ? `Ревизия — до повестки. Несверенные хвосты стенограмм за ${status.window_days} дней:\n${
+      status.days.map((day) => `- ${reviewDayLine(day)}`).join('\n')}\nПрочитай их через tasks_read`
+      + ' — только хвост, выше последней отметки уже сверено — и сверь с задачником.'
+    : `Ревизия — до повестки: стенограммы за сегодня нет вовсе (${status.path} пуст).`
+      + ' Разговор за день не записан, сверять не с чем — и это само по себе потеря: всё, что сегодня обсудили'
+      + ' и не завели, восстановить уже неоткуда. Скажи ему об этом и начни писать стенограмму с ближайшего обмена.';
+  const body = head
+    + (status.days.length
+      ? ' Ищи потерянное: принятое решение, которого нигде нет; договорённость с человеком без задачи,'
+        + ' слота или напоминания; дело, о котором договорились, а задачи нет; названные число, срок или цену;'
+        + ' вопрос, оставшийся без ответа и не помеченный «открыто:». Найденное заводи сразу — задачей,'
+        + ' напоминанием, идеей или пунктом планёрки. Пересказывать стенограмму не надо: он в этом разговоре был.'
+      : '')
+    + ' Закончил — tasks_standup с reviewed и коротким итогом: отметка ляжет в конец каждого прочитанного файла,'
+    + ' и на следующей планёрке ты увидишь только то, что появилось после неё.';
+  const hints = reviewCandidateLines(status.candidates);
+  return hints ? `${body}\n\n${hints}` : body;
+}
+
+// ── Кандидаты на потерю ──────────────────────────────────────────────────
+//
+// Ревизия целиком держалась на внимании: код приносил текст, сравнивал человек.
+// Прочитал по диагонали — ревизия превратилась в ритуал, и поймать это некому.
+//
+// Поэтому код сам вытаскивает из хвоста то, чему не нашлось пары в задачнике:
+// имена, суммы, время и вопросы. Это КАНДИДАТЫ, а не находки. Код не знает,
+// была ли названная сумма тратой или ценой из разведки рынка, и знать не может.
+// Формулировка обязана оставлять место ошибке: «названа сумма, в деньгах её
+// нет — проверь», а не «потеряна трата».
+//
+// Ложное срабатывание тут дешевле пропуска, но врать нельзя ни в ту, ни в
+// другую сторону. Совпадения ищутся простыми средствами: нормализованное
+// вхождение по началу слова, без стемминга и словарей.
+
+const REVIEW_CANDIDATE_CAP = 5;
+
+/** Пусто по всем четырём видам — чтобы форма ответа не зависела от находок. */
+function emptyReviewCandidates() {
+  return {
+    people: [], money: [], time: [], questions: [],
+    dropped: { people: 0, money: 0, time: 0, questions: 0 },
+    total: 0,
+  };
+}
+
+/**
+ * Текст хвоста без разметки: заголовки, отметки и подписи говорящего убраны.
+ *
+ * Подписи убираются первыми: «**Кин:**» в начале строки — это разметка, а имя
+ * в ней стоит в каждом втором абзаце и в кандидаты не годится вовсе.
+ */
+function reviewProse(text) {
+  return String(text || '')
+    .split('\n')
+    .filter((line) => !/^\s*#/.test(line) && !REVIEW_MARK_RE.test(line.trim()))
+    .map((line) => line
+      .replace(/^\s*(?:[-*]\s+)?\*\*[^*]{1,40}:\*\*\s*/, '')
+      .replace(/^\s*(?:[-*]\s+)?[A-Za-zА-ЯЁа-яё][\p{L}]{1,20}:\s+/u, ''))
+    .join('\n');
+}
+
+/** Все слова задачника одним множеством — по ним и проверяется «нашлось». */
+function reviewWordSet(files) {
+  const words = new Set();
+  for (const file of files || []) {
+    for (const word of String((file && file.text) || '').toLowerCase().split(/[^\p{L}\p{N}]+/u)) {
+      if (word) words.add(word);
+    }
+  }
+  return words;
+}
+
+/**
+ * Нашлось ли слово в задачнике. Сравнение по началу слова и без последних двух
+ * букв: «Маше», «Машей» и «Маша» — один человек, а полноценной лемматизации
+ * тут не нужно. Границы слова заданы разбиением по не-буквам: `\b` в JS считает
+ * буквой только ASCII и на кириллице срабатывает где попало.
+ */
+function reviewWordSeen(words, value) {
+  const lower = String(value || '').toLowerCase();
+  if (!lower) return true;
+  const stem = lower.slice(0, Math.max(3, lower.length - 2));
+  for (const word of words) if (word.startsWith(stem)) return true;
+  return false;
+}
+
+const REVIEW_NAME_RE = /[А-ЯЁ][а-яё]{2,}/g;
+// Разделитель тысяч — только пробел и неразрывный: пустить сюда `\s` значит
+// склеить «5 задач» с «300 руб» через перевод строки в одну сумму 5300.
+const REVIEW_MONEY_RE = /(\d[\d  ]*(?:[.,]\d+)?)[  ]*(₽|руб[а-яё]*|тыс[а-яё]*|млн|млрд|k|к)(?![а-яё])/gi;
+const REVIEW_DATE_RE = /(?<![\d.,:])(\d{1,2})\.(\d{1,2})(?![\d.])/g;
+const REVIEW_TIME_RE = /(?<![\d:])(\d{1,2}):(\d{2})(?![\d:])/g;
+const REVIEW_WEEKDAY_RE = /(?<![а-яё])(понедельник|вторник|сред[уые]|четверг|пятниц[уые]|суббот[уые]|воскресень[еяю])(?![а-яё])/gi;
+// Нумерация та же, что у weekdayIndex: понедельник нулевой, воскресенье шестое.
+const REVIEW_WEEKDAYS = [
+  ['понедельник', 0], ['вторник', 1], ['сред', 2], ['четверг', 3],
+  ['пятниц', 4], ['суббот', 5], ['воскресень', 6],
+];
+const REVIEW_MONEY_SCALE = [
+  [/^тыс/i, 1000], [/^k$/i, 1000], [/^к$/i, 1000], [/^млн/i, 1e6], [/^млрд/i, 1e9],
+];
+/** Мельче сотни рублей — это не потеря, а шум: «пять рублей» в разговоре. */
+const REVIEW_MONEY_MIN = 100;
+
+/** Сумма из «45 700 ₽» и «340 тысяч» — в рублях. */
+function reviewAmount(digits, unit) {
+  const clean = String(digits).replace(/[\s ]/g, '').replace(',', '.');
+  const value = Number(clean);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  const scale = (REVIEW_MONEY_SCALE.find(([re]) => re.test(unit)) || [null, 1])[1];
+  return Math.round(value * scale);
+}
+
+/** Ближайшая дата названного дня недели, считая от сегодня вперёд. */
+function reviewWeekdayDate(word, today) {
+  if (!today) return null;
+  const lower = String(word).toLowerCase();
+  const found = REVIEW_WEEKDAYS.find(([stem]) => lower.startsWith(stem));
+  if (!found) return null;
+  const shift = (found[1] - weekdayIndex(today) + 7) % 7 || 7;
+  return shiftDate(today, shift);
+}
+
+/**
+ * Кандидаты на потерю по всем хвостам окна.
+ *
+ * @param {Array} tails  [{ date, text }] — только несверенное
+ * @param {Object} ctx   files — проекты, дни и напоминания; money — { 'ГГГГ-ММ': текст };
+ *                       openQuestions — collectOpenQuestions по проектам
+ */
+function reviewCandidates(tails, {
+  files = [], money = {}, openQuestions = [], today = null, cap = REVIEW_CANDIDATE_CAP,
+} = {}) {
+  const out = emptyReviewCandidates();
+  const prose = (tails || []).map((tail) => reviewProse(tail.text)).join('\n');
+  if (!prose.trim()) return out;
+
+  const words = reviewWordSet(files);
+  const amounts = new Set();
+  for (const [month, text] of Object.entries(money || {})) {
+    for (const op of parseMoneyOps(text, month)) amounts.add(Math.abs(op.amount));
+  }
+  const slotSpans = [];
+  const slotTimes = new Set();
+  const slotDates = new Set();
+  for (const file of files || []) {
+    const day = /^days\/(\d{4}-\d{2}-\d{2})\.md$/i.exec(file.path || '');
+    if (!day) continue;
+    const slots = parseSlots(file.text || '');
+    if (slots.length) slotDates.add(day[1]);
+    for (const slot of slots) {
+      slotTimes.add(padTime(slot.start));
+      slotSpans.push([slot.from, slot.to]);
+    }
+  }
+  // Час считается покрытым и тогда, когда он попал ВНУТРЬ уже стоящего слота:
+  // «сняли портрет с 16:50 до 18:10» при слоте 16:50–18:10 — это не потеря, а
+  // пересказ расписания. Сравнение по одному только началу давало их пачками.
+  const slotCovers = (value) => {
+    const minutes = timeToMinutes(value);
+    if (minutes === null) return false;
+    const shifted = minutes < DAY_TAIL_BEFORE ? minutes + 24 * 60 : minutes;
+    return slotSpans.some(([from, to]) => shifted >= from && shifted <= to);
+  };
+  const reminders = (files || []).find((file) => file.path === REMINDERS_PATH) || null;
+  for (const reminder of parseReminders(reminders)) {
+    if (reminder.done) continue;
+    slotDates.add(reminder.date);
+    if (reminder.time) slotTimes.add(reminder.time);
+  }
+
+  const seen = new Set();
+  const push = (kind, item, dedup = null) => {
+    const key = `${kind}|${(dedup || item.quote).toLowerCase()}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    if (out[kind].length >= cap) { out.dropped[kind] += 1; return; }
+    out[kind].push(item);
+  };
+
+  // 1. Люди. Заглавная в начале предложения стоит по грамматике, а не по имени.
+  // Второе сито — сам же хвост: «Чай», «Пуш», «Вот» с большой буквы попадаются
+  // в любом разговоре, но то же слово там же встречается и со строчной, а имя
+  // человека — почти никогда. Словаря для этого не нужно, только сам текст.
+  const lowered = new Set(prose.split(/[^\p{L}\p{N}]+/u).filter((w) => w && /^\p{Ll}/u.test(w)));
+  for (const line of prose.split('\n')) {
+    for (const match of line.matchAll(REVIEW_NAME_RE)) {
+      const before = line.slice(0, match.index).replace(/[\s*_>«"([]+$/, '');
+      if (!before || /[.?!:;—–…]$/.test(before)) continue;
+      if (lowered.has(match[0].toLowerCase())) continue;
+      if (reviewWordSeen(words, match[0])) continue;
+      // Дубль снимается по началу слова, а не по написанию: «Суперленд» и
+      // «Суперленде» — одно, и две строки об одном занимают половину потолка.
+      // Четыре буквы, а не «минус два с конца»: у разных падежей длина разная,
+      // и отрезание с конца разводило бы их обратно по разным ключам.
+      push('people', {
+        quote: match[0],
+        what: 'ни в одной открытой задаче, ни в напоминаниях, ни в слотах его нет — проверь, завели ли договорённость',
+      }, match[0].toLowerCase().slice(0, 4));
+    }
+  }
+
+  // 2. Деньги. Названная сумма — ещё не трата: это может быть цена из разведки.
+  for (const match of prose.matchAll(REVIEW_MONEY_RE)) {
+    const amount = reviewAmount(match[1], match[2]);
+    if (amount === null || amount < REVIEW_MONEY_MIN || amounts.has(amount)) continue;
+    push('money', {
+      quote: match[0].trim(),
+      amount,
+      what: `в деньгах за этот период суммы ${amount} нет — проверь, была ли это операция или просто названная цена`,
+    });
+  }
+
+  // 3. Время. Названный час без слота и без напоминания живёт только в разговоре.
+  for (const match of prose.matchAll(REVIEW_DATE_RE)) {
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    if (!(day >= 1 && day <= 31 && month >= 1 && month <= 12)) continue;
+    const year = String(today || '').slice(0, 4) || null;
+    const iso = year ? `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}` : null;
+    if (iso && slotDates.has(iso)) continue;
+    push('time', { quote: match[0], date: iso, what: `на ${iso || match[0]} нет ни слота в днях, ни напоминания — проверь, поставлено ли` });
+  }
+  for (const match of prose.matchAll(REVIEW_TIME_RE)) {
+    const hour = Number(match[1]);
+    if (hour > 23 || Number(match[2]) > 59) continue;
+    const time = padTime(`${match[1]}:${match[2]}`);
+    if (slotTimes.has(time) || slotCovers(time)) continue;
+    push('time', { quote: match[0], time, what: `на ${time} нет ни слота в ближайших днях, ни напоминания — проверь, поставлено ли` });
+  }
+  for (const match of prose.matchAll(REVIEW_WEEKDAY_RE)) {
+    const iso = reviewWeekdayDate(match[1], today);
+    if (!iso || slotDates.has(iso)) continue;
+    push('time', { quote: match[0], date: iso, what: `ближайший такой день — ${iso}, слотов и напоминаний на него нет — проверь` });
+  }
+
+  // 4. Вопросы. Заданный вслух вопрос без строки «открыто:» назавтра исчезает.
+  //
+  // Границей предложения считается и закрывающая кавычка: разговор наполовину
+  // состоит из цитат, и без этого два вопроса подряд слипались в один, который
+  // уже ни на что не похож. Открывающие кавычки и тире с начала срезаются.
+  for (const raw of prose.split(/(?<=[.!?»)\]])\s+/)) {
+    const sentence = raw.trim().replace(/\s+/g, ' ')
+      // «Его слова: «А почему…» — подпись перед цитатой, а не часть вопроса.
+      // Срезается только вплотную к открывающей кавычке: без неё под правило
+      // попал бы и живой вопрос, начинающийся с уточнения через двоеточие.
+      .replace(/^[^«»?]{0,25}:\s*«/, '')
+      .replace(/^[«"'\-—–\s]+/, '')
+      .replace(/[»"']+$/, '');
+    if (!/\?$/.test(sentence)) continue;
+    const size = [...sentence].length;
+    if (size < 12 || size > 200) continue;
+    if (openQuestions.some((q) => questionSimilarity(q.question, sentence) >= DECISION_SIMILARITY)) continue;
+    push('questions', { quote: sentence, what: 'похожей строки «открыто:» на доске нет — проверь, помечен ли вопрос открытым' });
+  }
+
+  out.total = out.people.length + out.money.length + out.time.length + out.questions.length;
+  return out;
+}
+
+/** Кандидаты словами — или null, когда их нет: пустой раздел не показываем. */
+function reviewCandidateLines(candidates) {
+  if (!candidates || !candidates.total) return null;
+  // Показываем только те признаки, что попадают. Замер на живых стенограммах
+  // 1–3 августа: деньги 1 из 1, вопросы ~2/3 по делу, а люди 0 из 6 и время
+  // 0 из 5 — там имена продуктов и таймстампы логов. Подсказка, где всё ложное,
+  // не помогает, а приучает пролистывать блок мимо глаз. Признаки считаются
+  // по-прежнему (видно в structured), но в текст не идут, пока не научатся.
+  const kinds = [['money', 'деньги'], ['questions', 'вопросы']];
+  const lines = [];
+  for (const [kind, title] of kinds) {
+    for (const item of candidates[kind]) lines.push(`- ${title}: «${item.quote}» — ${item.what}`);
+  }
+  const dropped = Object.values(candidates.dropped).reduce((n, x) => n + x, 0);
+  return 'Кандидаты на потерю — подсказка кода, а не результат сверки: он видит только, что похожего в задачнике'
+    + ' не нашлось, и не знает, завели это или нет. Хвост всё равно читать целиком, кандидаты страхуют от'
+    + ` невнимательности.\n${lines.join('\n')}${dropped ? `\n(и ещё ${dropped} — не показываю, список должен читаться)` : ''}`;
+}
+
 // ── Эксперимент «два ответа» ─────────────────────────────────────────────
 //
 // Недельная проверка (решение пользователя 2026-08-03): на содержательный
@@ -1577,6 +2342,39 @@ function lastBalance(text) {
     if (match) found = { date: match[1], amount: Number(match[2]) };
   }
   return found;
+}
+
+/**
+ * Внесены ли деньги за день. Признак ровно один и очень узкий: есть ли в файле
+ * месяца хоть одна операция с этой датой.
+ *
+ * Это НЕ «были ли траты». Про траты знает Zenmoney и он сам, а задачник знает
+ * только то, что в нём записано, — из пустого дня следует «не внесено», и
+ * ничего больше. Разница не косметическая: «ты не внёс расходы» и «трат не
+ * было» — разные утверждения, и второе выдумывать нельзя.
+ *
+ * Считается по завершённому дню — по вчерашнему. Пока день идёт, отсутствие
+ * операций не значит вообще ничего: трата случится через час. Решение
+ * владельца от 2026-08-03: спрашивать утром, на планёрке, за вчера, когда
+ * деньги дня уже закрыты целиком.
+ */
+function moneyDayStatus(text, date) {
+  const month = String(date).slice(0, 7);
+  const ops = parseMoneyOps(text, month).filter((op) => op.date === date);
+  return { date, month, path: `money/${month}.md`, operations: ops.length, empty: ops.length === 0 };
+}
+
+/**
+ * Одна строка приписки — или null, когда за день уже что-то записано.
+ *
+ * Null здесь так же важен, как строка: напоминание, которое приходит каждое
+ * утро независимо от того, сделал он это или нет, перестают читать за неделю.
+ */
+function moneyDayReminder(status) {
+  if (!status || !status.empty) return null;
+  return `Деньги за ${status.date} не сведены: в ${status.path} за этот день нет ни одной операции. `
+    + 'Спроси, какие были расходы и доходы, и внеси их через tasks_money. '
+    + 'Пустой день значит «не внесено», а не «трат не было» — так и спрашивай, а не утверждай.';
 }
 
 /**
@@ -3538,6 +4336,8 @@ module.exports = {
   KEY_PREFIX,
   INDEX_KEY,
   moscowDate,
+  moscowTime,
+  taskDay,
   SLOT_KINDS,
   slotKindAndTitle,
   slotClashLevel,
@@ -3646,6 +4446,22 @@ module.exports = {
   transcriptPath,
   transcriptStatus,
   transcriptReminder,
+  // ревизия стенограмм перед планёркой
+  transcriptShape,
+  transcriptTail,
+  REVIEW_WINDOW_DAYS,
+  REVIEW_MARK_RE,
+  reviewMarkLine,
+  reviewMarkBlock,
+  appendReviewMark,
+  dayReviewDay,
+  dayReviewStatus,
+  dayReviewBlock,
+  reviewTails,
+  REVIEW_CANDIDATE_CAP,
+  reviewCandidates,
+  reviewCandidateLines,
+  emptyReviewCandidates,
   READ_MAX_CHARS,
   READ_HARD_MAX,
   fileWindow,
@@ -3654,6 +4470,16 @@ module.exports = {
   taskTitle,
   taskAddress,
   collectOpenQuestions,
+  taskBackDate,
+  questionKey,
+  isSimpleQuestion,
+  compareSimpleQuestions,
+  pickSimpleQuestions,
+  rememberShownQuestions,
+  sleepQuestion,
+  SIMPLE_QUESTION_MAX_LEN,
+  SIMPLE_QUESTION_LIMIT,
+  QUESTION_SLEEP_DAYS,
   collectPeopleThreads,
   // разбор фразы
   topicTerms,
@@ -3677,6 +4503,7 @@ module.exports = {
   // память прохода
   STATE_KEY,
   PROPOSAL_COOLDOWN_DAYS,
+  PROPOSAL_OPEN_STATUSES,
   ensureState,
   proposalCooldown,
   pickFindings,
@@ -3696,6 +4523,8 @@ module.exports = {
   // деньги
   moneyLine,
   parseMoneyOps,
+  moneyDayStatus,
+  moneyDayReminder,
   lastBalance,
   monthAfter,
   parseBudget,

@@ -619,6 +619,19 @@ test('tasks_money без контура не проходит', async () => {
   assert.equal(api.writes.length, 0);
 });
 
+test('описание контура обещает отказ, а не выдуманное «прочее»', async () => {
+  // Описание обещало, что операция без контура «уедет в прочее». Никакого
+  // «прочего» в деньгах нет, и запись просто не проходит: агент, поверивший
+  // описанию, ждал бы кривой строки в файле вместо отказа.
+  const api = withBoard();
+  const contour = createTasksTools({ api, curatorJwt: JWT, clientId: CLIENT, nowMs: NOW, ToolError })
+    .schemas.find((s) => s.name === 'tasks_money').inputSchema.properties.contour.description;
+  assert.ok(!/прочее/i.test(contour), 'несуществующее последствие из описания убрано');
+  assert.match(contour, /откажет и ничего не запишет/);
+  await assert.rejects(() => build(api).tasks_money({ amount: 500, category: 'продукты' }),
+    (e) => e.code === 'contour_required', 'описание обещает ровно то, что делает код');
+});
+
 test('tasks_money пишет операцию в том формате, который читает доска', async () => {
   const api = withBoard();
   const res = await build(api).tasks_money({
@@ -761,12 +774,21 @@ test('дата по умолчанию считается по Москве, а 
   assert.equal(tasks.moscowDate(Date.UTC(2026, 7, 2, 12, 0)), '2026-08-02');
 });
 
-test('ночью метка создания ставится московским числом', async () => {
+test('ночная мысль помечается днём, который человек ещё живёт', async () => {
+  // 22:30 UTC — это 01:30 по Москве, но сутки задачника кончаются в 3 утра, как
+  // в дневнике HEYS. Мысль, записанная в час ночи, относится к прошедшему дню:
+  // человек его ещё не закрыл. Метка `^` идёт по рабочему дню, а не по числу.
   const api = withWrites();
   const night = createTasksTools({ api, curatorJwt: JWT, clientId: CLIENT, nowMs: Date.UTC(2026, 7, 2, 22, 30), ToolError }).tools;
   await night.tasks_capture({ text: 'Ночная мысль', project: 'family' });
   const saved = api.writes[0].items.find((i) => i.k === tasks.keyForPath('projects/family.md')).v.text;
-  assert.match(saved, /Ночная мысль \^2026-08-03/, 'метка обязана быть московской датой');
+  assert.match(saved, /Ночная мысль \^2026-08-02/, 'ночью метка идёт вчерашним рабочим днём');
+});
+
+test('граница рабочего дня — 3 утра по Москве, не полночь', () => {
+  assert.equal(tasks.taskDay(Date.UTC(2026, 7, 2, 22, 30)), '2026-08-02', '01:30 МСК — ещё вчера');
+  assert.equal(tasks.taskDay(Date.UTC(2026, 7, 3, 0, 30)), '2026-08-03', '03:30 МСК — уже сегодня');
+  assert.equal(tasks.taskDay(Date.UTC(2026, 7, 2, 12, 0)), '2026-08-02', 'днём совпадает с числом');
 });
 
 // ── Агентский слой: дельта, связи, развитие контекстов ───────────────────
@@ -1054,6 +1076,25 @@ test('память предложений переживает сессию и �
   assert.equal(after.structured.proposals.find((p) => p.key === key).status, 'accepted');
 });
 
+test('«позже» — отдельный ответ, а не откат к «ещё не спрашивал»', async () => {
+  // Раньше «позже» писалось статусом «proposed», и две недели молчания
+  // получались случайно — падением на срок непрочитанного предложения. Сдвинь
+  // тот срок, и молча уехал бы ответ, который он дал прямо.
+  const api = liveReviewApi();
+  const first = await session(api).tasks_review({ post: false });
+  const key = first.structured.findings[0].key;
+
+  const later = await session(api).tasks_proposal({ key, answer: 'позже' });
+  assert.equal(later.structured.status, 'later', 'ответ записан своим статусом');
+  assert.equal(later.structured.days_left, tasks.PROPOSAL_COOLDOWN_DAYS.later);
+  assert.match(later.text, /позже/);
+
+  const list = await session(api).tasks_proposal({});
+  assert.equal(list.structured.proposals.find((p) => p.key === key).status, 'later');
+  // Ответ по существу ещё не получен: снятие вопроса закроет и это предложение.
+  assert.ok(tasks.PROPOSAL_OPEN_STATUSES.has('later') && tasks.PROPOSAL_OPEN_STATUSES.has('proposed'));
+});
+
 test('ответ на несуществующее предложение не выдумывается', async () => {
   const api = liveReviewApi();
   await assert.rejects(() => session(api).tasks_proposal({ key: 'split_context:нет:такого', answer: 'нет' }),
@@ -1162,17 +1203,26 @@ test('тема в одно слово работает как раньше', asy
 
 const { curatorInstructions } = require('../lib/curator');
 
-test('у каждого нового инструмента задачника есть повод в правилах', () => {
+test('у каждого инструмента задачника есть повод его звать', () => {
+  // Повод живёт либо в правилах, либо в описании самого инструмента. Дубли
+  // 2026-08-03 вырезаны из правил, поэтому смотрим в оба места сразу — важно,
+  // что повод есть хоть где-то, а не что он записан дважды.
+  const built = createTasksTools({ api: liveApi({}), curatorJwt: JWT, clientId: CLIENT, nowMs: NOW, ToolError });
   const rules = curatorInstructions('Антон', true);
+  const where = (name) => {
+    const schema = built.schemas.find((s) => s.name === name);
+    assert.ok(schema, `${name} не объявлен в схемах — модель его не увидит`);
+    const args = Object.values(schema.inputSchema.properties || {}).map((a) => a.description || '');
+    return [rules, schema.description, ...args].join('\n');
+  };
   for (const [tool, why] of [
     ['tasks_delta', /начале сессии|прошлого прохода/],
-    ['tasks_link', /не по словам|общих слов/],
-    ['tasks_review', /три находки|потолок в три/],
+    ['tasks_link', /не по словам|общих слов|друг друга не находят/],
+    ['tasks_review', /три находки|потолок в три|НЕ БОЛЬШЕ ТРЁХ/],
     ['tasks_proposal', /месяц/],
-    ['tasks_focus', /максимум три|три задачи/],
+    ['tasks_focus', /максимум три|три задачи|не больше трёх задач/],
   ]) {
-    assert.match(rules, new RegExp(tool), `${tool} нигде не назван — модель его не вызовет`);
-    assert.match(rules, why, `у ${tool} нет объяснения, когда его звать`);
+    assert.match(where(tool), why, `у ${tool} нигде не сказано, когда его звать`);
   }
 });
 
@@ -1393,9 +1443,12 @@ test('правила различают его слово и вывод аген
   assert.ok(fact, 'про план и факт в правилах ничего нет');
   assert.match(fact, /трижды|три/i, 'порог повторов в правиле не назван');
 
-  const review = lines.find((l) => /старше месяца/i.test(l));
-  assert.ok(review, 'про пересмотр памяти в правилах ничего нет');
-  assert.match(review, /вычёркивает только он|удаления нет/i);
+  // Про пересмотр памяти правило вырезано как дубль: это механика планёрки, и
+  // она описана у самого инструмента.
+  const standup = createTasksTools({ api: liveApi({}), curatorJwt: JWT, clientId: CLIENT, nowMs: NOW, ToolError })
+    .schemas.find((s) => s.name === 'tasks_standup').description;
+  assert.match(standup, /старше месяца/i, 'про пересмотр памяти не сказано нигде');
+  assert.match(standup, /вычёркивает он сам|удалять записанное с его слов система не умеет/i);
 });
 
 test('правила не обещают того, чего инструменты не умеют', () => {
@@ -2212,6 +2265,32 @@ test('закрытие дня ставит галочки, пишет замет
   assert.match(res.text, /перенести \(tasks_reslot\), снять \(tasks_unslot\)/);
 });
 
+// ── Какой день закрывается по умолчанию ──────────────────────────────────
+//
+// Правило владельца от 2026-08-03: закрывается ВЧЕРАШНИЙ день, утром на
+// планёрке — вечером день ещё не кончился. До этого дефолт стоял на «сегодня»,
+// и правило спорило с инструментом: агент, прочитавший описание аргумента и не
+// вспомнивший правило, закрывал не тот день.
+
+test('без даты закрывается вчерашний день, а не сегодняшний', async () => {
+  const api = dayApi({ 'days/2026-08-01.md': PLAN });
+  const res = await session(api).tasks_close_day({ note: 'вчера всё срослось' });
+  assert.equal(res.structured.date, '2026-08-01', 'сегодня по МСК — 2026-08-02');
+  assert.match(api.day('2026-08-01'), /^> вчера всё срослось$/m);
+  assert.ok(!/^> вчера всё срослось$/m.test(api.day('2026-08-02')), 'сегодняшний день не тронут');
+});
+
+test('вчерашний и сегодняшний день закрываются словом, а не только датой', async () => {
+  const api = dayApi({ 'days/2026-08-01.md': PLAN });
+  const yesterday = await session(api).tasks_close_day({ date: 'вчера', note: 'словом' });
+  assert.equal(yesterday.structured.date, '2026-08-01');
+
+  // Сегодняшний закрыть можно, но только явно: это исключение, а не умолчание.
+  const today = await session(api).tasks_close_day({ date: 'сегодня', done: ['10:00'], note: 'день закончили раньше' });
+  assert.equal(today.structured.date, '2026-08-02');
+  assert.match(api.day('2026-08-02'), /- \[x\] 10:00–14:00 Лендинг/);
+});
+
 test('второе закрытие переписывает заметку, а не заводит вторую', async () => {
   const api = dayApi();
   await session(api).tasks_close_day({ date: '2026-08-02', done: ['10:00'], note: 'первая версия' });
@@ -2241,6 +2320,86 @@ test('неоднозначное «что состоялось» не закры
     (e) => e.code === 'slot_ambiguous',
   );
   assert.equal(api.saved.length, 0, 'ни галочки, ни заметки — иначе непонятно, закрыт день или нет');
+});
+
+// ── Деньги за вчера: напоминание на утренней планёрке ────────────────────
+//
+// Правка владельца от 2026-08-03: спрашивать не вечером, а утром, там же, где
+// закрывают вчерашний день. Вечером день ещё идёт, трата случится после
+// закрытия, и признак «внёс или нет» соврёт. За вчера всё уже случилось.
+
+const MONEY_EMPTY_AUG = '# Август\n\n- 02 -3000 билеты ~travel\n';
+const MONEY_WITH_YESTERDAY = '# Август\n\n- 01 -1200 еда ~family · тинькофф\n- 02 -3000 билеты ~travel\n';
+
+function closeApi(money) {
+  return dayApi({ 'days/2026-08-01.md': PLAN, 'money/2026-08.md': money });
+}
+
+test('пустой день в деньгах — это «не внесено», а не «трат не было»', () => {
+  const empty = tasks.moneyDayStatus(MONEY_EMPTY_AUG, '2026-08-01');
+  assert.equal(empty.empty, true);
+  assert.equal(empty.operations, 0);
+  assert.equal(empty.path, 'money/2026-08.md');
+
+  const said = tasks.moneyDayReminder(empty);
+  assert.match(said, /2026-08-01/);
+  assert.match(said, /не внесено/, 'формулировка обязана отличать отсутствие записей от отсутствия трат');
+  assert.match(said, /не утверждай/);
+  assert.ok(!/трат не было[^»]/.test(said.replace(/«[^»]*»/g, '')), 'вывода «трат не было» инструмент делать не вправе');
+
+  const filled = tasks.moneyDayStatus(MONEY_WITH_YESTERDAY, '2026-08-01');
+  assert.equal(filled.operations, 1);
+  assert.equal(tasks.moneyDayReminder(filled), null, 'внесённый день молчит');
+});
+
+test('закрытие вчерашнего дня напоминает свести деньги, если за вчера пусто', async () => {
+  const api = closeApi(MONEY_EMPTY_AUG);
+  const res = await session(api).tasks_close_day({ date: '2026-08-01', done: ['10:00'], note: 'ушёл на лендинг' });
+
+  assert.match(res.text, /Деньги за 2026-08-01 не сведены/);
+  assert.equal(res.structured.money_day.operations, 0);
+  assert.match(res.structured.money_reminder, /tasks_money/);
+});
+
+test('за вчера операции есть — про деньги молчим', async () => {
+  const api = closeApi(MONEY_WITH_YESTERDAY);
+  const res = await session(api).tasks_close_day({ date: '2026-08-01', done: ['10:00'], note: 'ушёл на лендинг' });
+
+  assert.equal(res.structured.money_reminder, null);
+  assert.ok(!/Деньги за/.test(res.text), 'напоминание при сведённом дне — это ровно тот шум, из-за которого их перестают читать');
+});
+
+test('про один и тот же день спрашивают один раз за утро, а не при каждом обращении', async () => {
+  const api = closeApi(MONEY_EMPTY_AUG);
+  const tools = session(api);
+  const first = await tools.tasks_close_day({ date: '2026-08-01', done: ['10:00'], note: 'первая версия' });
+  assert.match(first.text, /Деньги за 2026-08-01/);
+
+  // Второе закрытие того же дня и повестка после него — про деньги молчат:
+  // спрошенное лежит в памяти прохода, а не в памяти этого чата.
+  const again = await tools.tasks_close_day({ date: '2026-08-01', done: ['10:00'], note: 'на самом деле съехало' });
+  assert.equal(again.structured.money_reminder, null);
+  assert.equal(api.kv[tasks.STATE_KEY].money_nudge.date, '2026-08-01');
+
+  const fresh = await session(api).tasks_close_day({ date: '2026-08-01', done: ['10:00'], note: 'третий заход' });
+  assert.equal(fresh.structured.money_reminder, null, 'новая сессия того же утра — это не новый повод спросить');
+});
+
+test('закрытие сегодняшнего дня про деньги не спрашивает — день ещё идёт', async () => {
+  const api = dayApi({ 'money/2026-08.md': '# Август\n\n- 01 -1200 еда ~family\n' });
+  const res = await session(api).tasks_close_day({ date: '2026-08-02', done: ['10:00'], note: 'как-то так' });
+
+  assert.equal(res.structured.money_reminder, null);
+  assert.ok(!api.kv[tasks.STATE_KEY], 'по идущему дню и памяти прохода тратить незачем');
+});
+
+test('правила говорят, когда спрашивать про деньги и чего не утверждать', () => {
+  const rules = curatorInstructions('Антон', true);
+  const rule = rules.split('\n').find((line) => /деньги за вчера сводятся|сводятся и деньги за вчера/i.test(line));
+  assert.ok(rule, 'без правила приписку про несведённые деньги никто не прочитает как повод спросить');
+  assert.match(rule, /планёрк/i, 'место названо: утро, рядом с закрытием вчерашнего дня');
+  assert.match(rule, /tasks_money/);
+  assert.match(rule, /не внесено/, 'разница «не внёс» и «трат не было» должна стоять в самом правиле');
 });
 
 test('снять и перенести названы в правилах — иначе инструмент никто не вызовет', () => {
@@ -2330,8 +2489,13 @@ test('правило про деньги не спорит с money/README.md', 
   // README требует вносить сводку самому и ставить контур самому; прежняя
   // формулировка «сумму и контур бери у него» ровно этому противоречила.
   assert.ok(!/контур бери у него/.test(money));
-  assert.match(money, /не переспрашивая/);
-  assert.match(money, /контур ставь сам/);
+  // Разбор сводки без переспрашивания описан у самого tasks_money — в правиле
+  // остался только запрет на его файлы и порядок исправления ошибок.
+  const tool = createTasksTools({ api: liveApi({}), curatorJwt: JWT, clientId: CLIENT, nowMs: NOW, ToolError })
+    .schemas.find((s) => s.name === 'tasks_money');
+  assert.match(tool.description, /не переспрашивая/);
+  assert.match(tool.description, /контур ставь сам/);
+  assert.match(money, /строку-поправку/, 'исправление ошибки задним числом запрещено правилом');
   // Запрет на budget.md жил только в данных, а инструкция агента о нём молчала.
   assert.match(money, /budget\.md/);
 });
@@ -2461,6 +2625,9 @@ function standupApi(extra = {}) {
   const files = {
     [tasks.keyForPath('projects/heys.md')]: { path: 'projects/heys.md', text: STANDUP_HEYS, rev: 1, updatedAt: 1 },
     [tasks.keyForPath('days/2026-08-03.md')]: { path: 'days/2026-08-03.md', text: STANDUP_DAY, rev: 1, updatedAt: 1 },
+    // Деньги за вчера (01.08) в этом наборе уже внесены — значит про них
+    // молчим, и остальные проверки повестки не спотыкаются о напоминание.
+    [tasks.keyForPath('money/2026-08.md')]: { path: 'money/2026-08.md', text: AUG_MONEY, rev: 1, updatedAt: 1 },
   };
   for (const [path, text] of Object.entries(extra)) files[tasks.keyForPath(path)] = { path, text, rev: 1, updatedAt: 1 };
   const api = liveApi(files);
@@ -2482,6 +2649,25 @@ test('пустая повестка не падает и честно говор
   // а фон, ради которого утро и садятся разбирать.
   assert.match(res.text, /Картина: /);
   assert.ok(Array.isArray(res.structured.picture.free_days));
+});
+
+test('повестка спрашивает про вчерашние деньги, только когда их не вносили', async () => {
+  // По умолчанию в наборе деньги за 01.08 внесены — и повестка про них молчит.
+  const quiet = await session(standupApi()).tasks_standup({});
+  assert.equal(quiet.structured.money_yesterday, null);
+  assert.ok(!/Деньги за вчера/.test(quiet.text));
+
+  const api = standupApi({ 'money/2026-08.md': '# Август\n\n- 02 -3000 билеты ~travel\n' });
+  const res = await session(api).tasks_standup({});
+  assert.match(res.text, /Деньги за вчера:/);
+  assert.match(res.text, /Деньги за 2026-08-01 не сведены/);
+  assert.equal(res.structured.money_yesterday.date, '2026-08-01');
+  assert.equal(res.structured.empty, false, 'несведённые деньги — это не пустое утро');
+
+  // Второй вызов повестки за то же утро вопрос не повторяет.
+  const again = await session(api).tasks_standup({});
+  assert.equal(again.structured.money_yesterday, null);
+  assert.ok(!/Деньги за вчера/.test(again.text));
 });
 
 test('слот ведёт в несуществующую и в закрытую задачу — оба случая названы', async () => {
@@ -2704,7 +2890,709 @@ test('планёрка объявлена и в схемах, и обработ�
   assert.ok(schema, 'без схемы модель инструмента не увидит');
   assert.equal(schema.inputSchema.type, 'object');
   assert.equal(typeof built.tools.tasks_standup, 'function');
-  for (const arg of ['add', 'done']) assert.ok(schema.inputSchema.properties[arg], `${arg} объявлен`);
+  for (const arg of ['add', 'done', 'sleep', 'sleep_days']) assert.ok(schema.inputSchema.properties[arg], `${arg} объявлен`);
+});
+
+// ── Ревизия стенограмм перед повесткой ───────────────────────────────────
+//
+// Повестка собрана только из того, что уже заведено. Всё, что за день обсудили
+// и не завели, до неё не доходило вовсе и пропадало молча — а осталось оно
+// ровно в одном месте, в стенограмме.
+//
+// Отметка о сверке лежит в самом файле стенограммы: она отвечает на «где
+// кончилось прочитанное», а не на «сверяли ли сегодня». Разница видна на трёх
+// случаях, и все три проверяются ниже: вторая планёрка за день, ночная работа
+// во вчерашнем файле и пропущенная планёрка.
+//
+// Сравнивать код здесь не пытается и не будет: «это уже завели» — суждение о
+// смысле. Он приносит материал и подсказывает кандидатов; проверяется, что
+// материал верный, а шаг нельзя пропустить молча.
+
+const DAY_TRANSCRIPT = `## 09:10
+
+**Кин:** Давай сегодня разберём склад.
+
+**Claude:** Записал.
+
+## 11:40–12:05
+
+**Кин:** И не забудь про глазок, сегодня последний день возврата.
+`;
+
+/** Сегодня в тестах — 2026-08-02: стенограмма дня лежит по этой дате. */
+const DAY_TRANSCRIPT_PATH = 'transcript/2026-08-02.md';
+const YESTERDAY_TRANSCRIPT_PATH = 'transcript/2026-08-01.md';
+
+/** Отметка о сверке — той же функцией, которой её пишет инструмент. */
+const MARK = (summary, time = '08:00', date = '2026-08-02') =>
+  tasks.reviewMarkBlock({ date, time, summary });
+
+test('ревизия идёт первым блоком и показывает несверенный хвост', async () => {
+  const res = await session(standupApi({ [DAY_TRANSCRIPT_PATH]: DAY_TRANSCRIPT })).tasks_standup({});
+
+  // Первый блок после шапки: заводить найденное надо ДО повестки, иначе
+  // повестка соберётся без него.
+  assert.match(res.text.split('\n\n')[1], /^Ревизия — до повестки/, 'ревизия стоит перед повесткой, а не в хвосте');
+  assert.match(res.text, /transcript\/2026-08-02\.md/);
+  assert.match(res.text, /tasks_read/, 'сказано, чем читать — иначе шаг остаётся пожеланием');
+  assert.match(res.text, /отметок нет — файл целиком/, 'первая ревизия читает файл с начала');
+
+  const review = res.structured.day_review;
+  assert.equal(review.needed, true);
+  assert.equal(review.today_missing, false);
+  assert.equal(review.window_days, tasks.REVIEW_WINDOW_DAYS);
+  assert.equal(review.days.length, 1, 'несверенный хвост ровно у одного дня');
+  assert.equal(review.days[0].path, DAY_TRANSCRIPT_PATH);
+  assert.equal(review.days[0].sections, 2, 'два обмена за день');
+  assert.equal(review.days[0].last_entry, '11:40–12:05', 'время последней записи — из её заголовка');
+  assert.equal(review.days[0].marks, 0);
+});
+
+test('хвост берётся после отметки посреди файла, а не с начала', async () => {
+  const text = `## 09:10
+
+**Кин:** Разберём склад.
+
+${MARK('склад заведён задачей')}
+
+## 15:20
+
+**Кин:** И ещё про глазок.
+`;
+  const res = await session(standupApi({ [DAY_TRANSCRIPT_PATH]: text })).tasks_standup({});
+  const day = res.structured.day_review.days[0];
+  assert.equal(day.sections, 1, 'прочитанный до отметки обмен в хвост не входит');
+  assert.equal(day.last_entry, '15:20');
+  assert.equal(day.marks, 1);
+  assert.deepEqual(day.last_mark, { date: '2026-08-02', time: '08:00', summary: 'склад заведён задачей' });
+
+  // Прямо по разбору: выше отметки не осталось ничего.
+  const tail = tasks.transcriptTail(text);
+  assert.ok(!/склад/i.test(tail.text), 'сверенный текст в хвост не возвращается');
+  assert.match(tail.text, /глазок/);
+});
+
+test('отметок несколько — считается последняя, а не первая', () => {
+  const text = `## 09:10
+
+**Кин:** Первое.
+
+${MARK('утро сверено', '09:30')}
+
+## 12:00
+
+**Кин:** Второе.
+
+${MARK('день сверен', '13:00')}
+
+## 18:00
+
+**Кин:** Третье.
+`;
+  const tail = tasks.transcriptTail(text);
+  assert.equal(tail.marks, 2);
+  assert.equal(tail.last_mark.time, '13:00', 'граница прочитанного — последняя отметка');
+  assert.ok(!/Второе/.test(tail.text), 'текст между отметками уже сверен');
+  assert.match(tail.text, /Третье/);
+});
+
+test('отметка в последней строке — хвост пуст, и день в блок не идёт', async () => {
+  const text = `${DAY_TRANSCRIPT}\n${MARK('ничего не потеряно')}\n`;
+  const res = await session(standupApi({ [DAY_TRANSCRIPT_PATH]: text })).tasks_standup({});
+  assert.equal(res.structured.day_review.days.length, 0, 'сверенный день второй раз не просят');
+  assert.equal(res.structured.day_review.needed, false);
+  assert.ok(!/Ревизия — до повестки/.test(res.text));
+  assert.equal(tasks.dayReviewBlock(res.structured.day_review), null);
+});
+
+test('стенограммы за сегодня нет вовсе — это находка, а не тишина', async () => {
+  // В базовом наборе стенограммы нет вовсе: разговор за день не записан, и
+  // сверять ревизии не с чем. Промолчать здесь значит потерять день целиком.
+  const res = await session(standupApi()).tasks_standup({});
+
+  assert.match(res.text, /Ревизия — до повестки: стенограммы за сегодня нет вовсе/);
+  assert.equal(res.structured.day_review.today_missing, true);
+  assert.equal(res.structured.day_review.needed, true);
+  assert.equal(res.structured.day_review.days.length, 0);
+});
+
+test('хвост вчерашнего файла приезжает вместе с сегодняшним', async () => {
+  // Работа до двух ночи попадает во вчерашний файл, а планёрку могли
+  // пропустить. Память прохода на это отвечала «сегодня уже сверено».
+  const api = standupApi({
+    [YESTERDAY_TRANSCRIPT_PATH]: '## 23:40\n\n**Кин:** Ночью решили про потолок.\n',
+    [DAY_TRANSCRIPT_PATH]: DAY_TRANSCRIPT,
+  });
+  const res = await session(api).tasks_standup({});
+  assert.deepEqual(
+    res.structured.day_review.days.map((d) => d.date),
+    ['2026-08-02', '2026-08-01'],
+    'оба дня в блоке, свежий сверху',
+  );
+  assert.match(res.text, /transcript\/2026-08-01\.md/);
+});
+
+test('reviewed дописывает отметку в конец каждого несверенного файла', async () => {
+  const api = standupApi({
+    [YESTERDAY_TRANSCRIPT_PATH]: '## 23:40\n\n**Кин:** Ночью решили про потолок.\n',
+    [DAY_TRANSCRIPT_PATH]: DAY_TRANSCRIPT,
+  });
+  const mark = await session(api).tasks_standup({ reviewed: 'глазок не был заведён — поставил напоминание' });
+
+  assert.deepEqual(
+    mark.structured.day_review.marked.map((m) => m.path).sort(),
+    [YESTERDAY_TRANSCRIPT_PATH, DAY_TRANSCRIPT_PATH],
+    'отмечены оба файла, чей хвост читали',
+  );
+  for (const path of [YESTERDAY_TRANSCRIPT_PATH, DAY_TRANSCRIPT_PATH]) {
+    const saved = api.file(path);
+    assert.match(saved, /\*\*Сверено с доской\*\* · 2026-08-02 15:00 · глазок не был заведён/, `${path}: отметка с временем и итогом`);
+    assert.match(saved, /## 15:00\n\n\*\*Сверено с доской\*\*/, `${path}: у отметки свой заголовок-время`);
+  }
+
+  // Новая сборка инструментов — это новая сессия: отметка лежит в файле, а не
+  // в замыкании, и второй чат за утро ревизии заново не требует.
+  const after = await session(api).tasks_standup({});
+  assert.ok(!/Ревизия — до повестки/.test(after.text));
+  assert.equal(after.structured.day_review.needed, false);
+  assert.equal(after.structured.day_review.days.length, 0);
+});
+
+test('после отметки сверяется только дописанное, а не день заново', async () => {
+  const api = standupApi({ [DAY_TRANSCRIPT_PATH]: DAY_TRANSCRIPT });
+  await session(api).tasks_standup({ reviewed: 'ничего не потеряно' });
+  await session(api).tasks_append({
+    path: DAY_TRANSCRIPT_PATH,
+    block: '## 19:30\n\n**Кин:** Вечером договорились про потолок.',
+  });
+
+  const evening = await session(api).tasks_standup({});
+  const day = evening.structured.day_review.days[0];
+  assert.equal(day.sections, 1, 'вечерняя планёрка читает только вечерний обмен');
+  assert.equal(day.last_entry, '19:30');
+  assert.equal(day.last_mark.summary, 'ничего не потеряно');
+});
+
+test('отметка не ломает формат стенограммы: её заголовок — время', () => {
+  const block = tasks.reviewMarkBlock({ date: '2026-08-02', time: '9:05', summary: 'пусто' });
+  assert.equal(tasks.transcriptHeadingError(DAY_TRANSCRIPT_PATH, block), null, 'иначе tasks_append отклонит собственную отметку');
+  assert.match(block, /^## 09:05$/m, 'время приведено к каноническому виду');
+  assert.match(block.split('\n').pop(), tasks.REVIEW_MARK_RE, 'отметка находится тем же выражением, что её ищет разбор');
+});
+
+test('отмечать нечего, когда несверенного хвоста нет', async () => {
+  const api = standupApi({ [DAY_TRANSCRIPT_PATH]: `${DAY_TRANSCRIPT}\n${MARK('уже сверено')}\n` });
+  const before = api.file(DAY_TRANSCRIPT_PATH);
+  const res = await session(api).tasks_standup({ reviewed: 'ещё раз посмотрел' });
+  assert.deepEqual(res.structured.day_review.marked, []);
+  assert.equal(api.file(DAY_TRANSCRIPT_PATH), before, 'вторая отметка подряд файл не трогает');
+});
+
+test('отметка без итога не принимается: галочку ставят не читая', async () => {
+  const api = standupApi({ [DAY_TRANSCRIPT_PATH]: DAY_TRANSCRIPT });
+  await assert.rejects(
+    () => session(api).tasks_standup({ reviewed: '   ' }),
+    (e) => e.code === 'invalid_reviewed',
+  );
+  assert.equal(api.file(DAY_TRANSCRIPT_PATH), DAY_TRANSCRIPT, 'пустая отметка в файл не попадает');
+});
+
+test('память прохода про ревизию не хранит ничего', () => {
+  // Дата в памяти отвечала одинаково неверно на вторую планёрку за день, на
+  // ночную работу во вчерашнем файле и на пропущенную планёрку.
+  const state = tasks.ensureState({ day_review: { date: '2026-08-02', summary: 'старое' } });
+  assert.ok(!('day_review' in state), 'мёртвое поле не переносится из старой памяти');
+  assert.equal(typeof tasks.markDayReview, 'undefined', 'записывать в память больше нечем');
+});
+
+test('размер хвоста считается по обменам, а не по разметке', () => {
+  const shape = tasks.transcriptShape(DAY_TRANSCRIPT);
+  assert.equal(shape.sections, 2);
+  assert.equal(shape.lines, 5, 'пустые строки между блоками — это разметка, а не разговор');
+  assert.equal(shape.last_entry, '11:40–12:05');
+
+  // Старые стенограммы писались темой, а не временем: время появилось позже
+  // файлов. Выдумывать его вместо пропуска нельзя.
+  const byTopic = tasks.transcriptShape('## Планерка · склад\n\nтекст\n');
+  assert.equal(byTopic.sections, 1);
+  assert.equal(byTopic.last_entry, null);
+});
+
+test('служебный вызов планёрки блок ревизии не приносит', async () => {
+  // add / done / observe — это реплики посреди разговора, а не начало утра.
+  // Блок, который приходит на каждый чих, перестают читать первым.
+  const api = standupApi({ [DAY_TRANSCRIPT_PATH]: DAY_TRANSCRIPT });
+  const added = await session(api).tasks_standup({ add: 'обсудить склад' });
+  assert.ok(!/Ревизия — до повестки/.test(added.text));
+  assert.equal(added.structured.day_review, undefined);
+
+  const done = await session(api).tasks_standup({ done: 'склад' });
+  assert.ok(!/Ревизия — до повестки/.test(done.text));
+
+  const observed = await session(api).tasks_standup({
+    observe: 'В днях стоит созвон, а в задаче срок другой?',
+    sides: ['days/2026-08-03.md: 10:00 Созвон', 'projects/heys.md: due:2026-08-20'],
+  });
+  assert.ok(!/Ревизия — до повестки/.test(observed.text));
+});
+
+// ── Кандидаты на потерю ──────────────────────────────────────────────────
+//
+// Ревизия целиком держалась на внимании: код приносил текст, сравнивал человек.
+// Кандидаты страхуют от невнимательности — и ровно поэтому названы кандидатами:
+// код видит только, что похожего в задачнике нет, и не знает, завели это или
+// нет. Ложное срабатывание тут дешевле пропуска, но врать нельзя в обе стороны.
+
+const CANDIDATE_FILES = [
+  {
+    path: 'projects/heys.md',
+    text: '# HEYS\n\n## Задачи\n\n- [ ] P1 Позвонить Ивану due:2026-08-10\n  - открыто: брать ли второй монитор?\n',
+  },
+  { path: 'days/2026-08-05.md', text: '# План\n\n- 10:00–11:00 Созвон #дело\n' },
+  { path: 'docs/reminders.md', text: '# Напоминания\n\n## Напоминания\n\n- [ ] 2026-08-06 14:00 · забрать заказ\n' },
+];
+const CANDIDATE_MONEY = { '2026-08': '# Август\n\n- 01 -1200 еда ~family\n' };
+const CANDIDATE_CTX = {
+  files: CANDIDATE_FILES,
+  money: CANDIDATE_MONEY,
+  openQuestions: tasks.collectOpenQuestions([CANDIDATE_FILES[0]]),
+  today: '2026-08-02',
+};
+
+const CANDIDATE_TAIL = [{
+  date: '2026-08-02',
+  text: `## 14:00
+
+**Кин:** Договорились с Машей на подмену. Автомат стоит 340 тысяч, брать не будем. Встречаемся 09.09 в 07:30. Отдать ключи Маше не забудь. Ставим ли лимиты бюджета в конце августа?
+`,
+}];
+
+test('кандидаты вытаскивают из хвоста имя, сумму, время и вопрос', () => {
+  const found = tasks.reviewCandidates(CANDIDATE_TAIL, CANDIDATE_CTX);
+
+  // «Машей» и «Маше» — один человек: дубль снимается по основе, иначе одно имя
+  // в трёх падежах съедает весь потолок.
+  assert.deepEqual(found.people.map((p) => p.quote), ['Машей'], 'имя без задачи, слота и напоминания — одной строкой');
+  assert.equal(found.money.length, 1);
+  assert.equal(found.money[0].amount, 340000, '«340 тысяч» — это 340000, а не 340');
+  assert.match(found.money[0].what, /проверь/, 'сумма названа кандидатом, а не потерянной тратой');
+  assert.deepEqual(found.time.map((t) => t.quote).sort(), ['07:30', '09.09']);
+  assert.equal(found.questions.length, 1);
+  assert.match(found.questions[0].quote, /лимиты бюджета/);
+  assert.equal(found.total, 5);
+});
+
+test('кандидат замолкает, когда пара в задачнике нашлась', () => {
+  const files = [
+    { ...CANDIDATE_FILES[0], text: `${CANDIDATE_FILES[0].text}- [ ] P2 Подмена с Машей ^2026-08-02\n  - открыто: ставим ли лимиты бюджета в конце августа?\n` },
+    // Слот на названный день есть, но не на названный час: дата замолкает,
+    // час — нет. Иначе «встретимся 09.09 в 07:30» закрывалось бы чужим слотом.
+    { path: 'days/2026-09-09.md', text: '# План\n\n- 09:00–10:00 Встреча #дело\n' },
+    CANDIDATE_FILES[2],
+  ];
+  const found = tasks.reviewCandidates(CANDIDATE_TAIL, {
+    files,
+    money: { '2026-08': '# Август\n\n- 02 -340000 автомат ~studio\n' },
+    openQuestions: tasks.collectOpenQuestions([files[0]]),
+    today: '2026-08-02',
+  });
+  assert.deepEqual(found.people, [], 'имя нашлось в задаче — молчим');
+  assert.deepEqual(found.money, [], 'сумма нашлась в деньгах — молчим');
+  assert.deepEqual(found.questions, [], 'вопрос помечен «открыто:» — молчим');
+  assert.deepEqual(found.time.map((t) => t.quote), ['07:30'], 'дата нашла слот, час — нет: молчит только дата');
+});
+
+test('подписи говорящего и заголовки в кандидаты не идут', () => {
+  // «**Кин:**» стоит в каждом втором абзаце, а «## 14:00» — это разметка.
+  // Без вычистки блок кандидатов состоял бы из них одних.
+  const found = tasks.reviewCandidates(
+    [{ date: '2026-08-02', text: '## 14:00\n\n**Кин:** Ничего особенного.\n\n**Claude:** Записал.\n' }],
+    CANDIDATE_CTX,
+  );
+  assert.deepEqual(found.people, []);
+  assert.deepEqual(found.time, []);
+});
+
+test('вопрос из цитаты вынимается целиком и без подписи', () => {
+  // Разговор наполовину состоит из цитат. Без границы по кавычке два вопроса
+  // подряд слипались в один, а подпись «Его слова:» уезжала внутрь цитаты —
+  // и такой «вопрос» уже ни на что на доске не похож.
+  const found = tasks.reviewCandidates(
+    [{ date: '2026-08-02', text: 'Его слова: «А почему правила пришли обрезанными?» «Как этого избежать?»\n' }],
+    CANDIDATE_CTX,
+  );
+  assert.deepEqual(
+    found.questions.map((q) => q.quote),
+    ['А почему правила пришли обрезанными?', 'Как этого избежать?'],
+  );
+});
+
+test('мелкие суммы и заглавная в начале предложения кандидатами не становятся', () => {
+  const found = tasks.reviewCandidates(
+    [{ date: '2026-08-02', text: 'Кофе взяли за 90 руб. Потолок красить не будем.\n' }],
+    CANDIDATE_CTX,
+  );
+  assert.deepEqual(found.money, [], 'девяносто рублей — это шум, а не потеря');
+  assert.deepEqual(found.people, [], '«Потолок» после точки — грамматика, а не имя');
+});
+
+test('у кандидатов есть потолок, и отброшенные посчитаны', () => {
+  const names = ['Марине', 'Олегу', 'Тимуру', 'Ларисе', 'Егору', 'Ксении', 'Руслану'];
+  const found = tasks.reviewCandidates(
+    [{ date: '2026-08-02', text: `Договорились с ${names.join(', с ')}.\n` }],
+    CANDIDATE_CTX,
+  );
+  assert.equal(found.people.length, tasks.REVIEW_CANDIDATE_CAP);
+  assert.equal(found.dropped.people, names.length - tasks.REVIEW_CANDIDATE_CAP);
+});
+
+test('кандидатов нет — раздела в блоке тоже нет', () => {
+  const empty = tasks.emptyReviewCandidates();
+  assert.equal(tasks.reviewCandidateLines(empty), null, 'пустой раздел учит пролистывать блок целиком');
+  const status = tasks.dayReviewStatus(
+    [{ date: '2026-08-02', file: { path: DAY_TRANSCRIPT_PATH, text: DAY_TRANSCRIPT } }],
+    { date: '2026-08-02' },
+  );
+  assert.ok(!/Кандидаты/.test(tasks.dayReviewBlock(status)));
+});
+
+test('деньги и напоминания доезжают до кандидатов и гасят их', async () => {
+  // Оба файла читаются только ради этого блока и в разбор задачника не идут:
+  // строки напоминаний похожи на задачи. Если их не довезти, кандидат будет
+  // спрашивать про то, что уже записано, — и его перестанут читать первым.
+  const api = standupApi({
+    'docs/reminders.md': '# Напоминания\n\n## Напоминания\n\n- [ ] 2026-08-06 14:00 · забрать заказ\n',
+    [DAY_TRANSCRIPT_PATH]: '## 09:00\n\n**Кин:** Подушку положили 10000 руб, встречаемся в 14:00, а ещё нужен глазок за 3500 руб.\n',
+  });
+  const res = await session(api).tasks_standup({});
+  const found = res.structured.day_review.candidates;
+  assert.deepEqual(found.money.map((m) => m.amount), [3500], '10000 записано в деньгах — молчим, 3500 нет — спрашиваем');
+  assert.deepEqual(found.time, [], '14:00 стоит напоминанием — молчим');
+});
+
+test('кандидаты приезжают вместе с блоком и названы подсказкой, а не находкой', async () => {
+  const api = standupApi({
+    [DAY_TRANSCRIPT_PATH]: '## 14:00\n\n**Кин:** Договорились с Машей на подмену, автомат за 340 тысяч не берём.\n',
+  });
+  const res = await session(api).tasks_standup({});
+  assert.match(res.text, /Кандидаты на потерю — подсказка кода, а не результат сверки/);
+  assert.match(res.text, /деньги: «340 тысяч»/);
+  // Люди и время считаются, но в текст не идут: на живых стенограммах 1–3 августа
+  // они дали 0 попаданий из 11 — имена продуктов и таймстампы логов. Подсказка,
+  // где всё ложное, приучает пролистывать блок мимо глаз.
+  assert.doesNotMatch(res.text, /люди: «Машей»/, 'шумный признак в текст не идёт');
+  assert.ok(res.structured.day_review.candidates.people.length > 0, 'но считается и виден в structured');
+  assert.ok(res.structured.day_review.candidates.total > 0);
+});
+
+
+// ── Пять простых вопросов ────────────────────────────────────────────────
+//
+// Открытых вопросов на доске к 2026-08-03 было 29, и разбирались они плохо не
+// потому, что трудные: список, который нельзя закрыть за один заход, перестают
+// открывать целиком. Планёрка вынимает из него пять таких, на которые владелец
+// отвечает не вставая. Ломается в такой сущности три вещи, и все три здесь:
+// планка «простого» ползёт вверх и блок пустеет, ротация зацикливается и
+// вечерняя планёрка повторяет утреннюю, спячка превращается в удаление.
+//
+// Формулировки взяты из живого задачника, а не выдуманы: планка проверялась
+// на них, и подменять их удобными — значит проверять не то.
+
+const SIMPLE_HEYS = `# HEYS
+
+## Задачи
+
+- [ ] P1 Съёмка due:2026-08-04 ^2026-07-28
+  - открыто: Снимаем 4-го постановкой или ждём реального разбора 7-го?
+- [ ] P1 Норма белка due:2026-08-05 ^2026-07-20
+  - открыто: Проценты heys_norms остаются настройкой или становятся производной?
+  - открыто: Коэффициенты белка зашиваем в код или даём куратору настраивать на клиента?
+- [ ] P2 Чек-ин due:2026-08-09 ^2026-07-25
+  - открыто: Делаем heys_checkin до релиза 8-го или сразу после, отдельным заходом?
+  - открыто: Какой полный список шагов чек-ина в приложении сейчас — нужен, чтобы понять объём
+- [ ] P2 Анонс по базе due:2026-08-12 ^2026-07-26
+  - открыто: ставить ли due под анонс по базе?
+- [ ] P2 Ремонт склада ^2026-07-10
+  - открыто: Перегородка капитальная с дверью или лёгкое зонирование?
+  - открыто: Согласовать с собственником вывод воды или обойтись без него?
+`;
+
+/** Пул из шести простых: пятёрка помещается, а на второй заход остаётся хвост. */
+function simpleApi(extra = {}) {
+  return standupApi({ 'projects/heys.md': SIMPLE_HEYS, ...extra });
+}
+
+/** Синтетический пул: ровно то, что нужно ротации, — десять одинаково простых. */
+function pool(n, { due = null } = {}) {
+  return Array.from({ length: n }, (_, i) => ({
+    ref: `heys/00000${i}`,
+    path: 'projects/heys.md',
+    task: `Задача ${i}`,
+    question: `Берём вариант А или Б в ${i}?`,
+    due,
+    created: '2026-07-01',
+    line: i + 1,
+    key: `k${i}`,
+  }));
+}
+
+test('простым признаётся то, на что можно ответить не вставая', () => {
+  for (const question of [
+    'Перегородка капитальная с дверью или лёгкое зонирование?',
+    'ставить ли due под анонс по базе (уходит 8-10 августа)',
+    'Подключаем вторую подписку сегодня, чтобы со вторника работать без оглядки на остаток?',
+    'возраст и формат — девичник для школьниц или семейный',
+  ]) {
+    assert.equal(tasks.isSimpleQuestion(question).simple, true, `«${question}» — это выбор из двух`);
+  }
+});
+
+test('непростое отсеивается, и причина у каждого своя', () => {
+  const cases = [
+    // Вопрос без развилки: ответом будет не решение, а поход с рулеткой.
+    ['Какая площадь у склада и куда переезжает то, что там лежит?', 'нет развилки'],
+    ['Какое место в студии отдаём под конструкцию сейчас, пока комната не готова?', 'нет развилки'],
+    // Развилка есть, но своим словом её не закрыть — нужен второй человек.
+    ['Помещение своё или арендованное? Перепланировку согласовывать с собственником', 'нужен другой человек'],
+    ['Кормление котов было разовым или брат ещё в отъезде — ставим слот на 23:00?', 'нужен другой человек'],
+    ['Уборку двигаем на утро вторника или её делает кто-то другой, пока ты в Суперлэнде?', 'нужен другой человек'],
+    // Развилка есть, но между её сторонами лежит замер или подсчёт.
+    ['Уходит ли слив самотёком к кухне или нужен насос — замерить перепад высот', 'надо посчитать'],
+    // Не вопрос, а сложенный в строку кусок разбора.
+    [`03.08 вечером — на студию не поехали. ${'Всё студийное уехало на вторник одним заездом. '.repeat(4)}или двигаем?`, 'слишком длинный'],
+  ];
+  for (const [question, reason] of cases) {
+    const verdict = tasks.isSimpleQuestion(question);
+    assert.equal(verdict.simple, false, `«${question.slice(0, 40)}…» простым быть не должен`);
+    assert.equal(verdict.reason, reason, `причина отвода у «${question.slice(0, 40)}…»`);
+  }
+});
+
+test('границы слов в отсеве считаются буквами, а не \\b — иначе родня не ловится', () => {
+  // В JS `\b` считает буквой только ASCII, поэтому `\bбрат\b` не совпадает НИ
+  // С ЧЕМ: на этом отсев по родне однажды уже молча не работал.
+  assert.equal(tasks.isSimpleQuestion('Брат привезёт сам или забираем?').reason, 'нужен другой человек');
+  // Имя в середине — тот же признак: в деле есть кто-то ещё.
+  assert.equal(tasks.isSimpleQuestion('Ставим фотозону сами или зовём Машу?').reason, 'нужен другой человек');
+  // Заглавная в начале стоит по грамматике, а не по имени, и вопрос не топит.
+  assert.equal(tasks.isSimpleQuestion('Ставим фотозону сами или заказываем под ключ?').simple, true);
+});
+
+test('ближе срок задачи — выше вопрос; без срока идёт после всех', () => {
+  const dated = (due, key) => ({ ...pool(1)[0], due, key });
+  const sorted = [dated(null, 'нет'), dated('2026-09-01', 'дальний'), dated('2026-08-04', 'ближний')]
+    .sort(tasks.compareSimpleQuestions);
+  assert.deepEqual(sorted.map((q) => q.key), ['ближний', 'дальний', 'нет']);
+});
+
+test('при равных сроках выше тот вопрос, что записан раньше', () => {
+  // Своей даты у строки «открыто:» нет, поэтому старшинство берётся по месту в
+  // файле: строки дописываются вниз, и верхняя действительно старше.
+  const base = { due: '2026-08-05', created: '2026-07-01', question: 'Берём А или Б?', done: false };
+  const sorted = [
+    { ...base, path: 'projects/heys.md', line: 30, key: 'ниже' },
+    { ...base, path: 'projects/family.md', line: 99, key: 'другой файл' },
+    { ...base, path: 'projects/heys.md', line: 10, key: 'выше' },
+  ].sort(tasks.compareSimpleQuestions);
+  assert.deepEqual(sorted.map((q) => q.key), ['другой файл', 'выше', 'ниже']);
+});
+
+test('пятёрка на планёрке идёт по срокам и попадает в ответ отдельным блоком', async () => {
+  const res = await session(simpleApi()).tasks_standup({});
+  const asked = res.structured.simple_questions;
+  assert.equal(asked.length, tasks.SIMPLE_QUESTION_LIMIT);
+  assert.equal(res.structured.simple_questions_pool, 6, 'из десяти строк «открыто:» простыми признаны шесть');
+  assert.deepEqual(asked.map((q) => q.due), ['2026-08-04', '2026-08-05', '2026-08-05', '2026-08-09', '2026-08-12']);
+  // Непростое в пятёрку не попадает вовсе, сколько бы его ни было на доске.
+  assert.ok(!asked.some((q) => /полный список|Согласовать/i.test(q.question)), 'то, на что не ответить не вставая');
+  assert.match(res.text, /Простые вопросы/);
+  assert.match(res.text, /tasks_resolve/, 'без этого ответы останутся в чате и пропадут');
+  assert.match(res.text, /срок 2026-08-04/);
+});
+
+test('вечерняя планёрка спрашивает не то же, что утренняя', async () => {
+  const api = simpleApi();
+  const morning = await session(api).tasks_standup({});
+  const evening = await session(api).tasks_standup({});
+  const asked = evening.structured.simple_questions.map((q) => q.key);
+  assert.ok(
+    !morning.structured.simple_questions.map((q) => q.key).every((key) => asked.includes(key)),
+    'повтор утренней пятёрки вечером — это ровно тот шум, из-за которого блок перестанут читать',
+  );
+  assert.ok(asked.includes(evening.structured.simple_questions.find((q) => /Перегородка/.test(q.question)).key));
+  assert.ok(api.kv[tasks.STATE_KEY].question_rota.shown, 'показанное лежит в памяти прохода, а не в памяти чата');
+});
+
+test('круг идёт по всему пулу, а кончившись — начинается заново', () => {
+  const items = pool(10);
+  let state = tasks.ensureState(null);
+  const first = tasks.pickSimpleQuestions(items, state, { today: '2026-08-02' });
+  state = tasks.rememberShownQuestions(state, { ...first, reset: first.round_reset, nowMs: 1 });
+  const second = tasks.pickSimpleQuestions(items, state, { today: '2026-08-02' });
+  assert.equal(second.round_reset, false, 'десять на пятёрки делятся ровно — круг ещё идёт');
+  assert.deepEqual(
+    first.picked.map((q) => q.key).filter((key) => second.picked.some((q) => q.key === key)),
+    [],
+    'второй заход не повторяет первый',
+  );
+
+  state = tasks.rememberShownQuestions(state, { ...second, reset: second.round_reset, nowMs: 2 });
+  const third = tasks.pickSimpleQuestions(items, state, { today: '2026-08-02' });
+  assert.equal(third.round_reset, true);
+  assert.equal(third.picked.length, tasks.SIMPLE_QUESTION_LIMIT, 'молчать нельзя: круг начинается заново');
+  assert.deepEqual(third.picked.map((q) => q.key), first.picked.map((q) => q.key), 'заново — значит с начала списка');
+});
+
+test('вопросов меньше пятёрки — спрашиваются все, а не тают до нуля', () => {
+  const items = pool(3);
+  let state = tasks.ensureState(null);
+  for (let round = 0; round < 3; round += 1) {
+    const picked = tasks.pickSimpleQuestions(items, state, { today: '2026-08-02' });
+    assert.equal(picked.picked.length, 3, `круг ${round}: три вопроса — это три вопроса`);
+    state = tasks.rememberShownQuestions(state, { ...picked, reset: picked.round_reset, nowMs: round });
+  }
+});
+
+test('отвеченный вопрос уходит из ротации сам — отдельной записи о нём не заводят', () => {
+  const items = pool(3);
+  const state = tasks.rememberShownQuestions(tasks.ensureState(null), {
+    picked: items, keys: items.map((q) => q.key), reset: false, nowMs: 1,
+  });
+  // Ответ снял строку «открыто:» — вопрос исчез из пула, и в памяти его быть не должно.
+  const after = tasks.rememberShownQuestions(state, {
+    picked: [], keys: ['k0', 'k1'], reset: false, nowMs: 2,
+  });
+  assert.deepEqual(Object.keys(after.question_rota.shown).sort(), ['k0', 'k1']);
+});
+
+test('«не трогать» — это спячка, а не удаление: строка «открыто:» остаётся', async () => {
+  const api = simpleApi();
+  const before = api.file('projects/heys.md');
+  const off = await session(api).tasks_standup({ sleep: 'Перегородка' });
+
+  assert.equal(off.structured.until, '2026-08-16', 'по умолчанию четырнадцать дней');
+  assert.equal(off.structured.days, tasks.QUESTION_SLEEP_DAYS);
+  assert.equal(api.file('projects/heys.md'), before, 'вопрос усыплён, а не снят — снимает его только ответ');
+  assert.match(off.text, /tasks_resolve/);
+
+  const agenda = await session(api).tasks_standup({});
+  assert.ok(!agenda.structured.simple_questions.some((q) => /Перегородка/.test(q.question)), 'спящий не спрашивается');
+  assert.equal(agenda.structured.simple_questions_sleeping.length, 1);
+  assert.equal(agenda.structured.simple_questions_sleeping[0].until, '2026-08-16');
+});
+
+test('срок спячки задаётся явно, а проснувшийся вопрос возвращается в общий пул', () => {
+  const items = pool(2);
+  const asleep = tasks.sleepQuestion(tasks.ensureState(null), items[0], { until: '2026-08-09', nowMs: 1 });
+  assert.equal(tasks.pickSimpleQuestions(items, asleep, { today: '2026-08-02' }).pool, 1);
+  assert.equal(tasks.pickSimpleQuestions(items, asleep, { today: '2026-08-08' }).pool, 1, 'накануне ещё спит');
+  assert.equal(tasks.pickSimpleQuestions(items, asleep, { today: '2026-08-09' }).pool, 2, 'в день срока уже проснулся');
+});
+
+test('усыпить можно только существующий вопрос и только однозначно названный', async () => {
+  const api = simpleApi();
+  await assert.rejects(() => session(api).tasks_standup({ sleep: 'вопроса такого нет' }), (e) => e.code === 'question_not_found');
+  await assert.rejects(() => session(api).tasks_standup({ sleep: 'или' }), (e) => e.code === 'ambiguous_question');
+  await assert.rejects(
+    () => session(api).tasks_standup({ sleep: 'Перегородка', sleep_days: 0 }),
+    (e) => e.code === 'invalid_sleep_days',
+  );
+});
+
+test('пятёрка видна в шапке — иначе блок пролистают вместе с остальным', async () => {
+  const res = await session(simpleApi()).tasks_standup({});
+  assert.equal(res.structured.empty, false, 'пять неразобранных вопросов — это не пустое утро');
+  assert.match(res.text, /Простых вопросов 5 из 6/);
+});
+
+test('под закрытой задачей спрашивать нечего, даже если строка «открыто:» осталась', async () => {
+  const closed = `${SIMPLE_HEYS}- [x] P2 Уже решили ^2026-07-01\n  - открыто: Берём вариант А или Б?\n`;
+  const res = await session(simpleApi({ 'projects/heys.md': closed })).tasks_standup({});
+  assert.equal(res.structured.simple_questions_pool, 6, 'остаток под закрытой задачей в пул не идёт');
+  assert.ok(!res.structured.simple_questions.some((q) => /вариант А или Б/.test(q.question)));
+});
+
+// ── Перенос задачи сворачивает её вопросы ────────────────────────────────
+//
+// Живой случай 2026-08-04: переделку склада отложили до сентября, а планёрка
+// продолжала спрашивать «уходит слив самотёком или нужен насос». Строку
+// «вернуться:» доска понимала и такую задачу сворачивала, а открытые вопросы
+// под ней о переносе не знали и лезли и в пятёрку, и в «Требует решения».
+//
+// Собственная спячка вопроса при этом остаётся отдельной сущностью: там отложен
+// один вопрос, здесь вся задача целиком.
+
+/** Тот же набор, но переделка склада отложена до сентября. */
+const DEFERRED_HEYS = SIMPLE_HEYS.replace(
+  '- [ ] P2 Ремонт склада ^2026-07-10\n',
+  '- [ ] P2 Ремонт склада ^2026-07-10\n  - вернуться: 2026-09-01 — до сентября к этому не возвращаемся\n',
+);
+
+test('вопросы отложенной задачи не спрашиваются и не считаются открытыми', async () => {
+  const res = await session(simpleApi({ 'projects/heys.md': DEFERRED_HEYS })).tasks_standup({});
+
+  assert.ok(!res.structured.simple_questions.some((q) => /Перегородка/.test(q.question)),
+    'решено не возвращаться — значит и вопросы про это не задаём');
+  // Из двух вопросов склада простым был один: второй («согласовать с
+  // собственником») отсеивается раньше — там нужен другой человек.
+  assert.equal(res.structured.simple_questions_pool, 5, 'счётчик открытых тоже не считает свёрнутые');
+  const asleep = res.structured.simple_questions_sleeping;
+  assert.equal(asleep.length, 1, 'вопрос не выкинут, а свёрнут — снимает его только ответ');
+  assert.equal(asleep[0].until, '2026-09-01');
+});
+
+test('отложенная задача уходит из «Требует решения» — как и на доске', async () => {
+  const api = simpleApi({ 'projects/heys.md': DEFERRED_HEYS });
+  const list = await session(api).tasks_list({});
+  assert.ok(!list.structured.blocked.some((t) => /Ремонт склада/.test(t.title)),
+    '«вернуться: 2026-09-01» — это уже данный ответ «не сейчас», а не ожидание ответа');
+
+  const agenda = await session(api).tasks_standup({});
+  assert.ok(!agenda.structured.decide.some((t) => /Ремонт склада/.test(t.title)),
+    'два разных ответа на «что требует решения» — то, ради чего планёрку и заводили');
+});
+
+test('день пришёл — вопросы и задача возвращаются сами, без отдельного действия', async () => {
+  const api = simpleApi({ 'projects/heys.md': DEFERRED_HEYS });
+  const september = Date.UTC(2026, 8, 1, 6, 0);          // 2026-09-01 по Москве
+
+  const res = await session(api, september).tasks_standup({});
+  assert.equal(res.structured.simple_questions_pool, 6, 'в день срока вопросы уже в пуле');
+  assert.equal(res.structured.simple_questions_sleeping.length, 0);
+
+  const list = await session(api, september).tasks_list({});
+  assert.ok(list.structured.blocked.some((t) => /Ремонт склада/.test(t.title)));
+});
+
+test('перенос задачи и спячка вопроса не гасят друг друга: молчим до более поздней', () => {
+  const items = pool(2).map((item, i) => (i === 0 ? { ...item, back: '2026-09-01' } : item));
+  const asleep = tasks.sleepQuestion(tasks.ensureState(null), items[0], { until: '2026-08-09', nowMs: 1 });
+
+  const round = tasks.pickSimpleQuestions(items, asleep, { today: '2026-08-10' });
+  assert.equal(round.pool, 1, 'спячка кончилась, но задача всё ещё отложена');
+  assert.equal(round.sleeping[0].until, '2026-09-01');
+  assert.equal(round.sleeping[0].deferred, true, 'видно, что молчит из-за переноса задачи, а не своей спячки');
+
+  // И наоборот: перенос прошёл, а своя спячка вопроса ещё нет.
+  const later = tasks.pickSimpleQuestions(
+    [{ ...items[0], back: '2026-08-05' }],
+    tasks.sleepQuestion(tasks.ensureState(null), items[0], { until: '2026-09-20', nowMs: 1 }),
+    { today: '2026-08-10' },
+  );
+  assert.equal(later.sleeping[0].until, '2026-09-20');
+  assert.equal(later.sleeping[0].deferred, false);
+});
+
+test('«вернуться:» разбирается так же, как на доске, включая короткую дату', () => {
+  const iso = ['вернуться: 2026-09-01 — до сентября не трогаем'];
+  assert.equal(tasks.taskBackDate(iso, { today: '2026-08-02' }), '2026-09-01', 'причина после тире не мешает');
+
+  // Короткая форма без года: ближайший год, в котором дата ещё не прошла.
+  assert.equal(tasks.taskBackDate(['вернуться: 01.09'], { today: '2026-08-02' }), '2026-09-01');
+  assert.equal(tasks.taskBackDate(['вернуться: 01.09'], { today: '2026-12-20' }), '2027-09-01', 'сентябрь впереди, а не позади');
+
+  assert.equal(tasks.taskBackDate(['открыто: а как?', 'ждём: ответа'], { today: '2026-08-02' }), null);
+  assert.equal(tasks.taskBackDate(['вернуться: как-нибудь'], { today: '2026-08-02' }), null, 'дата или ничего');
 });
 
 // ── Замеченное по смыслу ─────────────────────────────────────────────────
