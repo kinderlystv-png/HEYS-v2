@@ -1726,22 +1726,71 @@ const PREFS_PATH = 'docs/preferences.md';
 const PREFS_SECTION = '## Как он решает';
 const PREFS_SOFT_LIMIT = 60;
 
-/** Строки памяти предпочтений: дата, вид, сама формулировка, откуда известно. */
+/**
+ * Виды памяти и их права.
+ *
+ * Первые три — с его слов, и трогать их без него нельзя. Четвёртый заведён
+ * отдельно именно ради разницы в правах: «наблюдение» — это то, что агент
+ * вывел из данных сам. Свой вывод можно уточнить, когда он подтвердился ещё
+ * раз; его решение переписать выводом нельзя никогда, и держится это не на
+ * добросовестности модели, а на отказе инструмента.
+ */
+const PREFS_KINDS = ['предпочтение', 'порог', 'решение', 'наблюдение'];
+const PREFS_OWNER_KINDS = ['предпочтение', 'порог', 'решение'];
+
+/** Сколько дней записи хватает, чтобы спрашивать «а это ещё нужно». */
+const PREFS_STALE_DAYS = 30;
+
+/** Вложенные строки записи: заданный вопрос и два счётчика. */
+const PREFS_CHILD_RE = /^(вопрос|подтверждено|пригодилось):\s*(.*)$/i;
+
+function parseCounterChild(value) {
+  const count = /^(\d+)/.exec(String(value || '').trim());
+  const date = /(\d{4}-\d{2}-\d{2})/.exec(String(value || ''));
+  return { count: count ? Number(count[1]) : 0, date: date ? date[1] : null };
+}
+
+function counterChild(field, { count, date }) {
+  return `${field}: ${count}${date ? `, последний раз ${date}` : ''}`;
+}
+
+/**
+ * Строки памяти предпочтений: дата, вид, сама формулировка, откуда известно.
+ *
+ * Под записью могут лежать вложенные строки — заданный вопрос и счётчики. Они
+ * не отдельная запись, а её продолжение, поэтому разбираются вместе с ней:
+ * запись без них — обычная старая строка, и читается она ровно как раньше.
+ */
 function parsePreferences(file) {
   const out = [];
   const lines = String((file && file.text) || '').split('\n');
+  let current = null;
   for (let i = 0; i < lines.length; i += 1) {
-    const match = /^-\s*(\d{4}-\d{2}-\d{2})\s*·\s*([^·]+?)\s*·\s*(.+)$/.exec(lines[i].trim());
-    if (!match) continue;
+    const raw = lines[i];
+    if (/^\s/.test(raw)) {
+      if (!current) continue;
+      const child = PREFS_CHILD_RE.exec(raw.trim().replace(/^[-*]\s+/, ''));
+      if (!child) continue;
+      const field = child[1].toLowerCase();
+      if (field === 'вопрос') current.question = child[2].trim();
+      else current[field === 'подтверждено' ? 'confirmed' : 'used'] = parseCounterChild(child[2]);
+      continue;
+    }
+    const match = /^-\s*(\d{4}-\d{2}-\d{2})\s*·\s*([^·]+?)\s*·\s*(.+)$/.exec(raw.trim());
+    if (!match) { current = null; continue; }
     const body = match[3];
     const split = body.lastIndexOf(' — ');
-    out.push({
+    current = {
       line: i,
       date: match[1],
       kind: match[2].trim(),
       note: (split === -1 ? body : body.slice(0, split)).trim(),
       evidence: split === -1 ? null : body.slice(split + 3).trim(),
-    });
+      question: null,
+      confirmed: { count: 0, date: null },
+      used: { count: 0, date: null },
+    };
+    out.push(current);
   }
   return out;
 }
@@ -1749,18 +1798,85 @@ function parsePreferences(file) {
 /**
  * Уже записано ли то же самое. Дословного совпадения мало: одна и та же мысль
  * записывается разными словами, и память быстро зарастает повторами.
+ *
+ * Вопрос сравнивается наравне с ответом, и это не удвоение проверки. Ответы на
+ * один и тот же вопрос формулируются как угодно («уборка — три часа», «на
+ * уборку закладываем 180 минут»), а сам вопрос человек и модель задают
+ * похожими словами почти всегда. Повтор ловится по той оси, по которой он
+ * действительно повторяется.
  */
-function knownPreference(existing, note, { threshold = DECISION_SIMILARITY } = {}) {
+function knownPreference(existing, note, { threshold = DECISION_SIMILARITY, question = null } = {}) {
   let best = null;
+  const consider = (entry, score, by) => {
+    if (score < threshold) return;
+    if (best && best.score >= score) return;
+    best = { ...entry, score: Math.round(score * 100) / 100, matched_by: by };
+  };
   for (const entry of existing) {
-    const score = questionSimilarity(note, entry.note);
-    if (score >= threshold && (!best || score > best.score)) best = { ...entry, score: Math.round(score * 100) / 100 };
+    if (note) consider(entry, questionSimilarity(note, entry.note), 'формулировка');
+    if (question) {
+      if (entry.question) consider(entry, questionSimilarity(question, entry.question), 'вопрос');
+      consider(entry, questionSimilarity(question, entry.note), 'вопрос');
+    }
   }
   return best;
 }
 
 function preferenceLine({ date, kind, note, evidence }) {
   return `- ${date} · ${kind} · ${note}${evidence ? ` — ${evidence}` : ''}`;
+}
+
+/** Запись целиком: строка и заданный вопрос под ней, если он был. */
+function preferenceBlock({ date, kind, note, evidence, question = null }) {
+  const head = preferenceLine({ date, kind, note, evidence });
+  const asked = String(question || '').trim();
+  return asked ? `${head}\n  - вопрос: ${asked}` : head;
+}
+
+/**
+ * Счётчик у записи памяти: сколько раз она подтверждалась или пригождалась.
+ *
+ * Правится сразу пачкой и с конца файла: каждая вставка вложенной строки
+ * двигает номера строк ниже, и обновление «сверху вниз» промахнулось бы уже на
+ * второй записи.
+ */
+function bumpPreferenceCounter(text, entries, { field = 'пригодилось', date = null } = {}) {
+  const key = field === 'подтверждено' ? 'confirmed' : 'used';
+  let out = String(text || '');
+  const order = [...(entries || [])].sort((a, b) => b.line - a.line);
+  for (const entry of order) {
+    const lines = out.split('\n');
+    const next = counterChild(field, { count: (entry[key]?.count || 0) + 1, date });
+    let at = -1;
+    for (let i = entry.line + 1; i < lines.length; i += 1) {
+      if (!/^\s/.test(lines[i]) || !lines[i].trim()) break;
+      const child = PREFS_CHILD_RE.exec(lines[i].trim().replace(/^[-*]\s+/, ''));
+      if (child && child[1].toLowerCase() === field) { at = i; break; }
+    }
+    if (at === -1) {
+      out = appendChild(out, entry.line, next);
+    } else {
+      lines[at] = `  - ${next}`;
+      out = lines.join('\n');
+    }
+  }
+  return out;
+}
+
+/**
+ * Что пора пересмотреть: записи старше месяца, которые ни разу не пригодились.
+ *
+ * «Пригодилось» считается с того дня, как счётчик вообще завели, — у записи,
+ * сделанной раньше, пустой счётчик значит «не считали», а не «не нужна». Это
+ * не мешает делу: список только показывается, и вычёркивает из него он сам.
+ */
+function stalePreferences(entries, { today = null, days = PREFS_STALE_DAYS } = {}) {
+  if (!today) return [];
+  return (entries || [])
+    .map((entry) => ({ entry, age: Math.floor((dateToMs(today) - dateToMs(entry.date)) / DAY_MS) }))
+    .filter(({ entry, age }) => Number.isFinite(age) && age > days && !(entry.used?.count > 0))
+    .map(({ entry, age }) => ({ ...entry, age_days: age }))
+    .sort((a, b) => b.age_days - a.age_days);
 }
 
 // ── Окружение находки ────────────────────────────────────────────────────
@@ -3324,6 +3440,84 @@ function stuckPromises(files, { today = null, staleDays = STANDUP_STALE_DAYS } =
   return out.sort((a, b) => b.days - a.days);
 }
 
+// ── План и факт ──────────────────────────────────────────────────────────
+//
+// Единственный факт, который в задачнике действительно есть, — состоялось или
+// нет. Фактической длительности нет вовсе: галочка не запоминает, во сколько
+// дело началось на самом деле и когда кончилось. Считать «уборка заняла три
+// часа» здесь не из чего, и подставлять сюда плановые часы значило бы выдать
+// план за факт — то есть сравнить план с самим собой.
+//
+// Факт читается только с закрытых дней. Слот без галочки в закрытом дне — это
+// «не состоялось», в незакрытом — «неизвестно»: там просто никто не отмечал.
+//
+// Порог в три случая выбран арифметикой, а не на глаз. Если исход случаен, как
+// монета, три одинаковых подряд выпадают в одном случае из восьми, два — в
+// каждом четвёртом. То есть один сорванный слот не значит ничего, два — почти
+// ничего, а на трёх «не состоялось» уже дешевле спросить, чем молчать. Ждать
+// четырёх при двух десятках закрытых дней значит не сработать никогда.
+
+const PLAN_FACT_MIN_CASES = 3;
+/** Доля срывов, ниже которой это не закономерность, а обычный разброс. */
+const PLAN_FACT_MIN_SHARE = 0.6;
+/** Насколько далеко назад смотрим: дальше это уже не «сейчас так живётся». */
+const PLAN_FACT_WINDOW_DAYS = 60;
+
+/**
+ * Повторяющиеся расхождения плана с фактом по закрытым дням.
+ *
+ * Возвращает только счёт состоявшегося и несостоявшегося — ничего про
+ * длительность, потому что её взять неоткуда.
+ */
+function planFactPatterns(files, {
+  today = null,
+  minCases = PLAN_FACT_MIN_CASES,
+  minShare = PLAN_FACT_MIN_SHARE,
+  windowDays = PLAN_FACT_WINDOW_DAYS,
+} = {}) {
+  if (!today) return [];
+  const from = shiftDate(today, -windowDays);
+  const byTitle = new Map();
+  for (const file of files || []) {
+    const found = /^days\/(\d{4}-\d{2}-\d{2})\.md$/i.exec(String(file.path || ''));
+    if (!found) continue;
+    const date = found[1];
+    if (date > today || date < from) continue;
+    // Незакрытый день фактом не является: там не «не состоялось», а «не смотрели».
+    if (!dayNote(file.text)) continue;
+    for (const slot of parseSlots(file.text)) {
+      const title = slotCoreTitle(slot.title);
+      const key = title.toLowerCase();
+      if (!key) continue;
+      if (!byTitle.has(key)) byTitle.set(key, { title, planned: 0, happened: 0, missed: 0, days: [] });
+      const acc = byTitle.get(key);
+      acc.planned += 1;
+      if (slot.done) acc.happened += 1;
+      else { acc.missed += 1; acc.days.push(date); }
+    }
+  }
+  const out = [];
+  for (const acc of byTitle.values()) {
+    if (acc.missed < minCases) continue;
+    const share = acc.missed / acc.planned;
+    if (share < minShare) continue;
+    out.push({ ...acc, share: Math.round(share * 100) / 100, days: acc.days.slice(-5) });
+  }
+  return out.sort((a, b) => b.missed - a.missed || String(a.title).localeCompare(String(b.title)));
+}
+
+/** Как расхождение звучит вопросом к нему. Утверждать тут нечего: причину знает он. */
+function planFactQuestion(pattern) {
+  return `«${pattern.title}» стоит в плане, но в закрытых днях не состоялось ${pattern.missed} раз из ${pattern.planned} — план неверный или отмечать забываем?`;
+}
+
+function planFactSides(pattern) {
+  return [
+    `план: ${pattern.title} — ${pattern.planned} раз в закрытых днях`,
+    `факт: состоялось ${pattern.happened}, без отметки ${pattern.missed}${pattern.days.length ? ` (${pattern.days.join(', ')})` : ''}`,
+  ];
+}
+
 module.exports = {
   KEY_PREFIX,
   INDEX_KEY,
@@ -3374,6 +3568,13 @@ module.exports = {
   knownObservation,
   findDivergences,
   stuckPromises,
+  // план и факт
+  PLAN_FACT_MIN_CASES,
+  PLAN_FACT_MIN_SHARE,
+  PLAN_FACT_WINDOW_DAYS,
+  planFactPatterns,
+  planFactQuestion,
+  planFactSides,
   // загруженность вперёд
   BOARD_DAY_START,
   BOARD_DAY_END,
@@ -3486,9 +3687,15 @@ module.exports = {
   PREFS_PATH,
   PREFS_SECTION,
   PREFS_SOFT_LIMIT,
+  PREFS_KINDS,
+  PREFS_OWNER_KINDS,
+  PREFS_STALE_DAYS,
   parsePreferences,
   knownPreference,
   preferenceLine,
+  preferenceBlock,
+  bumpPreferenceCounter,
+  stalePreferences,
   // окружение находки
   projectNeighborhood,
   slotsAround,

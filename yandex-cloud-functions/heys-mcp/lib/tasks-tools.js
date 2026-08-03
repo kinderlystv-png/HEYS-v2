@@ -224,7 +224,7 @@ const TASKS_BOARD_SCHEMAS = [
   },
   {
     name: 'tasks_close_day',
-    description: 'Закрыть день: отметить, что из запланированного состоялось, и записать одну фразу «как прошло» строкой «> …» — так это описано в days/README.md. Без закрытия в задачнике остаётся один план: слот без галочки в незакрытом дне значит «неизвестно», а не «не состоялось», и на «как прошла неделя», «что я забросил», «сколько реально ушло на kinderly» отвечать нечем. Отмечай только то, что он сам назвал состоявшимся — галочка это его слово, а не твой вывод. Что осталось без отметки, инструмент перечислит в ответе: перенести, снять или оставить — решает он.',
+    description: 'Закрыть день: отметить, что из запланированного состоялось, и записать одну фразу «как прошло» строкой «> …» — так это описано в days/README.md. Без закрытия в задачнике остаётся один план: слот без галочки в незакрытом дне значит «неизвестно», а не «не состоялось», и на «как прошла неделя», «что я забросил», «сколько реально ушло на kinderly» отвечать нечем. Отмечай только то, что он сам назвал состоявшимся — галочка это его слово, а не твой вывод. Что осталось без отметки, инструмент перечислит в ответе: перенести, снять или оставить — решает он. Записывается ровно один факт — состоялось или нет. Фактической длительности здесь нет и взять её неоткуда: сколько дело заняло на самом деле, не хранит ничто, и плановые часы за факт выдавать нельзя. Повторяющиеся расхождения плана с фактом собирает планёрка (tasks_standup), когда их наберётся трижды.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -324,13 +324,14 @@ const TASKS_BOARD_SCHEMAS = [
   },
   {
     name: 'tasks_learn',
-    description: 'Запомнить, как куратор решает: повторяющийся выбор, порог, правило, которое он назвал сам. Хранится обычным файлом задачника, который он может прочитать и поправить, и возвращается в каждом tasks_context. Без аргументов — показать всё, что уже записано. Записывай только то, что он подтвердил словами; догадка «ему, наверное, так удобнее» эту память обесценивает.',
+    description: 'Запомнить, как куратор решает: повторяющийся выбор, порог, правило, которое он назвал сам. Хранится обычным файлом задачника, который он может прочитать и поправить, и возвращается в каждом tasks_context. Сюда же кладётся ответ на любой заданный ему вопрос — передавай его в question рядом с ответом, тогда повтор ловится и по формулировке вопроса, а не только ответа. Без аргументов — показать всё, что уже записано; с одним question — проверить, не спрашивал ли ты это раньше. Записывай только то, что он подтвердил словами; свой вывод из данных — это вид «наблюдение», и его слово наблюдением не переписывается.',
     inputSchema: {
       type: 'object',
       properties: {
         note: { type: 'string', description: 'Как он решает — одной строкой, без пересказа разговора. «Развилки по деньгам решает сам, не делегирует», а не «мы обсудили деньги».' },
         evidence: { type: 'string', description: 'Откуда это известно: его слова цитатой, дата разговора или адрес задачи. Обязательно — без опоры запись не отличить от догадки.' },
-        kind: { type: 'string', description: 'Вид: «предпочтение» (по умолчанию), «порог» (названное им число или граница), «решение» (разовый выбор с последствиями).' },
+        kind: { type: 'string', description: 'Вид: «предпочтение» (по умолчанию), «порог» (названное им число или граница), «решение» (разовый выбор с последствиями), «наблюдение» (твой вывод из данных, а не его слова). У наблюдения меньше прав: оно уточняется само, когда подтвердилось, но переписать им его решение инструмент не даст.' },
+        question: { type: 'string', description: 'Вопрос, который ты ему задал, — его же словами, коротко. Без него повтор ловится только по формулировке ответа, а один и тот же ответ записывается по-разному. Переданный без note — это проверка «я уже спрашивал?», ничего не пишущая.' },
       },
       required: [],
     },
@@ -410,7 +411,7 @@ const TASKS_AGENT_SCHEMAS = [
   },
   {
     name: 'tasks_standup',
-    description: 'Повестка планёрки: с чего начинается утро. Собирает в одном ответе то, что иначе пришлось бы доставать пятью вызовами: что он сам просил обсудить, что висит нерешённым, где данные задачника разошлись между собой, что ты заметил по смыслу, какие обещания зависли, и коротко — картину времени и денег. Расхождения и замеченное разведены намеренно: первое посчитано по файлам и это факт, второе — твой вопрос к нему. Аргумент add кладёт вопрос на планёрку заранее — вызывай его сразу, как он сказал «обсудим на планёрке»; observe выносит замеченное; done снимает пункт, когда обсудили.',
+    description: 'Повестка планёрки: с чего начинается утро. Собирает в одном ответе то, что иначе пришлось бы доставать пятью вызовами: что он сам просил обсудить, что висит нерешённым, где данные задачника разошлись между собой, что ты заметил по смыслу, где план разошёлся с фактом по закрытым дням, какие обещания зависли, какие записи памяти пора пересмотреть, и коротко — картину времени и денег. Расхождения и замеченное разведены намеренно: первое посчитано по файлам и это факт, второе — твой вопрос к нему. «План и факт» — тоже вопрос: цифры показывают, что дело не состоялось трижды и чаще, а причину знает он, поэтому память по этому блоку не правится без его ответа. «Память на пересмотр» только показывается: удалять записанное с его слов система не умеет и не должна. Аргумент add кладёт вопрос на планёрку заранее — вызывай его сразу, как он сказал «обсудим на планёрке»; observe выносит замеченное; done снимает пункт, когда обсудили.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -783,9 +784,38 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       // Как он решает — возвращается всегда и целиком. Смысл этой памяти в
       // том, что её не надо вспоминать отдельным вызовом: правило, о котором
       // помнят через раз, хуже отсутствующего.
-      const preferences = tasks.parsePreferences(
-        files.find((f) => f.path === tasks.PREFS_PATH) || null,
-      );
+      const prefsFile = files.find((f) => f.path === tasks.PREFS_PATH) || null;
+      const preferences = tasks.parsePreferences(prefsFile);
+
+      /**
+       * Отметка «пригодилось». Считается не «пришло в ответ» — приходят все
+       * записи и всегда, такой счётчик мерил бы число вызовов, — а «попало по
+       * словам в то, что он сейчас сказал». Из-за этого запись обычно не
+       * трогается вовсе, и лишней записи в облако на каждую реплику нет.
+       *
+       * Счётчик нужен ровно для одного: на планёрке отличить память, которая
+       * работает, от той, что просто лежит. Сломаться он права не имеет —
+       * tasks_context читающий, и неудачная отметка не должна стоить разбора.
+       */
+      const relevant = preferences.filter((p) => {
+        const text = `${p.note} ${p.question || ''}`;
+        // Слова сверяются в обе стороны. Приведение к основе тут длинозависимое
+        // («лендинг» и «лендингу» дают разные основы), и односторонняя проверка
+        // молча промахивалась бы на падежах — то есть считала бы работающую
+        // запись ни разу не пригодившейся.
+        p.relevant = tasks.matchTerms(text, terms).score > 0
+          || tasks.matchTerms(topic, tasks.topicTerms(text).terms).score > 0;
+        return p.relevant;
+      });
+      if (relevant.length && prefsFile) {
+        try {
+          await writeFile(
+            prefsFile,
+            tasks.bumpPreferenceCounter(prefsFile.text, relevant, { field: 'пригодилось', date: today() }),
+          );
+          for (const entry of relevant) entry.used = { count: (entry.used?.count || 0) + 1, date: today() };
+        } catch (_) { /* отметка полезности не имеет права ломать чтение */ }
+      }
 
       const parts = [];
       if (open.length) parts.push(`открытых вопросов: ${open.length}`);
@@ -1779,7 +1809,20 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       const existing = tasks.parsePreferences(file);
 
       const note = String(args.note || '').trim();
+      const question = String(args.question || '').trim();
+
+      // Вопрос без ответа — это не запись, а проверка «я это уже спрашивал?».
+      // Дешёвая: файл памяти всё равно поднят этим же вызовом.
       if (!note) {
+        if (question) {
+          const asked = tasks.knownPreference(existing, null, { question });
+          return {
+            text: asked
+              ? `Это уже спрашивал: ${asked.date} записано «${asked.note}»${asked.evidence ? ` — ${asked.evidence}` : ''}. Второй раз не спрашивай.`
+              : 'Про это в памяти ничего нет — спроси один раз и запиши ответ вместе с вопросом.',
+            structured: { asked: !!asked, same_as: asked, question, path: tasks.PREFS_PATH },
+          };
+        }
         return {
           text: existing.length
             ? `Про то, как он решает, записано ${existing.length}: ${existing.slice(-8).map((e) => e.note).join('; ')}.`
@@ -1796,27 +1839,65 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
         );
       }
 
-      const known = tasks.knownPreference(existing, note);
-      if (known) {
-        return {
-          text: `Уже записано ${known.date}: «${known.note}». Второй раз не пишу.`,
-          structured: { created: false, reason: 'duplicate', same_as: known, path: tasks.PREFS_PATH },
-        };
-      }
-
-      const kind = ['предпочтение', 'порог', 'решение'].includes(String(args.kind))
+      const kind = tasks.PREFS_KINDS.includes(String(args.kind))
         ? String(args.kind)
         : 'предпочтение';
-      const line = tasks.preferenceLine({ date: today(), kind, note, evidence });
+      const known = tasks.knownPreference(existing, note, { question: question || null });
+      if (known) {
+        /**
+         * Разница в правах, ради которой «наблюдение» и заведено отдельным
+         * видом. Его слово наблюдением не переписывается: вывод из данных
+         * может быть верным и всё равно не иметь права отменять то, что он
+         * решил сам. Отказ здесь, а не в правилах, потому что правило можно
+         * не прочитать, а отказ инструмента — нет.
+         */
+        if (kind === 'наблюдение' && tasks.PREFS_OWNER_KINDS.includes(known.kind)) {
+          throw new ToolError(
+            'observation_over_decision',
+            `Это его ${known.kind} от ${known.date}: «${known.note}»${known.evidence ? ` — ${known.evidence}` : ''}. `
+            + 'Своим наблюдением его слово не переписывается. Если данные говорят другое — вынеси расхождение вопросом (tasks_standup с observe) и запиши то, что он ответит.',
+            { same_as: known },
+          );
+        }
+        // Свой вывод, подтвердившийся ещё раз, — не вторая запись, а та же с
+        // отметкой: наблюдение имеет право уточняться само.
+        if (kind === 'наблюдение' && known.kind === 'наблюдение') {
+          const bumped = tasks.bumpPreferenceCounter(file.text, [known], { field: 'подтверждено', date: today() });
+          const saved = await writeFile(file, bumped);
+          const times = (known.confirmed?.count || 0) + 1;
+          return {
+            text: `Это уже наблюдалось ${known.date}: «${known.note}». Отметил подтверждение, теперь их ${times}. Второй записи не завожу.`,
+            structured: { created: false, reason: 'confirmed', confirmed: times, same_as: known, path: saved.path, rev: saved.rev },
+          };
+        }
+        // Его слово поверх наблюдения агента — это не дубль: у записи другая
+        // опора. Пишем новую строку, старое наблюдение не трогаем — вычёркивает
+        // он сам, глазами.
+        if (known.kind !== 'наблюдение') {
+          return {
+            text: `Уже записано ${known.date}: «${known.note}». Второй раз не пишу.`,
+            structured: { created: false, reason: 'duplicate', same_as: known, path: tasks.PREFS_PATH },
+          };
+        }
+      }
+
+      const line = tasks.preferenceBlock({ date: today(), kind, note, evidence, question: question || null });
       const saved = await writeFile(file, tasks.appendToSection(file.text, line, tasks.PREFS_SECTION));
 
       const total = existing.length + 1;
       const crowded = total > tasks.PREFS_SOFT_LIMIT
         ? ` Записей уже ${total} — их стало больше, чем читают за раз; предложи ему вычистить устаревшее.`
         : '';
+      const over = known && known.kind === 'наблюдение'
+        ? ` Раньше это же было моим наблюдением (${known.date}: «${known.note}») — теперь есть его слово; старую строку он вычеркнет сам, я её не трогаю.`
+        : '';
       return {
-        text: `Запомнил: ${note}.${crowded}`,
-        structured: { created: true, path: saved.path, rev: saved.rev, kind, note, evidence, total },
+        text: `Запомнил: ${note}.${over}${crowded}`,
+        structured: {
+          created: true, path: saved.path, rev: saved.rev, kind, note, evidence, total,
+          question: question || null,
+          over_observation: over ? known : null,
+        },
       };
     },
 
@@ -2246,11 +2327,37 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
       // tasks.js и ни один соседний инструмент его не отдаёт.
       const index = await loadIndex();
       const dayPaths = Array.from({ length: span }, (_, i) => `days/${tasks.shiftDate(today_, i)}.md`);
-      const wanted = [...projectPaths(index), ...dayPaths];
+      // Прошлые дни читаются только ради плана и факта, и только те, что уже
+      // заведены: несуществующий день — это не «пусто», а лишний ключ в батче.
+      const pastPaths = Array.from({ length: tasks.PLAN_FACT_WINDOW_DAYS }, (_, i) => `days/${tasks.shiftDate(today_, -(i + 1))}.md`)
+        .filter((path) => index.files[path]);
+      const wanted = [...projectPaths(index), ...dayPaths, ...pastPaths, tasks.PREFS_PATH];
       const files = await readAll({ paths: wanted, max: wanted.length });
 
       const divergences = tasks.findDivergences(files, { today: today_ });
       const stuck = tasks.stuckPromises(files, { today: today_ });
+
+      /**
+       * План против факта. Считается по файлам, но выносится вопросом, а не
+       * утверждением: цифры говорят «не состоялось трижды», а почему — план
+       * был неверный, дело сорвалось или просто забыли отметить — знает он.
+       * Поэтому память отсюда не правится ни при каких условиях.
+       *
+       * Уже спрошенное молчит: тем же сравнением, что и остальные наблюдения,
+       * иначе одно и то же расхождение всплывало бы каждое утро.
+       */
+      const planFact = tasks.planFactPatterns(files, { today: today_ })
+        .filter((pattern) => !tasks.knownObservation(observations, {
+          question: tasks.planFactQuestion(pattern),
+          sides: tasks.planFactSides(pattern),
+        }));
+
+      // Память, которую пора пересмотреть. Только показать: удалять записанное
+      // с его слов система не имеет права, и инструмента для этого нет вовсе.
+      const staleMemory = tasks.stalePreferences(
+        tasks.parsePreferences(files.find((f) => f.path === tasks.PREFS_PATH) || null),
+        { today: today_ },
+      );
 
       // Что висит — считает tasks_list, а не второй разбор задач здесь.
       const list = await tools.tasks_list({});
@@ -2272,7 +2379,9 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
         // молчать про то, что и так молча копится.
         divergences: { all: divergences, shown: divergences },
         noticed: { all: noticed, shown: noticed.slice(0, tasks.STANDUP_OBSERVE_CAP) },
+        plan_fact: { all: planFact, shown: planFact.slice(0, cap) },
         stuck: { all: stuck, shown: stuck.slice(0, cap) },
+        stale_memory: { all: staleMemory, shown: staleMemory.slice(0, cap) },
       };
       const hidden = Object.fromEntries(
         Object.entries(groups).map(([name, g]) => [name, g.all.length - g.shown.length]),
@@ -2302,12 +2411,19 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
         // случая перепроверять придётся и доказанное.
         block('Расхождения (посчитано по файлам)', 'divergences', (d) => d.what),
         block('Замечено — нужен твой ответ', 'noticed', (o) => `${o.question}\n${o.sides.map((s) => `  · ${s}`).join('\n')}`),
+        // План и факт стоят отдельно от расхождений: там доказана ошибка в
+        // данных, здесь — только счёт. Сколько дело заняло на самом деле, в
+        // задачнике не записывает ничто, и делать вид, что мы это знаем, нельзя.
+        block('План и факт (по закрытым дням; фактической длительности в задачнике нет) — спроси, не правь память', 'plan_fact',
+          (p) => `${tasks.planFactQuestion(p)}\n${tasks.planFactSides(p).map((s) => `  · ${s}`).join('\n')}`),
         block('Зависшее', 'stuck', (s) => `${s.ref} · ${s.text} — ${s.days} дн.`),
+        block('Память на пересмотр — старше месяца и ни разу не пригодилась; вычёркивает он сам', 'stale_memory',
+          (p) => `${p.date} · ${p.kind} · ${p.note} (${p.age_days} дн.)`),
         `Картина: ${picture}.`,
       ].filter(Boolean).join('\n\n');
 
       const head = total
-        ? `Планёрка ${today_}. Принесли ${groups.brought.all.length}, требует решения ${groups.decide.all.length}, расхождений ${groups.divergences.all.length}, замечено ${groups.noticed.all.length}, зависло ${groups.stuck.all.length}.`
+        ? `Планёрка ${today_}. Принесли ${groups.brought.all.length}, требует решения ${groups.decide.all.length}, расхождений ${groups.divergences.all.length}, замечено ${groups.noticed.all.length}, план и факт ${groups.plan_fact.all.length}, зависло ${groups.stuck.all.length}, память на пересмотр ${groups.stale_memory.all.length}.`
         : `Планёрка ${today_}. Обсуждать нечего: ничего не принесено, нерешённого нет, расхождений не нашёл.`;
 
       return {
@@ -2320,7 +2436,9 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
           decide: groups.decide.shown,
           divergences: groups.divergences.shown,
           noticed: groups.noticed.shown,
+          plan_fact: groups.plan_fact.shown,
           stuck: groups.stuck.shown,
+          stale_memory: groups.stale_memory.shown,
           hidden,
           totals: Object.fromEntries(Object.entries(groups).map(([name, g]) => [name, g.all.length])),
           picture: {

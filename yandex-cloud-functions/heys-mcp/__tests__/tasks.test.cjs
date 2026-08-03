@@ -1373,6 +1373,31 @@ test('нумерация правил задачника сплошная — п
   assert.deepEqual(numbers, numbers.map((_, i) => i + 1), 'дыры и буквенные вставки ломают внутренние ссылки');
 });
 
+test('общий ход «спросил — записал — не спрашиваю» есть в правилах и не привязан к случаю', () => {
+  // Правило ищется по смыслу, а не по номеру: нумерация сплошная и от вставки
+  // новой строки все номера ниже уезжают.
+  const rule = curatorInstructions('Антон', true).split('\n')
+    .find((line) => /^З\d+\./.test(line) && /question/.test(line) && /спрос/i.test(line));
+  assert.ok(rule, 'общего хода про незнание в правилах нет');
+  assert.match(rule, /меняет|ДРУГИМ/, 'спрашивать велено только про то, что меняет ответ');
+  assert.match(rule, /второй раз|не спрашивается/i);
+});
+
+test('правила различают его слово и вывод агента, и говорят про пересмотр памяти', () => {
+  const lines = curatorInstructions('Антон', true).split('\n').filter((l) => /^З\d+\./.test(l));
+  const kinds = lines.find((l) => /наблюдение/.test(l) && /tasks_learn/.test(l));
+  assert.ok(kinds, 'про вид «наблюдение» в правилах ничего нет');
+  assert.match(kinds, /не переписывается|откажет/i);
+
+  const fact = lines.find((l) => /закрыт/i.test(l) && /длительност/i.test(l));
+  assert.ok(fact, 'про план и факт в правилах ничего нет');
+  assert.match(fact, /трижды|три/i, 'порог повторов в правиле не назван');
+
+  const review = lines.find((l) => /старше месяца/i.test(l));
+  assert.ok(review, 'про пересмотр памяти в правилах ничего нет');
+  assert.match(review, /вычёркивает только он|удаления нет/i);
+});
+
 test('правила не обещают того, чего инструменты не умеют', () => {
   const rules = curatorInstructions('Антон', true);
   // Слот с задачей связывается через ref, а не через tasks_link: раньше правило
@@ -1476,6 +1501,134 @@ test('память «как он решает» приходит в контек
   const res = await session(api).tasks_context({ topic: 'лендинг' });
   assert.equal(res.structured.preferences.length, 1);
   assert.equal(res.structured.preferences[0].note, 'Дела короче получаса в день не ставим');
+});
+
+// ── Спросил — записал — больше не спрашиваю ──────────────────────────────
+//
+// Общий ход, а не правило под очередной случай. Держится он на том, что рядом
+// с ответом лежит сам вопрос: ответы на один и тот же вопрос формулируются как
+// угодно, а вопрос повторяется почти дословно.
+
+test('вопрос ложится рядом с ответом и ловит повтор, заданный другими словами', async () => {
+  const api = liveTasksApi();
+  await session(api).tasks_learn({
+    note: 'Уборка студии — два часа',
+    evidence: 'его слова 2026-08-02',
+    kind: 'порог',
+    question: 'сколько занимает уборка студии?',
+  });
+  const saved = api.kv[tasks.keyForPath(tasks.PREFS_PATH)].text;
+  assert.match(saved, /^ {2}- вопрос: сколько занимает уборка студии\?$/m);
+
+  // Ответ переформулирован до неузнаваемости — по нему повтор не виден вовсе
+  // (проверено рядом), а вопрос тот же, и запись не задваивается.
+  assert.ok(tasks.questionSimilarity('Уборка студии — два часа', 'Закладываем 120 минут') < tasks.DECISION_SIMILARITY);
+  const again = await session(api).tasks_learn({
+    note: 'Закладываем 120 минут',
+    evidence: 'снова сказал',
+    question: 'сколько времени занимает уборка студии?',
+  });
+  assert.equal(again.structured.created, false);
+  assert.equal(again.structured.same_as.matched_by, 'вопрос');
+  assert.equal(tasks.parsePreferences({ text: api.kv[tasks.keyForPath(tasks.PREFS_PATH)].text }).length, 1);
+});
+
+test('один question без ответа — это проверка «я уже спрашивал», а не запись', async () => {
+  const api = liveTasksApi();
+  const before = await session(api).tasks_learn({ question: 'сколько занимает уборка студии?' });
+  assert.equal(before.structured.asked, false);
+  assert.equal(api.kv[tasks.keyForPath(tasks.PREFS_PATH)], undefined, 'проверка ничего не пишет');
+
+  await session(api).tasks_learn({
+    note: 'Уборка студии — два часа', evidence: 'его слова', kind: 'порог',
+    question: 'сколько занимает уборка студии?',
+  });
+  const after = await session(api).tasks_learn({ question: 'сколько времени занимает уборка студии?' });
+  assert.equal(after.structured.asked, true);
+  assert.match(after.text, /уже спрашивал/);
+});
+
+test('наблюдение не переписывает его решение — отказывает инструмент, а не правило', async () => {
+  const api = liveTasksApi();
+  await session(api).tasks_learn({
+    note: 'Развилки по деньгам решает сам, не делегирует',
+    evidence: 'его слова', kind: 'решение',
+  });
+  const before = api.kv[tasks.keyForPath(tasks.PREFS_PATH)].text;
+
+  await assert.rejects(
+    () => session(api).tasks_learn({
+      note: 'Развилки по деньгам он не решает сам',
+      evidence: 'вижу по журналу', kind: 'наблюдение',
+    }),
+    (e) => e.code === 'observation_over_decision' && /вынеси расхождение вопросом/.test(e.message),
+  );
+  assert.equal(api.kv[tasks.keyForPath(tasks.PREFS_PATH)].text, before, 'файл памяти не тронут вовсе');
+});
+
+test('своё наблюдение уточняется само: второй раз не запись, а подтверждение', async () => {
+  const api = liveTasksApi();
+  await session(api).tasks_learn({
+    note: 'Уборка кухни утром не состоится',
+    evidence: 'три закрытых дня', kind: 'наблюдение',
+  });
+  const again = await session(api).tasks_learn({
+    note: 'Уборка кухни утром не состоится',
+    evidence: 'ещё два дня', kind: 'наблюдение',
+  });
+  assert.equal(again.structured.created, false);
+  assert.equal(again.structured.reason, 'confirmed');
+  assert.equal(again.structured.confirmed, 1);
+  const parsed = tasks.parsePreferences({ text: api.kv[tasks.keyForPath(tasks.PREFS_PATH)].text });
+  assert.equal(parsed.length, 1, 'подтверждение не заводит вторую запись');
+  assert.equal(parsed[0].confirmed.count, 1);
+  assert.equal(parsed[0].confirmed.date, '2026-08-02');
+});
+
+test('его слово поверх наблюдения пишется, а наблюдение остаётся ему на вычёркивание', async () => {
+  const api = liveTasksApi();
+  await session(api).tasks_learn({
+    note: 'Уборка кухни утром не состоится',
+    evidence: 'три закрытых дня', kind: 'наблюдение',
+  });
+  const said = await session(api).tasks_learn({
+    note: 'Уборка кухни утром не состоится, переносим на вечер',
+    evidence: 'его слова 2026-08-02', kind: 'решение',
+  });
+  assert.equal(said.structured.created, true);
+  assert.equal(said.structured.over_observation.kind, 'наблюдение');
+  const parsed = tasks.parsePreferences({ text: api.kv[tasks.keyForPath(tasks.PREFS_PATH)].text });
+  assert.deepEqual(parsed.map((p) => p.kind), ['наблюдение', 'решение'], 'старое наблюдение не стёрто');
+});
+
+test('в разбор попала запись памяти — она отмечается пригодившейся, посторонняя нет', async () => {
+  const api = liveTasksApi();
+  await session(api).tasks_learn({ note: 'Лендинг собираем по вечерам', evidence: 'его слова' });
+  await session(api).tasks_learn({ note: 'Смету по празднику считает жена', evidence: 'его слова' });
+
+  // Падежная форма — обычный случай живой фразы, и промахнуться на ней нельзя:
+  // непойманное попадание превращается в «ни разу не пригодилась».
+  await session(api).tasks_context({ topic: 'что там по лендингу' });
+  const parsed = tasks.parsePreferences({ text: api.kv[tasks.keyForPath(tasks.PREFS_PATH)].text });
+  const landing = parsed.find((p) => /Лендинг/.test(p.note));
+  const other = parsed.find((p) => /Смету/.test(p.note));
+  assert.equal(landing.used.count, 1);
+  assert.equal(landing.used.date, '2026-08-02');
+  assert.equal(other.used.count, 0, 'запись не по теме счётчик не набирает — иначе он мерил бы число вызовов');
+
+  // Второй разбор по той же теме — второе попадание, а не переписанная единица.
+  await session(api).tasks_context({ topic: 'лендинг' });
+  const twice = tasks.parsePreferences({ text: api.kv[tasks.keyForPath(tasks.PREFS_PATH)].text })
+    .find((p) => /Лендинг/.test(p.note));
+  assert.equal(twice.used.count, 2);
+});
+
+test('сбой отметки «пригодилось» не роняет разбор темы', async () => {
+  const api = liveTasksApi();
+  await session(api).tasks_learn({ note: 'Лендинг собираем по вечерам', evidence: 'его слова' });
+  api.upsertKVManyByCurator = async () => ({ ok: false, error: 'сервер отказал' });
+  const res = await session(api).tasks_context({ topic: 'лендинг' });
+  assert.ok(res.structured.preferences.length, 'память всё равно вернулась в разбор');
 });
 
 // ── Загруженность вперёд ─────────────────────────────────────────────────
@@ -2698,6 +2851,153 @@ test('замеченное и принесённое не путаются ме�
     () => session(api).tasks_standup({ done: 'расписание секций' }),
     (e) => e.code === 'ambiguous_standup_item',
   );
+});
+
+// ── План и факт ──────────────────────────────────────────────────────────
+//
+// Факт в задачнике ровно один: состоялось или нет, и только в закрытом дне.
+// Длительности нет вовсе, поэтому и проверяется здесь в первую очередь то,
+// чего механизм НЕ делает: не считает по одному случаю, не принимает
+// незакрытый день за срыв и не правит память сам.
+
+/** Закрытый день: слот и обязательная заметка «как прошло». */
+const CLOSED_DAY = (date, slots) => `# План на ${date}\n${slots}\n\n> как-то так\n`;
+
+function planFactFiles(dates, { line = '- 09:00–09:30 Уборка кухни #дело', note = true } = {}) {
+  return dates.map((date) => ({
+    path: `days/${date}.md`,
+    text: note ? CLOSED_DAY(date, line) : `# План на ${date}\n${line}\n`,
+  }));
+}
+
+test('одного и двух срывов мало — закономерность начинается с трёх', () => {
+  const dates = ['2026-08-01', '2026-07-31', '2026-07-30'];
+  for (const take of [1, 2]) {
+    assert.deepEqual(
+      tasks.planFactPatterns(planFactFiles(dates.slice(0, take)), { today: '2026-08-02' }),
+      [],
+      `${take} случай(ев) — это разброс, а не закономерность`,
+    );
+  }
+  const found = tasks.planFactPatterns(planFactFiles(dates), { today: '2026-08-02' });
+  assert.equal(found.length, 1);
+  assert.equal(found[0].title, 'Уборка кухни');
+  assert.equal(found[0].planned, 3);
+  assert.equal(found[0].missed, 3);
+  assert.equal(found[0].happened, 0);
+});
+
+test('состоявшееся чаще, чем срывалось, закономерностью не считается', () => {
+  const files = [
+    ...planFactFiles(['2026-08-01', '2026-07-31', '2026-07-30']),
+    ...planFactFiles(['2026-07-29', '2026-07-28', '2026-07-27', '2026-07-26'], { line: '- [x] 09:00–09:30 Уборка кухни #дело' }),
+  ];
+  assert.deepEqual(tasks.planFactPatterns(files, { today: '2026-08-02' }), [], '3 из 7 — это обычный разброс');
+});
+
+test('незакрытый день фактом не считается: там «неизвестно», а не «не состоялось»', () => {
+  const open = planFactFiles(['2026-08-01', '2026-07-31', '2026-07-30'], { note: false });
+  assert.deepEqual(tasks.planFactPatterns(open, { today: '2026-08-02' }), []);
+  // Тот же набор дней, но закрытых, закономерность даёт — иначе проверка выше
+  // доказывала бы только то, что файлы не прочитали.
+  assert.equal(tasks.planFactPatterns(planFactFiles(['2026-08-01', '2026-07-31', '2026-07-30']), { today: '2026-08-02' }).length, 1);
+});
+
+test('будущий день фактом не считается — он ещё не наступил', () => {
+  const ahead = planFactFiles(['2026-08-03', '2026-08-04', '2026-08-05']);
+  assert.deepEqual(tasks.planFactPatterns(ahead, { today: '2026-08-02' }), []);
+});
+
+test('про фактическую длительность механизм не говорит ничего — её взять неоткуда', () => {
+  const found = tasks.planFactPatterns(planFactFiles(['2026-08-01', '2026-07-31', '2026-07-30']), { today: '2026-08-02' })[0];
+  assert.deepEqual(
+    Object.keys(found).sort(),
+    ['days', 'happened', 'missed', 'planned', 'share', 'title'],
+    'появилось поле про длительность — значит план выдали за факт',
+  );
+  assert.doesNotMatch(tasks.planFactQuestion(found), /минут|часа|часов|длит/i);
+});
+
+test('расхождение плана с фактом приходит на планёрку вопросом и память не трогает', async () => {
+  const api = standupApi(Object.fromEntries(
+    planFactFiles(['2026-08-01', '2026-07-31', '2026-07-30']).map((f) => [f.path, f.text]),
+  ));
+  await session(api).tasks_learn({ note: 'Уборка кухни — полчаса утром', evidence: 'его слова', kind: 'порог' });
+  const before = api.file(tasks.PREFS_PATH);
+
+  const agenda = await session(api).tasks_standup({});
+  assert.equal(agenda.structured.plan_fact.length, 1);
+  assert.equal(agenda.structured.plan_fact[0].missed, 3);
+  assert.match(agenda.text, /План и факт/);
+  assert.match(agenda.text, /спроси, не правь память/);
+  assert.match(agenda.text, /не состоялось 3 раз из 3/);
+  assert.equal(api.file(tasks.PREFS_PATH), before, 'память правится только его ответом');
+});
+
+test('спрошенное про то же расхождение второй раз на планёрку не всплывает', async () => {
+  const api = standupApi(Object.fromEntries(
+    planFactFiles(['2026-08-01', '2026-07-31', '2026-07-30']).map((f) => [f.path, f.text]),
+  ));
+  const first = await session(api).tasks_standup({});
+  const pattern = first.structured.plan_fact[0];
+
+  await session(api).tasks_standup({
+    observe: tasks.planFactQuestion(pattern),
+    sides: tasks.planFactSides(pattern),
+  });
+  const again = await session(api).tasks_standup({});
+  assert.deepEqual(again.structured.plan_fact, [], 'спрошенное молчит — иначе это ежедневная придирка');
+  assert.equal(again.structured.noticed.length, 1, 'вопрос остался висеть до его ответа');
+});
+
+// ── Пересмотр памяти ─────────────────────────────────────────────────────
+//
+// Всё, что только копится, однажды становится шумом. Поэтому старое и ни разу
+// не пригодившееся показывается на планёрке — и ровно показывается: вычеркнуть
+// его вправе только он.
+
+const OLD_PREFS = [
+  '# Предпочтения',
+  '',
+  '## Как он решает',
+  '',
+  '- 2026-06-01 · предпочтение · Старое и никому не понадобилось — его слова',
+  '- 2026-06-01 · предпочтение · Старое, но в разборы попадало — его слова',
+  '  - пригодилось: 2, последний раз 2026-07-30',
+  '- 2026-07-25 · порог · Свежее, ещё месяца не прошло — его слова',
+  '',
+].join('\n');
+
+test('в пересмотр попадают только старые и ни разу не пригодившиеся', () => {
+  const stale = tasks.stalePreferences(tasks.parsePreferences({ text: OLD_PREFS }), { today: '2026-08-02' });
+  assert.deepEqual(stale.map((p) => p.note), ['Старое и никому не понадобилось']);
+  assert.equal(stale[0].age_days, 62);
+});
+
+test('память на пересмотр показывается на планёрке и ничего не удаляется', async () => {
+  const api = standupApi({ [tasks.PREFS_PATH]: OLD_PREFS });
+  const agenda = await session(api).tasks_standup({});
+
+  assert.equal(agenda.structured.stale_memory.length, 1);
+  assert.equal(agenda.structured.stale_memory[0].note, 'Старое и никому не понадобилось');
+  assert.match(agenda.text, /Память на пересмотр/);
+  assert.match(agenda.text, /вычёркивает он сам/);
+
+  // Файл памяти после планёрки — байт в байт прежний.
+  assert.equal(api.file(tasks.PREFS_PATH), OLD_PREFS, 'стереть его решение система права не имеет');
+  assert.equal(tasks.parsePreferences({ text: api.file(tasks.PREFS_PATH) }).length, 3);
+});
+
+test('удалять записанное нечем: инструмента для этого нет вовсе', () => {
+  const built = createTasksTools({ api: liveApi({}), curatorJwt: JWT, clientId: CLIENT, nowMs: NOW, ToolError });
+  const learn = built.schemas.find((s) => s.name === 'tasks_learn');
+  assert.deepEqual(
+    Object.keys(learn.inputSchema.properties).filter((k) => /delete|remove|drop|forget|удал/i.test(k)),
+    [],
+    'появился аргумент удаления — значит память можно стереть мимо него',
+  );
+  const names = built.schemas.map((s) => s.name);
+  assert.ok(!names.some((n) => /forget|unlearn/i.test(n)));
 });
 
 // ── Напоминание про стенограмму ──────────────────────────────────────────
