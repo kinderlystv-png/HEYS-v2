@@ -132,3 +132,68 @@
       type: cloud_functions
       service_account_id: aje85rjgpj4nk9m384ek
       function_id: __HEYS_MCP_FUNCTION_ID__
+
+# ═══════════════════════════════════════════════════════════════
+# /mcp/attach — мобильная страница вложений задачника (lib/attach.js)
+# ═══════════════════════════════════════════════════════════════
+# Не OAuth и не MCP-транспорт: обычная HTML-страница за cookie-сессией,
+# вход теми же кураторскими email+паролем, что и в /mcp/authorize.
+
+/mcp/attach:
+  get:
+    summary: Attach page — app shell or login form depending on session cookie
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/mcp/attach/login:
+  post:
+    summary: Attach page — curator email+password(+2FA) login
+    x-yc-apigateway-throttling:
+      rate: 5
+      unit: MINUTE
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/mcp/attach/logout:
+  post:
+    summary: Attach page — clear session cookie
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/mcp/attach/search:
+  get:
+    summary: Attach page — find a task by board address or title words
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/mcp/attach/upload:
+  post:
+    summary: Attach page — upload a file to a task (same path as tasks_attach)
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/mcp/attach/manifest.webmanifest:
+  get:
+    summary: Attach page — PWA manifest (unauthenticated, static)
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/mcp/attach/icon.png:
+  get:
+    summary: Attach page — PWA icon (unauthenticated, static)
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__

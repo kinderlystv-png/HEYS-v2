@@ -13,17 +13,29 @@
  * жить на одном пути. Роль берётся из токена, не из адреса: путь только
  * разводит два независимых OAuth-подключения.
  *
+ * `/mcp/attach*`                       — мобильная страница вложений задачника
+ *
+ * Четвёртая группа — не OAuth и не MCP-транспорт: обычная HTML-страница за
+ * cookie-сессией, с телефона куратора. Подробности входа и логики — в
+ * lib/attach.js.
+ *
  * Внешних зависимостей нет: подпись токенов — node:crypto, обращения к данным —
  * HTTPS-вызовы собственного /rpc. Прямого доступа к БД функция не имеет, поэтому
  * не может обойти серверные гарды дневника.
  */
 
+const crypto = require('node:crypto');
 const { initSecrets } = require('./shared/secrets');
 const mcp = require('./lib/mcp');
 const oauth = require('./lib/oauth');
+const attach = require('./lib/attach');
 const { createApiClient } = require('./lib/heys-api');
-const { createTools } = require('./lib/tools');
+const { createTools, ToolError } = require('./lib/tools');
 const { createCuratorContext } = require('./lib/curator');
+
+const ATTACH_PAGE_PATH = '/mcp/attach';
+const ATTACH_MANIFEST_PATH = '/mcp/attach/manifest.webmanifest';
+const ATTACH_ICON_PATH = '/mcp/attach/icon.png';
 
 const DEFAULT_API_URL = 'https://api.heyslab.ru';
 
@@ -274,6 +286,112 @@ async function handleAuthorizePost(event, { secret, apiUrl }) {
   return redirect(oauth.buildRedirect(validation.redirectUri, { code, state: validation.state }));
 }
 
+/**
+ * CSP страницы вложений отличается от {@link SECURITY_HEADERS}: там странице
+ * запрещён любой JS (форма без единого script), здесь JS — сама страница
+ * (поиск, чтение файла, сжатие фото). `script-src` разрешает инлайн-скрипт
+ * только по одноразовому nonce — вписать свой script в ответ снаружи нечем.
+ */
+function attachSecurityHeaders(nonce) {
+  return {
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Content-Security-Policy': `default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'`,
+    'Referrer-Policy': 'no-referrer',
+  };
+}
+
+function attachHtml(statusCode, body, nonce, extraHeaders = {}) {
+  return { statusCode, headers: { 'Content-Type': 'text/html; charset=utf-8', ...attachSecurityHeaders(nonce), ...extraHeaders }, body };
+}
+
+function attachJson(statusCode, body, extraHeaders = {}) {
+  return {
+    statusCode,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'no-referrer', ...extraHeaders },
+    body: JSON.stringify(body),
+  };
+}
+
+function toolErrorJson(e) {
+  if (e instanceof ToolError) return attachJson(400, { error: { code: e.code, message: e.message } });
+  throw e;
+}
+
+/** Маршруты страницы вложений: вход по кураторским email+паролю, поиск и загрузка. */
+async function handleAttachRequest(event, { method, path, headers, secret, apiUrl }) {
+  const rawJwtSecret = process.env.JWT_SECRET || null;
+  const tasksClientId = process.env.HEYS_TASKS_CLIENT_ID || null;
+  const api = createApiClient({ apiUrl });
+  const cookieHeader = headers.cookie || '';
+  const nonce = crypto.randomBytes(16).toString('base64');
+
+  if (path === ATTACH_PAGE_PATH && method === 'GET') {
+    const auth = await attach.authenticate({ cookieHeader, secret, rawJwtSecret, api });
+    if (!auth.ok) return attachHtml(200, attach.renderLoginPage({}), nonce);
+    return attachHtml(200, attach.renderAppPage({ name: auth.name, nonce }), nonce);
+  }
+
+  if (path === `${ATTACH_PAGE_PATH}/login` && method === 'POST') {
+    const form = parseForm(readBody(event));
+    const email = String(form.email || '').trim();
+    const password = String(form.password || '');
+    if (!email || !password) {
+      return attachHtml(400, attach.renderLoginPage({ error: 'Введите email и пароль.', email }), nonce);
+    }
+    const mfaCode = String(form.mfa_code || '').trim();
+    const login = await api.curatorLogin(email, password, mfaCode);
+    if (!login.ok) {
+      const message = login.error === 'mfa_required'
+        ? 'Включена двухфакторная защита: введите код из приложения-аутентификатора.'
+        : login.error === 'rate_limited'
+          ? 'Слишком много попыток. Подождите минуту и повторите.'
+          : 'Неверный email или пароль.';
+      return attachHtml(401, attach.renderLoginPage({ error: message, email }), nonce);
+    }
+    const token = attach.issueSession({ curatorId: login.curatorId, email, name: login.name }, secret);
+    console.info('[heys-mcp] attach login', { curator: String(login.curatorId).slice(0, 8) });
+    return { statusCode: 302, headers: { Location: ATTACH_PAGE_PATH, 'Set-Cookie': attach.setCookieHeader(token), 'Cache-Control': 'no-store' }, body: '' };
+  }
+
+  if (path === `${ATTACH_PAGE_PATH}/logout` && method === 'POST') {
+    return attachJson(200, { ok: true }, { 'Set-Cookie': attach.clearCookieHeader() });
+  }
+
+  if (path === `${ATTACH_PAGE_PATH}/search` && method === 'GET') {
+    const auth = await attach.authenticate({ cookieHeader, secret, rawJwtSecret, api });
+    if (!auth.ok) return attachJson(401, { error: 'not_authenticated' });
+    const query = (event && (event.queryStringParameters || event.query)) || {};
+    const tools = attach.tasksToolsFor({ api, curatorJwt: auth.curatorJwt, tasksClientId });
+    try {
+      return attachJson(200, await attach.searchTasks({ tools, query: query.q }));
+    } catch (e) {
+      return toolErrorJson(e);
+    }
+  }
+
+  if (path === `${ATTACH_PAGE_PATH}/upload` && method === 'POST') {
+    const auth = await attach.authenticate({ cookieHeader, secret, rawJwtSecret, api });
+    if (!auth.ok) return attachJson(401, { error: 'not_authenticated' });
+    let body;
+    try {
+      body = JSON.parse(readBody(event) || '{}');
+    } catch (_) {
+      return attachJson(400, { error: { code: 'invalid_json', message: 'Тело запроса не JSON.' } });
+    }
+    const tools = attach.tasksToolsFor({ api, curatorJwt: auth.curatorJwt, tasksClientId });
+    try {
+      const result = await attach.uploadAttachment({ tools, body });
+      return attachJson(200, { ok: true, line: result.structured.line, text: result.text });
+    } catch (e) {
+      return toolErrorJson(e);
+    }
+  }
+
+  return attachJson(404, { error: 'not_found', path });
+}
+
 exports.handler = async (event) => {
   try {
     await initSecrets();
@@ -370,6 +488,25 @@ exports.handler = async (event) => {
     // Поток «сервер → клиент» не поддерживается: транспорт stateless.
     if (MCP_ENDPOINTS.has(path) && (method === 'GET' || method === 'DELETE')) {
       return json(405, { error: 'method_not_allowed' }, { Allow: 'POST' });
+    }
+
+    if (path === ATTACH_MANIFEST_PATH && method === 'GET') {
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/manifest+json', 'Cache-Control': 'public, max-age=3600', 'X-Content-Type-Options': 'nosniff' },
+        body: JSON.stringify(attach.MANIFEST),
+      };
+    }
+    if (path === ATTACH_ICON_PATH && method === 'GET') {
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' },
+        body: attach.ICON_PNG.toString('base64'),
+        isBase64Encoded: true,
+      };
+    }
+    if (path === ATTACH_PAGE_PATH || path.startsWith(`${ATTACH_PAGE_PATH}/`)) {
+      return await handleAttachRequest(event, { method, path, headers, secret, apiUrl });
     }
 
     return json(404, { error: 'not_found', path });

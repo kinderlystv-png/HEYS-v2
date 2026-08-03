@@ -1003,6 +1003,65 @@ paths:
         service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4egv2a6pdhmf5hbrgp8
 
+  /mcp/attach:
+    get:
+      summary: Attach page — app shell or login form depending on session cookie
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /mcp/attach/login:
+    post:
+      summary: Attach page — curator email+password(+2FA) login
+      x-yc-apigateway-throttling:
+        rate: 5
+        unit: MINUTE
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /mcp/attach/logout:
+    post:
+      summary: Attach page — clear session cookie
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /mcp/attach/search:
+    get:
+      summary: Attach page — find a task by board address or title words
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /mcp/attach/upload:
+    post:
+      summary: Attach page — upload a file to a task (same path as tasks_attach)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /mcp/attach/manifest.webmanifest:
+    get:
+      summary: Attach page — PWA manifest (unauthenticated, static)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /mcp/attach/icon.png:
+    get:
+      summary: Attach page — PWA icon (unauthenticated, static)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
   /.well-known/oauth-protected-resource/mcp/curator:
     get:
       summary: OAuth protected resource metadata for /mcp/curator

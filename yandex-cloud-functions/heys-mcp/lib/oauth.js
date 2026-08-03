@@ -246,6 +246,19 @@ function exchangeAuthorizationCode(form, secret, nowMs = Date.now()) {
 }
 
 /**
+ * Кураторский JWT в формате heys-api-auth: {sub, email, role:'curator'},
+ * подписанный сырым JWT_SECRET на 24 часа. Используется и здесь при refresh,
+ * и страницей вложений (lib/attach.js) — она хранит только личность куратора
+ * в своей cookie-сессии, а рабочий JWT для вызовов к API выпускает заново на
+ * каждый запрос, тем же способом.
+ */
+function mintCuratorJwt({ curatorId, email = '', rawJwtSecret, nowMs = Date.now() }) {
+  return signRawJwt({ sub: curatorId, email, role: 'curator' }, rawJwtSecret, {
+    ttlSeconds: CURATOR_JWT_TTL_SECONDS, nowMs,
+  });
+}
+
+/**
  * 🔐 SEC-031 (2026-08-02): перевыпуск кураторского JWT — только после
  * подтверждения сервером, что аккаунт ещё действует.
  *
@@ -280,11 +293,7 @@ async function exchangeRefreshToken(form, secret, nowMs = Date.now(), { rawJwtSe
     if (!rawJwtSecret || !claims.sub) {
       return { ok: false, error: 'invalid_grant', description: 'Кураторскую сессию продлить нельзя — войдите заново.' };
     }
-    const freshJwt = signRawJwt(
-      { sub: claims.sub, email: claims.em || '', role: 'curator' },
-      rawJwtSecret,
-      { ttlSeconds: CURATOR_JWT_TTL_SECONDS, nowMs },
-    );
+    const freshJwt = mintCuratorJwt({ curatorId: claims.sub, email: claims.em || '', rawJwtSecret, nowMs });
     // Fail-closed: без положительного ответа сервера продления не будет.
     // Свежий JWT нужен самой проверке — прежний к этому моменту мог истечь
     // (он живёт 24 часа, а refresh-токен — 30 суток).
@@ -464,6 +473,7 @@ module.exports = {
   issueTokenPair,
   exchangeAuthorizationCode,
   exchangeRefreshToken,
+  mintCuratorJwt,
   authenticateAccessToken,
   renderLoginPage,
   renderErrorPage,
