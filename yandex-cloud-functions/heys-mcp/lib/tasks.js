@@ -63,6 +63,22 @@ function pathForKey(key) {
  * пути, `..`, ведущие слеши. Инструмент получает путь от модели, а не от
  * файловой системы, поэтому проверять его обязательно.
  */
+// Заголовок обмена в стенограмме обязан быть временем, а не темой: без этого
+// порядок дня восстановить может только человек, глазами, а не код. Проверка
+// дешёвая — файл и так пишется, лишнего чтения нет — и жёсткая: свободная
+// формулировка отклоняется, а не проходит с предупреждением.
+const TRANSCRIPT_HEADING_RE = /^##\s*~?\d{1,2}:\d{2}(\s*[–—-]\s*~?\d{1,2}:\d{2})?\s*$/m;
+
+function transcriptHeadingError(path, block) {
+  if (!/^transcript\/\d{4}-\d{2}-\d{2}\.md$/i.test(String(path || ''))) return null;
+  const firstHeading = String(block || '').split('\n').find((l) => l.trim().startsWith('#'));
+  if (!firstHeading) return 'Нужен заголовок обмена — время «## ЧЧ:ММ», а не тема.';
+  if (!TRANSCRIPT_HEADING_RE.test(firstHeading.trim())) {
+    return `Заголовок «${firstHeading.trim()}» не время. Стенограмма — «## ЧЧ:ММ» (диапазон «## ЧЧ:ММ–ЧЧ:ММ» тоже годится), не тема разговора: по времени день восстанавливается, по теме — только глазами.`;
+  }
+  return null;
+}
+
 function normalizePath(path) {
   const raw = String(path || '').trim().replace(/\\/g, '/');
   if (!raw) return null;
@@ -3598,6 +3614,7 @@ module.exports = {
   taskHash,
   projectKeyForPath,
   appendToSection,
+  transcriptHeadingError,
   prependToSection,
   appendBlock,
   findTaskByHash,

@@ -3465,3 +3465,38 @@ test('подготовка к событию описана как три рол
   assert.match(limits, /в тот же день/);
   assert.match(limits, /просто задача/);
 });
+
+// ── Заголовок стенограммы обязан быть временем ───────────────────────────
+//
+// Без этого порядок дня восстанавливается только глазами, не кодом. Дёшево
+// и без предупреждений: свободная формулировка отклоняется до записи.
+
+test('заголовок стенограммы принимает время и диапазон', () => {
+  assert.equal(tasks.transcriptHeadingError('transcript/2026-08-03.md', '## 14:35\n**Кин:** текст'), null);
+  assert.equal(tasks.transcriptHeadingError('transcript/2026-08-03.md', '## ~16:50–18:10\n**Кин:** текст'), null);
+  assert.equal(tasks.transcriptHeadingError('transcript/2026-08-03.md', '## 9:05\n**Кин:** текст'), null);
+});
+
+test('заголовок стенограммы темой вместо времени отклоняется', () => {
+  const err = tasks.transcriptHeadingError('transcript/2026-08-03.md', '## Планёрка · идеи\n**Кин:** текст');
+  assert.ok(err && /не время/.test(err));
+});
+
+test('запись без заголовка в стенограмму отклоняется', () => {
+  const err = tasks.transcriptHeadingError('transcript/2026-08-03.md', '**Кин:** текст без заголовка вовсе');
+  assert.ok(err && /Нужен заголовок/.test(err));
+});
+
+test('проверка заголовка не трогает журнал и другие файлы', () => {
+  assert.equal(tasks.transcriptHeadingError('journal/2026-08.md', '## Планёрка · идеи'), null);
+  assert.equal(tasks.transcriptHeadingError('projects/heys.md', 'просто текст'), null);
+});
+
+test('tasks_append отклоняет тематический заголовок в стенограмме до записи файла', async () => {
+  const api = liveTasksApi();
+  await assert.rejects(
+    () => session(api).tasks_append({ path: 'transcript/2026-08-03.md', block: '## Планёрка · обсуждение\n**Кин:** текст' }),
+    (e) => e.code === 'invalid_transcript_heading',
+  );
+  assert.ok(!api.kv[tasks.keyForPath('transcript/2026-08-03.md')], 'файл не создан и не изменён');
+});

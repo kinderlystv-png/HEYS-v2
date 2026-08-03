@@ -1147,6 +1147,8 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
     async tasks_append(args = {}) {
       const block = String(args.block || '').trim();
       if (!block) throw new ToolError('invalid_block', 'Нужен текст блока.');
+      const headingError = tasks.transcriptHeadingError(args.path, block);
+      if (headingError) throw new ToolError('invalid_transcript_heading', headingError);
       const file = await readFile(args.path);
       const saved = await writeFile(file, tasks.appendBlock(file.text, block));
       return {
