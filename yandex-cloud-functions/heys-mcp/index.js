@@ -297,7 +297,9 @@ function attachSecurityHeaders(nonce) {
     'Cache-Control': 'no-store',
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
-    'Content-Security-Policy': `default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'`,
+    // img-src нужен blob: — сжатие фото рисует File через URL.createObjectURL()
+    // в <img> для canvas, а это blob:-URL, не data:.
+    'Content-Security-Policy': `default-src 'self'; script-src 'self' 'nonce-${nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'`,
     'Referrer-Policy': 'no-referrer',
   };
 }
