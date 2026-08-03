@@ -2892,3 +2892,17 @@ test('напоминания, быстрые дела и идеи объявле
     assert.equal(typeof built.tools[name], 'function', `${name} имеет обработчик`);
   }
 });
+
+test('подготовка к событию описана как три роли, а не как «заводи всё тройками»', () => {
+  const rules = curatorInstructions('Антон', true);
+  const prep = rules.split('\n').filter((l) => /^З\d+\. (Подготовка к чужому событию|Три роли)/.test(l));
+  assert.equal(prep.length, 2, 'правило про подготовку и правило про его границы');
+  const [roles, limits] = prep;
+  // Три роли названы вместе с инструментами — иначе агент заведёт только задачу.
+  for (const tool of ['tasks_capture', 'tasks_slot', 'tasks_remind']) assert.match(roles, new RegExp(tool));
+  assert.match(roles, /ref/, 'слот связывается с задачей, а не просто называется похоже');
+  assert.match(roles, /спроси/, 'длительность и нужность напоминания не угадываются');
+  // Граница обязательна: без неё правило превращается в генератор троек.
+  assert.match(limits, /в тот же день/);
+  assert.match(limits, /просто задача/);
+});
