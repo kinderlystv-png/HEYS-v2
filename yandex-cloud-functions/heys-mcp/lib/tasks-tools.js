@@ -16,6 +16,7 @@
  */
 
 const tasks = require('./tasks');
+const assets = require('./assets');
 
 const TASKS_TOOL_SCHEMAS = [
   {
@@ -271,6 +272,21 @@ const TASKS_BOARD_SCHEMAS = [
     },
   },
   {
+    name: 'tasks_attach',
+    description: 'Приложить файл к задаче: файл уезжает в приватное хранилище вложений, а в карточку встаёт строка «вложение: путь — подпись». Этим кладут скрин, счёт, скан, готовый промпт — всё, что должно остаться при задаче, а не в переписке. Файл отдаётся содержимым в base64; байты идут напрямую в хранилище, в ответ не возвращаются и в карточку не попадают. Картинку перед вызовом сожми (ширина около 1000, качество 60, цель — около 100 КБ): жать её здесь нечем, слишком тяжёлую инструмент отклонит и скажет, до чего дожать. Документ (pdf, xlsx, md) кладётся как есть, жать его нельзя — пережатый счёт перестаёт быть счётом. Подпись обязательна: файл может потеряться, строка с подписью останется понятной.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        project: { type: 'string', description: 'Проект задачи: heys, kinderly, family, personal, mine2d, travel, someday.' },
+        hash: { type: 'string', description: 'Хэш задачи с доски.' },
+        filename: { type: 'string', description: 'Имя файла с расширением: screenshot.jpg, счёт-август.pdf. Расширение определяет, картинка это или документ, — без него файл не примут.' },
+        content_base64: { type: 'string', description: 'Содержимое файла в base64, без префикса data:. Картинка должна быть уже сжатой.' },
+        caption: { type: 'string', description: 'Подпись одной строкой: что это за файл. «скрин ошибки в планёрке», «счёт от Ани за август».' },
+      },
+      required: ['project', 'hash', 'filename', 'content_base64', 'caption'],
+    },
+  },
+  {
     name: 'tasks_resolve',
     description: 'Снять вложенную строку у задачи: ответ на «открыто:» получен, ожидание «ждём:» закрылось. Снимай в том же ходе, когда пришёл ответ, — иначе вопрос всплывёт снова и его зададут второй раз.',
     inputSchema: {
@@ -491,9 +507,35 @@ const TASKS_AGENT_SCHEMAS = [
  */
 const WRITE_ATTEMPTS = 4;
 
-function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolError, writeContext = null }) {
+function createTasksTools({
+  api, curatorJwt, clientId, nowMs = Date.now(), ToolError, writeContext = null,
+  // Хранилище вложений подставляется тестами целиком: до сети они не доходят,
+  // и проверочный мусор в боевой репозиторий не уезжает.
+  assetsClient = null, env = process.env,
+}) {
   let indexPromise = null;
   let statePromise = null;
+
+  /**
+   * Токен читается лениво и только здесь. В аргументы инструмента он не
+   * входит, наружу не возвращается и в текст ошибки не попадает: наличие
+   * секрета видно по факту «настроено / не настроено», а не по значению.
+   */
+  function requireAssets() {
+    if (assetsClient) return assetsClient;
+    const token = env && env.TASKS_ASSETS_TOKEN;
+    if (!token) {
+      throw new ToolError(
+        'attachments_not_configured',
+        'Хранилище вложений не подключено: доступ на запись не задан. Скажи ему — он положит его в секреты. Пока этого нет, файл приложить нельзя, и делать вид, что приложил, тоже нельзя.',
+      );
+    }
+    return assets.createAssetsClient({
+      token,
+      repo: (env && env.TASKS_ASSETS_REPO) || assets.DEFAULT_REPO,
+      branch: (env && env.TASKS_ASSETS_BRANCH) || assets.DEFAULT_BRANCH,
+    });
+  }
 
   function requireClient() {
     if (!clientId) {
@@ -2180,6 +2222,84 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
      * несуществующий хэш выглядит как связь, а ведёт в пустоту — и обнаружится
      * это ровно тогда, когда по ней захотят пройти.
      */
+    /**
+     * Файл из разговора — в карточку.
+     *
+     * Порядок шагов выбран так, чтобы в хранилище не оставалось сирот: сперва
+     * проверяется файл, потом находится карточка, и только затем идёт заливка.
+     * Обратный порядок оставлял бы в репозитории вложения, на которые никто не
+     * ссылается, а чистить их нечем.
+     *
+     * Строка в карточке — единственный результат, который переживёт разговор.
+     * Ответ инструмента специально говорит об этом словами: файл, отданный
+     * только в чат, через день не найдёт никто.
+     */
+    async tasks_attach(args = {}) {
+      const caption = String(args.caption || '').replace(/\s+/g, ' ').trim();
+      if (!caption) {
+        throw new ToolError('caption_required', 'Вложению нужна подпись: что это за файл. Без неё строка в карточке станет бессмысленной в тот день, когда файл потеряется.');
+      }
+
+      const { kind, ext, maxBytes } = assets.classifyKind(args.filename);
+      if (!kind) {
+        throw new ToolError(
+          'unsupported_file',
+          ext
+            ? `Файлы «.${ext}» не принимаются. Картинки: ${[...assets.IMAGE_EXTS].join(', ')}. Документы: ${[...assets.DOC_EXTS].join(', ')}.`
+            : 'У файла нет расширения, а по нему определяется, картинка это или документ. Назови имя файла целиком: screenshot.jpg, счёт.pdf.',
+        );
+      }
+
+      const base64 = String(args.content_base64 || '').replace(/\s+/g, '');
+      if (!assets.isValidBase64(base64)) {
+        throw new ToolError('invalid_content', 'Содержимое файла пришло не в base64. Нужен чистый base64, без префикса data: и без обрезки.');
+      }
+      const bytes = assets.base64Bytes(base64);
+      if (bytes > maxBytes) {
+        const kb = Math.round(bytes / 1024);
+        const capKb = Math.round(maxBytes / 1024);
+        throw new ToolError(
+          'file_too_large',
+          kind === 'image'
+            ? `Картинка на ${kb} КБ, потолок — ${capKb} КБ. Сожми её там, где лежит файл: ширина около 1000, качество 60, цель — около 100 КБ. Здесь жать нечем.`
+            : `Документ на ${kb} КБ, потолок — ${capKb} КБ. Документы не пережимаются: пришли файл меньшего объёма или раздели его.`,
+          { kind, bytes, max_bytes: maxBytes },
+        );
+      }
+
+      // Карточка ищется ДО заливки: не найдётся — в хранилище ничего не ляжет.
+      const { file, found, key } = await locateTask(args.project, args.hash);
+
+      const path = assets.assetPath({ filename: args.filename, caption, nowMs });
+      const store = requireAssets();
+      let res;
+      try {
+        res = await store.putFile({ path, base64, message: `вложение: ${path}` });
+      } catch (err) {
+        throw new ToolError('attach_upload_failed', `Не удалось положить файл в хранилище: ${store.scrub(err && err.message)}`);
+      }
+      if (!res.ok) {
+        throw new ToolError('attach_upload_failed', `Файл не залит, в карточку ничего не записано. ${res.error}`, { status: res.status });
+      }
+
+      const line = assets.buildAttachLine({ path, caption });
+      const saved = await writeFile(file, tasks.appendChild(file.text, found.line, line));
+      return {
+        text: `${key}/${String(args.hash).toLowerCase()} · ${found.parsed.title} → ${line}. Файл лежит в хранилище вложений, строка стоит в карточке — на доске он появится после ближайшей синхронизации. Отдать файл ещё и в чат можно, но карточка теперь и есть результат.`,
+        structured: {
+          path: saved.path,
+          rev: saved.rev,
+          task: `${key}/${String(args.hash).toLowerCase()}`,
+          title: found.parsed.title,
+          asset_path: path,
+          kind,
+          bytes,
+          caption,
+          line,
+        },
+      };
+    },
+
     async tasks_link(args = {}) {
       const address = tasks.parseAddress(args.to);
       if (!address) throw new ToolError('invalid_ref', `Ссылка «${args.to}» не похожа на адрес с доски. Нужно «проект/хэш», например kinderly/8e3572.`);
