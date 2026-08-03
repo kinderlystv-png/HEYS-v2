@@ -2455,6 +2455,374 @@ function markHabit(text, habit, date) {
   throw new Error(`habit_not_found:${habit}`);
 }
 
+// ── Планёрка ─────────────────────────────────────────────────────────────
+//
+// Утро начинается не с чтения всего задачника, а с повестки: что висит, что он
+// сам просил обсудить, где данные разошлись. Своего хранилища у планёрки нет и
+// быть не должно — почти всё она собирает из уже существующих разборов. Своё у
+// неё ровно одно: список того, что он в разговоре отложил «до планёрки».
+//
+// Список живёт обычным файлом задачника, как предпочтения и голоса. Скрытое
+// состояние здесь не годится: пункт, который нельзя прочитать глазами и
+// вычеркнуть, через неделю становится чужой памятью о его словах. Снятый пункт
+// остаётся в файле галочкой — так видно, что обсудили, и повестка его больше
+// не поднимает.
+
+const STANDUP_PATH = 'docs/standup.md';
+const STANDUP_SECTION = '## На планёрку';
+const STANDUP_OBSERVED_SECTION = '## Замечено';
+
+/** Сколько пунктов показывать в одной группе повестки. */
+const STANDUP_GROUP_CAP = 5;
+
+/**
+ * Сколько замеченного можно держать открытым одновременно.
+ *
+ * Потолок здесь жёстче, чем у остальных групп, и это не про длину списка.
+ * Механическое расхождение доказано арифметикой, а замеченное — догадка, за
+ * подтверждением которой идут к человеку. Три догадки за утро он разберёт;
+ * десять превращают планёрку в допрос, после которого перестают отвечать и на
+ * верные.
+ */
+const STANDUP_OBSERVE_CAP = 3;
+
+/** С какого возраста обещание «ждём:» считается зависшим. */
+const STANDUP_STALE_DAYS = 10;
+
+function standupLine({ date, topic, note = null }) {
+  return `- [ ] ${date} · ${topic}${note ? ` — ${note}` : ''}`;
+}
+
+/** Границы раздела файла: пункты повестки и замеченное не должны смешиваться. */
+function standupSectionRange(lines, section) {
+  const start = findSectionLine(lines, section);
+  if (start === -1) return null;
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i += 1) {
+    if (/^#{1,6}\s/.test(lines[i])) { end = i; break; }
+  }
+  return { start: start + 1, end };
+}
+
+const STANDUP_HEAD_RE = /^-\s*\[([ xX])\]\s*(\d{4}-\d{2}-\d{2})\s*·\s*(.+)$/;
+
+/**
+ * Пункты повестки из файла. Формат тот же, что у задач: галочка спереди, чтобы
+ * он мог снять пункт руками в markdown, не открывая чат.
+ */
+function parseStandupItems(file, { section = STANDUP_SECTION } = {}) {
+  const out = [];
+  const lines = String((file && file.text) || '').split('\n');
+  const range = standupSectionRange(lines, section);
+  if (!range) return out;
+  for (let i = range.start; i < range.end; i += 1) {
+    const match = STANDUP_HEAD_RE.exec(lines[i].trim());
+    if (!match) continue;
+    const body = match[3].trim();
+    const split = body.lastIndexOf(' — ');
+    out.push({
+      line: i,
+      done: match[1].toLowerCase() === 'x',
+      date: match[2],
+      topic: (split === -1 ? body : body.slice(0, split)).trim(),
+      note: split === -1 ? null : body.slice(split + 3).trim(),
+    });
+  }
+  return out;
+}
+
+/**
+ * Замеченное: то, что нашлось не арифметикой, а по смыслу.
+ *
+ * Разрешено это ровно на одном условии — наблюдение выносится вопросом с
+ * обеими сторонами цитатами, а его ответ записывается тут же и навсегда
+ * закрывает тему. Иначе цена ошибочного наблюдения перестаёт быть одним
+ * вопросом и становится ежедневной придиркой.
+ *
+ * Стороны лежат вложенными строками, как контекст задачи: человек читает их
+ * глазами в markdown и за секунду видит, кто прав.
+ */
+function observationBlock({ date, question, sides = [] }) {
+  return [`- [ ] ${date} · ${question}`, ...sides.map((side) => `  - ${side}`)].join('\n');
+}
+
+function parseStandupObservations(file) {
+  const lines = String((file && file.text) || '').split('\n');
+  const range = standupSectionRange(lines, STANDUP_OBSERVED_SECTION);
+  const out = [];
+  if (!range) return out;
+  let current = null;
+  for (let i = range.start; i < range.end; i += 1) {
+    const raw = lines[i];
+    if (!/^\s/.test(raw)) {
+      const head = STANDUP_HEAD_RE.exec(raw.trim());
+      if (head) {
+        current = {
+          line: i,
+          done: head[1].toLowerCase() === 'x',
+          date: head[2],
+          question: head[3].trim(),
+          sides: [],
+          answer: null,
+        };
+        out.push(current);
+      } else {
+        current = null;
+      }
+      continue;
+    }
+    if (!current || !raw.trim()) continue;
+    const text = raw.trim().replace(/^[-*]\s+/, '');
+    const answered = /^ответ:\s*(.*)$/i.exec(text);
+    if (answered) current.answer = answered[1].trim();
+    else current.sides.push(text);
+  }
+  return out;
+}
+
+/** Снять пункт повестки: галочка, а не удаление — обсуждённое видно в файле. */
+function markStandupDone(text, index, done = true) {
+  const lines = String(text || '').split('\n');
+  if (index < 0 || index >= lines.length) throw new Error(`standup_line_out_of_range:${index}`);
+  const next = lines[index].replace(/\[[ xX]\]/, done ? '[x]' : '[ ]');
+  if (next === lines[index]) throw new Error(`standup_line_not_item:${index}`);
+  lines[index] = next;
+  return lines.join('\n');
+}
+
+/**
+ * Ответ на замеченное. Пишется вложенной строкой рядом с самим наблюдением и
+ * закрывает его галочкой: наблюдение, на которое ответили «это нормально»,
+ * обязано замолчать насовсем, а не всплыть через неделю другими словами.
+ */
+function answerObservation(text, index, answer) {
+  const said = String(answer || '').trim();
+  if (!said) throw new Error('empty_answer');
+  return appendChild(markStandupDone(text, index), index, `ответ: ${said}`);
+}
+
+/**
+ * Уже спрашивали ли про это. Мера и порог — те же, что у развилок доски:
+ * своя третья проверка схожести разошлась бы с ними на первой же правке.
+ *
+ * Сравнивается наблюдение целиком — вопрос вместе со сторонами, — а не одна
+ * формулировка вопроса. Причина проверялась на живом случае: одно и то же
+ * расхождение, пересказанное другими словами, набирало 0.58 и проходило мимо
+ * порога, хотя ссылалось на те же две строки в тех же двух файлах. Наблюдение
+ * — это вопрос И его опора; по опоре повтор виден там, где формулировка уже
+ * разошлась.
+ *
+ * Перекос намеренный: спорная пара скорее промолчит, чем спросит второй раз.
+ * Владелец согласился платить за наблюдение одним вопросом, а не двумя, и
+ * лишний повтор обесценивает механизм быстрее, чем пропущенная догадка.
+ */
+function observationText({ question, sides = [] }) {
+  return [String(question || ''), ...(sides || []).map(String)].join(' ');
+}
+
+function knownObservation(existing, observation, { threshold = DECISION_SIMILARITY } = {}) {
+  const wanted = observationText(
+    typeof observation === 'string' ? { question: observation } : observation,
+  );
+  let best = null;
+  for (const entry of existing) {
+    const score = questionSimilarity(wanted, observationText(entry));
+    if (score >= threshold && (!best || score > best.score)) best = { ...entry, score: Math.round(score * 100) / 100 };
+  }
+  return best;
+}
+
+// ── Расхождения ──────────────────────────────────────────────────────────
+//
+// Самое ценное на планёрке и самое опасное место в коде. Разошедшиеся данные
+// копятся молча: задачу «свести расписание» удалили как решённую, а сами дни не
+// поменяли. Но искать расхождения «по смыслу» нельзя — сравнение текста журнала
+// с содержимым дней это не проверка, а догадка, и одна выдуманная нестыковка
+// обесценит весь список.
+//
+// Поэтому здесь только то, что сходится или не сходится арифметически: ссылка
+// ведёт или не ведёт в живую задачу, срок прошёл или нет, два слота пересеклись
+// или нет. Ни одного правила вида «похоже, тут противоречие».
+
+/** Порядок групп в выдаче: спор данных важнее просто просроченного срока. */
+const DIVERGENCE_ORDER = [
+  'слот без задачи',
+  'слот на закрытую задачу',
+  'слоты пересеклись',
+  'ссылка в никуда',
+  'висит без вопроса',
+  'срок прошёл',
+];
+
+const DAY_FILE_RE = /^days\/(\d{4}-\d{2}-\d{2})\.md$/i;
+
+/**
+ * Места, где данные задачника спорят сами с собой.
+ *
+ * @param {Array} files файлы задачника: проекты и дни
+ * @param {string} today сегодняшняя дата — прошлые дни не проверяются вовсе:
+ *   слот на закрытую задачу вчера означает «сделали», а не расхождение.
+ */
+function findDivergences(files, { today = null } = {}) {
+  const all = (files || []).filter((f) => f && typeof f.text === 'string' && f.text);
+  const projects = all.filter((f) => /^projects\//i.test(f.path || ''));
+  const out = [];
+
+  // 1–2. Слот дня ведёт в задачу, которой нет или которая уже закрыта.
+  // 3. Два слота одного дня пересеклись так, что движок зовёт это конфликтом.
+  for (const file of all) {
+    const match = DAY_FILE_RE.exec(file.path || '');
+    if (!match) continue;
+    const date = match[1];
+    if (today && date < today) continue;
+
+    const lines = file.text.split('\n');
+    for (let i = 0; i < lines.length; i += 1) {
+      const raw = lines[i].trim();
+      if (/^-?\s*\[x\]/i.test(raw)) continue; // состоявшееся событие не расхождение
+      const slot = parseSlotRef(lines[i]);
+      if (!slot) continue;
+      const ref = `${slot.ref.project}/${slot.ref.hash}`;
+      const target = findTaskByAddress(projects, slot.ref);
+      if (!target) {
+        out.push({
+          kind: 'слот без задачи',
+          date,
+          path: file.path,
+          line: i + 1,
+          ref,
+          what: `${date} ${slot.from}–${slot.to} «${slot.title}» ссылается на ${ref}, а такой задачи нет`,
+        });
+      } else if (target.done) {
+        out.push({
+          kind: 'слот на закрытую задачу',
+          date,
+          path: file.path,
+          line: i + 1,
+          ref,
+          what: `${date} ${slot.from}–${slot.to} «${slot.title}» стоит под ${ref} «${target.title}», а задача уже закрыта`,
+        });
+      }
+    }
+
+    const slots = parseSlots(file.text).filter((s) => !s.done);
+    for (let a = 0; a < slots.length; a += 1) {
+      for (let b = a + 1; b < slots.length; b += 1) {
+        if (slots[a].from >= slots[b].to || slots[a].to <= slots[b].from) continue;
+        if (slotClashLevel(slots[a].kind, slots[b].kind) !== 'конфликт') continue;
+        out.push({
+          kind: 'слоты пересеклись',
+          date,
+          path: file.path,
+          line: slots[b].line + 1,
+          ref: null,
+          what: `${date}: «${slotPlainTitle(slots[a].title)}» ${slots[a].start}–${slots[a].end} и «${slotPlainTitle(slots[b].title)}» ${slots[b].start}–${slots[b].end} стоят одновременно`,
+        });
+      }
+    }
+  }
+
+  // 4. Задача висит в «Требует решения», а спрашивать нечего: строку «открыто:»
+  // сняли руками, тег остался. На доске она занимает место вопроса, которого нет.
+  // Обратную сторону — «открыто:» без тега — здесь не ищем намеренно: такие
+  // задачи повестка и так показывает в группе «требует решения», и второй раз
+  // тот же список читать не станут.
+  for (const file of projects) {
+    for (const task of parseTasks(file)) {
+      if (task.done) continue;
+      if (!task.tags.some((t) => t.toLowerCase() === 'blocked')) continue;
+      if (task.children.some((c) => /^открыто:/i.test(c))) continue;
+      out.push({
+        kind: 'висит без вопроса',
+        date: null,
+        path: file.path,
+        line: task.line,
+        ...taskAddress(file.path, task.title),
+        what: `«${task.title}» помечена #blocked, но ни одного «открыто:» под ней нет`,
+      });
+    }
+  }
+
+  // 5. Ссылка «см:» ведёт в задачу, которой больше нет. Слоты сюда не попадают:
+  // они уже проверены выше и попали бы вторым пунктом про то же самое.
+  for (const link of collectLinks(projects)) {
+    if (!link.from.project || !link.from.hash) continue;
+    if (findTaskByAddress(projects, link.to)) continue;
+    const ref = `${link.to.project}/${link.to.hash}`;
+    out.push({
+      kind: 'ссылка в никуда',
+      date: null,
+      path: link.from.path,
+      line: link.from.line,
+      ref,
+      from: `${link.from.project}/${link.from.hash}`,
+      what: `«${link.from.title}» ссылается на ${ref}, а такой задачи нет`,
+    });
+  }
+
+  // 6. Срок прошёл, отметки нет. Стоит последним: просрочки всегда больше, чем
+  // споров в данных, и без порядка она вытеснила бы их из-под потолка группы.
+  if (today) {
+    for (const file of projects) {
+      for (const task of parseTasks(file)) {
+        if (task.done || !task.due || task.due >= today) continue;
+        out.push({
+          kind: 'срок прошёл',
+          date: task.due,
+          path: file.path,
+          line: task.line,
+          ...taskAddress(file.path, task.title),
+          what: `«${task.title}» — срок ${task.due} прошёл, отметки нет`,
+        });
+      }
+    }
+  }
+
+  const rank = (kind) => {
+    const at = DIVERGENCE_ORDER.indexOf(kind);
+    return at === -1 ? DIVERGENCE_ORDER.length - 1 : at;
+  };
+  return out.sort((a, b) => rank(a.kind) - rank(b.kind) || String(a.date || '').localeCompare(String(b.date || '')));
+}
+
+/**
+ * Зависшие обещания: строки «ждём:» и «при встрече:» старше порога.
+ *
+ * Возраст берётся из хвоста «с ГГГГ-ММ-ДД», если он есть, иначе из даты
+ * заведения задачи. Обещание без обеих дат возраста не имеет — и зависшим его
+ * называть нечем, поэтому оно сюда не попадает вовсе.
+ */
+function stuckPromises(files, { today = null, staleDays = STANDUP_STALE_DAYS } = {}) {
+  if (!today) return [];
+  const projects = (files || []).filter((f) => f && /^projects\//i.test(f.path || ''));
+  const out = [];
+  for (const file of projects) {
+    for (const task of parseTasks(file)) {
+      if (task.done) continue;
+      for (const child of task.children) {
+        const match = /^(ждём|при встрече):\s*(.*)$/i.exec(child);
+        if (!match) continue;
+        const since = /(?:^|\s)с\s+(\d{4}-\d{2}-\d{2})/.exec(match[2]);
+        const started = since ? since[1] : task.created;
+        if (!started || !/^\d{4}-\d{2}-\d{2}$/.test(started)) continue;
+        const age = Math.floor((dateToMs(today) - dateToMs(started)) / DAY_MS);
+        if (!Number.isFinite(age) || age < staleDays) continue;
+        out.push({
+          path: file.path,
+          line: task.line,
+          ...taskAddress(file.path, task.title),
+          task: task.title,
+          kind: match[1].toLowerCase(),
+          text: match[2],
+          since: started,
+          days: age,
+        });
+      }
+    }
+  }
+  return out.sort((a, b) => b.days - a.days);
+}
+
 module.exports = {
   KEY_PREFIX,
   INDEX_KEY,
@@ -2480,6 +2848,23 @@ module.exports = {
   dayNote,
   setDayNote,
   markHabit,
+  // планёрка
+  STANDUP_PATH,
+  STANDUP_SECTION,
+  STANDUP_OBSERVED_SECTION,
+  STANDUP_GROUP_CAP,
+  STANDUP_OBSERVE_CAP,
+  STANDUP_STALE_DAYS,
+  standupLine,
+  parseStandupItems,
+  observationBlock,
+  observationText,
+  parseStandupObservations,
+  markStandupDone,
+  answerObservation,
+  knownObservation,
+  findDivergences,
+  stuckPromises,
   // загруженность вперёд
   BOARD_DAY_START,
   BOARD_DAY_END,

@@ -2022,3 +2022,421 @@ test('tasks_update до защищённых файлов не дотягива�
     (e) => e.code === 'invalid_path' || e.code === 'task_not_found',
   );
 });
+
+// ── Планёрка ─────────────────────────────────────────────────────────────
+//
+// Утренний обход собирали руками из пяти вызовов, и он держался ровно до
+// первого раза, когда его собрали не в том порядке. Здесь проверяется то, что
+// в такой сущности ломается: повестка обязана оставаться короткой, а список
+// расхождений — не выдумывать нестыковок там, где данные в порядке. Ложное
+// расхождение опаснее пропущенного: после него перепроверять придётся всё.
+
+const STANDUP_HEYS = `# HEYS
+
+## Задачи
+
+- [ ] P1 Живая задача due:2026-08-20 #ноут ^2026-07-30
+- [x] P2 Закрытая задача ^2026-07-01
+`;
+
+const STANDUP_DAY = `# План на 2026-08-03
+- 10:00–11:00 Созвон · heys/${tasks.taskHash('heys', 'Живая задача')} #фокус
+- 12:00–13:00 Обед #дело
+`;
+
+/** Задачник без единого расхождения — на нём проверяется отсутствие ложных. */
+function standupApi(extra = {}) {
+  const files = {
+    [tasks.keyForPath('projects/heys.md')]: { path: 'projects/heys.md', text: STANDUP_HEYS, rev: 1, updatedAt: 1 },
+    [tasks.keyForPath('days/2026-08-03.md')]: { path: 'days/2026-08-03.md', text: STANDUP_DAY, rev: 1, updatedAt: 1 },
+  };
+  for (const [path, text] of Object.entries(extra)) files[tasks.keyForPath(path)] = { path, text, rev: 1, updatedAt: 1 };
+  const api = liveApi(files);
+  api.file = (path) => (api.kv[tasks.keyForPath(path)] || {}).text || '';
+  return api;
+}
+
+test('на здоровом задачнике расхождений нет ни одного', async () => {
+  const res = await session(standupApi()).tasks_standup({});
+  assert.deepEqual(res.structured.divergences, [], 'выдуманное расхождение обесценивает весь список');
+  assert.equal(res.structured.totals.divergences, 0);
+});
+
+test('пустая повестка не падает и честно говорит, что обсуждать нечего', async () => {
+  const res = await session(standupApi()).tasks_standup({});
+  assert.equal(res.structured.empty, true);
+  assert.match(res.text, /Обсуждать нечего/);
+  // Картина времени и денег остаётся даже на пустой повестке: это не находка,
+  // а фон, ради которого утро и садятся разбирать.
+  assert.match(res.text, /Картина: /);
+  assert.ok(Array.isArray(res.structured.picture.free_days));
+});
+
+test('слот ведёт в несуществующую и в закрытую задачу — оба случая названы', async () => {
+  const closed = tasks.taskHash('heys', 'Закрытая задача');
+  const api = standupApi({
+    'days/2026-08-04.md': `# План\n- 09:00–10:00 В никуда · heys/abcdef\n- 11:00–12:00 На закрытую · heys/${closed}\n`,
+  });
+  const res = await session(api).tasks_standup({});
+  const kinds = res.structured.divergences.map((d) => d.kind);
+  assert.ok(kinds.includes('слот без задачи'), 'ссылка в несуществующую задачу');
+  assert.ok(kinds.includes('слот на закрытую задачу'), 'событие под уже закрытой задачей');
+  assert.match(res.text, /heys\/abcdef/);
+});
+
+test('прошлые дни не проверяются: вчерашний слот на закрытую задачу — это «сделали»', () => {
+  const closed = tasks.taskHash('heys', 'Закрытая задача');
+  const files = [
+    { path: 'projects/heys.md', text: STANDUP_HEYS },
+    { path: 'days/2026-08-01.md', text: `# План\n- 09:00–10:00 Вчера · heys/${closed}\n- 09:30–10:30 И ещё #фокус\n` },
+  ];
+  assert.deepEqual(tasks.findDivergences(files, { today: '2026-08-02' }), [], 'прошлое расхождением не считается');
+  // Тот же файл, если день ещё не наступил, разбирается полностью — иначе
+  // проверка выше доказывала бы только то, что день не прочитали.
+  const ahead = tasks.findDivergences(files, { today: '2026-07-01' }).map((d) => d.kind);
+  assert.deepEqual(ahead.sort(), ['слот на закрытую задачу', 'слоты пересеклись']);
+});
+
+test('состоявшийся слот расхождением не считается, даже если задача закрыта', () => {
+  const closed = tasks.taskHash('heys', 'Закрытая задача');
+  const files = [
+    { path: 'projects/heys.md', text: STANDUP_HEYS },
+    { path: 'days/2026-08-05.md', text: `# План\n- [x] 09:00–10:00 Было · heys/${closed}\n` },
+  ];
+  assert.deepEqual(tasks.findDivergences(files, { today: '2026-08-02' }), []);
+});
+
+test('пересечение слотов берётся у движка конфликтов, а не считается заново', () => {
+  const day = (text) => [{ path: 'projects/heys.md', text: STANDUP_HEYS }, { path: 'days/2026-08-05.md', text }];
+  // Два «фокуса» внахлёст — конфликт: двум делам в одно время нужна голова.
+  const clash = tasks.findDivergences(day('# П\n- 10:00–12:00 Раз #фокус\n- 11:00–13:00 Два #фокус\n'), { today: '2026-08-02' });
+  assert.equal(clash.length, 1);
+  assert.equal(clash[0].kind, 'слоты пересеклись');
+  // «Дело» — врезка внутри чего угодно, и движок конфликтом это не зовёт.
+  assert.deepEqual(tasks.findDivergences(day('# П\n- 10:00–12:00 Раз #фокус\n- 11:00–11:15 Врезка #дело\n'), { today: '2026-08-02' }), []);
+  // «Вопрос» — не конфликт: два фоновых блока подряд движок различить не берётся,
+  // и на планёрку такое выносить нечего. В расхождения идёт только «конфликт».
+  assert.equal(tasks.slotClashLevel('фон', 'фон'), 'вопрос');
+  assert.deepEqual(tasks.findDivergences(day('# П\n- 10:00–12:00 Раз #фон\n- 11:00–13:00 Два #фон\n'), { today: '2026-08-02' }), []);
+  assert.deepEqual(tasks.findDivergences(day('# П\n- 10:00–12:00 Раз #фокус\n- 11:00–13:00 Зарядка #привычка\n'), { today: '2026-08-02' }), []);
+  // Смежные по краю слоты не пересекаются вовсе.
+  assert.deepEqual(tasks.findDivergences(day('# П\n- 10:00–11:00 Раз #фокус\n- 11:00–12:00 Два #фокус\n'), { today: '2026-08-02' }), []);
+});
+
+test('#blocked без единого «открыто:» — задача занимает место вопроса, которого нет', () => {
+  const withOpen = `# HEYS\n\n## Задачи\n\n- [ ] P2 Развилка #blocked ^2026-08-01\n  - открыто: какой вариант берём?\n`;
+  assert.deepEqual(tasks.findDivergences([{ path: 'projects/heys.md', text: withOpen }], { today: '2026-08-02' }), []);
+
+  const без = `# HEYS\n\n## Задачи\n\n- [ ] P2 Развилка #blocked ^2026-08-01\n  - просто заметка\n`;
+  const found = tasks.findDivergences([{ path: 'projects/heys.md', text: без }], { today: '2026-08-02' });
+  assert.equal(found.length, 1);
+  assert.equal(found[0].kind, 'висит без вопроса');
+  assert.equal(found[0].ref, `heys/${tasks.taskHash('heys', 'Развилка')}`);
+
+  // Закрытая задача с тем же тегом расхождением не считается.
+  const done = `# HEYS\n\n## Задачи\n\n- [x] P2 Развилка #blocked ^2026-08-01\n`;
+  assert.deepEqual(tasks.findDivergences([{ path: 'projects/heys.md', text: done }], { today: '2026-08-02' }), []);
+});
+
+test('ссылка «см:» в несуществующую задачу видна, а живая — нет', () => {
+  const live = tasks.taskHash('heys', 'Живая задача');
+  const ok = `${STANDUP_HEYS}  - см: heys/${live} — та же тема\n`;
+  assert.deepEqual(tasks.findDivergences([{ path: 'projects/heys.md', text: ok }], { today: '2026-08-02' }), []);
+
+  const broken = `${STANDUP_HEYS}  - см: heys/000000 — в никуда\n`;
+  const found = tasks.findDivergences([{ path: 'projects/heys.md', text: broken }], { today: '2026-08-02' });
+  assert.equal(found.length, 1);
+  assert.equal(found[0].kind, 'ссылка в никуда');
+  assert.equal(found[0].ref, 'heys/000000');
+});
+
+test('прошедший срок без отметки назван, а будущий — нет', () => {
+  const found = tasks.findDivergences([{ path: 'projects/heys.md', text: STANDUP_HEYS }], { today: '2026-08-25' });
+  assert.deepEqual(found.map((d) => d.kind), ['срок прошёл']);
+  assert.equal(found[0].ref, `heys/${tasks.taskHash('heys', 'Живая задача')}`);
+  // Тот же файл на дату до срока — расхождения нет.
+  assert.deepEqual(tasks.findDivergences([{ path: 'projects/heys.md', text: STANDUP_HEYS }], { today: '2026-08-02' }), []);
+});
+
+test('спор данных показывается раньше просрочки — иначе она вытеснит его из-под потолка', () => {
+  const text = `# HEYS\n\n## Задачи\n\n${
+    Array.from({ length: 6 }, (_, i) => `- [ ] P2 Просрочка ${i} due:2026-07-01 ^2026-06-01`).join('\n')
+  }\n- [ ] P2 Висит #blocked ^2026-07-01\n`;
+  const found = tasks.findDivergences([{ path: 'projects/heys.md', text }], { today: '2026-08-02' });
+  assert.equal(found[0].kind, 'висит без вопроса', 'спор данных стоит первым');
+  assert.equal(found.filter((d) => d.kind === 'срок прошёл').length, 6);
+});
+
+test('потолок группы держится и скрытое считается вслух', async () => {
+  const many = `# HEYS\n\n## Задачи\n\n${
+    Array.from({ length: 8 }, (_, i) => `- [ ] P2 Развилка ${i} #blocked ^2026-07-01\n  - открыто: какой вариант ${i}?`).join('\n')
+  }\n`;
+  const api = standupApi({ 'projects/heys.md': many });
+  const res = await session(api).tasks_standup({});
+  assert.equal(res.structured.totals.decide, 8);
+  assert.equal(res.structured.decide.length, tasks.STANDUP_GROUP_CAP);
+  assert.equal(res.structured.hidden.decide, 8 - tasks.STANDUP_GROUP_CAP);
+  assert.match(res.text, new RegExp(`и ещё ${8 - tasks.STANDUP_GROUP_CAP}`));
+});
+
+test('потолок держится и на том, что он принёс сам', async () => {
+  const api = standupApi();
+  const tools = session(api);
+  // Темы намеренно разные: похожие отсеются как повтор, и потолок останется
+  // непроверенным.
+  const topics = [
+    'Отпуск: какие даты в силе',
+    'Реклама: бюджет на август',
+    'Аренда студии: продлевать ли',
+    'Второй тренер: искать сейчас',
+    'Дзюдо: третья тренировка',
+    'Лендинг: какую версию берём',
+    'Налоги: патент на следующий год',
+  ];
+  assert.ok(topics.length > tasks.STANDUP_GROUP_CAP, 'принесённого должно быть больше потолка');
+  for (const topic of topics) {
+    const res = await tools.tasks_standup({ add: topic });
+    assert.equal(res.structured.created, true, `«${topic}» должна была лечь в повестку`);
+  }
+  const res = await session(api).tasks_standup({});
+  assert.equal(res.structured.totals.brought, topics.length);
+  assert.equal(res.structured.brought.length, tasks.STANDUP_GROUP_CAP);
+  assert.equal(res.structured.hidden.brought, topics.length - tasks.STANDUP_GROUP_CAP);
+});
+
+test('посчитанные расхождения потолком не режутся — они доказуемы', async () => {
+  const many = `# HEYS\n\n## Задачи\n\n${
+    Array.from({ length: 8 }, (_, i) => `- [ ] P2 Висит ${i} #blocked ^2026-07-01`).join('\n')
+  }\n`;
+  // Без файла дня: здесь считается ровно восемь расхождений одного вида.
+  const api = liveApi({ [tasks.keyForPath('projects/heys.md')]: { path: 'projects/heys.md', text: many, rev: 1, updatedAt: 1 } });
+  const res = await session(api).tasks_standup({});
+  assert.equal(res.structured.totals.divergences, 8);
+  assert.equal(res.structured.divergences.length, 8, 'доказанное не прячется ради длины');
+  assert.equal(res.structured.hidden.divergences, 0);
+});
+
+test('зависшее обещание считается по дате, а свежее не считается вовсе', () => {
+  const text = `# Семья\n\n## Задачи\n\n- [>] P2 Забрать зеркало ^2026-07-01\n  - ждём: Даня — привезёт, с 2026-07-01\n- [>] P2 Второе ^2026-08-01\n  - ждём: Маша — ответит, с 2026-08-01\n`;
+  const found = tasks.stuckPromises([{ path: 'projects/family.md', text }], { today: '2026-08-02' });
+  assert.equal(found.length, 1, 'вчерашнее обещание зависшим не считается');
+  assert.equal(found[0].days, 32);
+  assert.match(found[0].text, /Даня/);
+});
+
+test('обещание без даты возрастом не наделяется', () => {
+  const text = '# Семья\n\n## Задачи\n\n- [>] P2 Без даты\n  - ждём: Даня — привезёт\n';
+  assert.deepEqual(tasks.stuckPromises([{ path: 'projects/family.md', text }], { today: '2026-08-02' }), []);
+});
+
+test('вопрос кладётся на планёрку заранее и утром всплывает в повестке', async () => {
+  const api = standupApi();
+  const put = await session(api).tasks_standup({ add: 'Отпуск 16–19: даты снова открыли', note: 'сказал «обсудим на планёрке»' });
+  assert.equal(put.structured.created, true);
+  assert.match(api.file(tasks.STANDUP_PATH), /^- \[ \] 2026-08-02 · Отпуск 16–19: даты снова открыли — сказал/m);
+
+  const agenda = await session(api).tasks_standup({});
+  assert.equal(agenda.structured.empty, false);
+  assert.equal(agenda.structured.brought.length, 1);
+  assert.equal(agenda.structured.brought[0].topic, 'Отпуск 16–19: даты снова открыли');
+  assert.match(agenda.text, /Принесли на планёрку/);
+});
+
+test('обсуждённый пункт снимается и в повестке больше не всплывает', async () => {
+  const api = standupApi();
+  await session(api).tasks_standup({ add: 'Отпуск 16–19: даты снова открыли' });
+  await session(api).tasks_standup({ add: 'Кто ведёт вторую смену' });
+
+  const off = await session(api).tasks_standup({ done: 'отпуск' });
+  assert.equal(off.structured.left, 1);
+  assert.match(api.file(tasks.STANDUP_PATH), /^- \[x\] 2026-08-02 · Отпуск/m, 'снятое видно в файле галочкой, а не стёрто');
+
+  const agenda = await session(api).tasks_standup({});
+  assert.deepEqual(agenda.structured.brought.map((i) => i.topic), ['Кто ведёт вторую смену']);
+});
+
+test('тот же вопрос на планёрку второй раз не кладётся', async () => {
+  const api = standupApi();
+  await session(api).tasks_standup({ add: 'Кто ведёт вторую смену в субботу' });
+  const again = await session(api).tasks_standup({ add: 'Кто ведёт вторую смену в субботу' });
+  assert.equal(again.structured.created, false);
+  assert.equal(again.structured.reason, 'duplicate');
+  assert.equal(tasks.parseStandupItems({ text: api.file(tasks.STANDUP_PATH) }).length, 1);
+});
+
+test('снять пункт по неоднозначным словам инструмент отказывается', async () => {
+  const api = standupApi();
+  await session(api).tasks_standup({ add: 'Смена в субботу' });
+  await session(api).tasks_standup({ add: 'Смена в воскресенье' });
+  await assert.rejects(() => session(api).tasks_standup({ done: 'смена' }), (e) => e.code === 'ambiguous_standup_item');
+  await assert.rejects(() => session(api).tasks_standup({ done: 'ремонт' }), (e) => e.code === 'standup_item_not_found');
+});
+
+test('повестка берёт нерешённое у tasks_list, а не разбирает задачи заново', async () => {
+  const withOpen = `# HEYS\n\n## Задачи\n\n- [ ] P2 Развилка #blocked ^2026-08-01\n  - открыто: какой вариант берём?\n`;
+  const api = standupApi({ 'projects/heys.md': withOpen });
+  const tools = session(api);
+  const agenda = await tools.tasks_standup({});
+  const list = await tools.tasks_list({});
+  assert.deepEqual(
+    agenda.structured.decide.map((t) => t.ref),
+    list.structured.blocked.map((t) => t.ref),
+    'два разных ответа на «что требует решения» — то, ради чего планёрку и заводили',
+  );
+  assert.match(agenda.text, /какой вариант берём/);
+});
+
+test('планёрка объявлена и в схемах, и обработчиком', () => {
+  const built = createTasksTools({ api: liveApi({}), curatorJwt: JWT, clientId: CLIENT, nowMs: NOW, ToolError });
+  const schema = built.schemas.find((s) => s.name === 'tasks_standup');
+  assert.ok(schema, 'без схемы модель инструмента не увидит');
+  assert.equal(schema.inputSchema.type, 'object');
+  assert.equal(typeof built.tools.tasks_standup, 'function');
+  for (const arg of ['add', 'done']) assert.ok(schema.inputSchema.properties[arg], `${arg} объявлен`);
+});
+
+// ── Замеченное по смыслу ─────────────────────────────────────────────────
+//
+// Кодом такое не проверяется: сравнить запись журнала с содержимым дней может
+// только модель, и она же может ошибиться. Владелец согласился платить за
+// ошибку одним вопросом — но ровно при условии, что ответ запоминается и
+// вопрос не повторяется. Условие механическое, поэтому и проверяется здесь, а
+// не остаётся обещанием в правилах.
+
+/** Живой случай: журнал говорит одно, дни показывают другое. */
+const NOTICED = 'В журнале за 03.08 записано, что неделя 3–9 сходится (футбол ср 5, дзюдо сб 8), а в днях 5-го стоит дзюдо и 8-е без него — что верно?';
+const NOTICED_SIDES = [
+  'journal/2026-08.md: «слоты проставлены: футбол ср 5 и пт 7, дзюдо сб 8»',
+  'days/2026-08-05.md: «16:00–17:30 Дзюдо @ЮЗР»',
+  'days/2026-08-08.md: дзюдо нет вовсе',
+];
+
+test('замеченное выносится вопросом с обеими сторонами и встаёт отдельной группой', async () => {
+  const api = standupApi();
+  const put = await session(api).tasks_standup({ observe: NOTICED, sides: NOTICED_SIDES });
+  assert.equal(put.structured.created, true);
+
+  const saved = api.file(tasks.STANDUP_PATH);
+  assert.match(saved, /^## Замечено$/m, 'замеченное лежит своим разделом, а не вперемешку с принесённым');
+  assert.match(saved, /^ {2}- journal\/2026-08\.md: /m, 'сторона осталась цитатой с указанием файла');
+
+  const agenda = await session(api).tasks_standup({});
+  assert.equal(agenda.structured.noticed.length, 1);
+  assert.equal(agenda.structured.noticed[0].sides.length, 3);
+  // Посчитанное и замеченное названы по-разному: смешать их значит выдать
+  // догадку за факт.
+  assert.match(agenda.text, /Замечено — нужен твой ответ/);
+  assert.match(agenda.text, /days\/2026-08-05\.md/);
+  assert.deepEqual(agenda.structured.brought, [], 'в принесённое им замеченное не попало');
+});
+
+test('наблюдение без обеих сторон не принимается', async () => {
+  const api = standupApi();
+  for (const sides of [undefined, [], ['journal/2026-08.md: «дзюдо сб 8»']]) {
+    await assert.rejects(
+      () => session(api).tasks_standup({ observe: NOTICED, sides }),
+      (e) => e.code === 'sides_required',
+    );
+  }
+  assert.equal(api.file(tasks.STANDUP_PATH), '', 'ничего не записано');
+});
+
+test('про то же самое второй раз не спрашиваем, даже другими словами', async () => {
+  const api = standupApi();
+  await session(api).tasks_standup({ observe: NOTICED, sides: NOTICED_SIDES });
+  const again = await session(api).tasks_standup({
+    observe: 'Неделя 3–9: в журнале дзюдо записано на субботу 8, а в днях дзюдо стоит 5-го — что верно?',
+    sides: NOTICED_SIDES,
+  });
+  assert.equal(again.structured.created, false);
+  assert.equal(again.structured.reason, 'duplicate');
+  assert.equal(tasks.parseStandupObservations({ text: api.file(tasks.STANDUP_PATH) }).length, 1);
+});
+
+test('отвеченное наблюдение замолкает навсегда, а ответ остаётся в файле', async () => {
+  const api = standupApi();
+  await session(api).tasks_standup({ observe: NOTICED, sides: NOTICED_SIDES });
+  const closed = await session(api).tasks_standup({
+    done: 'неделя 3–9', answer: 'дни верные, журнал не поправили — ориентируйся на дни',
+  });
+  assert.equal(closed.structured.kind, 'наблюдение');
+  const saved = api.file(tasks.STANDUP_PATH);
+  assert.match(saved, /^- \[x\] 2026-08-02 · В журнале за 03\.08/m);
+  assert.match(saved, /^ {2}- ответ: дни верные, журнал не поправили/m);
+
+  // Из повестки ушло.
+  const agenda = await session(api).tasks_standup({});
+  assert.deepEqual(agenda.structured.noticed, []);
+
+  // И поднять его заново нельзя — ни теми же словами, ни другими.
+  const retry = await session(api).tasks_standup({
+    observe: 'Неделя 3–9: в журнале дзюдо на субботу 8, а в днях дзюдо 5-го — что верно?',
+    sides: NOTICED_SIDES,
+  });
+  assert.equal(retry.structured.created, false);
+  assert.equal(retry.structured.reason, 'answered');
+  assert.match(retry.text, /он ответил/);
+});
+
+test('наблюдение без записанного ответа закрыть нельзя', async () => {
+  const api = standupApi();
+  await session(api).tasks_standup({ observe: NOTICED, sides: NOTICED_SIDES });
+  await assert.rejects(
+    () => session(api).tasks_standup({ done: 'неделя 3–9' }),
+    (e) => e.code === 'answer_required' && /завтра ты спросишь то же самое/.test(e.message),
+  );
+  assert.equal(tasks.parseStandupObservations({ text: api.file(tasks.STANDUP_PATH) })[0].done, false);
+});
+
+test('принесённый им пункт закрывается и без ответа — это не наблюдение', async () => {
+  const api = standupApi();
+  await session(api).tasks_standup({ add: 'Отпуск 16–19: даты снова открыли' });
+  const off = await session(api).tasks_standup({ done: 'отпуск' });
+  assert.equal(off.structured.kind, 'пункт');
+  assert.equal(off.structured.answer, null);
+});
+
+test('больше трёх незакрытых наблюдений завести нельзя', async () => {
+  const api = standupApi();
+  const tools = session(api);
+  // Наблюдения намеренно про разное: похожие отсеялись бы как повтор, и
+  // потолок остался бы непроверенным.
+  const distinct = [
+    { observe: 'Дзюдо записано на субботу, а стоит во вторник — что верно?', sides: ['journal/2026-08.md: «дзюдо сб»', 'days/2026-08-04.md: «дзюдо»'] },
+    { observe: 'Аренда студии оплачена дважды за один месяц?', sides: ['money/2026-08.md: «-30000 аренда»', 'money/2026-08.md: «-30000 аренда»'] },
+    { observe: 'Отпуск помечен решённым, но даты снова открыли — какие в силе?', sides: ['GOALS.md: «отпуск 16–19, решено»', 'journal/2026-08.md: «даты снова открыли»'] },
+  ];
+  for (const one of distinct) {
+    const res = await tools.tasks_standup(one);
+    assert.equal(res.structured.created, true, `«${one.observe}» должно было завестись`);
+  }
+  await assert.rejects(
+    () => session(api).tasks_standup({ observe: 'Реклама запущена, а бюджет на неё нигде не записан?', sides: ['projects/heys.md: «запуск рекламы»', 'money/2026-08.md: «строк по рекламе нет»'] }),
+    (e) => e.code === 'too_many_observations' && /закрой через done с answer/.test(e.message),
+  );
+});
+
+test('разные наблюдения про одну неделю повтором не считаются', async () => {
+  const api = standupApi();
+  const tools = session(api);
+  await tools.tasks_standup({ observe: NOTICED, sides: NOTICED_SIDES });
+  // То же расписание, но расхождение другое: время футбола против закрытия
+  // студии. Отсечь его как повтор значит потерять настоящее наблюдение.
+  const other = await tools.tasks_standup({
+    observe: 'Футбол 9-го стоит на 16:00, а студия закрывается в 16:00 — успеет ли?',
+    sides: ['days/2026-08-09.md: «15:00-16:00 Закрыть студию»', 'days/2026-08-09.md: «16:00–17:00 Футбол @центр»'],
+  });
+  assert.equal(other.structured.created, true);
+  assert.equal(other.structured.open, 2);
+});
+
+test('замеченное и принесённое не путаются между собой при снятии', async () => {
+  const api = standupApi();
+  const tools = session(api);
+  await tools.tasks_standup({ add: 'Расписание секций на сентябрь' });
+  await tools.tasks_standup({ observe: 'Расписание секций: журнал и дни разошлись — что верно?', sides: ['j.md: «а»', 'd.md: «б»'] });
+  await assert.rejects(
+    () => session(api).tasks_standup({ done: 'расписание секций' }),
+    (e) => e.code === 'ambiguous_standup_item',
+  );
+});

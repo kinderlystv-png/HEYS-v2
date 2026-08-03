@@ -407,6 +407,26 @@ const TASKS_AGENT_SCHEMAS = [
     },
   },
   {
+    name: 'tasks_standup',
+    description: 'Повестка планёрки: с чего начинается утро. Собирает в одном ответе то, что иначе пришлось бы доставать пятью вызовами: что он сам просил обсудить, что висит нерешённым, где данные задачника разошлись между собой, что ты заметил по смыслу, какие обещания зависли, и коротко — картину времени и денег. Расхождения и замеченное разведены намеренно: первое посчитано по файлам и это факт, второе — твой вопрос к нему. Аргумент add кладёт вопрос на планёрку заранее — вызывай его сразу, как он сказал «обсудим на планёрке»; observe выносит замеченное; done снимает пункт, когда обсудили.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        add: { type: 'string', description: 'Положить вопрос на ближайшую планёрку — одной строкой, о чём говорить. Вызывай в том же ходе, когда он сказал «это обсудим на планёрке»: иначе вопрос живёт до конца чата и утром его никто не вспомнит.' },
+        note: { type: 'string', description: 'К add: его формулировка или факт, без которого пункт утром не читается. Коротко.' },
+        observe: { type: 'string', description: 'Замеченное по смыслу — ВОПРОСОМ, а не утверждением: «в журнале за 03.08 записано, что неделя сходится, а в днях 5-го дзюдо и 8-е пустое — что верно?». Подтвердить такое может только он, поэтому утверждение здесь было бы враньём. Открытых наблюдений держим не больше трёх: догадка стоит его ответа, а десять догадок — это допрос.' },
+        sides: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'К observe: обе стороны расхождения цитатами с указанием файла — «journal/2026-08.md: „дзюдо сб 8“» и «days/2026-08-08.md: дзюдо нет». Минимум две: без них он пойдёт проверять сам, и наблюдение будет стоить дороже, чем сэкономит.',
+        },
+        done: { type: 'string', description: 'Снять пункт повестки или закрыть замеченное — часть его текста. Вызывай, когда обсудили: непогашенный пункт всплывёт и завтра, и через неделю.' },
+        answer: { type: 'string', description: 'К done по замеченному — обязателен: что он ответил, его словами. Незаписанный ответ значит, что завтра ты спросишь то же самое. Если он назвал этим ответом правило, запиши его ещё и через tasks_learn.' },
+        days: { type: 'integer', description: 'Горизонт, на котором ищутся расхождения в днях: по умолчанию 14. Прошлые дни не проверяются вовсе — слот на закрытую задачу вчера значит «сделали».' },
+      },
+    },
+  },
+  {
     name: 'tasks_focus',
     description: 'Что делать прямо сейчас: не больше трёх задач под место, время и состояние. «Есть час», «я в студии», «голова не варит» — это ситуация, а не просьба показать всё. Отбор идёт по подходящести, а не по возрасту задачи, и у каждой в ответе есть причина, почему она здесь.',
     inputSchema: {
@@ -1957,6 +1977,237 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
           ? `Записал: «${entry.title}» принято.`
           : `Записал: «${entry.title}» — ${status === 'declined' ? 'нет' : 'позже'}. Не подниму ещё ${cooldown.days_left} дн.`,
         structured: { key: args.key, status, days_left: cooldown.days_left, title: entry.title },
+      };
+    },
+
+    /**
+     * Повестка планёрки.
+     *
+     * Отдельной сущностью, а не набором вызовов «на память»: утренний обход из
+     * пяти инструментов держится ровно до первого раза, когда его собрали не в
+     * том порядке. Здесь порядок и потолки заданы кодом, поэтому повестка
+     * получается одинаковой каждое утро.
+     *
+     * Своего разбора задач тут нет. Что висит — считает tasks_list, время —
+     * tasks_calendar, деньги — tasks_budget; их выводы берутся сводкой, а не
+     * целиком, иначе повестка превращается в три отчёта подряд. Своё у планёрки
+     * ровно две вещи: список принесённого заранее и поиск расхождений.
+     */
+    async tasks_standup(args = {}) {
+      const today_ = today();
+      const file = await readFile(tasks.STANDUP_PATH);
+      const items = tasks.parseStandupItems(file);
+      const observations = tasks.parseStandupObservations(file);
+
+      // Положить вопрос на планёрку. Отвечаем коротко и ничего больше не
+      // читаем: это реплика посреди разговора, а не начало утра.
+      if (args.add) {
+        const topic = String(args.add).trim();
+        if (!topic) throw new ToolError('invalid_add', 'Нужно, о чём говорить на планёрке, — одной строкой.');
+        const open = items.filter((i) => !i.done);
+        const same = open.find((i) => tasks.questionSimilarity(topic, i.topic) >= tasks.DECISION_SIMILARITY);
+        if (same) {
+          return {
+            text: `Это уже на планёрке с ${same.date}: «${same.topic}». Второй раз не пишу.`,
+            structured: { created: false, reason: 'duplicate', same_as: same, path: tasks.STANDUP_PATH },
+          };
+        }
+        const line = tasks.standupLine({ date: today_, topic, note: args.note ? String(args.note).trim() : null });
+        const saved = await writeFile(file, tasks.appendToSection(file.text, line, tasks.STANDUP_SECTION));
+        return {
+          text: `На планёрку: ${topic}. Сейчас в повестке ${open.length + 1}.`,
+          structured: { created: true, path: saved.path, rev: saved.rev, topic, note: args.note || null, open: open.length + 1 },
+        };
+      }
+
+      /**
+       * Замеченное по смыслу. Кодом такое не проверяется — сравнить запись
+       * журнала с содержимым дней может только модель, и она же может
+       * ошибиться. Цена ошибки остаётся одним вопросом ровно при трёх
+       * условиях, и все три стоят здесь, а не в правилах: наблюдение
+       * формулируется вопросом с обеими сторонами, повтор блокируется той же
+       * мерой схожести, что у развилок доски, а открытых наблюдений не больше
+       * трёх зараз.
+       */
+      if (args.observe) {
+        const question = String(args.observe).trim();
+        if (!question) throw new ToolError('invalid_observe', 'Нужно, что именно заметил, — вопросом к нему.');
+        const sides = (Array.isArray(args.sides) ? args.sides : [])
+          .map((s) => String(s).trim())
+          .filter(Boolean);
+        if (sides.length < 2) {
+          throw new ToolError(
+            'sides_required',
+            'Нужны обе стороны расхождения цитатами с указанием файла: что записано в одном месте и что в другом. Наблюдение без опоры он не проверит за секунду, и оно будет стоить дороже, чем сэкономит.',
+          );
+        }
+        // Уже спрашивали — молчим. Отвеченное молчит навсегда: «это нормально»
+        // на то и ответ, чтобы не возвращаться к теме другими словами.
+        const same = tasks.knownObservation(observations, { question, sides });
+        if (same) {
+          return {
+            text: same.answer
+              ? `Про это уже спрашивал ${same.date}, он ответил: «${same.answer}». Второй раз не поднимаю.`
+              : `Про это уже спрошено ${same.date}: «${same.question}». Ответа ещё нет — второй раз не спрашиваю.`,
+            structured: { created: false, reason: same.answer ? 'answered' : 'duplicate', same_as: same, path: tasks.STANDUP_PATH },
+          };
+        }
+        const open = observations.filter((o) => !o.done);
+        if (open.length >= tasks.STANDUP_OBSERVE_CAP) {
+          throw new ToolError(
+            'too_many_observations',
+            `Уже висит ${open.length} незакрытых наблюдения (потолок ${tasks.STANDUP_OBSERVE_CAP}): ${open.map((o) => `«${o.question}»`).join(', ')}. `
+            + 'Новое не завожу: замеченное держится на том, что на него отвечают. Спроси про висящее и закрой через done с answer.',
+          );
+        }
+        const block = tasks.observationBlock({ date: today_, question, sides });
+        const saved = await writeFile(file, tasks.appendToSection(file.text, block, tasks.STANDUP_OBSERVED_SECTION));
+        return {
+          text: `Заметил и вынес вопросом: ${question}`,
+          structured: { created: true, path: saved.path, rev: saved.rev, question, sides, open: open.length + 1 },
+        };
+      }
+
+      // Снять обсуждённое. Без этого пункт висит вечно, и через неделю повестку
+      // перестают читать целиком — ровно так же, как переполненную доску.
+      if (args.done) {
+        const needle = String(args.done).trim().toLowerCase();
+        if (!needle) throw new ToolError('invalid_done', 'Нужна часть текста пункта, который снимаем.');
+        const matched = [
+          ...items.filter((i) => !i.done && `${i.topic} ${i.note || ''}`.toLowerCase().includes(needle))
+            .map((i) => ({ kind: 'пункт', line: i.line, title: i.topic })),
+          ...observations.filter((o) => !o.done && `${o.question} ${o.sides.join(' ')}`.toLowerCase().includes(needle))
+            .map((o) => ({ kind: 'наблюдение', line: o.line, title: o.question })),
+        ];
+        if (!matched.length) {
+          throw new ToolError('standup_item_not_found', `В повестке нет пункта со словами «${args.done}». Список — tasks_standup без аргументов.`);
+        }
+        if (matched.length > 1) {
+          throw new ToolError(
+            'ambiguous_standup_item',
+            `Под «${args.done}» подошло ${matched.length}: ${matched.map((i) => `«${i.title}»`).join(', ')}. Назови точнее, какой снимаем.`,
+          );
+        }
+        const hit = matched[0];
+        const said = args.answer ? String(args.answer).trim() : '';
+        // Наблюдение без записанного ответа закрывать нельзя. Весь размен —
+        // «спрошу, зато научусь» — держится на том, что ответ сохранён; без
+        // него завтра будет задан тот же вопрос, и это уже придирка.
+        if (hit.kind === 'наблюдение' && !said) {
+          throw new ToolError(
+            'answer_required',
+            'Наблюдение закрывается только вместе с его ответом: передай answer его словами. Иначе завтра ты спросишь то же самое, и он перестанет отвечать на замеченное вовсе.',
+          );
+        }
+        const nextText = hit.kind === 'наблюдение'
+          ? tasks.answerObservation(file.text, hit.line, said)
+          : tasks.markStandupDone(file.text, hit.line);
+        const saved = await writeFile(file, nextText);
+        const left = items.filter((i) => !i.done).length + observations.filter((o) => !o.done).length - 1;
+        return {
+          text: hit.kind === 'наблюдение'
+            ? `Записал ответ и закрыл наблюдение: ${hit.title}. Больше про это не спрошу.${said ? ' Если это правило — запиши его через tasks_learn.' : ''}`
+            : `Снял с планёрки: ${hit.title}.${left ? ` Осталось ${left}.` : ' Повестка пуста.'}`,
+          structured: { path: saved.path, rev: saved.rev, kind: hit.kind, topic: hit.title, answer: said || null, left },
+        };
+      }
+
+      const rawDays = args.days === undefined || args.days === null ? 14 : Number(args.days);
+      if (!Number.isFinite(rawDays) || rawDays < 1) throw new ToolError('invalid_days', 'Горизонт — целое число дней от 1.');
+      const span = Math.min(Math.round(rawDays), 60);
+
+      // Расхождения и зависшее считаются по своим файлам: их разбор живёт в
+      // tasks.js и ни один соседний инструмент его не отдаёт.
+      const index = await loadIndex();
+      const dayPaths = Array.from({ length: span }, (_, i) => `days/${tasks.shiftDate(today_, i)}.md`);
+      const wanted = [...projectPaths(index), ...dayPaths];
+      const files = await readAll({ paths: wanted, max: wanted.length });
+
+      const divergences = tasks.findDivergences(files, { today: today_ });
+      const stuck = tasks.stuckPromises(files, { today: today_ });
+
+      // Что висит — считает tasks_list, а не второй разбор задач здесь.
+      const list = await tools.tasks_list({});
+      const decide = list.structured.blocked;
+
+      // Картина: только сводка. Полный вывод календаря и бюджета — это два
+      // экрана, и повестка после них перестаёт читаться за минуту.
+      const calendar = await tools.tasks_calendar({ days: 7 });
+      const budget = await tools.tasks_budget({});
+
+      const cap = tasks.STANDUP_GROUP_CAP;
+      const brought = items.filter((i) => !i.done);
+      const noticed = observations.filter((o) => !o.done);
+      const groups = {
+        brought: { all: brought, shown: brought.slice(0, cap) },
+        decide: { all: decide, shown: decide.slice(0, cap) },
+        // Расхождения потолком не режутся: каждое посчитано по файлам и
+        // проверяется за секунду. Прятать доказанное «ради длины» значит
+        // молчать про то, что и так молча копится.
+        divergences: { all: divergences, shown: divergences },
+        noticed: { all: noticed, shown: noticed.slice(0, tasks.STANDUP_OBSERVE_CAP) },
+        stuck: { all: stuck, shown: stuck.slice(0, cap) },
+      };
+      const hidden = Object.fromEntries(
+        Object.entries(groups).map(([name, g]) => [name, g.all.length - g.shown.length]),
+      );
+      const total = Object.values(groups).reduce((n, g) => n + g.all.length, 0);
+
+      const more = (name) => (hidden[name] ? ` (и ещё ${hidden[name]} — не показываю, повестка должна читаться за минуту)` : '');
+      const block = (title, name, render) => (groups[name].all.length
+        ? `${title}${more(name)}:\n${groups[name].shown.map((x) => `- ${render(x)}`).join('\n')}`
+        : null);
+
+      const picture = [
+        `ближайшие 7 дней — свободных ${calendar.structured.free_days.length}`,
+        calendar.structured.free_stretches.length
+          ? `подряд ${calendar.structured.free_stretches.map((s) => `${s.from}…${s.to}`).join(', ')}`
+          : null,
+        `деньги ${budget.structured.month}: расходов ${budget.structured.spent} ₽, доходов ${budget.structured.income} ₽`,
+        budget.structured.one_sided ? 'доходов за месяц в записях нет — вывод односторонний' : null,
+      ].filter(Boolean).join('; ');
+
+      const body = [
+        block('Принесли на планёрку', 'brought', (i) => `${i.topic}${i.note ? ` — ${i.note}` : ''} (с ${i.date})`),
+        block('Требует решения', 'decide', (t) => `${t.ref} · ${t.title}${
+          t.children.filter((c) => /^открыто:/i.test(c)).map((c) => ` — ${c.replace(/^открыто:\s*/i, '')}`)[0] || ''}`),
+        // Посчитанное и замеченное стоят разными блоками и названы по-разному.
+        // Смешать их — значит выдать догадку за факт: после одного такого
+        // случая перепроверять придётся и доказанное.
+        block('Расхождения (посчитано по файлам)', 'divergences', (d) => d.what),
+        block('Замечено — нужен твой ответ', 'noticed', (o) => `${o.question}\n${o.sides.map((s) => `  · ${s}`).join('\n')}`),
+        block('Зависшее', 'stuck', (s) => `${s.ref} · ${s.text} — ${s.days} дн.`),
+        `Картина: ${picture}.`,
+      ].filter(Boolean).join('\n\n');
+
+      const head = total
+        ? `Планёрка ${today_}. Принесли ${groups.brought.all.length}, требует решения ${groups.decide.all.length}, расхождений ${groups.divergences.all.length}, замечено ${groups.noticed.all.length}, зависло ${groups.stuck.all.length}.`
+        : `Планёрка ${today_}. Обсуждать нечего: ничего не принесено, нерешённого нет, расхождений не нашёл.`;
+
+      return {
+        text: `${head}\n\n${body}`,
+        structured: {
+          date: today_,
+          horizon_days: span,
+          empty: total === 0,
+          brought: groups.brought.shown,
+          decide: groups.decide.shown,
+          divergences: groups.divergences.shown,
+          noticed: groups.noticed.shown,
+          stuck: groups.stuck.shown,
+          hidden,
+          totals: Object.fromEntries(Object.entries(groups).map(([name, g]) => [name, g.all.length])),
+          picture: {
+            free_days: calendar.structured.free_days,
+            free_stretches: calendar.structured.free_stretches,
+            busiest_week: calendar.structured.busiest_week,
+            month: budget.structured.month,
+            spent: budget.structured.spent,
+            income: budget.structured.income,
+            one_sided: budget.structured.one_sided,
+          },
+          path: tasks.STANDUP_PATH,
+        },
       };
     },
 
