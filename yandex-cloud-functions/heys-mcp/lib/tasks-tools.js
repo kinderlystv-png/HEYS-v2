@@ -439,6 +439,43 @@ const TASKS_AGENT_SCHEMAS = [
       },
     },
   },
+  {
+    name: 'tasks_remind',
+    description: 'Напоминание: о чём вспомнить в конкретный день. Напоминание не делают, о нём вспоминают — «поздравить брата 12-го», «продлить страховку до конца месяца», «спросить у Дани про зеркало во вторник». Задачей такое заводить не надо: задача попадает в загруженность, в фокус и в счёт висящего, а напоминанию там не место. Без аргументов показывает активные, просроченное сверху; done снимает, когда вспомнил. День обязателен: за местом и условиями тут никто не следит.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'О чём вспомнить — одной строкой, его словами.' },
+        date: { type: 'string', description: 'Когда вспомнить: ГГГГ-ММ-ДД. Обязателен вместе с text — напоминание без дня не всплывёт никогда.' },
+        time: { type: 'string', description: 'Час, если он назван: ЧЧ:ММ. Не обязателен — большинство напоминаний про день, а не про минуту.' },
+        done: { type: 'string', description: 'Снять напоминание — часть его текста. Вызывай, когда он сказал, что вспомнил или сделал: неснятое всплывёт и завтра.' },
+      },
+    },
+  },
+  {
+    name: 'tasks_quick',
+    description: 'Быстрые дела: открытые задачи с тегом времени не длиннее порога, плоским списком из всех проектов сразу. Своей сущности у них нет и быть не должно — это те же задачи проектов, просто отобранные по тегу, и закрываются они обычным путём через tasks_update, чтобы галочка встала в самом проекте. Задача без тега времени сюда не попадает вовсе: тег ставится руками, поэтому короткий или пустой список значит «теги не расставлены», а не «дел нет».',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        minutes: { type: 'integer', description: 'Потолок в минутах: по умолчанию 15. Теги задачника — 15min, 30min, 45min, 1h, 2h.' },
+      },
+    },
+  },
+  {
+    name: 'tasks_idea',
+    description: 'Идеи в projects/someday.md: то, что он хочет обдумывать, а не делать. Идея отличается от задачи тем, что её нельзя закрыть галочкой, а от «когда-нибудь» — тем, что её развивают: к ней дописываются мысли, и однажды она становится задачей проекта. Без аргументов показывает идеи вместе с накопленным. Аргумент note дописывает мысль к идее, to_project превращает её в задачу — вместе с накопленным, иначе от развития ничего не остаётся.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Новая идея — одной строкой, его словами.' },
+        idea: { type: 'string', description: 'К какой идее относится note или to_project — часть её текста.' },
+        note: { type: 'string', description: 'Мысль к уже заведённой идее: довод, находка, кусок замысла. Ложится вложенной строкой под ней.' },
+        to_project: { type: 'string', description: 'Превратить идею в задачу этого проекта: heys, kinderly, family, personal. Идея уходит из раздела, накопленные мысли переезжают под новую задачу.' },
+        priority: { type: 'string', description: 'К to_project: P1, P2 или P3. По умолчанию P2.' },
+      },
+    },
+  },
 ];
 
 function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolError, writeContext = null }) {
@@ -2268,6 +2305,272 @@ function createTasksTools({ api, curatorJwt, clientId, nowMs = Date.now(), ToolE
             due: t.due, tags: t.tags, reasons: t.reasons, blocked: t.blocked, score: t.score,
           })),
         },
+      };
+    },
+
+    /**
+     * Напоминания. Единственное здесь, у чего есть своё хранилище: всё
+     * остальное в этой тройке — вид на уже существующие записи.
+     *
+     * Дата обязательна, и это осознанный отказ, а не недоделка. «Напомни,
+     * когда буду в студии» звучит выполнимо, но за местом человека в задачнике
+     * не следит ничто: такое напоминание молча не сработало бы никогда, а
+     * молчаливый отказ хуже честного. Привязка к месту в задачнике уже есть —
+     * тег места на обычной задаче, который поднимает tasks_focus, когда он
+     * скажет, где он; туда отказ и отправляет.
+     */
+    async tasks_remind(args = {}) {
+      const file = await readFile(tasks.REMINDERS_PATH);
+      const all = tasks.parseReminders(file);
+      const today_ = today();
+
+      // Снять. Идёт первым: «вспомнил про страховку» — это чаще снятие, чем
+      // повод завести второе такое же.
+      if (args.done) {
+        const needle = String(args.done).trim().toLowerCase();
+        if (!needle) throw new ToolError('invalid_done', 'Нужна часть текста напоминания, которое снимаем.');
+        const matched = all.filter((r) => !r.done && r.text.toLowerCase().includes(needle));
+        if (!matched.length) {
+          // Повторное снятие — не ошибка и не повод трогать файл: он мог
+          // сказать «убери» дважды или снять галочку руками в markdown.
+          const already = all.filter((r) => r.done && r.text.toLowerCase().includes(needle));
+          if (already.length) {
+            return {
+              text: `«${already[0].text}» уже снято (${already[0].date}). Файл не трогаю.`,
+              structured: { removed: false, reason: 'already_done', reminder: already[0], path: tasks.REMINDERS_PATH },
+            };
+          }
+          throw new ToolError('reminder_not_found', `Среди напоминаний нет ничего про «${args.done}».`);
+        }
+        if (matched.length > 1) {
+          throw new ToolError(
+            'ambiguous_reminder',
+            `Под «${args.done}» подходит ${matched.length}: ${matched.map((r) => `${r.date} · ${r.text}`).join('; ')}. Уточни, какое снимаем.`,
+            { matched },
+          );
+        }
+        const hit = matched[0];
+        const saved = await writeFile(file, tasks.markLineDone(file.text, hit.line));
+        const left = all.filter((r) => !r.done).length - 1;
+        return {
+          text: `Снял: ${hit.text}. Активных напоминаний осталось ${left}.`,
+          structured: { removed: true, path: saved.path, rev: saved.rev, reminder: hit, active: left },
+        };
+      }
+
+      if (args.text) {
+        const text = String(args.text).trim();
+        if (!text) throw new ToolError('invalid_text', 'Нужен текст напоминания.');
+        const date = args.date ? String(args.date).trim() : null;
+        if (!date) {
+          throw new ToolError(
+            'date_required',
+            'Напоминанию нужен день: всплывает оно по дате и больше ни по чему. За местом и условиями — «когда буду в студии», «как освободится Даня» — в задачнике не следит ничто, и такое напоминание не сработало бы никогда. Если привязка к месту, а не ко дню, это обычная задача с тегом места (студия, дом, ноут, город) через tasks_capture: её поднимет tasks_focus, когда он скажет, где он. Если день всё-таки назван — передай его.',
+          );
+        }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          throw new ToolError('invalid_date', `Дата «${args.date}» не в формате YYYY-MM-DD.`);
+        }
+        let time = args.time ? String(args.time).trim() : null;
+        if (time && !/^\d{1,2}:\d{2}$/.test(time)) {
+          throw new ToolError('invalid_time', `Время «${args.time}» не в формате ЧЧ:ММ.`);
+        }
+        // Час приводится к тому же виду, в каком ляжет в файл: «в 9:00» в
+        // ответе и «09:00» в строке — это уже два разных напоминания на вид.
+        if (time) {
+          try { time = tasks.padTime(time); } catch { throw new ToolError('invalid_time', `Время «${args.time}» не в формате ЧЧ:ММ.`); }
+        }
+        // Шапка объясняет формат тому, кто откроет файл руками, — поэтому она
+        // пишется вместе с первой строкой, а не когда-нибудь потом.
+        const base = file.text.trim() ? file.text : tasks.REMINDERS_HEADER;
+        const line = tasks.reminderLine({ date, time, text });
+        const saved = await writeFile(file, tasks.appendToSection(base, line, tasks.REMINDERS_SECTION));
+        const active = tasks.activeReminders([...all, { done: false, date, time, text, line: -1 }], { today: today_ });
+        const late = date < today_;
+        return {
+          text: `Напомню ${date}${time ? ` в ${time}` : ''}: ${text}.${late ? ' День уже прошёл — покажу сразу.' : ''} Активных: ${active.length}.`,
+          structured: { created: true, path: saved.path, rev: saved.rev, date, time: time || null, text, active: active.length },
+        };
+      }
+
+      if (args.date || args.time) {
+        throw new ToolError('invalid_text', 'День назван, а о чём вспомнить — нет. Передай text.');
+      }
+
+      const active = tasks.activeReminders(all, { today: today_ });
+      const overdue = active.filter((r) => r.overdue);
+      const now = active.filter((r) => r.today);
+      const ahead = active.filter((r) => !r.overdue && !r.today);
+      const show = (r) => `${r.date}${r.time ? ` ${r.time}` : ''} · ${r.text}`;
+      return {
+        text: active.length
+          ? [
+            overdue.length ? `Просрочено (${overdue.length}): ${overdue.map(show).join('; ')}` : null,
+            now.length ? `Сегодня: ${now.map(show).join('; ')}` : null,
+            ahead.length ? `Впереди: ${ahead.map(show).join('; ')}` : null,
+          ].filter(Boolean).join('. ')
+          : 'Активных напоминаний нет.',
+        structured: {
+          path: tasks.REMINDERS_PATH,
+          active,
+          overdue,
+          today: now,
+          ahead,
+          done: all.filter((r) => r.done).length,
+        },
+      };
+    },
+
+    /**
+     * Быстрые дела. Своего хранилища нет намеренно: заведи их отдельной
+     * сущностью — и одна задача окажется в двух местах, а закрытая в одном
+     * останется открытой в другом. Это выборка по тем же задачам проектов, и
+     * отбор идёт тем же движком, что у tasks_focus, а не третьим разбором.
+     */
+    async tasks_quick(args = {}) {
+      const raw = args.minutes === undefined || args.minutes === null ? 15 : Number(args.minutes);
+      if (!Number.isFinite(raw) || raw < 1) throw new ToolError('invalid_minutes', 'Потолок — целое число минут от 1.');
+      const minutes = Math.round(raw);
+
+      const index = await loadIndex();
+      const files = await readAll({ paths: projectPaths(index) });
+      const pool = files.flatMap((file) => {
+        const project = tasks.projectKeyForPath(file.path);
+        return tasks.parseTasks(file).map((task) => ({
+          ...task,
+          project,
+          ref: `${project}/${tasks.taskHash(project, task.title)}`,
+        }));
+      });
+
+      // pickFocus пропускает и задачи без тега времени — им окно не мешает.
+      // Здесь наоборот: без тега задача в «быстрые дела» не попадает, потому
+      // что никто не знает, быстрая она или на полдня.
+      const open = pool.filter((task) => !task.done && !task.waiting);
+      const picked = tasks.pickFocus(pool, { minutes, today: today(), limit: pool.length })
+        .filter((task) => tasks.taskMinutes(task));
+      const untagged = open.filter((task) => !tasks.taskMinutes(task)).length;
+
+      // Пустой список тут — почти всегда норма, и сказать об этом обязательно:
+      // иначе он прочитает «дел нет» там, где написано «теги не расставлены».
+      const why = `Задач без тега времени — ${untagged} из ${open.length} открытых: сюда они не попадают, тег ставится руками.`;
+      return {
+        text: picked.length
+          ? `Короче ${minutes} мин: ${picked.map((t) => `${t.ref} · ${t.title}`).join('; ')}. ${why}`
+          : `Ничего короче ${minutes} мин не нашлось. ${why}`,
+        structured: {
+          minutes,
+          picked: picked.map((t) => ({
+            ref: t.ref, project: t.project, title: t.title, priority: t.priority,
+            due: t.due, tags: t.tags, minutes: tasks.taskMinutes(t), reasons: t.reasons, blocked: t.blocked,
+          })),
+          without_time_tag: untagged,
+          open_total: open.length,
+        },
+      };
+    },
+
+    /**
+     * Идеи. Раздел `## Идеи` в someday.md существовал пустым — своего входа у
+     * него не было. Отдельный файл заводить не за чем: место есть, не хватало
+     * только способа туда класть и оттуда доставать.
+     */
+    async tasks_idea(args = {}) {
+      const file = await readFile(tasks.SOMEDAY_PATH);
+      const ideas = tasks.parseIdeas(file);
+      const today_ = today();
+
+      function findIdea(needleRaw, what) {
+        const needle = String(needleRaw || '').trim().toLowerCase();
+        if (!needle) throw new ToolError('idea_required', `Нужно, к какой идее относится ${what}, — часть её текста.`);
+        const matched = ideas.filter((i) => i.text.toLowerCase().includes(needle));
+        if (!matched.length) throw new ToolError('idea_not_found', `Среди идей нет ничего про «${needleRaw}».`);
+        if (matched.length > 1) {
+          throw new ToolError(
+            'ambiguous_idea',
+            `Под «${needleRaw}» подходит ${matched.length}: ${matched.map((i) => i.text).join('; ')}. Уточни, о какой речь.`,
+            { matched },
+          );
+        }
+        return matched[0];
+      }
+
+      // Превратить идею в задачу проекта. Накопленное переезжает вместе с ней:
+      // без этого «развивал-развивал» заканчивается голым заголовком.
+      if (args.to_project) {
+        const hit = findIdea(args.idea, 'превращение');
+        const project = String(args.to_project).toLowerCase().replace(/\.md$/i, '');
+        const targetPath = `projects/${project}.md`;
+        const index = await loadIndex();
+        if (!projectPaths(index).includes(targetPath)) {
+          throw new ToolError(
+            'project_not_found',
+            `Проекта «${project}» нет. Есть: ${projectPaths(index).map((p) => tasks.projectKeyForPath(p)).join(', ')}.`,
+          );
+        }
+        const priority = args.priority ? String(args.priority).toUpperCase() : 'P2';
+        if (!/^P[123]$/.test(priority)) throw new ToolError('invalid_priority', 'Приоритет — P1, P2 или P3.');
+
+        const taskLine = `- [ ] ${priority} ${hit.text} ^${today_}`;
+        const block = [taskLine, ...hit.notes.map((n) => `  - ${n}`)].join('\n');
+        const cut = tasks.cutTask(file.text, hit.line);
+
+        if (targetPath === file.path) {
+          await writeFile(file, tasks.appendToSection(cut.text, block, '## Задачи'));
+        } else {
+          // Сначала завести задачу, потом убрать идею: оборвись это посередине,
+          // запись задвоится, а не пропадёт.
+          const target = await readFile(targetPath);
+          await writeFile(target, tasks.appendToSection(target.text, block, '## Задачи'));
+          await writeFile(file, cut.text);
+        }
+
+        const title = tasks.taskTitle(taskLine);
+        const ref = `${project}/${tasks.taskHash(project, title)}`;
+        return {
+          text: `Идея стала задачей ${project}: ${priority} ${title}${hit.notes.length ? `, накопленное перенёс (${hit.notes.length})` : ''}. Ссылка: ${ref}`,
+          structured: {
+            promoted: true, ref, project, title, priority,
+            notes_moved: hit.notes.length, from: tasks.SOMEDAY_PATH, path: targetPath,
+          },
+        };
+      }
+
+      if (args.note) {
+        const note = String(args.note).trim();
+        if (!note) throw new ToolError('invalid_note', 'Нужен текст мысли.');
+        const hit = findIdea(args.idea, 'мысль');
+        const saved = await writeFile(file, tasks.appendChild(file.text, hit.line, note));
+        return {
+          text: `К идее «${hit.text}» дописал: ${note}. Накоплено мыслей: ${hit.notes.length + 1}.`,
+          structured: { added: true, path: saved.path, rev: saved.rev, idea: hit.text, note, notes: hit.notes.length + 1 },
+        };
+      }
+
+      if (args.text) {
+        const text = String(args.text).trim();
+        if (!text) throw new ToolError('invalid_text', 'Нужен текст идеи.');
+        const line = tasks.ideaLine({ date: today_, text });
+        const saved = await writeFile(file, tasks.appendToSection(file.text, line, tasks.IDEAS_SECTION));
+        return {
+          text: `Записал в идеи: ${text}. Всего идей: ${ideas.length + 1}.`,
+          structured: { created: true, path: saved.path, rev: saved.rev, text, total: ideas.length + 1 },
+        };
+      }
+
+      if (args.idea) {
+        const hit = findIdea(args.idea, 'показ');
+        return {
+          text: `${hit.date} · ${hit.text}${hit.notes.length ? `. Накоплено: ${hit.notes.join('; ')}` : '. Мыслей под ней пока нет.'}`,
+          structured: { idea: hit, path: tasks.SOMEDAY_PATH },
+        };
+      }
+
+      return {
+        text: ideas.length
+          ? `Идей ${ideas.length}: ${ideas.map((i) => `${i.text}${i.notes.length ? ` (мыслей ${i.notes.length})` : ''}`).join('; ')}.`
+          : 'В идеях пусто.',
+        structured: { ideas, path: tasks.SOMEDAY_PATH },
       };
     },
   });

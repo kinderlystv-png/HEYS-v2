@@ -2711,8 +2711,12 @@ function standupLine({ date, topic, note = null }) {
   return `- [ ] ${date} · ${topic}${note ? ` — ${note}` : ''}`;
 }
 
-/** Границы раздела файла: пункты повестки и замеченное не должны смешиваться. */
-function standupSectionRange(lines, section) {
+/**
+ * Границы раздела файла: от строки после заголовка до следующего заголовка.
+ * Пункты повестки и замеченное не должны смешиваться, идеи в `## Идеи` — не
+ * заезжать в `## Задачи` соседнего раздела.
+ */
+function sectionRange(lines, section) {
   const start = findSectionLine(lines, section);
   if (start === -1) return null;
   let end = lines.length;
@@ -2731,7 +2735,7 @@ const STANDUP_HEAD_RE = /^-\s*\[([ xX])\]\s*(\d{4}-\d{2}-\d{2})\s*·\s*(.+)$/;
 function parseStandupItems(file, { section = STANDUP_SECTION } = {}) {
   const out = [];
   const lines = String((file && file.text) || '').split('\n');
-  const range = standupSectionRange(lines, section);
+  const range = sectionRange(lines, section);
   if (!range) return out;
   for (let i = range.start; i < range.end; i += 1) {
     const match = STANDUP_HEAD_RE.exec(lines[i].trim());
@@ -2766,7 +2770,7 @@ function observationBlock({ date, question, sides = [] }) {
 
 function parseStandupObservations(file) {
   const lines = String((file && file.text) || '').split('\n');
-  const range = standupSectionRange(lines, STANDUP_OBSERVED_SECTION);
+  const range = sectionRange(lines, STANDUP_OBSERVED_SECTION);
   const out = [];
   if (!range) return out;
   let current = null;
@@ -2798,14 +2802,22 @@ function parseStandupObservations(file) {
   return out;
 }
 
-/** Снять пункт повестки: галочка, а не удаление — обсуждённое видно в файле. */
-function markStandupDone(text, index, done = true) {
+/**
+ * Снять строку с галочкой: галочка, а не удаление — снятое видно в файле.
+ * Одна на все списки с `- [ ]`: повестка, замеченное, напоминания.
+ */
+function markLineDone(text, index, done = true) {
   const lines = String(text || '').split('\n');
-  if (index < 0 || index >= lines.length) throw new Error(`standup_line_out_of_range:${index}`);
+  if (index < 0 || index >= lines.length) throw new Error(`line_out_of_range:${index}`);
   const next = lines[index].replace(/\[[ xX]\]/, done ? '[x]' : '[ ]');
-  if (next === lines[index]) throw new Error(`standup_line_not_item:${index}`);
+  if (next === lines[index]) throw new Error(`line_not_item:${index}`);
   lines[index] = next;
   return lines.join('\n');
+}
+
+/** Снять пункт повестки. */
+function markStandupDone(text, index, done = true) {
+  return markLineDone(text, index, done);
 }
 
 /**
@@ -2848,6 +2860,130 @@ function knownObservation(existing, observation, { threshold = DECISION_SIMILARI
     if (score >= threshold && (!best || score > best.score)) best = { ...entry, score: Math.round(score * 100) / 100 };
   }
   return best;
+}
+
+// ── Напоминания ──────────────────────────────────────────────────────────
+//
+// Единственная новая сущность за всю эту тройку, и заводится она потому, что
+// её нечем подменить: в задачнике нет ничего, что само дёрнет в нужный день.
+// Задача — это то, что делают; напоминание — то, о чём вспоминают, и разница
+// не словесная. Задача с датой попадает в загруженность, в фокус и в счёт
+// «сколько на мне висит»; «поздравить брата» ничего из этого не значит и,
+// оказавшись задачей, только разбавляет список настоящей работы.
+//
+// Повод показать напоминание — приход человека на доску, а не наступивший
+// час: расписание из задачника убрано намеренно. Поэтому в файле лежит день,
+// а не таймер, и просроченное не пропадает, а поднимается наверх.
+//
+// Файл обычный markdown: он читается и правится руками, как повестка и
+// предпочтения. Снятое остаётся галочкой — так видно, что было.
+
+const REMINDERS_PATH = 'docs/reminders.md';
+const REMINDERS_SECTION = '## Напоминания';
+
+/**
+ * Шапка файла — пишется один раз, в пустой файл. Сам раздел заводит вставка:
+ * так у него получаются те же отбивки, что у повестки и предпочтений.
+ */
+const REMINDERS_HEADER = [
+  '# Напоминания',
+  '',
+  'О чём вспомнить в конкретный день. Это не задачи: напоминание не делают,',
+  'о нём вспоминают, поэтому в проекте ему места нет и в загруженность оно не',
+  'входит. Всплывает при открытии доски, а не по часам.',
+  '',
+  'Формат строки: `- [ ] ГГГГ-ММ-ДД ЧЧ:ММ · текст`, время можно опустить.',
+  'Снятое помечается `[x]` и остаётся в файле.',
+  '',
+].join('\n');
+
+const REMINDER_RE = /^-\s*\[([ xX])\]\s*(\d{4}-\d{2}-\d{2})(?:\s+(\d{1,2}:\d{2}))?\s*·\s*(.+)$/;
+
+function reminderLine({ date, time = null, text }) {
+  return `- [ ] ${date}${time ? ` ${padTime(time)}` : ''} · ${String(text).trim()}`;
+}
+
+function parseReminders(file) {
+  const out = [];
+  const lines = String((file && file.text) || '').split('\n');
+  const range = sectionRange(lines, REMINDERS_SECTION);
+  if (!range) return out;
+  for (let i = range.start; i < range.end; i += 1) {
+    const match = REMINDER_RE.exec(lines[i].trim());
+    if (!match) continue;
+    out.push({
+      line: i,
+      done: match[1].toLowerCase() === 'x',
+      date: match[2],
+      time: match[3] ? padTime(match[3]) : null,
+      text: match[4].trim(),
+    });
+  }
+  return out;
+}
+
+/**
+ * Активные напоминания в том порядке, в каком их читают: просроченное сверху,
+ * потом сегодняшнее, потом будущее. Внутри дня — по времени, безвременное
+ * первым: у него нет часа, и ждать от него очереди не за чем.
+ */
+function activeReminders(reminders, { today = null } = {}) {
+  return reminders
+    .filter((r) => !r.done)
+    .map((r) => ({
+      ...r,
+      overdue: Boolean(today && r.date < today),
+      today: Boolean(today && r.date === today),
+    }))
+    .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)
+      || String(a.time || '').localeCompare(String(b.time || ''))
+      || a.line - b.line);
+}
+
+// ── Идеи ─────────────────────────────────────────────────────────────────
+//
+// Раздел `## Идеи` в projects/someday.md существовал и до этого — пустым.
+// Место было, в него не клали, потому что не было чем.
+//
+// Идея отличается от «когда-нибудь» не сроком, а тем, что её развивают: к ней
+// дописывают мысли, и однажды она либо становится задачей проекта, либо
+// отмирает. Поэтому у неё есть вложенные строки, как контекст у задачи, и
+// поэтому при превращении в задачу они переезжают вместе с ней: без них
+// остаётся голый заголовок, а всё, что он про эту идею надумал, теряется.
+//
+// Галочки у идеи нет намеренно. Идею не закрывают — её продвигают; галочка
+// звала бы отметить сделанным то, чего никто не делал, и заодно втащила бы
+// идеи во все разборы задач, которые ищут строки `- [ ]`.
+
+const SOMEDAY_PATH = 'projects/someday.md';
+const IDEAS_SECTION = '## Идеи';
+
+const IDEA_RE = /^-\s*(\d{4}-\d{2}-\d{2})\s*·\s*(.+)$/;
+
+function ideaLine({ date, text }) {
+  return `- ${date} · ${String(text).trim()}`;
+}
+
+/** Идеи вместе с накопленными под ними мыслями. */
+function parseIdeas(file) {
+  const out = [];
+  const lines = String((file && file.text) || '').split('\n');
+  const range = sectionRange(lines, IDEAS_SECTION);
+  if (!range) return out;
+  let current = null;
+  for (let i = range.start; i < range.end; i += 1) {
+    const raw = lines[i];
+    if (!raw.trim()) { current = null; continue; }
+    if (/^\s/.test(raw)) {
+      if (current) current.notes.push(raw.trim().replace(/^[-*]\s+/, ''));
+      continue;
+    }
+    const match = IDEA_RE.exec(raw.trim());
+    if (!match) { current = null; continue; }
+    current = { line: i, date: match[1], text: match[2].trim(), notes: [] };
+    out.push(current);
+  }
+  return out;
 }
 
 // ── Расхождения ──────────────────────────────────────────────────────────
@@ -3074,6 +3210,7 @@ module.exports = {
   STANDUP_OBSERVE_CAP,
   STANDUP_STALE_DAYS,
   standupLine,
+  markLineDone,
   parseStandupItems,
   observationBlock,
   observationText,
@@ -3207,5 +3344,18 @@ module.exports = {
   // что делать сейчас
   PLACE_TAGS,
   TIME_TAGS,
+  taskMinutes,
   pickFocus,
+  // напоминания
+  REMINDERS_PATH,
+  REMINDERS_SECTION,
+  REMINDERS_HEADER,
+  reminderLine,
+  parseReminders,
+  activeReminders,
+  // идеи
+  SOMEDAY_PATH,
+  IDEAS_SECTION,
+  ideaLine,
+  parseIdeas,
 };

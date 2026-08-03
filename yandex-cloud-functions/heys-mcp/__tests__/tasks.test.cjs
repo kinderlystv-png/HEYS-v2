@@ -2680,3 +2680,215 @@ test('«требует решения» весом решения не счит�
   assert.ok(open < decided, 'нерешённое не должно всплывать наравне с решённым');
   assert.equal(decided, tasks.RANK_WEIGHTS.SOURCE_MAX);
 });
+
+// ── Напоминания, быстрые дела, идеи ──────────────────────────────────────
+//
+// Три разные истории, и проверяется в них разное. У напоминаний своё
+// хранилище — значит, проверяется файл: заводится, снимается, снятое не
+// притворяется активным и повторное снятие ничего не портит. У быстрых дел
+// хранилища нет вовсе — значит, проверяется, что выборка не притащила лишнего.
+// У идей проверяется перенос: без накопленного превращение в задачу теряет
+// ровно то, ради чего идею и держали.
+
+const SOMEDAY = `# Когда-нибудь
+
+Отложено осознанно, а не забыто.
+
+## Задачи
+
+## Идеи
+`;
+
+const QUICK_PROJECT = `# HEYS
+
+## Задачи
+
+- [ ] P1 Собрать лендинг due:2026-08-04 #ноут ^2026-08-01
+- [ ] P2 Отписать Ване #15min ^2026-08-01
+- [x] P2 Уже сделанное короткое #15min ^2026-08-01
+- [ ] P3 Разобрать почту #30min ^2026-08-01
+- [ ] P2 Переписать движок #2h ^2026-08-01
+`;
+
+function ideasApi() {
+  return liveApi({
+    [tasks.keyForPath('projects/someday.md')]: { path: 'projects/someday.md', text: SOMEDAY, rev: 1, updatedAt: 1 },
+    [tasks.keyForPath('projects/heys.md')]: { path: 'projects/heys.md', text: HEYS_PROJECT, rev: 3, updatedAt: 1 },
+  });
+}
+
+function quickApi() {
+  return liveApi({
+    [tasks.keyForPath('projects/heys.md')]: { path: 'projects/heys.md', text: QUICK_PROJECT, rev: 1, updatedAt: 1 },
+  });
+}
+
+const remindersText = (api) => (api.kv[tasks.keyForPath(tasks.REMINDERS_PATH)] || {}).text || '';
+
+test('напоминание заводится с днём и объясняет свой формат в самом файле', async () => {
+  const api = liveApi({});
+  const res = await session(api).tasks_remind({ text: 'Поздравить брата', date: '2026-08-05', time: '9:00' });
+  assert.equal(res.structured.created, true);
+  assert.equal(res.structured.time, '09:00', 'час приводится к тому же виду, в каком лёг в файл');
+
+  const text = remindersText(api);
+  assert.match(text, /- \[ \] 2026-08-05 09:00 · Поздравить брата/);
+  // Шапка — не украшение: файл правится руками, и без неё формат придётся угадывать.
+  assert.match(text, /Формат строки/);
+  assert.match(text, /напоминание не делают/i);
+
+  const list = await session(api).tasks_remind({});
+  assert.equal(list.structured.active.length, 1);
+  assert.equal(list.structured.active[0].text, 'Поздравить брата');
+});
+
+test('снятое напоминание уходит из активных, но остаётся в файле', async () => {
+  const api = liveApi({});
+  await session(api).tasks_remind({ text: 'Продлить страховку', date: '2026-08-04' });
+  const off = await session(api).tasks_remind({ done: 'страхов' });
+  assert.equal(off.structured.removed, true);
+
+  assert.match(remindersText(api), /- \[x\] 2026-08-04 · Продлить страховку/, 'снятое видно в файле галочкой, а не стёрто');
+  const list = await session(api).tasks_remind({});
+  assert.equal(list.structured.active.length, 0);
+  assert.equal(list.structured.done, 1);
+  assert.match(list.text, /Активных напоминаний нет/);
+});
+
+test('повторное снятие ничего не портит и файл не трогает', async () => {
+  const api = liveApi({});
+  await session(api).tasks_remind({ text: 'Продлить страховку', date: '2026-08-04' });
+  await session(api).tasks_remind({ done: 'страхов' });
+  const before = api.kv[tasks.keyForPath(tasks.REMINDERS_PATH)];
+
+  const again = await session(api).tasks_remind({ done: 'страхов' });
+  assert.equal(again.structured.removed, false);
+  assert.equal(again.structured.reason, 'already_done');
+  assert.equal(api.kv[tasks.keyForPath(tasks.REMINDERS_PATH)].rev, before.rev, 'второе снятие не пишет новую ревизию');
+  assert.equal(api.kv[tasks.keyForPath(tasks.REMINDERS_PATH)].text, before.text);
+});
+
+test('просроченное напоминание не пропадает, а идёт первым', async () => {
+  const api = liveApi({});
+  await session(api).tasks_remind({ text: 'Забрать посылку', date: '2026-07-30' });
+  await session(api).tasks_remind({ text: 'Поздравить брата', date: '2026-08-05' });
+
+  const list = await session(api).tasks_remind({});
+  assert.equal(list.structured.overdue.length, 1);
+  assert.equal(list.structured.active[0].text, 'Забрать посылку');
+  assert.match(list.text, /Просрочено \(1\)/);
+});
+
+test('напоминание без дня не заводится молча, а отправляет к тегу места', async () => {
+  const api = liveApi({});
+  await assert.rejects(
+    () => session(api).tasks_remind({ text: 'Напомнить, когда буду в студии' }),
+    (e) => {
+      assert.equal(e.code, 'date_required');
+      // Отказ полезен, только если у него есть адрес: за местом не следит
+      // ничто, но тег места на задаче существует и работает.
+      assert.match(e.message, /tasks_capture/);
+      assert.match(e.message, /tasks_focus/);
+      return true;
+    },
+  );
+  assert.equal(remindersText(api), '', 'отказ не оставляет за собой пустой файл');
+});
+
+test('под одно слово подошло два напоминания — снимать наугад нельзя', async () => {
+  const api = liveApi({});
+  await session(api).tasks_remind({ text: 'Позвонить в автосервис', date: '2026-08-04' });
+  await session(api).tasks_remind({ text: 'Позвонить маме', date: '2026-08-05' });
+  const before = api.kv[tasks.keyForPath(tasks.REMINDERS_PATH)].text;
+
+  await assert.rejects(
+    () => session(api).tasks_remind({ done: 'позвонить' }),
+    (e) => e.code === 'ambiguous_reminder' && /автосервис/.test(e.message) && /маме/.test(e.message),
+  );
+  assert.equal(api.kv[tasks.keyForPath(tasks.REMINDERS_PATH)].text, before);
+});
+
+test('быстрые дела берут только открытое с тегом времени в пределах порога', async () => {
+  const res = await session(quickApi()).tasks_quick({});
+  const titles = res.structured.picked.map((t) => t.title);
+  assert.deepEqual(titles, ['Отписать Ване'], 'пятнадцатиминутное и только оно');
+  assert.ok(!titles.includes('Уже сделанное короткое'), 'закрытая задача — не быстрое дело');
+  assert.ok(!titles.includes('Собрать лендинг'), 'без тега времени задача сюда не попадает');
+  assert.ok(res.structured.picked[0].ref.startsWith('heys/'), 'адрес есть — закрывать её обычным путём');
+});
+
+test('порог сдвигается, и в него входит всё, что короче', async () => {
+  const res = await session(quickApi()).tasks_quick({ minutes: 60 });
+  assert.deepEqual(
+    res.structured.picked.map((t) => t.title).sort(),
+    ['Отписать Ване', 'Разобрать почту'],
+  );
+  assert.ok(!res.structured.picked.some((t) => t.title === 'Переписать движок'), 'двухчасовое в час не влезает');
+});
+
+test('пустой список быстрых дел объясняет, что дело в тегах, а не в отсутствии дел', async () => {
+  const api = liveApi({
+    [tasks.keyForPath('projects/heys.md')]: { path: 'projects/heys.md', text: HEYS_PROJECT, rev: 3, updatedAt: 1 },
+  });
+  const res = await session(api).tasks_quick({});
+  assert.equal(res.structured.picked.length, 0);
+  assert.equal(res.structured.without_time_tag, res.structured.open_total);
+  assert.match(res.text, /без тега времени/, 'иначе пустой ответ читается как «дел нет»');
+});
+
+test('идея копит мысли и уходит в задачу вместе с ними', async () => {
+  const api = ideasApi();
+  await session(api).tasks_idea({ text: 'Бот, который сам ведёт дневник' });
+  await session(api).tasks_idea({ idea: 'бот', note: 'начать с текстового ввода' });
+  const second = await session(api).tasks_idea({ idea: 'бот', note: 'нужен long polling' });
+  assert.equal(second.structured.notes, 2);
+
+  const moved = await session(api).tasks_idea({ idea: 'бот', to_project: 'heys' });
+  assert.equal(moved.structured.notes_moved, 2);
+
+  const project = api.kv[tasks.keyForPath('projects/heys.md')].text;
+  assert.match(project, /- \[ \] P2 Бот, который сам ведёт дневник \^2026-08-02/);
+  assert.match(project, /\n {2}- начать с текстового ввода\n {2}- нужен long polling/, 'накопленное переехало под задачу');
+  assert.match(moved.structured.ref, /^heys\/[0-9a-f]{6}$/);
+
+  const someday = api.kv[tasks.keyForPath('projects/someday.md')].text;
+  assert.ok(!/Бот, который сам ведёт дневник/.test(someday), 'из идей она ушла — иначе будет жить в двух местах');
+  assert.ok(!/long polling/.test(someday), 'и мысли под ней тоже');
+  const left = await session(api).tasks_idea({});
+  assert.equal(left.structured.ideas.length, 0);
+});
+
+test('идея не притворяется задачей и в списки задач не лезет', async () => {
+  const api = ideasApi();
+  await session(api).tasks_idea({ text: 'Бот, который сам ведёт дневник' });
+  const list = await session(api).tasks_list({});
+  assert.ok(
+    !list.structured.overdue.concat(list.structured.next, list.structured.blocked)
+      .some((t) => /Бот, который/.test(t.title)),
+    'идею нельзя закрыть галочкой, поэтому среди задач ей делать нечего',
+  );
+  const someday = tasks.ensureFile(api.kv[tasks.keyForPath('projects/someday.md')], 'projects/someday.md');
+  assert.equal(tasks.parseTasks(someday).length, 0);
+});
+
+test('превращение в несуществующий проект идею не трогает', async () => {
+  const api = ideasApi();
+  await session(api).tasks_idea({ text: 'Бот, который сам ведёт дневник' });
+  const before = api.kv[tasks.keyForPath('projects/someday.md')].text;
+
+  await assert.rejects(
+    () => session(api).tasks_idea({ idea: 'бот', to_project: 'heyss' }),
+    (e) => e.code === 'project_not_found',
+  );
+  assert.equal(api.kv[tasks.keyForPath('projects/someday.md')].text, before, 'идея не должна уехать в файл-призрак');
+});
+
+test('напоминания, быстрые дела и идеи объявлены и в схемах, и обработчиком', () => {
+  const built = createTasksTools({ api: liveApi({}), curatorJwt: JWT, clientId: CLIENT, nowMs: NOW, ToolError });
+  for (const name of ['tasks_remind', 'tasks_quick', 'tasks_idea']) {
+    const schema = built.schemas.find((s) => s.name === name);
+    assert.ok(schema, `${name} объявлен в схемах — иначе модель его не увидит`);
+    assert.equal(schema.inputSchema.type, 'object');
+    assert.equal(typeof built.tools[name], 'function', `${name} имеет обработчик`);
+  }
+});
