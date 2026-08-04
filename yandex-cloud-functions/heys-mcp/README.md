@@ -389,6 +389,14 @@ claude.ai → Настройки → Коннекторы → «Добавить
 же, что в приложении. OAuth Client ID / Secret оставить пустыми: сервер
 поддерживает динамическую регистрацию.
 
+ChatGPT → Плагины → «Добавить сервер» → URL
+`https://api.heyslab.ru/mcp/chatgpt/curator`. Это отдельный OAuth resource на
+той же функции и с тем же кураторским набором инструментов. Alias введён
+2026-08-04 после подтверждённого cache-инцидента: ChatGPT продолжал считать
+старый `/mcp/curator` несовместимым с RFC 7591 и не отправлял запрос на живой
+`/mcp/register`, хотя endpoint отвечал `201`. Claude URL и OAuth-flow не
+изменялись.
+
 **ChatGPT — исправлено и задеплоено 2026-08-04.** OAuth discovery в production
 исправен, callback `https://chatgpt.com/connector/oauth/{callback_id}` разрешён.
 В default allowlist добавлен только точный host `chatgpt.com`, без wildcard;

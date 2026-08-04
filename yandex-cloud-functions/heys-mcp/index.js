@@ -5,6 +5,7 @@
  *
  * Один Cloud Function обслуживает три группы маршрутов:
  *   POST /mcp, POST /mcp/curator       — Streamable HTTP транспорт MCP
+ *   POST /mcp/chatgpt/curator          — стабильный ChatGPT alias без старого discovery-cache
  *   /mcp/register|authorize|token      — OAuth 2.1 + DCR + PKCE
  *   /.well-known/oauth-*               — метаданные для авто-обнаружения
  *
@@ -44,7 +45,7 @@ const DEFAULT_API_URL = 'https://api.heyslab.ru';
  * сверяет `resource` из метаданных с URL коннектора, поэтому метаданные и
  * заголовок 401 обязаны называть именно тот путь, по которому пришёл запрос.
  */
-const MCP_ENDPOINTS = new Set(['/mcp', '/mcp/curator']);
+const MCP_ENDPOINTS = new Set(['/mcp', '/mcp/curator', '/mcp/chatgpt/curator']);
 const DEFAULT_MCP_ENDPOINT = '/mcp';
 
 const PROTECTED_RESOURCE_PREFIX = '/.well-known/oauth-protected-resource';

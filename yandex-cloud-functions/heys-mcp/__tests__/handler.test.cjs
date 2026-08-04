@@ -33,6 +33,7 @@ test('метаданные authorization server отдаются для корн
     '/.well-known/oauth-authorization-server',
     '/.well-known/oauth-authorization-server/mcp',
     '/.well-known/oauth-authorization-server/mcp/curator',
+    '/.well-known/oauth-authorization-server/mcp/chatgpt/curator',
   ]) {
     const res = await call({ httpMethod: 'GET', path });
     assert.equal(res.statusCode, 200, path);
@@ -60,6 +61,17 @@ test('/mcp/curator — POST и GET без токена указывают на �
   const get = await call({ httpMethod: 'GET', path: '/mcp/curator' });
   assert.equal(get.statusCode, 401);
   assert.match(get.headers['WWW-Authenticate'], /resource_metadata="https:\/\/api\.heyslab\.ru\/\.well-known\/oauth-protected-resource\/mcp\/curator"/);
+});
+
+test('/mcp/chatgpt/curator — отдельный OAuth resource для обхода discovery-cache ChatGPT', async () => {
+  const resource = '/mcp/chatgpt/curator';
+  const get = await call({ httpMethod: 'GET', path: resource });
+  assert.equal(get.statusCode, 401);
+  assert.match(get.headers['WWW-Authenticate'], /resource_metadata="https:\/\/api\.heyslab\.ru\/\.well-known\/oauth-protected-resource\/mcp\/chatgpt\/curator"/);
+
+  const meta = await call({ httpMethod: 'GET', path: `/.well-known/oauth-protected-resource${resource}` });
+  assert.equal(meta.statusCode, 200);
+  assert.equal(body(meta).resource, `https://${HOST}${resource}`);
 });
 
 test('каждый адрес транспорта ведёт за метаданными к себе, а не к соседу', async () => {

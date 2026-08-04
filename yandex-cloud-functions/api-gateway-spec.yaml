@@ -948,6 +948,26 @@ paths:
         service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4egv2a6pdhmf5hbrgp8
 
+  /mcp/chatgpt/curator:
+    get:
+      summary: ChatGPT-specific MCP OAuth discovery challenge for the curator connector
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+    post:
+      summary: ChatGPT-specific MCP Streamable HTTP endpoint for the curator connector
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+    options:
+      summary: CORS preflight for the ChatGPT curator MCP endpoint
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
   /mcp/register:
     post:
       summary: OAuth 2.1 dynamic client registration (RFC 7591)
