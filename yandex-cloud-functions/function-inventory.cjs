@@ -39,13 +39,13 @@ const FUNCTION_BY_NAME = new Map(FUNCTIONS.map((item) => [item.name, item]));
 const COMMON_DEPLOY_FILES = new Set([
   'yandex-cloud-functions/deploy-all.sh',
   'yandex-cloud-functions/test-functions.sh',
-  'yandex-cloud-functions/function-inventory.cjs',
   'yandex-cloud-functions/serverless-capacity-policy.cjs',
   'yandex-cloud-functions/check-serverless-capacity.cjs',
   'yandex-cloud-functions/check-serverless-error-logs.cjs',
   'yandex-cloud-functions/serverless-ops-canary.cjs',
   'yandex-cloud-functions/serverless-sync-load-test.cjs',
 ]);
+const NON_RUNTIME_DOCUMENT_PATTERN = /(?:^|\/)(?:README|DEPLOY|CHANGELOG|CONTRIBUTING)\.mdx?$/i;
 
 function listFunctions({ group = null, autoOnly = false } = {}) {
   return FUNCTIONS
@@ -97,7 +97,8 @@ function resolveChangedFiles(files = []) {
   const normalized = [...new Set(files.map((file) => String(file).trim()).filter(Boolean))];
   const gatewaySpecChanged = normalized.includes('yandex-cloud-functions/api-gateway-spec.yaml');
   const nonGatewayFiles = normalized.filter(
-    (file) => file !== 'yandex-cloud-functions/api-gateway-spec.yaml',
+    (file) => file !== 'yandex-cloud-functions/api-gateway-spec.yaml'
+      && !NON_RUNTIME_DOCUMENT_PATTERN.test(file),
   );
   const commonChanged = nonGatewayFiles.some(
     (file) => file.startsWith('yandex-cloud-functions/shared/') || COMMON_DEPLOY_FILES.has(file),

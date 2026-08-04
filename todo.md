@@ -122,11 +122,11 @@
   token auth method, возвращает поддержанные метаданные клиента по RFC 7591
   §3.2.1 и `Pragma: no-cache`. Claude-default и обязательный PKCE не изменены;
   профильный OAuth-набор: 24/24.
-- **Live evidence (2026-08-04):** commit `77ce4237d`, версия Cloud Functions
-  `d4erafqk4lt4hb0tqbik` (`ACTIVE`). DCR для ChatGPT и контрольный DCR для
-  Claude вернули HTTP 201 с `Cache-Control: no-store` и `Pragma: no-cache`;
-  metadata объявляет только PKCE `S256`, authorize с выданным ChatGPT client ID
-  вернул страницу входа HEYS (HTTP 200).
+- **Live evidence (2026-08-04):** commit `77ce4237d`; точная активная версия и
+  статус хранятся в CI/deploy receipt, а не дублируются в Git. DCR для ChatGPT и
+  контрольный DCR для Claude вернули HTTP 201 с `Cache-Control: no-store` и
+  `Pragma: no-cache`; metadata объявляет только PKCE `S256`, authorize с
+  выданным ChatGPT client ID вернул страницу входа HEYS (HTTP 200).
 - **Осталось:** пересоздать коннектор ChatGPT через DCR и пройти
   пользовательский OAuth/tool scan.
 - **Первая попытка deploy 2026-08-04:** обязательный pre-deploy gate прошёл

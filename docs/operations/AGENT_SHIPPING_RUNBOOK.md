@@ -51,6 +51,30 @@ emergency-only. The script intentionally does not support `--no-verify`.
 requires an explicitly staged scope and may clean stale Git lock files and
 create/remove the ship lock. Use it only after staging itself is authorized.
 
+### Single-pass production documentation
+
+- Update source and canonical documentation together while implementing. Ask for
+  publication permission only after the complete intended scope is ready,
+  reviewed and verified.
+- Present that exact scope once. One direct `commit + push + deploy` approval
+  covers commit, mandatory pre-push, push and deploy for that scope without
+  intermediate approval prompts. It does not cover source/docs added after the
+  approval except mandatory hook auto-fixes; material expansion requires a new
+  permission gate.
+- Before the permitted commit, include the stable decision, changed contract,
+  expected deploy gate and next user-owned step. Do not claim that production is
+  live before the deploy evidence exists.
+- After push, verify the live outcome from the CI run and, where supported,
+  `record_ops_deploy_receipt`. Report the run URL, deployed commit, version and
+  canary/health result in the final response; those runtime facts do not require
+  a second Git commit by themselves.
+- Create a follow-up documentation commit only when the live result changes a
+  decision, roadmap status, risk or next gate, or proves tracked documentation
+  false. Treat it as a new scope under the normal commit/push permission gate.
+- Never create a second push merely to copy transient deployment identifiers
+  from CI into Markdown. This keeps the normal flow atomic: one intended commit,
+  one push and one deploy.
+
 ## 3. Intended staging and dirty workspace
 
 Before any staging or branch mutation:

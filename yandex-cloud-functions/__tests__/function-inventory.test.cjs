@@ -29,6 +29,53 @@ test('API source change selects its exact deployment target', () => {
   });
 });
 
+test('documentation-only changes do not redeploy a cloud function', () => {
+  assert.deepEqual(resolveChangedFiles([
+    'yandex-cloud-functions/heys-mcp/README.md',
+    'yandex-cloud-functions/heys-api-payments/DEPLOY.md',
+    'yandex-cloud-functions/shared/README.mdx',
+  ]), {
+    mode: 'none',
+    functions: [],
+    gatewaySpecChanged: false,
+    reason: 'no-deployable-function-changes',
+  });
+});
+
+test('documentation beside runtime source does not hide the runtime target', () => {
+  assert.deepEqual(resolveChangedFiles([
+    'yandex-cloud-functions/heys-mcp/README.md',
+    'yandex-cloud-functions/heys-mcp/index.js',
+  ]), {
+    mode: 'selective',
+    functions: ['heys-mcp'],
+    gatewaySpecChanged: false,
+    reason: 'changed-function-directories',
+  });
+});
+
+test('an arbitrary markdown asset remains fail-closed as runtime input', () => {
+  assert.deepEqual(resolveChangedFiles([
+    'yandex-cloud-functions/heys-mcp/prompts/curator.md',
+  ]), {
+    mode: 'selective',
+    functions: ['heys-mcp'],
+    gatewaySpecChanged: false,
+    reason: 'changed-function-directories',
+  });
+});
+
+test('classifier-only change does not redeploy runtime functions', () => {
+  assert.deepEqual(resolveChangedFiles([
+    'yandex-cloud-functions/function-inventory.cjs',
+  ]), {
+    mode: 'none',
+    functions: [],
+    gatewaySpecChanged: false,
+    reason: 'no-deployable-function-changes',
+  });
+});
+
 test('cron, maintenance, backup and polling changes select automation targets', () => {
   const result = resolveChangedFiles([
     'yandex-cloud-functions/heys-cron-reminders/index.js',
