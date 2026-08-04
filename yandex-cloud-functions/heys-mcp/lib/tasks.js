@@ -235,11 +235,36 @@ function stemWord(word) {
   return word.length > 5 ? word.slice(0, word.length - 2) : word;
 }
 
+/**
+ * Сравнение слов по общему началу — для коротких, где отрезать два символа
+ * нельзя: «зал» превратился бы в один символ и совпал с чем угодно.
+ *
+ * Порог в три буквы: «зал» и «зала», «дом» и «дома» сходятся, а «дом» и «дым»
+ * — нет. Короче трёх не сверяем вовсе: там осмысленной общей части уже не
+ * остаётся, и совпадать начнёт всё подряд.
+ */
+function shortFormsMatch(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return false;
+  let common = 0;
+  while (common < a.length && common < b.length && a[common] === b[common]) common += 1;
+  // Три общих буквы подряд: «зал»/«зала» и «дома»/«домой» сходятся, «дом»/«дым»
+  // расходятся на второй букве, а «зал»/«заказ» — на третьей. Порог ниже трёх
+  // склеивает всё, что начинается одинаково; выше — теряет падежи коротких слов.
+  return common >= 3;
+}
+
 function lineMatchesTerm(line, term) {
   if (line.includes(term)) return true;
   const stem = stemWord(term);
-  if (stem.length < 4) return false;
-  return line.split(/[^\p{L}\p{N}]+/u).some((word) => word && stemWord(word).startsWith(stem));
+  const words = line.split(/[^\p{L}\p{N}]+/u);
+  // Длинное слово ищем по основе, короткое — по общему началу. Раньше короткие
+  // не искались вовсе (порог в 4 символа на основу), и «до зала» не находило
+  // «зал»: падеж делал слово другим. Людям же свойственно называть места
+  // короткими словами — зал, дом, юг, — и именно они промахивались.
+  if (stem.length >= 4) {
+    if (words.some((word) => word && stemWord(word).startsWith(stem))) return true;
+  }
+  return words.some((word) => word && shortFormsMatch(word, term));
 }
 
 /**
@@ -1684,14 +1709,31 @@ function sleepQuestion(state, item, { until, nowMs = Date.now() } = {}) {
 const PATH_RANK = [
   [/^projects\//i, 0],          // сами задачи — без них не отвечает ничто
   [/^(NOW|INBOX|GOALS|habits)\.md$/i, 1],
-  // 2 — рабочая память, см. isStateFile ниже
+  // 2 — рабочая память и справочники, см. isStateFile / isReference ниже
   [/^days\//i, 3],
   [/^journal\//i, 4],
   [/^money\//i, 5],
   [/^archive\//i, 6],
-  [/^(README|CLAUDE)\.md$/i, 7], // справочники: формат файлов и договорённости
   [/^transcript\//i, 8],
 ];
+
+/**
+ * Справочник: формат файлов, договорённости, карта районов и время в пути.
+ *
+ * Стоял 7-м рангом, и это оказалось миной. Датированные папки растут на файл в
+ * день, а потолок чтения не растёт: по счёту файлов README.md и CLAUDE.md
+ * выпадали из сплошного прохода примерно к 19 августа — молча, вместе с картой
+ * районов, которую больше взять негде. Цена подъёма нулевая: справочники малы,
+ * их всего несколько штук, и в потолок они и так помещались — менялся только
+ * порядок, в котором их отрезают.
+ *
+ * Признак — имя файла, а не корень: справка о формате лежит рядом с данными
+ * (`days/README.md`, `money/README.md`), и по папке она неотличима от
+ * датированных файлов, которые её и вытесняют.
+ */
+function isReference(path) {
+  return /(^|\/)(README|CLAUDE)\.md$/i.test(String(path || ''));
+}
 
 /**
  * Рабочая память живёт в docs/, но документацией не является.
@@ -1731,6 +1773,7 @@ function isOneOffReport(path) {
 
 function pathRank(path) {
   if (isStateFile(path)) return 2;      // рабочая память — вровень с задачами, до дней
+  if (isReference(path)) return 2;      // справочники — там же: их вытесняли растущие дни
   if (isOneOffReport(path)) return 9;   // разовые отчёты — последними
   for (const [re, rank] of PATH_RANK) if (re.test(String(path || ''))) return rank;
   return 8;                             // прочее (rituals/ и подобное) — перед отчётами
@@ -1757,6 +1800,49 @@ function rankPaths(paths, { today = null } = {}) {
     if (da !== null && db !== null && da !== db) return da - db;
     return String(a).localeCompare(String(b));
   });
+}
+
+/**
+ * Сколько файлов из одной датированной папки берётся в сплошной проход.
+ *
+ * Порядок сам по себе от вытеснения не спасает: `days/` пополняется каждый
+ * день и стоит выше журнала, денег и архива, поэтому за год он один занял бы
+ * весь потолок, а всё, что ниже, перестало бы читаться — снова молча. Двенадцать
+ * — это две недели дней либо год месячных файлов журнала и денег: дальше начинается
+ * прошлое, за которым и так ходят прицельно, поиском или прямым чтением.
+ */
+const DATED_QUOTA = 12;
+
+/** Папка, файлы которой датированы именем: days/, journal/, money/, archive/… */
+function datedGroup(path) {
+  const found = /^([^/]+)\/[^/]*\d{4}-\d{2}/.exec(String(path || ''));
+  return found ? found[1].toLowerCase() : null;
+}
+
+/**
+ * Что читать сплошным проходом: порядок по смыслу плюс потолок на каждую
+ * растущую папку.
+ *
+ * Лишнее не выбрасывается, а уходит в хвост: если после отбора место осталось,
+ * тринадцатый день прочитается — просто после справочников и журнала, а не
+ * вместо них. Поднимать сам потолок для этого нельзя: каждый файл прохода
+ * оплачивается в каждом разборе фразы.
+ */
+function selectPaths(paths, { today = null, max = null, perGroup = DATED_QUOTA } = {}) {
+  const order = rankPaths(paths, { today });
+  const taken = new Map();
+  const head = [];
+  const rest = [];
+  for (const path of order) {
+    const group = perGroup ? datedGroup(path) : null;
+    if (!group) { head.push(path); continue; }
+    const count = taken.get(group) || 0;
+    if (count >= perGroup) { rest.push(path); continue; }
+    taken.set(group, count + 1);
+    head.push(path);
+  }
+  const selected = [...head, ...rest];
+  return max ? selected.slice(0, max) : selected;
 }
 
 // ── Стенограмма: напоминание, а не принуждение ───────────────────────────
@@ -2555,20 +2641,50 @@ const PREFS_SOFT_LIMIT = 60;
 /**
  * Виды памяти и их права.
  *
- * Первые три — с его слов, и трогать их без него нельзя. Четвёртый заведён
- * отдельно именно ради разницы в правах: «наблюдение» — это то, что агент
- * вывел из данных сам. Свой вывод можно уточнить, когда он подтвердился ещё
- * раз; его решение переписать выводом нельзя никогда, и держится это не на
+ * Первые три и «факт» — с его слов, и трогать их без него нельзя.
+ * «Наблюдение» заведено отдельно именно ради разницы в правах: это то, что
+ * агент вывел из данных сам. Свой вывод можно уточнить, когда он подтвердился
+ * ещё раз; его решение переписать выводом нельзя никогда, и держится это не на
  * добросовестности модели, а на отказе инструмента.
+ *
+ * «Факт» — это устройство его мира, а не способ решать: марка машины, площадь
+ * склада, две Маши — один человек или разные. Такое спрашивали по четыре раза
+ * за день, потому что записывать было некуда: предпочтение и порог про другое,
+ * а ответ в разговоре не оседает нигде. Права у факта его же, владельческие:
+ * «вижу по журналу, что машина другая» — это догадка, и переписывать ею
+ * названное им нельзя ровно так же, как его порог.
  */
-const PREFS_KINDS = ['предпочтение', 'порог', 'решение', 'наблюдение'];
-const PREFS_OWNER_KINDS = ['предпочтение', 'порог', 'решение'];
+const PREFS_KINDS = ['предпочтение', 'порог', 'решение', 'наблюдение', 'факт'];
+const PREFS_OWNER_KINDS = ['предпочтение', 'порог', 'решение', 'факт'];
 
 /** Сколько дней записи хватает, чтобы спрашивать «а это ещё нужно». */
 const PREFS_STALE_DAYS = 30;
 
-/** Вложенные строки записи: заданный вопрос и два счётчика. */
-const PREFS_CHILD_RE = /^(вопрос|подтверждено|пригодилось):\s*(.*)$/i;
+/**
+ * Факту тот же срок не годится. «Площадь склада — 200 м²» может не всплывать
+ * полгода и мусором от этого не станет: у факта нет причины пригождаться
+ * каждый месяц. Но и молчать про него нельзя — устаревший факт хуже
+ * отсутствующего: отсутствующий спросят, а устаревшим ответят уверенно.
+ * Поэтому срок длиннее и считается иначе (см. stalePreferences).
+ */
+const PREFS_FACT_STALE_DAYS = 180;
+
+/** Вложенные строки записи: заданный вопрос, два счётчика и отметка устаревания. */
+/**
+ * Дочерние строки записи памяти. «зовётся» — слова, которыми он называет то же
+ * самое: «тачка» вместо «машина», «зал» вместо «студия». Без них факт поднимается
+ * только на дословном совпадении, и «сколько ехать до зала» не найдёт запись про
+ * студию — а неподнявшийся факт неотличим от отсутствующего.
+ */
+const PREFS_CHILD_RE = /^(вопрос|подтверждено|пригодилось|устарело|зовётся|зовется):\s*(.*)$/i;
+
+/** Синонимы одной строкой: «тачка, авто» — по любому из них факт поднимется. */
+function parseAliases(value) {
+  return String(value || '')
+    .split(/[,;]/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
 
 function parseCounterChild(value) {
   const count = /^(\d+)/.exec(String(value || '').trim());
@@ -2578,6 +2694,25 @@ function parseCounterChild(value) {
 
 function counterChild(field, { count, date }) {
   return `${field}: ${count}${date ? `, последний раз ${date}` : ''}`;
+}
+
+/**
+ * Отметка «это больше не так»: дата и чем заменено.
+ *
+ * Строкой, а не удалением, и по той же причине, по которой удаления памяти нет
+ * вовсе: он должен видеть глазами, что было записано раньше и когда это
+ * перестало быть правдой. Продал машину — старая марка остаётся в файле с
+ * датой, а не исчезает, будто её никогда и не говорили.
+ */
+function staleChild({ date, replacedBy = null }) {
+  return `устарело: ${date}${replacedBy ? `, заменено на «${replacedBy}»` : ''}`;
+}
+
+function parseStaleChild(value) {
+  const raw = String(value || '').trim();
+  const date = /(\d{4}-\d{2}-\d{2})/.exec(raw);
+  const replaced = /«([^»]+)»/.exec(raw);
+  return { date: date ? date[1] : null, replaced_by: replaced ? replaced[1] : null };
 }
 
 /**
@@ -2599,6 +2734,8 @@ function parsePreferences(file) {
       if (!child) continue;
       const field = child[1].toLowerCase();
       if (field === 'вопрос') current.question = child[2].trim();
+      else if (field === 'зовётся' || field === 'зовется') current.aliases = parseAliases(child[2]);
+      else if (field === 'устарело') current.stale = parseStaleChild(child[2]);
       else current[field === 'подтверждено' ? 'confirmed' : 'used'] = parseCounterChild(child[2]);
       continue;
     }
@@ -2615,6 +2752,8 @@ function parsePreferences(file) {
       question: null,
       confirmed: { count: 0, date: null },
       used: { count: 0, date: null },
+      aliases: [],
+      stale: null,
     };
     out.push(current);
   }
@@ -2630,12 +2769,17 @@ function parsePreferences(file) {
  * уборку закладываем 180 минут»), а сам вопрос человек и модель задают
  * похожими словами почти всегда. Повтор ловится по той оси, по которой он
  * действительно повторяется.
+ *
+ * Помеченное устаревшим из сравнения не выкидывается, а только уступает
+ * живому при равном совпадении. Выкинуть было бы хуже: старое значение факта
+ * тогда записалось бы заново как новое, и в памяти оказались бы две живые
+ * записи, отвечающие на один вопрос по-разному.
  */
 function knownPreference(existing, note, { threshold = DECISION_SIMILARITY, question = null } = {}) {
   let best = null;
   const consider = (entry, score, by) => {
     if (score < threshold) return;
-    if (best && best.score >= score) return;
+    if (best && (best.score > score || (best.score === score && !best.stale))) return;
     best = { ...entry, score: Math.round(score * 100) / 100, matched_by: by };
   };
   for (const entry of existing) {
@@ -2653,10 +2797,15 @@ function preferenceLine({ date, kind, note, evidence }) {
 }
 
 /** Запись целиком: строка и заданный вопрос под ней, если он был. */
-function preferenceBlock({ date, kind, note, evidence, question = null }) {
+function preferenceBlock({ date, kind, note, evidence, question = null, aliases = null }) {
   const head = preferenceLine({ date, kind, note, evidence });
+  const rows = [];
   const asked = String(question || '').trim();
-  return asked ? `${head}\n  - вопрос: ${asked}` : head;
+  if (asked) rows.push(`  - вопрос: ${asked}`);
+  const named = (Array.isArray(aliases) ? aliases : String(aliases || '').split(/[,;]/))
+    .map((x) => String(x).trim()).filter(Boolean);
+  if (named.length) rows.push(`  - зовётся: ${named.join(', ')}`);
+  return rows.length ? `${head}\n${rows.join('\n')}` : head;
 }
 
 /**
@@ -2690,18 +2839,71 @@ function bumpPreferenceCounter(text, entries, { field = 'пригодилось'
 }
 
 /**
- * Что пора пересмотреть: записи старше месяца, которые ни разу не пригодились.
+ * Пометить запись устаревшей — по её собственной строке, а не по номеру.
  *
- * «Пригодилось» считается с того дня, как счётчик вообще завели, — у записи,
- * сделанной раньше, пустой счётчик значит «не считали», а не «не нужна». Это
- * не мешает делу: список только показывается, и вычёркивает из него он сам.
+ * Номер строки здесь не годится вовсе: между чтением и записью файл могли
+ * переписать из другой сессии, и повтор на свежем тексте (rebase) обязан найти
+ * ту же запись заново. Не нашлась — возвращаем null, и вызывающий отказывает
+ * вслух: молча дописать новое значение, не погасив старое, значит оставить в
+ * памяти два живых ответа на один вопрос.
  */
-function stalePreferences(entries, { today = null, days = PREFS_STALE_DAYS } = {}) {
+function markPreferenceStale(text, entry, { date, replacedBy = null } = {}) {
+  const head = preferenceLine(entry).trim();
+  const lines = String(text || '').split('\n');
+  const at = lines.findIndex((line) => line.trim() === head);
+  if (at === -1) return null;
+  const mark = staleChild({ date, replacedBy });
+  for (let i = at + 1; i < lines.length; i += 1) {
+    if (!/^\s/.test(lines[i]) || !lines[i].trim()) break;
+    const child = PREFS_CHILD_RE.exec(lines[i].trim().replace(/^[-*]\s+/, ''));
+    if (child && child[1].toLowerCase() === 'устарело') {
+      lines[i] = `  - ${mark}`;
+      return lines.join('\n');
+    }
+  }
+  return appendChild(lines.join('\n'), at, mark);
+}
+
+/** Живая память: всё, кроме помеченного устаревшим. */
+function activePreferences(entries) {
+  return (entries || []).filter((entry) => !entry.stale);
+}
+
+/**
+ * Что пора пересмотреть. Для разных видов памяти это разные вопросы, и меряются
+ * они по-разному.
+ *
+ * Обычная запись: старше месяца и ни разу не пригодилась — «это ещё нужно?».
+ * «Пригодилось» считается с того дня, как счётчик вообще завели, — у записи,
+ * сделанной раньше, пустой счётчик значит «не считали», а не «не нужна».
+ *
+ * Факт: срок вшестеро длиннее и считается от последнего касания, а не от даты
+ * записи. Причина в том, что счётчик у факта работает наоборот: факт, который
+ * пригождается каждую неделю, — самый опасный из устаревших, им отвечают
+ * уверенно и не проверяя. Поэтому «пригодилось» его не освобождает, а только
+ * отодвигает срок: раз попал в разбор — значит был верен на тот день.
+ *
+ * Список только показывается, вычёркивает из него он сам.
+ */
+function stalePreferences(entries, { today = null, days = PREFS_STALE_DAYS, factDays = PREFS_FACT_STALE_DAYS } = {}) {
   if (!today) return [];
-  return (entries || [])
-    .map((entry) => ({ entry, age: Math.floor((dateToMs(today) - dateToMs(entry.date)) / DAY_MS) }))
-    .filter(({ entry, age }) => Number.isFinite(age) && age > days && !(entry.used?.count > 0))
-    .map(({ entry, age }) => ({ ...entry, age_days: age }))
+  const ageFrom = (date) => Math.floor((dateToMs(today) - dateToMs(date)) / DAY_MS);
+  return activePreferences(entries)
+    .map((entry) => {
+      if (entry.kind !== 'факт') {
+        const age = ageFrom(entry.date);
+        const due = Number.isFinite(age) && age > days && !(entry.used?.count > 0);
+        return due ? { ...entry, age_days: age, reason: 'вычеркнуть' } : null;
+      }
+      // Последнее касание: запись, подтверждение или попадание в разбор.
+      const touched = [entry.date, entry.confirmed?.date, entry.used?.date]
+        .filter(Boolean).sort().pop();
+      const age = ageFrom(touched);
+      return Number.isFinite(age) && age > factDays
+        ? { ...entry, age_days: age, reason: 'проверить' }
+        : null;
+    })
+    .filter(Boolean)
     .sort((a, b) => b.age_days - a.age_days);
 }
 
@@ -2818,15 +3020,28 @@ function questionSimilarity(a, b) {
 }
 
 /**
- * Что мешает положить развилку: такой вопрос уже висит открытым, или доска
- * уже держит столько нерешённого, что новое просто не прочитают.
+ * Что мешает положить развилку: такой вопрос уже висит открытым, ответ на него
+ * уже записан фактом, или доска держит столько нерешённого, что новое просто не
+ * прочитают.
+ *
+ * Проверка по фактам стоит здесь, а не в правилах, по той же причине, что и
+ * остальные отказы этого файла: правило можно не прочитать. Вопрос, на который
+ * ответ уже лежит в памяти, — это тот самый четвёртый раз про марку машины,
+ * только положенный на доску, где он ещё и переживёт разговор.
+ *
+ * Сверяются только факты: устройство его мира отвечает на вопрос целиком.
+ * Предпочтение или решение на вопрос доски похоже словами, но не отвечает на
+ * него, и глушить им развилку значило бы терять настоящие вопросы.
  *
  * @param {Array} openQuestions результат collectOpenQuestions
  * @param {string[]} questions что собираемся спросить
+ * @param {Array} facts записи памяти (parsePreferences); берутся живые факты
  */
-function decisionGuard(openQuestions, questions, { cap = OPEN_DECISIONS_CAP, threshold = DECISION_SIMILARITY } = {}) {
+function decisionGuard(openQuestions, questions, { cap = OPEN_DECISIONS_CAP, threshold = DECISION_SIMILARITY, facts = [] } = {}) {
   const duplicates = [];
+  const answered = [];
   const fresh = [];
+  const known = activePreferences(facts).filter((entry) => entry.kind === 'факт');
   for (const question of questions) {
     let best = null;
     for (const open of openQuestions) {
@@ -2835,11 +3050,13 @@ function decisionGuard(openQuestions, questions, { cap = OPEN_DECISIONS_CAP, thr
         best = { asked: question, same_as: open.question, ref: open.ref, task: open.task, score: Math.round(score * 100) / 100 };
       }
     }
-    if (best) duplicates.push(best);
-    else fresh.push(question);
+    if (best) { duplicates.push(best); continue; }
+    const fact = knownPreference(known, null, { question, threshold });
+    if (fact) { answered.push({ asked: question, fact }); continue; }
+    fresh.push(question);
   }
   const openTasks = [...new Set(openQuestions.map((q) => q.ref).filter(Boolean))];
-  return { fresh, duplicates, open_refs: openTasks, open_count: openTasks.length, cap, over_cap: openTasks.length >= cap };
+  return { fresh, duplicates, answered, open_refs: openTasks, open_count: openTasks.length, cap, over_cap: openTasks.length >= cap };
 }
 
 // ── «Что делать прямо сейчас» ────────────────────────────────────────────
@@ -4524,8 +4741,12 @@ module.exports = {
   // порядок чтения
   pathRank,
   rankPaths,
+  selectPaths,
+  datedGroup,
+  DATED_QUOTA,
   isStateFile,
   isOneOffReport,
+  isReference,
   // эксперимент «два ответа»
   VOTES_PATH,
   VOTES_SECTION,
@@ -4548,11 +4769,15 @@ module.exports = {
   PREFS_KINDS,
   PREFS_OWNER_KINDS,
   PREFS_STALE_DAYS,
+  PREFS_FACT_STALE_DAYS,
   parsePreferences,
   knownPreference,
+  activePreferences,
   preferenceLine,
   preferenceBlock,
   bumpPreferenceCounter,
+  markPreferenceStale,
+  staleChild,
   stalePreferences,
   // окружение находки
   projectNeighborhood,
