@@ -390,16 +390,20 @@ claude.ai → Настройки → Коннекторы → «Добавить
 поддерживает динамическую регистрацию.
 
 ChatGPT → Плагины → «Добавить сервер» → URL
-`https://api.heyslab.ru/mcp/chatgpt/curator`. Это отдельный OAuth resource на
-той же функции и с тем же кураторским набором инструментов. Alias введён
-2026-08-04 после подтверждённого cache-инцидента: ChatGPT продолжал считать
-старый `/mcp/curator` несовместимым с RFC 7591 и не отправлял запрос на живой
-`/mcp/register`, хотя endpoint отвечал `201`. Claude URL и OAuth-flow не
-изменялись. Повторная browser-проверка показала host-level cache: backend
-ChatGPT отклонял DCR до `POST /mcp/register`, несмотря на корректный root
-metadata. Path-scoped issuer не подходит: ChatGPT не принимает его как источник
-DCR. Поэтому ChatGPT подключается через штатный hostname API Gateway с root
-issuer, а Claude продолжает использовать `https://api.heyslab.ru` без изменений.
+`https://d5d7939njvjp27ofsok0.3zvepvee.apigw.yandexcloud.net/mcp/chatgpt/curator`.
+Это отдельный OAuth resource на той же функции и с тем же кураторским набором
+инструментов. Alias введён 2026-08-04 после подтверждённого cache-инцидента:
+ChatGPT продолжал считать старый `/mcp/curator` несовместимым с RFC 7591 и не
+отправлял запрос на живой `/mcp/register`, хотя endpoint отвечал `201`. Claude
+URL и OAuth-flow не изменялись. Повторная browser-проверка показала host-level
+cache: backend ChatGPT отклонял DCR до `POST /mcp/register`, несмотря на
+корректный root metadata. Path-scoped issuer не подходит: ChatGPT не принимает
+его как источник DCR. Поэтому ChatGPT подключается через штатный hostname API
+Gateway с root issuer, а Claude продолжает использовать `https://api.heyslab.ru`
+без изменений. Если UI ChatGPT ошибочно отклоняет DCR до вызова `/mcp/register`,
+нужно выбрать «Пользовательский клиент OAuth» и предварительно зарегистрировать
+public client через `/mcp/register` для точного callback текущей формы. Client
+ID от другого callback переиспользовать нельзя.
 
 **ChatGPT — исправлено и задеплоено 2026-08-04.** OAuth discovery в production
 исправен, callback `https://chatgpt.com/connector/oauth/{callback_id}` разрешён.
