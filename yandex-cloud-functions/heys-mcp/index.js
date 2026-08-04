@@ -49,21 +49,11 @@ const MCP_ENDPOINTS = new Set(['/mcp', '/mcp/curator', '/mcp/chatgpt/curator']);
 const DEFAULT_MCP_ENDPOINT = '/mcp';
 
 const PROTECTED_RESOURCE_PREFIX = '/.well-known/oauth-protected-resource';
-const AUTHORIZATION_SERVER_PREFIX = '/.well-known/oauth-authorization-server';
-const CHATGPT_MCP_ENDPOINT = '/mcp/chatgpt/curator';
 
 /** Путь ресурса из адреса метаданных: .../oauth-protected-resource/mcp/curator → /mcp/curator. */
 function resourcePathFromMetadataPath(path) {
   const suffix = String(path).slice(PROTECTED_RESOURCE_PREFIX.length);
   return MCP_ENDPOINTS.has(suffix) ? suffix : DEFAULT_MCP_ENDPOINT;
-}
-
-/**
- * ChatGPT кеширует metadata по authorization server URL отдельно от MCP URL.
- * Path-scoped issuer изолирует его discovery-cache, не меняя Claude issuer.
- */
-function authorizationServerIssuer(origin, resourcePath) {
-  return resourcePath === CHATGPT_MCP_ENDPOINT ? `${origin}${resourcePath}` : origin;
 }
 
 const SECURITY_HEADERS = {
@@ -429,16 +419,10 @@ exports.handler = async (event) => {
   // Метаданные не требуют секрета и должны отвечать даже при проблемах с ним.
   if (method === 'GET' && path.startsWith(PROTECTED_RESOURCE_PREFIX)) {
     const resourcePath = resourcePathFromMetadataPath(path);
-    return json(200, oauth.protectedResourceMetadata({
-      issuer: authorizationServerIssuer(issuer, resourcePath),
-      resource: `${issuer}${resourcePath}`,
-    }));
+    return json(200, oauth.protectedResourceMetadata({ issuer, resource: `${issuer}${resourcePath}` }));
   }
-  if (method === 'GET' && path.startsWith(AUTHORIZATION_SERVER_PREFIX)) {
-    const resourcePath = String(path).slice(AUTHORIZATION_SERVER_PREFIX.length);
-    const metadata = oauth.authorizationServerMetadata({ issuer });
-    metadata.issuer = authorizationServerIssuer(issuer, resourcePath);
-    return json(200, metadata);
+  if (method === 'GET' && path.startsWith('/.well-known/oauth-authorization-server')) {
+    return json(200, oauth.authorizationServerMetadata({ issuer }));
   }
 
   const secret = getTokenSecret();

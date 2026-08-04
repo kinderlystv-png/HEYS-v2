@@ -395,12 +395,11 @@ ChatGPT → Плагины → «Добавить сервер» → URL
 2026-08-04 после подтверждённого cache-инцидента: ChatGPT продолжал считать
 старый `/mcp/curator` несовместимым с RFC 7591 и не отправлял запрос на живой
 `/mcp/register`, хотя endpoint отвечал `201`. Claude URL и OAuth-flow не
-изменялись. Повторная browser-проверка показала тот же cache на уровне
-authorization server: backend ChatGPT отклонял DCR до `POST /mcp/register`,
-несмотря на корректный root metadata. Поэтому только ChatGPT-resource
-рекламирует path-scoped issuer `https://api.heyslab.ru/mcp/chatgpt/curator`;
-OAuth endpoints остаются общими, а Claude продолжает использовать issuer
-`https://api.heyslab.ru`.
+изменялись. Повторная browser-проверка показала host-level cache: backend
+ChatGPT отклонял DCR до `POST /mcp/register`, несмотря на корректный root
+metadata. Path-scoped issuer не подходит: ChatGPT не принимает его как источник
+DCR. Поэтому ChatGPT подключается через штатный hostname API Gateway с root
+issuer, а Claude продолжает использовать `https://api.heyslab.ru` без изменений.
 
 **ChatGPT — исправлено и задеплоено 2026-08-04.** OAuth discovery в production
 исправен, callback `https://chatgpt.com/connector/oauth/{callback_id}` разрешён.
