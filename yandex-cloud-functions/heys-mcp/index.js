@@ -436,7 +436,9 @@ exports.handler = async (event) => {
       }
       const result = oauth.registerClient(body, secret);
       if (!result.ok) return json(400, { error: result.error, error_description: result.description });
-      return json(201, result.registration);
+      const response = json(201, result.registration);
+      response.headers.Pragma = 'no-cache';
+      return response;
     }
 
     if (path === '/mcp/authorize' && method === 'GET') {

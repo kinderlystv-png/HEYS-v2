@@ -114,7 +114,16 @@
   `d4er3rfcfgk6imblgj1c` (`ACTIVE`); pre-deploy gate 806/806 и post-deploy
   health-check прошли. DCR с тестовым callback
   `https://chatgpt.com/connector/oauth/test-callback` → HTTP 201.
-- **Осталось:** пройти интерактивный OAuth/tool scan из экрана ChatGPT.
+- **Новый факт (интерактив, 2026-08-04):** ChatGPT видит discovery, но строгая
+  DCR-проверка отклоняет ответ как несовместимый с RFC 7591. Ручной client ID
+  создаёт коннектор, однако ChatGPT не передаёт `code_challenge`, поэтому HEYS
+  корректно блокирует authorize; ослаблять обязательный PKCE запрещено.
+- **Исправлено локально, deploy ожидается:** DCR проверяет запрошенные grant,
+  response type и token auth method, возвращает поддержанные метаданные клиента
+  по RFC 7591 §3.2.1 и `Pragma: no-cache`. Claude-default и обязательный PKCE не
+  изменены; профильный OAuth-набор: 24/24.
+- **Осталось:** отдельные commit/deploy, затем пересоздать коннектор через DCR и
+  пройти OAuth/tool scan из ChatGPT.
 - **Первая попытка deploy 2026-08-04:** обязательный pre-deploy gate прошёл
   806/806, затем guard остановил процесс до первой cloud-мутации из-за
   незакоммиченного source. Нужен отдельный commit-only grant; `--force-dirty`

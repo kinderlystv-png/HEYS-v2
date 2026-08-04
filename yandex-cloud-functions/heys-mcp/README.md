@@ -392,16 +392,20 @@ claude.ai → Настройки → Коннекторы → «Добавить
 **ChatGPT — исправлено и задеплоено 2026-08-04.** OAuth discovery в production
 исправен, callback `https://chatgpt.com/connector/oauth/{callback_id}` разрешён.
 В default allowlist добавлен только точный host `chatgpt.com`, без wildcard;
-профильный OAuth-набор 22/22 проверяет текущий и legacy callback и блокирует
+профильный OAuth-набор проверяет текущий и legacy callback и блокирует
 `chatgpt.com.evil.tld`. Версия `d4er3rfcfgk6imblgj1c` активна; DCR с тестовым
 ChatGPT callback вернул HTTP 201, pre-deploy gate 806/806 и post-deploy
-health-check прошли. Остался интерактивный OAuth/tool scan из ChatGPT. Evidence
-— D6 в [`todo.md`](../../todo.md).
+health-check прошли. Интерактивная проверка выявила второй gate: строгий клиент
+ChatGPT требует полный RFC 7591 response, а ручной client ID запускается без
+PKCE и поэтому намеренно блокируется. Локальная правка возвращает поддержанные
+метаданные регистрации и `Pragma: no-cache`, не меняя Claude-default и
+обязательный PKCE; OAuth-набор 24/24, deploy ожидается. Evidence — D6 в
+[`todo.md`](../../todo.md).
 
 Первая попытка deploy 2026-08-04 прошла обязательный pre-deploy gate (806/806),
 но штатный guard остановил процесс до первой cloud-мутации: source не
-закоммичен. Следующий шаг — отдельно разрешённый commit-only без push, затем
-повторный deploy; аварийный `--force-dirty` не используется.
+закоммичен. Этот блок сохраняет историю первой попытки; исправление allowlist
+после commit было успешно задеплоено, аварийный `--force-dirty` не применялся.
 
 ## Тесты
 

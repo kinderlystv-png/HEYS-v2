@@ -58,6 +58,42 @@ test('DCR требует https redirect_uri', () => {
   assert.equal(oauth.registerClient({ redirect_uris: [REDIRECT] }, SECRET).ok, true);
 });
 
+test('DCR возвращает зарегистрированные OAuth-метаданные по RFC 7591', () => {
+  const result = oauth.registerClient({
+    client_name: 'ChatGPT',
+    redirect_uris: ['https://chatgpt.com/connector/oauth/test-callback'],
+    grant_types: ['authorization_code'],
+    response_types: ['code'],
+    token_endpoint_auth_method: 'none',
+    scope: 'heys:diary',
+    client_uri: 'https://chatgpt.com',
+    contacts: ['support@openai.com'],
+    software_id: 'chatgpt',
+  }, SECRET);
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.registration.redirect_uris, ['https://chatgpt.com/connector/oauth/test-callback']);
+  assert.deepEqual(result.registration.grant_types, ['authorization_code']);
+  assert.deepEqual(result.registration.response_types, ['code']);
+  assert.equal(result.registration.token_endpoint_auth_method, 'none');
+  assert.equal(result.registration.scope, 'heys:diary');
+  assert.equal(result.registration.client_uri, 'https://chatgpt.com');
+  assert.deepEqual(result.registration.contacts, ['support@openai.com']);
+  assert.equal(result.registration.software_id, 'chatgpt');
+  assert.equal(typeof result.registration.client_id, 'string');
+  assert.equal(typeof result.registration.client_id_issued_at, 'number');
+});
+
+test('DCR fail-closed отклоняет неподдерживаемые grant, response type и auth method', () => {
+  const base = { redirect_uris: [REDIRECT] };
+  assert.equal(oauth.registerClient({ ...base, grant_types: ['client_credentials'] }, SECRET).ok, false);
+  assert.equal(oauth.registerClient({ ...base, grant_types: [] }, SECRET).ok, false);
+  assert.equal(oauth.registerClient({ ...base, response_types: ['token'] }, SECRET).ok, false);
+  assert.equal(oauth.registerClient({ ...base, response_types: [] }, SECRET).ok, false);
+  assert.equal(oauth.registerClient({ ...base, token_endpoint_auth_method: 'client_secret_post' }, SECRET).ok, false);
+  assert.equal(oauth.registerClient({ ...base, scope: 'admin' }, SECRET).ok, false);
+});
+
 // ── SEC-030: allowlist redirect-хостов ───────────────────────────────────────
 //
 // Открытая DCR + страница, собирающая пароль и код 2FA, давали фишинг на

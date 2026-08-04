@@ -140,11 +140,41 @@ function registerClient(body, secret, nowMs = Date.now()) {
     return { ok: false, error: 'invalid_redirect_uri', description: 'redirect_uris must be https (or localhost) and at most 5' };
   }
   const clientName = typeof body.client_name === 'string' ? body.client_name.slice(0, 120) : 'mcp-client';
+  const requestedGrantTypes = Array.isArray(body.grant_types)
+    ? body.grant_types
+    : ['authorization_code', 'refresh_token'];
+  const requestedResponseTypes = Array.isArray(body.response_types) ? body.response_types : ['code'];
+  if (!requestedGrantTypes.includes('authorization_code') || requestedGrantTypes.some((value) => !['authorization_code', 'refresh_token'].includes(value))) {
+    return { ok: false, error: 'invalid_client_metadata', description: 'Unsupported grant_types' };
+  }
+  if (!requestedResponseTypes.includes('code') || requestedResponseTypes.some((value) => value !== 'code')) {
+    return { ok: false, error: 'invalid_client_metadata', description: 'Unsupported response_types' };
+  }
+  if (body.token_endpoint_auth_method && body.token_endpoint_auth_method !== 'none') {
+    return { ok: false, error: 'invalid_client_metadata', description: 'Only token_endpoint_auth_method=none is supported' };
+  }
+  if (body.scope !== undefined && (typeof body.scope !== 'string' || body.scope.trim() !== SCOPE)) {
+    return { ok: false, error: 'invalid_client_metadata', description: `Only scope=${SCOPE} is supported` };
+  }
   const clientId = signToken({ ru: redirectUris, cn: clientName }, secret, {
     typ: 'heys-mcp-client',
     ttlSeconds: CLIENT_TTL_SECONDS,
     nowMs,
   });
+  // RFC 7591 §3.2.1 требует вернуть все фактически зарегистрированные
+  // метаданные клиента. Claude присылает минимальный набор, а ChatGPT может
+  // добавлять описательные поля — они не влияют на OAuth-политику, но должны
+  // сохраниться в ответе DCR, иначе строгий клиент считает endpoint несовместимым.
+  const optionalMetadata = {};
+  for (const key of ['client_uri', 'logo_uri', 'tos_uri', 'policy_uri', 'jwks_uri', 'software_id', 'software_version', 'application_type']) {
+    if (typeof body[key] === 'string') optionalMetadata[key] = body[key];
+  }
+  if (Array.isArray(body.contacts) && body.contacts.every((value) => typeof value === 'string')) {
+    optionalMetadata.contacts = body.contacts;
+  }
+  if (body.jwks && typeof body.jwks === 'object' && !Array.isArray(body.jwks)) {
+    optionalMetadata.jwks = body.jwks;
+  }
   return {
     ok: true,
     registration: {
@@ -152,10 +182,11 @@ function registerClient(body, secret, nowMs = Date.now()) {
       client_id_issued_at: Math.floor(nowMs / 1000),
       client_name: clientName,
       redirect_uris: redirectUris,
-      grant_types: ['authorization_code', 'refresh_token'],
-      response_types: ['code'],
+      grant_types: requestedGrantTypes,
+      response_types: requestedResponseTypes,
       token_endpoint_auth_method: 'none',
       scope: SCOPE,
+      ...optionalMetadata,
     },
   };
 }
