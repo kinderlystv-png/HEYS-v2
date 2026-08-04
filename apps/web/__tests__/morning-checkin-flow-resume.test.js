@@ -610,6 +610,59 @@ describe('morning check-in journal resume', () => {
     expect(values.get(PROGRESS_KEY).steps.weight.status).toBe('planned');
   });
 
+  it('не открывает чек-ин ради одного опционального хвоста, когда обязательное собрано', () => {
+    // Обязательную часть могли закрыть не через флоу — из карточки дня или
+    // через куратора (heys_checkin). Тогда всплывать с одними замерами и
+    // холодом значит требовать то, чего система не требует: сам флоу их
+    // блокирующими не считает (getBlockingMorningSteps), и «показать» с
+    // «закрыть» должны отвечать одинаково.
+    const ledger = fullIncidentLedger('synced');
+    ledger.steps.yesterdayVerify = { status: 'synced' };
+    ledger.steps.measurements = { status: 'planned' };
+    ledger.steps.cold_exposure = { status: 'planned' };
+    const day = completedDay();
+    delete day.measurements;
+    delete day.coldExposure;
+
+    const { HEYS } = loadMorning({ day, profile: { stepsGoal: 9000 }, ledger });
+    expect(HEYS.shouldShowMorningCheckin()).toBe(false);
+  });
+
+  it('не открывает чек-ин ради одного позитивного экрана, когда всё собрано и синхронизировано', () => {
+    // «Финал» ничего не записывает и завершённым по данным не становится
+    // никогда. Пока он считался блокирующим наравне с остальными, модалка
+    // открывалась каждое утро ради экрана «начни день» — при полностью
+    // собранном и уехавшем в облако чек-ине.
+    const ledger = fullIncidentLedger('synced');
+    ledger.steps.yesterdayVerify = { status: 'synced' };
+    ledger.steps.cold_exposure = { status: 'synced' };
+    ledger.steps.morningRoutine = { status: 'planned' };
+
+    const { HEYS } = loadMorning({
+      day: completedDay(),
+      profile: { stepsGoal: 9000 },
+      ledger,
+    });
+    expect(HEYS.shouldShowMorningCheckin()).toBe(false);
+  });
+
+  it('всё же открывает чек-ин, если у шага данные не уехали в облако', () => {
+    // Обратная сторона предыдущего: значение уже видно в дне, но живёт только
+    // на устройстве. Такой шаг обязан дозакрыться, иначе пропадёт вместе с
+    // телефоном — и здесь модалка нужна, даже когда обязательное собрано.
+    const ledger = fullIncidentLedger('synced');
+    ledger.steps.yesterdayVerify = { status: 'synced' };
+    ledger.steps.morningRoutine = { status: 'synced' };
+    ledger.steps.cold_exposure = { status: 'saved_local', cloudPending: true };
+
+    const { HEYS } = loadMorning({
+      day: completedDay(),
+      profile: { stepsGoal: 9000 },
+      ledger,
+    });
+    expect(HEYS.shouldShowMorningCheckin()).toBe(true);
+  });
+
   it('does not let a session flag hide an unfinished journal or a current yesterday check', () => {
     sessionStorage.setItem(`heys_morning_checkin_done_${CLIENT_ID}_${DATE_KEY}`, 'true');
     const unfinishedLedger = fullIncidentLedger();

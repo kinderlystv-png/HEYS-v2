@@ -1097,9 +1097,44 @@
     }
 
     const flowStatus = existingProgress?.steps?.__flow__?.status || null;
-    if (existingProgress && remainingProgressSteps.length > 0) {
+    // Незавершённым флоу считаем только блокирующие шаги. Опциональный хвост
+    // (замеры, холод, добавки, цикл, загрузочный день) сам по себе модалку не
+    // открывает: обязательная часть могла быть закрыта другим путём — из
+    // карточки дня или через куратора, — и тогда всплывать с одними
+    // необязательными шагами значит требовать то, чего система не требует.
+    // Ту же границу уже проводит completeMorningCheckin, когда решает, можно
+    // ли закрыть флоу (getBlockingMorningSteps): раньше «показать» и «закрыть»
+    // считались по-разному, и хвост держал модалку открытой.
+    // Модалку держат две разные причины, и раньше они были свалены в одну.
+    //
+    // Первая — незакрытый обязательный шаг: спросить действительно нечего,
+    // пока не названы вес, сон и настроение.
+    //
+    // Вторая — шаг, чьи данные остались на телефоне и не уехали в облако
+    // (saved_local / failed_sync / editing). Такой шаг надо дозакрыть, даже
+    // если значение уже видно в дне: иначе оно живёт только здесь и пропадёт
+    // вместе с устройством. Именно это, а не «финал» сам по себе, защищает
+    // тест «does not let a session flag hide an unfinished journal» — там
+    // cold_exposure помечен saved_local с cloudPending.
+    //
+    // А «финал» (morningRoutine) — мотивационный экран: он ничего не
+    // записывает и завершённым по данным не становится никогда, только явным
+    // проходом. Когда обязательное собрано и всё синхронизировано, держать
+    // модалку ради него — значит открывать её каждое утро ни за чем.
+    const coreDone = !coreCheckinDataMissing(mergedDay) && hasStepsGoal(profile);
+    const blockingProgressSteps = (existingProgress
+      ? getBlockingMorningSteps({ ledger: existingProgress, dateKey: todayKey, clientId: currentClientId })
+      : [])
+      .filter((row) => !(row.id === 'morningRoutine' && coreDone));
+    const unsyncedProgressSteps = existingProgress
+      ? Object.entries(existingProgress.steps || {})
+        .filter(([id, row]) => id !== '__flow__' && isUnresolvedProgressStatus(row && row.status))
+      : [];
+    if (existingProgress && (blockingProgressSteps.length > 0 || unsyncedProgressSteps.length > 0)) {
       console.info('[MorningCheckin] ↩️ Resuming flow with unfinished steps', {
         flowId: existingProgress.flowId,
+        blockingSteps: blockingProgressSteps.map((row) => row.id),
+        unsyncedSteps: unsyncedProgressSteps.map(([id]) => id),
         remainingSteps: remainingProgressSteps.map((row) => row.id),
         flowStatus
       });
