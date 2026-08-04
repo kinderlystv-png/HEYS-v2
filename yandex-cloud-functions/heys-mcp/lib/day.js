@@ -628,6 +628,27 @@ function markCuratorEdits(day, targets, nowMs) {
   return marks;
 }
 
+/**
+ * Погасить метку авторства — клиент назвал значение сам.
+ *
+ * Зеркалит HEYS.models.clearCuratorMarks в apps/web/heys_models_v1.js: метка не
+ * удаляется, а перезаписывается пустым значением. Удалённый ключ вернулся бы со
+ * второй стороны — merge объединяет этот словарь union'ом по свежести. Просто
+ * «не ставить метку» при записи недостаточно: старая метка пережила бы запись,
+ * и повтор того же числа снова читался бы как кураторский.
+ */
+function clearCuratorEdits(day, targets, nowMs) {
+  const marks = (day._curatorEdits && typeof day._curatorEdits === 'object' && !Array.isArray(day._curatorEdits))
+    ? day._curatorEdits
+    : null;
+  if (!marks) return undefined;
+  const touched = targets.filter((f) => marks[f]);
+  if (!touched.length) return marks;
+  const next = { ...marks };
+  for (const field of touched) next[field] = { at: nowMs, value: null };
+  return next;
+}
+
 /** Поля, значение которых до сих пор то самое, что вписал куратор. */
 function curatorAuthoredFields(day) {
   const marks = (day && day._curatorEdits && typeof day._curatorEdits === 'object' && !Array.isArray(day._curatorEdits))
@@ -674,8 +695,16 @@ function updateDayFields(day, fields, { nowMs, clientId, byCurator = false }) {
     if (applied.includes(publicName)) next[stamp] = nowMs;
   }
   if (!applied.length) return { day, applied };
+  const targets = applied.map((name) => DAY_FIELD_MAP[name]);
   if (byCurator) {
-    next._curatorEdits = markCuratorEdits(next, applied.map((name) => DAY_FIELD_MAP[name]), nowMs);
+    next._curatorEdits = markCuratorEdits(next, targets, nowMs);
+  } else {
+    // Клиент назвал значение сам — старую метку надо именно погасить, а не
+    // просто не ставить новую: иначе поле, однажды вписанное куратором,
+    // осталось бы помеченным навсегда, и повтор того же числа не закрыл бы
+    // шаг чек-ина. Так же поступает сам шаг в приложении (clearCuratorMarks).
+    const cleared = clearCuratorEdits(next, targets, nowMs);
+    if (cleared !== undefined) next._curatorEdits = cleared;
   }
   return { day: touch(next, nowMs, clientId), applied };
 }

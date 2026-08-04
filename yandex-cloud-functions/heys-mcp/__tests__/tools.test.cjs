@@ -876,6 +876,39 @@ test('heys_checkin — action вне get/submit отклоняется', async (
   );
 });
 
+test('heys_checkin submit — все три оценки шага пишутся вместе и без метки', async () => {
+  // Шаг «утреннее настроение» в приложении спрашивает три оценки разом.
+  // Инцидент 04.08: инструмент принимал только mood, две другие уходили через
+  // heys_update_day и оседали кураторскими — heys_get_day показал
+  // curator_authored: ["stressMorning","wellbeingMorning"] на живых данных.
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
+  const res = await build(api).heys_checkin({ action: 'submit', mood: 10, wellbeing: 9, stress: 1 });
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  assert.equal(saved.value.moodMorning, 10);
+  assert.equal(saved.value.wellbeingMorning, 9);
+  assert.equal(saved.value.stressMorning, 1);
+  assert.equal(saved.value._curatorEdits, undefined, 'ни одна из трёх не помечается кураторской');
+  assert.match(res.text, /wellbeing/);
+});
+
+test('heys_checkin submit — гасит кураторскую метку, а не просто не ставит новую', async () => {
+  // Поле, однажды вписанное куратором, оставалось помеченным навсегда: при
+  // byCurator=false метка не ставилась, но и не снималась, и повтор того же
+  // числа не закрывал шаг. Приложение в этом месте зовёт clearCuratorMarks.
+  const api = fakeApi({
+    day: {
+      date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111,
+      weightMorning: 91.2,
+      _curatorEdits: { weightMorning: { at: 1, value: 91.2 } },
+    },
+  });
+  const res = await build(api).heys_checkin({ action: 'submit', weight: 91.2 });
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  assert.equal(saved.value._curatorEdits.weightMorning.value, null, 'метка погашена, а не оставлена');
+  assert.equal(res.structured.status.steps.find((s) => s.id === 'weight').done, true,
+    'то же самое число, названное клиентом, обязано закрыть шаг');
+});
+
 test('heys_checkin submit — замеры пишутся, а незаполненные поля остаются null', async () => {
   const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
   const res = await build(api).heys_checkin({ action: 'submit', measurements: { waist: 82 } });

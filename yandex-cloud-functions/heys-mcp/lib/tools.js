@@ -552,8 +552,6 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         name: args.name,
         time,
         mood: clampSubjective(args.mood, 'mood'),
-        wellbeing: clampSubjective(args.wellbeing, 'wellbeing'),
-        stress: clampSubjective(args.stress, 'stress'),
       };
 
       let result;
@@ -887,7 +885,15 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         sleep_start: args.sleep_start,
         sleep_end: args.sleep_end,
         sleep_quality: clampSubjective(args.sleep_quality, 'sleep_quality'),
+        // Шаг «утреннее настроение» в приложении спрашивает три оценки разом и
+        // все три пишет одним сохранением (apps/web/heys_steps_v1.js,
+        // registerStep('morning_mood')). Проверка «шаг пройден» смотрит только
+        // на настроение, но принимать здесь одно его — значит отправить две
+        // другие оценки в heys_update_day и пометить их кураторскими, хотя
+        // клиент назвал их тем же голосом и в ту же секунду.
         mood: clampSubjective(args.mood, 'mood'),
+        wellbeing: clampSubjective(args.wellbeing, 'wellbeing'),
+        stress: clampSubjective(args.stress, 'stress'),
       };
       const hasDayFields = Object.values(dayFields).some((v) => v !== undefined && v !== null);
       const hasCold = args.cold_type !== undefined && args.cold_type !== null;
@@ -1768,7 +1774,9 @@ const TOOL_SCHEMAS = [
         sleep_start: { type: 'string', description: 'Время засыпания HH:MM.' },
         sleep_end: { type: 'string', description: 'Время подъёма HH:MM.' },
         sleep_quality: { type: 'integer', description: 'Качество сна, 1–10.' },
-        mood: { type: 'integer', description: 'Самочувствие утром, 1–10 — единственный вопрос настроения, который спрашивает сам чек-ин.' },
+        mood: { type: 'integer', description: 'Настроение утром, 1–10. Шаг «утреннее настроение» спрашивает три оценки разом — настроение, самочувствие, стресс; передавай их вместе, если клиент назвал все три.' },
+        wellbeing: { type: 'integer', description: 'Самочувствие утром, 1–10 — вторая из трёх оценок того же шага.' },
+        stress: { type: 'integer', description: 'Стресс утром, 1–10 — третья из трёх оценок того же шага. Здесь больше значит хуже.' },
         cold_type: { type: 'string', enum: ['none', 'coldShower', 'coldBath', 'coldSwim'], description: 'Холодовое воздействие — необязательный шаг. none — не было (обычный душ), coldShower/coldBath/coldSwim — холодный душ/ванна/моржевание.' },
         steps_goal: { type: 'integer', description: 'Цель по шагам на день — поле профиля, не дня; пишется тем же вызовом для удобства, физически уходит через heys_update_profile.' },
         measurements: {
