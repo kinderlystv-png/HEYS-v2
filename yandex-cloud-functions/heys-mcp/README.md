@@ -389,19 +389,19 @@ claude.ai → Настройки → Коннекторы → «Добавить
 же, что в приложении. OAuth Client ID / Secret оставить пустыми: сервер
 поддерживает динамическую регистрацию.
 
-**ChatGPT — исправлено в рабочем дереве 2026-08-04, deploy ожидается.** OAuth
-discovery в production исправен, но текущая live-версия ещё отклоняет callback
-`https://chatgpt.com/connector/oauth/{callback_id}` с HTTP 400
-`invalid_redirect_uri`. В default allowlist добавлен только точный host
-`chatgpt.com`, без wildcard; профильный OAuth-набор 22/22 проверяет текущий и
-legacy callback и блокирует `chatgpt.com.evil.tld`. Следующий gate — deploy
-`heys-mcp`, затем повторный OAuth/tool scan из ChatGPT. Активная задача и
-evidence — D6 в [`todo.md`](../../todo.md).
+**ChatGPT — исправлено и задеплоено 2026-08-04.** OAuth discovery в production
+исправен, callback `https://chatgpt.com/connector/oauth/{callback_id}` разрешён.
+В default allowlist добавлен только точный host `chatgpt.com`, без wildcard;
+профильный OAuth-набор 22/22 проверяет текущий и legacy callback и блокирует
+`chatgpt.com.evil.tld`. Версия `d4er3rfcfgk6imblgj1c` активна; DCR с тестовым
+ChatGPT callback вернул HTTP 201, pre-deploy gate 806/806 и post-deploy
+health-check прошли. Остался интерактивный OAuth/tool scan из ChatGPT. Evidence
+— D6 в [`todo.md`](../../todo.md).
 
-Попытка deploy 2026-08-04 прошла обязательный pre-deploy gate (806/806), но
-штатный guard остановил процесс до первой cloud-мутации: source не закоммичен.
-Следующий шаг — отдельно разрешённый commit-only без push, затем повторный
-deploy; аварийный `--force-dirty` не используется.
+Первая попытка deploy 2026-08-04 прошла обязательный pre-deploy gate (806/806),
+но штатный guard остановил процесс до первой cloud-мутации: source не
+закоммичен. Следующий шаг — отдельно разрешённый commit-only без push, затем
+повторный deploy; аварийный `--force-dirty` не используется.
 
 ## Тесты
 

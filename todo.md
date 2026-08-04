@@ -89,7 +89,7 @@
 | D3      | Перейти к измерению воронки и улучшениям запуска по фактическим метрикам  | Закрытые launch-gates и работающая аналитика                  |
 | D4      | Ввести отдельные поля для этанола и полиолов в модель нутриентов          | Готовность менять формулу калорийности разом в трёх местах    |
 | D5      | Сделать кураторские JWT отзываемыми (`token_version`)                     | Готовность править выпуск и проверку токенов во всех функциях |
-| D6      | Разрешить OAuth-подключение HEYS MCP из ChatGPT                           | Деплой `heys-mcp` и live OAuth/tool scan                      |
+| D6      | Разрешить OAuth-подключение HEYS MCP из ChatGPT                           | Пользовательский OAuth/tool scan в ChatGPT                    |
 
 ### D6 — ChatGPT отклоняется redirect allowlist MCP
 
@@ -107,15 +107,18 @@
   400 `invalid_redirect_uri` (2026-08-04); официальный контракт callback:
   `https://chatgpt.com/connector/oauth/{callback_id}`.
 - **Решение пользователя (2026-08-04):** разрешить callback ChatGPT.
-- **Сделано в рабочем дереве:** в default allowlist добавлен только точный host
+- **Сделано и задеплоено:** в default allowlist добавлен только точный host
   `chatgpt.com`, без wildcard; тесты пропускают текущий и legacy callback
   ChatGPT и отклоняют `chatgpt.com.evil.tld`. Профильный OAuth-набор: 22/22.
-- **Осталось:** задеплоить `heys-mcp`, повторить DCR с фактическим callback из
-  экрана ChatGPT и пройти OAuth/tool scan.
-- **Попытка deploy 2026-08-04:** обязательный pre-deploy gate прошёл 806/806,
-  затем guard остановил процесс до первой cloud-мутации из-за незакоммиченного
-  source. Нужен отдельный commit-only grant; `--force-dirty` оставлен только для
-  аварийного hotpatch и не используется.
+- **Live evidence (2026-08-04):** commit `fd70ed137`, версия Cloud Functions
+  `d4er3rfcfgk6imblgj1c` (`ACTIVE`); pre-deploy gate 806/806 и post-deploy
+  health-check прошли. DCR с тестовым callback
+  `https://chatgpt.com/connector/oauth/test-callback` → HTTP 201.
+- **Осталось:** пройти интерактивный OAuth/tool scan из экрана ChatGPT.
+- **Первая попытка deploy 2026-08-04:** обязательный pre-deploy gate прошёл
+  806/806, затем guard остановил процесс до первой cloud-мутации из-за
+  незакоммиченного source. Нужен отдельный commit-only grant; `--force-dirty`
+  оставлен только для аварийного hotpatch и не используется.
 - **Критерий закрытия:** DCR с фактическим callback из экрана ChatGPT получает
   `201`; OAuth проходит до страницы входа HEYS, а MCP scan получает список
   инструментов.

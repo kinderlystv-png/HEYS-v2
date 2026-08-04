@@ -171,8 +171,10 @@ email+пароль+2FA), но не показывает, куда уйдёт к�
 только точным host `chatgpt.com`, без wildcard: OpenAI использует callback
 `https://chatgpt.com/connector/oauth/{callback_id}`. Тесты пропускают текущий и
 legacy callback ChatGPT и отклоняют `chatgpt.com.evil.tld`; OAuth-набор 22/22.
-Изменение пока только в рабочем дереве, live DCR начнёт принимать ChatGPT после
-отдельно разрешённого deploy `heys-mcp`.
+Изменение закоммичено как `fd70ed137` и задеплоено в версию
+`d4er3rfcfgk6imblgj1c`: live DCR с тестовым callback ChatGPT вернул HTTP 201;
+pre-deploy gate 806/806 и post-deploy health-check прошли. Остался интерактивный
+OAuth/tool scan из ChatGPT.
 
 ### Тур 3 — кураторская сессия: проверка состояния при refresh (SEC-031)
 
