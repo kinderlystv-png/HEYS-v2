@@ -28,8 +28,12 @@ test('метаданные защищённого ресурса указыва�
   assert.deepEqual(meta.authorization_servers, [`https://${HOST}`]);
 });
 
-test('метаданные authorization server отдаются и без завершающего сегмента', async () => {
-  for (const path of ['/.well-known/oauth-authorization-server', '/.well-known/oauth-authorization-server/mcp']) {
+test('метаданные authorization server отдаются для корня и обоих MCP-ресурсов', async () => {
+  for (const path of [
+    '/.well-known/oauth-authorization-server',
+    '/.well-known/oauth-authorization-server/mcp',
+    '/.well-known/oauth-authorization-server/mcp/curator',
+  ]) {
     const res = await call({ httpMethod: 'GET', path });
     assert.equal(res.statusCode, 200, path);
     assert.equal(body(res).registration_endpoint, `https://${HOST}/mcp/register`);

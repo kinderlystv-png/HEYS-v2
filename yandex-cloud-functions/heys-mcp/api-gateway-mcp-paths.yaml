@@ -133,6 +133,14 @@
       service_account_id: aje85rjgpj4nk9m384ek
       function_id: __HEYS_MCP_FUNCTION_ID__
 
+/.well-known/oauth-authorization-server/mcp/curator:
+  get:
+    summary: OAuth authorization server metadata for /mcp/curator
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
 # ═══════════════════════════════════════════════════════════════
 # /mcp/attach — мобильная страница вложений задачника (lib/attach.js)
 # ═══════════════════════════════════════════════════════════════
