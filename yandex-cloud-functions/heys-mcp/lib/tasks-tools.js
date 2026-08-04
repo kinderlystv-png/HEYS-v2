@@ -1055,8 +1055,13 @@ function createTasksTools({
       // формулировка решения весят больше пересказа, а строка, из которой
       // руками поставлена ссылка на найденную задачу, поднимается отдельно —
       // ссылки резолвятся по ВСЕМ файлам, иначе цель ссылки не найдётся.
+      // Деньги входят в корпус наравне с журналом. Без них целый класс
+      // вопросов не решался основным путём вовсе: «сколько отдал за новую
+      // батарею» лежит операцией в money/, и tasks_context честно отвечал
+      // «ничего не нашлось», хотя сумма записана. Файл на месяц, как журнал,
+      // — чтение почти ничего не стоит.
       const journalHits = tasks.searchFiles(
-        files.filter((f) => f.path.startsWith('journal/')),
+        files.filter((f) => f.path.startsWith('journal/') || f.path.startsWith('money/')),
         topic,
         {
           limit: 10,
@@ -1147,13 +1152,27 @@ function createTasksTools({
        * лежал в том же самом ответе, этажом ниже. Клиенту в content уходит
        * только text (lib/mcp.js), так что молчание тут равно потере факта.
        */
+      // Самая длинная живая запись памяти на 04.08 — 695 знаков; потолок взят
+      // с запасом, чтобы факт доезжал целиком, а не до середины.
+      const PREF_NOTE_CAP = 800;
       const recalled = relevant
         .map((p) => {
           // Целиком, а не первым куском: в самом факте тире обычное дело
           // («Машина — Hyundai Solaris»), и обрезка по нему оставляла бы
           // от записи одно слово. Опора уже отделена разбором и не печатается.
+          //
+          // Потолок высокий и режет по границе предложения. Прежние 160 знаков
+          // отсекали ровно то, ради чего запись заводилась: у факта про районы
+          // за срезом оставались и «живут сейчас на юге», и сетка тренировок по
+          // дням, то есть запись формально доезжала, а ответ на «где мы живём»
+          // — нет. Обрыв на полуслове здесь хуже длинной строки: человек не
+          // видит, что его обрезали, и считает прочитанное всей записью.
           const note = String(p.note || '').trim();
-          return `— ${p.kind}: ${note.length > 160 ? `${note.slice(0, 157)}…` : note}`;
+          if (note.length <= PREF_NOTE_CAP) return `— ${p.kind}: ${note}`;
+          const head = note.slice(0, PREF_NOTE_CAP);
+          const cut = Math.max(head.lastIndexOf('. '), head.lastIndexOf('; '));
+          const shown = cut > PREF_NOTE_CAP * 0.5 ? head.slice(0, cut + 1) : head;
+          return `— ${p.kind}: ${shown.trim()}…`;
         })
         .join('\n');
       const memory = recalled ? `\nИз памяти:\n${recalled}` : '';
@@ -2448,17 +2467,38 @@ function createTasksTools({
             .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
         if (kind === 'факт' && known.kind === 'факт' && sameValue(note, known.note)) {
           const bumped = tasks.bumpPreferenceCounter(file.text, [known], { field: 'подтверждено', date: today() });
-          const saved = await writeFile(file, bumped);
+          // Синонимы дописываются здесь же: это единственный путь добавить их
+          // к живому факту, не штампуя на нём ложное «устарело».
+          const withAliases = tasks.addPreferenceAliases(bumped, known, args.aliases);
+          const saved = await writeFile(file, withAliases ? withAliases.text : bumped);
           const times = (known.confirmed?.count || 0) + 1;
+          const said = withAliases ? ` Синонимы дописал: ${withAliases.added.join(', ')} — теперь запись поднимается и на них.` : '';
           return {
-            text: `Этот факт уже записан ${known.date}: «${known.note}». Отметил, что он подтверждён сегодня — теперь подтверждений ${times}, и на проверку он выйдет не скоро. Второй записи не завожу.`,
-            structured: { created: false, reason: 'confirmed', confirmed: times, same_as: known, path: saved.path, rev: saved.rev },
+            text: `Этот факт уже записан ${known.date}: «${known.note}». Отметил, что он подтверждён сегодня — теперь подтверждений ${times}, и на проверку он выйдет не скоро. Второй записи не завожу.${said}`,
+            structured: {
+              created: false, reason: 'confirmed', confirmed: times, same_as: known,
+              aliases_added: withAliases ? withAliases.added : [],
+              path: saved.path, rev: saved.rev,
+            },
           };
         }
         // Его слово поверх наблюдения агента — это не дубль: у записи другая
         // опора. Пишем новую строку, старое наблюдение не трогаем — вычёркивает
         // он сам, глазами.
         if (known.kind !== 'наблюдение') {
+          // Отказ по дублю не должен съедать переданные синонимы: значение
+          // остаётся прежним, меняется только то, какими словами его найдут.
+          const withAliases = tasks.addPreferenceAliases(file.text, known, args.aliases);
+          if (withAliases) {
+            const saved = await writeFile(file, withAliases.text);
+            return {
+              text: `Уже записано ${known.date}: «${known.note}» — второй записи не завожу. Синонимы дописал: ${withAliases.added.join(', ')}, теперь запись поднимается и на них.`,
+              structured: {
+                created: false, reason: 'aliases_added', same_as: known,
+                aliases_added: withAliases.added, path: saved.path, rev: saved.rev,
+              },
+            };
+          }
           return {
             text: `Уже записано ${known.date}: «${known.note}». Второй раз не пишу.`
               + ' Если записанное перестало быть правдой — это не повтор, а замена: передай replaces с текстом старой записи, и она погаснет с датой.',

@@ -373,8 +373,10 @@ get_function_config() {
             echo "nodejs22 index.handler 256m 30s" ;;
         "heys-api-messages")
             echo "nodejs22 index.handler 256m 30s" ;;
+        # 512m — под поиск по срезу исходников: архив распаковывается в память
+        # целиком (около 64 МБ текста), замеренный пик 225 МБ.
         "heys-mcp")
-            echo "nodejs22 index.handler 256m 60s" ;;
+            echo "nodejs22 index.handler 512m 60s" ;;
         "heys-api-photos")
             echo "nodejs22 index.handler 256m 30s" ;;
         "heys-cron-reminders")
@@ -529,6 +531,10 @@ build_env_flags() {
     # инструменты задачника просто не появятся в списке (см. lib/curator.js).
     if [[ "$func_name" == "heys-mcp" ]]; then
         env_flags+=" --environment HEYS_TASKS_CLIENT_ID=${HEYS_TASKS_CLIENT_ID:-ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a}"
+        # Срез исходников для вопросов «как это работает в приложении» лежит в
+        # приватном бакете heys-backups; ключи только из Lockbox. Без них
+        # инструменты по коду вообще не появляются в списке (lib/curator.js).
+        env_flags+=" --environment LOCKBOX_S3_SECRET_ID=$LOCKBOX_S3_ID"
     fi
 
     # Server-side overload shed: reserve one slot per instance for recovery and

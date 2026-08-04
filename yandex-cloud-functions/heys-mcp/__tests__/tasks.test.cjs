@@ -1830,6 +1830,87 @@ test('ответ-факт умеет исправлять записанное, 
   assert.match(live[0].note, /^Машина — Renault Duster/);
 });
 
+test('длинный факт доезжает целиком, а не до середины мысли', async () => {
+  // Прежний потолок в 160 знаков резал ровно то, ради чего запись заводилась:
+  // у факта про районы за срезом оставались и «живут сейчас на юге», и сетка
+  // тренировок по дням. Запись формально доезжала, а ответ — нет.
+  const api = liveTasksApi();
+  const note = 'Районов два: юг и центр. На юге студия, дом родителей и дзюдо. '
+    + 'В центре квартира и футбол в центре. Футбол бывает в обоих районах, '
+    + 'и район берётся по конкретной тренировке, а не по слову «футбол»: '
+    + 'пн и ср — юг, пт и вс — центр. Живут они сейчас на доме на юге.';
+  await session(api).tasks_learn({ note, evidence: 'его слова', kind: 'факт' });
+  const res = await session(api).tasks_context({ topic: 'где мы сейчас живём' });
+  assert.match(res.text, /Живут они сейчас на доме на юге/, 'хвост записи обязан доезжать');
+  assert.match(res.text, /пн и ср/, 'сетка по дням тоже внутри записи');
+});
+
+test('запись длиннее потолка обрывается по границе мысли, и обрыв виден', async () => {
+  const api = liveTasksApi();
+  const note = `${'Правило про длинный разбор. '.repeat(40)}Хвост, который не влезет.`;
+  await session(api).tasks_learn({ note, evidence: 'его слова', kind: 'решение' });
+  const res = await session(api).tasks_context({ topic: 'правило про длинный разбор' });
+  assert.match(res.text, /…/, 'обрезка обязана быть заметна — иначе кусок примут за всю запись');
+  assert.doesNotMatch(res.text, /Хвост, который не влезет/);
+  const line = res.text.split('\n').find((l) => l.startsWith('— решение:'));
+  assert.ok(line.length < 900, `строка памяти не должна раздуваться: ${line.length}`);
+});
+
+test('деньги отвечают через основной разбор, а не только через поиск', async () => {
+  // «Сколько отдал за новую батарею» лежит операцией в money/, а корпус
+  // tasks_context держал только projects/ и journal/ — инструмент честно
+  // отвечал «ничего не нашлось», хотя сумма записана.
+  const api = liveTasksApi();
+  await session(api).tasks_money({
+    amount: 18700, category: 'транспорт', contour: 'personal',
+    title: 'Аккумулятор Camel AGM вместо сгоревшей VARTA',
+  });
+  const res = await session(api).tasks_context({ topic: 'сколько отдал за аккумулятор' });
+  const hits = res.structured.journal.filter((h) => h.path.startsWith('money/'));
+  assert.ok(hits.length, 'операция обязана доезжать основным путём');
+  assert.match(hits[0].text, /18\s?700|18700/);
+});
+
+test('синонимы дописываются к живому факту, не штампуя на нём ложное «устарело»', async () => {
+  // Их рисовали только при создании и при замене через replaces. Значит
+  // добавить «зовётся: тачка» к уже записанной машине было нечем: повтор
+  // уходил в подтверждение и синонимы выбрасывал, а replaces записал бы в
+  // память событие, которого не было.
+  const api = await apiWithFact();
+  const again = await session(api).tasks_learn({
+    note: 'Машина — Hyundai Solaris', evidence: 'его слова', kind: 'факт',
+    aliases: 'тачка, шкода',
+  });
+  assert.deepEqual(again.structured.aliases_added, ['тачка', 'шкода']);
+  const live = tasks.activePreferences(tasks.parsePreferences({ text: prefsText(api) }));
+  assert.equal(live.length, 1, 'второй записи не завелось');
+  assert.deepEqual(live[0].aliases, ['тачка', 'шкода']);
+  assert.doesNotMatch(prefsText(api), /устарело/, 'ложной отметки об устаревании быть не должно');
+
+  // Повтор тех же синонимов ничего не меняет и не плодит строк.
+  const twice = await session(api).tasks_learn({
+    note: 'Машина — Hyundai Solaris', evidence: 'его слова', kind: 'факт', aliases: 'тачка',
+  });
+  assert.deepEqual(twice.structured.aliases_added, []);
+  assert.equal((prefsText(api).match(/зовётся:/g) || []).length, 1);
+});
+
+test('синоним поднимает факт на обиходном слове', async () => {
+  const api = await apiWithFact();
+  const before = await session(api).tasks_context({ topic: 'на чём поедем, тачка на ходу?' });
+  assert.equal(before.structured.preferences.filter((p) => p.relevant).length, 0);
+
+  await session(api).tasks_learn({
+    note: 'Машина — Hyundai Solaris', evidence: 'его слова', kind: 'факт', aliases: 'тачка, авто',
+  });
+  const after = await session(api).tasks_context({ topic: 'на чём поедем, тачка на ходу?' });
+  assert.ok(
+    after.structured.preferences.some((p) => p.relevant && /Solaris/.test(p.note)),
+    'ради этого синонимы и заводились',
+  );
+  assert.match(after.text, /Из памяти/);
+});
+
 test('подошедшая память видна в тексте ответа, а не только в structured', async () => {
   // Ровно тот случай, ради которого факты и заводились: задач по слову нет,
   // и без этого блока инструмент отвечал «ничего не нашлось» — при том что
@@ -4577,6 +4658,58 @@ test('надбавки не могут перебить одно совпавш�
     ceiling < w.WORD_WEIGHT,
     `потолок надбавок ${ceiling} обязан быть ниже цены слова ${w.WORD_WEIGHT}: иначе свежесть начнёт решать за смысл`,
   );
+});
+
+test('журнал читается не только с начала месяца: берутся лучшие строки, а не первые', () => {
+  // До 04.08 обход останавливался на пятом совпадении сверху вниз. Журнал —
+  // один файл на месяц и дописывается вниз, поэтому бюджет всегда съедали
+  // записи первых чисел, а сегодняшняя запись не читалась никогда. К концу
+  // месяца слой становился недостижим целиком.
+  const early = Array.from({ length: 8 }, (_, i) => `Мимоходом про батарею, разговор ${i + 1}.`).join('\n');
+  const hits = tasks.searchFiles([{
+    path: 'journal/2026-08.md',
+    text: `## 2026-08-01\n\n${early}\n\n## 2026-08-30\n\nАртикул батареи для магазина — VARTA 577 400 078.\n`,
+  }], 'артикул батареи', { today: RANK_TODAY, any: true });
+
+  assert.ok(
+    hits.some((h) => /577 400 078/.test(h.text)),
+    'нужная строка в конце файла обязана доезжать, иначе свежий журнал недостижим',
+  );
+});
+
+test('отменённая версия не выдаётся за действующую: снятие весит как решение', () => {
+  // Инцидент 04.08: на «почему дело не в клемме» приходило «это классика
+  // плохого контакта, а не севшего АКБ», а строка про снятие версии — нет.
+  // Ответ по такой выдаче уверенно повторяет опровергнутый замером диагноз.
+  const hits = tasks.searchFiles([{
+    path: 'journal/2026-08.md',
+    text: '## 2026-08-04\n\n'
+      + 'Клемма рыжая от окисла, это классика плохого контакта.\n'
+      + 'Снял и поставил клемму обратно — питание вернулось.\n'
+      + 'Прикурили прямо на клемму, завелась сразу.\n'
+      + 'Ещё раз про клемму: контакт грели, следов нет.\n'
+      + 'Замер показал 4.37 В на клемме.\n'
+      + 'Версия про окисленную клемму снимается: замкнутая банка.\n',
+  }], 'клемма', { today: RANK_TODAY, any: true, limitPerFile: 3 });
+
+  assert.ok(
+    hits.some((h) => /снимается/.test(h.text)),
+    'строка, отменяющая версию, обязана попадать в выдачу вперёд самой версии',
+  );
+});
+
+test('длинные слова не склеиваются по трём первым буквам', () => {
+  // Порог в три буквы писался под «зал»/«зала», а применялся ко всему подряд:
+  // «квантовой» ↔ «квартира», «сколько» ↔ «скобках». Из-за этого честное
+  // «ничего не нашлось» не выдавалось никогда.
+  const sameStart = (word, line) => tasks.matchTerms(line, [{ word, kind: 'word' }]).score > 0;
+  assert.equal(sameStart('квантовой', 'квартира в центре'), false);
+  assert.equal(sameStart('сколько', 'в скобках рекомендация'), false);
+  assert.equal(sameStart('машина', 'Маша-аниматор придёт'), false);
+  // Короткие формы, ради которых правило и заводилось, продолжают сходиться.
+  assert.equal(sameStart('зала', 'поехали до зал'), true);
+  assert.equal(sameStart('дома', 'вернулись домой'), true);
+  assert.equal(sameStart('лендингу', 'правки по лендинг'), true);
 });
 
 test('при равном совпадении слов свежая запись идёт первой', () => {

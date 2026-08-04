@@ -29,6 +29,7 @@ env:
   YC_BUCKET_PWA: heys-app # PWA приложение → app.heyslab.ru
   YC_BUCKET_DEMO: try-heyslab-ru # Demo PWA → try.heyslab.ru
   YC_BUCKET_LANDING: heys-static # Лендинг → heyslab.ru (CDN origin: heys-static.website.yandexcloud.net)
+  YC_BUCKET_SOURCE_INDEX: heys-backups # Срез исходников для MCP-коннектора (приватный бакет)
   YC_ENDPOINT: https://storage.yandexcloud.net
 
 jobs:
@@ -334,6 +335,21 @@ jobs:
             echo "SW_CACHE_VERSION=unknown" >> $GITHUB_ENV
           fi
 
+      # Срез текстовых исходников для коннектора: по нему Claude отвечает на
+      # вопросы «как это устроено в приложении» цитатами кода, а не пересказом.
+      # Собирается здесь, потому что нужен git-индекс; заливается в бакет уже
+      # на деплое, чтобы срез не уезжал вперёд неудавшегося выката.
+      - name: Build source index for MCP connector
+        run: node scripts/ci/build-source-index.mjs --out dist/source-index
+
+      - name: Upload source index artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: source-index
+          path: dist/source-index
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Upload PWA artifact
         uses: actions/upload-artifact@v6
         with:
@@ -372,6 +388,12 @@ jobs:
         with:
           name: landing-out
           path: apps/landing/out
+
+      - name: Download source index artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: source-index
+          path: dist/source-index
 
       - name: Read build version from artifact
         run: |
@@ -730,6 +752,32 @@ jobs:
           done
 
           echo "✅ Production verified: $EXPECTED_HASH, ${#BUNDLES[@]} hash bundle(s) available"
+
+      # Срез исходников для MCP-коннектора. Идёт после проверки прода: если
+      # выкат не состоялся, срез не должен уехать вперёд работающего кода.
+      # Порядок внутри шага важен — сначала архив, манифест последним: по нему
+      # коннектор понимает, что появилось новое состояние, и тянет архив.
+      - name: Upload source index for MCP connector
+        run: |
+          if [ ! -f dist/source-index/latest.tar.gz ]; then
+            echo "::error::source index artifact missing"
+            exit 1
+          fi
+
+          aws s3 cp dist/source-index/latest.tar.gz \
+            s3://${{ env.YC_BUCKET_SOURCE_INDEX }}/source-index/latest.tar.gz \
+            --endpoint-url=${{ env.YC_ENDPOINT }} \
+            --content-type "application/gzip" \
+            --cache-control "no-cache, no-store, must-revalidate"
+
+          aws s3 cp dist/source-index/latest.json \
+            s3://${{ env.YC_BUCKET_SOURCE_INDEX }}/source-index/latest.json \
+            --endpoint-url=${{ env.YC_ENDPOINT }} \
+            --content-type "application/json" \
+            --cache-control "no-cache, no-store, must-revalidate"
+
+          echo "📚 Source index uploaded:"
+          cat dist/source-index/latest.json
 
       - name: Deployment summary
         run: |
