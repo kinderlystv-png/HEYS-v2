@@ -402,8 +402,12 @@ cache: backend ChatGPT отклонял DCR до `POST /mcp/register`, несм�
 Gateway с root issuer, а Claude продолжает использовать `https://api.heyslab.ru`
 без изменений. Если UI ChatGPT ошибочно отклоняет DCR до вызова `/mcp/register`,
 нужно выбрать «Пользовательский клиент OAuth» и предварительно зарегистрировать
-public client через `/mcp/register` для точного callback текущей формы. Client
-ID от другого callback переиспользовать нельзя.
+для точного callback текущей формы confidential client с
+`token_endpoint_auth_method=client_secret_post`. В builder указываются оба
+выданных значения — Client ID и Client Secret — и тот же метод token endpoint.
+Public client в этом режиме непригоден: ChatGPT не отправляет PKCE. Client ID
+или secret от другого callback переиспользовать нельзя. Публичный DCR-flow
+Claude остаётся `token_endpoint_auth_method=none` и требует PKCE `S256`.
 
 **ChatGPT — исправлено и задеплоено 2026-08-04.** OAuth discovery в production
 исправен, callback `https://chatgpt.com/connector/oauth/{callback_id}` разрешён.

@@ -1,5 +1,7 @@
 'use strict';
 
+const crypto = require('node:crypto');
+
 /**
  * Минимальный OAuth 2.1 authorization server для MCP-клиентов ChatGPT/Claude.
  *
@@ -19,7 +21,16 @@
  *     но уже выданный JWT доживает свои 24 часа.
  */
 
-const { signToken, verifyToken, encryptSecret, decryptSecret, verifyPkce, signRawJwt } = require('./crypto-tokens');
+const {
+  signToken,
+  verifyToken,
+  encryptSecret,
+  decryptSecret,
+  verifyPkce,
+  signRawJwt,
+  b64url,
+  timingSafeEqualStr,
+} = require('./crypto-tokens');
 
 /**
  * Кураторский JWT живёт 24 часа (JWT_EXPIRES_IN в heys-api-auth). Чтобы
@@ -123,7 +134,7 @@ function authorizationServerMetadata({ issuer }) {
     response_types_supported: ['code'],
     grant_types_supported: ['authorization_code', 'refresh_token'],
     code_challenge_methods_supported: ['S256'],
-    token_endpoint_auth_methods_supported: ['none'],
+    token_endpoint_auth_methods_supported: ['none', 'client_secret_post'],
   };
 }
 
@@ -150,13 +161,25 @@ function registerClient(body, secret, nowMs = Date.now()) {
   if (!requestedResponseTypes.includes('code') || requestedResponseTypes.some((value) => value !== 'code')) {
     return { ok: false, error: 'invalid_client_metadata', description: 'Unsupported response_types' };
   }
-  if (body.token_endpoint_auth_method && body.token_endpoint_auth_method !== 'none') {
-    return { ok: false, error: 'invalid_client_metadata', description: 'Only token_endpoint_auth_method=none is supported' };
+  const tokenEndpointAuthMethod = body.token_endpoint_auth_method || 'none';
+  if (!['none', 'client_secret_post'].includes(tokenEndpointAuthMethod)) {
+    return { ok: false, error: 'invalid_client_metadata', description: 'Unsupported token_endpoint_auth_method' };
   }
   if (body.scope !== undefined && (typeof body.scope !== 'string' || body.scope.trim() !== SCOPE)) {
     return { ok: false, error: 'invalid_client_metadata', description: `Only scope=${SCOPE} is supported` };
   }
-  const clientId = signToken({ ru: redirectUris, cn: clientName }, secret, {
+  const clientSecret = tokenEndpointAuthMethod === 'client_secret_post'
+    ? b64url(crypto.randomBytes(32))
+    : '';
+  const clientSecretHash = clientSecret
+    ? b64url(crypto.createHmac('sha256', secret).update(clientSecret, 'utf8').digest())
+    : '';
+  const clientId = signToken({
+    ru: redirectUris,
+    cn: clientName,
+    am: tokenEndpointAuthMethod,
+    csh: clientSecretHash,
+  }, secret, {
     typ: 'heys-mcp-client',
     ttlSeconds: CLIENT_TTL_SECONDS,
     nowMs,
@@ -184,8 +207,12 @@ function registerClient(body, secret, nowMs = Date.now()) {
       redirect_uris: redirectUris,
       grant_types: requestedGrantTypes,
       response_types: requestedResponseTypes,
-      token_endpoint_auth_method: 'none',
+      token_endpoint_auth_method: tokenEndpointAuthMethod,
       scope: SCOPE,
+      ...(clientSecret ? {
+        client_secret: clientSecret,
+        client_secret_expires_at: Math.floor(nowMs / 1000) + CLIENT_TTL_SECONDS,
+      } : {}),
       ...optionalMetadata,
     },
   };
@@ -194,7 +221,26 @@ function registerClient(body, secret, nowMs = Date.now()) {
 function parseClientId(clientId, secret, nowMs = Date.now()) {
   const verified = verifyToken(clientId, secret, { typ: 'heys-mcp-client', nowMs });
   if (!verified.ok) return null;
-  return { redirectUris: verified.claims.ru || [], clientName: verified.claims.cn || '' };
+  return {
+    redirectUris: verified.claims.ru || [],
+    clientName: verified.claims.cn || '',
+    tokenEndpointAuthMethod: verified.claims.am || 'none',
+    clientSecretHash: verified.claims.csh || '',
+  };
+}
+
+function validateClientAuthentication(clientId, providedSecret, secret, nowMs = Date.now()) {
+  const client = parseClientId(clientId, secret, nowMs);
+  if (!client) return { ok: false, error: 'invalid_client', description: 'Неизвестный или просроченный client_id.' };
+  if (client.tokenEndpointAuthMethod === 'none') return { ok: true, client };
+  if (client.tokenEndpointAuthMethod !== 'client_secret_post' || !providedSecret || !client.clientSecretHash) {
+    return { ok: false, error: 'invalid_client', description: 'Требуется аутентификация OAuth-клиента.' };
+  }
+  const actualHash = b64url(crypto.createHmac('sha256', secret).update(String(providedSecret), 'utf8').digest());
+  if (!timingSafeEqualStr(actualHash, client.clientSecretHash)) {
+    return { ok: false, error: 'invalid_client', description: 'Неверный client_secret.' };
+  }
+  return { ok: true, client };
 }
 
 /**
@@ -219,7 +265,13 @@ function validateAuthorizeRequest(query, secret, nowMs = Date.now()) {
   if (query.response_type !== 'code') {
     return { ok: false, fatal: false, redirectUri, error: 'unsupported_response_type', description: 'Поддерживается только response_type=code.' };
   }
-  if (query.code_challenge_method !== 'S256' || !query.code_challenge) {
+  const hasCodeChallenge = typeof query.code_challenge === 'string' && query.code_challenge.length > 0;
+  const hasCodeChallengeMethod = typeof query.code_challenge_method === 'string' && query.code_challenge_method.length > 0;
+  const hasValidPkce = hasCodeChallenge && query.code_challenge_method === 'S256';
+  if ((hasCodeChallenge || hasCodeChallengeMethod) && !hasValidPkce) {
+    return { ok: false, fatal: false, redirectUri, error: 'invalid_request', description: 'Требуется PKCE с code_challenge_method=S256.' };
+  }
+  if (!hasValidPkce && client.tokenEndpointAuthMethod === 'none') {
     return { ok: false, fatal: false, redirectUri, error: 'invalid_request', description: 'Требуется PKCE с code_challenge_method=S256.' };
   }
   return {
@@ -229,7 +281,8 @@ function validateAuthorizeRequest(query, secret, nowMs = Date.now()) {
     redirectUri,
     redirectOrigin: redirectOrigin(redirectUri),
     state: typeof query.state === 'string' ? query.state : '',
-    codeChallenge: query.code_challenge,
+    codeChallenge: hasValidPkce ? query.code_challenge : '',
+    codeChallengeMethod: hasValidPkce ? 'S256' : '',
     resource: typeof query.resource === 'string' ? query.resource : '',
   };
 }
@@ -278,7 +331,12 @@ function exchangeAuthorizationCode(form, secret, nowMs = Date.now()) {
   if (form.redirect_uri !== claims.ru) {
     return { ok: false, error: 'invalid_grant', description: 'redirect_uri не совпадает с authorize-запросом.' };
   }
-  if (!verifyPkce(form.code_verifier, claims.cc)) {
+  const clientAuth = validateClientAuthentication(form.client_id, form.client_secret, secret, nowMs);
+  if (!clientAuth.ok) return clientAuth;
+  if (claims.cc && !verifyPkce(form.code_verifier, claims.cc)) {
+    return { ok: false, error: 'invalid_grant', description: 'PKCE-проверка не пройдена.' };
+  }
+  if (!claims.cc && clientAuth.client.tokenEndpointAuthMethod === 'none') {
     return { ok: false, error: 'invalid_grant', description: 'PKCE-проверка не пройдена.' };
   }
   return { ok: true, tokens: issueTokenPair(claims, secret, nowMs) };
@@ -325,6 +383,8 @@ async function exchangeRefreshToken(form, secret, nowMs = Date.now(), { rawJwtSe
   if (!form.client_id || form.client_id !== verified.claims.cid) {
     return { ok: false, error: 'invalid_client', description: 'client_id не совпадает с refresh-токеном.' };
   }
+  const clientAuth = validateClientAuthentication(form.client_id, form.client_secret, secret, nowMs);
+  if (!clientAuth.ok) return clientAuth;
   const claims = { ...verified.claims };
   // Куратор: перевыпускаем 24-часовой JWT, иначе инструменты умрут через сутки
   // после входа, хотя refresh-токен ещё жив.
@@ -383,6 +443,7 @@ function renderLoginPage(request, { error = '', phone = '', email = '', curatorM
     ['redirect_uri', request.redirectUri],
     ['state', request.state],
     ['code_challenge', request.codeChallenge],
+    ['code_challenge_method', request.codeChallengeMethod],
     ['resource', request.resource],
   ].map(([name, value]) => `<input type="hidden" name="${name}" value="${escapeHtml(value)}">`).join('');
 
@@ -507,6 +568,7 @@ module.exports = {
   authorizationServerMetadata,
   registerClient,
   parseClientId,
+  validateClientAuthentication,
   validateAuthorizeRequest,
   issueAuthorizationCode,
   issueTokenPair,

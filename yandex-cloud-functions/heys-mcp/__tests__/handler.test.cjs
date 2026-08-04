@@ -132,6 +132,36 @@ test('регистрация клиента отклоняет http-redirect и 
   assert.equal(empty.statusCode, 400);
 });
 
+test('confidential client регистрируется и открывает authorize без PKCE', async () => {
+  const redirectUri = 'https://chatgpt.com/connector/oauth/test-callback';
+  const registered = await call({
+    httpMethod: 'POST',
+    path: '/mcp/register',
+    body: JSON.stringify({
+      client_name: 'ChatGPT',
+      redirect_uris: [redirectUri],
+      token_endpoint_auth_method: 'client_secret_post',
+    }),
+  });
+  assert.equal(registered.statusCode, 201);
+  const reg = body(registered);
+  assert.equal(reg.token_endpoint_auth_method, 'client_secret_post');
+  assert.equal(typeof reg.client_secret, 'string');
+
+  const authorize = await call({
+    httpMethod: 'GET',
+    path: '/mcp/authorize',
+    queryStringParameters: {
+      client_id: reg.client_id,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      state: 'chatgpt-state',
+    },
+  });
+  assert.equal(authorize.statusCode, 200);
+  assert.match(authorize.body, /Войти как куратор/);
+});
+
 test('authorize с чужим redirect_uri показывает ошибку, а не редиректит на него', async () => {
   const reg = body(await call({
     httpMethod: 'POST', path: '/mcp/register', body: JSON.stringify({ redirect_uris: [REDIRECT] }),

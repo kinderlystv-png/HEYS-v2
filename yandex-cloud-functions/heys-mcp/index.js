@@ -216,7 +216,7 @@ async function handleAuthorizePost(event, { secret, apiUrl }) {
     redirect_uri: form.redirect_uri,
     response_type: 'code',
     code_challenge: form.code_challenge,
-    code_challenge_method: 'S256',
+    code_challenge_method: form.code_challenge_method,
     state: form.state,
     resource: form.resource,
   }, secret);

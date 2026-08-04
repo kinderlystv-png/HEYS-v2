@@ -90,7 +90,7 @@ test('DCR fail-closed отклоняет неподдерживаемые grant,
   assert.equal(oauth.registerClient({ ...base, grant_types: [] }, SECRET).ok, false);
   assert.equal(oauth.registerClient({ ...base, response_types: ['token'] }, SECRET).ok, false);
   assert.equal(oauth.registerClient({ ...base, response_types: [] }, SECRET).ok, false);
-  assert.equal(oauth.registerClient({ ...base, token_endpoint_auth_method: 'client_secret_post' }, SECRET).ok, false);
+  assert.equal(oauth.registerClient({ ...base, token_endpoint_auth_method: 'client_secret_basic' }, SECRET).ok, false);
   assert.equal(oauth.registerClient({ ...base, scope: 'admin' }, SECRET).ok, false);
 });
 
@@ -225,6 +225,70 @@ test('authorize требует PKCE S256 — plain не принимается',
   assert.equal(result.error, 'invalid_request');
 });
 
+test('confidential ChatGPT client работает без PKCE только с client_secret_post', async () => {
+  const redirectUri = 'https://chatgpt.com/connector/oauth/test-callback';
+  const reg = oauth.registerClient({
+    client_name: 'ChatGPT',
+    redirect_uris: [redirectUri],
+    token_endpoint_auth_method: 'client_secret_post',
+  }, SECRET);
+  assert.equal(reg.ok, true);
+  assert.equal(reg.registration.token_endpoint_auth_method, 'client_secret_post');
+  assert.equal(typeof reg.registration.client_secret, 'string');
+  assert.ok(reg.registration.client_secret.length >= 43);
+
+  const validation = oauth.validateAuthorizeRequest({
+    client_id: reg.registration.client_id,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    state: 'chatgpt-state',
+  }, SECRET);
+  assert.equal(validation.ok, true);
+  assert.equal(validation.codeChallenge, '');
+
+  const code = oauth.issueAuthorizationCode({
+    clientId: validation.clientId,
+    redirectUri: validation.redirectUri,
+    codeChallenge: validation.codeChallenge,
+    heysClientId: HEYS_CLIENT,
+    sessionToken: SESSION,
+  }, SECRET);
+  const baseExchange = {
+    code,
+    client_id: reg.registration.client_id,
+    redirect_uri: redirectUri,
+  };
+  assert.equal(oauth.exchangeAuthorizationCode(baseExchange, SECRET).error, 'invalid_client');
+  assert.equal(oauth.exchangeAuthorizationCode({ ...baseExchange, client_secret: 'wrong' }, SECRET).error, 'invalid_client');
+
+  const exchanged = oauth.exchangeAuthorizationCode({
+    ...baseExchange,
+    client_secret: reg.registration.client_secret,
+  }, SECRET);
+  assert.equal(exchanged.ok, true);
+
+  assert.equal((await oauth.exchangeRefreshToken({
+    refresh_token: exchanged.tokens.refresh_token,
+    client_id: reg.registration.client_id,
+  }, SECRET)).error, 'invalid_client');
+  assert.equal((await oauth.exchangeRefreshToken({
+    refresh_token: exchanged.tokens.refresh_token,
+    client_id: reg.registration.client_id,
+    client_secret: reg.registration.client_secret,
+  }, SECRET)).ok, true);
+});
+
+test('публичный клиент без PKCE по-прежнему отклоняется', () => {
+  const reg = oauth.registerClient({ redirect_uris: [REDIRECT] }, SECRET);
+  const result = oauth.validateAuthorizeRequest({
+    client_id: reg.registration.client_id,
+    redirect_uri: REDIRECT,
+    response_type: 'code',
+  }, SECRET);
+  assert.equal(result.ok, false);
+  assert.equal(result.error, 'invalid_request');
+});
+
 test('полный цикл: код → токены → доступ к сессии HEYS', () => {
   const { reg, verifier, validation } = registerAndAuthorize();
   const code = oauth.issueAuthorizationCode({
@@ -338,6 +402,7 @@ test('метаданные указывают на собственные энд
   assert.equal(meta.token_endpoint, 'https://api.heyslab.ru/mcp/token');
   assert.equal(meta.registration_endpoint, 'https://api.heyslab.ru/mcp/register');
   assert.deepEqual(meta.code_challenge_methods_supported, ['S256']);
+  assert.deepEqual(meta.token_endpoint_auth_methods_supported, ['none', 'client_secret_post']);
   const resource = oauth.protectedResourceMetadata({ issuer: 'https://api.heyslab.ru', resource: 'https://api.heyslab.ru/mcp' });
   assert.deepEqual(resource.authorization_servers, ['https://api.heyslab.ru']);
 });
