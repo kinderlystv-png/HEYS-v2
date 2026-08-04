@@ -38,6 +38,13 @@ test('метаданные authorization server отдаются для корн
     const res = await call({ httpMethod: 'GET', path });
     assert.equal(res.statusCode, 200, path);
     assert.equal(body(res).registration_endpoint, `https://${HOST}/mcp/register`);
+    assert.equal(
+      body(res).issuer,
+      path.endsWith('/mcp/chatgpt/curator')
+        ? `https://${HOST}/mcp/chatgpt/curator`
+        : `https://${HOST}`,
+      path,
+    );
   }
 });
 
@@ -72,6 +79,7 @@ test('/mcp/chatgpt/curator — отдельный OAuth resource для обхо
   const meta = await call({ httpMethod: 'GET', path: `/.well-known/oauth-protected-resource${resource}` });
   assert.equal(meta.statusCode, 200);
   assert.equal(body(meta).resource, `https://${HOST}${resource}`);
+  assert.deepEqual(body(meta).authorization_servers, [`https://${HOST}${resource}`]);
 });
 
 test('каждый адрес транспорта ведёт за метаданными к себе, а не к соседу', async () => {
