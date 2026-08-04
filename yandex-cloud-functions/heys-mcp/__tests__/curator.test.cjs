@@ -1181,6 +1181,24 @@ test('правило про норму клиента доезжает до ку
   assert.ok(!TASKS_RULES().some((l) => /норм/i.test(l) && /client_saved/.test(l)));
 });
 
+test('перед вопросом «кому вносить» модель обязана сверить свою память', () => {
+  // Инцидент 2026-08-04: правило «мне = такой-то клиент» лежало в памяти, а
+  // модель сразу позвала heys_list_clients и переспросила, хотя ответ уже был
+  // известен. Строка обязана стоять раньше «КРИТИЧЕСКОГО ПРАВИЛА РЕЖИМА» —
+  // модель заметнее реагирует на то, что идёт первым шагом алгоритма.
+  const text = curatorInstructions('Антон', true, Date.UTC(2026, 7, 3));
+  const checkMemory = text.indexOf('проверь, не объяснял ли куратор');
+  const askRule = text.indexOf('КРИТИЧЕСКОЕ ПРАВИЛО РЕЖИМА');
+  assert.ok(checkMemory >= 0, 'инструкция сверить память отсутствует');
+  assert.ok(askRule >= 0);
+  assert.ok(checkMemory < askRule, 'сверка памяти должна идти раньше вопроса «кому»');
+  assert.match(text, /tasks_context по его фразе/, 'с задачником — явная отсылка к tasks_context');
+
+  const noTasks = curatorInstructions('Антон', false, Date.UTC(2026, 7, 3));
+  assert.doesNotMatch(noTasks, /tasks_context по его фразе/, 'без задачника — не звать несуществующий инструмент');
+  assert.match(noTasks, /проверь, не объяснял ли куратор/, 'сверка памяти нужна и без задачника');
+});
+
 test('потолок развилок в тексте — тот же, что в коде', () => {
   const decision = toolText('tasks_decision');
   assert.match(decision, new RegExp(`${tasksLib.OPEN_DECISIONS_CAP} нерешённых развилок`));

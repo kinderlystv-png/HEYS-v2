@@ -744,6 +744,239 @@ test('WRITE_TOOLS совпадает с обработчиками, которы
   }
 });
 
+// --- heys_checkin ------------------------------------------------------
+//
+// Основная claim этого инструмента: submit пишет так, что приложение
+// действительно засчитывает шаг — в отличие от heys_update_day, где то же
+// значение остаётся помеченным кураторским. Каждый тест ниже проверяет это
+// тем же условием, каким его проверяет само приложение (см.
+// apps/web/heys_morning_checkin_v1.js: hasCheckinWeight/hasSleepTime/…),
+// а не пересказом реализации.
+
+const PROFILE_KEY = 'heys_profile';
+
+test('heys_checkin get — статус required-шагов совпадает с условием приложения', async () => {
+  const api = fakeApi({
+    day: {
+      date: '2026-08-01',
+      weightMorning: 80.2,
+      sleepStart: '23:30', sleepEnd: '07:00', sleepQuality: 7,
+      moodMorning: 8,
+      meals: [], waterMl: 0, updatedAt: 111,
+    },
+    card: { [PROFILE_KEY]: { stepsGoal: 9000 } },
+  });
+  const res = await build(api).heys_checkin({ action: 'get' });
+  assert.equal(res.structured.status, 'done');
+  assert.match(res.text, /пройден/);
+  const byId = Object.fromEntries(res.structured.steps.map((s) => [s.id, s]));
+  assert.equal(byId.weight.done, true);
+  assert.equal(byId.sleep.done, true);
+  assert.equal(byId.steps_goal.value, 9000);
+  assert.equal(byId.cold_exposure.required, false, 'холод — необязательный шаг');
+});
+
+test('heys_checkin get — значение куратора не закрывает шаг, хотя оно на месте', async () => {
+  // Ровно то же поле, что закрыло бы шаг при самостоятельном вводе (тест
+  // выше), но помеченное кураторским — приложение его игнорирует, и наш
+  // разбор обязан отвечать так же, иначе get будет врать про статус.
+  const api = fakeApi({
+    day: {
+      date: '2026-08-01',
+      weightMorning: 80.2,
+      _curatorEdits: { weightMorning: { at: 1, value: 80.2 } },
+      meals: [], waterMl: 0, updatedAt: 111,
+    },
+  });
+  const res = await build(api).heys_checkin({ action: 'get' });
+  const weight = res.structured.steps.find((s) => s.id === 'weight');
+  assert.equal(weight.done, false, 'кураторское значение не считается пройденным шагом');
+  assert.equal(res.structured.status, 'not_started');
+});
+
+test('heys_checkin submit — пишет без кураторской метки, шаг закрывается по-настоящему', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
+  const res = await build(api).heys_checkin({
+    action: 'submit', weight: 80.2, sleep_start: '23:30', sleep_end: '07:00', sleep_quality: 7, mood: 8,
+  });
+  assert.equal(res.structured.status.status, 'partial', 'steps_goal не передан — до done не хватает профиля');
+  const weightStep = res.structured.status.steps.find((s) => s.id === 'weight');
+  assert.equal(weightStep.done, true);
+
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  assert.ok(saved, 'день должен уйти в mergeSaveKV');
+  assert.equal(saved.value._curatorEdits, undefined,
+    'submit — это диктовка живьём, а не решение куратора: метки авторства быть не должно');
+});
+
+test('heys_checkin: то же поле через heys_update_day остаётся кураторским и шаг не закрывает', async () => {
+  // Прямое сравнение с соседним инструментом — это и есть разница, ради
+  // которой heys_checkin вообще завели.
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
+  const tools = createTools({ api, sessionToken: SESSION, clientId: CLIENT, nowMs: NOW, byCurator: true }).tools;
+  await tools.heys_update_day({ weight: 80.2 });
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  assert.ok(saved.value._curatorEdits && saved.value._curatorEdits.weightMorning,
+    'heys_update_day с byCurator — значение остаётся помеченным');
+});
+
+test('heys_checkin submit — задним числом отказывает и ничего не пишет', async () => {
+  const api = fakeApi({ day: { date: '2026-07-31', meals: [], waterMl: 0, updatedAt: 111 } });
+  const tools = build(api);
+  await assert.rejects(
+    () => tools.heys_checkin({ action: 'submit', date: '2026-07-31', weight: 80 }),
+    (e) => e.code === 'retroactive_checkin',
+  );
+  assert.equal(api.saves.length, 0, 'отказ должен случиться до записи');
+});
+
+test('heys_checkin submit — холод пишется формой, которую понимает шаг приложения', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
+  const res = await build(api).heys_checkin({ action: 'submit', cold_type: 'coldShower' });
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  assert.deepEqual(Object.keys(saved.value.coldExposure).sort(), ['answeredAt', 'time', 'type']);
+  assert.equal(saved.value.coldExposure.type, 'coldShower');
+  assert.equal(res.structured.status.steps.find((s) => s.id === 'cold_exposure').done, true);
+});
+
+test('heys_checkin submit — неизвестный cold_type отклоняется, а не тихо игнорируется', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
+  await assert.rejects(
+    () => build(api).heys_checkin({ action: 'submit', cold_type: 'iceCream' }),
+    (e) => e.code === 'invalid_field',
+  );
+});
+
+test('heys_checkin submit — цель по шагам уходит в профиль, а не в день', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
+    card: { [PROFILE_KEY]: { stepsGoal: 5000, updatedAt: 5 } },
+  });
+  const res = await build(api).heys_checkin({ action: 'submit', steps_goal: 9000 });
+  assert.equal(api.saves.some((s) => s.key.startsWith('heys_dayv2_')), false,
+    'единственное переданное поле — профильное, день трогать незачем');
+  const profileSave = api.saves.find((s) => s.key === PROFILE_KEY);
+  assert.equal(profileSave.value.stepsGoal, 9000);
+  assert.equal(res.structured.status.steps.find((s) => s.id === 'steps_goal').value, 9000);
+});
+
+test('heys_checkin submit — пустой вызов отказывает явно', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
+  await assert.rejects(
+    () => build(api).heys_checkin({ action: 'submit' }),
+    (e) => e.code === 'nothing_to_update',
+  );
+});
+
+test('heys_checkin — action вне get/submit отклоняется', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
+  await assert.rejects(
+    () => build(api).heys_checkin({ action: 'reset' }),
+    (e) => e.code === 'invalid_action',
+  );
+});
+
+test('heys_checkin submit — замеры пишутся, а незаполненные поля остаются null', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
+  const res = await build(api).heys_checkin({ action: 'submit', measurements: { waist: 82 } });
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  assert.equal(saved.value.measurements.waist, 82);
+  assert.equal(saved.value.measurements.hips, null);
+  assert.equal(res.structured.status.steps.find((s) => s.id === 'measurements').done, true);
+});
+
+test('heys_checkin submit — пустые замеры отклоняются, а не пишутся тихим нулём', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
+  await assert.rejects(
+    () => build(api).heys_checkin({ action: 'submit', measurements: {} }),
+    (e) => e.code === 'invalid_field',
+  );
+});
+
+test('heys_checkin submit — добавки из каталога пишутся списком целиком', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
+  const res = await build(api).heys_checkin({ action: 'submit', supplements: ['vitD', 'omega3', 'custom_777'] });
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  assert.deepEqual(saved.value.supplementsPlanned, ['vitD', 'omega3', 'custom_777']);
+  assert.equal(res.structured.status.steps.find((s) => s.id === 'supplements').done, true);
+});
+
+test('heys_checkin submit — добавка не из каталога отклоняется, а не пишется как есть', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
+  await assert.rejects(
+    () => build(api).heys_checkin({ action: 'submit', supplements: ['vitD', 'магический-порошок'] }),
+    (e) => e.code === 'invalid_field',
+  );
+  assert.equal(api.saves.length, 0, 'ни одна из добавок не должна уйти в облако, если список невалиден целиком');
+});
+
+test('heys_checkin submit — цикл без включённого трекинга отказывает явно', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
+    card: { [PROFILE_KEY]: { gender: 'Мужской' } },
+  });
+  await assert.rejects(
+    () => build(api).heys_checkin({ action: 'submit', cycle_day: 3 }),
+    (e) => e.code === 'cycle_tracking_disabled',
+  );
+  assert.equal(api.saves.length, 0);
+});
+
+test('heys_checkin submit — cycle_day проставляет номер на все семь дней окна', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
+    card: { [PROFILE_KEY]: { gender: 'Женский', cycleTrackingEnabled: true } },
+  });
+  const res = await build(api).heys_checkin({ action: 'submit', cycle_day: 3 });
+  const dayKeys = api.saves.filter((s) => s.key.startsWith('heys_dayv2_')).map((s) => s.key).sort();
+  assert.deepEqual(dayKeys, [
+    'heys_dayv2_2026-07-30', 'heys_dayv2_2026-07-31', 'heys_dayv2_2026-08-01',
+    'heys_dayv2_2026-08-02', 'heys_dayv2_2026-08-03', 'heys_dayv2_2026-08-04', 'heys_dayv2_2026-08-05',
+  ], 'окно якорится на день 3 из 7, а не только на дату submit');
+  const today = api.saves.find((s) => s.key === 'heys_dayv2_2026-08-01');
+  assert.equal(today.value.cycleDay, 3);
+  const neighbour = api.saves.find((s) => s.key === 'heys_dayv2_2026-08-04');
+  assert.equal(neighbour.value.cycleDay, 6, 'сосед получает свой порядковый номер в окне, не тот же самый');
+  assert.equal(res.structured.status.steps.find((s) => s.id === 'cycle').done, true);
+});
+
+test('heys_checkin submit — cycle_status снимает окно, но статус ставит только сегодняшнему дню', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111, cycleDay: 3 },
+    card: { [PROFILE_KEY]: { gender: 'Женский', cycleTrackingEnabled: true } },
+  });
+  const res = await build(api).heys_checkin({ action: 'submit', cycle_status: 'none' });
+  const today = api.saves.find((s) => s.key === 'heys_dayv2_2026-08-01');
+  assert.equal(today.value.cycleDay, null);
+  assert.equal(today.value.cycleStatus, 'none');
+  const neighbour = api.saves.find((s) => s.key === 'heys_dayv2_2026-08-04');
+  assert.equal(neighbour.value.cycleDay, null);
+  assert.equal(neighbour.value.cycleStatus, undefined, 'соседний день окна теряет номер, но не получает чужой ответ «нет цикла»');
+  assert.equal(res.structured.status.steps.find((s) => s.id === 'cycle').done, true);
+});
+
+test('heys_checkin submit — cycle_day и cycle_status разом — явная ошибка', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
+    card: { [PROFILE_KEY]: { gender: 'Женский', cycleTrackingEnabled: true } },
+  });
+  await assert.rejects(
+    () => build(api).heys_checkin({ action: 'submit', cycle_day: 3, cycle_status: 'none' }),
+    (e) => e.code === 'invalid_field',
+  );
+});
+
+test('heys_checkin get — без включённого трекинга шаг цикла не блокирует и объясняет почему', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
+    card: { [PROFILE_KEY]: { gender: 'Мужской' } },
+  });
+  const res = await build(api).heys_checkin({ action: 'get' });
+  const cycle = res.structured.steps.find((s) => s.id === 'cycle');
+  assert.equal(cycle.done, true, 'у клиента без трекинга шаг не в ожидании — как и в приложении');
+  assert.match(cycle.note, /выключен/);
+});
+
 // --- Норма клиента в day_after ---------------------------------------------
 
 const CARD = {

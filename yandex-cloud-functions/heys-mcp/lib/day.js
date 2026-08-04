@@ -681,6 +681,192 @@ function updateDayFields(day, fields, { nowMs, clientId, byCurator = false }) {
 }
 
 /**
+ * Типы холодового воздействия — тот же список, что в шаге чек-ина приложения
+ * (apps/web/heys_steps_v1.js, COLD_TYPES). Здесь не импортируется: клиентский
+ * бандл и облачная функция — разные пакеты, дублирование меньше зла, чем связь
+ * между ними. Разойдутся — заметно по отказу инструмента на новом значении.
+ */
+const COLD_EXPOSURE_TYPES = new Set(['none', 'coldShower', 'coldBath', 'coldSwim']);
+
+/** Записать холодовое воздействие — форма объекта та же, что пишет сам шаг приложения. */
+function applyColdExposure(day, type, { nowMs, clientId } = {}) {
+  if (!COLD_EXPOSURE_TYPES.has(type)) {
+    throw new Error(`invalid_cold_type:${type}`);
+  }
+  const time = nowParts(nowMs).time;
+  const next = {
+    ...day,
+    coldExposure: type === 'none'
+      ? { type: 'none', time: null, answeredAt: nowMs }
+      : { type, time, answeredAt: nowMs },
+  };
+  return touch(next, nowMs, clientId);
+}
+
+/** Замеры тела — форма объекта та же, что пишет шаг приложения (measurements). */
+function applyMeasurements(day, values, { nowMs, clientId } = {}) {
+  const pick = (v) => (v === undefined || v === null || v === '') ? null : Number(v);
+  const measurements = {
+    waist: pick(values.waist), hips: pick(values.hips),
+    thigh: pick(values.thigh), biceps: pick(values.biceps),
+    measuredAt: day.date,
+  };
+  const hasAny = ['waist', 'hips', 'thigh', 'biceps'].some((k) => measurements[k] !== null && Number.isFinite(measurements[k]));
+  if (!hasAny) throw new Error('empty_measurements');
+  return touch({ ...day, measurements }, nowMs, clientId);
+}
+
+/**
+ * Каталог добавок — те же id, что в apps/web/heys_supplements_v1.js
+ * (SUPPLEMENTS_CATALOG). Дублируется по той же причине, что COLD_EXPOSURE_TYPES:
+ * клиентский бандл и облачная функция не делят код. `custom_*` — пользовательские
+ * записи из приложения, пропускаются без проверки состава.
+ */
+const SUPPLEMENT_IDS = new Set([
+  'vitD', 'vitC', 'zinc', 'selenium', 'omega3', 'magnesium', 'b12', 'b6', 'lecithin',
+  'calcium', 'k2', 'collagen', 'glucosamine', 'creatine', 'bcaa', 'protein', 'biotin',
+  'vitE', 'hyaluronic', 'iron', 'folic', 'melatonin', 'glycine', 'ltheanine', 'coq10',
+  'berberine', 'cinnamon', 'chromium', 'vinegar', 'flaxOil', 'oliveOil', 'fishOil',
+]);
+
+/** Добавки на день — id из каталога или пользовательские `custom_*`. */
+function applySupplements(day, ids, { nowMs, clientId } = {}) {
+  const list = Array.isArray(ids) ? ids : [];
+  const bad = list.filter((id) => !SUPPLEMENT_IDS.has(id) && !String(id).startsWith('custom_'));
+  if (bad.length) throw new Error(`unknown_supplement:${bad.join(',')}`);
+  const mutationAt = Math.max(nowMs, (Number(day.supplementsPlannedUpdatedAt) || 0) + 1);
+  return touch({ ...day, supplementsPlanned: list, supplementsPlannedUpdatedAt: mutationAt }, mutationAt, clientId);
+}
+
+const CYCLE_WINDOW_DAYS = 7;
+
+/**
+ * Даты недельного окна цикла вокруг дня `dayNumber` (1–7), считая от `anchorDate`.
+ * Та же арифметика, что HEYS.Cycle.setCycleDaysAuto/clearCycleDays в приложении:
+ * окно фиксировано в семь дней и якорится на введённый номер дня, поэтому часть
+ * дат уходит в прошлое, часть — в будущее относительно anchorDate.
+ */
+function cycleWindowDates(anchorDate, dayNumber) {
+  const out = [];
+  for (let d = 1; d <= CYCLE_WINDOW_DAYS; d += 1) {
+    out.push({ day: d, date: addDays(anchorDate, d - dayNumber) });
+  }
+  return out;
+}
+
+/** Записать номер дня цикла в один день окна — вызывается по кругу для всех семи дат. */
+function applyCycleDay(day, dayNumber, { nowMs, clientId } = {}) {
+  const mutationAt = Math.max(nowMs, (Number(day.cycleUpdatedAt) || 0) + 1);
+  return touch({ ...day, cycleDay: dayNumber, cycleStatus: null, cycleAnsweredAt: mutationAt, cycleUpdatedAt: mutationAt }, mutationAt, clientId);
+}
+
+/**
+ * Снять номер цикла с одного дня окна — вызывается по кругу для соседних дат
+ * при отмене. Статус здесь не трогаем: и в приложении (clearCycleDays) статус
+ * ставится только на тот день, с которого явно ответили «нет цикла», а не на
+ * весь снятый диапазон — иначе шесть соседних дней тоже осели бы как «нет
+ * цикла», хотя вопрос про них никто не задавал.
+ */
+function clearCycleDay(day, { nowMs, clientId } = {}) {
+  const mutationAt = Math.max(nowMs, (Number(day.cycleUpdatedAt) || 0) + 1);
+  return touch({ ...day, cycleDay: null, cycleUpdatedAt: mutationAt }, mutationAt, clientId);
+}
+
+/** Явный ответ «нет цикла сегодня / пропустил» — только для дня, за который отвечают. */
+function setCycleStatus(day, status, { nowMs, clientId } = {}) {
+  const mutationAt = Math.max(nowMs, (Number(day.cycleUpdatedAt) || 0) + 1);
+  return touch({ ...day, cycleDay: null, cycleStatus: status, cycleAnsweredAt: mutationAt, cycleUpdatedAt: mutationAt }, mutationAt, clientId);
+}
+
+/**
+ * Тот же вопрос, что hasCycleDecision в apps/web/heys_steps_v1.js: нужен ли
+ * вообще ответ про цикл сегодня. Не нужен, если трекинг выключен в профиле
+ * (гейт по полу и флагу — та же граница, что защищает от переноса цикла на
+ * профиль, где он не включён), либо ответ уже есть — либо номер дня, либо
+ * явное «нет цикла / пропустил».
+ */
+function hasCycleDecision(day, profile) {
+  if (!profile || profile.gender !== 'Женский' || profile.cycleTrackingEnabled !== true) return true;
+  const cycleDay = Number(day && day.cycleDay);
+  if (Number.isFinite(cycleDay) && cycleDay >= 1 && cycleDay <= 7) return true;
+  const answeredAt = Number(day && day.cycleAnsweredAt);
+  return (day && (day.cycleStatus === 'none' || day.cycleStatus === 'skipped')) && Number.isFinite(answeredAt) && answeredAt > 0;
+}
+
+/**
+ * Шаги утреннего чек-ина — какие из них реально закрывают гейт в приложении.
+ *
+ * Мостит два разных источника правды намеренно: обязательные поля дня решает
+ * `curatorAuthoredFields` (та же функция, что кормит `heys_get_day.curator_authored`
+ * и app-side `isCuratorAuthored`), а `stepsGoal` живёт в профиле и авторства
+ * не знает вовсе — `hasStepsGoal` в приложении смотрит только на число.
+ * Список шагов и условие «пройден» зеркалят apps/web/heys_morning_checkin_v1.js
+ * (MORNING_CORE_STEPS, hasCheckinWeight/hasSleepTime/hasSleepQuality/
+ * hasMorningMood/hasStepsGoal) — если приложение поменяет условие, эта копия
+ * должна поменяться вместе с ним, отдельного стража на неё сейчас нет.
+ */
+function checkinStatus(day, profile) {
+  const authored = new Set(curatorAuthoredFields(day));
+  const hasNum = (v) => Number.isFinite(Number(v)) && Number(v) > 0;
+  const steps = [
+    {
+      id: 'weight', label: 'вес', required: true,
+      done: hasNum(day.weightMorning) && !authored.has('weightMorning'),
+      value: day.weightMorning ?? null,
+    },
+    {
+      id: 'sleep', label: 'сон', required: true,
+      done: Boolean(day.sleepStart) && Boolean(day.sleepEnd)
+        && !authored.has('sleepStart') && !authored.has('sleepEnd'),
+      value: (day.sleepStart || day.sleepEnd) ? { start: day.sleepStart || null, end: day.sleepEnd || null } : null,
+    },
+    {
+      id: 'sleep_quality', label: 'качество сна', required: true,
+      done: hasNum(day.sleepQuality) && !authored.has('sleepQuality'),
+      value: day.sleepQuality ?? null,
+    },
+    {
+      id: 'mood', label: 'самочувствие', required: true,
+      done: hasNum(day.moodMorning) && !authored.has('moodMorning'),
+      value: day.moodMorning ?? null,
+    },
+    {
+      id: 'steps_goal', label: 'цель по шагам', required: true,
+      done: hasNum(profile && profile.stepsGoal),
+      value: (profile && profile.stepsGoal) ?? null,
+      note: 'поле профиля — пишется heys_update_profile(steps_goal), не heys_checkin',
+    },
+    {
+      id: 'cold_exposure', label: 'холод', required: false,
+      done: Boolean(day.coldExposure && day.coldExposure.type),
+      value: day.coldExposure || null,
+    },
+    {
+      id: 'measurements', label: 'замеры тела', required: false,
+      done: Boolean(day.measurements && ['waist', 'hips', 'thigh', 'biceps'].some((k) => hasNum(day.measurements[k]))),
+      value: day.measurements || null,
+    },
+    {
+      id: 'supplements', label: 'добавки', required: false,
+      done: Array.isArray(day.supplementsPlanned),
+      value: day.supplementsPlanned || null,
+    },
+    {
+      id: 'cycle', label: 'цикл', required: false,
+      done: hasCycleDecision(day, profile),
+      value: { cycleDay: day.cycleDay ?? null, cycleStatus: day.cycleStatus ?? null },
+      note: (profile && profile.gender === 'Женский' && profile.cycleTrackingEnabled === true)
+        ? undefined
+        : 'трекинг цикла выключен в профиле — шаг в приложении не показывается',
+    },
+  ];
+  const required = steps.filter((s) => s.required);
+  const doneCount = required.filter((s) => s.done).length;
+  const status = doneCount === 0 ? 'not_started' : doneCount === required.length ? 'done' : 'partial';
+  return { date: day.date, status, steps };
+}
+
+/**
  * Норма дня: сколько клиенту положено съесть — калории и БЖУ в граммах.
  *
  * Без неё картина дня после записи бесполезна: «1400 ккал» ничего не значит,
@@ -1015,4 +1201,16 @@ module.exports = {
   addTraining,
   updateDayFields,
   summarizeDay,
+  applyColdExposure,
+  applyMeasurements,
+  applySupplements,
+  applyCycleDay,
+  clearCycleDay,
+  setCycleStatus,
+  cycleWindowDates,
+  hasCycleDecision,
+  checkinStatus,
+  COLD_EXPOSURE_TYPES,
+  SUPPLEMENT_IDS,
+  CYCLE_WINDOW_DAYS,
 };

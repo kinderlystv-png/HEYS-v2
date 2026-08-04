@@ -72,6 +72,18 @@ function resolveDate(input, nowMs) {
   return value;
 }
 
+/**
+ * «Сегодня» для чек-ина — тот же порог 3 утра, что в самом приложении
+ * (apps/web/heys_morning_checkin_v1.js:getTodayKey). Это не общий `resolveDate`:
+ * остальные day-инструменты берут календарную дату по Москве, и здесь этого
+ * не менял — блока радиус слишком широкий для правки чек-ина. Расхождение
+ * бьёт только в окне 00:00–03:00: календарный день уже следующий, а
+ * приложение (и чек-ин вместе с ним) ещё живёт вчерашним.
+ */
+function checkinToday(nowMs) {
+  return day.nowParts(nowMs - 3 * 60 * 60 * 1000).date;
+}
+
 class ToolError extends Error {
   constructor(code, message, details) {
     super(message);
@@ -828,6 +840,209 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
     },
 
     /**
+     * Утренний чек-ин — не то же самое, что heys_update_day.
+     *
+     * `get` отвечает, какие шаги закрыты, тем же условием, что смотрит само
+     * приложение: поле заполнено И не помечено кураторским (day.checkinStatus).
+     * `submit` пишет day-поля с `byCurator: false` — потому что смысл этого
+     * инструмента ровно в том, что клиент диктует значения только что и живьём,
+     * а не в том, что куратор вписывает их по своему усмотрению. Это и отличает
+     * его от heys_update_day, где то же самое поле осталось бы помеченным
+     * кураторским и не закрыло бы шаг в приложении.
+     * Задним числом чек-ин не проходится (решено 04.08, docs/preferences.md):
+     * submit работает только на сегодняшний день по границе приложения (3:00
+     * по Москве) — прошлый день правится через heys_update_day, и он честно
+     * останется пропущенным.
+     */
+    async heys_checkin(args) {
+      const action = args.action;
+      if (action !== 'get' && action !== 'submit') {
+        throw new ToolError('invalid_action', 'action — "get" или "submit".');
+      }
+      const date = args.date ? resolveDate(args.date, nowMs) : checkinToday(nowMs);
+
+      if (action === 'get') {
+        const [currentDay, blobs] = await Promise.all([readDay(date), readMany([profile.PROFILE_KEY])]);
+        const status = day.checkinStatus(currentDay, blobs[profile.PROFILE_KEY]);
+        const pending = status.steps.filter((s) => s.required && !s.done).map((s) => s.label);
+        const optionalOpen = status.steps.filter((s) => !s.required && !s.done).map((s) => s.label);
+        const head = status.status === 'done' ? 'пройден'
+          : status.status === 'not_started' ? 'не начат' : 'частично';
+        return {
+          text: `Чек-ин за ${date}: ${head}.`
+            + (pending.length ? ` Не хватает: ${pending.join(', ')}.` : '')
+            + (optionalOpen.length ? ` Необязательно: ${optionalOpen.join(', ')}.` : ''),
+          structured: status,
+        };
+      }
+
+      if (date !== checkinToday(nowMs)) {
+        throw new ToolError('retroactive_checkin',
+          'Чек-ин задним числом не проходится — так устроено и в приложении. '
+          + `День ${date} останется пропущенным; отдельные поля правь heys_update_day.`);
+      }
+
+      const dayFields = {
+        weight: args.weight,
+        sleep_start: args.sleep_start,
+        sleep_end: args.sleep_end,
+        sleep_quality: clampSubjective(args.sleep_quality, 'sleep_quality'),
+        mood: clampSubjective(args.mood, 'mood'),
+      };
+      const hasDayFields = Object.values(dayFields).some((v) => v !== undefined && v !== null);
+      const hasCold = args.cold_type !== undefined && args.cold_type !== null;
+      const hasStepsGoal = args.steps_goal !== undefined && args.steps_goal !== null;
+      const hasMeasurements = args.measurements !== undefined && args.measurements !== null;
+      const hasSupplements = args.supplements !== undefined && args.supplements !== null;
+      const hasCycleDay = args.cycle_day !== undefined && args.cycle_day !== null;
+      const hasCycleStatus = args.cycle_status !== undefined && args.cycle_status !== null;
+      if (hasCycleDay && hasCycleStatus) {
+        throw new ToolError('invalid_field', 'cycle_day и cycle_status — разные ответы на один вопрос, передай только один.');
+      }
+      if (!hasDayFields && !hasCold && !hasStepsGoal && !hasMeasurements && !hasSupplements && !hasCycleDay && !hasCycleStatus) {
+        throw new ToolError('nothing_to_update', 'Не передано ни одного шага чек-ина.');
+      }
+
+      // Профиль читаем заранее, если он нужен для гейта цикла: тот же гейт,
+      // что в приложении (hasCycleDecision) — трекинг цикла в принципе не
+      // задаётся женским полом и включённым флагом. Он же переиспользуется
+      // для steps_goal и для итогового статуса, чтобы не читать карточку дважды.
+      let currentProfile;
+      let profileForStatus;
+      if (hasStepsGoal || hasCycleDay || hasCycleStatus) {
+        const blobs = await readMany([profile.PROFILE_KEY]);
+        currentProfile = blobs[profile.PROFILE_KEY];
+        profileForStatus = currentProfile;
+      }
+      if ((hasCycleDay || hasCycleStatus)
+        && !(currentProfile && currentProfile.gender === 'Женский' && currentProfile.cycleTrackingEnabled === true)) {
+        throw new ToolError('cycle_tracking_disabled',
+          'Трекинг цикла выключен в профиле клиента — тот же гейт, что в приложении. Включи его heys_update_profile, прежде чем писать cycle_day/cycle_status.');
+      }
+      if (hasCycleDay) {
+        const n = Number(args.cycle_day);
+        if (!Number.isInteger(n) || n < 1 || n > 7) throw new ToolError('invalid_field', 'cycle_day — целое число 1–7.');
+      }
+      if (hasCycleStatus && args.cycle_status !== 'none' && args.cycle_status !== 'skipped') {
+        throw new ToolError('invalid_field', 'cycle_status — "none" или "skipped".');
+      }
+
+      const original = await readDay(date);
+      let working = original;
+      const applied = [];
+
+      if (hasDayFields) {
+        let updated;
+        try {
+          updated = day.updateDayFields(working, dayFields, { nowMs, clientId, byCurator: false });
+        } catch (e) {
+          throw new ToolError('invalid_field', e.message);
+        }
+        if (updated.applied.length) { working = updated.day; applied.push(...updated.applied); }
+      }
+      if (hasCold) {
+        if (!day.COLD_EXPOSURE_TYPES.has(args.cold_type)) {
+          throw new ToolError('invalid_field', `cold_type — один из: ${[...day.COLD_EXPOSURE_TYPES].join(', ')}.`);
+        }
+        working = day.applyColdExposure(working, args.cold_type, { nowMs, clientId });
+        applied.push('cold_type');
+      }
+      if (hasMeasurements) {
+        try {
+          working = day.applyMeasurements(working, args.measurements || {}, { nowMs, clientId });
+        } catch (e) {
+          throw new ToolError('invalid_field', e.message === 'empty_measurements'
+            ? 'measurements — нужен хотя бы один из waist/hips/thigh/biceps.' : e.message);
+        }
+        applied.push('measurements');
+      }
+      if (hasSupplements) {
+        try {
+          working = day.applySupplements(working, args.supplements, { nowMs, clientId });
+        } catch (e) {
+          throw new ToolError('invalid_field', String(e.message).startsWith('unknown_supplement:')
+            ? `Неизвестные добавки: ${String(e.message).split(':')[1]}. Список — в схеме инструмента.`
+            : e.message);
+        }
+        applied.push('supplements');
+      }
+      // Цикл — окно в семь дней, а не одна дата: почти всегда выходит за
+      // пределы дня чек-ина, поэтому пишется отдельными вызовами writeDay
+      // по каждой дате окна, а не через общий `working`/финальный writeDay.
+      // Сегодняшний день внутри окна — исключение: его правим прямо в
+      // `working`, чтобы после общего writeDay ниже в нём уже было верное
+      // значение и не понадобилось лишнее чтение для итогового статуса.
+      if (hasCycleDay) {
+        const n = Number(args.cycle_day);
+        const targets = day.cycleWindowDates(date, n);
+        for (const t of targets) {
+          if (t.date === date) {
+            working = day.applyCycleDay(working, n, { nowMs, clientId });
+            continue;
+          }
+          const other = await readDay(t.date);
+          // Каждой дате окна — её собственный номер дня, не тот, что назвали
+          // для сегодня: иначе соседние семь дней получили бы один и тот же
+          // cycleDay вместо последовательности 1..7 вокруг названного.
+          const nextOther = day.applyCycleDay(other, t.day, { nowMs, clientId });
+          await writeDay(t.date, nextOther, Number(other.updatedAt) || 0);
+        }
+        applied.push(`cycle_day (окно ${targets[0].date}…${targets[targets.length - 1].date})`);
+      } else if (hasCycleStatus) {
+        const anchorDay = Number(working.cycleDay);
+        const targets = (Number.isInteger(anchorDay) && anchorDay >= 1 && anchorDay <= 7)
+          ? day.cycleWindowDates(date, anchorDay)
+          : [{ day: null, date }];
+        for (const t of targets) {
+          if (t.date === date) {
+            working = day.setCycleStatus(working, args.cycle_status, { nowMs, clientId });
+            continue;
+          }
+          const other = await readDay(t.date);
+          const nextOther = day.clearCycleDay(other, { nowMs, clientId });
+          await writeDay(t.date, nextOther, Number(other.updatedAt) || 0);
+        }
+        applied.push('cycle_status');
+      }
+      // Профиль для итогового статуса — тот же объект, что только что записан
+      // (или прочитан выше для гейта цикла / steps_goal), а не повторное
+      // чтение: повторное чтение отвечало бы на вопрос «что видит следующий
+      // вызов», а не «что мы сейчас сохранили», и с любым запаздывающим
+      // кэшем API соврало бы про только что записанную цель.
+      if (hasStepsGoal) {
+        let patch;
+        try {
+          patch = profile.applyProfileFields(currentProfile, { steps_goal: args.steps_goal }, nowMs);
+        } catch (e) {
+          throw new ToolError(e.code || 'invalid_field', e.message);
+        }
+        if (patch.changed.length) {
+          await saveCardKey(profile.PROFILE_KEY, patch.value, Number(currentProfile && currentProfile.updatedAt) || 0);
+          profileForStatus = patch.value;
+          applied.push('steps_goal');
+        }
+      }
+      if (!applied.length) throw new ToolError('nothing_to_update', 'Ни один шаг чек-ина не изменился.');
+
+      let after = null;
+      if (working !== original) {
+        const saved = await writeDay(date, working, Number(original.updatedAt) || 0);
+        after = await dayAfterWrite(saved, working);
+        if (saved && saved.value && typeof saved.value === 'object') working = saved.value;
+      }
+      if (profileForStatus === undefined) {
+        const blobs = await readMany([profile.PROFILE_KEY]);
+        profileForStatus = blobs[profile.PROFILE_KEY];
+      }
+      const status = day.checkinStatus(working, profileForStatus);
+      const head = status.status === 'done' ? 'пройден' : status.status === 'partial' ? 'частично' : 'не начат';
+      return {
+        text: `Чек-ин за ${date}: записано ${applied.join(', ')}. Статус — ${head}.${after ? dayAfterText(after) : ''}`,
+        structured: { date, applied, status, day_after: after },
+      };
+    },
+
+    /**
      * Правка личной карточки продукта. Нужна ровно затем, чтобы ошибка в
      * нутриентах не закрывалась созданием второго продукта с тем же именем:
      * дубль тянется в дневник, в наборы и в отчёты и живёт там годами.
@@ -1521,7 +1736,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_update_day',
-    description: 'Обновить дневные показатели: утренний вес, шаги, бытовая активность, сон (начало, конец, качество), настроение, самочувствие, стресс, комментарий к дню.',
+    description: 'Куратор вписывает дневные показатели по своему усмотрению или задним числом: вес, шаги, быт, сон, настроение, самочувствие, стресс, комментарий. Поле остаётся помеченным кураторским и не закрывает шаг утреннего чек-ина в приложении — клиент увидит его снова. Для «клиент диктует значения прямо сейчас, живьём» — heys_checkin, не этот инструмент.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1533,10 +1748,51 @@ const TOOL_SCHEMAS = [
         sleep_end: { type: 'string', description: 'Время подъёма HH:MM.' },
         sleep_quality: { type: 'integer', description: 'Качество сна, 1–10.' },
         sleep_note: { type: 'string', description: 'Заметка про сон.' },
-        mood: { type: 'integer', description: 'Утреннее настроение из чек-ина, 1–10. Среднее за день считается вместе с оценками приёмов и тренировок.' },
-        wellbeing: { type: 'integer', description: 'Утреннее самочувствие из чек-ина, 1–10.' },
-        stress: { type: 'integer', description: 'Утренний стресс из чек-ина, 1–10.' },
+        mood: { type: 'integer', description: 'Настроение, 1–10. В приложении это один утренний вопрос чек-ина — среднее за день считается вместе с оценками приёмов и тренировок.' },
+        wellbeing: { type: 'integer', description: 'Самочувствие, 1–10. Поле карточки дня, не шаг утреннего чек-ина приложения.' },
+        stress: { type: 'integer', description: 'Стресс, 1–10. Поле карточки дня, не шаг утреннего чек-ина приложения.' },
         comment: { type: 'string', description: 'Комментарий к дню.' },
+      },
+    },
+  },
+  {
+    name: 'heys_checkin',
+    description: 'Утренний чек-ин приложения — не то же самое, что heys_update_day. `get` показывает, какие шаги уже закрыты (тем же условием, что и само приложение), `submit` пишет значения так, будто их ввели в самом приложении: без кураторской метки, шаг закрывается по-настоящему. Годится ровно для случая «клиент диктует прямо сейчас, живьём» — если куратор вписывает значение по своей догадке или задним числом, это heys_update_day, и оно останется помеченным. Задним числом submit не работает: день либо проходится сегодня, либо остаётся пропущенным — правь его heys_update_day.',
+    inputSchema: {
+      type: 'object',
+      required: ['action'],
+      properties: {
+        action: { type: 'string', enum: ['get', 'submit'], description: '"get" — статус и то, чего не хватает. "submit" — записать продиктованное.' },
+        date: { type: 'string', description: 'YYYY-MM-DD. По умолчанию — сегодня по границе приложения (3:00 по Москве, как и сама доска задач). У submit — только сегодняшний день, у get можно смотреть любой.' },
+        weight: { type: 'number', description: 'Утренний вес, кг.' },
+        sleep_start: { type: 'string', description: 'Время засыпания HH:MM.' },
+        sleep_end: { type: 'string', description: 'Время подъёма HH:MM.' },
+        sleep_quality: { type: 'integer', description: 'Качество сна, 1–10.' },
+        mood: { type: 'integer', description: 'Самочувствие утром, 1–10 — единственный вопрос настроения, который спрашивает сам чек-ин.' },
+        cold_type: { type: 'string', enum: ['none', 'coldShower', 'coldBath', 'coldSwim'], description: 'Холодовое воздействие — необязательный шаг. none — не было (обычный душ), coldShower/coldBath/coldSwim — холодный душ/ванна/моржевание.' },
+        steps_goal: { type: 'integer', description: 'Цель по шагам на день — поле профиля, не дня; пишется тем же вызовом для удобства, физически уходит через heys_update_profile.' },
+        measurements: {
+          type: 'object',
+          description: 'Замеры тела, необязательный шаг. Передавай только названные — остальные не тронутся.',
+          properties: {
+            waist: { type: 'number', description: 'Талия, см.' },
+            hips: { type: 'number', description: 'Бёдра, см.' },
+            thigh: { type: 'number', description: 'Бедро (обхват), см.' },
+            biceps: { type: 'number', description: 'Бицепс, см.' },
+          },
+        },
+        supplements: {
+          type: 'array', items: { type: 'string' },
+          description: 'Добавки на сегодня, необязательный шаг. Id из каталога приложения: vitD, vitC, zinc, selenium, omega3, magnesium, b12, b6, lecithin, calcium, k2, collagen, glucosamine, creatine, bcaa, protein, biotin, vitE, hyaluronic, iron, folic, melatonin, glycine, ltheanine, coq10, berberine, cinnamon, chromium, vinegar, flaxOil, oliveOil, fishOil — либо custom_* для того, что клиент завёл сам в приложении. Список целиком заменяет прежний, а не дополняет его.',
+        },
+        cycle_day: {
+          type: 'integer', minimum: 1, maximum: 7,
+          description: 'Номер дня цикла (1–7), необязательный шаг. Пишет не только сегодня, а окно в семь дней вокруг названного номера — так же, как это делает сам шаг в приложении. Доступен только клиентам с включённым трекингом цикла (профиль: пол «Женский», cycleTrackingEnabled) — иначе инструмент откажет явно, а не проставит цикл туда, где его не спрашивали. Взаимоисключим с cycle_status.',
+        },
+        cycle_status: {
+          type: 'string', enum: ['none', 'skipped'],
+          description: '«Нет цикла сегодня» (none) или «пропустил ответ» (skipped) — необязательный шаг, тот же гейт по профилю, что у cycle_day. Взаимоисключим с cycle_day.',
+        },
       },
     },
   },
@@ -1558,6 +1814,7 @@ const WRITE_TOOLS = new Set([
   'heys_add_water',
   'heys_log_training',
   'heys_update_day',
+  'heys_checkin',
   'heys_update_profile',
   'heys_update_norms',
   'heys_update_hr_zones',

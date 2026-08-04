@@ -1906,11 +1906,23 @@ function transcriptTail(text) {
   let last = null;
   let cut = 0;
   lines.forEach((line, i) => {
+    if (i < cut) return; // строка уже поглощена как продолжение предыдущей отметки
     const match = REVIEW_MARK_RE.exec(line.trim());
     if (!match) return;
     marks += 1;
-    last = { date: match[1], time: padTime(match[2]), summary: match[3].trim() };
-    cut = i + 1;
+    // reviewMarkLine пишет итог одной строкой, но живой текст (ручная правка,
+    // старая запись до этого правила) может перенести его на несколько строк.
+    // Без этого продолжение итога читалось бы как несверенный текст — шум
+    // после каждой отметки, и так навсегда.
+    const parts = [match[3].trim()];
+    let j = i + 1;
+    while (j < lines.length && lines[j].trim()
+           && !/^##\s/.test(lines[j]) && !/^\*\*/.test(lines[j].trim())) {
+      parts.push(lines[j].trim());
+      j += 1;
+    }
+    last = { date: match[1], time: padTime(match[2]), summary: parts.join(' ').trim() };
+    cut = j;
   });
   return { text: lines.slice(cut).join('\n'), marks, last_mark: last };
 }
