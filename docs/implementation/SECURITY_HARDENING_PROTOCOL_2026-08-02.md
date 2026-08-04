@@ -167,6 +167,13 @@ email+пароль+2FA), но не показывает, куда уйдёт к�
 - Evidence: 7 новых проверок в `__tests__/oauth.test.cjs` (включая то, что имя
   приложения не может внести разметку), файл 22/22 pass.
 
+**Уточнение 2026-08-04.** По решению пользователя default allowlist расширен
+только точным host `chatgpt.com`, без wildcard: OpenAI использует callback
+`https://chatgpt.com/connector/oauth/{callback_id}`. Тесты пропускают текущий и
+legacy callback ChatGPT и отклоняют `chatgpt.com.evil.tld`; OAuth-набор 22/22.
+Изменение пока только в рабочем дереве, live DCR начнёт принимать ChatGPT после
+отдельно разрешённого deploy `heys-mcp`.
+
 ### Тур 3 — кураторская сессия: проверка состояния при refresh (SEC-031)
 
 **Проблема.** На refresh-гранте функция сама подписывает новый кураторский JWT

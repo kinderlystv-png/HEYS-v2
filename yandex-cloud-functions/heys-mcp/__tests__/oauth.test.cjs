@@ -67,11 +67,14 @@ test('DCR требует https redirect_uri', () => {
 test('SEC-030: DCR отклоняет посторонний https-хост', () => {
   assert.equal(oauth.registerClient({ redirect_uris: ['https://evil.tld/cb'] }, SECRET).ok, false);
   assert.equal(oauth.registerClient({ redirect_uris: ['https://claude.ai.evil.tld/cb'] }, SECRET).ok, false);
+  assert.equal(oauth.registerClient({ redirect_uris: ['https://chatgpt.com.evil.tld/cb'] }, SECRET).ok, false);
   assert.equal(oauth.registerClient({ redirect_uris: ['https://notclaude.ai/cb'] }, SECRET).ok, false);
 });
 
-test('SEC-030: известные адреса клиентов Anthropic и loopback проходят', () => {
+test('SEC-030: известные адреса ChatGPT, Anthropic и loopback проходят', () => {
   for (const uri of [
+    'https://chatgpt.com/connector/oauth/test-callback',
+    'https://chatgpt.com/connector_platform_oauth_redirect',
     REDIRECT,
     'https://claude.com/api/mcp/auth_callback',
     'https://console.anthropic.com/cb',
@@ -148,6 +151,7 @@ test('SEC-031: страница не обещает куратору мгнов�
   const page = oauth.renderLoginPage(validation);
   assert.ok(!page.includes('отключить коннектор в Claude'), 'старое ложное обещание убрано');
   assert.match(page, /мгновенного отзыва нет/);
+  assert.match(page, /ChatGPT или Claude/);
 });
 
 test('SEC-030: согласие называет реальный объём кураторского доступа', () => {

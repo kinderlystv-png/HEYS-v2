@@ -1,15 +1,15 @@
 'use strict';
 
 /**
- * heys-mcp — MCP-сервер HEYS для custom connector claude.ai.
+ * heys-mcp — MCP-сервер HEYS для custom connectors ChatGPT и Claude.
  *
  * Один Cloud Function обслуживает три группы маршрутов:
  *   POST /mcp, POST /mcp/curator       — Streamable HTTP транспорт MCP
  *   /mcp/register|authorize|token      — OAuth 2.1 + DCR + PKCE
  *   /.well-known/oauth-*               — метаданные для авто-обнаружения
  *
- * `/mcp/curator` — тот же транспорт под вторым адресом. claude.ai держит один
- * коннектор на URL, поэтому личный клиентский и кураторский доступ не могут
+ * `/mcp/curator` — тот же транспорт под вторым адресом. MCP-клиент держит одно
+ * подключение на URL, поэтому личный клиентский и кураторский доступ не могут
  * жить на одном пути. Роль берётся из токена, не из адреса: путь только
  * разводит два независимых OAuth-подключения.
  *
@@ -40,7 +40,7 @@ const ATTACH_ICON_PATH = '/mcp/attach/icon.png';
 const DEFAULT_API_URL = 'https://api.heyslab.ru';
 
 /**
- * Адреса MCP-транспорта. Каждый — самостоятельный OAuth resource: claude.ai
+ * Адреса MCP-транспорта. Каждый — самостоятельный OAuth resource: MCP-клиент
  * сверяет `resource` из метаданных с URL коннектора, поэтому метаданные и
  * заголовок 401 обязаны называть именно тот путь, по которому пришёл запрос.
  */
@@ -66,8 +66,8 @@ const SECURITY_HEADERS = {
 };
 
 /**
- * Метаданные и /mcp читает Anthropic из своего облака, поэтому CORS открыт
- * только для безопасных для чтения путей. Секретов эти ответы не содержат.
+ * Метаданные и /mcp читают OpenAI/Anthropic из своего облака, поэтому CORS
+ * открыт только для безопасных для чтения путей. Секретов эти ответы не содержат.
  */
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',

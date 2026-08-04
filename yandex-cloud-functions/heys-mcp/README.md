@@ -1,11 +1,11 @@
 # heys-mcp — remote MCP connector для HEYS
 
-Даёт ассистенту (claude.ai, Cowork, Claude Desktop, Claude Code) возможность
-вести дневник HEYS за пользователя: «выпил кофе в студии» → приём пищи
-появляется в PWA.
+Даёт ассистенту (ChatGPT, claude.ai, Cowork, Claude Desktop, Claude Code)
+возможность вести дневник HEYS за пользователя: «выпил кофе в студии» → приём
+пищи появляется в PWA.
 
-Работает с любого устройства, включая телефон: запрос идёт из облака Anthropic в
-`https://api.heyslab.ru/mcp`, компьютер пользователя не участвует.
+Работает с любого устройства, включая телефон: запрос идёт из облака OpenAI или
+Anthropic в `https://api.heyslab.ru/mcp`, компьютер пользователя не участвует.
 
 **Инструкция для куратора — [CURATOR_GUIDE.md](CURATOR_GUIDE.md):** что можно
 сделать с данными клиентов через чат, какими словами, что требует подтверждения
@@ -388,6 +388,20 @@ claude.ai → Настройки → Коннекторы → «Добавить
 `https://api.heyslab.ru/mcp`. Дальше откроется страница HEYS: телефон и PIN — те
 же, что в приложении. OAuth Client ID / Secret оставить пустыми: сервер
 поддерживает динамическую регистрацию.
+
+**ChatGPT — исправлено в рабочем дереве 2026-08-04, deploy ожидается.** OAuth
+discovery в production исправен, но текущая live-версия ещё отклоняет callback
+`https://chatgpt.com/connector/oauth/{callback_id}` с HTTP 400
+`invalid_redirect_uri`. В default allowlist добавлен только точный host
+`chatgpt.com`, без wildcard; профильный OAuth-набор 22/22 проверяет текущий и
+legacy callback и блокирует `chatgpt.com.evil.tld`. Следующий gate — deploy
+`heys-mcp`, затем повторный OAuth/tool scan из ChatGPT. Активная задача и
+evidence — D6 в [`todo.md`](../../todo.md).
+
+Попытка deploy 2026-08-04 прошла обязательный pre-deploy gate (806/806), но
+штатный guard остановил процесс до первой cloud-мутации: source не закоммичен.
+Следующий шаг — отдельно разрешённый commit-only без push, затем повторный
+deploy; аварийный `--force-dirty` не используется.
 
 ## Тесты
 

@@ -1,11 +1,11 @@
 'use strict';
 
 /**
- * Минимальный OAuth 2.1 authorization server для custom connector claude.ai.
+ * Минимальный OAuth 2.1 authorization server для MCP-клиентов ChatGPT/Claude.
  *
- * Почему именно OAuth, а не заголовок с токеном: в claude.ai у кастомного
- * коннектора нет поля «Authorization», подключение идёт только через OAuth с
- * Dynamic Client Registration. Поэтому сервер обязан сам уметь DCR + PKCE.
+ * Почему именно OAuth, а не заголовок с токеном: кастомные коннекторы
+ * подключаются через OAuth с Dynamic Client Registration. Поэтому сервер
+ * обязан сам уметь DCR + PKCE.
  *
  * Состояние не хранится: client_id, authorization code, access и refresh
  * токены — это подписанные HS256-структуры.
@@ -53,7 +53,15 @@ const CLIENT_TTL_SECONDS = 60 * 60 * 24 * 365;
  * оставлено на случай нового клиента — список через запятую, `*.example.com`
  * разрешает поддомены.
  */
-const DEFAULT_ALLOWED_REDIRECT_HOSTS = ['claude.ai', '*.claude.ai', 'claude.com', '*.claude.com', 'anthropic.com', '*.anthropic.com'];
+const DEFAULT_ALLOWED_REDIRECT_HOSTS = [
+  'chatgpt.com',
+  'claude.ai',
+  '*.claude.ai',
+  'claude.com',
+  '*.claude.com',
+  'anthropic.com',
+  '*.anthropic.com',
+];
 
 function allowedRedirectHosts() {
   const raw = process.env.MCP_ALLOWED_REDIRECT_HOSTS;
@@ -428,9 +436,9 @@ function renderLoginPage(request, { error = '', phone = '', email = '', curatorM
       <p class="foot">Кураторский вход открывает не только дневники. Ассистент сможет: читать и вести дневники всех ваших клиентов; читать переписку и отвечать клиентам; заводить клиентов и выдавать им доступ, включая смену PIN; продлевать и отменять подписки; работать с заявками и лидами. Он всегда называет, кому вносит данные.</p>
     </details>
     <!-- 🔐 SEC-031: прежний текст обещал отзыв через отключение коннектора в
-         Claude. Для куратора это неправда: кураторские JWT stateless, отзыва на
-         сервере нет. Пишем как есть. -->
-    <p class="foot">Клиент может прекратить доступ в любой момент — выйдя из аккаунта в приложении. У куратора мгновенного отзыва нет: отключение коннектора в Claude убирает его только на вашей стороне, а выданный доступ действует до суток. Если доступ мог утечь — смените пароль и сообщите администратору.</p>
+         MCP-клиенте. Для куратора это неправда: кураторские JWT stateless,
+         отзыва на сервере нет. Пишем как есть. -->
+    <p class="foot">Клиент может прекратить доступ в любой момент — выйдя из аккаунта в приложении. У куратора мгновенного отзыва нет: отключение коннектора в ChatGPT или Claude прекращает доступ только со стороны этого сервиса, а выданный доступ действует до суток. Если доступ мог утечь — смените пароль и сообщите администратору.</p>
   </div>
 </body>
 </html>`;
