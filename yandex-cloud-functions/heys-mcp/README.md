@@ -397,10 +397,12 @@ claude.ai → Настройки → Коннекторы → «Добавить
 ChatGPT callback вернул HTTP 201, pre-deploy gate 806/806 и post-deploy
 health-check прошли. Интерактивная проверка выявила второй gate: строгий клиент
 ChatGPT требует полный RFC 7591 response, а ручной client ID запускается без
-PKCE и поэтому намеренно блокируется. Локальная правка возвращает поддержанные
+PKCE и поэтому намеренно блокируется. Исправление возвращает поддержанные
 метаданные регистрации и `Pragma: no-cache`, не меняя Claude-default и
-обязательный PKCE; OAuth-набор 24/24, deploy ожидается. Evidence — D6 в
-[`todo.md`](../../todo.md).
+обязательный PKCE; OAuth-набор 24/24. Версия `d4erafqk4lt4hb0tqbik` из commit
+`77ce4237d` активна: live DCR ChatGPT и контрольный DCR Claude вернули HTTP 201,
+metadata сохранила PKCE `S256`, authorize ChatGPT-клиента открыл страницу входа
+HEYS (HTTP 200). Evidence — D6 в [`todo.md`](../../todo.md).
 
 Первая попытка deploy 2026-08-04 прошла обязательный pre-deploy gate (806/806),
 но штатный guard остановил процесс до первой cloud-мутации: source не
