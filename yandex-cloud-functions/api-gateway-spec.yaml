@@ -909,6 +909,12 @@ paths:
   # MCP — remote MCP connector (heys-mcp)
   # ═══════════════════════════════════════════════════════════════
   /mcp:
+    get:
+      summary: MCP OAuth discovery challenge
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
     post:
       summary: MCP Streamable HTTP endpoint
       x-yc-apigateway-integration:
@@ -923,6 +929,12 @@ paths:
         function_id: d4egv2a6pdhmf5hbrgp8
 
   /mcp/curator:
+    get:
+      summary: MCP OAuth discovery challenge for the curator connector
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
     post:
       summary: MCP Streamable HTTP endpoint for the curator connector
       x-yc-apigateway-integration:

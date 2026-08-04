@@ -139,17 +139,21 @@ function issuerFrom(headers) {
   return `https://${String(host).split(',')[0].trim()}`;
 }
 
+function mcpUnauthorized(headers, resourcePath) {
+  const issuer = issuerFrom(headers);
+  return json(401, { error: 'invalid_token', error_description: 'Требуется авторизация HEYS.' }, {
+    'WWW-Authenticate': `Bearer realm="heys-mcp", resource_metadata="${issuer}${PROTECTED_RESOURCE_PREFIX}${resourcePath}"`,
+  });
+}
+
 async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath = DEFAULT_MCP_ENDPOINT }) {
   const auth = oauth.authenticateAccessToken(headers.authorization, secret);
   if (!auth.ok) {
-    const issuer = issuerFrom(headers);
     // RFC 9728: 401 обязан показать, где искать метаданные ресурса —
     // по ним claude.ai сам находит authorization server и запускает OAuth.
     // Путь ресурса совпадает с адресом запроса, иначе второй коннектор уедет
     // за метаданными первого.
-    return json(401, { error: 'invalid_token', error_description: 'Требуется авторизация HEYS.' }, {
-      'WWW-Authenticate': `Bearer realm="heys-mcp", resource_metadata="${issuer}${PROTECTED_RESOURCE_PREFIX}${resourcePath}"`,
-    });
+    return mcpUnauthorized(headers, resourcePath);
   }
 
   let payload;
@@ -489,8 +493,15 @@ exports.handler = async (event) => {
       return await handleMcpRequest(event, { headers, secret, apiUrl, resourcePath: path });
     }
 
-    // Поток «сервер → клиент» не поддерживается: транспорт stateless.
-    if (MCP_ENDPOINTS.has(path) && (method === 'GET' || method === 'DELETE')) {
+    // GET без токена также рекламирует OAuth metadata: некоторые MCP-хосты
+    // проверяют endpoint до первого JSON-RPC POST. С валидным токеном поток
+    // «сервер → клиент» по-прежнему не поддерживается: транспорт stateless.
+    if (MCP_ENDPOINTS.has(path) && method === 'GET') {
+      const auth = oauth.authenticateAccessToken(headers.authorization, secret);
+      if (!auth.ok) return mcpUnauthorized(headers, path);
+      return json(405, { error: 'method_not_allowed' }, { Allow: 'POST' });
+    }
+    if (MCP_ENDPOINTS.has(path) && method === 'DELETE') {
       return json(405, { error: 'method_not_allowed' }, { Allow: 'POST' });
     }
 

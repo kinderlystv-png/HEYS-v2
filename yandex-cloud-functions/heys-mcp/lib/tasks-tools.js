@@ -137,6 +137,18 @@ const TASKS_WRITE_SCHEMAS = [
     },
   },
   {
+    name: 'tasks_checkpoint',
+    description: 'Закрыть содержательный обмен перед финальным ответом: обязательно дописать стенограмму обеими репликами целиком, а если из разговора следует решение, отвергнутая версия, открытый вопрос или новый следующий шаг — тем же вызовом дописать краткий вывод в журнал. Это последний пишущий вызов хода. Факты о жизни сюда не смешиваются: сначала запиши каждый из них через tasks_learn с kind «факт», затем вызови checkpoint. Без journal_block допустим только обмен, из которого ничего устойчивого не следует.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        transcript_block: { type: 'string', description: 'Полный обмен в формате «## ЧЧ:ММ», затем «**Кин:**» дословно и «**Claude:**» полностью по содержанию. Технические логи можно свернуть одной строкой.' },
+        journal_block: { type: 'string', description: 'Только устойчивый вывод разговора в формате журнала «## ГГГГ-ММ-ДД ЧЧ:ММ · тема», поля «Вводная:», «Разбор:», «Итог:». Не передавай, если вывода действительно нет.' },
+      },
+      required: ['transcript_block'],
+    },
+  },
+  {
     name: 'tasks_patch',
     description: 'Заменить блок файла между якорями — для переработок вроде «перегруппируй раздел». Требует ревизию файла из tasks_read: если файл с тех пор изменился, правка отклоняется, а не затирает чужое.',
     inputSchema: {
@@ -1513,6 +1525,56 @@ function createTasksTools({
       return {
         text: `Дописал в ${saved.path} (${block.split('\n').length} строк).`,
         structured: { path: saved.path, rev: saved.rev, lines: block.split('\n').length },
+      };
+    },
+
+    async tasks_checkpoint(args = {}) {
+      const transcriptBlock = String(args.transcript_block || '').trim();
+      if (!transcriptBlock) throw new ToolError('invalid_transcript', 'Нужен полный блок стенограммы текущего обмена.');
+      const day = today();
+      const transcriptPath = tasks.transcriptPath(day);
+      const headingError = tasks.transcriptHeadingError(transcriptPath, transcriptBlock);
+      if (headingError) throw new ToolError('invalid_transcript_heading', headingError);
+      if (!/^\*\*Кин:\*\*/m.test(transcriptBlock) || !/^\*\*Claude:\*\*/m.test(transcriptBlock)) {
+        throw new ToolError(
+          'incomplete_transcript_exchange',
+          'Checkpoint не принят: в стенограмме нужны обе стороны — «**Кин:**» и «**Claude:**». Без одной из них это не полный обмен.',
+        );
+      }
+
+      const journalBlock = String(args.journal_block || '').trim();
+      const journalPath = `journal/${day.slice(0, 7)}.md`;
+      if (journalBlock) {
+        const expected = new RegExp(`^##\\s+${day.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}\\s+\\d{1,2}:\\d{2}\\s+·\\s+.+$`, 'm');
+        if (!expected.test(journalBlock)) {
+          throw new ToolError(
+            'invalid_journal_heading',
+            `Запись журнала должна начинаться «## ${day} ЧЧ:ММ · тема». Стенограмму ещё не писал: исправь блок и повтори checkpoint целиком.`,
+          );
+        }
+      }
+
+      // Оба блока валидируем до первой записи: ошибка формата не должна
+      // оставить половину checkpoint. Сетевой сбой между двумя файлами всё
+      // ещё возможен, поэтому в ответе возвращаются отдельные ревизии.
+      const transcript = await readFile(transcriptPath);
+      const putTranscript = (text) => tasks.appendBlock(text, transcriptBlock);
+      const savedTranscript = await writeFile(transcript, putTranscript(transcript.text), { rebase: putTranscript });
+
+      let savedJournal = null;
+      if (journalBlock) {
+        const journal = await readFile(journalPath);
+        const putJournal = (text) => tasks.appendBlock(text, journalBlock);
+        savedJournal = await writeFile(journal, putJournal(journal.text), { rebase: putJournal });
+      }
+
+      return {
+        text: `Обмен сохранён: стенограмма ${transcriptPath}${savedJournal ? `, вывод — ${journalPath}` : '; устойчивого вывода для журнала нет'}.`,
+        structured: {
+          checkpoint: true,
+          transcript: { path: savedTranscript.path, rev: savedTranscript.rev },
+          journal: savedJournal ? { path: savedJournal.path, rev: savedJournal.rev } : null,
+        },
       };
     },
 

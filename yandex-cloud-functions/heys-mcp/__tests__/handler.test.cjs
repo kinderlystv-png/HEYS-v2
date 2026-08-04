@@ -46,20 +46,20 @@ test('MCP без токена отвечает 401 с указателем на 
   assert.match(res.headers['WWW-Authenticate'], /resource_metadata="https:\/\/api\.heyslab\.ru\/\.well-known\/oauth-protected-resource\/mcp"/);
 });
 
-test('GET /mcp не поддерживается: транспорт без серверного потока', async () => {
+test('GET /mcp без токена рекламирует OAuth metadata', async () => {
   const res = await call({ httpMethod: 'GET', path: '/mcp' });
-  assert.equal(res.statusCode, 405);
-  assert.equal(res.headers.Allow, 'POST');
+  assert.equal(res.statusCode, 401);
+  assert.match(res.headers['WWW-Authenticate'], /resource_metadata="https:\/\/api\.heyslab\.ru\/\.well-known\/oauth-protected-resource\/mcp"/);
 });
 
-test('/mcp/curator — тот же транспорт: POST требует токен, GET не поддержан', async () => {
+test('/mcp/curator — POST и GET без токена указывают на свои OAuth metadata', async () => {
   const post = await call({ httpMethod: 'POST', path: '/mcp/curator', body: '{}' });
   assert.equal(post.statusCode, 401);
   assert.equal(body(post).error, 'invalid_token');
 
   const get = await call({ httpMethod: 'GET', path: '/mcp/curator' });
-  assert.equal(get.statusCode, 405);
-  assert.equal(get.headers.Allow, 'POST');
+  assert.equal(get.statusCode, 401);
+  assert.match(get.headers['WWW-Authenticate'], /resource_metadata="https:\/\/api\.heyslab\.ru\/\.well-known\/oauth-protected-resource\/mcp\/curator"/);
 });
 
 test('каждый адрес транспорта ведёт за метаданными к себе, а не к соседу', async () => {

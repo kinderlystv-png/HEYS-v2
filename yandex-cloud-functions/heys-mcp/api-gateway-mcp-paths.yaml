@@ -12,6 +12,12 @@
 # находит authorization server и запускает OAuth-подключение коннектора.
 
 /mcp:
+  get:
+    summary: MCP OAuth discovery challenge
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
   post:
     summary: MCP Streamable HTTP endpoint
     x-yc-apigateway-integration:
@@ -29,6 +35,12 @@
 # поэтому клиентский и кураторский доступ разведены по путям. Роль берётся из
 # токена, путь только разделяет два независимых OAuth-подключения.
 /mcp/curator:
+  get:
+    summary: MCP OAuth discovery challenge for the curator connector
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
   post:
     summary: MCP Streamable HTTP endpoint for the curator connector
     x-yc-apigateway-integration:

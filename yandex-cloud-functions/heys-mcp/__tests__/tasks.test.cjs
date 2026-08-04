@@ -4642,6 +4642,53 @@ test('приписка не читает саму стенограмму', async
   assert.ok(!reads.includes(tasks.keyForPath(TRANSCRIPT_TODAY)), 'хватило индекса, файл не поднимался');
 });
 
+// ── Checkpoint обмена ───────────────────────────────────────────────────
+
+test('checkpoint одним вызовом сохраняет полный обмен и вывод в журнал', async () => {
+  const api = liveTasksApi();
+  const res = await session(api).tasks_checkpoint({
+    transcript_block: '## 12:40\n\n**Кин:** Проверь всё.\n**Claude:** Проверил три слоя и нашёл разрыв в обязательной записи.',
+    journal_block: '## 2026-08-02 12:40 · heys\n\nВводная: нужна полная запись.\nРазбор: отдельного checkpoint не было.\nИтог: добавлен единый checkpoint обмена.',
+  });
+  assert.equal(res.structured.checkpoint, true);
+  assert.match(api.kv[tasks.keyForPath(TRANSCRIPT_TODAY)].text, /\*\*Кин:\*\* Проверь всё\./);
+  assert.match(api.kv[tasks.keyForPath('journal/2026-08.md')].text, /Итог: добавлен единый checkpoint обмена\./);
+  assert.ok(res.structured.transcript.rev > 0);
+  assert.ok(res.structured.journal.rev > 0);
+});
+
+test('checkpoint без устойчивого вывода пишет только стенограмму', async () => {
+  const api = liveTasksApi();
+  const journalBefore = api.kv[tasks.keyForPath('journal/2026-08.md')].text;
+  const res = await session(api).tasks_checkpoint({
+    transcript_block: '## 12:41\n\n**Кин:** Спасибо.\n**Claude:** Пожалуйста.',
+  });
+  assert.match(api.kv[tasks.keyForPath(TRANSCRIPT_TODAY)].text, /\*\*Claude:\*\* Пожалуйста\./);
+  assert.equal(res.structured.journal, null);
+  assert.equal(api.kv[tasks.keyForPath('journal/2026-08.md')].text, journalBefore);
+});
+
+test('checkpoint не принимает половину обмена', async () => {
+  const api = liveTasksApi();
+  await assert.rejects(
+    () => session(api).tasks_checkpoint({ transcript_block: '## 12:42\n\n**Кин:** Только моя сторона.' }),
+    (e) => e.code === 'incomplete_transcript_exchange',
+  );
+  assert.equal(api.kv[tasks.keyForPath(TRANSCRIPT_TODAY)], undefined);
+});
+
+test('ошибка журнала возникает до записи стенограммы', async () => {
+  const api = liveTasksApi();
+  await assert.rejects(
+    () => session(api).tasks_checkpoint({
+      transcript_block: '## 12:43\n\n**Кин:** Проверка.\n**Claude:** Ответ.',
+      journal_block: '## неверная дата\n\nИтог: не должно записаться.',
+    }),
+    (e) => e.code === 'invalid_journal_heading',
+  );
+  assert.equal(api.kv[tasks.keyForPath(TRANSCRIPT_TODAY)], undefined);
+});
+
 // ── Свежесть и вес источника в поиске ────────────────────────────────────
 //
 // Слова отвечают на «про то ли это», но не на «что читать первым». Проверяется
