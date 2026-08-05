@@ -3382,9 +3382,40 @@ test('потолок держится и на том, что он принёс �
     assert.equal(res.structured.created, true, `«${topic}» должна была лечь в повестку`);
   }
   const res = await session(api).tasks_standup({});
-  assert.equal(res.structured.totals.brought, topics.length);
-  assert.equal(res.structured.brought.length, tasks.STANDUP_GROUP_CAP);
-  assert.equal(res.structured.hidden.brought, topics.length - tasks.STANDUP_GROUP_CAP);
+  assert.equal(res.structured.totals.brought_general, topics.length);
+  assert.equal(res.structured.brought_general.length, tasks.STANDUP_GROUP_CAP);
+  assert.equal(res.structured.hidden.brought_general, topics.length - tasks.STANDUP_GROUP_CAP);
+});
+
+test('принесённое делится на разработку и общее — по его решению 05.08 два отдельных блока', async () => {
+  const api = standupApi();
+  const dev = await session(api).tasks_standup({
+    add: 'Стенограмма теряет обычные диалоговые обмены', category: 'разработка',
+  });
+  assert.equal(dev.structured.category, 'разработка');
+  const general = await session(api).tasks_standup({ add: 'Купить свисток на студию' });
+  assert.equal(general.structured.category, 'общее', 'без category ложится в общее по умолчанию');
+
+  // «разработка» пишется в файл маркером, «общее» — молча, без засорения строки.
+  const saved = api.file(tasks.STANDUP_PATH);
+  assert.match(saved, /^- \[ \] 2026-08-02 · \[разработка\] Стенограмма теряет/m);
+  assert.match(saved, /^- \[ \] 2026-08-02 · Купить свисток на студию$/m);
+
+  const agenda = await session(api).tasks_standup({});
+  assert.equal(agenda.structured.brought_dev.length, 1);
+  assert.equal(agenda.structured.brought_dev[0].topic, 'Стенограмма теряет обычные диалоговые обмены');
+  assert.equal(agenda.structured.brought_general.length, 1);
+  assert.equal(agenda.structured.brought_general[0].topic, 'Купить свисток на студию');
+  assert.match(agenda.text, /Принесли на планёрку — разработка/);
+  assert.match(agenda.text, /Принесли на планёрку — общее/);
+});
+
+test('старый пункт повестки без маркера категории читается как общее', () => {
+  const file = { path: tasks.STANDUP_PATH, text: '## На планёрку\n\n- [ ] 2026-08-01 · Довоенный пункт без категории\n' };
+  const items = tasks.parseStandupItems(file);
+  assert.equal(items.length, 1);
+  assert.equal(items[0].category, 'общее');
+  assert.equal(items[0].topic, 'Довоенный пункт без категории');
 });
 
 test('посчитанные расхождения потолком не режутся — они доказуемы', async () => {
@@ -3420,8 +3451,8 @@ test('вопрос кладётся на планёрку заранее и ут
 
   const agenda = await session(api).tasks_standup({});
   assert.equal(agenda.structured.empty, false);
-  assert.equal(agenda.structured.brought.length, 1);
-  assert.equal(agenda.structured.brought[0].topic, 'Отпуск 16–19: даты снова открыли');
+  assert.equal(agenda.structured.brought_general.length, 1);
+  assert.equal(agenda.structured.brought_general[0].topic, 'Отпуск 16–19: даты снова открыли');
   assert.match(agenda.text, /Принесли на планёрку/);
 });
 
@@ -3435,7 +3466,7 @@ test('обсуждённый пункт снимается и в повестк�
   assert.match(api.file(tasks.STANDUP_PATH), /^- \[x\] 2026-08-02 · Отпуск/m, 'снятое видно в файле галочкой, а не стёрто');
 
   const agenda = await session(api).tasks_standup({});
-  assert.deepEqual(agenda.structured.brought.map((i) => i.topic), ['Кто ведёт вторую смену']);
+  assert.deepEqual(agenda.structured.brought_general.map((i) => i.topic), ['Кто ведёт вторую смену']);
 });
 
 test('тот же вопрос на планёрку второй раз не кладётся', async () => {
@@ -4236,7 +4267,7 @@ test('замеченное выносится вопросом с обеими �
   // догадку за факт.
   assert.match(agenda.text, /Замечено — нужен твой ответ/);
   assert.match(agenda.text, /days\/2026-08-05\.md/);
-  assert.deepEqual(agenda.structured.brought, [], 'в принесённое им замеченное не попало');
+  assert.deepEqual(agenda.structured.brought_general, [], 'в принесённое им замеченное не попало');
 });
 
 test('наблюдение без обеих сторон не принимается', async () => {
@@ -5039,6 +5070,63 @@ test('пустой список быстрых дел объясняет, что
   assert.equal(res.structured.picked.length, 0);
   assert.equal(res.structured.without_time_tag, res.structured.open_total);
   assert.match(res.text, /без тега времени/, 'иначе пустой ответ читается как «дел нет»');
+});
+
+const ORDERS_PROJECT = `# Kinderly
+
+## Задачи
+
+- [ ] P2 Заказать свисток #заказ ^2026-08-04
+  - площадка: Озон
+  - цена: ~500
+- [ ] P2 Заказать фурнитуру для баскетбола #заказ ^2026-08-04
+- [ ] P2 Собрать реквизит ^2026-08-04
+`;
+
+function ordersApi() {
+  return liveApi({
+    [tasks.keyForPath('projects/kinderly.md')]: { path: 'projects/kinderly.md', text: ORDERS_PROJECT, rev: 1, updatedAt: 1 },
+    [tasks.keyForPath('money/2026-08.md')]: { path: 'money/2026-08.md', text: '# Август\n', rev: 1, updatedAt: 1 },
+  });
+}
+
+test('«Быстро заказать» берёт только открытое с тегом #заказ и показывает площадку с ценой', async () => {
+  const res = await session(ordersApi()).tasks_orders({});
+  assert.equal(res.structured.open.length, 2);
+  const whistle = res.structured.open.find((o) => o.title === 'Заказать свисток');
+  assert.equal(whistle.place, 'Озон');
+  assert.equal(whistle.price, '~500');
+  assert.ok(!res.structured.open.some((o) => o.title === 'Собрать реквизит'), 'без тега #заказ сюда не попадает');
+});
+
+test('закрытие покупки без суммы не проходит — иначе трата пропадёт молча', async () => {
+  await assert.rejects(
+    () => session(ordersApi()).tasks_orders({ done: 'свисток', contour: 'kinderly' }),
+    (e) => e.code === 'invalid_amount',
+  );
+});
+
+test('закрытие покупки без контура не проходит', async () => {
+  await assert.rejects(
+    () => session(ordersApi()).tasks_orders({ done: 'свисток', amount: 300 }),
+    (e) => e.code === 'contour_required',
+  );
+});
+
+test('закрытие покупки ставит галочку в проекте и пишет расход в money одним ходом', async () => {
+  const api = ordersApi();
+  const res = await session(api).tasks_orders({ done: 'свисток', amount: 300, contour: 'kinderly' });
+  assert.equal(res.structured.title, 'Заказать свисток');
+  assert.equal(res.structured.amount, 300);
+
+  const projectText = api.kv[tasks.keyForPath('projects/kinderly.md')].text;
+  assert.match(projectText, /^- \[x\] P2 Заказать свисток #заказ/m, 'задача закрыта в самом проекте');
+
+  const moneyText = api.kv[tasks.keyForPath('money/2026-08.md')].text;
+  assert.match(moneyText, /-300 заказы ~kinderly · Заказать свисток/, 'расход попал в money в формате, который читает доска');
+
+  const list = await session(api).tasks_orders({});
+  assert.equal(list.structured.open.length, 1, 'купленное больше не висит в списке');
 });
 
 test('идея копит мысли и уходит в задачу вместе с ними', async () => {

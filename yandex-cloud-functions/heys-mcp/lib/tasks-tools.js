@@ -450,6 +450,7 @@ const TASKS_AGENT_SCHEMAS = [
       properties: {
         add: { type: 'string', description: 'Положить вопрос на ближайшую планёрку — одной строкой, о чём говорить. Вызывай в том же ходе, когда он сказал «это обсудим на планёрке»: иначе вопрос живёт до конца чата и утром его никто не вспомнит.' },
         note: { type: 'string', description: 'К add: его формулировка или факт, без которого пункт утром не читается. Коротко.' },
+        category: { type: 'string', enum: ['разработка', 'общее'], description: 'К add: категория пункта — реши сам по предмету разговора, не спрашивай его. «разработка» — если предмет это доска, окно планёрки, коннектор, стенограмма, парсер повестки: что-то в них не работает или его стоит улучшить кодом. «общее» — всё остальное: проекты, работа, покупки, люди, деньги, личное, даже если закрывается кодом (пример от него самого: «Быстро заказать» — про покупки, не про доску, значит общее). Не передал — пункт лёг в «общее» по умолчанию.' },
         observe: { type: 'string', description: 'Замеченное по смыслу — ВОПРОСОМ, а не утверждением: «в журнале за 03.08 записано, что неделя сходится, а в днях 5-го дзюдо и 8-е пустое — что верно?». Подтвердить такое может только он, поэтому утверждение здесь было бы враньём. Открытых наблюдений держим не больше трёх: догадка стоит его ответа, а десять догадок — это допрос.' },
         sides: {
           type: 'array',
@@ -500,6 +501,19 @@ const TASKS_AGENT_SCHEMAS = [
       type: 'object',
       properties: {
         minutes: { type: 'integer', description: 'Потолок в минутах: по умолчанию 15. Теги задачника — 15min, 30min, 45min, 1h, 2h.' },
+      },
+    },
+  },
+  {
+    name: 'tasks_orders',
+    description: 'Быстро заказать: открытые задачи с тегом «заказ» плоским списком из всех проектов — на озоне, в стройке, где угодно. Отдельно от tasks_quick намеренно: у покупки есть площадка и цена (необязательные вложенные строки задачи — «площадка: Озон», «цена: ~500»), а забытый заказ стоит не десяти минут, а недели ожидания на доставку. Без аргументов — список открытого. Аргумент done закрывает покупку: галочка в проекте плюс расход в money одним вызовом — amount и contour обязательны, category по умолчанию «заказы». Закрыть покупку без суммы нельзя: это оставило бы ровно ту дыру в деньгах, ради которой блок и заводился.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        done: { type: 'string', description: 'Часть названия покупки, которую закрываем — куплено, привезли, забрали.' },
+        amount: { type: 'number', description: 'К done: сумма покупки в рублях, положительное число. Обязателен.' },
+        contour: { type: 'string', description: 'К done: контур траты, как в остальных деньгах (kinderly, heys, семья…). Обязателен — без него строка не попадёт в разбивку на доске.' },
+        category: { type: 'string', description: 'К done: категория как в Zenmoney. По умолчанию «заказы».' },
       },
     },
   },
@@ -2986,12 +3000,21 @@ function createTasksTools({
             structured: { created: false, reason: 'duplicate', same_as: same, path: tasks.STANDUP_PATH },
           };
         }
-        const line = tasks.standupLine({ date: today_, topic, note: args.note ? String(args.note).trim() : null });
+        const category = args.category && tasks.STANDUP_CATEGORIES.includes(args.category) ? args.category : 'общее';
+        // Маркер пишем в файл только для «разработки»: «общее» — молчаливый
+        // умолчательный случай (так читались все пункты до 05.08), и не стоит
+        // захламлять строку меткой, которая ничего не меняет для читателя.
+        const line = tasks.standupLine({
+          date: today_, topic, note: args.note ? String(args.note).trim() : null,
+          category: category === 'разработка' ? 'разработка' : null,
+        });
         const put = (text) => tasks.appendToSection(text, line, tasks.STANDUP_SECTION);
         const saved = await writeFile(file, put(file.text), { rebase: put });
         return {
-          text: `На планёрку: ${topic}. Сейчас в повестке ${open.length + 1}.`,
-          structured: { created: true, path: saved.path, rev: saved.rev, topic, note: args.note || null, open: open.length + 1 },
+          text: `На планёрку (${category}): ${topic}. Сейчас в повестке ${open.length + 1}.`,
+          structured: {
+            created: true, path: saved.path, rev: saved.rev, topic, note: args.note || null, category, open: open.length + 1,
+          },
         };
       }
 
@@ -3281,9 +3304,16 @@ function createTasksTools({
 
       const cap = tasks.STANDUP_GROUP_CAP;
       const brought = items.filter((i) => !i.done);
+      // Два блока вместо одного списка — его решение 05.08: садишься либо за
+      // разработку доски и планёрки целиком, либо за остальную повестку,
+      // не перескакивая. Категория пишется в строку самим add по предмету
+      // разговора; старые пункты без маркера читаются как «общее».
+      const broughtDev = brought.filter((i) => i.category === 'разработка');
+      const broughtGeneral = brought.filter((i) => i.category !== 'разработка');
       const noticed = observations.filter((o) => !o.done);
       const groups = {
-        brought: { all: brought, shown: brought.slice(0, cap) },
+        brought_dev: { all: broughtDev, shown: broughtDev.slice(0, cap) },
+        brought_general: { all: broughtGeneral, shown: broughtGeneral.slice(0, cap) },
         decide: { all: decide, shown: decide.slice(0, cap) },
         // Расхождения потолком не режутся: каждое посчитано по файлам и
         // проверяется за секунду. Прятать доказанное «ради длины» значит
@@ -3317,7 +3347,9 @@ function createTasksTools({
         // Ревизия стоит перед всем остальным намеренно: заводить найденное в
         // стенограмме надо ДО повестки, иначе повестка соберётся без него.
         tasks.dayReviewBlock(review),
-        block('Принесли на планёрку', 'brought', (i) => `${i.topic}${i.note ? ` — ${i.note}` : ''} (с ${i.date})`),
+        block('Принесли на планёрку — разработка (доска, окно планёрки, коннектор, стенограмма)', 'brought_dev',
+          (i) => `${i.topic}${i.note ? ` — ${i.note}` : ''} (с ${i.date})`),
+        block('Принесли на планёрку — общее', 'brought_general', (i) => `${i.topic}${i.note ? ` — ${i.note}` : ''} (с ${i.date})`),
         block('Требует решения', 'decide', (t) => `${t.ref} · ${t.title}${
           t.children.filter((c) => /^открыто:/i.test(c)).map((c) => ` — ${c.replace(/^открыто:\s*/i, '')}`)[0] || ''}`),
         simple.picked.length
@@ -3348,7 +3380,7 @@ function createTasksTools({
         ? ` Простых вопросов ${simple.picked.length} из ${simple.pool}${simple.sleeping.length ? `, в спячке ${simple.sleeping.length}` : ''}.`
         : '';
       const head = total
-        ? `Планёрка ${today_}. Принесли ${groups.brought.all.length}, требует решения ${groups.decide.all.length}, расхождений ${groups.divergences.all.length}, замечено ${groups.noticed.all.length}, план и факт ${groups.plan_fact.all.length}, зависло ${groups.stuck.all.length}, память на пересмотр ${groups.stale_memory.all.length}.${simpleTail}`
+        ? `Планёрка ${today_}. Принесли ${groups.brought_dev.all.length + groups.brought_general.all.length} (разработка ${groups.brought_dev.all.length}, общее ${groups.brought_general.all.length}), требует решения ${groups.decide.all.length}, расхождений ${groups.divergences.all.length}, замечено ${groups.noticed.all.length}, план и факт ${groups.plan_fact.all.length}, зависло ${groups.stuck.all.length}, память на пересмотр ${groups.stale_memory.all.length}.${simpleTail}`
         // Пустая повестка при несведённых деньгах или неразобранных простых
         // вопросах — не пустое утро: иначе шапка говорит «обсуждать нечего», а
         // строкой ниже стоят пять вопросов.
@@ -3371,7 +3403,8 @@ function createTasksTools({
           simple_questions_sleeping: simple.sleeping.map((q) => ({
             key: q.key, ref: q.ref, question: q.question, until: q.until,
           })),
-          brought: groups.brought.shown,
+          brought_dev: groups.brought_dev.shown,
+          brought_general: groups.brought_general.shown,
           decide: groups.decide.shown,
           divergences: groups.divergences.shown,
           noticed: groups.noticed.shown,
@@ -3621,6 +3654,101 @@ function createTasksTools({
           without_time_tag: untagged,
           open_total: open.length,
         },
+      };
+    },
+
+    /**
+     * Быстро заказать. Решено 03.08, реализовано 05.08: покупки — не то же
+     * самое, что «быстрые дела» (tasks_quick). У покупки есть площадка и
+     * цена, а забытый заказ стоит не десяти минут, а недели ожидания. Своей
+     * сущности всё равно нет — это те же задачи проектов с тегом «заказ»,
+     * закрываются они здесь же, потому что закрытие покупки без записи её
+     * стоимости оставляет ту самую дыру в деньгах, ради которой блок и
+     * заводился.
+     */
+    async tasks_orders(args = {}) {
+      const index = await loadIndex();
+      const files = await readAll({ paths: projectPaths(index) });
+      const pool = files.flatMap((file) => {
+        const project = tasks.projectKeyForPath(file.path);
+        return tasks.parseTasks(file).map((task) => ({
+          ...task,
+          project,
+          ref: `${project}/${tasks.taskHash(project, task.title)}`,
+        }));
+      });
+      const open = pool.filter((task) => !task.done && !task.waiting && task.tags.includes('заказ'));
+
+      // Закрыть покупку: галочка в проекте плюс расход в money — одним
+      // вызовом, чтобы решение «закрыл заказ — записал трату» выполнялось
+      // само, а не держалось на памяти о втором шаге.
+      if (args.done) {
+        const needle = String(args.done).trim().toLowerCase();
+        if (!needle) throw new ToolError('invalid_done', 'Нужна часть названия покупки, которую закрываем.');
+        const matched = open.filter((t) => t.title.toLowerCase().includes(needle));
+        if (!matched.length) {
+          throw new ToolError('order_not_found', `Среди «Быстро заказать» нет ничего со словами «${args.done}». Список — tasks_orders без аргументов.`);
+        }
+        if (matched.length > 1) {
+          throw new ToolError(
+            'ambiguous_order',
+            `Под «${args.done}» подошло ${matched.length}: ${matched.map((t) => `${t.ref} · ${t.title}`).join(', ')}. Назови точнее.`,
+          );
+        }
+        const amount = Number(args.amount);
+        if (!Number.isFinite(amount) || amount <= 0) {
+          throw new ToolError('invalid_amount', 'Нужна сумма покупки — положительное число. Без неё это была бы закрытая задача и молчаливая дыра в деньгах, ровно то, из-за чего блок заводился.');
+        }
+        const contour = String(args.contour || '').trim();
+        if (!contour) throw new ToolError('contour_required', 'Нужен контур траты — без него она не попадёт в разбивку на доске.');
+        const category = String(args.category || 'заказы').trim();
+
+        const hit = matched[0];
+        const projFile = await readFile(`projects/${hit.project}.md`);
+        const found = tasks.findTaskByHash(projFile, tasks.taskHash(hit.project, hit.title));
+        if (!found) throw new ToolError('task_not_found', `Задача «${hit.title}» пропала из ${projFile.path} между чтением и записью — перечитай tasks_orders.`);
+        const lines = projFile.text.split('\n');
+        const patched = tasks.applyTaskPatch(lines[found.line], { state: 'done' });
+        const nextTaskText = [...lines.slice(0, found.line), patched, ...lines.slice(found.line + 1)].join('\n');
+        const savedTask = await writeFile(projFile, nextTaskText);
+
+        const date = today();
+        const month = date.slice(0, 7);
+        const moneyFile = await readFile(`money/${month}.md`);
+        const moneyLineText = tasks.moneyLine({
+          date, amount: -Math.abs(amount), income: false, category, contour, comment: hit.title,
+        });
+        const putMoney = (text) => tasks.prependToSection(text, moneyLineText, '## Операции');
+        const savedMoney = await writeFile(moneyFile, putMoney(moneyFile.text), { rebase: putMoney });
+
+        return {
+          text: `Куплено: ${hit.title} — ${amount} ₽ (${contour}/${category}). Задача закрыта, расход записан.`,
+          structured: {
+            ref: hit.ref, title: hit.title, amount, contour, category,
+            task_path: savedTask.path, task_rev: savedTask.rev,
+            money_path: savedMoney.path, money_rev: savedMoney.rev,
+          },
+        };
+      }
+
+      // Площадка и цена — необязательные вложенные строки задачи вида
+      // «площадка: Озон» / «цена: ~500». Не назвал — просто не показываем,
+      // придумывать за него нельзя.
+      const readField = (task, label) => {
+        const line = (task.children || []).find((c) => new RegExp(`^${label}:`, 'i').test(c.trim()));
+        return line ? line.trim().replace(new RegExp(`^${label}:\\s*`, 'i'), '') : null;
+      };
+      const rows = open.map((t) => ({
+        ref: t.ref, project: t.project, title: t.title,
+        place: readField(t, 'площадка'), price: readField(t, 'цена'),
+        due: t.due, overdue: t.overdue,
+      }));
+
+      return {
+        text: rows.length
+          ? `Быстро заказать (${rows.length}): ${rows.map((r) => `${r.ref} · ${r.title}${r.place ? ` — ${r.place}` : ''}${r.price ? ` (${r.price})` : ''}`).join('; ')}`
+          : 'Заказывать нечего — под тегом #заказ ничего не открыто.',
+        structured: { open: rows },
       };
     },
 

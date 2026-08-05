@@ -4100,8 +4100,21 @@ const STANDUP_OBSERVE_CAP = 3;
 /** С какого возраста обещание «ждём:» считается зависшим. */
 const STANDUP_STALE_DAYS = 10;
 
-function standupLine({ date, topic, note = null }) {
-  return `- [ ] ${date} · ${topic}${note ? ` — ${note}` : ''}`;
+/**
+ * Категория пункта повестки. Он решил 05.08: показывать планёрку двумя
+ * отдельными блоками, а не общим списком — «Разработка» (доска, окно
+ * планёрки, коннектор, стенограмма — то, что чинится или улучшается кодом) и
+ * «Общее» (всё остальное). Признак — предмет разговора, а не то, чем пункт
+ * закрывается: «Быстро заказать» про покупки, а не про доску, поэтому он
+ * общий, хотя реализуется кодом. Категорию определяет модель, не текстовый
+ * поиск по ключевым словам — угадать «разработку» по словам ненадёжнее, чем
+ * дать это судить тому, кто читал разговор целиком.
+ */
+const STANDUP_CATEGORIES = ['разработка', 'общее'];
+
+function standupLine({ date, topic, note = null, category = null }) {
+  const cat = category && STANDUP_CATEGORIES.includes(category) ? `[${category}] ` : '';
+  return `- [ ] ${date} · ${cat}${topic}${note ? ` — ${note}` : ''}`;
 }
 
 /**
@@ -4133,12 +4146,19 @@ function parseStandupItems(file, { section = STANDUP_SECTION } = {}) {
   for (let i = range.start; i < range.end; i += 1) {
     const match = STANDUP_HEAD_RE.exec(lines[i].trim());
     if (!match) continue;
-    const body = match[3].trim();
+    let body = match[3].trim();
+    // Категория — необязательный маркер `[разработка]`/`[общее]` перед темой.
+    // Пункты без маркера (заведённые до 05.08) читаются как «общее»: старая
+    // формулировка молчала про доску и планёрку, значит по умолчанию не про них.
+    let category = null;
+    const catMatch = /^\[(разработка|общее)\]\s*(.*)$/.exec(body);
+    if (catMatch) { category = catMatch[1]; body = catMatch[2]; }
     const split = body.lastIndexOf(' — ');
     out.push({
       line: i,
       done: match[1].toLowerCase() === 'x',
       date: match[2],
+      category: category || 'общее',
       topic: (split === -1 ? body : body.slice(0, split)).trim(),
       note: split === -1 ? null : body.slice(split + 3).trim(),
     });
@@ -4689,6 +4709,7 @@ module.exports = {
   STANDUP_GROUP_CAP,
   STANDUP_OBSERVE_CAP,
   STANDUP_STALE_DAYS,
+  STANDUP_CATEGORIES,
   standupLine,
   markLineDone,
   parseStandupItems,
