@@ -47,6 +47,8 @@ const DEFAULT_API_URL = 'https://api.heyslab.ru';
  */
 const MCP_ENDPOINTS = new Set(['/mcp', '/mcp/curator', '/mcp/chatgpt/curator']);
 const DEFAULT_MCP_ENDPOINT = '/mcp';
+const CHATGPT_CURATOR_ENDPOINT = '/mcp/chatgpt/curator';
+const CURATOR_OAUTH_SCHEME = [{ type: 'oauth2', scopes: ['heys:diary'] }];
 
 const PROTECTED_RESOURCE_PREFIX = '/.well-known/oauth-protected-resource';
 
@@ -147,9 +149,24 @@ function mcpUnauthorized(headers, resourcePath) {
   });
 }
 
+function curatorContext(api, auth = {}) {
+  return createCuratorContext({
+    api,
+    curatorJwt: auth.sessionToken || 'oauth-discovery',
+    curatorId: auth.clientId || null,
+    curatorName: auth.subjectName || '',
+    tasksClientId: process.env.HEYS_TASKS_CLIENT_ID || null,
+  });
+}
+
+function chatGptToolSchemas(schemas) {
+  return schemas.map((schema) => ({ ...schema, securitySchemes: CURATOR_OAUTH_SCHEME }));
+}
+
 async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath = DEFAULT_MCP_ENDPOINT }) {
   const auth = oauth.authenticateAccessToken(headers.authorization, secret);
-  if (!auth.ok) {
+  const chatGptDiscovery = !auth.ok && resourcePath === CHATGPT_CURATOR_ENDPOINT;
+  if (!auth.ok && !chatGptDiscovery) {
     // RFC 9728: 401 обязан показать, где искать метаданные ресурса —
     // по ним claude.ai сам находит authorization server и запускает OAuth.
     // Путь ресурса совпадает с адресом запроса, иначе второй коннектор уедет
@@ -168,25 +185,32 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
   }
 
   const api = createApiClient({ apiUrl });
+  if (chatGptDiscovery) {
+    const curatorCtx = curatorContext(api);
+    const issuer = issuerFrom(headers);
+    const response = await mcp.handlePayload(payload, {
+      tools: curatorCtx.tools,
+      toolSchemas: chatGptToolSchemas(curatorCtx.schemas),
+      instructions: curatorCtx.instructions,
+      authRequired: `Bearer resource_metadata="${issuer}${PROTECTED_RESOURCE_PREFIX}${resourcePath}", error="invalid_token", error_description="OAuth authorization required"`,
+    });
+    if (response === null) {
+      return { statusCode: 202, headers: { ...SECURITY_HEADERS, ...CORS_HEADERS }, body: '' };
+    }
+    return json(200, response);
+  }
+
   let tools;
   let toolSchemas = null;
   let instructions = null;
   if (auth.role === 'curator') {
     // Кураторский коннектор: в auth.sessionToken лежит кураторский JWT,
     // инструменты работают с дневниками клиентов куратора.
-    const curatorCtx = createCuratorContext({
-      api,
-      curatorJwt: auth.sessionToken,
-      // sub кураторского токена — это curator_id: он нужен админским RPC,
-      // которые принимают его параметром (подписки), а не берут из JWT.
-      curatorId: auth.clientId,
-      curatorName: auth.subjectName,
-      // Задачник живёт под обычным клиентом HEYS, id задаётся окружением:
-      // это личные файлы куратора, и подставлять их по имени нельзя.
-      tasksClientId: process.env.HEYS_TASKS_CLIENT_ID || null,
-    });
+    const curatorCtx = curatorContext(api, auth);
     tools = curatorCtx.tools;
-    toolSchemas = curatorCtx.schemas;
+    toolSchemas = resourcePath === CHATGPT_CURATOR_ENDPOINT
+      ? chatGptToolSchemas(curatorCtx.schemas)
+      : curatorCtx.schemas;
     instructions = curatorCtx.instructions;
   } else {
     tools = createTools({ api, sessionToken: auth.sessionToken, clientId: auth.clientId }).tools;

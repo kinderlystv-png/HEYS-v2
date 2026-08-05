@@ -76,6 +76,40 @@ test('/mcp/chatgpt/curator — отдельный OAuth resource для обхо
   assert.deepEqual(body(meta).authorization_servers, [`https://${HOST}`]);
 });
 
+test('/mcp/chatgpt/curator разрешает OAuth discovery инструментов до входа', async () => {
+  const resource = '/mcp/chatgpt/curator';
+  const initialize = await call({
+    httpMethod: 'POST', path: resource,
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18' } }),
+  });
+  assert.equal(initialize.statusCode, 200);
+  assert.equal(body(initialize).result.serverInfo.name, 'heys-mcp');
+
+  const listed = await call({
+    httpMethod: 'POST', path: resource,
+    body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }),
+  });
+  assert.equal(listed.statusCode, 200);
+  const schemas = body(listed).result.tools;
+  assert.ok(schemas.length > 0);
+  assert.ok(schemas.every((schema) => schema.securitySchemes?.[0]?.type === 'oauth2'));
+
+  const called = await call({
+    httpMethod: 'POST', path: resource,
+    body: JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: schemas[0].name, arguments: {} } }),
+  });
+  assert.equal(called.statusCode, 200);
+  const result = body(called).result;
+  assert.equal(result.isError, true);
+  assert.match(result._meta['mcp/www_authenticate'][0], /resource_metadata="https:\/\/api\.heyslab\.ru\/\.well-known\/oauth-protected-resource\/mcp\/chatgpt\/curator"/);
+
+  const claude = await call({
+    httpMethod: 'POST', path: '/mcp/curator',
+    body: JSON.stringify({ jsonrpc: '2.0', id: 4, method: 'tools/list', params: {} }),
+  });
+  assert.equal(claude.statusCode, 401);
+});
+
 test('каждый адрес транспорта ведёт за метаданными к себе, а не к соседу', async () => {
   const res = await call({ httpMethod: 'POST', path: '/mcp/curator', body: '{}' });
   assert.match(

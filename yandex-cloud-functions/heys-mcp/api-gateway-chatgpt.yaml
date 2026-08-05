@@ -1,0 +1,141 @@
+openapi: 3.0.0
+info:
+  title: HEYS MCP for ChatGPT
+  version: 1.0.0
+  description: Dedicated hostname for ChatGPT OAuth discovery and MCP transport.
+
+paths:
+  /mcp/chatgpt/curator:
+    get:
+      summary: ChatGPT MCP OAuth discovery challenge
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+    post:
+      summary: ChatGPT MCP Streamable HTTP endpoint
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+    options:
+      summary: CORS preflight for ChatGPT MCP
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /mcp/register:
+    post:
+      summary: OAuth dynamic client registration (RFC 7591)
+      x-yc-apigateway-throttling:
+        rate: 10
+        unit: MINUTE
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+    options:
+      summary: CORS preflight for OAuth registration
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /mcp/authorize:
+    get:
+      summary: OAuth authorization page
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+    post:
+      summary: OAuth authorization form submit
+      x-yc-apigateway-throttling:
+        rate: 5
+        unit: MINUTE
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /mcp/token:
+    post:
+      summary: OAuth token endpoint
+      x-yc-apigateway-throttling:
+        rate: 30
+        unit: MINUTE
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+    options:
+      summary: CORS preflight for OAuth token endpoint
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /.well-known/oauth-protected-resource:
+    get:
+      summary: OAuth protected resource metadata
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+    options:
+      summary: CORS preflight for OAuth protected resource metadata
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /.well-known/oauth-protected-resource/mcp/chatgpt/curator:
+    get:
+      summary: OAuth protected resource metadata for ChatGPT MCP
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+    options:
+      summary: CORS preflight for ChatGPT OAuth protected resource metadata
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /.well-known/oauth-authorization-server:
+    get:
+      summary: ChatGPT OAuth authorization server metadata (public PKCE client)
+      x-yc-apigateway-integration:
+        type: dummy
+        http_code: 200
+        http_headers:
+          Content-Type: application/json
+          Cache-Control: no-store
+        content:
+          application/json: '{"issuer":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net","authorization_endpoint":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/authorize","token_endpoint":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/token","registration_endpoint":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/register","scopes_supported":["heys:diary"],"response_types_supported":["code"],"grant_types_supported":["authorization_code","refresh_token"],"code_challenge_methods_supported":["S256"],"token_endpoint_auth_methods_supported":["none"]}'
+    options:
+      summary: CORS preflight for OAuth authorization server metadata
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
+  /.well-known/oauth-authorization-server/mcp/chatgpt/curator:
+    get:
+      summary: ChatGPT OAuth authorization server metadata alias (public PKCE client)
+      x-yc-apigateway-integration:
+        type: dummy
+        http_code: 200
+        http_headers:
+          Content-Type: application/json
+          Cache-Control: no-store
+        content:
+          application/json: '{"issuer":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net","authorization_endpoint":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/authorize","token_endpoint":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/token","registration_endpoint":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/register","scopes_supported":["heys:diary"],"response_types_supported":["code"],"grant_types_supported":["authorization_code","refresh_token"],"code_challenge_methods_supported":["S256"],"token_endpoint_auth_methods_supported":["none"]}'
+    options:
+      summary: CORS preflight for ChatGPT OAuth authorization server metadata
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8

@@ -37,7 +37,7 @@ const SHARED = [
 ];
 
 /** Подставной API: данные раздельно по клиентам, фиксация кураторских записей. */
-function fakeCuratorApi({ clients = CLIENTS } = {}) {
+function fakeCuratorApi({ clients = CLIENTS, tasksClientId = null, tasksIndex = null } = {}) {
   const kv = {
     'cid-anton': {
       heys_products_overlay_v2: [{ id: 'own-coffee', _custom: true, name: 'Кофе американо', protein100: 0.1, simple100: 0.3, complex100: 0, badFat100: 0, goodFat100: 0, in_my_list: true }],
@@ -50,10 +50,16 @@ function fakeCuratorApi({ clients = CLIENTS } = {}) {
       'heys_dayv2_2026-08-01': { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 9 },
     },
   };
+  if (tasksClientId) {
+    kv[tasksClientId] = {
+      [tasksLib.INDEX_KEY]: tasksIndex || { files: {}, updatedAt: NOW },
+    };
+  }
   const writes = [];
   const contexts = [];
   const batchReads = [];
   return {
+    kv,
     writes,
     contexts,
     batchReads,
@@ -90,14 +96,21 @@ function fakeCuratorApi({ clients = CLIENTS } = {}) {
       if (kv[clientId]) kv[clientId][key] = value;
       return { ok: true };
     },
+    async upsertKVManyByCurator(bearer, clientId, entries, contextId) {
+      writes.push({ path: 'batch-upsert', clientId, entries, contextId });
+      if (kv[clientId]) {
+        for (const entry of entries) kv[clientId][entry.k] = entry.v;
+      }
+      return { ok: true };
+    },
     async getSharedProducts() {
       return { data: SHARED, error: null };
     },
   };
 }
 
-function build(api) {
-  return createCuratorContext({ api, curatorJwt: JWT, curatorName: 'Кин', nowMs: NOW });
+function build(api, { tasksClientId = null } = {}) {
+  return createCuratorContext({ api, curatorJwt: JWT, curatorName: 'Кин', nowMs: NOW, tasksClientId });
 }
 
 test('list_clients отдаёт клиентов куратора', async () => {
@@ -241,6 +254,49 @@ test('приём по набору пишется в день нужного к�
   assert.equal(write.value._writerCid, 'cid-anton');
   assert.equal(write.lastSeen, 5, 'merge отправляет известную версию дня этого клиента');
   assert.match(res.text, /^\[Антон\]/);
+});
+
+test('запись в дневник автоматически кладёт реплику и результат в стенограмму', async () => {
+  const tasksClientId = 'cid-tasks';
+  const api = fakeCuratorApi({
+    tasksClientId,
+    tasksIndex: {
+      files: {
+        'transcript/2026-08-01.md': { rev: 1, updatedAt: NOW },
+      },
+      updatedAt: NOW,
+    },
+  });
+  const { tools } = build(api, { tasksClientId });
+  const res = await tools.heys_log_meal({
+    client: 'Антон', preset: 'Кофе Киндерли', transcript: 'Внеси мне кофе Киндерли.',
+  });
+  assert.ok(res.structured.transcript_checkpoint, res.text);
+  const transcript = api.kv[tasksClientId][tasksLib.keyForPath('transcript/2026-08-01.md')].text;
+
+  assert.match(res.text, /автоматически сохранён в стенограмму/);
+  assert.match(transcript, /\*\*Кин:\*\* Внеси мне кофе Киндерли\./);
+  assert.match(transcript, /\*\*Claude:\*\* \[Автозапись инструмента\] \[Антон\] Записал:/);
+});
+
+test('запись в дневник не начинается без дословной реплики для стенограммы', async () => {
+  const tasksClientId = 'cid-tasks';
+  const api = fakeCuratorApi({ tasksClientId });
+  const { tools } = build(api, { tasksClientId });
+
+  await assert.rejects(
+    () => tools.heys_log_meal({ client: 'Антон', preset: 'Кофе Киндерли' }),
+    (error) => error.code === 'transcript_required',
+  );
+  assert.equal(api.writes.length, 0, 'без стенограммы дневник не меняется');
+});
+
+test('схема записи в дневник требует transcript, когда задачник подключён', () => {
+  const schemas = buildCuratorSchemas({ requireTranscript: true });
+  const meal = schemas.find((schema) => schema.name === 'heys_log_meal');
+
+  assert.ok(meal.inputSchema.required.includes('transcript'));
+  assert.match(meal.inputSchema.properties.transcript.description, /дословная полная реплика/i);
 });
 
 test('кураторские схемы: свои инструменты сверху и параметр client везде, кроме списка клиентов', () => {
@@ -1325,41 +1381,12 @@ test('вырезанные дубли не вернулись в блок, а и
   }
 });
 
-// ── Недельный эксперимент «два ответа» ───────────────────────────────────
-
-// Соседний тест в tasks.test.cjs берёт даты с запасом; здесь проверяется сама
-// граница — последний час эксперимента и первый час после него.
-test('эксперимент выключается ровно на границе срока', () => {
-  const before = curatorInstructions('Антон', true, Date.UTC(2026, 7, 5, 20, 0));
-  assert.match(before, /Эксперимент до 2026-08-05 включительно/);
-  assert.match(before, /tasks_vote/);
-
-  const after = curatorInstructions('Антон', true, Date.UTC(2026, 7, 5, 21, 0));
-  assert.doesNotMatch(after, /Эксперимент до 2026-08-05/);
-  assert.doesNotMatch(after, /tasks_vote/);
-  // Сами правила задачника от этого не страдают.
-  assert.match(after, /Задачи и подпункты закрывает только он/);
-});
-
-test('эксперимент сравнивает урезанные правила со свободой, а не мёртвую процедуру', () => {
-  const block = curatorInstructions('Антон', true, Date.UTC(2026, 7, 3))
-    .split('\n')
-    .filter((line) => /^Э\d+\./.test(line))
-    .join('\n');
-  // Ссылок на срезанную процедуру в эксперименте остаться не могло.
-  assert.doesNotMatch(block, /З2:/);
-  assert.doesNotMatch(block, /З17/);
-  assert.doesNotMatch(block, /дельта → список → контекст/);
-  assert.match(block, /по правилам задачника/);
-  // Механика записи не тронута: голос без tasks_vote не существует.
-  assert.match(block, /tasks_vote/);
-  assert.match(block, /Полномочия действуют в обоих/);
-});
-
-test('эксперимент не включается без задачника', () => {
-  const plain = curatorInstructions('Антон', false, Date.UTC(2026, 7, 3));
-  assert.doesNotMatch(plain, /Эксперимент до 2026-08-05/);
-  assert.doesNotMatch(plain, /^З1\./m);
+test('два ответа больше не включаются, а правила задачника сохраняются', () => {
+  const instructions = curatorInstructions('Антон', true, Date.UTC(2026, 7, 3));
+  assert.doesNotMatch(instructions, /Эксперимент до 2026-08-05/);
+  assert.doesNotMatch(instructions, /^Э\d+\./m);
+  assert.doesNotMatch(instructions, /tasks_vote/);
+  assert.match(instructions, /Задачи и подпункты закрывает только он/);
 });
 
 // ── Планёрка ─────────────────────────────────────────────────────────────

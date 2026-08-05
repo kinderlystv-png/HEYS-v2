@@ -41,14 +41,16 @@ function negotiateProtocolVersion(requested) {
  * isError: по спеке это ошибка выполнения, которую модель должна увидеть и
  * исправить сама (уточнить продукт, поправить дату), а не сбой протокола.
  */
-function toolFailure(message, code, details) {
+function toolFailure(message, code, details, meta) {
   const payload = { ok: false, error: code || 'tool_error', message };
   if (details) Object.assign(payload, details);
-  return {
+  const result = {
     content: [{ type: 'text', text: message }],
     structuredContent: payload,
     isError: true,
   };
+  if (meta) result._meta = meta;
+  return result;
 }
 
 /**
@@ -121,6 +123,14 @@ async function handleMessage(message, ctx) {
     case 'tools/call': {
       const name = params && params.name;
       const args = (params && params.arguments) || {};
+      if (ctx.authRequired) {
+        return rpcResult(id, toolFailure(
+          'Подключи HEYS через OAuth, чтобы использовать этот инструмент.',
+          'authentication_required',
+          null,
+          { 'mcp/www_authenticate': [ctx.authRequired] },
+        ));
+      }
       const handler = ctx.tools && ctx.tools[name];
       if (!handler) {
         return rpcError(id, JSONRPC_ERRORS.INVALID_PARAMS, `Unknown tool: ${name}`);

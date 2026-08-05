@@ -2452,16 +2452,11 @@ test('правила задачника ссылаются только на с�
   for (const name of named) assert.ok(known.has(name), `правило обещает несуществующий инструмент ${name}`);
 });
 
-// ── Эксперимент «два ответа» ─────────────────────────────────────────────
-
-test('блок эксперимента живёт до дедлайна и исчезает после', () => {
-  const during = curatorInstructions('Антон', true, Date.UTC(2026, 7, 4));
-  assert.match(during, /Эксперимент до 2026-08-05/);
-  assert.match(during, /tasks_vote/);
-  const after = curatorInstructions('Антон', true, Date.UTC(2026, 7, 7));
-  assert.ok(!/Эксперимент до 2026-08-05/.test(after), 'временный режим не должен тихо стать вечным');
-  // Основные правила при этом на месте.
-  assert.match(after, /^З1\./m);
+test('инструкция куратора не включает остановленный эксперимент с двумя ответами', () => {
+  const instructions = curatorInstructions('Антон', true, Date.UTC(2026, 7, 4));
+  assert.doesNotMatch(instructions, /Эксперимент до 2026-08-05/);
+  assert.doesNotMatch(instructions, /tasks_vote/);
+  assert.match(instructions, /^З1\./m);
 });
 
 test('голос записывается как процедурный или свободный, а не как сырые номера', async () => {
