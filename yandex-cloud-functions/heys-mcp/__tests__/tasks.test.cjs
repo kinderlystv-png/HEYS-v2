@@ -3418,6 +3418,60 @@ test('старый пункт повестки без маркера катег�
   assert.equal(items[0].topic, 'Довоенный пункт без категории');
 });
 
+test('приоритет пункта повестки тянется из задачи по ref, если не назван явно', async () => {
+  const heysHash = tasks.taskHash('heys', 'Живая задача');
+  const api = standupApi();
+  await session(api).tasks_standup({
+    add: 'Прогнать флоу перед релизом', category: 'разработка', note: `см: heys/${heysHash}`,
+  });
+  await session(api).tasks_standup({ add: 'Купить свисток на студию' });
+  const agenda = await session(api).tasks_standup({});
+  const linked = agenda.structured.brought_dev.find((i) => i.topic === 'Прогнать флоу перед релизом');
+  assert.equal(linked.priority, null, 'явного маркера в строке нет');
+  assert.equal(linked.ref, `heys/${heysHash}`);
+  // «Живая задача» в STANDUP_HEYS — P1, значит эффективный приоритет от неё.
+  assert.equal(linked.effective_priority, 'P1');
+  const plain = agenda.structured.brought_general.find((i) => i.topic === 'Купить свисток на студию');
+  assert.equal(plain.effective_priority, 'P2', 'без ref и без явного маркера — дефолт P2');
+});
+
+test('явный приоритет пункта повестки побеждает над приоритетом задачи по ref', async () => {
+  const heysHash = tasks.taskHash('heys', 'Живая задача');
+  const api = standupApi();
+  await session(api).tasks_standup({
+    add: 'Обсудить нюансы вместе с heys/' + heysHash, category: 'разработка', priority: 'P3',
+  });
+  const saved = api.file(tasks.STANDUP_PATH);
+  assert.match(saved, /^- \[ \] 2026-08-02 · \[разработка\] \[P3\] Обсудить нюансы/m);
+  const agenda = await session(api).tasks_standup({});
+  const item = agenda.structured.brought_dev[0];
+  assert.equal(item.priority, 'P3');
+  assert.equal(item.effective_priority, 'P3', 'явный приоритет сильнее ref на P1-задачу');
+});
+
+test('пункты повестки сортируются по приоритету внутри категории, при равенстве — по порядку добавления', async () => {
+  const api = standupApi();
+  await session(api).tasks_standup({ add: 'Третий по счёту, без приоритета', category: 'общее' });
+  await session(api).tasks_standup({ add: 'Первый по приоритету', category: 'общее', priority: 'P1' });
+  await session(api).tasks_standup({ add: 'Четвёртый по счёту, тоже без приоритета', category: 'общее' });
+  await session(api).tasks_standup({ add: 'Второй по приоритету', category: 'общее', priority: 'P1' });
+  const agenda = await session(api).tasks_standup({});
+  assert.deepEqual(agenda.structured.brought_general.map((i) => i.topic), [
+    'Первый по приоритету',
+    'Второй по приоритету',
+    'Третий по счёту, без приоритета',
+    'Четвёртый по счёту, тоже без приоритета',
+  ]);
+});
+
+test('tasks_standup add отклоняет неверный приоритет', async () => {
+  const api = standupApi();
+  await assert.rejects(
+    () => session(api).tasks_standup({ add: 'Пункт с плохим приоритетом', priority: 'P9' }),
+    (e) => e.code === 'invalid_priority',
+  );
+});
+
 test('посчитанные расхождения потолком не режутся — они доказуемы', async () => {
   const many = `# HEYS\n\n## Задачи\n\n${
     Array.from({ length: 8 }, (_, i) => `- [ ] P2 Висит ${i} #blocked ^2026-07-01`).join('\n')

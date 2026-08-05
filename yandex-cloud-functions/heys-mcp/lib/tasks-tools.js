@@ -451,6 +451,7 @@ const TASKS_AGENT_SCHEMAS = [
         add: { type: 'string', description: 'Положить вопрос на ближайшую планёрку — одной строкой, о чём говорить. Вызывай в том же ходе, когда он сказал «это обсудим на планёрке»: иначе вопрос живёт до конца чата и утром его никто не вспомнит.' },
         note: { type: 'string', description: 'К add: его формулировка или факт, без которого пункт утром не читается. Коротко.' },
         category: { type: 'string', enum: ['разработка', 'общее'], description: 'К add: категория пункта — реши сам по предмету разговора, не спрашивай его. «разработка» — если предмет это доска, окно планёрки, коннектор, стенограмма, парсер повестки: что-то в них не работает или его стоит улучшить кодом. «общее» — всё остальное: проекты, работа, покупки, люди, деньги, личное, даже если закрывается кодом (пример от него самого: «Быстро заказать» — про покупки, не про доску, значит общее). Не передал — пункт лёг в «общее» по умолчанию.' },
+        priority: { type: 'string', enum: ['P1', 'P2', 'P3'], description: 'К add: явный приоритет пункта, решено 05.08. Побеждает всегда, даже если пункт ссылается на задачу с другим приоритетом. Не передал — приоритет пункта считается сам: от задачи, на которую пункт ссылается («проект/хэш» в тексте или note), а если ссылки нет — P2. Список повестки сортируется по этому приоритету внутри каждой категории.' },
         observe: { type: 'string', description: 'Замеченное по смыслу — ВОПРОСОМ, а не утверждением: «в журнале за 03.08 записано, что неделя сходится, а в днях 5-го дзюдо и 8-е пустое — что верно?». Подтвердить такое может только он, поэтому утверждение здесь было бы враньём. Открытых наблюдений держим не больше трёх: догадка стоит его ответа, а десять догадок — это допрос.' },
         sides: {
           type: 'array',
@@ -3001,19 +3002,35 @@ function createTasksTools({
           };
         }
         const category = args.category && tasks.STANDUP_CATEGORIES.includes(args.category) ? args.category : 'общее';
+        // Приоритет, решено 05.08: явный параметр побеждает всегда — над ним
+        // ref к задаче не имеет силы. Без параметра приоритет пункту не
+        // присваивается здесь: его на чтении даст ref или дефолт P2.
+        let priority = null;
+        if (args.priority !== undefined && args.priority !== null && args.priority !== '') {
+          priority = String(args.priority).toUpperCase();
+          if (!/^P[123]$/.test(priority)) throw new ToolError('invalid_priority', 'Приоритет — P1, P2 или P3.');
+        }
         // Маркер пишем в файл только для «разработки»: «общее» — молчаливый
         // умолчательный случай (так читались все пункты до 05.08), и не стоит
         // захламлять строку меткой, которая ничего не меняет для читателя.
         const line = tasks.standupLine({
           date: today_, topic, note: args.note ? String(args.note).trim() : null,
           category: category === 'разработка' ? 'разработка' : null,
+          priority,
         });
         const put = (text) => tasks.appendToSection(text, line, tasks.STANDUP_SECTION);
         const saved = await writeFile(file, put(file.text), { rebase: put });
         return {
-          text: `На планёрку (${category}): ${topic}. Сейчас в повестке ${open.length + 1}.`,
+          text: `На планёрку (${category}${priority ? `, ${priority}` : ''}): ${topic}. Сейчас в повестке ${open.length + 1}.`,
           structured: {
-            created: true, path: saved.path, rev: saved.rev, topic, note: args.note || null, category, open: open.length + 1,
+            created: true,
+            path: saved.path,
+            rev: saved.rev,
+            topic,
+            note: args.note || null,
+            category,
+            priority: priority || null,
+            open: open.length + 1,
           },
         };
       }
@@ -3304,12 +3321,29 @@ function createTasksTools({
 
       const cap = tasks.STANDUP_GROUP_CAP;
       const brought = items.filter((i) => !i.done);
+      // Приоритет пункта, решено 05.08: явный маркер [P1]/[P3] побеждает,
+      // иначе — приоритет задачи по ref (найден по тексту пункта), иначе P2.
+      // Карта строится по уже прочитанным файлам проектов — второго чтения
+      // ради этого не требуется.
+      const priorityByRef = {};
+      for (const f of files) {
+        const projectKey = tasks.projectKeyForPath(f.path);
+        if (!projectKey) continue;
+        for (const t of tasks.parseTasks(f)) {
+          priorityByRef[`${projectKey}/${tasks.taskHash(projectKey, t.title)}`] = t.priority || tasks.STANDUP_DEFAULT_PRIORITY;
+        }
+      }
       // Два блока вместо одного списка — его решение 05.08: садишься либо за
       // разработку доски и планёрки целиком, либо за остальную повестку,
       // не перескакивая. Категория пишется в строку самим add по предмету
-      // разговора; старые пункты без маркера читаются как «общее».
-      const broughtDev = brought.filter((i) => i.category === 'разработка');
-      const broughtGeneral = brought.filter((i) => i.category !== 'разработка');
+      // разговора; старые пункты без маркера читаются как «общее». Внутри
+      // каждого блока — по приоритету, решено 05.08, при равном приоритете
+      // порядок как был (по дате добавления).
+      const withEffectivePriority = (i) => ({ ...i, effective_priority: tasks.standupEffectivePriority(i, priorityByRef) });
+      const broughtDev = tasks.sortStandupByPriority(brought.filter((i) => i.category === 'разработка'), priorityByRef)
+        .map(withEffectivePriority);
+      const broughtGeneral = tasks.sortStandupByPriority(brought.filter((i) => i.category !== 'разработка'), priorityByRef)
+        .map(withEffectivePriority);
       const noticed = observations.filter((o) => !o.done);
       const groups = {
         brought_dev: { all: broughtDev, shown: broughtDev.slice(0, cap) },
@@ -3347,9 +3381,18 @@ function createTasksTools({
         // Ревизия стоит перед всем остальным намеренно: заводить найденное в
         // стенограмме надо ДО повестки, иначе повестка соберётся без него.
         tasks.dayReviewBlock(review),
+        // Приоритет в тексте показываем только когда он не по умолчанию —
+        // P2 у большинства пунктов и так молчаливый, метка для него была бы
+        // шумом без новой информации.
         block('Принесли на планёрку — разработка (доска, окно планёрки, коннектор, стенограмма)', 'brought_dev',
-          (i) => `${i.topic}${i.note ? ` — ${i.note}` : ''} (с ${i.date})`),
-        block('Принесли на планёрку — общее', 'brought_general', (i) => `${i.topic}${i.note ? ` — ${i.note}` : ''} (с ${i.date})`),
+          (i) => {
+            const pr = tasks.standupEffectivePriority(i, priorityByRef);
+            return `${pr !== tasks.STANDUP_DEFAULT_PRIORITY ? `${pr} · ` : ''}${i.topic}${i.note ? ` — ${i.note}` : ''} (с ${i.date})`;
+          }),
+        block('Принесли на планёрку — общее', 'brought_general', (i) => {
+          const pr = tasks.standupEffectivePriority(i, priorityByRef);
+          return `${pr !== tasks.STANDUP_DEFAULT_PRIORITY ? `${pr} · ` : ''}${i.topic}${i.note ? ` — ${i.note}` : ''} (с ${i.date})`;
+        }),
         block('Требует решения', 'decide', (t) => `${t.ref} · ${t.title}${
           t.children.filter((c) => /^открыто:/i.test(c)).map((c) => ` — ${c.replace(/^открыто:\s*/i, '')}`)[0] || ''}`),
         simple.picked.length

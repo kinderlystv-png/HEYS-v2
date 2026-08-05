@@ -4112,9 +4112,30 @@ const STANDUP_STALE_DAYS = 10;
  */
 const STANDUP_CATEGORIES = ['разработка', 'общее'];
 
-function standupLine({ date, topic, note = null, category = null }) {
+/**
+ * Приоритет пункта повестки, решено 05.08: если у пункта есть явный приоритет
+ * — берём его, иначе — приоритет связанной задачи (ref, найденный по тексту
+ * пункта), иначе P2 по умолчанию, как у обычных задач. Явный приоритет пишем
+ * в строку меткой `[P1]`/`[P3]` только когда его назвали — P2 молчаливый,
+ * чтобы не захламлять строку меткой, которая ничего не меняет для читателя.
+ */
+const STANDUP_DEFAULT_PRIORITY = 'P2';
+const STANDUP_PRIORITY_ORDER = { P1: 0, P2: 1, P3: 2 };
+
+/** Первая ссылка вида «проект/хэш» в тексте пункта — источник приоритета по умолчанию. */
+const STANDUP_REF_RE = /\b([a-zа-я][a-zа-я0-9]*)\/([0-9a-f]{6})\b/i;
+
+function standupItemRef(text) {
+  const match = STANDUP_REF_RE.exec(String(text || ''));
+  return match ? `${match[1].toLowerCase()}/${match[2].toLowerCase()}` : null;
+}
+
+function standupLine({
+  date, topic, note = null, category = null, priority = null,
+}) {
   const cat = category && STANDUP_CATEGORIES.includes(category) ? `[${category}] ` : '';
-  return `- [ ] ${date} · ${cat}${topic}${note ? ` — ${note}` : ''}`;
+  const pr = priority && /^P[123]$/.test(priority) ? `[${priority}] ` : '';
+  return `- [ ] ${date} · ${cat}${pr}${topic}${note ? ` — ${note}` : ''}`;
 }
 
 /**
@@ -4153,17 +4174,46 @@ function parseStandupItems(file, { section = STANDUP_SECTION } = {}) {
     let category = null;
     const catMatch = /^\[(разработка|общее)\]\s*(.*)$/.exec(body);
     if (catMatch) { category = catMatch[1]; body = catMatch[2]; }
+    // Приоритет — необязательный маркер `[P1]`/`[P3]` сразу после категории,
+    // решено 05.08. Без маркера приоритет не «пустой», а вычисляется читателем
+    // (tasks-tools) из ref или дефолта — здесь только то, что названо явно.
+    let priority = null;
+    const prMatch = /^\[(P[123])\]\s*(.*)$/.exec(body);
+    if (prMatch) { priority = prMatch[1]; body = prMatch[2]; }
     const split = body.lastIndexOf(' — ');
     out.push({
       line: i,
       done: match[1].toLowerCase() === 'x',
       date: match[2],
       category: category || 'общее',
+      priority,
+      ref: standupItemRef(body),
       topic: (split === -1 ? body : body.slice(0, split)).trim(),
       note: split === -1 ? null : body.slice(split + 3).trim(),
     });
   }
   return out;
+}
+
+/**
+ * Приоритет пункта для сортировки повестки. Порядок решён 05.08: явный
+ * маркер побеждает всегда (можно вручную поднять важность обсуждения выше
+ * приоритета самой задачи), иначе берём приоритет задачи по ref, иначе P2.
+ * `priorityByRef` — карта `проект/хэш → P1|P2|P3`, считает её вызывающий
+ * код по уже прочитанным файлам проектов, здесь только выбор источника.
+ */
+function standupEffectivePriority(item, priorityByRef = {}) {
+  if (item.priority) return item.priority;
+  if (item.ref && priorityByRef[item.ref]) return priorityByRef[item.ref];
+  return STANDUP_DEFAULT_PRIORITY;
+}
+
+/** Сортировка списка пунктов повестки по приоритету, устойчивая — при равном приоритете порядок (по дате добавления) не меняется. */
+function sortStandupByPriority(list, priorityByRef = {}) {
+  return [...list].sort((a, b) => (
+    STANDUP_PRIORITY_ORDER[standupEffectivePriority(a, priorityByRef)]
+    - STANDUP_PRIORITY_ORDER[standupEffectivePriority(b, priorityByRef)]
+  ));
 }
 
 /**
@@ -4710,7 +4760,12 @@ module.exports = {
   STANDUP_OBSERVE_CAP,
   STANDUP_STALE_DAYS,
   STANDUP_CATEGORIES,
+  STANDUP_DEFAULT_PRIORITY,
+  STANDUP_PRIORITY_ORDER,
   standupLine,
+  standupItemRef,
+  standupEffectivePriority,
+  sortStandupByPriority,
   markLineDone,
   parseStandupItems,
   observationBlock,
