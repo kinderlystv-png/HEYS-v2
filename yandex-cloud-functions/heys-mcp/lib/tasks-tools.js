@@ -452,6 +452,7 @@ const TASKS_AGENT_SCHEMAS = [
         note: { type: 'string', description: 'К add: его формулировка или факт, без которого пункт утром не читается. Коротко.' },
         category: { type: 'string', enum: ['разработка', 'общее'], description: 'К add: категория пункта — реши сам по предмету разговора, не спрашивай его. «разработка» — если предмет это доска, окно планёрки, коннектор, стенограмма, парсер повестки: что-то в них не работает или его стоит улучшить кодом. «общее» — всё остальное: проекты, работа, покупки, люди, деньги, личное, даже если закрывается кодом (пример от него самого: «Быстро заказать» — про покупки, не про доску, значит общее). Не передал — пункт лёг в «общее» по умолчанию.' },
         priority: { type: 'string', enum: ['P1', 'P2', 'P3'], description: 'К add: явный приоритет пункта, решено 05.08. Побеждает всегда, даже если пункт ссылается на задачу с другим приоритетом. Не передал — приоритет пункта считается сам: от задачи, на которую пункт ссылается («проект/хэш» в тексте или note), а если ссылки нет — P2. Список повестки сортируется по этому приоритету внутри каждой категории.' },
+        session: { type: 'string', description: 'К add: тема (рабочая сессия), решено 05.08. Свободный текст, не из списка — он садится за ноутбук пачкой по одной зоне кода или теме («PWA доски», «механика повестки»), а не по одному пункту. Определи сам по предмету разговора и по уже заведённым темам в текущей повестке — не выдумывай новую тему, если пункт ложится в существующую. Пункты с одинаковой темой в повестке рисуются одним блоком.' },
         observe: { type: 'string', description: 'Замеченное по смыслу — ВОПРОСОМ, а не утверждением: «в журнале за 03.08 записано, что неделя сходится, а в днях 5-го дзюдо и 8-е пустое — что верно?». Подтвердить такое может только он, поэтому утверждение здесь было бы враньём. Открытых наблюдений держим не больше трёх: догадка стоит его ответа, а десять догадок — это допрос.' },
         sides: {
           type: 'array',
@@ -3010,6 +3011,10 @@ function createTasksTools({
           priority = String(args.priority).toUpperCase();
           if (!/^P[123]$/.test(priority)) throw new ToolError('invalid_priority', 'Приоритет — P1, P2 или P3.');
         }
+        // Тема, решено 05.08: садится за ноутбук пачкой по одной зоне кода
+        // или теме, а не по одному пункту. Свободный текст — задаёт он сам
+        // или модель по смыслу разговора, список тем никем не ограничен.
+        const session = args.session ? String(args.session).trim() : null;
         // Маркер пишем в файл только для «разработки»: «общее» — молчаливый
         // умолчательный случай (так читались все пункты до 05.08), и не стоит
         // захламлять строку меткой, которая ничего не меняет для читателя.
@@ -3017,11 +3022,12 @@ function createTasksTools({
           date: today_, topic, note: args.note ? String(args.note).trim() : null,
           category: category === 'разработка' ? 'разработка' : null,
           priority,
+          session,
         });
         const put = (text) => tasks.appendToSection(text, line, tasks.STANDUP_SECTION);
         const saved = await writeFile(file, put(file.text), { rebase: put });
         return {
-          text: `На планёрку (${category}${priority ? `, ${priority}` : ''}): ${topic}. Сейчас в повестке ${open.length + 1}.`,
+          text: `На планёрку (${category}${priority ? `, ${priority}` : ''}${session ? `, тема «${session}»` : ''}): ${topic}. Сейчас в повестке ${open.length + 1}.`,
           structured: {
             created: true,
             path: saved.path,
@@ -3030,6 +3036,7 @@ function createTasksTools({
             note: args.note || null,
             category,
             priority: priority || null,
+            session: session || null,
             open: open.length + 1,
           },
         };
@@ -3368,6 +3375,31 @@ function createTasksTools({
         ? `${title}${more(name)}:\n${groups[name].shown.map((x) => `- ${render(x)}`).join('\n')}`
         : null);
 
+      // Пункты «принесённого» с одной темой (session, решено 05.08) рисуются
+      // одним блоком под подзаголовком, а не вперемешку с остальными — он
+      // садится за ноутбук пачкой по теме, а не по одному пункту.
+      const fmtBrought = (i) => `${tasks.standupEffectivePriority(i, priorityByRef) !== tasks.STANDUP_DEFAULT_PRIORITY
+        ? `${tasks.standupEffectivePriority(i, priorityByRef)} · ` : ''}${i.topic}${i.note ? ` — ${i.note}` : ''} (с ${i.date})`;
+      const renderBrought = (title, name) => {
+        const g = groups[name];
+        if (!g.all.length) return null;
+        const seen = new Set();
+        const lines = [];
+        for (const item of g.shown) {
+          if (seen.has(item)) continue;
+          if (item.session) {
+            const cluster = g.shown.filter((x) => x.session === item.session);
+            cluster.forEach((x) => seen.add(x));
+            lines.push(`  тема «${item.session}»:`);
+            for (const x of cluster) lines.push(`  - ${fmtBrought(x)}`);
+          } else {
+            seen.add(item);
+            lines.push(`- ${fmtBrought(item)}`);
+          }
+        }
+        return `${title}${more(name)}:\n${lines.join('\n')}`;
+      };
+
       const picture = [
         `ближайшие 7 дней — свободных ${calendar.structured.free_days.length}`,
         calendar.structured.free_stretches.length
@@ -3383,16 +3415,9 @@ function createTasksTools({
         tasks.dayReviewBlock(review),
         // Приоритет в тексте показываем только когда он не по умолчанию —
         // P2 у большинства пунктов и так молчаливый, метка для него была бы
-        // шумом без новой информации.
-        block('Принесли на планёрку — разработка (доска, окно планёрки, коннектор, стенограмма)', 'brought_dev',
-          (i) => {
-            const pr = tasks.standupEffectivePriority(i, priorityByRef);
-            return `${pr !== tasks.STANDUP_DEFAULT_PRIORITY ? `${pr} · ` : ''}${i.topic}${i.note ? ` — ${i.note}` : ''} (с ${i.date})`;
-          }),
-        block('Принесли на планёрку — общее', 'brought_general', (i) => {
-          const pr = tasks.standupEffectivePriority(i, priorityByRef);
-          return `${pr !== tasks.STANDUP_DEFAULT_PRIORITY ? `${pr} · ` : ''}${i.topic}${i.note ? ` — ${i.note}` : ''} (с ${i.date})`;
-        }),
+        // шумом без новой информации. Пункты одной темы — общим блоком.
+        renderBrought('Принесли на планёрку — разработка (доска, окно планёрки, коннектор, стенограмма)', 'brought_dev'),
+        renderBrought('Принесли на планёрку — общее', 'brought_general'),
         block('Требует решения', 'decide', (t) => `${t.ref} · ${t.title}${
           t.children.filter((c) => /^открыто:/i.test(c)).map((c) => ` — ${c.replace(/^открыто:\s*/i, '')}`)[0] || ''}`),
         simple.picked.length

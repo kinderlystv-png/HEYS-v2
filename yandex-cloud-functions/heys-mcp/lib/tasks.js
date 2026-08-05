@@ -4130,12 +4130,23 @@ function standupItemRef(text) {
   return match ? `${match[1].toLowerCase()}/${match[2].toLowerCase()}` : null;
 }
 
+/**
+ * Тема (сессия) пункта повестки — решено 05.08: он садится за ноутбук не по
+ * одному пункту, а пачкой вокруг одной зоны кода или темы («PWA доски»,
+ * «механика повестки»). Свободный текст, не список — тем будет столько,
+ * сколько реально наберётся, а не заранее заданный enum. Пишется меткой
+ * `[тема:Имя]`, а не отдельным префиксом типа category, чтобы не путать с
+ * `[разработка]`/`[P1]` при разборе.
+ */
+const STANDUP_SESSION_RE = /^\[тема:([^\]]+)\]\s*(.*)$/;
+
 function standupLine({
-  date, topic, note = null, category = null, priority = null,
+  date, topic, note = null, category = null, priority = null, session = null,
 }) {
   const cat = category && STANDUP_CATEGORIES.includes(category) ? `[${category}] ` : '';
   const pr = priority && /^P[123]$/.test(priority) ? `[${priority}] ` : '';
-  return `- [ ] ${date} · ${cat}${pr}${topic}${note ? ` — ${note}` : ''}`;
+  const ses = session && String(session).trim() ? `[тема:${String(session).trim()}] ` : '';
+  return `- [ ] ${date} · ${cat}${pr}${ses}${topic}${note ? ` — ${note}` : ''}`;
 }
 
 /**
@@ -4180,6 +4191,11 @@ function parseStandupItems(file, { section = STANDUP_SECTION } = {}) {
     let priority = null;
     const prMatch = /^\[(P[123])\]\s*(.*)$/.exec(body);
     if (prMatch) { priority = prMatch[1]; body = prMatch[2]; }
+    // Тема — необязательный маркер `[тема:Имя]` сразу после приоритета,
+    // решено 05.08: садится за ноутбук пачкой по одной зоне, а не по пункту.
+    let session = null;
+    const seMatch = STANDUP_SESSION_RE.exec(body);
+    if (seMatch) { session = seMatch[1].trim(); body = seMatch[2]; }
     const split = body.lastIndexOf(' — ');
     out.push({
       line: i,
@@ -4187,6 +4203,7 @@ function parseStandupItems(file, { section = STANDUP_SECTION } = {}) {
       date: match[2],
       category: category || 'общее',
       priority,
+      session,
       ref: standupItemRef(body),
       topic: (split === -1 ? body : body.slice(0, split)).trim(),
       note: split === -1 ? null : body.slice(split + 3).trim(),

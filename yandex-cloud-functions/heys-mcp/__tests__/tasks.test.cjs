@@ -3472,6 +3472,33 @@ test('tasks_standup add отклоняет неверный приоритет',
   );
 });
 
+test('тема пункта повестки пишется меткой в файл и парсится обратно', async () => {
+  const api = standupApi();
+  await session(api).tasks_standup({
+    add: 'Промпт для Codex готов', category: 'разработка', session: 'PWA доски',
+  });
+  const saved = api.file(tasks.STANDUP_PATH);
+  assert.match(saved, /^- \[ \] 2026-08-02 · \[разработка\] \[тема:PWA доски\] Промпт для Codex готов$/m);
+  const agenda = await session(api).tasks_standup({});
+  assert.equal(agenda.structured.brought_dev[0].session, 'PWA доски');
+});
+
+test('пункты одной темы в повестке рисуются одним блоком с подзаголовком', async () => {
+  const api = standupApi();
+  await session(api).tasks_standup({ add: 'Первый про PWA', category: 'разработка', session: 'PWA доски' });
+  await session(api).tasks_standup({ add: 'Отдельный пункт без темы', category: 'разработка' });
+  await session(api).tasks_standup({ add: 'Второй про PWA', category: 'разработка', session: 'PWA доски' });
+  const agenda = await session(api).tasks_standup({});
+  assert.match(agenda.text, /тема «PWA доски»:\n {2}- Первый про PWA[\s\S]*?\n {2}- Второй про PWA/);
+  assert.match(agenda.text, /- Отдельный пункт без темы/);
+});
+
+test('пункт без темы читается как session: null', () => {
+  const file = { path: tasks.STANDUP_PATH, text: '## На планёрку\n\n- [ ] 2026-08-01 · Пункт без темы\n' };
+  const items = tasks.parseStandupItems(file);
+  assert.equal(items[0].session, null);
+});
+
 test('посчитанные расхождения потолком не режутся — они доказуемы', async () => {
   const many = `# HEYS\n\n## Задачи\n\n${
     Array.from({ length: 8 }, (_, i) => `- [ ] P2 Висит ${i} #blocked ^2026-07-01`).join('\n')
