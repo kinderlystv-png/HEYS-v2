@@ -76,32 +76,48 @@ test('/mcp/chatgpt/curator — отдельный OAuth resource для обхо
   assert.deepEqual(body(meta).authorization_servers, [`https://${HOST}`]);
 });
 
-test('/mcp/chatgpt/curator разрешает OAuth discovery инструментов до входа', async () => {
+test('/mcp/chatgpt/curator рекламирует OAuth до входа и схемы инструментов после входа', async () => {
   const resource = '/mcp/chatgpt/curator';
   const initialize = await call({
     httpMethod: 'POST', path: resource,
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18' } }),
   });
-  assert.equal(initialize.statusCode, 200);
-  assert.equal(body(initialize).result.serverInfo.name, 'heys-mcp');
+  assert.equal(initialize.statusCode, 401);
+  assert.match(initialize.headers['WWW-Authenticate'], /resource_metadata="https:\/\/api\.heyslab\.ru\/\.well-known\/oauth-protected-resource\/mcp\/chatgpt\/curator"/);
+
+  const oauth = require('../lib/oauth');
+  const redirectUri = 'https://chatgpt.com/connector/oauth/handler-test';
+  const registration = oauth.registerClient({
+    client_name: 'ChatGPT handler test',
+    redirect_uris: [redirectUri],
+    token_endpoint_auth_method: 'client_secret_post',
+  }, process.env.MCP_TOKEN_SECRET).registration;
+  const code = oauth.issueAuthorizationCode({
+    clientId: registration.client_id,
+    redirectUri,
+    codeChallenge: '',
+    heysClientId: 'curator-test',
+    sessionToken: 'curator-jwt-test',
+    role: 'curator',
+    resource: `https://${HOST}${resource}`,
+  }, process.env.MCP_TOKEN_SECRET);
+  const exchanged = oauth.exchangeAuthorizationCode({
+    code,
+    client_id: registration.client_id,
+    client_secret: registration.client_secret,
+    redirect_uri: redirectUri,
+  }, process.env.MCP_TOKEN_SECRET);
+  assert.equal(exchanged.ok, true);
 
   const listed = await call({
     httpMethod: 'POST', path: resource,
+    headers: { host: HOST, authorization: `Bearer ${exchanged.tokens.access_token}` },
     body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }),
   });
   assert.equal(listed.statusCode, 200);
   const schemas = body(listed).result.tools;
   assert.ok(schemas.length > 0);
   assert.ok(schemas.every((schema) => schema.securitySchemes?.[0]?.type === 'oauth2'));
-
-  const called = await call({
-    httpMethod: 'POST', path: resource,
-    body: JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: schemas[0].name, arguments: {} } }),
-  });
-  assert.equal(called.statusCode, 200);
-  const result = body(called).result;
-  assert.equal(result.isError, true);
-  assert.match(result._meta['mcp/www_authenticate'][0], /resource_metadata="https:\/\/api\.heyslab\.ru\/\.well-known\/oauth-protected-resource\/mcp\/chatgpt\/curator"/);
 
   const claude = await call({
     httpMethod: 'POST', path: '/mcp/curator',

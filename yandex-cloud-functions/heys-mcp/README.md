@@ -434,6 +434,16 @@ Evidence — D6 в [`todo.md`](../../todo.md).
 запроса без токена возвращает тот же OAuth challenge; POST-flow Claude, DCR и
 обязательный PKCE не меняются. Точечный набор handler+OAuth: 39/39.
 
+**Уточнение 2026-08-05 (проверено в живом builder ChatGPT).** Разрешать
+анонимный JSON-RPC `initialize`/`tools/list` на ChatGPT-alias нельзя: отдельная
+проверка `POST /backend-api/aip/connectors/mcp/oauth_config` трактует ответ 200
+как отсутствие OAuth и возвращает `404 does not implement OAuth`, даже если
+список инструментов уже содержит `securitySchemes`. ChatGPT-alias снова отвечает
+транспортным `401 + WWW-Authenticate` до входа; после OAuth `tools/list`
+по-прежнему публикует `oauth2` для всех инструментов. Claude URL и его
+транспортный контракт не меняются. Evidence: сетевой ответ builder и точечный
+`handler.test.cjs` (18/18).
+
 Первая попытка deploy 2026-08-04 прошла обязательный pre-deploy gate (806/806),
 но штатный guard остановил процесс до первой cloud-мутации: source не
 закоммичен. Этот блок сохраняет историю первой попытки; исправление allowlist

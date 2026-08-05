@@ -165,8 +165,7 @@ function chatGptToolSchemas(schemas) {
 
 async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath = DEFAULT_MCP_ENDPOINT }) {
   const auth = oauth.authenticateAccessToken(headers.authorization, secret);
-  const chatGptDiscovery = !auth.ok && resourcePath === CHATGPT_CURATOR_ENDPOINT;
-  if (!auth.ok && !chatGptDiscovery) {
+  if (!auth.ok) {
     // RFC 9728: 401 обязан показать, где искать метаданные ресурса —
     // по ним claude.ai сам находит authorization server и запускает OAuth.
     // Путь ресурса совпадает с адресом запроса, иначе второй коннектор уедет
@@ -185,21 +184,6 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
   }
 
   const api = createApiClient({ apiUrl });
-  if (chatGptDiscovery) {
-    const curatorCtx = curatorContext(api);
-    const issuer = issuerFrom(headers);
-    const response = await mcp.handlePayload(payload, {
-      tools: curatorCtx.tools,
-      toolSchemas: chatGptToolSchemas(curatorCtx.schemas),
-      instructions: curatorCtx.instructions,
-      authRequired: `Bearer resource_metadata="${issuer}${PROTECTED_RESOURCE_PREFIX}${resourcePath}", error="invalid_token", error_description="OAuth authorization required"`,
-    });
-    if (response === null) {
-      return { statusCode: 202, headers: { ...SECURITY_HEADERS, ...CORS_HEADERS }, body: '' };
-    }
-    return json(200, response);
-  }
-
   let tools;
   let toolSchemas = null;
   let instructions = null;
