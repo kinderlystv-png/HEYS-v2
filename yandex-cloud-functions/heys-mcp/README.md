@@ -390,7 +390,7 @@ claude.ai → Настройки → Коннекторы → «Добавить
 поддерживает динамическую регистрацию.
 
 ChatGPT → Плагины → «Добавить сервер» → URL
-`https://d5d7939njvjp27ofsok0.3zvepvee.apigw.yandexcloud.net/mcp/chatgpt/curator`.
+`https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/chatgpt/curator-v2`.
 Это отдельный OAuth resource на той же функции и с тем же кураторским набором
 инструментов. Alias введён 2026-08-04 после подтверждённого cache-инцидента:
 ChatGPT продолжал считать старый `/mcp/curator` несовместимым с RFC 7591 и не
@@ -443,6 +443,17 @@ Evidence — D6 в [`todo.md`](../../todo.md).
 по-прежнему публикует `oauth2` для всех инструментов. Claude URL и его
 транспортный контракт не меняются. Evidence: сетевой ответ builder и точечный
 `handler.test.cjs` (18/18).
+
+**Уточнение 2026-08-05 (решение пользователя, production incident).** После
+успешного OAuth старый ChatGPT-коннектор мог оставаться без действий, а создание
+нового падало до первого запроса к функции: отрицательный discovery-cache жил на
+стороне ChatGPT. Для чистой проверки введён новый resource
+`/mcp/chatgpt/curator-v2`; старые URL не удалены, Claude-схема не менялась.
+Отдельная конфигурация gateway хранится рядом в `chatgpt-api-gateway-spec.yaml`;
+она также проводит `HEAD` к функции и на корневом protected-resource metadata
+рекламирует точный `curator-v2` resource. Evidence: Cloud Logging без входящего
+запроса при ошибке builder, локальный `handler.test.cjs` и live HTTP-проверка
+после deploy.
 
 Первая попытка deploy 2026-08-04 прошла обязательный pre-deploy gate (806/806),
 но штатный guard остановил процесс до первой cloud-мутации: source не

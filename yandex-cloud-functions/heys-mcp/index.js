@@ -45,9 +45,12 @@ const DEFAULT_API_URL = 'https://api.heyslab.ru';
  * сверяет `resource` из метаданных с URL коннектора, поэтому метаданные и
  * заголовок 401 обязаны называть именно тот путь, по которому пришёл запрос.
  */
-const MCP_ENDPOINTS = new Set(['/mcp', '/mcp/curator', '/mcp/chatgpt/curator']);
+const CHATGPT_CURATOR_ENDPOINTS = new Set([
+  '/mcp/chatgpt/curator',
+  '/mcp/chatgpt/curator-v2',
+]);
+const MCP_ENDPOINTS = new Set(['/mcp', '/mcp/curator', ...CHATGPT_CURATOR_ENDPOINTS]);
 const DEFAULT_MCP_ENDPOINT = '/mcp';
-const CHATGPT_CURATOR_ENDPOINT = '/mcp/chatgpt/curator';
 const CURATOR_OAUTH_SCHEME = [{ type: 'oauth2', scopes: ['heys:diary'] }];
 
 const PROTECTED_RESOURCE_PREFIX = '/.well-known/oauth-protected-resource';
@@ -192,7 +195,7 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
     // инструменты работают с дневниками клиентов куратора.
     const curatorCtx = curatorContext(api, auth);
     tools = curatorCtx.tools;
-    toolSchemas = resourcePath === CHATGPT_CURATOR_ENDPOINT
+    toolSchemas = CHATGPT_CURATOR_ENDPOINTS.has(resourcePath)
       ? chatGptToolSchemas(curatorCtx.schemas)
       : curatorCtx.schemas;
     instructions = curatorCtx.instructions;
@@ -505,10 +508,12 @@ exports.handler = async (event) => {
     // GET без токена также рекламирует OAuth metadata: некоторые MCP-хосты
     // проверяют endpoint до первого JSON-RPC POST. С валидным токеном поток
     // «сервер → клиент» по-прежнему не поддерживается: транспорт stateless.
-    if (MCP_ENDPOINTS.has(path) && method === 'GET') {
+    if (MCP_ENDPOINTS.has(path) && (method === 'GET' || method === 'HEAD')) {
       const auth = oauth.authenticateAccessToken(headers.authorization, secret);
-      if (!auth.ok) return mcpUnauthorized(headers, path);
-      return json(405, { error: 'method_not_allowed' }, { Allow: 'POST' });
+      const response = !auth.ok
+        ? mcpUnauthorized(headers, path)
+        : json(405, { error: 'method_not_allowed' }, { Allow: 'POST' });
+      return method === 'HEAD' ? { ...response, body: '' } : response;
     }
     if (MCP_ENDPOINTS.has(path) && method === 'DELETE') {
       return json(405, { error: 'method_not_allowed' }, { Allow: 'POST' });

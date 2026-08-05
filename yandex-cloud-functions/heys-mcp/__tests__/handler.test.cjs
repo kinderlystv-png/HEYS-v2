@@ -34,6 +34,7 @@ test('метаданные authorization server отдаются для корн
     '/.well-known/oauth-authorization-server/mcp',
     '/.well-known/oauth-authorization-server/mcp/curator',
     '/.well-known/oauth-authorization-server/mcp/chatgpt/curator',
+    '/.well-known/oauth-authorization-server/mcp/chatgpt/curator-v2',
   ]) {
     const res = await call({ httpMethod: 'GET', path });
     assert.equal(res.statusCode, 200, path);
@@ -76,14 +77,29 @@ test('/mcp/chatgpt/curator — отдельный OAuth resource для обхо
   assert.deepEqual(body(meta).authorization_servers, [`https://${HOST}`]);
 });
 
-test('/mcp/chatgpt/curator рекламирует OAuth до входа и схемы инструментов после входа', async () => {
-  const resource = '/mcp/chatgpt/curator';
+test('/mcp/chatgpt/curator-v2 — новый resource не наследует отрицательный discovery-cache', async () => {
+  const resource = '/mcp/chatgpt/curator-v2';
+  for (const method of ['GET', 'HEAD', 'POST']) {
+    const res = await call({ httpMethod: method, path: resource, body: method === 'POST' ? '{}' : undefined });
+    assert.equal(res.statusCode, 401, method);
+    assert.match(res.headers['WWW-Authenticate'], /resource_metadata="https:\/\/api\.heyslab\.ru\/\.well-known\/oauth-protected-resource\/mcp\/chatgpt\/curator-v2"/);
+    if (method === 'HEAD') assert.equal(res.body, '');
+  }
+
+  const meta = await call({ httpMethod: 'GET', path: `/.well-known/oauth-protected-resource${resource}` });
+  assert.equal(meta.statusCode, 200);
+  assert.equal(body(meta).resource, `https://${HOST}${resource}`);
+  assert.deepEqual(body(meta).authorization_servers, [`https://${HOST}`]);
+});
+
+test('/mcp/chatgpt/curator-v2 рекламирует OAuth до входа и схемы инструментов после входа', async () => {
+  const resource = '/mcp/chatgpt/curator-v2';
   const initialize = await call({
     httpMethod: 'POST', path: resource,
     body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18' } }),
   });
   assert.equal(initialize.statusCode, 401);
-  assert.match(initialize.headers['WWW-Authenticate'], /resource_metadata="https:\/\/api\.heyslab\.ru\/\.well-known\/oauth-protected-resource\/mcp\/chatgpt\/curator"/);
+  assert.match(initialize.headers['WWW-Authenticate'], /resource_metadata="https:\/\/api\.heyslab\.ru\/\.well-known\/oauth-protected-resource\/mcp\/chatgpt\/curator-v2"/);
 
   const oauth = require('../lib/oauth');
   const redirectUri = 'https://chatgpt.com/connector/oauth/handler-test';
