@@ -7,52 +7,89 @@ info:
 servers:
   - url: https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net
 
-x-heys-function: &heys_function
-  type: cloud_functions
-  service_account_id: aje85rjgpj4nk9m384ek
-  function_id: d4egv2a6pdhmf5hbrgp8
-
 paths:
   /mcp/chatgpt/curator-v2:
     get:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
     head:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
     post:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
     options:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
 
   /mcp/chatgpt/curator:
     get:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
     head:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
     post:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
     options:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
 
   /mcp/register:
     post:
       x-yc-apigateway-throttling: { rate: 10, unit: MINUTE }
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
     options:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
 
   /mcp/authorize:
     get:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
     post:
       x-yc-apigateway-throttling: { rate: 5, unit: MINUTE }
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
 
   /mcp/token:
     post:
       x-yc-apigateway-throttling: { rate: 30, unit: MINUTE }
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
     options:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
 
   /.well-known/oauth-protected-resource:
     get:
@@ -65,23 +102,38 @@ paths:
         content:
           application/json: '{"resource":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/chatgpt/curator-v2","authorization_servers":["https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net"],"scopes_supported":["heys:diary"],"bearer_methods_supported":["header"]}'
     options:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
 
   /.well-known/oauth-protected-resource/mcp/chatgpt/curator-v2:
     get:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
     options:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
 
   /.well-known/oauth-protected-resource/mcp/chatgpt/curator:
     get:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
     options:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
 
   /.well-known/oauth-authorization-server:
     get:
-      x-yc-apigateway-integration: &oauth_metadata
+      x-yc-apigateway-integration:
         type: dummy
         http_code: 200
         http_headers:
@@ -90,16 +142,39 @@ paths:
         content:
           application/json: '{"issuer":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net","authorization_endpoint":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/authorize","token_endpoint":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/token","registration_endpoint":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/register","scopes_supported":["heys:diary"],"response_types_supported":["code"],"grant_types_supported":["authorization_code","refresh_token"],"code_challenge_methods_supported":["S256"],"token_endpoint_auth_methods_supported":["none"]}'
     options:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
 
   /.well-known/oauth-authorization-server/mcp/chatgpt/curator-v2:
     get:
-      x-yc-apigateway-integration: *oauth_metadata
+      x-yc-apigateway-integration:
+        type: dummy
+        http_code: 200
+        http_headers:
+          Content-Type: application/json
+          Cache-Control: no-store
+        content:
+          application/json: '{"issuer":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net","authorization_endpoint":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/authorize","token_endpoint":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/token","registration_endpoint":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/register","scopes_supported":["heys:diary"],"response_types_supported":["code"],"grant_types_supported":["authorization_code","refresh_token"],"code_challenge_methods_supported":["S256"],"token_endpoint_auth_methods_supported":["none"]}'
     options:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
 
   /.well-known/oauth-authorization-server/mcp/chatgpt/curator:
     get:
-      x-yc-apigateway-integration: *oauth_metadata
+      x-yc-apigateway-integration:
+        type: dummy
+        http_code: 200
+        http_headers:
+          Content-Type: application/json
+          Cache-Control: no-store
+        content:
+          application/json: '{"issuer":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net","authorization_endpoint":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/authorize","token_endpoint":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/token","registration_endpoint":"https://d5d58uh6hggc7j2e19f5.ccx97b51.apigw.yandexcloud.net/mcp/register","scopes_supported":["heys:diary"],"response_types_supported":["code"],"grant_types_supported":["authorization_code","refresh_token"],"code_challenge_methods_supported":["S256"],"token_endpoint_auth_methods_supported":["none"]}'
     options:
-      x-yc-apigateway-integration: *heys_function
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
