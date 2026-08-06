@@ -8,8 +8,8 @@
 // Данные недели демонстрационные и обезличенные (канон `маркетинг/30` L3).
 // Настоящий скриншот недели из приложения ждёт материалов — слот в макете.
 
-import { Accent, Caption, PrimaryCta, Section, SectionLead, SectionTitle } from './primitives';
 import { D_CTA_HREF, D_CTA_LABEL } from './nav';
+import { Accent, Caption, PrimaryCta, Section, SectionLead, SectionTitle } from './primitives';
 import { D_WEEK } from './theme';
 
 interface Day {

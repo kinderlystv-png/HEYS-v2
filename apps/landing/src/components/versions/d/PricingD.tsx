@@ -13,8 +13,8 @@
 
 import { useState } from 'react';
 
-import { Accent, Caption, PrimaryCta, Section, SectionTitle } from './primitives';
 import { D_CTA_HREF, D_CTA_LABEL } from './nav';
+import { Accent, Caption, PrimaryCta, Section, SectionTitle } from './primitives';
 
 import PurchaseModal from '@/components/modals/PurchaseModal';
 import { PRICING } from '@/config/pricing';
