@@ -2092,6 +2092,36 @@ function reviewTails(entries) {
 }
 
 /**
+ * Причины дня — контекстные строки, которые «Закрыть день» пишет под слотом
+ * («✕ не было», «отменилось», «в работу») или самостоятельной строкой у
+ * снятого слота. Формат тот же двойной отступ, что у остальных вложенных
+ * строк, но это не подзадача (`- [ ]`) и не ждём:/при встрече:/открыто:/см: —
+ * у тех своя дорога в задачнике. Решено 05.08: разбираются в той же ревизии,
+ * что и хвост стенограммы, — отдельной категорией, а не раз в неделю, иначе
+ * теряют актуальность к моменту разбора.
+ */
+const DAY_REASON_RE = /^ {2}- (.+)$/;
+const DAY_REASON_SKIP_RE = /^(ждём:|при встрече:|открыто:|см:|\[[ xX>~-]\])/i;
+
+function dayFileReasons(text) {
+  return String(text || '').split('\n')
+    .map((line) => DAY_REASON_RE.exec(line))
+    .filter(Boolean)
+    .map((m) => m[1].trim())
+    .filter((line) => line && !DAY_REASON_SKIP_RE.test(line));
+}
+
+/**
+ * Отметка «Сверено с доской» в дне — тот же формат строки, что у стенограммы
+ * (transcriptTail её узнаёт), но без заголовка `## ЧЧ:ММ`: в days/*.md нет
+ * обменов по времени, есть только план, и посторонний заголовок среди слотов
+ * читался бы чужеродно.
+ */
+function appendDayReviewMark(text, mark) {
+  return appendBlock(text, reviewMarkLine(mark));
+}
+
+/**
  * Что читать перед этой планёркой.
  *
  * Дни без несверенного хвоста в ответ не попадают вовсе: показывать «за 30
@@ -2099,20 +2129,26 @@ function reviewTails(entries) {
  * случаем — сегодняшней стенограммы нет: сверять не с чем, и это не тишина, а
  * находка.
  */
-function dayReviewStatus(entries, { date, candidates = null } = {}) {
+function dayReviewStatus(entries, { date, candidates = null, dayEntries = [] } = {}) {
   const days = (entries || []).map(({ date: day, file }) => dayReviewDay(file, day));
   const today = days.find((day) => day.date === date) || dayReviewDay(null, date);
   const unreviewed = days
     .filter((day) => day.unreviewed)
     .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  const dayReasons = [];
+  for (const { date: day, file } of dayEntries || []) {
+    const tail = transcriptTail((file && file.text) || '');
+    for (const text of dayFileReasons(tail.text)) dayReasons.push({ date: day, path: `days/${day}.md`, text });
+  }
   return {
     date,
     path: today.path,
     window_days: REVIEW_WINDOW_DAYS,
     today_missing: !today.exists,
     days: unreviewed,
+    day_reasons: dayReasons,
     candidates: candidates || emptyReviewCandidates(),
-    needed: unreviewed.length > 0 || !today.exists,
+    needed: unreviewed.length > 0 || !today.exists || dayReasons.length > 0,
   };
 }
 
@@ -2139,22 +2175,33 @@ function reviewDayLine(day) {
  */
 function dayReviewBlock(status) {
   if (!status || !status.needed) return null;
-  const head = status.days.length
-    ? `Ревизия — до повестки. Несверенные хвосты стенограмм за ${status.window_days} дней:\n${
+  const parts = [];
+  if (status.days.length) {
+    parts.push(`Ревизия — до повестки. Несверенные хвосты стенограмм за ${status.window_days} дней:\n${
       status.days.map((day) => `- ${reviewDayLine(day)}`).join('\n')}\nПрочитай их через tasks_read`
       + ' — только хвост, выше последней отметки уже сверено — и сверь с задачником.'
-    : `Ревизия — до повестки: стенограммы за сегодня нет вовсе (${status.path} пуст).`
+      + ' Ищи потерянное: принятое решение, которого нигде нет; договорённость с человеком без задачи,'
+      + ' слота или напоминания; дело, о котором договорились, а задачи нет; названные число, срок или цену;'
+      + ' вопрос, оставшийся без ответа и не помеченный «открыто:». Найденное заводи сразу — задачей,'
+      + ' напоминанием, идеей или пунктом планёрки. Пересказывать стенограмму не надо: он в этом разговоре был.');
+  } else if (status.today_missing) {
+    parts.push(`Ревизия — до повестки: стенограммы за сегодня нет вовсе (${status.path} пуст).`
       + ' Разговор за день не записан, сверять не с чем — и это само по себе потеря: всё, что сегодня обсудили'
-      + ' и не завели, восстановить уже неоткуда. Скажи ему об этом и начни писать стенограмму с ближайшего обмена.';
-  const body = head
-    + (status.days.length
-      ? ' Ищи потерянное: принятое решение, которого нигде нет; договорённость с человеком без задачи,'
-        + ' слота или напоминания; дело, о котором договорились, а задачи нет; названные число, срок или цену;'
-        + ' вопрос, оставшийся без ответа и не помеченный «открыто:». Найденное заводи сразу — задачей,'
-        + ' напоминанием, идеей или пунктом планёрки. Пересказывать стенограмму не надо: он в этом разговоре был.'
-      : '')
-    + ' Закончил — tasks_standup с reviewed и коротким итогом: отметка ляжет в конец каждого прочитанного файла,'
-    + ' и на следующей планёрке ты увидишь только то, что появилось после неё.';
+      + ' и не завели, восстановить уже неоткуда. Скажи ему об этом и начни писать стенограмму с ближайшего обмена.');
+  }
+  // Причины из «Закрыть день» — решено 05.08: та же ревизия, отдельная
+  // категория, каждую планёрку, а не раз в неделю (иначе теряют актуальность).
+  // Это не гадание кандидатов ниже — прямая цитата его слов, назначенная
+  // задаче или другой сущности здесь и сейчас.
+  if (status.day_reasons && status.day_reasons.length) {
+    parts.push(`Причины из закрытых дней (${status.day_reasons.length}), ещё не сверенные с задачником —`
+      + ' его слова из «Закрыть день», не гадание: у каждой актуализируй или заведи то, к чему она относится'
+      + ' (задачу, факт, решение), прямо сейчас, а не откладывай:\n'
+      + status.day_reasons.map((r) => `- ${r.date}: ${r.text}`).join('\n'));
+  }
+  parts.push('Закончил — tasks_standup с reviewed и коротким итогом: отметка ляжет в конец каждого прочитанного файла,'
+    + ' и на следующей планёрке ты увидишь только то, что появилось после неё.');
+  const body = parts.join('\n\n');
   const hints = reviewCandidateLines(status.candidates);
   return hints ? `${body}\n\n${hints}` : body;
 }
@@ -4863,6 +4910,8 @@ module.exports = {
   reviewMarkLine,
   reviewMarkBlock,
   appendReviewMark,
+  dayFileReasons,
+  appendDayReviewMark,
   dayReviewDay,
   dayReviewStatus,
   dayReviewBlock,

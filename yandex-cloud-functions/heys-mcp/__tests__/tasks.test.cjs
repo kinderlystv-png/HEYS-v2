@@ -3737,6 +3737,78 @@ test('стенограммы за сегодня нет вовсе — это н
   assert.equal(res.structured.day_review.days.length, 0);
 });
 
+// ── Причины из «Закрыть день» — та же ревизия, отдельная категория ────────
+//
+// Решено 05.08: не гадание кандидатов (те про стенограмму), а прямая цитата
+// его слов из «Закрыть день» — «причина словами» под слотом или у снятого
+// слота. Разбирается КАЖДУЮ планёрку, вместе с хвостом стенограммы, а не раз
+// в неделю — иначе теряет актуальность к моменту, когда до неё дойдут руки.
+
+const TODAY_DAY_PATH = 'days/2026-08-02.md';
+
+test('причина из «Закрыть день» попадает в ревизию отдельной категорией', async () => {
+  // Слот снят («отменилось») — причина ложится самодостаточной строкой со
+  // временем и названием, слота над ней уже нет. Формат «Закрыть день» пишет
+  // именно так — dayFileReasons отдаёт строку как есть, не пытаясь её резать.
+  const dayText = `# План на 2026-08-02
+  - 16:00 Дзюдо — даня не захотел, возможно карате
+`;
+  const res = await session(standupApi({ [TODAY_DAY_PATH]: dayText })).tasks_standup({});
+  assert.match(res.text, /Причины из закрытых дней \(1\)/);
+  assert.match(res.text, /даня не захотел, возможно карате/);
+  const reasons = res.structured.day_review.day_reasons;
+  assert.equal(reasons.length, 1);
+  assert.equal(reasons[0].date, '2026-08-02');
+  assert.equal(reasons[0].path, TODAY_DAY_PATH);
+  assert.equal(reasons[0].text, '16:00 Дзюдо — даня не захотел, возможно карате');
+});
+
+test('подзадачи и ждём:/при встрече:/открыто:/см: причинами не считаются', async () => {
+  const dayText = `# План на 2026-08-02
+- 16:00-17:30 Студия: замер · kinderly/3f4e12
+  - [ ] Собрать каркас
+  - ждём: Маша — реквизит к среде
+  - при встрече: Кин — обсудить цвет
+  - открыто: нужен ли второй заезд
+  - см: heys/abc123
+  - есть размеры и фото
+`;
+  const res = await session(standupApi({ [TODAY_DAY_PATH]: dayText })).tasks_standup({});
+  const reasons = res.structured.day_review.day_reasons;
+  assert.equal(reasons.length, 1, 'только настоящая причина, остальное — структурные строки');
+  assert.equal(reasons[0].text, 'есть размеры и фото');
+});
+
+test('причина без стенограммы поднимает ревизию без ложного «стенограммы нет»', async () => {
+  // Стенограмма за сегодня в базовом наборе отсутствует вовсе — обычно это
+  // отдельная находка («стенограммы нет»), но если ревизию подняла причина
+  // дня, а не хвост, ложного текста про пустую стенограмму быть не должно.
+  const dayText = `# План на 2026-08-02
+  - 09:00 Зарядка — не в форме, перенёс
+`;
+  const res = await session(standupApi({ [TODAY_DAY_PATH]: dayText })).tasks_standup({});
+  assert.match(res.text, /Причины из закрытых дней \(1\)/);
+});
+
+test('reviewed ставит отметку и в день с причиной, вторая ревизия её не повторяет', async () => {
+  const dayText = `# План на 2026-08-02
+  - 16:00 Дзюдо — даня не захотел, возможно карате
+`;
+  const api = standupApi({ [TODAY_DAY_PATH]: dayText });
+  const before = await session(api).tasks_standup({});
+  assert.equal(before.structured.day_review.day_reasons.length, 1);
+
+  const mark = await session(api).tasks_standup({ reviewed: 'причина по дзюдо — карате обсудим отдельно' });
+  assert.equal(mark.structured.day_review.marked.length, 1);
+  assert.equal(mark.structured.day_review.marked[0].path, TODAY_DAY_PATH);
+  assert.equal(mark.structured.day_review.marked[0].kind, 'причины дня');
+  assert.match(api.file(TODAY_DAY_PATH), /\*\*Сверено с доской\*\* · 2026-08-02/);
+  assert.ok(!/^##\s/m.test(api.file(TODAY_DAY_PATH)), 'в дне нет постороннего заголовка «## ЧЧ:ММ»');
+
+  const after = await session(api).tasks_standup({});
+  assert.equal(after.structured.day_review.day_reasons.length, 0, 'сверенная причина второй раз не просится');
+});
+
 test('хвост вчерашнего файла приезжает вместе с сегодняшним', async () => {
   // Работа до двух ночи попадает во вчерашний файл, а планёрку могли
   // пропустить. Память прохода на это отвечала «сегодня уже сверено».

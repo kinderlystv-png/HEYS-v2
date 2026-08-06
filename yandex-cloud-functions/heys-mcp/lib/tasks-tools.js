@@ -921,12 +921,16 @@ function createTasksTools({
       { length: tasks.REVIEW_WINDOW_DAYS },
       (_, i) => tasks.shiftDate(date, -i),
     );
-    const paths = dates.map((day) => tasks.transcriptPath(day));
+    const transcriptPaths = dates.map((day) => tasks.transcriptPath(day));
+    const dayPaths = dates.map((day) => `days/${day}.md`);
     let files = [];
-    try { files = await readAll({ paths, max: paths.length }); } catch { files = []; }
+    try {
+      files = await readAll({ paths: [...transcriptPaths, ...dayPaths], max: transcriptPaths.length + dayPaths.length });
+    } catch { files = []; }
     const byPath = new Map(files.map((file) => [file.path, file]));
     const entries = dates.map((day) => ({ date: day, file: byPath.get(tasks.transcriptPath(day)) || null }));
-    return { entries, status: tasks.dayReviewStatus(entries, { date }) };
+    const dayEntries = dates.map((day) => ({ date: day, file: byPath.get(`days/${day}.md`) || null }));
+    return { entries, dayEntries, status: tasks.dayReviewStatus(entries, { date, dayEntries }) };
   }
 
   /**
@@ -3196,9 +3200,10 @@ function createTasksTools({
           );
         }
         const round = await dayReviewRound(today_);
-        if (!round.status.days.length) {
+        const reasonDates = [...new Set((round.status.day_reasons || []).map((r) => r.date))];
+        if (!round.status.days.length && !reasonDates.length) {
           return {
-            text: `Отмечать нечего: несверенного хвоста в стенограммах за ${tasks.REVIEW_WINDOW_DAYS} дней нет.${
+            text: `Отмечать нечего: несверенного хвоста в стенограммах и причин из закрытых дней за ${tasks.REVIEW_WINDOW_DAYS} дней нет.${
               round.status.today_missing ? ` Стенограммы за ${today_} нет вовсе — начни её писать, отметка ляжет в неё.` : ''}`,
             structured: { day_review: { date: today_, marked: [], summary, ...round.status } },
           };
@@ -3209,11 +3214,20 @@ function createTasksTools({
           const file = await readFile(day.path);
           const put = (text) => tasks.appendReviewMark(text, stamp);
           const saved = await writeFile(file, put(file.text), { rebase: put });
-          marked.push({ path: saved.path, rev: saved.rev, date: day.date });
+          marked.push({ path: saved.path, rev: saved.rev, date: day.date, kind: 'стенограмма' });
+        }
+        // Причины из «Закрыть день» сверены той же ревизией — отметка идёт в
+        // сам день, тем же форматом строки (без заголовка «## ЧЧ:ММ», в дне
+        // ему не место), чтобы при следующем заходе показать только новое.
+        for (const date of reasonDates) {
+          const file = await readFile(`days/${date}.md`);
+          const put = (text) => tasks.appendDayReviewMark(text, stamp);
+          const saved = await writeFile(file, put(file.text), { rebase: put });
+          marked.push({ path: saved.path, rev: saved.rev, date, kind: 'причины дня' });
         }
         return {
-          text: `Ревизия отмечена в ${marked.length === 1 ? 'стенограмме' : `стенограммах (${marked.length})`}: ${
-            marked.map((m) => m.path).join(', ')}. Итог: ${summary}. На следующей планёрке прочитаешь только то, что появится ниже отметки.`,
+          text: `Ревизия отмечена в ${marked.length === 1 ? 'файле' : `файлах (${marked.length})`}: ${
+            marked.map((m) => `${m.path} (${m.kind})`).join(', ')}. Итог: ${summary}. На следующей планёрке прочитаешь только то, что появится ниже отметки.`,
           structured: {
             day_review: {
               date: today_, marked, summary, at: `${stamp.date} ${stamp.time}`,
