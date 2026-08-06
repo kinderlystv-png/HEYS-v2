@@ -113,6 +113,21 @@ describe('формулировки, закреплённые решением в
     }
   });
 
+  it('первая body-заявка после артефакта недели, а не сразу после «Знакомо?»', () => {
+    const pain = read(D_DIR, 'PainSection.tsx');
+    const week = read(D_DIR, 'ReviewedWeek.tsx');
+    expect(pain).not.toContain('PrimaryCta');
+    expect(pain).not.toContain('#trial');
+    expect(week).toContain('D_CTA_LABEL');
+    expect(week).toContain('D_CTA_HREF');
+  });
+
+  it('Pro Спорт не продаёт founder-led / основателя во внешнем тексте', () => {
+    const pricing = read(D_DIR, 'PricingD.tsx');
+    expect(pricing).not.toMatch(/founder/i);
+    expect(pricing).not.toMatch(/основател/i);
+  });
+
   it('FAQ отвечает про живого человека и не выдаёт AI за куратора', () => {
     const faq = read(D_DIR, 'FaqD.tsx');
     expect(faq).toContain('живой человек или это AI');

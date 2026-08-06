@@ -8,7 +8,8 @@
 // Данные недели демонстрационные и обезличенные (канон `маркетинг/30` L3).
 // Настоящий скриншот недели из приложения ждёт материалов — слот в макете.
 
-import { Accent, Section, SectionLead, SectionTitle } from './primitives';
+import { Accent, Caption, PrimaryCta, Section, SectionLead, SectionTitle } from './primitives';
+import { D_CTA_HREF, D_CTA_LABEL } from './nav';
 import { D_WEEK } from './theme';
 
 interface Day {
@@ -218,6 +219,25 @@ export default function ReviewedWeek() {
           ))}
         </div>
       </details>
+
+      {/* Первая body-заявка — после узнавания, механики и артефакта недели
+          (COPY_VOICE 2026-06-27). Раньше карточка стояла в `#pain` и опережала proof. */}
+      <div
+        data-reveal
+        className="mx-auto mt-14 max-w-[640px] rounded-3xl border border-[rgba(16,24,38,0.12)] bg-[#FBFAF7] px-9 py-10 text-center shadow-[0_16px_44px_rgba(16,24,38,0.05)]"
+      >
+        <h3 className="text-[20px] font-semibold leading-[1.35] text-[#101826]">
+          Если хотите такую неделю — начните с <Accent>недели Pro.</Accent>
+        </h3>
+        <p className="mx-auto mt-4 max-w-[440px] text-[14.5px] leading-[1.6] text-[#5B6472]">
+          Неделю куратор ведёт ваш дневник и разбирает, где день начинает сбиваться. Дальше решаете
+          сами.
+        </p>
+        <div className="mt-7">
+          <PrimaryCta href={D_CTA_HREF}>{D_CTA_LABEL}</PrimaryCta>
+        </div>
+        <Caption>0 ₽ · без карты и автосписаний</Caption>
+      </div>
     </Section>
   );
 }

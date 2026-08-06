@@ -14,6 +14,7 @@
 import { useState } from 'react';
 
 import { Accent, Caption, PrimaryCta, Section, SectionTitle } from './primitives';
+import { D_CTA_HREF, D_CTA_LABEL } from './nav';
 
 import PurchaseModal from '@/components/modals/PurchaseModal';
 import { PRICING } from '@/config/pricing';
@@ -175,7 +176,7 @@ export default function PricingD() {
             </p>
 
             <div className="mt-8">
-              <PrimaryCta href="#trial">Начать с бесплатной недели</PrimaryCta>
+              <PrimaryCta href={D_CTA_HREF}>{D_CTA_LABEL}</PrimaryCta>
               <Caption>0 ₽ · без карты и автосписаний</Caption>
             </div>
           </div>
@@ -267,7 +268,7 @@ export default function PricingD() {
           </p>
           <p className="mt-4 text-[14.5px] leading-[1.6] text-[#5B6472]">
             Всё, что входит в Pro, плюс тренировочный план и его сведение с питанием. Мест немного:
-            формат founder-led, и каждый участник разбирается лично.
+            куратор ведёт ограниченный набор, и каждого участника разбирает лично.
           </p>
           <button
             type="button"

@@ -1,10 +1,11 @@
 // 01 — «Ваша ситуация» (`#pain`).
 //
 // Блок узнавания: четыре ситуации без карточек и иконок, затем вывод о том, что
-// дело не в силе воли, и карточка-CTA. Порядок важен: страница сначала называет
-// ситуацию человека и только потом переходит к механике сервиса.
+// дело не в силе воли. Карточку заявки сюда не ставим: COPY_VOICE 2026-06-27 —
+// первая заявка после объяснения и доказательства, не сразу после узнавания.
+// Trial-карточка стоит после артефакта недели (`ReviewedWeek`).
 
-import { Accent, Caption, ClosingLine, PrimaryCta, Section } from './primitives';
+import { ClosingLine, Section } from './primitives';
 
 const SITUATIONS = [
   'Вес стоит, и непонятно, почему — вроде бы питаетесь нормально',
@@ -45,23 +46,6 @@ export default function PainSection() {
       {/* «Рядом» здесь — описание потребности человека, а не обещание
           доступности куратора: разделение прямо закреплено в COPY_VOICE
           (раздел «Зависит от контекста»). */}
-
-      <div
-        data-reveal
-        className="mx-auto mt-14 max-w-[640px] rounded-3xl border border-[rgba(16,24,38,0.12)] bg-[#FBFAF7] px-9 py-10 text-center shadow-[0_16px_44px_rgba(16,24,38,0.05)]"
-      >
-        <h3 className="text-[20px] font-semibold leading-[1.35] text-[#101826]">
-          Если узнали себя — начните с <Accent>недели Pro.</Accent>
-        </h3>
-        <p className="mx-auto mt-4 max-w-[440px] text-[14.5px] leading-[1.6] text-[#5B6472]">
-          Неделю куратор ведёт ваш дневник и разбирает, где день начинает сбиваться. Дальше решаете
-          сами.
-        </p>
-        <div className="mt-7">
-          <PrimaryCta href="#trial">Начать неделю Pro</PrimaryCta>
-        </div>
-        <Caption>0 ₽ · без карты и автосписаний</Caption>
-      </div>
     </Section>
   );
 }

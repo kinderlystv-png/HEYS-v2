@@ -10,15 +10,16 @@
 // мокапа), без пустых 50–70vh после CTA. Липкий только фон. Ролик растёт от
 // верха; play — через `--hero-content-scale`.
 //
-// Кнопка первого экрана ведёт не в форму, а в блок механики: прямая заявка на
-// первом экране запрещена записью `COPY_VOICE` от 2026-06-27, а доступность
-// действия закрыта липкой панелью и шапкой.
+// Кнопка на первом экране убрана: после зума соседний блок уже в кадре, soft-
+// scroll пустой, а trial/квиз живут в шапке и липкой панели. Под мокапом —
+// closer-строка про живого куратора (Playfair на «не бот»).
+// Прямая заявка на первом экране по-прежнему запрещена `COPY_VOICE` 2026-06-27.
 
 import { useEffect, useRef } from 'react';
 
 import { playfair } from './fonts';
 import { LogoD } from './LogoD';
-import { D_CTA_HREF, D_NAV_LINKS } from './nav';
+import { D_CTA_HREF, D_CTA_LABEL, D_NAV_LINKS } from './nav';
 
 import HeroFlowDemo from '@/components/HeroFlowDemo';
 
@@ -26,11 +27,13 @@ import HeroFlowDemo from '@/components/HeroFlowDemo';
 const PLUS_PATTERN =
   "url(\"data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14 5.5c.9 4.1.9 4.1 5 4.9-4.1.9-4.1.9-5 5-.9-4.1-.9-4.1-5-5 4.1-.8 4.1-.8 5-4.9Z' fill='%23FFFFFF'/%3E%3C/svg%3E\")";
 
-const MAX_PHONE_SCALE = 1.38;
+const MAX_PHONE_SCALE = 1.44;
 /** Главы демо торчат под рамкой (`-bottom-9` в HeroFlowDemo). */
 const CHAPTER_DOTS_PX = 36;
-/** Воздух между низом масштабированного мокапа и CTA. */
-const CTA_GAP_PX = 32;
+/** Воздух между низом масштабированного мокапа и closer-строкой. */
+const CTA_GAP_PX = 36;
+/** Высота closer-строки + нижний отступ блока (без кнопки). */
+const CTA_CHROME_PX = 72;
 
 const smoothstep = (g: number) => g * g * (3 - 2 * g);
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
@@ -94,12 +97,12 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
       const vh = window.innerHeight;
       // Финальная ширина чуть уже края экрана — воздух по бокам, не «в упор».
       const targetWidth = desktop.matches
-        ? Math.min(400, window.innerWidth * 0.78)
-        : Math.min(292, window.innerWidth * 0.72);
+        ? Math.min(430, window.innerWidth * 0.82)
+        : Math.min(310, window.innerWidth * 0.76);
       // Снизу оставляем место под точки глав + CTA + подпись.
-      const bottomChrome = CHAPTER_DOTS_PX + CTA_GAP_PX + 120;
+      const bottomChrome = CHAPTER_DOTS_PX + CTA_GAP_PX + CTA_CHROME_PX;
       const heightPad = desktop.matches ? 48 : 32;
-      const cap = desktop.matches ? MAX_PHONE_SCALE : 1.2;
+      const cap = desktop.matches ? MAX_PHONE_SCALE : 1.26;
       const maxScale = Math.min(
         cap,
         Math.max(1, Math.min(targetWidth / width, (vh - heightPad - bottomChrome) / height)),
@@ -124,12 +127,12 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
           : `${CTA_GAP_PX + CHAPTER_DOTS_PX}px`;
       }
 
-      // Pad только чтобы доскроллить зум до центра + короткий мягкий хвост.
-      // Фиксированные 50/70vh после CTA оставляли пустое поле до «Ваша ситуация».
-      const softLand = 40;
+      // Pad только чтобы доскроллить зум до центра. Без лишнего хвоста:
+      // после CTA сразу «Ваша ситуация», а не пустое тёмное поле.
+      const softLand = 16;
       const contentH = section.offsetHeight;
       const padNeeded = growTravel + vh - contentH;
-      section.style.paddingBottom = `${Math.max(softLand, Math.ceil(padNeeded) + softLand)}px`;
+      section.style.paddingBottom = `${Math.max(softLand, Math.ceil(padNeeded))}px`;
     };
 
     const apply = () => {
@@ -264,7 +267,7 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
               href={D_CTA_HREF}
               className="hidden whitespace-nowrap rounded-full border border-white/32 px-4 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-white/10 sm:inline-flex"
             >
-              Неделя Pro — 0 ₽
+              {D_CTA_LABEL}
             </a>
             <button
               type="button"
@@ -311,14 +314,13 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
             />
           </div>
 
-          <div ref={ctaRef} className="pb-10" style={{ marginTop: CTA_GAP_PX + CHAPTER_DOTS_PX }}>
-            <a
-              href="#curator"
-              className="inline-flex items-center justify-center rounded-2xl bg-white px-[30px] py-4 text-[15px] font-semibold text-[#12283E] shadow-[0_12px_30px_rgba(0,0,0,0.3)] transition-all duration-[250ms] hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(0,0,0,0.4)]"
-            >
-              Понять, как работает HEYS →
-            </a>
-            <p className="mt-3 text-[13px] text-white/58">Куратор — живой человек, не чат-бот</p>
+          {/* Closer героя: без кнопки — job trial закрыт шапкой и липкой панелью.
+              «не бот» — Playfair italic, как акценты в заголовках D, меньшим кеглем. */}
+          <div ref={ctaRef} className="pb-12 sm:pb-14" style={{ marginTop: CTA_GAP_PX + CHAPTER_DOTS_PX }}>
+            <p className="max-w-[320px] text-balance text-[clamp(17px,2.1vw,21px)] font-medium leading-[1.4] tracking-[-0.01em] text-white/88">
+              Куратор — живой человек,{' '}
+              <span className={`${playfair.className} font-medium italic text-white`}>не бот</span>
+            </p>
           </div>
         </div>
       </div>
