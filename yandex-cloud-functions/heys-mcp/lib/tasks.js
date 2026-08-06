@@ -1699,7 +1699,24 @@ function pickSimpleQuestions(questions, state, { today, limit = SIMPLE_QUESTION_
   }
   pool.sort(compareSimpleQuestions);
 
-  const picked = pool.filter((item) => !shown[item.key]).slice(0, cap);
+  // Одна задача с несколькими «открыто:» не должна забирать весь круг: не
+  // больше одного её вопроса за раз, остальные ждут следующего круга ротации
+  // (инцидент 06.08 — норма белка отдавала 4 вопроса из 5, «Ремонт склада»
+  // не показывался вовсе). Без ref вопрос уникален сам по себе.
+  const usedRefs = new Set();
+  const takeOne = (item) => {
+    if (item.ref && usedRefs.has(item.ref)) return false;
+    if (item.ref) usedRefs.add(item.ref);
+    return true;
+  };
+
+  const unseen = pool.filter((item) => !shown[item.key]);
+  const picked = [];
+  for (const item of unseen) {
+    if (picked.length >= cap) break;
+    if (takeOne(item)) picked.push(item);
+  }
+
   let roundReset = false;
   if (picked.length < cap && pool.length > picked.length) {
     roundReset = true;
@@ -1707,7 +1724,7 @@ function pickSimpleQuestions(questions, state, { today, limit = SIMPLE_QUESTION_
     for (const item of pool) {
       if (picked.length >= cap) break;
       if (taken.has(item.key)) continue;
-      picked.push(item);
+      if (takeOne(item)) picked.push(item);
     }
     picked.sort(compareSimpleQuestions);
   }
@@ -3318,10 +3335,21 @@ function appendToSection(text, line, section = '## Задачи') {
   return [...lines.slice(0, end), line, ...lines.slice(end)].join('\n');
 }
 
-/** Дописать блок в конец файла — для журнала, стенограммы и инбокса. */
+/** Дописать блок в конец файла — для журнала и инбокса. */
 function appendBlock(text, block) {
   const base = String(text || '').replace(/\s+$/, '');
   return base ? `${base}\n\n${block}\n` : `${block}\n`;
+}
+
+/**
+ * Вставить блок первым в файл — стенограмма читает «свежее сверху»
+ * (transcript/README.md, действует с 2026-08-06): новый обмен встаёт перед
+ * уже существующим первым «## ЧЧ:ММ», а не в конец. appendBlock здесь не
+ * годится — его контракт «в конец» нужен журналу и инбоксу, но не транскрипту.
+ */
+function prependBlock(text, block) {
+  const base = String(text || '').replace(/^\s+/, '');
+  return base ? `${block}\n\n${base}` : `${block}\n`;
 }
 
 /** Найти задачу по хэшу доски. Возвращает индекс строки и разбор, либо null. */
@@ -4873,6 +4901,7 @@ module.exports = {
   transcriptHeadingError,
   prependToSection,
   appendBlock,
+  prependBlock,
   findTaskByHash,
   applyTaskPatch,
   appendChild,

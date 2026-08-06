@@ -4195,12 +4195,33 @@ test('пятёрка на планёрке идёт по срокам и поп�
   const asked = res.structured.simple_questions;
   assert.equal(asked.length, tasks.SIMPLE_QUESTION_LIMIT);
   assert.equal(res.structured.simple_questions_pool, 6, 'из десяти строк «открыто:» простыми признаны шесть');
-  assert.deepEqual(asked.map((q) => q.due), ['2026-08-04', '2026-08-05', '2026-08-05', '2026-08-09', '2026-08-12']);
+  // «Норма белка» несёт два простых «открыто:» с одним и тем же сроком — за
+  // круг отдаётся только первый по месту в файле (Проценты), а освободившееся
+  // место занимает «Ремонт склада» (без due, но простой), а не второй вопрос
+  // той же задачи. Это и есть «один вопрос на задачу за круг».
+  assert.deepEqual(asked.map((q) => q.due), ['2026-08-04', '2026-08-05', '2026-08-09', '2026-08-12', null]);
+  assert.equal(new Set(asked.map((q) => q.ref)).size, asked.length, 'пять вопросов — пять разных задач');
+  assert.match(asked[1].question, /Проценты heys_norms/, 'из двух вопросов нормы белка берётся первый по файлу');
   // Непростое в пятёрку не попадает вовсе, сколько бы его ни было на доске.
   assert.ok(!asked.some((q) => /полный список|Согласовать/i.test(q.question)), 'то, на что не ответить не вставая');
   assert.match(res.text, /Простые вопросы/);
   assert.match(res.text, /tasks_resolve/, 'без этого ответы останутся в чате и пропадут');
   assert.match(res.text, /срок 2026-08-04/);
+});
+
+test('одна задача с несколькими «открыто:» не занимает больше одного места за круг', () => {
+  const items = [
+    { ref: 'heys/norma', path: 'projects/heys.md', line: 1, task: 'Норма белка', due: '2026-08-05', created: '2026-07-20', question: 'Проценты остаются настройкой или становятся производной?', key: 'norma1' },
+    { ref: 'heys/norma', path: 'projects/heys.md', line: 2, task: 'Норма белка', due: '2026-08-05', created: '2026-07-20', question: 'Коэффициенты зашиваем в код или даём куратору настраивать?', key: 'norma2' },
+    { ref: 'heys/norma', path: 'projects/heys.md', line: 3, task: 'Норма белка', due: '2026-08-05', created: '2026-07-20', question: 'Заводим поле «тип тренировки» или нет?', key: 'norma3' },
+    ...pool(2).map((item, i) => ({ ...item, key: `other${i}` })), // две другие задачи, разные ref
+  ];
+  const state = tasks.ensureState(null);
+  const round = tasks.pickSimpleQuestions(items, state, { today: '2026-08-02', limit: 5 });
+  const norma = round.picked.filter((q) => q.ref === 'heys/norma');
+  assert.equal(norma.length, 1, 'из трёх вопросов одной задачи в круге виден один');
+  assert.equal(norma[0].key, 'norma1', 'первый по месту в файле, а не по алфавиту ключа');
+  assert.equal(round.picked.length, 3, 'пять вопросов в пуле, но у ротации только 3 разных ref — забирать чужой ref второй раз нельзя');
 });
 
 test('вечерняя планёрка спрашивает не то же, что утренняя', async () => {
@@ -4834,6 +4855,25 @@ test('checkpoint одним вызовом сохраняет полный об�
   assert.match(api.kv[tasks.keyForPath('journal/2026-08.md')].text, /Итог: добавлен единый checkpoint обмена\./);
   assert.ok(res.structured.transcript.rev > 0);
   assert.ok(res.structured.journal.rev > 0);
+});
+
+test('checkpoint кладёт новый обмен первым блоком дня, а не в конец файла', async () => {
+  // transcript/README.md, с 2026-08-06: свежее — сверху. Журнал этому правилу
+  // не подчиняется — appendBlock для него остался как был.
+  const api = liveTasksApi();
+  const tools = session(api);
+  await tools.tasks_checkpoint({
+    transcript_block: '## 09:00\n\n**Кин:** Первый обмен дня.\n**Claude:** Принято.',
+  });
+  await tools.tasks_checkpoint({
+    transcript_block: '## 12:44\n\n**Кин:** Второй обмен дня.\n**Claude:** Тоже принято.',
+  });
+  const text = api.kv[tasks.keyForPath(TRANSCRIPT_TODAY)].text;
+  assert.ok(
+    text.indexOf('Второй обмен дня') < text.indexOf('Первый обмен дня'),
+    'второй checkpoint должен встать перед первым, а не после',
+  );
+  assert.ok(text.startsWith('## 12:44'), 'самый свежий блок — первая строка файла');
 });
 
 test('checkpoint без устойчивого вывода пишет только стенограмму', async () => {
