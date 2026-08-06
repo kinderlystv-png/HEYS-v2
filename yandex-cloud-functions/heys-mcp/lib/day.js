@@ -758,13 +758,166 @@ const SUPPLEMENT_IDS = new Set([
   'berberine', 'cinnamon', 'chromium', 'vinegar', 'flaxOil', 'oliveOil', 'fishOil',
 ]);
 
+/** Дефолтный timing из apps/web/heys_supplements_v1.js SUPPLEMENTS_CATALOG. */
+const SUPPLEMENT_CATALOG_TIMING = {
+  vitD: 'withFat', vitC: 'anytime', zinc: 'withFood', selenium: 'withFood',
+  omega3: 'withFood', magnesium: 'evening', b12: 'morning', b6: 'morning', lecithin: 'withFood',
+  calcium: 'withFood', k2: 'withFat', collagen: 'anytime', glucosamine: 'withFood',
+  creatine: 'anytime', bcaa: 'anytime', protein: 'anytime',
+  biotin: 'withFood', vitE: 'withFat', hyaluronic: 'anytime',
+  iron: 'empty', folic: 'morning',
+  melatonin: 'beforeBed', glycine: 'beforeBed', ltheanine: 'evening',
+  coq10: 'withFat',
+  berberine: 'beforeMeal', cinnamon: 'withFood', chromium: 'withFood', vinegar: 'withFood',
+  flaxOil: 'withFood', oliveOil: 'withFood', fishOil: 'withFood',
+};
+
+function isValidSupplementId(id) {
+  return SUPPLEMENT_IDS.has(id) || String(id).startsWith('custom_');
+}
+
+function validateSupplementIds(ids) {
+  const list = Array.isArray(ids) ? ids.filter(Boolean) : [];
+  const bad = list.filter((id) => !isValidSupplementId(id));
+  if (bad.length) throw new Error(`unknown_supplement:${bad.join(',')}`);
+  return list;
+}
+
+function normalizeSupplementList(ids) {
+  return validateSupplementIds(ids);
+}
+
+function plannedSupplementsEqual(next, prev) {
+  const a = normalizeSupplementList(next || []);
+  const b = normalizeSupplementList(prev || []);
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+function getSupplementTiming(suppId, profile) {
+  const settings = profile && profile.supplementSettings && profile.supplementSettings[suppId];
+  if (settings && settings.timing) return settings.timing;
+  return SUPPLEMENT_CATALOG_TIMING[suppId] || 'anytime';
+}
+
+function isMorningSupplementTiming(timing) {
+  return timing === 'morning' || timing === 'empty';
+}
+
+function isEveningSupplementTiming(timing) {
+  return timing === 'evening' || timing === 'beforeBed';
+}
+
+function filterSupplementsByTimingSlot(ids, slot, profile) {
+  if (slot !== 'morning' && slot !== 'evening') throw new Error(`invalid_supplement_timing:${slot}`);
+  const list = normalizeSupplementList(ids);
+  return list.filter((id) => {
+    const timing = getSupplementTiming(id, profile);
+    return slot === 'morning' ? isMorningSupplementTiming(timing) : isEveningSupplementTiming(timing);
+  });
+}
+
 /** Добавки на день — id из каталога или пользовательские `custom_*`. */
 function applySupplements(day, ids, { nowMs, clientId } = {}) {
-  const list = Array.isArray(ids) ? ids : [];
-  const bad = list.filter((id) => !SUPPLEMENT_IDS.has(id) && !String(id).startsWith('custom_'));
-  if (bad.length) throw new Error(`unknown_supplement:${bad.join(',')}`);
+  const list = normalizeSupplementList(ids);
   const mutationAt = Math.max(nowMs, (Number(day.supplementsPlannedUpdatedAt) || 0) + 1);
   return touch({ ...day, supplementsPlanned: list, supplementsPlannedUpdatedAt: mutationAt }, mutationAt, clientId);
+}
+
+/**
+ * План на день: set целиком, либо add/remove без затрагивания остальных.
+ * Зеркалит savePlannedSupplements на уровне списка supplementsPlanned.
+ */
+function patchSupplementsPlanned(day, patch, { nowMs, clientId } = {}) {
+  let list;
+  if (patch.set !== undefined && patch.set !== null) {
+    list = normalizeSupplementList(patch.set);
+  } else {
+    const base = Array.isArray(day.supplementsPlanned) ? [...day.supplementsPlanned] : [];
+    if (patch.remove) {
+      const remove = new Set(normalizeSupplementList(patch.remove));
+      list = base.filter((id) => !remove.has(id));
+    } else {
+      list = [...base];
+    }
+    if (patch.add) {
+      for (const id of normalizeSupplementList(patch.add)) {
+        if (!list.includes(id)) list.push(id);
+      }
+    }
+    list = normalizeSupplementList(list);
+  }
+  if (plannedSupplementsEqual(list, day.supplementsPlanned)) return day;
+  const mutationAt = Math.max(nowMs, (Number(day.supplementsPlannedUpdatedAt) || 0) + 1);
+  return touch({ ...day, supplementsPlanned: list, supplementsPlannedUpdatedAt: mutationAt }, mutationAt, clientId);
+}
+
+/**
+ * Курс в профиле (plannedSupplements). Не трогает day — синхронизация дня отдельно.
+ */
+function applyPlannedSupplementsToProfile(profile, args, nowMs) {
+  const base = (profile && typeof profile === 'object' && !Array.isArray(profile)) ? { ...profile } : {};
+  const current = normalizeSupplementList(base.plannedSupplements || []);
+  let next;
+  if (args.planned_supplements !== undefined && args.planned_supplements !== null) {
+    next = normalizeSupplementList(args.planned_supplements);
+  } else {
+    next = [...current];
+    if (args.planned_supplements_remove) {
+      const remove = new Set(normalizeSupplementList(args.planned_supplements_remove));
+      next = next.filter((id) => !remove.has(id));
+    }
+    if (args.planned_supplements_add) {
+      for (const id of normalizeSupplementList(args.planned_supplements_add)) {
+        if (!next.includes(id)) next.push(id);
+      }
+    }
+    next = normalizeSupplementList(next);
+  }
+  if (plannedSupplementsEqual(next, current)) {
+    return { value: profile, changed: [], planned: current };
+  }
+  base.plannedSupplements = next;
+  base.updatedAt = nowMs;
+  const changed = [`курс добавок: ${current.join(',') || '—'} → ${next.join(',')}`];
+  return { value: base, changed, planned: next };
+}
+
+/**
+ * Отметить/снять принятые добавки — зеркалит markSupplementsTaken в приложении.
+ */
+function markSupplementsTaken(day, suppIds, taken, { nowMs, clientId, profile } = {}) {
+  const ids = validateSupplementIds(suppIds);
+  if (!ids.length) throw new Error('empty_supplements');
+  const next = { ...day };
+  if (!Array.isArray(next.supplementsTaken)) next.supplementsTaken = [];
+  if (!next.supplementsTakenAt || typeof next.supplementsTakenAt !== 'object') next.supplementsTakenAt = {};
+  if (!next.supplementsTakenMeta || typeof next.supplementsTakenMeta !== 'object') next.supplementsTakenMeta = {};
+  const timeStr = nowParts(nowMs).time;
+
+  for (const id of ids) {
+    if (taken) {
+      if (!next.supplementsTaken.includes(id)) next.supplementsTaken.push(id);
+      next.supplementsTakenAt[id] = timeStr;
+      const setting = profile && profile.supplementSettings && profile.supplementSettings[id];
+      if (setting && (setting.form || setting.dose || setting.unit)) {
+        next.supplementsTakenMeta[id] = {
+          form: setting.form,
+          dose: setting.dose,
+          unit: setting.unit,
+        };
+      }
+    } else {
+      next.supplementsTaken = next.supplementsTaken.filter((x) => x !== id);
+      delete next.supplementsTakenAt[id];
+      delete next.supplementsTakenMeta[id];
+    }
+  }
+
+  const mutationAt = Math.max(nowMs, (Number(next.supplementsTakenUpdatedAt) || 0) + 1);
+  next.supplementsTakenUpdatedAt = mutationAt;
+  return touch(next, mutationAt, clientId);
 }
 
 const CYCLE_WINDOW_DAYS = 7;
@@ -1080,6 +1233,8 @@ function summarizeDay(day) {
     },
     comment: day.dayComment || '',
     trainings,
+    supplements_planned: Array.isArray(day.supplementsPlanned) ? day.supplementsPlanned : [],
+    supplements_taken: Array.isArray(day.supplementsTaken) ? day.supplementsTaken : [],
     // Что в этом дне до сих пор стоит с кураторской руки, а не введено клиентом.
     curator_authored: curatorAuthoredFields(day),
   };
@@ -1233,6 +1388,13 @@ module.exports = {
   applyColdExposure,
   applyMeasurements,
   applySupplements,
+  patchSupplementsPlanned,
+  applyPlannedSupplementsToProfile,
+  markSupplementsTaken,
+  filterSupplementsByTimingSlot,
+  normalizeSupplementList,
+  validateSupplementIds,
+  plannedSupplementsEqual,
   applyCycleDay,
   clearCycleDay,
   setCycleStatus,

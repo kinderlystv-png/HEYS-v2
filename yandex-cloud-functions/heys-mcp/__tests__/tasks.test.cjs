@@ -273,6 +273,42 @@ test('patchBlock заменяет блок между якорями и пада
   assert.throws(() => tasks.patchBlock(text, { from: '## Нет такого', replacement: 'x' }), /anchor_not_found/);
 });
 
+test('patchBlock без to меняет одну строку, а не хвост файла', () => {
+  // Инцидент 05.08 / heys/e4ce9e: без to патч жрал всё до EOF — казалось,
+  // что «одиночный якорь сломан». Контракт: from alone = одна строка.
+  const text = '## Замечено\n\n- [ ] первый\n- [ ] второй\n\n## Итог\n';
+  const next = tasks.patchBlock(text, {
+    from: '- [ ] первый',
+    replacement: '- [x] первый — сделано',
+  });
+  assert.match(next, /- \[x\] первый — сделано/);
+  assert.match(next, /- \[ \] второй/);
+  assert.match(next, /## Итог/);
+});
+
+test('patchBlock принимает уникальную подстроку якоря (кейс Codex)', () => {
+  const text = [
+    '- [ ] 2026-08-03 · Режим Codex: запустить схему — инструкция в docs/codex-mode.md',
+    '- [ ] 2026-08-03 · Другое дело',
+    '## Замечено',
+  ].join('\n');
+  const next = tasks.patchBlock(text, {
+    from: 'Codex',
+    replacement: '- [x] 2026-08-03 · [разработка] Режим Codex: запустить схему — инструкция в docs/codex-mode.md',
+  });
+  assert.match(next, /\[разработка\] Режим Codex/);
+  assert.match(next, /Другое дело/);
+  assert.match(next, /## Замечено/);
+});
+
+test('patchBlock отказывает при неоднозначной подстроке', () => {
+  const text = '- [ ] Codex один\n- [ ] Codex два\n';
+  assert.throws(
+    () => tasks.patchBlock(text, { from: 'Codex', replacement: 'x' }),
+    /anchor_ambiguous/,
+  );
+});
+
 // ── Пишущие инструменты ──────────────────────────────────────────────────
 
 function withWrites() {
@@ -298,11 +334,14 @@ test('tasks_capture кладёт задачу в проект и возвращ�
   assert.equal(res.structured.path, 'projects/family.md');
   assert.equal(res.structured.title, 'Купить леску');
   assert.equal(res.structured.hash, tasks.taskHash('family', 'Купить леску'));
-  // Пишутся оба ключа сразу: файл и индекс.
-  assert.equal(api.writes.length, 1);
+  // Файл+индекс одним upsert; следом — agent_state с transcript_pending.
+  assert.equal(api.writes.length, 2);
   assert.deepEqual(api.writes[0].items.map((i) => i.k).sort(),
     [tasks.INDEX_KEY, tasks.keyForPath('projects/family.md')].sort());
-  assert.match(api.writes[0].items[0].v.text, /- \[ \] P2 Купить леску #15min \^/);
+  assert.equal(api.writes[1].items.map((i) => i.k).join(), tasks.STATE_KEY);
+  assert.match(api.writes[0].items.find((i) => i.k === tasks.keyForPath('projects/family.md')).v.text,
+    /- \[ \] P2 Купить леску #15min \^/);
+  assert.equal(res.structured.transcript_pending, true);
 });
 
 test('tasks_capture без проекта уходит в INBOX', async () => {
@@ -2975,7 +3014,9 @@ test('закрытие сегодняшнего дня про деньги не 
   const res = await session(api).tasks_close_day({ date: '2026-08-02', done: ['10:00'], note: 'как-то так' });
 
   assert.equal(res.structured.money_reminder, null);
-  assert.ok(!api.kv[tasks.STATE_KEY], 'по идущему дню и памяти прохода тратить незачем');
+  const state = api.kv[tasks.STATE_KEY];
+  assert.ok(!state?.money_nudge, 'по идущему дню money_nudge не ставим');
+  assert.ok(state?.transcript_pending, 'close_day — write, pending стенограммы ожидаем');
 });
 
 test('правила говорят, когда спрашивать про деньги и чего не утверждать', () => {
@@ -3408,6 +3449,64 @@ test('принесённое делится на разработку и общ�
   assert.equal(agenda.structured.brought_general[0].topic, 'Купить свисток на студию');
   assert.match(agenda.text, /Принесли на планёрку — разработка/);
   assert.match(agenda.text, /Принесли на планёрку — общее/);
+});
+
+test('recategorize переносит пункт тем же матчером что done, без потери note/priority', async () => {
+  const api = standupApi();
+  await session(api).tasks_standup({
+    add: 'Стенограмма теряет обычные диалоговые обмены',
+    category: 'разработка',
+    note: 'см: heys/abc123',
+    priority: 'P1',
+    session: 'механика повестки',
+  });
+  await session(api).tasks_standup({ add: 'Купить свисток на студию' });
+
+  const moved = await session(api).tasks_standup({
+    recategorize: 'свисток',
+    category: 'разработка',
+  });
+  assert.equal(moved.structured.changed, true);
+  assert.equal(moved.structured.previous, 'общее');
+  assert.equal(moved.structured.category, 'разработка');
+  assert.match(api.file(tasks.STANDUP_PATH), /^- \[ \] 2026-08-02 · \[разработка\] Купить свисток на студию$/m);
+
+  const back = await session(api).tasks_standup({
+    recategorize: 'Стенограмма теряет',
+    category: 'общее',
+  });
+  assert.equal(back.structured.changed, true);
+  assert.equal(back.structured.previous, 'разработка');
+  // Маркер снят, note/priority/session на месте.
+  assert.match(
+    api.file(tasks.STANDUP_PATH),
+    /^- \[ \] 2026-08-02 · \[P1\] \[тема:механика повестки\] Стенограмма теряет обычные диалоговые обмены — см: heys\/abc123$/m,
+  );
+
+  const noop = await session(api).tasks_standup({
+    recategorize: 'свисток',
+    category: 'разработка',
+  });
+  assert.equal(noop.structured.changed, false);
+
+  await assert.rejects(
+    () => session(api).tasks_standup({ recategorize: 'свисток' }),
+    (err) => err.code === 'invalid_category',
+  );
+  await assert.rejects(
+    () => session(api).tasks_standup({ recategorize: 'нет такого пункта', category: 'общее' }),
+    (err) => err.code === 'standup_item_not_found',
+  );
+});
+
+test('recategorize при двух совпадениях требует уточнения', async () => {
+  const api = standupApi();
+  await session(api).tasks_standup({ add: 'Купить свисток на студию' });
+  await session(api).tasks_standup({ add: 'Купить свисток запасной', category: 'разработка' });
+  await assert.rejects(
+    () => session(api).tasks_standup({ recategorize: 'свисток', category: 'общее' }),
+    (err) => err.code === 'ambiguous_standup_item',
+  );
 });
 
 test('старый пункт повестки без маркера категории читается как общее', () => {
@@ -4769,16 +4868,38 @@ test('стенограммы за сегодня нет — разбор фра�
   assert.ok(res.structured.tasks.length, 'сам ответ инструмента остался на месте');
 });
 
-test('запись в стенограмму гасит приписку, а её отсутствие — нет', async () => {
+test('запись в стенограмму гасит age-приписку; новый write снова ставит pending', async () => {
   const api = liveTasksApi();
   const before = await session(api).tasks_capture({ text: 'Купить леску', project: 'family' });
   assert.match(before.text, /Стенограмма за 2026-08-02 пуста/);
+  assert.equal(before.structured.transcript_pending, true);
 
   await session(api).tasks_append({ path: TRANSCRIPT_TODAY, block: '## 12:00\n\n**Кин:** купи леску' });
 
   const after = await session(api).tasks_capture({ text: 'Ещё одна', project: 'family' });
-  assert.equal(after.structured.transcript_reminder, undefined, 'стенограмма записана — напоминать не о чем');
-  assert.doesNotMatch(after.text, /Стенограмма/);
+  assert.equal(after.structured.transcript_pending, true);
+  assert.doesNotMatch(after.text, /пуста/, 'файл стенограммы уже есть — age-reminder молчит');
+  assert.match(after.structured.transcript_reminder, /не закрыта после/, 'write без checkpoint всё ещё висит');
+});
+
+test('checkpoint снимает transcript_pending после записи без стенограммы', async () => {
+  const api = liveTasksApi();
+  // Свежая стенограмма есть — age-reminder молчит; pending от write всё равно висит.
+  await session(api).tasks_append({
+    path: TRANSCRIPT_TODAY,
+    block: '## 09:00\n\n**Кин:** утро\n**Claude:** ок',
+  });
+  const wrote = await session(api).tasks_capture({ text: 'После свежей стенограммы', project: 'family' });
+  assert.equal(wrote.structured.transcript_pending, true);
+  assert.match(wrote.structured.transcript_reminder, /не закрыта после/);
+
+  const closed = await session(api).tasks_checkpoint({
+    transcript_block: '## 12:50\n\n**Кин:** После свежей стенограммы\n**Claude:** Положил в family задачу «После свежей стенограммы».',
+  });
+  assert.equal(closed.structured.transcript_pending, false);
+
+  const next = await session(api).tasks_list({});
+  assert.equal(next.structured.transcript_reminder, undefined);
 });
 
 test('стенограмма за вчера сегодняшнюю приписку не снимает', async () => {
@@ -4896,6 +5017,45 @@ test('checkpoint не принимает половину обмена', async (
   assert.equal(api.kv[tasks.keyForPath(TRANSCRIPT_TODAY)], undefined);
 });
 
+test('checkpoint отклоняет отсылку «содержание в записи выше» вместо полного ответа', async () => {
+  const api = liveTasksApi();
+  await assert.rejects(
+    () => session(api).tasks_checkpoint({
+      transcript_block: [
+        '## 12:45',
+        '',
+        '**Кин:** почини гонку',
+        '**Claude:** [техническое: вывод в журнал по обмену 12:45 не прошёл. Содержание обмена — в записи 12:45 выше.]',
+      ].join('\n'),
+    }),
+    (e) => e.code === 'verbatim_transcript_required',
+  );
+  assert.equal(api.kv[tasks.keyForPath(TRANSCRIPT_TODAY)], undefined);
+});
+
+test('checkpoint отклоняет короткую выжимку на длинной реплике Кина', async () => {
+  const api = liveTasksApi();
+  const longKin = 'Нужно гарантированно не допускать таких ситуаций, когда из ответа берётся только сводка и теряется марка машины, цена и срок — это уже второй раз.';
+  await assert.rejects(
+    () => session(api).tasks_checkpoint({
+      transcript_block: `## 13:00\n\n**Кин:** ${longKin}\n**Claude:** Ок, учёл.`,
+    }),
+    (e) => e.code === 'verbatim_transcript_required',
+  );
+});
+
+test('checkpoint принимает автозапись дневника и короткие подтверждения', async () => {
+  const api = liveTasksApi();
+  const auto = await session(api).tasks_checkpoint({
+    transcript_block: '## 13:01\n\n**Кин:** Цыпа арбуз 400\n**Claude:** [Автозапись инструмента] Записал: Перекус — Арбуз 400 г.',
+  });
+  assert.equal(auto.structured.checkpoint, true);
+  const short = await session(api).tasks_checkpoint({
+    transcript_block: '## 13:02\n\n**Кин:** Спасибо.\n**Claude:** Пожалуйста.',
+  });
+  assert.equal(short.structured.checkpoint, true);
+});
+
 test('ошибка журнала возникает до записи стенограммы', async () => {
   const api = liveTasksApi();
   await assert.rejects(
@@ -4906,6 +5066,47 @@ test('ошибка журнала возникает до записи стен�
     (e) => e.code === 'invalid_journal_heading',
   );
   assert.equal(api.kv[tasks.keyForPath(TRANSCRIPT_TODAY)], undefined);
+});
+
+test('checkpoint с date=вчера пишет в вчерашний transcript, а не в сегодняшний', async () => {
+  // Инцидент 06.08: обмен про вечер 05.08 с шапкой ## 23:40 уехал в
+  // transcript/2026-08-06.md, потому что путь брался от «сейчас».
+  const api = liveTasksApi();
+  const res = await session(api).tasks_checkpoint({
+    date: 'вчера',
+    transcript_block: '## 23:40\n\n**Кин:** Закрой вчерашний день.\n**Claude:** Закрыл days/2026-08-01.md.',
+    journal_block: '## 2026-08-01 23:40 · день\n\nВводная: закрыть вчера.\nРазбор: checkpoint без date уехал бы в сегодня.\nИтог: date=вчера кладёт обмен в нужный файл.',
+  });
+  assert.equal(res.structured.date, '2026-08-01');
+  assert.equal(res.structured.transcript.path, YESTERDAY_TRANSCRIPT_PATH);
+  assert.match(api.kv[tasks.keyForPath(YESTERDAY_TRANSCRIPT_PATH)].text, /Закрой вчерашний день/);
+  assert.equal(api.kv[tasks.keyForPath(TRANSCRIPT_TODAY)], undefined);
+  assert.match(api.kv[tasks.keyForPath('journal/2026-08.md')].text, /date=вчера кладёт обмен/);
+});
+
+test('checkpoint с date в будущем отклоняется', async () => {
+  const api = liveTasksApi();
+  await assert.rejects(
+    () => session(api).tasks_checkpoint({
+      date: '2026-08-09',
+      transcript_block: '## 10:00\n\n**Кин:** Завтра.\n**Claude:** Нет.',
+    }),
+    (e) => e.code === 'future_transcript',
+  );
+  assert.equal(api.kv[tasks.keyForPath('transcript/2026-08-09.md')], undefined);
+});
+
+test('checkpoint date и шапка журнала должны совпадать', async () => {
+  const api = liveTasksApi();
+  await assert.rejects(
+    () => session(api).tasks_checkpoint({
+      date: '2026-08-01',
+      transcript_block: '## 23:55\n\n**Кин:** Ок.\n**Claude:** Ок.',
+      journal_block: '## 2026-08-02 23:55 · мимо\n\nИтог: чужая дата.',
+    }),
+    (e) => e.code === 'invalid_journal_heading',
+  );
+  assert.equal(api.kv[tasks.keyForPath(YESTERDAY_TRANSCRIPT_PATH)], undefined);
 });
 
 // ── Свежесть и вес источника в поиске ────────────────────────────────────

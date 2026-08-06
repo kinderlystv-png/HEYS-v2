@@ -679,3 +679,37 @@ test('оценка учитывает день цикла — множитель
   const cycle = day.dailyNorm({ date: '2026-08-01', cycleDay: 2, meals: [] }, { profile, norms: NORMS, hrZones: [] });
   assert.equal(cycle.kcal, Math.round(plain.kcal * 1.05));
 });
+
+test('patchSupplementsPlanned — add/remove не трогают остальные id', () => {
+  const base = { date: '2026-08-01', meals: [], waterMl: 0, supplementsPlanned: ['vitD', 'omega3'] };
+  const added = day.patchSupplementsPlanned(base, { add: ['magnesium'] }, { nowMs: 1000, clientId: CLIENT });
+  assert.deepEqual(added.supplementsPlanned, ['vitD', 'omega3', 'magnesium']);
+  const removed = day.patchSupplementsPlanned(added, { remove: ['omega3'] }, { nowMs: 2000, clientId: CLIENT });
+  assert.deepEqual(removed.supplementsPlanned, ['vitD', 'magnesium']);
+});
+
+test('markSupplementsTaken — пишет supplementsTaken и время по id', () => {
+  const base = { date: '2026-08-01', meals: [], waterMl: 0 };
+  const marked = day.markSupplementsTaken(base, ['vitD', 'b12'], true, {
+    nowMs: Date.UTC(2026, 7, 1, 6, 30),
+    clientId: CLIENT,
+  });
+  assert.deepEqual(marked.supplementsTaken, ['vitD', 'b12']);
+  assert.equal(marked.supplementsTakenAt.vitD, '09:30');
+  assert.equal(marked.supplementsTakenAt.b12, '09:30');
+});
+
+test('filterSupplementsByTimingSlot — утро включает morning и empty', () => {
+  const ids = ['vitD', 'b12', 'magnesium', 'iron'];
+  const morning = day.filterSupplementsByTimingSlot(ids, 'morning', null);
+  assert.deepEqual(morning, ['b12', 'iron']);
+  const evening = day.filterSupplementsByTimingSlot(ids, 'evening', null);
+  assert.deepEqual(evening, ['magnesium']);
+});
+
+test('applyPlannedSupplementsToProfile — add в курс', () => {
+  const profile = { plannedSupplements: ['vitD'] };
+  const patch = day.applyPlannedSupplementsToProfile(profile, { planned_supplements_add: ['omega3'] }, 5000);
+  assert.deepEqual(patch.planned, ['vitD', 'omega3']);
+  assert.equal(patch.changed.length, 1);
+});

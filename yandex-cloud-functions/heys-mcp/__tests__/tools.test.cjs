@@ -943,7 +943,42 @@ test('heys_checkin submit — добавка не из каталога откл
   assert.equal(api.saves.length, 0, 'ни одна из добавок не должна уйти в облако, если список невалиден целиком');
 });
 
-test('heys_checkin submit — цикл без включённого трекинга отказывает явно', async () => {
+test('heys_update_day — supplements_mark отмечает выбранные id', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111, supplementsPlanned: ['vitD', 'omega3', 'magnesium'] },
+  });
+  const res = await build(api).heys_update_day({ supplements_mark: ['vitD', 'omega3'] });
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  assert.deepEqual(saved.value.supplementsTaken, ['vitD', 'omega3']);
+  assert.ok(saved.value.supplementsTakenAt.vitD);
+  assert.ok(res.structured.updated.includes('supplements_mark'));
+});
+
+test('heys_update_day — supplements_timing morning отмечает только утренние из плана', async () => {
+  const api = fakeApi({
+    day: {
+      date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111,
+      supplementsPlanned: ['vitD', 'b12', 'magnesium', 'iron'],
+    },
+  });
+  await build(api).heys_update_day({ supplements_timing: 'morning' });
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  assert.deepEqual(saved.value.supplementsTaken, ['b12', 'iron']);
+});
+
+test('heys_update_profile — planned_supplements_add дополняет курс и синхронизирует день', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111, supplementsPlanned: ['vitD'] },
+    card: { [PROFILE_KEY]: { plannedSupplements: ['vitD'], updatedAt: 50 } },
+  });
+  await build(api).heys_update_profile({ planned_supplements_add: ['omega3'] });
+  const profileSave = api.saves.find((s) => s.key === PROFILE_KEY);
+  assert.deepEqual(profileSave.value.plannedSupplements, ['vitD', 'omega3']);
+  const daySave = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  assert.deepEqual(daySave.value.supplementsPlanned, ['vitD', 'omega3']);
+});
+
+test('heys_checkin submit — cycle_tracking_disabled отказывает явно', async () => {
   const api = fakeApi({
     day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
     card: { [PROFILE_KEY]: { gender: 'Мужской' } },

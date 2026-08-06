@@ -203,6 +203,7 @@ function describeCard(profile, norms, zones, nowMs) {
     profileOut[publicName] = value === undefined ? null : value;
   }
   if (derivedAge !== null) profileOut.age = derivedAge;
+  profileOut.planned_supplements = Array.isArray(p.plannedSupplements) ? p.plannedSupplements : [];
 
   const normsOut = {};
   for (const [publicName, spec] of Object.entries(NORMS_FIELDS)) {

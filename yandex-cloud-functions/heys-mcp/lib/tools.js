@@ -821,19 +821,68 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         wellbeing: clampSubjective(args.wellbeing, 'wellbeing'),
         stress: clampSubjective(args.stress, 'stress'),
       };
+      const hasPlannedSet = args.supplements_planned !== undefined && args.supplements_planned !== null;
+      const hasPlannedAdd = args.supplements_planned_add !== undefined && args.supplements_planned_add !== null;
+      const hasPlannedRemove = args.supplements_planned_remove !== undefined && args.supplements_planned_remove !== null;
+      const hasSupplementsMark = args.supplements_mark !== undefined && args.supplements_mark !== null;
+      const hasSupplementsUnmark = args.supplements_unmark !== undefined && args.supplements_unmark !== null;
+      const hasSupplementsTiming = args.supplements_timing !== undefined && args.supplements_timing !== null;
+      const needsProfile = hasSupplementsMark || hasSupplementsUnmark || hasSupplementsTiming;
       const current = await readDay(date);
-      let updated;
-      try {
-        updated = day.updateDayFields(current, fields, { nowMs, clientId, byCurator });
-      } catch (e) {
-        throw new ToolError('invalid_field', e.message);
+      let working = current;
+      const applied = [];
+      let profileBlob = null;
+      if (needsProfile) {
+        const blobs = await readMany([profile.PROFILE_KEY]);
+        profileBlob = blobs[profile.PROFILE_KEY];
       }
-      if (!updated.applied.length) throw new ToolError('nothing_to_update', 'Не передано ни одного поля для обновления.');
-      const saved = await writeDay(date, updated.day, Number(current.updatedAt) || 0);
-      const after = await dayAfterWrite(saved, updated.day);
+      try {
+        const updated = day.updateDayFields(working, fields, { nowMs, clientId, byCurator });
+        if (updated.applied.length) {
+          working = updated.day;
+          applied.push(...updated.applied);
+        }
+        if (hasPlannedSet || hasPlannedAdd || hasPlannedRemove) {
+          working = day.patchSupplementsPlanned(working, {
+            set: hasPlannedSet ? args.supplements_planned : undefined,
+            add: hasPlannedAdd ? args.supplements_planned_add : undefined,
+            remove: hasPlannedRemove ? args.supplements_planned_remove : undefined,
+          }, { nowMs, clientId });
+          applied.push('supplements_planned');
+        }
+        if (hasSupplementsTiming) {
+          const slot = args.supplements_timing;
+          if (slot !== 'morning' && slot !== 'evening') {
+            throw new ToolError('invalid_field', 'supplements_timing — "morning" или "evening".');
+          }
+          const planned = working.supplementsPlanned
+            || (profileBlob && profileBlob.plannedSupplements)
+            || [];
+          const ids = day.filterSupplementsByTimingSlot(planned, slot, profileBlob);
+          if (!ids.length) throw new ToolError('nothing_to_update', `В плане нет добавок для слота «${slot}».`);
+          working = day.markSupplementsTaken(working, ids, true, { nowMs, clientId, profile: profileBlob });
+          applied.push(`supplements_timing:${slot}`);
+        }
+        if (hasSupplementsMark) {
+          working = day.markSupplementsTaken(working, args.supplements_mark, true, { nowMs, clientId, profile: profileBlob });
+          applied.push('supplements_mark');
+        }
+        if (hasSupplementsUnmark) {
+          working = day.markSupplementsTaken(working, args.supplements_unmark, false, { nowMs, clientId, profile: profileBlob });
+          applied.push('supplements_unmark');
+        }
+      } catch (e) {
+        if (e instanceof ToolError) throw e;
+        throw new ToolError('invalid_field', String(e.message).startsWith('unknown_supplement:')
+          ? `Добавка не из каталога: ${String(e.message).slice('unknown_supplement:'.length)}.`
+          : e.message);
+      }
+      if (!applied.length) throw new ToolError('nothing_to_update', 'Не передано ни одного поля для обновления.');
+      const saved = await writeDay(date, working, Number(current.updatedAt) || 0);
+      const after = await dayAfterWrite(saved, working);
       return {
-        text: `Обновил ${date}: ${updated.applied.join(', ')}.${dayAfterText(after)}`,
-        structured: { date, updated: updated.applied, day_after: after },
+        text: `Обновил ${date}: ${applied.join(', ')}.${dayAfterText(after)}`,
+        structured: { date, updated: applied, day_after: after },
       };
     },
 
@@ -1326,21 +1375,55 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
     async heys_update_profile(args) {
       const blobs = await readMany([profile.PROFILE_KEY]);
       const current = blobs[profile.PROFILE_KEY];
+      const hasPlanned = args.planned_supplements !== undefined && args.planned_supplements !== null
+        || (args.planned_supplements_add !== undefined && args.planned_supplements_add !== null)
+        || (args.planned_supplements_remove !== undefined && args.planned_supplements_remove !== null);
       let patch;
       try {
         patch = profile.applyProfileFields(current, args, nowMs);
       } catch (e) {
         throw new ToolError(e.code || 'invalid_field', e.message);
       }
-      if (!patch.changed.length) {
+      let profileValue = patch.value;
+      let plannedChanged = [];
+      let plannedList = null;
+      if (hasPlanned) {
+        try {
+          const plannedPatch = day.applyPlannedSupplementsToProfile(profileValue, args, nowMs);
+          profileValue = plannedPatch.value;
+          plannedChanged = plannedPatch.changed;
+          plannedList = plannedPatch.planned;
+        } catch (e) {
+          throw new ToolError('invalid_field', String(e.message).startsWith('unknown_supplement:')
+            ? `Добавка не из каталога: ${String(e.message).slice('unknown_supplement:'.length)}.`
+            : e.message);
+        }
+      }
+      const allChanged = [...patch.changed, ...plannedChanged];
+      if (!allChanged.length) {
         throw new ToolError('nothing_to_update', patch.ignored.length
           ? `Эти поля профиль не хранит: ${patch.ignored.join(', ')}.`
           : 'Ни одно поле профиля не изменилось.');
       }
-      await saveCardKey(profile.PROFILE_KEY, patch.value, Number(current && current.updatedAt) || 0);
+      await saveCardKey(profile.PROFILE_KEY, profileValue, Number(current && current.updatedAt) || 0);
+      const syncDay = args.sync_planned_to_day !== false && plannedList && plannedChanged.length;
+      if (syncDay) {
+        const syncDate = args.sync_planned_date
+          ? resolveDate(args.sync_planned_date, nowMs)
+          : day.nowParts(nowMs).date;
+        const dayCurrent = await readDay(syncDate);
+        const dayNext = day.patchSupplementsPlanned(dayCurrent, { set: plannedList }, { nowMs, clientId });
+        if (!day.plannedSupplementsEqual(plannedList, dayCurrent.supplementsPlanned)) {
+          await writeDay(syncDate, dayNext, Number(dayCurrent.updatedAt) || 0);
+        }
+      }
       return {
-        text: `Профиль обновлён — ${patch.changed.join('; ')}.`,
-        structured: { updated: patch.changed, ignored: patch.ignored },
+        text: `Профиль обновлён — ${allChanged.join('; ')}.`,
+        structured: {
+          updated: allChanged,
+          ignored: patch.ignored,
+          planned_supplements: plannedList || (profileValue && profileValue.plannedSupplements) || [],
+        },
       };
     },
 
@@ -1456,7 +1539,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_update_profile',
-    description: 'Изменить настройки клиента, которые куратор обычно вбивает во вкладке «Пользователь»: рост, вес, целевой вес, дату рождения, пол, норму сна, целевой дефицит, цель по шагам, трекинг цикла, доступ с десктопа. Передавай только те поля, которые действительно меняешь: остальные останутся как были. Имя клиента отсюда не меняется.',
+    description: 'Изменить настройки клиента, которые куратор обычно вбивает во вкладке «Пользователь»: рост, вес, целевой вес, дату рождения, пол, норму сна, целевой дефицит, цель по шагам, трекинг цикла, доступ с десктопа, курс добавок (planned_supplements). Передавай только те поля, которые действительно меняешь: остальные останутся как были. Имя клиента отсюда не меняется. Курс можно заменить целиком (planned_supplements), добавить (planned_supplements_add) или убрать (planned_supplements_remove) — id из каталога vitD, omega3, … или custom_*. По умолчанию новый курс синхронизируется в план сегодняшнего дня; sync_planned_to_day: false — только профиль.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1473,6 +1556,20 @@ const TOOL_SCHEMAS = [
         steps_goal: { type: 'integer', description: 'Цель по шагам за день.' },
         cycle_tracking_enabled: { type: 'boolean', description: 'Трекинг менструального цикла.' },
         desktop_allowed: { type: 'boolean', description: 'Разрешить клиенту вход с десктопа.' },
+        planned_supplements: {
+          type: 'array', items: { type: 'string' },
+          description: 'Курс добавок целиком — заменяет прежний список в профиле. Id из каталога или custom_*.',
+        },
+        planned_supplements_add: {
+          type: 'array', items: { type: 'string' },
+          description: 'Добавить в курс без снятия остальных.',
+        },
+        planned_supplements_remove: {
+          type: 'array', items: { type: 'string' },
+          description: 'Убрать из курса, остальные остаются.',
+        },
+        sync_planned_date: { type: 'string', description: 'YYYY-MM-DD — в какой день синхронизировать план после смены курса. По умолчанию сегодня.' },
+        sync_planned_to_day: { type: 'boolean', description: 'false — менять только профиль, не трогать supplementsPlanned в дне.' },
       },
     },
   },
@@ -1742,7 +1839,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_update_day',
-    description: 'Куратор вписывает дневные показатели по своему усмотрению или задним числом: вес, шаги, быт, сон, настроение, самочувствие, стресс, комментарий. Поле остаётся помеченным кураторским и не закрывает шаг утреннего чек-ина в приложении — клиент увидит его снова. Для «клиент диктует значения прямо сейчас, живьём» — heys_checkin, не этот инструмент.',
+    description: 'Куратор вписывает дневные показатели по своему усмотрению или задним числом: вес, шаги, быт, сон, настроение, самочувствие, стресс, комментарий, план добавок (supplements_planned / add / remove), отметки «принял» (supplements_mark / unmark / timing: morning|evening). Поле остаётся помеченным кураторским и не закрывает шаг утреннего чек-ина в приложении — клиент увидит его снова. Для «клиент диктует значения прямо сейчас, живьём» — heys_checkin, не этот инструмент.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1758,6 +1855,30 @@ const TOOL_SCHEMAS = [
         wellbeing: { type: 'integer', description: 'Самочувствие, 1–10. Поле карточки дня, не шаг утреннего чек-ина приложения.' },
         stress: { type: 'integer', description: 'Стресс, 1–10. Поле карточки дня, не шаг утреннего чек-ина приложения.' },
         comment: { type: 'string', description: 'Комментарий к дню.' },
+        supplements_planned: {
+          type: 'array', items: { type: 'string' },
+          description: 'План добавок на день — заменяет прежний список supplementsPlanned.',
+        },
+        supplements_planned_add: {
+          type: 'array', items: { type: 'string' },
+          description: 'Добавить в план дня без снятия остальных.',
+        },
+        supplements_planned_remove: {
+          type: 'array', items: { type: 'string' },
+          description: 'Убрать из плана дня.',
+        },
+        supplements_mark: {
+          type: 'array', items: { type: 'string' },
+          description: 'Отметить принятые добавки в дневнике (supplementsTaken). Один, несколько или любой набор id.',
+        },
+        supplements_unmark: {
+          type: 'array', items: { type: 'string' },
+          description: 'Снять отметку «принял» для указанных id.',
+        },
+        supplements_timing: {
+          type: 'string', enum: ['morning', 'evening'],
+          description: 'Отметить все добавки из плана дня (или курса) с timing утро/вечер — как в приложении.',
+        },
       },
     },
   },

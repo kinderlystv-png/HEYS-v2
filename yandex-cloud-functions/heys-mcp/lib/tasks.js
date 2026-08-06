@@ -80,6 +80,101 @@ function transcriptHeadingError(path, block) {
 }
 
 /**
+ * Разбор сторон обмена. Порядок Кина и Claude в блоке не важен — важен сам
+ * факт, что обе подписи есть и у каждой есть тело.
+ */
+function parseTranscriptSides(block) {
+  const text = String(block || '');
+  const kinMatch = /^\*\*Кин:\*\*\s*/m.exec(text);
+  const claudeMatch = /^\*\*Claude:\*\*\s*/m.exec(text);
+  if (!kinMatch || !claudeMatch) return null;
+  const kinStart = kinMatch.index + kinMatch[0].length;
+  const claudeStart = claudeMatch.index + claudeMatch[0].length;
+  if (kinMatch.index < claudeMatch.index) {
+    return {
+      kin: text.slice(kinStart, claudeMatch.index).trim(),
+      claude: text.slice(claudeStart).trim(),
+    };
+  }
+  return {
+    kin: text.slice(kinStart).trim(),
+    claude: text.slice(claudeStart, kinMatch.index).trim(),
+  };
+}
+
+/**
+ * Тело ответа без однострочных квадратных скобок «[вывод терминала: …]» —
+ * они разрешены как сводка техвозни и в длину содержания не входят.
+ */
+function transcriptSubstance(side) {
+  return String(side || '')
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trim();
+      if (/^\[[^\]]+\]$/.test(trimmed)) return '';
+      return line;
+    })
+    .join('\n')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Жёсткая сверка дословности (heys/49f059). Сервер чат не видит — сравнивать
+ * «с ответом агента на экране» нечем. Ловит то, что ловится кодом: пустые
+ * стороны, отсылки «содержание в записи выше», чисто технический stub и
+ * явный перекос длины (длинная реплика Кина + короткая выжимка Claude).
+ * Автозапись дневника (`[Автозапись инструмента]`) и короткие подтверждения
+ * при короткой реплике — не трогает.
+ */
+const TRANSCRIPT_STUB_RE = [
+  /содержание обмена\s*[—–-]\s*в записи/i,
+  /содержание обмена целиком в записи/i,
+  /содержание обмена\s*[—–-]\s*в записи\s+\d{1,2}:\d{2}/i,
+  /в записи\s+\d{1,2}:\d{2}\s+выше/i,
+  /см\.\s*запись\s+\d{1,2}:\d{2}/i,
+  /см\.\s*выше/i,
+  /только журнальн/i,
+  /здесь только журнальн/i,
+  /^(кратко|сводка|выжимка)\s*[:：]/i,
+];
+
+function verbatimTranscriptError(block) {
+  const sides = parseTranscriptSides(block);
+  if (!sides) return null;
+  if (!sides.kin) {
+    return 'Checkpoint не принят: реплика Кина пуста — нужна дословная полная реплика, не заголовок.';
+  }
+  if (!sides.claude) {
+    return 'Checkpoint не принят: реплика Claude пуста — нужен ответ полностью по содержанию (числа, марки, сроки), не одна подпись.';
+  }
+
+  const substance = transcriptSubstance(sides.claude);
+  const isAuto = /^\[Автозапись инструмента\]/i.test(sides.claude.trim());
+  const onlyBracket = /^\[[\s\S]*\]$/.test(sides.claude.trim());
+
+  if (!isAuto && onlyBracket && TRANSCRIPT_STUB_RE.some((re) => re.test(sides.claude))) {
+    return 'Checkpoint не принят: ответ Claude — техническая отсылка к другой записи, а не полный обмен. Допиши содержание сюда же; «см. выше» / «содержание в записи N» в стенограмму не годится (heys/49f059).';
+  }
+
+  for (const re of TRANSCRIPT_STUB_RE) {
+    if (re.test(sides.claude) && substance.length < 120) {
+      return 'Checkpoint не принят: ответ Claude похож на сводку или отсылку без содержания. Нужен полный ответ в этом же блоке — детали из разбора теряются первыми.';
+    }
+  }
+
+  if (!isAuto && sides.kin.length >= 80 && substance.length > 0 && substance.length < 40) {
+    return 'Checkpoint не принят: ответ Claude слишком короткий относительно реплики Кина — похоже на сжатие до выжимки. Сжимать разрешено только форму, не смысл (transcript/README.md).';
+  }
+
+  if (!isAuto && !substance) {
+    return 'Checkpoint не принят: после вычёркивания технических сводок в квадратных скобках у Claude не осталось содержания.';
+  }
+
+  return null;
+}
+
+/**
  * Рабочий день задачника, а не календарное число. Сутки кончаются в 3 утра —
  * та же граница, что в дневнике HEYS. Мысль, записанная в час ночи, относится
  * к дню, который человек ещё живёт; закрывать в это время надо его же.
@@ -1484,6 +1579,13 @@ function ensureState(raw) {
   // стенограммы. Дата в памяти отвечала одинаково неверно на все три случая —
   // вторая планёрка за день, ночная работа во вчерашнем файле и пропущенная
   // планёрка, — потому что помнила день, а не место, где кончилось прочитанное.
+  //
+  // transcript_pending — флаг «была запись в задачник/дневник без checkpoint».
+  // Нужен Stop-хукам и приписке: таймер stale не ловит свежий write без стенограммы.
+  const pending = (base.transcript_pending && typeof base.transcript_pending === 'object'
+    && !Array.isArray(base.transcript_pending))
+    ? base.transcript_pending
+    : null;
   return {
     version: 1,
     seen: { at: Number(seen.at) || 0, files: { ...files } },
@@ -1493,8 +1595,32 @@ function ensureState(raw) {
       : null,
     question_rota: { shown: { ...rotaShown } },
     question_sleep: { ...sleep },
+    transcript_pending: (pending && Number(pending.at) > 0)
+      ? {
+        at: Number(pending.at),
+        tool: pending.tool ? String(pending.tool) : null,
+        day: pending.day ? String(pending.day) : null,
+      }
+      : null,
     updatedAt: Number(base.updatedAt) || 0,
   };
+}
+
+/** Пометить: была запись без закрытия стенограммы. */
+function markTranscriptPending(state, { tool = null, day = null, nowMs = Date.now() } = {}) {
+  return {
+    ...ensureState(state),
+    transcript_pending: {
+      at: Number(nowMs) || Date.now(),
+      tool: tool ? String(tool) : null,
+      day: day ? String(day) : null,
+    },
+  };
+}
+
+/** Снять pending после успешного tasks_checkpoint. */
+function clearTranscriptPending(state) {
+  return { ...ensureState(state), transcript_pending: null };
 }
 
 /** Сколько ещё молчать про это предложение. */
@@ -3427,22 +3553,59 @@ function appendChild(text, taskLine, childLine) {
 }
 
 /**
+ * Найти индекс строки-якоря.
+ *
+ * Сначала — точное совпадение после trim (как раньше). Не нашли — уникальная
+ * строка, которая содержит needle (как матчер done у планёрки). Инцидент
+ * 05.08: агент копировал «Codex» / кусок пункта из tasks_read, а патч
+ * требовал байт-в-байт всю строку и отвечал anchor_not_found на живом файле.
+ * Несколько совпадений — ошибка с кандидатами, а не молчаливый первый hit.
+ *
+ * `fromIndex` — искать только ниже этой строки (для якоря `to`, чтобы не
+ * поймать одноимённый заголовок выше `from`).
+ */
+function findAnchorLine(lines, raw, { label = 'from', fromIndex = 0 } = {}) {
+  const needle = String(raw || '').trim();
+  if (!needle) throw new Error(`empty_anchor:${label}`);
+  const slice = lines.slice(fromIndex);
+
+  const exactRel = slice.findIndex((line) => line.trim() === needle);
+  if (exactRel !== -1) return fromIndex + exactRel;
+
+  const lower = needle.toLowerCase();
+  const hits = [];
+  for (let i = 0; i < slice.length; i += 1) {
+    const trimmed = slice[i].trim();
+    if (!trimmed) continue;
+    if (trimmed.toLowerCase().includes(lower)) hits.push(fromIndex + i);
+  }
+  if (hits.length === 1) return hits[0];
+  if (hits.length === 0) throw new Error(`anchor_not_found:${raw}`);
+  const preview = hits.slice(0, 5).map((i) => `${i + 1}:${lines[i].trim().slice(0, 80)}`).join(' | ');
+  throw new Error(`anchor_ambiguous:${label}:${hits.length}:${preview}`);
+}
+
+/**
  * Замена блока по якорям — для переработок вроде «перегруппируй раздел».
- * Якорь ищется как точная строка; блок заменяется вместе с ограничивающей
- * строкой `from`, но без `to`. Не нашли якорь — это ошибка, а не повод
- * дописать текст куда-нибудь.
+ * Якорь — точная строка или уникальная подстрока; блок заменяется вместе с
+ * ограничивающей строкой `from`, но без `to`. Без `to` меняется ровно одна
+ * строка `from` — раньше патч без `to` жрал файл до конца, и это выглядело
+ * как «одиночный якорь сломан», хотя start находился. Не нашли или нашли
+ * несколько — ошибка, а не повод дописать текст куда-нибудь.
  */
 function patchBlock(text, { from, to = null, replacement = '' }) {
   const lines = String(text || '').split('\n');
-  const start = lines.findIndex((line) => line.trim() === String(from || '').trim());
-  if (start === -1) throw new Error(`anchor_not_found:${from}`);
-  let end = lines.length;
+  const start = findAnchorLine(lines, from, { label: 'from' });
+  let end = start + 1;
   if (to) {
-    const rel = lines.slice(start + 1).findIndex((line) => line.trim() === String(to).trim());
-    if (rel === -1) throw new Error(`anchor_not_found:${to}`);
-    end = start + 1 + rel;
+    // Ищем строго ниже from — иначе одноимённый заголовок выше съест диапазон.
+    end = findAnchorLine(lines, to, { label: 'to', fromIndex: start + 1 });
   }
   const body = String(replacement).split('\n');
+  // replacement без завершающего \n даёт одну строку; с завершающим — лишний
+  // пустой элемент в конце. Убираем только хвостовой пустой, чтобы «строка\n»
+  // и «строка» вели себя одинаково при замене одной строки.
+  if (body.length > 1 && body[body.length - 1] === '') body.pop();
   return [...lines.slice(0, start), ...body, ...lines.slice(end)].join('\n');
 }
 
@@ -4376,6 +4539,30 @@ function markStandupDone(text, index, done = true) {
 }
 
 /**
+ * Сменить категорию пункта повестки, не трогая topic/note/priority/session.
+ * «общее» пишется без маркера (молчаливый дефолт); «разработка» — с `[разработка]`.
+ */
+function setStandupCategory(text, index, category) {
+  if (!STANDUP_CATEGORIES.includes(category)) {
+    throw new Error(`invalid_category:${category}`);
+  }
+  const lines = String(text || '').split('\n');
+  if (index < 0 || index >= lines.length) throw new Error(`standup_line_out_of_range:${index}`);
+  const items = parseStandupItems({ text: String(text || '') });
+  const item = items.find((i) => i.line === index);
+  if (!item) throw new Error(`standup_item_not_found:${index}`);
+  lines[index] = standupLine({
+    date: item.date,
+    topic: item.topic,
+    note: item.note || undefined,
+    category: category === 'разработка' ? 'разработка' : null,
+    priority: item.priority || undefined,
+    session: item.session || undefined,
+  });
+  return lines.join('\n');
+}
+
+/**
  * Ответ на замеченное. Пишется вложенной строкой рядом с самим наблюдением и
  * закрывает его галочкой: наблюдение, на которое ответили «это нормально»,
  * обязано замолчать насовсем, а не всплыть через неделю другими словами.
@@ -4864,6 +5051,7 @@ module.exports = {
   observationText,
   parseStandupObservations,
   markStandupDone,
+  setStandupCategory,
   answerObservation,
   knownObservation,
   findDivergences,
@@ -4899,6 +5087,9 @@ module.exports = {
   projectKeyForPath,
   appendToSection,
   transcriptHeadingError,
+  parseTranscriptSides,
+  verbatimTranscriptError,
+  transcriptSubstance,
   prependToSection,
   appendBlock,
   prependBlock,
@@ -4992,6 +5183,8 @@ module.exports = {
   PROPOSAL_COOLDOWN_DAYS,
   PROPOSAL_OPEN_STATUSES,
   ensureState,
+  markTranscriptPending,
+  clearTranscriptPending,
   proposalCooldown,
   pickFindings,
   rememberProposal,
