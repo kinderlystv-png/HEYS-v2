@@ -295,6 +295,13 @@ function createRepoTools({ ToolError, env = process.env, client = null } = {}) {
           to_line: result.to_line,
           total_lines: result.total_lines,
           commit: result.manifest && result.manifest.commit,
+          // heys_code_search кладёт найденный текст прямо в structured
+          // (hits[].text) и это надёжно доходит до модели; здесь тот же
+          // текст раньше был только в свободном content[].text — воспроизведён
+          // случай (heys/5d42b0), где модели приходила ТОЛЬКО эта структура
+          // без единой строки кода. Дублируем текст сюда же, а не полагаемся
+          // на то, что клиент отрендерит оба канала ответа.
+          text: result.text,
         },
       };
     },

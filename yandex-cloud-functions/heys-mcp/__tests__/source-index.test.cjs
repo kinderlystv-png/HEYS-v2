@@ -194,6 +194,24 @@ test('устаревший срез не выдаётся за свежий: о�
   assert.strictEqual(read.structured.stale, true);
 });
 
+test('heys_code_read кладёт сам код в structured, а не только в свободный текст (heys/5d42b0)', async () => {
+  // Живой случай: модель получила от коннектора только метаданные (path,
+  // kind, from_line/to_line, total_lines, commit) — ни одной строки кода —
+  // хотя content[].text по коду сервера строился. heys_code_search в тот же
+  // момент работал нормально, потому что кладёт найденный текст прямо в
+  // structured.hits[].text; этот канал и оказывается тем, что реально
+  // доходит. Фиксируем, что heys_code_read делает так же.
+  const archive = makeArchive(SAMPLE);
+  const client = {
+    read: async (opts) => ({ ok: true, manifest: { commit: 'abcdef1234' }, ...sourceIndex.readFromArchive(archive, opts) }),
+  };
+  const { tools } = createRepoTools({ ToolError, env: {}, client });
+  const res = await tools.heys_code_read({ path: 'apps/web/heys_day_calculations.js', lines: 2 });
+  assert.match(res.structured.text, /protPct/);
+  assert.match(res.structured.text, /proteinPct/);
+  assert.strictEqual(res.structured.total_lines, 2);
+});
+
 test('свежий срез не помечается устаревшим', async () => {
   const archive = makeArchive(SAMPLE);
   const client = {
