@@ -11,7 +11,7 @@ const { getPool } = require('./shared/db-pool');
 const { classifyCriticalKey, validateCriticalKvPayload } = require('./shared/kv-payload-contracts');
 const { createServerlessCapacityGuard } = require('./shared/serverless-capacity-guard');
 const { shouldSendImmediateTelegramAlert: _shouldSendTgAlert } = require('./ops-alert-policy.cjs');
-const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergePlanningRecords, mergeHungerStatusEvents, mergeInsightsFeedback, mergeScalarKvWithOutcome, mergeMorningCheckinProgress, hasMorningCheckinProgressConflict } = require('./lib/heys_sync_merge_v1.cjs');
+const { mergeDayData, hasSubjectiveFieldDrop, hasUntombstonedEntityDrop, mergeChronoTombstones, mergePlanningRecords, mergeHungerStatusEvents, mergeInsightsFeedback, mergeScalarKvWithOutcome, mergeMorningCheckinProgress, hasMorningCheckinProgressConflict } = require('./lib/heys_sync_merge_v1.cjs');
 const { computeCuratorActionPayload } = require('./curator-action-diff');
 
 const requestCapacityGuard = createServerlessCapacityGuard({ functionName: 'heys-api-rpc' });
@@ -2882,6 +2882,15 @@ async function handleRpcRequest(event, context) {
           const noConflict = lastSeenUpdatedAt > 0 && lastSeenUpdatedAt >= cloudInternalTs;
           const isDayv2Key = /^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(k);
           const hasSubjectiveDrop = isDayv2Key && hasSubjectiveFieldDrop(incomingValue, currentValue);
+          // 🛡️ Entity-drop guard (инцидент 2026-08-06, завтрак Александры).
+          // last_seen_updated_at приходит от клиента и НЕ является доказательством
+          // актуальности: старые сборки шлют туда updatedAt собственного payload'а,
+          // и тогда noConflict всегда true → fast-path затирает облако целиком.
+          // Здесь актуальность определяется по самим данным: если в облаке есть
+          // приёмы/позиции, которых нет во входящем, и на них нет tombstone —
+          // это потеря, а не удаление. Такой payload идёт в слияние независимо
+          // от last_seen. Осознанное удаление несёт tombstone и проходит как раньше.
+          const hasEntityDrop = isDayv2Key && hasUntombstonedEntityDrop(incomingValue, currentValue);
           const hasNewerCurrentItemEdit = (() => {
             if (!isDayv2Key || !incomingValue || !currentValue) return false;
             const currentItems = new Map();
@@ -2994,7 +3003,7 @@ async function handleRpcRequest(event, context) {
           } else if (PLANNING_RECORD_MERGE_KEYS.has(k)) {
             mergedValue = mergePlanningRecords(incomingValue, currentValue);
             mergeOutcome = 'planning_records_merged';
-          } else if (isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop)) {
+          } else if (isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop || hasEntityDrop)) {
             // forceKeepAll: client may not have seen the latest cloud-side meals yet,
             // so treating absence as "deleted" would lose other side's edits. Conservative: keep both.
             const merged = mergeDayData(incomingValue, currentValue, { forceKeepAll: true });
@@ -3002,7 +3011,9 @@ async function handleRpcRequest(event, context) {
               mergedValue = merged;
               mergeOutcome = hasNewerCurrentItemEdit
                 ? 'day_item_guard_merged'
-                : (hasSubjectiveDrop ? 'day_subjective_guard_merged' : 'day_merged');
+                : (hasSubjectiveDrop
+                  ? 'day_subjective_guard_merged'
+                  : (hasEntityDrop && noConflict ? 'day_entity_guard_merged' : 'day_merged'));
             } else {
               mergedValue = incomingValue; // identical content
             }

@@ -506,6 +506,85 @@
     return missingField || hasMorningActivationRegression(incoming.morningActivation, current.morningActivation);
   }
 
+  // ─── hasUntombstonedEntityDrop ───────────────────────────────────────────
+  //
+  // Инцидент 2026-08-06 (завтрак Александры): куратор записал приём в облако,
+  // телефон в это время лежал в фоне со старой копией дня. При возврате из фона
+  // очередь выгрузила эту копию, и приём куратора исчез из облака.
+  //
+  // Почему не сработала защита: сервер уходит в mergeDayData только когда
+  // last_seen_updated_at < cloud.updatedAt, а клиент присылает как last_seen
+  // updatedAt СВОЕГО исходящего payload'а (он всегда свежий) — конфликт не
+  // виден, и работает fast-path `mergedValue = incomingValue`.
+  // hasNewerCurrentItemEdit тоже промахивается: он сверяет только те id,
+  // которые есть на ОБЕИХ сторонах, а приём куратора телефон вообще не видел.
+  //
+  // Этот предикат закрывает дыру с другой стороны: если облако содержит meal/item,
+  // которых нет во входящем payload'е, и ни одна из сторон не предъявила на них
+  // tombstone — это не удаление, а потеря. Такой payload обязан пройти слияние,
+  // какой бы last_seen ни прислал клиент.
+  //
+  // Осознанное удаление здесь не страдает: оно всегда несёт deletedMealIds /
+  // deletedItemIds, и mergeDayData применяет tombstone'ы даже при forceKeepAll.
+  function hasUntombstonedEntityDrop(incoming, current) {
+    if (!incoming || !current || typeof incoming !== 'object' || typeof current !== 'object') return false;
+
+    const asTombstoneMap = (value) =>
+      (value && typeof value === 'object' && !Array.isArray(value)) ? value : {};
+    // Tombstone может лежать на любой стороне: клиент прислал удаление —
+    // на входящем, удалили с другого устройства — уже в облаке.
+    const mealTombstones = Object.assign(
+      {},
+      asTombstoneMap(current.deletedMealIds),
+      asTombstoneMap(incoming.deletedMealIds),
+    );
+    const itemTombstones = Object.assign(
+      {},
+      asTombstoneMap(current.deletedItemIds),
+      asTombstoneMap(incoming.deletedItemIds),
+    );
+
+    const incomingMeals = Array.isArray(incoming.meals) ? incoming.meals : [];
+    const currentMeals = Array.isArray(current.meals) ? current.meals : [];
+
+    const incomingMealIds = new Set();
+    const incomingItemIds = new Set();
+    incomingMeals.forEach((meal) => {
+      if (!meal || meal.id == null) return;
+      incomingMealIds.add(String(meal.id));
+      (Array.isArray(meal.items) ? meal.items : []).forEach((item) => {
+        if (item && item.id != null) incomingItemIds.add(String(item.id));
+      });
+    });
+
+    // Удаление засчитывается только если tombstone не старше самой правки:
+    // та же логика, что и в mergeDayData (правка свежее tombstone → воскрешение).
+    const isCovered = (tombstones, id, entityTs) => {
+      const tombTs = Number(tombstones[id]) || 0;
+      if (tombTs <= 0) return false;
+      return tombTs >= (Number(entityTs) || 0);
+    };
+
+    for (const meal of currentMeals) {
+      if (!meal || meal.id == null) continue;
+      const mealId = String(meal.id);
+      const mealTs = Number(meal.updatedAt || current.updatedAt) || 0;
+      if (!incomingMealIds.has(mealId)) {
+        if (!isCovered(mealTombstones, mealId, mealTs)) return true;
+        continue; // приём удалён осознанно — его позиции не проверяем
+      }
+      for (const item of (Array.isArray(meal.items) ? meal.items : [])) {
+        if (!item || item.id == null) continue;
+        const itemId = String(item.id);
+        if (incomingItemIds.has(itemId)) continue;
+        const itemTs = Number(item.updatedAt || meal.updatedAt || current.updatedAt) || 0;
+        if (!isCovered(itemTombstones, itemId, itemTs)) return true;
+      }
+    }
+
+    return false;
+  }
+
   function firstSubjectiveValue() {
     for (let i = 0; i < arguments.length; i += 1) {
       if (hasSubjectiveValue(arguments[i])) return arguments[i];
@@ -1499,6 +1578,7 @@
   return {
     mergeDayData,
     hasSubjectiveFieldDrop,
+    hasUntombstonedEntityDrop,
     hasMorningActivationRegression,
     mergeMorningActivationState,
     mergeChronoTombstones,

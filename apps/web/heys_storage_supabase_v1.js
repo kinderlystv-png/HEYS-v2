@@ -1693,6 +1693,75 @@
     return 0;
   }
 
+  // ─── dayv2 cloud baseline ──────────────────────────────────────────────────
+  //
+  // Инцидент 2026-08-06 (завтрак Александры): при возврате PWA из фона очередь
+  // выгружала локальную копию дня поверх облака, и приём, записанный куратором
+  // в это время, исчезал.
+  //
+  // Причина в аргументе last_seen_updated_at у merge_save: сервер уходит в
+  // слияние только когда last_seen < cloud.updatedAt, а клиент подставлял туда
+  // updatedAt СВОЕГО исходящего payload'а. Тот бампается при каждой локальной
+  // правке, поэтому условие «я видел эту версию облака» выполнялось всегда, и
+  // сервер честно применял fast-path — писал incoming как есть.
+  //
+  // Здесь хранится настоящая точка отсчёта: updatedAt той версии облака, которую
+  // клиент реально наблюдал (ответ merge_save, fetchDays, bootstrap, hot-sync).
+  // Пока такой отметки нет, отдаём 0 — сервер считает это конфликтом и сливает.
+  // Осознанно fail-safe: лишнее слияние сохраняет обе стороны, лишний fast-path
+  // теряет данные.
+  // Живёт только в памяти вкладки — намеренно. Инцидент разыгрывается внутри
+  // одного JS-контекста (фон → возврат), и памяти для него достаточно. На
+  // холодном старте отметки нет, и это правильное состояние: клиент ещё не
+  // видел облака, поэтому шлёт last_seen = 0 и получает слияние вместо
+  // fast-path. Отдельный ключ в localStorage дал бы ровно один выигрыш —
+  // пропуск слияния сразу после перезагрузки — ценой лишней сущности в
+  // хранилище, которую видят quota-диагностика и LS-интерцептор.
+  const DAYV2_CLOUD_BASELINE_MAX = 120;
+  const _dayv2CloudBaseline = new Map();
+
+  function loadDayv2CloudBaseline() {
+    return _dayv2CloudBaseline;
+  }
+
+  function capDayv2CloudBaseline() {
+    // Кап роста: карта живёт всю сессию, а дни — нет. Держим свежий хвост.
+    while (_dayv2CloudBaseline.size > DAYV2_CLOUD_BASELINE_MAX) {
+      const oldestKey = _dayv2CloudBaseline.keys().next().value;
+      if (oldestKey === undefined) break;
+      _dayv2CloudBaseline.delete(oldestKey);
+    }
+  }
+
+  // Принимает и нормализованный ключ (heys_dayv2_ДАТА), и client-scoped
+  // (heys_<uuid>_dayv2_ДАТА): наблюдение приходит с обеих сторон слоя.
+  function dayv2BaselineKey(anyKey, clientId) {
+    const match = /^heys_(?:[0-9a-f-]{36}_)?dayv2_(\d{4}-\d{2}-\d{2})$/i.exec(String(anyKey || ''));
+    if (!match) return null;
+    return `${clientId || 'anon'}|${match[1]}`;
+  }
+
+  // Отметить версию облака как наблюдённую. Монотонно: назад не откатываем,
+  // иначе поздний ответ старого запроса опустил бы точку отсчёта.
+  function recordDayv2CloudRevision(anyKey, clientId, cloudValue) {
+    const key = dayv2BaselineKey(anyKey, clientId);
+    if (!key) return;
+    const ts = getDayPayloadUpdatedAt(cloudValue);
+    if (!(ts > 0)) return;
+    const map = loadDayv2CloudBaseline();
+    const prev = Number(map.get(key)) || 0;
+    if (ts <= prev) return;
+    map.delete(key); // переставляем в конец — Map хранит порядок вставки
+    map.set(key, ts);
+    capDayv2CloudBaseline();
+  }
+
+  function getDayv2CloudRevision(anyKey, clientId) {
+    const key = dayv2BaselineKey(anyKey, clientId);
+    if (!key) return 0;
+    return Number(loadDayv2CloudBaseline().get(key)) || 0;
+  }
+
   function summarizeDayPayload(value) {
     const meals = Array.isArray(value?.meals) ? value.meals : [];
     const ids = HEYS.dayMutationGuard?.collectIds?.(value) || { mealIds: [], itemIds: [] };
@@ -6287,6 +6356,9 @@
           // 🛡️ v61 FIX: Защита dayv2 от перезатирания пустыми данными
           const isDayKey = key.includes('dayv2_');
           if (isDayKey) {
+            // Базлайн здесь не пишем: это глобальный legacy-bootstrap без
+            // клиента в области видимости. Scoped-дни приходят через
+            // syncClientViaRPC / bootstrapClientSync / fetchDays — там и отметка.
             if (shouldBlockDayV2DateMismatch(key, valueToStore, 'bootstrap')) return;
             const existingRaw = ls.getItem(key);
             if (existingRaw) {
@@ -6479,6 +6551,8 @@
 
           // 🛡️ v61 FIX: Защита dayv2 от перезатирания пустыми данными (аналогично bootstrapClientSync)
           if (isDayKey) {
+            // Версия облака увидена — двигаем точку отсчёта для merge_save.
+            recordDayv2CloudRevision(localKey, clientId, valueToStore);
             if (shouldBlockDayV2DateMismatch(localKey, valueToStore, 'yandex-sync')) return;
             const existingRaw = ls.getItem(localKey);
             if (existingRaw) {
@@ -6727,9 +6801,19 @@
 
       for (const it of mergeableItems) {
         try {
-          const lastSeen = Number((it.v && it.v.updatedAt) || 0);
+          // Для dayv2 точка отсчёта — последняя НАБЛЮДЁННАЯ версия облака, а не
+          // штамп собственного payload'а: свой штамп бампается на каждой локальной
+          // правке и делал проверку конфликта на сервере тождественно истинной
+          // (инцидент 2026-08-06). Нет отметки — шлём 0, сервер сольёт.
+          const lastSeen = isDayv2MergeKey(it.k)
+            ? getDayv2CloudRevision(it.k, clientId)
+            : Number((it.v && it.v.updatedAt) || 0);
           // 🛡️ Phase B2: pass per-item contextId (captured at save-time).
           const result = await YandexAPI.mergeSaveKV(clientId, it.k, it.v, lastSeen, it._ctx || null);
+          // Ответ merge_save — это текущая истина облака: запоминаем как базлайн.
+          if (result && result.success && result.v) {
+            recordDayv2CloudRevision(it.k, clientId, result.v);
+          }
           const isTerminalMergeRejection = result.success
             && /^(cross_client_|invalid_profile_field)/i.test(String(result.outcome || ''));
           if (isTerminalMergeRejection && !result.v) {
@@ -8783,6 +8867,8 @@
 
                 const remoteUpdatedAt = getDayPayloadUpdatedAt(row.v);
                 const localUpdatedAt = getDayPayloadUpdatedAt(local);
+                // Версия облака увидена — двигаем точку отсчёта для merge_save.
+                recordDayv2CloudRevision(key, client_id, row.v);
 
                 // � Диагностика: логируем решения по dayv2 для сегодня
                 const _syncDayDate = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
@@ -10552,6 +10638,9 @@
 
             const localMeaningful = isMeaningfulDayData(freshLocalVal);
             const remoteMeaningful = isMeaningfulDayData(row.v);
+
+            // Версия облака увидена — двигаем точку отсчёта для merge_save.
+            recordDayv2CloudRevision(targetKey, clientId, row.v);
 
             // 🛡️ ЗАЩИТА 0: meaningful локальные данные не затираем пустым remote
             if (localMeaningful && !remoteMeaningful && !isRemoteDayNewer(freshLocalVal, row.v)) {

@@ -534,8 +534,24 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     );
 
     expect(rpcSource).toContain('const hasSubjectiveDrop = isDayv2Key && hasSubjectiveFieldDrop(incomingValue, currentValue);');
-    expect(rpcSource).toContain('isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop)');
-    expect(rpcSource).toContain("hasSubjectiveDrop ? 'day_subjective_guard_merged' : 'day_merged'");
+    expect(rpcSource).toContain('isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop || hasEntityDrop)');
+    expect(rpcSource).toContain("hasSubjectiveDrop\n                  ? 'day_subjective_guard_merged'");
+  });
+
+  test('merge-save routes untombstoned entity drops through mergeDayData regardless of last_seen', () => {
+    // Инцидент 2026-08-06: last_seen приходит от клиента и не доказывает
+    // актуальность — старые сборки шлют туда штамп собственного payload'а.
+    // Условие обязано смотреть на сами данные, иначе fast-path затирает облако.
+    const rpcSource = fs.readFileSync(
+      path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'),
+      'utf8',
+    );
+
+    expect(rpcSource).toContain('const hasEntityDrop = isDayv2Key && hasUntombstonedEntityDrop(incomingValue, currentValue);');
+    expect(rpcSource).toContain('hasUntombstonedEntityDrop');
+    expect(rpcSource).toContain("hasEntityDrop && noConflict ? 'day_entity_guard_merged' : 'day_merged'");
+    // Импорт из общей библиотеки, а не локальная копия предиката.
+    expect(rpcSource).toMatch(/require\('\.\/lib\/heys_sync_merge_v1\.cjs'\)/);
   });
 
   test('REST client_kv_store dayv2 writes merge existing cloud row before safe upsert', () => {
