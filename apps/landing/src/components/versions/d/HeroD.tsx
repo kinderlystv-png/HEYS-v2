@@ -6,9 +6,9 @@
 // прошлой неделе, и спрашивает, прежде чем советовать» — первая из пяти точек,
 // на которых держится позиционирование страницы.
 //
-// Скролл-анимация. Секция выше вьюпорта (`pb-[50vh]` / `lg:pb-[70vh]`), липкий
-// только фон. Ролик растёт от верха до момента «мокап по центру экрана», дальше
-// scale заморожен. Play контр-масштабируется через `--hero-content-scale`.
+// Скролл-анимация. Нижний запас секции считается под ход зума (до центра
+// мокапа), без пустых 50–70vh после CTA. Липкий только фон. Ролик растёт от
+// верха; play — через `--hero-content-scale`.
 //
 // Кнопка первого экрана ведёт не в форму, а в блок механики: прямая заявка на
 // первом экране запрещена записью `COPY_VOICE` от 2026-06-27, а доступность
@@ -69,8 +69,12 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
         metrics.maxScale = 1;
         metrics.height = phone.offsetHeight;
         if (ctaRef.current) ctaRef.current.style.marginTop = '';
+        section.style.paddingBottom = '';
         return;
       }
+
+      // Сбрасываем pad до замера контента — иначе накопит прошлый запас.
+      section.style.paddingBottom = '0px';
 
       const prevTransform = phone.style.transform;
       const prevScaleVar = phone.style.getPropertyValue('--hero-content-scale');
@@ -119,6 +123,13 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
           ? `${CTA_GAP_PX + CHAPTER_DOTS_PX * maxScale + (maxScale - 1) * height}px`
           : `${CTA_GAP_PX + CHAPTER_DOTS_PX}px`;
       }
+
+      // Pad только чтобы доскроллить зум до центра + короткий мягкий хвост.
+      // Фиксированные 50/70vh после CTA оставляли пустое поле до «Ваша ситуация».
+      const softLand = 40;
+      const contentH = section.offsetHeight;
+      const padNeeded = growTravel + vh - contentH;
+      section.style.paddingBottom = `${Math.max(softLand, Math.ceil(padNeeded) + softLand)}px`;
     };
 
     const apply = () => {
@@ -189,7 +200,7 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
   }, []);
 
   return (
-    <section id="hero-d" ref={sectionRef} className="relative bg-[#0A1119] pb-[50vh] lg:pb-[70vh]">
+    <section id="hero-d" ref={sectionRef} className="relative bg-[#0A1119]">
       {/* Липкая обёртка нулевой высоты: сама она места в потоке не занимает,
           поэтому контент ниже начинается от верха секции, а фон внутри неё
           остаётся на экране всю прокрутку героя. Класть контент ВНУТРЬ липкого
