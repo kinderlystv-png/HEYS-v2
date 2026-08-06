@@ -6,10 +6,10 @@
 // прошлой неделе, и спрашивает, прежде чем советовать» — первая из пяти точек,
 // на которых держится позиционирование страницы.
 //
-// Скролл-анимация. Секция вдвое выше вьюпорта, внутри — липкий слой на высоту
-// экрана. По мере прокрутки текст уходит, а телефон вырастает почти во весь
-// экран, то есть демонстрация «раскрывается» вместо того, чтобы уехать вверх.
-// Кнопка play контр-масштабируется, иначе она росла бы вместе с корпусом.
+// Скролл-анимация. Секция выше вьюпорта (`pb-[50vh]` / `lg:pb-[70vh]`), липкий
+// только фон. На десктопе текст уходит, телефон растёт; на мобильном текст
+// остаётся, растёт ролик (как Future / версия B). Play контр-масштабируется
+// через `--hero-content-scale` = scale корпуса (формула в HeroFlowDemo).
 //
 // Кнопка первого экрана ведёт не в форму, а в блок механики: прямая заявка на
 // первом экране запрещена записью `COPY_VOICE` от 2026-06-27, а доступность
@@ -43,12 +43,11 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
   const ctaRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    // Скролл-зум — приём для широкого экрана. На телефоне первый экран и так
-    // почти целиком занят демонстрацией, а липкий слой на высоту экрана резал
-    // бы кнопку и точки-главы: контент героя выше вьюпорта телефона, и всё,
-    // что не поместилось, пропадало под `overflow: hidden`. Поэтому на узких
-    // экранах герой — обычный блок в потоке, без анимации.
+    // Скролл-зум на десктопе и на телефоне. Контент героя снаружи sticky-
+    // слоя с `overflow: hidden`, поэтому узкий экран больше не срезает CTA.
+    // `prefers-reduced-motion` — без масштаба.
     const desktop = window.matchMedia('(min-width: 1024px)');
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     // Всё, что меняется на каждый кадр прокрутки, пишем прямо в стиль узла:
     // через состояние React это перерисовывало бы весь первый экран.
@@ -57,7 +56,7 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
       const phone = phoneRef.current;
       if (!section || !phone) return;
 
-      if (!desktop.matches) {
+      if (reduced.matches) {
         phone.style.transform = '';
         phone.style.removeProperty('--hero-content-scale');
         if (textRef.current) {
@@ -78,20 +77,32 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
       const height = phone.offsetHeight;
       if (width === 0 || height === 0) return;
 
-      const targetWidth = Math.min(470, window.innerWidth * 0.92);
+      // Десктоп — крупнее; мобильный потолок как у Future/HeroScrollStage B.
+      const targetWidth = desktop.matches
+        ? Math.min(470, window.innerWidth * 0.92)
+        : Math.min(340, window.innerWidth * 0.94);
+      const heightPad = desktop.matches ? 40 : 24;
+      const cap = desktop.matches ? MAX_PHONE_SCALE : 1.35;
       const maxScale = Math.min(
-        MAX_PHONE_SCALE,
-        Math.max(1, Math.min(targetWidth / width, (vh - 40) / height)),
+        cap,
+        Math.max(1, Math.min(targetWidth / width, (vh - heightPad) / height)),
       );
       const scale = 1 + (maxScale - 1) * smoothstep(Math.min(1, p / 0.6));
       phone.style.transform = `scale(${scale.toFixed(4)})`;
-      phone.style.setProperty('--hero-content-scale', String(1 / scale));
+      // HeroFlowDemo контр-масштабирует play через `0.88 / --hero-content-scale`:
+      // сюда кладём сам scale родителя, не обратный (иначе кнопка раздувается).
+      phone.style.setProperty('--hero-content-scale', String(scale));
 
       const text = textRef.current;
       if (text) {
-        const fade = Math.min(1, p / 0.4);
-        text.style.opacity = String(1 - fade);
-        text.style.transform = `translateY(${(-28 * fade).toFixed(1)}px)`;
+        if (desktop.matches) {
+          const fade = Math.min(1, p / 0.4);
+          text.style.opacity = String(1 - fade);
+          text.style.transform = `translateY(${(-28 * fade).toFixed(1)}px)`;
+        } else {
+          text.style.opacity = '';
+          text.style.transform = '';
+        }
       }
 
       const cta = ctaRef.current;
@@ -107,16 +118,18 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
     window.addEventListener('resize', apply);
     window.addEventListener('load', apply);
     desktop.addEventListener('change', apply);
+    reduced.addEventListener('change', apply);
     return () => {
       window.removeEventListener('scroll', apply);
       window.removeEventListener('resize', apply);
       window.removeEventListener('load', apply);
       desktop.removeEventListener('change', apply);
+      reduced.removeEventListener('change', apply);
     };
   }, []);
 
   return (
-    <section id="hero-d" ref={sectionRef} className="relative bg-[#0A1119] lg:pb-[70vh]">
+    <section id="hero-d" ref={sectionRef} className="relative bg-[#0A1119] pb-[50vh] lg:pb-[70vh]">
       {/* Липкая обёртка нулевой высоты: сама она места в потоке не занимает,
           поэтому контент ниже начинается от верха секции, а фон внутри неё
           остаётся на экране всю прокрутку героя. Класть контент ВНУТРЬ липкого
