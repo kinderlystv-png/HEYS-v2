@@ -534,8 +534,26 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     );
 
     expect(rpcSource).toContain('const hasSubjectiveDrop = isDayv2Key && hasSubjectiveFieldDrop(incomingValue, currentValue);');
-    expect(rpcSource).toContain('isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop)');
-    expect(rpcSource).toContain("hasSubjectiveDrop ? 'day_subjective_guard_merged' : 'day_merged'");
+    expect(rpcSource).toContain('isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop || hasCurrentOnlyContent)');
+    expect(rpcSource).toContain(
+      "hasSubjectiveDrop\n                  ? 'day_subjective_guard_merged'\n                  : (hasCurrentOnlyContent ? 'day_missing_content_guard_merged' : 'day_merged')",
+    );
+  });
+
+  // Incident 2026-08-06: a stale client push (noConflict === true by timestamp)
+  // silently dropped a curator-added meal that the client never pulled. See
+  // hasCurrentOnlyDayContent in yandex-cloud-functions/heys-api-rpc/index.js and
+  // its dedicated unit tests in
+  // yandex-cloud-functions/heys-api-rpc/__tests__/merge-missing-content-guard.test.js.
+  test('merge-save forces mergeDayData when the cloud side has meals/items incoming never saw', () => {
+    const rpcSource = fs.readFileSync(
+      path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'),
+      'utf8',
+    );
+
+    expect(rpcSource).toContain('function hasCurrentOnlyDayContent(incomingValue, currentValue)');
+    expect(rpcSource).toContain('const hasCurrentOnlyContent = isDayv2Key && hasCurrentOnlyDayContent(incomingValue, currentValue);');
+    expect(rpcSource).toContain('hasCurrentOnlyDayContent,');
   });
 
   test('REST client_kv_store dayv2 writes merge existing cloud row before safe upsert', () => {
