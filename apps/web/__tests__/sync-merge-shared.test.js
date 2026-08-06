@@ -367,6 +367,21 @@ describe('mergeDayData — lost-update prevention', () => {
     }, current)).toBe(false);
   });
 
+  // heys/4546fb 06.08: heys_checkin submit → status done, сразу get → mood:0/partial.
+  // Stale PWA часто несёт moodMorning:0 как «пусто», а не как оценку; 0 не должен
+  // считаться присутствующим значением и пропускать noConflict fast-path.
+  test('server-side subjective guard treats moodMorning:0 as missing, not a real rating', () => {
+    const incoming = makeDay(4000, [], { moodMorning: 0, wellbeingMorning: 0, stressMorning: 0 });
+    const current = makeDay(2000, [], { moodMorning: 9, wellbeingMorning: 8, stressMorning: 2 });
+
+    expect(hasSubjectiveFieldDrop(incoming, current)).toBe(true);
+
+    const merged = mergeDayData(incoming, current, { forceKeepAll: true });
+    expect(merged.moodMorning).toBe(9);
+    expect(merged.wellbeingMorning).toBe(8);
+    expect(merged.stressMorning).toBe(2);
+  });
+
   test('server-side subjective guard detects partial morningActivation regression', () => {
     const incoming = makeDay(4000, [makeMeal('snack')], {
       _sourceId: 'stale-tab',

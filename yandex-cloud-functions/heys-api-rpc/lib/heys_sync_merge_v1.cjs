@@ -494,6 +494,11 @@
 
   const hasSubjectiveValue = (value) => {
     if (value === undefined || value === null || value === '') return false;
+    // 0 — «не задано» для шкал 1–10 (mood/wellbeing/stress/sleepQuality) и для
+    // daySleepMinutes. Иначе stale PWA с moodMorning:0 проходит noConflict
+    // fast-path и затирает реальное значение в облаке (кейс heys/4546fb 06.08).
+    if (typeof value === 'number' && value === 0) return false;
+    if (value === '0') return false;
     if (typeof value === 'object' && !Array.isArray(value)) return Object.keys(value).length > 0;
     return true;
   };
