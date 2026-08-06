@@ -26,7 +26,11 @@ import HeroFlowDemo from '@/components/HeroFlowDemo';
 const PLUS_PATTERN =
   "url(\"data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14 5.5c.9 4.1.9 4.1 5 4.9-4.1.9-4.1.9-5 5-.9-4.1-.9-4.1-5-5 4.1-.8 4.1-.8 5-4.9Z' fill='%23FFFFFF'/%3E%3C/svg%3E\")";
 
-const MAX_PHONE_SCALE = 1.55;
+const MAX_PHONE_SCALE = 1.38;
+/** Главы демо торчат под рамкой (`-bottom-9` в HeroFlowDemo). */
+const CHAPTER_DOTS_PX = 36;
+/** Воздух между низом масштабированного мокапа и CTA. */
+const CTA_GAP_PX = 32;
 
 const smoothstep = (g: number) => g * g * (3 - 2 * g);
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
@@ -64,6 +68,7 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
         metrics.active = false;
         metrics.maxScale = 1;
         metrics.height = phone.offsetHeight;
+        if (ctaRef.current) ctaRef.current.style.marginTop = '';
         return;
       }
 
@@ -83,14 +88,17 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
       if (width === 0 || height === 0) return;
 
       const vh = window.innerHeight;
+      // Финальная ширина чуть уже края экрана — воздух по бокам, не «в упор».
       const targetWidth = desktop.matches
-        ? Math.min(470, window.innerWidth * 0.92)
-        : Math.min(340, window.innerWidth * 0.94);
-      const heightPad = desktop.matches ? 40 : 24;
-      const cap = desktop.matches ? MAX_PHONE_SCALE : 1.35;
+        ? Math.min(400, window.innerWidth * 0.78)
+        : Math.min(292, window.innerWidth * 0.72);
+      // Снизу оставляем место под точки глав + CTA + подпись.
+      const bottomChrome = CHAPTER_DOTS_PX + CTA_GAP_PX + 120;
+      const heightPad = desktop.matches ? 48 : 32;
+      const cap = desktop.matches ? MAX_PHONE_SCALE : 1.2;
       const maxScale = Math.min(
         cap,
-        Math.max(1, Math.min(targetWidth / width, (vh - heightPad) / height)),
+        Math.max(1, Math.min(targetWidth / width, (vh - heightPad - bottomChrome) / height)),
       );
 
       // scrollY, при котором центр мокапа (без scale) = центр вьюпорта.
@@ -106,10 +114,10 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
 
       const cta = ctaRef.current;
       if (cta) {
-        // Origin сверху — весь прирост высоты вниз, резерв полный.
+        // Origin сверху: прирост высоты вниз + точки глав (тоже в transform).
         cta.style.marginTop = metrics.active
-          ? `${52 + (maxScale - 1) * height}px`
-          : '';
+          ? `${CTA_GAP_PX + CHAPTER_DOTS_PX * maxScale + (maxScale - 1) * height}px`
+          : `${CTA_GAP_PX + CHAPTER_DOTS_PX}px`;
       }
     };
 
@@ -282,7 +290,7 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
 
           <div
             ref={phoneRef}
-            className="mt-[clamp(28px,5vh,48px)] w-[248px] max-w-[76vw] origin-top will-change-transform sm:w-[300px] sm:max-w-[86vw] lg:mt-[clamp(36px,6vh,56px)]"
+            className="mt-[clamp(28px,5vh,48px)] w-[248px] max-w-[68vw] origin-top will-change-transform sm:w-[280px] sm:max-w-[72vw] lg:mt-[clamp(36px,6vh,56px)]"
           >
             <HeroFlowDemo
               showChapters
@@ -292,7 +300,7 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
             />
           </div>
 
-          <div ref={ctaRef} className="pb-10" style={{ marginTop: 52 }}>
+          <div ref={ctaRef} className="pb-10" style={{ marginTop: CTA_GAP_PX + CHAPTER_DOTS_PX }}>
             <a
               href="#curator"
               className="inline-flex items-center justify-center rounded-2xl bg-white px-[30px] py-4 text-[15px] font-semibold text-[#12283E] shadow-[0_12px_30px_rgba(0,0,0,0.3)] transition-all duration-[250ms] hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(0,0,0,0.4)]"
