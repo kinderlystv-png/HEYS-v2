@@ -61,6 +61,9 @@ export default function CuratorSection() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A94A2]">
             Куратор HEYS
           </p>
+          <p className="mt-2 text-[22px] font-semibold leading-none tracking-[-0.02em] text-[#101826]">
+            Антон
+          </p>
 
           <blockquote
             className={`${playfair.className} mt-5 text-[clamp(19px,2.2vw,24px)] font-medium italic leading-[1.45] text-[#101826]`}
@@ -83,7 +86,7 @@ export default function CuratorSection() {
 
           {/* УДАЛИТЬ, когда появятся материалы съёмки (`47` фаза 2). */}
           <p className="mt-6 text-[12px] leading-[1.5] text-[#9AA3B0]">
-            Имя и видео-знакомство появятся здесь после съёмки.
+            Видео-знакомство появится здесь после съёмки.
           </p>
         </div>
       </div>
