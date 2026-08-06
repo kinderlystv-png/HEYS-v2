@@ -17,6 +17,7 @@ import {
     LEGACY_GENERATOR_ORDER,
     isGeneratedFile,
 } from './legacy-bundle-config.mjs';
+import { prepareGeneratedBaselineForShip } from './legacy-generated-baseline.mjs';
 
 const ROOT_DIR = process.cwd();
 const WEB_DIR = path.join(ROOT_DIR, 'apps/web');
@@ -85,34 +86,6 @@ function isGeneratedStatusFile(filePath) {
     return isGeneratedFile(filePath);
 }
 
-function getDirtyGeneratedFiles() {
-    // NB: do NOT `.trim()` — git status --porcelain uses leading whitespace as
-    // status (e.g. " M file" = worktree-only modified, no index change). Trim
-    // would silently drop the leading space and `.slice(3)` would chop the
-    // first 1-2 chars of the filename, hiding the file from the dirty check.
-    // This bug let foreign worktree edits to hybrid files like apps/web/index.html
-    // slip through and get captured by the hook's later `git add -A` (incident
-    // 2026-06-08: SEC-005 work pulled into chore(fingers): block_catalog commit
-    // because index.html had unstaged manual edits the hook didn't detect).
-    const output = execSync('git status --porcelain --untracked-files=all', {
-        encoding: 'utf8',
-        cwd: ROOT_DIR,
-    });
-    return output
-        .split('\n')
-        .filter((line) => line.length >= 3)
-        .map((line) => line.slice(3).replace(/^"|"$/g, ''))
-        .filter(isGeneratedStatusFile);
-}
-
-function getStagedSourceFiles() {
-    const output = execSync('git diff --cached --name-only', { encoding: 'utf8', cwd: ROOT_DIR });
-    return output
-        .split('\n')
-        .filter(Boolean)
-        .filter(filePath => !isGeneratedStatusFile(filePath));
-}
-
 function getUnstagedSourceFiles() {
     const output = execSync('git status --porcelain --untracked-files=all', {
         encoding: 'utf8',
@@ -126,37 +99,25 @@ function getUnstagedSourceFiles() {
         .filter(filePath => !isGeneratedStatusFile(filePath));
 }
 
-function describeGeneratedBaselineConflict(dirtyFiles) {
-    const stagedSources = getStagedSourceFiles();
-    console.error('[legacy-sync] ❌ Generated files are already dirty before bundle sync.');
-    console.error('[legacy-sync] Авто-stash чужих зон отключён: hooks/scripts не должны прятать,');
-    console.error('[legacy-sync] откатывать или удалять чужой WIP без прямой команды пользователя.');
-    console.error('[legacy-sync] Dirty generated files:');
-    dirtyFiles.forEach(filePath => console.error(`  - ${filePath}`));
-
-    if (stagedSources.length > 0) {
-        console.error('[legacy-sync] Current staged source files:');
-        stagedSources.forEach(filePath => console.error(`  - ${filePath}`));
+/**
+ * Parallel-safe baseline for integration/ship:
+ * - dirty generated owned by staged sources → restore to HEAD, then rebuild;
+ * - any foreign dirty generated → fail closed, do not touch it.
+ * Never stash. Never restore paths outside the staged source rebuild scope.
+ */
+function assertGeneratedBaselineReady() {
+    try {
+        prepareGeneratedBaselineForShip({
+            log: (msg) => console.info(`[legacy-sync] ${msg.replace(/^\[generated-baseline\]\s*/, '')}`),
+            error: (msg) => console.error(`[legacy-sync] ${msg.replace(/^\[generated-baseline\]\s*/, '')}`),
+        });
+    } catch (err) {
+        if (err && err.code === 'foreign_generated_dirty') {
+            console.error('[legacy-sync] Авто-stash чужих зон отключён: hooks не трогают foreign WIP.');
+            process.exit(1);
+        }
+        throw err;
     }
-
-    console.error('[legacy-sync] Safe options:');
-    console.error('[legacy-sync]   1) если это твои preview-generated файлы — убери или пересобери только свой preview scope отдельным явным действием;');
-    console.error('[legacy-sync]   2) если это чужой/неясный WIP — остановись, покажи scope владельцу и используй worktree/integration-pass;');
-    console.error('[legacy-sync]   3) если нужно принять весь dirty generated scope в shipping — сделай это отдельным осознанным integration/release проходом;');
-    console.error('[legacy-sync]   4) не используй stash/restore/checkout/reset для чужого scope без прямой команды.');
-}
-
-function getGeneratedBaselineConflict() {
-    const dirty = getDirtyGeneratedFiles();
-    return { dirty };
-}
-
-function assertGeneratedBaselineClean() {
-    const result = getGeneratedBaselineConflict();
-    if (result.dirty.length === 0) return;
-
-    describeGeneratedBaselineConflict(result.dirty);
-    process.exit(1);
 }
 
 function buildBundleSourceIndex() {
@@ -356,7 +317,7 @@ function main() {
 
     if (!isTestMode && mode === 'integration') {
         assertNoUnstagedLegacyInputContamination(relevant);
-        assertGeneratedBaselineClean();
+        assertGeneratedBaselineReady();
     }
 
     if (relevant.some(filePath => LEGACY_FULL_REBUILD_TRIGGERS.has(filePath))) {

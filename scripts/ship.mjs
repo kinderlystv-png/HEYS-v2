@@ -15,12 +15,13 @@
  *
  * Pipeline:
  *   1. Verify explicit staged scope. The script never auto-stages dirty files.
- *   2. `git commit -m <msg>` — pre-commit hook (mode=integration) rebuilds
- *      affected bundles and stages them into the same commit.
- *   3. If commit is user-facing (feat/fix/perf), auto-generate a whats-new
+ *   2. Reset dirty generated owned by the staged source scope (never foreign).
+ *   3. `git commit -m <subject> [-m <body>]` — pre-commit (mode=integration)
+ *      rebuilds affected bundles and stages them into the same commit.
+ *   4. If commit is user-facing (feat/fix/perf), auto-generate a whats-new
  *      entry from the commit subject and create a chore(release) follow-up.
- *   4. `git push` current branch.
- *   5. If on main, watch the "Deploy to Yandex Cloud" workflow until green.
+ *   5. `git push` current branch.
+ *   6. If on main, watch deploy workflows for this SHA (warn if not found).
  *
  * Env it sets for child processes:
  *   HEYS_SHIP=1            — pre-commit bypass: ship is all-in-one by design
@@ -32,6 +33,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { prepareGeneratedBaselineForShip } from './legacy-generated-baseline.mjs';
 import { isWhatsNewEnabled } from './release-features.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -50,7 +52,12 @@ const flags = {
   noLock: args.includes('--no-lock'),
   noVerify: false, // intentionally unsupported
 };
-const message = args.find((a) => !a.startsWith('--'));
+const COMMIT_SUBJECT_MAX = 100;
+const rawMessage = args.find((a) => !a.startsWith('--'));
+const DEPLOY_WORKFLOWS = [
+  DEFAULT_DEPLOY_WORKFLOW,
+  'Auto-deploy Cloud Functions',
+];
 
 function out(s = '') {
   process.stdout.write(`${s}\n`);
@@ -94,21 +101,50 @@ function runGh(ghArgs, { capture = false } = {}) {
   });
 }
 
-function parseSubject(msg) {
+/**
+ * Accept real newlines or shell-escaped "\\n". Subject = first line (≤100),
+ * body = rest after an optional blank line. commitlint only sees the subject.
+ */
+export function parseCommitMessage(raw) {
+  const text = String(raw || '')
+    .replace(/\\n/g, '\n')
+    .replace(/\r\n/g, '\n');
+  const lines = text.split('\n');
+  const subjectLine = (lines[0] || '').trim();
+  if (!subjectLine) {
+    throw new Error('Commit message is empty.');
+  }
+  if (subjectLine.length > COMMIT_SUBJECT_MAX) {
+    throw new Error(
+      `Commit subject must be ≤${COMMIT_SUBJECT_MAX} chars (commitlint header-max-length).\n` +
+        `   Current length: ${subjectLine.length}\n` +
+        `   Subject: ${JSON.stringify(subjectLine)}\n` +
+        `   Tip: put details after a blank line as the body — ship passes them as a second -m.`,
+    );
+  }
+  let idx = 1;
+  if (lines[idx] === '') idx += 1;
+  const body = lines.slice(idx).join('\n').trim();
   const m =
     /^(feat|fix|perf|chore|docs|refactor|test|style|build|ci|revert)(?:\([^)]+\))?!?:\s*(.+)$/.exec(
-      msg,
+      subjectLine,
     );
   if (!m) {
-    fail(
-      `Commit message must be conventional: type(scope?): subject\n   Got: ${JSON.stringify(msg)}`,
+    throw new Error(
+      `Commit message must be conventional: type(scope?): subject\n   Got: ${JSON.stringify(subjectLine)}`,
     );
   }
   const [, type, subject] = m;
-  return { type, subject, isUserFacing: type === 'feat' || type === 'fix' || type === 'perf' };
+  return {
+    type,
+    subject,
+    subjectLine,
+    body,
+    isUserFacing: type === 'feat' || type === 'fix' || type === 'perf',
+  };
 }
 
-function ensureStagedAndReady(message) {
+function ensureStagedAndReady(subjectLine) {
   const status = gitSafe(['status', '--porcelain']);
   if (!status) fail('Nothing to commit (working tree clean).');
 
@@ -130,10 +166,10 @@ function ensureStagedAndReady(message) {
     err(`[ship]    of other agents' WIP in this checkout. Choose:`);
     err(``);
     err(`[ship]    Selective (recommended):`);
-    err(`[ship]        git add <your files> && pnpm ship "${message}"`);
+    err(`[ship]        git add <your files> && pnpm ship "${subjectLine}"`);
     err(``);
     err(`[ship]    All-dirty (only if every dirty file is yours):`);
-    err(`[ship]        git add -A && pnpm ship "${message}"`);
+    err(`[ship]        git add -A && pnpm ship "${subjectLine}"`);
     err(``);
     if (dirty.length > 0) {
       err(`[ship]    Dirty modified (${dirty.length}):`);
@@ -152,6 +188,24 @@ function ensureStagedAndReady(message) {
   out(
     `[ship] 📝 staged=${staged.length} unstaged=${unstagedCount} (unstaged stays in working tree)`,
   );
+
+  // Reset preview/generated leftover from a previous failed ship of THIS scope.
+  // Foreign generated (other bundles / other agent) → hard stop, no restore.
+  if (!flags.dryRun) {
+    try {
+      prepareGeneratedBaselineForShip({
+        log: (msg) => out(`[ship] ${msg.replace(/^\[generated-baseline\]\s*/, '')}`),
+        error: (msg) => err(`[ship] ${msg.replace(/^\[generated-baseline\]\s*/, '')}`),
+      });
+    } catch (e) {
+      if (e && e.code === 'foreign_generated_dirty') {
+        fail(
+          'Foreign dirty generated blocks ship. Use a worktree or clear the other scope first.',
+        );
+      }
+      throw e;
+    }
+  }
 }
 
 function getCurrentBranch() {
@@ -198,36 +252,55 @@ function watchDeploy(branch) {
   const headSha = gitSafe(['rev-parse', 'HEAD']);
   if (!headSha) return;
 
-  const workflow = DEFAULT_DEPLOY_WORKFLOW;
   out('');
-  out(`[ship] 👀 Watching "${workflow}" for main@${headSha.slice(0, 8)}...`);
+  out(
+    `[ship] 👀 Watching deploy workflows for main@${headSha.slice(0, 8)}: ${DEPLOY_WORKFLOWS.join(', ')}`,
+  );
 
-  let runItem = null;
-  for (let attempt = 1; attempt <= 6; attempt += 1) {
+  const found = [];
+  // Actions can sit queued for a long time; keep looking without failing the
+  // already-successful push. Miss → warning, not ship failure.
+  for (let attempt = 1; attempt <= 18; attempt += 1) {
+    for (const workflow of DEPLOY_WORKFLOWS) {
+      if (found.some((item) => item.workflow === workflow)) continue;
+      const runItem = findDeployRunForHead({ workflow, branch, headSha });
+      if (runItem) found.push({ workflow, ...runItem });
+    }
+    if (found.length > 0) break;
     sleepSeconds(5);
-    runItem = findDeployRunForHead({ workflow, branch, headSha });
-    if (runItem) break;
   }
-  if (!runItem) {
-    err(`[ship] Could not find "${workflow}" run for main@${headSha.slice(0, 8)}.`);
-    err(`[ship] Check manually: gh run list --workflow="${workflow}" --branch=main --limit 5`);
-    process.exit(1);
+
+  if (found.length === 0) {
+    err(
+      `[ship] ⚠️  No deploy run for main@${headSha.slice(0, 8)} yet (push already succeeded).`,
+    );
+    err(`[ship]    Check: gh run list --branch=main --limit 8`);
+    err(
+      `[ship]    Or dispatch: gh workflow run "${DEFAULT_DEPLOY_WORKFLOW}" --ref main`,
+    );
+    return;
   }
-  out(`[ship] Deploy run: ${runItem.url || `#${runItem.databaseId}`}`);
-  const watch = runGh([
-    'run',
-    'watch',
-    String(runItem.databaseId),
-    '--exit-status',
-    '--interval',
-    '20',
-    '--compact',
-  ]);
-  if (watch.status !== 0) {
-    err('[ship] Deploy failed.');
-    process.exit(watch.status || 1);
+
+  let failed = false;
+  for (const runItem of found) {
+    out(`[ship] ${runItem.workflow}: ${runItem.url || `#${runItem.databaseId}`}`);
+    const watch = runGh([
+      'run',
+      'watch',
+      String(runItem.databaseId),
+      '--exit-status',
+      '--interval',
+      '20',
+      '--compact',
+    ]);
+    if (watch.status !== 0) {
+      err(`[ship] ❌ ${runItem.workflow} failed.`);
+      failed = true;
+    } else {
+      out(`[ship] ✅ ${runItem.workflow} green.`);
+    }
   }
-  out('[ship] ✅ Deploy green.');
+  if (failed) process.exit(1);
 }
 
 /**
@@ -431,17 +504,25 @@ function cleanupStaleGitLocks() {
 }
 
 function main() {
-  if (!message) {
+  if (!rawMessage) {
     err('Usage: pnpm ship "<conventional commit message>" [--dry-run] [--no-push] [--no-watch]');
     err('Example: pnpm ship "feat(fingers): reorder layout cards"');
+    err('Body:    pnpm ship "fix(sync): short subject\\n\\nLonger body details."');
     process.exit(1);
   }
 
+  let parsedMessage;
+  try {
+    parsedMessage = parseCommitMessage(rawMessage);
+  } catch (e) {
+    fail(e.message || String(e));
+  }
+  const { type, subject, subjectLine, body, isUserFacing } = parsedMessage;
+
   cleanupStaleGitLocks();
   // After lock cleanup so we can read branch reliably without race.
-  acquireShipLock(getCurrentBranch(), message);
+  acquireShipLock(getCurrentBranch(), subjectLine);
 
-  const { type, subject, isUserFacing } = parseSubject(message);
   const branch = getCurrentBranch();
 
   // Guard: ship's purpose is solo serial work on `main` → push → deploy.
@@ -453,9 +534,9 @@ function main() {
     err(`[ship] ⚠️  Current branch is "${branch}", not "main".`);
     err(`[ship]    ship pushes to current branch and only watches deploy on main.`);
     err(`[ship]    If you meant to ship to prod:`);
-    err(`[ship]        git checkout main && pnpm ship "${message}"`);
+    err(`[ship]        git checkout main && pnpm ship "${subjectLine}"`);
     err(`[ship]    If you really need to ship "${branch}":`);
-    err(`[ship]        pnpm ship "${message}" --allow-non-main`);
+    err(`[ship]        pnpm ship "${subjectLine}" --allow-non-main`);
     process.exit(1);
   }
 
@@ -468,14 +549,16 @@ function main() {
   process.env.HEYS_INTEGRATION = '1';
   process.env.HEYS_STAGING_MODE = 'integration';
 
-  ensureStagedAndReady(message);
+  ensureStagedAndReady(subjectLine);
 
   // Staging is explicit (see ensureStagedAndReady) — agent already did `git add`.
   // Pre-commit hook (mode=integration) will rebuild affected bundles from the
   // staged source and stage the generated outputs into the same commit.
 
-  // First commit: source + freshly rebuilt bundles (via pre-commit auto-sync).
-  run('git', ['commit', '-m', message], { label: `💾 commit: ${message}` });
+  // Subject and body as separate -m flags so commitlint only sees the header.
+  const commitArgs = ['commit', '-m', subjectLine];
+  if (body) commitArgs.push('-m', body);
+  run('git', commitArgs, { label: `💾 commit: ${subjectLine}` });
 
   // Generate release metadata only while the centralized feature is enabled.
   if (isWhatsNewEnabled()) {
@@ -546,4 +629,8 @@ function main() {
   out('[ship] ✅ done.');
 }
 
-main();
+const isDirectRun =
+  Boolean(process.argv[1]) && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isDirectRun) {
+  main();
+}

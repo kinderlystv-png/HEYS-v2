@@ -43,9 +43,19 @@ mechanics; it never grants permission.
 
 `pnpm ship` rejects an empty staged set, expects `main` by default, and refuses
 a non-`main` branch unless `--allow-non-main` is intentional. Without
-`--no-push` it pushes the current branch and watches the deploy on `main`.
-`--no-watch` still pushes. `--no-lock` bypasses shipping serialization and is
-emergency-only. The script intentionally does not support `--no-verify`.
+`--no-push` it pushes the current branch and watches deploy workflows on `main`
+(`Deploy to Yandex Cloud` and `Auto-deploy Cloud Functions`). A missing run
+after a successful push is a warning, not a failed ship. `--no-watch` still
+pushes. `--no-lock` bypasses shipping serialization and is emergency-only. The
+script intentionally does not support `--no-verify`.
+
+Commit message: subject (first line) must be conventional and ≤100 chars;
+optional body after a blank line is passed as a second `-m`. Literal `\n` in the
+CLI string is accepted. Before commit, ship resets dirty **generated** files
+owned by the staged source rebuild scope (leftover from a failed previous ship
+of the same scope) and refuses if any **foreign** generated path is dirty — it
+never stash/restores another agent's preview. Parallel agents still use separate
+worktrees + `pnpm agents:integrate` for independent write streams.
 
 `pnpm ship --dry-run` is not a permission-free planning command: it still
 requires an explicitly staged scope and may clean stale Git lock files and
