@@ -7,9 +7,8 @@
 // на которых держится позиционирование страницы.
 //
 // Скролл-анимация. Секция выше вьюпорта (`pb-[50vh]` / `lg:pb-[70vh]`), липкий
-// только фон. На десктопе текст уходит, телефон растёт; на мобильном текст
-// остаётся, растёт ролик (как Future / версия B). Play контр-масштабируется
-// через `--hero-content-scale` = scale корпуса (формула в HeroFlowDemo).
+// только фон. Ролик растёт от верха до момента «мокап по центру экрана», дальше
+// scale заморожен. Play контр-масштабируется через `--hero-content-scale`.
 //
 // Кнопка первого экрана ведёт не в форму, а в блок механики: прямая заявка на
 // первом экране запрещена записью `COPY_VOICE` от 2026-06-27, а доступность
@@ -43,41 +42,47 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
   const ctaRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    // Скролл-зум на десктопе и на телефоне. Контент героя снаружи sticky-
-    // слоя с `overflow: hidden`, поэтому узкий экран больше не срезает CTA.
-    // `prefers-reduced-motion` — без масштаба.
+    // Зум доигрывает к моменту, когда мокап по центру экрана — дальше scale
+    // держим. Origin сверху: рост вниз, не наезжает на плашку «7 дней».
     const desktop = window.matchMedia('(min-width: 1024px)');
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const rafRef = { current: 0 };
+    const metrics = {
+      active: false,
+      growStart: 0,
+      growTravel: 1,
+      maxScale: 1,
+      height: 0,
+    };
 
-    // Всё, что меняется на каждый кадр прокрутки, пишем прямо в стиль узла:
-    // через состояние React это перерисовывало бы весь первый экран.
-    const apply = () => {
+    const measure = () => {
       const section = sectionRef.current;
       const phone = phoneRef.current;
       if (!section || !phone) return;
 
       if (reduced.matches) {
-        phone.style.transform = '';
-        phone.style.removeProperty('--hero-content-scale');
-        if (textRef.current) {
-          textRef.current.style.opacity = '';
-          textRef.current.style.transform = '';
-        }
-        if (ctaRef.current) ctaRef.current.style.marginTop = '';
+        metrics.active = false;
+        metrics.maxScale = 1;
+        metrics.height = phone.offsetHeight;
         return;
       }
 
-      const vh = window.innerHeight;
-      const heroTop = section.offsetTop;
-      const heroHeight = section.offsetHeight;
-      const travel = Math.max(1, heroHeight - vh);
-      const p = clamp01((window.scrollY - heroTop) / travel);
+      const prevTransform = phone.style.transform;
+      const prevScaleVar = phone.style.getPropertyValue('--hero-content-scale');
+      phone.style.transform = 'none';
+      phone.style.removeProperty('--hero-content-scale');
 
       const width = phone.offsetWidth;
       const height = phone.offsetHeight;
+      const rect = phone.getBoundingClientRect();
+      const centerDoc = rect.top + window.scrollY + height / 2;
+
+      phone.style.transform = prevTransform;
+      if (prevScaleVar) phone.style.setProperty('--hero-content-scale', prevScaleVar);
+
       if (width === 0 || height === 0) return;
 
-      // Десктоп — крупнее; мобильный потолок как у Future/HeroScrollStage B.
+      const vh = window.innerHeight;
       const targetWidth = desktop.matches
         ? Math.min(470, window.innerWidth * 0.92)
         : Math.min(340, window.innerWidth * 0.94);
@@ -87,16 +92,53 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
         cap,
         Math.max(1, Math.min(targetWidth / width, (vh - heightPad) / height)),
       );
-      const scale = 1 + (maxScale - 1) * smoothstep(Math.min(1, p / 0.6));
+
+      // scrollY, при котором центр мокапа (без scale) = центр вьюпорта.
+      const growStart = section.offsetTop;
+      const centeredScroll = centerDoc - vh / 2;
+      const growTravel = Math.max(1, centeredScroll - growStart);
+
+      metrics.active = maxScale > 1.02;
+      metrics.growStart = growStart;
+      metrics.growTravel = growTravel;
+      metrics.maxScale = maxScale;
+      metrics.height = height;
+
+      const cta = ctaRef.current;
+      if (cta) {
+        // Origin сверху — весь прирост высоты вниз, резерв полный.
+        cta.style.marginTop = metrics.active
+          ? `${52 + (maxScale - 1) * height}px`
+          : '';
+      }
+    };
+
+    const apply = () => {
+      const phone = phoneRef.current;
+      if (!phone) return;
+
+      if (!metrics.active) {
+        phone.style.transform = '';
+        phone.style.removeProperty('--hero-content-scale');
+        if (textRef.current) {
+          textRef.current.style.opacity = '';
+          textRef.current.style.transform = '';
+        }
+        return;
+      }
+
+      const p = clamp01((window.scrollY - metrics.growStart) / metrics.growTravel);
+      const scale = 1 + (metrics.maxScale - 1) * smoothstep(p);
+      phone.style.transformOrigin = 'center top';
       phone.style.transform = `scale(${scale.toFixed(4)})`;
-      // HeroFlowDemo контр-масштабирует play через `0.88 / --hero-content-scale`:
-      // сюда кладём сам scale родителя, не обратный (иначе кнопка раздувается).
+      // HeroFlowDemo: play = 0.88 / --hero-content-scale → кладём scale родителя.
       phone.style.setProperty('--hero-content-scale', String(scale));
 
       const text = textRef.current;
       if (text) {
         if (desktop.matches) {
-          const fade = Math.min(1, p / 0.4);
+          // Плашка уходит до того, как мокап заметно вырастет.
+          const fade = Math.min(1, p / 0.55);
           text.style.opacity = String(1 - fade);
           text.style.transform = `translateY(${(-28 * fade).toFixed(1)}px)`;
         } else {
@@ -104,27 +146,37 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
           text.style.transform = '';
         }
       }
-
-      const cta = ctaRef.current;
-      if (cta) {
-        // Телефон растёт из центра, поэтому нижний край уезжает вниз на
-        // половину прироста — на столько же отодвигаем кнопку.
-        cta.style.marginTop = `${52 + ((maxScale - 1) * height) / 2}px`;
-      }
     };
 
-    apply();
-    window.addEventListener('scroll', apply, { passive: true });
-    window.addEventListener('resize', apply);
-    window.addEventListener('load', apply);
-    desktop.addEventListener('change', apply);
-    reduced.addEventListener('change', apply);
+    const schedule = () => {
+      if (rafRef.current) return;
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = 0;
+        apply();
+      });
+    };
+
+    const remeasure = () => {
+      measure();
+      apply();
+    };
+
+    remeasure();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', remeasure);
+    window.addEventListener('load', remeasure);
+    desktop.addEventListener('change', remeasure);
+    reduced.addEventListener('change', remeasure);
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(remeasure);
+    if (phoneRef.current) observer?.observe(phoneRef.current);
     return () => {
-      window.removeEventListener('scroll', apply);
-      window.removeEventListener('resize', apply);
-      window.removeEventListener('load', apply);
-      desktop.removeEventListener('change', apply);
-      reduced.removeEventListener('change', apply);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', remeasure);
+      window.removeEventListener('load', remeasure);
+      desktop.removeEventListener('change', remeasure);
+      reduced.removeEventListener('change', remeasure);
+      observer?.disconnect();
     };
   }, []);
 
@@ -230,7 +282,7 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
 
           <div
             ref={phoneRef}
-            className="mt-[5vh] w-[248px] max-w-[76vw] origin-center will-change-transform sm:w-[300px] sm:max-w-[86vw] lg:mt-[7vh]"
+            className="mt-[clamp(28px,5vh,48px)] w-[248px] max-w-[76vw] origin-top will-change-transform sm:w-[300px] sm:max-w-[86vw] lg:mt-[clamp(36px,6vh,56px)]"
           >
             <HeroFlowDemo
               showChapters
