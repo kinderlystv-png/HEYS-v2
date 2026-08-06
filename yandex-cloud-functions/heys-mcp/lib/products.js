@@ -14,6 +14,7 @@
  */
 
 const crypto = require('node:crypto');
+const { computeTefKcal100 } = require('./day');
 
 const OVERLAY_KEY = 'heys_products_overlay_v2';
 
@@ -323,16 +324,15 @@ function pieceGrams(product) {
 
 /** Витрина продукта для модели: без нутриентного «шума», но с калорийностью. */
 function describeProduct(product) {
-  const kcal100 = Number(product.kcal100);
   const carbs = Number(product.carbs100) || ((Number(product.simple100) || 0) + (Number(product.complex100) || 0));
   const fat = Number(product.fat100) || ((Number(product.badFat100) || 0) + (Number(product.goodFat100) || 0) + (Number(product.trans100) || 0));
+  // Всегда NET Atwater (как день/позиция приёма), не сырой kcal100 из карточки
+  // и не классический 4×Б — иначе поиск и дневник расходятся на глазах куратора.
   return {
     product_id: product.id,
     name: product.name,
     source: product._source === 'own' ? 'мой список' : 'общая база',
-    kcal100: Number.isFinite(kcal100) && kcal100 > 0
-      ? Math.round(kcal100 * 10) / 10
-      : Math.round((4 * (Number(product.protein100) || 0) + 4 * carbs + 9 * fat) * 10) / 10,
+    kcal100: computeTefKcal100(product),
     protein100: Number(product.protein100) || 0,
     carbs100: Math.round(carbs * 10) / 10,
     fat100: Math.round(fat * 10) / 10,

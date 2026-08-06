@@ -101,6 +101,22 @@ test('describeProduct считает калорийность, если её н�
   assert.equal(syrup.source, 'мой список');
 });
 
+test('describeProduct всегда NET Atwater, даже если в карточке классический kcal100', () => {
+  // Регресс 2026-08-06: поиск показывал 4×Б из карточки, день клал 3×Б в приём.
+  const milk = {
+    id: 'p-milk',
+    name: 'Молоко',
+    protein100: 3,
+    carbs100: 4.7,
+    fat100: 3.5,
+    kcal100: 62.3, // классический Атуотер — витрина не должна его отдавать
+  };
+  const described = products.describeProduct(milk);
+  assert.equal(described.kcal100, day.computeTefKcal100(milk));
+  assert.equal(described.kcal100, 59.3);
+  assert.notEqual(described.kcal100, milk.kcal100);
+});
+
 // ── Написание, опечатки, штуки ────────────────────────────────────────────
 
 const BRANDS = [
