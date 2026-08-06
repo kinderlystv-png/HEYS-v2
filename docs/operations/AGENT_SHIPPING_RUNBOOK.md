@@ -143,7 +143,8 @@ Current hook sources: [commit-msg](../../.husky/commit-msg),
 - `commit-msg`: Commitlint.
 - `pre-commit`: `lint-staged`; agent staging/source-only guard; legacy sync
   (`agent-check` is report-only, `integration` rebuilds and stages generated
-  scope); lazy-chunk, pricing and CommonJS mirror guards; allowlist auto-fixes.
+  scope); lazy-chunk, pricing, CommonJS mirror and heys-mcp web-mirror guards;
+  allowlist auto-fixes.
 - `pre-push`: delegates to `push:preflight` for the outgoing committed range.
   The current fast gates are source/generated scope, Gitleaks, the migration
   test when migration contracts changed, direct-localStorage,

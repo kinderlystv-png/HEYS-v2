@@ -53,9 +53,10 @@
 ### Pre-commit / CI (факт)
 
 `.husky/pre-commit` гоняет lint-staged, agent-staging, legacy bundle check,
-pricing-sync, **sync-merge cjs mirror** — но **не**
-`lint-heys-mcp-web-mirror.mjs` и не `check-agent-shipping-docs.mjs`. Утверждение
-HANDOFF «сторож зеркала не подключён» — **всё ещё верно** на 06.08.
+pricing-sync, sync-merge cjs mirror и
+**`lint-heys-mcp-web-mirror.mjs --staged`** (подключён 06.08).
+`check-agent-shipping-docs.mjs` по-прежнему ручной (`pnpm docs:shipping:check`),
+не husky.
 
 ### День клиента (схема)
 
@@ -69,7 +70,8 @@ HANDOFF «сторож зеркала не подключён» — **всё е�
 
 - Источник: `apps/web/heys_tdee_v1.js` + `heys_day_calculations.js`
 - Копия: `yandex-cloud-functions/heys-mcp/lib/web-mirror/`
-- Сторож: `scripts/lint-heys-mcp-web-mirror.mjs` — **не в husky**
+- Сторож: `scripts/lint-heys-mcp-web-mirror.mjs` — в `.husky/pre-commit` с
+  `--staged` (с 06.08)
 
 ### Белок / жир (код, не мнение)
 
@@ -105,8 +107,8 @@ Codex-ветки/`claude/*` — см. Execution autonomy в AGENTS.md.
 | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | `heys_tdee_v1.js`                                                 | ✅ `apps/web/heys_tdee_v1.js` (+ web-mirror)                                              |
 | `heys_day_calculations.js` / computeDailyNorms ~68-91             | ✅ строки 68-90                                                                           |
-| `scripts/lint-heys-mcp-web-mirror.mjs`                            | ✅ есть, **не** в pre-commit/pre-push                                                     |
-| `.husky/pre-commit` «нужна строка сторожа»                        | ✅ сторожа формул всё ещё нет                                                             |
+| `scripts/lint-heys-mcp-web-mirror.mjs`                            | ✅ есть; в pre-commit с `--staged` с 06.08                                                |
+| `.husky/pre-commit` «нужна строка сторожа»                        | ✅ закрыто 06.08                                                                          |
 | `check-agent-shipping-docs`                                       | ✅ `scripts/check-agent-shipping-docs.mjs` + `pnpm docs:shipping:check`; в husky не видел |
 | `docs/heys-mcp-connector.md`                                      | ❌ в HEYS нет → лежит в **tasks** `docs/heys-mcp-connector.md`                            |
 | `docs/checkin-via-curator.md`                                     | ❌ в HEYS нет → **tasks** `docs/checkin-via-curator.md`                                   |
@@ -130,7 +132,8 @@ Codex-ветки/`claude/*` — см. Execution autonomy в AGENTS.md.
 4. **§4.3 heys_checkin «уезжает за релиз»** — инструмент и тесты уже в репо.
 5. **Три docs/\* из §3** — пути указаны как будто в HEYS; два живут в tasks,
    один отсутствует.
-6. **«Сторож зеркала не подключён»** — всё ещё правда (не ошибка, а долг).
+6. **«Сторож зеркала не подключён»** — было верно на момент HANDOFF; **закрыто
+   06.08** (строка в `.husky/pre-commit`).
 
 Не проверял заново численно кейс 1503/1534/1458 и sleep hours 5.8→5.5 — это
 отдельные техзадачи (нормы / сон), не bootstrap. Формула белка от % калорий в
@@ -146,8 +149,9 @@ P1-класс по живому коду/повестке, не по HANDOFF-к�
    доехать в прод; серверный guard на main уже был.
 2. **Чек-ин UX** (heys/4546fb) — мастер открывается / mood откатывается после
    записи куратором; `heys_checkin` есть, баг показа/статуса — отдельно.
-3. **Зеркало формул без husky-gate** — правка только web или только mirror
-   проедет pre-commit; ломает MCP-нормы молча.
+3. ~~**Зеркало формул без husky-gate**~~ — закрыто 06.08
+   (`lint-heys-mcp-web-mirror --staged` в pre-commit). Остаётся риск правка
+   только одной стороны до commit — но hook уже не пропустит.
 4. **Три источника нормы** (estimate / client_saved / канон TDEE) — модель всё
    ещё объясняет куратору разные числа; менять порядок расчёта белка опасно,
    пока не закрыт разбор 38.75 ккал.
@@ -158,14 +162,14 @@ P1-класс по живому коду/повестке, не по HANDOFF-к�
 
 ## 5. Вердикт bootstrap
 
-| Шаг приложения А                 | Статус                                                   |
-| -------------------------------- | -------------------------------------------------------- |
-| HANDOFF в `docs/HEYS-HANDOFF.md` | ✅ локально в HEYS-v2 (ждёт commit, если нужен в remote) |
-| Пробелы заполнены фактами репо   | ✅ этот файл                                             |
-| Пути §3 сверены                  | ✅ таблица выше                                          |
-| Короткий AGENTS.md «с нуля»      | ❌ **отклонён**: живой AGENTS.md не трогать              |
-| Список расхождений + рисков      | ✅ §3–4                                                  |
-| Тариф Codex x5                   | не нужен для этого bootstrap                             |
+| Шаг приложения А                 | Статус                                      |
+| -------------------------------- | ------------------------------------------- |
+| HANDOFF в `docs/HEYS-HANDOFF.md` | ✅ в main (`96f197c30`)                     |
+| Пробелы заполнены фактами репо   | ✅ этот файл                                |
+| Пути §3 сверены                  | ✅ таблица выше                             |
+| Короткий AGENTS.md «с нуля»      | ❌ **отклонён**: живой AGENTS.md не трогать |
+| Список расхождений + рисков      | ✅ §3–4                                     |
+| Тариф Codex x5                   | не нужен для этого bootstrap                |
 
 Готово для heys/42a93b: контекст агента = `AGENTS.md` + этот bootstrap при
 работе от HANDOFF; дальше кодовые задачи — напрямую в Cursor по `AGENTS.md`.
