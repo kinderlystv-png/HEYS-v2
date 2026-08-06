@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-07-25T14:45:06.511Z",
+  "timestamp": "2026-08-06T14:18:17.728Z",
   "scanType": "dependency-security",
   "projectInfo": {
     "name": "@heys/monorepo",
@@ -85,7 +85,7 @@
     }
   },
   "packages": {
-    "total": 51,
+    "total": 53,
     "direct": 16,
     "dev": 55,
     "production": 16
@@ -112,7 +112,7 @@
           "paths": ["apps/web > react-router-dom@6.30.4 > react-router@6.30.4"]
         }
       ],
-      "timestamp": "2026-07-25T14:45:12.003Z"
+      "timestamp": "2026-08-06T14:18:20.949Z"
     },
     {
       "id": 1124270,
@@ -135,7 +135,7 @@
           "paths": ["apps/web > react-router-dom@6.30.4"]
         }
       ],
-      "timestamp": "2026-07-25T14:45:12.003Z"
+      "timestamp": "2026-08-06T14:18:20.949Z"
     },
     {
       "id": 1124272,
@@ -158,7 +158,7 @@
           "paths": ["apps/web > react-router-dom@6.30.4 > react-router@6.30.4"]
         }
       ],
-      "timestamp": "2026-07-25T14:45:12.003Z"
+      "timestamp": "2026-08-06T14:18:20.949Z"
     }
   ],
   "summary": {
