@@ -675,6 +675,54 @@ async function prefetchGuardedCurrentValues(client, clientId, items, lockRows = 
   return map;
 }
 
+// 🛡️ Missing-content guard (incident 2026-08-06): the merge_save_client_kv_by_*
+// "noConflict" fast path (see merge_save handler below) only proves the pushing
+// device's last-known cloud timestamp is not older than the current row — it
+// says nothing about whether that device ever SAW meals/items added meanwhile
+// by someone else (curator MCP, another device). A stale local day snapshot
+// that never pulled those meals can still carry a fresh `updatedAt` (any
+// autosave re-stamps it on resume), so `noConflict` alone let such a write wipe
+// out meals/items that only exist server-side and were never tombstoned by the
+// incoming payload. The existing hasNewerCurrentItemEdit check only compares
+// items present on BOTH sides — it does not catch items/meals absent from
+// incoming entirely. Returns true whenever the cloud side has meals or items
+// the incoming payload doesn't account for (added OR explicitly deleted via
+// deletedMealIds/deletedItemIds), which should force the real mergeDayData
+// pass instead of letting incoming win outright.
+function hasCurrentOnlyDayContent(incomingValue, currentValue) {
+  if (!incomingValue || !currentValue || typeof incomingValue !== 'object' || typeof currentValue !== 'object') return false;
+  const incomingMeals = Array.isArray(incomingValue.meals) ? incomingValue.meals : [];
+  const currentMeals = Array.isArray(currentValue.meals) ? currentValue.meals : [];
+  const incomingMealById = new Map();
+  incomingMeals.forEach((meal) => { if (meal && meal.id) incomingMealById.set(String(meal.id), meal); });
+  const incomingDeletedMealIds = (incomingValue.deletedMealIds && typeof incomingValue.deletedMealIds === 'object' && !Array.isArray(incomingValue.deletedMealIds)) ? incomingValue.deletedMealIds : {};
+  const incomingDeletedItemIds = (incomingValue.deletedItemIds && typeof incomingValue.deletedItemIds === 'object' && !Array.isArray(incomingValue.deletedItemIds)) ? incomingValue.deletedItemIds : {};
+  let found = false;
+  currentMeals.forEach((meal) => {
+    if (found || !meal || !meal.id) return;
+    const mealId = String(meal.id);
+    const incomingMeal = incomingMealById.get(mealId);
+    if (!incomingMeal) {
+      const tombstoneTs = Number(incomingDeletedMealIds[mealId]) || 0;
+      const mealTs = Number(meal.updatedAt) || Number(currentValue.updatedAt) || 0;
+      if (!(tombstoneTs > 0 && tombstoneTs >= mealTs)) found = true;
+      return;
+    }
+    const incomingItems = Array.isArray(incomingMeal.items) ? incomingMeal.items : [];
+    const incomingItemIds = new Set(incomingItems.filter((it) => it && it.id).map((it) => String(it.id)));
+    const currentItems = Array.isArray(meal.items) ? meal.items : [];
+    currentItems.forEach((item) => {
+      if (found || !item || !item.id) return;
+      const itemId = String(item.id);
+      if (incomingItemIds.has(itemId)) return;
+      const tombstoneTs = Number(incomingDeletedItemIds[itemId]) || 0;
+      const itemTs = Number(item.updatedAt) || Number(meal.updatedAt) || Number(currentValue.updatedAt) || 0;
+      if (!(tombstoneTs > 0 && tombstoneTs >= itemTs)) found = true;
+    });
+  });
+  return found;
+}
+
 function mergeBatchDayv2ExistingRows(items, currentByKey) {
   if (!Array.isArray(items) || !currentByKey || typeof currentByKey.get !== 'function') return 0;
   let mergedCount = 0;
@@ -2915,6 +2963,11 @@ async function handleRpcRequest(event, context) {
             return foundNewer;
           })();
 
+          // 🛡️ Missing-content guard (incident 2026-08-06) — see hasCurrentOnlyDayContent
+          // above for rationale. Forces the real merge instead of letting a stale
+          // "noConflict" push silently drop meals/items only the cloud side has.
+          const hasCurrentOnlyContent = isDayv2Key && hasCurrentOnlyDayContent(incomingValue, currentValue);
+
           // 🛡️ Generic cross-client guard (incident 2026-06-02 #6): incoming
           // _writerCid должен совпадать с row.client_id для ВСЕХ guarded keys
           // включая heys_dayv2_*. До этого dayv2 branch внизу шёл сразу в
@@ -2994,7 +3047,7 @@ async function handleRpcRequest(event, context) {
           } else if (PLANNING_RECORD_MERGE_KEYS.has(k)) {
             mergedValue = mergePlanningRecords(incomingValue, currentValue);
             mergeOutcome = 'planning_records_merged';
-          } else if (isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop)) {
+          } else if (isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop || hasCurrentOnlyContent)) {
             // forceKeepAll: client may not have seen the latest cloud-side meals yet,
             // so treating absence as "deleted" would lose other side's edits. Conservative: keep both.
             const merged = mergeDayData(incomingValue, currentValue, { forceKeepAll: true });
@@ -3002,7 +3055,9 @@ async function handleRpcRequest(event, context) {
               mergedValue = merged;
               mergeOutcome = hasNewerCurrentItemEdit
                 ? 'day_item_guard_merged'
-                : (hasSubjectiveDrop ? 'day_subjective_guard_merged' : 'day_merged');
+                : (hasSubjectiveDrop
+                  ? 'day_subjective_guard_merged'
+                  : (hasCurrentOnlyContent ? 'day_missing_content_guard_merged' : 'day_merged'));
             } else {
               mergedValue = incomingValue; // identical content
             }
@@ -5146,4 +5201,9 @@ module.exports.handler = async function (event, context) {
     permit.release();
   }
 };
+
+// Exposed for unit tests (__tests__/merge-missing-content-guard.test.js).
+module.exports._internal = Object.assign(module.exports._internal || {}, {
+  hasCurrentOnlyDayContent,
+});
 // deployed at 2026-02-05 01:25:37
