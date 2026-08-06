@@ -40,6 +40,8 @@ function fakeApi({ day = null, presets = PRESETS, overlay = OVERLAY, card = null
   const upserts = [];
   let presetState = presets;
   let overlayState = overlay;
+  let dayState = day;
+  let cardState = card ? { ...card } : null;
   return {
     saves,
     upserts,
@@ -48,6 +50,7 @@ function fakeApi({ day = null, presets = PRESETS, overlay = OVERLAY, card = null
       upserts.push({ key, value });
       if (key === 'heys_meal_presets_v1') presetState = value;
       if (key === 'heys_products_overlay_v2') overlayState = value;
+      if (cardState && key === 'heys_profile') cardState['heys_profile'] = value;
       return { ok: true };
     },
     get presetState() { return presetState; },
@@ -55,8 +58,8 @@ function fakeApi({ day = null, presets = PRESETS, overlay = OVERLAY, card = null
       if (key === 'heys_products_overlay_v2') return { data: overlayState, error: null };
       if (key === 'heys_meal_presets_v1') return { data: presetState, error: null };
       if (key === 'heys_deleted_ids') return { data: this.tombstones, error: null };
-      if (key.startsWith('heys_dayv2_')) return { data: day, error: null };
-      if (card && Object.hasOwn(card, key)) return { data: card[key], error: null };
+      if (key.startsWith('heys_dayv2_')) return { data: dayState, error: null };
+      if (cardState && Object.hasOwn(cardState, key)) return { data: cardState[key], error: null };
       return { data: null, error: null };
     },
     async getSharedProducts() {
@@ -64,6 +67,7 @@ function fakeApi({ day = null, presets = PRESETS, overlay = OVERLAY, card = null
     },
     async mergeSaveKV(_session, key, value, lastSeenUpdatedAt) {
       saves.push({ key, value, lastSeenUpdatedAt });
+      if (key.startsWith('heys_dayv2_')) dayState = value;
       return { ok: true, outcome: 'incoming_wins' };
     },
   };
@@ -776,10 +780,9 @@ test('heys_checkin get — статус required-шагов совпадает �
   assert.equal(byId.cold_exposure.required, false, 'холод — необязательный шаг');
 });
 
-test('heys_checkin get — значение куратора не закрывает шаг, хотя оно на месте', async () => {
-  // Ровно то же поле, что закрыло бы шаг при самостоятельном вводе (тест
-  // выше), но помеченное кураторским — приложение его игнорирует, и наш
-  // разбор обязан отвечать так же, иначе get будет врать про статус.
+test('heys_checkin get — значение куратора закрывает core-шаг для gate, но помечено curatorAuthored', async () => {
+  // heys/4546fb: куратор заполнил вес — клиенту мастер не нужен по этому полю;
+  // get должен совпадать с приложением: done=true, curatorAuthored=true.
   const api = fakeApi({
     day: {
       date: '2026-08-01',
@@ -790,8 +793,9 @@ test('heys_checkin get — значение куратора не закрыва
   });
   const res = await build(api).heys_checkin({ action: 'get' });
   const weight = res.structured.steps.find((s) => s.id === 'weight');
-  assert.equal(weight.done, false, 'кураторское значение не считается пройденным шагом');
-  assert.equal(res.structured.status, 'not_started');
+  assert.equal(weight.done, true, 'кураторское значение закрывает шаг для gate');
+  assert.equal(weight.curatorAuthored, true);
+  assert.equal(res.structured.status, 'partial');
 });
 
 test('heys_checkin submit — пишет без кураторской метки, шаг закрывается по-настоящему', async () => {
@@ -807,6 +811,32 @@ test('heys_checkin submit — пишет без кураторской метк�
   assert.ok(saved, 'день должен уйти в mergeSaveKV');
   assert.equal(saved.value._curatorEdits, undefined,
     'submit — это диктовка живьём, а не решение куратора: метки авторства быть не должно');
+});
+
+test('heys_checkin submit затем get — статус done и mood держатся', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
+    card: { [PROFILE_KEY]: { stepsGoal: 9000 } },
+  });
+  const tools = build(api);
+  const submit = await tools.heys_checkin({
+    action: 'submit',
+    weight: 80.2,
+    sleep_start: '23:30',
+    sleep_end: '07:00',
+    sleep_quality: 7,
+    mood: 9,
+    wellbeing: 8,
+    stress: 2,
+    steps_goal: 9000,
+  });
+  assert.equal(submit.structured.status.status, 'done');
+
+  const get = await tools.heys_checkin({ action: 'get' });
+  assert.equal(get.structured.status, 'done');
+  const mood = get.structured.steps.find((s) => s.id === 'mood');
+  assert.equal(mood.done, true);
+  assert.equal(mood.value, 9);
 });
 
 test('heys_checkin: то же поле через heys_update_day остаётся кураторским и шаг не закрывает', async () => {

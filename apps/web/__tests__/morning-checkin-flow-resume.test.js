@@ -80,11 +80,34 @@ function loadMorning({
       canWriteStatus: (status) => ['trial', 'active'].includes(status),
     };
   }
+  if (!window.HEYS.models) {
+    const modelsSrc = fs.readFileSync(path.resolve(__dirname, '../heys_models_v1.js'), 'utf8');
+    // eslint-disable-next-line no-new-func
+    new Function(modelsSrc)();
+  }
   // eslint-disable-next-line no-new-func
   new Function(SYNC_MERGE_SRC)();
   // eslint-disable-next-line no-new-func
   new Function(MORNING_SRC)();
   return { HEYS: window.HEYS, utils: window.HEYS.MorningCheckinUtils, values, dayKey, progressKey };
+}
+
+function curatorCoreDay(overrides = {}) {
+  return {
+    weightMorning: 71,
+    sleepStart: '02:00',
+    sleepEnd: '10:20',
+    sleepQuality: 7,
+    moodMorning: 8,
+    _curatorEdits: {
+      weightMorning: { at: 1, value: 71 },
+      sleepStart: { at: 1, value: '02:00' },
+      sleepEnd: { at: 1, value: '10:20' },
+      sleepQuality: { at: 1, value: 7 },
+      moodMorning: { at: 1, value: 8 },
+    },
+    ...overrides,
+  };
 }
 
 function completedDay() {
@@ -608,6 +631,48 @@ describe('morning check-in journal resume', () => {
 
     expect(plan.steps).toEqual(['weight']);
     expect(values.get(PROGRESS_KEY).steps.weight.status).toBe('planned');
+  });
+
+  it('не открывает чек-ин, когда куратор заполнил все core-поля', () => {
+    const day = curatorCoreDay({
+      coldExposure: { type: 'shower' },
+      supplementsPlanned: ['d3'],
+    });
+    const { HEYS } = loadMorning({
+      day,
+      profile: { stepsGoal: 9000 },
+    });
+
+    expect(HEYS.shouldShowMorningCheckin()).toBe(false);
+  });
+
+  it('открывает только недостающие core-шаги, когда куратор заполнил часть', () => {
+    const day = {
+      sleepStart: '02:00',
+      sleepEnd: '10:20',
+      sleepHours: 8.3,
+      _curatorEdits: {
+        sleepStart: { at: 1, value: '02:00' },
+        sleepEnd: { at: 1, value: '10:20' },
+      },
+    };
+    const { HEYS, utils } = loadMorning({
+      day,
+      profile: { stepsGoal: 9000 },
+    });
+
+    expect(HEYS.shouldShowMorningCheckin()).toBe(true);
+    const plan = utils.buildMorningCheckinPlan({
+      dateKey: DATE_KEY,
+      clientId: CLIENT_ID,
+      source: 'MorningCheckin',
+    });
+
+    expect(plan.steps).toEqual(['weight', 'sleepQuality', 'morning_mood']);
+    expect(plan.steps).not.toContain('sleepTime');
+    expect(plan.steps).not.toContain('cold_exposure');
+    expect(plan.steps).not.toContain('supplements');
+    expect(plan.steps).not.toContain('morningRoutine');
   });
 
   it('не открывает чек-ин ради одного опционального хвоста, когда обязательное собрано', () => {

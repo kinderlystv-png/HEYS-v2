@@ -88,9 +88,9 @@ describe('метка авторства куратора', () => {
     expect(cascade.match(/countConsecutive\(prevDays14, hasClientWeight\)/g)).toHaveLength(2);
 
     const checkin = read('apps/web/heys_morning_checkin_v1.js');
-    expect(checkin).toContain("!byCurator(day, 'weightMorning')");
-    expect(checkin).toContain("!byCurator(day, 'sleepQuality')");
-    expect(checkin).toContain("!byCurator(day, 'moodMorning')");
+    // Мастер не открывается, если core уже в дне — в т.ч. от куратора (heys/4546fb).
+    expect(checkin).not.toMatch(/!byCurator\(day,/);
+    expect(checkin).toContain('hasPositiveCheckinNumber(day?.weightMorning)');
 
     const game = read('apps/web/heys_gamification_v1.js');
     expect(game).toContain("byClient('weightMorning')");

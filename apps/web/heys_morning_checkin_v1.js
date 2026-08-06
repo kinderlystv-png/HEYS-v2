@@ -844,7 +844,20 @@
   // читает MorningCheckin при заморозке списка шагов. Сбрасывается в начале каждого
   // shouldShowMorningCheckin, чтобы не протекать в ручной showCheckin.morning().
   let _reopenRequiredOnly = false;
+  // Дневной флоу (профиль уже полный): только обязательные шаги, без хвоста.
+  // Иначе после записи куратором клиент видит 6+ экранов, хотя нужно лишь
+  // подтвердить сон/вес — кейс heys/4546fb 05.08.
+  let _dailyRequiredOnly = false;
   let _nextPlanYesterdayVerifyRequired = null;
+
+  function isRegistrationProfilePending(profile) {
+    return !!(HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete
+      && HEYS.ProfileSteps.isProfileIncomplete(profile));
+  }
+
+  function markDailyRequiredOnlyIfApplicable(profile) {
+    if (!isRegistrationProfilePending(profile)) _dailyRequiredOnly = true;
+  }
 
   function hasCheckinValue(value) {
     return value !== undefined && value !== null && value !== '';
@@ -855,29 +868,24 @@
     return Number.isFinite(numeric) && numeric > 0;
   }
 
-  // Чек-ин — самоотчёт клиента, поэтому поле, вписанное куратором, шаг не
-  // закрывает: иначе клиента не спросят, а стрик дисциплины по этому дню всё
-  // равно не вырастет, и он потеряет его молча. Подтверждение клиента гасит
-  // метку (HEYS.models.clearCuratorMarks), даже если он ввёл то же число.
-  function byCurator(day, field) {
-    return !!HEYS.models?.isCuratorAuthored?.(day, field);
-  }
-
+  // Чек-ин — самоотчёт клиента, но если куратор уже внёс core-поля (вес/сон/
+  // качество/настроение), мастер не открываем: клиент видит данные в дневнике
+  // с пометкой куратора. Стрик дисциплины по-прежнему не растёт от чужой руки —
+  // см. heys_gamification_v1 (isCuratorAuthored), не здесь.
   function hasSleepTime(day) {
-    return hasCheckinValue(day?.sleepStart) && hasCheckinValue(day?.sleepEnd)
-      && !byCurator(day, 'sleepStart') && !byCurator(day, 'sleepEnd');
+    return hasCheckinValue(day?.sleepStart) && hasCheckinValue(day?.sleepEnd);
   }
 
   function hasCheckinWeight(day) {
-    return hasPositiveCheckinNumber(day?.weightMorning) && !byCurator(day, 'weightMorning');
+    return hasPositiveCheckinNumber(day?.weightMorning);
   }
 
   function hasSleepQuality(day) {
-    return hasPositiveCheckinNumber(day?.sleepQuality) && !byCurator(day, 'sleepQuality');
+    return hasPositiveCheckinNumber(day?.sleepQuality);
   }
 
   function hasMorningMood(day) {
-    return hasPositiveCheckinNumber(day?.moodMorning) && !byCurator(day, 'moodMorning');
+    return hasPositiveCheckinNumber(day?.moodMorning);
   }
 
   function hasCycleDay(day) {
@@ -1008,6 +1016,7 @@
   function shouldShowMorningCheckin() {
     const U = HEYS.utils || {};
     _reopenRequiredOnly = false;
+    _dailyRequiredOnly = false;
     _nextPlanYesterdayVerifyRequired = null;
 
     // Если клиент не выбран — НЕ показываем чек-ин (чтобы не показывать до авторизации)
@@ -1138,6 +1147,7 @@
         remainingSteps: remainingProgressSteps.map((row) => row.id),
         flowStatus
       });
+      markDailyRequiredOnlyIfApplicable(profile);
       return true;
     }
 
@@ -1219,6 +1229,7 @@
       sessionFlag: sessionStorage.getItem(sessionKey),
     });
 
+    if (pending.length > 0) markDailyRequiredOnlyIfApplicable(profile);
     return pending.length > 0;
   }
 
@@ -1930,7 +1941,9 @@
     if (opts.source === 'MorningCheckin') _nextPlanYesterdayVerifyRequired = null;
     const derivedFreshSteps = getCheckinSteps(profile, {
       filterCompleted: opts.filterCompleted !== false,
-      requiredOnly: !!opts.requiredOnly,
+      requiredOnly: typeof opts.requiredOnly === 'boolean'
+        ? opts.requiredOnly
+        : (opts.source === 'MorningCheckin' && (!!_reopenRequiredOnly || !!_dailyRequiredOnly)),
       yesterdayVerifyRequired: typeof opts.yesterdayVerifyRequired === 'boolean'
         ? opts.yesterdayVerifyRequired
         : cachedYesterdayVerifyRequired,
@@ -2220,7 +2233,7 @@
       // показываем только недостающие обязательные шаги, без опционального хвоста.
       planRef.current = buildMorningCheckinPlan({
         source: 'MorningCheckin',
-        requiredOnly: !!_reopenRequiredOnly
+        requiredOnly: !!_reopenRequiredOnly || !!_dailyRequiredOnly
       });
     }
 

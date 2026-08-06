@@ -993,23 +993,26 @@ function checkinStatus(day, profile) {
   const steps = [
     {
       id: 'weight', label: 'вес', required: true,
-      done: hasNum(day.weightMorning) && !authored.has('weightMorning'),
+      done: hasNum(day.weightMorning),
+      curatorAuthored: authored.has('weightMorning'),
       value: day.weightMorning ?? null,
     },
     {
       id: 'sleep', label: 'сон', required: true,
-      done: Boolean(day.sleepStart) && Boolean(day.sleepEnd)
-        && !authored.has('sleepStart') && !authored.has('sleepEnd'),
+      done: Boolean(day.sleepStart) && Boolean(day.sleepEnd),
+      curatorAuthored: authored.has('sleepStart') || authored.has('sleepEnd'),
       value: (day.sleepStart || day.sleepEnd) ? { start: day.sleepStart || null, end: day.sleepEnd || null } : null,
     },
     {
       id: 'sleep_quality', label: 'качество сна', required: true,
-      done: hasNum(day.sleepQuality) && !authored.has('sleepQuality'),
+      done: hasNum(day.sleepQuality),
+      curatorAuthored: authored.has('sleepQuality'),
       value: day.sleepQuality ?? null,
     },
     {
       id: 'mood', label: 'самочувствие', required: true,
-      done: hasNum(day.moodMorning) && !authored.has('moodMorning'),
+      done: hasNum(day.moodMorning),
+      curatorAuthored: authored.has('moodMorning'),
       value: day.moodMorning ?? null,
     },
     {
