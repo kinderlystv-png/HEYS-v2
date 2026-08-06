@@ -121,6 +121,28 @@ test('SEC-030: известные адреса ChatGPT, Anthropic и loopback п
   }
 });
 
+test('SEC-030: Cursor DCR — тройка redirect_uris проходит (localhost + cursor.com + cursor://)', () => {
+  const cursorBundle = [
+    'http://localhost:8787/callback',
+    'https://www.cursor.com/agents/mcp/oauth/callback',
+    'cursor://anysphere.cursor-mcp/oauth/callback',
+  ];
+  assert.equal(
+    oauth.registerClient({ client_name: 'Cursor', redirect_uris: cursorBundle }, SECRET).ok,
+    true,
+  );
+  // Чужой host под cursor:// — нет.
+  assert.equal(
+    oauth.registerClient({ redirect_uris: ['cursor://evil-app/oauth/callback'] }, SECRET).ok,
+    false,
+  );
+  // cursor.com без www — тоже в allowlist (на случай смены пути).
+  assert.equal(
+    oauth.registerClient({ redirect_uris: ['https://cursor.com/oauth/callback'] }, SECRET).ok,
+    true,
+  );
+});
+
 test('SEC-030: allowlist переопределяется переменной окружения', () => {
   const saved = process.env.MCP_ALLOWED_REDIRECT_HOSTS;
   try {

@@ -72,7 +72,21 @@ const DEFAULT_ALLOWED_REDIRECT_HOSTS = [
   '*.claude.com',
   'anthropic.com',
   '*.anthropic.com',
+  // Cursor Desktop/Agents: https://www.cursor.com/agents/mcp/oauth/callback
+  'cursor.com',
+  '*.cursor.com',
 ];
+
+/**
+ * Кастомные схемы нативных клиентов. Cursor при DCR шлёт сразу три URI:
+ * http://localhost:8787/callback, https://www.cursor.com/..., и
+ * cursor://anysphere.cursor-mcp/oauth/callback. Без схемы регистрация
+ * падает с «redirect_uris must be https (or localhost)».
+ * Хост жёстко ограничен — произвольный cursor://evil не принимаем.
+ */
+const ALLOWED_CUSTOM_SCHEME_HOSTS = {
+  'cursor:': new Set(['anysphere.cursor-mcp']),
+};
 
 function allowedRedirectHosts() {
   const raw = process.env.MCP_ALLOWED_REDIRECT_HOSTS;
@@ -93,6 +107,12 @@ function isLoopback(hostname) {
 function isHttpsUri(value) {
   try {
     const url = new URL(value);
+    const customHosts = ALLOWED_CUSTOM_SCHEME_HOSTS[url.protocol];
+    if (customHosts) {
+      // Кастомная схема: без fragment, host из allowlist, без query-атаки через #.
+      if (url.hash) return false;
+      return customHosts.has(String(url.hostname || '').toLowerCase());
+    }
     // Спека разрешает нативным клиентам loopback по HTTP.
     if (url.protocol === 'http:') return isLoopback(url.hostname);
     if (url.protocol !== 'https:') return false;
