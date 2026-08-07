@@ -3150,8 +3150,19 @@ function knownPreference(existing, note, { threshold = DECISION_SIMILARITY, ques
       // Точный алиас («мне», «тачка») — иначе стоп-слово/короткий вопрос
       // даёт «в памяти ничего нет», хотя запись лежит с зовётся:.
       const q = String(question).trim().toLowerCase();
+      const qCanon = addressAliasCanon(q);
       for (const alias of entry.aliases || []) {
-        if (String(alias).trim().toLowerCase() === q) consider(entry, 1, 'алиас');
+        const a = String(alias).trim().toLowerCase();
+        if (a === q || addressAliasCanon(a) === q || a === qCanon || addressAliasForms(a).includes(q)) {
+          consider(entry, 1, 'алиас');
+        }
+      }
+      // «жена» в note в кавычках — hit даже без зовётся:.
+      if (ADDRESS_ALIAS_CANON_BY_FORM.has(q) || ADDRESS_ALIAS_FORMS[qCanon]) {
+        const noteLower = String(entry.note || '').toLowerCase();
+        if (addressAliasForms(q).some((f) => noteLower.includes(`«${f}»`) || noteLower.includes(`"${f}"`))) {
+          consider(entry, 1, 'алиас');
+        }
       }
     }
   }
@@ -3159,6 +3170,55 @@ function knownPreference(existing, note, { threshold = DECISION_SIMILARITY, ques
 }
 
 const CLIENT_UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+
+/**
+ * Падежи/формы адресных алиасов. Канон = ключ (то, что пишут в client=).
+ * Smoke3 07.08: модель искала «жена», карта знала только «жене».
+ *
+ * В topic-детект не входят слишком частые формы («меня», «себя») — иначе
+ * «какая у меня машина» ломает обычный tasks_context.
+ */
+const ADDRESS_ALIAS_FORMS = Object.freeze({
+  мне: Object.freeze(['мне', 'меня', 'мной', 'мною']),
+  себе: Object.freeze(['себе', 'себя', 'собой']),
+  жене: Object.freeze(['жене', 'жена', 'жены', 'жену', 'женой']),
+  цыпе: Object.freeze(['цыпе', 'цыпа', 'цыпы', 'цыпу']),
+});
+
+/** Формы, безопасные для ловли в topic (без «у меня / себя»). */
+const ADDRESS_ALIAS_TOPIC_FORMS = Object.freeze([
+  'мне', 'себе',
+  'жене', 'жена', 'жены', 'жену', 'женой',
+  'цыпе', 'цыпа', 'цыпы', 'цыпу',
+]);
+
+const ADDRESS_ALIAS_CANON_BY_FORM = (() => {
+  const map = new Map();
+  for (const [canon, forms] of Object.entries(ADDRESS_ALIAS_FORMS)) {
+    for (const form of forms) map.set(form, canon);
+  }
+  return map;
+})();
+
+/** Канон группы («жена» → «жене») или lowercased исходник, если группа неизвестна. */
+function addressAliasCanon(raw) {
+  const key = String(raw || '').trim().toLowerCase();
+  if (!key) return '';
+  return ADDRESS_ALIAS_CANON_BY_FORM.get(key) || key;
+}
+
+/** Все формы группы для алиаса; неизвестный — сам себя. */
+function addressAliasForms(raw) {
+  const key = String(raw || '').trim().toLowerCase();
+  if (!key) return [];
+  const canon = ADDRESS_ALIAS_CANON_BY_FORM.get(key) || key;
+  const forms = ADDRESS_ALIAS_FORMS[canon];
+  return forms ? [...forms] : [canon];
+}
+
+function allHardcodedAddressAliasForms() {
+  return [...ADDRESS_ALIAS_TOPIC_FORMS];
+}
 
 /**
  * Алиасы адресации дневника из памяти («мне» → Полтавский).
@@ -3175,7 +3235,11 @@ function clientAddressMap(preferences, clients) {
   const put = (alias, client) => {
     const key = String(alias || '').trim().toLowerCase();
     if (!key || key.length > 40 || !client) return;
-    if (!map.has(key)) map.set(key, { client_id: client.client_id, name: client.name || null });
+    const target = { client_id: client.client_id, name: client.name || null };
+    if (!map.has(key)) map.set(key, target);
+    for (const form of addressAliasForms(key)) {
+      if (!map.has(form)) map.set(form, target);
+    }
   };
 
   const clientByNameIn = (text) => {
@@ -3247,8 +3311,13 @@ function preferenceHitsRawTopic(entry, topic) {
     ...(entry.aliases || []),
     ...[...String(entry.note || '').matchAll(/[«"]([^»"]{1,40})[»"]/g)].map((m) => m[1]),
   ];
+  const forms = new Set();
   for (const alias of aliases) {
+    for (const form of addressAliasForms(alias)) forms.add(form);
     const a = String(alias || '').trim().toLowerCase();
+    if (a) forms.add(a);
+  }
+  for (const a of forms) {
     if (!a) continue;
     // Граница слова: «мне» в «запиши мне 300», но не «изменение».
     const re = new RegExp(`(?:^|[^\\p{L}\\p{N}])${a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:[^\\p{L}\\p{N}]|$)`, 'iu');
@@ -3258,12 +3327,14 @@ function preferenceHitsRawTopic(entry, topic) {
 }
 
 /**
- * Алиас адресации в topic tasks_context («мне», «жене»…).
+ * Алиас адресации в topic («мне», «жена», «цыпу»…). Unicode-границы, не \b.
  */
 function addressAliasInTopic(topic) {
   const raw = String(topic || '').trim().toLowerCase();
   if (!raw) return false;
-  return /(?:^|[^\p{L}\p{N}])(мне|себе|жене|цыпе)(?:[^\p{L}\p{N}]|$)/u.test(raw);
+  const forms = allHardcodedAddressAliasForms().map((f) => f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const re = new RegExp(`(?:^|[^\\p{L}\\p{N}])(${forms.join('|')})(?:[^\\p{L}\\p{N}]|$)`, 'u');
+  return re.test(raw);
 }
 
 /**
@@ -3271,15 +3342,15 @@ function addressAliasInTopic(topic) {
  * не tasks_context. Инцидент 07.08: модель звала context, хотя сервер уже
  * разворачивает «мне» в client_id.
  *
- * Smoke2 07.08: модель передаёт в context археологию («Find who мне in memory»)
- * без дневниковых маркеров — ловим отдельным паттерном.
+ * Smoke2/3: archaeology («Find who мне», «кто жена») без дневниковых маркеров.
  */
 function diaryTopicUsesAddressAlias(topic) {
   if (!addressAliasInTopic(topic)) return false;
   const raw = String(topic || '').trim().toLowerCase();
   if (/(?:запиш|внес|завед|создай|добав|продукт|приём|перекус|обед|завтрак|ужин|дневник|еду|съел|\d+\s*г|мл|ml)/u.test(raw)) return true;
-  if (/(?:кто\s+(такой|есть)|find\s+who|who\s+is|curator\s+memory|в\s+памят|памят|алиас|alias|list_client)/u.test(raw)) return true;
-  if (/^(?:кто\s+)?(мне|себе|жене|цыпе)[\s?.!]*$/u.test(raw)) return true;
+  if (/(?:кто\s+(такой|такая|есть)|find\s+who|who\s+is|curator\s+memory|в\s+памят|памят|алиас|alias|list_client|ищу\s+кто|проверь.*(жен|мне|цып)|спрашивал.*(жен|мне|цып))/u.test(raw)) return true;
+  const tokens = raw.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  if (tokens.length <= 4) return true;
   return false;
 }
 
@@ -5602,6 +5673,9 @@ module.exports = {
   clientAddressMap,
   preferenceHitsRawTopic,
   diaryTopicUsesAddressAlias,
+  addressAliasCanon,
+  addressAliasForms,
+  addressAliasInTopic,
   activePreferences,
   preferenceLine,
   preferenceBlock,

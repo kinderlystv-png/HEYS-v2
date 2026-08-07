@@ -1588,6 +1588,7 @@ test('алиас «мне» из памяти резолвится в client б�
   const aliasMap = tasksLib.clientAddressMap(prefs, CLIENTS);
   assert.equal(aliasMap.get('мне').client_id, CLIENTS[0].client_id);
   assert.equal(aliasMap.get('жене').client_id, CLIENTS[1].client_id);
+  assert.equal(aliasMap.get('жена').client_id, CLIENTS[1].client_id);
   assert.equal(aliasMap.get('цыпе').client_id, CLIENTS[1].client_id);
   assert.equal(aliasMap.get('себе').client_id, CLIENTS[0].client_id);
 
@@ -1597,13 +1598,22 @@ test('алиас «мне» из памяти резолвится в client б�
   });
   assert.match(instructions, /Адресация из памяти/);
   assert.match(instructions, /Антон/);
+  assert.match(instructions, /жена = жене|жене\/жена|«жена»/i);
 
   const day = await tools.heys_get_day({ client: 'мне', date: '2026-08-01' });
   assert.match(day.text, /^\[Антон\]/);
   const wife = await tools.heys_get_day({ client: 'цыпе', date: '2026-08-01' });
   assert.match(wife.text, /^\[Александра\]/);
+  const wifeNom = await tools.heys_get_day({ client: 'жена', date: '2026-08-01' });
+  assert.match(wifeNom.text, /^\[Александра\]/);
 
   const listed = await tools.heys_list_clients({});
-  assert.match(listed.text, /Алиасы:/);
+  assert.match(listed.text, /алиас/i);
   assert.match(listed.text, /мне/);
+
+  const blocked = await tools.heys_list_clients({ for: 'жене' });
+  assert.equal(blocked.structured.skip_reason, 'known_alias_use_client_param');
+  const blockedNom = await tools.heys_list_clients({ alias: 'жена' });
+  assert.equal(blockedNom.structured.skip_reason, 'known_alias_use_client_param');
+  assert.equal(blockedNom.structured.canon, 'жене');
 });

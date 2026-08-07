@@ -4843,8 +4843,10 @@ test('адресация «мне» не тонет в TOPIC_STOP_WORDS', () => 
   assert.equal(map.get('жене').name, 'Александра');
   assert.equal(map.get('цыпе').name, 'Александра');
   assert.equal(map.get('себе').name, 'Полтавский');
+  assert.equal(map.get('жена').name, 'Александра', 'падеж жена из группы жене');
   assert.equal(tasks.preferenceHitsRawTopic(entry, 'заведи продукт и запиши мне 300 г'), true);
   assert.equal(tasks.preferenceHitsRawTopic(entry, 'запиши жене завтрак'), true);
+  assert.equal(tasks.preferenceHitsRawTopic(entry, 'запиши жена завтрак'), true);
   assert.equal(tasks.preferenceHitsRawTopic(entry, 'изменение нормы'), false);
   const known = tasks.knownPreference([
     { note, aliases: ['мне', 'себе'], question: null, date: '2026-08-03' },
@@ -4863,6 +4865,24 @@ test('diaryTopicUsesAddressAlias ловит «запиши мне» и не ло
   assert.equal(tasks.diaryTopicUsesAddressAlias('мне'), true);
   assert.equal(tasks.diaryTopicUsesAddressAlias('Find who «мне» is in curator memory'), true);
   assert.equal(tasks.diaryTopicUsesAddressAlias('кто такой мне'), true);
+  assert.equal(tasks.diaryTopicUsesAddressAlias('кто жена'), true);
+  assert.equal(tasks.diaryTopicUsesAddressAlias('Find who жена in curator memory'), true);
+  // Short topic with address alias only — «кто жена», не «какая у меня машина».
+  assert.equal(tasks.diaryTopicUsesAddressAlias('какая у меня машина'), false);
+});
+
+test('clientAddressMap и canon раскладывают падежи жена→жене', () => {
+  const note = '«Мне» = аккаунт клиента Полтавский (client_id ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a). «Жене» / «цыпе» = аккаунт клиента Александра (client_id 4545ee50-4f5f-4fc0-b862-7ca45fa1bafc).';
+  const clients = [
+    { client_id: 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a', name: 'Полтавский' },
+    { client_id: '4545ee50-4f5f-4fc0-b862-7ca45fa1bafc', name: 'Александра' },
+  ];
+  const map = tasks.clientAddressMap([{ note, aliases: [], kind: 'предпочтение' }], clients);
+  assert.equal(map.get('жена').name, 'Александра');
+  assert.equal(map.get('жену').name, 'Александра');
+  assert.equal(map.get('меня').name, 'Полтавский');
+  assert.equal(tasks.addressAliasCanon('жена'), 'жене');
+  assert.equal(tasks.addressAliasCanon('меня'), 'мне');
 });
 
 test('tasks_context отклоняет дневниковую фразу с «мне»', async () => {
@@ -4881,6 +4901,15 @@ test('tasks_context отклоняет archaeology-reframe с «мне»', async
   });
   assert.match(res.text, /tasks_context здесь не нужен/);
   assert.equal(res.structured.skip_reason, 'diary_addressing_use_client_param');
+});
+
+test('tasks_context отклоняет archaeology с «жена»', async () => {
+  const api = liveTasksApi();
+  const res = await session(api).tasks_context({
+    topic: 'кто жена',
+  });
+  assert.match(res.text, /tasks_context здесь не нужен/);
+  assert.equal(res.structured.suggested_client, 'жене');
 });
 
 test('синонимы пишутся дочерней строкой и переживают чтение', () => {

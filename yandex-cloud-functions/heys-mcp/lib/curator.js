@@ -42,7 +42,7 @@ const CLIENTLESS_TOOLS = new Set([
 
 const CLIENT_ARG = {
   type: 'string',
-  description: 'Про кого: client_id, имя целиком, или алиас («мне», «себе», «жене», «цыпе») — сервер развернёт. При «запиши мне» — сразу сюда, без tasks_context и list_clients.',
+  description: 'Про кого: client_id, имя целиком, или алиас («мне»/«меня», «себе», «жене»/«жена», «цыпе») — сервер развернёт падежи. При «запиши мне/жене» — сразу сюда, без tasks_context и list_clients.',
 };
 
 /**
@@ -53,7 +53,7 @@ const CLIENT_ARG = {
  */
 const CLIENT_ARG_STRICT = {
   type: 'string',
-  description: 'Кому вносим: client_id, имя целиком, или алиас («мне»/«себе»/«жене»/«цыпе»). Сервер развернёт. Первый вызов записи — с client=алиас; tasks_context и list_clients для «мне» запрещены.',
+  description: 'Кому вносим: client_id, имя целиком, или алиас («мне»/«жене»/«жена»/«цыпе»). Сервер развернёт падежи. Первый вызов записи — с client=алиас; tasks_context и list_clients для «мне»/«жены» запрещены.',
 };
 
 /**
@@ -269,7 +269,7 @@ function buildCuratorSchemas({ requireTranscript = false } = {}) {
   });
   schemas.unshift({
     name: 'heys_list_clients',
-    description: 'Список клиентов куратора: client_id, имя, статус. Не зови для известного алиаса («мне»/«жене») — передавай client=алиас в heys_*. Только когда клиент реально неизвестен или спросили «кого я веду».',
+    description: 'Список клиентов куратора. НЕ для «мне»/«жене»/«жена» — передавай client=алиас в heys_*. Только когда клиент реально неизвестен или спросили «кого я веду».',
     inputSchema: {
       type: 'object',
       properties: {
@@ -277,6 +277,8 @@ function buildCuratorSchemas({ requireTranscript = false } = {}) {
           type: 'string',
           description: 'Не передавай известный алиас — сервер отклонит и подскажет client=алиас.',
         },
+        for: { type: 'string', description: 'То же — не для известного алиаса.' },
+        query: { type: 'string', description: 'То же — не для известного алиаса.' },
       },
     },
   });
@@ -380,14 +382,14 @@ function curatorInstructions(curatorName, withTasks = false, nowMs = Date.now(),
     addressLine
       ? `Адресация из памяти (передавай прямо в client, не ищи): ${addressLine}`
       : (withTasks
-        ? 'Адресация: «мне»/«себе»/«жене»/«цыпе» и другие короткие алиасы из памяти передавай прямо в параметр client пишущего инструмента — сервер развернёт в client_id. Не зови heys_list_clients, tasks_context и не грепай journal ради «кто такой мне».'
-        : 'Адресация: «мне»/«себе»/«жене»/«цыпе» и другие короткие алиасы из памяти передавай прямо в параметр client пишущего инструмента — сервер развернёт в client_id. Не зови heys_list_clients и не грепай journal ради «кто такой мне».'),
-    'ЗАПРЕТ ДНЕВНИКОВОЙ АРХЕОЛОГИИ: если куратор просит записать в дневник и в фразе есть «мне»/«себе»/«жене»/«цыпе» или алиас из строки «Адресация из памяти» — первый вызов = heys_* с client=это слово. ЗАПРЕЩЕНО перед записью: '
+        ? 'Адресация: «мне»/«себе»/«жене»/«жена»/«цыпе» и другие короткие алиасы из памяти передавай прямо в параметр client пишущего инструмента — сервер развернёт падежи в client_id. Не зови heys_list_clients, tasks_context и не грепай journal ради «кто такой мне/жена».'
+        : 'Адресация: «мне»/«себе»/«жене»/«жена»/«цыпе» и другие короткие алиасы из памяти передавай прямо в параметр client пишущего инструмента — сервер развернёт падежи в client_id. Не зови heys_list_clients и не грепай journal ради «кто такой мне/жена».'),
+    'ЗАПРЕТ ДНЕВНИКОВОЙ АРХЕОЛОГИИ: если куратор просит записать в дневник и в фразе есть «мне»/«себе»/«жене»/«жена»/«цыпе» или алиас из строки «Адресация из памяти» — первый вызов = heys_* с client=это слово (жена = жене). ЗАПРЕЩЕНО перед записью: '
       + (withTasks
-        ? 'tasks_context, list_clients, heys_code_search/grep репо, чтение тестов ради параметров MCP. tasks_context — для задачника и планирования, не для «кто такой мне»; сервер отклонит такой вызов.'
+        ? 'tasks_context, tasks_learn «кто жена», list_clients, heys_code_search/grep репо, чтение тестов ради параметров MCP. tasks_context — для задачника и планирования, не для «кто такой мне/жена»; сервер отклонит такой вызов.'
         : 'list_clients, heys_code_search/grep репо, чтение тестов ради параметров MCP.'),
     'Прежде чем спросить «кому вносить» — если это не известный алиас и не имя из диалога: один heys_list_clients, без grep по файлам.'
-      + (withTasks ? ' Свою память (tasks_context) зови только когда адресация реально неизвестна, а не на каждое «мне».' : ''),
+      + (withTasks ? ' Свою память (tasks_context/tasks_learn) зови только когда адресация реально неизвестна, а не на каждое «мне»/«жене».' : ''),
     'КРИТИЧЕСКОЕ ПРАВИЛО РЕЖИМА: каждая запись адресная. Прежде чем внести что-либо, ты обязан знать, КОМУ. Неизвестный клиент — heys_list_clients и уточни у куратора. Никогда не выбирай клиента по догадке: запись в чужой дневник — худшая ошибка этого инструмента.',
     'В пишущие инструменты передавай client_id, точное имя или алиас из памяти («мне»). Часть чужого имени на запись не принимается.',
     ...(withTasks ? ['Для КАЖДОЙ записи в дневник передавай обязательный transcript — дословную реплику куратора целиком. Инструмент сам сохранит эту реплику и подтверждённый результат в стенограмму; отдельный tasks_checkpoint для такого технического ответа не нужен. Если после записи даёшь самостоятельный разбор или решение, сохрани и его обычным tasks_checkpoint.'] : []),
@@ -505,7 +507,15 @@ function createCuratorContext({
       byClient.get(id).aliases.push(alias);
     }
     return [...byClient.values()]
-      .map((row) => `«${row.aliases.join('»/«')}» → ${row.name || '?'}`)
+      .map((row) => {
+        // Каноны групп раньше остальных форм — модель копирует первое слово в client=.
+        const ranked = [...new Set(row.aliases)].sort((a, b) => {
+          const ca = tasks.addressAliasCanon(a) === a ? 0 : 1;
+          const cb = tasks.addressAliasCanon(b) === b ? 0 : 1;
+          return ca - cb || a.length - b.length || a.localeCompare(b, 'ru');
+        });
+        return `«${ranked.join('»/«')}» → ${row.name || '?'}`;
+      })
       .join('; ');
   }
 
@@ -537,7 +547,10 @@ function createCuratorContext({
     if (byId) return byId;
 
     const aliasMap = await loadAddressAliases();
-    const aliasHit = aliasMap.get(products.normalizeText(raw)) || aliasMap.get(raw.toLowerCase());
+    const rawLower = raw.toLowerCase();
+    const aliasHit = aliasMap.get(products.normalizeText(raw))
+      || aliasMap.get(rawLower)
+      || aliasMap.get(tasks.addressAliasCanon(raw));
     if (aliasHit) {
       const resolved = clients.find((c) => String(c.client_id) === String(aliasHit.client_id));
       if (resolved) return resolved;
@@ -1086,15 +1099,21 @@ function createCuratorContext({
 
     async heys_list_clients(args = {}) {
       const aliasMap = await loadAddressAliases();
-      const hint = String(args.alias || args.for || args.client || '').trim().toLowerCase();
-      if (hint) {
-        const hit = aliasMap.get(hint) || aliasMap.get(products.normalizeText(hint));
+      const hints = [
+        args.alias, args.for, args.client, args.query, args.topic, args.q,
+      ].map((x) => String(x || '').trim().toLowerCase()).filter(Boolean);
+      for (const hint of hints) {
+        const hit = aliasMap.get(hint)
+          || aliasMap.get(products.normalizeText(hint))
+          || aliasMap.get(tasks.addressAliasCanon(hint));
         if (hit) {
+          const canon = tasks.addressAliasCanon(hint) || hint;
           return {
-            text: `Алиас «${hint}» уже известен: ${hit.name || '?'} (${hit.client_id}). Не зови list_clients — передавай client=${hint} в heys_log_meal / heys_create_product / heys_search_products.`,
+            text: `Алиас «${hint}» уже известен: ${hit.name || '?'} (${hit.client_id}). Не зови list_clients — передавай client=${canon} в heys_log_meal / heys_create_product / heys_search_products / heys_list_meal_presets.`,
             structured: {
               skip_reason: 'known_alias_use_client_param',
               alias: hint,
+              canon,
               client_id: hit.client_id,
               name: hit.name,
             },
@@ -1109,7 +1128,7 @@ function createCuratorContext({
       const text = !clients.length
         ? 'У куратора нет клиентов.'
         : address
-          ? `Клиенты: ${list}. Алиасы: ${address}.`
+          ? `Известные алиасы: ${address} — для записи сразу client=алиас, не этот список. Клиенты: ${list}.`
           : `Клиенты: ${list}`;
       return {
         text,

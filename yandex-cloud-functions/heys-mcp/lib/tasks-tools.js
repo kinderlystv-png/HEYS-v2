@@ -1085,14 +1085,18 @@ function createTasksTools({
       const topic = String(args.topic || args.phrase || '').trim();
       if (!topic) throw new ToolError('invalid_topic', 'Нужна фраза или тема.');
       if (tasks.diaryTopicUsesAddressAlias(topic)) {
+        const canon = (() => {
+          const m = String(topic).toLowerCase().match(/(?:^|[^\p{L}\p{N}])(мне|меня|мной|мною|себе|себя|собой|жене|жена|жены|жену|женой|цыпе|цыпа|цыпы|цыпу)(?:[^\p{L}\p{N}]|$)/u);
+          return m ? tasks.addressAliasCanon(m[1]) : 'мне';
+        })();
         return {
           text: [
-            'tasks_context здесь не нужен: фраза про дневник с алиасом «мне»/«жене»/«цыпе»/«себе».',
-            'Передавай алиас прямо в client пишущего инструмента (heys_log_meal, heys_create_product, heys_search_products) — сервер развернёт в client_id.',
-            'heys_list_clients — только если алиас неизвестен.',
+            'tasks_context здесь не нужен: фраза про дневник/адресацию с алиасом «мне»/«жене»/«жена»/«цыпе».',
+            `Передавай client=${canon} прямо в heys_log_meal / heys_create_product / heys_search_products / heys_list_meal_presets — сервер развернёт в client_id.`,
+            'heys_list_clients и tasks_learn — только если алиас неизвестен.',
             'Параметры MCP (from_product_id и др.) — в описании инструмента, не grep репо.',
           ].join(' '),
-          structured: { skip_reason: 'diary_addressing_use_client_param', topic },
+          structured: { skip_reason: 'diary_addressing_use_client_param', topic, suggested_client: canon },
         };
       }
       const files = await readAll({});
