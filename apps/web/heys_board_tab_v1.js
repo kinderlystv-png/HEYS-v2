@@ -41,6 +41,9 @@
 
     function readCache() {
         try {
+            if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
+                return HEYS.utils.lsGet(CACHE_KEY, null);
+            }
             const raw = localStorage.getItem(CACHE_KEY);
             if (!raw) return null;
             return JSON.parse(raw);
@@ -51,6 +54,10 @@
 
     function writeCache(data) {
         try {
+            if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
+                HEYS.utils.lsSet(CACHE_KEY, data);
+                return;
+            }
             localStorage.setItem(CACHE_KEY, JSON.stringify(data));
         } catch (_) { /* quota */ }
     }
