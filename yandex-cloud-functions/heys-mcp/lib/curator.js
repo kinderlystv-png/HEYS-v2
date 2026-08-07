@@ -486,12 +486,11 @@ function createCuratorContext({
       aliasesPromise = (async () => {
         const key = tasks.keyForPath(tasks.PREFS_PATH);
         const { data, error } = await api.getKVByCurator(curatorJwt, tasksClientId, key);
-        if (error || !data || data.v == null) return new Map();
-        const prefs = tasks.activePreferences(tasks.parsePreferences({
-          path: tasks.PREFS_PATH,
-          text: String(data.v || ''),
-          rev: data.rev,
-        }));
+        // getKVByCurator возвращает row.v ({ text, rev }), не { v: file }.
+        if (error || data == null) return new Map();
+        const prefsFile = tasks.ensureFile(data, tasks.PREFS_PATH);
+        if (!prefsFile.text) return new Map();
+        const prefs = tasks.activePreferences(tasks.parsePreferences(prefsFile));
         return tasks.clientAddressMap(prefs, await loadClients());
       })().catch(() => new Map());
     }

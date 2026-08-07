@@ -163,12 +163,11 @@ async function curatorContext(api, auth = {}) {
     try {
       const key = tasks.keyForPath(tasks.PREFS_PATH);
       const { data } = await api.getKVByCurator(curatorJwt, tasksClientId, key);
-      if (data && data.v != null) {
-        const prefs = tasks.activePreferences(tasks.parsePreferences({
-          path: tasks.PREFS_PATH,
-          text: String(data.v || ''),
-          rev: data.rev,
-        }));
+      // getKVByCurator уже отдаёт row.v = { text, rev }, не обёртку { v }.
+      // Читать data.v здесь = всегда пустая карта (инцидент smoke 07.08 Layer 4).
+      if (data != null) {
+        const prefsFile = tasks.ensureFile(data, tasks.PREFS_PATH);
+        const prefs = tasks.activePreferences(tasks.parsePreferences(prefsFile));
         const { data: clients, error } = await api.listClients(curatorJwt);
         if (!error) addressAliases = tasks.clientAddressMap(prefs, clients || []);
       }

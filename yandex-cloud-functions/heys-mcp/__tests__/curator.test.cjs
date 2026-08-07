@@ -1617,3 +1617,34 @@ test('алиас «мне» из памяти резолвится в client б�
   assert.equal(blockedNom.structured.skip_reason, 'known_alias_use_client_param');
   assert.equal(blockedNom.structured.canon, 'жене');
 });
+
+test('алиасы грузятся из KV shape {text,rev}, не из data.v', async () => {
+  // Инцидент smoke 07.08 Layer 4: getKVByCurator отдаёт row.v = { text, rev },
+  // а прогрев читал data.v → пустая карта → «Клиент мне не найден» при живом
+  // предпочтении в preferences.md. Гарды tasks_context при этом работали.
+  const prefsText = [
+    '## Как он решает',
+    '',
+    `- 2026-08-03 · предпочтение · «Мне» = аккаунт клиента Антон (${CLIENTS[0].client_id}). «Жене» / «цыпе» = аккаунт клиента Александра (${CLIENTS[1].client_id}). — его слова`,
+    '  - зовётся: мне, себе, жене, цыпе',
+  ].join('\n');
+  const tasksClientId = 'cid-tasks';
+  const api = fakeCuratorApi({ tasksClientId });
+  api.kv[tasksClientId][tasksLib.keyForPath(tasksLib.PREFS_PATH)] = {
+    path: tasksLib.PREFS_PATH,
+    text: prefsText,
+    rev: 177,
+    updatedAt: NOW,
+  };
+  // Без addressAliases — только lazy load из KV, как на проде после промаха прогрева.
+  const { tools } = createCuratorContext({
+    api, curatorJwt: JWT, curatorName: 'Кин', nowMs: NOW, tasksClientId,
+  });
+  const day = await tools.heys_get_day({ client: 'мне', date: '2026-08-01' });
+  assert.match(day.text, /^\[Антон\]/, 'client=мне обязан резолвиться из preferences.md');
+  const listed = await tools.heys_list_clients({});
+  assert.match(listed.text, /Известные алиасы/);
+  assert.match(listed.text, /мне/);
+  const blocked = await tools.heys_list_clients({ for: 'жене' });
+  assert.equal(blocked.structured.skip_reason, 'known_alias_use_client_param');
+});
