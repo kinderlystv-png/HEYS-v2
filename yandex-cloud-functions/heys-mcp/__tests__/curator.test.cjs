@@ -119,6 +119,7 @@ test('list_clients отдаёт клиентов куратора', async () => 
   assert.equal(res.structured.clients.length, 2);
   assert.match(res.text, /Антон/);
   assert.match(res.text, /Александра/);
+  assert.match(res.text, /cid-anton|cid-alex/);
 });
 
 test('запись без указания клиента при двух клиентах отклоняется со списком', async () => {
@@ -503,6 +504,8 @@ test('client_required доходит до модели как isError со сп�
   assert.equal(res.result.isError, true);
   assert.equal(res.result.structuredContent.error, 'client_required');
   assert.equal(res.result.structuredContent.clients.length, 2);
+  assert.match(res.result.content[0].text, /Клиенты:/);
+  assert.match(res.result.content[0].text, /cid-/);
 });
 
 // ── Форма входа ──────────────────────────────────────────────────────────
@@ -833,12 +836,16 @@ test('вложения сообщения отдаются с путями — �
   assert.equal(message.has_attachment, true);
   assert.equal(message.attachments[0].path, 'cid-alexandra/2026-08-01/messenger/a1.jpg');
   assert.equal(message.attachments[0].kind, 'image');
+  assert.match(res.text, /фото: cid-alexandra\/2026-08-01\/messenger\/a1\.jpg/);
+  assert.match(res.text, /heys_get_photo/);
+  assert.match(res.text, /m1/);
 });
 
 test('правило про фото доехало до инструкций', () => {
   const { instructions } = build(fakeCuratorApi());
   assert.match(instructions, /heys_get_photo/);
   assert.match(instructions, /Не листай ими весь тред/);
+  assert.match(instructions, /не спрашивай «что на фото»|не спрашивай .что на фото./i);
 });
 
 // ── Публикация нового продукта в общую базу ──────────────────────────────

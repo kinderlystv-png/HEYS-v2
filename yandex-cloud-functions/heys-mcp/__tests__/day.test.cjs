@@ -274,6 +274,16 @@ test('updateMeal меняет граммовку и убирает позици�
 
   assert.deepEqual(res.meal.items.map((i) => [i.id, i.grams]), [['it_soba', 300]]);
   assert.equal(res.unknownItems.length, 0);
+  assert.equal(res.day.deletedItemIds.it_mayo, 777);
+});
+
+test('updateMeal ставит tombstone deletedItemIds при удалении позиции', () => {
+  const source = MEAL_DAY();
+  source.deletedItemIds = { it_old: 100 };
+  const res = day.updateMeal(source, 'm_dinner', { removeItemIds: ['it_mayo'] }, CTX);
+  assert.equal(res.day.deletedItemIds.it_old, 100);
+  assert.equal(res.day.deletedItemIds.it_mayo, 777);
+  assert.ok(!res.meal.items.some((i) => i.id === 'it_mayo'));
 });
 
 test('updateMeal сообщает о неизвестных id позиций вместо тихого no-op', () => {

@@ -67,8 +67,22 @@ function fakeApi({ day = null, presets = PRESETS, overlay = OVERLAY, card = null
     },
     async mergeSaveKV(_session, key, value, lastSeenUpdatedAt) {
       saves.push({ key, value, lastSeenUpdatedAt });
-      if (key.startsWith('heys_dayv2_')) dayState = value;
-      return { ok: true, outcome: 'incoming_wins' };
+      if (key.startsWith('heys_dayv2_')) {
+        if (typeof this.onMergeSave === 'function') {
+          const overridden = this.onMergeSave(key, value, dayState);
+          if (overridden && typeof overridden === 'object') {
+            dayState = overridden.value !== undefined ? overridden.value : value;
+            return {
+              ok: overridden.ok !== false,
+              outcome: overridden.outcome || 'incoming_wins',
+              value: overridden.value !== undefined ? overridden.value : value,
+              error: overridden.error,
+            };
+          }
+        }
+        dayState = value;
+      }
+      return { ok: true, outcome: 'incoming_wins', value };
     },
   };
 }
@@ -217,12 +231,17 @@ test('get_day отдаёт сводку и meal_id для правок', async (
   assert.equal(res.structured.meals[0].id, 'm1');
   assert.equal(res.structured.water_ml, 200);
   assert.equal(api.saves.length, 0);
+  assert.match(res.text, /m1/);
+  assert.match(res.text, /i1/);
+  assert.match(res.text, /Кофе/);
 });
 
 test('search_products показывает источник продукта', async () => {
   const tools = build(fakeApi({ day: null }));
   const res = await tools.heys_search_products({ query: 'сироп' });
   assert.equal(res.structured.results[0].source, 'мой список');
+  assert.match(res.text, /own-syrup|s-syrup|product_id|own-/);
+  assert.ok(res.text.includes(res.structured.results[0].product_id));
 });
 
 test('list_meal_presets отдаёт наборы с граммовками', async () => {
@@ -424,6 +443,71 @@ test('ошибка инструмента доходит до модели ка�
   assert.equal(response.result.isError, true);
   assert.equal(response.result.structuredContent.error, 'ambiguous_product');
   assert.ok(Array.isArray(response.result.structuredContent.candidates));
+  // Кандидаты обязаны быть в text: structuredContent в Cursor часто не виден.
+  assert.match(response.result.content[0].text, /Кандидаты:/);
+  assert.match(response.result.content[0].text, /product_id|own-|s-/);
+});
+
+test('get_day для сегодня пишет норму и статус чек-ина в text', async () => {
+  const api = fakeApi({
+    day: {
+      date: '2026-08-01', updatedAt: 9, waterMl: 200,
+      meals: [{ id: 'm1', name: 'Перекус', time: '15:54', items: [{ id: 'i1', name: 'Кофе', grams: 100, kcal100: 50 }] }],
+    },
+  });
+  const tools = build(api);
+  const res = await tools.heys_get_day({});
+  assert.match(res.text, /Норма /);
+  assert.match(res.text, /Чек-ин:/);
+  assert.ok(res.structured.checkin);
+  assert.ok(res.structured.norm);
+});
+
+test('log_meal печатает item_id в text', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 5 } });
+  const tools = build(api);
+  const res = await tools.heys_log_meal({
+    items: [{ product_id: 'own-americano', grams: 100 }],
+    name: 'Кофе',
+  });
+  assert.match(res.text, /Записал:/);
+  assert.match(res.text, /own-americano|Кофе американо/);
+  const itemId = res.structured.items[0].id;
+  assert.ok(itemId);
+  assert.match(res.text, new RegExp(itemId));
+});
+
+test('без grams берётся единственная порция с карточки', async () => {
+  const created = await build(fakeApi({ day: null })).heys_create_product({
+    ...LABEL,
+    name: 'Батончик порционный',
+    portions: [{ name: '1 шт', grams: 42 }],
+  });
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], updatedAt: 5 },
+    overlay: [...OVERLAY, created.structured.created_row],
+  });
+  const tools = build(api);
+  const res = await tools.heys_log_meal({
+    items: [{ product_id: created.structured.product_id }],
+    name: 'Перекус',
+  });
+  assert.equal(res.structured.items[0].grams, 42);
+  assert.match(res.text, /порция/);
+});
+
+test('create_product клонирует нутриенты по from_product_id', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  const base = await tools.heys_create_product(LABEL);
+  const res = await tools.heys_create_product({
+    name: 'Помидоры черри',
+    from_product_id: base.structured.product_id,
+  });
+  assert.equal(res.structured.cloned_from.product_id, base.structured.product_id);
+  assert.equal(res.structured.protein100, LABEL.protein100);
+  assert.match(res.text, /клон нутриентов/);
+  assert.match(res.text, /product_id=/);
 });
 
 // ── Правка приёма, штуки, тайминг ─────────────────────────────────────────
@@ -468,6 +552,52 @@ test('update_meal правит граммовку и убирает позици
   });
   const meal = api.saves[0].value.meals[0];
   assert.equal(meal.items.find((i) => i.id === 'it_milk').grams, 200);
+});
+
+test('update_meal пишет deletedItemIds при удалении позиции', async () => {
+  const base = DINNER_DAY();
+  base.meals[0].items.push({
+    id: 'it_syrup', product_id: 'own-syrup', name: 'Сироп', grams: 20, kcal100: 300, protein100: 0, carbs100: 75, fat100: 0,
+  });
+  const api = fakeApi({ day: base });
+  const tools = build(api);
+  const res = await tools.heys_update_meal({
+    meal_id: 'm_dinner',
+    remove_item_ids: ['it_syrup'],
+  });
+  assert.ok(api.saves[0].value.deletedItemIds.it_syrup);
+  assert.ok(!api.saves[0].value.meals[0].items.some((i) => i.id === 'it_syrup'));
+  assert.match(res.text, /m_dinner/);
+  assert.match(res.text, /it_milk/);
+});
+
+test('update_meal падает, если сервер вернул удалённую позицию обратно', async () => {
+  const base = DINNER_DAY();
+  base.meals[0].items.push({
+    id: 'it_syrup', product_id: 'own-syrup', name: 'Сироп', grams: 20, kcal100: 300, protein100: 0, carbs100: 75, fat100: 0,
+  });
+  const api = fakeApi({ day: base });
+  api.onMergeSave = (_key, value) => {
+    const corrupted = JSON.parse(JSON.stringify(value));
+    const meal = corrupted.meals.find((m) => m.id === 'm_dinner');
+    meal.items.push({
+      id: 'it_syrup', product_id: 'own-syrup', name: 'Сироп', grams: 20, kcal100: 300, protein100: 0, carbs100: 75, fat100: 0,
+    });
+    return { ok: true, outcome: 'day_merged', value: corrupted };
+  };
+  const tools = build(api);
+  await assert.rejects(
+    () => tools.heys_update_meal({ meal_id: 'm_dinner', remove_item_ids: ['it_syrup'] }),
+    (e) => e.code === 'item_resurrected',
+  );
+});
+
+test('create_product печатает product_id в тексте', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  const res = await tools.heys_create_product(LABEL);
+  assert.match(res.text, /product_id=/);
+  assert.ok(res.text.includes(res.structured.product_id));
 });
 
 test('update_meal не даёт опустошить приём и предлагает удаление', async () => {

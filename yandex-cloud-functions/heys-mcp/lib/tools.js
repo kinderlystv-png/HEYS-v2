@@ -277,9 +277,41 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
     };
   }
 
-  /** Хвост к тексту ответа: то же, что в day_after, одной строкой для модели. */
+  /**
+   * Хвост к тексту ответа: итог дня + outcome, если запись не «чистая».
+   * stale_write_blocked — в начале и явно: иначе модель отчитается «записал».
+   */
   function dayAfterText(after) {
-    return ` Итого за ${after.date}: ${after.totals.kcal} ккал, приёмов ${after.meals}, вода ${after.water_ml} мл.${normText(after.norm)}`;
+    const body = ` Итого за ${after.date}: ${after.totals.kcal} ккал, приёмов ${after.meals}, вода ${after.water_ml} мл.${normText(after.norm)}`;
+    if (after.outcome === 'stale_write_blocked') {
+      return ` НЕ ЗАПИСАНО (stale_write_blocked).${body}`;
+    }
+    if (after.outcome && after.outcome !== 'incoming_wins' && after.outcome !== 'saved') {
+      return `${body} outcome=${after.outcome}.`;
+    }
+    return body;
+  }
+
+  /** Строка приёма для модели: id обязательны — structuredContent в Cursor часто не виден. */
+  function formatMealLine(meal) {
+    if (!meal) return '';
+    const items = (meal.items || [])
+      .map((item) => `${item.name || '?'} ${item.id || '?'} ${item.grams}г`)
+      .join('; ');
+    const time = meal.time ? ` ${meal.time}` : '';
+    return `${meal.name || 'Приём'} ${meal.id || '?'}${time}: ${items || 'пусто'}`;
+  }
+
+  function formatDayMealsBlock(summary) {
+    const meals = summary && Array.isArray(summary.meals) ? summary.meals : [];
+    if (!meals.length) return '';
+    return `\n${meals.map(formatMealLine).join('\n')}`;
+  }
+
+  /** Блоб дня после merge_save: серверная правда, иначе наша оптимистичная копия. */
+  function savedDayBlob(res, fallbackDay) {
+    if (res && res.value && typeof res.value === 'object' && !Array.isArray(res.value)) return res.value;
+    return fallbackDay;
   }
 
   /** Норма одной строкой: цифра, БЖУ и откуда она взялась. */
@@ -336,9 +368,9 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
   }
 
   /**
-   * Граммовка: либо прямо в граммах, либо в штуках. Вес штуки берётся из
-   * карточки продукта, а если его там нет — инструмент отказывается угадывать
-   * и просит спросить у пользователя. Названный вес запоминается в карточке.
+   * Граммовка: граммы, штуки, либо единственная порция с карточки.
+   * Без цифры и без порции — спрашиваем; не ходим в прошлые дни за «привычной»
+   * порцией из кода (это лишние вызовы). Несколько порций — кандидатный список.
    */
   function resolveGrams(spec, product, label) {
     const pieces = Number(spec && spec.pieces);
@@ -357,21 +389,41 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       }
       const grams = Math.round(pieces * perPiece * 10) / 10;
       if (grams > 5000) throw new ToolError('invalid_grams', `${label}: получилось ${grams} г — больше допустимых 5000.`);
-      return { grams, learnPieceGrams: hasExplicit && !known ? perPiece : null };
+      return { grams, learnPieceGrams: hasExplicit && !known ? perPiece : null, portionNote: null };
     }
 
     const grams = Number(spec && spec.grams);
-    if (!Number.isFinite(grams) || grams <= 0 || grams > 5000) {
-      throw new ToolError('invalid_grams', `${label}: нужны grams (число от 1 до 5000) или pieces (штуки).`);
+    if (Number.isFinite(grams) && grams > 0 && grams <= 5000) {
+      return { grams, learnPieceGrams: null, portionNote: null };
     }
-    return { grams, learnPieceGrams: null };
+
+    const portions = products.normalizePortions(product.portions);
+    if (portions.length === 1) {
+      return {
+        grams: portions[0].grams,
+        learnPieceGrams: null,
+        portionNote: `порция «${portions[0].name}» ${portions[0].grams} г с карточки`,
+      };
+    }
+    if (portions.length > 1) {
+      throw new ToolError(
+        'grams_required',
+        `${label}: граммы не названы, у «${product.name}» несколько порций — уточни граммы или какую порцию взять.`,
+        { product: products.describeProduct(product), portions },
+      );
+    }
+    throw new ToolError(
+      'invalid_grams',
+      `${label}: нужны grams (1–5000), pieces (штуки) или порция в карточке продукта. Спроси граммовку у куратора.`,
+      { product: products.describeProduct(product) },
+    );
   }
 
   async function resolveItem(spec, index) {
     const label = `Позиция #${index + 1}`;
     const product = await resolveProduct(spec || {}, label);
-    const { grams, learnPieceGrams } = resolveGrams(spec, product, label);
-    return { product, grams, learnPieceGrams };
+    const { grams, learnPieceGrams, portionNote } = resolveGrams(spec, product, label);
+    return { product, grams, learnPieceGrams, portionNote };
   }
 
   /**
@@ -410,10 +462,26 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const date = resolveDate(args.date, nowMs);
       const current = await readDay(date);
       const summary = day.summarizeDay(current);
-      const text = summary.meals.length || summary.water_ml
-        ? `День ${date}: ${summary.totals.kcal} ккал, Б${summary.totals.protein} У${summary.totals.carbs} Ж${summary.totals.fat}, вода ${summary.water_ml} мл, приёмов: ${summary.meals.length}.`
-        : `День ${date} пока пустой.`;
-      return { text, structured: summary };
+      // Норма и чек-ин в том же ответе: иначе «из N» и «можно ли писать еду»
+      // тянут лишний heys_checkin(get) / догадку без цифры (diary UX 2026-08-07).
+      const inputs = await loadNormInputs();
+      const norm = day.dailyNorm(current, inputs);
+      const todayKey = checkinToday(nowMs);
+      let checkinText = '';
+      let checkin = null;
+      if (date === todayKey) {
+        checkin = day.checkinStatus(current, inputs && inputs.profile);
+        checkinText = checkin.status === 'done'
+          ? ' Чек-ин: пройден.'
+          : ` Чек-ин: ${checkin.status} — еду за сегодня не пиши, пока не закрыт (heys_checkin); отдельный get не нужен, статус уже здесь.`;
+      }
+      const head = summary.meals.length || summary.water_ml
+        ? `День ${date}: ${summary.totals.kcal} ккал, Б${summary.totals.protein} У${summary.totals.carbs} Ж${summary.totals.fat}, вода ${summary.water_ml} мл, приёмов: ${summary.meals.length}.${normText(norm)}${checkinText}${formatDayMealsBlock(summary)}`
+        : `День ${date} пока пустой.${normText(norm)}${checkinText}`;
+      return {
+        text: head,
+        structured: { ...summary, norm, ...(checkin ? { checkin } : {}) },
+      };
     },
 
     async heys_search_products(args) {
@@ -424,7 +492,15 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const found = products.searchProducts(catalog, args.query, args.limit || 10);
       const described = found.map(products.describeProduct);
       const text = described.length
-        ? `Нашёл ${described.length}: ${described.map((p) => `${p.name} (${p.kcal100} ккал/100, ${p.source})`).join('; ')}`
+        ? `Нашёл ${described.length}: ${described.map((p) => {
+          const parts = [`${p.name} (${p.product_id}, ${p.kcal100} ккал/100, ${p.source})`];
+          if (p.barcode) parts.push(`штрихкод ${p.barcode}`);
+          if (p.piece_grams) parts.push(`шт=${p.piece_grams}г`);
+          if (Array.isArray(p.portions) && p.portions.length) {
+            parts.push(`порции: ${p.portions.map((x) => `${x.name} ${x.grams}г`).join(', ')}`);
+          }
+          return parts.join(', ');
+        }).join('; ')}`
         : `По запросу "${args.query}" ничего не нашлось.`;
       return { text, structured: { query: args.query, results: described } };
     },
@@ -495,16 +571,21 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const learned = await persistPieceGrams(resolved);
 
       const kcal = day.macroTotals([meal]);
-      const itemsText = meal.items.map((item) => `${item.name} ${item.grams} г`).join(', ');
       const learnedText = learned.length
         ? ` Запомнил вес штуки: ${learned.map((l) => `${l.name} — ${l.grams} г`).join(', ')}.`
+        : '';
+      const portionNotes = resolved.map((e) => e.portionNote).filter(Boolean);
+      const portionText = portionNotes.length
+        ? ` Граммовка с карточки: ${portionNotes.join('; ')}.`
         : '';
       // Тип называем вслух, когда подпись приёма его не показывает (набор,
       // своё название): куратор должен видеть, чем запись легла в дневник, и
       // успеть поправить, если это не обед.
       const typeHint = meal.name === classified.name ? '' : ` (${classified.name})`;
+      // item_id в text — иначе «убери сироп из только что внесённого» снова
+      // зовёт get_day (structured в Cursor часто не виден).
       return {
-        text: `Записал: ${meal.name}${typeHint} в ${time} (${date}) — ${itemsText}. ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${learnedText}${dayAfterText(after)}`,
+        text: `Записал: ${formatMealLine(meal)}${typeHint} (${date}). ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${portionText}${learnedText}${dayAfterText(after)}`,
         structured: {
           date,
           meal_id: meal.id,
@@ -514,6 +595,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
           totals: kcal,
           items: meal.items.map((i) => ({ id: i.id, name: i.name, grams: i.grams })),
           learned_piece_grams: learned.length ? learned : undefined,
+          portion_defaults: portionNotes.length ? portionNotes : undefined,
           day_after: after,
         },
       };
@@ -578,23 +660,47 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
 
       const saved = await writeDay(date, result.day, Number(current.updatedAt) || 0);
       const after = await dayAfterWrite(saved, result.day);
+      // Состав приёма — с сервера: оптимистичный result.meal врёт при воскрешении
+      // позиции merge'ом (incident 2026-08-07 черри/помидор).
+      const serverDay = savedDayBlob(saved, result.day);
+      const serverMeal = (serverDay.meals || []).find((m) => m && String(m.id) === String(args.meal_id)) || result.meal;
+      const removeIds = Array.isArray(args.remove_item_ids) ? args.remove_item_ids.map(String) : [];
+      if (removeIds.length) {
+        const resurrected = removeIds.filter((id) => (serverMeal.items || []).some((item) => String(item.id) === id));
+        if (resurrected.length) {
+          throw new ToolError(
+            'item_resurrected',
+            `Удаление не удержалось после записи (merge вернул позиции: ${resurrected.join(', ')}). Перечитай heys_get_day и повтори; если повторится — в дне нет tombstone deletedItemIds.`,
+            {
+              meal_id: args.meal_id,
+              resurrected,
+              items: (serverMeal.items || []).map((i) => ({ id: i.id, name: i.name, grams: i.grams })),
+            },
+          );
+        }
+      }
       const learned = await persistPieceGrams(resolved);
 
-      const kcal = day.macroTotals([result.meal]);
+      const kcal = day.macroTotals([serverMeal]);
       const learnedText = learned.length
         ? ` Запомнил вес штуки: ${learned.map((l) => `${l.name} — ${l.grams} г`).join(', ')}.`
         : '';
+      const portionNotes = resolved.map((e) => e.portionNote).filter(Boolean);
+      const portionText = portionNotes.length
+        ? ` Граммовка с карточки: ${portionNotes.join('; ')}.`
+        : '';
       return {
-        text: `Обновил «${result.meal.name}» (${result.meal.time}, ${date}): ${result.changed.join('; ')}. Теперь в приёме ${result.meal.items.length} позиций, ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${learnedText}${dayAfterText(after)}`,
+        text: `Обновил «${serverMeal.name}» ${serverMeal.id} (${serverMeal.time}, ${date}): ${result.changed.join('; ')}. ${formatMealLine(serverMeal)}. ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${portionText}${learnedText}${dayAfterText(after)}`,
         structured: {
           date,
-          meal_id: result.meal.id,
-          name: result.meal.name,
-          time: result.meal.time,
+          meal_id: serverMeal.id,
+          name: serverMeal.name,
+          time: serverMeal.time,
           changed: result.changed,
           totals: kcal,
-          items: result.meal.items.map((i) => ({ id: i.id, name: i.name, grams: i.grams })),
+          items: (serverMeal.items || []).map((i) => ({ id: i.id, name: i.name, grams: i.grams })),
           learned_piece_grams: learned.length ? learned : undefined,
+          portion_defaults: portionNotes.length ? portionNotes : undefined,
           day_after: after,
         },
       };
@@ -608,10 +714,11 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const nameNorm = products.normalizeText(name);
       const duplicate = catalog.all.find((p) => products.normalizeText(p.name) === nameNorm);
       if (duplicate && !args.allow_duplicate) {
+        const existing = products.describeProduct(duplicate);
         throw new ToolError(
           'product_exists',
-          `Продукт «${duplicate.name}» уже есть (${duplicate._source === 'own' ? 'в твоём списке' : 'в общей базе'}). Если это другой продукт — уточни название, например добавь бренд.`,
-          { existing: products.describeProduct(duplicate) },
+          `Продукт «${duplicate.name}» уже есть (${duplicate._source === 'own' ? 'в твоём списке' : 'в общей базе'}, product_id=${existing.product_id}). Используй этот id или, если это другой продукт, уточни название (например бренд) и allow_duplicate.`,
+          { existing },
         );
       }
 
@@ -629,15 +736,47 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         }
       }
 
+      // from_product_id — клон нутриентов (черри ← помидор): без этикетки не
+      // выдумываем состав, копируем подтверждённую карточку и меняем имя.
+      let createInput = { ...args, name };
+      let clonedFrom = null;
+      if (args.from_product_id) {
+        const base = products.findById(catalog, args.from_product_id);
+        if (!base) {
+          throw new ToolError('product_not_found', `Продукт-источник с id "${args.from_product_id}" не найден.`);
+        }
+        const baseInput = {};
+        for (const field of products.REQUIRED_NUTRIENTS) {
+          if (Number.isFinite(Number(base[field]))) baseInput[field] = Number(base[field]);
+        }
+        for (const field of products.OPTIONAL_NUTRIENTS) {
+          if (Number.isFinite(Number(base[field]))) baseInput[field] = Number(base[field]);
+        }
+        if (Number.isFinite(Number(base.carbs100))) baseInput.carbs100 = Number(base.carbs100);
+        if (Number.isFinite(Number(base.fat100))) baseInput.fat100 = Number(base.fat100);
+        for (const field of products.BOOLEAN_FLAGS) {
+          if (base[field] != null) baseInput[field] = !!base[field];
+        }
+        if (Array.isArray(base.additives)) baseInput.additives = base.additives;
+        const basePortions = products.normalizePortions(base.portions);
+        if (basePortions.length) baseInput.portions = basePortions;
+        createInput = { ...baseInput, ...args, name };
+        clonedFrom = { product_id: base.id, name: base.name };
+      }
+
       let row;
       try {
-        row = products.buildCustomProduct(args, {
+        row = products.buildCustomProduct(createInput, {
           nowMs,
           makeId: () => `p_${nowMs}_${crypto.randomBytes(3).toString('hex')}`,
         });
       } catch (e) {
         if (e.missing) {
-          throw new ToolError('nutrients_missing', `Не хватает обязательных полей: ${e.missing.join(', ')}. Все значения — на 100 г.`, { missing: e.missing });
+          throw new ToolError(
+            'nutrients_missing',
+            `Не хватает обязательных полей: ${e.missing.join(', ')}. Все значения — на 100 г. Либо передай их с этикетки, либо from_product_id ближайшего продукта (например помидор → черри).`,
+            { missing: e.missing },
+          );
         }
         throw new ToolError('invalid_product', e.message);
       }
@@ -651,12 +790,13 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       catalogPromise = null;
 
       const extras = [];
+      if (clonedFrom) extras.push(`клон нутриентов с «${clonedFrom.name}» (${clonedFrom.product_id})`);
       if (row.brand) extras.push(`бренд ${row.brand}`);
       if (row.barcode) extras.push(`штрихкод ${row.barcode}`);
       if (row.portions) extras.push(`порции: ${row.portions.map((p) => `${p.name} ${p.grams} г`).join(', ')}`);
 
       return {
-        text: `Создал продукт «${row.name}» — ${row.kcal100} ккал/100 г, Б${row.protein100} У${row.carbs100} Ж${row.fat100}${extras.length ? '. ' + extras.join(', ') : ''}. Калорийность пересчитана по правилам HEYS, поэтому может отличаться от цифры на упаковке.`,
+        text: `Создал продукт «${row.name}» (product_id=${row.id}) — ${row.kcal100} ккал/100 г, Б${row.protein100} У${row.carbs100} Ж${row.fat100}${extras.length ? '. ' + extras.join(', ') : ''}. Калорийность пересчитана по правилам HEYS, поэтому может отличаться от цифры на упаковке.`,
         structured: {
           product_id: row.id,
           name: row.name,
@@ -667,9 +807,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
           brand: row.brand,
           barcode: row.barcode,
           portions: row.portions || [],
-          // Карточка целиком нужна кураторскому слою: по ней считается
-          // отпечаток для общей базы. Без неё пришлось бы пересобирать
-          // продукт из аргументов и разойтись с тем, что реально записано.
+          cloned_from: clonedFrom || undefined,
           created_row: row,
         },
       };
@@ -1516,7 +1654,7 @@ const ITEM_SCHEMA = {
   properties: {
     product_id: { type: 'string', description: 'Точный id продукта из heys_search_products.' },
     query: { type: 'string', description: 'Название продукта, если id неизвестен.' },
-    grams: { type: 'number', description: 'Вес порции в граммах (для напитков — миллилитры).' },
+    grams: { type: 'number', description: 'Вес порции в граммах (для напитков — миллилитры). Если не передать и у продукта ровно одна порция в карточке — возьмётся она.' },
     pieces: { type: 'number', description: 'Количество штук, когда пользователь считает штуками («четыре конфеты»). Вес одной штуки берётся из карточки продукта — не подставляй граммы от себя.' },
     piece_grams: { type: 'number', description: 'Вес одной штуки в граммах. Нужен только если в карточке продукта его ещё нет: инструмент попросит, а полученное значение сохранит в карточку.' },
   },
@@ -1525,7 +1663,7 @@ const ITEM_SCHEMA = {
 const TOOL_SCHEMAS = [
   {
     name: 'heys_get_day',
-    description: 'Показать день пользователя в HEYS: приёмы пищи с id и калориями, итоги по БЖУ, вода, вес, сон, настроение, тренировки. Вызывай перед правкой или удалением приёма, чтобы взять meal_id.',
+    description: 'Показать день пользователя в HEYS: приёмы с meal_id и item_id в тексте, итоги БЖУ, норма («из N»), для сегодня — статус чек-ина. Вызывай перед правкой или удалением приёма — id и чек-ин бери из текста, не ищи в коде/БД и не делай отдельный heys_checkin(get).',
     inputSchema: {
       type: 'object',
       properties: { date: DATE_ARG },
@@ -1648,7 +1786,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_search_products',
-    description: 'Найти продукт в базе HEYS: сначала личный список пользователя, затем общая база. Возвращает product_id, калорийность на 100 г и типовые порции. Используй, когда нужно уточнить, какой именно продукт имеется в виду.',
+    description: 'Найти продукт в базе HEYS: сначала личный список пользователя, затем общая база. Возвращает product_id, калорийность на 100 г, порции и штрихкод. Query — название или штрихкод с этикетки. Используй, когда нужно уточнить продукт или проверить, что он уже есть, до create.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1660,7 +1798,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_log_meal',
-    description: 'Создать приём пищи в дневнике. Составной напиток или блюдо вносится набором позиций, а не одним «итоговым» продуктом: сначала проверь heys_list_meal_presets — если у пользователя есть подходящий сохранённый набор, вноси его через preset. Каждая позиция задаётся product_id (точно) или query (поиск по названию) плюс граммы. Если по query несколько похожих продуктов, инструмент вернёт кандидатов — тогда уточни у пользователя, а не угадывай.',
+    description: 'Создать приём пищи в дневнике. Составной напиток или блюдо вносится набором позиций, а не одним «итоговым» продуктом: перед НОВЫМ составным приёмом проверь heys_list_meal_presets — если у пользователя есть подходящий сохранённый набор, вноси его через preset. Каждая позиция задаётся product_id (точно) или query (поиск по названию) плюс граммы. Если по query несколько похожих продуктов, инструмент вернёт кандидатов — тогда уточни у пользователя, а не угадывай.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1702,15 +1840,16 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_list_meal_presets',
-    description: 'Показать сохранённые наборы приёмов пользователя (готовые комбинации продуктов с граммовками). Вызывай перед записью составного приёма — набор точнее ручной сборки и совпадает с тем, как пользователь ведёт дневник сам.',
+    description: 'Показать сохранённые наборы приёмов пользователя (готовые комбинации продуктов с граммовками). Вызывай перед записью НОВОГО составного приёма через heys_log_meal. Для правки уже записанного приёма (heys_update_meal) наборы не нужны — бери meal_id и item_id из heys_get_day.',
     inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'heys_create_product',
     description: [
       'Создать новый продукт в личном списке пользователя — например по фотографии этикетки с составом и пищевой ценностью.',
+      'Без этикетки для близкого продукта (черри ← помидор) передай from_product_id: нутриенты копируются, имя новое — не выдумывай состав.',
       'Все значения указываются НА 100 Г продукта. Если на упаковке пищевая ценность дана на порцию, пересчитай на 100 г сам.',
-      'Обязательны: protein100, simple100, complex100, badFat100, goodFat100, trans100, fiber100, gi, harm.',
+      'Без from_product_id обязательны: protein100, simple100, complex100, badFat100, goodFat100, trans100, fiber100, gi, harm.',
       'Как заполнять то, чего нет на этикетке: simple100 — «в том числе сахара»; complex100 = углеводы минус сахара; badFat100 — «в том числе насыщенные»; goodFat100 = жиры минус насыщенные минус транс; trans100 — 0, если не указано; fiber100 — 0, если не указано.',
       'Клетчатка в HEYS — отдельная от углеводов масса, а не их часть. На российской этикетке углеводы уже указаны без пищевых волокон, и вычитать ничего не нужно. Но если этикетка импортная и клетчатка входит в «Total carbohydrate» (её часто печатают отступом как «in which: dietary fibre»), вычти её: complex100 = углеводы минус сахара минус клетчатка. Иначе клетчатка посчитается дважды — и как масса, и как калории.',
       'gi — гликемический индекс 0–100 по оценке, harm — вредность 0–10 по шкале HEYS (цельный продукт ближе к 0, ультрапереработанный со сложным составом ближе к 10).',
@@ -1721,6 +1860,7 @@ const TOOL_SCHEMAS = [
       type: 'object',
       properties: {
         name: { type: 'string', description: 'Название продукта. Если есть бренд, лучше включить его в название — так проще искать.' },
+        from_product_id: { type: 'string', description: 'Скопировать нутриенты с уже существующего продукта (product_id из search/get). Для «черри как помидор» без этикетки — не выдумывай состав.' },
         brand: { type: 'string', description: 'Производитель или бренд.' },
         barcode: { type: 'string', description: 'Штрихкод с упаковки, 6–32 символа.' },
         protein100: { type: 'number', description: 'Белки, г на 100 г.' },
@@ -1759,7 +1899,7 @@ const TOOL_SCHEMAS = [
         },
         allow_duplicate: { type: 'boolean', description: 'Создать, даже если продукт с таким названием уже есть или был удалён. Ставь только после подтверждения пользователя.' },
       },
-      required: ['name', 'protein100', 'simple100', 'complex100', 'badFat100', 'goodFat100', 'trans100', 'fiber100', 'gi', 'harm'],
+      required: ['name'],
     },
   },
   {

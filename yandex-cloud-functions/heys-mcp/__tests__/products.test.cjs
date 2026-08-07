@@ -282,3 +282,14 @@ test('промышленным считается продукт с брендо
   assert.equal(products.looksIndustrial({ name: 'Творог', brand: 'Домик' }), true);
   assert.equal(products.looksIndustrial({ name: 'Творог', barcode: '4600000000012' }), true);
 });
+
+test('поиск по штрихкоду находит продукт точнее имени', () => {
+  const shared = new Map([
+    ['s-a', { id: 's-a', name: 'Йогурт клубничный', protein100: 3, simple100: 10, complex100: 0, badfat100: 1, goodfat100: 1, barcode: '4600000123456' }],
+    ['s-b', { id: 's-b', name: 'Йогурт персиковый', protein100: 3, simple100: 10, complex100: 0, badfat100: 1, goodfat100: 1 }],
+  ]);
+  const c = products.buildCatalog([], shared);
+  const [hit] = products.searchProducts(c, '4600 0001-23456', 3);
+  assert.equal(hit.id, 's-a');
+  assert.equal(products.describeProduct(hit).barcode, '4600000123456');
+});

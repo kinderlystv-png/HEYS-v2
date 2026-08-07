@@ -27,6 +27,18 @@
 Новый пункт попадает сюда только с воспроизведением, механизмом ущерба и
 проверяемым критерием закрытия.
 
+### MCP diary: удаление позиции воскресало + id не в text — код готов 2026-08-07
+
+- **Механизм:** remove без tombstone; id/path фото в structured → dig/десятки
+  вызовов. Vision этикетки — у модели; MCP обязан показывать image + path.
+- **Инцидент:** 2026-08-07 «заведи черри…»; аудит
+  `docs/audits/2026-08-07_mcp_diary_friction.md`, heys/b235ea.
+- **Сделано (WT):** tombstone; server-truth; ids/norm/checkin/кандидаты/
+  clients/portions в text; presets; авто-порция; from_product_id; list_messages
+  с path фото; search по штрихкоду; photo-first §8в. 308 tests. Live без фикса.
+- **Осталось:** commit + deploy. Стоп: server OCR / suggest_from_photo — не этот
+  ship (маркетинг/38).
+
 ### Welcome-модалка триала повторяется на каждом новом устройстве — закрыто 2026-07-31
 
 - **Механизм:** признак «клиент уже видел приветствие» пишется прямым
@@ -127,6 +139,14 @@
   контрольный DCR для Claude вернули HTTP 201 с `Cache-Control: no-store` и
   `Pragma: no-cache`; metadata объявляет только PKCE `S256`, authorize с
   выданным ChatGPT client ID вернул страницу входа HEYS (HTTP 200).
+- **Факт, Codex desktop (2026-08-04):** прежняя диагностика ошибочно направляла
+  настройку в ChatGPT connector builder, хотя HEYS отсутствовал в локальной
+  конфигурации Codex. Сервер добавлен как Streamable HTTP `heys_curator` →
+  `https://api.heyslab.ru/mcp/curator`; штатный `codex mcp login` завершился
+  успешно, `codex mcp list` показывает `enabled / OAuth`, а новый Codex-процесс
+  обнаружил инструмент `tasks_context`. Следующий gate только клиентский:
+  Restart desktop-приложения для перечитывания MCP-конфигурации текущими
+  задачами.
 - **Осталось:** пересоздать коннектор ChatGPT через DCR и пройти
   пользовательский OAuth/tool scan.
 - **Первая попытка deploy 2026-08-04:** обязательный pre-deploy gate прошёл

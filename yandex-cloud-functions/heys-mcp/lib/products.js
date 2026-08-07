@@ -242,6 +242,20 @@ function scoreProduct(product, prepared) {
   const nameNorm = normalizeText(product.name);
   if (!nameNorm || !prepared) return 0;
 
+  // Штрихкод с этикетки: точное совпадение важнее имени — иначе модель
+  // прочитает EAN и всё равно уйдёт в неоднозначный поиск по бренду.
+  const barcodeQuery = normalizeBarcode(prepared.norm);
+  if (barcodeQuery) {
+    const codes = [];
+    if (product.barcode) codes.push(String(product.barcode));
+    if (Array.isArray(product.barcodes)) {
+      for (const code of product.barcodes) {
+        if (code) codes.push(String(code));
+      }
+    }
+    if (codes.some((code) => normalizeBarcode(code) === barcodeQuery)) return 2000;
+  }
+
   let score = 0;
   prepared.phrases.forEach((phrase, index) => {
     let value = 0;
@@ -336,6 +350,7 @@ function describeProduct(product) {
     protein100: Number(product.protein100) || 0,
     carbs100: Math.round(carbs * 10) / 10,
     fat100: Math.round(fat * 10) / 10,
+    barcode: product.barcode || undefined,
     portions: Array.isArray(product.portions) && product.portions.length
       ? product.portions.map((p) => ({ name: p.name, grams: p.grams }))
       : undefined,

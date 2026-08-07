@@ -6,6 +6,7 @@
  * Контракт блоба и порядок приёмов повторяют apps/web/heys_day_bundle_v1.js:
  *  - meals сортируются по времени по убыванию, приёмы без времени — в конец;
  *  - удаление приёма ставит tombstone в deletedMealIds (иначе merge вернёт его);
+ *  - удаление позиции ставит tombstone в deletedItemIds (как в apps/web);
  *  - kcal100 в позиции считается по NET Atwater (TEF 25% в белке), как в UI;
  *  - каждая мутация двигает updatedAt — на нём строится merge на сервере.
  *
@@ -474,13 +475,23 @@ function updateMeal(day, mealId, patch, { nowMs, clientId }) {
   const changed = [];
   const unknownItems = [];
 
+  const prevDeletedItemIds = (day.deletedItemIds && typeof day.deletedItemIds === 'object' && !Array.isArray(day.deletedItemIds))
+    ? day.deletedItemIds
+    : {};
+  const nextDeletedItemIds = { ...prevDeletedItemIds };
+
   const removeIds = (patch.removeItemIds || []).map(String);
   if (removeIds.length) {
     for (const id of removeIds) {
       if (!meal.items.some((item) => String(item.id) === id)) unknownItems.push(id);
     }
     const before = meal.items.length;
-    meal.items = meal.items.filter((item) => !removeIds.includes(String(item.id)));
+    meal.items = meal.items.filter((item) => {
+      const id = String(item.id);
+      if (!removeIds.includes(id)) return true;
+      nextDeletedItemIds[id] = nowMs;
+      return false;
+    });
     if (meal.items.length !== before) changed.push(`убрано позиций: ${before - meal.items.length}`);
   }
 
@@ -541,7 +552,11 @@ function updateMeal(day, mealId, patch, { nowMs, clientId }) {
   }
 
   const nextMeals = meals.map((m, i) => (i === index ? meal : m));
-  const nextDay = touch({ ...day, meals: resort ? sortMealsByTime(nextMeals) : nextMeals }, nowMs, clientId);
+  const nextDay = touch({
+    ...day,
+    meals: resort ? sortMealsByTime(nextMeals) : nextMeals,
+    deletedItemIds: nextDeletedItemIds,
+  }, nowMs, clientId);
   return { day: nextDay, meal, changed, unknownItems };
 }
 

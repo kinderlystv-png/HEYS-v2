@@ -37,6 +37,47 @@ function negotiateProtocolVersion(requested) {
 }
 
 /**
+ * Детали ошибки в text: в Cursor модель часто не видит structuredContent
+ * (тот же класс, что meal_id в get_day — incident 2026-08-07). Кандидаты,
+ * product_id и позиции иначе заставляют агента звать search/get_day снова.
+ */
+function formatErrorDetailsText(details) {
+  if (!details || typeof details !== 'object') return '';
+  const parts = [];
+  if (Array.isArray(details.candidates) && details.candidates.length) {
+    parts.push(`Кандидаты: ${details.candidates.map((c) => {
+      if (!c || typeof c !== 'object') return String(c);
+      const id = c.product_id || c.id || '?';
+      const kcal = c.kcal100 != null ? `, ${c.kcal100} ккал/100` : '';
+      const source = c.source ? `, ${c.source}` : '';
+      return `${c.name || '?'} (${id}${kcal}${source})`;
+    }).join('; ')}`);
+  }
+  if (details.existing && typeof details.existing === 'object' && details.existing.product_id) {
+    parts.push(`product_id=${details.existing.product_id}`);
+  }
+  if (details.product && typeof details.product === 'object' && details.product.product_id) {
+    parts.push(`product_id=${details.product.product_id}`);
+  }
+  if (Array.isArray(details.items) && details.items.length) {
+    parts.push(`Позиции: ${details.items.map((i) => `${(i && i.name) || '?'} ${(i && i.id) || '?'} ${(i && i.grams) != null ? `${i.grams}г` : ''}`).join('; ')}`);
+  }
+  if (Array.isArray(details.resurrected) && details.resurrected.length) {
+    parts.push(`resurrected=${details.resurrected.join(',')}`);
+  }
+  if (Array.isArray(details.clients) && details.clients.length) {
+    parts.push(`Клиенты: ${details.clients.map((c) => {
+      if (!c || typeof c !== 'object') return String(c);
+      return `${c.name || '?'} (${c.client_id || '?'})`;
+    }).join('; ')}`);
+  }
+  if (Array.isArray(details.portions) && details.portions.length) {
+    parts.push(`Порции: ${details.portions.map((p) => `${(p && p.name) || '?'} ${(p && p.grams) != null ? `${p.grams}г` : ''}`).join('; ')}`);
+  }
+  return parts.length ? ` ${parts.join('. ')}.` : '';
+}
+
+/**
  * Ошибка инструмента возвращается не как JSON-RPC error, а как результат с
  * isError: по спеке это ошибка выполнения, которую модель должна увидеть и
  * исправить сама (уточнить продукт, поправить дату), а не сбой протокола.
@@ -45,7 +86,7 @@ function toolFailure(message, code, details, meta) {
   const payload = { ok: false, error: code || 'tool_error', message };
   if (details) Object.assign(payload, details);
   const result = {
-    content: [{ type: 'text', text: message }],
+    content: [{ type: 'text', text: `${message}${formatErrorDetailsText(details)}` }],
     structuredContent: payload,
     isError: true,
   };
@@ -93,11 +134,11 @@ async function handleMessage(message, ctx) {
           '',
           'Правила работы:',
           '1. Составной напиток или блюдо вносится компонентами, а не одним «итоговым» продуктом. Капучино — это кофе + молоко + сироп, а не строка «капучино».',
-          '2. Сначала вызывай heys_list_meal_presets. Если у пользователя есть подходящий сохранённый набор, вноси приём через preset: набор хранит его собственные граммовки, и дневник остаётся однородным.',
+          '2. Перед новым составным приёмом вызывай heys_list_meal_presets. Если у пользователя есть подходящий сохранённый набор, вноси его через preset: набор хранит его собственные граммовки, и дневник остаётся однородным. Для правки уже записанного приёма (heys_update_meal) наборы не нужны. Простой одиночный продукт — сразу heys_log_meal, без presets.',
           '3. Граммовку, не названную явно, бери из привычной для пользователя порции — из набора или из того, как этот продукт вносился раньше (heys_get_day за прошлые даты). Не подставляй «круглые» значения от себя. Приёмы с названием вида «Обед · оценочно 155%» — заглушки автооценки, а не реальная еда: граммовки из них не бери.',
           '4. Продукты из личного списка пользователя приоритетнее одноимённых из общей базы.',
-          '5. Если продукт определяется неоднозначно, инструмент вернёт кандидатов — уточни у пользователя, а не угадывай. Уверен — вноси сам, не переспрашивая.',
-          '6. Перед правкой или удалением приёма вызывай heys_get_day, чтобы взять актуальный meal_id.',
+          '5. Если продукт определяется неоднозначно, инструмент вернёт кандидатов в тексте ответа — уточни у пользователя, а не угадывай. Уверен — вноси сам, не переспрашивая.',
+          '6. Перед правкой или удалением приёма вызывай heys_get_day, чтобы взять актуальный meal_id и item_id из текста. Статус чек-ина за сегодня тоже там — отдельный heys_checkin(get) не нужен.',
           '7. Добавить еду в уже записанный приём — heys_update_meal. Не удаляй и не пересоздавай приём ради этого: он получит новый id и потеряет оценки самочувствия.',
           '8. Штуки вноси через pieces, а не пересчитывай в граммы сам. Вес одной штуки инструмент возьмёт из карточки продукта; если его там нет — спросит, и названное пользователем значение сохранит в карточку.',
           '9. Время приёма по умолчанию — текущее московское. Сказал «утром» или «за обедом» — поставь правдоподобное время и назови его в ответе, чтобы он поправил одним словом. Не спрашивай: переспрос ради минут дороже самой правки.',
