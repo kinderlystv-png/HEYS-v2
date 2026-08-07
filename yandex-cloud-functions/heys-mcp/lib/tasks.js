@@ -176,6 +176,7 @@ function verbatimTranscriptError(block) {
 
 const CHECKPOINT_JOURNAL_REMINDER = 'Похоже, в обмене был устойчивый вывод — при необходимости допиши journal_block повторным checkpoint или следующим ходом.';
 const CHECKPOINT_FACT_REMINDER = 'Похоже, прозвучал факт о мире — если так, запиши через tasks_learn (kind «факт»), не в journal.';
+const CHECKPOINT_BOARD_REMINDER = 'Похоже, работа сдана — сверь связанные сущности на доске (пункт планёрки, открыто:/#blocked, #next, напоминание-спутник) и сними лишнее через tasks_standup / tasks_resolve / tasks_update в том же ходе; не оставляй «закрыл в чате — висит на доске».';
 
 const JOURNAL_NUDGE_STRONG_RE = [
   /итог\s*:/i,
@@ -216,11 +217,45 @@ const FACT_ALREADY_RECORDED_RE = [
   /записал.*(?:памят|факт)/i,
 ];
 
+/** Сдача работы / закрытие scope — повод сверить спутники на доске. */
+const BOARD_NUDGE_STRONG_RE = [
+  /tasks_update[^\n]{0,80}(?:state\s*[:=]\s*['"]?done|done)/i,
+  /state\s*[:=]\s*['"]?done['"]?/i,
+  /закрыл(?:а|и)?\s+(?:задач|пункт|scope|хэш|heys\/|kinderly\/)/i,
+  /закрыто\s+\d{1,2}\.\d{2}/i,
+  /\[x\].{0,40}(?:heys|kinderly|family|personal|travel|someday|mine2d)\/[0-9a-f]{6}/i,
+  /(?:heys|kinderly|family|personal|travel|someday|mine2d)\/[0-9a-f]{6}.{0,40}\[x\]/i,
+  /smoke\s*(?:ок|пройден|зелён|green|passed)/i,
+  /задепло(?:ил|ен)|на проде/i,
+  /дов[её]л(?:а|и)?\s+до\s+конца/i,
+  /сдал(?:а|и)?\s+(?:задач|scope|работу)/i,
+];
+
+const BOARD_NUDGE_WEAK_RE = [
+  /готов[оа]/i,
+  /сделано/i,
+  /критери[йи].{0,30}закрыт/i,
+  /тесты?\s*(?:зелён|прошл|ok|ок)/i,
+  /901\/901/,
+];
+
+const BOARD_ALREADY_SYNCED_RE = [
+  /tasks_standup/i,
+  /standup[^\n]{0,40}done/i,
+  /актуализир\w*\s+(?:доск|standup|планёр)/i,
+  /снял(?:а|и)?\s+(?:пункт|с\s+планёр|#next|открыто|#blocked)/i,
+  /build_board/i,
+  /на доске через/i,
+  /спутник\w*\s+снят/i,
+  /related\s+board/i,
+];
+
 const SIMPLE_KIN_RE = /^(?:спасибо|ок|да|нет|хорошо|понял|ясно)\.?$/i;
 
 /**
- * Soft-nudge после checkpoint: журнал/факт не обязательны, но если обмен
- * похож на разбор или факт о мире — одна приписка в ответ (precision > recall).
+ * Soft-nudge после checkpoint: журнал/факт/доска не обязательны, но если обмен
+ * похож на разбор, факт о мире или сдачу работы — одна приписка в ответ
+ * (precision > recall). Hard-block только у стенограммы.
  */
 function checkpointOutputReminders({ transcriptBlock, journalBlock } = {}) {
   const jb = String(journalBlock || '').trim();
@@ -232,7 +267,8 @@ function checkpointOutputReminders({ transcriptBlock, journalBlock } = {}) {
   const text = `${kin}\n${claude}`;
 
   if (/просто запиши/i.test(kin)) return {};
-  if (SIMPLE_KIN_RE.test(kin) && !JOURNAL_NUDGE_STRONG_RE.some((re) => re.test(text))) return {};
+  if (SIMPLE_KIN_RE.test(kin) && !JOURNAL_NUDGE_STRONG_RE.some((re) => re.test(text))
+    && !BOARD_NUDGE_STRONG_RE.some((re) => re.test(text))) return {};
 
   const out = {};
 
@@ -245,6 +281,15 @@ function checkpointOutputReminders({ transcriptBlock, journalBlock } = {}) {
   if (!FACT_ALREADY_RECORDED_RE.some((re) => re.test(claude))
     && FACT_NUDGE_RE.some((re) => re.test(text))) {
     out.fact_reminder = CHECKPOINT_FACT_REMINDER;
+  }
+
+  if (!BOARD_ALREADY_SYNCED_RE.some((re) => re.test(claude))) {
+    const boardStrong = BOARD_NUDGE_STRONG_RE.some((re) => re.test(text));
+    const boardWeak = BOARD_NUDGE_WEAK_RE.filter((re) => re.test(text)).length;
+    const hasHash = /(?:heys|kinderly|family|personal|travel|someday|mine2d)\/[0-9a-f]{6}/i.test(text);
+    if (boardStrong || (boardWeak >= 2 && hasHash) || (boardWeak >= 1 && hasHash && /закрыл|закрыто|done|\[x\]/i.test(text))) {
+      out.board_reminder = CHECKPOINT_BOARD_REMINDER;
+    }
   }
 
   return out;
@@ -4623,6 +4668,114 @@ function markHabit(text, habit, date) {
   throw new Error(`habit_not_found:${habit}`);
 }
 
+/**
+ * Порядок важности в «Требует решения» — зеркало build_board.py stKind().
+ * Признаки механические: срок/слот сегодня → важное; «А или Б» / «… ли» → быстро;
+ * остальное — ответ надо составить самому.
+ */
+const DECIDE_RX_TODAY = /сегодня|сегодняшн/i;
+const DECIDE_RX_FORK = /(?:^|[\s(])или(?=$|[\s,.?!)])/i;
+const DECIDE_RX_YESNO = /(?:^|[\s(])ли(?=$|[\s,.?!)])|да\s*\/\s*нет/i;
+
+function todaySlotRefsFromText(text) {
+  const refs = new Set();
+  for (const line of String(text || '').split('\n')) {
+    const slot = parseSlotRef(line);
+    if (slot?.ref) refs.add(`${slot.ref.project}/${slot.ref.hash}`);
+  }
+  return refs;
+}
+
+function decideKind(row, { today, slotRefs }) {
+  const due = row.due || '';
+  const plain = row.plain || '';
+  const ref = row.ref || '';
+  if ((due && due <= today) || row.overdue || (ref && slotRefs.has(ref)) || DECIDE_RX_TODAY.test(plain)) {
+    return 'hot';
+  }
+  return DECIDE_RX_FORK.test(plain) || DECIDE_RX_YESNO.test(plain) ? 'quick' : 'rest';
+}
+
+function formatDecideRow(row) {
+  if (row.source === 'open') return `${row.ref} · ${row.plain} (${row.title})`;
+  return `${row.ref} · ${row.title}`;
+}
+
+/**
+ * Собирает «Требует решения» как доска: #blocked — отдельные строки, каждый
+ * «открыто:» — своя строка, затем группировка hot → quick → rest.
+ */
+function buildDecideGroups({ blockedTasks, openQuestions, today, dayText }) {
+  const slotRefs = todaySlotRefsFromText(dayText);
+  const rows = [];
+
+  for (const task of blockedTasks || []) {
+    if (!task.tags.some((t) => t.toLowerCase() === 'blocked')) continue;
+    const back = taskBackDate(task.children, { today });
+    if (back && back > today) continue;
+    rows.push({
+      ref: task.ref,
+      title: task.title,
+      plain: task.title,
+      due: task.due || null,
+      overdue: !!(task.due && task.due < today),
+      source: 'blocked',
+      task,
+    });
+  }
+
+  for (const q of openQuestions || []) {
+    if (q.done) continue;
+    if (q.back && q.back > today) continue;
+    rows.push({
+      ref: q.ref,
+      title: q.task,
+      plain: q.question,
+      due: q.due || null,
+      overdue: !!(q.due && q.due < today),
+      source: 'open',
+      question: q.question,
+      task: q.task,
+    });
+  }
+
+  const grouped = { hot: [], quick: [], rest: [], all: rows };
+  for (const row of rows) grouped[decideKind(row, { today, slotRefs })].push(row);
+  return grouped;
+}
+
+/** Текст блока «Требует решения» для tasks_standup — порядок как на доске. */
+function renderDecideStandupBlock(grouped, cap = STANDUP_GROUP_CAP) {
+  const sections = [
+    ['важное', 'hot'],
+    ['быстро решается', 'quick'],
+    ['остальное', 'rest'],
+  ];
+  const parts = [];
+  let hidden = 0;
+  for (const [name, key] of sections) {
+    const all = grouped[key];
+    if (!all.length) continue;
+    const shown = all.slice(0, cap);
+    hidden += all.length - shown.length;
+    const tail = all.length > cap ? ` (и ещё ${all.length - cap})` : '';
+    parts.push(`${name}${tail}:\n${shown.map((r) => `- ${formatDecideRow(r)}`).join('\n')}`);
+  }
+  if (!parts.length) return null;
+  const headMore = hidden ? ` (ещё ${hidden} не показываю)` : '';
+  return `Требует решения${headMore}:\n\n${parts.join('\n\n')}`;
+}
+
+function decideGroupsShown(grouped, cap = STANDUP_GROUP_CAP) {
+  const pick = (key) => grouped[key].slice(0, cap);
+  return {
+    hot: pick('hot'),
+    quick: pick('quick'),
+    rest: pick('rest'),
+    all: [...pick('hot'), ...pick('quick'), ...pick('rest')],
+  };
+}
+
 // ── Планёрка ─────────────────────────────────────────────────────────────
 //
 // Утро начинается не с чтения всего задачника, а с повестки: что висит, что он
@@ -5473,6 +5626,11 @@ module.exports = {
   STANDUP_CATEGORIES,
   STANDUP_DEFAULT_PRIORITY,
   STANDUP_PRIORITY_ORDER,
+  buildDecideGroups,
+  renderDecideStandupBlock,
+  decideGroupsShown,
+  formatDecideRow,
+  decideKind,
   standupLine,
   standupItemRef,
   standupEffectivePriority,
@@ -5536,6 +5694,7 @@ module.exports = {
   checkpointOutputReminders,
   CHECKPOINT_JOURNAL_REMINDER,
   CHECKPOINT_FACT_REMINDER,
+  CHECKPOINT_BOARD_REMINDER,
   transcriptSubstance,
   prependToSection,
   appendBlock,

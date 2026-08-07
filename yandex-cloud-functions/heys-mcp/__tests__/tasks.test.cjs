@@ -3420,10 +3420,12 @@ test('потолок группы держится и скрытое счита�
   }\n`;
   const api = standupApi({ 'projects/heys.md': many });
   const res = await session(api).tasks_standup({});
-  assert.equal(res.structured.totals.decide, 8);
+  // #blocked и каждый «открыто:» — отдельные строки, как на доске: 8 + 8 = 16.
+  assert.equal(res.structured.totals.decide, 16);
   assert.equal(res.structured.decide.length, tasks.STANDUP_GROUP_CAP);
-  assert.equal(res.structured.hidden.decide, 8 - tasks.STANDUP_GROUP_CAP);
-  assert.match(res.text, new RegExp(`и ещё ${8 - tasks.STANDUP_GROUP_CAP}`));
+  assert.equal(res.structured.hidden.decide, 16 - tasks.STANDUP_GROUP_CAP);
+  assert.match(res.text, /остальное/);
+  assert.match(res.text, new RegExp(`и ещё ${16 - tasks.STANDUP_GROUP_CAP}`));
 });
 
 test('потолок держится и на том, что он принёс сам', async () => {
@@ -3689,18 +3691,33 @@ test('снять пункт по неоднозначным словам инс�
   await assert.rejects(() => session(api).tasks_standup({ done: 'ремонт' }), (e) => e.code === 'standup_item_not_found');
 });
 
-test('повестка берёт нерешённое у tasks_list, а не разбирает задачи заново', async () => {
-  const withOpen = `# HEYS\n\n## Задачи\n\n- [ ] P2 Развилка #blocked ^2026-08-01\n  - открыто: какой вариант берём?\n`;
+test('повестка: «Требует решения» группируется как на доске', async () => {
+  const withOpen = `# HEYS\n\n## Задачи\n\n- [ ] P2 Развилка #blocked ^2026-08-01\n  - открыто: А или Б?\n- [ ] P2 Долгое due:2026-08-01 ^2026-08-02\n  - открыто: когда начнём?\n`;
   const api = standupApi({ 'projects/heys.md': withOpen });
-  const tools = session(api);
-  const agenda = await tools.tasks_standup({});
-  const list = await tools.tasks_list({});
-  assert.deepEqual(
-    agenda.structured.decide.map((t) => t.ref),
-    list.structured.blocked.map((t) => t.ref),
-    'два разных ответа на «что требует решения» — то, ради чего планёрку и заводили',
-  );
-  assert.match(agenda.text, /какой вариант берём/);
+  const agenda = await session(api).tasks_standup({});
+  assert.match(agenda.text, /важное:/);
+  assert.match(agenda.text, /быстро решается:/);
+  assert.match(agenda.text, /А или Б/);
+  assert.equal(agenda.structured.decide_groups.totals.quick, 1);
+  assert.equal(agenda.structured.decide_groups.totals.hot, 1);
+  assert.ok(agenda.structured.decide.length >= 2, 'blocked и открытый вопрос — отдельные строки');
+});
+
+test('buildDecideGroups: stKind зеркалит доску', () => {
+  const grouped = tasks.buildDecideGroups({
+    blockedTasks: [{
+      ref: 'heys/aaaaaa', title: 'Срочное', tags: ['blocked'], children: [],
+      due: '2026-08-07', done: false,
+    }],
+    openQuestions: [{
+      ref: 'heys/bbbbbb', task: 'Выбор', question: 'А или Б?', due: null, done: false,
+    }],
+    today: '2026-08-07',
+    dayText: '',
+  });
+  assert.equal(grouped.hot.length, 1);
+  assert.equal(grouped.quick.length, 1);
+  assert.equal(grouped.rest.length, 0);
 });
 
 test('планёрка объявлена и в схемах, и обработчиком', () => {
@@ -5265,6 +5282,36 @@ test('checkpointOutputReminders: learn уже был — без fact_reminder', 
     transcriptBlock: '## 14:25\n\n**Кин:** Марка — Camel.\n**Claude:** Записал через tasks_learn kind «факт».',
   });
   assert.equal(r.fact_reminder, undefined);
+});
+
+test('checkpoint напоминает про доску после сдачи без синхронизации спутников', async () => {
+  const api = liveTasksApi();
+  const res = await session(api).tasks_checkpoint({
+    transcript_block: '## 22:10\n\n**Кин:** сделай всё как надо до конца.\n**Claude:** Закрыл heys/97e63a: smoke ок, тесты 901/901 зелёные. Готово.',
+  });
+  assert.match(res.structured.board_reminder, /доске/);
+  assert.match(res.text, /tasks_standup/);
+});
+
+test('checkpointOutputReminders: спутники уже сняты — без board_reminder', () => {
+  const r = tasks.checkpointOutputReminders({
+    transcriptBlock: '## 22:11\n\n**Кин:** ок.\n**Claude:** Закрыл heys/97e63a, пункт планёрки снял через tasks_standup done, #next убрал.',
+  });
+  assert.equal(r.board_reminder, undefined);
+});
+
+test('checkpointOutputReminders: простой захват без сдачи — без board_reminder', () => {
+  const r = tasks.checkpointOutputReminders({
+    transcriptBlock: '## 22:12\n\n**Кин:** Добавь задачу про soft-nudge доски.\n**Claude:** Положил в projects/heys.md.',
+  });
+  assert.equal(r.board_reminder, undefined);
+});
+
+test('checkpointOutputReminders: сильная сдача без хэша всё равно напоминает про доску', () => {
+  const r = tasks.checkpointOutputReminders({
+    transcriptBlock: '## 22:13\n\n**Кин:** доведи.\n**Claude:** Довёл до конца: smoke пройден, задеплоил на прод.',
+  });
+  assert.ok(r.board_reminder);
 });
 
 // ── Свежесть и вес источника в поиске ────────────────────────────────────

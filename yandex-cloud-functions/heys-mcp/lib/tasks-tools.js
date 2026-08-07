@@ -1719,6 +1719,10 @@ function createTasksTools({
         text += `\n\n${reminders.fact_reminder}`;
         structured.fact_reminder = reminders.fact_reminder;
       }
+      if (reminders.board_reminder) {
+        text += `\n\n${reminders.board_reminder}`;
+        structured.board_reminder = reminders.board_reminder;
+      }
 
       return { text, structured };
     },
@@ -3502,9 +3506,17 @@ function createTasksTools({
 
       // Что висит — считает tasks_list, а не второй разбор задач здесь.
       const list = await tools.tasks_list({});
-      const decide = list.structured.blocked;
+      const projectFiles = files.filter((f) => /^projects\//i.test(f.path));
+      const openQuestions = tasks.collectOpenQuestions(projectFiles, { today: today_ });
+      const todayDay = files.find((f) => f.path === `days/${today_}.md`);
+      const decideGrouped = tasks.buildDecideGroups({
+        blockedTasks: list.structured.blocked,
+        openQuestions,
+        today: today_,
+        dayText: todayDay ? todayDay.text : '',
+      });
 
-      // Картина: только сводка. Полный вывод календаря и бюджета — это два
+      // Картина: только сводка.
       // экрана, и повестка после них перестаёт читаться за минуту.
       const calendar = await tools.tasks_calendar({ days: 7 });
       const budget = await tools.tasks_budget({});
@@ -3555,6 +3567,7 @@ function createTasksTools({
       const review = { ...round.status, candidates };
 
       const cap = tasks.STANDUP_GROUP_CAP;
+      const decideShown = tasks.decideGroupsShown(decideGrouped, cap);
       const brought = items.filter((i) => !i.done);
       // Приоритет пункта, решено 05.08: явный маркер [P1]/[P3] побеждает,
       // иначе — приоритет задачи по ref (найден по тексту пункта), иначе P2.
@@ -3583,7 +3596,7 @@ function createTasksTools({
       const groups = {
         brought_dev: { all: broughtDev, shown: broughtDev.slice(0, cap) },
         brought_general: { all: broughtGeneral, shown: broughtGeneral.slice(0, cap) },
-        decide: { all: decide, shown: decide.slice(0, cap) },
+        decide: { all: decideGrouped.all, shown: decideShown.all, groups: decideShown },
         // Расхождения потолком не режутся: каждое посчитано по файлам и
         // проверяется за секунду. Прятать доказанное «ради длины» значит
         // молчать про то, что и так молча копится.
@@ -3646,8 +3659,7 @@ function createTasksTools({
         // шумом без новой информации. Пункты одной темы — общим блоком.
         renderBrought('Принесли на планёрку — разработка (доска, окно планёрки, коннектор, стенограмма)', 'brought_dev'),
         renderBrought('Принесли на планёрку — общее', 'brought_general'),
-        block('Требует решения', 'decide', (t) => `${t.ref} · ${t.title}${
-          t.children.filter((c) => /^открыто:/i.test(c)).map((c) => ` — ${c.replace(/^открыто:\s*/i, '')}`)[0] || ''}`),
+        tasks.renderDecideStandupBlock(decideGrouped, cap),
         simple.picked.length
           ? `Простые вопросы — задай все ${simple.picked.length}, к каждому дай свою рекомендацию, ответы разнеси через tasks_resolve в том же ходе:\n${
             simple.picked.map((q) => `- ${q.ref} · ${q.question} (${q.due ? `срок ${q.due}` : 'без срока'} · ${q.task})`).join('\n')}`
@@ -3676,7 +3688,7 @@ function createTasksTools({
         ? ` Простых вопросов ${simple.picked.length} из ${simple.pool}${simple.sleeping.length ? `, в спячке ${simple.sleeping.length}` : ''}.`
         : '';
       const head = total
-        ? `Планёрка ${today_}. Принесли ${groups.brought_dev.all.length + groups.brought_general.all.length} (разработка ${groups.brought_dev.all.length}, общее ${groups.brought_general.all.length}), требует решения ${groups.decide.all.length}, расхождений ${groups.divergences.all.length}, замечено ${groups.noticed.all.length}, план и факт ${groups.plan_fact.all.length}, зависло ${groups.stuck.all.length}, память на пересмотр ${groups.stale_memory.all.length}.${simpleTail}`
+        ? `Планёрка ${today_}. Принесли ${groups.brought_dev.all.length + groups.brought_general.all.length} (разработка ${groups.brought_dev.all.length}, общее ${groups.brought_general.all.length}), требует решения ${groups.decide.all.length} (важное ${decideGrouped.hot.length}, быстро ${decideGrouped.quick.length}, остальное ${decideGrouped.rest.length}), расхождений ${groups.divergences.all.length}, замечено ${groups.noticed.all.length}, план и факт ${groups.plan_fact.all.length}, зависло ${groups.stuck.all.length}, память на пересмотр ${groups.stale_memory.all.length}.${simpleTail}`
         // Пустая повестка при несведённых деньгах или неразобранных простых
         // вопросах — не пустое утро: иначе шапка говорит «обсуждать нечего», а
         // строкой ниже стоят пять вопросов.
@@ -3702,6 +3714,17 @@ function createTasksTools({
           brought_dev: groups.brought_dev.shown,
           brought_general: groups.brought_general.shown,
           decide: groups.decide.shown,
+          decide_groups: {
+            hot: decideShown.hot,
+            quick: decideShown.quick,
+            rest: decideShown.rest,
+            totals: {
+              hot: decideGrouped.hot.length,
+              quick: decideGrouped.quick.length,
+              rest: decideGrouped.rest.length,
+              all: decideGrouped.all.length,
+            },
+          },
           divergences: groups.divergences.shown,
           noticed: groups.noticed.shown,
           plan_fact: groups.plan_fact.shown,
