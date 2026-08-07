@@ -486,12 +486,43 @@ const EXACT_BONUS = 6;          // фраза стоит целиком
 const LINK_BONUS = 3;           // связь поставлена руками через «см:»
 
 /**
+ * Корпус выводов: активный journal/ и его ротационные части в archive/.
+ * Ротация не удаляет — только дробит файл, иначе Payload too large.
+ * Без архива в journalHits старые итоги месяца выпадали из tasks_context.
+ */
+function isJournalCorpusPath(path) {
+  const p = String(path || '');
+  return /^journal\/\d{4}-\d{2}\.md$/i.test(p)
+    || /^archive\/journal_\d{4}-\d{2}_part\d+\.md$/i.test(p);
+}
+
+/** Деньги: активный месяц и (если появятся) архивные части той же ротации. */
+function isMoneyCorpusPath(path) {
+  const p = String(path || '');
+  return /^money\/\d{4}-\d{2}\.md$/i.test(p)
+    || /^archive\/money_\d{4}-\d{2}_part\d+\.md$/i.test(p);
+}
+
+/**
+ * Сырьё разговора: активный день и архивные части. В автоконтекст не как
+ * выводы — отдельным слоем «сырьё», когда слова совпали; вес в поиске = 0.
+ */
+function isTranscriptCorpusPath(path) {
+  const p = String(path || '');
+  return /^transcript\/\d{4}-\d{2}-\d{2}\.md$/i.test(p)
+    || /^archive\/transcript_\d{4}-\d{2}-\d{2}_part\d+\.md$/i.test(p);
+}
+
+/**
  * Вес источника. Порядок важен: первое совпадение выигрывает, поэтому
  * стенограмма и архив проверяются раньше общих папок.
  */
 const SOURCE_WEIGHT = [
   [/^docs\/preferences\.md$/i, 5],  // как он решает — записано с его слов
   [/^transcript\//i, 0],            // сырой лог разговора, в разбор не тащится
+  [/^archive\/transcript_/i, 0],   // та же стенограмма после ротации
+  [/^archive\/journal_/i, 1.5],    // выводы журнала после ротации = журнал
+  [/^archive\/money_/i, 2],        // операции после ротации = money
   [/^archive\//i, 1],
   [/^projects\//i, 3],              // сами задачи
   [/^(NOW|GOALS)\.md$/i, 3],
@@ -1908,9 +1939,12 @@ const PATH_RANK = [
   // 2 — рабочая память и справочники, см. isStateFile / isReference ниже
   [/^days\//i, 3],
   [/^journal\//i, 4],
+  [/^archive\/journal_/i, 4],   // ротация журнала — тот же слой выводов
   [/^money\//i, 5],
+  [/^archive\/money_/i, 5],
   [/^archive\//i, 6],
   [/^transcript\//i, 8],
+  [/^archive\/transcript_/i, 8],
 ];
 
 /**
@@ -2009,9 +2043,16 @@ function rankPaths(paths, { today = null } = {}) {
  */
 const DATED_QUOTA = 12;
 
-/** Папка, файлы которой датированы именем: days/, journal/, money/, archive/… */
+/**
+ * Папка для квоты сплошного прохода.
+ * Ротационные части в archive/ считают к той же группе, что активный файл:
+ * иначе archive/ съедает свою дюжину, а journal_* вытесняются чужим хвостом.
+ */
 function datedGroup(path) {
-  const found = /^([^/]+)\/[^/]*\d{4}-\d{2}/.exec(String(path || ''));
+  const p = String(path || '');
+  const rotated = /^archive\/(journal|transcript|money)_/i.exec(p);
+  if (rotated) return rotated[1].toLowerCase();
+  const found = /^([^/]+)\/[^/]*\d{4}-\d{2}/.exec(p);
   return found ? found[1].toLowerCase() : null;
 }
 
@@ -5185,6 +5226,9 @@ module.exports = {
   archiveRotatePath,
   estimateWritePayloadBytes,
   applyDeltaToFile,
+  isJournalCorpusPath,
+  isMoneyCorpusPath,
+  isTranscriptCorpusPath,
   // загруженность вперёд
   BOARD_DAY_START,
   BOARD_DAY_END,

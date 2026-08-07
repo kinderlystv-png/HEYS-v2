@@ -5853,3 +5853,68 @@ test('checkpoint на переполненный journal идёт дельтой
   assert.ok(appendWrites.some((w) => w.append.path === 'journal/2026-08.md'));
   assert.match(api.kv[journalKey].text, /Итог: append RPC/);
 });
+
+test('корпус журнала включает archive/journal_* после ротации', () => {
+  assert.equal(tasks.isJournalCorpusPath('journal/2026-08.md'), true);
+  assert.equal(tasks.isJournalCorpusPath('archive/journal_2026-08_part1.md'), true);
+  assert.equal(tasks.isJournalCorpusPath('archive/transcript_2026-08-06_part1.md'), false);
+  assert.equal(tasks.isTranscriptCorpusPath('transcript/2026-08-06.md'), true);
+  assert.equal(tasks.isTranscriptCorpusPath('archive/transcript_2026-08-06_part2.md'), true);
+  assert.equal(tasks.sourceWeight('archive/journal_2026-08_part1.md', 'обычная строка'), 1.5);
+  assert.equal(tasks.sourceWeight('archive/transcript_2026-08-06_part1.md', 'Решили: что-то'), 0);
+  assert.equal(tasks.datedGroup('archive/journal_2026-08_part1.md'), 'journal');
+  assert.equal(tasks.datedGroup('archive/transcript_2026-08-06_part1.md'), 'transcript');
+});
+
+test('tasks_context поднимает выводы из archive/journal_* и сырьё из archive/transcript_*', async () => {
+  const journalArch = 'archive/journal_2026-08_part1.md';
+  const transcriptArch = 'archive/transcript_2026-08-01_part1.md';
+  const api = fakeApi({
+    files: {
+      [tasks.keyForPath(journalArch)]: {
+        path: journalArch,
+        text: '## 2026-08-01 10:00 · батарея\n\nВводная: какая батарея была.\nИтог: артикул старой батареи VARTA 577 400 078.\n',
+        rev: 1,
+        updatedAt: 1,
+      },
+      [tasks.keyForPath('journal/2026-08.md')]: {
+        path: 'journal/2026-08.md',
+        text: '## 2026-08-07 12:00 · свежее\n\nИтог: сегодня другое.\n',
+        rev: 2,
+        updatedAt: 2,
+      },
+      [tasks.keyForPath(transcriptArch)]: {
+        path: transcriptArch,
+        text: '## 10:05\n\n**Кин:** какая батарея была в машине раньше\n\n**Claude:** VARTA 577 400 078 — это в архивной стенограмме.\n',
+        rev: 1,
+        updatedAt: 1,
+      },
+      [tasks.keyForPath('projects/heys.md')]: {
+        path: 'projects/heys.md',
+        text: '# HEYS\n\n## Задачи\n\n- [ ] P2 Починить запись стенограммы ^2026-08-06\n',
+        rev: 1,
+        updatedAt: 1,
+      },
+    },
+    index: {
+      files: {
+        [journalArch]: { rev: 1, updatedAt: 1 },
+        'journal/2026-08.md': { rev: 2, updatedAt: 2 },
+        [transcriptArch]: { rev: 1, updatedAt: 1 },
+        'projects/heys.md': { rev: 1, updatedAt: 1 },
+      },
+      updatedAt: 2,
+    },
+  });
+  const res = await session(api).tasks_context({ topic: 'артикул батареи VARTA' });
+  assert.ok(
+    (res.structured.journal || []).some((h) => /577 400 078/.test(h.text) && /archive\/journal_/.test(h.path)),
+    'вывод из archive/journal_* обязан попадать в journalHits',
+  );
+  assert.ok(
+    (res.structured.transcript || []).some((h) => /archive\/transcript_/.test(h.path)),
+    'сырьё из archive/transcript_* поднимается отдельно',
+  );
+  assert.match(res.text, /записей в журнале/);
+  assert.match(res.text, /сырья стенограммы/);
+});
