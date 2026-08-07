@@ -42,7 +42,7 @@ const CLIENTLESS_TOOLS = new Set([
 
 const CLIENT_ARG = {
   type: 'string',
-  description: 'Про кого спрашиваем: client_id, имя целиком, или алиас из памяти («мне», «себе», «жене», «цыпе») — сервер развернёт. list_clients только если алиас неизвестен.',
+  description: 'Про кого: client_id, имя целиком, или алиас («мне», «себе», «жене», «цыпе») — сервер развернёт. При «запиши мне» — сразу сюда, без tasks_context и list_clients.',
 };
 
 /**
@@ -53,7 +53,7 @@ const CLIENT_ARG = {
  */
 const CLIENT_ARG_STRICT = {
   type: 'string',
-  description: 'Кому вносим: client_id, имя целиком, или алиас из памяти («мне»/«себе»/«жене»/«цыпе») — сервер развернёт в client_id. Не зови list_clients ради «мне».',
+  description: 'Кому вносим: client_id, имя целиком, или алиас («мне»/«себе»/«жене»/«цыпе»). Сервер развернёт. Первый вызов записи — с client=алиас; tasks_context и list_clients для «мне» запрещены.',
 };
 
 /**
@@ -358,7 +358,7 @@ const TASKS_INSTRUCTIONS = [
 const REPO_INSTRUCTIONS = [
   '',
   'Исходники приложения (heys_code_search / heys_code_read / heys_code_tree):',
-  'К1. Зови их только на вопросы о внутреннем устройстве HEYS: как считается норма или белок, откуда берётся число на экране, где задано правило, что делает функция, почему поведение такое. На вопросы про клиентов, дневники, продукты, переписку и задачник код не нужен — там есть свои инструменты, и лезть в репозиторий незачем.',
+  'К1. Зови их только на вопросы о внутреннем устройстве HEYS: как считается норма или белок, откуда берётся число на экране, где задано правило, что делает функция, почему поведение такое. На вопросы про клиентов, дневники, продукты, переписку и задачник код не нужен — там есть свои инструменты, и лезть в репозиторий незачем. ЗАПРЕТ: grep/read тестов или репо ради параметров MCP (from_product_id, client) — они в описании heys_*.',
   'К2. Про устройство приложения отвечай по коду, а не по памяти и не по документации: документация тут же, в срезе, и она бывает старше кода. Не нашёл в коде — так и скажи, а не достраивай правдоподобное.',
   'К3. Каждая находка помечена видом файла. Отвечай по тому, что помечено «код», и только из боевых путей (apps/, packages/, yandex-cloud-functions/). «Тест», «пример» и «документация» годятся как подсказка, где искать, но не как ответ: в примере из .github/skills белок делится на 4, а в боевом heys_day_calculations.js — на 3, и ответ по примеру был бы уверенным и неверным.',
   'К4. Нашёл строку — прочитай вокруг неё через heys_code_read, прежде чем объяснять. Одна строка почти никогда не показывает, при каком условии она выполняется и что подставляется в переменные.',
@@ -374,6 +374,10 @@ function curatorInstructions(curatorName, withTasks = false, nowMs = Date.now(),
       : (withTasks
         ? 'Адресация: «мне»/«себе»/«жене»/«цыпе» и другие короткие алиасы из памяти передавай прямо в параметр client пишущего инструмента — сервер развернёт в client_id. Не зови heys_list_clients, tasks_context и не грепай journal ради «кто такой мне».'
         : 'Адресация: «мне»/«себе»/«жене»/«цыпе» и другие короткие алиасы из памяти передавай прямо в параметр client пишущего инструмента — сервер развернёт в client_id. Не зови heys_list_clients и не грепай journal ради «кто такой мне».'),
+    'ЗАПРЕТ ДНЕВНИКОВОЙ АРХЕОЛОГИИ: если куратор просит записать в дневник и в фразе есть «мне»/«себе»/«жене»/«цыпе» или алиас из строки «Адресация из памяти» — первый вызов = heys_* с client=это слово. ЗАПРЕЩЕНО перед записью: '
+      + (withTasks
+        ? 'tasks_context, list_clients, heys_code_search/grep репо, чтение тестов ради параметров MCP. tasks_context — для задачника и планирования, не для «кто такой мне»; сервер отклонит такой вызов.'
+        : 'list_clients, heys_code_search/grep репо, чтение тестов ради параметров MCP.'),
     'Прежде чем спросить «кому вносить» — если это не известный алиас и не имя из диалога: один heys_list_clients, без grep по файлам.'
       + (withTasks ? ' Свою память (tasks_context) зови только когда адресация реально неизвестна, а не на каждое «мне».' : ''),
     'КРИТИЧЕСКОЕ ПРАВИЛО РЕЖИМА: каждая запись адресная. Прежде чем внести что-либо, ты обязан знать, КОМУ. Неизвестный клиент — heys_list_clients и уточни у куратора. Никогда не выбирай клиента по догадке: запись в чужой дневник — худшая ошибка этого инструмента.',
@@ -1241,13 +1245,23 @@ function createCuratorContext({
 
   const { annotateToolSchemas } = require('./tool-annotations');
   const initialAliases = addressAliases instanceof Map ? addressAliases : new Map();
+  const rawSchemas = annotateToolSchemas([
+    ...(tasksContext ? tasksContext.schemas : []),
+    ...(repoContext ? repoContext.schemas : []),
+    ...buildCuratorSchemas({ requireTranscript: !!tasksContext }),
+  ]);
+  const schemas = rawSchemas.map((schema) => {
+    if (schema.name === 'tasks_context') {
+      return {
+        ...schema,
+        description: `${schema.description} ЗАПРЕЩЕНО для записи в дневник с «мне»/«жене»/«цыпе»/«себе»: вызов отклонится — используй client=алиас в heys_*.`,
+      };
+    }
+    return schema;
+  });
   return {
     tools,
-    schemas: annotateToolSchemas([
-      ...(tasksContext ? tasksContext.schemas : []),
-      ...(repoContext ? repoContext.schemas : []),
-      ...buildCuratorSchemas({ requireTranscript: !!tasksContext }),
-    ]),
+    schemas,
     instructions: curatorInstructions(
       curatorName,
       !!tasksContext,

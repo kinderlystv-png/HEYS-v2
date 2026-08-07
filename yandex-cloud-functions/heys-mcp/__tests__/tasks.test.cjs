@@ -4853,6 +4853,25 @@ test('адресация «мне» не тонет в TOPIC_STOP_WORDS', () => 
   assert.equal(known.matched_by, 'алиас');
 });
 
+test('diaryTopicUsesAddressAlias ловит «запиши мне» и не ловит чистый задачник', () => {
+  assert.equal(
+    tasks.diaryTopicUsesAddressAlias('Заведи продукт «черри» от помидора черри и запиши мне 300 г на сегодня'),
+    true,
+  );
+  assert.equal(tasks.diaryTopicUsesAddressAlias('запиши жене завтрак'), true);
+  assert.equal(tasks.diaryTopicUsesAddressAlias('что там по лендингу'), false);
+  assert.equal(tasks.diaryTopicUsesAddressAlias('мне'), false);
+});
+
+test('tasks_context отклоняет дневниковую фразу с «мне»', async () => {
+  const api = liveTasksApi();
+  const res = await session(api).tasks_context({
+    topic: 'Заведи продукт черри и запиши мне 300 г',
+  });
+  assert.match(res.text, /tasks_context здесь не нужен/);
+  assert.equal(res.structured.skip_reason, 'diary_addressing_use_client_param');
+});
+
 test('синонимы пишутся дочерней строкой и переживают чтение', () => {
   const block = tasks.preferenceBlock({
     date: '2026-08-04', kind: 'факт', note: 'Машина Skoda Octavia',

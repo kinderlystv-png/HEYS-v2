@@ -33,12 +33,12 @@
   вызовов. Vision этикетки — у модели; MCP обязан показывать image + path.
 - **Инцидент:** 2026-08-07 «заведи черри…»; аудит
   `docs/audits/2026-08-07_mcp_diary_friction.md`, heys/b235ea.
-- **Сделано:** P0–P3 задеплоены (64aa29b84). Слой «мне» 07.08 вечер: стоп-слово
-  `мне` не поднимало preference в text → list_clients+grep; фикс
+- **Сделано:** P0–P3 задеплоены (64aa29b84). Слой «мне» 07.08 вечер:
   `clientAddressMap` + resolveTarget(алиас) + instructions/list_clients +
-  raw-topic hit. 893 tests. Live адресации ещё нет.
-- **Осталось:** commit + deploy слоя «мне». Стоп: server OCR; убирать `мне` из
-  TOPIC_STOP_WORDS (сломает разбор фраз).
+  raw-topic hit. Deploy a0b364123 — CI green. Слой 2 (код): guard
+  `diaryTopicUsesAddressAlias` + усилённые instructions; 896 tests.
+- **Осталось:** deploy слоя 2 + smoke без `tasks_context`. Стоп: server OCR;
+  убирать `мне` из TOPIC_STOP_WORDS (сломает разбор фраз).
 
 ### Welcome-модалка триала повторяется на каждом новом устройстве — закрыто 2026-07-31
 

@@ -1084,6 +1084,17 @@ function createTasksTools({
     async tasks_context(args = {}) {
       const topic = String(args.topic || args.phrase || '').trim();
       if (!topic) throw new ToolError('invalid_topic', 'Нужна фраза или тема.');
+      if (tasks.diaryTopicUsesAddressAlias(topic)) {
+        return {
+          text: [
+            'tasks_context здесь не нужен: фраза про дневник с алиасом «мне»/«жене»/«цыпе»/«себе».',
+            'Передавай алиас прямо в client пишущего инструмента (heys_log_meal, heys_create_product, heys_search_products) — сервер развернёт в client_id.',
+            'heys_list_clients — только если алиас неизвестен.',
+            'Параметры MCP (from_product_id и др.) — в описании инструмента, не grep репо.',
+          ].join(' '),
+          structured: { skip_reason: 'diary_addressing_use_client_param', topic },
+        };
+      }
       const files = await readAll({});
 
       // Адрес задачи с доски — самый точный вход: и когда он передан целиком,

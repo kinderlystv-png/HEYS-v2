@@ -1,7 +1,7 @@
 # Аудит MCP-дневника: быстрый ввод (вкл. фото + адресация)
 
 Дата: 2026-08-07 · heys/b235ea + слой «мне»  
-Статус: **код слоя адресации готов** — ждёт commit + deploy `heys-mcp`.
+Статус: **deploy a0b364123** — smoke «запиши мне …» без list_clients.
 
 ## Вердикт
 
@@ -42,7 +42,13 @@
 | Убрать «мне» из TOPIC_STOP_WORDS  | Сломает разбор фраз задачника        |
 | Авто-log без confirm              | `маркетинг/38` запрещает             |
 
-Дальше ценность = **deploy + smoke «запиши мне …» без list_clients**.
+## Smoke 07.08 вечер (Composer 2.5)
+
+Запрос «черри… запиши мне 300 г»: запис прошла, но первым был `tasks_context`.
+Слой 2: `diaryTopicUsesAddressAlias` (unicode boundaries, не `\b`) отклоняет
+context; instructions + CLIENT_ARG + запрет grep репо; 896 tests green.
+
+Дальше ценность = **deploy слоя 2 + smoke «запиши мне …» без tasks_context**.
 
 ## Тесты
 

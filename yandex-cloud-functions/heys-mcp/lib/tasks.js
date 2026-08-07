@@ -3257,6 +3257,19 @@ function preferenceHitsRawTopic(entry, topic) {
   return false;
 }
 
+/**
+ * Фраза про дневник с алиасом («запиши мне …») — адресация через client=алиас,
+ * не tasks_context. Инцидент 07.08: модель звала context, хотя сервер уже
+ * разворачивает «мне» в client_id.
+ */
+function diaryTopicUsesAddressAlias(topic) {
+  const raw = String(topic || '').trim().toLowerCase();
+  if (!raw) return false;
+  const aliasRe = /(?:^|[^\p{L}\p{N}])(мне|себе|жене|цыпе)(?:[^\p{L}\p{N}]|$)/u;
+  if (!aliasRe.test(raw)) return false;
+  return /(?:запиш|внес|завед|создай|добав|продукт|приём|перекус|обед|завтрак|ужин|дневник|еду|съел|\d+\s*г|мл|ml)/u.test(raw);
+}
+
 function preferenceLine({ date, kind, note, evidence }) {
   return `- ${date} · ${kind} · ${note}${evidence ? ` — ${evidence}` : ''}`;
 }
@@ -5575,6 +5588,7 @@ module.exports = {
   knownPreference,
   clientAddressMap,
   preferenceHitsRawTopic,
+  diaryTopicUsesAddressAlias,
   activePreferences,
   preferenceLine,
   preferenceBlock,

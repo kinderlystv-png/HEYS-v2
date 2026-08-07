@@ -1293,6 +1293,22 @@ test('перед вопросом «кому вносить» модель не 
   assert.match(noTasks, /передавай прямо в параметр client/);
 });
 
+test('запрет дневниковой археологии и отклонение tasks_context в схеме', () => {
+  const text = curatorInstructions('Антон', true, Date.UTC(2026, 7, 3), false, '«мне» → Полтавский');
+  assert.match(text, /ЗАПРЕТ ДНЕВНИКОВОЙ АРХЕОЛОГИИ/);
+  assert.match(text, /сервер отклонит такой вызов/);
+  const { schemas } = createCuratorContext({
+    api: fakeCuratorApi(),
+    curatorJwt: JWT,
+    curatorName: 'Кин',
+    nowMs: NOW,
+    tasksClientId: 'tasks-client-id',
+  });
+  const ctx = schemas.find((s) => s.name === 'tasks_context');
+  assert.ok(ctx, 'tasks_context schema missing');
+  assert.match(ctx.description, /ЗАПРЕЩЕНО для записи в дневник/);
+});
+
 test('вид «факт» и путь его обновления названы в правилах, а не только в схеме', () => {
   // Аргумент, о котором не сказано в правилах, модель не ищет — тот же довод,
   // что и у остальных сторожей этого файла. До сих пор эти три строки держал
