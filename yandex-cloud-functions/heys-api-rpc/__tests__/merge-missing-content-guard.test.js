@@ -9,7 +9,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { _internal } = require('../index.js');
-const { hasCurrentOnlyDayContent } = _internal;
+const { hasCurrentOnlyDayContent, hasIncomingTombstonedDayContent } = _internal;
 
 const curatorDay = {
   date: '2026-08-06',
@@ -88,4 +88,78 @@ test('empty/missing inputs are handled defensively', () => {
   assert.equal(hasCurrentOnlyDayContent(curatorDay, null), false);
   assert.equal(hasCurrentOnlyDayContent({}, curatorDay), true);
   assert.equal(hasCurrentOnlyDayContent({}, {}), false);
+});
+
+test('stale client resurrects curator-deleted meal via tombstone → flagged', () => {
+  const deletedCloudDay = {
+    date: '2026-08-07',
+    updatedAt: 1500,
+    meals: [],
+    deletedMealIds: { m_breakfast: 1500 },
+  };
+  const staleClientDay = {
+    date: '2026-08-07',
+    updatedAt: 2000,
+    meals: [{
+      id: 'm_breakfast',
+      time: '12:07',
+      updatedAt: 1000,
+      items: [{ id: 'it_1', name: 'Куриное филе в сливках', updatedAt: 1000 }],
+    }],
+  };
+  assert.equal(hasIncomingTombstonedDayContent(staleClientDay, deletedCloudDay), true);
+});
+
+test('incoming meal newer than cloud tombstone → not flagged (post-tombstone edit)', () => {
+  const deletedCloudDay = {
+    date: '2026-08-07',
+    updatedAt: 1500,
+    meals: [],
+    deletedMealIds: { m_breakfast: 1000 },
+  };
+  const editedClientDay = {
+    date: '2026-08-07',
+    updatedAt: 2000,
+    meals: [{
+      id: 'm_breakfast',
+      time: '12:07',
+      updatedAt: 1500,
+      items: [{ id: 'it_1', name: 'Куриное филе в сливках', updatedAt: 1500 }],
+    }],
+  };
+  assert.equal(hasIncomingTombstonedDayContent(editedClientDay, deletedCloudDay), false);
+});
+
+test('stale client resurrects curator-deleted item via tombstone → flagged', () => {
+  const deletedCloudDay = {
+    date: '2026-08-07',
+    updatedAt: 1500,
+    meals: [{
+      id: 'm_breakfast',
+      time: '12:07',
+      updatedAt: 1500,
+      items: [{ id: 'it_1', name: 'Куриное филе в сливках', updatedAt: 1500 }],
+    }],
+    deletedItemIds: { it_2: 1500 },
+  };
+  const staleClientDay = {
+    date: '2026-08-07',
+    updatedAt: 2000,
+    meals: [{
+      id: 'm_breakfast',
+      time: '12:07',
+      updatedAt: 2000,
+      items: [
+        { id: 'it_1', name: 'Куриное филе в сливках', updatedAt: 2000 },
+        { id: 'it_2', name: 'Белок яйца', updatedAt: 1000 },
+      ],
+    }],
+  };
+  assert.equal(hasIncomingTombstonedDayContent(staleClientDay, deletedCloudDay), true);
+});
+
+test('incoming tombstone guard handles empty/missing inputs defensively', () => {
+  assert.equal(hasIncomingTombstonedDayContent(null, curatorDay), false);
+  assert.equal(hasIncomingTombstonedDayContent(curatorDay, null), false);
+  assert.equal(hasIncomingTombstonedDayContent({ meals: [] }, curatorDay), false);
 });

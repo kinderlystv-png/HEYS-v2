@@ -723,6 +723,36 @@ function hasCurrentOnlyDayContent(incomingValue, currentValue) {
   return found;
 }
 
+// Symmetric guard to hasCurrentOnlyDayContent (incident 2026-08-07): a stale
+// client snapshot can still carry meals/items that the cloud side already
+// deleted via deletedMealIds/deletedItemIds tombstones. noConflict fast-path
+// would let incoming win outright and resurrect them because
+// hasCurrentOnlyDayContent only inspects current∖incoming, not incoming meals
+// against current tombstones. Returns true when incoming carries content the
+// cloud explicitly tombstoned, which should force mergeDayData instead.
+function hasIncomingTombstonedDayContent(incomingValue, currentValue) {
+  if (!incomingValue || !currentValue || typeof incomingValue !== 'object' || typeof currentValue !== 'object') return false;
+  const incomingMeals = Array.isArray(incomingValue.meals) ? incomingValue.meals : [];
+  const currentDeletedMealIds = (currentValue.deletedMealIds && typeof currentValue.deletedMealIds === 'object' && !Array.isArray(currentValue.deletedMealIds)) ? currentValue.deletedMealIds : {};
+  const currentDeletedItemIds = (currentValue.deletedItemIds && typeof currentValue.deletedItemIds === 'object' && !Array.isArray(currentValue.deletedItemIds)) ? currentValue.deletedItemIds : {};
+  for (const meal of incomingMeals) {
+    if (!meal || !meal.id) continue;
+    const mealId = String(meal.id);
+    const mealTs = Number(meal.updatedAt) || Number(incomingValue.updatedAt) || 0;
+    const mealTombstoneTs = Number(currentDeletedMealIds[mealId]) || 0;
+    if (mealTombstoneTs > 0 && mealTombstoneTs >= mealTs) return true;
+    const incomingItems = Array.isArray(meal.items) ? meal.items : [];
+    for (const item of incomingItems) {
+      if (!item || !item.id) continue;
+      const itemId = String(item.id);
+      const itemTs = Number(item.updatedAt) || mealTs;
+      const itemTombstoneTs = Number(currentDeletedItemIds[itemId]) || 0;
+      if (itemTombstoneTs > 0 && itemTombstoneTs >= itemTs) return true;
+    }
+  }
+  return false;
+}
+
 function mergeBatchDayv2ExistingRows(items, currentByKey) {
   if (!Array.isArray(items) || !currentByKey || typeof currentByKey.get !== 'function') return 0;
   let mergedCount = 0;
@@ -2969,6 +2999,7 @@ async function handleRpcRequest(event, context) {
           // above for rationale. Forces the real merge instead of letting a stale
           // "noConflict" push silently drop meals/items only the cloud side has.
           const hasCurrentOnlyContent = isDayv2Key && hasCurrentOnlyDayContent(incomingValue, currentValue);
+          const hasIncomingTombstonedContent = isDayv2Key && hasIncomingTombstonedDayContent(incomingValue, currentValue);
 
           // 🛡️ Generic cross-client guard (incident 2026-06-02 #6): incoming
           // _writerCid должен совпадать с row.client_id для ВСЕХ guarded keys
@@ -3049,7 +3080,7 @@ async function handleRpcRequest(event, context) {
           } else if (PLANNING_RECORD_MERGE_KEYS.has(k)) {
             mergedValue = mergePlanningRecords(incomingValue, currentValue);
             mergeOutcome = 'planning_records_merged';
-          } else if (isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop || hasCurrentOnlyContent)) {
+          } else if (isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop || hasCurrentOnlyContent || hasIncomingTombstonedContent)) {
             // forceKeepAll: client may not have seen the latest cloud-side meals yet,
             // so treating absence as "deleted" would lose other side's edits. Conservative: keep both.
             const merged = mergeDayData(incomingValue, currentValue, { forceKeepAll: true });
@@ -3059,7 +3090,9 @@ async function handleRpcRequest(event, context) {
                 ? 'day_item_guard_merged'
                 : (hasSubjectiveDrop
                   ? 'day_subjective_guard_merged'
-                  : (hasCurrentOnlyContent ? 'day_missing_content_guard_merged' : 'day_merged'));
+                  : (hasCurrentOnlyContent
+                    ? 'day_missing_content_guard_merged'
+                    : (hasIncomingTombstonedContent ? 'day_tombstone_guard_merged' : 'day_merged')));
             } else {
               mergedValue = incomingValue; // identical content
             }
@@ -5362,5 +5395,6 @@ module.exports.handler = async function (event, context) {
 // Exposed for unit tests (__tests__/merge-missing-content-guard.test.js).
 module.exports._internal = Object.assign(module.exports._internal || {}, {
   hasCurrentOnlyDayContent,
+  hasIncomingTombstonedDayContent,
 });
 // deployed at 2026-02-05 01:25:37
