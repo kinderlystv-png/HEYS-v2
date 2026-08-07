@@ -260,7 +260,7 @@
             // 🆕 Shortcut для переключения вкладок: ?tab=widgets / ?view=widgets и т.д.
             needsUrlCleanup = true;
             const requestedTab = tabParam || viewParam;
-            const validTabs = ['stats', 'diary', 'widgets', 'insights', 'month', 'ration', 'user', 'day'];
+            const validTabs = ['stats', 'diary', 'widgets', 'insights', 'month', 'ration', 'user', 'day', 'board', 'tasks'];
             const mappedTab = requestedTab === 'day' ? 'stats' : requestedTab;
             if (validTabs.includes(mappedTab)) {
                 if (skipTabSwitchRef) skipTabSwitchRef.current = true;

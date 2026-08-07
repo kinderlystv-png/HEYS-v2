@@ -1043,6 +1043,20 @@ paths:
         service_account_id: aje85rjgpj4nk9m384ek
         function_id: d4egv2a6pdhmf5hbrgp8
 
+  /mcp/board:
+    get:
+      summary: Board PWA — tasks snapshot (PIN session, curator client only)
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+    options:
+      summary: Board PWA — CORS preflight
+      x-yc-apigateway-integration:
+        type: cloud_functions
+        service_account_id: aje85rjgpj4nk9m384ek
+        function_id: d4egv2a6pdhmf5hbrgp8
+
   /mcp/attach/login:
     post:
       summary: Attach page — curator email+password(+2FA) login

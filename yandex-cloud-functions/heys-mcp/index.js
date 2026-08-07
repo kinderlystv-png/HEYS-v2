@@ -30,6 +30,7 @@ const { initSecrets } = require('./shared/secrets');
 const mcp = require('./lib/mcp');
 const oauth = require('./lib/oauth');
 const attach = require('./lib/attach');
+const board = require('./lib/board');
 const { createApiClient } = require('./lib/heys-api');
 const { createTools, ToolError } = require('./lib/tools');
 const { createCuratorContext } = require('./lib/curator');
@@ -38,6 +39,15 @@ const tasks = require('./lib/tasks');
 const ATTACH_PAGE_PATH = '/mcp/attach';
 const ATTACH_MANIFEST_PATH = '/mcp/attach/manifest.webmanifest';
 const ATTACH_ICON_PATH = '/mcp/attach/icon.png';
+const BOARD_PATH = '/mcp/board';
+
+const BOARD_CORS_ORIGINS = new Set([
+  'https://app.heyslab.ru',
+  'https://heyslab.ru',
+  'https://www.heyslab.ru',
+  'http://localhost:3001',
+  'http://127.0.0.1:3001',
+]);
 
 const DEFAULT_API_URL = 'https://api.heyslab.ru';
 
@@ -88,6 +98,33 @@ function json(statusCode, body, extraHeaders = {}) {
     statusCode,
     headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS, ...CORS_HEADERS, ...extraHeaders },
     body: JSON.stringify(body),
+  };
+}
+
+function boardCorsHeaders(origin) {
+  const headers = {
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Credentials': 'true',
+    'Access-Control-Max-Age': '86400',
+  };
+  if (origin && BOARD_CORS_ORIGINS.has(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+  }
+  return headers;
+}
+
+function boardJson(statusCode, body, origin, extraHeaders = {}) {
+  return {
+    statusCode,
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
+      ...SECURITY_HEADERS,
+      ...boardCorsHeaders(origin),
+      ...extraHeaders,
+    },
+    body: body == null ? '' : JSON.stringify(body),
   };
 }
 
@@ -557,6 +594,28 @@ exports.handler = async (event) => {
     }
     if (path === ATTACH_PAGE_PATH || path.startsWith(`${ATTACH_PAGE_PATH}/`)) {
       return await handleAttachRequest(event, { method, path, headers, secret, apiUrl });
+    }
+
+    if (path === BOARD_PATH) {
+      const origin = headers.origin || headers.Origin || '';
+      const rawJwtSecret = process.env.JWT_SECRET || null;
+      const tasksClientId = process.env.HEYS_TASKS_CLIENT_ID || board.DEFAULT_TASKS_CLIENT_ID;
+      const tasksCuratorId = process.env.HEYS_TASKS_CURATOR_ID || board.DEFAULT_TASKS_CURATOR_ID;
+      const api = createApiClient({ apiUrl });
+      const query = (event && (event.queryStringParameters || event.query)) || {};
+      const result = await board.handleBoardRequest({
+        method,
+        query,
+        cookieHeader: headers.cookie || '',
+        api,
+        rawJwtSecret,
+        tasksClientId,
+        tasksCuratorId,
+      });
+      if (result.status === 204) {
+        return { statusCode: 204, headers: { ...SECURITY_HEADERS, ...boardCorsHeaders(origin) }, body: '' };
+      }
+      return boardJson(result.status, result.body, origin);
     }
 
     return json(404, { error: 'not_found', path });

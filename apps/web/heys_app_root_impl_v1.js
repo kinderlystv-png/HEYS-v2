@@ -686,12 +686,18 @@
             })();
 
             React.useEffect(() => {
-                if (tab !== 'tasks') return;
-                if (!cloudUser && clientId) return;
+                if (tab !== 'tasks' && tab !== 'board') return;
+                if (!cloudUser && clientId) {
+                    if (tab === 'board' && String(clientId).toLowerCase() !== 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a') {
+                        setTabImmediate(defaultTab && defaultTab !== 'board' ? defaultTab : 'diary');
+                    }
+                    return;
+                }
                 if (!cloudUser && !clientId && isInitializing) return;
 
-                const fallbackTab = defaultTab && defaultTab !== 'tasks' ? defaultTab : 'diary';
-                console.info('[HEYS.tabs] 🔒 Tasks tab is unavailable in current context, redirecting', {
+                const fallbackTab = defaultTab && defaultTab !== tab ? defaultTab : 'diary';
+                console.info('[HEYS.tabs] 🔒 Tab is unavailable in current context, redirecting', {
+                    tab,
                     fallbackTab,
                     hasClientId: !!clientId,
                     hasCloudUser: !!cloudUser,

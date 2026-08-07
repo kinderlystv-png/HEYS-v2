@@ -253,3 +253,21 @@
       type: cloud_functions
       service_account_id: aje85rjgpj4nk9m384ek
       function_id: __HEYS_MCP_FUNCTION_ID__
+
+# ═══════════════════════════════════════════════════════════════
+# /mcp/board — read-only snapshot для PWA доски (lib/board.js)
+# ═══════════════════════════════════════════════════════════════
+
+/mcp/board:
+  get:
+    summary: Board PWA — tasks snapshot (PIN session, curator client only)
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+  options:
+    summary: Board PWA — CORS preflight
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__

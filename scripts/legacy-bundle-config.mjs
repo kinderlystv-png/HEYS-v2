@@ -357,6 +357,7 @@ export const LEGACY_BUNDLES = {
         ...READING_BOOK_SOURCES,
         'heys_planning_reading_v1.js',
         'heys_planning_v1.js',
+        'heys_board_tab_v1.js',
     ],
 };
 

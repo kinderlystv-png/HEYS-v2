@@ -4306,6 +4306,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             }
         };
 
+        const TASKS_BOARD_CLIENT_ID = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+
         const primaryTabs = React.useMemo(() => {
             const items = [
                 { key: 'stats', label: 'Отчёты', buttonLabel: 'Отчёты', icon: '📊', id: 'tour-stats-tab' },
@@ -4322,6 +4324,16 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     icon: '✓',
                     iconClassName: 'tab-icon tab-icon--tasks',
                     id: 'tour-tasks-tab',
+                });
+            }
+
+            if (!cloudUser && clientId && String(clientId).toLowerCase() === TASKS_BOARD_CLIENT_ID) {
+                items.push({
+                    key: 'board',
+                    label: 'Доска',
+                    buttonLabel: 'Доска',
+                    icon: '📋',
+                    id: 'tour-board-tab',
                 });
             }
 
@@ -5052,6 +5064,14 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                                             }
                                                         ))
                                                     : null)
+                                                : tab === 'board'
+                                                    ? ((!cloudUser && clientId && String(clientId).toLowerCase() === 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a')
+                                                        ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('board') },
+                                                            React.createElement(
+                                                                _lazyTab('board', '__loadPostboot3Ui', function() { return window.HEYS?.BoardTab; }),
+                                                                { key: 'board_' + String(clientId || '') }
+                                                            ))
+                                                        : null)
                                                 : renderTabFallback('default_' + String(tab || 'unknown'), tabFallbackSkeleton(tab || 'fallback'))
             )
         );

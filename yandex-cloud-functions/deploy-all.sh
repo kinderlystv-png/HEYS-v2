@@ -531,6 +531,7 @@ build_env_flags() {
     # инструменты задачника просто не появятся в списке (см. lib/curator.js).
     if [[ "$func_name" == "heys-mcp" ]]; then
         env_flags+=" --environment HEYS_TASKS_CLIENT_ID=${HEYS_TASKS_CLIENT_ID:-ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a}"
+        env_flags+=" --environment HEYS_TASKS_CURATOR_ID=${HEYS_TASKS_CURATOR_ID:-6d4dbb32-fd9d-45b3-8e01-512595e2cb2c}"
         # Срез исходников для вопросов «как это работает в приложении» лежит в
         # приватном бакете heys-backups; ключи только из Lockbox. Без них
         # инструменты по коду вообще не появляются в списке (lib/curator.js).

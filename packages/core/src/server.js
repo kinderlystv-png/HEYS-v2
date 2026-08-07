@@ -503,7 +503,9 @@ app.all('/auth/*', proxyToProd);
 app.all('/messages/*', proxyToProd);
 app.all('/photos/*', proxyToProd);
 app.all('/media/*', proxyToProd);
-console.log(`🔀 Dev proxy: /rpc, /rest, /auth, /messages, /photos, /media → ${PROD_API}`);
+app.all('/mcp/board', proxyToProd);
+app.all('/mcp/board/*', proxyToProd);
+console.log(`🔀 Dev proxy: /rpc, /rest, /auth, /messages, /photos, /media, /mcp/board → ${PROD_API}`);
 
 // SMS Proxy endpoint (обход CORS для SMS.ru)
 app.post('/api/sms', async (req, res) => {
