@@ -1400,6 +1400,10 @@
         const [reslotErrors, setReslotErrors] = React.useState({});
         const [closeDaySubmitting, setCloseDaySubmitting] = React.useState(false);
         const [closeDayError, setCloseDayError] = React.useState('');
+        const [togglingSlotKey, setTogglingSlotKey] = React.useState(null);
+        const [slotDoneErrors, setSlotDoneErrors] = React.useState({});
+        const [togglingHabitKey, setTogglingHabitKey] = React.useState(null);
+        const [habitErrors, setHabitErrors] = React.useState({});
         const [boardTheme, setBoardTheme] = React.useState(() => readBoardTheme());
 
         const toggleBoardTheme = React.useCallback(() => {
