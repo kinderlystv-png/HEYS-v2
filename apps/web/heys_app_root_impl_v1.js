@@ -688,7 +688,9 @@
             React.useEffect(() => {
                 if (tab !== 'tasks' && tab !== 'board') return;
                 if (!cloudUser && clientId) {
-                    if (tab === 'board' && String(clientId).toLowerCase() !== 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a') {
+                    const isBoardClient = HEYS.Board?.isBoardClient?.(clientId)
+                    || String(clientId).toLowerCase() === 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+                    if (tab === 'board' && !isBoardClient) {
                         setTabImmediate(defaultTab && defaultTab !== 'board' ? defaultTab : 'diary');
                     }
                     return;

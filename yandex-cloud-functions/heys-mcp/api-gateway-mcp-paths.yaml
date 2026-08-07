@@ -271,3 +271,101 @@
       type: cloud_functions
       service_account_id: aje85rjgpj4nk9m384ek
       function_id: __HEYS_MCP_FUNCTION_ID__
+
+/mcp/board/talk:
+  post:
+    summary: Board PWA — entity talk / comment (PIN session)
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+  options:
+    summary: Board PWA talk — CORS preflight
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/mcp/board/resolve:
+  post:
+    summary: Board PWA — answer simple standup question (PIN session)
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+  options:
+    summary: Board PWA resolve — CORS preflight
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/mcp/board/close-day:
+  post:
+    summary: Board PWA — close yesterday via tasks_close_day (PIN session)
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+  options:
+    summary: Board PWA close-day — CORS preflight
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/mcp/board/sleep:
+  post:
+    summary: Board PWA — snooze simple question via tasks_standup sleep (PIN session)
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+  options:
+    summary: Board PWA sleep — CORS preflight
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/mcp/board/reslot:
+  post:
+    summary: Board PWA — move slot within same day via tasks_reslot (PIN session)
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+  options:
+    summary: Board PWA reslot — CORS preflight
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/mcp/board/slot-done:
+  post:
+    summary: Board PWA — toggle slot done checkbox (PIN session)
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+  options:
+    summary: Board PWA slot-done — CORS preflight
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/mcp/board/habit:
+  post:
+    summary: Board PWA — toggle habit date mark (PIN session)
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+  options:
+    summary: Board PWA habit — CORS preflight
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__

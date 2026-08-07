@@ -104,6 +104,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             pullThreshold,
             isMobile,
             mobileSubTab,
+            isTabActive = true,
             orphanAlert,
             lowCalBanner,
             statsBlock,
@@ -433,7 +434,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                 reportsFullscreenModal,
 
-                isMobile && (mobileSubTab === 'stats' || mobileSubTab === 'diary' || mobileSubTab === 'activity') && !offlineColdStart && React.createElement(QuickActionsFabGroup, {
+                isMobile && isTabActive && (mobileSubTab === 'stats' || mobileSubTab === 'diary' || mobileSubTab === 'activity') && !offlineColdStart && React.createElement(QuickActionsFabGroup, {
                     id: 'tour-fab-buttons',
                     onAddWater: (e) => addWater(200, {
                         source: 'day-fab',

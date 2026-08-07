@@ -6529,11 +6529,16 @@
   // === Main WidgetsTab Component ===
   function WidgetsTab({ selectedDate, clientId, cloudUser, setTab, setSelectedDate }) {
     const canUseTasksAsHome = !cloudUser && !!clientId;
+    const canUseBoardAsHome = canUseTasksAsHome && (
+      HEYS.Board?.isBoardClient?.(clientId)
+      || String(clientId).toLowerCase() === 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a'
+    );
     const VALID_HOME_TABS = useMemo(() => {
       const keys = ['widgets', 'stats', 'diary', 'insights', 'month'];
       if (canUseTasksAsHome) keys.push('tasks');
+      if (canUseBoardAsHome) keys.push('board');
       return keys;
-    }, [canUseTasksAsHome]);
+    }, [canUseTasksAsHome, canUseBoardAsHome]);
     const getCurrentDefaultTab = useCallback(() => {
       const defaultTabFromApp = window.HEYS?.App?.getDefaultTab?.();
       if (VALID_HOME_TABS.includes(defaultTabFromApp)) return defaultTabFromApp;

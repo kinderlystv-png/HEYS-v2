@@ -115,6 +115,7 @@
             pullThreshold: ctx.pullThreshold,
             isMobile: ctx.isMobile,
             mobileSubTab: ctx.mobileSubTab,
+            isTabActive: ctx.isTabActive !== false,
             orphanAlert: ctx.orphanAlert,
             lowCalBanner: ctx.lowCalBanner,
             statsBlock: ctx.statsBlock,

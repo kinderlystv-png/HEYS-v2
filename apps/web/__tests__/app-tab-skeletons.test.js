@@ -47,6 +47,21 @@ describe('HEYS tab-aware skeleton layouts', () => {
         expect(bootSkeleton?.querySelectorAll('.heys-tab-skeleton__nav-item')).toHaveLength(7);
     });
 
+    it('reads ?tab=board for the board client boot context', () => {
+        const BOARD_CLIENT_ID = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+        window.localStorage.setItem('heys_client_current', JSON.stringify(BOARD_CLIENT_ID));
+        window.localStorage.setItem('heys_profile', JSON.stringify({ defaultTab: 'diary' }));
+        window.history.replaceState({}, '', '/?tab=board');
+
+        const skeletons = loadSkeletonModule();
+
+        expect(skeletons.readBootContext()).toEqual({
+            tab: 'fallback',
+            tasksSubtab: 'calendar',
+            hasClient: true,
+        });
+    });
+
     it('keeps distinct compositions for the main loading tabs', () => {
         const skeletons = loadSkeletonModule();
         const tabs = ['diary', 'stats', 'activity', 'widgets', 'insights', 'ration', 'user'];

@@ -40,6 +40,13 @@ const ATTACH_PAGE_PATH = '/mcp/attach';
 const ATTACH_MANIFEST_PATH = '/mcp/attach/manifest.webmanifest';
 const ATTACH_ICON_PATH = '/mcp/attach/icon.png';
 const BOARD_PATH = '/mcp/board';
+const BOARD_TALK_PATH = '/mcp/board/talk';
+const BOARD_RESOLVE_PATH = '/mcp/board/resolve';
+const BOARD_SLEEP_PATH = '/mcp/board/sleep';
+const BOARD_RESLOT_PATH = '/mcp/board/reslot';
+const BOARD_SLOT_DONE_PATH = '/mcp/board/slot-done';
+const BOARD_HABIT_PATH = '/mcp/board/habit';
+const BOARD_CLOSE_DAY_PATH = '/mcp/board/close-day';
 
 const BOARD_CORS_ORIGINS = new Set([
   'https://app.heyslab.ru',
@@ -103,7 +110,7 @@ function json(statusCode, body, extraHeaders = {}) {
 
 function boardCorsHeaders(origin) {
   const headers = {
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Max-Age': '86400',
@@ -606,6 +613,55 @@ exports.handler = async (event) => {
       const result = await board.handleBoardRequest({
         method,
         query,
+        cookieHeader: headers.cookie || '',
+        api,
+        rawJwtSecret,
+        tasksClientId,
+        tasksCuratorId,
+      });
+      if (result.status === 204) {
+        return { statusCode: 204, headers: { ...SECURITY_HEADERS, ...boardCorsHeaders(origin) }, body: '' };
+      }
+      return boardJson(result.status, result.body, origin);
+    }
+
+    if (
+      path === BOARD_TALK_PATH
+      || path === BOARD_RESOLVE_PATH
+      || path === BOARD_SLEEP_PATH
+      || path === BOARD_RESLOT_PATH
+      || path === BOARD_SLOT_DONE_PATH
+      || path === BOARD_HABIT_PATH
+      || path === BOARD_CLOSE_DAY_PATH
+    ) {
+      const origin = headers.origin || headers.Origin || '';
+      const rawJwtSecret = process.env.JWT_SECRET || null;
+      const tasksClientId = process.env.HEYS_TASKS_CLIENT_ID || board.DEFAULT_TASKS_CLIENT_ID;
+      const tasksCuratorId = process.env.HEYS_TASKS_CURATOR_ID || board.DEFAULT_TASKS_CURATOR_ID;
+      const api = createApiClient({ apiUrl });
+      let body = {};
+      try {
+        const raw = readBody(event);
+        body = raw ? JSON.parse(raw) : {};
+      } catch (_) {
+        return boardJson(400, { error: 'invalid_json' }, origin);
+      }
+      const handler = path === BOARD_RESOLVE_PATH
+        ? board.handleBoardResolveRequest
+        : path === BOARD_SLEEP_PATH
+          ? board.handleBoardSleepRequest
+          : path === BOARD_RESLOT_PATH
+            ? board.handleBoardReslotRequest
+            : path === BOARD_SLOT_DONE_PATH
+              ? board.handleBoardSlotDoneRequest
+              : path === BOARD_HABIT_PATH
+                ? board.handleBoardHabitRequest
+                : path === BOARD_CLOSE_DAY_PATH
+                  ? board.handleBoardCloseDayRequest
+                  : board.handleBoardTalkRequest;
+      const result = await handler({
+        method,
+        body,
         cookieHeader: headers.cookie || '',
         api,
         rawJwtSecret,

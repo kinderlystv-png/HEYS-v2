@@ -4002,9 +4002,44 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         } = props;
 
         const [settingsMenuOpen, setSettingsMenuOpen] = React.useState(false);
+        const [boardNavTheme, setBoardNavTheme] = React.useState(() => (
+            window.HEYS?.Board?.readTheme?.()
+            || window.__HEYS_BOOT_THEME__?.boardTheme
+            || 'dark'
+        ));
         const settingsWrapRef = React.useRef(null);
         const keepSettingsMenuOpenOnNextTabRef = React.useRef(false);
         const [, tickCascadeNav] = React.useReducer((n) => n + 1, 0);
+
+        React.useEffect(() => {
+            if (tab === 'board') {
+                setBoardNavTheme(window.HEYS?.Board?.readTheme?.() || 'dark');
+            }
+        }, [tab]);
+
+        React.useEffect(() => {
+            const onBoardTheme = (event) => {
+                const next = event?.detail?.theme;
+                if (next === 'light' || next === 'dark') setBoardNavTheme(next);
+            };
+            window.addEventListener('heys:board-theme-change', onBoardTheme);
+            return () => window.removeEventListener('heys:board-theme-change', onBoardTheme);
+        }, []);
+
+        const boardDarkNav = tab === 'board' && boardNavTheme === 'dark';
+        React.useEffect(() => {
+            if (typeof document === 'undefined') return undefined;
+            if (window.HEYS?.BootTheme?.setBoardDarkNav) {
+                window.HEYS.BootTheme.setBoardDarkNav(boardDarkNav);
+                return () => window.HEYS.BootTheme.setBoardDarkNav(false);
+            }
+            document.documentElement.classList.toggle('board-dark-nav', boardDarkNav);
+            document.body.classList.toggle('board-dark-nav', boardDarkNav);
+            return () => {
+                document.documentElement.classList.remove('board-dark-nav');
+                document.body.classList.remove('board-dark-nav');
+            };
+        }, [boardDarkNav]);
         React.useEffect(() => {
             if (tab === 'month') {
                 setTab('stats');
@@ -4097,7 +4132,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             };
         }, [isCuratorBadge]);
 
+        const TASKS_BOARD_CLIENT_ID = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
         const canUseTasksAsHome = !cloudUser && !!clientId;
+        const canUseBoardAsHome = canUseTasksAsHome && (
+            HEYS.Board?.isBoardClient?.(clientId)
+            || String(clientId).toLowerCase() === TASKS_BOARD_CLIENT_ID
+        );
         const HOME_TAB_OPTIONS = React.useMemo(() => {
             const options = [
                 { key: 'stats', label: 'Отчёты', icon: '📊' },
@@ -4108,9 +4148,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             if (canUseTasksAsHome) {
                 options.push({ key: 'tasks', label: 'Задачи', icon: '☑️' });
             }
+            if (canUseBoardAsHome) {
+                options.push({ key: 'board', label: 'Доска', icon: '📋' });
+            }
             options.push({ key: 'insights', label: 'Инсайты', icon: '🔮' });
             return options;
-        }, [canUseTasksAsHome]);
+        }, [canUseTasksAsHome, canUseBoardAsHome]);
 
         const TASKS_HOME_SUBTAB_OPTIONS = React.useMemo(() => {
             const fallbackItems = [
@@ -4305,8 +4348,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 // silent
             }
         };
-
-        const TASKS_BOARD_CLIENT_ID = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
 
         const primaryTabs = React.useMemo(() => {
             const items = [
@@ -4532,6 +4573,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     + (widgetsEditMode ? ' tabs--edit-mode' : '')
                     + (settingsMenuOpen ? ' tabs--settings-open' : '')
                     + (primaryTabsVariant === 'sext' ? ' tabs--dense-switch' : '')
+                    + (boardDarkNav ? ' tabs--board-dark' : '')
             },
             // Подсказка в режиме редактирования (внутри tabs для абсолютного позиционирования)
             widgetsEditMode && React.createElement(
@@ -5090,6 +5132,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
     function AppShell(props) {
         const { hideContent, clientId, tab } = props;
         const shouldRenderContent = !!clientId;
+        const hideProductHeader = tab === 'tasks' || tab === 'board';
         let profilerMountKey = 'p0';
         try {
             profilerMountKey = heysReactProfilerEnabled() ? 'p1' : 'p0';
@@ -5098,16 +5141,16 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         return React.createElement(
             'div',
             {
-                className: 'wrap' + (tab === 'tasks' ? ' wrap--no-header' : ''),
+                className: 'wrap' + (hideProductHeader ? ' wrap--no-header' : ''),
                 style: hideContent ? { display: 'none' } : undefined
             },
             shouldRenderContent && React.createElement(
                 'div',
                 {
                     className: 'app-header-wrapper',
-                    style: tab === 'tasks' ? { display: 'none' } : null,
-                    'aria-hidden': tab === 'tasks' ? 'true' : undefined,
-                    inert: tab === 'tasks' ? '' : undefined
+                    style: hideProductHeader ? { display: 'none' } : null,
+                    'aria-hidden': hideProductHeader ? 'true' : undefined,
+                    inert: hideProductHeader ? '' : undefined
                 },
                 React.createElement(MemoAppHeader, props)
             ),

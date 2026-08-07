@@ -322,7 +322,8 @@
                 products,
                 selectedDate,
                 setSelectedDate,
-                subTab
+                subTab,
+                isActive,
             }));
     }
 
@@ -335,6 +336,7 @@
         if (prev.clientId !== next.clientId) return false;
         if (prev.selectedDate !== next.selectedDate) return false;
         if (prev.subTab !== next.subTab) return false;
+        if (prev.isActive !== next.isActive) return false;
         // products ref is stabilized by signature in useProductsContext — ref equality is safe
         if (prev.products !== next.products) return false;
         // setSelectedDate from useState is stable; no check needed

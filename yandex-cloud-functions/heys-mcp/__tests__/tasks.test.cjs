@@ -5238,7 +5238,8 @@ test('checkpoint без journal_block напоминает про вывод, е
     transcript_block: '## 14:20\n\n**Кин:** Решили делать soft-nudge, открыто: ревизия на планёрке.\n**Claude:** Итог: эвристика в checkpoint, stop не блокируем.',
   });
   assert.equal(res.structured.checkpoint, true);
-  assert.match(res.structured.journal_reminder, /устойчивый вывод/);
+  assert.match(res.structured.journal_reminder, /journal_block/);
+  assert.ok(res.structured.journal_reminder.length < 120);
   assert.match(res.text, /journal_block/);
 });
 
@@ -5266,6 +5267,7 @@ test('checkpoint напоминает про факт о мире без tasks_l
     transcript_block: '## 14:23\n\n**Кин:** Марка машины — Camel AGM, без старт-стопа.\n**Claude:** Запомню для справки, в журнал не кладу.',
   });
   assert.match(res.structured.fact_reminder, /tasks_learn/);
+  assert.ok(res.structured.fact_reminder.length < 100);
   assert.equal(res.structured.journal_reminder, undefined);
 });
 
@@ -5290,7 +5292,9 @@ test('checkpoint напоминает про доску после сдачи б
     transcript_block: '## 22:10\n\n**Кин:** сделай всё как надо до конца.\n**Claude:** Закрыл heys/97e63a: smoke ок, тесты 901/901 зелёные. Готово.',
   });
   assert.match(res.structured.board_reminder, /доске/);
-  assert.match(res.text, /tasks_standup/);
+  assert.ok(res.structured.board_reminder.length < 120);
+  assert.match(res.text, /standup/);
+  assert.ok(!/полный текст правил|см\. выше|напоминание-спутник/i.test(res.text));
 });
 
 test('checkpointOutputReminders: спутники уже сняты — без board_reminder', () => {

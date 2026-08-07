@@ -3,12 +3,25 @@
     const HEYS = window.HEYS = window.HEYS || {};
     const DEV = window.DEV || {};
     const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
-    const HOME_TABS = ['widgets', 'stats', 'diary', 'insights', 'month', 'tasks'];
+    const BOARD_CLIENT_ID = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+    const BASE_HOME_TABS = ['widgets', 'stats', 'diary', 'insights', 'month', 'tasks'];
     const TASKS_HOME_SUBTABS = ['tasks', 'goals', 'calendar', 'gantt', 'chrono', 'checklists', 'reading'];
     const DEFAULT_TASKS_SUBTAB = 'calendar';
 
-    function resolveHomeTab(candidate) {
-        return HOME_TABS.includes(candidate) ? candidate : 'diary';
+    function isBoardHomeTabAllowed(clientId) {
+        if (HEYS.Board?.isBoardClient) return HEYS.Board.isBoardClient(clientId);
+        return String(clientId || '').toLowerCase() === BOARD_CLIENT_ID;
+    }
+
+    function getHomeTabs(clientId) {
+        const tabs = BASE_HOME_TABS.slice();
+        if (isBoardHomeTabAllowed(clientId)) tabs.push('board');
+        return tabs;
+    }
+
+    function resolveHomeTab(candidate, clientId) {
+        const allowed = getHomeTabs(clientId ?? readBootClientId());
+        return allowed.includes(candidate) ? candidate : 'diary';
     }
 
     function resolveHomeTasksSubtab(candidate) {
@@ -273,7 +286,7 @@
         }, [syncDefaultTabFromProfile]);
 
         const setDefaultTab = React.useCallback((newDefaultTab, options = {}) => {
-            if (!HOME_TABS.includes(newDefaultTab)) return;
+            if (!getHomeTabs(readBootClientId()).includes(newDefaultTab)) return;
 
             const U = window.HEYS?.utils;
             const profile = U?.lsGet?.('heys_profile', {}) || {};

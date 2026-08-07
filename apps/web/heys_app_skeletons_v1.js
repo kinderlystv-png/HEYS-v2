@@ -111,6 +111,21 @@
         return TASKS_SUBTABS.includes(subtab) ? subtab : 'calendar';
     }
 
+    function readBootTabParam() {
+        try {
+            const params = new global.URLSearchParams(global.location.search);
+            const urlTab = params.get('tab') || params.get('view') || params.get('defaultTab');
+            if (urlTab === 'day') return 'stats';
+            if (urlTab) return String(urlTab);
+        } catch (_) { /* noop */ }
+        return null;
+    }
+
+    function isBoardBootClient(clientId) {
+        const id = String(clientId || '').toLowerCase();
+        return id === 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
+    }
+
     function readBootContext(storage) {
         const store = storage || global.localStorage;
         let clientId = '';
@@ -131,7 +146,13 @@
         const demoTab = global.__HEYS_DEMO_MODE__?.enabled === true
             ? global.__HEYS_DEMO_MODE__.defaultTab
             : null;
-        const tab = normalizeTab(demoTab || profile.defaultTab || 'diary');
+        const urlTab = readBootTabParam();
+        const profileTab = profile.defaultTab || 'diary';
+        let rawTab = demoTab || urlTab || profileTab;
+        if (rawTab === 'board' && !isBoardBootClient(clientId)) {
+            rawTab = profileTab === 'board' ? 'diary' : profileTab;
+        }
+        const tab = normalizeTab(rawTab);
         return {
             tab,
             tasksSubtab: normalizeTasksSubtab(profile.defaultTasksSubtab),
@@ -329,6 +350,10 @@
         const target = global.document?.querySelector?.('.heys-skeleton[data-heys-boot-skeleton]');
         if (!target || target.dataset.heysSkeletonHydrated === 'true') return null;
         target.dataset.heysSkeletonHydrated = 'true';
+        const bootTheme = global.__HEYS_BOOT_THEME__;
+        if (bootTheme?.boardDarkNav && global.HEYS?.BootTheme?.syncBodyBoardNav) {
+            global.HEYS.BootTheme.syncBodyBoardNav();
+        }
         return renderBootSkeleton(target);
     }
 

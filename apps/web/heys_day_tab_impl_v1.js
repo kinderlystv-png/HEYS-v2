@@ -537,6 +537,7 @@
         // 'diary' — дневник питания (суточные итоги, приёмы пищи)
         // Теперь subTab приходит из props (из нижнего меню App)
         const mobileSubTab = props.subTab || 'stats';
+        const isTabActive = props.isActive !== false;
         const showStatsContent = !isMobile || mobileSubTab === 'stats';
         const showActivityContent = !isMobile || mobileSubTab === 'activity';
         const activityContentEnabled = showStatsContent || showActivityContent;
@@ -2363,6 +2364,7 @@
             pullThreshold,
             isMobile,
             mobileSubTab,
+            isTabActive,
             orphanAlert,
             lowCalBanner,
             statsBlock,

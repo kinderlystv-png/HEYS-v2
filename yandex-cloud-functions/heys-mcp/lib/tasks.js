@@ -174,9 +174,9 @@ function verbatimTranscriptError(block) {
   return null;
 }
 
-const CHECKPOINT_JOURNAL_REMINDER = 'Похоже, в обмене был устойчивый вывод — при необходимости допиши journal_block повторным checkpoint или следующим ходом.';
-const CHECKPOINT_FACT_REMINDER = 'Похоже, прозвучал факт о мире — если так, запиши через tasks_learn (kind «факт»), не в journal.';
-const CHECKPOINT_BOARD_REMINDER = 'Похоже, работа сдана — сверь связанные сущности на доске (пункт планёрки, открыто:/#blocked, #next, напоминание-спутник) и сними лишнее через tasks_standup / tasks_resolve / tasks_update в том же ходе; не оставляй «закрыл в чате — висит на доске».';
+const CHECKPOINT_JOURNAL_REMINDER = 'Похоже, нужен journal_block — допиши в следующем checkpoint.';
+const CHECKPOINT_FACT_REMINDER = 'Похоже, нужен tasks_learn (kind «факт»).';
+const CHECKPOINT_BOARD_REMINDER = 'Сверь спутников на доске (standup / открыто / #next) и сними лишнее.';
 
 const JOURNAL_NUDGE_STRONG_RE = [
   /итог\s*:/i,
@@ -4520,7 +4520,7 @@ function dayLoad({ date, text = '', recurring = [] } = {}) {
   const own = parseSlots(text, { dayStart: BOARD_DAY_START })
     .map((s) => ({
       start: s.start, end: s.end, from: s.from, to: s.to, kind: s.kind, title: s.title,
-      whose: s.whose, takes: s.takes, repeat: false,
+      whose: s.whose, takes: s.takes, repeat: false, done: !!s.done,
     }));
   const wd = weekdayIndex(date);
   const have = new Set(own.map((s) => `${s.start}|${slotCoreTitle(s.title)}`));
@@ -4532,7 +4532,8 @@ function dayLoad({ date, text = '', recurring = [] } = {}) {
     if (!span) continue;
     added.push({
       start: rec.start, end: rec.end, from: span.start, to: span.end,
-      kind: rec.kind || 'привычка', title: rec.title, whose: null, takes: [], repeat: true,
+      kind: rec.kind || 'привычка', title: rec.title, whose: null, takes: [],
+      repeat: true, done: false,
     });
   }
   const slots = [...own, ...added].sort((a, b) => a.from - b.from);
@@ -4546,7 +4547,7 @@ function dayLoad({ date, text = '', recurring = [] } = {}) {
     focus_minutes: focus,
     slots: slots.map((s) => ({
       from: s.start, to: s.end, title: s.title, kind: s.kind, repeat: s.repeat,
-      whose: s.whose || null, takes: s.takes || [],
+      whose: s.whose || null, takes: s.takes || [], done: !!s.done,
     })),
     free: freeGaps(slots),
     // Занятость машины и ребёнка идёт рядом со свободными окнами, а не вместо
@@ -4663,6 +4664,26 @@ function markHabit(text, habit, date) {
     if (dates.includes(date)) return { text: String(text), habit: title, already: true };
     const next = [...new Set([...dates, date])].sort();
     lines[i] = `- ${title} | ${next.join(', ')}`;
+    return { text: lines.join('\n'), habit: title, already: false };
+  }
+  throw new Error(`habit_not_found:${habit}`);
+}
+
+/** Снять дату у привычки. Повтор без этой даты — already. */
+function unmarkHabit(text, habit, date) {
+  const lines = String(text || '').split('\n');
+  const needle = String(habit || '').trim().toLowerCase();
+  if (!needle) throw new Error('empty_habit');
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i].trim();
+    if (!line.startsWith('- ') || !line.includes('|')) continue;
+    const cut = line.slice(2).indexOf('|') + 2;
+    const title = line.slice(2, cut).trim();
+    if (!title.toLowerCase().includes(needle)) continue;
+    const dates = line.slice(cut + 1).split(',').map((d) => d.trim()).filter(Boolean);
+    if (!dates.includes(date)) return { text: String(text), habit: title, already: true };
+    const next = dates.filter((d) => d !== date);
+    lines[i] = next.length ? `- ${title} | ${next.join(', ')}` : `- ${title} |`;
     return { text: lines.join('\n'), habit: title, already: false };
   }
   throw new Error(`habit_not_found:${habit}`);
@@ -5616,6 +5637,7 @@ module.exports = {
   dayNote,
   setDayNote,
   markHabit,
+  unmarkHabit,
   // планёрка
   STANDUP_PATH,
   STANDUP_SECTION,

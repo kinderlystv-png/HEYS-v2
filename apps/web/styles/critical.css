@@ -507,7 +507,9 @@ body {
 .heys-tab-skeleton__nav-icon { width: 24px; height: 24px; margin: 0 auto 5px; border-radius: 7px; }
 .heys-tab-skeleton__nav-label { width: 30px; height: 6px; margin: 0 auto; border-radius: 3px; }
 
-[data-theme="dark"] .heys-tab-skeleton {
+[data-theme="dark"] .heys-tab-skeleton,
+html.board-dark-nav .heys-tab-skeleton,
+body.board-dark-nav .heys-tab-skeleton {
   --heys-skeleton-surface: #1e293b;
   --heys-skeleton-soft: #111827;
   --heys-skeleton-fill: #475569;

@@ -3038,6 +3038,24 @@ function createTasksTools({
       };
     },
 
+    /** Облачко с PWA-доски — тот же dual-write, что POST /talk на desktop board. */
+    async board_entity_talk(args = {}) {
+      const boardTalk = require('./board-talk');
+      return boardTalk.entityTalk(args, { readFile, writeFile, nowMs, ToolError });
+    },
+
+    /** ✓ слота с PWA «Сегодня» — [x] в days/<date>.md. */
+    async board_slot_done(args = {}) {
+      const boardChecks = require('./board-checks');
+      return boardChecks.slotDone(args, { readFile, writeFile, ToolError, today: today() });
+    },
+
+    /** ✓ привычки с PWA «Сегодня» — дата в habits.md (toggle). */
+    async board_habit_done(args = {}) {
+      const boardChecks = require('./board-checks');
+      return boardChecks.habitDone(args, { readFile, writeFile, ToolError, today: today() });
+    },
+
     /**
      * Обход «что видно только сверху».
      *
@@ -4244,7 +4262,7 @@ function createTasksTools({
       if (state.transcript_pending) {
         transcriptNudged = true;
         const tool = state.transcript_pending.tool || 'запись';
-        return `Стенограмма не закрыта после «${tool}» — вызови tasks_checkpoint с обеими репликами целиком, иначе обмен пропадёт (heys/49f059).`;
+        return `Стенограмма не закрыта после «${tool}» — вызови tasks_checkpoint.`;
       }
       return null;
     } catch {
