@@ -4860,13 +4860,24 @@ test('diaryTopicUsesAddressAlias ловит «запиши мне» и не ло
   );
   assert.equal(tasks.diaryTopicUsesAddressAlias('запиши жене завтрак'), true);
   assert.equal(tasks.diaryTopicUsesAddressAlias('что там по лендингу'), false);
-  assert.equal(tasks.diaryTopicUsesAddressAlias('мне'), false);
+  assert.equal(tasks.diaryTopicUsesAddressAlias('мне'), true);
+  assert.equal(tasks.diaryTopicUsesAddressAlias('Find who «мне» is in curator memory'), true);
+  assert.equal(tasks.diaryTopicUsesAddressAlias('кто такой мне'), true);
 });
 
 test('tasks_context отклоняет дневниковую фразу с «мне»', async () => {
   const api = liveTasksApi();
   const res = await session(api).tasks_context({
     topic: 'Заведи продукт черри и запиши мне 300 г',
+  });
+  assert.match(res.text, /tasks_context здесь не нужен/);
+  assert.equal(res.structured.skip_reason, 'diary_addressing_use_client_param');
+});
+
+test('tasks_context отклоняет archaeology-reframe с «мне»', async () => {
+  const api = liveTasksApi();
+  const res = await session(api).tasks_context({
+    topic: 'Find who «мне» is in curator memory',
   });
   assert.match(res.text, /tasks_context здесь не нужен/);
   assert.equal(res.structured.skip_reason, 'diary_addressing_use_client_param');

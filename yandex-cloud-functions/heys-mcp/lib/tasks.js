@@ -3258,16 +3258,29 @@ function preferenceHitsRawTopic(entry, topic) {
 }
 
 /**
+ * Алиас адресации в topic tasks_context («мне», «жене»…).
+ */
+function addressAliasInTopic(topic) {
+  const raw = String(topic || '').trim().toLowerCase();
+  if (!raw) return false;
+  return /(?:^|[^\p{L}\p{N}])(мне|себе|жене|цыпе)(?:[^\p{L}\p{N}]|$)/u.test(raw);
+}
+
+/**
  * Фраза про дневник с алиасом («запиши мне …») — адресация через client=алиас,
  * не tasks_context. Инцидент 07.08: модель звала context, хотя сервер уже
  * разворачивает «мне» в client_id.
+ *
+ * Smoke2 07.08: модель передаёт в context археологию («Find who мне in memory»)
+ * без дневниковых маркеров — ловим отдельным паттерном.
  */
 function diaryTopicUsesAddressAlias(topic) {
+  if (!addressAliasInTopic(topic)) return false;
   const raw = String(topic || '').trim().toLowerCase();
-  if (!raw) return false;
-  const aliasRe = /(?:^|[^\p{L}\p{N}])(мне|себе|жене|цыпе)(?:[^\p{L}\p{N}]|$)/u;
-  if (!aliasRe.test(raw)) return false;
-  return /(?:запиш|внес|завед|создай|добав|продукт|приём|перекус|обед|завтрак|ужин|дневник|еду|съел|\d+\s*г|мл|ml)/u.test(raw);
+  if (/(?:запиш|внес|завед|создай|добав|продукт|приём|перекус|обед|завтрак|ужин|дневник|еду|съел|\d+\s*г|мл|ml)/u.test(raw)) return true;
+  if (/(?:кто\s+(такой|есть)|find\s+who|who\s+is|curator\s+memory|в\s+памят|памят|алиас|alias|list_client)/u.test(raw)) return true;
+  if (/^(?:кто\s+)?(мне|себе|жене|цыпе)[\s?.!]*$/u.test(raw)) return true;
+  return false;
 }
 
 function preferenceLine({ date, kind, note, evidence }) {

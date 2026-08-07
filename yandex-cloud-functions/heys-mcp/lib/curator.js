@@ -269,8 +269,16 @@ function buildCuratorSchemas({ requireTranscript = false } = {}) {
   });
   schemas.unshift({
     name: 'heys_list_clients',
-    description: 'Список клиентов куратора: client_id, имя, статус подписки. Вызывай, когда непонятно, кому вносить, или когда пользователь спрашивает про «клиентов», «кого я веду».',
-    inputSchema: { type: 'object', properties: {} },
+    description: 'Список клиентов куратора: client_id, имя, статус. Не зови для известного алиаса («мне»/«жене») — передавай client=алиас в heys_*. Только когда клиент реально неизвестен или спросили «кого я веду».',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        alias: {
+          type: 'string',
+          description: 'Не передавай известный алиас — сервер отклонит и подскажет client=алиас.',
+        },
+      },
+    },
   });
   return schemas;
 }
@@ -1076,9 +1084,24 @@ function createCuratorContext({
       };
     },
 
-    async heys_list_clients() {
-      const clients = await loadClients();
+    async heys_list_clients(args = {}) {
       const aliasMap = await loadAddressAliases();
+      const hint = String(args.alias || args.for || args.client || '').trim().toLowerCase();
+      if (hint) {
+        const hit = aliasMap.get(hint) || aliasMap.get(products.normalizeText(hint));
+        if (hit) {
+          return {
+            text: `Алиас «${hint}» уже известен: ${hit.name || '?'} (${hit.client_id}). Не зови list_clients — передавай client=${hint} в heys_log_meal / heys_create_product / heys_search_products.`,
+            structured: {
+              skip_reason: 'known_alias_use_client_param',
+              alias: hint,
+              client_id: hit.client_id,
+              name: hit.name,
+            },
+          };
+        }
+      }
+      const clients = await loadClients();
       const address = formatAddressLine(aliasMap);
       const list = clients.length
         ? clients.map((c) => `${c.name || '?'} (${c.client_id}${c.status ? `, ${c.status}` : ''})`).join('; ')
