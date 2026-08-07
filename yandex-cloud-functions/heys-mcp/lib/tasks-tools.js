@@ -116,7 +116,7 @@ const TASKS_WRITE_SCHEMAS = [
         hash: { type: 'string', description: 'Шесть символов хэша задачи с доски.' },
         due: { type: 'string', description: 'Новый срок YYYY-MM-DD; пустая строка снимает срок.' },
         priority: { type: 'string', description: 'P1, P2 или P3.' },
-        state: { type: 'string', description: 'new, doing, wait или done. Закрывать задачу — только по прямой просьбе.' },
+        state: { type: 'string', description: 'new, doing, wait или done. done — когда ты довёл задачу до конца и уверен; не уверен — спроси, не ставь наугад. Житейское и день — только по его слову.' },
         add_tags: { type: 'array', items: { type: 'string' }, description: 'Теги добавить.' },
         remove_tags: { type: 'array', items: { type: 'string' }, description: 'Теги убрать.' },
         note: { type: 'string', description: 'Вложенная строка контекста: «ждём: Имя — что», «при встрече: …», «открыто: …».' },
@@ -273,7 +273,7 @@ const TASKS_BOARD_SCHEMAS = [
   },
   {
     name: 'tasks_subtask',
-    description: 'Отметить или снять галочку у подпункта задачи. Подпункт называется текстом, а не номером. Галочки ставит только он: вызывай по прямой просьбе, а не по своему выводу, что шаг вроде бы сделан.',
+    description: 'Отметить или снять галочку у подпункта задачи. Подпункт называется текстом, а не номером. Ставь сам, когда шаг ты довёл до конца и уверен; не уверен — спроси. Житейское, что сделал только он, — только по его слову.',
     inputSchema: {
       type: 'object',
       properties: {
