@@ -713,3 +713,33 @@ test('applyPlannedSupplementsToProfile — add в курс', () => {
   assert.deepEqual(patch.planned, ['vitD', 'omega3']);
   assert.equal(patch.changed.length, 1);
 });
+
+test('applyRefeedDay — отмечает и снимает загрузочный день', () => {
+  const base = { date: '2026-08-07', meals: [], waterMl: 0 };
+  const marked = day.applyRefeedDay(base, true, 'training', { nowMs: 1000, clientId: CLIENT });
+  assert.equal(marked.isRefeedDay, true);
+  assert.equal(marked.refeedReason, 'training');
+  const cleared = day.applyRefeedDay(marked, false, null, { nowMs: 2000, clientId: CLIENT });
+  assert.equal(cleared.isRefeedDay, false);
+  assert.equal(cleared.refeedReason, null);
+});
+
+test('applyRefeedDay — без причины отклоняет', () => {
+  const base = { date: '2026-08-07', meals: [], waterMl: 0 };
+  assert.throws(
+    () => day.applyRefeedDay(base, true, 'magic', { nowMs: 1000, clientId: CLIENT }),
+    /invalid_refeed_reason/,
+  );
+});
+
+test('summarizeDay — refeed в сводке дня', () => {
+  const summary = day.summarizeDay({
+    date: '2026-08-07',
+    meals: [],
+    waterMl: 0,
+    isRefeedDay: true,
+    refeedReason: 'holiday',
+  });
+  assert.equal(summary.is_refeed_day, true);
+  assert.equal(summary.refeed_reason, 'holiday');
+});

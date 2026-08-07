@@ -717,6 +717,38 @@ function updateDayFields(day, fields, { nowMs, clientId, byCurator = false }) {
  */
 const COLD_EXPOSURE_TYPES = new Set(['none', 'coldShower', 'coldBath', 'coldSwim']);
 
+/**
+ * Причины загрузочного дня — тот же каталог, что apps/web/heys_refeed_v1.js (REFEED_REASONS).
+ * MCP не импортирует клиентский бандл; расхождение списка ловится отказом инструмента.
+ */
+const REFEED_REASONS = new Set(['deficit', 'training', 'holiday', 'rest']);
+
+/**
+ * Нужен ли шаг refeed в чек-ине — зеркалит shouldIncludeRefeedStep в
+ * apps/web/heys_morning_checkin_v1.js. Рекомендация по caloric debt здесь не
+ * считается: без полного движка долга MCP не знает needsRefeed, остаётся
+ * allowManualRefeed из профиля.
+ */
+function shouldIncludeRefeedStep(day, profile) {
+  if (typeof day.isRefeedDay === 'boolean') return false;
+  return Boolean(profile && profile.allowManualRefeed === true);
+}
+
+/** Загрузочный день (refeed): isRefeedDay + refeedReason на карточке дня. */
+function applyRefeedDay(day, isRefeedDay, refeedReason, { nowMs, clientId } = {}) {
+  if (isRefeedDay === true) {
+    const reason = refeedReason ? String(refeedReason) : '';
+    if (!REFEED_REASONS.has(reason)) throw new Error(`invalid_refeed_reason:${reason}`);
+    const next = { ...day, isRefeedDay: true, refeedReason: reason };
+    return touch(next, nowMs, clientId);
+  }
+  if (isRefeedDay === false) {
+    const next = { ...day, isRefeedDay: false, refeedReason: null };
+    return touch(next, nowMs, clientId);
+  }
+  throw new Error('invalid_refeed_day');
+}
+
 /** Записать холодовое воздействие — форма объекта та же, что пишет сам шаг приложения. */
 function applyColdExposure(day, type, { nowMs, clientId } = {}) {
   if (!COLD_EXPOSURE_TYPES.has(type)) {
@@ -1022,6 +1054,16 @@ function checkinStatus(day, profile) {
       note: 'поле профиля — пишется heys_update_profile(steps_goal), не heys_checkin',
     },
     {
+      id: 'refeed_day', label: 'загрузочный день', required: false,
+      done: typeof day.isRefeedDay === 'boolean' || !shouldIncludeRefeedStep(day, profile),
+      value: typeof day.isRefeedDay === 'boolean'
+        ? { is_refeed_day: day.isRefeedDay, refeed_reason: day.refeedReason ?? null }
+        : null,
+      note: shouldIncludeRefeedStep(day, profile)
+        ? undefined
+        : 'ручный refeed выключен в профиле (allowManualRefeed) — шаг в приложении не показывается',
+    },
+    {
       id: 'cold_exposure', label: 'холод', required: false,
       done: Boolean(day.coldExposure && day.coldExposure.type),
       value: day.coldExposure || null,
@@ -1238,6 +1280,8 @@ function summarizeDay(day) {
     trainings,
     supplements_planned: Array.isArray(day.supplementsPlanned) ? day.supplementsPlanned : [],
     supplements_taken: Array.isArray(day.supplementsTaken) ? day.supplementsTaken : [],
+    is_refeed_day: day.isRefeedDay === true,
+    refeed_reason: day.isRefeedDay === true ? (day.refeedReason || null) : null,
     // Что в этом дне до сих пор стоит с кураторской руки, а не введено клиентом.
     curator_authored: curatorAuthoredFields(day),
   };
@@ -1389,6 +1433,9 @@ module.exports = {
   updateDayFields,
   summarizeDay,
   applyColdExposure,
+  applyRefeedDay,
+  shouldIncludeRefeedStep,
+  REFEED_REASONS,
   applyMeasurements,
   applySupplements,
   patchSupplementsPlanned,

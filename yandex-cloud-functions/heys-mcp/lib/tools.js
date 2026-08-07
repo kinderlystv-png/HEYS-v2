@@ -268,6 +268,8 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       norm: day.dailyNorm(saved, await loadNormInputs()),
       meals: (saved.meals || []).length,
       water_ml: Number(saved.waterMl) || 0,
+      is_refeed_day: saved.isRefeedDay === true,
+      refeed_reason: saved.isRefeedDay === true ? (saved.refeedReason || null) : null,
       // 'saved' — наша версия победила, 'day_merged' — сервер слил с облачной,
       // 'stale_write_blocked' — нашу отбросили. Последнее ассистент обязан
       // назвать вслух, а не отчитаться «записал».
@@ -827,6 +829,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const hasSupplementsMark = args.supplements_mark !== undefined && args.supplements_mark !== null;
       const hasSupplementsUnmark = args.supplements_unmark !== undefined && args.supplements_unmark !== null;
       const hasSupplementsTiming = args.supplements_timing !== undefined && args.supplements_timing !== null;
+      const hasRefeed = args.refeed_day !== undefined && args.refeed_day !== null;
       const needsProfile = hasSupplementsMark || hasSupplementsUnmark || hasSupplementsTiming;
       const current = await readDay(date);
       let working = current;
@@ -870,6 +873,22 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         if (hasSupplementsUnmark) {
           working = day.markSupplementsTaken(working, args.supplements_unmark, false, { nowMs, clientId, profile: profileBlob });
           applied.push('supplements_unmark');
+        }
+        if (hasRefeed) {
+          if (args.refeed_day === true && !args.refeed_reason) {
+            throw new ToolError('invalid_field',
+              'refeed_day:true — нужна причина refeed_reason: deficit, training, holiday или rest.');
+          }
+          if (args.refeed_reason && !day.REFEED_REASONS.has(args.refeed_reason)) {
+            throw new ToolError('invalid_field',
+              `refeed_reason — один из: ${[...day.REFEED_REASONS].join(', ')}.`);
+          }
+          try {
+            working = day.applyRefeedDay(working, args.refeed_day, args.refeed_reason, { nowMs, clientId });
+          } catch (e) {
+            throw new ToolError('invalid_field', e.message);
+          }
+          applied.push(args.refeed_day ? 'refeed_day' : 'refeed_day:false');
         }
       } catch (e) {
         if (e instanceof ToolError) throw e;
@@ -951,11 +970,20 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const hasSupplements = args.supplements !== undefined && args.supplements !== null;
       const hasCycleDay = args.cycle_day !== undefined && args.cycle_day !== null;
       const hasCycleStatus = args.cycle_status !== undefined && args.cycle_status !== null;
+      const hasRefeed = args.refeed_day !== undefined && args.refeed_day !== null;
       if (hasCycleDay && hasCycleStatus) {
         throw new ToolError('invalid_field', 'cycle_day и cycle_status — разные ответы на один вопрос, передай только один.');
       }
-      if (!hasDayFields && !hasCold && !hasStepsGoal && !hasMeasurements && !hasSupplements && !hasCycleDay && !hasCycleStatus) {
+      if (!hasDayFields && !hasCold && !hasStepsGoal && !hasMeasurements && !hasSupplements && !hasCycleDay && !hasCycleStatus && !hasRefeed) {
         throw new ToolError('nothing_to_update', 'Не передано ни одного шага чек-ина.');
+      }
+      if (hasRefeed && args.refeed_day === true && !args.refeed_reason) {
+        throw new ToolError('invalid_field',
+          'refeed_day:true — нужна причина refeed_reason: deficit, training, holiday или rest.');
+      }
+      if (hasRefeed && args.refeed_reason && !day.REFEED_REASONS.has(args.refeed_reason)) {
+        throw new ToolError('invalid_field',
+          `refeed_reason — один из: ${[...day.REFEED_REASONS].join(', ')}.`);
       }
 
       // Профиль читаем заранее, если он нужен для гейта цикла: тот же гейт,
@@ -1020,6 +1048,10 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
             : e.message);
         }
         applied.push('supplements');
+      }
+      if (hasRefeed) {
+        working = day.applyRefeedDay(working, args.refeed_day, args.refeed_reason, { nowMs, clientId });
+        applied.push('refeed_day');
       }
       // Цикл — окно в семь дней, а не одна дата: почти всегда выходит за
       // пределы дня чек-ина, поэтому пишется отдельными вызовами writeDay
@@ -1839,7 +1871,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_update_day',
-    description: 'Куратор вписывает дневные показатели по своему усмотрению или задним числом: вес, шаги, быт, сон, настроение, самочувствие, стресс, комментарий, план добавок (supplements_planned / add / remove), отметки «принял» (supplements_mark / unmark / timing: morning|evening). Поле остаётся помеченным кураторским и не закрывает шаг утреннего чек-ина в приложении — клиент увидит его снова. Для «клиент диктует значения прямо сейчас, живьём» — heys_checkin, не этот инструмент.',
+    description: 'Куратор вписывает дневные показатели по своему усмотрению или задним числом: вес, шаги, быт, сон, настроение, самочувствие, стресс, комментарий, загрузочный день (refeed_day + refeed_reason), план добавок (supplements_planned / add / remove), отметки «принял» (supplements_mark / unmark / timing: morning|evening). Поле остаётся помеченным кураторским и не закрывает шаг утреннего чек-ина в приложении — клиент увидит его снова. Для «клиент диктует значения прямо сейчас, живьём» — heys_checkin, не этот инструмент.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -1878,6 +1910,15 @@ const TOOL_SCHEMAS = [
         supplements_timing: {
           type: 'string', enum: ['morning', 'evening'],
           description: 'Отметить все добавки из плана дня (или курса) с timing утро/вечер — как в приложении.',
+        },
+        refeed_day: {
+          type: 'boolean',
+          description: 'Загрузочный день (refeed): true — отметить (+35% к норме), false — снять. При true обязательна refeed_reason.',
+        },
+        refeed_reason: {
+          type: 'string',
+          enum: ['deficit', 'training', 'holiday', 'rest'],
+          description: 'Причина загрузочного дня — тот же каталог, что в приложении: deficit (дефицит), training (тренировка), holiday (праздник), rest (ментальный отдых).',
         },
       },
     },
@@ -1921,6 +1962,15 @@ const TOOL_SCHEMAS = [
         cycle_status: {
           type: 'string', enum: ['none', 'skipped'],
           description: '«Нет цикла сегодня» (none) или «пропустил ответ» (skipped) — необязательный шаг, тот же гейт по профилю, что у cycle_day. Взаимоисключим с cycle_day.',
+        },
+        refeed_day: {
+          type: 'boolean',
+          description: 'Загрузочный день — необязательный шаг чек-ина. true + refeed_reason — отметить; false — обычный день. При true причина обязательна.',
+        },
+        refeed_reason: {
+          type: 'string',
+          enum: ['deficit', 'training', 'holiday', 'rest'],
+          description: 'Причина refeed при refeed_day:true — deficit, training, holiday или rest.',
         },
       },
     },

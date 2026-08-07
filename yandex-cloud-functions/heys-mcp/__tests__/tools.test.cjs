@@ -1075,6 +1075,48 @@ test('heys_checkin get — без включённого трекинга шаг
   assert.match(cycle.note, /выключен/);
 });
 
+test('heys_update_day — refeed_day отмечает и снимает загрузочный день', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
+  });
+  const tools = build(api);
+  const set = await tools.heys_update_day({ refeed_day: true, refeed_reason: 'deficit' });
+  const savedSet = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  assert.equal(savedSet.value.isRefeedDay, true);
+  assert.equal(savedSet.value.refeedReason, 'deficit');
+  assert.equal(set.structured.day_after.is_refeed_day, true);
+  const unset = await tools.heys_update_day({ refeed_day: false });
+  const savedUnset = api.saves[api.saves.length - 1];
+  assert.equal(savedUnset.value.isRefeedDay, false);
+  assert.equal(savedUnset.value.refeedReason, null);
+  assert.equal(unset.structured.day_after.is_refeed_day, false);
+});
+
+test('heys_update_day — refeed_day:true без причины отклоняется', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
+  });
+  await assert.rejects(
+    () => build(api).heys_update_day({ refeed_day: true }),
+    (e) => e.code === 'invalid_field',
+  );
+});
+
+test('heys_checkin submit — refeed_day пишется как шаг чек-ина', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
+  });
+  const res = await build(api).heys_checkin({
+    action: 'submit',
+    refeed_day: true,
+    refeed_reason: 'rest',
+  });
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  assert.equal(saved.value.isRefeedDay, true);
+  assert.equal(saved.value.refeedReason, 'rest');
+  assert.ok(res.structured.applied.includes('refeed_day'));
+});
+
 // --- Норма клиента в day_after ---------------------------------------------
 
 const CARD = {
