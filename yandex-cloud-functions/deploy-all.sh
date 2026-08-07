@@ -787,6 +787,17 @@ deploy_function() {
             echo -e "${RED}❌ ERROR: capacity guard not found at $CAPACITY_GUARD_SRC${NC}"
             exit 1
         fi
+
+        TASKS_KV_SRC="$SCRIPT_DIR/heys-mcp/lib/tasks.js"
+        TASKS_KV_DST="$SCRIPT_DIR/$func_name/lib/heys_tasks_kv.cjs"
+        if [ -f "$TASKS_KV_SRC" ]; then
+            mkdir -p "$(dirname "$TASKS_KV_DST")"
+            cp "$TASKS_KV_SRC" "$TASKS_KV_DST"
+            echo -e "${BLUE}ℹ️  Synced tasks KV module: lib/heys_tasks_kv.cjs${NC}"
+        else
+            echo -e "${RED}❌ ERROR: tasks KV source not found at $TASKS_KV_SRC${NC}"
+            exit 1
+        fi
     fi
 
     # 📋 Sync day-checklist rules — общее правило «чего ещё ждём от клиента».

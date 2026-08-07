@@ -3416,7 +3416,7 @@ async function handleRpcRequest(event, context) {
     // Дельта-запись transcript/journal: в RPC уходит только блок, сервер сам
     // дописывает/вставляет и ротирует переполненный файл в archive/*_partN.
     if (fnName === 'append_heys_tasks_file_by_curator') {
-      const tasksKv = require('../heys-mcp/lib/tasks');
+      const tasksKv = require('./lib/heys_tasks_kv.cjs');
       let targetClientId = params.p_client_id || params.client_id;
       const filePath = params.p_path || params.path;
       const mode = params.p_mode || params.mode;
