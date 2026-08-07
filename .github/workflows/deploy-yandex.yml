@@ -15,8 +15,10 @@ on:
 # чтобы текущий deploy дозавершился — иначе риск частичной загрузки в S3.
 # Без этого блока race: fast-path может закончиться позже full build от
 # предыдущего push'а и затереть свежие бандлы старым whats-new.json.
+# Ghost run 31128803542 (2026-08-06) stuck in queued — API cancel 409.
+# Bump group so new deploys don't wait behind it; old run stays orphaned in UI.
 concurrency:
-  group: deploy-yandex-main
+  group: deploy-yandex-main-20260807
   cancel-in-progress: false
 
 permissions:
