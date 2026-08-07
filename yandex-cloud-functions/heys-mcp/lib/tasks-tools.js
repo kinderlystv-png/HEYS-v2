@@ -760,12 +760,70 @@ function createTasksTools({
    * безусловно), поэтому окно не закрывается совсем — но проигравший всегда
    * видит, что его текста нет, и либо повторяет, либо отказывает вслух.
    */
-  async function writeFile(file, text, { rebase = null } = {}) {
+  async function writeFileDelta(file, { mode, block }, { rebase = null } = {}) {
+    const contextId = writeContext ? await writeContext(clientId) : null;
+    let baseRev = Number(file.rev) || 0;
+    const deltaBlock = String(block || '').trim();
+    if (!deltaBlock) throw new ToolError('invalid_block', 'Пустой блок для дельта-записи.');
+
+    for (let attempt = 1; attempt <= WRITE_ATTEMPTS; attempt += 1) {
+      const before = await readForWrite(file.path);
+      if (before.file.rev !== baseRev) {
+        if (!rebase) throw staleWriteError(file.path, baseRev, before.file.rev);
+        baseRev = before.file.rev;
+      }
+
+      const res = await api.appendTasksFileByCurator(curatorJwt, clientId, {
+        path: file.path,
+        mode,
+        block: deltaBlock,
+        base_rev: baseRev,
+      }, contextId);
+      if (!res.ok && res.error === 'stale_rev') {
+        if (!rebase) throw staleWriteError(file.path, baseRev, res.current_rev);
+        baseRev = res.current_rev;
+        continue;
+      }
+      if (!res.ok) throw new ToolError('save_failed', `Сервер отклонил дельта-запись ${file.path}: ${res.error}`);
+
+      const after = await readForWrite(file.path);
+      const expectedRev = Number(res.data && res.data.rev) || 0;
+      if (expectedRev > 0 && after.file.rev !== expectedRev) {
+        baseRev = after.file.rev;
+        continue;
+      }
+      if (after.file.rev <= baseRev) {
+        baseRev = after.file.rev;
+        continue;
+      }
+
+      indexPromise = Promise.resolve(await ensureIndexEntry(after.file, after.index, contextId));
+      return after.file;
+    }
+
+    throw new ToolError(
+      'stale_write_blocked',
+      `Не удалось дельта-записать ${file.path}: за ${WRITE_ATTEMPTS} попытки файл каждый раз успевали переписать из другой сессии. Ничего не сохранено. Повтори операцию, когда параллельная работа закончится.`,
+      { path: file.path, attempts: WRITE_ATTEMPTS },
+    );
+  }
+
+  async function writeFile(file, text, { rebase = null, delta = null } = {}) {
     // Единственная дверь наружу для всех пишущих инструментов, поэтому запрет
     // на чужие файлы стоит здесь, а не в каждом обработчике по отдельности.
     const guarded = tasks.ownerOnlyFile(file.path);
     if (guarded) {
       throw new ToolError('owner_only_file', tasks.ownerOnlyRefusal(guarded), { path: guarded });
+    }
+    if (delta && tasks.isDeltaWritablePath(file.path) && typeof api.appendTasksFileByCurator === 'function') {
+      return writeFileDelta(file, delta, { rebase });
+    }
+    if (tasks.estimateWritePayloadBytes(file.path, text) > tasks.TASKS_WRITE_PAYLOAD_LIMIT) {
+      throw new ToolError(
+        'payload_too_large',
+        `Запись ${file.path} не влезает в лимит RPC (${tasks.TASKS_WRITE_PAYLOAD_LIMIT} байт). Для transcript/journal нужна дельта-запись — сообщи разработчику, если видишь это на checkpoint.`,
+        { path: file.path },
+      );
     }
     const contextId = writeContext ? await writeContext(clientId) : null;
     let baseRev = Number(file.rev) || 0;
@@ -1543,7 +1601,7 @@ function createTasksTools({
       if (headingError) throw new ToolError('invalid_transcript_heading', headingError);
       const file = await readFile(args.path);
       const put = (text) => tasks.appendBlock(text, block);
-      const saved = await writeFile(file, put(file.text), { rebase: put });
+      const saved = await writeFile(file, put(file.text), { rebase: put, delta: { mode: 'append', block } });
       return {
         text: `Дописал в ${saved.path} (${block.split('\n').length} строк).`,
         structured: { path: saved.path, rev: saved.rev, lines: block.split('\n').length },
@@ -1586,13 +1644,19 @@ function createTasksTools({
       // ещё возможен, поэтому в ответе возвращаются отдельные ревизии.
       const transcript = await readFile(transcriptPath);
       const putTranscript = (text) => tasks.prependBlock(text, transcriptBlock);
-      const savedTranscript = await writeFile(transcript, putTranscript(transcript.text), { rebase: putTranscript });
+      const savedTranscript = await writeFile(transcript, putTranscript(transcript.text), {
+        rebase: putTranscript,
+        delta: { mode: 'prepend', block: transcriptBlock },
+      });
 
       let savedJournal = null;
       if (journalBlock) {
         const journal = await readFile(journalPath);
         const putJournal = (text) => tasks.appendBlock(text, journalBlock);
-        savedJournal = await writeFile(journal, putJournal(journal.text), { rebase: putJournal });
+        savedJournal = await writeFile(journal, putJournal(journal.text), {
+          rebase: putJournal,
+          delta: { mode: 'append', block: journalBlock },
+        });
       }
 
       try {
@@ -3313,8 +3377,12 @@ function createTasksTools({
         const marked = [];
         for (const day of round.status.days) {
           const file = await readFile(day.path);
+          const markBlock = tasks.reviewMarkBlock(stamp);
           const put = (text) => tasks.appendReviewMark(text, stamp);
-          const saved = await writeFile(file, put(file.text), { rebase: put });
+          const saved = await writeFile(file, put(file.text), {
+            rebase: put,
+            delta: tasks.isDeltaWritablePath(file.path) ? { mode: 'append', block: markBlock } : null,
+          });
           marked.push({ path: saved.path, rev: saved.rev, date: day.date, kind: 'стенограмма' });
         }
         // Причины из «Закрыть день» сверены той же ревизией — отметка идёт в

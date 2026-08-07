@@ -314,6 +314,29 @@ test('patchBlock отказывает при неоднозначной подс
 function withWrites() {
   const api = withFiles();
   api.writes = [];
+  api.appendTasksFileByCurator = async (bearer, clientId, spec) => {
+    assert.equal(clientId, CLIENT);
+    const key = tasks.keyForPath(spec.path);
+    const file = tasks.ensureFile(api.kv[key], spec.path);
+    if (Number(spec.base_rev) > 0 && Number(file.rev) !== Number(spec.base_rev)) {
+      return { ok: false, error: 'stale_rev', current_rev: file.rev };
+    }
+    const applied = tasks.applyDeltaToFile(file, spec.mode, spec.block, Date.now());
+    api.kv[key] = applied.file;
+    for (const arch of applied.archives) {
+      api.kv[tasks.keyForPath(arch.path)] = arch;
+    }
+    const index = tasks.ensureIndex(api.kv[tasks.INDEX_KEY]);
+    let nextIndex = index;
+    for (const arch of applied.archives) nextIndex = tasks.withIndexEntry(nextIndex, arch, Date.now());
+    nextIndex = tasks.withIndexEntry(nextIndex, applied.file, Date.now());
+    api.kv[tasks.INDEX_KEY] = nextIndex;
+    api.writes.push({ append: spec, file: applied.file });
+    return {
+      ok: true,
+      data: { path: applied.file.path, rev: applied.file.rev, rotated: applied.archives.map((a) => a.path) },
+    };
+  };
   api.upsertKVManyByCurator = async (bearer, clientId, items, contextId) => {
     assert.equal(clientId, CLIENT);
     api.writes.push({ items, contextId });
@@ -5797,4 +5820,36 @@ test('запись в свой файл не выкидывает из инде�
   assert.ok(index.files['projects/kinderly.md'], 'чужой файл остался в индексе — правка в наш файл его не вытеснила');
   assert.equal(index.files['projects/heys.md'].rev, 4);
   assert.equal(index.files['projects/family.md'].rev, 3);
+});
+
+test('rotateFileText у journal снимает старые блоки сверху', () => {
+  const big = [
+    '## 2026-08-01 10:00 · старое',
+    'текст'.repeat(15000),
+    '## 2026-08-02 11:00 · середина',
+    'ещё'.repeat(15000),
+    '## 2026-08-02 12:00 · свежее',
+    'хвост',
+  ].join('\n\n');
+  const rotated = tasks.rotateFileText('journal/2026-08.md', big);
+  assert.ok(rotated.archives.length >= 1, 'должен появиться архив');
+  assert.match(rotated.active, /2026-08-02 12:00/);
+  assert.ok(tasks.utf8ByteLength(rotated.active) <= tasks.TASKS_ROTATE_TARGET_BYTES);
+});
+
+test('checkpoint на переполненный journal идёт дельтой, не полным телом', async () => {
+  const api = withWrites();
+  const journalKey = tasks.keyForPath('journal/2026-08.md');
+  const huge = '## 2026-08-01 10:00 · старое\n' + 'x'.repeat(tasks.TASKS_ROTATE_TARGET_BYTES);
+  api.kv[journalKey] = { path: 'journal/2026-08.md', text: huge, rev: 3, updatedAt: 1 };
+
+  await session(api).tasks_checkpoint({
+    transcript_block: '## 12:44\n\n**Кин:** тест дельты\n\n**Claude:** ответ дельты полный по смыслу, не выжимка — достаточно длинный для проверки.',
+    journal_block: '## 2026-08-02 12:44 · дельта\n\nВводная: journal переполнен.\nРазбор: пишем блоком.\nИтог: append RPC.',
+  });
+
+  const appendWrites = api.writes.filter((w) => w.append);
+  assert.ok(appendWrites.length >= 1, 'должна быть хотя бы одна дельта-запись');
+  assert.ok(appendWrites.some((w) => w.append.path === 'journal/2026-08.md'));
+  assert.match(api.kv[journalKey].text, /Итог: append RPC/);
 });

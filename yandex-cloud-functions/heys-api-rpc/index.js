@@ -1101,6 +1101,7 @@ const CURATOR_ONLY_FUNCTIONS = [
   // холодного heys-api-rest (cold start parity с PIN-путём).
   // Безопасность: SQL функция проверяет ownership (clients.user_id = curator).
   'batch_upsert_client_kv_by_curator',
+  'append_heys_tasks_file_by_curator',  // дельта-запись transcript/journal без полного тела
   'merge_save_client_kv_by_curator',      // 🔀 Server-side merge — куратор пишет данные клиента
   'issue_write_context_by_curator',       // 🛡️ Write context — выдача capability token (Phase A1)
 
@@ -1136,6 +1137,7 @@ const CURATOR_AUDIT_SKIP = new Set([
   'admin_get_trial_intake_summaries',
   'create_client_with_pin',          // новый клиент — нет existing target
   'delete_gamification_events_by_curator',  // bulk delete по event_ids, не client
+  'append_heys_tasks_file_by_curator',    // задачник куратора, не health-data
 ]);
 
 // CURATOR_AUDIT_HEALTH — функции которые читают/пишут health-data (питание,
@@ -3407,6 +3409,161 @@ async function handleRpcRequest(event, context) {
           v: mergedValue,
           outcome: mergeOutcome
         })
+      };
+    }
+
+    // 📝 SPECIAL: append_heys_tasks_file_by_curator
+    // Дельта-запись transcript/journal: в RPC уходит только блок, сервер сам
+    // дописывает/вставляет и ротирует переполненный файл в archive/*_partN.
+    if (fnName === 'append_heys_tasks_file_by_curator') {
+      const tasksKv = require('../heys-mcp/lib/tasks');
+      let targetClientId = params.p_client_id || params.client_id;
+      const filePath = params.p_path || params.path;
+      const mode = params.p_mode || params.mode;
+      const block = params.p_block != null ? params.p_block : params.block;
+      const baseRev = Number(params.p_base_rev || params.base_rev || 0);
+
+      if (!targetClientId || !curatorId) {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: 'Missing p_client_id or curator auth' }),
+        };
+      }
+      if (!filePath || !tasksKv.isDeltaWritablePath(filePath)) {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: 'invalid_path' }),
+        };
+      }
+      if (mode !== 'prepend' && mode !== 'append') {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: 'invalid_mode' }),
+        };
+      }
+      if (!block || !String(block).trim()) {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: 'empty_block' }),
+        };
+      }
+
+      const fileKey = tasksKv.keyForPath(filePath);
+      const indexKey = tasksKv.INDEX_KEY;
+      if (!fileKey) {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 400,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: 'invalid_path' }),
+        };
+      }
+
+      const ctxResult = await validateContextForWrite(
+        client, params, true /* isCurator */,
+        curatorId, null /* sessionId */, targetClientId, filePath,
+      );
+      if (!ctxResult.ok) {
+        try { client.release(); } catch (_) { /* ignore */ }
+        return {
+          statusCode: 403,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: ctxResult.status }),
+        };
+      }
+      targetClientId = ctxResult.effectiveClientId;
+
+      const nowMs = Date.now();
+      let mergedFile;
+      let archivePaths = [];
+      try {
+        await client.query('BEGIN');
+        const locked = await client.query(
+          'SELECT k, v FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[]) FOR UPDATE',
+          [targetClientId, [fileKey, indexKey]],
+        );
+        const byKey = {};
+        for (const row of locked.rows) byKey[row.k] = row.v;
+
+        const currentFile = tasksKv.ensureFile(byKey[fileKey], filePath);
+        const currentIndex = tasksKv.ensureIndex(byKey[indexKey]);
+
+        if (baseRev > 0 && Number(currentFile.rev) !== baseRev) {
+          await client.query('ROLLBACK');
+          try { client.release(); } catch (_) { /* ignore */ }
+          return {
+            statusCode: 409,
+            headers: corsHeaders,
+            body: JSON.stringify({
+              ok: false,
+              error: 'stale_rev',
+              current_rev: Number(currentFile.rev) || 0,
+            }),
+          };
+        }
+
+        const applied = tasksKv.applyDeltaToFile(currentFile, mode, block, nowMs);
+        mergedFile = applied.file;
+        archivePaths = applied.archives.map((f) => f.path);
+
+        let nextIndex = currentIndex;
+        for (const arch of applied.archives) {
+          nextIndex = tasksKv.withIndexEntry(nextIndex, arch, nowMs);
+        }
+        nextIndex = tasksKv.withIndexEntry(nextIndex, mergedFile, nowMs);
+
+        const items = [
+          { k: fileKey, v: mergedFile },
+          { k: indexKey, v: nextIndex },
+          ...applied.archives.map((f) => ({ k: tasksKv.keyForPath(f.path), v: f })),
+        ];
+
+        const upsert = await client.query(
+          'SELECT * FROM batch_upsert_client_kv_by_curator(p_curator_id => $1::uuid, p_client_id => $2::uuid, p_items => $3::jsonb)',
+          [curatorId, targetClientId, JSON.stringify(items)],
+        );
+        const upsertResult = upsert.rows[0]?.batch_upsert_client_kv_by_curator || upsert.rows[0] || {};
+        if (upsertResult && upsertResult.success === false) {
+          await client.query('ROLLBACK');
+          try { client.release(); } catch (_) { /* ignore */ }
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify(upsertResult),
+          };
+        }
+
+        await client.query('COMMIT');
+      } catch (appendErr) {
+        try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
+        try { client.release(); } catch (_) { /* ignore */ }
+        console.error('[append_heys_tasks] failed:', appendErr.message);
+        return {
+          statusCode: 500,
+          headers: corsHeaders,
+          body: JSON.stringify({ ok: false, error: appendErr.message }),
+        };
+      }
+
+      try { client.release(); } catch (_) { /* ignore */ }
+
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          ok: true,
+          path: mergedFile.path,
+          rev: mergedFile.rev,
+          rotated: archivePaths,
+        }),
       };
     }
 

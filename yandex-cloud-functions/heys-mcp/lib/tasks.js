@@ -4997,6 +4997,119 @@ function planFactSides(pattern) {
   ];
 }
 
+/** Порог ротации активного файла — с запасом под JSON-обёртку RPC (256 КБ). */
+const TASKS_ROTATE_TARGET_BYTES = 180 * 1024;
+/** Полная запись через batch_upsert не должна приближаться к лимиту тела запроса. */
+const TASKS_WRITE_PAYLOAD_LIMIT = 240 * 1024;
+
+function utf8ByteLength(text) {
+  return Buffer.byteLength(String(text || ''), 'utf8');
+}
+
+function isDeltaWritablePath(path) {
+  const clean = normalizePath(path);
+  if (!clean) return false;
+  return /^transcript\/\d{4}-\d{2}-\d{2}\.md$/i.test(clean)
+    || /^journal\/\d{4}-\d{2}\.md$/i.test(clean);
+}
+
+function rotatableKind(path) {
+  const clean = normalizePath(path);
+  if (!clean) return null;
+  if (/^transcript\//i.test(clean)) return 'transcript';
+  if (/^journal\//i.test(clean)) return 'journal';
+  return null;
+}
+
+const TRANSCRIPT_BLOCK_HEADING_RE = /^##\s*~?\d{1,2}:\d{2}(\s*[–—-]\s*~?\d{1,2}:\d{2})?\s*$/;
+const JOURNAL_BLOCK_HEADING_RE = /^##\s+\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2}/;
+
+function splitMarkdownBlocks(text, headingRe) {
+  const lines = String(text || '').split('\n');
+  const blocks = [];
+  let current = [];
+  let seenHeading = false;
+  for (const line of lines) {
+    if (headingRe.test(line.trim())) {
+      seenHeading = true;
+      if (current.length) blocks.push(current.join('\n').replace(/\s+$/, ''));
+      current = [line];
+    } else if (seenHeading) {
+      current.push(line);
+    } else if (line.trim()) {
+      current.push(line);
+    }
+  }
+  if (current.length) blocks.push(current.join('\n').replace(/\s+$/, ''));
+  return blocks.filter((b) => b.trim());
+}
+
+function archiveRotatePath(sourcePath, part) {
+  const base = String(sourcePath || '').replace(/\.md$/i, '').replace(/\//g, '_');
+  return `archive/${base}_part${part}.md`;
+}
+
+/**
+ * Урезать переполненный transcript/journal: старое — в archive/*_partN.md,
+ * активный ключ остаётся ниже TASKS_ROTATE_TARGET_BYTES.
+ */
+function rotateFileText(path, text) {
+  const kind = rotatableKind(path);
+  const raw = String(text || '');
+  if (!kind || utf8ByteLength(raw) <= TASKS_ROTATE_TARGET_BYTES) {
+    return { active: raw, archives: [] };
+  }
+  const headingRe = kind === 'transcript' ? TRANSCRIPT_BLOCK_HEADING_RE : JOURNAL_BLOCK_HEADING_RE;
+  let blocks = splitMarkdownBlocks(raw, headingRe);
+  if (blocks.length <= 1) {
+    return { active: raw, archives: [] };
+  }
+  const archives = [];
+  let part = 1;
+  while (utf8ByteLength(blocks.join('\n\n')) > TASKS_ROTATE_TARGET_BYTES && blocks.length > 1) {
+    const moved = kind === 'transcript' ? blocks.pop() : blocks.shift();
+    if (!moved || !moved.trim()) break;
+    archives.push({ path: archiveRotatePath(path, part), text: `${moved.trim()}\n` });
+    part += 1;
+  }
+  const active = blocks.join('\n\n').trim();
+  return { active: active ? `${active}\n` : '', archives };
+}
+
+function estimateWritePayloadBytes(path, text) {
+  const fileObj = bumpFile(emptyFile(path), String(text || ''), Date.now());
+  const indexObj = withIndexEntry(ensureIndex(null), fileObj, Date.now());
+  const items = [
+    { k: keyForPath(path), v: fileObj },
+    { k: INDEX_KEY, v: indexObj },
+  ];
+  return utf8ByteLength(JSON.stringify({ p_items: items }));
+}
+
+/**
+ * Дельта-запись: prepend/append блока + ротация при переполнении.
+ * Возвращает обновлённый файл и нулевой или более архивных файлов.
+ */
+function applyDeltaToFile(file, mode, block, nowMs) {
+  const path = normalizePath(file.path);
+  const cleanBlock = String(block || '').trim();
+  if (!cleanBlock) throw new Error('empty_block');
+  if (mode !== 'prepend' && mode !== 'append') throw new Error('invalid_mode');
+
+  const rotatedBefore = rotateFileText(path, file.text);
+  let text = rotatedBefore.active;
+  text = mode === 'prepend' ? prependBlock(text, cleanBlock) : appendBlock(text, cleanBlock);
+  const rotatedAfter = rotateFileText(path, text);
+
+  const nextFile = bumpFile(file, rotatedAfter.active, nowMs);
+  const archiveFiles = [
+    ...rotatedBefore.archives,
+    ...rotatedAfter.archives,
+  ].map((entry) => bumpFile(emptyFile(entry.path), entry.text, nowMs));
+
+  return { file: nextFile, archives: archiveFiles };
+}
+
 module.exports = {
   KEY_PREFIX,
   INDEX_KEY,
@@ -5063,6 +5176,15 @@ module.exports = {
   planFactPatterns,
   planFactQuestion,
   planFactSides,
+  TASKS_ROTATE_TARGET_BYTES,
+  TASKS_WRITE_PAYLOAD_LIMIT,
+  utf8ByteLength,
+  isDeltaWritablePath,
+  rotatableKind,
+  rotateFileText,
+  archiveRotatePath,
+  estimateWritePayloadBytes,
+  applyDeltaToFile,
   // загруженность вперёд
   BOARD_DAY_START,
   BOARD_DAY_END,

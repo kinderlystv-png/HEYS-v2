@@ -424,6 +424,27 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     return { ok: true, data };
   }
 
+  /**
+   * Дельта-запись transcript/journal: в теле RPC только блок, не весь файл.
+   * Сервер дописывает/вставляет и ротирует переполнение в archive/*_partN.
+   */
+  async function appendTasksFileByCurator(bearer, clientId, spec, contextId = null) {
+    const { data, error } = await rpc('append_heys_tasks_file_by_curator', {
+      p_client_id: clientId,
+      p_path: spec.path,
+      p_mode: spec.mode,
+      p_block: spec.block,
+      p_base_rev: Number(spec.base_rev) || 0,
+      p_context_id: contextId,
+    }, { bearer });
+    if (error) return { ok: false, error: error.message };
+    if (data && data.error === 'stale_rev') {
+      return { ok: false, error: 'stale_rev', current_rev: Number(data.current_rev) || 0 };
+    }
+    if (data && data.ok === false) return { ok: false, error: data.error || 'append_failed' };
+    return { ok: true, data };
+  }
+
   async function upsertKVByCurator(bearer, clientId, key, value, contextId = null) {
     const { data, error } = await rpc('batch_upsert_client_kv_by_curator', {
       p_client_id: clientId,
@@ -690,7 +711,7 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
 
   return {
     rpc, rest, verifyPin, getKV, getKVMany, mergeSaveKV, upsertKV, getSharedProducts, stats,
-    curatorLogin, curatorStatus, listClients, getKVByCurator, getKVManyByCurator, issueWriteContext, mergeSaveKVByCurator, upsertKVByCurator, upsertKVManyByCurator,
+    curatorLogin, curatorStatus, listClients, getKVByCurator, getKVManyByCurator, issueWriteContext, mergeSaveKVByCurator, upsertKVByCurator, upsertKVManyByCurator, appendTasksFileByCurator,
     getMessagesThread, getMessagesInbox, setMessageDone, sendMessageToClient, readAttachment,
     createClientWithPin, setClientPin, getClientAccessLink,
     extendSubscription, cancelSubscription,
