@@ -5132,6 +5132,58 @@ test('checkpoint date и шапка журнала должны совпадат
   assert.equal(api.kv[tasks.keyForPath(YESTERDAY_TRANSCRIPT_PATH)], undefined);
 });
 
+test('checkpoint без journal_block напоминает про вывод, если обмен похож на разбор', async () => {
+  const api = liveTasksApi();
+  const res = await session(api).tasks_checkpoint({
+    transcript_block: '## 14:20\n\n**Кин:** Решили делать soft-nudge, открыто: ревизия на планёрке.\n**Claude:** Итог: эвристика в checkpoint, stop не блокируем.',
+  });
+  assert.equal(res.structured.checkpoint, true);
+  assert.match(res.structured.journal_reminder, /устойчивый вывод/);
+  assert.match(res.text, /journal_block/);
+});
+
+test('checkpoint с journal_block не напоминает про журнал', async () => {
+  const api = liveTasksApi();
+  const res = await session(api).tasks_checkpoint({
+    transcript_block: '## 14:21\n\n**Кин:** Решили soft-nudge.\n**Claude:** Итог: делаем.',
+    journal_block: '## 2026-08-02 14:21 · heys\n\nВводная: soft-nudge.\nИтог: эвристика в checkpoint.',
+  });
+  assert.equal(res.structured.journal_reminder, undefined);
+});
+
+test('checkpoint на простой захват не шумит journal_reminder', async () => {
+  const api = liveTasksApi();
+  const res = await session(api).tasks_checkpoint({
+    transcript_block: '## 14:22\n\n**Кин:** Ок, записал задачу про soft-nudge.\n**Claude:** Положил в projects/heys.md.',
+  });
+  assert.equal(res.structured.journal_reminder, undefined);
+  assert.equal(res.structured.fact_reminder, undefined);
+});
+
+test('checkpoint напоминает про факт о мире без tasks_learn', async () => {
+  const api = liveTasksApi();
+  const res = await session(api).tasks_checkpoint({
+    transcript_block: '## 14:23\n\n**Кин:** Марка машины — Camel AGM, без старт-стопа.\n**Claude:** Запомню для справки, в журнал не кладу.',
+  });
+  assert.match(res.structured.fact_reminder, /tasks_learn/);
+  assert.equal(res.structured.journal_reminder, undefined);
+});
+
+test('checkpointOutputReminders: тёзки без learn', () => {
+  const r = tasks.checkpointOutputReminders({
+    transcriptBlock: '## 14:24\n\n**Кин:** Маша-фотограф и Маша-аниматор — это разные люди.\n**Claude:** Буду различать суффиксом роли.',
+  });
+  assert.ok(r.fact_reminder);
+  assert.equal(r.journal_reminder, undefined);
+});
+
+test('checkpointOutputReminders: learn уже был — без fact_reminder', () => {
+  const r = tasks.checkpointOutputReminders({
+    transcriptBlock: '## 14:25\n\n**Кин:** Марка — Camel.\n**Claude:** Записал через tasks_learn kind «факт».',
+  });
+  assert.equal(r.fact_reminder, undefined);
+});
+
 // ── Свежесть и вес источника в поиске ────────────────────────────────────
 //
 // Слова отвечают на «про то ли это», но не на «что читать первым». Проверяется

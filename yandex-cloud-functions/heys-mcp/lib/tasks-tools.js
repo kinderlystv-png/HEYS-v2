@@ -1683,16 +1683,25 @@ function createTasksTools({
         // pending — страховка для хуков/приписки; сбой очистки не откатывает checkpoint
       }
 
-      return {
-        text: `Обмен сохранён: стенограмма ${transcriptPath}${savedJournal ? `, вывод — ${journalPath}` : '; устойчивого вывода для журнала нет'}.`,
-        structured: {
-          checkpoint: true,
-          date: day,
-          transcript_pending: false,
-          transcript: { path: savedTranscript.path, rev: savedTranscript.rev },
-          journal: savedJournal ? { path: savedJournal.path, rev: savedJournal.rev } : null,
-        },
+      const reminders = tasks.checkpointOutputReminders({ transcriptBlock, journalBlock });
+      let text = `Обмен сохранён: стенограмма ${transcriptPath}${savedJournal ? `, вывод — ${journalPath}` : '; устойчивого вывода для журнала нет'}.`;
+      const structured = {
+        checkpoint: true,
+        date: day,
+        transcript_pending: false,
+        transcript: { path: savedTranscript.path, rev: savedTranscript.rev },
+        journal: savedJournal ? { path: savedJournal.path, rev: savedJournal.rev } : null,
       };
+      if (reminders.journal_reminder) {
+        text += `\n\n${reminders.journal_reminder}`;
+        structured.journal_reminder = reminders.journal_reminder;
+      }
+      if (reminders.fact_reminder) {
+        text += `\n\n${reminders.fact_reminder}`;
+        structured.fact_reminder = reminders.fact_reminder;
+      }
+
+      return { text, structured };
     },
 
     /**

@@ -174,6 +174,82 @@ function verbatimTranscriptError(block) {
   return null;
 }
 
+const CHECKPOINT_JOURNAL_REMINDER = 'Похоже, в обмене был устойчивый вывод — при необходимости допиши journal_block повторным checkpoint или следующим ходом.';
+const CHECKPOINT_FACT_REMINDER = 'Похоже, прозвучал факт о мире — если так, запиши через tasks_learn (kind «факт»), не в journal.';
+
+const JOURNAL_NUDGE_STRONG_RE = [
+  /итог\s*:/i,
+  /открыто\s*:/i,
+  /снято\s*:/i,
+  /разбор\s*:/i,
+  /(?:heys|kinderly|family|personal|travel|someday|mine2d)\/[0-9a-f]{6}/i,
+  /tasks_(?:decision|resolve)/i,
+];
+
+const JOURNAL_NUDGE_WEAK_RE = [
+  /решил[иа]?/i,
+  /решено/i,
+  /делаем/i,
+  /вариант/i,
+  /отклон/i,
+  /положил/i,
+  /зав[её]л/i,
+  /развилк/i,
+  /\d[\d\s]*(?:₽|руб\.?)/i,
+];
+
+const FACT_NUDGE_RE = [
+  /марка/i,
+  /машин[аыу]?/i,
+  /площад/i,
+  /склад/i,
+  /разные люди/i,
+  /кто есть кто/i,
+  /вид\s*[«"]факт[»"]/i,
+  /факт\s+о\s+мире/i,
+  /[-\p{L}\d]+-[-\p{L}\d]+\s+и\s+[-\p{L}\d]+-[-\p{L}\d]+\s+—\s+это\s+разные/iu,
+];
+
+const FACT_ALREADY_RECORDED_RE = [
+  /tasks_learn/i,
+  /kind\s*[«"]факт[»"]/i,
+  /записал.*(?:памят|факт)/i,
+];
+
+const SIMPLE_KIN_RE = /^(?:спасибо|ок|да|нет|хорошо|понял|ясно)\.?$/i;
+
+/**
+ * Soft-nudge после checkpoint: журнал/факт не обязательны, но если обмен
+ * похож на разбор или факт о мире — одна приписка в ответ (precision > recall).
+ */
+function checkpointOutputReminders({ transcriptBlock, journalBlock } = {}) {
+  const jb = String(journalBlock || '').trim();
+  const sides = parseTranscriptSides(transcriptBlock);
+  if (!sides) return {};
+
+  const kin = sides.kin.trim();
+  const claude = sides.claude.trim();
+  const text = `${kin}\n${claude}`;
+
+  if (/просто запиши/i.test(kin)) return {};
+  if (SIMPLE_KIN_RE.test(kin) && !JOURNAL_NUDGE_STRONG_RE.some((re) => re.test(text))) return {};
+
+  const out = {};
+
+  if (!jb) {
+    const strong = JOURNAL_NUDGE_STRONG_RE.some((re) => re.test(text));
+    const weakHits = JOURNAL_NUDGE_WEAK_RE.filter((re) => re.test(text)).length;
+    if (strong || weakHits >= 2) out.journal_reminder = CHECKPOINT_JOURNAL_REMINDER;
+  }
+
+  if (!FACT_ALREADY_RECORDED_RE.some((re) => re.test(claude))
+    && FACT_NUDGE_RE.some((re) => re.test(text))) {
+    out.fact_reminder = CHECKPOINT_FACT_REMINDER;
+  }
+
+  return out;
+}
+
 /**
  * Рабочий день задачника, а не календарное число. Сутки кончаются в 3 утра —
  * та же граница, что в дневнике HEYS. Мысль, записанная в час ночи, относится
@@ -5255,6 +5331,9 @@ module.exports = {
   transcriptHeadingError,
   parseTranscriptSides,
   verbatimTranscriptError,
+  checkpointOutputReminders,
+  CHECKPOINT_JOURNAL_REMINDER,
+  CHECKPOINT_FACT_REMINDER,
   transcriptSubstance,
   prependToSection,
   appendBlock,
