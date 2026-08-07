@@ -2004,4 +2004,15 @@ const WRITE_TOOLS = new Set([
   'heys_delete_meal_preset',
 ]);
 
-module.exports = { createTools, TOOL_SCHEMAS, WRITE_TOOLS, ToolError, defaultMealName, makeId };
+// Аннотации MCP (readOnlyHint/…) — см. lib/tool-annotations.js.
+const { annotateToolSchemas } = require('./tool-annotations');
+const TOOL_SCHEMAS_ANNOTATED = annotateToolSchemas(TOOL_SCHEMAS);
+
+module.exports = {
+  createTools,
+  TOOL_SCHEMAS: TOOL_SCHEMAS_ANNOTATED,
+  WRITE_TOOLS,
+  ToolError,
+  defaultMealName,
+  makeId,
+};

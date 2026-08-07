@@ -1157,13 +1157,14 @@ function createCuratorContext({
     : null;
   if (repoContext) Object.assign(tools, repoContext.tools);
 
+  const { annotateToolSchemas } = require('./tool-annotations');
   return {
     tools,
-    schemas: [
+    schemas: annotateToolSchemas([
       ...(tasksContext ? tasksContext.schemas : []),
       ...(repoContext ? repoContext.schemas : []),
       ...buildCuratorSchemas({ requireTranscript: !!tasksContext }),
-    ],
+    ]),
     instructions: curatorInstructions(curatorName, !!tasksContext, nowMs, !!repoContext),
   };
 }
