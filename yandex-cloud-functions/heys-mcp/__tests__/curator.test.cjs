@@ -1271,22 +1271,26 @@ test('правило про норму клиента доезжает до ку
   assert.ok(!TASKS_RULES().some((l) => /норм/i.test(l) && /client_saved/.test(l)));
 });
 
-test('перед вопросом «кому вносить» модель обязана сверить свою память', () => {
-  // Инцидент 2026-08-04: правило «мне = такой-то клиент» лежало в памяти, а
-  // модель сразу позвала heys_list_clients и переспросила, хотя ответ уже был
-  // известен. Строка обязана стоять раньше «КРИТИЧЕСКОГО ПРАВИЛА РЕЖИМА» —
-  // модель заметнее реагирует на то, что идёт первым шагом алгоритма.
+test('перед вопросом «кому вносить» модель не уходит в археологию «мне»', () => {
+  // Инцидент 2026-08-04/07: правило «мне = клиент» лежало в памяти, а модель
+  // звала list_clients + grep. Инструкция обязана сказать: передавай алиас в
+  // client напрямую, сервер развернёт — и стоять раньше CRITICAL.
   const text = curatorInstructions('Антон', true, Date.UTC(2026, 7, 3));
-  const checkMemory = text.indexOf('проверь, не объяснял ли куратор');
+  const address = text.indexOf('передавай прямо в параметр client');
   const askRule = text.indexOf('КРИТИЧЕСКОЕ ПРАВИЛО РЕЖИМА');
-  assert.ok(checkMemory >= 0, 'инструкция сверить память отсутствует');
+  assert.ok(address >= 0, 'инструкция про прямой client=алиас отсутствует');
   assert.ok(askRule >= 0);
-  assert.ok(checkMemory < askRule, 'сверка памяти должна идти раньше вопроса «кому»');
-  assert.match(text, /tasks_context по его фразе/, 'с задачником — явная отсылка к tasks_context');
+  assert.ok(address < askRule, 'адресация должна идти раньше вопроса «кому»');
+  assert.match(text, /не грепай journal|без grep/i);
+  assert.match(text, /Не зови heys_list_clients.*ради «кто такой мне»|не зови heys_list_clients/i);
+
+  const withLine = curatorInstructions('Антон', true, Date.UTC(2026, 7, 3), false, '«мне» → Полтавский');
+  assert.match(withLine, /Адресация из памяти/);
+  assert.match(withLine, /Полтавский/);
 
   const noTasks = curatorInstructions('Антон', false, Date.UTC(2026, 7, 3));
-  assert.doesNotMatch(noTasks, /tasks_context по его фразе/, 'без задачника — не звать несуществующий инструмент');
-  assert.match(noTasks, /проверь, не объяснял ли куратор/, 'сверка памяти нужна и без задачника');
+  assert.doesNotMatch(noTasks, /tasks_context/, 'без задачника — не звать несуществующий инструмент');
+  assert.match(noTasks, /передавай прямо в параметр client/);
 });
 
 test('вид «факт» и путь его обновления названы в правилах, а не только в схеме', () => {
@@ -1553,4 +1557,37 @@ test('занятость ресурса подана фактом, а вывод
   const rule = TASKS_RULES().find((line) => /спроси один раз/i.test(line) && /tasks_learn/.test(line));
   assert.ok(rule, 'общий ход «спросил → записал → молчу» в правилах остался');
   assert.doesNotMatch(rule, /сначала вызови/i);
+});
+
+test('алиас «мне» из памяти резолвится в client без археологии', async () => {
+  // Инцидент 07.08: на «запиши мне» модель звала list_clients+grep, хотя
+  // после понимания адреса запись занимала 2 вызова. Сервер обязан принять
+  // client=«мне» сам.
+  const prefsText = [
+    '## Как он решает',
+    '',
+    `- 2026-08-03 · предпочтение · «Мне» = аккаунт клиента Антон (${CLIENTS[0].client_id}). «Жене» / «цыпе» = аккаунт клиента Александра (${CLIENTS[1].client_id}). — его слова`,
+  ].join('\n');
+  const prefs = tasksLib.activePreferences(tasksLib.parsePreferences({ text: prefsText }));
+  const aliasMap = tasksLib.clientAddressMap(prefs, CLIENTS);
+  assert.equal(aliasMap.get('мне').client_id, CLIENTS[0].client_id);
+  assert.equal(aliasMap.get('жене').client_id, CLIENTS[1].client_id);
+  assert.equal(aliasMap.get('цыпе').client_id, CLIENTS[1].client_id);
+  assert.equal(aliasMap.get('себе').client_id, CLIENTS[0].client_id);
+
+  const api = fakeCuratorApi();
+  const { tools, instructions } = createCuratorContext({
+    api, curatorJwt: JWT, curatorName: 'Кин', nowMs: NOW, addressAliases: aliasMap,
+  });
+  assert.match(instructions, /Адресация из памяти/);
+  assert.match(instructions, /Антон/);
+
+  const day = await tools.heys_get_day({ client: 'мне', date: '2026-08-01' });
+  assert.match(day.text, /^\[Антон\]/);
+  const wife = await tools.heys_get_day({ client: 'цыпе', date: '2026-08-01' });
+  assert.match(wife.text, /^\[Александра\]/);
+
+  const listed = await tools.heys_list_clients({});
+  assert.match(listed.text, /Алиасы:/);
+  assert.match(listed.text, /мне/);
 });

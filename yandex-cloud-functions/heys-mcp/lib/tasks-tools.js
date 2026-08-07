@@ -1223,8 +1223,12 @@ function createTasksTools({
         // («лендинг» и «лендингу» дают разные основы), и односторонняя проверка
         // молча промахивалась бы на падежах — то есть считала бы работающую
         // запись ни разу не пригодившейся.
+        //
+        // Плюс сырая фраза: «мне»/«себе» — TOPIC_STOP_WORDS, из terms выпадают,
+        // и адресация дневника на «запиши мне» никогда не попадала в «Из памяти».
         p.relevant = tasks.matchTerms(text, terms).score > 0
-          || tasks.matchTerms(topic, tasks.topicTerms(text).terms).score > 0;
+          || tasks.matchTerms(topic, tasks.topicTerms(text).terms).score > 0
+          || tasks.preferenceHitsRawTopic(p, topic);
         return p.relevant;
       });
       if (relevant.length && prefsFile) {

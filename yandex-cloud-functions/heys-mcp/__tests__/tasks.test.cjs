@@ -4829,6 +4829,30 @@ test('синонимы поднимают факт, названный его с
   assert.equal(entry.kind, 'факт');
 });
 
+test('адресация «мне» не тонет в TOPIC_STOP_WORDS', () => {
+  // На «запиши мне 300 г» слово «мне» выкидывается из terms — без raw-hit
+  // предпочтение не попадало в «Из памяти», и модель шла в list_clients.
+  const note = '«Мне» = аккаунт клиента Полтавский (client_id ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a). «Жене» / «цыпе» = аккаунт клиента Александра (client_id 4545ee50-4f5f-4fc0-b862-7ca45fa1bafc).';
+  const clients = [
+    { client_id: 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a', name: 'Полтавский' },
+    { client_id: '4545ee50-4f5f-4fc0-b862-7ca45fa1bafc', name: 'Александра' },
+  ];
+  const entry = { note, aliases: [], kind: 'предпочтение' };
+  const map = tasks.clientAddressMap([entry], clients);
+  assert.equal(map.get('мне').name, 'Полтавский');
+  assert.equal(map.get('жене').name, 'Александра');
+  assert.equal(map.get('цыпе').name, 'Александра');
+  assert.equal(map.get('себе').name, 'Полтавский');
+  assert.equal(tasks.preferenceHitsRawTopic(entry, 'заведи продукт и запиши мне 300 г'), true);
+  assert.equal(tasks.preferenceHitsRawTopic(entry, 'запиши жене завтрак'), true);
+  assert.equal(tasks.preferenceHitsRawTopic(entry, 'изменение нормы'), false);
+  const known = tasks.knownPreference([
+    { note, aliases: ['мне', 'себе'], question: null, date: '2026-08-03' },
+  ], null, { question: 'мне' });
+  assert.ok(known, 'tasks_learn(question:мне) обязан найти запись по алиасу');
+  assert.equal(known.matched_by, 'алиас');
+});
+
 test('синонимы пишутся дочерней строкой и переживают чтение', () => {
   const block = tasks.preferenceBlock({
     date: '2026-08-04', kind: 'факт', note: 'Машина Skoda Octavia',

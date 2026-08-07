@@ -29,6 +29,7 @@ const { createRepoTools } = require('./repo-tools');
 const products = require('./products');
 const admin = require('./admin');
 const day = require('./day');
+const tasks = require('./tasks');
 
 /** Инструменты, которым не нужен целевой клиент. */
 const CLIENTLESS_TOOLS = new Set([
@@ -41,7 +42,7 @@ const CLIENTLESS_TOOLS = new Set([
 
 const CLIENT_ARG = {
   type: 'string',
-  description: 'Про кого спрашиваем: имя клиента или client_id из heys_list_clients. Обязательно, если у куратора больше одного клиента.',
+  description: 'Про кого спрашиваем: client_id, имя целиком, или алиас из памяти («мне», «себе», «жене», «цыпе») — сервер развернёт. list_clients только если алиас неизвестен.',
 };
 
 /**
@@ -52,7 +53,7 @@ const CLIENT_ARG = {
  */
 const CLIENT_ARG_STRICT = {
   type: 'string',
-  description: 'Кому вносим: client_id из heys_list_clients (надёжный вариант) или имя клиента целиком. Часть имени на запись не принимается — сначала возьми client_id из heys_list_clients.',
+  description: 'Кому вносим: client_id, имя целиком, или алиас из памяти («мне»/«себе»/«жене»/«цыпе») — сервер развернёт в client_id. Не зови list_clients ради «мне».',
 };
 
 /**
@@ -364,15 +365,19 @@ const REPO_INSTRUCTIONS = [
   'К5. В ответе называй файл и номер строки — по ним он проверит сам. Срез отвечает за выложенное состояние главной ветки: если он спрашивает про то, что правит прямо сейчас на ноутбуке, скажи, что этого в срезе ещё нет.',
 ];
 
-function curatorInstructions(curatorName, withTasks = false, nowMs = Date.now(), withRepo = false) {
+function curatorInstructions(curatorName, withTasks = false, nowMs = Date.now(), withRepo = false, addressLine = '') {
   return [
     `Дневники питания, воды, сна и тренировок HEYS. Ты помогаешь куратору${curatorName ? ` (${curatorName})` : ''} вести дневники его клиентов.`,
     '',
-    'Прежде чем спросить «кому вносить» — проверь, не объяснял ли куратор раньше, что для него значит «мне»/«себе»/сокращённое имя: своя память'
-      + (withTasks ? ' и tasks_context по его фразе' : '')
-      + '. Инцидент 2026-08-04: правило «мне = такой-то клиент» лежало в памяти, а модель сразу пошла звать heys_list_clients и переспрашивать — нашла его только когда куратор спросил «почему не сразу». Не нашлось ничего — тогда уже вопрос.',
-    'КРИТИЧЕСКОЕ ПРАВИЛО РЕЖИМА: каждая запись адресная. Прежде чем внести что-либо, ты обязан знать, КОМУ. Если из сообщения не ясно, какому клиенту вносить, — вызови heys_list_clients и уточни у куратора. Никогда не выбирай клиента по догадке: запись в чужой дневник — худшая ошибка этого инструмента.',
-    'В пишущие инструменты и в действия наружу (ответ клиенту, PIN, подписка, триал) передавай client_id из heys_list_clients, а не имя: часть имени там не принимается, и имя двух похожих клиентов различает только id.',
+    addressLine
+      ? `Адресация из памяти (передавай прямо в client, не ищи): ${addressLine}`
+      : (withTasks
+        ? 'Адресация: «мне»/«себе»/«жене»/«цыпе» и другие короткие алиасы из памяти передавай прямо в параметр client пишущего инструмента — сервер развернёт в client_id. Не зови heys_list_clients, tasks_context и не грепай journal ради «кто такой мне».'
+        : 'Адресация: «мне»/«себе»/«жене»/«цыпе» и другие короткие алиасы из памяти передавай прямо в параметр client пишущего инструмента — сервер развернёт в client_id. Не зови heys_list_clients и не грепай journal ради «кто такой мне».'),
+    'Прежде чем спросить «кому вносить» — если это не известный алиас и не имя из диалога: один heys_list_clients, без grep по файлам.'
+      + (withTasks ? ' Свою память (tasks_context) зови только когда адресация реально неизвестна, а не на каждое «мне».' : ''),
+    'КРИТИЧЕСКОЕ ПРАВИЛО РЕЖИМА: каждая запись адресная. Прежде чем внести что-либо, ты обязан знать, КОМУ. Неизвестный клиент — heys_list_clients и уточни у куратора. Никогда не выбирай клиента по догадке: запись в чужой дневник — худшая ошибка этого инструмента.',
+    'В пишущие инструменты передавай client_id, точное имя или алиас из памяти («мне»). Часть чужого имени на запись не принимается.',
     ...(withTasks ? ['Для КАЖДОЙ записи в дневник передавай обязательный transcript — дословную реплику куратора целиком. Инструмент сам сохранит эту реплику и подтверждённый результат в стенограмму; отдельный tasks_checkpoint для такого технического ответа не нужен. Если после записи даёшь самостоятельный разбор или решение, сохрани и его обычным tasks_checkpoint.'] : []),
     'После записи В ДЕНЬ (еда, вода, вес, сон, тренировка, правка дня) инструмент возвращает day_after — состояние дня по версии сервера. Сверяй его с тем, что ожидал: приёмов стало больше на один, калории выросли на внесённое. Не сошлось — скажи куратору, а не отчитывайся «внёс». Из outcome вслух называй только «stale_write_blocked»: это значит, что запись отбросили и её нет. «day_merged» — штатное слияние с параллельной правкой, тревожить им куратора незачем.',
     'Если куратор в диалоге явно сказал «сейчас работаем с <имя>» — используй этого клиента для последующих записей, пока он не переключится.',
@@ -432,10 +437,13 @@ function createCuratorContext({
   // а не данные клиента, поэтому адресат берётся из конфигурации: лишний
   // аргумент `client` у этих инструментов был бы лишним способом промахнуться.
   tasksClientId = null,
+  // Готовая карта алиасов (тесты / прогрев). Иначе читается из preferences.md.
+  addressAliases = null,
 }) {
   let clientsPromise = null;
   const toolsByClient = new Map();
   const contextByClient = new Map();
+  let aliasesPromise = null;
 
   async function loadClients() {
     if (!clientsPromise) {
@@ -457,6 +465,38 @@ function createCuratorContext({
     return clientsPromise;
   }
 
+  async function loadAddressAliases() {
+    if (addressAliases instanceof Map) return addressAliases;
+    if (!tasksClientId) return new Map();
+    if (!aliasesPromise) {
+      aliasesPromise = (async () => {
+        const key = tasks.keyForPath(tasks.PREFS_PATH);
+        const { data, error } = await api.getKVByCurator(curatorJwt, tasksClientId, key);
+        if (error || !data || data.v == null) return new Map();
+        const prefs = tasks.activePreferences(tasks.parsePreferences({
+          path: tasks.PREFS_PATH,
+          text: String(data.v || ''),
+          rev: data.rev,
+        }));
+        return tasks.clientAddressMap(prefs, await loadClients());
+      })().catch(() => new Map());
+    }
+    return aliasesPromise;
+  }
+
+  function formatAddressLine(aliasMap) {
+    if (!aliasMap || !aliasMap.size) return '';
+    const byClient = new Map();
+    for (const [alias, target] of aliasMap) {
+      const id = target.client_id;
+      if (!byClient.has(id)) byClient.set(id, { name: target.name, aliases: [] });
+      byClient.get(id).aliases.push(alias);
+    }
+    return [...byClient.values()]
+      .map((row) => `«${row.aliases.join('»/«')}» → ${row.name || '?'}`)
+      .join('; ');
+  }
+
   /**
    * @param {string} clientArg — что прислал вызов.
    * @param {{strict?: boolean}} options — strict для записи и действий наружу:
@@ -475,7 +515,7 @@ function createCuratorContext({
       throw new ToolError(
         'client_required',
         strict
-          ? 'Действие адресное: назови клиента явно — client_id из heys_list_clients.'
+          ? 'Действие адресное: назови клиента явно — client_id, имя или алиас («мне»).'
           : 'Не указан клиент. Уточни у куратора, кому вносить.',
         { clients: candidates() },
       );
@@ -483,6 +523,13 @@ function createCuratorContext({
 
     const byId = clients.find((c) => String(c.client_id) === raw);
     if (byId) return byId;
+
+    const aliasMap = await loadAddressAliases();
+    const aliasHit = aliasMap.get(products.normalizeText(raw)) || aliasMap.get(raw.toLowerCase());
+    if (aliasHit) {
+      const resolved = clients.find((c) => String(c.client_id) === String(aliasHit.client_id));
+      if (resolved) return resolved;
+    }
 
     const norm = products.normalizeText(raw);
     const exact = clients.filter((c) => products.normalizeText(c.name) === norm);
@@ -493,7 +540,7 @@ function createCuratorContext({
         exact.length ? 'client_ambiguous' : 'client_not_found',
         exact.length
           ? `Имя «${raw}» носит несколько клиентов — для записи возьми client_id из heys_list_clients.`
-          : `Клиент «${raw}» не найден по точному совпадению. Для записи имя должно совпадать целиком — возьми client_id из heys_list_clients.`,
+          : `Клиент «${raw}» не найден по точному совпадению. Для записи имя должно совпадать целиком — возьми client_id из heys_list_clients или алиас («мне»).`,
         { clients: candidates() },
       );
     }
@@ -1027,10 +1074,23 @@ function createCuratorContext({
 
     async heys_list_clients() {
       const clients = await loadClients();
-      const text = clients.length
-        ? `Клиенты: ${clients.map((c) => `${c.name || '?'} (${c.client_id}${c.status ? `, ${c.status}` : ''})`).join('; ')}`
-        : 'У куратора нет клиентов.';
-      return { text, structured: { clients } };
+      const aliasMap = await loadAddressAliases();
+      const address = formatAddressLine(aliasMap);
+      const list = clients.length
+        ? clients.map((c) => `${c.name || '?'} (${c.client_id}${c.status ? `, ${c.status}` : ''})`).join('; ')
+        : '';
+      const text = !clients.length
+        ? 'У куратора нет клиентов.'
+        : address
+          ? `Клиенты: ${list}. Алиасы: ${address}.`
+          : `Клиенты: ${list}`;
+      return {
+        text,
+        structured: {
+          clients,
+          aliases: [...aliasMap.entries()].map(([alias, target]) => ({ alias, ...target })),
+        },
+      };
     },
   };
 
@@ -1180,6 +1240,7 @@ function createCuratorContext({
   if (repoContext) Object.assign(tools, repoContext.tools);
 
   const { annotateToolSchemas } = require('./tool-annotations');
+  const initialAliases = addressAliases instanceof Map ? addressAliases : new Map();
   return {
     tools,
     schemas: annotateToolSchemas([
@@ -1187,7 +1248,13 @@ function createCuratorContext({
       ...(repoContext ? repoContext.schemas : []),
       ...buildCuratorSchemas({ requireTranscript: !!tasksContext }),
     ]),
-    instructions: curatorInstructions(curatorName, !!tasksContext, nowMs, !!repoContext),
+    instructions: curatorInstructions(
+      curatorName,
+      !!tasksContext,
+      nowMs,
+      !!repoContext,
+      formatAddressLine(initialAliases),
+    ),
   };
 }
 

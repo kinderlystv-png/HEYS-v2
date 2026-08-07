@@ -3147,9 +3147,114 @@ function knownPreference(existing, note, { threshold = DECISION_SIMILARITY, ques
     if (question) {
       if (entry.question) consider(entry, questionSimilarity(question, entry.question), 'вопрос');
       consider(entry, questionSimilarity(question, entry.note), 'вопрос');
+      // Точный алиас («мне», «тачка») — иначе стоп-слово/короткий вопрос
+      // даёт «в памяти ничего нет», хотя запись лежит с зовётся:.
+      const q = String(question).trim().toLowerCase();
+      for (const alias of entry.aliases || []) {
+        if (String(alias).trim().toLowerCase() === q) consider(entry, 1, 'алиас');
+      }
     }
   }
   return best;
+}
+
+const CLIENT_UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+
+/**
+ * Алиасы адресации дневника из памяти («мне» → Полтавский).
+ *
+ * Нужны, потому что «мне»/«себе» — TOPIC_STOP_WORDS: на «запиши мне 300 г»
+ * tasks_context не поднимает предпочтение в text, и модель уходит в
+ * list_clients + grep. Карта даёт resolveTarget и list_clients прямой ответ.
+ */
+function clientAddressMap(preferences, clients) {
+  const list = Array.isArray(clients) ? clients : [];
+  const byId = new Map(list.map((c) => [String(c.client_id || '').toLowerCase(), c]));
+  const map = new Map(); // aliasLower -> { client_id, name }
+
+  const put = (alias, client) => {
+    const key = String(alias || '').trim().toLowerCase();
+    if (!key || key.length > 40 || !client) return;
+    if (!map.has(key)) map.set(key, { client_id: client.client_id, name: client.name || null });
+  };
+
+  const clientByNameIn = (text) => {
+    const lower = String(text || '').toLowerCase();
+    for (const c of list) {
+      const name = String(c.name || '').trim();
+      if (name.length >= 3 && lower.includes(name.toLowerCase())) return c;
+    }
+    return null;
+  };
+
+  for (const entry of preferences || []) {
+    if (entry.stale) continue;
+    const note = String(entry.note || '');
+    // Окна по UUID (или по имени, если uuid в записи нет): алиасы до маркера
+    // клиента N → клиент N. Иначе «Жене» / «цыпе» = Александра склеивается с
+    // первым упомянутым клиентом.
+    const markers = [];
+    for (const m of note.matchAll(CLIENT_UUID_RE)) {
+      const client = byId.get(m[0].toLowerCase());
+      if (client) markers.push({ index: m.index, length: m[0].length, client });
+    }
+    if (!markers.length) {
+      for (const c of list) {
+        const name = String(c.name || '').trim();
+        if (name.length < 3) continue;
+        const idx = note.toLowerCase().indexOf(name.toLowerCase());
+        if (idx >= 0) markers.push({ index: idx, length: name.length, client: c });
+      }
+      markers.sort((a, b) => a.index - b.index);
+    }
+    if (markers.length) {
+      for (let i = 0; i < markers.length; i += 1) {
+        const start = i === 0 ? 0 : markers[i - 1].index + markers[i - 1].length;
+        const end = markers[i].index + markers[i].length;
+        const window = note.slice(start, end);
+        for (const m of window.matchAll(/[«"]([^»"]{1,40})[»"]/g)) put(m[1], markers[i].client);
+      }
+    }
+
+    const mentioned = new Set(markers.map((m) => m.client.client_id));
+    // зовётся: только если в записи один клиент — иначе «жене» уедет не туда.
+    if (mentioned.size === 1) {
+      const only = list.find((c) => c.client_id === [...mentioned][0]);
+      for (const alias of entry.aliases || []) put(alias, only);
+    } else if (!mentioned.size) {
+      const only = clientByNameIn(note);
+      if (only) {
+        for (const m of note.matchAll(/[«"]([^»"]{1,40})[»"]/g)) put(m[1], only);
+        for (const alias of entry.aliases || []) put(alias, only);
+      }
+    }
+  }
+  // «себе» ≡ «мне» для собственного дневника куратора (часто не пишут в кавычках).
+  if (map.has('мне') && !map.has('себе')) {
+    const me = map.get('мне');
+    const client = list.find((c) => String(c.client_id) === String(me.client_id));
+    if (client) put('себе', client);
+  }
+  return map;
+}
+
+/** Алиас из сырой фразы (в т.ч. стоп-слово «мне»), без topicTerms. */
+function preferenceHitsRawTopic(entry, topic) {
+  const raw = String(topic || '');
+  if (!raw) return false;
+  const lower = raw.toLowerCase();
+  const aliases = [
+    ...(entry.aliases || []),
+    ...[...String(entry.note || '').matchAll(/[«"]([^»"]{1,40})[»"]/g)].map((m) => m[1]),
+  ];
+  for (const alias of aliases) {
+    const a = String(alias || '').trim().toLowerCase();
+    if (!a) continue;
+    // Граница слова: «мне» в «запиши мне 300», но не «изменение».
+    const re = new RegExp(`(?:^|[^\\p{L}\\p{N}])${a.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:[^\\p{L}\\p{N}]|$)`, 'iu');
+    if (re.test(lower)) return true;
+  }
+  return false;
 }
 
 function preferenceLine({ date, kind, note, evidence }) {
@@ -5468,6 +5573,8 @@ module.exports = {
   PREFS_FACT_STALE_DAYS,
   parsePreferences,
   knownPreference,
+  clientAddressMap,
+  preferenceHitsRawTopic,
   activePreferences,
   preferenceLine,
   preferenceBlock,

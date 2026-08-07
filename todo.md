@@ -33,11 +33,12 @@
   вызовов. Vision этикетки — у модели; MCP обязан показывать image + path.
 - **Инцидент:** 2026-08-07 «заведи черри…»; аудит
   `docs/audits/2026-08-07_mcp_diary_friction.md`, heys/b235ea.
-- **Сделано (WT):** tombstone; server-truth; ids/norm/checkin/кандидаты/
-  clients/portions в text; presets; авто-порция; from_product_id; list_messages
-  с path фото; search по штрихкоду; photo-first §8в. 308 tests. Live без фикса.
-- **Осталось:** commit + deploy. Стоп: server OCR / suggest_from_photo — не этот
-  ship (маркетинг/38).
+- **Сделано:** P0–P3 задеплоены (64aa29b84). Слой «мне» 07.08 вечер: стоп-слово
+  `мне` не поднимало preference в text → list_clients+grep; фикс
+  `clientAddressMap` + resolveTarget(алиас) + instructions/list_clients +
+  raw-topic hit. 893 tests. Live адресации ещё нет.
+- **Осталось:** commit + deploy слоя «мне». Стоп: server OCR; убирать `мне` из
+  TOPIC_STOP_WORDS (сломает разбор фраз).
 
 ### Welcome-модалка триала повторяется на каждом новом устройстве — закрыто 2026-07-31
 

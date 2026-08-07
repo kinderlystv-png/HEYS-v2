@@ -33,6 +33,7 @@ const attach = require('./lib/attach');
 const { createApiClient } = require('./lib/heys-api');
 const { createTools, ToolError } = require('./lib/tools');
 const { createCuratorContext } = require('./lib/curator');
+const tasks = require('./lib/tasks');
 
 const ATTACH_PAGE_PATH = '/mcp/attach';
 const ATTACH_MANIFEST_PATH = '/mcp/attach/manifest.webmanifest';
@@ -152,13 +153,34 @@ function mcpUnauthorized(headers, resourcePath) {
   });
 }
 
-function curatorContext(api, auth = {}) {
+async function curatorContext(api, auth = {}) {
+  const curatorJwt = auth.sessionToken || 'oauth-discovery';
+  const tasksClientId = process.env.HEYS_TASKS_CLIENT_ID || null;
+  let addressAliases = null;
+  // Прогрев алиасов «мне»→client на initialize: иначе инструкция говорит
+  // «проверь память», а модель уходит в list_clients+grep (инцидент 07.08).
+  if (tasksClientId && curatorJwt !== 'oauth-discovery') {
+    try {
+      const key = tasks.keyForPath(tasks.PREFS_PATH);
+      const { data } = await api.getKVByCurator(curatorJwt, tasksClientId, key);
+      if (data && data.v != null) {
+        const prefs = tasks.activePreferences(tasks.parsePreferences({
+          path: tasks.PREFS_PATH,
+          text: String(data.v || ''),
+          rev: data.rev,
+        }));
+        const { data: clients, error } = await api.listClients(curatorJwt);
+        if (!error) addressAliases = tasks.clientAddressMap(prefs, clients || []);
+      }
+    } catch (_) { /* без алиасов — generic-инструкция и lazy resolveTarget */ }
+  }
   return createCuratorContext({
     api,
-    curatorJwt: auth.sessionToken || 'oauth-discovery',
+    curatorJwt,
     curatorId: auth.clientId || null,
     curatorName: auth.subjectName || '',
-    tasksClientId: process.env.HEYS_TASKS_CLIENT_ID || null,
+    tasksClientId,
+    addressAliases,
   });
 }
 
@@ -193,7 +215,7 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
   if (auth.role === 'curator') {
     // Кураторский коннектор: в auth.sessionToken лежит кураторский JWT,
     // инструменты работают с дневниками клиентов куратора.
-    const curatorCtx = curatorContext(api, auth);
+    const curatorCtx = await curatorContext(api, auth);
     tools = curatorCtx.tools;
     toolSchemas = CHATGPT_CURATOR_ENDPOINTS.has(resourcePath)
       ? chatGptToolSchemas(curatorCtx.schemas)
