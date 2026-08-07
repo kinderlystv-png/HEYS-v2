@@ -27,8 +27,6 @@
         try {
             if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
                 HEYS.utils.lsSet(THEME_KEY, theme);
-            } else {
-                localStorage.setItem(THEME_KEY, theme);
             }
         } catch (_) { /* quota */ }
     }
