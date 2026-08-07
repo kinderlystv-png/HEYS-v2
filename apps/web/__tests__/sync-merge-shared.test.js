@@ -549,9 +549,11 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     );
 
     expect(rpcSource).toContain('const hasSubjectiveDrop = isDayv2Key && hasSubjectiveFieldDrop(incomingValue, currentValue);');
-    expect(rpcSource).toContain('isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop || hasCurrentOnlyContent)');
     expect(rpcSource).toContain(
-      "hasSubjectiveDrop\n                  ? 'day_subjective_guard_merged'\n                  : (hasCurrentOnlyContent ? 'day_missing_content_guard_merged' : 'day_merged')",
+      'isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop || hasCurrentOnlyContent || hasIncomingTombstonedContent)',
+    );
+    expect(rpcSource).toContain(
+      "hasSubjectiveDrop\n                  ? 'day_subjective_guard_merged'\n                  : (hasCurrentOnlyContent\n                    ? 'day_missing_content_guard_merged'\n                    : (hasIncomingTombstonedContent ? 'day_tombstone_guard_merged' : 'day_merged'))",
     );
   });
 
@@ -567,8 +569,13 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     );
 
     expect(rpcSource).toContain('function hasCurrentOnlyDayContent(incomingValue, currentValue)');
+    expect(rpcSource).toContain('function hasIncomingTombstonedDayContent(incomingValue, currentValue)');
     expect(rpcSource).toContain('const hasCurrentOnlyContent = isDayv2Key && hasCurrentOnlyDayContent(incomingValue, currentValue);');
+    expect(rpcSource).toContain(
+      'const hasIncomingTombstonedContent = isDayv2Key && hasIncomingTombstonedDayContent(incomingValue, currentValue);',
+    );
     expect(rpcSource).toContain('hasCurrentOnlyDayContent,');
+    expect(rpcSource).toContain('hasIncomingTombstonedDayContent,');
   });
 
   test('REST client_kv_store dayv2 writes merge existing cloud row before safe upsert', () => {
