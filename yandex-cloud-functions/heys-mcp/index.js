@@ -108,6 +108,17 @@ function json(statusCode, body, extraHeaders = {}) {
   };
 }
 
+function isBoardPath(path) {
+  return path === BOARD_PATH
+    || path === BOARD_TALK_PATH
+    || path === BOARD_RESOLVE_PATH
+    || path === BOARD_SLEEP_PATH
+    || path === BOARD_RESLOT_PATH
+    || path === BOARD_SLOT_DONE_PATH
+    || path === BOARD_HABIT_PATH
+    || path === BOARD_CLOSE_DAY_PATH;
+}
+
 function boardCorsHeaders(origin) {
   const headers = {
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -489,6 +500,10 @@ exports.handler = async (event) => {
   const issuer = issuerFrom(headers);
 
   if (method === 'OPTIONS') {
+    if (isBoardPath(path)) {
+      const origin = headers.origin || headers.Origin || '';
+      return { statusCode: 204, headers: { ...SECURITY_HEADERS, ...boardCorsHeaders(origin) }, body: '' };
+    }
     return { statusCode: 204, headers: { ...SECURITY_HEADERS, ...CORS_HEADERS }, body: '' };
   }
 

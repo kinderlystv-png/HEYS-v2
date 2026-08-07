@@ -267,6 +267,18 @@ test('preflight отвечает без тела', async () => {
   assert.equal(res.headers['Access-Control-Allow-Origin'], '*');
 });
 
+test('preflight /mcp/board/habit — origin-specific CORS для credentials', async () => {
+  const res = await call({
+    httpMethod: 'OPTIONS',
+    path: '/mcp/board/habit',
+    headers: { origin: 'https://app.heyslab.ru' },
+  });
+  assert.equal(res.statusCode, 204);
+  assert.equal(res.headers['Access-Control-Allow-Origin'], 'https://app.heyslab.ru');
+  assert.equal(res.headers['Access-Control-Allow-Credentials'], 'true');
+  assert.notEqual(res.headers['Access-Control-Allow-Origin'], '*');
+});
+
 test('неизвестный путь — 404', async () => {
   const res = await call({ httpMethod: 'GET', path: '/mcp/whatever' });
   assert.equal(res.statusCode, 404);
