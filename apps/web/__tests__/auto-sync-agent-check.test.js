@@ -1,5 +1,5 @@
 import { execFileSync, execSync, spawnSync } from 'child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -68,7 +68,31 @@ describe('auto-sync legacy bundles integration mode', () => {
     git(['config', 'user.name', 'Test']);
     mkdirSync(path.join(repo, 'apps/web/public'), { recursive: true });
     mkdirSync(path.join(repo, '.claude'), { recursive: true });
+    mkdirSync(path.join(repo, 'scripts'), { recursive: true });
     writeFileSync(path.join(repo, 'apps/web/heys_storage_supabase_v1.js'), '// src\n');
+    // Placeholders so stageGeneratedOutputs can `git add` without pathspec errors.
+    writeFileSync(path.join(repo, 'apps/web/bundle-manifest.json'), '{}\n');
+    writeFileSync(path.join(repo, 'apps/web/index.html'), '<!doctype html>\n');
+    for (const name of [
+      'heys_day_core_bundle_v1.js',
+      'heys_advice_bundle_v1.js',
+      'heys_day_meals_bundle_v1.js',
+      'heys_day_bundle_v1.js',
+      'heys_fingers_bundle_v1.js',
+      'heys_mobility_bundle_v1.js',
+    ]) {
+      writeFileSync(path.join(repo, 'apps/web', name), `// ${name}\n`);
+    }
+    // Committed stub: integration rebuild shells out to this path from cwd.
+    // Must be tracked+clean so assertNoUnstagedLegacyInputContamination ignores it.
+    writeFileSync(
+      path.join(repo, 'scripts/bundle-legacy.mjs'),
+      [
+        "import { writeFileSync } from 'node:fs';",
+        "writeFileSync('bundle-ran.flag', 'ok');",
+        '',
+      ].join('\n'),
+    );
     git(['add', '.']);
     git(['commit', '-q', '-m', 'base']);
   });
@@ -77,13 +101,12 @@ describe('auto-sync legacy bundles integration mode', () => {
     rmSync(repo, { recursive: true, force: true });
   });
 
-  it('aborts when generated files are already dirty before the integration rebuild', () => {
-    // Stage a real source change so the sync proceeds past "no relevant files",
-    // then leave a generated artifact dirty — integration must refuse to rebuild
-    // on top of a polluted baseline instead of silently capturing it.
+  it('resets owned dirty generated before integration rebuild', () => {
+    // Contract since eb0907cc2: dirty generated owned by staged sources is
+    // restored to HEAD, then rebuild proceeds. Do not abort as "already dirty".
     writeFileSync(path.join(repo, 'apps/web/heys_storage_supabase_v1.js'), '// edited\n');
     git(['add', 'apps/web/heys_storage_supabase_v1.js']);
-    writeFileSync(path.join(repo, 'apps/web/public/sw.js'), '// dirty generated\n');
+    writeFileSync(path.join(repo, 'apps/web/public/sw.js'), '// dirty owned companion\n');
 
     const result = spawnSync('node', [SCRIPT_PATH, '--mode=integration'], {
       cwd: repo,
@@ -91,27 +114,22 @@ describe('auto-sync legacy bundles integration mode', () => {
       env: cleanGitEnv(),
     });
 
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain('Generated files are already dirty');
-    expect(result.stderr).toContain('apps/web/public/sw.js');
+    expect(result.status).toBe(0);
+    expect(`${result.stderr || ''}\n${result.stdout || ''}`).not.toContain('foreign_generated_dirty');
+    // Untracked owned preview was removed; rebuild stub ran.
+    expect(git(['status', '--porcelain'])).not.toContain('sw.js');
+    expect(git(['stash', 'list'])).toBe('');
   });
 
-  it('does not auto-stash foreign dirty scope when generated files block rebuild', () => {
-    writeFileSync(path.join(repo, '.claude/agent-zones.json'), JSON.stringify({
-      zones: {
-        own: ['apps/web/heys_storage_supabase_v1.js'],
-        foreign: ['docs/**'],
-      },
-    }));
-    mkdirSync(path.join(repo, 'docs'), { recursive: true });
-    writeFileSync(path.join(repo, 'docs/foreign.md'), 'foreign wip\n');
-    git(['add', '.claude/agent-zones.json', 'docs/foreign.md']);
-    git(['commit', '-q', '-m', 'zones']);
-
+  it('aborts on foreign dirty generated without stashing', () => {
+    // Stage boot-core source, leave a postboot hash-bundle dirty — outside
+    // rebuild scope → fail closed, never stash foreign WIP.
     writeFileSync(path.join(repo, 'apps/web/heys_storage_supabase_v1.js'), '// edited\n');
     git(['add', 'apps/web/heys_storage_supabase_v1.js']);
-    writeFileSync(path.join(repo, 'docs/foreign.md'), 'foreign dirty\n');
-    writeFileSync(path.join(repo, 'apps/web/public/sw.js'), '// dirty generated\n');
+    writeFileSync(
+      path.join(repo, 'apps/web/public/postboot-1-game-lazy.bundle.bbbbbbbbbbbb.js'),
+      '// foreign dirty generated\n',
+    );
 
     const result = spawnSync('node', [SCRIPT_PATH, '--mode=integration'], {
       cwd: repo,
@@ -120,10 +138,15 @@ describe('auto-sync legacy bundles integration mode', () => {
     });
 
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain('Generated files are already dirty');
-    expect(result.stderr).toContain('Авто-stash чужих зон отключён');
+    const err = `${result.stderr || ''}\n${result.stdout || ''}`;
+    expect(err).toMatch(/Dirty generated files outside this staged source scope|foreign_generated_dirty/);
+    expect(err).toContain('postboot-1-game-lazy.bundle.bbbbbbbbbbbb.js');
+    expect(err).toContain('Авто-stash чужих зон отключён');
     expect(git(['stash', 'list'])).toBe('');
-    expect(git(['status', '--porcelain'])).toContain(' M docs/foreign.md');
+    const porcelain = git(['status', '--porcelain']);
+    // git may collapse untracked tree to `?? apps/web/public/`
+    expect(porcelain).toMatch(/apps\/web\/public/);
+    expect(existsSync(path.join(repo, 'apps/web/public/postboot-1-game-lazy.bundle.bbbbbbbbbbbb.js'))).toBe(true);
   });
 
   it('aborts when unstaged legacy source would affect the same generated output', () => {
