@@ -56,9 +56,7 @@
         try {
             if (HEYS.utils && typeof HEYS.utils.lsSet === 'function') {
                 HEYS.utils.lsSet(CACHE_KEY, data);
-                return;
             }
-            localStorage.setItem(CACHE_KEY, JSON.stringify(data));
         } catch (_) { /* quota */ }
     }
 
