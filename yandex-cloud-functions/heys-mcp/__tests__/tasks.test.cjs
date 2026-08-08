@@ -650,6 +650,32 @@ test('повторное окно заменяет прежнее, а точны
   assert.match(res.text, /окно снято/);
 });
 
+test('новая задача заводится с окном сразу, а не остаётся без срока', async () => {
+  // Тот самый провал на живом прогоне: «согласовать с Машей — где-то в начале
+  // следующей недели» ушло в захват, у которого окна не было, и задача легла
+  // вообще без срока — то есть не всплыла бы ни в планёрке, ни в решениях.
+  const api = liveTasksApi();
+  const res = await session(api).tasks_capture({
+    project: 'kinderly', text: 'Согласовать с Машей сценарий', window: '2026-08-10..2026-08-12', tags: ['next'],
+  });
+  assert.match(res.text, /окно 2026-08-10\.\.2026-08-12, срок 2026-08-12/);
+  const saved = api.kv[tasks.keyForPath('projects/kinderly.md')].text;
+  assert.match(saved, /Согласовать с Машей сценарий due:2026-08-12 #next/);
+  assert.match(saved, /\n {2}- окно: 2026-08-10\.\.2026-08-12/);
+
+  const [task] = tasks.parseTasks({ path: 'projects/kinderly.md', text: saved })
+    .filter((t) => t.title === 'Согласовать с Машей сценарий');
+  assert.equal(tasks.taskSignalDate(task), '2026-08-10', 'ранняя граница обязана поднимать задачу с понедельника');
+  assert.equal(res.structured.hash, tasks.taskHash('kinderly', 'Согласовать с Машей сценарий'),
+    'строка окна не должна попасть в заголовок и увести хэш');
+});
+
+test('кривое окно в захвате отклоняется до записи', async () => {
+  const api = liveTasksApi();
+  await assert.rejects(() => session(api).tasks_capture({ project: 'kinderly', text: 'Что-то', window: 'начало недели' }),
+    (e) => e.code === 'invalid_window');
+});
+
 test('окно словами не принимается — границы считает ассистент, а не он', async () => {
   const api = liveTasksApi();
   const hash = tasks.taskHash('family', 'Покрасить потолок баллончиком');

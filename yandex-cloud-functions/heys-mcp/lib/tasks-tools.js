@@ -101,6 +101,10 @@ const TASKS_WRITE_SCHEMAS = [
         project: { type: 'string', description: 'heys, kinderly, family, personal, mine2d, travel, someday. Не указан — уходит в INBOX.' },
         priority: { type: 'string', description: 'P1 только если названа внешняя дата или последствие пропуска, иначе P2.' },
         due: { type: 'string', description: 'Срок YYYY-MM-DD.' },
+        window: {
+          type: 'string',
+          description: 'Неточный срок окном: «2026-08-10..2026-08-12». Ставится вместо due, когда он назвал время словами — «в начале следующей недели», «во второй половине августа». Переведи его слова в границы сам и не оставляй задачу вовсе без срока: без него она не всплывёт ни в планёрке, ни в «Требует решения». Срок выставится на позднюю границу, ранняя начнёт поднимать задачу.',
+        },
         tags: { type: 'array', items: { type: 'string' }, description: 'Теги без решётки: next, ноут, студия, 15min.' },
       },
       required: ['text'],
@@ -1606,13 +1610,18 @@ function createTasksTools({
       if (args.due && !/^\d{4}-\d{2}-\d{2}$/.test(args.due)) {
         throw new ToolError('invalid_due', `Срок «${args.due}» не в формате YYYY-MM-DD.`);
       }
+      // Новая задача с неточным сроком заводится именно здесь, а не правкой
+      // потом: без окна на этом шаге «в начале следующей недели» превращается
+      // в задачу вовсе без срока, и она не всплывает нигде.
+      const window = parseWindowArg(args.window);
 
       const today = tasks.taskDay(nowMs);
       const tags = (args.tags || []).map((t) => `#${String(t).replace(/^#/, '')}`);
       const parts = [`- [ ] ${priority} ${text}`];
-      if (args.due) parts.push(`due:${args.due}`);
+      const due = window ? window.to : args.due;
+      if (due) parts.push(`due:${due}`);
       parts.push(...tags, `^${today}`);
-      const line = parts.join(' ');
+      const line = window ? `${parts.join(' ')}\n  - окно: ${window.from}..${window.to}` : parts.join(' ');
 
       // Дописывание адресуется разделом, а не номером строки, поэтому его
       // безопасно повторить на свежем тексте: чужая задача, приехавшая между
@@ -1622,11 +1631,14 @@ function createTasksTools({
         : tasks.appendBlock(text, line));
       const saved = await writeFile(file, put(file.text), { rebase: put });
 
-      const title = tasks.taskTitle(line);
+      const title = tasks.taskTitle(line.split('\n')[0]);
       const hash = tasks.taskHash(tasks.projectKeyForPath(path), title);
+      const when = window
+        ? `, окно ${window.from}..${window.to}, срок ${window.to}`
+        : (due ? `, срок ${due}` : '');
       return {
-        text: `Положил в ${saved.path}: ${priority} ${title}${args.due ? `, срок ${args.due}` : ''}. Ссылка: ${tasks.projectKeyForPath(path)}/${hash}`,
-        structured: { path: saved.path, rev: saved.rev, hash, title, priority, due: args.due || null, tags },
+        text: `Положил в ${saved.path}: ${priority} ${title}${when}. Ссылка: ${tasks.projectKeyForPath(path)}/${hash}`,
+        structured: { path: saved.path, rev: saved.rev, hash, title, priority, due: due || null, window: window || null, tags },
       };
     },
 
@@ -1644,18 +1656,7 @@ function createTasksTools({
       // Окно и срок ставятся одним движением: срок — всегда поздняя граница.
       // Врозь они разъезжаются руками, и задача с окном «10-12» получает срок
       // на 15-е, то есть окно перестаёт значить хоть что-нибудь.
-      let window = null;
-      if (args.window !== undefined && args.window !== null && String(args.window).trim() !== '') {
-        const raw = String(args.window).trim();
-        const match = /^(\d{4}-\d{2}-\d{2})\s*\.\.\s*(\d{4}-\d{2}-\d{2})$/.exec(raw);
-        if (!match) {
-          throw new ToolError('invalid_window', `Окно «${raw}» не в формате ГГГГ-ММ-ДД..ГГГГ-ММ-ДД. «Начало недели» переведи в даты сам: он назвал срок словами, а границы считаешь ты.`);
-        }
-        if (match[1] > match[2]) {
-          throw new ToolError('invalid_window', `В окне «${raw}» начало позже конца.`);
-        }
-        window = { from: match[1], to: match[2] };
-      }
+      const window = parseWindowArg(args.window);
 
       const lines = file.text.split('\n');
       let changedWindowDropped = false;
@@ -1976,6 +1977,22 @@ function createTasksTools({
       ? { at: args.at || null, title: args.title || null }
       : splitSlotQuery(args.slot);
     return { file, slot: locateSlotIn(file, query, date) };
+  }
+
+  // Окно разбирается в одном месте на оба инструмента: разъехавшийся формат
+  // здесь означал бы, что задача, заведённая захватом, и та же задача после
+  // правки держат срок по-разному.
+  function parseWindowArg(raw) {
+    if (raw === undefined || raw === null || String(raw).trim() === '') return null;
+    const value = String(raw).trim();
+    const match = /^(\d{4}-\d{2}-\d{2})\s*\.\.\s*(\d{4}-\d{2}-\d{2})$/.exec(value);
+    if (!match) {
+      throw new ToolError('invalid_window', `Окно «${value}» не в формате ГГГГ-ММ-ДД..ГГГГ-ММ-ДД. «Начало недели» переведи в даты сам: он назвал срок словами, а границы считаешь ты.`);
+    }
+    if (match[1] > match[2]) {
+      throw new ToolError('invalid_window', `В окне «${value}» начало позже конца.`);
+    }
+    return { from: match[1], to: match[2] };
   }
 
   function plural(n, one, few, many) {
