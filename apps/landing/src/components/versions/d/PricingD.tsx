@@ -17,31 +17,7 @@ import { D_CTA_HREF, D_CTA_LABEL } from './nav';
 import { Accent, Caption, PrimaryCta, Section, SectionTitle } from './primitives';
 
 import PurchaseModal from '@/components/modals/PurchaseModal';
-import { PRICING } from '@/config/pricing';
-
-// Трекер из этого блока убран (решение владельца 2026-08-08). Две причины.
-// Первая: он подробно разобран выше, в таблице секции 02, и здесь повторялся
-// сокращённо — четыре строки той таблицы пересказывались одной фразой.
-// Вторая, важнее: рядом с нашей ценой у него стояло «Обычно бесплатно», то есть
-// ровно то сравнение числа с нулём, которое запрещено записью `COPY_VOICE`
-// 2026-08-08. Остались два платных формата, и сравнение работает на нас: месяц
-// ежедневной работы стоит как один-два разовых приёма.
-const FORMATS = [
-  {
-    label: 'Консультация',
-    labelColor: '#A8823C',
-    text: 'Видит день встречи. Неделю вспоминаете по памяти.',
-    price: '2 000 — 9 000 ₽ за один приём',
-    accentPrice: false,
-  },
-  {
-    label: 'HEYS',
-    labelColor: null,
-    text: 'Дневник ведёт куратор. Он видит неделю целиком.',
-    price: `${PRICING.pro.price} ₽ за месяц ежедневной работы`,
-    accentPrice: true,
-  },
-];
+import { MARKET_CONSULTATION, PRICING } from '@/config/pricing';
 
 const PRO_WEEK = [
   'Куратор заносит в дневник всё, что вы прислали.',
@@ -152,6 +128,17 @@ const SUPPORT_DETAILS: ReadonlyArray<{
   },
 ];
 
+/**
+ * Мостик перед карточками: чем три тарифа отличаются в одну строку каждый.
+ * Формулировки намеренно короче, чем в самих карточках, — здесь нужна не
+ * полнота, а быстрое различение.
+ */
+const TIER_SUMMARY: ReadonlyArray<[string, string]> = [
+  ['Self', 'ведёте дневник сами'],
+  ['Pro', 'куратор ведёт дневник и помогает по ходу недели'],
+  ['Pro Спорт', 'один специалист ведёт питание и тренировки'],
+];
+
 export default function PricingD() {
   const [proSportOpen, setProSportOpen] = useState(false);
 
@@ -163,48 +150,22 @@ export default function PricingD() {
         </SectionTitle>
       </div>
 
-      <div data-reveal className="mt-14 grid border-t border-[rgba(16,24,38,0.14)] sm:grid-cols-2">
-        {FORMATS.map((format, i) => (
-          <div
-            key={format.label}
-            className={`border-b border-[rgba(16,24,38,0.12)] px-0 py-[22px] sm:px-[26px] ${
-              i === 0 ? 'sm:pl-0' : ''
-            } ${i === FORMATS.length - 1 ? 'sm:pr-0' : ''}`}
-          >
-            <p
-              className="text-[11px] font-semibold uppercase tracking-[0.16em]"
-              style={{ color: format.labelColor ?? 'var(--da)' }}
-            >
-              {format.label}
-            </p>
-            <p className="mt-4 text-[15px] leading-[1.6] text-[#101826]">{format.text}</p>
-            <p
-              className={`mt-4 text-[13px] font-semibold ${
-                format.accentPrice ? 'text-[color:var(--da)]' : 'text-[#5B6472]'
-              }`}
-            >
-              {format.price}
-            </p>
-          </div>
+      {/* Три тарифа строками, а не одним абзацем: это мостик перед подробными
+          карточками, и работает он только если различие считывается с одного
+          взгляда. Сплошным текстом три названия сливались, и глазу приходилось
+          разбирать предложение, чтобы понять, что вариантов вообще три.
+          Выравнивание левое внутри центрированного блока — список читается
+          сверху вниз, центрированные строки такой опоры не дают. */}
+      <ul
+        data-reveal
+        className="mx-auto mt-8 flex max-w-[440px] flex-col gap-2.5 text-left text-[14.5px] leading-[1.6] text-[#5B6472]"
+      >
+        {TIER_SUMMARY.map(([tier, what]) => (
+          <li key={tier}>
+            <span className="font-medium text-[#101826]">{tier}</span> — {what}
+          </li>
         ))}
-      </div>
-
-      <p
-        data-reveal
-        className="mx-auto mt-8 max-w-[720px] text-center text-[14.5px] leading-[1.6] text-[#5B6472]"
-      >
-        Self — ведёте дневник сами. Pro — куратор ведёт дневник и помогает по ходу недели. Pro Спорт
-        — один специалист ведёт питание и тренировки.
-      </p>
-
-      <p
-        data-reveal
-        className="mx-auto mt-4 max-w-[720px] text-center text-[13px] leading-[1.6] text-[#9AA3B0]"
-      >
-        Вилка по консультациям — открытые прайсы московских клиник и площадок на август 2026. Цены
-        HEYS — за месяц, без скрытых доплат и автосписаний. При медицинских показаниях HEYS не
-        заменяет врача или нутрициолога.
-      </p>
+      </ul>
 
       {/* Карточка Pro — основной формат. */}
       <div
@@ -221,13 +182,27 @@ export default function PricingD() {
               {PRICING.pro.name}
             </p>
             <p className="mt-4 flex items-baseline gap-2">
-              <span className="text-[42px] font-semibold leading-none text-[#101826]">
+              <span className="text-[clamp(30px,4.2vw,42px)] font-semibold leading-none text-[#101826]">
                 {PRICING.pro.price}
               </span>
               <span className="text-[15px] text-[#8A94A2]">{PRICING.pro.period}</span>
             </p>
+            {/* Сравнение с разовым приёмом стоит здесь, а не отдельным блоком в
+                начале секции. Раньше секция открывалась сопоставлением
+                «Консультация / HEYS», и это выглядело чужеродно: заголовок
+                обещает выбор между НАШИМИ форматами, а первым делом человек
+                видел чужой. Механику того блока («видит день встречи, неделю
+                вспоминаете по памяти») страница и так объясняет — таблицей в
+                секции 02 и отдельным вопросом FAQ. Уникальной там была только
+                цена, и работает она ровно в одном месте: рядом с нашей, когда
+                человек решает, дорого это или нет.
+
+                Сравниваем форматы, а не качество чужой работы, и без имён
+                компаний — условия `COPY_VOICE` для рыночного диапазона.
+                Основание цифры — в `MARKET_CONSULTATION`. */}
             <p className="mt-3 text-[13px] leading-[1.5] text-[#8A94A2]">
-              Около 270 ₽ в день — с ежедневным ведением дневника
+              Около 270 ₽ в день — с ежедневным ведением дневника. Разовый приём у специалиста —{' '}
+              {MARKET_CONSULTATION.range}.
             </p>
 
             <p className="mt-7 text-[14px] font-semibold leading-[1.5] text-[color:var(--da)]">
@@ -292,7 +267,7 @@ export default function PricingD() {
             {PRICING.base.name}
           </p>
           <p className="mt-4 flex items-baseline gap-2">
-            <span className="text-[32px] font-semibold leading-none text-[#101826]">
+            <span className="text-[clamp(24px,3.2vw,32px)] font-semibold leading-none text-[#101826]">
               {PRICING.base.price}
             </span>
             <span className="text-[14px] text-[#8A94A2]">{PRICING.base.period}</span>
@@ -335,7 +310,7 @@ export default function PricingD() {
             {PRICING.proPlus.name}
           </p>
           <p className="mt-4 flex items-baseline gap-2">
-            <span className="text-[32px] font-semibold leading-none text-[#101826]">
+            <span className="text-[clamp(24px,3.2vw,32px)] font-semibold leading-none text-[#101826]">
               {PRICING.proPlus.price}
             </span>
             <span className="text-[14px] text-[#8A94A2]">{PRICING.proPlus.period}</span>

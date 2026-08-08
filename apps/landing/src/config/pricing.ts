@@ -4,9 +4,9 @@
 // pre-commit hook check-pricing-sync.cjs ругается на расхождение.
 
 export interface PricingPlan {
-  name: string
-  price: string // '2 990' (с неразрывным пробелом для тысяч)
-  period: string // '₽/мес'
+  name: string;
+  price: string; // '2 990' (с неразрывным пробелом для тысяч)
+  period: string; // '₽/мес'
 }
 
 // Pro-first Фаза 0 (метод. 19, решение 2026-06-09): Self — бюджетный якорь
@@ -19,6 +19,23 @@ export const PRICING = {
   // Внутренний ключ proPlus сохранён для совместимости с paywall/payments.
   // Публичный продукт с 2026-07-28 называется «Pro Спорт».
   proPlus: { name: 'Pro Спорт', price: '19 990', period: '₽/мес' },
-} as const satisfies Record<string, PricingPlan>
+} as const satisfies Record<string, PricingPlan>;
 
-export type PricingPlanId = keyof typeof PRICING
+/**
+ * Рыночный ориентир по разовой консультации — для сравнения форматов на
+ * лендинге. Диапазон обобщённый и без имён компаний; основание хранится здесь,
+ * а не в тексте страницы: подтвердить цифру нужно уметь, но читателю методология
+ * не нужна — на странице она читалась как чужая бухгалтерия (решение владельца
+ * 2026-08-08).
+ *
+ * `source` и `checkedAt` — то, чем цифра подтверждается. Диапазон устаревает
+ * быстрее правила: пересверять перед каждой публикацией и обновлять дату.
+ */
+export const MARKET_CONSULTATION = {
+  range: '2 000 — 9 000 ₽',
+  unit: 'за один приём',
+  source: 'открытые прайсы московских клиник и онлайн-площадок',
+  checkedAt: '2026-08',
+} as const;
+
+export type PricingPlanId = keyof typeof PRICING;

@@ -42,7 +42,7 @@ export default function PainSection() {
                 визуально спорить с выводом блока ниже — там теперь крупная
                 полужирная строка-УТП, и пункты узнавания при таком же весе
                 перетягивали внимание на себя. Решение владельца 2026-08-08. */}
-            <span className="text-[15.5px] leading-[1.5] text-[#101826]">{text}</span>
+            <span className="text-[15px] leading-[1.5] text-[#101826]">{text}</span>
           </li>
         ))}
       </ul>

@@ -231,7 +231,7 @@ export default function ReviewedWeek() {
         data-reveal
         className="mx-auto mt-14 max-w-[640px] rounded-3xl border border-[rgba(16,24,38,0.12)] bg-[#FBFAF7] px-9 py-10 text-center shadow-[0_16px_44px_rgba(16,24,38,0.05)]"
       >
-        <h3 className="text-[20px] font-semibold leading-[1.35] text-[#101826]">
+        <h3 className="text-[clamp(17px,1.9vw,20px)] font-semibold leading-[1.35] text-[#101826]">
           Если хотите такую неделю — начните с <Accent>недели Pro.</Accent>
         </h3>
         <p className="mx-auto mt-4 max-w-[440px] text-[14.5px] leading-[1.6] text-[#5B6472]">

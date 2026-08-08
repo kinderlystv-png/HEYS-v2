@@ -324,7 +324,12 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
               <span className={`${playfair.className} font-medium italic`}>ведёт куратор.</span>
             </h1>
 
-            <p className="mt-[clamp(26px,3.2vw,36px)] max-w-[560px] text-[clamp(15px,1.6vw,17px)] leading-[1.6] text-white/75">
+            {/* Колонка уже прототипных 560px. В прототипе тот же абзац короче; здесь
+                он вырос до 182 знаков, и на 560px это давало ~74 знака в строке —
+                верхняя граница читаемой длины. Под заголовком в 62px такая широкая
+                тонкая полоса читается растянутой. 480px дают ~63 знака: середина
+                нормы, и блок под H1 собирается плотнее. */}
+            <p className="mt-[clamp(26px,3.2vw,36px)] max-w-[480px] text-[clamp(15px,1.6vw,17px)] leading-[1.6] text-white/75">
               {/* Неразрывный пробел перед тире: по правилам русского набора тире
                   не должно начинать строку, и на 375 px оно как раз уезжало вниз
                   — фраза ломалась на «…пару фраз» / «— обычно до 3 минут». В
@@ -368,7 +373,7 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
             className="pb-12 sm:pb-14"
             style={{ marginTop: CTA_GAP_PX + CHAPTER_DOTS_PX }}
           >
-            <p className="max-w-[320px] text-balance text-[clamp(16px,1.9vw,18px)] font-normal leading-[1.45] tracking-[-0.01em] text-white/70">
+            <p className="max-w-[320px] text-balance text-[clamp(14px,1.5vw,16px)] font-normal leading-[1.45] tracking-[-0.01em] text-white/70">
               Куратор — живой человек,{' '}
               <span
                 className={`${playfair.className} text-[clamp(24px,3vw,30px)] font-medium italic leading-[1.25] text-white`}

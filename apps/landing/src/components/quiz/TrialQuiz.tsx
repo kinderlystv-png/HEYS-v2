@@ -228,7 +228,9 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
   if (step === 'sent') {
     return (
       <div className="rounded-3xl border border-[rgba(16,24,38,0.1)] bg-white p-10">
-        <h3 className="text-[22px] font-semibold text-[#101826]">Заявка получена</h3>
+        <h3 className="text-[clamp(18px,2vw,22px)] font-semibold text-[#101826]">
+          Заявка получена
+        </h3>
         <p className="mt-4 text-[15px] leading-[1.6] text-[#5B6472]">
           {quizTaken
             ? 'Куратор посмотрит ваш разбор до первого сообщения — начинать с нуля не придётся. Свяжется с вами через выбранный канал.'
@@ -247,7 +249,7 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
     <div className="rounded-3xl border border-[rgba(16,24,38,0.1)] bg-white p-8 sm:p-10">
       {step === 'intro' ? (
         <div>
-          <h3 className="text-[20px] font-semibold leading-[1.35] text-[#101826]">
+          <h3 className="text-[clamp(17px,1.9vw,20px)] font-semibold leading-[1.35] text-[#101826]">
             Хотите, куратор начнёт не с нуля?
           </h3>
           <p className="mt-4 text-[15px] leading-[1.6] text-[#5B6472]">
@@ -282,7 +284,7 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A94A2]">
             Шаг 1 из 2
           </p>
-          <h3 className="mt-4 text-[20px] font-semibold leading-[1.35] text-[#101826]">
+          <h3 className="mt-4 text-[clamp(17px,1.9vw,20px)] font-semibold leading-[1.35] text-[#101826]">
             Что чаще всего запускает срыв?
           </h3>
           <div className="mt-6 space-y-3">
@@ -305,7 +307,7 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A94A2]">
             Шаг 2 из 2
           </p>
-          <h3 className="mt-4 text-[20px] font-semibold leading-[1.35] text-[#101826]">
+          <h3 className="mt-4 text-[clamp(17px,1.9vw,20px)] font-semibold leading-[1.35] text-[#101826]">
             Когда чаще всего сложнее удержать режим?
           </h3>
           <div className="mt-6 space-y-3">
@@ -382,7 +384,7 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
 
       {step === 'form' ? (
         <form ref={formRef} onSubmit={handleSubmit} aria-label="Заявка на неделю Pro" noValidate>
-          <h3 className="text-[20px] font-semibold leading-[1.35] text-[#101826]">
+          <h3 className="text-[clamp(17px,1.9vw,20px)] font-semibold leading-[1.35] text-[#101826]">
             Куда куратору написать?
           </h3>
 

@@ -66,7 +66,7 @@ export default function FirstMonth() {
               </p>
             </div>
             <div>
-              <h3 className="text-[20px] font-semibold leading-[1.35] text-[#101826]">
+              <h3 className="text-[clamp(17px,1.9vw,20px)] font-semibold leading-[1.35] text-[#101826]">
                 {stage.title}
               </h3>
               <p className="mt-3 text-[15px] leading-[1.65] text-[#5B6472]">{stage.text}</p>

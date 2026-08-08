@@ -39,7 +39,9 @@ export default function TrialSection() {
             </h2>
 
             <p className="mt-6 flex items-baseline gap-3">
-              <span className="text-[56px] font-semibold leading-none text-white">0 ₽</span>
+              <span className="text-[clamp(36px,6.2vw,56px)] font-semibold leading-none text-white">
+                0 ₽
+              </span>
               <span className="text-[15px] text-white/60">/ 7 дней</span>
             </p>
 
