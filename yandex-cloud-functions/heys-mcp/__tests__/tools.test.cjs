@@ -312,6 +312,35 @@ test('log_strength_workout принимает свой вес без указа�
   assert.equal(saved.value.trainings[0].workoutLog.exercises[0].approaches[0].weightKg, '');
 });
 
+test('delete_training ставит tombstone, иначе merge вернёт тренировку из облака', async () => {
+  const api = fakeApi({
+    day: {
+      date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111,
+      trainings: [{ z: [60, 0, 0, 0], time: '10:00', type: 'cardio' }],
+    },
+  });
+  const res = await build(api).heys_delete_training({ index: 0 });
+
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_')).value;
+  // Строка вырезана, список добит пустыми заготовками — как в приложении.
+  assert.equal(saved.trainings.filter((t) => (t.z || []).some((m) => m > 0)).length, 0);
+  const tomb = saved.deletedTrainings[0];
+  assert.equal(tomb.signature, 'fields:cardio|||10:00|');
+  assert.ok(tomb.deletedAt > 0);
+  assert.match(res.text, /Удалил cardio/);
+});
+
+test('delete_training отбивает пустую заготовку и несуществующий индекс', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111, trainings: [{ z: [0, 0, 0, 0] }] },
+  });
+  const tools = build(api);
+  await assert.rejects(() => tools.heys_delete_training({ index: 9 }), (e) => e.code === 'not_found');
+  // У заготовки нет подписи: tombstone по ней погасил бы чужие тренировки.
+  await assert.rejects(() => tools.heys_delete_training({ index: 0 }), (e) => e.code === 'not_deletable');
+  assert.equal(api.saves.length, 0);
+});
+
 test('update_training дописывает оценки к уже записанной тренировке', async () => {
   // Ровно случай истории Александры: тренировки записаны, оценок в них нет,
   // а добавить их коннектор до сих пор не умел — только завести новую.

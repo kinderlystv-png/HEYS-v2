@@ -969,18 +969,24 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         mood: args.mood, wellbeing: args.wellbeing, stress: args.stress,
       };
       const current = await readDay(date);
-      const next = day.addTraining(current, zones, extra, { nowMs, clientId });
+      const added = day.addTraining(current, zones, extra, { nowMs, clientId });
+      if (added.error === 'too_many') {
+        throw new ToolError('too_many', 'В дне уже три тренировки — больше приложение не показывает. Удали лишнюю через heys_delete_training.');
+      }
+      const next = added.day;
       const saved = await writeDay(date, next, Number(current.updatedAt) || 0);
       const after = await dayAfterWrite(saved, next);
       // Нагрузка сессии — MET-минуты по зонам клиента (web-mirror, зеркало
-      // apps/web/_kernel/heys_kernel_load_v1.js). Только что записанная
-      // тренировка, без чтения истории — накопленную тренированность/усталость
-      // MCP пока не считает (окно ~42 дня, сначала измерить стоимость).
+      // apps/web/_kernel/heys_kernel_load_v1.js). Только этой сессии, без чтения
+      // истории: накопленную тренированность отдаёт heys_get_training_status.
       const inputs = await loadNormInputs(date);
       const zoneMets = Array.isArray(inputs && inputs.hrZones)
         ? inputs.hrZones.map((z) => Number(z && z.MET) || 0)
         : null;
-      const sessionLoad = webMirror.sessionLoad({ z: zones, type: extra.type }, zoneMets);
+      // По записанным зонам, а не по сырому вводу: отрицательные и запредельные
+      // значения клампятся при записи, и число в ответе обязано совпадать с блобом.
+      const writtenZ = next.trainings[next.trainings.length - 1].z;
+      const sessionLoad = webMirror.sessionLoad({ z: writtenZ, type: extra.type }, zoneMets);
       const extraBits = [];
       if (extra.time) extraBits.push(`в ${extra.time}`);
       if (extra.type) extraBits.push(extra.type);
@@ -1020,6 +1026,28 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
           max_weight_kg: agg.maxWeight,
           day_after: after,
         },
+      };
+    },
+
+    async heys_delete_training(args) {
+      const date = resolveDate(args.date, nowMs);
+      const current = await readDay(date);
+      const res = day.deleteTraining(current, args.index, { nowMs, clientId });
+      if (res.error === 'not_found') {
+        const total = (current.trainings || []).length;
+        throw new ToolError('not_found', total
+          ? `В дне ${date} тренировок ${total} — index от 0 до ${total - 1}. Индексы смотри в heys_get_day.`
+          : `В дне ${date} нет тренировок.`);
+      }
+      if (res.error === 'not_deletable') {
+        throw new ToolError('not_deletable', 'Это пустая заготовка без данных — удалять нечего.');
+      }
+      const saved = await writeDay(date, res.day, Number(current.updatedAt) || 0);
+      const after = await dayAfterWrite(saved, res.day);
+      const what = res.removed.activityLabel || res.removed.type || 'тренировку';
+      return {
+        text: `Удалил ${what} за ${date} (${args.index}).${dayAfterText(after)}`,
+        structured: { date, index: Number(args.index), day_after: after },
       };
     },
 
@@ -1583,7 +1611,11 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
      * дней, что и остальной дневник — без обхода валидаторов самих модулей.
      */
     async heys_get_training_status(args = {}) {
-      const to = resolveDate(args.to, nowMs);
+      const today = day.nowParts(nowMs).date;
+      const asked = resolveDate(args.to, nowMs);
+      // Будущее не читаем: там блобов нет, и модель отдала бы нули, выглядящие
+      // как «клиент не тренируется».
+      const to = asked > today ? today : asked;
       // Окно нагрузки шире периода отчёта: постоянная времени тренированности
       // 42 дня, и на более коротком ряде экспонента не успевает прогреться.
       // MAX_PERIOD_DAYS (31) — эргономика листинга дней, не предел чтения:
@@ -1647,8 +1679,12 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       // экспоненты посчитается по неверному числу дней.
       const cardioSeries = [];
       const tonnageSeries = [];
+      // Дни, за которые блоб реально есть. Ряд плотный (пропуск = 0), поэтому
+      // его длина всегда равна окну и уверенностью служить не может.
+      let daysWithData = 0;
       for (const date of loadDates) {
         const blob = blobs[day.dayKey(date)];
+        if (blob) daysWithData += 1;
         const trainings = (blob && Array.isArray(blob.trainings)) ? blob.trainings : [];
         let cardio = 0;
         for (const tr of trainings) cardio += webMirror.sessionLoad(tr, zoneMets);
@@ -1657,9 +1693,9 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       }
       // Кардио и силовая — раздельные ряды: единого коэффициента «кг тоннажа =
       // MET-минуты» не существует, сводить их в одно число рано.
-      const cardioLoad = webMirror.fitnessFatigue(cardioSeries);
+      const cardioLoad = webMirror.fitnessFatigue(cardioSeries, { daysWithData });
       const strengthLoad = tonnageSeries.some((v) => v > 0)
-        ? webMirror.fitnessFatigue(tonnageSeries)
+        ? webMirror.fitnessFatigue(tonnageSeries, { daysWithData })
         : null;
 
       const loadBits = [
@@ -2226,6 +2262,18 @@ const TOOL_SCHEMAS = [
     },
   },
   {
+    name: 'heys_delete_training',
+    description: 'Удалить тренировку из дня. Индекс — её позиция в списке из heys_get_day (с нуля). Удаление ставит tombstone, поэтому тренировка не вернётся из облака при следующей синхронизации.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        index: { type: 'integer', description: 'Номер тренировки в дне, с нуля — как в heys_get_day.' },
+        date: DATE_ARG,
+      },
+      required: ['index'],
+    },
+  },
+  {
     name: 'heys_update_training',
     description: 'Поправить уже записанную тренировку: дописать оценки самочувствия, время, тип или комментарий, изменить минуты по зонам. Индекс тренировки — её позиция в списке из heys_get_day (с нуля). Передавай только то, что меняешь.',
     inputSchema: {
@@ -2370,6 +2418,7 @@ const WRITE_TOOLS = new Set([
   'heys_log_training',
   'heys_log_strength_workout',
   'heys_update_training',
+  'heys_delete_training',
   'heys_update_day',
   'heys_checkin',
   'heys_update_profile',

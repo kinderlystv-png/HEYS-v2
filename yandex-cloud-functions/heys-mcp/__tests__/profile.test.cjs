@@ -339,8 +339,9 @@ test('нагрузка считается по всему 42-дневному о
 
   assert.equal(res.structured.load.window_days, 42);
   assert.ok(res.structured.load.cardio.ctl > 0, 'тренировка из окна должна попасть в тренированность');
-  // 42 дня истории — экспонента ещё не прогрелась, честно помечаем.
-  assert.equal(res.structured.load.cardio.confidence, 'medium');
+  // Блоб в окне ровно один — уверенность низкая, а не «42 дня истории».
+  assert.equal(res.structured.load.cardio.daysOfHistory, 1);
+  assert.equal(res.structured.load.cardio.confidence, 'low');
   assert.match(res.text, /тренированность/);
 });
 

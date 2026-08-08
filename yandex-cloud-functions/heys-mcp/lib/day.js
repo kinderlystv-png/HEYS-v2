@@ -13,8 +13,26 @@
  * Модуль не делает сетевых вызовов: всё тестируется без прод-доступа.
  */
 
+const crypto = require('node:crypto');
 const webMirror = require('./web-mirror');
 const { ageFromBirthDate, GENDERS } = require('./profile');
+
+/** Тот же формат, что у id приёмов в lib/tools.js. */
+function makeId(prefix) {
+  return `${prefix}${crypto.randomBytes(6).toString('hex')}`;
+}
+
+/**
+ * Потолки на объём записи. Без них один кривой вызов модели пишет блоб дня
+ * на десятки мегабайт, и день клиента перестаёт открываться (проверено
+ * аудитом 2026-08-08: 2000 упражнений × 200 подходов = 25.9 МБ).
+ */
+const MAX_TRAININGS_PER_DAY = 3; // столько слотов рисует приложение
+const MAX_EXERCISES = 30;
+const MAX_APPROACHES = 30;
+const MAX_NAME_LEN = 100;
+const MAX_NOTE_LEN = 500;
+const MAX_TRAINING_MINUTES = 1440; // сутки
 
 const MOSCOW_TZ = 'Europe/Moscow';
 const DAY_KEY_PREFIX = 'heys_dayv2_';
@@ -599,8 +617,13 @@ function addWater(day, ml, { nowMs, clientId }) {
  * когда-нибудь придётся взвешивать по-разному.
  */
 function addTraining(day, zoneMinutes, extra, { nowMs, clientId }) {
-  const z = Array.from({ length: HR_ZONES }, (_, i) => Math.max(0, Number(zoneMinutes[i]) || 0));
-  const training = { z, updatedAt: nowMs, source: 'curator_mcp' };
+  const z = Array.from({ length: HR_ZONES }, (_, i) => (
+    Math.min(MAX_TRAINING_MINUTES, Math.max(0, Number(zoneMinutes[i]) || 0))
+  ));
+  // id обязателен: по нему merge опознаёт тренировку при удалении. Без него
+  // подпись собирается по полям, и две однотипные тренировки за день получают
+  // одну подпись — tombstone гасит обе (аудит 2026-08-08).
+  const training = { id: makeId('tr_'), z, updatedAt: nowMs, source: 'curator_mcp' };
   const e = extra || {};
   if (typeof e.time === 'string' && e.time.trim()) training.time = e.time.trim();
   if (typeof e.type === 'string' && e.type.trim()) training.type = e.type.trim();
@@ -610,8 +633,15 @@ function addTraining(day, zoneMinutes, extra, { nowMs, clientId }) {
     const v = Number(e[field]);
     if (Number.isFinite(v) && v >= 1 && v <= 10) training[field] = v;
   }
-  const trainings = [...(day.trainings || []), training];
-  return touch({ ...day, trainings }, nowMs, clientId);
+  const list = Array.isArray(day.trainings) ? day.trainings : [];
+  // Приложение рисует три слота. Раньше коннектор писал сколько угодно, а
+  // удаление потом обрезало список до трёх и молча теряло лишние.
+  const real = list.filter(isRealTraining).length;
+  if (real >= MAX_TRAININGS_PER_DAY) {
+    return { day, error: 'too_many' };
+  }
+  const trainings = [...list, training];
+  return { day: touch({ ...day, trainings }, nowMs, clientId), error: null };
 }
 
 /**
@@ -677,9 +707,17 @@ function setStrengthWorkout(day, index, { exercises, time, comment, durationMin 
       : 'В дне нет тренировок — не передавай index, чтобы завести новую.' };
   }
 
+  const isNew = i === list.length;
   const prev = list[i] || {};
-  const dur = Number(durationMin);
-  const minutes = Number.isFinite(dur) && dur > 0 ? Math.max(1, Math.min(180, Math.round(dur))) : null;
+  // Перезаписывать чужую кардио-тренировку силовой молча нельзя: раньше от неё
+  // оставался ярлык («Плавание») поверх силового конструктора.
+  if (!isNew && isRealTraining(prev) && prev.type && String(prev.type).toLowerCase() !== 'strength') {
+    return { day, error: `Тренировка ${i} — «${prev.activityLabel || prev.type}», не силовая. Не передавай index, чтобы добавить новую, или сначала удали эту.` };
+  }
+  if (isNew && list.filter(isRealTraining).length >= MAX_TRAININGS_PER_DAY) {
+    return { day, error: `В дне уже ${MAX_TRAININGS_PER_DAY} тренировки — больше приложение не показывает. Удали лишнюю или передай index для перезаписи.` };
+  }
+  const minutes = clampTrainingMinutes(durationMin);
   const keepZ = Array.isArray(prev.z) && prev.z.some((m) => Number(m) > 0);
   const z = minutes !== null
     ? [0, minutes, 0, 0]
@@ -687,6 +725,7 @@ function setStrengthWorkout(day, index, { exercises, time, comment, durationMin 
 
   const training = {
     ...prev,
+    id: prev.id || makeId('tr_'),
     z,
     type: 'strength',
     strengthEntryMode: 'workout_builder',
@@ -700,6 +739,61 @@ function setStrengthWorkout(day, index, { exercises, time, comment, durationMin 
   const trainings = list.slice();
   trainings[i] = training;
   return { day: touch({ ...day, trainings }, nowMs, clientId), index: i, error: null };
+}
+
+/**
+ * Подпись тренировки для tombstone — зеркало `trainingDeletionSignature`
+ * из apps/web/heys_sync_merge_v1.js:157. Стабильного id у тренировки может не
+ * быть, поэтому опознаём по полям, а в крайнем случае по минутам зон.
+ */
+function trainingDeletionSignature(training) {
+  if (!training || typeof training !== 'object') return '';
+  const id = training.id == null ? '' : String(training.id).trim();
+  if (id) return `id:${id}`;
+  const identity = [training.type, training.activityLabel, training.source, training.time, training.hobbySubtype]
+    .map((v) => String(v == null ? '' : v).trim().toLowerCase());
+  if (identity.some(Boolean)) return `fields:${identity.join('|')}`;
+  const zones = Array.isArray(training.z) ? training.z.map((v) => Number(v) || 0) : [];
+  return zones.some((v) => v > 0) ? `zones:${zones.join('|')}` : '';
+}
+
+/**
+ * Удалить тренировку. Без tombstone нельзя: merge вернёт её из облака, как это
+ * было бы с приёмом еды. Форма записи повторяет приложение
+ * (heys_day_trainings_v1.js:2555) — строку вырезаем, список добиваем пустыми
+ * заготовками до трёх, подпись кладём в `deletedTrainings`.
+ *
+ * Тренировка без подписи (пустая заготовка) удалению не подлежит: merge не
+ * сможет отличить её от чужой, и tombstone погасил бы лишнее.
+ */
+function deleteTraining(day, index, { nowMs, clientId }) {
+  const list = Array.isArray(day.trainings) ? day.trainings : [];
+  const i = Number(index);
+  if (!Number.isInteger(i) || i < 0 || i >= list.length) {
+    return { day, error: 'not_found' };
+  }
+  const removed = list[i];
+  const signature = trainingDeletionSignature(removed);
+  if (!signature) return { day, error: 'not_deletable' };
+
+  const empty = { z: Array.from({ length: HR_ZONES }, () => 0), time: '', type: '' };
+  // Список НЕ обрезаем до трёх: в дне может лежать больше строк, и slice(0,3)
+  // терял бы хвост без tombstone. Добиваем заготовкой до прежней длины, чтобы
+  // позиционный merge не считал исчезнувший слот чужой правкой.
+  const kept = [...list.slice(0, i), ...list.slice(i + 1)];
+  // Merge тренировок позиционный, а удаление сдвигает массив влево. У записей
+  // приложения нет своего updatedAt, они падают на day.updatedAt и локальная
+  // версия побеждает на всех позициях. У наших он свой и разный — после сдвига
+  // строка сравнивалась бы с чужой позицией и терялась. Поднимаем штамп у всех
+  // оставшихся, повторяя поведение приложения.
+  const trainings = [...kept.map((t) => ({ ...t, updatedAt: nowMs })), empty];
+  const prevTombstones = Array.isArray(day.deletedTrainings) ? day.deletedTrainings : [];
+  const deletedTrainings = [
+    { tombstoneId: `${nowMs}:${i}:${signature}`, signature, deletedAt: nowMs, index: i },
+    ...prevTombstones,
+  ].slice(0, 50);
+
+  return { day: touch({ ...day, trainings, deletedTrainings }, nowMs, clientId), removed, error: null };
 }
 
 /** Пресеты отдыха конструктора (apps/web/heys_day_trainings_v1.js:516). */
@@ -723,51 +817,81 @@ function buildWorkoutLog(exercises, { durationMin } = {}) {
   if (!Array.isArray(exercises) || !exercises.length) {
     return { error: 'Нужен непустой список exercises.' };
   }
+  if (exercises.length > MAX_EXERCISES) {
+    return { error: `Слишком много упражнений: ${exercises.length}, максимум ${MAX_EXERCISES}.` };
+  }
+  // Число, а не «что угодно, приводимое к числу»: Number(true) === 1 и
+  // Number([]) === 0 молча превращали булев и пустой массив в вес и повторы.
+  const strictNum = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
   const out = [];
+  const usedIds = new Set();
   for (let i = 0; i < exercises.length; i += 1) {
     const raw = exercises[i] || {};
     const where = `Упражнение ${i + 1}`;
-    const name = String(raw.name || '').trim();
-    if (!name) return { error: `${where}: нужно название (name).` };
+    if (typeof raw.name !== 'string' || !raw.name.trim()) {
+      return { error: `${where}: нужно название (name) строкой.` };
+    }
+    const name = raw.name.trim();
+    if (name.length > MAX_NAME_LEN) {
+      return { error: `${where}: название длиннее ${MAX_NAME_LEN} символов.` };
+    }
+    if (raw.note !== undefined && raw.note !== null && typeof raw.note !== 'string') {
+      return { error: `${where} «${name}»: note — строка.` };
+    }
+    if (typeof raw.note === 'string' && raw.note.length > MAX_NOTE_LEN) {
+      return { error: `${where} «${name}»: заметка длиннее ${MAX_NOTE_LEN} символов.` };
+    }
 
     const rawAps = Array.isArray(raw.approaches) ? raw.approaches : null;
     if (!rawAps || !rawAps.length) return { error: `${where} «${name}»: нужен непустой список approaches.` };
+    if (rawAps.length > MAX_APPROACHES) {
+      return { error: `${where} «${name}»: подходов ${rawAps.length}, максимум ${MAX_APPROACHES}.` };
+    }
     const approaches = [];
     for (let k = 0; k < rawAps.length; k += 1) {
       const a = rawAps[k] || {};
-      const reps = Number(a.reps);
-      if (!Number.isInteger(reps) || reps < 1 || reps > 200) {
-        return { error: `${where} «${name}», подход ${k + 1}: reps — целое от 1 до 200.` };
+      const reps = strictNum(a.reps);
+      if (reps === null || !Number.isInteger(reps) || reps < 1 || reps > 200) {
+        return { error: `${where} «${name}», подход ${k + 1}: reps — целое число от 1 до 200.` };
       }
-      const w = a.weight_kg === undefined || a.weight_kg === null || a.weight_kg === '' ? null : Number(a.weight_kg);
-      if (w !== null && (!Number.isFinite(w) || w < 0 || w > 1000)) {
-        return { error: `${where} «${name}», подход ${k + 1}: weight_kg — число от 0 до 1000 или пусто для своего веса.` };
+      let w = null;
+      if (a.weight_kg !== undefined && a.weight_kg !== null && a.weight_kg !== '') {
+        w = strictNum(a.weight_kg);
+        if (w === null || w < 0 || w > 1000) {
+          return { error: `${where} «${name}», подход ${k + 1}: weight_kg — число от 0 до 1000 или пусто для своего веса.` };
+        }
+      }
+      if (a.done !== undefined && typeof a.done !== 'boolean') {
+        return { error: `${where} «${name}», подход ${k + 1}: done — true или false.` };
       }
       approaches.push({
-        id: `ap_mcp_${i}_${k}`,
+        id: makeId('ap_'),
         weightKg: w === null ? '' : String(w),
         reps,
-        done: a.done === undefined ? true : !!a.done,
+        done: a.done === undefined ? true : a.done,
       });
     }
 
-    const rpe = raw.rpe === undefined || raw.rpe === null ? 0 : Number(raw.rpe);
-    if (!Number.isInteger(rpe) || rpe < 0 || rpe > 10) {
-      return { error: `${where} «${name}»: rpe — целое от 0 до 10.` };
+    const rpe = raw.rpe === undefined || raw.rpe === null ? 0 : strictNum(raw.rpe);
+    if (rpe === null || !Number.isInteger(rpe) || rpe < 0 || rpe > 10) {
+      return { error: `${where} «${name}»: rpe — целое число от 0 до 10.` };
     }
-    const ssGroup = raw.superset_group === undefined || raw.superset_group === null ? 0 : Number(raw.superset_group);
-    if (!Number.isInteger(ssGroup) || ssGroup < 0) {
-      return { error: `${where} «${name}»: superset_group — целое ≥ 0 (0 = без связки, одинаковый номер = один суперсет).` };
+    const ssGroup = raw.superset_group === undefined || raw.superset_group === null ? 0 : strictNum(raw.superset_group);
+    if (ssGroup === null || !Number.isInteger(ssGroup) || ssGroup < 0) {
+      return { error: `${where} «${name}»: superset_group — целое число ≥ 0 (0 = без связки, одинаковый номер = один суперсет).` };
     }
-    const restSec = raw.rest_sec === undefined || raw.rest_sec === null ? 90 : Number(raw.rest_sec);
-    if (!REST_PRESETS.includes(restSec)) {
+    const restSec = raw.rest_sec === undefined || raw.rest_sec === null ? 90 : strictNum(raw.rest_sec);
+    if (restSec === null || !REST_PRESETS.includes(restSec)) {
       return { error: `${where} «${name}»: rest_sec — одно из ${REST_PRESETS.join(', ')}.` };
     }
 
     // sets/reps/weightKg — legacy-поля, приложение держит их синхронными с
     // первой строкой подходов (syncLegacyFieldsFromApproaches).
+    let exId = makeId('ex_');
+    while (usedIds.has(exId)) exId = makeId('ex_');
+    usedIds.add(exId);
     out.push({
-      id: `ex_mcp_${i}`,
+      id: exId,
       name,
       approaches,
       note: typeof raw.note === 'string' ? raw.note.trim() : '',
@@ -790,10 +914,28 @@ function buildWorkoutLog(exercises, { durationMin } = {}) {
     if (n < 2) return { error: `superset_group ${g} стоит у одного упражнения — в связке нужно минимум два.` };
   }
 
-  const log = { exercises: out };
-  const dur = Number(durationMin);
-  if (Number.isFinite(dur) && dur > 0) log.totalDurationMinutes = Math.round(dur);
+  // Форма как у приложения (ensureWorkoutLogShape): version + zoneMinutes +
+  // totalDurationMinutes + exercises. Без zoneMinutes наша запись слабее в
+  // тай-брейке merge — workoutLogRichness даёт за него +100 очков, и при
+  // конфликте с версией из приложения наша проигрывала бы.
+  const minutes = clampTrainingMinutes(durationMin);
+  const log = {
+    version: 1,
+    zoneMinutes: minutes !== null ? [0, minutes, 0, 0] : [0, 1, 0, 0],
+    exercises: out,
+  };
+  // totalDurationMinutes держим согласованным с zoneMinutes, а не сырым
+  // значением: раньше duration_min=500 давало z=[0,180,0,0] при
+  // totalDurationMinutes=500, и сервер с приложением видели разное.
+  if (minutes !== null) log.totalDurationMinutes = minutes;
   return { log };
+}
+
+/** Минуты одной тренировки в границах приложения (clampWbZoneMin: 1..180). */
+function clampTrainingMinutes(durationMin) {
+  const dur = typeof durationMin === 'number' && Number.isFinite(durationMin) ? durationMin : null;
+  if (dur === null || dur <= 0) return null;
+  return Math.max(1, Math.min(180, Math.round(dur)));
 }
 
 const DAY_FIELD_MAP = {
@@ -1908,6 +2050,7 @@ module.exports = {
   addWater,
   addTraining,
   updateTraining,
+  deleteTraining,
   setStrengthWorkout,
   buildWorkoutLog,
   isRealTraining,

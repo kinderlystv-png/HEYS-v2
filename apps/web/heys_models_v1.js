@@ -572,6 +572,12 @@
         stress: stress,
         comment: (t && t.comment) || ''
       };
+      // id пробрасываем: по нему merge опознаёт тренировку при удалении
+      // (trainingDeletionSignature, ветка `id:` идёт первой). Слот читался в
+      // трёх местах, но никто его не заполнял; коннектор начал с 2026-08-08.
+      // Без passthrough id вырезался бы при первом открытии дня, и удаление
+      // одной тренировки гасило бы соседнюю с той же подписью по полям.
+      if (t && t.id) out.id = String(t.id);
       if (t && t.source) out.source = t.source;
       if (t && typeof t.activityLabel === 'string' && t.activityLabel.trim()) out.activityLabel = t.activityLabel.trim();
       if (t && t.intensity) out.intensity = t.intensity;

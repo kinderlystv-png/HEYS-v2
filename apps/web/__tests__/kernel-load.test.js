@@ -90,10 +90,53 @@ describe('TrainingKernel.load', () => {
             const tk = loadKernel();
             const series = new Array(30).fill(100);
             const shortTau = tk.fitnessFatigue(series, { ctlTau: 7, atlTau: 3 });
-            // При коротком tau экспонента прогревается быстрее — confidence выше
-            // на той же длине истории, чем со стандартным tau 42.
+            // Порог уверенности привязан к tau: при коротком tau 30 дней — это
+            // уже полная история, при стандартном 42 — ещё частичная.
             expect(shortTau.confidence).toBe('high');
-            expect(tk.fitnessFatigue(series).confidence).toBe('low');
+            expect(tk.fitnessFatigue(series).confidence).toBe('medium');
         });
+    });
+});
+
+/**
+ * Регрессы по аудиту 2026-08-08 — три дефекта, из-за которых куратор видел
+ * заведомо неверные числа.
+ */
+describe('TrainingKernel.load — регрессы аудита', () => {
+    beforeEach(() => { window.HEYS = {}; });
+    afterEach(() => { window.HEYS = originalHEYS; });
+
+    it('готовность не уходит в минус на ровной нагрузке', () => {
+        // Старт с нуля: за окно длиной в одну τ экспонента прогревалась на 63%,
+        // и tsb был −36.5 даже при идеально ровной нагрузке. Куратор читал это
+        // как хроническое перенапряжение.
+        const tk = loadKernel();
+        const ff = tk.fitnessFatigue(new Array(42).fill(100));
+        expect(ff.ctl).toBeCloseTo(100, 0);
+        expect(Math.abs(ff.tsb)).toBeLessThan(1);
+    });
+
+    it('уверенность считается по дням с данными, а не по длине окна', () => {
+        // Ряд плотный и всегда равен окну, поэтому daysOfHistory всегда был 42,
+        // а confidence навсегда застревал на одном значении.
+        const tk = loadKernel();
+        const series = new Array(42).fill(100);
+        expect(tk.fitnessFatigue(series, { daysWithData: 3 })).toMatchObject({ daysOfHistory: 3, confidence: 'low' });
+        expect(tk.fitnessFatigue(series, { daysWithData: 20 })).toMatchObject({ confidence: 'medium' });
+        expect(tk.fitnessFatigue(series, { daysWithData: 42 })).toMatchObject({ confidence: 'high' });
+    });
+
+    it('отсутствующий MET зоны заменяется дефолтом своей зоны, а не последней', () => {
+        // `mets[i] || mets.at(-1)` подставлял анаэробные 8 вместо 2.5 и завышал
+        // нагрузку зоны 1 в 3.2 раза против калорийного расчёта.
+        const tk = loadKernel();
+        expect(tk.sessionLoad({ z: [30, 0, 0, 0] }, [0, 3, 5, 8])).toBe(30 * tk.DEFAULT_ZONE_METS[0]);
+    });
+
+    it('строковые минуты считаются, а не обнуляются', () => {
+        // Калорийный путь принимает '30' через `+min || 0`; нагрузка обязана
+        // вести себя так же, иначе на исторических блобах она молча нулевая.
+        const tk = loadKernel();
+        expect(tk.sessionLoad({ z: ['30', 0, 0, 0] }, [2, 3, 5, 8])).toBe(60);
     });
 });

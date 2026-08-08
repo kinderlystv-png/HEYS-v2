@@ -43,7 +43,13 @@
   const DEFAULT_CTL_TAU = 42;
   const DEFAULT_ATL_TAU = 7;
 
-  function num(x) { return typeof x === 'number' && isFinite(x) ? x : 0; }
+  // Числа в блобах бывают строками ('30'), и калорийный путь их принимает
+  // (`+min || 0` в heys_tdee_v1). Считать их нулём значило бы показывать нулевую
+  // нагрузку там, где калории посчитаны.
+  function num(x) {
+    const v = typeof x === 'number' ? x : parseFloat(x);
+    return isFinite(v) ? v : 0;
+  }
 
   /**
    * Нагрузка одной кардио-сессии в MET-минутах: сумма `минуты_зоны × MET_зоны`.
@@ -62,7 +68,11 @@
     const mets = Array.isArray(zoneMets) && zoneMets.length ? zoneMets : DEFAULT_ZONE_METS;
     let load = 0;
     for (let i = 0; i < z.length; i++) {
-      load += num(z[i]) * num(mets[i] || mets[mets.length - 1]);
+      // Отсутствующий MET заменяется дефолтом СВОЕЙ зоны, а не последней:
+      // `mets[i] || mets[mets.length - 1]` подставлял анаэробные 8 вместо 2.5
+      // и завышал нагрузку зоны 1 в 3.2 раза против калорийного расчёта.
+      const met = num(mets[i]) || num(DEFAULT_ZONE_METS[i]) || num(DEFAULT_ZONE_METS[DEFAULT_ZONE_METS.length - 1]);
+      load += num(z[i]) * met;
     }
     return load;
   }
@@ -86,19 +96,32 @@
     const ctlAlpha = 1 - Math.exp(-1 / ctlTau);
     const atlAlpha = 1 - Math.exp(-1 / atlTau);
 
-    let ctl = 0;
-    let atl = 0;
+    // Старт с нуля давал структурный перекос: за окно длиной в одну τ
+    // экспонента прогревается лишь на 63%, поэтому CTL всегда занижен, а
+    // готовность (CTL − ATL) не могла стать положительной даже при идеально
+    // ровной нагрузке (проверено: 42 дня по 100 → tsb −36.5). Стартуем со
+    // среднего по ряду — это допущение «до окна человек тренировался примерно
+    // так же», честное и стандартное для импульс-реакции.
+    let seed = 0;
+    for (let i = 0; i < series.length; i++) seed += num(series[i]);
+    seed = series.length ? seed / series.length : 0;
+
+    let ctl = seed;
+    let atl = seed;
     for (let i = 0; i < series.length; i++) {
       const load = num(series[i]);
       ctl += (load - ctl) * ctlAlpha;
       atl += (load - atl) * atlAlpha;
     }
 
-    const daysOfHistory = series.length;
-    // Деградация уверенности как у доменных readiness-модулей: меньше 2×tau —
-    // экспонента ещё не «прогрелась», CTL занижен относительно устоявшегося.
-    const confidence = daysOfHistory >= ctlTau * 2 ? 'high'
-      : daysOfHistory >= ctlTau ? 'medium'
+    // Дней С ДАННЫМИ, а не длина ряда: ряд плотный и всегда равен окну, так
+    // что series.length говорил «42 дня истории» даже клиенту, заведённому
+    // вчера, и confidence навсегда застревал на medium.
+    const daysOfHistory = o.daysWithData === undefined || o.daysWithData === null
+      ? series.length
+      : Math.max(0, Math.round(num(o.daysWithData)));
+    const confidence = daysOfHistory >= ctlTau ? 'high'
+      : daysOfHistory >= Math.round(ctlTau / 3) ? 'medium'
         : 'low';
 
     return {

@@ -112,8 +112,10 @@ test('addWater суммируется и не уходит в минус', () =>
 
 test('addTraining нормализует минуты в четыре пульсовые зоны', () => {
   const base = day.emptyDay('2026-08-01', CLIENT, 1000);
-  const next = day.addTraining(base, [10, 20], null, { nowMs: 2000, clientId: CLIENT });
+  const { day: next } = day.addTraining(base, [10, 20], null, { nowMs: 2000, clientId: CLIENT });
   assert.deepEqual(next.trainings[0].z, [10, 20, 0, 0]);
+  // id обязателен: по нему merge опознаёт тренировку при удалении.
+  assert.match(next.trainings[0].id, /^tr_[0-9a-f]{12}$/);
   // source проставляется всегда — без него нельзя отличить запись через
   // коннектор от той, что клиент внёс в приложении.
   assert.equal(next.trainings[0].source, 'curator_mcp');
@@ -121,7 +123,7 @@ test('addTraining нормализует минуты в четыре пульс
 
 test('addTraining пишет время, тип и ощущения — то, что раньше терялось молча', () => {
   const base = day.emptyDay('2026-08-01', CLIENT, 1000);
-  const next = day.addTraining(base, [30], {
+  const { day: next } = day.addTraining(base, [30], {
     time: '18:40', type: 'cardio', activityLabel: 'Бег', comment: 'В парке',
     mood: 8, wellbeing: 7, stress: 3,
   }, { nowMs: 2000, clientId: CLIENT });
@@ -137,7 +139,7 @@ test('addTraining пишет время, тип и ощущения — то, ч
 
 test('addTraining игнорирует мусорные значения ощущений вместо записи NaN', () => {
   const base = day.emptyDay('2026-08-01', CLIENT, 1000);
-  const next = day.addTraining(base, [30], { mood: 15, wellbeing: 'бодро', stress: 0 }, { nowMs: 2000, clientId: CLIENT });
+  const { day: next } = day.addTraining(base, [30], { mood: 15, wellbeing: 'бодро', stress: 0 }, { nowMs: 2000, clientId: CLIENT });
   const t = next.trainings[0];
   assert.equal(t.mood, undefined);
   assert.equal(t.wellbeing, undefined);
@@ -987,4 +989,113 @@ test('summarizeDay — refeed в сводке дня', () => {
   });
   assert.equal(summary.is_refeed_day, true);
   assert.equal(summary.refeed_reason, 'holiday');
+});
+
+// ── Регрессы по аудиту 2026-08-08 ────────────────────────────────────────
+
+test('две однотипные тренировки получают РАЗНЫЕ подписи для tombstone', () => {
+  // Корень дефекта: source: 'curator_mcp' проставляется всегда, поэтому в
+  // trainingDeletionSignature всегда срабатывает ветка по полям, а запасной
+  // путь по зонам мёртв. Две кардио без времени давали одну подпись, и
+  // удаление одной гасило обе. Лечится уникальным id.
+  const base = day.emptyDay('2026-08-01', CLIENT, 1000);
+  const a = day.addTraining(base, [30], { type: 'cardio' }, { nowMs: 2000, clientId: CLIENT }).day;
+  const b = day.addTraining(a, [45], { type: 'cardio' }, { nowMs: 3000, clientId: CLIENT }).day;
+  assert.notEqual(b.trainings[0].id, b.trainings[1].id);
+});
+
+test('удаление гасит ровно одну тренировку и не трогает соседнюю', () => {
+  const base = day.emptyDay('2026-08-01', CLIENT, 1000);
+  let d = day.addTraining(base, [30], { type: 'cardio' }, { nowMs: 2000, clientId: CLIENT }).day;
+  d = day.addTraining(d, [45], { type: 'cardio' }, { nowMs: 3000, clientId: CLIENT }).day;
+  const survivorId = d.trainings[1].id;
+  const res = day.deleteTraining(d, 0, { nowMs: 4000, clientId: CLIENT });
+
+  assert.equal(res.error, null);
+  assert.equal(res.day.deletedTrainings.length, 1);
+  // Подпись адресная — по id, а не по набору полей.
+  assert.match(res.day.deletedTrainings[0].signature, /^id:tr_/);
+  // Уцелевшая тренировка на месте и её id не попал в tombstone.
+  assert.equal(res.day.trainings[0].id, survivorId);
+  assert.notEqual(res.day.deletedTrainings[0].signature, `id:${survivorId}`);
+});
+
+test('удаление не обрезает список и поднимает штамп оставшимся', () => {
+  // slice(0, 3) терял четвёртую тренировку без tombstone. Плюс позиционный
+  // merge: у наших записей свой updatedAt, и после сдвига строка сравнивалась
+  // бы с чужой позицией.
+  const base = {
+    ...day.emptyDay('2026-08-01', CLIENT, 1000),
+    trainings: [
+      { id: 'tr_a', z: [10, 0, 0, 0], type: 'cardio', updatedAt: 1000 },
+      { id: 'tr_b', z: [20, 0, 0, 0], type: 'cardio', updatedAt: 5000 },
+      { id: 'tr_c', z: [30, 0, 0, 0], type: 'cardio', updatedAt: 2000 },
+      { id: 'tr_d', z: [40, 0, 0, 0], type: 'cardio', updatedAt: 3000 },
+    ],
+  };
+  const res = day.deleteTraining(base, 0, { nowMs: 9000, clientId: CLIENT });
+  const ids = res.day.trainings.filter((t) => t.id).map((t) => t.id);
+  assert.deepEqual(ids, ['tr_b', 'tr_c', 'tr_d'], 'четвёртая тренировка не потерялась');
+  for (const t of res.day.trainings.filter((x) => x.id)) {
+    assert.equal(t.updatedAt, 9000, 'штамп поднят у всех — иначе сдвиг ломает merge');
+  }
+});
+
+test('четвёртая тренировка за день отбивается, а не пишется молча', () => {
+  let d = day.emptyDay('2026-08-01', CLIENT, 1000);
+  for (let i = 0; i < 3; i += 1) {
+    const r = day.addTraining(d, [30], { type: 'cardio' }, { nowMs: 2000 + i, clientId: CLIENT });
+    assert.equal(r.error, null);
+    d = r.day;
+  }
+  assert.equal(day.addTraining(d, [30], null, { nowMs: 9000, clientId: CLIENT }).error, 'too_many');
+});
+
+test('минуты зоны не превышают суток', () => {
+  const base = day.emptyDay('2026-08-01', CLIENT, 1000);
+  const { day: next } = day.addTraining(base, [999999], null, { nowMs: 2000, clientId: CLIENT });
+  assert.equal(next.trainings[0].z[0], 1440);
+});
+
+test('buildWorkoutLog держит потолки и не принимает булев как число', () => {
+  const ok = [{ name: 'Жим', approaches: [{ weight_kg: 40, reps: 10 }] }];
+  assert.equal(day.buildWorkoutLog(ok).error, undefined);
+
+  const many = Array.from({ length: 31 }, () => ({ name: 'X', approaches: [{ reps: 1 }] }));
+  assert.match(day.buildWorkoutLog(many).error, /Слишком много упражнений/);
+
+  const manyAps = [{ name: 'X', approaches: Array.from({ length: 31 }, () => ({ reps: 1 })) }];
+  assert.match(day.buildWorkoutLog(manyAps).error, /максимум 30/);
+
+  // Number(true) === 1 и Number([]) === 0 раньше проходили как вес и повторы.
+  assert.match(day.buildWorkoutLog([{ name: 'X', approaches: [{ reps: true }] }]).error, /reps/);
+  assert.match(day.buildWorkoutLog([{ name: 'X', approaches: [{ reps: 5, weight_kg: [] }] }]).error, /weight_kg/);
+  assert.match(day.buildWorkoutLog([{ name: 123, approaches: [{ reps: 5 }] }]).error, /название/);
+  assert.match(day.buildWorkoutLog([{ name: 'X'.repeat(101), approaches: [{ reps: 5 }] }]).error, /длиннее/);
+});
+
+test('workoutLog пишется в форме приложения: version и zoneMinutes на месте', () => {
+  const { log } = day.buildWorkoutLog([{ name: 'Жим', approaches: [{ weight_kg: 40, reps: 10 }] }], { durationMin: 52 });
+  assert.equal(log.version, 1);
+  assert.deepEqual(log.zoneMinutes, [0, 52, 0, 0]);
+  assert.equal(log.totalDurationMinutes, 52);
+  assert.match(log.exercises[0].id, /^ex_[0-9a-f]{12}$/);
+});
+
+test('длительность согласована между zoneMinutes и totalDurationMinutes', () => {
+  // Раньше duration_min=500 давало z=[0,180,0,0] при totalDurationMinutes=500.
+  const { log } = day.buildWorkoutLog([{ name: 'Ж', approaches: [{ reps: 5 }] }], { durationMin: 500 });
+  assert.equal(log.zoneMinutes[1], 180);
+  assert.equal(log.totalDurationMinutes, 180);
+});
+
+test('силовая не перезаписывает чужую кардио-тренировку молча', () => {
+  const base = {
+    ...day.emptyDay('2026-08-01', CLIENT, 1000),
+    trainings: [{ z: [0, 40, 0, 0], type: 'cardio', activityLabel: 'Плавание', time: '10:00' }],
+  };
+  const res = day.setStrengthWorkout(base, 0, {
+    exercises: [{ name: 'Жим', approaches: [{ weight_kg: 40, reps: 10 }] }],
+  }, { nowMs: 2000, clientId: CLIENT });
+  assert.match(res.error, /не силовая/);
 });
