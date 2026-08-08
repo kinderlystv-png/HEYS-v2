@@ -1770,6 +1770,7 @@ module.exports = {
   addWater,
   addTraining,
   updateTraining,
+  isRealTraining,
   updateDayFields,
   summarizeDay,
   applyColdExposure,

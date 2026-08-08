@@ -307,6 +307,26 @@ test('пустой период тренировок отвечает прямо
   assert.equal(res.structured.load.strength_tonnage, null);
 });
 
+test('тренировка без типа попадает в список, а не выпадает молча', async () => {
+  // Живой случай 2026-08-08: heys_log_training до сегодняшнего дня не писал type,
+  // поэтому такие тренировки выпадали из sessions — инструмент отвечал
+  // «последняя 01.08» рядом с усталостью за более поздние сессии, которые
+  // модель нагрузки прекрасно видела. Ответ противоречил сам себе.
+  const api = fakeApi({
+    kv: {
+      'heys_dayv2_2026-07-31': DAY('2026-07-31', { trainings: [{ z: [40, 0, 0, 0], time: '12:00' }] }),
+    },
+  });
+  const res = await build(api).heys_get_training_status({ days: 5 });
+
+  assert.equal(res.structured.sessions.length, 1);
+  assert.equal(res.structured.sessions[0].type, null);
+  assert.equal(res.structured.by_type['без типа'].count, 1);
+  assert.equal(res.structured.by_type['без типа'].last_date, '2026-07-31');
+  // И она же учтена в нагрузке — два взгляда на одни данные не расходятся.
+  assert.ok(res.structured.load.cardio.ctl > 0);
+});
+
 test('нагрузка считается по всему 42-дневному окну, а не по периоду отчёта', async () => {
   // Тренировка за 40 дней до конца периода — вне отчётных 3 дней, но внутри
   // окна тренированности. Если окно схлопнется до days, CTL станет нулевым.

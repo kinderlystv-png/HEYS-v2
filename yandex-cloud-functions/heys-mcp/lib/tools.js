@@ -1568,12 +1568,21 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         const blob = blobs[day.dayKey(date)];
         const trainings = (blob && Array.isArray(blob.trainings)) ? blob.trainings : [];
         trainings.forEach((tr, index) => {
-          if (!tr || !tr.type) return;
+          // Раньше фильтр был `!tr.type`, и тренировка без типа выпадала из
+          // списка молча. Это давало внутренне противоречивый ответ: «последняя
+          // тренировка 01.08» рядом с усталостью за сессии 04–08.08, которые
+          // модель нагрузки видит (ей тип не нужен). Проверено на живых данных
+          // 2026-08-08 — heys_log_training до сегодняшнего дня тип не писал,
+          // поэтому таких тренировок в истории много.
+          // Тип ИЛИ реальная нагрузка. Только `isRealTraining` мало: сессии
+          // модулей (пальцы, мобильность) не пишут ни минут, ни времени — они
+          // опознаются как раз по типу, и сужение фильтра выкинуло бы их.
+          if (!tr || (!tr.type && !day.isRealTraining(tr))) return;
           const log = tr.fingersLog || tr.mobilityLog || null;
           sessions.push({
             date,
             index,
-            type: tr.type,
+            type: tr.type || null,
             program_id: (log && log.programId) || null,
             holds: (log && Array.isArray(log.holds)) ? log.holds.length : null,
             partial: !!(log && log.partial),
@@ -1584,9 +1593,12 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
 
       const byType = {};
       for (const s of sessions) {
-        if (!byType[s.type]) byType[s.type] = { count: 0, last_date: null };
-        byType[s.type].count += 1;
-        if (!byType[s.type].last_date || s.date > byType[s.type].last_date) byType[s.type].last_date = s.date;
+        // Тренировка без типа попадает в свою корзину, а не пропадает: тип
+        // необязателен, а нагрузку она несёт наравне с остальными.
+        const key = s.type || 'без типа';
+        if (!byType[key]) byType[key] = { count: 0, last_date: null };
+        byType[key].count += 1;
+        if (!byType[key].last_date || s.date > byType[key].last_date) byType[key].last_date = s.date;
       }
       const summary = Object.entries(byType).map(([type, info]) => `${type}: ${info.count}, последняя ${info.last_date}`);
 
