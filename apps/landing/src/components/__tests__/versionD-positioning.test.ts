@@ -38,8 +38,10 @@ describe('пять точек вникания', () => {
   it('2. в переписке куратор задаёт вопрос ДО вывода, а клиент на него отвечает', () => {
     const section = read(D_DIR, 'HowItWorks.tsx');
 
-    const question = section.indexOf('А обед в эти дни получался?');
-    const answer = section.indexOf('Честно — нет.');
+    // Вопрос именно про причину, а не про факт: факты куратор вносит сам и
+    // спрашивать о них не может — иначе диалог отрицает, что дневник ведёт он.
+    const question = section.indexOf('или что-то новое?');
+    const answer = section.indexOf('Перехватываю на бегу');
     const step = section.indexOf('вернём полноценный обед');
 
     expect(question).toBeGreaterThan(-1);
