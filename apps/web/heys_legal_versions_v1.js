@@ -12,11 +12,11 @@
   const HEYS = global.HEYS = global.HEYS || {};
 
   const versions = {
-    user_agreement:     '1.9',
+    user_agreement:     '1.10',
     personal_data:      '1.7',
     health_data:        '1.5',
     marketing:          '1.3',
-    payment_oferta:     '1.9',
+    payment_oferta:     '1.10',
     push_notifications: '1.0',
     curator_access:     '1.0',
     speech_transcription: '1.1',
