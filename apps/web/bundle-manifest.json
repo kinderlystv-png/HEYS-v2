@@ -8,20 +8,20 @@
     "builtAt": "2026-08-08T09:21:50.103Z"
   },
   "boot-calc": {
-    "file": "boot-calc.bundle.132acb74570d.js",
-    "hash": "132acb74570d",
-    "sourceFingerprint": "73180c8e79e1",
+    "file": "boot-calc.bundle.b1ef5a8d98b7.js",
+    "hash": "b1ef5a8d98b7",
+    "sourceFingerprint": "e2d716497196",
     "fileCount": 19,
-    "size": 846584,
-    "builtAt": "2026-08-08T09:21:58.667Z"
+    "size": 847786,
+    "builtAt": "2026-08-08T11:15:24.728Z"
   },
   "boot-day": {
-    "file": "boot-day.bundle.f1dc80fcd975.js",
-    "hash": "f1dc80fcd975",
-    "sourceFingerprint": "a016b30d3860",
+    "file": "boot-day.bundle.18622e346f73.js",
+    "hash": "18622e346f73",
+    "sourceFingerprint": "fc22d5436f5c",
     "fileCount": 62,
-    "size": 942479,
-    "builtAt": "2026-08-08T09:22:08.700Z"
+    "size": 942507,
+    "builtAt": "2026-08-08T11:15:27.859Z"
   },
   "boot-app": {
     "file": "boot-app.bundle.7cf2bb020521.js",

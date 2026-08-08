@@ -1313,7 +1313,10 @@ function estimateOptimum(day, profile, hrZones) {
 
   const weight = Number(day && day.weightMorning) || Number(p.weight) || 0;
   const height = Number(p.height) || 0;
-  const age = Number(p.age) || ageFromBirthDate(p.birthDate, Date.now()) || 0;
+  // Дата рождения важнее сохранённого `age`: поле протухает молча. У Полтавского
+  // в блобе лежало `age: 30` при дате рождения 1988 года — BMR считался как для
+  // тридцатилетнего, +40 ккал каждый день (2026-08-08).
+  const age = ageFromBirthDate(p.birthDate, Date.now()) || Number(p.age) || 0;
   const gender = GENDERS.includes(p.gender) ? p.gender : null;
   if (!weight || !height || !age || !gender) return { kcal: 0, reason: 'profile_incomplete' };
 
@@ -1430,9 +1433,10 @@ function dailyNorm(day, inputs) {
     why = `перебор за последние дни — мягкое снижение на ${debt.dailyReduction} ккал`;
   }
 
-  if (!debt) {
+  if (!debt && !(day && day.isRefeedDay === true)) {
     // Долг посчитать не на чем. Причины две и они разные: блобов вообще нет —
-    // или они есть, но ядро отсеяло их как дни с неполными данными.
+    // или они есть, но ядро отсеяло их как дни с неполными данными. Загрузочный
+    // день сюда не попадает: его норма уже объяснена и от долга не зависит.
     if (windowDays.length >= 2) {
       why = 'в прошлых днях слишком мало еды для расчёта долга — поправка не применена';
     } else {

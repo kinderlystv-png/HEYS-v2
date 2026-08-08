@@ -604,25 +604,25 @@ const WITH_WINDOW = (blobs) => ({
 });
 
 test('норма считается сервером целиком: база плюс надбавка за накопленный недобор', () => {
-  // База пустого дня — 1471. Три дня по 1000 ккал дают недобор, ядро приложения
-  // превращает его в надбавку, потолок — 20% от нормы.
-  const norm = day.dailyNorm(TODAY, WITH_WINDOW(pastBlobs(1000)));
+  // База пустого дня — 1471. Три дня по 1100 ккал (75% нормы — выше порога
+  // доверия) дают недобор 1113 ккал, ядро приложения возвращает 75% за 3 дня.
+  const norm = day.dailyNorm(TODAY, WITH_WINDOW(pastBlobs(1100)));
 
   assert.equal(norm.source, 'computed');
   assert.equal(norm.parts.base, 1471);
   assert.equal(norm.parts.window_days, 3);
-  assert.equal(norm.parts.correction, 294);
-  assert.equal(norm.kcal, 1765);
+  assert.equal(norm.parts.correction, 278);
+  assert.equal(norm.kcal, 1749);
   assert.match(norm.note, /накопленный недобор/);
 });
 
 test('кэш отрисовки на число больше не влияет, но расхождение с ним названо', () => {
   // Ровно случай 07.08.2026: клиент смотрел день до того, как данные доехали.
   const stale = { ...TODAY, savedDisplayOptimum: 1282 };
-  const norm = day.dailyNorm(stale, WITH_WINDOW(pastBlobs(1000)));
+  const norm = day.dailyNorm(stale, WITH_WINDOW(pastBlobs(1100)));
 
   assert.equal(norm.source, 'computed');
-  assert.equal(norm.kcal, 1765, 'число берётся из расчёта, а не из кэша');
+  assert.equal(norm.kcal, 1749, 'число берётся из расчёта, а не из кэша');
   assert.equal(norm.parts.client_saw, 1282);
   assert.match(norm.note, /Клиент последний раз видел 1282 ккал/);
 });
@@ -640,7 +640,7 @@ test('при переборе норма мягко снижается, а не 
 
 test('загрузочный день поднимает норму и перебивает долг', () => {
   const refeed = { ...TODAY, isRefeedDay: true };
-  const norm = day.dailyNorm(refeed, WITH_WINDOW(pastBlobs(1000)));
+  const norm = day.dailyNorm(refeed, WITH_WINDOW(pastBlobs(1100)));
 
   assert.equal(norm.source, 'computed');
   // +35% из heys_refeed_v1.js — своей копии константы у сервера нет.
@@ -729,9 +729,39 @@ test('без сохранённой цифры норма считается и 
   );
   assert.equal(norm.source, 'estimate');
   // Ровно то, что отдаёт зеркало apps/web/heys_tdee_v1.js на тех же входах:
-  // BMR 1730 + активность 843 = 2573, дефицит −15% → 2187.
-  assert.equal(norm.kcal, 2187);
+  // BMR 1730 + активность 717 = 2447, дефицит −15% → 2080.
+  // Активность считается НАД покоем (2026-08-08): быт 60 мин по нетто-MET 1.5
+  // даёт 126 ккал вместо 210, тренировка 30 мин в зоне 2 — 210 вместо 252.
+  // Раньше выходило 2187: один MET был посчитан дважды, он уже сидит в BMR.
+  assert.equal(norm.kcal, 2080);
   assert.match(norm.note, /оценка/i);
+});
+
+test('возраст берётся из даты рождения, даже когда в профиле лежит протухший age', () => {
+  // Реальный случай 2026-08-08: в блобе профиля осталось `age: 30` при дате
+  // рождения 1988 года. BMR считался как для тридцатилетнего — +40 ккал каждый
+  // день, и в приложении, и в коннекторе, потому что оба брали поле, а не дату.
+  const day2 = { date: '2026-08-08', weightMorning: 91.2, meals: [] };
+  const profile = { weight: 91.2, height: 183, gender: 'Мужской', deficitPctTarget: -10 };
+
+  const stale = day.dailyNorm(day2, { profile: { ...profile, age: 30 }, norms: NORMS, hrZones: [] });
+  const withBirth = day.dailyNorm(day2, {
+    profile: { ...profile, age: 30, birthDate: '1988-06-25' }, norms: NORMS, hrZones: [],
+  });
+
+  assert.equal(stale.parts.base, 1720); // BMR 1911 (возраст 30) × 0.9
+  assert.equal(withBirth.parts.base, 1684); // BMR 1871 (возраст 38) × 0.9
+});
+
+test('активность считается над покоем, а не поверх BMR целиком', () => {
+  const base = { date: '2026-08-01', weightMorning: 80, meals: [] };
+  const inputs = { profile: FULL_PROFILE, norms: NORMS, hrZones: [] };
+  const rest = day.dailyNorm(base, inputs).kcal;
+  const withHousehold = day.dailyNorm({ ...base, householdMin: 60 }, inputs).kcal;
+
+  // 60 минут быта: нетто-MET 1.5 при 80 кг = 2.1 ккал/мин → 126 ккал,
+  // с дефицитом −15% это +107 к норме. По брутто-MET 2.5 вышло бы +178.
+  assert.equal(withHousehold - rest, 107);
 });
 
 test('оценка не подставляет дефолты приложения при пустом профиле', () => {

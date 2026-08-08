@@ -49,6 +49,34 @@
   const kcalPerMin = (met, weight) => (met * 3.5 * weight) / 200;
 
   /**
+   * Расход НАД покоем: BMR уже покрывает все 24 часа на уровне 1 MET, поэтому
+   * активность нельзя добавлять по «брутто»-MET — один MET окажется посчитан
+   * дважды. 140 минут быта по MET 2.5 давали +559 ккал, из которых ~224 уже
+   * сидели в BMR (2026-08-08).
+   */
+  const netKcalPerMin = (met, weight) => kcalPerMin(Math.max((+met || 0) - 1, 0), weight);
+
+  /**
+   * Возраст: дата рождения важнее сохранённого числа — оно протухает молча.
+   * У Полтавского в блобе профиля лежало `age: 30` при `birthDate` 1988 года,
+   * и BMR восемь лет считался как для тридцатилетнего (2026-08-08).
+   */
+  const ageFromProfile = (p) => {
+    const birthDate = (p && p.birthDate) || '';
+    if (birthDate) {
+      const birth = new Date(birthDate);
+      if (!isNaN(birth.getTime())) {
+        const now = new Date();
+        let age = now.getFullYear() - birth.getFullYear();
+        const monthDiff = now.getMonth() - birth.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < birth.getDate())) age -= 1;
+        if (age >= 0 && age < 150) return age;
+      }
+    }
+    return +(p && p.age) || 30;
+  };
+
+  /**
    * BMR по формуле Mifflin-St Jeor
    * @param {number} weight - Вес в кг
    * @param {Object} profile - { age, height, gender }
@@ -63,7 +91,7 @@
       weight = +profile.weight || 0;
     }
     const p = profile || {};
-    const age = +p.age || 30;
+    const age = ageFromProfile(p);
     const height = +p.height || 170;
     // Пол: gender ('Женский') ИЛИ sex ('female') — day_utils нормализует пол в .sex.
     const isFemale = (p.gender === 'Женский') || (p.sex === 'female');
@@ -97,7 +125,8 @@
    */
   const trainingKcal = (training, weight, mets = [2.5, 6, 8, 10]) => {
     if (!training || !training.z) return 0;
-    const kcalMin = mets.map(m => kcalPerMin(m, weight));
+    // Нетто: минута в зоне стоит столько, на сколько она дороже покоя.
+    const kcalMin = mets.map(m => netKcalPerMin(m, weight));
     return (training.z || [0, 0, 0, 0]).reduce((sum, min, i) =>
       sum + r0((+min || 0) * (kcalMin[i] || 0)), 0);
   };
@@ -141,7 +170,7 @@
     const householdActivities = d.householdActivities ||
       (d.householdMin > 0 ? [{ minutes: d.householdMin }] : []);
     const totalHouseholdMin = householdActivities.reduce((sum, h) => sum + (+h.minutes || 0), 0);
-    const householdKcal = r0(totalHouseholdMin * kcalPerMin(2.5, weight));
+    const householdKcal = r0(totalHouseholdMin * netKcalPerMin(2.5, weight));
 
     // Общая активность
     const actTotal = r0(trainingsKcal + stepsK + householdKcal);
@@ -241,7 +270,8 @@
       optimum,
       weight,
       mets,                // 🆕 v1.1.0: MET зоны для UI
-      kcalMin: mets.map(m => kcalPerMin(m, weight)), // 🆕 v1.1.0: ккал/мин для UI
+      // Нетто, как и в самом расчёте — иначе подпись под зоной противоречила бы итогу.
+      kcalMin: mets.map(m => netKcalPerMin(m, weight)),
       deficitPct: dayTargetDef,
       cycleMultiplier: cycleKcalMultiplier
     };
@@ -333,7 +363,11 @@
     calcBMR,
     stepsKcal,
     trainingKcal,
-    kcalPerMin
+    kcalPerMin,
+    // Для тех, кто собирает расход по частям (heys_day_utils.getActiveDaysForMonth):
+    // активность добавляется только НАД покоем, иначе один MET считается дважды.
+    netKcalPerMin,
+    ageFromProfile
   };
 
   // Для отладки

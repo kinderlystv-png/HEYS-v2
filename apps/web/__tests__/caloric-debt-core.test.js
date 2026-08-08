@@ -50,9 +50,25 @@ describe('computeDebtCore', () => {
     });
 
     it('надбавка упирается в потолок 20% от нормы', () => {
-        const core = loadCore()({ ...BASE, optimum: 1000, sparklineData: window3(500) });
-        // 1500 долга × 0.75 / 3 = 375, но 20% от 1000 = 200.
+        // 720 из 1000 — это 72%, выше порога доверия к дню (70%).
+        const core = loadCore()({ ...BASE, optimum: 1000, sparklineData: window3(720) });
+        // 840 долга × 0.75 / 3 = 210, но 20% от 1000 = 200.
         expect(core.dailyBoost).toBe(200);
+    });
+
+    it('день ниже 70% нормы считается недозаполненным и в окно не идёт', () => {
+        // 875 ккал при норме 1638 — это 53%. Раньше порогом была треть нормы,
+        // такой день проходил и давал «долг» 763 ккал, который система возвращала
+        // прибавкой к норме следующих дней.
+        const underLogged = loadCore()({ ...BASE, optimum: 1638, sparklineData: window3(875) });
+        expect(underLogged).toBeNull();
+
+        // Тот же день, но пользователь явно подтвердил, что это голодание.
+        const intentional = loadCore()({
+            ...BASE, optimum: 1638, sparklineData: window3(875, { isFastingDay: true }),
+        });
+        expect(intentional.pastDays).toHaveLength(3);
+        expect(intentional.dailyBoost).toBeGreaterThan(0);
     });
 
     it('при переборе даёт мягкое снижение, а не штраф', () => {

@@ -767,10 +767,20 @@
         const p = lsGet('heys_profile', {}) || {};
         const g = (p.gender || p.sex || 'Мужской');
         const sex = (String(g).toLowerCase().startsWith('ж') ? 'female' : 'male');
+        // Возраст — из даты рождения, а не из поля `age`: оно протухает молча и
+        // никем не обновляется. Раньше здесь стояло `+p.age || 30`, и весь экран
+        // дня считал BMR по возрасту из карточки восьмилетней давности
+        // (2026-08-08). Дату рождения пробрасываем дальше: этот объект — то, что
+        // получают все потребители профиля на вкладке дня, и обрезать её здесь
+        // значит спрятать источник правды от TDEE.
+        const age = (typeof HEYS !== 'undefined' && HEYS.TDEE && HEYS.TDEE.ageFromProfile)
+            ? HEYS.TDEE.ageFromProfile(p)
+            : (+p.age || 30);
         return {
             sex,
             height: +p.height || 175,
-            age: +p.age || 30,
+            birthDate: p.birthDate || '',
+            age,
             sleepHours: +p.sleepHours || 8,
             weight: +p.weight || 70,
             deficitPctTarget: +p.deficitPctTarget || 0,
@@ -823,6 +833,23 @@
             } catch (_) { }
         }
         return Math.round((((+met || 0) * (+w || 0) * 0.0175) - 1) * 10) / 10;
+    }
+
+    /**
+     * Расход над покоем. Здесь расход собирается по частям вручную, поэтому
+     * брутто-MET дал бы двойной счёт: один MET уже сидит в BMR. Именно это
+     * расхождение делало `baseTarget` прошлых дней завышенным, а расчёт долга —
+     * оптимистичным (2026-08-08).
+     */
+    function netKcalPerMin(met, w) {
+        try {
+            if (typeof HEYS !== 'undefined' && HEYS.TDEE && HEYS.TDEE.netKcalPerMin) {
+                const v = HEYS.TDEE.netKcalPerMin(met, w);
+                const num = +v;
+                if (Number.isFinite(num)) return num;
+            }
+        } catch (_) { }
+        return kcalPerMin(Math.max((+met || 0) - 1, 0), w);
     }
 
     function stepsKcal(steps, w, sex, len) {
@@ -1815,16 +1842,17 @@
                 const steps = dayInfo.steps || 0;
                 const stepsK = stepsKcal(steps, weight, sex, 0.7);
 
-                // Быт: householdMin × kcalPerMin(2.5, weight)
+                // Быт: householdMin × netKcalPerMin(2.5, weight)
                 const householdMin = dayInfo.householdMin || 0;
-                const householdK = Math.round(householdMin * kcalPerMin(2.5, weight));
+                // Нетто-MET: один MET уже в BMR (см. netKcalPerMin).
+                const householdK = Math.round(householdMin * netKcalPerMin(2.5, weight));
 
                 // Тренировки: суммируем ккал из зон z (как на экране дня — только первые 3)
                 // Читаем кастомные MET из heys_hr_zones (как на экране дня)
                 const hrZones = lsGet('heys_hr_zones', []);
                 const customMets = hrZones.map(x => +x.MET || 0);
                 const mets = [2.5, 6, 8, 10].map((def, i) => customMets[i] || def);
-                const kcalMin = mets.map(m => kcalPerMin(m, weight));
+                const kcalMin = mets.map(m => netKcalPerMin(m, weight));
 
                 let trainingsK = 0;
                 const trainings = (dayInfo.trainings || []).slice(0, 3); // максимум 3 тренировки

@@ -1281,7 +1281,7 @@ test('норма подхватывает окно прошлых дней и н
   // что профиль, и считает долг зеркальным ядром приложения.
   const lean = (date) => ({
     date, weightMorning: 80, waterMl: 0, updatedAt: 100,
-    meals: [{ id: `m-${date}`, items: [{ grams: 100, kcal100: 1000 }] }],
+    meals: [{ id: `m-${date}`, items: [{ grams: 100, kcal100: 1100 }] }],
   });
   const api = fakeApi({
     card: CARD,
@@ -1301,8 +1301,8 @@ test('норма подхватывает окно прошлых дней и н
   assert.equal(norm.source, 'computed');
   assert.equal(norm.parts.window_days, 3);
   assert.equal(norm.parts.base, 1471);
-  assert.equal(norm.parts.correction, 294);
-  assert.equal(norm.kcal, 1765);
+  assert.equal(norm.parts.correction, 278);
+  assert.equal(norm.kcal, 1749);
   assert.match(norm.note, /накопленный недобор за 3 дн/);
 });
 
