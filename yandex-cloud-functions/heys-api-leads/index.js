@@ -148,6 +148,92 @@ function cleanQuizDetails(value) {
   return Object.keys(result).length > 0 ? result : null;
 }
 
+// Шаги воронки лендинга (`apps/landing/src/lib/funnel.ts`): открытый список
+// имён на сервере (funnel_events.event_type без CHECK), но приём поля здесь
+// ограничен тремя именами, которые реально шлёт клиент.
+const FUNNEL_STEP_NAMES = new Set(['quiz_start', 'quiz_complete', 'week_request']);
+// Больше шагов за один визит вкладки быть не должно — потолок против абьюза поля.
+const MAX_FUNNEL_STEPS = 20;
+// offset_ms — миллисекунды от первого события вкладки; визит не может тянуться дольше.
+const MAX_FUNNEL_OFFSET_MS = 6 * 60 * 60 * 1000; // 6 часов
+
+/**
+ * Валидирует и очищает `funnel` из тела заявки. Поле необязательное — если
+ * это не массив, возвращаем пустой список молча (не 400): потеря следа
+ * воронки не должна мешать сохранению заявки. Каждый элемент с неизвестным
+ * `name` или невалидным `offset_ms` отбрасывается по отдельности.
+ */
+function cleanFunnelSteps(value) {
+  if (!Array.isArray(value)) return [];
+  const result = [];
+  for (const raw of value.slice(0, MAX_FUNNEL_STEPS)) {
+    if (!raw || typeof raw !== 'object') continue;
+    if (!FUNNEL_STEP_NAMES.has(raw.name)) continue;
+
+    const offsetMs = Number(raw.offset_ms);
+    if (!Number.isFinite(offsetMs) || offsetMs < 0 || offsetMs > MAX_FUNNEL_OFFSET_MS) continue;
+
+    const step = { name: raw.name, offset_ms: offsetMs };
+    const segment = cleanOptionalText(raw.segment, 64);
+    if (segment) step.segment = segment;
+    if (raw.quiz != null) step.quiz = Boolean(raw.quiz);
+    result.push(step);
+  }
+  return result;
+}
+
+/**
+ * Записывает шаги воронки лендинга через `record_funnel_event` (та же
+ * SECURITY DEFINER функция, что и `recordLeadFunnelEvent` для события `lead`).
+ * Каждый шаг — отдельный try/catch: один упавший шаг не должен блокировать
+ * ответ клиенту, заявка к этому моменту уже сохранена в БД. `occurred_at`
+ * приближённо восстанавливается из `offset_ms`: последний шаг (обычно
+ * `week_request`) происходит почти вплотную к моменту отправки заявки,
+ * более ранние — раньше на разницу офсетов.
+ */
+async function recordFunnelSteps(client, { leadId, steps, ymClientId, abVariant }) {
+  if (!leadId || !Array.isArray(steps) || steps.length === 0) return;
+
+  const lastOffsetMs = Math.max(...steps.map((step) => step.offset_ms));
+  const now = Date.now();
+
+  for (const step of steps) {
+    try {
+      const occurredAt = new Date(now - (lastOffsetMs - step.offset_ms)).toISOString();
+      const metadata = JSON.stringify({
+        entry: 'landing',
+        ab_variant: abVariant || undefined,
+        quiz: step.quiz ?? undefined,
+      });
+
+      await client.query(
+        `SELECT public.record_funnel_event(
+           $1::text, $2::uuid, $3::uuid, $4::text, $5::text, $6::text, $7::text,
+           $8::text, $9::jsonb, $10::text, $11::timestamptz
+         ) AS event`,
+        [
+          step.name,
+          leadId,
+          null,
+          null,
+          null,
+          step.segment || null,
+          null,
+          ymClientId || null,
+          metadata,
+          // offset_ms в ключе на случай повторного submit после ошибки — тогда
+          // тот же шаг (например week_request) может встретиться в массиве
+          // дважды с разным offset_ms, и это должны быть два разных события.
+          `landing_funnel:${leadId}:${step.name}:${step.offset_ms}`,
+          occurredAt,
+        ],
+      );
+    } catch (e) {
+      console.warn(`[Funnel] Failed to record step "${step.name}":`, e.message);
+    }
+  }
+}
+
 async function markFunnelEventMetricaStatus(client, eventId, status, error) {
   if (!eventId) return;
   try {
@@ -319,6 +405,7 @@ module.exports.handler = async function (event, context) {
       ym_client_id,
       quiz_segment,
       quiz_details,
+      funnel,
       readiness,
       ab_variant,
       referrer,
@@ -472,6 +559,7 @@ module.exports.handler = async function (event, context) {
     const safeHowHeard = cleanOptionalText(how_heard, 64);
     const safeQuizSegment = cleanOptionalText(quiz_segment, 64);
     const safeQuizDetails = cleanQuizDetails(quiz_details);
+    const safeFunnelSteps = cleanFunnelSteps(funnel);
     const safeReadiness = cleanOptionalText(readiness, 64);
     const safeAbVariant = cleanOptionalText(ab_variant, 256);
 
@@ -642,6 +730,13 @@ module.exports.handler = async function (event, context) {
 
         await sendMetricaEvent(client, funnelEvent, landing_page || 'https://heyslab.ru/');
 
+        await recordFunnelSteps(client, {
+          leadId,
+          steps: safeFunnelSteps,
+          ymClientId: safeYmClientId,
+          abVariant: safeAbVariant,
+        });
+
         await sendTelegramNotification({
           id: leadId,
           name,
@@ -687,6 +782,7 @@ module.exports.handler = async function (event, context) {
 
 module.exports.__test = {
   normalizePhone,
+  cleanFunnelSteps,
   PRIVACY_CONSENT_VERSION,
   MARKETING_CONSENT_VERSION,
 };

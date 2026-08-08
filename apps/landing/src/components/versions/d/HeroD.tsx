@@ -19,7 +19,7 @@ import { useEffect, useRef } from 'react';
 
 import { playfair } from './fonts';
 import { LogoD } from './LogoD';
-import { D_CTA_HREF, D_CTA_LABEL, D_NAV_LINKS } from './nav';
+import { D_CTA_HREF, D_CTA_LABEL_SHORT, D_NAV_LINKS } from './nav';
 
 import HeroFlowDemo from '@/components/HeroFlowDemo';
 
@@ -203,21 +203,35 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
   }, []);
 
   return (
-    <section id="hero-d" ref={sectionRef} className="relative bg-[#0A1119]">
-      {/* Липкая обёртка нулевой высоты: сама она места в потоке не занимает,
-          поэтому контент ниже начинается от верха секции, а фон внутри неё
-          остаётся на экране всю прокрутку героя. Класть контент ВНУТРЬ липкого
-          слоя нельзя: его `overflow: hidden` срезает всё, что не поместилось в
-          высоту экрана, — при 812 px по высоте так пропадали кнопка и
-          точки-главы (контент героя ~1240 px). */}
-      <div className="sticky top-0 z-0 h-0">
-        <div className="h-screen overflow-hidden">
-          {/* Фон: градиент, орнамент и свечение под заголовком. */}
+    // `overflow-hidden` на секции — рамка для фоновых слоёв: свечение начинается
+    // выше её верхнего края и не должно выходить наружу. Прокрутке и скролл-зуму
+    // не мешает: они живут на контенте внутри.
+    <section id="hero-d" ref={sectionRef} className="relative overflow-hidden bg-[#0A1119]">
+      {/* Фон лежит прямо в секции и покрывает ровно её высоту.
+          Липкой обёртки нулевой высоты здесь больше нет: `position: sticky`
+          сам по себе задаёт containing block, поэтому `inset-0` внутри неё
+          означало «ноль пикселей» — градиент и орнамент схлопывались, а
+          свечение с отрицательным `top` рисовалось на 100vh вниз и наезжало
+          тёмным пятном на белый блок «Знакомо?» под героем. */}
+      <div>
+        <div>
+          {/* Фон: градиент, орнамент и свечение под заголовком.
+
+              Градиент отрабатывает ровно за один экран (`100% 100vh`), а не
+              растягивается на всю высоту секции. Секция выше экрана — там мокап
+              и запас под скролл-зум, — и растянутый на неё градиент размазывал
+              переходы: в кадре оставался только верхний участок, и фон читался
+              плоским. Ниже первого экрана продолжается `backgroundColor`: это
+              конечный цвет самого градиента, поэтому стыка не видно. */}
           <div
             aria-hidden="true"
             className="absolute inset-0"
             style={{
-              background: 'linear-gradient(180deg,#12263B 0%,#0E1D2E 42%,#0A1420 78%,#080F17 100%)',
+              backgroundImage:
+                'linear-gradient(180deg,#12263B 0%,#0E1D2E 42%,#0A1420 78%,#080F17 100%)',
+              backgroundSize: '100% 100vh',
+              backgroundRepeat: 'no-repeat',
+              backgroundColor: '#080F17',
             }}
           />
           <div
@@ -233,12 +247,18 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
                 'linear-gradient(180deg,rgba(0,0,0,0) 0px,rgba(0,0,0,0.35) 84px,rgba(0,0,0,1) 132px)',
             }}
           />
+          {/* Свечение под заголовком. Ширина — по контейнеру, а не 900 px:
+              фиксированная ширина вылезала за правый край экрана и давала
+              горизонтальную прокрутку всей страницы (на 375 px `scrollWidth`
+              был 637). Размер пятна теперь задаёт сам градиент, поэтому
+              картинка та же, а элемент шире экрана быть не может. */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute left-1/2 h-[520px] w-[900px] max-w-none -translate-x-1/2"
+            className="pointer-events-none absolute inset-x-0 h-[520px]"
             style={{
               top: -220,
-              background: 'radial-gradient(closest-side,rgba(88,150,205,0.28),rgba(88,150,205,0))',
+              background:
+                'radial-gradient(450px 260px at 50% 50%,rgba(88,150,205,0.28),rgba(88,150,205,0))',
             }}
           />
         </div>
@@ -247,7 +267,10 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
       {/* Контент поверх липкого фона. */}
       <div className="relative z-10 flex min-h-screen flex-col">
         {/* Шапка первого экрана. */}
-        <header className="relative z-10 mx-auto flex w-full max-w-[1240px] items-center justify-between gap-6 px-5 py-6 sm:px-9">
+        {/* Поля шапки — из прототипа: на узких экранах `16px 16px 12px 22px`,
+            дальше `26px 36px`. Было `px-5 py-6` на всех ширинах, из-за чего
+            шапка на мобильном была выше эталона и «съедала» первый экран. */}
+        <header className="relative z-10 mx-auto flex w-full max-w-[1240px] items-center justify-between gap-6 pb-3 pl-[22px] pr-4 pt-4 min-[561px]:gap-6 min-[561px]:px-9 min-[561px]:py-[26px]">
           <LogoD size={20} />
 
           <nav className="hidden items-center gap-6 min-[1181px]:flex">
@@ -265,9 +288,17 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
           <div className="flex items-center gap-2">
             <a
               href={D_CTA_HREF}
-              className="hidden whitespace-nowrap rounded-full border border-white/32 px-4 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-white/10 sm:inline-flex"
+              // Показывается на всех ширинах, а не с `sm`. Кнопки в самом герое
+              // нет (решение владельца), липкая пилюля включается только после
+              // блока «Ваша ситуация» — при `hidden sm:inline-flex` человек на
+              // 375 px проходил весь первый экран, а это два экрана прокрутки
+              // из-за зума, и не видел ни одного действия. По ширине помещается:
+              // логотип ~95 + пилюля ~150 + бургер 44 + отступы < 375.
+              // На узких экранах паддинг больше: при `py-2.5` высота выходила
+              // 33 px против минимальных 44.
+              className="inline-flex whitespace-nowrap rounded-full border border-white/32 px-4 py-[13px] text-[12.5px] font-semibold text-white transition-colors hover:bg-white/10 min-[561px]:py-[9px]"
             >
-              {D_CTA_LABEL}
+              {D_CTA_LABEL_SHORT}
             </a>
             <button
               type="button"
@@ -282,20 +313,29 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
         </header>
 
         {/* Контент первого экрана. */}
-        <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center px-5 text-center">
+        {/* Верхний отступ и поля — из прототипа (`padding: clamp(71px,calc(135px
+            - 4.6vw),99px) 24px 0`). Без него H1 начинался вплотную под шапкой:
+            на 375 px до заголовка было 0 px вместо 99, и весь первый экран
+            читался плотнее и крупнее эталона — «воздух» съедался именно здесь. */}
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center px-6 pt-[clamp(71px,calc(135px-4.6vw),99px)] text-center">
           <div ref={textRef} className="flex flex-col items-center">
             <h1 className="max-w-[760px] text-balance text-[clamp(38px,5vw,62px)] font-semibold leading-[1.08] tracking-[-0.025em] text-white">
               Ваш дневник питания{' '}
               <span className={`${playfair.className} font-medium italic`}>ведёт куратор.</span>
             </h1>
 
-            <p className="mt-[clamp(20px,3.2vw,36px)] max-w-[560px] text-[clamp(15px,1.6vw,17px)] leading-[1.6] text-white/75">
-              Присылаете фото, голосовое или пару фраз — обычно 3–5 минут в день. Остальное делает
-              куратор: ведёт дневник, помнит, что было на прошлой неделе, и спрашивает, прежде чем
-              советовать.
+            <p className="mt-[clamp(26px,3.2vw,36px)] max-w-[560px] text-[clamp(15px,1.6vw,17px)] leading-[1.6] text-white/75">
+              {/* Неразрывный пробел перед тире: по правилам русского набора тире
+                  не должно начинать строку, и на 375 px оно как раз уезжало вниз
+                  — фраза ломалась на «…пару фраз» / «— обычно до 3 минут». В
+                  прототипе тире держится на первой строке только потому, что
+                  просмотр идёт на 390 px; здесь это закреплено явно. */}
+              Присылаете фото, голосовое или пару фраз{'\u00A0'}— обычно до 3 минут в день.
+              Остальное делает куратор: ведёт дневник, помнит, что было на прошлой неделе, и
+              спрашивает, прежде чем советовать.
             </p>
 
-            <p className="mt-7 inline-flex items-center gap-2 rounded-full border border-white/24 bg-white/[0.09] px-[18px] py-2.5 text-[13px] backdrop-blur-[4px]">
+            <p className="mt-[30px] inline-flex items-center gap-2 rounded-full border border-white/24 bg-white/[0.09] px-[18px] py-[9px] text-[13px] backdrop-blur-[4px]">
               <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[#7FD1A0]" />
               <span className="whitespace-nowrap font-semibold text-white">7 дней Pro — 0 ₽</span>
               <span className="whitespace-nowrap text-white/62">· без карты и автосписаний</span>
@@ -304,7 +344,7 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
 
           <div
             ref={phoneRef}
-            className="mt-[clamp(28px,5vh,48px)] w-[248px] max-w-[68vw] origin-top will-change-transform sm:w-[280px] sm:max-w-[72vw] lg:mt-[clamp(36px,6vh,56px)]"
+            className="mt-[7vh] w-[248px] max-w-[68vw] origin-top will-change-transform sm:w-[280px] sm:max-w-[72vw]"
           >
             <HeroFlowDemo
               showChapters
@@ -315,11 +355,26 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
           </div>
 
           {/* Closer героя: без кнопки — job trial закрыт шапкой и липкой панелью.
-              «не бот» — Playfair italic, как акценты в заголовках D, меньшим кеглем. */}
-          <div ref={ctaRef} className="pb-12 sm:pb-14" style={{ marginTop: CTA_GAP_PX + CHAPTER_DOTS_PX }}>
-            <p className="max-w-[320px] text-balance text-[clamp(17px,2.1vw,21px)] font-medium leading-[1.4] tracking-[-0.01em] text-white/88">
+              «не бот» — Playfair italic, как акценты в заголовках D.
+
+              Вступление приглушённое и мельче, сам вывод крупнее и в полный
+              белый — тот же приём, что в `ClosingLine` (решение владельца
+              2026-08-08). Раньше обе половины шли одним кеглем 17px, и «не бот»
+              работал акцентом только за счёт курсива: ключевое утверждение
+              позиционирования («живой человек, а не AI» — по канону вопрос №2
+              в FAQ стоит вторым намеренно) весило как рядовая подпись. */}
+          <div
+            ref={ctaRef}
+            className="pb-12 sm:pb-14"
+            style={{ marginTop: CTA_GAP_PX + CHAPTER_DOTS_PX }}
+          >
+            <p className="max-w-[320px] text-balance text-[clamp(16px,1.9vw,18px)] font-normal leading-[1.45] tracking-[-0.01em] text-white/70">
               Куратор — живой человек,{' '}
-              <span className={`${playfair.className} font-medium italic text-white`}>не бот</span>
+              <span
+                className={`${playfair.className} text-[clamp(24px,3vw,30px)] font-medium italic leading-[1.25] text-white`}
+              >
+                не бот
+              </span>
             </p>
           </div>
         </div>

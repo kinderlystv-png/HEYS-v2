@@ -24,3 +24,18 @@ export const playfair = Playfair_Display({
   display: 'swap',
   variable: '--font-d-display',
 });
+
+// Прямое начертание той же антиквы — для строк-выводов (`ClosingLine`).
+//
+// Отдельный экземпляр нужен потому, что `playfair` выше объявлен как
+// `style: ['italic']`, и `next/font` вшивает `font-style: italic` прямо в свой
+// класс: снять курсив Tailwind-классом невозможно, а `not-italic` при
+// единственном курсивном `@font-face` заставил бы браузер либо всё равно взять
+// курсив, либо уйти на fallback. Второй набор `@font-face` — цена за прямое
+// начертание.
+export const playfairRoman = Playfair_Display({
+  subsets: ['cyrillic', 'latin'],
+  weight: ['500'],
+  style: ['normal'],
+  display: 'swap',
+});

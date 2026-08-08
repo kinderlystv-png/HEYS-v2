@@ -10,8 +10,12 @@ import { LogoD } from './LogoD';
 
 import { OPERATOR, SUPPORT_CONTACTS } from '@/config/legal-versions';
 
-const LEGAL_LINKS = [
+// Порядок и состав — по прототипу (`design/landing-d/prototype.html` строка 837).
+// «Калькуляторы» — не legal-документ, а живая публичная страница: футер остался
+// её единственным входом с лендинга, поэтому ссылка стоит здесь.
+const FOOTER_LINKS = [
   { href: '/legal/user-agreement', label: 'Пользовательское соглашение' },
+  { href: '/calculators', label: 'Калькуляторы' },
   { href: '/legal/privacy-policy', label: 'Политика конфиденциальности' },
   { href: '/legal/health-data-consent', label: 'Данные о здоровье' },
   { href: '/legal/marketing-consent', label: 'Маркетинговые материалы' },
@@ -49,8 +53,12 @@ export default function FooterD() {
             </p>
           </div>
 
-          <nav className="flex flex-col gap-2.5 text-[13px] sm:items-end">
-            {LEGAL_LINKS.map((link) => (
+          {/* Два ряда в несколько колонок, как в прототипе: восемь ссылок в один
+              столбец растягивали футер примерно на 150px без пользы. В колонку
+              сворачиваемся только на узких экранах — граница 560px взята из
+              медиазапроса прототипа, поэтому здесь не Tailwind-брейкпоинт. */}
+          <nav className="flex flex-col gap-3.5 text-[13px] min-[561px]:max-w-[560px] min-[561px]:flex-row min-[561px]:flex-wrap min-[561px]:justify-end min-[561px]:gap-x-6 min-[561px]:gap-y-3">
+            {FOOTER_LINKS.map((link) => (
               <a
                 key={link.href}
                 href={link.href}

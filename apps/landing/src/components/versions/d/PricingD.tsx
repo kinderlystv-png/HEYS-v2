@@ -19,14 +19,14 @@ import { Accent, Caption, PrimaryCta, Section, SectionTitle } from './primitives
 import PurchaseModal from '@/components/modals/PurchaseModal';
 import { PRICING } from '@/config/pricing';
 
+// Трекер из этого блока убран (решение владельца 2026-08-08). Две причины.
+// Первая: он подробно разобран выше, в таблице секции 02, и здесь повторялся
+// сокращённо — четыре строки той таблицы пересказывались одной фразой.
+// Вторая, важнее: рядом с нашей ценой у него стояло «Обычно бесплатно», то есть
+// ровно то сравнение числа с нулём, которое запрещено записью `COPY_VOICE`
+// 2026-08-08. Остались два платных формата, и сравнение работает на нас: месяц
+// ежедневной работы стоит как один-два разовых приёма.
 const FORMATS = [
-  {
-    label: 'Трекер',
-    labelColor: '#A0616D',
-    text: 'Заполняете сами. Цифры есть — объяснения нет.',
-    price: 'Обычно бесплатно',
-    accentPrice: false,
-  },
   {
     label: 'Консультация',
     labelColor: '#A8823C',
@@ -54,38 +54,101 @@ const PRO_WEEK = [
 const PRO_RESULT = [
   'Разбор недели 20–45 минут — голосом или перепиской, как вам удобнее.',
   'Понятно, что сработало и что стоит поменять на следующей неделе.',
-  'Остаются дневник, динамика и итог — они никуда не исчезают после разбора.',
+  'После разбора остаются заполненный дневник, динамика и понятный итог недели.',
 ];
 
-const COMPARISON: ReadonlyArray<[string, string, string]> = [
-  ['Кто ведёт дневник', 'вы сами', 'куратор'],
-  ['Что нужно от вас', 'считать и заносить', 'прислать фото или пару фраз'],
-  ['Горизонт разбора', 'один день', 'неделя целиком'],
-  ['Кто делает вывод', 'алгоритм или никто', 'человек, который вас знает'],
-  ['Уточняющий вопрос', 'нет', 'до совета, а не после'],
-  ['Что с поездками и праздниками', 'ломают статистику', 'часть обычной жизни'],
-  ['После срыва', 'начинать заново', 'вернуться в ритм'],
-  ['Сон и нагрузка', 'отдельные приложения', 'в одной картине с питанием'],
-  ['Ответ на «почему так»', 'графики', 'причина и один следующий шаг'],
-  ['Цена', 'от 0 ₽', `${PRICING.pro.price} ₽/мес`],
+// Self — витрина приложения и вход в воронку. Без состава рядом с восемью
+// строками Pro Спорт карточка читается как «брать не надо».
+const SELF_INCLUDES = [
+  'Дневник питания и КБЖУ',
+  'Динамика по дням и неделям',
+  'Своя база продуктов и история',
+  'Тренировочный дневник',
 ];
 
-const SUPPORT_DETAILS = [
+// У Pro Спорт самый высокий порог решения на странице, поэтому состав услуги
+// показан целиком, а не двумя абзацами.
+const PRO_SPORT_INCLUDES = [
+  'Всё сопровождение Pro',
+  'Стартовая встреча до 60 минут',
+  'Персональная программа тренировок на четыре недели',
+  'Тренер ведёт тренировочный дневник и видит, что реально выполнено',
+  'Один общий созвон по питанию и тренировкам 45–60 минут каждую неделю',
+  'Тренер проверяет технику упражнений вашей программы по коротким видео',
+  'Если обстоятельства меняются, тренер помогает перестроить ближайшую тренировку',
+  'Тренер обновляет программу с учётом того, как вы реально выполняете тренировки',
+];
+
+// Сравнение самих тарифов, а не сравнение с трекером: списком подряд разницу
+// между тремя форматами прочитать легко, но уловить трудно (решение владельца
+// 2026-08-08). Сравнение с трекером живёт выше, в секции 02.
+const PLAN_COMPARISON: ReadonlyArray<readonly [string, string, string, string]> = [
+  ['Кто ведёт дневник питания', 'Вы', 'Куратор', 'Куратор'],
+  [
+    'Помощь по ходу недели',
+    'Сами',
+    'Куратор помогает, если планы или режим меняются',
+    'Специалист помогает подстроить питание и тренировочную нагрузку под ситуацию',
+  ],
+  [
+    'Недельный разбор',
+    'Нет',
+    'Питание и ритм недели · 20–45 минут',
+    'Питание и тренировки · 45–60 минут',
+  ],
+  ['Кто ведёт дневник тренировок', 'Вы', 'Вы', 'Тренер'],
+  ['Программа тренировок', 'Нет', 'Нет', 'На четыре недели'],
+  ['Адаптация нагрузки', 'Сами', 'Не входит', 'Тренер помогает изменить ближайшую тренировку'],
+  ['Обновление программы', 'Нет', 'Нет', 'По результатам выполнения, не чаще раза в неделю'],
+  [
+    'Контроль техники',
+    'Сами',
+    'Нет',
+    'Тренер разбирает упражнения текущей программы по коротким видео',
+  ],
+  ['На старте новой программы', 'Сами', 'Не входит', 'Проверка техники упражнений новой программы'],
+  ['Бесплатная неделя', 'Нет', '7 дней', 'Нет'],
+];
+
+// Часы сопровождения и ориентир ответа — те же, что в пользовательском
+// соглашении (§ 5.4). Две разные обещанные скорости на одной странице — повод
+// для спора с клиентом.
+const SUPPORT_DETAILS: ReadonlyArray<{
+  title: string;
+  paragraphs: readonly string[];
+  accentNote?: string;
+  strongNote?: string;
+}> = [
   {
     title: 'По ходу недели',
-    text: 'Вы присылаете, куратор заносит и уточняет. Ответ приходит в течение рабочего дня — расписания «24/7» мы не обещаем.',
+    paragraphs: [
+      'Куратор работает с новыми записями в течение недели: вносит данные, задаёт уточняющие вопросы и помогает решить, что изменить, если меняются график, нагрузка или обстоятельства. Для этого не нужно ждать недельного разбора.',
+    ],
   },
   {
     title: 'Итог недели',
-    text: 'Разбор на 20–45 минут: что повторялось, что могло на это повлиять и один выполнимый шаг на следующую неделю.',
+    paragraphs: [
+      'Раз в неделю проходит более глубокий разбор: что сработало, где начал сбиваться ритм и на чём сосредоточиться дальше.',
+      'Для Pro он занимает 20–45 минут. Для Pro Спорт питание и тренировки разбираются вместе на общем созвоне 45–60 минут.',
+    ],
   },
   {
-    title: 'Как работает тренер в Pro Спорт',
-    text: 'Питание и тренировки ведёт один специалист, поэтому нагрузка и еда согласованы между собой, а не живут в двух разных чатах.',
+    title: 'Как работает тренер',
+    paragraphs: [
+      'В Pro Спорт тренер видит тренировочный дневник и помогает перестроить ближайшую тренировку, если ситуация изменилась. Основная программа обновляется по результатам выполнения, но не чаще одного раза в неделю.',
+      'Для разбора техники достаточно короткого видео одного рабочего подхода. На старте тренер проверяет упражнения новой программы, дальше вы присылаете новые или вызывающие сомнение движения. В ответ — несколько главных замечаний: что уже получается, что изменить и нужно ли показать упражнение повторно.',
+    ],
+    // Единственное место на странице, где сказано, что цена пилотная: без этого
+    // будущее повышение выглядит как обман.
+    accentNote: `Цена ${PRICING.proPlus.price} ${PRICING.proPlus.period} действует для текущего пилота. Для следующего набора планируется цена 26 990 ₽/мес.`,
   },
   {
     title: 'Связь и границы',
-    text: 'Общение идёт в мессенджере HEYS или привычном вам. Куратор не ставит диагнозов и не назначает лечение: при заболеваниях нужен врач.',
+    paragraphs: [
+      'Сообщения обрабатываются в часы сопровождения 09:00–21:00 МСК. Ориентир первой реакции — 1–2 часа; полный разбор может потребовать больше времени.',
+    ],
+    strongNote:
+      'Это не круглосуточная или экстренная связь. HEYS не заменяет врача, реабилитолога или медицинскую помощь.',
   },
 ];
 
@@ -100,7 +163,7 @@ export default function PricingD() {
         </SectionTitle>
       </div>
 
-      <div data-reveal className="mt-14 grid border-t border-[rgba(16,24,38,0.14)] sm:grid-cols-3">
+      <div data-reveal className="mt-14 grid border-t border-[rgba(16,24,38,0.14)] sm:grid-cols-2">
         {FORMATS.map((format, i) => (
           <div
             key={format.label}
@@ -171,8 +234,8 @@ export default function PricingD() {
               Дневник ведёт куратор, который вас знает
             </p>
             <p className="mt-3 text-[14.5px] leading-[1.6] text-[#5B6472]">
-              Он помнит, как прошла ваша прошлая неделя, и спрашивает про трудные дни, прежде чем
-              что-то предлагать.
+              Вы присылаете фото, текст или голос. Куратор ведёт дневник, помнит, что происходило в
+              течение недели, и помогает понять, что изменить, если планы или режим сбились.
             </p>
 
             <div className="mt-8">
@@ -192,10 +255,9 @@ export default function PricingD() {
                     key={item}
                     className="flex gap-2.5 text-[14.5px] leading-[1.55] text-[#101826]"
                   >
-                    <span
-                      aria-hidden="true"
-                      className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[color:var(--da)]"
-                    />
+                    <span aria-hidden="true" className="shrink-0 text-[color:var(--da)]">
+                      —
+                    </span>
                     {item}
                   </li>
                 ))}
@@ -211,10 +273,9 @@ export default function PricingD() {
                     key={item}
                     className="flex gap-2.5 text-[14.5px] leading-[1.55] text-[#101826]"
                   >
-                    <span
-                      aria-hidden="true"
-                      className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[color:var(--da)]"
-                    />
+                    <span aria-hidden="true" className="shrink-0 text-[color:var(--da)]">
+                      —
+                    </span>
                     {item}
                   </li>
                 ))}
@@ -226,7 +287,7 @@ export default function PricingD() {
 
       {/* Self и Pro Спорт. */}
       <div data-reveal className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        <div className="rounded-[22px] border border-[rgba(16,24,38,0.12)] bg-white px-8 py-9">
+        <div className="flex flex-col rounded-[22px] border border-[rgba(16,24,38,0.12)] bg-white px-8 py-9">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A94A2]">
             {PRICING.base.name}
           </p>
@@ -236,27 +297,43 @@ export default function PricingD() {
             </span>
             <span className="text-[14px] text-[#8A94A2]">{PRICING.base.period}</span>
           </p>
-          <p className="mt-4 text-[14.5px] leading-[1.6] text-[#5B6472]">
-            Дневник, КБЖУ и динамика — вы ведёте сами. Куратора и разбора недели здесь нет.
+          <p className="mt-3 text-[13.5px] font-semibold leading-[1.5] text-[color:var(--da)]">
+            Дневник ведёте сами
           </p>
-          <a
-            href="https://app.heyslab.ru"
-            className="mt-7 inline-flex items-center justify-center rounded-[13px] border border-[rgba(16,24,38,0.18)] bg-white px-6 py-3 text-[14px] font-semibold text-[#101826] transition-colors hover:border-[rgba(16,24,38,0.3)]"
-          >
-            Начать в HEYS
-          </a>
-          <Caption>Регистрация и оплата в приложении</Caption>
+          <p className="mt-3 text-[14.5px] leading-[1.6] text-[#5B6472]">
+            Питание, КБЖУ, тренировочные записи и динамика собраны в HEYS — без участия куратора.
+          </p>
+          <ul className="mt-4 space-y-2.5">
+            {SELF_INCLUDES.map((item) => (
+              <li key={item} className="flex gap-2.5 text-[13.5px] leading-[1.5] text-[#3C4552]">
+                <span aria-hidden="true" className="shrink-0 text-[color:var(--da)]">
+                  —
+                </span>
+                {item}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-auto pt-6">
+            <a
+              href="https://app.heyslab.ru"
+              className="inline-flex items-center justify-center rounded-[13px] border border-[rgba(16,24,38,0.18)] bg-white px-6 py-3 text-[14px] font-semibold text-[#101826] transition-colors hover:border-[rgba(16,24,38,0.3)]"
+            >
+              Начать в HEYS
+            </a>
+            <Caption>Регистрация и оплата в приложении</Caption>
+          </div>
         </div>
 
-        <div className="rounded-[22px] border border-[#C9C7E0] bg-[linear-gradient(180deg,#FCFBFF_0%,#F6F4FB_100%)] px-8 py-9">
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#4A4C7E]">
-              {PRICING.proPlus.name}
-            </p>
-            <span className="rounded-full border border-[#C9C7E0] px-3 py-1 text-[11px] font-semibold text-[#4A4C7E]">
-              Пилот · до 4 участников
-            </span>
-          </div>
+        {/* Бейдж — абсолютный, верхом на рамке: так же, как «Основной формат» у
+            карточки Pro. Инлайн-чип в строке с названием делал карточки
+            разнотипными. */}
+        <div className="relative flex flex-col rounded-[22px] border border-[#C9C7E0] bg-[linear-gradient(180deg,#FCFBFF_0%,#F6F4FB_100%)] px-8 py-9">
+          <span className="absolute -top-3 left-[30px] rounded-full border border-[#C9C7E0] bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#4A4C7E]">
+            Пилот · до 4 участников
+          </span>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#4A4C7E]">
+            {PRICING.proPlus.name}
+          </p>
           <p className="mt-4 flex items-baseline gap-2">
             <span className="text-[32px] font-semibold leading-none text-[#101826]">
               {PRICING.proPlus.price}
@@ -266,56 +343,104 @@ export default function PricingD() {
           <p className="mt-3 text-[13px] leading-[1.5] text-[#8A94A2]">
             Около 670 ₽ в день — питание и тренировки у одного специалиста
           </p>
-          <p className="mt-4 text-[14.5px] leading-[1.6] text-[#5B6472]">
-            Всё, что входит в Pro, плюс тренировочный план и его сведение с питанием. Мест немного:
-            куратор ведёт ограниченный набор, и каждого участника разбирает лично.
+          <p className="mt-3 text-[13.5px] font-semibold leading-[1.5] text-[#4A4C7E]">
+            Pro + персональный онлайн-тренер
           </p>
-          <button
-            type="button"
-            onClick={() => setProSportOpen(true)}
-            className="mt-7 inline-flex items-center justify-center rounded-[13px] bg-[#4A4C7E] px-6 py-3 text-[14px] font-semibold text-white transition-transform duration-[250ms] hover:-translate-y-0.5"
-          >
-            Обсудить Pro Спорт
-          </button>
-          <Caption>Оплата после личного согласования</Caption>
+          <p className="mt-3 text-[14.5px] leading-[1.6] text-[#5B6472]">
+            Один специалист ведёт питание и тренировки, составляет программу под ваш график и видит,
+            как вы выполняете упражнения. Поэтому нагрузка, питание и восстановление не существуют
+            отдельно друг от друга.
+          </p>
+          <ul className="mt-4 space-y-2.5">
+            {PRO_SPORT_INCLUDES.map((item) => (
+              <li key={item} className="flex gap-2.5 text-[13.5px] leading-[1.5] text-[#3C4552]">
+                <span aria-hidden="true" className="shrink-0 text-[#4A4C7E]">
+                  —
+                </span>
+                {item}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-auto pt-6">
+            <button
+              type="button"
+              onClick={() => setProSportOpen(true)}
+              className="inline-flex items-center justify-center rounded-[13px] bg-[#4A4C7E] px-6 py-3 text-[14px] font-semibold text-white transition-transform duration-[250ms] hover:-translate-y-0.5"
+            >
+              Обсудить Pro Спорт
+            </button>
+            <Caption>Оплата после личного согласования</Caption>
+          </div>
         </div>
       </div>
 
       {/* Второй слой: подробное сравнение и устройство сопровождения. Обычный
           сценарий выбора проходится без него — на первом слое уже есть формат,
           цена и действие. */}
-      <div data-reveal className="mx-auto mt-10 max-w-[860px] space-y-4">
-        <details className="group rounded-[18px] border border-[rgba(16,24,38,0.12)] bg-white px-7 py-5">
-          <summary className="flex cursor-pointer items-center justify-between text-[15px] font-semibold text-[#101826] [&::-webkit-details-marker]:hidden">
-            Сравнить форматы
+      <div data-reveal className="mx-auto mt-10 max-w-[860px]">
+        <details className="group border-b border-[rgba(16,24,38,0.12)] first:border-t">
+          <summary className="flex cursor-pointer items-center justify-between gap-4 py-6 text-[16.5px] font-semibold leading-[1.4] text-[#101826] [&::-webkit-details-marker]:hidden">
+            Сравнить тарифы
             <span
               aria-hidden="true"
               className="ml-4 inline-block h-2 w-2 shrink-0 rotate-45 border-b border-r border-[#9AA3B0] transition-transform duration-[250ms] group-open:rotate-[225deg]"
             />
           </summary>
-          <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[520px] border-collapse text-left">
+          {/* Спойлер свёрстан как FAQ — разделителями, без карточки-рамки. Так
+              второй слой выглядит одинаково по всей странице, а таблица
+              получает всю ширину контейнера секции: четыре колонки помещаются
+              целиком, и ни горизонтальная прокрутка, ни липкая колонка больше
+              не нужны. Колонка Self узкая намеренно — в ней только «Вы», «Нет»
+              и «Сами»; освободившееся отдано колонкам сопровождения. */}
+          {/* Таблица одна выходит за поля секции (`-mx-8`, компенсирует
+              `px-8` секции) — так все четыре колонки помещаются без
+              горизонтальной прокрутки. `px-1` — минимальный зазор до края
+              экрана, чтобы текст первой и последней колонки не упирался в
+              рамку устройства. На `sm` и выше поля не нужны — таблица уже
+              умещается в карточку целиком. */}
+          <div className="-mx-8 px-1 pb-6 sm:mx-0 sm:px-0">
+            <table className="w-full table-fixed border-collapse text-left text-[12px] leading-[1.45]">
+              <colgroup>
+                <col className="w-[24%]" />
+                <col className="w-[13%]" />
+                <col className="w-[31.5%]" />
+                <col className="w-[31.5%]" />
+              </colgroup>
               <thead>
-                <tr className="border-b border-[rgba(16,24,38,0.12)]">
-                  <th className="py-3 pr-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8A94A2]">
-                    &nbsp;
+                <tr className="border-b border-[rgba(16,24,38,0.14)] align-bottom">
+                  {/* Колонка критериев липкая: при горизонтальной прокрутке
+                      под неё уезжает Self, а рядом остаются Pro и Pro Спорт —
+                      сравнивать имеет смысл именно их, и вопрос строки должен
+                      быть виден. Непрозрачный фон обязателен, иначе уезжающий
+                      текст просвечивает сквозь колонку. */}
+                  <th className="bg-[#FBFAF7] py-3 pl-2 pr-1.5 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8A94A2]">
+                    Критерий
                   </th>
-                  <th className="py-3 pr-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8A94A2]">
-                    Трекер
+                  <th className="bg-[#F8F1E6] px-2 py-3 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[#8A94A2]">
+                    {PRICING.base.name}
                   </th>
-                  <th className="py-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-[color:var(--da)]">
-                    HEYS Pro
+                  <th className="bg-[#F6FAFD] px-2 py-3 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[color:var(--da)]">
+                    {PRICING.pro.name}
+                  </th>
+                  <th className="bg-[#F1FAF4] px-2 py-3 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[#1F6E4D]">
+                    {PRICING.proPlus.name}
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {COMPARISON.map(([row, tracker, heys]) => (
+                {PLAN_COMPARISON.map(([row, self, pro, proSport]) => (
                   <tr key={row} className="border-b border-[rgba(16,24,38,0.08)] align-top">
-                    <td className="py-3 pr-4 text-[14px] leading-[1.5] text-[#8A94A2]">{row}</td>
-                    <td className="py-3 pr-4 text-[14px] leading-[1.5] text-[#5B6472]">
-                      {tracker}
+                    <th
+                      scope="row"
+                      className="break-words bg-[#FBFAF7] py-2.5 pl-2 pr-1.5 text-left text-[11.5px] font-medium text-[#101826]"
+                    >
+                      {row}
+                    </th>
+                    <td className="break-words bg-[#F8F1E6] px-2 py-2.5 text-[#5B6472]">{self}</td>
+                    <td className="break-words bg-[#F6FAFD] px-2 py-2.5 text-[#3C4552]">{pro}</td>
+                    <td className="break-words bg-[#F1FAF4] px-2 py-2.5 text-[#3C4552]">
+                      {proSport}
                     </td>
-                    <td className="py-3 text-[14px] leading-[1.5] text-[#101826]">{heys}</td>
                   </tr>
                 ))}
               </tbody>
@@ -323,8 +448,8 @@ export default function PricingD() {
           </div>
         </details>
 
-        <details className="group rounded-[18px] border border-[rgba(16,24,38,0.12)] bg-white px-7 py-5">
-          <summary className="flex cursor-pointer items-center justify-between text-[15px] font-semibold text-[#101826] [&::-webkit-details-marker]:hidden">
+        <details className="group border-b border-[rgba(16,24,38,0.12)] first:border-t">
+          <summary className="flex cursor-pointer items-center justify-between gap-4 py-6 text-[16.5px] font-semibold leading-[1.4] text-[#101826] [&::-webkit-details-marker]:hidden">
             Как устроено сопровождение
             <span
               aria-hidden="true"
@@ -337,7 +462,19 @@ export default function PricingD() {
                 <h3 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#8A94A2]">
                   {item.title}
                 </h3>
-                <p className="mt-2 text-[14.5px] leading-[1.6] text-[#5B6472]">{item.text}</p>
+                {item.paragraphs.map((paragraph) => (
+                  <p key={paragraph} className="mt-2 text-[14.5px] leading-[1.6] text-[#5B6472]">
+                    {paragraph}
+                  </p>
+                ))}
+                {item.accentNote ? (
+                  <p className="mt-2 text-[13px] leading-[1.6] text-[#4A4C7E]">{item.accentNote}</p>
+                ) : null}
+                {item.strongNote ? (
+                  <p className="mt-2 text-[14.5px] font-medium leading-[1.6] text-[#3C4552]">
+                    {item.strongNote}
+                  </p>
+                ) : null}
               </div>
             ))}
           </div>

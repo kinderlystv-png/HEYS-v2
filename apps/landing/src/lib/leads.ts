@@ -14,6 +14,7 @@
 // `TrialForm`.
 
 import { LEGAL_DOCS } from '@/config/legal-versions';
+import type { FunnelStep } from '@/lib/funnel';
 
 declare global {
   interface Window {
@@ -50,6 +51,11 @@ export interface LeadInput {
   quizSegment?: string;
   /** Уточнения квиза — частота, барьер, цель. */
   quizDetails?: Record<string, string | null>;
+  /**
+   * След воронки: какие шаги человек прошёл до заявки. Едет вместе с заявкой,
+   * потому что отдельного эндпойнта событий у лендинга нет (`funnel.ts`).
+   */
+  funnel?: FunnelStep[];
 }
 
 export function readUtmParams(): UtmParams {
@@ -104,6 +110,10 @@ export async function submitLead(input: LeadInput): Promise<void> {
       // Уточнения квиза уходят одним пакетом вместе с заявкой и согласием —
       // поштучная отправка ответов до согласия запрещена (`17`, реестр данных).
       quiz_details: input.quizDetails,
+      // Шаги воронки до заявки. Сервер пока их не читает — приём поля закрывает
+      // отдельная задача по `heys-api-leads`; до этого след виден только своему
+      // обработчику `window.heysTrack`.
+      funnel: input.funnel,
       ...input.utm,
       referrer: typeof document !== 'undefined' ? document.referrer : undefined,
       landing_page: typeof window !== 'undefined' ? window.location.pathname : undefined,

@@ -14,6 +14,7 @@
 // поэтому они живут только в памяти вкладки: ни localStorage, ни поштучной
 // отправки. Всё уходит одним пакетом вместе с заявкой и согласием.
 
+import { Playfair_Display } from 'next/font/google';
 import { useMemo, useRef, useState } from 'react';
 
 import {
@@ -33,7 +34,21 @@ import {
 } from './quizModel';
 
 import { LEGAL_DOCS, SUPPORT_CONTACTS } from '@/config/legal-versions';
+import { funnelTrail, track } from '@/lib/funnel';
 import { readUtmParams, readYandexClientId, submitLead, type Messenger } from '@/lib/leads';
+
+// Антиква курсивом для заголовка разбора — единственного места страницы, где
+// текст персонально про этого человека. Шрифт объявлен здесь, а не взят из
+// `versions/d/fonts.ts`: квиз намеренно версионно-независим (см. шапку файла), и
+// импорт из папки версии D привязал бы его к ней. `next/font` дедуплицирует
+// одинаковые начертания, так что второй объявленный экземпляр не тянет за собой
+// второй файл шрифта.
+const playfairQuiz = Playfair_Display({
+  subsets: ['cyrillic', 'latin'],
+  weight: ['500'],
+  style: ['italic'],
+  display: 'swap',
+});
 
 type Step = 'intro' | 'trigger' | 'when' | 'result' | 'form' | 'sent';
 type FieldName = 'name' | 'phone' | 'birthYear' | 'consent';
@@ -87,12 +102,19 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
     setAnswers((prev) => ({ ...prev, trigger: code, when: null }));
     // Уточняющий вопрос про время суток нужен только тем, кто сам не понимает
     // причину: остальным он ничего не добавляет к типу срыва (`17` § 3.2).
-    setStep(code === 'unknown' ? 'when' : 'result');
+    const next = code === 'unknown' ? 'when' : 'result';
+    setStep(next);
+    // Разбор считается пройденным в тот момент, когда сегмент определён, —
+    // для большинства это первый же ответ.
+    if (next === 'result') track('quiz_complete', { segment: resolveSegment(code, null) });
   };
 
   const chooseWhen = (code: WhenCode) => {
     setAnswers((prev) => ({ ...prev, when: code }));
     setStep('result');
+    if (answers.trigger) {
+      track('quiz_complete', { segment: resolveSegment(answers.trigger, code) });
+    }
   };
 
   const validate = (): boolean => {
@@ -132,6 +154,9 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
     if (!validate()) return;
 
     setLoading(true);
+    // Событие ставится до отправки: след воронки уезжает внутри самой заявки,
+    // и `week_request` должен успеть попасть в этот пакет.
+    track('week_request', { quiz: quizTaken });
     try {
       const ymClientId = await readYandexClientId(consentAccepted);
       await submitLead({
@@ -152,6 +177,7 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
               goal: answers.goal,
             }
           : undefined,
+        funnel: funnelTrail(),
       });
       setStep('sent');
     } catch (error) {
@@ -233,6 +259,7 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
               type="button"
               onClick={() => {
                 setQuizTaken(true);
+                track('quiz_start');
                 setStep('trigger');
               }}
               className="rounded-[14px] bg-[#12283E] px-6 py-3.5 text-[15px] font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5"
@@ -301,7 +328,9 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--da)]">
             Ваш сценарий
           </p>
-          <h3 className="mt-3 text-[22px] font-semibold leading-[1.3] text-[#101826]">
+          <h3
+            className={`${playfairQuiz.className} mt-3 text-[clamp(26px,3.2vw,34px)] font-medium italic leading-[1.2] text-[#101826]`}
+          >
             {SEGMENTS[segment].title}
           </h3>
           <p className="mt-4 text-[15px] leading-[1.65] text-[#5B6472]">

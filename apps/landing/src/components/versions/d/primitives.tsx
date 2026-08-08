@@ -7,7 +7,7 @@
 
 import type { ReactNode } from 'react';
 
-import { playfair } from './fonts';
+import { playfair, playfairRoman } from './fonts';
 
 /** Акцент внутри заголовка: Playfair Display italic (`README` § Типографика). */
 export function Accent({ children }: { children: ReactNode }) {
@@ -28,7 +28,7 @@ export function Section({ id, index, label, tone = 'white', children }: SectionP
   return (
     <section
       id={id}
-      className={`px-5 pb-[104px] pt-[84px] sm:px-8 ${tone === 'warm' ? 'bg-[#F7F6F2]' : 'bg-white'}`}
+      className={`px-8 pb-[104px] pt-[84px] ${tone === 'warm' ? 'bg-[#F7F6F2]' : 'bg-white'}`}
     >
       <div className="mx-auto w-full max-w-[1060px]">
         <div className="border-t border-[rgba(16,24,38,0.12)] pt-6">
@@ -57,7 +57,7 @@ export function Section({ id, index, label, tone = 'white', children }: SectionP
 /** Заголовок секции по центру. `text-wrap: balance` — требование макета. */
 export function SectionTitle({ children }: { children: ReactNode }) {
   return (
-    <h2 className="mx-auto mt-[54px] max-w-[760px] text-balance text-center text-[clamp(28px,3.4vw,40px)] font-semibold leading-[1.18] tracking-[-0.02em] text-[#101826]">
+    <h2 className="mx-auto mt-[54px] max-w-[760px] text-balance text-center text-[clamp(30px,3.8vw,44px)] font-semibold leading-[1.18] tracking-[-0.02em] text-[#101826]">
       {children}
     </h2>
   );
@@ -72,13 +72,29 @@ export function SectionLead({ children }: { children: ReactNode }) {
   );
 }
 
-/** Строка-вывод антиквой в конце блока: вторая половина — цветом акцента. */
+/**
+ * Строка-вывод антиквой в конце блока: вторая половина — цветом акцента.
+ *
+ * Без курсива: в прототипе (`design/landing-d/prototype.html` строка 244) он
+ * оставлен только акценту внутри заголовков (`Accent`). Иначе две курсивные
+ * строки подряд — в секциях 01 и 02 — спорят с акцентами в H2 и читаются
+ * тяжелее.
+ *
+ * Вступление мелкое и приглушённое, вторая половина — крупнее, полужирная и
+ * цветом акцента: это не декоративный хвост фразы, а сам вывод блока (в
+ * `PainSection` — «не всё равно», в `HowItWorks` — что куратор уточняет раньше
+ * совета). Решение владельца 2026-08-08: раньше обе половины шли одним кеглем,
+ * и главная мысль терялась рядом со вступлением того же веса.
+ */
 export function ClosingLine({ lead, accent }: { lead: ReactNode; accent: ReactNode }) {
   return (
     <p
-      className={`${playfair.className} mx-auto mt-14 max-w-[720px] text-balance text-center text-[clamp(20px,2.4vw,26px)] font-medium italic leading-[1.45] text-[#101826]`}
+      className={`${playfairRoman.className} mx-auto mt-14 max-w-[720px] text-balance text-center text-[clamp(17px,2vw,20px)] font-normal leading-[1.5] text-[#5B6472]`}
     >
-      {lead} <span className="text-[color:var(--da)]">{accent}</span>
+      {lead}{' '}
+      <span className="text-[clamp(23px,3vw,30px)] font-semibold leading-[1.35] text-[color:var(--da)]">
+        {accent}
+      </span>
     </p>
   );
 }

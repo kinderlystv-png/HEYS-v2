@@ -165,7 +165,7 @@ input::placeholder{color:#9AA3B0}
     <div style="display:flex;flex-direction:column;align-items:center;padding:clamp(71px,calc(135px - 4.6vw),99px) 24px 0;text-align:center">
       <div ref="{{ textRef }}" style="display:flex;flex-direction:column;align-items:center;will-change:opacity,transform">
       <h1 style="margin:0;max-width:760px;font-weight:600;font-size:clamp(38px,5vw,62px);line-height:1.08;letter-spacing:-0.025em;color:#FFFFFF;text-wrap:balance">Ваш дневник питания <em style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500">ведёт куратор.</em></h1>
-      <p style="margin:clamp(26px,3.2vw,36px) 0 0;max-width:560px;font-size:clamp(15px,1.6vw,17px);line-height:1.6;color:rgba(255,255,255,0.75)">Присылаете фото, голосовое или пару фраз — 3–5 минут в день. Остальное делает куратор: ведёт дневник, помнит, что было на прошлой неделе, и спрашивает, прежде чем советовать.</p>
+      <p style="margin:clamp(26px,3.2vw,36px) 0 0;max-width:560px;font-size:clamp(15px,1.6vw,17px);line-height:1.6;color:rgba(255,255,255,0.75)">Присылаете фото, голосовое или пару фраз — обычно 3–5 минут в день. Остальное делает куратор: ведёт дневник, помнит, что было на прошлой неделе, и спрашивает, прежде чем советовать.</p>
       <div style="margin-top:30px;display:inline-flex;align-items:center;gap:9px;border:1px solid rgba(255,255,255,0.24);background:rgba(255,255,255,0.09);backdrop-filter:blur(4px);border-radius:999px;padding:9px 18px;font-size:13px">
         <span style="width:6px;height:6px;border-radius:50%;background:#7FD1A0"></span>
         <span style="font-weight:600;color:#FFFFFF;white-space:nowrap">7 дней Pro — 0 ₽</span>
@@ -198,12 +198,14 @@ input::placeholder{color:#9AA3B0}
       </div>
 
       <div ref="{{ ctaRef }}" style="display:flex;flex-direction:column;align-items:center;margin-top:52px">
+        <sc-if value="{{ chaptersOn }}" hint-placeholder-val="{{ true }}">
         <div style="display:flex;gap:2px;margin-bottom:4px">
           <button type="button" data-i="0" onClick="{{ seekChapter }}" aria-label="Глава 1: прислали — и пошли дальше" style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;background:none;border:none;cursor:pointer;padding:0"><span style="width:6px;height:6px;border-radius:50%;background:{{ dot1 }};transition:background 0.4s"></span></button>
           <button type="button" data-i="1" onClick="{{ seekChapter }}" aria-label="Глава 2: дневник ведёт куратор" style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;background:none;border:none;cursor:pointer;padding:0"><span style="width:6px;height:6px;border-radius:50%;background:{{ dot2 }};transition:background 0.4s"></span></button>
           <button type="button" data-i="2" onClick="{{ seekChapter }}" aria-label="Глава 3: неделя становится понятной" style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;background:none;border:none;cursor:pointer;padding:0"><span style="width:6px;height:6px;border-radius:50%;background:{{ dot3 }};transition:background 0.4s"></span></button>
           <button type="button" data-i="3" onClick="{{ seekChapter }}" aria-label="Глава 4: без поспешных выводов" style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;background:none;border:none;cursor:pointer;padding:0"><span style="width:6px;height:6px;border-radius:50%;background:{{ dot4 }};transition:background 0.4s"></span></button>
         </div>
+        </sc-if>
         <a href="#curator" style="display:inline-flex;align-items:center;gap:10px;background:#FFFFFF;color:#12283E;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:0.01em;border-radius:16px;padding:16px 30px;box-shadow:0 12px 30px rgba(0,0,0,0.3);transition:transform 0.25s,box-shadow 0.25s" style-hover="transform:translateY(-2px);box-shadow:0 18px 42px rgba(0,0,0,0.4)">Понять, как работает HEYS <span aria-hidden="true">→</span></a>
         <p style="margin:14px 0 0;font-size:13px;color:rgba(255,255,255,0.58)">Куратор — живой человек, не чат-бот</p>
       </div>
@@ -263,7 +265,7 @@ input::placeholder{color:#9AA3B0}
       <div style="padding:28px 28px 28px 0;border-bottom:1px solid rgba(16,24,38,0.1)">
         <span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:var(--da,#2E7CC0)">01</span>
         <h3 style="margin:12px 0 8px;font-size:17px;font-weight:600">Вы присылаете</h3>
-        <p style="margin:0;font-size:14.5px;line-height:1.6;color:#5B6472">Фото еды, снимок с весов, короткое сообщение или голосовое. Всего 3–5 минут в день — считать и заполнять ничего не нужно.</p>
+        <p style="margin:0;font-size:14.5px;line-height:1.6;color:#5B6472">Фото еды, снимок с весов, короткое сообщение или голосовое. Обычно 3–5 минут в день — считать и заполнять ничего не нужно.</p>
       </div>
       <div style="padding:28px;border-bottom:1px solid rgba(16,24,38,0.1)">
         <span style="font-weight:600;font-size:11px;letter-spacing:0.16em;color:var(--da,#2E7CC0)">02</span>
@@ -783,7 +785,7 @@ input::placeholder{color:#9AA3B0}
     <div style="margin-top:48px;border-top:1px solid rgba(16,24,38,0.12)">
       <details style="border-bottom:1px solid rgba(16,24,38,0.12)">
         <summary style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 4px"><span style="font-size:16.5px;font-weight:600;line-height:1.4">Нужно ли самому считать калории и заполнять дневник?</span><span class="dchev" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#F2F1EC;color:#5B6472;font-size:16px;line-height:1" aria-hidden="true">+</span></summary>
-        <div style="padding:0 4px 24px;font-size:14.5px;line-height:1.7;color:#5B6472;max-width:720px">В Pro и Pro Спорт считать калории и заполнять дневник вручную не нужно. Вы присылаете фото еды, короткий текст или голосовое — это 3–5 минут в день, — а куратор переносит данные в дневник и при необходимости уточняет детали. В Self дневник ведёте сами. Чем точнее описана порция, тем точнее получится запись.</div>
+        <div style="padding:0 4px 24px;font-size:14.5px;line-height:1.7;color:#5B6472;max-width:720px">В Pro и Pro Спорт считать калории и заполнять дневник вручную не нужно. Вы присылаете фото еды, короткий текст или голосовое — обычно это 3–5 минут в день, — а куратор переносит данные в дневник и при необходимости уточняет детали. В Self дневник ведёте сами. Чем точнее описана порция, тем точнее получится запись.</div>
       </details>
       <details style="border-bottom:1px solid rgba(16,24,38,0.12)">
         <summary style="display:flex;align-items:center;justify-content:space-between;gap:20px;padding:22px 4px"><span style="font-size:16.5px;font-weight:600;line-height:1.4">Куратор — живой человек или это AI?</span><span class="dchev" style="flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:#F2F1EC;color:#5B6472;font-size:16px;line-height:1" aria-hidden="true">+</span></summary>
@@ -852,13 +854,32 @@ input::placeholder{color:#9AA3B0}
 </footer>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#2E7CC0&quot;,&quot;options&quot;:[&quot;#2E7CC0&quot;,&quot;#3E66C9&quot;,&quot;#2F8F6B&quot;,&quot;#B07A3C&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Стиль&quot;},&quot;demoAutoplay&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Демо&quot;},&quot;showQuiz&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Заявка&quot;}}">
-const INTERSTITIALS = [
-  { at: 17.3, text: 'Прислали — и пошли дальше' },
-  { at: 23.15, text: 'Дневник ведёт куратор' },
-  { at: 36.8, text: 'Неделя становится понятной' },
-  { at: 59.8, text: 'Без поспешных выводов', resumeAt: 60.45 },
-];
-const SKIPS = [{ from: 2.62, to: 3.98 }];
+// Тайминги привязаны к конкретному файлу демо. В проде вынести целиком в
+// public/hero-curator-demo.json и грузить рядом с видео: при перемонтаже меняется
+// JSON, а не компонент. Проверка ниже (demoValid) гасит отбивки, если файл не тот, —
+// перемонтаж ломает эффект, а не страницу.
+const DEMO = {
+  duration: null,          // ожидаемая длительность файла в секундах; проставить после финального экспорта
+  tolerance: 0.4,
+  interstitials: [
+    { at: 17.3, text: 'Прислали — и пошли дальше' },
+    { at: 23.15, text: 'Дневник ведёт куратор' },
+    { at: 36.8, text: 'Неделя становится понятной' },
+    { at: 59.8, text: 'Без поспешных выводов', resumeAt: 60.45 },
+  ],
+  skips: [{ from: 2.62, to: 3.98 }],
+};
+const INTERSTITIALS = DEMO.interstitials;
+const SKIPS = DEMO.skips;
+
+// Воронка. Имена событий те же, что у бота HEYS Старт (маркетинг/17), плюс entry:'landing'.
+// В проде слать в свой backend, НЕ в Метрику: она за AnalyticsConsentGate, до согласия
+// события не уйдут и воронка будет дырявой. Шаги — обезличенно, без содержания ответов.
+function track(name, payload) {
+  const ev = Object.assign({ name: name, entry: 'landing', ts: Date.now() }, payload || {});
+  if (typeof window.heysTrack === 'function') window.heysTrack(ev);
+  else console.debug('[heys track]', ev);
+}
 
 // Вопросы и сегменты синхронизированы с ботом HEYS Старт (маркетинг/17):
 // коды сегментов и поля карточки лида совпадают, чтобы куратор видел одну карточку
@@ -948,7 +969,7 @@ class Component extends DCLogic {
   state = {
     sent: false, playing: false, cardOn: false, cardX: '105%', cardText: '', menuOpen: false, chapter: 0,
     qStep: 'intro', trigger: null, when: null, freq: null, barrier: null, goal: null,
-    msg: 'telegram', proOpen: false, proSent: false, proMsg: 'telegram',
+    msg: 'telegram', proOpen: false, proSent: false, proMsg: 'telegram', demoOk: true,
   };
 
   renderVals() {
@@ -970,22 +991,42 @@ class Component extends DCLogic {
       playLabel: this.state.playing ? 'Поставить демонстрацию на паузу' : 'Воспроизвести демонстрацию',
       cardOn: this.state.cardOn, cardText: this.state.cardText,
       cardTransform: 'translateX(' + this.state.cardX + ')',
+      chaptersOn: this.state.demoOk,
       togglePlay: () => this.togglePlay(),
       menuOpen: this.state.menuOpen,
       seekChapter: (e) => this.seekChapter(+e.currentTarget.dataset.i),
       openMenu: () => { this.setState({ menuOpen: true }); document.body.style.overflow = 'hidden'; },
       closeMenu: () => { this.setState({ menuOpen: false }); document.body.style.overflow = ''; },
-      submitLead: (e) => { e.preventDefault(); this.setState({ sent: true }); },
+      submitLead: (e) => { e.preventDefault(); track('week_request', { quiz: !!this.segment() }); this.setState({ sent: true }); },
       proOpen: this.state.proOpen,
       proSent: this.state.proSent,
       proNotSent: !this.state.proSent,
       proMsgOpts: MSG_OPTS.map((o) => ({ v: o.v, label: o.label, st: this.state.proMsg === o.v ? PRO_MSG_ON : MSG_OFF })),
       pickProMsg: (e) => this.setState({ proMsg: e.currentTarget.dataset.v }),
-      openPro: () => { this.setState({ proOpen: true, proSent: false }); document.body.style.overflow = 'hidden'; },
-      closePro: () => { this.setState({ proOpen: false }); document.body.style.overflow = ''; },
+      openPro: () => this.openPro(),
+      closePro: () => this.closePro(),
       submitPro: (e) => { e.preventDefault(); this.setState({ proSent: true }); },
       ...this.quizVals(),
     };
+  }
+
+  // Модалка: фокус уходит внутрь диалога и возвращается на кнопку при закрытии.
+  openPro() {
+    this._returnFocus = document.activeElement;
+    this.setState({ proOpen: true, proSent: false });
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => {
+      const d = document.querySelector('[role="dialog"]');
+      if (d) { d.tabIndex = -1; d.focus(); }
+    }, 30);
+  }
+
+  closePro() {
+    if (!this.state.proOpen) return;
+    this.setState({ proOpen: false });
+    document.body.style.overflow = this.state.menuOpen ? 'hidden' : '';
+    if (this._returnFocus && this._returnFocus.focus) this._returnFocus.focus();
+    this._returnFocus = null;
   }
 
   segment() {
@@ -1027,15 +1068,21 @@ class Component extends DCLogic {
         : 'Куратор свяжется с вами в выбранном канале и объяснит следующий шаг.',
       msgOpts: MSG_OPTS.map((o) => ({ v: o.v, label: o.label, st: st.msg === o.v ? MSG_ON : MSG_OFF })),
       pickMsg: (e) => this.setState({ msg: e.currentTarget.dataset.v }),
-      startQuiz: () => this.setState({ qStep: 'trigger' }),
+      startQuiz: () => { if (st.qStep === 'intro') track('quiz_start'); this.setState({ qStep: 'trigger' }); },
       skipQuiz: () => this.setState({ qStep: 'form' }),
       backToTrigger: () => this.setState({ qStep: 'trigger' }),
       toForm: () => this.setState({ qStep: 'form' }),
       pickTrigger: (e) => {
         const v = e.currentTarget.dataset.v;
-        this.setState({ trigger: v, qStep: v === 'unknown' ? 'when' : 'result' });
+        const next = v === 'unknown' ? 'when' : 'result';
+        this.setState({ trigger: v, qStep: next });
+        if (next === 'result') track('quiz_complete', { segment: v === 'stress' ? 'emotional' : v });
       },
-      pickWhen: (e) => this.setState({ when: e.currentTarget.dataset.v, qStep: 'result' }),
+      pickWhen: (e) => {
+        const w = e.currentTarget.dataset.v;
+        this.setState({ when: w, qStep: 'result' });
+        track('quiz_complete', { segment: w === 'evening' || w === 'night' ? 'evening' : 'mixed' });
+      },
       pickFreq: (e) => this.setState({ freq: e.currentTarget.dataset.v }),
       pickBarrier: (e) => this.setState({ barrier: e.currentTarget.dataset.v }),
       pickGoal: (e) => this.setState({ goal: e.currentTarget.dataset.v }),
@@ -1085,7 +1132,7 @@ class Component extends DCLogic {
     document.addEventListener('click', this.onNavClick);
     this.onKey = (e) => {
       if (e.key !== 'Escape') return;
-      if (this.state.proOpen) { this.setState({ proOpen: false }); document.body.style.overflow = ''; }
+      if (this.state.proOpen) this.closePro();
       else if (this.state.menuOpen) { this.setState({ menuOpen: false }); document.body.style.overflow = ''; }
     };
     document.addEventListener('keydown', this.onKey);
@@ -1124,6 +1171,7 @@ class Component extends DCLogic {
       targets.forEach(show);
       stop();
     }, 3000);
+    this.revealSweep = sweep;
     this.revealPoll = setInterval(sweep, 250);
     targets.forEach((el) => {
       el.style.opacity = '0';
@@ -1147,15 +1195,10 @@ class Component extends DCLogic {
     if (this.raf) cancelAnimationFrame(this.raf);
   }
 
+  // Скролл ускоряет тот же опрос, что крутится по таймеру: без этого при быстром
+  // скролле секция появлялась с задержкой до 250 мс.
   revealCheck() {
-    if (!this.rvEls || !this.rvEls.length) return;
-    const limit = window.innerHeight * 0.94;
-    this.rvEls = this.rvEls.filter((el) => {
-      if (el.getBoundingClientRect().top > limit) return true;
-      el.style.opacity = '1';
-      el.style.transform = 'translateY(0)';
-      return false;
-    });
+    if (this.revealSweep) this.revealSweep();
   }
 
   scheduleMeasure() {
@@ -1219,6 +1262,13 @@ class Component extends DCLogic {
     if (v.__dcInit) return;
     v.__dcInit = true;
     v.addEventListener('timeupdate', () => this.checkInterstitial(v));
+    const checkDuration = () => {
+      const ok = this.demoValid(v);
+      if (!ok) console.warn('[HEYS demo] длительность видео не совпадает с таймингами отбивок — отбивки и точки-главы отключены');
+      if (ok !== this.state.demoOk) this.setState({ demoOk: ok });
+    };
+    if (v.readyState >= 1) checkDuration();
+    else v.addEventListener('loadedmetadata', checkDuration, { once: true });
     if (this.props.demoAutoplay ?? true) {
       const tryPlay = () => v.play().then(
         () => this.setState({ playing: true }),
@@ -1229,7 +1279,18 @@ class Component extends DCLogic {
     }
   }
 
+  // Файл тот, что размечали? Если задана ожидаемая длительность — сверяем с ней;
+  // иначе минимальная проверка: последняя отбивка должна попадать внутрь ролика.
+  demoValid(v) {
+    const d = v.duration;
+    if (!isFinite(d) || d <= 0) return true;
+    if (DEMO.duration && Math.abs(d - DEMO.duration) > DEMO.tolerance) return false;
+    const last = INTERSTITIALS[INTERSTITIALS.length - 1];
+    return d > (last.resumeAt !== undefined ? last.resumeAt : last.at) + 0.5;
+  }
+
   checkInterstitial(v) {
+    if (!this.state.demoOk) return;
     const t = v.currentTime;
     const skip = SKIPS.find((s) => t >= s.from && t < s.to);
     if (skip) { v.currentTime = skip.to; return; }
@@ -1258,7 +1319,7 @@ class Component extends DCLogic {
 
   seekChapter(i) {
     const v = this.els && this.els.video;
-    if (!v) return;
+    if (!v || !this.state.demoOk) return;
     const item = INTERSTITIALS[i];
     this.timers.forEach(clearTimeout); this.timers = [];
     this.itl = false;

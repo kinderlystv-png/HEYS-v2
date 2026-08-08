@@ -38,6 +38,25 @@ export default function useReveal(rootRef: RefObject<HTMLElement | null>) {
 
     let poll = 0;
     let failsafe = 0;
+    let scrollFrame = 0;
+
+    // Прокрутка дёргает тот же проход, что крутится по таймеру: без этого при
+    // быстрой прокрутке блок появлялся с задержкой до одного тика (250 мс) — он
+    // уже в кадре, а всё ещё прозрачный. Объявлено функцией, а не константой:
+    // снять слушатель нужно и в аварийном пути `showAll`, который стоит выше.
+    function handleScroll() {
+      if (scrollFrame) return;
+      scrollFrame = window.requestAnimationFrame(() => {
+        scrollFrame = 0;
+        sweep();
+      });
+    }
+
+    function stopScrollWatch() {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollFrame) window.cancelAnimationFrame(scrollFrame);
+      scrollFrame = 0;
+    }
 
     const show = (el: HTMLElement) => {
       el.style.opacity = '1';
@@ -47,6 +66,7 @@ export default function useReveal(rootRef: RefObject<HTMLElement | null>) {
     const showAll = () => {
       window.clearInterval(poll);
       window.clearTimeout(failsafe);
+      stopScrollWatch();
       for (const el of nodes) show(el);
     };
 
@@ -78,7 +98,7 @@ export default function useReveal(rootRef: RefObject<HTMLElement | null>) {
       return;
     }
 
-    poll = window.setInterval(() => {
+    const sweep = () => {
       try {
         const limit = window.innerHeight * VISIBLE_RATIO;
         pending = pending.filter((el) => {
@@ -89,15 +109,20 @@ export default function useReveal(rootRef: RefObject<HTMLElement | null>) {
         if (pending.length === 0) {
           window.clearInterval(poll);
           window.clearTimeout(failsafe);
+          stopScrollWatch();
         }
       } catch {
         showAll();
       }
-    }, POLL_MS);
+    };
+
+    poll = window.setInterval(sweep, POLL_MS);
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
       window.clearInterval(poll);
       window.clearTimeout(failsafe);
+      stopScrollWatch();
     };
   }, [rootRef]);
 }

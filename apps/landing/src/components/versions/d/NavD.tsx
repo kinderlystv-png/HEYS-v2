@@ -12,7 +12,7 @@
 import { useEffect, useRef } from 'react';
 
 import { LogoD } from './LogoD';
-import { D_CTA_HREF, D_CTA_LABEL, D_CTA_NOTE, D_NAV_LINKS } from './nav';
+import { D_CTA_HREF, D_CTA_LABEL, D_CTA_LABEL_SHORT, D_CTA_NOTE, D_NAV_LINKS } from './nav';
 
 // Порог бургера (1180px) задан в разметке классом `min-[1181px]:` — держать
 // его ещё и числом здесь означало бы две правды об одном брейкпоинте.
@@ -44,16 +44,29 @@ export default function NavD({ menuOpen, onOpenMenu, onCloseMenu }: NavDProps) {
       const hero = document.getElementById('hero-d');
       const heroEnd = hero ? hero.offsetTop + hero.offsetHeight : window.innerHeight;
 
+      // Широкий экран: липкой пилюли там нет (она живёт до
+      // `STICKY_CTA_MAX_WIDTH`), и если шапка ещё и прячется при чтении вниз,
+      // человек, дочитавший тарифы, остаётся без единой кнопки на экране. На
+      // такой высоте прятать панель незачем — 56 px ничего не поджимают.
+      const wide = window.innerWidth > STICKY_CTA_MAX_WIDTH;
+
       const header = headerRef.current;
       if (header) {
         if (y <= heroEnd + 40) {
           headerShownRef.current = false;
+        } else if (wide) {
+          headerShownRef.current = true;
         } else if (delta < -4) {
           headerShownRef.current = true;
         } else if (delta > 6) {
           headerShownRef.current = false;
         }
-        header.style.transform = headerShownRef.current ? 'translateY(0)' : 'translateY(-100%)';
+        // Пишем именно `translate`, а не `transform`: стартовое состояние задано
+        // классом Tailwind (`-translate-y-full`), а в Tailwind v4 это отдельное
+        // CSS-свойство `translate`. Инлайновый `transform` его не заменяет, а
+        // складывается с ним — панель оставалась сдвинутой на -100% и не
+        // показывалась ни разу.
+        header.style.translate = headerShownRef.current ? '0 0' : '0 -100%';
       }
 
       const sticky = stickyCtaRef.current;
@@ -63,8 +76,11 @@ export default function NavD({ menuOpen, onOpenMenu, onCloseMenu }: NavDProps) {
         const vh = window.innerHeight;
         const from = pain ? pain.offsetTop - vh * 0.5 : heroEnd;
         const to = trial ? trial.offsetTop - vh * 0.9 : Number.POSITIVE_INFINITY;
-        const visible = window.innerWidth <= STICKY_CTA_MAX_WIDTH && y > from && y < to;
-        sticky.style.transform = visible ? 'translateY(0)' : 'translateY(140%)';
+        const visible = !wide && y > from && y < to;
+        // `translate`, а не `transform` — по той же причине, что и у шапки.
+        // 180% вместо прежних 140%: пилюля ниже прежней кнопки, а её тень
+        // (34px размытия) прежняя, и на 140% край подсветки виден у кромки.
+        sticky.style.translate = visible ? '0 0' : '0 180%';
         sticky.style.pointerEvents = visible ? 'auto' : 'none';
       }
     };
@@ -113,12 +129,26 @@ export default function NavD({ menuOpen, onOpenMenu, onCloseMenu }: NavDProps) {
   return (
     <>
       {/* Липкая шапка после героя. */}
+      {/* Начальное «спрятано» задаётся инлайном, а не классом `-translate-y-full`.
+          Причина: в Tailwind v4 утилиты сдвига пишут `translate` через свои
+          `@property`-переменные, и инлайновое значение того же свойства до них
+          не достаёт — панель оставалась на −100% даже при `translate: none`
+          в `style`. Одно место правды: и старт, и переключение — инлайн. */}
       <div
         ref={headerRef}
-        className="fixed inset-x-0 top-0 z-40 -translate-y-full border-b border-white/10 bg-[#0A1119]/95 backdrop-blur transition-transform duration-[350ms] ease-out"
+        style={{ translate: '0 -100%' }}
+        className="fixed inset-x-0 top-0 z-40 border-b border-[rgba(16,24,38,0.08)] bg-[rgba(247,246,242,0.88)] backdrop-blur-[14px] transition-transform duration-[350ms] ease-out"
       >
-        <div className="mx-auto flex w-full max-w-[1240px] items-center justify-between gap-6 px-5 py-3.5 sm:px-9">
-          <a href="#hero-d" aria-label="HEYS — наверх">
+        <div className="mx-auto flex w-full max-w-[1240px] items-center justify-between gap-6 px-5 py-3 sm:px-9">
+          {/* `LogoD` жёстко белый (рассчитан на тёмный герой и бургер), а эта
+              панель светлая. Перекрашиваем его снаружи, из места применения:
+              переписывать сам логотип нельзя — он используется ещё в трёх
+              тёмных местах, и там белый правильный. */}
+          <a
+            href="#hero-d"
+            aria-label="HEYS — наверх"
+            className="[&>span>span]:text-[#8A94A2] [&>span]:text-[#101826]"
+          >
             <LogoD size={18} />
           </a>
 
@@ -131,7 +161,9 @@ export default function NavD({ menuOpen, onOpenMenu, onCloseMenu }: NavDProps) {
                   event.preventDefault();
                   jumpTo(link.href);
                 }}
-                className="whitespace-nowrap text-[13px] text-white/72 transition-colors hover:text-white"
+                // Прототипный #5B6472 над тёмной карточкой заявки даёт 4.35:1 —
+                // на волос ниже AA. #565F6C визуально тот же серый, но 4.70:1.
+                className="whitespace-nowrap text-[13px] text-[#565F6C] transition-colors hover:text-[#101826]"
               >
                 {link.label}
               </a>
@@ -141,9 +173,9 @@ export default function NavD({ menuOpen, onOpenMenu, onCloseMenu }: NavDProps) {
           <div className="flex items-center gap-3">
             <a
               href={D_CTA_HREF}
-              className="whitespace-nowrap rounded-full border border-white/32 px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-white/10"
+              className="whitespace-nowrap rounded-full bg-[#12283E] px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-[#1B3A58]"
             >
-              {D_CTA_LABEL}
+              {D_CTA_LABEL_SHORT}
             </a>
             <button
               type="button"
@@ -152,8 +184,8 @@ export default function NavD({ menuOpen, onOpenMenu, onCloseMenu }: NavDProps) {
               onClick={onOpenMenu}
               className="flex h-11 w-11 shrink-0 flex-col items-center justify-center gap-1.5 min-[1181px]:hidden"
             >
-              <span aria-hidden="true" className="block h-0.5 w-5 bg-white" />
-              <span aria-hidden="true" className="block h-0.5 w-5 bg-white" />
+              <span aria-hidden="true" className="block h-0.5 w-5 rounded-[2px] bg-[#101826]" />
+              <span aria-hidden="true" className="block h-0.5 w-5 rounded-[2px] bg-[#101826]" />
             </button>
           </div>
         </div>
@@ -162,16 +194,25 @@ export default function NavD({ menuOpen, onOpenMenu, onCloseMenu }: NavDProps) {
       {/* Липкий CTA — только на узких экранах и только между узнаванием и формой. */}
       <div
         ref={stickyCtaRef}
-        className="fixed inset-x-0 bottom-0 z-30 translate-y-[140%] bg-gradient-to-t from-[#0A1119] via-[#0A1119]/95 to-transparent px-5 pb-5 pt-8 transition-transform duration-300 ease-out"
-        style={{ pointerEvents: 'none' }}
+        className="fixed inset-x-0 bottom-4 z-30 mx-auto w-fit max-w-[calc(100%-32px)] transition-transform duration-300 ease-out"
+        style={{ translate: '0 180%', pointerEvents: 'none' }}
       >
+        {/* Светлый контур в 1px — не украшение, а лечение коллизии: пилюля
+            проезжает над тёмной плашкой «Следующий шаг» в блоке недели, где тот
+            же `#12283E`, и без контура её силуэт растворяется в фоне (тень не
+            помогает — она тоже тёмная). На светлых секциях линия по краю тёмной
+            пилюли не читается вовсе. Прозрачность 0.22, а не чистый белый:
+            белый в упор дал бы мыльный ореол на светлом фоне. Контур сделан
+            вторым, внутренним слоем той же тени, а не утилитой `ring-*`: в
+            Tailwind v4 `ring` с произвольной прозрачностью здесь не собирался в
+            CSS, и рамки просто не было. */}
         <a
           href={D_CTA_HREF}
-          className="flex w-full items-center justify-center rounded-[16px] bg-white px-6 py-4 text-[15px] font-semibold text-[#12283E] shadow-[0_14px_34px_rgba(10,17,25,0.4)]"
+          className="flex items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[#12283E] px-[26px] py-[14px] text-[14px] font-semibold text-white shadow-[0_14px_34px_rgba(10,17,25,0.4),inset_0_0_0_1px_rgba(255,255,255,0.22)]"
         >
-          {D_CTA_LABEL} →
+          {D_CTA_LABEL_SHORT}
+          <span aria-hidden="true">→</span>
         </a>
-        <p className="mt-2 text-center text-[12px] text-white/55">{D_CTA_NOTE}</p>
       </div>
 
       {/* Бургер-оверлей. */}

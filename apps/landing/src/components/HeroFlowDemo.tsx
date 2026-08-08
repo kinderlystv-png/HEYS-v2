@@ -236,7 +236,6 @@ export default function HeroFlowDemo({
           interstitials: data.interstitials,
           chapters: data.chapters ?? [],
         };
-        if (showChapters) setChapters(markupRef.current.chapters);
         // Файл мог загрузиться раньше разметки — перепроверяем длительность.
         const duration = videoRef.current?.duration;
         if (duration && Number.isFinite(duration)) {
@@ -244,6 +243,10 @@ export default function HeroFlowDemo({
             Math.abs(duration - markupRef.current.expectedDuration) <=
             markupRef.current.durationTolerance;
         }
+        // Точки-главы показываем только вместе с годной разметкой: их подписи и
+        // таймкоды сняты по тому же монтажу, что отбивки. На чужом файле они
+        // перематывали бы в произвольные места и обещали сцены, которых нет.
+        if (showChapters) setChapters(markupUsableRef.current ? markupRef.current.chapters : []);
       })
       .catch(() => {
         /* сеть или кэш — работаем на встроенной разметке */
@@ -263,10 +266,12 @@ export default function HeroFlowDemo({
     if (!markupUsableRef.current) {
       console.warn(
         `[HeroFlowDemo] Длительность ролика ${duration.toFixed(2)}s не совпала с разметкой ` +
-          `${markup.expectedDuration}s — отбивки и пропуски отключены.`,
+          `${markup.expectedDuration}s — отбивки, пропуски и точки-главы отключены.`,
       );
     }
-  }, []);
+    // Точки-главы гаснут вместе с остальной разметкой — см. комментарий выше.
+    if (showChapters) setChapters(markupUsableRef.current ? markup.chapters : []);
+  }, [showChapters]);
 
   /** Клик по точке-главе: перематываем на начало главы и сбрасываем отбивку. */
   const jumpToChapter = useCallback(

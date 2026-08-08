@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { LEGAL_DOCS } from '../../config/legal-versions'
@@ -32,26 +32,41 @@ export default function PurchaseModal({ isOpen, onClose, planName, planPrice }: 
     const [errorMessage, setErrorMessage] = useState('')
     const [utmParams, setUtmParams] = useState<UTMParams>({})
     const [consentAccepted, setConsentAccepted] = useState(false)
+    const dialogRef = useRef<HTMLDivElement | null>(null)
+    // Куда вернуть фокус после закрытия и каким был скролл страницы до открытия.
+    const returnFocusRef = useRef<HTMLElement | null>(null)
+    const previousOverflowRef = useRef('')
 
     // Парсим UTM при открытии
     useEffect(() => {
-        if (isOpen && typeof window !== 'undefined') {
-            const params = new URLSearchParams(window.location.search)
-            setUtmParams({
-                utm_source: params.get('utm_source') || undefined,
-                utm_medium: params.get('utm_medium') || undefined,
-                utm_campaign: params.get('utm_campaign') || undefined,
-                utm_term: params.get('utm_term') || undefined,
-                utm_content: params.get('utm_content') || undefined,
-            })
-            // Блокируем скролл фона
-            document.body.style.overflow = 'hidden'
-        } else {
-            document.body.style.overflow = ''
-        }
+        if (!isOpen || typeof window === 'undefined') return
+
+        const params = new URLSearchParams(window.location.search)
+        setUtmParams({
+            utm_source: params.get('utm_source') || undefined,
+            utm_medium: params.get('utm_medium') || undefined,
+            utm_campaign: params.get('utm_campaign') || undefined,
+            utm_term: params.get('utm_term') || undefined,
+            utm_content: params.get('utm_content') || undefined,
+        })
+
+        // Блокируем скролл фона, запомнив прежнее значение. Сбрасывать в пустую
+        // строку нельзя: модалку открывают в том числе поверх открытого меню,
+        // которое само держит `overflow: hidden`, — и после закрытия модалки
+        // страница под меню начинала прокручиваться.
+        previousOverflowRef.current = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+
+        // Фокус уходит внутрь диалога: иначе клавиатура остаётся на странице под
+        // ним, и Tab уводит в фон вместо полей формы.
+        returnFocusRef.current = document.activeElement as HTMLElement | null
+        const focusTimer = window.setTimeout(() => dialogRef.current?.focus(), 30)
 
         return () => {
-            document.body.style.overflow = ''
+            window.clearTimeout(focusTimer)
+            document.body.style.overflow = previousOverflowRef.current
+            returnFocusRef.current?.focus?.()
+            returnFocusRef.current = null
         }
     }, [isOpen])
 
@@ -136,7 +151,14 @@ export default function PurchaseModal({ isOpen, onClose, planName, planPrice }: 
             />
 
             {/* Modal Window */}
-            <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div
+                ref={dialogRef}
+                role="dialog"
+                aria-modal="true"
+                aria-label={`Оформление: ${planName}`}
+                tabIndex={-1}
+                className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 focus:outline-none"
+            >
                 {/* Close Button */}
                 <button
                     onClick={onClose}
