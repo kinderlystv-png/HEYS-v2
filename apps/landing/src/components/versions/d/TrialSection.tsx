@@ -17,13 +17,18 @@ import TrialQuiz from '@/components/quiz/TrialQuiz';
 const PLUS_PATTERN =
   "url(\"data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14 5.5c.9 4.1.9 4.1 5 4.9-4.1.9-4.1.9-5 5-.9-4.1-.9-4.1-5-5 4.1-.8 4.1-.8 5-4.9Z' fill='%23FFFFFF'/%3E%3C/svg%3E\")";
 
+// Паддинги на узких экранах меньше общесекционных. На 390px внутренние 52/48
+// плюс 32 у контейнера съедали 96px ширины — почти четверть экрана уходила в
+// поля, и чипы «Без привязки карты» / «Без автосписаний» вставали в столбик.
+// Порог 560px, а не `sm`: до него карточке хватает места, а ниже арифметика
+// полей начинает съедать содержимое.
 export default function TrialSection() {
   return (
-    <section id="trial" className="bg-white px-8 pb-[104px] pt-[84px]">
+    <section id="trial" className="bg-white px-5 pb-[104px] pt-[84px] min-[561px]:px-8">
       <div className="mx-auto w-full max-w-[760px]">
         <div
           data-reveal
-          className="relative overflow-hidden rounded-[28px] bg-[#0E1D2E] px-8 py-12 sm:px-12 sm:py-[52px]"
+          className="relative overflow-hidden rounded-[22px] bg-[#0E1D2E] px-6 py-8 min-[561px]:rounded-[28px] min-[561px]:px-8 min-[561px]:py-12 sm:px-12 sm:py-[52px]"
         >
           <div
             aria-hidden="true"
@@ -55,7 +60,7 @@ export default function TrialSection() {
               {['Без привязки карты', 'Без автосписаний'].map((chip) => (
                 <span
                   key={chip}
-                  className="whitespace-nowrap rounded-full border border-white/25 px-4 py-2 text-[13px] text-white/85"
+                  className="whitespace-nowrap rounded-full border border-white/25 px-3 py-[7px] text-[12.5px] text-white/85 min-[561px]:px-4 min-[561px]:py-2 min-[561px]:text-[13px]"
                 >
                   {chip}
                 </span>

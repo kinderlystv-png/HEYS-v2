@@ -495,8 +495,9 @@ export default function PricingSectionContent() {
             <section className="py-4">
               <h3 className="text-sm font-semibold text-gray-900">Связь и границы</h3>
               <p className="mt-2 text-[13px] leading-relaxed text-gray-600">
-                Сообщения обрабатываются в часы сопровождения 09:00–21:00 МСК. Ориентир первой
-                реакции — 1–2 часа; полный разбор может потребовать больше времени.
+                Куратор на связи ежедневно, 09:00–21:00 МСК, включая выходные. Ориентир ответа и
+                внесения данных в дневник — 1–2 часа; полный разбор может потребовать больше
+                времени.
               </p>
               <p className="mt-2 text-[13px] font-medium leading-relaxed text-gray-700">
                 Это не круглосуточная или экстренная связь. HEYS не заменяет врача, реабилитолога

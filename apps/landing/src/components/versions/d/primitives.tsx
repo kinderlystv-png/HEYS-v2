@@ -133,6 +133,7 @@ export function PrimaryCta({
 }) {
   return (
     <a
+      data-own-cta
       href={href}
       className={`inline-flex items-center justify-center rounded-[14px] bg-[#12283E] px-[26px] py-[14px] text-[15px] font-semibold text-white shadow-[0_12px_30px_rgba(18,40,62,0.18)] transition-transform duration-[250ms] hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(18,40,62,0.24)] ${className}`}
     >

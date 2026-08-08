@@ -227,7 +227,7 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
 
   if (step === 'sent') {
     return (
-      <div className="rounded-3xl border border-[rgba(16,24,38,0.1)] bg-white p-10">
+      <div className="rounded-[22px] border border-[rgba(16,24,38,0.1)] bg-white px-[22px] py-7 min-[561px]:rounded-3xl min-[561px]:p-10">
         <h3 className="text-[clamp(18px,2vw,22px)] font-semibold text-[#101826]">
           Заявка получена
         </h3>
@@ -246,7 +246,7 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
   }
 
   return (
-    <div className="rounded-3xl border border-[rgba(16,24,38,0.1)] bg-white p-8 sm:p-10">
+    <div className="rounded-[22px] border border-[rgba(16,24,38,0.1)] bg-white px-[22px] py-7 min-[561px]:rounded-3xl min-[561px]:p-8 sm:p-10">
       {step === 'intro' ? (
         <div>
           <h3 className="text-[clamp(17px,1.9vw,20px)] font-semibold leading-[1.35] text-[#101826]">
@@ -256,6 +256,15 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
             Один вопрос — и вы увидите, какой сценарий чаще всего сбивает режим именно у вас. Это не
             тест на силу воли и занимает меньше минуты.
           </p>
+          {/* Иерархию несёт ширина: основная кнопка растёт (`flex:1 1 220px`
+              в макете), выход остаётся по контенту (`flex:0 1 auto`). Ровно
+              это и делает выход запасным — равные по размеру кнопки читаются
+              как равные по весу варианты.
+              
+              `items-start` здесь не подходит, хотя тоже даёт ширину по
+              контенту: он сжимает обе, и разница между ними падает до 15px —
+              на глаз это одинаковые кнопки. Растягивать нужно именно
+              основную. */}
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <button
               type="button"
@@ -264,16 +273,16 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
                 track('quiz_start');
                 setStep('trigger');
               }}
-              className="rounded-[14px] bg-[#12283E] px-6 py-3.5 text-[15px] font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5"
+              className="w-full sm:flex-1 rounded-[14px] bg-[#12283E] px-6 py-3.5 text-[15px] font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5"
             >
               Пройти короткий разбор →
             </button>
             <button
               type="button"
               onClick={() => setStep('form')}
-              className="rounded-[14px] border border-[rgba(16,24,38,0.18)] px-6 py-3.5 text-[15px] font-semibold text-[#101826] transition-colors hover:border-[rgba(16,24,38,0.32)]"
+              className="self-start sm:flex-none rounded-[14px] border border-[rgba(16,24,38,0.22)] px-6 py-3.5 text-[15px] font-semibold text-[#101826] transition-colors hover:border-[rgba(16,24,38,0.32)]"
             >
-              Просто оставить контакт
+              Просто заполнить форму
             </button>
           </div>
         </div>
@@ -592,6 +601,7 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
           ) : null}
 
           <button
+            data-own-cta
             type="submit"
             disabled={loading}
             className="mt-6 w-full rounded-[14px] bg-[#12283E] px-6 py-4 text-[15px] font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70"

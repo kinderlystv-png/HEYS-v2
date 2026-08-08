@@ -11,13 +11,16 @@
 // Цены берутся из `PRICING` — единого источника. Хардкод здесь развалил бы
 // синхронизацию с legal-документами (pre-commit `check-pricing-sync`).
 
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 
-import { D_CTA_HREF, D_CTA_LABEL } from './nav';
-import { Accent, Caption, PrimaryCta, Section, SectionTitle } from './primitives';
+import { playfair } from './fonts';
+import { D_CTA_HREF, D_CTA_LABEL_SHORT } from './nav';
+import { Accent, Section, SectionTitle } from './primitives';
+import { D_STAR_TEXTURE, D_TARIFF_HEADER, D_TEXT_CAPTION_AA } from './theme';
 
 import PurchaseModal from '@/components/modals/PurchaseModal';
-import { MARKET_CONSULTATION, PRICING } from '@/config/pricing';
+import { PRICING } from '@/config/pricing';
 
 /**
  * Пункты хранятся парой «ведущая часть — продолжение»: первая набирается
@@ -32,43 +35,149 @@ import { MARKET_CONSULTATION, PRICING } from '@/config/pricing';
  * существительное. Подлежащее опущено намеренно — двумя строками выше стоит
  * «Дневник ведёт куратор, который вас знает».
  */
-const PRO_WEEK: ReadonlyArray<[string, string]> = [
-  ['Заносит в дневник', 'всё, что вы прислали.'],
-  ['Спрашивает,', 'что стояло за днём, а не достраивает за вас.'],
-  ['Видит', 'питание, сон, нагрузку и график в одной картине — и помнит, как было неделю назад.'],
-  ['Помогает решить,', 'что делать, если меняются планы или график.'],
-  ['Возвращает в ритм после сбоя', '— без необходимости начинать всё заново.'],
-];
+/**
+ * Три карточки собраны одним каркасом: шапка с ценой, подзаголовок курсивом,
+ * полоса чисел, список, необязательные блоки Pro, кнопка с подписью. Разное
+ * наполнение при одинаковой конструкции — то, ради чего ряд читается как выбор
+ * из трёх вариантов, а не как три разных объявления (пакет тарифов, § Каркас).
+ *
+ * Пункты списков хранятся парой «ведущее действие — продолжение»: первая часть
+ * плотнее и темнее. Это навигация, а не украшение — список одним весом читается
+ * ровной массой, по которой нельзя скользнуть взглядом, а именно так его и
+ * читают при выборе тарифа. Выделять целую мысль в каждом пункте нельзя:
+ * выделено всё — не выделено ничего.
+ *
+ * Подлежащее в пунктах опущено намеренно. У Pro его даёт подзаголовок
+ * («Дневник ведёт куратор, который вас знает»), а у Pro Спорт слово «тренер»
+ * запрещено прямо: как только оно появляется, читается второй исполнитель, и
+ * УТП тарифа — один специалист без передачи между двумя — рушится.
+ */
+interface Tariff {
+  id: 'self' | 'pro' | 'proSport';
+  badge: string;
+  name: string;
+  price: string;
+  period: string;
+  /** Подзаголовок Playfair italic: обычная часть + акцентная. */
+  subtitle: [string, string];
+  /** Полоса чисел. У Self её нет — вместо неё `fit`. */
+  metrics?: ReadonlyArray<{ value: string; caption: ReactNode }>;
+  /** Только Self: честных чисел у тарифа без куратора нет. */
+  fit?: { title: string; text: string };
+  listTitle: string;
+  items: ReadonlyArray<[string, string]>;
+  cta: { label: string; href?: string; note: string };
+}
 
-// Здесь ведущая часть — не действие куратора, а то, что достаётся клиенту:
-// блок отвечает на другой вопрос («что я получу»), и глагол первым звучал бы
-// натужно.
-const PRO_RESULT: ReadonlyArray<[string, string]> = [
-  ['Разбор недели 20–45 минут', '— голосом или перепиской, как вам удобнее.'],
-  ['Видно,', 'что сработало и что стоит поменять на следующей неделе.'],
-  ['Остаются', 'заполненный дневник, динамика и понятный итог недели.'],
-];
+/**
+ * Слово «ориентир» — видимая ссылка на § 5.4 оферты, а не обычный текст.
+ * Тильда читается как «примерно полтора часа», реальный потолок — сутки, и эту
+ * разницу несёт только ссылка. Оговорки в карточке нет: ей место в оферте,
+ * витрина не оправдывается (решение владельца 2026-08-08).
+ */
+function OfferRef({ children }: { children: ReactNode }) {
+  return (
+    <a
+      href="/legal/user-agreement#5-4"
+      className="text-[#2467A3] underline decoration-[0.5px] underline-offset-2"
+    >
+      {children}
+    </a>
+  );
+}
 
-// Self — витрина приложения и вход в воронку. Без состава рядом с восемью
-// строками Pro Спорт карточка читается как «брать не надо».
-const SELF_INCLUDES = [
-  'Дневник питания и КБЖУ',
-  'Динамика по дням и неделям',
-  'Своя база продуктов и история',
-  'Тренировочный дневник',
-];
-
-// У Pro Спорт самый высокий порог решения на странице, поэтому состав услуги
-// показан целиком, а не двумя абзацами.
-const PRO_SPORT_INCLUDES = [
-  'Всё сопровождение Pro',
-  'Стартовая встреча до 60 минут',
-  'Персональная программа тренировок на четыре недели',
-  'Тренер ведёт тренировочный дневник и видит, что реально выполнено',
-  'Один общий созвон по питанию и тренировкам 45–60 минут каждую неделю',
-  'Тренер проверяет технику упражнений вашей программы по коротким видео',
-  'Если обстоятельства меняются, тренер помогает перестроить ближайшую тренировку',
-  'Тренер обновляет программу с учётом того, как вы реально выполняете тренировки',
+const TARIFFS: ReadonlyArray<Tariff> = [
+  {
+    id: 'self',
+    badge: 'Только приложение',
+    name: PRICING.base.name,
+    price: PRICING.base.price,
+    period: PRICING.base.period,
+    subtitle: ['Дневник ', 'ведёте сами'],
+    // Полоса сохраняется, но работа у неё другая: «0 разборов» писать нельзя,
+    // а придуманные числа обесценили бы числа у Pro. Честное «вы уже умеете
+    // считать» превращает дешёвый тариф в осознанный выбор, а не в огрызок.
+    fit: {
+      title: 'Кому подходит',
+      text: 'Вы уже умеете считать и вести записи — нужен только удобный инструмент, без сопровождения.',
+    },
+    listTitle: 'Что внутри',
+    items: [
+      ['Дневник питания', 'и КБЖУ'],
+      ['Динамика', 'по дням и неделям'],
+      ['Своя база продуктов', 'и тренировочный дневник'],
+    ],
+    cta: {
+      label: 'Начать в HEYS',
+      href: 'https://app.heyslab.ru',
+      note: 'Регистрация и оплата в приложении',
+    },
+  },
+  {
+    id: 'pro',
+    badge: 'Основной формат',
+    name: PRICING.pro.name,
+    price: PRICING.pro.price,
+    period: PRICING.pro.period,
+    subtitle: ['Дневник ведёт куратор, ', 'который вас знает'],
+    metrics: [
+      // «30 дней подряд» обеспечено офертой 1.10 § 5.4: режим ежедневный,
+      // включая выходные и праздники. До бампа версии число висело на
+      // нерасшифрованном «в дни и объёме тарифа» и ставить его было нельзя.
+      { value: '30', caption: 'дней подряд дневник ведёт куратор' },
+      {
+        value: '~1–2 ч',
+        caption: (
+          <>
+            <OfferRef>ориентир</OfferRef> ответа и записи
+          </>
+        ),
+      },
+      { value: '4', caption: 'разбора недели, каждые 7 дней' },
+    ],
+    listTitle: 'По ходу недели',
+    // Пятый пункт про сбой вынесен ниже отдельным блоком: конец перечня —
+    // слабейшая позиция, а строка замыкает секцию 01 и должна читаться как
+    // ответ на неё, а не как ещё один пункт состава.
+    items: [
+      ['Заносит в дневник', 'всё, что вы прислали'],
+      ['Спрашивает,', 'что стояло за днём, а не достраивает за вас'],
+      ['Видит', 'питание, сон и нагрузку в одной картине'],
+      ['Помогает решить,', 'что делать, если меняются планы или график'],
+    ],
+    cta: {
+      label: D_CTA_LABEL_SHORT,
+      href: D_CTA_HREF,
+      note: 'Около 270 ₽ в день · без карты и автосписаний',
+    },
+  },
+  {
+    id: 'proSport',
+    badge: 'Пилот · до 4 участников',
+    name: PRICING.proPlus.name,
+    price: PRICING.proPlus.price,
+    period: PRICING.proPlus.period,
+    subtitle: ['Питание и тренировки — ', 'у одного специалиста'],
+    metrics: [
+      { value: '4', caption: 'недели персональной программы' },
+      { value: '45–60', caption: 'минут общий созвон каждую неделю' },
+      // «∞ приёмов в день» пересказывает оферту (ведение дневника по
+      // присланным данным), а не обещает объём сверх неё. Прежнее «~90»
+      // снято как обещание, которого сервис не давал: объём задаёт клиент.
+      { value: '∞', caption: 'приёмов в день — вносим всё, что прислали' },
+    ],
+    listTitle: 'Дополнительно к Pro',
+    items: [
+      ['Всё сопровождение Pro', '— дневник ведёт куратор'],
+      ['Стартовая встреча до 60 минут', '— цель, график и что нужно учесть'],
+      [
+        'Один специалист на питание и тренировки',
+        '— тренировочный дневник ведёт тот же человек, что ведёт питание',
+      ],
+      ['Проверяет технику', 'по коротким видео'],
+    ],
+    cta: { label: 'Обсудить Pro Спорт', note: 'Оплата после личного согласования' },
+  },
 ];
 
 // Сравнение самих тарифов, а не сравнение с трекером: списком подряд разницу
@@ -168,333 +277,382 @@ export default function PricingD() {
 
   return (
     <Section id="pricing" index="06" label="Форматы и тарифы" tone="warm">
-      <div data-reveal>
-        <SectionTitle>
-          Какую помощь вы хотите <Accent>получить?</Accent>
-        </SectionTitle>
-      </div>
+      {/* Отрицательные поля гасят общесекционные `px-8` и ставят 20px: на 390px
+          32px секции плюс 28–44px внутри карточки отдавали полям 39% ширины, и
+          блок «После срыва» рендерился узким столбиком. Порог тот же 560px, что
+          и в секции заявки — арифметика полей у них одна. */}
+      <div className="-mx-3 min-[561px]:mx-0">
+        <div data-reveal>
+          <SectionTitle>
+            Какую помощь вы хотите <Accent>получить?</Accent>
+          </SectionTitle>
+        </div>
 
-      {/* Три тарифа строками, а не одним абзацем: это мостик перед подробными
+        {/* Три тарифа строками, а не одним абзацем: это мостик перед подробными
           карточками, и работает он только если различие считывается с одного
           взгляда. Сплошным текстом три названия сливались, и глазу приходилось
           разбирать предложение, чтобы понять, что вариантов вообще три.
           Выравнивание левое внутри центрированного блока — список читается
           сверху вниз, центрированные строки такой опоры не дают. */}
-      <ul
-        data-reveal
-        className="mx-auto mt-8 flex max-w-[440px] flex-col gap-2.5 text-left text-[14.5px] leading-[1.6] text-[#5B6472]"
-      >
-        {TIER_SUMMARY.map(([tier, what]) => (
-          <li key={tier}>
-            <span className="font-medium text-[#101826]">{tier}</span> — {what}
-          </li>
-        ))}
-      </ul>
+        <ul
+          data-reveal
+          className="mx-auto mt-8 flex max-w-[440px] flex-col gap-2.5 text-left text-[14.5px] leading-[1.6] text-[#5B6472]"
+        >
+          {TIER_SUMMARY.map(([tier, what]) => (
+            <li key={tier}>
+              <span className="font-medium text-[#101826]">{tier}</span> — {what}
+            </li>
+          ))}
+        </ul>
 
-      {/* Карточка Pro — основной формат. */}
-      <div
-        data-reveal
-        className="relative mt-14 rounded-[26px] border-[1.5px] border-[#12283E] bg-[linear-gradient(180deg,#FBFCFE_0%,#F3F7FB_100%)] px-8 py-10 shadow-[0_24px_60px_rgba(18,40,62,0.1)] sm:px-11"
-      >
-        <span className="absolute -top-[13px] left-11 rounded-full bg-[#12283E] px-4 py-1.5 text-[11px] font-semibold text-white">
-          Основной формат
-        </span>
+        {/* Ряд из трёх карточек. На узких экранах — колонкой, Pro первым:
+          основной формат должен встречаться раньше остальных, а на широких
+          он стоит в середине и держит центр ряда. */}
+        <div data-reveal className="mt-14 grid gap-5 lg:grid-cols-3">
+          {TARIFFS.map((tariff) => {
+            const dark = tariff.id !== 'self';
+            return (
+              <div
+                key={tariff.id}
+                className={`flex flex-col overflow-hidden rounded-[22px] bg-white min-[561px]:rounded-[26px] ${
+                  tariff.id === 'pro'
+                    ? 'shadow-[0_18px_44px_rgba(10,17,25,0.12)] lg:order-2'
+                    : tariff.id === 'proSport'
+                      ? 'border border-[#C9C7E0] lg:order-3'
+                      : 'border border-[rgba(16,24,38,0.12)] lg:order-1'
+                }`}
+              >
+                {/* Шапка. Орнамент на тёмных — та же звёздная текстура, что в
+                  герое и в карточке пробной недели: она держит поверхности в
+                  родстве и не даёт заливке читаться плоским прямоугольником.
+                  Решение зафиксировано, а не унаследовано (пакет тарифов №05). */}
+                <div
+                  className="relative px-5 pb-6 pt-6 min-[561px]:px-7"
+                  style={{ backgroundImage: D_TARIFF_HEADER[tariff.id] }}
+                >
+                  {dark ? (
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0"
+                      style={{
+                        backgroundImage: D_STAR_TEXTURE,
+                        backgroundSize: '56px',
+                        opacity: tariff.id === 'pro' ? 0.06 : 0.07,
+                      }}
+                    />
+                  ) : null}
 
-        <div className="grid gap-11 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A94A2]">
-              {PRICING.pro.name}
-            </p>
-            <p className="mt-4 flex items-baseline gap-2">
-              <span className="text-[clamp(30px,4.2vw,42px)] font-semibold leading-none text-[#101826]">
-                {PRICING.pro.price}
-              </span>
-              <span className="text-[15px] text-[#8A94A2]">{PRICING.pro.period}</span>
-            </p>
-            {/* Сравнение с разовым приёмом стоит здесь, а не отдельным блоком в
-                начале секции. Раньше секция открывалась сопоставлением
-                «Консультация / HEYS», и это выглядело чужеродно: заголовок
-                обещает выбор между НАШИМИ форматами, а первым делом человек
-                видел чужой. Механику того блока («видит день встречи, неделю
-                вспоминаете по памяти») страница и так объясняет — таблицей в
-                секции 02 и отдельным вопросом FAQ. Уникальной там была только
-                цена, и работает она ровно в одном месте: рядом с нашей, когда
-                человек решает, дорого это или нет.
-
-                Сравниваем форматы, а не качество чужой работы, и без имён
-                компаний — условия `COPY_VOICE` для рыночного диапазона.
-                Основание цифры — в `MARKET_CONSULTATION`. */}
-            <p className="mt-3 text-[13px] leading-[1.5] text-[#8A94A2]">
-              Около 270 ₽ в день — с ежедневным ведением дневника. Разовый приём у специалиста —{' '}
-              {MARKET_CONSULTATION.range}.
-            </p>
-
-            <p className="mt-7 text-[14px] font-semibold leading-[1.5] text-[color:var(--da)]">
-              Дневник ведёт куратор, который вас знает
-            </p>
-            <p className="mt-3 text-[14.5px] leading-[1.6] text-[#5B6472]">
-              Вы присылаете фото, текст или голос. Куратор ведёт дневник, помнит, что происходило в
-              течение недели, и помогает понять, что изменить, если планы или режим сбились.
-            </p>
-
-            <div className="mt-8">
-              <PrimaryCta href={D_CTA_HREF}>{D_CTA_LABEL}</PrimaryCta>
-              <Caption>0 ₽ · без карты и автосписаний</Caption>
-            </div>
-          </div>
-
-          <div className="grid gap-8 sm:grid-cols-2">
-            <div>
-              <h3 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#8A94A2]">
-                По ходу недели
-              </h3>
-              <ul className="mt-4 space-y-2.5">
-                {PRO_WEEK.map(([lead, rest]) => (
-                  <li
-                    key={lead}
-                    className="flex gap-2.5 text-[14.5px] leading-[1.5] text-[#3C4552]"
+                  {/* Высота строки задана явно: на другом наборе шрифтов текст
+                    бейджа выезжал за скругление пилюли. */}
+                  <span
+                    className={`relative inline-block rounded-full border px-3 py-[5px] text-[11px] font-semibold uppercase leading-[1.35] tracking-[0.14em] ${
+                      tariff.id === 'pro'
+                        ? 'border-[rgba(255,255,255,0.28)] text-[rgba(255,255,255,0.82)]'
+                        : tariff.id === 'proSport'
+                          ? 'border-[rgba(255,255,255,0.32)] text-[rgba(255,255,255,0.85)]'
+                          : 'border-[rgba(16,24,38,0.2)] text-[#5B6472]'
+                    }`}
                   >
-                    <span aria-hidden="true" className="shrink-0 text-[color:var(--da)]">
-                      —
-                    </span>
-                    <span>
-                      <span className="font-medium text-[#101826]">{lead}</span> {rest}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#8A94A2]">
-                Итог недели
-              </h3>
-              <ul className="mt-4 space-y-2.5">
-                {PRO_RESULT.map(([lead, rest]) => (
-                  <li
-                    key={lead}
-                    className="flex gap-2.5 text-[14.5px] leading-[1.5] text-[#3C4552]"
+                    {tariff.badge}
+                  </span>
+
+                  <p
+                    className={`relative mt-4 text-[clamp(20px,2.4vw,24px)] font-semibold leading-none ${
+                      dark ? 'text-white' : 'text-[#101826]'
+                    }`}
                   >
-                    <span aria-hidden="true" className="shrink-0 text-[color:var(--da)]">
-                      —
+                    {tariff.name}
+                  </p>
+                  <p className="relative mt-2 flex items-baseline gap-2">
+                    <span
+                      className={`text-[clamp(30px,3.4vw,41px)] font-semibold leading-none tracking-[-0.025em] ${
+                        dark ? 'text-white' : 'text-[#101826]'
+                      }`}
+                    >
+                      {tariff.price}
                     </span>
-                    <span>
-                      <span className="font-medium text-[#101826]">{lead}</span> {rest}
+                    <span
+                      className={`text-[14px] ${dark ? 'text-[rgba(255,255,255,0.62)]' : 'text-[#8A94A2]'}`}
+                    >
+                      {tariff.period}
                     </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
+                  </p>
+                </div>
 
-      {/* Self и Pro Спорт. */}
-      <div data-reveal className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        <div className="flex flex-col rounded-[22px] border border-[rgba(16,24,38,0.12)] bg-white px-8 py-9">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A94A2]">
-            {PRICING.base.name}
-          </p>
-          <p className="mt-4 flex items-baseline gap-2">
-            <span className="text-[clamp(24px,3.2vw,32px)] font-semibold leading-none text-[#101826]">
-              {PRICING.base.price}
-            </span>
-            <span className="text-[14px] text-[#8A94A2]">{PRICING.base.period}</span>
-          </p>
-          <p className="mt-3 text-[13.5px] font-semibold leading-[1.5] text-[color:var(--da)]">
-            Дневник ведёте сами
-          </p>
-          <p className="mt-3 text-[14.5px] leading-[1.6] text-[#5B6472]">
-            Питание, КБЖУ, тренировочные записи и динамика собраны в HEYS — без участия куратора.
-          </p>
-          <ul className="mt-4 space-y-2.5">
-            {SELF_INCLUDES.map((item) => (
-              <li key={item} className="flex gap-2.5 text-[13.5px] leading-[1.5] text-[#3C4552]">
-                <span aria-hidden="true" className="shrink-0 text-[color:var(--da)]">
-                  —
-                </span>
-                {item}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-auto pt-6">
-            <a
-              href="https://app.heyslab.ru"
-              className="inline-flex items-center justify-center rounded-[13px] border border-[rgba(16,24,38,0.18)] bg-white px-6 py-3 text-[14px] font-semibold text-[#101826] transition-colors hover:border-[rgba(16,24,38,0.3)]"
-            >
-              Начать в HEYS
-            </a>
-            <Caption>Регистрация и оплата в приложении</Caption>
-          </div>
+                {/* Спека пакета задаёт название 24px и число метрики 22px
+                  фиксированными; здесь они адаптивные с тем же максимумом.
+                  Правило масштаба версии D (`primitives.tsx`) выведено замером
+                  и старше этого пакета: заголовок секции на узких экранах
+                  падает до 30px, и фиксированные 24px дали бы 0.80 от него —
+                  карточка начала бы спорить с заголовком секции. На десктопе
+                  значения совпадают со спекой. */}
+                {/* Подзаголовок курсивом — на своей полосе: он объясняет, кто
+                  ведёт дневник, и это первое, что читают после цены. */}
+                <p
+                  className={`${playfair.className} border-b border-[rgba(16,24,38,0.08)] px-5 py-5 text-[17.5px] min-[561px]:px-7 font-medium italic leading-[1.4] text-[#101826] ${
+                    dark ? 'bg-[#FBFAF7]' : 'bg-white'
+                  }`}
+                >
+                  {tariff.subtitle[0]}
+                  <span style={{ color: tariff.id === 'proSport' ? '#4A4C7E' : 'var(--da)' }}>
+                    {tariff.subtitle[1]}
+                  </span>
+                </p>
+
+                {tariff.metrics ? (
+                  <div className="grid grid-cols-3 border-b border-[rgba(16,24,38,0.08)]">
+                    {tariff.metrics.map((metric, i) => (
+                      <div
+                        key={metric.value}
+                        className={`px-4 py-5 ${i > 0 ? 'border-l border-[rgba(16,24,38,0.08)]' : ''}`}
+                      >
+                        <p className="text-[clamp(19px,2.2vw,22px)] font-semibold leading-none text-[#101826]">
+                          {metric.value}
+                        </p>
+                        <p
+                          className="mt-2 text-[11.5px] leading-[1.3]"
+                          style={{ color: D_TEXT_CAPTION_AA }}
+                        >
+                          {metric.caption}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
+                {tariff.fit ? (
+                  <div className="border-b border-[rgba(16,24,38,0.08)] px-5 py-5 min-[561px]:px-7">
+                    <p
+                      className="text-[11px] font-semibold uppercase tracking-[0.16em]"
+                      style={{ color: D_TEXT_CAPTION_AA }}
+                    >
+                      {tariff.fit.title}
+                    </p>
+                    <p className="mt-2 text-[14px] leading-[1.5] text-[#3C4552]">
+                      {tariff.fit.text}
+                    </p>
+                  </div>
+                ) : null}
+
+                <div className="px-5 py-5 min-[561px]:px-7">
+                  {tariff.id === 'proSport' ? (
+                    <span className="inline-block rounded-full bg-[rgba(74,76,126,0.1)] px-[13px] py-1.5 text-[12px] font-semibold uppercase tracking-[0.1em] text-[#3E4069]">
+                      {tariff.listTitle}
+                    </span>
+                  ) : (
+                    <p
+                      className="text-[11px] font-semibold uppercase tracking-[0.16em]"
+                      style={{ color: D_TEXT_CAPTION_AA }}
+                    >
+                      {tariff.listTitle}
+                    </p>
+                  )}
+
+                  <ul className="mt-3">
+                    {tariff.items.map(([lead, rest]) => (
+                      <li
+                        key={lead}
+                        className="border-b border-[rgba(16,24,38,0.08)] py-2 text-[14px] leading-[1.5] text-[#3C4552] last:border-b-0"
+                      >
+                        <span className="font-semibold text-[#101826]">{lead}</span> {rest}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Ответ на секцию 01 — отдельным блоком, не пунктом списка.
+                  Речь сервиса — «после срыва»: форма «сорвались» обвиняет и
+                  остаётся только в собственной речи клиента в переписке 02. */}
+                {tariff.id === 'pro' ? (
+                  <div className="mx-5 mb-5 rounded-2xl bg-[#12283E] min-[561px]:mx-7 px-[17px] py-[15px]">
+                    <p
+                      className={`${playfair.className} text-[16px] italic leading-[1.35] text-white`}
+                    >
+                      После срыва — <span className="text-[#9DC7EE]">возвращает в ритм</span>
+                    </p>
+                    <p className="mt-2 text-[13px] leading-[1.5] text-[rgba(255,255,255,0.72)]">
+                      Без необходимости начинать всё заново — с той точки, где остановились.
+                    </p>
+                  </div>
+                ) : null}
+
+                {tariff.id === 'pro' ? (
+                  <div className="mx-5 mb-5 rounded-[15px] border min-[561px]:mx-7 border-[rgba(16,24,38,0.08)] bg-[#FBFAF7] px-4 py-4">
+                    <p
+                      className="text-[11px] font-semibold uppercase tracking-[0.16em]"
+                      style={{ color: D_TEXT_CAPTION_AA }}
+                    >
+                      Итог недели
+                    </p>
+                    <p className="mt-2 text-[13px] leading-[1.5] text-[#3C4552]">
+                      <span className="font-semibold text-[#101826]">Разбор 20–45 минут:</span> что
+                      сработало, что мешало и один шаг дальше. Остаются дневник, динамика и итог.
+                    </p>
+                  </div>
+                ) : null}
+
+                {/* `data-own-cta` — метка для липкой пилюли: пока такая кнопка в
+                  кадре, плавающая гаснет. На секции тарифов она дублировала бы
+                  одну из трёх кнопок и перекрывала две другие ровно в момент
+                  выбора (решение владельца 2026-08-08). */}
+                <div className="mt-auto px-5 pb-7 min-[561px]:px-7">
+                  {tariff.cta.href ? (
+                    <a
+                      data-own-cta
+                      href={tariff.cta.href}
+                      className={`flex items-center justify-center rounded-[15px] px-5 py-[15px] text-[14.5px] font-semibold transition-transform duration-[250ms] hover:-translate-y-0.5 ${
+                        tariff.id === 'pro'
+                          ? 'bg-[#12283E] text-white'
+                          : 'border border-[rgba(16,24,38,0.25)] bg-white text-[#101826]'
+                      }`}
+                    >
+                      {tariff.cta.label}
+                    </a>
+                  ) : (
+                    <button
+                      data-own-cta
+                      type="button"
+                      onClick={() => setProSportOpen(true)}
+                      className="flex w-full items-center justify-center rounded-[15px] bg-[#4A4C7E] px-5 py-[15px] text-[14.5px] font-semibold text-white transition-transform duration-[250ms] hover:-translate-y-0.5"
+                    >
+                      {tariff.cta.label}
+                    </button>
+                  )}
+                  <p
+                    className="mt-3 text-center text-[12px] leading-[1.4]"
+                    style={{ color: D_TEXT_CAPTION_AA }}
+                  >
+                    {tariff.cta.note}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Бейдж — абсолютный, верхом на рамке: так же, как «Основной формат» у
-            карточки Pro. Инлайн-чип в строке с названием делал карточки
-            разнотипными. */}
-        <div className="relative flex flex-col rounded-[22px] border border-[#C9C7E0] bg-[linear-gradient(180deg,#FCFBFF_0%,#F6F4FB_100%)] px-8 py-9">
-          <span className="absolute -top-3 left-[30px] rounded-full border border-[#C9C7E0] bg-white px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#4A4C7E]">
-            Пилот · до 4 участников
-          </span>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#4A4C7E]">
-            {PRICING.proPlus.name}
-          </p>
-          <p className="mt-4 flex items-baseline gap-2">
-            <span className="text-[clamp(24px,3.2vw,32px)] font-semibold leading-none text-[#101826]">
-              {PRICING.proPlus.price}
-            </span>
-            <span className="text-[14px] text-[#8A94A2]">{PRICING.proPlus.period}</span>
-          </p>
-          <p className="mt-3 text-[13px] leading-[1.5] text-[#8A94A2]">
-            Около 670 ₽ в день — питание и тренировки у одного специалиста
-          </p>
-          <p className="mt-3 text-[13.5px] font-semibold leading-[1.5] text-[#4A4C7E]">
-            Pro + персональный онлайн-тренер
-          </p>
-          <p className="mt-3 text-[14.5px] leading-[1.6] text-[#5B6472]">
-            Один специалист ведёт питание и тренировки, составляет программу под ваш график и видит,
-            как вы выполняете упражнения. Поэтому нагрузка, питание и восстановление не существуют
-            отдельно друг от друга.
-          </p>
-          <ul className="mt-4 space-y-2.5">
-            {PRO_SPORT_INCLUDES.map((item) => (
-              <li key={item} className="flex gap-2.5 text-[13.5px] leading-[1.5] text-[#3C4552]">
-                <span aria-hidden="true" className="shrink-0 text-[#4A4C7E]">
-                  —
-                </span>
-                {item}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-auto pt-6">
-            <button
-              type="button"
-              onClick={() => setProSportOpen(true)}
-              className="inline-flex items-center justify-center rounded-[13px] bg-[#4A4C7E] px-6 py-3 text-[14px] font-semibold text-white transition-transform duration-[250ms] hover:-translate-y-0.5"
-            >
-              Обсудить Pro Спорт
-            </button>
-            <Caption>Оплата после личного согласования</Caption>
-          </div>
-        </div>
-      </div>
-
-      {/* Второй слой: подробное сравнение и устройство сопровождения. Обычный
+        {/* Второй слой: подробное сравнение и устройство сопровождения. Обычный
           сценарий выбора проходится без него — на первом слое уже есть формат,
           цена и действие. */}
-      <div data-reveal className="mx-auto mt-10 max-w-[860px]">
-        <details className="group border-b border-[rgba(16,24,38,0.12)] first:border-t">
-          <summary className="flex cursor-pointer items-center justify-between gap-4 py-6 text-[16.5px] font-semibold leading-[1.4] text-[#101826] [&::-webkit-details-marker]:hidden">
-            Сравнить тарифы
-            <span
-              aria-hidden="true"
-              className="ml-4 inline-block h-2 w-2 shrink-0 rotate-45 border-b border-r border-[#9AA3B0] transition-transform duration-[250ms] group-open:rotate-[225deg]"
-            />
-          </summary>
-          {/* Спойлер свёрстан как FAQ — разделителями, без карточки-рамки. Так
+        <div data-reveal className="mx-auto mt-10 max-w-[860px]">
+          <details className="group border-b border-[rgba(16,24,38,0.12)] first:border-t">
+            <summary className="flex cursor-pointer items-center justify-between gap-4 py-6 text-[16.5px] font-semibold leading-[1.4] text-[#101826] [&::-webkit-details-marker]:hidden">
+              Сравнить тарифы
+              <span
+                aria-hidden="true"
+                className="ml-4 inline-block h-2 w-2 shrink-0 rotate-45 border-b border-r border-[#9AA3B0] transition-transform duration-[250ms] group-open:rotate-[225deg]"
+              />
+            </summary>
+            {/* Спойлер свёрстан как FAQ — разделителями, без карточки-рамки. Так
               второй слой выглядит одинаково по всей странице, а таблица
               получает всю ширину контейнера секции: четыре колонки помещаются
               целиком, и ни горизонтальная прокрутка, ни липкая колонка больше
               не нужны. Колонка Self узкая намеренно — в ней только «Вы», «Нет»
               и «Сами»; освободившееся отдано колонкам сопровождения. */}
-          {/* Таблица одна выходит за поля секции (`-mx-8`, компенсирует
+            {/* Таблица одна выходит за поля секции (`-mx-8`, компенсирует
               `px-8` секции) — так все четыре колонки помещаются без
               горизонтальной прокрутки. `px-1` — минимальный зазор до края
               экрана, чтобы текст первой и последней колонки не упирался в
               рамку устройства. На `sm` и выше поля не нужны — таблица уже
               умещается в карточку целиком. */}
-          <div className="-mx-8 px-1 pb-6 sm:mx-0 sm:px-0">
-            <table className="w-full table-fixed border-collapse text-left text-[12px] leading-[1.45]">
-              <colgroup>
-                <col className="w-[24%]" />
-                <col className="w-[13%]" />
-                <col className="w-[31.5%]" />
-                <col className="w-[31.5%]" />
-              </colgroup>
-              <thead>
-                <tr className="border-b border-[rgba(16,24,38,0.14)] align-bottom">
-                  {/* Колонка критериев липкая: при горизонтальной прокрутке
+            <div className="-mx-8 px-1 pb-6 sm:mx-0 sm:px-0">
+              <table className="w-full table-fixed border-collapse text-left text-[12px] leading-[1.45]">
+                <colgroup>
+                  <col className="w-[24%]" />
+                  <col className="w-[13%]" />
+                  <col className="w-[31.5%]" />
+                  <col className="w-[31.5%]" />
+                </colgroup>
+                <thead>
+                  <tr className="border-b border-[rgba(16,24,38,0.14)] align-bottom">
+                    {/* Колонка критериев липкая: при горизонтальной прокрутке
                       под неё уезжает Self, а рядом остаются Pro и Pro Спорт —
                       сравнивать имеет смысл именно их, и вопрос строки должен
                       быть виден. Непрозрачный фон обязателен, иначе уезжающий
                       текст просвечивает сквозь колонку. */}
-                  <th className="bg-[#FBFAF7] py-3 pl-2 pr-1.5 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8A94A2]">
-                    Критерий
-                  </th>
-                  <th className="bg-[#F8F1E6] px-2 py-3 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[#8A94A2]">
-                    {PRICING.base.name}
-                  </th>
-                  <th className="bg-[#F6FAFD] px-2 py-3 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[color:var(--da)]">
-                    {PRICING.pro.name}
-                  </th>
-                  <th className="bg-[#F1FAF4] px-2 py-3 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[#1F6E4D]">
-                    {PRICING.proPlus.name}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {PLAN_COMPARISON.map(([row, self, pro, proSport]) => (
-                  <tr key={row} className="border-b border-[rgba(16,24,38,0.08)] align-top">
-                    <th
-                      scope="row"
-                      className="break-words bg-[#FBFAF7] py-2.5 pl-2 pr-1.5 text-left text-[11.5px] font-medium text-[#101826]"
-                    >
-                      {row}
+                    <th className="bg-[#FBFAF7] py-3 pl-2 pr-1.5 text-left text-[11px] font-semibold uppercase tracking-[0.1em] text-[#8A94A2]">
+                      Критерий
                     </th>
-                    <td className="break-words bg-[#F8F1E6] px-2 py-2.5 text-[#5B6472]">{self}</td>
-                    <td className="break-words bg-[#F6FAFD] px-2 py-2.5 text-[#3C4552]">{pro}</td>
-                    <td className="break-words bg-[#F1FAF4] px-2 py-2.5 text-[#3C4552]">
-                      {proSport}
-                    </td>
+                    <th className="bg-[#F8F1E6] px-2 py-3 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[#8A94A2]">
+                      {PRICING.base.name}
+                    </th>
+                    <th className="bg-[#F6FAFD] px-2 py-3 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[color:var(--da)]">
+                      {PRICING.pro.name}
+                    </th>
+                    <th className="bg-[#F1FAF4] px-2 py-3 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-[#1F6E4D]">
+                      {PRICING.proPlus.name}
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
+                </thead>
+                <tbody>
+                  {PLAN_COMPARISON.map(([row, self, pro, proSport]) => (
+                    <tr key={row} className="border-b border-[rgba(16,24,38,0.08)] align-top">
+                      <th
+                        scope="row"
+                        className="break-words bg-[#FBFAF7] py-2.5 pl-2 pr-1.5 text-left text-[11.5px] font-medium text-[#101826]"
+                      >
+                        {row}
+                      </th>
+                      <td className="break-words bg-[#F8F1E6] px-2 py-2.5 text-[#5B6472]">
+                        {self}
+                      </td>
+                      <td className="break-words bg-[#F6FAFD] px-2 py-2.5 text-[#3C4552]">{pro}</td>
+                      <td className="break-words bg-[#F1FAF4] px-2 py-2.5 text-[#3C4552]">
+                        {proSport}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
 
-        <details className="group border-b border-[rgba(16,24,38,0.12)] first:border-t">
-          <summary className="flex cursor-pointer items-center justify-between gap-4 py-6 text-[16.5px] font-semibold leading-[1.4] text-[#101826] [&::-webkit-details-marker]:hidden">
-            Как устроено сопровождение
-            <span
-              aria-hidden="true"
-              className="ml-4 inline-block h-2 w-2 shrink-0 rotate-45 border-b border-r border-[#9AA3B0] transition-transform duration-[250ms] group-open:rotate-[225deg]"
-            />
-          </summary>
-          <div className="mt-5 space-y-5">
-            {SUPPORT_DETAILS.map((item) => (
-              <div key={item.title}>
-                <h3 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#8A94A2]">
-                  {item.title}
-                </h3>
-                {item.paragraphs.map((paragraph) => (
-                  <p key={paragraph} className="mt-2 text-[14.5px] leading-[1.6] text-[#5B6472]">
-                    {paragraph}
-                  </p>
-                ))}
-                {item.accentNote ? (
-                  <p className="mt-2 text-[13px] leading-[1.6] text-[#4A4C7E]">{item.accentNote}</p>
-                ) : null}
-                {item.strongNote ? (
-                  <p className="mt-2 text-[14.5px] font-medium leading-[1.6] text-[#3C4552]">
-                    {item.strongNote}
-                  </p>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </details>
-      </div>
+          <details className="group border-b border-[rgba(16,24,38,0.12)] first:border-t">
+            <summary className="flex cursor-pointer items-center justify-between gap-4 py-6 text-[16.5px] font-semibold leading-[1.4] text-[#101826] [&::-webkit-details-marker]:hidden">
+              Как устроено сопровождение
+              <span
+                aria-hidden="true"
+                className="ml-4 inline-block h-2 w-2 shrink-0 rotate-45 border-b border-r border-[#9AA3B0] transition-transform duration-[250ms] group-open:rotate-[225deg]"
+              />
+            </summary>
+            <div className="mt-5 space-y-5">
+              {SUPPORT_DETAILS.map((item) => (
+                <div key={item.title}>
+                  <h3 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#8A94A2]">
+                    {item.title}
+                  </h3>
+                  {item.paragraphs.map((paragraph) => (
+                    <p key={paragraph} className="mt-2 text-[14.5px] leading-[1.6] text-[#5B6472]">
+                      {paragraph}
+                    </p>
+                  ))}
+                  {item.accentNote ? (
+                    <p className="mt-2 text-[13px] leading-[1.6] text-[#4A4C7E]">
+                      {item.accentNote}
+                    </p>
+                  ) : null}
+                  {item.strongNote ? (
+                    <p className="mt-2 text-[14.5px] font-medium leading-[1.6] text-[#3C4552]">
+                      {item.strongNote}
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </details>
+        </div>
 
-      {/* Контракт заявки на Pro Спорт переиспользуется целиком: та же отправка в
+        {/* Контракт заявки на Pro Спорт переиспользуется целиком: та же отправка в
           `POST /leads`, те же согласия и та же версия политики, что на публичной
           странице. Оформление модалки — из существующего компонента, а не из
           макета: расхождение с макетом здесь дешевле, чем второй контракт
           заявки. Пункт для приёмки. */}
-      <PurchaseModal
-        isOpen={proSportOpen}
-        onClose={() => setProSportOpen(false)}
-        planName={PRICING.proPlus.name}
-        planPrice={`${PRICING.proPlus.price} ${PRICING.proPlus.period}`}
-      />
+        <PurchaseModal
+          isOpen={proSportOpen}
+          onClose={() => setProSportOpen(false)}
+          planName={PRICING.proPlus.name}
+          planPrice={`${PRICING.proPlus.price} ${PRICING.proPlus.period}`}
+        />
+      </div>
     </Section>
   );
 }
