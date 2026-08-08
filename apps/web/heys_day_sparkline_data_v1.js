@@ -273,6 +273,13 @@
               date: dateStr,
               kcal: fallbackKcal,
               target: fallbackTarget,
+              // 🔧 2026-08-08: baseTarget обязателен, даже когда TDEE за тот день
+              // не посчитан. Без него расчёт долга откатывался на target, а это
+              // savedDisplayOptimum — норма, в которой уже сидит вчерашний долг,
+              // и он учитывался второй раз. Текущий optimum — то же значение, на
+              // которое ядро долга падает своим последним фолбэком, но без долга
+              // внутри.
+              baseTarget: optimum,
               spent: fallbackTarget, // 🆕 v5.0: Затраты = норма для fallback дней (нет TDEE)
               ratio: fallbackTarget > 0 ? fallbackKcal / fallbackTarget : 0, // 🆕 Ratio для инсайтов
               isToday: false,

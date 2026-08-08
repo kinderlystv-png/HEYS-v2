@@ -35,7 +35,7 @@ const PRESETS = [{
 }];
 
 /** Подставной API: фиксирует записи, чтобы проверить контракт merge-сохранения. */
-function fakeApi({ day = null, presets = PRESETS, overlay = OVERLAY, card = null } = {}) {
+function fakeApi({ day = null, presets = PRESETS, overlay = OVERLAY, card = null, pastDays = {} } = {}) {
   const saves = [];
   const upserts = [];
   let presetState = presets;
@@ -58,7 +58,12 @@ function fakeApi({ day = null, presets = PRESETS, overlay = OVERLAY, card = null
       if (key === 'heys_products_overlay_v2') return { data: overlayState, error: null };
       if (key === 'heys_meal_presets_v1') return { data: presetState, error: null };
       if (key === 'heys_deleted_ids') return { data: this.tombstones, error: null };
-      if (key.startsWith('heys_dayv2_')) return { data: dayState, error: null };
+      // Только свой день: раньше фейк отдавал один и тот же блоб на любую дату,
+      // и окно долга молча набивалось копиями сегодняшнего дня.
+      if (key.startsWith('heys_dayv2_')) {
+        const wanted = dayState && dayState.date ? `heys_dayv2_${dayState.date}` : null;
+        return { data: (!wanted || key === wanted) ? dayState : (pastDays[key.slice('heys_dayv2_'.length)] || null), error: null };
+      }
       if (cardState && Object.hasOwn(cardState, key)) return { data: cardState[key], error: null };
       return { data: null, error: null };
     },
@@ -1255,21 +1260,60 @@ const CARD = {
   heys_hr_zones: [],
 };
 
-test('day_after отдаёт норму, которую клиент видит в приложении', async () => {
+test('day_after считает норму сервером, а не берёт из кэша отрисовки', async () => {
   const api = fakeApi({
     card: CARD,
-    day: { date: '2026-08-01', meals: [], waterMl: 0, savedDisplayOptimum: 1900, updatedAt: 111 },
+    day: { date: '2026-08-01', meals: [], waterMl: 0, weightMorning: 80, savedDisplayOptimum: 1900, updatedAt: 111 },
   });
   const res = await build(api).heys_log_meal({ items: [{ product_id: 'own-americano', grams: 100 }] });
 
   const norm = res.structured.day_after.norm;
-  assert.equal(norm.source, 'client_saved');
-  assert.equal(norm.kcal, 1900);
-  assert.equal(norm.protein_g, 158.3);
-  assert.equal(norm.carbs_g, 190);
-  assert.equal(norm.fat_g, 73.9);
-  assert.equal(norm.left.kcal, 1900 - res.structured.day_after.totals.kcal);
-  assert.match(res.text, /Норма: 1900 ккал, Б158\.3 У190 Ж73\.9 г — та, что видит клиент\./);
+  // 1471 — расчёт по данным дня; 1900 в блобе это кэш отрисовки, и он больше
+  // не источник числа (инцидент 07.08.2026: MCP отдавал 1282 при 2209 на экране).
+  assert.equal(norm.kcal, 1471);
+  assert.equal(norm.parts.client_saw, 1900);
+  assert.equal(norm.left.kcal, 1471 - res.structured.day_after.totals.kcal);
+  assert.doesNotMatch(res.text, /та, что видит клиент/);
+});
+
+test('норма подхватывает окно прошлых дней и накидывает надбавку за недобор', async () => {
+  // Три дня подряд заметно ниже нормы: сервер читает их блобы тем же пакетом,
+  // что профиль, и считает долг зеркальным ядром приложения.
+  const lean = (date) => ({
+    date, weightMorning: 80, waterMl: 0, updatedAt: 100,
+    meals: [{ id: `m-${date}`, items: [{ grams: 100, kcal100: 1000 }] }],
+  });
+  const api = fakeApi({
+    card: CARD,
+    day: { date: '2026-08-01', meals: [], waterMl: 0, weightMorning: 80, updatedAt: 111 },
+    // NOW в тестах — 2026-08-01, значит окно долга это 07-31 … 07-29,
+    // плюс 07-28 ради надбавки самому раннему дню окна.
+    pastDays: {
+      '2026-07-31': lean('2026-07-31'),
+      '2026-07-30': lean('2026-07-30'),
+      '2026-07-29': lean('2026-07-29'),
+      '2026-07-28': lean('2026-07-28'),
+    },
+  });
+  const res = await build(api).heys_add_water({ ml: 200 });
+
+  const norm = res.structured.day_after.norm;
+  assert.equal(norm.source, 'computed');
+  assert.equal(norm.parts.window_days, 3);
+  assert.equal(norm.parts.base, 1471);
+  assert.equal(norm.parts.correction, 294);
+  assert.equal(norm.kcal, 1765);
+  assert.match(norm.note, /накопленный недобор за 3 дн/);
+});
+
+test('расхождение с тем, что видел клиент, названо вслух', async () => {
+  const api = fakeApi({
+    card: CARD,
+    day: { date: '2026-08-01', meals: [], waterMl: 0, weightMorning: 80, savedDisplayOptimum: 1900, updatedAt: 111 },
+  });
+  const res = await build(api).heys_add_water({ ml: 200 });
+
+  assert.match(res.structured.day_after.norm.note, /Клиент последний раз видел 1900 ккал/);
 });
 
 test('в дне без сохранённой нормы day_after даёт оценку и говорит, что это оценка', async () => {
@@ -1280,6 +1324,7 @@ test('в дне без сохранённой нормы day_after даёт оц
   const res = await build(api).heys_add_water({ ml: 200 });
 
   const norm = res.structured.day_after.norm;
+  // Окна прошлых дней у фейкового API нет — значит долг посчитать не на чем.
   assert.equal(norm.source, 'estimate');
   assert.equal(norm.kcal, 1471); // BMR 1730 без активности, дефицит −15%
   assert.match(res.text, /Норма: ≈1471 ккал.*расчётная оценка/);
@@ -1347,7 +1392,8 @@ test('каждый инструмент, меняющий день, отдаёт
   for (const [name, args] of calls) {
     const tools = build(fakeApi({ card: CARD, day: JSON.parse(JSON.stringify(base)) }));
     const res = await tools[name](args);
-    assert.equal(res.structured.day_after.norm.kcal, 1900, `${name}: нет нормы в day_after`);
-    assert.match(res.text, /Норма: 1900 ккал/, `${name}: норма не попала в текст`);
+    // Число считает сервер; из блоба берётся только «что видел клиент».
+    assert.ok(res.structured.day_after.norm.kcal > 0, `${name}: нет нормы в day_after`);
+    assert.match(res.text, /Норма: \u2248?\d+ ккал/, `${name}: норма не попала в текст`);
   }
 });

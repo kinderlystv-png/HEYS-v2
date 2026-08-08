@@ -11,6 +11,7 @@
             optimum,
             eatenKcal,
             caloricDebt,
+            ndteBoostKcal,
             r0
         } = params || {};
 
@@ -61,13 +62,41 @@
             lastWroteRef.current = { at: now, dispOpt: displayOptimum, eaten: roundedEaten };
             console.debug('[caloric-display] write', { prev: { prevOptimum, prevEaten }, next: { displayOptimum, roundedEaten } });
 
+            // Отпечаток происхождения кэша: без него читатели блоба (MCP-коннектор
+            // куратора) не отличают «клиент видел ровно это число» от «клиент видел
+            // это утром, а шаги и тренировка приехали в день позже». Кэш пишет только
+            // браузер и только пока день открыт, поэтому он замерзает, пока входы
+            // продолжают меняться — 2026-08-07 MCP отдал 1282 ккал там, где в
+            // приложении стояло 2209. Сохраняем не только число, но и из чего оно
+            // получено: optimum, серверно-невычислимую поправку (долг/снижение/рефид)
+            // и NDTE — единственную часть базы, которой у сервера нет.
+            const trainingMin = (day.trainings || []).reduce(
+                (sum, t) => sum + ((t && t.z) || []).reduce((a, m) => a + (+m || 0), 0), 0);
+            const householdMin = (day.householdActivities
+                || (day.householdMin > 0 ? [{ minutes: day.householdMin }] : []))
+                .reduce((sum, h) => sum + (+(h && h.minutes) || 0), 0);
+
             setDay(prev => ({
                 ...prev,
                 savedDisplayOptimum: displayOptimum,
                 savedEatenKcal: roundedEaten,
+                savedOptimumMeta: {
+                    at: now,
+                    optimum,
+                    correction: displayOptimum - optimum,
+                    ndte: +ndteBoostKcal || 0,
+                    steps: +day.steps || 0,
+                    trainingMin,
+                    householdMin,
+                    weight: +day.weightMorning || 0,
+                },
                 updatedAt: now,
             }));
-        }, [displayOptimum, eatenKcal, day.savedDisplayOptimum, day.savedEatenKcal, setDay, r0]);
+            // Входы дня в deps не нужны: они меняют optimum, а тот — displayOptimum,
+            // так что эффект и так перезапустится со свежим day. Класть сюда
+            // day.trainings/householdActivities нельзя — новая идентичность массива
+            // на каждый рендер гоняла бы эффект вхолостую.
+        }, [displayOptimum, eatenKcal, day.savedDisplayOptimum, day.savedEatenKcal, optimum, ndteBoostKcal, setDay, r0]);
 
         const displayRemainingKcal = React.useMemo(() => {
             return r0(displayOptimum - eatenKcal);

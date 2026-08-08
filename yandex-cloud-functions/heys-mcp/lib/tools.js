@@ -208,38 +208,55 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
     return res;
   }
 
-  let normInputsPromise = null;
+  const normInputsByDate = new Map();
 
   /**
-   * Входы для нормы дня: профиль, проценты БЖУ и пульсовые зоны. Читаются один
-   * раз на запрос и одним пакетом.
+   * Входы для нормы дня: профиль, проценты БЖУ, пульсовые зоны и блоб за
+   * вчера. Читаются один раз на дату и одним пакетом.
+   *
+   * Вчерашний день нужен для NDTE — надбавки за вчерашнюю тренировку. В
+   * браузере её источник лезет в localStorage, серверу блоб доступен напрямую,
+   * и без него норма занижена на всю надбавку (до ~200 ккал).
    *
    * Сбой чтения гасим здесь же: норма — справочная величина в отчёте о записи,
    * и ронять из-за неё уже прошедшую запись еды нельзя. Куратор увидит «норма
    * не рассчитана», а не ошибку инструмента.
    */
-  function loadNormInputs() {
-    if (!normInputsPromise) {
-      normInputsPromise = (async () => {
+  function loadNormInputs(date) {
+    const cacheKey = date || '';
+    if (!normInputsByDate.has(cacheKey)) {
+      normInputsByDate.set(cacheKey, (async () => {
+        // Окно долга — три дня до запрошенного, плюс четвёртый: он даёт
+        // надбавку самому раннему дню окна. Всё одним пакетом.
+        const backDates = date ? [1, 2, 3, 4].map((back) => day.addDays(date, -back)) : [];
+        const keys = [profile.PROFILE_KEY, profile.NORMS_KEY, profile.ZONES_KEY]
+          .concat(backDates.map((d) => day.dayKey(d)));
         try {
-          const data = await readMany([profile.PROFILE_KEY, profile.NORMS_KEY, profile.ZONES_KEY]);
+          const data = await readMany(keys);
+          const pastBlobs = {};
+          for (const d of backDates) pastBlobs[d] = data[day.dayKey(d)] || null;
           return {
             profile: data[profile.PROFILE_KEY] || null,
             norms: data[profile.NORMS_KEY] || null,
             hrZones: data[profile.ZONES_KEY] || null,
+            // undefined — «вчера не читали», null — «читали, дня нет». Разница
+            // важна: в первом случае dailyNorm падает на NDTE из отпечатка.
+            prevDay: date ? pastBlobs[backDates[0]] : undefined,
+            pastBlobs: date ? pastBlobs : null,
+            nowMs,
           };
         } catch (_) {
           return null;
         }
-      })();
+      })());
     }
-    return normInputsPromise;
+    return normInputsByDate.get(cacheKey);
   }
 
   async function writeDay(date, nextDay, lastSeenUpdatedAt) {
     // Запускаем до await'а записи: норма нужна сразу после неё, и читать её
     // последовательно значило бы добавить лишний round-trip к каждой записи еды.
-    loadNormInputs();
+    loadNormInputs(date);
     const res = await api.mergeSaveKV(sessionToken, day.dayKey(date), nextDay, lastSeenUpdatedAt);
     if (!res.ok) throw new ToolError('save_failed', `Сервер отклонил запись дня ${date}: ${res.error}`);
     return res;
@@ -265,7 +282,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       // Съеденное без нормы ни о чём не говорит: «1400 ккал» читается только
       // рядом с «из 1900». Источник цифры указан в norm.source — куратор должен
       // видеть, сверяется он с тем, что видит клиент, или с нашей оценкой.
-      norm: day.dailyNorm(saved, await loadNormInputs()),
+      norm: day.dailyNorm(saved, await loadNormInputs(saved.date || fallbackDay.date)),
       meals: (saved.meals || []).length,
       water_ml: Number(saved.waterMl) || 0,
       is_refeed_day: saved.isRefeedDay === true,
@@ -321,10 +338,13 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
     const macros = norm.protein_g === null
       ? ' (проценты БЖУ в карточке не заданы)'
       : `, Б${norm.protein_g} У${norm.carbs_g} Ж${norm.fat_g} г`;
-    const from = norm.source === 'estimate'
-      ? ' — расчётная оценка, клиент этот день не открывал'
-      : ' — та, что видит клиент';
-    return ` Норма: ${approx}${norm.kcal} ккал${macros}${from}.`;
+    // Каждый источник называется своим именем. Раньше «та, что видит клиент»
+    // стояло у всего, кроме оценки, — и протухший кэш подавался как истина.
+    const FROM = {
+      computed: ' — посчитана по данным дня',
+      estimate: ' — расчётная оценка, история за прошлые дни недоступна',
+    };
+    return ` Норма: ${approx}${norm.kcal} ккал${macros}${FROM[norm.source] || FROM.estimate}.`;
   }
 
   /**
@@ -464,7 +484,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const summary = day.summarizeDay(current);
       // Норма и чек-ин в том же ответе: иначе «из N» и «можно ли писать еду»
       // тянут лишний heys_checkin(get) / догадку без цифры (diary UX 2026-08-07).
-      const inputs = await loadNormInputs();
+      const inputs = await loadNormInputs(date);
       const norm = day.dailyNorm(current, inputs);
       const todayKey = checkinToday(nowMs);
       let checkinText = '';

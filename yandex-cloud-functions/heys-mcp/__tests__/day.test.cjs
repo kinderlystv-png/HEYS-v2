@@ -578,19 +578,148 @@ test('зеркала apps/web совпадают с оригиналом поб�
   }
 });
 
-test('норма берёт сохранённую клиентом цифру как есть, а не считает свою', () => {
+/**
+ * Окно прошлых дней в том виде, в каком его читает `loadNormInputs`:
+ * блобы за date−1 … date−4. Четвёртый нужен самому раннему дню окна для NDTE.
+ */
+function pastBlobs(kcalPerDay, extra = {}) {
+  const out = {};
+  for (const [date, back] of [['2026-08-07', 1], ['2026-08-06', 2], ['2026-08-05', 3], ['2026-08-04', 4]]) {
+    out[date] = {
+      date,
+      weightMorning: 80,
+      meals: [{ id: `m-${back}`, items: [{ grams: 100, kcal100: kcalPerDay }] }],
+      ...extra,
+    };
+  }
+  return out;
+}
+
+const TODAY = { date: '2026-08-08', weightMorning: 80, meals: [] };
+/** Момент «сейчас» задаём явно: NDTE затухает по часам. */
+const AT_MSK_NOON_08 = Date.parse('2026-08-08T09:00:00Z');
+const WITH_WINDOW = (blobs) => ({
+  profile: FULL_PROFILE, norms: NORMS, hrZones: [],
+  nowMs: AT_MSK_NOON_08, prevDay: null, pastBlobs: blobs,
+});
+
+test('норма считается сервером целиком: база плюс надбавка за накопленный недобор', () => {
+  // База пустого дня — 1471. Три дня по 1000 ккал дают недобор, ядро приложения
+  // превращает его в надбавку, потолок — 20% от нормы.
+  const norm = day.dailyNorm(TODAY, WITH_WINDOW(pastBlobs(1000)));
+
+  assert.equal(norm.source, 'computed');
+  assert.equal(norm.parts.base, 1471);
+  assert.equal(norm.parts.window_days, 3);
+  assert.equal(norm.parts.correction, 294);
+  assert.equal(norm.kcal, 1765);
+  assert.match(norm.note, /накопленный недобор/);
+});
+
+test('кэш отрисовки на число больше не влияет, но расхождение с ним названо', () => {
+  // Ровно случай 07.08.2026: клиент смотрел день до того, как данные доехали.
+  const stale = { ...TODAY, savedDisplayOptimum: 1282 };
+  const norm = day.dailyNorm(stale, WITH_WINDOW(pastBlobs(1000)));
+
+  assert.equal(norm.source, 'computed');
+  assert.equal(norm.kcal, 1765, 'число берётся из расчёта, а не из кэша');
+  assert.equal(norm.parts.client_saw, 1282);
+  assert.match(norm.note, /Клиент последний раз видел 1282 ккал/);
+});
+
+test('при переборе норма мягко снижается, а не наказывает', () => {
+  const norm = day.dailyNorm(TODAY, WITH_WINDOW(pastBlobs(2600)));
+
+  assert.equal(norm.source, 'computed');
+  assert.ok(norm.parts.correction < 0, `ожидали снижение, получили ${norm.parts.correction}`);
+  // Потолок снижения — 10% от нормы, и оно всегда мягче перебора.
+  assert.ok(Math.abs(norm.parts.correction) <= Math.round(1471 * 0.1));
+  assert.equal(norm.kcal, 1471 + norm.parts.correction);
+  assert.match(norm.note, /мягкое снижение/);
+});
+
+test('загрузочный день поднимает норму и перебивает долг', () => {
+  const refeed = { ...TODAY, isRefeedDay: true };
+  const norm = day.dailyNorm(refeed, WITH_WINDOW(pastBlobs(1000)));
+
+  assert.equal(norm.source, 'computed');
+  // +35% из heys_refeed_v1.js — своей копии константы у сервера нет.
+  assert.equal(norm.kcal, 1986);
+  assert.match(norm.note, /Загрузочный день|загрузочный день/);
+});
+
+test('без окна прошлых дней норма честно помечается оценкой', () => {
+  const norm = day.dailyNorm(TODAY, {
+    profile: FULL_PROFILE, norms: NORMS, hrZones: [], nowMs: AT_MSK_NOON_08, prevDay: null,
+  });
+  assert.equal(norm.source, 'estimate');
+  assert.equal(norm.kcal, 1471);
+  assert.equal(norm.parts.window_days, 0);
+  assert.match(norm.note, /история за прошлые дни недоступна/);
+});
+
+test('день с неполными данными в окно долга не попадает', () => {
+  // Меньше трети нормы — данные внесены не полностью; окно схлопывается, и
+  // считать долг не на чем.
+  const norm = day.dailyNorm(TODAY, WITH_WINDOW(pastBlobs(300)));
+  assert.equal(norm.parts.window_days, 3);
+  assert.equal(norm.source, 'computed');
+  assert.equal(norm.parts.correction, 0, 'дни ниже порога ядро отсеивает само');
+  assert.match(norm.note, /слишком мало еды/);
+});
+
+/** Вчерашняя тренировка, которой хватает на надбавку (порог 300 ккал). */
+const PREV_DAY_TRAINING = { date: '2026-08-01', trainings: [{ z: [0, 0, 60, 30], type: 'cardio', time: '18:00' }] };
+const AT_MSK_NOON = Date.parse('2026-08-02T09:00:00Z');
+
+test('надбавка за вчерашнюю тренировку считается сервером из блоба за прошлый день', () => {
+  const today = { date: '2026-08-02', weightMorning: 80, meals: [] };
+  const base = { profile: FULL_PROFILE, norms: NORMS, hrZones: [], nowMs: AT_MSK_NOON };
+
+  const without = day.dailyNorm(today, { ...base, prevDay: null });
+  const with_ = day.dailyNorm(today, { ...base, prevDay: PREV_DAY_TRAINING });
+
+  assert.equal(without.parts.ndte, 0);
+  assert.equal(without.kcal, 1471);
+  assert.equal(with_.parts.ndte, 138);
+  assert.equal(with_.kcal, 1588);
+});
+
+test('надбавка затухает по московскому часу, а не по часам функции', () => {
+  const today = { date: '2026-08-02', weightMorning: 80, meals: [] };
+  const base = { profile: FULL_PROFILE, norms: NORMS, hrZones: [], prevDay: PREV_DAY_TRAINING };
+
+  // 18 часов после тренировки против 6 — разные тиры затухания.
+  const later = day.dailyNorm(today, { ...base, nowMs: AT_MSK_NOON });
+  const sooner = day.dailyNorm(today, { ...base, nowMs: Date.parse('2026-08-02T21:00:00Z') });
+
+  assert.equal(later.parts.ndte, 138);
+  assert.equal(sooner.parts.ndte, 173);
+});
+
+test('лёгкая вчерашняя активность надбавки не даёт', () => {
   const norm = day.dailyNorm(
-    { date: '2026-08-01', savedDisplayOptimum: 2400, weightMorning: 80, meals: [] },
+    { date: '2026-08-02', weightMorning: 80, meals: [] },
+    {
+      profile: FULL_PROFILE, norms: NORMS, hrZones: [], nowMs: AT_MSK_NOON,
+      prevDay: { trainings: [{ z: [10, 0, 0, 0], time: '18:00' }] },
+    },
+  );
+  assert.equal(norm.parts.ndte, 0);
+  assert.equal(norm.kcal, 1471);
+});
+
+test('если вчерашний день не читали, надбавка берётся из отпечатка', () => {
+  // prevDay: undefined — «не читали»: лучше взять сохранённое, чем занулить.
+  const norm = day.dailyNorm(
+    {
+      date: '2026-08-02', weightMorning: 80, meals: [],
+      savedOptimumMeta: { optimum: 1641, correction: 0, ndte: 200 },
+    },
     { profile: FULL_PROFILE, norms: NORMS, hrZones: [] },
   );
-  assert.equal(norm.source, 'client_saved');
-  assert.equal(norm.kcal, 2400);
-  // Расчёт по этому же дню дал бы другое число — значит, сохранённое не пересчитали.
-  const estimated = day.dailyNorm(
-    { date: '2026-08-01', weightMorning: 80, meals: [] },
-    { profile: FULL_PROFILE, norms: NORMS, hrZones: [] },
-  );
-  assert.notEqual(estimated.kcal, 2400);
+  assert.equal(norm.parts.ndte, 200);
+  assert.equal(norm.kcal, 1641);
 });
 
 test('без сохранённой цифры норма считается и помечается как оценка', () => {
@@ -632,21 +761,24 @@ test('возраст берётся из даты рождения, когда �
 
 test('граммы БЖУ считаются по коэффициентам приложения, жиры — остатком', () => {
   const norm = day.dailyNorm(
-    { date: '2026-08-01', savedDisplayOptimum: 1900, meals: [] },
+    { date: '2026-08-01', weightMorning: 80, meals: [] },
     { profile: FULL_PROFILE, norms: NORMS, hrZones: [] },
   );
   // NET Atwater: белок ÷3, углеводы ÷4, жир ÷9; жиры% = 100 − 40 − 25 = 35.
-  assert.equal(norm.protein_g, Math.round((1900 * 0.25 / 3) * 10) / 10); // 158.3
-  assert.equal(norm.carbs_g, Math.round((1900 * 0.40 / 4) * 10) / 10);   // 190
-  assert.equal(norm.fat_g, Math.round((1900 * 0.35 / 9) * 10) / 10);     // 73.9
+  // От фактической нормы, а не от захардкоженного числа: норму теперь считает
+  // сервер, и привязка к кэшу отрисовки здесь была бы ложной.
+  const kcal = norm.kcal;
+  assert.equal(norm.protein_g, Math.round((kcal * 0.25 / 3) * 10) / 10);
+  assert.equal(norm.carbs_g, Math.round((kcal * 0.40 / 4) * 10) / 10);
+  assert.equal(norm.fat_g, Math.round((kcal * 0.35 / 9) * 10) / 10);
 });
 
 test('пустые проценты БЖУ не превращаются в «жиры 100% калорий»', () => {
   const norm = day.dailyNorm(
-    { date: '2026-08-01', savedDisplayOptimum: 1900, meals: [] },
+    { date: '2026-08-01', weightMorning: 80, meals: [] },
     { profile: FULL_PROFILE, norms: {}, hrZones: [] },
   );
-  assert.equal(norm.kcal, 1900, 'калорийная норма известна и остаётся');
+  assert.ok(norm.kcal > 0, 'калорийная норма известна и остаётся');
   assert.equal(norm.protein_g, null);
   assert.equal(norm.fat_g, null);
   assert.equal(norm.reason, 'no_norms');
@@ -656,12 +788,12 @@ test('норма показывает остаток по калориям и к
   const norm = day.dailyNorm(
     {
       date: '2026-08-01',
-      savedDisplayOptimum: 1900,
+      weightMorning: 80,
       meals: [{ id: 'm1', items: [{ name: 'Каша', grams: 200, kcal100: 100, protein100: 10, simple100: 20, complex100: 0, badFat100: 2, goodFat100: 1 }] }],
     },
     { profile: FULL_PROFILE, norms: NORMS, hrZones: [] },
   );
-  assert.equal(norm.left.kcal, 1900 - 200);
+  assert.equal(norm.left.kcal, norm.kcal - 200);
   assert.equal(norm.left.protein, Math.round((norm.protein_g - 20) * 10) / 10);
   assert.equal(norm.left.carbs, Math.round((norm.carbs_g - 40) * 10) / 10);
   assert.equal(norm.left.fat, Math.round((norm.fat_g - 6) * 10) / 10);

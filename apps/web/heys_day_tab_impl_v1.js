@@ -1996,6 +1996,7 @@
             optimum,
             eatenKcal,
             caloricDebt,
+            ndteBoostKcal,
             r0
         }) || {};
         const {

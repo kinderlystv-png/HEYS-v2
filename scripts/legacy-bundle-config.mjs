@@ -88,6 +88,9 @@ export const LEGACY_BUNDLES = {
         'heys_day_time_mood_picker_v1.js',
         'heys_day_sparklines_v1.js',
         'heys_day_sparkline_data_v1.js',
+        // Ядро долга обязано грузиться до caloric_balance: хук зовёт его и без
+        // него возвращает null, то есть экран молча теряет надбавку за недобор.
+        'heys_day_caloric_debt_core_v1.js',
         'heys_day_caloric_balance_v1.js',
         'heys_day_insights_data_v1.js',
         'heys_day_insulin_wave_data_v1.js',
