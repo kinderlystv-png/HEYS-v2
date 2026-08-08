@@ -241,6 +241,77 @@ test('log_training пишет время, тип и ощущения, а не т
   assert.match(res.text, /в 18:40, cardio/);
 });
 
+test('log_strength_workout пишет всю тренировку одним вызовом', async () => {
+  const api = fakeApi({ day: null });
+  const res = await build(api).heys_log_strength_workout({
+    duration_min: 52,
+    time: '18:40',
+    exercises: [
+      { name: 'Жим лёжа', rpe: 8, superset_group: 1, approaches: [{ weight_kg: 22, reps: 12 }, { weight_kg: 24, reps: 10 }] },
+      { name: 'Тяга штанги', superset_group: 1, approaches: [{ weight_kg: 20, reps: 12 }] },
+      // Дропсет — просто убывающий вес внутри упражнения, отдельного поля нет.
+      { name: 'Разгибания', approaches: [{ weight_kg: 15, reps: 10 }, { weight_kg: 10, reps: 10 }, { weight_kg: 5, reps: 12 }] },
+    ],
+  });
+
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  const t = saved.value.trainings[0];
+  assert.equal(t.type, 'strength');
+  assert.equal(t.strengthEntryMode, 'workout_builder');
+  assert.equal(t.time, '18:40');
+  assert.deepEqual(t.z, [0, 52, 0, 0], 'длительность уходит в зону 2, как это делает приложение');
+
+  const ex = t.workoutLog.exercises;
+  assert.equal(ex.length, 3);
+  assert.equal(ex[0].rpe, 8);
+  assert.equal(ex[0].ssGroup, 1);
+  assert.equal(ex[1].ssGroup, 1, 'связка держится общим номером');
+  assert.equal(ex[0].approaches[0].done, true, 'подходы по умолчанию выполнены');
+  // legacy-поля синхронны с первой строкой подходов — как в приложении.
+  assert.equal(ex[0].sets, 2);
+  assert.equal(ex[0].weightKg, '22');
+
+  // 22×12 + 24×10 + 20×12 + 15×10 + 10×10 + 5×12 = 1054
+  assert.equal(res.structured.total_volume_kg, 1054);
+  assert.equal(res.structured.approaches_done, 6);
+});
+
+test('log_strength_workout проверяет всё до записи, а не пишет половину', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  // Ошибка в третьем упражнении — первые два тоже не должны записаться.
+  await assert.rejects(
+    () => tools.heys_log_strength_workout({
+      exercises: [
+        { name: 'Жим', approaches: [{ weight_kg: 40, reps: 10 }] },
+        { name: 'Тяга', approaches: [{ weight_kg: 30, reps: 10 }] },
+        { name: 'Присед', approaches: [{ weight_kg: 50, reps: 999 }] },
+      ],
+    }),
+    (e) => e.code === 'invalid_workout' && /Упражнение 3 «Присед», подход 1/.test(e.message),
+  );
+  assert.equal(api.saves.length, 0, 'ни одно упражнение не записалось');
+});
+
+test('log_strength_workout не принимает связку из одного упражнения', async () => {
+  const tools = build(fakeApi({ day: null }));
+  await assert.rejects(
+    () => tools.heys_log_strength_workout({
+      exercises: [{ name: 'Жим', superset_group: 1, approaches: [{ weight_kg: 40, reps: 10 }] }],
+    }),
+    (e) => e.code === 'invalid_workout' && /связке нужно минимум два/.test(e.message),
+  );
+});
+
+test('log_strength_workout принимает свой вес без указания веса', async () => {
+  const api = fakeApi({ day: null });
+  await build(api).heys_log_strength_workout({
+    exercises: [{ name: 'Подтягивания', approaches: [{ reps: 8 }, { reps: 6 }] }],
+  });
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  assert.equal(saved.value.trainings[0].workoutLog.exercises[0].approaches[0].weightKg, '');
+});
+
 test('update_training дописывает оценки к уже записанной тренировке', async () => {
   // Ровно случай истории Александры: тренировки записаны, оценок в них нет,
   // а добавить их коннектор до сих пор не умел — только завести новую.

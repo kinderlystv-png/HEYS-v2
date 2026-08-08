@@ -658,6 +658,144 @@ function updateTraining(day, index, patch, { nowMs, clientId }) {
   return { day: touch({ ...day, trainings }, nowMs, clientId), applied, error: null };
 }
 
+/**
+ * Записать силовую тренировку конструктором: новая или поверх существующей.
+ *
+ * Минуты по зонам ставим так же, как приложение выводит их из конструктора
+ * (`normalizeWorkoutLogZoneMinutes`): вся длительность в зону 2. Без них
+ * тренировка не даст ни калорий в TDEE, ни строки в средних оценках дня.
+ */
+function setStrengthWorkout(day, index, { exercises, time, comment, durationMin }, { nowMs, clientId }) {
+  const built = buildWorkoutLog(exercises, { durationMin });
+  if (built.error) return { day, error: built.error };
+
+  const list = Array.isArray(day.trainings) ? day.trainings : [];
+  let i = index === undefined || index === null ? list.length : Number(index);
+  if (!Number.isInteger(i) || i < 0 || i > list.length) {
+    return { day, error: list.length
+      ? `В дне тренировок ${list.length} — index от 0 до ${list.length - 1}, либо не передавай его для новой.`
+      : 'В дне нет тренировок — не передавай index, чтобы завести новую.' };
+  }
+
+  const prev = list[i] || {};
+  const dur = Number(durationMin);
+  const minutes = Number.isFinite(dur) && dur > 0 ? Math.max(1, Math.min(180, Math.round(dur))) : null;
+  const keepZ = Array.isArray(prev.z) && prev.z.some((m) => Number(m) > 0);
+  const z = minutes !== null
+    ? [0, minutes, 0, 0]
+    : (keepZ ? prev.z.map((m) => Number(m) || 0) : [0, 1, 0, 0]);
+
+  const training = {
+    ...prev,
+    z,
+    type: 'strength',
+    strengthEntryMode: 'workout_builder',
+    workoutLog: built.log,
+    source: 'curator_mcp',
+    updatedAt: nowMs,
+  };
+  if (typeof time === 'string' && time.trim()) training.time = time.trim();
+  if (typeof comment === 'string' && comment.trim()) training.comment = comment.trim();
+
+  const trainings = list.slice();
+  trainings[i] = training;
+  return { day: touch({ ...day, trainings }, nowMs, clientId), index: i, error: null };
+}
+
+/** Пресеты отдыха конструктора (apps/web/heys_day_trainings_v1.js:516). */
+const REST_PRESETS = [60, 90, 120, 180];
+
+/**
+ * Силовая тренировка конструктором: упражнения, подходы, суперсеты, RPE.
+ *
+ * Форма — та же, что пишет приложение (`ensureWorkoutLogShape`,
+ * heys_day_trainings_v1.js:2708). Приложение нормализует блоб при загрузке, но
+ * писать надо сразу канонично: иначе тоннаж и рекорды считаются по одному
+ * снимку, а рисуются по другому.
+ *
+ * Проверяем ВСЁ до записи — как это делает пачка слотов: ошибка в третьем
+ * упражнении не должна оставить половину тренировки записанной.
+ *
+ * `done` по умолчанию true: куратор вносит уже состоявшуюся тренировку, а не
+ * план. В приложении наоборот — там подход отмечают по ходу.
+ */
+function buildWorkoutLog(exercises, { durationMin } = {}) {
+  if (!Array.isArray(exercises) || !exercises.length) {
+    return { error: 'Нужен непустой список exercises.' };
+  }
+  const out = [];
+  for (let i = 0; i < exercises.length; i += 1) {
+    const raw = exercises[i] || {};
+    const where = `Упражнение ${i + 1}`;
+    const name = String(raw.name || '').trim();
+    if (!name) return { error: `${where}: нужно название (name).` };
+
+    const rawAps = Array.isArray(raw.approaches) ? raw.approaches : null;
+    if (!rawAps || !rawAps.length) return { error: `${where} «${name}»: нужен непустой список approaches.` };
+    const approaches = [];
+    for (let k = 0; k < rawAps.length; k += 1) {
+      const a = rawAps[k] || {};
+      const reps = Number(a.reps);
+      if (!Number.isInteger(reps) || reps < 1 || reps > 200) {
+        return { error: `${where} «${name}», подход ${k + 1}: reps — целое от 1 до 200.` };
+      }
+      const w = a.weight_kg === undefined || a.weight_kg === null || a.weight_kg === '' ? null : Number(a.weight_kg);
+      if (w !== null && (!Number.isFinite(w) || w < 0 || w > 1000)) {
+        return { error: `${where} «${name}», подход ${k + 1}: weight_kg — число от 0 до 1000 или пусто для своего веса.` };
+      }
+      approaches.push({
+        id: `ap_mcp_${i}_${k}`,
+        weightKg: w === null ? '' : String(w),
+        reps,
+        done: a.done === undefined ? true : !!a.done,
+      });
+    }
+
+    const rpe = raw.rpe === undefined || raw.rpe === null ? 0 : Number(raw.rpe);
+    if (!Number.isInteger(rpe) || rpe < 0 || rpe > 10) {
+      return { error: `${where} «${name}»: rpe — целое от 0 до 10.` };
+    }
+    const ssGroup = raw.superset_group === undefined || raw.superset_group === null ? 0 : Number(raw.superset_group);
+    if (!Number.isInteger(ssGroup) || ssGroup < 0) {
+      return { error: `${where} «${name}»: superset_group — целое ≥ 0 (0 = без связки, одинаковый номер = один суперсет).` };
+    }
+    const restSec = raw.rest_sec === undefined || raw.rest_sec === null ? 90 : Number(raw.rest_sec);
+    if (!REST_PRESETS.includes(restSec)) {
+      return { error: `${where} «${name}»: rest_sec — одно из ${REST_PRESETS.join(', ')}.` };
+    }
+
+    // sets/reps/weightKg — legacy-поля, приложение держит их синхронными с
+    // первой строкой подходов (syncLegacyFieldsFromApproaches).
+    out.push({
+      id: `ex_mcp_${i}`,
+      name,
+      approaches,
+      note: typeof raw.note === 'string' ? raw.note.trim() : '',
+      ssGroup,
+      rpe,
+      restSec,
+      restManual: false,
+      collapsed: false,
+      sets: approaches.length,
+      reps: approaches[0].reps,
+      weightKg: approaches[0].weightKg,
+    });
+  }
+
+  // Суперсет из одного упражнения приложение распускает само (pruneSsGroups) —
+  // не даём завести заведомо мусорную связку.
+  const counts = {};
+  for (const ex of out) if (ex.ssGroup > 0) counts[ex.ssGroup] = (counts[ex.ssGroup] || 0) + 1;
+  for (const [g, n] of Object.entries(counts)) {
+    if (n < 2) return { error: `superset_group ${g} стоит у одного упражнения — в связке нужно минимум два.` };
+  }
+
+  const log = { exercises: out };
+  const dur = Number(durationMin);
+  if (Number.isFinite(dur) && dur > 0) log.totalDurationMinutes = Math.round(dur);
+  return { log };
+}
+
 const DAY_FIELD_MAP = {
   weight: 'weightMorning',
   steps: 'steps',
@@ -1770,6 +1908,8 @@ module.exports = {
   addWater,
   addTraining,
   updateTraining,
+  setStrengthWorkout,
+  buildWorkoutLog,
   isRealTraining,
   updateDayFields,
   summarizeDay,

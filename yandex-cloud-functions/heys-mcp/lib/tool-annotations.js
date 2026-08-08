@@ -23,6 +23,7 @@ const DIARY_WRITE_TOOLS = new Set([
   'heys_delete_meal',
   'heys_add_water',
   'heys_log_training',
+  'heys_log_strength_workout',
   'heys_update_training',
   'heys_update_day',
   'heys_checkin',

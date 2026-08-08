@@ -990,6 +990,39 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       };
     },
 
+    async heys_log_strength_workout(args) {
+      const date = resolveDate(args.date, nowMs);
+      const current = await readDay(date);
+      const res = day.setStrengthWorkout(current, args.index, {
+        exercises: args.exercises,
+        time: args.time,
+        comment: args.comment,
+        durationMin: args.duration_min,
+      }, { nowMs, clientId });
+      if (res.error) throw new ToolError('invalid_workout', res.error);
+
+      const saved = await writeDay(date, res.day, Number(current.updatedAt) || 0);
+      const after = await dayAfterWrite(saved, res.day);
+      const written = res.day.trainings[res.index];
+      const agg = webMirror.trainingTonnage(written);
+      const exCount = written.workoutLog.exercises.length;
+      const tonnage = agg.totalVolume >= 1000
+        ? `${(agg.totalVolume / 1000).toFixed(1).replace(/\.0$/, '')} т`
+        : `${Math.round(agg.totalVolume)} кг`;
+      return {
+        text: `Записал силовую ${date}: ${exCount} упр., ${agg.doneApproaches} подходов, тоннаж ${tonnage}.${dayAfterText(after)}`,
+        structured: {
+          date,
+          index: res.index,
+          exercises: exCount,
+          approaches_done: agg.doneApproaches,
+          total_volume_kg: Math.round(agg.totalVolume),
+          max_weight_kg: agg.maxWeight,
+          day_after: after,
+        },
+      };
+    },
+
     async heys_update_training(args) {
       const date = resolveDate(args.date, nowMs);
       const current = await readDay(date);
@@ -2150,6 +2183,49 @@ const TOOL_SCHEMAS = [
     },
   },
   {
+    name: 'heys_log_strength_workout',
+    description: 'Записать силовую тренировку конструктором — так же, как её ведёт клиент в приложении: упражнения, подходы с весом и повторами, суперсеты, RPE, отдых. Куратор диктует тренировку целиком, поэтому вся она пишется ОДНИМ вызовом: список exercises и есть пачка. Проверяются все упражнения до записи — ошибка в одном не оставит половину тренировки записанной. Подходы по умолчанию считаются выполненными: вносится состоявшаяся тренировка, а не план. Дропсет — это просто несколько подходов с убывающим весом внутри упражнения, отдельного поля не нужно. Обычная тренировка по пульсовым зонам пишется через heys_log_training.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        exercises: {
+          type: 'array',
+          description: 'Упражнения по порядку. Каждое — со своим списком подходов.',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Название упражнения, свободная строка: «Жим лёжа».' },
+              approaches: {
+                type: 'array',
+                description: 'Подходы по порядку. Дропсет — несколько подходов с убывающим весом.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    weight_kg: { type: 'number', description: 'Вес, кг. Пусто или 0 — свой вес (подтягивания, отжимания).' },
+                    reps: { type: 'integer', description: 'Повторы, 1–200.' },
+                    done: { type: 'boolean', description: 'Выполнен ли. По умолчанию true — вносится уже сделанная тренировка.' },
+                  },
+                  required: ['reps'],
+                },
+              },
+              rpe: { type: 'integer', description: 'Субъективная тяжесть упражнения, 0–10.' },
+              superset_group: { type: 'integer', description: 'Номер связки: одинаковый у упражнений одного суперсета, 0 — без связки. В связке нужно минимум два упражнения.' },
+              rest_sec: { type: 'integer', description: 'Отдых между подходами: 60, 90, 120 или 180. По умолчанию 90.' },
+              note: { type: 'string', description: 'Заметка к упражнению.' },
+            },
+            required: ['name', 'approaches'],
+          },
+        },
+        date: DATE_ARG,
+        index: { type: 'integer', description: 'Номер тренировки в дне, если переписываешь существующую. Без него добавляется новая.' },
+        time: { type: 'string', description: 'Время начала, HH:MM.' },
+        duration_min: { type: 'integer', description: 'Длительность в минутах — из неё считаются калории тренировки.' },
+        comment: { type: 'string', description: 'Комментарий к тренировке целиком.' },
+      },
+      required: ['exercises'],
+    },
+  },
+  {
     name: 'heys_update_training',
     description: 'Поправить уже записанную тренировку: дописать оценки самочувствия, время, тип или комментарий, изменить минуты по зонам. Индекс тренировки — её позиция в списке из heys_get_day (с нуля). Передавай только то, что меняешь.',
     inputSchema: {
@@ -2292,6 +2368,7 @@ const WRITE_TOOLS = new Set([
   'heys_delete_meal',
   'heys_add_water',
   'heys_log_training',
+  'heys_log_strength_workout',
   'heys_update_training',
   'heys_update_day',
   'heys_checkin',

@@ -198,27 +198,23 @@
     return _historyCache.set(cacheKey, null);
   }
 
+  /**
+   * Объём НАБРАННЫЙ (все подходы, включая неотмеченные) — подпись «~N кг объёма»
+   * на карточке тренировки. Отличается от тоннажа ПОДНЯТОГО
+   * (computeDayTotalTonnage, только отмеченные): по ходу тренировки подходы
+   * добавляют заранее, а галочки ставят потом, и подпись должна показывать
+   * набранный план, а не отставать от него.
+   *
+   * Формула одна на оба смысла — в ядре (2026-08-08). До этого здесь и в
+   * computeDayTotalTonnage жили две независимые реализации, и разойтись они
+   * могли молча.
+   */
   function calcWorkoutBuilderVolumeKg(wl) {
-    const ex = wl && wl.exercises;
-    if (!Array.isArray(ex)) return 0;
-    let sum = 0;
-    for (let i = 0; i < ex.length; i++) {
-      const e = ex[i];
-      if (Array.isArray(e.approaches) && e.approaches.length > 0) {
-        for (let j = 0; j < e.approaches.length; j++) {
-          const a = e.approaches[j];
-          const w = parseFloat(String(a.weightKg || '').replace(',', '.')) || 0;
-          const reps = +a.reps || 0;
-          if (w > 0 && reps > 0) sum += w * reps;
-        }
-      } else {
-        const w = parseFloat(String(e.weightKg || '').replace(',', '.')) || 0;
-        const sets = +e.sets || 0;
-        const reps = +e.reps || 0;
-        if (w > 0 && sets > 0 && reps > 0) sum += w * sets * reps;
-      }
-    }
-    return sum;
+    const ks = HEYS.TrainingKernel && HEYS.TrainingKernel.strength;
+    if (!ks) return 0;
+    return ks.trainingTonnage({
+      type: 'strength', strengthEntryMode: 'workout_builder', workoutLog: wl,
+    }).plannedVolume;
   }
 
   /** Синхронные поля sets / reps / weightKg для облака и старых снимков — с первой строки approaches. */

@@ -29,23 +29,60 @@
       && !!t.workoutLog && typeof t.workoutLog === 'object';
   }
 
-  /** Сводка одной тренировки: тоннаж и объём выполненных подходов. */
+  /**
+   * Сводка одной тренировки.
+   *
+   * Различаются ДВА тоннажа, и это не дубликат, а разный смысл:
+   *   totalVolume   — только отмеченные подходы: сколько реально поднято;
+   *   plannedVolume — все подходы, включая неотмеченные: сколько набрано в план.
+   *
+   * До 2026-08-08 обе величины считались независимо в двух местах
+   * heys_day_trainings_v1.js (computeDayTotalTonnage — по done, подпись на
+   * карточке через calcWorkoutBuilderVolumeKg — по всем), и разойтись они могли
+   * молча. Теперь формула одна, а выбор величины — за вызывающим.
+   *
+   * Упражнение без массива approaches — старый снимок: там подходов нет, есть
+   * sets/reps/weightKg. Такие строки идут в обе величины целиком: признака
+   * выполнения в них не существует, и отбросить их значило бы потерять историю.
+   */
   function trainingTonnage(training) {
-    const out = { totalVolume: 0, maxWeight: 0, totalApproaches: 0, doneApproaches: 0, exerciseCount: 0 };
+    const out = {
+      totalVolume: 0, plannedVolume: 0, maxWeight: 0,
+      totalApproaches: 0, doneApproaches: 0, exerciseCount: 0,
+    };
     if (!isStrengthBuilder(training)) return out;
     const exercises = Array.isArray(training.workoutLog.exercises) ? training.workoutLog.exercises : [];
     for (let j = 0; j < exercises.length; j++) {
       const ex = exercises[j];
-      const aps = ex && Array.isArray(ex.approaches) ? ex.approaches : [];
-      if (aps.length) out.exerciseCount += 1;
-      for (let k = 0; k < aps.length; k++) {
-        const a = aps[k];
-        out.totalApproaches += 1;
-        if (!a || !a.done) continue;
-        out.doneApproaches += 1;
-        const w = parseFloat(String(a.weightKg || '').replace(',', '.')) || 0;
-        const r = +a.reps || 0;
-        if (w > 0 && r > 0) out.totalVolume += w * r;
+      if (!ex) continue;
+      const aps = Array.isArray(ex.approaches) ? ex.approaches : [];
+      if (aps.length) {
+        out.exerciseCount += 1;
+        for (let k = 0; k < aps.length; k++) {
+          const a = aps[k];
+          out.totalApproaches += 1;
+          const w = parseFloat(String((a && a.weightKg) || '').replace(',', '.')) || 0;
+          const r = +(a && a.reps) || 0;
+          const vol = (w > 0 && r > 0) ? w * r : 0;
+          out.plannedVolume += vol;
+          if (!a || !a.done) continue;
+          out.doneApproaches += 1;
+          out.totalVolume += vol;
+          if (w > out.maxWeight) out.maxWeight = w;
+        }
+        continue;
+      }
+      // Legacy-строка: sets × reps × вес, признака выполнения нет.
+      const w = parseFloat(String(ex.weightKg || '').replace(',', '.')) || 0;
+      const sets = +ex.sets || 0;
+      const reps = +ex.reps || 0;
+      if (w > 0 && sets > 0 && reps > 0) {
+        out.exerciseCount += 1;
+        out.totalApproaches += sets;
+        out.doneApproaches += sets;
+        const vol = w * sets * reps;
+        out.totalVolume += vol;
+        out.plannedVolume += vol;
         if (w > out.maxWeight) out.maxWeight = w;
       }
     }

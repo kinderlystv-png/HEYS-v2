@@ -40,6 +40,33 @@ describe('TrainingKernel.strength', () => {
         expect(agg.totalApproaches).toBe(3);
     });
 
+    it('поднятый и набранный объём — разные величины, обе из одной формулы', () => {
+        // По ходу тренировки подходы добавляют заранее, галочки ставят потом.
+        // Подпись на карточке показывает набранное, тоннаж дня — поднятое.
+        // До 2026-08-08 это считали две независимые реализации.
+        const ks = loadKernel();
+        const t = strengthTraining([
+            { weightKg: '60', reps: 10, done: true },
+            { weightKg: '60', reps: 10, done: false },
+        ]);
+        const agg = ks.trainingTonnage(t);
+        expect(agg.totalVolume).toBe(600);
+        expect(agg.plannedVolume).toBe(1200);
+    });
+
+    it('старая строка без подходов считается по sets × reps × вес', () => {
+        // Признака выполнения в legacy-снимке нет — отбросить её значило бы
+        // потерять историю, поэтому идёт в обе величины целиком.
+        const ks = loadKernel();
+        const t = {
+            type: 'strength', strengthEntryMode: 'workout_builder',
+            workoutLog: { exercises: [{ name: 'Жим', sets: 3, reps: 10, weightKg: '50' }] },
+        };
+        const agg = ks.trainingTonnage(t);
+        expect(agg.totalVolume).toBe(1500);
+        expect(agg.plannedVolume).toBe(1500);
+    });
+
     it('вес с запятой парсится как русский ввод (60,5)', () => {
         const ks = loadKernel();
         const t = strengthTraining([{ weightKg: '60,5', reps: 10, done: true }]);
