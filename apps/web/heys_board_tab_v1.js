@@ -417,11 +417,37 @@
         }
     }
 
+    const RU_MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+
+    function shortDate(iso) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+        if (!m) return String(iso || '');
+        return `${Number(m[3])} ${RU_MONTHS[Number(m[2]) - 1] || ''}`.trim();
+    }
+
+    // Неточный срок показывается диапазоном: «10-12 авг». Слово «окно» здесь не
+    // пишем — в этой же вкладке им уже названо свободное время дня, и две
+    // разные вещи под одним словом на маленьком экране не разводятся.
+    function dueLabel(item) {
+        const win = item && item.window;
+        if (!win || !win.from || !win.to) return null;
+        const from = /^(\d{4})-(\d{2})-\d{2}$/.exec(win.from);
+        const to = /^(\d{4})-(\d{2})-\d{2}$/.exec(win.to);
+        // Окно не по формату лучше не показывать вовсе, чем показать как есть:
+        // «нет-тоже нет» на месте срока читается как поломка всей карточки.
+        if (!from || !to) return null;
+        const sameMonth = from[1] === to[1] && from[2] === to[2];
+        const left = sameMonth ? String(Number(/(\d{2})$/.exec(win.from)[1])) : shortDate(win.from);
+        return `${left}-${shortDate(win.to)}`;
+    }
+
     function orderMeta(item) {
         const parts = [];
         if (item.place) parts.push(item.place);
         if (item.price) parts.push(item.price);
-        if (item.overdue && item.due) parts.push(`просрочено ${item.due}`);
+        const range = dueLabel(item);
+        if (item.overdue && item.due) parts.push(`просрочено ${range || item.due}`);
+        else if (range) parts.push(range);
         else if (item.due) parts.push(`до ${item.due}`);
         return parts.join(' · ') || null;
     }
@@ -545,8 +571,9 @@
                         ? React.createElement('span', { className: 'board-task__ref' }, question.ref || question.task)
                         : null,
                     React.createElement('span', { className: 'board-task__title' }, question.question || '—'),
-                    question.due
-                        ? React.createElement('span', { className: 'board-task__meta' }, `due ${question.due}`)
+                    dueLabel(question) || question.due
+                        ? React.createElement('span', { className: 'board-task__meta' },
+                            dueLabel(question) || `due ${question.due}`)
                         : null),
                 onTalk && (question.ref || question.task)
                     ? React.createElement('button', {
