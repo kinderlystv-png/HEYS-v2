@@ -115,6 +115,10 @@ const TASKS_WRITE_SCHEMAS = [
         project: { type: 'string', description: 'Проект задачи.' },
         hash: { type: 'string', description: 'Шесть символов хэша задачи с доски.' },
         due: { type: 'string', description: 'Новый срок YYYY-MM-DD; пустая строка снимает срок.' },
+        window: {
+          type: 'string',
+          description: 'Неточный срок окном: «2026-08-10..2026-08-12». Ставится, когда он назвал время словами — «в начале недели», «во второй половине августа». Не переспрашивай у него точный день и не выбирай одну дату молча: переведи его слова в границы сам, срок при этом выставится на позднюю границу автоматически. Ранняя граница — день, с которого задача начинает всплывать в планёрке и в «Требует решения», поздняя — крайний срок и просрочка. Появится точность — поставь обычный due, окно снимется само.',
+        },
         priority: { type: 'string', description: 'P1, P2 или P3.' },
         state: { type: 'string', description: 'new, doing, wait или done. done — когда ты довёл задачу до конца и уверен; не уверен — спроси, не ставь наугад. Житейское и день — только по его слову.' },
         add_tags: { type: 'array', items: { type: 'string' }, description: 'Теги добавить.' },
@@ -187,7 +191,7 @@ const TASKS_BOARD_SCHEMAS = [
   },
   {
     name: 'tasks_slot',
-    description: 'Поставить событие в день: время, место, что происходит. Пересечения с уже стоящими слотами возвращаются в ответе как conflicts — их считает та же логика, что и доска, так что ложных тревог не будет; уровень «конфликт» назови куратору, «вопрос» упомяни мимоходом.',
+    description: 'Поставить событие в день: время, место, что происходит. Пересечения с уже стоящими слотами возвращаются в ответе как conflicts — их считает та же логика, что и доска, так что ложных тревог не будет; уровень «конфликт» назови куратору, «вопрос» упомяни мимоходом. Он описывает день фразой целиком, а не по событию за раз, — поэтому расставляй его сразу списком slots одним вызовом: день пишется один раз, пересечения считаются и между новыми слотами тоже, а ошибка в любом из них не оставляет половину дня расставленной. Один слот ставится как раньше, через from/to/title.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -203,8 +207,25 @@ const TASKS_BOARD_SCHEMAS = [
         ref: { type: 'string', description: 'Адрес задачи, ради которой этот слот стоит в дне: kinderly/8e3572. Доска сделает слот кликабельным, а tasks_context покажет с той стороны, что под задачу уже выделено время.' },
         whose: { type: 'string', description: 'Чей это слот, если не его: «жена», «Саша». Нужен там, где событие чужое, а зависимость его — тренировка жены значит, что ребёнок остаётся на нём. Не сказал чей — не ставь: по умолчанию слот его собственный.' },
         takes: { type: 'array', items: { type: 'string' }, description: 'Что это время забирает у него: «машина», «ребёнок». Ресурсов ровно два — машина одна на двоих и ребёнок, который должен быть с кем-то. Ставь только когда он сам это сказал; по умолчанию слот не занимает ничего, и старые слоты без признака читаются как раньше. Занятость — это факт для его решения, а не запрет: что достижимо без машины и что делается с ребёнком, знает он один.' },
+        slots: {
+          type: 'array',
+          description: 'Весь день сразу: список слотов, у каждого те же поля, что и у одиночного — from, to, title и необязательные presence, kind, ref, whose, takes. Дата общая, она берётся из date: слоты разных дней это разные вызовы, иначе падение на середине оставит один день расставленным, а другой нет. Передавай список, когда он описал день фразой; ошибка в любом слоте отменяет весь вызов целиком, поэтому день не окажется расставленным наполовину.',
+          items: {
+            type: 'object',
+            properties: {
+              from: { type: 'string', description: 'Начало ЧЧ:ММ.' },
+              to: { type: 'string', description: 'Конец ЧЧ:ММ.' },
+              title: { type: 'string', description: 'Что происходит и где.' },
+              presence: { type: 'boolean', description: 'true для крупного блока присутствия.' },
+              kind: { type: 'string', description: 'фон, дело, фокус или привычка.' },
+              ref: { type: 'string', description: 'Адрес задачи: kinderly/8e3572.' },
+              whose: { type: 'string', description: 'Чей слот, если не его.' },
+              takes: { type: 'array', items: { type: 'string' }, description: 'машина, ребёнок.' },
+            },
+            required: ['from', 'to', 'title'],
+          },
+        },
       },
-      required: ['from', 'to', 'title'],
     },
   },
   {
@@ -999,7 +1020,16 @@ function createTasksTools({
    * заголовка, — и однажды разойтись с доской.
    */
   function withAddress(task) {
-    return { ...task, ...tasks.taskAddress(task.path, task.title) };
+    // Окно приклеивается здесь, в общей точке: через неё задачи проходят и в
+    // списки, и в календарь, и в снимок доски. Разложить его по каждому
+    // инструменту отдельно значило бы, что где-то оно молча потеряется — на
+    // телефоне, например, где строку контекста никто не читает.
+    const window = tasks.taskWindow(task.children);
+    return {
+      ...task,
+      ...tasks.taskAddress(task.path, task.title),
+      ...(window ? { window, signal: window.from } : {}),
+    };
   }
 
   const tools = {
@@ -1409,12 +1439,26 @@ function createTasksTools({
         const file = byPath.get(path);
         if (!file) continue;
         for (const task of tasks.parseTasks(file)) {
-          if (task.done || !task.due || task.due < from || task.due > till) continue;
-          if (!dueByDate.has(task.due)) dueByDate.set(task.due, []);
+          if (task.done || !task.due) continue;
+          const window = tasks.taskWindow(task.children);
           const withRef = withAddress(task);
-          dueByDate.get(task.due).push({
-            ref: withRef.ref, project: withRef.project, title: task.title, priority: task.priority,
-          });
+          // Задача с окном висит на двух днях: когда её можно начинать и когда
+          // край. Одним днём на конце окна она в календаре выглядит как дело
+          // последнего дня, хотя делать её надо было раньше. Всеми днями окна —
+          // замусорила бы полмесяца на «второй половине августа».
+          const marks = window
+            ? [[window.from, 'окно открывается'], [task.due, 'край окна']]
+            : [[task.due, null]];
+          for (const [date, note] of marks) {
+            if (date < from || date > till) continue;
+            if (!dueByDate.has(date)) dueByDate.set(date, []);
+            const already = dueByDate.get(date).find((row) => row.ref === withRef.ref);
+            if (already) continue;
+            dueByDate.get(date).push({
+              ref: withRef.ref, project: withRef.project, title: task.title, priority: task.priority,
+              ...(note ? { window: `${window.from}..${window.to}`, note } : {}),
+            });
+          }
         }
       }
 
@@ -1597,12 +1641,29 @@ function createTasksTools({
         throw new ToolError('task_not_found', `В ${file.path} нет задачи с хэшем ${args.hash}. Возьми актуальный через tasks_list.`);
       }
 
+      // Окно и срок ставятся одним движением: срок — всегда поздняя граница.
+      // Врозь они разъезжаются руками, и задача с окном «10-12» получает срок
+      // на 15-е, то есть окно перестаёт значить хоть что-нибудь.
+      let window = null;
+      if (args.window !== undefined && args.window !== null && String(args.window).trim() !== '') {
+        const raw = String(args.window).trim();
+        const match = /^(\d{4}-\d{2}-\d{2})\s*\.\.\s*(\d{4}-\d{2}-\d{2})$/.exec(raw);
+        if (!match) {
+          throw new ToolError('invalid_window', `Окно «${raw}» не в формате ГГГГ-ММ-ДД..ГГГГ-ММ-ДД. «Начало недели» переведи в даты сам: он назвал срок словами, а границы считаешь ты.`);
+        }
+        if (match[1] > match[2]) {
+          throw new ToolError('invalid_window', `В окне «${raw}» начало позже конца.`);
+        }
+        window = { from: match[1], to: match[2] };
+      }
+
       const lines = file.text.split('\n');
+      let changedWindowDropped = false;
       let patched;
       try {
         patched = tasks.applyTaskPatch(lines[found.line], {
           state: args.state,
-          due: args.due,
+          due: window ? window.to : args.due,
           priority: args.priority ? String(args.priority).toUpperCase() : undefined,
           addTags: args.add_tags,
           removeTags: args.remove_tags,
@@ -1612,13 +1673,30 @@ function createTasksTools({
       }
 
       let nextText = [...lines.slice(0, found.line), patched, ...lines.slice(found.line + 1)].join('\n');
+      // Старое окно снимается в обоих случаях: при новом окне — чтобы не копить
+      // две разные правды под одной задачей, при обычном сроке — потому что
+      // точность и появилась, окну больше нечего уточнять.
+      if (window || (args.due !== undefined && args.due !== null && String(args.due).trim() !== '')) {
+        const kept = nextText.split('\n');
+        const drop = [];
+        for (let i = found.line + 1; i < kept.length; i += 1) {
+          const raw = kept[i];
+          if (!raw.trim() || !/^\s/.test(raw)) break;
+          if (tasks.taskWindow([raw.trim().replace(/^[-*]\s+/, '')])) drop.push(i);
+        }
+        for (const i of drop.reverse()) kept.splice(i, 1);
+        nextText = kept.join('\n');
+        if (window) nextText = tasks.appendChild(nextText, found.line, `окно: ${window.from}..${window.to}`);
+        else if (drop.length) changedWindowDropped = true;
+      }
       if (args.note) nextText = tasks.appendChild(nextText, found.line, String(args.note).trim());
       if (nextText === file.text) throw new ToolError('nothing_to_update', 'Не передано ни одного изменения.');
 
       const saved = await writeFile(file, nextText);
       const changed = [];
       if (args.state) changed.push(`состояние → ${args.state}`);
-      if (args.due !== undefined) changed.push(args.due ? `срок → ${args.due}` : 'срок снят');
+      if (window) changed.push(`окно → ${window.from}..${window.to}, срок → ${window.to}`);
+      else if (args.due !== undefined) changed.push(args.due ? `срок → ${args.due}${changedWindowDropped ? ', окно снято' : ''}` : 'срок снят');
       if (args.priority) changed.push(`приоритет → ${args.priority}`);
       if (args.add_tags?.length) changed.push(`теги +${args.add_tags.join(', ')}`);
       if (args.remove_tags?.length) changed.push(`теги −${args.remove_tags.join(', ')}`);
@@ -1900,6 +1978,108 @@ function createTasksTools({
     return { file, slot: locateSlotIn(file, query, date) };
   }
 
+  function plural(n, one, few, many) {
+    const mod100 = n % 100;
+    if (mod100 >= 11 && mod100 <= 14) return many;
+    const mod10 = n % 10;
+    if (mod10 === 1) return one;
+    if (mod10 >= 2 && mod10 <= 4) return few;
+    return many;
+  }
+
+  // В пачке ошибку надо привязать к слоту, иначе «вид не из словаря» не говорит,
+  // какой из шести переписывать.
+  function slotWhere(i, batch) {
+    return batch ? `Слот ${i + 1}: ` : '';
+  }
+
+  function insertLineAt(text, line, at) {
+    const lines = String(text || '').split('\n');
+    lines.splice(at, 0, line);
+    return lines.join('\n').replace(/^\n+/, '');
+  }
+
+  /**
+   * Один слот: проверить всё и собрать строку, ничего не записывая.
+   *
+   * `accText` — текст дня с уже подготовленными слотами этой пачки, поэтому
+   * пересечения внутри неё считаются той же логикой, что и с уже стоящими:
+   * второй слот видит первый, потому что тот уже в тексте.
+   *
+   * `projectFiles` — общий на вызов кэш прочитанных проектов: шесть слотов на
+   * одну задачу читали бы её файл шесть раз.
+   */
+  async function prepareSlot(raw = {}, accText, projectFiles, i, batch) {
+    const where = slotWhere(i, batch);
+    const kind = raw.kind ? String(raw.kind).toLowerCase() : (raw.presence ? 'фон' : 'фокус');
+    if (!tasks.SLOT_KINDS.has(kind)) {
+      throw new ToolError('invalid_kind', `${where}вид «${raw.kind}» не из словаря доски: фон, дело, фокус, привычка.`);
+    }
+    // Время проверяется до slotConflicts намеренно: раньше любая ошибка оттуда
+    // выходила наружу как «время не в формате ЧЧ:ММ», и настоящая причина
+    // пряталась за чужим текстом.
+    if (tasks.timeToMinutes(raw.from) === null || tasks.timeToMinutes(raw.to) === null) {
+      throw new ToolError('invalid_time', `${where}время «${raw.from}–${raw.to}» не в формате ЧЧ:ММ.`);
+    }
+    const conflicts = tasks.slotConflicts(accText, raw.from, raw.to, kind);
+
+    // Привязка слота к задаче пишется тем же видом, который доска читает
+    // сама: «… · kinderly/8e3572». Свой формат здесь был бы двойником уже
+    // работающего, и доска перестала бы делать слот кликабельным.
+    let ref = null;
+    if (raw.ref) {
+      ref = tasks.parseAddress(raw.ref);
+      if (!ref) throw new ToolError('invalid_ref', `${where}ссылка «${raw.ref}» не похожа на адрес с доски. Нужно «проект/хэш», например kinderly/8e3572.`);
+      const path = `projects/${ref.project}.md`;
+      if (!projectFiles.has(path)) projectFiles.set(path, await readFile(path));
+      const refFile = projectFiles.get(path);
+      if (!tasks.findTaskByHash(refFile, ref.hash)) {
+        throw new ToolError('ref_not_found', `${where}в ${refFile.path} нет задачи ${ref.project}/${ref.hash}.`);
+      }
+    }
+    // Чей слот и что он забирает — оба признака необязательны. Не сказал —
+    // слот ничей и ничего не занимает, строка выходит ровно такой, какой была
+    // до этой пары полей.
+    const whose = raw.whose === undefined || raw.whose === null
+      ? null
+      : String(raw.whose).replace(/[()·;#@]/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    if (raw.whose !== undefined && raw.whose !== null && !whose) {
+      throw new ToolError('invalid_whose', `${where}чей слот — одно имя словами: «жена», «Саша». Скобки, «·», «#» и «@» в него не помещаются: по ним разбирается сама строка.`);
+    }
+    const takesRaw = Array.isArray(raw.takes)
+      ? raw.takes
+      : (raw.takes === undefined || raw.takes === null || raw.takes === '' ? [] : [raw.takes]);
+    const takes = [];
+    for (const item of takesRaw) {
+      const resource = tasks.normalizeResource(item);
+      if (!resource || !tasks.SLOT_RESOURCES.has(resource)) {
+        throw new ToolError(
+          'invalid_resource',
+          `${where}ресурс «${item}» не из словаря: машина, ребёнок. Общих ресурсов в семье ровно два — машина одна на двоих и ребёнок, который должен быть с кем-то. Третий не заводится словом в слоте.`,
+        );
+      }
+      takes.push(resource);
+    }
+    const mark = tasks.buildSlotMark({ whose, takes });
+    const refTail = ref ? ` · ${ref.project}/${ref.hash}` : '';
+    // Тег пишется всегда, даже для «фокус» по умолчанию: без него доска
+    // подставляет тот же смысл сама, но именно эта неявность и завела нас в
+    // ложный конфликт — слот без тега и соседний слот без тега считались
+    // «два дела требуют головы одновременно», хотя один из них был врезкой
+    // на пятнадцать минут.
+    // Скобка стоит до ссылки намеренно: доска ищет адрес задачи в хвосте
+    // строки после последней «·», и признаки после него сделали бы слот
+    // некликабельным.
+    const title = String(raw.title).trim();
+    const line = `- ${raw.from}–${raw.to} ${title}${mark ? ` ${mark}` : ''}${refTail} #${kind}`;
+    return {
+      line, kind, title, conflicts, whose, takes,
+      from: raw.from, to: raw.to,
+      presence: Boolean(raw.presence),
+      ref: ref ? `${ref.project}/${ref.hash}` : null,
+    };
+  }
+
   Object.assign(tools, {
     async tasks_habit(args = {}) {
       const date = args.date || today();
@@ -1922,91 +2102,94 @@ function createTasksTools({
 
     async tasks_slot(args = {}) {
       const date = args.date || today();
-      const file = await readFile(`days/${date}.md`);
-
-      let kind = args.kind ? String(args.kind).toLowerCase() : (args.presence ? 'фон' : 'фокус');
-      if (!tasks.SLOT_KINDS.has(kind)) {
-        throw new ToolError('invalid_kind', `Вид «${args.kind}» не из словаря доски: фон, дело, фокус, привычка.`);
+      // День расставляется целиком одним вызовом: описание дня приходит от него
+      // фразой, а не по слоту за раз. Дата остаётся на уровне вызова намеренно —
+      // с датой у каждого слота пачка перестала бы быть одной записью, и падение
+      // на середине оставило бы половину дня расставленной (та же причина, по
+      // которой tasks_close_day резолвит все галочки до записи).
+      const batch = Array.isArray(args.slots) ? args.slots : null;
+      if (batch && !batch.length) {
+        throw new ToolError('empty_batch', 'В slots пустой список. Передай слоты или поставь один через from/to/title.');
       }
-
-      let conflicts;
-      try {
-        conflicts = tasks.slotConflicts(file.text, args.from, args.to, kind);
-      } catch (e) {
-        throw new ToolError('invalid_time', `Время «${args.from}–${args.to}» не в формате ЧЧ:ММ.`);
-      }
-
-      // Тег пишется всегда, даже для «фокус» по умолчанию: без него доска
-      // подставляет тот же смысл сама, но именно эта неявность и завела нас в
-      // ложный конфликт — слот без тега и соседний слот без тега считались
-      // «два дела требуют головы одновременно», хотя один из них был врезкой
-      // на пятнадцать минут.
-      // Привязка слота к задаче пишется тем же видом, который доска читает
-      // сама: «… · kinderly/8e3572». Свой формат здесь был бы двойником уже
-      // работающего, и доска перестала бы делать слот кликабельным.
-      let ref = null;
-      if (args.ref) {
-        ref = tasks.parseAddress(args.ref);
-        if (!ref) throw new ToolError('invalid_ref', `Ссылка «${args.ref}» не похожа на адрес с доски. Нужно «проект/хэш», например kinderly/8e3572.`);
-        const refFile = await readFile(`projects/${ref.project}.md`);
-        if (!tasks.findTaskByHash(refFile, ref.hash)) {
-          throw new ToolError('ref_not_found', `В ${refFile.path} нет задачи ${ref.project}/${ref.hash}.`);
-        }
-      }
-      // Чей слот и что он забирает — оба признака необязательны. Не сказал —
-      // слот ничей и ничего не занимает, строка выходит ровно такой, какой была
-      // до этой пары полей.
-      const whose = args.whose === undefined || args.whose === null
-        ? null
-        : String(args.whose).replace(/[()·;#@]/g, ' ').replace(/\s{2,}/g, ' ').trim();
-      if (args.whose !== undefined && args.whose !== null && !whose) {
-        throw new ToolError('invalid_whose', 'Чей слот — одно имя словами: «жена», «Саша». Скобки, «·», «#» и «@» в него не помещаются: по ним разбирается сама строка.');
-      }
-      const takesRaw = Array.isArray(args.takes)
-        ? args.takes
-        : (args.takes === undefined || args.takes === null || args.takes === '' ? [] : [args.takes]);
-      const takes = [];
-      for (const item of takesRaw) {
-        const resource = tasks.normalizeResource(item);
-        if (!resource || !tasks.SLOT_RESOURCES.has(resource)) {
+      const items = batch || [args];
+      for (let i = 0; i < items.length; i += 1) {
+        const item = items[i] || {};
+        if (!item.from || !item.to || !String(item.title || '').trim()) {
           throw new ToolError(
-            'invalid_resource',
-            `Ресурс «${item}» не из словаря: машина, ребёнок. Общих ресурсов в семье ровно два — машина одна на двоих и ребёнок, который должен быть с кем-то. Третий не заводится словом в слоте.`,
+            'slot_args_missing',
+            `${slotWhere(i, batch)}нужны все три: from, to и title. Один слот ставится ими напрямую, несколько — списком slots.`,
           );
         }
-        takes.push(resource);
       }
-      const mark = tasks.buildSlotMark({ whose, takes });
 
-      const refTail = ref ? ` · ${ref.project}/${ref.hash}` : '';
-      // Скобка стоит до ссылки намеренно: доска ищет адрес задачи в хвосте
-      // строки после последней «·», и признаки после него сделали бы слот
-      // некликабельным.
-      const line = `- ${args.from}–${args.to} ${String(args.title).trim()}${mark ? ` ${mark}` : ''}${refTail} #${kind}`;
-      // Крупные блоки присутствия идут выше слотов задач: доска рисует то, что
-      // ниже в файле, поверх — иначе блок закроет собой всё, что внутри него.
-      const nextText = args.presence
-        ? [line, ...String(file.text || '').split('\n')].join('\n').replace(/^\n+/, '')
-        : tasks.appendBlock(file.text, line);
-      const saved = await writeFile(file, nextText);
+      const file = await readFile(`days/${date}.md`);
+      const projectFiles = new Map();
+      const addedRaw = new Set();
+      const prepared = [];
+      let accText = String(file.text || '');
+      let presenceCount = 0;
+      for (let i = 0; i < items.length; i += 1) {
+        const slot = await prepareSlot(items[i], accText, projectFiles, i, batch);
+        prepared.push(slot);
+        addedRaw.add(slot.line.trim());
+        // Крупные блоки присутствия идут выше слотов задач: доска рисует то, что
+        // ниже в файле, поверх — иначе блок закроет собой всё, что внутри него.
+        // Внутри пачки они складываются друг за другом, а не в обратном порядке.
+        accText = slot.presence
+          ? insertLineAt(accText, slot.line, presenceCount)
+          : tasks.appendBlock(accText, slot.line);
+        if (slot.presence) presenceCount += 1;
+      }
+      // Пересечение с тем, что уже стояло в дне, и пересечение с соседом по этой
+      // же пачке — разные новости: во втором случае двигать надо то, что он
+      // только что назвал, а не то, что стоит с утра.
+      for (const slot of prepared) {
+        for (const conflict of slot.conflicts) {
+          conflict.with = addedRaw.has(conflict.raw) ? 'пачка' : 'день';
+        }
+      }
 
+      // Запись ровно одна на весь вызов. Половина расставленного дня и ошибка на
+      // третьем слоте — это день, про который непонятно, поставлен он или нет.
+      const saved = await writeFile(file, accText);
+
+      const conflicts = prepared.flatMap((slot) => slot.conflicts);
       const real = conflicts.filter((c) => c.level === 'конфликт');
       const soft = conflicts.filter((c) => c.level === 'вопрос');
       let warn = '';
       if (real.length) warn += ` Конфликт с: ${real.map((c) => c.title).join('; ')} — скажи об этом куратору.`;
       if (soft.length) warn += ` Стоит уточнить: ${soft.map((c) => c.title).join('; ')}.`;
+
+      if (batch) {
+        const listed = prepared.map((s) => `${s.from}–${s.to} ${s.title}`).join('; ');
+        return {
+          text: `Поставил на ${date} ${prepared.length} ${plural(prepared.length, 'слот', 'слота', 'слотов')}: ${listed}.${warn}`,
+          structured: {
+            date,
+            count: prepared.length,
+            slots: prepared.map((s) => ({
+              from: s.from, to: s.to, title: s.title, kind: s.kind,
+              whose: s.whose, takes: s.takes, ref: s.ref, conflicts: s.conflicts,
+            })),
+            conflicts,
+            rev: saved.rev,
+          },
+        };
+      }
+
+      const one = prepared[0];
       // Занятость называется фактом, без вывода «значит туда не поедешь»:
       // что достижимо без машины и что делается с ребёнком, знает он один.
-      const busy = takes.length
-        ? ` В это время занято: ${takes.join(', ')}${whose ? ` (событие не его — ${whose})` : ''}.`
+      const busy = one.takes.length
+        ? ` В это время занято: ${one.takes.join(', ')}${one.whose ? ` (событие не его — ${one.whose})` : ''}.`
         : '';
 
       return {
-        text: `Поставил на ${date}: ${args.from}–${args.to} ${args.title} (${kind}).${busy}${warn}`,
+        text: `Поставил на ${date}: ${one.from}–${one.to} ${one.title} (${one.kind}).${busy}${warn}`,
         structured: {
-          date, from: args.from, to: args.to, title: args.title, kind,
-          whose, takes,
-          ref: ref ? `${ref.project}/${ref.hash}` : null, conflicts, rev: saved.rev,
+          date, from: one.from, to: one.to, title: one.title, kind: one.kind,
+          whose: one.whose, takes: one.takes,
+          ref: one.ref, conflicts, rev: saved.rev,
         },
       };
     },

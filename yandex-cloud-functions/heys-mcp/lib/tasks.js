@@ -1078,6 +1078,45 @@ function taskBackDate(children, { today } = {}) {
 }
 
 /**
+ * Неточный срок: `окно: 2026-08-10..2026-08-12`.
+ *
+ * Он говорит «в начале недели» и «во второй половине августа» — и это не
+ * уклончивость, а честное состояние дела: точность появится позже. Класть
+ * диапазон в сам `due` нельзя, оттуда хвост уезжает в заголовок задачи, а на
+ * заголовке держится её хэш — адрес проект/хэш поменялся бы, и все ссылки на
+ * задачу перестали бы её находить.
+ *
+ * Поэтому окно живёт отдельной строкой, а `due` остаётся поздней границей —
+ * крайним сроком. Ранняя граница нужна не для красоты: без неё задача со
+ * сроком на конце окна молчит всё окно и всплывает в последний день, то есть
+ * ровно тогда, когда делать уже поздно.
+ */
+const TASK_WINDOW_RE = /^\s*окно:\s*(\d{4}-\d{2}-\d{2})\s*\.\.\s*(\d{4}-\d{2}-\d{2})\s*$/i;
+
+function taskWindow(children) {
+  for (const child of children || []) {
+    const match = TASK_WINDOW_RE.exec(String(child || ''));
+    if (!match) continue;
+    const [, from, to] = match;
+    // Перевёрнутое окно — это опечатка, а не «окно назад». Молча меняя границы
+    // местами, мы бы сделали из опечатки правдоподобный срок.
+    if (from > to) continue;
+    return { from, to };
+  }
+  return null;
+}
+
+/**
+ * День, с которого задача начинает считаться живой. Без окна это её срок; с
+ * окном — ранняя граница. Просрочка при этом считается по-прежнему по `due`:
+ * пока не прошёл крайний срок, задача не просрочена, даже если окно началось.
+ */
+function taskSignalDate(task) {
+  const window = taskWindow(task && task.children);
+  return (window && window.from) || (task && task.due) || null;
+}
+
+/**
  * Открытые вопросы задачника: вложенные строки `открыто:` под задачами.
  *
  * Вместе с вопросом отдаются срок и дата заведения ЗАДАЧИ, а не вопроса:
@@ -1106,6 +1145,11 @@ function collectOpenQuestions(files, { today = null } = {}) {
             task: task.title,
             question,
             due: task.due || null,
+            // Вопрос наследует у задачи не только срок, но и окно: без этого
+            // «аудит целиком или только новые формы?» под задачей с окном
+            // 16–31 августа ждал бы 31-го, то есть последнего дня.
+            signal: taskSignalDate(task),
+            window: taskWindow(task.children),
             created: task.created || null,
             done: Boolean(task.done),
             back,
@@ -3749,10 +3793,19 @@ function pickFocus(tasks_, { place = null, minutes = null, mood = null, today = 
     let score = 0;
     if (wantedPlace && taskPlaceTag === wantedPlace) { score += 40; reasons.push(`место: #${taskPlaceTag}`); }
     if (budget && taskTime) { score += 25; reasons.push(`влезает в ${budget} мин (#${Object.keys(TIME_TAGS).find((k) => TIME_TAGS[k] === taskTime)})`); }
-    if (task.due && today) {
-      if (task.due < today) { score += 50; reasons.push(`просрочено с ${task.due}`); }
-      else if (task.due === today) { score += 45; reasons.push('срок сегодня'); }
-      else if (dateToMs(task.due) - dateToMs(today) <= 3 * DAY_MS) { score += 20; reasons.push(`срок ${task.due}`); }
+    // Окно считается и без срока: строку «окно:» можно положить руками, и тогда
+    // due у задачи нет вовсе — а «начало недели» всё равно уже наступило.
+    const signal = taskSignalDate(task);
+    if (signal && today) {
+      // Просрочка — всегда по сроку. Всё остальное считается от дня, с которого
+      // задачу можно делать: у задачи с окном это его начало, иначе тот же срок.
+      // Иначе «вторая половина августа» с крайним сроком 31-го молчала бы две
+      // недели и всплыла в последний день.
+      const window = taskWindow(task.children);
+      if (task.due && task.due < today) { score += 50; reasons.push(`просрочено с ${task.due}`); }
+      else if (signal === today) { score += 45; reasons.push(window ? `окно открылось ${window.from}` : 'срок сегодня'); }
+      else if (signal < today) { score += 45; reasons.push(`окно с ${window ? window.from : signal}${task.due ? `, край ${task.due}` : ''}`); }
+      else if (dateToMs(signal) - dateToMs(today) <= 3 * DAY_MS) { score += 20; reasons.push(window ? `окно с ${window.from}` : `срок ${task.due}`); }
     }
     if (task.priority === 'P1') { score += 30; reasons.push('P1'); }
     else if (task.priority === 'P2') score += 15;
@@ -4708,7 +4761,10 @@ function todaySlotRefsFromText(text) {
 }
 
 function decideKind(row, { today, slotRefs }) {
-  const due = row.due || '';
+  // Открывшееся окно приравнено к наступившему сроку: у задачи «в начале
+  // недели» крайний срок стоит на среде, и до среды она бы в «Требует решения»
+  // не попадала вовсе.
+  const due = row.signal || row.due || '';
   const plain = row.plain || '';
   const ref = row.ref || '';
   if ((due && due <= today) || row.overdue || (ref && slotRefs.has(ref)) || DECIDE_RX_TODAY.test(plain)) {
@@ -4739,6 +4795,10 @@ function buildDecideGroups({ blockedTasks, openQuestions, today, dayText }) {
       title: task.title,
       plain: task.title,
       due: task.due || null,
+      // Задача с окном становится горячей, когда окно открылось, а не когда
+      // истекает крайний срок: решать её надо внутри окна.
+      signal: taskSignalDate(task),
+      window: taskWindow(task.children),
       overdue: !!(task.due && task.due < today),
       source: 'blocked',
       task,
@@ -4753,6 +4813,8 @@ function buildDecideGroups({ blockedTasks, openQuestions, today, dayText }) {
       title: q.task,
       plain: q.question,
       due: q.due || null,
+      signal: q.signal || null,
+      window: q.window || null,
       overdue: !!(q.due && q.due < today),
       source: 'open',
       question: q.question,
@@ -5777,6 +5839,8 @@ module.exports = {
   taskAddress,
   collectOpenQuestions,
   taskBackDate,
+  taskWindow,
+  taskSignalDate,
   questionKey,
   isSimpleQuestion,
   compareSimpleQuestions,

@@ -554,6 +554,222 @@ test('неизвестный вид слота отклоняется до за�
   assert.equal(api.writes.length, 0);
 });
 
+// ── Неточный срок окном ──────────────────────────────────────────────────
+//
+// «В начале недели» — это не уклончивость, а честное состояние дела. Раньше
+// такое приходилось округлять до одной выдуманной даты или переспрашивать.
+
+test('окно читается строкой контекста, перевёрнутое и кривое — игнорируются', () => {
+  assert.deepEqual(tasks.taskWindow(['окно: 2026-08-10..2026-08-12']), { from: '2026-08-10', to: '2026-08-12' });
+  assert.deepEqual(tasks.taskWindow(['окно: 2026-08-10 .. 2026-08-12']), { from: '2026-08-10', to: '2026-08-12' });
+  assert.equal(tasks.taskWindow(['окно: 2026-08-12..2026-08-10']), null, 'перевёрнутое окно — опечатка, а не срок');
+  assert.equal(tasks.taskWindow(['окно: начало недели']), null);
+  assert.equal(tasks.taskWindow(['окно: 10.08..12.08']), null);
+  assert.equal(tasks.taskWindow(['обычный подпункт']), null);
+});
+
+test('окно не трогает хэш задачи — иначе все ссылки на неё отвалятся', () => {
+  const withWindow = tasks.parseTasks({
+    path: 'projects/kinderly.md',
+    text: '# k\n\n- [ ] P1 Согласовать сценарий due:2026-08-12 ^2026-08-01\n  - окно: 2026-08-10..2026-08-12\n',
+  })[0];
+  assert.equal(withWindow.title, 'Согласовать сценарий', 'строка окна не должна попасть в заголовок');
+  assert.equal(tasks.taskHash('kinderly', withWindow.title), tasks.taskHash('kinderly', 'Согласовать сценарий'));
+  assert.equal(withWindow.due, '2026-08-12', 'срок остаётся поздней границей');
+  assert.deepEqual(tasks.taskWindow(withWindow.children), { from: '2026-08-10', to: '2026-08-12' });
+});
+
+test('задача с открывшимся окном становится горячей до крайнего срока', () => {
+  const task = {
+    children: ['окно: 2026-08-10..2026-08-31'],
+    due: '2026-08-31',
+  };
+  assert.equal(tasks.taskSignalDate(task), '2026-08-10');
+});
+
+test('внутри открытого окна и задача, и её вопрос попадают в «Требует решения»', () => {
+  // Ровно тот случай, ради которого окно и заводится: «вторая половина
+  // августа» со сроком на 31-е раньше молчала две недели и всплывала в день,
+  // когда делать уже поздно.
+  const file = {
+    path: 'projects/heys.md',
+    text: '# heys\n\n- [ ] P1 Прогнать месячный аудит ПДн due:2026-08-31 #next #blocked ^2026-08-01\n'
+      + '  - окно: 2026-08-16..2026-08-31\n'
+      + '  - открыто: аудит целиком или только новые формы?\n',
+  };
+  const parsed = tasks.parseTasks(file).map((t) => ({ ...t, ref: `heys/${tasks.taskHash('heys', t.title)}` }));
+  const questions = tasks.collectOpenQuestions([file], { today: '2026-08-20' });
+  assert.equal(questions[0].signal, '2026-08-16', 'вопрос обязан наследовать окно задачи, а не только её срок');
+
+  const grouped = tasks.buildDecideGroups({
+    blockedTasks: parsed, openQuestions: questions, today: '2026-08-20', dayText: '',
+  });
+  assert.ok(grouped.hot.some((r) => r.source === 'blocked'), 'задача внутри окна — горячая, крайний срок ещё не наступил');
+  assert.ok(grouped.hot.some((r) => r.source === 'open'), 'вопрос по ней — тоже, иначе его зададут в последний день окна');
+
+  // До открытия окна она молчит: 10-го числа спрашивать ещё не о чем.
+  const early = tasks.buildDecideGroups({
+    blockedTasks: parsed, openQuestions: tasks.collectOpenQuestions([file], { today: '2026-08-10' }), today: '2026-08-10', dayText: '',
+  });
+  assert.ok(!early.hot.some((r) => r.source === 'blocked'), 'до начала окна задача не должна лезть в горячее');
+});
+
+test('срок на поздней границе окна не делает задачу просроченной раньше времени', () => {
+  const file = {
+    path: 'projects/heys.md',
+    text: '# heys\n\n- [ ] P1 Прогнать месячный аудит ПДн due:2026-08-31 #next ^2026-08-01\n  - окно: 2026-08-16..2026-08-31\n',
+  };
+  const [task] = tasks.parseTasks(file);
+  const focus = tasks.pickFocus([task], { today: '2026-08-20', limit: 3 });
+  const reasons = (focus[0].reasons || []).join(', ');
+  assert.match(reasons, /окно с 2026-08-16/, 'внутри окна задача поднимается, и причина названа окном');
+  assert.ok(!/просрочено/.test(reasons), 'просрочка считается по крайнему сроку, а не по началу окна');
+});
+
+test('tasks_update окном ставит строку и подтягивает срок к поздней границе', async () => {
+  const api = liveTasksApi();
+  const hash = tasks.taskHash('family', 'Покрасить потолок баллончиком');
+  const res = await session(api).tasks_update({ project: 'family', hash, window: '2026-08-10..2026-08-12' });
+  assert.match(res.text, /окно → 2026-08-10\.\.2026-08-12, срок → 2026-08-12/);
+  const saved = api.kv[tasks.keyForPath('projects/family.md')].text;
+  assert.match(saved, /окно: 2026-08-10\.\.2026-08-12/);
+  assert.match(saved, /Покрасить потолок баллончиком.*due:2026-08-12/);
+});
+
+test('повторное окно заменяет прежнее, а точный срок снимает его совсем', async () => {
+  const api = liveTasksApi();
+  const hash = tasks.taskHash('family', 'Покрасить потолок баллончиком');
+  await session(api).tasks_update({ project: 'family', hash, window: '2026-08-10..2026-08-12' });
+  await session(api).tasks_update({ project: 'family', hash, window: '2026-08-17..2026-08-19' });
+  let saved = api.kv[tasks.keyForPath('projects/family.md')].text;
+  assert.equal((saved.match(/окно:/g) || []).length, 1, 'два окна под одной задачей — две разные правды');
+  assert.match(saved, /окно: 2026-08-17\.\.2026-08-19/);
+  const res = await session(api).tasks_update({ project: 'family', hash, due: '2026-08-18' });
+  saved = api.kv[tasks.keyForPath('projects/family.md')].text;
+  assert.ok(!/окно:/.test(saved), 'появилась точность — окну больше нечего уточнять');
+  assert.match(res.text, /окно снято/);
+});
+
+test('окно словами не принимается — границы считает ассистент, а не он', async () => {
+  const api = liveTasksApi();
+  const hash = tasks.taskHash('family', 'Покрасить потолок баллончиком');
+  await assert.rejects(() => session(api).tasks_update({ project: 'family', hash, window: 'начало недели' }),
+    (e) => e.code === 'invalid_window');
+  await assert.rejects(() => session(api).tasks_update({ project: 'family', hash, window: '2026-08-12..2026-08-10' }),
+    (e) => e.code === 'invalid_window');
+});
+
+// ── День целиком одним вызовом ───────────────────────────────────────────
+//
+// Он описывает день фразой, а не по событию за раз. Шесть слотов шестью
+// вызовами — это шесть полных перезаписей файла дня и шесть окон, в которые
+// параллельная сессия ловит stale_write_blocked.
+
+test('пачка слотов пишет день одной записью', async () => {
+  const api = withBoard();
+  const res = await build(api).tasks_slot({
+    date: '2026-08-02',
+    slots: [
+      { from: '09:00', to: '09:30', title: 'Зарядка', kind: 'привычка' },
+      { from: '10:00', to: '11:00', title: 'Лендинг', kind: 'фокус' },
+      { from: '11:30', to: '11:45', title: 'Позвонить в банк', kind: 'дело' },
+    ],
+  });
+  const dayWrites = api.writes.filter((w) => (w.items || []).some((it) => it.k === tasks.keyForPath('days/2026-08-02.md')));
+  assert.equal(dayWrites.length, 1, 'день пишется один раз, а не по слоту за запись');
+  assert.equal(res.structured.count, 3);
+  const saved = api.writes[0].items[0].v.text;
+  assert.match(saved, /- 09:00–09:30 Зарядка #привычка/);
+  assert.match(saved, /- 10:00–11:00 Лендинг #фокус/);
+  assert.match(saved, /- 11:30–11:45 Позвонить в банк #дело/);
+});
+
+test('пересечение внутри пачки видно и отличимо от пересечения с днём', async () => {
+  const api = withBoard();
+  const res = await build(api).tasks_slot({
+    date: '2026-08-02',
+    slots: [
+      { from: '09:00', to: '11:00', title: 'Лендинг', kind: 'фокус' },
+      { from: '10:00', to: '12:00', title: 'Созвон', kind: 'фокус' },
+    ],
+  });
+  const inner = res.structured.conflicts.find((c) => c.title === 'Лендинг');
+  assert.ok(inner, 'второй слот обязан увидеть первый — иначе пачка ставит два фокуса встык молча');
+  assert.equal(inner.level, 'конфликт');
+  assert.equal(inner.with, 'пачка', 'двигать надо то, что он назвал сейчас, а не то, что стоит с утра');
+});
+
+test('presence в пачке встаёт выше остальных слотов и держит свой порядок', async () => {
+  const api = withBoard();
+  await build(api).tasks_slot({
+    date: '2026-08-02',
+    slots: [
+      { from: '10:00', to: '11:00', title: 'Лендинг', kind: 'фокус' },
+      { from: '08:00', to: '14:00', title: 'Дом у родителей', presence: true },
+      { from: '15:00', to: '20:00', title: 'Студия', presence: true },
+    ],
+  });
+  const lines = api.writes[0].items[0].v.text.split('\n').filter(Boolean);
+  const home = lines.findIndex((l) => l.includes('Дом у родителей #фон'));
+  const studio = lines.findIndex((l) => l.includes('Студия #фон'));
+  const work = lines.findIndex((l) => l.includes('Лендинг'));
+  assert.ok(home >= 0 && studio >= 0 && work >= 0);
+  assert.ok(home < work && studio < work, 'фон ниже слота задачи закроет его собой на доске');
+  assert.ok(home < studio, 'взаимный порядок присутствий не должен переворачиваться');
+});
+
+test('ошибка в третьем слоте отменяет всю пачку и называет его номер', async () => {
+  const api = withBoard();
+  await assert.rejects(() => build(api).tasks_slot({
+    date: '2026-08-02',
+    slots: [
+      { from: '09:00', to: '09:30', title: 'Зарядка' },
+      { from: '10:00', to: '11:00', title: 'Лендинг' },
+      { from: '12:00', to: '13:00', title: 'Студия', kind: 'важное' },
+    ],
+  }), (e) => e.code === 'invalid_kind' && /Слот 3/.test(e.message));
+  assert.equal(api.writes.length, 0, 'половина расставленного дня хуже нерасставленного: непонятно, поставлен он или нет');
+});
+
+test('вызов без времени и без списка говорит, чего не хватает, а не падает про формат ЧЧ:ММ', async () => {
+  const api = withBoard();
+  await assert.rejects(() => build(api).tasks_slot({ date: '2026-08-02', title: 'Что-то' }),
+    (e) => e.code === 'slot_args_missing');
+  assert.equal(api.writes.length, 0);
+});
+
+test('одиночный вызов после правки отдаёт тот же плоский ответ, что и раньше', async () => {
+  const api = withBoard();
+  const res = await build(api).tasks_slot({ date: '2026-08-02', from: '09:00', to: '09:10', title: 'Позвонить', kind: 'дело' });
+  assert.equal(res.structured.from, '09:00');
+  assert.equal(res.structured.title, 'Позвонить');
+  assert.equal(res.structured.kind, 'дело');
+  assert.equal(res.structured.slots, undefined, 'у одиночного вызова контракт не меняется');
+  assert.match(res.text, /Поставил на 2026-08-02: 09:00–09:10 Позвонить \(дело\)/);
+});
+
+test('пачка читает файл проекта один раз на все слоты с одной задачей', async () => {
+  const api = withBoard();
+  const hash = tasks.taskHash('heys', 'Собрать оптимальную версию лендинга');
+  const projectKey = tasks.keyForPath('projects/heys.md');
+  let projectReads = 0;
+  const origGet = api.getKVByCurator;
+  api.getKVByCurator = async (bearer, clientId, keys, ...rest) => {
+    const asked = Array.isArray(keys) ? keys : [keys];
+    if (asked.includes(projectKey)) projectReads += 1;
+    return origGet(bearer, clientId, keys, ...rest);
+  };
+  await build(api).tasks_slot({
+    date: '2026-08-02',
+    slots: [
+      { from: '10:00', to: '11:00', title: 'Лендинг: разбор', ref: `heys/${hash}` },
+      { from: '14:00', to: '15:00', title: 'Лендинг: правки', ref: `heys/${hash}` },
+      { from: '16:00', to: '17:00', title: 'Лендинг: сборка', ref: `heys/${hash}` },
+    ],
+  });
+  assert.equal(projectReads, 1, `файл задачи читается один раз, а не на каждый слот (прочитан ${projectReads} раз)`);
+});
+
 // ── Чей слот и что он забирает ───────────────────────────────────────────
 //
 // «У жены тренировка завтра в обед» — событие не его, а зависит от него он:
