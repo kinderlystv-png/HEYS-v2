@@ -1834,7 +1834,12 @@
                 },
                   d.bmiContext.category === 'underweight' ? '⚠️' :
                     d.bmiContext.category === 'obese' ? '📊' : '✅',
-                  ' BMI ' + (d.bmiContext.bmi || '—').toFixed?.(1) + ' (' +
+                  // Поле называется value, а не bmi (heys_day_caloric_balance_v1.js
+                  // строит bmiContext = { value, category, ... }) — при чтении
+                  // несуществующего d.bmiContext.bmi `.toFixed?.()` на '—' тихо
+                  // возвращал undefined, и попап печатал буквально «BMI undefined»
+                  // (2026-08-08).
+                  ' BMI ' + (typeof d.bmiContext.value === 'number' ? d.bmiContext.value.toFixed(1) : '—') + ' (' +
                   (d.bmiContext.category === 'normal' ? 'норма' :
                     d.bmiContext.category === 'underweight' ? 'недовес' :
                       d.bmiContext.category === 'overweight' ? 'избыток' : 'ожирение') + ')',
