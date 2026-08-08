@@ -585,11 +585,77 @@ function addWater(day, ml, { nowMs, clientId }) {
   }, nowMs, clientId);
 }
 
-/** Тренировка в блобе — это минуты по 4 пульсовым зонам. */
-function addTraining(day, zoneMinutes, { nowMs, clientId }) {
+/**
+ * Тренировка в блобе — минуты по 4 пульсовым зонам плюс необязательные поля,
+ * которые уже понимает веб-модель (apps/web/heys_day_trainings_v1.js:2995) и
+ * читает summarizeDay/isRealTraining/dayAverages здесь же: time, type,
+ * activityLabel, mood/wellbeing/stress, comment. До этой правки коннектор их
+ * молча терял — heys_log_training писал только `{z, updatedAt}`, и куратор не
+ * мог записать ни время, ни субъективную оценку тренировки.
+ *
+ * `source` не берётся снаружи: коннектор всегда проставляет 'curator_mcp' сам,
+ * чтобы отличать записи через MCP от того, что клиент внёс в приложении —
+ * это пригодится модели нагрузки, если качество данных из двух источников
+ * когда-нибудь придётся взвешивать по-разному.
+ */
+function addTraining(day, zoneMinutes, extra, { nowMs, clientId }) {
   const z = Array.from({ length: HR_ZONES }, (_, i) => Math.max(0, Number(zoneMinutes[i]) || 0));
-  const trainings = [...(day.trainings || []), { z, updatedAt: nowMs }];
+  const training = { z, updatedAt: nowMs, source: 'curator_mcp' };
+  const e = extra || {};
+  if (typeof e.time === 'string' && e.time.trim()) training.time = e.time.trim();
+  if (typeof e.type === 'string' && e.type.trim()) training.type = e.type.trim();
+  if (typeof e.activityLabel === 'string' && e.activityLabel.trim()) training.activityLabel = e.activityLabel.trim();
+  if (typeof e.comment === 'string' && e.comment.trim()) training.comment = e.comment.trim();
+  for (const field of ['mood', 'wellbeing', 'stress']) {
+    const v = Number(e[field]);
+    if (Number.isFinite(v) && v >= 1 && v <= 10) training[field] = v;
+  }
+  const trainings = [...(day.trainings || []), training];
   return touch({ ...day, trainings }, nowMs, clientId);
+}
+
+/**
+ * Правка уже записанной тренировки: оценки, время, тип, комментарий, зоны.
+ *
+ * Добавить тренировку коннектор умел с самого начала, а дописать к ней оценку —
+ * нет: куратор мог только завести новую. История без оценок так и оставалась
+ * без них (2026-08-08).
+ *
+ * Индекс — позиция в `day.trainings`, как её отдаёт summarizeDay. `z` меняем
+ * целиком: частичная правка отдельных зон неоднозначна (что делать с
+ * непереданными — обнулить или оставить), а тренировка и так короткая.
+ */
+function updateTraining(day, index, patch, { nowMs, clientId }) {
+  const list = Array.isArray(day.trainings) ? day.trainings : [];
+  const i = Number(index);
+  if (!Number.isInteger(i) || i < 0 || i >= list.length) {
+    return { day, applied: [], error: 'not_found' };
+  }
+  const current = list[i] || {};
+  const next = { ...current };
+  const applied = [];
+  const p = patch || {};
+
+  if (Array.isArray(p.zoneMinutes)) {
+    next.z = Array.from({ length: HR_ZONES }, (_, k) => Math.max(0, Number(p.zoneMinutes[k]) || 0));
+    applied.push('zones_minutes');
+  }
+  for (const [arg, field] of [['time', 'time'], ['type', 'type'], ['activityLabel', 'activityLabel'], ['comment', 'comment']]) {
+    if (typeof p[arg] === 'string' && p[arg].trim()) { next[field] = p[arg].trim(); applied.push(arg); }
+  }
+  for (const field of ['mood', 'wellbeing', 'stress']) {
+    if (p[field] === undefined || p[field] === null) continue;
+    const v = Number(p[field]);
+    if (!Number.isFinite(v) || v < 1 || v > 10) return { day, applied: [], error: 'invalid_range' };
+    next[field] = v;
+    applied.push(field);
+  }
+  if (!applied.length) return { day, applied: [], error: 'nothing_to_update' };
+
+  next.updatedAt = nowMs;
+  const trainings = list.slice();
+  trainings[i] = next;
+  return { day: touch({ ...day, trainings }, nowMs, clientId), applied, error: null };
 }
 
 const DAY_FIELD_MAP = {
@@ -1503,10 +1569,26 @@ function summarizeDay(day) {
       kcal: Math.round(itemKcal(item)),
     })),
   }));
+  // isRealTraining, не «есть минуты»: силовая с workout_builder может иметь
+  // z=[0,0,0,0] (нагрузка не в пульсовых зонах) и раньше выпадала из сводки
+  // целиком — куратор не видел тренировку вовсе, только на глаз по дневнику.
   const trainings = (day.trainings || [])
-    .map((t) => (Array.isArray(t && t.z) ? t.z.map(Number) : []))
-    .filter((z) => z.some((m) => m > 0))
-    .map((z) => ({ zones_minutes: z, total_minutes: z.reduce((a, b) => a + b, 0) }));
+    // Индекс — позиция в исходном массиве, до фильтра: его передают в
+    // heys_update_training, и он должен указывать на ту же тренировку в блобе.
+    .map((t, index) => ({ t, index }))
+    .filter(({ t }) => isRealTraining(t))
+    .map(({ t, index }) => {
+      const z = (Array.isArray(t.z) ? t.z : [0, 0, 0, 0]).map(Number);
+      const out = { index, zones_minutes: z, total_minutes: z.reduce((a, b) => a + b, 0) };
+      if (t.time) out.time = t.time;
+      if (t.type) out.type = t.type;
+      if (t.activityLabel) out.activity_label = t.activityLabel;
+      if (t.comment) out.comment = t.comment;
+      for (const field of ['mood', 'wellbeing', 'stress']) {
+        if (t[field] !== undefined && t[field] !== null && t[field] !== '') out[field] = Number(t[field]);
+      }
+      return out;
+    });
 
   return {
     date: day.date,
@@ -1687,6 +1769,7 @@ module.exports = {
   deleteMeal,
   addWater,
   addTraining,
+  updateTraining,
   updateDayFields,
   summarizeDay,
   applyColdExposure,

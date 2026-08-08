@@ -112,8 +112,36 @@ test('addWater суммируется и не уходит в минус', () =>
 
 test('addTraining нормализует минуты в четыре пульсовые зоны', () => {
   const base = day.emptyDay('2026-08-01', CLIENT, 1000);
-  const next = day.addTraining(base, [10, 20], { nowMs: 2000, clientId: CLIENT });
+  const next = day.addTraining(base, [10, 20], null, { nowMs: 2000, clientId: CLIENT });
   assert.deepEqual(next.trainings[0].z, [10, 20, 0, 0]);
+  // source проставляется всегда — без него нельзя отличить запись через
+  // коннектор от той, что клиент внёс в приложении.
+  assert.equal(next.trainings[0].source, 'curator_mcp');
+});
+
+test('addTraining пишет время, тип и ощущения — то, что раньше терялось молча', () => {
+  const base = day.emptyDay('2026-08-01', CLIENT, 1000);
+  const next = day.addTraining(base, [30], {
+    time: '18:40', type: 'cardio', activityLabel: 'Бег', comment: 'В парке',
+    mood: 8, wellbeing: 7, stress: 3,
+  }, { nowMs: 2000, clientId: CLIENT });
+  const t = next.trainings[0];
+  assert.equal(t.time, '18:40');
+  assert.equal(t.type, 'cardio');
+  assert.equal(t.activityLabel, 'Бег');
+  assert.equal(t.comment, 'В парке');
+  assert.equal(t.mood, 8);
+  assert.equal(t.wellbeing, 7);
+  assert.equal(t.stress, 3);
+});
+
+test('addTraining игнорирует мусорные значения ощущений вместо записи NaN', () => {
+  const base = day.emptyDay('2026-08-01', CLIENT, 1000);
+  const next = day.addTraining(base, [30], { mood: 15, wellbeing: 'бодро', stress: 0 }, { nowMs: 2000, clientId: CLIENT });
+  const t = next.trainings[0];
+  assert.equal(t.mood, undefined);
+  assert.equal(t.wellbeing, undefined);
+  assert.equal(t.stress, undefined);
 });
 
 test('updateDayFields пишет во внутренние имена полей и валидирует время', () => {
@@ -220,6 +248,51 @@ test('summarizeDay не тащит нутриентные слепки в отв
   // Пустые тренировки не показываем — их в блобе много как заготовок.
   assert.equal(summary.trainings.length, 1);
   assert.equal(summary.trainings[0].total_minutes, 15);
+});
+
+test('summarizeDay отдаёт время, тип и ощущения тренировки, а не только минуты', () => {
+  const summary = day.summarizeDay({
+    date: '2026-08-01',
+    waterMl: 0,
+    meals: [],
+    trainings: [{ z: [30, 0, 0, 0], time: '18:40', type: 'cardio', activityLabel: 'Бег', mood: 8, wellbeing: 7, stress: 3, comment: 'В парке' }],
+  });
+  assert.deepEqual(summary.trainings[0], {
+    index: 0,
+    zones_minutes: [30, 0, 0, 0], total_minutes: 30, time: '18:40', type: 'cardio',
+    activity_label: 'Бег', comment: 'В парке', mood: 8, wellbeing: 7, stress: 3,
+  });
+});
+
+test('index тренировки указывает на позицию в блобе, а не в отфильтрованном списке', () => {
+  // Первая тренировка — пустая заготовка, её summarizeDay не показывает.
+  // Если бы index считался по выходному списку, heys_update_training правил бы
+  // заготовку вместо настоящей тренировки.
+  const summary = day.summarizeDay({
+    date: '2026-08-01',
+    waterMl: 0,
+    meals: [],
+    trainings: [{ z: [0, 0, 0, 0] }, { z: [45, 0, 0, 0], time: '19:00' }],
+  });
+  assert.equal(summary.trainings.length, 1);
+  assert.equal(summary.trainings[0].index, 1);
+});
+
+test('summarizeDay видит силовую с workout_builder, даже когда z полностью нулевой', () => {
+  // Раньше такая тренировка выпадала из сводки целиком: фильтр смотрел только
+  // на сумму пульсовых зон, а силовая с конструктором их не заполняет.
+  const summary = day.summarizeDay({
+    date: '2026-08-01',
+    waterMl: 0,
+    meals: [],
+    trainings: [{
+      z: [0, 0, 0, 0], type: 'strength', strengthEntryMode: 'workout_builder',
+      workoutLog: { exercises: [{ approaches: [{ weightKg: '60', reps: 8, done: true }] }] },
+    }],
+  });
+  assert.equal(summary.trainings.length, 1);
+  assert.equal(summary.trainings[0].total_minutes, 0);
+  assert.equal(summary.trainings[0].type, 'strength');
 });
 
 test('ensureDay поднимает пустой день, а не падает', () => {

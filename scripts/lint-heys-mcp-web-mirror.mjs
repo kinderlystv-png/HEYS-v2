@@ -23,10 +23,21 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..');
 const SOURCE_DIR = 'apps/web';
 const MIRROR_DIR = 'yandex-cloud-functions/heys-mcp/lib/web-mirror';
+// Держать в точности как MIRRORED_FILES в
+// yandex-cloud-functions/heys-mcp/lib/web-mirror/index.js — 2026-08-08 список
+// здесь три коммита подряд не обновлялся вместе с тем, и NDTE/рефид/долг
+// побайтово не проверялись вовсе.
 const MIRRORED_FILES = [
   'heys_cycle_v1.js',
+  'heys_iw_shim.js',
+  'heys_iw_constants.js',
+  'heys_iw_utils.js',
   'heys_tdee_v1.js',
   'heys_day_calculations.js',
+  'heys_refeed_v1.js',
+  'heys_day_caloric_debt_core_v1.js',
+  '_kernel/heys_kernel_strength_v1.js',
+  '_kernel/heys_kernel_load_v1.js',
 ];
 const CHECK_STAGED = process.argv.includes('--staged');
 

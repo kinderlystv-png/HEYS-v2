@@ -302,4 +302,42 @@ test('пустой период тренировок отвечает прямо
   const res = await build(fakeApi()).heys_get_training_status({ days: 5 });
   assert.match(res.text, /тренировок не записано/);
   assert.deepEqual(res.structured.by_type, {});
+  // Без тренировок модель нагрузки даёт нули, а не молчит.
+  assert.equal(res.structured.load.cardio.ctl, 0);
+  assert.equal(res.structured.load.strength_tonnage, null);
+});
+
+test('нагрузка считается по всему 42-дневному окну, а не по периоду отчёта', async () => {
+  // Тренировка за 40 дней до конца периода — вне отчётных 3 дней, но внутри
+  // окна тренированности. Если окно схлопнется до days, CTL станет нулевым.
+  const api = fakeApi({
+    kv: {
+      'heys_dayv2_2026-06-25': DAY('2026-06-25', { trainings: [{ z: [0, 0, 60, 0], time: '10:00' }] }),
+    },
+  });
+  const res = await build(api).heys_get_training_status({ days: 3 });
+
+  assert.equal(res.structured.load.window_days, 42);
+  assert.ok(res.structured.load.cardio.ctl > 0, 'тренировка из окна должна попасть в тренированность');
+  // 42 дня истории — экспонента ещё не прогрелась, честно помечаем.
+  assert.equal(res.structured.load.cardio.confidence, 'medium');
+  assert.match(res.text, /тренированность/);
+});
+
+test('силовой тоннаж считается отдельным рядом, а не смешивается с кардио', async () => {
+  const api = fakeApi({
+    kv: {
+      'heys_dayv2_2026-07-30': DAY('2026-07-30', {
+        trainings: [{
+          type: 'strength', strengthEntryMode: 'workout_builder',
+          workoutLog: { exercises: [{ approaches: [{ weightKg: '60', reps: 10, done: true }] }] },
+        }],
+      }),
+    },
+  });
+  const res = await build(api).heys_get_training_status({ days: 3 });
+
+  // Силовая в кардио-ряд не попадает — у неё другие единицы.
+  assert.equal(res.structured.load.cardio.ctl, 0);
+  assert.ok(res.structured.load.strength_tonnage.ctl > 0);
 });

@@ -65,6 +65,12 @@ export const LEGACY_BUNDLES = {
         'heys_sparkline_utils_v1.js',
         'heys_sparklines_shared_v1.js',
         'heys_day_core_bundle_v1.js',
+        // Ядро тоннажа и модели нагрузки: heys_day_trainings_v1.js (грузится
+        // позже, лениво, через heys_day_stats_bundle_loader_v1.js) делегирует
+        // сюда. _kernel/* иначе грузится только приватным бандлером
+        // mobility/fingers и на момент открытия обычного дня ещё не подгружен.
+        '_kernel/heys_kernel_strength_v1.js',
+        '_kernel/heys_kernel_load_v1.js',
         'heys_day_utils.js',
         'heys_day_pickers.js',
         'heys_day_popups.js',

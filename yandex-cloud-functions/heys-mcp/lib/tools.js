@@ -13,9 +13,17 @@ const day = require('./day');
 const products = require('./products');
 const profile = require('./profile');
 const sharedCatalog = require('./shared-catalog');
+const webMirror = require('./web-mirror');
 
 /** Верхняя граница обзора периода: месяц читается одним пакетом без риска для таймаута. */
 const MAX_PERIOD_DAYS = 31;
+/**
+ * Окно для модели нагрузки: постоянная времени тренированности — 42 дня
+ * (_kernel/heys_kernel_load_v1.js, DEFAULT_CTL_TAU). Читается одним батчем,
+ * поэтому шире, чем MAX_PERIOD_DAYS: тот ограничивает листинг дней в ответе,
+ * а не стоимость чтения.
+ */
+const LOAD_WINDOW_DAYS = 42;
 
 /** Ключи планирования, из которых собирается сводка по задачам клиента. */
 const PLANNING_KEYS = [
@@ -956,13 +964,56 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       }
       const total = zones.reduce((sum, value) => sum + (Number(value) || 0), 0);
       if (total <= 0) throw new ToolError('invalid_zones', 'Суммарная длительность тренировки должна быть больше нуля.');
+      const extra = {
+        time: args.time, type: args.type, activityLabel: args.activity_label, comment: args.comment,
+        mood: args.mood, wellbeing: args.wellbeing, stress: args.stress,
+      };
       const current = await readDay(date);
-      const next = day.addTraining(current, zones, { nowMs, clientId });
+      const next = day.addTraining(current, zones, extra, { nowMs, clientId });
       const saved = await writeDay(date, next, Number(current.updatedAt) || 0);
       const after = await dayAfterWrite(saved, next);
+      // Нагрузка сессии — MET-минуты по зонам клиента (web-mirror, зеркало
+      // apps/web/_kernel/heys_kernel_load_v1.js). Только что записанная
+      // тренировка, без чтения истории — накопленную тренированность/усталость
+      // MCP пока не считает (окно ~42 дня, сначала измерить стоимость).
+      const inputs = await loadNormInputs(date);
+      const zoneMets = Array.isArray(inputs && inputs.hrZones)
+        ? inputs.hrZones.map((z) => Number(z && z.MET) || 0)
+        : null;
+      const sessionLoad = webMirror.sessionLoad({ z: zones, type: extra.type }, zoneMets);
+      const extraBits = [];
+      if (extra.time) extraBits.push(`в ${extra.time}`);
+      if (extra.type) extraBits.push(extra.type);
       return {
-        text: `Записал тренировку ${date}: ${total} мин по зонам [${zones.join(', ')}].${dayAfterText(after)}`,
-        structured: { date, zones_minutes: zones, total_minutes: total, day_after: after },
+        text: `Записал тренировку ${date}${extraBits.length ? ` (${extraBits.join(', ')})` : ''}: ${total} мин по зонам [${zones.join(', ')}], нагрузка ≈${Math.round(sessionLoad)} MET-мин.${dayAfterText(after)}`,
+        structured: { date, zones_minutes: zones, total_minutes: total, session_load: Math.round(sessionLoad), day_after: after },
+      };
+    },
+
+    async heys_update_training(args) {
+      const date = resolveDate(args.date, nowMs);
+      const current = await readDay(date);
+      const patch = {
+        zoneMinutes: args.zones_minutes, time: args.time, type: args.type,
+        activityLabel: args.activity_label, comment: args.comment,
+        mood: args.mood, wellbeing: args.wellbeing, stress: args.stress,
+      };
+      const res = day.updateTraining(current, args.index, patch, { nowMs, clientId });
+      if (res.error === 'not_found') {
+        const total = (current.trainings || []).length;
+        throw new ToolError('not_found', total
+          ? `В дне ${date} тренировок ${total} — index от 0 до ${total - 1}. Индексы смотри в heys_get_day.`
+          : `В дне ${date} нет ни одной тренировки — сначала heys_log_training.`);
+      }
+      if (res.error === 'invalid_range') throw new ToolError('invalid_range', 'Оценки mood/wellbeing/stress — целые от 1 до 10.');
+      if (res.error === 'nothing_to_update') {
+        throw new ToolError('nothing_to_update', 'Не передано ни одного изменения: нужны zones_minutes, time, type, activity_label, comment или оценки.');
+      }
+      const saved = await writeDay(date, res.day, Number(current.updatedAt) || 0);
+      const after = await dayAfterWrite(saved, res.day);
+      return {
+        text: `Поправил тренировку ${args.index} за ${date}: ${res.applied.join(', ')}.${dayAfterText(after)}`,
+        structured: { date, index: Number(args.index), applied: res.applied, day_after: after },
       };
     },
 
@@ -1500,10 +1551,17 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
      */
     async heys_get_training_status(args = {}) {
       const to = resolveDate(args.to, nowMs);
+      // Окно нагрузки шире периода отчёта: постоянная времени тренированности
+      // 42 дня, и на более коротком ряде экспонента не успевает прогреться.
+      // MAX_PERIOD_DAYS (31) — эргономика листинга дней, не предел чтения:
+      // readMany уходит одним RPC batch_get_client_kv_by_session независимо от
+      // числа ключей, так что окно стоит объёма ответа, а не round-trip'ов.
       const days = Math.min(Math.max(Number(args.days) || 30, 1), MAX_PERIOD_DAYS);
       const from = day.addDays(to, -(days - 1));
+      const loadFrom = day.addDays(to, -(LOAD_WINDOW_DAYS - 1));
+      const loadDates = day.enumerateDates(loadFrom, to, LOAD_WINDOW_DAYS);
       const dates = day.enumerateDates(from, to, MAX_PERIOD_DAYS);
-      const blobs = await readMany(dates.map((date) => day.dayKey(date)));
+      const blobs = await readMany(loadDates.map((date) => day.dayKey(date)));
 
       const sessions = [];
       for (const date of dates) {
@@ -1532,11 +1590,54 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       }
       const summary = Object.entries(byType).map(([type, info]) => `${type}: ${info.count}, последняя ${info.last_date}`);
 
+      // Накопленная нагрузка: тренированность/усталость/готовность зеркальным
+      // ядром (apps/web/_kernel/heys_kernel_load_v1.js). Считается на чтении из
+      // блобов — ничего производного в блоб не пишется, иначе правка прошлого
+      // дня оставила бы устаревшее число (урок savedDisplayOptimum).
+      const inputs = await loadNormInputs(to);
+      const zoneMets = Array.isArray(inputs && inputs.hrZones)
+        ? inputs.hrZones.map((z) => Number(z && z.MET) || 0)
+        : null;
+      // Ряд ПЛОТНЫЙ: день без тренировок — ноль, а не пропуск, иначе распад
+      // экспоненты посчитается по неверному числу дней.
+      const cardioSeries = [];
+      const tonnageSeries = [];
+      for (const date of loadDates) {
+        const blob = blobs[day.dayKey(date)];
+        const trainings = (blob && Array.isArray(blob.trainings)) ? blob.trainings : [];
+        let cardio = 0;
+        for (const tr of trainings) cardio += webMirror.sessionLoad(tr, zoneMets);
+        cardioSeries.push(cardio);
+        tonnageSeries.push(blob ? webMirror.dayTonnage(blob) : 0);
+      }
+      // Кардио и силовая — раздельные ряды: единого коэффициента «кг тоннажа =
+      // MET-минуты» не существует, сводить их в одно число рано.
+      const cardioLoad = webMirror.fitnessFatigue(cardioSeries);
+      const strengthLoad = tonnageSeries.some((v) => v > 0)
+        ? webMirror.fitnessFatigue(tonnageSeries)
+        : null;
+
+      const loadBits = [
+        `тренированность ${cardioLoad.ctl}, усталость ${cardioLoad.atl}, готовность ${cardioLoad.tsb} MET-мин/д`,
+        cardioLoad.confidence !== 'high' ? `(уверенность ${cardioLoad.confidence}: история ${cardioLoad.daysOfHistory} дн)` : null,
+      ].filter(Boolean).join(' ');
+
       return {
-        text: sessions.length
+        text: (sessions.length
           ? `Тренировки за ${from}…${to} — ${summary.join('; ')}.`
-          : `За ${from}…${to} тренировок не записано.`,
-        structured: { from, to, by_type: byType, sessions },
+          : `За ${from}…${to} тренировок не записано.`)
+          + ` Кардио-нагрузка за ${LOAD_WINDOW_DAYS} дн: ${loadBits}.`,
+        structured: {
+          from,
+          to,
+          by_type: byType,
+          sessions,
+          load: {
+            window_days: LOAD_WINDOW_DAYS,
+            cardio: cardioLoad,
+            strength_tonnage: strengthLoad,
+          },
+        },
       };
     },
 
@@ -2019,14 +2120,41 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_log_training',
-    description: 'Записать тренировку как минуты по пульсовым зонам: [зона1, зона2, зона3, зона4]. Если известна только общая длительность и интенсивность, положи минуты в соответствующую зону.',
+    description: 'Записать тренировку как минуты по пульсовым зонам: [зона1, зона2, зона3, зона4]. Если известна только общая длительность и интенсивность, положи минуты в соответствующую зону. Время, тип и ощущения — необязательные поля того же приёма, что заполняет клиент в приложении.',
     inputSchema: {
       type: 'object',
       properties: {
         zones_minutes: { type: 'array', items: { type: 'number' }, description: 'Минуты по пульсовым зонам, до 4 чисел.' },
         date: DATE_ARG,
+        time: { type: 'string', description: 'Время начала, HH:MM. Без него тренировка не попадёт в расчёт средних оценок дня (правило приложения).' },
+        type: { type: 'string', description: 'Тип: cardio, strength, hobby и т.п. — свободная строка, как в приложении.' },
+        activity_label: { type: 'string', description: 'Название активности для отображения, если тип не покрывает («йога», «плавание»).' },
+        mood: { type: 'integer', description: 'Настроение после тренировки, 1–10.' },
+        wellbeing: { type: 'integer', description: 'Самочувствие после тренировки, 1–10.' },
+        stress: { type: 'integer', description: 'Стресс после тренировки, 1–10.' },
+        comment: { type: 'string', description: 'Свободный комментарий к тренировке.' },
       },
       required: ['zones_minutes'],
+    },
+  },
+  {
+    name: 'heys_update_training',
+    description: 'Поправить уже записанную тренировку: дописать оценки самочувствия, время, тип или комментарий, изменить минуты по зонам. Индекс тренировки — её позиция в списке из heys_get_day (с нуля). Передавай только то, что меняешь.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        index: { type: 'integer', description: 'Номер тренировки в дне, с нуля — как в heys_get_day.' },
+        date: DATE_ARG,
+        zones_minutes: { type: 'array', items: { type: 'number' }, description: 'Заменить минуты по зонам целиком, до 4 чисел.' },
+        time: { type: 'string', description: 'Время начала, HH:MM.' },
+        type: { type: 'string', description: 'Тип: cardio, strength, hobby и т.п.' },
+        activity_label: { type: 'string', description: 'Название активности для отображения.' },
+        mood: { type: 'integer', description: 'Настроение после тренировки, 1–10.' },
+        wellbeing: { type: 'integer', description: 'Самочувствие после тренировки, 1–10.' },
+        stress: { type: 'integer', description: 'Стресс после тренировки, 1–10.' },
+        comment: { type: 'string', description: 'Свободный комментарий к тренировке.' },
+      },
+      required: ['index'],
     },
   },
   {
@@ -2152,6 +2280,7 @@ const WRITE_TOOLS = new Set([
   'heys_delete_meal',
   'heys_add_water',
   'heys_log_training',
+  'heys_update_training',
   'heys_update_day',
   'heys_checkin',
   'heys_update_profile',

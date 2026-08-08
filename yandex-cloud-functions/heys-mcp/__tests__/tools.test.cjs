@@ -224,6 +224,69 @@ test('log_training отклоняет нулевую тренировку', asyn
   await assert.rejects(() => tools.heys_log_training({ zones_minutes: [0, 0] }), (e) => e.code === 'invalid_zones');
 });
 
+test('log_training пишет время, тип и ощущения, а не только минуты', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  const res = await tools.heys_log_training({
+    zones_minutes: [30], time: '18:40', type: 'cardio', activity_label: 'Бег',
+    mood: 8, wellbeing: 7, stress: 3, comment: 'В парке',
+  });
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  const t = saved.value.trainings[0];
+  assert.equal(t.time, '18:40');
+  assert.equal(t.type, 'cardio');
+  assert.equal(t.activityLabel, 'Бег');
+  assert.equal(t.mood, 8);
+  assert.equal(t.source, 'curator_mcp');
+  assert.match(res.text, /в 18:40, cardio/);
+});
+
+test('update_training дописывает оценки к уже записанной тренировке', async () => {
+  // Ровно случай истории Александры: тренировки записаны, оценок в них нет,
+  // а добавить их коннектор до сих пор не умел — только завести новую.
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111, trainings: [{ z: [60, 0, 0, 0], time: '10:00' }] },
+  });
+  const res = await build(api).heys_update_training({ index: 0, mood: 8, wellbeing: 7, stress: 3 });
+
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  const t = saved.value.trainings[0];
+  assert.equal(t.mood, 8);
+  assert.equal(t.wellbeing, 7);
+  assert.equal(t.stress, 3);
+  assert.equal(t.z[0], 60, 'минуты не тронуты');
+  assert.equal(t.time, '10:00', 'время не тронуто');
+  assert.deepEqual(res.structured.applied.sort(), ['mood', 'stress', 'wellbeing']);
+});
+
+test('update_training отбивает несуществующий индекс, а не пишет мимо', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111, trainings: [{ z: [60, 0, 0, 0] }] },
+  });
+  const tools = build(api);
+  await assert.rejects(() => tools.heys_update_training({ index: 5, mood: 8 }), (e) => e.code === 'not_found');
+  await assert.rejects(() => tools.heys_update_training({ index: 0, mood: 42 }), (e) => e.code === 'invalid_range');
+  await assert.rejects(() => tools.heys_update_training({ index: 0 }), (e) => e.code === 'nothing_to_update');
+  assert.equal(api.saves.length, 0, 'ни одна отбитая правка не записалась');
+});
+
+test('log_training считает нагрузку сессии по реальным пульсовым зонам клиента', async () => {
+  const api = fakeApi({
+    day: null,
+    card: {
+      heys_profile: { weight: 80, height: 180, age: 40, gender: 'Мужской', deficitPctTarget: -15 },
+      heys_norms: {},
+      // MET по зонам клиента — не дефолт TDEE [2.5,6,8,10]. Если nagruzka
+      // считалась бы по дефолту, число ниже не сошлось бы.
+      heys_hr_zones: [{ MET: 2 }, { MET: 3 }, { MET: 5 }, { MET: 8 }],
+    },
+  });
+  const res = await build(api).heys_log_training({ zones_minutes: [30, 0, 20, 0] });
+  // 30×2 + 20×5 = 160.
+  assert.equal(res.structured.session_load, 160);
+  assert.match(res.text, /нагрузка ≈160 MET-мин/);
+});
+
 test('get_day отдаёт сводку и meal_id для правок', async () => {
   const api = fakeApi({
     day: {

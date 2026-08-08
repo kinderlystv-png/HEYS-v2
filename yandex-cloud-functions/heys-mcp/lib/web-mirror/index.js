@@ -60,6 +60,11 @@ const MIRRORED_FILES = [
   // своими словами. Раньше он их не считал вовсе и брал готовое число из кэша
   // отрисовки — отсюда и протухшая норма.
   'heys_day_caloric_debt_core_v1.js',
+  // Тоннаж силовых и модель нагрузки (Банистер) — для оценки тренировки
+  // (TRAINING_LOAD_MODEL_PROMPT.md). Путь с подкаталогом сохранён как в
+  // apps/web/_kernel/, чтобы source/mirror пути совпадали буквально.
+  '_kernel/heys_kernel_strength_v1.js',
+  '_kernel/heys_kernel_load_v1.js',
 ];
 
 /** Побайтовый оригинал каждого зеркала — от корня репозитория. */
@@ -92,8 +97,9 @@ function loadHeys() {
   }
 
   const HEYS = vm.runInContext('globalThis.HEYS', sandbox);
-  if (!HEYS || !HEYS.TDEE || !HEYS.dayCalculations || !HEYS.dayCaloricDebtCore) {
-    throw new Error('web-mirror: зеркала apps/web загрузились без HEYS.TDEE/HEYS.dayCalculations');
+  if (!HEYS || !HEYS.TDEE || !HEYS.dayCalculations || !HEYS.dayCaloricDebtCore
+    || !HEYS.TrainingKernel?.strength || !HEYS.TrainingKernel?.load) {
+    throw new Error('web-mirror: зеркала apps/web загрузились без HEYS.TDEE/HEYS.dayCalculations/HEYS.TrainingKernel');
   }
   // Цепочка iw-модулей молча выходит, если shim не загрузился первым: без этой
   // проверки NDTE тихо станет нулём, и норма поедет вниз без единой ошибки.
@@ -126,6 +132,26 @@ function computeDailyNorms(optimum, normPerc) {
   return loadHeys().dayCalculations.computeDailyNorms(optimum, normPerc);
 }
 
+/** `HEYS.TrainingKernel.strength.trainingTonnage` из apps/web/_kernel/heys_kernel_strength_v1.js. */
+function trainingTonnage(training) {
+  return loadHeys().TrainingKernel.strength.trainingTonnage(training);
+}
+
+/** `HEYS.TrainingKernel.strength.dayTonnage` из apps/web/_kernel/heys_kernel_strength_v1.js. */
+function dayTonnage(dayBlob) {
+  return loadHeys().TrainingKernel.strength.dayTonnage(dayBlob);
+}
+
+/** `HEYS.TrainingKernel.load.sessionLoad` из apps/web/_kernel/heys_kernel_load_v1.js. */
+function sessionLoad(training, zoneMets) {
+  return loadHeys().TrainingKernel.load.sessionLoad(training, zoneMets);
+}
+
+/** `HEYS.TrainingKernel.load.fitnessFatigue` из apps/web/_kernel/heys_kernel_load_v1.js. */
+function fitnessFatigue(dailyLoads, opts) {
+  return loadHeys().TrainingKernel.load.fitnessFatigue(dailyLoads, opts);
+}
+
 /**
  * `HEYS.InsulinWave.__internals` — NDTE и его хелперы.
  *
@@ -146,4 +172,8 @@ module.exports = {
   computeDebtCore,
   getRefeedOptimum,
   insulinWaveInternals,
+  trainingTonnage,
+  dayTonnage,
+  sessionLoad,
+  fitnessFatigue,
 };

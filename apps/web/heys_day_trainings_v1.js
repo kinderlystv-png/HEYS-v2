@@ -548,43 +548,25 @@
     return Math.round(n) + ' кг';
   }
 
-  /** Сумма тоннажа (вес × повторы) всех завершённых подходов всех silов в указанный день. */
+  /**
+   * Сумма тоннажа (вес × повторы) всех завершённых подходов всех силовых в
+   * указанный день. Формула — в _kernel/heys_kernel_strength_v1.js
+   * (HEYS.TrainingKernel.strength.dayTonnage): та же математика зеркалится в
+   * heys-mcp/lib/web-mirror, чтобы куратор через MCP видел то же число.
+   */
   function computeDayTotalTonnage(dateKey) {
     if (!dateKey) return 0;
-    const day = readDayFromStore(dateKey);
-    if (!day || !Array.isArray(day.trainings)) return 0;
-    let total = 0;
-    for (let i = 0; i < day.trainings.length; i++) {
-      const tr = day.trainings[i];
-      if (!tr || String(tr.type) !== 'strength' || tr.strengthEntryMode !== 'workout_builder') continue;
-      const wl = tr.workoutLog;
-      if (!wl || !Array.isArray(wl.exercises)) continue;
-      for (let j = 0; j < wl.exercises.length; j++) {
-        const ex = wl.exercises[j];
-        const aps = ex && Array.isArray(ex.approaches) ? ex.approaches : [];
-        for (let k = 0; k < aps.length; k++) {
-          const a = aps[k];
-          if (!a || !a.done) continue;
-          const w = parseFloat(String(a.weightKg || '').replace(',', '.')) || 0;
-          const r = +a.reps || 0;
-          if (w > 0 && r > 0) total += w * r;
-        }
-      }
-    }
-    return total;
+    const ks = HEYS.TrainingKernel && HEYS.TrainingKernel.strength;
+    if (!ks) return 0; // ядро не загружено — прод-safety, копии формулы здесь больше нет
+    return ks.dayTonnage(readDayFromStore(dateKey));
   }
 
   /** Сколько workout_builder-тренировок на дне. */
   function countStrengthWorkoutsOnDay(dateKey) {
     if (!dateKey) return 0;
-    const day = readDayFromStore(dateKey);
-    if (!day || !Array.isArray(day.trainings)) return 0;
-    let n = 0;
-    for (let i = 0; i < day.trainings.length; i++) {
-      const tr = day.trainings[i];
-      if (tr && String(tr.type) === 'strength' && tr.strengthEntryMode === 'workout_builder') n += 1;
-    }
-    return n;
+    const ks = HEYS.TrainingKernel && HEYS.TrainingKernel.strength;
+    if (!ks) return 0;
+    return ks.countStrengthWorkouts(readDayFromStore(dateKey));
   }
 
   /** Ближайший прошлый день, в котором был ненулевой тоннаж workout_builder. */
