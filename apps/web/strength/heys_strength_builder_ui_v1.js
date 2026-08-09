@@ -62,7 +62,7 @@
 
   function BuilderScreen(props) {
     const { training, dateKey, onPatch, onPatchNote, profile, historyFor, historyDetailFor,
-      lastSessionFor, onRepeatLast, onClose } = props;
+      lastSessionFor, onRepeatLast, syncStatusFor, onClose } = props;
     const SK = kernel();
     const [openIdx, setOpenIdx] = React.useState(0);
     const [view, setView] = React.useState('list');
@@ -83,6 +83,15 @@
       const id = global.setInterval(function () { setTick(function (t) { return t + 1; }); }, 1000);
       return function () { global.clearInterval(id); };
     }, [startedAt]);
+
+    const [syncStatus, setSyncStatus] = React.useState(function () {
+      return typeof syncStatusFor === 'function' ? syncStatusFor() : null;
+    });
+    React.useEffect(function () {
+      if (typeof syncStatusFor !== 'function') return undefined;
+      const id = global.setInterval(function () { setSyncStatus(syncStatusFor()); }, 3000);
+      return function () { global.clearInterval(id); };
+    }, [syncStatusFor]);
 
     React.useEffect(function () {
       if (!rest) return undefined;
@@ -403,6 +412,13 @@
           h('b', null, wl.title || (HEYS.StrengthBuilderParts || {}).sessionTitle(exercises)),
           h('div', { className: 'sb-head-sub' }, (HEYS.StrengthBuilderParts || {}).humanDate(dateKey))
         ),
+        // Очередь отправки: зал без сети — основной сценарий (решение 6). Статус
+        // берётся у уже существующей общей sync-очереди приложения, конструктор
+        // не заводит вторую.
+        syncStatus === 'pending' && h('span', {
+          className: 'sb-sync-badge',
+          title: 'Сохранено на телефоне, ждёт сеть'
+        }, '📡 Ждёт сеть'),
         h('button', {
           type: 'button', className: 'sb-icon-btn',
           onClick: function () { setSheetOpen(true); },
@@ -518,6 +534,11 @@
         onPatchNote: state.onPatchNote,
         dateKey: state.dateKey,
         profile: state.profile,
+        historyFor: state.historyFor,
+        historyDetailFor: state.historyDetailFor,
+        lastSessionFor: state.lastSessionFor,
+        onRepeatLast: state.onRepeatLast,
+        syncStatusFor: state.syncStatusFor,
         onPatch: function (nextExercises) {
           if (typeof state.onPatch === 'function') state.onPatch(nextExercises);
         },

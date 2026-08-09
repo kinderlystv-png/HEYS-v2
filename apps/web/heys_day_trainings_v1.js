@@ -3270,6 +3270,15 @@
                     return applyWorkoutLogToTraining(t0, wl0);
                   });
                 },
+                syncStatusFor: function () {
+                  try {
+                    const cloud = HEYS.cloud;
+                    if (!cloud || typeof cloud.getSyncStatus !== 'function') return null;
+                    const cid = HEYS.currentClientId || '';
+                    const key = cid ? ('heys_' + cid + '_dayv2_' + dateKey) : ('heys_dayv2_' + dateKey);
+                    return cloud.getSyncStatus(key);
+                  } catch (_e) { return null; }
+                },
                 onPatchNote: function (note) {
                   patchTraining(ti, function (t0) {
                     const wl0 = ensureWorkoutLogShape(t0);

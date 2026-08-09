@@ -1396,3 +1396,26 @@
   line-height: 1.5;
   color: var(--sb-mut);
 }
+
+/* Перенумерация (экран 12) — переходы и анимации остаются открытым вопросом
+ * протокола (не решение владельца), полноценный FLIP-перелёт цифры сюда не
+ * входит. Но мгновенная подмена читается как потеря подхода, поэтому хотя бы
+ * плавный переход цвета/фона держит номер и тоннаж визуально непрерывными. */
+.sb-ap-num,
+.sb-ap-check,
+.sb-stat {
+  transition: background-color 0.22s ease, color 0.22s ease, border-color 0.22s ease;
+}
+
+.sb-sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--sb-warnbg);
+  color: var(--sb-warnTx);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}

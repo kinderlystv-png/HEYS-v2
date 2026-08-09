@@ -382,3 +382,29 @@ describe('остались незакрытые подходы (экран 11)',
     expect(closed.length).toBe(1);
   });
 });
+
+describe('очередь отправки (экран 09)', () => {
+  it('«Ждёт сеть» показан, когда день не синхронизирован', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{ name: 'Жим', approaches: [work(75, 8, true)] }]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onClose: () => {},
+      syncStatusFor: () => 'pending',
+    }));
+    expect(screen.getByText('📡 Ждёт сеть')).toBeTruthy();
+  });
+
+  it('бейдж не показан, когда день синхронизирован', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{ name: 'Жим', approaches: [work(75, 8, true)] }]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onClose: () => {},
+      syncStatusFor: () => 'synced',
+    }));
+    expect(screen.queryByText('📡 Ждёт сеть')).toBeNull();
+  });
+});
