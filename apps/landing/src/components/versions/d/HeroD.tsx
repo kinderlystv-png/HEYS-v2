@@ -33,7 +33,7 @@ const CHAPTER_DOTS_PX = 36;
 /** Воздух между низом масштабированного мокапа и closer-строкой. */
 const CTA_GAP_PX = 36;
 /** Высота closer-строки + нижний отступ блока (без кнопки). */
-const CTA_CHROME_PX = 72;
+const CTA_CHROME_PX = 48;
 
 const smoothstep = (g: number) => g * g * (3 - 2 * g);
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
@@ -122,7 +122,7 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
         : Math.min(310, window.innerWidth * 0.76);
       // Снизу оставляем место под точки глав + CTA + подпись.
       const bottomChrome = CHAPTER_DOTS_PX + CTA_GAP_PX + CTA_CHROME_PX;
-      const heightPad = desktop.matches ? 48 : 32;
+      const heightPad = desktop.matches ? 48 : 16;
       const cap = desktop.matches ? MAX_PHONE_SCALE : 1.26;
       const maxScale = Math.min(
         cap,
