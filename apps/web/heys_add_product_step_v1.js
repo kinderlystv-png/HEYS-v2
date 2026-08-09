@@ -9995,7 +9995,7 @@ NOVA: 1
         }
       ],
       context: {
-        products: [],
+        products: HEYS.products?.getAll?.() || [],
         dateKey,
         mealIndex,
         itemId,

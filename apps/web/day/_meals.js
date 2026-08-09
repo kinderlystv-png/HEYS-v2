@@ -4843,9 +4843,10 @@
             const _iCnt = Array.isArray(safeDayData?.meals) ? safeDayData.meals.reduce((s, m) => s + (m.items?.length || 0), 0) : '?';
             try {
                 console.info('[HEYS.syncTrace] PERSIST_DAY', { key, action, meals: _mCnt, items: _iCnt, updatedAt: safeDayData?.updatedAt });
-                lsSet(key, safeDayData);
+                return lsSet(key, safeDayData);
             } catch (e) {
                 trackError(e, { source: 'day/_meals.js', action });
+                return false;
             }
         }, [date, protectCheckinFields]);
 
@@ -5028,18 +5029,18 @@
                         // Keep the ref in sync before React commits. requestFlush() and a
                         // newly opened product modal both read this ref synchronously.
                         dayRef.current = newDayData;
-                        try {
-                            persistDayData(newDayData, 'create_meal_mobile_flow');
-                        } catch (e) {
-                            trackError(e, { source: 'day/_meals.js', action: 'save_meal' });
-                        }
+                        const mealPersisted = persistDayData(newDayData, 'create_meal_mobile_flow');
                         setDay(() => newDayData);
                         HEYS.Day?.requestFlush?.({ force: true });
 
-                        if (window.HEYS && window.HEYS.analytics) {
-                            window.HEYS.analytics.trackDataOperation('meal-created');
+                        if (mealPersisted) {
+                            if (window.HEYS && window.HEYS.analytics) {
+                                window.HEYS.analytics.trackDataOperation('meal-created');
+                            }
+                            HEYS.Toast?.success('Приём создан');
+                        } else {
+                            HEYS.Toast?.error('Не удалось сохранить приём. Попробуйте ещё раз.');
                         }
-                        HEYS.Toast?.success('Приём создан');
                         window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
 
                         // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
@@ -5192,18 +5193,21 @@
 	                                        const newDayData = protectCheckinFields({ ...baseDay, meals: updatedMeals, updatedAt: newUpdatedAt });
 
 	                                        const prevMealItems = ((baseDay?.meals || [])[actualMealIndex]?.items || []).length;
+	                                        let inlineProductPersisted = false;
 	                                        try {
-	                                            lsSet(key, newDayData);
-	                                            console.info('[HEYS.meal] ✅ Product saved to localStorage', {
-	                                                product: finalProduct.name,
-	                                                key,
-	                                                mealIndex: actualMealIndex,
+	                                            inlineProductPersisted = lsSet(key, newDayData);
+	                                            if (inlineProductPersisted) {
+	                                                console.info('[HEYS.meal] ✅ Product saved to localStorage', {
+	                                                    product: finalProduct.name,
+	                                                    key,
+	                                                    mealIndex: actualMealIndex,
                                                     requestedMealIndex: addMealIndex,
                                                     mealId: addMealId,
-	                                                itemsInMeal: prevMealItems + 1,
-	                                                totalMeals: updatedMeals.length,
-	                                                updatedAt: newUpdatedAt,
-                                            });
+	                                                    itemsInMeal: prevMealItems + 1,
+	                                                    totalMeals: updatedMeals.length,
+	                                                    updatedAt: newUpdatedAt,
+                                                });
+                                            }
                                         } catch (e) {
                                             console.error('[HEYS.meal] ❌ Product lsSet failed', {
                                                 product: finalProduct.name,
@@ -5211,6 +5215,10 @@
                                                 error: String(e),
                                             });
                                             trackError(e, { source: 'day/_meals.js', action: 'save_product' });
+                                        }
+                                        if (!inlineProductPersisted) {
+                                            HEYS.Toast?.error?.('Не удалось сохранить продукт. Попробуйте ещё раз.');
+                                            return false;
                                         }
 
                                         setDay(() => newDayData);
@@ -6018,6 +6026,7 @@
                     updatedAt: newUpdatedAt,
                 });
             } catch (_) { /* noop */ }
+            let productPersisted = false;
             try {
                 try {
                     logDayTrace('[HEYS.day-trace] 5/8 LS write', {
@@ -6027,9 +6036,13 @@
                         updatedAt: newUpdatedAt,
                     });
                 } catch (_) { /* noop */ }
-                lsSet(key, newDayData);
+                productPersisted = lsSet(key, newDayData);
             } catch (e) {
                 trackError(e, { source: 'day/_meals.js', action: 'save_product_quick' });
+            }
+            if (!productPersisted) {
+                HEYS.Toast?.error?.('Не удалось сохранить продукт. Попробуйте ещё раз.');
+                return false;
             }
             setDay(() => newDayData);
 
@@ -6149,10 +6162,14 @@
             const before = (mealsList[targetMealIndex]?.items || []).length;
             const meals = mealsList.map((m, i) => i === targetMealIndex ? { ...m, items: [...(m.items || []), ...items] } : m);
             const newDayData = protectCheckinFields({ ...baseDay, meals, updatedAt: newUpdatedAt });
+            let productsPersisted = false;
             try {
-                lsSet(key, newDayData);
+                productsPersisted = lsSet(key, newDayData);
             } catch (e) {
                 trackError(e, { source: 'day/_meals.js', action: 'save_products_batch' });
+            }
+            if (!productsPersisted) {
+                HEYS.Toast?.error?.('Не удалось сохранить продукты. Попробуйте ещё раз.');
                 return false;
             }
             setDay(() => newDayData);
