@@ -1,0 +1,27 @@
+{
+  "name": "HEYS — Персональное сопровождение питания",
+  "short_name": "HEYS",
+  "description": "Не сила воли — а человек рядом. Экосистема с живым куратором.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A1119",
+  "theme_color": "#0A1119",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "fitness", "lifestyle"],
+  "lang": "ru",
+  "dir": "ltr"
+}

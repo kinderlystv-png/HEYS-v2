@@ -38,6 +38,27 @@ const CTA_CHROME_PX = 72;
 const smoothstep = (g: number) => g * g * (3 - 2 * g);
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
+/**
+ * Высота экрана, которая не «дышит» вместе с адресной строкой.
+ *
+ * В мобильном Safari при скролле панель то прячется, то возвращается, и
+ * `window.innerHeight` меняется прямо во время жеста. Зум мокапа считается от
+ * высоты экрана, поэтому кривая пересчитывалась на ходу — ролик дёргался
+ * туда-сюда вместо плавного роста. `100svh` — это высота с раскрытой панелью,
+ * она при скролле постоянна. Если браузер не знает `svh`, элемент останется
+ * нулевым и мы честно откатываемся к `innerHeight`.
+ */
+const readStableVh = () => {
+  if (typeof document === 'undefined') return 0;
+  const probe = document.createElement('div');
+  probe.style.cssText =
+    'position:fixed;top:0;left:0;width:0;height:100svh;visibility:hidden;pointer-events:none';
+  document.documentElement.appendChild(probe);
+  const height = probe.getBoundingClientRect().height;
+  probe.remove();
+  return height > 0 ? height : window.innerHeight;
+};
+
 interface HeroDProps {
   onOpenMenu: () => void;
 }
@@ -94,7 +115,7 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
 
       if (width === 0 || height === 0) return;
 
-      const vh = window.innerHeight;
+      const vh = readStableVh();
       // Финальная ширина чуть уже края экрана — воздух по бокам, не «в упор».
       const targetWidth = desktop.matches
         ? Math.min(430, window.innerWidth * 0.82)
@@ -183,9 +204,24 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
       apply();
     };
 
+    // Safari шлёт `resize` каждый раз, когда прячет или показывает адресную
+    // строку — то есть прямо посреди скролла. Пересчёт в этот момент менял
+    // кривую зума и высоту секции, и ролик прыгал. Реагируем только на
+    // настоящую смену вьюпорта: другая ширина или другая устойчивая высота.
+    let lastWidth = window.innerWidth;
+    let lastStableVh = readStableVh();
+    const onResize = () => {
+      const width = window.innerWidth;
+      const stableVh = readStableVh();
+      if (width === lastWidth && Math.abs(stableVh - lastStableVh) < 2) return;
+      lastWidth = width;
+      lastStableVh = stableVh;
+      remeasure();
+    };
+
     remeasure();
     window.addEventListener('scroll', schedule, { passive: true });
-    window.addEventListener('resize', remeasure);
+    window.addEventListener('resize', onResize);
     window.addEventListener('load', remeasure);
     desktop.addEventListener('change', remeasure);
     reduced.addEventListener('change', remeasure);
@@ -194,7 +230,7 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       window.removeEventListener('scroll', schedule);
-      window.removeEventListener('resize', remeasure);
+      window.removeEventListener('resize', onResize);
       window.removeEventListener('load', remeasure);
       desktop.removeEventListener('change', remeasure);
       reduced.removeEventListener('change', remeasure);

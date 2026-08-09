@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Open_Sans } from 'next/font/google'
 
 // import { ABTestSwitcher } from '@/components/ABTestSwitcher' // временно скрыто
@@ -110,6 +110,14 @@ export const metadata: Metadata = {
   //   google: 'google-site-verification-code',
   //   yandex: 'yandex-verification-code',
   // },
+}
+
+// Цвет системных полос в мобильных браузерах: область «чёлки» и панель Safari
+// красятся в theme-color. Раньше он приезжал зелёным из манифеста (#10b981 —
+// остаток старой палитры) и не имел ничего общего со страницей. Берём фон
+// первого экрана версии D, чтобы верх экрана продолжал герой, а не спорил с ним.
+export const viewport: Viewport = {
+  themeColor: '#0A1119',
 }
 
 // Яндекс.Метрика — российский счётчик, данные в РФ.
