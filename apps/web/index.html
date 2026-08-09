@@ -968,10 +968,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.c32efd35dfef.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.b5d420433b0e.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.5deb4c09cdab.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.f2f666d6dc7a.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.2ff5c7b961dd.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.a0921b0b831b.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.bf5971980603.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.fe19f89fc777.js" as="script" />
     <link rel="preload" href="boot-init.bundle.3b0b24c92433.js" as="script" />
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
          Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
@@ -4115,10 +4115,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.c32efd35dfef.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.b5d420433b0e.js"></script>
-    <script defer src="boot-day.bundle.5deb4c09cdab.js"></script>
-    <script defer src="boot-app.bundle.f2f666d6dc7a.js"></script>
+    <script defer src="boot-core.bundle.2ff5c7b961dd.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.a0921b0b831b.js"></script>
+    <script defer src="boot-day.bundle.bf5971980603.js"></script>
+    <script defer src="boot-app.bundle.fe19f89fc777.js"></script>
     <script defer src="boot-init.bundle.3b0b24c92433.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
@@ -4179,11 +4179,8 @@
         (function () {
             var POST_BOOT_BUNDLES = [
                 'postboot-1-game-eager.bundle.bb651c659737.js',
-                'postboot-1-game-lazy.bundle.9a0bc0be1ec1.js',
                 'postboot-2-insights-eager.bundle.807cb783ab2f.js',
-                'postboot-2-insights-lazy.bundle.be732ab2d6b7.js',
-                'postboot-3-ui-eager.bundle.51c8e6b6cb06.js',
-                'postboot-3-ui-lazy.bundle.8cbd5ff8b679.js'
+                'postboot-3-ui-eager.bundle.51c8e6b6cb06.js'
             ];
             var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';
             var total = POST_BOOT_BUNDLES.length;

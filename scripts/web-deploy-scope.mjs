@@ -78,7 +78,18 @@ export function verifyDeployScope(plan, distDir) {
     }
     if (!fs.existsSync(path.join(distDir, file))) throw new Error(`dist is missing ${file}`);
     if (!fs.existsSync(path.join(distDir, `${file}.gz`))) throw new Error(`dist is missing upload artifact ${file}.gz`);
-    if (!index.includes(file)) throw new Error(`index.html does not reference ${file}`);
+    // Lazy-чанк подключает фасад в рантайме по lazy-manifest, а не тегом в
+    // index.html: с 2026-08-10 генератор намеренно держит их вне
+    // POST_BOOT_BUNDLES, иначе они грузятся наравне с eager и исполняются
+    // вторым проходом на каждом буте. Поэтому ссылку ищем там, где она есть.
+    const referencedIn = bundle.endsWith('-lazy') ? JSON.stringify(lazyManifest) : index;
+    if (!referencedIn.includes(file)) {
+      throw new Error(
+        bundle.endsWith('-lazy')
+          ? `lazy-manifest.json does not reference ${file}`
+          : `index.html does not reference ${file}`,
+      );
+    }
     verifiedBundles.push(file);
   }
 
