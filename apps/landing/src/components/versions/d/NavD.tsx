@@ -72,15 +72,20 @@ export default function NavD({ menuOpen, onOpenMenu, onCloseMenu }: NavDProps) {
       const sticky = stickyCtaRef.current;
       if (sticky) {
         const pain = document.getElementById('pain');
-        const trial = document.getElementById('trial');
         const vh = window.innerHeight;
         const from = pain ? pain.offsetTop - vh * 0.5 : heroEnd;
-        const to = trial ? trial.offsetTop - vh * 0.9 : Number.POSITIVE_INFINITY;
         // Липкая гаснет там, где на экране есть собственная кнопка. Правило
         // общее, а не исключение для тарифов: в секции 06 три карточки со
         // своими CTA, и плавающая дублировала бы одну из них, перекрывая две
         // другие ровно в момент выбора — то есть отбирала бы выбор там, где
         // страница его предлагает (решение владельца 2026-08-08).
+        //
+        // Верхней границы у показа нет намеренно. Раньше пилюля выключалась
+        // перед секцией заявки и больше не возвращалась — но FAQ идёт ПОСЛЕ
+        // неё, и там человек оставался вообще без действия на экране: своей
+        // кнопки в вопросах нет (замечание владельца 2026-08-09). Теперь
+        // единственный выключатель — наличие собственного CTA в кадре, и на
+        // самой заявке он срабатывает сам.
         //
         // Считаем по геометрии, а не через IntersectionObserver: слушатель
         // scroll здесь уже один на всю страницу, и заводить рядом второй
@@ -91,7 +96,7 @@ export default function NavD({ menuOpen, onOpenMenu, onCloseMenu }: NavDProps) {
           const r = el.getBoundingClientRect();
           return r.bottom > 0 && r.top < vh;
         });
-        const visible = !wide && y > from && y < to && !ownCtaInView;
+        const visible = !wide && y > from && !ownCtaInView;
         // `translate`, а не `transform` — по той же причине, что и у шапки.
         // 180% вместо прежних 140%: пилюля ниже прежней кнопки, а её тень
         // (34px размытия) прежняя, и на 140% край подсветки виден у кромки.

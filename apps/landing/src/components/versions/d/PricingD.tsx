@@ -341,6 +341,13 @@ export default function PricingD() {
             return (
               <div
                 key={tariff.id}
+                // Метка стоит на карточке, а не на её кнопке. Кнопка ниже
+                // складки: человек, читающий состав Pro, кнопку ещё не видит —
+                // но уже ждёт её в карточке, и плавающая пилюля всё это время
+                // дублирует то, до чего он вот-вот доскроллит (замечание
+                // владельца 2026-08-09). Триггер — блок, у которого своя кнопка
+                // есть, а не момент, когда она попала в кадр.
+                data-own-cta
                 className={`flex flex-col overflow-hidden rounded-[22px] bg-white min-[561px]:rounded-[26px] ${
                   tariff.id === 'pro'
                     ? 'shadow-[0_18px_44px_rgba(10,17,25,0.12)] lg:order-2'
@@ -491,17 +498,37 @@ export default function PricingD() {
                   </ul>
                 </div>
 
-                {/* Ответ на секцию 01 — отдельным блоком, не пунктом списка.
+                {/* Блок тёплый, хотя в макете он тёмный `#12283E`. Причина не
+                  вкусовая: этот цвет почти совпадает с шапкой карточки
+                  (`#12263B → #0E1D2E`), и на узких экранах, где карточки идут
+                  стопкой, тёмный прямоугольник посреди белого тела читался
+                  шапкой СЛЕДУЮЩЕГО тарифа — то есть разрезал Pro надвое
+                  (замечание владельца 2026-08-09).
+
+                  Тёплый, а не голубой: акцентного синего на странице уже много
+                  — ссылки, выделения, подзаголовки, — и ещё одна голубая плашка
+                  добавила бы шума. Здесь он и смысловее: блок про срыв и
+                  возвращение, а не про предупреждение.
+
+                  Тона взяты из палитры, новых не заведено: `#F8F1E6` — фон
+                  колонки Self в таблице сравнения, `#A8823C` — метка формата.
+                  Акцент текста затемнён до `#7A5D28`: исходный давал на этом
+                  фоне 3.16:1 и не проходил AA, затемнённый — 5.47:1.
+
+                  От соседнего «Итога недели» (`#FBFAF7`) отличается насыщенностью
+                  — два блока подряд не сливаются.
+
+                  Ответ на секцию 01 — отдельным блоком, не пунктом списка.
                   Речь сервиса — «после срыва»: форма «сорвались» обвиняет и
                   остаётся только в собственной речи клиента в переписке 02. */}
                 {tariff.id === 'pro' ? (
-                  <div className="mx-5 mb-5 rounded-2xl bg-[#12283E] min-[561px]:mx-7 px-[17px] py-[15px]">
+                  <div className="mx-5 mb-5 rounded-2xl border-l-[3px] border-[#A8823C] bg-[#F8F1E6] px-4 py-[15px] min-[561px]:mx-7">
                     <p
-                      className={`${playfair.className} text-[16px] italic leading-[1.35] text-white`}
+                      className={`${playfair.className} text-[16px] italic leading-[1.35] text-[#101826]`}
                     >
-                      После срыва — <span className="text-[#9DC7EE]">возвращает в ритм</span>
+                      После срыва — <span className="text-[#7A5D28]">возвращает в ритм</span>
                     </p>
-                    <p className="mt-2 text-[13px] leading-[1.5] text-[rgba(255,255,255,0.72)]">
+                    <p className="mt-2 text-[13px] leading-[1.5] text-[#3C4552]">
                       Без необходимости начинать всё заново — с той точки, где остановились.
                     </p>
                   </div>
@@ -521,15 +548,9 @@ export default function PricingD() {
                     </p>
                   </div>
                 ) : null}
-
-                {/* `data-own-cta` — метка для липкой пилюли: пока такая кнопка в
-                  кадре, плавающая гаснет. На секции тарифов она дублировала бы
-                  одну из трёх кнопок и перекрывала две другие ровно в момент
-                  выбора (решение владельца 2026-08-08). */}
                 <div className="mt-auto px-5 pb-7 min-[561px]:px-7">
                   {tariff.cta.href ? (
                     <a
-                      data-own-cta
                       href={tariff.cta.href}
                       className={`flex items-center justify-center rounded-[15px] px-5 py-[15px] text-[14.5px] font-semibold transition-transform duration-[250ms] hover:-translate-y-0.5 ${
                         tariff.id === 'pro'
@@ -541,7 +562,6 @@ export default function PricingD() {
                     </a>
                   ) : (
                     <button
-                      data-own-cta
                       type="button"
                       onClick={() => setProSportOpen(true)}
                       className="flex w-full items-center justify-center rounded-[15px] bg-[#4A4C7E] px-5 py-[15px] text-[14.5px] font-semibold text-white transition-transform duration-[250ms] hover:-translate-y-0.5"

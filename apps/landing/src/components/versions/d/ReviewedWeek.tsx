@@ -229,6 +229,10 @@ export default function ReviewedWeek() {
           (COPY_VOICE 2026-06-27). Раньше карточка стояла в `#pain` и опережала proof. */}
       <div
         data-reveal
+        // Тот же принцип, что в карточках тарифов: метка на блоке, а не на
+        // кнопке внутри него. Пока карточка заявки в кадре, липкая пилюля
+        // гаснет — человек уже видит, куда нажимать.
+        data-own-cta
         className="mx-auto mt-14 max-w-[640px] rounded-3xl border border-[rgba(16,24,38,0.12)] bg-[#FBFAF7] px-9 py-10 text-center shadow-[0_16px_44px_rgba(16,24,38,0.05)]"
       >
         <h3 className="text-[clamp(17px,1.9vw,20px)] font-semibold leading-[1.35] text-[#101826]">

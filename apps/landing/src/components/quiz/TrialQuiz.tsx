@@ -282,7 +282,11 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
               на глаз это одинаковые кнопки. Растягивать нужно именно
               основную. */}
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+            {/* Оба входа помечены как собственные CTA: пока интро квиза в
+                кадре, плавающая пилюля гаснет — иначе на секции заявки их
+                оказывается три штуки разом. */}
             <button
+              data-own-cta
               type="button"
               onClick={() => {
                 setQuizTaken(true);
@@ -294,6 +298,7 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
               Пройти короткий разбор →
             </button>
             <button
+              data-own-cta
               type="button"
               onClick={() => setStep('form')}
               className="self-start sm:flex-none rounded-[14px] border border-[rgba(16,24,38,0.22)] px-6 py-3.5 text-[15px] font-semibold text-[#101826] transition-colors hover:border-[rgba(16,24,38,0.32)]"
