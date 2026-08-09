@@ -1960,6 +1960,38 @@
       ]
     };
 
+    // Каскад (heys_cascade_card_v1.js) и Инсайты (этот файл) — разные lazy-
+    // бандлы (postboot-1-game-lazy / postboot-2-insights-lazy); на не-дневной
+    // стартовой вкладке Инсайты могут отрендериться раньше, чем каскад
+    // догрузится, и одноразовый инлайн-чек `HEYS.CascadeCard?.X &&` навсегда
+    // останется пустым. heys_app_shell_v1.js уже решает это для навбара тем
+    // же способом — слушает heys:cascade-ready/heys:postboot-lazy-ready.
+    function CascadeInsightsSlot(props) {
+      const [Comp, setComp] = useState(function () {
+        return (window.HEYS && window.HEYS.CascadeCard && window.HEYS.CascadeCard.InsightsCascadeCard) || null;
+      });
+
+      useEffect(function () {
+        if (Comp) return undefined;
+        const checkReady = function () {
+          const found = (window.HEYS && window.HEYS.CascadeCard && window.HEYS.CascadeCard.InsightsCascadeCard) || null;
+          if (found) setComp(function () { return found; });
+        };
+        const handlePostbootReady = function (event) {
+          if (!event || !event.detail || event.detail.bundle === 'postboot-1-game') checkReady();
+        };
+        window.addEventListener('heys:cascade-ready', checkReady);
+        window.addEventListener('heys:postboot-lazy-ready', handlePostbootReady);
+        return function () {
+          window.removeEventListener('heys:cascade-ready', checkReady);
+          window.removeEventListener('heys:postboot-lazy-ready', handlePostbootReady);
+        };
+      }, [Comp]);
+
+      if (!Comp) return null;
+      return h(Comp, props);
+    }
+
     function InsightsTab({ lsGet, profile, pIndex, optimum, selectedDate, dayData, dayTot, normAbs, waterGoal }) {
       const [activeTab, setActiveTab] = useState('today');
       const [selectedCategory, setSelectedCategory] = useState(null);
@@ -2471,8 +2503,9 @@
 
             // Каскад решений — точка дня по HEYS Score, без месячной кривой
             // (та живёт в Отчётах). UI_V4_SPEC_2026-08-09.md, «Каскад как
-            // трендовая оценка (HEYS Score)».
-            HEYS.CascadeCard?.InsightsCascadeCard && h(HEYS.CascadeCard.InsightsCascadeCard, {
+            // трендовая оценка (HEYS Score)». CascadeInsightsSlot ждёт
+            // догрузку lazy-бандла каскада, а не рендерит один раз и молчит.
+            h(CascadeInsightsSlot, {
               day: dayData,
               dayTot,
               normAbs,
