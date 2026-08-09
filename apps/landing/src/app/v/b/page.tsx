@@ -8,7 +8,6 @@ import { Metadata } from 'next';
 import { VERSION_B_FONT_SIZE_ADJUST, versionBFont } from '@/components/versions/b/fonts';
 import FontSwitcherFab from '@/components/versions/b/FontSwitcherFab';
 import VersionB from '@/components/versions/VersionB';
-import VersionSwitcherFab from '@/components/VersionSwitcherFab';
 import { DRAFT_ROBOTS } from '@/config/landing-versions';
 
 export const metadata: Metadata = {
@@ -24,7 +23,6 @@ export default function VersionBPage() {
     <main className={versionBFont.className} style={{ fontSizeAdjust: VERSION_B_FONT_SIZE_ADJUST }}>
       <VersionB />
 
-      <VersionSwitcherFab current="B" />
       <FontSwitcherFab />
     </main>
   );

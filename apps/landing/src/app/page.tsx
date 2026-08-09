@@ -6,8 +6,8 @@
 //
 // Остальные версии лежат отдельными статическими роутами `/v/a/`, `/v/b/`,
 // `/v/c/` и в разметку этой страницы не попадают: посторонний не увидит их ни
-// на экране, ни в исходном коде. Переключатель — приватный инструмент владельца
-// (`22` п. 3.17, план `маркетинг/46`), это не A/B-эксперимент на посетителях.
+// на экране, ни в исходном коде. Владелец переключает версию напрямую через
+// адресную строку — это не A/B-эксперимент на посетителях.
 //
 // Индексация здесь разрешена глобальными `robots` из `layout.tsx`: это
 // публичная страница. У остальных версий стоит `DRAFT_ROBOTS` — иначе копии
@@ -17,7 +17,6 @@ import { Metadata, Viewport } from 'next';
 
 import { D_DARK_DEEP } from '@/components/versions/d/theme';
 import VersionD from '@/components/versions/VersionD';
-import VersionSwitcherFab from '@/components/VersionSwitcherFab';
 
 const TITLE = 'HEYS — ваш дневник питания ведёт куратор';
 const DESCRIPTION =
@@ -45,9 +44,6 @@ export default function Home() {
   return (
     <main>
       <VersionD />
-
-      {/* Приватный переключатель: у постороннего отсутствует в разметке. */}
-      <VersionSwitcherFab current="D" />
     </main>
   );
 }

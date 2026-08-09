@@ -10,7 +10,6 @@
 import { Metadata } from 'next';
 
 import VersionA from '@/components/versions/VersionA';
-import VersionSwitcherFab from '@/components/VersionSwitcherFab';
 import { VARIANTS } from '@/config/landing-variants';
 import { DRAFT_ROBOTS } from '@/config/landing-versions';
 
@@ -29,8 +28,6 @@ export default function VersionAPage() {
   return (
     <main>
       <VersionA />
-
-      <VersionSwitcherFab current="A" />
     </main>
   );
 }

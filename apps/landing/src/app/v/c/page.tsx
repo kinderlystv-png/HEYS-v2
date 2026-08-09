@@ -6,7 +6,6 @@
 import { Metadata } from 'next';
 
 import VersionC from '@/components/versions/VersionC';
-import VersionSwitcherFab from '@/components/VersionSwitcherFab';
 import { DRAFT_ROBOTS } from '@/config/landing-versions';
 
 // Свои OG-метаданные: без них отправленная владельцу ссылка на черновик
@@ -26,8 +25,6 @@ export default function VersionCPage() {
   return (
     <main>
       <VersionC />
-
-      <VersionSwitcherFab current="C" />
     </main>
   );
 }
