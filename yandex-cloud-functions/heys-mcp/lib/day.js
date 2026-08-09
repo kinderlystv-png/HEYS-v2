@@ -717,6 +717,22 @@ function setStrengthWorkout(day, index, { exercises, time, comment, durationMin 
   if (isNew && list.filter(isRealTraining).length >= MAX_TRAININGS_PER_DAY) {
     return { day, error: `В дне уже ${MAX_TRAININGS_PER_DAY} тренировки — больше приложение не показывает. Удали лишнюю или передай index для перезаписи.` };
   }
+  // Программа куратора (Слой 2): пачка слотов не должна молча затирать
+  // назначенное — куратор обязан явно передать index, чтобы записать поверх
+  // своего же плана. Без этой проверки первый же вызов без index создал бы
+  // четвёртую фактическую тренировку, а план остался бы висеть отдельно.
+  if (isNew) {
+    const assignedIdx = list.findIndex((t) => t && t.plan && t.plan.status === 'assigned');
+    if (assignedIdx >= 0) {
+      return { day, error: `Тренировка ${assignedIdx} в этом дне назначена планом и ещё не начата. Передай index: ${assignedIdx}, чтобы записать факт поверх плана, index для новой отдельной тренировки, или сначала heys_delete_training.` };
+    }
+  }
+  // Куратор правит только пока план не начат клиентом (Слой 5, минимальный
+  // контур): started/done — клиент уже открывал конструктор, его работу нельзя
+  // заменить чужой версией без переписывания merge, которого здесь нет.
+  if (!isNew && prev.plan && prev.plan.status && prev.plan.status !== 'assigned') {
+    return { day, error: `Тренировка ${i} — план со статусом «${prev.plan.status}»: клиент уже начал или закончил её в приложении. Правка куратора поверх такой записи не поддерживается.` };
+  }
   const minutes = clampTrainingMinutes(durationMin);
   const keepZ = Array.isArray(prev.z) && prev.z.some((m) => Number(m) > 0);
   const z = minutes !== null
@@ -733,12 +749,82 @@ function setStrengthWorkout(day, index, { exercises, time, comment, durationMin 
     source: 'curator_mcp',
     updatedAt: nowMs,
   };
+  // Запись факта поверх плана снимает статус «назначено»: план и снимок
+  // остаются для отчёта (слой 6), но день больше не должен вычитать её из
+  // калорий как невыполненную.
+  if (training.plan) training.plan = { ...training.plan, status: 'done' };
   if (typeof time === 'string' && time.trim()) training.time = time.trim();
   if (typeof comment === 'string' && comment.trim()) training.comment = comment.trim();
 
   const trainings = list.slice();
   trainings[i] = training;
   return { day: touch({ ...day, trainings }, nowMs, clientId), index: i, error: null };
+}
+
+/**
+ * Программа куратора, Слой 2: назначить одну тренировку клиенту.
+ *
+ * Архитектурное решение протокола — план не отдельная сущность, а та же
+ * запись тренировки, помеченная `plan`, плюс неизменяемый `planSnapshot`.
+ * Валидатор упражнений переиспользуется целиком из buildWorkoutLog: у плана и
+ * факта одна форма данных, расходиться им незачем.
+ *
+ * `z: [0,0,0,0]` всегда, вне зависимости от durationMin — план не должен
+ * поднимать калории и нагрузку клиента, пока тот ничего не сделал (Слой 1,
+ * риск «план завышает калории»). Подходы по умолчанию done: false — это
+ * задание, а не отчёт.
+ */
+function assignTraining(day, index, { exercises, time, dayLabel, assignedBy, weekIndex, programId }, { nowMs, clientId }) {
+  const built = buildWorkoutLog(exercises, { defaultDone: false });
+  if (built.error) return { day, error: built.error };
+  if (typeof assignedBy !== 'string' || !assignedBy.trim()) {
+    return { day, error: 'assignedBy обязателен: кто назначил тренировку.' };
+  }
+
+  const list = Array.isArray(day.trainings) ? day.trainings : [];
+  let i = index === undefined || index === null ? list.length : Number(index);
+  if (!Number.isInteger(i) || i < 0 || i > list.length) {
+    return { day, error: list.length
+      ? `В дне тренировок ${list.length} — index от 0 до ${list.length - 1}, либо не передавай его для новой.`
+      : 'В дне нет тренировок — не передавай index, чтобы назначить первую.' };
+  }
+  const isNew = i === list.length;
+  const prev = list[i] || {};
+  if (!isNew && isRealTraining(prev)) {
+    return { day, error: `Тренировка ${i} уже существует и это факт, не пустой слот. Не передавай index, чтобы назначить новую, замени план явно через отдельный index на существующий план, или сначала heys_delete_training.` };
+  }
+  if (isNew && list.filter(isRealTraining).length >= MAX_TRAININGS_PER_DAY) {
+    return { day, error: `В дне уже ${MAX_TRAININGS_PER_DAY} тренировки — больше приложение не показывает.` };
+  }
+
+  const plan = {
+    id: makeId('pl_'),
+    programId: typeof programId === 'string' && programId.trim() ? programId.trim() : null,
+    weekIndex: Number.isInteger(weekIndex) && weekIndex > 0 ? weekIndex : null,
+    dayLabel: typeof dayLabel === 'string' && dayLabel.trim() ? dayLabel.trim() : null,
+    assignedBy: assignedBy.trim(),
+    assignedAt: nowMs,
+    status: 'assigned',
+  };
+
+  const training = {
+    id: makeId('tr_'),
+    z: [0, 0, 0, 0],
+    type: 'strength',
+    strengthEntryMode: 'workout_builder',
+    workoutLog: built.log,
+    // Снимок задания фиксируется здесь, при назначении, а не при старте:
+    // иначе правка куратора между назначением и стартом прошла бы мимо него.
+    planSnapshot: { exercises: built.log.exercises },
+    plan,
+    source: 'curator_mcp',
+    updatedAt: nowMs,
+  };
+  if (typeof time === 'string' && time.trim()) training.time = time.trim();
+
+  const trainings = list.slice();
+  trainings[i] = training;
+  return { day: touch({ ...day, trainings }, nowMs, clientId), index: i, planId: plan.id, error: null };
 }
 
 /**
@@ -813,7 +899,10 @@ const REST_PRESETS = [60, 90, 120, 180];
  * `done` по умолчанию true: куратор вносит уже состоявшуюся тренировку, а не
  * план. В приложении наоборот — там подход отмечают по ходу.
  */
-function buildWorkoutLog(exercises, { durationMin } = {}) {
+function buildWorkoutLog(exercises, { durationMin, defaultDone } = {}) {
+  // Назначение плана пишет подходы невыполненными (Слой 2 программы куратора):
+  // куратор вносит задание, а не отчёт о том, что клиент уже поднял вес.
+  const doneDefault = defaultDone === undefined ? true : !!defaultDone;
   if (!Array.isArray(exercises) || !exercises.length) {
     return { error: 'Нужен непустой список exercises.' };
   }
@@ -900,7 +989,7 @@ function buildWorkoutLog(exercises, { durationMin } = {}) {
         id: makeId('ap_'),
         weightKg: w === null ? '' : String(w),
         reps,
-        done: a.done === undefined ? true : a.done,
+        done: a.done === undefined ? doneDefault : a.done,
       };
       if (a.set_type === 'warmup') approach.type = 'warmup';
       if (extra !== null && extra !== 0) approach.extraWeightKg = extra;
@@ -2138,6 +2227,7 @@ module.exports = {
   updateTraining,
   deleteTraining,
   setStrengthWorkout,
+  assignTraining,
   buildWorkoutLog,
   isRealTraining,
   isNotPerformedTraining,

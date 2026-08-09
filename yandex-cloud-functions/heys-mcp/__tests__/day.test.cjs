@@ -1240,6 +1240,90 @@ test('правила ступеней приходят из ядра, а не в
   assert.match(badType.error, /set_type/);
 });
 
+test('assignTraining назначает план: подходы невыполнены, калории нулевые', () => {
+  const base = day.emptyDay('2026-08-11', CLIENT, 1000);
+  const res = day.assignTraining(base, undefined, {
+    exercises: [{ name: 'Жим лёжа', approaches: [{ reps: 8, weight_kg: 75 }] }],
+    dayLabel: 'День B',
+    assignedBy: 'Артём',
+  }, { nowMs: 1000, clientId: CLIENT });
+  assert.equal(res.error, null);
+  const t = res.day.trainings[res.index];
+  assert.deepEqual(t.z, [0, 0, 0, 0]);
+  assert.equal(t.workoutLog.exercises[0].approaches[0].done, false);
+  assert.equal(t.plan.status, 'assigned');
+  assert.equal(t.plan.dayLabel, 'День B');
+  assert.equal(t.plan.assignedBy, 'Артём');
+  // Снимок — та же форма, что и живой journal на момент назначения.
+  assert.deepEqual(t.planSnapshot.exercises, t.workoutLog.exercises);
+});
+
+test('assignTraining без assigned_by отклоняется', () => {
+  const base = day.emptyDay('2026-08-11', CLIENT, 1000);
+  const res = day.assignTraining(base, undefined, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 75 }] }],
+  }, { nowMs: 1000, clientId: CLIENT });
+  assert.match(res.error, /assignedBy/);
+});
+
+test('heys_log_strength_workout без index не затирает молча назначенный план', () => {
+  const assigned = day.assignTraining(day.emptyDay('2026-08-11', CLIENT, 1000), undefined, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 75 }] }],
+    assignedBy: 'Артём',
+  }, { nowMs: 1000, clientId: CLIENT });
+
+  const res = day.setStrengthWorkout(assigned.day, undefined, {
+    exercises: [{ name: 'Присед', approaches: [{ reps: 5, weight_kg: 100 }] }],
+  }, { nowMs: 2000, clientId: CLIENT });
+  assert.match(res.error, /назначена планом/);
+  assert.match(res.error, new RegExp(`index: ${assigned.index}`));
+});
+
+test('heys_log_strength_workout с явным index записывает факт поверх плана и снимает статус', () => {
+  const assigned = day.assignTraining(day.emptyDay('2026-08-11', CLIENT, 1000), undefined, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 75 }] }],
+    assignedBy: 'Артём',
+  }, { nowMs: 1000, clientId: CLIENT });
+
+  const res = day.setStrengthWorkout(assigned.day, assigned.index, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 75, done: true }] }],
+  }, { nowMs: 2000, clientId: CLIENT });
+  assert.equal(res.error, null);
+  const t = res.day.trainings[res.index];
+  assert.equal(t.plan.status, 'done');
+  // Снимок задания остаётся нетронутым — иначе отчёту «план против факта» нечего сравнивать.
+  assert.equal(t.planSnapshot.exercises[0].approaches[0].done, false);
+});
+
+test('куратор не правит план после того, как клиент его начал', () => {
+  const assigned = day.assignTraining(day.emptyDay('2026-08-11', CLIENT, 1000), undefined, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 75 }] }],
+    assignedBy: 'Артём',
+  }, { nowMs: 1000, clientId: CLIENT });
+
+  const started = { ...assigned.day };
+  started.trainings = started.trainings.map((t, i) => (
+    i === assigned.index ? { ...t, plan: { ...t.plan, status: 'started' } } : t
+  ));
+
+  const res = day.setStrengthWorkout(started, assigned.index, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 75, done: true }] }],
+  }, { nowMs: 2000, clientId: CLIENT });
+  assert.match(res.error, /клиент уже начал/);
+});
+
+test('assignTraining не даёт назначить план поверх уже существующего факта', () => {
+  const logged = day.setStrengthWorkout(day.emptyDay('2026-08-11', CLIENT, 1000), undefined, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 75 }] }],
+  }, { nowMs: 1000, clientId: CLIENT });
+
+  const res = day.assignTraining(logged.day, logged.index, {
+    exercises: [{ name: 'Присед', approaches: [{ reps: 5, weight_kg: 100 }] }],
+    assignedBy: 'Артём',
+  }, { nowMs: 2000, clientId: CLIENT });
+  assert.match(res.error, /не пустой слот/);
+});
+
 test('участники связки обязаны идти подряд: раунд выводится из позиции', () => {
   const broken = day.buildWorkoutLog([
     { name: 'Жим', superset_group: 1, approaches: [{ weight_kg: 60, reps: 8 }] },

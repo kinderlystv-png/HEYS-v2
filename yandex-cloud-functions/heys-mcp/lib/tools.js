@@ -1029,6 +1029,35 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       };
     },
 
+    async heys_assign_training(args) {
+      const date = resolveDate(args.date, nowMs);
+      const current = await readDay(date);
+      const res = day.assignTraining(current, args.index, {
+        exercises: args.exercises,
+        time: args.time,
+        dayLabel: args.day_label,
+        assignedBy: args.assigned_by,
+        weekIndex: args.week_index,
+        programId: args.program_id,
+      }, { nowMs, clientId });
+      if (res.error) throw new ToolError('invalid_assignment', res.error);
+
+      const saved = await writeDay(date, res.day, Number(current.updatedAt) || 0);
+      const after = await dayAfterWrite(saved, res.day);
+      const written = res.day.trainings[res.index];
+      const exCount = written.workoutLog.exercises.length;
+      return {
+        text: `Назначил силовую на ${date}${written.plan.dayLabel ? ` («${written.plan.dayLabel}»)` : ''}: ${exCount} упр. Клиент увидит план при открытии дня, в калории и нагрузку не войдёт, пока не начнёт.${dayAfterText(after)}`,
+        structured: {
+          date,
+          index: res.index,
+          plan_id: res.planId,
+          exercises: exCount,
+          day_after: after,
+        },
+      };
+    },
+
     async heys_delete_training(args) {
       const date = resolveDate(args.date, nowMs);
       const current = await readDay(date);
@@ -2283,6 +2312,66 @@ const TOOL_SCHEMAS = [
     },
   },
   {
+    name: 'heys_assign_training',
+    description: 'Назначить клиенту план силовой тренировки — куратор задаёт задание, а не отчитывается о сделанном. Та же форма упражнений и подходов, что в heys_log_strength_workout, но подходы по умолчанию НЕ выполнены (done: false) и в калории с нагрузкой клиента план не входит, пока тот не начнёт тренировку в приложении. Клиент увидит план на карточке дня ("Начать по плану") и либо стартует его как обычную тренировку, либо отметит пропуск. Правка плана куратором возможна только пока клиент его не начал — после старта heys_log_strength_workout и повторный heys_assign_training на этот index откажут.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        exercises: {
+          type: 'array',
+          description: 'Упражнения по порядку. Каждое — со своим списком подходов.',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Название упражнения, свободная строка: «Жим лёжа».' },
+              approaches: {
+                type: 'array',
+                description: 'Подходы по порядку. Дропсет — не отдельные подходы, а ступени drops внутри одного подхода.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    weight_kg: { type: 'number', description: 'Вес, кг. Пусто или 0 — свой вес (подтягивания, отжимания).' },
+                    reps: { type: 'integer', description: 'Повторы, 1–200.' },
+                    done: { type: 'boolean', description: 'Выполнен ли. По умолчанию true — вносится уже сделанная тренировка.' },
+                    set_type: { type: 'string', enum: ['work', 'warmup'], description: 'Рабочий или разминочный. По умолчанию рабочий; разминка не идёт в тоннаж.' },
+                    extra_weight_kg: { type: 'number', description: 'Довес к своему весу: блин на поясе при подтягиваниях. Свойство подхода, 0–500.' },
+                    drops: {
+                      type: 'array',
+                      description: 'Ступени сброса внутри этого подхода, по порядку. Вес каждой следующей ниже предыдущей, всего не больше двух ступеней. В связке дропсет запрещён.',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          weight_kg: { type: 'number', description: 'Вес ступени, кг — ниже предыдущей.' },
+                          reps: { type: 'integer', description: 'Повторы на ступени, 1–200.' },
+                          done: { type: 'boolean', description: 'Выполнена ли ступень. По умолчанию как у подхода.' },
+                        },
+                        required: ['weight_kg', 'reps'],
+                      },
+                    },
+                  },
+                  required: ['reps'],
+                },
+              },
+              rpe: { type: 'integer', description: 'Субъективная тяжесть упражнения, 0–10.' },
+              superset_group: { type: 'integer', description: 'Номер связки: одинаковый у упражнений одного суперсета, 0 — без связки. В связке нужно минимум два упражнения.' },
+              rest_sec: { type: 'integer', description: 'Отдых между подходами: 60, 90, 120 или 180. По умолчанию 90.' },
+              note: { type: 'string', description: 'Заметка к упражнению.' },
+            },
+            required: ['name', 'approaches'],
+          },
+        },
+        date: DATE_ARG,
+        index: { type: 'integer', description: 'Номер тренировки в дне, если переназначаешь уже стоящий там план. Без него назначается новая.' },
+        time: { type: 'string', description: 'Время начала, HH:MM.' },
+        day_label: { type: 'string', description: 'Как называть этот день клиенту: «День B», «Верх тела».' },
+        assigned_by: { type: 'string', description: 'Обязательно: имя куратора, который назначил тренировку.' },
+        week_index: { type: 'integer', description: 'Номер недели цикла, с 1 — если план часть многонедельной программы.' },
+        program_id: { type: 'string', description: 'Идентификатор программы, если план — часть многонедельного цикла, а не разовое назначение.' },
+      },
+      required: ['exercises', 'assigned_by'],
+    },
+  },
+  {
     name: 'heys_delete_training',
     description: 'Удалить тренировку из дня. Индекс — её позиция в списке из heys_get_day (с нуля). Удаление ставит tombstone, поэтому тренировка не вернётся из облака при следующей синхронизации.',
     inputSchema: {
@@ -2438,6 +2527,7 @@ const WRITE_TOOLS = new Set([
   'heys_add_water',
   'heys_log_training',
   'heys_log_strength_workout',
+  'heys_assign_training',
   'heys_update_training',
   'heys_delete_training',
   'heys_update_day',

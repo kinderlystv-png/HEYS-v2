@@ -588,6 +588,46 @@
 
   Parts.sheetRows = sheetRows;
 
+  /**
+   * Программа куратора, слой 3 (карточка дня). Слой 2 в MCP пишет план в ту
+   * же запись тренировки, что и факт (plan + planSnapshot), поэтому карточка
+   * читает те же данные, что SummaryCard, но показывает другое действие.
+   */
+  function PlanCard(props) {
+    const { training, dateKey, isFutureDay, onStart, onOpenReadonly } = props;
+    const wl = (training && training.workoutLog) || {};
+    const exercises = Array.isArray(wl.exercises) ? wl.exercises : [];
+    const plan = training && training.plan;
+    if (!plan) return null;
+    const label = plan.dayLabel || sessionTitle(exercises);
+    const meta = 'назначил ' + (plan.assignedBy || 'куратор')
+      + (isFutureDay ? '' : ' · ' + exercises.length + ' упр.');
+
+    if (isFutureDay) {
+      // Будущий день: только просмотр состава, старт недоступен раньше своей даты.
+      return h('div', { className: 'sb-plan-card' },
+        h('div', { className: 'sb-plan-badge' }, 'Запланировано куратором'),
+        h('b', null, label),
+        h('span', { className: 'sb-plan-meta' }, meta + ' · ' + exercises.length + ' упр.'),
+        h('button', {
+          type: 'button', className: 'sb-btn sb-plan-cta',
+          onClick: onOpenReadonly
+        }, 'Посмотреть')
+      );
+    }
+
+    return h('div', { className: 'sb-plan-card' },
+      h('b', null, 'Сегодня по плану · ' + label),
+      h('span', { className: 'sb-plan-meta' }, meta),
+      h('button', {
+        type: 'button', className: 'sb-btn is-accent sb-plan-cta',
+        onClick: onStart
+      }, 'Начать по плану')
+    );
+  }
+
+  Parts.PlanCard = PlanCard;
+
   Parts.SupersetBlock = SupersetBlock;
   Parts.RestRing = RestRing;
 })(typeof window !== 'undefined' ? window : globalThis);

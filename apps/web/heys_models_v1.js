@@ -589,6 +589,20 @@
           out.workoutLog = t.workoutLog;
         }
       }
+      // Программа куратора (Слой 2): та же ловушка, что была с _curatorEdits —
+      // normalizeDay собирает тренировку перечислением полей, и без явного
+      // passthrough plan/planSnapshot стирались бы на первой же загрузке дня.
+      // MCP пишет их в облако, но клиент открывает день именно через этот путь.
+      if (t && t.plan && typeof t.plan === 'object') {
+        out.plan = { ...t.plan };
+      }
+      if (t && t.planSnapshot && typeof t.planSnapshot === 'object') {
+        try {
+          out.planSnapshot = JSON.parse(JSON.stringify(t.planSnapshot));
+        } catch {
+          out.planSnapshot = t.planSnapshot;
+        }
+      }
       return out;
     });
     return base;

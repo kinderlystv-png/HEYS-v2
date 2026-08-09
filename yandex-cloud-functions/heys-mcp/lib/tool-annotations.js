@@ -24,6 +24,7 @@ const DIARY_WRITE_TOOLS = new Set([
   'heys_add_water',
   'heys_log_training',
   'heys_log_strength_workout',
+  'heys_assign_training',
   'heys_update_training',
   'heys_delete_training',
   'heys_update_day',

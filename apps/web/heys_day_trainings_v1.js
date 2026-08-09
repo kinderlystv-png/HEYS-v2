@@ -38,6 +38,12 @@
     return y + '-' + pad2(m) + '-' + pad2(d);
   }
 
+  /** Сегодняшняя дата в формате дня — для различения карточек экрана 02/09 (сегодня) и будущего дня. */
+  function todayDateKeyForPlan() {
+    const now = new Date();
+    return dayKeyFromParts(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  }
+
   /**
    * Модульный кэш исторических сканов. Ключи — '<funcTag>|<normName>|<refDate>|<curTi>|<curExi>'.
    * Полная инвалидация по событию heys:day-updated (приходит при любом изменении dayv2_*).
@@ -3288,6 +3294,32 @@
                 }
               });
               if (typeof haptic === 'function') haptic('light');
+            }
+            // Программа куратора, слой 3: назначенный, но не начатый план
+            // получает свою карточку вместо обычной сводки — экран 02/09
+            // макета. rawT, не T: T пересобирается вручную для остальной
+            // карточки и plan/planSnapshot туда не проброшены.
+            if (rawT.plan && rawT.plan.status === 'assigned' && Parts.PlanCard) {
+              const isFutureDay = String(dateKey) > todayDateKeyForPlan();
+              return React.createElement(Parts.PlanCard, {
+                key: 'wb-plan-' + ti,
+                training: { workoutLog: wlLive, plan: rawT.plan },
+                dateKey: dateKey,
+                isFutureDay: isFutureDay,
+                onStart: function (e) {
+                  if (e && e.stopPropagation) e.stopPropagation();
+                  // Старт снимает «assigned» один раз: дальше это обычная
+                  // сессия конструктора, куратор её больше не правит поверх
+                  // (setStrengthWorkout откажет на статусе started/done).
+                  patchTraining(ti, function (t0) {
+                    return { ...t0, plan: { ...t0.plan, status: 'started' } };
+                  });
+                  openBuilder();
+                },
+                // «Посмотреть» до своей даты не переводит план в started: это
+                // просмотр состава, а не начало тренировки раньше срока.
+                onOpenReadonly: function (e) { if (e && e.stopPropagation) e.stopPropagation(); openBuilder(); }
+              });
             }
             // Экран 01: сводка вместо конструктора — время, прогресс подходов и
             // одно действие. Тоннажа и калорий здесь нет намеренно.
