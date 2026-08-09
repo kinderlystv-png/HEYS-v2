@@ -56,7 +56,7 @@
   // ——— Экран целиком ———
 
   function BuilderScreen(props) {
-    const { training, dateKey, onPatch, profile, onClose } = props;
+    const { training, dateKey, onPatch, onPatchNote, profile, historyFor, onClose } = props;
     const SK = kernel();
     const [openIdx, setOpenIdx] = React.useState(0);
     const [view, setView] = React.useState('list');
@@ -249,6 +249,24 @@
         onBack: function () { setView('list'); }
       });
     }
+    const FinUI = HEYS.StrengthFinishUI || {};
+    if (view === 'finish' && FinUI.FinishScreen) {
+      return h(FinUI.FinishScreen, {
+        training: liveTraining,
+        dateKey: dateKey,
+        elapsedSec: elapsedSec,
+        profile: profile,
+        dayTonnageKg: agg ? agg.totalVolume : 0,
+        strengthCount: 1,
+        onBack: function () { setView('list'); },
+        onDone: function (note) {
+          // Заметка — часть журнала тренировки, а не состояние экрана: без
+          // записи она исчезала бы вместе с закрытием слоя.
+          if (typeof onPatchNote === 'function') onPatchNote(note);
+          onClose();
+        }
+      });
+    }
     if (view === 'new' && CatUI.NewExerciseScreen) {
       return h(CatUI.NewExerciseScreen, {
         initialName: draftName,
@@ -287,6 +305,7 @@
         onToggleType: function (apIdx) { toggleType(i, apIdx); },
         onAddApproach: addApproach,
         onAddDrop: addDrop,
+        history: typeof historyFor === 'function' ? historyFor(ex.name, i) : null,
         onRpe: setRpe,
         onRename: renameExercise,
         onRemove: function (exIdx) {
@@ -339,7 +358,7 @@
           onClick: function () { setView('catalog'); }
         }, '+'),
         h('button', {
-          type: 'button', className: 'sb-finish', onClick: onClose
+          type: 'button', className: 'sb-finish', onClick: function () { setView('finish'); }
         }, notClosed > 0 ? 'Завершить · ' + notClosed + ' не закрыто' : 'Завершить')
       )
     );
@@ -353,6 +372,7 @@
     function render(api) {
       return h(BuilderScreen, {
         training: state.training,
+        onPatchNote: state.onPatchNote,
         dateKey: state.dateKey,
         profile: state.profile,
         onPatch: function (nextExercises) {

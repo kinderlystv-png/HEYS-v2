@@ -295,7 +295,8 @@
 
   function ExerciseCard(props) {
     const { ex, index, open, onToggleOpen, onPatchApproach, onToggleType,
-      onAddApproach, onAddDrop, onRpe, onRename, onRestManual, onRemove, onDiscomfortAction, readOnly } = props;
+      onAddApproach, onAddDrop, onRpe, onRename, onRestManual, onRemove, onDiscomfortAction,
+      history, readOnly } = props;
     const SK = kernel();
     const aps = Array.isArray(ex.approaches) ? ex.approaches : [];
     const metaApi = HEYS.exerciseMeta;
@@ -365,6 +366,23 @@
           suggestions: suggestions,
           onRename: function (value) { onRename(index, value); }
         }),
+        // Чипы истории: «прошлый раз» и рекорд — то, с чем человек сравнивает
+        // сегодняшний подход. Данные приходят из дня, UI их не ищет сам.
+        (function () {
+          const chips = [];
+          const last = history && history.last;
+          const rec = history && history.record;
+          if (last) {
+            const w = last.weightKg || (last.approaches && last.approaches[0] && last.approaches[0].weightKg);
+            const r = last.reps || (last.approaches && last.approaches[0] && last.approaches[0].reps);
+            if (w || r) chips.push(h('span', { key: 'last' }, 'Прошлый раз · ' + (w || 'свой') + ' × ' + (r || '—')));
+          }
+          if (rec && rec.maxW > 0) {
+            chips.push(h('span', { key: 'rec', className: 'is-record' },
+              '🏆 Рекорд · ' + rec.maxW + ' кг'));
+          }
+          return chips.length ? h('div', { className: 'sb-hist' }, chips) : null;
+        })(),
         h('div', { className: 'sb-aps-head' },
           h('span', null, ''),
           h('span', null, 'Вес, кг'),

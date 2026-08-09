@@ -27,6 +27,7 @@ function loadModules() {
   ev('_kernel/heys_kernel_strength_v1.js');
   ev('heys_exercise_catalog_v1.js');
   ev('strength/heys_strength_superset_ui_v1.js');
+  ev('strength/heys_strength_finish_ui_v1.js');
   ev('strength/heys_strength_builder_ui_v1.js');
   return globalThis.HEYS.StrengthBuilder;
 }
@@ -257,5 +258,29 @@ describe('конструктор: безопасность не спрятана
     const aps = seen[0][0].approaches;
     expect(aps[0].weightKg).toBe('100');
     expect(aps[1].weightKg).toBe('80');
+  });
+});
+
+describe('финал тренировки', () => {
+  it('расчётный максимум считается по Эпли, а не по Бржицки', () => {
+    loadModules();
+    const Fin = globalThis.HEYS.StrengthFinishUI;
+    // Пример протокола: 75 кг × 8 → 95 кг.
+    expect(Math.round(Fin.epley(75, 8))).toBe(95);
+  });
+
+  it('максимум берётся с рабочего подхода, а не с разминки или сброса', () => {
+    loadModules();
+    const Fin = globalThis.HEYS.StrengthFinishUI;
+    const best = Fin.bestWorkingSet([{
+      name: 'Жим',
+      approaches: [
+        { weightKg: '100', reps: 10, done: true, type: 'warmup' },
+        { weightKg: '75', reps: 8, done: true, drops: [{ weightKg: '60', reps: 6, done: true }] },
+        { weightKg: '90', reps: 5, done: false },
+      ],
+    }]);
+    expect(best.weightKg).toBe('75');
+    expect(best.reps).toBe(8);
   });
 });

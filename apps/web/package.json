@@ -10,7 +10,7 @@
     "build:analyze": "cross-env ANALYZE=true vite build",
     "build:ci": "pnpm run prebuild && pnpm run build:react && pnpm --dir ../.. bundle:legacy && node ../../scripts/verify-legacy-bundles.mjs && pnpm run build:dist",
     "build:deps": "pnpm --dir ../.. --filter @heys/shared run build && pnpm --dir ../.. --filter @heys/storage run build && pnpm --dir ../.. --filter @heys/core run build && pnpm --dir ../.. --filter @heys/search run build && pnpm --dir ../.. --filter @heys/ui run build && pnpm --dir ../.. --filter @heys/logger run build",
-    "build:dist": "vite build && node scripts/strip-console-logs.js && cp heys_*.js dist/ && cp react-bundle.js dist/ && mkdir -p dist/styles/modules && cp styles/*.css dist/styles/ && cp styles/modules/*.css dist/styles/modules/ && cp -r advice/*.js dist/advice/ && cp -r day/*.js dist/day/ && cp -r widgets/*.js dist/widgets/ && mkdir -p dist/hobby && cp -r hobby/* dist/hobby/",
+    "build:dist": "vite build && node scripts/strip-console-logs.js && cp heys_*.js dist/ && cp react-bundle.js dist/ && mkdir -p dist/styles/modules && cp styles/*.css dist/styles/ && cp styles/modules/*.css dist/styles/modules/ && cp -r advice/*.js dist/advice/ && cp -r day/*.js dist/day/ && cp -r widgets/*.js dist/widgets/ && mkdir -p dist/hobby && cp -r hobby/* dist/hobby/ && mkdir -p dist/strength && cp -r strength/*.js dist/strength/ && mkdir -p dist/_kernel && cp -r _kernel/*.js dist/_kernel/",
     "build:react": "npx esbuild src/react-globals-sync.ts --bundle --format=iife --minify --outfile=react-bundle.js --target=es2020",
     "bundle:assemble-day": "node scripts/bundle-assemble-day-game.mjs",
     "bundle:fingers": "node scripts/bundle-fingers.cjs",

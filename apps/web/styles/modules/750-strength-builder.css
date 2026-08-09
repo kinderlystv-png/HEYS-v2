@@ -1122,3 +1122,117 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.sb-hist span.is-record {
+  background: var(--sb-accbg);
+  color: var(--sb-accTx);
+  font-weight: 700;
+}
+
+/* ── Финал (экран 10): здесь метрики уместны ────────────────────────────── */
+
+.sb-done {
+  padding: 13px;
+  border-radius: 16px;
+  border: 1px solid var(--sb-okBr);
+  background: var(--sb-okbg);
+}
+
+.sb-done b {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--sb-okTx);
+  margin-bottom: 10px;
+}
+
+.sb-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.sb-tile {
+  padding: 9px 11px;
+  border-radius: 12px;
+  border: 1px solid var(--sb-br);
+  background: var(--sb-card);
+}
+
+.sb-tile span {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sb-mut);
+}
+
+.sb-tile b {
+  display: block;
+  margin: 0;
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--sb-tx);
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-block {
+  padding: 11px 13px;
+  border-radius: 14px;
+  border: 1px solid var(--sb-br);
+  background: var(--sb-card);
+}
+
+.sb-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--sb-mut);
+}
+
+.sb-line b {
+  margin-left: auto;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--sb-tx);
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-total {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: 14px;
+  background: var(--sb-accbg);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--sb-accTx);
+}
+
+.sb-total b {
+  margin-left: auto;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.sb-note {
+  width: 100%;
+  min-height: 88px;
+  box-sizing: border-box;
+  padding: 11px;
+  border-radius: 12px;
+  border: 1px solid var(--sb-br);
+  background: var(--sb-card);
+  color: var(--sb-tx);
+  font-size: 13.5px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.sb-finish.is-done {
+  background: linear-gradient(180deg, #16a34a, #15803d);
+}

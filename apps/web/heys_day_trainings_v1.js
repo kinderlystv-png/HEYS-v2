@@ -3231,10 +3231,27 @@
                 training: trainingForBuilder,
                 dateKey: dateKey,
                 profile: (U && U.lsGet) ? (U.lsGet('heys_profile', {}) || {}) : {},
+                // История упражнения живёт здесь: сканы по дням делает
+                // heys_day_trainings_v1.js, у конструктора своего доступа к
+                // хранилищу дней нет и быть не должно.
+                historyFor: function (name, exIdx) {
+                  try {
+                    const snap = findLastExerciseSnapshot(dateKey, name, ti, exIdx);
+                    const rec = findExerciseHistoricalRecord(name, dateKey, ti, exIdx);
+                    return { last: snap, record: rec };
+                  } catch (_e) { return { last: null, record: null }; }
+                },
                 onPatch: function (nextExercises) {
                   patchTraining(ti, function (t0) {
                     const wl0 = ensureWorkoutLogShape(t0);
                     wl0.exercises = nextExercises;
+                    return applyWorkoutLogToTraining(t0, wl0);
+                  });
+                },
+                onPatchNote: function (note) {
+                  patchTraining(ti, function (t0) {
+                    const wl0 = ensureWorkoutLogShape(t0);
+                    wl0.note = String(note == null ? '' : note);
                     return applyWorkoutLogToTraining(t0, wl0);
                   });
                 }

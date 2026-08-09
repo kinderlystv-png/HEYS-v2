@@ -3,7 +3,7 @@
 window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 ; (function (global) {
     const HEYS = (global.HEYS = global.HEYS || {});
-    const DAY_STATS_LAZY_VERSION = '2026-08-09-strength-catalog-v1';
+    const DAY_STATS_LAZY_VERSION = '2026-08-09-strength-finish-v1';
 
     const scripts = [
         'heys_morning_activation_calendar_v1.js',
@@ -19,6 +19,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         '_kernel/heys_kernel_fullscreen_v1.js',
         'strength/heys_strength_superset_ui_v1.js',
         'strength/heys_strength_catalog_ui_v1.js',
+        'strength/heys_strength_finish_ui_v1.js',
         'strength/heys_strength_builder_ui_v1.js',
         'heys_day_sleep_score_popups_v1.js',
         // 🤚 Fingers — climbing fingerboard module.
