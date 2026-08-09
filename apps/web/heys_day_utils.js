@@ -889,6 +889,48 @@
         return r1(d);
     }
 
+    // === Сон: ночь + дневной досып ===
+    // Контракт поля day.sleepHours — ночной интервал ПЛЮС дневной досып,
+    // округлённые до 0.1 ч. Он же зафиксирован на бэкенде
+    // (yandex-cloud-functions/heys-mcp/lib/day.js:2030).
+    //
+    // Эти три помощника звали из ~17 мест, но их здесь не было: вызовы гасились
+    // optional chaining и молча уходили в фолбэки. Из-за этого поле писалось
+    // по-разному — чек-ин клал ночь+досып (heys_steps_v1.js:1682), а эффект
+    // DayTab только ночь, потому что normalizeDaySleepMinutes тоже отсутствовал
+    // и обнулял досып (heys_day_sleep_effects_v1.js:16).
+
+    function normalizeDaySleepMinutes(value) {
+        const num = Math.round(Number(value) || 0);
+        return num > 0 ? num : 0;
+    }
+
+    /** Только ночной интервал, без досыпа. */
+    function getNightSleepHours(day) {
+        if (!day) return 0;
+        const fromTimes = sleepHours(day.sleepStart, day.sleepEnd);
+        if (fromTimes > 0) return fromTimes;
+        // Времён нет — вычитаем досып из суммарного поля.
+        const stored = Number(day.sleepHours);
+        if (!Number.isFinite(stored) || stored <= 0) return 0;
+        return r1(Math.max(0, stored - normalizeDaySleepMinutes(day.daySleepMinutes) / 60));
+    }
+
+    /** Ночь + досып. Считается от сырых полей, а не от day.sleepHours, — иначе
+     *  запись чек-ина, где досып уже учтён, дала бы его второй раз. */
+    function getTotalSleepHours(day) {
+        if (!day) return 0;
+        const nap = normalizeDaySleepMinutes(day.daySleepMinutes) / 60;
+        const night = sleepHours(day.sleepStart, day.sleepEnd);
+        if (night > 0) return r1(night + nap);
+        // Времён нет: day.sleepHours — единственный источник, и по историческим
+        // записям он мог быть как ночью, так и суммой. Берём максимум, а не
+        // сумму: сложение и есть тот самый двойной счёт.
+        const stored = Number(day.sleepHours);
+        if (Number.isFinite(stored) && stored > 0) return r1(Math.max(stored, nap));
+        return r1(nap);
+    }
+
     // === Meal Type Classification ===
     // Типы приёмов пищи с иконками и названиями
     const MEAL_TYPES = {
@@ -2167,6 +2209,9 @@
         // Time/Sleep
         parseTime,
         sleepHours,
+        normalizeDaySleepMinutes,
+        getNightSleepHours,
+        getTotalSleepHours,
         formatMealTime,
         // Hours Order (для wheel picker с ночными часами)
         HOURS_ORDER,

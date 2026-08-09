@@ -249,8 +249,14 @@ function syncIndexHtml(manifest) {
         html = updated;
     }
 
+    // Только eager-чанки. `-lazy` сюда попадать не должны: их грузят фасады по
+    // ступенчатому расписанию и мгновенно по клику вкладки (pi_facade.js,
+    // heys_game_facade_v1.js, heys_postboot3_facade_v1.js). Пока префиксный
+    // фильтр захватывал и их, index.html тянул все три чанка сразу после
+    // appReady — то есть и скачивал, и парсил их вторым экземпляром поверх
+    // фасадного, обнуляя ступенчатость из ac9f134e3.
     const postBootFiles = Object.entries(manifest)
-        .filter(([name]) => name.startsWith('postboot-'))
+        .filter(([name]) => name.startsWith('postboot-') && !name.endsWith('-lazy'))
         .map(([, entry]) => entry.file);
     if (postBootFiles.length > 0) {
         const postBootArray = 'var POST_BOOT_BUNDLES = [\n'

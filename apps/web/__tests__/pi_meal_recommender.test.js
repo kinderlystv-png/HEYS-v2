@@ -93,7 +93,7 @@ describe('Meal Recommender v2.6', () => {
                 },
                 thresholds: {
                     // Mock adaptive thresholds
-                    getAdaptiveThresholds: (days, profile, pIndex) => ({
+                    get: (days, profile, pIndex) => ({
                         lateEatingHour: 21.0,
                         idealMealGapMin: 240,
                         source: 'FULL',
@@ -595,7 +595,7 @@ describe('Meal Recommender v2.6', () => {
     describe('Adaptive Thresholds Integration (v2.4)', () => {
         it('uses adaptive lateEatingHour from thresholds', () => {
             // Mock thresholds with late eating at 20:00
-            global.HEYS.InsightsPI.thresholds.getAdaptiveThresholds = () => ({
+            global.HEYS.InsightsPI.thresholds.get = () => ({
                 lateEatingHour: 20.0,
                 idealMealGapMin: 240,
                 source: 'FULL'
@@ -618,7 +618,7 @@ describe('Meal Recommender v2.6', () => {
 
         it('uses adaptive idealMealGapMin for timing', () => {
             // Mock adaptive gap of 3 hours
-            global.HEYS.InsightsPI.thresholds.getAdaptiveThresholds = () => ({
+            global.HEYS.InsightsPI.thresholds.get = () => ({
                 lateEatingHour: 21.0,
                 idealMealGapMin: 180, // 3 hours
                 source: 'FULL'
@@ -752,7 +752,7 @@ describe('Meal Recommender v2.6', () => {
 
         it('material protein deficit is preserved near sleep', () => {
             // Mock adaptive threshold with late eating at 21:00
-            global.HEYS.InsightsPI.thresholds.getAdaptiveThresholds = () => ({
+            global.HEYS.InsightsPI.thresholds.get = () => ({
                 lateEatingHour: 21.0,
                 idealMealGapMin: 240,
                 source: 'FULL'
@@ -777,7 +777,7 @@ describe('Meal Recommender v2.6', () => {
 
         it('Before late_evening hour, PROTEIN_DEFICIT can win', () => {
             // Test soft-window: 1h before lateEatingHour, PROTEIN_DEFICIT should be selected
-            global.HEYS.InsightsPI.thresholds.getAdaptiveThresholds = () => ({
+            global.HEYS.InsightsPI.thresholds.get = () => ({
                 lateEatingHour: 21.0,
                 idealMealGapMin: 240,
                 source: 'FULL'

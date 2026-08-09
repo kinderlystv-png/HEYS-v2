@@ -80,7 +80,9 @@ function repoFileExists(repoRel) {
 
 const BUNDLE_NAMES = Object.keys(LEGACY_BUNDLES);
 const BOOT_NAMES = BUNDLE_NAMES.filter(n => n.startsWith('boot-'));
-const POSTBOOT_NAMES = BUNDLE_NAMES.filter(n => n.startsWith('postboot-'));
+// В POST_BOOT_BUNDLES перечислены только eager-чанки — `-lazy` грузят фасады
+// по требованию, см. фильтр в scripts/bundle-legacy.mjs.
+const POSTBOOT_NAMES = BUNDLE_NAMES.filter(n => n.startsWith('postboot-') && !n.endsWith('-lazy'));
 
 const SHOW_FIX_HINT = !process.argv.includes('--no-fix-hint');
 

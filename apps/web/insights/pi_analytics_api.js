@@ -893,7 +893,10 @@
       // === 5. Caloric Debt Bonus — 10% веса ===
       // Если сегодня большой недобор — риск срыва вечером/ночью
       const todayKcal = calculateDayKcal(today, pIndex);
-      const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile)?.kcal || 2000; // HEYS.Day.calculateOptimum не существует — норма молча падала в 2000
+      // HEYS.Day.calculateOptimum не существует — норма молча падала в 2000 у всех.
+      // Канон — TDEE.resolveDailyTargets(profile, day): день даёт вес, шаги,
+      // тренировки, дневной дефицит и цикл (heys_tdee_v1.js:335).
+      const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile, today)?.kcal || 2000;
       const kcalPct = todayKcal / optimum;
 
       const debtRisk = kcalPct < 0.5 && hour >= 16 ? 60 : kcalPct < 0.7 && hour >= 18 ? 40 : 0;
@@ -974,7 +977,8 @@
 
       // 2. Текущий калораж (энергия из еды)
       const todayKcal = calculateDayKcal(today, pIndex);
-      const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile)?.kcal || 2000; // HEYS.Day.calculateOptimum не существует — норма молча падала в 2000
+      // HEYS.Day.calculateOptimum не существует — см. комментарий в calculatePredictiveRisk.
+      const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile, today)?.kcal || 2000;
       const kcalPct = todayKcal / optimum;
       const kcalMod = kcalPct >= 0.8 ? 1.1 : kcalPct >= 0.5 ? 1.0 : kcalPct >= 0.3 ? 0.9 : 0.75;
       modifiers.push({ name: 'Еда', value: kcalMod, desc: `${Math.round(kcalPct * 100)}% нормы` });
@@ -1493,10 +1497,18 @@
       }
 
       // === 3. Metabolic Strain (калорийный стресс) — 15% ===
-      const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile)?.kcal || 2000; // HEYS.Day.calculateOptimum не существует — норма молча падала в 2000
-      const kcalValues = days.map(d => calculateDayKcal(d, pIndex)).filter(k => k > 0);
-      if (kcalValues.length >= 3) {
-        const kcalDeviations = kcalValues.map(k => Math.abs(k - optimum) / optimum);
+      // HEYS.Day.calculateOptimum не существует — норма падала в 2000 у всех.
+      // Здесь окно из 14 дней, и норма у каждого дня своя: в день тренировки
+      // съесть больше — не отклонение. Поэтому сравниваем день с ЕГО нормой,
+      // а не всё окно с одним числом (heys_tdee_v1.js:335).
+      const kcalSamples = days
+        .map(d => ({
+          kcal: calculateDayKcal(d, pIndex),
+          optimum: HEYS.TDEE?.resolveDailyTargets?.(profile, d)?.kcal || 2000
+        }))
+        .filter(s => s.kcal > 0 && s.optimum > 0);
+      if (kcalSamples.length >= 3) {
+        const kcalDeviations = kcalSamples.map(s => Math.abs(s.kcal - s.optimum) / s.optimum);
         const avgDeviation = average(kcalDeviations);
         const metabolicScore = Math.min(100, avgDeviation * 200); // 50% отклонение = 100
         components.metabolic = {

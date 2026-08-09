@@ -4531,7 +4531,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     optimum: optimumInfo.kcal,
                     normKcal: normAbs.kcal
                 });
-                const pIndex = window.HEYS.products?.getIndex ? window.HEYS.products.getIndex() : {};
+                // getIndex не существует — был всегда {} (heys_core_v12.js:4692).
+                const pIndex = window.HEYS.products?.buildIndex?.() || {};
                 window.HEYS.CascadeCard.computeCascadeState(day, dayTot, normAbs, prof, pIndex, {
                     silent: false
                 });
