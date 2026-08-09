@@ -4,7 +4,10 @@
     const DEV = window.DEV || {};
     const devLog = typeof DEV.log === 'function' ? DEV.log.bind(DEV) : function () { };
     const BOARD_CLIENT_ID = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
-    const BASE_HOME_TABS = ['widgets', 'stats', 'diary', 'insights', 'month', 'tasks'];
+    // 'activity' обязан быть здесь: пикер домашней вкладки предлагает «Актив»,
+    // и без него resolveHomeTab молча откатывал выбор на 'diary' — настройка
+    // сохранялась, но не применялась.
+    const BASE_HOME_TABS = ['widgets', 'stats', 'diary', 'activity', 'insights', 'month', 'tasks'];
     const TASKS_HOME_SUBTABS = ['tasks', 'goals', 'calendar', 'gantt', 'chrono', 'checklists', 'reading'];
     const DEFAULT_TASKS_SUBTAB = 'calendar';
 

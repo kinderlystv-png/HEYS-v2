@@ -30,10 +30,6 @@
   const h = React.createElement;
   const FULLSCREEN_ID = 'strength-builder';
 
-  function parts() {
-    return HEYS.StrengthBuilderParts || {};
-  }
-
   function kernel() {
     const TK = HEYS.TrainingKernel;
     return (TK && TK.strength) ? TK.strength : null;
@@ -42,11 +38,6 @@
   function fullscreen() {
     const TK = HEYS.TrainingKernel;
     return (TK && TK.fullscreen) ? TK.fullscreen : null;
-  }
-
-  function metaFor(name) {
-    const m = HEYS.exerciseMeta;
-    return (m && typeof m.get === 'function') ? m.get(name) : null;
   }
 
   function fmtClock(totalSec) {
@@ -62,227 +53,26 @@
     return v + ' кг';
   }
 
-  /** Подпись упражнения во втором слое: группы из справочника, а не выдумка UI. */
-  function groupsLabel(name) {
-    const meta = metaFor(name);
-    const m = HEYS.exerciseMeta;
-    if (!meta || !m) return '';
-    const parts = [m.groupLabel(meta.primaryGroup)].concat(
-      (meta.secondaryGroups || []).map(function (g) { return m.groupLabel(g); })
-    );
-    return parts.filter(Boolean).join(' · ');
-  }
-
-  // ——— Строка подхода (экраны 07, 13, 24) ———
-
-  function ApproachRow(props) {
-    const { approach, index, workNumber, onPatch, onToggleType, readOnly } = props;
-    const SK = kernel();
-    const warmup = SK ? SK.isWarmupApproach(approach) : false;
-    const stages = SK ? SK.approachStages(approach) : [];
-    const blank = SK ? SK.isBlankApproach(approach) : false;
-    const base = stages[0] || { weightKg: '', reps: 0, done: false };
-
-    function patchStage(stageIdx, patch) {
-      if (readOnly) return;
-      if (stageIdx === 0) {
-        onPatch(index, patch);
-        return;
-      }
-      const drops = (approach.drops || []).slice();
-      drops[stageIdx - 1] = Object.assign({}, drops[stageIdx - 1], patch);
-      onPatch(index, { drops: drops });
-    }
-
-    // Пустые повторы блокируют галочку — без модалки и слова «ошибка».
-    // Пустой вес нормален: это свой вес.
-    function canClose(stage) {
-      return +stage.reps > 0;
-    }
-
-    const rows = [];
-    stages.forEach(function (stage, si) {
-      const isDrop = stage.isDrop;
-      rows.push(h('div', {
-        key: 'st' + si,
-        className: (isDrop ? 'sb-drop' : 'sb-ap') + (blank && !isDrop ? ' is-blank' : '')
-      },
-        isDrop
-          ? h('span', { className: 'sb-drop-tag' }, 'дроп')
-          : h('button', {
-            type: 'button',
-            className: 'sb-ap-num' + (warmup ? ' is-warmup' : ''),
-            onClick: function () { if (!readOnly) onToggleType(index); },
-            title: warmup ? 'Разминка — вне тоннажа. Нажмите, чтобы сделать рабочим' : 'Рабочий подход. Нажмите, чтобы сделать разминочным',
-            'aria-label': warmup ? 'Разминочный подход' : 'Рабочий подход номер ' + workNumber
-          }, warmup ? 'разм' : String(workNumber || '—')),
-        h('input', {
-          className: 'sb-ap-field',
-          type: 'text',
-          inputMode: 'decimal',
-          value: stage.weightKg,
-          placeholder: 'свой',
-          disabled: readOnly,
-          onChange: function (e) { patchStage(si, { weightKg: e.target.value }); },
-          'aria-label': 'Вес, кг'
-        }),
-        h('input', {
-          className: 'sb-ap-field',
-          type: 'text',
-          inputMode: 'numeric',
-          value: stage.reps ? String(stage.reps) : '',
-          placeholder: '—',
-          disabled: readOnly,
-          onChange: function (e) {
-            const n = parseInt(String(e.target.value).replace(/\D/g, ''), 10);
-            patchStage(si, { reps: isFinite(n) ? Math.max(0, Math.min(200, n)) : 0 });
-          },
-          'aria-label': 'Повторы'
-        }),
-        h('button', {
-          type: 'button',
-          className: 'sb-ap-check' + (stage.done ? ' is-done' : ''),
-          disabled: readOnly || !canClose(stage),
-          onClick: function () { patchStage(si, { done: !stage.done }); },
-          'aria-label': stage.done ? 'Отменить отметку' : 'Отметить выполненным'
-        }, stage.done ? '✓' : '○')
-      ));
-    });
-
-    if (approach && approach.discomfort) {
-      rows.push(h('div', { key: 'pain', className: 'sb-ap-note' },
-        '⚠️ Дискомфорт' + (approach.discomfortNote ? ': ' + approach.discomfortNote : '')));
-    }
-
-    return h(React.Fragment, { key: 'ap' + index }, rows);
-  }
-
-  // ——— Упражнение (экран 04) ———
-
-  function ExerciseCard(props) {
-    const { ex, index, open, onToggleOpen, onPatchApproach, onToggleType,
-      onAddApproach, onAddDrop, onRpe, onDiscomfortAction, readOnly } = props;
-    const SK = kernel();
-    const aps = Array.isArray(ex.approaches) ? ex.approaches : [];
-    const meta = metaFor(ex.name);
-    const unit = (ex.unit || (meta && meta.unit) || 'weight_reps');
-
-    let workNo = 0;
-    const rows = aps.map(function (a, ai) {
-      const warmup = SK ? SK.isWarmupApproach(a) : false;
-      if (!warmup) workNo += 1;
-      return h(ApproachRow, {
-        key: 'a' + ai,
-        approach: a,
-        index: ai,
-        workNumber: warmup ? 0 : workNo,
-        onPatch: onPatchApproach,
-        onToggleType: onToggleType,
-        readOnly: readOnly
-      });
-    });
-
-    const doneCount = aps.filter(function (a) {
-      return SK ? SK.isApproachDone(a) && !SK.isBlankApproach(a) : !!a.done;
-    }).length;
-    const totalCount = aps.filter(function (a) {
-      return SK ? !SK.isBlankApproach(a) : true;
-    }).length;
-
-    const painApproach = aps.filter(function (a) { return a && a.discomfort; })[0];
-
-    const summary = [];
-    if (meta || ex.unit) {
-      const g = groupsLabel(ex.name);
-      if (g) summary.push(g);
-    }
-    if (unit === 'time') summary.push('время');
-    else if (unit === 'distance') summary.push('метры');
-    else if (unit === 'bodyweight') summary.push('свой вес');
-
-    return h('div', { className: 'sb-ex' + (open ? ' is-open' : '') },
-      h('button', {
-        type: 'button',
-        className: 'sb-ex-head',
-        onClick: function () { onToggleOpen(index); },
-        'aria-expanded': open ? 'true' : 'false'
-      },
-        h('span', { className: 'sb-ex-num' }, String(index + 1)),
-        h('span', { className: 'sb-ex-title' },
-          h('b', null, ex.name || 'Без названия'),
-          h('span', { className: 'sb-ex-sub' }, summary.join(' · '))
-        ),
-        h('span', {
-          className: 'sb-ex-count' + (totalCount > 0 && doneCount === totalCount ? ' is-done' : '')
-        }, doneCount + '/' + totalCount),
-        h('span', { className: 'sb-ex-count' }, open ? '▾' : '›')
-      ),
-      open && h('div', { className: 'sb-ex-body' },
-        h('div', { className: 'sb-aps-head' },
-          h('span', null, '№ / тип'),
-          h('span', null, 'Вес, кг'),
-          h('span', null, 'Повторы'),
-          h('span', null, '✓')
-        ),
-        h('div', { className: 'sb-aps' }, rows),
-
-        // Безопасность не прячется во второй слой: отметка ведёт к действию.
-        painApproach && h('div', { className: 'sb-pain' },
-          h('b', null, 'Дискомфорт' + (painApproach.discomfortNote ? ' · ' + painApproach.discomfortNote : '')),
-          h('p', null, 'Боль — не «стало тяжело». Уберите вес или пропустите упражнение: отметка уже сохранена и уйдёт куратору.'),
-          h('div', { className: 'sb-pain-actions' },
-            h('button', {
-              type: 'button', className: 'sb-btn',
-              onClick: function () { onDiscomfortAction(index, 'reduce'); }
-            }, 'Снизить вес на 20%'),
-            h('button', {
-              type: 'button', className: 'sb-btn',
-              onClick: function () { onDiscomfortAction(index, 'skip'); }
-            }, 'Пропустить упражнение')
-          )
-        ),
-
-        h('div', { className: 'sb-rpe' },
-          h('span', { className: 'sb-rpe-label' }, 'RPE'),
-          [6, 7, 8, 9, 10].map(function (v) {
-            return h('button', {
-              key: 'rpe' + v,
-              type: 'button',
-              className: 'sb-rpe-dot' + (+ex.rpe === v ? ' is-on' : ''),
-              onClick: function () { onRpe(index, v); },
-              'aria-label': 'RPE ' + v
-            }, String(v));
-          })
-        ),
-        h('div', { className: 'sb-rest-line' },
-          h('span', null, '⏱ Отдых ' + fmtClock(+ex.restSec || 90)),
-          h('span', null, ex.restManual ? '· вручную' : '· выведен из RPE')
-        ),
-        h('div', { className: 'sb-ex-actions' },
-          h('button', {
-            type: 'button', className: 'sb-btn is-accent',
-            onClick: function () { onAddApproach(index); },
-            disabled: readOnly
-          }, '+ Подход'),
-          h('button', {
-            type: 'button', className: 'sb-btn',
-            onClick: function () { onAddDrop(index); },
-            disabled: readOnly,
-            title: 'Сброс веса внутри последнего подхода'
-          }, '+ Сброс')
-        )
-      )
-    );
-  }
-
   // ——— Экран целиком ———
 
   function BuilderScreen(props) {
     const { training, dateKey, onPatch, profile, onClose } = props;
     const SK = kernel();
     const [openIdx, setOpenIdx] = React.useState(0);
+    const [view, setView] = React.useState('list');
+    const [draftName, setDraftName] = React.useState('');
     const [rest, setRest] = React.useState(null); // { total, startedAt }
     const [tick, setTick] = React.useState(0);
+
+    // Время с начала тренировки: «начата в 18:40» превращается в ⏱ на экране.
+    const startedAt = (HEYS.StrengthBuilderParts || {}).startedAtMs(training, dateKey);
+    const elapsedSec = startedAt ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)) : 0;
+
+    React.useEffect(function () {
+      if (!startedAt) return undefined;
+      const id = global.setInterval(function () { setTick(function (t) { return t + 1; }); }, 1000);
+      return function () { global.clearInterval(id); };
+    }, [startedAt]);
 
     React.useEffect(function () {
       if (!rest) return undefined;
@@ -376,6 +166,36 @@
       patchExercises(next);
     }
 
+    function addExercise(name) {
+      const m = HEYS.exerciseMeta;
+      const snap = (m && typeof m.snapshot === 'function') ? m.snapshot(name) : null;
+      const row = Object.assign({
+        name: name || '',
+        approaches: [{ weightKg: '', reps: 10, done: false }],
+        restSec: 90
+      }, snap || {});
+      const next = exercises.concat([row]);
+      patchExercises(next);
+      setOpenIdx(next.length - 1);
+      setView('list');
+      if (typeof HEYS.bumpExerciseUsage === 'function' && name) HEYS.bumpExerciseUsage(name);
+    }
+
+    function renameExercise(exIdx, value) {
+      const next = exercises.slice();
+      next[exIdx] = Object.assign({}, next[exIdx], { name: value });
+      patchExercises(next);
+      // Единица и коэффициент снимаются со справочника в момент, когда
+      // упражнение названо: дальше тоннаж считается по снимку, а не по
+      // справочнику, и правка справочника не перепишет историю.
+      const m = HEYS.exerciseMeta;
+      if (m && typeof m.snapshot === 'function') {
+        const snap = m.snapshot(value);
+        if (snap) next[exIdx] = Object.assign({}, next[exIdx], snap);
+        patchExercises(next.slice());
+      }
+    }
+
     function setRpe(exIdx, value) {
       const next = exercises.slice();
       const ex = Object.assign({}, next[exIdx], { rpe: value });
@@ -421,6 +241,22 @@
       global.setTimeout(function () { setRest(null); }, 0);
     }
 
+    const CatUI = HEYS.StrengthCatalogUI || {};
+    if (view === 'catalog' && CatUI.CatalogScreen) {
+      return h(CatUI.CatalogScreen, {
+        onPick: addExercise,
+        onCreate: function (name) { setDraftName(name || ''); setView('new'); },
+        onBack: function () { setView('list'); }
+      });
+    }
+    if (view === 'new' && CatUI.NewExerciseScreen) {
+      return h(CatUI.NewExerciseScreen, {
+        initialName: draftName,
+        onDone: addExercise,
+        onCancel: function () { setView('catalog'); }
+      });
+    }
+
     const rendered = [];
     const seenGroups = {};
     exercises.forEach(function (ex, i) {
@@ -428,7 +264,7 @@
       if (g) {
         if (seenGroups[g.groupId]) return;
         seenGroups[g.groupId] = true;
-        rendered.push(h(parts().SupersetBlock, {
+        rendered.push(h((HEYS.StrengthBuilderParts || {}).SupersetBlock, {
           key: 'g' + g.groupId,
           group: g,
           exercises: exercises,
@@ -441,7 +277,7 @@
         }));
         return;
       }
-      rendered.push(h(ExerciseCard, {
+      rendered.push(h((HEYS.StrengthBuilderParts || {}).ExerciseCard, {
         key: 'e' + i,
         ex: ex,
         index: i,
@@ -452,6 +288,17 @@
         onAddApproach: addApproach,
         onAddDrop: addDrop,
         onRpe: setRpe,
+        onRename: renameExercise,
+        onRemove: function (exIdx) {
+          const next = exercises.slice();
+          next.splice(exIdx, 1);
+          patchExercises(next);
+        },
+        onRestManual: function (exIdx, value) {
+          const next = exercises.slice();
+          next[exIdx] = Object.assign({}, next[exIdx], { restManual: value });
+          patchExercises(next);
+        },
         onDiscomfortAction: discomfortAction
       }));
     });
@@ -463,13 +310,15 @@
           onClick: onClose, 'aria-label': 'Закрыть конструктор'
         }, '✕'),
         h('div', { className: 'sb-head-title' },
-          h('b', null, wl.title || 'Силовая'),
-          h('div', { className: 'sb-head-sub' }, dateKey || '')
+          // Название собирается из основных групп упражнений (решение 12):
+          // подпись не должна врать про то, что человек делает.
+          h('b', null, wl.title || (HEYS.StrengthBuilderParts || {}).sessionTitle(exercises)),
+          h('div', { className: 'sb-head-sub' }, (HEYS.StrengthBuilderParts || {}).humanDate(dateKey))
         )
       ),
       h('div', { className: 'sb-stats' },
-        h('span', { className: 'sb-stat sb-stat-time' }, agg ? (agg.doneApproaches + ' / ' + agg.totalApproaches + ' ✓') : '—'),
-        agg && agg.totalVolume > 0 && h('span', { className: 'sb-stat' }, fmtTonnage(agg.totalVolume)),
+        elapsedSec > 0 && h('span', { className: 'sb-stat sb-stat-time' }, '⏱ ' + fmtClock(elapsedSec)),
+        h('span', { className: 'sb-stat' }, agg ? (agg.doneApproaches + ' / ' + agg.totalApproaches + ' ✓') : '—'),
         agg && agg.seconds > 0 && h('span', { className: 'sb-stat' }, fmtClock(agg.seconds)),
         agg && agg.meters > 0 && h('span', { className: 'sb-stat' }, Math.round(agg.meters) + ' м'),
         agg && agg.unmeasuredExercises > 0 && h('span', { className: 'sb-stat' },
@@ -478,7 +327,7 @@
       h('div', { className: 'sb-list' },
         rendered.length ? rendered : h('div', { className: 'sb-empty' }, 'Упражнений пока нет')
       ),
-      rest && h(parts().RestRing, {
+      rest && h((HEYS.StrengthBuilderParts || {}).RestRing, {
         secondsLeft: secondsLeft,
         total: rest.total,
         onSkip: function () { setRest(null); },
@@ -486,16 +335,12 @@
       }),
       h('div', { className: 'sb-panel' },
         h('button', {
-          type: 'button', className: 'sb-finish', onClick: onClose
-        }, notClosed > 0 ? 'Завершить · ' + notClosed + ' не закрыто' : 'Завершить'),
-        h('button', {
           type: 'button', className: 'sb-panel-add', 'aria-label': 'Добавить упражнение',
-          onClick: function () {
-            const next = exercises.concat([{ name: '', approaches: [{ weightKg: '', reps: 10, done: false }], restSec: 90 }]);
-            patchExercises(next);
-            setOpenIdx(next.length - 1);
-          }
-        }, '+')
+          onClick: function () { setView('catalog'); }
+        }, '+'),
+        h('button', {
+          type: 'button', className: 'sb-finish', onClick: onClose
+        }, notClosed > 0 ? 'Завершить · ' + notClosed + ' не закрыто' : 'Завершить')
       )
     );
   }

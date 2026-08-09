@@ -142,6 +142,392 @@
     );
   }
 
+  /**
+   * Название упражнения — первое обязательное поле: от него зависят группы,
+   * единица измерения и история. Пока оно пустое, показываем частые из
+   * каталога, чтобы не заставлять печатать вслепую.
+   */
+  function NameField(props) {
+    const { name, suggestions, onRename } = props;
+    return h('div', null,
+      h('input', {
+        className: 'sb-ap-field sb-ex-name',
+        type: 'text',
+        value: name,
+        placeholder: 'Название упражнения',
+        onChange: function (e) { onRename(e.target.value); },
+        'aria-label': 'Название упражнения'
+      }),
+      (suggestions && suggestions.length > 0) && h('div', { className: 'sb-hist' },
+        suggestions.map(function (sg) {
+          return h('button', {
+            key: sg.norm,
+            type: 'button',
+            className: 'sb-suggest',
+            onClick: function () { onRename(sg.name); }
+          }, sg.name);
+        })
+      )
+    );
+  }
+
+  Parts.NameField = NameField;
+
+  const MONTHS_RU = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  const WEEKDAYS_RU = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+  /** «2026-08-09» человеку читается как «Вс, 9 августа». */
+  function humanDate(dateKey) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
+    if (!m) return String(dateKey || '');
+    const d = new Date(+m[1], +m[2] - 1, +m[3], 12, 0, 0);
+    return WEEKDAYS_RU[d.getDay()] + ', ' + (+m[3]) + ' ' + MONTHS_RU[+m[2] - 1];
+  }
+
+  /**
+   * Название сессии — из основных групп упражнений (решение 12). Те же группы
+   * идут в движок, поэтому подпись не может разойтись с тем, что посчитано.
+   */
+  function sessionTitle(exercises) {
+    const meta = HEYS.exerciseMeta;
+    if (!meta || typeof meta.get !== 'function') return 'Силовая';
+    const seen = [];
+    (exercises || []).forEach(function (ex) {
+      const m = ex && ex.name ? meta.get(ex.name) : null;
+      if (!m || !m.primaryGroup) return;
+      const label = meta.groupLabel(m.primaryGroup);
+      if (label && seen.indexOf(label) < 0) seen.push(label);
+    });
+    if (!seen.length) return 'Силовая';
+    return 'Силовая · ' + seen.slice(0, 3).join(', ').toLowerCase();
+  }
+
+  Parts.humanDate = humanDate;
+  Parts.sessionTitle = sessionTitle;
+
+  // ——— Строка подхода (экраны 07, 13, 24) ———
+
+  function ApproachRow(props) {
+    const { approach, index, workNumber, onPatch, onToggleType, readOnly } = props;
+    const SK = kernel();
+    const warmup = SK ? SK.isWarmupApproach(approach) : false;
+    const stages = SK ? SK.approachStages(approach) : [];
+    const blank = SK ? SK.isBlankApproach(approach) : false;
+    const base = stages[0] || { weightKg: '', reps: 0, done: false };
+
+    function patchStage(stageIdx, patch) {
+      if (readOnly) return;
+      if (stageIdx === 0) {
+        onPatch(index, patch);
+        return;
+      }
+      const drops = (approach.drops || []).slice();
+      drops[stageIdx - 1] = Object.assign({}, drops[stageIdx - 1], patch);
+      onPatch(index, { drops: drops });
+    }
+
+    // Пустые повторы блокируют галочку — без модалки и слова «ошибка».
+    // Пустой вес нормален: это свой вес.
+    function canClose(stage) {
+      return +stage.reps > 0;
+    }
+
+    const rows = [];
+    stages.forEach(function (stage, si) {
+      const isDrop = stage.isDrop;
+      const rowState = stage.done ? ' is-done' : (si === 0 && !warmup && !stage.done ? ' is-current' : '');
+      rows.push(h('div', {
+        key: 'st' + si,
+        className: (isDrop ? 'sb-drop' : 'sb-ap') + (blank && !isDrop ? ' is-blank' : '') + rowState
+      },
+        isDrop
+          ? h('span', { className: 'sb-drop-tag' }, 'дроп')
+          : h('button', {
+            type: 'button',
+            className: 'sb-ap-num' + (warmup ? ' is-warmup' : ''),
+            onClick: function () { if (!readOnly) onToggleType(index); },
+            title: warmup ? 'Разминка — вне тоннажа. Нажмите, чтобы сделать рабочим' : 'Рабочий подход. Нажмите, чтобы сделать разминочным',
+            'aria-label': warmup ? 'Разминочный подход' : 'Рабочий подход номер ' + workNumber
+          }, warmup ? 'разм' : String(workNumber || '—')),
+        h('input', {
+          className: 'sb-ap-field',
+          type: 'text',
+          inputMode: 'decimal',
+          value: stage.weightKg,
+          placeholder: 'свой',
+          disabled: readOnly,
+          onChange: function (e) { patchStage(si, { weightKg: e.target.value }); },
+          'aria-label': 'Вес, кг'
+        }),
+        h('input', {
+          className: 'sb-ap-field',
+          type: 'text',
+          inputMode: 'numeric',
+          value: stage.reps ? String(stage.reps) : '',
+          placeholder: '—',
+          disabled: readOnly,
+          onChange: function (e) {
+            const n = parseInt(String(e.target.value).replace(/\D/g, ''), 10);
+            patchStage(si, { reps: isFinite(n) ? Math.max(0, Math.min(200, n)) : 0 });
+          },
+          'aria-label': 'Повторы'
+        }),
+        h('button', {
+          type: 'button',
+          className: 'sb-ap-check' + (stage.done ? ' is-done' : ''),
+          disabled: readOnly || !canClose(stage),
+          onClick: function () { patchStage(si, { done: !stage.done }); },
+          'aria-label': stage.done ? 'Отменить отметку' : 'Отметить выполненным'
+        }, stage.done ? '✓' : '○')
+      ));
+    });
+
+    if (approach && approach.discomfort) {
+      rows.push(h('div', { key: 'pain', className: 'sb-ap-note' },
+        '⚠️ Дискомфорт' + (approach.discomfortNote ? ': ' + approach.discomfortNote : '')));
+    }
+
+    return h(React.Fragment, { key: 'ap' + index }, rows);
+  }
+
+  // ——— Упражнение (экран 04) ———
+
+  function ExerciseCard(props) {
+    const { ex, index, open, onToggleOpen, onPatchApproach, onToggleType,
+      onAddApproach, onAddDrop, onRpe, onRename, onRestManual, onRemove, onDiscomfortAction, readOnly } = props;
+    const SK = kernel();
+    const aps = Array.isArray(ex.approaches) ? ex.approaches : [];
+    const metaApi = HEYS.exerciseMeta;
+    const meta = (metaApi && typeof metaApi.get === 'function') ? metaApi.get(ex.name) : null;
+    const unit = (ex.unit || (meta && meta.unit) || 'weight_reps');
+
+    let workNo = 0;
+    const rows = aps.map(function (a, ai) {
+      const warmup = SK ? SK.isWarmupApproach(a) : false;
+      if (!warmup) workNo += 1;
+      return h(ApproachRow, {
+        key: 'a' + ai,
+        approach: a,
+        index: ai,
+        workNumber: warmup ? 0 : workNo,
+        onPatch: onPatchApproach,
+        onToggleType: onToggleType,
+        readOnly: readOnly
+      });
+    });
+
+    const doneCount = aps.filter(function (a) {
+      return SK ? SK.isApproachDone(a) && !SK.isBlankApproach(a) : !!a.done;
+    }).length;
+    const totalCount = aps.filter(function (a) {
+      return SK ? !SK.isBlankApproach(a) : true;
+    }).length;
+
+    const painApproach = aps.filter(function (a) { return a && a.discomfort; })[0];
+
+    const summary = [];
+    if (meta || ex.unit) {
+      const g = groupsLabel(ex.name);
+      if (g) summary.push(g);
+    }
+    if (unit === 'time') summary.push('время');
+    else if (unit === 'distance') summary.push('метры');
+    else if (unit === 'bodyweight') summary.push('свой вес');
+
+    const suggestFn = HEYS.getExerciseSuggestions;
+    const suggestions = (open && !String(ex.name || '').trim() && typeof suggestFn === 'function')
+      ? suggestFn('', 6)
+      : [];
+
+    const allDone = totalCount > 0 && doneCount === totalCount;
+    return h('div', { className: 'sb-ex' + (open ? ' is-open' : '') + (allDone ? ' is-complete' : '') },
+      h('button', {
+        type: 'button',
+        className: 'sb-ex-head',
+        onClick: function () { onToggleOpen(index); },
+        'aria-expanded': open ? 'true' : 'false'
+      },
+        h('span', { className: 'sb-ex-num' }, String(index + 1)),
+        h('span', { className: 'sb-ex-title' },
+          h('b', null, ex.name || 'Без названия'),
+          h('span', { className: 'sb-ex-sub' }, summary.join(' · '))
+        ),
+        h('span', {
+          className: 'sb-ex-count' + (totalCount > 0 && doneCount === totalCount ? ' is-done' : ' is-current')
+        }, doneCount + '/' + totalCount),
+        h('span', { className: 'sb-ex-count' }, open ? '▾' : '›')
+      ),
+
+      open && h('div', { className: 'sb-ex-body' },
+        !String(ex.name || '').trim() && h((HEYS.StrengthBuilderParts || {}).NameField, {
+          name: ex.name || '',
+          suggestions: suggestions,
+          onRename: function (value) { onRename(index, value); }
+        }),
+        h('div', { className: 'sb-aps-head' },
+          h('span', null, ''),
+          h('span', null, 'Вес, кг'),
+          h('span', null, 'Повторы'),
+          h('span', null, '✓')
+        ),
+        h('div', { className: 'sb-aps' }, rows),
+
+        // Безопасность не прячется во второй слой: отметка ведёт к действию.
+        painApproach && h('div', { className: 'sb-pain' },
+          h('b', null, 'Дискомфорт' + (painApproach.discomfortNote ? ' · ' + painApproach.discomfortNote : '')),
+          h('p', null, 'Боль — не «стало тяжело». Уберите вес или пропустите упражнение: отметка уже сохранена и уйдёт куратору.'),
+          h('div', { className: 'sb-pain-actions' },
+            h('button', {
+              type: 'button', className: 'sb-btn',
+              onClick: function () { onDiscomfortAction(index, 'reduce'); }
+            }, 'Снизить вес на 20%'),
+            h('button', {
+              type: 'button', className: 'sb-btn',
+              onClick: function () { onDiscomfortAction(index, 'skip'); }
+            }, 'Пропустить упражнение')
+          )
+        ),
+
+        h('div', { className: 'sb-rpe' },
+          h('span', { className: 'sb-rpe-label' }, 'RPE'),
+          [6, 7, 8, 9, 10].map(function (v) {
+            return h('button', {
+              key: 'rpe' + v,
+              type: 'button',
+              className: 'sb-rpe-dot' + (+ex.rpe === v ? ' is-on' : ''),
+              onClick: function () { onRpe(index, v); },
+              'aria-label': 'RPE ' + v
+            }, String(v));
+          })
+        ),
+        h('div', { className: 'sb-rest-line' },
+          h('span', null, '⏱ Отдых ' + fmtClock(+ex.restSec || 90)),
+          // Без RPE это значение по умолчанию, а не вывод из него: подпись,
+          // называющая источником незаполненное поле, врёт.
+          h('span', null, ex.restManual
+            ? '· вручную'
+            : (+ex.rpe > 0 ? '· выведен из RPE ' + ex.rpe : '· по умолчанию')),
+          h('button', {
+            type: 'button',
+            className: 'sb-rest-manual' + (ex.restManual ? ' is-on' : ''),
+            onClick: function () { onRestManual(index, !ex.restManual); }
+          }, ex.restManual ? 'Авто' : 'Вручную')
+        ),
+        h('div', { className: 'sb-ex-actions' },
+          h('button', {
+            type: 'button', className: 'sb-btn is-accent',
+            onClick: function () { onAddApproach(index); },
+            disabled: readOnly
+          }, '+ Подход'),
+          h('button', {
+            type: 'button', className: 'sb-btn',
+            onClick: function () { onAddDrop(index); },
+            disabled: readOnly,
+            title: 'Сброс веса внутри последнего подхода'
+          }, '+ Сброс')
+        ),
+        h('button', {
+          type: 'button',
+          className: 'sb-ex-remove',
+          onClick: function () { onRemove(index); },
+          'aria-label': 'Убрать упражнение из тренировки'
+        }, 'Убрать упражнение')
+      )
+    );
+  }
+
+  /** Начало тренировки в миллисекундах: «начата в 18:40» + дата дня. */
+  function startedAtMs(training, dateKey) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String((training && training.time) || ''));
+    const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
+    if (!m || !d) return 0;
+    return new Date(+d[1], +d[2] - 1, +d[3], +m[1], +m[2], 0).getTime();
+  }
+
+  /** Подпись упражнения во втором слое: группы из справочника, а не выдумка UI. */
+  function groupsLabel(name) {
+    const m = HEYS.exerciseMeta;
+    const meta = (m && typeof m.get === 'function') ? m.get(name) : null;
+    if (!meta || !m) return '';
+    const parts = [m.groupLabel(meta.primaryGroup)].concat(
+      (meta.secondaryGroups || []).map(function (g) { return m.groupLabel(g); })
+    );
+    return parts.filter(Boolean).join(' · ');
+  }
+
+  Parts.ApproachRow = ApproachRow;
+  Parts.ExerciseCard = ExerciseCard;
+  Parts.startedAtMs = startedAtMs;
+
+  /**
+   * Карточка дня (экран 01): сводка вместо конструктора. Тоннажа и калорий
+   * здесь нет намеренно — в зале человеку нужно одно: сколько осталось и куда
+   * нажать, чтобы продолжить.
+   */
+  function SummaryCard(props) {
+    const { training, dateKey, onOpen } = props;
+    // Таймер тикает сам: карточка обязана показывать идущее время, иначе
+    // «47:12» превращается в момент последней перерисовки дня.
+    const [, setTick] = React.useState(0);
+    const startedAt = startedAtMs(training, dateKey);
+    React.useEffect(function () {
+      if (!startedAt) return undefined;
+      const id = setInterval(function () { setTick(function (t) { return t + 1; }); }, 1000);
+      return function () { clearInterval(id); };
+    }, [startedAt]);
+    const elapsedSec = startedAt ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)) : 0;
+    const TK = HEYS.TrainingKernel;
+    const SK = (TK && TK.strength) ? TK.strength : null;
+    const wl = (training && training.workoutLog) || {};
+    const exercises = Array.isArray(wl.exercises) ? wl.exercises : [];
+    const agg = SK ? SK.trainingTonnage(training) : null;
+    const done = agg ? agg.doneApproaches : 0;
+    const total = agg ? agg.totalApproaches : 0;
+    const ratio = total > 0 ? Math.min(1, done / total) : 0;
+
+    // Текущее упражнение — первое незакрытое: подпись под кнопкой отвечает на
+    // вопрос «а где я сейчас».
+    let currentIdx = -1;
+    for (let i = 0; i < exercises.length && currentIdx < 0; i++) {
+      const aps = (exercises[i] && exercises[i].approaches) || [];
+      for (let k = 0; k < aps.length; k++) {
+        if (SK && SK.isBlankApproach(aps[k])) continue;
+        if (!(SK ? SK.isApproachDone(aps[k]) : aps[k].done)) { currentIdx = i; break; }
+      }
+    }
+    const current = currentIdx >= 0 ? exercises[currentIdx] : null;
+    const running = done > 0 && done < total;
+
+    return h('div', { className: 'sb-card' },
+      h('div', { className: 'sb-card-head' },
+        h('div', { className: 'sb-card-title' },
+          h('b', null, sessionTitle(exercises)),
+          h('span', null, humanDate(dateKey) + (training && training.time ? ' · начата в ' + training.time : ''))
+        ),
+        running && h('span', { className: 'sb-card-badge' }, '● идёт')
+      ),
+      h('div', { className: 'sb-card-metrics' },
+        elapsedSec > 0 && h('span', { className: 'sb-card-clock' }, fmtClock(elapsedSec)),
+        h('span', { className: 'sb-card-count' }, done + ' / ' + total + ' подходов')
+      ),
+      h('div', { className: 'sb-card-bar' },
+        h('span', { style: { width: Math.round(ratio * 100) + '%' } })
+      ),
+      h('button', {
+        type: 'button', className: 'sb-card-cta', onClick: onOpen
+      },
+        h('b', null, running ? 'Продолжить тренировку' : 'Открыть конструктор'),
+        current && h('span', null,
+          'Упражнение ' + (currentIdx + 1) + ' из ' + exercises.length
+          + (current.name ? ' · ' + current.name : '')),
+        h('i', null, '›')
+      )
+    );
+  }
+
+  Parts.SummaryCard = SummaryCard;
+
   Parts.SupersetBlock = SupersetBlock;
   Parts.RestRing = RestRing;
 })(typeof window !== 'undefined' ? window : globalThis);

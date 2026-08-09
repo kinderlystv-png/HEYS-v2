@@ -3208,7 +3208,94 @@
           }, '📋 Дневник упражнений (подходы и повторы)')
         );
 
-        const builderBody = isBuilder && wlLive && React.createElement('div', { className: 'ct-wb-card-body' },
+        const strengthSummaryRow = isBuilder && wlLive && (function () {
+            const builder = HEYS.StrengthBuilder;
+            if (!builder || !builder.open) return null;
+            const Parts = HEYS.StrengthBuilderParts || {};
+            const startedTime = (function () {
+              try {
+                const d = readDayFromStore(dateKey);
+                const t = d && Array.isArray(d.trainings) ? d.trainings[ti] : null;
+                return (t && t.time) || '';
+              } catch (_e) { return ''; }
+            })();
+            const trainingForBuilder = {
+              type: 'strength',
+              strengthEntryMode: 'workout_builder',
+              time: startedTime,
+              workoutLog: wlLive
+            };
+            function openBuilder() {
+              const U = HEYS.utils;
+              builder.open({
+                training: trainingForBuilder,
+                dateKey: dateKey,
+                profile: (U && U.lsGet) ? (U.lsGet('heys_profile', {}) || {}) : {},
+                onPatch: function (nextExercises) {
+                  patchTraining(ti, function (t0) {
+                    const wl0 = ensureWorkoutLogShape(t0);
+                    wl0.exercises = nextExercises;
+                    return applyWorkoutLogToTraining(t0, wl0);
+                  });
+                }
+              });
+              if (typeof haptic === 'function') haptic('light');
+            }
+            // Экран 01: сводка вместо конструктора — время, прогресс подходов и
+            // одно действие. Тоннажа и калорий здесь нет намеренно.
+            if (Parts.SummaryCard) {
+              return React.createElement(Parts.SummaryCard, {
+                key: 'wb-summary-' + ti,
+                training: trainingForBuilder,
+                dateKey: dateKey,
+                onOpen: function (e) { if (e && e.stopPropagation) e.stopPropagation(); openBuilder(); }
+              });
+            }
+            return React.createElement('button', {
+            key: 'wb-fullscreen-' + ti,
+            type: 'button',
+            className: 'ct-wb-open-fullscreen',
+            onClick: function (e) {
+              e.stopPropagation();
+              const U = HEYS.utils;
+              builder.open({
+                training: {
+                  type: 'strength',
+                  strengthEntryMode: 'workout_builder',
+                  // Время начала нужно шапке конструктора: без него таймер
+                  // тренировки показать не из чего.
+                  time: (function () {
+                    try {
+                      const d = readDayFromStore(dateKey);
+                      const t = d && Array.isArray(d.trainings) ? d.trainings[ti] : null;
+                      return (t && t.time) || '';
+                    } catch (_e) { return ''; }
+                  })(),
+                  workoutLog: wlLive
+                },
+                dateKey: dateKey,
+                profile: (U && U.lsGet) ? (U.lsGet('heys_profile', {}) || {}) : {},
+                onPatch: function (nextExercises) {
+                  patchTraining(ti, function (t0) {
+                    const wl0 = ensureWorkoutLogShape(t0);
+                    wl0.exercises = nextExercises;
+                    return applyWorkoutLogToTraining(t0, wl0);
+                  });
+                }
+              });
+              if (typeof haptic === 'function') haptic('light');
+            }
+            }, '⛶ Открыть конструктор');
+          })();
+
+        // Прототип экрана 01: на карточке дня — только сводка и одно действие.
+        // Минуты по зонам и построчный ввод переехали во второй слой (сам
+        // конструктор), поэтому старый инлайн-блок здесь больше не рисуем.
+        // Он остаётся рабочим путём, пока полноэкранный не закроет все экраны:
+        // условие снимается, если модуль конструктора почему-то не загрузился.
+        const fullscreenReady = !!(HEYS.StrengthBuilder && HEYS.StrengthBuilder.open
+          && HEYS.StrengthBuilderParts && HEYS.StrengthBuilderParts.SummaryCard);
+        const builderBody = isBuilder && wlLive && !fullscreenReady && React.createElement('div', { className: 'ct-wb-card-body' },
           React.createElement('div', { className: 'ct-wb-zones-for-kcal' },
             React.createElement('div', { className: 'ct-wb-zones-for-kcal-title' }, 'Минуты по зонам для ккал'),
             React.createElement('div', { className: 'ct-wb-zones-for-kcal-grid' },
@@ -3243,36 +3330,6 @@
           // Вход в полноэкранный конструктор (шаг 5 редизайна). Инлайновый
           // список остаётся рабочим путём, пока полноэкранный не закроет все
           // экраны: strangler-переход, а не разовая замена.
-          (function () {
-            const builder = HEYS.StrengthBuilder;
-            if (!builder || !builder.open) return null;
-            return React.createElement('button', {
-            key: 'wb-fullscreen-' + ti,
-            type: 'button',
-            className: 'ct-wb-open-fullscreen',
-            onClick: function (e) {
-              e.stopPropagation();
-              const U = HEYS.utils;
-              builder.open({
-                training: {
-                  type: 'strength',
-                  strengthEntryMode: 'workout_builder',
-                  workoutLog: wlLive
-                },
-                dateKey: dateKey,
-                profile: (U && U.lsGet) ? (U.lsGet('heys_profile', {}) || {}) : {},
-                onPatch: function (nextExercises) {
-                  patchTraining(ti, function (t0) {
-                    const wl0 = ensureWorkoutLogShape(t0);
-                    wl0.exercises = nextExercises;
-                    return applyWorkoutLogToTraining(t0, wl0);
-                  });
-                }
-              });
-              if (typeof haptic === 'function') haptic('light');
-            }
-            }, '⛶ Открыть конструктор');
-          })(),
           React.createElement(WorkoutBuilderExerciseList, {
             key: 'wb-ex-list-' + ti,
             ti: ti,
@@ -3373,7 +3430,7 @@
           '💬 ', T.comment
         );
 
-        const foldedContentEl = React.createElement(React.Fragment, null, zonesRow, strengthBuilderCtaRow, builderBody);
+        const foldedContentEl = React.createElement(React.Fragment, null, zonesRow, strengthBuilderCtaRow, strengthSummaryRow, builderBody);
 
         if (isBuilder) {
           return React.createElement(CollapsibleWorkoutBuilderTrainingCard, {
