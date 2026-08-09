@@ -9,8 +9,8 @@ import fs from 'fs';
 import path from 'path';
 import React from 'react';
 import { fileURLToPath } from 'url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -477,5 +477,74 @@ describe('пропуск назначенного дня (экран 18, мин�
       onResumeSkipped: () => {},
     }));
     expect(screen.getByText('Без объяснения — и это нормально')).toBeTruthy();
+  });
+});
+
+describe('пуш об окончании отдыха (экран 11, только с существующим разрешением)', () => {
+  let created;
+  let originalNotification;
+
+  beforeEach(() => {
+    created = [];
+    originalNotification = global.Notification;
+    function FakeNotification(title, opts) {
+      created.push({ title, opts });
+    }
+    FakeNotification.permission = 'granted';
+    global.Notification = FakeNotification;
+    Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+  });
+
+  afterEach(() => {
+    global.Notification = originalNotification;
+    Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+  });
+
+  it('не запрашивает разрешение сам — только использует уже выданное', () => {
+    // Симулируем «ещё не спрошено»: конструктор не должен трогать permission API.
+    global.Notification.permission = 'default';
+    global.Notification.requestPermission = () => { throw new Error('не должен звать requestPermission'); };
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{ name: 'Жим', approaches: [work(75, 8, false)] }]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onClose: () => {},
+    }));
+    fireEvent.click(screen.getByLabelText('Отметить выполненным'));
+    expect(created.length).toBe(0);
+  });
+
+  it('без permission=granted пуш не показывается, даже если вкладка скрыта', () => {
+    global.Notification.permission = 'denied';
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{ name: 'Жим', approaches: [work(75, 8, false)] }]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onClose: () => {},
+    }));
+    fireEvent.click(screen.getByLabelText('Отметить выполненным'));
+    expect(created.length).toBe(0);
+  });
+
+  it('когда отдых истекает при granted+hidden — пуш с именем упражнения показывается', () => {
+    vi.useFakeTimers();
+    try {
+      render(React.createElement(SB.BuilderScreen, {
+        training: training([{ name: 'Жим лёжа', restSec: 90, approaches: [{ weightKg: '75', reps: 8, done: false }] }]),
+        dateKey: '2026-08-09',
+        profile: {},
+        onPatch: () => {},
+        onClose: () => {},
+      }));
+      fireEvent.click(screen.getByLabelText('Отметить выполненным'));
+      act(() => { vi.advanceTimersByTime(91000); });
+      expect(created.length).toBe(1);
+      expect(created[0].title).toBe('Отдых закончился');
+      expect(created[0].opts.body).toContain('Жим лёжа');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

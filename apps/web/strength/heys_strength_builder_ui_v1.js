@@ -132,7 +132,7 @@
       patchExercises(next);
       // Таймер — событие, а не виджет: он стартует, когда подход закрыт.
       if (patch.done && SK && SK.isApproachDone(aps[apIdx]) && !groupByIndex[exIdx]) {
-        setRest({ total: +ex.restSec || 90, startedAt: Date.now() });
+        setRest({ total: +ex.restSec || 90, startedAt: Date.now(), exName: ex.name || '' });
       }
     }
 
@@ -257,6 +257,18 @@
     const secondsLeft = rest ? Math.max(0, rest.total - Math.round((Date.now() - rest.startedAt) / 1000)) : 0;
     if (rest && secondsLeft === 0 && tick >= 0) {
       // Отдых кончился — снимаем экран, не дожидаясь действия человека.
+      // Пуш «отдых закончился, телефон в кармане» (экран 11) — только если
+      // разрешение уже есть (не запрашиваем сами посреди тренировки, это
+      // отдельное решение пользователя) и вкладка сейчас не на экране.
+      try {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted'
+          && typeof document !== 'undefined' && document.hidden) {
+          new Notification('Отдых закончился', {
+            body: (rest.exName || 'Тренировка') + ' · пора продолжать',
+            tag: 'heys-strength-rest', renotify: false
+          });
+        }
+      } catch (_e) { /* Notification недоступен — просто нет пуша */ }
       global.setTimeout(function () { setRest(null); }, 0);
     }
 
