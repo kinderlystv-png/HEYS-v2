@@ -392,7 +392,7 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
 
           <div
             ref={phoneRef}
-            className="mt-[7vh] w-[248px] max-w-[68vw] origin-top will-change-transform sm:w-[280px] sm:max-w-[72vw]"
+            className="mt-[7vh] w-[268px] max-w-[68vw] origin-top will-change-transform sm:w-[300px] sm:max-w-[72vw]"
           >
             <HeroFlowDemo
               showChapters
