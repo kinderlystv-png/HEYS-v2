@@ -1729,6 +1729,104 @@ test('начатая и обычная тренировка считаются �
   }
 });
 
+// --- heys_get_program_status ---------------------------------------------
+//
+// Слой 6 (CURATOR_TRAINING_PROGRAM_PROTOCOL_2026-08-09.md). Индекс
+// heys_training_program — снимок дат/id, а не источник статуса: тест
+// специально ставит в индексе даты, для которых живой день говорит другое
+// (done вместо assigned из индекса), чтобы поймать регресс «поверил индексу».
+
+const PLAN_EXERCISE = (name, weightKg, reps) => ({ name, approaches: [{ weightKg: String(weightKg), reps, done: false }] });
+const DONE_EXERCISE = (name, weightKg, reps) => ({ name, approaches: [{ weightKg: String(weightKg), reps, done: true }] });
+
+test('get_program_status: нет программы — не ошибка, а честный пустой ответ', async () => {
+  const res = await build(fakeApi({ day: null })).heys_get_program_status();
+  assert.deepEqual(res.structured, { has_program: false });
+});
+
+test('get_program_status: считает по живому plan.status каждого дня, не по индексу', async () => {
+  const program = {
+    id: 'pr_1', title: 'Верх/низ, 4 недели', weeks: 4, status: 'active',
+    days: [
+      { date: '2026-08-11', dayLabel: 'День A', weekIndex: 1, trainingId: 'tr_a' },
+      { date: '2026-08-12', dayLabel: 'День B', weekIndex: 1, trainingId: 'tr_b' },
+      { date: '2026-08-13', dayLabel: 'День C', weekIndex: 1, trainingId: 'tr_c' },
+    ],
+  };
+  const api = fakeApi({
+    card: { heys_training_program: program },
+    day: {
+      date: '2026-08-11',
+      meals: [],
+      updatedAt: 111,
+      trainings: [{
+        id: 'tr_a', type: 'strength', strengthEntryMode: 'workout_builder',
+        plan: { status: 'done' },
+        planSnapshot: { exercises: [PLAN_EXERCISE('Присед', 80, 5)] },
+        workoutLog: { exercises: [DONE_EXERCISE('Присед', 75, 5)] },
+      }],
+    },
+    pastDays: {
+      '2026-08-12': {
+        date: '2026-08-12', meals: [], updatedAt: 111,
+        trainings: [{ id: 'tr_b', type: 'strength', strengthEntryMode: 'workout_builder', plan: { status: 'started' } }],
+      },
+      '2026-08-13': {
+        date: '2026-08-13', meals: [], updatedAt: 111,
+        trainings: [{ id: 'tr_c', type: 'strength', strengthEntryMode: 'workout_builder', plan: { status: 'skipped' } }],
+      },
+    },
+  });
+
+  const res = await build(api).heys_get_program_status();
+  const s = res.structured;
+  assert.equal(s.has_program, true);
+  assert.deepEqual(s.counts, { assigned: 0, started: 1, done: 1, skipped: 1, missing: 0 });
+
+  const dayA = s.sessions.find((x) => x.date === '2026-08-11');
+  assert.equal(dayA.status, 'done');
+  assert.equal(dayA.planned_volume_kg, 400); // 80×5
+  assert.equal(dayA.actual_volume_kg, 375); // 75×5
+  assert.deepEqual(dayA.deviations, [{
+    name: 'Присед', approaches: [{ index: 0, planned_weight_kg: 80, actual_weight_kg: 75, planned_reps: 5, actual_reps: 5 }],
+  }]);
+});
+
+test('get_program_status: выполнено точно по плану — deviations пустой', async () => {
+  const program = {
+    id: 'pr_2', title: 'Верх/низ', status: 'active',
+    days: [{ date: '2026-08-11', dayLabel: 'День A', trainingId: 'tr_a' }],
+  };
+  const api = fakeApi({
+    card: { heys_training_program: program },
+    day: {
+      date: '2026-08-11', meals: [], updatedAt: 111,
+      trainings: [{
+        id: 'tr_a', type: 'strength', strengthEntryMode: 'workout_builder',
+        plan: { status: 'done' },
+        planSnapshot: { exercises: [PLAN_EXERCISE('Жим', 60, 8)] },
+        workoutLog: { exercises: [DONE_EXERCISE('Жим', 60, 8)] },
+      }],
+    },
+  });
+  const res = await build(api).heys_get_program_status();
+  assert.deepEqual(res.structured.sessions[0].deviations, []);
+});
+
+test('get_program_status: тренировка из индекса удалена из дня — считается missing, не падает', async () => {
+  const program = {
+    id: 'pr_3', title: 'Верх/низ', status: 'active',
+    days: [{ date: '2026-08-11', dayLabel: 'День A', trainingId: 'tr_gone' }],
+  };
+  const api = fakeApi({
+    card: { heys_training_program: program },
+    day: { date: '2026-08-11', meals: [], trainings: [], updatedAt: 111 },
+  });
+  const res = await build(api).heys_get_program_status();
+  assert.deepEqual(res.structured.counts, { assigned: 0, started: 0, done: 0, skipped: 0, missing: 1 });
+  assert.equal(res.structured.sessions[0].status, 'missing');
+});
+
 test('каждый инструмент, меняющий день, отдаёт норму в day_after', async () => {
   const base = {
     date: '2026-08-01',

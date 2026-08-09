@@ -81,6 +81,50 @@ function defaultMealName(time) {
   return 'Перекус';
 }
 
+/**
+ * Слой 6: сырое сравнение подходов planSnapshot vs фактического workoutLog —
+ * только факты (вес/повторы отличаются или нет), без оценки значимости
+ * расхождения (протокол её сознательно не определяет).
+ */
+function compareProgramApproaches(plannedApproaches, actualApproaches) {
+  const planned = Array.isArray(plannedApproaches) ? plannedApproaches : [];
+  const actual = Array.isArray(actualApproaches) ? actualApproaches : [];
+  const rows = [];
+  for (let i = 0; i < Math.max(planned.length, actual.length); i++) {
+    const p = planned[i];
+    const a = actual[i];
+    const pW = p ? Number(p.weightKg) || 0 : null;
+    const aW = a ? Number(a.weightKg) || 0 : null;
+    const pR = p ? Number(p.reps) || 0 : null;
+    const aR = a ? Number(a.reps) || 0 : null;
+    if (pW === aW && pR === aR) continue;
+    rows.push({ index: i, planned_weight_kg: pW, actual_weight_kg: aW, planned_reps: pR, actual_reps: aR });
+  }
+  return rows;
+}
+
+/** Сравнение упражнений по позиции — та же форма, что уже читает heys_get_program_status. */
+function compareProgramExercises(plannedExercises, actualExercises) {
+  const planned = Array.isArray(plannedExercises) ? plannedExercises : [];
+  const actual = Array.isArray(actualExercises) ? actualExercises : [];
+  const out = [];
+  for (let i = 0; i < Math.max(planned.length, actual.length); i++) {
+    const p = planned[i];
+    const a = actual[i];
+    if (!p || !a) {
+      out.push({ name: (a && a.name) || (p && p.name) || `упр. ${i + 1}`, structure_changed: true });
+      continue;
+    }
+    if (p.name !== a.name) {
+      out.push({ name: a.name, planned_name: p.name, structure_changed: true });
+      continue;
+    }
+    const approaches = compareProgramApproaches(p.approaches, a.approaches);
+    if (approaches.length) out.push({ name: a.name, approaches });
+  }
+  return out;
+}
+
 function resolveDate(input, nowMs) {
   if (input === undefined || input === null || input === '') return day.nowParts(nowMs).date;
   const value = String(input).trim();
@@ -1892,6 +1936,75 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       };
     },
 
+    /**
+     * Программа куратора, Слой 6: отчёт по назначенному циклу.
+     *
+     * Формат «значимых отклонений» протокол сознательно оставляет открытым
+     * (CURATOR_TRAINING_PROGRAM_PROTOCOL_2026-08-09.md, «Открытое») — сюда
+     * попадают только объективные факты (подход отличается от planSnapshot по
+     * весу/повторам), без оценки «это уже плохо» или «ещё нормально»: решать
+     * куратору по цифрам, а не инструменту за него.
+     */
+    async heys_get_program_status() {
+      const blobs = await readMany([PROGRAM_KEY]);
+      const program = blobs[PROGRAM_KEY];
+      if (!program || !Array.isArray(program.days) || !program.days.length) {
+        return {
+          text: 'У клиента сейчас нет назначенной программы тренировок.',
+          structured: { has_program: false },
+        };
+      }
+
+      const sortedDays = program.days.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+      const dayBlobs = await readMany(sortedDays.map((d) => day.dayKey(d.date)));
+
+      const counts = { assigned: 0, started: 0, done: 0, skipped: 0, missing: 0 };
+      const sessions = sortedDays.map((d) => {
+        const blob = dayBlobs[day.dayKey(d.date)];
+        const trainings = Array.isArray(blob && blob.trainings) ? blob.trainings : [];
+        const training = trainings.find((t) => t && t.id === d.trainingId);
+        const base = { date: d.date, dayLabel: d.dayLabel || null, weekIndex: d.weekIndex || null };
+        if (!training || !training.plan) {
+          counts.missing += 1;
+          return { ...base, status: 'missing' };
+        }
+        const status = training.plan.status || 'assigned';
+        counts[status] = (counts[status] || 0) + 1;
+        const out = { ...base, status };
+        if (status === 'done' && training.planSnapshot && training.workoutLog) {
+          const plannedShell = { type: 'strength', strengthEntryMode: 'workout_builder', workoutLog: training.planSnapshot };
+          out.planned_volume_kg = Math.round(webMirror.trainingTonnage(plannedShell).plannedVolume);
+          out.actual_volume_kg = Math.round(webMirror.trainingTonnage(training).totalVolume);
+          out.deviations = compareProgramExercises(training.planSnapshot.exercises, training.workoutLog.exercises);
+        }
+        return out;
+      });
+
+      const withDeviations = sessions.filter((s) => Array.isArray(s.deviations) && s.deviations.length);
+      const textParts = [
+        `Программа «${program.title || 'без названия'}»${program.weeks ? `, ${program.weeks} нед.` : ''}: ` +
+          `назначено ${counts.assigned}, идёт ${counts.started}, выполнено ${counts.done}, пропущено ${counts.skipped}` +
+          (counts.missing ? `, не найдено ${counts.missing}` : '') + '.',
+      ];
+      if (withDeviations.length) {
+        textParts.push(
+          'Отличия от плана: ' + withDeviations
+            .map((s) => `${s.date}${s.dayLabel ? ` (${s.dayLabel})` : ''} — ${s.deviations.length} упр.`)
+            .join('; ') + '.',
+        );
+      }
+
+      return {
+        text: textParts.join(' '),
+        structured: {
+          has_program: true,
+          program: { id: program.id, title: program.title, weeks: program.weeks || null, status: program.status },
+          counts,
+          sessions,
+        },
+      };
+    },
+
     /** Карточка клиента целиком: профиль, нормы и пульсовые зоны одним чтением. */
     async heys_get_profile() {
       const blobs = await readMany([profile.PROFILE_KEY, profile.NORMS_KEY, profile.ZONES_KEY]);
@@ -2073,6 +2186,11 @@ const TOOL_SCHEMAS = [
         to: { type: 'string', description: 'Последний день периода YYYY-MM-DD. По умолчанию — сегодня.' },
       },
     },
+  },
+  {
+    name: 'heys_get_program_status',
+    description: 'Отчёт по назначенной программе тренировок (heys_assign_program/heys_assign_training): сколько дней назначено, сколько идёт, выполнено, пропущено. Для выполненных дней — тоннаж по плану против факта и список подходов, где вес или повторы разошлись с planSnapshot (сырые цифры, без оценки «это уже плохо» — решай по числам сам). У клиента нет активной программы — скажет прямо, без ошибки.',
+    inputSchema: { type: 'object', properties: {} },
   },
   {
     name: 'heys_get_profile',
