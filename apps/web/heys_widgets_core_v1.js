@@ -144,8 +144,6 @@
       position: { col: 2, row: 4 },
       settings: {
         period: 'week',
-        showDates: true,
-        showWeekdays: true,
         highlightToday: true,
         elementScales: { grid: 0.95 }
       }
@@ -180,7 +178,6 @@
         showGoal: true,
         showChart: true,
         showTrend: true,
-        periodDays: 7,
         showAnalytics: true
       }
     },

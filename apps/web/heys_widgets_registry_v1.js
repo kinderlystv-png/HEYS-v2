@@ -320,10 +320,10 @@
       availableSizes: ALL_SIZES_4X4,
       dataKeys: ['dayData', 'profile', 'dayTot', 'normAbs', 'waterGoal'],
       component: 'WidgetStatus',
-      settings: {
-        showActions: { type: 'boolean', default: true, label: 'Показывать действия' },
-        showIssues: { type: 'boolean', default: true, label: 'Показывать проблемы' }
-      },
+      // showActions/showIssues убраны: status слит с DayScore, и
+      // StatusWidgetContent (heys_widgets_ui_v1.js:2100) не рендерит ни
+      // действий, ни проблем и вообще не читает settings.
+      settings: {},
       settingsBySize: {
         '1x1': {},
         '2x1': {},
@@ -407,8 +407,11 @@
         showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
         showBmi: { type: 'boolean', default: true, label: 'Показывать BMI' },
         showChart: { type: 'boolean', default: true, label: 'Показывать график' },
-        showAnalytics: { type: 'boolean', default: true, label: 'Показывать аналитику' },
-        periodDays: { type: 'number', default: 7, label: 'Период (дней)', min: 3, max: 30 }
+        // periodDays убран: окно тренда веса фиксировано 14 днями
+        // (_calculateWeightTrendExtended, widgets/widget_data.js), и в самом
+        // виджете нет переключателя периода, как у crashRisk/healthTrend.
+        // Поле в модалке меняло только запись в настройках.
+        showAnalytics: { type: 'boolean', default: true, label: 'Показывать аналитику' }
       },
       settingsBySize: {
         '1x1': {},
@@ -519,8 +522,9 @@
             { value: 'month', label: 'Месяц', disabled: true }
           ]
         },
-        showWeekdays: { type: 'boolean', default: true, label: 'Показывать дни недели' },
-        showDates: { type: 'boolean', default: true, label: 'Показывать числа' },
+        // showWeekdays/showDates убраны: подписей дней и чисел в heatmap нет
+        // ни в одном размере (heys_widgets_ui_v1.js:3647+), тумблеры ничего
+        // не переключали. Вернуть вместе с самой разметкой подписей.
         highlightToday: { type: 'boolean', default: true, label: 'Выделять сегодня' }
       }
     },

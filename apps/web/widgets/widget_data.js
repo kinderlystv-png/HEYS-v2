@@ -540,13 +540,34 @@
         return { ...DEMO_WIDGET_DATA.streak };
       }
 
-      // Получаем streak из HEYS.Day если доступен
-      const currentStreak = HEYS.Day?.getCurrentStreak?.() || 0;
-      const maxStreak = HEYS.Day?.getMaxStreak?.() || currentStreak;
+      // Текущая серия — тот же калькулятор, что у DayTab и бейджа в шапке
+      // (heys_day_calendar_metrics.js:13, boot-day, синхронный).
+      // HEYS.Day.getStreak — замыкание DayTab: на вкладке виджетов его нет.
+      let current = 0;
+      const metrics = HEYS.dayCalendarMetrics;
+      if (typeof metrics?.computeCurrentStreak === 'function') {
+        const products = HEYS.products?.getAll?.() || [];
+        const pIndex = HEYS.dayUtils?.buildProductIndex
+          ? HEYS.dayUtils.buildProductIndex(products)
+          : null;
+        current = metrics.computeCurrentStreak({
+          optimum: this._getOptimum(),
+          pIndex,
+          fmtDate: (d) => this._formatDate(d),
+          lsGet: (key, fallback) => readStoredValue(key, fallback)
+        }) || 0;
+      } else if (typeof HEYS.utils?.safeGetStreak === 'function') {
+        current = HEYS.utils.safeGetStreak() || 0;
+      }
+
+      // Рекорд живёт в геймификации как stats.bestStreak
+      // (heys_gamification_v1.js:1961, обновление :5682). Он пишется только
+      // при смонтированном DayTab, поэтому может отставать от current.
+      const best = HEYS.game?.getStats?.()?.stats?.bestStreak || 0;
 
       return {
-        current: currentStreak,
-        max: maxStreak
+        current,
+        max: Math.max(best, current)
       };
     },
 
@@ -708,14 +729,36 @@
         return { ...DEMO_WIDGET_DATA.insulin };
       }
 
-      // Получаем данные инсулиновой волны если модуль доступен
-      const waveData = HEYS.InsulinWave?.getWaveData?.() || {};
+      // Берём тот же канонический расчёт, что и виджет insulinWave:
+      // HEYS.InsulinWave.calculate (heys_insulin_wave_v1.js:111) — отдельного
+      // getWaveData в модуле нет и не было.
+      const wave = this.getInsulinWaveData() || {};
+      if (!wave.hasData) {
+        return { status: 'unknown', remaining: 0, totalWave: 0, phase: null, lastMealTime: null, endTime: null };
+      }
+
+      const totalWave = Math.round(wave.duration > 0 ? wave.duration : 180);
+      // scheduled (приём ещё впереди) даёт remaining > duration — кольцо ушло бы
+      // в минус, поэтому подрезаем по длине окна.
+      const remaining = Math.min(totalWave, Math.max(0, Math.round(wave.remaining || 0)));
+
+      // Канонический словарь — scheduled/settling/complete, UI-виджет знает
+      // active/soon/almost/lipolysis (heys_widgets_ui_v1.js:3551-3555).
+      // Пороги подобраны под демо-данные виджета (remaining 25 → 'almost').
+      let status;
+      if (wave.status === 'complete' || remaining <= 0) status = 'lipolysis';
+      else if (remaining <= 30) status = 'almost';
+      else if (remaining <= 60) status = 'soon';
+      else status = 'active';
 
       return {
-        status: waveData.status || 'unknown',
-        remaining: waveData.remaining || 0,
-        phase: waveData.currentPhase || null,
-        endTime: waveData.endTime || null
+        status,
+        remaining,
+        totalWave,
+        // currentPhase === status (heys_insulin_wave_v1.js:197) — как фаза бесполезен
+        phase: wave.waveShapeDesc || wave.statusLabel || null,
+        lastMealTime: wave.lastMealTimeDisplay || wave.lastMealTime || null,
+        endTime: wave.endTimeDisplay || wave.endTime || null
       };
     },
 

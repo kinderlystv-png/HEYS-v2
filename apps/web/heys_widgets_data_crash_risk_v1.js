@@ -66,6 +66,12 @@
 
     const MIN_DAYS = 7;
     const MAX_DAYS = 30;
+    // Порог самого EWS: THRESHOLDS.MIN_DAYS_FOR_ANALYSIS в
+    // insights/pi_early_warning.js:82. Окно берём с запасом — дни без записи
+    // выпадают, и на 7-дневном периоде одного пропуска хватало, чтобы прогноз
+    // молча не посчитался.
+    const EWS_MIN_DAYS = 6;
+    const EWS_MIN_WINDOW_DAYS = 14;
 
     // ============================================================================
     // HELPERS
@@ -220,11 +226,28 @@
             let ewsData = null, ewsCount = 0;
             if (HEYS.InsightsPI?.earlyWarning) {
                 try {
-                    let daysArray = [];
-                    if (HEYS.InsightsPI.analyticsAPI?.getRecentDays) {
-                        daysArray = HEYS.InsightsPI.analyticsAPI.getRecentDays(days);
+                    // analyticsAPI.getRecentDays никогда не существовал — массив
+                    // оставался пустым и EWS не считался. Собираем окно так же,
+                    // как живые потребители EWS (insights/pi_ui_dashboard.js:925,
+                    // heys_app_shell_v1.js:1497): полный dayv2 + инжект date.
+                    const fmtDate = HEYS.dayUtils?.fmtDate || U.fmtDate;
+                    const dayCache = HEYS.dayCache;
+                    const daysArray = [];
+                    if (fmtDate) {
+                        // Окно регрессии по весу может быть 7 дней, а EWS требует
+                        // минимум 6 непустых — один пропуск гасил бы прогноз.
+                        const ewsWindow = Math.min(MAX_DAYS, Math.max(days, EWS_MIN_WINDOW_DAYS));
+                        for (let i = 0; i < ewsWindow; i++) {
+                            const d = new Date();
+                            d.setDate(d.getDate() - i);
+                            const dateStr = fmtDate(d);
+                            const dayData = dayCache
+                                ? dayCache.getDay(dateStr)
+                                : U.lsGet(`heys_dayv2_${dateStr}`, null);
+                            if (dayData) daysArray.push({ ...dayData, date: dateStr });
+                        }
                     }
-                    if (daysArray?.length >= 6) {
+                    if (daysArray.length >= EWS_MIN_DAYS) {
                         ewsData = HEYS.InsightsPI.earlyWarning.detect(daysArray, profile, pIndex, { includeDetails: true });
                         ewsCount = ewsData?.count || 0;
                     }

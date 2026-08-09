@@ -1,0 +1,192 @@
+/**
+ * Регрессия на «тихую деградацию в нули» в слое данных виджетов.
+ *
+ * Все три бага были одинаковыми: вызов через optional chaining уходил в
+ * несуществующий метод, промах глушился, виджет молча показывал 0 / пусто.
+ * Поэтому тесты гоняют НАСТОЯЩИЕ модули (widgets/widget_data.js и
+ * heys_widgets_data_crash_risk_v1.js) против фейковых источников данных
+ * и требуют, чтобы данные реально доехали.
+ *
+ * Живой слой данных — apps/web/widgets/widget_data.js.
+ * apps/web/heys_widgets_data_v1.js не в бандле и источником правды не является.
+ */
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+import { beforeEach, describe, expect, it } from 'vitest';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const repoRoot = path.resolve(__dirname, '../../..');
+
+function loadLegacy(relPath, host) {
+  const src = fs.readFileSync(path.join(repoRoot, relPath), 'utf8');
+  // eslint-disable-next-line no-new-func
+  new Function('window', src)(host);
+}
+
+function isoDaysAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+describe('widget_data: streak берётся из живого калькулятора серии', () => {
+  let data;
+
+  beforeEach(() => {
+    global.window = global;
+    global.HEYS = {};
+    loadLegacy('apps/web/widgets/widget_data.js', global);
+    data = global.HEYS.Widgets.data;
+
+    // Единственный живой калькулятор текущей серии (boot-day).
+    global.HEYS.dayCalendarMetrics = {
+      computeCurrentStreak: () => 5,
+    };
+    // Рекорд живёт в геймификации как stats.bestStreak.
+    global.HEYS.game = { getStats: () => ({ stats: { bestStreak: 9 } }) };
+  });
+
+  it('текущая серия доезжает до виджета, а не остаётся нулём', () => {
+    expect(data.getStreakData().current).toBe(5);
+  });
+
+  it('рекорд берётся из геймификации', () => {
+    expect(data.getStreakData().max).toBe(9);
+  });
+
+  it('рекорд не может оказаться меньше текущей серии', () => {
+    // bestStreak пишется только при смонтированном DayTab и отстаёт.
+    global.HEYS.game = { getStats: () => ({ stats: { bestStreak: 0 } }) };
+    expect(data.getStreakData()).toEqual({ current: 5, max: 5 });
+  });
+
+  it('без геймификации виджет всё равно показывает серию', () => {
+    delete global.HEYS.game;
+    expect(data.getStreakData()).toEqual({ current: 5, max: 5 });
+  });
+});
+
+describe('widget_data: виджет «Инсулин» получает канонический расчёт', () => {
+  let data;
+
+  beforeEach(() => {
+    global.window = global;
+    global.HEYS = {};
+    loadLegacy('apps/web/widgets/widget_data.js', global);
+    data = global.HEYS.Widgets.data;
+
+    global.HEYS.Widgets.data._selectedDate = isoDaysAgo(0);
+    // Единственный источник — HEYS.InsulinWave.calculate.
+    global.HEYS.InsulinWave = {
+      calculate: () => ({
+        status: 'settling',
+        remaining: 95,
+        duration: 180,
+        lastMealTimeDisplay: '13:20',
+        endTimeDisplay: '16:20',
+        waveShapeDesc: 'Пологая волна',
+        currentPhase: 'settling',
+      }),
+    };
+    global.HEYS.store = {
+      get: (key) => (key.includes('dayv2') ? { meals: [{ time: '13:20', items: [] }] } : null),
+    };
+  });
+
+  it('статус перестаёт быть unknown и кольцо получает длину волны', () => {
+    const result = data.getInsulinData();
+    expect(result.status).not.toBe('unknown');
+    expect(result.totalWave).toBe(180);
+    expect(result.remaining).toBe(95);
+  });
+
+  it('UI-словарь статусов заполняется по остатку времени', () => {
+    const at = (remaining, status = 'settling') => {
+      global.HEYS.InsulinWave.calculate = () => ({ status, remaining, duration: 180 });
+      return data.getInsulinData().status;
+    };
+    expect(at(95)).toBe('active');
+    expect(at(45)).toBe('soon');
+    expect(at(25)).toBe('almost');
+    expect(at(0, 'complete')).toBe('lipolysis');
+  });
+
+  it('phase не подменяется статусом — currentPhase === status и бесполезен', () => {
+    expect(data.getInsulinData().phase).toBe('Пологая волна');
+  });
+
+  it('время последнего приёма доезжает до шапки виджета', () => {
+    expect(data.getInsulinData().lastMealTime).toBe('13:20');
+  });
+
+  it('«приём ещё впереди» не уводит кольцо в минус', () => {
+    global.HEYS.InsulinWave.calculate = () => ({ status: 'scheduled', remaining: 400, duration: 180 });
+    const result = data.getInsulinData();
+    expect(result.remaining).toBeLessThanOrEqual(result.totalWave);
+  });
+});
+
+describe('crash risk: ранний прогноз (EWS) действительно считается', () => {
+  let getCrashRiskData;
+  let seenDays;
+
+  beforeEach(() => {
+    global.window = global;
+    global.HEYS = {};
+
+    const store = new Map();
+    for (let i = 0; i < 20; i++) {
+      store.set(isoDaysAgo(i), { weightMorning: 80 - i * 0.05, meals: [], steps: 5000 });
+    }
+
+    global.HEYS.utils = {
+      lsGet: (key, fallback) => {
+        const m = /^heys_dayv2_(.+)$/.exec(key);
+        if (m) return store.get(m[1]) || fallback;
+        if (key === 'heys_profile') return { weight: 80, height: 180 };
+        return fallback;
+      },
+    };
+    global.HEYS.dayUtils = { fmtDate: (d) => isoDaysAgo(Math.round((Date.now() - d.getTime()) / 86400000)) };
+    global.HEYS.dayCache = { getDay: (dateStr) => store.get(dateStr) || null };
+
+    seenDays = null;
+    global.HEYS.InsightsPI = {
+      earlyWarning: {
+        detect: (daysArray) => {
+          seenDays = daysArray;
+          return { count: 3, signals: [] };
+        },
+      },
+    };
+
+    loadLegacy('apps/web/heys_widgets_data_crash_risk_v1.js', global);
+    getCrashRiskData = global.HEYS.Widgets.DataProviders.crashRisk.getData;
+  });
+
+  it('EWS вызывается и виджет получает ненулевой ewsCount', () => {
+    const result = getCrashRiskData({ days: 7 });
+    expect(seenDays, 'detect не был вызван — массив дней снова пустой').not.toBeNull();
+    expect(result.ewsCount).toBe(3);
+    expect(result.ewsData).toBeTruthy();
+  });
+
+  it('в EWS уходят полные dayv2-объекты с датой, а не пары {date, weight}', () => {
+    getCrashRiskData({ days: 7 });
+    expect(seenDays.length).toBeGreaterThanOrEqual(6);
+    for (const day of seenDays) {
+      expect(day.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(day).toHaveProperty('steps');
+    }
+  });
+
+  it('на 7-дневном периоде окно шире порога — пропуск дня не гасит прогноз', () => {
+    getCrashRiskData({ days: 7 });
+    expect(seenDays.length).toBeGreaterThan(7);
+  });
+});

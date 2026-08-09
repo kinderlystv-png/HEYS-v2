@@ -804,7 +804,7 @@
       }
 
       const gridCols = getGridCols();
-      const metrics = HEYS.Widgets.gridEngine?.getCellMetrics?.() || { cellWidth: 150, cellHeight: 76, gap: 12 };
+      const metrics = HEYS.Widgets.grid?.getCellMetrics?.() || { cellWidth: 150, cellHeight: 76, gap: 12 };
       const unitX = (metrics.cellWidth || 150) + (metrics.gap || 12);
       const unitY = (metrics.cellHeight || 76) + (metrics.gap || 12);
 
@@ -1022,7 +1022,7 @@
         if (!ref.isTouchBased && ref.pointerId != null && e.pointerId != null && e.pointerId !== ref.pointerId) return;
 
         const gridCols = getGridCols();
-        const metrics = HEYS.Widgets.gridEngine?.getCellMetrics?.() || { cellWidth: 150, cellHeight: 76, gap: 12 };
+        const metrics = HEYS.Widgets.grid?.getCellMetrics?.() || { cellWidth: 150, cellHeight: 76, gap: 12 };
         const unitX = (metrics.cellWidth || 150) + (metrics.gap || 12);
         const unitY = (metrics.cellHeight || 76) + (metrics.gap || 12);
 
@@ -3655,8 +3655,6 @@
     const canShowMonth = configuredPeriod === 'month' && d.area >= 9 && d.rows >= 3;
     const period = canShowMonth ? 'month' : 'week';
     const todayIso = new Date().toISOString().slice(0, 10);
-    const today = new Date();
-    const weekStartDayIndex = (today.getDay() + 6) % 7;
 
     let renderDays = days;
     if (d.isMicro) {
@@ -3669,10 +3667,7 @@
 
     const variant = d.isMicro ? 'micro' : d.isTiny ? 'compact' : 'std';
 
-    const buildWeekDayMeta = (day, i) => {
-      const fallbackDayIndex = (weekStartDayIndex - 6 + i + 7) % 7;
-      const dateObj = day?.date ? new Date(day.date) : null;
-      const hasValidDate = !!(dateObj && Number.isFinite(dateObj.getTime()));
+    const buildWeekDayMeta = (day) => {
       const isToday = highlightToday && day?.date === todayIso;
 
       return {
@@ -4969,7 +4964,9 @@
         React.createElement('div', { className: 'widget-relapse-risk__footer-badge-wrap' },
           React.createElement('div', {
             className: 'widget-relapse-risk__gauge-status-pill widget-relapse-risk__gauge-status-pill--footer',
-            style: { color, background: `${color}16`, borderColor: `${color}22` }
+            style: { color, background: `${color}16`, borderColor: `${color}22` },
+            // В 2x2 места под строку нет — источник даём подсказкой.
+            title: showSource && srcLabel ? `Источник риска: ${srcLabel}` : undefined
           }, getRelapseLevelLabel(level)),
         ),
         showConfidence ? React.createElement('div', { className: 'widget-relapse-risk__label' }, `conf ${confidence}%`) : null
@@ -4981,9 +4978,13 @@
     const showConfidence = widget.settings?.showConfidence !== false;
     const showSource = widget.settings?.showSource !== false;
     const srcLabel = getSourceLabel();
-    const riskSummaryLabel = showConfidence
-      ? `пик ${topWindowScore}% ${topWindowLabel} · conf ${confidence}%`
-      : `пик ${topWindowScore}% ${topWindowLabel}`;
+    const riskSummaryLabel = [
+      `пик ${topWindowScore}% ${topWindowLabel}`,
+      showConfidence ? `conf ${confidence}%` : null,
+      // Источник — какой движок дал этот балл. Тумблер объявлен в реестре
+      // (heys_widgets_registry_v1.js:603), но раньше ничего не рендерил.
+      showSource && srcLabel ? `источник ${srcLabel.toLowerCase()}` : null
+    ].filter(Boolean).join(' · ');
 
     return React.createElement('div', { className: `widget-relapse-risk widget-relapse-risk--${variant}` },
       React.createElement('div', { className: 'widget-relapse-risk__top' },
