@@ -217,6 +217,26 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
     return out;
   }
 
+  /**
+   * Гейт по тарифу Pro Спорт (CURATOR_TRAINING_PROGRAM_PROTOCOL_2026-08-09.md,
+   * слой 5): «Программа тренировок на 4 недели» продаётся тарифом `proplus` —
+   * лендинг и текст соглашения ([`heys_subscriptions_v1.js:66-77`](../../apps/web/heys_subscriptions_v1.js)),
+   * до этой проверки серверного гейта не было ни в каком виде (только
+   * клиентский UI-пейволл, обходимый прямым вызовом инструмента). Читает тот
+   * же `heys_profile`, куда `activateSubscription` пишет `subscription_plan` —
+   * второго источника правды по тарифу в MCP нет.
+   */
+  async function requireProSportTier(actionLabel) {
+    const blobs = await readMany([profile.PROFILE_KEY]);
+    const p = blobs[profile.PROFILE_KEY] || {};
+    if (p.subscription_plan !== 'proplus') {
+      throw new ToolError(
+        'tariff_required',
+        `${actionLabel} — функция тарифа Pro Спорт. У клиента сейчас «${p.subscription_plan || 'нет подписки'}». Оформи Pro Спорт (heys_manage_subscription) или предложи клиенту апгрейд.`,
+      );
+    }
+  }
+
   /** Чтение → патч → merge для ключей карточки клиента (профиль, нормы, зоны). */
   async function saveCardKey(key, value, lastSeenUpdatedAt) {
     const res = await api.mergeSaveKV(sessionToken, key, value, lastSeenUpdatedAt);
@@ -1038,6 +1058,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
     },
 
     async heys_assign_training(args) {
+      await requireProSportTier('Назначение плана тренировки');
       const date = resolveDate(args.date, nowMs);
       const current = await readDay(date);
       const res = day.assignTraining(current, args.index, {
@@ -1077,6 +1098,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
      * пишутся, а куратор получает точный список удавшихся и нет.
      */
     async heys_assign_program(args) {
+      await requireProSportTier('Назначение программы тренировок');
       const daysInput = Array.isArray(args.days) ? args.days : [];
       if (!daysInput.length) {
         throw new ToolError('nothing_to_assign', 'Передай days — список дат с упражнениями на каждый день программы.');
@@ -2486,7 +2508,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_assign_program',
-    description: 'Назначить клиенту программу силовых тренировок на несколько дней одним вызовом — например «верх/низ на 4 недели». Каждый день из days назначается тем же способом, что heys_assign_training (план, не факт: подходы не выполнены, в калории и нагрузку не входит). Все дни проверяются целиком до первой записи — ошибка в одном дне не даст назначить ни одного. Пишутся дни по одному, потому что это разные ключи в облаке: при сбое посреди программа помечается частичной (status: partial), а ответ называет, какие даты записались, а какие нет — вызови инструмент повторно только для незаписанных дат, не для всей программы заново. Замена уже активной программы (новая версия взамен старой) этим инструментом не делается: он всегда создаёт независимый program_id.',
+    description: 'Назначить клиенту программу силовых тренировок на несколько дней одним вызовом — например «верх/низ на 4 недели». Каждый день из days назначается тем же способом, что heys_assign_training (план, не факт: подходы не выполнены, в калории и нагрузку не входит). Все дни проверяются целиком до первой записи — ошибка в одном дне не даст назначить ни одного. Пишутся дни по одному, потому что это разные ключи в облаке: при сбое посреди программа помечается частичной (status: partial), а ответ называет, какие даты записались, а какие нет — вызови инструмент повторно только для незаписанных дат, не для всей программы заново. Замена уже активной программы (новая версия взамен старой) этим инструментом не делается: он всегда создаёт независимый program_id. Клиент увидит программу сам, когда откроет день или карточку тренировок, но пуш и сообщение об этом не уходят — как и с любым другим действием, писать клиенту об этом или нет решает куратор (heys_reply_message), инструмент не пишет за него сам.',
     inputSchema: {
       type: 'object',
       properties: {

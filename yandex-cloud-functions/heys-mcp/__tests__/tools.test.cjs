@@ -380,9 +380,13 @@ test('update_training отбивает несуществующий индекс
 // поверх нескольких дней, которой в day.js нет.
 
 const PROGRAM_EXERCISE = [{ name: 'Присед', approaches: [{ reps: 5, weight_kg: 80 }] }];
+// Слой 5: назначение плана — функция тарифа Pro Спорт (subscription_plan
+// 'proplus' в heys_profile). Без этой карточки гейт отбивает вызов раньше
+// любой другой проверки — см. отдельный тест ниже.
+const PROPLUS_CARD = { heys_profile: { subscription_plan: 'proplus' } };
 
 test('assign_program пишет несколько дней и индекс программы одним вызовом', async () => {
-  const api = fakeApi({ day: null });
+  const api = fakeApi({ day: null, card: PROPLUS_CARD });
   const res = await build(api).heys_assign_program({
     title: 'Верх/низ, 4 недели',
     assigned_by: 'Артём',
@@ -427,6 +431,7 @@ test('assign_program не пишет ничего, если хотя бы оди
         { time: '10:00', z: [30, 0, 0, 0] },
       ],
     },
+    card: PROPLUS_CARD,
   });
   const tools = build(api);
   await assert.rejects(
@@ -444,7 +449,7 @@ test('assign_program не пишет ничего, если хотя бы оди
 });
 
 test('assign_program отбивает повторную дату внутри одного вызова', async () => {
-  const api = fakeApi({ day: null });
+  const api = fakeApi({ day: null, card: PROPLUS_CARD });
   await assert.rejects(
     () => build(api).heys_assign_program({
       title: 'Верх/низ',
@@ -459,8 +464,31 @@ test('assign_program отбивает повторную дату внутри �
   assert.equal(api.saves.length, 0);
 });
 
+test('assign_program и assign_training отказывают без тарифа Pro Спорт, ничего не пишут', async () => {
+  const apiNoSub = fakeApi({ day: null });
+  await assert.rejects(
+    () => build(apiNoSub).heys_assign_program({
+      title: 'Верх/низ',
+      assigned_by: 'Артём',
+      days: [{ date: '2026-08-11', exercises: PROGRAM_EXERCISE }],
+    }),
+    (e) => e.code === 'tariff_required',
+  );
+  assert.equal(apiNoSub.saves.length, 0);
+
+  const apiWrongPlan = fakeApi({ day: null, card: { heys_profile: { subscription_plan: 'pro' } } });
+  await assert.rejects(
+    () => build(apiWrongPlan).heys_assign_training({
+      assigned_by: 'Артём',
+      exercises: PROGRAM_EXERCISE,
+    }),
+    (e) => e.code === 'tariff_required',
+  );
+  assert.equal(apiWrongPlan.saves.length, 0);
+});
+
 test('assign_program: сбой записи одного дня не роняет остальные — статус partial', async () => {
-  const api = fakeApi({ day: null });
+  const api = fakeApi({ day: null, card: PROPLUS_CARD });
   api.onMergeSave = (key) => {
     if (key === 'heys_dayv2_2026-08-13') return { ok: false, error: 'stale' };
     return null;
