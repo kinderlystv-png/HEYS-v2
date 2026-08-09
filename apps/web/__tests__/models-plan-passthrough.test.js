@@ -80,3 +80,17 @@ describe('ensureDay: plan и planSnapshot переживают нормализ�
     expect(twice.trainings[0].planSnapshot).toBeTruthy();
   });
 });
+
+describe('ensureDay: skipReason/skippedAt тоже переживают нормализацию', () => {
+  it('пропуск с причиной сохраняется целиком через object spread', () => {
+    const day = models.ensureDay({
+      trainings: [planTraining({
+        plan: { id: 'pl_1', status: 'skipped', dayLabel: 'День B', assignedBy: 'Артём', assignedAt: 1000, skipReason: 'Мало сил', skippedAt: 2000 },
+      })],
+    }, {});
+    const plan = day.trainings[0].plan;
+    expect(plan.status).toBe('skipped');
+    expect(plan.skipReason).toBe('Мало сил');
+    expect(plan.skippedAt).toBe(2000);
+  });
+});

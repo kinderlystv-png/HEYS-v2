@@ -1259,9 +1259,12 @@
 /* ── Шторка ⋯ (экран 20) ────────────────────────────────────────────────── */
 
 .sb-sheet-back {
-  position: absolute;
+  /* fixed, не absolute: внутри полноэкранного конструктора родитель .sb-root сам
+   * занимает весь экран, но на карточке дня (шторка пропуска плана) ближайший
+   * positioned предок — не она, и absolute уносил бы оверлей не туда. */
+  position: fixed;
   inset: 0;
-  z-index: 5;
+  z-index: 500;
   display: flex;
   align-items: flex-end;
   background: rgba(15, 23, 42, 0.45);
@@ -1464,4 +1467,29 @@
 .sb-plan-cta {
   width: 100%;
   min-height: 48px;
+}
+
+.sb-plan-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sb-plan-actions .sb-plan-cta {
+  flex: 1;
+}
+
+.sb-plan-skip {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 0 16px;
+}
+
+.sb-plan-card.is-skipped {
+  border-color: var(--sb-br, #e2e8f0);
+  background: var(--sb-soft, #f1f5f9);
+}
+
+.sb-skip-reason-input {
+  margin-top: 8px;
+  text-align: left;
 }

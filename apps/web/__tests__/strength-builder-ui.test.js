@@ -408,3 +408,74 @@ describe('очередь отправки (экран 09)', () => {
     expect(screen.queryByText('📡 Ждёт сеть')).toBeNull();
   });
 });
+
+describe('пропуск назначенного дня (экран 18, минимальная версия)', () => {
+  function planTraining(planOverrides) {
+    return {
+      workoutLog: { exercises: [{ name: 'Тяга', approaches: [work(60, 8, false)] }] },
+      plan: Object.assign({ id: 'pl_1', status: 'assigned', dayLabel: 'День B', assignedBy: 'Артём' }, planOverrides),
+    };
+  }
+
+  it('«Отпустить» открывает причины, «Отпустить» в шторке пишет причину и передаёт наружу', () => {
+    loadModules();
+    const Parts = globalThis.HEYS.StrengthBuilderParts;
+    const seen = [];
+    render(React.createElement(Parts.PlanCard, {
+      training: planTraining(),
+      dateKey: '2026-08-09',
+      isFutureDay: false,
+      onStart: () => {},
+      onSkip: (reason) => seen.push(reason),
+    }));
+    fireEvent.click(screen.getByText('Отпустить'));
+    fireEvent.click(screen.getByText('Мало сил'));
+    fireEvent.click(screen.getAllByText('Отпустить').find((el) => el.closest('.sb-sheet')));
+    expect(seen).toEqual(['Мало сил']);
+  });
+
+  it('«Передумал» закрывает шторку без вызова onSkip', () => {
+    loadModules();
+    const Parts = globalThis.HEYS.StrengthBuilderParts;
+    const seen = [];
+    render(React.createElement(Parts.PlanCard, {
+      training: planTraining(),
+      dateKey: '2026-08-09',
+      isFutureDay: false,
+      onStart: () => {},
+      onSkip: (reason) => seen.push(reason),
+    }));
+    fireEvent.click(screen.getByText('Отпустить'));
+    fireEvent.click(screen.getByText('Передумал'));
+    expect(seen.length).toBe(0);
+    expect(screen.queryByText('Что помешало · необязательно')).toBeNull();
+  });
+
+  it('пропущенный план показывает причину и «Начать всё же», а не обычную сводку', () => {
+    loadModules();
+    const Parts = globalThis.HEYS.StrengthBuilderParts;
+    const resumed = [];
+    render(React.createElement(Parts.PlanCard, {
+      training: planTraining({ status: 'skipped', skipReason: 'Плохое самочувствие' }),
+      dateKey: '2026-08-09',
+      isFutureDay: false,
+      onResumeSkipped: () => resumed.push(1),
+    }));
+    expect(screen.getByText(/пропущен/)).toBeTruthy();
+    expect(screen.getByText(/Плохое самочувствие/)).toBeTruthy();
+    fireEvent.click(screen.getByText('Начать всё же'));
+    expect(resumed.length).toBe(1);
+  });
+
+  it('пропуск без причины — нормальное состояние, не ошибка', () => {
+    loadModules();
+    const Parts = globalThis.HEYS.StrengthBuilderParts;
+    render(React.createElement(Parts.PlanCard, {
+      training: planTraining({ status: 'skipped' }),
+      dateKey: '2026-08-09',
+      isFutureDay: false,
+      onResumeSkipped: () => {},
+    }));
+    expect(screen.getByText('Без объяснения — и это нормально')).toBeTruthy();
+  });
+});

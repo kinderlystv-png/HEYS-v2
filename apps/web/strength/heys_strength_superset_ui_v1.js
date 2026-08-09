@@ -593,15 +593,74 @@
    * же запись тренировки, что и факт (plan + planSnapshot), поэтому карточка
    * читает те же данные, что SummaryCard, но показывает другое действие.
    */
+  const SKIP_REASONS = ['Не было времени', 'Мало сил', 'Плохое самочувствие', 'Другие приоритеты'];
+
+  /**
+   * Пропуск дня (экран 18, минимальная версия). Перенос на другую дату — открытый
+   * вопрос протокола («Перенос назначенной тренировки — операции нет ни в схеме,
+   * ни в коде»), сюда сознательно не входит: только «отпустить» день целиком.
+   */
+  function SkipSheet(props) {
+    const { onCancel, onConfirm } = props;
+    const [reason, setReason] = React.useState('');
+    const [custom, setCustom] = React.useState('');
+    return h('div', { className: 'sb-sheet-back', onClick: onCancel },
+      h('div', { className: 'sb-sheet', onClick: function (e) { e.stopPropagation(); } },
+        h('div', { className: 'sb-sheet-grip' }),
+        h('b', { className: 'sb-confirm-title' }, 'Что помешало · необязательно'),
+        h('div', { className: 'sb-chips' },
+          SKIP_REASONS.map(function (r) {
+            return h('button', {
+              key: r, type: 'button',
+              className: 'sb-chip' + (reason === r ? ' is-on' : ''),
+              onClick: function () { setReason(reason === r ? '' : r); }
+            }, r);
+          })
+        ),
+        h('input', {
+          className: 'sb-ap-field sb-skip-reason-input',
+          type: 'text',
+          placeholder: 'Своя причина',
+          value: custom,
+          onChange: function (e) { setCustom(e.target.value); setReason(''); }
+        }),
+        h('p', { className: 'sb-confirm-text' },
+          'Пропуск не считается провалом: он просто не попадёт в объём. Куратор увидит и решение, и причину, если укажешь.'),
+        h('div', { className: 'sb-pain-actions' },
+          h('button', { type: 'button', className: 'sb-btn', onClick: onCancel }, 'Передумал'),
+          h('button', {
+            type: 'button', className: 'sb-btn is-accent',
+            onClick: function () { onConfirm(custom.trim() || reason || ''); }
+          }, 'Отпустить')
+        )
+      )
+    );
+  }
+
   function PlanCard(props) {
-    const { training, dateKey, isFutureDay, onStart, onOpenReadonly } = props;
+    const { training, dateKey, isFutureDay, onStart, onOpenReadonly, onSkip, onResumeSkipped } = props;
     const wl = (training && training.workoutLog) || {};
     const exercises = Array.isArray(wl.exercises) ? wl.exercises : [];
     const plan = training && training.plan;
+    const [skipOpen, setSkipOpen] = React.useState(false);
     if (!plan) return null;
     const label = plan.dayLabel || sessionTitle(exercises);
     const meta = 'назначил ' + (plan.assignedBy || 'куратор')
       + (isFutureDay ? '' : ' · ' + exercises.length + ' упр.');
+
+    if (plan.status === 'skipped') {
+      // Пропущенный день остаётся пустым: тоннажа нет, подходов нет (ядро уже
+      // фильтрует skipped наравне с assigned) — но передумать можно.
+      return h('div', { className: 'sb-plan-card is-skipped' },
+        h('b', null, label + ' пропущен'),
+        h('span', { className: 'sb-plan-meta' },
+          plan.skipReason ? 'Причина: ' + plan.skipReason : 'Без объяснения — и это нормально'),
+        h('button', {
+          type: 'button', className: 'sb-btn sb-plan-cta',
+          onClick: onResumeSkipped
+        }, 'Начать всё же')
+      );
+    }
 
     if (isFutureDay) {
       // Будущий день: только просмотр состава, старт недоступен раньше своей даты.
@@ -619,10 +678,20 @@
     return h('div', { className: 'sb-plan-card' },
       h('b', null, 'Сегодня по плану · ' + label),
       h('span', { className: 'sb-plan-meta' }, meta),
-      h('button', {
-        type: 'button', className: 'sb-btn is-accent sb-plan-cta',
-        onClick: onStart
-      }, 'Начать по плану')
+      h('div', { className: 'sb-plan-actions' },
+        h('button', {
+          type: 'button', className: 'sb-btn is-accent sb-plan-cta',
+          onClick: onStart
+        }, 'Начать по плану'),
+        h('button', {
+          type: 'button', className: 'sb-btn sb-plan-skip',
+          onClick: function () { setSkipOpen(true); }
+        }, 'Отпустить')
+      ),
+      skipOpen && h(SkipSheet, {
+        onCancel: function () { setSkipOpen(false); },
+        onConfirm: function (skipReason) { setSkipOpen(false); onSkip(skipReason); }
+      })
     );
   }
 

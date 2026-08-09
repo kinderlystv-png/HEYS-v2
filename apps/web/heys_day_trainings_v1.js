@@ -3299,7 +3299,10 @@
             // получает свою карточку вместо обычной сводки — экран 02/09
             // макета. rawT, не T: T пересобирается вручную для остальной
             // карточки и plan/planSnapshot туда не проброшены.
-            if (rawT.plan && rawT.plan.status === 'assigned' && Parts.PlanCard) {
+            // skipped тоже сюда: PlanCard сама решает, что показать — карточку
+            // «пропущен» с возможностью передумать. started/done уже обычная
+            // сессия, им место в SummaryCard ниже.
+            if (rawT.plan && (rawT.plan.status === 'assigned' || rawT.plan.status === 'skipped') && Parts.PlanCard) {
               const isFutureDay = String(dateKey) > todayDateKeyForPlan();
               return React.createElement(Parts.PlanCard, {
                 key: 'wb-plan-' + ti,
@@ -3318,7 +3321,28 @@
                 },
                 // «Посмотреть» до своей даты не переводит план в started: это
                 // просмотр состава, а не начало тренировки раньше срока.
-                onOpenReadonly: function (e) { if (e && e.stopPropagation) e.stopPropagation(); openBuilder(); }
+                onOpenReadonly: function (e) { if (e && e.stopPropagation) e.stopPropagation(); openBuilder(); },
+                // Пропуск — явное «не делал»: без него незакрытый план остаётся
+                // «assigned» и вечно просится начать. Перенос на другую дату не
+                // входит — открытый вопрос протокола, отдельная операция.
+                onSkip: function (skipReason) {
+                  patchTraining(ti, function (t0) {
+                    const patch = { ...t0.plan, status: 'skipped' };
+                    if (skipReason) patch.skipReason = skipReason;
+                    else delete patch.skipReason;
+                    patch.skippedAt = Date.now();
+                    return { ...t0, plan: patch };
+                  });
+                },
+                onResumeSkipped: function (e) {
+                  if (e && e.stopPropagation) e.stopPropagation();
+                  patchTraining(ti, function (t0) {
+                    const patch = { ...t0.plan, status: 'assigned' };
+                    delete patch.skipReason;
+                    delete patch.skippedAt;
+                    return { ...t0, plan: patch };
+                  });
+                }
               });
             }
             // Экран 01: сводка вместо конструктора — время, прогресс подходов и
