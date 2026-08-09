@@ -1959,7 +1959,7 @@
     const bonusKcal = Math.round(coef * weight * bonusKm);
 
     const sliderPercent = Math.min(100, Math.max(0, ((stepsGoal - sliderMin) / (sliderMax - sliderMin)) * 100));
-    const sliderColor = stepsGoal < 7000 ? '#eab308' : stepsGoal >= 10000 ? '#22c55e' : '#3b82f6';
+    const sliderColor = HEYS.scales.stepsGoal(stepsGoal).color;
 
     const stepsValues = useMemo(() => [5000, 6000, 7000, 8000, 9000, 10000, 12000, 15000, 20000, 30000], []);
 
@@ -2108,13 +2108,7 @@
     const deficitValues = useMemo(() => Array.from({ length: 41 }, (_, i) => i - 20), []);
 
     // Получаем цвет и описание в зависимости от значения
-    const getDeficitInfo = useCallback((val) => {
-      if (val < -10) return { color: '#ef4444', label: 'Агрессивный дефицит', emoji: '🔥🔥' };
-      if (val < 0) return { color: '#f97316', label: 'Умеренный дефицит', emoji: '🔥' };
-      if (val === 0) return { color: '#22c55e', label: 'Поддержание веса', emoji: '⚖️' };
-      if (val <= 10) return { color: '#3b82f6', label: 'Умеренный профицит', emoji: '💪' };
-      return { color: '#3b82f6', label: 'Агрессивный набор', emoji: '💪💪' };
-    }, []);
+    const getDeficitInfo = useCallback((val) => HEYS.scales.deficit(val), []);
 
     const info = getDeficitInfo(deficit);
 
@@ -3372,20 +3366,10 @@
   ];
 
   // Цвета для позитивных шкал
-  const getColdPositiveColor = (v) => {
-    if (v <= 3) return '#ef4444';
-    if (v <= 5) return '#3b82f6';
-    if (v <= 7) return '#22c55e';
-    return '#10b981';
-  };
+  const getColdPositiveColor = (v) => HEYS.scales.wellbeing(v).color;
 
   // Цвета для негативных шкал (stress)
-  const getColdNegativeColor = (v) => {
-    if (v <= 3) return '#10b981';
-    if (v <= 5) return '#3b82f6';
-    if (v <= 7) return '#eab308';
-    return '#ef4444';
-  };
+  const getColdNegativeColor = (v) => HEYS.scales.stress(v).color;
 
   // Текст для значений
   const getColdMoodText = (v) => v <= 2 ? 'Плохо' : v <= 4 ? 'Так себе' : v <= 6 ? 'Норм' : v <= 8 ? 'Хорошо' : 'Отлично';

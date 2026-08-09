@@ -57,20 +57,8 @@
 
         const stepsColorPercent = Math.min(100, (stepsValue / stepsGoal) * 100);
 
-        const getStepsColor = (pct) => {
-            if (pct < 30) {
-                const t = pct / 30;
-                const r = Math.round(239 - t * (239 - 234));
-                const g = Math.round(68 + t * (179 - 68));
-                const b = Math.round(68 - t * (68 - 8));
-                return `rgb(${r}, ${g}, ${b})`;
-            }
-            const t = (pct - 30) / 70;
-            const r = Math.round(234 - t * (234 - 34));
-            const g = Math.round(179 + t * (197 - 179));
-            const b = Math.round(8 + t * (94 - 8));
-            return `rgb(${r}, ${g}, ${b})`;
-        };
+        // Шкала живёт в heys_scales_v1.js — там же, где остальные.
+        const getStepsColor = (pct) => HEYS.scales.stepsProgress(pct).color;
 
         const stepsColor = getStepsColor(stepsColorPercent);
 

@@ -3215,12 +3215,9 @@
     const showPercentage = widget.settings?.showPercentage !== false;
     const showRemaining = widget.settings?.showRemaining !== false;
 
-    const getStepsColor = () => {
-      if (pct >= 100) return '#22c55e';
-      if (pct >= 70) return '#3b82f6';
-      if (pct >= 40) return '#eab308';
-      return '#ef4444';
-    };
+    // Виджет исторически красит шаги ступенями, а Актив — градиентом.
+    // Расхождение сохранено, обе шкалы описаны в heys_scales_v1.js.
+    const getStepsColor = () => HEYS.scales.stepsWidget(pct).color;
 
     // 1x1 Micro
     if (d.isMicro) {

@@ -59,6 +59,8 @@ export const LEGACY_BUNDLES = {
     ],
     'boot-calc': [
         'heys_ratio_zones_v1.js',
+        // Цветовые шкалы: делегирует в ratioZones, потому идёт следом.
+        'heys_scales_v1.js',
         'heys_tef_v1.js',
         'heys_tdee_v1.js',
         'heys_harm_v1.js',
