@@ -227,14 +227,19 @@ readiness-математику, валидатор-фреймворк, онбо�
   работающем frontend или локальном preview. Сразу доведи всю цепочку до
   фактической проверки в целевой среде; остановка допустима только при реальном
   внешнем блокере, который нельзя устранить в текущей сессии.
-- **Только по отдельной прямой команде:** staging под commit, `git commit`,
-  production build (`pnpm build`), standalone/full legacy build, `pnpm ship`,
-  `pnpm push:*`, integration/release artifacts, `git push`, PR и внешняя
-  публикация. Approval задачи ≠ approval commit/shipping/push. Разрешённый
-  commit включает обязательные hook side effects только для staged scope.
-- Commit-only выполняй через `pnpm ship "..." --no-push`; обычный `pnpm ship`
-  допустим только когда та же команда пользователя явно включает push. После
-  commit-only спроси «пушить?». HARD invariant — push виден другим клиентам.
+- **Commit — на усмотрение агента** (решение владельца 2026-08-09). Staging и
+  `git commit` не требуют отдельной команды: коммить по ходу работы, когда
+  логический блок готов и проверен. Переспрашивать «коммитить?» не нужно. Коммит
+  включает обязательные hook side effects для staged scope.
+- **Только по отдельной прямой команде:** `git push`, `pnpm push:*`, deploy, PR,
+  внешняя публикация, а также production build (`pnpm build`), standalone/full
+  legacy build и integration/release artifacts, когда они не являются неизбежным
+  hook side effect уже сделанного коммита. Approval задачи ≠ approval
+  push/deploy.
+- Коммит выполняй через `pnpm ship "..." --no-push`; обычный `pnpm ship` (с
+  push) допустим только когда пользователь явно попросил push. HARD invariant —
+  push виден другим клиентам и запускает deploy, коммит остаётся локальным и
+  обратим.
 - Перед первым в сессии разрешённым staging/commit/production build/integration/
   push/PR полностью прочитай общий обязательный runbook:
   [docs/operations/AGENT_SHIPPING_RUNBOOK.md](docs/operations/AGENT_SHIPPING_RUNBOOK.md).
@@ -456,15 +461,17 @@ each.
 
 ## Commit / shipping gate
 
-- Перед разрешённым commit/shipping полностью прочитай общий runbook, указанный
-  в `Execution autonomy`; длинная hook/worktree механика хранится только там.
+- Перед первым в сессии commit и перед любым shipping полностью прочитай общий
+  runbook, указанный в `Execution autonomy`; длинная hook/worktree механика
+  хранится только там.
 - До staging проверь branch, status, staged/unstaged diff и ownership. Stage'и
   только intended scope; `git add -A` допустим лишь при явном принятии всего
   dirty scope. Перед checkout/reset также проверь локальные unpushed commits.
 - Чужой или неясный WIP не stash/checkout/restore/reset/delete и не исправляй
   конфликт в нём. При пересечении остановись и сообщи scope/риск.
-- Commit-only всегда сохраняет `--no-push`; push требует отдельного или ранее
-  явно данного session-wide grant. Integration создаёт commits, но не push.
+- Commit всегда сохраняет `--no-push`; push требует отдельной прямой команды или
+  ранее явно данного session-wide grant. Integration создаёт commits, но не
+  push.
 - На `claude/*` worktree коммить source-only; generated/release artifacts
   принадлежат явно разрешённому collector flow. Read-only параллельный аудит не
   требует worktree; независимые write-capable задачи изолируй по runbook.

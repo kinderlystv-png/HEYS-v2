@@ -6,6 +6,8 @@ file completely and re-check the referenced scripts. This runbook describes
 mechanics; it never grants permission.
 
 <!-- POLICY {"id":"shipping-runbook-required","path":"docs/operations/AGENT_SHIPPING_RUNBOOK.md","before":["staging","commit","production-build","integration","push","pr"],"grantsPermission":false} -->
+<!-- POLICY {"id":"commit-is-agent-discretion","actions":["staging","commit"],"requiresDirectInstruction":false,"since":"2026-08-09"} -->
+<!-- POLICY {"id":"publication-requires-direct-instruction","actions":["push","deploy","pr","publication","production-build","integration"],"requiresDirectInstruction":true} -->
 <!-- POLICY {"id":"commit-only-no-push","command":"pnpm ship","requiredArgs":["--no-push"],"push":false} -->
 <!-- POLICY {"id":"push-requires-grant","taskApproval":false,"allowedGrants":["direct","session-wide-scoped"]} -->
 <!-- POLICY {"id":"hook-bypass-explicit-only","tokens":["--no-verify","HUSKY=0"],"requires":"explicit-exact-operation"} -->
@@ -15,10 +17,13 @@ mechanics; it never grants permission.
 
 ## 1. Permission gate
 
-- A normal task approval (`сделай`, `исправь`) allows source edits,
-  proportionate verification and the scoped local preview flow. It does not
-  allow staging for commit, commit, production/release build, integration, push,
-  PR or publication.
+- **Staging and commit are the agent's call** (owner decision, 2026-08-09). A
+  normal task approval (`сделай`, `исправь`) allows source edits, proportionate
+  verification, the scoped local preview flow **and committing finished,
+  verified blocks**. No separate command is needed; do not ask «коммитить?».
+- A normal task approval still does **not** allow push, deploy, PR, publication,
+  production/release build or integration — those need a separate direct
+  instruction unless they are an unavoidable hook side effect of a commit.
 - `commit` means commit-only. It does not include push. Use a non-pushing flow.
 - `commit and push`, `push`, `ship` or an equivalent direct instruction grants
   only the named publication action and intended scope.

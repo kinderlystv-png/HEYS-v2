@@ -83,13 +83,15 @@ Tone, implementation scope, shared workspace, verification budget, prompt rules
   invariants, copy/marketing guardrails, local-dev verify и hook discipline.
 - После изменения общих правил запусти `pnpm agents:policy:check`; проверка
   должна пройти до завершения задачи.
-- Различаться могут только agent-specific execution mechanics. Общий invariant:
-  commit/staging под commit/push/PR/publication выполняются только по отдельной
-  прямой команде пользователя. `CLAUDE.md` может описывать `pnpm ship` как
-  shipping-механику, но не как разрешение ship'ить без команды. Если в правилах
-  найден конфликт и оба policy-файла входят в текущий scope, сначала
-  синхронизируй общий safety-инвариант, затем оставь явное agent-specific
-  исключение. Иначе не расширяй задачу молча: зафиксируй конфликт пользователю.
+- Различаться могут только agent-specific execution mechanics. Общий invariant
+  (обновлён 2026-08-09 решением владельца): staging и commit — на усмотрение
+  агента, отдельной команды не требуют; **push, deploy, PR и любая внешняя
+  публикация — только по отдельной прямой команде пользователя**. `CLAUDE.md`
+  может описывать `pnpm ship` как shipping-механику, но не как разрешение
+  push'ить без команды. Если в правилах найден конфликт и оба policy-файла
+  входят в текущий scope, сначала синхронизируй общий safety-инвариант, затем
+  оставь явное agent-specific исключение. Иначе не расширяй задачу молча:
+  зафиксируй конфликт пользователю.
 
 ## RuStore mobile release — проверенный flow
 
