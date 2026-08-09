@@ -2469,6 +2469,17 @@
           // === MAIN CONTENT (отсортировано по приоритету) ===
           h('div', { className: 'insights-tab__content' },
 
+            // Каскад решений — точка дня по HEYS Score, без месячной кривой
+            // (та живёт в Отчётах). UI_V4_SPEC_2026-08-09.md, «Каскад как
+            // трендовая оценка (HEYS Score)».
+            HEYS.CascadeCard?.InsightsCascadeCard && h(HEYS.CascadeCard.InsightsCascadeCard, {
+              day: dayData,
+              dayTot,
+              normAbs,
+              prof: profile,
+              pIndex
+            }),
+
             // L0: Status 0-100 Card (dynamic priority)
             // R-INS audit P11: data-critical-index=0 (первый CRITICAL в layout)
             shouldShowSection(statusSectionPriority) && h('div', {

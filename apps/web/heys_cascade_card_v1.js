@@ -241,6 +241,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     GROWING: 0.70
   };
 
+  // v3.8.0: четыре группы разбора HEYS Score (UI_V4_SPEC_2026-08-09.md,
+  // «Вклады в разборе Score»). Вес и самочувствие сюда не входят — их в
+  // каскаде нет вообще.
+  const CRS_SCORE_GROUPS = [
+    { key: 'nutrition', label: 'Питание' },
+    { key: 'sleep', label: 'Сон' },
+    { key: 'activity', label: 'Активность' },
+    { key: 'tracking', label: 'Ведение' }
+  ];
+
   // ─────────────────────────────────────────────────────
   // УТИЛИТЫ
   // ─────────────────────────────────────────────────────
@@ -1507,13 +1517,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    *   Missing-sleep default +0.3, calibrated synergy bonuses.
    *   Uses same daily-score scale (0–10) normalized by MOMENTUM_TARGET.
    *
+   * v3.8.0: also accumulates estScore split into 4 groups for HEYS Score
+   * breakdown (UI_V4_SPEC_2026-08-09.md, «Вклады в разборе Score»):
+   *   nutrition — качество еды, штраф за перебор калорий, паттерн ЖКТ-пауз
+   *   sleep     — отбой и длительность сна
+   *   activity  — тренировки, шаги, бытовая активность
+   *   tracking  — чек-ин, замеры
+   * Cross-factor synergy bonus (11) не имеет своей группы — распределяется
+   * пропорционально позитивным вкладам остальных четырёх на этот день.
+   * Возвращает объект, не число — единственный вызывающий (backfill ниже)
+   * уже обновлён на `.dcs`.
+   *
    * @param {Object} day — day data object from localStorage (dayv2_*)
    * @param {Array}  prevDays — up to 14 preceding days (for chronotype baseline)
-   * @returns {number|null} — estimated DCS (−0.3 … 1.0), or null if no data
+   * @returns {{dcs: number, nutrition: number, sleep: number, activity: number, tracking: number}|null}
+   *   dcs — estimated DCS (−0.3 … 1.0); group fields — raw (unclamped) share
+   *   of estScore/MOMENTUM_TARGET, для пропорционального разбора. null если нет данных дня.
    */
   function getRetroactiveDcs(day, prevDays, prof) {
     if (!day) return null;
     var estScore = 0; // estimated daily score on 0–10+ scale
+    var bNutrition = 0, bSleep = 0, bActivity = 0, bTracking = 0; // v3.8.0: group breakdown
 
     // ── 0. Chronotype Baseline (for sleep and meals) ──
     var retroOnsetValues = [];
@@ -1574,6 +1598,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         retroMealCount++;
       }
       estScore += mealContrib;
+      bNutrition += mealContrib;
     }
 
     // ── 2. Training: load-aware scoring (approximate ШАГ 3) ──
@@ -1582,15 +1607,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (trains.length > 0) {
       var firstLoad = getTrainingLoad(trains[0]);
       // sqrt-curve like full algo: clamp(sqrt(load/30)*1.2, 0.3, 3.0)
-      estScore += clamp(Math.sqrt(Math.max(firstLoad, 30) / 30) * 1.2, 0.5, 2.5);
+      var trainContrib1 = clamp(Math.sqrt(Math.max(firstLoad, 30) / 30) * 1.2, 0.5, 2.5);
+      estScore += trainContrib1;
+      bActivity += trainContrib1;
       // Diminishing returns for additional sessions (v3.4.1: 3rd+ at ×0.25)
       if (trains.length > 1) {
         var secondLoad = getTrainingLoad(trains[1]);
-        estScore += clamp(Math.sqrt(Math.max(secondLoad, 20) / 30) * 0.6, 0.2, 1.0);
+        var trainContrib2 = clamp(Math.sqrt(Math.max(secondLoad, 20) / 30) * 0.6, 0.2, 1.0);
+        estScore += trainContrib2;
+        bActivity += trainContrib2;
       }
       for (var rti = 2; rti < trains.length; rti++) {
         var addLoad = getTrainingLoad(trains[rti]);
-        estScore += clamp(Math.sqrt(Math.max(addLoad, 20) / 30) * 0.3, 0.1, 0.5);
+        var trainContribN = clamp(Math.sqrt(Math.max(addLoad, 20) / 30) * 0.3, 0.1, 0.5);
+        estScore += trainContribN;
+        bActivity += trainContribN;
       }
     }
 
@@ -1610,11 +1641,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (slMins > 1680) retroOnsetWeight = -2.0;
 
         estScore += retroOnsetWeight;
+        bSleep += retroOnsetWeight;
       }
     } else {
       // v3.4.2: missing sleep data — user probably slept but data gap.
       // Give small neutral default instead of 0 (data gap ≠ bad behavior).
       estScore += 0.3;
+      bSleep += 0.3;
     }
 
     // ── 4. Sleep duration: bell-curve matching full ШАГ 5 ──
@@ -1650,6 +1683,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       else if (slH > 12.0) slWeight = -0.5;
 
       estScore += slWeight;
+      bSleep += slWeight;
     }
 
     // ── 5. Steps: tanh matching full ШАГ 6 ──
@@ -1669,6 +1703,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       var stRatio = retSteps / retStepsGoal;
       var stWeight = clamp(Math.tanh((stRatio - 0.6) * 2.5) * 1.0 + 0.15, -0.5, 1.3);
       estScore += stWeight;
+      bActivity += stWeight;
     }
 
     // ── 6. Checkin: streak-aware scoring (v3.4.1 — matches full ШАГ 7) ──
@@ -1680,13 +1715,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         else break;
       }
       var retroStreakBonus = Math.min(0.5, retroCheckinStreak * 0.05);
-      estScore += Math.min(0.8, 0.3 + retroStreakBonus);
+      var checkinContrib = Math.min(0.8, 0.3 + retroStreakBonus);
+      estScore += checkinContrib;
+      bTracking += checkinContrib;
     }
 
     // ── 7. Household: log2-relative with adaptive baseline (v3.4.1) ──
     var retHM = day.householdMin || 0;
     if (retHM > 0) {
-      estScore += calculateHouseholdScore(retHM);
+      var householdContrib = calculateHouseholdScore(retHM);
+      estScore += householdContrib;
+      bActivity += householdContrib;
     }
 
     // ── 8. Supplements ──
@@ -1710,6 +1749,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // Good gaps (≥ 150 min) → small bonus, poor gaps → small penalty
         var gapWeight = clamp((avgGap - 120) / 180 * 0.5, -0.3, 0.5);
         estScore += gapWeight;
+        bNutrition += gapWeight; // паттерн пауз между приёмами — часть «Питания»
       }
     }
 
@@ -1718,13 +1758,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var retMeasKeys = retMeas ? Object.keys(retMeas).filter(function (k) { return retMeas[k] > 0; }) : [];
     if (retMeasKeys.length > 0) {
       var retMeasCompleteness = retMeasKeys.length / 4; // 4 measurements: waist, hips, thigh, biceps
-      estScore += clamp(0.5 + retMeasCompleteness * 0.7, 0, 1.2);
+      var measContrib = clamp(0.5 + retMeasCompleteness * 0.7, 0, 1.2);
+      estScore += measContrib;
+      bTracking += measContrib;
     }
 
     // ── 10.5. Calorie overshoot: align retro days with live cascade calorie penalties ──
     var retroCaloriePenalty = getHistoricalCaloriePenalty(day, prof);
     if (retroCaloriePenalty) {
       estScore += retroCaloriePenalty.weight;
+      bNutrition += retroCaloriePenalty.weight;
       console.info('[HEYS.cascade] 🔥 Retro calorie penalty applied:', {
         date: day.date || null,
         kind: retroCaloriePenalty.kind,
@@ -1752,12 +1795,35 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     else if (retroPositiveFactors >= 4) retroSynergyBonus = 0.45;
     else if (retroPositiveFactors >= 3) retroSynergyBonus = 0.25;
     estScore += retroSynergyBonus;
+    // v3.8.0: synergy — сквозной бонус, своей группы нет. Раздаём пропорционально
+    // позитивным вкладам остальных четырёх, чтобы группы в сумме давали estScore.
+    if (retroSynergyBonus !== 0) {
+      var bPos = [Math.max(0, bNutrition), Math.max(0, bSleep), Math.max(0, bActivity), Math.max(0, bTracking)];
+      var bPosSum = bPos[0] + bPos[1] + bPos[2] + bPos[3];
+      if (bPosSum > 0) {
+        bNutrition += retroSynergyBonus * bPos[0] / bPosSum;
+        bSleep += retroSynergyBonus * bPos[1] / bPosSum;
+        bActivity += retroSynergyBonus * bPos[2] / bPosSum;
+        bTracking += retroSynergyBonus * bPos[3] / bPosSum;
+      } else {
+        bNutrition += retroSynergyBonus / 4;
+        bSleep += retroSynergyBonus / 4;
+        bActivity += retroSynergyBonus / 4;
+        bTracking += retroSynergyBonus / 4;
+      }
+    }
 
     // Normalize: estScore / MOMENTUM_TARGET → DCS
     // v3.4.2: calibrated meal weights + synergies, retro can reach 9–10+ for excellent days
     var retroDcs = clamp(estScore / MOMENTUM_TARGET, CRS_DCS_CLAMP_NEG, 1.0);
 
-    return retroDcs;
+    return {
+      dcs: retroDcs,
+      nutrition: bNutrition / MOMENTUM_TARGET,
+      sleep: bSleep / MOMENTUM_TARGET,
+      activity: bActivity / MOMENTUM_TARGET,
+      tracking: bTracking / MOMENTUM_TARGET
+    };
   }
 
   /**
@@ -2111,6 +2177,126 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       state: state.key,
       stateLabel: state.label,
       distanceToNext: state.distanceToNext
+    };
+  }
+
+  /**
+   * v3.8.0: разложение current (HEYS Score, сырой CRS) на четыре группы
+   * факторов для разбора по тапу (UI_V4_SPEC_2026-08-09.md, «Вклады в
+   * разборе Score»): Питание, Сон, Активность, Ведение. Вес и самочувствие
+   * не входят — их в каскаде нет.
+   *
+   * Второго расчёта не заводит: переиспользует ту же формулу
+   * getRetroactiveDcs (теперь возвращает разбивку по группам) и те же веса
+   * EMA, что computeCascadeRate — по дням истории CRS_WINDOW-1..1.
+   * Сегодняшний todayBoost отдельно не декомпозируется (эффект ≤10% и
+   * решается той же пропорцией, что и остальные 29 дней) — вместо этого
+   * относительные доли групп применяются к уже готовому current, включая
+   * буст и обрезку потолком.
+   *
+   * Жёсткое требование контракта: строки должны давать ровно current. Доли
+   * считаются как current × (вес группы / сумма весов всех групп) —
+   * гарантирует точную сумму по построению, а не приближённо; остаток
+   * округления (после toFixed) довносится в группу с наибольшим по модулю
+   * вкладом. Если по дням окна не набралось данных для декомпозиции (нет
+   * day-объектов или сигнал около нуля), четыре доли равны current/4 —
+   * честный fallback, а не выдуманная точность.
+   *
+   * @param {string} [clientId]
+   * @param {Object} [opts] — те же поля, что у getCrsRawTrend (dcsHistory,
+   *   prevDays, todayDate), плюс:
+   * @param {Object} [opts.trend] — готовый результат getCrsRawTrend (чтобы не
+   *   считать серию повторно), иначе считается сам.
+   * @param {Object} [opts.prof] — профиль клиента, для штрафа за перебор
+   *   калорий внутри getRetroactiveDcs (опционально, штраф просто не
+   *   учтётся без него).
+   * @returns {{
+   *   current: number,
+   *   groups: Array<{key: string, label: string, value: number}>,
+   *   decomposedDays: number,
+   *   usedFallback: boolean
+   * }}
+   */
+  function getCrsRawTrendBreakdown(clientId, opts) {
+    var options = opts || {};
+    var resolvedClientId = typeof clientId === 'string'
+      ? clientId
+      : ((HEYS.utils && HEYS.utils.getCurrentClientId && HEYS.utils.getCurrentClientId()) || HEYS.currentClientId || '');
+
+    var trend = options.trend || getCrsRawTrend(resolvedClientId, options);
+    var dcsHistory = options.dcsHistory || loadDcsHistory(resolvedClientId);
+    var prevDays30 = options.prevDays || getPreviousDays(CRS_WINDOW);
+    var prof = options.prof || null;
+    var today = options.todayDate ? new Date(options.todayDate + 'T12:00:00') : new Date();
+
+    var sums = { nutrition: 0, sleep: 0, activity: 0, tracking: 0 };
+    var decomposedDays = 0;
+
+    for (var i = 1; i < CRS_WINDOW; i++) {
+      var d = new Date(today);
+      d.setDate(d.getDate() - i);
+      var dateKey = d.toISOString().slice(0, 10);
+      var dcsVal = dcsHistory[dateKey];
+      if (dcsVal === undefined || dcsVal === null) continue;
+
+      var dayIdx = i - 1; // prevDays30[0] = вчера = offset 1, см. getPreviousDays
+      var dayObj = prevDays30[dayIdx];
+      if (!dayObj) continue;
+
+      var weight = Math.pow(CRS_DECAY, i - 1);
+      if (dcsVal < -0.1) weight *= CRS_NEGATIVE_GRAVITY;
+
+      // Окно для хронотип-baseline — как в backfill computeCascadeState.
+      var retroWindow = [];
+      for (var bwi = Math.max(0, dayIdx - 7); bwi < Math.min(prevDays30.length, dayIdx + 8); bwi++) {
+        if (bwi !== dayIdx && prevDays30[bwi]) retroWindow.push(prevDays30[bwi]);
+      }
+
+      var breakdown = getRetroactiveDcs(dayObj, retroWindow, prof);
+      if (!breakdown) continue;
+
+      sums.nutrition += breakdown.nutrition * weight;
+      sums.sleep += breakdown.sleep * weight;
+      sums.activity += breakdown.activity * weight;
+      sums.tracking += breakdown.tracking * weight;
+      decomposedDays++;
+    }
+
+    var current = trend.current;
+    var totalRaw = sums.nutrition + sums.sleep + sums.activity + sums.tracking;
+    var usedFallback = decomposedDays === 0 || Math.abs(totalRaw) < 0.01;
+
+    var shares = usedFallback
+      ? { nutrition: 0.25, sleep: 0.25, activity: 0.25, tracking: 0.25 }
+      : {
+        nutrition: sums.nutrition / totalRaw,
+        sleep: sums.sleep / totalRaw,
+        activity: sums.activity / totalRaw,
+        tracking: sums.tracking / totalRaw
+      };
+
+    var groups = CRS_SCORE_GROUPS.map(function (g) {
+      return { key: g.key, label: g.label, value: +(current * shares[g.key]).toFixed(3) };
+    });
+
+    // Остаток округления — в группу с наибольшим по модулю вкладом, чтобы
+    // сумма строк была ровно current (жёсткое требование контракта).
+    var roundedSum = 0;
+    for (var si = 0; si < groups.length; si++) roundedSum += groups[si].value;
+    var diff = +(current - roundedSum).toFixed(3);
+    if (diff !== 0) {
+      var biggestIdx = 0;
+      for (var gj = 1; gj < groups.length; gj++) {
+        if (Math.abs(groups[gj].value) > Math.abs(groups[biggestIdx].value)) biggestIdx = gj;
+      }
+      groups[biggestIdx].value = +(groups[biggestIdx].value + diff).toFixed(3);
+    }
+
+    return {
+      current: current,
+      groups: groups,
+      decomposedDays: decomposedDays,
+      usedFallback: usedFallback
     };
   }
 
@@ -3274,9 +3460,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         for (var bwi = Math.max(0, bi - 7); bwi < Math.min(prevDays30.length, bi + 8); bwi++) {
           if (bwi !== bi && prevDays30[bwi]) retroWindow.push(prevDays30[bwi]);
         }
-        var retroDcs = getRetroactiveDcs(prevDays30[bi], retroWindow, prof);
-        if (retroDcs !== null) {
-          dcsHistory[bDateKey] = +retroDcs.toFixed(3);
+        var retroDcsResult = getRetroactiveDcs(prevDays30[bi], retroWindow, prof);
+        if (retroDcsResult !== null) {
+          dcsHistory[bDateKey] = +retroDcsResult.dcs.toFixed(3);
           backfillCount++;
         }
       }
@@ -3888,6 +4074,297 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     return React.createElement('div', { className: 'cascade-timeline-scroll' },
       React.createElement('div', { className: 'cascade-timeline' }, children)
+    );
+  }
+
+  // ─────────────────────────────────────────────────────
+  // v3.8.0: HEYS SCORE UI — плитка в Отчётах + карточка в Инсайтах
+  // UI_V4_SPEC_2026-08-09.md, «Каскад как трендовая оценка (HEYS Score)».
+  // Оба компонента читают уже готовые getCrsRawTrend/getCrsRawTrendBreakdown/
+  // computeCascadeState — второго расчёта не заводят.
+  // ─────────────────────────────────────────────────────
+
+  // Состояния тренда переиспользуют существующую семантику STATE_CONFIG
+  // (те же роли: нейтральный/разгон/рост/пик), а не заводят новую палитру.
+  var HEYS_SCORE_STATE_COLORS = {
+    BASE: STATE_CONFIG.EMPTY.color,
+    ACCELERATING: STATE_CONFIG.BUILDING.color,
+    GROWING: STATE_CONFIG.GROWING.color,
+    PEAK: STATE_CONFIG.STRONG.color
+  };
+
+  var HEYS_SCORE_STATE_PHRASES = {
+    BASE: 'Каскад набирает базу',
+    ACCELERATING: 'Ритм разгоняется',
+    GROWING: 'Ритм устойчивый',
+    PEAK: 'Держите набранный темп'
+  };
+
+  function formatHeysScoreNumber(raw) {
+    return Math.round((raw || 0) * 100);
+  }
+
+  // «+40 за 2 недели» — только арифметика по факту (delta14), никогда
+  // фиксированный текст-прогноз (UI_V4_SPEC_2026-08-09.md, «Фразы-прогнозы
+  // считаются из темпа или не показываются»).
+  function formatHeysScoreDelta14(delta14) {
+    if (typeof delta14 !== 'number' || !isFinite(delta14)) return null;
+    var pts = Math.round(delta14 * 100);
+    if (pts === 0) return 'Без изменений за 2 недели';
+    return (pts > 0 ? '+' : '') + pts + ' за 2 недели';
+  }
+
+  // Largest-remainder rounding: 4 группы должны в сумме давать ровно
+  // отображаемое целое число на плитке — иначе округление каждой доли по
+  // отдельности разъедет видимую сумму на глазах у пользователя, даже если
+  // точные (нецелые) доли уже равны current по построению.
+  function roundHeysScoreGroupsForDisplay(groups, totalDisplay) {
+    var scaled = groups.map(function (g) { return g.value * 100; });
+    var floors = scaled.map(Math.floor);
+    var used = floors.reduce(function (a, b) { return a + b; }, 0);
+    var remainder = totalDisplay - used;
+    var order = scaled
+      .map(function (v, idx) { return { idx: idx, frac: v - Math.floor(v) }; })
+      .sort(function (a, b) { return b.frac - a.frac; });
+    var result = floors.slice();
+    for (var k = 0; k < remainder && k < order.length; k++) {
+      result[order[k].idx] += 1;
+    }
+    return groups.map(function (g, idx) {
+      return { key: g.key, label: g.label, displayValue: result[idx] };
+    });
+  }
+
+  /**
+   * Полоса с зонами (База/Разгон/Рост/Пик) — используется и на плитке
+   * Отчётов, и в карточке Инсайтов. «Максимум» на полосе — это персональный
+   * потолок (ceiling) минус ~10%, а не сам потолок и не 100 из 100:
+   * засечка ровно на потолке была бы недостижима (можно только коснуться,
+   * не войти в зону) — см. UI_V4_SPEC_2026-08-09.md.
+   */
+  function HeysScoreZoneBar(props) {
+    var current = props.current || 0;
+    var ceiling = props.ceiling > 0 ? props.ceiling : 0.01;
+    var color = props.color || HEYS_SCORE_STATE_COLORS.BASE;
+    var t = CRS_RAW_TREND_THRESHOLDS;
+
+    var pct = function (v) { return clamp(v, 0, ceiling) / ceiling * 100; };
+    var maxMarkPct = pct(ceiling * 0.9);
+
+    var zoneBounds = [0, Math.min(t.BASE, ceiling), Math.min(t.ACCELERATING, ceiling), Math.min(t.GROWING, ceiling), ceiling];
+    var zoneClasses = ['base', 'accelerating', 'growing', 'peak'];
+    var zones = [];
+    for (var zi = 0; zi < zoneClasses.length; zi++) {
+      var from = zoneBounds[zi];
+      var to = zoneBounds[zi + 1];
+      if (to <= from) continue;
+      zones.push(React.createElement('span', {
+        key: 'zone-' + zoneClasses[zi],
+        className: 'heys-score-zonebar__zone heys-score-zonebar__zone--' + zoneClasses[zi],
+        style: { left: pct(from) + '%', width: (pct(to) - pct(from)) + '%' }
+      }));
+    }
+
+    return React.createElement('div', { className: 'heys-score-zonebar' },
+      React.createElement('div', { className: 'heys-score-zonebar__track' },
+        zones,
+        React.createElement('span', {
+          className: 'heys-score-zonebar__fill',
+          style: { width: pct(current) + '%', background: color }
+        }),
+        React.createElement('span', {
+          className: 'heys-score-zonebar__ceiling-mark',
+          style: { left: maxMarkPct + '%' },
+          title: 'Ваш нынешний потолок роста'
+        })
+      ),
+      React.createElement('div', { className: 'heys-score-zonebar__legend' },
+        React.createElement('span', null, 'База'),
+        React.createElement('span', null, 'Разгон'),
+        React.createElement('span', null, 'Рост'),
+        React.createElement('span', { className: 'heys-score-zonebar__legend-max' }, 'Максимум')
+      )
+    );
+  }
+
+  /**
+   * Плитка HEYS Score в ярусе итогов периода на Отчётах. Тап разворачивает
+   * разбор на четыре группы (getCrsRawTrendBreakdown) — первая строка
+   * называется «Каскад решений», чтобы читалась как то же самое, что
+   * показывает карточка в Инсайтах, просто за другой горизонт.
+   */
+  function HeysScoreTile(props) {
+    var clientId = props.clientId;
+    var expandedState = React.useState(false);
+    var expanded = expandedState[0];
+    var setExpanded = expandedState[1];
+
+    var trend = React.useMemo(function () {
+      try { return getCrsRawTrend(clientId); } catch (e) { return null; }
+    }, [clientId]);
+
+    var breakdown = React.useMemo(function () {
+      if (!expanded || !trend) return null;
+      try { return getCrsRawTrendBreakdown(clientId, { trend: trend }); } catch (e) { return null; }
+    }, [expanded, clientId, trend]);
+
+    if (!trend) return null;
+
+    var color = HEYS_SCORE_STATE_COLORS[trend.state] || HEYS_SCORE_STATE_COLORS.BASE;
+    var phrase = HEYS_SCORE_STATE_PHRASES[trend.state] || HEYS_SCORE_STATE_PHRASES.BASE;
+    var displayNumber = formatHeysScoreNumber(trend.current);
+    var deltaText = formatHeysScoreDelta14(trend.delta14);
+
+    var curvePoints = null;
+    if (trend.series && trend.series.length > 1) {
+      var w = 100, h = 28;
+      var maxV = Math.max(trend.ceiling || 0.01, 0.01);
+      var stepX = w / (trend.series.length - 1);
+      curvePoints = trend.series.map(function (pt, i) {
+        var x = +(i * stepX).toFixed(2);
+        var y = +(h - (clamp(pt.raw, 0, maxV) / maxV) * h).toFixed(2);
+        return x + ',' + y;
+      }).join(' ');
+    }
+
+    var rows = breakdown
+      ? roundHeysScoreGroupsForDisplay(breakdown.groups, displayNumber)
+      : null;
+
+    return React.createElement('div', {
+      className: 'heys-score-tile' + (expanded ? ' heys-score-tile--expanded' : ''),
+      role: 'button',
+      tabIndex: 0,
+      'aria-expanded': expanded,
+      onClick: function () { setExpanded(!expanded); },
+      onKeyDown: function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded); }
+      }
+    },
+      React.createElement('div', { className: 'heys-score-tile__head' },
+        React.createElement('span', { className: 'heys-score-tile__number', style: { color: color } }, displayNumber),
+        React.createElement('span', { className: 'heys-score-tile__label' }, 'HEYS Score')
+      ),
+      React.createElement('div', { className: 'heys-score-tile__state' }, phrase),
+      curvePoints && React.createElement('svg', {
+        className: 'heys-score-tile__curve',
+        viewBox: '0 0 100 28',
+        preserveAspectRatio: 'none'
+      },
+        React.createElement('polyline', {
+          points: curvePoints,
+          fill: 'none',
+          stroke: color,
+          strokeWidth: 2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          vectorEffect: 'non-scaling-stroke'
+        })
+      ),
+      deltaText && React.createElement('div', { className: 'heys-score-tile__delta' }, deltaText),
+      expanded && React.createElement('div', { className: 'heys-score-tile__detail' },
+        React.createElement('div', { className: 'heys-score-tile__detail-intro' }, 'Каскад решений'),
+        rows
+          ? rows.map(function (row) {
+            return React.createElement('div', { key: row.key, className: 'heys-score-tile__detail-row' },
+              React.createElement('span', { className: 'heys-score-tile__detail-label' }, row.label),
+              React.createElement('span', { className: 'heys-score-tile__detail-value' },
+                (row.displayValue >= 0 ? '+' : '') + row.displayValue
+              )
+            );
+          })
+          : React.createElement('div', { className: 'heys-score-tile__detail-loading' }, 'Считаем…')
+      )
+    );
+  }
+
+  // Сегодняшний computeCascadeState уже считает и кэширует Day tab при
+  // каждом визите (window.HEYS._lastCrs, см. computeCascadeState выше) — тот
+  // же паттерн уже читает CrsProgressBar. Инсайты по факту монтируются без
+  // day/dayTot/normAbs/pIndex (heys_app_shell_v1.js передаёт profile:null,
+  // pIndex:null, dayData вообще не передан), поэтому по умолчанию читаем этот
+  // кэш вместо второго вызова computeCascadeState вслепую на пустых данных.
+  function getTodayHeysScoreSnapshot() {
+    try {
+      var cached = window.HEYS && window.HEYS._lastCrs;
+      if (!cached) return null;
+      var todayStr = new Date().toISOString().slice(0, 10);
+      return cached.dayDate === todayStr ? cached : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * Карточка каскада в Инсайтах — точка дня, не месячная кривая. Состояние
+   * и потолок берутся из getCrsRawTrend (та же шкала, что на плитке
+   * Отчётов); точки решений и вклад дня — из computeCascadeState({silent:
+   * true}) когда явно передан day, иначе из уже посчитанного сегодняшнего
+   * window.HEYS._lastCrs (второго расчёта на пустых пропсах не заводим).
+   */
+  function InsightsCascadeCard(props) {
+    var day = props.day;
+    var dayTot = props.dayTot;
+    var normAbs = props.normAbs;
+    var prof = props.prof;
+    var pIndex = props.pIndex;
+
+    var liveState = React.useState(function () { return getTodayHeysScoreSnapshot(); });
+    var liveCascade = liveState[0];
+    var setLiveCascade = liveState[1];
+
+    React.useEffect(function () {
+      function handleUpdate() { setLiveCascade(getTodayHeysScoreSnapshot()); }
+      window.addEventListener('heys:crs-updated', handleUpdate);
+      return function () { window.removeEventListener('heys:crs-updated', handleUpdate); };
+    }, []);
+
+    var cascadeState = React.useMemo(function () {
+      if (day) {
+        try { return computeCascadeState(day, dayTot, normAbs, prof, pIndex, { silent: true }); }
+        catch (e) { return null; }
+      }
+      return liveCascade;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [day, dayTot, normAbs, prof, pIndex, liveCascade]);
+
+    var trend = React.useMemo(function () {
+      try { return getCrsRawTrend(); } catch (e) { return null; }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [cascadeState && cascadeState.dailyContribution]);
+
+    if (!cascadeState || !trend) return null;
+
+    var color = HEYS_SCORE_STATE_COLORS[trend.state] || HEYS_SCORE_STATE_COLORS.BASE;
+    var phrase = HEYS_SCORE_STATE_PHRASES[trend.state] || HEYS_SCORE_STATE_PHRASES.BASE;
+    var contribution = cascadeState.dailyContribution || 0;
+    var contribLabel = 'Решения сегодня ' + (contribution >= 0 ? '+' : '') + contribution.toFixed(1).replace('.', ',');
+    var deltaText = formatHeysScoreDelta14(trend.delta14);
+
+    var goToReports = function () {
+      var setTab = (HEYS.App && HEYS.App.setTab) || (HEYS.ui && HEYS.ui.switchTab);
+      if (typeof setTab === 'function') setTab('stats');
+    };
+
+    return React.createElement('div', { className: 'heys-score-insights-card' },
+      React.createElement('div', { className: 'heys-score-insights-card__header' },
+        React.createElement('span', { className: 'heys-score-insights-card__title' }, '📈 Каскад решений'),
+        React.createElement('span', { className: 'heys-score-insights-card__state', style: { color: color } }, phrase)
+      ),
+      React.createElement(HeysScoreZoneBar, { current: trend.current, ceiling: trend.ceiling, color: color }),
+      cascadeState.events && cascadeState.events.length > 0 && React.createElement(ChainDots, {
+        events: cascadeState.events,
+        dayDate: cascadeState.dayDate,
+        eventsSignature: cascadeState.eventsSignature
+      }),
+      React.createElement('div', { className: 'heys-score-insights-card__footer' },
+        React.createElement('span', { className: 'heys-score-insights-card__contribution' }, contribLabel),
+        deltaText && React.createElement('button', {
+          type: 'button',
+          className: 'heys-score-insights-card__transition',
+          onClick: goToReports
+        }, deltaText + ' · смотреть в Отчётах')
+      )
     );
   }
 
@@ -5588,7 +6065,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     CRS_THRESHOLDS: CRS_THRESHOLDS,
     getCrsRawTrend: getCrsRawTrend,
     CRS_RAW_TREND_THRESHOLDS: CRS_RAW_TREND_THRESHOLDS,
-    VERSION: '3.7.1'
+    getCrsRawTrendBreakdown: getCrsRawTrendBreakdown,
+    CRS_SCORE_GROUPS: CRS_SCORE_GROUPS,
+    HeysScoreTile: HeysScoreTile,
+    InsightsCascadeCard: InsightsCascadeCard,
+    HeysScoreZoneBar: HeysScoreZoneBar,
+    formatHeysScoreDelta14: formatHeysScoreDelta14,
+    VERSION: '3.8.0'
   };
 
   try {
@@ -5597,6 +6080,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }));
   } catch (_) { }
 
-  console.info('[HEYS.cascade] ✅ Module loaded v3.7.1 | CRS = raw EMA + todayBoost, then display curve (start 50%, fast to 80%, harder after) | EMA α=0.95, 30-day window, individual ceiling | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Goal-aware calorie penalty (deficit/bulk) | resolveCEBForDate + computeHistoricalCEB: shared CEB pipeline for diary/widgets/leaderboard | Filter: [HEYS.cascade] | Sub-filter: [HEYS.cascade.crs] [HEYS.cascade.deficit]');
+  console.info('[HEYS.cascade] ✅ Module loaded v3.8.0 | CRS = raw EMA + todayBoost, then display curve (start 50%, fast to 80%, harder after) | HEYS Score: raw-trend series + 4-group breakdown (getCrsRawTrend/getCrsRawTrendBreakdown), Reports tile + Insights card | EMA α=0.95, 30-day window, individual ceiling | Scientific scoring: continuous functions, personal baselines, cross-factor synergies | Goal-aware calorie penalty (deficit/bulk) | resolveCEBForDate + computeHistoricalCEB: shared CEB pipeline for diary/widgets/leaderboard | Filter: [HEYS.cascade] | Sub-filter: [HEYS.cascade.crs] [HEYS.cascade.deficit]');
 
 })(typeof window !== 'undefined' ? window : global);

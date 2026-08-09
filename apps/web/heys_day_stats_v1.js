@@ -2847,6 +2847,10 @@
           })()
         );
       })(),
+      // HEYS Score — плитка итога периода (сырой тренд каскада), рядом с
+      // «в норме» выше. UI_V4_SPEC_2026-08-09.md, «Каскад как трендовая
+      // оценка (HEYS Score)»; разбор на 4 группы — по тапу на плитке.
+      HEYS.CascadeCard?.HeysScoreTile && React.createElement(HEYS.CascadeCard.HeysScoreTile, {}),
       // Спарклайн веса — показываем если есть хотя бы 1 точка (вес из профиля)
       weightSparklineData.length >= 1 && React.createElement('div', {
         className: 'weight-sparkline-container' +

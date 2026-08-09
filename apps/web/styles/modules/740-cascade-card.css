@@ -1238,3 +1238,225 @@
 [data-theme="dark"] .cascade-crs-history__bar-track {
   background: rgba(255, 255, 255, 0.1);
 }
+
+/* ─────────────────────────────────────────────────────
+   HEYS SCORE — плитка в Отчётах + карточка в Инсайтах
+   UI_V4_SPEC_2026-08-09.md, «Каскад как трендовая оценка (HEYS Score)».
+   Цвет состояния (число/заливка/точка) приходит inline из JS
+   (HEYS_SCORE_STATE_COLORS — переиспользует существующие STATE_CONFIG),
+   здесь только нейтральная геометрия на существующих токенах.
+───────────────────────────────────────────────────── */
+
+.heys-score-tile {
+  grid-column: 1 / -1;
+  cursor: pointer;
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--heys-diary-outline-border-light, rgba(226, 232, 240, 0.9));
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-top: 4px;
+  box-shadow: 0 12px 24px -22px rgba(15, 23, 42, 0.35);
+}
+
+.heys-score-tile__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.heys-score-tile__number {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.heys-score-tile__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+}
+
+.heys-score-tile__state {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  margin-top: 2px;
+}
+
+.heys-score-tile__curve {
+  display: block;
+  width: 100%;
+  height: 28px;
+  margin-top: 8px;
+}
+
+.heys-score-tile__delta {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text, #1e293b);
+  margin-top: 4px;
+}
+
+.heys-score-tile__detail {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--heys-diary-outline-border-light, rgba(226, 232, 240, 0.9));
+}
+
+.heys-score-tile__detail-intro {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary, #64748b);
+  margin-bottom: 6px;
+}
+
+.heys-score-tile__detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 3px 0;
+  color: var(--text, #1e293b);
+}
+
+.heys-score-tile__detail-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.heys-score-tile__detail-loading {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+}
+
+[data-theme="dark"] .heys-score-tile {
+  background: var(--card-bg, rgba(15, 23, 42, 0.72));
+  border-color: rgba(71, 85, 105, 0.58);
+}
+
+[data-theme="dark"] .heys-score-tile__delta,
+[data-theme="dark"] .heys-score-tile__detail-row {
+  color: var(--text, #f1f5f9);
+}
+
+/* Полоса с зонами — общая для плитки Отчётов и карточки Инсайтов */
+.heys-score-zonebar {
+  margin-top: 8px;
+}
+
+.heys-score-zonebar__track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--heys-diary-outline-border-light, rgba(226, 232, 240, 0.9));
+  overflow: hidden;
+}
+
+.heys-score-zonebar__zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.heys-score-zonebar__zone--base { background: rgba(148, 163, 184, 0.28); }
+.heys-score-zonebar__zone--accelerating { background: rgba(59, 130, 246, 0.16); }
+.heys-score-zonebar__zone--growing { background: rgba(34, 197, 94, 0.16); }
+.heys-score-zonebar__zone--peak { background: rgba(234, 179, 8, 0.18); }
+
+.heys-score-zonebar__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.heys-score-zonebar__ceiling-mark {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--text-secondary, #64748b);
+  opacity: 0.6;
+}
+
+.heys-score-zonebar__legend {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-secondary, #94a3b8);
+  margin-top: 4px;
+}
+
+.heys-score-zonebar__legend-max {
+  margin-left: auto;
+}
+
+/* Карточка каскада в Инсайтах — точка дня, без месячной кривой */
+.heys-score-insights-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--heys-diary-outline-border-light, rgba(226, 232, 240, 0.9));
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: var(--heys-diary-stack-gap, 12px);
+}
+
+.heys-score-insights-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.heys-score-insights-card__title {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text, #1e293b);
+}
+
+.heys-score-insights-card__state {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.heys-score-insights-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.heys-score-insights-card__contribution {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.heys-score-insights-card__transition {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-blue-600, #2563eb);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .heys-score-insights-card__transition:hover {
+    text-decoration: underline;
+  }
+}
+
+[data-theme="dark"] .heys-score-insights-card {
+  background: var(--card-bg, rgba(15, 23, 42, 0.72));
+  border-color: rgba(71, 85, 105, 0.58);
+}
+
+[data-theme="dark"] .heys-score-insights-card__title,
+[data-theme="dark"] .heys-score-insights-card__number {
+  color: var(--text, #f1f5f9);
+}
