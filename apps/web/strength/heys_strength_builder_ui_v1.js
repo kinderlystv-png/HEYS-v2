@@ -281,6 +281,13 @@
         onBack: function () { setView('list'); }
       });
     }
+    if (view === 'order' && CatUI.OrderScreen) {
+      return h(CatUI.OrderScreen, {
+        exercises: exercises,
+        onApply: function (next) { patchExercises(next); setView('list'); },
+        onCancel: function () { setView('list'); }
+      });
+    }
     if (view === 'superset' && CatUI.SupersetScreen) {
       return h(CatUI.SupersetScreen, {
         exercises: exercises,

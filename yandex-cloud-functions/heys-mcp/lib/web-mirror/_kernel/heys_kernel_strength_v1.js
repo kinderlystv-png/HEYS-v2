@@ -613,6 +613,51 @@
     return list;
   }
 
+  /**
+   * Список в терминах блоков: одиночное упражнение или связка целиком. В режиме
+   * порядка человек двигает именно блоки — связку разорвать перестановкой
+   * нельзя, для этого есть «Разъединить».
+   */
+  function orderBlocks(exercises) {
+    const list = Array.isArray(exercises) ? exercises : [];
+    const out = [];
+    const seen = {};
+    for (let i = 0; i < list.length; i++) {
+      const g = exerciseGroupId(list[i]);
+      if (!g) {
+        out.push({ groupId: 0, indexes: [i] });
+        continue;
+      }
+      if (seen[g]) {
+        // Участник уже учтён своим блоком; несмежный хвост держим при блоке,
+        // чтобы перестановка не растащила связку ещё сильнее.
+        const block = out[seen[g] - 1];
+        if (block) block.indexes.push(i);
+        continue;
+      }
+      out.push({ groupId: g, indexes: [i] });
+      seen[g] = out.length;
+    }
+    return out;
+  }
+
+  /** Переставить блок на шаг вверх (-1) или вниз (+1). */
+  function moveBlock(exercises, blockIndex, direction) {
+    const list = Array.isArray(exercises) ? exercises.slice() : [];
+    const blocks = orderBlocks(list);
+    const from = +blockIndex;
+    const to = from + (direction < 0 ? -1 : 1);
+    if (from < 0 || from >= blocks.length || to < 0 || to >= blocks.length) return list;
+    const order = blocks.slice();
+    const moved = order.splice(from, 1)[0];
+    order.splice(to, 0, moved);
+    const out = [];
+    order.forEach(function (block) {
+      block.indexes.forEach(function (i) { out.push(list[i]); });
+    });
+    return out;
+  }
+
   function nextGroupId(exercises) {
     let max = 0;
     (exercises || []).forEach(function (ex) {
@@ -783,6 +828,8 @@
     swapSupersetMembers: swapSupersetMembers,
     moveSupersetGroup: moveSupersetGroup,
     insertRespectingGroups: insertRespectingGroups,
-    makeSuperset: makeSuperset
+    makeSuperset: makeSuperset,
+    orderBlocks: orderBlocks,
+    moveBlock: moveBlock
   };
 })(typeof window !== 'undefined' ? window : globalThis);

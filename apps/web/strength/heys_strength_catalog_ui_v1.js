@@ -383,6 +383,72 @@
     );
   }
 
+  /**
+   * Режим порядка (экран 06): тот же список, не отдельное место. Стрелки для
+   * пальца — перетаскивание мышью остаётся в обычном режиме конструктора.
+   * Связка двигается блоком целиком: разорвать её здесь нельзя.
+   */
+  function OrderScreen(props) {
+    const { exercises, onApply, onCancel } = props;
+    const [list, setList] = React.useState(exercises || []);
+    const TK = HEYS.TrainingKernel;
+    const SK = (TK && TK.strength) ? TK.strength : null;
+    if (!SK) return null;
+    const blocks = SK.orderBlocks(list);
+
+    function move(blockIdx, dir) {
+      setList(SK.moveBlock(list, blockIdx, dir));
+    }
+
+    return h('div', { className: 'sb-root sb-screen' },
+      h('div', { className: 'sb-head' },
+        h('button', {
+          type: 'button', className: 'sb-icon-btn', onClick: onCancel, 'aria-label': 'Отменить'
+        }, '✕'),
+        h('div', { className: 'sb-head-title' },
+          h('b', null, 'Тот же список · режим порядка'),
+          h('div', { className: 'sb-head-sub' }, 'Стрелки двигают блок целиком')
+        ),
+        h('button', {
+          type: 'button', className: 'sb-order-done',
+          onClick: function () { onApply(list); }
+        }, 'Готово')
+      ),
+      h('div', { className: 'sb-list' },
+        blocks.map(function (block, bi) {
+          const isGroup = block.groupId > 0;
+          const names = block.indexes.map(function (i) { return list[i].name || 'Без названия'; });
+          return h('div', {
+            key: bi,
+            className: 'sb-order-row' + (isGroup ? ' is-group' : '')
+          },
+            h('span', { className: 'sb-ex-num' }, String(bi + 1)),
+            h('div', { className: 'sb-cat-title' },
+              h('b', null, isGroup ? 'Связка ' + names.join(' ⇄ ') : names[0]),
+              isGroup && h('span', null, block.indexes.length + ' упражнения подряд')
+            ),
+            h('div', { className: 'sb-order-arrows' },
+              h('button', {
+                type: 'button', className: 'sb-icon-btn',
+                disabled: bi === 0,
+                onClick: function () { move(bi, -1); },
+                'aria-label': 'Выше'
+              }, '▲'),
+              h('button', {
+                type: 'button', className: 'sb-icon-btn',
+                disabled: bi === blocks.length - 1,
+                onClick: function () { move(bi, 1); },
+                'aria-label': 'Ниже'
+              }, '▼')
+            )
+          );
+        })
+      )
+    );
+  }
+
+  Cat.OrderScreen = OrderScreen;
+
   Cat.SupersetScreen = SupersetScreen;
 
   Cat.CatalogScreen = CatalogScreen;

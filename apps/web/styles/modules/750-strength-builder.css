@@ -1309,3 +1309,38 @@
   flex: 0 0 auto;
   font-size: 20px;
 }
+
+/* ── Режим порядка (экран 06) ────────────────────────────────────────────── */
+
+.sb-order-done {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 9px;
+  border: none;
+  background: var(--sb-accbg);
+  color: var(--sb-accTx);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sb-order-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border-radius: 13px;
+  border: 1px solid var(--sb-br);
+  background: var(--sb-card);
+  margin-bottom: 8px;
+}
+
+.sb-order-row.is-group {
+  border-left: 3px solid var(--sb-acc);
+}
+
+.sb-order-arrows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}

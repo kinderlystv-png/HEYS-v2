@@ -575,6 +575,11 @@
         go: function () { ctx.setHistoryName(current.name || ''); ctx.close(); ctx.go('history'); }
       },
       {
+        icon: '↕️', t: 'Порядок упражнений', d: 'Стрелками, связка блоком',
+        off: exercises.length < 2,
+        go: function () { ctx.close(); ctx.go('order'); }
+      },
+      {
         icon: '📝', t: 'Заметка и итоги', d: 'Самочувствие, зал, партнёр',
         go: function () { ctx.close(); ctx.go('finish'); }
       }

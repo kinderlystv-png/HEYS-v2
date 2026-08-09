@@ -199,3 +199,32 @@ describe('TrainingKernel.strength — писатели связки', () => {
         expect(ks.swapSupersetMembers(list, 0, 2).map((e) => e.name)).toEqual(['Жим', 'Тяга', 'Присед']);
     });
 });
+
+describe('TrainingKernel.strength — режим порядка (блоки)', () => {
+    beforeEach(() => { window.HEYS = {}; });
+    afterEach(() => { window.HEYS = originalHEYS; });
+
+    const ex = (name, ssGroup) => ({ name, ssGroup, approaches: [{ weightKg: '60', reps: 8, done: false }] });
+
+    it('связка — один блок, а не несколько отдельных строк', () => {
+        const ks = loadKernel();
+        const list = [ex('Присед', 0), ex('Жим', 1), ex('Тяга', 1), ex('Разведение', 0)];
+        const blocks = ks.orderBlocks(list);
+        expect(blocks.length).toBe(3);
+        expect(blocks[1].indexes).toEqual([1, 2]);
+    });
+
+    it('стрелка вниз двигает блок целиком, не разрывая связку', () => {
+        const ks = loadKernel();
+        const list = [ex('Присед', 0), ex('Жим', 1), ex('Тяга', 1), ex('Разведение', 0)];
+        const next = ks.moveBlock(list, 0, 1); // блок 0 («Присед») — на шаг вниз
+        expect(next.map((e) => e.name)).toEqual(['Жим', 'Тяга', 'Присед', 'Разведение']);
+    });
+
+    it('край списка не двигается дальше некуда', () => {
+        const ks = loadKernel();
+        const list = [ex('Присед', 0), ex('Жим', 0)];
+        expect(ks.moveBlock(list, 0, -1).map((e) => e.name)).toEqual(['Присед', 'Жим']);
+        expect(ks.moveBlock(list, 1, 1).map((e) => e.name)).toEqual(['Присед', 'Жим']);
+    });
+});
