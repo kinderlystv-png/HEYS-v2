@@ -216,10 +216,10 @@ apps/web/heys_curator_push_onboarding_banner_v1.js:62
 apps/web/heys_client_log_trace_v1.js:77
 apps/web/heys_client_log_trace_v1.js:148
 apps/web/heys_whats_new_modal_v1.js:87
-apps/web/heys_widgets_core_v1.js:1046
-apps/web/heys_widgets_core_v1.js:383
-apps/web/heys_widgets_ui_v1.js:4764
-apps/web/heys_widgets_ui_v1.js:7006
+apps/web/heys_widgets_core_v1.js:1049
+apps/web/heys_widgets_core_v1.js:386
+apps/web/heys_widgets_ui_v1.js:4769
+apps/web/heys_widgets_ui_v1.js:7005
 apps/web/heys_yesterday_verify_v1.js:1221
 apps/web/heys_yesterday_verify_v1.js:1219
 apps/web/heys_yesterday_verify_v1.js:36
