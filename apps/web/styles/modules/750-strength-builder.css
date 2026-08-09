@@ -1255,3 +1255,57 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ── Шторка ⋯ (экран 20) ────────────────────────────────────────────────── */
+
+.sb-sheet-back {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.sb-sheet {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 12px calc(16px + env(safe-area-inset-bottom, 0px));
+  border-radius: 20px 20px 0 0;
+  background: var(--sb-card);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.sb-sheet-grip {
+  width: 40px;
+  height: 4px;
+  margin: 4px auto 8px;
+  border-radius: 999px;
+  background: var(--sb-br);
+}
+
+.sb-sheet-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 60px;
+  padding: 8px 11px;
+  border-radius: 13px;
+  border: 1px solid var(--sb-br);
+  background: var(--sb-card);
+  text-align: left;
+  cursor: pointer;
+}
+
+.sb-sheet-row:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sb-sheet-icon {
+  flex: 0 0 auto;
+  font-size: 20px;
+}

@@ -155,6 +155,90 @@
     );
   }
 
+  /**
+   * История упражнения (экран 21): рекорд, максимум по Эпли и последние
+   * тренировки подходами. Данные приходят готовыми — сканы по дням делает день,
+   * у конструктора доступа к хранилищу нет.
+   */
+  function HistoryScreen(props) {
+    const { name, usages, record, onBack } = props;
+    const TK = HEYS.TrainingKernel;
+    const SK = (TK && TK.strength) ? TK.strength : null;
+    const meta = HEYS.exerciseMeta;
+    const m = (meta && typeof meta.get === 'function') ? meta.get(name) : null;
+    const groups = m && meta
+      ? [meta.groupLabel(m.primaryGroup)].concat((m.secondaryGroups || [])
+        .map(function (g) { return meta.groupLabel(g); })).filter(Boolean).join(' · ')
+      : '';
+
+    const rows = (usages || []).map(function (u) {
+      let volume = 0;
+      let best = 0;
+      (u.approaches || []).forEach(function (a) {
+        const w = parseFloat(String(a.weightKg || '').replace(',', '.')) || 0;
+        const r = +a.reps || 0;
+        if (w > 0 && r > 0) {
+          volume += w * r;
+          const oneRm = epley(w, r);
+          if (oneRm > best) best = oneRm;
+        }
+      });
+      return { u: u, volume: volume, best: best };
+    });
+
+    const oneRmNow = rows.length ? rows[0].best : 0;
+    const oneRmOld = rows.length > 1 ? rows[rows.length - 1].best : 0;
+    const delta = oneRmNow && oneRmOld ? Math.round(oneRmNow - oneRmOld) : 0;
+
+    return h('div', { className: 'sb-root sb-screen' },
+      h('div', { className: 'sb-head' },
+        h('button', {
+          type: 'button', className: 'sb-icon-btn', onClick: onBack, 'aria-label': 'Назад'
+        }, '‹'),
+        h('div', { className: 'sb-head-title' },
+          h('b', null, name || 'Упражнение'),
+          h('div', { className: 'sb-head-sub' },
+            (groups ? groups + ' · ' : '') + rows.length + ' тренировок в истории')
+        )
+      ),
+      h('div', { className: 'sb-list' },
+        h('div', { className: 'sb-tiles' },
+          h(Tile, {
+            label: 'Рекорд',
+            value: record && record.maxW > 0 ? record.maxW + ' кг' : '—',
+            accent: true
+          }),
+          h(Tile, {
+            label: 'Максимум · Эпли',
+            value: oneRmNow ? Math.round(oneRmNow) + ' кг' : '—'
+          })
+        ),
+        delta !== 0 && h('div', { className: 'sb-step-hint' },
+          (delta > 0 ? '+' : '') + delta + ' кг расчётного максимума за ' + rows.length + ' тренировок'),
+
+        h('div', { className: 'sb-step' }, h('span', null, 'Последние тренировки')),
+        rows.length === 0 && h('div', { className: 'sb-empty' }, 'Это упражнение ещё не делали'),
+        rows.map(function (row) {
+          return h('div', { className: 'sb-block', key: row.u.dateKey },
+            h('div', { className: 'sb-line' },
+              h('span', null, row.u.label || row.u.dateKey),
+              h('b', null, row.volume > 0 ? Math.round(row.volume) + ' кг' : '—')
+            ),
+            h('div', { className: 'sb-hist' },
+              (row.u.approaches || []).map(function (a, i) {
+                const drops = SK ? SK.approachStages(a).filter(function (st) { return st.isDrop; }) : [];
+                return h('span', { key: i },
+                  (a.weightKg || 'свой') + '×' + (a.reps || '—') + (drops.length ? ' дроп' : ''));
+              })
+            )
+          );
+        })
+      )
+    );
+  }
+
+  Fin.HistoryScreen = HistoryScreen;
+
   Fin.FinishScreen = FinishScreen;
   Fin.epley = epley;
   Fin.bestWorkingSet = bestWorkingSet;

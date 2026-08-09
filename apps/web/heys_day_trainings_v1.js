@@ -3241,6 +3241,14 @@
                     return { last: snap, record: rec };
                   } catch (_e) { return { last: null, record: null }; }
                 },
+                historyDetailFor: function (name, exIdx) {
+                  try {
+                    return {
+                      usages: findRecentExerciseUsages(name, dateKey, ti, exIdx, 12),
+                      record: findExerciseHistoricalRecord(name, dateKey, ti, exIdx)
+                    };
+                  } catch (_e) { return { usages: [], record: null }; }
+                },
                 onPatch: function (nextExercises) {
                   patchTraining(ti, function (t0) {
                     const wl0 = ensureWorkoutLogShape(t0);

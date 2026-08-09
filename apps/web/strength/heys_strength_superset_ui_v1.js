@@ -552,6 +552,37 @@
 
   Parts.SummaryCard = SummaryCard;
 
+  /**
+   * Входы шторки ⋯ (экран 20). Только рабочие: кнопка в пустоту в разработку не
+   * уходит (решение 9). Недоступные объясняют причину, а не просто гаснут.
+   */
+  function sheetRows(ctx) {
+    const exercises = ctx.exercises || [];
+    const current = exercises[ctx.openIdx >= 0 ? ctx.openIdx : 0] || {};
+    return [
+      {
+        icon: '🔍', t: 'Каталог упражнений', d: 'Фильтр по мышцам',
+        go: function () { ctx.close(); ctx.go('catalog'); }
+      },
+      {
+        icon: '⚡', t: 'Собрать связку', d: 'Суперсет, трисет, круговая',
+        off: exercises.length < 2,
+        go: function () { ctx.close(); ctx.setLinkFrom(0); ctx.go('superset'); }
+      },
+      {
+        icon: '📈', t: 'История и рекорды', d: 'Динамика веса и тоннажа',
+        off: !current.name,
+        go: function () { ctx.setHistoryName(current.name || ''); ctx.close(); ctx.go('history'); }
+      },
+      {
+        icon: '📝', t: 'Заметка и итоги', d: 'Самочувствие, зал, партнёр',
+        go: function () { ctx.close(); ctx.go('finish'); }
+      }
+    ];
+  }
+
+  Parts.sheetRows = sheetRows;
+
   Parts.SupersetBlock = SupersetBlock;
   Parts.RestRing = RestRing;
 })(typeof window !== 'undefined' ? window : globalThis);

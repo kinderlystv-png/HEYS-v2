@@ -56,12 +56,14 @@
   // ——— Экран целиком ———
 
   function BuilderScreen(props) {
-    const { training, dateKey, onPatch, onPatchNote, profile, historyFor, onClose } = props;
+    const { training, dateKey, onPatch, onPatchNote, profile, historyFor, historyDetailFor, onClose } = props;
     const SK = kernel();
     const [openIdx, setOpenIdx] = React.useState(0);
     const [view, setView] = React.useState('list');
     const [draftName, setDraftName] = React.useState('');
     const [linkFrom, setLinkFrom] = React.useState(0);
+    const [sheetOpen, setSheetOpen] = React.useState(false);
+    const [historyName, setHistoryName] = React.useState('');
     const [rest, setRest] = React.useState(null); // { total, startedAt }
     const [tick, setTick] = React.useState(0);
 
@@ -243,6 +245,7 @@
     }
 
     const CatUI = HEYS.StrengthCatalogUI || {};
+    function FinUIRef() { return HEYS.StrengthFinishUI || {}; }
     if (view === 'catalog' && CatUI.CatalogScreen) {
       return h(CatUI.CatalogScreen, {
         onPick: addExercise,
@@ -250,9 +253,8 @@
         onBack: function () { setView('list'); }
       });
     }
-    const FinUI = HEYS.StrengthFinishUI || {};
-    if (view === 'finish' && FinUI.FinishScreen) {
-      return h(FinUI.FinishScreen, {
+    if (view === 'finish' && FinUIRef().FinishScreen) {
+      return h(FinUIRef().FinishScreen, {
         training: liveTraining,
         dateKey: dateKey,
         elapsedSec: elapsedSec,
@@ -266,6 +268,17 @@
           if (typeof onPatchNote === 'function') onPatchNote(note);
           onClose();
         }
+      });
+    }
+    if (view === 'history' && FinUIRef().HistoryScreen) {
+      const detail = typeof historyDetailFor === 'function'
+        ? historyDetailFor(historyName, 0)
+        : { usages: [], record: null };
+      return h(FinUIRef().HistoryScreen, {
+        name: historyName,
+        usages: detail.usages,
+        record: detail.record,
+        onBack: function () { setView('list'); }
       });
     }
     if (view === 'superset' && CatUI.SupersetScreen) {
@@ -343,7 +356,12 @@
           // подпись не должна врать про то, что человек делает.
           h('b', null, wl.title || (HEYS.StrengthBuilderParts || {}).sessionTitle(exercises)),
           h('div', { className: 'sb-head-sub' }, (HEYS.StrengthBuilderParts || {}).humanDate(dateKey))
-        )
+        ),
+        h('button', {
+          type: 'button', className: 'sb-icon-btn',
+          onClick: function () { setSheetOpen(true); },
+          'aria-label': 'Ещё'
+        }, '⋯')
       ),
       h('div', { className: 'sb-stats' },
         elapsedSec > 0 && h('span', { className: 'sb-stat sb-stat-time' }, '⏱ ' + fmtClock(elapsedSec)),
@@ -362,6 +380,39 @@
         onSkip: function () { setRest(null); },
         onAdd: function () { setRest({ total: rest.total + 30, startedAt: rest.startedAt }); }
       }),
+      // Шторка ⋯ (экран 20). Показываем только рабочие входы: кнопка в пустоту
+      // в разработку не уходит (решение 9).
+      sheetOpen && h('div', { className: 'sb-sheet-back', onClick: function () { setSheetOpen(false); } },
+        h('div', {
+          className: 'sb-sheet',
+          onClick: function (e) { e.stopPropagation(); }
+        },
+          h('div', { className: 'sb-sheet-grip' }),
+          (HEYS.StrengthBuilderParts || {}).sheetRows({
+            exercises: exercises,
+            openIdx: openIdx,
+            close: function () { setSheetOpen(false); },
+            go: setView,
+            setLinkFrom: setLinkFrom,
+            setHistoryName: setHistoryName
+          }).map(function (row, i) {
+            return h('button', {
+              key: i,
+              type: 'button',
+              className: 'sb-sheet-row',
+              disabled: !!row.off,
+              onClick: row.go
+            },
+              h('span', { className: 'sb-sheet-icon' }, row.icon),
+              h('div', { className: 'sb-cat-title' },
+                h('b', null, row.t),
+                h('span', null, row.off ? 'Нужно больше упражнений в тренировке' : row.d)
+              ),
+              h('span', { className: 'sb-ex-count' }, '›')
+            );
+          })
+        )
+      ),
       h('div', { className: 'sb-panel' },
         h('button', {
           type: 'button', className: 'sb-panel-add', 'aria-label': 'Добавить упражнение',
