@@ -191,8 +191,6 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
     }
   };
 
-  const optionClass =
-    'w-full rounded-[14px] border border-[rgba(16,24,38,0.14)] bg-[#FBFAF7] px-5 py-4 text-left text-[15px] leading-[1.4] text-[#101826] transition-colors duration-200 hover:border-[color:var(--da)] hover:bg-white';
   // Поле 48px вместо прежних ~56: форма из шести блоков одного веса читалась
   // анкетой, и рост каждого блока умножался на шесть. Плейсхолдер `#98A2AE`
   // светлее текста, но темнее прежнего `#9AA3B0` — пустое поле не должно
