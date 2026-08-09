@@ -638,15 +638,19 @@
   }
 
   function PlanCard(props) {
-    const { training, dateKey, isFutureDay, onStart, onOpenReadonly, onSkip, onResumeSkipped } = props;
+    const { training, dateKey, isFutureDay, weekPlace, onStart, onOpenReadonly, onSkip, onResumeSkipped } = props;
     const wl = (training && training.workoutLog) || {};
     const exercises = Array.isArray(wl.exercises) ? wl.exercises : [];
     const plan = training && training.plan;
     const [skipOpen, setSkipOpen] = React.useState(false);
     if (!plan) return null;
     const label = plan.dayLabel || sessionTitle(exercises);
+    // Место в неделе вместо даты следующей тренировки — единственное, что
+    // осталось от прежнего виджета обзора (дизайн-ревью 2026-08-10, 16c):
+    // человеку важно, где он в неделе, а не когда календарно следующий раз.
     const meta = 'назначил ' + (plan.assignedBy || 'куратор')
-      + (isFutureDay ? '' : ' · ' + exercises.length + ' упр.');
+      + (isFutureDay ? '' : ' · ' + exercises.length + ' упр.')
+      + (!isFutureDay && weekPlace ? ' · ' + weekPlace : '');
 
     if (plan.status === 'skipped') {
       // Пропущенный день остаётся пустым: тоннажа нет, подходов нет (ядро уже

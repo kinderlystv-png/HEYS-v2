@@ -2465,127 +2465,222 @@
     return dayKeyFromParts(date.getFullYear(), date.getMonth() + 1, date.getDate());
   }
 
-  const PROGRAM_STATUS_LABELS = { assigned: 'Ожидает', started: 'Идёт', done: 'Выполнено', skipped: 'Пропущено' };
+  /** «в четверг» — так, как это скажет человек, а не «14.08». */
+  const WEEKDAY_IN = ['в воскресенье', 'в понедельник', 'во вторник', 'в среду', 'в четверг', 'в пятницу', 'в субботу'];
+
+  function whenPhrase(dateKey, today) {
+    if (dateKey === today) return 'сегодня';
+    if (dateKey === addDaysToKey(today, 1)) return 'завтра';
+    const parts = String(dateKey).split('-').map(Number);
+    const d = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+    const within = dateKey <= addDaysToKey(today, 6);
+    const label = WEEKDAY_IN[d.getDay()] || '';
+    if (within && label) return label;
+    return label ? (label + ', ' + parts[2] + '.' + String(parts[1]).padStart(2, '0')) : dateKey;
+  }
 
   /**
-   * Обзор программы куратора (CURATOR_TRAINING_PROGRAM_PROTOCOL_2026-08-09.md,
-   * слой 4): «ближайшая тренировка + на неделе ещё N» первым слоем, весь цикл —
-   * вторым, по `Подробнее`.
+   * Обзор программы куратора. Дизайн-ревью 2026-08-10 (экраны 16c/16d) снял
+   * прежнюю карточку-календарь: она занимала место каждый день, а менялась раз
+   * в неделю, ничего не предлагала сделать сегодня и — хуже всего — исчезала,
+   * когда цикл выполнен, то есть пропадала ровно в лучший его момент.
    *
-   * heys_training_program — снимок на момент назначения (days: date/dayLabel/
-   * trainingId), не источник правды: живой статус каждого дня лежит только в
-   * самой записи тренировки (plan.status). Поэтому обзор досчитывает статус
-   * ближайших дней отдельным батчем по датам программы, а не доверяет индексу.
-   * Читается напрямую через YandexAPI.getKV/getKVBatch (тот же путь, что у
-   * heys_reading_personalization_v1 в heys_planning_reading_v1.js) — ключ не
-   * добавлен в client-scoped allowlisty lsGet/hot-sync намеренно: виджету
-   * достаточно разового чтения при монтировании карточки дня, регистрация в
-   * общих реестрах синхронизации не нужна и не добавлялась.
+   * Осталась строка и только в день, когда тренировки нет: карточку занимает
+   * то, что делают сегодня. В день с планом строки нет вовсе — карточка плана
+   * уже говорит всё нужное, из обзора туда ушло лишь место в неделе.
+   *
+   * heys_training_program — снимок на момент назначения, не источник правды:
+   * живой статус каждого дня лежит в самой записи тренировки (plan.status), и
+   * читается он отдельным батчем по датам программы.
    */
-  function ProgramWeekOverviewCard({ clientId }) {
-    const [state, setState] = React.useState({ loading: true, program: null, liveDays: null });
-    const [expanded, setExpanded] = React.useState(false);
+  function useProgramState(clientId) {
+    const [state, setState] = React.useState({ loading: true, program: null, days: null });
 
     React.useEffect(() => {
       let cancelled = false;
       if (!clientId || !HEYS.YandexAPI || typeof HEYS.YandexAPI.getKV !== 'function') {
-        setState({ loading: false, program: null, liveDays: null });
+        setState({ loading: false, program: null, days: null });
         return undefined;
       }
       (async () => {
         try {
           const res = await HEYS.YandexAPI.getKV(clientId, 'heys_training_program');
           const program = res && res.data && typeof res.data === 'object' ? res.data : null;
-          const days = Array.isArray(program && program.days) ? program.days : [];
-          const today = todayDateKeyForPlan();
-          const upcoming = days
-            .filter((d) => d && typeof d.date === 'string' && d.date >= today)
-            .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-          if (!program || (program.status !== 'active' && program.status !== 'partial') || !upcoming.length) {
-            if (!cancelled) setState({ loading: false, program: null, liveDays: null });
+          const raw = Array.isArray(program && program.days) ? program.days : [];
+          if (!program || (program.status !== 'active' && program.status !== 'partial') || !raw.length) {
+            if (!cancelled) setState({ loading: false, program: null, days: null });
             return;
           }
-          const dayKeys = upcoming.map((d) => 'heys_dayv2_' + d.date);
+          const sorted = raw.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+          // Статусы всех дней, а не только будущих: «сделано 5 из 12» — про
+          // весь путь, и прошедшие дни в нём такая же часть, как впереди.
           const batch = typeof HEYS.YandexAPI.getKVBatch === 'function'
-            ? await HEYS.YandexAPI.getKVBatch(clientId, dayKeys)
+            ? await HEYS.YandexAPI.getKVBatch(clientId, sorted.map((d) => 'heys_dayv2_' + d.date))
             : { data: [] };
-          const blobByKey = new Map();
+          const byKey = new Map();
           (Array.isArray(batch && batch.data) ? batch.data : []).forEach((row) => {
-            if (row && row.k) blobByKey.set(row.k, row.v);
+            if (row && row.k) byKey.set(row.k, row.v);
           });
-          const liveDays = upcoming.map((d) => {
-            const blob = blobByKey.get('heys_dayv2_' + d.date);
-            const trainings = Array.isArray(blob && blob.trainings) ? blob.trainings : [];
-            const training = trainings.find((t) => t && t.id === d.trainingId);
+          const days = sorted.map((d) => {
+            const blob = byKey.get('heys_dayv2_' + d.date);
+            const list = Array.isArray(blob && blob.trainings) ? blob.trainings : [];
+            const training = list.find((t) => t && t.id === d.trainingId);
             return {
               date: d.date,
               dayLabel: d.dayLabel || null,
               weekIndex: d.weekIndex || null,
-              status: training && training.plan ? training.plan.status : null,
+              status: (training && training.plan && training.plan.status) || null
             };
           });
-          if (!cancelled) setState({ loading: false, program, liveDays });
+          if (!cancelled) setState({ loading: false, program, days });
         } catch (_) {
-          if (!cancelled) setState({ loading: false, program: null, liveDays: null });
+          if (!cancelled) setState({ loading: false, program: null, days: null });
         }
       })();
       return () => { cancelled = true; };
     }, [clientId]);
 
-    if (state.loading || !state.program || !Array.isArray(state.liveDays)) return null;
+    return state;
+  }
 
+  /** Место дня в своей неделе: «вторая из трёх на неделе». */
+  const ORDINAL_F = ['', 'первая', 'вторая', 'третья', 'четвёртая', 'пятая', 'шестая', 'седьмая'];
+  const COUNT_F = ['', 'одной', 'двух', 'трёх', 'четырёх', 'пяти', 'шести', 'семи'];
+
+  function placeInWeek(days, dateKey) {
+    const start = mondayOfWeek(dateKey);
+    const end = addDaysToKey(start, 6);
+    const week = (days || []).filter((d) => d.date >= start && d.date <= end);
+    if (week.length < 2) return '';
+    const idx = week.findIndex((d) => d.date === dateKey);
+    if (idx < 0) return '';
+    const nth = ORDINAL_F[idx + 1];
+    const total = COUNT_F[week.length];
+    return nth && total ? nth + ' из ' + total + ' на неделе' : '';
+  }
+
+  const PROGRAM_DONE_STATES = { done: 1, started: 1 };
+
+  /** Второй слой (16d): путь, а не таблица статусов — сколько прошёл и сколько осталось. */
+  function ProgramPathScreen({ program, days, onClose }) {
     const today = todayDateKeyForPlan();
-    const weekStart = mondayOfWeek(today);
-    const weekEnd = addDaysToKey(weekStart, 6);
-    const pending = state.liveDays.filter((d) => d.status === 'assigned');
-    if (!pending.length) return null;
-    const next = pending[0];
-    const restThisWeek = pending.slice(1).filter((d) => d.date >= weekStart && d.date <= weekEnd);
+    const doneCount = days.filter((d) => PROGRAM_DONE_STATES[d.status]).length;
+    const skipped = days.filter((d) => d.status === 'skipped').length;
+    const ahead = days.length - doneCount - skipped;
+    const next = days.find((d) => d.date >= today && d.status !== 'done' && d.status !== 'skipped');
+    const weeks = {};
+    days.forEach((d) => {
+      const w = d.weekIndex || 0;
+      (weeks[w] = weeks[w] || []).push(d);
+    });
+    const weekKeys = Object.keys(weeks).sort((a, b) => Number(a) - Number(b));
+    const currentWeek = next && next.weekIndex ? next.weekIndex : null;
 
-    const fmtDate = (dateKey) => {
-      const parts = String(dateKey).split('-');
-      return parts[2] + '.' + parts[1];
-    };
-
-    const allDays = Array.isArray(state.program.days)
-      ? state.program.days.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
-      : [];
-
-    return React.createElement('div', { className: 'program-overview-card' + (expanded ? ' is-expanded' : '') },
-      React.createElement('button', {
-        type: 'button',
-        className: 'program-overview-header',
-        onClick: () => setExpanded((v) => !v),
-        'aria-expanded': expanded
-      },
-        React.createElement('span', { className: 'program-overview-icon' }, '🗓️'),
-        React.createElement('div', { className: 'program-overview-main' },
-          React.createElement('div', { className: 'program-overview-title' },
-            'Следующая по плану: ' + (next.dayLabel || 'тренировка') + ' · ' + fmtDate(next.date)),
-          restThisWeek.length > 0 && React.createElement('div', { className: 'program-overview-sub' },
-            'На неделе ещё ' + restThisWeek.length)
-        ),
-        React.createElement('span', { className: 'program-overview-toggle' },
-          expanded ? 'Скрыть' : 'Подробнее', ' ', React.createElement('span', { className: 'program-overview-chevron' }, expanded ? '⌃' : '⌄'))
+    return React.createElement('div', { className: 'sb-root program-path' },
+      React.createElement('div', { className: 'sb-head' },
+        React.createElement('button', {
+          type: 'button', className: 'sb-icon-btn', onClick: onClose, 'aria-label': 'Назад'
+        }, '‹'),
+        React.createElement('div', { className: 'sb-head-title' },
+          React.createElement('b', null, program.title || 'Программа'),
+          React.createElement('div', { className: 'sb-head-sub' },
+            (program.weeks ? program.weeks + ' нед.' : 'Программа')
+            + (currentWeek ? ' · идёт ' + (ORDINAL_F[currentWeek] || currentWeek) : ''))
+        )
       ),
-      expanded && React.createElement('div', { className: 'program-overview-detail' },
-        React.createElement('div', { className: 'program-overview-detail-title' },
-          state.program.title + (state.program.weeks ? ' · ' + state.program.weeks + ' нед.' : '')),
-        React.createElement('ul', { className: 'program-overview-detail-list' },
-          allDays.map((d) => {
-            const isPast = d.date < today;
-            const live = isPast ? null : state.liveDays.find((l) => l.date === d.date);
-            const statusKey = isPast ? 'past' : ((live && live.status) || 'assigned');
-            const statusLabel = isPast ? 'Прошло' : (PROGRAM_STATUS_LABELS[statusKey] || 'Ожидает');
-            return React.createElement('li', { key: d.date, className: 'program-overview-detail-row' },
-              React.createElement('span', { className: 'program-overview-detail-date' }, fmtDate(d.date)),
-              React.createElement('span', { className: 'program-overview-detail-label' },
-                d.dayLabel || ('Неделя ' + (d.weekIndex || '?'))),
-              React.createElement('span', { className: 'program-overview-detail-status program-overview-status-' + statusKey }, statusLabel)
-            );
-          })
+      React.createElement('div', { className: 'sb-list' },
+        React.createElement('div', { className: 'program-path-count' },
+          React.createElement('b', null, 'Сделано ' + doneCount + ' из ' + days.length),
+          ahead > 0 && React.createElement('span', null, 'осталось ' + ahead)
+        ),
+        React.createElement('div', { className: 'program-path-weeks' },
+          weekKeys.map((w) => React.createElement('div', { key: w, className: 'program-path-week' },
+            React.createElement('span', { className: 'program-path-week-label' },
+              w === '0' ? 'Дни' : 'Неделя ' + w),
+            React.createElement('div', { className: 'program-path-dots' },
+              weeks[w].map((d) => {
+                const kind = PROGRAM_DONE_STATES[d.status] ? 'done'
+                  : d.status === 'skipped' ? 'skipped' : 'ahead';
+                return React.createElement('span', {
+                  key: d.date,
+                  className: 'program-path-dot is-' + kind,
+                  title: (d.dayLabel || '') + ' · ' + d.date
+                });
+              })
+            )
+          ))
+        ),
+        React.createElement('div', { className: 'program-path-legend' },
+          React.createElement('span', null, React.createElement('i', { className: 'program-path-dot is-done' }), 'сделано'),
+          skipped > 0 && React.createElement('span', null, React.createElement('i', { className: 'program-path-dot is-skipped' }), 'пропущено'),
+          React.createElement('span', null, React.createElement('i', { className: 'program-path-dot is-ahead' }), 'впереди')
+        ),
+        next && React.createElement('div', { className: 'program-path-next' },
+          React.createElement('div', { className: 'program-path-next-label' }, 'Ближайшая'),
+          React.createElement('b', null,
+            whenPhrase(next.date, today).replace(/^в[оо]? /, (m) => m.toUpperCase().slice(0, 1) + m.slice(1))
+            + (next.dayLabel ? ' · ' + next.dayLabel : '')),
+          React.createElement('span', { className: 'program-path-next-meta' },
+            placeInWeek(days, next.date) || (program.title || ''))
         )
       )
+    );
+  }
+
+  /**
+   * Место дня в своей неделе по дням из хранилища, а не по индексу программы:
+   * карточка плана рендерится синхронно, а индекс читается из сети. Считаем по
+   * тому же, что и показываем, — по назначенным планам недели.
+   */
+  function weekPlaceFromStore(dateKey) {
+    const start = mondayOfWeek(dateKey);
+    const dates = [];
+    for (let i = 0; i < 7; i++) dates.push(addDaysToKey(start, i));
+    const planned = [];
+    dates.forEach(function (d) {
+      let day = null;
+      try { day = readDayFromStore(d); } catch (_) { day = null; }
+      const list = day && Array.isArray(day.trainings) ? day.trainings : [];
+      if (list.some(function (t) { return t && t.plan; })) planned.push(d);
+    });
+    return placeInWeek(planned.map(function (d) { return { date: d }; }), dateKey);
+  }
+
+  const PROGRAM_PATH_ID = 'program-path';
+
+  /**
+   * Первый слой (16c): одна строка и только в день без тренировки. В день с
+   * планом карточка плана говорит всё сама — строка там была бы вторым
+   * сообщением об одном и том же.
+   */
+  function ProgramNextLine({ clientId, hasPlanToday }) {
+    const state = useProgramState(clientId);
+    if (state.loading || !state.program || !Array.isArray(state.days)) return null;
+    if (hasPlanToday) return null;
+
+    const today = todayDateKeyForPlan();
+    const next = state.days.find((d) => d.date >= today && d.status !== 'done' && d.status !== 'skipped');
+    if (!next) return null;
+
+    function openPath() {
+      const fs = HEYS.TrainingKernel && HEYS.TrainingKernel.fullscreen;
+      if (!fs) return;
+      fs.mount({
+        id: PROGRAM_PATH_ID,
+        ariaLabel: 'Программа',
+        render: (api) => React.createElement(ProgramPathScreen, {
+          program: state.program, days: state.days, onClose: api.close
+        })
+      });
+    }
+
+    return React.createElement('button', {
+      type: 'button', className: 'program-next-line', onClick: openPath
+    },
+      React.createElement('span', { className: 'program-next-text' },
+        'Следующая тренировка — ',
+        React.createElement('b', null, whenPhrase(next.date, today))),
+      React.createElement('span', { className: 'program-next-link' }, 'Программа ›')
     );
   }
 
@@ -3228,7 +3323,11 @@
     }
 
     return React.createElement('div', { className: 'compact-trainings' },
-      safeTrainingFilterMode === 'regular' && HEYS.currentClientId && React.createElement(ProgramWeekOverviewCard, { clientId: HEYS.currentClientId }),
+      safeTrainingFilterMode === 'regular' && HEYS.currentClientId && React.createElement(ProgramNextLine, {
+        clientId: HEYS.currentClientId,
+        // День с планом строку не показывает: карточка плана уже сказала всё.
+        hasPlanToday: trainingEntries.some(function (e) { return e.rawT && e.rawT.plan; })
+      }),
       safeTrainingFilterMode === 'all' && safeVisibleTrainings === 0 && safeHouseholdActivities.length === 0 && React.createElement('div', {
         className: 'empty-trainings',
         title: 'Силовые и другие тренировки при дефиците помогают сохранять мышечную массу и силовые показатели; учёт в HEYS — в калориях и самочувствии. Питание остаётся главным рычагом энергетического баланса.'
@@ -3534,6 +3633,9 @@
                 training: { workoutLog: wlLive, plan: rawT.plan },
                 dateKey: dateKey,
                 isFutureDay: isFutureDay,
+                // Единственное, что забрано из прежнего виджета обзора (16c):
+                // место в неделе, а не дата следующей тренировки.
+                weekPlace: weekPlaceFromStore(dateKey),
                 onStart: function (e) {
                   if (e && e.stopPropagation) e.stopPropagation();
                   // Старт снимает «assigned» один раз: дальше это обычная
@@ -3851,6 +3953,8 @@
     renderTrainingsBlock,
     // Тестовый шов — прямой рендер обзора программы куратора в изоляции от
     // всего остального compact-trainings дерева (много обязательных пропов).
-    ProgramWeekOverviewCard
+    ProgramNextLine,
+    ProgramPathScreen,
+    placeInWeek
   };
 })(window);

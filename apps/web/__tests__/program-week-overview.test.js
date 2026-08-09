@@ -1,17 +1,18 @@
-// program-week-overview.test.js — обзор программы куратора на карточке дня.
+// program-week-overview.test.js — обзор программы куратора у клиента.
 //
-// Слой 4 CURATOR_TRAINING_PROGRAM_PROTOCOL_2026-08-09.md: «ближайшая
-// тренировка + на неделе ещё N» первым слоем, весь цикл — вторым, по
-// «Подробнее». Индекс heys_training_program — снимок на момент назначения,
-// не источник правды: живой статус каждого дня тесты подсовывают отдельно
-// через getKVBatch, как это делает и сам виджет.
+// Дизайн-ревью 2026-08-10 (экраны 16c/16d) заменило прежнюю карточку-календарь:
+// она занимала место каждый день, а менялась раз в неделю, ничего не предлагала
+// сделать сегодня и исчезала, когда цикл выполнен — то есть пропадала ровно в
+// лучший его момент. Осталась строка и только в день без тренировки; второй
+// слой показывает путь (сколько прошёл / сколько осталось), а не таблицу дат
+// со статусами.
 
 import fs from 'fs';
 import path from 'path';
 import React from 'react';
 import { fileURLToPath } from 'url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,14 +24,9 @@ function loadModule() {
   globalThis.React = globalThis.window.React = React;
   /* eslint-disable-next-line no-eval */
   eval(fs.readFileSync(path.join(WEB_DIR, 'heys_day_trainings_v1.js'), 'utf8'));
-  return globalThis.HEYS.dayTrainings.ProgramWeekOverviewCard;
+  return globalThis.HEYS.dayTrainings;
 }
 
-// Виджет берёт «сегодня» из системных часов локальным временем
-// (todayDateKeyForPlan: getFullYear/getMonth/getDate, не UTC). Системное время
-// фиксируем на среду — иначе тест «на неделе ещё N» ломается всякий раз, когда
-// реальный запуск приходится на воскресенье (последний день ISO-недели: у
-// «завтра» уже нет места в этой неделе).
 function pad2(n) {
   return n < 10 ? '0' + n : '' + n;
 }
@@ -43,19 +39,14 @@ function addDays(base, delta) {
   return d;
 }
 
-const ANCHOR = new Date(2026, 7, 12); // среда
+// Среда: у «завтра» и «послезавтра» есть место в той же ISO-неделе.
+const ANCHOR = new Date(2026, 7, 12);
 const T0 = iso(ANCHOR);
 const T1 = iso(addDays(ANCHOR, 1));
 const T2 = iso(addDays(ANCHOR, 2));
 
 function program(days, status = 'active') {
-  return {
-    id: 'pr_1',
-    title: 'Верх/низ, 4 недели',
-    weeks: 4,
-    status,
-    days,
-  };
+  return { id: 'pr_1', title: 'Верх/низ, 4 недели', weeks: 4, status, days };
 }
 
 function fakeYandexApi({ programData, dayBlobs = {} }) {
@@ -81,89 +72,126 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('ProgramWeekOverviewCard', () => {
-  it('показывает ближайшую тренировку и остаток недели, не показывает весь цикл сразу', async () => {
-    const ProgramWeekOverviewCard = loadModule();
-    globalThis.HEYS.YandexAPI = fakeYandexApi({
-      programData: program([
-        { date: T0, dayLabel: 'День A', weekIndex: 1, trainingId: 'tr_0' },
-        { date: T1, dayLabel: 'День B', weekIndex: 1, trainingId: 'tr_1' },
-      ]),
-      dayBlobs: {
-        ['heys_dayv2_' + T0]: { trainings: [{ id: 'tr_0', plan: { status: 'assigned' } }] },
-        ['heys_dayv2_' + T1]: { trainings: [{ id: 'tr_1', plan: { status: 'assigned' } }] },
-      },
-    });
-
-    await act(async () => {
-      render(React.createElement(ProgramWeekOverviewCard, { clientId: 'c1' }));
-    });
-
-    expect(screen.getByText(/Следующая по плану: День A/)).toBeTruthy();
-    expect(screen.getByText(/На неделе ещё 1/)).toBeTruthy();
-    expect(screen.queryByText('Верх/низ, 4 недели')).toBeNull();
+describe('ProgramNextLine — первый слой', () => {
+  const twoDayProgram = () => ({
+    programData: program([
+      { date: T1, dayLabel: 'День A', weekIndex: 1, trainingId: 'tr_1' },
+      { date: T2, dayLabel: 'День B', weekIndex: 1, trainingId: 'tr_2' },
+    ]),
+    dayBlobs: {
+      ['heys_dayv2_' + T1]: { trainings: [{ id: 'tr_1', plan: { status: 'assigned' } }] },
+      ['heys_dayv2_' + T2]: { trainings: [{ id: 'tr_2', plan: { status: 'assigned' } }] },
+    },
   });
 
-  it('раскрывает весь цикл по клику на «Подробнее», прошедшие дни помечены отдельно', async () => {
-    const ProgramWeekOverviewCard = loadModule();
+  it('в день без тренировки — строка, названная по-человечески, а не датой', async () => {
+    const { ProgramNextLine } = loadModule();
+    globalThis.HEYS.YandexAPI = fakeYandexApi(twoDayProgram());
+
+    await act(async () => {
+      render(React.createElement(ProgramNextLine, { clientId: 'c1', hasPlanToday: false }));
+    });
+
+    expect(screen.getByText(/Следующая тренировка/)).toBeTruthy();
+    expect(screen.getByText('завтра')).toBeTruthy();
+    expect(screen.getByText(/Программа/)).toBeTruthy();
+  });
+
+  it('в день с планом строки нет вовсе — карточка плана уже всё сказала', async () => {
+    const { ProgramNextLine } = loadModule();
+    globalThis.HEYS.YandexAPI = fakeYandexApi(twoDayProgram());
+
+    const { container } = render(
+      React.createElement(ProgramNextLine, { clientId: 'c1', hasPlanToday: true }),
+    );
+    await act(async () => {});
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('без активной программы строки нет', async () => {
+    const { ProgramNextLine } = loadModule();
+    globalThis.HEYS.YandexAPI = fakeYandexApi({ programData: null });
+
+    const { container } = render(
+      React.createElement(ProgramNextLine, { clientId: 'c1', hasPlanToday: false }),
+    );
+    await act(async () => {});
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('выполненные и пропущенные дни в «следующую» не идут', async () => {
+    const { ProgramNextLine } = loadModule();
     globalThis.HEYS.YandexAPI = fakeYandexApi({
       programData: program([
-        { date: T0, dayLabel: 'День A', weekIndex: 1, trainingId: 'tr_0' },
-        { date: T2, dayLabel: 'День C', weekIndex: 1, trainingId: 'tr_2' },
+        { date: T1, dayLabel: 'День A', weekIndex: 1, trainingId: 'tr_1' },
+        { date: T2, dayLabel: 'День B', weekIndex: 1, trainingId: 'tr_2' },
       ]),
       dayBlobs: {
-        ['heys_dayv2_' + T0]: { trainings: [{ id: 'tr_0', plan: { status: 'assigned' } }] },
+        ['heys_dayv2_' + T1]: { trainings: [{ id: 'tr_1', plan: { status: 'skipped' } }] },
         ['heys_dayv2_' + T2]: { trainings: [{ id: 'tr_2', plan: { status: 'assigned' } }] },
       },
     });
 
     await act(async () => {
-      render(React.createElement(ProgramWeekOverviewCard, { clientId: 'c1' }));
+      render(React.createElement(ProgramNextLine, { clientId: 'c1', hasPlanToday: false }));
     });
+    // Пропущенный завтрашний пропускаем, ближайшая — послезавтра.
+    expect(screen.queryByText('завтра')).toBeNull();
+    expect(screen.getByText(/четверг|пятниц|суббот|воскресень|понедельник|вторник|сред/)).toBeTruthy();
+  });
+});
 
-    fireEvent.click(screen.getByText('Подробнее'));
-    expect(screen.getByText('Верх/низ, 4 недели · 4 нед.')).toBeTruthy();
-    expect(screen.getByText('День A')).toBeTruthy();
-    expect(screen.getByText('День C')).toBeTruthy();
+describe('ProgramPathScreen — второй слой', () => {
+  const days = [
+    { date: '2026-08-03', dayLabel: 'День A', weekIndex: 1, status: 'done' },
+    { date: '2026-08-05', dayLabel: 'День B', weekIndex: 1, status: 'done' },
+    { date: '2026-08-07', dayLabel: 'День C', weekIndex: 1, status: 'skipped' },
+    { date: T1, dayLabel: 'День A', weekIndex: 2, status: 'assigned' },
+    { date: T2, dayLabel: 'День B', weekIndex: 2, status: 'assigned' },
+  ];
+
+  it('показывает путь: сколько сделано из скольких и сколько осталось', () => {
+    const { ProgramPathScreen } = loadModule();
+    render(React.createElement(ProgramPathScreen, {
+      program: program([], 'active'), days, onClose: () => {},
+    }));
+
+    expect(screen.getByText('Сделано 2 из 5')).toBeTruthy();
+    expect(screen.getByText(/осталось 2/)).toBeTruthy();
   });
 
-  it('день уже started не в счёте «ближайшая/на неделе» — расчёт по живому статусу, не по индексу', async () => {
-    const ProgramWeekOverviewCard = loadModule();
-    globalThis.HEYS.YandexAPI = fakeYandexApi({
-      programData: program([
-        { date: T0, dayLabel: 'День A', weekIndex: 1, trainingId: 'tr_0' },
-        { date: T1, dayLabel: 'День B', weekIndex: 1, trainingId: 'tr_1' },
-      ]),
-      dayBlobs: {
-        // Клиент уже начал День A локально — индекс программы этого не знает.
-        ['heys_dayv2_' + T0]: { trainings: [{ id: 'tr_0', plan: { status: 'started' } }] },
-        ['heys_dayv2_' + T1]: { trainings: [{ id: 'tr_1', plan: { status: 'assigned' } }] },
-      },
-    });
+  it('дат и слова «статус» во втором слое нет — это отчёт куратора, не путь клиента', () => {
+    const { ProgramPathScreen } = loadModule();
+    const { container } = render(React.createElement(ProgramPathScreen, {
+      program: program([], 'active'), days, onClose: () => {},
+    }));
 
-    await act(async () => {
-      render(React.createElement(ProgramWeekOverviewCard, { clientId: 'c1' }));
-    });
-
-    expect(screen.getByText(/Следующая по плану: День B/)).toBeTruthy();
-    expect(screen.queryByText(/На неделе ещё/)).toBeNull();
+    const text = container.textContent;
+    expect(text).not.toMatch(/статус/i);
+    expect(text).not.toMatch(/\d{2}\.\d{2}/);
   });
 
-  it('без активной программы или без ожидающих дней ничего не рендерит', async () => {
-    const ProgramWeekOverviewCard = loadModule();
+  it('называет ближайшую тренировку и её место в неделе', () => {
+    const { ProgramPathScreen } = loadModule();
+    render(React.createElement(ProgramPathScreen, {
+      program: program([], 'active'), days, onClose: () => {},
+    }));
 
-    globalThis.HEYS.YandexAPI = fakeYandexApi({ programData: null });
-    const { container: c1 } = render(React.createElement(ProgramWeekOverviewCard, { clientId: 'c1' }));
-    await act(async () => {});
-    expect(c1.innerHTML).toBe('');
-    cleanup();
+    expect(screen.getByText('Ближайшая')).toBeTruthy();
+    expect(screen.getByText(/День A/)).toBeTruthy();
+  });
+});
 
-    globalThis.HEYS.YandexAPI = fakeYandexApi({
-      programData: program([{ date: T0, dayLabel: 'День A', weekIndex: 1, trainingId: 'tr_0' }]),
-      dayBlobs: { ['heys_dayv2_' + T0]: { trainings: [{ id: 'tr_0', plan: { status: 'done' } }] } },
-    });
-    const { container: c2 } = render(React.createElement(ProgramWeekOverviewCard, { clientId: 'c1' }));
-    await act(async () => {});
-    expect(c2.innerHTML).toBe('');
+describe('placeInWeek — место дня в своей неделе', () => {
+  it('«вторая из трёх на неделе», а не дата следующей', () => {
+    const { placeInWeek } = loadModule();
+    const week = [{ date: '2026-08-10' }, { date: '2026-08-12' }, { date: '2026-08-14' }];
+    expect(placeInWeek(week, '2026-08-12')).toBe('вторая из трёх на неделе');
+    expect(placeInWeek(week, '2026-08-10')).toBe('первая из трёх на неделе');
+  });
+
+  it('одна тренировка в неделе места не получает — сообщать нечего', () => {
+    const { placeInWeek } = loadModule();
+    expect(placeInWeek([{ date: '2026-08-12' }], '2026-08-12')).toBe('');
   });
 });
