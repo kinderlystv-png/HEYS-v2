@@ -341,6 +341,24 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
 
     const CURATOR_COMPETITION_CACHE_TTL_MS = 2 * 60 * 1000;
 
+    // Переключение вкладки с коммитом висящего undo. Живёт на уровне модуля:
+    // пользуются и AppHeader (бейдж пушей, «Настройки» в дропдауне аккаунта),
+    // и AppTabsNav. Раньше хелпер был локальным в AppTabsNav, а AppHeader звал
+    // его по имени из чужой области — то есть падал с ReferenceError.
+    function commitUndoAndSwitchTab(setTab, nextTab, { currentTab, reason } = {}) {
+        try {
+            if (window.HEYS?.Undo?.pending) {
+                console.info('[HEYS.tabs] 🧹 Commit pending undo before tab switch', {
+                    currentTab,
+                    nextTab,
+                    reason,
+                });
+                window.HEYS.Undo.commit(reason || 'tab-switch');
+            }
+        } catch (e) { }
+        setTab(nextTab);
+    }
+
     function AppHeader(props) {
         const {
             clientId,
@@ -375,7 +393,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             retryCountdown,
             GamificationBar,
             setTab,
-            setActiveTab,
         } = props;
 
         // 🚨 EWS Badge State (v1.0)
@@ -863,7 +880,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             // Если уже подписан и устройство, и сервер согласны — переходим на settings.
             if (pushStatus?.subscribed && window.HEYS?.push) {
                 if (typeof haptic === 'function') haptic('light');
-                switchTabWithUndoCommit('user', 'push-settings-badge');
+                commitUndoAndSwitchTab(setTab, 'user', { currentTab: tab, reason: 'push-settings-badge' });
                 setTimeout(() => window.dispatchEvent(new CustomEvent('heys:scroll-to-push-settings')), 80);
                 return;
             }
@@ -3375,9 +3392,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                         className: 'client-dropdown-account__action client-dropdown-account__action--settings',
                                         onClick: () => {
                                             setShowClientDropdown(false);
-                                            if (setActiveTab) {
-                                                setActiveTab('profile');
-                                            }
+                                            // Профиль — вкладка 'user'; вкладки 'profile' не существует.
+                                            // Прежний setActiveTab в AppHeader никем не передавался.
+                                            commitUndoAndSwitchTab(setTab, 'user', {
+                                                currentTab: tab,
+                                                reason: 'account-dropdown-settings',
+                                            });
                                         }
                                     },
                                         React.createElement('span', {
@@ -4389,19 +4409,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             ? 'sext'
             : (primaryTabs.length === 5 ? 'quint' : (primaryTabs.length === 4 ? 'quad' : 'triple'));
 
-        const switchTabWithUndoCommit = (nextTab, reason) => {
-            try {
-                if (window.HEYS?.Undo?.pending) {
-                    console.info('[HEYS.tabs] 🧹 Commit pending undo before tab switch', {
-                        currentTab: tab,
-                        nextTab,
-                        reason,
-                    });
-                    window.HEYS.Undo.commit(reason || 'tab-switch');
-                }
-            } catch (e) { }
-            setTab(nextTab);
-        };
+        const switchTabWithUndoCommit = (nextTab, reason) =>
+            commitUndoAndSwitchTab(setTab, nextTab, { currentTab: tab, reason });
 
         const handlePrimaryTabClick = (nextTab) => {
             if (widgetsEditMode) {
