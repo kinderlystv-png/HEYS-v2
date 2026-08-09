@@ -195,3 +195,22 @@ describe('placeInWeek — место дня в своей неделе', () => {
     expect(placeInWeek([{ date: '2026-08-12' }], '2026-08-12')).toBe('');
   });
 });
+
+describe('перенос тренировки — след в обе стороны', () => {
+  it('исходный день помечен как перенос, а не как пропуск', () => {
+    const { moveOptionsFor } = loadModule();
+    // Сам расчёт вариантов дат: занятый день предлагается с пометкой, а не
+    // прячется — иначе человек не понимает, почему субботы нет в списке.
+    expect(typeof moveOptionsFor).toBe('function');
+    const opts = moveOptionsFor(T0);
+    expect(opts.length).toBeGreaterThan(0);
+    expect(opts.every((o) => typeof o.date === 'string' && typeof o.weekday === 'string')).toBe(true);
+    expect(opts.some((o) => o.date === T1)).toBe(true);
+  });
+
+  it('варианты начинаются со следующего дня — сегодня переносить некуда', () => {
+    const { moveOptionsFor } = loadModule();
+    const opts = moveOptionsFor(T0);
+    expect(opts.some((o) => o.date === T0)).toBe(false);
+  });
+});

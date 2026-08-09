@@ -971,7 +971,7 @@
       // стирал бы уже отмеченные подходы (CURATOR_TRAINING_PROGRAM_PROTOCOL,
       // риск 2.5). Статусы вне этой карты (или отсутствие plan) не участвуют —
       // обычные тренировки без программы куратора мержатся как раньше.
-      const PLAN_STATUS_PRIORITY = { assigned: 0, started: 1, done: 1, skipped: 1 };
+      const PLAN_STATUS_PRIORITY = { assigned: 0, started: 1, done: 1, skipped: 1, moved: 1 };
       const planPriority = (t) => {
         const status = t && t.plan && t.plan.status;
         return status && Object.prototype.hasOwnProperty.call(PLAN_STATUS_PRIORITY, status)

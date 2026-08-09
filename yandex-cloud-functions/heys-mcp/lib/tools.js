@@ -1172,6 +1172,34 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       };
     },
 
+    /**
+     * Перенос назначенной тренировки на другую дату (16a/16b). Дни — разные
+     * ключи, транзакции нет: сначала пишем целевой день, потом отметку на
+     * исходном. Порядок именно такой — если второй записать не удалось, у
+     * клиента окажется лишняя тренировка на новом дне, а не потерянная.
+     */
+    async heys_move_training(args) {
+      await requireProSportTier('Перенос назначенной тренировки');
+      const fromDate = resolveDate(args.date, nowMs);
+      const toDate = String(args.to_date || '').trim();
+      const sourceDay = await readDay(fromDate);
+      const out = day.moveTrainingOut(sourceDay, args.index, { toDate, nowMs, clientId });
+      if (out.error) throw new ToolError('invalid_move', out.error);
+
+      const targetDay = await readDay(toDate);
+      const into = day.moveTrainingIn(targetDay, out.movedTraining, { nowMs, clientId });
+      if (into.error) throw new ToolError('target_day_full', into.error);
+
+      await writeDay(toDate, into.day, Number(targetDay.updatedAt) || 0);
+      await writeDay(fromDate, out.day, Number(sourceDay.updatedAt) || 0);
+
+      const label = out.movedTraining.plan && out.movedTraining.plan.dayLabel;
+      return {
+        text: `Перенёс${label ? ` «${label}»` : ''} с ${fromDate} на ${toDate}. Это не пропуск: ${fromDate} освобождён заранее, тренировка ждёт на новой дате вместе с весами.`,
+        structured: { from: fromDate, to: toDate, index: into.index },
+      };
+    },
+
     async heys_withdraw_training_proposal(args) {
       const date = resolveDate(args.date, nowMs);
       const current = await readDay(date);
@@ -2011,7 +2039,10 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const sortedDays = program.days.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
       const dayBlobs = await readMany(sortedDays.map((d) => day.dayKey(d.date)));
 
-      const counts = { assigned: 0, started: 0, done: 0, skipped: 0, missing: 0 };
+      // 'moved' — отдельная строка рядом с «выполнено» и «пропущено»: перенос
+      // пропуском не считается, иначе куратор увидит провал там, где клиент
+      // просто передвинул день (дизайн-ревью 2026-08-10, 16f).
+      const counts = { assigned: 0, started: 0, done: 0, skipped: 0, moved: 0, missing: 0 };
       const sessions = sortedDays.map((d) => {
         const blob = dayBlobs[day.dayKey(d.date)];
         const trainings = Array.isArray(blob && blob.trainings) ? blob.trainings : [];
@@ -2037,6 +2068,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const textParts = [
         `Программа «${program.title || 'без названия'}»${program.weeks ? `, ${program.weeks} нед.` : ''}: ` +
           `назначено ${counts.assigned}, идёт ${counts.started}, выполнено ${counts.done}, пропущено ${counts.skipped}` +
+          (counts.moved ? `, перенесено ${counts.moved}` : '') +
           (counts.missing ? `, не найдено ${counts.missing}` : '') + '.',
       ];
       if (withDeviations.length) {
@@ -2721,6 +2753,19 @@ const TOOL_SCHEMAS = [
     },
   },
   {
+    name: 'heys_move_training',
+    description: 'Перенести назначенную тренировку на другую дату — целиком, вместе с весами. Перенос это НЕ пропуск: исходный день освобождается заранее и в отчёте идёт отдельной строкой, а не в «пропущено». Переносить можно только план, который клиент ещё не открыл: начатую и завершённую тренировку не переносят, сделанное остаётся на своём дне. Прошедший день не воскрешают — если день уже пропущен, назначь замену обычным heys_assign_training на свободную дату, это будет отдельная тренировка, а не воскресший вторник. Если на целевом дне уже три тренировки, перенос откажет: выбери другую дату.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        index: { type: 'integer', description: 'Номер тренировки в дне, с нуля — как в heys_get_day.' },
+        date: DATE_ARG,
+        to_date: { type: 'string', description: 'Куда переносим, YYYY-MM-DD.' },
+      },
+      required: ['index', 'to_date'],
+    },
+  },
+  {
     name: 'heys_withdraw_training_proposal',
     description: 'Отозвать свою правку, пока клиент на неё не ответил. Отзыв следа в истории клиента не оставляет — в отличие от его отказа. Нужен, когда правку отправили по ошибке или передумали; чтобы заменить её другой, отзывать не обязательно — новое предложение и так вытесняет прежнее.',
     inputSchema: {
@@ -2947,6 +2992,7 @@ const WRITE_TOOLS = new Set([
   'heys_assign_training',
   'heys_assign_program',
   'heys_propose_training_edit',
+  'heys_move_training',
   'heys_withdraw_training_proposal',
   'heys_update_training',
   'heys_delete_training',

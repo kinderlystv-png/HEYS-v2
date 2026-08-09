@@ -24,6 +24,40 @@
     return withCid || U.lsGet('heys_dayv2_' + dateStr, null) || null;
   }
 
+  /**
+   * Дописать тренировку в другой день — единственная операция переноса, которой
+   * у карточки дня не было: React-состояние держит только открытый день, а
+   * целевой лежит в хранилище. Пишем тем же путём, что и остальной день
+   * (lsSet → Store.set → облако), чтобы перенос доехал до куратора сам.
+   */
+  function appendTrainingToDay(dateStr, training) {
+    const U = HEYS.utils || {};
+    if (typeof U.lsGet !== 'function' || typeof U.lsSet !== 'function') return false;
+    let cid = '';
+    try { cid = HEYS.currentClientId || ''; } catch (_) { cid = ''; }
+    const key = cid ? 'heys_' + cid + '_dayv2_' + dateStr : 'heys_dayv2_' + dateStr;
+    const existing = U.lsGet(key, null) || { date: dateStr, meals: [], trainings: [] };
+    const list = Array.isArray(existing.trainings) ? existing.trainings.slice() : [];
+    // Лимит тот же, что у дня: занятый день до сюда доходить не должен, но
+    // проверка стоит и здесь — между показом списка и выбором проходит время.
+    const real = list.filter(function (t) {
+      return t && (t.time || (Array.isArray(t.z) && t.z.some(function (m) { return +m > 0; })) || t.workoutLog);
+    });
+    if (real.length >= 3) return false;
+    list.push(training);
+    const next = Object.assign({}, existing, {
+      date: existing.date || dateStr,
+      trainings: list,
+      updatedAt: Date.now()
+    });
+    try {
+      U.lsSet(key, next);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function pad2(n) {
     return n < 10 ? '0' + n : '' + n;
   }
@@ -2646,6 +2680,35 @@
     return placeInWeek(planned.map(function (d) { return { date: d }; }), dateKey);
   }
 
+  const WEEKDAY_SHORT = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+
+  /**
+   * Ближайшие дни для переноса (16a). Занятый день не предлагается — с
+   * пометкой «занят», без диалога «что убрать»: лимит трёх тренировок решается
+   * выбором, а не разговором посреди переноса.
+   */
+  function moveOptionsFor(dateKey) {
+    const out = [];
+    for (let i = 1; i <= 7 && out.length < 5; i++) {
+      const d = addDaysToKey(dateKey, i);
+      let day = null;
+      try { day = readDayFromStore(d); } catch (_) { day = null; }
+      const list = day && Array.isArray(day.trainings) ? day.trainings : [];
+      const real = list.filter(function (t) {
+        return t && (t.time || (Array.isArray(t.z) && t.z.some(function (m) { return +m > 0; })) || t.workoutLog);
+      });
+      const parts = d.split('-').map(Number);
+      const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+      out.push({
+        date: d,
+        weekday: WEEKDAY_SHORT[dt.getDay()],
+        human: parts[2] + '.' + String(parts[1]).padStart(2, '0'),
+        busy: real.length >= 3
+      });
+    }
+    return out;
+  }
+
   const PROGRAM_PATH_ID = 'program-path';
 
   /**
@@ -3636,6 +3699,28 @@
                 // Единственное, что забрано из прежнего виджета обзора (16c):
                 // место в неделе, а не дата следующей тренировки.
                 weekPlace: weekPlaceFromStore(dateKey),
+                moveOptions: moveOptionsFor(dateKey),
+                // Клиент переносит сам, без подтверждения куратора (16a): пока
+                // тот ответит, день уйдёт, и перенос превратится в пропуск.
+                onMove: function (toDate) {
+                  const src = readDayFromStore(dateKey);
+                  const t0 = src && Array.isArray(src.trainings) ? src.trainings[ti] : null;
+                  if (!t0 || !t0.plan) return;
+                  const moved = {
+                    ...t0,
+                    id: 'tr_' + Math.random().toString(36).slice(2, 10),
+                    plan: { ...t0.plan, status: 'assigned', movedFrom: dateKey, movedAt: Date.now() },
+                    updatedAt: Date.now()
+                  };
+                  delete moved.plan.movedTo;
+                  // Целевой день пишем первым: если не удастся, у клиента
+                  // останется исходный план, а не потерянная тренировка.
+                  const okTarget = appendTrainingToDay(toDate, moved);
+                  if (!okTarget) return;
+                  patchTraining(ti, function (cur) {
+                    return { ...cur, plan: { ...cur.plan, status: 'moved', movedTo: toDate, movedAt: Date.now() } };
+                  });
+                },
                 onStart: function (e) {
                   if (e && e.stopPropagation) e.stopPropagation();
                   // Старт снимает «assigned» один раз: дальше это обычная
@@ -3954,6 +4039,8 @@
     // Тестовый шов — прямой рендер обзора программы куратора в изоляции от
     // всего остального compact-trainings дерева (много обязательных пропов).
     ProgramNextLine,
+    moveOptionsFor,
+    appendTrainingToDay,
     ProgramPathScreen,
     placeInWeek
   };

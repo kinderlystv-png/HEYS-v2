@@ -71,7 +71,11 @@
    *
    * @param {{plan?:{status?:string}}} training
    */
-  const NOT_PERFORMED_PLAN_STATUSES = ['assigned', 'skipped'];
+  // 'moved' — день, с которого тренировку унесли на другую дату (перенос,
+  // дизайн-ревью 2026-08-10). Как и назначенное с пропущенным, состоявшейся
+  // работой он не является: сама тренировка теперь ждёт на новом дне и
+  // посчитается там. Без этого перенос удваивал бы нагрузку на обоих днях.
+  const NOT_PERFORMED_PLAN_STATUSES = ['assigned', 'skipped', 'moved'];
 
   function isNotPerformedTraining(training) {
     if (!training || !training.plan) return false;

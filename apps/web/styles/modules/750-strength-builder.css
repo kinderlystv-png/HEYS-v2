@@ -1707,3 +1707,74 @@
   border: 1px solid var(--sb-br, #e2e8f0);
   background: var(--sb-soft, #f1f5f9);
 }
+
+/* ── Перенос тренировки (дизайн-ревью 2026-08-10, 16a/16b) ─────────────── */
+/* Перенести ≠ пропустить: исходный день освобождается заранее и пропуском не
+   считается — отсюда и вид карточки, нейтральный, а не гашёный. */
+
+.sb-move-days {
+  display: flex;
+  gap: 8px;
+  margin: 4px 0 12px;
+  overflow-x: auto;
+}
+
+.sb-move-day {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 62px;
+  padding: 10px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--sb-br, #e2e8f0);
+  background: var(--sb-card, #fff);
+  color: var(--sb-tx, #0f172a);
+  cursor: pointer;
+}
+
+.sb-move-day b {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.sb-move-day span {
+  font-size: 11px;
+  color: var(--sb-mut, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-move-day.is-on {
+  border-color: #1d4ed8;
+  background: rgba(37, 99, 235, 0.08);
+}
+
+/* Занятый день не предлагается — пометкой, а не диалогом «что убрать». */
+.sb-move-day.is-busy {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sb-move-day i {
+  font-size: 9.5px;
+  font-style: normal;
+  color: var(--sb-mut, #64748b);
+}
+
+.sb-move-skip {
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  border: none;
+  background: transparent;
+  color: var(--sb-mut, #64748b);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.sb-plan-card.is-moved {
+  border-color: rgba(37, 99, 235, 0.2);
+  background: var(--sb-soft, #f1f5f9);
+}

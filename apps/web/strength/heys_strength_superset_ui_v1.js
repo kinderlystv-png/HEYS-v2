@@ -637,12 +637,55 @@
     );
   }
 
+  /** Ближайшие свободные дни для переноса (16a). Занятый день не предлагается. */
+  function MoveSheet(props) {
+    const { options, onCancel, onConfirm } = props;
+    const [pick, setPick] = React.useState('');
+    return h('div', { className: 'sb-sheet-back', onClick: onCancel },
+      h('div', { className: 'sb-sheet', onClick: function (e) { e.stopPropagation(); } },
+        h('div', { className: 'sb-sheet-grip' }),
+        h('b', { className: 'sb-confirm-title' }, 'Когда сможешь?'),
+        h('p', { className: 'sb-confirm-text' },
+          'Тренировка переедет целиком, вместе с весами. Куратор увидит новую дату.'),
+        h('div', { className: 'sb-move-days' },
+          options.map(function (o) {
+            return h('button', {
+              key: o.date, type: 'button',
+              className: 'sb-move-day' + (pick === o.date ? ' is-on' : '') + (o.busy ? ' is-busy' : ''),
+              disabled: o.busy,
+              onClick: function () { if (!o.busy) setPick(o.date); }
+            },
+              h('b', null, o.weekday),
+              h('span', null, o.human),
+              o.busy && h('i', null, 'занят')
+            );
+          })
+        ),
+        h('div', { className: 'sb-pain-actions' },
+          h('button', { type: 'button', className: 'sb-btn', onClick: onCancel }, 'Передумал'),
+          h('button', {
+            type: 'button', className: 'sb-btn is-accent',
+            disabled: !pick,
+            onClick: function () { if (pick) onConfirm(pick); }
+          }, pick ? 'Перенести' : 'Выбери день')
+        ),
+        h('button', {
+          type: 'button', className: 'sb-move-skip',
+          onClick: function () { if (props.onSkipInstead) props.onSkipInstead(); }
+        }, 'Совсем пропустить')
+      )
+    );
+  }
+
+  Parts.MoveSheet = MoveSheet;
+
   function PlanCard(props) {
-    const { training, dateKey, isFutureDay, weekPlace, onStart, onOpenReadonly, onSkip, onResumeSkipped } = props;
+    const { training, dateKey, isFutureDay, weekPlace, moveOptions, onStart, onOpenReadonly, onSkip, onMove, onResumeSkipped } = props;
     const wl = (training && training.workoutLog) || {};
     const exercises = Array.isArray(wl.exercises) ? wl.exercises : [];
     const plan = training && training.plan;
     const [skipOpen, setSkipOpen] = React.useState(false);
+    const [moveOpen, setMoveOpen] = React.useState(false);
     if (!plan) return null;
     const label = plan.dayLabel || sessionTitle(exercises);
     // Место в неделе вместо даты следующей тренировки — единственное, что
@@ -651,6 +694,15 @@
     const meta = 'назначил ' + (plan.assignedBy || 'куратор')
       + (isFutureDay ? '' : ' · ' + exercises.length + ' упр.')
       + (!isFutureDay && weekPlace ? ' · ' + weekPlace : '');
+
+    if (plan.status === 'moved') {
+      // День, с которого тренировку унесли: не пропуск — она ждёт на новой дате.
+      return h('div', { className: 'sb-plan-card is-moved' },
+        h('b', null, label + ' перенесён'),
+        h('span', { className: 'sb-plan-meta' },
+          plan.movedTo ? 'Не пропуск — тренировка ждёт ' + humanDate(plan.movedTo) : 'Не пропуск — перенесён')
+      );
+    }
 
     if (plan.status === 'skipped') {
       // Пропущенный день остаётся пустым: тоннажа нет, подходов нет (ядро уже
@@ -680,6 +732,7 @@
     }
 
     return h('div', { className: 'sb-plan-card' },
+      plan.movedFrom && h('div', { className: 'sb-plan-badge' }, 'План с ' + humanDate(plan.movedFrom)),
       h('b', null, 'Сегодня по плану · ' + label),
       h('span', { className: 'sb-plan-meta' }, meta),
       h('div', { className: 'sb-plan-actions' },
@@ -689,9 +742,15 @@
         }, 'Начать по плану'),
         h('button', {
           type: 'button', className: 'sb-btn sb-plan-skip',
-          onClick: function () { setSkipOpen(true); }
-        }, 'Отпустить')
+          onClick: function () { if (moveOptions && moveOptions.length) setMoveOpen(true); else setSkipOpen(true); }
+        }, moveOptions && moveOptions.length ? 'Не смогу сегодня' : 'Отпустить')
       ),
+      moveOpen && h(MoveSheet, {
+        options: moveOptions,
+        onCancel: function () { setMoveOpen(false); },
+        onConfirm: function (toDate) { setMoveOpen(false); onMove(toDate); },
+        onSkipInstead: function () { setMoveOpen(false); setSkipOpen(true); }
+      }),
       skipOpen && h(SkipSheet, {
         onCancel: function () { setSkipOpen(false); },
         onConfirm: function (skipReason) { setSkipOpen(false); onSkip(skipReason); }

@@ -1864,7 +1864,7 @@ test('get_program_status: считает по живому plan.status кажд�
   const res = await build(api).heys_get_program_status();
   const s = res.structured;
   assert.equal(s.has_program, true);
-  assert.deepEqual(s.counts, { assigned: 0, started: 1, done: 1, skipped: 1, missing: 0 });
+  assert.deepEqual(s.counts, { assigned: 0, started: 1, done: 1, skipped: 1, moved: 0, missing: 0 });
 
   const dayA = s.sessions.find((x) => x.date === '2026-08-11');
   assert.equal(dayA.status, 'done');
@@ -1906,7 +1906,7 @@ test('get_program_status: тренировка из индекса удален�
     day: { date: '2026-08-11', meals: [], trainings: [], updatedAt: 111 },
   });
   const res = await build(api).heys_get_program_status();
-  assert.deepEqual(res.structured.counts, { assigned: 0, started: 0, done: 0, skipped: 0, missing: 1 });
+  assert.deepEqual(res.structured.counts, { assigned: 0, started: 0, done: 0, skipped: 0, moved: 0, missing: 1 });
   assert.equal(res.structured.sessions[0].status, 'missing');
 });
 

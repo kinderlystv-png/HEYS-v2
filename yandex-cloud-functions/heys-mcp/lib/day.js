@@ -906,6 +906,93 @@ function proposeTrainingEdit(day, index, { exercises, proposedBy, note }, { nowM
 }
 
 /**
+ * Перенос тренировки на другую дату (дизайн-ревью 2026-08-10, экраны 16a/16b).
+ *
+ * Отдельного механизма здесь нет и не нужно: перенос — это то же назначение
+ * плана на новый день плюс след в обе стороны. Новых операций не заводим,
+ * добавляется только происхождение на перенесённой записи и отметка на
+ * исходном дне.
+ *
+ * Ключевое различие, из которого следует всё остальное: **перенести ≠
+ * пропустить**. Перенос освобождает исходный день заранее и пропуском не
+ * считается — в отчёте куратора это отдельная строка. Пропуск задним числом
+ * остаётся пропуском навсегда: прошедший день не воскрешают, замена приходит
+ * новой тренировкой на свободный день.
+ *
+ * Возвращает исходный день с отметкой и готовую запись для целевого дня —
+ * записать её обязан вызывающий, потому что дни лежат под разными ключами и
+ * транзакции между ними нет.
+ */
+function moveTrainingOut(day, index, { toDate, nowMs, clientId }) {
+  const list = Array.isArray(day.trainings) ? day.trainings : [];
+  const i = Number(index);
+  if (!Number.isInteger(i) || i < 0 || i >= list.length) {
+    return { day, error: `В дне тренировок ${list.length} — index от 0 до ${Math.max(0, list.length - 1)}.` };
+  }
+  if (!isValidDate(toDate)) return { day, error: `Дата "${toDate}" не в формате YYYY-MM-DD.` };
+  const prev = list[i] || {};
+  if (!prev.plan || !prev.plan.status) {
+    return { day, error: `Тренировка ${i} — не назначенный план, а обычная запись. Переносить можно только план.` };
+  }
+  if (prev.plan.status === 'done' || prev.plan.status === 'started') {
+    return { day, error: `Тренировка ${i} уже начата или закончена — перенести её нельзя. Сделанное остаётся на своём дне.` };
+  }
+  if (prev.plan.status === 'moved') {
+    return { day, error: `Тренировка ${i} уже перенесена на ${prev.plan.movedTo || 'другую дату'}.` };
+  }
+  if (day.date && toDate === day.date) {
+    return { day, error: 'Перенос на тот же день ничего не меняет.' };
+  }
+
+  // Исходный день: не пропуск, а «уехала на такую-то дату». Статус moved
+  // держит её вне калорий и нагрузки — считаться она будет на новом дне.
+  const source = {
+    ...prev,
+    plan: { ...prev.plan, status: 'moved', movedTo: toDate, movedAt: nowMs },
+    updatedAt: nowMs,
+  };
+  // Целевой день получает ту же тренировку целиком, вместе с весами, и след
+  // происхождения: клиент должен видеть, что это перенос, а не новое задание.
+  const moved = {
+    ...prev,
+    id: makeId('tr_'),
+    plan: {
+      ...prev.plan,
+      status: 'assigned',
+      movedFrom: day.date || null,
+      movedAt: nowMs,
+    },
+    updatedAt: nowMs,
+  };
+  delete moved.plan.movedTo;
+  // Неотвеченная правка едет вместе с тренировкой: она про её содержание, а не
+  // про дату, и на новом дне остаётся ровно тем же незакрытым вопросом.
+
+  const trainings = list.slice();
+  trainings[i] = source;
+  return {
+    day: touch({ ...day, trainings }, nowMs, clientId),
+    index: i,
+    movedTraining: moved,
+    error: null,
+  };
+}
+
+/**
+ * Принять перенесённую тренировку на целевом дне. Отдельная функция, потому
+ * что это другой ключ хранилища: вызывающий пишет два дня подряд, и если
+ * второй записать не удалось, первый обязан остаться нетронутым.
+ */
+function moveTrainingIn(day, movedTraining, { nowMs, clientId }) {
+  const list = Array.isArray(day.trainings) ? day.trainings : [];
+  if (list.filter(isRealTraining).length >= MAX_TRAININGS_PER_DAY) {
+    return { day, error: `В дне ${day.date || ''} уже ${MAX_TRAININGS_PER_DAY} тренировки — перенести сюда некуда.` };
+  }
+  const trainings = list.concat([{ ...movedTraining, updatedAt: nowMs }]);
+  return { day: touch({ ...day, trainings }, nowMs, clientId), index: trainings.length - 1, error: null };
+}
+
+/**
  * Отозвать своё предложение, пока клиент не ответил. Отзыв — не отказ клиента:
  * запись просто перестаёт существовать, и в истории дня следа не оставляет.
  */
@@ -2329,6 +2416,8 @@ module.exports = {
   setStrengthWorkout,
   assignTraining,
   proposeTrainingEdit,
+  moveTrainingOut,
+  moveTrainingIn,
   withdrawTrainingProposal,
   buildWorkoutLog,
   isRealTraining,

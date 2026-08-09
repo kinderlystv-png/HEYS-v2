@@ -27,6 +27,7 @@ const DIARY_WRITE_TOOLS = new Set([
   'heys_assign_training',
   'heys_assign_program',
   'heys_propose_training_edit',
+  'heys_move_training',
   'heys_withdraw_training_proposal',
   'heys_update_training',
   'heys_delete_training',

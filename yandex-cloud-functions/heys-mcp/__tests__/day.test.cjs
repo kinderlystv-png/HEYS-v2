@@ -1470,6 +1470,80 @@ test('отзыв предложения не оставляет следа, по
   assert.match(again.error, /нет неотвеченного предложения/);
 });
 
+// --- Перенос тренировки (дизайн-ревью 2026-08-10, 16a/16b) --------------
+//
+// Главное различие, из которого следует всё: перенести ≠ пропустить. Перенос
+// освобождает исходный день заранее и пропуском не считается; прошедший день
+// не воскрешают вовсе.
+
+function assignedPlanDay(date = '2026-08-11') {
+  return day.assignTraining(day.emptyDay(date, CLIENT, 1000), undefined, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 75 }] }],
+    assignedBy: 'Артём',
+    dayLabel: 'День B',
+  }, { nowMs: 1000, clientId: CLIENT });
+}
+
+test('перенос помечает исходный день как moved, а не как пропуск', () => {
+  const { day: base, index } = assignedPlanDay();
+  const res = day.moveTrainingOut(base, index, { toDate: '2026-08-13', nowMs: 2000, clientId: CLIENT });
+
+  assert.equal(res.error, null);
+  const src = res.day.trainings[index];
+  assert.equal(src.plan.status, 'moved');
+  assert.equal(src.plan.movedTo, '2026-08-13');
+  assert.notEqual(src.plan.status, 'skipped', 'перенос не должен читаться как пропуск');
+});
+
+test('перенесённая запись несёт происхождение и веса целиком', () => {
+  const { day: base, index } = assignedPlanDay();
+  const res = day.moveTrainingOut(base, index, { toDate: '2026-08-13', nowMs: 2000, clientId: CLIENT });
+  const moved = res.movedTraining;
+
+  assert.equal(moved.plan.status, 'assigned');
+  assert.equal(moved.plan.movedFrom, '2026-08-11');
+  assert.equal(moved.plan.movedTo, undefined, 'на новом дне «уехала туда-то» уже неверно');
+  assert.equal(moved.workoutLog.exercises[0].approaches[0].weightKg, '75', 'веса едут вместе с тренировкой');
+  assert.notEqual(moved.id, base.trainings[index].id, 'на новом дне это отдельная запись');
+});
+
+test('перенос — не для начатой и не для завершённой тренировки', () => {
+  const { day: base, index } = assignedPlanDay();
+  for (const status of ['started', 'done']) {
+    const d = { ...base };
+    d.trainings = base.trainings.map((t, i) => (i === index ? { ...t, plan: { ...t.plan, status } } : t));
+    const res = day.moveTrainingOut(d, index, { toDate: '2026-08-13', nowMs: 2000, clientId: CLIENT });
+    assert.match(res.error, /начата или закончена/);
+  }
+});
+
+test('дважды одну тренировку не переносят', () => {
+  const { day: base, index } = assignedPlanDay();
+  const once = day.moveTrainingOut(base, index, { toDate: '2026-08-13', nowMs: 2000, clientId: CLIENT });
+  const twice = day.moveTrainingOut(once.day, index, { toDate: '2026-08-14', nowMs: 3000, clientId: CLIENT });
+  assert.match(twice.error, /уже перенесена/);
+});
+
+test('целевой день с тремя тренировками перенос не принимает', () => {
+  const { day: base, index } = assignedPlanDay();
+  const out = day.moveTrainingOut(base, index, { toDate: '2026-08-13', nowMs: 2000, clientId: CLIENT });
+  const full = day.emptyDay('2026-08-13', CLIENT, 1000);
+  full.trainings = [
+    { time: '08:00', z: [30, 0, 0, 0] },
+    { time: '09:00', z: [30, 0, 0, 0] },
+    { time: '10:00', z: [30, 0, 0, 0] },
+  ];
+  const into = day.moveTrainingIn(full, out.movedTraining, { nowMs: 2000, clientId: CLIENT });
+  assert.match(into.error, /перенести сюда некуда/);
+});
+
+test('перенесённый день не считается состоявшейся тренировкой', () => {
+  // Иначе перенос удвоил бы нагрузку: и на исходном дне, и на новом.
+  const { day: base, index } = assignedPlanDay();
+  const res = day.moveTrainingOut(base, index, { toDate: '2026-08-13', nowMs: 2000, clientId: CLIENT });
+  assert.equal(day.isNotPerformedTraining(res.day.trainings[index]), true);
+});
+
 test('участники связки обязаны идти подряд: раунд выводится из позиции', () => {
   const broken = day.buildWorkoutLog([
     { name: 'Жим', superset_group: 1, approaches: [{ weight_kg: 60, reps: 8 }] },
