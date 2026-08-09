@@ -1570,7 +1570,7 @@ function activityDrift(meta, day) {
   // ждёт выполнения, и сравнивать его с активностью на момент записи кэша
   // нельзя — иначе назначение выглядело бы как проведённая тренировка.
   const trainingMin = ((day && day.trainings) || [])
-    .filter((t) => !isPlannedTraining(t))
+    .filter((t) => !isNotPerformedTraining(t))
     .reduce((sum, t) => sum + (((t && t.z) || []).reduce((a, m) => a + (Number(m) || 0), 0)), 0);
   const householdMin = ((day && day.householdActivities)
     || (day && Number(day.householdMin) > 0 ? [{ minutes: day.householdMin }] : []))
@@ -1627,7 +1627,7 @@ function serverNdteBoost(prevDay, profile, bmr, nowMs = Date.now()) {
   // первой строки. Невыполненный вчерашний план не должен ни поднимать буст,
   // ни выдавать себя за силовую, если сам человек делал кардио.
   const allTrainings = (prevDay && Array.isArray(prevDay.trainings)) ? prevDay.trainings : [];
-  const trainings = allTrainings.filter((t) => !isPlannedTraining(t));
+  const trainings = allTrainings.filter((t) => !isNotPerformedTraining(t));
   if (!iw || !trainings.length || !bmr) return 0;
 
   // Вес 70 захардкожен в оригинале: калории нужны только как мера объёма
@@ -1933,7 +1933,7 @@ function summarizeDayBrief(day) {
   // проставлены, и без отсева сводка «за неделю N минут тренировок» раздувалась
   // бы назначением, которое клиент ещё не выполнял.
   const trainingMinutes = (day.trainings || []).reduce((sum, t) => {
-    if (isPlannedTraining(t)) return sum;
+    if (isNotPerformedTraining(t)) return sum;
     const z = Array.isArray(t && t.z) ? t.z : [];
     return sum + z.reduce((a, b) => a + (Number(b) || 0), 0);
   }, 0);
@@ -2006,8 +2006,8 @@ function ratingValues(source, field) {
  * сессий). В `isRealTraining` и `summarizeDay` его нет намеренно: куратор
  * обязан видеть назначенное, просто с явным признаком плана.
  */
-function isPlannedTraining(t) {
-  return webMirror.isPlannedTraining(t);
+function isNotPerformedTraining(t) {
+  return webMirror.isNotPerformedTraining(t);
 }
 
 /** Тренировка-заготовка без времени и минут в средние не входит — как в приложении. */
@@ -2089,7 +2089,7 @@ module.exports = {
   setStrengthWorkout,
   buildWorkoutLog,
   isRealTraining,
-  isPlannedTraining,
+  isNotPerformedTraining,
   updateDayFields,
   summarizeDay,
   applyColdExposure,

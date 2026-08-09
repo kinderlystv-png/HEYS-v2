@@ -71,7 +71,7 @@ describe('HEYS.TDEE.trainingKcal — назначенное не даёт кал
   it('предикат берётся из ядра, когда оно загружено, а не из локальной копии', () => {
     // Локальный фолбэк нужен на случай сборки без модуля нагрузки, но пока ядро
     // рядом — правда за ним. Иначе два условия разойдутся молча.
-    globalThis.HEYS.TrainingKernel = { load: { isPlannedTraining: () => true } };
+    globalThis.HEYS.TrainingKernel = { load: { isNotPerformedTraining: () => true } };
     expect(TDEE.trainingKcal(CARDIO, 80)).toBe(0);
   });
 });

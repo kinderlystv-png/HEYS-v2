@@ -2011,15 +2011,15 @@
    * калории вчерашнего дня в NDTE и создавал бы «до/после тренировки» контекст
    * у приёмов пищи, которых рядом с тренировкой не было.
    *
-   * Предикат канонический — `TK.load.isPlannedTraining`. Локальный фолбэк на
+   * Предикат канонический — `TK.load.isNotPerformedTraining`. Локальный фолбэк на
    * случай сборки без модуля нагрузки (тот же приём, что Runner fallback guard,
    * `_kernel/KERNEL_EXTRACTION_PLAN.md`): условие обязано совпадать с ядром.
    */
-  const isPlannedTraining = (t) => {
+  const isNotPerformedTraining = (t) => {
     const TK = global.HEYS && global.HEYS.TrainingKernel;
-    return TK && TK.load && TK.load.isPlannedTraining
-      ? TK.load.isPlannedTraining(t)
-      : !!(t && t.plan && t.plan.status === 'assigned');
+    return TK && TK.load && TK.load.isNotPerformedTraining
+      ? TK.load.isNotPerformedTraining(t)
+      : !!(t && t.plan && (t.plan.status === 'assigned' || t.plan.status === 'skipped'));
   };
 
   /**
@@ -2041,7 +2041,7 @@
     // 🆕 v3.7.3: Фильтруем пустые/дефолтные тренировки
     // Назначенные куратором отсеиваются тут же: приём пищи не может быть «после
     // тренировки», которой ещё не было.
-    const trainings = rawTrainings.filter(t => I.isValidTraining(t) && !isPlannedTraining(t));
+    const trainings = rawTrainings.filter(t => I.isValidTraining(t) && !isNotPerformedTraining(t));
 
     if (!mealTimeMin && mealTimeMin !== 0) return null;
 
@@ -2592,7 +2592,7 @@
     calculateTrainingKcal: (training, weight = 70) => {
       if (!training || !training.z) return 0;
       // Назначенное куратором ещё не выполнено — расхода не создаёт.
-      if (isPlannedTraining(training)) return 0;
+      if (isNotPerformedTraining(training)) return 0;
       const zones = training.z || [0, 0, 0, 0];
       const totalMinutes = zones.reduce((a, b) => a + (+b || 0), 0);
       if (totalMinutes === 0) return 0;
@@ -2925,7 +2925,7 @@
     // назначенное отсеивается до расчёта, поэтому мимо фильтра не проходят ни
     // калории, ни `trainings.length` (множитель за две тренировки), ни
     // `dominantType` (силовая даёт больший буст, чем кардио).
-    const trainings = dayData.trainings.filter(t => !isPlannedTraining(t));
+    const trainings = dayData.trainings.filter(t => !isNotPerformedTraining(t));
     if (trainings.length === 0) {
       return { trainings: [], totalKcal: 0, hoursSince: Infinity, dominantType: null };
     }

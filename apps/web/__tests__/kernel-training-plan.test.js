@@ -35,22 +35,22 @@ describe('назначенная тренировка не считается в
     beforeEach(() => { window.HEYS = {}; });
     afterEach(() => { window.HEYS = originalHEYS; });
 
-    describe('TK.load.isPlannedTraining — канонический предикат', () => {
+    describe('TK.load.isNotPerformedTraining — канонический предикат', () => {
         it('назначенное — да, начатое и выполненное — нет', () => {
             const tk = loadLoadKernel();
-            expect(tk.isPlannedTraining({ plan: { status: 'assigned' } })).toBe(true);
-            expect(tk.isPlannedTraining({ plan: { status: 'started' } })).toBe(false);
-            expect(tk.isPlannedTraining({ plan: { status: 'done' } })).toBe(false);
+            expect(tk.isNotPerformedTraining({ plan: { status: 'assigned' } })).toBe(true);
+            expect(tk.isNotPerformedTraining({ plan: { status: 'started' } })).toBe(false);
+            expect(tk.isNotPerformedTraining({ plan: { status: 'done' } })).toBe(false);
         });
 
         it('обычная запись без поля plan — факт, а не план', () => {
             // Поля plan сегодня нет ни у одной записи в базе: предикат обязан
             // молчать на всей существующей истории.
             const tk = loadLoadKernel();
-            expect(tk.isPlannedTraining(cardioTraining())).toBe(false);
-            expect(tk.isPlannedTraining({ plan: null })).toBe(false);
-            expect(tk.isPlannedTraining(null)).toBe(false);
-            expect(tk.isPlannedTraining(undefined)).toBe(false);
+            expect(tk.isNotPerformedTraining(cardioTraining())).toBe(false);
+            expect(tk.isNotPerformedTraining({ plan: null })).toBe(false);
+            expect(tk.isNotPerformedTraining(null)).toBe(false);
+            expect(tk.isNotPerformedTraining(undefined)).toBe(false);
         });
     });
 
@@ -103,13 +103,42 @@ describe('назначенная тренировка не считается в
         });
     });
 
+    describe('пропущенная тренировка тоже не считается фактом', () => {
+        // Решение владельца 2026-08-09: пропуск остаётся в дне как история
+        // «назначено и не сделано» — куратор её видит, но нагрузки она не даёт.
+        const SKIPPED = { plan: { status: 'skipped' } };
+
+        it('предикат ловит skipped наравне с assigned', () => {
+            const tk = loadLoadKernel();
+            expect(tk.isNotPerformedTraining(strengthTraining(SKIPPED))).toBe(true);
+            expect(tk.isNotPerformedTraining(strengthTraining({ plan: { status: 'started' } }))).toBe(false);
+            expect(tk.isNotPerformedTraining(strengthTraining({ plan: { status: 'done' } }))).toBe(false);
+        });
+
+        it('пропущенная не даёт ни нагрузки, ни тоннажа, ни счётчика', () => {
+            const tk = loadLoadKernel();
+            const ks = loadStrengthKernel();
+            expect(tk.sessionLoad(cardioTraining(SKIPPED), [2, 3, 5, 8])).toBe(0);
+            const day = { trainings: [strengthTraining(SKIPPED)] };
+            expect(ks.dayTonnage(day)).toBe(0);
+            expect(ks.countStrengthWorkouts(day)).toBe(0);
+        });
+
+        it('фолбэк в модуле силовых знает про skipped так же, как ядро', () => {
+            // Локальный фолбэк, отставший от ядра на один статус, — ровно тот
+            // молчаливый разрыв, ради которого предикат сделан единственным.
+            const ks = loadStrengthKernel();
+            expect(ks.dayTonnage({ trainings: [strengthTraining(SKIPPED)] })).toBe(0);
+        });
+    });
+
     describe('фолбэк предиката в модуле силовых', () => {
         it('работает и без модуля нагрузки, и через него (прод-порядок)', () => {
             // Выше модуль нагрузки не грузился вовсе — там отработал локальный
             // фолбэк. Здесь оба модуля в прод-порядке: результат обязан совпасть.
             const tk = loadLoadKernel();
             const ks = loadStrengthKernel();
-            expect(tk.isPlannedTraining(strengthTraining(ASSIGNED))).toBe(true);
+            expect(tk.isNotPerformedTraining(strengthTraining(ASSIGNED))).toBe(true);
             const day = { trainings: [strengthTraining(ASSIGNED)] };
             expect(ks.dayTonnage(day)).toBe(0);
             expect(ks.countStrengthWorkouts(day)).toBe(0);

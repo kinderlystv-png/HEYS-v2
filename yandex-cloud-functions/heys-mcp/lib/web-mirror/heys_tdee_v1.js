@@ -122,16 +122,16 @@
    * поэтому без предиката план считался бы фактом и поднимал расход, оптимум и
    * калорийный долг так, будто человек уже отработал.
    *
-   * Предикат канонический — `TK.load.isPlannedTraining`. Локальный фолбэк нужен
+   * Предикат канонический — `TK.load.isNotPerformedTraining`. Локальный фолбэк нужен
    * потому, что порядок загрузки модулей не гарантирован: TDEE считается и там,
    * где ядро нагрузки не подключено (тот же приём, что Runner fallback guard,
    * `_kernel/KERNEL_EXTRACTION_PLAN.md`). Расходиться им нельзя — условие одно.
    */
-  const isPlannedTraining = (training) => {
+  const isNotPerformedTraining = (training) => {
     const TK = HEYS.TrainingKernel;
-    return TK && TK.load && TK.load.isPlannedTraining
-      ? TK.load.isPlannedTraining(training)
-      : !!(training && training.plan && training.plan.status === 'assigned');
+    return TK && TK.load && TK.load.isNotPerformedTraining
+      ? TK.load.isNotPerformedTraining(training)
+      : !!(training && training.plan && (training.plan.status === 'assigned' || training.plan.status === 'skipped'));
   };
 
   /**
@@ -147,7 +147,7 @@
     // зонам у него уже проставлены. Это единственный вход тренировок в весь
     // дневной расход (`calculateTDEE` зовёт только его), поэтому оптимум,
     // калорийный долг и серверная оценка нормы закрываются здесь же.
-    if (isPlannedTraining(training)) return 0;
+    if (isNotPerformedTraining(training)) return 0;
     // Нетто: минута в зоне стоит столько, на сколько она дороже покоя.
     const kcalMin = mets.map(m => netKcalPerMin(m, weight));
     return (training.z || [0, 0, 0, 0]).reduce((sum, min, i) =>

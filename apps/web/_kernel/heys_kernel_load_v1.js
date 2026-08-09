@@ -7,7 +7,7 @@
 // нагрузку» кустарно — этот модуль даёт им общую математику.
 //
 // Что вошло:
-//   isPlannedTraining(training)       — запись назначена куратором, но не выполнена
+//   isNotPerformedTraining(training)       — запись назначена куратором, но не выполнена
 //   sessionLoad(training, zoneMets)   — нагрузка кардио-сессии, MET-минуты
 //   fitnessFatigue(dailyLoads, opts)  — CTL/ATL/TSB по плотному ряду за день
 //
@@ -53,7 +53,8 @@
   }
 
   /**
-   * Тренировка назначена куратором, но ещё не выполнена.
+   * Тренировка, которой не было: назначена куратором и не начата, либо явно
+   * пропущена.
    *
    * Назначенное лежит в `day.trainings` рядом с фактическим — теми же полями,
    * с теми же зонами и упражнениями. Без общего предиката каждый счётчик
@@ -61,14 +62,20 @@
    * накопленную нагрузку так, будто человек уже отработал. Статусы 'started' и
    * 'done' — уже факт, для них false.
    *
-   * Поле `plan` пока не пишет никто: защита ставится ДО реализации назначения,
-   * чтобы к первой такой записи все потребители уже умели её не засчитывать.
+   * `skipped` здесь по той же причине, что `assigned`: пропущенная тренировка
+   * остаётся в дне как история «назначено и не сделано» — её видит куратор, но
+   * нагрузки она не создаёт. Удалять её вместо этого нельзя: тогда исчезнет сам
+   * факт пропуска, а он и есть предмет разговора куратора с клиентом.
+   *
    * Предикат один на всё ядро — второй, локальный, разойдётся с этим молча.
    *
    * @param {{plan?:{status?:string}}} training
    */
-  function isPlannedTraining(training) {
-    return !!(training && training.plan && training.plan.status === 'assigned');
+  const NOT_PERFORMED_PLAN_STATUSES = ['assigned', 'skipped'];
+
+  function isNotPerformedTraining(training) {
+    if (!training || !training.plan) return false;
+    return NOT_PERFORMED_PLAN_STATUSES.indexOf(training.plan.status) !== -1;
   }
 
   /**
@@ -86,7 +93,7 @@
     if (!training || String(training.type) === 'strength') return 0;
     // Назначенное — ещё не сделанное: план не создаёт нагрузки, даже если у него
     // уже проставлены минуты по зонам.
-    if (isPlannedTraining(training)) return 0;
+    if (isNotPerformedTraining(training)) return 0;
     const z = Array.isArray(training.z) ? training.z : [];
     const mets = Array.isArray(zoneMets) && zoneMets.length ? zoneMets : DEFAULT_ZONE_METS;
     let load = 0;
@@ -161,7 +168,7 @@
     DEFAULT_ZONE_METS: DEFAULT_ZONE_METS,
     DEFAULT_CTL_TAU: DEFAULT_CTL_TAU,
     DEFAULT_ATL_TAU: DEFAULT_ATL_TAU,
-    isPlannedTraining: isPlannedTraining,
+    isNotPerformedTraining: isNotPerformedTraining,
     sessionLoad: sessionLoad,
     fitnessFatigue: fitnessFatigue,
   };

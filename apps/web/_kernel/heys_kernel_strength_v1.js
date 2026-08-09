@@ -34,8 +34,8 @@
   // сборки без модуля нагрузки: даже там план не должен считаться фактом
   // (тот же приём, что Runner fallback guard, KERNEL_EXTRACTION_PLAN.md).
   function isPlanned(t) {
-    return TK.load && TK.load.isPlannedTraining ? TK.load.isPlannedTraining(t)
-      : !!(t && t.plan && t.plan.status === 'assigned');
+    return TK.load && TK.load.isNotPerformedTraining ? TK.load.isNotPerformedTraining(t)
+      : !!(t && t.plan && (t.plan.status === 'assigned' || t.plan.status === 'skipped'));
   }
 
   /**

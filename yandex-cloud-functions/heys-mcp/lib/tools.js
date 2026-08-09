@@ -1648,7 +1648,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
           // и двигал «последнюю» на дату, когда клиент ничего не делал.
           // Ряды нагрузки ниже отсекают его сами — фильтр стоит в ядре
           // (sessionLoad/dayTonnage), а не здесь.
-          if (day.isPlannedTraining(tr)) return;
+          if (day.isNotPerformedTraining(tr)) return;
           const log = tr.fingersLog || tr.mobilityLog || null;
           sessions.push({
             date,

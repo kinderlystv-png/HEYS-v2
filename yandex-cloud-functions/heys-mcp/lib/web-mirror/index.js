@@ -149,14 +149,14 @@ function sessionLoad(training, zoneMets) {
 }
 
 /**
- * `HEYS.TrainingKernel.load.isPlannedTraining` из
+ * `HEYS.TrainingKernel.load.isNotPerformedTraining` из
  * apps/web/_kernel/heys_kernel_load_v1.js — запись назначена куратором, но ещё
  * не выполнена. Экспортируется отдельно, потому что серверные счётчики считают
  * тренировки в обход `sessionLoad`/`dayTonnage`, а второй экземпляр условия
  * разошёлся бы с ядром молча.
  */
-function isPlannedTraining(training) {
-  return loadHeys().TrainingKernel.load.isPlannedTraining(training);
+function isNotPerformedTraining(training) {
+  return loadHeys().TrainingKernel.load.isNotPerformedTraining(training);
 }
 
 /** `HEYS.TrainingKernel.load.fitnessFatigue` из apps/web/_kernel/heys_kernel_load_v1.js. */
@@ -189,6 +189,6 @@ module.exports = {
   trainingTonnage,
   dayTonnage,
   sessionLoad,
-  isPlannedTraining,
+  isNotPerformedTraining,
   fitnessFatigue,
 };

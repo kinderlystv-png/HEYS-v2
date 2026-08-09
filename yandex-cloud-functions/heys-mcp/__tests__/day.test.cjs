@@ -300,13 +300,13 @@ test('summarizeDay видит силовую с workout_builder, даже ког
 /** Назначенная куратором тренировка: план, а не факт. */
 const ASSIGNED = { z: [40, 0, 0, 0], time: '19:00', type: 'cardio', plan: { status: 'assigned' } };
 
-test('isPlannedTraining срабатывает только на статусе assigned', () => {
-  assert.equal(day.isPlannedTraining(ASSIGNED), true);
-  assert.equal(day.isPlannedTraining({ ...ASSIGNED, plan: { status: 'started' } }), false);
-  assert.equal(day.isPlannedTraining({ ...ASSIGNED, plan: { status: 'done' } }), false);
-  assert.equal(day.isPlannedTraining({ z: [40, 0, 0, 0] }), false);
-  assert.equal(day.isPlannedTraining({ plan: null }), false);
-  assert.equal(day.isPlannedTraining(null), false);
+test('isNotPerformedTraining срабатывает только на статусе assigned', () => {
+  assert.equal(day.isNotPerformedTraining(ASSIGNED), true);
+  assert.equal(day.isNotPerformedTraining({ ...ASSIGNED, plan: { status: 'started' } }), false);
+  assert.equal(day.isNotPerformedTraining({ ...ASSIGNED, plan: { status: 'done' } }), false);
+  assert.equal(day.isNotPerformedTraining({ z: [40, 0, 0, 0] }), false);
+  assert.equal(day.isNotPerformedTraining({ plan: null }), false);
+  assert.equal(day.isNotPerformedTraining(null), false);
 });
 
 test('summarizeDay показывает назначенную тренировку, но с явным признаком плана', () => {
