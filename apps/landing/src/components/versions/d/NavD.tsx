@@ -90,13 +90,19 @@ export default function NavD({ menuOpen, onOpenMenu, onCloseMenu }: NavDProps) {
         // Считаем по геометрии, а не через IntersectionObserver: слушатель
         // scroll здесь уже один на всю страницу, и заводить рядом второй
         // механизм ради того же вопроса — лишняя точка рассинхрона.
-        const ownCtaInView = Array.from(
-          document.querySelectorAll<HTMLElement>('[data-own-cta]'),
+        // Подвал гасит пилюлю наравне с собственными CTA, хотя кнопки в нём
+        // нет — и именно поэтому. Пока она там была, выключатель срабатывал
+        // сам; после её удаления пилюля осталась висеть над подвалом и
+        // перекрыла ссылку «Все документы» (замечание владельца 2026-08-09,
+        // Galaxy S9+). Звать в подвале уже некуда: там реквизиты, документы и
+        // контакты, а действие предложено четырьмя блоками выше.
+        const suppressorInView = Array.from(
+          document.querySelectorAll<HTMLElement>('[data-own-cta], footer'),
         ).some((el) => {
           const r = el.getBoundingClientRect();
           return r.bottom > 0 && r.top < vh;
         });
-        const visible = !wide && y > from && !ownCtaInView;
+        const visible = !wide && y > from && !suppressorInView;
         // `translate`, а не `transform` — по той же причине, что и у шапки.
         // 180% вместо прежних 140%: пилюля ниже прежней кнопки, а её тень
         // (34px размытия) прежняя, и на 140% край подсветки виден у кромки.
