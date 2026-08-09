@@ -1309,7 +1309,9 @@ test('куратор не правит план после того, как кл
   const res = day.setStrengthWorkout(started, assigned.index, {
     exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 75, done: true }] }],
   }, { nowMs: 2000, clientId: CLIENT });
-  assert.match(res.error, /клиент уже начал/);
+  // Отказ не тупиковый: он называет рабочий путь — правку предложением.
+  assert.match(res.error, /клиент уже открыл/);
+  assert.match(res.error, /heys_propose_training_edit/);
 });
 
 test('assignTraining не даёт назначить план поверх уже существующего факта', () => {
@@ -1322,6 +1324,150 @@ test('assignTraining не даёт назначить план поверх уж
     assignedBy: 'Артём',
   }, { nowMs: 2000, clientId: CLIENT });
   assert.match(res.error, /не пустой слот/);
+});
+
+// --- Слой 5: правка плана, который клиент уже открыл --------------------
+//
+// Дизайн-хэндофф «Правка куратора после старта» (2026-08-09). Прямая запись
+// здесь запрещена: правка кладётся предложением, а решает клиент. Сам разбор
+// «что ляжет, а что нет» живёт в ядре (applyPlanEdit) и покрыт
+// apps/web/__tests__/kernel-plan-edit.test.js — здесь стережём обвязку.
+
+/** План на 2 подхода, первый из которых клиент уже закрыл. */
+function startedPlanDay() {
+  const assigned = day.assignTraining(day.emptyDay('2026-08-11', CLIENT, 1000), undefined, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 75 }, { reps: 8, weight_kg: 75 }] }],
+    assignedBy: 'Артём',
+  }, { nowMs: 1000, clientId: CLIENT });
+  const started = { ...assigned.day };
+  started.trainings = started.trainings.map((t, i) => {
+    if (i !== assigned.index) return t;
+    const aps = t.workoutLog.exercises[0].approaches.map((a, k) => (k === 0 ? { ...a, done: true } : a));
+    return {
+      ...t,
+      plan: { ...t.plan, status: 'started' },
+      workoutLog: { ...t.workoutLog, exercises: [{ ...t.workoutLog.exercises[0], approaches: aps }] },
+    };
+  });
+  return { day: started, index: assigned.index };
+}
+
+test('proposeTrainingEdit кладёт предложение рядом с планом, живую запись не трогает', () => {
+  const { day: base, index } = startedPlanDay();
+  const before = JSON.parse(JSON.stringify(base.trainings[index].workoutLog));
+
+  const res = day.proposeTrainingEdit(base, index, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 60 }, { reps: 8, weight_kg: 60 }] }],
+    proposedBy: 'Артём',
+    note: 'Плечо ещё не готово',
+  }, { nowMs: 2000, clientId: CLIENT });
+
+  assert.equal(res.error, null);
+  const t = res.day.trainings[index];
+  assert.equal(t.plan.proposal.status, 'pending');
+  assert.equal(t.plan.proposal.proposedBy, 'Артём');
+  assert.equal(t.plan.proposal.note, 'Плечо ещё не готово');
+  // Сама тренировка не изменилась: решение за клиентом, а не за записью.
+  assert.deepEqual(t.workoutLog, before);
+  assert.equal(t.plan.status, 'started');
+});
+
+test('proposeTrainingEdit возвращает куратору предпросмотр — что не ляжет, видно до отправки', () => {
+  const { day: base, index } = startedPlanDay();
+  // Артём убирает жим целиком, но первый подход клиент уже закрыл.
+  const res = day.proposeTrainingEdit(base, index, {
+    exercises: [{ name: 'Планка', approaches: [{ reps: 1 }] }],
+    proposedBy: 'Артём',
+  }, { nowMs: 2000, clientId: CLIENT });
+
+  assert.equal(res.error, null);
+  assert.ok(res.preview.rejected.some((r) => r.reason === 'started_cannot_remove' && r.name === 'Жим'));
+});
+
+test('предложение всегда одно: новое заменяет прежнее, а не встаёт в очередь', () => {
+  const { day: base, index } = startedPlanDay();
+  const first = day.proposeTrainingEdit(base, index, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 70 }, { reps: 8, weight_kg: 70 }] }],
+    proposedBy: 'Артём',
+  }, { nowMs: 2000, clientId: CLIENT });
+  const second = day.proposeTrainingEdit(first.day, index, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 60 }, { reps: 8, weight_kg: 60 }] }],
+    proposedBy: 'Артём',
+  }, { nowMs: 3000, clientId: CLIENT });
+
+  const proposal = second.day.trainings[index].plan.proposal;
+  assert.notEqual(proposal.id, first.proposalId);
+  assert.equal(proposal.exercises[0].approaches[0].weightKg, '60');
+});
+
+test('на не начатый план предложение не заводится — его правят напрямую', () => {
+  const assigned = day.assignTraining(day.emptyDay('2026-08-11', CLIENT, 1000), undefined, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 75 }] }],
+    assignedBy: 'Артём',
+  }, { nowMs: 1000, clientId: CLIENT });
+
+  const res = day.proposeTrainingEdit(assigned.day, assigned.index, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 60 }] }],
+    proposedBy: 'Артём',
+  }, { nowMs: 2000, clientId: CLIENT });
+  assert.match(res.error, /heys_assign_training/);
+});
+
+test('пропущенный день правку предложением принимает — защищать в нём нечего', () => {
+  const { day: base, index } = startedPlanDay();
+  const skipped = { ...base };
+  skipped.trainings = base.trainings.map((t, i) => (
+    i === index ? { ...t, plan: { ...t.plan, status: 'skipped' } } : t
+  ));
+
+  const res = day.proposeTrainingEdit(skipped, index, {
+    exercises: [{ name: 'Планка', approaches: [{ reps: 1 }] }],
+    proposedBy: 'Артём',
+  }, { nowMs: 2000, clientId: CLIENT });
+  assert.equal(res.error, null);
+  assert.equal(res.day.trainings[index].plan.status, 'skipped', 'пропуск остаётся пропуском до ответа клиента');
+});
+
+test('в завершённую тренировку правка не идёт — сделанное задним числом не меняют', () => {
+  const { day: base, index } = startedPlanDay();
+  const done = { ...base };
+  done.trainings = base.trainings.map((t, i) => (
+    i === index ? { ...t, plan: { ...t.plan, status: 'done' } } : t
+  ));
+
+  const res = day.proposeTrainingEdit(done, index, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 60 }] }],
+    proposedBy: 'Артём',
+  }, { nowMs: 2000, clientId: CLIENT });
+  assert.match(res.error, /завершена/);
+});
+
+test('к обычной тренировке клиента правку предложить нельзя — это не задание куратора', () => {
+  const logged = day.setStrengthWorkout(day.emptyDay('2026-08-11', CLIENT, 1000), undefined, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 75 }] }],
+  }, { nowMs: 1000, clientId: CLIENT });
+
+  const res = day.proposeTrainingEdit(logged.day, logged.index, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 60 }] }],
+    proposedBy: 'Артём',
+  }, { nowMs: 2000, clientId: CLIENT });
+  assert.match(res.error, /не назначенный план/);
+});
+
+test('отзыв предложения не оставляет следа, повторный отзыв отбивается', () => {
+  const { day: base, index } = startedPlanDay();
+  const proposed = day.proposeTrainingEdit(base, index, {
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 60 }, { reps: 8, weight_kg: 60 }] }],
+    proposedBy: 'Артём',
+  }, { nowMs: 2000, clientId: CLIENT });
+
+  const withdrawn = day.withdrawTrainingProposal(proposed.day, index, { nowMs: 3000, clientId: CLIENT });
+  assert.equal(withdrawn.error, null);
+  assert.equal(withdrawn.day.trainings[index].plan.proposal, undefined);
+  assert.equal(withdrawn.day.trainings[index].plan.status, 'started');
+
+  const again = day.withdrawTrainingProposal(withdrawn.day, index, { nowMs: 4000, clientId: CLIENT });
+  assert.match(again.error, /нет неотвеченного предложения/);
 });
 
 test('участники связки обязаны идти подряд: раунд выводится из позиции', () => {

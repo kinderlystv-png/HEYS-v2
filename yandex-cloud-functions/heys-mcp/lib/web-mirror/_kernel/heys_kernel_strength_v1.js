@@ -658,6 +658,205 @@
     return out;
   }
 
+  /** Есть ли в упражнении хотя бы один закрытый подход. */
+  function hasDoneApproach(ex) {
+    const aps = ex && Array.isArray(ex.approaches) ? ex.approaches : [];
+    for (let i = 0; i < aps.length; i++) {
+      if (isApproachDone(aps[i])) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Подходы начатого упражнения после правки.
+   *
+   * Закрытые сохраняются дословно и всегда — это уже сделанная работа, менять
+   * её правка не имеет права ни весом, ни повторами, ни удалением. Дальше:
+   *  - fixedCount (участник начатой связки): число подходов держится за
+   *    раундами, поэтому меняются только вес и повторы в незакрытых клетках;
+   *  - одиночное упражнение: незакрытый хвост заменяется предложенным целиком,
+   *    включая его длину — «сделай не три подхода, а пять» это та же правка
+   *    того, к чему человек ещё не приступал.
+   */
+  function mergeStartedApproaches(liveEx, propEx, fixedCount) {
+    const liveAps = liveEx && Array.isArray(liveEx.approaches) ? liveEx.approaches : [];
+    const propAps = propEx && Array.isArray(propEx.approaches) ? propEx.approaches : [];
+    const out = [];
+    let changed = false;
+    if (fixedCount) {
+      for (let i = 0; i < liveAps.length; i++) {
+        const a = liveAps[i];
+        const p = propAps[i];
+        if (isApproachDone(a) || !p) { out.push(a); continue; }
+        const w = toWeightString(p.weightKg);
+        const r = +p.reps || 0;
+        if (w === toWeightString(a.weightKg) && r === (+a.reps || 0)) { out.push(a); continue; }
+        out.push(Object.assign({}, a, { weightKg: w, reps: r }));
+        changed = true;
+      }
+      return { approaches: out, changed: changed, lengthLocked: propAps.length !== liveAps.length };
+    }
+    for (let i = 0; i < liveAps.length; i++) {
+      if (isApproachDone(liveAps[i])) out.push(liveAps[i]);
+    }
+    const keptCount = out.length;
+    for (let i = keptCount; i < propAps.length; i++) out.push(propAps[i]);
+    changed = out.length !== liveAps.length;
+    if (!changed) {
+      for (let i = keptCount; i < out.length; i++) {
+        const a = liveAps[i];
+        const p = out[i];
+        if (!a || toWeightString(a.weightKg) !== toWeightString(p.weightKg) || (+a.reps || 0) !== (+p.reps || 0)) {
+          changed = true;
+          break;
+        }
+      }
+    }
+    // Закрытых подходов больше, чем предложено всего — сократить сделанное
+    // правка не может, и это тот случай, о котором обеим сторонам говорят вслух.
+    return { approaches: out, changed: changed, lengthLocked: propAps.length < keptCount };
+  }
+
+  /**
+   * Правка куратора поверх тренировки, которую клиент уже открыл.
+   *
+   * Единственное правило, из которого следует всё остальное: **предложение
+   * никогда не трогает отмеченные подходы**. Оно ложится только на то, к чему
+   * человек ещё не приступал, поэтому «принять» безопасно всегда и вопроса «а
+   * не сотрёт ли это мою работу» не возникает.
+   *
+   * Отсюда три следствия на упражнении: закрытый подход неприкосновенен;
+   * незакрытые подходы начатого упражнения правятся, включая их число; начатое
+   * упражнение нельзя убрать из плана — оно остаётся как факт, даже если
+   * куратор его вычеркнул.
+   *
+   * Связка — тот же инвариант этажом выше. Не начата: заменяется целиком,
+   * вынуть из неё одно упражнение правка не может — раунды перестанут
+   * сходиться. Начата: состав заморожен, правятся только веса в незакрытых
+   * клетках. Разбирать связку правка не имеет права ни в каком случае — у
+   * клиента это тоже доступно только через «Разъединить».
+   *
+   * Молчаливого «не применилось» быть не может: всё, что не легло, возвращается
+   * в `rejected` с названием упражнения. Без этого куратор решит, что его
+   * проигнорировали, и повторит правку через неделю.
+   *
+   * @returns {{ ok: boolean, exercises: Array, applied: Array, rejected: Array, errors: string[] }}
+   */
+  function applyPlanEdit(liveExercises, proposedExercises) {
+    const live = Array.isArray(liveExercises) ? liveExercises : [];
+    const proposed = Array.isArray(proposedExercises) ? proposedExercises : [];
+    const applied = [];
+    const rejected = [];
+
+    const liveBlocks = orderBlocks(live);
+    const blockOfId = {};
+    const liveById = {};
+    for (let b = 0; b < liveBlocks.length; b++) {
+      const idx = liveBlocks[b].indexes;
+      for (let k = 0; k < idx.length; k++) {
+        const ex = live[idx[k]];
+        const id = ex && ex.id ? String(ex.id) : '';
+        if (id) { blockOfId[id] = b; liveById[id] = ex; }
+      }
+    }
+    const blockStarted = [];
+    for (let b = 0; b < liveBlocks.length; b++) {
+      const idx = liveBlocks[b].indexes;
+      let started = false;
+      for (let k = 0; k < idx.length && !started; k++) started = hasDoneApproach(live[idx[k]]);
+      blockStarted.push(started);
+    }
+
+    const out = [];
+    const usedBlock = {};
+    const proposedBlocks = orderBlocks(proposed);
+
+    for (let p = 0; p < proposedBlocks.length; p++) {
+      const pb = proposedBlocks[p];
+      let target = -1;
+      for (let k = 0; k < pb.indexes.length && target < 0; k++) {
+        const id = proposed[pb.indexes[k]] && proposed[pb.indexes[k]].id;
+        if (id && blockOfId[String(id)] !== undefined) target = blockOfId[String(id)];
+      }
+
+      if (target >= 0 && blockStarted[target]) {
+        if (usedBlock[target]) continue;
+        usedBlock[target] = true;
+        const lb = liveBlocks[target];
+        const isGroup = lb.indexes.length > 1;
+        // Состав начатой связки заморожен: участники берутся живые, а не
+        // предложенные, иначе раунды перестанут сходиться с закрытыми клетками.
+        if (isGroup && pb.indexes.length !== lb.indexes.length) {
+          rejected.push({
+            id: live[lb.indexes[0]] && live[lb.indexes[0]].id,
+            name: live[lb.indexes[0]] && live[lb.indexes[0]].name,
+            reason: 'superset_composition_frozen'
+          });
+        }
+        for (let k = 0; k < lb.indexes.length; k++) {
+          const liveEx = live[lb.indexes[k]];
+          const propEx = liveEx && liveEx.id ? findById(proposed, liveEx.id) : null;
+          const merged = mergeStartedApproaches(liveEx, propEx, isGroup);
+          out.push(merged.changed
+            ? Object.assign({}, liveEx, { approaches: merged.approaches })
+            : liveEx);
+          if (merged.changed) applied.push({ id: liveEx.id, name: liveEx.name, reason: 'approaches_changed' });
+          if (merged.lengthLocked) {
+            rejected.push({ id: liveEx.id, name: liveEx.name, reason: 'done_approaches_kept' });
+          }
+        }
+        continue;
+      }
+
+      if (target >= 0) usedBlock[target] = true;
+      for (let k = 0; k < pb.indexes.length; k++) {
+        const ex = proposed[pb.indexes[k]];
+        out.push(ex);
+        applied.push({ id: ex && ex.id, name: ex && ex.name, reason: target >= 0 ? 'replaced' : 'added' });
+      }
+    }
+
+    // Начатые блоки, которых в предложении не оказалось: куратор их вычеркнул,
+    // но сделанное остаётся тренировкой. Возвращаем на исходную позицию, чтобы
+    // упражнение не уехало в конец списка, а связку — целым блоком.
+    for (let b = 0; b < liveBlocks.length; b++) {
+      if (usedBlock[b] || !blockStarted[b]) continue;
+      const idx = liveBlocks[b].indexes;
+      const items = [];
+      for (let k = 0; k < idx.length; k++) items.push(live[idx[k]]);
+      const at = Math.min(idx[0], out.length);
+      Array.prototype.splice.apply(out, [at, 0].concat(items));
+      rejected.push({
+        id: items[0] && items[0].id,
+        name: items[0] && items[0].name,
+        reason: 'started_cannot_remove'
+      });
+    }
+    for (let b = 0; b < liveBlocks.length; b++) {
+      if (usedBlock[b] || blockStarted[b]) continue;
+      const first = live[liveBlocks[b].indexes[0]];
+      applied.push({ id: first && first.id, name: first && first.name, reason: 'removed' });
+    }
+
+    // Fail-closed: если после всех перестановок связка всё же разорвана,
+    // правка не применяется вовсе. Испорченная раскладка тише, чем отказ, и
+    // потому опаснее — раунды разъедутся уже у клиента в зале.
+    const layout = validateSupersetLayout(out);
+    if (!layout.ok) {
+      return { ok: false, exercises: live, applied: [], rejected: [], errors: layout.errors };
+    }
+    return { ok: true, exercises: out, applied: applied, rejected: rejected, errors: [] };
+  }
+
+  function findById(list, id) {
+    const arr = Array.isArray(list) ? list : [];
+    const want = String(id);
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i] && String(arr[i].id) === want) return arr[i];
+    }
+    return null;
+  }
+
   function nextGroupId(exercises) {
     let max = 0;
     (exercises || []).forEach(function (ex) {
@@ -830,6 +1029,8 @@
     insertRespectingGroups: insertRespectingGroups,
     makeSuperset: makeSuperset,
     orderBlocks: orderBlocks,
-    moveBlock: moveBlock
+    moveBlock: moveBlock,
+    hasDoneApproach: hasDoneApproach,
+    applyPlanEdit: applyPlanEdit
   };
 })(typeof window !== 'undefined' ? window : globalThis);

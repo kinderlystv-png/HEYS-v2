@@ -487,6 +487,89 @@ test('assign_program и assign_training отказывают без тарифа
   assert.equal(apiWrongPlan.saves.length, 0);
 });
 
+// --- heys_propose_training_edit -----------------------------------------
+
+/** День с планом, который клиент открыл и закрыл в нём первый подход. */
+const STARTED_PLAN_DAY = () => ({
+  date: '2026-08-01',
+  meals: [],
+  waterMl: 0,
+  updatedAt: 111,
+  trainings: [{
+    id: 'tr_a',
+    type: 'strength',
+    strengthEntryMode: 'workout_builder',
+    z: [0, 0, 0, 0],
+    plan: { id: 'pl_1', status: 'started', assignedBy: 'Артём' },
+    planSnapshot: { exercises: [] },
+    workoutLog: {
+      version: 1,
+      exercises: [{
+        id: 'ex1',
+        name: 'Жим',
+        ssGroup: 0,
+        approaches: [
+          { id: 'a1', weightKg: '75', reps: 8, done: true },
+          { id: 'a2', weightKg: '75', reps: 8, done: false },
+        ],
+      }],
+    },
+  }],
+});
+
+test('propose_training_edit пишет предложение и называет то, что не ляжет', async () => {
+  const api = fakeApi({ day: STARTED_PLAN_DAY(), card: PROPLUS_CARD });
+  const res = await build(api).heys_propose_training_edit({
+    index: 0,
+    proposed_by: 'Артём',
+    // Жим убран целиком, но клиент уже закрыл в нём подход.
+    exercises: [{ name: 'Планка', approaches: [{ reps: 1 }] }],
+  });
+
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  const t = saved.value.trainings[0];
+  assert.equal(t.plan.proposal.status, 'pending');
+  // Живая запись не тронута — решение осталось за клиентом.
+  assert.equal(t.workoutLog.exercises[0].name, 'Жим');
+  assert.equal(t.workoutLog.exercises[0].approaches[0].done, true);
+  assert.ok(res.structured.will_not_apply.some((r) => r.name === 'Жим'));
+  assert.match(res.text, /Ляжет не всё/);
+});
+
+test('propose_training_edit требует тариф Pro Спорт и ничего не пишет без него', async () => {
+  const api = fakeApi({ day: STARTED_PLAN_DAY() });
+  await assert.rejects(
+    () => build(api).heys_propose_training_edit({
+      index: 0,
+      proposed_by: 'Артём',
+      exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 60 }] }],
+    }),
+    (e) => e.code === 'tariff_required',
+  );
+  assert.equal(api.saves.length, 0);
+});
+
+test('withdraw_training_proposal убирает предложение, повторный отзыв отбивается', async () => {
+  const base = STARTED_PLAN_DAY();
+  const api = fakeApi({ day: base, card: PROPLUS_CARD });
+  const tools = build(api);
+  await tools.heys_propose_training_edit({
+    index: 0,
+    proposed_by: 'Артём',
+    exercises: [{ name: 'Жим', approaches: [{ reps: 8, weight_kg: 60 }, { reps: 8, weight_kg: 60 }] }],
+  });
+  await tools.heys_withdraw_training_proposal({ index: 0 });
+
+  const last = api.saves.filter((s) => s.key.startsWith('heys_dayv2_')).pop();
+  assert.equal(last.value.trainings[0].plan.proposal, undefined);
+  assert.equal(last.value.trainings[0].plan.status, 'started');
+
+  await assert.rejects(
+    () => tools.heys_withdraw_training_proposal({ index: 0 }),
+    (e) => e.code === 'nothing_to_withdraw',
+  );
+});
+
 test('assign_program: сбой записи одного дня не роняет остальные — статус partial', async () => {
   const api = fakeApi({ day: null, card: PROPLUS_CARD });
   api.onMergeSave = (key) => {

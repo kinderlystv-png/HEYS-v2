@@ -727,11 +727,11 @@ function setStrengthWorkout(day, index, { exercises, time, comment, durationMin 
       return { day, error: `Тренировка ${assignedIdx} в этом дне назначена планом и ещё не начата. Передай index: ${assignedIdx}, чтобы записать факт поверх плана, index для новой отдельной тренировки, или сначала heys_delete_training.` };
     }
   }
-  // Куратор правит только пока план не начат клиентом (Слой 5, минимальный
-  // контур): started/done — клиент уже открывал конструктор, его работу нельзя
-  // заменить чужой версией без переписывания merge, которого здесь нет.
+  // Куратор правит напрямую только пока план не начат клиентом. Дальше правка
+  // идёт предложением (assignTrainingProposal): клиент сам решает, брать ли её,
+  // и его отмеченные подходы при этом не трогаются ни при каком ответе.
   if (!isNew && prev.plan && prev.plan.status && prev.plan.status !== 'assigned') {
-    return { day, error: `Тренировка ${i} — план со статусом «${prev.plan.status}»: клиент уже начал или закончил её в приложении. Правка куратора поверх такой записи не поддерживается.` };
+    return { day, error: `Тренировка ${i} — план со статусом «${prev.plan.status}»: клиент уже открыл его в приложении. Прямая запись поверх заменила бы его работу; отправь правку предложением через heys_propose_training_edit.` };
   }
   const minutes = clampTrainingMinutes(durationMin);
   const keepZ = Array.isArray(prev.z) && prev.z.some((m) => Number(m) > 0);
@@ -825,6 +825,106 @@ function assignTraining(day, index, { exercises, time, dayLabel, assignedBy, wee
   const trainings = list.slice();
   trainings[i] = training;
   return { day: touch({ ...day, trainings }, nowMs, clientId), index: i, planId: plan.id, error: null };
+}
+
+/**
+ * Программа куратора, Слой 5: правка плана, который клиент уже открыл.
+ *
+ * Прямой записи здесь нет и быть не может — клиент в этот момент может стоять
+ * с гантелей в руке, и его отмеченные подходы чужая версия заменить не вправе.
+ * Поэтому правка кладётся рядом с планом как предложение, а решение остаётся
+ * за клиентом: применит его приложение через `TK.strength.applyPlanEdit`, и
+ * там же сработает правило «отмеченное не трогаем».
+ *
+ * Живое предложение всегда одно: новое заменяет прежнее, а не встаёт в
+ * очередь. Иначе клиент открывает три предложения подряд и не понимает, какое
+ * сейчас в силе, а куратор не понимает, на какое ему ответили.
+ *
+ * Пропущенный день (`skipped`) сюда тоже попадает: защищать в нём нечего —
+ * отмеченных подходов нет, — но пропуск был решением человека, и возвращать
+ * его в план молчаливой перезаписью нельзя.
+ */
+function proposeTrainingEdit(day, index, { exercises, proposedBy, note }, { nowMs, clientId }) {
+  const built = buildWorkoutLog(exercises, { defaultDone: false });
+  if (built.error) return { day, error: built.error };
+  if (typeof proposedBy !== 'string' || !proposedBy.trim()) {
+    return { day, error: 'proposedBy обязателен: кто предлагает правку.' };
+  }
+
+  const list = Array.isArray(day.trainings) ? day.trainings : [];
+  const i = Number(index);
+  if (!Number.isInteger(i) || i < 0 || i >= list.length) {
+    return { day, error: list.length
+      ? `В дне тренировок ${list.length} — index от 0 до ${list.length - 1}.`
+      : 'В этом дне нет тренировок.' };
+  }
+  const prev = list[i] || {};
+  if (!prev.plan || !prev.plan.status) {
+    return { day, error: `Тренировка ${i} — не назначенный план, а обычная запись клиента. Предлагать правку к ней нельзя: это его тренировка, а не твоё задание.` };
+  }
+  if (prev.plan.status === 'assigned') {
+    return { day, error: `Тренировка ${i} ещё не открыта клиентом — правь её напрямую через heys_assign_training, предложение здесь лишний шаг.` };
+  }
+  if (prev.plan.status === 'done') {
+    return { day, error: `Тренировка ${i} уже завершена клиентом. Изменить сделанное задним числом нельзя — назначь следующую тренировку отдельно.` };
+  }
+
+  // Предпросмотр против живого состояния: куратор должен увидеть, что часть
+  // правки не ляжет, ещё до отправки. Молчаливого «не применилось» быть не
+  // может ни на одной из двух сторон.
+  const liveExercises = prev.workoutLog && Array.isArray(prev.workoutLog.exercises)
+    ? prev.workoutLog.exercises
+    : [];
+  const preview = webMirror.applyPlanEdit(liveExercises, built.log.exercises);
+  if (!preview.ok) {
+    return { day, error: `Такая правка разрывает связку: ${preview.errors.join('; ')}.` };
+  }
+
+  const proposal = {
+    id: makeId('pp_'),
+    exercises: built.log.exercises,
+    proposedBy: proposedBy.trim(),
+    proposedAt: nowMs,
+    status: 'pending',
+  };
+  if (typeof note === 'string' && note.trim()) proposal.note = note.trim();
+
+  const training = {
+    ...prev,
+    plan: { ...prev.plan, proposal },
+    updatedAt: nowMs,
+  };
+  const trainings = list.slice();
+  trainings[i] = training;
+  return {
+    day: touch({ ...day, trainings }, nowMs, clientId),
+    index: i,
+    proposalId: proposal.id,
+    preview: { applied: preview.applied, rejected: preview.rejected },
+    error: null,
+  };
+}
+
+/**
+ * Отозвать своё предложение, пока клиент не ответил. Отзыв — не отказ клиента:
+ * запись просто перестаёт существовать, и в истории дня следа не оставляет.
+ */
+function withdrawTrainingProposal(day, index, { nowMs, clientId }) {
+  const list = Array.isArray(day.trainings) ? day.trainings : [];
+  const i = Number(index);
+  if (!Number.isInteger(i) || i < 0 || i >= list.length) {
+    return { day, error: `В дне тренировок ${list.length} — index от 0 до ${Math.max(0, list.length - 1)}.` };
+  }
+  const prev = list[i] || {};
+  const proposal = prev.plan && prev.plan.proposal;
+  if (!proposal || proposal.status !== 'pending') {
+    return { day, error: `У тренировки ${i} нет неотвеченного предложения.` };
+  }
+  const nextPlan = { ...prev.plan };
+  delete nextPlan.proposal;
+  const trainings = list.slice();
+  trainings[i] = { ...prev, plan: nextPlan, updatedAt: nowMs };
+  return { day: touch({ ...day, trainings }, nowMs, clientId), index: i, error: null };
 }
 
 /**
@@ -2228,6 +2328,8 @@ module.exports = {
   deleteTraining,
   setStrengthWorkout,
   assignTraining,
+  proposeTrainingEdit,
+  withdrawTrainingProposal,
   buildWorkoutLog,
   isRealTraining,
   isNotPerformedTraining,

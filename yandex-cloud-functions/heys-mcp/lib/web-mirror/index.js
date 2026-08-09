@@ -170,6 +170,22 @@ function validateSupersetLayout(exercises) {
   return loadHeys().TrainingKernel.strength.validateSupersetLayout(exercises);
 }
 
+/**
+ * `HEYS.TrainingKernel.strength.applyPlanEdit` из
+ * apps/web/_kernel/heys_kernel_strength_v1.js — правка куратора поверх
+ * начатой тренировки. Правила «что можно тронуть, а что нет» живут в ядре в
+ * одном экземпляре: свой набор условий на сервере разошёлся бы с тем, что
+ * клиент показывает человеку на экране разбора.
+ */
+function applyPlanEdit(liveExercises, proposedExercises) {
+  return loadHeys().TrainingKernel.strength.applyPlanEdit(liveExercises, proposedExercises);
+}
+
+/** `HEYS.TrainingKernel.strength.hasDoneApproach` из apps/web/_kernel/heys_kernel_strength_v1.js. */
+function hasDoneApproach(exercise) {
+  return loadHeys().TrainingKernel.strength.hasDoneApproach(exercise);
+}
+
 /** `HEYS.TrainingKernel.load.sessionLoad` из apps/web/_kernel/heys_kernel_load_v1.js. */
 function sessionLoad(training, zoneMets) {
   return loadHeys().TrainingKernel.load.sessionLoad(training, zoneMets);
@@ -218,6 +234,8 @@ module.exports = {
   validateApproach,
   normalizeApproach,
   validateSupersetLayout,
+  applyPlanEdit,
+  hasDoneApproach,
   sessionLoad,
   isNotPerformedTraining,
   fitnessFatigue,

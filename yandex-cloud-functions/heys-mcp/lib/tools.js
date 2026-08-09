@@ -1132,6 +1132,59 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
     },
 
     /**
+     * Программа куратора, Слой 5: правка плана, который клиент уже открыл.
+     *
+     * Прямая запись здесь запрещена guard'ом в setStrengthWorkout — клиент в
+     * этот момент может быть в зале. Правка кладётся предложением, решение за
+     * ним. Предпросмотр возвращается сразу: куратор должен видеть, что часть
+     * правки не ляжет, до того как её отправил, а не узнавать об этом после.
+     */
+    async heys_propose_training_edit(args) {
+      await requireProSportTier('Правка назначенной тренировки');
+      const date = resolveDate(args.date, nowMs);
+      const current = await readDay(date);
+      const res = day.proposeTrainingEdit(current, args.index, {
+        exercises: args.exercises,
+        proposedBy: args.proposed_by,
+        note: args.note,
+      }, { nowMs, clientId });
+      if (res.error) throw new ToolError('invalid_proposal', res.error);
+
+      await writeDay(date, res.day, Number(current.updatedAt) || 0);
+      const blocked = res.preview.rejected;
+      const bits = [`Отправил правку на ${date}. Клиент увидит её в приложении и решит сам — до его ответа план у него прежний.`];
+      if (blocked.length) {
+        bits.push(`Ляжет не всё: ${blocked.map((r) => `«${r.name}» (${r.reason === 'started_cannot_remove'
+          ? 'клиент уже начал — останется в плане'
+          : r.reason === 'superset_composition_frozen'
+            ? 'связка начата, состав менять нельзя'
+            : 'сделанные подходы остаются'})`).join('; ')}.`);
+      }
+      return {
+        text: bits.join(' '),
+        structured: {
+          date,
+          index: res.index,
+          proposal_id: res.proposalId,
+          will_apply: res.preview.applied,
+          will_not_apply: blocked,
+        },
+      };
+    },
+
+    async heys_withdraw_training_proposal(args) {
+      const date = resolveDate(args.date, nowMs);
+      const current = await readDay(date);
+      const res = day.withdrawTrainingProposal(current, args.index, { nowMs, clientId });
+      if (res.error) throw new ToolError('nothing_to_withdraw', res.error);
+      await writeDay(date, res.day, Number(current.updatedAt) || 0);
+      return {
+        text: `Отозвал правку на ${date}: у клиента план остался прежним, следа в его истории отзыв не оставляет.`,
+        structured: { date, index: res.index },
+      };
+    },
+
+    /**
      * Программа куратора, Слой 4: назначить несколько дней одним вызовом.
      *
      * Транзакции на несколько дней нет и не будет — дни лежат под разными
@@ -2625,6 +2678,61 @@ const TOOL_SCHEMAS = [
     },
   },
   {
+    name: 'heys_propose_training_edit',
+    description: 'Изменить назначенную тренировку ПОСЛЕ того, как клиент её открыл (план в статусе started или skipped). Записать поверх нельзя — клиент может быть в зале прямо сейчас, — поэтому правка уходит ему предложением, и решает он. Главное правило: предложение никогда не трогает отмеченные подходы, оно ложится только на то, к чему клиент ещё не приступал. Отсюда следствия: закрытый подход не изменится ни весом, ни повторами, ни удалением; незакрытые подходы начатого упражнения правятся, включая их число; начатое упражнение останется в плане, даже если ты его вычеркнул; у начатой связки состав заморожен, правятся только веса. Что не ляжет — инструмент назовёт сразу, до отправки. Пока план не открыт (assigned) правь напрямую через heys_assign_training, а завершённую тренировку не меняют вовсе.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        index: { type: 'integer', description: 'Номер тренировки в дне, с нуля — как в heys_get_day.' },
+        date: DATE_ARG,
+        proposed_by: { type: 'string', description: 'Обязательно: имя куратора, который предлагает правку.' },
+        note: { type: 'string', description: 'Короткое объяснение клиенту, почему правка: «плечо ещё не готово к жиму под углом».' },
+        exercises: {
+          type: 'array',
+          description: 'Тренировка целиком в том виде, в каком она должна выглядеть после правки — та же форма, что в heys_assign_training. Не список изменений: пришли полный состав, а что из него можно тронуть, решит правило выше.',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Название упражнения.' },
+              approaches: {
+                type: 'array',
+                description: 'Подходы по порядку.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    weight_kg: { type: 'number', description: 'Вес, кг. Пусто или 0 — свой вес.' },
+                    reps: { type: 'integer', description: 'Повторы, 1–200.' },
+                    set_type: { type: 'string', enum: ['work', 'warmup'], description: 'Рабочий или разминочный.' },
+                    extra_weight_kg: { type: 'number', description: 'Довес к своему весу, 0–500.' },
+                  },
+                  required: ['reps'],
+                },
+              },
+              rpe: { type: 'integer', description: 'Субъективная тяжесть упражнения, 0–10.' },
+              superset_group: { type: 'integer', description: 'Номер связки, 0 — без связки.' },
+              rest_sec: { type: 'integer', description: 'Отдых между подходами: 60, 90, 120 или 180.' },
+              note: { type: 'string', description: 'Заметка к упражнению.' },
+            },
+            required: ['name', 'approaches'],
+          },
+        },
+      },
+      required: ['index', 'exercises', 'proposed_by'],
+    },
+  },
+  {
+    name: 'heys_withdraw_training_proposal',
+    description: 'Отозвать свою правку, пока клиент на неё не ответил. Отзыв следа в истории клиента не оставляет — в отличие от его отказа. Нужен, когда правку отправили по ошибке или передумали; чтобы заменить её другой, отзывать не обязательно — новое предложение и так вытесняет прежнее.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        index: { type: 'integer', description: 'Номер тренировки в дне, с нуля.' },
+        date: DATE_ARG,
+      },
+      required: ['index'],
+    },
+  },
+  {
     name: 'heys_assign_program',
     description: 'Назначить клиенту программу силовых тренировок на несколько дней одним вызовом — например «верх/низ на 4 недели». Каждый день из days назначается тем же способом, что heys_assign_training (план, не факт: подходы не выполнены, в калории и нагрузку не входит). Все дни проверяются целиком до первой записи — ошибка в одном дне не даст назначить ни одного. Пишутся дни по одному, потому что это разные ключи в облаке: при сбое посреди программа помечается частичной (status: partial), а ответ называет, какие даты записались, а какие нет — вызови инструмент повторно только для незаписанных дат, не для всей программы заново. Замена уже активной программы (новая версия взамен старой) этим инструментом не делается: он всегда создаёт независимый program_id. Клиент увидит программу сам, когда откроет день или карточку тренировок, но пуш и сообщение об этом не уходят — как и с любым другим действием, писать клиенту об этом или нет решает куратор (heys_reply_message), инструмент не пишет за него сам.',
     inputSchema: {
@@ -2838,6 +2946,8 @@ const WRITE_TOOLS = new Set([
   'heys_log_strength_workout',
   'heys_assign_training',
   'heys_assign_program',
+  'heys_propose_training_edit',
+  'heys_withdraw_training_proposal',
   'heys_update_training',
   'heys_delete_training',
   'heys_update_day',
