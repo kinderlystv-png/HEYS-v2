@@ -92,11 +92,27 @@ describe('места-призраки заменены на resolveDailyTargets 
     ['apps/web/insights/pi_meal_rec_patterns.js', 1],
     ['apps/web/heys_add_product_step_v1.js', 1],
     ['apps/web/insights/pi_analytics_api.js', 2],
+    // 2026-08-09: второй призрак того же класса — HEYS.dayUtils.getOptimumForDay
+    // не определён ни в одном исходнике. optimumData/optimumInfo были всегда
+    // {}, «осталось ккал» в шторке добавления и CRS-прогрев для навигации
+    // считались против жёсткого фолбэка 2000, а не реальной цели дня.
+    ['apps/web/heys_day_add_product.js', 1],
+    ['apps/web/heys_app_shell_v1.js', 1],
   ];
 
   it.each(sites)('%s содержит хотя бы %i вызов(ов) resolveDailyTargets/TDEE.calculate вместо призрака', (file, minCount) => {
     const src = read(file);
     const count = (src.match(/resolveDailyTargets|HEYS\.TDEE\?\.calculate/g) || []).length;
     expect(count).toBeGreaterThanOrEqual(minCount);
+  });
+});
+
+describe('HEYS.dayUtils.getOptimumForDay больше не вызывается напрямую как единственный путь', () => {
+  it('heys_day_add_product.js и heys_app_shell_v1.js больше не зовут несуществующий метод', () => {
+    for (const file of ['apps/web/heys_day_add_product.js', 'apps/web/heys_app_shell_v1.js']) {
+      const src = read(file);
+      // Пояснительные комментарии про призрак допустимы — недопустим сам вызов.
+      expect(src, file).not.toMatch(/dayUtils\??\.getOptimumForDay\?\.\(/);
+    }
   });
 });

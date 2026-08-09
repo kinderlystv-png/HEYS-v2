@@ -204,8 +204,12 @@
     const mealTotals = HEYS.models?.mealTotals?.(currentMeal, localPIndex) || {};
     const mealKcal = Math.round(mealTotals.kcal || 0);
 
-    const optimumData = HEYS.dayUtils?.getOptimumForDay?.(currentDay) || {};
-    const optimum = Math.round(optimumData.optimum || 2000);
+    // HEYS.dayUtils.getOptimumForDay — призрак, такого метода нет ни в одном
+    // исходнике: оптимум всегда падал в жёсткий фолбэк 2000, и «осталось
+    // ккал» после добавления еды считалось не против реальной цели дня.
+    const profile = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
+    const optimumData = HEYS.TDEE?.resolveDailyTargets?.(profile, currentDay) || {};
+    const optimum = Math.round(optimumData.kcal || 2000);
 
     const dayTotals = HEYS.dayCalculations?.calculateDayTotals?.(currentDay, localPIndex) || {};
     const eatenKcal = Math.round(dayTotals.kcal || 0);

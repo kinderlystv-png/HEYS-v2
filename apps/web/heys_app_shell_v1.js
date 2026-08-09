@@ -4516,14 +4516,19 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 // within their real TDEE-based goal.
                 const normPerc = readStored(scopedPrefix + 'norms', null)
                     || readStored('heys_norms', {});
-                const optimumInfo = window.HEYS.dayUtils?.getOptimumForDay?.(day, prof) || {};
-                const normAbs = (window.HEYS.dayCalculations?.computeDailyNorms && optimumInfo.optimum)
-                    ? window.HEYS.dayCalculations.computeDailyNorms(optimumInfo.optimum, normPerc)
+                // HEYS.dayUtils.getOptimumForDay — призрак, такого метода нет
+                // ни в одном исходнике: optimumInfo был всегда {}, поэтому этот
+                // прогрев CRS для навигации всегда считал normAbs по деградированному
+                // нулевому фолбэку — той же болезни, что уже чинили строкой выше
+                // для основного пути (heys_normAbs never written).
+                const optimumInfo = window.HEYS.TDEE?.resolveDailyTargets?.(prof, day) || {};
+                const normAbs = (window.HEYS.dayCalculations?.computeDailyNorms && optimumInfo.kcal)
+                    ? window.HEYS.dayCalculations.computeDailyNorms(optimumInfo.kcal, normPerc)
                     : { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0, gi: 0, harm: 0 };
                 console.info('[HEYS.AppTabsNav] ✅ CRS nav warm-up:', {
                     reason,
                     date: dateStr,
-                    optimum: optimumInfo.optimum,
+                    optimum: optimumInfo.kcal,
                     normKcal: normAbs.kcal
                 });
                 const pIndex = window.HEYS.products?.getIndex ? window.HEYS.products.getIndex() : {};
