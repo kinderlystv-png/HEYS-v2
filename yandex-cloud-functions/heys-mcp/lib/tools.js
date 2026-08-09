@@ -40,6 +40,14 @@ const PRESETS_KEY = 'heys_meal_presets_v1';
 const TOMBSTONES_KEY = 'heys_deleted_ids';
 
 /**
+ * Индекс программы куратора — кэш, не источник правды (CURATOR_TRAINING_
+ * PROGRAM_PROTOCOL_2026-08-09.md, 4.2). Содержание всегда в днях (`plan`
+ * на записи тренировки); ключ существует, чтобы показать цикл клиенту одним
+ * чтением, не собирая блобы по всем датам программы.
+ */
+const PROGRAM_KEY = 'heys_training_program';
+
+/**
  * Позиция набора — усечённый набор полей, ровно тот, что кладёт приложение
  * (apps/web/heys_add_product_step_v1.js). Полный нутриентный слепок здесь не
  * нужен: он пересобирается из каталога в момент записи приёма.
@@ -1055,6 +1063,111 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
           exercises: exCount,
           day_after: after,
         },
+      };
+    },
+
+    /**
+     * Программа куратора, Слой 4: назначить несколько дней одним вызовом.
+     *
+     * Транзакции на несколько дней нет и не будет — дни лежат под разными
+     * ключами KV. Поэтому валидация идёт целиком до первой записи (та же
+     * assignTraining, что пишет по одному дню, — источник правил один), и
+     * только если все дни проходят, начинается запись. Сбой посреди записи
+     * (сеть, stale write) не должен уронить уже записанные дни: остальные
+     * пишутся, а куратор получает точный список удавшихся и нет.
+     */
+    async heys_assign_program(args) {
+      const daysInput = Array.isArray(args.days) ? args.days : [];
+      if (!daysInput.length) {
+        throw new ToolError('nothing_to_assign', 'Передай days — список дат с упражнениями на каждый день программы.');
+      }
+      if (typeof args.assigned_by !== 'string' || !args.assigned_by.trim()) {
+        throw new ToolError('invalid_assignment', 'assigned_by обязателен: кто назначил программу.');
+      }
+      const title = typeof args.title === 'string' ? args.title.trim() : '';
+      if (!title) throw new ToolError('invalid_assignment', 'title обязателен: как программа называется клиенту.');
+
+      const normalized = [];
+      const seenDates = new Set();
+      for (const d of daysInput) {
+        const date = resolveDate(d && d.date, nowMs);
+        if (seenDates.has(date)) {
+          throw new ToolError('invalid_assignment', `Дата ${date} указана в программе дважды.`);
+        }
+        seenDates.add(date);
+        normalized.push({
+          date,
+          dayLabel: d && d.day_label,
+          weekIndex: d && d.week_index,
+          time: d && d.time,
+          exercises: d && d.exercises,
+        });
+      }
+
+      const programId = makeId('pr_');
+      const blobs = await readMany(normalized.map((d) => day.dayKey(d.date)));
+      // Каждый день проверяется той же функцией, что и пишет: расхождения
+      // правил валидации и записи здесь исключены по построению.
+      const prepared = normalized.map((d) => {
+        const current = day.ensureDay(blobs[day.dayKey(d.date)], d.date, clientId, nowMs);
+        const res = day.assignTraining(current, undefined, {
+          exercises: d.exercises,
+          time: d.time,
+          dayLabel: d.dayLabel,
+          assignedBy: args.assigned_by,
+          weekIndex: d.weekIndex,
+          programId,
+        }, { nowMs, clientId });
+        return { date: d.date, dayLabel: d.dayLabel, weekIndex: d.weekIndex, current, res };
+      });
+
+      const invalid = prepared.filter((p) => p.res.error);
+      if (invalid.length) {
+        throw new ToolError(
+          'invalid_assignment',
+          `Программа не назначена: ${invalid.length} из ${prepared.length} дней не проходят проверку, ничего не записано.\n${invalid.map((p) => `${p.date}: ${p.res.error}`).join('\n')}`,
+          { invalid: invalid.map((p) => ({ date: p.date, error: p.res.error })) },
+        );
+      }
+
+      const written = [];
+      const failed = [];
+      for (const p of prepared) {
+        try {
+          await writeDay(p.date, p.res.day, Number(p.current.updatedAt) || 0);
+          written.push({
+            date: p.date,
+            dayLabel: p.dayLabel || null,
+            weekIndex: p.weekIndex || null,
+            trainingId: p.res.day.trainings[p.res.index].id,
+          });
+        } catch (e) {
+          failed.push({ date: p.date, error: e.message || String(e) });
+        }
+      }
+
+      const status = failed.length === 0 ? 'active' : (written.length === 0 ? 'failed' : 'partial');
+      if (written.length > 0) {
+        // Индекс — кэш поверх дней (см. PROGRAM_KEY): перезаписывается целиком,
+        // известного updatedAt для сравнения нет, как и у profile/zones.
+        await saveCardKey(PROGRAM_KEY, {
+          id: programId,
+          title,
+          weeks: Number.isInteger(args.weeks) && args.weeks > 0 ? args.weeks : null,
+          startDate: written.slice().sort((a, b) => (a.date < b.date ? -1 : 1))[0].date,
+          assignedBy: args.assigned_by.trim(),
+          assignedAt: nowMs,
+          version: 1,
+          status,
+          days: written,
+        }, 0);
+      }
+
+      const lines = [`Программа «${title}» (${programId}): назначено ${written.length} из ${prepared.length} дней.`];
+      if (failed.length) lines.push(`Не удалось: ${failed.map((f) => `${f.date} (${f.error})`).join('; ')}.`);
+      return {
+        text: lines.join(' '),
+        structured: { program_id: programId, status, written, failed },
       };
     },
 
@@ -2372,6 +2485,62 @@ const TOOL_SCHEMAS = [
     },
   },
   {
+    name: 'heys_assign_program',
+    description: 'Назначить клиенту программу силовых тренировок на несколько дней одним вызовом — например «верх/низ на 4 недели». Каждый день из days назначается тем же способом, что heys_assign_training (план, не факт: подходы не выполнены, в калории и нагрузку не входит). Все дни проверяются целиком до первой записи — ошибка в одном дне не даст назначить ни одного. Пишутся дни по одному, потому что это разные ключи в облаке: при сбое посреди программа помечается частичной (status: partial), а ответ называет, какие даты записались, а какие нет — вызови инструмент повторно только для незаписанных дат, не для всей программы заново. Замена уже активной программы (новая версия взамен старой) этим инструментом не делается: он всегда создаёт независимый program_id.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Название программы для клиента: «Верх/низ, 4 недели».' },
+        assigned_by: { type: 'string', description: 'Обязательно: имя куратора, который назначил программу.' },
+        weeks: { type: 'integer', description: 'Длительность цикла в неделях — для отображения клиенту, на валидацию не влияет.' },
+        days: {
+          type: 'array',
+          description: 'Дни программы по датам. Каждый день — как один вызов heys_assign_training.',
+          items: {
+            type: 'object',
+            properties: {
+              date: { type: 'string', description: 'Дата дня в формате YYYY-MM-DD.' },
+              day_label: { type: 'string', description: 'Как называть этот день клиенту: «День B», «Верх тела».' },
+              week_index: { type: 'integer', description: 'Номер недели цикла, с 1.' },
+              time: { type: 'string', description: 'Время начала, HH:MM.' },
+              exercises: {
+                type: 'array',
+                description: 'Упражнения дня по порядку, та же форма, что в heys_assign_training.exercises.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string', description: 'Название упражнения, свободная строка: «Жим лёжа».' },
+                    approaches: {
+                      type: 'array',
+                      description: 'Подходы по порядку.',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          weight_kg: { type: 'number', description: 'Вес, кг. Пусто или 0 — свой вес.' },
+                          reps: { type: 'integer', description: 'Повторы, 1–200.' },
+                          set_type: { type: 'string', enum: ['work', 'warmup'], description: 'Рабочий или разминочный.' },
+                          extra_weight_kg: { type: 'number', description: 'Довес к своему весу, 0–500.' },
+                        },
+                        required: ['reps'],
+                      },
+                    },
+                    rpe: { type: 'integer', description: 'Субъективная тяжесть упражнения, 0–10.' },
+                    superset_group: { type: 'integer', description: 'Номер связки: одинаковый у упражнений одного суперсета, 0 — без связки.' },
+                    rest_sec: { type: 'integer', description: 'Отдых между подходами: 60, 90, 120 или 180.' },
+                    note: { type: 'string', description: 'Заметка к упражнению.' },
+                  },
+                  required: ['name', 'approaches'],
+                },
+              },
+            },
+            required: ['date', 'exercises'],
+          },
+        },
+      },
+      required: ['title', 'assigned_by', 'days'],
+    },
+  },
+  {
     name: 'heys_delete_training',
     description: 'Удалить тренировку из дня. Индекс — её позиция в списке из heys_get_day (с нуля). Удаление ставит tombstone, поэтому тренировка не вернётся из облака при следующей синхронизации.',
     inputSchema: {
@@ -2528,6 +2697,7 @@ const WRITE_TOOLS = new Set([
   'heys_log_training',
   'heys_log_strength_workout',
   'heys_assign_training',
+  'heys_assign_program',
   'heys_update_training',
   'heys_delete_training',
   'heys_update_day',

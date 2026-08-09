@@ -370,6 +370,121 @@ test('update_training отбивает несуществующий индекс
   assert.equal(api.saves.length, 0, 'ни одна отбитая правка не записалась');
 });
 
+// --- heys_assign_program ------------------------------------------------
+//
+// Программа куратора, Слой 4 (CURATOR_TRAINING_PROGRAM_PROTOCOL_2026-08-09.md).
+// Ключевой инвариант — «дни разные ключи, транзакции нет»: валидация идёт по
+// всем дням до первой записи, а сбой одного дня посреди записи не должен
+// уронить остальные. Сама валидация каждого дня — это assignTraining, и её
+// правила уже покрыты day.test.cjs; тесты здесь проверяют только оркестрацию
+// поверх нескольких дней, которой в day.js нет.
+
+const PROGRAM_EXERCISE = [{ name: 'Присед', approaches: [{ reps: 5, weight_kg: 80 }] }];
+
+test('assign_program пишет несколько дней и индекс программы одним вызовом', async () => {
+  const api = fakeApi({ day: null });
+  const res = await build(api).heys_assign_program({
+    title: 'Верх/низ, 4 недели',
+    assigned_by: 'Артём',
+    weeks: 4,
+    days: [
+      { date: '2026-08-11', day_label: 'День A', week_index: 1, exercises: PROGRAM_EXERCISE },
+      { date: '2026-08-13', day_label: 'День B', week_index: 1, exercises: PROGRAM_EXERCISE },
+    ],
+  });
+
+  assert.equal(res.structured.status, 'active');
+  assert.equal(res.structured.written.length, 2);
+  assert.equal(res.structured.failed.length, 0);
+
+  const dayDates = api.saves.filter((s) => s.key.startsWith('heys_dayv2_')).map((s) => s.key);
+  assert.deepEqual(dayDates.sort(), ['heys_dayv2_2026-08-11', 'heys_dayv2_2026-08-13']);
+  for (const s of api.saves.filter((s2) => s2.key.startsWith('heys_dayv2_'))) {
+    const plan = s.value.trainings[0].plan;
+    assert.equal(plan.status, 'assigned');
+    assert.equal(plan.programId, res.structured.program_id);
+  }
+
+  const index = api.saves.find((s) => s.key === 'heys_training_program');
+  assert.ok(index, 'индекс программы не записан');
+  assert.equal(index.value.status, 'active');
+  assert.equal(index.value.days.length, 2);
+  assert.equal(index.value.startDate, '2026-08-11', 'startDate — самая ранняя дата, не порядок в массиве');
+});
+
+test('assign_program не пишет ничего, если хотя бы один день не проходит проверку', async () => {
+  // Второй день уже занят тремя факт-тренировками — assignTraining его отобьёт
+  // тем же правилом MAX_TRAININGS_PER_DAY, что и одиночное назначение.
+  const api = fakeApi({
+    day: {
+      date: '2026-08-13',
+      meals: [],
+      waterMl: 0,
+      updatedAt: 111,
+      trainings: [
+        { time: '08:00', z: [30, 0, 0, 0] },
+        { time: '09:00', z: [30, 0, 0, 0] },
+        { time: '10:00', z: [30, 0, 0, 0] },
+      ],
+    },
+  });
+  const tools = build(api);
+  await assert.rejects(
+    () => tools.heys_assign_program({
+      title: 'Верх/низ',
+      assigned_by: 'Артём',
+      days: [
+        { date: '2026-08-11', exercises: PROGRAM_EXERCISE },
+        { date: '2026-08-13', exercises: PROGRAM_EXERCISE },
+      ],
+    }),
+    (e) => e.code === 'invalid_assignment' && /2026-08-13/.test(e.message),
+  );
+  assert.equal(api.saves.length, 0, 'ни один день не должен был записаться');
+});
+
+test('assign_program отбивает повторную дату внутри одного вызова', async () => {
+  const api = fakeApi({ day: null });
+  await assert.rejects(
+    () => build(api).heys_assign_program({
+      title: 'Верх/низ',
+      assigned_by: 'Артём',
+      days: [
+        { date: '2026-08-11', exercises: PROGRAM_EXERCISE },
+        { date: '2026-08-11', exercises: PROGRAM_EXERCISE },
+      ],
+    }),
+    (e) => e.code === 'invalid_assignment',
+  );
+  assert.equal(api.saves.length, 0);
+});
+
+test('assign_program: сбой записи одного дня не роняет остальные — статус partial', async () => {
+  const api = fakeApi({ day: null });
+  api.onMergeSave = (key) => {
+    if (key === 'heys_dayv2_2026-08-13') return { ok: false, error: 'stale' };
+    return null;
+  };
+  const res = await build(api).heys_assign_program({
+    title: 'Верх/низ',
+    assigned_by: 'Артём',
+    days: [
+      { date: '2026-08-11', exercises: PROGRAM_EXERCISE },
+      { date: '2026-08-13', exercises: PROGRAM_EXERCISE },
+    ],
+  });
+
+  assert.equal(res.structured.status, 'partial');
+  assert.equal(res.structured.written.length, 1);
+  assert.equal(res.structured.written[0].date, '2026-08-11');
+  assert.equal(res.structured.failed.length, 1);
+  assert.equal(res.structured.failed[0].date, '2026-08-13');
+
+  const index = api.saves.find((s) => s.key === 'heys_training_program');
+  assert.equal(index.value.status, 'partial');
+  assert.equal(index.value.days.length, 1);
+});
+
 test('log_training считает нагрузку сессии по реальным пульсовым зонам клиента', async () => {
   const api = fakeApi({
     day: null,
