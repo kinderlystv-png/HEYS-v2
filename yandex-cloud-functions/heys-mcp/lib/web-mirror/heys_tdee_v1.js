@@ -117,14 +117,37 @@
   };
 
   /**
+   * Назначенная куратором, но ещё не выполненная тренировка. Лежит в
+   * `day.trainings` рядом с фактической — теми же полями и с теми же зонами,
+   * поэтому без предиката план считался бы фактом и поднимал расход, оптимум и
+   * калорийный долг так, будто человек уже отработал.
+   *
+   * Предикат канонический — `TK.load.isPlannedTraining`. Локальный фолбэк нужен
+   * потому, что порядок загрузки модулей не гарантирован: TDEE считается и там,
+   * где ядро нагрузки не подключено (тот же приём, что Runner fallback guard,
+   * `_kernel/KERNEL_EXTRACTION_PLAN.md`). Расходиться им нельзя — условие одно.
+   */
+  const isPlannedTraining = (training) => {
+    const TK = HEYS.TrainingKernel;
+    return TK && TK.load && TK.load.isPlannedTraining
+      ? TK.load.isPlannedTraining(training)
+      : !!(training && training.plan && training.plan.status === 'assigned');
+  };
+
+  /**
    * Расчёт калорий от тренировки
-   * @param {Object} training - { z: [min1, min2, min3, min4], type, time }
+   * @param {Object} training - { z: [min1, min2, min3, min4], type, time, plan }
    * @param {number} weight - Вес в кг
    * @param {number[]} mets - MET для каждой зоны [zone1, zone2, zone3, zone4]
    * @returns {number} ккал
    */
   const trainingKcal = (training, weight, mets = [2.5, 6, 8, 10]) => {
     if (!training || !training.z) return 0;
+    // Назначенное — ещё не сделанное: план не даёт калорий, даже когда минуты по
+    // зонам у него уже проставлены. Это единственный вход тренировок в весь
+    // дневной расход (`calculateTDEE` зовёт только его), поэтому оптимум,
+    // калорийный долг и серверная оценка нормы закрываются здесь же.
+    if (isPlannedTraining(training)) return 0;
     // Нетто: минута в зоне стоит столько, на сколько она дороже покоя.
     const kcalMin = mets.map(m => netKcalPerMin(m, weight));
     return (training.z || [0, 0, 0, 0]).reduce((sum, min, i) =>
@@ -220,7 +243,10 @@
     let ndteBoost = 0;
     if (options.includeNDTE !== false && HEYS.InsulinWave?.calculateNDTE && HEYS.InsulinWave?.getPreviousDayTrainings && d.date) {
       const prevTrainings = HEYS.InsulinWave.getPreviousDayTrainings(d.date, lsGet);
-      if (prevTrainings.totalKcal >= 200) {
+      // 300, а не 200: сам `calculateNDTE` отбивает всё ниже 300 с v4.3
+      // (heys_iw_constants.js, «порог поднят 200 → 300 kcal»), поэтому внешние
+      // 200 ничего не пропускали — они лишь делали вид, что граница ниже.
+      if (prevTrainings.totalKcal >= 300) {
         const heightM = (+prof.height || 170) / 100;
         const bmi = weight && heightM ? r0(weight / (heightM * heightM) * 10) / 10 : 22;
         const ndteData = HEYS.InsulinWave.calculateNDTE({

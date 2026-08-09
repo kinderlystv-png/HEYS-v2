@@ -1536,6 +1536,56 @@ test('сбой чтения карточки не роняет запись ед
   assert.equal(res.structured.day_after.norm.reason, 'no_inputs');
 });
 
+/**
+ * Назначенное куратором не считается состоявшейся тренировкой.
+ *
+ * Поле `plan` пока не пишет никто — защита ставится ДО реализации назначения,
+ * чтобы первая же такая запись не раздула счётчики и накопленную нагрузку.
+ */
+const CARDIO = { z: [30, 0, 0, 0], time: '19:00', type: 'cardio' };
+const trainingStatusApi = (trainings) => fakeApi({
+  card: CARD,
+  day: { date: '2026-08-01', meals: [], trainings, updatedAt: 111 },
+  pastDays: {
+    '2026-07-30': { date: '2026-07-30', meals: [], trainings: [CARDIO], updatedAt: 100 },
+  },
+});
+
+test('heys_get_training_status не считает назначенную тренировку состоявшейся', async () => {
+  const res = await build(trainingStatusApi([{ ...CARDIO, plan: { status: 'assigned' } }]))
+    .heys_get_training_status({});
+
+  const s = res.structured;
+  // В списке осталась только настоящая тренировка 30.07.
+  assert.deepEqual(s.sessions.map((x) => x.date), ['2026-07-30']);
+  assert.equal(s.by_type.cardio.count, 1);
+  // Последняя тренировка — та, что была, а не та, что назначена на сегодня.
+  assert.equal(s.by_type.cardio.last_date, '2026-07-30');
+});
+
+test('день с назначенной тренировкой даёт ту же нагрузку, что день без неё', async () => {
+  // Критерий слоя 1: план не создаёт нагрузки. Сравниваем не с константой, а с
+  // тем же днём без записи — так тест переживёт правку коэффициентов модели.
+  const planned = await build(trainingStatusApi([{ ...CARDIO, plan: { status: 'assigned' } }]))
+    .heys_get_training_status({});
+  const empty = await build(trainingStatusApi([])).heys_get_training_status({});
+
+  assert.deepEqual(planned.structured.load, empty.structured.load);
+});
+
+test('начатая и обычная тренировка считаются в статусе как раньше', async () => {
+  const empty = await build(trainingStatusApi([])).heys_get_training_status({});
+  for (const trainings of [[{ ...CARDIO, plan: { status: 'started' } }], [CARDIO]]) {
+    const res = await build(trainingStatusApi(trainings)).heys_get_training_status({});
+    const s = res.structured;
+    assert.deepEqual(s.sessions.map((x) => x.date), ['2026-07-30', '2026-08-01']);
+    assert.equal(s.by_type.cardio.count, 2);
+    assert.equal(s.by_type.cardio.last_date, '2026-08-01');
+    // И нагрузку она несёт: у назначенной ряд совпал бы с пустым днём.
+    assert.notDeepEqual(s.load, empty.structured.load);
+  }
+});
+
 test('каждый инструмент, меняющий день, отдаёт норму в day_after', async () => {
   const base = {
     date: '2026-08-01',

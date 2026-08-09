@@ -2634,6 +2634,9 @@
     function isStrengthWorkoutBuilder(t) {
       if (String(t.type) !== 'strength') return false;
       if (t.strengthEntryMode === 'workout_builder') return true;
+      // Явный выбор «пульсовые зоны» сильнее наследия: мастер теперь хранит
+      // журнал упражнений и в этом режиме, но показывать его не должен.
+      if (t.strengthEntryMode === 'hr_zones') return false;
       const wl = t.workoutLog;
       return !!(wl && typeof wl === 'object' && Array.isArray(wl.exercises) && wl.exercises.length > 0);
     }
@@ -2643,6 +2646,9 @@
       if (!t || String(t.type) !== 'strength') return false;
       if (isMorningActivationTraining(t)) return false;
       if (t.strengthEntryMode === 'workout_builder') return false;
+      // Режим «пульсовые зоны» выбран явно — это и есть путь назад к журналу,
+      // сохранённый workoutLog при этом оживает, а не пересоздаётся пустым.
+      if (t.strengthEntryMode === 'hr_zones') return true;
       const wl = t.workoutLog;
       if (wl && Array.isArray(wl.exercises) && wl.exercises.length > 0) return false;
       return true;
@@ -2678,7 +2684,17 @@
         const zoneMinutes = sumMin > 0
           ? [0, 1, 2, 3].map((i) => clampWbZoneMin(z0[i]))
           : [0, Math.max(1, Math.min(180, 45)), 0, 0];
-        const wl = {
+        // Если журнал уже есть (например, тренировку переключали в «пульсовые
+        // зоны»), возвращаем его, а не затираем пустой заготовкой.
+        const prevWl = t0.workoutLog;
+        const hasPrevWl = !!(prevWl && typeof prevWl === 'object'
+          && Array.isArray(prevWl.exercises) && prevWl.exercises.length > 0);
+        const wl = hasPrevWl ? {
+          ...prevWl,
+          version: 1,
+          zoneMinutes: zoneMinutes.slice(),
+          totalDurationMinutes: zoneMinutes.reduce((s, v) => s + (+v || 0), 0)
+        } : {
           version: 1,
           zoneMinutes: zoneMinutes.slice(),
           totalDurationMinutes: zoneMinutes.reduce((s, v) => s + (+v || 0), 0),

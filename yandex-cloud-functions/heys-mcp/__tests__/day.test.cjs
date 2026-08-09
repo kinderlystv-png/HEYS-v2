@@ -297,6 +297,56 @@ test('summarizeDay видит силовую с workout_builder, даже ког
   assert.equal(summary.trainings[0].type, 'strength');
 });
 
+/** Назначенная куратором тренировка: план, а не факт. */
+const ASSIGNED = { z: [40, 0, 0, 0], time: '19:00', type: 'cardio', plan: { status: 'assigned' } };
+
+test('isPlannedTraining срабатывает только на статусе assigned', () => {
+  assert.equal(day.isPlannedTraining(ASSIGNED), true);
+  assert.equal(day.isPlannedTraining({ ...ASSIGNED, plan: { status: 'started' } }), false);
+  assert.equal(day.isPlannedTraining({ ...ASSIGNED, plan: { status: 'done' } }), false);
+  assert.equal(day.isPlannedTraining({ z: [40, 0, 0, 0] }), false);
+  assert.equal(day.isPlannedTraining({ plan: null }), false);
+  assert.equal(day.isPlannedTraining(null), false);
+});
+
+test('summarizeDay показывает назначенную тренировку, но с явным признаком плана', () => {
+  // Куратор обязан видеть то, что сам назначил, иначе он назначит второй раз.
+  // Отличать план от факта он должен по полю, а не по догадке о минутах.
+  const summary = day.summarizeDay({
+    date: '2026-08-01', waterMl: 0, meals: [], trainings: [ASSIGNED],
+  });
+  assert.equal(summary.trainings.length, 1);
+  assert.equal(summary.trainings[0].plan_status, 'assigned');
+  assert.equal(summary.trainings[0].total_minutes, 40);
+});
+
+test('summarizeDay не выдумывает plan_status обычной тренировке', () => {
+  const summary = day.summarizeDay({
+    date: '2026-08-01', waterMl: 0, meals: [],
+    trainings: [{ z: [40, 0, 0, 0], time: '19:00' }],
+  });
+  assert.equal(Object.hasOwn(summary.trainings[0], 'plan_status'), false);
+});
+
+test('summarizeDayBrief не считает минуты назначенной тренировки', () => {
+  // День с одним назначением обязан выглядеть как день без тренировок: иначе
+  // обзор недели показывает минуты, которых клиент не отрабатывал.
+  const brief = day.summarizeDayBrief({ date: '2026-08-01', meals: [], trainings: [ASSIGNED] });
+  assert.equal(brief.training_min, 0);
+});
+
+test('summarizeDayBrief считает начатую и обычную тренировку как раньше', () => {
+  const started = day.summarizeDayBrief({
+    date: '2026-08-01', meals: [], trainings: [{ ...ASSIGNED, plan: { status: 'started' } }],
+  });
+  assert.equal(started.training_min, 40);
+
+  const plain = day.summarizeDayBrief({
+    date: '2026-08-01', meals: [], trainings: [{ z: [40, 0, 0, 0], time: '19:00' }],
+  });
+  assert.equal(plain.training_min, 40);
+});
+
 test('ensureDay поднимает пустой день, а не падает', () => {
   const fresh = day.ensureDay(null, '2026-08-01', CLIENT, 1000);
   assert.equal(fresh.date, '2026-08-01');
@@ -702,6 +752,26 @@ test('кэш отрисовки на число больше не влияет, 
   assert.match(norm.note, /Клиент последний раз видел 1282 ккал/);
 });
 
+test('дрейф активности не считает назначенную тренировку доехавшей в день', () => {
+  // Кэш отрисовки писался, когда тренировок в дне не было. Назначение куратора
+  // добавилось после, но человек его не выполнял — «в день доехало: тренировка
+  // 0 мин → 40 мин» было бы прямой ложью.
+  const withPlan = {
+    ...TODAY, savedDisplayOptimum: 1282,
+    savedOptimumMeta: { trainingMin: 0, steps: 0, householdMin: 0, weight: 80 },
+    trainings: [ASSIGNED],
+  };
+  const planned = day.dailyNorm(withPlan, WITH_WINDOW(pastBlobs(1100)));
+  assert.doesNotMatch(planned.note, /тренировка/);
+
+  // Та же запись со статусом 'started' — уже факт, и дрейф её обязан назвать.
+  const started = day.dailyNorm(
+    { ...withPlan, trainings: [{ ...ASSIGNED, plan: { status: 'started' } }] },
+    WITH_WINDOW(pastBlobs(1100)),
+  );
+  assert.match(started.note, /тренировка 0 мин → 40 мин/);
+});
+
 test('при переборе норма мягко снижается, а не наказывает', () => {
   const norm = day.dailyNorm(TODAY, WITH_WINDOW(pastBlobs(2600)));
 
@@ -758,6 +828,55 @@ test('надбавка за вчерашнюю тренировку считае
   assert.equal(without.kcal, 1471);
   assert.equal(with_.parts.ndte, 138);
   assert.equal(with_.kcal, 1588);
+});
+
+test('назначенная вчера тренировка не даёт серверной надбавки', () => {
+  const today = { date: '2026-08-02', weightMorning: 80, meals: [] };
+  const base = { profile: FULL_PROFILE, norms: NORMS, hrZones: [], nowMs: AT_MSK_NOON };
+  const plannedPrev = {
+    date: '2026-08-01',
+    trainings: [{ ...PREV_DAY_TRAINING.trainings[0], plan: { status: 'assigned' } }],
+  };
+
+  const planned = day.dailyNorm(today, { ...base, prevDay: plannedPrev });
+  const empty = day.dailyNorm(today, { ...base, prevDay: null });
+
+  // День с назначенным планом обязан совпасть с днём без тренировки вовсе:
+  // отсекаются и калории, и множитель за количество, и тип первой строки.
+  assert.equal(planned.parts.ndte, empty.parts.ndte);
+  assert.equal(planned.kcal, empty.kcal);
+});
+
+test('начатая вчера тренировка надбавку по-прежнему даёт', () => {
+  const today = { date: '2026-08-02', weightMorning: 80, meals: [] };
+  const base = { profile: FULL_PROFILE, norms: NORMS, hrZones: [], nowMs: AT_MSK_NOON };
+  const startedPrev = {
+    date: '2026-08-01',
+    trainings: [{ ...PREV_DAY_TRAINING.trainings[0], plan: { status: 'started' } }],
+  };
+
+  const started = day.dailyNorm(today, { ...base, prevDay: startedPrev });
+  const plain = day.dailyNorm(today, { ...base, prevDay: PREV_DAY_TRAINING });
+
+  assert.equal(started.parts.ndte, plain.parts.ndte);
+  assert.equal(started.kcal, plain.kcal);
+});
+
+test('назначенная не подменяет тип и не удваивает счётчик при реальной тренировке рядом', () => {
+  const today = { date: '2026-08-02', weightMorning: 80, meals: [] };
+  const base = { profile: FULL_PROFILE, norms: NORMS, hrZones: [], nowMs: AT_MSK_NOON };
+  const mixedPrev = {
+    date: '2026-08-01',
+    trainings: [
+      { z: [0, 0, 0, 90], type: 'strength', time: '19:00', plan: { status: 'assigned' } },
+      PREV_DAY_TRAINING.trainings[0],
+    ],
+  };
+
+  const mixed = day.dailyNorm(today, { ...base, prevDay: mixedPrev });
+  const plain = day.dailyNorm(today, { ...base, prevDay: PREV_DAY_TRAINING });
+
+  assert.equal(mixed.parts.ndte, plain.parts.ndte);
 });
 
 test('надбавка затухает по московскому часу, а не по часам функции', () => {

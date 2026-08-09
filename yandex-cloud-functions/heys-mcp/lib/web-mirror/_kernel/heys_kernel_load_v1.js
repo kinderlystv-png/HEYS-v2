@@ -7,6 +7,7 @@
 // нагрузку» кустарно — этот модуль даёт им общую математику.
 //
 // Что вошло:
+//   isPlannedTraining(training)       — запись назначена куратором, но не выполнена
 //   sessionLoad(training, zoneMets)   — нагрузка кардио-сессии, MET-минуты
 //   fitnessFatigue(dailyLoads, opts)  — CTL/ATL/TSB по плотному ряду за день
 //
@@ -52,6 +53,25 @@
   }
 
   /**
+   * Тренировка назначена куратором, но ещё не выполнена.
+   *
+   * Назначенное лежит в `day.trainings` рядом с фактическим — теми же полями,
+   * с теми же зонами и упражнениями. Без общего предиката каждый счётчик
+   * считал бы план фактом: одно назначение поднимало бы расход, тоннаж и
+   * накопленную нагрузку так, будто человек уже отработал. Статусы 'started' и
+   * 'done' — уже факт, для них false.
+   *
+   * Поле `plan` пока не пишет никто: защита ставится ДО реализации назначения,
+   * чтобы к первой такой записи все потребители уже умели её не засчитывать.
+   * Предикат один на всё ядро — второй, локальный, разойдётся с этим молча.
+   *
+   * @param {{plan?:{status?:string}}} training
+   */
+  function isPlannedTraining(training) {
+    return !!(training && training.plan && training.plan.status === 'assigned');
+  }
+
+  /**
    * Нагрузка одной кардио-сессии в MET-минутах: сумма `минуты_зоны × MET_зоны`.
    * Вес зоны берётся из настроек клиента (hr_zones), не из новой константы —
    * персонализация уже есть, второй раз её не изобретаем.
@@ -64,6 +84,9 @@
    */
   function sessionLoad(training, zoneMets) {
     if (!training || String(training.type) === 'strength') return 0;
+    // Назначенное — ещё не сделанное: план не создаёт нагрузки, даже если у него
+    // уже проставлены минуты по зонам.
+    if (isPlannedTraining(training)) return 0;
     const z = Array.isArray(training.z) ? training.z : [];
     const mets = Array.isArray(zoneMets) && zoneMets.length ? zoneMets : DEFAULT_ZONE_METS;
     let load = 0;
@@ -138,6 +161,7 @@
     DEFAULT_ZONE_METS: DEFAULT_ZONE_METS,
     DEFAULT_CTL_TAU: DEFAULT_CTL_TAU,
     DEFAULT_ATL_TAU: DEFAULT_ATL_TAU,
+    isPlannedTraining: isPlannedTraining,
     sessionLoad: sessionLoad,
     fitnessFatigue: fitnessFatigue,
   };

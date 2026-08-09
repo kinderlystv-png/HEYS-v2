@@ -46,8 +46,9 @@ const MIRRORED_FILES = [
   // InsulinWave грузится цепочкой в том же порядке, что в
   // scripts/legacy-bundle-config.mjs: shim заводит `__internals`, constants
   // вешает туда NDTE, utils дополняет хелперами и молча выходит, если constants
-  // ещё не загружен. Публичного API у этих файлов нет — наружу их отдаёт
-  // `insulinWaveInternals()`.
+  // ещё не загружен. Наружу сервер берёт их через `insulinWaveInternals()`:
+  // публично constants поднимает только `calculateNDTE` и
+  // `getPreviousDayTrainings` (их ищет `heys_tdee_v1.js`), utils — `utils`.
   'heys_iw_shim.js',
   'heys_iw_constants.js',
   'heys_iw_utils.js',
@@ -147,6 +148,17 @@ function sessionLoad(training, zoneMets) {
   return loadHeys().TrainingKernel.load.sessionLoad(training, zoneMets);
 }
 
+/**
+ * `HEYS.TrainingKernel.load.isPlannedTraining` из
+ * apps/web/_kernel/heys_kernel_load_v1.js — запись назначена куратором, но ещё
+ * не выполнена. Экспортируется отдельно, потому что серверные счётчики считают
+ * тренировки в обход `sessionLoad`/`dayTonnage`, а второй экземпляр условия
+ * разошёлся бы с ядром молча.
+ */
+function isPlannedTraining(training) {
+  return loadHeys().TrainingKernel.load.isPlannedTraining(training);
+}
+
 /** `HEYS.TrainingKernel.load.fitnessFatigue` из apps/web/_kernel/heys_kernel_load_v1.js. */
 function fitnessFatigue(dailyLoads, opts) {
   return loadHeys().TrainingKernel.load.fitnessFatigue(dailyLoads, opts);
@@ -155,9 +167,11 @@ function fitnessFatigue(dailyLoads, opts) {
 /**
  * `HEYS.InsulinWave.__internals` — NDTE и его хелперы.
  *
- * Публичного API у цепочки iw-модулей нет: наружу его поднимает оркестратор,
- * которого в зеркалах нет (он тянет UI). Внутренности — те же функции, и
- * `calculateNDTE` среди них чистая.
+ * Публично цепочка поднимает лишь то, что ищут другие модули приложения
+ * (`calculateNDTE`, `getPreviousDayTrainings`, `utils`); остальное наружу
+ * отдаёт оркестратор, которого в зеркалах нет (он тянет UI). Берём
+ * `__internals`, потому что серверу нужны и хелперы тоже, а публичные ключи —
+ * те же ссылки. `calculateNDTE` среди них чистая.
  */
 function insulinWaveInternals() {
   const iw = loadHeys().InsulinWave;
@@ -175,5 +189,6 @@ module.exports = {
   trainingTonnage,
   dayTonnage,
   sessionLoad,
+  isPlannedTraining,
   fitnessFatigue,
 };

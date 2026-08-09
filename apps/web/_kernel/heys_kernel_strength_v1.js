@@ -29,6 +29,15 @@
       && !!t.workoutLog && typeof t.workoutLog === 'object';
   }
 
+  // «Назначено, но не сделано» — смысл модуля нагрузки, там и живёт предикат:
+  // второй экземпляр разошёлся бы с ним молча. Локальный фолбэк — на случай
+  // сборки без модуля нагрузки: даже там план не должен считаться фактом
+  // (тот же приём, что Runner fallback guard, KERNEL_EXTRACTION_PLAN.md).
+  function isPlanned(t) {
+    return TK.load && TK.load.isPlannedTraining ? TK.load.isPlannedTraining(t)
+      : !!(t && t.plan && t.plan.status === 'assigned');
+  }
+
   /**
    * Сводка одной тренировки.
    *
@@ -40,6 +49,11 @@
    * heys_day_trainings_v1.js (computeDayTotalTonnage — по done, подпись на
    * карточке через calcWorkoutBuilderVolumeKg — по всем), и разойтись они могли
    * молча. Теперь формула одна, а выбор величины — за вызывающим.
+   *
+   * Назначенную куратором тренировку эта функция считает как любую другую, и
+   * это намеренно: карточка назначенного показывает «~N кг объёма» именно через
+   * plannedVolume. Отсев плана — в dayTonnage и countStrengthWorkouts, то есть
+   * там, где считается ФАКТ дня.
    *
    * Упражнение без массива approaches — старый снимок: там подходов нет, есть
    * sets/reps/weightKg. Такие строки идут в обе величины целиком: признака
@@ -89,22 +103,29 @@
     return out;
   }
 
-  /** Сумма тоннажа (вес × повторы) всех завершённых подходов всех силовых в дне. */
+  /**
+   * Сумма тоннажа (вес × повторы) всех завершённых подходов всех силовых в дне.
+   * Назначенные куратором тренировки пропускаются: день с планом обязан давать
+   * тот же тоннаж, что пустой.
+   */
   function dayTonnage(day) {
     if (!day || !Array.isArray(day.trainings)) return 0;
     let total = 0;
     for (let i = 0; i < day.trainings.length; i++) {
-      total += trainingTonnage(day.trainings[i]).totalVolume;
+      const t = day.trainings[i];
+      if (isPlanned(t)) continue;
+      total += trainingTonnage(t).totalVolume;
     }
     return total;
   }
 
-  /** Сколько workout_builder-тренировок в дне. */
+  /** Сколько выполняемых workout_builder-тренировок в дне (назначенные не в счёт). */
   function countStrengthWorkouts(day) {
     if (!day || !Array.isArray(day.trainings)) return 0;
     let n = 0;
     for (let i = 0; i < day.trainings.length; i++) {
-      if (isStrengthBuilder(day.trainings[i])) n += 1;
+      const t = day.trainings[i];
+      if (isStrengthBuilder(t) && !isPlanned(t)) n += 1;
     }
     return n;
   }

@@ -331,6 +331,24 @@
     });
   }
 
+  // Быстрый пресет длительности раскладывается 40/35/20/5 по Z1…Z4
+  // (решение владельца 2026-08-09). Нумерация зон — как на карточке дня
+  // (heys_day_trainings_v1.js: Z1…Z4 = индексы 0…3).
+  const QUICK_DURATION_SHARES = [0.4, 0.35, 0.2, 0.05];
+
+  function distributeQuickDuration(totalMinutes) {
+    const total = Math.max(0, Math.round(Number(totalMinutes) || 0));
+    const zones = QUICK_DURATION_SHARES.map((share) => Math.floor(total * share));
+    // Остаток от округления — в Z2, чтобы сумма точно совпала с выбранной длительностью.
+    zones[1] += total - zones.reduce((sum, value) => sum + value, 0);
+    return zones;
+  }
+
+  // Поля, которые мастер не редактирует, но обязан пронести через сохранение.
+  // Без `id` подпись для tombstone считается по полям, и удаление одной силовой
+  // гасит соседнюю с той же подписью (BUGS_HISTORY, фикс 2026-08-08).
+  const TRAINING_PASSTHROUGH_FIELDS = ['id', 'source', 'intensity'];
+
   function buildTrainingFormData(training) {
     const source = training || {};
     const type = source.type || 'cardio';
@@ -361,6 +379,10 @@
     if (source.hobbyLog && typeof source.hobbyLog === 'object') {
       out.hobbyLog = source.hobbyLog;
     }
+    TRAINING_PASSTHROUGH_FIELDS.forEach((field) => {
+      const value = source[field];
+      if (value != null && value !== '') out[field] = value;
+    });
     return out;
   }
 
@@ -373,6 +395,7 @@
     while (trainings.length <= trainingIndex) {
       trainings.push({ z: [0, 0, 0, 0] });
     }
+    const previous = trainings[trainingIndex] || {};
 
     const infoData = allStepData?.['training-info'] || {};
     const feedbackData = allStepData?.['training-feedback'] || {};
@@ -397,6 +420,14 @@
       updatedAt: mutationTs
     };
 
+    // Мастер собирает запись белым списком и кладёт её в массив заменой, поэтому
+    // поля коннектора приходится проносить руками: из формы, а если её не было
+    // (saveFingers/saveMobility зовут persist без stepData) — из записи на диске.
+    TRAINING_PASSTHROUGH_FIELDS.forEach((field) => {
+      const value = (merged[field] != null && merged[field] !== '') ? merged[field] : previous[field];
+      if (value != null && value !== '') finalTraining[field] = value;
+    });
+
     if (merged.fingersLog && typeof merged.fingersLog === 'object') {
       finalTraining.fingersLog = merged.fingersLog;
     }
@@ -413,20 +444,33 @@
     if (merged.strengthEntryMode) {
       finalTraining.strengthEntryMode = merged.strengthEntryMode;
     }
-    if (merged.strengthEntryMode === 'workout_builder') {
-      if (merged.workoutLog && typeof merged.workoutLog === 'object') {
-        finalTraining.workoutLog = merged.workoutLog;
-      } else {
-        const m = Math.max(1, Math.min(180, Math.round(Number(merged.zones?.[1]) || 0) || 1));
-        finalTraining.workoutLog = {
-          version: 1,
-          zoneMinutes: [0, m, 0, 0],
-          totalDurationMinutes: m,
-          exercises: [{ id: 'ex_0', name: '', sets: 1, reps: 10, weightKg: '', note: '', ssGroup: 0, rpe: 0 }]
-        };
+    // Журнал упражнений переживает переключение в «пульсовые зоны». Раньше здесь
+    // стоял `delete finalTraining.workoutLog`: упражнения, подходы, веса, повторы,
+    // RPE и заметки исчезали без подтверждения и без отмены, а облако не спасало.
+    // Явный strengthEntryMode === 'hr_zones' и так прячет журнал у всех
+    // потребителей (они гейтят на 'workout_builder'), а при возврате в
+    // конструктор запись оживает (прецедент — heys_models_v1.js:547).
+    const carriedWorkoutLog = (merged.workoutLog && typeof merged.workoutLog === 'object')
+      ? merged.workoutLog
+      : (previous.workoutLog && typeof previous.workoutLog === 'object' ? previous.workoutLog : null);
+    if (carriedWorkoutLog) {
+      finalTraining.workoutLog = carriedWorkoutLog;
+    } else if (merged.strengthEntryMode === 'workout_builder') {
+      // Аварийная ветка: конструктор без журнала. Минуты берём по всем четырём
+      // зонам — раньше читалась только zones[1], и Z3 молча терялась.
+      const zoneMinutes = normalizeTrainingZones(merged.zones)
+        .map((value) => Math.max(0, Math.min(180, Math.round(Number(value) || 0))));
+      let totalDurationMinutes = zoneMinutes.reduce((sum, value) => sum + value, 0);
+      if (totalDurationMinutes <= 0) {
+        zoneMinutes[1] = 1;
+        totalDurationMinutes = 1;
       }
-    } else if (merged.strengthEntryMode === 'hr_zones') {
-      delete finalTraining.workoutLog;
+      finalTraining.workoutLog = {
+        version: 1,
+        zoneMinutes,
+        totalDurationMinutes,
+        exercises: [{ id: 'ex_0', name: '', sets: 1, reps: 10, weightKg: '', note: '', ssGroup: 0, rpe: 0 }]
+      };
     }
 
     trainings[trainingIndex] = finalTraining;
@@ -961,9 +1005,8 @@
               key: d,
               className: 'ts-quick-btn' + (totalMinutes === d ? ' active' : ''),
               onClick: () => {
-                // Распределяем время по зонам 1-2 (жиросжигание, аэробная)
-                const half = Math.floor(d / 2);
-                onChange({ ...data, zones: [0, half, d - half, 0] });
+                // Дефолт 40/35/20/5 по Z1…Z4; сумма точно равна выбранной длительности.
+                onChange({ ...data, zones: distributeQuickDuration(d) });
               }
             }, d + ' мин')
           )

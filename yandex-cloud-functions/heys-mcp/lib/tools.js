@@ -1643,6 +1643,12 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
           // модулей (пальцы, мобильность) не пишут ни минут, ни времени — они
           // опознаются как раз по типу, и сужение фильтра выкинуло бы их.
           if (!tr || (!tr.type && !day.isRealTraining(tr))) return;
+          // Назначенное куратором в состоявшиеся не идёт: этот список кормит
+          // by_type[].count и last_date, и план поднимал бы счётчик тренировок
+          // и двигал «последнюю» на дату, когда клиент ничего не делал.
+          // Ряды нагрузки ниже отсекают его сами — фильтр стоит в ядре
+          // (sessionLoad/dayTonnage), а не здесь.
+          if (day.isPlannedTraining(tr)) return;
           const log = tr.fingersLog || tr.mobilityLog || null;
           sessions.push({
             date,

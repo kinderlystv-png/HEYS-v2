@@ -1566,8 +1566,12 @@ function buildDebtWindow(date, inputs) {
  * активности» (профиль, зоны пульса, дефицит), и текст для этого случая свой.
  */
 function activityDrift(meta, day) {
-  const trainingMin = ((day && day.trainings) || []).reduce(
-    (sum, t) => sum + (((t && t.z) || []).reduce((a, m) => a + (Number(m) || 0), 0)), 0);
+  // Назначенное куратором в дрейф не входит: план не «доехал в день», а лишь
+  // ждёт выполнения, и сравнивать его с активностью на момент записи кэша
+  // нельзя — иначе назначение выглядело бы как проведённая тренировка.
+  const trainingMin = ((day && day.trainings) || [])
+    .filter((t) => !isPlannedTraining(t))
+    .reduce((sum, t) => sum + (((t && t.z) || []).reduce((a, m) => a + (Number(m) || 0), 0)), 0);
   const householdMin = ((day && day.householdActivities)
     || (day && Number(day.householdMin) > 0 ? [{ minutes: day.householdMin }] : []))
     .reduce((sum, h) => sum + (Number(h && h.minutes) || 0), 0);
@@ -1618,7 +1622,12 @@ function normMacros(kcal, norms) {
  */
 function serverNdteBoost(prevDay, profile, bmr, nowMs = Date.now()) {
   const iw = webMirror.insulinWaveInternals();
-  const trainings = (prevDay && Array.isArray(prevDay.trainings)) ? prevDay.trainings : [];
+  // Назначенное куратором отсеивается до расчёта, а не только по калориям:
+  // дальше от массива берутся ещё длина (множитель за две тренировки) и тип
+  // первой строки. Невыполненный вчерашний план не должен ни поднимать буст,
+  // ни выдавать себя за силовую, если сам человек делал кардио.
+  const allTrainings = (prevDay && Array.isArray(prevDay.trainings)) ? prevDay.trainings : [];
+  const trainings = allTrainings.filter((t) => !isPlannedTraining(t));
   if (!iw || !trainings.length || !bmr) return 0;
 
   // Вес 70 захардкожен в оригинале: калории нужны только как мера объёма
@@ -1629,7 +1638,10 @@ function serverNdteBoost(prevDay, profile, bmr, nowMs = Date.now()) {
     totalKcal += iw.utils.calculateTrainingKcal(t, 70);
     if (t && t.time) lastTrainingTime = t.time;
   }
-  if (totalKcal < 200) return 0;
+  // 300, а не 200: `calculateNDTE` ниже 300 всё равно возвращает нулевой буст
+  // (порог поднят в v4.3). Прежние 200 создавали коридор 200–299, где внешний
+  // гейт пропускал, а внутренний молча обнулял.
+  if (totalKcal < 300) return 0;
 
   let hoursSince = 24;
   if (lastTrainingTime) {
@@ -1862,6 +1874,10 @@ function summarizeDay(day) {
       const out = { index, zones_minutes: z, total_minutes: z.reduce((a, b) => a + b, 0) };
       if (t.time) out.time = t.time;
       if (t.type) out.type = t.type;
+      // Назначенное куратором в дне видно — иначе он не поймёт, что назначил, —
+      // но помечено явно, чтобы не читалось как проведённая тренировка. Поле
+      // необязательное, как time/type: у обычной записи `plan` нет вовсе.
+      if (t.plan && t.plan.status) out.plan_status = String(t.plan.status);
       if (t.activityLabel) out.activity_label = t.activityLabel;
       if (t.comment) out.comment = t.comment;
       for (const field of ['mood', 'wellbeing', 'stress']) {
@@ -1913,7 +1929,11 @@ function summarizeDay(day) {
  */
 function summarizeDayBrief(day) {
   const totals = macroTotals(day.meals);
+  // Назначенное куратором минут не даёт: у плана зоны могут быть уже
+  // проставлены, и без отсева сводка «за неделю N минут тренировок» раздувалась
+  // бы назначением, которое клиент ещё не выполнял.
   const trainingMinutes = (day.trainings || []).reduce((sum, t) => {
+    if (isPlannedTraining(t)) return sum;
     const z = Array.isArray(t && t.z) ? t.z : [];
     return sum + z.reduce((a, b) => a + (Number(b) || 0), 0);
   }, 0);
@@ -1973,6 +1993,21 @@ function ratingValues(source, field) {
   return (source || [])
     .filter((row) => row && row[field] && !Number.isNaN(Number(row[field])))
     .map((row) => Number(row[field]));
+}
+
+/**
+ * Назначенная куратором, но ещё не выполненная тренировка.
+ *
+ * Условие не повторяется здесь, а берётся из ядра через фасад зеркала: второй
+ * экземпляр «есть `plan` и статус `assigned`» разошёлся бы с ядром молча — и
+ * заметили бы это по расхождению чисел у клиента и куратора, а не по ошибке.
+ *
+ * Отсев идёт только там, где считается ФАКТ (минуты за период, счётчики
+ * сессий). В `isRealTraining` и `summarizeDay` его нет намеренно: куратор
+ * обязан видеть назначенное, просто с явным признаком плана.
+ */
+function isPlannedTraining(t) {
+  return webMirror.isPlannedTraining(t);
 }
 
 /** Тренировка-заготовка без времени и минут в средние не входит — как в приложении. */
@@ -2054,6 +2089,7 @@ module.exports = {
   setStrengthWorkout,
   buildWorkoutLog,
   isRealTraining,
+  isPlannedTraining,
   updateDayFields,
   summarizeDay,
   applyColdExposure,

@@ -2005,6 +2005,24 @@
    */
 
   /**
+   * Тренировка назначена куратором, но ещё не выполнена (`plan.status`
+   * === 'assigned'). Назначенное лежит в `day.trainings` теми же полями, что
+   * фактическое, поэтому без предиката план засчитывался бы как факт: давал бы
+   * калории вчерашнего дня в NDTE и создавал бы «до/после тренировки» контекст
+   * у приёмов пищи, которых рядом с тренировкой не было.
+   *
+   * Предикат канонический — `TK.load.isPlannedTraining`. Локальный фолбэк на
+   * случай сборки без модуля нагрузки (тот же приём, что Runner fallback guard,
+   * `_kernel/KERNEL_EXTRACTION_PLAN.md`): условие обязано совпадать с ядром.
+   */
+  const isPlannedTraining = (t) => {
+    const TK = global.HEYS && global.HEYS.TrainingKernel;
+    return TK && TK.load && TK.load.isPlannedTraining
+      ? TK.load.isPlannedTraining(t)
+      : !!(t && t.plan && t.plan.status === 'assigned');
+  };
+
+  /**
    * Проверяет, является ли тренировка "реальной" (не пустой/дефолтной)
    * Тренировка валидна если: есть время ИЛИ хотя бы одна зона пульса > 0
    */
@@ -2021,7 +2039,9 @@
     const { mealTimeMin, trainings: rawTrainings = [], steps = 0, householdMin = 0, weight = 70, allMeals = [], mealNutrients = {}, mealKcal = 0 } = params;
 
     // 🆕 v3.7.3: Фильтруем пустые/дефолтные тренировки
-    const trainings = rawTrainings.filter(I.isValidTraining);
+    // Назначенные куратором отсеиваются тут же: приём пищи не может быть «после
+    // тренировки», которой ещё не было.
+    const trainings = rawTrainings.filter(t => I.isValidTraining(t) && !isPlannedTraining(t));
 
     if (!mealTimeMin && mealTimeMin !== 0) return null;
 
@@ -2571,12 +2591,21 @@
     // 🆕 v3.7.7: Расчёт ккал тренировки через MET-значения зон пульса
     calculateTrainingKcal: (training, weight = 70) => {
       if (!training || !training.z) return 0;
+      // Назначенное куратором ещё не выполнено — расхода не создаёт.
+      if (isPlannedTraining(training)) return 0;
       const zones = training.z || [0, 0, 0, 0];
       const totalMinutes = zones.reduce((a, b) => a + (+b || 0), 0);
       if (totalMinutes === 0) return 0;
 
+      // MET по зонам берём из настроек клиента (`heys_hr_zones`), а не из
+      // код-фолбэка: у зон приложения по умолчанию MET [2,3,5,8], то есть
+      // фолбэк [2.5,6,8,10] завышает расход почти вдвое. Читаем ровно так же,
+      // как публичный близнец в heys_iw_utils.js: `lsGet` — не глобальный
+      // идентификатор, он живёт в `HEYS.utils`, и обращение к нему без
+      // префикса молча уходило в `typeof === 'undefined'`.
       let mets = [2.5, 6, 8, 10];
       try {
+        const lsGet = global.HEYS?.utils?.lsGet;
         const hrZones = (typeof lsGet === 'function') ? lsGet('heys_hr_zones', []) : [];
         if (hrZones.length >= 4) {
           mets = [2.5, 6, 8, 10].map((def, i) => +hrZones[i]?.MET || def);
@@ -2892,7 +2921,15 @@
       return { trainings: [], totalKcal: 0, hoursSince: Infinity, dominantType: null };
     }
 
-    const trainings = dayData.trainings;
+    // Невыполненный вчерашний план не должен разгонять сегодняшний расход:
+    // назначенное отсеивается до расчёта, поэтому мимо фильтра не проходят ни
+    // калории, ни `trainings.length` (множитель за две тренировки), ни
+    // `dominantType` (силовая даёт больший буст, чем кардио).
+    const trainings = dayData.trainings.filter(t => !isPlannedTraining(t));
+    if (trainings.length === 0) {
+      return { trainings: [], totalKcal: 0, hoursSince: Infinity, dominantType: null };
+    }
+
     let totalKcal = 0;
     let lastTrainingTime = null;
 
@@ -3108,6 +3145,18 @@
       desc: factor.desc
     };
   };
+
+  // === EXPORT TO PUBLIC API ===
+  // NDTE зовут снаружи модуля: `heys_tdee_v1.js` проверяет
+  // `HEYS.InsulinWave.calculateNDTE && HEYS.InsulinWave.getPreviousDayTrainings`
+  // и без них молча считает надбавку за вчерашнюю тренировку нулём. Обе функции
+  // жили только в `__internals`, поэтому условие всегда было ложным, а норма
+  // клиента расходилась с нормой, которую куратор видит через коннектор (сервер
+  // берёт те же функции через `webMirror.insulinWaveInternals()`).
+  // Публикуем те же ссылки, что в `__internals` — второго экземпляра формулы
+  // быть не должно; тот же приём, что `IW_NS.utils = I._utils` в heys_iw_utils.js.
+  IW.getPreviousDayTrainings = I.getPreviousDayTrainings;
+  IW.calculateNDTE = I.calculateNDTE;
 
   // Mark constants as loaded
   I._loaded.constants = true;
