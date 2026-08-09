@@ -963,8 +963,28 @@
       const remoteTrainingTs = rt.updatedAt || remote.updatedAt || 0;
       const localTrainingIsNewer = localTrainingTs >= remoteTrainingTs;
 
+      // Программа куратора, слой 5 (точечное правило, не переписывание merge):
+      // запись с планом, который клиент уже начал/закончил/пропустил, не
+      // проигрывает записи, где план ещё только «назначен» — ни по свежести,
+      // ни по richness. Без этого куратор, надиктовавший план офлайн-клиенту
+      // через MCP в момент, когда remote ещё не увидел клиентский «started»,
+      // стирал бы уже отмеченные подходы (CURATOR_TRAINING_PROGRAM_PROTOCOL,
+      // риск 2.5). Статусы вне этой карты (или отсутствие plan) не участвуют —
+      // обычные тренировки без программы куратора мержатся как раньше.
+      const PLAN_STATUS_PRIORITY = { assigned: 0, started: 1, done: 1, skipped: 1 };
+      const planPriority = (t) => {
+        const status = t && t.plan && t.plan.status;
+        return status && Object.prototype.hasOwnProperty.call(PLAN_STATUS_PRIORITY, status)
+          ? PLAN_STATUS_PRIORITY[status]
+          : -1;
+      };
+      const lPlanPriority = planPriority(lt);
+      const rPlanPriority = planPriority(rt);
+
       let winner;
-      if (localTrainingIsNewer) {
+      if (lPlanPriority !== rPlanPriority && (lPlanPriority >= 0 || rPlanPriority >= 0)) {
+        winner = lPlanPriority > rPlanPriority ? lt : rt;
+      } else if (localTrainingIsNewer) {
         winner = lt;
       } else if (ltSum === 0 && rtSum > 0) {
         winner = rt;
