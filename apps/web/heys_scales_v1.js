@@ -68,13 +68,16 @@
         return { color: '#ef4444', step: STEPS.WARN_SOFT };
     }
 
-    // Выбор цели по шагам в мастере. Маленькая цель — не ошибка, поэтому
-    // семантически это «слабо хорошо», а не предупреждение.
+    // Выбор цели по шагам в мастере. Маленькая цель — не ошибка, поэтому нижняя
+    // ступень NEUTRAL, а не предупреждение. Ступени монотонны: чем выше цель,
+    // тем выше ступень (правка 2026-08-10 — до неё 7000-9999 и 10000+ делили
+    // GOOD_STRONG, а цель ниже 7000 получала GOOD_SOFT, то есть ступень лучше
+    // средней. В новой теме это слило бы два разных выбора в один тон).
     function stepsGoal(goal) {
         const value = num(goal, 0);
         if (value >= 10000) return { color: '#22c55e', step: STEPS.GOOD_STRONG };
-        if (value < 7000) return { color: '#eab308', step: STEPS.GOOD_SOFT };
-        return { color: '#3b82f6', step: STEPS.GOOD_STRONG };
+        if (value < 7000) return { color: '#eab308', step: STEPS.NEUTRAL };
+        return { color: '#3b82f6', step: STEPS.GOOD_SOFT };
     }
 
     // Дефицит/профицит калорий. Движение по плану не подсвечивается —
@@ -84,7 +87,7 @@
         if (v < -10) return { color: '#ef4444', label: 'Агрессивный дефицит', emoji: '🔥🔥', step: STEPS.WARN_SOFT };
         if (v < 0) return { color: '#f97316', label: 'Умеренный дефицит', emoji: '🔥', step: STEPS.NEUTRAL };
         if (v === 0) return { color: '#22c55e', label: 'Поддержание веса', emoji: '⚖️', step: STEPS.NEUTRAL };
-        if (v <= 10) return { color: '#3b82f6', label: 'Умеренный профицит', emoji: '💪', step: STEPS.WARN_SOFT };
+        if (v <= 10) return { color: '#3b82f6', label: 'Умеренный профицит', emoji: '💪', step: STEPS.NEUTRAL };
         return { color: '#3b82f6', label: 'Агрессивный набор', emoji: '💪💪', step: STEPS.WARN_SOFT };
     }
 

@@ -192,3 +192,52 @@ describe('heys_scales_v1 — устойчивость к мусору', () => {
     expect(scales.color('нет такой', 1)).toBeNull();
   });
 });
+
+// Ступени — контракт для темы «Мягкий»: цвет там берётся из ступени, а не из
+// литерала. Ошибка в разметке глазами не видна (сейчас ступень нигде не
+// показывается), но в новой теме сольёт разные состояния в один тон.
+describe('heys_scales_v1 — монотонность ступеней', () => {
+  const RANK = {
+    WARN_STRONG: 0,
+    WARN_SOFT: 1,
+    NEUTRAL: 2,
+    GOOD_SOFT: 3,
+    GOOD_STRONG: 4,
+  };
+
+  const rank = (scales, step) => {
+    const name = Object.keys(scales.STEPS).find((k) => scales.STEPS[k] === step);
+    return RANK[name];
+  };
+
+  it('чем выше цель по шагам, тем выше ступень', () => {
+    const scales = loadScales();
+    const ranks = [5000, 8000, 12000].map((v) => rank(scales, scales.stepsGoal(v).step));
+    expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+    expect(new Set(ranks).size).toBe(3);
+  });
+
+  it('чем выше процент шагов, тем выше ступень', () => {
+    const scales = loadScales();
+    for (const fn of ['stepsProgress', 'stepsWidget']) {
+      const ranks = [10, 50, 80, 110].map((v) => rank(scales, scales[fn](v).step));
+      expect(ranks, fn).toEqual([...ranks].sort((a, b) => a - b));
+    }
+  });
+
+  it('чем лучше самочувствие, тем выше ступень; со стрессом наоборот', () => {
+    const scales = loadScales();
+    const wb = [2, 4, 6, 9].map((v) => rank(scales, scales.wellbeing(v).step));
+    expect(wb).toEqual([...wb].sort((a, b) => a - b));
+    const st = [2, 4, 6, 9].map((v) => rank(scales, scales.stress(v).step));
+    expect(st).toEqual([...st].sort((a, b) => b - a));
+  });
+
+  it('отклонение от плана в обе стороны ухудшает ступень симметрично', () => {
+    const scales = loadScales();
+    expect(rank(scales, scales.deficit(0).step)).toBe(RANK.NEUTRAL);
+    expect(rank(scales, scales.deficit(-5).step)).toBe(rank(scales, scales.deficit(5).step));
+    expect(rank(scales, scales.deficit(-20).step)).toBe(rank(scales, scales.deficit(20).step));
+    expect(rank(scales, scales.deficit(-20).step)).toBeLessThan(rank(scales, scales.deficit(-5).step));
+  });
+});
