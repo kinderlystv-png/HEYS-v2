@@ -939,6 +939,110 @@
     });
   }
 
+  /**
+   * Итог пройденной программы (дизайн-ревью 2026-08-10, экран 16e).
+   *
+   * Контракт задан дизайном и держится дословно, потому что каждое его условие
+   * закрывает свой способ соврать человеку:
+   *  - берём **рабочие веса, а не тоннаж**: тоннаж растёт и от лишних подходов,
+   *    то есть покажет «рост» там, где человек просто дольше сидел в зале;
+   *  - упражнение идёт в счёт, только если встречалось **минимум в трёх**
+   *    тренировках цикла — на двух точках это шум, а не тренд;
+   *  - сравниваем первое и последнее значение, порог — **один шаг**: 2,5 кг
+   *    или одно повторение, иначе в «рост» попадёт округление;
+   *  - максимум три строки по относительному приросту.
+   *
+   * Роста нет — заголовок меняется на «Что удержано», и вместо весов идут
+   * постоянство, тоннаж и закрытые подходы. «Что выросло» с пустым списком —
+   * издевательство над человеком, который месяц ходил в зал.
+   */
+  const GROWTH_STEP_KG = 2.5;
+  const GROWTH_MIN_SESSIONS = 3;
+  const GROWTH_MAX_ROWS = 3;
+
+  /** Рабочий вес упражнения за тренировку: лучший закрытый рабочий подход. */
+  function workingTopSet(ex) {
+    const aps = ex && Array.isArray(ex.approaches) ? ex.approaches : [];
+    let best = null;
+    for (let i = 0; i < aps.length; i++) {
+      const a = aps[i];
+      if (isWarmupApproach(a) || !isApproachDone(a) || isBlankApproach(a)) continue;
+      const w = toWeightNumber(a.weightKg);
+      const reps = +a.reps || 0;
+      const weight = w === null ? 0 : w;
+      if (!best || weight > best.weightKg || (weight === best.weightKg && reps > best.reps)) {
+        best = { weightKg: weight, reps: reps };
+      }
+    }
+    return best;
+  }
+
+  function programGrowth(sessions) {
+    const list = Array.isArray(sessions) ? sessions.slice() : [];
+    list.sort(function (a, b) { return String(a.date) < String(b.date) ? -1 : 1; });
+
+    const byName = {};
+    let totalVolume = 0;
+    let doneApproaches = 0;
+    list.forEach(function (s) {
+      const exercises = Array.isArray(s.exercises) ? s.exercises : [];
+      exercises.forEach(function (ex) {
+        const top = workingTopSet(ex);
+        if (!top) return;
+        const name = String((ex && ex.name) || '').trim();
+        if (!name) return;
+        (byName[name] = byName[name] || []).push(top);
+        totalVolume += top.weightKg * top.reps;
+      });
+      const agg = trainingTonnage({
+        type: 'strength', strengthEntryMode: 'workout_builder',
+        workoutLog: { exercises: exercises }
+      });
+      doneApproaches += agg.doneApproaches;
+    });
+
+    const rows = [];
+    Object.keys(byName).forEach(function (name) {
+      const points = byName[name];
+      if (points.length < GROWTH_MIN_SESSIONS) return;
+      const first = points[0];
+      const last = points[points.length - 1];
+      const dKg = last.weightKg - first.weightKg;
+      const dReps = last.reps - first.reps;
+      // Один шаг — минимум, ниже которого это не рост, а округление.
+      if (dKg >= GROWTH_STEP_KG) {
+        rows.push({
+          name: name, kind: 'weight',
+          from: first.weightKg, to: last.weightKg, delta: dKg,
+          relative: first.weightKg > 0 ? dKg / first.weightKg : 1
+        });
+        return;
+      }
+      // Вес не вырос, но повторы выросли — для своего веса это единственная ось.
+      if (dKg >= 0 && dReps >= 1) {
+        rows.push({
+          name: name, kind: 'reps',
+          from: first.reps, to: last.reps, delta: dReps,
+          relative: first.reps > 0 ? dReps / first.reps : 1
+        });
+      }
+    });
+    rows.sort(function (a, b) { return b.relative - a.relative; });
+
+    if (rows.length) {
+      return { kind: 'growth', rows: rows.slice(0, GROWTH_MAX_ROWS), held: null };
+    }
+    return {
+      kind: 'held',
+      rows: [],
+      held: {
+        sessions: list.length,
+        totalVolume: Math.round(totalVolume),
+        doneApproaches: doneApproaches
+      }
+    };
+  }
+
   /** Живое предложение, ждущее ответа клиента. */
   function pendingPlanProposal(training) {
     const p = training && training.plan && training.plan.proposal;
@@ -1132,6 +1236,8 @@
     acceptPlanProposal: acceptPlanProposal,
     declinePlanProposal: declinePlanProposal,
     expirePlanProposal: expirePlanProposal,
-    pendingPlanProposal: pendingPlanProposal
+    pendingPlanProposal: pendingPlanProposal,
+    programGrowth: programGrowth,
+    workingTopSet: workingTopSet
   };
 })(typeof window !== 'undefined' ? window : globalThis);

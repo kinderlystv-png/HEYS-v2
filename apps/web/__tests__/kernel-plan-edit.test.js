@@ -223,3 +223,121 @@ describe('TrainingKernel.strength.applyPlanEdit', () => {
         expect(ks.isBlankApproach(res.exercises[1].approaches[0])).toBe(true);
     });
 });
+
+/**
+ * Итог пройденной программы (дизайн-ревью 2026-08-10, экран 16e).
+ * Контракт задан дизайном; каждое его условие закрывает свой способ соврать
+ * человеку, поэтому тесты стерегут именно условия, а не форму вывода.
+ */
+describe('TrainingKernel.strength.programGrowth', () => {
+    beforeEach(() => { window.HEYS = {}; });
+    afterEach(() => { window.HEYS = originalHEYS; });
+
+    const done = (w, r) => ({ weightKg: String(w), reps: r, done: true });
+    const session = (date, exercises) => ({ date, exercises });
+
+    it('берёт рабочие веса, а не тоннаж: лишние подходы ростом не считаются', () => {
+        const ks = loadKernel();
+        // Вес тот же, подходов больше — тоннаж вырос, рабочий вес нет.
+        const res = ks.programGrowth([
+            session('2026-07-01', [{ name: 'Жим', approaches: [done(60, 8)] }]),
+            session('2026-07-08', [{ name: 'Жим', approaches: [done(60, 8), done(60, 8)] }]),
+            session('2026-07-15', [{ name: 'Жим', approaches: [done(60, 8), done(60, 8), done(60, 8)] }]),
+        ]);
+        expect(res.kind).toBe('held');
+    });
+
+    it('упражнение из двух тренировок в счёт не идёт — это шум, а не тренд', () => {
+        const ks = loadKernel();
+        const res = ks.programGrowth([
+            session('2026-07-01', [{ name: 'Жим', approaches: [done(60, 8)] }]),
+            session('2026-07-08', [{ name: 'Жим', approaches: [done(80, 8)] }]),
+        ]);
+        expect(res.kind).toBe('held');
+    });
+
+    it('рост ниже одного шага — округление, а не рост', () => {
+        const ks = loadKernel();
+        const res = ks.programGrowth([
+            session('2026-07-01', [{ name: 'Жим', approaches: [done(60, 8)] }]),
+            session('2026-07-08', [{ name: 'Жим', approaches: [done(61, 8)] }]),
+            session('2026-07-15', [{ name: 'Жим', approaches: [done(62, 8)] }]),
+        ]);
+        expect(res.kind).toBe('held');
+    });
+
+    it('шаг 2,5 кг на трёх тренировках — это уже рост', () => {
+        const ks = loadKernel();
+        const res = ks.programGrowth([
+            session('2026-07-01', [{ name: 'Жим', approaches: [done(60, 8)] }]),
+            session('2026-07-08', [{ name: 'Жим', approaches: [done(62.5, 8)] }]),
+            session('2026-07-15', [{ name: 'Жим', approaches: [done(65, 8)] }]),
+        ]);
+        expect(res.kind).toBe('growth');
+        expect(res.rows[0]).toMatchObject({ name: 'Жим', kind: 'weight', from: 60, to: 65 });
+    });
+
+    it('свой вес растёт повторами — иначе подтягивания никогда не попадут в итог', () => {
+        const ks = loadKernel();
+        const res = ks.programGrowth([
+            session('2026-07-01', [{ name: 'Подтягивания', approaches: [done(0, 6)] }]),
+            session('2026-07-08', [{ name: 'Подтягивания', approaches: [done(0, 8)] }]),
+            session('2026-07-15', [{ name: 'Подтягивания', approaches: [done(0, 10)] }]),
+        ]);
+        expect(res.kind).toBe('growth');
+        expect(res.rows[0]).toMatchObject({ name: 'Подтягивания', kind: 'reps', from: 6, to: 10 });
+    });
+
+    it('не больше трёх строк, по относительному приросту', () => {
+        const ks = loadKernel();
+        const mk = (name, a, b, c) => [
+            session('2026-07-01', [{ name, approaches: [done(a, 8)] }]),
+            session('2026-07-08', [{ name, approaches: [done(b, 8)] }]),
+            session('2026-07-15', [{ name, approaches: [done(c, 8)] }]),
+        ];
+        const all = [
+            ...mk('Жим', 100, 105, 110),
+            ...mk('Тяга', 50, 55, 60),
+            ...mk('Присед', 80, 90, 100),
+            ...mk('Планка', 20, 25, 30),
+        ];
+        // Сливаем сессии по датам, чтобы это была одна программа, а не четыре.
+        const merged = ['2026-07-01', '2026-07-08', '2026-07-15'].map((d) => session(
+            d, all.filter((s) => s.date === d).flatMap((s) => s.exercises),
+        ));
+        const res = ks.programGrowth(merged);
+        expect(res.rows).toHaveLength(3);
+        // Планка +50%, Присед +25%, Тяга +20%, Жим +10% — жим не попадает.
+        expect(res.rows.map((r) => r.name)).toEqual(['Планка', 'Присед', 'Тяга']);
+    });
+
+    it('роста нет — считаем удержанное, а не показываем пустой список', () => {
+        const ks = loadKernel();
+        const res = ks.programGrowth([
+            session('2026-07-01', [{ name: 'Жим', approaches: [done(60, 8), done(60, 8)] }]),
+            session('2026-07-08', [{ name: 'Жим', approaches: [done(60, 8), done(60, 8)] }]),
+        ]);
+        expect(res.kind).toBe('held');
+        expect(res.held.sessions).toBe(2);
+        expect(res.held.doneApproaches).toBe(4);
+        expect(res.held.totalVolume).toBeGreaterThan(0);
+    });
+
+    it('разминка и незакрытые подходы в рабочий вес не идут', () => {
+        const ks = loadKernel();
+        const s = (w) => ({
+            name: 'Жим',
+            approaches: [
+                { weightKg: '100', reps: 5, done: true, type: 'warmup' },
+                { weightKg: '200', reps: 5, done: false },
+                done(w, 8),
+            ],
+        });
+        const res = ks.programGrowth([
+            session('2026-07-01', [s(60)]),
+            session('2026-07-08', [s(65)]),
+            session('2026-07-15', [s(70)]),
+        ]);
+        expect(res.rows[0]).toMatchObject({ from: 60, to: 70 });
+    });
+});

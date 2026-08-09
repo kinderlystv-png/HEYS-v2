@@ -2711,6 +2711,59 @@
 
   const PROGRAM_PATH_ID = 'program-path';
 
+  const PROGRAM_DONE_ID = 'program-done';
+
+  /**
+   * Цикл пройден (16e). Строка вместо исчезновения: месяц работы обязан
+   * чем-то закончиться, иначе программа просто перестаёт существовать.
+   */
+  function ProgramDoneLine({ program, days, clientId }) {
+    const [dismissed, setDismissed] = React.useState(false);
+    if (dismissed) return null;
+    const Parts = HEYS.StrengthBuilderParts || {};
+    if (!Parts.ProgramDoneScreen) return null;
+
+    const doneCount = days.filter((d) => PROGRAM_DONE_STATES[d.status]).length;
+    const skippedCount = days.filter((d) => d.status === 'skipped').length;
+
+    function openDone() {
+      const fs = HEYS.TrainingKernel && HEYS.TrainingKernel.fullscreen;
+      if (!fs) return;
+      // Сессии цикла читаются из хранилища: рост считается по рабочим весам, а
+      // они лежат в самих тренировках, не в индексе программы.
+      const sessions = days.map(function (d) {
+        let blob = null;
+        try { blob = readDayFromStore(d.date); } catch (_) { blob = null; }
+        const list = blob && Array.isArray(blob.trainings) ? blob.trainings : [];
+        const t = list.find(function (x) { return x && x.plan && x.workoutLog; });
+        return { date: d.date, exercises: t && t.workoutLog ? (t.workoutLog.exercises || []) : [] };
+      }).filter(function (s) { return s.exercises.length; });
+
+      fs.mount({
+        id: PROGRAM_DONE_ID,
+        ariaLabel: 'Программа пройдена',
+        render: (api) => React.createElement(Parts.ProgramDoneScreen, {
+          program, sessions, doneCount, totalCount: days.length, skippedCount,
+          onClose: () => { api.close(); setDismissed(true); },
+          onWriteCurator: () => {
+            api.close();
+            setDismissed(true);
+            try { window.dispatchEvent(new CustomEvent('heys:open-messages')); } catch (_) { /* noop */ }
+          }
+        })
+      });
+    }
+
+    return React.createElement('button', {
+      type: 'button', className: 'program-next-line is-done', onClick: openDone
+    },
+      React.createElement('span', { className: 'program-next-text' },
+        React.createElement('b', null, 'Программа пройдена'),
+        ' · ', doneCount, ' из ', days.length),
+      React.createElement('span', { className: 'program-next-link' }, 'Итоги ›')
+    );
+  }
+
   /**
    * Первый слой (16c): одна строка и только в день без тренировки. В день с
    * планом карточка плана говорит всё сама — строка там была бы вторым
@@ -2723,7 +2776,11 @@
 
     const today = todayDateKeyForPlan();
     const next = state.days.find((d) => d.date >= today && d.status !== 'done' && d.status !== 'skipped');
-    if (!next) return null;
+    // Цикл пройден. Прежний виджет здесь просто исчезал — то есть пропадал
+    // ровно в лучший момент программы (дизайн-ревью 2026-08-10, 16c/16e).
+    if (!next) {
+      return React.createElement(ProgramDoneLine, { program: state.program, days: state.days, clientId });
+    }
 
     function openPath() {
       const fs = HEYS.TrainingKernel && HEYS.TrainingKernel.fullscreen;

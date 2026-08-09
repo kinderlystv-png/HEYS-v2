@@ -291,6 +291,90 @@
     );
   }
 
+  /**
+   * Программа пройдена (экран 16e). Про сделанное, а не про пропуски.
+   *
+   * Чего здесь намеренно нет: разбора «жим 70 вместо 75 три раза» и поимённого
+   * списка пропусков. У куратора это рабочий инструмент, у клиента тот же текст
+   * читается как перечень провалов — а он месяц ходил в зал. Пропуски названы
+   * одной строкой и без имён: факт, но не приговор.
+   */
+  function ProgramDoneScreen(props) {
+    const { program, sessions, doneCount, totalCount, skippedCount, onClose, onWriteCurator } = props;
+    const ks = kernel();
+    // Ядро недоступно — блока нет вовсе. Показать «Что удержано: 0 тренировок,
+    // 0 кг» человеку, который месяц ходил в зал, хуже, чем не показать ничего.
+    const growth = ks && ks.programGrowth ? ks.programGrowth(sessions || []) : null;
+    const hasHeld = growth && growth.held && growth.held.sessions > 0;
+    const weeks = program && program.weeks;
+
+    return h('div', { className: 'sb-root program-done' },
+      h('div', { className: 'sb-head' },
+        h('button', { type: 'button', className: 'sb-icon-btn', onClick: onClose, 'aria-label': 'Закрыть' }, '✕'),
+        h('div', { className: 'sb-head-title' },
+          h('b', null, weeks ? weeks + ' недели позади' : 'Цикл позади'),
+          h('div', { className: 'sb-head-sub' }, program && program.title ? program.title : 'Программа')
+        )
+      ),
+      h('div', { className: 'sb-list' },
+        h('div', { className: 'program-done-hero' },
+          h('b', null, 'Программа пройдена'),
+          h('p', null,
+            doneCount + ' ' + pluralSessions(doneCount) + ' из ' + totalCount
+            + ' — и вот что за ними стоит.')
+        ),
+        growth && growth.kind === 'growth'
+          ? h('section', { className: 'program-done-block' },
+            h('div', { className: 'sb-proposal-section-title' }, 'Что выросло'),
+            h('ul', { className: 'program-done-rows' },
+              growth.rows.map(function (r) {
+                return h('li', { key: r.name },
+                  h('b', null, r.name),
+                  h('span', null, r.kind === 'weight'
+                    ? r.from + ' → ' + r.to + ' кг'
+                    : r.from + ' → ' + r.to + ' повт.')
+                );
+              })
+            )
+          )
+          : hasHeld && h('section', { className: 'program-done-block' },
+            h('div', { className: 'sb-proposal-section-title' }, 'Что удержано'),
+            h('ul', { className: 'program-done-rows' },
+              h('li', { key: 'c' }, h('b', null, 'Постоянство'),
+                h('span', null, (growth.held ? growth.held.sessions : 0) + ' ' + pluralSessions(growth.held ? growth.held.sessions : 0))),
+              h('li', { key: 'v' }, h('b', null, 'Объём'),
+                h('span', null, fmtVolume(growth.held ? growth.held.totalVolume : 0))),
+              h('li', { key: 'a' }, h('b', null, 'Закрытых подходов'),
+                h('span', null, String(growth.held ? growth.held.doneApproaches : 0)))
+            )
+          ),
+        skippedCount > 0 && h('p', { className: 'program-done-skips' },
+          skippedCount + ' ' + pluralSessions(skippedCount) + ' пропущены — на итог это повлияло мало.'),
+        h('button', {
+          type: 'button', className: 'sb-btn is-accent program-done-cta', onClick: onWriteCurator
+        }, 'Написать куратору'),
+        h('p', { className: 'program-done-note' },
+          'Куратор уже видит итоги и готовит следующую.')
+      )
+    );
+  }
+
+  function pluralSessions(n) {
+    const t = Math.abs(n) % 100;
+    const d = t % 10;
+    if (t > 10 && t < 20) return 'тренировок';
+    if (d === 1) return 'тренировка';
+    if (d >= 2 && d <= 4) return 'тренировки';
+    return 'тренировок';
+  }
+
+  function fmtVolume(kg) {
+    const v = Math.round(kg || 0);
+    return v >= 1000 ? (v / 1000).toFixed(1).replace(/\.0$/, '') + ' т' : v + ' кг';
+  }
+
+  Parts.ProgramDoneScreen = ProgramDoneScreen;
+
   const REVIEW_ID = 'strength-proposal-review';
 
   /**

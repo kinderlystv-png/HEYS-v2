@@ -304,3 +304,53 @@ describe('правка куратора: как она названа челов
     expect(container.innerHTML).toBe('');
   });
 });
+
+describe('программа пройдена (16e)', () => {
+  beforeEach(() => { loadAll(); });
+  afterEach(() => { cleanup(); window.HEYS = originalHEYS; });
+
+  const doneAp = (w, r) => ({ weightKg: String(w), reps: r, done: true });
+  const sess = (date, w) => ({ date, exercises: [{ name: 'Жим', approaches: [doneAp(w, 8)] }] });
+
+  it('показывает рост, а не разбор отклонений и не список пропусков поимённо', () => {
+    const { Parts } = loadAll();
+    render(React.createElement(Parts.ProgramDoneScreen, {
+      program: { title: 'Верх/низ', weeks: 4 },
+      sessions: [sess('2026-07-01', 60), sess('2026-07-08', 65), sess('2026-07-15', 70)],
+      doneCount: 9, totalCount: 12, skippedCount: 3,
+      onClose: () => {}, onWriteCurator: () => {},
+    }));
+
+    expect(screen.getByText('Программа пройдена')).toBeTruthy();
+    expect(screen.getByText('Что выросло')).toBeTruthy();
+    expect(screen.getByText('60 → 70 кг')).toBeTruthy();
+    // Пропуски — одной строкой и без имён.
+    expect(screen.getByText(/3 тренировки пропущены/)).toBeTruthy();
+    expect(screen.queryByText(/вместо/)).toBeNull();
+  });
+
+  it('роста нет — «Что удержано», а не пустой список под заголовком «Что выросло»', () => {
+    const { Parts } = loadAll();
+    render(React.createElement(Parts.ProgramDoneScreen, {
+      program: { title: 'Верх/низ', weeks: 4 },
+      sessions: [sess('2026-07-01', 60), sess('2026-07-08', 60)],
+      doneCount: 2, totalCount: 2, skippedCount: 0,
+      onClose: () => {}, onWriteCurator: () => {},
+    }));
+
+    expect(screen.getByText('Что удержано')).toBeTruthy();
+    expect(screen.queryByText('Что выросло')).toBeNull();
+    expect(screen.getByText('Постоянство')).toBeTruthy();
+  });
+
+  it('без пропусков строки про них нет вовсе', () => {
+    const { Parts } = loadAll();
+    render(React.createElement(Parts.ProgramDoneScreen, {
+      program: { title: 'Верх/низ', weeks: 4 },
+      sessions: [sess('2026-07-01', 60), sess('2026-07-08', 65), sess('2026-07-15', 70)],
+      doneCount: 12, totalCount: 12, skippedCount: 0,
+      onClose: () => {}, onWriteCurator: () => {},
+    }));
+    expect(screen.queryByText(/пропущены/)).toBeNull();
+  });
+});
