@@ -566,6 +566,63 @@
   }
 
   /**
+   * Собрать связку из упражнений, идущих подряд от startIndex.
+   * Подходы выравниваются до rounds у всех участников — без равенства
+   * позиционная модель раундов невозможна (решение 11). Отдых ставится общий:
+   * максимум из значений участников или заданный явно.
+   */
+  function makeSuperset(exercises, startIndex, memberCount, rounds, restSec, opts) {
+    const list = Array.isArray(exercises) ? exercises.slice() : [];
+    const count = Math.max(2, +memberCount || 2);
+    const start = Math.max(0, +startIndex || 0);
+    if (start + count > list.length) return list;
+    const groupId = nextGroupId(list);
+    const wanted = Math.max(1, +rounds || 1);
+    const makeId = opts && opts.makeId;
+
+    let rest = +restSec || 0;
+    if (!rest) {
+      for (let i = start; i < start + count; i++) {
+        const r = +(list[i] && list[i].restSec) || 0;
+        if (r > rest) rest = r;
+      }
+    }
+
+    for (let i = start; i < start + count; i++) {
+      const ex = Object.assign({}, list[i], { ssGroup: groupId, restSec: rest || 90 });
+      const aps = Array.isArray(ex.approaches) ? ex.approaches.slice() : [];
+      const work = [];
+      for (let k = 0; k < aps.length; k++) {
+        if (!isWarmupApproach(aps[k])) work.push(k);
+      }
+      // Лишние рабочие подходы не удаляем: это была бы потеря записанного.
+      // Недостающие дописываем пустыми — их человек заполнит по ходу.
+      while (work.length < wanted) {
+        const last = work.length ? aps[work[work.length - 1]] : null;
+        const next = blankApproach(makeId);
+        if (last) {
+          next.weightKg = toWeightString(last.weightKg);
+          next.reps = +last.reps || 0;
+        }
+        aps.push(next);
+        work.push(aps.length - 1);
+      }
+      ex.approaches = aps;
+      list[i] = ex;
+    }
+    return list;
+  }
+
+  function nextGroupId(exercises) {
+    let max = 0;
+    (exercises || []).forEach(function (ex) {
+      const g = exerciseGroupId(ex);
+      if (g > max) max = g;
+    });
+    return max + 1;
+  }
+
+  /**
    * Сводка одной тренировки.
    *
    * Различаются ДВА тоннажа, и это не дубликат, а разный смысл:
@@ -725,6 +782,7 @@
     addSupersetMember: addSupersetMember,
     swapSupersetMembers: swapSupersetMembers,
     moveSupersetGroup: moveSupersetGroup,
-    insertRespectingGroups: insertRespectingGroups
+    insertRespectingGroups: insertRespectingGroups,
+    makeSuperset: makeSuperset
   };
 })(typeof window !== 'undefined' ? window : globalThis);

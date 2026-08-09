@@ -296,7 +296,7 @@
   function ExerciseCard(props) {
     const { ex, index, open, onToggleOpen, onPatchApproach, onToggleType,
       onAddApproach, onAddDrop, onRpe, onRename, onRestManual, onRemove, onDiscomfortAction,
-      history, readOnly } = props;
+      onLink, history, readOnly } = props;
     const SK = kernel();
     const aps = Array.isArray(ex.approaches) ? ex.approaches : [];
     const metaApi = HEYS.exerciseMeta;
@@ -443,7 +443,13 @@
             onClick: function () { onAddDrop(index); },
             disabled: readOnly,
             title: 'Сброс веса внутри последнего подхода'
-          }, '+ Сброс')
+          }, '+ Сброс'),
+          h('button', {
+            type: 'button', className: 'sb-btn',
+            onClick: function () { onLink(index); },
+            disabled: readOnly,
+            title: 'Связать со следующими упражнениями'
+          }, '🔗 Связать')
         ),
         h('button', {
           type: 'button',

@@ -288,6 +288,103 @@
     return 'Прогулка фермера, санки';
   }
 
+  /**
+   * Новая связка (экран 22). Суперсет, трисет и круговая — одно и то же,
+   * отличаются только числом участников: отдельного режима нет.
+   */
+  function SupersetScreen(props) {
+    const { exercises, startIndex, onCreate, onCancel } = props;
+    const available = Math.max(0, (exercises || []).length - startIndex);
+    const [count, setCount] = React.useState(Math.min(2, available));
+    const [rounds, setRounds] = React.useState(3);
+
+    const TK = HEYS.TrainingKernel;
+    const SK = (TK && TK.strength) ? TK.strength : null;
+    let rest = 0;
+    for (let i = startIndex; i < startIndex + count && i < exercises.length; i++) {
+      const r = +(exercises[i] && exercises[i].restSec) || 0;
+      if (r > rest) rest = r;
+    }
+    if (!rest) rest = 90;
+
+    const members = [];
+    for (let i = startIndex; i < startIndex + count && i < exercises.length; i++) {
+      members.push(exercises[i].name || 'Без названия');
+    }
+    const kinds = [
+      { n: 2, t: 'Суперсет', d: 'Два упражнения подряд без паузы' },
+      { n: 3, t: 'Трисет', d: 'Три подряд — плотнее и тяжелее' },
+      { n: 4, t: 'Круговая', d: 'Четыре и больше, круг за кругом' }
+    ];
+
+    return h('div', { className: 'sb-root sb-screen' },
+      h('div', { className: 'sb-head' },
+        h('button', {
+          type: 'button', className: 'sb-icon-btn', onClick: onCancel, 'aria-label': 'Отменить'
+        }, '✕'),
+        h('div', { className: 'sb-head-title' },
+          h('b', null, 'Новая связка'),
+          h('div', { className: 'sb-head-sub' }, 'Упражнения подряд, отдых — после круга')
+        )
+      ),
+      h('div', { className: 'sb-list' },
+        h('div', { className: 'sb-step' }, h('span', null, 'Сколько упражнений')),
+        kinds.map(function (k) {
+          const disabled = k.n > available;
+          return h('button', {
+            key: k.n,
+            type: 'button',
+            className: 'sb-radio' + (count === k.n ? ' is-on' : ''),
+            disabled: disabled,
+            onClick: function () { setCount(k.n); }
+          },
+            h('span', { className: 'sb-ex-num' }, k.n === 4 ? '4+' : String(k.n)),
+            h('div', { className: 'sb-cat-title' },
+              h('b', null, k.t),
+              h('span', null, disabled ? 'Не хватает упражнений ниже по списку' : k.d)
+            )
+          );
+        }),
+
+        h('div', { className: 'sb-step' }, h('span', null, 'Раундов')),
+        h('div', { className: 'sb-stepper' },
+          h('button', {
+            type: 'button', className: 'sb-btn',
+            onClick: function () { setRounds(Math.max(1, rounds - 1)); }
+          }, '−'),
+          h('b', null, String(rounds)),
+          h('button', {
+            type: 'button', className: 'sb-btn is-accent',
+            onClick: function () { setRounds(Math.min(20, rounds + 1)); }
+          }, '+')
+        ),
+        h('div', { className: 'sb-step-hint' },
+          'Отдых после круга — ' + Math.floor(rest / 60) + ':' + (rest % 60 < 10 ? '0' : '') + (rest % 60)
+          + '. Максимум из значений участников: первым можно стать перетаскиванием, и отдых поехал бы молча.'),
+
+        h('div', { className: 'sb-block' },
+          h('div', { className: 'sb-step' }, h('span', null, 'Что получится')),
+          h('div', { className: 'sb-step-hint' },
+            members.join(' → ') + '. Затем отдых. Так ' + rounds + ' раза.'),
+          h('div', { className: 'sb-tiles' },
+            h('div', { className: 'sb-tile' }, h('span', null, 'Подходов'), h('b', null, String(count * rounds))),
+            h('div', { className: 'sb-tile' }, h('span', null, 'Пауз'), h('b', null, String(rounds)))
+          )
+        )
+      ),
+      h('div', { className: 'sb-panel' },
+        h('button', {
+          type: 'button',
+          className: 'sb-finish',
+          disabled: !SK || count < 2 || count > available,
+          onClick: function () { onCreate(SK.makeSuperset(exercises, startIndex, count, rounds, rest)); }
+        }, 'Собрать связку · ' + (count * rounds) + ' подходов')
+      )
+    );
+  }
+
+  Cat.SupersetScreen = SupersetScreen;
+
   Cat.CatalogScreen = CatalogScreen;
   Cat.NewExerciseScreen = NewExerciseScreen;
 })(typeof window !== 'undefined' ? window : globalThis);

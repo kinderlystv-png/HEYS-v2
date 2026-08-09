@@ -1236,3 +1236,22 @@
 .sb-finish.is-done {
   background: linear-gradient(180deg, #16a34a, #15803d);
 }
+
+.sb-stepper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sb-stepper b {
+  min-width: 40px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-radio:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

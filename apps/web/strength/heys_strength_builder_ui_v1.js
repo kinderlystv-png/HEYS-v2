@@ -61,6 +61,7 @@
     const [openIdx, setOpenIdx] = React.useState(0);
     const [view, setView] = React.useState('list');
     const [draftName, setDraftName] = React.useState('');
+    const [linkFrom, setLinkFrom] = React.useState(0);
     const [rest, setRest] = React.useState(null); // { total, startedAt }
     const [tick, setTick] = React.useState(0);
 
@@ -267,6 +268,14 @@
         }
       });
     }
+    if (view === 'superset' && CatUI.SupersetScreen) {
+      return h(CatUI.SupersetScreen, {
+        exercises: exercises,
+        startIndex: linkFrom,
+        onCreate: function (next) { patchExercises(next); setView('list'); },
+        onCancel: function () { setView('list'); }
+      });
+    }
     if (view === 'new' && CatUI.NewExerciseScreen) {
       return h(CatUI.NewExerciseScreen, {
         initialName: draftName,
@@ -308,6 +317,7 @@
         history: typeof historyFor === 'function' ? historyFor(ex.name, i) : null,
         onRpe: setRpe,
         onRename: renameExercise,
+        onLink: function (exIdx) { setLinkFrom(exIdx); setView('superset'); },
         onRemove: function (exIdx) {
           const next = exercises.slice();
           next.splice(exIdx, 1);
