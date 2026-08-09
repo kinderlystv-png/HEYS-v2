@@ -24,6 +24,7 @@ import PainSection from '@/components/versions/d/PainSection';
 import PricingD from '@/components/versions/d/PricingD';
 import ReviewedWeek from '@/components/versions/d/ReviewedWeek';
 import { D_THEME_VARS } from '@/components/versions/d/theme';
+import ThemeBarColor from '@/components/versions/d/ThemeBarColor';
 import TrialSection from '@/components/versions/d/TrialSection';
 import useReveal from '@/components/versions/d/useReveal';
 
@@ -41,6 +42,8 @@ export default function VersionD() {
       className={`${golos.className} ${golos.variable} ${playfair.variable} bg-white text-[#101826] antialiased`}
       style={D_THEME_VARS}
     >
+      <ThemeBarColor />
+
       <HeroD onOpenMenu={() => setMenuOpen(true)} />
 
       <PainSection />

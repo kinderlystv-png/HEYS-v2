@@ -26,7 +26,10 @@ const FOOTER_LINKS = [
 
 export default function FooterD() {
   return (
-    <footer className="overflow-hidden bg-[#0A1119] px-5 pb-12 pt-16 sm:px-8">
+    <footer
+      data-theme-bar="#0A1119"
+      className="overflow-hidden bg-[#0A1119] px-5 pb-12 pt-16 sm:px-8"
+    >
       <div className="mx-auto w-full max-w-[1060px]">
         <div className="flex flex-col gap-10 sm:flex-row sm:items-start sm:justify-between">
           <div>

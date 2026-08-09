@@ -242,7 +242,14 @@ export default function HeroD({ onOpenMenu }: HeroDProps) {
     // `overflow-hidden` на секции — рамка для фоновых слоёв: свечение начинается
     // выше её верхнего края и не должно выходить наружу. Прокрутке и скролл-зуму
     // не мешает: они живут на контенте внутри.
-    <section id="hero-d" ref={sectionRef} className="relative overflow-hidden bg-[#0A1119]">
+    <section
+      id="hero-d"
+      ref={sectionRef}
+      // Пока герой в верхней точке экрана, полосы телефона держат его цвет
+      // (см. ThemeBarColor).
+      data-theme-bar="#0A1119"
+      className="relative overflow-hidden bg-[#0A1119]"
+    >
       {/* Фон лежит прямо в секции и покрывает ровно её высоту.
           Липкой обёртки нулевой высоты здесь больше нет: `position: sticky`
           сам по себе задаёт containing block, поэтому `inset-0` внутри неё

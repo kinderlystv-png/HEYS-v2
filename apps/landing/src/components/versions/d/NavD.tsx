@@ -238,6 +238,7 @@ export default function NavD({ menuOpen, onOpenMenu, onCloseMenu }: NavDProps) {
       {/* Бургер-оверлей. */}
       {menuOpen ? (
         <div
+          data-theme-bar="#12263B"
           className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-[linear-gradient(180deg,#12263B_0%,#0C1826_55%,#0A1119_100%)] px-5 py-6 sm:px-9"
           role="dialog"
           aria-modal="true"

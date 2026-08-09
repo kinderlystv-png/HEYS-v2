@@ -13,8 +13,9 @@
 // публичная страница. У остальных версий стоит `DRAFT_ROBOTS` — иначе копии
 // одного оффера конкурировали бы в поиске друг с другом.
 
-import { Metadata } from 'next';
+import { Metadata, Viewport } from 'next';
 
+import { D_DARK_DEEP } from '@/components/versions/d/theme';
 import VersionD from '@/components/versions/VersionD';
 import VersionSwitcherFab from '@/components/VersionSwitcherFab';
 
@@ -31,6 +32,13 @@ export const metadata: Metadata = {
     title: TITLE,
     description: DESCRIPTION,
   },
+};
+
+// Первая отрисовка приходится на тёмный герой, поэтому системные полосы стартуют
+// его цветом. Дальше по странице цвет ведёт `ThemeBarColor`: полоса совпадает с
+// тем, что реально в верхней точке экрана.
+export const viewport: Viewport = {
+  themeColor: D_DARK_DEEP,
 };
 
 export default function Home() {
