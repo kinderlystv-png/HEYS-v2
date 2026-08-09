@@ -308,7 +308,34 @@ export default function PricingD() {
         {/* Ряд из трёх карточек. На узких экранах — колонкой, Pro первым:
           основной формат должен встречаться раньше остальных, а на широких
           он стоит в середине и держит центр ряда. */}
-        <div data-reveal className="mt-14 grid gap-5 lg:grid-cols-3">
+        {/* Шапка Self ниже остальных: под ней сразу подзаголовок, а у Pro и
+          Pro Спорт — числовая строка, которая держит вес. Одинаковая высота
+          делала лёгкую карточку тяжеловесной сверху. Уменьшены только отступы,
+          кегль цены общий — цена должна читаться одинаково во всех трёх.
+
+          Ритм полос у Self плотнее, чем у Pro и Pro Спорт. Каркас общий, но у
+          Self нет числовой строки и вдвое меньше пунктов, а шаг рассчитан на
+          плотность Pro — тот же отступ при более редком содержимом читается
+          пустотой (замечание владельца 2026-08-09). Сильнее всего это било по
+          подзаголовку: однострочное «Дневник ведёте сами» получало 40px
+          паддингов на 26px текста.
+
+          Карточки отделяет от фона тень, а не заливка. Замер 2026-08-09: белое
+          тело даёт к фону секции контраст 1.08:1, и это ЛУЧШЕЕ, что здесь
+          возможно — фон `#F7F6F2` сам светлый, и мягкая тонировка тел (пробовали
+          `#F4F8FC`, `#F7F5FC`) опускает контраст до 1.00–1.03, то есть работает
+          против задачи. Насыщенная заливка отделила бы, но дала бы три цветных
+          прямоугольника подряд и заспорила бы с внутренними плашками карточки.
+          Тень рисует край и от разницы двух почти одинаковых светлых не зависит.
+          У Pro она сильнее по спеке — он остаётся основным форматом.
+
+          Зазор на колонке втрое больше, чем в ряду. Причина не в эстетике:
+          фон секции `#F7F6F2` и белые карточки различаются на 8 единиц по
+          каналу, отделяет их только рамка — и при 20px между ними три карточки
+          читались единой портянкой (замечание владельца 2026-08-09). В ряду на
+          десктопе такой проблемы нет: там карточки разделены по горизонтали и
+          видны как три объекта сразу. */}
+        <div data-reveal className="mt-14 grid gap-12 lg:grid-cols-3 lg:gap-5">
           {TARIFFS.map((tariff) => {
             const dark = tariff.id !== 'self';
             return (
@@ -318,8 +345,8 @@ export default function PricingD() {
                   tariff.id === 'pro'
                     ? 'shadow-[0_18px_44px_rgba(10,17,25,0.12)] lg:order-2'
                     : tariff.id === 'proSport'
-                      ? 'border border-[#C9C7E0] lg:order-3'
-                      : 'border border-[rgba(16,24,38,0.12)] lg:order-1'
+                      ? 'border border-[#C9C7E0] shadow-[0_10px_26px_rgba(10,17,25,0.06)] lg:order-3'
+                      : 'border border-[rgba(16,24,38,0.16)] shadow-[0_10px_26px_rgba(10,17,25,0.06)] lg:order-1'
                 }`}
               >
                 {/* Шапка. Орнамент на тёмных — та же звёздная текстура, что в
@@ -327,7 +354,9 @@ export default function PricingD() {
                   родстве и не даёт заливке читаться плоским прямоугольником.
                   Решение зафиксировано, а не унаследовано (пакет тарифов №05). */}
                 <div
-                  className="relative px-5 pb-6 pt-6 min-[561px]:px-7"
+                  className={`relative px-5 min-[561px]:px-7 ${
+                    tariff.id === 'self' ? 'pb-4 pt-5' : 'pb-6 pt-6'
+                  }`}
                   style={{ backgroundImage: D_TARIFF_HEADER[tariff.id] }}
                 >
                   {dark ? (
@@ -357,9 +386,9 @@ export default function PricingD() {
                   </span>
 
                   <p
-                    className={`relative mt-4 text-[clamp(20px,2.4vw,24px)] font-semibold leading-none ${
-                      dark ? 'text-white' : 'text-[#101826]'
-                    }`}
+                    className={`relative text-[clamp(20px,2.4vw,24px)] font-semibold leading-none ${
+                      tariff.id === 'self' ? 'mt-3' : 'mt-4'
+                    } ${dark ? 'text-white' : 'text-[#101826]'}`}
                   >
                     {tariff.name}
                   </p>
@@ -389,9 +418,9 @@ export default function PricingD() {
                 {/* Подзаголовок курсивом — на своей полосе: он объясняет, кто
                   ведёт дневник, и это первое, что читают после цены. */}
                 <p
-                  className={`${playfair.className} border-b border-[rgba(16,24,38,0.08)] px-5 py-5 text-[17.5px] min-[561px]:px-7 font-medium italic leading-[1.4] text-[#101826] ${
-                    dark ? 'bg-[#FBFAF7]' : 'bg-white'
-                  }`}
+                  className={`${playfair.className} border-b border-[rgba(16,24,38,0.08)] px-5 text-[17.5px] min-[561px]:px-7 font-medium italic leading-[1.4] text-[#101826] ${
+                    tariff.id === 'self' ? 'py-4' : 'py-5'
+                  } ${dark ? 'bg-[#FBFAF7]' : 'bg-white'}`}
                 >
                   {tariff.subtitle[0]}
                   <span style={{ color: tariff.id === 'proSport' ? '#4A4C7E' : 'var(--da)' }}>
@@ -421,7 +450,7 @@ export default function PricingD() {
                 ) : null}
 
                 {tariff.fit ? (
-                  <div className="border-b border-[rgba(16,24,38,0.08)] px-5 py-5 min-[561px]:px-7">
+                  <div className="border-b border-[rgba(16,24,38,0.08)] px-5 py-4 min-[561px]:px-7">
                     <p
                       className="text-[11px] font-semibold uppercase tracking-[0.16em]"
                       style={{ color: D_TEXT_CAPTION_AA }}
@@ -434,7 +463,7 @@ export default function PricingD() {
                   </div>
                 ) : null}
 
-                <div className="px-5 py-5 min-[561px]:px-7">
+                <div className={`px-5 min-[561px]:px-7 ${tariff.id === 'self' ? 'py-4' : 'py-5'}`}>
                   {tariff.id === 'proSport' ? (
                     <span className="inline-block rounded-full bg-[rgba(74,76,126,0.1)] px-[13px] py-1.5 text-[12px] font-semibold uppercase tracking-[0.1em] text-[#3E4069]">
                       {tariff.listTitle}
@@ -452,7 +481,9 @@ export default function PricingD() {
                     {tariff.items.map(([lead, rest]) => (
                       <li
                         key={lead}
-                        className="border-b border-[rgba(16,24,38,0.08)] py-2 text-[14px] leading-[1.5] text-[#3C4552] last:border-b-0"
+                        className={`border-b border-[rgba(16,24,38,0.08)] text-[14px] leading-[1.5] text-[#3C4552] last:border-b-0 ${
+                          tariff.id === 'self' ? 'py-1.5' : 'py-2'
+                        }`}
                       >
                         <span className="font-semibold text-[#101826]">{lead}</span> {rest}
                       </li>

@@ -193,9 +193,17 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
 
   const optionClass =
     'w-full rounded-[14px] border border-[rgba(16,24,38,0.14)] bg-[#FBFAF7] px-5 py-4 text-left text-[15px] leading-[1.4] text-[#101826] transition-colors duration-200 hover:border-[color:var(--da)] hover:bg-white';
-  const inputClass =
-    'w-full rounded-[13px] border border-[rgba(16,24,38,0.16)] bg-[#FBFAF7] px-4 py-3 text-[15px] text-[#101826] outline-none transition-colors placeholder:text-[#9AA3B0] focus:border-[color:var(--da)]';
-  const labelClass = 'mb-2 block text-[13px] font-semibold text-[#5B6472]';
+  // Поле 48px вместо прежних ~56: форма из шести блоков одного веса читалась
+  // анкетой, и рост каждого блока умножался на шесть. Плейсхолдер `#98A2AE`
+  // светлее текста, но темнее прежнего `#9AA3B0` — пустое поле не должно
+  // выглядеть заполненным почти невидимым серым (пакет формы, § Контраст).
+  // Ширина вынесена из базового класса: поле года узкое, и `w-full` из общей
+  // строки перебивал `w-[132px]` — оба задают `width`, и порядок решает не
+  // разметка, а генерация CSS.
+  const inputBase =
+    'rounded-[12px] border border-[rgba(16,24,38,0.14)] bg-[#FBFAF7] px-[14px] py-[13px] text-[15px] text-[#101826] outline-none transition-colors placeholder:text-[#98A2AE] focus:border-[color:var(--da)]';
+  const inputClass = `w-full ${inputBase}`;
+  const labelClass = 'mb-1.5 block text-[12.5px] font-semibold text-[#5B6472]';
   const errorClass = 'mt-1.5 text-[12px] text-[#B3384A]';
 
   const chipRow = <T extends string>(
@@ -204,18 +212,28 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
     value: string | null,
     onPick: (code: T) => void,
   ) => (
-    <div>
-      <p className="text-[13px] font-semibold text-[#5B6472]">{title}</p>
+    // Линия сверху разделяет группы: подряд без границ три вопроса читались
+    // одним полотном, и человек не видел, что их именно три.
+    <div className="mt-5 border-t border-[rgba(16,24,38,0.08)] pt-4">
+      <p className="text-[12.5px] font-semibold text-[#101826]">{title}</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {choices.map((choice) => (
           <button
             key={choice.code}
             type="button"
             onClick={() => onPick(choice.code)}
-            className={`rounded-full border px-4 py-2 text-[13.5px] transition-colors ${
+            // `leading-[1.2]` задан явно: спека его не оговаривала, и чип
+            // наследовал 1.5 от родителя — высота выходила 40px вместо 36 при
+            // тех же паддингах 9/14. Заметно на третьей группе, где чипы идут
+            // в три ряда (замечание ревьюера 2026-08-09: «чипы крупнее
+            // макетных» — паддинги были верные, рос интерлиньяж).
+            //
+            // Выбранный чип тёмный, а не акцентный: синий на заливке спорит с
+            // кнопками действия и читается как «нажми сюда», а не «выбрано».
+            className={`rounded-full border px-[14px] py-[9px] text-[13.5px] leading-[1.2] transition-colors ${
               value === choice.code
-                ? 'border-[color:var(--da)] bg-[color:var(--da)] text-white'
-                : 'border-[rgba(16,24,38,0.16)] bg-white text-[#5B6472] hover:border-[color:var(--da)]'
+                ? 'border-[#12283E] bg-[#12283E] font-semibold text-white'
+                : 'border-[rgba(16,24,38,0.16)] bg-white text-[#3C4552] hover:border-[rgba(16,24,38,0.3)]'
             }`}
           >
             {choice.label}
@@ -288,49 +306,90 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
         </div>
       ) : null}
 
-      {step === 'trigger' ? (
+      {step === 'trigger' || step === 'when' ? (
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A94A2]">
-            Шаг 1 из 2
-          </p>
-          <h3 className="mt-4 text-[clamp(17px,1.9vw,20px)] font-semibold leading-[1.35] text-[#101826]">
-            Что чаще всего запускает срыв?
-          </h3>
-          <div className="mt-6 space-y-3">
-            {TRIGGER_CHOICES.map((choice) => (
-              <button
-                key={choice.code}
-                type="button"
-                onClick={() => chooseTrigger(choice.code)}
-                className={optionClass}
-              >
-                {choice.label}
-              </button>
-            ))}
+          {/* Шапка экрана: текст отвечает «где я», полоска — «сколько
+              осталось». Второе считывается быстрее, поэтому есть оба. */}
+          <div className="flex items-baseline justify-between gap-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#5F6A77]">
+              Шаг {step === 'trigger' ? 1 : 2} из 2
+            </p>
+            {/* Тот же выход, что кнопка «Просто заполнить форму» на интро:
+                человек не должен застревать в разборе, если передумал. */}
+            <button
+              type="button"
+              onClick={() => setStep('form')}
+              className="shrink-0 text-[13px] text-[#5F6A77] underline decoration-[0.5px] underline-offset-[3px] transition-colors hover:text-[#101826]"
+            >
+              пропустить
+            </button>
           </div>
-        </div>
-      ) : null}
 
-      {step === 'when' ? (
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8A94A2]">
-            Шаг 2 из 2
-          </p>
-          <h3 className="mt-4 text-[clamp(17px,1.9vw,20px)] font-semibold leading-[1.35] text-[#101826]">
-            Когда чаще всего сложнее удержать режим?
-          </h3>
-          <div className="mt-6 space-y-3">
-            {WHEN_CHOICES.map((choice) => (
-              <button
-                key={choice.code}
-                type="button"
-                onClick={() => chooseWhen(choice.code)}
-                className={optionClass}
-              >
-                {choice.label}
-              </button>
-            ))}
+          <div className="mt-3 flex gap-[5px]" aria-hidden="true">
+            <span className="h-[3px] flex-1 rounded-[2px] bg-[#12283E]" />
+            <span
+              className={`h-[3px] flex-1 rounded-[2px] ${
+                step === 'when' ? 'bg-[#12283E]' : 'bg-[rgba(16,24,38,0.12)]'
+              }`}
+            />
           </div>
+
+          <h3
+            className={`${playfairQuiz.className} mt-4 text-[clamp(19px,2.3vw,23px)] font-medium italic leading-[1.25] text-[#101826]`}
+          >
+            {step === 'trigger'
+              ? 'Что чаще всего запускает срыв?'
+              : 'Когда чаще всего сложнее удержать режим?'}
+          </h3>
+
+          {/* Карточка ответа: заголовок плюс описание опыта. Голый ярлык
+              заставляет подобрать, куда себя отнести, — вторая строка даёт
+              узнать себя. На шаге `when` описаний нет: время суток однозначно
+              и пояснять там нечего. */}
+          <div className="mt-5 flex flex-col gap-[9px]">
+            {(step === 'trigger' ? TRIGGER_CHOICES : WHEN_CHOICES).map((choice) => {
+              const dashed = choice.code === 'unknown';
+              return (
+                <button
+                  key={choice.code}
+                  type="button"
+                  onClick={() =>
+                    step === 'trigger'
+                      ? chooseTrigger(choice.code as TriggerCode)
+                      : chooseWhen(choice.code as WhenCode)
+                  }
+                  className={`rounded-[14px] border bg-white px-[14px] py-3 text-left transition-colors duration-200 hover:border-[color:var(--da)] ${
+                    dashed
+                      ? 'border-dashed border-[rgba(16,24,38,0.2)]'
+                      : 'border-[rgba(16,24,38,0.14)]'
+                  }`}
+                >
+                  <span
+                    className={`block text-[15px] font-semibold leading-[1.35] ${
+                      dashed ? 'text-[#5B6472]' : 'text-[#101826]'
+                    }`}
+                  >
+                    {choice.label}
+                  </span>
+                  {choice.hint ? (
+                    <span className="mt-0.5 block text-[12.5px] leading-[1.4] text-[#5F6A77]">
+                      {choice.hint}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Вопрос «что запускает срыв» звучит обвинением, пока не сказано
+              обратное. Описания снимают это частично, прямая фраза надёжнее.
+              На шаге `when` не повторяется — там вопрос нейтральный. */}
+          {step === 'trigger' ? (
+            <p className="mt-4 text-[12.5px] leading-[1.5] text-[#5F6A77]">
+              Это не тест на силу воли: срывы чаще связаны с усталостью, контекстом и привычными
+              сценариями дня.
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -365,8 +424,18 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
           </div>
 
           {/* Три уточнения необязательны: они не меняют тип срыва, но дают
-              куратору контекст до первого сообщения (`17` § 3.7). */}
-          <div className="mt-8 space-y-6">
+              куратору контекст до первого сообщения (`17` § 3.7).
+
+              «Зачем это спрашивают» стоит НАД группами, а не под кнопкой: под
+              кнопкой человек читает объяснение уже после того, как решил
+              отвечать или нет. */}
+          <div className="mt-8">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#5F6A77]">
+              Необязательно · три вопроса
+            </p>
+            <p className="mt-2 text-[13.5px] leading-[1.5] text-[#5B6472]">
+              Ответы уйдут куратору вместе с заявкой — чтобы он начал не с общих слов.
+            </p>
             {chipRow('Как часто это повторяется?', FREQUENCY_CHOICES, answers.frequency, (code) =>
               setAnswers((prev) => ({ ...prev, frequency: code })),
             )}
@@ -385,17 +454,38 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
           >
             Оставить заявку на неделю Pro →
           </button>
-          <p className="mt-3 text-center text-[12px] text-[#9AA3B0]">
-            Ответы уйдут куратору вместе с заявкой — по отдельности мы их никуда не отправляем.
-          </p>
         </div>
       ) : null}
 
       {step === 'form' ? (
         <form ref={formRef} onSubmit={handleSubmit} aria-label="Заявка на неделю Pro" noValidate>
-          <h3 className="text-[clamp(17px,1.9vw,20px)] font-semibold leading-[1.35] text-[#101826]">
+          {/* Заголовок адаптивный, хотя спека задаёт 22px фиксированно:
+              правило масштаба версии D старше пакета, а заголовок секции
+              заявки на узких экранах падает до 28px — фиксированные 22 дали бы
+              0.79 от него. Максимум совпадает со спекой.
+
+              Индикатор отвечает на «сколько ещё осталось» — раньше на это не
+              отвечало ничто, и форма выглядела бесконечной. Заголовок Playfair
+              italic — тот же приём, что в подзаголовках тарифных карточек:
+              последний экран должен звучать человеком, а не бланком. */}
+          <p className="flex items-center gap-2.5">
+            <span
+              aria-hidden="true"
+              className="inline-block h-[22px] w-[22px] shrink-0 rounded-full bg-[#E9EFF6]"
+            />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#5F6A77]">
+              Остался последний шаг
+            </span>
+          </p>
+          <h3
+            className={`${playfairQuiz.className} mt-3 text-[clamp(19px,2.2vw,22px)] font-medium italic leading-[1.3] text-[#101826]`}
+          >
             Куда куратору написать?
           </h3>
+          {/* Называет объём работы: человек видит конец, а не открытый список. */}
+          <p className="mt-2 text-[13.5px] leading-[1.5] text-[#5B6472]">
+            Четыре поля. Дальше куратор пишет сам.
+          </p>
 
           {quizTaken && summary.length > 0 ? (
             <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[14px] bg-[#FBFAF7] px-5 py-4 text-[13.5px] leading-[1.5] text-[#5B6472]">
@@ -411,7 +501,7 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
             </div>
           ) : null}
 
-          <div className="mt-6 space-y-4">
+          <div className="mt-6 space-y-3.5">
             <div>
               <label htmlFor="d-name" className={labelClass}>
                 Ваше имя
@@ -441,7 +531,7 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
               <label htmlFor="d-phone" className={labelClass}>
                 Номер телефона
               </label>
-              <div className="flex items-center rounded-[13px] border border-[rgba(16,24,38,0.16)] bg-[#FBFAF7] px-4 py-3 focus-within:border-[color:var(--da)]">
+              <div className="flex items-center rounded-[12px] border border-[rgba(16,24,38,0.14)] bg-[#FBFAF7] px-[14px] py-[13px] focus-within:border-[color:var(--da)]">
                 <span className="select-none whitespace-nowrap text-[15px] text-[#101826]">
                   +7&nbsp;(
                 </span>
@@ -458,7 +548,7 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
                     setPhoneDigits(event.target.value.replace(/\D/g, '').slice(0, 10));
                     setFieldErrors((prev) => ({ ...prev, phone: undefined }));
                   }}
-                  className="min-w-0 flex-1 bg-transparent text-[15px] text-[#101826] outline-none placeholder:text-[#9AA3B0]"
+                  className="min-w-0 flex-1 bg-transparent text-[15px] text-[#101826] outline-none placeholder:text-[#98A2AE]"
                 />
               </div>
               {fieldErrors.phone ? (
@@ -490,10 +580,10 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
                     type="button"
                     disabled={loading}
                     onClick={() => setMessenger(item.code)}
-                    className={`rounded-[14px] border px-3 py-3 text-[14px] font-medium transition-colors ${
+                    className={`rounded-[11px] border px-1.5 py-2.5 text-[13.5px] transition-colors ${
                       messenger === item.code
-                        ? 'border-[#12283E] bg-[#12283E] text-white'
-                        : 'border-[rgba(16,24,38,0.16)] bg-white text-[#5B6472] hover:border-[rgba(16,24,38,0.3)]'
+                        ? 'border-[#12283E] bg-[#12283E] font-semibold text-white'
+                        : 'border-[rgba(16,24,38,0.16)] bg-white font-medium text-[#3C4552] hover:border-[rgba(16,24,38,0.3)]'
                     }`}
                   >
                     {item.label}
@@ -502,38 +592,54 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
               </div>
             </div>
 
+            {/* 148px, а не 132 из спеки: плейсхолдер «Например, 1990» в 132px
+                обрезался до «Например, 19…». Укоротить его нельзя — по той же
+                спеке пустое поле обязано отличаться от заполненного текстом, а
+                не только цветом, иначе читается как уже заполненное.
+
+                Поле под четырёхзначное число во всю ширину читалось как ещё
+                один крупный блок анкеты, а возрастное ограничение занимало
+                отдельную строку под ним. Узкое поле и пояснение рядом по
+                нижнему краю снимают обе проблемы одной перестановкой. */}
             <div>
               <label htmlFor="d-birth-year" className={labelClass}>
                 Год рождения
               </label>
-              <input
-                id="d-birth-year"
-                type="text"
-                inputMode="numeric"
-                autoComplete="bday-year"
-                placeholder="Например, 1990"
-                disabled={loading}
-                aria-invalid={Boolean(fieldErrors.birthYear)}
-                value={birthYear}
-                onChange={(event) => {
-                  setBirthYear(event.target.value.replace(/\D/g, '').slice(0, 4));
-                  setFieldErrors((prev) => ({ ...prev, birthYear: undefined }));
-                }}
-                className={inputClass}
-              />
+              <div className="flex items-end gap-3">
+                <input
+                  id="d-birth-year"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="bday-year"
+                  placeholder="Например, 1990"
+                  disabled={loading}
+                  aria-invalid={Boolean(fieldErrors.birthYear)}
+                  value={birthYear}
+                  onChange={(event) => {
+                    setBirthYear(event.target.value.replace(/\D/g, '').slice(0, 4));
+                    setFieldErrors((prev) => ({ ...prev, birthYear: undefined }));
+                  }}
+                  className={`${inputBase} w-[148px] shrink-0`}
+                />
+                {/* `text-balance`, а не выравнивание: `items-end` уже стоит и
+                    работает — низ пояснения совпадает с низом поля (замер: 510
+                    и 510). Проблема в ширине — на пояснение остаётся 144px, и
+                    перенос по умолчанию рвал фразу посередине, «с 18 / лет».
+                    Balance распределяет строки ровно и переносит после
+                    «доступен». */}
+                <p className="text-balance pb-2.5 text-[12px] leading-[1.4] text-[#5F6A77]">
+                  Сервис доступен с 18 лет
+                </p>
+              </div>
               {fieldErrors.birthYear ? (
                 <p className={errorClass} role="alert">
                   {fieldErrors.birthYear}
                 </p>
-              ) : (
-                <p className="mt-1.5 text-[12px] text-[#9AA3B0]">
-                  Сервис доступен только лицам старше 18 лет.
-                </p>
-              )}
+              ) : null}
             </div>
           </div>
 
-          <label className="mt-6 flex cursor-pointer select-none items-start gap-3">
+          <label className="mt-6 flex cursor-pointer select-none items-start gap-[9px]">
             <input
               id="d-consent"
               type="checkbox"
@@ -543,15 +649,15 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
                 setConsentAccepted(event.target.checked);
                 setFieldErrors((prev) => ({ ...prev, consent: undefined }));
               }}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-[#12283E]"
+              className="mt-0.5 h-[18px] w-[18px] shrink-0 rounded-[5px] accent-[#12283E]"
             />
-            <span className="text-[12px] leading-[1.6] text-[#5B6472]">
+            <span className="text-[12px] leading-[1.6] text-[#5F6A77]">
               Даю согласие на обработку персональных данных в соответствии с{' '}
               <a
                 href="/legal/privacy-policy"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[color:var(--da)] underline underline-offset-2"
+                className="text-[#2467A3] underline decoration-[0.5px] underline-offset-2"
                 onClick={(event) => event.stopPropagation()}
               >
                 политикой конфиденциальности
@@ -566,9 +672,17 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
             </p>
           ) : null}
 
-          <details className="mt-4 rounded-[13px] border border-[rgba(16,24,38,0.12)] bg-[#FBFAF7] px-4 py-3">
-            <summary className="cursor-pointer text-[12px] font-medium text-[#5B6472]">
+          {/* Без рамки и подложки: блок необязательный, и оформленный
+              карточкой он весил столько же, сколько обязательные поля. */}
+          <details className="group mt-4">
+            <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[12.5px] text-[#5B6472] [&::-webkit-details-marker]:hidden">
               Необязательно: полезные материалы и акции
+              <span
+                aria-hidden="true"
+                className="text-[#5F6A77] transition-transform duration-200 group-open:rotate-180"
+              >
+                ▾
+              </span>
             </summary>
             <label className="mt-3 flex cursor-pointer select-none items-start gap-3">
               <input
@@ -576,16 +690,16 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
                 checked={marketingAccepted}
                 disabled={loading}
                 onChange={(event) => setMarketingAccepted(event.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-[#12283E]"
+                className="mt-0.5 h-[18px] w-[18px] shrink-0 rounded-[5px] accent-[#12283E]"
               />
-              <span className="text-[12px] leading-[1.6] text-[#5B6472]">
+              <span className="text-[12px] leading-[1.6] text-[#5F6A77]">
                 Хочу получать полезные материалы и новости по выбранным контактам. На заявку это не
                 влияет, отказаться можно в любой момент.{' '}
                 <a
                   href="/legal/marketing-consent"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[color:var(--da)] underline underline-offset-2"
+                  className="text-[#2467A3] underline decoration-[0.5px] underline-offset-2"
                   onClick={(event) => event.stopPropagation()}
                 >
                   Полные условия
@@ -604,11 +718,16 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
             data-own-cta
             type="submit"
             disabled={loading}
-            className="mt-6 w-full rounded-[14px] bg-[#12283E] px-6 py-4 text-[15px] font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70"
+            className="mt-6 w-full rounded-[14px] bg-[#12283E] whitespace-nowrap px-5 py-4 text-[15px] font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70"
           >
-            {loading ? 'Отправляем…' : 'Оставить заявку на неделю Pro (0 ₽)'}
+            {loading ? 'Отправляем…' : 'Оставить заявку — 0 ₽'}
           </button>
-          <p className="mt-3 text-center text-[12px] leading-[1.5] text-[#9AA3B0]">
+          {/* Спека предлагала оставить здесь только «Куратор подтвердит
+              свободное место», но снятие обещания убирать нельзя: тест
+              `versionD-positioning` держит эту строку под кнопкой, и держит
+              по делу — «не гарантирует» защищает от обещания результата.
+              Оформление взято из спеки, формулировка сохранена. */}
+          <p className="mt-3 text-center text-[12px] leading-[1.5] text-[#5F6A77]">
             Заявка не гарантирует начало пробной недели — куратор подтвердит свободное место.
           </p>
         </form>
