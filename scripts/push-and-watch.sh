@@ -5,8 +5,8 @@
 #
 # Делает:
 #   1. git push origin <branch>
-#   2. ждёт пока Deploy to Yandex Cloud workflow для свежего push'а станет
-#      зелёным — exit 0
+#   2. находит run по headSha своего коммита (не «последний по ветке») и ждёт,
+#      пока Deploy to Yandex Cloud станет зелёным — exit 0
 #   3. если workflow красный или таймаут — exit 1 (не отдаёт управление
 #      пока не подтвердит deploy)
 #
@@ -65,17 +65,43 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "⏳ Watching latest \"$WORKFLOW\" run for branch $BRANCH..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# GitHub API нужно ~3-5 сек чтобы зарегистрировать новый run после push
-sleep 5
+# Ждём run именно для своего коммита, а не «последний по ветке».
+#
+# Инцидент 2026-08-09: скрипт брал --limit 1 сразу после пятисекундной паузы.
+# Новый run тогда ещё стоял в очереди, последним числился прошлый деплой —
+# давно завершённый успехом. gh run watch мгновенно вернул success, скрипт
+# напечатал «Deploy зелёный. Прод обновлён», хотя выкладка даже не начиналась.
+# Это худший из возможных отказов для скрипта, вся задача которого — не дать
+# уйти с непроверенным деплоем: он не молчит, а уверенно подтверждает неправду.
+#
+# Поэтому сверяем headSha и ждём появления run, а не берём того, кто оказался
+# сверху. Не нашли за отведённое время — честно говорим, что не подтвердили.
+PUSHED_SHA=$(git rev-parse HEAD)
+DISCOVERY_TIMEOUT="${DISCOVERY_TIMEOUT:-180}"
 
-RUN_ID=$(gh run list --workflow="$WORKFLOW" --branch="$BRANCH" --limit 1 --json databaseId -q '.[0].databaseId' 2>/dev/null || echo "")
+echo "🔎 Ищу run для коммита ${PUSHED_SHA:0:9} (до ${DISCOVERY_TIMEOUT}s)..."
+
+RUN_ID=""
+WAITED=0
+while [ "$WAITED" -lt "$DISCOVERY_TIMEOUT" ]; do
+  RUN_ID=$(gh run list --workflow="$WORKFLOW" --branch="$BRANCH" --limit 20 \
+    --json databaseId,headSha \
+    -q "[.[] | select(.headSha == \"$PUSHED_SHA\")] | .[0].databaseId" 2>/dev/null || echo "")
+  [ "$RUN_ID" = "null" ] && RUN_ID=""
+  [ -n "$RUN_ID" ] && break
+  sleep 5
+  WAITED=$((WAITED + 5))
+done
 
 if [ -z "$RUN_ID" ]; then
   echo ""
-  echo "⚠️  Не нашёл свежий run для workflow \"$WORKFLOW\" на ветке $BRANCH."
+  echo "⚠️  За ${DISCOVERY_TIMEOUT}s не появился run \"$WORKFLOW\" для ${PUSHED_SHA:0:9}."
+  echo "    ДЕПЛОЙ НЕ ПОДТВЕРЖДЁН — не считай выложенным."
   echo "    Возможные причины:"
-  echo "      • workflow ещё не зарегистрировался — подожди и проверь:"
-  echo "        gh run list --workflow=\"$WORKFLOW\" --branch=$BRANCH --limit 1"
+  echo "      • push ничего не отправил (ветка уже была актуальна)"
+  echo "      • workflow не запускается на изменённые пути"
+  echo "      • очередь GitHub Actions дольше обычного — проверь вручную:"
+  echo "        gh run list --workflow=\"$WORKFLOW\" --branch=$BRANCH --limit 5"
   echo "      • опечатка в имени workflow"
   exit 1
 fi
