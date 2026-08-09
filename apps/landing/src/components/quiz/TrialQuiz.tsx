@@ -15,7 +15,7 @@
 // отправки. Всё уходит одним пакетом вместе с заявкой и согласием.
 
 import { Playfair_Display } from 'next/font/google';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   BARRIER_CHOICES,
@@ -60,6 +60,12 @@ const MESSENGERS: ReadonlyArray<{ code: Messenger; label: string }> = [
   { code: 'max', label: 'MAX' },
 ];
 
+/**
+ * Запас сверху при возврате блока в кадр: липкая шапка версии D занимает около
+ * 64px, остальное — воздух, чтобы заголовок шага не касался её края.
+ */
+const STICKY_HEADER_OFFSET = 76;
+
 interface TrialQuizProps {
   /** Версия страницы — уходит в заявку как `ab_variant`. */
   abVariant: string;
@@ -82,6 +88,28 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitError, setSubmitError] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Смена шага меняет высоту блока, а позиция прокрутки остаётся от прошлого
+  // экрана. Разбор выше формы, поэтому «Просто заполнить форму» роняло высоту
+  // и выносило человека ниже цели: он смотрел в пустоту под блоком и не
+  // понимал, куда делась форма (замечание владельца 2026-08-09, Galaxy S9+).
+  //
+  // Возвращаем блок в кадр, но только когда его верх действительно ушёл выше:
+  // если шаг целиком виден, прокрутка ничего не исправляет и читается рывком.
+  const shownStep = useRef(step);
+  useEffect(() => {
+    if (shownStep.current === step) return;
+    shownStep.current = step;
+
+    const el = rootRef.current;
+    if (!el) return;
+    const { top } = el.getBoundingClientRect();
+    // Липкая шапка перекрывает верх страницы — иначе заголовок шага уезжает
+    // под неё и выглядит обрезанным.
+    if (top >= STICKY_HEADER_OFFSET) return;
+    window.scrollTo({ top: window.scrollY + top - STICKY_HEADER_OFFSET, behavior: 'smooth' });
+  }, [step]);
 
   const segment = useMemo(
     () => (answers.trigger ? resolveSegment(answers.trigger, answers.when) : null),
@@ -243,7 +271,10 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
 
   if (step === 'sent') {
     return (
-      <div className="rounded-[22px] border border-[rgba(16,24,38,0.1)] bg-white px-[22px] py-7 min-[561px]:rounded-3xl min-[561px]:p-10">
+      <div
+        ref={rootRef}
+        className="rounded-[22px] border border-[rgba(16,24,38,0.1)] bg-white px-[22px] py-7 min-[561px]:rounded-3xl min-[561px]:p-10"
+      >
         <h3 className="text-[clamp(18px,2vw,22px)] font-semibold text-[#101826]">
           Заявка получена
         </h3>
@@ -262,7 +293,10 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
   }
 
   return (
-    <div className="rounded-[22px] border border-[rgba(16,24,38,0.1)] bg-white px-[22px] py-7 min-[561px]:rounded-3xl min-[561px]:p-8 sm:p-10">
+    <div
+      ref={rootRef}
+      className="rounded-[22px] border border-[rgba(16,24,38,0.1)] bg-white px-[22px] py-7 min-[561px]:rounded-3xl min-[561px]:p-8 sm:p-10"
+    >
       {step === 'intro' ? (
         <div>
           <h3 className="text-[clamp(17px,1.9vw,20px)] font-semibold leading-[1.35] text-[#101826]">

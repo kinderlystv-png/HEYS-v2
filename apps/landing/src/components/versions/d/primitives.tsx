@@ -113,8 +113,15 @@ export function ClosingLine({ lead, accent }: { lead: ReactNode; accent: ReactNo
     <p
       className={`${playfairRoman.className} mx-auto mt-14 max-w-[720px] text-balance text-center text-[clamp(16px,1.8vw,20px)] font-normal leading-[1.5] text-[#5B6472]`}
     >
-      {lead}{' '}
-      <span className="text-[clamp(24px,2.7vw,30px)] font-semibold leading-[1.35] text-[color:var(--da)]">
+      {lead}
+      {/* Вывод отдельной строкой, а не инлайном за вступлением. Инлайновый
+          вариант отдавал перенос на волю ширины экрана: на десктопе строка
+          рвалась перед выводом и выглядела задуманной, а на 360px (Galaxy S9+,
+          замечание владельца 2026-08-09) вывод начинался в хвосте предыдущей
+          строки — два кегля в одной строке читались обрывком, а не переходом
+          к главной мысли. `block` убирает эту случайность: перенос одинаков на
+          любой ширине. */}
+      <span className="mt-2 block text-[clamp(24px,2.7vw,30px)] font-semibold leading-[1.35] text-[color:var(--da)]">
         {accent}
       </span>
     </p>
