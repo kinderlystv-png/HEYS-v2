@@ -18,6 +18,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         // RestRing из parts, а слой — из TrainingKernel.fullscreen.
         '_kernel/heys_kernel_fullscreen_v1.js',
         'strength/heys_strength_superset_ui_v1.js',
+        'strength/heys_strength_proposal_ui_v1.js',
         'strength/heys_strength_catalog_ui_v1.js',
         'strength/heys_strength_finish_ui_v1.js',
         'strength/heys_strength_builder_ui_v1.js',

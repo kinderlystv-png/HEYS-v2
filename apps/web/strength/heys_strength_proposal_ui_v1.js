@@ -1,0 +1,337 @@
+// heys_strength_proposal_ui_v1.js — правка куратора после старта плана.
+//
+// Дизайн-хэндофф «Правка куратора после старта» (2026-08-09), экраны 14a/14c и
+// 15a–15c; слой 5 CURATOR_TRAINING_PROGRAM_PROTOCOL_2026-08-09.md.
+//
+// Правило, из которого следует весь этот экран: предложение никогда не трогает
+// отмеченные подходы. Поэтому здесь нет ни одного диалога о рисках — «взять
+// правку» безопасно всегда, и вопрос «а не сотрёт ли это мою работу» просто не
+// возникает. Всё, что решает, ляжет ли часть правки, живёт в ядре
+// (TK.strength.applyPlanEdit); этот файл только показывает его вывод человеку.
+
+; (function (global) {
+  'use strict';
+
+  const HEYS = global.HEYS = global.HEYS || {};
+  const React = global.React;
+  if (!React) return;
+  const h = React.createElement;
+
+  const Parts = HEYS.StrengthBuilderParts = HEYS.StrengthBuilderParts || {};
+
+  function kernel() {
+    return (HEYS.TrainingKernel && HEYS.TrainingKernel.strength) || null;
+  }
+
+  function approachesOf(ex) {
+    return ex && Array.isArray(ex.approaches) ? ex.approaches : [];
+  }
+
+  function exerciseById(list, id) {
+    const arr = Array.isArray(list) ? list : [];
+    for (let i = 0; i < arr.length; i++) {
+      if (arr[i] && String(arr[i].id) === String(id)) return arr[i];
+    }
+    return null;
+  }
+
+  /** «4 × 8 · 75 кг» — та же строка, какой упражнение подписано на разборе. */
+  function approachSummary(ex) {
+    const aps = approachesOf(ex);
+    if (!aps.length) return '';
+    const first = aps[0];
+    const reps = +first.reps || 0;
+    const w = first.weightKg === '' || first.weightKg == null ? null : String(first.weightKg);
+    const head = aps.length + ' × ' + reps;
+    return w && w !== '0' ? head + ' · ' + w + ' кг' : head;
+  }
+
+  /** Сводка незакрытых подходов: то, чего правка ещё может коснуться. */
+  function openTailSummary(ex, ks) {
+    const aps = approachesOf(ex).filter(function (a) { return !ks.isApproachDone(a); });
+    if (!aps.length) return 'всё закрыто';
+    const first = aps[0];
+    const w = first.weightKg === '' || first.weightKg == null ? null : String(first.weightKg);
+    const head = aps.length + ' × ' + (+first.reps || 0);
+    return w && w !== '0' ? head + ' · ' + w + ' кг' : head;
+  }
+
+  /**
+   * Раскладка предложения для человека: что останется как есть, а что впереди
+   * и поменяется.
+   *
+   * Считается по фактическому результату применения (ядро, applyPlanEdit), а не
+   * сравнением списков на глаз. Разница принципиальная: у начатого упражнения
+   * закрытые подходы неприкосновенны, но незакрытые правка ещё меняет — и
+   * именно ради этого случая живая правка и нужна. Раскладка «упражнение
+   * начато, значит целиком заморожено» показала бы человеку, что куратор
+   * ничего не сделал, хотя вес в оставшихся подходах он сбавил.
+   */
+  function describePlanEdit(liveExercises, proposedExercises) {
+    const ks = kernel();
+    const live = Array.isArray(liveExercises) ? liveExercises : [];
+    const proposed = Array.isArray(proposedExercises) ? proposedExercises : [];
+    const frozen = [];
+    const ahead = [];
+    if (!ks) return { frozen: frozen, ahead: ahead };
+
+    live.forEach(function (ex) {
+      if (!ks.hasDoneApproach(ex)) return;
+      const aps = approachesOf(ex);
+      let done = 0;
+      aps.forEach(function (a) { if (ks.isApproachDone(a)) done += 1; });
+      frozen.push({
+        id: ex.id,
+        name: ex.name,
+        summary: done === aps.length ? approachSummary(ex) : done + ' из ' + aps.length
+      });
+    });
+
+    const res = ks.applyPlanEdit(live, proposed);
+    const next = res.ok ? res.exercises : live;
+
+    next.forEach(function (nex) {
+      const liveEx = nex && nex.id ? exerciseById(live, nex.id) : null;
+      if (!liveEx) {
+        ahead.push({ kind: 'added', name: nex.name, detail: 'Добавится · ' + approachSummary(nex) });
+        return;
+      }
+      if (liveEx === nex) {
+        // Ядро вернуло ту же ссылку — упражнение не тронуто вовсе.
+        if (!ks.hasDoneApproach(liveEx)) {
+          ahead.push({ kind: 'same', name: nex.name, detail: 'Без изменений · ' + approachSummary(nex) });
+        }
+        return;
+      }
+      ahead.push({
+        kind: 'changed',
+        name: nex.name,
+        before: openTailSummary(liveEx, ks),
+        after: openTailSummary(nex, ks)
+      });
+    });
+
+    live.forEach(function (ex) {
+      if (ex && ex.id && exerciseById(next, ex.id)) return;
+      ahead.push({
+        kind: 'removed',
+        name: ex.name,
+        detail: 'Уберётся из плана. Если решишь сделать — добавишь сам, это не запрет.'
+      });
+    });
+
+    return { frozen: frozen, ahead: ahead };
+  }
+
+  const KIND_SIGN = { added: '+', removed: '−', changed: '~', same: '·' };
+
+  /**
+   * Карточка на дне (14a). Первым слоем — что именно поменял куратор, тремя
+   * строками; решение живёт здесь, а не в переписке: одно решение в двух
+   * местах разъедется.
+   */
+  function ProposalCard(props) {
+    const { training, onReview, onDecline } = props;
+    const ks = kernel();
+    const proposal = ks && ks.pendingPlanProposal(training);
+    if (!proposal) return null;
+    const wl = (training && training.workoutLog) || {};
+    const diff = describePlanEdit(wl.exercises, proposal.exercises);
+    const who = proposal.proposedBy || 'Куратор';
+    const started = ks.hasDoneApproach
+      ? (Array.isArray(wl.exercises) ? wl.exercises : []).some(function (ex) { return ks.hasDoneApproach(ex); })
+      : false;
+
+    return h('div', { className: 'sb-plan-card sb-proposal-card' },
+      h('div', { className: 'sb-plan-badge' }, who + ' поменял план'),
+      h('b', null, (training.plan && training.plan.dayLabel) || 'Сегодня по плану'),
+      h('span', { className: 'sb-plan-meta' },
+        started
+          ? 'Сделанное не тронется — только то, что впереди'
+          : 'Ты его ещё не начинал'),
+      proposal.note && h('p', { className: 'sb-proposal-note' }, proposal.note),
+      h('ul', { className: 'sb-proposal-list' },
+        diff.ahead.slice(0, 3).map(function (row, i) {
+          return h('li', { key: i, className: 'sb-proposal-row is-' + row.kind },
+            h('span', { className: 'sb-proposal-sign' }, KIND_SIGN[row.kind] || '·'),
+            h('span', { className: 'sb-proposal-text' },
+              row.kind === 'changed' ? row.name + ' · ' + row.after : row.name)
+          );
+        })
+      ),
+      h('div', { className: 'sb-plan-actions' },
+        h('button', {
+          type: 'button', className: 'sb-btn is-accent sb-plan-cta', onClick: onReview
+        }, 'Посмотреть, что изменилось'),
+        h('button', {
+          type: 'button', className: 'sb-btn sb-plan-skip', onClick: onDecline
+        }, 'Оставить прежний')
+      )
+    );
+  }
+
+  /**
+   * Разбор целиком (14c). Сделанное — отдельным блоком сверху и до того, как
+   * человек увидит хоть одну кнопку: обещание «твою работу не тронут» должно
+   * стоять раньше вопроса «берёшь ли правку».
+   */
+  function ProposalReview(props) {
+    const { training, onClose, onAccept, onDecline } = props;
+    const ks = kernel();
+    const proposal = ks && ks.pendingPlanProposal(training);
+    if (!proposal) return null;
+    const wl = (training && training.workoutLog) || {};
+    const diff = describePlanEdit(wl.exercises, proposal.exercises);
+    const who = proposal.proposedBy || 'Куратор';
+
+    return h('div', { className: 'sb-root sb-proposal-review' },
+      h('div', { className: 'sb-head' },
+        h('button', { type: 'button', className: 'sb-icon-btn', onClick: onClose, 'aria-label': 'Закрыть' }, '✕'),
+        h('div', { className: 'sb-head-title' },
+          h('b', null, 'Что поменял ' + who),
+          h('span', { className: 'sb-head-sub' },
+            (training.plan && training.plan.dayLabel) || 'План на сегодня')
+        )
+      ),
+      h('div', { className: 'sb-list' },
+        diff.frozen.length > 0 && h('section', { className: 'sb-proposal-frozen' },
+          h('div', { className: 'sb-proposal-section-title' },
+            h('span', { className: 'sb-lock' }, '🔒'),
+            'Останется как есть · ' + diff.frozen.length + ' упр.'),
+          h('ul', { className: 'sb-proposal-frozen-list' },
+            diff.frozen.map(function (row) {
+              return h('li', { key: row.id },
+                h('span', { className: 'sb-proposal-text' }, row.name),
+                h('span', { className: 'sb-proposal-sum' }, row.summary));
+            })
+          ),
+          h('p', { className: 'sb-proposal-hint' },
+            'Замороженные именно эти подходы, а не упражнения целиком: незакрытые подходы правка ещё может тронуть. Сделанное остаётся в тренировке и в объёме.')
+        ),
+        h('section', { className: 'sb-proposal-ahead' },
+          h('div', { className: 'sb-proposal-section-title' }, 'Впереди — это и поменяется'),
+          h('ul', { className: 'sb-proposal-ahead-list' },
+            diff.ahead.map(function (row, i) {
+              return h('li', { key: i, className: 'sb-proposal-row is-' + row.kind },
+                h('span', { className: 'sb-proposal-sign' }, KIND_SIGN[row.kind] || '·'),
+                h('div', { className: 'sb-proposal-body' },
+                  h('b', null, row.name),
+                  h('span', { className: 'sb-proposal-detail' },
+                    row.kind === 'changed' ? row.before + ' → ' + row.after : row.detail)
+                )
+              );
+            })
+          )
+        )
+      ),
+      h('div', { className: 'sb-panel sb-proposal-foot' },
+        h('button', { type: 'button', className: 'sb-btn', onClick: onDecline }, 'Дальше по-своему'),
+        h('button', { type: 'button', className: 'sb-btn is-accent', onClick: onAccept }, 'Взять правку')
+      )
+    );
+  }
+
+  /**
+   * Полоска внутри идущей тренировки (14b) — намеренно не модалка: человек
+   * стоит с гантелей в руке, и перекрывать ему экран чужой правкой нельзя.
+   */
+  function ProposalStrip(props) {
+    const { training, onReview } = props;
+    const ks = kernel();
+    const proposal = ks && ks.pendingPlanProposal(training);
+    if (!proposal) return null;
+    return h('div', { className: 'sb-proposal-strip' },
+      h('span', { className: 'sb-proposal-strip-icon' }, (proposal.proposedBy || 'К').slice(0, 1)),
+      h('div', { className: 'sb-proposal-strip-main' },
+        h('b', null, (proposal.proposedBy || 'Куратор') + ' подправил план'),
+        h('span', null, 'Сделанное не тронется — только то, что впереди')
+      ),
+      h('button', { type: 'button', className: 'sb-btn sb-proposal-strip-btn', onClick: onReview }, 'Смотреть')
+    );
+  }
+
+  /**
+   * Итог в закрытой тренировке (15b): что из правки легло, а что нет. Эта же
+   * строка уходит куратору — без неё он решит, что клиент его проигнорировал,
+   * и повторит правку через неделю.
+   */
+  function ProposalOutcome(props) {
+    const { training } = props;
+    const proposal = training && training.plan && training.plan.proposal;
+    if (!proposal || proposal.status !== 'accepted') return null;
+    const rejected = Array.isArray(proposal.rejected) ? proposal.rejected : [];
+    const applied = Array.isArray(proposal.applied) ? proposal.applied : [];
+    if (!rejected.length) return null;
+
+    const REASONS = {
+      started_cannot_remove: 'убирал, но ты уже начал',
+      superset_composition_frozen: 'связка начата, состав остался',
+      done_approaches_kept: 'сделанные подходы остались'
+    };
+    const who = proposal.proposedBy || 'Куратор';
+    return h('section', { className: 'sb-proposal-outcome' },
+      h('div', { className: 'sb-proposal-section-title' }, 'Правка ' + who + ' легла не полностью'),
+      h('ul', { className: 'sb-proposal-ahead-list' },
+        applied.map(function (row, i) {
+          return h('li', { key: 'a' + i, className: 'sb-proposal-row is-added' },
+            h('span', { className: 'sb-proposal-sign' }, '+'),
+            h('div', { className: 'sb-proposal-body' },
+              h('b', null, row.name),
+              h('span', { className: 'sb-proposal-detail' }, 'Легло'))
+          );
+        }).concat(rejected.map(function (row, i) {
+          return h('li', { key: 'r' + i, className: 'sb-proposal-row is-removed' },
+            h('span', { className: 'sb-proposal-sign' }, '−'),
+            h('div', { className: 'sb-proposal-body' },
+              h('b', null, row.name),
+              h('span', { className: 'sb-proposal-detail' }, REASONS[row.reason] || 'осталось как было'))
+          );
+        }))
+      )
+    );
+  }
+
+  const REVIEW_ID = 'strength-proposal-review';
+
+  /**
+   * Открыть разбор поверх дня. Отдельный полноэкранный слой, а не вид внутри
+   * конструктора: правку смотрят и до тренировки, с карточки дня, где
+   * конструктор ещё не открыт.
+   */
+  function openReview(opts) {
+    const o = opts || {};
+    const TK = HEYS.TrainingKernel;
+    const fs = TK && TK.fullscreen;
+    if (!fs) return false;
+    return fs.mount({
+      id: REVIEW_ID,
+      ariaLabel: 'Что поменял куратор',
+      render: function (api) {
+        // Решение применяется ДО закрытия слоя. Наоборот было нельзя: патч,
+        // отправленный после размонтирования портала, доходил до состояния
+        // React, но на диск уже не сохранялся — ответ клиента жил до
+        // перезагрузки и молча исчезал (найдено живой проверкой 2026-08-09).
+        return h(ProposalReview, {
+          training: o.training,
+          onClose: api.close,
+          onAccept: function () { if (o.onAccept) o.onAccept(); api.close(); },
+          onDecline: function () { if (o.onDecline) o.onDecline(); api.close(); }
+        });
+      }
+    });
+  }
+
+  function closeReview() {
+    const TK = HEYS.TrainingKernel;
+    const fs = TK && TK.fullscreen;
+    return fs ? fs.unmount(REVIEW_ID) : false;
+  }
+
+  Parts.openProposalReview = openReview;
+  Parts.closeProposalReview = closeReview;
+  Parts.describePlanEdit = describePlanEdit;
+  Parts.ProposalCard = ProposalCard;
+  Parts.ProposalReview = ProposalReview;
+  Parts.ProposalStrip = ProposalStrip;
+  Parts.ProposalOutcome = ProposalOutcome;
+})(window);

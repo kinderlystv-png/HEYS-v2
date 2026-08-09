@@ -848,6 +848,103 @@
     return { ok: true, exercises: out, applied: applied, rejected: rejected, errors: [] };
   }
 
+  /**
+   * Развязать ссылку перед записью в день. Сериализация дня вырезает второе
+   * вхождение одного и того же объекта, поэтому одна ссылка, лежащая сразу в
+   * двух местах записи, доезжает на диск только в одном — и молча пропадает во
+   * втором.
+   */
+  function deepCopy(value) {
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch (_) {
+      return value;
+    }
+  }
+
+  /**
+   * Клиент взял правку. Снимок задания обновляется здесь и только здесь:
+   * иначе отчёт куратору покажет отклонение от плана, который обе стороны уже
+   * отменили. Прежний снимок уходит в историю внутри того же поля — заводить
+   * ради него новый ключ верхнего уровня значит чинить ещё и passthrough в
+   * модели дня.
+   *
+   * Результат применения остаётся на предложении: строка «правка легла не
+   * полностью» нужна обеим сторонам и после того, как тренировка закрыта.
+   */
+  function acceptPlanProposal(training, nowMs) {
+    const plan = training && training.plan;
+    const proposal = plan && plan.proposal;
+    if (!proposal || proposal.status !== 'pending') return { ok: false, training: training, errors: ['Нет неотвеченного предложения'] };
+    const wl = (training && training.workoutLog) || {};
+    const live = Array.isArray(wl.exercises) ? wl.exercises : [];
+    const res = applyPlanEdit(live, proposal.exercises);
+    if (!res.ok) return { ok: false, training: training, errors: res.errors };
+
+    const prevSnapshot = training.planSnapshot;
+    const history = (prevSnapshot && Array.isArray(prevSnapshot.previous) ? prevSnapshot.previous : []).slice();
+    if (prevSnapshot && Array.isArray(prevSnapshot.exercises)) {
+      history.push({ exercises: deepCopy(prevSnapshot.exercises), replacedAt: nowMs || 0 });
+    }
+    const nextTraining = Object.assign({}, training, {
+      workoutLog: Object.assign({}, wl, { exercises: res.exercises }),
+      // Копия, а не ссылка на proposal.exercises: сериализация дня вырезает
+      // второе вхождение одного и того же объекта (защита от циклов), и снимок
+      // молча уезжал на диск пустым. Найдено живой проверкой 2026-08-09.
+      planSnapshot: { exercises: deepCopy(proposal.exercises), previous: history },
+      plan: Object.assign({}, plan, {
+        proposal: Object.assign({}, proposal, {
+          status: 'accepted',
+          resolvedAt: nowMs || 0,
+          applied: res.applied,
+          rejected: res.rejected
+        })
+      })
+    });
+    return { ok: true, training: nextTraining, applied: res.applied, rejected: res.rejected, errors: [] };
+  }
+
+  /**
+   * Клиент остался на прежнем плане. Тренировка не меняется вовсе — отказ это
+   * решение, а не правка. Куратор увидит, что ответ дан, но объяснять причину
+   * клиент не обязан.
+   */
+  function declinePlanProposal(training, nowMs) {
+    const plan = training && training.plan;
+    const proposal = plan && plan.proposal;
+    if (!proposal || proposal.status !== 'pending') return { ok: false, training: training };
+    return {
+      ok: true,
+      training: Object.assign({}, training, {
+        plan: Object.assign({}, plan, {
+          proposal: Object.assign({}, proposal, { status: 'declined', resolvedAt: nowMs || 0 })
+        })
+      })
+    };
+  }
+
+  /**
+   * Тренировку закрыли, не ответив. Предложение не блокирует завершение: оно
+   * гаснет само и остаётся строкой в истории дня. Иначе человек с гантелей в
+   * руке вынужден разбирать чужую правку, чтобы просто закончить.
+   */
+  function expirePlanProposal(training, nowMs) {
+    const plan = training && training.plan;
+    const proposal = plan && plan.proposal;
+    if (!proposal || proposal.status !== 'pending') return training;
+    return Object.assign({}, training, {
+      plan: Object.assign({}, plan, {
+        proposal: Object.assign({}, proposal, { status: 'expired', resolvedAt: nowMs || 0 })
+      })
+    });
+  }
+
+  /** Живое предложение, ждущее ответа клиента. */
+  function pendingPlanProposal(training) {
+    const p = training && training.plan && training.plan.proposal;
+    return p && p.status === 'pending' ? p : null;
+  }
+
   function findById(list, id) {
     const arr = Array.isArray(list) ? list : [];
     const want = String(id);
@@ -1031,6 +1128,10 @@
     orderBlocks: orderBlocks,
     moveBlock: moveBlock,
     hasDoneApproach: hasDoneApproach,
-    applyPlanEdit: applyPlanEdit
+    applyPlanEdit: applyPlanEdit,
+    acceptPlanProposal: acceptPlanProposal,
+    declinePlanProposal: declinePlanProposal,
+    expirePlanProposal: expirePlanProposal,
+    pendingPlanProposal: pendingPlanProposal
   };
 })(typeof window !== 'undefined' ? window : globalThis);

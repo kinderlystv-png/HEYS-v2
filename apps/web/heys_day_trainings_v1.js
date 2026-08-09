@@ -3443,6 +3443,47 @@
             // skipped тоже сюда: PlanCard сама решает, что показать — карточку
             // «пропущен» с возможностью передумать. started/done уже обычная
             // сессия, им место в SummaryCard ниже.
+            // Слой 5: правка куратора, на которую клиент ещё не ответил.
+            // Идёт раньше всех прочих карточек — включая started/skipped, где
+            // предложение как раз и появляется. Решение живёт здесь, на дне, а
+            // не в переписке: одно решение в двух местах разъедется.
+            const TKs = (HEYS.TrainingKernel && HEYS.TrainingKernel.strength) || null;
+            const pendingProposal = TKs && TKs.pendingPlanProposal
+              ? TKs.pendingPlanProposal(rawT)
+              : null;
+            if (pendingProposal && Parts.ProposalCard) {
+              const trainingWithProposal = { workoutLog: wlLive, plan: rawT.plan, planSnapshot: rawT.planSnapshot };
+              const acceptProposal = function () {
+                patchTraining(ti, function (t0) {
+                  const res = TKs.acceptPlanProposal(t0, Date.now());
+                  // Не легло целиком (разрыв связки) — тренировку не трогаем:
+                  // испорченная раскладка тише отказа и потому опаснее.
+                  return res.ok ? res.training : t0;
+                });
+              };
+              const declineProposal = function () {
+                patchTraining(ti, function (t0) {
+                  const res = TKs.declinePlanProposal(t0, Date.now());
+                  return res.ok ? res.training : t0;
+                });
+              };
+              return React.createElement(Parts.ProposalCard, {
+                key: 'wb-proposal-' + ti,
+                training: trainingWithProposal,
+                onReview: function (e) {
+                  if (e && e.stopPropagation) e.stopPropagation();
+                  Parts.openProposalReview({
+                    training: trainingWithProposal,
+                    onAccept: acceptProposal,
+                    onDecline: declineProposal
+                  });
+                },
+                onDecline: function (e) {
+                  if (e && e.stopPropagation) e.stopPropagation();
+                  declineProposal();
+                }
+              });
+            }
             if (rawT.plan && (rawT.plan.status === 'assigned' || rawT.plan.status === 'skipped') && Parts.PlanCard) {
               const isFutureDay = String(dateKey) > todayDateKeyForPlan();
               return React.createElement(Parts.PlanCard, {

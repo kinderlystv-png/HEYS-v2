@@ -1493,3 +1493,217 @@
   margin-top: 8px;
   text-align: left;
 }
+
+/* ── Правка куратора после старта ──────────────────────────────────────── */
+/* Хэндофф «Правка куратора после старта» (2026-08-09), экраны 14a/14c/15b.
+   Тот же синий словарь, что у .sb-plan-card: это по-прежнему план куратора,
+   просто в состоянии «он что-то поменял». */
+
+.sb-proposal-note {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--sb-mut, #64748b);
+}
+
+.sb-proposal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 0 11px;
+  padding: 0;
+  list-style: none;
+}
+
+.sb-proposal-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--sb-soft, #f1f5f9);
+  font-size: 12.5px;
+}
+
+.sb-proposal-sign {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.sb-proposal-row.is-added .sb-proposal-sign {
+  background: rgba(22, 163, 74, 0.14);
+  color: #15803d;
+}
+
+.sb-proposal-row.is-removed .sb-proposal-sign {
+  background: rgba(220, 38, 38, 0.12);
+  color: #b91c1c;
+}
+
+.sb-proposal-row.is-changed .sb-proposal-sign,
+.sb-proposal-row.is-same .sb-proposal-sign {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
+.sb-proposal-text {
+  flex: 1;
+  min-width: 0;
+  color: var(--sb-tx, #0f172a);
+}
+
+.sb-proposal-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sb-proposal-body b {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--sb-tx, #0f172a);
+}
+
+.sb-proposal-detail {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--sb-mut, #64748b);
+}
+
+/* Разбор целиком (14c). */
+.sb-proposal-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--sb-mut, #64748b);
+}
+
+/* Обещание «твою работу не тронут» стоит раньше любой кнопки — намеренно. */
+.sb-proposal-frozen {
+  margin-bottom: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(22, 163, 74, 0.25);
+  background: rgba(22, 163, 74, 0.06);
+}
+
+.sb-proposal-frozen-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sb-proposal-frozen-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.sb-proposal-sum {
+  flex: 0 0 auto;
+  color: var(--sb-mut, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-proposal-hint {
+  margin: 9px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--sb-mut, #64748b);
+}
+
+.sb-proposal-ahead-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sb-proposal-foot {
+  display: flex;
+  gap: 8px;
+}
+
+.sb-proposal-foot .sb-btn {
+  flex: 1;
+  min-height: 48px;
+}
+
+/* Полоска в идущей тренировке (14b) — не модалка: человек стоит с гантелей. */
+.sb-proposal-strip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(37, 99, 235, 0.28);
+  background: rgba(37, 99, 235, 0.07);
+}
+
+.sb-proposal-strip-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sb-proposal-strip-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.sb-proposal-strip-main b {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--sb-tx, #0f172a);
+}
+
+.sb-proposal-strip-main span {
+  font-size: 11px;
+  color: var(--sb-mut, #64748b);
+}
+
+.sb-proposal-strip-btn {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+/* Итог в закрытой тренировке (15b): что легло, а что нет. */
+.sb-proposal-outcome {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--sb-br, #e2e8f0);
+  background: var(--sb-soft, #f1f5f9);
+}
