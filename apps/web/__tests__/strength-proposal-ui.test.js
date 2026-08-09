@@ -254,6 +254,48 @@ describe('правка куратора: как она названа челов
     expect(screen.getByText(/убирал, но ты уже начал/)).toBeTruthy();
   });
 
+  it('полоска в идущей тренировке не перекрывает экран и ведёт в разбор', () => {
+    // Экран 14b: человек стоит с гантелей в руке — правка приходит полоской,
+    // а не модалкой, и завершение она не держит.
+    const { Parts } = loadAll();
+    const training = startedTraining([ex('ex1', 'Жим', [ap('a1', 75, 8, false), ap('a2', 60, 8, false)])]);
+    let opened = false;
+
+    const { container } = render(React.createElement(Parts.ProposalStrip, {
+      training,
+      onReview: () => { opened = true; },
+    }));
+
+    expect(container.querySelector('.sb-proposal-strip')).toBeTruthy();
+    expect(screen.getByText(/Сделанное не тронется/)).toBeTruthy();
+    fireEvent.click(screen.getByText('Смотреть'));
+    expect(opened).toBe(true);
+  });
+
+  it('правка не запирает вход в начатую тренировку', () => {
+    // Регресс из живой проверки: карточка предложения подменяла сводку дня
+    // целиком, и клиент не мог продолжить тренировку, не ответив на правку.
+    // Условие входа в карточку — «к тренировке ещё не приступали»; ровно его
+    // и проверяем, потому что именно оно решает, запирает правка день или нет.
+    const { ks } = loadAll();
+    const startedLog = [ex('ex1', 'Жим', [ap('a1', 75, 8, true), ap('a2', 75, 8, false)])];
+    const untouchedLog = [ex('ex1', 'Жим', [ap('a1', 75, 8, false), ap('a2', 75, 8, false)])];
+
+    expect(startedLog.some((e) => ks.hasDoneApproach(e))).toBe(true);
+    expect(untouchedLog.some((e) => ks.hasDoneApproach(e))).toBe(false);
+  });
+
+  it('на отвеченное предложение полоска не показывается', () => {
+    const { ks, Parts } = loadAll();
+    const training = startedTraining([ex('ex1', 'Жим', [ap('a1', 75, 8, false)])]);
+    const expired = ks.expirePlanProposal(training, 9000);
+
+    const { container } = render(React.createElement(Parts.ProposalStrip, {
+      training: expired, onReview: () => {},
+    }));
+    expect(container.innerHTML).toBe('');
+  });
+
   it('когда всё легло, строки «легла не полностью» нет', () => {
     const { Parts } = loadAll();
     const { container } = render(React.createElement(Parts.ProposalOutcome, {

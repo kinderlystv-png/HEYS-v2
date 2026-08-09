@@ -3370,7 +3370,12 @@
               type: 'strength',
               strengthEntryMode: 'workout_builder',
               time: startedTime,
-              workoutLog: wlLive
+              workoutLog: wlLive,
+              // plan нужен полоске правки (экран 14b) и итогу «легла не
+              // полностью» (15b): без него конструктор не знает, что у этой
+              // тренировки вообще есть неотвеченное предложение куратора.
+              plan: rawT.plan,
+              planSnapshot: rawT.planSnapshot
             };
             function openBuilder() {
               const U = HEYS.utils;
@@ -3378,6 +3383,36 @@
                 training: trainingForBuilder,
                 dateKey: dateKey,
                 profile: (U && U.lsGet) ? (U.lsGet('heys_profile', {}) || {}) : {},
+                // Клиент закрыл тренировку, так и не ответив: предложение
+                // гаснет само и остаётся строкой в истории дня.
+                onFinishProposal: function () {
+                  const TKs3 = (HEYS.TrainingKernel && HEYS.TrainingKernel.strength) || null;
+                  if (!TKs3 || !TKs3.pendingPlanProposal) return;
+                  patchTraining(ti, function (t0) {
+                    return TKs3.pendingPlanProposal(t0) ? TKs3.expirePlanProposal(t0, Date.now()) : t0;
+                  });
+                },
+                // Разбор правки открывается поверх конструктора тем же слоем,
+                // что и с карточки дня: экран один, входов в него два.
+                onReviewProposal: function () {
+                  const TKs2 = (HEYS.TrainingKernel && HEYS.TrainingKernel.strength) || null;
+                  if (!TKs2 || !Parts.openProposalReview) return;
+                  Parts.openProposalReview({
+                    training: trainingForBuilder,
+                    onAccept: function () {
+                      patchTraining(ti, function (t0) {
+                        const r = TKs2.acceptPlanProposal(t0, Date.now());
+                        return r.ok ? r.training : t0;
+                      });
+                    },
+                    onDecline: function () {
+                      patchTraining(ti, function (t0) {
+                        const r = TKs2.declinePlanProposal(t0, Date.now());
+                        return r.ok ? r.training : t0;
+                      });
+                    }
+                  });
+                },
                 // История упражнения живёт здесь: сканы по дням делает
                 // heys_day_trainings_v1.js, у конструктора своего доступа к
                 // хранилищу дней нет и быть не должно.
@@ -3451,7 +3486,15 @@
             const pendingProposal = TKs && TKs.pendingPlanProposal
               ? TKs.pendingPlanProposal(rawT)
               : null;
-            if (pendingProposal && Parts.ProposalCard) {
+            // Карточкой предложение перехватывает день только пока клиент к
+            // тренировке не приступал (экран 14a, «ты его ещё не начинал»).
+            // Начатую тренировку подменять нельзя: тогда правка запирает вход
+            // в конструктор, а человек не может продолжить, не ответив на неё.
+            // Ему она приходит полоской внутри конструктора (экран 14b).
+            const proposalBlocksDay = pendingProposal
+              && !(Array.isArray(wlLive && wlLive.exercises) ? wlLive.exercises : [])
+                .some(function (ex) { return TKs && TKs.hasDoneApproach(ex); });
+            if (proposalBlocksDay && Parts.ProposalCard) {
               const trainingWithProposal = { workoutLog: wlLive, plan: rawT.plan, planSnapshot: rawT.planSnapshot };
               const acceptProposal = function () {
                 patchTraining(ti, function (t0) {

@@ -62,7 +62,7 @@
 
   function BuilderScreen(props) {
     const { training, dateKey, onPatch, onPatchNote, profile, historyFor, historyDetailFor,
-      lastSessionFor, onRepeatLast, syncStatusFor, onClose } = props;
+      lastSessionFor, onRepeatLast, syncStatusFor, onReviewProposal, onFinishProposal, onClose } = props;
     const SK = kernel();
     const [openIdx, setOpenIdx] = React.useState(0);
     const [view, setView] = React.useState('list');
@@ -294,6 +294,10 @@
           // Заметка — часть журнала тренировки, а не состояние экрана: без
           // записи она исчезала бы вместе с закрытием слоя.
           if (typeof onPatchNote === 'function') onPatchNote(note);
+          // Неотвеченная правка гаснет сама и завершение не держит: иначе
+          // человек с гантелей в руке обязан разобрать чужое предложение,
+          // чтобы просто закончить тренировку (экран 14d).
+          if (typeof onFinishProposal === 'function') onFinishProposal();
           onClose();
         }
       });
@@ -445,6 +449,15 @@
         agg && agg.unmeasuredExercises > 0 && h('span', { className: 'sb-stat' },
           agg.unmeasuredExercises + ' без тоннажа')
       ),
+      // Правка куратора, пришедшая посреди тренировки (экран 14b): полоска, а
+      // не модалка — человек стоит с гантелей в руке, и перекрывать ему экран
+      // чужой правкой нельзя. Ответить можно и позже: завершение она не держит.
+      Parts.ProposalStrip && h(Parts.ProposalStrip, {
+        training: training,
+        onReview: function () {
+          if (typeof onReviewProposal === 'function') onReviewProposal();
+        }
+      }),
       h('div', { className: 'sb-list' },
         rendered.length ? rendered : h('div', { className: 'sb-empty' }, 'Упражнений пока нет')
       ),
@@ -551,6 +564,8 @@
         lastSessionFor: state.lastSessionFor,
         onRepeatLast: state.onRepeatLast,
         syncStatusFor: state.syncStatusFor,
+        onReviewProposal: state.onReviewProposal,
+        onFinishProposal: state.onFinishProposal,
         onPatch: function (nextExercises) {
           if (typeof state.onPatch === 'function') state.onPatch(nextExercises);
         },
