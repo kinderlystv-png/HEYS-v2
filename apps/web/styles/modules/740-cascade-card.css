@@ -1389,10 +1389,6 @@
   margin-top: 4px;
 }
 
-.heys-score-zonebar__legend-max {
-  margin-left: auto;
-}
-
 /* Карточка каскада в Инсайтах — точка дня, без месячной кривой */
 .heys-score-insights-card {
   background: var(--card-bg, #fff);
