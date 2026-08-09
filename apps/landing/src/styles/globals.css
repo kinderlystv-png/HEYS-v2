@@ -346,3 +346,32 @@ body {
 .comparison-row-hover:hover {
   background-color: rgba(59, 130, 246, 0.03);
 }
+
+/* FAQ версии D: карточка темы и знак раскрытия.
+   Обычным CSS, а не утилитами: базовое и активное состояние стоят рядом и не
+   зависят от того, в каком порядке сборщик разложит утилиты. Требование
+   хэндофа — держать `border` и `box-shadow` карточки именно здесь: из
+   inline-стиля состояние `:has(details[open])` не перебило бы их по
+   специфичности, и подсветка молча не сработала бы. */
+.faq-group {
+  border: 1px solid rgba(16, 24, 38, 0.09);
+  box-shadow: 0 1px 2px rgba(16, 24, 38, 0.04);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+/* Подсветка показывает, где что-то раскрыто, а не «текущий выбор»: вопросы
+   независимы, поэтому подсвеченных карточек может быть несколько. */
+.faq-group:has(details[open]) {
+  border-color: rgba(16, 24, 38, 0.2);
+  box-shadow: 0 2px 10px rgba(16, 24, 38, 0.06);
+}
+
+.faq-plus {
+  transition: transform 0.18s ease;
+}
+
+details[open] .faq-plus {
+  transform: rotate(45deg);
+}
