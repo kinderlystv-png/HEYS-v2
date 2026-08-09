@@ -893,7 +893,7 @@
       // === 5. Caloric Debt Bonus — 10% веса ===
       // Если сегодня большой недобор — риск срыва вечером/ночью
       const todayKcal = calculateDayKcal(today, pIndex);
-      const optimum = HEYS.Day?.calculateOptimum?.(profile) || 2000;
+      const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile)?.kcal || 2000; // HEYS.Day.calculateOptimum не существует — норма молча падала в 2000
       const kcalPct = todayKcal / optimum;
 
       const debtRisk = kcalPct < 0.5 && hour >= 16 ? 60 : kcalPct < 0.7 && hour >= 18 ? 40 : 0;
@@ -974,7 +974,7 @@
 
       // 2. Текущий калораж (энергия из еды)
       const todayKcal = calculateDayKcal(today, pIndex);
-      const optimum = HEYS.Day?.calculateOptimum?.(profile) || 2000;
+      const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile)?.kcal || 2000; // HEYS.Day.calculateOptimum не существует — норма молча падала в 2000
       const kcalPct = todayKcal / optimum;
       const kcalMod = kcalPct >= 0.8 ? 1.1 : kcalPct >= 0.5 ? 1.0 : kcalPct >= 0.3 ? 0.9 : 0.75;
       modifiers.push({ name: 'Еда', value: kcalMod, desc: `${Math.round(kcalPct * 100)}% нормы` });
@@ -1493,7 +1493,7 @@
       }
 
       // === 3. Metabolic Strain (калорийный стресс) — 15% ===
-      const optimum = HEYS.Day?.calculateOptimum?.(profile) || 2000;
+      const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile)?.kcal || 2000; // HEYS.Day.calculateOptimum не существует — норма молча падала в 2000
       const kcalValues = days.map(d => calculateDayKcal(d, pIndex)).filter(k => k > 0);
       if (kcalValues.length >= 3) {
         const kcalDeviations = kcalValues.map(k => Math.abs(k - optimum) / optimum);
