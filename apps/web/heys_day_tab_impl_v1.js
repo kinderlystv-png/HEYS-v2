@@ -547,7 +547,9 @@
         const [monthlyReportsMode, setMonthlyReportsMode] = useState('weeks');
 
         const ensureReportsModules = useCallback(() => {
-            const loader = window.__loadPostboot3Ui;
+            // Глобал живёт в HEYS, а не на window напрямую
+            // (heys_postboot3_facade_v1.js: HEYS.__loadPostboot3Ui).
+            const loader = window.HEYS?.__loadPostboot3Ui;
             if (typeof loader !== 'function') return;
             try {
                 const result = loader();

@@ -1,120 +1,195 @@
-// heys_exercise_catalog_v1.js — каталог упражнений для конструктора силовой + подсказки и частота (LS)
+// heys_exercise_catalog_v1.js — справочник упражнений конструктора силовой:
+// названия, группы мышц, единица измерения, коэффициент своего веса + подсказки
+// и частота (LS).
+//
+// Шаг 1 протокола STRENGTH_BUILDER_REDESIGN_PROTOCOL_2026-08-09.md: от единицы
+// измерения зависит и тоннаж, и вид карточки подхода, поэтому справочник —
+// фундамент всей остальной арифметики.
+//
+// ВАЖНО про историю: справочник даёт ДЕФОЛТЫ на момент добавления упражнения в
+// тренировку. Единица и коэффициент копируются в само упражнение журнала
+// (снимок), и дальше тоннаж считается по снимку. Иначе правка коэффициента в
+// справочнике задним числом переписала бы уже посчитанные тренировки — это
+// изменение истории, прямо запрещённое протоколом (раздел про связки), и ядро
+// тоннажа начало бы зависеть от клиентского каталога.
 ; (function (global) {
   'use strict';
 
   const HEYS = global.HEYS = global.HEYS || {};
   const LS_KEY = 'heys_exercise_name_usage_v1';
   const LS_FAV = 'heys_exercise_favorites_v1';
+  // Свои упражнения клиента — client-scoped и уезжают в облако (в отличие от
+  // частоты и избранного выше: те живут на устройстве и общие для сессии).
+  const LS_META = 'heys_exercise_meta_v1';
 
-  /** Порядок = популярность по умолчанию (rank 1 — самое частое в каталоге). */
-  const RAW_NAMES = [
-    'Жим штанги лёжа',
-    'Приседания со штангой',
-    'Становая тяга',
-    'Подтягивания',
-    'Отжимания на брусьях',
-    'Жим гантелей лёжа',
-    'Армейский жим стоя',
-    'Тяга штанги в наклоне',
-    'Разведения гантелей лёжа',
-    'Подъём штанги на бицепс',
-    'Французский жим',
-    'Гиперэкстензия',
-    'Планка',
-    'Скручивания на пресс',
-    'Выпады с гантелями',
-    'Жим ногами',
-    'Сведение ног в тренажёре',
-    'Разгибания ног в тренажёре',
-    'Сгибания ног лёжа',
-    'Икры стоя',
-    'Икры сидя',
-    'Тяга верхнего блока',
-    'Тяга нижнего блока',
-    'Тяга гантели в наклоне',
-    'Тяга Т-грифа',
-    'Шраги со штангой',
-    'Шраги с гантелями',
-    'Жим Смита лёжа',
-    'Жим Смита сидя',
-    'Жим гантелей сидя',
-    'Жим Arnold',
-    'Махи гантелями в стороны',
-    'Разведения в кроссовере',
-    'Баттерфляй',
-    'Отжимания на брусьях с весом',
-    'Отжимания от пола',
-    'Отжимания узким хватом',
-    'Бурпи',
-    'Прыжки на скакалке',
-    'Бег на дорожке',
-    'Велотренажёр',
-    'Гребля',
-    'Скакалка',
-    'Приседания с гантелями',
-    'Гоблет-присед',
-    'Приседания фронтальные',
-    'Выпады в Смите',
-    'Болгарские выпады',
-    'Ступни на платформу',
-    'Зашагивания на скамью',
-    'Мостик ягодичный',
-    'Ягодичный мост со штангой',
-    'Обратная гиперэкстензия',
-    'Подъёмы на носки в тренажёре',
-    'Подъём на пресс для икр',
-    'Румынская тяга',
-    'Тяга сумо',
-    'Тяга Trap bar',
-    'Пуловер с гантелью',
-    'Пуловер в кроссовере',
-    'Разводка на заднюю дельту',
-    'Тяга к подбородку',
-    'Face pull',
-    'Жим вверх в тренажёте Смита',
-    'Отведение руки в кроссовере',
-    'Концентрированный подъём на бицепс',
-    'Молотки',
-    'Разгибания рук на трицепс с канатом',
-    'Разгибания руки из-за головы',
-    'Пресс на наклонной скамье',
-    'Подъёмы ног в висе',
-    'Велосипед',
-    'Русский скручивание',
-    'Дровосек',
-    'Скручивания на ролике',
-    'Боковая планка',
-    'Супермен',
-    'Попеременный подъём гантелей лёжа',
-    'Жим узким хватом лёжа',
-    'Жим обратным хватом лёжа',
-    'Отжимания с колен',
-    'Австралийские подтягивания',
-    'Подтягивания обратным хватом',
-    'Подтягивания широким хватом',
-    'Гравитрон',
-    'Подтягивания с весом',
-    'Шраги в Смите',
-    'Upright row',
-    'Скамья Скотта',
-    'Попеременные сгибания на бицепс',
-    'Обратные отжимания от скамьи',
-    'Плиометрические отжимания',
-    'Приседания с паузой',
-    'Коробчатый присед',
-    'Сведение рук в тренажёте',
-    'Разведение в наклоне',
-    'Тяга к поясу в тренажёте',
-    'Жим одной рукой гантелью',
-    'Тяга одной рукой в наклоне',
-    'Скручивания на фитболе'
+  /**
+   * Фиксированный список групп мышц. Свои названия не заводятся: иначе фильтр
+   * каталога и объём по группам рассыпаются (решение владельца 2026-08-09).
+   * «Всё тело» здесь нет намеренно — это не группа, а следствие множественного
+   * выбора: комплексное движение помечается несколькими группами.
+   */
+  const MUSCLE_GROUPS = [
+    { id: 'chest', label: 'Грудь' },
+    { id: 'back', label: 'Спина' },
+    { id: 'lower_back', label: 'Поясница' },
+    { id: 'traps', label: 'Трапеции' },
+    { id: 'shoulders', label: 'Плечи' },
+    { id: 'biceps', label: 'Бицепс' },
+    { id: 'triceps', label: 'Трицепс' },
+    { id: 'forearms', label: 'Предплечья' },
+    { id: 'abs', label: 'Пресс' },
+    { id: 'quads', label: 'Квадрицепс' },
+    { id: 'hamstrings', label: 'Бицепс бедра' },
+    { id: 'glutes', label: 'Ягодицы' },
+    { id: 'adductors', label: 'Приводящие' },
+    { id: 'calves', label: 'Икры' }
   ];
 
-  const exerciseCatalog = RAW_NAMES.map(function (name, i) {
+  /**
+   * Единица измерения — первое обязательное поле упражнения.
+   * volume говорит, во что копится объём: 'tonnage' — килограммы, 'seconds' —
+   * секунды под нагрузкой, 'meters' — дистанция. Перемножать килограммы на
+   * метры физически бессмысленно, поэтому три величины не смешиваются в одно
+   * число; вес при этом записывается всегда — человеку нужен прогресс, даже
+   * если тоннажа нет.
+   */
+  const EXERCISE_UNITS = [
+    { id: 'weight_reps', label: 'Вес × повторы', volume: 'tonnage', needsBodyweight: false },
+    { id: 'bodyweight', label: 'Свой вес', volume: 'tonnage', needsBodyweight: true },
+    { id: 'time', label: 'Время', volume: 'seconds', needsBodyweight: false },
+    { id: 'distance', label: 'Расстояние', volume: 'meters', needsBodyweight: false }
+  ];
+
+  /**
+   * Доля синергистов в объёме по группам: основная группа получает полный вес
+   * упражнения, дополнительные — эту долю. Стандартная практика учёта
+   * синергистов; параметр справочника, а не константа в потребителях
+   * (протокол, раздел «Группы мышц»). Кто им управляет из UI — не решено.
+   */
+  const SYNERGIST_SHARE = 0.5;
+
+  /**
+   * Каталог: имя, основная группа, дополнительные, единица, коэффициент своего
+   * веса. Порядок = популярность по умолчанию (rank 1 — самое частое).
+   *
+   * Коэффициент — физический факт про движение, а не настройка. Где он
+   * неизвестен, стоит null: дефолт не выдумываем, такое упражнение считается
+   * «без тоннажа» и попадает в итогах в строку «не посчитали». Опорные
+   * значения из макета: подтягивания 1,00, брусья 0,95, отжимания 0,64,
+   * приседания без веса 0,55, обратные отжимания 0,40.
+   */
+  const CATALOG_ROWS = [
+    ['Жим штанги лёжа', 'chest', ['triceps', 'shoulders'], 'weight_reps', null],
+    ['Приседания со штангой', 'quads', ['glutes', 'hamstrings', 'lower_back'], 'weight_reps', null],
+    ['Становая тяга', 'back', ['glutes', 'hamstrings', 'lower_back', 'traps'], 'weight_reps', null],
+    ['Подтягивания', 'back', ['biceps', 'forearms'], 'bodyweight', 1.0],
+    ['Отжимания на брусьях', 'chest', ['triceps', 'shoulders'], 'bodyweight', 0.95],
+    ['Жим гантелей лёжа', 'chest', ['triceps', 'shoulders'], 'weight_reps', null],
+    ['Армейский жим стоя', 'shoulders', ['triceps'], 'weight_reps', null],
+    ['Тяга штанги в наклоне', 'back', ['biceps', 'lower_back'], 'weight_reps', null],
+    ['Разведения гантелей лёжа', 'chest', ['shoulders'], 'weight_reps', null],
+    ['Подъём штанги на бицепс', 'biceps', ['forearms'], 'weight_reps', null],
+    ['Французский жим', 'triceps', [], 'weight_reps', null],
+    ['Гиперэкстензия', 'lower_back', ['glutes', 'hamstrings'], 'bodyweight', null],
+    ['Планка', 'abs', ['lower_back'], 'time', null],
+    ['Скручивания на пресс', 'abs', [], 'bodyweight', null],
+    ['Выпады с гантелями', 'quads', ['glutes', 'hamstrings'], 'weight_reps', null],
+    ['Жим ногами', 'quads', ['glutes', 'hamstrings'], 'weight_reps', null],
+    ['Сведение ног в тренажёре', 'adductors', [], 'weight_reps', null],
+    ['Разгибания ног в тренажёре', 'quads', [], 'weight_reps', null],
+    ['Сгибания ног лёжа', 'hamstrings', [], 'weight_reps', null],
+    ['Икры стоя', 'calves', [], 'weight_reps', null],
+    ['Икры сидя', 'calves', [], 'weight_reps', null],
+    ['Тяга верхнего блока', 'back', ['biceps', 'forearms'], 'weight_reps', null],
+    ['Тяга нижнего блока', 'back', ['biceps'], 'weight_reps', null],
+    ['Тяга гантели в наклоне', 'back', ['biceps'], 'weight_reps', null],
+    ['Тяга Т-грифа', 'back', ['biceps', 'traps'], 'weight_reps', null],
+    ['Шраги со штангой', 'traps', ['forearms'], 'weight_reps', null],
+    ['Шраги с гантелями', 'traps', ['forearms'], 'weight_reps', null],
+    ['Жим Смита лёжа', 'chest', ['triceps', 'shoulders'], 'weight_reps', null],
+    ['Жим Смита сидя', 'shoulders', ['triceps'], 'weight_reps', null],
+    ['Жим гантелей сидя', 'shoulders', ['triceps'], 'weight_reps', null],
+    ['Жим Arnold', 'shoulders', ['triceps'], 'weight_reps', null],
+    ['Махи гантелями в стороны', 'shoulders', [], 'weight_reps', null],
+    ['Разведения в кроссовере', 'chest', ['shoulders'], 'weight_reps', null],
+    ['Баттерфляй', 'chest', ['shoulders'], 'weight_reps', null],
+    ['Отжимания на брусьях с весом', 'chest', ['triceps', 'shoulders'], 'bodyweight', 0.95],
+    ['Отжимания от пола', 'chest', ['triceps', 'shoulders'], 'bodyweight', 0.64],
+    ['Отжимания узким хватом', 'triceps', ['chest', 'shoulders'], 'bodyweight', 0.64],
+    ['Бурпи', 'quads', ['chest', 'shoulders', 'abs'], 'bodyweight', null],
+    ['Прыжки на скакалке', 'calves', ['quads'], 'time', null],
+    ['Бег на дорожке', 'quads', ['calves', 'hamstrings'], 'time', null],
+    ['Велотренажёр', 'quads', ['calves'], 'time', null],
+    ['Гребля', 'back', ['quads', 'biceps'], 'time', null],
+    ['Скакалка', 'calves', ['quads'], 'time', null],
+    ['Приседания с гантелями', 'quads', ['glutes'], 'weight_reps', null],
+    ['Гоблет-присед', 'quads', ['glutes', 'abs'], 'weight_reps', null],
+    ['Приседания фронтальные', 'quads', ['glutes', 'abs'], 'weight_reps', null],
+    ['Выпады в Смите', 'quads', ['glutes'], 'weight_reps', null],
+    ['Болгарские выпады', 'quads', ['glutes', 'hamstrings'], 'weight_reps', null],
+    ['Ступни на платформу', 'quads', ['glutes'], 'weight_reps', null],
+    ['Зашагивания на скамью', 'quads', ['glutes'], 'weight_reps', null],
+    ['Мостик ягодичный', 'glutes', ['hamstrings'], 'bodyweight', null],
+    ['Ягодичный мост со штангой', 'glutes', ['hamstrings'], 'weight_reps', null],
+    ['Обратная гиперэкстензия', 'glutes', ['lower_back', 'hamstrings'], 'bodyweight', null],
+    ['Подъёмы на носки в тренажёре', 'calves', [], 'weight_reps', null],
+    ['Подъём на пресс для икр', 'calves', [], 'weight_reps', null],
+    ['Румынская тяга', 'hamstrings', ['glutes', 'lower_back', 'back'], 'weight_reps', null],
+    ['Тяга сумо', 'quads', ['glutes', 'back', 'traps'], 'weight_reps', null],
+    ['Тяга Trap bar', 'quads', ['glutes', 'back', 'traps'], 'weight_reps', null],
+    ['Пуловер с гантелью', 'back', ['chest', 'triceps'], 'weight_reps', null],
+    ['Пуловер в кроссовере', 'back', ['chest', 'triceps'], 'weight_reps', null],
+    ['Разводка на заднюю дельту', 'shoulders', ['back'], 'weight_reps', null],
+    ['Тяга к подбородку', 'shoulders', ['traps', 'biceps'], 'weight_reps', null],
+    ['Face pull', 'shoulders', ['back', 'traps'], 'weight_reps', null],
+    ['Жим вверх в тренажёте Смита', 'shoulders', ['triceps'], 'weight_reps', null],
+    ['Отведение руки в кроссовере', 'shoulders', [], 'weight_reps', null],
+    ['Концентрированный подъём на бицепс', 'biceps', [], 'weight_reps', null],
+    ['Молотки', 'biceps', ['forearms'], 'weight_reps', null],
+    ['Разгибания рук на трицепс с канатом', 'triceps', [], 'weight_reps', null],
+    ['Разгибания руки из-за головы', 'triceps', [], 'weight_reps', null],
+    ['Пресс на наклонной скамье', 'abs', [], 'bodyweight', null],
+    ['Подъёмы ног в висе', 'abs', ['forearms'], 'bodyweight', null],
+    ['Велосипед', 'abs', [], 'bodyweight', null],
+    ['Русский скручивание', 'abs', [], 'bodyweight', null],
+    ['Дровосек', 'abs', ['shoulders', 'back'], 'weight_reps', null],
+    ['Скручивания на ролике', 'abs', ['shoulders'], 'bodyweight', null],
+    ['Боковая планка', 'abs', [], 'time', null],
+    ['Супермен', 'lower_back', ['glutes'], 'bodyweight', null],
+    ['Попеременный подъём гантелей лёжа', 'chest', ['triceps', 'shoulders'], 'weight_reps', null],
+    ['Жим узким хватом лёжа', 'triceps', ['chest', 'shoulders'], 'weight_reps', null],
+    ['Жим обратным хватом лёжа', 'chest', ['triceps'], 'weight_reps', null],
+    ['Отжимания с колен', 'chest', ['triceps', 'shoulders'], 'bodyweight', 0.49],
+    ['Австралийские подтягивания', 'back', ['biceps'], 'bodyweight', null],
+    ['Подтягивания обратным хватом', 'back', ['biceps'], 'bodyweight', 1.0],
+    ['Подтягивания широким хватом', 'back', ['biceps'], 'bodyweight', 1.0],
+    ['Гравитрон', 'back', ['biceps'], 'bodyweight', null],
+    ['Подтягивания с весом', 'back', ['biceps', 'forearms'], 'bodyweight', 1.0],
+    ['Шраги в Смите', 'traps', ['forearms'], 'weight_reps', null],
+    ['Upright row', 'shoulders', ['traps', 'biceps'], 'weight_reps', null],
+    ['Скамья Скотта', 'biceps', ['forearms'], 'weight_reps', null],
+    ['Попеременные сгибания на бицепс', 'biceps', ['forearms'], 'weight_reps', null],
+    ['Обратные отжимания от скамьи', 'triceps', ['chest', 'shoulders'], 'bodyweight', 0.4],
+    ['Плиометрические отжимания', 'chest', ['triceps', 'shoulders'], 'bodyweight', 0.64],
+    ['Приседания с паузой', 'quads', ['glutes', 'hamstrings'], 'weight_reps', null],
+    ['Коробчатый присед', 'quads', ['glutes'], 'weight_reps', null],
+    ['Сведение рук в тренажёте', 'chest', ['shoulders'], 'weight_reps', null],
+    ['Разведение в наклоне', 'shoulders', ['back'], 'weight_reps', null],
+    ['Тяга к поясу в тренажёте', 'back', ['biceps'], 'weight_reps', null],
+    ['Жим одной рукой гантелью', 'shoulders', ['triceps'], 'weight_reps', null],
+    ['Тяга одной рукой в наклоне', 'back', ['biceps'], 'weight_reps', null],
+    ['Скручивания на фитболе', 'abs', [], 'bodyweight', null]
+  ];
+
+  const exerciseCatalog = CATALOG_ROWS.map(function (row, i) {
     return {
       id: 'excat_' + (i + 1),
-      name: name,
-      rank: i + 1
+      name: row[0],
+      rank: i + 1,
+      primaryGroup: row[1],
+      secondaryGroups: row[2].slice(),
+      unit: row[3],
+      bodyweightFactor: row[4]
     };
   });
 
@@ -399,7 +474,241 @@
     });
   }
 
+  // ——— Справочник: группы, единица, коэффициент своего веса ———
+
+  const GROUP_IDS = MUSCLE_GROUPS.map(function (g) { return g.id; });
+  const UNIT_IDS = EXERCISE_UNITS.map(function (u) { return u.id; });
+
+  function unitById(id) {
+    for (let i = 0; i < EXERCISE_UNITS.length; i++) {
+      if (EXERCISE_UNITS[i].id === id) return EXERCISE_UNITS[i];
+    }
+    return null;
+  }
+
+  function groupLabel(id) {
+    for (let i = 0; i < MUSCLE_GROUPS.length; i++) {
+      if (MUSCLE_GROUPS[i].id === id) return MUSCLE_GROUPS[i].label;
+    }
+    return '';
+  }
+
+  /** Свои упражнения клиента: client-scoped через utils, чтобы уехать в облако. */
+  function readCustomMeta() {
+    try {
+      const u = HEYS.utils;
+      if (u && typeof u.lsGet === 'function') {
+        const o = u.lsGet(LS_META, null);
+        return o && typeof o === 'object' ? o : {};
+      }
+      const raw = global.localStorage && global.localStorage.getItem(LS_META);
+      if (!raw) return {};
+      const o = JSON.parse(raw);
+      return o && typeof o === 'object' ? o : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function writeCustomMeta(obj) {
+    try {
+      const u = HEYS.utils;
+      if (u && typeof u.lsSet === 'function') {
+        u.lsSet(LS_META, obj);
+        return;
+      }
+      if (global.localStorage) global.localStorage.setItem(LS_META, JSON.stringify(obj));
+    } catch (e) { /* quota */ }
+  }
+
+  function normalizeMeta(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const primary = String(raw.primaryGroup || '').trim();
+    const secondaryIn = Array.isArray(raw.secondaryGroups) ? raw.secondaryGroups : [];
+    const seen = {};
+    const secondary = [];
+    secondaryIn.forEach(function (g) {
+      const id = String(g || '').trim();
+      if (!id || id === primary || seen[id]) return;
+      seen[id] = true;
+      secondary.push(id);
+    });
+    const unit = String(raw.unit || '').trim();
+    let factor = raw.bodyweightFactor;
+    if (factor === '' || factor === undefined) factor = null;
+    if (factor !== null) {
+      factor = parseFloat(String(factor).replace(',', '.'));
+      if (!isFinite(factor)) factor = null;
+    }
+    return {
+      primaryGroup: primary,
+      secondaryGroups: secondary,
+      unit: unit,
+      // Коэффициент имеет смысл только у своего веса: у штанги он молча
+      // удвоил бы тоннаж, а у времени и метров тоннажа нет вовсе.
+      bodyweightFactor: unit === 'bodyweight' ? factor : null
+    };
+  }
+
+  /**
+   * @returns {{ ok: boolean, errors: string[], meta: object|null }}
+   * У новых упражнений поля обязательны — отсюда fail-closed: неполная запись
+   * не сохраняется, вместо неё человек выбирает «Создать · без тоннажа».
+   */
+  function validateExerciseMeta(raw) {
+    const meta = normalizeMeta(raw);
+    const errors = [];
+    if (!meta) return { ok: false, errors: ['Запись пустая'], meta: null };
+    if (!meta.primaryGroup) errors.push('Не выбрана основная группа мышц');
+    else if (GROUP_IDS.indexOf(meta.primaryGroup) < 0) errors.push('Неизвестная основная группа: ' + meta.primaryGroup);
+    meta.secondaryGroups.forEach(function (g) {
+      if (GROUP_IDS.indexOf(g) < 0) errors.push('Неизвестная дополнительная группа: ' + g);
+    });
+    if (!meta.unit) errors.push('Не выбрана единица измерения');
+    else if (UNIT_IDS.indexOf(meta.unit) < 0) errors.push('Неизвестная единица измерения: ' + meta.unit);
+    if (meta.bodyweightFactor !== null && !(meta.bodyweightFactor > 0 && meta.bodyweightFactor <= 2)) {
+      errors.push('Коэффициент своего веса вне диапазона 0…2');
+    }
+    return { ok: errors.length === 0, errors: errors, meta: errors.length === 0 ? meta : null };
+  }
+
+  function catalogMetaByNorm(norm) {
+    for (let i = 0; i < exerciseCatalog.length; i++) {
+      const c = exerciseCatalog[i];
+      if (normalizeText(c.name) === norm) {
+        return {
+          primaryGroup: c.primaryGroup,
+          secondaryGroups: c.secondaryGroups.slice(),
+          unit: c.unit,
+          bodyweightFactor: c.bodyweightFactor,
+          source: 'catalog'
+        };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Справочные данные упражнения по названию: сначала своя запись клиента (она
+   * может переопределить каталожную), затем каталог. null — упражнения нет ни
+   * там, ни там: заполнить поля должен человек.
+   */
+  function getExerciseMeta(displayName) {
+    const norm = normalizeText(displayName || '');
+    if (!norm) return null;
+    const custom = readCustomMeta()[norm];
+    if (custom) {
+      const v = validateExerciseMeta(custom);
+      if (v.ok) {
+        v.meta.source = 'custom';
+        return v.meta;
+      }
+    }
+    return catalogMetaByNorm(norm);
+  }
+
+  /** @returns {{ ok: boolean, errors: string[] }} */
+  function saveExerciseMeta(displayName, raw) {
+    const label = String(displayName || '').trim();
+    const norm = normalizeText(label);
+    if (!norm) return { ok: false, errors: ['Пустое название упражнения'] };
+    const v = validateExerciseMeta(raw);
+    if (!v.ok) return { ok: false, errors: v.errors };
+    const all = readCustomMeta();
+    all[norm] = {
+      label: label,
+      primaryGroup: v.meta.primaryGroup,
+      secondaryGroups: v.meta.secondaryGroups,
+      unit: v.meta.unit,
+      bodyweightFactor: v.meta.bodyweightFactor
+    };
+    writeCustomMeta(all);
+    return { ok: true, errors: [] };
+  }
+
+  function removeExerciseMeta(displayName) {
+    const norm = normalizeText(displayName || '');
+    if (!norm) return false;
+    const all = readCustomMeta();
+    if (!all[norm]) return false;
+    delete all[norm];
+    writeCustomMeta(all);
+    return true;
+  }
+
+  /**
+   * Снимок справочных полей для упражнения журнала. Тоннаж считается по нему, а
+   * не по справочнику: правка коэффициента задним числом не должна переписывать
+   * уже проведённые тренировки.
+   */
+  function exerciseMetaSnapshot(displayName) {
+    const meta = getExerciseMeta(displayName);
+    if (!meta) return null;
+    return {
+      primaryGroup: meta.primaryGroup,
+      secondaryGroups: meta.secondaryGroups.slice(),
+      unit: meta.unit,
+      bodyweightFactor: meta.bodyweightFactor
+    };
+  }
+
+  /** Идёт ли объём упражнения в тоннаж: у времени и метров — нет. */
+  function unitCountsAsTonnage(unitId) {
+    const u = unitById(unitId);
+    return !!u && u.volume === 'tonnage';
+  }
+
+  /**
+   * Веса групп для объёма по группам: основная получает 1, дополнительные —
+   * synergistShare. Доля берётся из справочника параметром, а не зашивается у
+   * потребителя.
+   */
+  function groupWeights(meta, share) {
+    const out = {};
+    if (!meta || !meta.primaryGroup) return out;
+    const s = typeof share === 'number' && isFinite(share) ? share : SYNERGIST_SHARE;
+    out[meta.primaryGroup] = 1;
+    (meta.secondaryGroups || []).forEach(function (g) {
+      if (!g || g === meta.primaryGroup) return;
+      out[g] = s;
+    });
+    return out;
+  }
+
+  /**
+   * Опоры для вопроса «на что похоже движение»: упражнения с известным
+   * коэффициентом. Человек не может ответить, какая доля массы тела приходится
+   * на движение, а неверный ответ молча испортит тоннаж навсегда — поэтому
+   * коэффициент выбирается по аналогии, а не вводится числом.
+   */
+  function bodyweightReferences() {
+    return exerciseCatalog
+      .filter(function (c) { return c.unit === 'bodyweight' && c.bodyweightFactor !== null; })
+      .map(function (c) {
+        return { name: c.name, norm: normalizeText(c.name), bodyweightFactor: c.bodyweightFactor };
+      })
+      .sort(function (a, b) {
+        if (b.bodyweightFactor !== a.bodyweightFactor) return b.bodyweightFactor - a.bodyweightFactor;
+        return a.name.localeCompare(b.name, 'ru');
+      });
+  }
+
   HEYS.exerciseCatalog = exerciseCatalog;
+  HEYS.exerciseMeta = {
+    bodyweightReferences: bodyweightReferences,
+    groups: MUSCLE_GROUPS,
+    units: EXERCISE_UNITS,
+    synergistShare: SYNERGIST_SHARE,
+    groupLabel: groupLabel,
+    unitById: unitById,
+    get: getExerciseMeta,
+    save: saveExerciseMeta,
+    remove: removeExerciseMeta,
+    validate: validateExerciseMeta,
+    snapshot: exerciseMetaSnapshot,
+    countsAsTonnage: unitCountsAsTonnage,
+    groupWeights: groupWeights
+  };
   HEYS.getExerciseSuggestions = getExerciseSuggestions;
   HEYS.bumpExerciseUsage = bumpExerciseUsage;
   HEYS.getExerciseUsageMap = getExerciseUsageMap;

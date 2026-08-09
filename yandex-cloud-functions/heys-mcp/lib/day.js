@@ -847,6 +847,9 @@ function buildWorkoutLog(exercises, { durationMin } = {}) {
     if (rawAps.length > MAX_APPROACHES) {
       return { error: `${where} «${name}»: подходов ${rawAps.length}, максимум ${MAX_APPROACHES}.` };
     }
+    const rawSsGroup = raw.superset_group === undefined || raw.superset_group === null
+      ? 0
+      : strictNum(raw.superset_group);
     const approaches = [];
     for (let k = 0; k < rawAps.length; k += 1) {
       const a = rawAps[k] || {};
@@ -864,19 +867,59 @@ function buildWorkoutLog(exercises, { durationMin } = {}) {
       if (a.done !== undefined && typeof a.done !== 'boolean') {
         return { error: `${where} «${name}», подход ${k + 1}: done — true или false.` };
       }
-      approaches.push({
+      if (a.set_type !== undefined && a.set_type !== null && !['work', 'warmup'].includes(a.set_type)) {
+        return { error: `${where} «${name}», подход ${k + 1}: set_type — work или warmup.` };
+      }
+
+      // Сброс — ступень ВНУТРИ подхода, а не отдельный подход: иначе счётчик
+      // подходов у коннектора и приложения разойдётся на каждом дроп-сете.
+      const rawDrops = a.drops === undefined || a.drops === null ? [] : a.drops;
+      if (!Array.isArray(rawDrops)) {
+        return { error: `${where} «${name}», подход ${k + 1}: drops — список ступеней сброса.` };
+      }
+      const drops = [];
+      for (let d = 0; d < rawDrops.length; d += 1) {
+        const st = rawDrops[d] || {};
+        const dReps = strictNum(st.reps);
+        const dW = strictNum(st.weight_kg);
+        if (dReps === null || dW === null) {
+          return { error: `${where} «${name}», подход ${k + 1}, ступень ${d + 1}: нужны weight_kg и reps.` };
+        }
+        drops.push({
+          weightKg: String(dW),
+          reps: dReps,
+          done: st.done === undefined ? (a.done === undefined ? true : a.done) : st.done,
+        });
+      }
+
+      const extra = a.extra_weight_kg === undefined || a.extra_weight_kg === null || a.extra_weight_kg === ''
+        ? null
+        : strictNum(a.extra_weight_kg);
+
+      const approach = {
         id: makeId('ap_'),
         weightKg: w === null ? '' : String(w),
         reps,
         done: a.done === undefined ? true : a.done,
-      });
+      };
+      if (a.set_type === 'warmup') approach.type = 'warmup';
+      if (extra !== null && extra !== 0) approach.extraWeightKg = extra;
+      if (drops.length) approach.drops = drops;
+
+      // Правила подхода живут в ядре в одном экземпляре — свой набор условий
+      // здесь разошёлся бы с приложением молча.
+      const verdict = webMirror.validateApproach(approach, { inSuperset: rawSsGroup > 0 });
+      if (!verdict.ok) {
+        return { error: `${where} «${name}», подход ${k + 1}: ${verdict.errors.join('; ')}.` };
+      }
+      approaches.push(approach);
     }
 
     const rpe = raw.rpe === undefined || raw.rpe === null ? 0 : strictNum(raw.rpe);
     if (rpe === null || !Number.isInteger(rpe) || rpe < 0 || rpe > 10) {
       return { error: `${where} «${name}»: rpe — целое число от 0 до 10.` };
     }
-    const ssGroup = raw.superset_group === undefined || raw.superset_group === null ? 0 : strictNum(raw.superset_group);
+    const ssGroup = rawSsGroup;
     if (ssGroup === null || !Number.isInteger(ssGroup) || ssGroup < 0) {
       return { error: `${where} «${name}»: superset_group — целое число ≥ 0 (0 = без связки, одинаковый номер = один суперсет).` };
     }
@@ -912,6 +955,14 @@ function buildWorkoutLog(exercises, { durationMin } = {}) {
   for (const ex of out) if (ex.ssGroup > 0) counts[ex.ssGroup] = (counts[ex.ssGroup] || 0) + 1;
   for (const [g, n] of Object.entries(counts)) {
     if (n < 2) return { error: `superset_group ${g} стоит у одного упражнения — в связке нужно минимум два.` };
+  }
+
+  // Смежность участников — инвариант писателя: раунд выводится из позиции, и
+  // разорванная связка молча перестала бы давать раунды. Проверка та же, что у
+  // приложения — из ядра, а не второй набор условий.
+  const layout = webMirror.validateSupersetLayout(out);
+  if (!layout.ok) {
+    return { error: `${layout.errors.join('; ')}. Участники связки идут подряд в списке exercises.` };
   }
 
   // Форма как у приложения (ensureWorkoutLogShape): version + zoneMinutes +

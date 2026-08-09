@@ -38,18 +38,21 @@
         }
 
         card.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+        // Ищем по data-атрибуту, а не по подписи: подписи у кнопок разные
+        // («Добавить 1 продукт», «Добавить несколько продуктов») и локализованы.
+        // Берём одиночное добавление, при его отсутствии — любое.
+        const findAddButton = (root) => root?.querySelector?.('button[data-add-product="single"]')
+            || root?.querySelector?.('button[data-add-product]');
         const openAddProduct = () => {
             const currentCard = document.querySelector(selector);
-            const addButton = currentCard?.querySelector?.('button[aria-label="Добавить продукт"]');
+            const addButton = findAddButton(currentCard);
             if (addButton) {
                 addButton.click();
                 return;
             }
             currentCard?.querySelector?.('.meal-collapsed-plaque')?.click?.();
             window.setTimeout(() => {
-                document.querySelector(selector)
-                    ?.querySelector?.('button[aria-label="Добавить продукт"]')
-                    ?.click?.();
+                findAddButton(document.querySelector(selector))?.click?.();
             }, 180);
         };
         window.setTimeout(openAddProduct, 220);
@@ -232,7 +235,7 @@
         const dayData = options.dayData || {};
         const profile = options.profile || {};
         const pIndex = options.pIndex || profile?.pIndex || 0;
-        const waterGoal = app.utils?.calculateWaterGoal?.(profile?.weight) || 2000;
+        const waterGoal = app.dayWaterState?.computeWaterGoal?.({ day: dayData, profile }) || 2000;
         const dayTot = (options.dayTot && Object.keys(options.dayTot).length)
             ? options.dayTot
             : (app.DayData?.getDayTot?.(dayData)

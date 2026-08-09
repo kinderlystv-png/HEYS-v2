@@ -56,7 +56,10 @@ describe('day diary mobile fast path', () => {
         const scrollIntoView = vi.fn();
         const card = {
             scrollIntoView,
-            querySelector: vi.fn((selector) => selector.includes('aria-label') ? { click: addProductClick } : null)
+            // Мок возвращал кнопку по aria-label «Добавить продукт» — в живом
+            // DOM такой подписи нет ни у одной кнопки, поэтому тест был
+            // зелёным, пока прод молча не работал. Ищем по data-атрибуту.
+            querySelector: vi.fn((selector) => selector.includes('data-add-product') ? { click: addProductClick } : null)
         };
         const document = {
             querySelector: vi.fn(() => card),

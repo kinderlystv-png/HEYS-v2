@@ -3,7 +3,7 @@
 window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 ; (function (global) {
     const HEYS = (global.HEYS = global.HEYS || {});
-    const DAY_STATS_LAZY_VERSION = '2026-06-17-charge-hide-zones-v1';
+    const DAY_STATS_LAZY_VERSION = '2026-08-09-profile-tab-link-v1';
 
     const scripts = [
         'heys_morning_activation_calendar_v1.js',

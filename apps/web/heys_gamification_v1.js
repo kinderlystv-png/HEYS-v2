@@ -2848,14 +2848,18 @@
   // Получить динамическую норму воды из профиля
   function getWaterGoalForDay() {
     try {
-      // Пробуем HEYS.Day.getWaterGoal (если доступен)
-      if (typeof HEYS !== 'undefined' && HEYS.Day?.getWaterGoal) {
-        return HEYS.Day.getWaterGoal();
+      // Единый расчёт нормы — heys_day_water_state.js. Раньше звался
+      // HEYS.Day.getWaterGoal, которого не существует, и геймификация
+      // считала норму как «вес × 30».
+      const profileStr = readStoredValue('heys_profile', null);
+      const prof = profileStr ? JSON.parse(profileStr) : null;
+      if (typeof HEYS !== 'undefined' && HEYS.dayWaterState?.computeWaterGoal) {
+        const day = HEYS.DayData?.getCurrentDay?.() || {};
+        const goal = HEYS.dayWaterState.computeWaterGoal({ day, profile: prof || {} });
+        if (goal) return goal;
       }
       // Fallback: 30мл на кг веса
-      const profileStr = readStoredValue('heys_profile', null);
-      if (profileStr) {
-        const prof = JSON.parse(profileStr);
+      if (prof) {
         return Math.round((prof.weight || 70) * 30);
       }
     } catch (e) { /* ignore */ }

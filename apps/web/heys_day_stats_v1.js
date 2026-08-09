@@ -5,6 +5,16 @@
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
 
+  // Профиль и цели живут во вкладке 'user' (вкладки 'profile' не существует).
+  // Переключатель регистрирует heys_app_tab_state_v1.js; HEYS.openProfileModal
+  // не существует ни в одном модуле, поэтому прежний вызов был мёртвым.
+  function openProfileTab() {
+    const setTab = HEYS.App?.setTab || HEYS.ui?.switchTab;
+    if (typeof setTab !== 'function') return false;
+    setTab('user');
+    return true;
+  }
+
   function resetMorningCheckinDay(day, nowTs = Date.now()) {
     return {
       ...(day || {}),
@@ -134,8 +144,7 @@
       TEF,
       Day,
       showCheckin,
-      App,
-      openProfileModal
+      App
     } = deps;
     const cascadeSlot = slots?.cascade || null;
 
@@ -2914,14 +2923,7 @@
           className: 'weight-goal-hint-link',
           onClick: (e) => {
             e.preventDefault();
-            // Открываем профиль (как ссылка на настройки)
-            if (openProfileModal) {
-              openProfileModal();
-            } else {
-              // Fallback: переключаем на вкладку профиля
-              const profileTab = document.querySelector('[data-tab="profile"]');
-              if (profileTab) profileTab.click();
-            }
+            openProfileTab();
           }
         }, 'целевой вес'),
         ' в профиле — прогноз будет точнее!'

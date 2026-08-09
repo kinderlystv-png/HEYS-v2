@@ -88,8 +88,8 @@ apps/web/heys_core_v12.js:238
 apps/web/heys_core_v12.js:856
 apps/web/heys_core_v12.js:1951
 apps/web/heys_core_v12.js:4385
-apps/web/heys_core_v12.js:5630
-apps/web/heys_core_v12.js:5741
+apps/web/heys_core_v12.js:5644
+apps/web/heys_core_v12.js:5755
 apps/web/heys_cycle_v1.js:44
 apps/web/heys_day_core_bundle_v1.js:2253
 apps/web/heys_day_core_bundle_v1.js:4024
@@ -137,7 +137,7 @@ apps/web/heys_gamification_bar_v1.js:1425
 apps/web/heys_gamification_v1.js:1619
 apps/web/heys_gamification_v1.js:50
 apps/web/heys_gamification_v1.js:52
-apps/web/heys_gamification_v1.js:6094
+apps/web/heys_gamification_v1.js:6098
 apps/web/heys_insulin_wave_v1.js:908
 apps/web/heys_iw_config_loader.js:149
 apps/web/heys_iw_config_loader.js:151

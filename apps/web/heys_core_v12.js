@@ -4681,6 +4681,20 @@
       } catch (_) { /* noop */ }
       return result;
     },
+	    /**
+	     * Индекс продуктов для расчёта приёмов. Метод звали из ~10 мест
+	     * (недельные отчёты, аналитика инсайтов, виджеты), но он никогда не
+	     * существовал: `HEYS.products?.buildIndex?.()` молча давал undefined,
+	     * дальше `getProductFromItem(it, undefined)` возвращал null, и позиции
+	     * без инлайновых kcal100/protein100 считались нулями — отсюда нулевые
+	     * ГИ и вредность в отчётах.
+	     */
+	    buildIndex: () => {
+	      const emptyIndex = { byId: new Map(), byName: new Map(), byFingerprint: new Map() };
+	      const build = HEYS.models?.buildProductIndex || HEYS.dayUtils?.buildProductIndex;
+	      if (typeof build !== 'function') return emptyIndex;
+	      return build(HEYS.products.getAll?.() || []) || emptyIndex;
+	    },
 	    /** Личная база: поиск по id (в т.ч. для dayv2 / orphan — shared id здесь не ищем) */
 	    getById: (id) => {
 	      if (id == null || id === '') return null;

@@ -133,14 +133,41 @@ function computeDailyNorms(optimum, normPerc) {
   return loadHeys().dayCalculations.computeDailyNorms(optimum, normPerc);
 }
 
-/** `HEYS.TrainingKernel.strength.trainingTonnage` из apps/web/_kernel/heys_kernel_strength_v1.js. */
-function trainingTonnage(training) {
-  return loadHeys().TrainingKernel.strength.trainingTonnage(training);
+/**
+ * `HEYS.TrainingKernel.strength.trainingTonnage` из
+ * apps/web/_kernel/heys_kernel_strength_v1.js. `opts.bodyWeightKg` нужен
+ * упражнениям со своим весом: без массы тела они остаются непосчитанными.
+ */
+function trainingTonnage(training, opts) {
+  return loadHeys().TrainingKernel.strength.trainingTonnage(training, opts);
 }
 
 /** `HEYS.TrainingKernel.strength.dayTonnage` из apps/web/_kernel/heys_kernel_strength_v1.js. */
-function dayTonnage(dayBlob) {
-  return loadHeys().TrainingKernel.strength.dayTonnage(dayBlob);
+function dayTonnage(dayBlob, opts) {
+  return loadHeys().TrainingKernel.strength.dayTonnage(dayBlob, opts);
+}
+
+/**
+ * `HEYS.TrainingKernel.strength.validateApproach` — правила подхода (тип,
+ * довес, ступени дроп-сета) живут в ядре в одном экземпляре: второй набор
+ * условий на стороне коннектора разошёлся бы с приложением молча.
+ */
+function validateApproach(approach, ctx) {
+  return loadHeys().TrainingKernel.strength.validateApproach(approach, ctx);
+}
+
+/** `HEYS.TrainingKernel.strength.normalizeApproach` из того же модуля ядра. */
+function normalizeApproach(approach) {
+  return loadHeys().TrainingKernel.strength.normalizeApproach(approach);
+}
+
+/**
+ * `HEYS.TrainingKernel.strength.validateSupersetLayout` — смежность участников
+ * связки и её минимальный размер. Раунд выводится из позиции, поэтому
+ * разорванная связка молча перестаёт давать раунды.
+ */
+function validateSupersetLayout(exercises) {
+  return loadHeys().TrainingKernel.strength.validateSupersetLayout(exercises);
 }
 
 /** `HEYS.TrainingKernel.load.sessionLoad` из apps/web/_kernel/heys_kernel_load_v1.js. */
@@ -188,6 +215,9 @@ module.exports = {
   insulinWaveInternals,
   trainingTonnage,
   dayTonnage,
+  validateApproach,
+  normalizeApproach,
+  validateSupersetLayout,
   sessionLoad,
   isNotPerformedTraining,
   fitnessFatigue,

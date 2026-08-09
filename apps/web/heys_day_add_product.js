@@ -1142,7 +1142,11 @@
         + ((highlightCurrent && isCurrentMeal) ? ' aps-open-btn--current' : '')
         + (buttonClassName ? ` ${buttonClassName}` : ''),
       onClick: handleOpenModal,
-      'aria-label': ariaLabel
+      'aria-label': ariaLabel,
+      // Стабильный якорь для внешних сценариев (кнопка «Заполнить» в баннере
+      // пустых приёмов). Раньше её искали по aria-label «Добавить продукт» —
+      // но все call-site передают свои подписи, и селектор не находил ничего.
+      'data-add-product': autoRepeatCount > 0 ? 'repeat' : (multiProductMode ? 'multi' : 'single')
     },
       React.createElement('span', { className: 'aps-open-icon' }, buttonIcon),
       React.createElement('span', { className: 'aps-open-text' }, buttonText)

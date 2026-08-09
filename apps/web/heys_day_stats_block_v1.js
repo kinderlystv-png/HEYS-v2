@@ -221,8 +221,7 @@
                 TEF: HEYSLocal.TEF,
                 Day: HEYSLocal.Day,
                 showCheckin: HEYSLocal.showCheckin,
-                App: HEYSLocal.App,
-                openProfileModal: HEYSLocal.openProfileModal
+                App: HEYSLocal.App
             }
         };
 

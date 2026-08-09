@@ -158,12 +158,18 @@
         sets: ex.sets,
         reps: ex.reps,
         weightKg: ex.weightKg != null ? String(ex.weightKg) : '',
+        // Тип, довес и ступени сброса едут в снимок вместе с подходом: иначе
+        // «прошлый раз» покажет тоннаж ниже фактического, потеряв сбросы.
         approaches: Array.isArray(ex.approaches) && ex.approaches.length
           ? ex.approaches.map(function (a) {
-            return {
+            const SK = strengthKernel();
+            const base = SK ? SK.normalizeApproach(a) : {
               weightKg: a.weightKg != null ? String(a.weightKg) : '',
-              reps: a.reps != null ? Math.max(1, Math.min(200, parseInt(a.reps, 10) || 1)) : 10
+              reps: +a.reps || 0,
+              done: !!a.done
             };
+            base.reps = a.reps != null ? Math.max(1, Math.min(200, parseInt(a.reps, 10) || 1)) : 10;
+            return base;
           })
           : null,
         rpe: ex.rpe != null ? +ex.rpe : 0,
@@ -392,11 +398,48 @@
     return _historyCache.set(cacheKey, out);
   }
 
+  // Схема подхода (тип, ступени дроп-сета) живёт в ядре в одном экземпляре:
+  // второй набор условий здесь разошёлся бы с ним молча. Фолбэк — на случай
+  // сборки без модуля силовой, там подход читается как обычный рабочий.
+  function strengthKernel() {
+    const TK = HEYS.TrainingKernel;
+    return (TK && TK.strength && TK.strength.approachStages) ? TK.strength : null;
+  }
+
+  function approachStagesOf(a) {
+    const SK = strengthKernel();
+    if (SK) return SK.approachStages(a);
+    return [{
+      weightKg: a && a.weightKg != null ? String(a.weightKg) : '',
+      reps: +(a && a.reps) || 0,
+      done: !!(a && a.done),
+      isDrop: false
+    }];
+  }
+
+  function approachIsWarmup(a) {
+    const SK = strengthKernel();
+    if (SK) return SK.isWarmupApproach(a);
+    return !!(a && a.type === 'warmup');
+  }
+
+  function approachIsDone(a) {
+    const SK = strengthKernel();
+    if (SK) return SK.isApproachDone(a);
+    return !!(a && a.done);
+  }
+
+  /** Объём подхода со всеми ступенями: работа сделана вся. Разминка вне тоннажа. */
   function approachVolumeKg(a) {
-    if (!a) return 0;
-    const w = parseFloat(String(a.weightKg || '').replace(',', '.')) || 0;
-    const r = +a.reps || 0;
-    return w > 0 && r > 0 ? w * r : 0;
+    if (!a || approachIsWarmup(a)) return 0;
+    const stages = approachStagesOf(a);
+    let vol = 0;
+    for (let i = 0; i < stages.length; i++) {
+      const w = parseFloat(String(stages[i].weightKg || '').replace(',', '.')) || 0;
+      const r = +stages[i].reps || 0;
+      if (w > 0 && r > 0) vol += w * r;
+    }
+    return vol;
   }
 
   function exerciseRecordsFromApproaches(approaches) {
@@ -404,11 +447,14 @@
     if (!Array.isArray(approaches)) return { maxSet: 0, maxW: 0, total: 0 };
     for (let i = 0; i < approaches.length; i++) {
       const a = approaches[i];
-      const w = parseFloat(String(a.weightKg || '').replace(',', '.')) || 0;
-      const r = +a.reps || 0;
-      const vol = w > 0 && r > 0 ? w * r : 0;
+      if (!a || approachIsWarmup(a)) continue;
+      const vol = approachVolumeKg(a);
       if (vol > maxSet) maxSet = vol;
-      if (w > maxW) maxW = w;
+      // Рекорд по весу — только основная ступень: иначе любой дроп-сет стал бы
+      // личным рекордом, хотя человек не поднял больше.
+      const stages = approachStagesOf(a);
+      const baseW = parseFloat(String((stages[0] && stages[0].weightKg) || '').replace(',', '.')) || 0;
+      if (baseW > maxW) maxW = baseW;
       total += vol;
     }
     return { maxSet: maxSet, maxW: maxW, total: total };
@@ -767,11 +813,21 @@
   function buildApproachesFromSnapshot(snap, row) {
     if (snap.approaches && snap.approaches.length > 0) {
       return snap.approaches.map(function (a, idx) {
-        return {
+        const out = {
           id: createApproachId('snap', idx),
           weightKg: a.weightKg != null ? String(a.weightKg) : '',
           reps: a.reps != null ? Math.max(1, Math.min(200, parseInt(a.reps, 10) || 1)) : 10
         };
+        // Повторяется схема подхода, но не отметки: тренировку ещё предстоит
+        // сделать, поэтому done не переносится ни у подхода, ни у ступеней.
+        if (a.type === 'warmup') out.type = 'warmup';
+        if (a.extraWeightKg) out.extraWeightKg = a.extraWeightKg;
+        if (Array.isArray(a.drops) && a.drops.length) {
+          out.drops = a.drops.map(function (d) {
+            return { weightKg: d.weightKg != null ? String(d.weightKg) : '', reps: +d.reps || 0, done: false };
+          });
+        }
+        return out;
       });
     }
     const nSets = snap.sets != null
@@ -840,6 +896,26 @@
       if (i === fromIdx || i === toIdx) return { ...row, ssGroup: target };
       return row;
     });
+  }
+
+  /**
+   * Связать два упражнения и тут же собрать связку смежно: раунд выводится из
+   * позиции, поэтому участники обязаны идти подряд. Инвариант держится здесь, у
+   * писателя, а не чинится при чтении.
+   */
+  function linkAsSuperset(exercises, idxA, idxB) {
+    const merged = mergeSupersetLinks(exercises, idxA, idxB);
+    // Номер связки берётся ДО пересборки: после неё прежние индексы указывают
+    // уже на других участников.
+    const groupId = +(merged[idxB] && merged[idxB].ssGroup) || 0;
+    const SK = strengthKernel();
+    if (!SK || !SK.moveSupersetGroup || !groupId) return { exercises: merged, groupId: groupId };
+    let firstMember = -1;
+    for (let i = 0; i < merged.length; i++) {
+      if (+(merged[i].ssGroup || 0) === groupId) { firstMember = i; break; }
+    }
+    if (firstMember < 0) return { exercises: merged, groupId: groupId };
+    return { exercises: SK.moveSupersetGroup(merged, groupId, firstMember), groupId: groupId };
   }
 
   function reorderExercises(arr, fromIdx, toIdx) {
@@ -979,7 +1055,8 @@
       const aps = (ex && Array.isArray(ex.approaches)) ? ex.approaches : [];
       if (aps.length === 0) return false;
       for (let k = 0; k < aps.length; k++) {
-        if (!aps[k] || !aps[k].done) return false;
+        // Подход со сбросами закрыт, только когда закрыты все его ступени.
+        if (!aps[k] || !approachIsDone(aps[k])) return false;
       }
       return true;
     });
@@ -999,13 +1076,17 @@
           totalApproaches += 1;
           const a = aps[k];
           if (!a) continue;
-          const w = parseFloat(String(a.weightKg || '').replace(',', '.')) || 0;
-          const r = +a.reps || 0;
-          const vol = w > 0 && r > 0 ? w * r : 0;
-          if (a.done) {
+          // Разминка вне тоннажа и вне рекордов; подход со сбросами — один
+          // подход, но объём в нём весь, а рекорд — по основной ступени.
+          const warmup = approachIsWarmup(a);
+          const vol = approachVolumeKg(a);
+          const stages = approachStagesOf(a);
+          const baseW = parseFloat(String((stages[0] && stages[0].weightKg) || '').replace(',', '.')) || 0;
+          if (approachIsDone(a)) {
             doneApproaches += 1;
+            if (warmup) continue;
             totalVolume += vol;
-            if (w > maxWeight) maxWeight = w;
+            if (baseW > maxWeight) maxWeight = baseW;
             if (histMaxSet > 0 && vol > histMaxSet + 0.05) prCount += 1;
           }
         }
@@ -1259,9 +1340,12 @@
               });
               patchTraining(ti, function (t0) {
                 const wl0 = ensureWorkoutLogShape(t0);
-                wl0.exercises = mergeSupersetLinks(wl0.exercises, fromSs, exi);
-                wl0.exercises = wl0.exercises.map(function (row, idx) {
-                  if (idx === fromSs || idx === exi) return { ...row, collapsed: false };
+                // Связка собирается смежно, поэтому прежние индексы уже не
+                // указывают на тех же участников — раскрываем по номеру связки.
+                const linked = linkAsSuperset(wl0.exercises, fromSs, exi);
+                const gLinked = linked.groupId;
+                wl0.exercises = linked.exercises.map(function (row) {
+                  if (gLinked && +(row.ssGroup || 0) === gLinked) return { ...row, collapsed: false };
                   return row;
                 });
                 return applyWorkoutLogToTraining(t0, wl0);
@@ -1278,7 +1362,19 @@
             if (!Number.isNaN(from)) {
               patchTraining(ti, function (t0) {
                 const wl0 = ensureWorkoutLogShape(t0);
-                wl0.exercises = reorderExerciseToBeforeIndex(wl0.exercises, from, beforeIdx);
+                const SK = strengthKernel();
+                const movedGroup = +(wl0.exercises[from] && wl0.exercises[from].ssGroup) || 0;
+                if (SK && movedGroup > 0) {
+                  // Связка перетаскивается целиком: разорвать её перетаскиванием
+                  // нельзя, для этого есть явное «Разъединить».
+                  wl0.exercises = SK.moveSupersetGroup(wl0.exercises, movedGroup, beforeIdx);
+                } else if (SK && SK.insertRespectingGroups) {
+                  // Вставка внутрь чужой связки прилипает к её границе: участники
+                  // обязаны идти подряд, иначе раунды перестают выводиться.
+                  wl0.exercises = SK.insertRespectingGroups(wl0.exercises, from, beforeIdx);
+                } else {
+                  wl0.exercises = reorderExerciseToBeforeIndex(wl0.exercises, from, beforeIdx);
+                }
                 return applyWorkoutLogToTraining(t0, wl0);
               });
             }
@@ -1384,9 +1480,10 @@
                 });
                 patchTraining(ti, function (t0) {
                   const wl0 = ensureWorkoutLogShape(t0);
-                  wl0.exercises = mergeSupersetLinks(wl0.exercises, partner, exi);
-                  wl0.exercises = wl0.exercises.map(function (row, idx) {
-                    if (idx === partner || idx === exi) return { ...row, collapsed: false };
+                  const linked = linkAsSuperset(wl0.exercises, partner, exi);
+                  const gLinked = linked.groupId;
+                  wl0.exercises = linked.exercises.map(function (row) {
+                    if (gLinked && +(row.ssGroup || 0) === gLinked) return { ...row, collapsed: false };
                     return row;
                   });
                   return applyWorkoutLogToTraining(t0, wl0);

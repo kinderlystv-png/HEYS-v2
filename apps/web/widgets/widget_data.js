@@ -961,13 +961,15 @@
     },
 
     _getWaterGoal() {
-      // Если есть HEYS.Day, используем его метод
-      if (HEYS.Day?.getWaterGoal) {
-        return HEYS.Day.getWaterGoal();
-      }
+      // Единый расчёт нормы — heys_day_water_state.js. Раньше здесь звался
+      // HEYS.Day.getWaterGoal, которого не существует, и виджеты молча жили
+      // на «вес × 30», расходясь с карточкой воды.
+      const prof = this._getProfile() || {};
+      const day = HEYS.DayData?.getCurrentDay?.() || {};
+      const goal = HEYS.dayWaterState?.computeWaterGoal?.({ day, profile: prof });
+      if (goal) return goal;
 
       // Fallback: базовый расчёт (30мл на кг веса)
-      const prof = this._getProfile();
       return Math.round((prof.weight || 70) * 30);
     },
 

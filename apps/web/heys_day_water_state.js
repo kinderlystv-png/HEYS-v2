@@ -3,6 +3,88 @@
 ; (function (global) {
     const HEYS = global.HEYS = global.HEYS || {};
 
+    // Норма воды считается здесь и только здесь. До 2026-08-09 её брали в
+    // четырёх местах через три разных имени, ни одно из которых не было
+    // определено: HEYS.utils.calculateWaterGoal, HEYS.Day.getWaterGoal,
+    // HEYS.utils.getWaterGoal. Optional chaining глушил промах, и каждое место
+    // молча падало в свой фолбэк — 2000 мл или «вес × 30». На одном экране
+    // норма отличалась в полтора раза: карточка воды 2700, оценка дня 2000.
+
+    // Карточка воды знает калории тренировок и считает значимой ту, что дала
+    // больше 50 ккал. Снаружи калорий нет, поэтому значимость оценивается по
+    // длительности: 20 минут при любой зоне дают больше 50 ккал.
+    function countSignificantTrainings(day, trainingKcals) {
+        if (Array.isArray(trainingKcals)) {
+            return trainingKcals.filter((kcal) => (+kcal || 0) > 50).length;
+        }
+        const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
+        return trainings.filter((training) => {
+            const zones = Array.isArray(training?.z) ? training.z : [];
+            const minutes = zones.reduce((sum, m) => sum + (+m || 0), 0);
+            return minutes >= 20;
+        }).length;
+    }
+
+    function computeWaterGoalBreakdown(params) {
+        const { day, profile, trainingKcals } = params || {};
+        const safeDay = day || {};
+        const safeProf = profile || {};
+
+        const w = +safeDay.weightMorning || +safeProf.weight || 70;
+        const age = +safeProf.age || 30;
+        const isFemale = safeProf.sex === 'female';
+        const coef = isFemale ? 28 : 30;
+
+        const baseRaw = w * coef;
+
+        let ageFactor = 1;
+        let ageNote = '';
+        if (age >= 60) { ageFactor = 0.9; ageNote = '−10% (60+)'; }
+        else if (age >= 40) { ageFactor = 0.95; ageNote = '−5% (40+)'; }
+        const base = baseRaw * ageFactor;
+
+        const stepsCount = Math.floor((safeDay.steps || 0) / 5000);
+        const stepsBonus = stepsCount * 250;
+
+        const trainCount = countSignificantTrainings(safeDay, trainingKcals);
+        const trainBonus = trainCount * 500;
+
+        const month = new Date().getMonth();
+        const isHotSeason = month >= 5 && month <= 7;
+        const seasonBonus = isHotSeason ? 300 : 0;
+        const seasonNote = isHotSeason ? '☀️ Лето' : '';
+
+        const cycleMultiplier = HEYS.Cycle?.getWaterMultiplier?.(safeDay.cycleDay) || 1;
+        const cycleBonus = cycleMultiplier > 1 ? Math.round(base * (cycleMultiplier - 1)) : 0;
+        const cycleNote = cycleBonus > 0 ? '🌸 Особый период' : '';
+
+        const total = Math.round((base + stepsBonus + trainBonus + seasonBonus + cycleBonus) / 100) * 100;
+        const finalGoal = Math.max(1500, Math.min(5000, total));
+
+        return {
+            weight: w,
+            coef,
+            baseRaw: Math.round(baseRaw),
+            ageFactor,
+            ageNote,
+            base: Math.round(base),
+            stepsCount,
+            stepsBonus,
+            trainCount,
+            trainBonus,
+            seasonBonus,
+            seasonNote,
+            cycleBonus,
+            cycleNote,
+            total: Math.round(total),
+            finalGoal
+        };
+    }
+
+    function computeWaterGoal(params) {
+        return computeWaterGoalBreakdown(params).finalGoal;
+    }
+
     function useWaterState(params) {
         const { React, day, prof, train1k, train2k, train3k, haptic } = params || {};
         const { useMemo, useState, useRef } = React || {};
@@ -10,57 +92,11 @@
         const safeDay = day || {};
         const safeProf = prof || {};
 
-        const waterGoalBreakdown = useMemo(() => {
-            const w = +safeDay.weightMorning || +safeProf.weight || 70;
-            const age = +safeProf.age || 30;
-            const isFemale = safeProf.sex === 'female';
-            const coef = isFemale ? 28 : 30;
-
-            const baseRaw = w * coef;
-
-            let ageFactor = 1;
-            let ageNote = '';
-            if (age >= 60) { ageFactor = 0.9; ageNote = '−10% (60+)'; }
-            else if (age >= 40) { ageFactor = 0.95; ageNote = '−5% (40+)'; }
-            const base = baseRaw * ageFactor;
-
-            const stepsCount = Math.floor((safeDay.steps || 0) / 5000);
-            const stepsBonus = stepsCount * 250;
-
-            const trainCount = [train1k, train2k, train3k].filter(k => k > 50).length;
-            const trainBonus = trainCount * 500;
-
-            const month = new Date().getMonth();
-            const isHotSeason = month >= 5 && month <= 7;
-            const seasonBonus = isHotSeason ? 300 : 0;
-            const seasonNote = isHotSeason ? '☀️ Лето' : '';
-
-            const cycleMultiplier = HEYS.Cycle?.getWaterMultiplier?.(safeDay.cycleDay) || 1;
-            const cycleBonus = cycleMultiplier > 1 ? Math.round(base * (cycleMultiplier - 1)) : 0;
-            const cycleNote = cycleBonus > 0 ? '🌸 Особый период' : '';
-
-            const total = Math.round((base + stepsBonus + trainBonus + seasonBonus + cycleBonus) / 100) * 100;
-            const finalGoal = Math.max(1500, Math.min(5000, total));
-
-            return {
-                weight: w,
-                coef,
-                baseRaw: Math.round(baseRaw),
-                ageFactor,
-                ageNote,
-                base: Math.round(base),
-                stepsCount,
-                stepsBonus,
-                trainCount,
-                trainBonus,
-                seasonBonus,
-                seasonNote,
-                cycleBonus,
-                cycleNote,
-                total: Math.round(total),
-                finalGoal
-            };
-        }, [safeDay.weightMorning, safeDay.steps, safeDay.cycleDay, train1k, train2k, train3k, safeProf.weight, safeProf.age, safeProf.sex]);
+        const waterGoalBreakdown = useMemo(() => computeWaterGoalBreakdown({
+            day: safeDay,
+            profile: safeProf,
+            trainingKcals: [train1k, train2k, train3k]
+        }), [safeDay.weightMorning, safeDay.steps, safeDay.cycleDay, train1k, train2k, train3k, safeProf.weight, safeProf.age, safeProf.sex]);
 
         const waterGoal = waterGoalBreakdown.finalGoal;
 
@@ -129,6 +165,8 @@
     }
 
     HEYS.dayWaterState = {
-        useWaterState
+        useWaterState,
+        computeWaterGoal,
+        computeWaterGoalBreakdown
     };
 })(window);

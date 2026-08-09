@@ -6,14 +6,25 @@
     function pad2(n) { return String(n).padStart(2, '0'); }
     function fmtDate(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
 
+    // HEYS.store.getCurrentProfile не существует — здесь всегда получался 'guest',
+    // и подпись кэша читала несуществующие ключи. Канонический источник id —
+    // HEYS.utils.getCurrentClientId (heys_core_v12.js), см. также HEYS.cloud.
     function getClientId() {
-        return HEYS.store?.getCurrentProfile?.()?.id || 'guest';
+        return HEYS.utils?.getCurrentClientId?.()
+            || HEYS.cloud?.getCurrentClientId?.()
+            || HEYS.currentClientId
+            || '';
     }
 
+    // Формат client-scoped ключа: heys_<clientId>_<suffix> (см. scoped()
+    // в heys_storage_layer_v1.js). Порядок частей важен: heys_dayv2_<дата>_<cid>
+    // не существует в localStorage.
     function getStorageKey(key) {
         const clientId = getClientId();
-        const encrypted = ['heys_profile', 'heys_hr_zones'].includes(key) || key.startsWith('heys_dayv2_');
-        return encrypted ? `${key}_${clientId}` : key;
+        if (!clientId || key.includes(clientId)) return key;
+        return key.startsWith('heys_')
+            ? 'heys_' + clientId + '_' + key.slice('heys_'.length)
+            : `heys_${clientId}_${key}`;
     }
 
     function getLsGet() {
@@ -40,10 +51,22 @@
         };
     }
 
-    function getSignature({ weeksCount, profile, dateKeys }) {
+    // HEYS.products.buildIndex не существует; индекс строит HEYS.models.buildProductIndex
+    // и ему нужен список продуктов — вызов без аргумента вернул бы пустой индекс,
+    // из-за чего ГИ и вредность в отчётах считались по нулям.
+    function buildProductIndex() {
+        const products = HEYS.products?.getAll?.();
+        if (!Array.isArray(products) || !products.length) return null;
+        return HEYS.models?.buildProductIndex?.(products)
+            || HEYS.dayUtils?.buildProductIndex?.(products)
+            || null;
+    }
+
+    function getSignature({ weeksCount, profile, dateKeys, productsCount = 0 }) {
         const parts = [
             getClientId(),
-            JSON.stringify(profile || {})
+            JSON.stringify(profile || {}),
+            `products:${productsCount}`
         ];
 
         dateKeys.forEach((dateStr) => {
@@ -79,14 +102,21 @@
     function buildMonthlyWeeks({ weeksCount = 8, useCache = true } = {}) {
         const lsGet = getLsGet();
         const profile = lsGet('heys_profile', {});
-        const pIndex = HEYS.products?.buildIndex?.();
+        const pIndex = buildProductIndex();
 
         if (!HEYS.weeklyReports?.buildWeekReport) return [];
 
         const now = new Date();
         const nowDateStr = fmtDate(now);
         const dateKeys = buildDateKeys({ weeksCount, now });
-        const signature = getSignature({ weeksCount, profile, dateKeys });
+        // Число продуктов входит в подпись: без него отчёт, построенный до загрузки
+        // каталога (pIndex === null), навсегда залипал бы в кэше с нулевыми ГИ.
+        const signature = getSignature({
+            weeksCount,
+            profile,
+            dateKeys,
+            productsCount: pIndex?.byId?.size || 0
+        });
 
         const cache = HEYS.monthlyReportsService?.cache;
         if (useCache && cache && cache.signature === signature && Array.isArray(cache.weeks)) {

@@ -3599,6 +3599,9 @@
                 addProductToMeal,
                 prof,
                 insulinWaveData,
+                // Без этого удаление фото молча не работает: MealCard зовёт
+                // removePhoto?.(...), optional chaining глушит промах.
+                removePhoto,
             }) || [];
             const nextUi = [];
 

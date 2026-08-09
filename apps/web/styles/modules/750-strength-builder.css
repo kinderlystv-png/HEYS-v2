@@ -1,0 +1,680 @@
+/* ============================================================================
+ * 750-strength-builder.css — полноэкранный силовой конструктор
+ *
+ * Редизайн по STRENGTH_BUILDER_REDESIGN_PROTOCOL_2026-08-09.md, шаг 5.
+ * Токены макета (--sb-*) собираются из токенов проекта, а не дублируют их:
+ * расхождение тем означало бы баг, а не решение.
+ *
+ * Мишени: 44 px для действий с подходом, связкой и таймером; 36 px для
+ * служебных кнопок шапки (решение 7). Промежуточных размеров нет.
+ * ==========================================================================*/
+
+.sb-root {
+  --sb-card: var(--card, #ffffff);
+  --sb-bg: var(--bg, #f8fafc);
+  --sb-tx: var(--text, #0f172a);
+  --sb-mut: var(--muted, #64748b);
+  --sb-br: var(--border, #e2e8f0);
+  --sb-soft: #f1f5f9;
+  --sb-acc: #c2410c;
+  --sb-acc-strong: #9a3412;
+  --sb-accbg: rgba(249, 115, 22, 0.12);
+  --sb-accTx: #9a3412;
+  --sb-okbg: rgba(34, 197, 94, 0.12);
+  --sb-okBr: rgba(34, 197, 94, 0.45);
+  --sb-okTx: #15803d;
+  --sb-dropbg: rgba(139, 92, 246, 0.12);
+  --sb-dropBr: rgba(139, 92, 246, 0.45);
+  --sb-dropTx: #6d28d9;
+  --sb-warnbg: rgba(239, 68, 68, 0.1);
+  --sb-warnBr: rgba(239, 68, 68, 0.5);
+  --sb-warnTx: #b91c1c;
+
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: flex;
+  flex-direction: column;
+  background: var(--sb-bg);
+  color: var(--sb-tx);
+  font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
+  overscroll-behavior: contain;
+}
+
+[data-theme='dark'] .sb-root {
+  --sb-card: #1e293b;
+  --sb-bg: #0f172a;
+  --sb-tx: #e2e8f0;
+  --sb-mut: #94a3b8;
+  --sb-br: #334155;
+  --sb-soft: #172033;
+  --sb-accbg: rgba(249, 115, 22, 0.18);
+  --sb-accTx: #fdba74;
+  --sb-okbg: rgba(34, 197, 94, 0.18);
+  --sb-okTx: #86efac;
+  /* Отдельные значения для тёмной: на светлых у фиолетового контраст 1,93. */
+  --sb-dropbg: rgba(167, 139, 250, 0.2);
+  --sb-dropBr: rgba(167, 139, 250, 0.5);
+  --sb-dropTx: #c4b5fd;
+  --sb-warnTx: #fca5a5;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme='light']) .sb-root {
+    --sb-card: #1e293b;
+    --sb-bg: #0f172a;
+    --sb-tx: #e2e8f0;
+    --sb-mut: #94a3b8;
+    --sb-br: #334155;
+    --sb-soft: #172033;
+    --sb-accbg: rgba(249, 115, 22, 0.18);
+    --sb-accTx: #fdba74;
+    --sb-okbg: rgba(34, 197, 94, 0.18);
+    --sb-okTx: #86efac;
+    --sb-dropbg: rgba(167, 139, 250, 0.2);
+    --sb-dropBr: rgba(167, 139, 250, 0.5);
+    --sb-dropTx: #c4b5fd;
+    --sb-warnTx: #fca5a5;
+  }
+}
+
+/* ── Шапка ─────────────────────────────────────────────────────────────── */
+
+.sb-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--sb-br);
+  background: var(--sb-card);
+}
+
+.sb-head-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.sb-head-title b {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sb-head-sub {
+  font-size: 11.5px;
+  color: var(--sb-mut);
+}
+
+/* Служебные кнопки шапки — 36 px (решение 7). */
+.sb-icon-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--sb-br);
+  background: var(--sb-card);
+  color: var(--sb-tx);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.sb-stats {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--sb-br);
+  background: var(--sb-card);
+}
+
+.sb-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 9px;
+  background: var(--sb-soft);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-stat-time {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* ── Список упражнений ─────────────────────────────────────────────────── */
+
+.sb-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 10px 12px 96px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.sb-ex {
+  border: 1px solid var(--sb-br);
+  border-radius: 14px;
+  background: var(--sb-card);
+  overflow: hidden;
+}
+
+.sb-ex.is-open {
+  border-color: rgba(249, 115, 22, 0.45);
+}
+
+.sb-ex-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 11px;
+  background: none;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sb-ex-num {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--sb-soft);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--sb-mut);
+}
+
+.sb-ex-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.sb-ex-title b {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sb-ex-sub {
+  font-size: 11.5px;
+  color: var(--sb-mut);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sb-ex-count {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--sb-mut);
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-ex-count.is-done {
+  color: var(--sb-okTx);
+}
+
+.sb-ex-body {
+  padding: 0 11px 11px;
+  border-top: 1px solid var(--sb-br);
+}
+
+.sb-hist {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  padding: 9px 0;
+}
+
+.sb-hist span {
+  font-size: 11.5px;
+  color: var(--sb-mut);
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: var(--sb-soft);
+}
+
+/* ── Таблица подходов ──────────────────────────────────────────────────── */
+
+.sb-aps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sb-aps-head,
+.sb-ap {
+  display: grid;
+  grid-template-columns: 46px 1fr 1fr 44px;
+  gap: 7px;
+  align-items: center;
+}
+
+.sb-aps-head {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--sb-mut);
+  padding: 2px 0;
+}
+
+.sb-ap-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 10px;
+  background: var(--sb-soft);
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  border: none;
+  color: var(--sb-tx);
+  cursor: pointer;
+}
+
+/* Разминка — ярлык вместо номера, но мишень та же: ярлык интерактивен. */
+.sb-ap-num.is-warmup {
+  background: var(--sb-accbg);
+  color: var(--sb-accTx);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.sb-ap-field {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--sb-br);
+  background: var(--sb-card);
+  color: var(--sb-tx);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.sb-ap-field:focus {
+  outline: 2px solid var(--sb-acc);
+  outline-offset: -1px;
+}
+
+.sb-ap-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  border: 1.5px solid var(--sb-br);
+  background: var(--sb-card);
+  color: var(--sb-mut);
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.sb-ap-check.is-done {
+  border-color: var(--sb-okBr);
+  background: var(--sb-okbg);
+  color: var(--sb-okTx);
+}
+
+/* Пустые повторы блокируют галочку без модалки и слова «ошибка». */
+.sb-ap-check:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sb-ap.is-blank .sb-ap-field {
+  border-style: dashed;
+  color: var(--sb-mut);
+}
+
+/* Ступени сброса — вложены в строку подхода, своего номера у них нет. */
+.sb-drop {
+  display: grid;
+  grid-template-columns: 46px 1fr 1fr 44px;
+  gap: 7px;
+  align-items: center;
+  margin-left: 12px;
+  padding-left: 10px;
+  border-left: 2px solid var(--sb-dropBr);
+}
+
+.sb-drop-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 10px;
+  background: var(--sb-dropbg);
+  color: var(--sb-dropTx);
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.sb-ap-note {
+  grid-column: 1 / -1;
+  font-size: 11.5px;
+  color: var(--sb-mut);
+}
+
+/* ── RPE и отдых ───────────────────────────────────────────────────────── */
+
+.sb-rpe {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 0 4px;
+}
+
+.sb-rpe-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--sb-mut);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sb-rpe-dot {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  border: 1px solid var(--sb-br);
+  background: var(--sb-card);
+  color: var(--sb-tx);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sb-rpe-dot.is-on {
+  border-color: var(--sb-acc);
+  background: var(--sb-accbg);
+  color: var(--sb-accTx);
+  font-weight: 800;
+}
+
+.sb-rest-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0 2px;
+  font-size: 12px;
+  color: var(--sb-mut);
+}
+
+.sb-ex-actions {
+  display: flex;
+  gap: 7px;
+  padding-top: 10px;
+}
+
+.sb-btn {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 11px;
+  border: 1px solid var(--sb-br);
+  background: var(--sb-card);
+  color: var(--sb-tx);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sb-btn.is-accent {
+  border-color: var(--sb-acc);
+  background: var(--sb-accbg);
+  color: var(--sb-accTx);
+}
+
+/* ── Связка ────────────────────────────────────────────────────────────── */
+
+.sb-ss {
+  border: 1.5px solid rgba(249, 115, 22, 0.4);
+  border-radius: 14px;
+  background: var(--sb-card);
+  overflow: hidden;
+}
+
+.sb-ss-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 11px;
+  background: var(--sb-accbg);
+}
+
+.sb-ss-head b {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--sb-accTx);
+}
+
+.sb-ss-members {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 11px 0;
+  font-size: 12px;
+  color: var(--sb-mut);
+}
+
+.sb-ss-member {
+  display: flex;
+  gap: 8px;
+}
+
+.sb-ss-member i {
+  font-style: normal;
+  font-weight: 800;
+  color: var(--sb-accTx);
+}
+
+.sb-round {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+}
+
+.sb-round-num {
+  flex: 0 0 auto;
+  width: 34px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--sb-mut);
+}
+
+.sb-cell {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--sb-br);
+  background: var(--sb-card);
+  color: var(--sb-tx);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.sb-cell.is-done {
+  border-color: var(--sb-okBr);
+  background: var(--sb-okbg);
+  color: var(--sb-okTx);
+}
+
+/* Прочерк — не ноль и не пропуск: клетка не закрывается. */
+.sb-cell.is-blank {
+  border-style: dashed;
+  border-color: var(--sb-mut);
+  background: var(--sb-soft);
+  color: var(--sb-mut);
+  cursor: default;
+}
+
+.sb-ss-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px 11px;
+  font-size: 11.5px;
+  color: var(--sb-mut);
+}
+
+/* Старая связка без раундов — плоские списки, историю не переписываем. */
+.sb-ss-flat {
+  padding: 8px 11px 11px;
+  font-size: 11.5px;
+  color: var(--sb-mut);
+}
+
+/* ── Дискомфорт ────────────────────────────────────────────────────────── */
+
+.sb-pain {
+  margin: 9px 0 0;
+  border: 1px solid var(--sb-warnBr);
+  border-radius: 13px;
+  background: var(--sb-warnbg);
+  padding: 11px;
+}
+
+.sb-pain b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--sb-tx);
+}
+
+.sb-pain p {
+  margin: 6px 0 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--sb-tx);
+}
+
+.sb-pain-actions {
+  display: flex;
+  gap: 7px;
+}
+
+/* ── Нижняя панель ─────────────────────────────────────────────────────── */
+
+.sb-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: var(--sb-card);
+  border-top: 1px solid var(--sb-br);
+}
+
+.sb-finish {
+  flex: 1;
+  min-height: 52px;
+  border: none;
+  border-radius: 13px;
+  /* Затемнён до 5,2 и 7,3 против нормы 4,5 (решение 8). */
+  background: linear-gradient(180deg, #c2410c, #9a3412);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sb-panel-add {
+  flex: 0 0 auto;
+  width: 52px;
+  min-height: 52px;
+  border-radius: 13px;
+  border: 1px solid var(--sb-br);
+  background: var(--sb-card);
+  color: var(--sb-tx);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+/* ── Отдых ─────────────────────────────────────────────────────────────── */
+
+.sb-rest {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: var(--sb-bg);
+}
+
+.sb-rest-ring {
+  position: relative;
+  width: 184px;
+  height: 184px;
+}
+
+.sb-rest-ring svg {
+  transform: rotate(-90deg);
+}
+
+.sb-rest-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-rest-value small {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sb-mut);
+}
+
+.sb-rest-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sb-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--sb-mut);
+  font-size: 13px;
+}

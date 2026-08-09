@@ -1201,6 +1201,70 @@ test('workoutLog пишется в форме приложения: version и z
   assert.match(log.exercises[0].id, /^ex_[0-9a-f]{12}$/);
 });
 
+test('разминочный подход помечается типом, рабочий остаётся без поля', () => {
+  const { log } = day.buildWorkoutLog([{
+    name: 'Жим',
+    approaches: [
+      { weight_kg: 40, reps: 10, set_type: 'warmup' },
+      { weight_kg: 75, reps: 8 },
+    ],
+  }]);
+  assert.equal(log.exercises[0].approaches[0].type, 'warmup');
+  assert.equal('type' in log.exercises[0].approaches[1], false);
+});
+
+test('дропсет пишется ступенями внутри подхода, а не отдельными подходами', () => {
+  const { log } = day.buildWorkoutLog([{
+    name: 'Жим',
+    approaches: [{ weight_kg: 75, reps: 8, drops: [{ weight_kg: 60, reps: 6 }] }],
+  }]);
+  const aps = log.exercises[0].approaches;
+  // Счётчик дня обязан видеть ОДИН подход: иначе число разойдётся с приложением.
+  assert.equal(aps.length, 1);
+  assert.deepEqual(aps[0].drops, [{ weightKg: '60', reps: 6, done: true }]);
+});
+
+test('правила ступеней приходят из ядра, а не второго набора условий', () => {
+  const up = day.buildWorkoutLog([{
+    name: 'Жим', approaches: [{ weight_kg: 75, reps: 8, drops: [{ weight_kg: 80, reps: 6 }] }],
+  }]);
+  assert.match(up.error, /ниже предыдущей/);
+
+  const inSuperset = day.buildWorkoutLog([
+    { name: 'Жим', superset_group: 1, approaches: [{ weight_kg: 75, reps: 8, drops: [{ weight_kg: 60, reps: 6 }] }] },
+    { name: 'Тяга', superset_group: 1, approaches: [{ weight_kg: 60, reps: 8 }] },
+  ]);
+  assert.match(inSuperset.error, /связки/);
+
+  const badType = day.buildWorkoutLog([{ name: 'Жим', approaches: [{ reps: 8, set_type: 'дроп' }] }]);
+  assert.match(badType.error, /set_type/);
+});
+
+test('участники связки обязаны идти подряд: раунд выводится из позиции', () => {
+  const broken = day.buildWorkoutLog([
+    { name: 'Жим', superset_group: 1, approaches: [{ weight_kg: 60, reps: 8 }] },
+    { name: 'Присед', approaches: [{ weight_kg: 100, reps: 5 }] },
+    { name: 'Тяга', superset_group: 1, approaches: [{ weight_kg: 50, reps: 10 }] },
+  ]);
+  assert.match(broken.error, /подряд/);
+
+  const ok = day.buildWorkoutLog([
+    { name: 'Жим', superset_group: 1, approaches: [{ weight_kg: 60, reps: 8 }] },
+    { name: 'Тяга', superset_group: 1, approaches: [{ weight_kg: 50, reps: 10 }] },
+    { name: 'Присед', approaches: [{ weight_kg: 100, reps: 5 }] },
+  ]);
+  assert.equal(ok.error, undefined);
+});
+
+test('довес пишется на подход и не путается с весом снаряда', () => {
+  const { log } = day.buildWorkoutLog([{
+    name: 'Подтягивания',
+    approaches: [{ reps: 10, extra_weight_kg: 15 }],
+  }]);
+  assert.equal(log.exercises[0].approaches[0].weightKg, '');
+  assert.equal(log.exercises[0].approaches[0].extraWeightKg, 15);
+});
+
 test('длительность согласована между zoneMinutes и totalDurationMinutes', () => {
   // Раньше duration_min=500 давало z=[0,180,0,0] при totalDurationMinutes=500.
   const { log } = day.buildWorkoutLog([{ name: 'Ж', approaches: [{ reps: 5 }] }], { durationMin: 500 });

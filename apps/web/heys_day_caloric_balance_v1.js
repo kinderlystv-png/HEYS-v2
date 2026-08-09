@@ -540,9 +540,11 @@
         // --- 14. Hydration Impact ---
         // Dennis et al., 2010: Вода перед едой снижает потребление на 75-90 ккал
         const waterMl = day.waterMl || 0;
-        const waterGoal = typeof HEYS !== 'undefined' && HEYS.utils?.getWaterGoal
-          ? HEYS.utils.getWaterGoal(prof)
-          : 2000;
+        // Единый расчёт нормы — heys_day_water_state.js. Раньше звался
+        // HEYS.utils.getWaterGoal, которого не существует, и инсайт про
+        // обезвоживание всегда сравнивал с 2000 мл.
+        const waterGoal = (typeof HEYS !== 'undefined'
+          && HEYS.dayWaterState?.computeWaterGoal?.({ day, profile: prof })) || 2000;
         const waterRatio = waterGoal > 0 ? waterMl / waterGoal : 0;
 
         const waterInsight = waterRatio < 0.5 && eatenKcal > optimum
