@@ -3,7 +3,7 @@
 window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
 ; (function (global) {
     const HEYS = (global.HEYS = global.HEYS || {});
-    const DAY_STATS_LAZY_VERSION = '2026-08-09-profile-tab-link-v1';
+    const DAY_STATS_LAZY_VERSION = '2026-08-09-strength-builder-v1';
 
     const scripts = [
         'heys_morning_activation_calendar_v1.js',
@@ -13,6 +13,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         'heys_day_activity_v1.js',
         'heys_day_trainings_v1.js',
         'heys_day_training_popups_v1.js',
+        // 🏋️ Силовой конструктор: полноэкранный слой ядра + экраны связки и
+        // самого конструктора. Порядок строгий — builder берёт SupersetBlock и
+        // RestRing из parts, а слой — из TrainingKernel.fullscreen.
+        '_kernel/heys_kernel_fullscreen_v1.js',
+        'strength/heys_strength_superset_ui_v1.js',
+        'strength/heys_strength_builder_ui_v1.js',
         'heys_day_sleep_score_popups_v1.js',
         // 🤚 Fingers — climbing fingerboard module.
         // Lazy: грузим только тонкий 5 KB stub. Полный 404 KB bundle подтягивается

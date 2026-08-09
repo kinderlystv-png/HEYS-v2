@@ -3240,6 +3240,39 @@
               )
             )
           ),
+          // Вход в полноэкранный конструктор (шаг 5 редизайна). Инлайновый
+          // список остаётся рабочим путём, пока полноэкранный не закроет все
+          // экраны: strangler-переход, а не разовая замена.
+          (function () {
+            const builder = HEYS.StrengthBuilder;
+            if (!builder || !builder.open) return null;
+            return React.createElement('button', {
+            key: 'wb-fullscreen-' + ti,
+            type: 'button',
+            className: 'ct-wb-open-fullscreen',
+            onClick: function (e) {
+              e.stopPropagation();
+              const U = HEYS.utils;
+              builder.open({
+                training: {
+                  type: 'strength',
+                  strengthEntryMode: 'workout_builder',
+                  workoutLog: wlLive
+                },
+                dateKey: dateKey,
+                profile: (U && U.lsGet) ? (U.lsGet('heys_profile', {}) || {}) : {},
+                onPatch: function (nextExercises) {
+                  patchTraining(ti, function (t0) {
+                    const wl0 = ensureWorkoutLogShape(t0);
+                    wl0.exercises = nextExercises;
+                    return applyWorkoutLogToTraining(t0, wl0);
+                  });
+                }
+              });
+              if (typeof haptic === 'function') haptic('light');
+            }
+            }, '⛶ Открыть конструктор');
+          })(),
           React.createElement(WorkoutBuilderExerciseList, {
             key: 'wb-ex-list-' + ti,
             ti: ti,
