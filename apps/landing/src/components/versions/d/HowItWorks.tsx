@@ -195,8 +195,6 @@ export default function HowItWorks() {
             </div>
           ))}
         </div>
-
-        <p className="mt-6 text-center text-[11px] text-[#9AA3B0]">Демонстрационный пример</p>
       </div>
 
       <ClosingLine

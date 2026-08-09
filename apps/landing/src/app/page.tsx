@@ -1,34 +1,45 @@
 // Главная страница — основная (публичная) версия лендинга.
 //
-// Черновые версии B и C живут отдельными статическими роутами `/v/b/` и
+// С 2026-08-09 здесь версия `D` («вникание», решение владельца `маркетинг/15`
+// №50): она доведена по дизайн-пакетам и заменила `A`. Прежняя основная не
+// удалена — живёт на `/v/a/` и остаётся baseline для сравнения.
+//
+// Остальные версии лежат отдельными статическими роутами `/v/a/`, `/v/b/`,
 // `/v/c/` и в разметку этой страницы не попадают: посторонний не увидит их ни
-// на экране, ни в исходном коде. Переключатель между версиями — приватный
-// инструмент владельца (`22` п. 3.17, план `маркетинг/46`), это не
-// A/B-эксперимент на посетителях.
+// на экране, ни в исходном коде. Переключатель — приватный инструмент владельца
+// (`22` п. 3.17, план `маркетинг/46`), это не A/B-эксперимент на посетителях.
+//
+// Индексация здесь разрешена глобальными `robots` из `layout.tsx`: это
+// публичная страница. У остальных версий стоит `DRAFT_ROBOTS` — иначе копии
+// одного оффера конкурировали бы в поиске друг с другом.
 
 import { Metadata } from 'next';
 
-import VersionA from '@/components/versions/VersionA';
+import VersionD from '@/components/versions/VersionD';
 import VersionSwitcherFab from '@/components/VersionSwitcherFab';
-import { VARIANTS } from '@/config/landing-variants';
 
-// Метаданные для главной страницы
+const TITLE = 'HEYS — ваш дневник питания ведёт куратор';
+const DESCRIPTION =
+  'Присылаете фото, голосовое или пару фраз — обычно до 3 минут в день. ' +
+  'Остальное делает куратор: ведёт дневник, помнит, что было на прошлой неделе, ' +
+  'и спрашивает, прежде чем советовать.';
+
 export const metadata: Metadata = {
-  title: `HEYS — ${VARIANTS.A.hero.headline}`,
-  description: VARIANTS.A.hero.subheadline,
+  title: TITLE,
+  description: DESCRIPTION,
   openGraph: {
-    title: `HEYS — ${VARIANTS.A.hero.headline}`,
-    description: VARIANTS.A.hero.subheadline,
+    title: TITLE,
+    description: DESCRIPTION,
   },
 };
 
 export default function Home() {
   return (
     <main>
-      <VersionA />
+      <VersionD />
 
       {/* Приватный переключатель: у постороннего отсутствует в разметке. */}
-      <VersionSwitcherFab current="A" />
+      <VersionSwitcherFab current="D" />
     </main>
   );
 }

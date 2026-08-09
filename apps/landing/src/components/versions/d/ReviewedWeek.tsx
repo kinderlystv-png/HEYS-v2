@@ -8,6 +8,7 @@
 // Данные недели демонстрационные и обезличенные (канон `маркетинг/30` L3).
 // Настоящий скриншот недели из приложения ждёт материалов — слот в макете.
 
+import { playfair } from './fonts';
 import { D_CTA_HREF, D_CTA_LABEL } from './nav';
 import { Accent, Caption, PrimaryCta, Section, SectionLead, SectionTitle } from './primitives';
 import { D_WEEK } from './theme';
@@ -102,7 +103,6 @@ export default function ReviewedWeek() {
           <span className="text-[14px] font-semibold text-[#101826]">Ваша неделя в HEYS</span>
           <span className="text-[11px] text-[#9AA3B0]">7 дней подряд</span>
         </div>
-
         <div className="px-7 py-7">
           <div className="grid grid-cols-7 gap-[7px]">
             {WEEK.map((day) => (
@@ -138,7 +138,6 @@ export default function ReviewedWeek() {
             ))}
           </ul>
         </div>
-
         <div className="space-y-px bg-[rgba(16,24,38,0.08)]">
           {ANALYSIS.map((block) => (
             <div key={block.title} className="bg-white px-7 py-6">
@@ -153,19 +152,30 @@ export default function ReviewedWeek() {
             </div>
           ))}
 
-          {/* Следующий шаг — один и выполнимый. Тёмная плашка отделяет его от
-              наблюдений: это то единственное, что человеку предлагается сделать. */}
-          <div className="bg-[#12283E] px-7 py-7">
-            <h3 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#8FC1E8]">
+          {/* Следующий шаг — один и выполнимый: то единственное, что человеку
+              предлагается сделать, и потому он отделён от наблюдений.
+
+              Отделяет его тёплый фон, а не тёмная плашка. Прежний `#12283E`
+              совпадал с цветом карточек и шапок, и внутри белой карточки читался
+              не выводом, а началом нового блока — карточка разваливалась надвое
+              (та же болезнь, что вылечили в тарифах 2026-08-09).
+
+              Курсив Playfair — не украшение: на странице он закреплён за
+              выводами (закрывающие строки секций, подзаголовки карточек, блок
+              «После срыва» в тарифах). Здесь тот же жанр, и одинаковый голос
+              связывает их между собой. */}
+          <div className="border-l-[3px] border-[#A8823C] bg-[#F8F1E6] px-7 py-7">
+            <h3 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[#7A5D28]">
               Следующий шаг
             </h3>
-            <p className="mt-3 text-[15px] leading-[1.6] text-white">
+            <p
+              className={`${playfair.className} mt-3 text-[16px] italic leading-[1.5] text-[#101826]`}
+            >
               Вернуть полноценный обед в четверг и пятницу — и посмотреть, станет ли вечер
               спокойнее.
             </p>
           </div>
         </div>
-
         <details className="group border-t border-[rgba(16,24,38,0.08)] bg-white">
           <summary className="flex cursor-pointer items-center justify-between px-7 py-5 text-[14px] font-semibold text-[#101826] [&::-webkit-details-marker]:hidden">
             Что ещё видит куратор в этой неделе
@@ -185,11 +195,7 @@ export default function ReviewedWeek() {
               </li>
             ))}
           </ul>
-        </details>
-
-        <figcaption className="bg-[#FBFAF7] px-7 py-4 text-center text-[11px] text-[#9AA3B0]">
-          Демонстрационный пример · данные обезличены
-        </figcaption>
+        </details>{' '}
       </figure>
 
       {/* Второй слой: вопрос «а если неделя не задалась» задают почти все, но

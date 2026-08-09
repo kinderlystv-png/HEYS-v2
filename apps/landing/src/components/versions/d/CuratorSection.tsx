@@ -109,11 +109,14 @@ export default function CuratorSection() {
         className="mx-auto mt-14 grid max-w-[860px] gap-10 rounded-3xl border border-[rgba(16,24,38,0.1)] bg-[#FBFAF7] p-9 sm:grid-cols-[minmax(0,250px)_minmax(0,1fr)]"
       >
         {/* Слот портрета. До съёмки — честная рамка с описанием кадра, а не
-            стоковое лицо: страница о вникании не может начинаться с подделки. */}
+            стоковое лицо: страница о вникании не может начинаться с подделки.
+            Строка «Съёмка запланирована · портрет» снята 2026-08-09 вместе с
+            переездом версии в корень: это внутренняя пометка о ходе работ, а
+            `COPY_VOICE` (2026-06-22) запрещает выносить служебные формулировки
+            в интерфейс — на публичной странице она читается как «у нас ещё не
+            готово». Описание кадра осталось: оно говорит, что здесь будет, и
+            звучит замыслом, а не отчётом о сроках. */}
         <div className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[rgba(16,24,38,0.16)] bg-white px-4 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#9AA3B0]">
-            Съёмка запланирована · портрет
-          </p>
           <p className="text-[13px] leading-5 text-[#8A94A2]">
             Куратор за работой: разбор недели участника
           </p>
