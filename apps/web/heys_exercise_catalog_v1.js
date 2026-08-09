@@ -203,48 +203,62 @@
       .replace(/\s+/g, ' ');
   }
 
-  function readUsage() {
+  /**
+   * Частота и избранное — данные клиента, а не устройства: у куратора с
+   * несколькими клиентами общий ключ показывал бы одному чужие подсказки, а при
+   * смене телефона всё терялось бы. Пишем через utils (client-scoped, уезжает в
+   * облако), читаем с фолбэком на старый глобальный ключ, чтобы уже накопленное
+   * не пропало.
+   */
+  function readScoped(key) {
+    const u = HEYS.utils;
     try {
-      const raw = global.localStorage && global.localStorage.getItem(LS_KEY);
-      if (!raw) return {};
-      const o = JSON.parse(raw);
-      return o && typeof o === 'object' ? o : {};
+      if (u && typeof u.lsGet === 'function') {
+        const o = u.lsGet(key, null);
+        if (o && typeof o === 'object') return o;
+      }
+      const raw = global.localStorage && global.localStorage.getItem(key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : null;
     } catch (e) {
-      return {};
+      return null;
     }
+  }
+
+  function writeScoped(key, obj) {
+    const u = HEYS.utils;
+    if (!u || typeof u.lsSet !== 'function') return false;
+    try {
+      u.lsSet(key, obj);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function readUsage() {
+    return readScoped(LS_KEY) || {};
   }
 
   function writeUsage(obj) {
-    try {
-      if (global.localStorage) global.localStorage.setItem(LS_KEY, JSON.stringify(obj));
-    } catch (e) { /* quota */ }
+    writeScoped(LS_KEY, obj);
   }
 
   function readFavoriteNormsOrdered() {
-    try {
-      const raw = global.localStorage && global.localStorage.getItem(LS_FAV);
-      if (!raw) return [];
-      const o = JSON.parse(raw);
-      if (!o || typeof o !== 'object') return [];
-      const norms = o.norms;
-      if (!Array.isArray(norms)) return [];
-      return norms
-        .map(function (n) {
-          return typeof n === 'string' ? normalizeText(n) : '';
-        })
-        .filter(Boolean)
-        .slice(0, 40);
-    } catch (e) {
-      return [];
-    }
+    const o = readScoped(LS_FAV);
+    const norms = o && Array.isArray(o.norms) ? o.norms : null;
+    if (!norms) return [];
+    return norms
+      .map(function (n) {
+        return typeof n === 'string' ? normalizeText(n) : '';
+      })
+      .filter(Boolean)
+      .slice(0, 40);
   }
 
   function writeFavoriteNorms(norms) {
-    try {
-      if (global.localStorage) {
-        global.localStorage.setItem(LS_FAV, JSON.stringify({ norms: norms.slice(0, 40) }));
-      }
-    } catch (e) { /* quota */ }
+    writeScoped(LS_FAV, { norms: norms.slice(0, 40) });
   }
 
   function isFavoriteNorm(norm) {
@@ -495,30 +509,17 @@
 
   /** Свои упражнения клиента: client-scoped через utils, чтобы уехать в облако. */
   function readCustomMeta() {
-    try {
-      const u = HEYS.utils;
-      if (u && typeof u.lsGet === 'function') {
-        const o = u.lsGet(LS_META, null);
-        return o && typeof o === 'object' ? o : {};
-      }
-      const raw = global.localStorage && global.localStorage.getItem(LS_META);
-      if (!raw) return {};
-      const o = JSON.parse(raw);
-      return o && typeof o === 'object' ? o : {};
-    } catch (e) {
-      return {};
-    }
+    return readScoped(LS_META) || {};
   }
 
+  /**
+   * Только через utils: свои упражнения обязаны быть client-scoped и уехать в
+   * облако. Прямой setItem прошёл бы мимо перехватчика (инвариант №5 в
+   * CLAUDE.md) и молча оставил бы каталог на одном устройстве — а он должен
+   * пережить смену телефона. Нет utils — честно сообщаем, что не сохранили.
+   */
   function writeCustomMeta(obj) {
-    try {
-      const u = HEYS.utils;
-      if (u && typeof u.lsSet === 'function') {
-        u.lsSet(LS_META, obj);
-        return;
-      }
-      if (global.localStorage) global.localStorage.setItem(LS_META, JSON.stringify(obj));
-    } catch (e) { /* quota */ }
+    return writeScoped(LS_META, obj);
   }
 
   function normalizeMeta(raw) {
@@ -622,7 +623,9 @@
       unit: v.meta.unit,
       bodyweightFactor: v.meta.bodyweightFactor
     };
-    writeCustomMeta(all);
+    if (!writeCustomMeta(all)) {
+      return { ok: false, errors: ['Хранилище недоступно — упражнение не сохранено'] };
+    }
     return { ok: true, errors: [] };
   }
 
@@ -632,8 +635,7 @@
     const all = readCustomMeta();
     if (!all[norm]) return false;
     delete all[norm];
-    writeCustomMeta(all);
-    return true;
+    return writeCustomMeta(all);
   }
 
   /**
