@@ -231,6 +231,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     RECOVERY: 0.53   // Возвращение (> 0.53)
   };
 
+  // v3.8.0: засечки для месячного тренда HEYS Score — заданы в шкале СЫРОГО CRS
+  // (не показываемого числа, см. CRS_THRESHOLDS выше). Показываемая кривая
+  // сплющивает рост (аудит UI_V4_SPEC_2026-08-09.md), поэтому для тренда нужна
+  // отдельная разметка: 25 / 45 / 70 → База / Разгон / Рост / Пик.
+  const CRS_RAW_TREND_THRESHOLDS = {
+    BASE: 0.25,
+    ACCELERATING: 0.45,
+    GROWING: 0.70
+  };
+
   // ─────────────────────────────────────────────────────
   // УТИЛИТЫ
   // ─────────────────────────────────────────────────────
@@ -2006,6 +2016,102 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (diff > 0.05) return 'up';
     if (diff < -0.05) return 'down';
     return 'flat';
+  }
+
+  /**
+   * v3.8.0: состояние в разметке СЫРОГО CRS (25/45/70 → База/Разгон/Рост/Пик).
+   * Отдельно от CRS_THRESHOLDS/STATES — те размечают показываемое число и
+   * текущий день, а не месячный тренд. См. CRS_RAW_TREND_THRESHOLDS.
+   */
+  function getCrsRawState(rawValue) {
+    var t = CRS_RAW_TREND_THRESHOLDS;
+    if (rawValue >= t.GROWING) {
+      return { key: 'PEAK', label: 'Пик', distanceToNext: null };
+    }
+    if (rawValue >= t.ACCELERATING) {
+      return { key: 'GROWING', label: 'Рост', distanceToNext: +(t.GROWING - rawValue).toFixed(3) };
+    }
+    if (rawValue >= t.BASE) {
+      return { key: 'ACCELERATING', label: 'Разгон', distanceToNext: +(t.ACCELERATING - rawValue).toFixed(3) };
+    }
+    return { key: 'BASE', label: 'База', distanceToNext: +(t.BASE - rawValue).toFixed(3) };
+  }
+
+  /**
+   * v3.8.0: HEYS Score — 30-дневная серия СЫРОГО CRS для трендовой оценки.
+   * Показываемое число (mapRawCrsToDisplay) для тренда не годится — оно
+   * сплющивает рост в разы (аудит UI_V4_SPEC_2026-08-09.md, «Каскад как
+   * трендовая оценка»: реальный клиент +40 сырых за 14 дней ↔ +9 показываемых).
+   * Строим по сырому: серия по дням, дельта за 14 дней, состояние по засечкам
+   * CRS_RAW_TREND_THRESHOLDS.
+   *
+   * Переиспользует computeCascadeRate/computeIndividualCeiling/loadDcsHistory —
+   * второй расчёт не заводим. Ceiling считается один раз на всю серию (как и в
+   * основном пайплайне computeCascadeState), а не отдельно на каждый день.
+   *
+   * @param {string} [clientId] — если не задан, берётся текущий клиент.
+   * @param {Object} [opts]
+   * @param {Object} [opts.dcsHistory] — override истории DCS (для тестов);
+   *   иначе loadDcsHistory(clientId).
+   * @param {Array}  [opts.prevDays] — override 30-дневной истории дней (для
+   *   ceiling в тестах); иначе getPreviousDays(CRS_WINDOW).
+   * @param {string} [opts.todayDate] — YYYY-MM-DD, точка отсчёта (для тестов);
+   *   иначе сегодня.
+   * @returns {{
+   *   series: Array<{date: string, raw: number}>,
+   *   current: number,
+   *   delta14: (number|null),
+   *   ceiling: number,
+   *   state: string,
+   *   stateLabel: string,
+   *   distanceToNext: (number|null)
+   * }}
+   */
+  function getCrsRawTrend(clientId, opts) {
+    var options = opts || {};
+    var resolvedClientId = typeof clientId === 'string'
+      ? clientId
+      : ((HEYS.utils && HEYS.utils.getCurrentClientId && HEYS.utils.getCurrentClientId()) || HEYS.currentClientId || '');
+
+    var dcsHistory = options.dcsHistory || loadDcsHistory(resolvedClientId);
+    var prevDays30 = options.prevDays || getPreviousDays(CRS_WINDOW);
+    var ceilingResult = computeIndividualCeiling(dcsHistory, prevDays30, {});
+    var ceiling = ceilingResult.ceiling;
+
+    var today = options.todayDate ? new Date(options.todayDate + 'T12:00:00') : new Date();
+
+    var series = [];
+    for (var i = CRS_WINDOW - 1; i >= 0; i--) {
+      var d = new Date(today);
+      d.setDate(d.getDate() - i);
+      var dateKey = d.toISOString().slice(0, 10);
+
+      var baseRaw = computeCascadeRate(dcsHistory, ceiling, dateKey);
+      var dcsOfDay = dcsHistory[dateKey];
+      var boost = 0;
+      if (typeof dcsOfDay === 'number') {
+        if (dcsOfDay > 0) boost = dcsOfDay * CRS_TODAY_BOOST;
+        else if (dcsOfDay < -0.1) boost = dcsOfDay * CRS_TODAY_PENALTY;
+      }
+      var rawForDay = +clamp(baseRaw + boost, 0, ceiling).toFixed(3);
+      series.push({ date: dateKey, raw: rawForDay });
+    }
+
+    var current = series.length ? series[series.length - 1].raw : 0;
+    var idx14 = series.length - 1 - 14;
+    var delta14 = idx14 >= 0 ? +(current - series[idx14].raw).toFixed(3) : null;
+
+    var state = getCrsRawState(current);
+
+    return {
+      series: series,
+      current: current,
+      delta14: delta14,
+      ceiling: ceiling,
+      state: state.key,
+      stateLabel: state.label,
+      distanceToNext: state.distanceToNext
+    };
   }
 
   // ─────────────────────────────────────────────────────
@@ -5480,6 +5586,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     STATE_CONFIG: STATE_CONFIG,
     MESSAGES: MESSAGES,
     CRS_THRESHOLDS: CRS_THRESHOLDS,
+    getCrsRawTrend: getCrsRawTrend,
+    CRS_RAW_TREND_THRESHOLDS: CRS_RAW_TREND_THRESHOLDS,
     VERSION: '3.7.1'
   };
 
