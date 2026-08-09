@@ -987,6 +987,142 @@ td:first-child input {
   font-weight: 500;
 }
 
+/* Обзор программы куратора (CURATOR_TRAINING_PROGRAM_PROTOCOL, слой 4):
+   первым слоем — ближайшая тренировка, второй слой (Подробнее) — весь цикл.
+   Тот же синий акцент, что у sb-plan-card (750-strength-builder.css) —
+   визуально одна и та же сущность «план куратора». */
+.program-overview-card {
+  border-radius: 14px;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  background: var(--card, #fff);
+  overflow: hidden;
+}
+
+.program-overview-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 13px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.program-overview-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.program-overview-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.program-overview-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text, #0f172a);
+}
+
+.program-overview-sub {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--muted, #64748b);
+}
+
+.program-overview-toggle {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #1d4ed8;
+  white-space: nowrap;
+}
+
+.program-overview-chevron {
+  font-size: 13px;
+}
+
+.program-overview-detail {
+  padding: 0 13px 12px;
+  border-top: 1px solid rgba(37, 99, 235, 0.15);
+}
+
+.program-overview-detail-title {
+  margin: 10px 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text, #0f172a);
+}
+
+.program-overview-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.program-overview-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.program-overview-detail-date {
+  flex: 0 0 auto;
+  color: var(--muted, #64748b);
+  font-variant-numeric: tabular-nums;
+}
+
+.program-overview-detail-label {
+  flex: 1;
+  min-width: 0;
+  color: var(--text, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.program-overview-detail-status {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.program-overview-status-assigned {
+  background: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
+.program-overview-status-started {
+  background: rgba(217, 119, 6, 0.14);
+  color: #b45309;
+}
+
+.program-overview-status-done {
+  background: rgba(22, 163, 74, 0.14);
+  color: #15803d;
+}
+
+.program-overview-status-skipped,
+.program-overview-status-past {
+  background: rgba(100, 116, 139, 0.12);
+  color: var(--muted, #64748b);
+}
+
 .compact-train {
   padding: 10px 14px !important;
   animation: slideIn 0.25s ease-out;

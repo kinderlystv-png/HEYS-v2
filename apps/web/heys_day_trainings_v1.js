@@ -2449,6 +2449,146 @@
     );
   }
 
+  /** Понедельник ISO-недели, содержащей dateKey — тот же расчёт, что в heys_planning_store_v1.js/heys_day_tab_impl_v1.js. */
+  function mondayOfWeek(dateKey) {
+    const parts = String(dateKey).split('-').map(Number);
+    const date = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+    const dow = date.getDay();
+    date.setDate(date.getDate() + (dow === 0 ? -6 : 1 - dow));
+    return dayKeyFromParts(date.getFullYear(), date.getMonth() + 1, date.getDate());
+  }
+
+  function addDaysToKey(dateKey, delta) {
+    const parts = String(dateKey).split('-').map(Number);
+    const date = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+    date.setDate(date.getDate() + delta);
+    return dayKeyFromParts(date.getFullYear(), date.getMonth() + 1, date.getDate());
+  }
+
+  const PROGRAM_STATUS_LABELS = { assigned: 'Ожидает', started: 'Идёт', done: 'Выполнено', skipped: 'Пропущено' };
+
+  /**
+   * Обзор программы куратора (CURATOR_TRAINING_PROGRAM_PROTOCOL_2026-08-09.md,
+   * слой 4): «ближайшая тренировка + на неделе ещё N» первым слоем, весь цикл —
+   * вторым, по `Подробнее`.
+   *
+   * heys_training_program — снимок на момент назначения (days: date/dayLabel/
+   * trainingId), не источник правды: живой статус каждого дня лежит только в
+   * самой записи тренировки (plan.status). Поэтому обзор досчитывает статус
+   * ближайших дней отдельным батчем по датам программы, а не доверяет индексу.
+   * Читается напрямую через YandexAPI.getKV/getKVBatch (тот же путь, что у
+   * heys_reading_personalization_v1 в heys_planning_reading_v1.js) — ключ не
+   * добавлен в client-scoped allowlisty lsGet/hot-sync намеренно: виджету
+   * достаточно разового чтения при монтировании карточки дня, регистрация в
+   * общих реестрах синхронизации не нужна и не добавлялась.
+   */
+  function ProgramWeekOverviewCard({ clientId }) {
+    const [state, setState] = React.useState({ loading: true, program: null, liveDays: null });
+    const [expanded, setExpanded] = React.useState(false);
+
+    React.useEffect(() => {
+      let cancelled = false;
+      if (!clientId || !HEYS.YandexAPI || typeof HEYS.YandexAPI.getKV !== 'function') {
+        setState({ loading: false, program: null, liveDays: null });
+        return undefined;
+      }
+      (async () => {
+        try {
+          const res = await HEYS.YandexAPI.getKV(clientId, 'heys_training_program');
+          const program = res && res.data && typeof res.data === 'object' ? res.data : null;
+          const days = Array.isArray(program && program.days) ? program.days : [];
+          const today = todayDateKeyForPlan();
+          const upcoming = days
+            .filter((d) => d && typeof d.date === 'string' && d.date >= today)
+            .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+          if (!program || (program.status !== 'active' && program.status !== 'partial') || !upcoming.length) {
+            if (!cancelled) setState({ loading: false, program: null, liveDays: null });
+            return;
+          }
+          const dayKeys = upcoming.map((d) => 'heys_dayv2_' + d.date);
+          const batch = typeof HEYS.YandexAPI.getKVBatch === 'function'
+            ? await HEYS.YandexAPI.getKVBatch(clientId, dayKeys)
+            : { data: [] };
+          const blobByKey = new Map();
+          (Array.isArray(batch && batch.data) ? batch.data : []).forEach((row) => {
+            if (row && row.k) blobByKey.set(row.k, row.v);
+          });
+          const liveDays = upcoming.map((d) => {
+            const blob = blobByKey.get('heys_dayv2_' + d.date);
+            const trainings = Array.isArray(blob && blob.trainings) ? blob.trainings : [];
+            const training = trainings.find((t) => t && t.id === d.trainingId);
+            return {
+              date: d.date,
+              dayLabel: d.dayLabel || null,
+              weekIndex: d.weekIndex || null,
+              status: training && training.plan ? training.plan.status : null,
+            };
+          });
+          if (!cancelled) setState({ loading: false, program, liveDays });
+        } catch (_) {
+          if (!cancelled) setState({ loading: false, program: null, liveDays: null });
+        }
+      })();
+      return () => { cancelled = true; };
+    }, [clientId]);
+
+    if (state.loading || !state.program || !Array.isArray(state.liveDays)) return null;
+
+    const today = todayDateKeyForPlan();
+    const weekStart = mondayOfWeek(today);
+    const weekEnd = addDaysToKey(weekStart, 6);
+    const pending = state.liveDays.filter((d) => d.status === 'assigned');
+    if (!pending.length) return null;
+    const next = pending[0];
+    const restThisWeek = pending.slice(1).filter((d) => d.date >= weekStart && d.date <= weekEnd);
+
+    const fmtDate = (dateKey) => {
+      const parts = String(dateKey).split('-');
+      return parts[2] + '.' + parts[1];
+    };
+
+    const allDays = Array.isArray(state.program.days)
+      ? state.program.days.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0))
+      : [];
+
+    return React.createElement('div', { className: 'program-overview-card' + (expanded ? ' is-expanded' : '') },
+      React.createElement('button', {
+        type: 'button',
+        className: 'program-overview-header',
+        onClick: () => setExpanded((v) => !v),
+        'aria-expanded': expanded
+      },
+        React.createElement('span', { className: 'program-overview-icon' }, '🗓️'),
+        React.createElement('div', { className: 'program-overview-main' },
+          React.createElement('div', { className: 'program-overview-title' },
+            'Следующая по плану: ' + (next.dayLabel || 'тренировка') + ' · ' + fmtDate(next.date)),
+          restThisWeek.length > 0 && React.createElement('div', { className: 'program-overview-sub' },
+            'На неделе ещё ' + restThisWeek.length)
+        ),
+        React.createElement('span', { className: 'program-overview-toggle' },
+          expanded ? 'Скрыть' : 'Подробнее', ' ', React.createElement('span', { className: 'program-overview-chevron' }, expanded ? '⌃' : '⌄'))
+      ),
+      expanded && React.createElement('div', { className: 'program-overview-detail' },
+        React.createElement('div', { className: 'program-overview-detail-title' },
+          state.program.title + (state.program.weeks ? ' · ' + state.program.weeks + ' нед.' : '')),
+        React.createElement('ul', { className: 'program-overview-detail-list' },
+          allDays.map((d) => {
+            const isPast = d.date < today;
+            const live = isPast ? null : state.liveDays.find((l) => l.date === d.date);
+            const statusKey = isPast ? 'past' : ((live && live.status) || 'assigned');
+            const statusLabel = isPast ? 'Прошло' : (PROGRAM_STATUS_LABELS[statusKey] || 'Ожидает');
+            return React.createElement('li', { key: d.date, className: 'program-overview-detail-row' },
+              React.createElement('span', { className: 'program-overview-detail-date' }, fmtDate(d.date)),
+              React.createElement('span', { className: 'program-overview-detail-label' },
+                d.dayLabel || ('Неделя ' + (d.weekIndex || '?'))),
+              React.createElement('span', { className: 'program-overview-detail-status program-overview-status-' + statusKey }, statusLabel)
+            );
+          })
+        )
+      )
+    );
+  }
+
   function renderTrainingsBlock(params) {
     if (!React) return null;
 
@@ -3088,6 +3228,7 @@
     }
 
     return React.createElement('div', { className: 'compact-trainings' },
+      safeTrainingFilterMode === 'regular' && HEYS.currentClientId && React.createElement(ProgramWeekOverviewCard, { clientId: HEYS.currentClientId }),
       safeTrainingFilterMode === 'all' && safeVisibleTrainings === 0 && safeHouseholdActivities.length === 0 && React.createElement('div', {
         className: 'empty-trainings',
         title: 'Силовые и другие тренировки при дефиците помогают сохранять мышечную массу и силовые показатели; учёт в HEYS — в калориях и самочувствии. Питание остаётся главным рычагом энергетического баланса.'
@@ -3623,6 +3764,9 @@
   }
 
   HEYS.dayTrainings = {
-    renderTrainingsBlock
+    renderTrainingsBlock,
+    // Тестовый шов — прямой рендер обзора программы куратора в изоляции от
+    // всего остального compact-trainings дерева (много обязательных пропов).
+    ProgramWeekOverviewCard
   };
 })(window);
