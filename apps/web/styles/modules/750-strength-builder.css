@@ -1344,3 +1344,55 @@
   flex-direction: column;
   gap: 5px;
 }
+
+/* ── Пустая тренировка (экран 02) ────────────────────────────────────────── */
+
+.sb-empty-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 48px 20px 20px;
+  text-align: center;
+}
+
+.sb-empty-emoji {
+  font-size: 40px;
+  margin-bottom: 4px;
+}
+
+.sb-empty-screen b {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--sb-tx);
+}
+
+.sb-empty-screen p {
+  margin: 6px 0 18px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--sb-mut);
+  max-width: 320px;
+}
+
+.sb-empty-cta {
+  width: 100%;
+  max-width: 320px;
+  min-height: 52px;
+  margin-bottom: 9px;
+}
+
+.sb-confirm-title {
+  display: block;
+  padding: 4px 12px 2px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--sb-tx);
+}
+
+.sb-confirm-text {
+  margin: 6px 12px 13px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--sb-mut);
+}

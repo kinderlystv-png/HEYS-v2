@@ -3241,6 +3241,20 @@
                     return { last: snap, record: rec };
                   } catch (_e) { return { last: null, record: null }; }
                 },
+                lastSessionFor: function () {
+                  try {
+                    const hit = findLastWorkoutBuilderExercises(dateKey, ti);
+                    if (!hit || !hit.exercises || !hit.exercises.length) return null;
+                    return { dateKey: hit.dateKey || dateKey, exercises: hit.exercises };
+                  } catch (_e) { return null; }
+                },
+                onRepeatLast: function (srcExercises) {
+                  patchTraining(ti, function (t0) {
+                    const wl0 = ensureWorkoutLogShape(t0);
+                    wl0.exercises = cloneExercisesForReplay(srcExercises);
+                    return applyWorkoutLogToTraining(t0, wl0);
+                  });
+                },
                 historyDetailFor: function (name, exIdx) {
                   try {
                     return {

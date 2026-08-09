@@ -40,6 +40,11 @@
     return (TK && TK.fullscreen) ? TK.fullscreen : null;
   }
 
+  function strengthKernelRef() {
+    const TK = HEYS.TrainingKernel;
+    return (TK && TK.strength) ? TK.strength : null;
+  }
+
   function fmtClock(totalSec) {
     const s = Math.max(0, Math.round(totalSec || 0));
     const mm = Math.floor(s / 60);
@@ -56,13 +61,15 @@
   // ——— Экран целиком ———
 
   function BuilderScreen(props) {
-    const { training, dateKey, onPatch, onPatchNote, profile, historyFor, historyDetailFor, onClose } = props;
+    const { training, dateKey, onPatch, onPatchNote, profile, historyFor, historyDetailFor,
+      lastSessionFor, onRepeatLast, onClose } = props;
     const SK = kernel();
     const [openIdx, setOpenIdx] = React.useState(0);
     const [view, setView] = React.useState('list');
     const [draftName, setDraftName] = React.useState('');
     const [linkFrom, setLinkFrom] = React.useState(0);
     const [sheetOpen, setSheetOpen] = React.useState(false);
+    const [closeConfirm, setCloseConfirm] = React.useState(false);
     const [historyName, setHistoryName] = React.useState('');
     const [rest, setRest] = React.useState(null); // { total, startedAt }
     const [tick, setTick] = React.useState(0);
@@ -270,6 +277,7 @@
         }
       });
     }
+    const Parts = HEYS.StrengthBuilderParts || {};
     if (view === 'history' && FinUIRef().HistoryScreen) {
       const detail = typeof historyDetailFor === 'function'
         ? historyDetailFor(historyName, 0)
@@ -302,6 +310,37 @@
         onDone: addExercise,
         onCancel: function () { setView('catalog'); }
       });
+    }
+
+    // Экран 02: пустая тренировка. «Начать по плану» не показываем — под неё
+    // нет схемы данных (см. протокол, раздел «Открытое»); кнопка в пустоту не
+    // уходит в разработку (решение 9).
+    if (exercises.length === 0) {
+      const last = typeof lastSessionFor === 'function' ? lastSessionFor() : null;
+      return h('div', { className: 'sb-root' },
+        h('div', { className: 'sb-head' },
+          h('button', {
+            type: 'button', className: 'sb-icon-btn', onClick: onClose, 'aria-label': 'Закрыть'
+          }, '✕'),
+          h('div', { className: 'sb-head-title' },
+            h('b', null, 'Силовая'),
+            h('div', { className: 'sb-head-sub' }, 'Пусто · 0 подходов')
+          )
+        ),
+        h('div', { className: 'sb-empty-screen' },
+          h('div', { className: 'sb-empty-emoji' }, '🏆'),
+          h('b', null, 'Пустая тренировка'),
+          h('p', null, 'Добавляйте упражнения по ходу — план не обязан быть готов заранее.'),
+          h('button', {
+            type: 'button', className: 'sb-btn is-accent sb-empty-cta',
+            onClick: function () { setView('catalog'); }
+          }, '+ Собрать свою'),
+          last && h('button', {
+            type: 'button', className: 'sb-btn sb-empty-cta',
+            onClick: function () { onRepeatLast(last.exercises); }
+          }, '↻ Повторить ' + (Parts.humanDate ? Parts.humanDate(last.dateKey) : last.dateKey))
+        )
+      );
     }
 
     const rendered = [];
@@ -420,13 +459,49 @@
           })
         )
       ),
+      // Осталось незакрытым: если это не сделано — лучше убрать, иначе тоннаж и
+      // объём по группам завышаются пустыми строками (экран 11).
+      closeConfirm && h('div', { className: 'sb-sheet-back', onClick: function () { setCloseConfirm(false); } },
+        h('div', { className: 'sb-sheet', onClick: function (e) { e.stopPropagation(); } },
+          h('div', { className: 'sb-sheet-grip' }),
+          h('b', { className: 'sb-confirm-title' }, 'Остались незакрытые подходы'),
+          h('p', { className: 'sb-confirm-text' },
+            notClosed + (notClosed === 1 ? ' подход' : notClosed < 5 ? ' подхода' : ' подходов')
+            + ' без отметки. Если они не сделаны — лучше убрать: иначе тоннаж и объём по группам будут завышены.'),
+          h('div', { className: 'sb-pain-actions' },
+            h('button', {
+              type: 'button', className: 'sb-btn',
+              onClick: function () { setCloseConfirm(false); onClose(); }
+            }, 'Оставить'),
+            h('button', {
+              type: 'button', className: 'sb-btn is-accent',
+              onClick: function () {
+                const SK = strengthKernelRef();
+                const cleaned = exercises.map(function (ex) {
+                  const aps = (ex.approaches || []).filter(function (a) {
+                    return !SK || SK.isApproachDone(a) || SK.isBlankApproach(a);
+                  });
+                  return Object.assign({}, ex, { approaches: aps });
+                });
+                patchExercises(cleaned);
+                setCloseConfirm(false);
+                onClose();
+              }
+            }, 'Убрать пустые')
+          )
+        )
+      ),
       h('div', { className: 'sb-panel' },
         h('button', {
           type: 'button', className: 'sb-panel-add', 'aria-label': 'Добавить упражнение',
           onClick: function () { setView('catalog'); }
         }, '+'),
         h('button', {
-          type: 'button', className: 'sb-finish', onClick: function () { setView('finish'); }
+          type: 'button', className: 'sb-finish',
+          onClick: function () {
+            if (notClosed > 0) { setCloseConfirm(true); return; }
+            setView('finish');
+          }
         }, notClosed > 0 ? 'Завершить · ' + notClosed + ' не закрыто' : 'Завершить')
       )
     );

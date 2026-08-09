@@ -284,3 +284,101 @@ describe('финал тренировки', () => {
     expect(best.reps).toBe(8);
   });
 });
+
+describe('пустая тренировка (экран 02)', () => {
+  it('план куратора не показываем — под него нет схемы данных', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onClose: () => {},
+    }));
+    expect(screen.getByText('Пустая тренировка')).toBeTruthy();
+    expect(screen.getByText('+ Собрать свою')).toBeTruthy();
+    expect(screen.queryByText(/Начать по плану/)).toBeNull();
+    expect(screen.queryByText(/Шаблон/)).toBeNull();
+  });
+
+  it('без прошлой сессии кнопка повтора не показывается', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onClose: () => {},
+      lastSessionFor: () => null,
+    }));
+    expect(screen.queryByText(/Повторить/)).toBeNull();
+  });
+
+  it('с прошлой сессией повтор клонирует упражнения, не ссылается на старые', () => {
+    const repeated = [];
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onClose: () => {},
+      lastSessionFor: () => ({ dateKey: '2026-08-05', exercises: [{ name: 'Жим', approaches: [work(75, 8, true)] }] }),
+      onRepeatLast: (ex) => repeated.push(ex),
+    }));
+    fireEvent.click(screen.getByText(/Повторить/));
+    expect(repeated.length).toBe(1);
+    expect(repeated[0][0].name).toBe('Жим');
+  });
+});
+
+describe('остались незакрытые подходы (экран 11)', () => {
+  it('«Завершить» с незакрытыми подходами спрашивает, а не уходит сразу на финал', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onClose: () => {},
+    }));
+    fireEvent.click(screen.getByText('Завершить · 1 не закрыто'));
+    expect(screen.getByText('Остались незакрытые подходы')).toBeTruthy();
+    expect(screen.getByText(/лучше убрать/)).toBeTruthy();
+  });
+
+  it('«Убрать пустые» чистит незакрытые заполненные, но не трогает закрытые и прочерки', () => {
+    const seen = [];
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{
+        name: 'Жим',
+        // Третий подход — прочерк участника связки, добавленного по ходу: он
+        // легитимен и не должен исчезнуть вместе с настоящим «недоделал».
+        approaches: [work(75, 8, true), work(75, 8, false), { weightKg: '', reps: 0, done: false }],
+      }]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: (next) => seen.push(next),
+      onClose: () => {},
+    }));
+    fireEvent.click(screen.getByText('Завершить · 1 не закрыто'));
+    fireEvent.click(screen.getByText('Убрать пустые'));
+    const aps = seen[seen.length - 1][0].approaches;
+    expect(aps.length).toBe(2);
+    expect(aps[0].done).toBe(true);
+    expect(aps[1].weightKg).toBe('');
+    expect(aps[1].reps).toBe(0);
+  });
+
+  it('«Оставить» закрывает конструктор, ничего не меняя', () => {
+    const patched = [];
+    const closed = [];
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{ name: 'Жим', approaches: [work(75, 8, false)] }]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: (n) => patched.push(n),
+      onClose: () => closed.push(1),
+    }));
+    fireEvent.click(screen.getByText('Завершить · 1 не закрыто'));
+    fireEvent.click(screen.getByText('Оставить'));
+    expect(patched.length).toBe(0);
+    expect(closed.length).toBe(1);
+  });
+});
