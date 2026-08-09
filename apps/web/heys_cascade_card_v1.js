@@ -5339,9 +5339,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       var calcTotals = HEYS.dayCalculations && HEYS.dayCalculations.calculateDayTotals;
       var calcNorms = HEYS.dayCalculations && HEYS.dayCalculations.computeDailyNorms;
       var buildPIndex = HEYS.dayUtils && HEYS.dayUtils.buildProductIndex;
-      var getOptimumForDay = HEYS.dayUtils && HEYS.dayUtils.getOptimumForDay;
 
-      if (!calcTotals || !calcNorms || !buildPIndex || !getOptimumForDay) return null;
+      if (!calcTotals || !calcNorms || !buildPIndex) return null;
 
       var normalizedDay = ensureDay ? ensureDay(day, profile) : day;
       var products = (HEYS.products && HEYS.products.getAll) ? HEYS.products.getAll() : [];
@@ -5359,7 +5358,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
       } catch (_) { }
 
-      var optimumInfo = getOptimumForDay(normalizedDay, profile) || {};
+      // HEYS.dayUtils.getOptimumForDay — призрак: такого метода нет ни в одном
+      // исходнике, и жёсткая проверка на него выше обрывала весь «точный»
+      // расчёт каскада (виджет всегда получал hasData: false). Оптимум дня
+      // резолвим через TDEE — так же, как остальной слой данных виджетов.
+      var optimumInfo = (HEYS.dayUtils && HEYS.dayUtils.getOptimumForDay)
+        ? (HEYS.dayUtils.getOptimumForDay(normalizedDay, profile) || {})
+        : (HEYS.TDEE && HEYS.TDEE.calculate ? (HEYS.TDEE.calculate(normalizedDay, profile, {}) || {}) : {});
       var normAbs = calcNorms(optimumInfo.optimum || 0, normPerc || {});
       var cascadeResult = computeCascadeState(normalizedDay, dayTot, normAbs, profile, pIndex, {
         silent: options.silent !== false

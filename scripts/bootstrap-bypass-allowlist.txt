@@ -128,12 +128,12 @@ apps/web/heys_dev_utils.js:76
 apps/web/heys_exercise_catalog_v1.js:144
 apps/web/heys_exercise_catalog_v1.js:170
 apps/web/heys_feature_flags_v1.js:95
-apps/web/heys_gamification_bar_v1.js:1415
-apps/web/heys_gamification_bar_v1.js:1416
-apps/web/heys_gamification_bar_v1.js:1417
+apps/web/heys_gamification_bar_v1.js:1422
+apps/web/heys_gamification_bar_v1.js:1430
+apps/web/heys_gamification_bar_v1.js:1431
 apps/web/heys_gamification_bar_v1.js:1423
 apps/web/heys_gamification_bar_v1.js:1424
-apps/web/heys_gamification_bar_v1.js:1425
+apps/web/heys_gamification_bar_v1.js:1432
 apps/web/heys_gamification_v1.js:1619
 apps/web/heys_gamification_v1.js:50
 apps/web/heys_gamification_v1.js:52
@@ -218,8 +218,8 @@ apps/web/heys_client_log_trace_v1.js:148
 apps/web/heys_whats_new_modal_v1.js:87
 apps/web/heys_widgets_core_v1.js:1046
 apps/web/heys_widgets_core_v1.js:383
-apps/web/heys_widgets_ui_v1.js:4764
-apps/web/heys_widgets_ui_v1.js:7006
+apps/web/heys_widgets_ui_v1.js:4628
+apps/web/heys_widgets_ui_v1.js:6870
 apps/web/heys_yesterday_verify_v1.js:1221
 apps/web/heys_yesterday_verify_v1.js:1219
 apps/web/heys_yesterday_verify_v1.js:36

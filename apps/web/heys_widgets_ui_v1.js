@@ -1726,11 +1726,11 @@
     const remaining = data?.remaining || 0;
     const endTime = data?.endTime || null;
     const color = data?.color || '#3b82f6';
-    const isLipolysis = data?.isLipolysis ?? (status === 'lipolysis');
-    const lastMealTime = data?.lastMealTime || null;
-    const isNightTime = data?.isNightTime || false;
-    const isPastDay = data?.isPastDay || false;
-    const isOvernightLipolysis = data?.isOvernightLipolysis || false;
+    // Канонический расчёт знает только scheduled/settling/complete
+    // (heys_insulin_wave_v1.js:140) и поля isLipolysis не отдаёт — статуса
+    // 'lipolysis' не бывает, поэтому точка спарклайна никогда не садилась на
+    // базовую линию. 'complete' — тот же эквивалент, что и в widget_data.js.
+    const isLipolysis = data?.isLipolysis ?? (status === 'complete');
 
     const d = getWidgetDims(widget);
     const isShort = d.isShort;
@@ -1813,148 +1813,12 @@
     );
   }
 
-  function InsulinWaveOvernightContent({ data, d, isShort }) {
-    const lipolysisMin = data?.lipolysisMinutes || 0;
-    const record = data?.lipolysisRecord || {};
-    const recordMin = record.minutes || 0;
-    const isRecord = data?.isRecord || false;
-
-    const formatMin = (minutes) => {
-      if (!minutes || minutes <= 0) return '0м';
-      const h = Math.floor(minutes / 60);
-      const m = Math.round(minutes % 60);
-      if (h > 0 && m > 0) return `${h}ч ${m}м`;
-      if (h > 0) return `${h}ч`;
-      return `${m}м`;
-    };
-
-    const durationLabel = formatMin(lipolysisMin);
-    const recordLabel = recordMin > 0 ? formatMin(recordMin) : null;
-    const sparkline = React.createElement(InsulinWaveSparkline, {
-      progress: 100, isLipolysis: true, color: '#22c55e', width: '100%', height: isShort ? 34 : 50
-    });
-
-    if (isShort) {
-      return React.createElement('div', {
-        style: { display: 'flex', alignItems: 'center', height: '100%', gap: '8px', padding: '4px 10px' }
-      },
-        React.createElement('div', {
-          style: { display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0, minWidth: '78px' }
-        },
-          React.createElement('div', {
-            style: { fontSize: '0.72rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }
-          }, 'Низкая волна'),
-          React.createElement('div', {
-            style: { fontSize: '0.65rem', color: '#3b82f6', fontWeight: 700 }
-          }, durationLabel)
-        ),
-        React.createElement('div', { style: { flex: 1, minWidth: 0 } }, sparkline)
-      );
-    }
-
-    return React.createElement('div', {
-      style: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%', padding: '8px 8px 6px' }
-    },
-      React.createElement('div', {
-        style: { fontSize: '0.8rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }
-      }, 'Низкая волна'),
-      React.createElement('div', {
-        style: { fontSize: '1.2rem', fontWeight: 800, color: '#3b82f6', letterSpacing: '-0.5px', lineHeight: 1, marginTop: '2px' }
-      }, durationLabel),
-      React.createElement('div', {
-        style: { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', marginTop: '4px', marginBottom: '4px' }
-      }, sparkline),
-      React.createElement('div', {
-        style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px' }
-      },
-        React.createElement('div', {
-          style: { fontSize: '0.6rem', fontWeight: 600, color: '#22c55e', lineHeight: 1.3 }
-        }, 'Ориентир предыдущего приёма завершён'),
-        recordLabel ? React.createElement('div', {
-          style: { fontSize: '0.55rem', fontWeight: 600, color: isRecord ? '#f59e0b' : 'var(--heys-text-tertiary,#94a3b8)', lineHeight: 1.2, whiteSpace: 'nowrap' }
-        }, isRecord ? 'Длинный промежуток' : `История: ${recordLabel}`) : null
-      )
-    );
-  }
-
-  // === Past-day insulin wave: итоги низкой волны ===
-  function InsulinWavePastDayContent({ widget, data, d, isShort }) {
-    const windowH = data.fatBurningWindowH || 0;
-    const windowM = data.fatBurningWindowM || 0;
-    const record = data.lipolysisRecord || {};
-    const isRecord = data.isRecord || false;
-    const windowMin = data.fatBurningWindowMin || 0;
-    const stillActive = data.fatBurningStillActive || false;
-
-    const durationLabel = windowH > 0
-      ? (windowM > 0 ? `${windowH}ч ${windowM}м` : `${windowH}ч`)
-      : `${windowM}м`;
-
-    const headerText = stillActive
-      ? 'Низкая волна'
-      : windowMin > 0 ? 'Был промежуток' : 'Нет промежутка';
-
-    // Рекорд
-    const recordMin = record.minutes || 0;
-    const recordH = Math.floor(recordMin / 60);
-    const recordM = Math.round(recordMin % 60);
-    const recordLabel = recordMin > 0
-      ? (recordH > 0 ? (recordM > 0 ? `${recordH}ч ${recordM}м` : `${recordH}ч`) : `${recordM}м`)
-      : null;
-
-    const sparkline = React.createElement(InsulinWaveSparkline, {
-      progress: 100, isLipolysis: true, color: '#22c55e', width: '100%', height: isShort ? 34 : 50
-    });
-
-    // === 2×1 horizontal ===
-    if (isShort) {
-      return React.createElement('div', {
-        style: { display: 'flex', alignItems: 'center', height: '100%', gap: '8px', padding: '4px 10px' }
-      },
-        React.createElement('div', {
-          style: { display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0, minWidth: '68px' }
-        },
-          React.createElement('div', {
-            style: { fontSize: '0.72rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }
-          }, headerText),
-          React.createElement('div', {
-            style: { fontSize: '0.65rem', color: '#3b82f6', fontWeight: 700 }
-          }, durationLabel)
-        ),
-        React.createElement('div', { style: { flex: 1, minWidth: 0 } }, sparkline)
-      );
-    }
-
-    // === 2×2 vertical: past-day version ===
-    return React.createElement('div', {
-      style: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%', padding: '8px 8px 6px' }
-    },
-      // Header
-      React.createElement('div', {
-        style: { fontSize: '0.8rem', fontWeight: 700, color: '#22c55e', lineHeight: 1.2 }
-      }, headerText),
-      // Duration (big)
-      React.createElement('div', {
-        style: { fontSize: '1.2rem', fontWeight: 800, color: '#3b82f6', letterSpacing: '-0.5px', lineHeight: 1, marginTop: '2px' }
-      }, windowMin > 0 ? durationLabel : '—'),
-      // Sparkline
-      React.createElement('div', {
-        style: { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', marginTop: '4px', marginBottom: '4px' }
-      }, sparkline),
-      // Bottom: neutral estimate copy + legacy interval record
-      React.createElement('div', {
-        style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '4px' }
-      },
-        React.createElement('div', {
-          style: { fontSize: '0.6rem', fontWeight: 600, color: '#22c55e', lineHeight: 1.3 }
-        }, 'Ориентируйтесь на голод и план питания'),
-        !stillActive && recordLabel ? React.createElement('div', {
-          style: { fontSize: '0.55rem', fontWeight: 600, color: isRecord ? '#f59e0b' : 'var(--heys-text-tertiary,#94a3b8)', lineHeight: 1.2, whiteSpace: 'nowrap' }
-        }, isRecord ? 'Длинный промежуток' : `История: ${recordLabel}`) : null
-      )
-    );
-  }
-
+  // InsulinWaveOvernightContent и InsulinWavePastDayContent удалены 2026-08-09:
+  // ветки диспетчеризации на них вырезаны ещё в 95d64c042 вместе с
+  // формулировками про жиросжигание, а поля, которые они читали
+  // (lipolysisMinutes, lipolysisRecord, fatBurning*), не производит никто —
+  // вернуть их как есть значило бы показать «Низкая волна / 0м» вместо
+  // нынешней корректной карточки «Окно завершено».
 
   // === Health Trend Widget Content (Тренд здоровья 0-100 из инсайтов) ===
   function HealthTrendWidgetContent({ widget, data }) {

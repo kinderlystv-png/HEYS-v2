@@ -529,7 +529,11 @@
             },
 
             updateFromStreak() {
-                const streak = HEYS?.Day?.getStreak?.() || 0;
+                // Через safeGetStreak, а не напрямую через HEYS.Day.getStreak:
+                // тот живёт только пока смонтирован DayTab, и бейдж на иконке
+                // сбрасывался в ноль на любой другой вкладке.
+                const streak = HEYS?.utils?.safeGetStreak?.()
+                    ?? (HEYS?.Day?.getStreak?.() || 0);
                 this.update(streak);
             },
 

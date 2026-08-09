@@ -9,7 +9,14 @@
      */
     function safeGetStreak() {
         try {
-            return typeof HEYS.Day?.getStreak === 'function' ? HEYS.Day.getStreak() : 0;
+            // HEYS.Day.getStreak — замыкание DayTab (heys_day_effects.js), оно
+            // удаляется при размонтировании вкладки. Раньше на этом всё и
+            // ломалось: на виджетах, в отчётах и в профиле серия становилась
+            // нулём, а вместе с ней молча падали XP-множитель, прогресс миссий
+            // и запись рекорда bestStreak.
+            const fromDayTab = typeof HEYS.Day?.getStreak === 'function' ? HEYS.Day.getStreak() : 0;
+            if (fromDayTab > 0) return fromDayTab;
+            return HEYS.dayCalendarMetrics?.getCurrentStreak?.() || 0;
         } catch {
             return 0;
         }

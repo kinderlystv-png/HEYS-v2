@@ -72,8 +72,62 @@
         }
     }
 
+    // Единая точка входа для всех, кому нужна «серия», но неоткуда взять
+    // аргументы. Раньше её роль играл HEYS.Day.getStreak — замыкание DayTab,
+    // которое удаляется при размонтировании вкладки: на виджетах, в шапке и в
+    // геймификации серия молча становилась нулём.
+    //
+    // Аргументы резолвятся в момент вызова, а не при инициализации: модуль
+    // лежит в boot-day и грузится раньше продуктов и профиля.
+    let streakCache = { key: '', at: 0, value: 0 };
+    const STREAK_CACHE_MS = 15000;
+
+    function getCurrentStreak(options) {
+        const includeToday = !!(options && options.includeToday);
+        const dayUtils = HEYS.dayUtils || {};
+        const fmtDate = dayUtils.fmtDate;
+        const lsGet = HEYS.utils?.lsGet;
+        if (typeof fmtDate !== 'function' || typeof lsGet !== 'function') return 0;
+
+        // computeCurrentStreak читает до 30 ключей localStorage, а шапка
+        // геймификации опрашивает серию раз в 30 секунд — держим короткий кэш.
+        const cacheKey = `${fmtDate(new Date())}|${includeToday ? 1 : 0}`;
+        const now = Date.now();
+        if (streakCache.key === cacheKey && now - streakCache.at < STREAK_CACHE_MS) {
+            return streakCache.value;
+        }
+
+        const products = HEYS.products?.getAll?.() || [];
+        const pIndex = typeof dayUtils.buildProductIndex === 'function'
+            ? dayUtils.buildProductIndex(products)
+            : null;
+        // Для каждого дня приоритет у его собственного savedDisplayOptimum;
+        // это значение — только фолбэк для старых записей без него.
+        // HEYS.dayUtils.getOptimumForDay намеренно не зовём: такого метода нет
+        // ни в одном исходнике, все его вызовы в проекте молча падают в фолбэк.
+        const profile = lsGet('heys_profile', {}) || {};
+        const optimum = HEYS.TDEE?.calculate?.({}, profile, {})?.optimum || 0;
+
+        const value = computeCurrentStreak({ optimum, pIndex, fmtDate, lsGet, includeToday }) || 0;
+        streakCache = { key: cacheKey, at: now, value };
+        return value;
+    }
+
+    function invalidateStreakCache() {
+        streakCache = { key: '', at: 0, value: 0 };
+    }
+
+    // Вкладка Дня шлёт это событие, когда пересчитала серию
+    // (heys_day_effects.js) — сбрасываем кэш, чтобы шапка и виджеты не
+    // показывали устаревшее значение до истечения TTL.
+    if (typeof global.addEventListener === 'function') {
+        global.addEventListener('heysDayStreakUpdated', invalidateStreakCache);
+    }
+
     HEYS.dayCalendarMetrics = {
         computeActiveDays,
-        computeCurrentStreak
+        computeCurrentStreak,
+        getCurrentStreak,
+        invalidateStreakCache
     };
 })(window);

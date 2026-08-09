@@ -83,7 +83,10 @@ describe('места-призраки заменены на resolveDailyTargets 
     ['apps/web/heys_relapse_risk_v1.js', 4],
     ['apps/web/heys_metabolic_intelligence_v1.js', 2],
     ['apps/web/heys_refeed_v1.js', 1],
-    ['apps/web/heys_widgets_data_v1.js', 5],
+    // heys_widgets_data_v1.js удалён 2026-08-09: файл не входил ни в один
+    // бандл и не был подключён, а присваивал HEYS.Widgets.data — то есть
+    // затёр бы живой слой данных, попади он в сборку. Контрактная проверка
+    // призраков в нём ничего не защищала.
     ['apps/web/heys_widgets_ui_v1.js', 1],
     ['apps/web/insights/pi_meal_recommender.js', 3],
     ['apps/web/insights/pi_meal_rec_patterns.js', 1],

@@ -7,8 +7,8 @@
  * heys_widgets_data_crash_risk_v1.js) против фейковых источников данных
  * и требуют, чтобы данные реально доехали.
  *
- * Живой слой данных — apps/web/widgets/widget_data.js.
- * apps/web/heys_widgets_data_v1.js не в бандле и источником правды не является.
+ * Живой слой данных — apps/web/widgets/widget_data.js. Второй файл, который
+ * присваивал тот же HEYS.Widgets.data мимо бандлов, удалён 2026-08-09.
  */
 import fs from 'fs';
 import path from 'path';
@@ -43,9 +43,10 @@ describe('widget_data: streak берётся из живого калькуля�
     loadLegacy('apps/web/widgets/widget_data.js', global);
     data = global.HEYS.Widgets.data;
 
-    // Единственный живой калькулятор текущей серии (boot-day).
+    // Единая точка входа для серии (boot-day) — см.
+    // widgets-streak-single-source.test.js, где она проверяется по-настоящему.
     global.HEYS.dayCalendarMetrics = {
-      computeCurrentStreak: () => 5,
+      getCurrentStreak: () => 5,
     };
     // Рекорд живёт в геймификации как stats.bestStreak.
     global.HEYS.game = { getStats: () => ({ stats: { bestStreak: 9 } }) };
@@ -188,5 +189,77 @@ describe('crash risk: ранний прогноз (EWS) действительн
   it('на 7-дневном периоде окно шире порога — пропуск дня не гасит прогноз', () => {
     getCrashRiskData({ days: 7 });
     expect(seenDays.length).toBeGreaterThan(7);
+  });
+});
+
+function readSource(relPath) {
+  return fs.readFileSync(path.join(repoRoot, relPath), 'utf8');
+}
+
+describe('виджет insulinWave: липолиз-режим спарклайна включается', () => {
+  it('фолбэк isLipolysis сверяется со статусом, который расчёт реально отдаёт', () => {
+    const ui = readSource('apps/web/heys_widgets_ui_v1.js');
+    const wave = readSource('apps/web/heys_insulin_wave_v1.js');
+
+    const m = /isLipolysis\s*=\s*data\?\.isLipolysis\s*\?\?\s*\(status === '(\w+)'\)/.exec(ui);
+    expect(m, 'фолбэк isLipolysis исчез из InsulinWaveWidgetContent').toBeTruthy();
+
+    // Канонический расчёт знает три статуса; фолбэк обязан ссылаться на один
+    // из них, иначе режим липолиза в спарклайне мёртв.
+    const produced = new Set([...wave.matchAll(/'(scheduled|settling|complete)'/g)].map((x) => x[1]));
+    expect(produced.has(m[1]), `статус '${m[1]}' расчёт не производит`).toBe(true);
+  });
+
+  it('в компоненте не осталось чтений полей, которых никто не производит', () => {
+    const ui = readSource('apps/web/heys_widgets_ui_v1.js');
+    const start = ui.indexOf('function InsulinWaveWidgetContent');
+    const body = ui.slice(start, start + 4000);
+    for (const ghost of ['isNightTime', 'isOvernightLipolysis']) {
+      expect(body.includes(ghost), `${ghost} читается, но не производится`).toBe(false);
+    }
+  });
+
+  it('мёртвые компоненты ночного и прошлого дня удалены вместе с полями-призраками', () => {
+    const ui = readSource('apps/web/heys_widgets_ui_v1.js');
+    expect(ui).not.toMatch(/function InsulinWaveOvernightContent/);
+    expect(ui).not.toMatch(/function InsulinWavePastDayContent/);
+    expect(ui).not.toMatch(/fatBurningWindow/);
+  });
+});
+
+describe('каскад: «точный» расчёт больше не обрывается о несуществующий метод', () => {
+  let snapshot;
+
+  beforeEach(() => {
+    global.window = global;
+    global.HEYS = {};
+    global.HEYS.dayCalculations = {
+      calculateDayTotals: () => ({ kcal: 1800, prot: 90, fat: 60, carbs: 200 }),
+      computeDailyNorms: (optimum) => ({ optimum, kcal: optimum }),
+    };
+    global.HEYS.dayUtils = { buildProductIndex: () => ({ byId: new Map(), byName: new Map() }) };
+    // getOptimumForDay намеренно отсутствует — ровно как в живом приложении.
+    global.HEYS.products = { getAll: () => [] };
+    global.HEYS.TDEE = { calculate: () => ({ optimum: 1868 }) };
+    global.HEYS.utils = { lsGet: (k, f) => f };
+    global.React = {
+      createElement: () => null,
+      memo: (c) => c,
+      useState: () => [null, () => {}],
+      useEffect: () => {},
+      useMemo: (f) => f(),
+      useRef: () => ({ current: null }),
+      useCallback: (f) => f,
+    };
+
+    loadLegacy('apps/web/heys_cascade_card_v1.js', global);
+    snapshot = global.HEYS.CascadeCard?.computeExactCascadeSnapshot;
+  });
+
+  it('без HEYS.dayUtils.getOptimumForDay расчёт всё равно доходит до результата', () => {
+    expect(typeof snapshot).toBe('function');
+    const day = { meals: [{ time: '09:00', items: [{ name: 'каша', grams: 200 }] }] };
+    const result = snapshot(day, { weight: 80, height: 180, age: 35 }, { silent: true });
+    expect(result, 'снимок каскада снова null — жёсткая проверка на призрака вернулась').not.toBeNull();
   });
 });

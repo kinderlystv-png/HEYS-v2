@@ -89,3 +89,29 @@ describe('реестр не объявляет настройки-пустышк
     expect(dead, 'настройка есть в модалке, но её никто не читает').toEqual([]);
   });
 });
+
+describe('слой данных виджетов — ровно один', () => {
+  it('HEYS.Widgets.data присваивает только живой widget_data.js', () => {
+    // 2026-08-09: рядом жил heys_widgets_data_v1.js — не в бандле, не в
+    // index.html, но присваивал тот же namespace. Попади он в сборку, живой
+    // слой был бы затёрт целиком. Файл удалён; сторож не даёт завести второй.
+    const SKIP = new Set(['node_modules', 'public', 'dist', '.next', 'coverage']);
+    const webRoot = path.join(repoRoot, 'apps/web');
+    const sources = [];
+    const walk = (dir) => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (SKIP.has(entry.name)) continue;
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (entry.isFile() && entry.name.endsWith('.js')) sources.push(full);
+      }
+    };
+    walk(webRoot);
+
+    const owners = sources
+      .filter((f) => /HEYS\.Widgets\.data\s*=(?!=)/.test(fs.readFileSync(f, 'utf8')))
+      .map((f) => path.relative(webRoot, f));
+
+    expect(owners).toEqual(['widgets/widget_data.js']);
+  });
+});

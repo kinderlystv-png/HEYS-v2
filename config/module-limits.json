@@ -5308,27 +5308,6 @@
         }
       }
     },
-    "apps/web/heys_widgets_data_v1.js": {
-      "metrics": {
-        "loc": 395,
-        "functions": 8,
-        "heysRefs": 55
-      },
-      "limits": {
-        "loc": {
-          "warn": 395,
-          "error": 435
-        },
-        "functions": {
-          "warn": 8,
-          "error": 9
-        },
-        "heysRefs": {
-          "warn": 55,
-          "error": 61
-        }
-      }
-    },
     "apps/web/heys_widgets_events_v1.js": {
       "metrics": {
         "loc": 211,

@@ -90,25 +90,15 @@
 
   function getCurrentStreak() {
     try {
+      // Второй алгоритм серии убран 2026-08-09: он считал «дней подряд, где
+      // хоть что-то записано» — без калорий, зон и рефида, да ещё по UTC-дате,
+      // из-за чего после 21:00 по Москве промахивался мимо ключей дня. Число
+      // систематически расходилось с каноническим.
       const utils = HEYS.utils || {};
       if (typeof utils.safeGetStreak === 'function') {
         return utils.safeGetStreak();
       }
-      const U = HEYS.utils || {};
-      let streak = 0;
-      const today = new Date();
-      for (let i = 1; i <= 30; i++) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        const key = d.toISOString().slice(0, 10);
-        const dayData = U.lsGet ? U.lsGet(`heys_dayv2_${key}`, {}) : {};
-        if (dayData.meals && dayData.meals.length > 0) {
-          streak++;
-        } else {
-          break;
-        }
-      }
-      return streak;
+      return HEYS.dayCalendarMetrics?.getCurrentStreak?.() || 0;
     } catch (e) {
       return 0;
     }

@@ -540,25 +540,9 @@
         return { ...DEMO_WIDGET_DATA.streak };
       }
 
-      // Текущая серия — тот же калькулятор, что у DayTab и бейджа в шапке
-      // (heys_day_calendar_metrics.js:13, boot-day, синхронный).
-      // HEYS.Day.getStreak — замыкание DayTab: на вкладке виджетов его нет.
-      let current = 0;
-      const metrics = HEYS.dayCalendarMetrics;
-      if (typeof metrics?.computeCurrentStreak === 'function') {
-        const products = HEYS.products?.getAll?.() || [];
-        const pIndex = HEYS.dayUtils?.buildProductIndex
-          ? HEYS.dayUtils.buildProductIndex(products)
-          : null;
-        current = metrics.computeCurrentStreak({
-          optimum: this._getOptimum(),
-          pIndex,
-          fmtDate: (d) => this._formatDate(d),
-          lsGet: (key, fallback) => readStoredValue(key, fallback)
-        }) || 0;
-      } else if (typeof HEYS.utils?.safeGetStreak === 'function') {
-        current = HEYS.utils.safeGetStreak() || 0;
-      }
+      // Единая точка входа: тот же калькулятор, что у DayTab и бейджа в шапке
+      // (heys_day_calendar_metrics.js, boot-day, синхронный).
+      const current = HEYS.dayCalendarMetrics?.getCurrentStreak?.() || 0;
 
       // Рекорд живёт в геймификации как stats.bestStreak
       // (heys_gamification_v1.js:1961, обновление :5682). Он пишется только
