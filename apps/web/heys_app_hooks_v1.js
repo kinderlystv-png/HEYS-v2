@@ -116,6 +116,18 @@
             return 'classic';
         });
 
+        // Предпочтение шире самого режима: 'auto' в themeId не виден, туда
+        // попадает уже вычисленный от системы id. Шторке выбора нужно именно
+        // предпочтение, иначе «Как в системе» никогда не покажется выбранным.
+        const [modePreference, setModePreferenceState] = useState(() => {
+            try {
+                if (themeApi && typeof themeApi.getModePreference === 'function') {
+                    return themeApi.getModePreference();
+                }
+            } catch { /* noop */ }
+            return 'light';
+        });
+
         const theme = useMemo(
             () => (themeApi ? themeApi.resolveResolvedMode(themeId) : (themeId.endsWith('-dark') ? 'dark' : 'light')),
             [themeApi, themeId],
@@ -135,6 +147,9 @@
                 if (detail && detail.themeId) {
                     setThemeId(detail.themeId);
                 }
+                if (typeof api.getModePreference === 'function') {
+                    setModePreferenceState(api.getModePreference());
+                }
             });
         }, []);
 
@@ -152,6 +167,12 @@
         }, [resolvedTheme, themeApi, themeId]);
 
         const cycleTheme = useCallback(() => {
+            // Через предпочтение, а не через сам id: нажатие тумблера при
+            // «Как в системе» означает выбор руками и снимает слежение.
+            if (themeApi && typeof themeApi.toggleModePreference === 'function') {
+                themeApi.toggleModePreference();
+                return;
+            }
             setThemeId((prev) => {
                 if (themeApi && typeof themeApi.toggleMode === 'function') {
                     return themeApi.toggleMode(prev);
@@ -160,12 +181,22 @@
             });
         }, [themeApi]);
 
+        const setModePreference = useCallback((nextPref) => {
+            if (!themeApi || typeof themeApi.setModePreference !== 'function') return;
+            themeApi.setModePreference(nextPref);
+        }, [themeApi]);
+
+        const setPalette = useCallback((nextPalette) => {
+            if (!themeApi || typeof themeApi.setPalette !== 'function') return;
+            themeApi.setPalette(nextPalette);
+        }, [themeApi]);
+
         const setThemeById = useCallback((nextThemeId) => {
             if (!themeApi || typeof themeApi.parseThemeId !== 'function') return;
             setThemeId(themeApi.parseThemeId(nextThemeId));
         }, [themeApi]);
 
-        return { theme, resolvedTheme, themeId, palette, cycleTheme, setThemeById };
+        return { theme, resolvedTheme, themeId, palette, modePreference, cycleTheme, setThemeById, setModePreference, setPalette };
     }
 
     function usePwaPrompts() {

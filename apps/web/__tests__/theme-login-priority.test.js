@@ -131,7 +131,11 @@ describe('theme priority on login/init', () => {
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 
-  it('ignores auto preference and keeps light on init', () => {
+  // До 2026-08-10 значение 'auto' схлопывалось в классику, и этот тест
+  // закреплял именно это. По решению владельца «Как в системе» восстановлено,
+  // поэтому эталон меняется вместе с поведением: при auto и тёмной системе
+  // на входе должна быть тёмная тема.
+  it('follows the system mode when preference is auto', () => {
     const mockStorage = createMockStorage({
       heys_theme_explicit: '1',
       heys_theme_pref: 'auto',
@@ -151,9 +155,10 @@ describe('theme priority on login/init', () => {
     loadHooksModule();
     const themeState = renderThemeHook();
 
-    expect(themeState.theme).toBe('light');
-    expect(themeState.resolvedTheme).toBe('light');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    expect(themeState.theme).toBe('dark');
+    expect(themeState.resolvedTheme).toBe('dark');
+    expect(themeState.modePreference).toBe('auto');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
   });
 
   it('syncs hook state after external Theme.setThemeId', () => {
