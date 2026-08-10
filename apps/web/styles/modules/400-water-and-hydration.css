@@ -151,7 +151,7 @@
 }
 
 [data-theme="dark"] .water-reminder {
-  color: #fbbf24;
+  color: var(--v4-warn-soft, #fbbf24);
   background: rgba(245, 158, 11, 0.15);
 }
 
@@ -166,7 +166,7 @@
   border-radius: 12px;
   padding: 12px 14px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--v4-line, #e5e7eb);
   z-index: 1000;
   min-width: 200px;
   max-width: 280px;
@@ -191,7 +191,7 @@
   color: #0369a1;
   margin-bottom: 8px;
   padding-bottom: 6px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--v4-line, #e5e7eb);
 }
 
 .water-formula-row {
@@ -213,7 +213,7 @@
   color: #0ea5e9;
   margin-top: 8px;
   padding-top: 6px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--v4-line, #e5e7eb);
 }
 
 .water-formula-hint {
@@ -224,7 +224,7 @@
 }
 
 [data-theme="dark"] .water-formula-tooltip {
-  background: #1e293b;
+  background: var(--v4-hero, #1e293b);
   border-color: var(--color-slate-700);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
@@ -332,7 +332,7 @@
   padding: 4px 8px;
   font-size: 11px;
   font-weight: 500;
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
   background: #fef2f2;
   border: 1px solid #fecaca;
   border-radius: 6px;
@@ -679,7 +679,7 @@
 .water-weekly-goal-meta {
   font-size: 8px;
   line-height: 1.1;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .water-weekly-chart-shell {
@@ -814,13 +814,13 @@
 .water-tip-text {
   font-size: 11px;
   line-height: 1.35;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-weight: 400;
 }
 
 /* Dark mode */
 html.dark .water-tip-text {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 .water-preset-compact {
@@ -1002,7 +1002,7 @@ body.planning-tab-active .fab-group {
   height: 18px;
   padding: 0 5px;
   border-radius: 9px;
-  background: #dc2626;
+  background: var(--v4-warn-2, #dc2626);
   color: var(--color-white);
   font-size: 11px;
   font-weight: 700;
@@ -1535,7 +1535,7 @@ body.planning-tab-active .fab-group {
 
 .advice-list-item-info {
   --advice-gradient: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
-  --advice-bg: #f8fafc;
+  --advice-bg: var(--v4-hero, #f8fafc);
   /* slate-50 */
 }
 
@@ -1642,7 +1642,7 @@ body.planning-tab-active .fab-group {
   padding: 0;
   border: none;
   background: transparent;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
@@ -1726,7 +1726,7 @@ body.planning-tab-active .fab-group {
 }
 
 [data-theme="dark"] .advice-card-footnote-link {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 @media (hover: hover) {
@@ -2013,7 +2013,7 @@ body.planning-tab-active .fab-group {
   position: sticky;
   top: 0;
   background: var(--bg-color, var(--color-white));
-  border-bottom: 2px solid #e5e7eb;
+  border-bottom: 2px solid var(--v4-line, #e5e7eb);
   z-index: 2;
 }
 

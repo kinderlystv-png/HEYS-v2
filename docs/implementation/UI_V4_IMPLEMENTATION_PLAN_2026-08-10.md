@@ -995,6 +995,46 @@ brand/platform hues, legacy fallbacks, несовпадающие пары; ещ
 scope). Следующий кандидат — `400-water-and-hydration.css` (~136 hex);
 альтернатива — `800-meal-optimizer.css` (~72 hex).
 
+### Stage 6 batch 15 — 2026-08-10
+
+**Файлы (граница батча):**
+
+| Файл                                         | Что сделано                                                                 | Литералов → `var(--v4-*)` |
+| -------------------------------------------- | --------------------------------------------------------------------------- | ------------------------- |
+| `styles/modules/400-water-and-hydration.css` | весь файл (water card/ring, FAB, advice list, data overview, dark variants) | 14                        |
+
+**Инструмент:** `scripts/ui-v4-css-batch-codemod.mjs` — тот же scoped codemod и
+гейт классики, что в batch 3–14. Проверка: `ui-v4-check-classic-drift.mjs`
+(`--files=styles/modules/400-water-and-hydration.css`) +
+`ui-v4-classic-drift.test.js`.
+
+**Исключено в batch 15 (намеренно, как в batch 2–14):**
+
+- `linear-gradient` / `radial-gradient` — water card bg, progress fill, FAB,
+  advice type borders, meal-fab
+- `rgba()` — без замены
+- water/sky brand hues без v4-совпадения (`#0369a1`, `#0ea5e9`, `#bae6fd`,
+  `#38bdf8`, `#0284c7`, `#7dd3fc`, `#e0f2fe`, `#f0f9ff`, `#0c4a6e`)
+- семантические status/tint без classic-пары (`#fef2f2`, `#fecaca`, `#fffbeb`,
+  `#059669`, `#34d399`, `#d1fae5`, advice-type pastels)
+- `--advice-gradient` / `--advice-bg` custom props в gradient-border карточках
+  (кроме `#f8fafc` → `--v4-hero`)
+- legacy `var(--text-*, #…)` / `var(--bg-*, #…)` / `var(--color-*, #…)` — не
+  трогаем чужие fallback
+- тёмные правила с литералами ≠ `classic-dark` роли (`#dff4ff`, `#d8eefb`,
+  `#88a4b8`)
+- `backdrop-filter` blur tints — оставлены литералами
+
+**Остаток в `400-water-and-hydration.css`:** ~122 bare hex (градиенты, rgba,
+water/sky hues, advice-type tints, legacy fallbacks, несовпадающие пары; ещё ~14
+hex только как fallback в `var(--v4-*)`). Файл закрыт для stage 6 — следующий
+батч — другой модуль в `styles/`.
+
+**Параллельность:** не пересекается со Stage 4 Activity
+(`600-steps-and-aps.css`, `731-ui-v4-activity.css`, `apps/web/*.js` — вне
+scope). Следующий кандидат — `800-meal-optimizer.css` (~72 hex); альтернатива —
+`715-yesterday-verify.css` (~80 hex).
+
 ---
 
 ## Этап 7. Поток B — что осталось после вкладок
