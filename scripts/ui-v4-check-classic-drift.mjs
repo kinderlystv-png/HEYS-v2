@@ -99,6 +99,33 @@ function isDarkSelector(sel) {
   return /\[data-theme[^\]]*dark/i.test(sel) || /\bdark\b/i.test(sel);
 }
 
+// Правило может быть тёмным не только по селектору, но и по обрамляющему
+// @media (prefers-color-scheme: dark) — селектор внутри него выглядит светлым.
+function insideDarkMedia(css, index) {
+  let depth = 0;
+  for (let i = index; i >= 0; i--) {
+    const ch = css[i];
+    if (ch === '}') depth += 1;
+    else if (ch === '{') {
+      if (depth === 0) {
+        // Комментарии убираем: разделители между блоками длинные и рвут поиск.
+        const head = css
+          .slice(Math.max(0, css.lastIndexOf('}', i) + 1), i)
+          .replace(/\/\*[\s\S]*?\*\//g, '');
+        if (/@media[^{]*prefers-color-scheme\s*:\s*dark/i.test(head)) return true;
+      } else depth -= 1;
+    }
+  }
+  return false;
+}
+
+// html:not([data-theme]) — состояние до инициализации темы: атрибут ещё не
+// проставлен, значит ни одна палитра не активна и роли не определены. Запасное
+// значение там срабатывает по-настоящему, сравнивать его с палитрой незачем.
+function beforeThemeApplied(sel) {
+  return /html:not\(\[data-theme\]\)/.test(sel);
+}
+
 function selectorAt(css, index) {
   const open = css.lastIndexOf('{', index);
   if (open === -1) return '';
@@ -116,7 +143,9 @@ function checkFile(rel) {
     const [full, roleVar, literal] = m;
     const role = roleVar.slice(2);
     // Инлайн-стиль в JS применяется в любой теме, поэтому там всегда классика.
-    const dark = isCss && isDarkSelector(selectorAt(src, m.index));
+    const selector = isCss ? selectorAt(src, m.index) : '';
+    if (beforeThemeApplied(selector)) continue;
+    const dark = isCss && (isDarkSelector(selector) || insideDarkMedia(src, m.index));
     const palette = dark ? CLASSIC_DARK : CLASSIC;
     const value = palette.get(role);
     if (!value) continue; // роль не задана — запасное значение сработает, всё честно

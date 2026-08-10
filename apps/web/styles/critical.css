@@ -840,8 +840,12 @@ body:has(:is(
     color: #8e8e93;
   }
 
+  /* v4-intentional: смена вида принята 2026-08-10. Было #0a84ff — яркая синяя
+     плашка, которая на тёмном весит больше самого контента вкладки и читается
+     как призыв нажать. Подложка акцента приглушённая; держать в одной роли
+     подложку в светлой и заливку в тёмной нельзя. */
   html:not([data-theme]) .tab.tab-switch.active {
-    background: #0a84ff;
+    background: var(--v4-accent-bg, #1e3a5f);
     color: white;
   }
 }
@@ -875,8 +879,9 @@ body:has(:is(
   color: #8e8e93;
 }
 
+/* v4-intentional: та же смена вида, см. комментарий выше. */
 [data-theme="dark"] .tab.tab-switch.active {
-  background: #0a84ff;
+  background: var(--v4-accent-bg, #1e3a5f);
   color: white;
 }
 
