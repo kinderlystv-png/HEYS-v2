@@ -149,13 +149,21 @@ input[type="password"] {
   --color-gray-400: var(--v4-ink-4, #9ca3af);
   --color-blue-ios: #007aff;
 
-  --bg: var(--color-white);
-  --card: var(--color-white);
+  /* Найдено 2026-08-10: этот :root грузится в main.css после critical.css и
+   * безусловно перебивал --bg/--card критикал-файла обратно в белый — по факту
+   * ЭТИМ ключом фон html/body и часть карточек не следовали палитре ни в одном
+   * тёмном наборе, кроме classic-dark, которую чинит отдельная легаси-строка
+   * [data-theme="dark"] в 200-dark-and-effects.css. sand-dark/blue-dark несут
+   * своё значение data-theme (не литеральное "dark"), та строка их не ловит,
+   * и фон страницы оставался белым при тёмных карточках поверх него. Приведено
+   * к тому же паттерну, что уже в critical.css. */
+  --bg: var(--v4-bg, var(--color-white));
+  --card: var(--v4-bg, var(--color-white));
   --text: var(--v4-ink, #111827);
   --muted: var(--color-gray-500);
   --border: var(--color-slate-200);
   --acc: var(--v4-act, #2563eb);
-  --acc-contrast: var(--color-white);
+  --acc-contrast: var(--v4-bg, var(--color-white));
 
   /* Emoji style: 'android' | 'apple' | 'system' */
   --emoji-style: 'android';

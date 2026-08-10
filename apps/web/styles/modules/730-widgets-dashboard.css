@@ -202,19 +202,19 @@ body:has(.page-day) .hdr::after {
   z-index: -1;
 }
 
-[data-theme="dark"] .wrap:has(.widgets-tab) {
+[data-theme$="dark"] .wrap:has(.widgets-tab) {
   background-color: transparent !important;
   background-image: none !important;
 }
 
-[data-theme="dark"] .wrap:has(.page-day) {
+[data-theme$="dark"] .wrap:has(.page-day) {
   background-color: transparent !important;
   background-image: none !important;
 }
 
 /* Тёмная тема: ::before с более высокой opacity */
-[data-theme="dark"] body:has(.widgets-tab)::before,
-[data-theme="dark"] body:has(.page-day)::before {
+[data-theme$="dark"] body:has(.widgets-tab)::before,
+[data-theme$="dark"] body:has(.page-day)::before {
   background-color: var(--bg-primary, #0f0f13);
   background-image:
     linear-gradient(180deg, color-mix(in srgb, var(--v4-tint-cool, #0a84ff) 28%, transparent) 0px, color-mix(in srgb, var(--v4-tint-cool, #0a84ff) 12%, transparent) 100px, transparent 280px),
@@ -222,7 +222,7 @@ body:has(.page-day) .hdr::after {
 }
 
 /* Тёмный frosted glass */
-[data-theme="dark"] body:has(.page-day) .hdr {
+[data-theme$="dark"] body:has(.page-day) .hdr {
   background: rgba(14, 20, 36, 0.92) !important;
   backdrop-filter: blur(12px) saturate(1.4);
   -webkit-backdrop-filter: blur(12px) saturate(1.4);
@@ -230,7 +230,7 @@ body:has(.page-day) .hdr::after {
   will-change: transform;
 }
 
-[data-theme="dark"] body:has(.page-day) .hdr::after {
+[data-theme$="dark"] body:has(.page-day) .hdr::after {
   content: '';
   position: absolute;
   bottom: -28px;
@@ -506,16 +506,16 @@ body:has(.page-reports) .hdr::after {
   background-repeat: repeat-y;
 }
 
-[data-theme="dark"] .widgets-tab {
+[data-theme$="dark"] .widgets-tab {
   background-color: transparent;
 }
 
 /* [data-theme="dark"] .page-day — прозрачный, виден ::before со своим dark gradient */
-[data-theme="dark"] .page-day {
+[data-theme$="dark"] .page-day {
   background-color: transparent;
 }
 
-[data-theme="dark"] .widgets-tab {
+[data-theme$="dark"] .widgets-tab {
   background-image:
     /* Декоративные радиальные градиенты — сдвинуты вниз */
     radial-gradient(1200px 800px at 20% 25%, color-mix(in srgb, var(--v4-tint-cool, #0a84ff) 12%, transparent), transparent 55%),
@@ -523,7 +523,7 @@ body:has(.page-reports) .hdr::after {
     radial-gradient(900px 700px at 50% 100%, color-mix(in srgb, var(--v4-tint-warm, #ff9500) 10%, transparent), transparent 60%);
 }
 
-[data-theme="dark"] .page-day {
+[data-theme$="dark"] .page-day {
   background-image:
     /* 1. Песочный справа */
     radial-gradient(1300px 1100px at 85% 1200px, color-mix(in srgb, var(--v4-tint-warm, #ff9500) 10%, transparent), transparent 60%),
