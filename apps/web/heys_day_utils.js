@@ -456,6 +456,13 @@
         return fmtDate(d);
     }
 
+    // Возвращает "предыдущий" календарный день
+    function getPrevDay(dateISO) {
+        const d = parseISO(dateISO);
+        d.setDate(d.getDate() - 1);
+        return fmtDate(d);
+    }
+
     // === Storage Utilities ===
     // ВАЖНО: Store-first (HEYS.store), затем HEYS.utils, затем localStorage
     function lsGet(k, d) {
@@ -2141,6 +2148,7 @@
         isNightTime,
         getEffectiveDate,
         getNextDay,
+        getPrevDay,
         // Storage
         lsGet,
         lsSet,

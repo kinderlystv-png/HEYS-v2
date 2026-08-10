@@ -18,7 +18,7 @@
       console.error('[heys_day_pickers] dayUtils not loaded yet');
       return null;
     }
-    const { parseISO, todayISO, fmtDate, formatDateDisplay } = utils;
+    const { parseISO, todayISO, fmtDate, formatDateDisplay, getNextDay, getPrevDay } = utils;
     
     const [isOpen, setIsOpen] = React.useState(false);
     const [cur, setCur] = React.useState(parseISO(valueISO || todayISO()));
@@ -160,6 +160,19 @@
     const isTodaySelected = (valueISO || todayISO()) === todayISO();
     const todayLongDate = parseISO(valueISO || todayISO())
       .toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    const currentISO = valueISO || todayISO();
+    const todayStr = todayISO();
+    const canGoNext = currentISO < todayStr;
+
+    const handlePrevDay = (e) => {
+      e.stopPropagation();
+      onSelect(getPrevDay(currentISO));
+    };
+    const handleNextDay = (e) => {
+      e.stopPropagation();
+      if (!canGoNext) return;
+      onSelect(getNextDay(currentISO));
+    };
     const calendarIcon = React.createElement('svg', {
       className: 'date-picker-icon',
       viewBox: '0 0 24 24',
@@ -179,25 +192,41 @@
     );
 
     return React.createElement('div', { className: 'date-picker', ref: wrapperRef },
-      // Кнопка-триггер
-      React.createElement('button', {
-        ref: triggerRef,
-        className: 'date-picker-trigger' + (isOpen ? ' open' : '') + (isTodaySelected ? ' date-picker-trigger--today' : ' date-picker-trigger--not-today'),
-        onClick: () => setIsOpen(!isOpen)
-      },
-        calendarIcon,
-        React.createElement('span', { className: 'date-picker-text' },
-          isTodaySelected
-            ? [
-                React.createElement('span', { key: 'main', className: 'date-picker-main date-picker-main--today' }, 'Сегодня'),
-                React.createElement('span', { key: 'sub', className: 'date-picker-sub date-picker-sub--today' }, todayLongDate)
-              ]
-            : [
-                React.createElement('span', { key: 'main', className: 'date-picker-main' }, dateInfo.label),
-                React.createElement('span', { key: 'sub', className: 'date-picker-sub' }, dateInfo.sub)
-              ]
+      React.createElement('div', { className: 'date-picker-row' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'date-picker-day-nav',
+          onClick: handlePrevDay,
+          title: 'Предыдущий день',
+          'aria-label': 'Предыдущий день'
+        }, '‹'),
+        // Кнопка-триггер — тап открывает месяц шторкой
+        React.createElement('button', {
+          ref: triggerRef,
+          type: 'button',
+          className: 'date-picker-trigger' + (isOpen ? ' open' : '') + (isTodaySelected ? ' date-picker-trigger--today' : ' date-picker-trigger--not-today'),
+          onClick: () => setIsOpen(!isOpen)
+        },
+          calendarIcon,
+          React.createElement('span', { className: 'date-picker-text' },
+            isTodaySelected
+              ? React.createElement('span', { className: 'date-picker-main date-picker-main--today' },
+                  'Сегодня, ', todayLongDate)
+              : [
+                  React.createElement('span', { key: 'main', className: 'date-picker-main' }, dateInfo.label),
+                  React.createElement('span', { key: 'sub', className: 'date-picker-sub' }, dateInfo.sub)
+                ]
+          ),
+          React.createElement('span', { className: 'date-picker-arrow' }, isOpen ? '▲' : '▼')
         ),
-        React.createElement('span', { className: 'date-picker-arrow' }, isOpen ? '▲' : '▼')
+        React.createElement('button', {
+          type: 'button',
+          className: 'date-picker-day-nav' + (canGoNext ? '' : ' date-picker-day-nav--disabled'),
+          onClick: handleNextDay,
+          disabled: !canGoNext,
+          title: canGoNext ? 'Следующий день' : 'Уже сегодня',
+          'aria-label': canGoNext ? 'Следующий день' : 'Уже сегодня'
+        }, '›')
       ),
       // Backdrop и Dropdown через portal в body
       isOpen && ReactDOM.createPortal(
@@ -294,14 +323,10 @@
           React.createElement('span', { className: 'legend-item refeed' }, '🍕 refeed')
         ),
         React.createElement('div', { className: 'date-picker-footer' },
-          React.createElement('button', {
+          !isTodaySelected && React.createElement('button', {
             className: 'date-picker-btn today-btn',
             onClick: () => { onSelect(todayISO()); setIsOpen(false); }
-          }, '📍 Сегодня'),
-          React.createElement('button', {
-            className: 'date-picker-btn delete-btn',
-            onClick: () => { onRemove(); setIsOpen(false); }
-          }, '🗑️ Очистить')
+          }, '📍 Сегодня')
         )
       )
     ), document.body)

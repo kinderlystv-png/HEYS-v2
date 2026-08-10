@@ -3906,52 +3906,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     pushBadgeSlot
                 ),
 
-                                   // Кнопки "Вчера" + "Сегодня" + DatePicker
+                                   // Строка даты v4: стрелки + DatePicker (месяц — шторкой по тапу)
                 (tab === 'stats' || tab === 'diary' || tab === 'activity' || tab === 'insights' || tab === 'widgets') && window.HEYS.DatePicker
                     ? React.createElement('div', { className: 'hdr-date-group' },
-                        // Кнопка вчера — скрываем когда мы НЕ в сегодняшнем дне
-                        // (вернуться можно через капсулу «НЕ СЕГОДНЯ» слева или DatePicker).
-                        selectedDate === todayISO() && React.createElement('button', {
-                            className: 'yesterday-quick-btn' + (selectedDate === (() => {
-                                const d = new Date();
-                                if (d.getHours() < 3) d.setDate(d.getDate() - 1);
-                                d.setDate(d.getDate() - 1);
-                                // Локальное форматирование (не UTC!)
-                                return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-                            })() ? ' active' : ''),
-                            onClick: () => {
-                                const d = new Date();
-                                if (d.getHours() < 3) d.setDate(d.getDate() - 1);
-                                d.setDate(d.getDate() - 1);
-                                // Локальное форматирование (не UTC!)
-                                const nextDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-                                selectDateWithPrefetch(nextDate, { reason: 'quick-yesterday' });
-                            },
-                            title: 'Перейти на вчера'
-                        }, (() => {
-                            // До 3:00 — вчера = позавчера реально
-                            const d = new Date();
-                            if (d.getHours() < 3) d.setDate(d.getDate() - 1);
-                            d.setDate(d.getDate() - 1);
-                            return d.getDate();
-                        })()),
-                        // Кнопка «Перейти в сегодня» — показывается только когда
-                        // выбран НЕ-сегодняшний день. На today она избыточна.
-                        selectedDate !== todayISO() && React.createElement('button', {
-                            className: 'today-quick-btn today-quick-btn--goto',
-                            onClick: () => selectDateWithPrefetch(todayISO(), { reason: 'quick-today' }),
-                            title: 'Перейти в сегодня'
-                        },
-                            React.createElement('span', { className: 'today-quick-btn__line1' }, 'Перейти в'),
-                            React.createElement('span', { className: 'today-quick-btn__line2' }, 'сегодня')
-                        ),
-                        // DatePicker
                         React.createElement(window.HEYS.DatePicker, {
                             valueISO: selectedDate,
                             onSelect: (nextDate) => selectDateWithPrefetch(nextDate, { reason: 'date-picker' }),
-                            onRemove: () => {
-                                selectDateWithPrefetch(todayISO(), { reason: 'date-picker-clear' });
-                            },
                             activeDays: datePickerActiveDays,
                             // Функция для загрузки данных при смене месяца
                             getActiveDaysForMonth: (year, month) => {

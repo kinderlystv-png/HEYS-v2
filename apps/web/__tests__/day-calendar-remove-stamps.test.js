@@ -11,7 +11,7 @@ function read(relPath) {
   return fs.readFileSync(path.join(repoRoot, relPath), 'utf8');
 }
 
-let renderCalendarBlock;
+let clearDayForDate;
 
 beforeAll(() => {
   global.window = global;
@@ -26,10 +26,10 @@ beforeAll(() => {
   // eslint-disable-next-line no-new-func
   new Function('window', calBlockSrc)(global);
 
-  renderCalendarBlock = global.HEYS.dayCalendarBlock.renderCalendarBlock;
+  clearDayForDate = global.HEYS.dayCalendarBlock.clearDayForDate;
 });
 
-describe('очистка дня из календаря (регресс 2026-08-02)', () => {
+describe('очистка дня (регресс 2026-08-02, экспорт clearDayForDate)', () => {
   it('не удаляет ключ localStorage вручную — обычный autosave сам перепишет его', () => {
     let removed = false;
     global.localStorage = {
@@ -37,22 +37,12 @@ describe('очистка дня из календаря (регресс 2026-08-
       setItem: () => {},
       removeItem: () => { removed = true; },
     };
-    let capturedProps = null;
-    const params = {
-      React: { createElement: (type, props) => { if (props && props.onRemove) capturedProps = props; return null; } },
-      CalendarComponent: () => null,
+    clearDayForDate({
       date: '2026-08-02',
-      activeDays: new Set(),
-      products: [],
-      setDate: () => {},
-      lsGet: () => null,
-      lsSet: () => {},
       getProfile: () => ({}),
       ensureDay: global.HEYS.models.ensureDay,
       setDay: () => {},
-    };
-    renderCalendarBlock(params);
-    capturedProps.onRemove();
+    });
     expect(removed).toBe(false);
   });
 
@@ -77,30 +67,16 @@ describe('очистка дня из календаря (регресс 2026-08-
     };
 
     let savedDay = null;
-    let capturedProps = null;
-    const params = {
-      React: { createElement: (type, props) => { if (props && props.onRemove) capturedProps = props; return null; } },
-      CalendarComponent: () => null,
+    clearDayForDate({
       date,
-      activeDays: new Set(),
-      products: [],
-      setDate: () => {},
-      lsGet: () => null,
-      lsSet: () => {},
       getProfile: () => ({}),
       ensureDay: global.HEYS.models.ensureDay,
       setDay: (next) => { savedDay = next; },
-    };
-
-    renderCalendarBlock(params);
-    expect(capturedProps).toBeTruthy();
-    capturedProps.onRemove();
+    });
 
     expect(savedDay).toBeTruthy();
     expect(savedDay.steps).toBe(0);
     expect(savedDay.dayComment).toBe('');
-    // Каждый штамп строго новее прежнего — иначе guardExplicitMutationGroups
-    // на клиенте и merge на сервере откатят очистку обратно к prevDay.
     expect(savedDay.stepsUpdatedAt).toBeGreaterThan(prevDay.stepsUpdatedAt);
     expect(savedDay.sleepNoteUpdatedAt).toBeGreaterThan(prevDay.sleepNoteUpdatedAt);
     expect(savedDay.dayCommentUpdatedAt).toBeGreaterThan(prevDay.dayCommentUpdatedAt);
@@ -116,23 +92,12 @@ describe('очистка дня из календаря (регресс 2026-08-
     };
 
     let savedDay = null;
-    let capturedProps = null;
-    const params = {
-      React: { createElement: (type, props) => { if (props && props.onRemove) capturedProps = props; return null; } },
-      CalendarComponent: () => null,
+    clearDayForDate({
       date,
-      activeDays: new Set(),
-      products: [],
-      setDate: () => {},
-      lsGet: () => null,
-      lsSet: () => {},
       getProfile: () => ({}),
       ensureDay: global.HEYS.models.ensureDay,
       setDay: (next) => { savedDay = next; },
-    };
-
-    renderCalendarBlock(params);
-    capturedProps.onRemove();
+    });
 
     expect(savedDay.stepsUpdatedAt).toBeGreaterThan(0);
     expect(Number.isNaN(savedDay.stepsUpdatedAt)).toBe(false);

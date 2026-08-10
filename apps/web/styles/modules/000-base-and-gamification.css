@@ -7604,6 +7604,49 @@ body:has(.offline-banner) .wrap {
   flex-shrink: 0;
 }
 
+.date-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.date-picker-day-nav {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--color-slate-200);
+  border-radius: 10px;
+  background: var(--v4-surface, #fff);
+  color: var(--v4-ink, #1f2937);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color, border-color, opacity 0.15s ease;
+}
+
+@media (hover: hover) {
+  .date-picker-day-nav:hover:not(:disabled) {
+    border-color: #cbd5e1;
+    background: var(--v4-hero, #f8fafc);
+  }
+}
+
+.date-picker-day-nav:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.date-picker-day-nav--disabled,
+.date-picker-day-nav:disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
 .date-picker-trigger {
   display: flex;
   align-items: center;
@@ -8102,18 +8145,26 @@ svg.date-picker-icon {
 
 /* Mobile responsive */
 @media (max-width: 640px) {
+  .date-picker-day-nav {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+
   .date-picker-trigger {
     padding: 0 6px;
     height: 34px;
     min-width: 80px;
-    max-width: 100px;
+    max-width: 120px;
     gap: 4px;
   }
 
-  /* В today-режиме нужен запас под две строки «Сегодня» / «15 мая» */
+  /* Одна строка «Сегодня, 15 мая» */
   .date-picker-trigger--today {
     max-width: none;
-    padding: 0 10px;
+    min-width: 0;
+    flex: 1;
+    padding: 0 8px;
     gap: 6px;
   }
 
@@ -8126,7 +8177,8 @@ svg.date-picker-icon {
   }
 
   .date-picker-main.date-picker-main--today {
-    font-size: 9px;
+    font-size: 11px;
+    white-space: nowrap;
   }
 
   .date-picker-sub.date-picker-sub--today {
