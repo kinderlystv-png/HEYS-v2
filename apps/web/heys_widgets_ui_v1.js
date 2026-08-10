@@ -3148,21 +3148,8 @@
       { label: 'Углеводы', shortLabel: 'У', value: carbs || 0, target: carbsTarget || 250, pct: pctC, toneClass: 'carbs' }
     ];
 
-    const getMacroValueTone = ({ pct, toneClass }) => {
-      if (!Number.isFinite(pct) || pct <= 0) {
-        return '#ef4444';
-      }
-
-      if (toneClass === 'protein') {
-        if (pct >= 90) return '#16a34a';
-        if (pct >= 70) return '#f59e0b';
-        return '#ef4444';
-      }
-
-      if (pct >= 70 && pct <= 110) return '#16a34a';
-      if (pct >= 50 && pct <= 125) return '#f59e0b';
-      return '#ef4444';
-    };
+    const getMacroValueTone = ({ pct, toneClass }) =>
+      HEYS.scales.macroWidgetValueTone(pct, toneClass).color;
 
     const buildMacroRing = ({ label, shortLabel, value, target, pct, toneClass }, options = {}) => {
       const {
@@ -5544,12 +5531,7 @@
       }
     };
 
-    const getRadarColor = (s) => {
-      if (s >= 70) return '#ef4444';
-      if (s >= 40) return '#f97316';
-      if (s >= 20) return '#eab308';
-      return '#10b981';
-    };
+    const getRadarColor = (s) => HEYS.scales.riskRadarScore(s).color;
 
     const windows = getSortedRelapseWindows(snapshot?.windows || result?.windows);
     const drivers = Array.isArray(snapshot?.primaryDrivers) ? snapshot.primaryDrivers : (Array.isArray(result?.primaryDrivers) ? result.primaryDrivers : []);

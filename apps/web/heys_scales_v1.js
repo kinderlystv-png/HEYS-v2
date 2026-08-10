@@ -325,6 +325,29 @@
         return pack(STEPS.WARN_STRONG, C.red);
     }
 
+    // Виджет макро: % от нормы, не граммы — пороги отличаются от macro* колец.
+    function macroWidgetValueTone(pct, toneClass) {
+        const p = num(pct, NaN);
+        if (!Number.isFinite(p) || p <= 0) return pack(STEPS.WARN_STRONG, C.red);
+        if (toneClass === 'protein') {
+            if (p >= 90) return pack(STEPS.GOOD_STRONG, C.greenHarm);
+            if (p >= 70) return pack(STEPS.WARN_SOFT, C.amberMacro);
+            return pack(STEPS.WARN_STRONG, C.red);
+        }
+        if (p >= 70 && p <= 110) return pack(STEPS.GOOD_STRONG, C.greenHarm);
+        if (p >= 50 && p <= 125) return pack(STEPS.WARN_SOFT, C.amberMacro);
+        return pack(STEPS.WARN_STRONG, C.red);
+    }
+
+    // Радар риска: выше балл — хуже (инверсия healthScore).
+    function riskRadarScore(score) {
+        const s = num(score, 0);
+        if (s >= 70) return pack(STEPS.WARN_STRONG, C.red);
+        if (s >= 40) return pack(STEPS.WARN_SOFT, C.orange);
+        if (s >= 20) return pack(STEPS.NEUTRAL, C.yellow);
+        return pack(STEPS.GOOD_STRONG, C.greenDark);
+    }
+
     const MACRO_GRADIENT_STOPS = Object.freeze({
         protein: ['#fecaca', '#ef4444'],
         fat: ['#fde68a', '#f59e0b'],
@@ -379,6 +402,8 @@
         macro_protein: macroProtein,
         macro_fat: macroFat,
         macro_carbs: macroCarbs,
+        macro_widget_value_tone: macroWidgetValueTone,
+        risk_radar_score: riskRadarScore,
         ratio,
     };
 
@@ -388,6 +413,7 @@
         if (scaleId === 'sleep_hours') return fn(value, arg2);
         if (scaleId === 'macro_protein') return fn(value, arg2, arg3);
         if (scaleId === 'macro_carbs') return fn(value, arg2, arg3);
+        if (scaleId === 'macro_widget_value_tone') return fn(value, arg2);
         return fn(value);
     }
 
@@ -423,6 +449,8 @@
         macroProtein,
         macroFat,
         macroCarbs,
+        macroWidgetValueTone,
+        riskRadarScore,
         MACRO_GRADIENT_STOPS,
         MACRO_OVERFLOW_COLORS,
         ratio,
