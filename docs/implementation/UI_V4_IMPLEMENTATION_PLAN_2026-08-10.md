@@ -920,6 +920,42 @@ hex только как fallback в `var(--v4-*)`). Файл закрыт для
 scope). Следующий кандидат — `500-pwa-and-offline.css` (~173 hex); альтернатива
 — `400-water-and-hydration.css` (~136 hex).
 
+### Stage 6 batch 14 — 2026-08-10
+
+**Файлы (граница батча):**
+
+| Файл                                     | Что сделано                                                                | Литералов → `var(--v4-*)` |
+| ---------------------------------------- | -------------------------------------------------------------------------- | ------------------------- |
+| `styles/modules/500-pwa-and-offline.css` | весь файл (PWA install banner, update toast, offline shell, meal-check UI) | 53                        |
+
+**Инструмент:** `scripts/ui-v4-css-batch-codemod.mjs` — тот же scoped codemod и
+гейт классики, что в batch 3–13. Проверка: `ui-v4-check-classic-drift.mjs`
+(`--files=styles/modules/500-pwa-and-offline.css`) +
+`ui-v4-classic-drift.test.js`.
+
+**Исключено в batch 14 (намеренно, как в batch 2–13):**
+
+- `linear-gradient` / `radial-gradient` — PWA banners, update toasts, install
+  CTA
+- `rgba()` — без замены
+- семантические status/tint без classic-пары (`#fee2e2`, `#fecaca`, `#fca5a5`,
+  `#fef3c7`, `#bbf7d0`, `#bfdbfe`, `#fed7aa`)
+- brand/platform hues без v4-совпадения (`#007AFF`, `#34d399`, `#047857`,
+  `#1d4ed8`, `#9a3412`, `#1e40af`, `#2563eb`)
+- legacy `var(--color-*, #…)` — не трогаем чужие fallback
+- тёмные правила с литералами ≠ `classic-dark` роли (`#34d399`)
+- `backdrop-filter` blur tints — оставлены литералами
+
+**Остаток в `500-pwa-and-offline.css`:** ~120 bare hex (градиенты, rgba,
+brand/platform hues, legacy fallbacks, несовпадающие пары; ещё ~53 hex только
+как fallback в `var(--v4-*)`). Файл закрыт для stage 6 — следующий батч — другой
+модуль в `styles/`.
+
+**Параллельность:** не пересекается со Stage 4 Activity
+(`600-steps-and-aps.css`, `731-ui-v4-activity.css`, `apps/web/*.js` — вне
+scope). Следующий кандидат — `400-water-and-hydration.css` (~136 hex);
+альтернатива — `800-meal-optimizer.css` (~72 hex).
+
 ---
 
 ## Этап 7. Поток B — что осталось после вкладок
