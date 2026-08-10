@@ -600,6 +600,40 @@ rgba, brand, несовпадающие пары). Файл закрыт для 
 и `apps/web/*.js` — вне scope). Следующий кандидат —
 `720-predictive-insights.css` (~740 hex).
 
+### Stage 6 batch 5 — 2026-08-10
+
+**Файлы (граница батча):**
+
+| Файл                                         | Что сделано                                       | Литералов → `var(--v4-*)` |
+| -------------------------------------------- | ------------------------------------------------- | ------------------------- |
+| `styles/modules/720-predictive-insights.css` | весь файл (predictive insights, score, scenarios) | 175                       |
+
+**Инструмент:** `scripts/ui-v4-css-batch-codemod.mjs` — тот же scoped codemod и
+гейт классики, что в batch 3–4. Проверка: `ui-v4-check-classic-drift.mjs`
+(`--files=styles/modules/720-predictive-insights.css`) +
+`ui-v4-classic-drift.test.js`.
+
+**Исключено в batch 5 (намеренно, как в batch 2–4):**
+
+- `linear-gradient` / `radial-gradient` — градиенты (`--insights-score-gradient`
+  и др.)
+- `rgba()` — без замены
+- категорийные токены без v4-совпадения (`--insights-activity` `#f59e0b`,
+  `--insights-recovery` `#8b5cf6`)
+- legacy `var(--text-*, #…)` — не трогаем fallback-литералы внутри чужих токенов
+- семантические red/orange без classic-пары (`#f87171`, `#fb923c`, tooltip
+  `#1f2937`)
+- тёмные правила с литералами ≠ `classic-dark` роли
+
+**Остаток в `720-predictive-insights.css`:** ~565 bare hex (градиенты, rgba,
+несовпадающие пары; ещё ~175 hex только как fallback в `var(--v4-*)`). Файл
+закрыт для stage 6 — следующий батч — другой модуль в `styles/`.
+
+**Параллельность:** не пересекается со Stage 4 Activity
+(`600-steps-and-aps.css`, `731-ui-v4-activity.css`, `apps/web/*.js` — вне
+scope). Следующий кандидат — `730-widgets-dashboard.css` (~393 hex);
+альтернатива — `300-modals-and-day.css` (~316 hex).
+
 ---
 
 ## Этап 7. Поток B — что осталось после вкладок
