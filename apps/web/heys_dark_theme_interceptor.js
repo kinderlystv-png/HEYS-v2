@@ -1,7 +1,9 @@
 // heys_dark_theme_interceptor.js — Auto-transform inline colors for dark theme
 // Patches React.createElement to wrap hardcoded colors in var(--token, fallback)
 // Light mode: var undefined → fallback (original). Dark mode: var defined → dark value.
-// v1.0.0 | 2025-02-08
+// UI v4 stage 2: on sand/blue palettes neutral literals map to var(--v4-*, #fallback);
+// classic palette keeps legacy --muted/--border/--text so appearance stays pixel-identical.
+// v1.1.0 | 2026-08-10
 (function () {
   'use strict';
 
@@ -72,6 +74,42 @@
     ['#cbd5e1', 'var(--border, #cbd5e1)'],
   ]);
 
+  // UI v4 stage 2 — sand/blue palettes only (classic keeps legacy maps above)
+  const V4_BG = new Map([
+    ['#fff', 'var(--v4-bg, #fff)'],
+    ['#ffffff', 'var(--v4-bg, #ffffff)'],
+    ['white', 'var(--v4-bg, white)'],
+    ['#f8fafc', 'var(--v4-hero, #f8fafc)'],
+    ['#f1f5f9', 'var(--v4-surface, #f1f5f9)'],
+    ['#f3f4f6', 'var(--v4-surface, #f3f4f6)'],
+    ['#f9fafb', 'var(--v4-surface, #f9fafb)'],
+    ['#e5e7eb', 'var(--v4-line, #e5e7eb)'],
+    ['#e2e8f0', 'var(--v4-line, #e2e8f0)'],
+  ]);
+
+  const V4_TEXT = new Map([
+    ['#0f172a', 'var(--v4-ink, #0f172a)'],
+    ['#1f2937', 'var(--v4-ink, #1f2937)'],
+    ['#111827', 'var(--v4-ink, #111827)'],
+    ['#1e293b', 'var(--v4-ink, #1e293b)'],
+    ['#374151', 'var(--v4-ink, #374151)'],
+    ['#64748b', 'var(--v4-ink-2, #64748b)'],
+    ['#94a3b8', 'var(--v4-ink-3, #94a3b8)'],
+    ['#475569', 'var(--v4-ink-2, #475569)'],
+    ['#334155', 'var(--v4-ink-2, #334155)'],
+    ['#6b7280', 'var(--v4-ink-2, #6b7280)'],
+    ['#9ca3af', 'var(--v4-ink-3, #9ca3af)'],
+    ['#71717a', 'var(--v4-ink-3, #71717a)'],
+    ['#cbd5e1', 'var(--v4-ink-3, #cbd5e1)'],
+  ]);
+
+  const V4_BORDER = new Map([
+    ['#e2e8f0', 'var(--v4-line, #e2e8f0)'],
+    ['#e5e7eb', 'var(--v4-line, #e5e7eb)'],
+    ['#d1d5db', 'var(--v4-line, #d1d5db)'],
+    ['#cbd5e1', 'var(--v4-line, #cbd5e1)'],
+  ]);
+
   // ═══════════════════════════════════════════
   // PROPERTY SETS
   // ═══════════════════════════════════════════
@@ -90,12 +128,47 @@
   // Pre-built regex for compound border replacement (sorted longest-first)
   const BORDER_REGEX = /#e5e7eb|#e2e8f0|#d1d5db|#cbd5e1/gi;
 
+  function usesV4PaletteRoles() {
+    try {
+      var palette = document.documentElement.getAttribute('data-palette');
+      return palette === 'sand' || palette === 'blue';
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function mergeColorMaps(primary, fallback) {
+    var merged = new Map(fallback);
+    primary.forEach(function (value, key) {
+      merged.set(key, value);
+    });
+    return merged;
+  }
+
+  function getColorMaps() {
+    if (!usesV4PaletteRoles()) {
+      return { bg: BG, text: TEXT, border: BORDER, borderRegex: BORDER_REGEX };
+    }
+    return {
+      bg: mergeColorMaps(V4_BG, BG),
+      text: mergeColorMaps(V4_TEXT, TEXT),
+      border: V4_BORDER,
+      borderRegex: BORDER_REGEX,
+    };
+  }
+
   // ═══════════════════════════════════════════
   // TRANSFORM ENGINE
   // ═══════════════════════════════════════════
 
   function transformStyle(style) {
     if (!style || typeof style !== 'object') return style;
+
+    var maps = getColorMaps();
+    var bgMap = maps.bg;
+    var textMap = maps.text;
+    var borderMap = maps.border;
+    var borderRegex = maps.borderRegex;
 
     var changed = false;
     var result = null;
@@ -112,17 +185,17 @@
       if (BG_PROPS.has(key)) {
         // Skip gradients and complex values
         if (lower.indexOf('gradient') === -1 && lower.indexOf('url(') === -1) {
-          mapped = BG.get(lower);
+          mapped = bgMap.get(lower);
         }
       } else if (TEXT_PROPS.has(key)) {
-        mapped = TEXT.get(lower);
+        mapped = textMap.get(lower);
       } else if (BORDER_PROPS.has(key)) {
-        mapped = BORDER.get(lower);
+        mapped = borderMap.get(lower);
       } else if (COMPOUND_BORDER_PROPS.has(key)) {
         // Handle compound: '1px solid #e5e7eb' → '1px solid var(--border, #e5e7eb)'
         if (lower.indexOf('#') !== -1) {
-          var replaced = val.replace(BORDER_REGEX, function (m) {
-            return BORDER.get(m.toLowerCase()) || m;
+          var replaced = val.replace(borderRegex, function (m) {
+            return borderMap.get(m.toLowerCase()) || m;
           });
           if (replaced !== val) mapped = replaced;
         }
@@ -193,6 +266,6 @@
     });
   } catch (_) { }
 
-  console.info('[DarkInterceptor] Patched React.createElement — %d bg, %d text, %d border mappings',
-    BG.size, TEXT.size, BORDER.size);
+  console.info('[DarkInterceptor] Patched React.createElement — legacy %d/%d/%d, v4 %d/%d/%d mappings',
+    BG.size, TEXT.size, BORDER.size, V4_BG.size, V4_TEXT.size, V4_BORDER.size);
 })();
