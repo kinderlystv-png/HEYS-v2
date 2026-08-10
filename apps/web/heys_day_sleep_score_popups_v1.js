@@ -79,12 +79,7 @@
                 React.createElement('span', {
                   className: 'sleep-quality-number',
                   style: {
-                    color: pendingSleepQuality === 0 ? '#9ca3af' :
-                      pendingSleepQuality <= 2 ? '#ef4444' :
-                        pendingSleepQuality <= 4 ? '#f97316' :
-                          pendingSleepQuality <= 5 ? '#eab308' :
-                            pendingSleepQuality <= 7 ? '#84cc16' :
-                              pendingSleepQuality <= 9 ? '#22c55e' : '#10b981'
+                    color: HEYS.scales.sleepQuality(pendingSleepQuality).color,
                   }
                 }, pendingSleepQuality === 0 ? '—' : sleepQualityValues[pendingSleepQuality]),
                 React.createElement('span', { className: 'sleep-quality-of-ten' }, pendingSleepQuality > 0 ? '/10' : '')
@@ -233,10 +228,7 @@
                 React.createElement('span', {
                   className: 'day-score-number',
                   style: {
-                    color: pendingDayScore === 0 ? '#9ca3af' :
-                      pendingDayScore <= 3 ? '#ef4444' :
-                        pendingDayScore <= 5 ? '#eab308' :
-                          pendingDayScore <= 7 ? '#22c55e' : '#10b981'
+                    color: HEYS.scales.dayScore10(pendingDayScore).color,
                   }
                 }, pendingDayScore === 0 ? '—' : pendingDayScore),
                 React.createElement('span', { className: 'day-score-of-ten' }, '/ 10')

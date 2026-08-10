@@ -241,3 +241,50 @@ describe('heys_scales_v1 — монотонность ступеней', () => {
     expect(rank(scales, scales.deficit(-20).step)).toBeLessThan(rank(scales, scales.deficit(-5).step));
   });
 });
+
+describe('heys_scales_v1 — этап 3: новые шкалы и colorForStep', () => {
+  function legacyTrainingRating(v) {
+    if (v <= 3) return '#ef4444';
+    if (v <= 5) return '#eab308';
+    if (v <= 7) return '#84cc16';
+    return '#10b981';
+  }
+
+  function legacyHealthScore(s) {
+    if (s >= 85) return '#10b981';
+    if (s >= 70) return '#22c55e';
+    if (s >= 50) return '#eab308';
+    if (s >= 30) return '#f97316';
+    return '#ef4444';
+  }
+
+  it('trainingRating и healthScore сохраняют классические цвета', () => {
+    const scales = loadScales();
+    for (let v = 0; v <= 10; v += 1) {
+      expect(scales.trainingRating(v).color).toBe(v <= 0 ? '#9ca3af' : legacyTrainingRating(v));
+      expect(scales.trainingRating(v).step).toBeTruthy();
+    }
+    for (const s of [0, 29, 30, 49, 50, 69, 70, 84, 85, 100]) {
+      expect(scales.healthScore(s).color).toBe(legacyHealthScore(s));
+    }
+  });
+
+  it('harm и gamificationLevel возвращают ступень', () => {
+    const scales = loadScales();
+    const harm = scales.harm(6.5);
+    expect(harm.id).toBe('harmful');
+    expect(harm.step).toBe(scales.STEPS.WARN_STRONG);
+    const level = scales.gamificationLevel(12);
+    expect(level.title).toBe('Практик');
+    expect(level.step).toBe(scales.STEPS.GOOD_STRONG);
+  });
+
+  it('macro* шкалы совпадают с прежней логикой колец', () => {
+    const scales = loadScales();
+    expect(scales.macroProtein(50, 100, false).color).toBe('#ef4444');
+    expect(scales.macroProtein(85, 100, false).color).toBe('#f59e0b');
+    expect(scales.macroProtein(100, 100, false).color).toBe('#22c55e');
+    expect(scales.macroFat(40, 100).color).toBe('#ef4444');
+    expect(scales.macroCarbs(20, 100, true).color).toBe('#f59e0b');
+  });
+});

@@ -1,22 +1,14 @@
 // heys_scales_v1.js — единая точка цветовых шкал приложения
 //
-// Зачем: цвет «хорошо / внимание» задавался литералами в 6+ независимых
-// местах, причём одна и та же метрика (шаги) красилась двумя разными
-// способами — непрерывным градиентом в Активе и четырьмя ступенями в
-// виджете. Модуль собирает все шкалы в одно место, ничего не меняя
-// визуально: каждая возвращает ровно тот цвет, что и раньше.
-//
-// Каждая шкала помимо цвета отдаёт семантическую ступень (step). Ступени
-// общие для всех шкал — на них будет опираться альтернативная тема
-// «Мягкий», где палитра сводится к шалфею и терракоте в двух насыщенностях.
-// Пока тема одна, step никем не используется и служит контрактом.
+// Этап 3 UI v4: пороговые функции возвращают ступень; цвет классики берётся из
+// централизованных таблиц веток (не из литералов в потребителях). Для будущих
+// палитр — colorForStep(step) и resolve().step.
 
 ; (function (global) {
     'use strict';
 
     const HEYS = global.HEYS = global.HEYS || {};
 
-    // Семантические ступени. Порядок — от «хорошо» к «требует внимания».
     const STEPS = {
         GOOD_STRONG: 'good-strong',
         GOOD_SOFT: 'good-soft',
@@ -25,13 +17,51 @@
         WARN_STRONG: 'warn-strong',
     };
 
+    const CLASSIC_STEP_COLOR = Object.freeze({
+        [STEPS.GOOD_STRONG]: '#22c55e',
+        [STEPS.GOOD_SOFT]: '#3b82f6',
+        [STEPS.NEUTRAL]: '#eab308',
+        [STEPS.WARN_SOFT]: '#ef4444',
+        [STEPS.WARN_STRONG]: '#dc2626',
+    });
+
+    const C = Object.freeze({
+        green: '#22c55e',
+        greenDark: '#10b981',
+        greenLight: '#84cc16',
+        blue: '#3b82f6',
+        yellow: '#eab308',
+        orange: '#f97316',
+        red: '#ef4444',
+        redDark: '#dc2626',
+        gray: '#9ca3af',
+        grayMuted: '#6b7280',
+        purple: '#a855f7',
+        greenHarm: '#16a34a',
+        redHarm: '#7f1d1d',
+        amberMacro: '#f59e0b',
+        slate: '#94a3b8',
+    });
+
     function num(value, fallback) {
         const n = Number(value);
         return Number.isFinite(n) ? n : fallback;
     }
 
-    // Линейная интерполяция между двумя rgb-тройками. Формат результата
-    // повторяет прежний посимвольно: 'rgb(r, g, b)'.
+    function pack(step, color, extra) {
+        const out = { step, color };
+        if (extra) {
+            for (const key in extra) {
+                if (Object.prototype.hasOwnProperty.call(extra, key)) out[key] = extra[key];
+            }
+        }
+        return out;
+    }
+
+    function colorForStep(step) {
+        return CLASSIC_STEP_COLOR[step] || C.grayMuted;
+    }
+
     function mixRgb(from, to, t) {
         const r = Math.round(from[0] + t * (to[0] - from[0]));
         const g = Math.round(from[1] + t * (to[1] - from[1]));
@@ -43,8 +73,6 @@
     const YELLOW = [234, 179, 8];
     const GREEN = [34, 197, 94];
 
-    // Прогресс шагов в Активе: непрерывный градиент красный → жёлтый → зелёный.
-    // Перелом на 30 % — исторический, сохранён как есть.
     function stepsProgress(percent) {
         const pct = Math.max(0, num(percent, 0));
         const color = pct < 30
@@ -57,62 +85,227 @@
         return { color, step };
     }
 
-    // Прогресс шагов в виджете. Тот же показатель, но исторически четыре
-    // ступени с другими порогами — расхождение сохранено, чтобы правка
-    // оставалась чисто структурной.
     function stepsWidget(percent) {
         const pct = num(percent, 0);
-        if (pct >= 100) return { color: '#22c55e', step: STEPS.GOOD_STRONG };
-        if (pct >= 70) return { color: '#3b82f6', step: STEPS.GOOD_SOFT };
-        if (pct >= 40) return { color: '#eab308', step: STEPS.NEUTRAL };
-        return { color: '#ef4444', step: STEPS.WARN_SOFT };
+        if (pct >= 100) return pack(STEPS.GOOD_STRONG, C.green);
+        if (pct >= 70) return pack(STEPS.GOOD_SOFT, C.blue);
+        if (pct >= 40) return pack(STEPS.NEUTRAL, C.yellow);
+        return pack(STEPS.WARN_SOFT, C.red);
     }
 
-    // Выбор цели по шагам в мастере. Маленькая цель — не ошибка, поэтому нижняя
-    // ступень NEUTRAL, а не предупреждение. Ступени монотонны: чем выше цель,
-    // тем выше ступень (правка 2026-08-10 — до неё 7000-9999 и 10000+ делили
-    // GOOD_STRONG, а цель ниже 7000 получала GOOD_SOFT, то есть ступень лучше
-    // средней. В новой теме это слило бы два разных выбора в один тон).
     function stepsGoal(goal) {
         const value = num(goal, 0);
-        if (value >= 10000) return { color: '#22c55e', step: STEPS.GOOD_STRONG };
-        if (value < 7000) return { color: '#eab308', step: STEPS.NEUTRAL };
-        return { color: '#3b82f6', step: STEPS.GOOD_SOFT };
+        if (value >= 10000) return pack(STEPS.GOOD_STRONG, C.green);
+        if (value < 7000) return pack(STEPS.NEUTRAL, C.yellow);
+        return pack(STEPS.GOOD_SOFT, C.blue);
     }
 
-    // Дефицит/профицит калорий. Движение по плану не подсвечивается —
-    // отсюда NEUTRAL у любого дефицита в пределах плана.
     function deficit(value) {
         const v = num(value, 0);
-        if (v < -10) return { color: '#ef4444', label: 'Агрессивный дефицит', emoji: '🔥🔥', step: STEPS.WARN_SOFT };
-        if (v < 0) return { color: '#f97316', label: 'Умеренный дефицит', emoji: '🔥', step: STEPS.NEUTRAL };
-        if (v === 0) return { color: '#22c55e', label: 'Поддержание веса', emoji: '⚖️', step: STEPS.NEUTRAL };
-        if (v <= 10) return { color: '#3b82f6', label: 'Умеренный профицит', emoji: '💪', step: STEPS.NEUTRAL };
-        return { color: '#3b82f6', label: 'Агрессивный набор', emoji: '💪💪', step: STEPS.WARN_SOFT };
+        if (v < -10) return pack(STEPS.WARN_SOFT, C.red, { label: 'Агрессивный дефицит', emoji: '🔥🔥' });
+        if (v < 0) return pack(STEPS.NEUTRAL, C.orange, { label: 'Умеренный дефицит', emoji: '🔥' });
+        if (v === 0) return pack(STEPS.NEUTRAL, C.green, { label: 'Поддержание веса', emoji: '⚖️' });
+        if (v <= 10) return pack(STEPS.NEUTRAL, C.blue, { label: 'Умеренный профицит', emoji: '💪' });
+        return pack(STEPS.WARN_SOFT, C.blue, { label: 'Агрессивный набор', emoji: '💪💪' });
     }
 
-    // Шкалы самочувствия. Низкая оценка — состояние, а не срыв, поэтому
-    // нижняя ступень WARN_SOFT, а не WARN_STRONG.
     function wellbeing(value) {
         const v = num(value, 0);
-        if (v <= 3) return { color: '#ef4444', step: STEPS.WARN_SOFT };
-        if (v <= 5) return { color: '#3b82f6', step: STEPS.NEUTRAL };
-        if (v <= 7) return { color: '#22c55e', step: STEPS.GOOD_SOFT };
-        return { color: '#10b981', step: STEPS.GOOD_STRONG };
+        if (v <= 3) return pack(STEPS.WARN_SOFT, C.red);
+        if (v <= 5) return pack(STEPS.NEUTRAL, C.blue);
+        if (v <= 7) return pack(STEPS.GOOD_SOFT, C.green);
+        return pack(STEPS.GOOD_STRONG, C.greenDark);
     }
 
-    // Стресс — зеркальная шкала: чем ниже, тем лучше.
     function stress(value) {
         const v = num(value, 0);
-        if (v <= 3) return { color: '#10b981', step: STEPS.GOOD_STRONG };
-        if (v <= 5) return { color: '#3b82f6', step: STEPS.GOOD_SOFT };
-        if (v <= 7) return { color: '#eab308', step: STEPS.NEUTRAL };
-        return { color: '#ef4444', step: STEPS.WARN_SOFT };
+        if (v <= 3) return pack(STEPS.GOOD_STRONG, C.greenDark);
+        if (v <= 5) return pack(STEPS.GOOD_SOFT, C.blue);
+        if (v <= 7) return pack(STEPS.NEUTRAL, C.yellow);
+        return pack(STEPS.WARN_SOFT, C.red);
     }
 
-    // Калории относительно нормы. Значения живут в heys_ratio_zones_v1.js и
-    // настраиваются пользователем — дублировать их здесь нельзя, поэтому
-    // шкала делегирует.
+    function trainingRating(value) {
+        const v = num(value, 0);
+        if (v <= 0) return pack(STEPS.NEUTRAL, C.gray);
+        if (v <= 3) return pack(STEPS.WARN_SOFT, C.red);
+        if (v <= 5) return pack(STEPS.NEUTRAL, C.yellow);
+        if (v <= 7) return pack(STEPS.GOOD_SOFT, C.greenLight);
+        return pack(STEPS.GOOD_STRONG, C.greenDark);
+    }
+
+    function moodRating(value) {
+        const v = num(value, 0);
+        if (v <= 2) return pack(STEPS.WARN_SOFT, C.red);
+        if (v <= 4) return pack(STEPS.WARN_SOFT, C.orange);
+        if (v <= 6) return pack(STEPS.NEUTRAL, C.yellow);
+        if (v <= 8) return pack(STEPS.GOOD_SOFT, C.green);
+        return pack(STEPS.GOOD_STRONG, C.greenDark);
+    }
+
+    function stressRating(value) {
+        const v = num(value, 0);
+        if (v <= 2) return pack(STEPS.GOOD_STRONG, C.greenDark);
+        if (v <= 4) return pack(STEPS.GOOD_SOFT, C.green);
+        if (v <= 6) return pack(STEPS.NEUTRAL, C.yellow);
+        if (v <= 8) return pack(STEPS.WARN_SOFT, C.orange);
+        return pack(STEPS.WARN_STRONG, C.red);
+    }
+
+    function sleepQuality(value) {
+        const v = num(value, 0);
+        if (v <= 0) return pack(STEPS.NEUTRAL, C.gray);
+        if (v <= 2) return pack(STEPS.WARN_STRONG, C.red);
+        if (v <= 4) return pack(STEPS.WARN_SOFT, C.orange);
+        if (v <= 5) return pack(STEPS.NEUTRAL, C.yellow);
+        if (v <= 7) return pack(STEPS.GOOD_SOFT, C.greenLight);
+        if (v <= 9) return pack(STEPS.GOOD_STRONG, C.green);
+        return pack(STEPS.GOOD_STRONG, C.greenDark);
+    }
+
+    function dayScore10(value) {
+        const v = num(value, 0);
+        if (v <= 0) return pack(STEPS.NEUTRAL, C.gray);
+        if (v <= 3) return pack(STEPS.WARN_SOFT, C.red);
+        if (v <= 5) return pack(STEPS.NEUTRAL, C.yellow);
+        if (v <= 7) return pack(STEPS.GOOD_SOFT, C.green);
+        return pack(STEPS.GOOD_STRONG, C.greenDark);
+    }
+
+    function healthScore(score) {
+        const s = num(score, 0);
+        if (s >= 85) return pack(STEPS.GOOD_STRONG, C.greenDark);
+        if (s >= 70) return pack(STEPS.GOOD_STRONG, C.green);
+        if (s >= 50) return pack(STEPS.NEUTRAL, C.yellow);
+        if (s >= 30) return pack(STEPS.WARN_SOFT, C.orange);
+        return pack(STEPS.WARN_STRONG, C.red);
+    }
+
+    function waterProgress(percent) {
+        const pct = num(percent, 0);
+        if (pct >= 100) return pack(STEPS.GOOD_STRONG, C.green);
+        if (pct >= 70) return pack(STEPS.GOOD_SOFT, C.blue);
+        if (pct >= 40) return pack(STEPS.NEUTRAL, C.yellow);
+        return pack(STEPS.WARN_SOFT, C.red);
+    }
+
+    function sleepHours(hours, target) {
+        const h = num(hours, 0);
+        const t = num(target, 0);
+        if (t <= 0) return pack(STEPS.NEUTRAL, C.grayMuted);
+        if (h >= t) return pack(STEPS.GOOD_STRONG, C.green);
+        if (h >= t - 1) return pack(STEPS.GOOD_SOFT, C.blue);
+        if (h >= t - 2) return pack(STEPS.NEUTRAL, C.yellow);
+        return pack(STEPS.WARN_SOFT, C.red);
+    }
+
+    const HARM_BRANCHES = [
+        { max: 1.0, id: 'superHealthy', name: '🟢 Суперполезный', color: C.greenHarm, emoji: '🟢', step: STEPS.GOOD_STRONG },
+        { max: 2.5, id: 'healthy', name: '🟢 Полезный', color: C.green, emoji: '🟢', step: STEPS.GOOD_SOFT },
+        { max: 4.0, id: 'neutral', name: '🟡 Нейтральный', color: C.yellow, emoji: '🟡', step: STEPS.NEUTRAL },
+        { max: 5.5, id: 'mildlyHarmful', name: '🟠 Умеренно вредный', color: C.orange, emoji: '🟠', step: STEPS.WARN_SOFT },
+        { max: 7.0, id: 'harmful', name: '🔴 Вредный', color: C.red, emoji: '🔴', step: STEPS.WARN_STRONG },
+        { max: 8.5, id: 'veryHarmful', name: '🔴 Очень вредный', color: C.redDark, emoji: '🔴', step: STEPS.WARN_STRONG },
+        { max: 10, id: 'superHarmful', name: '⚫ Супервредный', color: C.redHarm, emoji: '⚫', step: STEPS.WARN_STRONG },
+    ];
+
+    function harm(value) {
+        const harmVal = num(value, NaN);
+        if (!Number.isFinite(harmVal)) {
+            return pack(STEPS.NEUTRAL, C.grayMuted, { id: 'unknown', name: '❓ Неизвестно', emoji: '❓' });
+        }
+        for (let i = 0; i < HARM_BRANCHES.length; i++) {
+            const branch = HARM_BRANCHES[i];
+            if (harmVal <= branch.max) {
+                return pack(branch.step, branch.color, {
+                    id: branch.id,
+                    name: branch.name,
+                    emoji: branch.emoji,
+                });
+            }
+        }
+        const last = HARM_BRANCHES[HARM_BRANCHES.length - 1];
+        return pack(last.step, last.color, { id: last.id, name: last.name, emoji: last.emoji });
+    }
+
+    const GAMIFICATION_LEVELS = [
+        { min: 1, max: 4, title: 'Новичок', icon: '🌱', color: C.slate, step: STEPS.NEUTRAL },
+        { min: 5, max: 9, title: 'Ученик', icon: '📚', color: C.blue, step: STEPS.GOOD_SOFT },
+        { min: 10, max: 14, title: 'Практик', icon: '💪', color: C.green, step: STEPS.GOOD_STRONG },
+        { min: 15, max: 19, title: 'Эксперт', icon: '⭐', color: C.yellow, step: STEPS.NEUTRAL },
+        { min: 20, max: 25, title: 'Мастер', icon: '👑', color: C.purple, step: STEPS.GOOD_STRONG },
+    ];
+
+    function gamificationLevel(level) {
+        const lv = num(level, 1);
+        for (let i = 0; i < GAMIFICATION_LEVELS.length; i++) {
+            const row = GAMIFICATION_LEVELS[i];
+            if (lv >= row.min && lv <= row.max) {
+                return pack(row.step, row.color, {
+                    title: row.title,
+                    icon: row.icon,
+                    min: row.min,
+                    max: row.max,
+                });
+            }
+        }
+        const last = GAMIFICATION_LEVELS[GAMIFICATION_LEVELS.length - 1];
+        return pack(last.step, last.color, {
+            title: last.title,
+            icon: last.icon,
+            min: last.min,
+            max: last.max,
+        });
+    }
+
+    function macroProtein(actual, norm, hasTraining) {
+        if (!norm || norm <= 0) return pack(STEPS.NEUTRAL, C.grayMuted);
+        const ratio = actual / norm;
+        const minOk = hasTraining ? 0.7 : 0.6;
+        const minGood = hasTraining ? 1.0 : 0.9;
+        if (ratio < minOk) return pack(STEPS.WARN_STRONG, C.red);
+        if (ratio < minGood) return pack(STEPS.WARN_SOFT, C.amberMacro);
+        return pack(STEPS.GOOD_STRONG, C.green);
+    }
+
+    function macroFat(actual, norm) {
+        if (!norm || norm <= 0) return pack(STEPS.NEUTRAL, C.grayMuted);
+        const ratio = actual / norm;
+        if (ratio < 0.5) return pack(STEPS.WARN_STRONG, C.red);
+        if (ratio < 0.8) return pack(STEPS.WARN_SOFT, C.amberMacro);
+        if (ratio <= 1.2) return pack(STEPS.GOOD_STRONG, C.green);
+        if (ratio <= 1.5) return pack(STEPS.WARN_SOFT, C.amberMacro);
+        return pack(STEPS.WARN_STRONG, C.red);
+    }
+
+    function macroCarbs(actual, norm, hasDeficit) {
+        if (!norm || norm <= 0) return pack(STEPS.NEUTRAL, C.grayMuted);
+        const ratio = actual / norm;
+        if (hasDeficit) {
+            if (ratio < 0.3) return pack(STEPS.WARN_SOFT, C.amberMacro);
+            if (ratio <= 1.0) return pack(STEPS.GOOD_STRONG, C.green);
+            if (ratio <= 1.2) return pack(STEPS.WARN_SOFT, C.amberMacro);
+            return pack(STEPS.WARN_STRONG, C.red);
+        }
+        if (ratio < 0.5) return pack(STEPS.WARN_STRONG, C.red);
+        if (ratio < 0.8) return pack(STEPS.WARN_SOFT, C.amberMacro);
+        if (ratio <= 1.1) return pack(STEPS.GOOD_STRONG, C.green);
+        if (ratio <= 1.3) return pack(STEPS.WARN_SOFT, C.amberMacro);
+        return pack(STEPS.WARN_STRONG, C.red);
+    }
+
+    const MACRO_GRADIENT_STOPS = Object.freeze({
+        protein: ['#fecaca', '#ef4444'],
+        fat: ['#fde68a', '#f59e0b'],
+        carbs: ['#bbf7d0', '#22c55e'],
+    });
+
+    const MACRO_OVERFLOW_COLORS = Object.freeze({
+        protein: C.green,
+        fat: C.red,
+        carbs: C.red,
+    });
+
     function ratio(value) {
         const zones = HEYS.ratioZones;
         if (!zones || typeof zones.getZone !== 'function') return null;
@@ -126,11 +319,12 @@
             over: STEPS.WARN_SOFT,
             binge: STEPS.WARN_STRONG,
         };
+        const step = STEP_BY_ZONE[zone.id] || STEPS.NEUTRAL;
         return {
             color: zone.color,
             textColor: zone.textColor,
             zone: zone.id,
-            step: STEP_BY_ZONE[zone.id] || STEPS.NEUTRAL,
+            step,
         };
     }
 
@@ -141,22 +335,40 @@
         deficit,
         wellbeing,
         stress,
+        training_rating: trainingRating,
+        mood_rating: moodRating,
+        stress_rating: stressRating,
+        sleep_quality: sleepQuality,
+        day_score_10: dayScore10,
+        health_score: healthScore,
+        water_progress: waterProgress,
+        sleep_hours: sleepHours,
+        harm,
+        gamification_level: gamificationLevel,
+        macro_protein: macroProtein,
+        macro_fat: macroFat,
+        macro_carbs: macroCarbs,
         ratio,
     };
 
-    function resolve(scaleId, value) {
+    function resolve(scaleId, value, arg2, arg3) {
         const fn = SCALES[scaleId];
         if (typeof fn !== 'function') return null;
+        if (scaleId === 'sleep_hours') return fn(value, arg2);
+        if (scaleId === 'macro_protein') return fn(value, arg2, arg3);
+        if (scaleId === 'macro_carbs') return fn(value, arg2, arg3);
         return fn(value);
     }
 
-    function color(scaleId, value) {
-        const result = resolve(scaleId, value);
+    function color(scaleId, value, arg2, arg3) {
+        const result = resolve(scaleId, value, arg2, arg3);
         return result ? result.color : null;
     }
 
     HEYS.scales = {
         STEPS,
+        CLASSIC_STEP_COLOR,
+        colorForStep,
         resolve,
         color,
         stepsProgress,
@@ -165,7 +377,24 @@
         deficit,
         wellbeing,
         stress,
+        trainingRating,
+        moodRating,
+        stressRating,
+        sleepQuality,
+        dayScore10,
+        healthScore,
+        waterProgress,
+        sleepHours,
+        harm,
+        gamificationLevel,
+        macroProtein,
+        macroFat,
+        macroCarbs,
+        MACRO_GRADIENT_STOPS,
+        MACRO_OVERFLOW_COLORS,
         ratio,
+        HARM_BRANCHES,
+        GAMIFICATION_LEVELS,
     };
 
     if (typeof module !== 'undefined' && module.exports) {

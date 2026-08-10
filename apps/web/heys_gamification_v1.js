@@ -2047,6 +2047,17 @@
   }
 
   function getLevelTitle(level) {
+    if (HEYS.scales && typeof HEYS.scales.gamificationLevel === 'function') {
+      const scaled = HEYS.scales.gamificationLevel(level);
+      return {
+        min: scaled.min,
+        max: scaled.max,
+        title: scaled.title,
+        icon: scaled.icon,
+        color: scaled.color,
+        step: scaled.step,
+      };
+    }
     for (const t of LEVEL_TITLES) {
       if (level >= t.min && level <= t.max) return t;
     }

@@ -7,28 +7,44 @@
 
   const HEYS = global.HEYS = global.HEYS || {};
 
-  const MACRO_COLORS = Object.freeze({
-    red: '#ef4444',
-    amber: '#f59e0b',
-    green: '#22c55e',
-    gray: '#6b7280',
-  });
+  const MACRO_COLORS = Object.freeze(
+    HEYS.scales
+      ? {
+        red: '#ef4444',
+        amber: '#f59e0b',
+        green: '#22c55e',
+        gray: '#6b7280',
+      }
+      : {
+        red: '#ef4444',
+        amber: '#f59e0b',
+        green: '#22c55e',
+        gray: '#6b7280',
+      }
+  );
 
   // Градиентные пары (оригинал из widgets/weekly): [light, dark]
-  const GRADIENT_STOPS = Object.freeze({
-    protein: ['#fecaca', '#ef4444'],
-    fat: ['#fde68a', '#f59e0b'],
-    carbs: ['#bbf7d0', '#22c55e'],
-  });
+  const GRADIENT_STOPS = Object.freeze(
+    (HEYS.scales && HEYS.scales.MACRO_GRADIENT_STOPS) || {
+      protein: ['#fecaca', '#ef4444'],
+      fat: ['#fde68a', '#f59e0b'],
+      carbs: ['#bbf7d0', '#22c55e'],
+    }
+  );
 
   // Перебор-цвет: для белка зелёный (норм), для жира/углей — красный (плохо).
-  const OVERFLOW_COLORS = Object.freeze({
-    protein: MACRO_COLORS.green,
-    fat: MACRO_COLORS.red,
-    carbs: MACRO_COLORS.red,
-  });
+  const OVERFLOW_COLORS = Object.freeze(
+    (HEYS.scales && HEYS.scales.MACRO_OVERFLOW_COLORS) || {
+      protein: MACRO_COLORS.green,
+      fat: MACRO_COLORS.red,
+      carbs: MACRO_COLORS.red,
+    }
+  );
 
   function getProteinColor(actual, norm, hasTraining) {
+    if (HEYS.scales && typeof HEYS.scales.macroProtein === 'function') {
+      return HEYS.scales.macroProtein(actual, norm, hasTraining).color;
+    }
     if (!norm || norm <= 0) return MACRO_COLORS.gray;
     const ratio = actual / norm;
     const minOk = hasTraining ? 0.7 : 0.6;
@@ -39,6 +55,9 @@
   }
 
   function getFatColor(actual, norm) {
+    if (HEYS.scales && typeof HEYS.scales.macroFat === 'function') {
+      return HEYS.scales.macroFat(actual, norm).color;
+    }
     if (!norm || norm <= 0) return MACRO_COLORS.gray;
     const ratio = actual / norm;
     if (ratio < 0.5) return MACRO_COLORS.red;
@@ -49,6 +68,9 @@
   }
 
   function getCarbsColor(actual, norm, hasDeficit) {
+    if (HEYS.scales && typeof HEYS.scales.macroCarbs === 'function') {
+      return HEYS.scales.macroCarbs(actual, norm, hasDeficit).color;
+    }
     if (!norm || norm <= 0) return MACRO_COLORS.gray;
     const ratio = actual / norm;
     if (hasDeficit) {

@@ -395,12 +395,7 @@
                 const ratingState = negativeSignals >= 1 && positiveSignals === 0 ? 'negative' :
                   positiveSignals >= 1 && negativeSignals === 0 ? 'positive' : 'neutral';
 
-                const getPositiveColor = (v) => {
-                  if (v <= 3) return '#ef4444';
-                  if (v <= 5) return '#eab308';
-                  if (v <= 7) return '#84cc16';
-                  return '#10b981';
-                };
+                const getPositiveColor = (v) => HEYS.scales.trainingRating(v).color;
 
                 const getQualityEmoji = (v) =>
                   v === 0 ? '🤷' : v <= 2 ? '😫' : v <= 4 ? '😕' : v <= 6 ? '😐' : v <= 8 ? '💪' : '🔥';

@@ -580,6 +580,16 @@
      * @returns {Object} - { id, name, color, emoji }
      */
     function getHarmCategory(harm) {
+        if (HEYS.scales && typeof HEYS.scales.harm === 'function') {
+            const scaled = HEYS.scales.harm(harm);
+            return {
+                id: scaled.id,
+                name: scaled.name,
+                color: scaled.color,
+                emoji: scaled.emoji,
+                step: scaled.step,
+            };
+        }
         if (harm == null || isNaN(harm)) {
             return { id: 'unknown', name: '❓ Неизвестно', color: '#6b7280', emoji: '❓' };
         }

@@ -538,19 +538,11 @@
   }
 
   function getMoodColor(v) {
-    if (v <= 2) return '#ef4444';
-    if (v <= 4) return '#f97316';
-    if (v <= 6) return '#eab308';
-    if (v <= 8) return '#22c55e';
-    return '#10b981';
+    return HEYS.scales.moodRating(v).color;
   }
 
   function getStressColor(v) {
-    if (v <= 2) return '#10b981';
-    if (v <= 4) return '#22c55e';
-    if (v <= 6) return '#eab308';
-    if (v <= 8) return '#f97316';
-    return '#ef4444';
+    return HEYS.scales.stressRating(v).color;
   }
 
   // WheelPicker и TimePicker из StepModal

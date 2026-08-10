@@ -212,20 +212,9 @@
   // ============================================================
 
   // Цвета для позитивных шкал (mood, wellbeing)
-  const getPositiveColor = (v) => {
-    if (v <= 3) return '#ef4444';
-    if (v <= 5) return '#3b82f6';
-    if (v <= 7) return '#22c55e';
-    return '#10b981';
-  };
+  const getPositiveColor = (v) => HEYS.scales.wellbeing(v).color;
 
-  // Цвета для негативных шкал (stress)
-  const getNegativeColor = (v) => {
-    if (v <= 3) return '#10b981';
-    if (v <= 5) return '#3b82f6';
-    if (v <= 7) return '#eab308';
-    return '#ef4444';
-  };
+  const getNegativeColor = (v) => HEYS.scales.stress(v).color;
 
   // Цвет фона карточки (позитивная шкала)
   const getCardBg = (v) => {

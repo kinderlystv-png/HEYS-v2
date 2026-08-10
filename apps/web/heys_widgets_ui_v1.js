@@ -1519,13 +1519,7 @@
     const showAction = widget.settings?.showAction !== false;
     const showLevel = widget.settings?.showLevel !== false;
 
-    const getColor = () => {
-      if (score >= 85) return '#10b981';
-      if (score >= 70) return '#22c55e';
-      if (score >= 50) return '#eab308';
-      if (score >= 30) return '#f97316';
-      return '#ef4444';
-    };
+    const getColor = () => HEYS.scales.healthScore(score).color;
 
     const getLevelEmoji = () => {
       switch (level) {
@@ -1832,13 +1826,7 @@
     const d = getWidgetDims(widget);
     const isShort = d.isShort; // 2x1
 
-    const getColor = (s) => {
-      if (s >= 85) return '#10b981';
-      if (s >= 70) return '#22c55e';
-      if (s >= 50) return '#eab308';
-      if (s >= 30) return '#f97316';
-      return '#ef4444';
-    };
+    const getColor = (s) => HEYS.scales.healthScore(s).color;
 
     const color = getColor(score);
 
@@ -1968,13 +1956,7 @@
     const score = data.status?.score ?? data.score ?? 0;
     const level = data.status?.level ?? { label: 'Нет данных', color: '#94a3b8' };
 
-    const getColor = () => {
-      if (score >= 85) return '#10b981';
-      if (score >= 70) return '#22c55e';
-      if (score >= 50) return '#eab308';
-      if (score >= 30) return '#f97316';
-      return '#ef4444';
-    };
+    const getColor = () => HEYS.scales.healthScore(score).color;
 
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-day-score widget-day-score--micro' },
@@ -2215,12 +2197,7 @@
       ? `${drunk}${d.isMicro ? '' : ' мл'}`
       : `${glasses}${d.isMicro ? '🥛' : ' 🥛'}`;
 
-    const getWaterColor = () => {
-      if (pct >= 100) return '#22c55e';
-      if (pct >= 70) return '#3b82f6';
-      if (pct >= 40) return '#eab308';
-      return '#ef4444';
-    };
+    const getWaterColor = () => HEYS.scales.waterProgress(pct).color;
 
     // 1x1 Micro
     if (d.isMicro) {
@@ -2323,12 +2300,7 @@
 
     const pct = target > 0 ? Math.round((hours / target) * 100) : 0;
 
-    const getSleepColor = () => {
-      if (hours >= target) return '#22c55e';
-      if (hours >= target - 1) return '#3b82f6';
-      if (hours >= target - 2) return '#eab308';
-      return '#ef4444';
-    };
+    const getSleepColor = () => HEYS.scales.sleepHours(hours, target).color;
 
     const getEmoji = () => {
       if (hours >= target) return '😊';
@@ -4895,13 +4867,7 @@
     const breakdown = Array.isArray(status.breakdown) ? status.breakdown : [];
     const topActions = Array.isArray(status.topActions) ? status.topActions : [];
 
-    const getColor = (s) => {
-      if (s >= 85) return '#10b981';
-      if (s >= 70) return '#22c55e';
-      if (s >= 50) return '#eab308';
-      if (s >= 30) return '#f97316';
-      return '#ef4444';
-    };
+    const getColor = (s) => HEYS.scales.healthScore(s).color;
 
     const copyStatusLog = async () => {
       try {
@@ -5338,13 +5304,7 @@
     const statusBreakdown = Array.isArray(statusResult.breakdown) ? statusResult.breakdown : [];
     const topActions = Array.isArray(statusResult.topActions) ? statusResult.topActions : [];
 
-    const getColor = (s) => {
-      if (s >= 85) return '#10b981';
-      if (s >= 70) return '#22c55e';
-      if (s >= 50) return '#eab308';
-      if (s >= 30) return '#f97316';
-      return '#ef4444';
-    };
+    const getColor = (s) => HEYS.scales.healthScore(s).color;
 
     const getLevelLabel = (lvl) => {
       switch (lvl) {

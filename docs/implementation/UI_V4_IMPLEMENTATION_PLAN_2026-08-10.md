@@ -1,10 +1,8 @@
 # План имплементации дизайн-слоя v4 — 2026-08-10
 
-**Статус:** этапы 0–1 закрыты (`5502aca11`). Этап 2 — первая волна
-`heys_dark_theme_interceptor.js`: маппинги только `var(--v4-*, #fallback)`, на
-палитре `classic` legacy-токены без изменений. Tailwind `darkMode` в конфиге
-оставлен, но `styles/tailwind.css` статичен с 2025-05-31 — пересборка отдельная
-задача.
+**Статус:** этапы 0–3 закрыты. Этап 4 — codemod по вкладкам. Tailwind `darkMode`
+в конфиге оставлен, но `styles/tailwind.css` статичен с 2025-05-31 — пересборка
+отдельная задача.
 
 ## Этап 0 — сделано (2026-08-10)
 
@@ -142,6 +140,14 @@ legacy-картой.
 
 **Готово, когда:** ни одна пороговая функция не возвращает литерал, все
 возвращают ступень; в классике цвета прежние.
+
+**Реализация 2026-08-10:** `heys_scales_v1.js` — `pack(step, color)` и
+`colorForStep`; новые шкалы `trainingRating`, `moodRating`, `stressRating`,
+`sleepQuality`, `dayScore10`, `healthScore`, `waterProgress`, `sleepHours`,
+`harm`, `gamificationLevel`, `macro*`. Потребители: training step/popups, sleep
+popups, widgets (score/water/sleep), `heys_harm_v1`, `heys_gamification_v1`,
+`heys_macro_rings_core_v1`. Ratio zones — step на чтении, цвет из
+пользовательских значений без изменений.
 
 ---
 
