@@ -2073,22 +2073,6 @@
     return LEVEL_THRESHOLDS[level - 1];
   }
 
-  // ========== RANK BADGES ==========
-  const RANK_BADGES = [
-    { min: 1, max: 4, rank: 'Bronze', icon: '🥉', color: '#cd7f32' },
-    { min: 5, max: 9, rank: 'Silver', icon: '🥈', color: '#c0c0c0' },
-    { min: 10, max: 14, rank: 'Gold', icon: '🥇', color: '#ffd700' },
-    { min: 15, max: 19, rank: 'Platinum', icon: '💎', color: '#e5e4e2' },
-    { min: 20, max: 25, rank: 'Diamond', icon: '👑', color: '#b9f2ff' }
-  ];
-
-  function getRankBadge(level) {
-    for (const r of RANK_BADGES) {
-      if (level >= r.min && level <= r.max) return r;
-    }
-    return RANK_BADGES[RANK_BADGES.length - 1];
-  }
-
   // ========== XP MULTIPLIER ==========
   function getXPMultiplier() {
     const streak = safeGetStreak();
@@ -2194,7 +2178,6 @@
     data.level = calculateLevel(data.totalXP);
     const afterXP = data.totalXP;
     const afterAchievements = data.unlockedAchievements.length;
-    handleRankTransition(oldLevel, data.level);
     saveData();
     triggerImmediateSync('daily_bonus');
 
@@ -3119,10 +3102,8 @@
         reward: challenge.reward
       });
       // Бонус за выполнение
-      const oldLevel = data.level;
       data.totalXP += challenge.reward;
       data.level = calculateLevel(data.totalXP);
-      handleRankTransition(oldLevel, data.level);
       saveData();
       celebrate();
 
@@ -3167,10 +3148,8 @@
           name: challenge.name,
           reward: challenge.reward
         });
-        const oldLevel = data.level;
         data.totalXP += challenge.reward;
         data.level = calculateLevel(data.totalXP);
-        handleRankTransition(oldLevel, data.level);
         saveData();
         celebrate();
 
@@ -3234,141 +3213,6 @@
     if (HEYS.audio) {
       HEYS.audio.play('achievementUnlocked');
     }
-  }
-
-  // 🏆 Rank ceremony sound (longer, more epic)
-  function playRankCeremonySound() {
-    if (HEYS.audio) {
-      HEYS.audio.play('rankCeremony');
-    }
-  }
-
-  // ========== LOTTIE LOADER ==========
-  let _lottieLoadPromise = null;
-
-  function loadLottie() {
-    if (window.lottie) return Promise.resolve(true);
-    if (_lottieLoadPromise) return _lottieLoadPromise;
-
-    _lottieLoadPromise = new Promise((resolve) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/lottie-web@5.12.2/build/player/lottie.min.js';
-      script.async = true;
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.head.appendChild(script);
-    });
-
-    return _lottieLoadPromise;
-  }
-
-  // ========== RANK CEREMONY ==========
-  let _activeRankCeremony = null;
-
-  function showRankCeremony(payload) {
-    if (!payload) return;
-
-    const existing = document.querySelector('.rank-ceremony');
-    if (existing) existing.remove();
-
-    const ceremony = document.createElement('div');
-    ceremony.className = 'rank-ceremony';
-    ceremony.setAttribute('role', 'dialog');
-    ceremony.setAttribute('aria-live', 'polite');
-
-    const panel = document.createElement('div');
-    panel.className = 'rank-ceremony__panel';
-
-    const lottieWrap = document.createElement('div');
-    lottieWrap.className = 'rank-ceremony__lottie';
-
-    const title = document.createElement('div');
-    title.className = 'rank-ceremony__title';
-    title.textContent = 'Новый ранг!';
-
-    const subtitle = document.createElement('div');
-    subtitle.className = 'rank-ceremony__subtitle';
-    subtitle.textContent = `${payload.toTitle.icon} ${payload.toTitle.title}`;
-
-    const rankLine = document.createElement('div');
-    rankLine.className = 'rank-ceremony__rankline';
-    rankLine.innerHTML = `
-      <span class="rank-ceremony__rank">${payload.fromTitle.icon} ${payload.fromTitle.title}</span>
-      <span class="rank-ceremony__arrow">→</span>
-      <span class="rank-ceremony__rank">${payload.toTitle.icon} ${payload.toTitle.title}</span>
-    `;
-
-    const hint = document.createElement('div');
-    hint.className = 'rank-ceremony__hint';
-    hint.textContent = 'Продолжай — следующие уровни уже ждут.';
-
-    const button = document.createElement('button');
-    button.className = 'rank-ceremony__btn';
-    button.type = 'button';
-    button.textContent = 'Круто!';
-
-    panel.appendChild(lottieWrap);
-    panel.appendChild(title);
-    panel.appendChild(subtitle);
-    panel.appendChild(rankLine);
-    panel.appendChild(hint);
-    panel.appendChild(button);
-    ceremony.appendChild(panel);
-
-    const removeCeremony = () => {
-      ceremony.classList.add('rank-ceremony--hide');
-      setTimeout(() => ceremony.remove(), 250);
-      _activeRankCeremony = null;
-    };
-
-    button.addEventListener('click', removeCeremony);
-    ceremony.addEventListener('click', (e) => {
-      if (e.target === ceremony) removeCeremony();
-    });
-
-    document.body.appendChild(ceremony);
-
-    _activeRankCeremony = { el: ceremony, remove: removeCeremony };
-
-    loadLottie().then((loaded) => {
-      if (!loaded || !window.lottie || !document.body.contains(ceremony)) return;
-
-      window.lottie.loadAnimation({
-        container: lottieWrap,
-        renderer: 'svg',
-        loop: true,
-        autoplay: true,
-        path: 'assets/lottie/level-up-ceremony.json'
-      });
-    });
-
-    setTimeout(removeCeremony, 6000);
-  }
-
-  function handleRankTransition(oldLevel, newLevel) {
-    if (newLevel <= oldLevel) return;
-
-    // 🔒 v4.0: Полная блокировка UI во время загрузки/rebuild
-    if (_isLoadingPhase || _isRebuilding || _suppressUIUpdates) return;
-
-    const fromTitle = getLevelTitle(oldLevel);
-    const toTitle = getLevelTitle(newLevel);
-
-    if (fromTitle.title === toTitle.title) return;
-
-    // 🛡️ Не показываем повторно один и тот же ранг при входе/синке
-    const lastShown = readStoredValue('heys_rank_ceremony_last', null);
-    if (lastShown && lastShown.title === toTitle.title && (lastShown.level || 0) >= newLevel) {
-      return;
-    }
-    setStoredValue('heys_rank_ceremony_last', {
-      title: toTitle.title,
-      level: newLevel,
-      ts: Date.now()
-    });
-
-    playRankCeremonySound();
-    showRankCeremony({ fromTitle, toTitle });
   }
 
   // ========== XP HISTORY (7 days) ==========
@@ -4048,12 +3892,10 @@
       data.unlockedAchievements.push(achievementId);
 
       // Начисляем XP за достижение
-      const oldLevel = data.level;
       data.totalXP += ach.xp;
       data.level = calculateLevel(data.totalXP);
       const afterXP = data.totalXP;
       const afterAchievements = data.unlockedAchievements.length;
-      handleRankTransition(oldLevel, data.level);
 
       // 🔒 FIX: Синхронизируем кеш ПЕРЕД saveData() чтобы избежать race condition с rebuild
       _data = data;
@@ -4152,7 +3994,7 @@
 
     /**
      * Получить прогресс текущего уровня
-     * @returns {{ current: number, required: number, percent: number }}
+     * @returns {{ current: number, required: number, percent: number, isMax: boolean }}
      */
     getProgress() {
       const data = loadData();
@@ -4160,14 +4002,18 @@
       const nextLevelXP = getXPForNextLevel(data.level);
 
       if (nextLevelXP === null) {
-        return { current: data.totalXP, required: data.totalXP, percent: 100 };
+        // Потолок шкалы: следующей ступени нет, поэтому current/required держим
+        // равными общему XP (полоса заполнена), а UI по isMax показывает
+        // «максимальный уровень» и счётчик XP вместо цели «ещё N до ур.N+1».
+        // XP при этом продолжает копиться — начисление не меняется.
+        return { current: data.totalXP, required: data.totalXP, percent: 100, isMax: true };
       }
 
       const progressXP = data.totalXP - currentLevelXP;
       const requiredXP = nextLevelXP - currentLevelXP;
       const percent = Math.min(100, Math.round((progressXP / requiredXP) * 100));
 
-      return { current: progressXP, required: requiredXP, percent };
+      return { current: progressXP, required: requiredXP, percent, isMax: false };
     },
 
     getLevelTitle() {
@@ -5099,7 +4945,6 @@
     RARITY_COLORS,
     LEVEL_TITLES,
     XP_ACTIONS,
-    RANK_BADGES,
 
     // 🔧 Exposed merge для storage layer (heys_storage_supabase_v1.js)
     // Используется в applyCloudSnapshot и applyForegroundHotSyncValue чтобы
@@ -5147,7 +4992,6 @@
     },
 
     // Новые функции
-    getRankBadge,
     getXPMultiplier,
     canClaimDailyBonus,
     refreshDailyBonusFromAudit,
@@ -5761,7 +5605,6 @@
       // 🔥 LEVEL UP — критическое событие, сохраняем сразу!
       triggerImmediateSync('level_up');
 
-      handleRankTransition(oldLevel, data.level);
       const title = getLevelTitle(data.level);
 
       queueGamificationEvent({

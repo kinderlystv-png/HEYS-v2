@@ -1008,12 +1008,13 @@
         };
 
         const { title, progress } = stats;
+        const isMaxLevel = progress.isMax === true; // потолок шкалы — следующей ступени нет
         const progressPercent = levelGuardActive ? 0 : Math.max(5, progress.percent); // Minimum 5% для визуального feedback
         const avgDailyXP = xpHistory?.length
             ? Math.round(xpHistory.reduce((sum, d) => sum + (d?.xp || 0), 0) / xpHistory.length)
             : 0;
         const xpToNext = Math.max(0, progress.required - progress.current);
-        const daysToNext = avgDailyXP > 0 ? Math.ceil(xpToNext / avgDailyXP) : null;
+        const daysToNext = !isMaxLevel && avgDailyXP > 0 ? Math.ceil(xpToNext / avgDailyXP) : null;
         const storyAchievement = storyAchId && HEYS.game?.ACHIEVEMENTS
             ? HEYS.game.ACHIEVEMENTS[storyAchId]
             : null;
@@ -1021,10 +1022,10 @@
             ? HEYS.game.isAchievementUnlocked(storyAchId)
             : false;
 
-        // Эффекты по уровню прогресса
-        const isShimmering = progress.percent >= 80; // Блик при >80%
-        const isPulsing = progress.percent >= 90;    // Пульсация при >90%
-        const isGlowing = progress.percent >= 90;
+        // Эффекты по уровню прогресса (на максимуме гасим — иначе полоса пульсирует вечно)
+        const isShimmering = !isMaxLevel && progress.percent >= 80; // Блик при >80%
+        const isPulsing = !isMaxLevel && progress.percent >= 90;    // Пульсация при >90%
+        const isGlowing = !isMaxLevel && progress.percent >= 90;
 
         // Streak класс по уровню
         const getStreakClass = (s) => {
@@ -1259,8 +1260,8 @@
                 className: 'game-bar',
                 onClick: toggleExpanded
             },
-                // Level + Rank Badge (горизонтально, компактно)
-                // Всегда рендерим text + badge — только меняем opacity/visibility, без layout shift
+                // Level (компактно)
+                // Всегда рендерим text — только меняем opacity/visibility, без layout shift
                 React.createElement('div', {
                     className: `game-level-group${levelGuardActive ? ' is-syncing' : ''}`,
                     style: { color: levelGuardActive ? 'rgba(255,255,255,0.5)' : title.color }
@@ -1271,14 +1272,6 @@
                     React.createElement('span', { className: 'game-level-text' },
                         levelGuardActive ? '· · ·' : `${title.icon} ${stats.level}`
                     ),
-                    // Rank badge — всегда в DOM; opacity:0 во время guard → нет скачка
-                    React.createElement('span', {
-                        className: `game-rank-badge${levelGuardActive ? ' guard-hidden' : ''}`,
-                        style: !levelGuardActive && HEYS.game ? {
-                            background: `linear-gradient(135deg, ${HEYS.game.getRankBadge(stats.level).color}66 0%, ${HEYS.game.getRankBadge(stats.level).color} 100%)`,
-                            color: stats.level >= 10 ? '#000' : '#fff'
-                        } : undefined
-                    }, !levelGuardActive && HEYS.game ? HEYS.game.getRankBadge(stats.level).rank : '···'),
                     // Level Roadmap Tooltip — все звания
                     HEYS.game && HEYS.game.getAllTitles && !levelGuardActive && React.createElement('div', {
                         className: 'game-level-roadmap'
@@ -1335,7 +1328,9 @@
                     ),
                     // Tooltip — скрываем пока guard активен
                     !levelGuardActive && React.createElement('span', { className: 'game-progress-tooltip' },
-                        `Ещё ${progress.required - progress.current} XP до ур.${stats.level + 1}`
+                        isMaxLevel
+                            ? `Максимальный уровень · всего ${stats.totalXP} XP`
+                            : `Ещё ${progress.required - progress.current} XP до ур.${stats.level + 1}`
                     )
                 ),
 
@@ -1739,7 +1734,9 @@
                                 style: { color: title.color }
                             }, `${title.icon} ${title.title}`),
                             React.createElement('div', { className: 'next-level-hint' },
-                                `До уровня ${stats.level + 1}: ${progress.required - progress.current} XP`
+                                isMaxLevel
+                                    ? `Максимальный уровень · всего ${stats.totalXP} XP`
+                                    : `До уровня ${stats.level + 1}: ${progress.required - progress.current} XP`
                             ),
                             onboardingDone && React.createElement('div', {
                                 ref: targetMedalRef,
