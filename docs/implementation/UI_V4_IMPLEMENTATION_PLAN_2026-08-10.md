@@ -808,6 +808,40 @@ tint, legacy fallbacks, несовпадающие пары; ещё ~143 hex т�
 scope). Следующий кандидат — `fingers.css` (~538 hex); альтернатива —
 `200-dark-and-effects.css` (~499 hex).
 
+### Stage 6 batch 11 — 2026-08-10
+
+**Файлы (граница батча):**
+
+| Файл                         | Что сделано                                                        | Литералов → `var(--v4-*)` |
+| ---------------------------- | ------------------------------------------------------------------ | ------------------------- |
+| `styles/modules/fingers.css` | весь файл (finger trainer, onboarding, session UI, charts, modals) | 63                        |
+
+**Инструмент:** `scripts/ui-v4-css-batch-codemod.mjs` — тот же scoped codemod и
+гейт классики, что в batch 3–10. Проверка: `ui-v4-check-classic-drift.mjs`
+(`--files=styles/modules/fingers.css`) + `ui-v4-classic-drift.test.js`.
+
+**Исключено в batch 11 (намеренно, как в batch 2–10):**
+
+- `linear-gradient` / `radial-gradient` — session progress, chart fills, shimmer
+- `rgba()` — без замены
+- семантические status/tint без classic-пары (`#dcfce7`, `#fef2f2`, `#bbf7d0`,
+  `#166534`, `#fee2e2`, `#991b1b`)
+- legacy `var(--text-*, #…)` / `var(--bg-*, #…)` / `var(--border-color, #…)` —
+  не трогаем чужие fallback
+- category/accent без v4-совпадения (`#8b5cf6`, `#a78bfa`, `#0369a1`)
+- тёмные правила с литералами ≠ `classic-dark` роли
+- `backdrop-filter` blur tints — оставлены литералами
+
+**Остаток в `fingers.css`:** ~475 bare hex (градиенты, rgba, семантические tint,
+legacy fallbacks, несовпадающие пары; ещё ~63 hex только как fallback в
+`var(--v4-*)`). Файл закрыт для stage 6 — следующий батч — другой модуль в
+`styles/`.
+
+**Параллельность:** не пересекается со Stage 4 Activity
+(`600-steps-and-aps.css`, `731-ui-v4-activity.css`, `apps/web/*.js` — вне
+scope). Следующий кандидат — `1000-messenger.css` (~464 hex); альтернатива —
+`905-planning-chrono.css` (~233 hex).
+
 ---
 
 ## Этап 7. Поток B — что осталось после вкладок
