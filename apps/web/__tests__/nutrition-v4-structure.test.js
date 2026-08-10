@@ -50,10 +50,12 @@ describe('Nutrition tab v4 structure', () => {
     expect(diarySource).toMatch(/return null/);
   });
 
-  it('structure css is imported', () => {
+  it('structure css is imported and uses v4 paint roles', () => {
     const mainCss = fs.readFileSync(path.resolve(__dirname, '../styles/main.css'), 'utf8');
     expect(mainCss).toContain('732-ui-v4-nutrition.css');
     expect(cssSource).toContain('.nutrition-v4-cta');
-    expect(cssSource).toContain('.nutrition-v4-hero');
+    expect(cssSource).toContain('var(--v4-hero');
+    expect(cssSource).toContain('var(--v4-ink-2');
+    expect(cssSource).toMatch(/v4-intentional.*var\(--v4-act\)/s);
   });
 });

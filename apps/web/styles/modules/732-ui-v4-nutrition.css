@@ -1,4 +1,4 @@
-/* 732-ui-v4-nutrition.css — Nutrition tab v4 (stage 4 structure) */
+/* 732-ui-v4-nutrition.css — Nutrition tab v4 (stage 4 structure + paint) */
 
 .nutrition-v4 {
   display: flex;
@@ -29,20 +29,20 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.38);
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .nutrition-v4-meta__sync {
   font-size: 10.5px;
   font-weight: 600;
-  color: #16a34a;
+  color: var(--v4-ok-fill, #22c55e);
 }
 
 .nutrition-v4-hero {
   margin-top: 14px;
   padding: 26px 22px 22px;
   border-radius: 26px;
-  background: #f8fafc;
+  background: var(--v4-hero, #f8fafc);
 }
 
 .nutrition-v4-hero__label {
@@ -50,7 +50,7 @@
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .nutrition-v4-hero__value-row {
@@ -73,20 +73,20 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .nutrition-v4-hero__track {
   height: 6px;
   margin-top: 20px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.09);
+  background: var(--v4-line, rgba(0, 0, 0, 0.09));
 }
 
 .nutrition-v4-hero__fill {
   height: 6px;
   border-radius: 999px;
-  background: #2563eb;
+  background: var(--v4-act, #2563eb);
 }
 
 .nutrition-v4-hero__budget {
@@ -96,7 +96,7 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
   font-variant-numeric: tabular-nums;
 }
 
@@ -107,7 +107,7 @@
   line-height: 1;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .nutrition-v4-window {
@@ -117,7 +117,7 @@
   gap: 12px;
   padding: 14px 16px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--v4-surface, rgba(255, 255, 255, 0.65));
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1.2;
@@ -128,13 +128,13 @@
 }
 
 .nutrition-v4-window__value {
-  color: #16a34a;
+  color: var(--v4-ok-fill, #22c55e);
   text-align: right;
 }
 
 .nutrition-v4-diary {
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--v4-surface, rgba(255, 255, 255, 0.65));
   overflow: hidden;
 }
 
@@ -142,12 +142,12 @@
   padding: 18px 16px;
   font-size: 12px;
   line-height: 1.45;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .nutrition-v4-meal-row {
   padding: 15px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
 }
 
 .nutrition-v4-meal-row:last-child {
@@ -183,7 +183,7 @@
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.5;
-  color: rgba(0, 0, 0, 0.42);
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.42));
 }
 
 .nutrition-v4-cta {
@@ -195,12 +195,30 @@
   padding: 17px 22px;
   border: none;
   border-radius: 999px;
-  background: #2563eb;
+  background: var(--v4-act, #2563eb);
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
   color: #ffffff;
   cursor: pointer;
+}
+
+/* v4-intentional: sand/blue CTA uses palette act role */
+[data-palette="sand"] .nutrition-v4-cta,
+[data-palette="sand-dark"] .nutrition-v4-cta,
+[data-palette="blue"] .nutrition-v4-cta,
+[data-palette="blue-dark"] .nutrition-v4-cta {
+  background: var(--v4-act); /* v4-intentional */
+}
+
+[data-palette="sand"] .nutrition-v4-cta,
+[data-palette="sand-dark"] .nutrition-v4-cta {
+  color: #2b1608;
+}
+
+[data-palette="blue"] .nutrition-v4-cta,
+[data-palette="blue-dark"] .nutrition-v4-cta {
+  color: #ffffff;
 }
 
 .nutrition-v4-cta__icon {
@@ -212,7 +230,7 @@
 .nutrition-v4-breakdown {
   padding: 16px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--v4-surface, rgba(255, 255, 255, 0.65));
 }
 
 .nutrition-v4-breakdown__title {
@@ -221,7 +239,7 @@
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .nutrition-v4-breakdown__grid {
@@ -231,7 +249,7 @@
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.42);
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.42));
   font-variant-numeric: tabular-nums;
 }
 
@@ -259,11 +277,11 @@
 }
 
 .nutrition-v4-breakdown__cell--dev.is-good {
-  color: #16a34a;
+  color: var(--v4-ok-fill, #22c55e);
 }
 
 .nutrition-v4-breakdown__cell--dev.is-warn {
-  color: #dc2626;
+  color: var(--v4-warn, #dc2626);
 }
 
 .nutrition-v4-mini-cards {
@@ -279,11 +297,11 @@
 }
 
 .nutrition-v4-mini-card--fiber {
-  background: #f1f5f9;
+  background: var(--v4-hero, #f8fafc);
 }
 
 .nutrition-v4-mini-card--harm {
-  background: #ecfdf5;
+  background: var(--v4-ok-bg, #f0fdf4);
 }
 
 .nutrition-v4-mini-card__label {
@@ -291,7 +309,7 @@
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .nutrition-v4-mini-card__value {
@@ -314,13 +332,13 @@
 .nutrition-v4-water__suffix {
   font-size: 11px;
   font-weight: 500;
-  color: rgba(0, 0, 0, 0.35);
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
 }
 
 .nutrition-v4-mini-card__ok {
   font-size: 14px;
   line-height: 1;
-  color: #16a34a;
+  color: var(--v4-ok-fill, #22c55e);
 }
 
 .nutrition-v4-mini-card__hint {
@@ -328,14 +346,14 @@
   font-size: 10px;
   font-weight: 500;
   line-height: 1;
-  color: rgba(0, 0, 0, 0.42);
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.42));
 }
 
 .nutrition-v4-waves {
   margin-top: 10px;
   padding: 16px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--v4-surface, rgba(255, 255, 255, 0.65));
 }
 
 .nutrition-v4-water {
@@ -346,7 +364,7 @@
   margin-top: 10px;
   padding: 16px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--v4-surface, rgba(255, 255, 255, 0.65));
 }
 
 .nutrition-v4-water__label {
@@ -354,7 +372,7 @@
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .nutrition-v4-water__value {
@@ -375,14 +393,73 @@
   padding: 10px 15px;
   border: none;
   border-radius: 999px;
-  background: #ecfdf5;
+  background: var(--v4-ok-bg, #f0fdf4);
   font-size: 11.5px;
   font-weight: 700;
   line-height: 1;
-  color: #16a34a;
+  color: var(--v4-ok-fill, #22c55e);
   cursor: pointer;
 }
 
 .nutrition-v4-legacy-meals {
   display: none;
+}
+
+/* v4-intentional: sand/blue hero value uses act-text */
+[data-palette="sand"] .nutrition-v4-hero__value,
+[data-palette="sand-dark"] .nutrition-v4-hero__value,
+[data-palette="blue"] .nutrition-v4-hero__value,
+[data-palette="blue-dark"] .nutrition-v4-hero__value {
+  color: var(--v4-act-text); /* v4-intentional */
+}
+
+/* v4-intentional: sand/blue tier label uses act-text */
+[data-palette="sand"] .nutrition-v4-tier,
+[data-palette="sand-dark"] .nutrition-v4-tier,
+[data-palette="blue"] .nutrition-v4-tier,
+[data-palette="blue-dark"] .nutrition-v4-tier {
+  color: var(--v4-act-text); /* v4-intentional */
+}
+
+/* v4-intentional: sand/blue list surfaces use palette surface */
+[data-palette="sand"] .nutrition-v4-window,
+[data-palette="sand-dark"] .nutrition-v4-window,
+[data-palette="blue"] .nutrition-v4-window,
+[data-palette="blue-dark"] .nutrition-v4-window,
+[data-palette="sand"] .nutrition-v4-diary,
+[data-palette="sand-dark"] .nutrition-v4-diary,
+[data-palette="blue"] .nutrition-v4-diary,
+[data-palette="blue-dark"] .nutrition-v4-diary,
+[data-palette="sand"] .nutrition-v4-breakdown,
+[data-palette="sand-dark"] .nutrition-v4-breakdown,
+[data-palette="blue"] .nutrition-v4-breakdown,
+[data-palette="blue-dark"] .nutrition-v4-breakdown,
+[data-palette="sand"] .nutrition-v4-waves,
+[data-palette="sand-dark"] .nutrition-v4-waves,
+[data-palette="blue"] .nutrition-v4-waves,
+[data-palette="blue-dark"] .nutrition-v4-waves,
+[data-palette="sand"] .nutrition-v4-water,
+[data-palette="sand-dark"] .nutrition-v4-water,
+[data-palette="blue"] .nutrition-v4-water,
+[data-palette="blue-dark"] .nutrition-v4-water {
+  background: var(--v4-surface); /* v4-intentional */
+}
+
+/* v4-intentional: sand/blue mini-card tints */
+[data-palette="sand"] .nutrition-v4-mini-card--fiber,
+[data-palette="sand-dark"] .nutrition-v4-mini-card--fiber,
+[data-palette="blue"] .nutrition-v4-mini-card--fiber,
+[data-palette="blue-dark"] .nutrition-v4-mini-card--fiber {
+  background: var(--v4-hero); /* v4-intentional */
+}
+
+[data-palette="sand"] .nutrition-v4-mini-card--harm,
+[data-palette="sand-dark"] .nutrition-v4-mini-card--harm,
+[data-palette="blue"] .nutrition-v4-mini-card--harm,
+[data-palette="blue-dark"] .nutrition-v4-mini-card--harm,
+[data-palette="sand"] .nutrition-v4-water__btn,
+[data-palette="sand-dark"] .nutrition-v4-water__btn,
+[data-palette="blue"] .nutrition-v4-water__btn,
+[data-palette="blue-dark"] .nutrition-v4-water__btn {
+  background: var(--v4-ok-bg); /* v4-intentional */
 }
