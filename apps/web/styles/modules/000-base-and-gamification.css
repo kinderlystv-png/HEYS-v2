@@ -6819,8 +6819,16 @@ td:first-child input {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
   margin-left: auto;
+}
+
+.hdr-date-group .date-picker--v4 {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .hdr-client-avatar {
@@ -7607,7 +7615,210 @@ body:has(.offline-banner) .wrap {
 .date-picker-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
+  min-width: 0;
+}
+
+.date-picker--v4 .date-picker-day-nav {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-hero, #f7efe2);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color, opacity 0.15s ease;
+}
+
+@media (hover: hover) {
+  .date-picker--v4 .date-picker-day-nav:hover:not(:disabled) {
+    background: var(--v4-surface-2, #efe3cf);
+  }
+}
+
+.date-picker--v4 .date-picker-day-nav:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.date-picker--v4 .date-picker-day-nav--disabled,
+.date-picker--v4 .date-picker-day-nav:disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+.date-picker--v4 .date-picker-trigger {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 12px;
+  height: auto;
+  background: var(--v4-hero, #f7efe2);
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+@media (hover: hover) {
+  .date-picker--v4 .date-picker-trigger:hover {
+    background: var(--v4-surface-2, #efe3cf);
+  }
+}
+
+.date-picker--v4 .date-picker-trigger.open {
+  box-shadow: 0 0 0 2px var(--v4-act, #c67139);
+}
+
+.date-picker--v4 .date-picker-trigger--today .date-picker-main--today {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--v4-ink, #201e1d);
+}
+
+.date-picker--v4 .date-picker-trigger--not-today {
+  background: var(--v4-tint-warm, #f3e0d2);
+}
+
+.date-picker--v4 .date-picker-trigger--not-today .date-picker-main--past {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--v4-act, #8a4a20);
+}
+
+.date-picker--v4 .date-picker-sub--relative {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-act, #8a4a20);
+}
+
+.date-picker--v4 .date-picker-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  text-align: center;
+}
+
+.date-picker--v4 .date-picker-main {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Bottom sheet month picker (v4) */
+.date-picker-sheet {
+  top: auto !important;
+  right: 0 !important;
+  left: 0 !important;
+  bottom: 0;
+  min-width: 0;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 18px 16px 24px;
+  border: none;
+  border-radius: 26px 26px 0 0;
+  background: var(--v4-bg, #fffaf1);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+  animation: datePickerSheetIn 0.25s ease;
+}
+
+.date-picker-sheet-handle {
+  width: 38px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.14);
+  margin: 0 auto 16px;
+}
+
+.date-picker-sheet .day-data-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--v4-good, #7a8a5e);
+  flex-shrink: 0;
+}
+
+.date-picker-sheet .day-status {
+  display: none;
+}
+
+.date-picker-day.future.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: default;
+}
+
+@keyframes datePickerSheetIn {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.date-picker-backdrop {
+  background: rgba(32, 30, 29, 0.34);
+}
+
+/* Баннер «прошлый день» под шапкой */
+.past-day-banner-wrap {
+  padding: 0 18px;
+  margin-top: 8px;
+}
+
+.past-day-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 15px;
+  border-radius: 18px;
+  background: var(--v4-tint-warm, #f3e0d2);
+}
+
+.past-day-banner__text {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--v4-act, #8a4a20);
+}
+
+.past-day-banner__today {
+  flex: none;
+  border: none;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: var(--v4-act, #c67139);
+  color: var(--v4-act-ink, #2b1608);
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .past-day-banner__today:hover {
+    filter: brightness(1.05);
+  }
 }
 
 .date-picker-day-nav {

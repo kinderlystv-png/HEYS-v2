@@ -18,11 +18,10 @@
       console.error('[heys_day_pickers] dayUtils not loaded yet');
       return null;
     }
-    const { parseISO, todayISO, fmtDate, formatDateDisplay, getNextDay, getPrevDay } = utils;
+    const { parseISO, todayISO, fmtDate, formatDateHeaderRow, getNextDay, getPrevDay } = utils;
     
     const [isOpen, setIsOpen] = React.useState(false);
     const [cur, setCur] = React.useState(parseISO(valueISO || todayISO()));
-    const [dropdownPos, setDropdownPos] = React.useState({ top: 0, right: 0 });
     const [tooltip, setTooltip] = React.useState(null); // { x, y, text }
     const [monthData, setMonthData] = React.useState(null); // Данные для текущего месяца календаря
     const wrapperRef = React.useRef(null);
@@ -105,17 +104,6 @@
     
     React.useEffect(() => { setCur(parseISO(valueISO || todayISO())); }, [valueISO]);
     
-    // Вычисляем позицию при открытии
-    React.useEffect(() => {
-      if (isOpen && triggerRef.current) {
-        const rect = triggerRef.current.getBoundingClientRect();
-        setDropdownPos({
-          top: rect.bottom + 8,
-          right: window.innerWidth - rect.right
-        });
-      }
-    }, [isOpen]);
-    
     const first = new Date(y, m, 1), start = (first.getDay() + 6) % 7;
     const dim = new Date(y, m + 1, 0).getDate();
     const cells = [];
@@ -129,7 +117,9 @@
     
     const sel = parseISO(valueISO || todayISO());
     const today = parseISO(todayISO()); // Учитываем ночной порог (до 3:00 = вчера)
-    const dateInfo = formatDateDisplay(valueISO || todayISO());
+    const headerRow = formatDateHeaderRow
+      ? formatDateHeaderRow(valueISO || todayISO())
+      : { main: valueISO || todayISO(), relative: null, isToday: true };
     
     // Проверяем, показывается ли текущий месяц
     const isCurrentMonth = y === today.getFullYear() && m === today.getMonth();
@@ -153,13 +143,7 @@
       });
     };
     
-    // На today показываем одной строкой «Сегодня, 15 мая» (без числа в иконке).
-    // Иконка — чистый SVG-календарь без вшитой даты (📅 на iOS показывает «17»).
-    // Дата идёт в родительном падеже («мая», не «май») — toLocaleDateString
-    // с day+month=long корректно склоняет, в отличие от {month:'short'} отдельно.
-    const isTodaySelected = (valueISO || todayISO()) === todayISO();
-    const todayLongDate = parseISO(valueISO || todayISO())
-      .toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    const isTodaySelected = headerRow.isToday;
     const currentISO = valueISO || todayISO();
     const todayStr = todayISO();
     const canGoNext = currentISO < todayStr;
@@ -173,25 +157,24 @@
       if (!canGoNext) return;
       onSelect(getNextDay(currentISO));
     };
-    const calendarIcon = React.createElement('svg', {
-      className: 'date-picker-icon',
-      viewBox: '0 0 24 24',
-      width: 16,
-      height: 16,
-      fill: 'none',
-      stroke: 'currentColor',
-      strokeWidth: 2,
-      strokeLinecap: 'round',
-      strokeLinejoin: 'round',
-      'aria-hidden': 'true'
-    },
-      React.createElement('rect', { x: 3, y: 4, width: 18, height: 18, rx: 2 }),
-      React.createElement('line', { x1: 16, y1: 2, x2: 16, y2: 6 }),
-      React.createElement('line', { x1: 8,  y1: 2, x2: 8,  y2: 6 }),
-      React.createElement('line', { x1: 3, y1: 10, x2: 21, y2: 10 })
-    );
 
-    return React.createElement('div', { className: 'date-picker', ref: wrapperRef },
+    function navChevron(direction) {
+      return React.createElement('svg', {
+        className: 'date-picker-day-nav-icon',
+        viewBox: '0 0 24 24',
+        width: 14,
+        height: 14,
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 2.75,
+        strokeLinecap: 'round',
+        'aria-hidden': 'true'
+      }, React.createElement('path', {
+        d: direction === 'left' ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'
+      }));
+    }
+
+    return React.createElement('div', { className: 'date-picker date-picker--v4', ref: wrapperRef },
       React.createElement('div', { className: 'date-picker-row' },
         React.createElement('button', {
           type: 'button',
@@ -199,25 +182,21 @@
           onClick: handlePrevDay,
           title: 'Предыдущий день',
           'aria-label': 'Предыдущий день'
-        }, '‹'),
-        // Кнопка-триггер — тап открывает месяц шторкой
+        }, navChevron('left')),
         React.createElement('button', {
           ref: triggerRef,
           type: 'button',
           className: 'date-picker-trigger' + (isOpen ? ' open' : '') + (isTodaySelected ? ' date-picker-trigger--today' : ' date-picker-trigger--not-today'),
           onClick: () => setIsOpen(!isOpen)
         },
-          calendarIcon,
           React.createElement('span', { className: 'date-picker-text' },
-            isTodaySelected
-              ? React.createElement('span', { className: 'date-picker-main date-picker-main--today' },
-                  'Сегодня, ', todayLongDate)
-              : [
-                  React.createElement('span', { key: 'main', className: 'date-picker-main' }, dateInfo.label),
-                  React.createElement('span', { key: 'sub', className: 'date-picker-sub' }, dateInfo.sub)
-                ]
-          ),
-          React.createElement('span', { className: 'date-picker-arrow' }, isOpen ? '▲' : '▼')
+            React.createElement('span', {
+              className: 'date-picker-main' + (isTodaySelected ? ' date-picker-main--today' : ' date-picker-main--past')
+            }, headerRow.main),
+            headerRow.relative && React.createElement('span', {
+              className: 'date-picker-sub date-picker-sub--relative'
+            }, headerRow.relative)
+          )
         ),
         React.createElement('button', {
           type: 'button',
@@ -226,7 +205,7 @@
           disabled: !canGoNext,
           title: canGoNext ? 'Следующий день' : 'Уже сегодня',
           'aria-label': canGoNext ? 'Следующий день' : 'Уже сегодня'
-        }, '›')
+        }, navChevron('right'))
       ),
       // Backdrop и Dropdown через portal в body
       isOpen && ReactDOM.createPortal(
@@ -241,9 +220,9 @@
             style: { left: tooltip.x + 'px', top: tooltip.y + 'px' }
           }, tooltip.text),
           React.createElement('div', { 
-            className: 'date-picker-dropdown',
-            style: { top: dropdownPos.top + 'px', right: dropdownPos.right + 'px' }
+            className: 'date-picker-dropdown date-picker-sheet',
           },
+        React.createElement('div', { className: 'date-picker-sheet-handle', 'aria-hidden': 'true' }),
         React.createElement('div', { className: 'date-picker-header' },
           React.createElement('button', { 
             className: 'date-picker-nav', 
@@ -276,6 +255,7 @@
             const dayData = daysDataMap.get(dateStr);
             const isSel = same(dt, sel);
             const isToday = same(dt, today);
+            const isFuture = dateStr > todayStr;
             const hasCycle = dayData?.cycleDay != null;
             const hasRefeed = dayData?.isRefeedDay === true;
             const hasRealData = dayData && dayData.kcal > 0; // Есть реальные данные (еда)
@@ -294,16 +274,18 @@
                 'date-picker-day',
                 isSel ? 'selected' : '',
                 isToday ? 'today' : '',
+                isFuture ? 'future disabled' : '',
                 hasRealData ? 'has-data' : '',
                 hasCycle ? 'has-cycle' : '',
                 hasRefeed ? 'has-refeed' : ''
               ].join(' ').trim(),
               style: cellStyle,
-              onClick: () => { onSelect(dateStr); setIsOpen(false); setTooltip(null); },
+              onClick: isFuture ? undefined : () => { onSelect(dateStr); setIsOpen(false); setTooltip(null); },
               onMouseEnter: (e) => handleDayHover(e, dayData, dateStr),
               onMouseLeave: () => setTooltip(null)
             }, 
               React.createElement('span', { className: 'day-number' }, dt.getDate()),
+              hasRealData && React.createElement('span', { className: 'day-data-dot' }),
               statusEmoji && React.createElement('span', { className: 'day-status' }, statusEmoji),
               hasCycle && React.createElement('span', { className: 'day-cycle-dot' }, '🌸'),
               hasRefeed && React.createElement('span', { className: 'day-refeed-dot' }, '🍕')

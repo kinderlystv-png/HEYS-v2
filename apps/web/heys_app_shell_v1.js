@@ -4835,6 +4835,18 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         } = props;
         const tabContentRef = React.useRef(null);
         const isDayTab = tab === 'stats' || tab === 'diary' || tab === 'activity';
+        const todayStr = (HEYS.dayUtils && typeof HEYS.dayUtils.todayISO === 'function')
+            ? HEYS.dayUtils.todayISO()
+            : '';
+        const showPastDayBanner = !!(selectedDate && todayStr && selectedDate !== todayStr
+            && (tab === 'stats' || tab === 'diary' || tab === 'activity' || tab === 'insights' || tab === 'widgets'));
+        const handlePastDayGoToday = () => {
+            if (window.HEYS?.ui?.setSelectedDate) {
+                window.HEYS.ui.setSelectedDate(todayStr);
+                return;
+            }
+            if (typeof setSelectedDate === 'function') setSelectedDate(todayStr);
+        };
 
         const [, _tickPostboot] = React.useReducer(function(n) { return n + 1; }, 0);
         React.useEffect(function() {
@@ -4909,6 +4921,19 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         };
 
         return React.createElement(
+            React.Fragment,
+            null,
+            showPastDayBanner && React.createElement('div', { className: 'past-day-banner-wrap' },
+                React.createElement('div', { className: 'past-day-banner' },
+                    React.createElement('span', { className: 'past-day-banner__text' }, 'Вы смотрите прошлый день'),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'past-day-banner__today',
+                        onClick: handlePastDayGoToday
+                    }, 'Сегодня')
+                )
+            ),
+            React.createElement(
             'div',
             {
                 ref: tabContentRef,
@@ -5022,6 +5047,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                                             ))
                                                         : null)
                                                 : renderTabFallback('default_' + String(tab || 'unknown'), tabFallbackSkeleton(tab || 'fallback'))
+            )
             )
         );
     }

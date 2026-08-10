@@ -1189,6 +1189,47 @@
         return { label: `${dayNum} ${month}`, sub: dayName };
     }
 
+    /** Сколько календарных дней назад от «сегодня» (с учётом ночного порога). */
+    function formatDaysAgoRu(isoDate) {
+        if (!isoDate) return null;
+        const effectiveToday = parseISO(todayISO());
+        const d = parseISO(isoDate);
+        effectiveToday.setHours(12, 0, 0, 0);
+        d.setHours(12, 0, 0, 0);
+        const diffDays = Math.round((effectiveToday - d) / (24 * 60 * 60 * 1000));
+        if (diffDays <= 0) return null;
+        if (diffDays === 1) return 'вчера';
+        const mod10 = diffDays % 10;
+        const mod100 = diffDays % 100;
+        if (mod10 === 1 && mod100 !== 11) return `${diffDays} день назад`;
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return `${diffDays} дня назад`;
+        return `${diffDays} дней назад`;
+    }
+
+    /** Строка даты v4 в шапке: «Сегодня, 10 августа» / «Пятница, 7 августа» + relative. */
+    function formatDateHeaderRow(isoDate) {
+        const d = parseISO(isoDate || todayISO());
+        const effectiveToday = parseISO(todayISO());
+        const effectiveYesterday = new Date(effectiveToday);
+        effectiveYesterday.setDate(effectiveYesterday.getDate() - 1);
+        const longDate = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+        const isToday = d.toDateString() === effectiveToday.toDateString();
+        const isYesterday = d.toDateString() === effectiveYesterday.toDateString();
+        if (isToday) {
+            return { main: `Сегодня, ${longDate}`, relative: null, isToday: true };
+        }
+        if (isYesterday) {
+            return { main: `Вчера, ${longDate}`, relative: 'вчера', isToday: false };
+        }
+        const weekday = d.toLocaleDateString('ru-RU', { weekday: 'long' });
+        const wd = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+        return {
+            main: `${wd}, ${longDate}`,
+            relative: formatDaysAgoRu(isoDate),
+            isToday: false
+        };
+    }
+
     /**
      * Предпросмотр типа приёма для модалки создания.
      * Определяет тип по времени и существующим приёмам (без данных о продуктах).
@@ -2143,6 +2184,8 @@
         parseISO,
         uid,
         formatDateDisplay,
+        formatDaysAgoRu,
+        formatDateHeaderRow,
         // Night time logic (приёмы 00:00-02:59 относятся к предыдущему дню)
         NIGHT_HOUR_THRESHOLD,
         isNightTime,
