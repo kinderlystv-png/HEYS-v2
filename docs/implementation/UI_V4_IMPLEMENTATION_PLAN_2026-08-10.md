@@ -740,6 +740,41 @@ scope). Следующий кандидат — `100-metrics-and-graphs.css` (~5
 scope). Следующий кандидат — `725-metabolic-intelligence.css` (~592 hex);
 альтернатива — `200-dark-and-effects.css` (~499 hex).
 
+### Stage 6 batch 9 — 2026-08-10
+
+**Файлы (граница батча):**
+
+| Файл                                            | Что сделано                                                     | Литералов → `var(--v4-*)` |
+| ----------------------------------------------- | --------------------------------------------------------------- | ------------------------- |
+| `styles/modules/725-metabolic-intelligence.css` | весь файл (metabolic status, pillars, confidence, reason cards) | 186                       |
+
+**Инструмент:** `scripts/ui-v4-css-batch-codemod.mjs` — тот же scoped codemod и
+гейт классики, что в batch 3–8. Проверка: `ui-v4-check-classic-drift.mjs`
+(`--files=styles/modules/725-metabolic-intelligence.css`) +
+`ui-v4-classic-drift.test.js`.
+
+**Исключено в batch 9 (намеренно, как в batch 2–8):**
+
+- `linear-gradient` / `radial-gradient` — pillar tint, shimmer, status card
+  gradients
+- `rgba()` — без замены
+- семантические trend/reason tint без classic-пары (`#dcfce7`, `#fef2f2`,
+  `#f0fdf4`, `#eff6ff`, `#86efac`, `#15803d`, `#92400e`)
+- legacy `var(--text-*, #…)` / `var(--bg-*, #…)` / `var(--border-color, #…)` —
+  не трогаем чужие fallback
+- pillar/category accent без v4-совпадения (`#8b5cf6`, `#a78bfa`, `#0369a1`)
+- тёмные правила с литералами ≠ `classic-dark` роли
+
+**Остаток в `725-metabolic-intelligence.css`:** ~450 bare hex (градиенты, rgba,
+семантические tint, legacy fallbacks, несовпадающие пары; ещё ~186 hex только
+как fallback в `var(--v4-*)`). Файл закрыт для stage 6 — следующий батч — другой
+модуль в `styles/`.
+
+**Параллельность:** не пересекается со Stage 4 Activity
+(`600-steps-and-aps.css`, `731-ui-v4-activity.css`, `apps/web/*.js` — вне
+scope). Следующий кандидат — `fingers.css` (~626 hex); альтернатива —
+`900-planning.css` (~474 hex).
+
 ---
 
 ## Этап 7. Поток B — что осталось после вкладок
