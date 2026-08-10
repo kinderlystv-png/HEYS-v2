@@ -4011,6 +4011,84 @@ td:first-child input {
   z-index: 20;
 }
 
+.hdr-top.hdr-gamification .game-bar {
+  grid-template-columns: auto minmax(14px, 1fr) auto auto;
+  gap: 9px;
+}
+
+.game-level-number {
+  font-weight: 800;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--v4-act-text, #8a4a20);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.game-level-number.is-syncing {
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.38));
+}
+
+.game-rank-title {
+  font-weight: 600;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.38));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 84px;
+  flex-shrink: 1;
+}
+
+.hdr-top.hdr-gamification .game-progress {
+  height: 3px;
+  border-radius: 999px;
+}
+
+.game-bar-slots--compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hdr-header-icon-btn {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.35));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.hdr-header-icon-btn:hover {
+  color: var(--v4-ink, #201e1d);
+}
+
+[data-theme$="dark"] .game-level-number {
+  color: var(--v4-act-text, #e2a468);
+}
+
+[data-theme$="dark"] .game-rank-title,
+[data-theme$="dark"] .hdr-header-icon-btn {
+  color: rgba(242, 237, 230, 0.46);
+}
+
+[data-theme$="dark"] .tabs--v4-primary .tab.tab-primary-nav {
+  color: rgba(242, 237, 230, 0.63);
+}
+
+[data-theme$="dark"] .tabs--v4-primary .tab.tab-primary-nav.active {
+  color: var(--v4-act-text, #e2a468);
+  background: color-mix(in srgb, var(--v4-hero, #211e19) 88%, var(--v4-act-text, #e2a468) 12%);
+}
+
 .game-bar-container {
   position: relative;
   width: 100%;
@@ -8452,6 +8530,77 @@ svg.date-picker-icon {
   /* 🚀 PERF: containment isolates tabs layout/style from page reflow during scroll */
   contain: layout style paint;
   will-change: transform;
+}
+
+.tabs.tabs--v4-primary {
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 4px 6px calc(10px + env(safe-area-inset-bottom, 0px));
+}
+
+.tab-primary-nav-row {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 0;
+  min-width: 0;
+}
+
+.tabs--v4-primary .tab.tab-primary-nav {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+  min-height: 44px;
+  padding: 8px 6px;
+  gap: 6px;
+  border-radius: 12px;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  background: transparent;
+  box-shadow: none;
+}
+
+.tabs--v4-primary .tab.tab-primary-nav .tab-text {
+  display: block;
+  font-size: 8.5px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.tabs--v4-primary .tab.tab-primary-nav .tab-icon-svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.tabs--v4-primary .tab.tab-primary-nav.active {
+  color: var(--v4-act-text, #8a4a20);
+  background: var(--v4-hero, #fffaf1);
+  box-shadow: none;
+}
+
+.tabs--v4-primary .tab.tab-primary-nav.active .tab-text {
+  font-weight: 700;
+}
+
+.tabs--v4-primary .tab-settings-wrap > .tab {
+  flex: 0 0 auto;
+  min-width: 44px;
+  max-width: 44px;
+}
+
+.tab-settings-item .tab-icon-svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.tab-settings-item--advice {
+  position: relative;
+}
+
+.tab-settings-item--advice .tab-advice-badge {
+  top: 6px;
+  right: 8px;
 }
 
 /* CRS Progress Bar (v3.1.0) */
