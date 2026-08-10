@@ -25,6 +25,20 @@
         [STEPS.WARN_STRONG]: '#dc2626',
     });
 
+    // Глубина внутри ступени «внимание»: сдержанная, средняя, плотная. Один
+    // оттенок, различаются насыщенность и светлота — роль та же, вторая
+    // цветовая система не заводится (решение владельца 2026-08-10). Нужна там,
+    // где значение различает больше состояний, чем даёт контракт ступеней:
+    // шкала вреда несёт вредный / очень вредный / супервредный внутри
+    // warn-strong. Палитры держат эти же градации в --v4-warn-1/2/3.
+    const DEPTH = Object.freeze({ SOFT: 1, MID: 2, DEEP: 3 });
+
+    const CLASSIC_WARN_DEPTH_COLOR = Object.freeze({
+        1: '#ef4444',
+        2: '#dc2626',
+        3: '#7f1d1d',
+    });
+
     const C = Object.freeze({
         green: '#22c55e',
         greenDark: '#10b981',
@@ -58,7 +72,10 @@
         return out;
     }
 
-    function colorForStep(step) {
+    function colorForStep(step, depth) {
+        if (step === STEPS.WARN_STRONG && CLASSIC_WARN_DEPTH_COLOR[depth]) {
+            return CLASSIC_WARN_DEPTH_COLOR[depth];
+        }
         return CLASSIC_STEP_COLOR[step] || C.grayMuted;
     }
 
@@ -199,14 +216,17 @@
         return pack(STEPS.WARN_STRONG, C.red);
     }
 
+    // Три вредных градации остаются одной ступенью и различаются глубиной:
+    // цвет не должен различать семь состояний, глазом это всё равно не читается.
+    // Точные названия живут в подписи, цвет несёт грубее.
     const HARM_BRANCHES = [
         { max: 1.0, id: 'superHealthy', name: '🟢 Суперполезный', color: C.greenHarm, emoji: '🟢', step: STEPS.GOOD_STRONG },
         { max: 2.5, id: 'healthy', name: '🟢 Полезный', color: C.green, emoji: '🟢', step: STEPS.GOOD_SOFT },
         { max: 4.0, id: 'neutral', name: '🟡 Нейтральный', color: C.yellow, emoji: '🟡', step: STEPS.NEUTRAL },
         { max: 5.5, id: 'mildlyHarmful', name: '🟠 Умеренно вредный', color: C.orange, emoji: '🟠', step: STEPS.WARN_SOFT },
-        { max: 7.0, id: 'harmful', name: '🔴 Вредный', color: C.red, emoji: '🔴', step: STEPS.WARN_STRONG },
-        { max: 8.5, id: 'veryHarmful', name: '🔴 Очень вредный', color: C.redDark, emoji: '🔴', step: STEPS.WARN_STRONG },
-        { max: 10, id: 'superHarmful', name: '⚫ Супервредный', color: C.redHarm, emoji: '⚫', step: STEPS.WARN_STRONG },
+        { max: 7.0, id: 'harmful', name: '🔴 Вредный', color: C.red, emoji: '🔴', step: STEPS.WARN_STRONG, depth: DEPTH.SOFT },
+        { max: 8.5, id: 'veryHarmful', name: '🔴 Очень вредный', color: C.redDark, emoji: '🔴', step: STEPS.WARN_STRONG, depth: DEPTH.MID },
+        { max: 10, id: 'superHarmful', name: '⚫ Супервредный', color: C.redHarm, emoji: '⚫', step: STEPS.WARN_STRONG, depth: DEPTH.DEEP },
     ];
 
     function harm(value) {
@@ -221,11 +241,17 @@
                     id: branch.id,
                     name: branch.name,
                     emoji: branch.emoji,
+                    depth: branch.depth,
                 });
             }
         }
         const last = HARM_BRANCHES[HARM_BRANCHES.length - 1];
-        return pack(last.step, last.color, { id: last.id, name: last.name, emoji: last.emoji });
+        return pack(last.step, last.color, {
+            id: last.id,
+            name: last.name,
+            emoji: last.emoji,
+            depth: last.depth,
+        });
     }
 
     // Ранги — не оценка «хорошо/плохо», а декоративная палитра прогресса:
@@ -372,7 +398,9 @@
 
     HEYS.scales = {
         STEPS,
+        DEPTH,
         CLASSIC_STEP_COLOR,
+        CLASSIC_WARN_DEPTH_COLOR,
         colorForStep,
         resolve,
         color,

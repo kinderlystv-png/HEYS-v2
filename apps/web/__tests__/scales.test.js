@@ -329,10 +329,9 @@ describe('heys_scales_v1 — согласованность ступеней м�
     { name: 'dayScore10', from: 0.5, to: 10, step: 0.5, up: true },
     { name: 'healthScore', from: 0, to: 100, step: 1, up: true },
     { name: 'waterProgress', from: 0, to: 130, step: 1, up: true },
-    // Шкала вреда — единственная с семью красками на пять ступеней: вредный,
-    // очень вредный и супервредный делят warn-strong. В классике они
-    // различаются оттенком, в теме «Мягкий» через ступень сольются. Открытый
-    // вопрос к палитре, поэтому шкала не участвует в проверке «краска = ступень».
+    // Вредный, очень вредный и супервредный делят warn-strong намеренно: цвет
+    // не различает семь состояний, поэтому три градации живут глубиной внутри
+    // одной роли, а точные названия — в подписи (решение владельца 2026-08-10).
     { name: 'harm', from: 0, to: 10, step: 0.1, up: false, colorsExceedSteps: true },
   ];
 
@@ -377,6 +376,109 @@ describe('heys_scales_v1 — согласованность ступеней м�
       const best = spec.up ? run[run.length - 1] : run[0];
       expect(worst, `${spec.name}: худшее значение`).toBe('warn-strong');
       expect(best, `${spec.name}: лучшее значение`).toBe('good-strong');
+    }
+  });
+});
+
+// Глубина внутри роли «внимание». Проверять надо по светлоте, а не по имени
+// ступени: три градации одного оттенка расходятся незаметно — ошибка вида
+// «жёлтый Эксперт после зелёного Практика» здесь не бросается в глаза, потому
+// что все три краски и так похожи.
+describe('heys_scales_v1 — три градации внимания', () => {
+  const PALETTE_CSS = fs.readFileSync(
+    path.resolve(__dirname, '../styles/modules/002-ui-v4-palette-roles.css'),
+    'utf8',
+  );
+
+  function readWarnDepths(themeId) {
+    const block = PALETTE_CSS.slice(PALETTE_CSS.indexOf(`[data-theme-id="${themeId}"]`));
+    const body = block.slice(0, block.indexOf('}'));
+    return [1, 2, 3].map((i) => {
+      const m = body.match(new RegExp(`--v4-warn-${i}:\\s*(#[0-9a-f]{6})`, 'i'));
+      if (!m) throw new Error(`${themeId}: нет --v4-warn-${i}`);
+      return m[1].toLowerCase();
+    });
+  }
+
+  // Воспринимаемая яркость (WCAG relative luminance). HSL-lightness тут врёт:
+  // янтарный с L 56% воспринимается светлее розового с L 65%.
+  function luminance(hex) {
+    const ch = (i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * ch(1) + 0.7152 * ch(3) + 0.0722 * ch(5);
+  }
+
+  function hue(hex) {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+    const mx = Math.max(r, g, b);
+    const d = mx - Math.min(r, g, b);
+    if (!d) return 0;
+    let h;
+    if (mx === r) h = 60 * (((g - b) / d) % 6);
+    else if (mx === g) h = 60 * ((b - r) / d + 2);
+    else h = 60 * ((r - g) / d + 4);
+    return h < 0 ? h + 360 : h;
+  }
+
+  const THEMES = ['classic', 'classic-dark', 'sand', 'sand-dark', 'blue', 'blue-dark'];
+
+  it('шкала вреда даёт три градации подряд и только внутри warn-strong', () => {
+    const scales = loadScales();
+    expect(scales.harm(6.5).depth).toBe(scales.DEPTH.SOFT);
+    expect(scales.harm(8.0).depth).toBe(scales.DEPTH.MID);
+    expect(scales.harm(9.5).depth).toBe(scales.DEPTH.DEEP);
+    for (const v of [0.5, 2, 3.5, 5]) {
+      expect(scales.harm(v).step).not.toBe(scales.STEPS.WARN_STRONG);
+      expect(scales.harm(v).depth, `вред ${v}: глубина вне warn-strong`).toBeUndefined();
+    }
+  });
+
+  it('глубина растёт вместе с вредностью, без провалов', () => {
+    const scales = loadScales();
+    const run = [];
+    for (let v = 5.6; v <= 10; v += 0.1) {
+      const d = scales.harm(Number(v.toFixed(2))).depth;
+      if (run[run.length - 1] !== d) run.push(d);
+    }
+    expect(run).toEqual([1, 2, 3]);
+  });
+
+  it('классический цвет градации совпадает с веткой шкалы', () => {
+    const scales = loadScales();
+    for (const [value, depth] of [[6.5, 1], [8.0, 2], [9.5, 3]]) {
+      expect(scales.colorForStep(scales.STEPS.WARN_STRONG, depth)).toBe(scales.harm(value).color);
+    }
+    // Без глубины — прежнее поведение, ступень остаётся одноцветной.
+    expect(scales.colorForStep(scales.STEPS.WARN_STRONG)).toBe('#dc2626');
+  });
+
+  it('в каждой палитре градации темнеют по светлоте, а не по номеру', () => {
+    for (const theme of THEMES) {
+      const lums = readWarnDepths(theme).map(luminance);
+      expect(lums, `${theme}: градации не темнеют`).toEqual([...lums].sort((a, b) => b - a));
+      expect(
+        lums[0] - lums[2],
+        `${theme}: между сдержанной и плотной нет заметной разницы`,
+      ).toBeGreaterThan(0.05);
+    }
+  });
+
+  it('градации держат один оттенок', () => {
+    // Синяя палитра — известное расхождение: сдержанная задана янтарной
+    // (#e0a93e), средняя и плотная розово-красные, разрыв 50°. Значения
+    // владельца, замена в том же оттенке — #e59ea8. Тест фиксирует факт, а не
+    // одобряет его: как только цвет поправят, палитра уходит из исключений.
+    const HUE_JUMP = new Set(['blue']);
+    for (const theme of THEMES) {
+      const hues = readWarnDepths(theme).map(hue).map((h) => (h > 180 ? h - 360 : h));
+      const spread = Math.max(...hues) - Math.min(...hues);
+      if (HUE_JUMP.has(theme)) {
+        expect(spread, `${theme}: расхождение исчезло — убрать из исключений`).toBeGreaterThan(15);
+      } else {
+        expect(spread, `${theme}: оттенок скачет на ${spread.toFixed(0)}°`).toBeLessThanOrEqual(15);
+      }
     }
   });
 });
