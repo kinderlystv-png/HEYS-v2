@@ -189,8 +189,17 @@
             .replace(/\$\{firstName\}, /g, firstName ? firstName + ', ' : '')
             .replace(/\$\{firstName\}!/g, firstName ? firstName + '!' : '')
             .replace(/\, \$\{firstName\}/g, firstName ? ', ' + firstName : '')
-            .replace(/\$\{firstName\}/g, firstName);
-        return result.trim();
+            .replace(/\$\{firstName\}/g, firstName)
+            .trim();
+
+        // Шаблоны вида «${firstName}, после тренировки нужен белок!» рассчитаны
+        // на то, что имя стоит первым, поэтому следующее слово идёт со строчной.
+        // У клиента без имени обращение исчезает, и совет начинается с обрывка
+        // «после тренировки…». Убрать запятую мало — надо вернуть заглавную.
+        if (!firstName && /^\$\{firstName\}/.test(text) && result) {
+            return result.charAt(0).toUpperCase() + result.slice(1);
+        }
+        return result;
     }
 
     /**
