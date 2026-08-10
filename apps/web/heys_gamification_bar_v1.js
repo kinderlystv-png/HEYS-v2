@@ -1235,20 +1235,17 @@
         };
 
         // Динамический золотой градиент — чем ближе к 100%, тем ярче золото
+        // v4-intentional: полоса уровня — единственный акцент в шапке (решение
+        // владельца 2026-08-10). Раньше цвет считался здесь в JS как градиент
+        // darkgoldenrod→gold и ставился инлайном, поэтому перебивал любой CSS и
+        // оставался золотым во всех шести наборах. Теперь берёт акцент палитры;
+        // ощущение заполнения даёт прозрачность, а не смена оттенка.
         const getProgressGradient = (percent) => {
-            // От приглушённого (#b8860b / darkgoldenrod) до яркого (#ffd700 / gold)
-            const t = percent / 100; // 0..1
-            // Интерполяция RGB: darkgoldenrod(184,134,11) → gold(255,215,0)
-            const r = Math.round(184 + (255 - 184) * t);
-            const g = Math.round(134 + (215 - 134) * t);
-            const b = Math.round(11 + (0 - 11) * t);
-            const brightColor = `rgb(${r}, ${g}, ${b})`;
-            // Начальный цвет ещё темнее
-            const startR = Math.round(140 + (184 - 140) * t);
-            const startG = Math.round(100 + (134 - 100) * t);
-            const startB = Math.round(20 + (11 - 20) * t);
-            const startColor = `rgb(${startR}, ${startG}, ${startB})`;
-            return `linear-gradient(90deg, ${startColor} 0%, ${brightColor} 100%)`;
+            const t = Math.max(0, Math.min(100, percent)) / 100;
+            const startAlpha = (0.55 + 0.25 * t).toFixed(3);
+            return `linear-gradient(90deg,`
+                + ` color-mix(in srgb, var(--v4-act, #2563eb) ${Math.round(startAlpha * 100)}%, transparent) 0%,`
+                + ` var(--v4-act, #2563eb) 100%)`;
         };
 
         return React.createElement('div', {
