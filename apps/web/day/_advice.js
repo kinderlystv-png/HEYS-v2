@@ -1486,6 +1486,8 @@
         React,
         adviceTrigger,
         adviceRelevant,
+        badgeAdvices,
+        totalAdviceCount,
         toastVisible,
         dismissToast,
         getSortedGroupedAdvices,
@@ -1541,11 +1543,14 @@
         // Курaтор всё равно не пишет outcomes (гейчено в advice/_core.js
         // recordAdviceOutcomeEvent + track*).
         const _isCurator = isCuratorReadOnlyMode();
+        const drawerAdvices = Array.isArray(badgeAdvices) && badgeAdvices.length > 0
+            ? badgeAdvices
+            : adviceRelevant;
+        const displayAdviceCount = typeof totalAdviceCount === 'number' ? totalAdviceCount : 0;
 
-        if (!(adviceTrigger === 'manual' && adviceRelevant?.length > 0 && toastVisible)) return null;
+        if (!(adviceTrigger === 'manual' && drawerAdvices?.length > 0 && toastVisible)) return null;
 
-        // 🚀 PERF A1: activeCount computed inside getSortedGroupedAdvices (no extra .filter())
-        const { sorted, groups, activeCount } = getSortedGroupedAdvices(adviceRelevant);
+        const { sorted, groups } = getSortedGroupedAdvices(drawerAdvices);
         const groupKeys = Object.keys(groups);
 
         return React.createElement('div', {
@@ -1564,9 +1569,9 @@
                 renderMedicalDisclaimer(React),
                 React.createElement('div', { className: 'advice-list-header' },
                     React.createElement('div', { className: 'advice-list-header-top' },
-                        React.createElement('span', { className: 'advice-list-title' }, `💡 Советы (${activeCount})`),
+                        React.createElement('span', { className: 'advice-list-title' }, `💡 Советы (${displayAdviceCount})`),
                         React.createElement('div', { className: 'advice-list-header-actions' },
-                            adviceTraceAvailable && React.createElement('button', {
+                            _isCurator && adviceTraceAvailable && React.createElement('button', {
                                 className: 'advice-list-header-link',
                                 onClick: copyAdviceTrace,
                                 title: 'Скопировать технический лог принятия решений по советам',
@@ -1577,12 +1582,12 @@
                                         ? 'Ошибка'
                                         : 'Техлог'
                             ),
-                            adviceDiagnostics && React.createElement('button', {
+                            _isCurator && adviceDiagnostics && React.createElement('button', {
                                 className: 'advice-list-header-link',
                                 onClick: openAdviceDiagnostics,
                                 title: 'Показать компактную диагностику advice engine',
                             }, 'Диагностика'),
-                            activeCount > 1 && React.createElement('button', {
+                            displayAdviceCount > 1 && React.createElement('button', {
                                 className: 'advice-list-header-link advice-list-header-link--read-all',
                                 onClick: handleDismissAll,
                                 disabled: dismissAllAnimation,
@@ -1612,7 +1617,7 @@
                                     React.createElement('span', { className: 'advice-toggle-hint' },
                                         _isCurator
                                             ? 'Автопоказ выключен (режим куратора)'
-                                            : 'Автопоказ всплывающих советов'
+                                            : 'Показывать советы сами'
                                     )
                                 )
                             ),
@@ -1699,7 +1704,7 @@
                             onOpenTechnicalDetails: openAdviceTechnicalDetails,
                         }))
                 ),
-                activeCount > 0 && React.createElement('div', { className: 'advice-list-hints' },
+                displayAdviceCount > 0 && React.createElement('div', { className: 'advice-list-hints' },
                     React.createElement('span', { className: 'advice-list-hint-item' }, '← прочитано'),
                     React.createElement('span', { className: 'advice-list-hint-divider' }, '•'),
                     React.createElement('span', { className: 'advice-list-hint-item' }, 'скрыть →'),
@@ -2469,18 +2474,18 @@
 
         const ADVICE_PRIORITY = { warning: 0, insight: 1, tip: 2, achievement: 3, info: 4 };
         const ADVICE_CATEGORY_NAMES = {
-            nutrition: '🍎 Питание',
-            training: '💪 Тренировки',
-            lifestyle: '🌙 Режим',
-            hydration: '💧 Вода',
-            emotional: '🧠 Психология',
-            achievement: '🏆 Достижения',
-            motivation: '✨ Мотивация',
-            personalized: '👤 Персональное',
-            correlation: '🔗 Корреляции',
-            timing: '⏰ Тайминг',
-            sleep: '😴 Сон',
-            activity: '🚶 Активность',
+            nutrition: 'Питание',
+            training: 'Тренировки',
+            lifestyle: 'Режим',
+            hydration: 'Вода',
+            emotional: 'Психология',
+            achievement: 'Достижения',
+            motivation: 'Мотивация',
+            personalized: 'Персональное',
+            correlation: 'Корреляции',
+            timing: 'Тайминг',
+            sleep: 'Сон',
+            activity: 'Активность',
         };
 
         // 🚀 PERF A1: compute activeCount inline to avoid extra .filter() on sorted

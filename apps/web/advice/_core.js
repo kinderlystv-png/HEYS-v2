@@ -186,10 +186,10 @@
     function personalizeText(text, ctx) {
         const firstName = ctx.prof?.firstName || '';
         const result = text
-            .replace(/\$\{firstName\}/g, firstName)
             .replace(/\$\{firstName\}, /g, firstName ? firstName + ', ' : '')
             .replace(/\$\{firstName\}!/g, firstName ? firstName + '!' : '')
-            .replace(/\, \$\{firstName\}/g, firstName ? ', ' + firstName : '');
+            .replace(/\, \$\{firstName\}/g, firstName ? ', ' + firstName : '')
+            .replace(/\$\{firstName\}/g, firstName);
         return result.trim();
     }
 

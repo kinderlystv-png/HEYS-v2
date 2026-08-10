@@ -4066,7 +4066,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             }
         }, [tab, setTab]);
 
-        // Bulletproof fallback: document-level capture listener для «Советы» в шапке. показываем JWT-куратору количество pending-заявок.
+        // Bulletproof fallback: document-level capture listener для «Советы» в шапке.
+        // Pending badge: показываем JWT-куратору количество pending-заявок.
         // Init из sessionStorage чтобы избежать flash 0→N при reload.
         const [pendingCount, setPendingCount] = React.useState(() => {
             try {

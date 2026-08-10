@@ -138,6 +138,8 @@
             diarySection,
             adviceTrigger: adviceState.adviceTrigger,
             adviceRelevant: adviceState.adviceRelevant,
+            badgeAdvices: adviceState.badgeAdvices,
+            totalAdviceCount: adviceState.totalAdviceCount,
             toastVisible: adviceState.toastVisible,
             dismissToast: adviceState.dismissToast,
             getSortedGroupedAdvices: adviceState.getSortedGroupedAdvices,

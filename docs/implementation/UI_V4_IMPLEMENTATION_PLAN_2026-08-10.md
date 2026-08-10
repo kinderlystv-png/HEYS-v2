@@ -293,6 +293,13 @@ push-slot + сообщения); `nav-advice-badge` на пункте «Сове
 > на остальных вкладках. Заодно починить склеенный комментарий в
 > `heys_app_shell_v1.js`, оставшийся от 3b.
 
+**Сдано (source-only, бандлы не трогали):** висячая запятая (`personalizeText` —
+порядок замен в `advice/_core.js`); «ГИ null» — guard `hasIwAvgGI` в
+`advice/_nutrition.js`; счётчик шторки = `totalAdviceCount` на `badgeAdvices`;
+«Техлог»/«Диагностика» только в кураторской сессии; копирайт «Показывать советы
+сами»; заголовки групп без эмодзи; комментарий в `heys_app_shell_v1.js`. Тесты:
+`TESTS/advice-defects-3c.test.js` (6).
+
 ---
 
 ### Промпт 4 — оставшиеся вкладки
