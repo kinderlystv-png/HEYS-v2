@@ -1318,24 +1318,55 @@
                     title: title?.title || '',
                 }, levelGuardActive ? '' : (title?.title || '')),
 
-                // Правая часть: push-slot + сообщения; streak/expand/theme убраны из компактной рамы v4
+                // Правая часть: push-slot + советы + настройки (v4 Prompt 3b)
                 React.createElement('div', {
                     className: `game-bar-slots game-bar-slots--compact${levelGuardActive ? ' is-loading' : ' is-loaded'}`
                 },
                     React.createElement('span', { id: 'push-badge-slot', className: 'gamification-push-slot', key: 'push-slot' }),
 
-                    HEYS.Messenger?.openModal && React.createElement('button', {
-                        className: 'hdr-header-icon-btn hdr-header-icon-btn--messenger',
-                        onClick: (e) => {
-                            e.stopPropagation();
-                            HEYS.Messenger.openModal();
+                    React.createElement('div', { className: 'hdr-header-actions' },
+                        React.createElement('button', {
+                            className: 'hdr-header-icon-btn hdr-header-icon-btn--advice',
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                setTimeout(() => {
+                                    try {
+                                        if (typeof window.__heysShowAdviceHandler === 'function') {
+                                            window.__heysShowAdviceHandler();
+                                        }
+                                        window.dispatchEvent(new CustomEvent('heysShowAdvice'));
+                                    } catch (_) { /* noop */ }
+                                }, 0);
+                            },
+                            title: 'Советы',
+                            type: 'button',
+                            'aria-label': 'Советы',
                         },
-                        title: 'Сообщения',
-                        type: 'button',
-                    },
-                        HEYS.AppNavIcons?.NavIcon
-                            ? React.createElement(HEYS.AppNavIcons.NavIcon, { name: 'chat', size: 15 })
-                            : React.createElement('span', { 'aria-hidden': 'true' }, '💬')
+                            HEYS.AppNavIcons?.NavIcon
+                                ? React.createElement(HEYS.AppNavIcons.NavIcon, { name: 'advice', size: 18 })
+                                : React.createElement('span', { 'aria-hidden': 'true' }, '💡'),
+                            React.createElement('span', {
+                                className: 'tab-advice-badge hdr-advice-badge',
+                                id: 'nav-advice-badge',
+                            })
+                        ),
+
+                        React.createElement('button', {
+                            className: 'hdr-header-icon-btn hdr-header-icon-btn--settings',
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                if (typeof window.HEYS?.App?.setTab === 'function') {
+                                    window.HEYS.App.setTab('user');
+                                }
+                            },
+                            title: 'Настройки',
+                            type: 'button',
+                            'aria-label': 'Настройки',
+                        },
+                            HEYS.AppNavIcons?.NavIcon
+                                ? React.createElement(HEYS.AppNavIcons.NavIcon, { name: 'sliders', size: 18 })
+                                : React.createElement('span', { 'aria-hidden': 'true' }, '⚙️')
+                        ),
                     ),
                 ),
             ),

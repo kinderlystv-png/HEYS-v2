@@ -4052,19 +4052,43 @@ td:first-child input {
   gap: 6px;
 }
 
+.hdr-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .hdr-header-icon-btn {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
+  position: relative;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
   padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.35));
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  touch-action: manipulation;
+}
+
+.hdr-header-icon-btn--advice {
+  justify-content: flex-end;
+  padding-right: 10px;
+}
+
+.hdr-header-icon-btn--settings {
+  justify-content: flex-start;
+  padding-left: 10px;
+}
+
+.hdr-advice-badge,
+.hdr-header-icon-btn--advice #nav-advice-badge {
+  top: 6px;
+  right: 6px;
 }
 
 .hdr-header-icon-btn:hover {
@@ -8598,6 +8622,7 @@ svg.date-picker-icon {
   position: relative;
 }
 
+/* v4 Prompt 3b: badge lives in header, not settings menu */
 .tab-settings-item--advice .tab-advice-badge {
   top: 6px;
   right: 8px;

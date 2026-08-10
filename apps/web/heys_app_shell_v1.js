@@ -12,7 +12,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
     window.document.addEventListener('click', function _heysAdviceTabCapture(e) {
         try {
             if (!e || !e.target || typeof e.target.closest !== 'function') return;
-            const adviceTab = e.target.closest('.tab-settings-item--advice');
+            const adviceTab = e.target.closest('.hdr-header-icon-btn--advice');
             if (!adviceTab) return;
             if (adviceTab.classList.contains('tab--disabled-home')) return;
             setTimeout(function _heysShowAdviceDispatch() {
@@ -4066,21 +4066,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             }
         }, [tab, setTab]);
 
-        // Bulletproof fallback: document-level capture listener для «Советы» в меню ⚙️.
-        // React synthetic events иногда не доходят до onClick после re-render'ов
-        // shell'а (наблюдалось 2026-05-28). Document.addEventListener в capture
-        // phase ловит любой клик ПОВЕРХ React event system, фильтруем по closest.
-        React.useEffect(() => {
-            const handler = (e) => {
-                if (e.target && e.target.closest && e.target.closest('.tab-settings-item--advice')) {
-                    setTimeout(() => window.dispatchEvent(new CustomEvent('heysShowAdvice')), 0);
-                }
-            };
-            document.addEventListener('click', handler, true);
-            return () => document.removeEventListener('click', handler, true);
-        }, []);
-
-        // 🔔 Бейдж модерации на ⚙️-иконке: показываем JWT-куратору количество pending-заявок.
+        // Bulletproof fallback: document-level capture listener для «Советы» в шапке. показываем JWT-куратору количество pending-заявок.
         // Init из sessionStorage чтобы избежать flash 0→N при reload.
         const [pendingCount, setPendingCount] = React.useState(() => {
             try {
@@ -4610,7 +4596,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     React.createElement(
                         'span',
                         { className: 'tab-icon tab-icon--settings', style: { position: 'relative' } },
-                        renderNavIcon('settings', tab === 'user' || settingsMenuOpen),
+                        renderNavIcon('more', settingsMenuOpen),
                         isCuratorBadge && pendingCount > 0 && React.createElement(
                             'span',
                             {
@@ -4620,36 +4606,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             pendingCount > 99 ? '99+' : String(pendingCount)
                         )
                     ),
-                    React.createElement('span', { className: 'tab-text' }, 'Настройки'),
+                    React.createElement('span', { className: 'tab-text' }, 'Ещё'),
                 ),
                 settingsMenuOpen && React.createElement(
                     'div',
                     { className: 'tab-settings-menu tab-settings-menu--with-home' + (defaultTab === 'tasks' ? ' tab-settings-menu--tasks-home' : '') },
-                    React.createElement(
-                        'div',
-                        {
-                            className: 'tab-settings-item',
-                            onClick: () => {
-                                setSettingsMenuOpen(false);
-                                switchTabWithUndoCommit('user', 'tab-settings-user-switch');
-                            }
-                        },
-                        renderNavIcon('settings'),
-                        React.createElement('span', null, 'Настройки')
-                    ),
-                    React.createElement(
-                        'div',
-                        {
-                            className: 'tab-settings-item tab-settings-item--advice',
-                            onClick: () => {
-                                setSettingsMenuOpen(false);
-                                setTimeout(() => window.dispatchEvent(new CustomEvent('heysShowAdvice')), 0);
-                            }
-                        },
-                        renderNavIcon('advice'),
-                        React.createElement('span', null, 'Советы'),
-                        React.createElement('span', { className: 'tab-advice-badge', id: 'nav-advice-badge' }),
-                    ),
                     canUseTasksAsHome && React.createElement(
                         'div',
                         {
@@ -5118,6 +5079,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const { hideContent, clientId, tab } = props;
         const shouldRenderContent = !!clientId;
         const hideProductHeader = tab === 'tasks' || tab === 'board';
+        const MessageFabButton = HEYS.Messenger?.FabButton;
         let profilerMountKey = 'p0';
         try {
             profilerMountKey = heysReactProfilerEnabled() ? 'p1' : 'p0';
@@ -5142,7 +5104,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             shouldRenderContent && React.createElement(MemoAppTabsNav, props),
             shouldRenderContent && React.createElement(MemoAppTabContent, Object.assign({}, props, {
                 key: 'appTabContent_' + String(clientId || '') + '_' + profilerMountKey
-            }))
+            })),
+            shouldRenderContent && MessageFabButton && !hideProductHeader && React.createElement(
+                'div',
+                { className: 'fab-group fab-group--messenger-only', id: 'global-messenger-fab' },
+                React.createElement(MessageFabButton, { key: 'global-msg-fab' })
+            )
         );
     }
 

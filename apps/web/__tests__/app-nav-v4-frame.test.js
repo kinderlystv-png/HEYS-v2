@@ -1,4 +1,4 @@
-// app-nav-v4-frame.test.js — UI v4 Prompt 3: пять вкладок внизу, задачи/доска/советы в меню ⚙️
+// app-nav-v4-frame.test.js — UI v4 Prompt 3/3b: рама, шапка, нижняя навигация
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -6,6 +6,15 @@ import { describe, expect, it } from 'vitest';
 
 const WEB_DIR = path.resolve(__dirname, '..');
 const shellSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_app_shell_v1.js'), 'utf8');
+const gamificationSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_gamification_bar_v1.js'), 'utf8');
+const messengerCss = fs.readFileSync(
+    path.join(WEB_DIR, 'styles/modules/1000-messenger.css'),
+    'utf8',
+);
+const baseCss = fs.readFileSync(
+    path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'),
+    'utf8',
+);
 const swipeSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_app_swipe_nav_v1.js'), 'utf8');
 const bundleCfg = fs.readFileSync(
     path.resolve(WEB_DIR, '../../scripts/legacy-bundle-config.mjs'),
@@ -36,25 +45,60 @@ describe('UI v4 — нижняя навигация', () => {
         expect(shellSrc).not.toMatch(/primaryTabsVariant/);
     });
 
-    it('Задачи и Доска в меню ⚙️ с прежними условиями', () => {
+    it('Задачи и Доска в меню «Ещё» с прежними условиями', () => {
         expect(shellSrc).toContain('canUseTasksAsHome && React.createElement');
         expect(shellSrc).toContain('canUseBoardAsHome && React.createElement');
         expect(shellSrc).toContain("switchTabWithUndoCommit('tasks'");
         expect(shellSrc).toContain("switchTabWithUndoCommit('board'");
-        expect(shellSrc).toContain('tab-settings-item--advice');
     });
 
-    it('счётчик советов сохраняет id nav-advice-badge', () => {
-        expect(shellSrc).toContain("id: 'nav-advice-badge'");
+    it('советы и настройки убраны из меню «Ещё»', () => {
+        expect(shellSrc).not.toContain('tab-settings-item--advice');
+        expect(shellSrc).not.toMatch(/tab-settings-menu[\s\S]{0,1200}renderNavIcon\('settings'\)/);
+    });
+
+    it('глобальный messenger FAB для вкладок без fab-group', () => {
+        expect(shellSrc).toContain('fab-group--messenger-only');
+        expect(shellSrc).toContain('global-messenger-fab');
     });
 
     it('adviceTabRef убран', () => {
         expect(shellSrc).not.toContain('adviceTabRef');
     });
 
-    it('capture listener для советов смотрит на пункт меню', () => {
-        expect(shellSrc).toContain(".closest('.tab-settings-item--advice')");
+    it('capture listener для советов смотрит на кнопку в шапке', () => {
+        expect(shellSrc).toContain(".closest('.hdr-header-icon-btn--advice')");
+        expect(shellSrc).not.toContain(".closest('.tab-settings-item--advice')");
         expect(shellSrc).not.toContain(".closest('.tab.tab-advice')");
+    });
+});
+
+describe('UI v4 Prompt 3b — шапка', () => {
+    it('советы и настройки в gamification bar, не мессенджер', () => {
+        expect(gamificationSrc).toContain('hdr-header-icon-btn--advice');
+        expect(gamificationSrc).toContain('hdr-header-icon-btn--settings');
+        expect(gamificationSrc).toContain("name: 'sliders'");
+        expect(gamificationSrc).not.toContain('hdr-header-icon-btn--messenger');
+    });
+
+    it('счётчик советов в шапке с id nav-advice-badge', () => {
+        expect(gamificationSrc).toContain("id: 'nav-advice-badge'");
+        expect(gamificationSrc).toContain('hdr-header-icon-btn--advice');
+        expect(gamificationSrc).toContain('hdr-advice-badge');
+    });
+
+    it('кнопки шапки — 44px touch box', () => {
+        const btnRule = baseCss.match(/\.hdr-header-icon-btn \{[^}]+\}/)?.[0] || '';
+        expect(btnRule).toMatch(/width:\s*44px/);
+        expect(btnRule).toMatch(/height:\s*44px/);
+        expect(btnRule).toMatch(/min-width:\s*44px/);
+        expect(baseCss).toMatch(/\.hdr-header-actions[\s\S]*?gap:\s*8px/);
+    });
+
+    it('standalone messenger FAB скрывается при tab fab-group', () => {
+        expect(messengerCss).toMatch(
+            /body:has\(\.fab-group:not\(\.fab-group--messenger-only\) \.message-fab\) \.fab-group--messenger-only/,
+        );
     });
 });
 

@@ -71,6 +71,18 @@ body.planning-tab-active .fab-group .message-fab {
   visibility: hidden;
 }
 
+body.widgets-edit-mode .fab-group--messenger-only,
+body.planning-tab-active .fab-group--messenger-only {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Standalone messenger FAB (insights / desktop day) hides when tab FAB group already has chat */
+body:has(.fab-group:not(.fab-group--messenger-only) .message-fab) .fab-group--messenger-only {
+  display: none;
+}
+
 /* ═══════════════════════════════════════════════════════════════════
  * Messenger Modal (full-screen on mobile, centered card on desktop)
  * ═══════════════════════════════════════════════════════════════════ */
