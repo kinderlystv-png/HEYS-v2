@@ -1,0 +1,416 @@
+/* 733-ui-v4-reports.css — Reports tab v4 (stage 4b structure) */
+
+.reports-v4 {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 4px;
+}
+
+.reports-v4-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 12px;
+  margin-top: 18px;
+}
+
+.reports-v4-meta__title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-ink, #0f172a);
+}
+
+.reports-v4-meta__range {
+  flex: 1;
+  min-width: 120px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+}
+
+.reports-v4-period-pills {
+  display: flex;
+  gap: 16px;
+  margin-left: auto;
+}
+
+.reports-v4-period-pill {
+  min-width: 44px;
+  min-height: 44px;
+  margin: -16px -6px;
+  padding: 0 6px;
+  border: none;
+  background: none;
+  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+  cursor: pointer;
+}
+
+.reports-v4-period-pill.is-active {
+  color: var(--v4-act, #8a4a20);
+  box-shadow: inset 0 -2px 0 0 var(--v4-act-line, #c67139);
+}
+
+.reports-v4-hero {
+  margin-top: 14px;
+  padding: 26px 22px 22px;
+  border-radius: 26px;
+  background: var(--v4-hero, #efe3cf);
+}
+
+.reports-v4-hero__label {
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+}
+
+.reports-v4-hero__value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.reports-v4-hero__value {
+  font-size: 60px;
+  font-weight: 600;
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+  color: var(--v4-act, #8a4a20);
+  font-variant-numeric: tabular-nums;
+}
+
+.reports-v4-hero__unit {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+}
+
+.reports-v4-hero__phrase {
+  margin-top: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--v4-act, #8a4a20);
+}
+
+.reports-v4-hero__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 20px;
+  padding-top: 16px;
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.09);
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.reports-v4-hero__footer-text {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+  font-variant-numeric: tabular-nums;
+}
+
+.reports-v4-hero__footer-chevron {
+  flex: none;
+  opacity: 0.55;
+  font-size: 14px;
+}
+
+.reports-v4-tier {
+  margin: 20px 0 10px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--v4-tier, #a75c2b);
+}
+
+.reports-v4-score-slot {
+  margin-bottom: 10px;
+}
+
+.reports-v4-score-slot .heys-score-tile {
+  border-radius: 20px;
+  background: var(--v4-hero, #efe3cf);
+}
+
+.reports-v4-summary {
+  display: flex;
+  gap: 10px;
+}
+
+.reports-v4-summary-card {
+  flex: 1;
+  padding: 15px 16px;
+  border-radius: 20px;
+}
+
+.reports-v4-summary-card--norm {
+  background: var(--v4-ok-surface, #dfe6d1);
+}
+
+.reports-v4-summary-card--score {
+  background: var(--v4-warn-surface, #f0d8c4);
+}
+
+.reports-v4-summary-card__label {
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+}
+
+.reports-v4-summary-card__value {
+  margin-top: 9px;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}
+
+.reports-v4-summary-card--norm .reports-v4-summary-card__value {
+  color: var(--v4-ok-ink, #5c6a45);
+}
+
+.reports-v4-summary-card--score .reports-v4-summary-card__value {
+  color: var(--v4-act, #8a4a20);
+}
+
+.reports-v4-summary-card__suffix {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+}
+
+.reports-v4-dynamics-card {
+  margin-top: 10px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.reports-v4-dynamics-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.reports-v4-dynamics-card__label {
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+}
+
+.reports-v4-dynamics-card__badge {
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-act, #8a4a20);
+  font-variant-numeric: tabular-nums;
+}
+
+.reports-v4-dynamics-card__hint {
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+}
+
+.reports-v4-wellbeing {
+  margin-top: 10px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.reports-v4-wellbeing__title {
+  margin-bottom: 14px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+}
+
+.reports-v4-wellbeing__grid {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reports-v4-wellbeing__item {
+  text-align: left;
+}
+
+.reports-v4-wellbeing__value {
+  display: block;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ok-ink, #5c6a45);
+  font-variant-numeric: tabular-nums;
+}
+
+.reports-v4-wellbeing__item:last-child .reports-v4-wellbeing__value {
+  color: var(--v4-act, #8a4a20);
+}
+
+.reports-v4-wellbeing__label {
+  display: block;
+  margin-top: 7px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
+}
+
+.reports-v4-days {
+  padding: 2px 16px;
+  border-radius: 20px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.reports-v4-days__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.reports-v4-days__row:last-child {
+  border-bottom: none;
+}
+
+.reports-v4-days__left {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.55));
+}
+
+.reports-v4-days__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: none;
+}
+
+.reports-v4-days__dot--good {
+  background: var(--v4-ok-fill, #dfe6d1);
+}
+
+.reports-v4-days__dot--warn {
+  background: var(--v4-warn-fill, #f0d8c4);
+}
+
+.reports-v4-days__dot--over {
+  background: var(--v4-over-fill, #d99a63);
+}
+
+.reports-v4-days__right {
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}
+
+.reports-v4-days__more {
+  padding: 14px 0 4px;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-act, #8a4a20);
+}
+
+.reports-v4 .kcal-sparkline-container.reports-v4-dynamics-card {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.reports-v4 .weight-sparkline-container.reports-v4-dynamics-card {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* v4-intentional: palette surfaces for reports tiers */
+[data-palette="sand"] .reports-v4-tier,
+[data-palette="sand-dark"] .reports-v4-tier,
+[data-palette="blue"] .reports-v4-tier,
+[data-palette="blue-dark"] .reports-v4-tier {
+  color: var(--v4-act-text); /* v4-intentional */
+}
+
+[data-palette="sand"] .reports-v4-hero,
+[data-palette="sand-dark"] .reports-v4-hero,
+[data-palette="blue"] .reports-v4-hero,
+[data-palette="blue-dark"] .reports-v4-hero,
+[data-palette="sand"] .reports-v4-dynamics-card,
+[data-palette="sand-dark"] .reports-v4-dynamics-card,
+[data-palette="blue"] .reports-v4-dynamics-card,
+[data-palette="blue-dark"] .reports-v4-dynamics-card,
+[data-palette="sand"] .reports-v4-wellbeing,
+[data-palette="sand-dark"] .reports-v4-wellbeing,
+[data-palette="blue"] .reports-v4-wellbeing,
+[data-palette="blue-dark"] .reports-v4-wellbeing,
+[data-palette="sand"] .reports-v4-days,
+[data-palette="sand-dark"] .reports-v4-days,
+[data-palette="blue"] .reports-v4-days,
+[data-palette="blue-dark"] .reports-v4-days {
+  background: var(--v4-surface); /* v4-intentional */
+}
+
+[data-palette="sand"] .reports-v4-score-slot .heys-score-tile,
+[data-palette="sand-dark"] .reports-v4-score-slot .heys-score-tile,
+[data-palette="blue"] .reports-v4-score-slot .heys-score-tile,
+[data-palette="blue-dark"] .reports-v4-score-slot .heys-score-tile {
+  background: var(--v4-hero); /* v4-intentional */
+  border-color: transparent;
+}
+
+[data-palette="sand"] .reports-v4-summary-card--norm,
+[data-palette="sand-dark"] .reports-v4-summary-card--norm,
+[data-palette="blue"] .reports-v4-summary-card--norm,
+[data-palette="blue-dark"] .reports-v4-summary-card--norm {
+  background: var(--v4-ok-bg); /* v4-intentional */
+}
+
+[data-palette="sand"] .reports-v4-summary-card--score,
+[data-palette="sand-dark"] .reports-v4-summary-card--score,
+[data-palette="blue"] .reports-v4-summary-card--score,
+[data-palette="blue-dark"] .reports-v4-summary-card--score {
+  background: var(--v4-warn-bg); /* v4-intentional */
+}
+
+[data-palette="sand"] .reports-v4-period-pill.is-active,
+[data-palette="sand-dark"] .reports-v4-period-pill.is-active,
+[data-palette="blue"] .reports-v4-period-pill.is-active,
+[data-palette="blue-dark"] .reports-v4-period-pill.is-active {
+  color: var(--v4-act-text); /* v4-intentional */
+  box-shadow: inset 0 -2px 0 0 var(--v4-act); /* v4-intentional */
+}

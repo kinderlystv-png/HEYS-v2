@@ -1339,6 +1339,46 @@
   color: var(--text, #f1f5f9);
 }
 
+/* Reports v4 · Вариант Б — плитка в ярусе «Итог периода» */
+.reports-v4-score-slot .heys-score-tile {
+  grid-column: auto;
+  margin-top: 0;
+  border-radius: 20px;
+  padding: 16px;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.reports-v4-score-slot .heys-score-tile__number {
+  font-size: 40px;
+  line-height: 0.9;
+}
+
+.reports-v4-score-slot .heys-score-tile__head {
+  justify-content: space-between;
+}
+
+.reports-v4-score-slot .heys-score-tile__delta {
+  margin-top: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.reports-v4-score-slot .heys-score-tile__state {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--v4-act-text, var(--text-secondary, #64748b));
+}
+
+.reports-v4-score-slot .heys-score-tile__curve {
+  max-width: 150px;
+  margin-left: auto;
+}
+
+.reports-v4-score-slot .heys-score-tile--expanded .heys-score-tile__detail {
+  border-top-color: rgba(0, 0, 0, 0.09);
+}
+
 /* Полоса с зонами — общая для плитки Отчётов и карточки Инсайтов */
 .heys-score-zonebar {
   margin-top: 8px;

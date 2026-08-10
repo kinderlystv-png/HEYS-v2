@@ -2832,6 +2832,18 @@
   margin-bottom: 0;
 }
 
+.compact-stats.stats-section.reports-v4 {
+  gap: 0;
+}
+
+.compact-stats.stats-section.reports-v4 .kcal-sparkline-container.reports-v4-dynamics-card,
+.compact-stats.stats-section.reports-v4 .weight-sparkline-container.reports-v4-dynamics-card {
+  margin-top: 10px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-surface, var(--stats-bg));
+}
+
 .compact-stats .goal-progress-bar {
   background: transparent;
   box-shadow: none;
