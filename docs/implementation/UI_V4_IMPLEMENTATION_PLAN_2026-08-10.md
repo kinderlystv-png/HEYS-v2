@@ -417,14 +417,40 @@ alpha-suffixed chip tokens (`#10b98112`).
 - градиенты, rgba, брендовые цвета overlay (`#4285f4`, `#43e97b`) без
   v4-совпадения в classic
 
-**Оценка остатка:** ~9 100 hex-литералов в `styles/` (без
+**Оценка остатка:** ~8 100 hex-литералов в `styles/` (без
 `002-ui-v4-palette-roles.css`, `tailwind.css`, архивного `main.css.pre-split`).
-Следующий батч — `critical.css` + начало `000-base-and-gamification.css` (~970
-литералов).
+Batch 2 закрыт; следующий — продолжение `000-base-and-gamification.css` с
+строки 7079.
 
 **Параллельность:** не пересекается со Stage 4 Home (JS/`heys_widgets`). Риск —
 `730-widgets-dashboard.css` при будущей покраске виджетов; batch 1 его не
 трогает.
+
+### Stage 6 batch 2 — 2026-08-10
+
+**Файлы (граница батча):**
+
+| Файл                                           | Что сделано                                            | Литералов → `var(--v4-*)` |
+| ---------------------------------------------- | ------------------------------------------------------ | ------------------------- |
+| `styles/critical.css`                          | `:root`, skeleton vars, AppShell, DayTab first-paint   | 51                        |
+| `styles/modules/000-base-and-gamification.css` | `:root` palette + секции 01–29 (строки 1–7078, до EWS) | 259                       |
+
+**Исключено в batch 2 (намеренно):**
+
+- `linear-gradient` / `radial-gradient` — градиенты, как в batch 1
+- `rgba()` — без замены
+- skeleton meal-tint (`#deeddb`, `#f3d7d7`, `#e2ecf2`, `#e8edf3`) — нет
+  v4-совпадения
+- Google brand (`#4285f4`, `#43e97b`) и iOS chrome (`#1c1c1e`, `#3a3a3c`,
+  `#8e8e93`)
+- nutrition tints в critical (`#bbf7d0`, `#166534`, kcal-sparkline gradients)
+- `:root` soft-bg блоки в 000 (`--stats-bg`, `--activity-bg`, `--sleep-bg`)
+- progress/macro vars в 000 (`--success`, `--protein`, `--fat`, `--carbs`)
+- строки 7079+ в `000-base-and-gamification.css` (секции 30+)
+
+**Остаток в scope batch 2:** ~535 hex-литералов (градиенты, rgba, исключения
+выше). Следующий батч — продолжение `000-base-and-gamification.css` с строки
+7079 (~900 литералов до конца файла).
 
 ---
 
