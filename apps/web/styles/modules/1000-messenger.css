@@ -50,14 +50,14 @@
   height: 22px;
   padding: 0 6px;
   border-radius: 11px;
-  background: #ef4444;
-  color: #fff;
+  background: var(--v4-warn-1, #ef4444);
+  color: var(--v4-bg, #fff);
   font-size: 12px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #fff;
+  border: 2px solid var(--v4-bg, #fff);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   pointer-events: none;
 }
@@ -130,8 +130,8 @@ body.planning-tab-active .fab-group .message-fab {
   gap: 12px;
   padding: 18px 18px 16px;
   border-bottom: 1px solid #edebe5;
-  background: #ffffff;
-  color: #111827;
+  background: var(--v4-bg, #ffffff);
+  color: var(--v4-ink, #111827);
   position: relative;
   /* Выше строки чек-листа (z-index: 2): иначе выпадающее меню «⋯»
      оказывается под ней — она идёт следующей в потоке. */
@@ -160,7 +160,7 @@ body.planning-tab-active .fab-group .message-fab {
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: -0.005em;
-  color: #111827;
+  color: var(--v4-ink, #111827);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -210,7 +210,7 @@ body.planning-tab-active .fab-group .message-fab {
   min-width: 232px;
   padding: 6px;
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
   border: 1px solid #edebe5;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
 }
@@ -260,7 +260,7 @@ body.planning-tab-active .fab-group .message-fab {
   gap: 7px;
   padding: 0 18px 13px;
   margin-top: -1px;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
   border-bottom: 1px solid #edebe5;
   overflow-x: auto;
   scrollbar-width: none;
@@ -438,7 +438,7 @@ button.messenger-day-checklist__chip:active {
   max-width: 320px;
   font-size: 13px;
   line-height: 1.5;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .messenger-empty__prompts {
@@ -453,7 +453,7 @@ button.messenger-day-checklist__chip:active {
   padding: 6px 12px;
   border-radius: 999px;
   border: 1px solid #e8e6e0;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
   color: #1d70b7;
   font-family: inherit;
   font-size: 12px;
@@ -546,14 +546,14 @@ button.messenger-day-checklist__chip:active {
 .msg-bubble-mine {
   max-width: 86%;
   background: #1d70b7;
-  color: #fff;
+  color: var(--v4-bg, #fff);
   border: 1px solid transparent;
   border-radius: 16px 16px 5px 16px;
 }
 
 .msg-bubble-theirs {
   max-width: 82%;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
   color: #1b2430;
   border: 1px solid #edebe5;
   border-radius: 16px 16px 16px 5px;
@@ -650,7 +650,7 @@ button.messenger-day-checklist__chip:active {
 .messenger-show-older {
   align-self: center;
   margin: 6px 0 8px;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
   border: 1px solid #e8e6e0;
   border-radius: 999px;
   padding: 6px 12px;
@@ -779,7 +779,7 @@ button.messenger-day-checklist__chip:active {
   border: none;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.18);
-  color: #ffffff;
+  color: var(--v4-bg, #ffffff);
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
@@ -824,7 +824,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .msg-audio-wave span.is-played {
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
 }
 
 .msg-audio.is-playing .msg-audio-wave span {
@@ -888,7 +888,7 @@ button.messenger-day-checklist__chip:active {
 
 .msg-bubble-theirs .msg-audio-transcript,
 .messenger-audio-draft .msg-audio-transcript {
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .msg-audio-transcript.is-pending {
@@ -965,7 +965,7 @@ button.messenger-day-checklist__chip:active {
   padding: 7px 14px;
   border: 1px solid #c6daea;
   border-radius: 999px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
   color: #1d70b7;
   font: inherit;
   cursor: pointer;
@@ -985,7 +985,7 @@ button.messenger-day-checklist__chip:active {
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.4);
-  color: #fff;
+  color: var(--v4-bg, #fff);
   font-size: 20px;
   z-index: 2;
 }
@@ -1034,7 +1034,7 @@ button.messenger-day-checklist__chip:active {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--v4-bg, #fff);
   font-size: 18px;
   font-weight: 700;
   z-index: 2;
@@ -1060,7 +1060,7 @@ button.messenger-day-checklist__chip:active {
   border-radius: 50%;
   border: none;
   background: rgba(0, 0, 0, 0.6);
-  color: #fff;
+  color: var(--v4-bg, #fff);
   font-size: 11px;
   line-height: 1;
   padding: 0;
@@ -1101,7 +1101,7 @@ button.messenger-day-checklist__chip:active {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #ef4444;
+  background: var(--v4-warn-1, #ef4444);
   box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.42);
   animation: messenger-recording-pulse 1.1s ease-out infinite;
   flex-shrink: 0;
@@ -1132,8 +1132,8 @@ button.messenger-day-checklist__chip:active {
   border: none;
   border-radius: 10px;
   min-height: 34px;
-  background: #ef4444;
-  color: #fff;
+  background: var(--v4-warn-1, #ef4444);
+  color: var(--v4-bg, #fff);
   padding: 0 12px;
   font-size: 12px;
   font-weight: 600;
@@ -1198,7 +1198,7 @@ button.messenger-day-checklist__chip:active {
   max-width: 320px;
   padding: 20px;
   border-radius: 18px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
   border: none;
   box-shadow: 0 24px 64px rgba(15, 23, 42, 0.28);
 }
@@ -1238,12 +1238,12 @@ button.messenger-day-checklist__chip:active {
 .messenger-consent-primary {
   border: none;
   background: #1d70b7;
-  color: #fff;
+  color: var(--v4-bg, #fff);
 }
 
 .messenger-consent-secondary {
   border: 1px solid rgba(148, 163, 184, 0.28);
-  background: #f8fafc;
+  background: var(--v4-hero, #f8fafc);
   color: #334155;
 }
 
@@ -1305,8 +1305,8 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-voice.is-recording {
-  background: #ef4444;
-  color: #fff;
+  background: var(--v4-warn-1, #ef4444);
+  color: var(--v4-bg, #fff);
 }
 
 .messenger-voice__stop {
@@ -1413,7 +1413,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-lightbox__thumb.is-active {
   opacity: 1;
-  outline: 2px solid #ffffff;
+  outline: 2px solid var(--v4-bg, #ffffff);
   outline-offset: 1px;
 }
 
@@ -1483,13 +1483,13 @@ button.messenger-day-checklist__chip:active {
 }
 
 .msg-edit-save {
-  background: #fff;
+  background: var(--v4-bg, #fff);
   color: #1d70b7;
 }
 
 .msg-bubble-theirs .msg-edit-save {
   background: #1d70b7;
-  color: #fff;
+  color: var(--v4-bg, #fff);
 }
 
 .msg-edit-cancel:disabled,
@@ -1593,9 +1593,9 @@ button.messenger-day-checklist__chip:active {
   max-width: 320px;
   border-radius: 18px;
   padding: 20px;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
   border: none;
-  color: #111827;
+  color: var(--v4-ink, #111827);
   box-shadow: 0 24px 64px rgba(15, 23, 42, 0.28);
   animation: messenger-confirm-pop 0.16s ease-out;
 }
@@ -1618,7 +1618,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-confirm-title {
   margin: 4px 0 0;
-  color: #111827;
+  color: var(--v4-ink, #111827);
   font-size: 17px;
   line-height: 1.2;
   font-weight: 700;
@@ -1636,7 +1636,7 @@ button.messenger-day-checklist__chip:active {
   margin-top: 12px;
   padding: 10px 12px;
   border-radius: 11px;
-  background: #f8fafc;
+  background: var(--v4-hero, #f8fafc);
   border: 1px solid #e4eaf0;
   color: #334155;
   font-size: 13px;
@@ -1664,7 +1664,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-confirm-cancel {
-  background: #f8fafc;
+  background: var(--v4-hero, #f8fafc);
   color: #334155;
   border: 1px solid #e4eaf0;
 }
@@ -1672,7 +1672,7 @@ button.messenger-day-checklist__chip:active {
 .messenger-confirm-delete {
   border: none;
   background: #c0392b;
-  color: #fff;
+  color: var(--v4-bg, #fff);
 }
 
 .messenger-confirm-cancel:disabled,
@@ -1703,8 +1703,8 @@ button.messenger-day-checklist__chip:active {
   padding: 10px 14px 10px 12px;
   border: 1px solid #e4eaf0;
   border-radius: 16px;
-  background: #ffffff;
-  color: #111827;
+  background: var(--v4-bg, #ffffff);
+  color: var(--v4-ink, #111827);
   box-shadow: 0 12px 30px rgba(17, 24, 39, 0.14);
   opacity: 0;
   pointer-events: none;
@@ -1728,7 +1728,7 @@ button.messenger-day-checklist__chip:active {
   justify-content: center;
   border-radius: 16px;
   background: #1d70b7;
-  color: #fff;
+  color: var(--v4-bg, #fff);
   font-size: 20px;
   box-shadow: 0 10px 22px rgba(29, 112, 183, 0.28);
 }
@@ -1750,7 +1750,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-inapp-toast__copy span {
   overflow: hidden;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-size: 0.78rem;
   font-weight: 700;
   line-height: 1.25;
@@ -1779,12 +1779,12 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-inapp-toast__later {
   background: transparent;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .messenger-inapp-toast__read {
   background: #1d70b7;
-  color: #fff;
+  color: var(--v4-bg, #fff);
 }
 
 /* Плашка «время и граммы»: от неё зависит, соберёт куратор день с первого
@@ -1836,7 +1836,7 @@ button.messenger-day-checklist__chip:active {
   padding: 4px 10px;
   border-radius: 999px;
   border: 1px solid #e9d9b4;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
   color: #8a6d2b;
   font-family: inherit;
   font-size: 11.5px;
@@ -1862,7 +1862,7 @@ button.messenger-day-checklist__chip:active {
   gap: 9px;
   padding: 10px 0 0;
   border-top: 1px solid #edebe5;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
 }
 
 .messenger-input-row {
@@ -1909,7 +1909,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-input:focus {
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
   border-color: #1d70b7;
   box-shadow: 0 0 0 3px rgba(29, 112, 183, 0.12);
 }
@@ -1968,7 +1968,7 @@ button.messenger-day-checklist__chip:active {
   border: 0;
   border-radius: 12px;
   background: #434587;
-  color: #fff;
+  color: var(--v4-bg, #fff);
   font: inherit;
   font-size: 12px;
   font-weight: 700;
@@ -1992,7 +1992,7 @@ button.messenger-day-checklist__chip:active {
   border-radius: 50%;
   border: none;
   background: #1d70b7;
-  color: #fff;
+  color: var(--v4-bg, #fff);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -2019,7 +2019,7 @@ button.messenger-day-checklist__chip:active {
   height: 16px;
   border-radius: 50%;
   border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #ffffff;
+  border-top-color: var(--v4-bg, #ffffff);
   animation: messenger-send-spin 0.7s linear infinite;
 }
 
@@ -2388,7 +2388,7 @@ button.messenger-day-checklist__chip:active {
 
 [data-theme="dark"] .msg-bubble-theirs .msg-audio-wave span.is-played,
 [data-theme="dark"] .messenger-audio-draft .msg-audio-wave span.is-played {
-  background: #60a5fa;
+  background: var(--v4-act-text, #60a5fa);
 }
 
 [data-theme="dark"] .msg-bubble-theirs .msg-audio-transcript,
@@ -2574,7 +2574,7 @@ button.messenger-day-checklist__chip:active {
   padding: 12px;
   border: 1px solid #e8e6e0;
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
 }
 
 .messenger-apply__head {
@@ -2616,7 +2616,7 @@ button.messenger-day-checklist__chip:active {
   padding: 0 8px;
   border: 1px solid #dce3ea;
   border-radius: 8px;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
   color: #1b2430;
   font-family: inherit;
   outline: none;
@@ -2699,7 +2699,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-apply__cancel {
   border: 1px solid #e4eaf0;
-  background: #f8fafc;
+  background: var(--v4-hero, #f8fafc);
   color: #334155;
 }
 
@@ -2707,7 +2707,7 @@ button.messenger-day-checklist__chip:active {
   flex: 1;
   border: none;
   background: #1d70b7;
-  color: #ffffff;
+  color: var(--v4-bg, #ffffff);
 }
 
 .messenger-apply__submit:disabled {
@@ -2725,7 +2725,7 @@ button.messenger-day-checklist__chip:active {
   padding: 11px 12px;
   border: 1px solid #e8e6e0;
   border-radius: 14px;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
 }
 
 .msg-applied-card__head {
@@ -2889,7 +2889,7 @@ button.messenger-day-checklist__chip:active {
   padding: 0 14px;
   border: 1px solid #eae7e0;
   border-radius: 20px;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
   color: #1b2430;
   font-family: inherit;
   font-size: 14px;
@@ -2918,7 +2918,7 @@ button.messenger-day-checklist__chip:active {
   padding: 5px 11px;
   border: 1px solid #e8e6e0;
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
   color: #667079;
   font-family: inherit;
   font-size: 11.5px;
@@ -2929,7 +2929,7 @@ button.messenger-day-checklist__chip:active {
 .messenger-search__filter.is-active {
   background: #1d70b7;
   border-color: #1d70b7;
-  color: #ffffff;
+  color: var(--v4-bg, #ffffff);
 }
 
 .messenger-search__results {
@@ -3068,7 +3068,7 @@ button.messenger-day-checklist__chip:active {
   min-width: 0;
   font-size: 11.5px;
   line-height: 1.35;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .messenger-offline-bar__retry {
@@ -3134,7 +3134,7 @@ button.messenger-day-checklist__chip:active {
   height: 30px;
   border-radius: 9px;
   border: 1px solid #e9d9b4;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
   color: #8a6d2b;
   font-family: inherit;
   font-size: 15px;
@@ -3147,7 +3147,7 @@ button.messenger-day-checklist__chip:active {
   padding: 0 8px;
   border: 1.5px solid #b58b36;
   border-radius: 9px;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
   color: #4a3a14;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 15px;
@@ -3166,7 +3166,7 @@ button.messenger-day-checklist__chip:active {
   border: none;
   border-radius: 9px;
   background: #1d70b7;
-  color: #ffffff;
+  color: var(--v4-bg, #ffffff);
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
@@ -3182,7 +3182,7 @@ button.messenger-day-checklist__chip:active {
   padding: 11px 12px;
   border: 1px solid #e4eaf0;
   border-radius: 14px;
-  background: #f8fafc;
+  background: var(--v4-hero, #f8fafc);
 }
 
 .messenger-transcript-draft__head {
@@ -3211,7 +3211,7 @@ button.messenger-day-checklist__chip:active {
   padding: 9px 11px;
   border: 1px solid #e4eaf0;
   border-radius: 11px;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
   color: #1b2430;
   font-family: inherit;
   font-size: 13px;
@@ -3305,7 +3305,7 @@ button.messenger-day-checklist__chip:active {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
   border-bottom: 1px solid #edebe5;
 }
 
@@ -3316,7 +3316,7 @@ button.messenger-day-checklist__chip:active {
 .messenger-inbox__title {
   font-size: 16px;
   font-weight: 600;
-  color: #111827;
+  color: var(--v4-ink, #111827);
 }
 
 .messenger-inbox__subtitle {
@@ -3342,8 +3342,8 @@ button.messenger-day-checklist__chip:active {
   padding: 5px 11px;
   border: 1px solid #e4eaf0;
   border-radius: 999px;
-  background: #ffffff;
-  color: #64748b;
+  background: var(--v4-bg, #ffffff);
+  color: var(--v4-ink-2, #64748b);
   font-family: inherit;
   font-size: 11.5px;
   font-weight: 600;
@@ -3353,7 +3353,7 @@ button.messenger-day-checklist__chip:active {
 .messenger-inbox__filter.is-active {
   background: #1d70b7;
   border-color: #1d70b7;
-  color: #ffffff;
+  color: var(--v4-bg, #ffffff);
 }
 
 .messenger-inbox__list {
@@ -3421,9 +3421,9 @@ button.messenger-day-checklist__chip:active {
   height: 18px;
   padding: 0 5px;
   border-radius: 9px;
-  background: #ef4444;
-  border: 2px solid #fff;
-  color: #fff;
+  background: var(--v4-warn-1, #ef4444);
+  border: 2px solid var(--v4-bg, #fff);
+  color: var(--v4-bg, #fff);
   font-size: 11px;
   font-weight: 700;
   display: flex;
@@ -3450,7 +3450,7 @@ button.messenger-day-checklist__chip:active {
   min-width: 0;
   font-size: 14.5px;
   font-weight: 600;
-  color: #111827;
+  color: var(--v4-ink, #111827);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3458,7 +3458,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-inbox__row.is-done .messenger-inbox__name {
   font-weight: 500;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .messenger-inbox__time {
@@ -3469,7 +3469,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-inbox__preview {
   font-size: 13px;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

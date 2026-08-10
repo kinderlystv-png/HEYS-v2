@@ -842,6 +842,42 @@ legacy fallbacks, несовпадающие пары; ещё ~63 hex тольк
 scope). Следующий кандидат — `1000-messenger.css` (~464 hex); альтернатива —
 `905-planning-chrono.css` (~233 hex).
 
+### Stage 6 batch 12 — 2026-08-10
+
+**Файлы (граница батча):**
+
+| Файл                                | Что сделано                                             | Литералов → `var(--v4-*)` |
+| ----------------------------------- | ------------------------------------------------------- | ------------------------- |
+| `styles/modules/1000-messenger.css` | весь файл (thread list, bubbles, composer, badges, FAB) | 75                        |
+
+**Инструмент:** `scripts/ui-v4-css-batch-codemod.mjs` — тот же scoped codemod и
+гейт классики, что в batch 3–11. Проверка: `ui-v4-check-classic-drift.mjs`
+(`--files=styles/modules/1000-messenger.css`) + `ui-v4-classic-drift.test.js`.
+
+**Исключено в batch 12 (намеренно, как в batch 2–11):**
+
+- `linear-gradient` / `radial-gradient` — bubble tails, shimmer, unread stripe
+- `rgba()` — без замены
+- семантические status/tint без classic-пары (`#dcfce7`, `#fef2f2`, `#fff1f1`,
+  `#a33b3b`, `#4c9a5e`, `#e2ecf2`, `#434587`)
+- messenger brand/accent без v4-совпадения (`#1d70b7`, `#185f9d`, `#1b2430`,
+  `#7c8a99`, `#667079`, `#2c4e68`)
+- legacy `var(--text-*, #…)` / `var(--bg-*, #…)` / `var(--border-color, #…)` —
+  не трогаем чужие fallback
+- тёмные правила с литералами ≠ `classic-dark` роли (`prefers-color-scheme`,
+  `[data-theme` blocks)
+- `backdrop-filter` blur tints — оставлены литералами
+
+**Остаток в `1000-messenger.css`:** ~393 bare hex (градиенты, rgba,
+семантические tint, brand blues, legacy fallbacks, несовпадающие пары; ещё ~75
+hex только как fallback в `var(--v4-*)`). Файл закрыт для stage 6 — следующий
+батч — другой модуль в `styles/`.
+
+**Параллельность:** не пересекается со Stage 4 Activity
+(`600-steps-and-aps.css`, `731-ui-v4-activity.css`, `apps/web/*.js` — вне
+scope). Следующий кандидат — `905-planning-chrono.css` (~233 hex); альтернатива
+— `500-pwa-and-offline.css` (~173 hex).
+
 ---
 
 ## Этап 7. Поток B — что осталось после вкладок
