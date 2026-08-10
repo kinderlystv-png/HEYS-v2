@@ -3346,19 +3346,20 @@
       );
     };
 
-    // Цвета Б/Ж/У статичны и не зависят от value/target: это категорийная
-    // палитра по типу данных, а не оценка. Роли внимания и воды сюда не
-    // подходят — жир не предупреждение, углеводы не вода. Литералы ждут
-    // решения владельца о расформировании категорийных палитр (2026-08-10).
+    // Цвета Б/Ж/У статичны и не зависят от value/target — это ряд «это другая
+    // штука», а не оценка. По решению владельца 2026-08-10 категорийная палитра
+    // расформирована: три ступени чернил набора вместо трёх сигналов. Ступени
+    // производные от --v4-ink, поэтому следуют за палитрой. Вид классики здесь
+    // меняется намеренно: цветные метки становятся серыми.
     return React.createElement('div', { className: `widget-macros widget-macros--${variant}` },
       React.createElement(MacroBar, {
-        label: 'Б', value: protein || 0, target: proteinTarget || 100, color: '#ef4444', cls: 'widget-macros__label--prot'
+        label: 'Б', value: protein || 0, target: proteinTarget || 100, color: 'var(--v4-mark-1)', cls: 'widget-macros__label--prot'
       }),
       React.createElement(MacroBar, {
-        label: 'Ж', value: fat || 0, target: fatTarget || 70, color: '#eab308', cls: 'widget-macros__label--fat'
+        label: 'Ж', value: fat || 0, target: fatTarget || 70, color: 'var(--v4-mark-2)', cls: 'widget-macros__label--fat'
       }),
       React.createElement(MacroBar, {
-        label: 'У', value: carbs || 0, target: carbsTarget || 250, color: '#3b82f6', cls: 'widget-macros__label--carbs'
+        label: 'У', value: carbs || 0, target: carbsTarget || 250, color: 'var(--v4-mark-3)', cls: 'widget-macros__label--carbs'
       })
     );
   }

@@ -80,6 +80,19 @@ function expand(hex) {
 
 const VAR_RE = /var\(\s*(--v4-[a-z0-9-]+)\s*,\s*(#[0-9a-fA-F]{3,8})\s*\)/g;
 
+// Роль без запасного значения обходит проверку выше: сравнивать не с чем.
+// Иногда это правильно — намеренная смена вида, как расформирование
+// категорийной палитры. Но тогда это должно быть сказано вслух, а не получиться
+// случайно, поэтому такие места требуют маркера рядом.
+const BARE_VAR_RE = /var\(\s*(--v4-[a-z0-9-]+)\s*\)/g;
+const INTENT_MARK = /v4-(?:intentional|mark-\d)|расформиров/i;
+
+function hasIntentNearby(src, index) {
+  const from = src.lastIndexOf('\n', src.lastIndexOf('\n', index - 1) - 1);
+  const to = src.indexOf('\n', index);
+  return INTENT_MARK.test(src.slice(Math.max(0, from), to === -1 ? src.length : to));
+}
+
 // Тёмное правило применяется только при тёмной теме, поэтому сверять его надо с
 // каноничной тёмной палитрой, а не со светлой.
 function isDarkSelector(sel) {
@@ -119,6 +132,19 @@ function checkFile(rel) {
       theme: dark ? 'каноничная тёмная' : 'каноничная',
     });
   }
+  for (const m of src.matchAll(BARE_VAR_RE)) {
+    if (hasIntentNearby(src, m.index)) continue;
+    findings.push({
+      file: rel,
+      line: src.slice(0, m.index).split('\n').length,
+      full: m[0],
+      literal: null,
+      role: m[1],
+      shown: 'нечему сравнивать',
+      theme: 'без запасного значения',
+    });
+  }
+
   return { abs, src, findings };
 }
 
@@ -134,13 +160,20 @@ for (const rel of scope) {
   total += findings.length;
   console.log(`\n${rel} — ${findings.length}`);
   for (const f of findings.slice(0, 8)) {
-    console.log(`  :${f.line} ${f.role} — было ${f.literal}, ${f.theme} покажет ${f.shown}`);
+    console.log(
+      f.literal
+        ? `  :${f.line} ${f.role} — было ${f.literal}, ${f.theme} покажет ${f.shown}`
+        : `  :${f.line} ${f.role} — без запасного значения, прежний цвет потерян`,
+    );
   }
   if (findings.length > 8) console.log(`  … ещё ${findings.length - 8}`);
 
   if (fix) {
     let next = src;
-    for (const f of findings) next = next.split(f.full).join(f.literal);
+    for (const f of findings) {
+      if (!f.literal) continue; // вернуть нечего — прежний цвет в коде не сохранён
+      next = next.split(f.full).join(f.literal);
+    }
     fs.writeFileSync(abs, next);
   }
 }
