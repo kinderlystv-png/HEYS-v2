@@ -384,6 +384,12 @@ Scope: только JS Home tab — `heys_widgets_ui_v1.js`,
 `var(--heys-*, #…)`, scale/threshold returns, gradient stop arrays,
 alpha-suffixed chip tokens (`#10b98112`).
 
+**Актив — структурный коммит 2026-08-10 (`7abfa3d25`).** Dot-grid «История» (14
+колонок, без Пн–Вс и номеров), кардио в «Сегодня» до «Действие», сняты
+`border: 1px` у hero/steps/rows/history/cardio. **Не расхождение:** копирайт
+героя (`buildHeroFooterLabel`) — «снижение по плану» и формула TEF разные
+состояния; не чинить. **Заметка дизайнеру:** цикл-множитель в макете опционален.
+
 ---
 
 ## Этап 5. Экран входа: выбор оформления
