@@ -43,7 +43,7 @@
 .metrics-card {
   position: relative;
   min-width: 0;
-  background: #f8fafc;
+  background: var(--v4-hero, #f8fafc);
   border: 1px solid var(--color-slate-200);
   border-radius: 10px;
   padding: 8px 4px;
@@ -328,7 +328,7 @@
   padding: 10px 14px;
   font-size: 12px;
   font-weight: 700;
-  color: #fff;
+  color: var(--v4-bg, #fff);
   background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
   box-shadow: 0 6px 14px rgba(234, 88, 12, 0.24);
   cursor: pointer;
@@ -412,7 +412,7 @@
 
 .sparkline-line {
   fill: none;
-  stroke: #22c55e;
+  stroke: var(--v4-ok-fill, #22c55e);
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -622,7 +622,7 @@
 }
 
 .sparkline-dot-ok {
-  fill: #22c55e;
+  fill: var(--v4-ok-fill, #22c55e);
   /* зелёный — в норме */
 }
 
@@ -698,7 +698,7 @@
 }
 
 .sparkline-day-today {
-  fill: #22c55e;
+  fill: var(--v4-ok-fill, #22c55e);
   font-weight: 600;
 }
 
@@ -864,7 +864,7 @@
 
 .sparkline-popup-v2 .sparkline-popup-tag-v2.bad {
   background: #fee2e2;
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
 }
 
 .sparkline-popup-v2 .sparkline-popup-tag-v2.perfect {
@@ -974,7 +974,7 @@
 
 /* === 05a. TDEE POPUP (расшифровка затрат) === */
 .tdee-popup {
-  background: #fff;
+  background: var(--v4-bg, #fff);
 }
 
 .tdee-bar-container {
@@ -1003,7 +1003,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 10px;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .tdee-details {
@@ -1017,7 +1017,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  background: #f8fafc;
+  background: var(--v4-hero, #f8fafc);
   border-radius: 8px;
   font-size: 13px;
 }
@@ -1056,12 +1056,12 @@
 }
 
 .tdee-positive {
-  color: #16a34a !important;
+  color: var(--v4-ok-text, #16a34a) !important;
 }
 
 .tdee-row-hint {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--v4-ink-3, #94a3b8);
   padding-left: 40px;
   margin-top: -4px;
 }
@@ -1126,7 +1126,7 @@
 
 .sparkline-popup-header .popup-pct.bad {
   background: #fee2e2;
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
 }
 
 /* Главная строка — калории */
@@ -1183,7 +1183,7 @@
 
 .sparkline-popup-tag.bad {
   background: #fee2e2;
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
 }
 
 /* Золотой стиль для идеальных дней */
@@ -1217,7 +1217,7 @@
 }
 
 .sparkline-popup-value.good {
-  color: #22c55e;
+  color: var(--v4-ok-fill, #22c55e);
 }
 
 .sparkline-popup-value.warn {
@@ -1297,7 +1297,7 @@
 
 /* Dark mode */
 [data-theme="dark"] .sparkline-popup {
-  background: #1e293b;
+  background: var(--v4-hero, #1e293b);
   border-color: var(--color-slate-700);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
@@ -1330,18 +1330,18 @@
 
 @media (hover: hover) {
   [data-theme="dark"] .sparkline-popup-btn:hover {
-  background: #475569;
+  background: var(--v4-ink-4, #475569);
 }
 }
 
 /* Dark mode: sparkline-popup-v2 */
 [data-theme="dark"] .sparkline-popup-v2 {
-  background: #1e293b;
+  background: var(--v4-hero, #1e293b);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-swipe {
-  background: #475569;
+  background: var(--v4-ink-4, #475569);
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-date {
@@ -1362,8 +1362,8 @@
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-compare.up {
-  background: #14532d;
-  color: #4ade80;
+  background: var(--v4-ok-bg, #14532d);
+  color: var(--v4-ok-text, #4ade80);
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-compare.down {
@@ -1377,8 +1377,8 @@
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2.good {
-  background: #14532d;
-  color: #4ade80;
+  background: var(--v4-ok-bg, #14532d);
+  color: var(--v4-ok-text, #4ade80);
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2.bad {
@@ -1389,7 +1389,7 @@
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2.perfect {
   background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
   border-color: #92400e;
-  color: #fbbf24;
+  color: var(--v4-warn-soft, #fbbf24);
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2 {
@@ -1399,14 +1399,14 @@
 
 @media (hover: hover) {
   [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2:hover {
-  background: #475569;
+  background: var(--v4-ink-4, #475569);
 }
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2.perfect {
   background: linear-gradient(135deg, #451a03 0%, #78350f 100%);
   border-color: #92400e;
-  color: #fbbf24;
+  color: var(--v4-warn-soft, #fbbf24);
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-close {
@@ -1422,7 +1422,7 @@
 }
 
 [data-theme="dark"] .sparkline-popup-v2 .sparkline-popup-arrow {
-  border-bottom-color: #1e293b;
+  border-bottom-color: var(--v4-hero, #1e293b);
 }
 
 [data-theme="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 {
@@ -1435,13 +1435,13 @@
 }
 
 [data-theme="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-perfect-title {
-  color: #fbbf24;
+  color: var(--v4-warn-soft, #fbbf24);
 }
 
 [data-theme="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-motivation-v2 {
   background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
   border-color: #b45309;
-  color: #fbbf24;
+  color: var(--v4-warn-soft, #fbbf24);
 }
 
 [data-theme="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-progress {
@@ -1489,7 +1489,7 @@
 
 /* 80-95% */
 .sparkline-heatmap-day.level-3 {
-  background: #22c55e;
+  background: var(--v4-ok-fill, #22c55e);
 }
 
 /* 95-105% - идеал */
@@ -1868,7 +1868,7 @@
 
 .sparkline-slider-tooltip-ratio.ratio-over {
   background: #fee2e2;
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
 }
 
 /* Main row: калории */
@@ -1917,7 +1917,7 @@
 
 .sparkline-slider-tooltip-tag.bad {
   background: #fee2e2;
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
 }
 
 /* Weekly Rhythm — вертикальные сепараторы недель */
@@ -1974,7 +1974,7 @@
 
 .sparkline-annotation-training {
   font-size: 10px;
-  fill: #3b82f6;
+  fill: var(--v4-water, #3b82f6);
   /* фиолетовый для тренировок */
   opacity: 0;
   animation: fadeInSimple 0.3s ease-out forwards;
@@ -2198,7 +2198,7 @@
 }
 
 .sparkline-max-label {
-  fill: #22c55e;
+  fill: var(--v4-ok-fill, #22c55e);
 }
 
 /* Золотые пульсирующие точки для идеальных дней */
@@ -2489,7 +2489,7 @@
 .week-heatmap-action-label {
   font-size: 11px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   cursor: pointer;
   letter-spacing: 0.01em;
 }
@@ -2506,7 +2506,7 @@
   border-radius: 8px;
   border: 1px solid rgba(191, 219, 254, 0.82);
   background: linear-gradient(180deg, #ffffff, #eff6ff);
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-size: 12px;
   line-height: 1;
   display: flex;
@@ -2589,7 +2589,7 @@
 
 .week-heatmap-norm {
   font-size: 11px;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   cursor: pointer;
   padding: 6px 10px;
   border-radius: 999px;
@@ -2614,7 +2614,7 @@
 }
 
 .week-heatmap-stat.deficit-good {
-  color: #16a34a;
+  color: var(--v4-ok-text, #16a34a);
   font-weight: 600;
 }
 
@@ -2624,7 +2624,7 @@
 }
 
 .week-heatmap-stat.deficit-bad {
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
   font-weight: 600;
 }
 
@@ -2664,7 +2664,7 @@
 /* Выходные: красный текст + розовая рамка */
 .week-heatmap-day.weekend .week-heatmap-date,
 .week-heatmap-day.weekend .week-heatmap-name {
-  color: #ef4444;
+  color: var(--v4-warn-1, #ef4444);
 }
 
 .week-heatmap-day.weekend .week-heatmap-date {
@@ -2715,12 +2715,12 @@
 
 /* Статусы — fallback если нет inline градиента */
 .week-heatmap-day.low .week-heatmap-cell:not([style*="background"]) {
-  background: #eab308;
+  background: var(--v4-warn-soft, #eab308);
   /* жёлтый для low */
 }
 
 .week-heatmap-day.green .week-heatmap-cell:not([style*="background"]) {
-  background: #22c55e;
+  background: var(--v4-ok-fill, #22c55e);
 }
 
 .week-heatmap-day.perfect .week-heatmap-cell:not([style*="background"]) {
@@ -2728,7 +2728,7 @@
 }
 
 .week-heatmap-day.yellow .week-heatmap-cell:not([style*="background"]) {
-  background: #eab308;
+  background: var(--v4-warn-soft, #eab308);
 }
 
 .week-heatmap-day.red .week-heatmap-cell:not([style*="background"]) {
@@ -2819,7 +2819,7 @@
   align-items: center;
   gap: 6px;
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--v4-ink-3, #94a3b8);
   margin-top: 4px;
 }
 
@@ -2834,7 +2834,7 @@
   right: 10px;
   font-size: 10px;
   font-weight: 600;
-  color: #eab308;
+  color: var(--v4-warn-soft, #eab308);
   background: #fff7ed;
   border: 1px solid rgba(234, 179, 8, 0.35);
   padding: 2px 6px;
@@ -2927,7 +2927,7 @@
 [data-theme="dark"] .week-heatmap-norm,
 [data-theme="dark"] .week-heatmap-name,
 [data-theme="dark"] .week-heatmap-deficit-target-line {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme="dark"] .week-heatmap-action {
@@ -3050,7 +3050,7 @@
   background: rgba(239, 68, 68, 0.1);
   border-radius: 6px;
   font-size: 12px;
-  color: #ef4444;
+  color: var(--v4-warn-1, #ef4444);
 }
 
 /* === CALORIC BALANCE CARD — Раскрывающаяся карточка баланса === */
@@ -3113,7 +3113,7 @@
 .caloric-balance-boost {
   font-size: 11px;
   font-weight: 500;
-  color: #22c55e;
+  color: var(--v4-ok-fill, #22c55e);
 }
 
 .caloric-balance-rec-short {
@@ -3161,7 +3161,7 @@
 .caloric-balance-badge {
   font-size: 12px;
   font-weight: 700;
-  color: #fff;
+  color: var(--v4-bg, #fff);
   padding: 3px 8px;
   border-radius: 10px;
   white-space: nowrap;
@@ -3308,7 +3308,7 @@
 .caloric-debt-badge {
   font-size: 11px;
   font-weight: 700;
-  color: #fff;
+  color: var(--v4-bg, #fff);
   padding: 3px 8px;
   border-radius: 10px;
   white-space: nowrap;
@@ -3373,7 +3373,7 @@
   top: -6px;
   right: -4px;
   font-size: 12px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
   border-radius: 50%;
   padding: 1px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
@@ -3407,7 +3407,7 @@
   gap: 6px;
   font-size: 12px;
   font-weight: 500;
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
   padding: 6px 10px;
   background: rgba(239, 68, 68, 0.08);
   border-radius: 8px;
@@ -3479,7 +3479,7 @@
 .debt-card-boost {
   font-size: 12px;
   font-weight: 500;
-  color: #22c55e;
+  color: var(--v4-ok-fill, #22c55e);
   background: rgba(34, 197, 94, 0.1);
   padding: 2px 8px;
   border-radius: 12px;
@@ -3498,7 +3498,7 @@
   border-radius: 50%;
   border: 1.5px solid rgba(59, 130, 246, 0.3);
   background: rgba(59, 130, 246, 0.05);
-  color: #3b82f6;
+  color: var(--v4-water, #3b82f6);
   font-size: 11px;
   font-weight: 700;
   display: flex;
@@ -3523,7 +3523,7 @@
 }
 
 .debt-card.expanded .debt-card-chevron {
-  color: #3b82f6;
+  color: var(--v4-water, #3b82f6);
 }
 
 /* Expanded view */
@@ -3634,7 +3634,7 @@
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #22c55e;
+  color: var(--v4-ok-fill, #22c55e);
   padding: 8px 12px;
   background: rgba(34, 197, 94, 0.06);
   border-radius: 8px;
@@ -3655,7 +3655,7 @@
 .debt-plan-header {
   font-size: 11px;
   font-weight: 600;
-  color: #3b82f6;
+  color: var(--v4-water, #3b82f6);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -3674,7 +3674,7 @@
 }
 
 .debt-plan-result {
-  color: #22c55e;
+  color: var(--v4-ok-fill, #22c55e);
   font-size: 15px;
 }
 
@@ -3812,7 +3812,7 @@
 }
 
 [data-theme="dark"] .debt-summary-row strong {
-  color: #f1f5f9;
+  color: var(--v4-ink, #f1f5f9);
 }
 
 [data-theme="dark"] .debt-day-bar-wrap {
@@ -3897,7 +3897,7 @@
 .caloric-excess-success .caloric-excess-rec-text {
   font-size: 13px;
   font-weight: 600;
-  color: #16a34a;
+  color: var(--v4-ok-text, #16a34a);
 }
 
 /* Cardio recommendation */
@@ -4002,7 +4002,7 @@
 .caloric-insights-badge {
   font-size: 11px;
   font-weight: 600;
-  color: #fff;
+  color: var(--v4-bg, #fff);
   background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
   padding: 3px 8px;
   border-radius: 10px;
@@ -4141,7 +4141,7 @@
 
 /* Severity colors (border-left-color) */
 .caloric-insight-item-v2.severity-critical {
-  border-left-color: #ef4444;
+  border-left-color: var(--v4-warn-1, #ef4444);
   background: rgba(239, 68, 68, 0.06);
 }
 
@@ -4151,12 +4151,12 @@
 }
 
 .caloric-insight-item-v2.severity-positive {
-  border-left-color: #22c55e;
+  border-left-color: var(--v4-ok-fill, #22c55e);
   background: rgba(34, 197, 94, 0.05);
 }
 
 .caloric-insight-item-v2.severity-info {
-  border-left-color: #3b82f6;
+  border-left-color: var(--v4-water, #3b82f6);
   background: rgba(59, 130, 246, 0.05);
 }
 
@@ -4341,7 +4341,7 @@
 .weight-single-hint {
   margin-top: 8px;
   font-size: 12px;
-  color: #3b82f6;
+  color: var(--v4-water, #3b82f6);
   opacity: 0.8;
 }
 
@@ -4373,7 +4373,7 @@
 
 .weight-trend-badge.up {
   background: #fee2e2;
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
 }
 
 .weight-trend-badge.same {
@@ -4482,7 +4482,7 @@
 /* Статистика по циклам */
 .weight-retention-stats {
   font-size: 10px;
-  color: #9ca3af;
+  color: var(--v4-ink-4, #9ca3af);
   margin-top: 2px;
   padding-top: 4px;
   border-top: 1px dashed rgba(236, 72, 153, 0.2);
@@ -4960,7 +4960,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  background: #fff;
+  background: var(--v4-bg, #fff);
 }
 
 .goal-unit {
@@ -5130,7 +5130,7 @@
 .goal-current-pct {
   display: inline-block;
   background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-  color: #fff;
+  color: var(--v4-bg, #fff);
   font-size: 11px;
   font-weight: 700;
   padding: 3px 8px;
@@ -5208,7 +5208,7 @@
 
 /* Circadian badge — time-based urgency */
 .context-badge-circadian {
-  background: #dbeafe;
+  background: var(--v4-accent-bg, #dbeafe);
   color: #1e40af;
 }
 
@@ -5287,7 +5287,7 @@
 }
 
 .goal-remaining b {
-  color: #22c55e;
+  color: var(--v4-ok-fill, #22c55e);
   font-weight: 700;
   font-size: 16px;
 }
@@ -5373,7 +5373,7 @@
   height: 68px;
   border-radius: 50%;
   /* Чистый белый фон без "грязи" */
-  background: #ffffff;
+  background: var(--v4-bg, #ffffff);
   /* Мягкая внешняя тень вместо жесткой "грязной" */
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.06),
@@ -5424,7 +5424,7 @@
 
 .macro-ring-fill--over {
   fill: none;
-  stroke: #ef4444;
+  stroke: var(--v4-warn-1, #ef4444);
   /* Ярко-красный для перебора */
   stroke-width: 5;
   stroke-linecap: round;
@@ -5434,7 +5434,7 @@
 
 /* Точка-блик на конце дуги */
 .macro-ring-dot {
-  fill: #ffffff;
+  fill: var(--v4-bg, #ffffff);
   stroke: var(--macro-ring-dot, #ffffff);
   stroke-width: 1.5;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.18));
@@ -5471,7 +5471,7 @@
 
 /* Цвета - делаем чуть насыщеннее */
 .macro-ring.protein {
-  --macro-ring-color: #ef4444;
+  --macro-ring-color: var(--v4-warn-1, #ef4444);
   /* Red-500 */
   --macro-ring-over: #b91c1c;
   /* Red-700 */
@@ -5487,7 +5487,7 @@
 
 
 .macro-ring.carbs {
-  --macro-ring-color: #22c55e;
+  --macro-ring-color: var(--v4-ok-fill, #22c55e);
   /* Green-500 */
   --macro-ring-over: #15803d;
   /* Green-700 */
@@ -5518,7 +5518,7 @@
 .macro-ring-target {
   font-size: 11px;
   font-weight: 500;
-  color: #94a3b8;
+  color: var(--v4-ink-3, #94a3b8);
   /* Slate-400 */
 }
 
@@ -5669,7 +5669,7 @@
   gap: 6px;
   margin-bottom: 8px;
   padding: 6px 8px;
-  background: #f8fafc;
+  background: var(--v4-hero, #f8fafc);
   border-radius: 6px;
 }
 
@@ -6294,7 +6294,7 @@
   .dev-clear-weight-mini:hover {
   opacity: 1;
   background: rgba(220, 38, 38, 0.2);
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
 }
 }
 
@@ -6305,7 +6305,7 @@
   border: none;
   border-radius: 50%;
   background: rgba(220, 38, 38, 0.15);
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
   font-size: 10px;
   line-height: 1;
   cursor: pointer;
@@ -6332,7 +6332,7 @@
 }
 
 .weight-card-trend.trend-up {
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
 }
 
 .weight-card-trend.trend-same {
@@ -6518,17 +6518,17 @@
 
 .activity-charge-card-status--missed {
   background: rgba(248, 113, 113, 0.14);
-  color: #ef4444;
+  color: var(--v4-warn-1, #ef4444);
 }
 
 .activity-charge-card-status--done {
   background: rgba(34, 197, 94, 0.14);
-  color: #16a34a;
+  color: var(--v4-ok-text, #16a34a);
 }
 
 .activity-charge-card-status--replacement {
   background: rgba(59, 130, 246, 0.14);
-  color: #2563eb;
+  color: var(--v4-act, #2563eb);
 }
 
 .activity-charge-card .compact-trainings {
@@ -6586,7 +6586,7 @@
 
 .ma-skip-notice-sub {
   margin-top: 2px;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.35;
@@ -6619,7 +6619,7 @@
 }
 
 .ma-done-notice-card--replacement .ma-done-notice-text {
-  color: #1d4ed8;
+  color: var(--v4-act-text, #1d4ed8);
 }
 
 /* Правая колонка: быт + кнопка */
@@ -6633,7 +6633,7 @@
 .household-activity-card {
   flex: 1;
   background: var(--color-white);
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--v4-line, #e5e7eb);
   border-radius: 12px;
   padding: 12px var(--heys-diary-card-padding-x, 16px);
   cursor: pointer;
@@ -6646,7 +6646,7 @@
 
 @media (hover: hover) {
   .household-activity-card:hover {
-  border-color: #22c55e;
+  border-color: var(--v4-ok-fill, #22c55e);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
 }
@@ -6702,7 +6702,7 @@
 
 .household-value-kcal {
   font-size: 12px;
-  color: #22c55e;
+  color: var(--v4-ok-fill, #22c55e);
   font-weight: 500;
   margin-top: 2px;
 }
@@ -6743,9 +6743,9 @@
   width: 100%;
   margin-top: 8px;
   padding: 10px 12px;
-  border: 1px dashed #22c55e;
+  border: 1px dashed var(--v4-ok-fill, #22c55e);
   background: rgba(34, 197, 94, 0.08);
-  color: #16a34a;
+  color: var(--v4-ok-text, #16a34a);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -6755,7 +6755,7 @@
 
 @media (hover: hover) {
   .household-add-btn:hover {
-  border-color: #16a34a;
+  border-color: var(--v4-ok-text, #16a34a);
   background: rgba(34, 197, 94, 0.15);
 }
 }
@@ -6863,7 +6863,7 @@
 
 .household-value-kcal {
   font-size: 12px;
-  color: #22c55e;
+  color: var(--v4-ok-fill, #22c55e);
   margin-left: 8px;
   font-weight: 500;
 }
@@ -6872,7 +6872,7 @@
 .formula-card {
   flex: 1;
   background: var(--color-white);
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--v4-line, #e5e7eb);
   border-radius: 12px;
   padding: 12px var(--heys-diary-card-padding-x, 16px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -6921,7 +6921,7 @@
 .formula-row.formula-total {
   margin-top: 6px;
   padding-top: 6px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--v4-line, #e5e7eb);
 }
 
 .formula-row.formula-total .formula-label {
@@ -6938,7 +6938,7 @@
 .formula-row.formula-subtotal {
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px dashed #e5e7eb;
+  border-top: 1px dashed var(--v4-line, #e5e7eb);
 }
 
 /* 🔥 NDTE — эффект вчерашней тренировки */
@@ -6970,11 +6970,11 @@
 }
 
 .formula-row.deficit .formula-label {
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
 }
 
 .formula-row.deficit .formula-value {
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
   font-weight: 600;
 }
 
@@ -7307,8 +7307,8 @@
 }
 
 .training-zone-header.zone-color-1 {
-  background: #dbeafe;
-  color: #2563eb;
+  background: var(--v4-accent-bg, #dbeafe);
+  color: var(--v4-act, #2563eb);
 }
 
 .training-zone-header.zone-color-2 {
@@ -7323,7 +7323,7 @@
 
 .training-zone-header.zone-color-4 {
   background: #fee2e2;
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
 }
 
 .training-zone-column .wheel-column {
@@ -7363,7 +7363,7 @@
 /* Training presets */
 .training-presets-section {
   padding: 8px 16px 12px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--v4-line, #e5e7eb);
 }
 
 .training-presets-label {
@@ -7385,7 +7385,7 @@
   font-size: 13px;
   font-weight: 500;
   color: #374151;
-  background: #f8fafc;
+  background: var(--v4-hero, #f8fafc);
   border: 1px solid var(--color-slate-200);
   border-radius: 10px;
   cursor: pointer;
@@ -7515,7 +7515,7 @@
 }
 
 .training-comment-prompt.negative .training-comment-text {
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
 }
 
 .training-comment-input {
@@ -7560,7 +7560,7 @@
   border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
-  color: #16a34a;
+  color: var(--v4-ok-text, #16a34a);
 }
 
 .training-card-duration-icon {
@@ -7632,7 +7632,7 @@
 }
 
 .training-card-rating.mood .training-card-rating-value {
-  color: #16a34a;
+  color: var(--v4-ok-text, #16a34a);
 }
 
 /* Stress (усталость) - синий */
@@ -7642,7 +7642,7 @@
 }
 
 .training-card-rating.stress .training-card-rating-value {
-  color: #2563eb;
+  color: var(--v4-act, #2563eb);
 }
 
 .training-card-rating-emoji {
@@ -7764,7 +7764,7 @@
   justify-content: center;
   gap: 8px;
   padding: 12px 0 8px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--v4-line, #e5e7eb);
 }
 
 .picker-step-dot {
@@ -7776,7 +7776,7 @@
 }
 
 .picker-step-dot.active {
-  background: #3b82f6;
+  background: var(--v4-water, #3b82f6);
 }
 
 /* DEV: Clear weight button */
@@ -7817,7 +7817,7 @@
   line-height: 14px;
   color: var(--color-gray-400);
   background: transparent;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--v4-line, #e5e7eb);
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -7840,7 +7840,7 @@
 
 .weight-picker-section {
   padding: 12px 16px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--v4-line, #e5e7eb);
 }
 
 .weight-picker-section:last-child {
@@ -7908,9 +7908,9 @@
   font-size: 18px;
   font-weight: 600;
   text-align: center;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--v4-line, #e5e7eb);
   border-radius: 8px;
-  background: #f8fafc;
+  background: var(--v4-hero, #f8fafc);
   color: var(--success-dark);
 }
 
@@ -8129,7 +8129,7 @@
 /* Nutrition - зеленоватый */
 .macro-toast-nutrition {
   --toast-gradient: linear-gradient(135deg, #86efac 0%, #22c55e 100%);
-  --toast-bg: #f0fdf4;
+  --toast-bg: var(--v4-ok-bg, #f0fdf4);
   /* green-50 */
 }
 
@@ -8911,7 +8911,7 @@
   margin-bottom: 20px;
   font-size: 17px;
   font-weight: 700;
-  color: #fff;
+  color: var(--v4-bg, #fff);
   background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
   border: none;
   border-radius: 16px;

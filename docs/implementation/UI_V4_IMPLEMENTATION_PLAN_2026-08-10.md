@@ -705,6 +705,41 @@ scope). Следующий кандидат — `300-modals-and-day.css` (~316 h
 scope). Следующий кандидат — `100-metrics-and-graphs.css` (~542 hex);
 альтернатива — `725-metabolic-intelligence.css` (~636 hex).
 
+### Stage 6 batch 8 — 2026-08-10
+
+**Файлы (граница батча):**
+
+| Файл                                        | Что сделано                                             | Литералов → `var(--v4-*)` |
+| ------------------------------------------- | ------------------------------------------------------- | ------------------------- |
+| `styles/modules/100-metrics-and-graphs.css` | весь файл (macro ring, sparklines, goal badges, charts) | 114                       |
+
+**Инструмент:** `scripts/ui-v4-css-batch-codemod.mjs` — тот же scoped codemod и
+гейт классики, что в batch 3–7. Проверка: `ui-v4-check-classic-drift.mjs`
+(`--files=styles/modules/100-metrics-and-graphs.css`) +
+`ui-v4-classic-drift.test.js`.
+
+**Исключено в batch 8 (намеренно, как в batch 2–7):**
+
+- `linear-gradient` / `radial-gradient` — sparkline tint, macro ring, skeleton
+  shimmer
+- `rgba()` — без замены
+- семантические chart/goal цвета без classic-пары (`#166534`, `#bbf7d0`,
+  `#ca8a04`, `#f59e0b`, `#f97316`, `#ea580c`, `#9a3412`, `#7c2d12`, `#c2410c`)
+- legacy `var(--color-*, #…)` / `var(--goal-badge-color, #…)` — не трогаем чужие
+  fallback
+- `--sparkline-bg-*` custom properties с градиентными stop-литералами
+- тёмные правила с литералами ≠ `classic-dark` роли
+
+**Остаток в `100-metrics-and-graphs.css`:** ~366 bare hex (градиенты, rgba,
+семантические tint/chart, несовпадающие пары; ещё ~114 hex только как fallback в
+`var(--v4-*)`). Файл закрыт для stage 6 — следующий батч — другой модуль в
+`styles/`.
+
+**Параллельность:** не пересекается со Stage 4 Activity
+(`600-steps-and-aps.css`, `731-ui-v4-activity.css`, `apps/web/*.js` — вне
+scope). Следующий кандидат — `725-metabolic-intelligence.css` (~592 hex);
+альтернатива — `200-dark-and-effects.css` (~499 hex).
+
 ---
 
 ## Этап 7. Поток B — что осталось после вкладок
