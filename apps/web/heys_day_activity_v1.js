@@ -504,6 +504,21 @@
         React.createElement('div', { className: 'activity-v4-steps__hint' }, stepsK + ' ккал · правка ползунком')
       ),
 
+      regularTrainingsBlock && React.createElement('div', { className: 'activity-v4-cardio' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'activity-v4-cardio__toggle',
+          onClick: () => setCardioOpen((v) => !v),
+          'aria-expanded': cardioOpen
+        },
+          React.createElement('span', null, 'Кардио'),
+          React.createElement('span', { className: 'activity-v4-cardio__toggle-value' },
+            cardioKcal > 0 ? cardioKcal + ' ккал' : 'не отмечено'
+          )
+        ),
+        cardioOpen && React.createElement('div', { className: 'activity-v4-cardio__body' }, regularTrainingsBlock)
+      ),
+
       todayRows.length > 0 && React.createElement('div', { className: 'activity-v4-rows' }, todayRows),
 
       React.createElement('div', { className: 'activity-v4-tier' }, 'Действие'),
@@ -539,21 +554,6 @@
           ))
         ),
         monthOpen && monthCount === 0 && React.createElement('div', { className: 'month-trainings-empty' }, 'Нет тренировок за последние 30 дней')
-      ),
-
-      regularTrainingsBlock && React.createElement('div', { className: 'activity-v4-cardio' },
-        React.createElement('button', {
-          type: 'button',
-          className: 'activity-v4-cardio__toggle',
-          onClick: () => setCardioOpen((v) => !v),
-          'aria-expanded': cardioOpen
-        },
-          React.createElement('span', null, 'Кардио'),
-          React.createElement('span', { className: 'activity-v4-cardio__toggle-value' },
-            cardioKcal > 0 ? cardioKcal + ' ккал' : 'не отмечено'
-          )
-        ),
-        cardioOpen && React.createElement('div', { className: 'activity-v4-cardio__body' }, regularTrainingsBlock)
       ),
 
       activitySheet

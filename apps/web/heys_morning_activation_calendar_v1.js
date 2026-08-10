@@ -357,6 +357,10 @@
       + (isActivityV4 ? '' : 'compact-card widget-shadow-diary-glass widget-outline-diary-glass ')
       + (layoutClass || '').trim();
 
+    const displayGrid = isActivityV4
+      ? calendarData.grid.filter((cell) => !cell.isEmpty)
+      : calendarData.grid;
+
     return React.createElement('div', { className: shellClass.trim() },
       React.createElement('div', { className: 'ma-habit-cal-head' },
         isActivityV4
@@ -372,14 +376,16 @@
       ),
       periodRow,
       React.createElement('div', { className: 'ma-habit-cal-matrix' },
-        React.createElement('div', { className: 'ma-habit-cal-weekdays' },
+        !isActivityV4 && React.createElement('div', { className: 'ma-habit-cal-weekdays' },
           WEEKDAY_SHORT.map((label, idx) => React.createElement('div', {
             key: 'wd-' + label,
             className: 'ma-habit-cal-wd' + (idx >= 5 ? ' ma-habit-cal-wd--weekend' : '')
           }, label))
         ),
-        React.createElement('div', { className: 'ma-habit-cal-grid' },
-          calendarData.grid.map((cell) => {
+        React.createElement('div', {
+          className: 'ma-habit-cal-grid' + (isActivityV4 ? ' ma-habit-cal-grid--dot' : '')
+        },
+          displayGrid.map((cell) => {
           if (cell.isEmpty) {
             return React.createElement('div', { key: cell.id, className: 'ma-habit-cal-cell ma-habit-cal-cell--empty' });
           }
@@ -398,7 +404,7 @@
             className: 'ma-habit-cal-cell ' + rowStatus + (cell.isToday ? ' is-today' : '') + (weekend ? ' is-weekend' : ''),
             title
           },
-          React.createElement('div', { className: 'ma-habit-cal-cell-inner' },
+          !isActivityV4 && React.createElement('div', { className: 'ma-habit-cal-cell-inner' },
             React.createElement('span', { className: 'ma-habit-cal-daynum' }, cell.dayOfMonth)
           )
           );

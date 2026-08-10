@@ -38,6 +38,17 @@ describe('Activity tab v4 structure', () => {
   it('calendar supports v4 heading and hides footer in v4', () => {
     expect(calendarSource).toContain('ma-habit-cal--activity-v4');
     expect(calendarSource).toContain('Зарядка ·');
+    expect(calendarSource).toContain('ma-habit-cal-grid--dot');
+    expect(calendarSource).toContain('!isActivityV4 && React.createElement(\'div\', { className: \'ma-habit-cal-weekdays\'');
+  });
+
+  it('cardio sits in Сегодня tier before Действие', () => {
+    const cardioIdx = activitySource.indexOf('activity-v4-cardio');
+    const actionIdx = activitySource.indexOf("'Действие'");
+    const historyIdx = activitySource.indexOf("'История'");
+    expect(cardioIdx).toBeGreaterThan(-1);
+    expect(cardioIdx).toBeLessThan(actionIdx);
+    expect(cardioIdx).toBeLessThan(historyIdx);
   });
 
   it('activity renders only on activity mobile subtab', () => {
@@ -51,6 +62,8 @@ describe('Activity tab v4 structure', () => {
     expect(cssSource).toContain('.activity-v4-cta');
     expect(cssSource).toContain('var(--v4-hero');
     expect(cssSource).toContain('var(--v4-ink-2');
+    expect(cssSource).toContain('ma-habit-cal-grid--dot');
+    expect(cssSource).not.toMatch(/\.activity-v4-hero\s*\{[^}]*border:\s*1px/s);
     expect(cssSource).toMatch(/v4-intentional.*var\(--v4-act\)/s);
   });
 });
