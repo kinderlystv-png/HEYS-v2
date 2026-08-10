@@ -18,19 +18,19 @@
       id: 'nutrition',
       label: 'Питание',
       icon: '🍎',
-      color: 'var(--v4-warn-soft, #f97316)'
+      color: '#f97316'
     },
     health: {
       id: 'health',
       label: 'Здоровье',
       icon: '❤️',
-      color: 'var(--v4-ink-2, #8b5cf6)'
+      color: '#8b5cf6'
     },
     motivation: {
       id: 'motivation',
       label: 'Мотивация',
       icon: '🎯',
-      color: 'var(--v4-ok-fill, #10b981)'
+      color: '#10b981'
     },
     advanced: {
       id: 'advanced',
@@ -42,7 +42,7 @@
       id: 'cycle',
       label: 'Цикл',
       icon: '🌸',
-      color: 'var(--v4-warn-soft, #ec4899)'
+      color: '#ec4899'
     }
   };
 

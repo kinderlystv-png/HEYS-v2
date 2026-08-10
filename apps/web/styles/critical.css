@@ -9,7 +9,7 @@
   --bg: var(--v4-bg, #ffffff);
   --card: var(--v4-bg, #ffffff);
   --text: var(--v4-ink, #111827);
-  --muted: var(--v4-ink-2, #6b7280);
+  --muted: #6b7280;
   --border: var(--v4-line, #e5e7eb);
   --acc: var(--v4-act, #2563eb);
   --acc-contrast: var(--v4-bg, #ffffff);
@@ -117,8 +117,8 @@ body {
 .heys-tab-skeleton {
   --heys-skeleton-surface: var(--v4-bg, #fff);
   --heys-skeleton-soft: var(--v4-hero, #f8fafc);
-  --heys-skeleton-fill: var(--v4-line, #e2e8f0);
-  --heys-skeleton-highlight: var(--v4-surface, #f1f5f9);
+  --heys-skeleton-fill: #e2e8f0;
+  --heys-skeleton-highlight: #f1f5f9;
   --heys-skeleton-border: #e8edf3;
   width: 100%;
   min-height: calc(100dvh - 176px - env(safe-area-inset-bottom, 0px));
@@ -510,11 +510,11 @@ body {
 [data-theme="dark"] .heys-tab-skeleton,
 html.board-dark-nav .heys-tab-skeleton,
 body.board-dark-nav .heys-tab-skeleton {
-  --heys-skeleton-surface: var(--v4-surface, #1e293b);
-  --heys-skeleton-soft: var(--v4-bg, #111827);
-  --heys-skeleton-fill: var(--v4-ink-2, #475569);
-  --heys-skeleton-highlight: var(--v4-line, #334155);
-  --heys-skeleton-border: var(--v4-line, #334155);
+  --heys-skeleton-surface: #1e293b;
+  --heys-skeleton-soft: #111827;
+  --heys-skeleton-fill: #475569;
+  --heys-skeleton-highlight: #334155;
+  --heys-skeleton-border: #334155;
 }
 
 @media (max-width: 520px) {
@@ -672,7 +672,7 @@ body.board-dark-nav .heys-tab-skeleton {
 .hdr-client-name {
   font-size: 12px;
   font-weight: 600;
-  color: var(--v4-ink, #1f2937);
+  color: #1f2937;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -801,7 +801,7 @@ body:has(:is(
 }
 
 .tab.tab-switch.active {
-  background: var(--v4-surface, #dbeafe);
+  background: #dbeafe;
   color: #0f5fd7;
   box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.22), 0 2px 8px rgba(37, 99, 235, 0.18);
 }
@@ -812,7 +812,7 @@ body:has(:is(
 
 @media (prefers-color-scheme: dark) {
   html:not([data-theme]) .hdr {
-    background: var(--v4-bg, #111827);
+    background: #111827;
   }
 
   html:not([data-theme]) .hdr-bottom {
@@ -823,7 +823,7 @@ body:has(:is(
   html:not([data-theme]) .hdr-client-firstname,
   html:not([data-theme]) .hdr-client-lastname,
   html:not([data-theme]) .hdr-client-name {
-    color: var(--v4-ink, #f9fafb);
+    color: #f9fafb;
   }
 
   html:not([data-theme]) .tabs {
@@ -841,13 +841,13 @@ body:has(:is(
   }
 
   html:not([data-theme]) .tab.tab-switch.active {
-    background: var(--v4-act, #0a84ff);
+    background: #0a84ff;
     color: white;
   }
 }
 
 [data-theme="dark"] .hdr {
-  background: var(--v4-bg, #111827);
+  background: #111827;
 }
 
 [data-theme="dark"] .hdr-bottom {
@@ -858,7 +858,7 @@ body:has(:is(
 [data-theme="dark"] .hdr-client-firstname,
 [data-theme="dark"] .hdr-client-lastname,
 [data-theme="dark"] .hdr-client-name {
-  color: var(--v4-ink, #f9fafb);
+  color: #f9fafb;
 }
 
 [data-theme="dark"] .tabs {
@@ -876,7 +876,7 @@ body:has(:is(
 }
 
 [data-theme="dark"] .tab.tab-switch.active {
-  background: var(--v4-act, #0a84ff);
+  background: #0a84ff;
   color: white;
 }
 
@@ -942,7 +942,7 @@ body:has(:is(
   position: relative;
   min-width: 0;
   background: var(--v4-hero, #f8fafc);
-  border: 1px solid var(--v4-line, #e2e8f0);
+  border: 1px solid #e2e8f0;
   border-radius: 10px;
   padding: 8px 4px;
   text-align: center;
@@ -1105,21 +1105,21 @@ body:has(:is(
 
 @media (prefers-color-scheme: dark) {
   html:not([data-theme]) .card {
-    background: var(--v4-surface, #1f2937);
-    border-color: var(--v4-ink, #374151);
+    background: #1f2937;
+    border-color: #374151;
   }
 
   html:not([data-theme]) .card.tone-slate {
-    background: var(--v4-bg, #111827);
+    background: #111827;
   }
 
   html:not([data-theme]) .metrics-card {
-    background: var(--v4-surface, #1e293b);
-    border-color: var(--v4-line, #334155);
+    background: #1e293b;
+    border-color: #334155;
   }
 
   html:not([data-theme]) .metrics-label {
-    color: var(--v4-ink-3, #94a3b8);
+    color: #94a3b8;
   }
 
   html:not([data-theme]) .kcal-sparkline-container {
@@ -1132,27 +1132,27 @@ body:has(:is(
   }
 
   html:not([data-theme]) .formula-card {
-    background: var(--v4-surface, #1f2937);
-    border-color: var(--v4-ink, #374151);
+    background: #1f2937;
+    border-color: #374151;
   }
 }
 
 [data-theme="dark"] .card {
-  background: var(--v4-surface, #1f2937);
-  border-color: var(--v4-ink, #374151);
+  background: #1f2937;
+  border-color: #374151;
 }
 
 [data-theme="dark"] .card.tone-slate {
-  background: var(--v4-bg, #111827);
+  background: #111827;
 }
 
 [data-theme="dark"] .metrics-card {
-  background: var(--v4-surface, #1e293b);
-  border-color: var(--v4-line, #334155);
+  background: #1e293b;
+  border-color: #334155;
 }
 
 [data-theme="dark"] .metrics-label {
-  color: var(--v4-ink-3, #94a3b8);
+  color: #94a3b8;
 }
 
 [data-theme="dark"] .kcal-sparkline-container {
@@ -1165,6 +1165,6 @@ body:has(:is(
 }
 
 [data-theme="dark"] .formula-card {
-  background: var(--v4-surface, #1f2937);
-  border-color: var(--v4-ink, #374151);
+  background: #1f2937;
+  border-color: #374151;
 }

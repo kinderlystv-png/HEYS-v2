@@ -10,6 +10,34 @@ import path from 'node:path';
 const ROOT = path.resolve(import.meta.dirname, '..');
 const DRY_RUN = process.argv.includes('--dry-run');
 
+// Замена вида var(--роль, #литерал) НЕ безопасна сама по себе. Запасное значение
+// срабатывает, только если роль не определена, а этап 1 задал все роли для всех
+// шести палитр — включая каноничную. Значит показывается значение роли, и если
+// оно отличается от литерала, цвет меняется прямо в классике. Так этап 4 и
+// батчи CSS внесли 209 сдвигов, пока проверки не было.
+// Правило: заменять можно, только если каноничное значение роли равно литералу.
+const CLASSIC_ROLE_VALUE = (() => {
+  const css = fs.readFileSync(
+    path.join(ROOT, 'apps/web/styles/modules/002-ui-v4-palette-roles.css'),
+    'utf8',
+  );
+  const start = css.indexOf('[data-theme-id="classic"]');
+  const body = css.slice(start, css.indexOf('}', start));
+  const map = new Map();
+  for (const m of body.matchAll(/--(v4-[a-z0-9-]+):\s*([^;]+);/g)) {
+    map.set(m[1], m[2].trim().toLowerCase());
+  }
+  return map;
+})();
+
+const skippedByDrift = [];
+
+function classicKeepsColor(role, literal) {
+  const value = CLASSIC_ROLE_VALUE.get(role);
+  if (!value) return true; // роль не задана — запасное значение честно сработает
+  return value === normalizeHex(literal);
+}
+
 const FILES = [
   'apps/web/heys_widgets_ui_v1.js',
   'apps/web/heys_widgets_registry_v1.js',
@@ -176,6 +204,10 @@ function replaceHexInLine(line, lines, lineIndex, isCss = false) {
     }
     const role = HEX_TO_ROLE[norm];
     if (!role) return match;
+    if (!classicKeepsColor(role, norm)) {
+      skippedByDrift.push(`${norm} → --${role} (классика показала бы ${CLASSIC_ROLE_VALUE.get(role)})`);
+      return match;
+    }
     // Scale hex in threshold returns / comparisons (JS only)
     if (!isCss && SCALE_HEX.has(norm)) {
       if (/return\s/.test(line) || /===|!==/.test(line) || /\?\s*['"]/.test(line)) return match;
@@ -213,3 +245,11 @@ for (const [f, n] of Object.entries(perFile)) {
   console.log(`  ${f}: ${n} replacements`);
 }
 console.log(`  total: ${totalReplacements}`);
+
+if (skippedByDrift.length) {
+  const unique = [...new Set(skippedByDrift)].sort();
+  console.log(`\n  Пропущено ради классики: ${skippedByDrift.length} (${unique.length} уникальных пар)`);
+  for (const line of unique) console.log(`    ${line}`);
+  console.log('  Этим литералам нужна своя роль с тем же каноничным значением —');
+  console.log('  подменять их близкой по смыслу ролью нельзя, классика поедет.');
+}

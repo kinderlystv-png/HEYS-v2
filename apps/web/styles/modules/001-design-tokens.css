@@ -66,7 +66,7 @@
 
   /* Text */
   --heys-text-primary: var(--v4-ink, #111827);
-  --heys-text-secondary: var(--v4-ink-2, #6b7280);
+  --heys-text-secondary: #6b7280;
   --heys-text-muted: var(--v4-ink-4, #9ca3af);
   --heys-text-inverted: var(--v4-bg, #ffffff);
 
