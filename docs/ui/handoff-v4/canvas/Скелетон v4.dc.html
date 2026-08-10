@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#e9dfcd;font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  *{box-sizing:border-box}
+  a{color:#8a4a20;text-decoration:none}
+  a:hover{color:#c67139}
+  @keyframes sk{0%{background-position:140% 0}100%{background-position:-40% 0}}
+  .sk{border-radius:999px;background-color:var(--ph);background-image:linear-gradient(100deg,transparent 20%,var(--gl) 50%,transparent 80%);background-size:220% 100%;background-repeat:no-repeat;animation:sk 1.5s linear infinite}
+  .ph{width:330px;height:706px;flex:none;position:relative;overflow:hidden;border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12)}
+  .lab{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}
+  .lab b{font:700 12.5px/1 Figtree,sans-serif;color:#201e1d}
+  .lab span{font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45)}
+  .h{font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:26px 0 12px}
+  .nt{padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid rgba(0,0,0,.07)}
+  .nt > b,.ntl > b{font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;display:block}
+  .nt > span,.ntl > span{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);display:block;margin-top:4px}
+</style>
+</helmet>
+
+<div style="background:#e9dfcd;padding:44px 46px 70px;width:max-content;">
+
+  <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
+    <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">СКЕЛЕТОН</span>
+    <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Состояние загрузки — четыре набора значений</span>
+  </div>
+  <p style="margin:0 0 34px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Скелетон повторяет геометрию готового экрана, а не показывает спиннер: карточки, ярусы и высоты те же, поэтому при появлении данных ничего не прыгает. Плейсхолдер отступает от своей подложки в сторону от фона: на светлых наборах темнее, на тёмных светлее, с отрывом не ниже 1,45:1 — тогда геометрия читается и без блика. Акцент не участвует: загрузка это не состояние и не действие.</p>
+
+  <div style="display:flex;gap:30px;align-items:flex-start;">
+
+    <!-- ПЕСОЧНАЯ СВЕТЛАЯ -->
+    <div>
+      <div class="lab"><b>Песочная</b><span>Питание · светлая</span></div>
+      <div class="ph" data-screen-label="Скелетон · песочная" style="--ph:#d0bc9b;--gl:rgba(255,255,255,.55);background:#efe3cf;">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <span class="sk" style="width:16px;height:11px;"></span>
+            <span style="flex:1;height:3px;border-radius:999px;background:rgba(0,0,0,.07);"></span>
+            <span class="sk" style="width:44px;height:9px;"></span>
+            <span class="sk" style="width:15px;height:15px;border-radius:999px;"></span>
+            <span class="sk" style="width:15px;height:15px;border-radius:999px;"></span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;">
+            <span class="sk" style="width:78px;height:15px;border-radius:6px;"></span>
+            <span class="sk" style="width:104px;height:10px;"></span>
+          </div>
+        </div>
+        <div style="padding:8px 18px 14px;">
+          <div style="background:#fffaf1;border-radius:26px;padding:26px 22px 22px;margin-top:14px;">
+            <span class="sk" style="display:block;width:104px;height:10px;"></span>
+            <span class="sk" style="display:block;width:172px;height:52px;border-radius:14px;margin-top:16px;"></span>
+            <span class="sk" style="display:block;width:100%;height:6px;margin-top:22px;"></span>
+            <div style="display:flex;justify-content:space-between;margin-top:14px;">
+              <span class="sk" style="width:88px;height:10px;"></span>
+              <span class="sk" style="width:78px;height:10px;"></span>
+            </div>
+          </div>
+
+          <span class="sk" style="display:block;width:58px;height:9px;margin:22px 2px 10px;"></span>
+          <div style="background:#f7efe2;border-radius:20px;padding:15px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <span class="sk" style="width:96px;height:11px;--ph:#e6d8c2;"></span>
+            <span class="sk" style="width:128px;height:11px;--ph:#e6d8c2;"></span>
+          </div>
+
+          <span class="sk" style="display:block;width:66px;height:9px;margin:22px 2px 10px;"></span>
+          <div style="background:#f7efe2;border-radius:20px;padding:4px 16px;">
+            <div style="padding:16px 0;border-bottom:1px solid rgba(0,0,0,.06);">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="sk" style="width:118px;height:12px;--ph:#e6d8c2;"></span>
+                <span class="sk" style="width:34px;height:12px;--ph:#e6d8c2;"></span>
+              </div>
+              <span class="sk" style="display:block;width:100%;height:9px;margin-top:11px;--ph:#e6d8c2;"></span>
+              <span class="sk" style="display:block;width:62%;height:9px;margin-top:7px;--ph:#e6d8c2;"></span>
+            </div>
+            <div style="padding:16px 0;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="sk" style="width:96px;height:12px;--ph:#e6d8c2;"></span>
+                <span class="sk" style="width:34px;height:12px;--ph:#e6d8c2;"></span>
+              </div>
+              <span class="sk" style="display:block;width:86%;height:9px;margin-top:11px;--ph:#e6d8c2;"></span>
+            </div>
+          </div>
+
+          <div class="sk" style="height:48px;border-radius:999px;margin-top:18px;"></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;display:flex;padding:10px 10px 18px;background:#fffaf1;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#ede0cc;"></span><span class="sk" style="width:32px;height:7px;--ph:#ede0cc;"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#ede0cc;"></span><span class="sk" style="width:32px;height:7px;--ph:#ede0cc;"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#ede0cc;"></span><span class="sk" style="width:28px;height:7px;--ph:#ede0cc;"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#ede0cc;"></span><span class="sk" style="width:32px;height:7px;--ph:#ede0cc;"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#ede0cc;"></span><span class="sk" style="width:34px;height:7px;--ph:#ede0cc;"></span></div>
+        </div>
+      </div>
+
+      <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div>
+      <div class="ph" data-screen-label="Скелетон · песочная тёмная" style="--ph:#3d342a;--gl:rgba(242,237,230,.09);background:#191713;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <span class="sk" style="width:16px;height:11px;"></span>
+            <span style="flex:1;height:3px;border-radius:999px;background:rgba(242,237,230,.09);"></span>
+            <span class="sk" style="width:44px;height:9px;"></span>
+            <span class="sk" style="width:15px;height:15px;border-radius:999px;"></span>
+            <span class="sk" style="width:15px;height:15px;border-radius:999px;"></span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;">
+            <span class="sk" style="width:78px;height:15px;border-radius:6px;"></span>
+            <span class="sk" style="width:104px;height:10px;"></span>
+          </div>
+        </div>
+        <div style="padding:8px 18px 14px;">
+          <div style="background:#2f2820;border-radius:26px;padding:26px 22px 22px;margin-top:14px;">
+            <span class="sk" style="display:block;width:104px;height:10px;--ph:#453a2d;"></span>
+            <span class="sk" style="display:block;width:172px;height:52px;border-radius:14px;margin-top:16px;--ph:#453a2d;"></span>
+            <span class="sk" style="display:block;width:100%;height:6px;margin-top:22px;--ph:#453a2d;"></span>
+            <div style="display:flex;justify-content:space-between;margin-top:14px;">
+              <span class="sk" style="width:88px;height:10px;--ph:#453a2d;"></span>
+              <span class="sk" style="width:78px;height:10px;--ph:#453a2d;"></span>
+            </div>
+          </div>
+
+          <span class="sk" style="display:block;width:58px;height:9px;margin:22px 2px 10px;"></span>
+          <div style="background:#23201b;border-radius:20px;padding:15px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <span class="sk" style="width:96px;height:11px;--ph:#302b23;"></span>
+            <span class="sk" style="width:128px;height:11px;--ph:#302b23;"></span>
+          </div>
+
+          <span class="sk" style="display:block;width:66px;height:9px;margin:22px 2px 10px;"></span>
+          <div style="background:#23201b;border-radius:20px;padding:4px 16px;">
+            <div style="padding:16px 0;border-bottom:1px solid rgba(242,237,230,.09);">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="sk" style="width:118px;height:12px;--ph:#302b23;"></span>
+                <span class="sk" style="width:34px;height:12px;--ph:#302b23;"></span>
+              </div>
+              <span class="sk" style="display:block;width:100%;height:9px;margin-top:11px;--ph:#302b23;"></span>
+              <span class="sk" style="display:block;width:62%;height:9px;margin-top:7px;--ph:#302b23;"></span>
+            </div>
+            <div style="padding:16px 0;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="sk" style="width:96px;height:12px;--ph:#302b23;"></span>
+                <span class="sk" style="width:34px;height:12px;--ph:#302b23;"></span>
+              </div>
+              <span class="sk" style="display:block;width:86%;height:9px;margin-top:11px;--ph:#302b23;"></span>
+            </div>
+          </div>
+
+          <div class="sk" style="height:48px;border-radius:999px;margin-top:18px;"></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;display:flex;padding:10px 10px 18px;background:#23201b;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#302b23;"></span><span class="sk" style="width:32px;height:7px;--ph:#302b23;"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#302b23;"></span><span class="sk" style="width:32px;height:7px;--ph:#302b23;"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#302b23;"></span><span class="sk" style="width:28px;height:7px;--ph:#302b23;"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#302b23;"></span><span class="sk" style="width:32px;height:7px;--ph:#302b23;"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#302b23;"></span><span class="sk" style="width:34px;height:7px;--ph:#302b23;"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- СИНЯЯ -->
+    <div>
+      <div class="lab"><b>Синяя</b><span>Питание · светлая</span></div>
+      <div class="ph" data-screen-label="Скелетон · синяя" style="--ph:#b4c7db;--gl:rgba(255,255,255,.65);background:#e2edf7;box-shadow:0 1px 2px rgba(16,24,38,.08),0 14px 40px rgba(16,24,38,.1);">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <span class="sk" style="width:16px;height:11px;"></span>
+            <span style="flex:1;height:3px;border-radius:999px;background:rgba(16,24,38,.08);"></span>
+            <span class="sk" style="width:44px;height:9px;"></span>
+            <span class="sk" style="width:15px;height:15px;border-radius:999px;"></span>
+            <span class="sk" style="width:15px;height:15px;border-radius:999px;"></span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;">
+            <span class="sk" style="width:78px;height:15px;border-radius:6px;"></span>
+            <span class="sk" style="width:104px;height:10px;"></span>
+          </div>
+        </div>
+        <div style="padding:8px 18px 14px;">
+          <div style="background:#ffffff;border-radius:26px;padding:26px 22px 22px;margin-top:14px;">
+            <span class="sk" style="display:block;width:104px;height:10px;--ph:#e4ebf3;"></span>
+            <span class="sk" style="display:block;width:172px;height:52px;border-radius:14px;margin-top:16px;--ph:#e4ebf3;"></span>
+            <span class="sk" style="display:block;width:100%;height:6px;margin-top:22px;--ph:#e4ebf3;"></span>
+            <div style="display:flex;justify-content:space-between;margin-top:14px;">
+              <span class="sk" style="width:88px;height:10px;--ph:#e4ebf3;"></span>
+              <span class="sk" style="width:78px;height:10px;--ph:#e4ebf3;"></span>
+            </div>
+          </div>
+
+          <span class="sk" style="display:block;width:58px;height:9px;margin:22px 2px 10px;"></span>
+          <div style="background:#eef3f9;border-radius:20px;padding:15px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <span class="sk" style="width:96px;height:11px;--ph:#dde5ee;"></span>
+            <span class="sk" style="width:128px;height:11px;--ph:#dde5ee;"></span>
+          </div>
+
+          <span class="sk" style="display:block;width:66px;height:9px;margin:22px 2px 10px;"></span>
+          <div style="background:#eef3f9;border-radius:20px;padding:4px 16px;">
+            <div style="padding:16px 0;border-bottom:1px solid rgba(16,24,38,.07);">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="sk" style="width:118px;height:12px;--ph:#dde5ee;"></span>
+                <span class="sk" style="width:34px;height:12px;--ph:#dde5ee;"></span>
+              </div>
+              <span class="sk" style="display:block;width:100%;height:9px;margin-top:11px;--ph:#dde5ee;"></span>
+              <span class="sk" style="display:block;width:62%;height:9px;margin-top:7px;--ph:#dde5ee;"></span>
+            </div>
+            <div style="padding:16px 0;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="sk" style="width:96px;height:12px;--ph:#dde5ee;"></span>
+                <span class="sk" style="width:34px;height:12px;--ph:#dde5ee;"></span>
+              </div>
+              <span class="sk" style="display:block;width:86%;height:9px;margin-top:11px;--ph:#dde5ee;"></span>
+            </div>
+          </div>
+
+          <div class="sk" style="height:48px;border-radius:999px;margin-top:18px;"></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;display:flex;padding:10px 10px 18px;background:#ffffff;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#e4ebf3;"></span><span class="sk" style="width:32px;height:7px;--ph:#e4ebf3;"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#e4ebf3;"></span><span class="sk" style="width:32px;height:7px;--ph:#e4ebf3;"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#e4ebf3;"></span><span class="sk" style="width:28px;height:7px;--ph:#e4ebf3;"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#e4ebf3;"></span><span class="sk" style="width:32px;height:7px;--ph:#e4ebf3;"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#e4ebf3;"></span><span class="sk" style="width:34px;height:7px;--ph:#e4ebf3;"></span></div>
+        </div>
+      </div>
+
+      <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div>
+      <div class="ph" data-screen-label="Скелетон · синяя тёмная" style="--ph:#274058;--gl:rgba(238,243,248,.08);background:#0d1a26;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <span class="sk" style="width:16px;height:11px;"></span>
+            <span style="flex:1;height:3px;border-radius:999px;background:rgba(238,243,248,.09);"></span>
+            <span class="sk" style="width:44px;height:9px;"></span>
+            <span class="sk" style="width:15px;height:15px;border-radius:999px;"></span>
+            <span class="sk" style="width:15px;height:15px;border-radius:999px;"></span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;">
+            <span class="sk" style="width:78px;height:15px;border-radius:6px;"></span>
+            <span class="sk" style="width:104px;height:10px;"></span>
+          </div>
+        </div>
+        <div style="padding:8px 18px 14px;">
+          <div style="background:#1d3348;border-radius:26px;padding:26px 22px 22px;margin-top:14px;">
+            <span class="sk" style="display:block;width:104px;height:10px;--ph:#2c4a66;"></span>
+            <span class="sk" style="display:block;width:172px;height:52px;border-radius:14px;margin-top:16px;--ph:#2c4a66;"></span>
+            <span class="sk" style="display:block;width:100%;height:6px;margin-top:22px;--ph:#2c4a66;"></span>
+            <div style="display:flex;justify-content:space-between;margin-top:14px;">
+              <span class="sk" style="width:88px;height:10px;--ph:#2c4a66;"></span>
+              <span class="sk" style="width:78px;height:10px;--ph:#2c4a66;"></span>
+            </div>
+          </div>
+
+          <span class="sk" style="display:block;width:58px;height:9px;margin:22px 2px 10px;"></span>
+          <div style="background:#182a3a;border-radius:20px;padding:15px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <span class="sk" style="width:96px;height:11px;--ph:#23394d;"></span>
+            <span class="sk" style="width:128px;height:11px;--ph:#23394d;"></span>
+          </div>
+
+          <span class="sk" style="display:block;width:66px;height:9px;margin:22px 2px 10px;"></span>
+          <div style="background:#182a3a;border-radius:20px;padding:4px 16px;">
+            <div style="padding:16px 0;border-bottom:1px solid rgba(238,243,248,.09);">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="sk" style="width:118px;height:12px;--ph:#23394d;"></span>
+                <span class="sk" style="width:34px;height:12px;--ph:#23394d;"></span>
+              </div>
+              <span class="sk" style="display:block;width:100%;height:9px;margin-top:11px;--ph:#23394d;"></span>
+              <span class="sk" style="display:block;width:62%;height:9px;margin-top:7px;--ph:#23394d;"></span>
+            </div>
+            <div style="padding:16px 0;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="sk" style="width:96px;height:12px;--ph:#23394d;"></span>
+                <span class="sk" style="width:34px;height:12px;--ph:#23394d;"></span>
+              </div>
+              <span class="sk" style="display:block;width:86%;height:9px;margin-top:11px;--ph:#23394d;"></span>
+            </div>
+          </div>
+
+          <div class="sk" style="height:48px;border-radius:999px;margin-top:18px;"></div>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;display:flex;padding:10px 10px 18px;background:#13222f;">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#23394d;"></span><span class="sk" style="width:32px;height:7px;--ph:#23394d;"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#23394d;"></span><span class="sk" style="width:32px;height:7px;--ph:#23394d;"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#23394d;"></span><span class="sk" style="width:28px;height:7px;--ph:#23394d;"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#23394d;"></span><span class="sk" style="width:32px;height:7px;--ph:#23394d;"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;"><span class="sk" style="width:17px;height:17px;border-radius:5px;--ph:#23394d;"></span><span class="sk" style="width:34px;height:7px;--ph:#23394d;"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ЛИСТ -->
+    <div style="width:400px;flex:none;">
+      <div class="h" style="margin-top:0;">Правила</div>
+      <div style="background:#fffaf1;border-radius:24px;padding:20px;">
+        <div class="nt"><b>Геометрия готового экрана, а не заглушка</b><span>Карточки, ярусы, паддинги и высоты те же, что у Питания. Данные приходят — ничего не прыгает, потому что место уже занято. Это единственная причина рисовать скелетон вместо спиннера.</span></div>
+        <div class="nt"><b>Плейсхолдер — шаг от своей подложки в сторону от фона</b><span>На светлых наборах это шаг темнее подложки, на тёмных — светлее: «плотнее» значит дальше от фона, и направление переворачивается вместе с темой. Отрыв к подложке не ниже 1,45:1 в каждом наборе — это порог, а не точное значение: у тёмных он выходит выше сам собой, и занижать их не нужно. Ни один плейсхолдер не берёт акцент: загрузка это не состояние и не действие.</span></div>
+        <div class="nt"><b>Блик, а не пульсация</b><span>Полоса света проходит слева направо за 1,5 с, наклон 100°. Пульсация целой карточки читается как мигание и на тёмном выглядит грубо; блик по светлоте почти не меняет средний тон.</span></div>
+        <div class="nt"><b>Блик берёт светлоту, а не цвет</b><span>На светлых наборах белый 60–75 %, на тёмных — бумажный 8–9 %. Цветной блик превратил бы загрузку в акцентное событие.</span></div>
+        <div class="nt"><b>Ширины строк неровные</b><span>Вторая строка приёма — 62 % и 86 % вместо 100 %. Ровные блоки читаются как таблица; неровные — как текст, который сейчас появится.</span></div>
+        <div class="ntl"><b>Кнопка и навигация тоже в скелетоне</b><span>Главное действие держит свою высоту 48 и радиус 999, иконки навигации — квадраты 17×17 с подписью. Иначе нижняя треть экрана дёрнется в момент загрузки, а это самая заметная его часть.</span></div>
+      </div>
+
+      <div class="h">Что не скелетонить</div>
+      <div style="background:#efe3cf;border-radius:24px;padding:20px;">
+        <div class="nt"><b>Плавающие кнопки</b><span>Они не ждут данных — доступны сразу. Показывать их в загрузке значит запретить добавить еду на две секунды без причины.</span></div>
+        <div class="nt"><b>Полосу уровня</b><span>Трек остаётся настоящим, заполнение — плейсхолдер. Трек это геометрия, а не данные.</span></div>
+        <div class="ntl"><b>Экраны короче секунды</b><span>Если данные локальные и приходят мгновенно, скелетон мелькнёт и создаст ощущение сбоя. Порог показа — от 300 мс ожидания, ниже не показываем ничего.</span></div>
+      </div>
+
+      <div class="h">Для реализации</div>
+      <div style="background:#f0d8c4;border-radius:24px;padding:20px;">
+        <div class="nt"><b>Одна роль на набор: подложка плейсхолдера</b><span>Три значения на палитру — на грунте, на карточке, в герое. Либо одна роль плюс два шага плотности от неё; второе дешевле и не плодит значений.</span></div>
+        <div class="ntl"><b>Уважать prefers-reduced-motion</b><span>При включённом флаге блик выключается, остаётся статичная подложка — и она обязана читаться сама. Поэтому отрыв плейсхолдера от подложки задаётся измерением, а не на глаз: если геометрия видна только под бликом, при выключенной анимации экран станет пустым.</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <p style="margin:30px 0 0;font:500 12.5px/1.6 Figtree,sans-serif;color:rgba(0,0,0,.5);">Дальше: «скелетон Актива и Отчётов» · «пустые состояния вместо скелетона»</p>
+</div>
+</x-dc>
+</body>
+</html>
