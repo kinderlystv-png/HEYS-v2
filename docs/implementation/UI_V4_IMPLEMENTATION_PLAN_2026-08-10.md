@@ -884,6 +884,42 @@ hex только как fallback в `var(--v4-*)`). Файл закрыт для
 scope). Следующий кандидат — `905-planning-chrono.css` (~233 hex); альтернатива
 — `500-pwa-and-offline.css` (~173 hex).
 
+### Stage 6 batch 13 — 2026-08-10
+
+**Файлы (граница батча):**
+
+| Файл                                     | Что сделано                                                      | Литералов → `var(--v4-*)` |
+| ---------------------------------------- | ---------------------------------------------------------------- | ------------------------- |
+| `styles/modules/905-planning-chrono.css` | весь файл (chrono strip, duration, untracked flow, range slider) | 45                        |
+
+**Инструмент:** `scripts/ui-v4-css-batch-codemod.mjs` — тот же scoped codemod и
+гейт классики, что в batch 3–12. Проверка: `ui-v4-check-classic-drift.mjs`
+(`--files=styles/modules/905-planning-chrono.css`) +
+`ui-v4-classic-drift.test.js`.
+
+**Исключено в batch 13 (намеренно, как в batch 2–12):**
+
+- `linear-gradient` / `radial-gradient` — range track, bubble fills, shimmer
+- `rgba()` — без замены
+- семантические status/tint без classic-пары (`#dcfce7`, `#166534`, `#b91c1c`,
+  `#434587`)
+- planning accent/category без v4-совпадения (`#2563eb`, `#ec4899`, `#0f766e`,
+  `#1d70b7`)
+- legacy `var(--planning-*, #…)` / `var(--text-*, #…)` / `var(--bg-*, #…)` — не
+  трогаем чужие fallback
+- тёмные правила с литералами ≠ `classic-dark` роли
+- `backdrop-filter` blur tints — оставлены литералами
+
+**Остаток в `905-planning-chrono.css`:** ~193 bare hex (градиенты, rgba,
+planning-accent, category hues, legacy fallbacks, несовпадающие пары; ещё ~45
+hex только как fallback в `var(--v4-*)`). Файл закрыт для stage 6 — следующий
+батч — другой модуль в `styles/`.
+
+**Параллельность:** не пересекается со Stage 4 Activity
+(`600-steps-and-aps.css`, `731-ui-v4-activity.css`, `apps/web/*.js` — вне
+scope). Следующий кандидат — `500-pwa-and-offline.css` (~173 hex); альтернатива
+— `400-water-and-hydration.css` (~136 hex).
+
 ---
 
 ## Этап 7. Поток B — что осталось после вкладок

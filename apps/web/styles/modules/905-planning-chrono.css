@@ -413,7 +413,7 @@ html.chrono-bubble-dragging .chrono-screen {
 
 .chrono-duration__target-kind-btn.active {
     background: var(--planning-accent, #2563eb);
-    color: #fff;
+    color: var(--v4-bg, #fff);
 }
 
 .chrono-duration__target.is-budget .chrono-duration__target-kind-btn.active {
@@ -455,7 +455,7 @@ html.chrono-bubble-dragging .chrono-screen {
 
 .chrono-scope-bar__toggle-item.active {
     background: var(--planning-accent, #2563eb);
-    color: #fff;
+    color: var(--v4-bg, #fff);
 }
 
 .chrono-scope-bar__nav-btn {
@@ -582,7 +582,7 @@ html.chrono-bubble-dragging .chrono-screen {
 .chrono-strip__item--add {
     background: var(--planning-accent, #2563eb);
     border-color: var(--planning-accent, #2563eb);
-    color: #fff;
+    color: var(--v4-bg, #fff);
     font-weight: 600;
 }
 
@@ -608,9 +608,9 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-strip__trash.is-active {
-    border-color: #ef4444;
+    border-color: var(--v4-warn-1, #ef4444);
     background: rgba(239, 68, 68, 0.14);
-    color: #dc2626;
+    color: var(--v4-warn-2, #dc2626);
     transform: scale(1.08);
 }
 
@@ -618,7 +618,7 @@ html.chrono-bubble-dragging .chrono-screen {
   .chrono-strip__item--add:hover {
     background: var(--planning-accent, #2563eb);
     border-color: var(--planning-accent, #2563eb);
-    color: #fff;
+    color: var(--v4-bg, #fff);
     filter: brightness(1.08);
 }
 }
@@ -936,7 +936,7 @@ html.chrono-bubble-dragging .chrono-screen {
     padding: 0 14px;
     border: 0;
     background: transparent;
-    color: #ffffff;
+    color: var(--v4-bg, #ffffff);
     font-size: 12px;
     font-weight: 800;
     line-height: 1.1;
@@ -1191,13 +1191,13 @@ html.chrono-bubble-dragging .chrono-screen {
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: #fff;
+    background: var(--v4-bg, #fff);
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.22);
     transition: transform 0.16s ease;
 }
 
 .chrono-untracked-flow__parallel-toggle.active .chrono-untracked-flow__parallel-switch {
-    background: #16a34a;
+    background: var(--v4-ok-text, #16a34a);
 }
 
 .chrono-untracked-flow__parallel-toggle.active .chrono-untracked-flow__parallel-knob {
@@ -1205,7 +1205,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-untracked-flow__range {
-    --chrono-range-fill: #16a34a;
+    --chrono-range-fill: var(--v4-ok-text, #16a34a);
     --chrono-range-track: rgba(15, 23, 42, 0.13);
     --chrono-range-shadow: rgba(22, 163, 74, 0.28);
     --chrono-range-pct: 0%;
@@ -1230,7 +1230,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-untracked-flow__slider-row.is-parallel .chrono-untracked-flow__range:disabled {
-    --chrono-range-fill: #16a34a;
+    --chrono-range-fill: var(--v4-ok-text, #16a34a);
     --chrono-range-track: rgba(22, 163, 74, 0.18);
     --chrono-range-shadow: rgba(22, 163, 74, 0.2);
 }
@@ -1241,7 +1241,7 @@ html.chrono-bubble-dragging .chrono-screen {
     background: linear-gradient(
         90deg,
         var(--chrono-range-fill) 0%,
-        #22c55e var(--chrono-range-pct),
+        var(--v4-ok-fill, #22c55e) var(--chrono-range-pct),
         var(--chrono-range-track) var(--chrono-range-pct),
         var(--chrono-range-track) 100%
     );
@@ -1262,7 +1262,7 @@ html.chrono-bubble-dragging .chrono-screen {
     width: 24px;
     height: 24px;
     margin-top: -7px;
-    border: 3px solid #fff;
+    border: 3px solid var(--v4-bg, #fff);
     border-radius: 50%;
     background: var(--chrono-range-fill);
     box-shadow:
@@ -1280,8 +1280,8 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-untracked-flow__slider-row.is-parallel .chrono-untracked-flow__range:disabled::-webkit-slider-thumb {
-    border-color: #fff;
-    background: #16a34a;
+    border-color: var(--v4-bg, #fff);
+    background: var(--v4-ok-text, #16a34a);
     box-shadow: 0 4px 10px rgba(22, 163, 74, 0.18);
 }
 
@@ -1301,7 +1301,7 @@ html.chrono-bubble-dragging .chrono-screen {
 .chrono-untracked-flow__range::-moz-range-thumb {
     width: 18px;
     height: 18px;
-    border: 3px solid #fff;
+    border: 3px solid var(--v4-bg, #fff);
     border-radius: 50%;
     background: var(--chrono-range-fill);
     box-shadow:
@@ -1322,8 +1322,8 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-untracked-flow__slider-row.is-parallel .chrono-untracked-flow__range:disabled::-moz-range-thumb {
-    border-color: #fff;
-    background: #16a34a;
+    border-color: var(--v4-bg, #fff);
+    background: var(--v4-ok-text, #16a34a);
     box-shadow: 0 4px 10px rgba(22, 163, 74, 0.18);
 }
 
@@ -1349,8 +1349,8 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-untracked-flow__confirm-now {
-    background: #16a34a;
-    border-color: #16a34a;
+    background: var(--v4-ok-text, #16a34a);
+    border-color: var(--v4-ok-text, #16a34a);
     box-shadow: 0 8px 18px -12px rgba(22, 163, 74, 0.65);
 }
 
@@ -1423,7 +1423,7 @@ html.chrono-bubble-dragging .chrono-screen {
 
 .chrono-overview__alert.is-under {
     background: rgba(37, 99, 235, 0.08);
-    color: #1d4ed8;
+    color: var(--v4-act-text, #1d4ed8);
 }
 
 .chrono-overview__balance {
@@ -1624,13 +1624,13 @@ html.chrono-bubble-dragging .chrono-screen {
     background: var(--chrono-category-color, var(--planning-accent, #2563eb));
 }
 
-.tone-blue { --chrono-category-color: #2563eb; }
-.tone-green { --chrono-category-color: #16a34a; }
+.tone-blue { --chrono-category-color: var(--v4-act, #2563eb); }
+.tone-green { --chrono-category-color: var(--v4-ok-text, #16a34a); }
 .tone-teal { --chrono-category-color: #0f766e; }
 .tone-rose { --chrono-category-color: #e11d48; }
-.tone-slate { --chrono-category-color: #64748b; }
+.tone-slate { --chrono-category-color: var(--v4-ink-2, #64748b); }
 .tone-amber { --chrono-category-color: #d97706; }
-.tone-red { --chrono-category-color: #dc2626; }
+.tone-red { --chrono-category-color: var(--v4-warn-2, #dc2626); }
 
 /* --- Cloud (bubbles) ---
    Облако занимает верхнюю свободную область, а списки и чипы после него
@@ -1752,9 +1752,9 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-cloud__trash.is-active {
-    border-color: #ef4444;
+    border-color: var(--v4-warn-1, #ef4444);
     background: rgba(239, 68, 68, 0.15);
-    color: #ef4444;
+    color: var(--v4-warn-1, #ef4444);
     transform: scale(1.12);
     transform-origin: center center;
 }
@@ -1895,7 +1895,7 @@ html.chrono-bubble-dragging .chrono-screen {
     top: 0;
     transform: translate(-50%, -6px);
     background: var(--badge-bg, var(--planning-accent, #2563eb));
-    color: #fff;
+    color: var(--v4-bg, #fff);
     font-size: 13px;
     font-weight: 700;
     padding: 4px 10px;
@@ -2063,7 +2063,7 @@ html.chrono-bubble-dragging .chrono-screen {
 .chrono-picker__archive-toggle.active {
     background: var(--planning-accent, #2563eb);
     border-color: var(--planning-accent, #2563eb);
-    color: #fff;
+    color: var(--v4-bg, #fff);
 }
 
 .chrono-picker__row--editing {
@@ -2191,7 +2191,7 @@ html.chrono-bubble-dragging .chrono-screen {
 @media (hover: hover) {
   .chrono-picker__icon-btn--danger:hover {
     background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
+    color: var(--v4-warn-1, #ef4444);
 }
 }
 
@@ -2224,7 +2224,7 @@ html.chrono-bubble-dragging .chrono-screen {
     flex: 0 0 auto;
     padding: 6px 14px;
     background: var(--planning-accent, #2563eb);
-    color: #fff;
+    color: var(--v4-bg, #fff);
     border: none;
     border-radius: 999px;
     font-size: 13px;
@@ -2485,7 +2485,7 @@ html.chrono-bubble-dragging .chrono-screen {
     padding: 3px 7px;
     border-radius: 999px;
     background: rgba(37, 99, 235, 0.1);
-    color: #1d4ed8;
+    color: var(--v4-act-text, #1d4ed8);
     font-size: 11px;
     font-weight: 800;
 }
@@ -2725,7 +2725,7 @@ html.chrono-bubble-dragging .chrono-screen {
 .chrono-duration__target-period-btn.active,
 .chrono-picker__target-period-btn.active {
     background: var(--planning-accent, #2563eb);
-    color: #fff;
+    color: var(--v4-bg, #fff);
 }
 
 
@@ -2802,7 +2802,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-duration__step-pill-item.active {
-    color: #fff;
+    color: var(--v4-bg, #fff);
     background: var(--planning-text, #0f172a);
 }
 
@@ -3087,7 +3087,7 @@ html.chrono-bubble-dragging .chrono-screen {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #fff;
+    background: var(--v4-bg, #fff);
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.24);
     transition: transform 0.18s ease;
 }
@@ -3159,7 +3159,7 @@ html.chrono-bubble-dragging .chrono-screen {
 
 .chrono-duration__target-unit-btn.active {
     background: var(--planning-accent, #2563eb);
-    color: #fff;
+    color: var(--v4-bg, #fff);
 }
 
 .chrono-duration__target-value {
@@ -3189,7 +3189,7 @@ html.chrono-bubble-dragging .chrono-screen {
 @media (hover: hover) {
   .chrono-duration__target-clear:hover {
     background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
+    color: var(--v4-warn-1, #ef4444);
 }
 }
 
@@ -3200,7 +3200,7 @@ html.chrono-bubble-dragging .chrono-screen {
     flex: 0 0 auto;
     border: none;
     background: var(--planning-accent, #2563eb);
-    color: #fff;
+    color: var(--v4-bg, #fff);
     font-size: 13px;
     font-weight: 700;
     padding: 7px 14px;
@@ -3226,7 +3226,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-duration__target-save.is-saved {
-    background: #22c55e;
+    background: var(--v4-ok-fill, #22c55e);
 }
 
 /* Зелёный flash на инпуте + плашка «✓ сохранено» — фидбек что значение
@@ -3237,14 +3237,14 @@ html.chrono-bubble-dragging .chrono-screen {
 
 .chrono-duration__target-input.is-saved {
     background-color: #dcfce7;
-    border-color: #22c55e;
+    border-color: var(--v4-ok-fill, #22c55e);
 }
 
 .chrono-duration__target-saved {
     flex: 0 0 100%;
     font-size: 12px;
     font-weight: 600;
-    color: #16a34a;
+    color: var(--v4-ok-text, #16a34a);
     animation: chrono-target-saved 0.9s ease-out forwards;
 }
 
@@ -3323,7 +3323,7 @@ html.chrono-bubble-dragging .chrono-screen {
 .chrono-duration__category-chip.active {
     background: var(--chrono-category-color, var(--planning-accent, #2563eb));
     border-color: var(--chrono-category-color, var(--planning-accent, #2563eb));
-    color: #fff;
+    color: var(--v4-bg, #fff);
 }
 
 .chrono-duration__smart-chip {
@@ -3458,7 +3458,7 @@ html.chrono-bubble-dragging .chrono-screen {
     align-items: center;
     justify-content: center;
     background: linear-gradient(135deg, #434587, #1d70b7);
-    color: #fff;
+    color: var(--v4-bg, #fff);
     box-shadow: 0 10px 24px -16px rgba(67, 69, 135, 0.85);
     cursor: pointer;
     font: inherit;
@@ -3624,7 +3624,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-weekly-report__signal.is-good .chrono-weekly-report__signal-value { color: #15803d; }
-.chrono-weekly-report__signal.is-bad .chrono-weekly-report__signal-value { color: #dc2626; }
+.chrono-weekly-report__signal.is-bad .chrono-weekly-report__signal-value { color: var(--v4-warn-2, #dc2626); }
 .chrono-weekly-report__signal.is-neutral .chrono-weekly-report__signal-value { color: var(--planning-accent, #2563eb); }
 
 @keyframes chrono-target-saved {
@@ -3647,7 +3647,7 @@ html.chrono-bubble-dragging .chrono-screen {
     padding: 10px 14px;
     border-radius: 999px;
     background: rgba(15, 23, 42, 0.92);
-    color: #fff;
+    color: var(--v4-bg, #fff);
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.24);
     font-size: 13px;
     max-width: calc(100vw - 24px);
