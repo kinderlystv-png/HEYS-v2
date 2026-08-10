@@ -13998,7 +13998,8 @@ body.tour-active .ios-pwa-banner {
   overflow-y: auto;
   padding-top: max(20px, calc(env(safe-area-inset-top, 0px) + 20px)) !important;
   padding-bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 20px)) !important;
-  background: linear-gradient(145deg, #4964c7 0%, #2f5fd7 46%, #434587 100%);
+  background: var(--v4-hero, #e8ecf1);
+  transition: background 0.24s ease;
 }
 
 .heys-auth-card {
@@ -14877,7 +14878,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 [data-theme="dark"] .heys-auth-shell {
-  background: linear-gradient(135deg, #0f172a 0%, #172554 55%, #1e1b4b 100%);
+  background: var(--v4-hero, #0f172a);
 }
 
 [data-theme="dark"] .heys-auth-card {

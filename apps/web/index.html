@@ -923,6 +923,7 @@
     </script>
     <!-- Prevent FOUC: Apply theme before CSS loads -->
     <script src="heys_theme_v1.js"></script>
+    <script src="heys_login_theme_picker_v1.js"></script>
     <script>
         (function () {
             if (window.HEYS && HEYS.Theme && typeof HEYS.Theme.applyBootGlobalTheme === 'function') {
@@ -943,6 +944,8 @@
 
     <!-- Critical CSS for instant rendering -->
     <link rel="stylesheet" href="styles/critical.css?v=6" />
+    <link rel="stylesheet" href="styles/modules/002-ui-v4-palette-roles.css" />
+    <link rel="stylesheet" href="styles/modules/733-ui-v4-login-theme.css" />
 
     <!-- Pattern Debugger CSS (отладочная модалка — загружаем async, не нужен для FCP) -->
     <link rel="preload" href="insights/pi_pattern_debugger.css?v=2" as="style"
@@ -1714,7 +1717,7 @@
 
     <!-- Шаг 2: Статичный HTML логин-оверлей -->
     <div id="heys-login-gate" class="heys-auth-shell"
-        style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(145deg,#4964c7 0%,#2f5fd7 46%,#434587 100%);padding:max(20px,calc(env(safe-area-inset-top,0px) + 20px)) 20px max(20px,calc(env(safe-area-inset-bottom,0px) + 20px));overflow-y:auto;opacity:0;pointer-events:none;transition:opacity 0.14s ease;will-change:opacity">
+        style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:max(20px,calc(env(safe-area-inset-top,0px) + 20px)) 20px max(20px,calc(env(safe-area-inset-bottom,0px) + 20px));overflow-y:auto;opacity:0;pointer-events:none;transition:opacity 0.14s ease, background 0.24s ease;will-change:opacity">
 
 	        <!-- Экран: client (телефон + PIN) — показывается сразу -->
 	        <div id="hlg-screen-client">
@@ -1797,10 +1800,9 @@
                         <button type="button" class="heys-auth-key" data-pin-key="0">0</button>
                         <button type="button" class="heys-auth-key heys-auth-key--muted" data-pin-backspace aria-label="Удалить цифру PIN">⌫</button>
                     </div>
+                    <div id="hlg-theme-mount" class="heys-login-theme-mount"></div>
                     <!-- Ошибка -->
-                    <div id="hlg-client-err" class="heys-auth-error"
-                        style="display:none;border-radius:12px;background:#fef2f2;border:1px solid #fee2e2;padding:12px 16px;text-align:center;font-size:14px;color:#dc2626;margin-bottom:16px;font-family:system-ui,-apple-system,sans-serif">
-                    </div>
+                    <div id="hlg-client-err" class="heys-auth-error heys-auth-error-slot" role="alert" aria-live="polite"></div>
 	                    <button id="hlg-client-submit" class="heys-auth-submit-hidden" type="button" onclick="hlgClientLogin()" disabled aria-label="Войти"></button>
                 </div>
 	                <div id="hlg-intake-explanation" class="heys-auth-subtitle"
@@ -3471,14 +3473,38 @@
 	                });
 	            }
 
+            function initLoginThemePicker() {
+                var mount = document.getElementById('hlg-theme-mount');
+                var pickerApi = window.HEYS && window.HEYS.LoginThemePicker;
+                if (!mount || !pickerApi || typeof pickerApi.mountDom !== 'function') return;
+                var phoneInput = document.getElementById('hlg-phone');
+                var keypad = document.getElementById('hlg-pin-keypad');
+                window.__hlgThemePicker = pickerApi.mountDom({
+                    keypadEl: keypad,
+                    phoneInputEl: phoneInput,
+                });
+                mount.appendChild(window.__hlgThemePicker.root);
+            }
+
             // ─── Показ ошибок ──────────────────────────────────────────────
             function hlgSetClientErr(msg, options) {
                 options = options || {};
                 var el = document.getElementById('hlg-client-err');
                 if (!el) return;
                 el.classList.toggle('is-pin-error', !!options.pinError);
-                if (msg) { el.textContent = msg; el.style.display = ''; }
-                else { el.style.display = 'none'; el.textContent = ''; el.classList.remove('is-pin-error'); }
+                if (options.pinError) {
+                    if (window.__hlgThemePicker && typeof window.__hlgThemePicker.setDimmed === 'function') {
+                        window.__hlgThemePicker.setDimmed(true);
+                    }
+                } else if (window.__hlgThemePicker && typeof window.__hlgThemePicker.setDimmed === 'function') {
+                    window.__hlgThemePicker.setDimmed(false);
+                }
+                if (msg) {
+                    el.textContent = msg;
+                } else {
+                    el.textContent = '';
+                    el.classList.remove('is-pin-error');
+                }
             }
             function hlgSetCuratorErr(msg) {
                 var el = document.getElementById('hlg-curator-err');
@@ -3867,6 +3893,7 @@
                 initPhoneInput();
                 initPinInputs();
                 initPinKeypad();
+                initLoginThemePicker();
                 updatePinStyles();
                 initCuratorEnter();
             }
@@ -4167,11 +4194,11 @@
         (function () {
             var POST_BOOT_BUNDLES = [
                 'postboot-1-game-eager.bundle.bb651c659737.js',
-                'postboot-1-game-lazy.bundle.757f9f52633d.js',
+                'postboot-1-game-lazy.bundle.089c7656865f.js',
                 'postboot-2-insights-eager.bundle.807cb783ab2f.js',
                 'postboot-2-insights-lazy.bundle.8cd78cb7c91d.js',
                 'postboot-3-ui-eager.bundle.51c8e6b6cb06.js',
-                'postboot-3-ui-lazy.bundle.7701a0b8df64.js'
+                'postboot-3-ui-lazy.bundle.16b070bb6db2.js'
             ];
             var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';
             var total = POST_BOOT_BUNDLES.length;

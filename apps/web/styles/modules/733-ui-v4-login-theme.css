@@ -1,0 +1,261 @@
+/* 733-ui-v4-login-theme.css — login/onboarding theme picker (UI v4 stage 5) */
+
+.heys-auth-shell {
+  background: var(--v4-hero, #e8ecf1);
+  transition: background 0.24s ease;
+}
+
+.heys-auth-card {
+  background: var(--v4-bg, rgba(255, 255, 255, 0.95));
+  border-color: color-mix(in srgb, var(--v4-line, #e5e7eb) 72%, transparent);
+  color: var(--v4-ink, #111827);
+  transition:
+    background 0.24s ease,
+    border-color 0.24s ease,
+    color 0.24s ease;
+}
+
+.heys-auth-title,
+.heys-auth-brand,
+.heys-auth-label,
+.heys-auth-prefix,
+.heys-auth-phone-input,
+.heys-auth-pin-input {
+  color: var(--v4-ink, #111827);
+}
+
+.heys-auth-subtitle,
+.heys-auth-meta,
+.heys-auth-support-line {
+  color: var(--v4-ink-2, #64748b);
+}
+
+.heys-auth-field,
+.heys-auth-input,
+.heys-auth-pin-input,
+.heys-auth-key {
+  background: var(--v4-bg, #ffffff);
+  border-color: var(--v4-line, #e2e8f0);
+}
+
+.heys-auth-field.is-active,
+.heys-auth-field:focus-within,
+.heys-auth-pin-input.is-active:not(.is-complete) {
+  border-color: color-mix(in srgb, var(--v4-act, #2563eb) 72%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--v4-act, #2563eb) 18%, transparent);
+}
+
+.heys-auth-pin-section.is-active .heys-auth-label {
+  color: var(--v4-act-text, #1d4ed8) !important;
+}
+
+.heys-auth-support-link,
+.heys-auth-link-btn {
+  color: var(--v4-act-text, #2563eb);
+}
+
+.heys-auth-error-slot {
+  box-sizing: border-box;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  visibility: hidden;
+}
+
+.heys-auth-error-slot:not(:empty) {
+  visibility: visible;
+  min-height: 48px;
+  margin-bottom: 4px;
+  padding: 12px 16px;
+  border-color: color-mix(in srgb, var(--v4-warn-2, #dc2626) 24%, transparent);
+  background: color-mix(in srgb, var(--v4-warn-1, #ef4444) 10%, var(--v4-bg, #fff));
+  color: var(--v4-warn-2, #dc2626);
+}
+
+.heys-auth-keypad.is-hidden {
+  display: none !important;
+}
+
+.heys-login-theme {
+  width: min(100%, 276px);
+  margin: 0 auto;
+  transition: opacity 0.2s ease;
+}
+
+.heys-login-theme.is-dimmed {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.heys-login-theme__dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin: 8px auto 0;
+  padding: 10px 0 2px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.heys-login-theme__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  box-sizing: border-box;
+}
+
+.heys-login-theme__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 24px auto 28px;
+  padding: 14px 12px 12px;
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+  border-radius: 18px;
+  background: var(--v4-surface, var(--v4-bg, #ffffff));
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--v4-ink, #111827) 8%, transparent);
+}
+
+.heys-login-theme__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--v4-ink, #201e1d);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.heys-login-theme__collapse {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--v4-ink-2, #64748b) 10%, transparent);
+  color: var(--v4-ink-2, #64748b);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.heys-login-theme__section-label {
+  margin-top: 4px;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.heys-login-theme__row {
+  display: flex;
+  gap: 8px;
+}
+
+.heys-login-theme__row--soft {
+  flex-wrap: wrap;
+}
+
+.heys-login-theme__chip {
+  flex: 1 1 0;
+  min-height: 42px;
+  padding: 12px 8px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--v4-hero, #f7efe2) 72%, var(--v4-bg, #fff));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.45));
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.heys-login-theme__chip.is-active {
+  background: var(--v4-act, #c67139);
+  color: color-mix(in srgb, var(--v4-bg, #fff) 8%, var(--v4-ink, #2b1608));
+}
+
+.heys-login-theme__chip--mode {
+  min-height: 38px;
+  padding: 10px 6px;
+  font-size: 11.5px;
+}
+
+.heys-login-theme__soft-card {
+  display: flex;
+  flex: 1 1 calc(50% - 4px);
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 10px;
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+  border-radius: 14px;
+  background: var(--v4-bg, #ffffff);
+  color: var(--v4-ink, #201e1d);
+  cursor: pointer;
+  text-align: left;
+}
+
+.heys-login-theme__soft-card.is-active {
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 55%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--v4-act, #c67139) 16%, transparent);
+}
+
+.heys-login-theme__soft-swatch {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--swatch-act, #c67139), var(--swatch-hero, #efe3cf));
+  flex: 0 0 auto;
+}
+
+.heys-login-theme__soft-label {
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.heys-login-theme__hint {
+  margin-top: 2px;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: center;
+}
+
+[data-theme="dark"] .heys-auth-shell,
+[data-theme="classic-dark"] .heys-auth-shell,
+[data-theme="sand-dark"] .heys-auth-shell,
+[data-theme="blue-dark"] .heys-auth-shell {
+  background: var(--v4-hero, #0f172a);
+}
+
+[data-theme="dark"] .heys-auth-card,
+[data-theme="classic-dark"] .heys-auth-card,
+[data-theme="sand-dark"] .heys-auth-card,
+[data-theme="blue-dark"] .heys-auth-card {
+  background: color-mix(in srgb, var(--v4-surface, #1e293b) 94%, transparent);
+  border-color: color-mix(in srgb, var(--v4-line, #334155) 80%, transparent);
+}
+
+@media (max-height: 760px) {
+  .heys-login-theme__panel {
+    margin-top: 12px;
+    margin-bottom: 14px;
+    padding-top: 12px;
+  }
+
+  .heys-login-theme__chip {
+    min-height: 38px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+}

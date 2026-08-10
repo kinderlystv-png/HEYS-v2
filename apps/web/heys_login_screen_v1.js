@@ -94,6 +94,10 @@
 
     const React = global.React;
     const { useEffect, useMemo, useState, useRef } = React;
+    const LoginThemePicker = HEYS.LoginThemePicker
+      && typeof HEYS.LoginThemePicker.createReactComponent === 'function'
+      ? HEYS.LoginThemePicker.createReactComponent(React)
+      : null;
 
     const [mode, setMode] = useState(initialMode);
 
@@ -112,6 +116,7 @@
     ]);
     const phoneInputRef = useRef(null);
     const pinRefs = useRef([]);
+    const keypadRef = useRef(null);
     const pinHideTimers = useRef([null, null, null, null]);
     const phonePulseTimer = useRef(null);
 
@@ -926,7 +931,7 @@
 
           React.createElement(
             'div',
-            { className: 'heys-auth-keypad', 'aria-label': 'Цифровая клавиатура PIN' },
+            { className: 'heys-auth-keypad', ref: keypadRef, 'aria-label': 'Цифровая клавиатура PIN' },
             [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) =>
               React.createElement(
                 'button',
@@ -964,7 +969,23 @@
             ),
           ),
 
-          err && React.createElement('div', { className: 'heys-auth-error' + (pinErrorVisible ? ' is-pin-error' : '') }, err),
+          LoginThemePicker
+            ? React.createElement(LoginThemePicker, {
+              keypadRef,
+              phoneInputRef,
+              dimmed: pinErrorVisible,
+            })
+            : null,
+
+          React.createElement(
+            'div',
+            {
+              className: 'heys-auth-error heys-auth-error-slot' + (pinErrorVisible ? ' is-pin-error' : ''),
+              role: 'alert',
+              'aria-live': 'polite',
+            },
+            err || '',
+          ),
           React.createElement(
             'button',
             { type: 'submit', disabled: !canClientLogin, className: 'heys-auth-submit-hidden', tabIndex: -1, 'aria-label': 'Войти' },
