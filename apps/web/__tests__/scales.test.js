@@ -299,6 +299,21 @@ describe('heys_scales_v1 — этап 3: новые шкалы и colorForStep',
     expect(scales.macroFat(40, 100).color).toBe('#ef4444');
     expect(scales.macroCarbs(20, 100, true).color).toBe('#f59e0b');
   });
+
+  it('macroWidgetValueTone и riskRadarScore сохраняют классические цвета виджетов', () => {
+    const scales = loadScales();
+    expect(scales.macroWidgetValueTone(0, 'protein').color).toBe('#ef4444');
+    expect(scales.macroWidgetValueTone(50, 'protein').color).toBe('#ef4444');
+    expect(scales.macroWidgetValueTone(75, 'protein').color).toBe('#f59e0b');
+    expect(scales.macroWidgetValueTone(95, 'protein').color).toBe('#16a34a');
+    expect(scales.macroWidgetValueTone(80, 'fat').color).toBe('#16a34a');
+    expect(scales.macroWidgetValueTone(60, 'carbs').color).toBe('#f59e0b');
+    expect(scales.macroWidgetValueTone(130, 'carbs').color).toBe('#ef4444');
+    expect(scales.riskRadarScore(10).color).toBe('#10b981');
+    expect(scales.riskRadarScore(25).color).toBe('#eab308');
+    expect(scales.riskRadarScore(50).color).toBe('#f97316');
+    expect(scales.riskRadarScore(80).color).toBe('#ef4444');
+  });
 });
 
 // Ступени должны читаться одинаково во всех оценочных шкалах: одинаково плохое
