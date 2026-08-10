@@ -1,20 +1,10 @@
-// heys_day_activity_v1.js — Activity tracking card component
-// Extracted from heys_day_v12.js (PR-2: Step 2/2)
-// Renders steps slider, household activities, and training blocks
+// heys_day_activity_v1.js — Activity tab (v4 layout, stage 4)
 
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
 
   const MA_ZONE_SIGS_MONTH = new Set(['8,0,0,0', '8,6,0,0', '4,8,8,2']);
   const MA_REPLACEMENT_FIRST_HALF_TRAINING = 'first_half_training';
-
-  const MA_SKIP_REASON_LABEL_FALLBACK = {
-    no_time: 'Не было времени',
-    low_mood: 'Плохое настроение или самочувствие',
-    low_energy: 'Мало сил и энергии',
-    other_priority: 'Были другие приоритеты',
-    other: 'Другая причина'
-  };
 
   function trainingZoneSigMonth(training) {
     const z = Array.isArray(training?.z) ? training.z : [];
@@ -55,9 +45,93 @@
     return z.reduce((s, min, i) => s + r0((+min || 0) * (kcalMin[i] || 0)), 0);
   }
 
+  function isMorningActivationTraining(training) {
+    return isMorningActivationTrainingMonth(training);
+  }
+
+  function getChargeKcalToday(day, r0, kcalMin) {
+    const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
+    const charge = trainings.find((t) => t && isMorningActivationTraining(t));
+    if (!charge) return 0;
+    return trainingKcalFromZones(charge, kcalMin || [0, 0, 0, 0], r0);
+  }
+
+  function getChargeTimeToday(day) {
+    const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
+    const charge = trainings.find((t) => t && isMorningActivationTraining(t));
+    return charge?.time || day?.morningActivation?.decidedAt?.slice(11, 16) || null;
+  }
+
+  function hasMorningActivationDone(day) {
+    if (day?.morningActivation?.status === 'done') return true;
+    const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
+    if (trainings.some((t) => t && t.source === 'morning_activation')) return true;
+    const household = Array.isArray(day?.householdActivities) ? day.householdActivities : [];
+    if (household.some((h) => h && h.source === 'morning_activation')) return true;
+    return false;
+  }
+
+  function formatDeficitLabel(dayTargetDef) {
+    const pct = Number(dayTargetDef) || 0;
+    if (pct === 0) return '';
+    if (pct < 0) return '\u2212' + Math.abs(pct) + ' %';
+    return '+' + pct + ' %';
+  }
+
+  function buildHeroFooterLabel(ctx) {
+    const { dayTargetDef, day, caloricDebt, ndteBoostKcal } = ctx;
+    if (day?.isRefeedDay) return 'день загрузки';
+    if ((caloricDebt?.dailyBoost || 0) > 0) return 'компенсация долга';
+    if ((caloricDebt?.dailyReduction || 0) > 0) return 'снижение по плану';
+    if (ndteBoostKcal > 0) return 'буст после тренировки вчера';
+    const def = formatDeficitLabel(dayTargetDef);
+    return def
+      ? 'от затрат без термического эффекта · ' + def
+      : 'от затрат без термического эффекта';
+  }
+
+  function readHungerSummary(dateKey) {
+    const Storage = HEYS.HungerEnergyStatusStorage;
+    if (!Storage?.readEvents) return null;
+    const rows = Storage.readEvents() || [];
+    const todayRows = rows.filter((row) => {
+      if (!row || typeof row !== 'object') return false;
+      const at = row.recordedAt || row.at || row.createdAt;
+      if (typeof at !== 'string') return false;
+      return at.slice(0, 10) === dateKey;
+    });
+    if (!todayRows.length) return null;
+    const last = todayRows[todayRows.length - 1];
+    const hunger = last.hunger ?? last.hungerLevel ?? last.level;
+    const energy = last.energy ?? last.energyLevel;
+    if (Number.isFinite(hunger) && Number.isFinite(energy)) {
+      return 'голод ' + hunger + ' · энергия ' + energy;
+    }
+    if (Number.isFinite(hunger)) return 'голод ' + hunger;
+    if (Number.isFinite(energy)) return 'энергия ' + energy;
+    if (typeof last.summary === 'string' && last.summary.trim()) return last.summary.trim();
+    return 'отмечено';
+  }
+
+  function openMorningActivationQuickAdd(day, visibleTrainings, openTrainingPicker) {
+    const dateKey = day?.date || day?.dateKey || (HEYS.StepModal?.utils?.getTodayKey?.() || new Date().toISOString().slice(0, 10));
+    if (HEYS.StepModal?.show && HEYS.StepModal?.registry?.morning_activation_followup) {
+      HEYS.StepModal.show({
+        steps: ['morning_activation_followup'],
+        title: 'Утренняя зарядка',
+        showProgress: false,
+        showStreak: false,
+        showGreeting: false,
+        showTip: false,
+        allowSwipe: false,
+        context: { dateKey }
+      });
+      return;
+    }
+    openTrainingPicker?.(visibleTrainings || 0);
+  }
+
   /**
-   * Собирает строки для блока «тренировки за 30 дней» (чтение дней из localStorage).
-   * Утреннюю зарядку (charge / morning_activation) не включаем — она в календаре зарядки выше.
    * @returns {Array<{ dateKey: string, dateLine: string, typeLabel: string, kcal: number }>}
    */
   function collectMonthTrainingRows(params) {
@@ -84,8 +158,6 @@
       const d = new Date(endD);
       d.setDate(d.getDate() - i);
       const dateKey = fmtDate(d);
-      // Логический ключ «heys_dayv2_DATE»: HEYS.utils.lsGet сам добавит clientId (nsKey).
-      // Нельзя передавать уже префиксованный heys_${cid}_dayv2_ — получится двойной clientId и null.
       const stored = lsGet('heys_dayv2_' + dateKey, null);
       if (!stored || typeof stored !== 'object') continue;
       const trainings = Array.isArray(stored.trainings) ? stored.trainings : [];
@@ -106,15 +178,9 @@
     return rows;
   }
 
-  /**
-   * Render activity card
-   * @param {Object} params - Render parameters
-   * @param {Object} params.React - React reference
-   * @param {Object} params.ctx - Context data (day, prof, steps, trainings, etc.)
-   * @param {Object} params.actions - Action handlers
-   * @returns {ReactElement} Activity card element
-   */
-  function renderActivityCard({ React, ctx, actions }) {
+  function ActivityTabV4(props) {
+    const { React, ctx, actions } = props;
+    const { useState, useMemo } = React;
     const {
       day,
       prof,
@@ -126,13 +192,11 @@
       bmr,
       householdK,
       totalHouseholdMin,
-      householdActivities,
       train1k,
       train2k,
       r0,
       visibleTrainings,
       regularTrainingsBlock,
-      chargeTrainingBlock,
       ndteData,
       ndteBoostKcal,
       tefData,
@@ -142,11 +206,12 @@
       tdee,
       caloricDebt,
       monthTrainingsRows,
-      morningActivationCalendarBlock
+      morningActivationCalendarBlock,
+      kcalMin
     } = ctx;
+
     const safeR0 = typeof r0 === 'function' ? r0 : (v) => Math.round(v || 0);
     const {
-      setDay,
       haptic,
       setMetricPopup,
       setTefInfoPopup,
@@ -156,335 +221,353 @@
       openTrainingPicker
     } = actions;
 
-    const hasMorningActivationDone = (() => {
-      if (day?.morningActivation?.status === 'done') return true;
-      const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
-      if (trainings.some((t) => t && t.source === 'morning_activation')) return true;
-      const household = Array.isArray(day?.householdActivities) ? day.householdActivities : [];
-      if (household.some((h) => h && h.source === 'morning_activation')) return true;
-      return false;
-    })();
-    const isMorningActivationReplacement = (() => {
-      if (day?.morningActivation?.replacement === MA_REPLACEMENT_FIRST_HALF_TRAINING) return true;
-      const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
-      return trainings.some((t) => t && t.source === 'morning_activation_replacement');
-    })();
+    const [heroOpen, setHeroOpen] = useState(false);
+    const [sheetOpen, setSheetOpen] = useState(false);
+    const [cardioOpen, setCardioOpen] = useState(false);
+    const [monthOpen, setMonthOpen] = useState(false);
 
-    const showMaSkippedChargeNotice = day?.morningActivation?.status === 'missed' && !hasMorningActivationDone;
-    const showMaDoneChargeNotice = hasMorningActivationDone && !chargeTrainingBlock;
-    const maSkipReasonSubtitle = (() => {
-      const id = day?.morningActivation?.skipReasonId;
-      if (!id) return null;
-      const list = HEYS.morningActivationSkipReasons;
-      if (Array.isArray(list) && list.length) {
-        const row = list.find((x) => x && x.id === id);
-        if (row) return row.label;
-      }
-      return MA_SKIP_REASON_LABEL_FALLBACK[id] || null;
-    })();
-    const showChargeCard = !!chargeTrainingBlock || !!morningActivationCalendarBlock || showMaSkippedChargeNotice;
+    const dateKey = day?.date || day?.dateKey || '';
+    const safeKcalMin = Array.isArray(kcalMin) && kcalMin.length === 4
+      ? kcalMin
+      : (HEYS.TDEE?.calculate?.(day, prof || {})?.kcalMin || [0, 0, 0, 0]);
+    const baseExpenditure = safeR0((Number(tdee) || 0) - (Number(tefKcal) || 0));
+    const chargeKcal = getChargeKcalToday(day, safeR0, safeKcalMin);
+    const chargeTime = getChargeTimeToday(day);
+    const chargeDone = hasMorningActivationDone(day);
+    const hungerSummary = readHungerSummary(dateKey);
 
-    const openMorningActivationQuickAdd = () => {
-      const dateKey = day?.date || day?.dateKey || (HEYS.StepModal?.utils?.getTodayKey?.() || new Date().toISOString().slice(0, 10));
-      if (HEYS.StepModal?.show && HEYS.StepModal?.registry?.morning_activation_followup) {
-        HEYS.StepModal.show({
-          steps: ['morning_activation_followup'],
-          title: 'Утренняя зарядка',
-          showProgress: false,
-          showStreak: false,
-          showGreeting: false,
-          showTip: false,
-          allowSwipe: false,
-          context: { dateKey }
-        });
-        return;
-      }
-      openTrainingPicker?.(visibleTrainings || 0);
+    const monthCount = Array.isArray(monthTrainingsRows) ? monthTrainingsRows.length : 0;
+    const cardioKcal = safeR0((train1k || 0) + (train2k || 0));
+
+    const calendarBlock = morningActivationCalendarBlock && React.isValidElement?.(morningActivationCalendarBlock)
+      ? React.cloneElement(morningActivationCalendarBlock, {
+        layoutClass: 'ma-habit-cal--activity-v4 ma-habit-cal--activity'
+      })
+      : morningActivationCalendarBlock;
+
+    const pendingMarks = useMemo(() => {
+      const items = [];
+      if (!(totalHouseholdMin > 0)) items.push('быт');
+      if (!chargeDone) items.push('зарядка');
+      if (!hungerSummary) items.push('голод');
+      return items;
+    }, [totalHouseholdMin, chargeDone, hungerSummary]);
+
+    const showCollapsedMark = pendingMarks.length >= 2;
+
+    const heroFooter = buildHeroFooterLabel({ dayTargetDef, day, caloricDebt, ndteBoostKcal });
+
+    const openHungerModal = () => {
+      HEYS.HungerEnergyStatusModal?.show?.({
+        source: 'activity-row',
+        date: dateKey,
+        day
+      });
     };
 
-    return React.createElement('div', { className: 'compact-activity activity-section', 'data-curator-target': 'activity' },
-      React.createElement('div', { className: 'compact-card-header' }, '📏 АКТИВНОСТЬ'),
+    const activitySheet = sheetOpen && React.createElement(React.Fragment, null,
+      React.createElement('div', {
+        className: 'activity-v4-sheet-backdrop',
+        onClick: () => setSheetOpen(false)
+      }),
+      React.createElement('div', { className: 'activity-v4-sheet', role: 'dialog', 'aria-label': 'Добавить активность' },
+        React.createElement('div', { className: 'activity-v4-sheet__title' }, 'Добавить активность'),
+        visibleTrainings < 3 && React.createElement('button', {
+          type: 'button',
+          className: 'activity-v4-sheet__btn',
+          onClick: () => {
+            setSheetOpen(false);
+            openTrainingPicker?.(visibleTrainings || 0);
+            haptic?.('light');
+          }
+        }, '🏋️', ' Тренировка'),
+        React.createElement('button', {
+          type: 'button',
+          className: 'activity-v4-sheet__btn',
+          onClick: () => {
+            setSheetOpen(false);
+            openHouseholdPicker?.('add');
+            haptic?.('light');
+          }
+        }, '🏠', ' Бытовая активность'),
+        !chargeDone && React.createElement('button', {
+          type: 'button',
+          className: 'activity-v4-sheet__btn',
+          onClick: () => {
+            setSheetOpen(false);
+            openMorningActivationQuickAdd(day, visibleTrainings, openTrainingPicker);
+            haptic?.('light');
+          }
+        }, '⚡', ' Зарядка')
+      )
+    );
 
-      React.createElement('div', { className: 'activity-cards-row activity-cards-row--top' },
-        React.createElement('div', { className: 'formula-card formula-card--activity-top widget-shadow-diary-glass widget-outline-diary-glass' },
-        React.createElement('div', { className: 'formula-card-header' },
-          React.createElement('span', { className: 'formula-card-icon' }, '📊'),
-          React.createElement('span', { className: 'formula-card-title' }, 'Расчёт калорий')
-        ),
-        React.createElement('div', { className: 'formula-card-rows' },
-          React.createElement('div', { className: 'formula-row' },
-            React.createElement('span', { className: 'formula-label' }, 'BMR'),
-            React.createElement('span', { className: 'formula-value' }, bmr)
-          ),
-          React.createElement('div', { className: 'formula-row' },
-            React.createElement('span', { className: 'formula-label' }, '+ Шаги'),
-            React.createElement('span', { className: 'formula-value' }, stepsK)
-          ),
-          householdK > 0 && React.createElement('div', { className: 'formula-row' },
-            React.createElement('span', { className: 'formula-label' }, '+ Быт'),
-            React.createElement('span', { className: 'formula-value' }, householdK)
-          ),
-          (train1k + train2k > 0) && React.createElement('div', { className: 'formula-row' },
-            React.createElement('span', { className: 'formula-label' }, '+ Тренировки'),
-            React.createElement('span', { className: 'formula-value' }, safeR0(train1k + train2k))
-          ),
-          ndteData.active && ndteBoostKcal > 0 && React.createElement('div', { className: 'formula-row ndte-row' },
-            React.createElement('span', { className: 'formula-label' },
-              React.createElement('span', { style: { marginRight: '4px' } }, '🔥'),
-              'Тренировка вчера'
-            ),
-            React.createElement('span', { className: 'formula-value ndte-value' }, '+' + ndteBoostKcal)
-          ),
-          tefKcal > 0 && React.createElement('div', { className: 'formula-row tef-row' },
-            React.createElement('span', {
-              className: 'formula-label',
-              title: tefData.breakdown ? `Б: ${tefData.breakdown.protein} | У: ${tefData.breakdown.carbs} | Ж: ${tefData.breakdown.fat}` : ''
-            },
-              React.createElement('span', { style: { marginRight: '4px' } }, '🔥'),
-              '+ TEF',
-              React.createElement('span', {
-                className: 'tef-help-icon',
-                onClick: (e) => {
-                  e.stopPropagation();
-                  const rect = e.target.getBoundingClientRect();
-                  setTefInfoPopup({ x: rect.left + rect.width / 2, y: rect.bottom });
-                },
-                style: {
-                  marginLeft: '6px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '16px',
-                  height: '16px',
-                  borderRadius: '50%',
-                  background: 'rgba(100, 116, 139, 0.15)',
-                  color: '#64748b',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }
-              }, '?')
-            ),
-            React.createElement('span', { className: 'formula-value tef-value' }, tefKcal)
-          ),
-          React.createElement('div', { className: 'formula-row formula-subtotal' },
-            React.createElement('span', { className: 'formula-label' }, '= Затраты'),
-            React.createElement('span', { className: 'formula-value' }, tdee)
-          ),
-          dayTargetDef !== 0 && React.createElement('div', { className: 'formula-row' + (dayTargetDef < 0 ? ' deficit' : ' surplus') },
-            React.createElement('span', { className: 'formula-label' }, dayTargetDef < 0 ? 'Дефицит' : 'Профицит'),
-            React.createElement('span', { className: 'formula-value' }, (dayTargetDef > 0 ? '+' : '') + dayTargetDef + '%')
-          ),
-          caloricDebt?.dailyBoost > 0 && React.createElement('div', { className: 'formula-row debt-row' },
-            React.createElement('span', { className: 'formula-label' },
-              React.createElement('span', { style: { marginRight: '4px' } }, '💰'),
-              'Долг'
-            ),
-            React.createElement('span', { className: 'formula-value', style: { color: day.isRefeedDay ? '#9ca3af' : '#22c55e' } },
-              (day.isRefeedDay ? '(' : '+') + caloricDebt.dailyBoost + (day.isRefeedDay ? ')' : '')
-            )
-          ),
-          day.isRefeedDay && React.createElement('div', { className: 'formula-row refeed-row' },
-            React.createElement('span', { className: 'formula-label' },
-              React.createElement('span', { style: { marginRight: '4px' } }, '🍕'),
-              'Загрузка'
-            ),
-            React.createElement('span', { className: 'formula-value', style: { color: '#f97316' } }, '+35%')
-          ),
-          React.createElement('div', { className: 'formula-row formula-total' },
-            React.createElement('span', { className: 'formula-label' }, 'Цель'),
-            React.createElement('span', { className: 'formula-value' }, displayOptimum)
-          )
+    const todayRows = [];
+
+    if (totalHouseholdMin > 0) {
+      todayRows.push(React.createElement('div', {
+        key: 'household',
+        className: 'activity-v4-row activity-v4-row--action',
+        onClick: () => openHouseholdPicker?.('stats')
+      },
+        React.createElement('span', { className: 'activity-v4-row__label' }, 'Бытовая активность'),
+        React.createElement('span', { className: 'activity-v4-row__value' },
+          totalHouseholdMin + ' мин · ' + (householdK || 0) + ' ккал'
         )
+      ));
+    }
+
+    if (chargeDone && (chargeTime || chargeKcal > 0)) {
+      todayRows.push(React.createElement('div', {
+        key: 'charge',
+        className: 'activity-v4-row'
+      },
+        React.createElement('span', { className: 'activity-v4-row__label' }, 'Зарядка'),
+        React.createElement('span', { className: 'activity-v4-row__value' },
+          (chargeTime ? chargeTime + ' · ' : '') + chargeKcal + ' ккал'
+        )
+      ));
+    }
+
+    if (hungerSummary) {
+      todayRows.push(React.createElement('div', {
+        key: 'hunger',
+        className: 'activity-v4-row activity-v4-row--action',
+        onClick: openHungerModal
+      },
+        React.createElement('span', { className: 'activity-v4-row__label' }, 'Голод и энергия'),
+        React.createElement('span', { className: 'activity-v4-row__value' }, hungerSummary)
+      ));
+    }
+
+    if (showCollapsedMark) {
+      todayRows.push(React.createElement('div', {
+        key: 'mark-collapsed',
+        className: 'activity-v4-row activity-v4-row--action',
+        onClick: () => setSheetOpen(true)
+      },
+        React.createElement('span', { className: 'activity-v4-row__label' }, 'Отметить'),
+        React.createElement('span', { className: 'activity-v4-row__value activity-v4-row__value--muted' },
+          pendingMarks.join(', ')
+        )
+      ));
+    } else {
+      if (!(totalHouseholdMin > 0)) {
+        todayRows.push(React.createElement('div', {
+          key: 'household-empty',
+          className: 'activity-v4-row activity-v4-row--action',
+          onClick: () => openHouseholdPicker?.('add')
+        },
+          React.createElement('span', { className: 'activity-v4-row__label' }, 'Бытовая активность'),
+          React.createElement('span', { className: 'activity-v4-row__value activity-v4-row__value--muted' }, 'не отмечено')
+        ));
+      }
+      if (!chargeDone) {
+        todayRows.push(React.createElement('div', {
+          key: 'charge-empty',
+          className: 'activity-v4-row activity-v4-row--action',
+          onClick: () => openMorningActivationQuickAdd(day, visibleTrainings, openTrainingPicker)
+        },
+          React.createElement('span', { className: 'activity-v4-row__label' }, 'Зарядка'),
+          React.createElement('span', { className: 'activity-v4-row__value activity-v4-row__value--muted' }, 'не отмечено')
+        ));
+      }
+      if (!hungerSummary) {
+        todayRows.push(React.createElement('div', {
+          key: 'hunger-empty',
+          className: 'activity-v4-row activity-v4-row--action',
+          onClick: openHungerModal
+        },
+          React.createElement('span', { className: 'activity-v4-row__label' }, 'Голод и энергия'),
+          React.createElement('span', { className: 'activity-v4-row__value activity-v4-row__value--muted' }, 'не отмечено')
+        ));
+      }
+    }
+
+    const heroBreakdown = heroOpen && React.createElement('div', { className: 'activity-v4-hero__breakdown' },
+      React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
+        React.createElement('span', null, 'BMR'),
+        React.createElement('span', null, bmr + ' ккал')
+      ),
+      React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
+        React.createElement('span', null, '+ Шаги'),
+        React.createElement('span', null, stepsK + ' ккал')
+      ),
+      householdK > 0 && React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
+        React.createElement('span', null, '+ Быт'),
+        React.createElement('span', null, householdK + ' ккал')
+      ),
+      cardioKcal > 0 && React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
+        React.createElement('span', null, '+ Тренировки'),
+        React.createElement('span', null, cardioKcal + ' ккал')
+      ),
+      ndteData?.active && ndteBoostKcal > 0 && React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
+        React.createElement('span', null, 'Тренировка вчера'),
+        React.createElement('span', null, '+' + ndteBoostKcal + ' ккал')
+      ),
+      React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
+        React.createElement('span', null, 'База (без TEF)'),
+        React.createElement('span', null, baseExpenditure + ' ккал')
+      ),
+      tefKcal > 0 && React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
+        React.createElement('span', null, '+ TEF'),
+        React.createElement('span', null, tefKcal + ' ккал')
+      ),
+      React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
+        React.createElement('span', null, 'Затраты'),
+        React.createElement('span', null, tdee + ' ккал')
+      ),
+      dayTargetDef !== 0 && React.createElement('div', { className: 'activity-v4-hero__breakdown-row' },
+        React.createElement('span', null, dayTargetDef < 0 ? 'Дефицит' : 'Профицит'),
+        React.createElement('span', null, formatDeficitLabel(dayTargetDef))
+      )
+    );
+
+    return React.createElement('div', {
+      className: 'compact-activity activity-section activity-v4',
+      'data-curator-target': 'activity'
+    },
+      React.createElement('div', { className: 'activity-v4-hero' },
+        React.createElement('div', { className: 'activity-v4-hero__label' }, 'Цель дня'),
+        React.createElement('div', { className: 'activity-v4-hero__value-row' },
+          React.createElement('span', { className: 'activity-v4-hero__value' }, displayOptimum),
+          React.createElement('span', { className: 'activity-v4-hero__unit' }, 'ккал')
         ),
-        React.createElement('div', { className: 'activity-right-col activity-right-col--top' },
-          React.createElement('div', {
-            className: 'household-activity-card clickable widget-shadow-diary-glass widget-outline-diary-glass',
-            onClick: () => openHouseholdPicker('stats')
-          },
-            React.createElement('div', { className: 'household-activity-header' },
-              React.createElement('span', { className: 'household-activity-icon' }, '🏠'),
-              React.createElement('span', { className: 'household-activity-title' }, 'Бытовая активность'),
-              householdActivities.length > 0 && React.createElement('span', { className: 'household-count-badge' }, householdActivities.length)
-            ),
-            React.createElement('div', { className: 'household-activity-value' },
-              React.createElement('span', { className: 'household-value-number' }, totalHouseholdMin),
-              React.createElement('span', { className: 'household-value-unit' }, 'мин')
-            ),
-            React.createElement('span', { className: 'household-stats-link' },
-              React.createElement('span', { className: 'household-help-icon' }, '?'),
-              ' подробнее'
-            ),
-            householdK > 0 && React.createElement('div', { className: 'household-value-kcal' }, '→ ' + householdK + ' ккал'),
-            React.createElement('button', {
-              className: 'household-add-btn',
+        React.createElement('button', {
+          type: 'button',
+          className: 'activity-v4-hero__footer',
+          onClick: () => setHeroOpen((v) => !v),
+          'aria-expanded': heroOpen
+        },
+          React.createElement('span', null, heroFooter),
+          React.createElement('span', { className: 'activity-v4-hero__footer-chevron', 'aria-hidden': 'true' }, heroOpen ? '\u2039' : '\u203A')
+        ),
+        heroBreakdown
+      ),
+
+      React.createElement('div', { className: 'activity-v4-tier' }, 'Сегодня'),
+
+      React.createElement('div', { className: 'activity-v4-steps', 'data-curator-target': 'steps' },
+        React.createElement('div', { className: 'activity-v4-steps__head' },
+          React.createElement('span', { className: 'activity-v4-steps__label' }, 'Шаги'),
+          React.createElement('span', { className: 'activity-v4-steps__values' },
+            React.createElement('span', {
               onClick: (e) => {
                 e.stopPropagation();
-                openHouseholdPicker('add');
-              }
-            }, '+ Добавить')
+                const rect = e.currentTarget.getBoundingClientRect();
+                setMetricPopup?.({
+                  type: 'steps',
+                  x: rect.left + rect.width / 2,
+                  y: rect.top,
+                  data: {
+                    value: stepsValue,
+                    goal: stepsGoal,
+                    ratio: stepsValue / stepsGoal,
+                    kcal: stepsK,
+                    color: stepsColor
+                  }
+                });
+                haptic?.('light');
+              },
+              style: { cursor: 'pointer' }
+            }, stepsValue.toLocaleString()),
+            ' ',
+            React.createElement('span', { className: 'activity-v4-steps__goal' }, '/ ' + stepsGoal.toLocaleString())
           )
-        )
-      ),
-
-      // Слайдер шагов с зоной защиты от свайпа
-      React.createElement('div', { className: 'activity-steps-card widget-shadow-diary-glass widget-outline-diary-glass', 'data-curator-target': 'steps' },
-        React.createElement('div', { className: 'steps-slider-container no-swipe-zone' },
-          React.createElement('div', { className: 'steps-slider-header' },
-            React.createElement('span', { className: 'steps-label' }, '👟 Шаги'),
-            React.createElement('span', { className: 'steps-value' },
-              // Фактические шаги — кликабельные с подсказкой
-              React.createElement('span', {
-                onClick: (e) => {
-                  e.stopPropagation();
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  setMetricPopup({
-                    type: 'steps',
-                    x: rect.left + rect.width / 2,
-                    y: rect.top,
-                    data: {
-                      value: stepsValue,
-                      goal: stepsGoal,
-                      ratio: stepsValue / stepsGoal,
-                      kcal: stepsK,
-                      color: stepsColor
-                    }
-                  });
-                  haptic('light');
-                },
-                style: { cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted', textUnderlineOffset: '3px' },
-                title: 'Нажмите для подробностей'
-              },
-                React.createElement('b', { style: { color: stepsColor } }, stepsValue.toLocaleString())
-              ),
-              ' / ',
-              // Цель шагов — с кнопкой редактирования
-              React.createElement('span', {
-                onClick: (e) => {
-                  e.stopPropagation();
-                  openStepsGoalPicker();
-                  haptic('light');
-                },
-                style: { cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' },
-                title: 'Изменить цель'
-              },
-                React.createElement('b', { className: 'steps-goal' }, stepsGoal.toLocaleString()),
-                React.createElement('span', { style: { fontSize: '12px', opacity: 0.7 } }, '✏️')
-              ),
-              React.createElement('span', { className: 'steps-kcal-hint' }, ' / ' + stepsK + ' ккал')
-            )
-          ),
-          React.createElement('div', {
-            className: 'steps-slider'
-          },
-            React.createElement('div', { className: 'steps-slider-track' }),
-            React.createElement('div', { className: 'steps-slider-goal-mark', style: { left: '80%' } },
-              React.createElement('span', { className: 'steps-goal-label' }, String(stepsGoal))
-            ),
+        ),
+        React.createElement('div', { className: 'activity-v4-steps__track-wrap no-swipe-zone' },
+          React.createElement('div', { className: 'activity-v4-steps__track' },
             React.createElement('div', {
-              className: 'steps-slider-fill',
+              className: 'activity-v4-steps__fill',
               style: { width: stepsPercent + '%', background: stepsColor }
-            }),
-            React.createElement('div', {
-              className: 'steps-slider-thumb',
-              style: { left: stepsPercent + '%', borderColor: stepsColor },
-              onMouseDown: handleStepsDrag,
-              onTouchStart: handleStepsDrag
             })
-          )
-        )
-      ),
-
-      React.createElement('div', { className: 'activity-actions-row' },
-        visibleTrainings < 3 && React.createElement('button', {
-          className: 'add-training-btn',
-          onClick: () => {
-            const newIndex = visibleTrainings;
-            // НЕ увеличиваем visibleTrainings сразу —
-            // он обновится автоматически когда тренировка сохранится
-            openTrainingPicker(newIndex);
-          }
-        }, '+ Тренировка'),
-        !hasMorningActivationDone && React.createElement('button', {
-          className: 'add-training-btn add-charge-btn',
-          type: 'button',
-          onClick: openMorningActivationQuickAdd,
-          title: 'Добавить зарядку'
-        }, '⚡🔋')
-      ),
-
-      // Тренировки — обычные выше зарядки
-      regularTrainingsBlock,
-
-      showChargeCard && React.createElement('div', {
-        className: 'activity-charge-card compact-card widget-shadow-diary-glass widget-outline-diary-glass',
-        'data-curator-target': 'training'
-      },
-        React.createElement('div', { className: 'activity-charge-card-head' },
-          React.createElement('span', { className: 'activity-charge-card-title' }, '⚡ Зарядка'),
-          showMaSkippedChargeNotice && React.createElement('span', {
-            className: 'activity-charge-card-status activity-charge-card-status--missed'
-          }, 'пропущено'),
-          showMaDoneChargeNotice && React.createElement('span', {
-            className: 'activity-charge-card-status ' + (isMorningActivationReplacement ? 'activity-charge-card-status--replacement' : 'activity-charge-card-status--done')
-          }, isMorningActivationReplacement ? 'тренировка' : 'сделано')
-        ),
-        showMaDoneChargeNotice && React.createElement('div', {
-          className: 'ma-done-notice-card' + (isMorningActivationReplacement ? ' ma-done-notice-card--replacement' : ''),
-          role: 'status'
-        },
-          React.createElement('span', { className: 'ma-done-notice-icon', 'aria-hidden': 'true' }, isMorningActivationReplacement ? '🏋️' : '✅'),
-          React.createElement('span', { className: 'ma-done-notice-text' }, isMorningActivationReplacement ? 'Тренировка вместо зарядки' : 'Сегодня выполнено')
-        ),
-        showMaSkippedChargeNotice && React.createElement('div', {
-          className: 'ma-skip-notice-card',
-          role: 'status'
-        },
-          React.createElement('div', { className: 'ma-skip-notice-row' },
-            React.createElement('span', { className: 'ma-skip-notice-icon', 'aria-hidden': 'true' }, '⚡'),
-            React.createElement('div', { className: 'ma-skip-notice-text' },
-              React.createElement('div', { className: 'ma-skip-notice-title' }, 'Сегодня пропущено'),
-              React.createElement('div', { className: 'ma-skip-notice-sub' },
-                maSkipReasonSubtitle
-                  ? maSkipReasonSubtitle
-                  : (day?.morningActivation?.skipReasonPending
-                    ? 'После добавления продукта в приём можно коротко отметить причину.'
-                    : 'Ты отметил(а), что зарядку сегодня не планируешь.')
-              )
+          ),
+          React.createElement('div', { className: 'activity-v4-steps__slider steps-slider-container' },
+            React.createElement('div', { className: 'steps-slider' },
+              React.createElement('div', { className: 'steps-slider-track' }),
+              React.createElement('div', { className: 'steps-slider-goal-mark', style: { left: '80%' } },
+                React.createElement('span', { className: 'steps-goal-label' }, String(stepsGoal))
+              ),
+              React.createElement('div', {
+                className: 'steps-slider-fill',
+                style: { width: stepsPercent + '%', background: stepsColor }
+              }),
+              React.createElement('div', {
+                className: 'steps-slider-thumb',
+                style: { left: stepsPercent + '%', borderColor: stepsColor },
+                onMouseDown: handleStepsDrag,
+                onTouchStart: handleStepsDrag
+              })
             )
           )
         ),
-        chargeTrainingBlock,
-        morningActivationCalendarBlock && React.createElement('div', {
-          className: 'activity-charge-calendar'
-        }, morningActivationCalendarBlock)
+        React.createElement('div', { className: 'activity-v4-steps__hint' }, stepsK + ' ккал · правка ползунком')
       ),
 
-      // Тренировки за последние 30 дней (сводка)
-      React.createElement('div', { className: 'month-trainings-card compact-card widget-shadow-diary-glass widget-outline-diary-glass', 'data-curator-target': 'training-summary' },
-        React.createElement('div', { className: 'month-trainings-card-header' },
-          React.createElement('span', { className: 'month-trainings-card-title' }, '📋 Тренировки за 30 дней')
+      todayRows.length > 0 && React.createElement('div', { className: 'activity-v4-rows' }, todayRows),
+
+      React.createElement('div', { className: 'activity-v4-tier' }, 'Действие'),
+      React.createElement('button', {
+        type: 'button',
+        className: 'activity-v4-cta',
+        onClick: () => setSheetOpen(true)
+      },
+        React.createElement('span', null, 'Добавить активность'),
+        React.createElement('span', { className: 'activity-v4-cta__icon', 'aria-hidden': 'true' }, '+')
+      ),
+
+      React.createElement('div', { className: 'activity-v4-tier' }, 'История'),
+      React.createElement('div', { className: 'activity-v4-history' },
+        calendarBlock,
+        React.createElement('button', {
+          type: 'button',
+          className: 'activity-v4-history__month-row',
+          onClick: () => setMonthOpen((v) => !v),
+          'aria-expanded': monthOpen
+        },
+          React.createElement('span', { className: 'activity-v4-history__month-label' }, 'Тренировки за месяц'),
+          React.createElement('span', { className: 'activity-v4-history__month-value' }, monthCount + ' \u203A')
         ),
-        (!Array.isArray(monthTrainingsRows) || monthTrainingsRows.length === 0)
-          ? React.createElement('div', { className: 'month-trainings-empty' }, 'Нет тренировок за последние 30 дней')
-          : React.createElement('div', { className: 'month-trainings-list' },
-            monthTrainingsRows.map((row, ri) => React.createElement('div', {
-              key: 'mtr-' + ri + '-' + row.dateKey,
-              className: 'month-trainings-row'
-            },
+        monthOpen && monthCount > 0 && React.createElement('div', { className: 'activity-v4-history__month-list month-trainings-list' },
+          monthTrainingsRows.map((row, ri) => React.createElement('div', {
+            key: 'mtr-' + ri + '-' + row.dateKey,
+            className: 'month-trainings-row'
+          },
             React.createElement('span', { className: 'month-trainings-row-date' }, row.dateLine || row.dateKey),
             React.createElement('span', { className: 'month-trainings-row-type' }, row.typeLabel),
             React.createElement('span', { className: 'compact-badge train month-trainings-row-kcal' }, (row.kcal || 0) + ' ккал')
-            ))
+          ))
+        ),
+        monthOpen && monthCount === 0 && React.createElement('div', { className: 'month-trainings-empty' }, 'Нет тренировок за последние 30 дней')
+      ),
+
+      regularTrainingsBlock && React.createElement('div', { className: 'activity-v4-cardio' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'activity-v4-cardio__toggle',
+          onClick: () => setCardioOpen((v) => !v),
+          'aria-expanded': cardioOpen
+        },
+          React.createElement('span', null, 'Кардио'),
+          React.createElement('span', { className: 'activity-v4-cardio__toggle-value' },
+            cardioKcal > 0 ? cardioKcal + ' ккал' : 'не отмечено'
           )
-      )
+        ),
+        cardioOpen && React.createElement('div', { className: 'activity-v4-cardio__body' }, regularTrainingsBlock)
+      ),
+
+      activitySheet
     );
   }
 
-  // Export
+  function renderActivityCard(params) {
+    return React.createElement(ActivityTabV4, params);
+  }
+
   HEYS.dayActivity = {
     render: renderActivityCard,
-    collectMonthTrainingRows
+    collectMonthTrainingRows,
+    ActivityTabV4
   };
 
 })(window);

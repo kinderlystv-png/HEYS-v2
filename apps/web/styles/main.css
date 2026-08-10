@@ -42,6 +42,7 @@
 /* 720-predictive-insights, 725-metabolic-intelligence, 900-planning moved to main-deferred.css
  * (chained preload after main.css onload — see index.html). 2026-04-25 split. */
 @import url('./modules/730-widgets-dashboard.css');
+@import url('./modules/731-ui-v4-activity.css');
 @import url('./modules/740-cascade-card.css');
 @import url('./modules/750-strength-builder.css');
 @import url('./modules/800-meal-optimizer.css');

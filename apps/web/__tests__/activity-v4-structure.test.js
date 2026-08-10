@@ -1,0 +1,53 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+
+const activitySource = fs.readFileSync(
+  path.resolve(__dirname, '../heys_day_activity_v1.js'),
+  'utf8',
+);
+const calendarSource = fs.readFileSync(
+  path.resolve(__dirname, '../heys_morning_activation_calendar_v1.js'),
+  'utf8',
+);
+const cssSource = fs.readFileSync(
+  path.resolve(__dirname, '../styles/modules/731-ui-v4-activity.css'),
+  'utf8',
+);
+const shellSource = fs.readFileSync(
+  path.resolve(__dirname, '../heys_day_page_shell.js'),
+  'utf8',
+);
+
+describe('Activity tab v4 structure', () => {
+  it('exports ActivityTabV4 with tiered layout markers', () => {
+    expect(activitySource).toContain('function ActivityTabV4');
+    expect(activitySource).toContain('activity-v4-hero');
+    expect(activitySource).toContain('activity-v4-tier');
+    expect(activitySource).toContain('Добавить активность');
+    expect(activitySource).toContain('activity-v4-cardio');
+    expect(activitySource).toContain('Отметить');
+  });
+
+  it('does not keep legacy formula-card header block', () => {
+    expect(activitySource).not.toContain('formula-card--activity-top');
+    expect(activitySource).not.toContain('📏 АКТИВНОСТЬ');
+  });
+
+  it('calendar supports v4 heading and hides footer in v4', () => {
+    expect(calendarSource).toContain('ma-habit-cal--activity-v4');
+    expect(calendarSource).toContain('Зарядка ·');
+  });
+
+  it('activity renders only on activity mobile subtab', () => {
+    expect(shellSource).toMatch(/mobileSubTab === 'activity'\) && compactActivity/);
+    expect(shellSource).not.toMatch(/mobileSubTab === 'stats' \|\| mobileSubTab === 'activity'\) && compactActivity/);
+  });
+
+  it('structure css is imported', () => {
+    const mainCss = fs.readFileSync(path.resolve(__dirname, '../styles/main.css'), 'utf8');
+    expect(mainCss).toContain('731-ui-v4-activity.css');
+    expect(cssSource).toContain('.activity-v4-cta');
+  });
+});

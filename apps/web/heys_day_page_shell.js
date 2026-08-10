@@ -427,7 +427,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 (!isMobile || mobileSubTab === 'stats') && orphanAlert,
                 (!isMobile || mobileSubTab === 'stats') && lowCalBanner,
                 (!isMobile || mobileSubTab === 'stats') && statsBlock,
-                (!isMobile || mobileSubTab === 'stats' || mobileSubTab === 'activity') && compactActivity,
+                (!isMobile || mobileSubTab === 'activity') && compactActivity,
                 (!isMobile || mobileSubTab === 'stats') && sideBlock,
                 (!isMobile || mobileSubTab === 'stats') && cycleCard,
                 (!isMobile || mobileSubTab === 'stats') && reportsOverviewCard,

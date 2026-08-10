@@ -300,7 +300,11 @@
       [effectiveAnchorKey, calendarViewMode, stableRead]
     );
 
-    const periodRow = calendarViewMode === VIEW_MONTH
+    const isActivityV4 = (layoutClass || '').includes('ma-habit-cal--activity-v4');
+    const activeDays = calendarData.grid.filter((cell) => !cell.isEmpty).length;
+    const v4Heading = 'Зарядка · ' + calendarData.doneCount + ' из ' + activeDays;
+
+    const periodRow = !isActivityV4 && calendarViewMode === VIEW_MONTH
       ? React.createElement('div', { className: 'ma-habit-cal-period ma-habit-cal-period--month' },
         React.createElement('button', {
           type: 'button',
@@ -323,34 +327,48 @@
           }
         }, '\u203A')
       )
-      : React.createElement('div', { className: 'ma-habit-cal-period ma-habit-cal-period--28' },
-        React.createElement('span', { className: 'ma-habit-cal-period-label ma-habit-cal-period-label--28' }, calendarData.title)
-      );
-
-    return React.createElement('div', { className: 'ma-habit-cal-shell compact-card widget-shadow-diary-glass widget-outline-diary-glass ' + (layoutClass || '').trim() },
-      React.createElement('div', { className: 'ma-habit-cal-head' },
-        React.createElement('div', { className: 'ma-habit-cal-head-title-group' },
-          React.createElement('span', { className: 'ma-habit-cal-heading' }, headingTitle),
-          React.createElement('span', { className: 'ma-habit-cal-head-dot', 'aria-hidden': 'true' }, '\u00B7'),
-          React.createElement('button', {
-            type: 'button',
-            className: 'ma-habit-cal-mode-btn ma-habit-cal-mode-btn--inline' + (calendarViewMode === VIEW_28_DAYS ? ' is-active' : ''),
-            onClick: () => {
-              setCalendarViewMode(VIEW_28_DAYS);
-              saveMorningActivationCalendarViewPreference(VIEW_28_DAYS);
-            }
-          }, '28 дней'),
-          React.createElement('span', { className: 'ma-habit-cal-head-dot', 'aria-hidden': 'true' }, '\u00B7'),
-          React.createElement('button', {
-            type: 'button',
-            className: 'ma-habit-cal-mode-btn ma-habit-cal-mode-btn--inline' + (calendarViewMode === VIEW_MONTH ? ' is-active' : ''),
-            onClick: () => {
-              setCalendarViewMode(VIEW_MONTH);
-              saveMorningActivationCalendarViewPreference(VIEW_MONTH);
-              setMonthAnchorKey(firstOfMonthIsoFromDateKey(dateKey));
-            }
-          }, 'Месяц')
+      : (!isActivityV4
+        ? React.createElement('div', { className: 'ma-habit-cal-period ma-habit-cal-period--28' },
+          React.createElement('span', { className: 'ma-habit-cal-period-label ma-habit-cal-period-label--28' }, calendarData.title)
         )
+        : null);
+
+    const modeButtons = React.createElement('div', { className: 'ma-habit-cal-mode-group' },
+      React.createElement('button', {
+        type: 'button',
+        className: 'ma-habit-cal-mode-btn ma-habit-cal-mode-btn--inline' + (calendarViewMode === VIEW_28_DAYS ? ' is-active' : ''),
+        onClick: () => {
+          setCalendarViewMode(VIEW_28_DAYS);
+          saveMorningActivationCalendarViewPreference(VIEW_28_DAYS);
+        }
+      }, '28 дней'),
+      React.createElement('button', {
+        type: 'button',
+        className: 'ma-habit-cal-mode-btn ma-habit-cal-mode-btn--inline' + (calendarViewMode === VIEW_MONTH ? ' is-active' : ''),
+        onClick: () => {
+          setCalendarViewMode(VIEW_MONTH);
+          saveMorningActivationCalendarViewPreference(VIEW_MONTH);
+          setMonthAnchorKey(firstOfMonthIsoFromDateKey(dateKey));
+        }
+      }, 'Месяц')
+    );
+
+    const shellClass = 'ma-habit-cal-shell '
+      + (isActivityV4 ? '' : 'compact-card widget-shadow-diary-glass widget-outline-diary-glass ')
+      + (layoutClass || '').trim();
+
+    return React.createElement('div', { className: shellClass.trim() },
+      React.createElement('div', { className: 'ma-habit-cal-head' },
+        isActivityV4
+          ? React.createElement('div', { className: 'ma-habit-cal-head-title-group' },
+            React.createElement('span', { className: 'ma-habit-cal-heading' }, v4Heading),
+            modeButtons
+          )
+          : React.createElement('div', { className: 'ma-habit-cal-head-title-group' },
+            React.createElement('span', { className: 'ma-habit-cal-heading' }, headingTitle),
+            React.createElement('span', { className: 'ma-habit-cal-head-dot', 'aria-hidden': 'true' }, '\u00B7'),
+            modeButtons
+          )
       ),
       periodRow,
       React.createElement('div', { className: 'ma-habit-cal-matrix' },
@@ -387,7 +405,7 @@
         })
         )
       ),
-      React.createElement('div', { className: 'ma-habit-cal-footer' },
+      !isActivityV4 && React.createElement('div', { className: 'ma-habit-cal-footer' },
         React.createElement('span', null, `Сделано: ${calendarData.doneCount}`),
         calendarData.replacementCount > 0 && React.createElement('span', null, `Тренировкой: ${calendarData.replacementCount}`),
         React.createElement('span', null, `Пропущено: ${calendarData.missedCount}`)
