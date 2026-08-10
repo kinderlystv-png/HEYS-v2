@@ -56,17 +56,7 @@
   --widget-weight-semibold: 600;
   --widget-weight-bold: 700;
 
-  /* Premium Color Palette */
-  --widget-nutrition: #FF9500;
-  /* Apple Orange */
-  --widget-health: #AF52DE;
-  /* Apple Purple */
-  --widget-motivation: #30D158;
-  /* Apple Green */
-  --widget-advanced: #0A84FF;
-  /* Apple Blue */
-  --widget-cycle: #FF375F;
-  /* Apple Pink */
+  /* Вода — единственный холодный акцент плитки (полоса заполнения) */
   --widget-water: #64D2FF;
   /* Apple Cyan */
 
@@ -1238,7 +1228,7 @@ body:has(.page-reports) .hdr::after {
 
 /* Focus state for accessibility */
 .widget:focus-visible {
-  outline: 3px solid var(--widget-advanced);
+  outline: 3px solid var(--v4-act, #0A84FF);
   outline-offset: 2px;
 }
 
@@ -1642,7 +1632,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget--insulin .widget__wave-curve {
-  stroke: #0A84FF;
+  stroke: var(--v4-tint-cool, #0A84FF);
   stroke-width: 2.5;
   fill: none;
   filter: drop-shadow(0 2px 4px color-mix(in srgb, var(--v4-tint-cool, #0a84ff) 30%, transparent));
@@ -1665,7 +1655,7 @@ body:has(.page-reports) .hdr::after {
 
 .widget--insulin .widget__status--active {
   background: color-mix(in srgb, var(--v4-tint-cool, #0a84ff) 12%, transparent);
-  color: #0A84FF;
+  color: var(--v4-tint-cool, #0A84FF);
 }
 
 .widget--insulin .widget__status--lipolysis {
@@ -1997,7 +1987,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget--macros .widget__bar-label--carbs {
-  color: #0A84FF;
+  color: var(--v4-tint-cool, #0A84FF);
 }
 
 .widget--macros .widget__bar-label--fat {
@@ -3093,12 +3083,59 @@ body:has(.page-reports) .hdr::after {
   font-size: 26px;
 }
 
+.widget-calories--2x1 {
+  justify-content: center;
+  height: 100%;
+  padding: 0;
+}
+
+.widget-calories__row-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+}
+
+.widget-calories__left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.widget-calories__right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.widget-calories--2x1 .widget-calories__value--lg {
+  font-size: clamp(22px, 7vw, 28px);
+  line-height: 1;
+}
+
+.widget-calories--2x1 .widget-calories__label {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.widget-calories__remaining-line {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--v4-ink-2, #6b7280);
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
 .widget-calories__value {
   font-size: 32px;
   font-weight: 700;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: #FF9500;
+  color: var(--v4-tint-warm, #FF9500);
   /* overridden by JS inline style based on ratio */
   font-feature-settings: 'tnum' on;
 }
@@ -3129,7 +3166,7 @@ body:has(.page-reports) .hdr::after {
   padding: 4px 10px;
   border-radius: 100px;
   background: color-mix(in srgb, var(--v4-tint-warm, #ff9500) 12%, transparent);
-  color: #FF9500;
+  color: var(--v4-tint-warm, #FF9500);
 }
 
 .widget-calories__progress {
@@ -3173,7 +3210,7 @@ body:has(.page-reports) .hdr::after {
   padding: 2px 8px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--v4-tint-cool, #0a84ff) 10%, transparent);
-  color: #0A84FF;
+  color: var(--v4-tint-cool, #0A84FF);
 }
 
 .widget-water--micro {
@@ -3233,7 +3270,7 @@ body:has(.page-reports) .hdr::after {
 .widget-water__label {
   font-size: 12px;
   font-weight: 600;
-  color: #0A84FF;
+  color: var(--v4-tint-cool, #0A84FF);
   padding: 4px 10px;
   background: color-mix(in srgb, var(--v4-tint-cool, #0a84ff) 10%, transparent);
   border-radius: 100px;
@@ -4073,7 +4110,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-macros__label--carbs {
-  color: #0A84FF;
+  color: var(--v4-tint-cool, #0A84FF);
 }
 
 .widget-macros__bar-container {
@@ -4138,7 +4175,7 @@ body:has(.page-reports) .hdr::after {
   padding: 1px 4px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--v4-tint-cool, #0a84ff) 10%, transparent);
-  color: #0A84FF;
+  color: var(--v4-tint-cool, #0A84FF);
 }
 
 .widget-insulin--micro {
@@ -4563,7 +4600,7 @@ body:has(.page-reports) .hdr::after {
   font-size: clamp(18px, 9vw, 26px);
   font-weight: 800;
   letter-spacing: -0.03em;
-  color: #FF9500;
+  color: var(--v4-tint-warm, #FF9500);
   /* overridden by JS inline style */
   font-feature-settings: 'tnum' on;
   line-height: 1;
@@ -4633,7 +4670,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-calories__meta--accent .widget-calories__meta-val {
-  color: #FF9500;
+  color: var(--v4-tint-warm, #FF9500);
 }
 
 /* --- Water Widget 2×2 --- */
@@ -5732,12 +5769,12 @@ body:has(.page-reports) .hdr::after {
 
 .pct-badge--orange {
   background: color-mix(in srgb, var(--v4-tint-warm, #ff9500) 12%, transparent);
-  color: #FF9500;
+  color: var(--v4-tint-warm, #FF9500);
 }
 
 .pct-badge--blue {
   background: color-mix(in srgb, var(--v4-tint-cool, #0a84ff) 12%, transparent);
-  color: #0A84FF;
+  color: var(--v4-tint-cool, #0A84FF);
 }
 
 .pct-badge--purple {
