@@ -1333,6 +1333,12 @@
         window.dispatchEvent(new CustomEvent('heys:day-updated', {
           detail: { date: dateKey, field: 'weightMorning', value: weight, forceReload: true }
         }));
+        // 🎮 XP: шлём по факту записи веса, а не в конце StepModal — тогда XP
+        // не теряется, если чек-ин закрыли на одном из следующих шагов.
+        // Дубли гасит геймификация (weight_logged: maxPerDay 1 + dedup-guard).
+        window.dispatchEvent(new CustomEvent('heysWeightLogged', {
+          detail: { weight, date: dateKey, source: 'weight-step' }
+        }));
       }
       return {
         affectedKeys: [`heys_dayv2_${dateKey}`],
@@ -1571,7 +1577,7 @@
       dayData.sleepHours = Math.round((sleepHours + daySleepMinutes / 60) * 10) / 10;
       dayData.updatedAt = Date.now();
       dayData._curatorEdits = HEYS.models?.clearCuratorMarks?.(dayData, ['sleepStart', 'sleepEnd'], dayData.updatedAt);
-      saveDayData(dateKey, dayData);
+      const savedSleep = saveDayData(dateKey, dayData);
       console.info('[HEYS.sleepTime] ✅ Saved:', { dateKey, sleepStart, sleepEnd, daySleepMinutes, sleepHours: dayData.sleepHours });
       // TASK-003: несём полный payload дня (с live-meals merge), чтобы apply пошёл
       // immediate-путём (heys_day_effects.js:488) и значения сна доехали в React
@@ -1582,6 +1588,18 @@
           data: mergeDayMealsPreferLiveIfRicher(dateKey, { ...dayData, date: dateKey })
         }
       }));
+      // 🎮 XP: ночной сон — основная запись сна за день (sleepStart/End/sleepHours),
+      // поэтому событие шлём отсюда, а не из шага качества сна или дневного досыпа.
+      // Только по факту успешной записи; дубли гасит геймификация
+      // (sleep_logged: maxPerDay 1 + dedup-guard).
+      if (savedSleep) {
+        window.dispatchEvent(new CustomEvent('heysSleepLogged', {
+          detail: {
+            date: dateKey, sleepStart, sleepEnd,
+            sleepHours: dayData.sleepHours, source: 'sleep-step'
+          }
+        }));
+      }
     },
     xpAction: 'sleep_logged'
   });
