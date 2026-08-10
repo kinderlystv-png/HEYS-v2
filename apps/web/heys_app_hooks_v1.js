@@ -113,7 +113,7 @@
                     return themeApi.readStoredThemeId();
                 }
             } catch { /* noop */ }
-            return 'classic';
+            return 'sand';
         });
 
         // Предпочтение шире самого режима: 'auto' в themeId не виден, туда
@@ -136,7 +136,7 @@
         const resolvedTheme = theme;
 
         const palette = useMemo(
-            () => (themeApi ? themeApi.getPalette(themeId) : 'classic'),
+            () => (themeApi ? themeApi.getPalette(themeId) : 'sand'),
             [themeApi, themeId],
         );
 
@@ -177,7 +177,7 @@
                 if (themeApi && typeof themeApi.toggleMode === 'function') {
                     return themeApi.toggleMode(prev);
                 }
-                return prev === 'classic-dark' ? 'classic' : 'classic-dark';
+                return prev === 'sand-dark' ? 'sand' : 'sand-dark';
             });
         }, [themeApi]);
 

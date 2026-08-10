@@ -8,8 +8,6 @@
         title: 'Оформление',
         paletteLabel: 'Палитра',
         modeLabel: 'Режим',
-        familyClassic: 'Каноничная',
-        familySoft: 'Мягкая',
         softSand: 'Бежево-зелёная',
         softBlue: 'Синяя',
         modeLight: 'Светлый',
@@ -20,7 +18,7 @@
         collapse: 'Свернуть выбор оформления',
     });
 
-    const SOFT_VARIANTS = Object.freeze([
+    const PALETTE_VARIANTS = Object.freeze([
         { id: 'sand', label: COPY.softSand, palette: 'sand', act: '#c67139', hero: '#efe3cf' },
         { id: 'blue', label: COPY.softBlue, palette: 'blue', act: '#2e7cc0', hero: '#e2edf7' },
     ]);
@@ -36,12 +34,12 @@
     }
 
     function readPalette(themeApi) {
-        if (!themeApi) return 'classic';
+        if (!themeApi) return 'sand';
         try {
             const id = themeApi.readStoredThemeId();
             return themeApi.getPalette(id);
         } catch (_) {
-            return 'classic';
+            return 'sand';
         }
     }
 
@@ -54,17 +52,8 @@
         }
     }
 
-    function familyFromPalette(palette) {
-        return palette === 'classic' ? 'canonical' : 'soft';
-    }
-
-    function softVariantFromPalette(palette) {
-        return palette === 'blue' ? 'blue' : 'sand';
-    }
-
-    function applyPalette(themeApi, family, softVariant) {
+    function applyPalette(themeApi, palette) {
         if (!themeApi || typeof themeApi.setPalette !== 'function') return;
-        const palette = family === 'canonical' ? 'classic' : softVariant;
         themeApi.setPalette(palette);
     }
 
@@ -74,24 +63,9 @@
     }
 
     function dotStyle(palette, activePalette, kind) {
-        const classicAct = '#2563eb';
         const sandAct = '#c67139';
         const blueAct = '#2e7cc0';
         const isActive = palette === activePalette;
-        if (kind === 'classic') {
-            if (isActive) {
-                return {
-                    background: 'var(--v4-bg, #ffffff)',
-                    border: '2px solid var(--v4-ink-2, #64748b)',
-                    boxShadow: 'none',
-                };
-            }
-            return {
-                background: classicAct,
-                border: '2px solid transparent',
-                boxShadow: 'none',
-            };
-        }
         if (kind === 'sand') {
             return {
                 background: sandAct,
@@ -112,8 +86,6 @@
         let expanded = false;
         let dimmed = false;
         let palette = readPalette(themeApi);
-        let family = familyFromPalette(palette);
-        let softVariant = softVariantFromPalette(palette);
         let modePreference = readModePreference(themeApi);
         const listeners = new Set();
 
@@ -126,7 +98,7 @@
         dots.setAttribute('aria-label', COPY.dotsLabel);
         dots.setAttribute('aria-expanded', 'false');
 
-        const dotEls = ['classic', 'sand', 'blue'].map((kind) => {
+        const dotEls = ['sand', 'blue'].map((kind) => {
             const el = document.createElement('span');
             el.className = 'heys-login-theme__dot';
             el.setAttribute('aria-hidden', 'true');
@@ -152,28 +124,14 @@
         paletteLabel.className = 'heys-login-theme__section-label';
         paletteLabel.textContent = COPY.paletteLabel;
 
-        const familyRow = document.createElement('div');
-        familyRow.className = 'heys-login-theme__row heys-login-theme__row--family';
-        const familyButtons = {};
-
-        [['canonical', COPY.familyClassic], ['soft', COPY.familySoft]].forEach(([id, label]) => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'heys-login-theme__chip';
-            btn.dataset.family = id;
-            btn.textContent = label;
-            familyRow.appendChild(btn);
-            familyButtons[id] = btn;
-        });
-
-        const softRow = document.createElement('div');
-        softRow.className = 'heys-login-theme__row heys-login-theme__row--soft';
-        const softButtons = {};
-        SOFT_VARIANTS.forEach((variant) => {
+        const paletteRow = document.createElement('div');
+        paletteRow.className = 'heys-login-theme__row heys-login-theme__row--soft';
+        const paletteButtons = {};
+        PALETTE_VARIANTS.forEach((variant) => {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'heys-login-theme__soft-card';
-            btn.dataset.soft = variant.id;
+            btn.dataset.palette = variant.id;
             const swatch = document.createElement('span');
             swatch.className = 'heys-login-theme__soft-swatch';
             swatch.style.setProperty('--swatch-act', variant.act);
@@ -183,8 +141,8 @@
             text.textContent = variant.label;
             btn.appendChild(swatch);
             btn.appendChild(text);
-            softRow.appendChild(btn);
-            softButtons[variant.id] = btn;
+            paletteRow.appendChild(btn);
+            paletteButtons[variant.id] = btn;
         });
 
         const modeLabel = document.createElement('div');
@@ -211,8 +169,7 @@
         panelHead.appendChild(collapseBtn);
         panel.appendChild(panelHead);
         panel.appendChild(paletteLabel);
-        panel.appendChild(familyRow);
-        panel.appendChild(softRow);
+        panel.appendChild(paletteRow);
         panel.appendChild(modeLabel);
         panel.appendChild(modeRow);
         panel.appendChild(hint);
@@ -221,10 +178,10 @@
 
         function notify() {
             listeners.forEach((fn) => {
-                try { fn({ expanded, dimmed, palette, family, softVariant, modePreference }); } catch (_) { /* noop */ }
+                try { fn({ expanded, dimmed, palette, modePreference }); } catch (_) { /* noop */ }
             });
             if (typeof opts.onStateChange === 'function') {
-                opts.onStateChange({ expanded, dimmed, palette, family, softVariant, modePreference });
+                opts.onStateChange({ expanded, dimmed, palette, modePreference });
             }
         }
 
@@ -238,8 +195,6 @@
 
         function paint() {
             palette = readPalette(themeApi);
-            family = familyFromPalette(palette);
-            softVariant = softVariantFromPalette(palette);
             modePreference = readModePreference(themeApi);
 
             dotEls.forEach(({ kind, el }) => {
@@ -249,15 +204,9 @@
                 el.style.boxShadow = style.boxShadow;
             });
 
-            Object.keys(familyButtons).forEach((id) => {
-                familyButtons[id].classList.toggle('is-active', family === id);
-                familyButtons[id].setAttribute('aria-pressed', family === id ? 'true' : 'false');
-            });
-
-            softRow.hidden = family !== 'soft';
-            Object.keys(softButtons).forEach((id) => {
-                softButtons[id].classList.toggle('is-active', family === 'soft' && softVariant === id);
-                softButtons[id].setAttribute('aria-pressed', family === 'soft' && softVariant === id ? 'true' : 'false');
+            Object.keys(paletteButtons).forEach((id) => {
+                paletteButtons[id].classList.toggle('is-active', palette === id);
+                paletteButtons[id].setAttribute('aria-pressed', palette === id ? 'true' : 'false');
             });
 
             Object.keys(modeButtons).forEach((id) => {
@@ -287,19 +236,9 @@
         dots.addEventListener('click', () => setExpanded(true));
         collapseBtn.addEventListener('click', () => setExpanded(false));
 
-        Object.keys(familyButtons).forEach((id) => {
-            familyButtons[id].addEventListener('click', () => {
-                family = id;
-                applyPalette(themeApi, family, softVariant);
-                paint();
-            });
-        });
-
-        Object.keys(softButtons).forEach((id) => {
-            softButtons[id].addEventListener('click', () => {
-                softVariant = id;
-                family = 'soft';
-                applyPalette(themeApi, family, softVariant);
+        Object.keys(paletteButtons).forEach((id) => {
+            paletteButtons[id].addEventListener('click', () => {
+                applyPalette(themeApi, id);
                 paint();
             });
         });
@@ -341,7 +280,7 @@
     }
 
     function createReactPicker(React) {
-        const { useState, useEffect, useCallback, useMemo } = React;
+        const { useState, useEffect, useCallback } = React;
 
         return function LoginThemePicker(props) {
             const {
@@ -355,9 +294,6 @@
             const [expanded, setExpanded] = useState(false);
             const [palette, setPaletteState] = useState(() => readPalette(themeApi));
             const [modePreference, setModePreferenceState] = useState(() => readModePreference(themeApi));
-
-            const family = useMemo(() => familyFromPalette(palette), [palette]);
-            const softVariant = useMemo(() => softVariantFromPalette(palette), [palette]);
 
             useEffect(() => {
                 const api = getThemeApi();
@@ -388,13 +324,8 @@
                 keypad.setAttribute('aria-hidden', hideKeypad ? 'true' : 'false');
             }, [expanded, dimmed, keypadRef]);
 
-            const chooseFamily = useCallback((nextFamily) => {
-                applyPalette(themeApi, nextFamily, softVariant);
-                setPaletteState(readPalette(themeApi));
-            }, [themeApi, softVariant]);
-
-            const chooseSoft = useCallback((nextSoft) => {
-                applyPalette(themeApi, 'soft', nextSoft);
+            const choosePalette = useCallback((nextPalette) => {
+                applyPalette(themeApi, nextPalette);
                 setPaletteState(readPalette(themeApi));
             }, [themeApi]);
 
@@ -413,7 +344,7 @@
                     hidden: expanded,
                     onClick: () => setExpanded(true),
                 },
-                ['classic', 'sand', 'blue'].map((kind) => {
+                ['sand', 'blue'].map((kind) => {
                     const style = dotStyle(palette, palette, kind);
                     return React.createElement('span', {
                         key: kind,
@@ -445,31 +376,15 @@
                 React.createElement('div', { className: 'heys-login-theme__section-label' }, COPY.paletteLabel),
                 React.createElement(
                     'div',
-                    { className: 'heys-login-theme__row heys-login-theme__row--family' },
-                    React.createElement('button', {
-                        type: 'button',
-                        className: 'heys-login-theme__chip' + (family === 'canonical' ? ' is-active' : ''),
-                        'aria-pressed': family === 'canonical' ? 'true' : 'false',
-                        onClick: () => chooseFamily('canonical'),
-                    }, COPY.familyClassic),
-                    React.createElement('button', {
-                        type: 'button',
-                        className: 'heys-login-theme__chip' + (family === 'soft' ? ' is-active' : ''),
-                        'aria-pressed': family === 'soft' ? 'true' : 'false',
-                        onClick: () => chooseFamily('soft'),
-                    }, COPY.familySoft),
-                ),
-                family === 'soft' && React.createElement(
-                    'div',
                     { className: 'heys-login-theme__row heys-login-theme__row--soft' },
-                    SOFT_VARIANTS.map((variant) => React.createElement(
+                    PALETTE_VARIANTS.map((variant) => React.createElement(
                         'button',
                         {
                             key: variant.id,
                             type: 'button',
-                            className: 'heys-login-theme__soft-card' + (softVariant === variant.id ? ' is-active' : ''),
-                            'aria-pressed': softVariant === variant.id ? 'true' : 'false',
-                            onClick: () => chooseSoft(variant.id),
+                            className: 'heys-login-theme__soft-card' + (palette === variant.id ? ' is-active' : ''),
+                            'aria-pressed': palette === variant.id ? 'true' : 'false',
+                            onClick: () => choosePalette(variant.id),
                         },
                         React.createElement('span', {
                             className: 'heys-login-theme__soft-swatch',
@@ -506,12 +421,10 @@
 
     HEYS.LoginThemePicker = {
         COPY,
-        SOFT_VARIANTS,
+        PALETTE_VARIANTS,
         MODE_OPTIONS,
         mountDom: createDomPicker,
         createReactComponent: createReactPicker,
-        familyFromPalette,
-        softVariantFromPalette,
         dotStyle,
     };
 }(typeof window !== 'undefined' ? window : globalThis));

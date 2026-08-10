@@ -49,26 +49,31 @@ describe('heys_theme_v1', () => {
         window.HEYS = originalHEYS;
     });
 
-    it('normalizes unknown theme ids to classic', () => {
+    it('normalizes unknown theme ids to sand', () => {
         const Theme = loadThemeModule();
-        expect(Theme.parseThemeId('nope')).toBe('classic');
-        expect(Theme.parseThemeId('light')).toBe('classic');
-        expect(Theme.parseThemeId('dark')).toBe('classic-dark');
+        expect(Theme.parseThemeId('nope')).toBe('sand');
+        expect(Theme.parseThemeId('light')).toBe('sand');
+        expect(Theme.parseThemeId('dark')).toBe('sand-dark');
     });
 
-    it('maps classic palette to legacy dom values', () => {
+    it('migrates classic ids to sand palette', () => {
         const Theme = loadThemeModule();
-        expect(Theme.resolveDomTheme('classic')).toBe('light');
-        expect(Theme.resolveDomTheme('classic-dark')).toBe('dark');
+        expect(Theme.parseThemeId('classic')).toBe('sand');
+        expect(Theme.parseThemeId('classic-dark')).toBe('sand-dark');
+    });
+
+    it('maps palette ids to dom theme values', () => {
+        const Theme = loadThemeModule();
         expect(Theme.resolveDomTheme('sand')).toBe('sand');
         expect(Theme.resolveDomTheme('sand-dark')).toBe('sand-dark');
+        expect(Theme.resolveDomTheme('blue')).toBe('blue');
+        expect(Theme.resolveDomTheme('blue-dark')).toBe('blue-dark');
     });
 
     it('toggles mode within the same palette', () => {
         const Theme = loadThemeModule();
         expect(Theme.toggleMode('sand')).toBe('sand-dark');
         expect(Theme.toggleMode('sand-dark')).toBe('sand');
-        expect(Theme.toggleMode('classic')).toBe('classic-dark');
         expect(Theme.toggleMode('blue-dark')).toBe('blue');
     });
 
@@ -82,12 +87,30 @@ describe('heys_theme_v1', () => {
         expect(window.localStorage.getItem('heys_theme')).toBe('sand-dark');
     });
 
-    it('migrates legacy dark preference to classic-dark', () => {
+    it('migrates legacy dark preference to sand-dark', () => {
         window.localStorage.setItem('heys_theme_explicit', '1');
         window.localStorage.setItem('heys_theme_pref', 'dark');
 
         const Theme = loadThemeModule();
-        expect(Theme.readStoredThemeId()).toBe('classic-dark');
+        expect(Theme.readStoredThemeId()).toBe('sand-dark');
+    });
+
+    it('migrates stored classic theme id to sand in localStorage', () => {
+        window.localStorage.setItem('heys_theme_id', 'classic');
+
+        const Theme = loadThemeModule();
+        expect(Theme.readStoredThemeId()).toBe('sand');
+        expect(window.localStorage.getItem('heys_theme_id')).toBe('sand');
+        expect(window.localStorage.getItem('heys_theme')).toBe('sand');
+    });
+
+    it('migrates stored classic-dark theme id to sand-dark in localStorage', () => {
+        window.localStorage.setItem('heys_theme_id', 'classic-dark');
+
+        const Theme = loadThemeModule();
+        expect(Theme.readStoredThemeId()).toBe('sand-dark');
+        expect(window.localStorage.getItem('heys_theme_id')).toBe('sand-dark');
+        expect(window.localStorage.getItem('heys_theme')).toBe('sand-dark');
     });
 
     it('notifies subscribers when setThemeId is called', () => {
@@ -120,6 +143,12 @@ describe('heys_theme_v1', () => {
         expect(document.documentElement.getAttribute('data-palette')).toBe('blue');
         expect(meta.getAttribute('content')).toBe('#0d1a26');
     });
+
+    it('defaults new clients to sand', () => {
+        const Theme = loadThemeModule();
+        expect(Theme.readStoredThemeId()).toBe('sand');
+        expect(Theme.DEFAULT_THEME_ID).toBe('sand');
+    });
 });
 
 // «Как в системе» — третий вариант предпочтения, а не третий режим: в
@@ -142,7 +171,7 @@ describe('heys_theme_v1 — «Как в системе»', () => {
         const Theme = loadThemeModule();
 
         Theme.setModePreference('auto');
-        expect(Theme.readStoredThemeId()).toBe('classic-dark');
+        expect(Theme.readStoredThemeId()).toBe('sand-dark');
 
         Theme.setPalette('sand');
         expect(Theme.readStoredThemeId()).toBe('sand-dark');
@@ -175,10 +204,10 @@ describe('heys_theme_v1 — «Как в системе»', () => {
         // Тумблер в шапке — это выбор руками, слежение снимается.
         Theme.toggleModePreference();
         expect(Theme.getModePreference()).toBe('light');
-        expect(Theme.readStoredThemeId()).toBe('classic');
+        expect(Theme.readStoredThemeId()).toBe('sand');
 
         system.switchTo('dark');
-        expect(Theme.readStoredThemeId()).toBe('classic');
+        expect(Theme.readStoredThemeId()).toBe('sand');
     });
 
     it('keeps the auto preference when the effective id is persisted', () => {
@@ -192,12 +221,12 @@ describe('heys_theme_v1 — «Как в системе»', () => {
         expect(Theme.getModePreference()).toBe('auto');
     });
 
-    it('migrates the legacy auto preference to the system mode, not to classic', () => {
+    it('migrates the legacy auto preference to the system mode, not to sand default', () => {
         mockSystemMode('dark');
         window.localStorage.setItem('heys_theme_pref', 'auto');
 
         const Theme = loadThemeModule();
         expect(Theme.getModePreference()).toBe('auto');
-        expect(Theme.readStoredThemeId()).toBe('classic-dark');
+        expect(Theme.readStoredThemeId()).toBe('sand-dark');
     });
 });

@@ -10,15 +10,13 @@
     const ROLE_PREFIX = 'v4-';
 
     const THEME_IDS = Object.freeze([
-        'classic',
-        'classic-dark',
         'sand',
         'sand-dark',
         'blue',
         'blue-dark',
     ]);
 
-    const PALETTES = Object.freeze(['classic', 'sand', 'blue']);
+    const PALETTES = Object.freeze(['sand', 'blue']);
     const MODES = Object.freeze(['light', 'dark']);
     // Предпочтение режима шире самого режима: 'auto' означает «спросить систему».
     // Конечный режим всё равно light или dark — auto живёт только в хранилище и
@@ -31,20 +29,13 @@
     const LEGACY_THEME_KEY = 'heys_theme';
     const MODE_PREF_KEY = 'heys_theme_mode_pref';
 
-    const DEFAULT_THEME_ID = 'classic';
+    const DEFAULT_THEME_ID = 'sand';
 
     const THEME_COLOR_META = Object.freeze({
-        classic: '#2563eb',
-        'classic-dark': '#0f172a',
         sand: '#c67139',
         'sand-dark': '#141210',
         blue: '#2e7cc0',
         'blue-dark': '#0d1a26',
-    });
-
-    const DOM_THEME_COMPAT = Object.freeze({
-        classic: 'light',
-        'classic-dark': 'dark',
     });
 
     function tryParse(raw, fallback) {
@@ -96,19 +87,35 @@
         return THEME_IDS.includes(value);
     }
 
+    function migrateClassicThemeId(value) {
+        if (value === 'classic') return 'sand';
+        if (value === 'classic-dark') return 'sand-dark';
+        return value;
+    }
+
+    function migrateStoredThemeKeys() {
+        const storedId = lsGet(THEME_ID_KEY, null);
+        if (storedId === 'classic' || storedId === 'classic-dark') {
+            const migrated = migrateClassicThemeId(storedId);
+            lsSet(THEME_ID_KEY, migrated);
+            lsSet(THEME_PREF_KEY, getMode(migrated));
+            lsSet(LEGACY_THEME_KEY, resolveDomTheme(migrated));
+        }
+    }
+
     function parseThemeId(value) {
-        if (isThemeId(value)) return value;
-        if (value === 'light') return 'classic';
-        if (value === 'dark') return 'classic-dark';
+        const migrated = migrateClassicThemeId(value);
+        if (isThemeId(migrated)) return migrated;
+        if (value === 'light') return 'sand';
+        if (value === 'dark') return 'sand-dark';
         return DEFAULT_THEME_ID;
     }
 
     function getPalette(themeId) {
         const id = parseThemeId(themeId);
-        if (id === 'classic' || id === 'classic-dark') return 'classic';
         if (id.startsWith('sand')) return 'sand';
         if (id.startsWith('blue')) return 'blue';
-        return 'classic';
+        return 'sand';
     }
 
     function getMode(themeId) {
@@ -117,11 +124,8 @@
     }
 
     function buildThemeId(palette, mode) {
-        const safePalette = PALETTES.includes(palette) ? palette : 'classic';
+        const safePalette = PALETTES.includes(palette) ? palette : 'sand';
         const safeMode = MODES.includes(mode) ? mode : 'light';
-        if (safePalette === 'classic') {
-            return safeMode === 'dark' ? 'classic-dark' : 'classic';
-        }
         return safeMode === 'dark' ? `${safePalette}-dark` : safePalette;
     }
 
@@ -132,8 +136,7 @@
     }
 
     function resolveDomTheme(themeId) {
-        const id = parseThemeId(themeId);
-        return DOM_THEME_COMPAT[id] || id;
+        return parseThemeId(themeId);
     }
 
     function resolveResolvedMode(themeId) {
@@ -144,18 +147,20 @@
         const pref = lsGet(THEME_PREF_KEY, null);
         const explicit = lsGet(THEME_EXPLICIT_KEY, null);
         const legacy = lsGet(LEGACY_THEME_KEY, null);
-        if (pref === 'auto') return buildThemeId('classic', getSystemMode());
+        if (pref === 'auto') return buildThemeId('sand', getSystemMode());
         const hasExplicit = isExplicitThemeFlag(explicit);
         const rawThemePreference = pref === 'dark' || pref === 'light'
             ? pref
             : (hasExplicit ? legacy : null);
-        if (rawThemePreference === 'dark') return 'classic-dark';
+        if (rawThemePreference === 'dark') return 'sand-dark';
+        if (rawThemePreference === 'light') return 'sand';
         return DEFAULT_THEME_ID;
     }
 
     function readStoredThemeId() {
+        migrateStoredThemeKeys();
         const stored = lsGet(THEME_ID_KEY, null);
-        const base = isThemeId(stored) ? stored : readLegacyThemeId();
+        const base = stored != null ? parseThemeId(stored) : readLegacyThemeId();
         if (getModePreference() === 'auto') {
             return buildThemeId(getPalette(base), getSystemMode());
         }
@@ -225,8 +230,9 @@
     }
 
     function readStoredPalette() {
+        migrateStoredThemeKeys();
         const stored = lsGet(THEME_ID_KEY, null);
-        return isThemeId(stored) ? stored : readLegacyThemeId();
+        return stored != null ? parseThemeId(stored) : readLegacyThemeId();
     }
 
     function setModePreference(modePref) {
@@ -280,6 +286,7 @@
     }
 
     function applyBootGlobalTheme() {
+        migrateStoredThemeKeys();
         const themeId = readStoredThemeId();
         const applied = applyThemeToDocument(themeId);
         startSystemModeWatch();
@@ -307,6 +314,8 @@
         THEME_COLOR_META,
         isThemeId,
         parseThemeId,
+        migrateClassicThemeId,
+        migrateStoredThemeKeys,
         getPalette,
         getMode,
         buildThemeId,

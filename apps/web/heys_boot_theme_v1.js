@@ -76,7 +76,7 @@
         const themeApi = global.HEYS && global.HEYS.Theme;
         const globalApplied = themeApi && typeof themeApi.applyBootGlobalTheme === 'function'
             ? themeApi.applyBootGlobalTheme()
-            : { themeId: 'classic', domTheme: 'light' };
+            : { themeId: 'sand', domTheme: 'sand' };
         const globalTheme = globalApplied.domTheme || readGlobalTheme();
         const bootTab = readBootTab(clientId);
         const boardTheme = readBoardTheme();
@@ -86,7 +86,7 @@
         setBoardDarkNav(boardDarkNav);
 
         const result = {
-            themeId: globalApplied.themeId || 'classic',
+            themeId: globalApplied.themeId || 'sand',
             globalTheme,
             bootTab,
             boardTheme,

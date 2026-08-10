@@ -104,7 +104,7 @@ describe('theme priority on login/init', () => {
 
     expect(themeState.theme).toBe('light');
     expect(themeState.resolvedTheme).toBe('light');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('sand');
   });
 
   it('applies dark only when explicit preference is dark', () => {
@@ -128,7 +128,7 @@ describe('theme priority on login/init', () => {
 
     expect(themeState.theme).toBe('dark');
     expect(themeState.resolvedTheme).toBe('dark');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('sand-dark');
   });
 
   // До 2026-08-10 значение 'auto' схлопывалось в классику, и этот тест
@@ -158,7 +158,7 @@ describe('theme priority on login/init', () => {
     expect(themeState.theme).toBe('dark');
     expect(themeState.resolvedTheme).toBe('dark');
     expect(themeState.modePreference).toBe('auto');
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('sand-dark');
   });
 
   it('syncs hook state after external Theme.setThemeId', () => {

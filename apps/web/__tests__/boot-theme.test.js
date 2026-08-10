@@ -44,9 +44,9 @@ describe('boot theme pre-paint detection', () => {
 
         const bootTheme = loadBootThemeModule();
 
-        expect(bootTheme.readGlobalTheme()).toBe('dark');
-        expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
-        expect(window.__HEYS_BOOT_THEME__).toMatchObject({ globalTheme: 'dark', boardDarkNav: false });
+        expect(bootTheme.readGlobalTheme()).toBe('sand-dark');
+        expect(document.documentElement.getAttribute('data-theme')).toBe('sand-dark');
+        expect(window.__HEYS_BOOT_THEME__).toMatchObject({ globalTheme: 'sand-dark', boardDarkNav: false });
     });
 
     it('keeps light skeleton when global theme is light on non-board tab', () => {
@@ -55,7 +55,7 @@ describe('boot theme pre-paint detection', () => {
 
         loadBootThemeModule();
 
-        expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+        expect(document.documentElement.getAttribute('data-theme')).toBe('sand');
         expect(document.body.classList.contains('board-dark-nav')).toBe(false);
     });
 
@@ -74,7 +74,7 @@ describe('boot theme pre-paint detection', () => {
         });
         expect(document.documentElement.classList.contains('board-dark-nav')).toBe(true);
         expect(document.body.classList.contains('board-dark-nav')).toBe(true);
-        expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+        expect(document.documentElement.getAttribute('data-theme')).toBe('sand');
     });
 
     it('respects saved light board theme on board home tab', () => {

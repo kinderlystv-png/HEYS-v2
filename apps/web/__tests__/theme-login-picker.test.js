@@ -42,12 +42,10 @@ describe('heys_login_theme_picker_v1', () => {
         window.HEYS = originalHEYS;
     });
 
-    it('maps palette ids to picker families', () => {
+    it('offers sand and blue palette variants', () => {
         loadModules();
         const picker = window.HEYS.LoginThemePicker;
-        expect(picker.familyFromPalette('classic')).toBe('canonical');
-        expect(picker.familyFromPalette('sand')).toBe('soft');
-        expect(picker.softVariantFromPalette('blue')).toBe('blue');
+        expect(picker.PALETTE_VARIANTS.map((v) => v.id)).toEqual(['sand', 'blue']);
     });
 
     it('applies palette and mode immediately through HEYS.Theme', () => {
@@ -64,8 +62,7 @@ describe('heys_login_theme_picker_v1', () => {
         mount.appendChild(picker.root);
         document.body.appendChild(mount);
 
-        picker.root.querySelector('[data-family="soft"]').click();
-        picker.root.querySelector('[data-soft="blue"]').click();
+        picker.root.querySelector('[data-palette="blue"]').click();
         picker.root.querySelector('[data-mode="auto"]').click();
 
         expect(window.localStorage.getItem('heys_theme_id')).toBe('blue');
@@ -90,11 +87,11 @@ describe('heys_login_theme_picker_v1', () => {
         expect(keypad.classList.contains('is-hidden')).toBe(false);
     });
 
-    it('uses ink-2 ring for active classic dot', () => {
+    it('uses ink ring for active sand dot', () => {
         loadModules();
-        window.HEYS.Theme.setPalette('classic');
-        const style = window.HEYS.LoginThemePicker.dotStyle('classic', 'classic', 'classic');
-        expect(style.background).toContain('--v4-bg');
-        expect(style.border).toContain('--v4-ink-2');
+        window.HEYS.Theme.setPalette('sand');
+        const style = window.HEYS.LoginThemePicker.dotStyle('sand', 'sand', 'sand');
+        expect(style.background).toContain('#c67139');
+        expect(style.border).toContain('--v4-ink');
     });
 });
