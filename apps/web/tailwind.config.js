@@ -2,8 +2,8 @@
 export default {
   // Важно: legacy web app живёт в корне apps/web и использует Tailwind className прямо в heys_*.js
   content: ['./index.html', './src/**/*.{html,js,ts,tsx}', './heys_*.js'],
-  // Legacy тема переключается через data-theme="dark" (см. index.html)
-  darkMode: ['class', '[data-theme="dark"]'],
+  // Legacy + v4 palettes: classic uses data-theme light/dark; soft palettes use *-dark ids.
+  darkMode: ['class', '[data-theme="dark"]', '[data-theme="sand-dark"]', '[data-theme="blue-dark"]'],
   // Preflight может ломать legacy CSS каскад. Оставляем утилиты без reset.
   corePlugins: {
     preflight: false,

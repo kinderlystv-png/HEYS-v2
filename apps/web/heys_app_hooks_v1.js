@@ -100,122 +100,72 @@
         return result;
     };
 
-    const getSystemTheme = () => {
-        try {
-            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        } catch {
-            return 'light';
-        }
-    };
-
-    const THEME_PREF_KEY = 'heys_theme_pref';
-    const THEME_EXPLICIT_KEY = 'heys_theme_explicit';
-    const LEGACY_THEME_KEY = 'heys_theme';
-
-    const isThemePreference = (value) => value === 'light' || value === 'dark' || value === 'auto';
-
-    const isExplicitThemeFlag = (value) => (
-        value === '1' || value === 1 || value === true || value === 'true'
-    );
-
-    const getStoredThemePreference = () => {
-        let pref = null;
-        let explicit = null;
-        let legacyTheme = null;
-
-        try {
-            pref = tryParseStoredValue(localStorage.getItem(THEME_PREF_KEY), null);
-            explicit = tryParseStoredValue(localStorage.getItem(THEME_EXPLICIT_KEY), null);
-            legacyTheme = tryParseStoredValue(localStorage.getItem(LEGACY_THEME_KEY), null);
-        } catch { }
-
-        if (explicit === null || explicit === undefined) explicit = readGlobalValue(THEME_EXPLICIT_KEY, null);
-        if (!isExplicitThemeFlag(explicit)) return 'light';
-
-        if (pref === null || pref === undefined) pref = readGlobalValue(THEME_PREF_KEY, null);
-        if (pref === 'dark' || pref === 'light') return pref;
-        if (pref === 'auto') return 'light';
-
-        if (legacyTheme === null || legacyTheme === undefined) legacyTheme = readGlobalValue(LEGACY_THEME_KEY, null);
-        if (legacyTheme === 'light' || legacyTheme === 'dark') {
-            return legacyTheme;
-        }
-
-        return 'light';
-    };
-
-    const normalizeThemePreference = (value) => {
-        if (value === 'light' || value === 'dark') return value;
-        if (value === 'auto') return 'light';
-        return 'light';
-    };
+    const getThemeApi = () => window.HEYS && window.HEYS.Theme;
 
     function useThemePreference() {
         const React = window.React;
         const { useState, useEffect, useMemo, useCallback } = React;
-        const [theme, setTheme] = useState(() => {
+        const themeApi = getThemeApi();
+
+        const [themeId, setThemeId] = useState(() => {
             try {
-                return getStoredThemePreference();
-            } catch {
-                return 'light';
-            }
+                if (themeApi && typeof themeApi.readStoredThemeId === 'function') {
+                    return themeApi.readStoredThemeId();
+                }
+            } catch { /* noop */ }
+            return 'classic';
         });
 
-        const [systemTheme, setSystemTheme] = useState(getSystemTheme);
+        const theme = useMemo(
+            () => (themeApi ? themeApi.resolveResolvedMode(themeId) : (themeId.endsWith('-dark') ? 'dark' : 'light')),
+            [themeApi, themeId],
+        );
 
-        useEffect(() => {
-            let media;
-            try {
-                media = window.matchMedia('(prefers-color-scheme: dark)');
-            } catch {
-                return undefined;
-            }
+        const resolvedTheme = theme;
 
-            const updateSystemTheme = (event) => {
-                const nextMatches = typeof event?.matches === 'boolean' ? event.matches : media.matches;
-                setSystemTheme(nextMatches ? 'dark' : 'light');
-            };
-
-            updateSystemTheme();
-
-            if (typeof media.addEventListener === 'function') {
-                media.addEventListener('change', updateSystemTheme);
-                return () => media.removeEventListener('change', updateSystemTheme);
-            }
-
-            if (typeof media.addListener === 'function') {
-                media.addListener(updateSystemTheme);
-                return () => media.removeListener(updateSystemTheme);
-            }
-
-            return undefined;
-        }, []);
-
-        const resolvedTheme = useMemo(
-            () => (theme === 'auto' ? systemTheme : normalizeThemePreference(theme)),
-            [systemTheme, theme],
+        const palette = useMemo(
+            () => (themeApi ? themeApi.getPalette(themeId) : 'classic'),
+            [themeApi, themeId],
         );
 
         useEffect(() => {
-            document.documentElement.setAttribute('data-theme', resolvedTheme);
+            const api = getThemeApi();
+            if (!api || typeof api.subscribeThemeChange !== 'function') return undefined;
+            return api.subscribeThemeChange((detail) => {
+                if (detail && detail.themeId) {
+                    setThemeId(detail.themeId);
+                }
+            });
+        }, []);
+
+        useEffect(() => {
+            if (themeApi && typeof themeApi.applyThemeToDocument === 'function') {
+                themeApi.applyThemeToDocument(themeId);
+            } else {
+                document.documentElement.setAttribute('data-theme', resolvedTheme);
+            }
             try {
-                localStorage.setItem(THEME_PREF_KEY, theme);
-                localStorage.setItem(THEME_EXPLICIT_KEY, theme === 'auto' ? '0' : '1');
-                localStorage.setItem(LEGACY_THEME_KEY, resolvedTheme);
-                writeGlobalValue(THEME_PREF_KEY, theme);
-                writeGlobalValue(THEME_EXPLICIT_KEY, theme === 'auto' ? '0' : '1');
-                writeGlobalValue(LEGACY_THEME_KEY, resolvedTheme);
-            } catch { }
-        }, [resolvedTheme, theme]);
+                if (themeApi && typeof themeApi.writeStoredThemeId === 'function') {
+                    themeApi.writeStoredThemeId(themeId);
+                }
+            } catch { /* noop */ }
+        }, [resolvedTheme, themeApi, themeId]);
 
         const cycleTheme = useCallback(() => {
-            setTheme((prev) => {
-                const currentResolvedTheme = prev === 'auto' ? systemTheme : normalizeThemePreference(prev);
-                return currentResolvedTheme === 'dark' ? 'light' : 'dark';
+            setThemeId((prev) => {
+                if (themeApi && typeof themeApi.toggleMode === 'function') {
+                    return themeApi.toggleMode(prev);
+                }
+                return prev === 'classic-dark' ? 'classic' : 'classic-dark';
             });
-        }, [systemTheme]);
+        }, [themeApi]);
 
-        return { theme, resolvedTheme, cycleTheme };
+        const setThemeById = useCallback((nextThemeId) => {
+            if (!themeApi || typeof themeApi.parseThemeId !== 'function') return;
+            setThemeId(themeApi.parseThemeId(nextThemeId));
+        }, [themeApi]);
+
+        return { theme, resolvedTheme, themeId, palette, cycleTheme, setThemeById };
     }
 
     function usePwaPrompts() {

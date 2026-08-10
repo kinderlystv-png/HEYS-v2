@@ -8,6 +8,8 @@ const originalBootTheme = window.__HEYS_BOOT_THEME__;
 const BOARD_CLIENT_ID = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
 
 function loadBootThemeModule() {
+    const themePath = path.resolve(__dirname, '../heys_theme_v1.js');
+    eval(fs.readFileSync(themePath, 'utf8'));
     const filePath = path.resolve(__dirname, '../heys_boot_theme_v1.js');
     const source = fs.readFileSync(filePath, 'utf8');
     eval(source);

@@ -4,9 +4,6 @@
 
     const BOARD_CLIENT_ID = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
     const BOARD_THEME_KEY = 'heys_board_theme_v1';
-    const THEME_PREF_KEY = 'heys_theme_pref';
-    const THEME_EXPLICIT_KEY = 'heys_theme_explicit';
-    const LEGACY_THEME_KEY = 'heys_theme';
 
     function tryParse(raw, fallback) {
         if (raw == null) return fallback;
@@ -28,21 +25,6 @@
 
     function isBoardClient(clientId) {
         return String(clientId || '').toLowerCase() === BOARD_CLIENT_ID;
-    }
-
-    function isExplicitThemeFlag(value) {
-        return value === '1' || value === 1 || value === true || value === 'true';
-    }
-
-    function readGlobalTheme() {
-        const pref = lsGet(THEME_PREF_KEY, null);
-        const explicit = lsGet(THEME_EXPLICIT_KEY, null);
-        const legacy = lsGet(LEGACY_THEME_KEY, null);
-        const hasExplicit = isExplicitThemeFlag(explicit);
-        const rawThemePreference = pref === 'dark' || pref === 'light'
-            ? pref
-            : (hasExplicit ? legacy : null);
-        return rawThemePreference === 'dark' ? 'dark' : 'light';
     }
 
     function readBoardTheme() {
@@ -81,21 +63,30 @@
         if (doc.body) doc.body.classList.toggle('board-dark-nav', enabled);
     }
 
+    function readGlobalTheme() {
+        const themeApi = global.HEYS && global.HEYS.Theme;
+        if (themeApi && typeof themeApi.readStoredThemeId === 'function') {
+            return themeApi.resolveDomTheme(themeApi.readStoredThemeId());
+        }
+        return 'light';
+    }
+
     function applyBootTheme() {
         const clientId = readBootClientId();
-        const globalTheme = readGlobalTheme();
+        const themeApi = global.HEYS && global.HEYS.Theme;
+        const globalApplied = themeApi && typeof themeApi.applyBootGlobalTheme === 'function'
+            ? themeApi.applyBootGlobalTheme()
+            : { themeId: 'classic', domTheme: 'light' };
+        const globalTheme = globalApplied.domTheme || readGlobalTheme();
         const bootTab = readBootTab(clientId);
         const boardTheme = readBoardTheme();
         const boardTabActive = isBoardClient(clientId) && bootTab === 'board';
         const boardDarkNav = boardTabActive && boardTheme === 'dark';
 
-        const doc = global.document;
-        if (doc && doc.documentElement) {
-            doc.documentElement.setAttribute('data-theme', globalTheme);
-            setBoardDarkNav(boardDarkNav);
-        }
+        setBoardDarkNav(boardDarkNav);
 
         const result = {
+            themeId: globalApplied.themeId || 'classic',
             globalTheme,
             bootTab,
             boardTheme,

@@ -15,6 +15,7 @@ export const READING_BOOK_SOURCES = [
 export const LEGACY_BUNDLES = {
     'boot-core': [
         'heys_dev_utils.js',
+        'heys_boot_theme_v1.js',
         'heys_legal_versions_v1.js',  // 🆕 единый источник версий consent-документов (compliance overhaul 2026-05-20)
         'heys_release_features_v1.js', // Central release/runtime switches (What's New temporary off)
         'heys_feature_flags_v1.js',

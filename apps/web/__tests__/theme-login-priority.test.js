@@ -54,6 +54,8 @@ function createFakeReact() {
 }
 
 function loadHooksModule() {
+  const themePath = path.resolve(__dirname, '../heys_theme_v1.js');
+  eval(fs.readFileSync(themePath, 'utf8'));
   const modulePath = path.resolve(__dirname, '../heys_app_hooks_v1.js');
   const source = fs.readFileSync(modulePath, 'utf8');
   eval(source);
@@ -152,5 +154,28 @@ describe('theme priority on login/init', () => {
     expect(themeState.theme).toBe('light');
     expect(themeState.resolvedTheme).toBe('light');
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+  });
+
+  it('syncs hook state after external Theme.setThemeId', () => {
+    const mockStorage = createMockStorage();
+    Object.defineProperty(window, 'localStorage', {
+      value: mockStorage,
+      writable: true,
+      configurable: true,
+    });
+
+    loadHooksModule();
+    const fakeReact = createFakeReact();
+    window.React = fakeReact;
+    fakeReact.beginRender();
+    window.HEYS.AppHooks.useThemePreference();
+
+    window.HEYS.Theme.setThemeId('sand');
+
+    fakeReact.beginRender();
+    const themeState = window.HEYS.AppHooks.useThemePreference();
+
+    expect(themeState.themeId).toBe('sand');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('sand');
   });
 });
