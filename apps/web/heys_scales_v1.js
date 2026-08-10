@@ -90,7 +90,7 @@
         if (pct >= 100) return pack(STEPS.GOOD_STRONG, C.green);
         if (pct >= 70) return pack(STEPS.GOOD_SOFT, C.blue);
         if (pct >= 40) return pack(STEPS.NEUTRAL, C.yellow);
-        return pack(STEPS.WARN_SOFT, C.red);
+        return pack(STEPS.WARN_STRONG, C.red);
     }
 
     function stepsGoal(goal) {
@@ -111,7 +111,7 @@
 
     function wellbeing(value) {
         const v = num(value, 0);
-        if (v <= 3) return pack(STEPS.WARN_SOFT, C.red);
+        if (v <= 3) return pack(STEPS.WARN_STRONG, C.red);
         if (v <= 5) return pack(STEPS.NEUTRAL, C.blue);
         if (v <= 7) return pack(STEPS.GOOD_SOFT, C.green);
         return pack(STEPS.GOOD_STRONG, C.greenDark);
@@ -122,13 +122,13 @@
         if (v <= 3) return pack(STEPS.GOOD_STRONG, C.greenDark);
         if (v <= 5) return pack(STEPS.GOOD_SOFT, C.blue);
         if (v <= 7) return pack(STEPS.NEUTRAL, C.yellow);
-        return pack(STEPS.WARN_SOFT, C.red);
+        return pack(STEPS.WARN_STRONG, C.red);
     }
 
     function trainingRating(value) {
         const v = num(value, 0);
         if (v <= 0) return pack(STEPS.NEUTRAL, C.gray);
-        if (v <= 3) return pack(STEPS.WARN_SOFT, C.red);
+        if (v <= 3) return pack(STEPS.WARN_STRONG, C.red);
         if (v <= 5) return pack(STEPS.NEUTRAL, C.yellow);
         if (v <= 7) return pack(STEPS.GOOD_SOFT, C.greenLight);
         return pack(STEPS.GOOD_STRONG, C.greenDark);
@@ -136,7 +136,7 @@
 
     function moodRating(value) {
         const v = num(value, 0);
-        if (v <= 2) return pack(STEPS.WARN_SOFT, C.red);
+        if (v <= 2) return pack(STEPS.WARN_STRONG, C.red);
         if (v <= 4) return pack(STEPS.WARN_SOFT, C.orange);
         if (v <= 6) return pack(STEPS.NEUTRAL, C.yellow);
         if (v <= 8) return pack(STEPS.GOOD_SOFT, C.green);
@@ -166,7 +166,7 @@
     function dayScore10(value) {
         const v = num(value, 0);
         if (v <= 0) return pack(STEPS.NEUTRAL, C.gray);
-        if (v <= 3) return pack(STEPS.WARN_SOFT, C.red);
+        if (v <= 3) return pack(STEPS.WARN_STRONG, C.red);
         if (v <= 5) return pack(STEPS.NEUTRAL, C.yellow);
         if (v <= 7) return pack(STEPS.GOOD_SOFT, C.green);
         return pack(STEPS.GOOD_STRONG, C.greenDark);
@@ -175,7 +175,7 @@
     function healthScore(score) {
         const s = num(score, 0);
         if (s >= 85) return pack(STEPS.GOOD_STRONG, C.greenDark);
-        if (s >= 70) return pack(STEPS.GOOD_STRONG, C.green);
+        if (s >= 70) return pack(STEPS.GOOD_SOFT, C.green);
         if (s >= 50) return pack(STEPS.NEUTRAL, C.yellow);
         if (s >= 30) return pack(STEPS.WARN_SOFT, C.orange);
         return pack(STEPS.WARN_STRONG, C.red);
@@ -186,7 +186,7 @@
         if (pct >= 100) return pack(STEPS.GOOD_STRONG, C.green);
         if (pct >= 70) return pack(STEPS.GOOD_SOFT, C.blue);
         if (pct >= 40) return pack(STEPS.NEUTRAL, C.yellow);
-        return pack(STEPS.WARN_SOFT, C.red);
+        return pack(STEPS.WARN_STRONG, C.red);
     }
 
     function sleepHours(hours, target) {
@@ -196,7 +196,7 @@
         if (h >= t) return pack(STEPS.GOOD_STRONG, C.green);
         if (h >= t - 1) return pack(STEPS.GOOD_SOFT, C.blue);
         if (h >= t - 2) return pack(STEPS.NEUTRAL, C.yellow);
-        return pack(STEPS.WARN_SOFT, C.red);
+        return pack(STEPS.WARN_STRONG, C.red);
     }
 
     const HARM_BRANCHES = [
@@ -228,34 +228,39 @@
         return pack(last.step, last.color, { id: last.id, name: last.name, emoji: last.emoji });
     }
 
+    // Ранги — не оценка «хорошо/плохо», а декоративная палитра прогресса:
+    // жёлтый Эксперт идёт ПОСЛЕ зелёного Практика, фиолетовый Мастер вообще вне
+    // оценочной оси. Ступень здесь не возвращается намеренно: контракт STEPS
+    // задаёт тон предупреждения, и ранги в нём немонотонны. Тема берёт цвет
+    // ранга из своей палитры по id, не через colorForStep.
     const GAMIFICATION_LEVELS = [
-        { min: 1, max: 4, title: 'Новичок', icon: '🌱', color: C.slate, step: STEPS.NEUTRAL },
-        { min: 5, max: 9, title: 'Ученик', icon: '📚', color: C.blue, step: STEPS.GOOD_SOFT },
-        { min: 10, max: 14, title: 'Практик', icon: '💪', color: C.green, step: STEPS.GOOD_STRONG },
-        { min: 15, max: 19, title: 'Эксперт', icon: '⭐', color: C.yellow, step: STEPS.NEUTRAL },
-        { min: 20, max: 25, title: 'Мастер', icon: '👑', color: C.purple, step: STEPS.GOOD_STRONG },
+        { min: 1, max: 4, id: 'novice', title: 'Новичок', icon: '🌱', color: C.slate },
+        { min: 5, max: 9, id: 'student', title: 'Ученик', icon: '📚', color: C.blue },
+        { min: 10, max: 14, id: 'practitioner', title: 'Практик', icon: '💪', color: C.green },
+        { min: 15, max: 19, id: 'expert', title: 'Эксперт', icon: '⭐', color: C.yellow },
+        { min: 20, max: 25, id: 'master', title: 'Мастер', icon: '👑', color: C.purple },
     ];
 
     function gamificationLevel(level) {
         const lv = num(level, 1);
+        let row = null;
         for (let i = 0; i < GAMIFICATION_LEVELS.length; i++) {
-            const row = GAMIFICATION_LEVELS[i];
-            if (lv >= row.min && lv <= row.max) {
-                return pack(row.step, row.color, {
-                    title: row.title,
-                    icon: row.icon,
-                    min: row.min,
-                    max: row.max,
-                });
+            const candidate = GAMIFICATION_LEVELS[i];
+            if (lv >= candidate.min && lv <= candidate.max) {
+                row = candidate;
+                break;
             }
         }
-        const last = GAMIFICATION_LEVELS[GAMIFICATION_LEVELS.length - 1];
-        return pack(last.step, last.color, {
-            title: last.title,
-            icon: last.icon,
-            min: last.min,
-            max: last.max,
-        });
+        if (!row) row = GAMIFICATION_LEVELS[GAMIFICATION_LEVELS.length - 1];
+        return {
+            id: row.id,
+            color: row.color,
+            title: row.title,
+            icon: row.icon,
+            min: row.min,
+            max: row.max,
+            tone: 'rank',
+        };
     }
 
     function macroProtein(actual, norm, hasTraining) {

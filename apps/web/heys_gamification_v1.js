@@ -2055,7 +2055,6 @@
         title: scaled.title,
         icon: scaled.icon,
         color: scaled.color,
-        step: scaled.step,
       };
     }
     for (const t of LEVEL_TITLES) {

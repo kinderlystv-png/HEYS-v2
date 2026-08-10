@@ -269,14 +269,26 @@ describe('heys_scales_v1 — этап 3: новые шкалы и colorForStep',
     }
   });
 
-  it('harm и gamificationLevel возвращают ступень', () => {
+  it('harm возвращает ступень, ранг геймификации — нет', () => {
     const scales = loadScales();
     const harm = scales.harm(6.5);
     expect(harm.id).toBe('harmful');
     expect(harm.step).toBe(scales.STEPS.WARN_STRONG);
+    // Ранги — декоративная палитра: жёлтый Эксперт идёт после зелёного
+    // Практика. Втиснутые сюда ступени были немонотонны и в теме «Мягкий»
+    // покрасили бы Эксперта предупреждением.
     const level = scales.gamificationLevel(12);
     expect(level.title).toBe('Практик');
-    expect(level.step).toBe(scales.STEPS.GOOD_STRONG);
+    expect(level.tone).toBe('rank');
+    expect(level.step).toBeUndefined();
+  });
+
+  it('сон без цели не выдаёт зелёный', () => {
+    const scales = loadScales();
+    // Отличие от классики намеренное: прежний код при target = 0 давал
+    // `hours >= target` → зелёный на нулевых данных.
+    expect(scales.sleepHours(0, 0).color).toBe('#6b7280');
+    expect(scales.sleepHours(8, 8).color).toBe('#22c55e');
   });
 
   it('macro* шкалы совпадают с прежней логикой колец', () => {
@@ -286,5 +298,85 @@ describe('heys_scales_v1 — этап 3: новые шкалы и colorForStep',
     expect(scales.macroProtein(100, 100, false).color).toBe('#22c55e');
     expect(scales.macroFat(40, 100).color).toBe('#ef4444');
     expect(scales.macroCarbs(20, 100, true).color).toBe('#f59e0b');
+  });
+});
+
+// Ступени должны читаться одинаково во всех оценочных шкалах: одинаково плохое
+// значение обязано давать одинаковый тон, иначе тема «Мягкий» покрасит
+// «оценка тренировки 2/10» мягче, чем «качество сна 2/10». Литеральный список
+// цветов такую рассинхронизацию не ловит — до этой проверки красный означал
+// WARN_SOFT в семи шкалах и WARN_STRONG в четырёх.
+describe('heys_scales_v1 — согласованность ступеней между шкалами', () => {
+  const RANK = {
+    'warn-strong': 0,
+    'warn-soft': 1,
+    neutral: 2,
+    'good-soft': 3,
+    'good-strong': 4,
+  };
+
+  // from > 0 там, где нижняя ветка означает «нет данных», а не худшую оценку.
+  const GRADED = [
+    { name: 'stepsWidget', from: 0, to: 150, step: 1, up: true },
+    { name: 'wellbeing', from: 0, to: 10, step: 0.5, up: true },
+    { name: 'stress', from: 0, to: 10, step: 0.5, up: false },
+    { name: 'trainingRating', from: 0.5, to: 10, step: 0.5, up: true },
+    { name: 'moodRating', from: 0, to: 10, step: 0.5, up: true },
+    { name: 'stressRating', from: 0, to: 10, step: 0.5, up: false },
+    // Две верхних краски сна (отлично 8–9 и идеально 10) делят good-strong.
+    // Слияние безобидно: обе означают «хорошо», решения пользователя не меняют.
+    { name: 'sleepQuality', from: 0.5, to: 10, step: 0.5, up: true, colorsExceedSteps: true },
+    { name: 'dayScore10', from: 0.5, to: 10, step: 0.5, up: true },
+    { name: 'healthScore', from: 0, to: 100, step: 1, up: true },
+    { name: 'waterProgress', from: 0, to: 130, step: 1, up: true },
+    // Шкала вреда — единственная с семью красками на пять ступеней: вредный,
+    // очень вредный и супервредный делят warn-strong. В классике они
+    // различаются оттенком, в теме «Мягкий» через ступень сольются. Открытый
+    // вопрос к палитре, поэтому шкала не участвует в проверке «краска = ступень».
+    { name: 'harm', from: 0, to: 10, step: 0.1, up: false, colorsExceedSteps: true },
+  ];
+
+  function runOf(scales, spec, field) {
+    const out = [];
+    for (let v = spec.from; v <= spec.to + 1e-9; v += spec.step) {
+      const value = scales[spec.name](Number(v.toFixed(3)))[field];
+      if (out[out.length - 1] !== value) out.push(value);
+    }
+    return out;
+  }
+
+  const stepRun = (scales, spec) => runOf(scales, spec, 'step');
+
+  it('ступень меняется монотонно', () => {
+    const scales = loadScales();
+    for (const spec of GRADED) {
+      const ranks = stepRun(scales, spec).map((s) => RANK[s]);
+      const sorted = [...ranks].sort((a, b) => (spec.up ? a - b : b - a));
+      expect(ranks, `${spec.name}: ступени не по порядку`).toEqual(sorted);
+    }
+  });
+
+  it('каждая краска шкалы получает свою ступень', () => {
+    const scales = loadScales();
+    for (const spec of GRADED) {
+      if (spec.colorsExceedSteps) continue;
+      const colors = runOf(scales, spec, 'color');
+      const steps = stepRun(scales, spec);
+      expect(
+        steps.length,
+        `${spec.name}: ${colors.length} красок на ${steps.length} ступеней — в теме «Мягкий» соседние состояния сольются`,
+      ).toBe(colors.length);
+    }
+  });
+
+  it('край шкалы — всегда крайняя ступень, а не промежуточная', () => {
+    const scales = loadScales();
+    for (const spec of GRADED) {
+      const run = stepRun(scales, spec);
+      const worst = spec.up ? run[0] : run[run.length - 1];
+      const best = spec.up ? run[run.length - 1] : run[0];
+      expect(worst, `${spec.name}: худшее значение`).toBe('warn-strong');
+      expect(best, `${spec.name}: лучшее значение`).toBe('good-strong');
+    }
   });
 });
