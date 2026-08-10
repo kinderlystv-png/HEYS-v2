@@ -125,7 +125,7 @@
   padding: 10px 18px;
   border: 1px solid rgba(67, 69, 135, 0.18);
   border-radius: 18px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
   color: var(--word-builder-brand);
   box-shadow: 0 8px 20px rgba(48, 50, 94, 0.08);
   font: inherit;
@@ -198,7 +198,7 @@
 .planning-word-builder__primary {
   border: 1px solid var(--word-builder-brand);
   background: var(--word-builder-brand);
-  color: #fff;
+  color: var(--v4-bg, #fff);
   box-shadow: 0 10px 24px rgba(67, 69, 135, 0.2);
 }
 
