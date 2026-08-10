@@ -224,30 +224,30 @@
     }
 }
 
-[data-theme="dark"] .planning-color-trail {
+[data-theme$="dark"] .planning-color-trail {
     --color-trail-ink: #f4f5ff;
     --color-trail-muted: #b9bdd2;
     --color-trail-surface: rgba(31, 34, 54, 0.9);
 }
 
-[data-theme="dark"] .planning-color-trail__hud span,
-[data-theme="dark"] .planning-color-trail__pause,
-[data-theme="dark"] .planning-color-trail__copy {
+[data-theme$="dark"] .planning-color-trail__hud span,
+[data-theme$="dark"] .planning-color-trail__pause,
+[data-theme$="dark"] .planning-color-trail__copy {
     border-color: rgba(192, 198, 235, 0.2);
     background: rgba(40, 44, 70, 0.8);
     color: #dfe2ff;
 }
 
-[data-theme="dark"] .planning-color-trail__stage {
+[data-theme$="dark"] .planning-color-trail__stage {
     border-color: rgba(226, 236, 242, 0.12);
     background: var(--v4-surface, #1d2032);
 }
 
-[data-theme="dark"] .planning-color-trail__overlay {
+[data-theme$="dark"] .planning-color-trail__overlay {
     background: rgba(29, 32, 50, 0.92);
 }
 
-[data-theme="dark"] .planning-color-trail__quiet {
+[data-theme$="dark"] .planning-color-trail__quiet {
     border-color: rgba(226, 236, 242, 0.18);
     background: rgba(255, 255, 255, 0.06);
     color: #e2e5ff;

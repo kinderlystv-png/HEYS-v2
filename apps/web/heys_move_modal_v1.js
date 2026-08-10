@@ -395,8 +395,8 @@
         style.textContent = `
 @keyframes moveModalFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes moveModalSlideUp { from { transform: translateY(20px); opacity: 0.6; } to { transform: translateY(0); opacity: 1; } }
-[data-theme="dark"] .move-modal { background: #1e293b; color: #f1f5f9; }
-[data-theme="dark"] .move-modal button { color: #f1f5f9; }
+[data-theme$="dark"] .move-modal { background: #1e293b; color: #f1f5f9; }
+[data-theme$="dark"] .move-modal button { color: #f1f5f9; }
 `;
         document.head.appendChild(style);
     }

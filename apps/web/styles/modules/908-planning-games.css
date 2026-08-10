@@ -598,12 +598,12 @@ body.planning-game-reader-open {
   }
 }
 
-:is(body.dark, [data-theme="dark"]) .planning-games-screen {
+:is(body.dark, [data-theme$="dark"]) .planning-games-screen {
   --games-ink: #f0eff8;
   --games-muted: #aaaabd;
 }
 
-:is(body.dark, [data-theme="dark"]) .planning-game-reader {
+:is(body.dark, [data-theme$="dark"]) .planning-game-reader {
   --game-reader-bg: #171722;
   --game-reader-ink: #f1f0f6;
   --game-reader-muted: #b7b6c6;

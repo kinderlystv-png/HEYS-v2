@@ -486,7 +486,7 @@
   .assemble-day-app * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
 
-:is(body.dark, [data-theme="dark"]) .assemble-day-app {
+:is(body.dark, [data-theme$="dark"]) .assemble-day-app {
   --ad-ink: #f1f0f6;
   --ad-muted: #b8b7c5;
   --ad-line: rgba(226, 225, 239, 0.15);
@@ -500,9 +500,9 @@
   --ad-scene-highlight: #f7f7f4;
 }
 
-:is(body.dark, [data-theme="dark"]) .assemble-day-tabs { background: rgba(23, 23, 34, 0.92); }
-:is(body.dark, [data-theme="dark"]) .assemble-day-restart { background: rgba(23, 23, 34, 0.92); color: var(--ad-muted); }
-:is(body.dark, [data-theme="dark"]) .assemble-day-option { background: var(--v4-surface, #242431); color: var(--ad-ink); }
-:is(body.dark, [data-theme="dark"]) .assemble-day-format { background: var(--v4-surface, #242431); color: var(--ad-ink); }
-:is(body.dark, [data-theme="dark"]) .assemble-day-rule,
-:is(body.dark, [data-theme="dark"]) .assemble-day-goals button { background: var(--v4-surface, #242431); color: var(--ad-ink); }
+:is(body.dark, [data-theme$="dark"]) .assemble-day-tabs { background: rgba(23, 23, 34, 0.92); }
+:is(body.dark, [data-theme$="dark"]) .assemble-day-restart { background: rgba(23, 23, 34, 0.92); color: var(--ad-muted); }
+:is(body.dark, [data-theme$="dark"]) .assemble-day-option { background: var(--v4-surface, #242431); color: var(--ad-ink); }
+:is(body.dark, [data-theme$="dark"]) .assemble-day-format { background: var(--v4-surface, #242431); color: var(--ad-ink); }
+:is(body.dark, [data-theme$="dark"]) .assemble-day-rule,
+:is(body.dark, [data-theme$="dark"]) .assemble-day-goals button { background: var(--v4-surface, #242431); color: var(--ad-ink); }

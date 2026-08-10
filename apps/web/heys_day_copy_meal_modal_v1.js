@@ -634,8 +634,8 @@
         style.textContent = `
 @keyframes copyMealFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes copyMealScaleIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
-[data-theme="dark"] .copy-meal-modal { background: #1e293b; color: #f1f5f9; }
-[data-theme="dark"] .copy-meal-modal label { color: #f1f5f9; }
+[data-theme$="dark"] .copy-meal-modal { background: #1e293b; color: #f1f5f9; }
+[data-theme$="dark"] .copy-meal-modal label { color: #f1f5f9; }
 `;
         document.head.appendChild(style);
     }

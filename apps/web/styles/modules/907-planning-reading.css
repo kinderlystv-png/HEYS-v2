@@ -228,4 +228,4 @@ body.reading-reader-open { overflow: hidden; }
 @media (max-width: 620px) { .reading-applicability__grid { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .reading-card__title, .reading-reader__progress span { transition: none; } .reading-card__open:active { transform: none; } }
 
-:is(body.dark, [data-theme="dark"]) .planning-reading-screen { --reading-ink: #f0eff8; --reading-muted: #aaaabd; --reading-line: rgba(201, 202, 231, .17); }
+:is(body.dark, [data-theme$="dark"]) .planning-reading-screen { --reading-ink: #f0eff8; --reading-muted: #aaaabd; --reading-line: rgba(201, 202, 231, .17); }

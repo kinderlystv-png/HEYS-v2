@@ -186,12 +186,12 @@
 }
 
 /* Dark theme must follow HEYS app theme, not browser/OS theme */
-[data-theme="dark"] .cso-backdrop,
+[data-theme$="dark"] .cso-backdrop,
 .dark-theme .cso-backdrop {
     background: rgba(2, 6, 23, 0.58);
 }
 
-[data-theme="dark"] .cso-card,
+[data-theme$="dark"] .cso-card,
 .dark-theme .cso-card {
     background: linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.96) 100%);
     border: 1px solid rgba(148, 163, 184, 0.18);

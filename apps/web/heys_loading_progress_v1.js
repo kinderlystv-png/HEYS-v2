@@ -150,15 +150,15 @@
         // Dark theme overrides (mirror skeleton pattern from index.html:1512+)
         const styleEl = document.createElement('style');
         styleEl.textContent = [
-            '[data-theme="dark"] #heys-loading-progress-chip {',
+            '[data-theme$="dark"] #heys-loading-progress-chip {',
             '  background:rgba(30,41,59,0.94);',
             '  color:#e2e8f0;',
             '  box-shadow:0 4px 14px rgba(0,0,0,0.4);',
             '}',
-            '[data-theme="dark"] #heys-loading-progress-chip > span:last-child > span:first-child {',
+            '[data-theme$="dark"] #heys-loading-progress-chip > span:last-child > span:first-child {',
             '  color:#e2e8f0;',
             '}',
-            '[data-theme="dark"] #heys-loading-progress-chip > span:last-child > span:last-child {',
+            '[data-theme$="dark"] #heys-loading-progress-chip > span:last-child > span:last-child {',
             '  color:#94a3b8;',
             '}',
             '@keyframes heys-loading-pulse {',
