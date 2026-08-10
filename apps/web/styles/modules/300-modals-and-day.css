@@ -72,7 +72,7 @@
   flex: 1;
   padding: 12px 8px;
   border-radius: 14px;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--v4-line, #e5e7eb);
   background: var(--color-white);
   font-size: 14px;
   font-weight: 600;
@@ -94,7 +94,7 @@
 .sleep-quality-preset-ok.active {
   background: rgba(234, 179, 8, 0.1);
   color: #ca8a04;
-  border-color: #eab308;
+  border-color: var(--v4-warn-soft, #eab308);
 }
 
 .sleep-quality-preset-good.active {
@@ -217,7 +217,7 @@
 }
 
 .sleep-quality-hours-info strong {
-  color: #3b82f6;
+  color: var(--v4-water, #3b82f6);
 }
 
 /* Dark mode for Sleep Quality */
@@ -250,7 +250,7 @@
 
 [data-theme="dark"] .sleep-quality-preset-ok.active {
   background: rgba(251, 191, 36, 0.2);
-  border-color: #fbbf24;
+  border-color: var(--v4-warn-soft, #fbbf24);
 }
 
 [data-theme="dark"] .sleep-quality-preset-good.active {
@@ -290,7 +290,7 @@
 }
 
 [data-theme="dark"] .sleep-quality-hours-info strong {
-  color: #60a5fa;
+  color: var(--v4-act-text, #60a5fa);
 }
 
 .day-score-auto-info {
@@ -304,7 +304,7 @@
 }
 
 .day-score-auto-info strong {
-  color: #3b82f6;
+  color: var(--v4-water, #3b82f6);
 }
 
 /* Wrapper с фиксированной высотой чтобы модалка не прыгала */
@@ -401,7 +401,7 @@
 }
 
 .day-score-comment-prompt.negative .day-score-comment-text {
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
 }
 
 .day-score-comment-prompt.neutral .day-score-comment-text {
@@ -472,7 +472,7 @@
 
 [data-theme="dark"] .sleep-duration-hint {
   background: rgba(139, 92, 246, 0.2);
-  color: #60a5fa;
+  color: var(--v4-act-text, #60a5fa);
 }
 
 [data-theme="dark"] .sleep-quality-display.clickable:active {
@@ -581,7 +581,7 @@
 }
 
 [data-theme="dark"] .day-score-auto-info strong {
-  color: #60a5fa;
+  color: var(--v4-act-text, #60a5fa);
 }
 
 [data-theme="dark"] .day-score-comment-prompt {
@@ -988,7 +988,7 @@
 }
 
 .insulin-time-start {
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .insulin-time-end {
@@ -1157,7 +1157,7 @@
   margin-top: 12px;
   padding: 12px;
   border-radius: 12px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   animation: expandIn 0.3s ease-out;
 }
@@ -1259,7 +1259,7 @@
 
 .day-wave-overview--high .day-wave-overview__status {
   background: rgba(239, 68, 68, 0.12);
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
 }
 
 .day-wave-overview__canvas {
@@ -1325,8 +1325,8 @@
 }
 
 .day-wave-overview__meal circle {
-  fill: #fff;
-  stroke: #3b82f6;
+  fill: var(--v4-bg, #fff);
+  stroke: var(--v4-water, #3b82f6);
   stroke-width: 1.6;
 }
 
@@ -1336,7 +1336,7 @@
 }
 
 .day-wave-overview__time {
-  fill: #64748b;
+  fill: var(--v4-ink-2, #64748b);
   font-size: 8px;
   font-weight: 750;
 }
@@ -1362,7 +1362,7 @@
 }
 
 .day-wave-overview__interaction-label--micro {
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 [data-theme="dark"] .day-wave-overview {
@@ -1400,7 +1400,7 @@
 [data-theme="dark"] .day-wave-overview__canvas {
   border-color: rgba(148, 163, 184, 0.14);
   background: rgba(15, 23, 42, 0.62);
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme="dark"] .day-wave-overview__axis {
@@ -1437,16 +1437,16 @@
 }
 
 [data-theme="dark"] .day-wave-overview__meal circle {
-  fill: #0f172a;
-  stroke: #60a5fa;
+  fill: var(--v4-bg, #0f172a);
+  stroke: var(--v4-act-text, #60a5fa);
 }
 
 [data-theme="dark"] .day-wave-overview__time {
-  fill: #94a3b8;
+  fill: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme="dark"] .day-wave-overview__overlaps {
-  color: #fbbf24;
+  color: var(--v4-warn-soft, #fbbf24);
 }
 
 /* Пульсация активной волны */
@@ -1583,7 +1583,7 @@
 .mood-card-value {
   font-size: 16px;
   font-weight: 700;
-  color: #111827;
+  color: var(--v4-ink, #111827);
 }
 
 /* === Mood Sparkline — динамика настроения === */
@@ -1775,7 +1775,7 @@
 }
 
 [data-theme="dark"] .month-trainings-empty {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme="dark"] .month-trainings-row {
@@ -1784,11 +1784,11 @@
 }
 
 [data-theme="dark"] .month-trainings-row-date {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme="dark"] .month-trainings-row-type {
-  color: #f1f5f9;
+  color: var(--v4-ink, #f1f5f9);
 }
 
 /* Календарь привычки «утренняя зарядка» (модалка + карточка активности) */
@@ -1831,7 +1831,7 @@
 }
 
 .ma-habit-cal-head-dot {
-  color: #94a3b8;
+  color: var(--v4-ink-3, #94a3b8);
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
@@ -1935,7 +1935,7 @@
 .ma-habit-cal-mode-btn {
   border-radius: 8px;
   border: 1px solid rgba(203, 213, 225, 0.9);
-  background: #f8fafc;
+  background: var(--v4-hero, #f8fafc);
   color: #475569;
   font-size: 10px;
   font-weight: 700;
@@ -1955,7 +1955,7 @@
 .ma-habit-cal-mode-btn.is-active {
   border-color: rgba(59, 130, 246, 0.55);
   background: rgba(59, 130, 246, 0.1);
-  color: #1d4ed8;
+  color: var(--v4-act-text, #1d4ed8);
 }
 
 /* Сетка календаря уже не на всю ширину карточки — визуально легче */
@@ -1974,12 +1974,12 @@
 .ma-habit-cal-wd {
   font-size: 9px;
   font-weight: 600;
-  color: #94a3b8;
+  color: var(--v4-ink-3, #94a3b8);
   text-align: center;
 }
 
 .ma-habit-cal-wd--weekend {
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
 }
 
 .ma-habit-cal-grid {
@@ -1992,7 +1992,7 @@
   min-height: 24px;
   border-radius: 7px;
   border: 1px solid rgba(226, 232, 240, 0.95);
-  background: #f8fafc;
+  background: var(--v4-hero, #f8fafc);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2032,7 +2032,7 @@
 .ma-habit-cal-cell.is-done {
   border-color: rgba(16, 185, 129, 0.42);
   background: linear-gradient(145deg, #0d9488 0%, #14b8a6 32%, #2dd4bf 68%, #5eead4 100%);
-  color: #f0fdf4;
+  color: var(--v4-ok-bg, #f0fdf4);
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 1px 2px rgba(13, 148, 136, 0.22);
 }
@@ -2048,7 +2048,7 @@
 .ma-habit-cal-cell.is-missed {
   border-color: rgba(251, 207, 216, 0.95);
   background: linear-gradient(180deg, #f8f4f5 0%, rgba(252, 231, 243, 0.82) 100%);
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   text-shadow: none;
   box-shadow: none;
 }
@@ -2081,7 +2081,7 @@
   justify-content: space-between;
   gap: 8px;
   font-size: 10px;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 [data-theme="dark"] .ma-habit-cal-shell {
@@ -2094,7 +2094,7 @@
 }
 
 [data-theme="dark"] .ma-habit-cal-head-dot {
-  color: #64748b;
+  color: var(--v4-ink-3, #64748b);
 }
 
 [data-theme="dark"] .ma-habit-cal-subtitle {
@@ -2103,7 +2103,7 @@
 
 [data-theme="dark"] .ma-habit-cal-period-nav {
   background: transparent;
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 @media (hover: hover) {
@@ -2121,12 +2121,12 @@
 }
 
 [data-theme="dark"] .ma-habit-cal-period-label--28 {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme="dark"] .ma-habit-cal-footer,
 [data-theme="dark"] .ma-habit-cal-wd {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme="dark"] .ma-habit-cal-wd--weekend {
@@ -2232,7 +2232,7 @@
   margin-top: 4px;
   font-size: 11px;
   line-height: 1.4;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 @media (hover: hover) {
@@ -2252,7 +2252,7 @@
 }
 
 [data-theme="dark"] .ma-skip-notice-sub {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 /* Steps Slider */
@@ -2524,7 +2524,7 @@
   justify-content: space-between;
   gap: 4px;
   padding: 12px;
-  background: #f8fafc;
+  background: var(--v4-hero, #f8fafc);
   border-radius: 12px;
   margin-bottom: 16px;
 }
@@ -2626,7 +2626,7 @@
 }
 
 [data-theme="dark"] .app-loader-skeleton {
-  background: #1e293b;
+  background: var(--v4-hero, #1e293b);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
@@ -2640,7 +2640,7 @@
 }
 
 [data-theme="dark"] .app-loader-skeleton .skeleton-sparkline {
-  background: #0f172a;
+  background: var(--v4-bg, #0f172a);
 }
 
 [data-theme="dark"] .app-loader-skeleton .skeleton-tabs {
@@ -2942,7 +2942,7 @@
 .metrics-card:nth-child(3)::after {
   content: '•';
   font-size: 8px;
-  color: #e5e7eb;
+  color: var(--v4-line, #e5e7eb);
 }
 
 /* Mobile responsive для metrics cards */
@@ -3508,7 +3508,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #e5e7eb;
+  background: var(--v4-line, #e5e7eb);
   transition: all 0.2s ease;
 }
 
@@ -3556,7 +3556,7 @@
 .quick-chips.negative .quick-chip {
   background: rgba(239, 68, 68, 0.08);
   border-color: rgba(239, 68, 68, 0.15);
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
 }
 
 .quick-chips.positive .quick-chip {
@@ -3736,7 +3736,7 @@
   flex: 1;
   padding: 8px 4px;
   border-radius: 12px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid var(--v4-line, #e5e7eb);
   background: var(--color-white);
   font-size: 12px;
   font-weight: 500;
@@ -3828,7 +3828,7 @@
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));
   border-radius: 12px;
   font-size: 13px;
-  color: #3b82f6;
+  color: var(--v4-water, #3b82f6);
   border: 1px solid rgba(99, 102, 241, 0.2);
 }
 
@@ -3911,7 +3911,7 @@
 }
 
 .mood-journal-prompt.negative .mood-journal-text {
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
 }
 
 .mood-journal-prompt.neutral .mood-journal-text {
@@ -4026,22 +4026,22 @@
 
 .mood-slider-positive::-webkit-slider-runnable-track {
   background: linear-gradient(90deg,
-      #ef4444 0%,
+      var(--v4-warn-1, #ef4444) 0%,
       #f97316 18%,
       #f59e0b 34%,
-      #3b82f6 52%,
-      #22c55e 76%,
+      var(--v4-water, #3b82f6) 52%,
+      var(--v4-ok-fill, #22c55e) 76%,
       #10b981 100%);
 }
 
 .mood-slider-negative::-webkit-slider-runnable-track {
   background: linear-gradient(90deg,
       #10b981 0%,
-      #22c55e 24%,
-      #3b82f6 50%,
+      var(--v4-ok-fill, #22c55e) 24%,
+      var(--v4-water, #3b82f6) 50%,
       #f59e0b 72%,
       #f97316 86%,
-      #ef4444 100%);
+      var(--v4-warn-1, #ef4444) 100%);
 }
 
 .mood-slider::-moz-range-track {
@@ -4053,22 +4053,22 @@
 
 .mood-slider-positive::-moz-range-track {
   background: linear-gradient(90deg,
-      #ef4444 0%,
+      var(--v4-warn-1, #ef4444) 0%,
       #f97316 18%,
       #f59e0b 34%,
-      #3b82f6 52%,
-      #22c55e 76%,
+      var(--v4-water, #3b82f6) 52%,
+      var(--v4-ok-fill, #22c55e) 76%,
       #10b981 100%);
 }
 
 .mood-slider-negative::-moz-range-track {
   background: linear-gradient(90deg,
       #10b981 0%,
-      #22c55e 24%,
-      #3b82f6 50%,
+      var(--v4-ok-fill, #22c55e) 24%,
+      var(--v4-water, #3b82f6) 50%,
       #f59e0b 72%,
       #f97316 86%,
-      #ef4444 100%);
+      var(--v4-warn-1, #ef4444) 100%);
 }
 
 /* Slider thumb */
@@ -4880,7 +4880,7 @@
 
 /* Utility classes для замены inline стилей (modals/day scope) */
 .dev-positive {
-  color: #dc2626;
+  color: var(--v4-warn-2, #dc2626);
   font-weight: 600;
 }
 
@@ -5237,12 +5237,12 @@ select {
 
 [data-theme="dark"] .mood-preset-ok.active {
   background: rgba(96, 165, 250, 0.2);
-  border-color: #3b82f6;
+  border-color: var(--v4-act, #3b82f6);
 }
 
 [data-theme="dark"] .mood-preset-good.active {
   background: rgba(74, 222, 128, 0.2);
-  border-color: #22c55e;
+  border-color: var(--v4-ok-fill, #22c55e);
 }
 
 [data-theme="dark"] .mood-face-text {
@@ -5254,7 +5254,7 @@ select {
 }
 
 [data-theme="dark"] .mood-slider-value {
-  color: #60a5fa;
+  color: var(--v4-act-text, #60a5fa);
 }
 
 [data-theme="dark"] .mood-slider::-webkit-slider-runnable-track,
@@ -5342,11 +5342,11 @@ select {
 }
 
 [data-theme="dark"] .rating-progress-dot.filled {
-  background: #4ade80;
+  background: var(--v4-ok-text, #4ade80);
 }
 
 [data-theme="dark"] .rating-progress-dot.partial {
-  background: #fbbf24;
+  background: var(--v4-warn-soft, #fbbf24);
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -5416,7 +5416,7 @@ select {
 }
 
 [data-theme="dark"] .steps-value b {
-  color: #60a5fa;
+  color: var(--v4-act-text, #60a5fa);
 }
 
 [data-theme="dark"] .steps-kcal-hint {
@@ -5495,11 +5495,11 @@ select {
 }
 
 [data-theme="dark"] .mds-header {
-  color: #60a5fa;
+  color: var(--v4-act-text, #60a5fa);
 }
 
 [data-theme="dark"] .mds-label {
-  color: #60a5fa;
+  color: var(--v4-act-text, #60a5fa);
 }
 
 [data-theme="dark"] .mds-dim {
@@ -5540,7 +5540,7 @@ select {
 }
 
 [data-theme="dark"] .sleep-quality-value {
-  color: #fbbf24;
+  color: var(--v4-warn-soft, #fbbf24);
 }
 
 /* ══════════════════════════════════════════════════════════════

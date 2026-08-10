@@ -670,6 +670,41 @@ widget-tokens, несовпадающие пары; ещё ~66 hex только 
 scope). Следующий кандидат — `300-modals-and-day.css` (~316 hex); альтернатива —
 `200-dark-and-effects.css` (~499 hex).
 
+### Stage 6 batch 7 — 2026-08-10
+
+**Файлы (граница батча):**
+
+| Файл                                    | Что сделано                                                    | Литералов → `var(--v4-*)` |
+| --------------------------------------- | -------------------------------------------------------------- | ------------------------- |
+| `styles/modules/300-modals-and-day.css` | весь файл (modals, day UI, sleep/mood, bottom sheet, portions) | 71                        |
+
+**Инструмент:** `scripts/ui-v4-css-batch-codemod.mjs` — тот же scoped codemod и
+гейт классики, что в batch 3–6. Проверка: `ui-v4-check-classic-drift.mjs`
+(`--files=styles/modules/300-modals-and-day.css`) +
+`ui-v4-classic-drift.test.js`.
+
+**Исключено в batch 7 (намеренно, как в batch 2–6):**
+
+- `linear-gradient` / `radial-gradient` — glassmorphism bottom sheet, mood/sleep
+  tint gradients
+- `rgba()` — без замены
+- iOS chrome (`#1c1c1e`, `#8e8e93`) и семантические mood/sleep цвета без
+  classic-пары (`#ca8a04`, `#059669`, `#be185d`, `#f9a8d4`, `#93c5fd`)
+- legacy `var(--color-*, #…)` / `var(--bg-*, #…)` — не трогаем чужие fallback
+- pink/mood comment-prompt блоки (`#fce7f3`, `#fdf2f8`, `#be185d`) — семантика
+  без v4-совпадения
+- тёмные правила с литералами ≠ `classic-dark` роли
+
+**Остаток в `300-modals-and-day.css`:** ~275 bare hex (градиенты, rgba,
+семантические tint, несовпадающие пары; ещё ~71 hex только как fallback в
+`var(--v4-*)`). Файл закрыт для stage 6 — следующий батч — другой модуль в
+`styles/`.
+
+**Параллельность:** не пересекается со Stage 4 Activity
+(`600-steps-and-aps.css`, `731-ui-v4-activity.css`, `apps/web/*.js` — вне
+scope). Следующий кандидат — `100-metrics-and-graphs.css` (~542 hex);
+альтернатива — `725-metabolic-intelligence.css` (~636 hex).
+
 ---
 
 ## Этап 7. Поток B — что осталось после вкладок
