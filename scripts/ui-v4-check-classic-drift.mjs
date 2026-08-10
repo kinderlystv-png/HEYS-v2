@@ -33,6 +33,11 @@ const SKIP_DIRS = new Set(['public', 'dist', 'node_modules', '__tests__', '.next
 // каноничной палитры к ним неприменимо.
 const SKIP_FILES = new Set([
   '002-ui-v4-palette-roles.css', // сами определения ролей
+  // Скомпилированный Tailwind-артефакт: index.html грузит styles/tailwind.css,
+  // не src/tailwind.css; prebuild/CI/dev не пересобирают. ~153 hex — утилиты
+  // Tailwind, не ручная покраска Stage 6. Перекраска — только после отдельной
+  // пересборки из src/tailwind.css + tailwind.config.js (см. UI v4 plan Stage 6).
+  'tailwind.css',
   // Карты подмены этапа 2: применяются только на песочной и синей палитрах
   // (usesV4PaletteRoles), в классике работают legacy-карты. Несовпадение
   // каноничного значения здесь ожидаемо и правильно.

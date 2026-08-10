@@ -1097,6 +1097,29 @@ classic-пары (градиенты, `rgba`, brand/scales, семантичес
 вместе с краской Activity (Stage 4); снятие bare-hex остатков — только через
 новые роли с совпадающим classic-значением, не обход гейта.
 
+### Stage 6 — `styles/tailwind.css` (разбор 2026-08-10, не красили)
+
+**Пересборка в обычном CI/dev — нет.** `apps/web/package.json` не содержит
+tailwind-скрипта; `build` / `build:ci` / `predev` копируют `styles/*.css` как
+есть (`build:dist`). С 2026-01-22 (`8086bed65`) `index.html` ссылается на
+скомпилированный `/styles/tailwind.css`, а не на `/src/tailwind.css` (Vite
+раньше гонял PostCSS на лету).
+
+| Что                        | Путь / факт                                                                  |
+| -------------------------- | ---------------------------------------------------------------------------- |
+| Артефакт в проде           | `apps/web/styles/tailwind.css` (~153 hex, без `var(--v4-*)`)                 |
+| Вход пересборки (вручную)  | `apps/web/src/tailwind.css` (`@import "tailwindcss"`)                        |
+| Конфиг                     | `apps/web/tailwind.config.js` (`content`, `darkMode`, `theme.extend.colors`) |
+| PostCSS                    | `apps/web/postcss.config.js` (`@tailwindcss/postcss`)                        |
+| Последний коммит артефакта | `8086bed65` 2026-01-22                                                       |
+
+**Stage 6:** файл в исключениях codemod/drift (`tailwind.css` в
+`ui-v4-check-classic-drift.mjs`); ручная покраска артефакта запрещена. Когда
+нужна перекраска утилит — отдельная задача: правки в `tailwind.config.js` /
+`@theme` у входа, затем
+`cd apps/web && npx @tailwindcss/cli -i src/tailwind.css -o styles/tailwind.css`,
+smoke, коммит артефакта.
+
 ---
 
 ## Этап 7. Поток B — что осталось после вкладок
