@@ -43,8 +43,8 @@
   function buildReportsPeriodMeta(sparklineData, chartPeriod, ratioZones, lsGet, clientId) {
     const points = (sparklineData || []).filter((p) => p && !p.isFuture && !p.isIncomplete);
     const withKcal = points.filter((p) => p.kcal > 0);
-    const totalEaten = withKcal.reduce((s, p) => s + p.kcal, 0);
-    const totalPlan = withKcal.reduce((s, p) => s + (p.target || 0), 0);
+    const totalEaten = Math.round(withKcal.reduce((s, p) => s + p.kcal, 0));
+    const totalPlan = Math.round(withKcal.reduce((s, p) => s + (p.target || 0), 0));
     const balance = totalEaten - totalPlan;
     const dates = withKcal.map((p) => p.date).filter(Boolean);
     const dateRange = HEYS.SparklinesShared?.formatDateRange?.(dates) || '';
@@ -144,7 +144,7 @@
   function ReportsTabV4Top(props) {
     const { React, periodMeta, chartPeriod, handlePeriodChange, scoreTile, onBalanceFooterClick } = props || {};
     if (!React || !periodMeta) return null;
-    const fmtNum = (n) => (n || 0).toLocaleString('ru-RU');
+    const fmtNum = (n) => Math.round(n || 0).toLocaleString('ru-RU');
     const scoreSuffix = periodMeta.scoredCount > 0 && periodMeta.scoredCount < periodMeta.withData
       ? ' за ' + periodMeta.scoredCount + ' дней из ' + periodMeta.withData
       : '';
