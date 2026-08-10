@@ -97,7 +97,7 @@
 }
 
 .drums-ft__header span {
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
@@ -141,7 +141,7 @@
   padding: 12px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 12px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
 }
 
 .drums-ft-stat strong {
@@ -153,7 +153,7 @@
 }
 
 .drums-ft-stat span {
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-size: 12px;
 }
 
@@ -167,7 +167,7 @@
   padding: 14px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 12px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
 }
 
 .drums-ft-resume,
@@ -197,7 +197,7 @@
 .drums-ft-save-btn {
   border-radius: 10px;
   background: #0f766e;
-  color: #fff;
+  color: var(--v4-bg, #fff);
   font-weight: 800;
 }
 
@@ -219,7 +219,7 @@
   padding: 14px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 12px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
   color: inherit;
   text-align: left;
 }
@@ -236,7 +236,7 @@
 
 .drums-ft-session-card span:not(.drums-ft-session-card__icon),
 .drums-ft-method p {
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-size: 13px;
   line-height: 1.35;
 }
@@ -263,7 +263,7 @@
 }
 
 .drums-ft-run-head span {
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-size: 12px;
 }
 
@@ -297,8 +297,8 @@
   min-height: 36px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 10px;
-  background: #fff;
-  color: #64748b;
+  background: var(--v4-bg, #fff);
+  color: var(--v4-ink-2, #64748b);
   cursor: pointer;
   font-weight: 800;
 }
@@ -332,7 +332,7 @@
   border: 0;
   border-radius: 10px;
   background: #ea580c;
-  color: #fff;
+  color: var(--v4-bg, #fff);
   cursor: pointer;
   font-weight: 800;
 }
@@ -343,7 +343,7 @@
   place-items: center;
   border-radius: 16px;
   background: #0f172a;
-  color: #fff;
+  color: var(--v4-bg, #fff);
 }
 
 .drums-ft-timer span {
@@ -360,7 +360,7 @@
   padding: 12px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 12px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
 }
 
 .drums-ft-count-in {
@@ -375,14 +375,14 @@
   place-items: center;
   border-radius: 999px;
   background: #0f766e;
-  color: #fff;
+  color: var(--v4-bg, #fff);
   font-size: 24px;
   line-height: 1;
 }
 
 .drums-ft-count-in span,
 .drums-ft-ramp span {
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-size: 13px;
 }
 
@@ -392,7 +392,7 @@
   padding: 12px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 12px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
 }
 
 .drums-ft-notation__head {
@@ -413,7 +413,7 @@
   place-items: center;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 10px;
-  background: #f8fafc;
+  background: var(--v4-hero, #f8fafc);
   color: #0f766e;
   font-size: 13px;
   font-weight: 900;
@@ -470,7 +470,7 @@
   right: 8px;
   bottom: 3px;
   left: 8px;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-size: 9px;
   font-style: normal;
   font-weight: 800;
@@ -481,7 +481,7 @@
 }
 
 .drums-ft-tempo-picker__side {
-  color: #94a3b8;
+  color: var(--v4-ink-3, #94a3b8);
   font-size: 14px;
   font-weight: 900;
   line-height: 1;
@@ -540,7 +540,7 @@
 }
 
 .drums-ft-notation__stick {
-  fill: #64748b;
+  fill: var(--v4-ink-2, #64748b);
   font-size: 13px;
 }
 
@@ -551,7 +551,7 @@
 
 .drums-ft-notation__rest {
   fill: none;
-  stroke: #64748b;
+  stroke: var(--v4-ink-2, #64748b);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.4;
@@ -564,7 +564,7 @@
 
 .drums-ft-note-mark.is-left .drums-ft-notation__note-head,
 .drums-ft-note-mark.is-left .drums-ft-notation__stick {
-  fill: #2563eb;
+  fill: var(--v4-act, #2563eb);
 }
 
 .drums-ft-note-mark.is-now .drums-ft-notation__note-head {
@@ -632,7 +632,7 @@
 
 .drums-ft-controls button.is-active {
   background: #f59e0b;
-  color: #fff;
+  color: var(--v4-bg, #fff);
 }
 
 .drums-ft-volume-control {
@@ -646,7 +646,7 @@
   padding: 10px 12px;
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.06);
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-size: 12px;
   font-weight: 800;
 }
@@ -701,7 +701,7 @@
   gap: 10px;
   padding: 12px;
   border-radius: 12px;
-  background: #f8fafc;
+  background: var(--v4-hero, #f8fafc);
 }
 
 .drums-ft-technique__summary {
@@ -726,7 +726,7 @@
   padding: 9px 8px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 10px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
 }
 
 .drums-ft-technique__step strong {
@@ -738,7 +738,7 @@
 }
 
 .drums-ft-technique__step span {
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-size: 11px;
   font-weight: 700;
   line-height: 1.25;
@@ -767,7 +767,7 @@
 
 .drums-ft-technique__step--up .drums-ft-technique__path,
 .drums-ft-technique__step--tap .drums-ft-technique__path {
-  stroke: #2563eb;
+  stroke: var(--v4-act, #2563eb);
 }
 
 .drums-ft-technique__step--buzz .drums-ft-technique__path {
@@ -780,7 +780,7 @@
 
 .drums-ft-technique__pause path {
   fill: none;
-  stroke: #64748b;
+  stroke: var(--v4-ink-2, #64748b);
   stroke-linecap: round;
   stroke-width: 5;
 }
@@ -816,7 +816,7 @@
 }
 
 .drums-ft-current li {
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-size: 13px;
 }
 
@@ -847,7 +847,7 @@
 }
 
 .drums-ft-quality__head span {
-  color: #94a3b8;
+  color: var(--v4-ink-3, #94a3b8);
   font-size: 12px;
   font-weight: 800;
 }
@@ -859,7 +859,7 @@
   padding: 12px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 12px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
 }
 
 .drums-ft-quality-card {
@@ -896,7 +896,7 @@
 .drums-ft-quality-card small,
 .drums-ft-quality-check small,
 .drums-ft-pain small {
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-size: 11px;
   font-weight: 700;
   line-height: 1.25;
@@ -904,7 +904,7 @@
 
 .drums-ft-quality-card input[type='range'] {
   width: 100%;
-  accent-color: #2563eb;
+  accent-color: var(--v4-act, #2563eb);
 }
 
 .drums-ft-quality-check,
@@ -945,8 +945,8 @@
   padding: 11px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 12px;
-  background: #fff;
-  color: #64748b;
+  background: var(--v4-bg, #fff);
+  color: var(--v4-ink-2, #64748b);
   font-size: 12px;
   font-weight: 700;
 }
@@ -1023,7 +1023,7 @@
   padding: 12px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 12px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
 }
 
 .drums-ft-tap-test__head,
@@ -1042,7 +1042,7 @@
 
 .drums-ft-tap-test__head span,
 .drums-ft-tap-test__meta span {
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-variant-numeric: tabular-nums;
   font-weight: 800;
 }
@@ -1075,7 +1075,7 @@
 .drums-ft-tap-test button.is-active,
 .drums-ft-tap-test__tap {
   background: #0f766e;
-  color: #fff;
+  color: var(--v4-bg, #fff);
 }
 
 .drums-ft-tap-test button:disabled {
@@ -1089,7 +1089,7 @@
   padding: 12px;
   border: 1px solid rgba(15, 23, 42, 0.12);
   border-radius: 12px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
   color: #0f172a;
   font: inherit;
   outline: none;
@@ -1156,7 +1156,7 @@
 [data-theme='dark'] .drums-ft-quality-card small,
 [data-theme='dark'] .drums-ft-quality-check small,
 [data-theme='dark'] .drums-ft-pain small {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme='dark'] .drums-ft-pain {
@@ -1175,7 +1175,7 @@
 
 [data-theme='dark'] .drums-ft-tempo-picker__side,
 [data-theme='dark'] .drums-ft-tempo-picker__wheel em {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme='dark'] .drums-ft-notation__staff line {
@@ -1307,7 +1307,7 @@
   width: min(420px, 100%);
   padding: 24px;
   border-radius: 18px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
   box-shadow: 0 22px 60px rgba(15, 23, 42, 0.32);
   text-align: center;
 }
@@ -1320,7 +1320,7 @@
 
 .drums-ft-modal__hint {
   font-size: 13px;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .drums-ft-modal__bpm {
@@ -1339,7 +1339,7 @@
 
 .drums-ft-modal__bpm span {
   font-size: 13px;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-weight: 700;
 }
 
@@ -1381,7 +1381,7 @@
 
 .drums-ft-modal__primary {
   background: #0f766e;
-  color: #fff;
+  color: var(--v4-bg, #fff);
 }
 
 .drums-ft-modal__primary:hover {
@@ -1398,7 +1398,7 @@
 }
 
 [data-theme='dark'] .drums-ft-modal__card {
-  background: #1e293b;
+  background: var(--v4-hero, #1e293b);
   color: #f8fafc;
 }
 
@@ -1409,7 +1409,7 @@
 
 [data-theme='dark'] .drums-ft-modal__hint,
 [data-theme='dark'] .drums-ft-modal__bpm span {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme='dark'] .drums-ft-modal__steps button,
@@ -1449,7 +1449,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -1462,7 +1462,7 @@
 
 .drums-ft-technique__variant-btn.is-active {
   background: #0f766e;
-  color: #fff;
+  color: var(--v4-bg, #fff);
 }
 
 [data-theme='dark'] .drums-ft-technique__variant-switch {
@@ -1470,7 +1470,7 @@
 }
 
 [data-theme='dark'] .drums-ft-technique__variant-btn {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme='dark'] .drums-ft-technique__variant-btn:hover {
@@ -1560,7 +1560,7 @@
   align-items: center;
   gap: 2px;
   padding: 4px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
   border-radius: 8px;
   color: #475569;
   font-size: 10px;
@@ -1582,7 +1582,7 @@
 }
 
 [data-theme='dark'] .drums-ft-technique__story-frame {
-  background: #1e293b;
+  background: var(--v4-hero, #1e293b);
   color: #cbd5e1;
 }
 
@@ -1614,7 +1614,7 @@
   align-items: center;
   justify-content: center;
   padding: 12px;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-size: 11px;
   text-align: center;
   font-weight: 600;
@@ -1631,7 +1631,7 @@
 }
 
 [data-theme='dark'] .drums-ft-technique__video-fallback {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 /* === Progress CTA on home === */
@@ -1673,7 +1673,7 @@
 
 .drums-ft-progress-cta__body span {
   font-size: 12px;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .drums-ft-progress-cta__chev {
@@ -1688,7 +1688,7 @@
 }
 
 [data-theme='dark'] .drums-ft-progress-cta__body span {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 /* === Progress screen === */
@@ -1717,7 +1717,7 @@
 .drums-ft-progress-screen__head span {
   grid-column: 2;
   font-size: 12px;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .drums-ft-back-btn {
@@ -1742,7 +1742,7 @@
 }
 
 [data-theme='dark'] .drums-ft-progress-screen__head span {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme='dark'] .drums-ft-back-btn {
@@ -1762,7 +1762,7 @@
   gap: 8px;
   padding: 14px;
   border-radius: 14px;
-  background: #fff;
+  background: var(--v4-bg, #fff);
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06), 0 6px 20px rgba(15, 23, 42, 0.04);
   border: 1px solid rgba(15, 23, 42, 0.06);
   text-align: left;
@@ -1790,7 +1790,7 @@
 
 .drums-ft-progress-card__head span {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--v4-ink-3, #94a3b8);
 }
 
 .drums-ft-progress-card__body {
@@ -1812,7 +1812,7 @@
   display: block;
   margin-top: 4px;
   font-size: 11px;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-weight: 700;
 }
 
@@ -1820,12 +1820,12 @@
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-weight: 700;
 }
 
 [data-theme='dark'] .drums-ft-progress-card {
-  background: #1e293b;
+  background: var(--v4-hero, #1e293b);
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: none;
 }
@@ -1837,7 +1837,7 @@
 [data-theme='dark'] .drums-ft-progress-card__head span,
 [data-theme='dark'] .drums-ft-progress-card__metric span,
 [data-theme='dark'] .drums-ft-progress-card__foot {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme='dark'] .drums-ft-progress-card__metric strong {
@@ -1896,7 +1896,7 @@
 
 .drums-ft-progress-target span {
   font-size: 12px;
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
 }
 
 [data-theme='dark'] .drums-ft-progress-target {
@@ -1904,7 +1904,7 @@
 }
 
 [data-theme='dark'] .drums-ft-progress-target span {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 .drums-ft-chart-wrap {
@@ -1928,7 +1928,7 @@
 }
 
 .drums-ft-chart__label {
-  fill: #64748b;
+  fill: var(--v4-ink-2, #64748b);
   font-size: 10px;
 }
 
@@ -1943,8 +1943,8 @@
 }
 
 .drums-ft-chart__dot.is-dirty {
-  fill: #fff;
-  stroke: #ef4444;
+  fill: var(--v4-bg, #fff);
+  stroke: var(--v4-warn-1, #ef4444);
   stroke-width: 1.5;
 }
 
@@ -1952,7 +1952,7 @@
   display: grid;
   place-items: center;
   height: 160px;
-  color: #94a3b8;
+  color: var(--v4-ink-3, #94a3b8);
   font-size: 13px;
   font-weight: 700;
 }
@@ -1970,7 +1970,7 @@
 }
 
 [data-theme='dark'] .drums-ft-chart__label {
-  fill: #94a3b8;
+  fill: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme='dark'] .drums-ft-chart__dot.is-clean {
@@ -1979,7 +1979,7 @@
 }
 
 [data-theme='dark'] .drums-ft-chart__dot.is-dirty {
-  fill: #1e293b;
+  fill: var(--v4-hero, #1e293b);
   stroke: #f87171;
 }
 
@@ -2021,7 +2021,7 @@
 }
 
 .drums-ft-history__date {
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   font-weight: 700;
   min-width: 56px;
 }
@@ -2048,7 +2048,7 @@
 }
 
 .drums-ft-history__session {
-  color: #94a3b8;
+  color: var(--v4-ink-3, #94a3b8);
   font-size: 11px;
   text-align: right;
   overflow: hidden;
@@ -2060,7 +2060,7 @@
   padding: 16px;
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.04);
-  color: #64748b;
+  color: var(--v4-ink-2, #64748b);
   text-align: center;
   font-size: 12px;
   font-weight: 600;
@@ -2084,11 +2084,11 @@
 
 [data-theme='dark'] .drums-ft-history__date,
 [data-theme='dark'] .drums-ft-history__session {
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme='dark'] .drums-ft-history__empty {
   background: rgba(255, 255, 255, 0.05);
-  color: #94a3b8;
+  color: var(--v4-ink-2, #94a3b8);
 }
 
