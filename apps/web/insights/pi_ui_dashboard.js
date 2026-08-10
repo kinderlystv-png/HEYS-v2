@@ -777,41 +777,42 @@
      * Каждое действие: Action + Why + Forecast.
      * Использует pi_conflict_resolver для устранения противоречий (R-INS-2C).
      */
-    function PriorityActions({ actions, onSimulate }) {
+    function PriorityActions({ actions, onSimulate, variant }) {
       if (!actions || actions.length === 0) return null;
+      const isV4 = variant === 'v4';
+      const list = isV4 ? actions.slice(0, 3) : actions;
 
-      return h('div', { className: 'insights-priority-actions' },
-        h('div', { className: 'insights-priority-actions__header' },
+      return h('div', { className: 'insights-priority-actions' + (isV4 ? ' insights-priority-actions--v4' : '') },
+        !isV4 && h('div', { className: 'insights-priority-actions__header' },
           h('span', { className: 'insights-priority-actions__icon' }, '⚡'),
           h('div', { className: 'insights-priority-actions__title' },
             'Сделай сегодня',
             h('span', { className: 'insights-priority-actions__subtitle' },
-              ` — топ ${actions.length} ${actions.length === 1 ? 'действие' : actions.length < 5 ? 'действия' : 'действий'}`
+              ` — топ ${list.length} ${list.length === 1 ? 'действие' : list.length < 5 ? 'действия' : 'действий'}`
             )
           )
         ),
+        isV4 && h('div', { className: 'insights-v4-tier' }, 'Сделай сегодня'),
         h('div', { className: 'insights-priority-actions__list' },
-          actions.map((a, idx) =>
+          list.map((a, idx) =>
             h('div', {
               key: a.id || idx,
-              className: `insights-priority-action insights-priority-action--severity-${a.severity || 'medium'}`
+              className: `insights-priority-action insights-priority-action--severity-${a.severity || 'medium'}` + (isV4 ? ' insights-priority-action--v4' : '')
             },
-              h('div', { className: 'insights-priority-action__rank' }, idx + 1),
+              isV4
+                ? h('span', { className: 'insights-priority-action__dot', 'aria-hidden': 'true' })
+                : h('div', { className: 'insights-priority-action__rank' }, idx + 1),
               h('div', { className: 'insights-priority-action__content' },
-                // ACTION — что делать
                 h('div', { className: 'insights-priority-action__text' }, a.text),
-                // WHY — почему важно
                 a.why && h('div', { className: 'insights-priority-action__why' },
                   h('span', { className: 'insights-priority-action__why-label' }, '💡 '),
                   a.why
                 ),
-                // FORECAST — что даст
-                a.forecast && h('div', { className: 'insights-priority-action__forecast' },
+                !isV4 && a.forecast && h('div', { className: 'insights-priority-action__forecast' },
                   h('span', { className: 'insights-priority-action__forecast-label' }, '📈 '),
                   a.forecast
                 ),
-                // R-INS-2B тизер: simulate button если есть onSimulate handler
-                onSimulate && h('button', {
+                !isV4 && onSimulate && h('button', {
                   type: 'button',
                   className: 'insights-priority-action__simulate',
                   onClick: () => onSimulate(a),
@@ -1961,6 +1962,129 @@
     };
 
     // Каскад (heys_cascade_card_v1.js) и Инсайты (этот файл) — разные lazy-
+    const INSIGHTS_V4_PERIODS = [7, 14, 30];
+
+    function buildInsightsCuratorPhrase(actions, warnings) {
+      if (actions && actions[0] && actions[0].why) return actions[0].why;
+      if (actions && actions[0] && actions[0].text) return actions[0].text;
+      if (warnings && warnings[0] && warnings[0].message) return warnings[0].message;
+      return 'Смотрю на последние дни — вот что стоит учесть сегодня.';
+    }
+
+    function formatInsightsDaysLabel(days) {
+      const n = days || 0;
+      const mod10 = n % 10;
+      const mod100 = n % 100;
+      let word = 'дней';
+      if (mod10 === 1 && mod100 !== 11) word = 'день';
+      else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) word = 'дня';
+      return n + ' ' + word + ' данных';
+    }
+
+    function InsightsV4Header(props) {
+      const { daysWithData, period, onPeriodChange } = props || {};
+      return h('div', { className: 'insights-v4-meta' },
+        h('div', { className: 'insights-v4-meta__row' },
+          h('h2', { className: 'insights-v4-meta__title' }, 'Инсайты'),
+          h('span', { className: 'insights-v4-meta__days' }, formatInsightsDaysLabel(daysWithData))
+        ),
+        h('div', { className: 'insights-v4-period-pills' },
+          INSIGHTS_V4_PERIODS.map(function (p) {
+            const disabled = p === 30 && (daysWithData || 0) < 30;
+            return h('button', {
+              key: p,
+              type: 'button',
+              className: 'insights-v4-period-pill' + (period === p ? ' is-active' : '') + (disabled ? ' is-disabled' : ''),
+              disabled: disabled,
+              onClick: function () { if (!disabled && onPeriodChange) onPeriodChange(p); },
+              title: disabled ? ('Доступно после 30 дней данных (сейчас ' + (daysWithData || 0) + ')') : (p + ' дней')
+            }, p + 'д');
+          })
+        )
+      );
+    }
+
+    function InsightsTodayHero(props) {
+      const { phrase, actions } = props || {};
+      if (!phrase && !(actions && actions.length)) return null;
+      return h('div', { className: 'insights-v4-hero' },
+        phrase && h('p', { className: 'insights-v4-hero__phrase' }, phrase),
+        actions && actions.length > 0 && h(PriorityActions, { actions: actions, variant: 'v4' })
+      );
+    }
+
+    function InsightsV4Attention(props) {
+      const { warnings, daysWithData, onOpenPanel } = props || {};
+      if (!warnings || warnings.length === 0) {
+        return h('div', { className: 'insights-v4-attention insights-v4-attention--ok' },
+          h('div', { className: 'insights-v4-tier' }, 'Стоит внимания'),
+          h('p', { className: 'insights-v4-attention__text' }, 'Пока всё спокойно — заметных отклонений в последних днях нет.')
+        );
+      }
+      const basis = daysWithData ? ('на ' + daysWithData + ' днях') : '';
+      return h('div', { className: 'insights-v4-attention' },
+        h('div', { className: 'insights-v4-tier' }, 'Стоит внимания'),
+        h('ul', { className: 'insights-v4-attention__list' },
+          warnings.slice(0, 3).map(function (w, idx) {
+            return h('li', { key: w.id || w.type || idx, className: 'insights-v4-attention__item' },
+              h('span', { className: 'insights-v4-attention__dot', 'aria-hidden': 'true' }),
+              h('div', { className: 'insights-v4-attention__copy' },
+                h('div', { className: 'insights-v4-attention__line' }, w.message || w.detail),
+                w.detail && w.message && h('div', { className: 'insights-v4-attention__sub' }, w.detail),
+                basis && h('div', { className: 'insights-v4-attention__basis' }, basis)
+              )
+            );
+          })
+        ),
+        warnings.length > 3 && onOpenPanel && h('button', {
+          type: 'button',
+          className: 'insights-v4-attention__more',
+          onClick: onOpenPanel
+        }, 'Ещё ' + (warnings.length - 3) + ' →')
+      );
+    }
+
+    function buildPatternMaturityLabel(pattern, daysWithData) {
+      if (!pattern) return '';
+      if (pattern.available) {
+        const analyzed = pattern.daysAnalyzed || daysWithData || 0;
+        const minDays = pattern.minDaysRequired || 7;
+        if (analyzed > 0 && analyzed < minDays) {
+          return analyzed + ' из ' + minDays;
+        }
+        if (typeof pattern.confidence === 'number') {
+          return Math.round(pattern.confidence * 100) + '% уверенности';
+        }
+        return '';
+      }
+      const need = pattern.minDaysRequired || 7;
+      const have = pattern.daysAnalyzed || daysWithData || 0;
+      const left = Math.max(0, need - have);
+      if (left > 0) return 'нужно ещё ' + left + ' ' + (left === 1 ? 'день' : left < 5 ? 'дня' : 'дней');
+      return 'мало данных';
+    }
+
+    function InsightsV4Patterns(props) {
+      const { patterns, daysWithData } = props || {};
+      if (!patterns || patterns.length === 0) return null;
+      const available = patterns.filter(function (p) { return p && p.available; });
+      const immature = patterns.filter(function (p) { return p && !p.available; }).slice(0, 3);
+      if (available.length === 0 && immature.length === 0) return null;
+      return h('div', { className: 'insights-v4-patterns' },
+        h('div', { className: 'insights-v4-tier' }, 'Что заметили'),
+        available.length > 0 && h(PatternsList, { patterns: available }),
+        immature.length > 0 && h('ul', { className: 'insights-v4-patterns__immature' },
+          immature.map(function (p, idx) {
+            return h('li', { key: p.pattern || idx, className: 'insights-v4-patterns__immature-item' },
+              h('span', { className: 'insights-v4-patterns__immature-title' }, p.title || p.pattern),
+              h('span', { className: 'insights-v4-patterns__immature-meta' }, buildPatternMaturityLabel(p, daysWithData))
+            );
+          })
+        )
+      );
+    }
+
+    // бандлы (postboot-1-game-lazy / postboot-2-insights-lazy); на не-дневной
     // бандлы (postboot-1-game-lazy / postboot-2-insights-lazy); на не-дневной
     // стартовой вкладке Инсайты могут отрендериться раньше, чем каскад
     // догрузится, и одноразовый инлайн-чек `HEYS.CascadeCard?.X &&` навсегда
@@ -2001,7 +2125,12 @@
       const [showPhenotypeClassifier, setShowPhenotypeClassifier] = useState(false); // Phenotype Classifier Panel
       const [showWhatIfScenarios, setShowWhatIfScenarios] = useState(false); // What-If Scenarios Panel
       const [ewsWarnings, setEwsWarnings] = useState([]);
+      const [priorityActions, setPriorityActions] = useState([]);
+      const [insightsPeriod, setInsightsPeriod] = useState(7);
+      const [showInsightsDetail, setShowInsightsDetail] = useState(false);
+      const [ewsPanelOpen, setEwsPanelOpen] = useState(false);
       const [dataVersion, setDataVersion] = useState(0);
+      const useInsightsV4 = true;
 
       useEffect(() => {
         let refreshRaf = null;
@@ -2152,7 +2281,7 @@
       // Анализ данных
       const realInsights = useMemo(() => {
         // 🔧 v6.0.2: Динамический daysBack в зависимости от выбранного таба
-        const daysBack = activeTab === 'today' ? 7 : 30;
+        const daysBack = useInsightsV4 ? insightsPeriod : (activeTab === 'today' ? 7 : 30);
         const insightsDebugEnabled = (() => {
           try {
             return window.__HEYS_INSIGHTS_DEBUG === true ||
@@ -2192,7 +2321,7 @@
         }
 
         return analysis;
-      }, [lsGet, activeTab, selectedDate, effectiveData.profile, effectiveData.pIndex, effectiveData.optimum]);
+      }, [lsGet, activeTab, insightsPeriod, useInsightsV4, selectedDate, effectiveData.profile, effectiveData.pIndex, effectiveData.optimum]);
 
       // 🎭 Используем демо-данные если тур не пройден И реальных данных нет
       const showDemoMode = !insightsTourCompleted && !realInsights.available;
@@ -2255,7 +2384,10 @@
             const fmtDate = HEYS.dayUtils?.fmtDate || window.HEYS?.utils?.fmtDate;
 
             if (!earlyWarning || typeof earlyWarning.detect !== 'function' || !getter || !fmtDate) {
-              if (!cancelled) setEwsWarnings([]);
+              if (!cancelled) {
+                setEwsWarnings([]);
+                setPriorityActions([]);
+              }
               console.info(`${DYNAMIC_LOG_PREFIX} ⚠️ skipped:`, {
                 reason: 'EWS module or storage utils unavailable',
                 hasDetect: !!earlyWarning?.detect,
@@ -2276,7 +2408,10 @@
             }
 
             if (days.length < 7) {
-              if (!cancelled) setEwsWarnings([]);
+              if (!cancelled) {
+                setEwsWarnings([]);
+                setPriorityActions([]);
+              }
               console.info(`${DYNAMIC_LOG_PREFIX} ⚠️ skipped:`, {
                 reason: 'insufficient days for EWS',
                 days: days.length
@@ -2301,13 +2436,30 @@
 
             if (!cancelled) setEwsWarnings(warnings);
 
+            if (!cancelled) {
+              const generatePA = HEYS.InsightsPI?.advanced?.generatePriorityActions;
+              if (typeof generatePA === 'function' && result) {
+                try {
+                  const actions = generatePA({ available: true, ews: result }, effectiveData.profile);
+                  setPriorityActions(Array.isArray(actions) ? actions.slice(0, 3) : []);
+                } catch (e) {
+                  setPriorityActions([]);
+                }
+              } else if (!cancelled) {
+                setPriorityActions([]);
+              }
+            }
+
             console.info(`${DYNAMIC_LOG_PREFIX} 📥 input:`, {
               score: insights?.healthScore?.total,
               warningsCount: warnings.length,
               highWarnings: warnings.filter(w => w.severity === 'high').length
             });
           } catch (error) {
-            if (!cancelled) setEwsWarnings([]);
+            if (!cancelled) {
+              setEwsWarnings([]);
+              setPriorityActions([]);
+            }
             console.error(`${DYNAMIC_LOG_PREFIX} ❌ failed:`, { scope: 'InsightsTab', error: error?.message || error });
           }
         };
@@ -2409,18 +2561,167 @@
       const shouldShowEmptyState = !insights.available || daysWithData < MIN_DAYS_FOR_FULL;
       if (shouldShowEmptyState && insightsTourCompleted) {
         return h(InsightsErrorBoundary, null,
-          h('div', { className: 'insights-tab' },
-            h('div', { className: 'insights-tab__hero' },
-              h('div', { className: 'insights-tab__header' },
-                h('h2', { className: 'insights-tab__title' }, 'Умная аналитика')
-              )
-            ),
-            h('div', { className: 'insights-tab__content' },
+          h('div', { className: 'insights-tab insights-v4' },
+            h(InsightsV4Header, {
+              daysWithData: daysWithData,
+              period: insightsPeriod,
+              onPeriodChange: setInsightsPeriod
+            }),
+            h('div', { className: 'insights-tab__content insights-v4__content' },
               h(EmptyState, {
                 daysAnalyzed: daysWithData,
                 minRequired: realInsights.minDaysRequired || MIN_DAYS_FOR_FULL
               })
             )
+          )
+        );
+      }
+
+      const insightsDaysWithData = realInsights?.daysWithData ?? realInsights?.daysAnalyzed ?? daysWithData ?? 0;
+      const curatorPhrase = buildInsightsCuratorPhrase(priorityActions, ewsWarnings);
+
+      if (useInsightsV4 && showInsightsDetail) {
+        return h(InsightsErrorBoundary, null,
+          h('div', { className: 'insights-tab insights-v4 insights-v4--detail' },
+            h('div', { className: 'insights-v4-detail__head' },
+              h('button', {
+                type: 'button',
+                className: 'insights-v4-detail__back',
+                onClick: function () { setShowInsightsDetail(false); }
+              }, '← Инсайты'),
+              h('h2', { className: 'insights-v4-detail__title' }, 'Подробно')
+            ),
+            h('div', { className: 'insights-tab__content insights-v4__content insights-v4-detail__content' },
+              insights.weightPrediction && h(CollapsibleSection, {
+                title: 'Прогноз веса',
+                icon: '⚖️',
+                defaultOpen: true,
+                priority: 'MEDIUM'
+              },
+                h(WeightPrediction, { prediction: insights.weightPrediction }),
+                h('p', { className: 'insights-v4-detail__disclaimer' },
+                  'Расчёт при условии точного учёта — не обещание даты на весах.'
+                )
+              ),
+              h(CollapsibleSection, {
+                title: 'Метаболизм и тип',
+                icon: '⚡',
+                defaultOpen: false,
+                priority: 'HIGH'
+              },
+                h(MetabolismSection, {
+                  lsGet,
+                  profile: effectiveData.profile,
+                  pIndex: effectiveData.pIndex,
+                  selectedDate
+                }),
+                HEYS.Phenotype?.PhenotypeExpandableCard && h(HEYS.Phenotype.PhenotypeExpandableCard, {
+                  profile: effectiveData.profile
+                }),
+                h(AdvancedAnalyticsCard, {
+                  lsGet,
+                  profile: effectiveData.profile,
+                  pIndex: effectiveData.pIndex,
+                  selectedDate
+                })
+              ),
+              insights.weeklyWrap && h(CollapsibleSection, {
+                title: 'Итоги недели',
+                icon: '📋',
+                defaultOpen: true,
+                infoKey: 'WEEKLY_WRAP',
+                priority: 'LOW'
+              },
+                h(WeeklyWrap, { wrap: insights.weeklyWrap })
+              ),
+              !insights.weeklyWrap && HEYS.weeklyReports?.WeeklyReportCard && h('div', {
+                className: 'insights-tab__section insights-tab__section--low'
+              },
+                h(HEYS.weeklyReports.WeeklyReportCard, {
+                  lsGet,
+                  profile: effectiveData.profile,
+                  pIndex: effectiveData.pIndex,
+                  anchorDate: selectedDate
+                })
+              ),
+              h('div', { className: 'insights-tab__section insights-tab__section--low' },
+                h(SectionHeader, {
+                  title: 'Полнота данных',
+                  icon: '📊',
+                  priority: 'LOW',
+                  infoKey: 'DATA_COMPLETENESS'
+                }),
+                h(DataCompletenessCard, { lsGet, profile: effectiveData.profile })
+              )
+            )
+          ),
+          showPatternDebug && window.PatternDebugModal && h(window.PatternDebugModal, {
+            lsGet: lsGet || (window.HEYS?.utils?.lsGet),
+            profile: effectiveData.profile,
+            pIndex: effectiveData.pIndex,
+            optimum: effectiveData.optimum,
+            onClose: function () { setShowPatternDebug(false); }
+          })
+        );
+      }
+
+      if (useInsightsV4) {
+        return h(InsightsErrorBoundary, null,
+          h('div', { className: 'insights-tab insights-v4' },
+            h(InsightsV4Header, {
+              daysWithData: insightsDaysWithData,
+              period: insightsPeriod,
+              onPeriodChange: setInsightsPeriod
+            }),
+            showDemoMode && h('div', { className: 'insights-tab__demo-banner' },
+              h('span', { className: 'insights-tab__demo-banner-icon' }, '✨'),
+              h('div', null,
+                h('div', { className: 'insights-tab__demo-banner-title' }, 'Демо-режим'),
+                h('div', { className: 'insights-tab__demo-banner-desc' },
+                  'Пример данных — реальная статистика появится через 3 дня'
+                )
+              )
+            ),
+            h('div', { className: 'insights-tab__content insights-v4__content' },
+              h(InsightsTodayHero, {
+                phrase: curatorPhrase,
+                actions: priorityActions
+              }),
+              h(CascadeInsightsSlot, {
+                day: dayData,
+                dayTot,
+                normAbs,
+                prof: profile,
+                pIndex
+              }),
+              h(InsightsV4Attention, {
+                warnings: ewsWarnings,
+                daysWithData: insightsDaysWithData,
+                onOpenPanel: function () { setEwsPanelOpen(true); }
+              }),
+              h(InsightsV4Patterns, {
+                patterns: insights.patterns,
+                daysWithData: insightsDaysWithData
+              }),
+              h('button', {
+                type: 'button',
+                className: 'insights-v4-detail-link',
+                onClick: function () { setShowInsightsDetail(true); }
+              }, 'Подробно →')
+            ),
+            ewsPanelOpen && HEYS.EarlyWarningPanel && h(HEYS.EarlyWarningPanel, {
+              isOpen: ewsPanelOpen,
+              onClose: function () { setEwsPanelOpen(false); },
+              warnings: ewsWarnings,
+              mode: 'full'
+            }),
+            showPatternDebug && window.PatternDebugModal && h(window.PatternDebugModal, {
+              lsGet: lsGet || (window.HEYS?.utils?.lsGet),
+              profile: effectiveData.profile,
+              pIndex: effectiveData.pIndex,
+              optimum: effectiveData.optimum,
+              onClose: function () { setShowPatternDebug(false); }
+            })
           )
         );
       }
@@ -5503,7 +5804,13 @@
       ActionCard,
       // 🆕 v3.5.0: Early Warning System (EWS)
       EarlyWarningBadge,
-      EarlyWarningPanel
+      EarlyWarningPanel,
+      _test: {
+        buildInsightsCuratorPhrase,
+        formatInsightsDaysLabel,
+        buildPatternMaturityLabel,
+        INSIGHTS_V4_PERIODS
+      }
     };
 
     // Backward compatibility fallback
