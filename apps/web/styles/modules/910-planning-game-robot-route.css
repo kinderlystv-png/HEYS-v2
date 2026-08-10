@@ -144,7 +144,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--v4-bg, #fff);
 }
 
 .planning-robot-route__legend {
@@ -217,7 +217,7 @@
   height: 36px;
   border-radius: 10px;
   color: var(--robot-primary);
-  background: #fff;
+  background: var(--v4-bg, #fff);
   font-size: 22px;
   font-weight: 800;
   box-shadow: 0 3px 9px rgba(45, 49, 95, 0.08);
@@ -325,7 +325,7 @@
   width: 100%;
   margin-top: 10px;
   border: 1px solid var(--robot-primary);
-  color: #fff;
+  color: var(--v4-bg, #fff);
   background: var(--robot-primary);
   box-shadow: 0 8px 18px rgba(67, 69, 135, 0.18);
 }
