@@ -2093,6 +2093,17 @@
             isToday: date === todayKey
         }) || false;
 
+        // === Геймификация: «День выполнен» / «Идеальный день» ===
+        // currentRatio — живой ratio текущего дня (heroMetrics выше). Начисляем
+        // только за СЕГОДНЯ: ретроспективный просмотр прошлых дат не должен
+        // триггерить XP. Дедупликация — maxPerDay в самой геймификации, поэтому
+        // повторные вызовы при каждом изменении eatenKcal безопасны.
+        React.useEffect(() => {
+            if (date !== todayKey) return;
+            if (!HEYS.game?.checkDayCompleted) return;
+            HEYS.game.checkDayCompleted(currentRatio, todayKey);
+        }, [date, todayKey, currentRatio]);
+
         // === Hero display (tour override + colors + deficit) — extracted ===
         if (!HEYS.dayHeroDisplay?.buildHeroDisplay) {
             throw new Error('[heys_day_v12] HEYS.dayHeroDisplay not loaded before heys_day_v12.js');

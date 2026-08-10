@@ -10,11 +10,18 @@
         return getActiveDaysForMonth(d.getFullYear(), d.getMonth(), prof, products);
     }
 
-    function computeCurrentStreak(params) {
+    // computeStreakDetails — тот же цикл по дням, что и раньше в
+    // computeCurrentStreak, но дополнительно сообщает, был ли использован
+    // «прощённый» пропуск: i===0 (по умолчанию это вчера, includeToday=false)
+    // неуспешен или пуст, но серия не оборвалась (условие `i > 0` в break).
+    // Второй такой пропуск подряд (i===1) серию уже обрывает — это НЕ второе
+    // прощение, а конец действия первого.
+    function computeStreakDetails(params) {
         const { optimum, pIndex, fmtDate, lsGet, includeToday } = params || {};
 
         try {
             let count = 0;
+            let yesterdayForgiven = false;
             let checkDate = new Date();
             checkDate.setHours(12);
 
@@ -60,16 +67,33 @@
                     if (!isRefeedDay) {
                         if (isStreakDay) {
                             count++;
-                        } else if (i > 0) break;
+                        } else if (i > 0) {
+                            break;
+                        } else {
+                            yesterdayForgiven = true;
+                        }
                     }
-                } else if (i > 0) break;
+                } else if (i > 0) {
+                    break;
+                } else {
+                    yesterdayForgiven = true;
+                }
 
                 checkDate.setDate(checkDate.getDate() - 1);
             }
-            return count;
+            return { count, yesterdayForgiven };
         } catch (e) {
-            return 0;
+            return { count: 0, yesterdayForgiven: false };
         }
+    }
+
+    // computeCurrentStreak — существующий контракт (число), сохранён ради
+    // обратной совместимости: у него много потребителей, которые используют
+    // возврат в арифметике/сравнениях (heys_day_tab_impl_v1.js, виджеты,
+    // тесты). Новые вызовы, которым нужен флаг прощённого дня, должны звать
+    // computeStreakDetails/getStreakDetails.
+    function computeCurrentStreak(params) {
+        return computeStreakDetails(params).count;
     }
 
     // Единая точка входа для всех, кому нужна «серия», но неоткуда взять
@@ -79,22 +103,29 @@
     //
     // Аргументы резолвятся в момент вызова, а не при инициализации: модуль
     // лежит в boot-day и грузится раньше продуктов и профиля.
-    let streakCache = { key: '', at: 0, value: 0 };
+    let streakCache = { key: '', at: 0, value: 0, details: null };
     const STREAK_CACHE_MS = 15000;
 
-    function getCurrentStreak(options) {
+    // Считает (или берёт из кэша) детальный результат серии — {count,
+    // yesterdayForgiven} — и обновляет общий кэш, которым пользуются и
+    // getCurrentStreak, и getStreakDetails, чтобы не сканировать LS дважды.
+    // Кэш-ключ проверяется ДО чтения профиля/продуктов — иначе кэш перестаёт
+    // экономить localStorage-чтения на каждый повторный вызов.
+    function resolveStreakDetails(options) {
         const includeToday = !!(options && options.includeToday);
         const dayUtils = HEYS.dayUtils || {};
         const fmtDate = dayUtils.fmtDate;
         const lsGet = HEYS.utils?.lsGet;
-        if (typeof fmtDate !== 'function' || typeof lsGet !== 'function') return 0;
+        if (typeof fmtDate !== 'function' || typeof lsGet !== 'function') {
+            return { count: 0, yesterdayForgiven: false };
+        }
 
-        // computeCurrentStreak читает до 30 ключей localStorage, а шапка
+        // computeStreakDetails читает до 30 ключей localStorage, а шапка
         // геймификации опрашивает серию раз в 30 секунд — держим короткий кэш.
         const cacheKey = `${fmtDate(new Date())}|${includeToday ? 1 : 0}`;
         const now = Date.now();
-        if (streakCache.key === cacheKey && now - streakCache.at < STREAK_CACHE_MS) {
-            return streakCache.value;
+        if (streakCache.key === cacheKey && now - streakCache.at < STREAK_CACHE_MS && streakCache.details) {
+            return streakCache.details;
         }
 
         const products = HEYS.products?.getAll?.() || [];
@@ -108,13 +139,28 @@
         const profile = lsGet('heys_profile', {}) || {};
         const optimum = HEYS.TDEE?.calculate?.({}, profile, {})?.optimum || 0;
 
-        const value = computeCurrentStreak({ optimum, pIndex, fmtDate, lsGet, includeToday }) || 0;
-        streakCache = { key: cacheKey, at: now, value };
-        return value;
+        const details = computeStreakDetails({ optimum, pIndex, fmtDate, lsGet, includeToday })
+            || { count: 0, yesterdayForgiven: false };
+        streakCache = { key: cacheKey, at: now, value: details.count, details };
+        return details;
+    }
+
+    function getCurrentStreak(options) {
+        return resolveStreakDetails(options).count;
+    }
+
+    // getStreakDetails — как getCurrentStreak, но отдаёт ещё yesterdayForgiven:
+    // true, если вчера серия не прервалась несмотря на пустой/неуспешный день
+    // (использован единственный «прощённый» пропуск). Новый экспорт — старые
+    // потребители getCurrentStreak/computeCurrentStreak продолжают получать
+    // число, как раньше.
+    function getStreakDetails(options) {
+        const details = resolveStreakDetails(options);
+        return { count: details.count, yesterdayForgiven: !!details.yesterdayForgiven };
     }
 
     function invalidateStreakCache() {
-        streakCache = { key: '', at: 0, value: 0 };
+        streakCache = { key: '', at: 0, value: 0, details: null };
     }
 
     // Вкладка Дня шлёт это событие, когда пересчитала серию
@@ -127,7 +173,9 @@
     HEYS.dayCalendarMetrics = {
         computeActiveDays,
         computeCurrentStreak,
+        computeStreakDetails,
         getCurrentStreak,
+        getStreakDetails,
         invalidateStreakCache
     };
 })(window);
