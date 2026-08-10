@@ -344,6 +344,7 @@ describe('heys_scales_v1 — согласованность ступеней м�
     { name: 'dayScore10', from: 0.5, to: 10, step: 0.5, up: true },
     { name: 'healthScore', from: 0, to: 100, step: 1, up: true },
     { name: 'waterProgress', from: 0, to: 130, step: 1, up: true },
+    { name: 'riskRadarScore', from: 0, to: 100, step: 1, up: false },
     // Вредный, очень вредный и супервредный делят warn-strong намеренно: цвет
     // не различает семь состояний, поэтому три градации живут глубиной внутри
     // одной роли, а точные названия — в подписи (решение владельца 2026-08-10).
