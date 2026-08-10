@@ -198,7 +198,7 @@
       icon: '🔥',
       description: 'Текущие калории и норма',
       defaultSize: '2x2',
-      availableSizes: ['2x2'],
+      availableSizes: ['2x1', '2x2'],
       dataKeys: ['dayTot.kcal', 'optimum'],
       component: 'WidgetCalories',
       scalableElements: SCALABLE_ELEMENTS.calories,
@@ -604,7 +604,7 @@
         showDrivers: { type: 'boolean', default: true, label: 'Показывать драйверы' },
         showRecommendation: { type: 'boolean', default: true, label: 'Показывать действие' },
         showConfidence: { type: 'boolean', default: true, label: 'Показывать confidence' },
-        showSource: { type: 'boolean', default: true, label: 'Показывать источник риска' }
+        // showSource убран: тумблер не менял отображение (источник всегда в breakdown).
       },
       settingsBySize: {
         '1x1': {},

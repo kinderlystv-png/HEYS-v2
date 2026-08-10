@@ -59,6 +59,27 @@
     }
   }
 
+  // Настройки, которые ничего не переключают — не показываем в модалке (промпт 4a).
+  const DEAD_WIDGET_SETTING_KEYS = {
+    heatmap: new Set(['showWeekdays', 'showDates']),
+    relapseRisk: new Set(['showSource']),
+    weight: new Set(['periodDays'])
+  };
+
+  function isDeadWidgetSetting(widgetType, key) {
+    return DEAD_WIDGET_SETTING_KEYS[widgetType]?.has(key) === true;
+  }
+
+  function getWidgetSettingsSchema(widgetType, selectedSize) {
+    const sizeSpecificSettings = widgetType?.settingsBySize?.[selectedSize];
+    const raw = sizeSpecificSettings !== undefined
+      ? sizeSpecificSettings
+      : (widgetType?.settings || {});
+    return Object.fromEntries(
+      Object.entries(raw).filter(([key]) => !isDeadWidgetSetting(widgetType?.type, key))
+    );
+  }
+
   // Единая утилита: размеры виджета (не завязаны на «популярность»)
   function getWidgetDims(widget) {
     const registry = HEYS.Widgets?.registry;
@@ -2143,6 +2164,28 @@
             React.createElement('span', { className: 'widget-calories__meta-val' }, remaining > 0 ? formatKcal(remaining) : (hasOver ? formatKcal(eaten - target) : '✓'))
           )
         ) : null
+      );
+    }
+
+    // 2x1 — число слева, «Осталось N» справа, без полосы прогресса
+    if (size === '2x1') {
+      const showRemaining2x1 = widget.settings?.showRemaining !== false;
+      const remainingLabel = remaining > 0
+        ? `Осталось ${formatKcal(remaining)}`
+        : (eaten > target ? `+${formatKcal(eaten - target)}` : 'В норме');
+      return React.createElement('div', { className: 'widget-calories widget-calories--2x1' },
+        React.createElement('div', { className: 'widget-calories__row-h' },
+          React.createElement('div', { className: 'widget-calories__left' },
+            React.createElement('div', {
+              className: 'widget-calories__value widget-calories__value--lg',
+              style: { color: getColor() }
+            }, formatKcal(eaten)),
+            React.createElement('div', { className: 'widget-calories__label' }, `из ${formatKcal(target)}`)
+          ),
+          showRemaining2x1 ? React.createElement('div', { className: 'widget-calories__right' },
+            React.createElement('div', { className: 'widget-calories__remaining-line' }, remainingLabel)
+          ) : null
+        )
       );
     }
 
@@ -6072,12 +6115,7 @@
           ),
 
           // Custom settings — если задан settingsBySize, используем настройки для текущего размера
-          Object.entries((() => {
-            const sizeSpecificSettings = widgetType.settingsBySize?.[selectedSize];
-            return sizeSpecificSettings !== undefined
-              ? sizeSpecificSettings
-              : (widgetType.settings || {});
-          })()).map(([key, def]) =>
+          Object.entries(getWidgetSettingsSchema(widgetType, selectedSize)).map(([key, def]) =>
             React.createElement('div', { key, className: 'widgets-settings__field' },
               React.createElement('label', null, def.label),
               def.type === 'boolean' ?
