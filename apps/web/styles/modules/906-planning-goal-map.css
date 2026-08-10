@@ -22,7 +22,7 @@ body.planning-goal-map-open {
 
 .goal-map-screen {
     --goal-map-bg: #f2f5f8;
-    --goal-map-surface: #ffffff;
+    --goal-map-surface: var(--v4-bg, #ffffff);
     --goal-map-surface-muted: #f7f9fb;
     --goal-map-text: #172033;
     --goal-map-muted: #627086;
@@ -184,7 +184,7 @@ body.planning-goal-map-open {
 .goal-map-screen .goal-map-button--primary {
     border-color: var(--goal-map-accent);
     background: var(--goal-map-accent);
-    color: #fff;
+    color: var(--v4-bg, #fff);
 }
 
 .goal-map-button--primary:hover,
