@@ -27,6 +27,255 @@
     };
   }
 
+  function reportsR1(v) {
+    return Math.round((+v || 0) * 10) / 10;
+  }
+
+  function formatReportsDayLabel(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T12:00:00');
+    if (Number.isNaN(d.getTime())) return dateStr;
+    const wd = d.toLocaleDateString('ru-RU', { weekday: 'short' });
+    const dm = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    return wd + ' · ' + dm;
+  }
+
+  function buildReportsPeriodMeta(sparklineData, chartPeriod, ratioZones, lsGet, clientId) {
+    const points = (sparklineData || []).filter((p) => p && !p.isFuture && !p.isIncomplete);
+    const withKcal = points.filter((p) => p.kcal > 0);
+    const totalEaten = withKcal.reduce((s, p) => s + p.kcal, 0);
+    const totalPlan = withKcal.reduce((s, p) => s + (p.target || 0), 0);
+    const balance = totalEaten - totalPlan;
+    const dates = withKcal.map((p) => p.date).filter(Boolean);
+    const dateRange = HEYS.SparklinesShared?.formatDateRange?.(dates) || '';
+
+    let inNorm = 0;
+    withKcal.forEach((p) => {
+      const ratio = p.target > 0 ? p.kcal / p.target : 0;
+      if (ratioZones?.isSuccess?.(ratio)) inNorm++;
+    });
+
+    const scoredDays = withKcal.filter((p) => p.dayScore > 0);
+    const avgScore = scoredDays.length
+      ? reportsR1(scoredDays.reduce((s, p) => s + p.dayScore, 0) / scoredDays.length)
+      : null;
+
+    const sleepVals = [];
+    const moodVals = [];
+    const wellbeingVals = [];
+
+    withKcal.forEach((p) => {
+      let mood = +p.moodAvg || 0;
+      let wellbeing = +p.wellbeingAvg || 0;
+      if ((!mood || !wellbeing) && typeof lsGet === 'function' && p.date) {
+        const scopedKey = clientId ? 'heys_' + clientId + '_dayv2_' + p.date : 'heys_dayv2_' + p.date;
+        const dayRow = lsGet(scopedKey, null) || lsGet('heys_dayv2_' + p.date, null);
+        if (dayRow) {
+          if (!mood) mood = +dayRow.moodAvg || +dayRow.moodMorning || 0;
+          if (!wellbeing) wellbeing = +dayRow.wellbeingAvg || +dayRow.wellbeingMorning || 0;
+        }
+      }
+      if (p.sleepHours > 0) sleepVals.push(+p.sleepHours);
+      if (mood > 0) moodVals.push(mood);
+      if (wellbeing > 0) wellbeingVals.push(wellbeing);
+    });
+
+    const avgSleep = sleepVals.length >= 3
+      ? reportsR1(sleepVals.reduce((a, b) => a + b, 0) / sleepVals.length)
+      : null;
+    const avgMood = moodVals.length >= 3
+      ? reportsR1(moodVals.reduce((a, b) => a + b, 0) / moodVals.length)
+      : null;
+    const avgWellbeing = wellbeingVals.length >= 3
+      ? reportsR1(wellbeingVals.reduce((a, b) => a + b, 0) / wellbeingVals.length)
+      : null;
+
+    const showWellbeingBlock = sleepVals.length >= 3 || moodVals.length >= 3 || wellbeingVals.length >= 3;
+
+    const dayRows = [...withKcal].reverse().map((p) => {
+      const delta = Math.round(p.kcal - (p.target || 0));
+      const ratio = p.ratio != null ? p.ratio : (p.target > 0 ? p.kcal / p.target : 0);
+      return {
+        date: p.date,
+        label: formatReportsDayLabel(p.date),
+        dayScore: p.dayScore || 0,
+        delta,
+        ratio
+      };
+    });
+
+    const fatGrams = balance !== 0 ? Math.round(Math.abs(balance) / 7.7) : 0;
+    const fatText = fatGrams >= 1000
+      ? (fatGrams / 1000).toFixed(1).replace('.', ',') + ' кг'
+      : fatGrams + ' г';
+
+    const balanceSign = balance > 0 ? '+' : balance < 0 ? '−' : '';
+    const balanceAbs = Math.abs(balance);
+
+    return {
+      balance,
+      balanceSign,
+      balanceAbs,
+      totalEaten,
+      totalPlan,
+      dateRange,
+      inNorm,
+      withData: withKcal.length,
+      periodDays: chartPeriod || withKcal.length,
+      avgScore,
+      scoredCount: scoredDays.length,
+      avgSleep,
+      sleepCount: sleepVals.length,
+      avgMood,
+      moodCount: moodVals.length,
+      avgWellbeing,
+      wellbeingCount: wellbeingVals.length,
+      showWellbeingBlock,
+      dayRows,
+      fatText,
+      balancePhrase: balance > 0
+        ? 'Съедено больше плана — это ≈ ' + fatText + ' жира'
+        : balance < 0
+          ? 'Недобор относительно плана — это ≈ ' + fatText + ' жира'
+          : 'Съедено в пределах плана за период'
+    };
+  }
+
+  function ReportsTabV4Top(props) {
+    const { React, periodMeta, chartPeriod, handlePeriodChange, scoreTile, onBalanceFooterClick } = props || {};
+    if (!React || !periodMeta) return null;
+    const fmtNum = (n) => (n || 0).toLocaleString('ru-RU');
+    const scoreSuffix = periodMeta.scoredCount > 0 && periodMeta.scoredCount < periodMeta.withData
+      ? ' за ' + periodMeta.scoredCount + ' дней из ' + periodMeta.withData
+      : '';
+
+    return React.createElement(React.Fragment, null,
+      React.createElement('div', { className: 'reports-v4-meta' },
+        React.createElement('span', { className: 'reports-v4-meta__title' }, 'Отчёты'),
+        React.createElement('span', { className: 'reports-v4-meta__range' }, periodMeta.dateRange || ''),
+        React.createElement('div', { className: 'reports-v4-period-pills', role: 'tablist', 'aria-label': 'Период отчёта' },
+          [7, 14, 30].map((period) =>
+            React.createElement('button', {
+              key: period,
+              type: 'button',
+              role: 'tab',
+              className: 'reports-v4-period-pill' + (chartPeriod === period ? ' is-active' : ''),
+              'aria-selected': chartPeriod === period,
+              onClick: () => handlePeriodChange(period)
+            }, period + ' дней')
+          )
+        )
+      ),
+      periodMeta.withData > 0 && React.createElement('div', { className: 'reports-v4-hero' },
+        React.createElement('div', { className: 'reports-v4-hero__label' }, 'Баланс за ' + (chartPeriod === 7 ? 'неделю' : chartPeriod + ' дней')),
+        React.createElement('div', { className: 'reports-v4-hero__value-row' },
+          React.createElement('span', { className: 'reports-v4-hero__value' },
+            periodMeta.balanceSign + fmtNum(periodMeta.balanceAbs)
+          ),
+          React.createElement('span', { className: 'reports-v4-hero__unit' }, 'ккал')
+        ),
+        React.createElement('div', { className: 'reports-v4-hero__phrase' }, periodMeta.balancePhrase),
+        React.createElement('button', {
+          type: 'button',
+          className: 'reports-v4-hero__footer',
+          onClick: onBalanceFooterClick
+        },
+          React.createElement('span', { className: 'reports-v4-hero__footer-text' },
+            'Съедено ' + fmtNum(periodMeta.totalEaten) + ' · план ' + fmtNum(periodMeta.totalPlan)
+          ),
+          React.createElement('span', { className: 'reports-v4-hero__footer-chevron', 'aria-hidden': 'true' }, '›')
+        )
+      ),
+      React.createElement('div', { className: 'reports-v4-tier' }, 'Итог периода'),
+      scoreTile,
+      React.createElement('div', { className: 'reports-v4-summary' },
+        React.createElement('div', { className: 'reports-v4-summary-card reports-v4-summary-card--norm' },
+          React.createElement('div', { className: 'reports-v4-summary-card__label' }, 'Дней в норме'),
+          React.createElement('div', { className: 'reports-v4-summary-card__value' },
+            periodMeta.inNorm,
+            React.createElement('span', { className: 'reports-v4-summary-card__suffix' }, ' из ' + periodMeta.withData)
+          )
+        ),
+        periodMeta.avgScore != null && React.createElement('div', { className: 'reports-v4-summary-card reports-v4-summary-card--score' },
+          React.createElement('div', { className: 'reports-v4-summary-card__label' }, 'Средняя оценка'),
+          React.createElement('div', { className: 'reports-v4-summary-card__value' },
+            String(periodMeta.avgScore).replace('.', ','),
+            React.createElement('span', { className: 'reports-v4-summary-card__suffix' }, ' из 10' + scoreSuffix)
+          )
+        )
+      ),
+      React.createElement('div', { className: 'reports-v4-tier' }, 'Динамика')
+    );
+  }
+
+  function ReportsTabV4Bottom(props) {
+    const { React, periodMeta } = props || {};
+    if (!React || !periodMeta) return null;
+
+    return React.createElement(React.Fragment, null,
+      periodMeta.showWellbeingBlock && React.createElement('div', { className: 'reports-v4-wellbeing' },
+        React.createElement('div', { className: 'reports-v4-wellbeing__title' }, 'Сон и самочувствие'),
+        React.createElement('div', { className: 'reports-v4-wellbeing__grid' },
+          periodMeta.avgSleep != null && React.createElement('div', { className: 'reports-v4-wellbeing__item' },
+            React.createElement('span', { className: 'reports-v4-wellbeing__value' }, String(periodMeta.avgSleep).replace('.', ',')),
+            React.createElement('span', { className: 'reports-v4-wellbeing__label' }, 'часов' + (periodMeta.sleepCount < periodMeta.withData ? ' · за ' + periodMeta.sleepCount + ' дн.' : ''))
+          ),
+          periodMeta.avgMood != null && React.createElement('div', { className: 'reports-v4-wellbeing__item' },
+            React.createElement('span', { className: 'reports-v4-wellbeing__value' }, String(periodMeta.avgMood).replace('.', ',')),
+            React.createElement('span', { className: 'reports-v4-wellbeing__label' }, 'настроение' + (periodMeta.moodCount < periodMeta.withData ? ' · за ' + periodMeta.moodCount + ' дн.' : ''))
+          ),
+          periodMeta.avgWellbeing != null && React.createElement('div', { className: 'reports-v4-wellbeing__item' },
+            React.createElement('span', { className: 'reports-v4-wellbeing__value' }, String(periodMeta.avgWellbeing).replace('.', ',')),
+            React.createElement('span', { className: 'reports-v4-wellbeing__label' }, 'самочувствие' + (periodMeta.wellbeingCount < periodMeta.withData ? ' · за ' + periodMeta.wellbeingCount + ' дн.' : ''))
+          )
+        )
+      ),
+      periodMeta.dayRows.length > 0 && React.createElement('div', { className: 'reports-v4-tier' }, 'Дни'),
+      periodMeta.dayRows.length > 0 && React.createElement('div', { className: 'reports-v4-days' },
+        periodMeta.dayRows.slice(0, 4).map((row) => {
+          const zone = HEYS.ratioZones?.getZone?.(row.ratio);
+          const dotClass = zone?.id === 'low' ? 'warn' : zone?.id === 'over' ? 'over' : 'good';
+          const deltaSign = row.delta > 0 ? '+' : row.delta < 0 ? '−' : '';
+          return React.createElement('div', {
+            key: row.date,
+            className: 'reports-v4-days__row'
+          },
+            React.createElement('span', { className: 'reports-v4-days__left' },
+              React.createElement('span', { className: 'reports-v4-days__dot reports-v4-days__dot--' + dotClass }),
+              row.label
+            ),
+            React.createElement('span', { className: 'reports-v4-days__right' },
+              deltaSign + Math.abs(row.delta) + (row.dayScore > 0 ? ' · ' + row.dayScore + '/10' : '')
+            )
+          );
+        }),
+        periodMeta.dayRows.length > 4 && React.createElement('div', { className: 'reports-v4-days__more' },
+          'ещё ' + (periodMeta.dayRows.length - 4) + ' ' + (periodMeta.dayRows.length - 4 === 1 ? 'день' : (periodMeta.dayRows.length - 4 < 5 ? 'дня' : 'дней'))
+        )
+      )
+    );
+  }
+
+  function ReportsTabV4(props) {
+    const {
+      React,
+      periodMeta,
+      chartPeriod,
+      handlePeriodChange,
+      scoreTile,
+      kcalDynamics,
+      weightDynamics,
+      onBalanceFooterClick
+    } = props || {};
+
+    return React.createElement(React.Fragment, null,
+      ReportsTabV4Top({ React, periodMeta, chartPeriod, handlePeriodChange, scoreTile, onBalanceFooterClick }),
+      kcalDynamics,
+      weightDynamics,
+      ReportsTabV4Bottom({ React, periodMeta })
+    );
+  }
+
   /**
    * Render stats block
    * @param {Object} params - Render parameters
@@ -242,6 +491,13 @@
     const heatmapDayStyleMeta = vmComputed.heatmapDayStyleMeta;
     const sparklinePerfectPopupMeta = vmComputed.sparklinePerfectPopupMeta;
     const popupPositionStyle = vmComputed.popupPositionStyle;
+
+    // Отчёты v4: вкладка DayTab subTab === 'stats' (в навигации — «Отчёты»).
+    const useReportsV4 = !isMobile || mobileSubTab === 'stats';
+    const reportsClientId = HEYS.currentClientId || deps?.clientId || '';
+    const reportsPeriodMeta = useReportsV4
+      ? buildReportsPeriodMeta(sparklineData, chartPeriod, ratioZones, lsGet, reportsClientId)
+      : null;
 
     const weekHeatmapDates = (weekHeatmapDaysMeta || []).map((d) => d.date).filter(Boolean);
     const selectedDayRatio = Number.isFinite(currentRatio)
@@ -553,16 +809,46 @@
       applyDate();
     };
 
-    const statsBlock = React.createElement('div', { className: 'compact-stats stats-section' },
-      React.createElement('div', { className: 'compact-card-header stats-header-with-badge' },
+    const reportsV4ScoreTile = HEYS.CascadeCard?.HeysScoreTile
+      ? React.createElement('div', { className: 'reports-v4-score-slot' },
+        React.createElement(HEYS.CascadeCard.HeysScoreTile, {}))
+      : null;
+
+    const reportsV4BalanceClick = (e) => {
+      e?.stopPropagation?.();
+      haptic('light');
+      if (weekHeatmapData?.totalEaten > 0) {
+        const deficitMeta = vmComputed.weekHeatmapDeficitMeta;
+        if (deficitMeta?.popupData) {
+          setWeekDeficitPopup({
+            x: window.innerWidth / 2,
+            y: window.innerHeight / 3,
+            data: deficitMeta.popupData
+          });
+        }
+      }
+    };
+
+    const statsBlock = React.createElement('div', {
+      className: 'compact-stats stats-section' + (useReportsV4 ? ' reports-v4' : '')
+    },
+      useReportsV4 && ReportsTabV4Top({
+        React,
+        periodMeta: reportsPeriodMeta,
+        chartPeriod,
+        handlePeriodChange,
+        scoreTile: reportsV4ScoreTile,
+        onBalanceFooterClick: reportsV4BalanceClick
+      }),
+      !useReportsV4 && React.createElement('div', { className: 'compact-card-header stats-header-with-badge' },
         React.createElement('span', null, '📊 СТАТИСТИКА'),
         React.createElement('span', {
           className: 'ratio-status-badge' + (displayRatioStatus.emoji === '🔥' ? ' perfect' : ''),
           style: vmComputed.ratioBadgeStyle
         }, displayRatioStatus.emoji + ' ' + displayRatioStatus.text)
       ),
-      // 4 карточки метрик внутри статистики
-      React.createElement('div', { className: 'metrics-cards', id: 'tour-hero-stats' },
+      // 4 карточки метрик внутри статистики — только legacy, не на Отчётах v4
+      !useReportsV4 && React.createElement('div', { className: 'metrics-cards', id: 'tour-hero-stats' },
         // Затраты (TDEE) — кликабельная для расшифровки
         React.createElement('div', {
           className: 'metrics-card',
@@ -702,12 +988,13 @@
 
         const renderData = vmProgress.sparklineRenderData || sparklineData;
 
-        return React.createElement('div', { className: 'kcal-sparkline-container', id: 'tour-calorie-graph' },
-          React.createElement('div', { className: 'kcal-sparkline-header' },
+        return React.createElement('div', {
+          className: 'kcal-sparkline-container' + (useReportsV4 ? ' reports-v4-dynamics-card' : ''),
+          id: 'tour-calorie-graph'
+        },
+          !useReportsV4 && React.createElement('div', { className: 'kcal-sparkline-header' },
             React.createElement('span', { className: 'kcal-sparkline-title' }, '📊 Калории'),
-            // Period Pills
             React.createElement('div', { className: 'kcal-header-right' },
-              // Кнопки выбора периода
               React.createElement('div', { className: 'kcal-period-pills' },
                 [7, 14, 30].map(period =>
                   React.createElement('button', {
@@ -719,7 +1006,13 @@
               )
             )
           ),
-          React.createElement('div', { className: 'kcal-sparkline-legend' },
+          useReportsV4 && React.createElement('div', { className: 'reports-v4-dynamics-card__head' },
+            React.createElement('span', { className: 'reports-v4-dynamics-card__label' }, 'Съедено против плана'),
+            sparklinePeriodMeta?.avgRatioPct != null && React.createElement('span', { className: 'reports-v4-dynamics-card__badge' },
+              (sparklinePeriodMeta.avgRatioPct - 100 >= 0 ? '+' : '') + (sparklinePeriodMeta.avgRatioPct - 100) + ' %'
+            )
+          ),
+          !useReportsV4 && React.createElement('div', { className: 'kcal-sparkline-legend' },
             React.createElement('span', { className: 'kcal-sparkline-legend-item' },
               React.createElement('img', {
                 className: 'kcal-sparkline-legend-icon',
@@ -735,6 +1028,9 @@
           },
             // 🔧 FIX: Используем displayOptimum (с учётом долга) для линии цели
             renderSparkline(renderData, displayOptimum)
+          ),
+          useReportsV4 && React.createElement('div', { className: 'reports-v4-dynamics-card__hint' },
+            'Столбик вверх — недобор, вниз — перебор. Пунктир — план.'
           ),
           shouldOfferRealDataConfirmation && React.createElement('div', {
             className: 'kcal-realdata-card'
@@ -773,7 +1069,7 @@
         );
       })(),
       // === CALORIC DEBT CARD v2 — Чистая и понятная карточка долга ===
-      caloricDebt && caloricDebt.hasDebt && (() => {
+      !useReportsV4 && caloricDebt && caloricDebt.hasDebt && (() => {
         const { debt, effectiveDebt, recoveryDays, dailyBoost, adjustedOptimum, needsRefeed, refeedBoost, refeedOptimum, dayBreakdown, daysToRecover, recoveryDayName } = caloricDebt;
         const debtDaysMeta = vmComputed.debtDaysMeta || dayBreakdown || [];
 
@@ -1060,7 +1356,7 @@
       // - Основной акцент на АКТИВНОСТЬ (кардио, шаги)
       // - Снижение нормы — мягкий акцент (5-10%), не штраф
       // - Herman & Polivy 1984: строгие ограничения → срывы
-      caloricDebt && caloricDebt.hasExcess && !caloricDebt.hasDebt && (() => {
+      !useReportsV4 && caloricDebt && caloricDebt.hasExcess && !caloricDebt.hasDebt && (() => {
         const {
           excess, rawExcess, cardioRecommendation, totalTrainingKcal, dayBreakdown, trend, severity, weightImpact, goalMode,
           // 🆕 Мягкая коррекция
@@ -2653,7 +2949,7 @@
         }); // Закрываем PopupWithBackdrop
       })(),
       // Fallback: нет данных о весе, но есть калории
-      (!weightTrend && kcalTrend) && React.createElement('div', {
+      (!weightTrend && kcalTrend) && !useReportsV4 && React.createElement('div', {
         className: 'correlation-block correlation-clickable',
         onClick: () => {
           haptic('light');
@@ -2666,9 +2962,9 @@
           'Добавь вес для анализа связи калорий и веса'
         )
       ),
-      cascadeSlot,
+      !useReportsV4 && cascadeSlot,
       // === Mini-heatmap недели (скрываем если нет данных — появится как сюрприз) ===
-      weekHeatmapData && weekHeatmapData.withData > 0 && (() => {
+      !useReportsV4 && weekHeatmapData && weekHeatmapData.withData > 0 && (() => {
         const weekHeatmapMeta = vmComputed.weekHeatmapMeta;
         const colorClass = weekHeatmapMeta.colorClass || 'deficit-warn';
         const deviationText = weekHeatmapMeta.deviationText || '';
@@ -2850,15 +3146,18 @@
       // HEYS Score — плитка итога периода (сырой тренд каскада), рядом с
       // «в норме» выше. UI_V4_SPEC_2026-08-09.md, «Каскад как трендовая
       // оценка (HEYS Score)»; разбор на 4 группы — по тапу на плитке.
-      HEYS.CascadeCard?.HeysScoreTile && React.createElement(HEYS.CascadeCard.HeysScoreTile, {}),
+      !useReportsV4 && HEYS.CascadeCard?.HeysScoreTile && React.createElement(HEYS.CascadeCard.HeysScoreTile, {}),
       // Спарклайн веса — показываем если есть хотя бы 1 точка (вес из профиля)
       weightSparklineData.length >= 1 && React.createElement('div', {
         className: 'weight-sparkline-container' +
+          (useReportsV4 ? ' reports-v4-dynamics-card' : '') +
           (weightTrend?.direction === 'down' ? ' trend-down' :
             weightTrend?.direction === 'up' ? ' trend-up' : ' trend-same')
       },
-        React.createElement('div', { className: 'weight-sparkline-header' },
-          React.createElement('span', { className: 'weight-sparkline-title' }, '⚖️ Вес'),
+        React.createElement('div', { className: useReportsV4 ? 'reports-v4-dynamics-card__head' : 'weight-sparkline-header' },
+          React.createElement('span', {
+            className: useReportsV4 ? 'reports-v4-dynamics-card__label' : 'weight-sparkline-title'
+          }, useReportsV4 ? ('Вес · ' + chartPeriod + ' дней') : '⚖️ Вес'),
           // Badges показываем только когда есть тренд (2+ точки)
           weightSparklineData.length >= 2 && weightTrend && React.createElement('div', { className: 'weight-sparkline-badges' },
             React.createElement('span', {
@@ -2883,8 +3182,11 @@
           ) // закрываем badges div
         ), // закрываем условие weightSparklineData.length >= 2
         renderWeightSparkline(weightSparklineData),
+        useReportsV4 && monthForecast?.text && React.createElement('div', { className: 'reports-v4-dynamics-card__hint' },
+          monthForecast.text
+        ),
         // Сноска о задержке воды если есть такие дни
-        weightSparklineData.some(d => d.hasWaterRetention) && React.createElement('div', {
+        !useReportsV4 && weightSparklineData.some(d => d.hasWaterRetention) && React.createElement('div', {
           className: 'weight-retention-note'
         },
           React.createElement('span', { className: 'weight-retention-note-icon' }, '🌸'),
@@ -2932,6 +3234,7 @@
         }, 'целевой вес'),
         ' в профиле — прогноз будет точнее!'
       ),
+      useReportsV4 && ReportsTabV4Bottom({ React, periodMeta: reportsPeriodMeta }),
       // Popup с деталями веса при клике на точку — V2 STYLE
       sparklinePopup && sparklinePopup.type === 'weight' && (() => {
         const point = sparklinePopup.point;
@@ -3101,7 +3404,7 @@
         }); // Закрываем PopupWithBackdrop
       })(),
       // Контейнер: Макро-кольца + Плашка веса
-      React.createElement('div', { className: 'macro-weight-row' },
+      !useReportsV4 && React.createElement('div', { className: 'macro-weight-row' },
         // Макро-бар БЖУ (в стиле Apple Watch колец)
         (() => {
           const macroRingsMeta = vmComputed.macroRingsMeta;
@@ -3443,7 +3746,13 @@
   // Export
   HEYS.dayStats = {
     render: renderStatsBlock,
-    _test: { resetMorningCheckinDay }
+    _test: {
+      resetMorningCheckinDay,
+      buildReportsPeriodMeta,
+      ReportsTabV4,
+      ReportsTabV4Top,
+      ReportsTabV4Bottom
+    }
   };
 
 })(window);
