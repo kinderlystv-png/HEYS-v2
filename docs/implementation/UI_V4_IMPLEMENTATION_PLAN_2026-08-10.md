@@ -571,6 +571,35 @@ Batch 2 закрыт; следующий — продолжение `000-base-an
 rgba, brand, несовпадающие пары). Файл закрыт для stage 6 — следующий батч —
 другой модуль в `styles/`.
 
+### Stage 6 batch 4 — 2026-08-10
+
+**Файлы (граница батча):**
+
+| Файл                                      | Что сделано                                 | Литералов → `var(--v4-*)` |
+| ----------------------------------------- | ------------------------------------------- | ------------------------- |
+| `styles/modules/200-dark-and-effects.css` | весь файл (dark theme, effects, sparklines) | 107                       |
+
+**Инструмент:** `scripts/ui-v4-css-batch-codemod.mjs` — тот же scoped codemod и
+гейт классики, что в batch 3. Проверка: `ui-v4-check-classic-drift.mjs` +
+`ui-v4-classic-drift.test.js`.
+
+**Исключено в batch 4 (намеренно, как в batch 2–3):**
+
+- `linear-gradient` / `radial-gradient` — градиенты
+- `rgba()` — без замены
+- семантические tint-блоки (`--stats-bg`, `--activity-bg`, `--sleep-bg` и т.п.)
+  где литерал ≠ `classic-dark` роли
+- `--color-*` slate/gray шаги без v4-совпадения (например `#e2e8f0`, `#cbd5e1`)
+- brand / iOS chrome / red semantic (`#f87171`, `#9ca3af`, …)
+
+**Остаток в `200-dark-and-effects.css`:** ~451 bare hex (градиенты, rgba,
+несовпадающие пары; ещё ~109 hex только как fallback в `var(--v4-*)`). Файл
+закрыт для stage 6 — следующий батч — другой модуль в `styles/`.
+
+**Параллельность:** не пересекается со Stage 4 Activity (`600-steps-and-aps.css`
+и `apps/web/*.js` — вне scope). Следующий кандидат —
+`720-predictive-insights.css` (~740 hex).
+
 ---
 
 ## Этап 7. Поток B — что осталось после вкладок
