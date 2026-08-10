@@ -634,6 +634,42 @@ rgba, brand, несовпадающие пары). Файл закрыт для 
 scope). Следующий кандидат — `730-widgets-dashboard.css` (~393 hex);
 альтернатива — `300-modals-and-day.css` (~316 hex).
 
+### Stage 6 batch 6 — 2026-08-10
+
+**Файлы (граница батча):**
+
+| Файл                                       | Что сделано                                           | Литералов → `var(--v4-*)` |
+| ------------------------------------------ | ----------------------------------------------------- | ------------------------- |
+| `styles/modules/730-widgets-dashboard.css` | весь файл (widget dashboard, home tab, edit controls) | 66                        |
+
+**Инструмент:** `scripts/ui-v4-css-batch-codemod.mjs` — тот же scoped codemod и
+гейт классики, что в batch 3–5. Проверка: `ui-v4-check-classic-drift.mjs`
+(`--files=styles/modules/730-widgets-dashboard.css`) +
+`ui-v4-classic-drift.test.js`.
+
+**Исключено в batch 6 (намеренно, как в batch 2–5):**
+
+- `--widget-*` Apple category tokens (`#FF9500`, `#AF52DE`, `#30D158`, …) — нет
+  v4-совпадения
+- `--widget-gradient-*` — `linear-gradient` целиком
+- `rgba()` — без замены
+- legacy `var(--bg-*, #…)` / `var(--primary, #…)` — не трогаем чужие fallback
+- orange/report CTA блок (`#ea580c`, `#c2410c`, `#7c2d12`, `#9a3412`, `#ffedd5`,
+  `#fed7aa`) — семантика без classic-пары
+- gradient stop-литералы на строках без `linear-gradient` (частично
+  конвертированы; остаток `#f97316`, `#10b981` и др. без пары)
+- тёмные правила с литералами ≠ `classic-dark` роли
+
+**Остаток в `730-widgets-dashboard.css`:** ~327 bare hex (градиенты, rgba,
+widget-tokens, несовпадающие пары; ещё ~66 hex только как fallback в
+`var(--v4-*)`). Файл закрыт для stage 6 — следующий батч — другой модуль в
+`styles/`.
+
+**Параллельность:** не пересекается со Stage 4 Activity
+(`600-steps-and-aps.css`, `731-ui-v4-activity.css`, `apps/web/*.js` — вне
+scope). Следующий кандидат — `300-modals-and-day.css` (~316 hex); альтернатива —
+`200-dark-and-effects.css` (~499 hex).
+
 ---
 
 ## Этап 7. Поток B — что осталось после вкладок
