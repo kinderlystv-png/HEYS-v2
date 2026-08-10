@@ -71,7 +71,7 @@
     align-items: center;
     gap: 8px;
     font-size: 14px;
-    color: var(--muted, #6b7280);
+    color: var(--v4-ink-2, #6b7280);
     animation: cso-stage-in 0.2s ease-out;
     min-height: 24px;
 }
@@ -109,7 +109,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--border, #e5e7eb);
+    background: var(--v4-line, #e5e7eb);
     transition: background 0.3s, transform 0.3s;
 }
 

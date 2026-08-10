@@ -9,32 +9,32 @@
    * ═══════════════════════════════════════════════════════════════════════════ */
 
   /* Primary Brand */
-  --heys-primary: #2563eb;
-  --heys-primary-hover: #1d4ed8;
-  --heys-primary-light: #3b82f6;
+  --heys-primary: var(--v4-act, #2563eb);
+  --heys-primary-hover: var(--v4-act-text, #1d4ed8);
+  --heys-primary-light: var(--v4-water, #3b82f6);
   --heys-primary-bg: #eff6ff;
 
   /* Success / Green */
-  --heys-success: #22c55e;
-  --heys-success-hover: #16a34a;
+  --heys-success: var(--v4-ok-fill, #22c55e);
+  --heys-success-hover: var(--v4-ok-text, #16a34a);
   --heys-success-light: #4ade80;
-  --heys-success-bg: #f0fdf4;
+  --heys-success-bg: var(--v4-ok-bg, #f0fdf4);
 
   /* Warning / Yellow */
-  --heys-warning: #eab308;
+  --heys-warning: var(--v4-warn-soft, #eab308);
   --heys-warning-hover: #ca8a04;
   --heys-warning-light: #fde047;
   --heys-warning-bg: #fefce8;
 
   /* Danger / Red */
-  --heys-danger: #ef4444;
-  --heys-danger-hover: #dc2626;
+  --heys-danger: var(--v4-warn-1, #ef4444);
+  --heys-danger-hover: var(--v4-warn-2, #dc2626);
   --heys-danger-light: #f87171;
   --heys-danger-bg: #fef2f2;
 
   /* Info / Blue */
-  --heys-info: #3b82f6;
-  --heys-info-hover: #2563eb;
+  --heys-info: var(--v4-water, #3b82f6);
+  --heys-info-hover: var(--v4-act, #2563eb);
   --heys-info-light: #60a5fa;
   --heys-info-bg: #eff6ff;
 
@@ -55,9 +55,9 @@
    * ═══════════════════════════════════════════════════════════════════════════ */
 
   /* Backgrounds */
-  --heys-bg-page: #ffffff;
-  --heys-bg-card: #ffffff;
-  --heys-bg-elevated: #ffffff;
+  --heys-bg-page: var(--v4-bg, #ffffff);
+  --heys-bg-card: var(--v4-bg, #ffffff);
+  --heys-bg-elevated: var(--v4-bg, #ffffff);
   --heys-bg-muted: var(--heys-neutral-100);
   --heys-bg-subtle: var(--heys-neutral-50);
   --heys-bg-primary: var(--heys-bg-card);
@@ -65,10 +65,10 @@
   --heys-bg-tertiary: var(--heys-bg-elevated);
 
   /* Text */
-  --heys-text-primary: #111827;
-  --heys-text-secondary: #6b7280;
-  --heys-text-muted: #9ca3af;
-  --heys-text-inverted: #ffffff;
+  --heys-text-primary: var(--v4-ink, #111827);
+  --heys-text-secondary: var(--v4-ink-2, #6b7280);
+  --heys-text-muted: var(--v4-ink-4, #9ca3af);
+  --heys-text-inverted: var(--v4-bg, #ffffff);
 
   /* Borders */
   --heys-border-default: var(--heys-neutral-200);
@@ -212,15 +212,15 @@
   /* ══════════════════════════════════
    * BACKGROUNDS — Темная палитра
    * ══════════════════════════════════ */
-  --heys-bg-page: #0f172a;
+  --heys-bg-page: var(--v4-bg, #0f172a);
   /* Slate 900 - основной фон */
-  --heys-bg-card: #1e293b;
+  --heys-bg-card: var(--v4-surface, #1e293b);
   /* Slate 800 - карточки */
   --heys-bg-elevated: #334155;
   /* Slate 700 - приподнятые элементы */
-  --heys-bg-muted: #1e293b;
+  --heys-bg-muted: var(--v4-surface, #1e293b);
   /* Slate 800 - приглушенный фон */
-  --heys-bg-subtle: #0f172a;
+  --heys-bg-subtle: var(--v4-bg, #0f172a);
   /* Slate 900 - едва заметный фон */
   --heys-bg-primary: var(--heys-bg-card);
   --heys-bg-secondary: rgba(51, 65, 85, 0.88);
@@ -229,21 +229,21 @@
   /* ══════════════════════════════════
    * TEXT — Улучшенная читаемость
    * ══════════════════════════════════ */
-  --heys-text-primary: #f1f5f9;
+  --heys-text-primary: var(--v4-ink, #f1f5f9);
   /* Slate 100 - основной текст (высокий контраст) */
   --heys-text-secondary: #cbd5e1;
   /* Slate 300 - вторичный текст (средний контраст) */
-  --heys-text-muted: #94a3b8;
+  --heys-text-muted: var(--v4-ink-2, #94a3b8);
   /* Slate 400 - приглушенный текст (низкий контраст) */
-  --heys-text-inverted: #0f172a;
+  --heys-text-inverted: var(--v4-bg, #0f172a);
   /* Инверсия для кнопок и акцентов */
 
   /* ══════════════════════════════════
    * BORDERS — Видимые границы
    * ══════════════════════════════════ */
-  --heys-border-default: #475569;
+  --heys-border-default: var(--v4-ink-4, #475569);
   /* Slate 600 - основные границы (видимые) */
-  --heys-border-subtle: #334155;
+  --heys-border-subtle: var(--v4-line, #334155);
   /* Slate 700 - едва заметные границы */
   --heys-border-focus: #60a5fa;
   /* Blue 400 - фокус (яркий) */

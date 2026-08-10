@@ -372,6 +372,35 @@ codemod берёт всё остальное. Перед заменой в фа�
 **Готово, когда:** файл перекрытий тёмной темы сокращается, а не растёт; новые
 палитры не требуют своих файлов перекрытий.
 
+### Stage 6 batch 1 — 2026-08-10
+
+**Файлы (граница батча):**
+
+| Файл                                           | Что сделано                                       | Литералов → `var(--v4-*)` |
+| ---------------------------------------------- | ------------------------------------------------- | ------------------------- |
+| `styles/modules/001-design-tokens.css`         | семантика light + dark (brand, UI bg/text/border) | 27                        |
+| `styles/modules/310-client-switch-overlay.css` | legacy `--muted`/`--border` → v4 роли             | 2 var-ref                 |
+
+**Исключено в batch 1 (намеренно):**
+
+- `--heys-neutral-*` — отдельная серая шкала, не v4-роли
+- блок NUTRITION (`--heys-ratio-*`, macros, nutrient quality) — шкалы, этап 3
+- soft-bg литералы (`--heys-*-bg` кроме ok-bg), `-light` варианты без точного
+  v4-совпадения
+- dark semantic overrides (primary/success/warning/danger/info) — значения ≠
+  classic-dark v4
+- градиенты, rgba, брендовые цвета overlay (`#4285f4`, `#43e97b`) без
+  v4-совпадения в classic
+
+**Оценка остатка:** ~9 100 hex-литералов в `styles/` (без
+`002-ui-v4-palette-roles.css`, `tailwind.css`, архивного `main.css.pre-split`).
+Следующий батч — `critical.css` + начало `000-base-and-gamification.css` (~970
+литералов).
+
+**Параллельность:** не пересекается со Stage 4 Home (JS/`heys_widgets`). Риск —
+`730-widgets-dashboard.css` при будущей покраске виджетов; batch 1 его не
+трогает.
+
 ---
 
 ## Этап 7. Поток B — что осталось после вкладок
