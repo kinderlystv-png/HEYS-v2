@@ -45,9 +45,12 @@ describe('Activity tab v4 structure', () => {
     expect(shellSource).not.toMatch(/mobileSubTab === 'stats' \|\| mobileSubTab === 'activity'\) && compactActivity/);
   });
 
-  it('structure css is imported', () => {
+  it('structure css is imported and uses v4 paint roles', () => {
     const mainCss = fs.readFileSync(path.resolve(__dirname, '../styles/main.css'), 'utf8');
     expect(mainCss).toContain('731-ui-v4-activity.css');
     expect(cssSource).toContain('.activity-v4-cta');
+    expect(cssSource).toContain('var(--v4-hero');
+    expect(cssSource).toContain('var(--v4-ink-2');
+    expect(cssSource).toMatch(/v4-intentional.*var\(--v4-act\)/s);
   });
 });
