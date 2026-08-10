@@ -4313,21 +4313,6 @@ td:first-child input {
   opacity: 0.35;
 }
 
-/* ─── 3. Rank badge: всегда в DOM; opacity transition ─── */
-.game-rank-badge {
-  transition: opacity 0.4s ease, transform 0.4s ease;
-}
-
-.game-rank-badge.guard-hidden {
-  opacity: 0;
-  transform: scale(0.8);
-}
-
-.game-rank-badge:not(.guard-hidden) {
-  opacity: 1;
-  transform: scale(1);
-}
-
 /* ─── 4. Dot-индикатор загрузки (absolute, 0 layout impact) ─── */
 .game-level-sync-dot {
   position: absolute;
@@ -4687,39 +4672,6 @@ td:first-child input {
 
   100% {
     transform: scale(1);
-  }
-}
-
-/* === 15. Rank Badge === */
-.game-rank-badge {
-  font-size: 9px;
-  padding: 1px 5px;
-  border-radius: 8px;
-  font-weight: 600;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  align-self: flex-start;
-}
-
-.game-level-group:focus-within .game-rank-badge {
-  animation: badgeShine 1.6s ease-in-out 1;
-}
-
-@media (hover: hover) {
-  .game-level-group:hover .game-rank-badge {
-  animation: badgeShine 1.6s ease-in-out 1;
-}
-}
-
-/* 🚀 PERF R6: replaced filter with opacity — GPU-compositable */
-@keyframes badgeShine {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.8;
   }
 }
 
@@ -6656,10 +6608,6 @@ td:first-child input {
     font-size: 11px;
   }
 
-  .game-rank-badge {
-    font-size: 8px;
-    padding: 1px 4px;
-  }
 }
 
 @media (max-width: 340px) {
@@ -6674,13 +6622,6 @@ td:first-child input {
 
   .game-level-group {
     max-width: 74px;
-  }
-
-  .game-rank-badge {
-    max-width: 38px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .game-bar-slots {
@@ -14352,134 +14293,6 @@ body:has(.tabs.tabs--settings-open) :is(
 /* MODULE 01 — Base & Gamification
  * Scope: base/modern polish, cards, tabs, compact layouts, gamification badges/animations.
  */
-
-/* === RANK CEREMONY === */
-.rank-ceremony {
-  position: fixed;
-  inset: 0;
-  background: rgba(8, 8, 12, 0.92);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  animation: rankCeremonyFadeIn 0.35s ease-out;
-  padding: 16px;
-}
-
-.rank-ceremony__panel {
-  background: var(--v4-bg, #ffffff);
-  border-radius: 22px;
-  max-width: 520px;
-  width: 100%;
-  padding: 36px 32px 28px;
-  text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-  animation: rankCeremonySlideUp 0.45s ease-out;
-}
-
-.rank-ceremony__lottie {
-  width: 220px;
-  height: 220px;
-  margin: 0 auto 12px;
-}
-
-.rank-ceremony__title {
-  font-size: 26px;
-  font-weight: 700;
-  color: var(--v4-ink, #111827);
-  margin-bottom: 6px;
-}
-
-.rank-ceremony__subtitle {
-  font-size: 18px;
-  font-weight: 600;
-  color: #4f46e5;
-  margin-bottom: 16px;
-}
-
-.rank-ceremony__rankline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--v4-ink, #111827);
-  margin-bottom: 14px;
-}
-
-.rank-ceremony__arrow {
-  color: var(--v4-ink-4, #9ca3af);
-}
-
-.rank-ceremony__hint {
-  font-size: 13px;
-  color: #6b7280;
-  margin-bottom: 18px;
-}
-
-.rank-ceremony__btn {
-  border: none;
-  border-radius: 12px;
-  padding: 10px 22px;
-  font-weight: 700;
-  color: var(--v4-bg, #ffffff);
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.rank-ceremony__btn:active {
-  transform: translateY(1px);
-  box-shadow: none;
-}
-
-.rank-ceremony--hide {
-  animation: rankCeremonyFadeOut 0.25s ease-in forwards;
-}
-
-@keyframes rankCeremonyFadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes rankCeremonyFadeOut {
-  from {
-    opacity: 1;
-  }
-
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes rankCeremonySlideUp {
-  from {
-    transform: translateY(24px);
-    opacity: 0;
-  }
-
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@media (max-width: 640px) {
-  .rank-ceremony__panel {
-    padding: 28px 20px 22px;
-  }
-
-  .rank-ceremony__lottie {
-    width: 180px;
-    height: 180px;
-  }
-}
 
 /* === ACHIEVEMENT STORY MODAL === */
 .achievement-badge {

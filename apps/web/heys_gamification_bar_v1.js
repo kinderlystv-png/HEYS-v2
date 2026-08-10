@@ -26,6 +26,20 @@
     HEYS.utils = HEYS.utils || {};
     HEYS.utils.safeGetStreak = safeGetStreak;
 
+    // safeGetStreakDetails — как safeGetStreak, но добавляет yesterdayForgiven:
+    // серия рвётся не с первого промаха (решение владельца 2026-08-10), и это
+    // обязано быть видно, иначе читается как сбой счётчика. Число серии для
+    // экрана всё ещё берём из safeGetStreak (совпадает по расчёту, но у
+    // HEYS.Day.getStreak свой приоритет живой вкладки) — здесь нужен только флаг.
+    function safeGetStreakDetails() {
+        try {
+            return HEYS.dayCalendarMetrics?.getStreakDetails?.() || { count: 0, yesterdayForgiven: false };
+        } catch {
+            return { count: 0, yesterdayForgiven: false };
+        }
+    }
+    HEYS.utils.safeGetStreakDetails = safeGetStreakDetails;
+
     function GamificationBar() {
         const React = window.React;
         const ReactDOM = window.ReactDOM;
@@ -1354,7 +1368,9 @@
                     // Streak
                     streak > 0 && React.createElement('span', {
                         className: `game-streak ${getStreakClass(streak)}${streakJustGrew ? ' just-grew' : ''}`,
-                        title: `${streak} дней подряд в норме (считаем только завершённые дни)`
+                        title: safeGetStreakDetails().yesterdayForgiven
+                            ? `${streak} дней подряд — вчера пропуск, серия сохранена. Второй пропуск её прервёт`
+                            : `${streak} дней подряд в норме (считаем только завершённые дни)`
                     },
                         React.createElement('span', {
                             className: `game-streak__flame ${getStreakFlameClass(streak)}`

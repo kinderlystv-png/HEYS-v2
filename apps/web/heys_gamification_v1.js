@@ -204,7 +204,14 @@
   // ========== ВНУТРЕННЕЕ СОСТОЯНИЕ ==========
 
   let _data = null;
-  let _debounceTimer = null;
+  // Карта таймеров, а не один общий: общий таймер гасил XP при частых
+  // последовательных addXP с разными reason (баг обнаружен 2026-08-10 —
+  // утренний чек-ин звал addXP по кругу для веса/сна/настроения/etc,
+  // каждый следующий вызов clearTimeout'ил предыдущий, засчитывался только
+  // последний). Ключ — reason, поэтому дебаунс держит свой изначальный
+  // смысл: гасит повторные вызовы ОДНОЙ и той же причины в одном тике,
+  // а не разные причины друг друга.
+  const _debounceTimers = new Map();
   let _notificationQueue = [];
   let _isShowingNotification = false;
   let _cloudLoaded = false; // 🛡️ Флаг что облако проверено
@@ -3976,12 +3983,15 @@
         xpReason = amount;
         xpAmount = 0;
       }
-      // Debounce
-      if (_debounceTimer) clearTimeout(_debounceTimer);
+      // Debounce — свой таймер на каждый reason, см. комментарий у _debounceTimers.
+      const debounceKey = xpReason || '';
+      const pending = _debounceTimers.get(debounceKey);
+      if (pending) clearTimeout(pending);
 
-      _debounceTimer = setTimeout(() => {
+      _debounceTimers.set(debounceKey, setTimeout(() => {
+        _debounceTimers.delete(debounceKey);
         _addXPInternal(xpAmount, xpReason, sourceEl, extraData);
-      }, DEBOUNCE_MS);
+      }, DEBOUNCE_MS));
     },
 
     getLevel() {
@@ -5854,7 +5864,7 @@
   game.cancelAllPendingFlushes = function () {
     try { if (_auditFlushTimer) { clearTimeout(_auditFlushTimer); _auditFlushTimer = null; } } catch (_) { /* noop */ }
     try { if (_cloudSyncTimer) { clearTimeout(_cloudSyncTimer); _cloudSyncTimer = null; } } catch (_) { /* noop */ }
-    try { if (_debounceTimer) { clearTimeout(_debounceTimer); _debounceTimer = null; } } catch (_) { /* noop */ }
+    try { _debounceTimers.forEach((tid) => clearTimeout(tid)); _debounceTimers.clear(); } catch (_) { /* noop */ }
     try { _pendingCloudSync = false; } catch (_) { /* noop */ }
     try { _syncInProgress = false; } catch (_) { /* noop */ }
   };

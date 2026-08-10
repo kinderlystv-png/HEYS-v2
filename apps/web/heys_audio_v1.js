@@ -547,7 +547,6 @@
   // null = haptic-only, no sound
   const EVENT_MAP = {
     // Triumph
-    rankCeremony: 'triumph',
     levelUp: 'triumph',
     allMissionsComplete: 'triumph',
     achievementUnlocked: 'triumph',
