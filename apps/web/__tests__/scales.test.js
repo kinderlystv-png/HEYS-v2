@@ -476,3 +476,72 @@ describe('heys_scales_v1 — три градации внимания', () => {
     }
   });
 });
+
+// Правило тёмной стороны (решение владельца 2026-08-10). На светлом «сильнее»
+// значит темнее: ступень уходит от фона, контраст растёт. На тёмном затемнение,
+// наоборот, приближает к фону, и ступень читается не сильнее, а глуше — поэтому
+// усиление несёт насыщенность, а контраст к фону при этом падает. Так во всех
+// трёх тёмных палитрах одинаково; проверка нужна, чтобы однажды кто-нибудь не
+// «починил» одну из них по светлому принципу и не выбил её из ряда.
+describe('heys_scales_v1 — градации внимания против фона палитры', () => {
+  const PALETTE_CSS = fs.readFileSync(
+    path.resolve(__dirname, '../styles/modules/002-ui-v4-palette-roles.css'),
+    'utf8',
+  );
+
+  function role(themeId, name) {
+    const block = PALETTE_CSS.slice(PALETTE_CSS.indexOf(`[data-theme-id="${themeId}"]`));
+    const body = block.slice(0, block.indexOf('}'));
+    const m = body.match(new RegExp(`--${name}:\\s*(#[0-9a-f]{6})`, 'i'));
+    if (!m) throw new Error(`${themeId}: нет --${name}`);
+    return m[1].toLowerCase();
+  }
+
+  function luminance(hex) {
+    const ch = (i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * ch(1) + 0.7152 * ch(3) + 0.0722 * ch(5);
+  }
+
+  function contrast(a, b) {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+
+  const LIGHT = ['classic', 'sand', 'blue'];
+  const DARK = ['classic-dark', 'sand-dark', 'blue-dark'];
+  const THEME_ALL = [...LIGHT, ...DARK];
+
+  const contrasts = (theme) => {
+    const bg = role(theme, 'v4-bg');
+    return [1, 2, 3].map((i) => contrast(role(theme, `v4-warn-${i}`), bg));
+  };
+
+  it('на светлом усиление уводит от фона — контраст растёт', () => {
+    for (const theme of LIGHT) {
+      const cs = contrasts(theme);
+      expect(cs, `${theme}: контраст не растёт`).toEqual([...cs].sort((a, b) => a - b));
+    }
+  });
+
+  it('на тёмном усиление несёт насыщенность — контраст падает', () => {
+    for (const theme of DARK) {
+      const cs = contrasts(theme);
+      expect(cs, `${theme}: контраст не падает — палитра починена по светлому принципу`).toEqual(
+        [...cs].sort((a, b) => b - a),
+      );
+    }
+  });
+
+  it('плотная ступень не проваливается ниже границы читаемости', () => {
+    // Нижняя точка всего набора — каноничная тёмная, 3.38. Владелец принял её
+    // как допустимую для кружка (2026-08-10). Порог 3.35 держит именно эту
+    // границу: любое дальнейшее ослабление должно быть осознанным.
+    for (const theme of THEME_ALL) {
+      const deep = contrasts(theme)[2];
+      expect(deep, `${theme}: плотная градация неразличима на фоне`).toBeGreaterThan(3.35);
+    }
+  });
+});
