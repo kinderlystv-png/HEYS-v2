@@ -12,7 +12,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
     window.document.addEventListener('click', function _heysAdviceTabCapture(e) {
         try {
             if (!e || !e.target || typeof e.target.closest !== 'function') return;
-            const adviceTab = e.target.closest('.tab.tab-advice');
+            const adviceTab = e.target.closest('.tab-settings-item--advice');
             if (!adviceTab) return;
             if (adviceTab.classList.contains('tab--disabled-home')) return;
             setTimeout(function _heysShowAdviceDispatch() {
@@ -4066,15 +4066,13 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             }
         }, [tab, setTab]);
 
-        // Bulletproof fallback: document-level capture listener для tab-advice.
+        // Bulletproof fallback: document-level capture listener для «Советы» в меню ⚙️.
         // React synthetic events иногда не доходят до onClick после re-render'ов
-        // shell'а (наблюдалось 2026-05-28). useRef + useEffect([]) тоже не помог
-        // (ref ловит только initial node). Document.addEventListener в capture
+        // shell'а (наблюдалось 2026-05-28). Document.addEventListener в capture
         // phase ловит любой клик ПОВЕРХ React event system, фильтруем по closest.
-        const adviceTabRef = React.useRef(null);
         React.useEffect(() => {
             const handler = (e) => {
-                if (e.target && e.target.closest && e.target.closest('.tab.tab-advice')) {
+                if (e.target && e.target.closest && e.target.closest('.tab-settings-item--advice')) {
                     setTimeout(() => window.dispatchEvent(new CustomEvent('heysShowAdvice')), 0);
                 }
             };
@@ -4160,18 +4158,18 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         );
         const HOME_TAB_OPTIONS = React.useMemo(() => {
             const options = [
-                { key: 'stats', label: 'Отчёты', icon: '📊' },
-                { key: 'diary', label: 'Питание', icon: '🍽️' },
-                { key: 'activity', label: 'Актив', icon: '🏃' },
-                { key: 'widgets', label: 'Виджеты', icon: '🧩' },
+                { key: 'widgets', label: 'Главная', iconName: 'home' },
+                { key: 'diary', label: 'Питание', iconName: 'diary' },
+                { key: 'activity', label: 'Актив', iconName: 'activity' },
+                { key: 'stats', label: 'Отчёты', iconName: 'stats' },
             ];
             if (canUseTasksAsHome) {
-                options.push({ key: 'tasks', label: 'Задачи', icon: '☑️' });
+                options.push({ key: 'tasks', label: 'Задачи', iconName: 'tasks' });
             }
             if (canUseBoardAsHome) {
-                options.push({ key: 'board', label: 'Доска', icon: '📋' });
+                options.push({ key: 'board', label: 'Доска', iconName: 'board' });
             }
-            options.push({ key: 'insights', label: 'Инсайты', icon: '🔮' });
+            options.push({ key: 'insights', label: 'Инсайты', iconName: 'insights' });
             return options;
         }, [canUseTasksAsHome, canUseBoardAsHome]);
 
@@ -4369,45 +4367,20 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             }
         };
 
-        const primaryTabs = React.useMemo(() => {
-            const items = [
-                { key: 'stats', label: 'Отчёты', buttonLabel: 'Отчёты', icon: '📊', id: 'tour-stats-tab' },
-                { key: 'diary', label: 'Питание', buttonLabel: 'Питание', icon: '🍴', id: 'tour-diary-tab' },
-                { key: 'activity', label: 'Актив', shortLabel: 'Актив', buttonLabel: 'Актив', icon: '🏃', id: 'tour-activity-tab' },
-                { key: 'widgets', label: 'Виджеты', buttonLabel: 'Виджеты', icon: '🎛️', id: 'tour-widgets-tab' },
-            ];
+        const primaryTabs = React.useMemo(() => ([
+            { key: 'widgets', label: 'Главная', iconName: 'home', id: 'tour-widgets-tab' },
+            { key: 'diary', label: 'Питание', iconName: 'diary', id: 'tour-diary-tab' },
+            { key: 'activity', label: 'Актив', iconName: 'activity', id: 'tour-activity-tab' },
+            { key: 'stats', label: 'Отчёты', iconName: 'stats', id: 'tour-stats-tab' },
+            { key: 'insights', label: 'Инсайты', iconName: 'insights', id: 'tour-insights-tab' },
+        ]), []);
 
-            if (!cloudUser && clientId) {
-                items.push({
-                    key: 'tasks',
-                    label: 'Задачи',
-                    buttonLabel: 'Задачи',
-                    icon: '✓',
-                    iconClassName: 'tab-icon tab-icon--tasks',
-                    id: 'tour-tasks-tab',
-                });
-            }
-
-            if (!cloudUser && clientId && String(clientId).toLowerCase() === TASKS_BOARD_CLIENT_ID) {
-                items.push({
-                    key: 'board',
-                    label: 'Доска',
-                    buttonLabel: 'Доска',
-                    icon: '📋',
-                    id: 'tour-board-tab',
-                });
-            }
-
-            items.push(
-                { key: 'insights', label: 'Инсайты', buttonLabel: 'Инсайты', icon: '🔮', id: 'tour-insights-tab' },
-            );
-
-            return items;
-        }, [cloudUser, clientId]);
-
-        const primaryTabsVariant = primaryTabs.length >= 6
-            ? 'sext'
-            : (primaryTabs.length === 5 ? 'quint' : (primaryTabs.length === 4 ? 'quad' : 'triple'));
+        const NavIcon = window.HEYS?.AppNavIcons?.NavIcon;
+        const renderNavIcon = (iconName, active) => (
+            NavIcon
+                ? React.createElement(NavIcon, { name: iconName, active: !!active })
+                : React.createElement('span', { className: 'tab-icon', 'aria-hidden': 'true' }, '•')
+        );
 
         const switchTabWithUndoCommit = (nextTab, reason) =>
             commitUndoAndSwitchTab(setTab, nextTab, { currentTab: tab, reason });
@@ -4583,10 +4556,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         return React.createElement(
             'div',
             {
-                className: 'tabs'
+                className: 'tabs tabs--v4-primary'
                     + (widgetsEditMode ? ' tabs--edit-mode' : '')
                     + (settingsMenuOpen ? ' tabs--settings-open' : '')
-                    + (primaryTabsVariant === 'sext' ? ' tabs--dense-switch' : '')
                     + (boardDarkNav ? ' tabs--board-dark' : '')
             },
             // Подсказка в режиме редактирования (внутри tabs для абсолютного позиционирования)
@@ -4596,68 +4568,28 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 React.createElement('span', { className: 'default-tab-hint__icon' }, '🏠'),
                 React.createElement('span', { className: 'default-tab-hint__text' }, 'Нажми на вкладку, чтобы сделать её домашней'),
             ),
-            // Советы — первая кнопка в меню
             React.createElement(
                 'div',
-                {
-                    ref: adviceTabRef,
-                    className: 'tab tab-advice' + (widgetsEditMode ? ' tab--disabled-home' : ''),
-                    onClick: () => {
-                        // PERF R13 FIX G: defer heysShowAdvice dispatch to avoid sync React render in click handler.
-                        // Дублирует module-level capture listener (в начале файла) — на случай если
-                        // в каком-то браузере document.click capture не отрабатывает.
-                        setTimeout(() => window.dispatchEvent(new CustomEvent('heysShowAdvice')), 0);
-                    },
-                },
-                React.createElement('span', { className: 'tab-icon' }, '💡'),
-                React.createElement('span', { className: 'tab-advice-badge', id: 'nav-advice-badge' }),
-            ),
-            // iOS Switch группа для stats/diary/widgets/insights/month/tasks — ПО ЦЕНТРУ + подписи
-            (() => {
-                const activeIdx = primaryTabs.findIndex(item => item.key === tab);
-                const totalTabs = primaryTabs.length;
-                const gliderStyle = activeIdx < 0
-                    ? { opacity: 0, pointerEvents: 'none' }
-                    : {
-                        width: `calc((100% - 4px) / ${totalTabs})`,
-                        transform: `translateX(${activeIdx * 100}%)`,
-                    };
-                return React.createElement(
+                { className: 'tab-primary-nav-row', role: 'tablist', 'aria-label': 'Основная навигация' },
+                primaryTabs.map((item) => React.createElement(
                     'div',
-                    { className: 'tab-switch-wrapper tab-switch-wrapper--' + primaryTabsVariant },
-                    React.createElement(
-                        'div',
-                        {
-                            className: 'tab-switch-group tab-switch-group--' + primaryTabsVariant + (activeIdx < 0 ? ' tab-switch-group--no-active' : ''),
-                        },
-                        React.createElement('div', { className: 'tab-switch-glider', 'aria-hidden': 'true', style: gliderStyle }),
-                        primaryTabs.map((item) => React.createElement(
-                            'div',
-                            {
-                                key: item.key,
-                                className: 'tab tab-switch ' + (tab === item.key ? 'active' : '') + (widgetsEditMode && defaultTab === item.key ? ' default-tab-indicator' : '') + (widgetsEditMode ? ' tab--home-candidate' : ''),
-                                id: item.id,
-                                title: item.label,
-                                onClick: () => handlePrimaryTabClick(item.key),
-                            },
-                            widgetsEditMode && defaultTab === item.key && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
-                            React.createElement('span', { className: item.iconClassName || 'tab-icon' }, item.icon),
-                            React.createElement('span', { className: 'tab-text' }, item.buttonLabel),
-                        )),
-                    ),
-                // Подписи под переключателем
-                React.createElement(
-                    'div',
-                    { className: 'tab-switch-labels tab-switch-labels--' + primaryTabsVariant },
-                    primaryTabs.map((item) => React.createElement('span', {
+                    {
                         key: item.key,
-                        className: 'tab-switch-label' + (tab === item.key ? ' active' : ''),
+                        className: 'tab tab-primary-nav'
+                            + (tab === item.key ? ' active' : '')
+                            + (widgetsEditMode && defaultTab === item.key ? ' default-tab-indicator' : '')
+                            + (widgetsEditMode ? ' tab--home-candidate' : ''),
+                        id: item.id,
                         title: item.label,
-                        onClick: () => switchTabWithUndoCommit(item.key, `tab-label-${item.key}-switch`)
-                    }, item.shortLabel || item.label)),
-                ),
-            );
-            })(),
+                        role: 'tab',
+                        'aria-selected': tab === item.key ? 'true' : 'false',
+                        onClick: () => handlePrimaryTabClick(item.key),
+                    },
+                    widgetsEditMode && defaultTab === item.key && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
+                    renderNavIcon(item.iconName, tab === item.key),
+                    React.createElement('span', { className: 'tab-text' }, item.label),
+                )),
+            ),
             // Настройки — раскрывающееся меню вверх
             React.createElement(
                 'div',
@@ -4677,8 +4609,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     },
                     React.createElement(
                         'span',
-                        { className: 'tab-icon', style: { position: 'relative' } },
-                        '⚙️',
+                        { className: 'tab-icon tab-icon--settings', style: { position: 'relative' } },
+                        renderNavIcon('settings', tab === 'user' || settingsMenuOpen),
                         isCuratorBadge && pendingCount > 0 && React.createElement(
                             'span',
                             {
@@ -4702,8 +4634,45 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                 switchTabWithUndoCommit('user', 'tab-settings-user-switch');
                             }
                         },
-                        React.createElement('span', { className: 'tab-settings-icon' }, '⚙️'),
+                        renderNavIcon('settings'),
                         React.createElement('span', null, 'Настройки')
+                    ),
+                    React.createElement(
+                        'div',
+                        {
+                            className: 'tab-settings-item tab-settings-item--advice',
+                            onClick: () => {
+                                setSettingsMenuOpen(false);
+                                setTimeout(() => window.dispatchEvent(new CustomEvent('heysShowAdvice')), 0);
+                            }
+                        },
+                        renderNavIcon('advice'),
+                        React.createElement('span', null, 'Советы'),
+                        React.createElement('span', { className: 'tab-advice-badge', id: 'nav-advice-badge' }),
+                    ),
+                    canUseTasksAsHome && React.createElement(
+                        'div',
+                        {
+                            className: 'tab-settings-item',
+                            onClick: () => {
+                                setSettingsMenuOpen(false);
+                                switchTabWithUndoCommit('tasks', 'tab-settings-tasks-switch');
+                            }
+                        },
+                        renderNavIcon('tasks'),
+                        React.createElement('span', null, 'Задачи')
+                    ),
+                    canUseBoardAsHome && React.createElement(
+                        'div',
+                        {
+                            className: 'tab-settings-item',
+                            onClick: () => {
+                                setSettingsMenuOpen(false);
+                                switchTabWithUndoCommit('board', 'tab-settings-board-switch');
+                            }
+                        },
+                        renderNavIcon('board'),
+                        React.createElement('span', null, 'Доска')
                     ),
                     React.createElement(
                         'div',
@@ -4714,7 +4683,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                 switchTabWithUndoCommit('ration', 'tab-settings-ration-switch');
                             }
                         },
-                        React.createElement('span', { className: 'tab-settings-icon' }, '📦'),
+                        renderNavIcon('products'),
                         React.createElement('span', null, 'Список продуктов')
                     ),
                     React.createElement(
@@ -4748,7 +4717,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                         'aria-pressed': defaultTab === option.key,
                                         title: `Сделать домашней вкладкой: ${option.label}`,
                                     },
-                                        React.createElement('span', { className: 'widgets-home-tab-picker__option-icon' }, option.icon),
+                                        React.createElement('span', { className: 'widgets-home-tab-picker__option-icon' },
+                                            option.iconName ? renderNavIcon(option.iconName) : null
+                                        ),
                                         React.createElement('span', { className: 'widgets-home-tab-picker__option-label' }, option.label),
                                         defaultTab === option.key && React.createElement('span', {
                                             className: 'widgets-home-tab-picker__option-badge',

@@ -7,9 +7,8 @@
 
     const useSwipeNavigation = ({ React, tab, setTab }) => {
         // === SWIPE NAVIGATION ===
-        // Свайп работает между 4 вкладками по кругу: Отчёты → Дневник → Виджеты → Задачи → Отчёты
-        // widgets исключаются из свайпа когда editMode активен (drag & drop)
-        const SWIPEABLE_TABS = ['stats', 'diary', 'widgets', 'tasks'];
+        // Свайп между пятью основными вкладками по кругу: Главная → Питание → Актив → Отчёты → Инсайты
+        const SWIPEABLE_TABS = ['widgets', 'diary', 'activity', 'stats', 'insights'];
         const touchRef = React.useRef({ startX: 0, startY: 0, startTime: 0 });
         const slideTimerRef = React.useRef(0);
         const MIN_SWIPE_DISTANCE = 60;
@@ -25,7 +24,7 @@
         const onTouchStart = React.useCallback((e) => {
             // Игнорируем свайпы на интерактивных элементах, модалках, слайдерах и тостах
             const target = e.target;
-            if (target.closest('input, textarea, select, button, .swipeable-container, table, .tab-switch-group, .advice-list-overlay, .macro-toast, .no-swipe-zone, .goal-map-screen, [data-no-app-swipe], [type="range"]')) {
+            if (target.closest('input, textarea, select, button, .swipeable-container, table, .tab-switch-group, .tab-primary-nav-row, .advice-list-overlay, .macro-toast, .no-swipe-zone, .goal-map-screen, [data-no-app-swipe], [type="range"]')) {
                 return;
             }
             // Защита от конфликта свайпа и drag & drop в режиме редактирования виджетов
@@ -59,7 +58,7 @@
             if (Math.abs(deltaY) > Math.abs(deltaX) * 0.7) return; // Более мягкое условие
             if (Math.abs(deltaX) < MIN_SWIPE_DISTANCE) return;
 
-            // Свайп работает между 4 вкладками по кругу: Отчёты → Дневник → Виджеты → Задачи
+            // Свайп между пятью основными вкладками по кругу
             const currentIndex = SWIPEABLE_TABS.indexOf(tab);
 
             // Если текущая вкладка не в свайпабельных — игнорируем

@@ -1271,43 +1271,10 @@
                 className: 'game-bar',
                 onClick: toggleExpanded
             },
-                // Level (компактно)
-                // Всегда рендерим text — только меняем opacity/visibility, без layout shift
-                React.createElement('div', {
-                    className: `game-level-group${levelGuardActive ? ' is-syncing' : ''}`,
-                    style: { color: levelGuardActive ? 'rgba(255,255,255,0.5)' : title.color }
-                },
-                    // Маленький dot-индикатор (absolute, не меняет размер group)
-                    React.createElement('span', { className: 'game-level-sync-dot' }),
-                    // Level text — всегда в DOM; skeleton-текст во время guard
-                    React.createElement('span', { className: 'game-level-text' },
-                        levelGuardActive ? '· · ·' : `${title.icon} ${stats.level}`
-                    ),
-                    // Level Roadmap Tooltip — все звания
-                    HEYS.game && HEYS.game.getAllTitles && !levelGuardActive && React.createElement('div', {
-                        className: 'game-level-roadmap'
-                    },
-                        React.createElement('div', { className: 'roadmap-title' }, '🎮 Путь развития'),
-                        HEYS.game.getAllTitles().map((t, i) => {
-                            const isCurrent = stats.level >= t.min && stats.level <= t.max;
-                            const isAchieved = stats.level > t.max;
-                            const isFuture = stats.level < t.min;
-                            return React.createElement('div', {
-                                key: i,
-                                className: `roadmap-item ${isCurrent ? 'current' : ''} ${isAchieved ? 'achieved' : ''} ${isFuture ? 'future' : ''}`
-                            },
-                                React.createElement('span', { className: 'roadmap-icon' }, t.icon),
-                                React.createElement('span', { className: 'roadmap-name' }, t.title),
-                                React.createElement('span', {
-                                    className: 'roadmap-levels',
-                                    style: { color: t.color }
-                                }, `ур.${t.min}-${t.max}`),
-                                isCurrent && React.createElement('span', { className: 'roadmap-you' }, '← ты'),
-                                isAchieved && React.createElement('span', { className: 'roadmap-check' }, '✓')
-                            );
-                        })
-                    )
-                ),
+                // Level number — компактно, без эмодзи звания (v4 mockup)
+                React.createElement('span', {
+                    className: `game-level-number${levelGuardActive ? ' is-syncing' : ''}`,
+                }, levelGuardActive ? '· · ·' : String(stats.level)),
 
                 // Progress bar
                 React.createElement('div', {
@@ -1345,103 +1312,32 @@
                     )
                 ),
 
-                // ═══ Правая часть бара: слоты ВСЕГДА в DOM, плавная анимация при загрузке ═══
-                // Обёрнуты в game-bar-slots — резервирует место, opacity 0→1 через CSS transition
+                // Rank title — видимый текст между полосой и иконками
+                React.createElement('span', {
+                    className: `game-rank-title${levelGuardActive ? ' is-syncing' : ''}`,
+                    title: title?.title || '',
+                }, levelGuardActive ? '' : (title?.title || '')),
+
+                // Правая часть: push-slot + сообщения; streak/expand/theme убраны из компактной рамы v4
                 React.createElement('div', {
-                    className: `game-bar-slots${levelGuardActive ? ' is-loading' : ' is-loaded'}`
+                    className: `game-bar-slots game-bar-slots--compact${levelGuardActive ? ' is-loading' : ' is-loaded'}`
                 },
-                    // Daily Multiplier
-                    dailyMultiplier.actions > 0 && React.createElement('span', {
-                        className: `game-daily-mult ${dailyMultiplier.multiplier >= 2 ? 'high' : dailyMultiplier.multiplier > 1 ? 'active' : ''}`,
-                        title: dailyMultiplier.nextThreshold
-                            ? `${dailyMultiplier.actions} действий сегодня. Ещё ${dailyMultiplier.nextThreshold - dailyMultiplier.actions} до ${dailyMultiplier.nextMultiplier}x!`
-                            : `${dailyMultiplier.actions} действий сегодня. Максимальный бонус!`
-                    },
-                        dailyMultiplier.multiplier > 1
-                            ? React.createElement('span', { className: 'game-daily-mult-value' }, `${dailyMultiplier.multiplier}x`)
-                            : `⚡${dailyMultiplier.actions}`
-                    ),
+                    React.createElement('span', { id: 'push-badge-slot', className: 'gamification-push-slot', key: 'push-slot' }),
 
-                    // Streak
-                    streak > 0 && React.createElement('span', {
-                        className: `game-streak ${getStreakClass(streak)}${streakJustGrew ? ' just-grew' : ''}`,
-                        title: safeGetStreakDetails().yesterdayForgiven
-                            ? `${streak} дней подряд — вчера пропуск, серия сохранена. Второй пропуск её прервёт`
-                            : `${streak} дней подряд в норме (считаем только завершённые дни)`
-                    },
-                        React.createElement('span', {
-                            className: `game-streak__flame ${getStreakFlameClass(streak)}`
-                        }, '🔥'),
-                        React.createElement('span', { className: 'game-streak__count' }, streak)
-                    ),
-
-                    // Personal Best
-                    HEYS.game && HEYS.game.isNewStreakRecord() && streak > 0 && React.createElement('span', {
-                        className: `game-personal-best${personalBestPulse ? ' pulse' : ''}`,
-                        title: 'Новый рекорд streak!'
-                    }, '🏆'),
-
-                    // Daily Bonus
-                    dailyBonusAvailable && React.createElement('button', {
-                        className: 'game-daily-bonus',
-                        onClick: async (e) => {
+                    HEYS.Messenger?.openModal && React.createElement('button', {
+                        className: 'hdr-header-icon-btn hdr-header-icon-btn--messenger',
+                        onClick: (e) => {
                             e.stopPropagation();
-                            if (!HEYS.game || dailyBonusLoading) return;
-                            setDailyBonusLoading(true);
-                            try {
-                                const claimed = await HEYS.game.claimDailyBonus();
-                                if (claimed) {
-                                    setDailyBonusAvailable(false);
-                                    return;
-                                }
-                                setDailyBonusAvailable(HEYS.game.canClaimDailyBonus());
-                            } finally {
-                                setDailyBonusLoading(false);
-                            }
+                            HEYS.Messenger.openModal();
                         },
-                        title: 'Забрать ежедневный бонус!'
-                    }, '🎁'),
-
-                ),
-
-                // Expand button — всегда виден
-                React.createElement('button', {
-                    className: `game-expand-btn ${expanded ? 'expanded' : ''} ${notifPulse ? 'has-notif' : ''}`,
-                    title: expanded ? 'Свернуть' : 'Подробнее'
-                }, expanded ? '▲' : '▼'),
-
-                // Slot для push-уведомлений (рендерится через Portal из heys_app_shell_v1.js)
-                React.createElement('span', { id: 'push-badge-slot', className: 'gamification-push-slot', key: 'push-slot' }),
-
-                // Theme toggle button — всегда виден
-                React.createElement('button', {
-                    className: 'hdr-theme-btn',
-                    onClick: (e) => {
-                        e.stopPropagation();
-                        if (HEYS.cycleTheme) {
-                            HEYS.cycleTheme();
-                            return;
-                        }
-                        const html = document.documentElement;
-                        const current = html.getAttribute('data-theme') || 'light';
-                        const next = current === 'dark' ? 'light' : 'dark';
-                        html.setAttribute('data-theme', next);
-                        const U = window.HEYS?.utils || {};
-                        localStorage.setItem('heys_theme_pref', next);
-                        localStorage.setItem('heys_theme_explicit', '1');
-                        localStorage.setItem('heys_theme', next);
-                        if (U.lsSet) {
-                            U.lsSet('heys_theme_pref', next);
-                            U.lsSet('heys_theme_explicit', '1');
-                            U.lsSet('heys_theme', next);
-                        } else {
-                            localStorage.setItem('heys_theme_pref', next);
-                            localStorage.setItem('heys_theme_explicit', '1');
-                            localStorage.setItem('heys_theme', next);
-                        }
+                        title: 'Сообщения',
+                        type: 'button',
                     },
-                    title: 'Сменить тему'
-                }, document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙')
+                        HEYS.AppNavIcons?.NavIcon
+                            ? React.createElement(HEYS.AppNavIcons.NavIcon, { name: 'chat', size: 15 })
+                            : React.createElement('span', { 'aria-hidden': 'true' }, '💬')
+                    ),
+                ),
             ),
 
             // Notification (level up / achievement / streak_shield)

@@ -173,6 +173,7 @@ export const LEGACY_BUNDLES = {
         'heys_tab_prefetch_v1.js',
         'heys_early_warning_panel_v1.js',
         'heys_gamification_bar_v1.js',
+        'heys_app_nav_icons_v1.js',
         'heys_app_gates_v1.js',
         'heys_client_diagnostics_v1.js',
         'heys_leaderboard_v1.js',
