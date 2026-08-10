@@ -434,7 +434,7 @@ body.planning-game-reader-open {
   height: 58px;
   place-items: center;
   border-radius: 18px;
-  background: #e2ecf2;
+  background: var(--v4-accent-bg, #e2ecf2);
   color: #434587;
   font-weight: 850;
   animation: planning-game-tile 900ms ease-in-out infinite alternate;
@@ -454,7 +454,7 @@ body.planning-game-reader-open {
 
 .planning-game-loader--robot-route .planning-game-loader__art span {
   border-radius: 12px;
-  background: #e2ecf2;
+  background: var(--v4-accent-bg, #e2ecf2);
 }
 
 .planning-game-loader--robot-route .planning-game-loader__art i {
@@ -482,7 +482,7 @@ body.planning-game-reader-open {
 .planning-game-loader--assemble-day .planning-game-loader__art span {
   width: 24px;
   border-radius: 12px 12px 5px 5px;
-  background: #dfe4ef;
+  background: var(--v4-accent-bg, #dfe4ef);
   animation: planning-game-tile 900ms ease-in-out infinite alternate;
 }
 

@@ -3236,7 +3236,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-duration__target-input.is-saved {
-    background-color: #dcfce7;
+    background-color: var(--v4-ok-bg, #dcfce7);
     border-color: var(--v4-ok-fill, #22c55e);
 }
 

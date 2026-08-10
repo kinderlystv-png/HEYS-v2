@@ -34,7 +34,7 @@
   padding: 0 14px;
   border: 1px solid var(--ad-line);
   border-radius: 18px;
-  background: color-mix(in srgb, #f8f7f4 92%, transparent);
+  background: color-mix(in srgb, var(--v4-hero, #f8f7f4) 92%, transparent);
   color: var(--ad-muted);
   font: inherit;
   font-size: 13px;
@@ -52,7 +52,7 @@
   padding: 4px;
   border: 1px solid var(--ad-line);
   border-radius: 18px;
-  background: color-mix(in srgb, #f8f7f4 92%, transparent);
+  background: color-mix(in srgb, var(--v4-hero, #f8f7f4) 92%, transparent);
   box-shadow: 0 8px 28px rgba(40, 42, 71, 0.08);
   backdrop-filter: blur(16px);
 }
@@ -502,7 +502,7 @@
 
 :is(body.dark, [data-theme="dark"]) .assemble-day-tabs { background: rgba(23, 23, 34, 0.92); }
 :is(body.dark, [data-theme="dark"]) .assemble-day-restart { background: rgba(23, 23, 34, 0.92); color: var(--ad-muted); }
-:is(body.dark, [data-theme="dark"]) .assemble-day-option { background: #242431; color: var(--ad-ink); }
-:is(body.dark, [data-theme="dark"]) .assemble-day-format { background: #242431; color: var(--ad-ink); }
+:is(body.dark, [data-theme="dark"]) .assemble-day-option { background: var(--v4-surface, #242431); color: var(--ad-ink); }
+:is(body.dark, [data-theme="dark"]) .assemble-day-format { background: var(--v4-surface, #242431); color: var(--ad-ink); }
 :is(body.dark, [data-theme="dark"]) .assemble-day-rule,
-:is(body.dark, [data-theme="dark"]) .assemble-day-goals button { background: #242431; color: var(--ad-ink); }
+:is(body.dark, [data-theme="dark"]) .assemble-day-goals button { background: var(--v4-surface, #242431); color: var(--ad-ink); }

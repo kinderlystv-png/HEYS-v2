@@ -398,12 +398,12 @@ body.planning-goal-map-open {
 .goal-map-node--result {
     border: 0;
     clip-path: polygon(12% 0, 100% 0, 88% 100%, 0 100%);
-    background: #eaf3fb;
+    background: var(--v4-accent-bg, #eaf3fb);
     box-shadow: inset 0 0 0 2px #7ba6ca, 0 8px 22px rgba(34, 46, 66, 0.09);
 }
 
 [data-theme="dark"] .goal-map-node--result {
-    background: #20394b;
+    background: var(--v4-accent-bg, #20394b);
     box-shadow: inset 0 0 0 2px #6894b5, 0 8px 22px rgba(0, 0, 0, 0.25);
 }
 
@@ -415,7 +415,7 @@ body.planning-goal-map-open {
     padding: 18px;
     border-color: #579173;
     border-radius: 50%;
-    background: #edf7f1;
+    background: var(--v4-ok-bg, #edf7f1);
 }
 
 [data-theme="dark"] .goal-map-node--milestone {

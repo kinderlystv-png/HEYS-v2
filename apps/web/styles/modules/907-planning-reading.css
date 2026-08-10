@@ -209,7 +209,7 @@ body.reading-reader-open { overflow: hidden; }
 .reading-reader__palette-option > span { width: 30px; height: 16px; border: 1px solid rgba(37, 37, 53, .18); border-radius: 5px; }
 .reading-reader__palette-option--yellow > span { background: #f6d977; }
 .reading-reader__palette-option--mint > span { background: #cfe8d6; }
-.reading-reader__palette-option--blue > span { background: #cfe4f1; }
+.reading-reader__palette-option--blue > span { background: var(--v4-accent-bg, #cfe4f1); }
 .reading-reader__palette-option--rose > span { background: #f0d1da; }
 .reading-reader__palette-option[aria-checked="true"] { border-color: var(--reader-brand); background: var(--reader-soft); }
 .reading-reader__palette-option b { position: absolute; right: 3px; bottom: 1px; color: var(--reader-brand); font-size: 11px; }

@@ -34,7 +34,7 @@
   font-weight: 600;
   line-height: 0.9;
   letter-spacing: -0.045em;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-variant-numeric: tabular-nums;
 }
 
@@ -120,7 +120,7 @@
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-variant-numeric: tabular-nums;
 }
 
@@ -203,7 +203,7 @@
 
 .activity-v4-row__value {
   flex: none;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
@@ -244,7 +244,7 @@
 
 [data-palette="blue"] .activity-v4-cta,
 [data-palette="blue-dark"] .activity-v4-cta {
-  color: #ffffff;
+  color: var(--v4-ink, #ffffff);
 }
 
 .activity-v4-cta__icon {
@@ -284,7 +284,7 @@
 }
 
 .activity-v4-history__month-value {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-variant-numeric: tabular-nums;
 }
 
@@ -317,7 +317,7 @@
 }
 
 .activity-v4-cardio__toggle-value {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-variant-numeric: tabular-nums;
 }
 
@@ -352,7 +352,7 @@
   padding: 8px 8px 12px;
   font-size: 13px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .activity-v4-sheet__btn {
@@ -367,7 +367,7 @@
   background: var(--v4-hero, #f8fafc);
   font-size: 14px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   cursor: pointer;
   text-align: left;
 }

@@ -76,7 +76,7 @@
 .yv-subtitle {
   font-size: 16px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   text-align: center;
 }
 
@@ -154,12 +154,12 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: #166534;
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
 }
 
 .yv-day-meta {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .yv-day-estimate {
@@ -190,14 +190,14 @@
 
 @media (hover: hover) {
   .yv-day-action-btn:hover {
-  background: #eef2ff;
+  background: var(--v4-accent-bg, #eef2ff);
   border-color: #93c5fd;
 }
 }
 
 .yv-day-action-btn--ghost {
   background: transparent;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .yv-day-editor {
@@ -218,7 +218,7 @@
 
 .yv-day-editor-subtitle {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   line-height: 1.45;
 }
 
@@ -275,7 +275,7 @@
 
 .yv-preset-desc {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   line-height: 1.4;
 }
 
@@ -323,7 +323,7 @@
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  background: #f9fafb;
+  background: var(--v4-hero, #f9fafb);
   border: 2px solid var(--v4-line, #e5e7eb);
   border-radius: 12px;
   cursor: pointer;
@@ -336,7 +336,7 @@
 
 @media (hover: hover) {
   .yv-option:hover {
-  background: #f3f4f6;
+  background: var(--v4-hero, #f3f4f6);
   border-color: #d1d5db;
   transform: translateY(-1px);
 }
@@ -375,7 +375,7 @@
 
 .yv-option-desc {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .yv-option-recommended {
@@ -388,7 +388,7 @@
   font-size: 11px;
   font-weight: 700;
   color: #166534;
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   border: 1px solid #86efac;
 }
 
@@ -404,7 +404,7 @@
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   background: transparent;
   border: 1px solid var(--v4-line, #e5e7eb);
   border-radius: 8px;
@@ -414,7 +414,7 @@
 
 @media (hover: hover) {
   .yv-back:hover {
-  background: #f3f4f6;
+  background: var(--v4-hero, #f3f4f6);
   border-color: #d1d5db;
   color: #374151;
 }
@@ -423,10 +423,10 @@
 /* Подсказка */
 .yv-hint {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   text-align: center;
   padding: 12px 16px;
-  background: #f9fafb;
+  background: var(--v4-hero, #f9fafb);
   border-radius: 10px;
 }
 

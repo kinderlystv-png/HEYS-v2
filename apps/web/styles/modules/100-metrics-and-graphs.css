@@ -818,7 +818,7 @@
 }
 
 .sparkline-popup-v2 .sparkline-popup-compare.up {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: #166534;
 }
 
@@ -858,7 +858,7 @@
 }
 
 .sparkline-popup-v2 .sparkline-popup-tag-v2.good {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: var(--success-dark);
 }
 
@@ -1068,7 +1068,7 @@
 
 .tdee-divider {
   height: 1px;
-  background: #e2e8f0;
+  background: var(--v4-accent-bg, #e2e8f0);
   margin: 4px 0;
 }
 
@@ -1115,7 +1115,7 @@
 }
 
 .sparkline-popup-header .popup-pct.good {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: var(--success-dark);
 }
 
@@ -1172,7 +1172,7 @@
 }
 
 .sparkline-popup-tag.good {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: var(--success-dark);
 }
 
@@ -1857,7 +1857,7 @@
 }
 
 .sparkline-slider-tooltip-ratio.ratio-ok {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: var(--success-dark);
 }
 
@@ -1906,7 +1906,7 @@
 }
 
 .sparkline-slider-tooltip-tag.good {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: var(--success-dark);
 }
 
@@ -2914,7 +2914,7 @@
 }
 
 [data-theme="dark"] .week-heatmap-title {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .week-heatmap-action-wrap,
@@ -4397,7 +4397,7 @@
 }
 
 .weight-forecast-badge.down {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: #15803d;
 }
 
@@ -4475,7 +4475,7 @@
 /* Персональный инсайт */
 .weight-retention-insight {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   font-style: italic;
 }
 
@@ -4843,7 +4843,7 @@
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.3px;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .goal-progress-title-group {
@@ -5219,12 +5219,12 @@
 
 /* Training badge — nutrition priority */
 .context-badge-training {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: #166534;
 }
 
 .context-badge-training.strength {
-  background: #e0e7ff;
+  background: var(--v4-accent-bg, #e0e7ff);
   color: #3730a3;
 }
 
@@ -5770,7 +5770,7 @@
 }
 
 .macro-badge-popup-compare.up {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: #166534;
 }
 
@@ -5971,7 +5971,7 @@
 }
 
 .metric-popup-compare.up {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: #166534;
 }
 
@@ -7312,7 +7312,7 @@
 }
 
 .training-zone-header.zone-color-2 {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: var(--success-dark);
 }
 

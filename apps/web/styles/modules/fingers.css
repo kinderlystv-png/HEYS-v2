@@ -952,7 +952,7 @@
 [data-theme="dark"] .fingers-fs-constructor-card .fingers-fs-weight-btn {
   background: linear-gradient(180deg, rgba(44,44,50,0.95), rgba(32,32,38,0.92)) !important;
   border-color: rgba(255, 255, 255, 0.10) !important;
-  color: #f9fafb !important;
+  color: var(--v4-ink, #f9fafb) !important;
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.4),
     0 3px 8px rgba(0, 0, 0, 0.30),
@@ -1401,7 +1401,7 @@
 }
 .fingers-fs-equipment-tab.is-active {
   background: linear-gradient(180deg, #ffffff, #f7f8fb);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-weight: 700;
   /* Аккуратная фиолетовая рамка под цвет чекбокса (ring через box-shadow —
      без сдвига layout). */
@@ -1418,7 +1418,7 @@
 [data-theme="dark"] .fingers-fs-equipment-tab { color: rgba(235, 235, 245, 0.65); }
 [data-theme="dark"] .fingers-fs-equipment-tab.is-active {
   background: linear-gradient(180deg, #2a2a31, #1f1f25);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.5),
     0 4px 12px rgba(0, 0, 0, 0.35),
@@ -1527,7 +1527,7 @@
   letter-spacing: -0.005em;
   color: var(--fingers-text, #0f172a);
 }
-[data-theme="dark"] .fingers-fs-equipment-board__option-label { color: #f9fafb; }
+[data-theme="dark"] .fingers-fs-equipment-board__option-label { color: var(--v4-ink, #f9fafb); }
 .fingers-fs-equipment-board__option-sub {
   font-size: 11.5px;
   color: rgba(60, 60, 67, 0.55);
@@ -1738,7 +1738,7 @@
   font-variant-numeric: tabular-nums;
   color: var(--fingers-text, #0f172a);
 }
-[data-theme="dark"] .fingers-fs-summary__metric-value { color: #f9fafb; }
+[data-theme="dark"] .fingers-fs-summary__metric-value { color: var(--v4-ink, #f9fafb); }
 .fingers-fs-summary__metric-label {
   font-size: 11px;
   font-weight: 500;
@@ -1994,7 +1994,7 @@
 }
 [data-theme="dark"] .fingers-settings__close {
   background: rgba(255, 255, 255, 0.06);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 @media (hover: hover) {
   [data-theme="dark"] .fingers-settings__close:hover { background: rgba(255, 255, 255, 0.12); }
@@ -2053,7 +2053,7 @@
   justify-content: space-between;
   gap: 10px;
 }
-[data-theme="dark"] .fingers-settings__row-label { color: #f9fafb; }
+[data-theme="dark"] .fingers-settings__row-label { color: var(--v4-ink, #f9fafb); }
 .fingers-settings__row-hint {
   margin-top: 2px;
   font-size: 12px;
@@ -2176,7 +2176,7 @@
 [data-theme="dark"] .fingers-registry__close,
 [data-theme="dark"] .fingers-registry-detail__close {
   background: rgba(255, 255, 255, 0.07);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 @media (hover: hover) {
   [data-theme="dark"] .fingers-registry__close:hover,
@@ -2221,7 +2221,7 @@
 [data-theme="dark"] .fingers-registry__search-input {
   background: rgba(255, 255, 255, 0.07);
   border-color: rgba(255, 255, 255, 0.10);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 .fingers-registry__block-tabs {
   display: flex;
@@ -2317,7 +2317,7 @@
 [data-theme="dark"] .fingers-registry-card {
   background: rgba(255, 255, 255, 0.055);
   border-color: rgba(255, 255, 255, 0.08);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 .fingers-registry-card__photo {
   display: block;
@@ -2412,7 +2412,7 @@
   line-height: 1.22;
   color: var(--fingers-text, #0f172a);
 }
-[data-theme="dark"] .fingers-registry-card__name { color: #f9fafb; }
+[data-theme="dark"] .fingers-registry-card__name { color: var(--v4-ink, #f9fafb); }
 .fingers-registry-card__meta {
   font-size: 11.5px;
   color: rgba(60, 60, 67, 0.64);
@@ -2572,7 +2572,7 @@
   background: rgba(255, 255, 255, 0.055);
   border-color: rgba(255, 255, 255, 0.08);
 }
-[data-theme="dark"] .fingers-registry-selected-card__name { color: #f9fafb; }
+[data-theme="dark"] .fingers-registry-selected-card__name { color: var(--v4-ink, #f9fafb); }
 [data-theme="dark"] .fingers-registry-selected-card__eyebrow,
 [data-theme="dark"] .fingers-registry-selected-card__meta {
   color: rgba(235, 235, 245, 0.62);
@@ -2628,7 +2628,7 @@
   line-height: 1.48;
 }
 .fingers-registry-detail__section p + p { margin-top: 7px; }
-[data-theme="dark"] .fingers-registry-detail__section h4 { color: #f9fafb; }
+[data-theme="dark"] .fingers-registry-detail__section h4 { color: var(--v4-ink, #f9fafb); }
 [data-theme="dark"] .fingers-registry-detail__section p { color: rgba(235, 235, 245, 0.78); }
 .fingers-registry-detail__rows {
   display: flex;
@@ -2851,7 +2851,7 @@
 [data-theme="dark"] .fingers-settings__theme.is-active {
   background: linear-gradient(180deg, rgba(129, 140, 248, 0.14), rgba(129, 140, 248, 0.06));
 }
-[data-theme="dark"] .fingers-settings__theme-id { color: #f9fafb; }
+[data-theme="dark"] .fingers-settings__theme-id { color: var(--v4-ink, #f9fafb); }
 [data-theme="dark"] .fingers-settings__theme-label { color: rgba(235, 235, 245, 0.55); }
 
 /* Profile grid — compact info tiles */
@@ -2896,7 +2896,7 @@
   font-size: 13.5px;
 }
 [data-theme="dark"] .fingers-settings__profile-label { color: rgba(235, 235, 245, 0.50); }
-[data-theme="dark"] .fingers-settings__profile-value { color: #f9fafb; }
+[data-theme="dark"] .fingers-settings__profile-value { color: var(--v4-ink, #f9fafb); }
 [data-theme="dark"] .fingers-settings__profile-value.is-missing { color: #fcd34d; }
 .fingers-settings__level-row {
   display: flex;
@@ -2930,7 +2930,7 @@
 [data-theme="dark"] .fingers-settings__level-chip {
   background: rgba(40, 40, 46, 0.78);
   border-color: rgba(255, 255, 255, 0.08);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 [data-theme="dark"] .fingers-settings__level-chip.is-active {
   border-color: rgba(251, 146, 60, 0.46);
@@ -3097,7 +3097,7 @@
 }
 [data-theme="dark"] .fingers-bib-modal__close {
   background: rgba(255, 255, 255, 0.06);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 @media (hover: hover) {
   [data-theme="dark"] .fingers-bib-modal__close:hover { background: rgba(255, 255, 255, 0.12); }
@@ -3149,7 +3149,7 @@
 [data-theme="dark"] .fingers-bib-modal__search-input {
   background: rgba(40, 40, 46, 0.85);
   border-color: rgba(255, 255, 255, 0.10);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 
 .fingers-bib-modal__chips {
@@ -3194,7 +3194,7 @@
 [data-theme="dark"] .fingers-bib-modal__chip {
   background: rgba(40, 40, 46, 0.7);
   border-color: rgba(255, 255, 255, 0.08);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 
 /* Source list — scrollable */
@@ -3379,7 +3379,7 @@
   opacity: 0.7;
 }
 [data-theme="dark"] .fingers-bib-source__author { color: rgba(235, 235, 245, 0.65); }
-[data-theme="dark"] .fingers-bib-source__author strong { color: #f9fafb; }
+[data-theme="dark"] .fingers-bib-source__author strong { color: var(--v4-ink, #f9fafb); }
 .fingers-bib-source__title {
   margin: 0;
   font-size: 14.5px;
@@ -3388,7 +3388,7 @@
   line-height: 1.35;
   color: var(--fingers-text, #0f172a);
 }
-[data-theme="dark"] .fingers-bib-source__title { color: #f9fafb; }
+[data-theme="dark"] .fingers-bib-source__title { color: var(--v4-ink, #f9fafb); }
 .fingers-bib-source__chevron {
   flex-shrink: 0;
   font-size: 11px;
@@ -3671,7 +3671,7 @@
 [data-theme="dark"] .fingers-mh-test__field input {
   background: rgba(40, 40, 46, 0.85);
   border-color: rgba(255, 255, 255, 0.10);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 
 /* Сегмент выбора руки (both/left/right) для анализа L/R-асимметрии. */
@@ -3704,7 +3704,7 @@
 [data-theme="dark"] .fingers-mh-test__hand-btn {
   background: rgba(40, 40, 46, 0.85);
   border-color: rgba(255, 255, 255, 0.10);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 [data-theme="dark"] .fingers-mh-test__hand-btn[data-active="true"] {
   border-color: rgba(129, 140, 248, 0.55);
@@ -3748,7 +3748,7 @@
 }
 [data-theme="dark"] .fingers-mh-test__btn--cancel {
   background: rgba(255, 255, 255, 0.08);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 
 /* ── result stage ── */
@@ -3820,7 +3820,7 @@
 }
 .fingers-mh-test__result-explain strong { color: var(--fingers-text, #1f2937); font-weight: 700; }
 [data-theme="dark"] .fingers-mh-test__result-explain { color: rgba(235, 235, 245, 0.68); }
-[data-theme="dark"] .fingers-mh-test__result-explain strong { color: #f9fafb; }
+[data-theme="dark"] .fingers-mh-test__result-explain strong { color: var(--v4-ink, #f9fafb); }
 
 /* Suggestion block — gate message от calibration */
 .fingers-mh-test__result-msg-block {
@@ -3886,7 +3886,7 @@
   .fingers-mh-test__close:hover { filter: brightness(1.05); }
 }
 .fingers-mh-test__close:active { transform: scale(0.98); }
-[data-theme="dark"] .fingers-mh-test__result-title { color: #f9fafb; }
+[data-theme="dark"] .fingers-mh-test__result-title { color: var(--v4-ink, #f9fafb); }
 [data-theme="dark"] .fingers-mh-test__result-mvc { color: rgba(235, 235, 245, 0.7); }
 [data-theme="dark"] .fingers-mh-test__result-mvc strong {
   background: linear-gradient(135deg, #f9fafb, #cbd5e1);
@@ -4386,7 +4386,7 @@
 }
 [data-fingers-theme] .fingers-fs-tab--active {
   background: linear-gradient(180deg, #ffffff 0%, #f7f8fb 100%);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-weight: 600;
   box-shadow:
     0 1px 1px rgba(0, 0, 0, 0.04),
@@ -4409,7 +4409,7 @@
 [data-theme="dark"][data-fingers-theme] .fingers-fs-tab--active,
 [data-theme="dark"] [data-fingers-theme] .fingers-fs-tab--active {
   background: linear-gradient(180deg, #2a2a31 0%, #1f1f25 100%);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.5),
     0 4px 12px rgba(0, 0, 0, 0.35),
@@ -5004,7 +5004,7 @@
 }
 [data-fingers-theme] .fingers-fs-scope-toggle__btn.is-active {
   background: linear-gradient(180deg, #ffffff 0%, #f7f8fb 100%);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   box-shadow:
     0 1px 1px rgba(0, 0, 0, 0.04),
     0 3px 8px rgba(15, 23, 42, 0.08),
@@ -5028,7 +5028,7 @@
 [data-theme="dark"][data-fingers-theme] .fingers-fs-scope-toggle__btn.is-active,
 [data-theme="dark"] [data-fingers-theme] .fingers-fs-scope-toggle__btn.is-active {
   background: linear-gradient(180deg, #2a2a31 0%, #1f1f25 100%);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 
 /* Mix trace modal — окно с разбором логики сборки микс-тренировки. */
@@ -5204,7 +5204,7 @@
 /* Dark theme */
 [data-theme="dark"][data-fingers-theme] .fingers-fs-trace__modal,
 [data-theme="dark"] [data-fingers-theme] .fingers-fs-trace__modal {
-  background: #1c1d22;
+  background: var(--v4-bg, #1c1d22);
   border-color: rgba(255, 255, 255, 0.08);
 }
 [data-theme="dark"][data-fingers-theme] .fingers-fs-trace__topbar,
@@ -5760,7 +5760,7 @@
 }
 [data-theme="dark"][data-fingers-theme] .fingers-fs-intensity-filter__chip.is-active,
 [data-theme="dark"] [data-fingers-theme] .fingers-fs-intensity-filter__chip.is-active {
-  color: #fff;
+  color: var(--v4-ink, #fff);
 }
 
 /* ---- last-done chip: "Сделал N дней назад" / "ещё не пробовал" ---- */
@@ -5916,7 +5916,7 @@
   transition: color 180ms ease, stroke-width 180ms ease, filter 200ms ease;
 }
 [data-fingers-theme] .fingers-fs-tab--active .fingers-fs-tab__svg {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   stroke-width: 1.85;
   filter: drop-shadow(0 1px 2px rgba(99, 102, 241, 0.28));
 }
@@ -5931,7 +5931,7 @@
 }
 [data-theme="dark"][data-fingers-theme] .fingers-fs-tab--active .fingers-fs-tab__svg,
 [data-theme="dark"] [data-fingers-theme] .fingers-fs-tab--active .fingers-fs-tab__svg {
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
   filter: drop-shadow(0 1px 3px rgba(129, 140, 248, 0.40));
 }
 [data-fingers-theme] .fingers-fs-tab__label {
@@ -6278,7 +6278,7 @@
   color: var(--fingers-text, #0f172a);
 }
 [data-theme="dark"] .fingers-voice-mini__btn svg {
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 
 /* Inline вариант (в шапке WarmupRunner) — компактный 36px */
@@ -6302,7 +6302,7 @@
 [data-theme="dark"] .fingers-voice-mini__btn {
   background: rgba(40, 40, 46, 0.75);
   border-color: rgba(255, 255, 255, 0.1);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
@@ -6329,12 +6329,12 @@
   flex-direction: column;
   gap: 12px;
   animation: fingers-voice-pop-in 200ms cubic-bezier(0.2, 1, 0.4, 1);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 [data-theme="dark"] .fingers-voice-mini__pop {
   background: rgba(28, 28, 32, 0.96);
   border-color: rgba(255, 255, 255, 0.10);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.5),
     0 14px 36px rgba(0, 0, 0, 0.5),
@@ -7840,7 +7840,7 @@
 }
 
 [data-theme="dark"] .fingers-fs-live-roadmap__item.is-current {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
   background: rgba(248, 250, 252, 0.10);
   border-color: rgba(248, 250, 252, 0.25);
   box-shadow:
@@ -8247,7 +8247,7 @@
 [data-theme="dark"] .heys-fingers-countdown__btn {
   background: rgba(40, 40, 46, 0.78);
   border-color: rgba(255, 255, 255, 0.1);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
@@ -8379,7 +8379,7 @@
 }
 [data-theme="dark"] .fingers-grip-picker__close {
   background: rgba(255, 255, 255, 0.06);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 @media (hover: hover) {
   [data-theme="dark"] .fingers-grip-picker__close:hover { background: rgba(255, 255, 255, 0.12); }
@@ -8445,7 +8445,7 @@
 [data-theme="dark"] .fingers-grip-picker__chip {
   background: rgba(40, 40, 46, 0.7);
   border-color: rgba(255, 255, 255, 0.08);
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 [data-theme="dark"] .fingers-grip-picker__chip-count {
   background: rgba(255, 255, 255, 0.10);
@@ -8577,13 +8577,13 @@
   font-weight: 700 !important;
   letter-spacing: -0.01em;
   line-height: 1.3 !important;
-  color: #0f172a !important; /* hard-coded чтобы var() мимо контекста не вырубил */
+  color: var(--v4-ink, #0f172a) !important; /* hard-coded чтобы var() мимо контекста не вырубил */
   text-align: center !important;
   min-height: 34px;
   visibility: visible !important;
   opacity: 1 !important;
 }
-[data-theme="dark"] .fingers-grip-tile__name { color: #f9fafb !important; }
+[data-theme="dark"] .fingers-grip-tile__name { color: var(--v4-ink, #f9fafb) !important; }
 
 .fingers-grip-tile__meta {
   display: block !important;
@@ -8602,7 +8602,7 @@
 }
 /* a2 — нейтральный мягкий, не конкурирует с danger */
 .fingers-grip-tile__a2 {
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 [data-theme="dark"] .fingers-grip-tile__a2 { color: #cbd5e1; }
 /* danger — окрашен в цвет уровня риска */

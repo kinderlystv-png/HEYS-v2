@@ -30,7 +30,7 @@
 }
 
 .status-trend-badge--up {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: var(--v4-ok-text, #16a34a);
 }
 
@@ -2887,7 +2887,7 @@
 }
 
 .adv-analytics-card__confidence-mini--excellent {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: var(--v4-ok-text, #16a34a);
 }
 
@@ -3719,7 +3719,7 @@
 .adv-analytics__science-value {
   font-size: 20px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .dark .adv-analytics__science-value,
@@ -4848,7 +4848,7 @@
 [data-theme="dark"] .whatif-custom__field input[type="text"] {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.2);
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 .whatif-custom__field input[type="range"] {

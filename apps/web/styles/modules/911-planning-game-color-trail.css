@@ -240,7 +240,7 @@
 
 [data-theme="dark"] .planning-color-trail__stage {
     border-color: rgba(226, 236, 242, 0.12);
-    background: #1d2032;
+    background: var(--v4-surface, #1d2032);
 }
 
 [data-theme="dark"] .planning-color-trail__overlay {
@@ -270,7 +270,7 @@
 
     .planning-color-trail__stage {
         border-color: rgba(226, 236, 242, 0.12);
-        background: #1d2032;
+        background: var(--v4-surface, #1d2032);
     }
 
     .planning-color-trail__overlay {

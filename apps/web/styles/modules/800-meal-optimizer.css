@@ -167,7 +167,7 @@
 
 @media (hover: hover) {
   .meal-optimizer__item--info:hover {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
 }
 }
 

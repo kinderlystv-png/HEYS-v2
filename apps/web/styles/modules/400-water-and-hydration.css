@@ -1912,7 +1912,7 @@ body.planning-tab-active .fab-group {
 
 [data-theme="dark"] .water-weekly-label,
 [data-theme="dark"] .water-weekly-goal-meta {
-  color: #88a4b8;
+  color: var(--v4-ink-2, #88a4b8);
 }
 
 [data-theme="dark"] .water-weekly-chart-shell {
@@ -2053,7 +2053,7 @@ body.planning-tab-active .fab-group {
 .data-overview-table td {
   padding: 10px 6px;
   text-align: center;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--v4-line, #f3f4f6);
   min-width: 36px;
 }
 
@@ -2076,12 +2076,12 @@ body.planning-tab-active .fab-group {
 
 @media (hover: hover) {
   .data-overview-table tbody tr:hover {
-  background: #f9fafb;
+  background: var(--v4-hero, #f9fafb);
 }
 }
 
 .data-overview-table tbody tr:active {
-  background: #f3f4f6;
+  background: var(--v4-hero, #f3f4f6);
 }
 
 /* Cell states */
@@ -2140,25 +2140,25 @@ body.planning-tab-active .fab-group {
 
 /* Dark theme */
 [data-theme="dark"] .data-overview-title {
-  color: #f3f4f6;
+  color: var(--v4-ink, #f3f4f6);
 }
 
 [data-theme="dark"] .data-overview-total {
-  background: #064e3b;
+  background: var(--v4-ok-bg, #064e3b);
   color: #6ee7b7;
 }
 
 [data-theme="dark"] .data-overview-table th {
-  background: #1f2937;
-  border-color: #374151;
+  background: var(--v4-surface, #1f2937);
+  border-color: var(--v4-line, #374151);
 }
 
 [data-theme="dark"] .data-overview-table td {
-  border-color: #374151;
+  border-color: var(--v4-line, #374151);
 }
 
 [data-theme="dark"] .data-overview-table td:first-child {
-  background: #1f2937;
+  background: var(--v4-surface, #1f2937);
 }
 
 @media (hover: hover) {

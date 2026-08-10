@@ -133,7 +133,7 @@
 }
 
 .completeness-score--good {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: #166534;
 }
 
@@ -761,8 +761,8 @@
 
 @media (hover: hover) {
   .tour-btn-skip:hover {
-  color: #6b7280;
-  background: #f3f4f6;
+  color: var(--v4-ink-2, #6b7280);
+  background: var(--v4-hero, #f3f4f6);
 }
 }
 
@@ -865,7 +865,7 @@ body.tour-active .ios-pwa-banner {
   border: 1px solid rgba(191, 219, 254, 0.95);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.96);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
@@ -998,7 +998,7 @@ body.tour-active .ios-pwa-banner {
 
 .weekly-report-card--empty {
   text-align: center;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .weekly-report-card__header {
@@ -1059,7 +1059,7 @@ body.tour-active .ios-pwa-banner {
 
 .weekly-report-card__stat-label {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .weekly-report-card__sparkline {
@@ -1107,7 +1107,7 @@ body.tour-active .ios-pwa-banner {
 
 .weekly-wrap-step__range {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .weekly-wrap-step__nav {
@@ -1211,13 +1211,13 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-step__badge--current {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: #15803d;
   border: 1px solid #86efac;
 }
 
 .weekly-wrap-step__badge--excluded {
-  background: #f1f5f9;
+  background: var(--v4-hero, #f1f5f9);
   color: var(--v4-ink-2, #64748b);
   border: 1px solid #cbd5f5;
 }
@@ -1402,7 +1402,7 @@ body.tour-active .ios-pwa-banner {
 
 .weekly-wrap-step__stat-label {
   font-size: 10px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1550,7 +1550,7 @@ body.tour-active .ios-pwa-banner {
   border: none;
   border-radius: 14px;
   background: transparent;
-  color: #77799b;
+  color: var(--v4-ink-2, #77799b);
   font-size: 27px;
   font-weight: 400;
   line-height: 1;
@@ -1592,7 +1592,7 @@ body.tour-active .ios-pwa-banner {
 
 .meal-plate-guide__leaders path {
   fill: none;
-  stroke: #696b96;
+  stroke: var(--v4-ink-2, #696b96);
   stroke-width: 1.35;
   stroke-dasharray: 1 4;
   stroke-linecap: round;
@@ -2005,7 +2005,7 @@ body.tour-active .ios-pwa-banner {
   border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   border: 1px solid #86efac;
   color: #14532d;
   box-shadow: none;
@@ -2091,7 +2091,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 22px;
   font-weight: 800;
   line-height: 1.15;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .widgets-reset-confirm__body {
@@ -2131,7 +2131,7 @@ body.tour-active .ios-pwa-banner {
   margin-top: 4px;
   font-size: 13px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .widgets-reset-confirm__actions {
@@ -2180,7 +2180,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .widgets-reset-confirm__pill-value {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .confirm-modal-btn--custom {
@@ -2189,7 +2189,7 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .confirm-modal-btn--fill.confirm-modal-btn--warning {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 55%, #b45309 100%);
-  color: #ffffff;
+  color: var(--v4-ink, #ffffff);
 }
 
 @media (min-width: 640px) {
@@ -2268,7 +2268,7 @@ body.tour-active .ios-pwa-banner {
   flex-wrap: wrap;
   gap: 12px 16px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .weekly-wrap-step__meta-item {
@@ -2656,7 +2656,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 18px;
   font-weight: 800;
   line-height: 1.2;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .advice-diagnostics-modal__subtitle {
@@ -2707,7 +2707,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 28px;
   font-weight: 800;
   line-height: 1;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .advice-diagnostics-summary-card__score-label,
@@ -2733,7 +2733,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .advice-diagnostics-grade.is-strong {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: #15803d;
 }
 
@@ -2800,7 +2800,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 18px;
   font-weight: 800;
   line-height: 1.1;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .advice-diagnostics-section {
@@ -2848,7 +2848,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .advice-diagnostics-tag.is-muted {
-  background: #f1f5f9;
+  background: var(--v4-hero, #f1f5f9);
   color: #475569;
 }
 
@@ -2868,7 +2868,7 @@ body.tour-active .ios-pwa-banner {
 .advice-diagnostics-module-row__name {
   font-size: 14px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .advice-diagnostics-module-row__meta,
@@ -3181,7 +3181,7 @@ body.tour-active .ios-pwa-banner {
   border-radius: 14px;
   border: 1px solid rgba(203, 213, 225, 0.92);
   background: rgba(255, 255, 255, 0.92);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
@@ -3251,13 +3251,13 @@ body.tour-active .ios-pwa-banner {
 .widget-relapse-risk__dev-compare-label {
   font-size: 12px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .widget-relapse-risk__dev-compare-score {
   font-size: 18px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .widget-relapse-risk__dev-compare-meta {
@@ -3327,7 +3327,7 @@ body.tour-active .ios-pwa-banner {
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 4px;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-size: 12px;
 }
 
@@ -3412,7 +3412,7 @@ body.tour-active .ios-pwa-banner {
 
 .advice-expert-evidence__text.is-accent {
   font-weight: 600;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .advice-list-details__actions {
@@ -3526,7 +3526,7 @@ body.tour-active .ios-pwa-banner {
   margin-top: 8px;
   font-size: 16px;
   line-height: 1.5;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 [data-theme="dark"] .advice-diagnostics-modal {
@@ -3544,7 +3544,7 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .advice-diagnostics-stat-card__value,
 [data-theme="dark"] .advice-diagnostics-chip__value,
 [data-theme="dark"] .advice-diagnostics-module-row__name {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .advice-diagnostics-modal__subtitle,
@@ -3626,7 +3626,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .advice-expert-evidence__text.is-accent {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .advice-detail-modal__hero {
@@ -3640,7 +3640,7 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .advice-detail-modal__hero-text,
 [data-theme="dark"] .advice-detail-modal__description {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .advice-technical-trigger {
@@ -3780,7 +3780,7 @@ body.tour-active .ios-pwa-banner {
 .aps-portions-suggest-chip {
   font-size: 11px;
   padding: 4px 8px;
-  background: #ecfdf5;
+  background: var(--v4-ok-bg, #ecfdf5);
   border: 1px solid #bbf7d0;
   color: #059669;
   border-radius: 999px;
@@ -3792,7 +3792,7 @@ body.tour-active .ios-pwa-banner {
   padding: 6px 10px;
   border-radius: 8px;
   border: 1px solid #c7d2fe;
-  background: #eef2ff;
+  background: var(--v4-accent-bg, #eef2ff);
   color: #4338ca;
   font-size: 12px;
   font-weight: 600;
@@ -3847,7 +3847,7 @@ body.tour-active .ios-pwa-banner {
 
 .aps-portions-grams-unit {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .aps-portions-remove-btn {
@@ -3896,8 +3896,8 @@ body.tour-active .ios-pwa-banner {
 
 .aps-portions-skip-btn {
   border: 1px solid var(--v4-line, #e5e7eb);
-  background: #f9fafb;
-  color: #6b7280;
+  background: var(--v4-hero, #f9fafb);
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .aps-portions-next-btn {
@@ -4243,7 +4243,7 @@ body.tour-active .ios-pwa-banner {
 
 .pe-segment-btn.active {
   border-color: var(--v4-ok-fill, #22c55e);
-  background: #ecfdf5;
+  background: var(--v4-ok-bg, #ecfdf5);
   color: #047857;
 }
 
@@ -4281,7 +4281,7 @@ body.tour-active .ios-pwa-banner {
   color: #4b5563;
   padding: 8px 10px;
   border-radius: 8px;
-  background: #f9fafb;
+  background: var(--v4-hero, #f9fafb);
   border: 1px dashed var(--v4-line, #e5e7eb);
 }
 
@@ -4348,7 +4348,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .pe-section {
-  background: #111827;
+  background: var(--v4-bg, #111827);
   border-color: #1f2937;
 }
 
@@ -4382,9 +4382,9 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .pe-input,
 [data-theme="dark"] .pe-textarea {
-  background: #111827;
+  background: var(--v4-bg, #111827);
   border-color: #1f2937;
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 
 [data-theme="dark"] .pe-preview {
@@ -4438,13 +4438,13 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .mc-header-right-btn {
-  background: #111827;
+  background: var(--v4-bg, #111827);
   color: #e5e7eb;
   border-color: #1f2937;
 }
 
 [data-theme="dark"] .aps-portions-suggest {
-  background: #111827;
+  background: var(--v4-bg, #111827);
   border-color: #1f2937;
 }
 
@@ -4453,7 +4453,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .aps-portions-suggest-chip {
-  background: #064e3b;
+  background: var(--v4-ok-bg, #064e3b);
   border-color: #065f46;
   color: #34d399;
 }
@@ -4465,9 +4465,9 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .aps-portions-input {
-  background: #111827;
+  background: var(--v4-bg, #111827);
   border-color: #1f2937;
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 
 [data-theme="dark"] .aps-portions-grams-unit {
@@ -4487,7 +4487,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .aps-portions-skip-btn {
-  background: #111827;
+  background: var(--v4-bg, #111827);
   border-color: #1f2937;
   color: #9ca3af;
 }
@@ -4556,7 +4556,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .heys-system-banner {
-  background: #111827;
+  background: var(--v4-bg, #111827);
   color: #e5e7eb;
 }
 
@@ -4611,7 +4611,7 @@ body.tour-active .ios-pwa-banner {
 
 .level-up-modal__subtitle {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   margin-bottom: 14px;
 }
 
@@ -4859,7 +4859,7 @@ body.tour-active .ios-pwa-banner {
 
 .game-audit-subtitle {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .game-audit-buttons {
@@ -4884,7 +4884,7 @@ body.tour-active .ios-pwa-banner {
 
 @media (hover: hover) {
   .game-audit-btn:hover {
-  background: #f9fafb;
+  background: var(--v4-hero, #f9fafb);
   border-color: #d1d5db;
 }
 }
@@ -4949,7 +4949,7 @@ body.tour-active .ios-pwa-banner {
   flex-wrap: wrap;
   gap: 6px;
   font-size: 10px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .game-audit-badge {
@@ -4967,12 +4967,12 @@ body.tour-active .ios-pwa-banner {
 }
 
 .game-audit-badge--curator {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: #15803d;
 }
 
 .game-audit-badge--pin {
-  background: #e0f2fe;
+  background: var(--v4-accent-bg, #e0f2fe);
   color: #0369a1;
 }
 
@@ -4985,7 +4985,7 @@ body.tour-active .ios-pwa-banner {
 .game-audit-error,
 .game-audit-empty {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   padding: 6px 0;
 }
 
@@ -5003,7 +5003,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .game-audit-btn {
-  background: #111827;
+  background: var(--v4-bg, #111827);
   border-color: #1f2937;
   color: #e2e8f0;
 }
@@ -5011,13 +5011,13 @@ body.tour-active .ios-pwa-banner {
 @media (hover: hover) {
   [data-theme="dark"] .game-audit-btn:hover {
   background: #1f2937;
-  border-color: #374151;
+  border-color: var(--v4-line, #374151);
 }
 }
 
 [data-theme="dark"] .game-audit-btn--copy {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: #ffffff;
+  color: var(--v4-ink, #ffffff);
   border-color: var(--v4-act, #3b82f6);
 }
 
@@ -5029,7 +5029,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .game-audit-item {
-  background: #111827;
+  background: var(--v4-bg, #111827);
   border-color: #1f2937;
 }
 
@@ -5132,7 +5132,7 @@ body.tour-active .ios-pwa-banner {
 .game-forecast {
   margin-top: 6px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .game-title-row {
@@ -5649,13 +5649,13 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .level-up-modal__card {
-  background: #111827;
+  background: var(--v4-bg, #111827);
   color: #e5e7eb;
   box-shadow: 0 18px 50px -20px rgba(0, 0, 0, 0.7);
 }
 
 [data-theme="dark"] .level-up-modal__title {
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 
 [data-theme="dark"] .level-up-modal__subtitle,
@@ -6046,8 +6046,8 @@ body.tour-active .ios-pwa-banner {
 
 @media (hover: hover) {
   .aps-hide-btn:hover {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--v4-hero, #f3f4f6);
+  color: var(--v4-ink-2, #6b7280);
   opacity: 1;
 }
 }
@@ -6057,7 +6057,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .aps-hide-btn--active {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: var(--v4-ok-text, #16a34a);
   opacity: 1;
 }
@@ -6100,7 +6100,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .aps-hide-btn--active {
-  background: #064e3b;
+  background: var(--v4-ok-bg, #064e3b);
   color: #6ee7b7;
 }
 
@@ -6395,14 +6395,14 @@ body.tour-active .ios-pwa-banner {
   gap: 6px;
   margin: 6px 0 10px;
   padding: 4px;
-  background: #f3f4f6;
+  background: var(--v4-hero, #f3f4f6);
   border-radius: 10px;
 }
 
 .monthly-reports-tab {
   border: 0;
   background: transparent;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   border-radius: 8px;
   padding: 6px 10px;
   font-size: 12px;
@@ -6445,7 +6445,7 @@ body.tour-active .ios-pwa-banner {
 .monthly-reports-page-info {
   font-size: 12px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .monthly-reports-filter {
@@ -6458,7 +6458,7 @@ body.tour-active .ios-pwa-banner {
 .monthly-reports-filter__btn {
   border: 1px solid var(--v4-line, #e5e7eb);
   background: var(--v4-bg, #ffffff);
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   border-radius: 999px;
   padding: 5px 10px;
   font-size: 11px;
@@ -6630,7 +6630,7 @@ body.tour-active .ios-pwa-banner {
 .reports-sleep-card__subtitle,
 .reports-sleep-card__hint {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .reports-sleep-card__stats {
@@ -6646,13 +6646,13 @@ body.tour-active .ios-pwa-banner {
   gap: 4px;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #f9fafb;
+  background: var(--v4-hero, #f9fafb);
 }
 
 .reports-sleep-card__stat-label {
   font-size: 11px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .reports-sleep-card__stat-value {
@@ -6704,7 +6704,7 @@ body.tour-active .ios-pwa-banner {
 
 .mc-day-sleep-summary__hint {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .mc-day-sleep-options {
@@ -6717,7 +6717,7 @@ body.tour-active .ios-pwa-banner {
   min-height: 44px;
   border: 1px solid var(--v4-accent-bg, #dbeafe);
   border-radius: 12px;
-  background: #f8fbff;
+  background: var(--v4-hero, #f8fbff);
   color: #1e3a8a;
   font-size: 14px;
   font-weight: 700;
@@ -6777,7 +6777,7 @@ body.tour-active .ios-pwa-banner {
   align-items: center;
   margin-bottom: 8px;
   padding-bottom: 6px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--v4-line, #f3f4f6);
 }
 
 .monthly-week-card__title {
@@ -6841,7 +6841,7 @@ body.tour-active .ios-pwa-banner {
   align-items: center;
   text-align: center;
   padding: 5px 3px;
-  background: #f9fafb;
+  background: var(--v4-hero, #f9fafb);
   border-radius: 8px;
   gap: 2px;
   min-height: 54px;
@@ -6901,12 +6901,12 @@ body.tour-active .ios-pwa-banner {
 }
 
 .monthly-metric-value--neutral {
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .monthly-metric-label {
   font-size: 8px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   text-transform: uppercase;
   letter-spacing: 0.02em;
   font-weight: 600;
@@ -6939,7 +6939,7 @@ body.tour-active .ios-pwa-banner {
 .monthly-macro-diff-label {
   font-size: 8px;
   font-weight: 700;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .monthly-macro-diff-value {
@@ -6957,7 +6957,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .monthly-macro-diff-value--neutral {
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .monthly-macro-ring {
@@ -6997,7 +6997,7 @@ body.tour-active .ios-pwa-banner {
 .monthly-macro-label {
   font-size: 8px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .monthly-macro-target {
@@ -7070,7 +7070,7 @@ body.tour-active .ios-pwa-banner {
   border: 1px solid var(--v4-line, #e5e7eb);
   border-radius: 10px;
   padding: 8px;
-  background: #f9fafb;
+  background: var(--v4-hero, #f9fafb);
 }
 
 .monthly-week-day-row--muted {
@@ -7101,8 +7101,8 @@ body.tour-active .ios-pwa-banner {
   font-size: 8px;
   font-weight: 700;
   text-transform: uppercase;
-  color: #6b7280;
-  background: #f3f4f6;
+  color: var(--v4-ink-2, #6b7280);
+  background: var(--v4-hero, #f3f4f6);
   padding: 2px 5px;
   border-radius: 999px;
 }
@@ -7126,13 +7126,13 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .monthly-reports-tab--active {
-  background: #111827;
+  background: var(--v4-bg, #111827);
   color: #e5e7eb;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.35);
 }
 
 [data-theme="dark"] .monthly-reports-page-btn {
-  background: #111827;
+  background: var(--v4-bg, #111827);
   border-color: #1f2937;
   color: #e5e7eb;
 }
@@ -7142,7 +7142,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .monthly-reports-filter__btn {
-  background: #111827;
+  background: var(--v4-bg, #111827);
   border-color: #1f2937;
   color: #9ca3af;
 }
@@ -7154,7 +7154,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .reports-title-row .reports-title {
-  color: #f3f4f6;
+  color: var(--v4-ink, #f3f4f6);
 }
 
 [data-theme="dark"] .monthly-reports-legend__item--complete {
@@ -7222,7 +7222,7 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .reports-sleep-card__title,
 [data-theme="dark"] .reports-sleep-card__stat-value,
 [data-theme="dark"] .mc-day-sleep-summary__value {
-  color: #f3f4f6;
+  color: var(--v4-ink, #f3f4f6);
 }
 
 [data-theme="dark"] .reports-sleep-card__subtitle,
@@ -7258,7 +7258,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .monthly-week-card__title {
-  color: #f3f4f6;
+  color: var(--v4-ink, #f3f4f6);
 }
 
 [data-theme="dark"] .monthly-week-card__badge {
@@ -7281,7 +7281,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .monthly-metric-value {
-  color: #f3f4f6;
+  color: var(--v4-ink, #f3f4f6);
 }
 
 [data-theme="dark"] .monthly-weight-trend--good {
@@ -7322,12 +7322,12 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .monthly-week-day-row__title {
-  color: #f3f4f6;
+  color: var(--v4-ink, #f3f4f6);
 }
 
 [data-theme="dark"] .monthly-week-day-row__badge {
   color: #9ca3af;
-  background: #111827;
+  background: var(--v4-bg, #111827);
 }
 
 [data-theme="dark"] .monthly-week-day-row__badge--today {
@@ -7336,11 +7336,11 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .monthly-macro-bg {
-  stroke: #374151;
+  stroke: var(--v4-line, #374151);
 }
 
 [data-theme="dark"] .monthly-macro-value {
-  fill: #f3f4f6;
+  fill: var(--v4-ink, #f3f4f6);
 }
 
 /* === ACTION CARD PRIORITY BADGES (v5.1.0) === */
@@ -7458,7 +7458,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .monthly-macro-target {
-  color: #6b7280;
+  color: var(--v4-ink-3, #6b7280);
 }
 
 [data-theme="dark"] .monthly-macro-diff-label {
@@ -7466,7 +7466,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .monthly-macro-diff-value {
-  color: #f3f4f6;
+  color: var(--v4-ink, #f3f4f6);
 }
 
 [data-theme="dark"] .monthly-macro-diff-value--good {
@@ -8166,7 +8166,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .client-dropdown-account__name {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .client-dropdown-backdrop {
@@ -8373,7 +8373,7 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .hdr-client-firstname,
 [data-theme="dark"] .hdr-client-name {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .hdr-client-lastname,
@@ -8468,7 +8468,7 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .tab.tab-switch.active {
   background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  color: #ffffff;
+  color: var(--v4-ink, #ffffff);
 }
 
 [data-theme="dark"] .tab-switch-labels {
@@ -8476,7 +8476,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .tab-switch-label.active {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .tab.tab-advice {
@@ -8514,7 +8514,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .date-picker-main {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .date-picker-icon {
@@ -8523,7 +8523,7 @@ body.tour-active .ios-pwa-banner {
 
 /* Today-вариант: дата — яркая основная (label "Сегодня" остаётся красным). */
 [data-theme="dark"] .date-picker-sub--today {
-  color: #f8fafc !important;
+  color: var(--v4-ink, #f8fafc) !important;
 }
 
 [data-theme="dark"] .date-picker-sub,
@@ -8556,12 +8556,12 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .date-picker-btn.delete-btn:hover {
   background: rgba(51, 65, 85, 0.96);
   border-color: rgba(148, 163, 184, 0.24);
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 }
 
 [data-theme="dark"] .date-picker-title {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .date-picker-weekday {
@@ -8580,12 +8580,12 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .date-picker-day.selected {
   background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-  color: #ffffff;
+  color: var(--v4-ink, #ffffff);
 }
 
 [data-theme="dark"] .date-picker-day.today {
   background: linear-gradient(135deg, #0f766e 0%, #10b981 100%);
-  color: #ffffff;
+  color: var(--v4-ink, #ffffff);
 }
 
 [data-theme="dark"] .date-picker-footer {
@@ -8681,7 +8681,7 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .date-picker-trigger,
 [data-theme="dark"] .date-picker-trigger * {
-  color: #f8fafc !important;
+  color: var(--v4-ink, #f8fafc) !important;
 }
 
 [data-theme="dark"] .date-picker-trigger {
@@ -8709,7 +8709,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .metrics-value {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .metrics-label,
@@ -8811,7 +8811,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 13px;
   line-height: 1.4;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .sync-pending-banner__summary {
@@ -8867,7 +8867,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 12px;
   line-height: 1.2;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .sync-pending-banner__item-scope {
@@ -8913,7 +8913,7 @@ body.tour-active .ios-pwa-banner {
   padding: 24px 22px 22px;
   border-radius: 24px;
   text-align: center;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   background:
     radial-gradient(circle at top, rgba(96, 165, 250, 0.18), transparent 44%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 250, 252, 0.92));
@@ -8969,7 +8969,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 18px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .sync-lock-overlay__subtitle {
@@ -9115,7 +9115,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .sync-lock-overlay__title {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .sync-lock-overlay__subtitle {
@@ -9157,7 +9157,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .sync-pending-banner__title {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .sync-pending-banner__summary {
@@ -9182,7 +9182,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .sync-pending-banner__item-label {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .sync-pending-banner__item-scope {
@@ -9246,7 +9246,7 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .macro-ring-value,
 [data-theme="dark"] .macro-ring-label {
-  color: #f8fafc !important;
+  color: var(--v4-ink, #f8fafc) !important;
 }
 
 [data-theme="dark"] .macro-ring-target {
@@ -9280,7 +9280,7 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .household-value-number,
 [data-theme="dark"] .household-value-unit,
 [data-theme="dark"] .sleep-card-times {
-  color: #f8fafc !important;
+  color: var(--v4-ink, #f8fafc) !important;
 }
 
 [data-theme="dark"] .formula-label,
@@ -9327,7 +9327,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .compact-card-header {
-  color: #f8fafc !important;
+  color: var(--v4-ink, #f8fafc) !important;
   text-shadow: 0 1px 2px rgba(2, 6, 23, 0.45);
 }
 
@@ -9392,7 +9392,7 @@ body.tour-active .ios-pwa-banner {
   padding: 14px 42px 14px 14px;
   font-size: 15px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.92));
   box-shadow:
@@ -9421,7 +9421,7 @@ body.tour-active .ios-pwa-banner {
   padding: 12px 14px;
   font-size: 14px;
   background: rgba(255, 255, 255, 0.92);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .training-activity-custom-input:focus {
@@ -9463,7 +9463,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .training-activity-label {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .training-activity-helper,
@@ -9472,7 +9472,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .training-activity-select {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
   border-color: rgba(96, 165, 250, 0.2);
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(30, 41, 59, 0.92));
   box-shadow:
@@ -9485,7 +9485,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .training-activity-custom-input {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
   border-color: rgba(96, 165, 250, 0.16);
   background: rgba(15, 23, 42, 0.82);
 }
@@ -9513,7 +9513,7 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .insights-tab__filter-btn.active {
   background: rgba(15, 23, 42, 0.72) !important;
-  color: #f8fafc !important;
+  color: var(--v4-ink, #f8fafc) !important;
   box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.14), 0 10px 24px -22px rgba(2, 6, 23, 0.9) !important;
 }
 
@@ -9559,7 +9559,7 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .predictive-dashboard__title,
 [data-theme="dark"] .predictive-dashboard__header h3,
 [data-theme="dark"] .predictive-dashboard__header h4 {
-  color: #f8fafc !important;
+  color: var(--v4-ink, #f8fafc) !important;
 }
 
 [data-theme="dark"] .early-warning-card__cta,
@@ -9648,7 +9648,7 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .adv-analytics-card__tab:hover {
   background: rgba(30, 41, 59, 0.72) !important;
   border-color: rgba(148, 163, 184, 0.14) !important;
-  color: #f8fafc !important;
+  color: var(--v4-ink, #f8fafc) !important;
 }
 }
 
@@ -9656,7 +9656,7 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .adv-analytics-card__tab--active {
   background: linear-gradient(135deg, rgba(51, 65, 85, 0.96) 0%, rgba(30, 41, 59, 0.98) 100%) !important;
   border-color: rgba(96, 165, 250, 0.2) !important;
-  color: #f8fafc !important;
+  color: var(--v4-ink, #f8fafc) !important;
   box-shadow:
     0 12px 24px -20px rgba(2, 6, 23, 0.96),
     inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
@@ -9719,7 +9719,7 @@ body.tour-active .ios-pwa-banner {
   [data-theme="dark"] .info-modal__close:hover {
   background: rgba(51, 65, 85, 0.82) !important;
   border-color: rgba(148, 163, 184, 0.22) !important;
-  color: #f8fafc !important;
+  color: var(--v4-ink, #f8fafc) !important;
 }
 }
 
@@ -10029,7 +10029,7 @@ body.tour-active .ios-pwa-banner {
  * Supplements "all taken" state + insulin/lipolysis popup polish
  */
 [data-theme="dark"] .widget--supplements-diary .supplements-card__title {
-  color: #f8fafc !important;
+  color: var(--v4-ink, #f8fafc) !important;
 }
 
 [data-theme="dark"] .widget--supplements-diary .supplements-card__icon-btn {
@@ -10160,7 +10160,7 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .wave-details-popup__title,
 [data-theme="dark"] .wave-details-popup__section-title {
-  color: #f8fafc !important;
+  color: var(--v4-ink, #f8fafc) !important;
 }
 
 [data-theme="dark"] .wave-details-popup__close {
@@ -10389,7 +10389,7 @@ body.tour-active .ios-pwa-banner {
 .meal-rec-card__timeline-dot--warn { border-color: #f59e0b; }
 .meal-rec-card__timeline-dot--danger { border-color: var(--v4-warn-1, #ef4444); }
 .meal-rec-card__timeline-dot--actionable {
-  background: #ecfdf5;
+  background: var(--v4-ok-bg, #ecfdf5);
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16), 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 .meal-rec-card__timeline-dot-time {
@@ -10397,7 +10397,7 @@ body.tour-active .ios-pwa-banner {
   color: var(--v4-ink, #111827);
 }
 .meal-rec-card__timeline-dot-kcal {
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   font-size: 10px;
 }
 .meal-rec-card__timeline-dot-sleep {
@@ -10412,12 +10412,12 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .meal-rec-card__timeline-range { color: #9ca3af; }
 [data-theme="dark"] .meal-rec-card__timeline-dot {
   background: #0b1b16;
-  border-color: #374151;
+  border-color: var(--v4-line, #374151);
   color: #e5e7eb;
 }
-[data-theme="dark"] .meal-rec-card__timeline-dot-time { color: #f3f4f6; }
+[data-theme="dark"] .meal-rec-card__timeline-dot-time { color: var(--v4-ink, #f3f4f6); }
 [data-theme="dark"] .meal-rec-card__timeline-dot--actionable {
-  background: #064e3b;
+  background: var(--v4-ok-bg, #064e3b);
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.28), 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
@@ -10493,7 +10493,7 @@ body.tour-active .ios-pwa-banner {
   opacity: 0.85;
   color: var(--v4-warn-1, #ef4444);
 }
-[data-theme="dark"] .meal-rec-card__diag-dot { color: #6b7280; }
+[data-theme="dark"] .meal-rec-card__diag-dot { color: var(--v4-ink-3, #6b7280); }
 @media (hover: hover) {
   [data-theme="dark"] .meal-rec-card__diag-dot:hover { color: #9ca3af; }
 }
@@ -10554,7 +10554,7 @@ body.tour-active .ios-pwa-banner {
 .meal-rec-card__science-refs {
   font-size: 8px;
   line-height: 1.3;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   letter-spacing: 0.15px;
 }
 
@@ -10595,7 +10595,7 @@ body.tour-active .ios-pwa-banner {
 
 .meal-rec-card__time-value {
   font-weight: 500;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   font-size: 13px;
 }
 
@@ -10630,7 +10630,7 @@ body.tour-active .ios-pwa-banner {
   border-radius: 12px;
   font-size: 12px;
   font-weight: 500;
-  background: #f3f4f6;
+  background: var(--v4-hero, #f3f4f6);
   color: #374151;
 }
 
@@ -10665,7 +10665,7 @@ body.tour-active .ios-pwa-banner {
 
 .meal-rec-card__details {
   padding: 0 12px 10px 12px;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid var(--v4-line, #f3f4f6);
 }
 
 .meal-rec-card__section-title {
@@ -10797,7 +10797,7 @@ body.tour-active .ios-pwa-banner {
 .meal-rec-card__group-name {
   font-size: 12px;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -10823,7 +10823,7 @@ body.tour-active .ios-pwa-banner {
 @media (hover: hover) {
   .meal-rec-card__product-item:hover {
   border-color: #d1d5db;
-  background: #f9fafb;
+  background: var(--v4-hero, #f9fafb);
 }
 }
 
@@ -10923,7 +10923,7 @@ body.tour-active .ios-pwa-banner {
   padding: 12px;
   margin-top: 12px;
   border: 2px dashed #d1d5db;
-  background: #f9fafb;
+  background: var(--v4-hero, #f9fafb);
   color: #9ca3af;
   font-size: 14px;
   font-weight: 500;
@@ -10961,7 +10961,7 @@ body.tour-active .ios-pwa-banner {
   gap: 4px;
   margin-bottom: 6px;
   padding-top: 6px;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid var(--v4-line, #f3f4f6);
 }
 
 .meal-rec-card__reason-tag {
@@ -11059,7 +11059,7 @@ body.tour-active .ios-pwa-banner {
   justify-content: space-between;
   gap: 8px;
   padding: 8px 10px 6px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--v4-line, #f3f4f6);
 }
 
 .meal-rec-card__products-modal-title {
@@ -11074,7 +11074,7 @@ body.tour-active .ios-pwa-banner {
   border-radius: 6px;
   border: 1px solid #d1d5db;
   background: var(--v4-bg, #ffffff);
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   cursor: pointer;
   line-height: 1;
   font-size: 12px;
@@ -11210,7 +11210,7 @@ body.tour-active .ios-pwa-banner {
   font-weight: 700;
   line-height: 1.3;
   margin-bottom: 2px;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .meal-role-coach-card__text {
@@ -11329,7 +11329,7 @@ body.tour-active .ios-pwa-banner {
   align-items: center;
   justify-content: space-between;
   padding-top: 6px;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid var(--v4-line, #f3f4f6);
 }
 
 .meal-rec-card__confidence {
@@ -11724,7 +11724,7 @@ body.tour-active .ios-pwa-banner {
 :root:not([data-theme="dark"]) .heys-undo-bar__btn {
   background:
     linear-gradient(135deg, #f0a1bc 0%, #e68daf 24%, #d97bab 58%, #bd79d2 100%);
-  color: #fffafc;
+  color: var(--v4-ink, #fffafc);
   border-color: rgba(217, 123, 171, 0.24);
   box-shadow:
     0 14px 30px -22px rgba(217, 123, 171, 0.28),
@@ -11810,7 +11810,7 @@ body.tour-active .ios-pwa-banner {
   margin-top: 10px;
   padding: 14px 14px 10px;
   background: var(--v4-bg, #ffffff);
-  border: 1px solid #e9edf2;
+  border: 1px solid var(--v4-line, #e9edf2);
   border-radius: 12px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
@@ -11882,7 +11882,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .meal-rec-card__meal-badge--balanced {
-  background: #dcfce7;
+  background: var(--v4-ok-bg, #dcfce7);
   color: #166534;
 }
 
@@ -11917,7 +11917,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .meal-rec-card__science-refs {
-  color: #6b7280;
+  color: var(--v4-ink-3, #6b7280);
 }
 
 [data-theme="dark"] .meal-rec-card__science-refs-detail {
@@ -11925,7 +11925,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .meal-rec-card__time {
-  color: #f3f4f6;
+  color: var(--v4-ink, #f3f4f6);
 }
 
 [data-theme="dark"] .meal-rec-card__time-value {
@@ -11981,7 +11981,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .meal-rec-card__suggestion-product {
-  color: #f3f4f6;
+  color: var(--v4-ink, #f3f4f6);
 }
 
 [data-theme="dark"] .meal-rec-card__suggestion-grams {
@@ -11989,7 +11989,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .meal-rec-card__suggestion-reason {
-  color: #6b7280;
+  color: var(--v4-ink-3, #6b7280);
 }
 
 /* v27: Dark mode for grouped products */
@@ -12003,31 +12003,31 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .meal-rec-card__product-item {
   background: #1f2937;
-  border-color: #374151;
+  border-color: var(--v4-line, #374151);
 }
 
 @media (hover: hover) {
   [data-theme="dark"] .meal-rec-card__product-item:hover {
   border-color: #4b5563;
-  background: #111827;
+  background: var(--v4-bg, #111827);
 }
 }
 
 [data-theme="dark"] .meal-rec-card__product-item--selected {
   border-color: #10b981;
-  background: #064e3b;
+  background: var(--v4-ok-bg, #064e3b);
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
 }
 
 @media (hover: hover) {
   [data-theme="dark"] .meal-rec-card__product-item--selected:hover {
   border-color: #10b981;
-  background: #064e3b;
+  background: var(--v4-ok-bg, #064e3b);
 }
 }
 
 [data-theme="dark"] .meal-rec-card__product-name {
-  color: #f3f4f6;
+  color: var(--v4-ink, #f3f4f6);
 }
 
 [data-theme="dark"] .meal-rec-card__product-grams {
@@ -12045,9 +12045,9 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .meal-rec-card__add-selected-btn {
-  border-color: #374151;
+  border-color: var(--v4-line, #374151);
   background: #1f2937;
-  color: #6b7280;
+  color: var(--v4-ink-3, #6b7280);
 }
 
 [data-theme="dark"] .meal-rec-card__add-selected-btn--active {
@@ -12074,7 +12074,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .meal-rec-card__logic-label {
-  color: #6b7280;
+  color: var(--v4-ink-3, #6b7280);
 }
 
 [data-theme="dark"] .meal-rec-card__logic-text {
@@ -12095,8 +12095,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .meal-rec-card__products-modal {
-  background: #111827;
-  border-color: #374151;
+  background: var(--v4-bg, #111827);
+  border-color: var(--v4-line, #374151);
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
 }
 
@@ -12105,12 +12105,12 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .meal-rec-card__products-modal-title {
-  color: #f3f4f6;
+  color: var(--v4-ink, #f3f4f6);
 }
 
 [data-theme="dark"] .meal-rec-card__products-modal-close {
   background: #1f2937;
-  border-color: #374151;
+  border-color: var(--v4-line, #374151);
   color: #9ca3af;
 }
 
@@ -12123,11 +12123,11 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .meal-rec-card__confidence {
-  color: #6b7280;
+  color: var(--v4-ink-3, #6b7280);
 }
 
 [data-theme="dark"] .meal-rec-card__feedback-label {
-  color: #6b7280;
+  color: var(--v4-ink-3, #6b7280);
 }
 
 [data-theme="dark"] .meal-rec-card__feedback-btn {
@@ -12144,7 +12144,7 @@ body.tour-active .ios-pwa-banner {
 
 [data-theme="dark"] .meal-rec-card__feedback-btn--selected {
   border-color: #10b981;
-  background: #064e3b;
+  background: var(--v4-ok-bg, #064e3b);
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
 }
 
@@ -12154,17 +12154,17 @@ body.tour-active .ios-pwa-banner {
 
 /* Dark mode: multi-meal (v27.6+) */
 [data-theme="dark"] .meal-rec-card__meal-subcard {
-  background: #1a2535;
-  border-color: #2d3748;
+  background: var(--v4-surface, #1a2535);
+  border-color: var(--v4-line, #2d3748);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme="dark"] .meal-rec-card__meal-title {
-  color: #f3f4f6;
+  color: var(--v4-ink, #f3f4f6);
 }
 
 [data-theme="dark"] .meal-rec-card__meal-time {
-  color: #6b7280;
+  color: var(--v4-ink-3, #6b7280);
 }
 
 [data-theme="dark"] .meal-rec-card__meal-badge--protein {
@@ -12188,11 +12188,11 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .meal-rec-card__meal-wave {
-  color: #6b7280;
+  color: var(--v4-ink-3, #6b7280);
 }
 
 [data-theme="dark"] .meal-rec-card__meal-hint {
-  color: #6b7280;
+  color: var(--v4-ink-3, #6b7280);
 }
 
 /* === OUTCOME TRACKING MODAL (R2.7) === */
@@ -12436,7 +12436,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .outcome-modal__title {
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 
 [data-theme="dark"] .outcome-modal__close-btn {
@@ -12446,7 +12446,7 @@ body.tour-active .ios-pwa-banner {
 @media (hover: hover) {
   [data-theme="dark"] .outcome-modal__close-btn:hover {
   background: #374151;
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 }
 
@@ -12455,7 +12455,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .outcome-modal__label {
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 
 [data-theme="dark"] .outcome-modal__slider {
@@ -12482,7 +12482,7 @@ body.tour-active .ios-pwa-banner {
 @media (hover: hover) {
   [data-theme="dark"] .outcome-modal__btn--cancel:hover:not(:disabled) {
   background: #4b5563;
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 }
 
@@ -12538,7 +12538,7 @@ body.tour-active .ios-pwa-banner {
 .score-explainer-cta__title {
   font-size: 14px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .score-explainer-cta__subtitle {
@@ -12593,7 +12593,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 22px;
   line-height: 1.15;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .score-explainer-modal__subtitle {
@@ -12626,7 +12626,7 @@ body.tour-active .ios-pwa-banner {
   line-height: 1;
   font-weight: 900;
   letter-spacing: -0.04em;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .score-explainer-modal__score-label {
@@ -12645,7 +12645,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 16px;
   line-height: 1.55;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .score-explainer-modal__subline {
@@ -12741,7 +12741,7 @@ body.tour-active .ios-pwa-banner {
   min-width: 0;
   font-size: 13px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .score-explainer-modal__summary-value {
@@ -12837,7 +12837,7 @@ body.tour-active .ios-pwa-banner {
 .score-explainer-modal__category-title {
   font-size: 15px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .score-explainer-modal__category-meta {
@@ -12910,7 +12910,7 @@ body.tour-active .ios-pwa-banner {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.88);
   border: 1px solid rgba(148, 163, 184, 0.14);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-size: 12px;
   font-weight: 700;
 }
@@ -12941,7 +12941,7 @@ body.tour-active .ios-pwa-banner {
 .score-explainer-modal__action-text {
   font-size: 13px;
   line-height: 1.55;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-weight: 700;
 }
 
@@ -13054,7 +13054,7 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .score-explainer-modal__category-title,
 [data-theme="dark"] .score-explainer-modal__action-text,
 [data-theme="dark"] .score-explainer-modal__signal-chip {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .score-explainer-cta__subtitle,
@@ -13087,7 +13087,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .score-explainer-modal__score-number {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .score-explainer-modal__meta-chip,
@@ -13533,7 +13533,7 @@ body.tour-active .ios-pwa-banner {
 
 .diary-fiber-panel__title {
   overflow: hidden;
-  color: #172033;
+  color: var(--v4-ink, #172033);
   font-size: clamp(14px, 3.7vw, 17px);
   font-weight: 800;
   line-height: 1.08;
@@ -13716,7 +13716,7 @@ body.tour-active .ios-pwa-banner {
 
 .diary-fiber-panel__section-title {
   min-width: 0;
-  color: #172033;
+  color: var(--v4-ink, #172033);
   font-size: 13px;
   font-weight: 850;
   line-height: 1.12;
@@ -13756,7 +13756,7 @@ body.tour-active .ios-pwa-banner {
 
 .diary-fiber-panel__earned-name {
   overflow: hidden;
-  color: #172033;
+  color: var(--v4-ink, #172033);
   font-size: 12.5px;
   font-weight: 800;
   line-height: 1.16;
@@ -13828,7 +13828,7 @@ body.tour-active .ios-pwa-banner {
 
 .diary-fiber-panel__source-title {
   overflow-wrap: anywhere;
-  color: #172033;
+  color: var(--v4-ink, #172033);
   font-size: 12px;
   font-weight: 850;
   line-height: 1.08;
@@ -14017,7 +14017,7 @@ body.tour-active .ios-pwa-banner {
 
 .heys-auth-brand,
 .heys-auth-title {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-weight: 800;
   letter-spacing: 0;
 }
@@ -14128,7 +14128,7 @@ body.tour-active .ios-pwa-banner {
 
 .heys-auth-phone-input,
 .heys-auth-input {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-family: inherit;
 }
 
@@ -14652,7 +14652,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   height: 32px;
   border: none;
   border-radius: 10px;
-  background: #f1f5f9;
+  background: var(--v4-hero, #f1f5f9);
   color: var(--v4-ink-2, #64748b);
   cursor: pointer;
   font-size: 22px;
@@ -14661,7 +14661,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-auth-support-title {
   margin-bottom: 8px;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-size: 18px;
   font-weight: 800;
 }
@@ -14805,7 +14805,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 .heys-auth-btn--secondary {
   border: 1px solid #e2e8f0;
   background: var(--v4-hero, #f8fafc);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.72),
     0 12px 24px -20px rgba(15, 23, 42, 0.18);
@@ -14813,7 +14813,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 @media (hover: hover) {
   .heys-auth-btn--secondary:hover {
-  background: #f1f5f9;
+  background: var(--v4-hero, #f1f5f9);
 }
 }
 
@@ -14892,7 +14892,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 [data-theme="dark"] .heys-auth-title,
 [data-theme="dark"] .heys-auth-label,
 [data-theme="dark"] .heys-auth-prefix {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .heys-auth-mark {
@@ -14910,12 +14910,12 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 [data-theme="dark"] .heys-auth-key {
   background: rgba(15, 23, 42, 0.78);
   border-color: rgba(148, 163, 184, 0.16);
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 [data-theme="dark"] .heys-auth-phone-input {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .heys-auth-field:focus-within,
@@ -14952,7 +14952,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 [data-theme="dark"] .heys-auth-support-title {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .heys-auth-support-text {
@@ -14986,7 +14986,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 [data-theme="dark"] .heys-auth-pin-overlay {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .heys-auth-error {

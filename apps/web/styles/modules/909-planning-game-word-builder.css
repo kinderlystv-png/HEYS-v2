@@ -352,7 +352,7 @@
 
 :is(body.dark, [data-theme='dark']) .planning-word-builder__answer span,
 :is(body.dark, [data-theme='dark']) .planning-word-builder__syllable {
-  background: #29293a;
+  background: var(--v4-surface, #29293a);
   color: #d5d6ff;
 }
 

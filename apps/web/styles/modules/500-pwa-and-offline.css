@@ -336,7 +336,7 @@
 
 .update-toast-update:active {
   transform: scale(0.95);
-  background: #ecfdf5;
+  background: var(--v4-ok-bg, #ecfdf5);
 }
 
 .update-toast-dismiss {
@@ -512,7 +512,7 @@
 .mc-header-title {
   font-size: 16px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -559,7 +559,7 @@
 .mc-title {
   font-size: 17px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .mc-btn-back,
@@ -690,7 +690,7 @@
 .mc-weight-value {
   font-size: 56px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   letter-spacing: -2px;
 }
 
@@ -755,7 +755,7 @@
   justify-content: center;
   font-size: 24px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   transition: all 0.2s ease;
   cursor: pointer;
 }
@@ -1087,7 +1087,7 @@
 }
 
 .household-inc-btn.primary {
-  background: #ecfdf3;
+  background: var(--v4-ok-bg, #ecfdf3);
   border-color: #d1fae5;
   color: #047857;
 }
@@ -1218,7 +1218,7 @@
   gap: 8px;
   background: #ecfeff;
   border: 1px solid #a5f3fc;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   padding: 8px 12px;
   border-radius: 12px;
   font-size: 13px;
@@ -1243,7 +1243,7 @@
 .household-target {
   font-size: 12px;
   font-weight: 700;
-  background: #f1f5f9;
+  background: var(--v4-hero, #f1f5f9);
   padding: 6px 10px;
   border-radius: 10px;
 }
@@ -1338,7 +1338,7 @@
 }
 
 .household-badge.success {
-  background: #ecfdf3;
+  background: var(--v4-ok-bg, #ecfdf3);
   color: #047857;
   border-color: #bbf7d0;
 }
@@ -2158,7 +2158,7 @@
 .mc-greeting {
   font-size: 17px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   flex: 1;
 }
 
@@ -2228,7 +2228,7 @@
 .mc-step-title {
   font-size: 20px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   margin: 0 0 4px;
 }
 
@@ -2471,7 +2471,7 @@
 .mc-wheel-value {
   font-size: 24px;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   height: 32px;
   display: flex;
   align-items: center;
@@ -2749,7 +2749,7 @@
 
 .mc-steps-purpose-sub {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   line-height: 1.4;
 }
 
@@ -2759,11 +2759,11 @@
 }
 
 [data-theme="dark"] .mc-steps-purpose-main {
-  color: #f3f4f6;
+  color: var(--v4-ink, #f3f4f6);
 }
 
 [data-theme="dark"] .mc-steps-purpose-sub {
-  color: #9ca3af;
+  color: var(--v4-ink-2, #9ca3af);
 }
 
 /* Steps day type — тип дня */
@@ -2774,7 +2774,7 @@
   gap: 10px;
   margin: 12px 0;
   padding: 10px 16px;
-  background: #f9fafb;
+  background: var(--v4-hero, #f9fafb);
   border-radius: 10px;
   border: 1px solid var(--v4-line, #e5e7eb);
 }
@@ -2797,20 +2797,20 @@
 
 .mc-steps-day-type-desc {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 [data-theme="dark"] .mc-steps-day-type {
-  background: #1f2937;
-  border-color: #374151;
+  background: var(--v4-surface, #1f2937);
+  border-color: var(--v4-line, #374151);
 }
 
 [data-theme="dark"] .mc-steps-day-type-label {
-  color: #f3f4f6;
+  color: var(--v4-ink, #f3f4f6);
 }
 
 [data-theme="dark"] .mc-steps-day-type-desc {
-  color: #9ca3af;
+  color: var(--v4-ink-2, #9ca3af);
 }
 
 /* Steps footer hint */
@@ -2819,7 +2819,7 @@
   margin-top: 16px;
   padding: 10px 16px;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
   background: #fef3c7;
   border-radius: 8px;
   border: 1px solid #fcd34d;
@@ -3626,7 +3626,7 @@
 }
 
 [data-theme="dark"] .ca-modal {
-  background: #111827;
+  background: var(--v4-bg, #111827);
   border-color: rgba(255, 255, 255, 0.08);
 }
 [data-theme="dark"] .ca-modal__header { border-color: rgba(255, 255, 255, 0.06); }

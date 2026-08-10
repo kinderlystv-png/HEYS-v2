@@ -222,7 +222,7 @@ body {
 
 .heys-tab-skeleton__date.is-active {
   box-shadow: inset 0 0 0 2px rgba(82, 160, 216, 0.68);
-  background: #e2ecf2;
+  background: var(--v4-accent-bg, #e2ecf2);
   animation: none;
 }
 
@@ -339,7 +339,7 @@ body {
   border-radius: 11px;
 }
 
-.heys-tab-skeleton__list--meal .heys-tab-skeleton__list-row:nth-child(3n + 1) .heys-tab-skeleton__row-icon { background: #e2ecf2; animation: none; }
+.heys-tab-skeleton__list--meal .heys-tab-skeleton__list-row:nth-child(3n + 1) .heys-tab-skeleton__row-icon { background: var(--v4-accent-bg, #e2ecf2); animation: none; }
 .heys-tab-skeleton__list--meal .heys-tab-skeleton__list-row:nth-child(3n + 2) .heys-tab-skeleton__row-icon { background: #deeddb; animation: none; }
 .heys-tab-skeleton__list--meal .heys-tab-skeleton__list-row:nth-child(3n) .heys-tab-skeleton__row-icon { background: #f3d7d7; animation: none; }
 
@@ -593,7 +593,7 @@ body.board-dark-nav .heys-tab-skeleton {
   left: 0;
   right: 0;
   z-index: 100;
-  background: #f8f9fa;
+  background: var(--v4-hero, #f8f9fa);
   padding: 12px 18px 0;
   max-width: 100%;
   contain: layout style paint;
@@ -620,7 +620,7 @@ body.board-dark-nav .heys-tab-skeleton {
   justify-content: space-between;
   gap: 6px;
   padding: 6px 10px;
-  background: #f0f0f0;
+  background: var(--v4-hero, #f0f0f0);
   border: 1px solid #4285f4;
   border-top: none;
   border-radius: 0 0 16px 16px;
@@ -700,7 +700,7 @@ body.board-dark-nav .heys-tab-skeleton {
   gap: 0;
   padding: 8px 12px;
   margin: 0;
-  background: #fcfcfc;
+  background: var(--v4-hero, #fcfcfc);
   border-top: 0.5px solid rgba(0, 0, 0, 0.1);
   position: fixed;
   bottom: 0;
@@ -802,7 +802,7 @@ body:has(:is(
 
 .tab.tab-switch.active {
   background: var(--v4-accent-bg, #dbeafe);
-  color: #0f5fd7;
+  color: var(--v4-act-text, #0f5fd7);
   box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.22), 0 2px 8px rgba(37, 99, 235, 0.18);
 }
 
@@ -812,7 +812,7 @@ body:has(:is(
 
 @media (prefers-color-scheme: dark) {
   html:not([data-theme]) .hdr {
-    background: #111827;
+    background: var(--v4-bg, #111827);
   }
 
   html:not([data-theme]) .hdr-bottom {
@@ -823,7 +823,7 @@ body:has(:is(
   html:not([data-theme]) .hdr-client-firstname,
   html:not([data-theme]) .hdr-client-lastname,
   html:not([data-theme]) .hdr-client-name {
-    color: #f9fafb;
+    color: var(--v4-ink, #f9fafb);
   }
 
   html:not([data-theme]) .tabs {
@@ -851,7 +851,7 @@ body:has(:is(
 }
 
 [data-theme="dark"] .hdr {
-  background: #111827;
+  background: var(--v4-bg, #111827);
 }
 
 [data-theme="dark"] .hdr-bottom {
@@ -862,7 +862,7 @@ body:has(:is(
 [data-theme="dark"] .hdr-client-firstname,
 [data-theme="dark"] .hdr-client-lastname,
 [data-theme="dark"] .hdr-client-name {
-  color: #f9fafb;
+  color: var(--v4-ink, #f9fafb);
 }
 
 [data-theme="dark"] .tabs {
@@ -1110,12 +1110,12 @@ body:has(:is(
 
 @media (prefers-color-scheme: dark) {
   html:not([data-theme]) .card {
-    background: #1f2937;
-    border-color: #374151;
+    background: var(--v4-surface, #1f2937);
+    border-color: var(--v4-line, #374151);
   }
 
   html:not([data-theme]) .card.tone-slate {
-    background: #111827;
+    background: var(--v4-bg, #111827);
   }
 
   html:not([data-theme]) .metrics-card {
@@ -1137,18 +1137,18 @@ body:has(:is(
   }
 
   html:not([data-theme]) .formula-card {
-    background: #1f2937;
-    border-color: #374151;
+    background: var(--v4-surface, #1f2937);
+    border-color: var(--v4-line, #374151);
   }
 }
 
 [data-theme="dark"] .card {
-  background: #1f2937;
-  border-color: #374151;
+  background: var(--v4-surface, #1f2937);
+  border-color: var(--v4-line, #374151);
 }
 
 [data-theme="dark"] .card.tone-slate {
-  background: #111827;
+  background: var(--v4-bg, #111827);
 }
 
 [data-theme="dark"] .metrics-card {
@@ -1170,6 +1170,6 @@ body:has(:is(
 }
 
 [data-theme="dark"] .formula-card {
-  background: #1f2937;
-  border-color: #374151;
+  background: var(--v4-surface, #1f2937);
+  border-color: var(--v4-line, #374151);
 }

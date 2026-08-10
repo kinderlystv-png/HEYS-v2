@@ -14,7 +14,7 @@
   border-radius: 50%;
   border: none;
   background: #1d70b7;
-  color: #fff;
+  color: var(--v4-ink, #fff);
   box-shadow: 0 10px 24px rgba(29, 112, 183, 0.28);
   cursor: pointer;
   display: flex;
@@ -97,7 +97,7 @@ body.planning-tab-active .fab-group .message-fab {
   height: 90vh;
   height: 90dvh;
   max-height: 720px;
-  background: #fcfbf8;
+  background: var(--v4-hero, #fcfbf8);
   color: #1b2430;
   border: none;
   border-radius: 22px 22px 0 0;
@@ -147,7 +147,7 @@ body.planning-tab-active .fab-group .message-fab {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #e2ecf2;
+  background: var(--v4-accent-bg, #e2ecf2);
   color: #434587;
   font-size: 15px;
   font-weight: 600;
@@ -247,7 +247,7 @@ body.planning-tab-active .fab-group .message-fab {
 
 @media (hover: hover) {
   .messenger-header-menu__item:not(:disabled):hover {
-    background: #f5f4f0;
+    background: var(--v4-hero, #f5f4f0);
   }
 }
 
@@ -278,7 +278,7 @@ body.planning-tab-active .fab-group .message-fab {
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
 }
 
 .messenger-day-checklist__chip {
@@ -296,7 +296,7 @@ body.planning-tab-active .fab-group .message-fab {
 }
 
 .messenger-day-checklist__chip--missing {
-  background: #e2ecf2;
+  background: var(--v4-accent-bg, #e2ecf2);
   color: #2c4e68;
 }
 
@@ -307,8 +307,8 @@ body.planning-tab-active .fab-group .message-fab {
 }
 
 .messenger-day-checklist__chip--done {
-  background: #f2f1ed;
-  color: #667079;
+  background: var(--v4-hero, #f2f1ed);
+  color: var(--v4-ink-2, #667079);
 }
 
 .messenger-day-checklist__tick {
@@ -371,7 +371,7 @@ button.messenger-day-checklist__chip:active {
 
 @media (hover: hover) {
   .messenger-header-button:hover {
-    background: #f5f4f0;
+    background: var(--v4-hero, #f5f4f0);
     color: #1b2430;
   }
 }
@@ -390,7 +390,7 @@ button.messenger-day-checklist__chip:active {
   gap: 14px;
   /* Тёплая бумага вместо холодного градиента с диагональной штриховкой:
      фон не должен спорить с фотографиями еды. */
-  background: #fcfbf8;
+  background: var(--v4-hero, #fcfbf8);
   scrollbar-width: thin;
   scrollbar-color: rgba(100, 116, 139, 0.22) transparent;
   overscroll-behavior-y: contain;
@@ -424,7 +424,7 @@ button.messenger-day-checklist__chip:active {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #e2ecf2;
+  background: var(--v4-accent-bg, #e2ecf2);
   color: #434587;
 }
 
@@ -578,7 +578,7 @@ button.messenger-day-checklist__chip:active {
 .msg-meta,
 .msg-edited-marker {
   font-size: 11px;
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
 }
 
 /* «Внесено в день» — единственный статус, который остаётся пилюлей:
@@ -685,7 +685,7 @@ button.messenger-day-checklist__chip:active {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -788,7 +788,7 @@ button.messenger-day-checklist__chip:active {
 
 .msg-bubble-theirs .msg-audio-play,
 .messenger-audio-draft .msg-audio-play {
-  background: #e2ecf2;
+  background: var(--v4-accent-bg, #e2ecf2);
   color: #1d70b7;
 }
 
@@ -916,7 +916,7 @@ button.messenger-day-checklist__chip:active {
 .msg-attachment-item {
   position: relative;
   cursor: pointer;
-  background: #e2e8f0;
+  background: var(--v4-accent-bg, #e2e8f0);
   aspect-ratio: 1;
   overflow: hidden;
   border-radius: 10px;
@@ -953,7 +953,7 @@ button.messenger-day-checklist__chip:active {
   justify-content: center;
   gap: 8px;
   padding: 14px;
-  background: #eef1f4;
+  background: var(--v4-hero, #eef1f4);
   color: #475569;
   text-align: center;
   font-size: 13px;
@@ -1009,7 +1009,7 @@ button.messenger-day-checklist__chip:active {
   height: 56px;
   border-radius: 12px;
   overflow: hidden;
-  background: #e2e8f0;
+  background: var(--v4-accent-bg, #e2e8f0);
   border: 1px solid rgba(148, 163, 184, 0.22);
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.10);
 }
@@ -1204,7 +1204,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-consent-title {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-size: 17px;
   font-weight: 700;
   line-height: 1.2;
@@ -1299,7 +1299,7 @@ button.messenger-day-checklist__chip:active {
 @media (hover: hover) {
   .messenger-attach:hover,
   .messenger-voice:hover {
-    background: #f5f4f0;
+    background: var(--v4-hero, #f5f4f0);
     color: #1b2430;
   }
 }
@@ -1745,7 +1745,7 @@ button.messenger-day-checklist__chip:active {
   font-size: 0.93rem;
   font-weight: 600;
   line-height: 1.12;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .messenger-inapp-toast__copy span {
@@ -1893,7 +1893,7 @@ button.messenger-day-checklist__chip:active {
   padding: 11px 16px;
   font-size: 14px;
   font-family: inherit;
-  background: #f5f4f0;
+  background: var(--v4-hero, #f5f4f0);
   color: #1b2430;
   outline: none;
   min-height: 44px; /* одна строка, не 90 и не 100 — редизайн уже дважды это откатывал */
@@ -2004,7 +2004,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-send:disabled {
-  background: #dce3e8;
+  background: var(--v4-accent-bg, #dce3e8);
   color: #a8b0b8;
   box-shadow: none;
   cursor: not-allowed;
@@ -2093,23 +2093,23 @@ button.messenger-day-checklist__chip:active {
 
 [data-theme="dark"] .messenger-modal {
   background: #111417;
-  color: #e7eaed;
+  color: var(--v4-ink, #e7eaed);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.48);
 }
 
 [data-theme="dark"] .messenger-header {
-  background: #15181c;
-  color: #e7eaed;
+  background: var(--v4-bg, #15181c);
+  color: var(--v4-ink, #e7eaed);
   border-bottom-color: #23272c;
 }
 
 [data-theme="dark"] .messenger-avatar {
-  background: #1e2a33;
+  background: var(--v4-surface, #1e2a33);
   color: #8fb9d8;
 }
 
 [data-theme="dark"] .messenger-title {
-  color: #e7eaed;
+  color: var(--v4-ink, #e7eaed);
 }
 
 [data-theme="dark"] .messenger-subtitle {
@@ -2122,25 +2122,25 @@ button.messenger-day-checklist__chip:active {
 
 [data-theme="dark"] .messenger-header-button.is-open,
 [data-theme="dark"] .messenger-header-button:active {
-  background: #23272c;
-  color: #e7eaed;
+  background: var(--v4-surface, #23272c);
+  color: var(--v4-ink, #e7eaed);
 }
 
 @media (hover: hover) {
   [data-theme="dark"] .messenger-header-button:hover {
     background: #1b1f24;
-    color: #e7eaed;
+    color: var(--v4-ink, #e7eaed);
   }
 }
 
 [data-theme="dark"] .messenger-header-menu {
-  background: #15181c;
+  background: var(--v4-bg, #15181c);
   border-color: #23272c;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
 }
 
 [data-theme="dark"] .messenger-header-menu__label {
-  color: #e7eaed;
+  color: var(--v4-ink, #e7eaed);
 }
 
 [data-theme="dark"] .messenger-header-menu__hint {
@@ -2154,7 +2154,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme="dark"] .messenger-day-checklist {
-  background: #15181c;
+  background: var(--v4-bg, #15181c);
   border-bottom-color: #23272c;
 }
 
@@ -2163,7 +2163,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme="dark"] .messenger-day-checklist__chip--missing {
-  background: #1e2a33;
+  background: var(--v4-surface, #1e2a33);
   color: #9fc6e2;
 }
 
@@ -2187,17 +2187,17 @@ button.messenger-day-checklist__chip:active {
   [data-theme="dark"] .messenger-attach:hover,
   [data-theme="dark"] .messenger-voice:hover {
     background: #1b1f24;
-    color: #e7eaed;
+    color: var(--v4-ink, #e7eaed);
   }
 }
 
 [data-theme="dark"] .messenger-voice.is-recording {
   background: #ef4444;
-  color: #fff;
+  color: var(--v4-ink, #fff);
 }
 
 [data-theme="dark"] .messenger-show-older {
-  background: #15181c;
+  background: var(--v4-bg, #15181c);
   border-color: #23272c;
   color: #8b949d;
 }
@@ -2211,12 +2211,12 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme="dark"] .messenger-empty__badge {
-  background: #1e2a33;
+  background: var(--v4-surface, #1e2a33);
   color: #8fb9d8;
 }
 
 [data-theme="dark"] .messenger-empty__title {
-  color: #e7eaed;
+  color: var(--v4-ink, #e7eaed);
 }
 
 [data-theme="dark"] .messenger-empty__text {
@@ -2224,7 +2224,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme="dark"] .messenger-empty__prompt {
-  background: #15181c;
+  background: var(--v4-bg, #15181c);
   border-color: #23272c;
   color: #5fa3d6;
 }
@@ -2235,20 +2235,20 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme="dark"] .msg-attachment-error {
-  background: #1a1e23;
+  background: var(--v4-bg, #1a1e23);
   color: #8b949d;
 }
 
 [data-theme="dark"] .msg-attachment-error button {
-  background: #15181c;
+  background: var(--v4-bg, #15181c);
   border-color: #26333d;
   color: #5fa3d6;
 }
 
 [data-theme="dark"] .msg-bubble-theirs {
-  background: #1a1e23;
+  background: var(--v4-bg, #1a1e23);
   border-color: #262b31;
-  color: #e7eaed;
+  color: var(--v4-ink, #e7eaed);
 }
 
 [data-theme="dark"] .msg-meta,
@@ -2271,7 +2271,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme="dark"] .msg-action:disabled {
-  color: #6b747c;
+  color: var(--v4-ink-3, #6b747c);
 }
 
 [data-theme="dark"] .msg-bubble-theirs .msg-quote {
@@ -2280,7 +2280,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme="dark"] .messenger-composer {
-  background: #15181c;
+  background: var(--v4-bg, #15181c);
   border-top-color: #23272c;
 }
 
@@ -2306,7 +2306,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme="dark"] .messenger-food-hint__pill {
-  background: #15181c;
+  background: var(--v4-bg, #15181c);
   border-color: #3a3020;
   color: #d3be8e;
 }
@@ -2330,16 +2330,16 @@ button.messenger-day-checklist__chip:active {
 
 [data-theme="dark"] .messenger-confirm-dialog {
   background:
-    #15181c;
+    var(--v4-bg, #15181c);
   border-color: rgba(148, 163, 184, 0.18);
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
   box-shadow:
     0 26px 76px rgba(0, 0, 0, 0.54),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 [data-theme="dark"] .messenger-confirm-title {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .messenger-confirm-text {
@@ -2360,14 +2360,14 @@ button.messenger-day-checklist__chip:active {
 
 [data-theme="dark"] .messenger-inapp-toast {
   background:
-    #15181c;
+    var(--v4-bg, #15181c);
   border-color: rgba(96, 165, 250, 0.26);
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.44);
 }
 
 [data-theme="dark"] .messenger-inapp-toast__copy strong {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .messenger-inapp-toast__copy span {
@@ -2397,12 +2397,12 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme="dark"] .messenger-consent-dialog {
-  background: #111827;
+  background: var(--v4-bg, #111827);
   border-color: rgba(148, 163, 184, 0.24);
 }
 
 [data-theme="dark"] .messenger-consent-title {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .messenger-consent-text {
@@ -2410,19 +2410,19 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme="dark"] .messenger-consent-secondary {
-  background: #1f2937;
+  background: var(--v4-surface, #1f2937);
   color: #e5e7eb;
   border-color: rgba(148, 163, 184, 0.24);
 }
 
 [data-theme="dark"] .messenger-input {
   background: #1b1f24;
-  color: #e7eaed;
+  color: var(--v4-ink, #e7eaed);
   border-color: #262b31;
 }
 
 [data-theme="dark"] .messenger-input:focus {
-  background: #15181c;
+  background: var(--v4-bg, #15181c);
   border-color: #1d70b7;
   box-shadow: 0 0 0 3px rgba(29, 112, 183, 0.18);
 }
@@ -2459,7 +2459,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .msg-bubble-theirs .msg-intent__kicker {
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
 }
 
 .msg-intent__row {
@@ -2496,7 +2496,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .msg-bubble-theirs .msg-intent__details {
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -2594,13 +2594,13 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-apply__time {
   font-size: 11.5px;
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
 }
 
 .messenger-apply__empty {
   font-size: 12.5px;
   line-height: 1.45;
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
 }
 
 .messenger-apply__row {
@@ -2663,7 +2663,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-apply__total {
   font-size: 12px;
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2711,7 +2711,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-apply__submit:disabled {
-  background: #dce3e8;
+  background: var(--v4-accent-bg, #dce3e8);
   color: #a8b0b8;
   cursor: not-allowed;
 }
@@ -2750,7 +2750,7 @@ button.messenger-day-checklist__chip:active {
 .msg-applied-card__meta {
   margin-left: auto;
   font-size: 11px;
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
 }
 
 .msg-applied-card__items {
@@ -2783,7 +2783,7 @@ button.messenger-day-checklist__chip:active {
 .msg-applied-card__grams,
 .msg-applied-card__kcal {
   font-size: 12.5px;
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2800,7 +2800,7 @@ button.messenger-day-checklist__chip:active {
 
 .msg-applied-card__total {
   font-size: 11.5px;
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2817,7 +2817,7 @@ button.messenger-day-checklist__chip:active {
 
 [data-theme="dark"] .messenger-apply,
 [data-theme="dark"] .msg-applied-card {
-  background: #15181c;
+  background: var(--v4-bg, #15181c);
   border-color: #262b31;
 }
 
@@ -2826,7 +2826,7 @@ button.messenger-day-checklist__chip:active {
 [data-theme="dark"] .messenger-apply__kcal {
   background: #111417;
   border-color: #2e343b;
-  color: #e7eaed;
+  color: var(--v4-ink, #e7eaed);
 }
 
 [data-theme="dark"] .messenger-apply__cancel {
@@ -2841,7 +2841,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme="dark"] .msg-applied-card__name {
-  color: #e7eaed;
+  color: var(--v4-ink, #e7eaed);
 }
 
 [data-theme="dark"] .msg-applied-card__title {
@@ -2872,7 +2872,7 @@ button.messenger-day-checklist__chip:active {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: #fcfbf8;
+  background: var(--v4-hero, #fcfbf8);
 }
 
 .messenger-search__bar {
@@ -2919,7 +2919,7 @@ button.messenger-day-checklist__chip:active {
   border: 1px solid #e8e6e0;
   border-radius: 999px;
   background: var(--v4-bg, #ffffff);
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
   font-family: inherit;
   font-size: 11.5px;
   font-weight: 600;
@@ -2944,7 +2944,7 @@ button.messenger-day-checklist__chip:active {
   text-align: center;
   font-size: 13px;
   line-height: 1.5;
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
 }
 
 .messenger-search__day {
@@ -2953,7 +2953,7 @@ button.messenger-day-checklist__chip:active {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
 }
 
 .messenger-search__item {
@@ -2983,7 +2983,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-search__time {
   font-size: 11px;
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
 }
 
 .messenger-search__snippet {
@@ -3006,11 +3006,11 @@ button.messenger-day-checklist__chip:active {
 [data-theme="dark"] .messenger-search__input {
   background: #1b1f24;
   border-color: #262b31;
-  color: #e7eaed;
+  color: var(--v4-ink, #e7eaed);
 }
 
 [data-theme="dark"] .messenger-search__filter {
-  background: #15181c;
+  background: var(--v4-bg, #15181c);
   border-color: #23272c;
   color: #8b949d;
 }
@@ -3018,12 +3018,12 @@ button.messenger-day-checklist__chip:active {
 [data-theme="dark"] .messenger-search__filter.is-active {
   background: #1d70b7;
   border-color: #1d70b7;
-  color: #ffffff;
+  color: var(--v4-ink, #ffffff);
 }
 
 [data-theme="dark"] .messenger-search__author,
 [data-theme="dark"] .messenger-search__snippet {
-  color: #e7eaed;
+  color: var(--v4-ink, #e7eaed);
 }
 
 [data-theme="dark"] .messenger-search__day,
@@ -3051,8 +3051,8 @@ button.messenger-day-checklist__chip:active {
   margin: 0 14px;
   padding: 8px 10px;
   border-radius: 12px;
-  background: #f4f6f8;
-  border: 1px solid #e6eaee;
+  background: var(--v4-hero, #f4f6f8);
+  border: 1px solid var(--v4-line, #e6eaee);
 }
 
 .messenger-offline-bar__dot {
@@ -3084,7 +3084,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-offline-bar__retry:disabled {
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
   cursor: default;
 }
 
@@ -3201,7 +3201,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-transcript-draft__note {
   font-size: 10.5px;
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
 }
 
 .messenger-transcript-draft__field {
@@ -3226,20 +3226,20 @@ button.messenger-day-checklist__chip:active {
 
 [data-theme="dark"] .messenger-food-hint__step,
 [data-theme="dark"] .messenger-food-hint__time {
-  background: #15181c;
+  background: var(--v4-bg, #15181c);
   border-color: #3a3020;
   color: #d3be8e;
 }
 
 [data-theme="dark"] .messenger-transcript-draft {
-  background: #15181c;
+  background: var(--v4-bg, #15181c);
   border-color: #262b31;
 }
 
 [data-theme="dark"] .messenger-transcript-draft__field {
   background: #111417;
   border-color: #2e343b;
-  color: #e7eaed;
+  color: var(--v4-ink, #e7eaed);
 }
 
 [data-theme="dark"] .messenger-transcript-draft__note,
@@ -3254,7 +3254,7 @@ button.messenger-day-checklist__chip:active {
   gap: 4px;
   font-size: 11px;
   font-weight: 600;
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
 }
 
 .msg-status__dot {
@@ -3366,7 +3366,7 @@ button.messenger-day-checklist__chip:active {
   padding: 24px 18px;
   text-align: center;
   font-size: 13px;
-  color: #667079;
+  color: var(--v4-ink-2, #667079);
 }
 
 .messenger-inbox__row {
@@ -3384,13 +3384,13 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-inbox__row.is-active {
-  background: #f1f6fa;
+  background: var(--v4-hero, #f1f6fa);
   border-left: 3px solid #1d70b7;
   padding-left: 15px;
 }
 
 .messenger-inbox__row.is-done {
-  background: #fcfbf8;
+  background: var(--v4-hero, #fcfbf8);
 }
 
 .messenger-inbox__avatar {
@@ -3402,15 +3402,15 @@ button.messenger-day-checklist__chip:active {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #e2ecf2;
+  background: var(--v4-accent-bg, #e2ecf2);
   color: #434587;
   font-size: 14px;
   font-weight: 600;
 }
 
 .messenger-inbox__row.is-done .messenger-inbox__avatar {
-  background: #f2f1ed;
-  color: #667079;
+  background: var(--v4-hero, #f2f1ed);
+  color: var(--v4-ink-2, #667079);
 }
 
 .messenger-inbox__badge {
@@ -3485,8 +3485,8 @@ button.messenger-day-checklist__chip:active {
 .messenger-inbox__tag {
   padding: 2px 7px;
   border-radius: 999px;
-  background: #f2f1ed;
-  color: #667079;
+  background: var(--v4-hero, #f2f1ed);
+  color: var(--v4-ink-2, #667079);
   font-size: 10.5px;
   font-weight: 600;
 }
@@ -3524,12 +3524,12 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme="dark"] .messenger-inbox {
-  background: #15181c;
+  background: var(--v4-bg, #15181c);
   border-color: #23272c;
 }
 
 [data-theme="dark"] .messenger-inbox__title {
-  color: #e7eaed;
+  color: var(--v4-ink, #e7eaed);
 }
 
 [data-theme="dark"] .messenger-inbox__subtitle,
@@ -3547,7 +3547,7 @@ button.messenger-day-checklist__chip:active {
 [data-theme="dark"] .messenger-inbox__filter.is-active {
   background: #1d70b7;
   border-color: #1d70b7;
-  color: #ffffff;
+  color: var(--v4-ink, #ffffff);
 }
 
 [data-theme="dark"] .messenger-inbox__row {
@@ -3555,7 +3555,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme="dark"] .messenger-inbox__row.is-active {
-  background: #171b1f;
+  background: var(--v4-bg, #171b1f);
 }
 
 [data-theme="dark"] .messenger-inbox__row.is-done {
@@ -3563,11 +3563,11 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme="dark"] .messenger-inbox__name {
-  color: #e7eaed;
+  color: var(--v4-ink, #e7eaed);
 }
 
 [data-theme="dark"] .messenger-inbox__avatar {
-  background: #1e2a33;
+  background: var(--v4-surface, #1e2a33);
   color: #8fb9d8;
 }
 

@@ -83,6 +83,58 @@ function expand(hex) {
   return h;
 }
 
+// Строгое равенство литерала и роли защищало классику ценой тёмных палитр:
+// #0f172a отличается от --v4-ink (#111827) на глаз неразличимо, но замена
+// запрещалась — и текст оставался жёстко тёмным во всех шести наборах, включая
+// тёмные, где он нечитаем. Решение владельца 2026-08-10: мерить перцептивную
+// разницу, а не совпадение байтов. Сумма по каналам RGB для этого не годится —
+// шесть единиц в синем и в зелёном воспринимаются по-разному, поэтому OKLab.
+function srgbToLinear(c) {
+  const v = c / 255;
+  return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+}
+
+function hexToOklab(hex) {
+  const h = expand(hex);
+  const r = srgbToLinear(parseInt(h.slice(1, 3), 16));
+  const g = srgbToLinear(parseInt(h.slice(3, 5), 16));
+  const b = srgbToLinear(parseInt(h.slice(5, 7), 16));
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return {
+    L: 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    a: 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    b: 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  };
+}
+
+// Шкала ×100, чтобы пороги читались как привычные ΔE.
+function deltaE(hexA, hexB) {
+  const A = hexToOklab(hexA);
+  const B = hexToOklab(hexB);
+  return Math.hypot(A.L - B.L, A.a - B.a, A.b - B.b) * 100;
+}
+
+const DELTA_SILENT = 2; // заменяем молча
+const DELTA_NOTED = 4;  // заменяем, но с пометкой в отчёте; выше — гейт держит
+
+function relLuminance(hex) {
+  const h = expand(hex);
+  const [r, g, b] = [1, 3, 5].map((i) => srgbToLinear(parseInt(h.slice(i, i + 2), 16)));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+// Сдвиг чернил на два тона безобиден для плашки, но текст обязан сохранить
+// контраст. Фон в общем случае не вычислить статически, поэтому сверяем с
+// каноничным фоном набора — для текста это и есть худший реальный случай.
+function contrastTo(hex, bg) {
+  const [hi, lo] = [relLuminance(hex), relLuminance(bg)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+const TEXT_PROPS = /(^|[;{\s])color\s*:/;
+
 const VAR_RE = /var\(\s*(--v4-[a-z0-9-]+)\s*,\s*(#[0-9a-fA-F]{3,8})\s*\)/g;
 
 // Роль без запасного значения обходит проверку выше: сравнивать не с чем.
@@ -138,6 +190,8 @@ function selectorAt(css, index) {
   return css.slice(prevClose + 1, open).trim();
 }
 
+const noted = [];
+
 function checkFile(rel) {
   const abs = path.join(WEB, rel);
   const src = fs.readFileSync(abs, 'utf8');
@@ -156,6 +210,28 @@ function checkFile(rel) {
     if (!value) continue; // роль не задана — запасное значение сработает, всё честно
     if (!value.startsWith('#')) continue; // rgba-роли сравнивать с hex бессмысленно
     if (expand(value) === expand(literal)) continue;
+
+    const delta = deltaE(value, literal);
+    if (delta <= DELTA_NOTED) {
+      // Перцептивно неразличимо или почти — замена допустима. Но если это
+      // текст, контраст к фону набора не должен просесть: иначе выигрыш в
+      // тёмных палитрах куплен ухудшением читаемости в светлой.
+      const lineStart = src.lastIndexOf('\n', m.index) + 1;
+      const decl = src.slice(lineStart, src.indexOf('\n', m.index));
+      const isText = TEXT_PROPS.test(decl);
+      const bg = (dark ? CLASSIC_DARK : CLASSIC).get('v4-bg') || '#ffffff';
+      // То же уточнение, что в ui-v4-apply-near-roles.mjs: держим литерал, если
+      // контраст уходит ниже AA (4.5) или теряет больше десятой части.
+      // Буквальное «не ниже прежнего» блокировало #0f172a при падении 17.85 →
+      // 17.74 — величина, которой на экране не существует.
+      const before = contrastTo(literal, bg);
+      const contrastDropped = isText && contrastTo(value, bg) < Math.max(before >= 4.5 ? 4.5 : 0, before * 0.9);
+      if (!contrastDropped) {
+        if (delta > DELTA_SILENT) noted.push({ rel, line: src.slice(0, m.index).split('\n').length, literal, role: roleVar, value, delta });
+        continue;
+      }
+    }
+
     findings.push({
       file: rel,
       line: src.slice(0, m.index).split('\n').length,
@@ -164,6 +240,7 @@ function checkFile(rel) {
       role: roleVar,
       shown: value,
       theme: dark ? 'каноничная тёмная' : 'каноничная',
+      delta,
     });
   }
   for (const m of src.matchAll(BARE_VAR_RE)) {
@@ -197,6 +274,7 @@ for (const rel of scope) {
     console.log(
       f.literal
         ? `  :${f.line} ${f.role} — было ${f.literal}, ${f.theme} покажет ${f.shown}`
+          + (f.delta ? ` (ΔE ${f.delta.toFixed(1)})` : '')
         : `  :${f.line} ${f.role} — без запасного значения, прежний цвет потерян`,
     );
   }
@@ -212,8 +290,18 @@ for (const rel of scope) {
   }
 }
 
+if (noted.length) {
+  console.log(`\nЗамены в зоне ΔE ${DELTA_SILENT}–${DELTA_NOTED} — допустимы, но названы вслух: ${noted.length}`);
+  const byPair = new Map();
+  for (const n of noted) {
+    const key = `${n.literal} → ${n.role} (${n.value}) ΔE ${n.delta.toFixed(1)}`;
+    byPair.set(key, (byPair.get(key) || 0) + 1);
+  }
+  for (const [k, c] of [...byPair].sort((a, b) => b[1] - a[1])) console.log(`  ${k} ×${c}`);
+}
+
 if (!total) {
-  console.log('Сдвигов классики нет: каждая роль показывает тот же цвет, что стоял литералом.');
+  console.log('Сдвигов классики нет: перцептивная разница в пределах порога.');
   process.exit(0);
 }
 

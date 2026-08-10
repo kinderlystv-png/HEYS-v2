@@ -19,7 +19,7 @@
   font-size: 15px;
   font-weight: 700;
   line-height: 1;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .nutrition-v4-meta__details {
@@ -65,7 +65,7 @@
   font-weight: 600;
   line-height: 0.9;
   letter-spacing: -0.045em;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-variant-numeric: tabular-nums;
 }
 
@@ -166,14 +166,14 @@
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .nutrition-v4-meal-row__kcal {
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-variant-numeric: tabular-nums;
 }
 
@@ -218,7 +218,7 @@
 
 [data-palette="blue"] .nutrition-v4-cta,
 [data-palette="blue-dark"] .nutrition-v4-cta {
-  color: #ffffff;
+  color: var(--v4-ink, #ffffff);
 }
 
 .nutrition-v4-cta__icon {
@@ -258,7 +258,7 @@
 }
 
 .nutrition-v4-breakdown__row-label {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-weight: 700;
 }
 
@@ -272,7 +272,7 @@
 }
 
 .nutrition-v4-breakdown__cell--fact {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-weight: 700;
 }
 
@@ -317,7 +317,7 @@
   font-size: 22px;
   font-weight: 600;
   line-height: 1;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-variant-numeric: tabular-nums;
 }
 
@@ -380,7 +380,7 @@
   font-size: 22px;
   font-weight: 600;
   line-height: 1;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-variant-numeric: tabular-nums;
 }
 
@@ -405,13 +405,10 @@
   display: none;
 }
 
-/* v4-intentional: sand/blue hero value uses act-text */
-[data-palette="sand"] .nutrition-v4-hero__value,
-[data-palette="sand-dark"] .nutrition-v4-hero__value,
-[data-palette="blue"] .nutrition-v4-hero__value,
-[data-palette="blue-dark"] .nutrition-v4-hero__value {
-  color: var(--v4-act-text); /* v4-intentional */
-}
+/* Цифра героя остаётся нейтральной во всех наборах. Была переопределена на
+ * --v4-act-text для песочной и синей — снято 2026-08-10 по ревью владельца:
+ * «Осталось на сегодня» это факт, а не действие, и акцент несёт действие.
+ * Цветом в этом блоке отмечается только строка отклонения. */
 
 /* v4-intentional: sand/blue tier label uses act-text */
 [data-palette="sand"] .nutrition-v4-tier,

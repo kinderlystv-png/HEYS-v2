@@ -117,7 +117,7 @@
   border: 0;
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.06);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   cursor: pointer;
   font-size: 26px;
   line-height: 1;
@@ -458,7 +458,7 @@
 }
 
 .drums-ft-tempo-picker__wheel strong {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-size: 28px;
   font-weight: 900;
   line-height: 1;
@@ -518,7 +518,7 @@
 }
 
 .drums-ft-notation__note-head {
-  fill: #0f172a;
+  fill: var(--v4-ink, #0f172a);
 }
 
 .drums-ft-notation__stem {
@@ -592,7 +592,7 @@
 }
 
 .drums-ft-ramp strong {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-size: 14px;
 }
 
@@ -602,7 +602,7 @@
   border: 0;
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.06);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   cursor: pointer;
   font: inherit;
   font-weight: 800;
@@ -626,7 +626,7 @@
   padding: 10px 12px;
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.06);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-weight: 800;
 }
 
@@ -652,7 +652,7 @@
 }
 
 .drums-ft-volume-control strong {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-size: 13px;
   font-weight: 900;
 }
@@ -705,7 +705,7 @@
 }
 
 .drums-ft-technique__summary {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-size: 13px;
   font-weight: 700;
   line-height: 1.35;
@@ -841,7 +841,7 @@
 }
 
 .drums-ft-quality__head strong {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-size: 15px;
   font-weight: 900;
 }
@@ -878,7 +878,7 @@
 .drums-ft-quality-card strong,
 .drums-ft-quality-check strong,
 .drums-ft-pain strong {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-size: 13px;
   font-weight: 900;
 }
@@ -956,7 +956,7 @@
   min-width: 0;
   border: 0;
   background: transparent;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-size: 20px;
   font-weight: 900;
   outline: none;
@@ -968,7 +968,7 @@
 
 .drums-ft-pain {
   border-color: rgba(239, 68, 68, 0.2);
-  background: #fffafa;
+  background: var(--v4-hero, #fffafa);
 }
 
 .drums-ft-pain strong {
@@ -1036,7 +1036,7 @@
 
 .drums-ft-tap-test__head strong,
 .drums-ft-tap-test__meta strong {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-weight: 900;
 }
 
@@ -1066,7 +1066,7 @@
   border: 0;
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.06);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   cursor: pointer;
   font: inherit;
   font-weight: 800;
@@ -1090,7 +1090,7 @@
   border: 1px solid rgba(15, 23, 42, 0.12);
   border-radius: 12px;
   background: var(--v4-bg, #fff);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font: inherit;
   outline: none;
 }
@@ -1149,7 +1149,7 @@
 [data-theme='dark'] .drums-ft-quality-check strong,
 [data-theme='dark'] .drums-ft-input-grid input[type='number'],
 [data-theme='dark'] .drums-ft-note {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme='dark'] .drums-ft-quality__head span,
@@ -1203,7 +1203,7 @@
 [data-theme='dark'] .drums-ft-tap-test button.is-active,
 [data-theme='dark'] .drums-ft-tap-test__tap {
   background: #0f766e;
-  color: #fff;
+  color: var(--v4-ink, #fff);
 }
 
 @media (max-width: 640px) {
@@ -1271,7 +1271,7 @@
 }
 
 .drums-ft-phase-banner strong {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-weight: 800;
 }
 
@@ -1315,7 +1315,7 @@
 .drums-ft-modal__title {
   font-size: 18px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .drums-ft-modal__hint {
@@ -1333,7 +1333,7 @@
 .drums-ft-modal__bpm strong {
   font-size: 56px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   line-height: 1;
 }
 
@@ -1353,7 +1353,7 @@
   min-height: 44px;
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.06);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-weight: 800;
   border: 0;
   cursor: pointer;
@@ -1390,7 +1390,7 @@
 
 .drums-ft-modal__secondary {
   background: rgba(15, 23, 42, 0.06);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .drums-ft-modal__secondary:hover {
@@ -1399,12 +1399,12 @@
 
 [data-theme='dark'] .drums-ft-modal__card {
   background: var(--v4-hero, #1e293b);
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme='dark'] .drums-ft-modal__title,
 [data-theme='dark'] .drums-ft-modal__bpm strong {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme='dark'] .drums-ft-modal__hint,
@@ -1415,7 +1415,7 @@
 [data-theme='dark'] .drums-ft-modal__steps button,
 [data-theme='dark'] .drums-ft-modal__secondary {
   background: rgba(255, 255, 255, 0.08);
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme='dark'] .drums-ft-phase-banner {
@@ -1424,7 +1424,7 @@
 }
 
 [data-theme='dark'] .drums-ft-phase-banner strong {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme='dark'] .drums-ft-phase-banner.is-warmup {
@@ -1457,7 +1457,7 @@
 
 .drums-ft-technique__variant-btn:hover {
   background: rgba(15, 23, 42, 0.08);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .drums-ft-technique__variant-btn.is-active {
@@ -1475,7 +1475,7 @@
 
 [data-theme='dark'] .drums-ft-technique__variant-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 /* === Animated schematic === */
@@ -1642,7 +1642,7 @@
   padding: 14px 16px;
   border-radius: 14px;
   background: linear-gradient(135deg, rgba(15, 118, 110, 0.12), rgba(15, 118, 110, 0.04));
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   text-align: left;
   border: 0;
   cursor: pointer;
@@ -1684,7 +1684,7 @@
 
 [data-theme='dark'] .drums-ft-progress-cta {
   background: linear-gradient(135deg, rgba(15, 118, 110, 0.28), rgba(15, 118, 110, 0.12));
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme='dark'] .drums-ft-progress-cta__body span {
@@ -1711,7 +1711,7 @@
   grid-column: 2;
   font-size: 17px;
   font-weight: 900;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .drums-ft-progress-screen__head span {
@@ -1727,7 +1727,7 @@
   border: 0;
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.06);
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-weight: 800;
   font-size: 12px;
   cursor: pointer;
@@ -1738,7 +1738,7 @@
 }
 
 [data-theme='dark'] .drums-ft-progress-screen__head strong {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme='dark'] .drums-ft-progress-screen__head span {
@@ -1747,7 +1747,7 @@
 
 [data-theme='dark'] .drums-ft-back-btn {
   background: rgba(255, 255, 255, 0.08);
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 .drums-ft-progress-grid {
@@ -1785,7 +1785,7 @@
 .drums-ft-progress-card__head strong {
   font-size: 15px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .drums-ft-progress-card__head span {
@@ -1831,7 +1831,7 @@
 }
 
 [data-theme='dark'] .drums-ft-progress-card__head strong {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme='dark'] .drums-ft-progress-card__head span,
@@ -1886,7 +1886,7 @@
   padding: 14px;
   border-radius: 12px;
   background: linear-gradient(135deg, rgba(15, 118, 110, 0.1), rgba(20, 184, 166, 0.04));
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .drums-ft-progress-target strong {
@@ -1900,7 +1900,7 @@
 }
 
 [data-theme='dark'] .drums-ft-progress-target {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme='dark'] .drums-ft-progress-target span {
@@ -1993,7 +1993,7 @@
 .drums-ft-history > strong {
   font-size: 13px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
 }
 
 .drums-ft-history ul {
@@ -2027,7 +2027,7 @@
 }
 
 .drums-ft-history__bpm {
-  color: #0f172a;
+  color: var(--v4-ink, #0f172a);
   font-weight: 900;
   font-size: 13px;
 }
@@ -2067,7 +2067,7 @@
 }
 
 [data-theme='dark'] .drums-ft-history > strong {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme='dark'] .drums-ft-history__row {
@@ -2079,7 +2079,7 @@
 }
 
 [data-theme='dark'] .drums-ft-history__bpm {
-  color: #f8fafc;
+  color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme='dark'] .drums-ft-history__date,

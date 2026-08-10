@@ -75,7 +75,7 @@
     border-radius: 999px;
     border: 1px solid rgba(0, 0, 0, 0.08);
     background: rgba(255, 255, 255, 0.85);
-    color: #6b7280;
+    color: var(--v4-ink-2, #6b7280);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -193,7 +193,7 @@
 .planning-tab:has(.planning-checklists-screen) .planning-content,
 .planning-tab:has(.planning-goals-screen),
 .planning-tab:has(.planning-goals-screen) .planning-content {
-    background-color: #f1f5f9;
+    background-color: var(--v4-hero, #f1f5f9);
     background-image:
         radial-gradient(circle at 100% 0%, rgba(59, 130, 246, 0.08), transparent 34%),
         linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(241, 245, 249, 0.92));
@@ -1572,7 +1572,7 @@
 [data-theme="dark"] .planning-goals-review-panel__actions .is-primary {
     border-color: rgba(29, 112, 183, 0.3);
     background: #1d70b7;
-    color: #fff;
+    color: var(--v4-ink, #fff);
 }
 
 [data-theme="dark"] .planning-goals-review-panel__more {
@@ -8466,7 +8466,7 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 [data-theme="dark"] .planning-calendar-task-picker__action--delete.is-armed {
-    color: #ffffff;
+    color: var(--v4-ink, #ffffff);
     background: #be5673;
 }
 
@@ -11520,7 +11520,7 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 
 [data-theme="dark"] .planning-completed-toggle.active {
     background: color-mix(in srgb, var(--planning-project-color, #94a3b8) 18%, var(--planning-surface) 82%);
-    color: #f8fafc;
+    color: var(--v4-ink, #f8fafc);
 }
 
 [data-theme="dark"] .planning-action-menu-overlay {
@@ -11872,7 +11872,7 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 [data-theme="dark"] .planning-calendar-drag-cancel.is-active {
     border-color: #be5673;
     background: #be5673;
-    color: #ffffff;
+    color: var(--v4-ink, #ffffff);
 }
 
 [data-theme="dark"] .planning-calendar-drag-conflict {
@@ -12213,7 +12213,7 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 [data-theme="dark"] .planning-repeat-calendar__day--selected.planning-repeat-calendar__day--today {
     background: var(--planning-accent, #3b82f6);
     border-color: var(--planning-accent, #3b82f6);
-    color: #fff;
+    color: var(--v4-ink, #fff);
 }
 
 @media (hover: hover) {
