@@ -3921,7 +3921,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                     : (window.HEYS.products?.getAll?.() || []);
                                 // Fallback chain для profile
                                 const effectiveProfile = cachedProfile || (U && U.lsGet ? U.lsGet('heys_profile', {}) : {});
-                                if (!getActiveDaysForMonthFn || !clientId || effectiveProducts.length === 0) {
+                                if (!getActiveDaysForMonthFn || !clientId) {
                                     return new Map();
                                 }
                                 try {

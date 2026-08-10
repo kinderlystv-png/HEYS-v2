@@ -1219,7 +1219,7 @@
             return { main: `Сегодня, ${longDate}`, relative: null, isToday: true };
         }
         if (isYesterday) {
-            return { main: `Вчера, ${longDate}`, relative: 'вчера', isToday: false };
+            return { main: `Вчера, ${longDate}`, relative: null, isToday: false };
         }
         const weekday = d.toLocaleDateString('ru-RU', { weekday: 'long' });
         const wd = weekday.charAt(0).toUpperCase() + weekday.slice(1);

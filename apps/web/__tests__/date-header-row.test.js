@@ -36,10 +36,10 @@ describe('formatDateHeaderRow (v4 date line)', () => {
     expect(row.relative).toBeNull();
   });
 
-  it('yesterday — «Вчера, …» и relative вчера', () => {
+  it('yesterday — «Вчера, …» без дублирующей подписи', () => {
     const row = formatDateHeaderRow('2026-08-09');
     expect(row.main).toMatch(/^Вчера, 9 августа/);
-    expect(row.relative).toBe('вчера');
+    expect(row.relative).toBeNull();
   });
 
   it('three days ago — weekday + «три дня назад»', () => {

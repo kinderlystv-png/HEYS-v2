@@ -76,11 +76,6 @@
                     var effectiveProducts = (products && products.length > 0) ? products
                         : (window.HEYS?.products?.getAll?.() || []);
 
-                    if (effectiveProducts.length === 0) {
-                        if (tokenRef.current === token) setActiveDays(function () { return new Map(); });
-                        return;
-                    }
-
                     var getActiveDaysForMonth = window.HEYS && window.HEYS.dayUtils && window.HEYS.dayUtils.getActiveDaysForMonth;
                     if (!getActiveDaysForMonth) {
                         if (tokenRef.current === token) setActiveDays(function () { return new Map(); });

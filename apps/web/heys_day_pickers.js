@@ -305,10 +305,13 @@
           React.createElement('span', { className: 'legend-item refeed' }, '🍕 refeed')
         ),
         React.createElement('div', { className: 'date-picker-footer' },
-          !isTodaySelected && React.createElement('button', {
+          React.createElement('button', {
             className: 'date-picker-btn today-btn',
-            onClick: () => { onSelect(todayISO()); setIsOpen(false); }
-          }, '📍 Сегодня')
+            onClick: () => {
+              if ((valueISO || todayStr) !== todayStr) onSelect(todayStr);
+              setIsOpen(false);
+            }
+          }, 'Сегодня')
         )
       )
     ), document.body)
