@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#e9dfcd;font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  *{box-sizing:border-box}
+  a{color:#8a4a20;text-decoration:none}
+  a:hover{color:#c67139}
+  .ph{width:330px;flex:none;position:relative;overflow:hidden;background:#fffaf1;border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12)}
+  .sc{min-height:600px;padding:6px 18px 18px}
+  .n{font-variant-numeric:tabular-nums}
+  .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.42)}
+  .tier{font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#a75c2b;margin:20px 0 10px}
+  .cd{background:#f7efe2;border-radius:20px;padding:2px 16px}
+  .grp{background:#f7efe2;border-radius:20px;padding:16px}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12.5px/1 Figtree,sans-serif}
+  .row > :last-child{flex:none}
+  .h{font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:26px 0 12px}
+  .nt{padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid rgba(0,0,0,.07)}
+  .nt > b,.ntl > b{font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;display:block}
+  .nt > span,.ntl > span{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);display:block;margin-top:4px}
+  .top{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 0}
+  .ttl{font:700 15px/1 Figtree,sans-serif;color:#201e1d}
+  .btn{display:flex;align-items:center;justify-content:center;gap:9px;border-radius:999px;background:#c67139;padding:16px;font:700 13px/1 Figtree,sans-serif;color:#2b1608}
+  .btn2{display:flex;align-items:center;justify-content:center;border-radius:999px;background:#f7efe2;padding:15px;font:700 12.5px/1 Figtree,sans-serif;color:#8a4a20}
+  .chip{position:relative;padding:11px 14px;border-radius:14px;background:#f7efe2;font:600 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);text-align:center}
+  .chip::after{content:"";position:absolute;left:-4px;right:-4px;top:50%;height:44px;transform:translateY(-50%);min-width:44px}
+  .chip.on{background:#efe3cf;color:#8a4a20;font-weight:700}
+  .dots{display:flex;gap:5px;align-items:center}
+  .dots span{width:6px;height:6px;border-radius:999px;background:rgba(0,0,0,.14)}
+  .dots span.on{background:#c67139;width:16px}
+  .lab{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}
+  .lab b{font:700 12.5px/1 Figtree,sans-serif;color:#201e1d}
+  .lab span{font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45)}
+</style>
+</helmet>
+
+<div style="background:#e9dfcd;padding:44px 46px 70px;width:max-content;">
+
+  <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
+    <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">ДОБАВЛЕНИЕ ЕДЫ</span>
+    <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Весь флоу на слое v4 — по текущим экранам, до инвентаря</span>
+  </div>
+  <p style="margin:0 0 34px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Перерисованы восемь экранов из присланных скриншотов, порядок сохранён. Это перекраска плюс несколько сокращений, которые видны без кода; всё структурное помечено в листе справа и ждёт инвентаря. Главное наблюдение: между «плюсом» и сохранённым приёмом человек проходит до восьми экранов, и трижды отвечает на вопрос «сколько продуктов ты добавишь» — заранее, до того как увидел список.</p>
+
+  <div style="display:flex;gap:30px;align-items:flex-start;">
+
+    <!-- 0. ГАРД ДАТЫ -->
+    <div>
+      <div class="lab"><b>0 · Другая дата</b><span>только если день не сегодня</span></div>
+      <div class="ph" data-screen-label="Добавление · гард даты">
+        <div class="sc" style="min-height:633px;display:flex;flex-direction:column;justify-content:center;padding:18px;">
+          <div style="background:#f3e0d2;border-radius:26px;padding:24px 20px;">
+            <div class="k" style="color:#8a4a20;">Внимание</div>
+            <div style="font:700 17px/1.35 Figtree,sans-serif;color:#201e1d;margin-top:12px;text-wrap:pretty;">Приём запишется на 7 августа, а не на сегодня</div>
+            <div style="font:500 12.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.55);margin-top:10px;text-wrap:pretty;">В календаре выбран другой день. Еда уйдёт туда и в сегодняшнюю норму не попадёт.</div>
+            <div class="btn" style="margin-top:20px;">Перейти на сегодня</div>
+            <div style="text-align:center;font:600 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:16px;">Всё-таки записать на 7 августа</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. ВРЕМЯ И ТИП -->
+    <div>
+      <div class="lab"><b>1 · Время и тип</b><span>частный случай: волна ещё идёт</span></div>
+      <div class="ph" data-screen-label="Добавление · время и тип">
+        <div class="top">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          <span class="ttl">Новый приём</span>
+          <span class="dots"><span class="on"></span><span></span></span>
+        </div>
+        <div class="sc">
+          <div style="background:#efe3cf;border-radius:26px;padding:24px 20px;margin-top:16px;text-align:center;">
+            <div class="k">Время</div>
+            <div class="n" style="font:600 54px/1 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.04em;margin-top:12px;">11:50</div>
+          </div>
+          <div class="tier">Тип приёма</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <span class="chip">Завтрак</span><span class="chip">Обед</span>
+            <span class="chip on">Перекус</span><span class="chip">Ужин</span>
+            <span class="chip">Кофе-брейк</span><span class="chip">Ночной приём</span>
+          </div>
+          <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:12px;text-wrap:pretty;">Тип предложен по времени — менять не обязательно.</div>
+          <div class="grp" style="background:#f0d8c4;margin-top:16px;">
+            <div style="font:600 12px/1.45 Figtree,sans-serif;color:#8a4a20;text-wrap:pretty;">Прошлый приём ещё усваивается — окно закроется в 13:00.</div>
+          </div>
+          <div class="btn" style="margin-top:12px;">Всё равно продолжить</div>
+          <div style="text-align:center;font:600 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:14px;">Подождать</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. САМОЧУВСТВИЕ -->
+    <div>
+      <div class="lab"><b>2 · Самочувствие</b><span>второй шаг, до еды</span></div>
+      <div class="ph" data-screen-label="Добавление · самочувствие">
+        <div class="top">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <span class="ttl">Как вы сейчас</span>
+          <span class="dots"><span></span><span class="on"></span></span>
+        </div>
+        <div class="sc">
+          <div class="grp" style="margin-top:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Настроение</span><span class="n" style="font:700 13px/1 Figtree,sans-serif;color:#5c6a45;">8 · хорошо</span></div>
+            <div style="height:8px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:14px;position:relative;"><div style="width:80%;height:8px;border-radius:999px;background:#7a8a5e;"></div><span style="position:absolute;left:80%;top:-4px;width:16px;height:16px;margin-left:-8px;border-radius:999px;background:#fffaf1;box-shadow:0 1px 4px rgba(80,50,20,.25);"></span></div>
+          </div>
+          <div class="grp" style="margin-top:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Самочувствие</span><span class="n" style="font:700 13px/1 Figtree,sans-serif;color:#8a4a20;">3 · слабость</span></div>
+            <div style="height:8px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:14px;position:relative;"><div style="width:30%;height:8px;border-radius:999px;background:#d99a63;"></div><span style="position:absolute;left:30%;top:-4px;width:16px;height:16px;margin-left:-8px;border-radius:999px;background:#fffaf1;box-shadow:0 1px 4px rgba(80,50,20,.25);"></span></div>
+          </div>
+          <div class="grp" style="margin-top:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Стресс</span><span class="n" style="font:700 13px/1 Figtree,sans-serif;color:#5c6a45;">1 · спокоен</span></div>
+            <div style="height:8px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:14px;position:relative;"><div style="width:10%;height:8px;border-radius:999px;background:#7a8a5e;"></div><span style="position:absolute;left:10%;top:-4px;width:16px;height:16px;margin-left:-8px;border-radius:999px;background:#fffaf1;box-shadow:0 1px 4px rgba(80,50,20,.25);"></span></div>
+          </div>
+          <div class="tier">Что повлияло</div>
+          <div style="display:flex;flex-wrap:wrap;gap:14px;">
+            <span class="chip on" style="padding:9px 13px;">Радость</span><span class="chip" style="padding:9px 13px;">Успех</span><span class="chip" style="padding:9px 13px;">Встреча</span><span class="chip" style="padding:9px 13px;">Природа</span><span class="chip" style="padding:9px 13px;">Недосып</span>
+          </div>
+          <div class="btn" style="margin-top:20px;">Дальше<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2b1608" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+          <div style="text-align:center;font:600 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:16px;">Сохранить приём без оценок</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. ЧТО ДОБАВЛЯЕМ -->
+    <div>
+      <div class="lab"><b>3 · Поиск и повтор</b><span>развилка и поиск слиты</span></div>
+      <div class="ph" data-screen-label="Добавление · выбор способа">
+        <div class="top">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          <span class="ttl">Перекус · 11:50</span>
+          <span style="width:17px;"></span>
+        </div>
+        <div class="sc">
+          <div style="background:#efe3cf;border-radius:22px;padding:18px;margin-top:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div><div style="font:700 13px/1.3 Figtree,sans-serif;color:#201e1d;">Повторить вчерашний перекус</div><div style="font:500 11.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:5px;">Кофе, сыр, хлеб · 292 ккал</div></div>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;background:#f7efe2;border-radius:16px;padding:14px 16px;margin-top:14px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.75" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+            <span style="flex:1;font:500 13px/1 Figtree,sans-serif;color:rgba(0,0,0,.35);">Поиск продукта</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 8v8M11 8v8M15 8v8"/></svg>
+          </div>
+          <div style="display:flex;gap:16px;margin-top:16px;font:600 11.5px/1 Figtree,sans-serif;">
+            <span style="color:#8a4a20;padding-bottom:6px;border-bottom:2px solid #c67139;">Частые</span>
+            <span style="color:rgba(0,0,0,.35);padding-bottom:6px;">Недавние</span>
+            <span style="color:rgba(0,0,0,.35);padding-bottom:6px;">Наборы · 4</span>
+            <span style="color:rgba(0,0,0,.35);padding-bottom:6px;">Общие</span>
+          </div>
+          <div style="font:500 10.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);margin-top:10px;">За 21 день · чаще всего</div>
+          <div class="cd" style="margin-top:12px;">
+            <div class="row"><span style="display:flex;align-items:center;gap:11px;"><span style="width:4px;height:30px;border-radius:999px;background:#7a8a5e;flex:none;"></span><span><span style="display:block;color:#201e1d;">Кофе растворимый с молоком</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">51 ккал · 22 раза</span></span></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a75c2b" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div class="row"><span style="display:flex;align-items:center;gap:11px;"><span style="width:4px;height:30px;border-radius:999px;background:#7a8a5e;flex:none;"></span><span><span style="display:block;color:#201e1d;">Сыр твёрдый классический</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">307 ккал · 18 раз</span></span></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a75c2b" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div class="row" style="border-bottom:none;"><span style="display:flex;align-items:center;gap:11px;"><span style="width:4px;height:30px;border-radius:999px;background:#7a8a5e;flex:none;"></span><span><span style="display:block;color:#201e1d;">Хлеб тостовый премиум</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">274 ккал · 12 раз</span></span></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a75c2b" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+          </div>
+          <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:14px;text-wrap:pretty;">Поиск и частые — сразу, без экрана-развилки. Сколько продуктов будет, решается по ходу.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. ПОИСК -->
+    <div>
+      <div class="lab"><b>4 · Список продуктов</b><span>после ввода запроса</span></div>
+      <div class="ph" data-screen-label="Добавление · поиск">
+        <div class="top">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <span class="ttl">Перекус · 11:50</span>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 8v8M11 8v8M15 8v8"/></svg>
+        </div>
+        <div class="sc">
+          <div style="display:flex;align-items:center;gap:10px;background:#f7efe2;border-radius:16px;padding:14px 16px;margin-top:14px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.75" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+            <span style="flex:1;font:600 13px/1 Figtree,sans-serif;color:#201e1d;">сыр</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </div>
+          <div style="font:500 10.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);margin-top:12px;">Найдено 5
+
+          </div>
+          <div class="cd" style="margin-top:12px;">
+            <div class="row"><span style="display:flex;align-items:center;gap:11px;"><span style="width:4px;height:30px;border-radius:999px;background:#7a8a5e;flex:none;"></span><span><span style="display:block;color:#201e1d;"><b style="font-weight:700;">Сыр</b> твёрдый классический</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">307 ккал · Б25 Ж25 У1 · 18 раз</span></span></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a75c2b" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div class="row"><span style="display:flex;align-items:center;gap:11px;"><span style="width:4px;height:30px;border-radius:999px;background:#7a8a5e;flex:none;"></span><span><span style="display:block;color:#201e1d;">Творожный <b style="font-weight:700;">сыр</b> 60</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">282 ккал · Б6 Ж28 У3 · 7 раз</span></span></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a75c2b" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div class="row"><span style="display:flex;align-items:center;gap:11px;"><span style="width:4px;height:30px;border-radius:999px;background:#d99a63;flex:none;"></span><span><span style="display:block;color:#201e1d;">Плавленый <b style="font-weight:700;">сыр</b> в ванночке</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">257 ккал · Б10 Ж23 У4 · 2 раза</span></span></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a75c2b" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div class="row"><span style="display:flex;align-items:center;gap:11px;"><span style="width:4px;height:30px;border-radius:999px;background:#7a8a5e;flex:none;"></span><span><span style="display:block;color:#201e1d;"><b style="font-weight:700;">Сыр</b> адыгейский</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">240 ккал · Б19 Ж19 У1 · общая база</span></span></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a75c2b" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div class="row" style="border-bottom:none;"><span style="display:flex;align-items:center;gap:11px;"><span style="width:4px;height:30px;border-radius:999px;background:#c67139;flex:none;"></span><span><span style="display:block;color:#201e1d;"><b style="font-weight:700;">Сыр</b>ок глазированный</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">407 ккал · Б8 Ж23 У40 · общая база</span></span></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a75c2b" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+          </div>
+          <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:12px;text-wrap:pretty;">Полоса слева — вредность, до сохранения она передаётся только цветом. Числом появится в дневнике.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. ПОРЦИЯ -->
+    <div>
+      <div class="lab"><b>5 · Порция</b><span>частный случай: продукт уже в приёме</span></div>
+      <div class="ph" data-screen-label="Добавление · порция">
+        <div class="top">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <span class="ttl">Кофе растворимый с молоком</span>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 6.2L21 10l-4.8 4.3L17.5 21 12 17.6 6.5 21l1.3-6.7L3 10l6.5-.8z"/></svg>
+        </div>
+        <div class="sc">
+          <div style="background:#efe3cf;border-radius:26px;padding:24px 20px 20px;margin-top:14px;text-align:center;">
+            <div class="k">Сколько</div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-top:14px;">
+              <span style="width:44px;height:44px;border-radius:999px;background:#fffaf1;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
+              <span class="n" style="font:600 54px/1 Figtree,sans-serif;color:#201e1d;letter-spacing:-.04em;">100<span style="font-size:15px;font-weight:600;color:rgba(0,0,0,.38);"> г</span></span>
+              <span style="width:44px;height:44px;border-radius:999px;background:#fffaf1;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+            </div>
+            <div style="display:flex;justify-content:center;gap:12px;margin-top:18px;">
+              <span class="chip" style="background:#fffaf1;padding:10px 11px;">50</span>
+              <span class="chip on" style="background:#c67139;color:#2b1608;padding:10px 11px;">100</span>
+              <span class="chip" style="background:#fffaf1;padding:10px 11px;">150</span>
+              <span class="chip" style="background:#fffaf1;padding:10px 11px;">200</span>
+              <span class="chip" style="background:#fffaf1;padding:10px 11px;">300</span>
+            </div>
+            <div style="display:flex;justify-content:center;gap:12px;margin-top:12px;">
+              <span class="chip" style="background:#eaefe0;color:#5c6a45;padding:10px 12px;">½ стакана · 125 г</span>
+              <span class="chip" style="background:#eaefe0;color:#5c6a45;padding:10px 12px;">1 стакан · 250 г</span>
+            </div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:14px;">В прошлый раз было 100 г</div>
+          </div>
+          <div class="grp" style="margin-top:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Добавится</span><span class="n" style="font:600 22px/1 Figtree,sans-serif;color:#8a4a20;">51 ккал</span></div>
+            <div class="n" style="display:flex;gap:16px;font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:12px;"><span>Б 3</span><span>Ж 3</span><span>У 5</span></div>
+            <div style="height:6px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:14px;"><div style="width:3%;height:6px;border-radius:999px;background:#c67139;"></div></div>
+            <div class="n" style="font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:9px;">51 из 1683 за день · 3 %</div>
+          </div>
+          <div class="grp" style="background:#f3e0d2;margin-top:12px;">
+            <div style="font:600 12.5px/1.45 Figtree,sans-serif;color:#8a4a20;text-wrap:pretty;">Этот продукт уже есть в приёме — 100 г. Добавите ещё, и еда посчитается дважды.</div>
+          </div>
+          <div class="btn" style="margin-top:12px;">Добавить</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. ПРИЁМ СОБРАН -->
+    <div>
+      <div class="lab"><b>6 · Приём собран</b><span>вместо «добавить ещё?»</span></div>
+      <div class="ph" data-screen-label="Добавление · приём собран">
+        <div class="top">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          <span class="ttl">Перекус · 11:50</span>
+          <span style="width:17px;"></span>
+        </div>
+        <div class="sc">
+          <div style="background:#efe3cf;border-radius:26px;padding:22px 20px;margin-top:14px;">
+            <div class="k">В приёме</div>
+            <div style="display:flex;align-items:baseline;gap:9px;margin-top:12px;"><span class="n" style="font:600 44px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.035em;">292</span><span style="font:600 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);">ккал · 4 продукта</span></div>
+            <div class="n" style="font:500 11.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:10px;">До нормы дня остаётся 1391</div>
+          </div>
+          <div class="cd" style="margin-top:12px;">
+            <div class="row"><span style="color:rgba(0,0,0,.55);">Кофе растворимый <span class="n" style="color:rgba(0,0,0,.35);font-weight:500;">100 г</span></span><span class="n" style="color:#201e1d;">51</span></div>
+            <div class="row"><span style="color:rgba(0,0,0,.55);">Сыр твёрдый <span class="n" style="color:rgba(0,0,0,.35);font-weight:500;">30 г</span></span><span class="n" style="color:#201e1d;">92</span></div>
+            <div class="row"><span style="color:rgba(0,0,0,.55);">Творожный сыр <span class="n" style="color:rgba(0,0,0,.35);font-weight:500;">20 г</span></span><span class="n" style="color:#201e1d;">38</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:rgba(0,0,0,.55);">Хлеб тостовый <span class="n" style="color:rgba(0,0,0,.35);font-weight:500;">40 г</span></span><span class="n" style="color:#201e1d;">111</span></div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:14px;">
+            <span class="btn2" style="flex:1;">Добавить ещё</span>
+            <span class="btn2" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Фото приёма</span>
+          </div>
+          <div class="btn2" style="margin-top:8px;">Сохранить как набор</div>
+          <div class="btn" style="margin-top:10px;">Готово</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. НАБОРЫ -->
+    <div>
+      <div class="lab"><b>7 · Готовые наборы</b><span>самое ценное во флоу</span></div>
+      <div class="ph" data-screen-label="Добавление · наборы">
+        <div class="top">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <span class="ttl">Наборы</span>
+          <span style="font:600 12px/1 Figtree,sans-serif;color:#8a4a20;">Править</span>
+        </div>
+        <div class="sc">
+          <div class="tier" style="margin-top:14px;">Замечено в истории</div>
+          <div class="grp" style="background:#eaefe0;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;"><span style="font:700 12.5px/1.3 Figtree,sans-serif;color:#201e1d;">Кофе, сыр, хлеб</span><span class="n" style="flex:none;font:700 11px/1 Figtree,sans-serif;color:#5c6a45;">повторялось 7×</span></div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <span style="flex:1;text-align:center;padding:10px;border-radius:999px;background:#fffaf1;font:700 11.5px/1 Figtree,sans-serif;color:#5c6a45;">Сохранить как набор</span>
+              <span style="padding:10px 14px;border-radius:999px;background:#fffaf1;font:700 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">Скрыть</span>
+            </div>
+          </div>
+          <div class="tier">Мои наборы</div>
+          <div class="cd">
+            <div class="row"><span><span style="display:block;color:#201e1d;">Бутер с маслом и кофе</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">4 продукта · 318 ккал</span></span><span style="padding:9px 14px;border-radius:999px;background:#efe3cf;font:700 11.5px/1 Figtree,sans-serif;color:#8a4a20;">Добавить</span></div>
+            <div class="row"><span><span style="display:block;color:#201e1d;">Овсяная каша с кофе</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">3 продукта · 402 ккал</span></span><span style="padding:9px 14px;border-radius:999px;background:#efe3cf;font:700 11.5px/1 Figtree,sans-serif;color:#8a4a20;">Добавить</span></div>
+            <div class="row"><span><span style="display:block;color:#201e1d;">Бутер с кофе без ветчины</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">4 продукта · 292 ккал</span></span><span style="padding:9px 14px;border-radius:999px;background:#efe3cf;font:700 11.5px/1 Figtree,sans-serif;color:#8a4a20;">Добавить</span></div>
+            <div class="row" style="border-bottom:none;"><span><span style="display:block;color:#201e1d;">Кофе Киндерли</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">3 продукта · 187 ккал</span></span><span style="padding:9px 14px;border-radius:999px;background:#efe3cf;font:700 11.5px/1 Figtree,sans-serif;color:#8a4a20;">Добавить</span></div>
+          </div>
+          <div class="btn2" style="margin-top:14px;">Собрать новый набор</div>
+          <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:14px;text-wrap:pretty;">Удаление и переименование — по долгому нажатию, чтобы три иконки не висели у каждой строки.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 8. ПРАВКА НАБОРА -->
+    <div>
+      <div class="lab"><b>8 · Правка набора</b><span>перед добавлением</span></div>
+      <div class="ph" data-screen-label="Добавление · правка набора">
+        <div class="top">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <span class="ttl">Бутер с кофе без ветчины</span>
+          <span style="width:17px;"></span>
+        </div>
+        <div class="sc">
+          <div style="display:flex;align-items:center;justify-content:space-between;background:#efe3cf;border-radius:20px;padding:15px 18px;margin-top:14px;">
+            <div><div style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Весь набор</div><div style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:5px;">умножить все позиции</div></div>
+            <span style="padding:10px 16px;border-radius:999px;background:#fffaf1;font:700 12.5px/1 Figtree,sans-serif;color:#8a4a20;">×2</span>
+          </div>
+          <div class="cd" style="margin-top:10px;">
+            <div class="row"><span><span style="display:block;color:#201e1d;">Кофе с молоком</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">51 ккал</span></span><span style="display:flex;align-items:center;gap:9px;"><span style="width:30px;height:30px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M6 12h12"/></svg></span><span class="n" style="font:600 13px/1 Figtree,sans-serif;color:#201e1d;min-width:38px;text-align:center;">100 г</span><span style="width:30px;height:30px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span></span></div>
+            <div class="row"><span><span style="display:block;color:#201e1d;">Сыр твёрдый</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">92 ккал</span></span><span style="display:flex;align-items:center;gap:9px;"><span style="width:30px;height:30px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M6 12h12"/></svg></span><span class="n" style="font:600 13px/1 Figtree,sans-serif;color:#201e1d;min-width:38px;text-align:center;">30 г</span><span style="width:30px;height:30px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span></span></div>
+            <div class="row"><span><span style="display:block;color:#201e1d;">Творожный сыр</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">38 ккал</span></span><span style="display:flex;align-items:center;gap:9px;"><span style="width:30px;height:30px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M6 12h12"/></svg></span><span class="n" style="font:600 13px/1 Figtree,sans-serif;color:#201e1d;min-width:38px;text-align:center;">20 г</span><span style="width:30px;height:30px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span></span></div>
+            <div class="row" style="border-bottom:none;"><span><span style="display:block;color:#201e1d;">Хлеб тостовый</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:6px;">111 ккал</span></span><span style="display:flex;align-items:center;gap:9px;"><span style="width:30px;height:30px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M6 12h12"/></svg></span><span class="n" style="font:600 13px/1 Figtree,sans-serif;color:#201e1d;min-width:38px;text-align:center;">40 г</span><span style="width:30px;height:30px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span></span></div>
+          </div>
+          <div class="btn" style="margin-top:14px;">Добавить 4 продукта · 292 ккал</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ЛИСТ -->
+    <div style="width:400px;flex:none;">
+      <div class="h" style="margin-top:0;">Что видно без кода</div>
+      <div style="background:#fffaf1;border-radius:24px;padding:20px;">
+        <div class="nt"><b>Шесть типов вместо восьми · требования к записи</b><span>В конфиге слотов восемь, три из них называются «Перекус»; на экране шесть различимых. Единственный «Перекус» обязан записывать слот <b style="font-weight:700;">по времени</b>, а не всегда первый — иначе вечерний перекус ляжет утренним ключом и дневник начнёт его переставлять. В карточке приёма после сохранения обязан остаться вариант «Авто»: это единственный обратный путь после ручного выбора. Кофе-брейк есть в сетке создания, но отсутствует в селекторе карточки — расхождение кода, закрыть при перерисовке дневника.</span></div>
+        <div class="nt"><b>Три предупреждения нарисованы, «сначала ваши» снято</b><span>Гард даты стоит нулевым экраном — это защита от потери данных, а не декорация. Волна и дубль сделаны по одному правилу: плашка без собственных кнопок, а выбор выражают главная кнопка и текстовая ссылка под ней. Три равноправных действия на одно решение — это то, от чего уходим. Подпись «сначала ваши продукты» убрана: в коде личный продукт получает +3 балла при разбросе релевантности в десятки, так что обещание сортировки не выполняется. Либо группировать выдачу по-настоящему — тогда подпись вернётся.</span></div>
+        <div class="nt"><b>На гарде даты главная кнопка — безопасная</b><span>«Перейти на сегодня» терракотовая, «Всё-таки записать на 7 августа» — текстом. Гард существует затем, чтобы еда не ушла в чужой день машинально; если опасное действие сделать главным, защита превращается в кнопку «ок».</span></div>
+        <div class="nt"><b>«Пропустить» названо своим именем</b><span>Приём сохраняется именно на шаге самочувствия, поэтому кнопка читается как «Сохранить приём без оценок». Иначе человек не понимает, создалась запись или он отложил её.</span></div>
+        <div class="nt"><b>Экран-развилка слит с поиском</b><span>Отдельный экран «как добавить» стоял между «плюсом» и списком продуктов, хотя в девяти случаях из десяти ответ один — найти продукт. Теперь поиск и частые открываются сразу, а повтор вчерашнего висит карточкой сверху; штрихкод — иконкой в строке поиска, наборы — вкладкой. Путь до продукта короче на один экран.</span></div>
+        <div class="nt"><b>Три вопроса «сколько продуктов» подряд · поток B</b><span>«Быстро добавить 1», «Добавить несколько», «Ещё 2 / 3 / 4» — и то же самое в конце. Человек не знает заранее, сколько положит в тарелку. В макете вопрос снят совсем: добавляешь, пока не нажмёшь «Готово». Цена названа честно — это удаление трёх режимов, а не перекраска: единственный оставшийся и есть тот, что не мигал. Старые кнопки «на всякий случай» сохранять нельзя, иначе вернётся всё.</span></div>
+        <div class="nt"><b>Экран «Добавить ещё?» заменён на «Приём собран»</b><span>Раньше это был вопрос с пятью кнопками разного цвета. Теперь состояние: что уже в приёме, сколько ккал, сколько до нормы. Действия внизу и без соревнования между собой: одна главная и три вспомогательные, из которых «Сохранить как набор» — кандидат во второй слой, оно редкое.</span></div>
+        <div class="nt"><b>Наборы вышли из-под «жёлтой кнопки»</b><span>Это самая ценная вещь во флоу — готовый приём в один тап, — но живёт третьей кнопкой в ряду. Поставил их пунктом в списке способов и вынес «Повторить вчерашний» наверх отдельной карточкой: у человека еда повторяется, и это надо ставить первым.</span></div>
+        <div class="nt"><b>Три иконки у каждой строки набора</b><span>Играть, править, удалять — на каждой из пяти строк это пятнадцать целей на экране. Осталось одно действие «Добавить», остальное по долгому нажатию.</span></div>
+        <div class="ntl"><b>Модалка «Это — важно» с тарелкой</b><span>По коду показывается при каждом создании приёма, флага «больше не показывать» нет: единственный обход — параметр, который ни один вызов не передаёт. Предлагаю перенести её в пустое состояние первого приёма и оставить постоянный вход по знаку вопроса. Содержание сохраняется, налог на каждое добавление исчезает.</span></div>
+      </div>
+
+      <div class="h">Что перекрашено</div>
+      <div style="background:#efe3cf;border-radius:24px;padding:20px;">
+        <div class="nt"><b>Один акцент на экран</b><span>Было до пяти разноцветных кнопок в одном окне — синяя, оранжевая, зелёная, жёлтая, фиолетовая. Цвет перестал что-либо значить. Теперь главное действие терракотовое, остальные — на бумаге.</span></div>
+        <div class="nt"><b>Эмодзи сняты</b><span>Вилка с тарелкой, дискета, карандаш, корзина. Типы приёмов различаются словом, действия — местом и весом.</span></div>
+        <div class="ntl"><b>Числа героем</b><span>Время, граммы, итог приёма набраны крупно и табличными цифрами. Всё, что человек проверяет глазами, должно читаться без вчитывания.</span></div>
+      </div>
+
+      <div class="h">Что дал разбор по коду</div>
+      <div style="background:#efe3cf;border-radius:24px;padding:20px;">
+        <div class="nt"><b>Семь экранов до первого продукта</b><span>Гард даты, гайд с тарелкой, пикер времени, самочувствие, модалка выбора флоу, поиск, граммовка. Приём при этом сохраняется уже на четвёртом — продукты идут надстройкой. На десктопе путь короче: приём создаётся сразу, три шага отсутствуют.</span></div>
+        <div class="nt"><b>Название приёма меняется само</b><span>Три разные логики: жёсткие часы при создании, плавающие слоты в пикере, третья — в дневнике, где первый приём дня всегда завтрак плюс коррекция по размеру. Человек добавит третий продукт — и «Перекус» станет «Обедом». В заголовке должен быть виден ручной выбор, иначе это выглядит как сбой.</span></div>
+        <div class="nt"><b>Единица одна — граммы</b><span>«½ стакана» и «1 стакан» — только подписи кнопок, число всегда в граммах, пересчёта нет. Поэтому граммовку в подписи порции убирать нельзя: она и есть значение.</span></div>
+        <div class="nt"><b>Клетчатка, ГИ и вредность — только после сохранения</b><span>До этого вредность передаётся одним цветом фона карточки. В макете это сохранено: вредность несёт полоса слева от строки, а не число. Показывать её числом до сохранения — отдельное решение, не перекраска.</span></div>
+        <div class="ntl"><b>Белок считается по 3 ккал/г</b><span>Системное решение (NET Atwater), не ошибка. Следствие для экрана порции: калории продукта не сойдутся с суммой БЖУ, посчитанной по учебнику — и кто-нибудь это заметит.</span></div>
+      </div>
+
+      <div class="h">Мёртвое и спорное</div>
+      <div style="background:#f0d8c4;border-radius:24px;padding:20px;">
+        <div class="nt"><b>Подсказка «в прошлый раз» держится на живом каскаде</b><span>Дефолт граммовки берётся из последней порции этого продукта — это работает. А вот история граммовок пишется и синхронизируется, но не читается никогда, и история порций всегда пуста: функция записи не вызывается. Подсветка «рекомендованной» порции из-за этого не работает вообще.</span></div>
+        <div class="nt"><b>Мигание в режиме «ещё N»</b><span>Окно закрывается, показывается модалка, открывается новое окно — с двумя таймерами по 100 мс. Бесшовный цикл в коде написан, но недостижим: выше стоит ранний выход. В макете этого режима нет вовсе, и это предложение, а не факт.</span></div>
+        <div class="ntl"><b>Продукт у позиции заменить нельзя</b><span>Только удалить и добавить заново. Отмена есть у удаления (4 секунды), у изменения граммовки — нет.</span></div>
+      </div>
+
+      <div class="h">Второй слой · дорисовать</div>
+      <div style="background:#fffaf1;border-radius:24px;padding:20px;">
+        <div class="nt"><b>Фото приёма вернулось — и переехало</b><span>Это единственный вход для фото во всём приложении, а жил он в шапке поиска продуктов, хотя фото относится к приёму. Перенёс на «Приём собран»: там оно и по смыслу, и по месту. Реализовать макет без этой кнопки — значит убрать функцию совсем.</span></div>
+        <div class="nt"><b>Четыре обязательных состояния</b><span>Первый вход при пустой личной базе (сейчас его нет как состояния), ошибка загрузки общей базы отдельно от «ничего не найдено», офлайн одним честным сообщением вместо тоста и inline-ошибки подряд, сканер штрихкода модалкой-карточкой с ручным вводом кода. Нарисую следующим заходом.</span></div>
+        <div class="ntl"><b>Что ещё во втором слое</b><span>Просмотрщик фото, создание продукта на три шага с выбором между вставленной вредностью и расчётом системы, оверлей наборов целиком.</span></div>
+      </div>
+
+      <div class="h">Макет обязан это решить</div>
+      <div style="background:#f3e0d2;border-radius:24px;padding:20px;">
+        <div class="nt"><b>Тач-цели</b><span>Точки прогресса в шапке — 6×6 px, это в семь раз ниже нормы. Пресеты граммовки ~29, кнопки порций ~23, пять иконок 26×26 подряд в строке продукта, крестик ~37. В макете снята главная причина — одна иконка на строку вместо пяти. Чипам и пресетам задана невидимая область нажатия 44 pt поверх визуальных 32; тем же приёмом её обязаны получить вкладки списков и точки прогресса, визуальный размер при этом не меняется.</span></div>
+        <div class="nt"><b>Кнопка «Добавить» под клавиатурой</b><span>Она внутри скролла, после неё ещё четыре блока, компенсации высоты нет нигде. Человек вводит граммы и не видит, чем подтвердить. Требование: кнопка закреплена внизу листа и поднимается вместе с клавиатурой.</span></div>
+        <div class="nt"><b>«Назад» на Android и выход на середине</b><span>Аппаратная кнопка не перехватывается — уводит наружу, модалка остаётся с заблокированным скроллом. Закрытие теряет продукт и граммовку без черновика, а крестик и «Готово» одинаково прыгают к заголовку дневника, хотя позиция входа в коде сохраняется.</span></div>
+        <div class="ntl"><b>Ноль подтверждений там, где они нужны</b><span>Сохранение набора не подтверждается ничем, удаление идёт без вопроса. Обратная сторона: тост «Приём создан» печатается даже когда запись не прошла.</span></div>
+      </div>
+
+      <div class="h">Ждёт решения</div>
+      <div style="background:#f0d8c4;border-radius:24px;padding:20px;">
+        <div class="nt"><b>Рекомендованные наборы — по коду</b><span>Движок сам находит сочетания, повторившиеся трижды, и предлагает сохранить их набором с частотой «повторялось N×». На экранах этого не было видно; поставил отдельным ярусом над «Моими наборами» — работает на самое частое действие и ничего не стоит пользователю.</span></div>
+        <div class="nt"><b>Два списка при пустом запросе — из кода</b><span>«Частые» считаются окном 21 день, «Недавние» — 3 дня. Окна вынесены в подписи вкладок: без них человек не понимает, почему вчерашний продукт есть в одном списке и нет в другом.</span></div>
+        <div class="nt"><b>Самочувствие внутри флоу еды</b><span>Второй шаг перед продуктами, и именно на нём приём сохраняется. Надо понять, как часто его заполняют: если пропускают — он стоит не на своём месте и задерживает продукты.</span></div>
+        <div class="nt"><b>Распознавания фото и голоса не существует</b><span>Проверено по коду: «Добавить фото» вешает снимок на приём, а не на продукт — облако просто кладёт JPEG и возвращает ссылку, ни кандидатов, ни граммовки. Web Speech API в проекте есть, но к добавлению еды не подключён нигде. Иконку камеры из строки поиска убрал: обещать распознавание, которого нет, хуже, чем не обещать ничего. Когда появится — вернём.</span></div>
+        <div class="nt"><b>Создание продукта — не форма</b><span>Новый продукт заводится вставкой строки из двенадцати чисел, с кнопкой «скопировать промпт для ИИ»: человек уходит к внешней модели посреди добавления еды и возвращается со строкой. Экрана в наборе нет — нарисую отдельно, вместе с шагами «Порции» и «Вредность», на которых продукт и сохраняется.</span></div>
+        <div class="ntl"><b>Штрихкод, «Общие», счётчик 399</b><span>Три сущности без объяснения: база продуктов, режим поиска и что-то с числом в шапке. Нарисованы как есть, до разбора.</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <p style="margin:30px 0 0;font:500 12.5px/1.6 Figtree,sans-serif;color:rgba(0,0,0,.5);">Дальше: «пустое состояние с тарелкой» · «тёмная версия» · «пересобрать по инвентарю»</p>
+</div>
+</x-dc>
+</body>
+</html>
