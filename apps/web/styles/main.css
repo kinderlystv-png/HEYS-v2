@@ -43,6 +43,7 @@
  * (chained preload after main.css onload — see index.html). 2026-04-25 split. */
 @import url('./modules/730-widgets-dashboard.css');
 @import url('./modules/731-ui-v4-activity.css');
+@import url('./modules/732-ui-v4-nutrition.css');
 @import url('./modules/740-cascade-card.css');
 @import url('./modules/750-strength-builder.css');
 @import url('./modules/800-meal-optimizer.css');

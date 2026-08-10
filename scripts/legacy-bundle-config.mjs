@@ -138,6 +138,7 @@ export const LEGACY_BUNDLES = {
         'heys_day_runtime_ui_state_v1.js',
         'heys_day_water_card_v1.js',
         'heys_day_activity_card_v1.js',
+        'heys_day_nutrition_card_v1.js',
         'heys_day_energy_context_v1.js',
         'heys_hunger_energy_status_v1.js',
         'heys_hunger_energy_calibration_v1.js',

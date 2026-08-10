@@ -121,6 +121,7 @@
             statsBlock: ctx.statsBlock,
             waterCard: ctx.waterCard,
             compactActivity: ctx.compactActivity,
+            compactNutrition: ctx.compactNutrition,
             sideBlock: ctx.sideBlock,
             cycleCard: ctx.cycleCard,
             reportsOverviewCard: ctx.reportsOverviewCard,

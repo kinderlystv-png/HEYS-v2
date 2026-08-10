@@ -958,6 +958,9 @@
 
         const app = rootHEYs || HEYS;
         const showDiary = !isMobile || mobileSubTab === 'diary';
+        if (isMobile && mobileSubTab === 'diary') {
+            return null;
+        }
         const ensureSupplementsModule = () => {
             if (app.Supplements?.renderCard) return true;
             if (typeof document === 'undefined') return false;

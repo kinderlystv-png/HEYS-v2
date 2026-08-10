@@ -540,6 +540,7 @@
         const isTabActive = props.isActive !== false;
         const showStatsContent = !isMobile || mobileSubTab === 'stats';
         const showActivityContent = !isMobile || mobileSubTab === 'activity';
+        const showNutritionContent = !isMobile || mobileSubTab === 'diary';
         const activityContentEnabled = showStatsContent || showActivityContent;
         const showWaterContent = !isMobile || mobileSubTab === 'diary';
         const [reportsModalOpen, setReportsModalOpen] = useState(false);
@@ -2365,6 +2366,34 @@
             });
         }, [showActivityContent, stepsValue, stepsGoal, stepsPercent, stepsColor, stepsK, bmr, householdK, totalHouseholdMin, train1k, train2k, visibleTrainings, regularTrainingsBlock, chargeTrainingBlock, monthTrainingsRows, morningActivationCalendarBlock, ndteBoostKcal, tefKcal, dayTargetDef, displayOptimum, tdee, caloricDebt, day?.isRefeedDay]);
 
+        if (!HEYS.dayNutritionCard?.buildNutritionCard) {
+            throw new Error('[heys_day_v12] HEYS.dayNutritionCard not loaded before heys_day_v12.js');
+        }
+        const compactNutrition = useMemo(() => {
+            if (!showNutritionContent) return null;
+            const dailyWaveOverview = HEYS.dayMealsChartUI?.renderDailyWaveOverview?.({ React, insulinWaveData }) || null;
+            return HEYS.dayNutritionCard.buildNutritionCard({
+                React,
+                day,
+                prof,
+                pIndex,
+                date,
+                eatenKcal,
+                displayOptimum,
+                displayRemainingKcal,
+                dayTot,
+                normAbs,
+                insulinWaveData,
+                dailyWaveOverview,
+                legacyMealsUI: mealsUI,
+                waterMl: day?.waterMl ?? day?.water,
+                waterGoal,
+                addMeal,
+                addWater,
+                haptic
+            });
+        }, [showNutritionContent, day?.meals, day?.waterMl, day?.water, day?.date, eatenKcal, displayOptimum, displayRemainingKcal, dayTot, normAbs, insulinWaveData, mealsUI, waterGoal, date, pIndex, prof]);
+
         if (!HEYS.dayTabRender?.renderDayTabLayout) {
             throw new Error('[heys_day_v12] HEYS.dayTabRender not loaded before heys_day_v12.js');
         }
@@ -2384,6 +2413,7 @@
             statsBlock,
             waterCard,
             compactActivity,
+            compactNutrition,
             sideBlock,
             cycleCard,
             reportsOverviewCard,

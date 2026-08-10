@@ -11,6 +11,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-day: execute start');
         'heys_day_realdata_actions_v1.js',
         'heys_day_stats_v1.js',
         'heys_day_activity_v1.js',
+        'heys_day_nutrition_v1.js',
         'heys_day_trainings_v1.js',
         'heys_day_training_popups_v1.js',
         // 🏋️ Силовой конструктор: полноэкранный слой ядра + экраны связки и
