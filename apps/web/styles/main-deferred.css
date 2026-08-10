@@ -11,6 +11,7 @@
  * outside the Widgets tab. See [heys_day_day_handlers.js:148] and DayPageShell rendering.
  */
 @import url("./modules/720-predictive-insights.css");
+@import url("./modules/734-ui-v4-insights.css");
 @import url("./modules/725-metabolic-intelligence.css");
 @import url("./modules/900-planning.css");
 @import url("./modules/905-planning-chrono.css");
