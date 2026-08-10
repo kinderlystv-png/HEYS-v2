@@ -1677,7 +1677,7 @@
     const dotX = (padX + clampedT * chartW).toFixed(1);
     const dotLevel = isLipolysis ? 0.03 : getIWLevelAt(clampedT);
     const dotY = (padY + chartH - dotLevel * chartH).toFixed(1);
-    const lineColor = isLipolysis ? '#22c55e' : (color || '#3b82f6');
+    const lineColor = isLipolysis ? '#22c55e' : (color || 'var(--v4-water, #3b82f6)');
 
     return React.createElement('svg', {
       viewBox: `0 0 ${svgW} ${svgH}`,
@@ -1719,7 +1719,7 @@
     const progress = data?.progress || 0;
     const remaining = data?.remaining || 0;
     const endTime = data?.endTime || null;
-    const color = data?.color || '#3b82f6';
+    const color = data?.color || 'var(--v4-water, #3b82f6)';
     // Канонический расчёт знает только scheduled/settling/complete
     // (heys_insulin_wave_v1.js:140) и поля isLipolysis не отдаёт — статуса
     // 'lipolysis' не бывает, поэтому точка спарклайна никогда не садилась на
@@ -1740,9 +1740,9 @@
 
     const mainLabel = status === 'complete' ? 'Окно завершено' : 'После еды';
 
-    const mainLabelColor = status === 'complete' ? '#167D61' : '#2F6BFF';
+    const mainLabelColor = status === 'complete' ? 'var(--v4-ok-text, #167D61)' : 'var(--v4-act, #2F6BFF)';
 
-    const timeLabelColor = '#3b82f6'; // всегда синий
+    const timeLabelColor = 'var(--v4-water, #3b82f6)'; // всегда синий
 
     const timeLabel = status === 'complete'
       ? 'Готово'
@@ -1755,7 +1755,7 @@
     const subText = status === 'complete'
       ? 'Ориентируйся на голод и план'
       : (data?.endTimeRange ? `Диапазон ${data.endTimeRange}` : endTime ? `Ориентир ${endTime}` : 'Уточняем диапазон');
-    const subTextColor = '#6B7C93';
+    const subTextColor = 'var(--v4-ink-2, #6B7C93)';
 
     const sparkline = React.createElement(InsulinWaveSparkline, {
       progress, isLipolysis, color, width: '100%', height: isShort ? 34 : 50
@@ -2469,7 +2469,7 @@
       if (!Number.isFinite(trend)) return null;
       if (trend < -0.02) return { cls: 'down', emoji: '↓', label: 'снижается', color: '#22c55e' };
       if (trend > 0.02) return { cls: 'up', emoji: '↑', label: 'растёт', color: '#ef4444' };
-      return { cls: 'stable', emoji: '→', label: 'стабилен', color: '#3b82f6' };
+      return { cls: 'stable', emoji: '→', label: 'стабилен', color: 'var(--v4-water, #3b82f6)' };
     };
     const trendInfo = getTrendInfo();
 
@@ -2513,7 +2513,7 @@
         points: pts,
         width: '100%',
         height: height,
-        trendColor: trendInfo?.color || '#3b82f6',
+        trendColor: trendInfo?.color || 'var(--v4-water, #3b82f6)',
         showDots,
         showLabels,
         showGoalLine: showGoalLine && hasGoal,
@@ -2988,7 +2988,7 @@
         y1: goalY,
         x2: svgW - paddingX,
         y2: goalY,
-        stroke: '#8b5cf6',
+        stroke: 'var(--v4-ink-2, #8b5cf6)',
         strokeWidth: 1,
         strokeDasharray: '4 2',
         opacity: 0.5
@@ -3348,13 +3348,13 @@
 
     return React.createElement('div', { className: `widget-macros widget-macros--${variant}` },
       React.createElement(MacroBar, {
-        label: 'Б', value: protein || 0, target: proteinTarget || 100, color: '#ef4444', cls: 'widget-macros__label--prot'
+        label: 'Б', value: protein || 0, target: proteinTarget || 100, color: 'var(--v4-act-text, #ef4444)', cls: 'widget-macros__label--prot'
       }),
       React.createElement(MacroBar, {
-        label: 'Ж', value: fat || 0, target: fatTarget || 70, color: '#eab308', cls: 'widget-macros__label--fat'
+        label: 'Ж', value: fat || 0, target: fatTarget || 70, color: 'var(--v4-warn-soft, #eab308)', cls: 'widget-macros__label--fat'
       }),
       React.createElement(MacroBar, {
-        label: 'У', value: carbs || 0, target: carbsTarget || 250, color: '#3b82f6', cls: 'widget-macros__label--carbs'
+        label: 'У', value: carbs || 0, target: carbsTarget || 250, color: 'var(--v4-water, #3b82f6)', cls: 'widget-macros__label--carbs'
       })
     );
   }
@@ -3372,10 +3372,10 @@
 
     const getStatusInfo = () => {
       switch (status) {
-        case 'active': return { emoji: '📈', label: 'Волна активна', color: '#f97316', short: 'Активна' };
-        case 'almost': return { emoji: '📉', label: 'Почти закончилась', color: '#eab308', short: 'Завершается' };
+        case 'active': return { emoji: '📈', label: 'Волна активна', color: 'var(--v4-warn-soft, #f97316)', short: 'Активна' };
+        case 'almost': return { emoji: '📉', label: 'Почти закончилась', color: 'var(--v4-warn-soft, #eab308)', short: 'Завершается' };
         case 'soon': return { emoji: '⏳', label: 'Скоро закончится', color: '#22c55e', short: 'Скоро' };
-        case 'lipolysis': return { emoji: '✓', label: 'Окно завершено', color: '#10b981', short: 'Завершено' };
+        case 'lipolysis': return { emoji: '✓', label: 'Окно завершено', color: 'var(--v4-ok-fill, #10b981)', short: 'Завершено' };
         default: return { emoji: '❓', label: 'Нет данных', color: '#94a3b8', short: '—' };
       }
     };
@@ -3598,7 +3598,7 @@
     // 2x2 — Оптимальный layout с кольцевым прогрессом
     if (size === '2x2') {
       const progressPct = Math.round((day / cycleLength) * 100);
-      const phaseColor = phase?.color || '#ec4899';
+      const phaseColor = phase?.color || 'var(--v4-warn-soft, #ec4899)';
 
       // SVG кольцо
       const ringSize = 48;
@@ -3623,7 +3623,7 @@
             // Фон
             React.createElement('circle', {
               cx: ringSize / 2, cy: ringSize / 2, r: radius,
-              fill: 'none', stroke: '#fce7f3', strokeWidth
+              fill: 'none', stroke: 'var(--v4-surface, #fce7f3)', strokeWidth
             }),
             // Прогресс
             React.createElement('circle', {
@@ -4016,7 +4016,7 @@
 
   function getRelapseRiskColor(level) {
     if (level === 'critical') return 'var(--heys-ratio-crash)';
-    if (level === 'high') return '#f97316';
+    if (level === 'high') return 'var(--v4-warn-soft, #f97316)';
     if (level === 'elevated') return 'var(--heys-ratio-over)';
     if (level === 'guarded') return 'var(--heys-ratio-low)';
     return 'var(--heys-ratio-good)';
@@ -4490,7 +4490,7 @@
     const offset = halfCircumference - progress;
     const colors = {
       low: '#22c55e',
-      medium: '#eab308',
+      medium: 'var(--v4-warn-soft, #eab308)',
       high: '#ef4444'
     };
     const valueY = size / 2 - (compact ? 2 : 5);
@@ -5713,7 +5713,7 @@
                 key: factor.id || factor.label,
                 className: 'widget-relapse-risk__impact-chip widget-relapse-risk__impact-chip--down',
                 style: {
-                  '--chip-accent': '#10b981',
+                  '--chip-accent': 'var(--v4-ok-fill, #10b981)',
                   '--chip-bg': '#10b98112',
                   '--chip-border': '#10b98124'
                 }

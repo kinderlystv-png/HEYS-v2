@@ -1168,7 +1168,7 @@
     _getBMICategory(bmi) {
       if (!bmi) return null;
 
-      if (bmi < 18.5) return { id: 'underweight', label: 'Недостаток', color: '#3b82f6' };
+      if (bmi < 18.5) return { id: 'underweight', label: 'Недостаток', color: 'var(--v4-water, #3b82f6)' };
       if (bmi < 25) return { id: 'normal', label: 'Норма', color: '#22c55e' };
       if (bmi < 30) return { id: 'overweight', label: 'Избыток', color: '#eab308' };
       return { id: 'obese', label: 'Ожирение', color: '#ef4444' };

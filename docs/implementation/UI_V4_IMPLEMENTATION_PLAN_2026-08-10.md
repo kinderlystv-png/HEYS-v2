@@ -1,8 +1,9 @@
 # План имплементации дизайн-слоя v4 — 2026-08-10
 
-**Статус:** этапы 0–3 закрыты и приняты. Этап 4 — codemod по вкладкам. Tailwind
-`darkMode` в конфиге оставлен, но `styles/tailwind.css` статичен с 2025-05-31 —
-пересборка отдельная задача.
+**Статус:** этапы 0–3 закрыты и приняты. Этап 4 — codemod по вкладкам; пилот
+Главная (краска) — коммит 2026-08-10, smoke владельца. Tailwind `darkMode` в
+конфиге оставлен, но `styles/tailwind.css` статичен с 2025-05-31 — пересборка
+отдельная задача.
 
 ## Этап 0 — сделано (2026-08-10)
 
@@ -294,6 +295,22 @@ codemod берёт всё остальное. Перед заменой в фа�
 **Готово, когда:** вкладка в классике не изменилась, в песочной палитре
 перекрашена целиком, остаточный поиск по литералам в её файлах пуст или
 объяснён.
+
+**Пилот Главная — красочный коммит 2026-08-10 (в работе, smoke владельца).**
+Scope: только JS Home tab — `heys_widgets_ui_v1.js`,
+`heys_widgets_registry_v1.js`, `heys_widgets_data_crash_risk_v1.js`,
+`widgets/widget_data.js`. Инструмент: `scripts/ui-v4-home-paint-codemod.mjs` +
+ручные добивки (insulin-wave статусы, relapse high, macro label Б).
+
+Сделано: ~41 замена литералов на `var(--v4-*, #fallback)` по
+[COLOR_MAP](UI_V4_COLOR_MAP_2026-08-10.md). Не тронуто: нейтрали interceptor
+(V4_BG/TEXT/BORDER), шкалы/пороги (`HEYS.scales`, gradient maps, сравнения
+`#ef4444`/`#22c55e`), `730-widgets-dashboard.css` (общий с DayTab/Reports — этап
+6).
+
+Остаток в JS (~95 литералов) объяснён: interceptor-owned fallbacks в
+`var(--heys-*, #…)`, scale/threshold returns, gradient stop arrays,
+alpha-suffixed chip tokens (`#10b98112`).
 
 ---
 
