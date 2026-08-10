@@ -1311,30 +1311,12 @@
         }, []);
     }
 
+    // Day is a theme consumer only. DOM attrs (data-theme / data-theme-id /
+    // data-palette) and storage are owned by HEYS.Theme via
+    // HEYS.AppHooks.useThemePreference. Do not write them here — that used to
+    // collapse sand-dark → dark on Day tab mount.
     function useDayThemeEffect(deps) {
-        const React = getReact();
-        const { theme, resolvedTheme } = deps || {};
-        React.useEffect(() => {
-            const nextTheme = theme === 'dark' || theme === 'light'
-                ? theme
-                : resolvedTheme === 'dark'
-                    ? 'dark'
-                    : 'light';
-
-            document.documentElement.setAttribute('data-theme', nextTheme);
-            try {
-                const U = global.HEYS?.utils || {};
-                if (global.HEYS?.store?.set) {
-                    global.HEYS.store.set('heys_theme', nextTheme);
-                } else if (U.lsSet) {
-                    U.lsSet('heys_theme', nextTheme);
-                } else {
-                    localStorage.setItem('heys_theme', nextTheme);
-                }
-            } catch (e) {
-                // QuotaExceeded — игнорируем, тема применится через data-theme
-            }
-        }, [theme, resolvedTheme]);
+        void deps;
     }
 
     function useDayExportsEffects(deps) {
