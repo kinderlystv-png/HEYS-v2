@@ -11265,17 +11265,25 @@
     // 🔐 v=54 FIX: После миграции на Yandex API — ВСЕГДА используем RPC режим!
     // _rpcOnlyMode = true устанавливается для ВСЕХ (и клиент PIN, и куратор)
     // Supabase SDK удалён — нет смысла проверять client/user для legacy branch
-    const canSync = _rpcOnlyMode; // Simplified: только RPC режим работает
+    // 2026-08-11: READONLY_MODE (замороженная копия прода, stable.heyslab.ru) —
+    // читает боевые данные через тот же API, но не пишет: старая сборка не
+    // должна фоново менять живые данные клиента.
+    const isReadonlyMode = !!(global.__HEYS_READONLY_MODE__ && global.__HEYS_READONLY_MODE__.enabled);
+    const canSync = _rpcOnlyMode && !isReadonlyMode; // Simplified: только RPC режим работает
     // 🔇 v4.7.1: Debug лог отключён
     if (!canSync) {
       // Вернуть в очередь
-      console.warn('⚠️ [UPLOAD] canSync=false, returning batch to queue');
+      if (isReadonlyMode) {
+        console.info('[READONLY_MODE] upload skipped, batch returned to queue');
+      } else {
+        console.warn('⚠️ [UPLOAD] canSync=false, returning batch to queue');
+      }
       requeueClientInFlightBatch(filteredBatch, 'sync-disabled');
       _uploadInProgress = false;
       _uploadInFlightCount = 0;
       traceClientSyncEvent(_observedUploadClientId, 'write_failed', {
         status: 'failed', count: filteredBatch.length, ..._observedUploadContext,
-        reason: 'auth', error_code: 'auth_missing'
+        reason: isReadonlyMode ? 'readonly_mode' : 'auth', error_code: isReadonlyMode ? 'readonly_mode' : 'auth_missing'
       }, 'error');
       notifySyncCompletedIfDrained();
       return;

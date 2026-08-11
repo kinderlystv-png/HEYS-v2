@@ -33,6 +33,20 @@
     (global.console || console).info('[HEYS.YandexAPI] DEMO_MODE — no-op stub installed');
     return;
   }
+
+  // READONLY_MODE (2026-08-11): замороженная копия прода (stable.heyslab.ru)
+  // для сравнения версий. В отличие от DEMO_MODE выше, чтение остаётся живым —
+  // это боевые данные через тот же API. Блокируем только запись: старая
+  // сборка не должна фоново менять живые данные клиента. Белый список вместо
+  // чёрного — новый пишущий метод, добавленный позже, не должен просочиться
+  // молча.
+  const isReadonlyMode = !!(global.__HEYS_READONLY_MODE__ && global.__HEYS_READONLY_MODE__.enabled);
+  const READONLY_ALLOWED_RPC_PREFIX = /^(get_|check_|batch_get_)/;
+  const READONLY_ALLOWED_RPC_EXACT = new Set(['normal_read']);
+  function isReadonlyAllowedRpc(fnName) {
+    return READONLY_ALLOWED_RPC_EXACT.has(fnName) || READONLY_ALLOWED_RPC_PREFIX.test(fnName);
+  }
+
   const isLocalBrowserDev =
     typeof window !== 'undefined' &&
     typeof location !== 'undefined' &&
@@ -570,6 +584,11 @@
    * @returns {Promise<{data: any, error: any}>}
    */
   async function rpc(fnName, params = {}, requestOptions = {}) {
+    if (isReadonlyMode && !isReadonlyAllowedRpc(fnName)) {
+      log(`RPC ${fnName} blocked — READONLY_MODE`);
+      return { data: null, error: { message: 'Только чтение (замороженная копия)', code: 'READONLY_MODE' } };
+    }
+
     const url = `${CONFIG.API_URL}${CONFIG.ENDPOINTS.RPC}?fn=${encodeURIComponent(fnName)}`;
 
     try {
@@ -659,6 +678,11 @@
       method = 'GET', filters = {}, data = null, select, limit, offset, order,
       upsert, onConflict, requestPriority, requestClass
     } = options;
+
+    if (isReadonlyMode && method !== 'GET') {
+      log(`REST ${method} ${table} blocked — READONLY_MODE`);
+      return { data: null, error: { message: 'Только чтение (замороженная копия)', code: 'READONLY_MODE' } };
+    }
 
     // Строим URL с параметрами (формат: /rest/{table}?params)
     const params = new URLSearchParams();

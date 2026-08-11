@@ -3808,6 +3808,17 @@ color: var(--v4-ink, #1f2937);
   width: 100%;
 }
 
+/* Замороженная копия прода (stable.heyslab.ru) — неинтерактивный признак режима */
+.hdr-readonly-banner {
+  text-align: center;
+  font: 600 11px/1.4 Figtree, sans-serif;
+  letter-spacing: 0.02em;
+  padding: 4px 10px;
+  color: var(--v4-warn-text, #92400e);
+  background: var(--v4-warn-soft, #fef3c7);
+  pointer-events: none;
+}
+
 /* === 12. MODERN HEADER === */
 .hdr {
   display: flex;
@@ -3821,7 +3832,7 @@ color: var(--v4-ink, #1f2937);
   left: 0;
   right: 0;
   z-index: 100;
-  background: var(--bg-primary, #f8f9fa);
+  background: var(--v4-bg, #f8f9fa);
 
   /* Padding как у карточек */
   padding: 12px 18px 0;
@@ -4001,8 +4012,9 @@ color: var(--v4-ink, #1f2937);
 
 /* === 14. Gamification Bar (Phase 1 Live) === */
 .hdr-top.hdr-gamification {
-  padding: 4px 12px;
+  padding: 6px 12px;
   min-height: 40px;
+  background: var(--v4-bg, #ffffff);
   position: relative;
   /* 🚀 PERF: contain gamification layout — prevents child animations from triggering parent reflow */
   contain: layout style;
@@ -6783,8 +6795,8 @@ color: var(--v4-act-text, #e2a468);
   justify-content: space-between;
   gap: 4px;
   padding: 5px 8px;
-  background: var(--v4-hero, #f0f0f0);
-  border: 1px solid #4285f4;
+  background: var(--v4-bg, #ffffff);
+  border: 1px solid var(--v4-line, #e5e7eb);
   border-top: none;
   border-radius: 0 0 16px 16px;
   flex-wrap: nowrap;
@@ -9019,6 +9031,9 @@ svg.date-picker-icon {
   justify-content: flex-start;
   gap: 4px;
   padding: 4px 6px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: var(--v4-bg, #ffffff);
+  border-top: 1px solid var(--v4-line, #e5e7eb);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04);
 }
 
 .tab-primary-nav-row {
@@ -9056,9 +9071,13 @@ svg.date-picker-icon {
 }
 
 .tabs--v4-primary .tab.tab-primary-nav.active {
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
   background: var(--v4-hero, #fffaf1);
   box-shadow: none;
+}
+
+.tabs--v4-primary .tab.tab-primary-nav.active .tab-icon-svg {
+  color: currentColor;
 }
 
 .tabs--v4-primary .tab.tab-primary-nav.active .tab-text {

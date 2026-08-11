@@ -3278,6 +3278,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         return React.createElement(
             'div',
             { className: 'hdr' },
+            // Замороженная копия прода (stable.heyslab.ru) — видимый признак,
+            // чтобы человек понимал, что смотрит не боевое приложение.
+            (typeof window !== 'undefined' && window.__HEYS_READONLY_MODE__ && window.__HEYS_READONLY_MODE__.enabled) &&
+                React.createElement('div', { className: 'hdr-readonly-banner', key: 'readonly-banner' },
+                    'Копия для сравнения · только чтение'
+                ),
             // === ВЕРХНЯЯ ЛИНИЯ: Gamification Bar ===
             React.createElement(
                 'div',

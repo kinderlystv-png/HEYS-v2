@@ -104,6 +104,22 @@
             }
         })();
     </script>
+    <!-- READONLY_MODE flag — замороженная копия прода для сравнения версий
+         (stable.heyslab.ru). Читает боевые данные через тот же api.heyslab.ru,
+         но не пишет: старая сборка не должна фоново менять живые данные
+         клиента. Hardcoded hostname check, как у DEMO_MODE выше — никаких
+         query-параметров, иначе режим можно включить и на проде. -->
+    <script>
+        (function () {
+            var h = window.location.hostname;
+            var onReadonlyHost = h === 'stable.heyslab.ru'
+                               || h === 'stable-heyslab-ru.website.yandexcloud.net';
+            window.__HEYS_READONLY_MODE__ = { enabled: onReadonlyHost };
+            if (onReadonlyHost) {
+                console.info('[READONLY_MODE] Active — hostname=' + h + ': чтение живое, запись заблокирована.');
+            }
+        })();
+    </script>
     <script>
         (function () {
             window.__heysBootLog = [];
@@ -959,10 +975,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.37753b63288f.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.c83348461d10.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.bf5971980603.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.599f7c913fae.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.a6fae33571ea.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.de3e541e15d7.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.fb5de09ecf79.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.a6047e4c80a3.js" as="script" />
     <link rel="preload" href="boot-init.bundle.3b0b24c92433.js" as="script" />
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
          Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
@@ -4130,10 +4146,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.37753b63288f.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.c83348461d10.js"></script>
-    <script defer src="boot-day.bundle.bf5971980603.js"></script>
-    <script defer src="boot-app.bundle.599f7c913fae.js"></script>
+    <script defer src="boot-core.bundle.a6fae33571ea.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.de3e541e15d7.js"></script>
+    <script defer src="boot-day.bundle.fb5de09ecf79.js"></script>
+    <script defer src="boot-app.bundle.a6047e4c80a3.js"></script>
     <script defer src="boot-init.bundle.3b0b24c92433.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
@@ -4194,11 +4210,11 @@
         (function () {
             var POST_BOOT_BUNDLES = [
                 'postboot-1-game-eager.bundle.bb651c659737.js',
-                'postboot-1-game-lazy.bundle.089c7656865f.js',
+                'postboot-1-game-lazy.bundle.2fbae8fd0d59.js',
                 'postboot-2-insights-eager.bundle.807cb783ab2f.js',
-                'postboot-2-insights-lazy.bundle.8cd78cb7c91d.js',
+                'postboot-2-insights-lazy.bundle.d085f32f5e5f.js',
                 'postboot-3-ui-eager.bundle.51c8e6b6cb06.js',
-                'postboot-3-ui-lazy.bundle.16b070bb6db2.js'
+                'postboot-3-ui-lazy.bundle.7678706339ad.js'
             ];
             var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';
             var total = POST_BOOT_BUNDLES.length;
