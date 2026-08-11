@@ -138,27 +138,96 @@ describe('messenger retry-safe transport', () => {
     expect(requestIds[0]).not.toBe(requestIds[1]);
   });
 
-  it('fetches an authenticated photo blob through the API fallback', async () => {
+  it('fetches an authenticated photo blob and caches the object URL by path', async () => {
     const blob = new Blob(['jpeg'], { type: 'image/jpeg' });
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       status: 200,
       blob: async () => blob,
     });
+    const createObjectURL = vi.fn().mockReturnValue('blob:photo-1');
+    const createDescriptor = Object.getOwnPropertyDescriptor(globalThis.URL, 'createObjectURL');
+    Object.defineProperty(globalThis.URL, 'createObjectURL', { configurable: true, value: createObjectURL });
     localStorage.setItem('heys_session_token', JSON.stringify('session-token'));
     const api = loadAPI();
 
-    await expect(api.fetchPhotoBlob('client/2026-07-25/msg-photo/file.jpg'))
-      .resolves.toEqual({ success: true, blob });
-    expect(fetchSpy).toHaveBeenCalledWith('http://localhost:4001/photos/read', expect.objectContaining({
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer session-token',
-      },
-      credentials: 'include',
-      body: JSON.stringify({ path: 'client/2026-07-25/msg-photo/file.jpg' }),
-    }));
+    try {
+      await expect(api.fetchPhotoBlob('client/2026-07-25/msg-photo/file.jpg'))
+        .resolves.toEqual({ success: true, objectUrl: 'blob:photo-1' });
+      expect(fetchSpy).toHaveBeenCalledWith('http://localhost:4001/photos/read', expect.objectContaining({
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer session-token',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ path: 'client/2026-07-25/msg-photo/file.jpg' }),
+      }));
+
+      // Второй запрос того же пути отдаётся из кэша, сети не касается.
+      fetchSpy.mockClear();
+      await expect(api.fetchPhotoBlob('client/2026-07-25/msg-photo/file.jpg'))
+        .resolves.toEqual({ success: true, objectUrl: 'blob:photo-1', cached: true });
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      if (createDescriptor) Object.defineProperty(globalThis.URL, 'createObjectURL', createDescriptor);
+      else delete globalThis.URL.createObjectURL;
+    }
+  });
+
+  it('fetches an authenticated voice-message blob through the same endpoint, validating audio/*', async () => {
+    // Голосовые лежат в том же бакете тем же способом, что и фото (2026-08-11):
+    // публичная ссылка снята для обоих, `/photos/read` — общий эндпоинт.
+    // `fetchPhotoBlob` для audio/webm обязан отклонить ответ — иначе перепутанный
+    // media-type тихо проходит мимо серверной проверки.
+    const audioBlob = new Blob(['webm'], { type: 'audio/webm' });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: async () => audioBlob,
+    });
+    const createObjectURL = vi.fn().mockReturnValue('blob:audio-1');
+    const createDescriptor = Object.getOwnPropertyDescriptor(globalThis.URL, 'createObjectURL');
+    Object.defineProperty(globalThis.URL, 'createObjectURL', { configurable: true, value: createObjectURL });
+    const api = loadAPI();
+
+    try {
+      await expect(api.fetchAudioBlob('client/2026-08-01/voice/msg-1/file.webm'))
+        .resolves.toEqual({ success: true, objectUrl: 'blob:audio-1' });
+      expect(fetchSpy).toHaveBeenCalledWith('http://localhost:4001/photos/read', expect.objectContaining({
+        body: JSON.stringify({ path: 'client/2026-08-01/voice/msg-1/file.webm' }),
+      }));
+
+      await expect(api.fetchPhotoBlob('client/2026-08-01/voice/msg-1/file.webm'))
+        .resolves.toMatchObject({ success: false, error: 'invalid_photo_response' });
+    } finally {
+      if (createDescriptor) Object.defineProperty(globalThis.URL, 'createObjectURL', createDescriptor);
+      else delete globalThis.URL.createObjectURL;
+    }
+  });
+
+  it('does not repeat a failed photo request within the negative-cache window', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({ error: 'attachment_not_found' }),
+    });
+    localStorage.setItem('heys_session_token', JSON.stringify('session-token'));
+    const api = loadAPI();
+
+    await expect(api.fetchPhotoBlob('client/2026-07-25/msg-photo/missing.jpg'))
+      .resolves.toEqual({ success: false, error: 'attachment_not_found', statusCode: 404 });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    // Тот же путь сразу после провала — из отрицательного кэша, без сети.
+    await expect(api.fetchPhotoBlob('client/2026-07-25/msg-photo/missing.jpg'))
+      .resolves.toEqual({ success: false, error: 'cached_failure', cached: true });
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    // `force` (ручной «Повторить») обходит отрицательный кэш немедленно.
+    await expect(api.fetchPhotoBlob('client/2026-07-25/msg-photo/missing.jpg', { force: true }))
+      .resolves.toEqual({ success: false, error: 'attachment_not_found', statusCode: 404 });
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -331,39 +400,13 @@ describe('messenger photo recovery', () => {
     window.HEYS = originalHEYS;
   });
 
-  it('retries Yandex photos through a cache-busted URL and the path-style host', () => {
-    const { getPhotoSourceCandidates, getPhotoSourceCandidateType } = loadMessengerInternals();
-    const original = 'https://heys-photos.storage.yandexcloud.net/client/day/message/photo.jpg';
-    const candidates = getPhotoSourceCandidates({ url: original }, 2);
-
-    expect(candidates).toEqual([
-      original,
-      `${original}?_heys_img_retry=2-direct`,
-      'https://storage.yandexcloud.net/heys-photos/client/day/message/photo.jpg?_heys_img_retry=2-path',
-    ]);
-    expect(candidates.map((source, index) => getPhotoSourceCandidateType({ url: original }, source, index)))
-      .toEqual(['direct', 'cache-bust', 'path-style']);
-  });
-
-  it('does not rewrite local previews or unrelated image hosts', () => {
-    const { getPhotoSourceCandidates } = loadMessengerInternals();
-
-    expect(getPhotoSourceCandidates({ localPreview: 'data:image/jpeg;base64,abc' })).toEqual([
-      'data:image/jpeg;base64,abc',
-    ]);
-    expect(getPhotoSourceCandidates({ url: 'https://images.example.test/photo.jpg' }, 1)).toEqual([
-      'https://images.example.test/photo.jpg',
-      'https://images.example.test/photo.jpg?_heys_img_retry=1-direct',
-    ]);
-  });
-
-  it('reports an allowlisted privacy-safe diagnostic only after candidate exhaustion', () => {
+  it('reports an allowlisted privacy-safe diagnostic', () => {
     const { tracePhotoLoadFailure } = loadMessengerInternals();
     const event = vi.fn();
     window.HEYS.LogTrace = { event };
 
     const diagnostic = tracePhotoLoadFailure({
-      candidateType: 'path-style',
+      candidateType: 'api',
       attemptCount: 6,
       url: 'https://storage.example.test/private-photo.jpg',
       path: 'private/client/path.jpg',
@@ -385,7 +428,7 @@ describe('messenger photo recovery', () => {
       screen: 'messenger',
       online: true,
       effective_type: '3g',
-      candidate_type: 'path-style',
+      candidate_type: 'api',
       attempt_count: 6,
       surface: 'mobile-pwa',
     });
@@ -394,30 +437,26 @@ describe('messenger photo recovery', () => {
       expect(diagnostic).not.toHaveProperty(forbiddenKey);
     }
     expect(JSON.stringify(diagnostic)).not.toContain('private-photo');
-    expect(messengerSource).toContain('const fetchFallback = HEYS.MessengerAPI?.fetchPhotoBlob');
-    expect(messengerSource).toContain('fetchFallback(attachment.path)');
-    expect(messengerSource).toContain("candidateType: 'api-fallback'");
+    // `/photos/upload` больше не отдаёт публичный URL (2026-08-11): функция,
+    // строившая кандидатов из `attachment.url`, не должна вернуться в файл.
+    expect(messengerSource).not.toContain('getPhotoSourceCandidates');
+    expect(messengerSource).not.toContain('getYandexPathStylePhotoUrl');
+    expect(messengerSource).toContain('HEYS.MessengerAPI?.fetchPhotoBlob');
     expect(logTraceSource).toContain('effective_type: 1, candidate_type: 1, attempt_count: 1, surface: 1');
     expect(messengerSource).toContain('Не удалось показать фото');
     expect(messengerSource).not.toContain('Не удалось загрузить фото');
   });
 
-  it('loads the API blob only after direct candidates fail and revokes it on cleanup', async () => {
-    vi.useFakeTimers();
+  it('loads the photo through the authorized path immediately, ignoring any legacy public url', async () => {
     const attachment = {
-      url: 'https://heys-photos.storage.yandexcloud.net/client/2026-07-25/msg-photo/file.jpg',
-      path: 'client/2026-07-25/msg-photo/file.jpg',
+      // Историческая запись: до 2026-08-11 `url` был публичной ссылкой на
+      // бакет. Она должна остаться полностью неиспользованной.
+      url: 'https://heys-photos.storage.yandexcloud.net/client/2026-05-25/msg-photo/file.jpg',
+      path: 'client/2026-05-25/msg-photo/file.jpg',
       type: 'image',
       mime: 'image/jpeg',
     };
-    const blob = new Blob(['jpeg'], { type: 'image/jpeg' });
-    const fetchPhotoBlob = vi.fn().mockResolvedValue({ success: true, blob });
-    const createObjectURL = vi.fn().mockReturnValue('blob:api-photo');
-    const revokeObjectURL = vi.fn();
-    const createDescriptor = Object.getOwnPropertyDescriptor(globalThis.URL, 'createObjectURL');
-    const revokeDescriptor = Object.getOwnPropertyDescriptor(globalThis.URL, 'revokeObjectURL');
-    Object.defineProperty(globalThis.URL, 'createObjectURL', { configurable: true, value: createObjectURL });
-    Object.defineProperty(globalThis.URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL });
+    const fetchPhotoBlob = vi.fn().mockResolvedValue({ success: true, objectUrl: 'blob:api-photo' });
     window.HEYS = { MessengerAPI: { fetchPhotoBlob } };
     const { MessagePhoto } = loadMessengerComponentInternals();
     const view = render(RealReact.createElement(MessagePhoto, {
@@ -429,27 +468,82 @@ describe('messenger photo recovery', () => {
 
     try {
       const image = () => view.container.querySelector('img');
-      fireEvent.error(image());
-      await act(async () => vi.advanceTimersByTimeAsync(251));
-      fireEvent.error(image());
-      await act(async () => vi.advanceTimersByTimeAsync(501));
-      expect(fetchPhotoBlob).not.toHaveBeenCalled();
+      // Никакой прямой попытки по attachment.url — источник пуст до ответа API.
+      expect(image().getAttribute('src')).not.toBe(attachment.url);
 
-      fireEvent.error(image());
-      await act(async () => { await Promise.resolve(); });
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
 
-      expect(fetchPhotoBlob).toHaveBeenCalledWith(attachment.path);
+      expect(fetchPhotoBlob).toHaveBeenCalledTimes(1);
+      expect(fetchPhotoBlob).toHaveBeenCalledWith(attachment.path, { force: false });
       expect(image().getAttribute('src')).toBe('blob:api-photo');
       fireEvent.load(image());
       expect(view.queryByText('Не удалось показать фото')).toBeNull();
-      view.unmount();
-      expect(revokeObjectURL).toHaveBeenCalledWith('blob:api-photo');
     } finally {
       if (view.container.isConnected) view.unmount();
-      if (createDescriptor) Object.defineProperty(globalThis.URL, 'createObjectURL', createDescriptor);
-      else delete globalThis.URL.createObjectURL;
+    }
+  });
+
+  it('does not revoke the cached object URL on unmount — the cache owns its lifecycle', async () => {
+    const revokeObjectURL = vi.fn();
+    const revokeDescriptor = Object.getOwnPropertyDescriptor(globalThis.URL, 'revokeObjectURL');
+    Object.defineProperty(globalThis.URL, 'revokeObjectURL', { configurable: true, value: revokeObjectURL });
+    const attachment = { path: 'client/2026-08-01/msg-photo/file.jpg' };
+    const fetchPhotoBlob = vi.fn().mockResolvedValue({ success: true, objectUrl: 'blob:shared-photo' });
+    window.HEYS = { MessengerAPI: { fetchPhotoBlob } };
+    const { MessagePhoto } = loadMessengerComponentInternals();
+    const view = render(RealReact.createElement(MessagePhoto, {
+      attachment, photos: [attachment], index: 0, eager: true,
+    }));
+
+    try {
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      view.unmount();
+      // Тот же blob-URL мог быть показан одновременно в ленте и в лайтбоксе —
+      // отзыв на unmount одного места сломал бы другое. Отзывает только LRU
+      // кэша в heys_messenger_api_v1.js.
+      expect(revokeObjectURL).not.toHaveBeenCalled();
+    } finally {
+      if (view.container.isConnected) view.unmount();
       if (revokeDescriptor) Object.defineProperty(globalThis.URL, 'revokeObjectURL', revokeDescriptor);
       else delete globalThis.URL.revokeObjectURL;
+    }
+  });
+
+  it('retries by bypassing the negative cache, not by trying another URL', async () => {
+    const attachment = { path: 'client/2026-08-01/msg-photo/retry.jpg' };
+    const fetchPhotoBlob = vi.fn()
+      .mockResolvedValueOnce({ success: false, error: 'http_404' })
+      .mockResolvedValueOnce({ success: true, objectUrl: 'blob:retried-photo' });
+    window.HEYS = { MessengerAPI: { fetchPhotoBlob } };
+    const { MessagePhoto } = loadMessengerComponentInternals();
+    const view = render(RealReact.createElement(MessagePhoto, {
+      attachment, photos: [attachment], index: 0, eager: true,
+    }));
+
+    try {
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      expect(view.getByText('Не удалось показать фото')).toBeTruthy();
+
+      fireEvent.click(view.getByText('Повторить'));
+      await act(async () => {
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(fetchPhotoBlob).toHaveBeenCalledTimes(2);
+      expect(fetchPhotoBlob).toHaveBeenNthCalledWith(2, attachment.path, { force: true });
+      expect(view.container.querySelector('img').getAttribute('src')).toBe('blob:retried-photo');
+    } finally {
+      if (view.container.isConnected) view.unmount();
     }
   });
 });

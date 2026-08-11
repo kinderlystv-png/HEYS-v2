@@ -19,24 +19,55 @@
   /**
    * Lazy Photo Thumbnail с IntersectionObserver и skeleton loading
    */
+  // `photo.url` больше не строится сервером (2026-08-11): раньше это была
+  // постоянная публичная ссылка на бакет, и снятие публичного доступа сделало
+  // бы старые фото недоступными. Единственный путь — авторизованный
+  // `/photos/read` по `photo.path`, тот же кэш (LRU + короткий отрицательный
+  // TTL), что у мессенджера: `HEYS.MessengerAPI.fetchPhotoBlob`. `photo.data`
+  // — локальный base64 ещё не отправленного фото, сети не касается вовсе.
+  function useDayPhotoSource(photo, isVisible) {
+    const localSrc = photo?.data || '';
+    const path = photo?.path || null;
+    const [source, setSource] = React.useState(localSrc);
+    const requestIdRef = React.useRef(0);
+
+    React.useEffect(() => {
+      if (localSrc) {
+        setSource(localSrc);
+        return;
+      }
+      if (!isVisible || !path) return;
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
+      const fetchBlob = HEYS.MessengerAPI?.fetchPhotoBlob;
+      if (typeof fetchBlob !== 'function') return;
+      Promise.resolve(fetchBlob(path)).then((result) => {
+        if (requestIdRef.current !== requestId) return;
+        if (result?.success && result.objectUrl) setSource(result.objectUrl);
+      });
+    }, [localSrc, isVisible, path]);
+
+    return source;
+  }
+
   const LazyPhotoThumb = React.memo(function LazyPhotoThumb({
-    photo, photoSrc, thumbClass, timeStr, mealIndex, photoIndex, mealPhotos, handleDelete, removePhoto, setDay
+    photo, thumbClass, timeStr, mealIndex, photoIndex, mealPhotos, handleDelete, removePhoto, setDay
   }) {
     const [isLoaded, setIsLoaded] = React.useState(false);
     const [isVisible, setIsVisible] = React.useState(false);
     const containerRef = React.useRef(null);
-    
+    const photoSrc = useDayPhotoSource(photo, isVisible);
+
     // IntersectionObserver для lazy loading
     React.useEffect(() => {
-      const el = containerRef.current;
-      if (!el) return;
-      
       // Если это base64 data, показываем сразу (уже в памяти)
-      if (photoSrc?.startsWith('data:')) {
+      if (photo?.data) {
         setIsVisible(true);
         return;
       }
-      
+      const el = containerRef.current;
+      if (!el) return;
+
       const observer = new IntersectionObserver(
         ([entry]) => {
           if (entry.isIntersecting) {
@@ -46,11 +77,11 @@
         },
         { rootMargin: '100px' } // Предзагружаем за 100px до видимости
       );
-      
+
       observer.observe(el);
       return () => observer.disconnect();
-    }, [photoSrc]);
-    
+    }, [photo?.data]);
+
     // Открытие галереи
     const handleClick = React.useCallback((e) => {
       // Не открывать галерею если кликнули по чекбоксу
@@ -59,7 +90,7 @@
       if (window.HEYS?.showPhotoViewer) {
         const onDeleteInViewer = (photoId) => removePhoto?.(mealIndex, photoId, { skipConfirm: false });
         window.HEYS.showPhotoViewer([...(mealPhotos || [])], photoIndex, onDeleteInViewer);
-      } else {
+      } else if (photoSrc) {
         window.open(photoSrc, '_blank');
       }
     }, [mealPhotos, photoIndex, photoSrc, mealIndex, removePhoto]);
@@ -93,9 +124,11 @@
       className: finalClass,
       onClick: handleClick
     },
-      // Изображение (показываем только когда видимо)
-      isVisible && React.createElement('img', { 
-        src: photoSrc, 
+      // Изображение — только когда видимо И источник уже разрешён: пока идёт
+      // авторизованный запрос, photoSrc пуст, и пустой src у <img> перезагрузил
+      // бы текущую страницу вместо показа скелетона.
+      isVisible && photoSrc && React.createElement('img', {
+        src: photoSrc,
         alt: 'Фото приёма',
         onLoad: () => setIsLoaded(true),
         onError: () => setIsLoaded(true) // Убираем skeleton даже при ошибке
@@ -257,14 +290,34 @@
       touch-action: none;
     `;
     
+    // `photo.url` — историческая публичная ссылка, больше не строится сервером
+    // (2026-08-11) и после снятия публичного доступа с бакета не работает.
+    // Единственный путь — авторизованный `/photos/read` по `photo.path`, тот
+    // же кэш, что у миниатюр и мессенджера. `showPhotoRequestId` — защита от
+    // гонки: пока грузится фото N, пользователь мог смахнуть на N+1, и ответ
+    // по N не должен подменить уже показанное N+1.
+    let showPhotoRequestId = 0;
     function showPhoto(index) {
       const photo = photos[index];
       if (!photo) return;
-      img.src = photo.url || photo.data;
+      const requestId = ++showPhotoRequestId;
       scale = 1;
       translateX = 0;
       translateY = 0;
       updateTransform();
+
+      if (photo.data) {
+        img.src = photo.data;
+        return;
+      }
+      img.removeAttribute('src'); // не держать прошлый кадр, пока грузится этот
+      if (!photo.path) return;
+      const fetchBlob = HEYS.MessengerAPI?.fetchPhotoBlob;
+      if (typeof fetchBlob !== 'function') return;
+      Promise.resolve(fetchBlob(photo.path)).then((result) => {
+        if (requestId !== showPhotoRequestId) return;
+        if (result?.success && result.objectUrl) img.src = result.objectUrl;
+      });
     }
     
     function updateTransform() {

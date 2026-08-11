@@ -97,58 +97,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return att?.url || att?.path || att?.localPreview || att?.tempId || idx;
   }
 
-  function withPhotoRetryToken(value, token) {
-    try {
-      const url = new URL(value);
-      if (url.protocol !== 'https:') return value;
-      url.searchParams.set('_heys_img_retry', String(token));
-      return url.toString();
-    } catch {
-      return value;
-    }
-  }
-
-  function getYandexPathStylePhotoUrl(value) {
-    try {
-      const url = new URL(value);
-      const suffix = '.storage.yandexcloud.net';
-      if (url.protocol !== 'https:' || !url.hostname.endsWith(suffix)) return null;
-      const bucket = url.hostname.slice(0, -suffix.length);
-      if (!bucket) return null;
-      url.hostname = 'storage.yandexcloud.net';
-      url.pathname = `/${bucket}${url.pathname}`;
-      return url.toString();
-    } catch {
-      return null;
-    }
-  }
-
-  function getPhotoSourceCandidates(att, retryCycle = 0) {
-    const primary = String(att?.url || att?.localPreview || '').trim();
-    if (!primary) return [''];
-    if (!primary.startsWith('https://')) return [primary];
-
-    const candidates = [
-      primary,
-      withPhotoRetryToken(primary, `${retryCycle}-direct`),
-    ];
-    const pathStyle = getYandexPathStylePhotoUrl(primary);
-    if (pathStyle) candidates.push(withPhotoRetryToken(pathStyle, `${retryCycle}-path`));
-    if (att?.localPreview && att.localPreview !== primary) candidates.push(att.localPreview);
-    return Array.from(new Set(candidates));
-  }
-
-  function getPhotoSourceCandidateType(att, source, sourceIndex) {
-    const primary = String(att?.url || att?.localPreview || '').trim();
-    if (sourceIndex === 0 || source === primary) return 'direct';
-    if (att?.localPreview && source === att.localPreview) return 'local-preview';
-    try {
-      const pathStyle = getYandexPathStylePhotoUrl(primary);
-      if (pathStyle && new URL(source).hostname === 'storage.yandexcloud.net') return 'path-style';
-    } catch { /* use the generic cache-bust classification */ }
-    return 'cache-bust';
-  }
-
   function getPhotoSurface(runtime = {}) {
     const nav = runtime.navigator || global.navigator || {};
     const userAgent = String(nav.userAgent || '');
@@ -167,7 +115,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const safeEffectiveType = ['slow-2g', '2g', '3g', '4g'].includes(effectiveType)
       ? effectiveType
       : 'unknown';
-    const safeCandidateType = ['direct', 'cache-bust', 'path-style', 'local-preview', 'api-fallback'].includes(details.candidateType)
+    // 'api' — авторизованный /photos/read, единственный сетевой источник с
+    // 2026-08-11; 'local-preview' — ещё не отправленное фото, blob в памяти.
+    const safeCandidateType = ['api', 'local-preview'].includes(details.candidateType)
       ? details.candidateType
       : 'unknown';
     const attemptCount = Math.max(1, Math.min(1000, Math.round(Number(details.attemptCount) || 1)));
@@ -507,8 +457,55 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }
   }
 
+  // Единственный источник — авторизованный `/photos/read` по `attachment.path`
+  // (2026-08-11, тот же переход, что и у фото): `attachment.url` был публичной
+  // ссылкой на бакет и больше не строится сервером. `localUrl` — локальный
+  // objectURL ещё не отправленной записи, сети не касается.
+  function useReliableAudioSource(attachment) {
+    const [source, setSource] = useState('');
+    const requestIdRef = useRef(0);
+    const path = attachment?.path || null;
+    const localUrl = attachment?.localUrl || null;
+
+    const load = useCallback((force = false) => {
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
+
+      if (localUrl) {
+        setSource(localUrl);
+        return;
+      }
+      if (!path) {
+        setSource('');
+        return;
+      }
+      const fetchBlob = HEYS.MessengerAPI?.fetchAudioBlob;
+      if (typeof fetchBlob !== 'function') {
+        setSource('');
+        return;
+      }
+      Promise.resolve(fetchBlob(path, { force })).then((result) => {
+        if (requestIdRef.current !== requestId) return;
+        setSource(result?.success && result.objectUrl ? result.objectUrl : '');
+      }).catch(() => {
+        if (requestIdRef.current !== requestId) return;
+        setSource('');
+      });
+    }, [path, localUrl]);
+
+    useEffect(() => {
+      load(false);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [path, localUrl]);
+
+    // Blob-URL принадлежит общему кэшу (heys_messenger_api_v1.js), не этому
+    // компоненту: тот же голос мог звучать где-то ещё, отзыв — забота LRU.
+    return { source, retry: () => load(true) };
+  }
+
   function AudioAttachment({ attachment, compact, transcriptionGranted = false }) {
     const audioRef = useRef(null);
+    const { source: resolvedSrc } = useReliableAudioSource(attachment);
     const [playing, setPlaying] = useState(false);
     const [loading, setLoading] = useState(false);
     const [playError, setPlayError] = useState('');
@@ -566,7 +563,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         audio.removeEventListener('canplay', onCanPlay);
         audio.removeEventListener('error', onError);
       };
-    }, [attachment?.url, attachment?.localUrl]);
+    }, [resolvedSrc]);
 
     const toggle = async () => {
       const audio = audioRef.current;
@@ -608,7 +605,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         },
         React.createElement('audio', {
           ref: audioRef,
-          src: attachment.localUrl || attachment.url || '',
+          src: resolvedSrc,
           preload: 'metadata',
         }),
         React.createElement('button', {
@@ -652,119 +649,82 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // eager=true для последних сообщений (в viewport при открытии) — грузятся
   // сразу, мгновенный показ. Для остальных — lazy, чтобы не качать тысячи
   // фото из длинной истории при каждом открытии треда.
+  //
+  // Единственный источник — авторизованный `/photos/read` по `attachment.path`
+  // (2026-08-11). Раньше было наоборот: прямая публичная ссылка на бакет была
+  // основным источником, а этот путь — запасным на случай ошибки. С уходом
+  // публичного доступа к бакету прямая ссылка стала мёртвой по определению, и
+  // держать её первым кандидатом означало держать гарантированный первый
+  // провал на каждом фото. `attachment.localPreview` остаётся отдельным
+  // случаем: это собственный `objectURL` ещё не отправленного фото, локальный,
+  // авторизации не требует и кэшем ниже не управляется.
   function useReliablePhotoSource(attachment) {
-    const [sourceIndex, setSourceIndex] = useState(0);
-    const [retryCycle, setRetryCycle] = useState(0);
-    const [fallbackSource, setFallbackSource] = useState(null);
+    const [source, setSource] = useState('');
     const [status, setStatus] = useState('loading');
-    const retryTimerRef = useRef(null);
-    const fallbackRequestRef = useRef(0);
-    const fallbackPendingRef = useRef(false);
-    const fallbackObjectUrlRef = useRef(null);
-    const candidates = getPhotoSourceCandidates(attachment, retryCycle);
-    const source = fallbackSource || candidates[Math.min(sourceIndex, candidates.length - 1)] || '';
+    const requestIdRef = useRef(0);
+    const path = attachment?.path || null;
+    const localPreview = attachment?.localPreview || null;
 
-    const clearFallbackSource = () => {
-      fallbackRequestRef.current += 1;
-      fallbackPendingRef.current = false;
-      if (fallbackObjectUrlRef.current) {
-        try { URL.revokeObjectURL(fallbackObjectUrlRef.current); } catch { /* ignore */ }
-        fallbackObjectUrlRef.current = null;
+    const load = useCallback((force = false) => {
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
+
+      if (localPreview) {
+        setSource(localPreview);
+        setStatus('loading');
+        return;
       }
-      setFallbackSource(null);
-    };
-
-    useEffect(() => {
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
-      clearFallbackSource();
-      setSourceIndex(0);
-      setRetryCycle(0);
-      setStatus('loading');
-    }, [attachment?.url, attachment?.localPreview]);
-
-    useEffect(() => () => {
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-      fallbackRequestRef.current += 1;
-      fallbackPendingRef.current = false;
-      if (fallbackObjectUrlRef.current) {
-        try { URL.revokeObjectURL(fallbackObjectUrlRef.current); } catch { /* ignore */ }
-        fallbackObjectUrlRef.current = null;
-      }
-    }, []);
-
-    const onLoad = useCallback(() => {
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
-      setStatus('loaded');
-    }, []);
-
-    const onError = useCallback(() => {
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-      if (fallbackSource) {
-        tracePhotoLoadFailure({
-          candidateType: 'api-fallback',
-          attemptCount: retryCycle * (candidates.length + 1) + candidates.length + 1,
-        });
+      if (!path) {
+        setSource('');
         setStatus('failed');
         return;
       }
-      if (sourceIndex >= candidates.length - 1) {
-        retryTimerRef.current = null;
-        const fetchFallback = HEYS.MessengerAPI?.fetchPhotoBlob;
-        if (attachment?.path && typeof fetchFallback === 'function' && !fallbackPendingRef.current) {
-          const requestId = fallbackRequestRef.current + 1;
-          fallbackRequestRef.current = requestId;
-          fallbackPendingRef.current = true;
-          setStatus('retrying');
-          Promise.resolve(fetchFallback(attachment.path)).then((result) => {
-            if (fallbackRequestRef.current !== requestId) return;
-            fallbackPendingRef.current = false;
-            if (!result?.success || !result.blob || typeof URL.createObjectURL !== 'function') {
-              tracePhotoLoadFailure({
-                candidateType: 'api-fallback',
-                attemptCount: retryCycle * (candidates.length + 1) + candidates.length + 1,
-              });
-              setStatus('failed');
-              return;
-            }
-            const objectUrl = URL.createObjectURL(result.blob);
-            fallbackObjectUrlRef.current = objectUrl;
-            setFallbackSource(objectUrl);
-            setStatus('loading');
-          }).catch(() => {
-            if (fallbackRequestRef.current !== requestId) return;
-            fallbackPendingRef.current = false;
-            tracePhotoLoadFailure({
-              candidateType: 'api-fallback',
-              attemptCount: retryCycle * (candidates.length + 1) + candidates.length + 1,
-            });
-            setStatus('failed');
-          });
+
+      setStatus((prev) => (prev === 'loaded' ? 'loading' : prev === 'failed' ? 'retrying' : 'loading'));
+      const fetchBlob = HEYS.MessengerAPI?.fetchPhotoBlob;
+      if (typeof fetchBlob !== 'function') {
+        setStatus('failed');
+        return;
+      }
+      Promise.resolve(fetchBlob(path, { force })).then((result) => {
+        if (requestIdRef.current !== requestId) return;
+        if (result?.success && result.objectUrl) {
+          setSource(result.objectUrl);
+          setStatus('loading'); // снимается в 'loaded' самим <img onLoad>
           return;
         }
-        tracePhotoLoadFailure({
-          candidateType: getPhotoSourceCandidateType(attachment, source, sourceIndex),
-          attemptCount: retryCycle * candidates.length + sourceIndex + 1,
-        });
+        tracePhotoLoadFailure({ candidateType: 'api', attemptCount: 1 });
+        setSource('');
         setStatus('failed');
-        return;
-      }
-      setStatus('retrying');
-      retryTimerRef.current = setTimeout(() => {
-        retryTimerRef.current = null;
-        setSourceIndex((current) => current + 1);
-      }, 250 * (sourceIndex + 1));
-    }, [attachment, candidates.length, fallbackSource, retryCycle, source, sourceIndex]);
+      }).catch(() => {
+        if (requestIdRef.current !== requestId) return;
+        tracePhotoLoadFailure({ candidateType: 'api', attemptCount: 1 });
+        setSource('');
+        setStatus('failed');
+      });
+    }, [path, localPreview]);
 
-    const retry = useCallback(() => {
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
-      clearFallbackSource();
-      setRetryCycle((current) => current + 1);
-      setSourceIndex(0);
-      setStatus('loading');
-    }, []);
+    useEffect(() => {
+      load(false);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [path, localPreview]);
+
+    // Blob-URL'ы в кэше принадлежат кэшу (LRU в heys_messenger_api_v1.js),
+    // а не компоненту: их отзывает вытеснение при переполнении, а не unmount
+    // этого рендера. Отзывать здесь нельзя — тот же URL может быть показан
+    // в другом месте экрана (лента и лайтбокс одного и того же фото).
+
+    const onLoad = useCallback(() => setStatus('loaded'), []);
+    const onError = useCallback(() => {
+      // Провал уже отрисованного <img> — отдельно от провала самой загрузки
+      // блоба (тот попадает в trace выше, в load()): здесь источник был
+      // валиден, но браузер не смог его декодировать/показать.
+      tracePhotoLoadFailure({ candidateType: localPreview ? 'local-preview' : 'api', attemptCount: 1 });
+      setStatus('failed');
+    }, [localPreview]);
+    // Ручной повтор обходит короткий отрицательный кэш (30с): человек явно
+    // просит попробовать снова, ждать TTL незачем.
+    const retry = useCallback(() => load(true), [load]);
 
     return { source, status, onLoad, onError, retry };
   }
@@ -3485,7 +3445,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           blob: uploadBlob,
           durationMs,
         });
-        if (result?.error || !result?.url) {
+        // Сигнал успеха — `path`, не `url`: `/photos/upload` перестал отдавать
+        // `url` (2026-08-11, публичная ссылка на бакет закрыта). Проверка
+        // `!result?.url` здесь останавливала бы КАЖДУЮ отправку голосового —
+        // самый серьёзный побочный эффект из всех мест, читавших это поле.
+        if (result?.error || !result?.path) {
           setPendingAudio((prev) => prev && prev.tempId === tempId ? { ...prev, status: 'error' } : prev);
           setError(result?.error || 'audio_upload_failed');
           return;
@@ -4978,8 +4942,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     },
   };
 
-  HEYS.Messenger._test.getPhotoSourceCandidates = getPhotoSourceCandidates;
-  HEYS.Messenger._test.getPhotoSourceCandidateType = getPhotoSourceCandidateType;
   HEYS.Messenger._test.buildPhotoFailureDiagnostic = buildPhotoFailureDiagnostic;
   HEYS.Messenger._test.tracePhotoLoadFailure = tracePhotoLoadFailure;
   HEYS.Messenger._test.MessagePhoto = MessagePhoto;

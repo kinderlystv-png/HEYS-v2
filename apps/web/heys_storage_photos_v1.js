@@ -451,7 +451,13 @@
         }
     }
 
-    async function updatePhotoUrlInDay(clientId, date, photoId, newUrl) {
+    // Раньше принимала `newUrl` — постоянную публичную ссылку, которую сервер
+    // отдавал в ответе загрузки. С 2026-08-11 `/photos/upload` её не отдаёт
+    // (снят публичный доступ к бакету), и `path` — единственное, что связывает
+    // запись в дне с загруженным объектом. Без этой правки успешно загруженное
+    // фото писалось бы с `url: null` и БЕЗ `path` — то есть пропадало бы из
+    // дня совсем, хотя объект реально лежит в хранилище.
+    async function updatePhotoPathInDay(clientId, date, photoId, newPath) {
         const utils = HEYS?.utils;
         if (!utils?.lsGet || !utils?.lsSet) return;
 
@@ -467,7 +473,7 @@
                     updated = true;
                     return {
                         ...photo,
-                        url: newUrl,
+                        path: newPath,
                         data: undefined,
                         pending: false,
                         uploaded: true
@@ -480,7 +486,7 @@
 
         if (updated) {
             utils.lsSet(dayKey, day);
-            log('📷 Updated photo URL in day:', date, photoId);
+            log('📷 Updated photo path in day:', date, photoId);
         }
     }
 
@@ -559,7 +565,7 @@
                     );
 
                     if (result?.uploaded) {
-                        await updatePhotoUrlInDay(photo.clientId, photo.date, photo.id, result.url);
+                        await updatePhotoPathInDay(photo.clientId, photo.date, photo.id, result.path);
                         log('📷 Pending photo uploaded:', photo.id);
                     } else {
                         stillPending.push({ ...photo, retryCount: retryCount + 1, lastTriedAt: now });

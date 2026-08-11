@@ -149,8 +149,42 @@
     return { success: false, error: 'network_error' };
   }
 
-  async function fetchPhotoBlob(path) {
-    if (!path || typeof path !== 'string') return { success: false, error: 'path_required' };
+  // ── Photo blob cache ─────────────────────────────────────────────────
+  // Публичные ссылки на фото убраны из ответа `/photos/upload` (2026-08-11):
+  // каждая загрузка раньше клала в базу постоянный публичный URL, и снятие
+  // публичного доступа с бакета его не отзывало бы. Единственный путь чтения
+  // теперь — авторизованный `/photos/read` по `path`. Он вызывается на КАЖДОЕ
+  // открытие фото (лента куратора за неделю, история сообщений), поэтому кэш
+  // здесь не оптимизация, а необходимость: без него неделя фото — это неделя
+  // запросов заново при каждом рендере.
+  //
+  // Кэш общий для мессенджера и дневника — оба контура используют один и тот
+  // же `path` от одного и того же эндпоинта, второй кэш плодил бы дубликаты
+  // blob'ов в памяти без причины.
+  const PHOTO_CACHE_LIMIT = 60; // блобов одновременно; вытесняются самые старые
+  const PHOTO_NEGATIVE_TTL_MS = 30 * 1000; // короткий: сетевой сбой не должен
+  // держать «фото недоступно» до перезагрузки вкладки
+  const photoObjectUrlCache = new Map(); // path -> objectUrl; порядок вставки = recency (LRU)
+  const photoNegativeCache = new Map(); // path -> expiresAt
+  const photoInFlight = new Map(); // path -> Promise, чтобы параллельные рендеры не дублировали запрос
+
+  function touchLru(map, key) {
+    if (!map.has(key)) return;
+    const value = map.get(key);
+    map.delete(key);
+    map.set(key, value);
+  }
+
+  function evictPhotoCacheOverflow() {
+    while (photoObjectUrlCache.size > PHOTO_CACHE_LIMIT) {
+      const oldestKey = photoObjectUrlCache.keys().next().value;
+      const objectUrl = photoObjectUrlCache.get(oldestKey);
+      photoObjectUrlCache.delete(oldestKey);
+      try { URL.revokeObjectURL(objectUrl); } catch { /* уже отозван — не критично */ }
+    }
+  }
+
+  async function requestPhotoBlob(path, mediaTypePrefix) {
     const token = getBearerToken();
     const headers = {
       'Content-Type': 'application/json',
@@ -178,7 +212,7 @@
       }
       if (res.ok) {
         const blob = await res.blob();
-        if (!blob?.size || !String(blob.type || '').startsWith('image/')) {
+        if (!blob?.size || !String(blob.type || '').startsWith(`${mediaTypePrefix}/`)) {
           return { success: false, error: 'invalid_photo_response' };
         }
         return { success: true, blob };
@@ -198,15 +232,79 @@
     return { success: false, error: 'network_error' };
   }
 
+  // `force` — обход обоих кэшей: используется ручным «Повторить», где сигнал
+  // от человека важнее короткого отрицательного TTL.
+  //
+  // Кэш общий для фото и голосовых: пути не пересекаются (у голосовых свой
+  // `voice/` сегмент, см. `isMessengerAudioPath` на сервере), а `/photos/read`
+  // — один и тот же эндпоинт для обоих, определяет тип по структуре пути.
+  async function fetchMediaBlob(path, mediaTypePrefix, { force = false } = {}) {
+    if (!path || typeof path !== 'string') return { success: false, error: 'path_required' };
+    // Ключ включает тип медиа: пути image/audio на практике не пересекаются
+    // (у голосовых свой `voice/` сегмент), но если бы кто-то вызвал
+    // `fetchPhotoBlob` и `fetchAudioBlob` для одного и того же пути, общий
+    // ключ вернул бы из кэша объект чужого типа без повторной проверки MIME —
+    // проверка идёт только при живом сетевом запросе.
+    const cacheKey = `${mediaTypePrefix}:${path}`;
+
+    if (!force && photoObjectUrlCache.has(cacheKey)) {
+      touchLru(photoObjectUrlCache, cacheKey);
+      return { success: true, objectUrl: photoObjectUrlCache.get(cacheKey), cached: true };
+    }
+    if (!force) {
+      const negative = photoNegativeCache.get(cacheKey);
+      if (negative) {
+        if (negative > Date.now()) {
+          return { success: false, error: 'cached_failure', cached: true };
+        }
+        photoNegativeCache.delete(cacheKey);
+      }
+    }
+    if (!force && photoInFlight.has(cacheKey)) return photoInFlight.get(cacheKey);
+
+    const promise = (async () => {
+      const result = await requestPhotoBlob(path, mediaTypePrefix);
+      if (result.success) {
+        const objectUrl = URL.createObjectURL(result.blob);
+        photoObjectUrlCache.set(cacheKey, objectUrl);
+        evictPhotoCacheOverflow();
+        return { success: true, objectUrl };
+      }
+      photoNegativeCache.set(cacheKey, Date.now() + PHOTO_NEGATIVE_TTL_MS);
+      return result;
+    })();
+    photoInFlight.set(cacheKey, promise);
+    try {
+      return await promise;
+    } finally {
+      photoInFlight.delete(cacheKey);
+    }
+  }
+
+  function fetchPhotoBlob(path, opts) {
+    return fetchMediaBlob(path, 'image', opts);
+  }
+
+  // Голосовые лежат в бакете тем же способом, что и фото (2026-08-11): раньше
+  // публичная ссылка была видна в `attachment.url`, теперь единственный путь —
+  // тот же авторизованный `/photos/read`, только с проверкой `audio/*` вместо
+  // `image/*`.
+  function fetchAudioBlob(path, opts) {
+    return fetchMediaBlob(path, 'audio', opts);
+  }
+
   // ── Public API ───────────────────────────────────────────────────────
 
   /**
    * Отправить сообщение.
    *   client → curator: { body, intent_type?, intent_payload?, attachments? }
    *   curator → client: { client_id, body, attachments? }
-   * attachments:
-   *   image — {type:'image', url, path, filename?, mime?, width?, height?}
-   *   audio — {type:'audio', url, path, filename?, mime?, duration_ms, size_bytes?, waveform?,
+   * attachments (2026-08-11: `url` больше не используется для чтения —
+   *   `/photos/upload` его не отдаёт, показ идёт через `path` и
+   *   `fetchPhotoBlob`/`fetchAudioBlob`; поле может остаться в старых записях
+   *   как мёртвое значение):
+   *   image — {type:'image', path, filename?, mime?, width?, height?}
+   *   audio — {type:'audio', path, filename?, mime?, duration_ms, size_bytes?, waveform?,
    *            transcript_status?, transcript_text?, transcript_provider?, transcript_created_at?, transcript_error?}
    */
   async function send(payload, options = {}) {
@@ -518,6 +616,7 @@
     deleteMessage,
     editMessage,
     fetchPhotoBlob,
+    fetchAudioBlob,
     getUnreadCount,
     getInboxCache,
     refreshInbox,

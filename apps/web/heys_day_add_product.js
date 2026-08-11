@@ -542,7 +542,12 @@
           try {
             const result = await HEYS.cloud.uploadPhoto(photo, clientId, date, mealId);
 
-            if (result?.uploaded && result?.url) {
+            // Сигнал успешной загрузки — `path`, не `url`: сервер перестал
+            // отдавать `url` в ответе `/photos/upload` (2026-08-11, публичная
+            // ссылка на бакет закрыта). Проверка `result?.url` здесь никогда
+            // не была бы true для новых фото, и `data`/`uploading` не
+            // очищались бы после успешной загрузки.
+            if (result?.uploaded && result?.path) {
               setDay((prevDay = {}) => {
                 const targetIndex = resolveMealIndex(prevDay, mealIndex, mealId);
                 const meals = (prevDay.meals || []).map((m, i) => {
@@ -551,7 +556,7 @@
                     ...m,
                     photos: m.photos.map(p =>
                       p.id === photoId
-                        ? { ...p, url: result.url, data: undefined, pending: false, uploading: false, uploaded: true }
+                        ? { ...p, path: result.path, data: undefined, pending: false, uploading: false, uploaded: true }
                         : p
                     )
                   };

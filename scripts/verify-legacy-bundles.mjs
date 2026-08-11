@@ -6,6 +6,8 @@
  * - apps/web/bundle-manifest.json ↔ apps/web/public/bundle-manifest.json
  * - Each manifest entry: file exists under public/, hash matches filename
  * - index.html: boot defer scripts + preloads + POST_BOOT_BUNDLES match manifest
+ * - No bundle references the private-photos bucket by hostname (see
+ *   FORBIDDEN_BUNDLE_SUBSTRINGS below) — 2026-08-11
  *
  * Run: pnpm verify:legacy-bundles
  * Optional: --fix-hint (default true) append rebuild commands on failure
@@ -23,6 +25,16 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
 const WEB_DIR = resolve(ROOT, 'apps/web');
 const INDEX_HTML = resolve(WEB_DIR, 'index.html');
+
+// Публичный прямой хост приватного бакета фото/аудио клиентов. До 2026-08-11
+// `/photos/upload` отдавал этот URL, и он оседал в client_messages.attachments
+// как постоянная публичная ссылка. Снятие публичного доступа с бакета этого
+// не отменяет, если код продолжает его строить — фронт должен ходить только
+// через авторизованный `/photos/read` по `path`. Строка тут — не про
+// hostname `storage.yandexcloud.net` вообще (у него есть легитимные публичные
+// применения, например демо-снапшот в heys_demo_mode_v1.js), а именно про
+// прямой адрес ЭТОГО бакета в собранном бандле.
+const FORBIDDEN_BUNDLE_SUBSTRINGS = ['heys-photos.storage.yandexcloud.net'];
 
 // --ref=HEAD (used by pre-push): verify the COMMITTED state being pushed, not
 // the working tree. In a shared/parallel checkout the working tree may carry
@@ -252,6 +264,17 @@ function main() {
             if (!repoFileExists(`apps/web/public/${file}`)) {
                 errors.push(`missing public asset: apps/web/public/${file} (manifest lists it)`);
                 continue;
+            }
+
+            const bundleText = readRepoFile(`apps/web/public/${file}`);
+            for (const forbidden of FORBIDDEN_BUNDLE_SUBSTRINGS) {
+                if (bundleText.includes(forbidden)) {
+                    errors.push(
+                        `bundle "${name}" contains forbidden reference "${forbidden}" — a public direct link ` +
+                        `to the private photos bucket. Fix: read via /photos/read + path, not a stored public URL. ` +
+                        `See apps/web/heys_messenger_api_v1.js (fetchPhotoBlob/fetchAudioBlob).`,
+                    );
+                }
             }
 
             if (hasValidSourceFingerprint) {

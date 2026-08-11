@@ -995,9 +995,12 @@ return React.createElement('div', { key: it.id, className: 'mpc', style: { margi
 // Фотографии приёма (если есть)
 (meal.photos && meal.photos.length > 0) && React.createElement('div', { className: 'meal-photos' },
   meal.photos.map((photo, photoIndex) => {
-    // Используем url если загружено, иначе data (для pending)
-    const photoSrc = photo.url || photo.data;
-    if (!photoSrc) return null;
+    // `photo.url` больше не строится (2026-08-11): публичная ссылка на бакет
+    // уходила прямо в дневник, а её снятие сделало бы старые фото недоступными.
+    // Показ идёт через `path` — `LazyPhotoThumb` сам резолвит его авторизованным
+    // запросом, когда миниатюра попадает в видимую область. `photo.data` —
+    // локальный base64 ещё не отправленного фото, отображается сразу.
+    if (!photo.path && !photo.data) return null;
 
     // Форматируем timestamp
     const timeStr = photo.timestamp
@@ -1035,7 +1038,6 @@ return React.createElement('div', { key: it.id, className: 'mpc', style: { margi
     return React.createElement(LazyPhotoThumb, {
       key: photo.id || photoIndex,
       photo,
-      photoSrc,
       thumbClass,
       timeStr,
       mealIndex,

@@ -163,9 +163,14 @@
                     return {
                         ...meal,
                         photos: meal.photos.map(photo => {
-                            // Если есть URL — удаляем data (base64)
-                            // Если нет URL (pending) — сохраняем data для offline
-                            if (photo.url) {
+                            // Сигнал успешной загрузки — `path`, не `url`: сервер
+                            // перестал отдавать `url` в ответе `/photos/upload`
+                            // (2026-08-11, публичная ссылка на бакет закрыта).
+                            // Если продолжить проверять `photo.url`, условие
+                            // никогда не станет true для новых фото, и base64
+                            // будет копиться в localStorage бесконечно вместо
+                            // очистки после успешной загрузки.
+                            if (photo.path) {
                                 const { data, ...rest } = photo;
                                 return rest;
                             }
