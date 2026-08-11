@@ -1265,7 +1265,22 @@ async function handleUpdateClient(curatorId, clientId, body) {
   const client = await getClient();
 
   try {
-    // Build dynamic UPDATE — only include provided fields
+    // PIN — через admin_set_client_pin: одноразовый код, сброс сессий, очередь push.
+    if (plainPin) {
+      const pinResult = await client.query(
+        `SELECT public.admin_set_client_pin($1::uuid, $2::text, $3::uuid) AS result`,
+        [clientId, plainPin, curatorId]
+      );
+      const pinPayload = pinResult.rows[0]?.result;
+      if (!pinPayload?.success) {
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: pinPayload?.error || 'pin_update_failed' })
+        };
+      }
+    }
+
+    // Build dynamic UPDATE — only include provided fields (PIN уже выше)
     const setClauses = [];
     const params = [];
     let idx = 1;
@@ -1280,15 +1295,19 @@ async function handleUpdateClient(curatorId, clientId, body) {
       setClauses.push(`phone_normalized = $${idx++}`);
       params.push(phoneNormalized);
     }
-    if (plainPin) {
-      // bcrypt через pgcrypto в SQL — совместимо с verify_client_pin_v3
-      setClauses.push(`pin_hash = crypt($${idx++}, gen_salt('bf'))`);
-      params.push(plainPin);
-      // Сбрасываем pin_salt (legacy SHA256-схема его требовала, bcrypt salt уже в hash)
-      setClauses.push(`pin_salt = NULL`);
-      setClauses.push(`pin_updated_at = NOW()`);
-      setClauses.push(`pin_failed_attempts = 0`);
-      setClauses.push(`pin_locked_until = NULL`);
+    if (setClauses.length === 0 && plainPin) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          data: { id: clientId, pin_updated: true, sessions_revoked: true }
+        })
+      };
+    }
+    if (setClauses.length === 0) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'No fields to update' })
+      };
     }
     setClauses.push(`updated_at = NOW()`);
     params.push(clientId);

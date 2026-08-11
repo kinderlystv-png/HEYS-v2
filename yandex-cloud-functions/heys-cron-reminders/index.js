@@ -1196,6 +1196,57 @@ async function jobHungerOutcomeFollowUps(client) {
   return { scanned: rows.rows.length, due, total };
 }
 
+// ─── Auth events (новое устройство / сброс кода) ───────────────────────
+
+async function jobClientAuthPush(client) {
+  let rows;
+  try {
+    rows = await client.query(
+      `SELECT q.id, q.client_id, q.event_type
+         FROM public.client_auth_push_queue q
+        WHERE q.sent_at IS NULL
+        ORDER BY q.created_at
+        LIMIT 50`
+    );
+  } catch (err) {
+    if (String(err.message || '').includes('client_auth_push_queue')) {
+      return { skipped: true, reason: 'table_missing' };
+    }
+    throw err;
+  }
+
+  const templates = {
+    new_device_login: {
+      title: 'Вход с нового устройства',
+      body: 'Кто-то вошёл в ваш аккаунт с другого устройства. Если это не вы — напишите куратору.',
+      url: '/',
+    },
+    access_code_reset: {
+      title: 'Код доступа сброшен',
+      body: 'Куратор выдал новый код для входа. Откройте приложение и задайте свой код заново.',
+      url: '/',
+    },
+  };
+
+  let delivered = 0;
+  for (const row of rows.rows) {
+    const tpl = templates[row.event_type];
+    if (tpl) {
+      const payload = {
+        ...tpl,
+        tag: `auth-${row.event_type}-${row.client_id}`,
+      };
+      const res = await sendToClient(client, row.client_id, payload);
+      delivered += res.sent || 0;
+    }
+    await client.query(
+      `UPDATE public.client_auth_push_queue SET sent_at = now() WHERE id = $1`,
+      [row.id]
+    );
+  }
+  return { pending: rows.rows.length, delivered };
+}
+
 // ─── Main ──────────────────────────────────────────────────────────────
 
 module.exports.handler = async function (event, context) {
@@ -1209,6 +1260,7 @@ module.exports.handler = async function (event, context) {
   let stats = {};
   try {
     stats.curatorBatching = await jobCuratorBatching(client);
+    stats.clientAuthPush = await jobClientAuthPush(client);
     stats.hungerOutcomeFollowUps = await jobHungerOutcomeFollowUps(client);
     stats.mealReminders = await jobMealReminders(client);
     stats.inactiveClients = await jobInactiveClients(client);

@@ -918,6 +918,11 @@ const ALLOWED_FUNCTIONS = [
   // 🔐 P2: Removed create_client_with_pin — curator-only (иначе спам-регистрация)
   // 🔐 P2: Removed verify_client_pin_v2 (returned plaintext PIN!)
   'verify_client_pin_v3',             // 🔐 P1: С rate-limit по IP!
+  'verify_client_onetime_pin',        // 🆕 Первый вход по одноразовому PIN куратора
+  'set_client_access_code',           // 🆕 Создание кода доступа после первого входа
+  'change_client_access_code_by_session', // 🆕 Смена кода доступа клиентом
+  'login_client_v1',                  // 🆕 Вход с устройства / с кодом
+  'sign_consents_with_access_code_by_session', // 🆕 Подписание только с кодом
   'revoke_session',                   // Logout (отзыв сессии)
 
   // === SUBSCRIPTION (клиентская) ===
@@ -2638,6 +2643,18 @@ async function handleRpcRequest(event, context) {
     params.p_ip = clientIp || null;
     params.p_user_agent = event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
     debugLog('[RPC Handler] Added p_ip and p_user_agent to verify_client_pin_v3');
+  }
+
+  if (fnName === 'verify_client_onetime_pin' || fnName === 'login_client_v1') {
+    params.p_ip = clientIp || null;
+    params.p_user_agent = event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
+  }
+
+  if (fnName === 'set_client_access_code'
+      || fnName === 'change_client_access_code_by_session'
+      || fnName === 'sign_consents_with_access_code_by_session') {
+    params.p_ip = clientIp || null;
+    params.p_user_agent = event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
   }
 
   // 🔐 Для consent RPC доказательство IP/UA берём только из HTTP-запроса.
@@ -4684,6 +4701,43 @@ async function handleRpcRequest(event, context) {
         'p_ip': '::text',
         'p_user_agent': '::text'
       },
+      'verify_client_onetime_pin': {
+        'p_phone': '::text',
+        'p_pin': '::text',
+        'p_device_id': '::text',
+        'p_ip': '::text',
+        'p_user_agent': '::text'
+      },
+      'set_client_access_code': {
+        'p_session_token': '::text',
+        'p_access_code': '::text',
+        'p_device_id': '::text',
+        'p_ip': '::text',
+        'p_user_agent': '::text'
+      },
+      'change_client_access_code_by_session': {
+        'p_session_token': '::text',
+        'p_current_code': '::text',
+        'p_new_code': '::text',
+        'p_device_id': '::text',
+        'p_ip': '::text',
+        'p_user_agent': '::text'
+      },
+      'login_client_v1': {
+        'p_phone': '::text',
+        'p_device_id': '::text',
+        'p_access_code': '::text',
+        'p_ip': '::text',
+        'p_user_agent': '::text'
+      },
+      'sign_consents_with_access_code_by_session': {
+        'p_session_token': '::text',
+        'p_access_code': '::text',
+        'p_consents': '::jsonb',
+        'p_device_id': '::text',
+        'p_ip': '::text',
+        'p_user_agent': '::text'
+      },
       'revoke_session': {
         'p_session_token': '::text'
       },
@@ -5270,7 +5324,12 @@ async function handleRpcRequest(event, context) {
       ? responseBody[fnName]
       : responseBody;
 
-    if (fnName === 'verify_client_pin_v3'
+    const loginFnsWithSessionCookie = new Set([
+      'verify_client_pin_v3',
+      'verify_client_onetime_pin',
+      'login_client_v1',
+    ]);
+    if (loginFnsWithSessionCookie.has(fnName)
         && inner && typeof inner === 'object'
         && inner.success === true
         && typeof inner.session_token === 'string') {
