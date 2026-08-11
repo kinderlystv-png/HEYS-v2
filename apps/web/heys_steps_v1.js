@@ -2742,11 +2742,18 @@
 
   /**
    * Проверка: нужно ли показывать шаг cycle?
-   * Показываем если:
-   * 1. В профиле cycleTrackingEnabled = true
+   * Release gate: трекинг цикла снят с релиза (prompt-cycle-removal).
+   * Исторически: cycleTrackingEnabled=true и gender=Женский.
    */
   function shouldShowCycleStep() {
     try {
+      const hf = HEYS.healthFeatures;
+      if (hf && typeof hf.isCycleFeatureAvailable === 'function' && !hf.isCycleFeatureAvailable()) {
+        return false;
+      }
+      if (hf && typeof hf.isCycleTrackingEnabled === 'function') {
+        return hf.isCycleTrackingEnabled(lsGet('heys_profile', {}));
+      }
       const profile = lsGet('heys_profile', {});
       // 🛡️ v65 FIX: check gender — cycle step is only for female users
       return profile.cycleTrackingEnabled === true && profile.gender === 'Женский';

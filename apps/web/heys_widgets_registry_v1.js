@@ -556,6 +556,13 @@
       component: 'WidgetCycle',
       scalableElements: SCALABLE_ELEMENTS.cycle,
       requiresCondition: () => {
+        const hf = HEYS.healthFeatures;
+        if (hf && typeof hf.isCycleFeatureAvailable === 'function' && !hf.isCycleFeatureAvailable()) {
+          return false;
+        }
+        if (hf && typeof hf.isCycleTrackingEnabled === 'function') {
+          return hf.isCycleTrackingEnabled(HEYS.utils?.lsGet?.('heys_profile', {}) || {});
+        }
         const prof = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
         return prof.gender === 'Женский' && prof.cycleTrackingEnabled === true;
       },

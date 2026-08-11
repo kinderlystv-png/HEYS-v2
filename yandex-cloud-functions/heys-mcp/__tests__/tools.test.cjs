@@ -1570,49 +1570,40 @@ test('heys_update_profile — planned_supplements_add дополняет кур�
   assert.deepEqual(daySave.value.supplementsPlanned, ['vitD', 'omega3']);
 });
 
-test('heys_checkin submit — cycle_tracking_disabled отказывает явно', async () => {
+test('heys_checkin submit — cycle_tracking_removed отказывает явно', async () => {
   const api = fakeApi({
     day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
     card: { [PROFILE_KEY]: { gender: 'Мужской' } },
   });
   await assert.rejects(
     () => build(api).heys_checkin({ action: 'submit', cycle_day: 3 }),
-    (e) => e.code === 'cycle_tracking_disabled',
+    (e) => e.code === 'cycle_tracking_removed',
   );
   assert.equal(api.saves.length, 0);
 });
 
-test('heys_checkin submit — cycle_day проставляет номер на все семь дней окна', async () => {
+test('heys_checkin submit — cycle_day отклонён даже при включённом флаге в профиле', async () => {
   const api = fakeApi({
     day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
     card: { [PROFILE_KEY]: { gender: 'Женский', cycleTrackingEnabled: true } },
   });
-  const res = await build(api).heys_checkin({ action: 'submit', cycle_day: 3 });
-  const dayKeys = api.saves.filter((s) => s.key.startsWith('heys_dayv2_')).map((s) => s.key).sort();
-  assert.deepEqual(dayKeys, [
-    'heys_dayv2_2026-07-30', 'heys_dayv2_2026-07-31', 'heys_dayv2_2026-08-01',
-    'heys_dayv2_2026-08-02', 'heys_dayv2_2026-08-03', 'heys_dayv2_2026-08-04', 'heys_dayv2_2026-08-05',
-  ], 'окно якорится на день 3 из 7, а не только на дату submit');
-  const today = api.saves.find((s) => s.key === 'heys_dayv2_2026-08-01');
-  assert.equal(today.value.cycleDay, 3);
-  const neighbour = api.saves.find((s) => s.key === 'heys_dayv2_2026-08-04');
-  assert.equal(neighbour.value.cycleDay, 6, 'сосед получает свой порядковый номер в окне, не тот же самый');
-  assert.equal(res.structured.status.steps.find((s) => s.id === 'cycle').done, true);
+  await assert.rejects(
+    () => build(api).heys_checkin({ action: 'submit', cycle_day: 3 }),
+    (e) => e.code === 'cycle_tracking_removed',
+  );
+  assert.equal(api.saves.length, 0);
 });
 
-test('heys_checkin submit — cycle_status снимает окно, но статус ставит только сегодняшнему дню', async () => {
+test('heys_checkin submit — cycle_status отклонён (снят с релиза)', async () => {
   const api = fakeApi({
     day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111, cycleDay: 3 },
     card: { [PROFILE_KEY]: { gender: 'Женский', cycleTrackingEnabled: true } },
   });
-  const res = await build(api).heys_checkin({ action: 'submit', cycle_status: 'none' });
-  const today = api.saves.find((s) => s.key === 'heys_dayv2_2026-08-01');
-  assert.equal(today.value.cycleDay, null);
-  assert.equal(today.value.cycleStatus, 'none');
-  const neighbour = api.saves.find((s) => s.key === 'heys_dayv2_2026-08-04');
-  assert.equal(neighbour.value.cycleDay, null);
-  assert.equal(neighbour.value.cycleStatus, undefined, 'соседний день окна теряет номер, но не получает чужой ответ «нет цикла»');
-  assert.equal(res.structured.status.steps.find((s) => s.id === 'cycle').done, true);
+  await assert.rejects(
+    () => build(api).heys_checkin({ action: 'submit', cycle_status: 'none' }),
+    (e) => e.code === 'cycle_tracking_removed',
+  );
+  assert.equal(api.saves.length, 0);
 });
 
 test('heys_checkin submit — cycle_day и cycle_status разом — явная ошибка', async () => {
@@ -1635,6 +1626,17 @@ test('heys_checkin get — без включённого трекинга шаг
   const cycle = res.structured.steps.find((s) => s.id === 'cycle');
   assert.equal(cycle.done, true, 'у клиента без трекинга шаг не в ожидании — как и в приложении');
   assert.match(cycle.note, /выключен/);
+});
+
+test('heys_update_profile — cycle_tracking_enabled отклонён (снят с релиза)', async () => {
+  const api = fakeApi({
+    card: { [PROFILE_KEY]: { gender: 'Женский', cycleTrackingEnabled: false } },
+  });
+  await assert.rejects(
+    () => build(api).heys_update_profile({ cycle_tracking_enabled: true }),
+    (e) => e.code === 'cycle_tracking_removed',
+  );
+  assert.equal(api.saves.length, 0);
 });
 
 test('heys_update_day — refeed_day отмечает и снимает загрузочный день', async () => {

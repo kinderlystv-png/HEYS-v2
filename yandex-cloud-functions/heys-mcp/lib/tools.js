@@ -1574,10 +1574,9 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         currentProfile = blobs[profile.PROFILE_KEY];
         profileForStatus = currentProfile;
       }
-      if ((hasCycleDay || hasCycleStatus)
-        && !(currentProfile && currentProfile.gender === 'Женский' && currentProfile.cycleTrackingEnabled === true)) {
-        throw new ToolError('cycle_tracking_disabled',
-          'Трекинг цикла выключен в профиле клиента — тот же гейт, что в приложении. Включи его heys_update_profile, прежде чем писать cycle_day/cycle_status.');
+      if ((hasCycleDay || hasCycleStatus)) {
+        throw new ToolError('cycle_tracking_removed',
+          'Трекинг менструального цикла снят с релиза: cycle_day / cycle_status не пишутся ни одним путём. Функция вернётся после релиза в архитектуре device-only.');
       }
       if (hasMeasurements && !(currentProfile && currentProfile.measurementsTrackingEnabled === true)) {
         throw new ToolError('measurements_tracking_disabled',
@@ -2346,7 +2345,7 @@ const TOOL_SCHEMAS = [
         insulin_wave_hours: { type: 'number', description: 'Длительность инсулиновой волны, часов (0.5–12).' },
         deficit_pct_target: { type: 'number', description: 'Целевой дефицит калорий в процентах, от -50 до 50.' },
         steps_goal: { type: 'integer', description: 'Цель по шагам за день.' },
-        cycle_tracking_enabled: { type: 'boolean', description: 'Трекинг менструального цикла.' },
+        cycle_tracking_enabled: { type: 'boolean', description: 'Снято с релиза: запись отклоняется (cycle_tracking_removed).' },
         measurements_tracking_enabled: { type: 'boolean', description: 'Трекинг замеров тела (талия, бёдра и т.д.).' },
         supplements_tracking_enabled: { type: 'boolean', description: 'Трекинг витаминов и добавок.' },
         desktop_allowed: { type: 'boolean', description: 'Разрешить клиенту вход с десктопа.' },
@@ -3002,11 +3001,11 @@ const TOOL_SCHEMAS = [
         },
         cycle_day: {
           type: 'integer', minimum: 1, maximum: 7,
-          description: 'Номер дня цикла (1–7), необязательный шаг. Пишет не только сегодня, а окно в семь дней вокруг названного номера — так же, как это делает сам шаг в приложении. Доступен только клиентам с включённым трекингом цикла (профиль: пол «Женский», cycleTrackingEnabled) — иначе инструмент откажет явно, а не проставит цикл туда, где его не спрашивали. Взаимоисключим с cycle_status.',
+          description: 'Снято с релиза: запись cycle_day отклоняется (cycle_tracking_removed). Исторически — номер дня цикла 1–7.',
         },
         cycle_status: {
           type: 'string', enum: ['none', 'skipped'],
-          description: '«Нет цикла сегодня» (none) или «пропустил ответ» (skipped) — необязательный шаг, тот же гейт по профилю, что у cycle_day. Взаимоисключим с cycle_day.',
+          description: 'Снято с релиза: запись cycle_status отклоняется (cycle_tracking_removed).',
         },
         refeed_day: {
           type: 'boolean',

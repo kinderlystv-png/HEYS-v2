@@ -1687,11 +1687,11 @@ function setCycleStatus(day, status, { nowMs, clientId } = {}) {
  * явное «нет цикла / пропустил».
  */
 function hasCycleDecision(day, profile) {
-  if (!profile || profile.gender !== 'Женский' || profile.cycleTrackingEnabled !== true) return true;
-  const cycleDay = Number(day && day.cycleDay);
-  if (Number.isFinite(cycleDay) && cycleDay >= 1 && cycleDay <= 7) return true;
-  const answeredAt = Number(day && day.cycleAnsweredAt);
-  return (day && (day.cycleStatus === 'none' || day.cycleStatus === 'skipped')) && Number.isFinite(answeredAt) && answeredAt > 0;
+  // prompt-cycle-removal: cycle tracking out of release → never block check-in on cycle,
+  // even if a stale profile.cycleTrackingEnabled=true remains until purge.
+  void day;
+  void profile;
+  return true;
 }
 
 /**

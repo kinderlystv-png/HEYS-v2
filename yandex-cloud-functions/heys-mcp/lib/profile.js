@@ -141,6 +141,13 @@ function applyFields(current, fields, schema, nowMs) {
 }
 
 function applyProfileFields(current, fields, nowMs) {
+  if (fields && Object.prototype.hasOwnProperty.call(fields, 'cycle_tracking_enabled')) {
+    // prompt-cycle-removal: cannot enable or change cycle tracking flag in this release.
+    throw new ProfileError(
+      'cycle_tracking_removed',
+      'Трекинг менструального цикла снят с релиза: cycle_tracking_enabled не пишется. Функция вернётся после релиза в архитектуре device-only.',
+    );
+  }
   return applyFields(current, fields, PROFILE_FIELDS, nowMs);
 }
 

@@ -894,7 +894,20 @@
   }
 
   function hasCycleDecision(day, profile) {
-    if (!profile || profile.gender !== 'Женский' || profile.cycleTrackingEnabled !== true) return true;
+    // prompt-cycle-removal: while cycle is out of release, check-in never waits on cycle.
+    try {
+      const hf = HEYS.healthFeatures;
+      if (hf && typeof hf.isCycleFeatureAvailable === 'function' && !hf.isCycleFeatureAvailable()) {
+        return true;
+      }
+      if (hf && typeof hf.isCycleTrackingEnabled === 'function') {
+        if (!hf.isCycleTrackingEnabled(profile)) return true;
+      } else if (!profile || profile.gender !== 'Женский' || profile.cycleTrackingEnabled !== true) {
+        return true;
+      }
+    } catch (_) {
+      if (!profile || profile.gender !== 'Женский' || profile.cycleTrackingEnabled !== true) return true;
+    }
     if (hasCycleDay(day)) return true;
     return (day?.cycleStatus === 'none' || day?.cycleStatus === 'skipped') && hasPositiveCheckinNumber(day?.cycleAnsweredAt);
   }

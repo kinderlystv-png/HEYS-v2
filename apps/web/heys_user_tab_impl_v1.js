@@ -723,7 +723,17 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         function updateProfileField(key, value) {
             // Валидация числовых полей
             const validator = PROFILE_VALIDATORS[key];
-            const validatedValue = validator ? validator(value) : value;
+            let validatedValue = validator ? validator(value) : value;
+
+            // prompt-cycle-removal: cycleTrackingEnabled cannot be enabled in this release.
+            if (key === 'cycleTrackingEnabled') {
+                const hf = HEYS.healthFeatures;
+                const available = hf && typeof hf.isCycleFeatureAvailable === 'function'
+                  ? hf.isCycleFeatureAvailable()
+                  : false;
+                if (!available && validatedValue) return;
+                if (!available) validatedValue = false;
+            }
 
             // Устанавливаем статус "pending" для этого поля
             setLastEditedField(key);
@@ -802,22 +812,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 profile.birthDate && React.createElement('span', { style: { marginLeft: '8px', color: 'var(--gray-600)' } }, `(${calcAgeFromBirthDate(profile.birthDate)} лет)`)
                             ),
                             !profile.birthDate && React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Возраст (лет)'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { type: 'number', value: profile.age, onChange: e => updateProfileField('age', Number(e.target.value) || 0), onFocus: e => e.target.select() }), React.createElement(FieldStatus, { fieldKey: 'age' })),
-                            // Трекинг особого периода (только для женщин)
-                            profile.gender === 'Женский' && React.createElement('div', { className: 'inline-field cycle-tracking-toggle' },
-                                React.createElement('label', null, '🌸 Особый период'),
-                                React.createElement('span', { className: 'sep' }, '-'),
-                                React.createElement('label', { className: 'toggle-switch' },
-                                    React.createElement('input', {
-                                        type: 'checkbox',
-                                        checked: !!profile.cycleTrackingEnabled,
-                                        onChange: e => updateProfileField('cycleTrackingEnabled', e.target.checked)
-                                    }),
-                                    React.createElement('span', { className: 'toggle-slider' })
-                                ),
-                                React.createElement('span', { className: 'cycle-toggle-hint' },
-                                    profile.cycleTrackingEnabled ? 'Включён' : 'Выключен'
-                                )
-                            )
+                            // Трекинг цикла снят с релиза (prompt-cycle-removal): экран включения отсутствует.
                         ),
 
                         // === ГРУППА 2: Параметры тела ===

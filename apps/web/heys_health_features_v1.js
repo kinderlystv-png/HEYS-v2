@@ -4,6 +4,10 @@
 
   const HEYS = (global.HEYS = global.HEYS || {});
 
+  // Release gate (prompt-cycle-removal, 2026-08): cycle tracking is out of release.
+  // Keep module/code; close all enable/write paths until device-only return.
+  const CYCLE_TRACKING_IN_RELEASE = false;
+
   const DEFAULT_PROFILE_FLAGS = Object.freeze({
     cycleTrackingEnabled: false,
     measurementsTrackingEnabled: false,
@@ -30,7 +34,12 @@
     'supplementsTaken', 'supplementsTakenAt', 'supplementsTakenMeta', 'supplementsTakenUpdatedAt',
   ];
 
+  function isCycleFeatureAvailable() {
+    return CYCLE_TRACKING_IN_RELEASE === true;
+  }
+
   function isCycleTrackingEnabled(profile) {
+    if (!isCycleFeatureAvailable()) return false;
     return !!(profile && profile.gender === 'Женский' && profile.cycleTrackingEnabled === true);
   }
 
@@ -140,7 +149,8 @@
       label: 'Трекинг цикла',
       purgeDay: purgeCycleDataFromDay,
       purgeProfile: purgeCycleDataFromProfile,
-      visible: (profile) => profile && profile.gender === 'Женский',
+      // Hidden for release; feature returns later as device-only.
+      visible: () => isCycleFeatureAvailable(),
     },
     measurementsTrackingEnabled: {
       consentType: 'body_measurements',
@@ -201,6 +211,10 @@
   async function requestHealthFeatureToggle(flagKey, nextEnabled) {
     const cfg = FEATURE_TOGGLES[flagKey];
     if (!cfg) return false;
+    if (flagKey === 'cycleTrackingEnabled' && !isCycleFeatureAvailable()) {
+      if (nextEnabled) return false;
+      // Allow explicit disable/purge path while feature is out of release.
+    }
     if (nextEnabled) {
       const ok = global.confirm(
         `Текст согласия на «${cfg.label}» будет предоставлен владельцем проекта.\n\nВключить функцию?`
@@ -232,6 +246,8 @@
     DEFAULT_PROFILE_FLAGS,
     CONSENT_TYPES,
     KNOWN_SUPPLEMENT_IDS,
+    CYCLE_TRACKING_IN_RELEASE,
+    isCycleFeatureAvailable,
     isCycleTrackingEnabled,
     isMeasurementsTrackingEnabled,
     isSupplementsTrackingEnabled,

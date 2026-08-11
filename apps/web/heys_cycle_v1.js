@@ -294,6 +294,13 @@
   function writeDayData(dateStr, value, lsSet) {
     const baseKey = 'heys_dayv2_' + dateStr;
     const scopedKey = getDayKey(dateStr);
+    // prompt-cycle-removal: refuse cycle writes while feature is out of release.
+    try {
+      const hf = HEYS.healthFeatures;
+      if (hf && typeof hf.isCycleFeatureAvailable === 'function' && !hf.isCycleFeatureAvailable()) {
+        return;
+      }
+    } catch (_) { /* noop */ }
     let valueToSave = value;
     try {
       if (HEYS.dayMutationGuard?.mergeProtectedFields) {

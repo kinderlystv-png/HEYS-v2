@@ -429,7 +429,6 @@
   // ============================================================
 
   function ProfilePersonalComponent({ data, onChange }) {
-    const [showCycleHint, setShowCycleHint] = useState(false);
     const [showBirthDateHint, setShowBirthDateHint] = useState(false);
 
     // Получаем WheelPicker из StepModal
@@ -438,7 +437,7 @@
     const firstName = data.firstName || '';
     const lastName = data.lastName || '';
     const gender = data.gender || 'Мужской';
-    const cycleTrackingEnabled = data.cycleTrackingEnabled || false;
+    // cycleTrackingEnabled снят с релиза — поле в data не пишем.
 
     // Разбираем дату на компоненты
     const currentYear = new Date().getFullYear();
@@ -450,7 +449,7 @@
     const birthDate = `${birthYear}-${String(birthMonth).padStart(2, '0')}-${String(birthDay).padStart(2, '0')}`;
 
     const age = calcAgeFromBirthDate(birthDate);
-    const isFemale = gender === 'Женский';
+    // Пол женский больше не открывает UI цикла в регистрации.
 
     // Значения для пикеров
     const daysInMonth = new Date(birthYear, birthMonth, 0).getDate();
@@ -581,42 +580,8 @@
         })
       ),
 
-      // Активация трекинга особого периода (только для женщин)
-      isFemale && React.createElement('div', {
-        className: 'flex items-center justify-between p-3 bg-pink-50 rounded-xl border border-pink-200',
-        style: { animation: 'fadeIn 0.3s ease-out' }
-      },
-        React.createElement('div', { className: 'flex flex-col gap-0.5' },
-          React.createElement('div', { className: 'flex items-center gap-2 relative' },
-            React.createElement('span', { className: 'text-xs font-medium text-gray-700' }, '🌸 Учитывать особый период?'),
-            React.createElement('button', {
-              type: 'button',
-              onClick: () => setShowCycleHint(!showCycleHint),
-              className: 'w-4 h-4 rounded-full bg-pink-200 text-pink-600 text-[10px] font-medium hover:bg-pink-300 transition-colors flex items-center justify-center'
-            }, '?'),
-            React.createElement(HintTooltip, {
-              show: showCycleHint,
-              onClose: () => setShowCycleHint(false)
-            }, 'HEYS адаптирует калории и воду под фазы цикла. Можно изменить позже в настройках.')
-          ),
-          React.createElement('span', { className: 'text-[11px] text-gray-500' },
-            cycleTrackingEnabled ? '✓ Нормы будут адаптироваться' : 'Включите, чтобы учесть в расчётах'
-          )
-        ),
-        React.createElement('label', { className: 'toggle-switch', style: { transform: 'scale(0.85)' } },
-          React.createElement('input', {
-            type: 'checkbox',
-            checked: cycleTrackingEnabled,
-            onChange: (e) => {
-              onChange({ ...data, cycleTrackingEnabled: e.target.checked });
-              if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                navigator.vibrate(10);
-              }
-            }
-          }),
-          React.createElement('span', { className: 'toggle-slider' })
-        )
-      )
+      // Активация трекинга особого периода — снята с релиза (prompt-cycle-removal).
+      // Функция вернётся device-only; экран включения сейчас отсутствует.
     );
   }
 
@@ -683,8 +648,8 @@
         birthDay,
         birthMonth,
         birthYear,
-        // По умолчанию выключен — включается явно в настройках или согласием
-        cycleTrackingEnabled: profile.cycleTrackingEnabled === true
+        // prompt-cycle-removal: трекинг цикла не включаем в регистрации
+        cycleTrackingEnabled: false
       };
     },
     validate: (data) => {
@@ -712,7 +677,7 @@
       profile.displayName = fullName;
       profile.gender = data.gender;
       profile.birthDate = birthDate;
-      profile.cycleTrackingEnabled = data.cycleTrackingEnabled;
+      profile.cycleTrackingEnabled = false;
       // Вычисляем возраст
       profile.age = calcAgeFromBirthDate(birthDate);
       profile.updatedAt = Date.now();
@@ -1191,7 +1156,7 @@
         gender: step1.gender || profile.gender || 'Мужской',
         birthDate: step1.birthDate || profile.birthDate || '',
         age: step1.birthDate ? calcAgeFromBirthDate(step1.birthDate) : profile.age || 30,
-        cycleTrackingEnabled: step1.cycleTrackingEnabled || false,
+        cycleTrackingEnabled: false,
         // Базовый вес (стартовый, из регистрации) — НЕ меняется после
         baseWeight: profile.baseWeight || registrationWeight,
         // Текущий вес — изначально = базовый, потом обновляется из чек-ина
@@ -1302,7 +1267,7 @@
       gender: step1.gender || profile.gender || 'Мужской',
       birthDate: step1.birthDate || profile.birthDate || '',
       age: step1.birthDate ? calcAgeFromBirthDate(step1.birthDate) : profile.age || 30,
-      cycleTrackingEnabled: step1.cycleTrackingEnabled || false,
+      cycleTrackingEnabled: false,
       // Базовый вес (стартовый, из регистрации) — НЕ меняется после
       baseWeight: profile.baseWeight || registrationWeight,
       // Текущий вес — изначально = базовый, потом обновляется из чек-ина
