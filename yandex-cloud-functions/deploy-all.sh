@@ -206,14 +206,19 @@ assert_target_allowed() {
     # и любая посторонняя строка в нём становится «именем функции».
     case ",${ALLOW_DISABLED_FUNCTIONS:-}," in
         *",$fn,"*)
-            echo -e "${YELLOW}⚠ $fn: авто-деплой отключён, но разрешён через ALLOW_DISABLED_FUNCTIONS${NC}" >&2
+            if [ -z "${ALLOW_DISABLED_REASON:-}" ]; then
+                echo -e "${RED}❌ $fn: ALLOW_DISABLED_FUNCTIONS задан без ALLOW_DISABLED_REASON${NC}" >&2
+                echo -e "${RED}   Причина обязательна — она попадёт в лог деплоя.${NC}" >&2
+                exit 1
+            fi
+            echo -e "${YELLOW}⚠ $fn: авто-деплой отключён, разрешён вручную — ${ALLOW_DISABLED_REASON}${NC}" >&2
             return 0
             ;;
     esac
 
     echo -e "${RED}❌ $fn: авто-деплой отключён в function-inventory.cjs${NC}" >&2
     echo -e "${RED}   $(node "$INVENTORY_SCRIPT" --reason "$fn" 2>/dev/null)${NC}" >&2
-    echo -e "${RED}   Осознанный релиз: ALLOW_DISABLED_FUNCTIONS=$fn $0 $fn${NC}" >&2
+    echo -e "${RED}   Осознанный релиз: ALLOW_DISABLED_FUNCTIONS=$fn ALLOW_DISABLED_REASON=\"почему\" $0 $fn${NC}" >&2
     exit 1
 }
 

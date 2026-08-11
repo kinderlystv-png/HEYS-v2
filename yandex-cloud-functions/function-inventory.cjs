@@ -149,10 +149,44 @@ function resolveChangedFiles(files = []) {
   };
 }
 
+// Проверка стоит на всех путях деплоя, а не на одном. У признака `autoDeploy`
+// их три: классификатор изменённых файлов, явный список в deploy-all.sh и
+// ручной запуск workflow через `--assert-deployable`. Первый признак учитывал,
+// второй обходился списком (heys-api-sms уехала в прод 2026-08-11), третий
+// проверял только существование имени в инвентаре. Проверка, закрывающая один
+// путь из трёх, — декоративная.
+//
+// Разрешение требует и имени, и причины: переменная без причины отклоняется,
+// чтобы `ALLOW_DISABLED_FUNCTIONS` не стала обычным способом деплоить. Причина
+// печатается в лог деплоя и остаётся в логах CI.
+function assertAllowedWhenDisabled(item) {
+  if (item.autoDeploy !== false) return item;
+
+  const allowList = (process.env.ALLOW_DISABLED_FUNCTIONS || '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const reason = (process.env.ALLOW_DISABLED_REASON || '').trim();
+
+  if (!allowList.includes(item.name)) {
+    throw new Error(
+      `Auto-deploy disabled for ${item.name}: ${item.reason}\n` +
+        `  Осознанный релиз: ALLOW_DISABLED_FUNCTIONS=${item.name} ALLOW_DISABLED_REASON="почему" ...`,
+    );
+  }
+  if (!reason) {
+    throw new Error(
+      `${item.name}: ALLOW_DISABLED_FUNCTIONS задан без ALLOW_DISABLED_REASON — причина обязательна`,
+    );
+  }
+  process.stderr.write(`[inventory] ${item.name}: авто-деплой отключён, разрешён вручную — ${reason}\n`);
+  return item;
+}
+
 function assertDeployable(name) {
   const item = FUNCTION_BY_NAME.get(name);
   if (!item) throw new Error(`Unknown cloud function: ${name}`);
-  return item;
+  return assertAllowedWhenDisabled(item);
 }
 
 function readStdin() {
