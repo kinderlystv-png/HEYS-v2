@@ -380,6 +380,89 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
         expect(mockStorage.setItem).not.toHaveBeenCalledWith('heys_pin_auth_client', 'client-uuid-1');
     });
 
+    // Локальный счётчик наказывает только за реально неверный код. Иначе
+    // падение бэкенда запирало бы человека в его же браузере после десяти
+    // попыток, хотя он ни разу не ошибся.
+    async function attemptTimes(times) {
+        for (let i = 0; i < times; i++) {
+            const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
+            await flushLoginDelay();
+            await p;
+        }
+    }
+
+    it('does not lock the browser after 10 network failures', async () => {
+        rpc.mockResolvedValue({
+            data: null,
+            error: { message: 'Failed to fetch', code: 'NETWORK_ERROR' },
+        });
+
+        await attemptTimes(10);
+        rpc.mockClear();
+
+        const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
+        await flushLoginDelay();
+        const result = await p;
+
+        expect(result).toMatchObject({ ok: false, error: 'network_error' });
+        expect(rpc).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not lock the browser while PIN login is disabled server-side', async () => {
+        rpc.mockResolvedValue({
+            data: {
+                verify_client_pin_v3: {
+                    success: false,
+                    error: 'pin_login_disabled',
+                    message: 'Вход по PIN временно отключён.',
+                },
+            },
+            error: null,
+        });
+
+        await attemptTimes(10);
+        rpc.mockClear();
+
+        const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
+        await flushLoginDelay();
+        const result = await p;
+
+        expect(result).toMatchObject({ ok: false, error: 'pin_login_disabled' });
+        expect(rpc).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not lock the browser when the server fails to issue a session', async () => {
+        rpc.mockResolvedValue({
+            data: { verify_client_pin_v3: { success: true, client_id: null, session_token: null } },
+            error: null,
+        });
+
+        await attemptTimes(10);
+        rpc.mockClear();
+
+        const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
+        await flushLoginDelay();
+        const result = await p;
+
+        expect(result).toMatchObject({ ok: false, error: 'session_not_issued' });
+        expect(rpc).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the exception text out of the response and out of the counter', async () => {
+        rpc.mockRejectedValue(new Error('boom: internal detail'));
+
+        await attemptTimes(10);
+        rpc.mockClear();
+
+        const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
+        await flushLoginDelay();
+        const result = await p;
+
+        expect(result).toMatchObject({ ok: false, error: 'exception' });
+        expect(result.message).toBeUndefined();
+        expect(rpc).toHaveBeenCalledTimes(1);
+    });
+
     it('rate limits locally after 10 failed RPC attempts (11th does not call RPC)', async () => {
         rpc.mockResolvedValue({
             data: null,

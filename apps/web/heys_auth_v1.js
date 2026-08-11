@@ -234,16 +234,31 @@
     setRateState(st);
   }
 
-  // Коды, при которых сервер действительно говорит «этот PIN не подходит».
-  // Всё остальное — другая причина отказа, и показывать её как неверный код
-  // нельзя: клиент решает, что забыл PIN, и идёт в поддержку. Инцидент
-  // 2026-08-11: заглушка `pin_login_disabled` (вход по PIN временно закрыт)
-  // доезжала до экрана как «PIN не подошёл».
-  const WRONG_PIN_SERVER_ERRORS = new Set(['invalid_credentials', 'invalid_pin', 'wrong_pin']);
-
-  // `rate_limited` — исторический код, `pin_rate_limited` возвращает
-  // verify_client_pin_v3 после 2026-08-11 (блокировка по номеру клиента).
-  const RATE_LIMIT_SERVER_ERRORS = new Set(['rate_limited', 'pin_rate_limited']);
+  // Единый словарь серверных кодов отказа на входе клиента — он же контракт с
+  // SQL. `verify_client_pin_v3` не имеет права вернуть код, которого здесь нет:
+  // это сверяет тест `__tests__/login-error-codes-contract.test.js`, поэтому
+  // новый код на сервере без осознанной трактовки на клиенте роняет сборку.
+  // До 2026-08-11 сверки не было — из-за этого `pin_rate_limited` (блокировка
+  // по номеру) молча читался клиентом как «PIN не подошёл».
+  //
+  // kind:
+  //   'wrong_pin'  — единственный случай, когда экран говорит «PIN не подошёл»
+  //                  и когда попытка идёт в локальный счётчик неудач;
+  //   'rate_limit' — попытки исчерпаны, вход временно закрыт;
+  //   'explained'  — другая причина: код доезжает до экрана как есть, у экрана
+  //                  есть своя формулировка на случай, если сервер не прислал
+  //                  `message`.
+  const LOGIN_SERVER_ERRORS = {
+    invalid_credentials: { kind: 'wrong_pin' },
+    invalid_pin: { kind: 'wrong_pin' },
+    wrong_pin: { kind: 'wrong_pin' },
+    rate_limited: { kind: 'rate_limit' },
+    // database/2026-08-11_pin_lockout_by_phone.sql — блокировка по номеру.
+    pin_rate_limited: { kind: 'rate_limit' },
+    // Заглушка боевой БД с 2026-08-11 (вход по PIN временно закрыт против
+    // перебора). Миграции в репозитории нет — код известен только отсюда.
+    pin_login_disabled: { kind: 'explained' },
+  };
 
   // Приводит серверный отказ к коду для экрана. Незнакомый код НЕ схлопывается
   // в invalid_credentials, а уезжает наверх как есть вместе с серверным
@@ -251,17 +266,21 @@
   function classifyServerLoginError(rawError, rawMessage) {
     const serverError = typeof rawError === 'string' ? rawError.trim() : '';
     const serverMessage = typeof rawMessage === 'string' ? rawMessage.trim() : '';
+    const known = Object.prototype.hasOwnProperty.call(LOGIN_SERVER_ERRORS, serverError)
+      ? LOGIN_SERVER_ERRORS[serverError]
+      : null;
 
     let error;
-    if (RATE_LIMIT_SERVER_ERRORS.has(serverError)) {
+    if (known && known.kind === 'rate_limit') {
       error = 'rate_limited';
-    } else if (!serverError || WRONG_PIN_SERVER_ERRORS.has(serverError)) {
+    } else if (!serverError || (known && known.kind === 'wrong_pin')) {
+      // Отказ без кода трактуем как неверный PIN — исторический контракт v3.
       error = 'invalid_credentials';
     } else {
       error = serverError;
     }
 
-    return { error, serverError, serverMessage };
+    return { error, serverError, serverMessage, isWrongPin: error === 'invalid_credentials' };
   }
 
   async function loginClient({ phone, pin }) {
@@ -316,12 +335,17 @@
       });
 
       if (vRes.error) {
-        registerFail('login', phoneNorm);
         // Транспорт: `error.message` — это код из тела ответа (`data.error`),
         // а человеческий текст, если сервер его прислал, лежит в `error.raw`.
         const transport = vRes.error.code === 'NETWORK_ERROR'
-          ? { error: 'network_error', serverError: '', serverMessage: '' }
+          ? { error: 'network_error', serverError: '', serverMessage: '', isWrongPin: false }
           : classifyServerLoginError(vRes.error.message, vRes.error.raw && vRes.error.raw.message);
+        // В локальный счётчик идёт только реально неверный код. Иначе падение
+        // бэкенда запирало бы человека в его же браузере после десяти попыток,
+        // хотя он ни разу не ошибся. Перебор PIN это не ослабляет: подбор
+        // всегда даёт invalid_credentials, а настоящая защита — серверная
+        // блокировка по номеру клиента.
+        if (transport.isWrongPin) registerFail('login', phoneNorm);
         return {
           ok: false,
           error: transport.error,
@@ -342,8 +366,8 @@
 
       // v3 возвращает { success, client_id, session_token, error }
       if (!vRow?.success) {
-        registerFail('login', phoneNorm);
         const rejected = classifyServerLoginError(vRow?.error, vRow?.message);
+        if (rejected.isWrongPin) registerFail('login', phoneNorm);
         return {
           ok: false,
           error: rejected.error,
@@ -362,10 +386,10 @@
       const clientName = vRow.name || vRow.client_name || ''; // Имя введённое куратором при создании
 
       if (!clientId || !sessionToken) {
-        registerFail('login', phoneNorm);
         // Сервер подтвердил код, но не выдал сессию — это сбой на стороне
         // сервера, а не неверный PIN. Отдельный код, чтобы экран не отправлял
-        // клиента вспоминать несуществующую ошибку в PIN.
+        // клиента вспоминать несуществующую ошибку в PIN; в счётчик неудач
+        // такая попытка не идёт — PIN человек ввёл правильный.
         return {
           ok: false,
           error: 'session_not_issued',
@@ -421,12 +445,13 @@
 
       return { ok: true, clientId, sessionToken, clientName };
     } catch (e) {
-      registerFail('login', phoneNorm);
+      // Исключение — сбой на нашей стороне, а не ошибка человека: в счётчик
+      // неудач не идёт. Текст исключения остаётся в _debug и не показывается:
+      // на экране от него нет пользы, а внутренности он выдаёт.
       return {
         ok: false,
         error: 'exception',
-        message: e?.message || String(e),
-        _debug: { stage: 'exception' },
+        _debug: { stage: 'exception', message: e?.message || String(e) },
       };
     }
   }
@@ -627,6 +652,9 @@
     generateSalt,
     hashPin,
     loginClient,
+    // Контракт кодов отказа на входе: читает тест, сверяющий его с SQL и с
+    // ветками экрана входа.
+    LOGIN_SERVER_ERRORS,
     createClientWithPin,
     resetClientPin,
     isCuratorSession,
