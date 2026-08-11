@@ -150,8 +150,13 @@
     return merged;
   }
 
-  function Field({ label, hint, value, onChange, textarea = false, required = false, placeholder = '', type = 'text' }) {
+  // `fieldId` нужен, чтобы к незаполненному полю можно было прокрутить и
+  // поставить в него фокус: на шаге «Здоровье и ограничения» полей восемь,
+  // часть появляется по условию, и сообщение «заполните обязательные поля» без
+  // адреса заставляло искать пустое место глазами.
+  function Field({ label, hint, value, onChange, textarea = false, required = false, placeholder = '', type = 'text', fieldId = undefined }) {
     const controlProps = {
+      id: fieldId,
       value: value || '',
       onChange: (event) => onChange(event.target.value),
       placeholder,
@@ -167,11 +172,12 @@
     );
   }
 
-  function SelectField({ label, hint, value, onChange, options, required = false }) {
+  function SelectField({ label, hint, value, onChange, options, required = false, fieldId = undefined }) {
     return React.createElement('label', { style: labelStyle },
       React.createElement('span', null, label, required ? ' *' : ''),
       hint ? React.createElement('span', { style: hintStyle }, hint) : null,
       React.createElement('select', {
+        id: fieldId,
         value: value || '', onChange: (event) => onChange(event.target.value),
         required, style: inputStyle,
       }, [
@@ -241,13 +247,13 @@
       subtitle: 'Опишите желаемый результат своими словами — здесь нет правильных ответов.',
       required: ['primary_goal', 'success_definition'],
       render: (value, set) => [
-        React.createElement(Field, { key: 'primary_goal', label: 'Главная цель', required: true, textarea: true,
+        React.createElement(Field, { key: 'primary_goal', fieldId: 'intake-primary_goal', label: 'Главная цель', required: true, textarea: true,
           placeholder: 'Что вы хотите изменить и почему это важно сейчас?', value: value.primary_goal,
           onChange: (next) => set('primary_goal', next) }),
-        React.createElement(Field, { key: 'success_definition', label: 'Как вы поймёте, что сопровождение помогает?', required: true, textarea: true,
+        React.createElement(Field, { key: 'success_definition', fieldId: 'intake-success_definition', label: 'Как вы поймёте, что сопровождение помогает?', required: true, textarea: true,
           placeholder: 'Какие изменения будут для вас значимыми?', value: value.success_definition,
           onChange: (next) => set('success_definition', next) }),
-        React.createElement(Field, { key: 'time_expectations', label: 'Есть ли дата или срок, которые важно учитывать?', hint: 'Если срока нет, так и напишите.',
+        React.createElement(Field, { key: 'time_expectations', fieldId: 'intake-time_expectations', label: 'Есть ли дата или срок, которые важно учитывать?', hint: 'Если срока нет, так и напишите.',
           value: value.time_expectations, onChange: (next) => set('time_expectations', next) }),
       ],
     },
@@ -256,7 +262,7 @@
       subtitle: 'Это помогает не повторять то, что уже не подошло.',
       required: ['previous_experience'],
       render: (value, set) => [
-        React.createElement(SelectField, { key: 'previous_experience', label: 'Был ли опыт изменения питания или образа жизни?', required: true,
+        React.createElement(SelectField, { key: 'previous_experience', fieldId: 'intake-previous_experience', label: 'Был ли опыт изменения питания или образа жизни?', required: true,
           value: value.previous_experience, onChange: (next) => {
             set('previous_experience', next);
             if (next === 'none') {
@@ -266,11 +272,11 @@
           },
           options: [['none', 'Нет, начинаю впервые'], ['self', 'Да, самостоятельно'], ['specialist', 'Да, со специалистом'], ['both', 'Оба варианта']] }),
         value.previous_experience && value.previous_experience !== 'none'
-          ? React.createElement(Field, { key: 'what_worked', label: 'Что раньше работало хорошо?', textarea: true,
+          ? React.createElement(Field, { key: 'what_worked', fieldId: 'intake-what_worked', label: 'Что раньше работало хорошо?', textarea: true,
             value: value.what_worked, onChange: (next) => set('what_worked', next) })
           : null,
         value.previous_experience && value.previous_experience !== 'none'
-          ? React.createElement(Field, { key: 'what_did_not_work', label: 'Что не подошло или оказалось трудно поддерживать?', textarea: true,
+          ? React.createElement(Field, { key: 'what_did_not_work', fieldId: 'intake-what_did_not_work', label: 'Что не подошло или оказалось трудно поддерживать?', textarea: true,
             value: value.what_did_not_work, onChange: (next) => set('what_did_not_work', next) })
           : null,
       ],
@@ -280,16 +286,16 @@
       subtitle: 'Нам нужен реальный контекст, а не идеальная неделя.',
       required: ['schedule', 'sleep'],
       render: (value, set) => [
-        React.createElement(Field, { key: 'schedule', label: 'Как обычно устроен ваш день?', required: true, textarea: true,
+        React.createElement(Field, { key: 'schedule', fieldId: 'intake-schedule', label: 'Как обычно устроен ваш день?', required: true, textarea: true,
           hint: 'Достаточно примерного ритма без адресов и названий мест.',
           placeholder: 'Работа, учёба, дорога, семья, смены', value: value.schedule,
           onChange: (next) => set('schedule', next) }),
-        React.createElement(Field, { key: 'sleep', label: 'Сколько вы обычно спите и как восстанавливаетесь?', required: true,
+        React.createElement(Field, { key: 'sleep', fieldId: 'intake-sleep', label: 'Сколько вы обычно спите и как восстанавливаетесь?', required: true,
           placeholder: 'Например: 7 часов, утром часто чувствую усталость', value: value.sleep,
           onChange: (next) => set('sleep', next) }),
-        React.createElement(Field, { key: 'activity', label: 'Какая у вас сейчас физическая активность?', hint: 'Укажите вид активности и примерную частоту.', textarea: true,
+        React.createElement(Field, { key: 'activity', fieldId: 'intake-activity', label: 'Какая у вас сейчас физическая активность?', hint: 'Укажите вид активности и примерную частоту.', textarea: true,
           value: value.activity, onChange: (next) => set('activity', next) }),
-        React.createElement(Field, { key: 'constraints', label: 'Что может мешать вам регулярно присылать фото или короткие сообщения в течение дня?', textarea: true,
+        React.createElement(Field, { key: 'constraints', fieldId: 'intake-constraints', label: 'Что может мешать вам регулярно присылать фото или короткие сообщения в течение дня?', textarea: true,
           value: value.constraints, onChange: (next) => set('constraints', next) }),
       ],
     },
@@ -298,13 +304,13 @@
       subtitle: 'Для пробной недели достаточно регулярно присылать фото или короткие сообщения и отвечать на уточнения куратора.',
       required: ['daily_tracking', 'feedback_style'],
       render: (value, set) => [
-        React.createElement(SelectField, { key: 'daily_tracking', label: 'Готовы в течение недели присылать фото, текст или голосовые сообщения о приёмах пищи?', required: true,
+        React.createElement(SelectField, { key: 'daily_tracking', fieldId: 'intake-daily_tracking', label: 'Готовы в течение недели присылать фото, текст или голосовые сообщения о приёмах пищи?', required: true,
           value: value.daily_tracking, onChange: (next) => set('daily_tracking', next),
           options: CURATOR_ANSWER_FIELDS['collaboration.daily_tracking'].options }),
-        React.createElement(SelectField, { key: 'feedback_style', label: 'Какая обратная связь вам полезнее?', required: true,
+        React.createElement(SelectField, { key: 'feedback_style', fieldId: 'intake-feedback_style', label: 'Какая обратная связь вам полезнее?', required: true,
           value: value.feedback_style, onChange: (next) => set('feedback_style', next),
           options: [['concise', 'Коротко и по делу'], ['detailed', 'Подробно с объяснениями'], ['gentle', 'Мягко и постепенно'], ['direct', 'Прямо и требовательно']] }),
-        React.createElement(Field, { key: 'expectations_from_curator', label: 'Чего вы ждёте от куратора?', textarea: true,
+        React.createElement(Field, { key: 'expectations_from_curator', fieldId: 'intake-expectations_from_curator', label: 'Чего вы ждёте от куратора?', textarea: true,
           value: value.expectations_from_curator, onChange: (next) => set('expectations_from_curator', next) }),
       ],
     },
@@ -342,10 +348,10 @@
           label: 'Есть ли аллергии или непереносимости?',
           detailLabel: 'Что важно исключить из питания?',
         }),
-        React.createElement(SelectField, { key: 'pregnancy_lactation', label: 'Беременность или грудное вскармливание',
+        React.createElement(SelectField, { key: 'pregnancy_lactation', fieldId: 'intake-pregnancy_lactation', label: 'Беременность или грудное вскармливание',
           value: value.pregnancy_lactation, onChange: (next) => set('pregnancy_lactation', next),
           options: [['no', 'Нет'], ['pregnancy', 'Беременность'], ['lactation', 'Грудное вскармливание'], ['not_applicable', 'Не применимо'], ['prefer_not', 'Предпочитаю обсудить с куратором']] }),
-        React.createElement(SelectField, { key: 'eating_disorder_history', label: 'Был ли опыт расстройства пищевого поведения?',
+        React.createElement(SelectField, { key: 'eating_disorder_history', fieldId: 'intake-eating_disorder_history', label: 'Был ли опыт расстройства пищевого поведения?',
           value: value.eating_disorder_history, onChange: (next) => set('eating_disorder_history', next),
           options: [['no', 'Нет'], ['past', 'Да, в прошлом'], ['current', 'Да, сейчас'], ['unsure', 'Затрудняюсь ответить'], ['prefer_not', 'Предпочитаю обсудить с куратором']] }),
         React.createElement(ConditionalHealthField, {
@@ -361,19 +367,19 @@
       subtitle: 'Отметки не означают автоматический отказ. Куратор изучит контекст вручную и при необходимости задаст вопросы.',
       required: ['acute_symptoms', 'recent_surgery', 'active_ed_concern', 'medical_supervision'],
       render: (value, set) => [
-        React.createElement(SelectField, { key: 'acute_symptoms', label: 'Сейчас есть острые симптомы или резкое ухудшение самочувствия?', required: true,
+        React.createElement(SelectField, { key: 'acute_symptoms', fieldId: 'intake-acute_symptoms', label: 'Сейчас есть острые симптомы или резкое ухудшение самочувствия?', required: true,
           value: value.acute_symptoms, onChange: (next) => set('acute_symptoms', next),
           options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] }),
-        React.createElement(SelectField, { key: 'recent_surgery', label: 'Недавно была операция, травма или госпитализация?', required: true,
+        React.createElement(SelectField, { key: 'recent_surgery', fieldId: 'intake-recent_surgery', label: 'Недавно была операция, травма или госпитализация?', required: true,
           value: value.recent_surgery, onChange: (next) => set('recent_surgery', next),
           options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] }),
-        React.createElement(SelectField, { key: 'active_ed_concern', label: 'Есть трудности с пищевым поведением, которые сейчас требуют помощи специалиста?', required: true,
+        React.createElement(SelectField, { key: 'active_ed_concern', fieldId: 'intake-active_ed_concern', label: 'Есть трудности с пищевым поведением, которые сейчас требуют помощи специалиста?', required: true,
           value: value.active_ed_concern, onChange: (next) => set('active_ed_concern', next),
           options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] }),
-        React.createElement(SelectField, { key: 'medical_supervision', label: 'Наблюдаетесь у врача по состоянию, влияющему на питание или нагрузку?', required: true,
+        React.createElement(SelectField, { key: 'medical_supervision', fieldId: 'intake-medical_supervision', label: 'Наблюдаетесь у врача по состоянию, влияющему на питание или нагрузку?', required: true,
           value: value.medical_supervision, onChange: (next) => set('medical_supervision', next),
           options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] }),
-        React.createElement(Field, { key: 'details', label: 'Что ещё важно знать куратору перед решением?',
+        React.createElement(Field, { key: 'details', fieldId: 'intake-details', label: 'Что ещё важно знать куратору перед решением?',
           hint: 'Укажите только значимый контекст, без ФИО врачей, названий клиник и документов.', textarea: true,
           value: value.details, onChange: (next) => set('details', next) }),
         React.createElement('div', { key: 'urgent', role: 'note', style: { padding: 14, borderRadius: 12, background: '#fff7e8', color: '#754b00', fontSize: 13, lineHeight: 1.5 } },
@@ -387,9 +393,41 @@
     collaboration: 'Совместная работа', health: 'Здоровье', safety: 'Безопасность',
   };
 
+  // Метки нужны для КАЖДОГО значения, которое может дойти до экрана сверки:
+  // `reviewValue` при отсутствии метки печатает сырой код, и человек видит
+  // «unsure» вместо своего ответа. Так и было с «готовностью присылать данные»
+  // (`collaboration.daily_tracking`) — единственным полем сверки, где есть
+  // вариант `unsure`. Добавляя вариант в форму, добавляйте метку сюда же.
+  // Человеческое имя поля для сообщения об ошибке. Собрано из тех же подписей,
+  // что видит человек: иначе он читает «заполните обязательные поля», а какое
+  // именно — ищет глазами среди восьми, часть которых появляется по условию.
+  const FIELD_LABELS = {
+    active_ed_concern: 'Есть трудности с пищевым поведением, которые сейчас требуют помощи специалиста?',
+    activity: 'Какая у вас сейчас физическая активность?',
+    acute_symptoms: 'Сейчас есть острые симптомы или резкое ухудшение самочувствия?',
+    constraints: 'Что может мешать вам регулярно присылать фото или короткие сообщения в течение дня?',
+    daily_tracking: 'Готовы в течение недели присылать фото, текст или голосовые сообщения о приёмах пищи?',
+    details: 'Что ещё важно знать куратору перед решением?',
+    eating_disorder_history: 'Был ли опыт расстройства пищевого поведения?',
+    expectations_from_curator: 'Чего вы ждёте от куратора?',
+    feedback_style: 'Какая обратная связь вам полезнее?',
+    medical_supervision: 'Наблюдаетесь у врача по состоянию, влияющему на питание или нагрузку?',
+    pregnancy_lactation: 'Беременность или грудное вскармливание',
+    previous_experience: 'Был ли опыт изменения питания или образа жизни?',
+    primary_goal: 'Главная цель',
+    recent_surgery: 'Недавно была операция, травма или госпитализация?',
+    schedule: 'Как обычно устроен ваш день?',
+    sleep: 'Сколько вы обычно спите и как восстанавливаетесь?',
+    success_definition: 'Как вы поймёте, что сопровождение помогает?',
+    time_expectations: 'Есть ли дата или срок, которые важно учитывать?',
+    what_did_not_work: 'Что не подошло или оказалось трудно поддерживать?',
+    what_worked: 'Что раньше работало хорошо?',
+  };
+
   const REVIEW_VALUE_LABELS = {
     none: 'Начинаю впервые', self: 'Самостоятельно', specialist: 'Со специалистом', both: 'Самостоятельно и со специалистом',
     yes: 'Да', no: 'Нет', mostly: 'Скорее да, но возможны пропуски', prefer_not: 'Предпочитаю обсудить с куратором',
+    unsure: 'Пока не уверен', past: 'Да, в прошлом', current: 'Да, сейчас', not_applicable: 'Не применимо',
   };
 
   function reviewValue(value) {
@@ -584,23 +622,39 @@
     };
 
     const current = STEPS[step];
-    const missingRequired = current
-      ? current.required.some((key) => !String(answers[current.id]?.[key] || '').trim())
-        || (current.id === 'health' && [
+    // Не флаг, а адрес: список конкретных незаполненных ключей в порядке
+    // появления на экране. Первый из них называется в ошибке и получает фокус.
+    const missingKeys = current
+      ? [
+        ...current.required.filter((key) => !String(answers[current.id]?.[key] || '').trim()),
+        ...(current.id === 'health' ? [
           ['chronic_conditions_status', 'chronic_conditions'],
           ['medications_status', 'medications'],
           ['injuries_operations_status', 'injuries_operations'],
           ['allergies_status', 'allergies'],
           ['doctor_restrictions_status', 'doctor_restrictions'],
-        ].some(([statusKey, detailKey]) => (
+        ].filter(([statusKey, detailKey]) => (
           answers.health?.[statusKey] === 'yes'
           && !String(answers.health?.[detailKey] || '').trim()
-        )))
-      : false;
+        )).map(([, detailKey]) => detailKey) : []),
+      ]
+      : [];
+    const missingRequired = missingKeys.length > 0;
 
     const next = async () => {
       if (missingRequired) {
-        setError('Заполните обязательные поля этого шага.');
+        const firstKey = missingKeys[0];
+        const label = FIELD_LABELS[firstKey];
+        setError(label ? `Заполните поле «${label}».` : 'Заполните обязательные поля этого шага.');
+        // Прокрутка и фокус: на длинном шаге незаполненное поле может быть за
+        // пределами экрана, и одного текста ошибки мало.
+        try {
+          const node = global.document?.getElementById(`intake-${firstKey}`);
+          if (node) {
+            node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            node.focus({ preventScroll: true });
+          }
+        } catch (_) { /* фокус — вспомогательный, отсутствие DOM не ломает шаг */ }
         return;
       }
       setError('');
