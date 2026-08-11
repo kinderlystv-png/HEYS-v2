@@ -187,6 +187,19 @@ SEC-018/019/020 закрыты или с deployed-fix.
   ([`SECURITY_REVIEW_l6_baseline.md`](SECURITY_REVIEW_l6_baseline.md)); L6-1
   mitigated watchdog'ом, L6-2 fixed+deployed, остаток — флип `DRY_RUN=0`.
 
+**Актуализация 2026-08-11 (SEC-006 закрыт триггером из собственного списка):**
+
+- **SEC-006** — вариант B заменён на вариант строже A. Триггер пересмотра — тот
+  самый «real URL leak incident», который документ называл условием перехода:
+  `attachment.url` из `/photos/upload` был живой публичной ссылкой в
+  `client_messages`, подтверждено `curl` без авторизации на проде (фото и
+  голосовое отдавались целиком, HTTP 200). `ACL: 'public-read'` убран из
+  `PutObjectCommand`; единственный путь чтения — `/photos/read` с проверкой
+  сессии и владения per-request, постоянного URL больше не существует вовсе
+  (сильнее подписанных ссылок с TTL из варианта A — отзывать нечего, если ссылки
+  нет). Подробности:
+  [`SECURITY_REVIEW_sec006_recommendation.md`](SECURITY_REVIEW_sec006_recommendation.md).
+
 Evidence: [`маркетинг/22`](../маркетинг/22_План_реализации_маркетинга.md) § 6Б,
 [`маркетинг/25`](../маркетинг/25_Roadmap_Ф0_Ф1.md) § gates и
 [`docs/legal/operator/heys-r0-live-evidence-2026-07-26.md`](legal/operator/heys-r0-live-evidence-2026-07-26.md).

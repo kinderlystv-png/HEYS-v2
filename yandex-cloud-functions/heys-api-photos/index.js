@@ -259,6 +259,15 @@ function isMessengerImagePath(path, clientId) {
   return /^\d{4}-\d{2}-\d{2}\/msg-[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\.(?:jpe?g|png|webp)$/i.test(rest);
 }
 
+// Голосовые кладутся `buildKey`-ом в `voice/<messageId>/<rnd>.<ext>` — тот же
+// префикс, что закрывает публичная ссылка (2026-08-11), поэтому у аудио тот
+// же авторизованный путь чтения, что и у фото, а не отдельный публичный URL.
+function isMessengerAudioPath(path, clientId) {
+  if (!path || !clientId || !String(path).startsWith(`${clientId}/`)) return false;
+  const rest = String(path).slice(String(clientId).length + 1);
+  return /^\d{4}-\d{2}-\d{2}\/voice\/msg-[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\.(?:webm|ogg|m4a|mp3|wav)$/i.test(rest);
+}
+
 async function objectBodyToBuffer(body) {
   if (Buffer.isBuffer(body)) return body;
   if (body && typeof body.transformToByteArray === 'function') {
@@ -467,14 +476,15 @@ async function handleUpload(identity, body) {
       Key: key,
       Body: buf,
       ContentType: realContentType,
-      // SEC-006 (2026-06-14, Вариант B accepted-risk): bucket остаётся
-      // anonymous-readable (см. docs/SECURITY_REVIEW_sec006_recommendation.md),
-      // защита держится на ~318 битах энтропии ключа. Митигация против URL
-      // leakage: Cache-Control private + no-store → ответ не кэшируется в
-      // shared/intermediate caches (CDN, proxy), не оседает в browser-history
-      // shared-cache, минимизирует window утечки URL через cache inspection.
+      // SEC-006 пересмотрен 2026-08-11: anonymous-read закрыт. Раньше защита
+      // держалась только на энтропии ключа (~318 бит) — принятый риск, пока
+      // единственным путём чтения был сам публичный URL. Теперь единственный
+      // путь — авторизованный `/photos/read` (проверка сессии + владения),
+      // и объект приватным быть обязан: публичный ACL делает эту авторизацию
+      // необязательной для любого, кто как-то узнал ключ (история браузера,
+      // пересылка, лог прокси). См. docs/SECURITY_REVIEW_sec006_recommendation.md
+      // — документ обновить вместе с этим изменением.
       CacheControl: 'private, no-store, max-age=0',
-      ACL: 'public-read',
     }));
   } catch (err) {
     console.error('[photos] S3 PutObject failed', { code: err?.name || 'storage_error' });
@@ -501,10 +511,15 @@ async function handleUpload(identity, body) {
     path: key,
   });
 
+  // `url` больше не отдаётся. Раньше этот же публичный адрес объекта уходил во
+  // фронт и оседал в `client_messages.attachments[].url` — контракт превращал
+  // каждую загрузку в новую публичную ссылку в базе, а снятие публичного
+  // доступа с бакета сломало бы только НОВЫЕ сообщения, но не остановило бы
+  // само производство таких ссылок. `path` — единственный источник адреса;
+  // читается он строго через авторизованный `/photos/read`.
   return {
     statusCode: 200,
     body: {
-      url: `${getPublicBaseUrl()}/${key}`,
       path: key,
       media_type: realMeta.mediaType,
       mime: realContentType,
@@ -576,9 +591,17 @@ async function handleDelete(identity, body) {
 async function handleRead(identity, body) {
   const path = typeof body?.path === 'string' ? body.path : '';
   const clientId = path.split('/')[0] || '';
-  if (!isMessengerImagePath(path, clientId)) {
+  // Голосовые кладутся тем же `/photos/upload` и той же публичной ссылкой,
+  // которую убрали 2026-08-11 (§ фото) — вернуть авторизованное чтение только
+  // для картинок значило бы оставить открытым второй, менее заметный путь.
+  const isImage = isMessengerImagePath(path, clientId);
+  const isAudio = !isImage && isMessengerAudioPath(path, clientId);
+  if (!isImage && !isAudio) {
     return { statusCode: 400, body: { error: 'invalid_attachment_path' } };
   }
+  const mimeToExt = isAudio ? AUDIO_MIME_TO_EXT : IMAGE_MIME_TO_EXT;
+  const maxBytes = isAudio ? MAX_AUDIO_BYTES : MAX_IMAGE_BYTES;
+  const attachmentType = isAudio ? 'audio' : 'image';
 
   if (identity.kind === 'client' && clientId !== identity.id) {
     return { statusCode: 403, body: { error: 'attachment_not_owned' } };
@@ -604,9 +627,9 @@ async function handleRead(identity, body) {
          CROSS JOIN LATERAL jsonb_array_elements(COALESCE(m.attachments, '[]'::jsonb)) attachment
         WHERE m.client_id = $2
           AND attachment->>'path' = $1
-          AND COALESCE(attachment->>'type', 'image') = 'image'
+          AND COALESCE(attachment->>'type', 'image') = $3
         LIMIT 1`,
-      [path, clientId]
+      [path, clientId, attachmentType]
     );
     if (!referenced.rows.length) {
       return { statusCode: 404, body: { error: 'attachment_not_found' } };
@@ -619,15 +642,15 @@ async function handleRead(identity, body) {
   try {
     const object = await getS3().send(new GetObjectCommand({ Bucket: getBucket(), Key: path }));
     const data = await objectBodyToBuffer(object.Body);
-    if (!data.length || data.length > MAX_IMAGE_BYTES) {
+    if (!data.length || data.length > maxBytes) {
       return { statusCode: data.length ? 413 : 404, body: { error: data.length ? 'too_large' : 'attachment_not_found' } };
     }
     const objectMime = String(object.ContentType || '').split(';')[0].trim().toLowerCase();
-    const contentType = IMAGE_MIME_TO_EXT[objectMime]
+    const contentType = mimeToExt[objectMime]
       ? objectMime
-      : (IMAGE_MIME_TO_EXT[attachmentMime] ? attachmentMime : null);
+      : (mimeToExt[attachmentMime] ? attachmentMime : null);
     if (!contentType) {
-      return { statusCode: 415, body: { error: 'unsupported_image_type' } };
+      return { statusCode: 415, body: { error: isAudio ? 'unsupported_audio_type' : 'unsupported_image_type' } };
     }
     trace('read.ok', {
       actor_role: identity.kind,
@@ -662,6 +685,7 @@ module.exports._test = {
   parseUploadData,
   sanitizeDiagnosticValue,
   isMessengerImagePath,
+  isMessengerAudioPath,
   objectBodyToBuffer,
 };
 
