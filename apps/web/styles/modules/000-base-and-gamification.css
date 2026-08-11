@@ -684,7 +684,7 @@ td:first-child input {
 .card.tone-violet.main-violet .violet-table td:first-child {
   font-size: 14px;
   font-weight: 600;
-color: var(--v4-ink, #1f2937);
+color: var(--v4-sand-ink-slate, #1f2937);
   text-align: right;
   padding-right: 20px;
 }
@@ -3815,7 +3815,7 @@ color: var(--v4-ink, #1f2937);
   letter-spacing: 0.02em;
   padding: 4px 10px;
   color: var(--v4-warn-text, #92400e);
-  background: var(--v4-warn-soft, #fef3c7);
+  background: var(--v4-sand-warn-bg, #fef3c7);
   pointer-events: none;
 }
 
@@ -4032,7 +4032,7 @@ color: var(--v4-ink, #1f2937);
   font-weight: 800;
   font-size: 12px;
   line-height: 1;
-  color: var(--v4-act-text, #8a4a20);
+  color: var(--v4-sand-act-text, #8a4a20);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -4104,11 +4104,11 @@ color: var(--v4-ink, #1f2937);
 }
 
 .hdr-header-icon-btn:hover {
-color: var(--v4-ink, #201e1d);
+color: var(--v4-sand-ink, #201e1d);
 }
 
 [data-theme$="dark"] .game-level-number {
-color: var(--v4-act-text, #e2a468);
+color: var(--v4-sand-act-soft, #e2a468);
 }
 
 [data-theme$="dark"] .game-rank-title,
@@ -4121,8 +4121,8 @@ color: var(--v4-act-text, #e2a468);
 }
 
 [data-theme$="dark"] .tabs--v4-primary .tab.tab-primary-nav.active {
-  color: var(--v4-act-text, #e2a468);
-  background: color-mix(in srgb, var(--v4-hero, #211e19) 88%, var(--v4-act-text, #e2a468) 12%);
+  color: var(--v4-sand-act-soft, #e2a468);
+  background: color-mix(in srgb, var(--v4-sand-hero-dark, #211e19) 88%, var(--v4-sand-act-soft, #e2a468) 12%);
 }
 
 .game-bar-container {
@@ -7688,30 +7688,30 @@ body:has(.offline-banner) .wrap {
 }
 
 .date-picker--v4 .date-picker-trigger.open {
-  box-shadow: 0 0 0 2px var(--v4-act, #c67139);
+  box-shadow: 0 0 0 2px var(--v4-sand-act, #c67139);
 }
 
 .date-picker--v4 .date-picker-trigger--today .date-picker-main--today {
   font-size: 12.5px;
   font-weight: 700;
-  color: var(--v4-ink, #201e1d);
+  color: var(--v4-sand-ink, #201e1d);
 }
 
 .date-picker--v4 .date-picker-trigger--not-today {
-  background: var(--v4-tint-warm, #f3e0d2);
+  background: var(--v4-sand-tint, #f3e0d2);
 }
 
 .date-picker--v4 .date-picker-trigger--not-today .date-picker-main--past {
   font-size: 12.5px;
   font-weight: 700;
-  color: var(--v4-act, #8a4a20);
+  color: var(--v4-sand-act-deep, #8a4a20);
 }
 
 .date-picker--v4 .date-picker-sub--relative {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-act, #8a4a20);
+  color: var(--v4-sand-act-deep, #8a4a20);
 }
 
 .date-picker--v4 .date-picker-text {
@@ -7789,7 +7789,7 @@ body:has(.offline-banner) .wrap {
 
 .date-picker-sheet .date-picker-day.today,
 .date-picker-sheet .date-picker-day.selected.today {
-  background: var(--v4-act, #c67139);
+  background: var(--v4-sand-act, #c67139);
   color: var(--v4-act-ink, #2b1608);
   font-weight: 700;
   border: none;
@@ -9071,7 +9071,7 @@ svg.date-picker-icon {
 }
 
 .tabs--v4-primary .tab.tab-primary-nav.active {
-  color: var(--v4-act-text, #8a4a20);
+  color: var(--v4-sand-act-text, #8a4a20);
   background: var(--v4-hero, #fffaf1);
   box-shadow: none;
 }
@@ -15321,7 +15321,7 @@ html.heys-bg-paused *::after {
 /* === Gamification v4 sheet (paint) === */
 .game-panel-expanded--v4 {
   background: var(--v4-bg, #fffaf1);
-  color: var(--v4-ink, #201e1d);
+  color: var(--v4-sand-ink, #201e1d);
   box-shadow:
     0 1px 2px rgba(80, 50, 20, 0.09),
     0 14px 40px rgba(80, 50, 20, 0.12);
@@ -15370,7 +15370,7 @@ html.heys-bg-paused *::after {
 .game-v4-sheet__header-title {
   font-size: 15px;
   font-weight: 700;
-  color: var(--v4-ink, #201e1d);
+  color: var(--v4-sand-ink, #201e1d);
 }
 
 .game-v4-sheet__tabs {
@@ -15383,7 +15383,7 @@ html.heys-bg-paused *::after {
   border: 0;
   border-radius: 10px;
   padding: 8px 6px;
-  background: var(--v4-surface, #f7efe2);
+  background: var(--v4-sand-surface, #f7efe2);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   font-size: 12px;
   font-weight: 600;
@@ -15391,8 +15391,8 @@ html.heys-bg-paused *::after {
 }
 
 .game-v4-sheet__tab.is-active {
-  background: var(--v4-hero, #efe3cf);
-  color: var(--v4-act-text, #8a4a20);
+  background: var(--v4-sand-hero, #efe3cf);
+  color: var(--v4-sand-act-text, #8a4a20);
 }
 
 .game-v4-sheet__panel {
@@ -15406,12 +15406,12 @@ html.heys-bg-paused *::after {
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--v4-act-text, #a75c2b);
+  color: var(--v4-sand-act-mid, #a75c2b);
   margin: 8px 0 2px;
 }
 
 .game-v4-sheet__hero--cream {
-  background: var(--v4-hero, #efe3cf);
+  background: var(--v4-sand-hero, #efe3cf);
   border-radius: 22px;
   padding: 20px 18px 18px;
 }
@@ -15435,7 +15435,7 @@ html.heys-bg-paused *::after {
   font-weight: 600;
   line-height: 0.9;
   letter-spacing: -0.045em;
-  color: var(--v4-act-text, #8a4a20);
+  color: var(--v4-sand-act-text, #8a4a20);
 }
 
 .game-v4-sheet__hero-num--md {
@@ -15453,7 +15453,7 @@ html.heys-bg-paused *::after {
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1.5;
-  color: var(--v4-act-text, #8a4a20);
+  color: var(--v4-sand-act-text, #8a4a20);
 }
 
 .game-v4-sheet__hero-muted {
@@ -15469,7 +15469,7 @@ html.heys-bg-paused *::after {
   font-size: 17px;
   font-weight: 700;
   line-height: 1.35;
-  color: var(--v4-ink, #201e1d);
+  color: var(--v4-sand-ink, #201e1d);
 }
 
 .game-v4-sheet__streak-bars {
@@ -15489,16 +15489,16 @@ html.heys-bg-paused *::after {
 }
 
 .game-v4-sheet__streak-bar.is-earned {
-  background: var(--v4-act, #c67139);
+  background: var(--v4-sand-act, #c67139);
 }
 
 .game-v4-sheet__streak-bar.is-earned.is-ok {
-  background: var(--v4-ok-fill, #7a8a5e);
+  background: var(--v4-sand-ok-fill, #7a8a5e);
 }
 
 .game-v4-sheet__streak-bar.is-forgiven {
   background: transparent;
-  box-shadow: inset 0 0 0 1.5px var(--v4-act, #c67139);
+  box-shadow: inset 0 0 0 1.5px var(--v4-sand-act, #c67139);
 }
 
 .game-v4-sheet__streak-bar.is-today {
@@ -15515,7 +15515,7 @@ html.heys-bg-paused *::after {
 }
 
 .game-v4-sheet__card {
-  background: var(--v4-surface, #f7efe2);
+  background: var(--v4-sand-surface, #f7efe2);
   border-radius: 18px;
   padding: 14px 16px;
 }
@@ -15535,18 +15535,18 @@ html.heys-bg-paused *::after {
   font-size: 13px;
   font-weight: 700;
   line-height: 1.3;
-  color: var(--v4-ink, #201e1d);
+  color: var(--v4-sand-ink, #201e1d);
 }
 
 .game-v4-sheet__card-xp {
   flex: none;
   font-size: 11.5px;
   font-weight: 700;
-  color: var(--v4-act-text, #8a4a20);
+  color: var(--v4-sand-act-text, #8a4a20);
 }
 
 .game-v4-sheet__card-xp--ok {
-  color: var(--v4-ok-text, #5c6a45);
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .game-v4-sheet__card-sub {
@@ -15577,11 +15577,11 @@ html.heys-bg-paused *::after {
 .game-v4-sheet__bar-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--v4-act, #c67139);
+  background: var(--v4-sand-act, #c67139);
 }
 
 .game-v4-sheet__bar-fill.is-complete {
-  background: var(--v4-ok-fill, #7a8a5e);
+  background: var(--v4-sand-ok-fill, #7a8a5e);
 }
 
 .game-v4-sheet__card-meta {
@@ -15593,7 +15593,7 @@ html.heys-bg-paused *::after {
 
 .game-v4-sheet__card-meta--ok {
   font-weight: 600;
-  color: var(--v4-ok-text, #5c6a45);
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .game-v4-sheet__mission-card.is-done {
@@ -15602,7 +15602,7 @@ html.heys-bg-paused *::after {
 
 .game-v4-sheet__level-floor,
 .game-v4-sheet__level-line {
-  background: var(--v4-surface, #f7efe2);
+  background: var(--v4-sand-surface, #f7efe2);
   border-radius: 18px;
   padding: 14px 16px;
   font-size: 12.5px;
@@ -15636,7 +15636,7 @@ html.heys-bg-paused *::after {
 }
 
 .game-v4-sheet__list-card {
-  background: var(--v4-surface, #f7efe2);
+  background: var(--v4-sand-surface, #f7efe2);
   border-radius: 18px;
   padding: 2px 14px;
 }
@@ -15662,13 +15662,13 @@ html.heys-bg-paused *::after {
   align-items: center;
   justify-content: center;
   font-size: 14px;
-  background: var(--v4-hero, #efe3cf);
+  background: var(--v4-sand-hero, #efe3cf);
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.35));
 }
 
 .game-v4-sheet__list-row.is-unlocked .game-v4-sheet__list-icon {
   background: var(--v4-ok-bg, #eaefe0);
-  color: var(--v4-ok-text, #5c6a45);
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .game-v4-sheet__list-body {
@@ -15680,7 +15680,7 @@ html.heys-bg-paused *::after {
   font-size: 12.5px;
   font-weight: 700;
   line-height: 1.3;
-  color: var(--v4-ink, #201e1d);
+  color: var(--v4-sand-ink, #201e1d);
 }
 
 .game-v4-sheet__list-row.is-locked .game-v4-sheet__list-title {
@@ -15711,8 +15711,8 @@ html.heys-bg-paused *::after {
   border: 0;
   border-radius: 18px;
   padding: 14px 16px;
-  background: var(--v4-surface, #f7efe2);
-  color: var(--v4-act-text, #8a4a20);
+  background: var(--v4-sand-surface, #f7efe2);
+  color: var(--v4-sand-act-text, #8a4a20);
   font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
@@ -15741,25 +15741,25 @@ html.heys-bg-paused *::after {
   justify-content: center;
   font-size: 13px;
   font-weight: 700;
-  background: var(--v4-hero, #efe3cf);
+  background: var(--v4-sand-hero, #efe3cf);
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.38));
 }
 
 .game-v4-sheet__ladder-row.is-current .game-v4-sheet__ladder-num {
-  background: var(--v4-act, #c67139);
+  background: var(--v4-sand-act, #c67139);
   color: #2b1608;
 }
 
 .game-v4-sheet__ladder-row:not(.is-future):not(.is-current) .game-v4-sheet__ladder-num {
   background: var(--v4-ok-bg, #eaefe0);
-  color: var(--v4-ok-text, #5c6a45);
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .game-v4-sheet__ladder-title {
   flex: 1;
   font-size: 12.5px;
   font-weight: 700;
-  color: var(--v4-ink, #201e1d);
+  color: var(--v4-sand-ink, #201e1d);
 }
 
 .game-v4-sheet__ladder-row.is-future .game-v4-sheet__ladder-title {

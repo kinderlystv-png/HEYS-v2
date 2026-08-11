@@ -34,6 +34,27 @@
   --v4-warn-1: #ef4444;
   --v4-warn-2: #dc2626;
   --v4-warn-3: #7f1d1d;
+  /* Sand UI language: painted modules keep warm look on every theme
+     (owner 2026-08-12: not shared --v4-act with warm fallback). */
+  --v4-sand-act: #c67139;
+  --v4-sand-act-deep: #8a4a20;
+  --v4-sand-act-text: #8a4a20;
+  --v4-sand-act-mid: #a75c2b;
+  --v4-sand-act-soft: #e2a468;
+  --v4-sand-hero: #efe3cf;
+  --v4-sand-hero-cool: #e8ecf1;
+  --v4-sand-hero-dark: #211e19;
+  --v4-sand-hero-night: #0f172a;
+  --v4-sand-surface: #f7efe2;
+  --v4-sand-surface-soft: #fffaf1;
+  --v4-sand-ink: #201e1d;
+  --v4-sand-ink-deep: #2b1608;
+  --v4-sand-ink-slate: #1f2937;
+  --v4-sand-ok-text: #5c6a45;
+  --v4-sand-ok-fill: #7a8a5e;
+  --v4-sand-ok-fill-soft: #dfe6d1;
+  --v4-sand-tint: #f3e0d2;
+  --v4-sand-warn-bg: #fef3c7;
 }
 
 [data-theme-id="classic-dark"],
@@ -63,6 +84,27 @@
   --v4-warn-1: #d36969;
   --v4-warn-2: #d34545;
   --v4-warn-3: #d02525;
+  /* Sand UI language: painted modules keep warm look on every theme
+     (owner 2026-08-12: not shared --v4-act with warm fallback). */
+  --v4-sand-act: #c67139;
+  --v4-sand-act-deep: #8a4a20;
+  --v4-sand-act-text: #8a4a20;
+  --v4-sand-act-mid: #a75c2b;
+  --v4-sand-act-soft: #e2a468;
+  --v4-sand-hero: #efe3cf;
+  --v4-sand-hero-cool: #e8ecf1;
+  --v4-sand-hero-dark: #211e19;
+  --v4-sand-hero-night: #0f172a;
+  --v4-sand-surface: #f7efe2;
+  --v4-sand-surface-soft: #fffaf1;
+  --v4-sand-ink: #201e1d;
+  --v4-sand-ink-deep: #2b1608;
+  --v4-sand-ink-slate: #1f2937;
+  --v4-sand-ok-text: #5c6a45;
+  --v4-sand-ok-fill: #7a8a5e;
+  --v4-sand-ok-fill-soft: #dfe6d1;
+  --v4-sand-tint: #f3e0d2;
+  --v4-sand-warn-bg: #fef3c7;
 }
 
 [data-theme-id="sand"],
@@ -89,6 +131,27 @@
   --v4-warn-1: #d99a63;
   --v4-warn-2: #c67139;
   --v4-warn-3: #a1471c;
+  /* Sand UI language: painted modules keep warm look on every theme
+     (owner 2026-08-12: not shared --v4-act with warm fallback). */
+  --v4-sand-act: #c67139;
+  --v4-sand-act-deep: #8a4a20;
+  --v4-sand-act-text: #8a4a20;
+  --v4-sand-act-mid: #a75c2b;
+  --v4-sand-act-soft: #e2a468;
+  --v4-sand-hero: #efe3cf;
+  --v4-sand-hero-cool: #e8ecf1;
+  --v4-sand-hero-dark: #211e19;
+  --v4-sand-hero-night: #0f172a;
+  --v4-sand-surface: #f7efe2;
+  --v4-sand-surface-soft: #fffaf1;
+  --v4-sand-ink: #201e1d;
+  --v4-sand-ink-deep: #2b1608;
+  --v4-sand-ink-slate: #1f2937;
+  --v4-sand-ok-text: #5c6a45;
+  --v4-sand-ok-fill: #7a8a5e;
+  --v4-sand-ok-fill-soft: #dfe6d1;
+  --v4-sand-tint: #f3e0d2;
+  --v4-sand-warn-bg: #fef3c7;
 }
 
 [data-theme-id="sand-dark"],
@@ -123,6 +186,27 @@
   --v4-warn-1: #d39673;
   --v4-warn-2: #d07d4e;
   --v4-warn-3: #c9662c;
+  /* Sand UI language: painted modules keep warm look on every theme
+     (owner 2026-08-12: not shared --v4-act with warm fallback). */
+  --v4-sand-act: #c67139;
+  --v4-sand-act-deep: #8a4a20;
+  --v4-sand-act-text: #8a4a20;
+  --v4-sand-act-mid: #a75c2b;
+  --v4-sand-act-soft: #e2a468;
+  --v4-sand-hero: #efe3cf;
+  --v4-sand-hero-cool: #e8ecf1;
+  --v4-sand-hero-dark: #211e19;
+  --v4-sand-hero-night: #0f172a;
+  --v4-sand-surface: #f7efe2;
+  --v4-sand-surface-soft: #fffaf1;
+  --v4-sand-ink: #201e1d;
+  --v4-sand-ink-deep: #2b1608;
+  --v4-sand-ink-slate: #1f2937;
+  --v4-sand-ok-text: #5c6a45;
+  --v4-sand-ok-fill: #7a8a5e;
+  --v4-sand-ok-fill-soft: #dfe6d1;
+  --v4-sand-tint: #f3e0d2;
+  --v4-sand-warn-bg: #fef3c7;
 }
 
 [data-theme-id="blue"],
@@ -153,6 +237,27 @@
   --v4-warn-1: #e59ea8;
   --v4-warn-2: #d9707e;
   --v4-warn-3: #a83246;
+  /* Sand UI language: painted modules keep warm look on every theme
+     (owner 2026-08-12: not shared --v4-act with warm fallback). */
+  --v4-sand-act: #c67139;
+  --v4-sand-act-deep: #8a4a20;
+  --v4-sand-act-text: #8a4a20;
+  --v4-sand-act-mid: #a75c2b;
+  --v4-sand-act-soft: #e2a468;
+  --v4-sand-hero: #efe3cf;
+  --v4-sand-hero-cool: #e8ecf1;
+  --v4-sand-hero-dark: #211e19;
+  --v4-sand-hero-night: #0f172a;
+  --v4-sand-surface: #f7efe2;
+  --v4-sand-surface-soft: #fffaf1;
+  --v4-sand-ink: #201e1d;
+  --v4-sand-ink-deep: #2b1608;
+  --v4-sand-ink-slate: #1f2937;
+  --v4-sand-ok-text: #5c6a45;
+  --v4-sand-ok-fill: #7a8a5e;
+  --v4-sand-ok-fill-soft: #dfe6d1;
+  --v4-sand-tint: #f3e0d2;
+  --v4-sand-warn-bg: #fef3c7;
 }
 
 [data-theme-id="blue-dark"],
@@ -187,6 +292,27 @@
   --v4-warn-1: #d8838e;
   --v4-warn-2: #d05868;
   --v4-warn-3: #cc3347;
+  /* Sand UI language: painted modules keep warm look on every theme
+     (owner 2026-08-12: not shared --v4-act with warm fallback). */
+  --v4-sand-act: #c67139;
+  --v4-sand-act-deep: #8a4a20;
+  --v4-sand-act-text: #8a4a20;
+  --v4-sand-act-mid: #a75c2b;
+  --v4-sand-act-soft: #e2a468;
+  --v4-sand-hero: #efe3cf;
+  --v4-sand-hero-cool: #e8ecf1;
+  --v4-sand-hero-dark: #211e19;
+  --v4-sand-hero-night: #0f172a;
+  --v4-sand-surface: #f7efe2;
+  --v4-sand-surface-soft: #fffaf1;
+  --v4-sand-ink: #201e1d;
+  --v4-sand-ink-deep: #2b1608;
+  --v4-sand-ink-slate: #1f2937;
+  --v4-sand-ok-text: #5c6a45;
+  --v4-sand-ok-fill: #7a8a5e;
+  --v4-sand-ok-fill-soft: #dfe6d1;
+  --v4-sand-tint: #f3e0d2;
+  --v4-sand-warn-bg: #fef3c7;
 }
 
 /* Метки Б/Ж/У и подобные ряды «это другая штука» — не палитра по типу данных,

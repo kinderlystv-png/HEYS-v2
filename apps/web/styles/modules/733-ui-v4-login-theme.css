@@ -1,7 +1,7 @@
 /* 733-ui-v4-login-theme.css — login/onboarding theme picker (UI v4 stage 5) */
 
 .heys-auth-shell {
-  background: var(--v4-hero, #e8ecf1);
+  background: var(--v4-sand-hero-cool, #e8ecf1);
   transition: background 0.24s ease;
 }
 
@@ -51,7 +51,7 @@
 
 .heys-auth-support-link,
 .heys-auth-link-btn {
-  color: var(--v4-act-text, #2563eb);
+  color: var(--v4-act-text, #1d4ed8);
 }
 
 .heys-auth-error-slot {
@@ -127,7 +127,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  color: var(--v4-ink, #201e1d);
+  color: var(--v4-sand-ink, #201e1d);
   font-size: 15px;
   font-weight: 700;
   line-height: 1.1;
@@ -178,8 +178,8 @@
 }
 
 .heys-login-theme__chip.is-active {
-  background: var(--v4-act, #c67139);
-  color: color-mix(in srgb, var(--v4-bg, #fff) 8%, var(--v4-ink, #2b1608));
+  background: var(--v4-sand-act, #c67139);
+  color: color-mix(in srgb, var(--v4-bg, #fff) 8%, var(--v4-sand-ink-deep, #2b1608));
 }
 
 .heys-login-theme__chip--mode {
@@ -198,14 +198,14 @@
   border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 14px;
   background: var(--v4-bg, #ffffff);
-  color: var(--v4-ink, #201e1d);
+  color: var(--v4-sand-ink, #201e1d);
   cursor: pointer;
   text-align: left;
 }
 
 .heys-login-theme__soft-card.is-active {
-  border-color: color-mix(in srgb, var(--v4-act, #c67139) 55%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--v4-act, #c67139) 16%, transparent);
+  border-color: color-mix(in srgb, var(--v4-sand-act, #c67139) 55%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--v4-sand-act, #c67139) 16%, transparent);
 }
 
 .heys-login-theme__soft-swatch {
@@ -235,7 +235,7 @@
 [data-theme="classic-dark"] .heys-auth-shell,
 [data-theme="sand-dark"] .heys-auth-shell,
 [data-theme="blue-dark"] .heys-auth-shell {
-  background: var(--v4-hero, #0f172a);
+  background: var(--v4-sand-hero-night, #0f172a);
 }
 
 [data-theme="dark"] .heys-auth-card,

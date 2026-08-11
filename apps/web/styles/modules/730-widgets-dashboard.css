@@ -1228,7 +1228,7 @@ body:has(.page-reports) .hdr::after {
 
 /* Focus state for accessibility */
 .widget:focus-visible {
-  outline: 3px solid var(--v4-act, #0A84FF);
+  outline: 3px solid var(--v4-act, #2563eb);
   outline-offset: 2px;
 }
 

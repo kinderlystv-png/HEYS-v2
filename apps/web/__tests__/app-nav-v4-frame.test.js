@@ -142,9 +142,10 @@ describe('UI v4 chrome paint — рама', () => {
         expect(painted).toContain('var(--v4-line');
     });
 
-    it('активная вкладка nav на --v4-act-text, не голый литерал', () => {
+    it('активная вкладка nav на sand-роли, не голый литерал', () => {
         const rule = baseCss.match(/\.tabs--v4-primary \.tab\.tab-primary-nav\.active \{[^}]+\}/)?.[0] || '';
-        expect(rule).toContain('var(--v4-act-text');
+        // Sand UI language (owner 2026-08-12): не общий --v4-act-text с warm fallback.
+        expect(rule).toMatch(/var\(--v4-sand-act(?:-text|-deep)?/);
         expect(rule).not.toMatch(/color:\s*#8a4a20\s*;/);
     });
 });

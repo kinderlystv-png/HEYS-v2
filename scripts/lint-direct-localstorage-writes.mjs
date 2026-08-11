@@ -7,11 +7,13 @@
  * (unlisted) violation.
  *
  * Mode:
- *   - Warn-only (Phase 3): all allowlisted sites → stderr warnings.
- *     Exit 0 unless NEW unlisted sites found.
+ *   - Warn-only (Phase 3): allowlisted sites counted against baseline;
+ *     default log is one summary line. Pass --verbose to list each WARN.
+ *     Exit 0 unless NEW unlisted sites found OR allowlist grew past baseline.
  *   - Strict (Phase 5): pass --strict to treat ALL warnings as errors.
  *
  * Allowlist: scripts/bootstrap-bypass-allowlist.txt
+ * Baseline:  scripts/bootstrap-bypass-allowlist.baseline (integer count)
  *   Formats (one per line; `#` starts a comment):
  *     path::needle     — preferred: matches a setItem line containing needle
  *                        (stable across line drift)
@@ -35,8 +37,11 @@ const ALLOWLIST_REL = 'scripts/bootstrap-bypass-allowlist.txt';
 const ALLOWLIST_FILE = resolve(ROOT, ALLOWLIST_REL);
 const STRICT = process.argv.includes('--strict');
 const AUTO_FIX = process.argv.includes('--auto-fix');
+const VERBOSE = process.argv.includes('--verbose');
 const REF = getCliOption('--ref');
 const PATTERN = /localStorage\.setItem\s*\(/;
+const BASELINE_REL = 'scripts/bootstrap-bypass-allowlist.baseline';
+const BASELINE_FILE = resolve(ROOT, BASELINE_REL);
 
 const EXCLUDED_FILES = new Set([
   'heys_storage_supabase_v1.js',
@@ -270,7 +275,9 @@ let errors = 0;
 for (const { ref, listed, snippet } of hits) {
   if (listed && !STRICT) {
     warnings++;
-    process.stderr.write(`[WARN]  ${ref}\n        ${snippet}\n`);
+    if (VERBOSE) {
+      process.stderr.write(`[WARN]  ${ref}\n        ${snippet}\n`);
+    }
   } else {
     errors++;
     process.stderr.write(`[ERROR] ${ref}\n        ${snippet}\n`);
@@ -278,18 +285,50 @@ for (const { ref, listed, snippet } of hits) {
 }
 
 const label = STRICT ? 'strict' : 'warn-only';
-process.stdout.write(
-  `\nlocalStorage.setItem lint (${label}): ${warnings} warnings, ${errors} violations\n`,
-);
+let baseline = null;
+if (existsSync(BASELINE_FILE)) {
+  const raw = readFileSync(BASELINE_FILE, 'utf8').trim();
+  const n = Number.parseInt(raw, 10);
+  if (Number.isFinite(n) && n >= 0) baseline = n;
+}
+
+if (baseline === null) {
+  process.stderr.write(
+    `[WARN]  No allowlist baseline at ${BASELINE_REL} — write the current allowlisted count there.\n`,
+  );
+} else if (warnings > baseline) {
+  process.stderr.write(
+    `\n❌ Allowlist grew: ${warnings} allowlisted sites, baseline ${baseline} (${BASELINE_REL}).\n` +
+      `   New direct setItem must go through Store/lsSet, or bump the baseline deliberately\n` +
+      `   after reviewing each new site (prefer path::needle).\n`,
+  );
+  process.exit(1);
+} else if (warnings < baseline) {
+  process.stdout.write(
+    `localStorage.setItem lint (${label}): ${warnings} allowlisted, 0 new` +
+      ` (baseline ${baseline} — allowlist shrank; bump ${BASELINE_REL} down when intentional)\n`,
+  );
+} else {
+  process.stdout.write(
+    `localStorage.setItem lint (${label}): ${warnings} allowlisted, 0 new\n`,
+  );
+}
 
 if (errors > 0) {
   process.stderr.write(
     `\n❌ ${errors} localStorage.setItem call(s) not in allowlist.\n` +
       `   Migrate to HEYS.utils.lsSet / OverlayStore, OR add to ${ALLOWLIST_REL}\n` +
-      `   Prefer stable form: path::needle (substring on the setItem line).\n`,
+      `   Prefer stable form: path::needle (substring on the setItem line).\n` +
+      (VERBOSE ? '' : `   Allowlisted sites: omit from log; pass --verbose to list them.\n`),
   );
   process.exit(1);
 }
 
-process.stdout.write(`✅ lint passed (${hits.length} sites, ${warnings} existing warnings)\n`);
+if (!VERBOSE && warnings > 0 && baseline !== null && warnings === baseline) {
+  process.stdout.write(`✅ lint passed (${hits.length} sites scanned)\n`);
+} else if (VERBOSE) {
+  process.stdout.write(`✅ lint passed (${hits.length} sites, ${warnings} existing warnings)\n`);
+} else {
+  process.stdout.write(`✅ lint passed (${hits.length} sites scanned)\n`);
+}
 process.exit(0);

@@ -14,7 +14,7 @@
   --pi-success: var(--v4-ok-fill, #22c55e);
   --pi-warning: #f59e0b;
   --pi-error: #ef4444;
-  --pi-info: var(--v4-act, #3b82f6);
+  --pi-info: var(--v4-act, #2563eb);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -13998,7 +13998,7 @@ body.tour-active .ios-pwa-banner {
   overflow-y: auto;
   padding-top: max(20px, calc(env(safe-area-inset-top, 0px) + 20px)) !important;
   padding-bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 20px)) !important;
-  background: var(--v4-hero, #e8ecf1);
+  background: var(--v4-sand-hero-cool, #e8ecf1);
   transition: background 0.24s ease;
 }
 
@@ -14878,7 +14878,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 [data-theme="dark"] .heys-auth-shell {
-  background: var(--v4-hero, #0f172a);
+  background: var(--v4-sand-hero-night, #0f172a);
 }
 
 [data-theme="dark"] .heys-auth-card {

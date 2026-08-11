@@ -10,7 +10,7 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(SCRIPT_DIR, '..', '..');
 const DEFAULT_MANIFEST = path.join(SCRIPT_DIR, 'migrations', 'manifest.json');
 const PSQL_WRAPPER = path.join(SCRIPT_DIR, 'psql.sh');
-const EXCLUDED_DIRS = new Set(['.git', 'node_modules', 'dist', 'coverage']);
+const EXCLUDED_DIRS = new Set(['.git', 'node_modules', 'dist', 'coverage', '.claude', '.worktrees']);
 
 function toPosix(relativePath) {
   return relativePath.split(path.sep).join('/');

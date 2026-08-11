@@ -1383,13 +1383,13 @@
 .heys-score-zonebar {
   margin-top: 8px;
   --heys-score-tone-base: var(--v4-ink-3, #94a3b8);
-  --heys-score-tone-1: color-mix(in srgb, var(--v4-act, #8a4a20) 55%, var(--v4-ink-3, #94a3b8));
-  --heys-score-tone-2: color-mix(in srgb, var(--v4-act, #8a4a20) 78%, var(--v4-ink-3, #94a3b8));
-  --heys-score-tone-3: var(--v4-act, #8a4a20);
+  --heys-score-tone-1: color-mix(in srgb, var(--v4-sand-act-deep, #8a4a20) 55%, var(--v4-ink-3, #94a3b8));
+  --heys-score-tone-2: color-mix(in srgb, var(--v4-sand-act-deep, #8a4a20) 78%, var(--v4-ink-3, #94a3b8));
+  --heys-score-tone-3: var(--v4-sand-act-deep, #8a4a20);
   --heys-score-zone-step-0: color-mix(in srgb, var(--v4-ink-3, #94a3b8) 28%, transparent);
-  --heys-score-zone-step-1: color-mix(in srgb, var(--v4-act, #8a4a20) 14%, transparent);
-  --heys-score-zone-step-2: color-mix(in srgb, var(--v4-act, #8a4a20) 24%, transparent);
-  --heys-score-zone-step-3: color-mix(in srgb, var(--v4-act, #8a4a20) 36%, transparent);
+  --heys-score-zone-step-1: color-mix(in srgb, var(--v4-sand-act-deep, #8a4a20) 14%, transparent);
+  --heys-score-zone-step-2: color-mix(in srgb, var(--v4-sand-act-deep, #8a4a20) 24%, transparent);
+  --heys-score-zone-step-3: color-mix(in srgb, var(--v4-sand-act-deep, #8a4a20) 36%, transparent);
 }
 
 .heys-score-zonebar__track {
