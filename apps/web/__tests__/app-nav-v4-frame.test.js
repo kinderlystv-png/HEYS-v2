@@ -122,4 +122,29 @@ describe('UI v4 — иконки', () => {
         expect(iconsIdx).toBeGreaterThan(-1);
         expect(shellIdx).toBeGreaterThan(iconsIdx);
     });
+
+    it('FAB water/meal используют NavIcon вместо emoji', () => {
+        const dayShell = fs.readFileSync(path.join(WEB_DIR, 'heys_day_page_shell.js'), 'utf8');
+        const iconsSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_app_nav_icons_v1.js'), 'utf8');
+        expect(iconsSrc).toContain("water:");
+        expect(iconsSrc).toContain("meal:");
+        expect(dayShell).toContain("renderFabNavIcon('water'");
+        expect(dayShell).toContain("renderFabNavIcon('meal'");
+        expect(dayShell).not.toMatch(/className: 'water-fab'[\s\S]{0,80}'🥛'/);
+    });
+});
+
+describe('UI v4 chrome paint — рама', () => {
+    it('hdr-bottom без legacy синей рамки #4285f4', () => {
+        const rules = [...baseCss.matchAll(/\.hdr-bottom\s*\{[^}]+\}/g)].map((m) => m[0]);
+        const painted = rules.find((rule) => rule.includes('var(--v4-line')) || '';
+        expect(painted).not.toContain('#4285f4');
+        expect(painted).toContain('var(--v4-line');
+    });
+
+    it('активная вкладка nav на --v4-act-text, не голый литерал', () => {
+        const rule = baseCss.match(/\.tabs--v4-primary \.tab\.tab-primary-nav\.active \{[^}]+\}/)?.[0] || '';
+        expect(rule).toContain('var(--v4-act-text');
+        expect(rule).not.toMatch(/color:\s*#8a4a20\s*;/);
+    });
 });

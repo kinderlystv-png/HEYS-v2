@@ -49,6 +49,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         );
     }
 
+    function renderFabNavIcon(name, emojiFallback, size) {
+        const NavIcon = HEYS.AppNavIcons?.NavIcon;
+        if (NavIcon) {
+            return React.createElement(NavIcon, { name, size: size || 20 });
+        }
+        return emojiFallback;
+    }
+
     function QuickActionsFabGroup({ id, onAddWater, onAddMeal, hungerContext = {} }) {
         const HungerFabButton = HEYS.HungerEnergyStatusModal?.FabButton;
         const MessageFabButton = HEYS.Messenger?.FabButton;
@@ -61,12 +69,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 className: 'water-fab',
                 onClick: onAddWater,
                 'aria-label': 'Добавить стакан воды'
-            }, '🥛'),
+            }, renderFabNavIcon('water', '🥛', 18)),
             React.createElement('button', {
                 className: 'meal-fab',
                 onClick: onAddMeal,
                 'aria-label': 'Добавить приём пищи'
-            }, '🍽️'),
+            }, renderFabNavIcon('meal', '🍽️', 22)),
             HungerFabButton
                 ? React.createElement(HungerFabButton, {
                     key: 'hunger-fab',

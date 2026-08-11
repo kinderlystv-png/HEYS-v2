@@ -1759,6 +1759,7 @@ body.planning-tab-active .fab-group {
 /* === 06. FAB для воды (в группе) === */
 .fab-group .water-fab {
   position: static;
+  color: var(--v4-ink, #0f172a);
 }
 
 /* === FAB для добавления приёма пищи ===
@@ -1772,6 +1773,7 @@ body.planning-tab-active .fab-group {
   border-radius: 50%;
   background: var(--v4-act, #2563eb);
   border: none;
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
