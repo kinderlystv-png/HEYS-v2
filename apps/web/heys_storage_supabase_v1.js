@@ -4806,6 +4806,27 @@
     return null;
   }
 
+  function readOwnerProfile(ownerCid) {
+    const candidates = [];
+    if (ownerCid) candidates.push('heys_' + ownerCid + '_profile');
+    const current = (global.HEYS && global.HEYS.currentClientId) || '';
+    if (!ownerCid || (current && ownerCid === current)) {
+      candidates.push('heys_profile');
+    }
+    for (const key of candidates) {
+      try {
+        const raw = global.localStorage.getItem(key);
+        if (!raw) continue;
+        const parsed = tryParse(raw);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+            && Object.keys(parsed).length > 0) {
+          return parsed;
+        }
+      } catch (_) { /* noop */ }
+    }
+    return null;
+  }
+
   function stripInvalidCycleDay(key, value, clientId) {
     if (!value || typeof value !== 'object' || value.cycleDay == null) return value;
     const enabled = readCycleTrackingEnabled(ownerClientIdFromDayKey(key, clientId));
@@ -4817,6 +4838,25 @@
     return enabled === false ? Object.assign({}, value, { cycleDay: null }) : value;
   }
 
+  function stripDisabledHealthFieldsForDay(key, value, clientId) {
+    if (!value || typeof value !== 'object') return value;
+    const ownerCid = ownerClientIdFromDayKey(key, clientId);
+    const profile = readOwnerProfile(ownerCid);
+    if (!profile) return stripInvalidCycleDay(key, value, clientId);
+
+    const hf = global.HEYS && global.HEYS.healthFeatures;
+    if (hf && typeof hf.stripDisabledHealthFields === 'function') {
+      return hf.stripDisabledHealthFields(value, profile);
+    }
+
+    const sync = global.HEYS && global.HEYS.sync;
+    if (sync && typeof sync.gateHealthFieldsForOwner === 'function') {
+      return sync.gateHealthFieldsForOwner(value, profile);
+    }
+
+    return stripInvalidCycleDay(key, value, clientId);
+  }
+
   function stampDayv2ValueForLocalMutation(key, value, clientId) {
     if (!isDayv2StorageKey(key) || !value || typeof value !== 'object') return value;
     const stampFn = getStampDayv2ChangedEntities();
@@ -4824,7 +4864,7 @@
     // всегда — иначе невалидный cycleDay проскочит в окне до загрузки sync-модуля.
     const prevDay = stampFn ? readLocalDayForStamp(key, clientId) : null;
     const stamped = stampFn ? stampFn(prevDay, value) : value;
-    return stripInvalidCycleDay(key, stamped, clientId);
+    return stripDisabledHealthFieldsForDay(key, stamped, clientId);
   }
 
   Object.defineProperty(cloud, '_stampDayv2ChangedEntities', {

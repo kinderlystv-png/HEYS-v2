@@ -1521,6 +1521,40 @@
     return day;
   }
 
+  // Optional health features gate — cycle/measurements/supplements stripped when
+  // respective profile flags are off (same contract as storage interceptor).
+  function gateHealthFieldsForOwner(day, profile) {
+    const g = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : {});
+    const hf = g.HEYS && g.HEYS.healthFeatures;
+    if (hf && typeof hf.gateHealthFieldsForOwner === 'function') {
+      return hf.gateHealthFieldsForOwner(day, profile);
+    }
+    if (!day || typeof day !== 'object' || !profile || typeof profile !== 'object') return day;
+    let next = day;
+    if (!(profile.gender === 'Женский' && profile.cycleTrackingEnabled === true)) {
+      next = gateCycleDayForOwner(next, false);
+      if (next.cycleStatus != null || next.cycleAnsweredAt != null || next.cycleUpdatedAt != null) {
+        next = Object.assign({}, next, {
+          cycleStatus: null,
+          cycleAnsweredAt: null,
+          cycleUpdatedAt: null,
+        });
+      }
+    }
+    if (profile.measurementsTrackingEnabled !== true && next.measurements != null) {
+      next = Object.assign({}, next, { measurements: null });
+    }
+    if (profile.supplementsTrackingEnabled !== true) {
+      const patch = {};
+      ['supplementsPlanned', 'supplementsPlannedUpdatedAt', 'supplementsTaken',
+        'supplementsTakenAt', 'supplementsTakenMeta', 'supplementsTakenUpdatedAt'].forEach((key) => {
+        if (next[key] != null) patch[key] = null;
+      });
+      if (Object.keys(patch).length) next = Object.assign({}, next, patch);
+    }
+    return next;
+  }
+
   return {
     mergeDayData,
     hasSubjectiveFieldDrop,
@@ -1547,5 +1581,6 @@
     // Pure cycleDay feature-gate helpers (used by interceptor chokepoint + tests):
     ownerClientIdFromDayKey,
     gateCycleDayForOwner,
+    gateHealthFieldsForOwner,
   };
 });

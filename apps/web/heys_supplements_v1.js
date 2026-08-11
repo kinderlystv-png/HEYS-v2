@@ -350,28 +350,9 @@
    * Добавить кастомную добавку
    * @param {Object} supp - { name, icon, timing }
    */
-  function addCustomSupplement(supp) {
-    const profile = getProfileSafe();
-    const customs = profile.customSupplements || [];
-
-    const newSupp = {
-      id: 'custom_' + Date.now(),
-      name: supp.name || 'Моя добавка',
-      icon: supp.icon || '💊',
-      timing: supp.timing || 'anytime',
-      category: 'custom',
-      isCustom: true,
-    };
-
-    customs.push(newSupp);
-    profile.customSupplements = customs;
-    saveProfileSafe(profile, 'customSupplements');
-
-    // Добавляем в рантайм каталог
-    SUPPLEMENTS_CATALOG[newSupp.id] = newSupp;
-
-    window.dispatchEvent(new CustomEvent('heys:supplements-updated'));
-    return newSupp;
+  function addCustomSupplement(_supp) {
+    // Custom free-text supplements removed (health minimization).
+    return null;
   }
 
   /**
@@ -397,15 +378,28 @@
    * Загрузить кастомные добавки в каталог при инициализации
    */
   function loadCustomSupplements() {
-    const customs = getCustomSupplements();
-    for (const supp of customs) {
-      SUPPLEMENTS_CATALOG[supp.id] = supp;
-    }
+    // Custom supplements are no longer loaded into the runtime catalog.
   }
 
-  // Загружаем кастомные при старте
-  if (typeof window !== 'undefined') {
-    setTimeout(loadCustomSupplements, 100);
+  function isSupplementsTrackingEnabled() {
+    const profile = getProfileSafe();
+    const hf = HEYS.healthFeatures;
+    if (hf && typeof hf.isSupplementsTrackingEnabled === 'function') {
+      return hf.isSupplementsTrackingEnabled(profile);
+    }
+    return profile.supplementsTrackingEnabled === true;
+  }
+
+  function filterCatalogSupplementIds(supplements) {
+    if (!Array.isArray(supplements)) return [];
+    const hf = HEYS.healthFeatures;
+    return supplements.filter((id) => {
+      if (!id) return false;
+      if (hf && typeof hf.isKnownSupplementId === 'function') {
+        return hf.isKnownSupplementId(id);
+      }
+      return !String(id).startsWith('custom_') && !!SUPPLEMENTS_CATALOG[id];
+    });
   }
 
   // === v3.5: SCAFFOLDING — Настройки, история, batch-операции ===
@@ -1147,7 +1141,7 @@
 
   function normalizePlannedSupplementsList(supplements) {
     if (!Array.isArray(supplements)) return [];
-    return supplements.filter(Boolean);
+    return filterCatalogSupplementIds(supplements.filter(Boolean));
   }
 
   function arePlannedSupplementsEqual(nextSupplements, prevSupplements) {
@@ -1162,6 +1156,7 @@
 
   function syncPlannedSupplementsToDay(dateKey, supplements, source = 'supplements-profile-sync') {
     if (!dateKey || typeof dateKey !== 'string') return false;
+    if (!isSupplementsTrackingEnabled()) return false;
 
     const normalizedSupplements = normalizePlannedSupplementsList(supplements);
     const dayData = readStoredValue(`heys_dayv2_${dateKey}`, { date: dateKey }) || { date: dateKey };
@@ -1203,6 +1198,9 @@
    * Сохранить запланированные (в профиль — запоминается на след. день)
    */
   function savePlannedSupplements(supplements, options = {}) {
+    if (!isSupplementsTrackingEnabled()) {
+      return { skipped: true, reason: 'supplements_tracking_disabled' };
+    }
     const normalizedSupplements = normalizePlannedSupplementsList(supplements);
     const profile = getProfileSafe();
     const shouldSyncDay = options.syncDay !== false;

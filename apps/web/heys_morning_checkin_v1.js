@@ -1301,16 +1301,20 @@
       steps.push('refeedDay');
     }
 
-    // 4. Условные шаги (cycle, measurements)
-    // Для cycle: показываем если cycleTrackingEnabled=true ИЛИ если это регистрация (шаг спросит сам)
-    // При регистрации профиль ещё пуст, но шаг cycle сам определит пол из StepModal data
-    if (hasProfileSteps) {
-      // При регистрации всегда добавляем cycle — шаг сам решит показывать ли (по полу из данных регистрации)
-      steps.push('cycle');
-    } else if (HEYS.Steps && HEYS.Steps.shouldShowCycleStep && HEYS.Steps.shouldShowCycleStep()) {
+    // 4. Условные шаги (cycle, measurements, supplements)
+    if (HEYS.Steps && HEYS.Steps.shouldShowCycleStep && HEYS.Steps.shouldShowCycleStep()) {
       steps.push('cycle');
     }
-    if (HEYS.Steps && HEYS.Steps.shouldShowMeasurements && HEYS.Steps.shouldShowMeasurements()) {
+    const hf = HEYS.healthFeatures;
+    const measurementsEnabled = hf && typeof hf.isMeasurementsTrackingEnabled === 'function'
+      ? hf.isMeasurementsTrackingEnabled(profile)
+      : profile && profile.measurementsTrackingEnabled === true;
+    const supplementsEnabled = hf && typeof hf.isSupplementsTrackingEnabled === 'function'
+      ? hf.isSupplementsTrackingEnabled(profile)
+      : profile && profile.supplementsTrackingEnabled === true;
+
+    if (measurementsEnabled
+      && HEYS.Steps && HEYS.Steps.shouldShowMeasurements && HEYS.Steps.shouldShowMeasurements()) {
       steps.push('measurements');
     }
 
@@ -1318,7 +1322,9 @@
     steps.push('cold_exposure');
 
     // 6. 💊 Витамины (опциональный шаг, запоминается на след. день)
-    steps.push('supplements');
+    if (supplementsEnabled) {
+      steps.push('supplements');
+    }
 
     // 7. 🌟 Мотивирующий финальный шаг
     steps.push('morningRoutine');

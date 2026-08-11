@@ -30,6 +30,8 @@
     deficitPctTarget: 0,
     stepsGoal: 10000, // целевая дневная активность по шагам
     cycleTrackingEnabled: false, // ручное включение трекинга цикла (для любого пола)
+    measurementsTrackingEnabled: false, // опциональные замеры тела (выключено по умолчанию)
+    supplementsTrackingEnabled: false, // опциональный трекинг добавок (выключено по умолчанию)
     profileCompleted: false, // флаг заполненности профиля (для wizard первого входа)
     desktopAllowed: false, // 🖥️ Разрешён ли доступ с десктопа (куратор может включить)
 
@@ -752,6 +754,27 @@
       };
       setProfile(newProfile);
     }
+
+    async function updateOptionalHealthFeature(flagKey, nextEnabled) {
+      const hf = HEYS.healthFeatures;
+      if (!hf || typeof hf.requestHealthFeatureToggle !== 'function') {
+        updateProfileField(flagKey, nextEnabled);
+        return;
+      }
+      const allowed = await hf.requestHealthFeatureToggle(flagKey, nextEnabled);
+      if (!allowed) return;
+      const cfg = hf.FEATURE_TOGGLES[flagKey];
+      const purged = nextEnabled
+        ? { ...profile, [flagKey]: true }
+        : (cfg && cfg.purgeProfile ? cfg.purgeProfile(profile) : { ...profile, [flagKey]: false });
+      setLastEditedField(flagKey);
+      setFieldStatus('pending');
+      setProfile({
+        ...purged,
+        revision: (profile.revision || 0) + 1,
+        updatedAt: Date.now(),
+      });
+    }
     function updateZone(i, patch) {
       setZones(prev => {
         const updated = prev.map((z, idx) => idx === i ? { ...z, ...patch } : z);
@@ -816,23 +839,35 @@
                 React.createElement(FieldStatus, { fieldKey: 'birthDate' }),
                 profile.birthDate && React.createElement('span', { style: { marginLeft: '8px', color: 'var(--gray-600)' } }, `(${calcAgeFromBirthDate(profile.birthDate)} лет)`)
               ),
-              !profile.birthDate && React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Возраст (лет)'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { type: 'number', value: profile.age, onChange: e => updateProfileField('age', Number(e.target.value) || 0), onFocus: e => e.target.select() }), React.createElement(FieldStatus, { fieldKey: 'age' })),
-              // Трекинг особого периода (только для женщин)
-              profile.gender === 'Женский' && React.createElement('div', { className: 'inline-field cycle-tracking-toggle' },
-                React.createElement('label', null, '🌸 Особый период'),
-                React.createElement('span', { className: 'sep' }, '-'),
-                React.createElement('label', { className: 'toggle-switch' },
-                  React.createElement('input', {
-                    type: 'checkbox',
-                    checked: !!profile.cycleTrackingEnabled,
-                    onChange: e => updateProfileField('cycleTrackingEnabled', e.target.checked)
-                  }),
-                  React.createElement('span', { className: 'toggle-slider' })
-                ),
-                React.createElement('span', { className: 'cycle-toggle-hint' },
-                  profile.cycleTrackingEnabled ? 'Включён' : 'Выключен'
-                )
-              )
+              !profile.birthDate && React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Возраст (лет)'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { type: 'number', value: profile.age, onChange: e => updateProfileField('age', Number(e.target.value) || 0), onFocus: e => e.target.select() }), React.createElement(FieldStatus, { fieldKey: 'age' }))
+            ),
+
+            // === ГРУППА 1б: Опциональные функции (согласие + выключение с удалением) ===
+            React.createElement(ProfileFieldGroup, { icon: '🔒', title: 'Опциональные функции' },
+              React.createElement('p', { style: { margin: '0 0 12px', fontSize: 13, color: 'var(--gray-600)', lineHeight: 1.45 } },
+                'По умолчанию выключены. Перед включением нужно подтвердить согласие; при выключении данные функции удаляются.'),
+              (() => {
+                const hf = HEYS.healthFeatures;
+                const toggles = hf && hf.FEATURE_TOGGLES ? hf.FEATURE_TOGGLES : {};
+                return Object.entries(toggles).map(([flagKey, cfg]) => {
+                  if (cfg.visible && !cfg.visible(profile)) return null;
+                  return React.createElement('div', { key: flagKey, className: 'inline-field cycle-tracking-toggle' },
+                    React.createElement('label', null, cfg.label),
+                    React.createElement('span', { className: 'sep' }, '-'),
+                    React.createElement('label', { className: 'toggle-switch' },
+                      React.createElement('input', {
+                        type: 'checkbox',
+                        checked: !!profile[flagKey],
+                        onChange: (e) => { updateOptionalHealthFeature(flagKey, e.target.checked); },
+                      }),
+                      React.createElement('span', { className: 'toggle-slider' })
+                    ),
+                    React.createElement('span', { className: 'cycle-toggle-hint' },
+                      profile[flagKey] ? 'Включён' : 'Выключен'
+                    )
+                  );
+                });
+              })()
             ),
 
             // === ГРУППА 2: Параметры тела ===

@@ -26,6 +26,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         deficitPctTarget: 0,
         stepsGoal: 10000, // целевая дневная активность по шагам
         cycleTrackingEnabled: false, // ручное включение трекинга цикла (для любого пола)
+        measurementsTrackingEnabled: false, // опциональные замеры тела (выключено по умолчанию)
+        supplementsTrackingEnabled: false, // опциональный трекинг добавок (выключено по умолчанию)
         profileCompleted: false, // флаг заполненности профиля (для wizard первого входа)
         desktopAllowed: false, // 🖥️ Разрешён ли доступ с десктопа (куратор может включить)
 

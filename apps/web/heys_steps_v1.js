@@ -3126,6 +3126,14 @@
    * Проверка: нужно ли показывать шаг замеров (прошло ≥7 дней)
    */
   function shouldShowMeasurements() {
+    const profile = lsGet('heys_profile', {}) || {};
+    const hf = HEYS.healthFeatures;
+    if (hf && typeof hf.isMeasurementsTrackingEnabled === 'function') {
+      if (!hf.isMeasurementsTrackingEnabled(profile)) return false;
+    } else if (profile.measurementsTrackingEnabled !== true) {
+      return false;
+    }
+
     const last = getLastMeasurements();
     if (!last.measuredAt) return true; // Нет данных → показываем
     // Если прошлый замер был неполным — продолжаем показывать
@@ -3304,6 +3312,19 @@
       };
     },
     save: (data) => {
+      const profile = lsGet('heys_profile', {}) || {};
+      const hf = HEYS.healthFeatures;
+      const measurementsEnabled = hf && typeof hf.isMeasurementsTrackingEnabled === 'function'
+        ? hf.isMeasurementsTrackingEnabled(profile)
+        : profile.measurementsTrackingEnabled === true;
+      if (!measurementsEnabled) {
+        return {
+          skipped: true,
+          reason: 'measurements_tracking_disabled',
+          affectedKeys: []
+        };
+      }
+
       // Используем дату из data._dateKey (переданную из getInitialData) или сегодня
       const dateKey = data._dateKey || getTodayKey();
       const dayData = getFreshDayData(dateKey);
@@ -4661,6 +4682,19 @@
       return { selected: planned };
     },
     save: (data, context) => {
+      const profile = lsGet('heys_profile', {}) || {};
+      const hf = HEYS.healthFeatures;
+      const supplementsEnabled = hf && typeof hf.isSupplementsTrackingEnabled === 'function'
+        ? hf.isSupplementsTrackingEnabled(profile)
+        : profile.supplementsTrackingEnabled === true;
+      if (!supplementsEnabled) {
+        return {
+          skipped: true,
+          reason: 'supplements_tracking_disabled',
+          affectedKeys: []
+        };
+      }
+
       // Используем dateKey из контекста (для редактирования прошлых дней) или сегодня
       const dateKey = context?.dateKey || getTodayKey();
       const selected = Array.isArray(data?.selected) ? data.selected : [];

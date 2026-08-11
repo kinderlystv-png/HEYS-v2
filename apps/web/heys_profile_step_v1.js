@@ -683,8 +683,8 @@
         birthDay,
         birthMonth,
         birthYear,
-        // По умолчанию включён для женщин (можно выключить)
-        cycleTrackingEnabled: profile.cycleTrackingEnabled !== undefined ? profile.cycleTrackingEnabled : true
+        // По умолчанию выключен — включается явно в настройках или согласием
+        cycleTrackingEnabled: profile.cycleTrackingEnabled === true
       };
     },
     validate: (data) => {

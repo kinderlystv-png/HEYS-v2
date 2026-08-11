@@ -11,6 +11,7 @@ const sql = fs.readFileSync(path.join(repoDir, 'database/2026-07-27_trial_intake
 const v2Sql = fs.readFileSync(path.join(repoDir, 'database/2026-07-27_trial_intake_flow_v2.sql'), 'utf8');
 const v3Sql = fs.readFileSync(path.join(repoDir, 'scripts/db/migrations/2026-07-29_trial_intake_preclient_v3.sql'), 'utf8');
 const correctionsV1Sql = fs.readFileSync(path.join(repoDir, 'scripts/db/migrations/2026-07-30_trial_candidate_answer_corrections_v1.sql'), 'utf8');
+const healthMinimizationSql = fs.readFileSync(path.join(repoDir, 'scripts/db/migrations/2026-08-11_health_minimization_intake_v1.sql'), 'utf8');
 const intakeSource = fs.readFileSync(path.join(webDir, 'heys_trial_intake_v1.js'), 'utf8');
 const queueSource = fs.readFileSync(path.join(webDir, 'heys_trial_queue_v1.js'), 'utf8');
 const yandexApiSource = fs.readFileSync(path.join(webDir, 'heys_yandex_api_v1.js'), 'utf8');
@@ -38,20 +39,11 @@ const completedAnswers = {
   experience: { previous_experience: 'self' },
   lifestyle: { schedule: 'Рабочий день', sleep: 'Около восьми часов' },
   collaboration: { daily_tracking: 'yes', feedback_style: 'concise' },
-  health: {
-    chronic_conditions_status: 'no',
-    medications_status: 'no',
-    injuries_operations_status: 'no',
-    allergies_status: 'no',
-    doctor_restrictions_status: 'no',
+  warning: {
+    acknowledged_at: '2026-08-11T10:00:00.000Z',
+    text_version: 'pending-owner-text',
   },
-  safety: {
-    acute_symptoms: 'no',
-    recent_surgery: 'no',
-    active_ed_concern: 'no',
-    medical_supervision: 'no',
-  },
-  meta: { schema_version: '1.1' },
+  meta: { schema_version: '1.2' },
 };
 
 function sqlFunction(name, nextName) {
@@ -249,8 +241,8 @@ describe('protected trial intake contract', () => {
     expect(review).toContain('public.admin_convert_lead');
     expect(review).toContain("status = 'promoted'");
     expect(v3Sql).toContain("status = 'active'");
-    expect(intakeSource).toContain("p_document_version: '1.5'");
-    expect(intakeSource).not.toContain("p_document_version: '2.0'");
+    expect(intakeSource).toContain("meta: { schema_version: '1.2' }");
+    expect(intakeSource).not.toContain('accept_trial_candidate_health_consent_by_candidate_session');
     expect(v3Sql).toContain('admin_get_trial_candidate_summaries');
     expect(v3Sql).toContain("l.status <> 'contacted' OR l.curator_id = p_curator_id");
   });
@@ -351,12 +343,15 @@ describe('protected trial intake contract', () => {
     expect(queueSource).toContain('Открыть приглашение');
   });
 
-  it('requires explicit v1.1 safety answers and conditional health details', () => {
+  it('requires warning acknowledgement for schema 1.2 and keeps legacy 1.1 validation', () => {
     expect(v2Sql).toContain("COALESCE(p_answers #>> '{safety,acute_symptoms}', '') = ''");
-    expect(v2Sql).toContain("COALESCE(p_answers #>> '{safety,medical_supervision}', '') = ''");
-    expect(v2Sql).toContain("'conditional_details_missing'");
-    expect(intakeSource).toContain("['no', 'Нет'], ['yes', 'Да'], ['prefer_not'");
-    expect(intakeSource).toContain('ConditionalHealthField');
+    expect(healthMinimizationSql).toContain("v_schema_version NOT IN ('1.0', '1.1', '1.2')");
+    expect(healthMinimizationSql).toContain("BTRIM(COALESCE(p_answers #>> '{warning,acknowledged_at}', '')) = ''");
+    expect(healthMinimizationSql).toContain("BTRIM(COALESCE(p_answers #>> '{warning,text_version}', '')) = ''");
+    expect(healthMinimizationSql).toContain("p_current_step > 4");
+    expect(healthMinimizationSql).not.toContain('health_consent_required');
+    expect(intakeSource).toContain('WARNING_TEXT_VERSION');
+    expect(intakeSource).not.toContain('ConditionalHealthField');
     expect(intakeSource).not.toContain('function CheckField');
   });
 
@@ -507,7 +502,7 @@ describe('protected trial intake contract', () => {
     (0, eval)(intakeSource);
 
     render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
-    await screen.findByText('Шаг 3 из 6');
+    await screen.findByText('Шаг 3 из 5');
     expect(screen.getByDisplayValue('Рабочий день')).toBeTruthy();
 
     fireEvent.change(screen.getByDisplayValue('Рабочий день'), {
@@ -565,7 +560,34 @@ describe('protected trial intake contract', () => {
     }, { timeout: 1800 });
   });
 
-  it('shows health details only after yes and keeps personal discussion private', async () => {
+  it('requires warning confirmation on the final step before submit', async () => {
+    const answers = {
+      ...completedAnswers,
+      warning: { acknowledged_at: '', text_version: '' },
+    };
+    const rpc = vi.fn(async (fn) => {
+      if (fn === 'get_trial_intake_by_session') {
+        return { data: { get_trial_intake_by_session: {
+          success: true,
+          intake: { status: 'in_progress', current_step: 4, answers },
+        } } };
+      }
+      return { data: { save_trial_intake_by_session: { success: true, status: 'in_progress' } } };
+    });
+    window.React = React;
+    window.HEYS = { YandexAPI: { rpc } };
+    // eslint-disable-next-line no-eval
+    (0, eval)(intakeSource);
+
+    render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
+    expect(await screen.findByText('Проверьте ответы перед отправкой')).toBeTruthy();
+    expect(screen.getByText('Подтвердите предупреждение перед отправкой')).toBeTruthy();
+    const editWarning = screen.getByRole('button', { name: 'Изменить подтверждение предупреждения' });
+    fireEvent.click(editWarning);
+    expect(screen.getByText('Шаг 5 из 5')).toBeTruthy();
+  });
+
+  it('shows a visible final review with warning confirmation and edit action', async () => {
     const rpc = vi.fn(async (fn) => {
       if (fn === 'get_trial_intake_by_session') {
         return { data: { get_trial_intake_by_session: {
@@ -581,42 +603,11 @@ describe('protected trial intake contract', () => {
     (0, eval)(intakeSource);
 
     render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
-    const chronicStatus = await screen.findByRole('combobox', { name: /Есть ли хронические состояния/ });
-    expect(screen.queryByText(/Что именно важно учитывать/)).toBeNull();
-
-    fireEvent.change(chronicStatus, { target: { value: 'yes' } });
-    expect(screen.getByText(/Что именно важно учитывать/)).toBeTruthy();
-    fireEvent.change(chronicStatus, { target: { value: 'prefer_not' } });
-    expect(screen.queryByText(/Что именно важно учитывать/)).toBeNull();
-  });
-
-  it('shows a visible final review with safety answers and edit actions', async () => {
-    const answers = {
-      ...completedAnswers,
-      safety: { ...completedAnswers.safety, active_ed_concern: 'prefer_not' },
-    };
-    const rpc = vi.fn(async (fn) => {
-      if (fn === 'get_trial_intake_by_session') {
-        return { data: { get_trial_intake_by_session: {
-          success: true,
-          intake: { status: 'in_progress', current_step: 5, answers },
-        } } };
-      }
-      return { data: { save_trial_intake_by_session: { success: true, status: 'in_progress' } } };
-    });
-    window.React = React;
-    window.HEYS = { YandexAPI: { rpc } };
-    // eslint-disable-next-line no-eval
-    (0, eval)(intakeSource);
-
-    render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
     expect(await screen.findByText('Проверьте ответы перед отправкой')).toBeTruthy();
-    expect(screen.getByText('Проверьте ответы о безопасности')).toBeTruthy();
-    expect(screen.getAllByText('Предпочитаю обсудить с куратором')).toHaveLength(5);
-    const editHealth = screen.getByRole('button', { name: 'Изменить сведения о здоровье' });
-    expect(screen.getByRole('button', { name: 'Изменить ответы о безопасности' })).toBeTruthy();
-    fireEvent.click(editHealth);
-    expect(screen.getByText('Шаг 5 из 6')).toBeTruthy();
+    expect(screen.getByText('Предупреждение подтверждено')).toBeTruthy();
+    const editWarning = screen.getByRole('button', { name: 'Изменить подтверждение предупреждения' });
+    fireEvent.click(editWarning);
+    expect(screen.getByText('Шаг 5 из 5')).toBeTruthy();
   });
 
   it('uses the real sharing action, one autosave status and the supported unsure option', () => {
@@ -638,6 +629,7 @@ describe('protected trial intake contract', () => {
     expect(queueSource).toContain('Ответ кандидата:');
     expect(queueSource).toContain('Уточнение со слов кандидата');
     expect(queueSource).toContain('Фактор здоровья или безопасности обсуждён отдельно');
+    expect(queueSource).toContain('Клиент подтвердил предупреждение перед анкетой; формат сопровождения обсуждается на пробной неделе');
     expect(queueSource).toContain('client_id: clientId');
     expect(correctionsV1Sql).toContain("p_action NOT IN ('approved', 'rejected')");
     expect(correctionsV1Sql).toContain("'original_answers', v_original, 'answer_corrections', v_history");
@@ -672,10 +664,10 @@ describe('protected trial intake contract', () => {
     (0, eval)(intakeSource);
 
     render(React.createElement(window.HEYS.TrialIntake.ClientScreen));
-    await screen.findByText('Шаг 1 из 6');
+    await screen.findByText('Шаг 1 из 5');
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Продолжить' })));
 
-    expect(screen.getByText('Шаг 1 из 6')).toBeTruthy();
+    expect(screen.getByText('Шаг 1 из 5')).toBeTruthy();
     expect(screen.getByText('Не удалось сохранить изменения. Проверьте интернет и повторите.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Повторить сохранение' })).toBeTruthy();
   });
@@ -703,7 +695,7 @@ describe('protected trial intake contract', () => {
       if (fn === 'get_trial_intake_by_session') {
         return { data: { get_trial_intake_by_session: {
           success: true,
-          intake: { status: 'in_progress', current_step: 5, answers: completedAnswers },
+          intake: { status: 'in_progress', current_step: 4, answers: completedAnswers },
         } } };
       }
       return { data: { save_trial_intake_by_session: {
@@ -727,40 +719,25 @@ describe('protected trial intake contract', () => {
     ))).toBe(true);
   });
 
-  it('summarizes the goal and safety flags before raw curator details', () => {
+  it('summarizes the goal without legacy safety factors', () => {
     window.React = {};
     window.HEYS = {};
     // eslint-disable-next-line no-eval
     (0, eval)(queueSource);
     const summary = window.HEYS.TrialQueue.summarizeIntakeAnswers({
       goals: { primary_goal: 'Удерживать режим' },
-      safety: { acute_symptoms: true, recent_surgery: false, medical_supervision: true },
+      warning: {
+        acknowledged_at: '2026-08-11T10:00:00.000Z',
+        text_version: 'pending-owner-text',
+      },
     });
 
     expect(summary.goal).toBe('Удерживать режим');
-    expect(summary.safetyFlags).toEqual([
-      'Острые симптомы или резкое ухудшение',
-      'Состояние под наблюдением врача',
-    ]);
-    expect(summary.safetyFactors).toEqual([
-      expect.objectContaining({
-        section: 'safety', key: 'acute_symptoms', status: 'attention',
-        statusLabel: 'Требует внимания', anchorId: 'trial-intake-answer-safety-acute_symptoms',
-      }),
-      expect.objectContaining({
-        section: 'safety', key: 'medical_supervision', status: 'attention',
-        statusLabel: 'Требует внимания', anchorId: 'trial-intake-answer-safety-medical_supervision',
-      }),
-    ]);
-    const clarification = window.HEYS.TrialQueue.getIntakeAnswerAttention({
-      safety: { acute_symptoms: 'prefer_not' },
-    }, 'safety', 'acute_symptoms');
-    expect(clarification).toEqual(expect.objectContaining({
-      status: 'clarification', statusLabel: 'Нужно уточнить до решения',
-    }));
+    expect(summary.safetyFlags).toEqual([]);
+    expect(summary.safetyFactors).toEqual([]);
     expect(window.HEYS.TrialQueue.getIntakeAnswerAttention({
-      safety: { acute_symptoms: 'no' },
-    }, 'safety', 'acute_symptoms')).toBeNull();
+      warning: { acknowledged_at: '2026-08-11T10:00:00.000Z' },
+    }, 'warning', 'acknowledged_at')).toBeNull();
     expect(queueSource).toContain("React.createElement('details'");
     expect(queueSource).toContain('Все ответы анкеты');
     expect(queueSource).toContain('Факторов, требующих отдельного уточнения, не отмечено.');

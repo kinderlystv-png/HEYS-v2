@@ -58,6 +58,8 @@ const PROFILE_FIELDS = {
   deficit_pct_target: { type: 'number', target: 'deficitPctTarget', min: -50, max: 50, label: 'целевой дефицит, %' },
   steps_goal: { type: 'number', target: 'stepsGoal', min: 0, max: 50000, label: 'цель по шагам' },
   cycle_tracking_enabled: { type: 'boolean', target: 'cycleTrackingEnabled', label: 'трекинг цикла' },
+  measurements_tracking_enabled: { type: 'boolean', target: 'measurementsTrackingEnabled', label: 'трекинг замеров тела' },
+  supplements_tracking_enabled: { type: 'boolean', target: 'supplementsTrackingEnabled', label: 'трекинг добавок' },
   desktop_allowed: { type: 'boolean', target: 'desktopAllowed', label: 'доступ с десктопа' },
 };
 

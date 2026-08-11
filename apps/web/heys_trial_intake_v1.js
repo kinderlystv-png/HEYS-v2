@@ -6,14 +6,15 @@
   const React = global.React;
   if (!React) return;
 
+  const WARNING_TEXT_VERSION = 'pending-owner-text';
+
   const EMPTY_ANSWERS = {
     goals: {},
     experience: {},
     lifestyle: {},
     collaboration: {},
-    health: {},
-    safety: {},
-    meta: { schema_version: '1.1' },
+    warning: {},
+    meta: { schema_version: '1.2' },
   };
 
   const STATUS_COPY = {
@@ -84,11 +85,6 @@
         p_expected_updated_at: expectedUpdatedAt || null,
       }), fn);
     },
-    async acceptHealthConsent() {
-      if (!this.isCandidate()) return { success: true };
-      const fn = 'accept_trial_candidate_health_consent_by_candidate_session';
-      return unwrapRpc(await HEYS.YandexAPI.rpc(fn, { p_document_version: '1.5' }), fn);
-    },
   };
 
   function saveErrorCopy(result, isSubmit = false) {
@@ -127,25 +123,12 @@
       acc[key] = { ...EMPTY_ANSWERS[key], ...(source[key] || {}) };
       return acc;
     }, {});
-    if (merged.meta.schema_version === '1.0') {
-      const statusFromText = (value) => {
-        const normalized = String(value || '').trim().toLowerCase();
-        if (!normalized) return '';
-        return ['нет', 'no', 'не принимаю', 'не было'].includes(normalized) ? 'no' : 'yes';
-      };
-      [
-        ['chronic_conditions_status', 'chronic_conditions'],
-        ['medications_status', 'medications'],
-        ['injuries_operations_status', 'injuries_operations'],
-        ['allergies_status', 'allergies'],
-        ['doctor_restrictions_status', 'doctor_restrictions'],
-      ].forEach(([statusKey, detailKey]) => {
-        if (!merged.health[statusKey]) merged.health[statusKey] = statusFromText(merged.health[detailKey]);
-      });
-      ['acute_symptoms', 'recent_surgery', 'active_ed_concern', 'medical_supervision'].forEach((key) => {
-        if (typeof merged.safety[key] === 'boolean') merged.safety[key] = merged.safety[key] ? 'yes' : 'no';
-      });
-      merged.meta.schema_version = '1.1';
+    const legacySchema = ['1.0', '1.1'].includes(String(source.meta?.schema_version || ''))
+      || source.health
+      || source.safety;
+    if (legacySchema) {
+      merged.warning = {};
+      merged.meta = { schema_version: '1.2' };
     }
     return merged;
   }
@@ -189,25 +172,6 @@
     );
   }
 
-  function ConditionalHealthField({ value, set, statusKey, detailKey, label, detailLabel, hint }) {
-    return React.createElement('div', { style: { display: 'grid', gap: 10 } },
-      React.createElement(SelectField, {
-        label, required: true, value: value[statusKey],
-        onChange: (next) => {
-          set(statusKey, next);
-          if (next !== 'yes') set(detailKey, '');
-        },
-        options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']],
-      }),
-      value[statusKey] === 'yes'
-        ? React.createElement(Field, {
-          label: detailLabel, hint, required: true, textarea: true,
-          value: value[detailKey], onChange: (next) => set(detailKey, next),
-        })
-        : null
-    );
-  }
-
   const CURATOR_ANSWER_FIELDS = Object.freeze({
     'goals.primary_goal': { type: 'text' },
     'goals.success_definition': { type: 'text' },
@@ -222,23 +186,8 @@
     'collaboration.daily_tracking': { type: 'select', options: [['yes', 'Да'], ['mostly', 'Скорее да, но возможны пропуски'], ['unsure', 'Пока не уверен'], ['no', 'Нет']] },
     'collaboration.feedback_style': { type: 'select', options: [['concise', 'Коротко и по делу'], ['detailed', 'Подробно с объяснениями'], ['gentle', 'Мягко и постепенно'], ['direct', 'Прямо и требовательно']] },
     'collaboration.expectations_from_curator': { type: 'text' },
-    'health.chronic_conditions_status': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
-    'health.chronic_conditions': { type: 'text' },
-    'health.medications_status': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
-    'health.medications': { type: 'text' },
-    'health.injuries_operations_status': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
-    'health.injuries_operations': { type: 'text' },
-    'health.allergies_status': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
-    'health.allergies': { type: 'text' },
-    'health.pregnancy_lactation': { type: 'select', options: [['no', 'Нет'], ['pregnancy', 'Беременность'], ['lactation', 'Грудное вскармливание'], ['not_applicable', 'Не применимо'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
-    'health.eating_disorder_history': { type: 'select', options: [['no', 'Нет'], ['past', 'Да, в прошлом'], ['current', 'Да, сейчас'], ['unsure', 'Затрудняюсь ответить'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
-    'health.doctor_restrictions_status': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
-    'health.doctor_restrictions': { type: 'text' },
-    'safety.acute_symptoms': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
-    'safety.recent_surgery': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
-    'safety.active_ed_concern': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
-    'safety.medical_supervision': { type: 'select', options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] },
-    'safety.details': { type: 'text' },
+    'warning.acknowledged_at': { type: 'text' },
+    'warning.text_version': { type: 'text' },
   });
 
   const STEPS = [
@@ -315,82 +264,46 @@
       ],
     },
     {
-      id: 'health', title: 'Здоровье и ограничения',
-      subtitle: 'Эти сведения нужны только для оценки безопасности и границ сопровождения. HEYS не ставит диагнозы и не заменяет врача.',
-      required: [
-        'chronic_conditions_status', 'medications_status',
-        'injuries_operations_status', 'allergies_status',
-        'doctor_restrictions_status',
-      ],
+      id: 'warning', title: 'Важная информация',
+      subtitle: 'Прочитайте предупреждение и подтвердите, что готовы продолжить.',
+      required: ['acknowledged_at'],
       render: (value, set) => [
-        React.createElement(ConditionalHealthField, {
-          key: 'chronic_conditions', value, set,
-          statusKey: 'chronic_conditions_status', detailKey: 'chronic_conditions',
-          label: 'Есть ли хронические состояния или диагнозы, которые важно учитывать?',
-          detailLabel: 'Что именно важно учитывать?',
-        }),
-        React.createElement(ConditionalHealthField, {
-          key: 'medications', value, set,
-          statusKey: 'medications_status', detailKey: 'medications',
-          label: 'Принимаете ли лекарства или добавки, влияющие на питание, аппетит или нагрузку?',
-          detailLabel: 'Укажите лекарства или добавки',
-          hint: 'Не отменяйте назначения врача.',
-        }),
-        React.createElement(ConditionalHealthField, {
-          key: 'injuries_operations', value, set,
-          statusKey: 'injuries_operations_status', detailKey: 'injuries_operations',
-          label: 'Есть ли сейчас ограничения после травмы или операции?',
-          detailLabel: 'Опишите ограничения, которые важно учитывать',
-        }),
-        React.createElement(ConditionalHealthField, {
-          key: 'allergies', value, set,
-          statusKey: 'allergies_status', detailKey: 'allergies',
-          label: 'Есть ли аллергии или непереносимости?',
-          detailLabel: 'Что важно исключить из питания?',
-        }),
-        React.createElement(SelectField, { key: 'pregnancy_lactation', fieldId: 'intake-pregnancy_lactation', label: 'Беременность или грудное вскармливание',
-          value: value.pregnancy_lactation, onChange: (next) => set('pregnancy_lactation', next),
-          options: [['no', 'Нет'], ['pregnancy', 'Беременность'], ['lactation', 'Грудное вскармливание'], ['not_applicable', 'Не применимо'], ['prefer_not', 'Предпочитаю обсудить с куратором']] }),
-        React.createElement(SelectField, { key: 'eating_disorder_history', fieldId: 'intake-eating_disorder_history', label: 'Был ли опыт расстройства пищевого поведения?',
-          value: value.eating_disorder_history, onChange: (next) => set('eating_disorder_history', next),
-          options: [['no', 'Нет'], ['past', 'Да, в прошлом'], ['current', 'Да, сейчас'], ['unsure', 'Затрудняюсь ответить'], ['prefer_not', 'Предпочитаю обсудить с куратором']] }),
-        React.createElement(ConditionalHealthField, {
-          key: 'doctor_restrictions', value, set,
-          statusKey: 'doctor_restrictions_status', detailKey: 'doctor_restrictions',
-          label: 'Есть ли рекомендации или ограничения от врача?',
-          detailLabel: 'Опишите рекомендации или ограничения',
-        }),
-      ],
-    },
-    {
-      id: 'safety', title: 'Проверка безопасности',
-      subtitle: 'Отметки не означают автоматический отказ. Куратор изучит контекст вручную и при необходимости задаст вопросы.',
-      required: ['acute_symptoms', 'recent_surgery', 'active_ed_concern', 'medical_supervision'],
-      render: (value, set) => [
-        React.createElement(SelectField, { key: 'acute_symptoms', fieldId: 'intake-acute_symptoms', label: 'Сейчас есть острые симптомы или резкое ухудшение самочувствия?', required: true,
-          value: value.acute_symptoms, onChange: (next) => set('acute_symptoms', next),
-          options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] }),
-        React.createElement(SelectField, { key: 'recent_surgery', fieldId: 'intake-recent_surgery', label: 'Недавно была операция, травма или госпитализация?', required: true,
-          value: value.recent_surgery, onChange: (next) => set('recent_surgery', next),
-          options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] }),
-        React.createElement(SelectField, { key: 'active_ed_concern', fieldId: 'intake-active_ed_concern', label: 'Есть трудности с пищевым поведением, которые сейчас требуют помощи специалиста?', required: true,
-          value: value.active_ed_concern, onChange: (next) => set('active_ed_concern', next),
-          options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] }),
-        React.createElement(SelectField, { key: 'medical_supervision', fieldId: 'intake-medical_supervision', label: 'Наблюдаетесь у врача по состоянию, влияющему на питание или нагрузку?', required: true,
-          value: value.medical_supervision, onChange: (next) => set('medical_supervision', next),
-          options: [['no', 'Нет'], ['yes', 'Да'], ['prefer_not', 'Предпочитаю обсудить с куратором']] }),
-        React.createElement(Field, { key: 'details', fieldId: 'intake-details', label: 'Что ещё важно знать куратору перед решением?',
-          hint: 'Укажите только значимый контекст, без ФИО врачей, названий клиник и документов.', textarea: true,
-          value: value.details, onChange: (next) => set('details', next) }),
-        React.createElement('div', { key: 'urgent', role: 'note', style: { padding: 14, borderRadius: 12, background: '#fff7e8', color: '#754b00', fontSize: 13, lineHeight: 1.5 } },
-          'Если вам нужна срочная медицинская помощь, не ждите ответа куратора — обратитесь в экстренную службу или к врачу.'),
+        React.createElement('div', {
+          key: 'warning-text',
+          role: 'note',
+          style: {
+            padding: 16, borderRadius: 12, background: '#fff7e8',
+            color: '#754b00', fontSize: 14, lineHeight: 1.55,
+          },
+        }, 'Текст предупреждения будет уточнён владельцем продукта. Продолжая, вы подтверждаете, что ознакомились с важной информацией перед заполнением анкеты.'),
+        React.createElement('label', {
+          key: 'warning-confirm',
+          style: { display: 'flex', gap: 10, alignItems: 'flex-start', color: '#334039', fontSize: 14, lineHeight: 1.5 },
+        },
+          React.createElement('input', {
+            id: 'intake-acknowledged_at',
+            type: 'checkbox',
+            checked: Boolean(value.acknowledged_at),
+            onChange: (event) => {
+              if (event.target.checked) {
+                set('acknowledged_at', new Date().toISOString());
+                set('text_version', WARNING_TEXT_VERSION);
+              } else {
+                set('acknowledged_at', '');
+                set('text_version', '');
+              }
+            },
+            style: { width: 20, height: 20, marginTop: 1, flex: '0 0 auto' },
+          }),
+          React.createElement('span', null, 'Я прочитал предупреждение и готов продолжить заполнение анкеты.')
+        ),
       ],
     },
   ];
 
   const SECTION_LABELS = {
     goals: 'Цели', experience: 'Предыдущий опыт', lifestyle: 'Ритм жизни',
-    collaboration: 'Совместная работа', health: 'Здоровье', safety: 'Безопасность',
+    collaboration: 'Совместная работа', warning: 'Важная информация',
   };
 
   // Метки нужны для КАЖДОГО значения, которое может дойти до экрана сверки:
@@ -402,20 +315,14 @@
   // что видит человек: иначе он читает «заполните обязательные поля», а какое
   // именно — ищет глазами среди восьми, часть которых появляется по условию.
   const FIELD_LABELS = {
-    active_ed_concern: 'Есть трудности с пищевым поведением, которые сейчас требуют помощи специалиста?',
+    acknowledged_at: 'Подтверждение предупреждения',
     activity: 'Какая у вас сейчас физическая активность?',
-    acute_symptoms: 'Сейчас есть острые симптомы или резкое ухудшение самочувствия?',
     constraints: 'Что может мешать вам регулярно присылать фото или короткие сообщения в течение дня?',
     daily_tracking: 'Готовы в течение недели присылать фото, текст или голосовые сообщения о приёмах пищи?',
-    details: 'Что ещё важно знать куратору перед решением?',
-    eating_disorder_history: 'Был ли опыт расстройства пищевого поведения?',
     expectations_from_curator: 'Чего вы ждёте от куратора?',
     feedback_style: 'Какая обратная связь вам полезнее?',
-    medical_supervision: 'Наблюдаетесь у врача по состоянию, влияющему на питание или нагрузку?',
-    pregnancy_lactation: 'Беременность или грудное вскармливание',
     previous_experience: 'Был ли опыт изменения питания или образа жизни?',
     primary_goal: 'Главная цель',
-    recent_surgery: 'Недавно была операция, травма или госпитализация?',
     schedule: 'Как обычно устроен ваш день?',
     sleep: 'Сколько вы обычно спите и как восстанавливаетесь?',
     success_definition: 'Как вы поймёте, что сопровождение помогает?',
@@ -440,29 +347,16 @@
       ['Предыдущий опыт', answers.experience?.previous_experience],
       ['Готовность присылать данные', answers.collaboration?.daily_tracking],
     ].filter(([, value]) => String(value || '').trim());
-    const safetyRows = [
-      ['Острые симптомы', answers.safety?.acute_symptoms],
-      ['Недавняя операция, травма или госпитализация', answers.safety?.recent_surgery],
-      ['Трудности с пищевым поведением', answers.safety?.active_ed_concern],
-      ['Наблюдение врача', answers.safety?.medical_supervision],
-      ['Ограничения врача', answers.health?.doctor_restrictions_status],
-    ].filter(([, value]) => String(value || '').trim());
-    const needsAttention = safetyRows.some(([, value]) => !['', 'no'].includes(String(value || '')));
-    const renderRows = (rows, attention = false) => React.createElement('div', {
+    const warningConfirmed = Boolean(String(answers.warning?.acknowledged_at || '').trim());
+    const renderRows = (rows) => React.createElement('div', {
       style: { display: 'grid', gap: 10 }
-    }, rows.map(([label, value]) => {
-      const rowNeedsAttention = attention && !['', 'no'].includes(String(value || ''));
-      return React.createElement('div', {
-        key: label,
-        style: {
-          display: 'grid', gap: 2,
-          ...(rowNeedsAttention ? { background: '#fff7e8', borderRadius: 9, padding: '8px 10px', color: '#754b00' } : {}),
-        }
-      },
-        React.createElement('span', { style: { fontSize: 11, color: rowNeedsAttention ? '#875700' : '#718078', textTransform: 'uppercase' } }, label),
-        React.createElement('span', { style: { fontSize: 14, lineHeight: 1.45 } }, reviewValue(value))
-      );
-    }));
+    }, rows.map(([label, value]) => React.createElement('div', {
+      key: label,
+      style: { display: 'grid', gap: 2 },
+    },
+      React.createElement('span', { style: { fontSize: 11, color: '#718078', textTransform: 'uppercase' } }, label),
+      React.createElement('span', { style: { fontSize: 14, lineHeight: 1.45 } }, reviewValue(value))
+    )));
 
     return React.createElement('section', {
       style: {
@@ -478,24 +372,21 @@
       React.createElement('div', {
         role: 'status',
         style: {
-          border: `1px solid ${needsAttention ? '#efc36f' : '#cfe3d3'}`,
+          border: `1px solid ${warningConfirmed ? '#cfe3d3' : '#efc36f'}`,
           borderRadius: 11, padding: 11,
-          background: needsAttention ? '#fffaf0' : '#f2faf4',
+          background: warningConfirmed ? '#f2faf4' : '#fffaf0',
         }
       },
-        React.createElement('div', { style: { marginBottom: 8, fontSize: 13, fontWeight: 750, color: needsAttention ? '#754b00' : '#27613b' } },
-          needsAttention ? 'Проверьте ответы о безопасности' : 'Ответы о безопасности заполнены'),
-        renderRows(safetyRows, true)
+        React.createElement('div', { style: { marginBottom: 8, fontSize: 13, fontWeight: 750, color: warningConfirmed ? '#27613b' : '#754b00' } },
+          warningConfirmed ? 'Предупреждение подтверждено' : 'Подтвердите предупреждение перед отправкой'),
+        React.createElement('div', { style: { fontSize: 14, lineHeight: 1.45, color: '#334039' } },
+          warningConfirmed ? 'Вы подтвердили, что прочитали предупреждение перед анкетой.' : 'Вернитесь к шагу с предупреждением и поставьте галочку подтверждения.')
       ),
       React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 8 } },
         React.createElement('button', {
-          type: 'button', onClick: () => onEdit('health'),
+          type: 'button', onClick: () => onEdit('warning'),
           style: { minHeight: 44, padding: '9px 12px', borderRadius: 10, border: '1px solid #cfd6d0', background: '#fff', color: '#334039', cursor: 'pointer', fontWeight: 650 },
-        }, 'Изменить сведения о здоровье'),
-        React.createElement('button', {
-          type: 'button', onClick: () => onEdit('safety'),
-          style: { minHeight: 44, padding: '9px 12px', borderRadius: 10, border: '1px solid #cfd6d0', background: '#fff', color: '#334039', cursor: 'pointer', fontWeight: 650 },
-        }, 'Изменить ответы о безопасности')
+        }, 'Изменить подтверждение предупреждения')
       )
     );
   }
@@ -511,7 +402,6 @@
     const [saveErrorCode, setSaveErrorCode] = React.useState('');
     const [hasEdited, setHasEdited] = React.useState(false);
     const [hydrated, setHydrated] = React.useState(false);
-    const [healthConsentAccepted, setHealthConsentAccepted] = React.useState(!api.isCandidate());
     const saveTimerRef = React.useRef(null);
     const saveQueueRef = React.useRef(Promise.resolve());
     const answersRef = React.useRef(answers);
@@ -537,13 +427,6 @@
     const enqueueSave = React.useCallback((nextAnswers, nextStep, complete) => {
       const run = async () => {
         try {
-          if (api.isCandidate() && !healthConsentAccepted) {
-            return { success: false, error: 'health_consent_required' };
-          }
-          if (api.isCandidate()) {
-            const consent = await api.acceptHealthConsent();
-            if (!consent?.success) return consent;
-          }
           const result = await api.save(
             nextAnswers, nextStep, complete, serverUpdatedAtRef.current
           );
@@ -558,7 +441,7 @@
       const queued = saveQueueRef.current.then(run, run);
       saveQueueRef.current = queued.catch(() => undefined);
       return queued;
-    }, [healthConsentAccepted]);
+    }, []);
 
     React.useEffect(() => {
       let active = true;
@@ -625,19 +508,7 @@
     // Не флаг, а адрес: список конкретных незаполненных ключей в порядке
     // появления на экране. Первый из них называется в ошибке и получает фокус.
     const missingKeys = current
-      ? [
-        ...current.required.filter((key) => !String(answers[current.id]?.[key] || '').trim()),
-        ...(current.id === 'health' ? [
-          ['chronic_conditions_status', 'chronic_conditions'],
-          ['medications_status', 'medications'],
-          ['injuries_operations_status', 'injuries_operations'],
-          ['allergies_status', 'allergies'],
-          ['doctor_restrictions_status', 'doctor_restrictions'],
-        ].filter(([statusKey, detailKey]) => (
-          answers.health?.[statusKey] === 'yes'
-          && !String(answers.health?.[detailKey] || '').trim()
-        )).map(([, detailKey]) => detailKey) : []),
-      ]
+      ? current.required.filter((key) => !String(answers[current.id]?.[key] || '').trim())
       : [];
     const missingRequired = missingKeys.length > 0;
 
@@ -845,19 +716,6 @@
           color: '#526159', fontSize: 13, lineHeight: 1.5, marginBottom: 20,
         }
       }, 'Ответы доступны вам и назначенному куратору в защищённой анкете. Заполнение анкеты не гарантирует пробную неделю.') : null,
-      step === 0 && api.isCandidate() ? React.createElement('label', {
-        style: { display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 22, color: '#334039', fontSize: 14, lineHeight: 1.5 }
-      },
-        React.createElement('input', {
-          type: 'checkbox', checked: healthConsentAccepted,
-          onChange: (event) => { setHealthConsentAccepted(event.target.checked); setError(''); },
-          style: { width: 20, height: 20, marginTop: 1, flex: '0 0 auto' }
-        }),
-        React.createElement('span', null,
-          'Я согласен на обработку данных о здоровье для рассмотрения анкеты. ',
-          React.createElement('a', { href: '/docs/health-data-consent.md', target: '_blank', rel: 'noopener noreferrer' }, 'Текст согласия')
-        )
-      ) : null,
       React.createElement('h1', { style: { fontSize: 28, lineHeight: 1.2, margin: '0 0 8px' } }, current.title),
       React.createElement('p', { style: { color: '#657168', lineHeight: 1.55, margin: '0 0 26px' } }, current.subtitle),
       React.createElement('div', { style: { display: 'grid', gap: 20 } }, current.render(
@@ -890,12 +748,12 @@
           style: { ...inputStyle, width: 'auto', minWidth: 108, cursor: 'pointer', fontWeight: 650 },
         }, 'Назад') : null,
         React.createElement('button', {
-          type: 'button', onClick: next, disabled: saveState === 'saving' || (step === 0 && api.isCandidate() && !healthConsentAccepted),
-          style: { ...inputStyle, minHeight: 46, flex: 1, background: '#434587', color: '#fff', border: 0, cursor: 'pointer', fontWeight: 750, opacity: saveState === 'saving' || (step === 0 && api.isCandidate() && !healthConsentAccepted) ? 0.65 : 1 },
+          type: 'button', onClick: next, disabled: saveState === 'saving',
+          style: { ...inputStyle, minHeight: 46, flex: 1, background: '#434587', color: '#fff', border: 0, cursor: 'pointer', fontWeight: 750, opacity: saveState === 'saving' ? 0.65 : 1 },
         }, step === STEPS.length - 1 ? 'Отправить куратору' : 'Продолжить')
       )
     ));
   }
 
-  HEYS.TrialIntake = { api, ClientScreen, shouldOpen, leaveIntake, EMPTY_ANSWERS, CURATOR_ANSWER_FIELDS };
+  HEYS.TrialIntake = { api, ClientScreen, shouldOpen, leaveIntake, EMPTY_ANSWERS, CURATOR_ANSWER_FIELDS, WARNING_TEXT_VERSION };
 })(typeof window !== 'undefined' ? window : globalThis);

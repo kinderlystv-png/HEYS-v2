@@ -194,20 +194,7 @@
     ].join('\n');
   }
 
-  const INTAKE_ATTENTION_RULES = [
-    { section: 'health', key: 'chronic_conditions_status', detailKey: 'chronic_conditions', label: 'Состояния или диагнозы', values: ['yes', 'prefer_not'] },
-    { section: 'health', key: 'medications_status', detailKey: 'medications', label: 'Лекарства или добавки', values: ['yes', 'prefer_not'] },
-    { section: 'health', key: 'injuries_operations_status', detailKey: 'injuries_operations', label: 'Ограничения после травмы или операции', values: ['yes', 'prefer_not'] },
-    { section: 'health', key: 'allergies_status', detailKey: 'allergies', label: 'Аллергии или непереносимости', values: ['yes', 'prefer_not'] },
-    { section: 'health', key: 'doctor_restrictions_status', detailKey: 'doctor_restrictions', label: 'Рекомендации или ограничения врача', values: ['yes', 'prefer_not'] },
-    { section: 'health', key: 'pregnancy_lactation', label: 'Беременность или грудное вскармливание', values: ['pregnancy', 'lactation', 'prefer_not'] },
-    { section: 'health', key: 'eating_disorder_history', label: 'Опыт трудностей с пищевым поведением', values: ['past', 'current', 'unsure', 'prefer_not'] },
-    { section: 'safety', key: 'acute_symptoms', label: 'Острые симптомы или резкое ухудшение', values: ['yes', 'prefer_not'] },
-    { section: 'safety', key: 'recent_surgery', label: 'Недавняя операция, травма или госпитализация', values: ['yes', 'prefer_not'] },
-    { section: 'safety', key: 'active_ed_concern', label: 'Трудности с пищевым поведением, требующие помощи специалиста', values: ['yes', 'prefer_not'] },
-    { section: 'safety', key: 'medical_supervision', label: 'Состояние под наблюдением врача', values: ['yes', 'prefer_not'] },
-    { section: 'safety', key: 'details', label: 'Дополнительный контекст безопасности', nonEmpty: true },
-  ];
+  const INTAKE_ATTENTION_RULES = [];
 
   function normalizeIntakeAnswer(value) {
     if (value === true) return 'yes';
@@ -2369,35 +2356,25 @@
 
     const ANSWER_LABELS = {
       goals: 'Цели и ожидания', experience: 'Предыдущий опыт', lifestyle: 'Ритм жизни',
-      collaboration: 'Формат совместной работы', health: 'Здоровье и ограничения', safety: 'Проверка безопасности',
+      collaboration: 'Формат совместной работы', warning: 'Важная информация',
       primary_goal: 'Главная цель', success_definition: 'Критерий результата', time_expectations: 'Желаемый срок',
       previous_experience: 'Опыт', what_worked: 'Что работало', what_did_not_work: 'Что не подошло',
       schedule: 'Распорядок', sleep: 'Сон', activity: 'Активность', constraints: 'Что может мешать присылать данные',
       daily_tracking: 'Готовность присылать фото или сообщения', feedback_style: 'Формат обратной связи', expectations_from_curator: 'Ожидания от куратора',
-      chronic_conditions_status: 'Есть ли состояния или диагнозы',
-      chronic_conditions: 'Состояния и диагнозы', medications: 'Лекарства и добавки', injuries_operations: 'Травмы и операции',
-      medications_status: 'Есть ли лекарства или добавки',
-      injuries_operations_status: 'Есть ли травмы или операции',
-      allergies_status: 'Есть ли аллергии',
-      allergies: 'Аллергии', pregnancy_lactation: 'Беременность / ГВ', eating_disorder_history: 'Опыт РПП', doctor_restrictions: 'Ограничения врача',
-      doctor_restrictions_status: 'Есть ли ограничения врача',
-      acute_symptoms: 'Острые симптомы', recent_surgery: 'Недавняя операция / травма', active_ed_concern: 'Трудности с пищевым поведением',
-      medical_supervision: 'Наблюдение врача', details: 'Дополнительный контекст',
+      acknowledged_at: 'Подтверждение предупреждения', text_version: 'Версия текста предупреждения',
     };
     const DECISION_CHECKLIST_LABELS = {
       within_scope: 'Запрос находится в пределах услуг HEYS',
       understands_boundaries: 'Человек понимает, что HEYS не лечит',
       ready_to_track: 'Готов регулярно присылать данные в течение недели',
       realistic_expectations: 'Ожидания от результата и куратора реалистичны',
-      safe_format: 'Факторы безопасности разобраны; формат сопровождения безопасен с учётом ограничений',
+      safe_format: 'Клиент подтвердил предупреждение перед анкетой; формат сопровождения обсуждается на пробной неделе',
     };
 
     const ANSWER_VALUE_LABELS = {
       none: 'Начинает впервые', self: 'Самостоятельно', specialist: 'Со специалистом', both: 'Самостоятельно и со специалистом',
       mostly: 'Скорее да, но возможны пропуски',
       concise: 'Коротко и по делу', detailed: 'Подробно с объяснениями', gentle: 'Мягко и постепенно', direct: 'Прямо и требовательно',
-      pregnancy: 'Беременность', lactation: 'Грудное вскармливание', not_applicable: 'Не применимо',
-      past: 'Да, в прошлом', current: 'Да, сейчас', unsure: 'Пока не уверен',
     };
     const renderAnswerValue = (value, section, key) => {
       if (value === true) return 'Да';

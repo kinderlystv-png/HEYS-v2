@@ -1389,7 +1389,8 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const hasSupplementsUnmark = args.supplements_unmark !== undefined && args.supplements_unmark !== null;
       const hasSupplementsTiming = args.supplements_timing !== undefined && args.supplements_timing !== null;
       const hasRefeed = args.refeed_day !== undefined && args.refeed_day !== null;
-      const needsProfile = hasSupplementsMark || hasSupplementsUnmark || hasSupplementsTiming;
+      const needsProfile = hasSupplementsMark || hasSupplementsUnmark || hasSupplementsTiming
+        || hasPlannedSet || hasPlannedAdd || hasPlannedRemove;
       const current = await readDay(date);
       let working = current;
       const applied = [];
@@ -1397,6 +1398,23 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       if (needsProfile) {
         const blobs = await readMany([profile.PROFILE_KEY]);
         profileBlob = blobs[profile.PROFILE_KEY];
+      }
+      const supplementsWriteRequested = hasPlannedSet || hasPlannedAdd || hasPlannedRemove
+        || hasSupplementsMark || hasSupplementsUnmark || hasSupplementsTiming;
+      if (supplementsWriteRequested && !(profileBlob && profileBlob.supplementsTrackingEnabled === true)) {
+        throw new ToolError('supplements_tracking_disabled',
+          'Трекинг добавок выключен в профиле клиента — включи supplements_tracking_enabled через heys_update_profile.');
+      }
+      if (hasPlannedSet || hasPlannedAdd) {
+        const rawIds = [
+          ...(hasPlannedSet && Array.isArray(args.supplements_planned) ? args.supplements_planned : []),
+          ...(hasPlannedAdd && Array.isArray(args.supplements_planned_add) ? args.supplements_planned_add : []),
+        ];
+        const customIds = rawIds.filter((id) => String(id).startsWith('custom_'));
+        if (customIds.length) {
+          throw new ToolError('invalid_field',
+            `Свободный текст добавок отключён — custom_* не принимаются: ${customIds.join(', ')}.`);
+        }
       }
       try {
         const updated = day.updateDayFields(working, fields, { nowMs, clientId, byCurator });
@@ -1551,7 +1569,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       // для steps_goal и для итогового статуса, чтобы не читать карточку дважды.
       let currentProfile;
       let profileForStatus;
-      if (hasStepsGoal || hasCycleDay || hasCycleStatus) {
+      if (hasStepsGoal || hasCycleDay || hasCycleStatus || hasMeasurements || hasSupplements) {
         const blobs = await readMany([profile.PROFILE_KEY]);
         currentProfile = blobs[profile.PROFILE_KEY];
         profileForStatus = currentProfile;
@@ -1560,6 +1578,22 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         && !(currentProfile && currentProfile.gender === 'Женский' && currentProfile.cycleTrackingEnabled === true)) {
         throw new ToolError('cycle_tracking_disabled',
           'Трекинг цикла выключен в профиле клиента — тот же гейт, что в приложении. Включи его heys_update_profile, прежде чем писать cycle_day/cycle_status.');
+      }
+      if (hasMeasurements && !(currentProfile && currentProfile.measurementsTrackingEnabled === true)) {
+        throw new ToolError('measurements_tracking_disabled',
+          'Трекинг замеров выключен в профиле клиента — включи measurements_tracking_enabled через heys_update_profile.');
+      }
+      if (hasSupplements && !(currentProfile && currentProfile.supplementsTrackingEnabled === true)) {
+        throw new ToolError('supplements_tracking_disabled',
+          'Трекинг добавок выключен в профиле клиента — включи supplements_tracking_enabled через heys_update_profile.');
+      }
+      if (hasSupplements) {
+        const ids = Array.isArray(args.supplements) ? args.supplements : [];
+        const customIds = ids.filter((id) => String(id).startsWith('custom_'));
+        if (customIds.length) {
+          throw new ToolError('invalid_field',
+            `Свободный текст добавок отключён — custom_* не принимаются: ${customIds.join(', ')}.`);
+        }
       }
       if (hasCycleDay) {
         const n = Number(args.cycle_day);
@@ -2128,6 +2162,19 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       let plannedChanged = [];
       let plannedList = null;
       if (hasPlanned) {
+        if (!(profileValue && profileValue.supplementsTrackingEnabled === true)) {
+          throw new ToolError('supplements_tracking_disabled',
+            'Трекинг добавок выключен в профиле клиента — включи supplements_tracking_enabled через heys_update_profile.');
+        }
+        const rawPlanned = [
+          ...(args.planned_supplements != null && Array.isArray(args.planned_supplements) ? args.planned_supplements : []),
+          ...(args.planned_supplements_add != null && Array.isArray(args.planned_supplements_add) ? args.planned_supplements_add : []),
+        ];
+        const customIds = rawPlanned.filter((id) => String(id).startsWith('custom_'));
+        if (customIds.length) {
+          throw new ToolError('invalid_field',
+            `Свободный текст добавок отключён — custom_* не принимаются: ${customIds.join(', ')}.`);
+        }
         try {
           const plannedPatch = day.applyPlannedSupplementsToProfile(profileValue, args, nowMs);
           profileValue = plannedPatch.value;
@@ -2284,7 +2331,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_update_profile',
-    description: 'Изменить настройки клиента, которые куратор обычно вбивает во вкладке «Пользователь»: рост, вес, целевой вес, дату рождения, пол, норму сна, целевой дефицит, цель по шагам, трекинг цикла, доступ с десктопа, курс добавок (planned_supplements). Передавай только те поля, которые действительно меняешь: остальные останутся как были. Имя клиента отсюда не меняется. Курс можно заменить целиком (planned_supplements), добавить (planned_supplements_add) или убрать (planned_supplements_remove) — id из каталога vitD, omega3, … или custom_*. По умолчанию новый курс синхронизируется в план сегодняшнего дня; sync_planned_to_day: false — только профиль.',
+    description: 'Изменить настройки клиента, которые куратор обычно вбивает во вкладке «Пользователь»: рост, вес, целевой вес, дату рождения, пол, норму сна, целевой дефицит, цель по шагам, трекинг цикла/замеров/добавок, доступ с десктопа, курс добавок (planned_supplements). Передавай только те поля, которые действительно меняешь: остальные останутся как были. Имя клиента отсюда не меняется. Курс можно заменить целиком (planned_supplements), добавить (planned_supplements_add) или убрать (planned_supplements_remove) — id из каталога vitD, omega3, … (custom_* отключены). По умолчанию новый курс синхронизируется в план сегодняшнего дня; sync_planned_to_day: false — только профиль.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -2300,6 +2347,8 @@ const TOOL_SCHEMAS = [
         deficit_pct_target: { type: 'number', description: 'Целевой дефицит калорий в процентах, от -50 до 50.' },
         steps_goal: { type: 'integer', description: 'Цель по шагам за день.' },
         cycle_tracking_enabled: { type: 'boolean', description: 'Трекинг менструального цикла.' },
+        measurements_tracking_enabled: { type: 'boolean', description: 'Трекинг замеров тела (талия, бёдра и т.д.).' },
+        supplements_tracking_enabled: { type: 'boolean', description: 'Трекинг витаминов и добавок.' },
         desktop_allowed: { type: 'boolean', description: 'Разрешить клиенту вход с десктопа.' },
         planned_supplements: {
           type: 'array', items: { type: 'string' },

@@ -1,0 +1,260 @@
+// heys_health_features_v1.js — optional health features (cycle, measurements, supplements)
+(function (global) {
+  'use strict';
+
+  const HEYS = (global.HEYS = global.HEYS || {});
+
+  const DEFAULT_PROFILE_FLAGS = Object.freeze({
+    cycleTrackingEnabled: false,
+    measurementsTrackingEnabled: false,
+    supplementsTrackingEnabled: false,
+  });
+
+  const CONSENT_TYPES = Object.freeze({
+    cycle_tracking: 'pending-owner-text',
+    body_measurements: 'pending-owner-text',
+    supplements_tracking: 'pending-owner-text',
+  });
+
+  const KNOWN_SUPPLEMENT_IDS = new Set([
+    'vitD', 'vitC', 'zinc', 'selenium', 'omega3', 'magnesium', 'b12', 'b6', 'lecithin',
+    'calcium', 'k2', 'collagen', 'glucosamine', 'creatine', 'bcaa', 'protein', 'biotin',
+    'vitE', 'hyaluronic', 'iron', 'folic', 'melatonin', 'glycine', 'ltheanine', 'coq10',
+    'berberine', 'cinnamon', 'chromium', 'vinegar', 'flaxOil', 'oliveOil', 'fishOil',
+  ]);
+
+  const CYCLE_DAY_FIELDS = ['cycleDay', 'cycleStatus', 'cycleAnsweredAt', 'cycleUpdatedAt'];
+  const MEASUREMENT_FIELDS = ['measurements'];
+  const SUPPLEMENT_DAY_FIELDS = [
+    'supplementsPlanned', 'supplementsPlannedUpdatedAt',
+    'supplementsTaken', 'supplementsTakenAt', 'supplementsTakenMeta', 'supplementsTakenUpdatedAt',
+  ];
+
+  function isCycleTrackingEnabled(profile) {
+    return !!(profile && profile.gender === 'Женский' && profile.cycleTrackingEnabled === true);
+  }
+
+  function isMeasurementsTrackingEnabled(profile) {
+    return !!(profile && profile.measurementsTrackingEnabled === true);
+  }
+
+  function isSupplementsTrackingEnabled(profile) {
+    return !!(profile && profile.supplementsTrackingEnabled === true);
+  }
+
+  function isKnownSupplementId(id) {
+    if (!id) return false;
+    const value = String(id);
+    if (value.startsWith('custom_')) return false;
+    return KNOWN_SUPPLEMENT_IDS.has(value);
+  }
+
+  function hasOwnData(value) {
+    if (value == null) return false;
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'object') return Object.keys(value).length > 0;
+    return true;
+  }
+
+  function nullOutFields(target, fields) {
+    let changed = false;
+    const next = { ...target };
+    for (const field of fields) {
+      if (!Object.prototype.hasOwnProperty.call(next, field) && next[field] == null) continue;
+      if (next[field] == null) continue;
+      next[field] = null;
+      changed = true;
+    }
+    return changed ? next : target;
+  }
+
+  function purgeCycleDataFromDay(day) {
+    if (!day || typeof day !== 'object') return day;
+    return nullOutFields(day, CYCLE_DAY_FIELDS);
+  }
+
+  function purgeMeasurementsFromDay(day) {
+    if (!day || typeof day !== 'object') return day;
+    return nullOutFields(day, MEASUREMENT_FIELDS);
+  }
+
+  function purgeSupplementsFromDay(day) {
+    if (!day || typeof day !== 'object') return day;
+    return nullOutFields(day, SUPPLEMENT_DAY_FIELDS);
+  }
+
+  function purgeCycleDataFromProfile(profile) {
+    if (!profile || typeof profile !== 'object') return profile;
+    return { ...profile, cycleTrackingEnabled: false };
+  }
+
+  function purgeMeasurementsFromProfile(profile) {
+    if (!profile || typeof profile !== 'object') return profile;
+    return { ...profile, measurementsTrackingEnabled: false };
+  }
+
+  function purgeSupplementsFromProfile(profile) {
+    if (!profile || typeof profile !== 'object') return profile;
+    const next = {
+      ...profile,
+      supplementsTrackingEnabled: false,
+      plannedSupplements: [],
+      customSupplements: [],
+      supplementSettings: {},
+      supplementHistory: {},
+    };
+    return next;
+  }
+
+  /**
+   * Strip health fields when respective tracking flag is explicitly disabled.
+   * Unknown profile (null/undefined) → leave day untouched (boot-race safe).
+   */
+  function stripDisabledHealthFields(day, profile) {
+    if (!day || typeof day !== 'object') return day;
+    if (!profile || typeof profile !== 'object') return day;
+
+    let next = day;
+    if (!isCycleTrackingEnabled(profile)) {
+      const purged = purgeCycleDataFromDay(next);
+      if (purged !== next) next = purged;
+    }
+    if (!isMeasurementsTrackingEnabled(profile)) {
+      const purged = purgeMeasurementsFromDay(next);
+      if (purged !== next) next = purged;
+    }
+    if (!isSupplementsTrackingEnabled(profile)) {
+      const purged = purgeSupplementsFromDay(next);
+      if (purged !== next) next = purged;
+    }
+    return next;
+  }
+
+  function gateHealthFieldsForOwner(day, profile) {
+    return stripDisabledHealthFields(day, profile);
+  }
+
+  const FEATURE_TOGGLES = Object.freeze({
+    cycleTrackingEnabled: {
+      consentType: 'cycle_tracking',
+      label: 'Трекинг цикла',
+      purgeDay: purgeCycleDataFromDay,
+      purgeProfile: purgeCycleDataFromProfile,
+      visible: (profile) => profile && profile.gender === 'Женский',
+    },
+    measurementsTrackingEnabled: {
+      consentType: 'body_measurements',
+      label: 'Замеры тела',
+      purgeDay: purgeMeasurementsFromDay,
+      purgeProfile: purgeMeasurementsFromProfile,
+      visible: () => true,
+    },
+    supplementsTrackingEnabled: {
+      consentType: 'supplements_tracking',
+      label: 'Добавки',
+      purgeDay: purgeSupplementsFromDay,
+      purgeProfile: purgeSupplementsFromProfile,
+      visible: () => true,
+    },
+  });
+
+  function scopedDayKeys() {
+    const keys = [];
+    try {
+      const cid = (HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '').toLowerCase();
+      const prefix = cid ? `heys_${cid}_dayv2_` : 'heys_dayv2_';
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(prefix)) keys.push(key);
+      }
+    } catch (_) { /* noop */ }
+    return keys;
+  }
+
+  function purgeLocalDays(purgeDayFn) {
+    const readDay = (key) => {
+      try {
+        if (HEYS.store && typeof HEYS.store.get === 'function') {
+          const base = key.replace(/^heys_[0-9a-f-]{36}_/, '').replace(/^heys_/, '');
+          return HEYS.store.get(base, null);
+        }
+        const raw = localStorage.getItem(key);
+        if (!raw) return null;
+        const fn = HEYS.store?.decompress;
+        return fn ? fn(raw) : JSON.parse(raw);
+      } catch (_) { return null; }
+    };
+    const writeDay = (key, value) => {
+      try {
+        if (HEYS.store && typeof HEYS.store.set === 'function') {
+          const base = key.replace(/^heys_[0-9a-f-]{36}_/, '').replace(/^heys_/, '');
+          HEYS.store.set(base, value);
+          return;
+        }
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (_) { /* noop */ }
+    };
+    for (const key of scopedDayKeys()) {
+      const day = readDay(key);
+      if (!day || typeof day !== 'object') continue;
+      const purged = purgeDayFn(day);
+      if (purged !== day) writeDay(key, purged);
+    }
+  }
+
+  /**
+   * Enable/disable optional health feature with consent gate and local purge on disable.
+   * Returns true when toggle should be applied to profile.
+   */
+  async function requestHealthFeatureToggle(flagKey, nextEnabled) {
+    const cfg = FEATURE_TOGGLES[flagKey];
+    if (!cfg) return false;
+    if (nextEnabled) {
+      const ok = global.confirm(
+        `Текст согласия на «${cfg.label}» будет предоставлен владельцем проекта.\n\nВключить функцию?`
+      );
+      if (!ok) return false;
+      const version = CONSENT_TYPES[cfg.consentType] || 'pending-owner-text';
+      if (HEYS.YandexAPI && typeof HEYS.YandexAPI.logConsentsBySession === 'function') {
+        const result = await HEYS.YandexAPI.logConsentsBySession([{
+          type: cfg.consentType,
+          version,
+          granted: true,
+        }]);
+        if (result && result.error) return false;
+      }
+      return true;
+    }
+    const ok = global.confirm(
+      `Выключение «${cfg.label}» удалит все сохранённые данные этой функции. Продолжить?`
+    );
+    if (!ok) return false;
+    purgeLocalDays(cfg.purgeDay);
+    if (HEYS.YandexAPI && typeof HEYS.YandexAPI.revokeConsentBySession === 'function') {
+      await HEYS.YandexAPI.revokeConsentBySession(cfg.consentType);
+    }
+    return true;
+  }
+
+  HEYS.healthFeatures = {
+    DEFAULT_PROFILE_FLAGS,
+    CONSENT_TYPES,
+    KNOWN_SUPPLEMENT_IDS,
+    isCycleTrackingEnabled,
+    isMeasurementsTrackingEnabled,
+    isSupplementsTrackingEnabled,
+    isKnownSupplementId,
+    stripDisabledHealthFields,
+    gateHealthFieldsForOwner,
+    purgeCycleDataFromDay,
+    purgeMeasurementsFromDay,
+    purgeSupplementsFromDay,
+    purgeCycleDataFromProfile,
+    purgeMeasurementsFromProfile,
+    purgeSupplementsFromProfile,
+    hasOwnData,
+    FEATURE_TOGGLES,
+    requestHealthFeatureToggle,
+    purgeLocalDays,
+  };
+})(typeof window !== 'undefined' ? window : globalThis);

@@ -40,6 +40,7 @@ export const LEGACY_BUNDLES = {
         'heys_sync_queue_runtime_pure_v1.js',
         'heys_storage_key_contract_v1.js',
         'heys_write_context_health_v1.js',
+        'heys_health_features_v1.js',
         'heys_perf_main_thread_v1.js',
         'heys_sync_merge_v1.js',
         'heys_day_mutation_guard_v1.js',

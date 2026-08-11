@@ -1468,8 +1468,7 @@ function applyMeasurements(day, values, { nowMs, clientId } = {}) {
 /**
  * Каталог добавок — те же id, что в apps/web/heys_supplements_v1.js
  * (SUPPLEMENTS_CATALOG). Дублируется по той же причине, что COLD_EXPOSURE_TYPES:
- * клиентский бандл и облачная функция не делят код. `custom_*` — пользовательские
- * записи из приложения, пропускаются без проверки состава.
+ * клиентский бандл и облачная функция не делят код. `custom_*` больше не принимаются.
  */
 const SUPPLEMENT_IDS = new Set([
   'vitD', 'vitC', 'zinc', 'selenium', 'omega3', 'magnesium', 'b12', 'b6', 'lecithin',
@@ -1493,7 +1492,7 @@ const SUPPLEMENT_CATALOG_TIMING = {
 };
 
 function isValidSupplementId(id) {
-  return SUPPLEMENT_IDS.has(id) || String(id).startsWith('custom_');
+  return SUPPLEMENT_IDS.has(id);
 }
 
 function validateSupplementIds(ids) {
@@ -1538,7 +1537,7 @@ function filterSupplementsByTimingSlot(ids, slot, profile) {
   });
 }
 
-/** Добавки на день — id из каталога или пользовательские `custom_*`. */
+/** Добавки на день — id из каталога (custom_* отключены). */
 function applySupplements(day, ids, { nowMs, clientId } = {}) {
   const list = normalizeSupplementList(ids);
   const mutationAt = Math.max(nowMs, (Number(day.supplementsPlannedUpdatedAt) || 0) + 1);
@@ -1760,11 +1759,17 @@ function checkinStatus(day, profile) {
       id: 'measurements', label: 'замеры тела', required: false,
       done: Boolean(day.measurements && ['waist', 'hips', 'thigh', 'biceps'].some((k) => hasNum(day.measurements[k]))),
       value: day.measurements || null,
+      note: (profile && profile.measurementsTrackingEnabled === true)
+        ? undefined
+        : 'трекинг замеров выключен в профиле — шаг в приложении не показывается',
     },
     {
       id: 'supplements', label: 'добавки', required: false,
       done: Array.isArray(day.supplementsPlanned),
       value: day.supplementsPlanned || null,
+      note: (profile && profile.supplementsTrackingEnabled === true)
+        ? undefined
+        : 'трекинг добавок выключен в профиле — шаг в приложении не показывается',
     },
     {
       id: 'cycle', label: 'цикл', required: false,
