@@ -42,24 +42,58 @@ function matchAll(source, pattern) {
     return [...source.matchAll(pattern)].map((m) => m[1]);
 }
 
+const PIN_FUNCTION_DEFINITION = /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+(public\.)?verify_client_pin_v3/i;
+const MIGRATION_DATE = /^(\d{4}-\d{2}-\d{2})/;
+
 /**
- * Самая свежая версия verify_client_pin_v3 в репозитории. Имена миграций
- * начинаются с даты, поэтому лексикографическая сортировка = хронологическая.
+ * Самая свежая версия verify_client_pin_v3 в репозитории. Выбор идёт по дате в
+ * имени миграции, и это единственное хрупкое место теста: две миграции одним
+ * днём, файл без даты или переименование — и сверка молча ушла бы не на тот
+ * файл. Поэтому каждое допущение проверяется вслух и падает с внятным текстом:
+ * тест, который тихо сверяет пустоту, хуже отсутствующего.
  */
 function readLatestPinFunctionSql() {
-    const files = fs
+    const candidates = fs
         .readdirSync(DATABASE_DIR)
         .filter((name) => name.endsWith('.sql'))
-        .filter((name) => {
-            const body = fs.readFileSync(path.join(DATABASE_DIR, name), 'utf8');
-            return /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+(public\.)?verify_client_pin_v3/i.test(body);
-        })
-        .sort();
+        .filter((name) => PIN_FUNCTION_DEFINITION.test(fs.readFileSync(path.join(DATABASE_DIR, name), 'utf8')));
 
-    expect(files.length, 'в database/ не найдено ни одной версии verify_client_pin_v3').toBeGreaterThan(0);
+    expect(
+        candidates.length,
+        'в database/ не найдено ни одного файла с CREATE OR REPLACE FUNCTION verify_client_pin_v3. '
+        + 'Либо функцию переименовали, либо миграции переехали — сверка кодов входа сейчас не проверяет ничего.',
+    ).toBeGreaterThan(0);
 
-    const latest = files[files.length - 1];
-    return { file: latest, sql: fs.readFileSync(path.join(DATABASE_DIR, latest), 'utf8') };
+    const undated = candidates.filter((name) => !MIGRATION_DATE.test(name));
+    expect(
+        undated,
+        `миграции verify_client_pin_v3 без даты в имени: ${undated.join(', ')}. Порядок версий определить нельзя — `
+        + 'переименуйте по образцу ГГГГ-ММ-ДД_описание.sql.',
+    ).toEqual([]);
+
+    const latestDate = candidates
+        .map((name) => name.match(MIGRATION_DATE)[1])
+        .sort()
+        .pop();
+    const latestSameDay = candidates.filter((name) => name.startsWith(latestDate));
+
+    expect(
+        latestSameDay,
+        `verify_client_pin_v3 переопределяют несколько миграций от ${latestDate}: ${latestSameDay.join(', ')}. `
+        + 'Какая из них актуальна — по имени файла не решить; оставьте одну или объедините.',
+    ).toHaveLength(1);
+
+    const file = latestSameDay[0];
+    const sql = fs.readFileSync(path.join(DATABASE_DIR, file), 'utf8');
+
+    // Двойная проверка уже отобранного файла: если отбор когда-нибудь разъедется
+    // с содержимым, тест скажет об этом, а не сверит пустоту.
+    expect(
+        PIN_FUNCTION_DEFINITION.test(sql),
+        `выбранный как актуальный ${file} не содержит определения verify_client_pin_v3.`,
+    ).toBe(true);
+
+    return { file, sql };
 }
 
 describe('контракт кодов отказа на входе клиента', () => {
