@@ -466,12 +466,17 @@
           return;
         }
 
-        // Код верный — сохраняем согласия с методом подписи
+        // Код верный — сохраняем согласия с методом подписи.
+        // Ветка недостижима, пока SMS_VERIFICATION_ENABLED === false (см. выше):
+        // 'sms_code' удалён из CHECK-constraint signature_method
+        // (database/2026-08-11_consents_pin_confirm_signature.sql), поэтому если
+        // флаг когда-нибудь включат обратно, значение здесь тоже нужно решить
+        // заново — это часть будущей схемы подписи, не текущей.
         const consentList = Object.entries(consents).map(([type, granted]) => ({
           type,
           granted,
           version: CURRENT_VERSIONS[type] || '1.0',  // 2026-05-21 fix: без version SQL ставил дефолт 1.1
-          signature_method: type === 'health_data' ? 'sms_code' : 'checkbox'
+          signature_method: 'checkbox'
         }));
 
         // Логируем в Supabase
