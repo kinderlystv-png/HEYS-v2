@@ -46,11 +46,10 @@ const PIN_FUNCTION_DEFINITION = /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+(public\.)?v
 const MIGRATION_DATE = /^(\d{4}-\d{2}-\d{2})/;
 
 /**
- * Самая свежая версия verify_client_pin_v3 в репозитории. Выбор идёт по дате в
- * имени миграции, и это единственное хрупкое место теста: две миграции одним
- * днём, файл без даты или переименование — и сверка молча ушла бы не на тот
- * файл. Поэтому каждое допущение проверяется вслух и падает с внятным текстом:
- * тест, который тихо сверяет пустоту, хуже отсутствующего.
+ * Самая свежая версия verify_client_pin_v3 в репозитории. Выбор: дата в имени,
+ * при нескольких файлах за день — лексикографический хвост (= порядок apply
+ * по sorted filename). Файл без даты — явный отказ: иначе сверка ушла бы
+ * молча не на тот SQL.
  */
 function readLatestPinFunctionSql() {
     const candidates = fs
@@ -71,19 +70,10 @@ function readLatestPinFunctionSql() {
         + 'переименуйте по образцу ГГГГ-ММ-ДД_описание.sql.',
     ).toEqual([]);
 
-    const latestDate = candidates
-        .map((name) => name.match(MIGRATION_DATE)[1])
-        .sort()
-        .pop();
-    const latestSameDay = candidates.filter((name) => name.startsWith(latestDate));
-
-    expect(
-        latestSameDay,
-        `verify_client_pin_v3 переопределяют несколько миграций от ${latestDate}: ${latestSameDay.join(', ')}. `
-        + 'Какая из них актуальна — по имени файла не решить; оставьте одну или объедините.',
-    ).toHaveLength(1);
-
-    const file = latestSameDay[0];
+    // В один день несколько CREATE OR REPLACE — нормально (incremental).
+    // Актуальная = последняя по лексикографическому имени: так же идёт apply
+    // по sorted filename в database/. Не по дате mtime и не «первая попавшаяся».
+    const file = candidates.sort().at(-1);
     const sql = fs.readFileSync(path.join(DATABASE_DIR, file), 'utf8');
 
     // Двойная проверка уже отобранного файла: если отбор когда-нибудь разъедется
