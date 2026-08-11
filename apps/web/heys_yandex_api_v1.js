@@ -42,7 +42,14 @@
   // молча.
   const isReadonlyMode = !!(global.__HEYS_READONLY_MODE__ && global.__HEYS_READONLY_MODE__.enabled);
   const READONLY_ALLOWED_RPC_PREFIX = /^(get_|check_|batch_get_)/;
-  const READONLY_ALLOWED_RPC_EXACT = new Set(['normal_read']);
+  const READONLY_ALLOWED_RPC_EXACT = new Set([
+    'normal_read',
+    'getDayData', // camelCase-исключение из общей snake_case конвенции — чтение дня
+    // verify_client_pin_v3 создаёт сессию (пишет её в БД), но без входа копия
+    // бесполезна целиком: это единственное исключение из «read-only» —
+    // авторизация, а не изменение прикладных данных клиента.
+    'verify_client_pin_v3',
+  ]);
   function isReadonlyAllowedRpc(fnName) {
     return READONLY_ALLOWED_RPC_EXACT.has(fnName) || READONLY_ALLOWED_RPC_PREFIX.test(fnName);
   }
