@@ -804,7 +804,7 @@
                 : h('div', { className: 'insights-priority-action__rank' }, idx + 1),
               h('div', { className: 'insights-priority-action__content' },
                 h('div', { className: 'insights-priority-action__text' }, a.text),
-                a.why && h('div', { className: 'insights-priority-action__why' },
+                !isV4 && a.why && h('div', { className: 'insights-priority-action__why' },
                   h('span', { className: 'insights-priority-action__why-label' }, '💡 '),
                   a.why
                 ),
@@ -2623,25 +2623,6 @@
                   profile: effectiveData.profile,
                   pIndex: effectiveData.pIndex,
                   selectedDate
-                })
-              ),
-              insights.weeklyWrap && h(CollapsibleSection, {
-                title: 'Итоги недели',
-                icon: '📋',
-                defaultOpen: true,
-                infoKey: 'WEEKLY_WRAP',
-                priority: 'LOW'
-              },
-                h(WeeklyWrap, { wrap: insights.weeklyWrap })
-              ),
-              !insights.weeklyWrap && HEYS.weeklyReports?.WeeklyReportCard && h('div', {
-                className: 'insights-tab__section insights-tab__section--low'
-              },
-                h(HEYS.weeklyReports.WeeklyReportCard, {
-                  lsGet,
-                  profile: effectiveData.profile,
-                  pIndex: effectiveData.pIndex,
-                  anchorDate: selectedDate
                 })
               ),
               h('div', { className: 'insights-tab__section insights-tab__section--low' },

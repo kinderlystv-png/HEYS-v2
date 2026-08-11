@@ -57,6 +57,17 @@ describe('Insights tab v4 structure', () => {
     expect(dashboardSource).toContain('Прогноз веса');
     expect(dashboardSource).toContain('insights-v4-detail__disclaimer');
     expect(dashboardSource).toContain('Полнота данных');
+    const detailBlock = dashboardSource.slice(
+      dashboardSource.indexOf('if (useInsightsV4 && showInsightsDetail)'),
+      dashboardSource.indexOf('if (useInsightsV4) {\n        return h(InsightsErrorBoundary'),
+    );
+    expect(detailBlock).not.toContain('WeeklyWrap');
+    expect(detailBlock).not.toContain('WeeklyReportCard');
+  });
+
+  it('v4 priority actions hide duplicate why lines', () => {
+    expect(dashboardSource).toContain('!isV4 && a.why');
+    expect(dashboardSource).toContain("variant: 'v4'");
   });
 
   it('period pills use 7/14/30 days', () => {
