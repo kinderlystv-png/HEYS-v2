@@ -172,33 +172,25 @@
   }
 
   function purgeLocalDays(purgeDayFn) {
-    const readDay = (key) => {
-      try {
-        if (HEYS.store && typeof HEYS.store.get === 'function') {
-          const base = key.replace(/^heys_[0-9a-f-]{36}_/, '').replace(/^heys_/, '');
-          return HEYS.store.get(base, null);
-        }
-        const raw = localStorage.getItem(key);
-        if (!raw) return null;
-        const fn = HEYS.store?.decompress;
-        return fn ? fn(raw) : JSON.parse(raw);
-      } catch (_) { return null; }
-    };
-    const writeDay = (key, value) => {
-      try {
-        if (HEYS.store && typeof HEYS.store.set === 'function') {
-          const base = key.replace(/^heys_[0-9a-f-]{36}_/, '').replace(/^heys_/, '');
-          HEYS.store.set(base, value);
-          return;
-        }
-        localStorage.setItem(key, JSON.stringify(value));
-      } catch (_) { /* noop */ }
-    };
+    // Purge must go through OverlayStore so the interceptor/cloud sync sees the
+    // write. A silent localStorage fallback would delete locally and resurrect
+    // on next sync — worse than failing for consent-withdrawal.
+    if (!HEYS.store || typeof HEYS.store.get !== 'function' || typeof HEYS.store.set !== 'function') {
+      throw new Error(
+        'HEYS.store unavailable: cannot purge health-feature day data without OverlayStore',
+      );
+    }
+    const toBase = (key) => key.replace(/^heys_[0-9a-f-]{36}_/, '').replace(/^heys_/, '');
     for (const key of scopedDayKeys()) {
-      const day = readDay(key);
+      let day;
+      try {
+        day = HEYS.store.get(toBase(key), null);
+      } catch (_) {
+        day = null;
+      }
       if (!day || typeof day !== 'object') continue;
       const purged = purgeDayFn(day);
-      if (purged !== day) writeDay(key, purged);
+      if (purged !== day) HEYS.store.set(toBase(key), purged);
     }
   }
 

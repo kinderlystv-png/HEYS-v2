@@ -12,25 +12,23 @@
  *   - Strict (Phase 5): pass --strict to treat ALL warnings as errors.
  *
  * Allowlist: scripts/bootstrap-bypass-allowlist.txt
- *   Format: one `relative/path/from/repo-root:lineNumber` per line.
- *   Lines starting with `#` are comments.
- *   Stale entries (file migrated) are silently ignored.
+ *   Formats (one per line; `#` starts a comment):
+ *     path::needle     — preferred: matches a setItem line containing needle
+ *                        (stable across line drift)
+ *     path:lineNumber  — legacy; still accepted
+ *   Stale entries are silently ignored.
  *
  * Excluded from scan:
- *   - heys_storage_supabase_v1.js  (the interceptor itself — has 42 intentional writes)
- *   - heys_storage_registry_v1.js  (audit infra — writes to audit keys are intentional)
- *   - heys_advice_bundle_v1.js     (generated from advice/*.js sources)
- *   - heys_day_bundle_v1.js        (generated from day sources)
- *   - heys_day_meals_bundle_v1.js  (generated from meals sources)
+ *   - storage interceptor / registry
+ *   - generated `*_bundle_v1.js` (violations live in sources)
  *
- * NOTE (C1 from 5th-audit): The primary target is `localStorage.setItem`.
- * `originalSetItem` is only used as a parameter name in cloud_storage_utils_v1.js
- * (not a bypass), so no extra grep needed at this phase. Phase 5 re-audits.
+ * Comments are not violations: line comments and block comments are skipped
+ * even when they mention localStorage.setItem.
  */
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, existsSync, writeFileSync } from 'node:fs';
-import { resolve, relative } from 'node:path';
+import { resolve } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
 const ALLOWLIST_REL = 'scripts/bootstrap-bypass-allowlist.txt';
@@ -40,20 +38,24 @@ const AUTO_FIX = process.argv.includes('--auto-fix');
 const REF = getCliOption('--ref');
 const PATTERN = /localStorage\.setItem\s*\(/;
 
-// Files excluded from scan (generated bundles or intentional interceptors).
 const EXCLUDED_FILES = new Set([
   'heys_storage_supabase_v1.js',
   'heys_storage_registry_v1.js',
-  'heys_advice_bundle_v1.js',
-  'heys_day_bundle_v1.js',
-  'heys_day_meals_bundle_v1.js',
 ]);
 
-// Directories and filename patterns to scan.
+function isGeneratedBundle(fileName) {
+  return /_bundle_v\d+\.js$/.test(fileName) || fileName.endsWith('_bundle.js');
+}
+
 const SCAN_TARGETS = [
-  { dir: 'apps/web',         match: (f) => f.startsWith('heys_') && f.endsWith('.js') && !EXCLUDED_FILES.has(f) },
-  { dir: 'apps/web/advice',  match: (f) => f.endsWith('.js') },
-  { dir: 'apps/web/insights', match: (f) => f.endsWith('.js') },
+  {
+    dir: 'apps/web',
+    match: (f) =>
+      f.startsWith('heys_') && f.endsWith('.js') && !EXCLUDED_FILES.has(f) && !isGeneratedBundle(f),
+  },
+  { dir: 'apps/web/advice', match: (f) => f.endsWith('.js') && !isGeneratedBundle(f) },
+  { dir: 'apps/web/insights', match: (f) => f.endsWith('.js') && !isGeneratedBundle(f) },
+  { dir: 'apps/web/day', match: (f) => f.endsWith('.js') && !isGeneratedBundle(f) },
 ];
 
 function getCliOption(name) {
@@ -86,11 +88,60 @@ function listDir(dir) {
   return output.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
 }
 
+/** True when localStorage.setItem appears in executable code on this line. */
+function lineHasCodeSetItem(line) {
+  // Strip string literals so // inside strings is not treated as a comment.
+  // Avoid backticks in the regex character class — they confuse some parsers
+  // when this file itself uses template literals nearby.
+  let cleaned = line.replace(/(['"])(?:\\.|(?!\1).)*\1/g, '""');
+  cleaned = cleaned.replace(/`(?:\\.|[^`])*`/g, '""');
+  cleaned = cleaned.replace(/\/\*[\s\S]*?\*\//g, '');
+  const lineComment = cleaned.indexOf('//');
+  if (lineComment >= 0) cleaned = cleaned.slice(0, lineComment);
+  return PATTERN.test(cleaned);
+}
+
+function collectHitsFromContent(relPath, content) {
+  const hits = [];
+  const lines = content.split('\n');
+  let inBlockComment = false;
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+    let scan = '';
+    for (let j = 0; j < line.length; j++) {
+      if (!inBlockComment && line[j] === '/' && line[j + 1] === '*') {
+        inBlockComment = true;
+        scan += ' ';
+        j++;
+        continue;
+      }
+      if (inBlockComment && line[j] === '*' && line[j + 1] === '/') {
+        inBlockComment = false;
+        scan += ' ';
+        j++;
+        continue;
+      }
+      scan += inBlockComment ? ' ' : line[j];
+    }
+    if (!lineHasCodeSetItem(scan)) continue;
+    hits.push({
+      path: relPath,
+      line: i + 1,
+      snippet: line.trim().slice(0, 100),
+    });
+  }
+  return hits;
+}
+
 function listScanFiles() {
   const relFiles = [];
   for (const { dir, match } of SCAN_TARGETS) {
     let files;
-    try { files = listDir(dir); } catch (_) { continue; }
+    try {
+      files = listDir(dir);
+    } catch (_) {
+      continue;
+    }
     for (const file of files) {
       if (match(file)) relFiles.push(`${dir}/${file}`);
     }
@@ -98,104 +149,98 @@ function listScanFiles() {
   return relFiles;
 }
 
-function grepRefMatches(relFiles) {
-  if (!relFiles.length) return [];
-  let output = '';
-  try {
-    output = execFileSync(
-      'git',
-      ['grep', '-n', '-E', 'localStorage\\.setItem[[:space:]]*\\(', REF, '--', ...relFiles],
-      {
-        cwd: ROOT,
-        encoding: 'utf8',
-        maxBuffer: 16 * 1024 * 1024,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      },
-    );
-  } catch (error) {
-    if (error.status === 1) return [];
-    throw error;
-  }
-  return output.split(/\r?\n/).filter(Boolean);
-}
-
 // ── Read allowlist ─────────────────────────────────────────────────────────
-const allowlist = new Set();
+/** @type {{ kind: 'line'|'needle', path: string, line?: number, needle?: string, raw: string }[]} */
+const allowEntries = [];
 try {
   const lines = readText(ALLOWLIST_REL).split('\n');
   for (const line of lines) {
     const t = line.trim();
-    if (t && !t.startsWith('#')) allowlist.add(t);
+    if (!t || t.startsWith('#')) continue;
+    const needleSep = t.indexOf('::');
+    if (needleSep > 0) {
+      allowEntries.push({
+        kind: 'needle',
+        path: t.slice(0, needleSep),
+        needle: t.slice(needleSep + 2),
+        raw: t,
+      });
+      continue;
+    }
+    const m = /^(.+):(\d+)$/.exec(t);
+    if (m) {
+      allowEntries.push({
+        kind: 'line',
+        path: m[1],
+        line: Number(m[2]),
+        raw: t,
+      });
+    }
   }
 } catch {
   process.stderr.write(`[WARN]  Allowlist not found: ${ALLOWLIST_FILE}\n`);
   process.stderr.write(`        Run with --generate-allowlist to create it.\n`);
 }
 
-// ── Scan ───────────────────────────────────────────────────────────────────
-const hits = [];
-
-if (REF) {
-  for (const line of grepRefMatches(listScanFiles())) {
-    const match = /^(?:[^:]+:)?([^:]+):(\d+):(.*)$/.exec(line);
-    if (!match) continue;
-    const ref = `${match[1]}:${match[2]}`;
-    hits.push({ ref, listed: allowlist.has(ref), snippet: match[3].trim().slice(0, 100) });
+function isListed(hit) {
+  for (const entry of allowEntries) {
+    if (entry.path !== hit.path) continue;
+    if (entry.kind === 'line' && entry.line === hit.line) return true;
+    if (entry.kind === 'needle' && entry.needle && hit.snippet.includes(entry.needle)) return true;
   }
-} else {
-  for (const { dir, match } of SCAN_TARGETS) {
-    let files;
-    try { files = listDir(dir); } catch (_) { continue; }
+  return false;
+}
 
-    for (const file of files) {
-      if (!match(file)) continue;
-      const relPath = `${dir}/${file}`;
-      let content;
-      try { content = readText(relPath); } catch (_) { continue; }
-      const lines = content.split('\n');
-      for (let i = 0; i < lines.length; i++) {
-        if (PATTERN.test(lines[i])) {
-          const ref = `${relPath}:${i + 1}`;
-          const listed = allowlist.has(ref);
-          hits.push({ ref, listed, snippet: lines[i].trim().slice(0, 100) });
-        }
-      }
-    }
+// ── Scan ───────────────────────────────────────────────────────────────────
+const rawHits = [];
+for (const relPath of listScanFiles()) {
+  let content;
+  try {
+    content = readText(relPath);
+  } catch (_) {
+    continue;
+  }
+  for (const hit of collectHitsFromContent(relPath, content)) {
+    rawHits.push(hit);
   }
 }
 
-// ── Auto-bump drift ────────────────────────────────────────────────────────
-// Когда параллельный agent сдвинул номера строк в файле, у allowlist остаются
-// stale entries. Если для файла F: количество hits == количество allowlist-
-// entries, и сами номера различаются — это однозначный line drift (не новые
-// нелистованные writes). Авто-перепишем allowlist на актуальные номера.
-//
-// Если count не совпадает — что-то реальное (новый setItem или удалённый):
-// auto-fix НЕ применяется, hook отчитывается как раньше.
-if (AUTO_FIX && !REF) {
-  const hitsByFile = new Map();
-  for (const hit of hits) {
-    const file = hit.ref.split(':')[0];
-    if (!hitsByFile.has(file)) hitsByFile.set(file, []);
-    hitsByFile.get(file).push(Number(hit.ref.split(':')[1]));
-  }
-  const allowlistByFile = new Map();
-  for (const entry of allowlist) {
-    const [file] = entry.split(':');
-    if (!allowlistByFile.has(file)) allowlistByFile.set(file, []);
-    allowlistByFile.get(file).push(Number(entry.split(':')[1]));
-  }
+const hits = rawHits.map((hit) => ({
+  ref: `${hit.path}:${hit.line}`,
+  path: hit.path,
+  line: hit.line,
+  listed: isListed(hit),
+  snippet: hit.snippet,
+}));
 
+// ── Auto-bump: only legacy path:line entries, same-count drift ─────────────
+if (AUTO_FIX && !REF) {
   let allowlistText = readFileSync(ALLOWLIST_FILE, 'utf8');
   const bumped = [];
 
+  const hitsByFile = new Map();
+  for (const hit of hits) {
+    if (!hitsByFile.has(hit.path)) hitsByFile.set(hit.path, []);
+    hitsByFile.get(hit.path).push(hit.line);
+  }
+
+  const lineEntriesByFile = new Map();
+  for (const entry of allowEntries) {
+    if (entry.kind !== 'line') continue;
+    if (!lineEntriesByFile.has(entry.path)) lineEntriesByFile.set(entry.path, []);
+    lineEntriesByFile.get(entry.path).push(entry.line);
+  }
+
   for (const [file, hitLines] of hitsByFile) {
-    const allowLines = allowlistByFile.get(file) || [];
+    const allowLines = lineEntriesByFile.get(file) || [];
+    // Only auto-bump when this file has no needle entries (semantic list owns it).
+    const hasNeedle = allowEntries.some((e) => e.kind === 'needle' && e.path === file);
+    if (hasNeedle) continue;
     if (allowLines.length === 0 || allowLines.length !== hitLines.length) continue;
 
     const hSorted = [...hitLines].sort((a, b) => a - b);
     const aSorted = [...allowLines].sort((a, b) => a - b);
-    if (hSorted.length === aSorted.length && hSorted.every((v, i) => v === aSorted[i])) continue;
+    if (hSorted.every((v, i) => v === aSorted[i])) continue;
 
     for (let i = 0; i < hSorted.length; i++) {
       const oldRef = `${file}:${aSorted[i]}`;
@@ -214,15 +259,7 @@ if (AUTO_FIX && !REF) {
     writeFileSync(ALLOWLIST_FILE, allowlistText);
     process.stdout.write(`\n🔧 Auto-bumped ${bumped.length} allowlist entr(ies) for line drift:\n`);
     bumped.forEach((b) => process.stdout.write(`   ${b}\n`));
-    process.stdout.write(`   → ${relative(ROOT, ALLOWLIST_FILE)} updated; stage it together with your source change.\n\n`);
-
-    // Перестроить allowlist Set и переклассифицировать hits для корректного отчёта.
-    allowlist.clear();
-    for (const line of allowlistText.split('\n')) {
-      const t = line.trim();
-      if (t && !t.startsWith('#')) allowlist.add(t);
-    }
-    for (const hit of hits) hit.listed = allowlist.has(hit.ref);
+    process.stdout.write(`   → Prefer path::needle entries to avoid future drift.\n\n`);
   }
 }
 
@@ -248,8 +285,8 @@ process.stdout.write(
 if (errors > 0) {
   process.stderr.write(
     `\n❌ ${errors} localStorage.setItem call(s) not in allowlist.\n` +
-    `   Migrate to HEYS.utils.lsSet, OR add to scripts/bootstrap-bypass-allowlist.txt\n` +
-    `   if the write must happen before Store loads (bootstrap-bypass).\n`,
+      `   Migrate to HEYS.utils.lsSet / OverlayStore, OR add to ${ALLOWLIST_REL}\n` +
+      `   Prefer stable form: path::needle (substring on the setItem line).\n`,
   );
   process.exit(1);
 }

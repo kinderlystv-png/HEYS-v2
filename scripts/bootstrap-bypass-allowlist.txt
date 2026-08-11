@@ -1,16 +1,20 @@
 # bootstrap-bypass-allowlist.txt
-# Phase 3 baseline: all known direct localStorage.setItem sites as of 2026-04-26.
+# Phase 3 baseline: known direct localStorage.setItem sites (updated 2026-08-12).
 #
-# Format: relative/path/from/repo-root:lineNumber
+# Format (prefer needle — survives line drift):
+#   path::needle       — matches a setItem line containing needle
+#   path:lineNumber    — legacy; still accepted; prefer migrating to ::needle
 #
 # Categories (in comments below each block):
 #   [bootstrap]  — written before Store loads; must stay direct; never migrate
+#   [auth bootstrap] / [theme prefs] / [sync-UI] / [day UI] — not diary OverlayStore
 #   [phase4]     — migrate in Phase 4 (quota meter phase)
 #   [phase3]     — migrate in Phase 3 (advice sources) — REMOVE entries when done
 #   [audit-infra]— internal audit writes; excluded from scan but listed for reference
 #
+# Generated *_bundle_v1.js are excluded from the scanner — list sources, not bundles.
 # After migrating a file, remove its entries from this list.
-# Stale entries (file no longer has the setItem at that line) are silently ignored.
+# Stale entries are silently ignored.
 apps/web/advice/_core.js:1025
 apps/web/advice/_core.js:1113
 apps/web/advice/_core.js:1179
@@ -37,10 +41,9 @@ apps/web/advice/_outcomes.js:132
 apps/web/advice/_outcomes.js:170
 apps/web/heys_add_product_step_v1.js:180
 apps/web/heys_app_gate_flow_v1.js:48
-apps/web/heys_app_hooks_v1.js:202
-apps/web/heys_app_hooks_v1.js:203
-apps/web/heys_app_hooks_v1.js:204
-apps/web/heys_app_hooks_v1.js:552
+# [sync-UI] Pending sync toast queue — device-local UI feedback, not diary OverlayStore data.
+# Needle form: stable across line drift when hooks file is edited.
+apps/web/heys_app_hooks_v1.js::PENDING_SYNC_UI_QUEUE_KEY
 # [local-only] Version-bound consent proof must survive reload/offline without entering the cloud sync queue.
 apps/web/heys_app_runtime_effects_v1.js:22
 apps/web/heys_app_shell_v1.js:145
@@ -61,9 +64,12 @@ apps/web/heys_app_tabs_v1.js:786
 apps/web/heys_app_update_notifications_v1.js:17
 apps/web/heys_audio_v1.js:15
 apps/web/heys_audio_v1.js:75
-apps/web/heys_auth_v1.js:16
-apps/web/heys_auth_v1.js:343
-apps/web/heys_auth_v1.js:350
+# [auth bootstrap] Session hints + PIN client id + pending name — before OverlayStore is ready;
+# not diary KV. Prefer path::needle so edits to heys_auth_v1.js do not re-break push.
+apps/web/heys_auth_v1.js::JSON.stringify(v)
+apps/web/heys_auth_v1.js::setItem(key, '1')
+apps/web/heys_auth_v1.js::heys_pin_auth_client
+apps/web/heys_auth_v1.js::heys_pending_client_name
 apps/web/heys_cascade_card_v1.js:1268
 apps/web/heys_cascade_card_v1.js:3864
 apps/web/heys_cascade_card_v1.js:3873
@@ -91,11 +97,7 @@ apps/web/heys_core_v12.js:4385
 apps/web/heys_core_v12.js:5644
 apps/web/heys_core_v12.js:5755
 apps/web/heys_cycle_v1.js:44
-apps/web/heys_day_core_bundle_v1.js:2253
-apps/web/heys_day_core_bundle_v1.js:4024
-apps/web/heys_day_core_bundle_v1.js:4634
-apps/web/heys_day_core_bundle_v1.js:489
-apps/web/heys_day_core_bundle_v1.js:53
+# Generated bundles excluded from scanner (2026-08-12); day_core line entries dropped.
 apps/web/heys_day_orphan_alert.js:142
 apps/web/heys_event_log_v1.js:203
 apps/web/heys_day_effects.js:722
@@ -260,11 +262,18 @@ apps/web/heys_app_auth_init_v1.js:545
 apps/web/heys_app_auth_init_v1.js:546
 apps/web/heys_app_auth_init_v1.js:548
 apps/web/heys_app_auth_init_v1.js:620
-apps/web/heys_auth_v1.js:28
-apps/web/heys_auth_v1.js:363
-apps/web/heys_auth_v1.js:371
 apps/web/heys_yandex_api_v1.js:281
 apps/web/heys_yandex_api_v1.js:866
+
+# [theme prefs] UI theme preference — not diary OverlayStore data.
+apps/web/heys_theme_v1.js::global.localStorage.setItem(key, value)
+
+# [day UI] Medical disclaimer + meal chart hint + advice toast prefs — local UI flags /
+# fallbacks after Store/lsSet; not cloud diary writes. Sources scanned; bundles excluded.
+apps/web/day/_advice.js::MEDICAL_DISCLAIMER_KEY
+apps/web/day/_advice.js::JSON.stringify(value)
+apps/web/day/_advice.js::String(value)
+apps/web/day/_meals.js::heys_meal_hint_shown
 
 # Reader preferences use direct storage only as a client-scoped fallback and
 # sync explicitly; reading progress remains device-local UI state.
