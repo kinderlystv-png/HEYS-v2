@@ -1468,7 +1468,7 @@
                 }),
                 React.createElement('div', {
                     ref: expandedPanelRef,
-                    className: 'game-panel-expanded',
+                    className: `game-panel-expanded${HEYS.GamificationScreens?.GamificationSheet ? ' game-panel-expanded--v4' : ''}`,
                     style: {
                         top: `${expandedPanelLayout.top}px`,
                         left: `${expandedPanelLayout.left}px`,

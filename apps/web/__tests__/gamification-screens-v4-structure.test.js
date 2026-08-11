@@ -35,6 +35,22 @@ describe('Gamification screens v4 · structure', () => {
     expect(screensSource).toContain('onboarding');
     expect(screensSource).toContain('STREAK_CORRIDOR_HINT');
     expect(screensSource).toContain('FORGIVEN_HINT');
+    expect(screensSource).toContain("'Серия'");
+    expect(screensSource).not.toContain('Серия дней');
+    expect(screensSource).toMatch(/yesterdayForgiven\s*&&\s*streakCount\s*>\s*0/);
+    // Не путать сорванную серию давнего с первым днём
+    expect(screensSource).toContain('unlockedCount');
+    expect(screensSource).toMatch(/level\s*<=\s*2/);
+  });
+
+  it('achievements tab has opened hero and near-progress block', () => {
+    expect(screensSource).toContain('getInProgressAchievements');
+    expect(screensSource).toContain('Открыто');
+    expect(screensSource).toContain('Ближе всего');
+  });
+
+  it('bar adds v4 modifier on expanded panel', () => {
+    expect(barSource).toContain('game-panel-expanded--v4');
   });
 
   it('levels tab uses XP_ACTIONS, isMax and level titles', () => {

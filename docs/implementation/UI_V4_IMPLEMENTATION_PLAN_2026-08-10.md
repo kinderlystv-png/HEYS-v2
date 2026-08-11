@@ -604,9 +604,11 @@ push-slot + сообщения); `nav-advice-badge` на пункте «Сове
 > наличие экранов/ключевых блоков; preview на localhost:3001. Краска — вторым
 > коммитом.
 >
-> **Статус 2026-08-11:** структурный коммит сделан (модуль
-> `heys_gamification_screens_v1.js`, wiring в bar, structure test). Краска
-> (pixel-perfect токены/отступы) — второй коммит, ещё нет.
+> **Статус 2026-08-11:** структурный коммит `171cc0af8`; краска (prompt 6b) —
+> светлый sheet `game-panel-expanded--v4`, hero серии/открыто/уровня, карточки
+> миссий, «Ближе всего», forgiveness только при `streak>0`, structure test 7/7.
+> Preview: `pnpm bundle:legacy:auto --files=heys_gamification_screens_v1.js,…` +
+> `pnpm dev:local`.
 
 ---
 
