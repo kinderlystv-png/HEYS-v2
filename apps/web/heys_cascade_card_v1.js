@@ -4084,13 +4084,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // computeCascadeState — второго расчёта не заводят.
   // ─────────────────────────────────────────────────────
 
-  // Состояния тренда переиспользуют существующую семантику STATE_CONFIG
-  // (те же роли: нейтральный/разгон/рост/пик), а не заводят новую палитру.
+  // Тренд HEYS Score: ступени одной акцентной роли (плотность), не ok/warn.
+  // Текст/кривая плитки и fill zonebar — через CSS-переменные в 740-cascade-card.css.
   var HEYS_SCORE_STATE_COLORS = {
-    BASE: STATE_CONFIG.EMPTY.color,
-    ACCELERATING: STATE_CONFIG.BUILDING.color,
-    GROWING: STATE_CONFIG.GROWING.color,
-    PEAK: STATE_CONFIG.STRONG.color
+    BASE: 'var(--heys-score-tone-base, #94a3b8)',
+    ACCELERATING: 'var(--heys-score-tone-1, #b07a4c)',
+    GROWING: 'var(--heys-score-tone-2, #9a5f2e)',
+    PEAK: 'var(--heys-score-tone-3, #8a4a20)'
+  };
+
+  var HEYS_SCORE_FILL_CLASS = {
+    BASE: 'base',
+    ACCELERATING: 'accelerating',
+    GROWING: 'growing',
+    PEAK: 'peak'
   };
 
   var HEYS_SCORE_STATE_PHRASES = {
@@ -4145,7 +4152,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function HeysScoreZoneBar(props) {
     var current = props.current || 0;
     var ceiling = props.ceiling > 0 ? props.ceiling : 0.01;
-    var color = props.color || HEYS_SCORE_STATE_COLORS.BASE;
+    var state = props.state || 'BASE';
+    var fillClass = HEYS_SCORE_FILL_CLASS[state] || 'base';
     var t = CRS_RAW_TREND_THRESHOLDS;
 
     var pct = function (v) { return clamp(v, 0, ceiling) / ceiling * 100; };
@@ -4169,8 +4177,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       React.createElement('div', { className: 'heys-score-zonebar__track' },
         zones,
         React.createElement('span', {
-          className: 'heys-score-zonebar__fill',
-          style: { width: pct(current) + '%', background: color }
+          className: 'heys-score-zonebar__fill heys-score-zonebar__fill--' + fillClass,
+          style: { width: pct(current) + '%' }
         }),
         React.createElement('span', {
           className: 'heys-score-zonebar__ceiling-mark',
@@ -4351,7 +4359,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         React.createElement('span', { className: 'heys-score-insights-card__title' }, '📈 Каскад решений'),
         React.createElement('span', { className: 'heys-score-insights-card__state', style: { color: color } }, phrase)
       ),
-      React.createElement(HeysScoreZoneBar, { current: trend.current, ceiling: trend.ceiling, color: color }),
+      React.createElement(HeysScoreZoneBar, {
+        current: trend.current,
+        ceiling: trend.ceiling,
+        state: trend.state
+      }),
       cascadeState.events && cascadeState.events.length > 0 && React.createElement(ChainDots, {
         events: cascadeState.events,
         dayDate: cascadeState.dayDate,

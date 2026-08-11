@@ -1382,6 +1382,14 @@
 /* Полоса с зонами — общая для плитки Отчётов и карточки Инсайтов */
 .heys-score-zonebar {
   margin-top: 8px;
+  --heys-score-tone-base: var(--v4-ink-3, #94a3b8);
+  --heys-score-tone-1: color-mix(in srgb, var(--v4-act, #8a4a20) 55%, var(--v4-ink-3, #94a3b8));
+  --heys-score-tone-2: color-mix(in srgb, var(--v4-act, #8a4a20) 78%, var(--v4-ink-3, #94a3b8));
+  --heys-score-tone-3: var(--v4-act, #8a4a20);
+  --heys-score-zone-step-0: color-mix(in srgb, var(--v4-ink-3, #94a3b8) 28%, transparent);
+  --heys-score-zone-step-1: color-mix(in srgb, var(--v4-act, #8a4a20) 14%, transparent);
+  --heys-score-zone-step-2: color-mix(in srgb, var(--v4-act, #8a4a20) 24%, transparent);
+  --heys-score-zone-step-3: color-mix(in srgb, var(--v4-act, #8a4a20) 36%, transparent);
 }
 
 .heys-score-zonebar__track {
@@ -1398,10 +1406,10 @@
   bottom: 0;
 }
 
-.heys-score-zonebar__zone--base { background: rgba(148, 163, 184, 0.28); }
-.heys-score-zonebar__zone--accelerating { background: rgba(59, 130, 246, 0.16); }
-.heys-score-zonebar__zone--growing { background: rgba(34, 197, 94, 0.16); }
-.heys-score-zonebar__zone--peak { background: rgba(234, 179, 8, 0.18); }
+.heys-score-zonebar__zone--base { background: var(--heys-score-zone-step-0, rgba(148, 163, 184, 0.28)); }
+.heys-score-zonebar__zone--accelerating { background: var(--heys-score-zone-step-1, rgba(138, 74, 32, 0.14)); }
+.heys-score-zonebar__zone--growing { background: var(--heys-score-zone-step-2, rgba(138, 74, 32, 0.24)); }
+.heys-score-zonebar__zone--peak { background: var(--heys-score-zone-step-3, rgba(138, 74, 32, 0.36)); }
 
 .heys-score-zonebar__fill {
   position: absolute;
@@ -1411,6 +1419,11 @@
   border-radius: 999px;
   transition: width 0.4s ease;
 }
+
+.heys-score-zonebar__fill--base { background: var(--heys-score-tone-base, #94a3b8); }
+.heys-score-zonebar__fill--accelerating { background: var(--heys-score-tone-1, #b07a4c); }
+.heys-score-zonebar__fill--growing { background: var(--heys-score-tone-2, #9a5f2e); }
+.heys-score-zonebar__fill--peak { background: var(--heys-score-tone-3, #8a4a20); }
 
 .heys-score-zonebar__ceiling-mark {
   position: absolute;
