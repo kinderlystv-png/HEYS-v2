@@ -684,7 +684,7 @@ td:first-child input {
 .card.tone-violet.main-violet .violet-table td:first-child {
   font-size: 14px;
   font-weight: 600;
-  color: #1f2937;
+color: var(--v4-ink, #1f2937);
   text-align: right;
   padding-right: 20px;
 }
@@ -4092,11 +4092,11 @@ td:first-child input {
 }
 
 .hdr-header-icon-btn:hover {
-  color: var(--v4-ink, #201e1d);
+color: var(--v4-ink, #201e1d);
 }
 
 [data-theme$="dark"] .game-level-number {
-  color: var(--v4-act-text, #e2a468);
+color: var(--v4-act-text, #e2a468);
 }
 
 [data-theme$="dark"] .game-rank-title,
@@ -7726,7 +7726,7 @@ body:has(.offline-banner) .wrap {
   left: 0 !important;
   bottom: 0;
   min-width: 0;
-  max-width: none;
+  max-width: none !important;
   width: 100%;
   margin: 0;
   padding: 18px 16px 24px;
@@ -7734,7 +7734,7 @@ body:has(.offline-banner) .wrap {
   border-radius: 26px 26px 0 0;
   background: var(--v4-bg, #fffaf1);
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
-  animation: datePickerSheetIn 0.25s ease;
+  animation: datePickerSheetIn 0.25s ease both;
 }
 
 .date-picker-sheet-handle {
@@ -7745,6 +7745,62 @@ body:has(.offline-banner) .wrap {
   margin: 0 auto 16px;
 }
 
+/* Sheet calendar · вариант А (канвас «Дата и остатки» 2026-08-11):
+   точка = есть записи; заливка — навигация (сегодня / выбран);
+   цикл/загрузка — полосы по краю, не emoji и не цвет качества. */
+.date-picker-sheet .date-picker-days {
+  gap: 4px;
+}
+
+.date-picker-sheet .date-picker-day {
+  position: relative;
+  overflow: hidden;
+  flex-direction: column;
+  gap: 3px;
+  border-radius: 12px;
+  font-weight: 600;
+  color: #201e1d;
+  background: transparent;
+  animation: none;
+}
+
+.date-picker-sheet .date-picker-day.has-data:not(.today):not(.selected) {
+  background: #f7efe2;
+}
+
+.date-picker-sheet .date-picker-day.selected:not(.today) {
+  background: #efe3cf;
+  color: #201e1d;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 2px #c67139;
+}
+
+.date-picker-sheet .date-picker-day.today,
+.date-picker-sheet .date-picker-day.selected.today {
+  background: var(--v4-act, #c67139);
+  color: var(--v4-act-ink, #2b1608);
+  font-weight: 700;
+  border: none;
+  box-shadow: none;
+  animation: none;
+}
+
+[data-theme-id="blue"] .date-picker-sheet .date-picker-day.today,
+[data-theme-id="blue"] .date-picker-sheet .date-picker-day.selected.today,
+[data-theme-id="blue-dark"] .date-picker-sheet .date-picker-day.today,
+[data-theme-id="blue-dark"] .date-picker-sheet .date-picker-day.selected.today,
+[data-theme-id="classic"] .date-picker-sheet .date-picker-day.today,
+[data-theme-id="classic"] .date-picker-sheet .date-picker-day.selected.today,
+[data-theme-id="classic-dark"] .date-picker-sheet .date-picker-day.today,
+[data-theme-id="classic-dark"] .date-picker-sheet .date-picker-day.selected.today {
+  color: #ffffff;
+}
+
+.date-picker-sheet .date-picker-day.future.disabled {
+  background: transparent;
+  opacity: 0.38;
+}
+
 .date-picker-sheet .day-data-dot {
   width: 4px;
   height: 4px;
@@ -7753,8 +7809,137 @@ body:has(.offline-banner) .wrap {
   flex-shrink: 0;
 }
 
-.date-picker-sheet .day-status {
-  display: none;
+.date-picker-sheet .date-picker-day.today .day-data-dot,
+.date-picker-sheet .date-picker-day.selected.today .day-data-dot {
+  background: currentColor;
+}
+
+.date-picker-sheet .date-picker-day.has-cycle::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #201e1d 32%, transparent);
+  pointer-events: none;
+}
+
+.date-picker-sheet .date-picker-day.has-refeed::after {
+  content: '';
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #201e1d 32%, transparent);
+  pointer-events: none;
+}
+
+.date-picker-sheet .date-picker-day.today.has-cycle::before,
+.date-picker-sheet .date-picker-day.today.has-refeed::after,
+.date-picker-sheet .date-picker-day.selected.today.has-cycle::before,
+.date-picker-sheet .date-picker-day.selected.today.has-refeed::after {
+  background: color-mix(in srgb, var(--v4-act-ink, #2b1608) 42%, transparent);
+}
+
+[data-theme-id="blue"] .date-picker-sheet .date-picker-day.today.has-cycle::before,
+[data-theme-id="blue"] .date-picker-sheet .date-picker-day.today.has-refeed::after,
+[data-theme-id="blue"] .date-picker-sheet .date-picker-day.selected.today.has-cycle::before,
+[data-theme-id="blue"] .date-picker-sheet .date-picker-day.selected.today.has-refeed::after,
+[data-theme-id="blue-dark"] .date-picker-sheet .date-picker-day.today.has-cycle::before,
+[data-theme-id="blue-dark"] .date-picker-sheet .date-picker-day.today.has-refeed::after,
+[data-theme-id="blue-dark"] .date-picker-sheet .date-picker-day.selected.today.has-cycle::before,
+[data-theme-id="blue-dark"] .date-picker-sheet .date-picker-day.selected.today.has-refeed::after,
+[data-theme-id="classic"] .date-picker-sheet .date-picker-day.today.has-cycle::before,
+[data-theme-id="classic"] .date-picker-sheet .date-picker-day.today.has-refeed::after,
+[data-theme-id="classic"] .date-picker-sheet .date-picker-day.selected.today.has-cycle::before,
+[data-theme-id="classic"] .date-picker-sheet .date-picker-day.selected.today.has-refeed::after,
+[data-theme-id="classic-dark"] .date-picker-sheet .date-picker-day.today.has-cycle::before,
+[data-theme-id="classic-dark"] .date-picker-sheet .date-picker-day.today.has-refeed::after,
+[data-theme-id="classic-dark"] .date-picker-sheet .date-picker-day.selected.today.has-cycle::before,
+[data-theme-id="classic-dark"] .date-picker-sheet .date-picker-day.selected.today.has-refeed::after {
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.date-picker-sheet .date-picker-legend {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 10px 14px;
+  padding: 12px 2px 4px;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.date-picker-sheet .legend-item,
+.date-picker-sheet .legend-item.cycle,
+.date-picker-sheet .legend-item.refeed,
+.date-picker-sheet .legend-item.good,
+.date-picker-sheet .legend-item.warn,
+.date-picker-sheet .legend-item.bad {
+  gap: 6px;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  font-size: inherit;
+}
+
+.date-picker-sheet .date-picker-btn.today-btn {
+  background: #c67139;
+  color: var(--v4-act-ink, #2b1608);
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+[data-theme-id="blue"] .date-picker-sheet .date-picker-btn.today-btn,
+[data-theme-id="blue-dark"] .date-picker-sheet .date-picker-btn.today-btn,
+[data-theme-id="classic"] .date-picker-sheet .date-picker-btn.today-btn,
+[data-theme-id="classic-dark"] .date-picker-sheet .date-picker-btn.today-btn {
+  color: #ffffff;
+}
+
+.date-picker-sheet .legend-swatch {
+  flex: none;
+  display: inline-block;
+  box-sizing: border-box;
+}
+
+.date-picker-sheet .legend-swatch--dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: #7a8a5e;
+}
+
+.date-picker-sheet .legend-swatch--cycle {
+  width: 2px;
+  height: 11px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #201e1d 32%, transparent);
+}
+
+.date-picker-sheet .legend-swatch--refeed {
+  width: 11px;
+  height: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #201e1d 32%, transparent);
+}
+
+.date-picker-sheet .legend-swatch--today {
+  width: 11px;
+  height: 11px;
+  border-radius: 4px;
+  background: #c67139;
+}
+
+.date-picker-sheet .legend-swatch--selected {
+  width: 11px;
+  height: 11px;
+  border-radius: 4px;
+  background: #efe3cf;
+  box-shadow: inset 0 0 0 1.5px #c67139;
 }
 
 .date-picker-day.future.disabled {
@@ -7792,14 +7977,14 @@ body:has(.offline-banner) .wrap {
   gap: 12px;
   padding: 13px 15px;
   border-radius: 18px;
-  background: var(--v4-tint-warm, #f3e0d2);
+  background: #f3e0d2;
 }
 
 .past-day-banner__text {
   font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
-  color: var(--v4-act, #8a4a20);
+  color: #8a4a20;
 }
 
 .past-day-banner__today {
@@ -7807,7 +7992,7 @@ body:has(.offline-banner) .wrap {
   border: none;
   padding: 9px 14px;
   border-radius: 999px;
-  background: var(--v4-act, #c67139);
+  background: #c67139;
   color: var(--v4-act-ink, #2b1608);
   font-size: 11.5px;
   font-weight: 700;
@@ -7829,7 +8014,7 @@ body:has(.offline-banner) .wrap {
   border: 1px solid var(--color-slate-200);
   border-radius: 10px;
   background: var(--v4-surface, #fff);
-  color: var(--v4-ink, #1f2937);
+  color: #1f2937;
   font-size: 20px;
   font-weight: 600;
   line-height: 1;
@@ -8442,6 +8627,17 @@ svg.date-picker-icon {
     transform: translateX(-50%);
   }
 
+  /* Sheet — на всю ширину снизу; не наследовать центрирование dropdown. */
+  .date-picker-dropdown.date-picker-sheet {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    padding: 18px 16px 24px;
+    transform: none;
+  }
+
   @keyframes datePickerSlide {
     from {
       opacity: 0;
@@ -8860,7 +9056,7 @@ svg.date-picker-icon {
 }
 
 .tabs--v4-primary .tab.tab-primary-nav.active {
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
   background: var(--v4-hero, #fffaf1);
   box-shadow: none;
 }

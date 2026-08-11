@@ -64,18 +64,10 @@
       return new Map();
     }, [monthData, activeDays]);
     
-    // Функция для расчёта цвета фона — используем централизованный ratioZones
+    // Streak / tooltip по-прежнему через ratioZones; заливка ratio в сетке шторки
+    // снята (вариант А, канвас 2026-08-11) — качество живёт в Отчётах.
     const rz = HEYS.ratioZones;
-    function getDayBgColor(ratio) {
-      if (!ratio || ratio <= 0) return null;
-      return rz ? rz.getGradientColor(ratio, 0.35) : 'rgba(156, 163, 175, 0.35)';
-    }
-    
-    // Функция для получения эмодзи статуса — используем ratioZones
-    function getStatusEmoji(ratio) {
-      return rz ? rz.getEmoji(ratio) : '';
-    }
-    
+
     // Вычисляем streak (серию хороших дней) — используем ratioZones.isSuccess()
     const streakInfo = React.useMemo(() => {
       if (daysDataMap.size === 0) return { count: 0, isActive: false };
@@ -259,15 +251,10 @@
             const hasCycle = dayData?.cycleDay != null;
             const hasRefeed = dayData?.isRefeedDay === true;
             const hasRealData = dayData && dayData.kcal > 0; // Есть реальные данные (еда)
-            
-            // Фон только для дней с едой
-            const bgColor = hasRealData ? getDayBgColor(dayData.ratio) : null;
-            // Не показываем градиентный фон для сегодня и выбранного дня
-            const cellStyle = bgColor && !isSel && !isToday ? { background: bgColor } : undefined;
-            
-            // Emoji только для дней с едой (не для пустых дней с cycleDay)
-            const statusEmoji = hasRealData ? getStatusEmoji(dayData.ratio) : '';
-            
+            // Вариант А (канвас 2026-08-11): точка = «есть записи»; заливка ratio
+            // и emoji статуса/цикл/refeed из сетки убраны. Цикл/загрузка —
+            // полосы по краю клетки (CSS ::before/::after на has-cycle/has-refeed).
+
             return React.createElement('div', {
               key: dt.toISOString(),
               className: [
@@ -279,16 +266,12 @@
                 hasCycle ? 'has-cycle' : '',
                 hasRefeed ? 'has-refeed' : ''
               ].join(' ').trim(),
-              style: cellStyle,
               onClick: isFuture ? undefined : () => { onSelect(dateStr); setIsOpen(false); setTooltip(null); },
               onMouseEnter: (e) => handleDayHover(e, dayData, dateStr),
               onMouseLeave: () => setTooltip(null)
-            }, 
+            },
               React.createElement('span', { className: 'day-number' }, dt.getDate()),
-              hasRealData && React.createElement('span', { className: 'day-data-dot' }),
-              statusEmoji && React.createElement('span', { className: 'day-status' }, statusEmoji),
-              hasCycle && React.createElement('span', { className: 'day-cycle-dot' }, '🌸'),
-              hasRefeed && React.createElement('span', { className: 'day-refeed-dot' }, '🍕')
+              hasRealData && React.createElement('span', { className: 'day-data-dot', 'aria-hidden': 'true' })
             );
           })
         ),
@@ -296,13 +279,28 @@
         streakInfo.count > 1 && React.createElement('div', { className: 'date-picker-streak' },
           '🔥 ', streakInfo.count, ' дней подряд в норме!'
         ),
-        // Легенда цветов
+        // Легенда: точка = факт записи; цикл/загрузка — форма; сегодня/выбран — навигация
         React.createElement('div', { className: 'date-picker-legend' },
-          React.createElement('span', { className: 'legend-item good' }, '● норма'),
-          React.createElement('span', { className: 'legend-item warn' }, '● мало'),
-          React.createElement('span', { className: 'legend-item bad' }, '● переел'),
-          React.createElement('span', { className: 'legend-item cycle' }, '🌸 цикл'),
-          React.createElement('span', { className: 'legend-item refeed' }, '🍕 refeed')
+          React.createElement('span', { className: 'legend-item has-data' },
+            React.createElement('span', { className: 'legend-swatch legend-swatch--dot', 'aria-hidden': 'true' }),
+            'есть записи'
+          ),
+          React.createElement('span', { className: 'legend-item cycle' },
+            React.createElement('span', { className: 'legend-swatch legend-swatch--cycle', 'aria-hidden': 'true' }),
+            'цикл'
+          ),
+          React.createElement('span', { className: 'legend-item refeed' },
+            React.createElement('span', { className: 'legend-swatch legend-swatch--refeed', 'aria-hidden': 'true' }),
+            'загрузка'
+          ),
+          React.createElement('span', { className: 'legend-item today' },
+            React.createElement('span', { className: 'legend-swatch legend-swatch--today', 'aria-hidden': 'true' }),
+            'сегодня'
+          ),
+          React.createElement('span', { className: 'legend-item selected' },
+            React.createElement('span', { className: 'legend-swatch legend-swatch--selected', 'aria-hidden': 'true' }),
+            'выбран'
+          )
         ),
         React.createElement('div', { className: 'date-picker-footer' },
           React.createElement('button', {
