@@ -44,11 +44,11 @@ test('documentation-only changes do not redeploy a cloud function', () => {
 
 test('documentation beside runtime source does not hide the runtime target', () => {
   assert.deepEqual(resolveChangedFiles([
-    'yandex-cloud-functions/heys-mcp/README.md',
-    'yandex-cloud-functions/heys-mcp/index.js',
+    'yandex-cloud-functions/heys-api-payments/DEPLOY.md',
+    'yandex-cloud-functions/heys-api-payments/index.js',
   ]), {
     mode: 'selective',
-    functions: ['heys-mcp'],
+    functions: ['heys-api-payments'],
     gatewaySpecChanged: false,
     reason: 'changed-function-directories',
   });
@@ -56,10 +56,10 @@ test('documentation beside runtime source does not hide the runtime target', () 
 
 test('an arbitrary markdown asset remains fail-closed as runtime input', () => {
   assert.deepEqual(resolveChangedFiles([
-    'yandex-cloud-functions/heys-mcp/prompts/curator.md',
+    'yandex-cloud-functions/heys-bot-client/CRM_SMOKE.md',
   ]), {
     mode: 'selective',
-    functions: ['heys-mcp'],
+    functions: ['heys-bot-client'],
     gatewaySpecChanged: false,
     reason: 'changed-function-directories',
   });
@@ -131,7 +131,15 @@ test('deploy and test scripts consume the shared inventory instead of local list
   assert.doesNotMatch(testScript, /ALL_FUNCTIONS=\(\s*heys-/);
   assert.equal((deployScript.match(/ensure_speechkit_trigger/g) || []).length, 3);
   assert.equal((deployScript.match(/\[ "\$CI_MODE" != true \]/g) || []).length >= 2, true);
-  assert.equal(FUNCTIONS.filter((item) => item.autoDeploy).length, 19);
+  assert.equal(FUNCTIONS.filter((item) => item.autoDeploy).length, 18);
+});
+
+test('production-disabled heys-mcp source cannot silently auto-deploy', () => {
+  assert.throws(
+    () => resolveChangedFiles(['yandex-cloud-functions/heys-mcp/index.js']),
+    /Auto-deploy disabled for heys-mcp: .+/,
+    'ожидаем блокировку auto-deploy и непустую reason в инвентаре',
+  );
 });
 
 test('deploy workflow routes API and automation changes through the shared classifier', () => {

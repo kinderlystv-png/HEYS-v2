@@ -1758,10 +1758,10 @@ function createTasksTools({
       // оставить половину checkpoint. Сетевой сбой между двумя файлами всё
       // ещё возможен, поэтому в ответе возвращаются отдельные ревизии.
       const transcript = await readFile(transcriptPath);
-      const putTranscript = (text) => tasks.prependBlock(text, transcriptBlock);
+      const putTranscript = (text) => tasks.appendBlock(text, transcriptBlock);
       const savedTranscript = await writeFile(transcript, putTranscript(transcript.text), {
         rebase: putTranscript,
-        delta: { mode: 'prepend', block: transcriptBlock },
+        delta: { mode: 'append', block: transcriptBlock },
       });
 
       let savedJournal = null;

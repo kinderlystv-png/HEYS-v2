@@ -3885,10 +3885,9 @@ function appendBlock(text, block) {
 }
 
 /**
- * Вставить блок первым в файл — стенограмма читает «свежее сверху»
- * (transcript/README.md, действует с 2026-08-06): новый обмен встаёт перед
- * уже существующим первым «## ЧЧ:ММ», а не в конец. appendBlock здесь не
- * годится — его контракт «в конец» нужен журналу и инбоксу, но не транскрипту.
+ * Вставить блок первым в файл. Оставлен для дельт с mode=prepend (деньги и пр.).
+ * Стенограмма с 2026-08-11 пишется через appendBlock — хронология сверху вниз,
+ * как tasks_append и transcriptTail.
  */
 function prependBlock(text, block) {
   const base = String(text || '').replace(/^\s+/, '');
@@ -5599,6 +5598,33 @@ function splitMarkdownBlocks(text, headingRe) {
   return blocks.filter((b) => b.trim());
 }
 
+/** Минуты от полуночи для сортировки блоков стенограммы (ночь 00:00–04:59 — после вечера). */
+function transcriptBlockSortMinutes(block) {
+  const heading = String(block || '').split('\n').find((line) => TRANSCRIPT_BLOCK_HEADING_RE.test(line.trim()));
+  if (!heading) return null;
+  const match = TRANSCRIPT_ENTRY_RE.exec(heading.trim());
+  if (!match) return null;
+  const start = match[1].split(/[–—-]/)[0].trim().replace(/^~/, '');
+  const minutes = timeToMinutes(start);
+  if (minutes === null) return null;
+  return minutes < DAY_TAIL_BEFORE ? minutes + 24 * 60 : minutes;
+}
+
+/** Выровнять блоки стенограммы по времени заголовка; без времени — порядок как был. */
+function sortTranscriptChronologically(text) {
+  const blocks = splitMarkdownBlocks(text, TRANSCRIPT_BLOCK_HEADING_RE);
+  if (blocks.length <= 1) return String(text || '').replace(/\s+$/, '') ? `${String(text).replace(/\s+$/, '')}\n` : '';
+  const indexed = blocks.map((block, index) => ({
+    block,
+    index,
+    sortKey: transcriptBlockSortMinutes(block),
+  }));
+  const allKeyed = indexed.every((entry) => entry.sortKey !== null);
+  if (!allKeyed) return String(text || '').replace(/\s+$/, '') ? `${String(text).replace(/\s+$/, '')}\n` : '';
+  indexed.sort((a, b) => a.sortKey - b.sortKey || a.index - b.index);
+  return `${indexed.map((entry) => entry.block).join('\n\n')}\n`;
+}
+
 function archiveRotatePath(sourcePath, part) {
   const base = String(sourcePath || '').replace(/\.md$/i, '').replace(/\//g, '_');
   return `archive/${base}_part${part}.md`;
@@ -5622,7 +5648,8 @@ function rotateFileText(path, text) {
   const archives = [];
   let part = 1;
   while (utf8ByteLength(blocks.join('\n\n')) > TASKS_ROTATE_TARGET_BYTES && blocks.length > 1) {
-    const moved = kind === 'transcript' ? blocks.pop() : blocks.shift();
+    // transcript и journal: старые блоки сверху, свежие внизу — в архив уходит начало.
+    const moved = blocks.shift();
     if (!moved || !moved.trim()) break;
     archives.push({ path: archiveRotatePath(path, part), text: `${moved.trim()}\n` });
     part += 1;
@@ -5815,6 +5842,8 @@ module.exports = {
   // ревизия стенограмм перед планёркой
   transcriptShape,
   transcriptTail,
+  sortTranscriptChronologically,
+  transcriptBlockSortMinutes,
   REVIEW_WINDOW_DAYS,
   REVIEW_MARK_RE,
   reviewMarkLine,

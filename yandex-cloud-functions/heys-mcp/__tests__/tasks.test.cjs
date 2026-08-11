@@ -5343,9 +5343,8 @@ test('checkpoint одним вызовом сохраняет полный об�
   assert.ok(res.structured.journal.rev > 0);
 });
 
-test('checkpoint кладёт новый обмен первым блоком дня, а не в конец файла', async () => {
-  // transcript/README.md, с 2026-08-06: свежее — сверху. Журнал этому правилу
-  // не подчиняется — appendBlock для него остался как был.
+test('checkpoint дописывает новый обмен в конец дня, а не в начало файла', async () => {
+  // transcript/README.md, с 2026-08-11: хронология сверху вниз — как tasks_append.
   const api = liveTasksApi();
   const tools = session(api);
   await tools.tasks_checkpoint({
@@ -5356,10 +5355,42 @@ test('checkpoint кладёт новый обмен первым блоком д
   });
   const text = api.kv[tasks.keyForPath(TRANSCRIPT_TODAY)].text;
   assert.ok(
-    text.indexOf('Второй обмен дня') < text.indexOf('Первый обмен дня'),
-    'второй checkpoint должен встать перед первым, а не после',
+    text.indexOf('Первый обмен дня') < text.indexOf('Второй обмен дня'),
+    'второй checkpoint должен встать после первого, а не перед',
   );
-  assert.ok(text.startsWith('## 12:44'), 'самый свежий блок — первая строка файла');
+  assert.ok(text.trimEnd().endsWith('Тоже принято.'), 'самый свежий блок — в конце файла');
+});
+
+test('sortTranscriptChronologically выравнивает блоки по времени заголовка', () => {
+  const mixed = [
+    '## 21:03',
+    '',
+    '**Кин:** поздно',
+    '**Claude:** ответ',
+    '',
+    '## 19:20',
+    '',
+    '**Кин:** раньше',
+    '**Claude:** ответ2',
+  ].join('\n');
+  const sorted = tasks.sortTranscriptChronologically(mixed);
+  assert.ok(sorted.indexOf('раньше') < sorted.indexOf('поздно'));
+});
+
+test('rotateFileText у transcript снимает старые блоки сверху', () => {
+  const big = [
+    '## 09:00',
+    'старое'.repeat(15000),
+    '## 12:00',
+    'ещё'.repeat(15000),
+    '## 18:00',
+    'хвост',
+  ].join('\n\n');
+  const rotated = tasks.rotateFileText(`transcript/2026-08-11.md`, big);
+  assert.ok(rotated.archives.length >= 1, 'должен появиться архив');
+  assert.match(rotated.active, /18:00/);
+  assert.doesNotMatch(rotated.active, /09:00/);
+  assert.ok(tasks.utf8ByteLength(rotated.active) <= tasks.TASKS_ROTATE_TARGET_BYTES);
 });
 
 test('checkpoint без устойчивого вывода пишет только стенограмму', async () => {
