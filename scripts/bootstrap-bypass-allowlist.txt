@@ -71,10 +71,10 @@ apps/web/heys_app_backup_import_v1.js:286
 apps/web/heys_app_backup_import_v1.js:296
 apps/web/heys_cloud_storage_utils_v1.js:108
 apps/web/heys_consents_v1.js:341
-apps/web/heys_consents_v1.js:493
-apps/web/heys_consents_v1.js:540
-apps/web/heys_consents_v1.js:596
-apps/web/heys_consents_v1.js:1021
+apps/web/heys_consents_v1.js:498
+apps/web/heys_consents_v1.js:545
+apps/web/heys_consents_v1.js:601
+apps/web/heys_consents_v1.js:1026
 apps/web/heys_push_v1.js:12
 apps/web/heys_demo_mode_v1.js:109
 apps/web/heys_demo_mode_v1.js:111
@@ -106,7 +106,7 @@ apps/web/heys_day_meals_chart_ui_v1.js:296
 apps/web/heys_day_meals_chart_ui_v1.js:367
 apps/web/heys_day_storage_v1.js:28
 apps/web/heys_day_utils.js:48
-apps/web/heys_day_utils.js:484
+apps/web/heys_day_utils.js:491
 apps/web/heys_day_hooks.js:39
 # fingers bundle — regen after eca96299 feat(fingers) shifted line numbers
 apps/web/heys_fingers_bundle_v1.js:2650
@@ -134,10 +134,10 @@ apps/web/heys_gamification_bar_v1.js:1426
 apps/web/heys_gamification_bar_v1.js:1418
 apps/web/heys_gamification_bar_v1.js:1419
 apps/web/heys_gamification_bar_v1.js:1427
-apps/web/heys_gamification_v1.js:1619
+apps/web/heys_gamification_v1.js:1626
 apps/web/heys_gamification_v1.js:50
 apps/web/heys_gamification_v1.js:52
-apps/web/heys_gamification_v1.js:5951
+apps/web/heys_gamification_v1.js:5961
 apps/web/heys_insulin_wave_v1.js:908
 apps/web/heys_iw_config_loader.js:149
 apps/web/heys_iw_config_loader.js:151
@@ -192,7 +192,7 @@ apps/web/heys_steps_v1.js:58
 apps/web/heys_storage_layer_v1.js:169
 apps/web/heys_storage_layer_v1.js:200
 apps/web/heys_storage_photos_v1.js:435
-apps/web/heys_storage_photos_v1.js:575
+apps/web/heys_storage_photos_v1.js:581
 apps/web/heys_subscription_v1.js:99
 apps/web/heys_subscriptions_v1.js:695
 apps/web/heys_subscriptions_v1.js:1431
@@ -204,10 +204,10 @@ apps/web/heys_ui_onboarding_v1.js:1665
 apps/web/heys_ui_onboarding_v1.js:1680
 apps/web/heys_ui_onboarding_v1.js:174
 apps/web/heys_ui_onboarding_v1.js:781
-apps/web/heys_user_tab_impl_v1.js:400
-apps/web/heys_user_tab_impl_v1.js:650
-apps/web/heys_user_v12.js:147
-apps/web/heys_user_v12.js:158
+apps/web/heys_user_tab_impl_v1.js:402
+apps/web/heys_user_tab_impl_v1.js:652
+apps/web/heys_user_v12.js:149
+apps/web/heys_user_v12.js:160
 apps/web/heys_weekly_reports_v2.js:36
 apps/web/heys_curator_actions_banner_v1.js:342
 apps/web/heys_curator_actions_banner_v1.js:378
@@ -218,8 +218,8 @@ apps/web/heys_client_log_trace_v1.js:148
 apps/web/heys_whats_new_modal_v1.js:87
 apps/web/heys_widgets_core_v1.js:1046
 apps/web/heys_widgets_core_v1.js:383
-apps/web/heys_widgets_ui_v1.js:4592
-apps/web/heys_widgets_ui_v1.js:6817
+apps/web/heys_widgets_ui_v1.js:4635
+apps/web/heys_widgets_ui_v1.js:6855
 apps/web/heys_yesterday_verify_v1.js:1221
 apps/web/heys_yesterday_verify_v1.js:1219
 apps/web/heys_yesterday_verify_v1.js:36
@@ -263,8 +263,8 @@ apps/web/heys_app_auth_init_v1.js:620
 apps/web/heys_auth_v1.js:28
 apps/web/heys_auth_v1.js:363
 apps/web/heys_auth_v1.js:371
-apps/web/heys_yandex_api_v1.js:253
-apps/web/heys_yandex_api_v1.js:828
+apps/web/heys_yandex_api_v1.js:281
+apps/web/heys_yandex_api_v1.js:866
 
 # Reader preferences use direct storage only as a client-scoped fallback and
 # sync explicitly; reading progress remains device-local UI state.
@@ -278,10 +278,10 @@ apps/web/heys_planning_reading_v1.js:119
 #   :1754 — черновик: текст и снятые фото, ждущие сети;
 #   :1759 — тот же черновик без фото, когда кончилась квота хранилища;
 #   :2423 — флаг «клиент скрыл плашку про время и граммы».
-apps/web/heys_messenger_v1.js:1700
-apps/web/heys_messenger_v1.js:1754
-apps/web/heys_messenger_v1.js:1759
-apps/web/heys_messenger_v1.js:2421
+apps/web/heys_messenger_v1.js:1660
+apps/web/heys_messenger_v1.js:1714
+apps/web/heys_messenger_v1.js:1719
+apps/web/heys_messenger_v1.js:2381
 
 # [phase3] Собранная копия advice-исходников. Те же три записи уже разрешены
 # в apps/web/advice/_actions.js:175 и _commitments.js:52,200 — в бандл они

@@ -154,18 +154,12 @@
     function buildDayTotForInsights(dayData, pIndex) {
       if (dayData?.dayTot && typeof dayData.dayTot === 'object') return dayData.dayTot;
 
-      if (HEYS.Day?.computeDayTot && dayData?.meals?.length) {
-        try {
-          return HEYS.Day.computeDayTot(dayData, pIndex);
-        } catch (error) {
-          devWarn('[pi_ui_dashboard] buildDayTotForInsights failed:', error);
-        }
-      }
-
-      // Fallback: use dayCalculations if available
+      // HEYS.Day.computeDayTot не существует — работал только фолбэк ниже, и то
+      // без pIndex: calculateDayTotals(day, pIndex) без индекса не находит
+      // продукт и даёт нули по ГИ и вредности (heys_day_calculations.js:22).
       if (typeof HEYS.dayCalculations?.calculateDayTotals === 'function' && dayData?.meals?.length) {
         try {
-          return HEYS.dayCalculations.calculateDayTotals(dayData);
+          return HEYS.dayCalculations.calculateDayTotals(dayData, pIndex);
         } catch (error) {
           devWarn('[pi_ui_dashboard] buildDayTotForInsights calculateDayTotals failed:', error);
         }
@@ -174,23 +168,15 @@
       return {};
     }
 
-    function buildNormAbsForInsights(profile) {
-      if (HEYS.Day?.calcNormAbs && profile) {
+    function buildNormAbsForInsights(profile, dayData) {
+      // HEYS.Day.calcNormAbs не существует — работал только фолбэк, а он звал
+      // TDEE.calculate(profile), подставляя профиль в слот дня: активность
+      // считалась нулевой и норма занижалась. resolveDailyTargets(profile, day)
+      // — канон и уже возвращает { kcal, prot } (heys_tdee_v1.js:335).
+      if (profile) {
         try {
-          return HEYS.Day.calcNormAbs(profile) || {};
-        } catch (error) {
-          devWarn('[pi_ui_dashboard] buildNormAbsForInsights failed:', error);
-        }
-      }
-
-      // Fallback: estimate from TDEE
-      if (typeof HEYS.TDEE?.calculate === 'function' && profile) {
-        try {
-          var tdee = HEYS.TDEE.calculate(profile);
-          if (tdee && tdee.optimum > 0) {
-            var weight = +(profile.weight || profile.baseWeight || 70);
-            return { kcal: tdee.optimum, prot: Math.round(weight * 1.6) };
-          }
+          const targets = HEYS.TDEE?.resolveDailyTargets?.(profile, dayData);
+          if (targets && targets.kcal > 0) return targets;
         } catch (error) {
           devWarn('[pi_ui_dashboard] buildNormAbsForInsights TDEE failed:', error);
         }
@@ -219,7 +205,7 @@
           : buildDayTotForInsights(safeDayData, pIndex);
         const safeNormAbs = normAbs && Object.keys(normAbs).length > 0
           ? normAbs
-          : buildNormAbsForInsights(profile);
+          : buildNormAbsForInsights(profile, safeDayData);
         const historyDays = getHistoryDaysForDate(lsGet, selectedDate, 14);
         const todayIso = HEYS.dayUtils?.todayISO?.() || new Date().toISOString().split('T')[0];
         const now = selectedDate === todayIso ? undefined : `${selectedDate}T23:59:00`;
@@ -345,7 +331,9 @@
         try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
       });
       const profile = getter('heys_profile', {});
-      const pIndex = window.HEYS?.products?.getIndex?.();
+      // getIndex не существует — позиции без инлайнового снапшота считались
+      // нулями. Канон — buildIndex (heys_core_v12.js:4692).
+      const pIndex = window.HEYS?.products?.buildIndex?.();
 
       let proteinDeficitDays = 0;
       let highStressDays = 0;
@@ -2227,38 +2215,23 @@
           }
         }
 
-        // Получаем индекс продуктов
-        let currentPIndex = pIndex || window.HEYS?.products?.getIndex?.();
-
-        // Если getIndex не существует, строим индекс из массива продуктов
-        if (!currentPIndex || !currentPIndex.byId) {
-          const products = window.HEYS?.products?.getAll?.() || [];
-          const buildIndex = window.HEYS?.dayUtils?.buildProductIndex
-            || window.HEYS?.models?.buildProductIndex;
-          if (buildIndex && products.length > 0) {
-            currentPIndex = buildIndex(products);
-          } else if (products.length > 0) {
-            // Fallback: строим простой индекс вручную
-            const byId = new Map();
-            const byName = new Map();
-            for (const p of products) {
-              if (p.id) byId.set(String(p.id).toLowerCase(), p);
-              if (p.name) byName.set(p.name.toLowerCase(), p);
-            }
-            currentPIndex = { byId, byName };
-          }
-        }
+        // Получаем индекс продуктов. getIndex не существует; buildIndex
+        // (heys_core_v12.js:4692) сам делегирует в models/dayUtils
+        // buildProductIndex — ручная пересборка ниже была его копией.
+        let currentPIndex = pIndex || window.HEYS?.products?.buildIndex?.();
 
         // Вычисляем dayTot если не передан
         let currentDayTot = dayTot;
-        if (!currentDayTot && currentDayData.meals?.length > 0 && window.HEYS?.Day?.computeDayTot) {
-          currentDayTot = window.HEYS.Day.computeDayTot(currentDayData, currentPIndex);
+        // HEYS.Day.computeDayTot/calcNormAbs не существуют — обе ветки никогда
+        // не выполнялись, dayTot и normAbs оставались пустыми.
+        if (!currentDayTot && currentDayData.meals?.length > 0) {
+          currentDayTot = buildDayTotForInsights(currentDayData, currentPIndex);
         }
 
         // Вычисляем normAbs если не передан
         let currentNormAbs = normAbs;
-        if (!currentNormAbs && currentProfile && window.HEYS?.Day?.calcNormAbs) {
-          currentNormAbs = window.HEYS.Day.calcNormAbs(currentProfile);
+        if (!currentNormAbs && currentProfile) {
+          currentNormAbs = buildNormAbsForInsights(currentProfile, currentDayData);
         }
 
         // Вычисляем optimum если не передан
@@ -3966,7 +3939,7 @@
           dayTot: buildDayTotForInsights(day, pIndex),
           profile: prof,
           pIndex,
-          normAbs: buildNormAbsForInsights(prof),
+          normAbs: buildNormAbsForInsights(prof, day),
         });
       }, [initialRelapseRisk, lsGet, profile, pIndex, selectedDate]);
 
@@ -4621,7 +4594,7 @@
 
           // FORECAST TAB — с timeline
           activeTab === 'forecast' && h('div', { className: 'predictive-dashboard__panel' },
-            forecast ? h(ForecastPanel, { forecast, isPast: isForecastPast }) :
+            forecast ? h(ForecastPanel, { forecast, isPast: isForecastPast, lsGet, pIndex, forecastDate }) :
               h('div', { className: 'predictive-dashboard__empty' }, 'Нет данных для прогноза')
           )
         )
@@ -5061,21 +5034,48 @@
      * ForecastPanel — содержимое таба Forecast
      * Интегрирован с InsulinWave для показа окон еды
      */
-    function ForecastPanel({ forecast, isPast }) {
+    function ForecastPanel({ forecast, isPast, lsGet, pIndex, forecastDate }) {
       // 🆕 Получаем данные инсулиновой волны для более точного прогноза
       const [insulinWaveData, setInsulinWaveData] = useState(null);
 
       useEffect(() => {
-        if (window.HEYS?.InsulinWave?.calculate) {
-          try {
-            // Получаем текущее состояние волны
-            const waveData = window.HEYS.InsulinWave.getLatestWaveData?.() || null;
-            setInsulinWaveData(waveData);
-          } catch (e) {
-            // Игнорируем ошибки
-          }
+        // getLatestWaveData не существует: гард стоял на calculate, а звался
+        // другой метод — блок расчётного окна не рендерился никогда. Канон —
+        // InsulinWave.calculate (heys_insulin_wave_v1.js:111), он и отдаёт
+        // status/remaining/endTimeRange, которые читает getWaveEndInfo ниже.
+        const IW = window.HEYS?.InsulinWave;
+        if (typeof IW?.calculate !== 'function' || !forecastDate) {
+          setInsulinWaveData(null);
+          return;
         }
-      }, []);
+        try {
+          const getter = lsGet || window.HEYS?.utils?.lsGet || ((k, d) => {
+            try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; }
+          });
+          const day = getter('heys_dayv2_' + forecastDate, {}) || {};
+          // Волна строится от приёмов со временем; без них считать нечего
+          // (для будущих дат meals пуст — блок просто не появится).
+          const meals = (day.meals || []).filter(m => m && m.time);
+          if (!meals.length) { setInsulinWaveData(null); return; }
+
+          const idx = pIndex || window.HEYS?.products?.buildIndex?.() || null;
+          const getProductFromItem = window.HEYS?.models?.getProductFromItem
+            || window.HEYS?.dayCalculations?.getProductFromItem;
+          if (typeof getProductFromItem !== 'function') { setInsulinWaveData(null); return; }
+
+          setInsulinWaveData(IW.calculate({
+            meals,
+            pIndex: idx,
+            getProductFromItem,
+            trainings: day.trainings || [],
+            // Для прошлого дня смотрим на конец суток, а не на текущий час.
+            nowMinutes: isPast ? 1439 : undefined
+          }));
+        } catch (e) {
+          devWarn('[pi_ui_dashboard] insulin wave calculate failed:', e);
+          setInsulinWaveData(null);
+        }
+      }, [forecastDate, isPast, lsGet, pIndex]);
 
       // Форматирование расчётного окна после еды
       const getWaveEndInfo = () => {
@@ -5632,7 +5632,8 @@
             .map(k => getter(k, {}))
             .filter(d => d && d.date);
           const profile = getter('heys_profile', {});
-          const pIndex = window.HEYS?.products?.getIndex?.();
+          // getIndex не существует — см. buildIndex (heys_core_v12.js:4692).
+          const pIndex = window.HEYS?.products?.buildIndex?.();
 
           const result = earlyWarning.detect(days, profile, pIndex);
           devLog('[EarlyWarningBadge] Detected warnings:', result);

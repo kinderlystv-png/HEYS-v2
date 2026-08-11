@@ -146,12 +146,12 @@
             const total = window.HEYS.dayUtils.getTotalSleepHours(day);
             return total > 0 ? total : null;
         }
+        // Досып не прибавляем: day.sleepHours по контракту уже сумма —
+        // см. тот же фолбэк в insights/patterns/sleep.js.
         const base = day.sleepHours || (day.sleepStart && day.sleepEnd
             ? calculateSleepHours(day.sleepStart, day.sleepEnd)
             : null);
-        if (!base) return null;
-        const napHours = Math.max(0, Math.round(+day.daySleepMinutes || 0)) / 60;
-        return base + napHours;
+        return base || null;
     }
 
     /**

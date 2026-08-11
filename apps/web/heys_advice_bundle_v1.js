@@ -1934,11 +1934,20 @@
     function personalizeText(text, ctx) {
         const firstName = ctx.prof?.firstName || '';
         const result = text
-            .replace(/\$\{firstName\}/g, firstName)
             .replace(/\$\{firstName\}, /g, firstName ? firstName + ', ' : '')
             .replace(/\$\{firstName\}!/g, firstName ? firstName + '!' : '')
-            .replace(/\, \$\{firstName\}/g, firstName ? ', ' + firstName : '');
-        return result.trim();
+            .replace(/\, \$\{firstName\}/g, firstName ? ', ' + firstName : '')
+            .replace(/\$\{firstName\}/g, firstName)
+            .trim();
+
+        // Шаблоны вида «${firstName}, после тренировки нужен белок!» рассчитаны
+        // на то, что имя стоит первым, поэтому следующее слово идёт со строчной.
+        // У клиента без имени обращение исчезает, и совет начинается с обрывка
+        // «после тренировки…». Убрать запятую мало — надо вернуть заглавную.
+        if (!firstName && /^\$\{firstName\}/.test(text) && result) {
+            return result.charAt(0).toUpperCase() + result.slice(1);
+        }
+        return result;
     }
 
     /**
@@ -10015,7 +10024,10 @@
                     baseWaveHours: prof?.insulinWaveHours || 3
                 });
 
-                if (iwData && iwData.status !== 'ready' && iwData.avgGI > 65) {
+                const iwAvgGI = iwData?.avgGI;
+                const hasIwAvgGI = typeof iwAvgGI === 'number' && Number.isFinite(iwAvgGI);
+
+                if (iwData && iwData.status !== 'ready' && hasIwAvgGI && iwAvgGI > 65) {
                     const remainingText = iwData.remaining > 60
                         ? Math.round(iwData.remaining / 60) + 'ч'
                         : Math.round(iwData.remaining) + ' мин';
@@ -10023,7 +10035,7 @@
                     advices.push({
                         id: 'high_gi_during_wave',
                         icon: '⚡',
-                        text: `ГИ ${iwData.avgGI} во время волны (${remainingText}) — сахар в крови подскочит`,
+                        text: `ГИ ${iwAvgGI} во время волны (${remainingText}) — сахар в крови подскочит`,
                         type: 'warning',
                         priority: 8,
                         category: 'nutrition',
@@ -10032,11 +10044,11 @@
                     });
                 }
 
-                if (iwData && iwData.status !== 'ready' && iwData.avgGI <= 40) {
+                if (iwData && iwData.status !== 'ready' && hasIwAvgGI && iwAvgGI <= 40) {
                     advices.push({
                         id: 'low_gi_during_wave',
                         icon: '👍',
-                        text: `ГИ ${iwData.avgGI} — отличный выбор для активной волны!`,
+                        text: `ГИ ${iwAvgGI} — отличный выбор для активной волны!`,
                         type: 'achievement',
                         priority: 35,
                         category: 'nutrition',

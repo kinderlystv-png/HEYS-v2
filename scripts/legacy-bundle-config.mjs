@@ -278,6 +278,10 @@ export const LEGACY_BUNDLES = {
         'insights/patterns/quality.js',
         'insights/patterns/micronutrients.js',
         'insights/pi_patterns.js',
+        // Потребитель — pi_advanced.js (разрешение противоречивых советов в
+        // «Сделай сегодня»). Файл не входил ни в один бандл, поэтому
+        // HEYS.InsightsPI.conflictResolver не существовал в рантайме.
+        'insights/pi_conflict_resolver.js',
         'insights/pi_advanced.js',
         'insights/pi_cache.js',
         'insights/pi_analytics_api.js',
