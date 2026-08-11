@@ -229,6 +229,7 @@ export const LEGACY_BUNDLES = {
         'heys_cascade_card_v1.js',
         'heys_daily_missions_v1.js',
         'heys_gamification_v1.js',
+        'heys_gamification_screens_v1.js',
         'heys_advice_rules_v1.js',
         'heys_advice_bundle_v1.js',
         'heys_meal_optimizer_v1.js',

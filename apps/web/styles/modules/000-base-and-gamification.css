@@ -15298,3 +15298,331 @@ html.heys-bg-paused *::after {
     background: rgba(82, 160, 216, 0.12);
   }
 }
+
+/* === Gamification v4 sheet (structure) === */
+.game-v4-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.game-v4-sheet-fallback {
+  padding: 16px 8px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  text-align: center;
+}
+
+.game-v4-sheet__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.game-v4-sheet__back {
+  border: 0;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.game-v4-sheet__header-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.game-v4-sheet__tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.game-v4-sheet__tab {
+  flex: 1;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.game-v4-sheet__tab.is-active {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.game-v4-sheet__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.game-v4-sheet__hero {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.game-v4-sheet__streak-num {
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  min-width: 48px;
+}
+
+.game-v4-sheet__hero-icon {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.game-v4-sheet__hero-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.game-v4-sheet__hero-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.game-v4-sheet__hero-sub {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 4px;
+}
+
+.game-v4-sheet__hero-meta {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 6px;
+}
+
+.game-v4-sheet__section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 6px;
+}
+
+.game-v4-sheet__missions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.game-v4-sheet__mission-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.game-v4-sheet__mission-row.is-done {
+  opacity: 0.85;
+}
+
+.game-v4-sheet__mission-icon {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.game-v4-sheet__mission-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.game-v4-sheet__mission-name {
+  font-size: 14px;
+  color: #fff;
+  font-weight: 500;
+}
+
+.game-v4-sheet__mission-sub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 2px;
+}
+
+.game-v4-sheet__mission-bar,
+.game-v4-sheet__level-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.game-v4-sheet__mission-bar-fill,
+.game-v4-sheet__level-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.game-v4-sheet__level-line,
+.game-v4-sheet__level-block {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.game-v4-sheet__level-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.game-v4-sheet__level-title {
+  font-weight: 600;
+}
+
+.game-v4-sheet__level-hint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.game-v4-sheet__ach-cat {
+  margin-bottom: 10px;
+}
+
+.game-v4-sheet__ach-cat-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 6px;
+}
+
+.game-v4-sheet__ach-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.game-v4-sheet__ach-row {
+  display: flex;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.game-v4-sheet__ach-icon {
+  font-size: 18px;
+}
+
+.game-v4-sheet__ach-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.game-v4-sheet__ach-desc {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 2px;
+}
+
+.game-v4-sheet__ach-progress,
+.game-v4-sheet__ach-meta {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 4px;
+}
+
+.game-v4-sheet__more-groups {
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.game-v4-sheet__level-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.game-v4-sheet__level-step {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.game-v4-sheet__level-step.is-current {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-weight: 600;
+}
+
+.game-v4-sheet__multipliers {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.game-v4-sheet__xp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.game-v4-sheet__xp-table td {
+  padding: 6px 4px;
+  color: rgba(255, 255, 255, 0.85);
+  vertical-align: top;
+}
+
+.game-v4-sheet__xp-label {
+  width: 55%;
+}
+
+.game-v4-sheet__xp-value {
+  width: 20%;
+  text-align: right;
+}
+
+.game-v4-sheet__xp-limit {
+  width: 25%;
+  text-align: right;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.game-v4-sheet__xp-footnote {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 6px;
+}
