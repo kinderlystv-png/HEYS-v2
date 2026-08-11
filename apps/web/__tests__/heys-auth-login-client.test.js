@@ -176,7 +176,7 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
         expect(result).toMatchObject({ ok: false, error: 'rate_limited' });
     });
 
-    it('returns invalid_credentials when success but missing client_id or session_token', async () => {
+    it('returns session_not_issued (not invalid_credentials) when success but missing client_id or session_token', async () => {
         rpc.mockResolvedValue({
             data: { verify_client_pin_v3: { success: true, client_id: null, session_token: 'tok' } },
             error: null,
@@ -186,8 +186,117 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
         const result = await p;
         expect(result).toMatchObject({
             ok: false,
-            error: 'invalid_credentials',
+            error: 'session_not_issued',
             _debug: { hasClientId: false, hasSessionToken: true },
+        });
+    });
+
+    // Экран показывает «PIN не подошёл» только на invalid_credentials. Любой
+    // другой серверный код обязан доехать до экрана вместе с текстом сервера —
+    // иначе клиент решит, что забыл код (инцидент 2026-08-11).
+    it('passes pin_login_disabled through with the server message', async () => {
+        rpc.mockResolvedValue({
+            data: {
+                verify_client_pin_v3: {
+                    success: false,
+                    error: 'pin_login_disabled',
+                    message: 'Вход по PIN временно отключён. Куратор откроет доступ после обновления входа.',
+                },
+            },
+            error: null,
+        });
+        const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
+        await flushLoginDelay();
+        const result = await p;
+        expect(result).toMatchObject({
+            ok: false,
+            error: 'pin_login_disabled',
+            serverError: 'pin_login_disabled',
+            serverMessage: 'Вход по PIN временно отключён. Куратор откроет доступ после обновления входа.',
+        });
+    });
+
+    it('maps server pin_rate_limited to rate_limited and keeps the server message', async () => {
+        rpc.mockResolvedValue({
+            data: {
+                verify_client_pin_v3: {
+                    success: false,
+                    error: 'pin_rate_limited',
+                    message: 'Слишком много попыток. Попробуйте позже или напишите куратору.',
+                },
+            },
+            error: null,
+        });
+        const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
+        await flushLoginDelay();
+        const result = await p;
+        expect(result).toMatchObject({
+            ok: false,
+            error: 'rate_limited',
+            serverError: 'pin_rate_limited',
+            serverMessage: 'Слишком много попыток. Попробуйте позже или напишите куратору.',
+        });
+    });
+
+    it('does not collapse an unknown server code into invalid_credentials', async () => {
+        rpc.mockResolvedValue({
+            data: {
+                verify_client_pin_v3: {
+                    success: false,
+                    error: 'client_archived',
+                    message: 'Доступ закрыт куратором.',
+                },
+            },
+            error: null,
+        });
+        const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
+        await flushLoginDelay();
+        const result = await p;
+        expect(result).toMatchObject({
+            ok: false,
+            error: 'client_archived',
+            serverMessage: 'Доступ закрыт куратором.',
+        });
+    });
+
+    it('still reports invalid_credentials when the server gives no reason at all', async () => {
+        rpc.mockResolvedValue({
+            data: { verify_client_pin_v3: { success: false } },
+            error: null,
+        });
+        const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
+        await flushLoginDelay();
+        const result = await p;
+        expect(result).toMatchObject({ ok: false, error: 'invalid_credentials' });
+    });
+
+    it('maps a transport failure to network_error, not invalid_credentials', async () => {
+        rpc.mockResolvedValue({
+            data: null,
+            error: { message: 'Failed to fetch', code: 'NETWORK_ERROR' },
+        });
+        const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
+        await flushLoginDelay();
+        const result = await p;
+        expect(result).toMatchObject({ ok: false, error: 'network_error' });
+    });
+
+    it('passes an HTTP-level server code and its message through', async () => {
+        rpc.mockResolvedValue({
+            data: null,
+            error: {
+                message: 'pin_login_disabled',
+                code: 403,
+                raw: { error: 'pin_login_disabled', message: 'Вход по PIN временно отключён.' },
+            },
+        });
+        const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
+        await flushLoginDelay();
+        const result = await p;
+        expect(result).toMatchObject({
+            ok: false,
+            error: 'pin_login_disabled',
+            serverMessage: 'Вход по PIN временно отключён.',
         });
     });
 

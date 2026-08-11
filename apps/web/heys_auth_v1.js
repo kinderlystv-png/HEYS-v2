@@ -234,6 +234,36 @@
     setRateState(st);
   }
 
+  // Коды, при которых сервер действительно говорит «этот PIN не подходит».
+  // Всё остальное — другая причина отказа, и показывать её как неверный код
+  // нельзя: клиент решает, что забыл PIN, и идёт в поддержку. Инцидент
+  // 2026-08-11: заглушка `pin_login_disabled` (вход по PIN временно закрыт)
+  // доезжала до экрана как «PIN не подошёл».
+  const WRONG_PIN_SERVER_ERRORS = new Set(['invalid_credentials', 'invalid_pin', 'wrong_pin']);
+
+  // `rate_limited` — исторический код, `pin_rate_limited` возвращает
+  // verify_client_pin_v3 после 2026-08-11 (блокировка по номеру клиента).
+  const RATE_LIMIT_SERVER_ERRORS = new Set(['rate_limited', 'pin_rate_limited']);
+
+  // Приводит серверный отказ к коду для экрана. Незнакомый код НЕ схлопывается
+  // в invalid_credentials, а уезжает наверх как есть вместе с серверным
+  // текстом: экран покажет настоящую причину, а не «PIN не подошёл».
+  function classifyServerLoginError(rawError, rawMessage) {
+    const serverError = typeof rawError === 'string' ? rawError.trim() : '';
+    const serverMessage = typeof rawMessage === 'string' ? rawMessage.trim() : '';
+
+    let error;
+    if (RATE_LIMIT_SERVER_ERRORS.has(serverError)) {
+      error = 'rate_limited';
+    } else if (!serverError || WRONG_PIN_SERVER_ERRORS.has(serverError)) {
+      error = 'invalid_credentials';
+    } else {
+      error = serverError;
+    }
+
+    return { error, serverError, serverMessage };
+  }
+
   async function loginClient({ phone, pin }) {
     // 🔧 FIX: Очищаем curator токен ПЕРЕД PIN-авторизацией
     // Если остался старый heys_supabase_auth_token от куратора,
@@ -287,9 +317,16 @@
 
       if (vRes.error) {
         registerFail('login', phoneNorm);
+        // Транспорт: `error.message` — это код из тела ответа (`data.error`),
+        // а человеческий текст, если сервер его прислал, лежит в `error.raw`.
+        const transport = vRes.error.code === 'NETWORK_ERROR'
+          ? { error: 'network_error', serverError: '', serverMessage: '' }
+          : classifyServerLoginError(vRes.error.message, vRes.error.raw && vRes.error.raw.message);
         return {
           ok: false,
-          error: vRes.error.message === 'rate_limited' ? 'rate_limited' : 'invalid_credentials',
+          error: transport.error,
+          serverError: transport.serverError,
+          serverMessage: transport.serverMessage,
           _debug: {
             stage: 'verify_pin',
             rpc: 'verify_client_pin_v3',
@@ -306,9 +343,12 @@
       // v3 возвращает { success, client_id, session_token, error }
       if (!vRow?.success) {
         registerFail('login', phoneNorm);
+        const rejected = classifyServerLoginError(vRow?.error, vRow?.message);
         return {
           ok: false,
-          error: vRow?.error === 'rate_limited' ? 'rate_limited' : 'invalid_credentials',
+          error: rejected.error,
+          serverError: rejected.serverError,
+          serverMessage: rejected.serverMessage,
           _debug: {
             stage: 'verify_pin',
             rpc: 'verify_client_pin_v3',
@@ -323,9 +363,12 @@
 
       if (!clientId || !sessionToken) {
         registerFail('login', phoneNorm);
+        // Сервер подтвердил код, но не выдал сессию — это сбой на стороне
+        // сервера, а не неверный PIN. Отдельный код, чтобы экран не отправлял
+        // клиента вспоминать несуществующую ошибку в PIN.
         return {
           ok: false,
-          error: 'invalid_credentials',
+          error: 'session_not_issued',
           _debug: {
             stage: 'verify_pin',
             rpc: 'verify_client_pin_v3',

@@ -336,11 +336,26 @@
         if (!res || res.ok === false) {
           const code = res && res.error;
 
+          // Серверный текст, если сервер объяснил отказ словами.
+          const serverMessage = (res && typeof res.serverMessage === 'string')
+            ? res.serverMessage.trim()
+            : '';
+
           if (code === 'rate_limited') {
             const sec = Math.ceil((res.retryAfterMs || 0) / 1000);
-            setErr(`Слишком много попыток. Подождите ${sec}с и попробуйте снова.`);
+            // Локальный ограничитель знает, сколько ждать; серверная блокировка
+            // по номеру точного отсчёта не даёт, но присылает свой текст.
+            setErr(sec > 0
+              ? `Слишком много попыток. Подождите ${sec}с и попробуйте снова.`
+              : (serverMessage || 'Слишком много попыток. Попробуйте позже или напишите куратору.'));
+          } else if (code === 'pin_login_disabled') {
+            setErr(serverMessage || 'Вход по PIN временно отключён. Куратор откроет доступ после обновления входа.');
           } else if (code === 'invalid_credentials') {
             showInvalidPinFeedback();
+          } else if (code === 'session_not_issued') {
+            setErr('Код верный, но вход не завершился. Попробуйте ещё раз или напишите куратору.');
+          } else if (code === 'network_error') {
+            setErr('Нет связи с сервером. Проверьте интернет и попробуйте снова.');
           } else if (code === 'cloud_not_ready') {
             setErr('Сервер не готов. Попробуйте чуть позже.');
           } else if (code === 'invalid_phone') {
@@ -349,7 +364,10 @@
             setErr('PIN должен быть из 4 цифр');
             resetPinToFirstSlot();
           } else {
-            setErr(res.message || 'Не удалось войти');
+            // Незнакомый серверный код показываем словами сервера. Молча
+            // сводить его к «PIN не подошёл» нельзя: клиент решит, что забыл
+            // код, и уйдёт в поддержку с несуществующей проблемой.
+            setErr(serverMessage || res.message || 'Не удалось войти');
           }
         }
       } finally {
