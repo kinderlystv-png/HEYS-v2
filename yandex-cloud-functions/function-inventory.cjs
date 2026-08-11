@@ -194,7 +194,20 @@ function main() {
     }
     return;
   }
-  throw new Error('Usage: --verify | --list [--group api|automations] [--auto-only] | --resolve [--github-output] | --assert-deployable <name>');
+  // Признак и причина по имени — для deploy-all.sh: явный список функций
+  // раньше обходил `autoDeploy: false`, и отключённая функция уезжала в прод
+  // заодно с соседями (heys-api-sms, 2026-08-11).
+  if (argSet.has('--auto-deploy')) {
+    const item = FUNCTION_BY_NAME.get(args[args.indexOf('--auto-deploy') + 1]);
+    console.log(item ? String(item.autoDeploy !== false) : 'unknown');
+    return;
+  }
+  if (argSet.has('--reason')) {
+    const item = FUNCTION_BY_NAME.get(args[args.indexOf('--reason') + 1]);
+    console.log(item?.reason || '');
+    return;
+  }
+  throw new Error('Usage: --verify | --list [--group api|automations] [--auto-only] | --resolve [--github-output] | --assert-deployable <name> | --auto-deploy <name> | --reason <name>');
 }
 
 if (require.main === module) {

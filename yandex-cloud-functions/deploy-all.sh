@@ -185,8 +185,44 @@ while IFS= read -r func_name; do
     AUTOMATION_FUNCTIONS+=("$func_name")
 done < <(node "$INVENTORY_SCRIPT" --list --group automations --auto-only)
 
+# Функция с autoDeploy:false не должна уезжать в прод «заодно». Инвентарь её
+# из автоматических групп исключает, но явный список функций этот признак
+# обходил: 2026-08-11 правка CORS перечислила шесть функций подряд, и
+# heys-api-sms — отключённая в проде с 22 мая — вернулась в облако вместе с
+# остальными. Внешний обработчик появился в проде, не появившись ни в одном
+# юридическом документе.
+#
+# Явное указание само по себе не является «explicit release decision», которого
+# требует причина в инвентаре: перечислить имя в списке слишком легко. Поэтому
+# отключённая функция требует отдельной переменной с её именем — случайно такое
+# не наберёшь, а осознанный релиз не блокируется.
+assert_target_allowed() {
+    local fn="$1"
+    local auto_deploy
+    auto_deploy="$(node "$INVENTORY_SCRIPT" --auto-deploy "$fn" 2>/dev/null || echo unknown)"
+    [ "$auto_deploy" = "false" ] || return 0
+
+    # Диагностика уходит в stderr: stdout этой ветки — список имён функций,
+    # и любая посторонняя строка в нём становится «именем функции».
+    case ",${ALLOW_DISABLED_FUNCTIONS:-}," in
+        *",$fn,"*)
+            echo -e "${YELLOW}⚠ $fn: авто-деплой отключён, но разрешён через ALLOW_DISABLED_FUNCTIONS${NC}" >&2
+            return 0
+            ;;
+    esac
+
+    echo -e "${RED}❌ $fn: авто-деплой отключён в function-inventory.cjs${NC}" >&2
+    echo -e "${RED}   $(node "$INVENTORY_SCRIPT" --reason "$fn" 2>/dev/null)${NC}" >&2
+    echo -e "${RED}   Осознанный релиз: ALLOW_DISABLED_FUNCTIONS=$fn $0 $fn${NC}" >&2
+    exit 1
+}
+
 selected_functions() {
     if [ ${#TARGET_FUNCTIONS[@]} -gt 0 ]; then
+        local fn
+        for fn in "${TARGET_FUNCTIONS[@]}"; do
+            assert_target_allowed "$fn"
+        done
         printf '%s\n' "${TARGET_FUNCTIONS[@]}"
         return
     fi
