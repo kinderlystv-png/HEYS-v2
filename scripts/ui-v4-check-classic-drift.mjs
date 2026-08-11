@@ -187,7 +187,11 @@ function selectorAt(css, index) {
   const open = css.lastIndexOf('{', index);
   if (open === -1) return '';
   const prevClose = Math.max(css.lastIndexOf('}', open), css.lastIndexOf(';', open));
-  return css.slice(prevClose + 1, open).trim();
+  // Без границы слева (первое правило файла) захват уходит в начало файла и
+  // ловит слово "dark" из обычной прозы в шапочном комментарии — как здесь,
+  // в 1000-messenger.css: «между light/dark при смене темы». Комментарии
+  // всегда вычищаем перед проверкой на тёмный селектор.
+  return css.slice(prevClose + 1, open).replace(/\/\*[\s\S]*?\*\//g, '').trim();
 }
 
 const noted = [];
