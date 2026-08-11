@@ -55,7 +55,7 @@
 }
 
 .insights-v4-period-pill.is-active {
-  color: var(--v4-act, #8a4a20);
+  color: #8a4a20;
   box-shadow: inset 0 -2px 0 0 var(--v4-act-line, #c67139);
 }
 
@@ -84,7 +84,7 @@
 .insights-v4-hero {
   padding: 18px 18px 14px;
   border-radius: 22px;
-  background: var(--v4-hero, #efe3cf);
+  background: #efe3cf;
 }
 
 .insights-v4-hero__phrase {
@@ -92,7 +92,7 @@
   font-size: 13px;
   font-weight: 600;
   line-height: 1.45;
-  color: var(--v4-act, #8a4a20);
+  color: #8a4a20;
 }
 
 .insights-priority-actions--v4 {
@@ -120,14 +120,14 @@
   height: 8px;
   margin-top: 5px;
   border-radius: 50%;
-  background: var(--v4-act, #8a4a20);
+  background: #8a4a20;
   flex: none;
 }
 
 .insights-v4-attention {
   padding: 16px 18px;
   border-radius: 20px;
-  background: var(--v4-surface, #fffaf1);
+  background: #fffaf1;
 }
 
 .insights-v4-attention--ok .insights-v4-attention__text {
@@ -185,14 +185,14 @@
   background: none;
   font-size: 12px;
   font-weight: 600;
-  color: var(--v4-act, #8a4a20);
+  color: #8a4a20;
   cursor: pointer;
 }
 
 .insights-v4-patterns {
   padding: 16px 18px;
   border-radius: 20px;
-  background: var(--v4-surface, #fffaf1);
+  background: #fffaf1;
 }
 
 .insights-v4-patterns__immature {
@@ -230,7 +230,7 @@
   background: var(--v4-surface-2, rgba(0, 0, 0, 0.04));
   font-size: 13px;
   font-weight: 700;
-  color: var(--v4-act, #8a4a20);
+  color: #8a4a20;
   text-align: left;
   cursor: pointer;
 }
@@ -248,7 +248,7 @@
   padding: 8px 0;
   font-size: 13px;
   font-weight: 600;
-  color: var(--v4-act, #8a4a20);
+  color: #8a4a20;
   cursor: pointer;
 }
 
@@ -269,14 +269,14 @@
 
 .insights-v4 .heys-score-insights-card {
   border-radius: 20px;
-  background: var(--v4-surface, #fffaf1);
+  background: #fffaf1;
 }
 
 [data-palette="sand"] .insights-v4-hero,
 [data-palette="sand-dark"] .insights-v4-hero,
 [data-palette="blue"] .insights-v4-hero,
 [data-palette="blue-dark"] .insights-v4-hero {
-  background: var(--v4-hero, #efe3cf);
+  background: #efe3cf;
 }
 
 [data-palette="sand"] .insights-v4-attention,
@@ -287,5 +287,5 @@
 [data-palette="sand-dark"] .insights-v4-patterns,
 [data-palette="blue"] .insights-v4-patterns,
 [data-palette="blue-dark"] .insights-v4-patterns {
-  background: var(--v4-surface, #fffaf1);
+  background: #fffaf1;
 }

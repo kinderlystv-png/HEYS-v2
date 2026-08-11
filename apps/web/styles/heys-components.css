@@ -14,7 +14,7 @@
   --pi-success: var(--v4-ok-fill, #22c55e);
   --pi-warning: #f59e0b;
   --pi-error: #ef4444;
-  --pi-info: var(--v4-act, #3b82f6);
+  --pi-info: #3b82f6;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -5018,7 +5018,7 @@ body.tour-active .ios-pwa-banner {
 [data-theme="dark"] .game-audit-btn--copy {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: var(--v4-ink, #ffffff);
-  border-color: var(--v4-act, #3b82f6);
+  border-color: #3b82f6;
 }
 
 @media (hover: hover) {
@@ -7249,8 +7249,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .monthly-week-card--current {
-  border-color: var(--v4-act, #3b82f6);
-  box-shadow: 0 0 0 1px var(--v4-act, #3b82f6);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
 }
 
 [data-theme="dark"] .monthly-week-card__header {
@@ -12051,8 +12051,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme="dark"] .meal-rec-card__add-selected-btn--active {
-  border-color: var(--v4-act, #3b82f6);
-  background: var(--v4-act, #3b82f6);
+  border-color: #3b82f6;
+  background: #3b82f6;
   color: white;
 }
 
@@ -12137,7 +12137,7 @@ body.tour-active .ios-pwa-banner {
 
 @media (hover: hover) {
   [data-theme="dark"] .meal-rec-card__feedback-btn:hover:not(:disabled) {
-  border-color: var(--v4-act, #3b82f6);
+  border-color: #3b82f6;
   background: #1e3a8a;
 }
 }
@@ -13998,7 +13998,7 @@ body.tour-active .ios-pwa-banner {
   overflow-y: auto;
   padding-top: max(20px, calc(env(safe-area-inset-top, 0px) + 20px)) !important;
   padding-bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 20px)) !important;
-  background: var(--v4-hero, #e8ecf1);
+  background: #e8ecf1;
   transition: background 0.24s ease;
 }
 
@@ -14878,7 +14878,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 [data-theme="dark"] .heys-auth-shell {
-  background: var(--v4-hero, #0f172a);
+  background: #0f172a;
 }
 
 [data-theme="dark"] .heys-auth-card {
