@@ -108,6 +108,11 @@ const ALLOWED_ORIGINS = [
   'https://app.heyslab.ru',
   'https://heyslab.ru',
   'https://www.heyslab.ru',
+  // 2026-08-11: замороженная копия прода для сравнения версий. Тот же API и та
+  // же база — это второй вход в живые данные, а не песочница. Оба адреса: по
+  // короткому копия открывается до настройки DNS, по длинному — после.
+  'https://stable.heyslab.ru',
+  'https://stable-heyslab-ru.website.yandexcloud.net',
   ...(ALLOW_LOCALHOST_ORIGINS ? ['http://localhost:3001', 'http://127.0.0.1:3001'] : []),
 ];
 
