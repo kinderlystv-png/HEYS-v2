@@ -49,6 +49,13 @@
     // бесполезна целиком: это единственное исключение из «read-only» —
     // авторизация, а не изменение прикладных данных клиента.
     'verify_client_pin_v3',
+    // issue_write_context_by_session/_by_curator выдают capability token
+    // (session/curator-scoped), а не меняют данные клиента. Без него сервер
+    // резолвит все последующие *_by_session чтения без контекста — это тоже
+    // auth-инфраструктура, как verify_client_pin_v3 выше, не запись прикладных
+    // данных.
+    'issue_write_context_by_session',
+    'issue_write_context_by_curator',
   ]);
   function isReadonlyAllowedRpc(fnName) {
     return READONLY_ALLOWED_RPC_EXACT.has(fnName) || READONLY_ALLOWED_RPC_PREFIX.test(fnName);
