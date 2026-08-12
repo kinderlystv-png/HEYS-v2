@@ -2739,7 +2739,14 @@
                 { hasGate: !!gate, hasDesktopGate: !!desktopGate, cloudUser: !!cloudUser, isPinSessionActive, clientId: !!clientId, checkingConsent });
         }
         const hasOutdatedRequiredConsents = (outdatedTypes || []).length > 0;
-        const shouldBlockForConsents = needsConsent || mustBlockReconsent || hasOutdatedRequiredConsents;
+        // READONLY_MODE (stable.heyslab.ru): живая БД + отозванные/устаревшие
+        // согласия иначе тупят вход — log_consents* заблокирован. Экран согласий
+        // остаётся открываемым вручную для эталонных скринов, но не гейтит вход.
+        const isReadonlyHost = !!(typeof window !== 'undefined'
+            && window.__HEYS_READONLY_MODE__
+            && window.__HEYS_READONLY_MODE__.enabled);
+        const shouldBlockForConsents = !isReadonlyHost
+            && (needsConsent || mustBlockReconsent || hasOutdatedRequiredConsents);
 
         if (baseEligible && shouldBlockForConsents && !HEYS.Consents?.ConsentScreen) {
             console.debug('[CONSENTS GATE] ConsentScreen компонент ещё не загружен');

@@ -373,12 +373,32 @@
     const [error, setError] = useState(null);
     const [showFullText, setShowFullText] = useState(null);
     const screenRef = useRef(null);
+    // Замороженная копия (stable.heyslab.ru): экран открыт для скринов, запись
+    // согласий заблокирована на уровне API — «Продолжить» только закрывает UI.
+    const isReadonlyHost = !!(typeof window !== 'undefined'
+      && window.__HEYS_READONLY_MODE__
+      && window.__HEYS_READONLY_MODE__.enabled);
     const outdatedTypeSet = new Set(
       (Array.isArray(outdatedTypes) ? outdatedTypes : [])
         .map(item => item?.type || item)
         .filter(Boolean)
     );
     const hasOutdatedDocuments = outdatedTypeSet.size > 0;
+
+    const buildConsentList = useCallback((signatureMethod) => (
+      Object.entries(consents).map(([type, granted]) => ({
+        type,
+        granted,
+        version: CURRENT_VERSIONS[type] || '1.0',
+        signature_method: signatureMethod || 'checkbox'
+      }))
+    ), [consents]);
+
+    const completeWithoutWrite = useCallback(() => {
+      const consentList = buildConsentList('checkbox');
+      console.info('[Consents] READONLY_MODE — skip log_consents, continue without write');
+      onComplete?.(consentList);
+    }, [buildConsentList, onComplete]);
 
     useEffect(() => {
       HEYS.BlankScreenGuard?.reportVisibleFrame?.({
@@ -454,6 +474,11 @@
         return;
       }
 
+      if (isReadonlyHost) {
+        completeWithoutWrite();
+        return;
+      }
+
       setLoading(true);
       setError(null);
 
@@ -473,12 +498,7 @@
         // (database/2026-08-11_consents_pin_confirm_signature.sql), поэтому если
         // флаг когда-нибудь включат обратно, значение здесь тоже нужно решить
         // заново — это часть будущей схемы подписи, не текущей.
-        const consentList = Object.entries(consents).map(([type, granted]) => ({
-          type,
-          granted,
-          version: CURRENT_VERSIONS[type] || '1.0',  // 2026-05-21 fix: без version SQL ставил дефолт 1.1
-          signature_method: 'checkbox'
-        }));
+        const consentList = buildConsentList('checkbox');
 
         // Логируем в Supabase
         const result = await consentsAPI.logConsents(clientId, consentList);
@@ -511,11 +531,17 @@
       } finally {
         setLoading(false);
       }
-    }, [clientId, phone, code, consents, notificationsOptIn, onComplete, onError]);
+    }, [clientId, phone, code, buildConsentList, isReadonlyHost, completeWithoutWrite, notificationsOptIn, onComplete, onError]);
 
     // Переход к шагу верификации
     const handleProceedToVerify = useCallback(async () => {
       if (!allRequiredAccepted) return;
+
+      // Замороженная копия: запись согласий заблокирована — только закрыть UI.
+      if (isReadonlyHost) {
+        completeWithoutWrite();
+        return;
+      }
 
       // SMS верификация отключена — используем только чекбоксы + логирование
       // Для health-data юридическая достаточность ПЭП подтверждается отдельно.
@@ -524,12 +550,7 @@
         // Сохраняем без верификации
         setLoading(true);
         try {
-          const consentList = Object.entries(consents).map(([type, granted]) => ({
-            type,
-            granted,
-            version: CURRENT_VERSIONS[type] || '1.0',  // 2026-05-21 fix: без version SQL ставил дефолт 1.1
-            signature_method: 'checkbox'
-          }));
+          const consentList = buildConsentList('checkbox');
 
           const result = await consentsAPI.logConsents(clientId, consentList);
           if (!result.success) throw new Error(result.error || 'Ошибка сохранения согласий');
@@ -566,22 +587,23 @@
       await sendVerificationCode();
       // Фокус на поле ввода
       setTimeout(() => codeInputRef.current?.focus(), 100);
-    }, [allRequiredAccepted, consents, clientId, phone, onComplete, onError, sendVerificationCode]);
+    }, [allRequiredAccepted, buildConsentList, clientId, phone, isReadonlyHost, completeWithoutWrite, notificationsOptIn, onComplete, onError, sendVerificationCode]);
 
     // Старый handleSubmit для обратной совместимости (без верификации)
     const handleSubmit = useCallback(async () => {
       if (!allRequiredAccepted) return;
+
+      if (isReadonlyHost) {
+        completeWithoutWrite();
+        return;
+      }
 
       setLoading(true);
       setError(null);
 
       try {
         // Формируем массив согласий
-        const consentList = Object.entries(consents).map(([type, granted]) => ({
-          type,
-          granted,
-          signature_method: 'checkbox'
-        }));
+        const consentList = buildConsentList('checkbox');
 
         // Логируем в Supabase
         const result = await consentsAPI.logConsents(clientId, consentList);
@@ -614,7 +636,7 @@
       } finally {
         setLoading(false);
       }
-    }, [clientId, consents, allRequiredAccepted, notificationsOptIn, onComplete, onError]);
+    }, [clientId, buildConsentList, allRequiredAccepted, isReadonlyHost, completeWithoutWrite, notificationsOptIn, onComplete, onError]);
 
     return React.createElement('div', {
       ref: screenRef,
@@ -640,6 +662,13 @@
             ? 'Проверьте содержание документов и подтвердите актуальные условия'
             : 'Коротко объяснили каждый пункт. Для продолжения примите обязательные условия')
       ),
+
+      // READONLY: постоянный баннер — эталон для скринов, запись недоступна
+      isReadonlyHost && React.createElement('div', {
+        'data-testid': 'consents-readonly-banner',
+        className: 'px-4 py-2 text-sm',
+        style: { backgroundColor: '#fef3c7', color: '#92400e', borderBottom: '1px solid #fcd34d' }
+      }, 'Замороженная копия — только просмотр. Согласия не сохраняются.'),
 
       // Content - разные шаги
       step === 'consents' ? (
