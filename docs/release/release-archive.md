@@ -2,7 +2,7 @@
 
 > Сюда переезжают выполненные пункты и отменённые формулировки из плана и
 > треков. Ничего не удаляется: через месяц должно быть видно, что делали и
-> почему. Обратно в план не возвращается. **Штамп: 13.08.2026 00:51 MSK.**
+> почему. Обратно в план не возвращается. **Штамп: 13.08.2026 01:22 MSK.**
 
 ## 4.5 Порядок на 12.08
 
@@ -435,6 +435,18 @@
   нет» / «нужен серверный белый список»~~ — снято реализацией 13.08 (см. выше).
   Историческая проверка 12.08 «код кандидата не одноразовый» остаётся выше как
   снимок на дату; с 13.08 поведение другое
+- ✅ **13.08 · prompt-push-consent-gate на проде.** Коммит `a900a76ee` на
+  `origin/main`. Миграция `2026-08-13_revoke_consent_detach_push_v1.sql`:
+  `revoke_consent` и `revoke_consent_by_session` при отзыве `push_notifications`
+  или `personal_data` делают `DELETE FROM push_subscriptions`;
+  `delete_my_account` тоже. Гейт `clientHasLivePushConsent` до INSERT в
+  `handleSubscribe` и до чтения подписок в `handleTest`, `sendPushToClient`
+  (`heys-api-messages`) и `sendToClient` (`heys-cron-reminders`) — в промпте
+  отправитель был один, по коду их три, закрыты все. Кураторская ветка не
+  менялась. Прод до правки: 2 подписки, обе с живым `push_notifications`
+  (Александра Apple, Полтавский FCM) — ничего не удаляли. Deploy commit
+  `a900a76ee`: push `d4er203c3jmc9pl6kppp`, messages `d4e76p38f6cro19kge6g`,
+  cron `d4ep4crjo2o4ojqkcgg8`. Тесты: unit 5/5, host 5/5, DB 2/2
 
 ## 9. Трек C · Лендинг
 
