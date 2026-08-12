@@ -3179,20 +3179,31 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             ? pendingActionItems.slice(0, 4)
             : [];
         const shouldShowPendingSyncBanner = pendingCount > 0 && showPendingSyncBanner;
+        const isReadonlyHost = !!(typeof window !== 'undefined'
+            && window.__HEYS_READONLY_MODE__
+            && window.__HEYS_READONLY_MODE__.enabled);
         const isBackgroundPendingSync = !!showPendingSyncBanner;
-        const pendingSyncBannerEyebrow = isBackgroundPendingSync ? 'Сохранил локально' : 'Ждут отправки';
-        const pendingSyncBannerTitle = isBackgroundPendingSync
-            ? 'Можно продолжать — отправляю изменения в фоне'
-            : pendingCount > 1
-                ? `${pendingCount} изменений ждут синхронизации`
-                : '1 изменение ждёт синхронизации';
-        const pendingSyncBannerSummary = pendingBreakdownText
-            ? (isBackgroundPendingSync
-                ? `${pendingBreakdownText} · ничего не потеряется. Если включён VPN — попробуйте отключить, часто ускоряет синхронизацию.`
-                : `${pendingBreakdownText} · можно нажать на облако`)
+        const pendingSyncBannerEyebrow = isReadonlyHost
+            ? 'Копия для просмотра'
+            : (isBackgroundPendingSync ? 'Сохранил локально' : 'Ждут отправки');
+        const pendingSyncBannerTitle = isReadonlyHost
+            ? 'Изменения здесь не сохраняются'
             : (isBackgroundPendingSync
-                ? 'Если интернет тормозит — ничего не потеряется. Если включён VPN — попробуйте отключить, часто ускоряет синхронизацию.'
-                : 'Нажми на облако, чтобы подтолкнуть отправку.');
+                ? 'Можно продолжать — отправляю изменения в фоне'
+                : pendingCount > 1
+                    ? `${pendingCount} изменений ждут синхронизации`
+                    : '1 изменение ждёт синхронизации');
+        const pendingSyncBannerSummary = isReadonlyHost
+            ? (pendingBreakdownText
+                ? `${pendingBreakdownText} · это замороженная копия, запись отключена`
+                : 'Это замороженная копия для сравнения — данные клиента не меняются.')
+            : (pendingBreakdownText
+                ? (isBackgroundPendingSync
+                    ? `${pendingBreakdownText} · ничего не потеряется. Если включён VPN — попробуйте отключить, часто ускоряет синхронизацию.`
+                    : `${pendingBreakdownText} · можно нажать на облако`)
+                : (isBackgroundPendingSync
+                    ? 'Если интернет тормозит — ничего не потеряется. Если включён VPN — попробуйте отключить, часто ускоряет синхронизацию.'
+                    : 'Нажми на облако, чтобы подтолкнуть отправку.'));
         const pad2 = (n) => String(n).padStart(2, '0');
         const formatLocalISO = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
         const shiftISO = (iso, delta) => {

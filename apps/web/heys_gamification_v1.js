@@ -1985,6 +1985,11 @@
   const IMMEDIATE_SYNC_COOLDOWN_MS = 2000; // 🔥 Оптимизация: 2 сек вместо 10
 
   function scheduleCloudSync(immediate = false) {
+    if (typeof window !== 'undefined'
+      && window.__HEYS_READONLY_MODE__
+      && window.__HEYS_READONLY_MODE__.enabled) {
+      return;
+    }
     if (!_cloudLoaded) {
       _pendingCloudSync = true;
       return;
@@ -4557,6 +4562,12 @@
      */
     async syncToCloud() {
       const syncTrace = startGameSyncTrace('syncToCloud');
+      if (typeof window !== 'undefined'
+        && window.__HEYS_READONLY_MODE__
+        && window.__HEYS_READONLY_MODE__.enabled) {
+        endGameSyncTrace(syncTrace, 'skipped', { reason: 'readonly_mode' });
+        return false;
+      }
       try {
         // � Mutex: предотвращаем параллельные записи в облако
         if (_syncInProgress) {

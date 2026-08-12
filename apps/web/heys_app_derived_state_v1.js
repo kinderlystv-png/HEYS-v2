@@ -78,12 +78,17 @@
         const isMorningCheckinBlocking = showMorningCheckin === true && window.HEYS?.MorningCheckin;
 
         // Проверка согласий блокирует всё (показывается ДО morning checkin)
+        const isReadonlyHost = !!(typeof window !== 'undefined'
+            && window.__HEYS_READONLY_MODE__
+            && window.__HEYS_READONLY_MODE__.enabled);
         const hasOutdatedRequiredConsents = (complianceState?.outdatedTypes || []).length > 0;
         const isConsentRevalidationBlocking = checkingConsent && HEYS._consentsValid !== true;
-        const isConsentBlocking = needsConsent || isConsentRevalidationBlocking
+        const isConsentBlocking = !isReadonlyHost && (
+            needsConsent || isConsentRevalidationBlocking
             || complianceState?.mustBlockReconsent
             || complianceState?.consentCheckError
-            || hasOutdatedRequiredConsents;
+            || hasOutdatedRequiredConsents
+        );
 
         return {
             pendingText,

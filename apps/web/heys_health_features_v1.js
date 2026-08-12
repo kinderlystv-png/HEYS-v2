@@ -260,6 +260,7 @@
   async function requestHealthFeatureToggle(flagKey, nextEnabled) {
     const cfg = FEATURE_TOGGLES[flagKey];
     if (!cfg) return false;
+    const isReadonlyHost = !!(global.__HEYS_READONLY_MODE__ && global.__HEYS_READONLY_MODE__.enabled);
     if (OPTIONAL_FEATURE_FLAG_KEYS.includes(flagKey) && nextEnabled && !isOptionalHealthFeatureAvailable()) {
       return false;
     }
@@ -272,6 +273,10 @@
         `Текст согласия на «${cfg.label}» будет предоставлен владельцем проекта.\n\nВключить функцию?`
       );
       if (!ok) return false;
+      if (isReadonlyHost) {
+        console.info('[healthFeatures] READONLY_MODE — skip logConsentsBySession, allow local preview toggle');
+        return true;
+      }
       const version = CONSENT_TYPES[cfg.consentType] || 'pending-owner-text';
       if (HEYS.YandexAPI && typeof HEYS.YandexAPI.logConsentsBySession === 'function') {
         const result = await HEYS.YandexAPI.logConsentsBySession([{
@@ -288,7 +293,7 @@
     );
     if (!ok) return false;
     purgeLocalDays(cfg.purgeDay);
-    if (HEYS.YandexAPI && typeof HEYS.YandexAPI.revokeConsentBySession === 'function') {
+    if (!isReadonlyHost && HEYS.YandexAPI && typeof HEYS.YandexAPI.revokeConsentBySession === 'function') {
       await HEYS.YandexAPI.revokeConsentBySession(cfg.consentType);
     }
     return true;

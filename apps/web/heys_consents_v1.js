@@ -1682,6 +1682,12 @@
   };
 
   consentsAPI.confirmAge = async function (birthYear) {
+    if (typeof window !== 'undefined'
+      && window.__HEYS_READONLY_MODE__
+      && window.__HEYS_READONLY_MODE__.enabled) {
+      console.info('[Consents] READONLY_MODE — skip confirmAge, continue without write');
+      return { success: true, readonly: true };
+    }
     try {
       if (!HEYS.YandexAPI?.confirmAgeBySession) return { success: false, error: 'API not ready' };
       const r = await HEYS.YandexAPI.confirmAgeBySession(birthYear);
@@ -1789,6 +1795,9 @@
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const currentYear = new Date().getFullYear();
+    const isReadonlyHost = !!(typeof window !== 'undefined'
+      && window.__HEYS_READONLY_MODE__
+      && window.__HEYS_READONLY_MODE__.enabled);
 
     const submit = async () => {
       const y = parseInt(year, 10);
@@ -1798,6 +1807,11 @@
       }
       if (currentYear - y < 18) {
         setError('Сервис доступен только лицам старше 18 лет (152-ФЗ ст.9.5).');
+        return;
+      }
+      if (isReadonlyHost) {
+        console.info('[Consents] READONLY_MODE — skip confirmAge UI write, continue without write');
+        onConfirm && onConfirm(y);
         return;
       }
       setLoading(true);
@@ -1825,6 +1839,14 @@
       },
         React.createElement('h2', { style: { marginTop: 0, fontSize: 20 } },
           '🎂 Подтвердите возраст'),
+        isReadonlyHost && React.createElement('div', {
+          'data-testid': 'age-gate-readonly-banner',
+          style: {
+            marginTop: 12, padding: '10px 12px', borderRadius: 8,
+            background: '#fef3c7', color: '#92400e', fontSize: 13,
+            border: '1px solid #fcd34d'
+          }
+        }, 'Замороженная копия — только просмотр. Возраст не сохраняется.'),
         React.createElement('p', { style: { color: '#52525b', fontSize: 14 } },
           'По требованиям 152-ФЗ ст.9.5 сервисом могут пользоваться только лица старше 18 лет. Пожалуйста, укажите ваш год рождения.'),
         React.createElement('input', {

@@ -244,4 +244,107 @@ describe('consent readonly stable copy', () => {
       window.__HEYS_READONLY_MODE__ = previousReadonly;
     }
   });
+
+  it('does not call confirmAgeBySession when AgeGate confirms in readonly', async () => {
+    const previousHEYS = window.HEYS;
+    const previousReact = window.React;
+    const previousReadonly = window.__HEYS_READONLY_MODE__;
+    const confirmAgeBySession = vi.fn();
+    const onConfirm = vi.fn();
+
+    window.__HEYS_READONLY_MODE__ = { enabled: true };
+    window.HEYS = {
+      YandexAPI: { confirmAgeBySession },
+    };
+    window.React = {
+      useState: (initial) => {
+        if (initial === '') return ['1990', () => {}];
+        if (initial === null) return [null, () => {}];
+        return [initial, () => {}];
+      },
+      useEffect: () => {},
+      useCallback: (callback) => callback,
+      useRef: (initial) => ({ current: initial }),
+      createElement: (type, props, ...children) => {
+        if (typeof type === 'function') {
+          return type(props || {});
+        }
+        return { type, props: props || {}, children };
+      },
+    };
+
+    try {
+      // eslint-disable-next-line no-eval
+      (0, eval)(consentsSource);
+      const tree = window.HEYS.Consents.AgeGateModal({
+        onConfirm,
+        onDismiss: vi.fn(),
+      });
+
+      const banner = collectElements(tree).find(
+        (node) => node.props?.['data-testid'] === 'age-gate-readonly-banner'
+      );
+      expect(banner).toBeTruthy();
+
+      const confirmButton = collectElements(tree).find(
+        (node) => node.type === 'button'
+          && collectText(node).join(' ').includes('Подтвердить')
+          && typeof node.props?.onClick === 'function'
+      );
+      expect(confirmButton).toBeTruthy();
+
+      await confirmButton.props.onClick();
+
+      expect(confirmAgeBySession).not.toHaveBeenCalled();
+      expect(onConfirm).toHaveBeenCalledOnce();
+    } finally {
+      window.HEYS = previousHEYS;
+      window.React = previousReact;
+      window.__HEYS_READONLY_MODE__ = previousReadonly;
+    }
+  });
+
+  it('does not mark consent shell blocking in readonly derived state', () => {
+    const previousHEYS = window.HEYS;
+    const previousReadonly = window.__HEYS_READONLY_MODE__;
+    const derivedSource = fs.readFileSync(
+      path.resolve(__dirname, '../heys_app_derived_state_v1.js'),
+      'utf8'
+    );
+
+    window.__HEYS_READONLY_MODE__ = { enabled: true };
+    window.HEYS = { _consentsValid: false };
+    window.React = {
+      useState: (initial) => [initial, () => {}],
+      useEffect: () => {},
+      useMemo: (fn) => fn(),
+    };
+
+    try {
+      // eslint-disable-next-line no-eval
+      (0, eval)(derivedSource);
+      const derived = window.HEYS.AppDerivedState.useAppDerivedState({
+        React: window.React,
+        pendingDetails: null,
+        clients: [],
+        clientId: 'client-1',
+        needsConsent: true,
+        checkingConsent: true,
+        complianceState: {
+          mustBlockReconsent: true,
+          consentCheckError: 'boom',
+          outdatedTypes: [{ type: 'health_data' }],
+        },
+        showMorningCheckin: false,
+        U: {},
+        cloud: {},
+      });
+
+      expect(derived.isConsentBlocking).toBe(false);
+    } finally {
+      window.HEYS = previousHEYS;
+      window.__HEYS_READONLY_MODE__ = previousReadonly;
+      delete window.React;
+    }
+  });
 });

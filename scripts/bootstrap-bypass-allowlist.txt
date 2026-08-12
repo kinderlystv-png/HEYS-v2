@@ -137,7 +137,7 @@ apps/web/heys_gamification_bar_v1.js:1427
 apps/web/heys_gamification_v1.js:1626
 apps/web/heys_gamification_v1.js:50
 apps/web/heys_gamification_v1.js:52
-apps/web/heys_gamification_v1.js:5961
+apps/web/heys_gamification_v1.js:5972
 apps/web/heys_insulin_wave_v1.js:908
 apps/web/heys_iw_config_loader.js:149
 apps/web/heys_iw_config_loader.js:151
@@ -167,11 +167,11 @@ apps/web/heys_planning_tasks_v1.js:2295
 apps/web/heys_platform_apis_v1.js:241
 apps/web/heys_platform_apis_v1.js:645
 apps/web/heys_predictive_insights_v1.js:48
-apps/web/heys_products_overlay_v1.js:561
-apps/web/heys_products_overlay_v1.js:1116
-apps/web/heys_products_overlay_v1.js:1117
-apps/web/heys_products_overlay_v1.js:1118
-apps/web/heys_products_overlay_v1.js:1177
+apps/web/heys_products_overlay_v1.js:566
+apps/web/heys_products_overlay_v1.js:1121
+apps/web/heys_products_overlay_v1.js:1122
+apps/web/heys_products_overlay_v1.js:1123
+apps/web/heys_products_overlay_v1.js:1182
 apps/web/heys_profile_step_v1.js:1638
 apps/web/heys_profile_step_v1.js:1039
 apps/web/heys_profile_step_v1.js:1191

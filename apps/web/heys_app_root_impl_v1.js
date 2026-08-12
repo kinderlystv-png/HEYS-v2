@@ -636,12 +636,17 @@
                 }, [isRpcMode, cachedProfile, fallbackClients, fallbackClientId, clientChangeTick]);
 
                 const isMorningCheckinBlocking = fallbackShowMorningCheckin === true && HEYS?.MorningCheckin;
+                const isReadonlyHost = !!(typeof window !== 'undefined'
+                    && window.__HEYS_READONLY_MODE__
+                    && window.__HEYS_READONLY_MODE__.enabled);
                 const fallbackHasOutdatedRequiredConsents = (fallbackComplianceState?.outdatedTypes || []).length > 0;
                 const isConsentRevalidationBlocking = fallbackCheckingConsent && HEYS._consentsValid !== true;
-                const isConsentBlocking = fallbackNeedsConsent || isConsentRevalidationBlocking
+                const isConsentBlocking = !isReadonlyHost && (
+                    fallbackNeedsConsent || isConsentRevalidationBlocking
                     || fallbackComplianceState?.mustBlockReconsent
                     || fallbackComplianceState?.consentCheckError
-                    || fallbackHasOutdatedRequiredConsents;
+                    || fallbackHasOutdatedRequiredConsents
+                );
 
                 return {
                     pendingText,

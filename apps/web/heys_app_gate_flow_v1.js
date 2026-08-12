@@ -2836,11 +2836,11 @@
             ));
         };
 
-        if (consentEligible && checkingConsent) {
+        if (consentEligible && checkingConsent && !isReadonlyHost) {
             return null;
         }
 
-        if (baseEligible && consentCheckError) {
+        if (baseEligible && consentCheckError && !isReadonlyHost) {
             const retryConsentCheck = () => {
                 setConsentCheckError && setConsentCheckError(null);
                 setNeedsConsent(false);

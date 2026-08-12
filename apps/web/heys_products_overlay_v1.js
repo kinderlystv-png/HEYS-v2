@@ -69,6 +69,11 @@
   // проблему "overlay обновился локально, но в cloud не попал".
   let _cloudSyncTimer = null;
   function _scheduleCloudSync(rows) {
+    if (typeof window !== 'undefined'
+      && window.__HEYS_READONLY_MODE__
+      && window.__HEYS_READONLY_MODE__.enabled) {
+      return;
+    }
     try { clearTimeout(_cloudSyncTimer); } catch (_) { /* noop */ }
     _cloudSyncTimer = setTimeout(function () {
       try {

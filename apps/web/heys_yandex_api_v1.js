@@ -2168,6 +2168,9 @@
     if (!k || v == null) {
       return { success: false, error: 'invalid_params' };
     }
+    if (isReadonlyMode) {
+      return { success: false, error: 'readonly_mode', readonly: true };
+    }
     // 🛡️ Cross-client blob guard tag (2026-06-01, wave 2: + norms/game/hr_zones).
     // Тегаем каждую запись per-client KV blob полем _writerCid = clientId, чтобы
     // сервер мог отвергать writes от чужого клиента. Mirror Class 4 fa851aad для
