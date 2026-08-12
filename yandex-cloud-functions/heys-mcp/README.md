@@ -337,10 +337,11 @@ yc serverless api-gateway update --name <gateway-name> --spec=api-gateway-spec.y
 
 ### Production status — 2026-08-01
 
-- **Факт:** функция `heys-mcp` (`d4egv2a6pdhmf5hbrgp8`), версия
-  `d4epi1k9hloceo34sdn8` из commit `39a01a1c7`, и gateway `heys-api` активны;
-  deploy gate прошёл 100/100 MCP-тестов, обязательный post-deploy health
-  зелёный.
+- **Факт (2026-08-01):** gateway `heys-api` активен; deploy gate прошёл 100/100
+  MCP-тестов, обязательный post-deploy health зелёный. Тогдашняя функция была
+  `d4egv2a6pdhmf5hbrgp8` / версия `d4epi1k9hloceo34sdn8` (commit `39a01a1c7`) —
+  **устарело:** с 2026-08-11 live id — `d4epjmd9lnk059u29bg8` (`heys-mcp`);
+  tracked `api-gateway-spec.yaml` выровнен 2026-08-12.
 - **Факт:** Claude-коннектор подключён и проверен чтением дня, наборов, поиском
   продукта и обратимой записью воды.
 - **Факт:** `MCP_TOKEN_SECRET` хранится в `heys-app-secrets`; активная версия

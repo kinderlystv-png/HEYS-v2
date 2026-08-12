@@ -921,19 +921,19 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     post:
       summary: MCP Streamable HTTP endpoint
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: CORS preflight for MCP
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/curator:
     get:
@@ -941,19 +941,19 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     post:
       summary: MCP Streamable HTTP endpoint for the curator connector
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: CORS preflight for the curator MCP endpoint
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/chatgpt/curator:
     get:
@@ -961,19 +961,19 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     post:
       summary: ChatGPT-specific MCP Streamable HTTP endpoint for the curator connector
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: CORS preflight for the ChatGPT curator MCP endpoint
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/register:
     post:
@@ -984,13 +984,13 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: CORS preflight for dynamic client registration
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/authorize:
     get:
@@ -998,7 +998,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     post:
       summary: OAuth authorization form submit
       x-yc-apigateway-throttling:
@@ -1007,7 +1007,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/token:
     post:
@@ -1018,13 +1018,13 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: CORS preflight for the token endpoint
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /.well-known/oauth-protected-resource:
     get:
@@ -1032,7 +1032,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /.well-known/oauth-protected-resource/mcp:
     get:
@@ -1040,7 +1040,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/attach:
     get:
@@ -1048,7 +1048,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/board:
     get:
@@ -1056,13 +1056,13 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: Board PWA — CORS preflight
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/board/talk:
     post:
@@ -1070,13 +1070,13 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: Board PWA talk — CORS preflight
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/board/resolve:
     post:
@@ -1084,13 +1084,13 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: Board PWA resolve — CORS preflight
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/board/close-day:
     post:
@@ -1098,13 +1098,13 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: Board PWA close-day — CORS preflight
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/board/sleep:
     post:
@@ -1112,13 +1112,13 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: Board PWA sleep — CORS preflight
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/board/reslot:
     post:
@@ -1126,13 +1126,13 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: Board PWA reslot — CORS preflight
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/board/slot-done:
     post:
@@ -1140,13 +1140,13 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: Board PWA slot-done — CORS preflight
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/board/habit:
     post:
@@ -1154,13 +1154,13 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: Board PWA habit — CORS preflight
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/attach/login:
     post:
@@ -1171,7 +1171,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/attach/logout:
     post:
@@ -1179,7 +1179,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/attach/search:
     get:
@@ -1187,7 +1187,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/attach/upload:
     post:
@@ -1195,7 +1195,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/attach/manifest.webmanifest:
     get:
@@ -1203,7 +1203,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/attach/icon.png:
     get:
@@ -1211,7 +1211,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /.well-known/oauth-protected-resource/mcp/curator:
     get:
@@ -1219,7 +1219,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /.well-known/oauth-protected-resource/mcp/chatgpt/curator:
     get:
@@ -1227,7 +1227,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /.well-known/oauth-authorization-server:
     get:
@@ -1235,7 +1235,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /.well-known/oauth-authorization-server/mcp:
     get:
@@ -1243,7 +1243,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /.well-known/oauth-authorization-server/mcp/curator:
     get:
@@ -1251,7 +1251,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /.well-known/oauth-authorization-server/mcp/chatgpt/curator:
     get:
@@ -1259,4 +1259,4 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
