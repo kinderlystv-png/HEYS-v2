@@ -365,7 +365,7 @@ BEGIN
      AND revoked_at IS NULL;
   GET DIAGNOSTICS v_client_consents = ROW_COUNT;
 
-  INSERT INTO public.audit_logs(action, table_name, details)
+  INSERT INTO public.audit_logs(action, resource_type, metadata)
   VALUES (
     'health_minimization_purge',
     'client_kv_store',
