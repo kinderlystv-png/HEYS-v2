@@ -1,6 +1,15 @@
 -- HEYS trial intake health minimization v1.
 -- Schema 1.2: replace health/safety questionnaire sections with warning acknowledgement.
 
+-- Old schema used steps 0..5; clamp historical rows before tightening CHECK to 0..4.
+UPDATE public.trial_intakes
+   SET current_step = 4
+ WHERE current_step > 4;
+
+UPDATE public.trial_candidates
+   SET current_step = 4
+ WHERE current_step > 4;
+
 ALTER TABLE public.trial_intakes
   DROP CONSTRAINT IF EXISTS trial_intakes_current_step_check;
 

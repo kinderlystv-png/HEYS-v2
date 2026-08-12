@@ -179,7 +179,7 @@ AS $$
          kv.k,
          'measurements'::text,
          'measurements',
-         LEFT(COALESCE(kv.v->'measurements'::text, ''), 120)
+         LEFT(COALESCE((kv.v->'measurements')::text, ''), 120)
     FROM public.client_kv_store kv
    WHERE kv.k ~ '^heys_dayv2_[0-9]{4}-[0-9]{2}-[0-9]{2}$'
      AND kv.v ? 'measurements'
@@ -192,7 +192,7 @@ AS $$
          kv.k,
          'supplements'::text,
          fld.field_name,
-         LEFT(COALESCE(kv.v->>fld.field_name, kv.v->fld.field_name::text, ''), 120)
+         LEFT(COALESCE((kv.v->fld.field_name)::text, ''), 120)
     FROM public.client_kv_store kv
     CROSS JOIN (
       VALUES ('supplementsPlanned'), ('supplementsTaken')
@@ -210,7 +210,7 @@ AS $$
          kv.k,
          'supplements_profile'::text,
          fld.field_name,
-         LEFT(COALESCE(kv.v->>fld.field_name, kv.v->fld.field_name::text, ''), 120)
+         LEFT(COALESCE((kv.v->fld.field_name)::text, ''), 120)
     FROM public.client_kv_store kv
     CROSS JOIN (
       VALUES ('plannedSupplements'), ('customSupplements')
