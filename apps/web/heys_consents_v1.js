@@ -367,7 +367,8 @@
     });
     // notifications — отдельный preference, НЕ 152-ФЗ согласие.
     // Default ON: пользователь явно решил включить уведомления при онбординге.
-    const [notificationsOptIn, setNotificationsOptIn] = useState(true);
+    // Юрист: предустановка ≠ активное действие субъекта (lawyer-review-5 §1).
+    const [notificationsOptIn, setNotificationsOptIn] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [showFullText, setShowFullText] = useState(null);
@@ -1030,49 +1031,189 @@
   })();
 
   /**
-   * Простой парсер Markdown → HTML
-   * Поддерживает: заголовки, списки, жирный/курсив, таблицы, горизонтальные линии
+   * Markdown → HTML для модалок согласий.
+   * Байты legal-файлов не трогаем: хэш документа считается по исходнику.
+   * Поддержка: заголовки, blockquote (в т.ч. многострочный), списки ul/ol,
+   * таблицы, жирный/курсив, hr, ссылки, инлайн-код, literal br из шаблонов.
    */
   function parseMarkdown(md) {
     if (!md) return '';
 
-    let html = md
-      // Экранируем HTML
+    let text = String(md)
+      .replace(/\r\n/g, '\n')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      // Горизонтальные линии
-      .replace(/^---+$/gm, '<hr class="my-4 border-zinc-300 dark:border-zinc-600">')
-      // Заголовки
-      .replace(/^#### (.+)$/gm, '<h4 class="text-base font-semibold mt-4 mb-2">$1</h4>')
-      .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold mt-6 mb-3">$1</h3>')
-      .replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold mt-8 mb-4">$1</h2>')
-      .replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold mb-4">$1</h1>')
-      // Blockquotes
-      .replace(/^&gt; (.+)$/gm, '<blockquote class="border-l-4 border-zinc-300 dark:border-zinc-600 pl-4 italic text-zinc-600 dark:text-zinc-400 my-2">$1</blockquote>')
-      // Жирный и курсив
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      // Инлайн-код
-      .replace(/`(.+?)`/g, '<code class="bg-zinc-100 dark:bg-zinc-800 px-1 rounded text-sm">$1</code>')
-      // Ссылки
-      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-blue-500 underline" target="_blank">$1</a>')
-      // Списки (простые)
-      .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
-      .replace(/^• (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
-      .replace(/^\d+\. (.+)$/gm, '<li class="ml-4 list-decimal">$1</li>')
-      // Параграфы (пустые строки)
-      .replace(/\n\n/g, '</p><p class="my-2">')
-      // Переносы строк
-      .replace(/\n/g, '<br>');
+      .replace(/>/g, '&gt;');
 
-    // Оборачиваем в параграф
-    html = '<p class="my-2">' + html + '</p>';
+    // В legal-шаблонах часто стоит HTML <br> внутри blockquote — после
+    // экранирования возвращаем только этот безопасный тег.
+    text = text.replace(/&lt;br\s*\/?&gt;/gi, '<br>');
 
-    // Группируем списки
-    html = html.replace(/(<li[^>]*>.*?<\/li>)(\s*<br>)?/g, '$1');
+    function formatInline(s) {
+      return String(s)
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/__(.+?)__/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/_([^_\n]+)_/g, '<em>$1</em>')
+        .replace(/`(.+?)`/g, '<code class="bg-zinc-100 dark:bg-zinc-800 px-1 rounded text-sm">$1</code>')
+        .replace(
+          /\[(.+?)\]\((.+?)\)/g,
+          '<a href="$2" class="text-blue-500 underline" target="_blank" rel="noopener noreferrer">$1</a>'
+        );
+    }
 
-    return html;
+    function isTableRow(line) {
+      const t = line.trim();
+      return t.startsWith('|') && t.includes('|', 1);
+    }
+
+    function isTableSep(line) {
+      return /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line.trim());
+    }
+
+    function isUl(line) {
+      return /^[-•] /.test(line);
+    }
+
+    function isOl(line) {
+      return /^\d+\. /.test(line);
+    }
+
+    function isSpecial(line) {
+      const t = line.trim();
+      if (!t) return true;
+      if (/^#{1,4} /.test(t)) return true;
+      if (/^---+$/.test(t)) return true;
+      if (/^&gt;/.test(line)) return true;
+      if (isUl(line) || isOl(line) || isTableRow(line)) return true;
+      return false;
+    }
+
+    const lines = text.split('\n');
+    const out = [];
+    let i = 0;
+
+    while (i < lines.length) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      if (!trimmed) {
+        i += 1;
+        continue;
+      }
+
+      if (/^---+$/.test(trimmed)) {
+        out.push('<hr class="my-4 border-zinc-300 dark:border-zinc-600">');
+        i += 1;
+        continue;
+      }
+
+      const heading = trimmed.match(/^(#{1,4})\s+(.+)$/);
+      if (heading) {
+        const level = heading[1].length;
+        const cls =
+          level === 1
+            ? 'text-2xl font-bold mb-4'
+            : level === 2
+              ? 'text-xl font-bold mt-8 mb-4'
+              : level === 3
+                ? 'text-lg font-semibold mt-6 mb-3'
+                : 'text-base font-semibold mt-4 mb-2';
+        out.push(
+          `<h${level} class="${cls}">${formatInline(heading[2])}</h${level}>`
+        );
+        i += 1;
+        continue;
+      }
+
+      if (/^&gt;/.test(line)) {
+        const parts = [];
+        while (i < lines.length && /^&gt;/.test(lines[i])) {
+          parts.push(lines[i].replace(/^&gt;\s?/, ''));
+          i += 1;
+        }
+        out.push(
+          `<blockquote class="border-l-4 border-zinc-300 dark:border-zinc-600 pl-4 italic text-zinc-600 dark:text-zinc-400 my-2">${formatInline(parts.join(' '))}</blockquote>`
+        );
+        continue;
+      }
+
+      if (isTableRow(line)) {
+        const rows = [];
+        while (i < lines.length && isTableRow(lines[i])) {
+          rows.push(lines[i]);
+          i += 1;
+        }
+        const bodyRows = rows.filter((r) => !isTableSep(r));
+        if (bodyRows.length) {
+          const parseCells = (row) =>
+            row
+              .trim()
+              .replace(/^\|/, '')
+              .replace(/\|$/, '')
+              .split('|')
+              .map((c) => c.trim());
+          const header = parseCells(bodyRows[0]);
+          const data = bodyRows.slice(1).map(parseCells);
+          let table =
+            '<div class="my-3 overflow-x-auto"><table class="w-full text-sm border-collapse">';
+          table += '<thead><tr>';
+          header.forEach((cell) => {
+            table += `<th class="border border-zinc-300 dark:border-zinc-600 px-2 py-1 text-left font-semibold">${formatInline(cell)}</th>`;
+          });
+          table += '</tr></thead><tbody>';
+          data.forEach((cells) => {
+            table += '<tr>';
+            cells.forEach((cell) => {
+              table += `<td class="border border-zinc-300 dark:border-zinc-600 px-2 py-1 align-top">${formatInline(cell)}</td>`;
+            });
+            table += '</tr>';
+          });
+          table += '</tbody></table></div>';
+          out.push(table);
+        }
+        continue;
+      }
+
+      if (isUl(line)) {
+        out.push('<ul class="my-2 list-disc pl-5">');
+        while (i < lines.length && isUl(lines[i])) {
+          out.push(
+            `<li class="my-1">${formatInline(lines[i].replace(/^[-•] /, ''))}</li>`
+          );
+          i += 1;
+        }
+        out.push('</ul>');
+        continue;
+      }
+
+      if (isOl(line)) {
+        // Отдельный <ol> на каждый непрерывный блок — иначе list-decimal
+        // нумерует сквозь весь документ (симптом «36.» вместо «4.»).
+        out.push('<ol class="my-2 list-decimal pl-5">');
+        while (i < lines.length && isOl(lines[i])) {
+          out.push(
+            `<li class="my-1">${formatInline(lines[i].replace(/^\d+\. /, ''))}</li>`
+          );
+          i += 1;
+        }
+        out.push('</ol>');
+        continue;
+      }
+
+      const paraParts = [];
+      while (i < lines.length && lines[i].trim() && !isSpecial(lines[i])) {
+        let chunk = lines[i];
+        if (/ {2}$/.test(chunk)) {
+          chunk = chunk.replace(/ {2}$/, '') + '<br>';
+        }
+        paraParts.push(chunk);
+        i += 1;
+      }
+      out.push(`<p class="my-2">${formatInline(paraParts.join(' '))}</p>`);
+    }
+
+    return out.join('\n');
   }
 
   /**
@@ -1750,7 +1891,8 @@
     useConsentsRequired,
 
     // Utils
-    getCurrentLegalVersions
+    getCurrentLegalVersions,
+    parseMarkdown
   });
 
   // Verbose init log removed
