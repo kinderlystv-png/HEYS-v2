@@ -464,9 +464,11 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
     });
 
     it('rate limits locally after 10 failed RPC attempts (11th does not call RPC)', async () => {
+        // invalid_credentials больше не идёт в локальный счётчик (kind explained);
+        // перебор PIN на сервере даёт wrong_pin / invalid_pin.
         rpc.mockResolvedValue({
             data: null,
-            error: { message: 'invalid_credentials', code: 401 },
+            error: { message: 'wrong_pin', code: 401 },
         });
 
         const phone = '+7 999 123-45-67';
