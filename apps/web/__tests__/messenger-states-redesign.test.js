@@ -72,10 +72,11 @@ describe('пустой тред и скелетон', () => {
   it('тёмная тема полосы записи и черновика аудио задана один раз', () => {
     // Раньше новое правило дописывалось вниз файла и перекрывало старое лишь
     // частично: черновик оставался сине-серым, а у полосы висела чужая тень.
-    const rules = cssSource.match(/\[data-theme="dark"\] \.messenger-recording-live/g) || [];
+    // UI v4: суффиксный селектор [data-theme$="dark"] (fee30ae6c).
+    const rules = cssSource.match(/\[data-theme\$="dark"\] \.messenger-recording-live/g) || [];
     expect(rules).toHaveLength(1);
 
-    const block = cssSource.match(/\[data-theme="dark"\] \.messenger-recording-live,\n\[data-theme="dark"\] \.messenger-audio-draft \{[^}]*\}/)[0];
+    const block = cssSource.match(/\[data-theme\$="dark"\] \.messenger-recording-live,\n\[data-theme\$="dark"\] \.messenger-audio-draft \{[^}]*\}/)[0];
     expect(block).toContain('#2a1b1d');
     expect(block).toContain('box-shadow: none');
   });
@@ -331,9 +332,10 @@ describe('интент-сообщения', () => {
 describe('контраст и узкий экран', () => {
   it('мета-текст поднят до читаемого контраста', () => {
     // 11px #A8B0B8 на #FCFBF8 давал ~2.5:1 — ниже нормы.
+    // UI v4: ink-2 роль с fallback #667079.
     const meta = cssSource.match(/\.msg-meta,\n\.msg-edited-marker \{[^}]*\}/)[0];
-    expect(meta).toMatch(/color:\s*#667079/);
-    expect(cssSource).toMatch(/\[data-theme="dark"\] \.msg-meta,\n\[data-theme="dark"\] \.msg-edited-marker \{\s*color:\s*#8b949d/);
+    expect(meta).toMatch(/color:\s*var\(--v4-ink-2,\s*#667079\)/);
+    expect(cssSource).toMatch(/\[data-theme\$="dark"\] \.msg-meta,\n\[data-theme\$="dark"\] \.msg-edited-marker \{\s*color:\s*#8b949d/);
   });
 
   it('на 320 px уменьшаются шапка, кнопки и поле', () => {
