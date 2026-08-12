@@ -1639,6 +1639,29 @@ test('heys_update_profile — cycle_tracking_enabled отклонён (снят 
   assert.equal(api.saves.length, 0);
 });
 
+const SPOUSE_CLIENT = '4545ee50-4f5f-4fc0-b862-7ca45fa1bafc';
+
+test('heys_update_profile — cycle_tracking_enabled разрешён для spouse exception', async () => {
+  const api = fakeApi({
+    card: { [PROFILE_KEY]: { gender: 'Женский', cycleTrackingEnabled: false } },
+  });
+  const tools = createTools({ api, sessionToken: SESSION, clientId: SPOUSE_CLIENT, nowMs: NOW }).tools;
+  const res = await tools.heys_update_profile({ cycle_tracking_enabled: true });
+  assert.ok(res.structured.updated.some((line) => /цикл/i.test(line) || /cycle/i.test(line)));
+  const saved = api.saves.find((s) => s.key === PROFILE_KEY);
+  assert.equal(saved.value.cycleTrackingEnabled, true);
+});
+
+test('heys_checkin submit — cycle_day разрешён для spouse exception при флаге', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
+    card: { [PROFILE_KEY]: { gender: 'Женский', cycleTrackingEnabled: true } },
+  });
+  const tools = createTools({ api, sessionToken: SESSION, clientId: SPOUSE_CLIENT, nowMs: NOW }).tools;
+  await tools.heys_checkin({ action: 'submit', cycle_day: 3 });
+  assert.ok(api.saves.some((s) => s.key.startsWith('heys_dayv2_')));
+});
+
 test('heys_update_day — refeed_day отмечает и снимает загрузочный день', async () => {
   const api = fakeApi({
     day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },

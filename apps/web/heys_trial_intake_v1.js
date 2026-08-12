@@ -6,7 +6,17 @@
   const React = global.React;
   if (!React) return;
 
-  const WARNING_TEXT_VERSION = 'pending-owner-text';
+  const WARNING_TEXT_VERSION = '1.0';
+  // Source: docs/ release/lawyer-review-3-2026-08-12.md §IV.1
+  // (review-4 ссылается на три текста из третьего разбора; проект лежит там).
+  const WARNING_TEXT_TITLE = 'Прежде чем начать';
+  const WARNING_TEXT_PARAGRAPHS = Object.freeze([
+    'HEYS — сервис сопровождения по режиму питания. Это не медицинская услуга: мы не ставим диагнозы, не назначаем лечение и не заменяем консультацию врача.',
+    'Изменение режима питания и физической активности подходит не всем и при некоторых состояниях требует согласования с врачом.',
+    'Не сообщайте куратору сведения о заболеваниях, диагнозах и принимаемых препаратах — сервис их не запрашивает и не хранит.',
+  ]);
+  const WARNING_CHECKBOX_LABEL =
+    'Я ознакомился с предупреждением. При наличии противопоказаний я согласовал участие с врачом и принимаю решение об участии на себя.';
 
   const EMPTY_ANSWERS = {
     goals: {},
@@ -274,8 +284,15 @@
           style: {
             padding: 16, borderRadius: 12, background: '#fff7e8',
             color: '#754b00', fontSize: 14, lineHeight: 1.55,
+            display: 'grid', gap: 10,
           },
-        }, 'Текст предупреждения будет уточнён владельцем продукта. Продолжая, вы подтверждаете, что ознакомились с важной информацией перед заполнением анкеты.'),
+        },
+          React.createElement('div', { style: { fontWeight: 750, fontSize: 15, color: '#5c3b00' } }, WARNING_TEXT_TITLE),
+          ...WARNING_TEXT_PARAGRAPHS.map((paragraph, index) => React.createElement('p', {
+            key: `warning-p-${index}`,
+            style: { margin: 0 },
+          }, paragraph)),
+        ),
         React.createElement('label', {
           key: 'warning-confirm',
           style: { display: 'flex', gap: 10, alignItems: 'flex-start', color: '#334039', fontSize: 14, lineHeight: 1.5 },
@@ -295,7 +312,7 @@
             },
             style: { width: 20, height: 20, marginTop: 1, flex: '0 0 auto' },
           }),
-          React.createElement('span', null, 'Я прочитал предупреждение и готов продолжить заполнение анкеты.')
+          React.createElement('span', null, WARNING_CHECKBOX_LABEL)
         ),
       ],
     },
@@ -757,5 +774,8 @@
     ));
   }
 
-  HEYS.TrialIntake = { api, ClientScreen, shouldOpen, leaveIntake, EMPTY_ANSWERS, CURATOR_ANSWER_FIELDS, WARNING_TEXT_VERSION };
+  HEYS.TrialIntake = {
+    api, ClientScreen, shouldOpen, leaveIntake, EMPTY_ANSWERS, CURATOR_ANSWER_FIELDS,
+    WARNING_TEXT_VERSION, WARNING_TEXT_TITLE, WARNING_TEXT_PARAGRAPHS, WARNING_CHECKBOX_LABEL,
+  };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -24,6 +24,7 @@
 const PROFILE_KEY = 'heys_profile';
 const NORMS_KEY = 'heys_norms';
 const ZONES_KEY = 'heys_hr_zones';
+const cycleReleaseGate = require('./cycle_release_gate.cjs');
 
 /** Пол хранится русскими словами — так его пишет и читает приложение. */
 const GENDERS = ['Мужской', 'Женский'];
@@ -140,13 +141,15 @@ function applyFields(current, fields, schema, nowMs) {
   return { value: next, changed, ignored };
 }
 
-function applyProfileFields(current, fields, nowMs) {
+function applyProfileFields(current, fields, nowMs, options = {}) {
   if (fields && Object.prototype.hasOwnProperty.call(fields, 'cycle_tracking_enabled')) {
-    // prompt-cycle-removal: cannot enable or change cycle tracking flag in this release.
-    throw new ProfileError(
-      'cycle_tracking_removed',
-      'Трекинг менструального цикла снят с релиза: cycle_tracking_enabled не пишется. Функция вернётся после релиза в архитектуре device-only.',
-    );
+    // prompt-cycle-removal: closed for release, except owner allowlist (spouse).
+    if (!cycleReleaseGate.isCycleFeatureAvailableForClient(options.clientId)) {
+      throw new ProfileError(
+        'cycle_tracking_removed',
+        'Трекинг менструального цикла снят с релиза: cycle_tracking_enabled не пишется. Функция вернётся после релиза в архитектуре device-only.',
+      );
+    }
   }
   return applyFields(current, fields, PROFILE_FIELDS, nowMs);
 }

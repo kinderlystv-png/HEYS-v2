@@ -14,6 +14,7 @@ const products = require('./products');
 const profile = require('./profile');
 const sharedCatalog = require('./shared-catalog');
 const webMirror = require('./web-mirror');
+const cycleReleaseGate = require('./cycle_release_gate.cjs');
 
 /** Верхняя граница обзора периода: месяц читается одним пакетом без риска для таймаута. */
 const MAX_PERIOD_DAYS = 31;
@@ -1575,8 +1576,14 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         profileForStatus = currentProfile;
       }
       if ((hasCycleDay || hasCycleStatus)) {
-        throw new ToolError('cycle_tracking_removed',
-          'Трекинг менструального цикла снят с релиза: cycle_day / cycle_status не пишутся ни одним путём. Функция вернётся после релиза в архитектуре device-only.');
+        if (!cycleReleaseGate.isCycleFeatureAvailableForClient(clientId)) {
+          throw new ToolError('cycle_tracking_removed',
+            'Трекинг менструального цикла снят с релиза: cycle_day / cycle_status не пишутся ни одним путём. Функция вернётся после релиза в архитектуре device-only.');
+        }
+        if (!(currentProfile && currentProfile.gender === 'Женский' && currentProfile.cycleTrackingEnabled === true)) {
+          throw new ToolError('cycle_tracking_disabled',
+            'Трекинг цикла выключен в профиле клиента — для исключённого аккаунта включи cycle_tracking_enabled через heys_update_profile.');
+        }
       }
       if (hasMeasurements && !(currentProfile && currentProfile.measurementsTrackingEnabled === true)) {
         throw new ToolError('measurements_tracking_disabled',
@@ -2153,7 +2160,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         || (args.planned_supplements_remove !== undefined && args.planned_supplements_remove !== null);
       let patch;
       try {
-        patch = profile.applyProfileFields(current, args, nowMs);
+        patch = profile.applyProfileFields(current, args, nowMs, { clientId });
       } catch (e) {
         throw new ToolError(e.code || 'invalid_field', e.message);
       }

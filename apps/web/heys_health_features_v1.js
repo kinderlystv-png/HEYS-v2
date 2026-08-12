@@ -8,6 +8,12 @@
   // Keep module/code; close all enable/write paths until device-only return.
   const CYCLE_TRACKING_IN_RELEASE = false;
 
+  // Owner exception 2026-08-12: spouse account keeps cycle tracking while release gate stays off.
+  // Keep in sync with yandex-cloud-functions/heys-mcp/lib/cycle_release_gate.cjs
+  const CYCLE_TRACKING_EXCEPTION_CLIENT_IDS = Object.freeze([
+    '4545ee50-4f5f-4fc0-b862-7ca45fa1bafc', // Александра
+  ]);
+
   const DEFAULT_PROFILE_FLAGS = Object.freeze({
     cycleTrackingEnabled: false,
     measurementsTrackingEnabled: false,
@@ -34,12 +40,32 @@
     'supplementsTaken', 'supplementsTakenAt', 'supplementsTakenMeta', 'supplementsTakenUpdatedAt',
   ];
 
-  function isCycleFeatureAvailable() {
-    return CYCLE_TRACKING_IN_RELEASE === true;
+  function resolveClientId(clientId) {
+    if (clientId != null && String(clientId).trim()) {
+      return String(clientId).trim().toLowerCase();
+    }
+    try {
+      return String(
+        HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '',
+      ).trim().toLowerCase();
+    } catch (_) {
+      return '';
+    }
   }
 
-  function isCycleTrackingEnabled(profile) {
-    if (!isCycleFeatureAvailable()) return false;
+  function isCycleTrackingExceptionClient(clientId) {
+    const id = resolveClientId(clientId);
+    if (!id) return false;
+    return CYCLE_TRACKING_EXCEPTION_CLIENT_IDS.includes(id);
+  }
+
+  function isCycleFeatureAvailable(clientId) {
+    if (CYCLE_TRACKING_IN_RELEASE === true) return true;
+    return isCycleTrackingExceptionClient(clientId);
+  }
+
+  function isCycleTrackingEnabled(profile, clientId) {
+    if (!isCycleFeatureAvailable(clientId)) return false;
     return !!(profile && profile.gender === 'Женский' && profile.cycleTrackingEnabled === true);
   }
 
@@ -247,6 +273,8 @@
     CONSENT_TYPES,
     KNOWN_SUPPLEMENT_IDS,
     CYCLE_TRACKING_IN_RELEASE,
+    CYCLE_TRACKING_EXCEPTION_CLIENT_IDS,
+    isCycleTrackingExceptionClient,
     isCycleFeatureAvailable,
     isCycleTrackingEnabled,
     isMeasurementsTrackingEnabled,
