@@ -7,7 +7,7 @@
   if (!React) return;
 
   const WARNING_TEXT_VERSION = '1.0';
-  // Source: docs/ release/lawyer-review-3-2026-08-12.md §IV.1
+  // Source: docs/release/lawyer-review-3-2026-08-12.md §IV.1
   // (review-4 ссылается на три текста из третьего разбора; проект лежит там).
   const WARNING_TEXT_TITLE = 'Прежде чем начать';
   const WARNING_TEXT_PARAGRAPHS = Object.freeze([
@@ -17,6 +17,12 @@
   ]);
   const WARNING_CHECKBOX_LABEL =
     'Я ознакомился с предупреждением. При наличии противопоказаний я согласовал участие с врачом и принимаю решение об участии на себя.';
+
+  // Candidate invite code is one-time (verify_trial_candidate_pin consumes pin_consumed_at).
+  const DRAFT_STORAGE_COPY =
+    'Ответы сохранены. С другого телефона продолжите с того же шага — войдите по номеру и одноразовому коду из сообщения куратора. Черновик ждёт 30 дней без активности.';
+  const CLOSE_DRAFT_COPY =
+    'Ответы сохранены. Вернуться можно в течение 30 дней без активности — войдите по номеру и одноразовому коду из сообщения куратора.';
 
   const EMPTY_ANSWERS = {
     goals: {},
@@ -419,6 +425,8 @@
     const [saveErrorCode, setSaveErrorCode] = React.useState('');
     const [hasEdited, setHasEdited] = React.useState(false);
     const [hydrated, setHydrated] = React.useState(false);
+    const [closeConfirmOpen, setCloseConfirmOpen] = React.useState(false);
+    const [resumeGateOpen, setResumeGateOpen] = React.useState(false);
     const saveTimerRef = React.useRef(null);
     const saveQueueRef = React.useRef(Promise.resolve());
     const answersRef = React.useRef(answers);
@@ -469,8 +477,10 @@
         } else if (!result.intake) {
           setStatus('not_invited');
         } else {
-          setStatus(result.intake.status || 'invited');
-          setStep(Math.max(0, Math.min(STEPS.length - 1, Number(result.intake.current_step) || 0)));
+          const nextStatus = result.intake.status || 'invited';
+          const nextStep = Math.max(0, Math.min(STEPS.length - 1, Number(result.intake.current_step) || 0));
+          setStatus(nextStatus);
+          setStep(nextStep);
           setAnswers(mergeAnswers(result.intake.answers));
           setClarification({
             text: result.intake.clarification_request || '',
@@ -479,6 +489,12 @@
               : [],
           });
           serverUpdatedAtRef.current = result.intake.updated_at || null;
+          if (
+            ['in_progress', 'needs_clarification'].includes(nextStatus)
+            && nextStep > 0
+          ) {
+            setResumeGateOpen(true);
+          }
         }
         setHydrated(true);
         setLoading(false);
@@ -610,7 +626,8 @@
       setError(saveErrorCopy(result));
     };
 
-    const closeSafely = async () => {
+    const performClose = async () => {
+      setCloseConfirmOpen(false);
       if (!hasEdited && !['pending', 'saving', 'error'].includes(saveState)) {
         leaveIntake();
         return;
@@ -626,6 +643,46 @@
         setError(saveErrorCopy(result));
       }
     };
+
+    const closeSafely = () => {
+      if (closeConfirmOpen) return;
+      setCloseConfirmOpen(true);
+    };
+
+    const storageNotice = (title, body, primaryLabel, onPrimary, secondaryLabel, onSecondary) => React.createElement('div', {
+      role: 'dialog',
+      'aria-modal': 'true',
+      style: {
+        position: 'fixed', inset: 0, zIndex: 40, display: 'grid', placeItems: 'center',
+        padding: 16, background: 'rgba(23, 32, 42, 0.42)',
+      },
+    }, React.createElement('div', {
+      style: {
+        width: 'min(100%, 420px)', background: '#fff', borderRadius: 18,
+        border: '1px solid #e6e9e5', boxShadow: '0 18px 50px rgba(24, 39, 30, 0.16)',
+        padding: '22px 20px 18px', boxSizing: 'border-box',
+      },
+    },
+      React.createElement('h2', { style: { margin: '0 0 10px', fontSize: 22 } }, title),
+      React.createElement('p', { style: { margin: '0 0 20px', color: '#657168', lineHeight: 1.55, fontSize: 15 } }, body),
+      React.createElement('div', { style: { display: 'flex', gap: 10, flexWrap: 'wrap' } },
+        secondaryLabel ? React.createElement('button', {
+          type: 'button', onClick: onSecondary,
+          style: {
+            ...inputStyle, width: 'auto', flex: '1 1 140px', minHeight: 46, cursor: 'pointer',
+            background: '#f3f5f3', border: '1px solid #d5dbd6', fontWeight: 650,
+          },
+        }, secondaryLabel) : null,
+        React.createElement('button', {
+          type: 'button', onClick: onPrimary, disabled: saveState === 'saving',
+          style: {
+            ...inputStyle, width: 'auto', flex: '1 1 140px', minHeight: 46, cursor: saveState === 'saving' ? 'wait' : 'pointer',
+            background: '#434587', color: '#fff', border: 0, fontWeight: 700,
+            opacity: saveState === 'saving' ? 0.65 : 1,
+          },
+        }, primaryLabel)
+      )
+    ));
 
     if (loading) return React.createElement('div', shellProps, React.createElement('div', { style: cardStyle }, 'Загружаем анкету…'));
     if (error && !hydrated) return React.createElement('div', shellProps, React.createElement('div', { style: cardStyle },
@@ -681,6 +738,22 @@
     }
 
     return React.createElement('div', shellProps, React.createElement('main', { style: cardStyle },
+      resumeGateOpen ? storageNotice(
+        'Можно продолжить',
+        DRAFT_STORAGE_COPY,
+        'Продолжить',
+        () => setResumeGateOpen(false),
+        null,
+        null,
+      ) : null,
+      closeConfirmOpen ? storageNotice(
+        'Закрыть анкету?',
+        CLOSE_DRAFT_COPY,
+        'Закрыть',
+        performClose,
+        'Остаться',
+        () => setCloseConfirmOpen(false),
+      ) : null,
       React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'center', marginBottom: 20 } },
         React.createElement('div', null,
           React.createElement('div', { style: { fontSize: 12, color: '#657168', marginBottom: 4 } }, `Шаг ${step + 1} из ${STEPS.length}`),

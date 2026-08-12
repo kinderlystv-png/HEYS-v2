@@ -12,6 +12,14 @@ const v2Sql = fs.readFileSync(path.join(repoDir, 'database/2026-07-27_trial_inta
 const v3Sql = fs.readFileSync(path.join(repoDir, 'scripts/db/migrations/2026-07-29_trial_intake_preclient_v3.sql'), 'utf8');
 const correctionsV1Sql = fs.readFileSync(path.join(repoDir, 'scripts/db/migrations/2026-07-30_trial_candidate_answer_corrections_v1.sql'), 'utf8');
 const healthMinimizationSql = fs.readFileSync(path.join(repoDir, 'scripts/db/migrations/2026-08-11_health_minimization_intake_v1.sql'), 'utf8');
+const purgeIncompleteCandidatesSql = fs.readFileSync(
+  path.join(repoDir, 'scripts/db/migrations/2026-08-12_purge_incomplete_trial_candidates_v1.sql'),
+  'utf8',
+);
+const onetimePinSql = fs.readFileSync(
+  path.join(repoDir, 'scripts/db/migrations/2026-08-13_trial_candidate_onetime_pin_v1.sql'),
+  'utf8',
+);
 const intakeSource = fs.readFileSync(path.join(webDir, 'heys_trial_intake_v1.js'), 'utf8');
 const queueSource = fs.readFileSync(path.join(webDir, 'heys_trial_queue_v1.js'), 'utf8');
 const yandexApiSource = fs.readFileSync(path.join(webDir, 'heys_yandex_api_v1.js'), 'utf8');
@@ -393,6 +401,30 @@ describe('protected trial intake contract', () => {
     expect(v2Sql).toContain("'intake_status', 'purged'");
     expect(v2Sql).toContain('FOR UPDATE;');
     expect(v2Sql).toContain("'reopen_trial_candidate'");
+  });
+
+  it('consumes candidate invite PIN after first successful login', () => {
+    expect(onetimePinSql).toContain('ADD COLUMN IF NOT EXISTS pin_consumed_at');
+    expect(onetimePinSql).toContain('ADD COLUMN IF NOT EXISTS pin_expires_at');
+    expect(onetimePinSql).toContain("'onetime_pin_consumed'");
+    expect(onetimePinSql).toContain("'onetime_pin_expired'");
+    expect(onetimePinSql).toContain('pin_consumed_at = NOW()');
+    expect(onetimePinSql).toContain("pin_expires_at = NOW() + INTERVAL '3 days'");
+    expect(onetimePinSql).toContain('pin_consumed_at = NULL, pin_expires_at = NULL');
+  });
+
+  it('purges incomplete trial_candidates after 30 days of inactivity', () => {
+    expect(purgeIncompleteCandidatesSql).toContain('CREATE OR REPLACE FUNCTION public.purge_expired_trial_candidates');
+    expect(purgeIncompleteCandidatesSql).toContain("'invite_prepared', 'invite_sent', 'in_progress', 'needs_clarification'");
+    expect(purgeIncompleteCandidatesSql).toContain("NOW() - INTERVAL '30 days'");
+    expect(purgeIncompleteCandidatesSql).toContain('updated_at, started_at, invite_sent_at, invite_prepared_at, created_at');
+    expect(purgeIncompleteCandidatesSql).toContain('reviewed_at, updated_at, started_at');
+    expect(purgeIncompleteCandidatesSql).toContain("status IN ('rejected', 'expired')");
+    expect(maintenanceSource).toContain('purge_expired_trial_candidates');
+    expect(intakeSource).toContain('Черновик ждёт 30 дней без активности');
+    expect(intakeSource).toContain('одноразовому коду');
+    expect(intakeSource).toContain('closeConfirmOpen');
+    expect(intakeSource).toContain('resumeGateOpen');
   });
 
   it('fails closed on stale tabs, partial curator data and retired shortcuts', () => {

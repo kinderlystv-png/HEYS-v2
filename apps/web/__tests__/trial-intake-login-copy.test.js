@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 
-const loginSource = fs.readFileSync('heys_login_screen_v1.js', 'utf8');
-const staticHtml = fs.readFileSync('index.html', 'utf8');
+const webDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const loginSource = fs.readFileSync(path.join(webDir, 'heys_login_screen_v1.js'), 'utf8');
+const staticHtml = fs.readFileSync(path.join(webDir, 'index.html'), 'utf8');
 
 function loadLoginScreen({ search = '', candidateHint = false } = {}) {
   const localStorage = {
@@ -23,8 +26,8 @@ describe('trial-intake login copy', () => {
 
     expect(copy).toEqual({
       title: 'Вход в анкету',
-      instruction: 'Введите номер из заявки и PIN из сообщения куратора.',
-      explanation: 'Сейчас вы входите только в анкету. Доступ к HEYS появится после её проверки и подтверждения пробной недели куратором.',
+      instruction: 'Введите номер из заявки и одноразовый код из сообщения куратора.',
+      explanation: 'Код действует один раз и три дня после отправки приглашения. Сейчас вы входите только в анкету — доступ к HEYS появится после её проверки и подтверждения пробной недели куратором.',
       supportLead: 'Не получается войти? ',
     });
     expect(copy.title).not.toBe('Вход клиента');
@@ -50,8 +53,8 @@ describe('trial-intake login copy', () => {
 
   it('keeps the static pre-React screen synchronized with both variants', () => {
     expect(staticHtml).toContain('id="hlg-greeting-client"');
-    expect(staticHtml).toContain('Введите номер из заявки и PIN из сообщения куратора.');
-    expect(staticHtml).toContain('Сейчас вы входите только в анкету. Доступ к HEYS появится после её проверки и подтверждения пробной недели куратором.');
+    expect(staticHtml).toContain('Введите номер из заявки и одноразовый код из сообщения куратора.');
+    expect(staticHtml).toContain('Код действует один раз и три дня после отправки приглашения.');
     expect(staticHtml).toContain("title.textContent = 'Вход в анкету'");
     expect(staticHtml).toContain("supportPrefix.textContent = 'Не получается войти? '");
     expect(staticHtml).toContain('<span id="hlg-support-prefix">Забыли PIN? </span>');

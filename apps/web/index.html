@@ -975,10 +975,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.ef76a6d761cc.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.e57b5b36d955.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.b1b608c28b0a.js" as="script" />
     <link rel="preload" href="boot-day.bundle.fb5de09ecf79.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.1cb720c92056.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.c1ae7a71d82c.js" as="script" />
     <link rel="preload" href="boot-init.bundle.3b0b24c92433.js" as="script" />
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
          Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
@@ -1748,7 +1748,7 @@
 	                        Вход клиента</div>
 	                    <div id="hlg-intake-instruction" class="heys-auth-subtitle"
 	                        style="display:none;max-width:300px;font-size:14px;line-height:1.45">
-	                        Введите номер из заявки и PIN из сообщения куратора.</div>
+	                        Введите номер из заявки и одноразовый код из сообщения куратора.</div>
 	                </div>
 	                <div id="hlg-client-form" class="space-y-6">
                     <!-- Телефон -->
@@ -1823,7 +1823,7 @@
                 </div>
 	                <div id="hlg-intake-explanation" class="heys-auth-subtitle"
 	                    style="display:none;margin-top:18px;text-align:center;font-size:13px;line-height:1.45">
-	                    Сейчас вы входите только в анкету. Доступ к HEYS появится после её проверки и подтверждения пробной недели куратором.</div>
+	                    Код действует один раз и три дня после отправки приглашения. Сейчас вы входите только в анкету — доступ к HEYS появится после её проверки и подтверждения пробной недели куратором.</div>
 		                <div class="heys-auth-footer-row">
 		                    <div class="heys-auth-support-line"><span id="hlg-support-prefix">Забыли PIN? </span><button onclick="hlgOpenSupportPopup()" class="heys-auth-support-link" type="button">Обратитесь в поддержку.</button></div>
 		                </div>
@@ -4146,10 +4146,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.ef76a6d761cc.js" fetchpriority="high"></script>
+    <script defer src="boot-core.bundle.e57b5b36d955.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.b1b608c28b0a.js"></script>
     <script defer src="boot-day.bundle.fb5de09ecf79.js"></script>
-    <script defer src="boot-app.bundle.1cb720c92056.js"></script>
+    <script defer src="boot-app.bundle.c1ae7a71d82c.js"></script>
     <script defer src="boot-init.bundle.3b0b24c92433.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 

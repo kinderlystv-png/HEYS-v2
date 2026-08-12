@@ -16,6 +16,7 @@
 
 const { getPool } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
+const { validatePushSubscribeEndpoint } = require('./push-endpoint-host');
 const webpush = require('web-push');
 const crypto = require('crypto');
 
@@ -175,6 +176,20 @@ async function handleSubscribe(identity, body, userAgent) {
   const { endpoint, keys } = body || {};
   if (!endpoint || !keys?.p256dh || !keys?.auth) {
     return { statusCode: 400, body: { error: 'missing_subscription_fields' } };
+  }
+
+  const hostCheck = validatePushSubscribeEndpoint(endpoint);
+  if (!hostCheck.ok) {
+    console.warn('[push] subscribe rejected', {
+      reason: hostCheck.reason,
+      host: hostCheck.host || null,
+      identity_kind: identity.kind,
+      identity_id: identity.id,
+    });
+    return {
+      statusCode: 400,
+      body: { error: hostCheck.reason, host: hostCheck.host || null },
+    };
   }
 
   const pool = getPool();
