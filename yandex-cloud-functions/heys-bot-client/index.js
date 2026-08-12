@@ -124,6 +124,26 @@ function telegramMethodResponse(method, payload) {
   return jsonResponse(200, { method, ...payload });
 }
 
+function resolveHttpPath(event) {
+  const headers = event?.headers || {};
+  const raw =
+    event?.path ||
+    event?.url ||
+    headers['x-serverless-gateway-path'] ||
+    headers['X-Serverless-Gateway-Path'] ||
+    '';
+  if (typeof raw !== 'string') return '';
+  // Gateway sometimes passes absolute URL — keep pathname only.
+  try {
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      return new URL(raw).pathname || '';
+    }
+  } catch (_) {
+    /* keep raw */
+  }
+  return raw;
+}
+
 function isInternalCronCall(headers) {
   if (!INTERNAL_CRON_TOKEN) return false;
   const provided = headers?.['x-internal-cron-token'] || headers?.['X-Internal-Cron-Token'];
@@ -1912,7 +1932,7 @@ async function handleInternalSend(body, headers) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 module.exports.handler = async function (event) {
-  const path = event?.path || event?.url || '';
+  const path = resolveHttpPath(event);
   const method = event?.httpMethod || 'GET';
 
   const warmup = getWarmupPayload(event);
@@ -1967,7 +1987,16 @@ module.exports.handler = async function (event) {
     });
   }
 
-  if (method === 'POST' && (!path || path.includes('/start-bot/webhook'))) {
+  // Internal cron send MUST be matched before webhook branches.
+  // Bug (2026-08-12): API Gateway often leaves event.path empty and only sets
+  // x-serverless-gateway-path. Old code treated `!path` as start-bot webhook →
+  // 403 forbidden on /bot/send (looked like "token header dropped").
+  if (method === 'POST' && (path === '/bot/send' || path.endsWith('/bot/send') || path.includes('/send'))) {
+    await ensureRuntimeConfig();
+    return await handleInternalSend(body, event?.headers || {});
+  }
+
+  if (method === 'POST' && (path === '/start-bot/webhook' || path.endsWith('/start-bot/webhook'))) {
     if (!verifyWebhookSecret(
       event?.headers || {},
       'HEYS_START_WEBHOOK_SECRET',
@@ -1979,7 +2008,7 @@ module.exports.handler = async function (event) {
     return await handleStartBotWebhook(body);
   }
 
-  if (method === 'POST' && path.includes('/webhook')) {
+  if (method === 'POST' && (path === '/bot/webhook' || path.endsWith('/bot/webhook') || path.includes('/webhook'))) {
     // 🛡️ SEC-020 (2026-06-08): verify Telegram secret_token header.
     // Telegram setWebhook позволяет настроить `secret_token` — Telegram потом
     // шлёт его в каждом webhook'е через заголовок `X-Telegram-Bot-Api-Secret-Token`.
@@ -1999,11 +2028,6 @@ module.exports.handler = async function (event) {
     return await handleTelegramWebhook(body);
   }
 
-  if (method === 'POST' && path.includes('/send')) {
-    await ensureRuntimeConfig();
-    return await handleInternalSend(body, event?.headers || {});
-  }
-
   return jsonResponse(404, { error: 'not-found', path });
 };
 
@@ -2013,4 +2037,5 @@ module.exports.__test = {
   handleCuratorLeadCallback,
   handleCuratorBotUpdate,
   isAuthorizedCuratorCallback,
+  resolveHttpPath,
 };
