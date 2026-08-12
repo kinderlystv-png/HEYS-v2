@@ -24,7 +24,7 @@
     },
     completed: {
       title: 'Анкета отправлена',
-      text: 'Куратор внимательно изучит ответы и свяжется с вами в выбранном мессенджере.',
+      text: 'Куратор внимательно изучит ответы — результат придёт уведомлением в приложении.',
     },
     approved: {
       title: 'Анкета рассмотрена',
@@ -668,7 +668,9 @@
         React.createElement('div', null,
           React.createElement('div', { style: { fontSize: 12, color: '#657168', marginBottom: 4 } }, `Шаг ${step + 1} из ${STEPS.length}`),
           React.createElement('div', { style: { fontSize: 12, color: '#657168', marginBottom: 3 } },
-            step === 0 ? 'Обычно занимает около 10 минут' : `Осталось примерно ${Math.max(2, (STEPS.length - step) * 2)} мин`),
+            step === 0
+              ? 'Обычно занимает до 3 минут'
+              : `Осталось примерно ${Math.max(1, Math.round(((STEPS.length - step) / STEPS.length) * 3))} мин`),
           React.createElement('div', { style: { fontSize: 12, color: saveState === 'error' ? '#b42318' : '#657168' } },
             saveState === 'saving' || saveState === 'pending' ? 'Сохраняем…' : saveState === 'saved' ? 'Ответы сохранены' : saveState === 'error' ? 'Ошибка сохранения' : '')
         ),
