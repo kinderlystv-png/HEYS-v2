@@ -55,6 +55,36 @@
   --v4-sand-ok-fill-soft: #dfe6d1;
   --v4-sand-tint: #f3e0d2;
   --v4-sand-warn-bg: #fef3c7;
+  /* Виджеты Главной — каноничное значение = литерал пилота 4a (повтор 2026-08-11). */
+  --v4-wgt-emerald: #10b981;
+  --v4-wgt-ok-deep: #167d61;
+  --v4-wgt-link: #2f6bff;
+  --v4-wgt-slate: #6b7c93;
+  --v4-wgt-violet: #8b5cf6;
+  --v4-wgt-danger-text: #b91c1c;
+  --v4-wgt-mint: #d1fae5;
+  --v4-wgt-sky: #dbeafe;
+  --v4-wgt-magenta: #ec4899;
+  --v4-wgt-lilac: #ede9fe;
+  --v4-wgt-amber: #f59e0b;
+  --v4-wgt-orange: #f97316;
+  --v4-wgt-rose: #fce7f3;
+  --v4-wgt-danger-bg: #fee2e2;
+  --v4-wgt-cream: #fef3c7;
+  --v4-wgt-peach: #ffedd5;
+  --v4-wgt-teal: #059669;
+  --v4-wgt-apple-green: #30d158;
+  --v4-wgt-indigo: #6366f1;
+  --v4-wgt-cyan: #64d2ff;
+  --v4-wgt-brown: #9a3412;
+  --v4-wgt-purple: #af52de;
+  --v4-wgt-rust: #c2410c;
+  --v4-wgt-gold: #d97706;
+  --v4-wgt-salmon: #f87171;
+  --v4-wgt-yellow: #fbbf24;
+  --v4-wgt-apricot: #fed7aa;
+  --v4-wgt-coral: #ff2d55;
+  --v4-wgt-lemon: #ffd60a;
 }
 
 [data-theme-id="classic-dark"],
@@ -105,6 +135,35 @@
   --v4-sand-ok-fill-soft: #dfe6d1;
   --v4-sand-tint: #f3e0d2;
   --v4-sand-warn-bg: #fef3c7;
+  --v4-wgt-emerald: #10b981;
+  --v4-wgt-ok-deep: #167d61;
+  --v4-wgt-link: #2f6bff;
+  --v4-wgt-slate: #6b7c93;
+  --v4-wgt-violet: #8b5cf6;
+  --v4-wgt-danger-text: #b91c1c;
+  --v4-wgt-mint: #d1fae5;
+  --v4-wgt-sky: #dbeafe;
+  --v4-wgt-magenta: #ec4899;
+  --v4-wgt-lilac: #ede9fe;
+  --v4-wgt-amber: #f59e0b;
+  --v4-wgt-orange: #f97316;
+  --v4-wgt-rose: #fce7f3;
+  --v4-wgt-danger-bg: #fee2e2;
+  --v4-wgt-cream: #fef3c7;
+  --v4-wgt-peach: #ffedd5;
+  --v4-wgt-teal: #059669;
+  --v4-wgt-apple-green: #30d158;
+  --v4-wgt-indigo: #6366f1;
+  --v4-wgt-cyan: #64d2ff;
+  --v4-wgt-brown: #9a3412;
+  --v4-wgt-purple: #af52de;
+  --v4-wgt-rust: #c2410c;
+  --v4-wgt-gold: #d97706;
+  --v4-wgt-salmon: #f87171;
+  --v4-wgt-yellow: #fbbf24;
+  --v4-wgt-apricot: #fed7aa;
+  --v4-wgt-coral: #ff2d55;
+  --v4-wgt-lemon: #ffd60a;
 }
 
 [data-theme-id="sand"],
@@ -152,6 +211,35 @@
   --v4-sand-ok-fill-soft: #dfe6d1;
   --v4-sand-tint: #f3e0d2;
   --v4-sand-warn-bg: #fef3c7;
+  --v4-wgt-emerald: #7a8a5e;
+  --v4-wgt-ok-deep: #5c6a45;
+  --v4-wgt-link: #c67139;
+  --v4-wgt-slate: #8a8578;
+  --v4-wgt-violet: #a68b7a;
+  --v4-wgt-danger-text: #a1471c;
+  --v4-wgt-mint: #eaefe0;
+  --v4-wgt-sky: #f0dcc6;
+  --v4-wgt-magenta: #d99a63;
+  --v4-wgt-lilac: #f7efe2;
+  --v4-wgt-amber: #d99a63;
+  --v4-wgt-orange: #c67139;
+  --v4-wgt-rose: #f7efe2;
+  --v4-wgt-danger-bg: #f0dcc6;
+  --v4-wgt-cream: #efe3cf;
+  --v4-wgt-peach: #efe3cf;
+  --v4-wgt-teal: #5c6a45;
+  --v4-wgt-apple-green: #7a8a5e;
+  --v4-wgt-indigo: #a68b7a;
+  --v4-wgt-cyan: #7d98a6;
+  --v4-wgt-brown: #8a4a20;
+  --v4-wgt-purple: #a68b7a;
+  --v4-wgt-rust: #c67139;
+  --v4-wgt-gold: #d99a63;
+  --v4-wgt-salmon: #d99a63;
+  --v4-wgt-yellow: #d99a63;
+  --v4-wgt-apricot: #efe3cf;
+  --v4-wgt-coral: #c67139;
+  --v4-wgt-lemon: #d99a63;
 }
 
 [data-theme-id="sand-dark"],
@@ -207,6 +295,35 @@
   --v4-sand-ok-fill-soft: #dfe6d1;
   --v4-sand-tint: #f3e0d2;
   --v4-sand-warn-bg: #fef3c7;
+  --v4-wgt-emerald: #8faa6d;
+  --v4-wgt-ok-deep: #9fb981;
+  --v4-wgt-link: #cf8144;
+  --v4-wgt-slate: #b5afa3;
+  --v4-wgt-violet: #c49a78;
+  --v4-wgt-danger-text: #c9662c;
+  --v4-wgt-mint: #242c20;
+  --v4-wgt-sky: #3a2c20;
+  --v4-wgt-magenta: #cf9257;
+  --v4-wgt-lilac: #23201b;
+  --v4-wgt-amber: #cf9257;
+  --v4-wgt-orange: #cf8144;
+  --v4-wgt-rose: #2f2820;
+  --v4-wgt-danger-bg: #3a2c20;
+  --v4-wgt-cream: #2f2820;
+  --v4-wgt-peach: #2f2820;
+  --v4-wgt-teal: #9fb981;
+  --v4-wgt-apple-green: #8faa6d;
+  --v4-wgt-indigo: #c49a78;
+  --v4-wgt-cyan: #8fb2c2;
+  --v4-wgt-brown: #e2a468;
+  --v4-wgt-purple: #c49a78;
+  --v4-wgt-rust: #cf8144;
+  --v4-wgt-gold: #cf9257;
+  --v4-wgt-salmon: #d39673;
+  --v4-wgt-yellow: #cf9257;
+  --v4-wgt-apricot: #2f2820;
+  --v4-wgt-coral: #d07d4e;
+  --v4-wgt-lemon: #cf9257;
 }
 
 [data-theme-id="blue"],
@@ -258,6 +375,35 @@
   --v4-sand-ok-fill-soft: #dfe6d1;
   --v4-sand-tint: #f3e0d2;
   --v4-sand-warn-bg: #fef3c7;
+  --v4-wgt-emerald: #3e9a6b;
+  --v4-wgt-ok-deep: #1f6e4d;
+  --v4-wgt-link: #2e7cc0;
+  --v4-wgt-slate: #6b7c93;
+  --v4-wgt-violet: #6a8fc4;
+  --v4-wgt-danger-text: #a83246;
+  --v4-wgt-mint: #e4efe7;
+  --v4-wgt-sky: #d7e8f7;
+  --v4-wgt-magenta: #e59ea8;
+  --v4-wgt-lilac: #eef3f9;
+  --v4-wgt-amber: #e0a93e;
+  --v4-wgt-orange: #2e7cc0;
+  --v4-wgt-rose: #eef3f9;
+  --v4-wgt-danger-bg: #d7e8f7;
+  --v4-wgt-cream: #e2edf7;
+  --v4-wgt-peach: #e2edf7;
+  --v4-wgt-teal: #1f6e4d;
+  --v4-wgt-apple-green: #3e9a6b;
+  --v4-wgt-indigo: #6a8fc4;
+  --v4-wgt-cyan: #4c8fb8;
+  --v4-wgt-brown: #1d5e96;
+  --v4-wgt-purple: #6a8fc4;
+  --v4-wgt-rust: #2e7cc0;
+  --v4-wgt-gold: #e0a93e;
+  --v4-wgt-salmon: #e59ea8;
+  --v4-wgt-yellow: #e0a93e;
+  --v4-wgt-apricot: #e2edf7;
+  --v4-wgt-coral: #d9707e;
+  --v4-wgt-lemon: #e0a93e;
 }
 
 [data-theme-id="blue-dark"],
@@ -313,6 +459,35 @@
   --v4-sand-ok-fill-soft: #dfe6d1;
   --v4-sand-tint: #f3e0d2;
   --v4-sand-warn-bg: #fef3c7;
+  --v4-wgt-emerald: #4caf7d;
+  --v4-wgt-ok-deep: #7fd1a0;
+  --v4-wgt-link: #2e7cc0;
+  --v4-wgt-slate: #94a8bc;
+  --v4-wgt-violet: #6a8fc4;
+  --v4-wgt-danger-text: #cc3347;
+  --v4-wgt-mint: #17302a;
+  --v4-wgt-sky: #1b3a54;
+  --v4-wgt-magenta: #d8838e;
+  --v4-wgt-lilac: #182a3a;
+  --v4-wgt-amber: #e0a93e;
+  --v4-wgt-orange: #2e7cc0;
+  --v4-wgt-rose: #182a3a;
+  --v4-wgt-danger-bg: #1b3a54;
+  --v4-wgt-cream: #1d3348;
+  --v4-wgt-peach: #1d3348;
+  --v4-wgt-teal: #7fd1a0;
+  --v4-wgt-apple-green: #4caf7d;
+  --v4-wgt-indigo: #6a8fc4;
+  --v4-wgt-cyan: #6fa8c8;
+  --v4-wgt-brown: #8fc1e8;
+  --v4-wgt-purple: #6a8fc4;
+  --v4-wgt-rust: #2e7cc0;
+  --v4-wgt-gold: #e0a93e;
+  --v4-wgt-salmon: #d8838e;
+  --v4-wgt-yellow: #e0a93e;
+  --v4-wgt-apricot: #1d3348;
+  --v4-wgt-coral: #d05868;
+  --v4-wgt-lemon: #e0a93e;
 }
 
 /* Метки Б/Ж/У и подобные ряды «это другая штука» — не палитра по типу данных,

@@ -57,7 +57,7 @@
   --widget-weight-bold: 700;
 
   /* Вода — единственный холодный акцент плитки (полоса заполнения) */
-  --widget-water: #64D2FF;
+  --widget-water: var(--v4-wgt-cyan, #64D2FF);
   /* Apple Cyan */
 
   /* Градиенты для акцентов */
@@ -412,7 +412,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .empty-meal-alert__copy span {
-  color: #9a3412;
+  color: var(--v4-wgt-brown, #9a3412);
   font-size: 12px;
   line-height: 1.35;
 }
@@ -422,7 +422,7 @@ body:has(.page-reports) .hdr::after {
   padding: 0 16px;
   border: 0;
   border-radius: 13px;
-  background: #c2410c;
+  background: var(--v4-wgt-rust, #c2410c);
   color: var(--v4-bg, #fff);
   font-size: 14px;
   font-weight: 700;
@@ -431,7 +431,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .empty-meal-alert__action:hover {
-  background: #9a3412;
+  background: var(--v4-wgt-brown, #9a3412);
 }
 
 .empty-meal-alert__action:focus-visible {
@@ -446,11 +446,11 @@ body:has(.page-reports) .hdr::after {
 }
 
 [data-theme$="dark"] .empty-meal-alert__copy strong {
-  color: #ffedd5;
+  color: var(--v4-wgt-peach, #ffedd5);
 }
 
 [data-theme$="dark"] .empty-meal-alert__copy span {
-  color: #fed7aa;
+  color: var(--v4-wgt-apricot, #fed7aa);
 }
 
 @media (max-width: 520px) {
@@ -983,7 +983,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widgets-header__btn--grid.active {
-  color: #6366f1;
+  color: var(--v4-wgt-indigo, #6366f1);
   background: rgba(99, 102, 241, 0.12);
   border-radius: 8px;
 }
@@ -1007,7 +1007,7 @@ body:has(.page-reports) .hdr::after {
   padding: 8px 11px;
   font-size: 18px;
   line-height: 1;
-  color: #c2410c;
+  color: var(--v4-wgt-rust, #c2410c);
   background: rgba(249, 115, 22, 0.12);
   border-radius: 8px;
 }
@@ -1392,13 +1392,13 @@ body:has(.page-reports) .hdr::after {
   background: linear-gradient(90deg,
       var(--v4-warn-1, #ef4444) 0%,
       /* red at 0% */
-      #f97316 40%,
+      var(--v4-wgt-orange, #f97316) 40%,
       /* orange */
       var(--v4-warn-soft, #eab308) 60%,
       /* yellow */
       var(--v4-ok-fill, #22c55e) 85%,
       /* green */
-      #10b981 100%
+      var(--v4-wgt-emerald, #10b981) 100%
       /* emerald at perfect */
     );
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1491,7 +1491,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget--sleep .widget__star--filled {
-  color: #fbbf24;
+  color: var(--v4-wgt-yellow, #fbbf24);
 }
 
 .widget--sleep .widget__star--empty {
@@ -1529,7 +1529,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget--weight .widget__sparkline-path {
-  stroke: #EC4899;
+  stroke: var(--v4-wgt-magenta, #EC4899);
   stroke-width: 2.5;
   fill: none;
   filter: drop-shadow(0 2px 4px rgba(236, 72, 153, 0.3));
@@ -1660,12 +1660,12 @@ body:has(.page-reports) .hdr::after {
 
 .widget--insulin .widget__status--lipolysis {
   background: rgba(48, 209, 88, 0.12);
-  color: #30D158;
+  color: var(--v4-wgt-apple-green, #30D158);
 }
 
 .widget--insulin .widget__status--soon {
   background: rgba(255, 214, 10, 0.12);
-  color: #FFD60A;
+  color: var(--v4-wgt-lemon, #FFD60A);
 }
 
 /* Макросы 🥗 — Premium bar design */
@@ -1719,7 +1719,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-cascade__dot--warn {
-  background: #f97316;
+  background: var(--v4-wgt-orange, #f97316);
 }
 
 .widget-cascade__dot--neutral {
@@ -1735,7 +1735,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-cascade__dot--peak {
-  background: #10b981;
+  background: var(--v4-wgt-emerald, #10b981);
 }
 
 .widget-cascade__dot--placeholder {
@@ -1770,7 +1770,7 @@ body:has(.page-reports) .hdr::after {
 
 .widget-cascade__badge--good {
   background: rgba(16, 185, 129, 0.15);
-  color: #059669;
+  color: var(--v4-wgt-teal, #059669);
 }
 
 .widget-cascade__badge--info {
@@ -1780,7 +1780,7 @@ body:has(.page-reports) .hdr::after {
 
 .widget-cascade__badge--warn {
   background: rgba(245, 158, 11, 0.16);
-  color: #d97706;
+  color: var(--v4-wgt-gold, #d97706);
 }
 
 .widget-cascade__badge--bad {
@@ -1822,7 +1822,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-cascade__day-balance--warn {
-  background: #f59e0b;
+  background: var(--v4-wgt-amber, #f59e0b);
 }
 
 .widget-cascade__day-balance--bad {
@@ -1863,7 +1863,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-cascade__metric--good {
-  color: #059669;
+  color: var(--v4-wgt-teal, #059669);
 }
 
 .widget-cascade__metric--info {
@@ -1871,7 +1871,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-cascade__metric--warn {
-  color: #d97706;
+  color: var(--v4-wgt-gold, #d97706);
 }
 
 .widget-cascade__metric--bad {
@@ -1991,7 +1991,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget--macros .widget__bar-label--fat {
-  color: #FFD60A;
+  color: var(--v4-wgt-lemon, #FFD60A);
 }
 
 .widget--macros .widget__bar-track {
@@ -2058,7 +2058,7 @@ body:has(.page-reports) .hdr::after {
   gap: 4px;
   padding: 6px 12px;
   background: rgba(255, 45, 85, 0.1);
-  color: #FF2D55;
+  color: var(--v4-wgt-coral, #FF2D55);
   border-radius: 100px;
   font-size: var(--widget-font-caption);
   font-weight: var(--widget-weight-bold);
@@ -3182,10 +3182,10 @@ body:has(.page-reports) .hdr::after {
   border-radius: 5px;
   background: linear-gradient(90deg,
       var(--v4-warn-1, #ef4444) 0%,
-      #f97316 40%,
+      var(--v4-wgt-orange, #f97316) 40%,
       var(--v4-warn-soft, #eab308) 60%,
       var(--v4-ok-fill, #22c55e) 85%,
-      #10b981 100%);
+      var(--v4-wgt-emerald, #10b981) 100%);
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 0 12px rgba(34, 197, 94, 0.3);
 }
@@ -3316,7 +3316,7 @@ body:has(.page-reports) .hdr::after {
   font-weight: 600;
   padding: 4px 10px;
   background: color-mix(in srgb, var(--v4-tint-cool, #0a84ff) 10%, transparent);
-  color: #AF52DE;
+  color: var(--v4-wgt-purple, #AF52DE);
   border-radius: 100px;
 }
 
@@ -3680,7 +3680,7 @@ body:has(.page-reports) .hdr::after {
 .widget-weight__goal-val {
   font-size: 20px;
   font-weight: 700;
-  color: #8b5cf6;
+  color: var(--v4-wgt-violet, #8b5cf6);
   font-feature-settings: 'tnum' on;
 }
 
@@ -3749,7 +3749,7 @@ body:has(.page-reports) .hdr::after {
 .widget-weight__progress-pct {
   font-size: 11px;
   font-weight: 600;
-  color: #ec4899;
+  color: var(--v4-wgt-magenta, #ec4899);
 }
 
 /* Vertical */
@@ -3845,7 +3845,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-weight__stat--pink {
-  color: #ec4899;
+  color: var(--v4-wgt-magenta, #ec4899);
   background: rgba(236, 72, 153, 0.1);
 }
 
@@ -3985,7 +3985,7 @@ body:has(.page-reports) .hdr::after {
   padding: 2px 8px;
   border-radius: 999px;
   background: rgba(48, 209, 88, 0.10);
-  color: #30D158;
+  color: var(--v4-wgt-apple-green, #30D158);
 }
 
 .widget-steps--micro {
@@ -4018,7 +4018,7 @@ body:has(.page-reports) .hdr::after {
 .widget-steps__km {
   font-size: 12px;
   font-weight: 600;
-  color: #30D158;
+  color: var(--v4-wgt-apple-green, #30D158);
   padding: 4px 10px;
   background: rgba(48, 209, 88, 0.1);
   border-radius: 100px;
@@ -4106,7 +4106,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-macros__label--fat {
-  color: #FFD60A;
+  color: var(--v4-wgt-lemon, #FFD60A);
 }
 
 .widget-macros__label--carbs {
@@ -4196,7 +4196,7 @@ body:has(.page-reports) .hdr::after {
 
 .widget-insulin__status--active {
   background: rgba(249, 115, 22, 0.12);
-  color: #f97316;
+  color: var(--v4-wgt-orange, #f97316);
 }
 
 .widget-insulin__status--almost {
@@ -4211,7 +4211,7 @@ body:has(.page-reports) .hdr::after {
 
 .widget-insulin__status--lipolysis {
   background: rgba(16, 185, 129, 0.12);
-  color: #10b981;
+  color: var(--v4-wgt-emerald, #10b981);
 }
 
 .widget-insulin__timer {
@@ -4464,7 +4464,7 @@ body:has(.page-reports) .hdr::after {
   font-weight: 600;
   padding: 6px 12px;
   background: rgba(255, 45, 85, 0.1);
-  color: #FF2D55;
+  color: var(--v4-wgt-coral, #FF2D55);
   border-radius: 100px;
 }
 
@@ -4991,7 +4991,7 @@ body:has(.page-reports) .hdr::after {
 .widget-steps__km {
   font-size: 13px;
   font-weight: 600;
-  color: #30D158;
+  color: var(--v4-wgt-apple-green, #30D158);
   padding: 4px 10px;
   background: rgba(48, 209, 88, 0.1);
   border-radius: 999px;
@@ -5004,7 +5004,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-steps__meta--accent {
-  color: #FFD60A;
+  color: var(--v4-wgt-lemon, #FFD60A);
   font-weight: 600;
 }
 
@@ -5631,7 +5631,7 @@ body:has(.page-reports) .hdr::after {
   right: -2px;
   width: 6px;
   height: 6px;
-  background: #f87171;
+  background: var(--v4-wgt-salmon, #f87171);
   border-radius: 50%;
   animation: heatmapStressPulse 1.5s infinite;
 }
@@ -5656,7 +5656,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 [data-theme$="dark"] .widget-heatmap__cell--stress::after {
-  background: #f87171;
+  background: var(--v4-wgt-salmon, #f87171);
 }
 
 /* --- Cycle Widget 2×2 --- */
@@ -5973,7 +5973,7 @@ body:has(.page-reports) .hdr::after {
   margin-left: auto;
   font-size: 10px;
   font-weight: 600;
-  color: #059669;
+  color: var(--v4-wgt-teal, #059669);
   background: rgba(16, 185, 129, 0.12);
   padding: 4px 8px;
   border-radius: 999px;
@@ -5984,12 +5984,12 @@ body:has(.page-reports) .hdr::after {
   opacity: 0.75;
   cursor: default;
   border-color: #f9a8d4;
-  background: #fce7f3;
+  background: var(--v4-wgt-rose, #fce7f3);
 }
 
 @media (hover: hover) {
   .widgets-catalog__item--disabled:hover {
-  background: #fce7f3;
+  background: var(--v4-wgt-rose, #fce7f3);
   border-color: #f9a8d4;
 }
 }
@@ -6865,7 +6865,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-relapse-risk__impact-chip {
-  --chip-accent: #f59e0b;
+  --chip-accent: var(--v4-wgt-amber, #f59e0b);
   --chip-bg: rgba(245, 158, 11, 0.12);
   --chip-border: rgba(245, 158, 11, 0.24);
   display: inline-flex;
@@ -7548,11 +7548,11 @@ body:has(.page-reports) .hdr::after {
 
 /* Severity Colors */
 .widget-crash-risk--none .widget-crash-risk__percent {
-  color: #10b981;
+  color: var(--v4-wgt-emerald, #10b981);
 }
 
 .widget-crash-risk--medium .widget-crash-risk__percent {
-  color: #f97316;
+  color: var(--v4-wgt-orange, #f97316);
 }
 
 .widget-crash-risk--high .widget-crash-risk__percent {
@@ -7602,7 +7602,7 @@ body:has(.page-reports) .hdr::after {
 
 .widget-crash-risk__ews-badge--none {
   background: rgba(16, 185, 129, 0.15);
-  color: #059669;
+  color: var(--v4-wgt-teal, #059669);
 }
 
 .widget-crash-risk__ews-badge--medium {
@@ -7673,7 +7673,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 [data-theme$="dark"] .widget-crash-risk--high .widget-crash-risk__percent {
-  color: #f87171;
+  color: var(--v4-wgt-salmon, #f87171);
 }
 
 [data-theme$="dark"] .widget-crash-risk__ews-badge--none {
@@ -7688,7 +7688,7 @@ body:has(.page-reports) .hdr::after {
 
 [data-theme$="dark"] .widget-crash-risk__ews-badge--high {
   background: rgba(248, 113, 113, 0.2);
-  color: #f87171;
+  color: var(--v4-wgt-salmon, #f87171);
 }
 
 [data-theme$="dark"] .widget-crash-risk__ews-preview {
@@ -7780,7 +7780,7 @@ body:has(.page-reports) .hdr::after {
   font-size: 14px;
   line-height: 1.25;
   font-weight: 900;
-  color: #9a3412;
+  color: var(--v4-wgt-brown, #9a3412);
 }
 
 .reports-overview-card__body {
@@ -7822,7 +7822,7 @@ body:has(.page-reports) .hdr::after {
 
 .reports-overview-card__stat-value {
   min-width: 0;
-  color: #c2410c;
+  color: var(--v4-wgt-rust, #c2410c);
   font-size: 24px;
   font-weight: 900;
   line-height: 1.1;
@@ -7841,7 +7841,7 @@ body:has(.page-reports) .hdr::after {
   border-radius: 999px;
   background: #fff7ed;
   box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.26);
-  color: #c2410c;
+  color: var(--v4-wgt-rust, #c2410c);
   font-weight: 900;
 }
 
@@ -7861,7 +7861,7 @@ body:has(.page-reports) .hdr::after {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.5);
   box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.22);
-  color: #9a3412;
+  color: var(--v4-wgt-brown, #9a3412);
   font-size: 12px;
   font-weight: 900;
 }
@@ -7953,12 +7953,12 @@ body.reports-fullscreen-open {
   background:
     linear-gradient(135deg, rgba(67, 20, 7, 0.92) 0%, rgba(124, 45, 18, 0.78) 100%);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
-  color: #fed7aa;
+  color: var(--v4-wgt-apricot, #fed7aa);
 }
 
 [data-theme$="dark"] .reports-overview-card__title,
 .theme-dark .reports-overview-card__title {
-  color: #fed7aa;
+  color: var(--v4-wgt-apricot, #fed7aa);
 }
 
 [data-theme$="dark"] .reports-overview-card__body,
@@ -7980,7 +7980,7 @@ body.reports-fullscreen-open {
 
 [data-theme$="dark"] .reports-overview-card__stat-value,
 .theme-dark .reports-overview-card__stat-value {
-  color: #ffedd5;
+  color: var(--v4-wgt-peach, #ffedd5);
 }
 
 [data-theme$="dark"] .reports-overview-card__stat-label,
@@ -7992,14 +7992,14 @@ body.reports-fullscreen-open {
 .theme-dark .reports-overview-card__count {
   background: rgba(154, 52, 18, 0.48);
   box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.24);
-  color: #ffedd5;
+  color: var(--v4-wgt-peach, #ffedd5);
 }
 
 [data-theme$="dark"] .reports-overview-card__action,
 .theme-dark .reports-overview-card__action {
   background: rgba(255, 237, 213, 0.1);
   box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.18);
-  color: #fed7aa;
+  color: var(--v4-wgt-apricot, #fed7aa);
 }
 
 [data-theme$="dark"] .reports-fullscreen-modal,
