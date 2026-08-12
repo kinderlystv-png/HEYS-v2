@@ -350,8 +350,13 @@
               : (serverMessage || 'Слишком много попыток. Попробуйте позже или напишите куратору.'));
           } else if (code === 'pin_login_disabled') {
             setErr(serverMessage || 'Вход по PIN временно отключён. Куратор откроет доступ после обновления входа.');
+          } else if (code === 'access_code_login_required') {
+            setErr(serverMessage || 'Используйте код доступа или вход с зарегистрированного устройства.');
           } else if (code === 'invalid_credentials') {
-            showInvalidPinFeedback();
+            showInvalidPinFeedback(
+              'Не удалось войти. Проверьте номер телефона и код доступа. '
+              + 'Если код выдавали недавно — попросите куратор один новый.'
+            );
           } else if (code === 'session_not_issued') {
             setErr('Код верный, но вход не завершился. Попробуйте ещё раз или напишите куратору.');
           } else if (code === 'network_error') {

@@ -249,7 +249,8 @@
   //                  есть своя формулировка на случай, если сервер не прислал
   //                  `message`.
   const LOGIN_SERVER_ERRORS = {
-    invalid_credentials: { kind: 'wrong_pin' },
+    // Нейтральная формулировка на экране: номер может не существовать в базе.
+    invalid_credentials: { kind: 'explained' },
     invalid_pin: { kind: 'wrong_pin' },
     wrong_pin: { kind: 'wrong_pin' },
     rate_limited: { kind: 'rate_limit' },
@@ -258,6 +259,7 @@
     // Заглушка боевой БД с 2026-08-11 (вход по PIN временно закрыт против
     // перебора). Миграции в репозитории нет — код известен только отсюда.
     pin_login_disabled: { kind: 'explained' },
+    access_code_login_required: { kind: 'explained' },
   };
 
   // Приводит серверный отказ к коду для экрана. Незнакомый код НЕ схлопывается
@@ -273,14 +275,17 @@
     let error;
     if (known && known.kind === 'rate_limit') {
       error = 'rate_limited';
-    } else if (!serverError || (known && known.kind === 'wrong_pin')) {
-      // Отказ без кода трактуем как неверный PIN — исторический контракт v3.
+    } else if (!serverError) {
+      // Отказ без кода — нейтральный invalid_credentials (не «PIN не подошёл»).
+      error = 'invalid_credentials';
+    } else if (known && known.kind === 'wrong_pin') {
       error = 'invalid_credentials';
     } else {
       error = serverError;
     }
 
-    return { error, serverError, serverMessage, isWrongPin: error === 'invalid_credentials' };
+    const isWrongPin = Boolean(known && known.kind === 'wrong_pin');
+    return { error, serverError, serverMessage, isWrongPin };
   }
 
   async function loginClient({ phone, pin }) {

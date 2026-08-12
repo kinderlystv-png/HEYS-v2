@@ -7,6 +7,7 @@ import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { runSql, runSqlBlock } from './_helpers';
 
 const PHONE = '79995550211';
+const PHONE_NORM_ONLY = '79995550333';
 const DEVICE_A = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 const ONETIME_A = '5829';
 const ONETIME_B = '9012';
@@ -19,6 +20,20 @@ function fnExists(name: string): boolean {
     `SELECT 1 FROM pg_proc WHERE proname = '${name}' AND pronamespace = 'public'::regnamespace`
   );
   return r.success && r.output.includes('(1 строка)');
+}
+
+function purgeNormOnly() {
+  return `
+    DELETE FROM public.client_auth_push_queue
+     WHERE client_id IN (SELECT id FROM public.clients WHERE phone_normalized = '${PHONE_NORM_ONLY}');
+    DELETE FROM public.client_devices
+     WHERE client_id IN (SELECT id FROM public.clients WHERE phone_normalized = '${PHONE_NORM_ONLY}');
+    DELETE FROM public.client_sessions
+     WHERE client_id IN (SELECT id FROM public.clients WHERE phone_normalized = '${PHONE_NORM_ONLY}');
+    DELETE FROM public.consents
+     WHERE client_id IN (SELECT id FROM public.clients WHERE phone_normalized = '${PHONE_NORM_ONLY}');
+    DELETE FROM public.clients WHERE phone_normalized = '${PHONE_NORM_ONLY}';
+  `;
 }
 
 function purge() {
@@ -184,6 +199,44 @@ describe('client login scheme — свойства', () => {
     `).output;
 
     expect(out).toMatch(/legacy\s*\|\s*access_code_login_required/);
+  });
+
+  it('клиент с phone_normalized без phone входит через verify_client_pin_v3', () => {
+    if (!schemeReady) return;
+
+    const out = runSqlBlock(`
+      ${purgeNormOnly()}
+      INSERT INTO public.clients (id, curator_id, name, phone_normalized, pin_hash)
+      SELECT gen_random_uuid(), c.id, 'props', '${PHONE_NORM_ONLY}',
+             crypt('${LEGACY_PIN}', gen_salt('bf', 12))
+        FROM public.curators c LIMIT 1;
+
+      SELECT 'norm_only' AS marker,
+             public.verify_client_pin_v3('${PHONE_NORM_ONLY}','${LEGACY_PIN}','203.0.113.1','vitest')->>'success' AS value;
+
+      ${purgeNormOnly()}
+    `).output;
+
+    expect(out).toMatch(/norm_only\s*\|\s*t/);
+  });
+
+  it('после admin_set_client_pin legacy verify_client_pin_v3 принимает PIN', () => {
+    if (!schemeReady) return;
+
+    const out = runSqlBlock(`
+      ${purge()}
+      INSERT INTO public.clients (id, curator_id, name, phone)
+      SELECT gen_random_uuid(), c.id, 'props', '+${PHONE}' FROM public.curators c LIMIT 1;
+
+      SELECT public.admin_set_client_pin(id, '${ONETIME_A}') FROM public.clients WHERE phone = '+${PHONE}';
+
+      SELECT 'legacy_after_reset' AS marker,
+             public.verify_client_pin_v3('+${PHONE}','${ONETIME_A}','203.0.113.1','vitest')->>'success' AS value;
+
+      ${purge()}
+    `).output;
+
+    expect(out).toMatch(/legacy_after_reset\s*\|\s*t/);
   });
 
   it('клиент без кода доступа входит через verify_client_pin_v3', () => {

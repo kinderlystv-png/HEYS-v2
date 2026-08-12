@@ -74,13 +74,20 @@ function readLatestPinFunctionSql() {
     // Актуальная = последняя по лексикографическому имени: так же идёт apply
     // по sorted filename в database/. Не по дате mtime и не «первая попавшаяся».
     const file = candidates.sort().at(-1);
-    const sql = fs.readFileSync(path.join(DATABASE_DIR, file), 'utf8');
+    const fullSql = fs.readFileSync(path.join(DATABASE_DIR, file), 'utf8');
 
-    // Двойная проверка уже отобранного файла: если отбор когда-нибудь разъедется
-    // с содержимым, тест скажет об этом, а не сверит пустоту.
+    // В одном файле могут быть и verify_client_pin_v3, и login_client_v1 — берём только v3.
+    const fnStart = fullSql.search(PIN_FUNCTION_DEFINITION);
+    expect(fnStart, `в ${file} не найден verify_client_pin_v3`).toBeGreaterThan(-1);
+    const fnTail = fullSql.slice(fnStart);
+    const fnEndMatch = fnTail.slice(1).search(
+        /\nCREATE\s+OR\s+REPLACE\s+FUNCTION\s+(public\.)?(?!verify_client_pin_v3)/i,
+    );
+    const sql = fnEndMatch >= 0 ? fnTail.slice(0, fnEndMatch + 1) : fnTail;
+
     expect(
         PIN_FUNCTION_DEFINITION.test(sql),
-        `выбранный как актуальный ${file} не содержит определения verify_client_pin_v3.`,
+        `выбранный фрагмент ${file} не содержит verify_client_pin_v3.`,
     ).toBe(true);
 
     return { file, sql };
@@ -165,7 +172,7 @@ describe('контракт кодов отказа на входе клиент�
         ).toEqual([]);
     });
 
-    it('«PIN не подошёл» показывается только на invalid_credentials', () => {
+    it('«PIN не подошёл» по умолчанию не показывается на invalid_credentials', () => {
         const handler = sliceBetween(
             screenSource,
             'async function handleClientLogin',
@@ -173,7 +180,7 @@ describe('контракт кодов отказа на входе клиент�
         );
 
         const calls = matchAll(handler, /(showInvalidPinFeedback)\(/g);
-        expect(calls.length, 'реакция «неверный PIN» вызывается больше одного раза — проверьте, в каких ветках')
+        expect(calls.length, 'реакция на invalid_credentials вызывается больше одного раза — проверьте ветки')
             .toBe(1);
 
         const branchIndex = handler.indexOf("code === 'invalid_credentials'");
@@ -182,7 +189,11 @@ describe('контракт кодов отказа на входе клиент�
         expect(callIndex).toBeGreaterThan(branchIndex);
         expect(
             handler.slice(branchIndex, callIndex),
-            'между веткой invalid_credentials и реакцией «неверный PIN» появилось другое условие',
+            'между веткой invalid_credentials и реакцией появилось другое условие',
         ).not.toContain('else if');
+
+        const invalidBranch = handler.slice(branchIndex, handler.indexOf('} else if', callIndex));
+        expect(invalidBranch).toContain('Не удалось войти');
+        expect(invalidBranch).not.toContain("'PIN не подошёл'");
     });
 });
