@@ -892,10 +892,12 @@ test('HEYS Start contact creates CRM lead and sends PII-free curator handoff', a
   const insertLead = queries.find((q) => /INSERT INTO public\.leads/.test(q.sql));
   assert.ok(insertLead, 'lead insert query should run');
   assert.match(insertLead.sql, /consent_privacy_version, consent_method/);
-  assert.match(insertLead.sql, /\$8, 'telegram_contact'/);
+  assert.match(insertLead.sql, /telegram_chat_id/);
+  assert.match(insertLead.sql, /\$9, 'telegram_contact'/);
   assert.equal(insertLead.params[0], 'Ivan Private');
   assert.equal(insertLead.params[1], '+79991112233');
-  assert.equal(insertLead.params[7], '1.7');
+  assert.equal(insertLead.params[2], 123456);
+  assert.equal(insertLead.params[8], '1.7');
 
   const recordLead = queries.find(
     (q) => /record_funnel_event/.test(q.sql) && q.params[0] === 'lead',
@@ -1044,6 +1046,7 @@ test('HEYS Start contact replay reuses active phone lead without duplicate curat
   assert.deepEqual(consentUpdate.params, [
     '22222222-2222-2222-2222-222222222222',
     '1.7',
+    123456,
   ]);
   assert.equal(
     queries.some((q) => /record_funnel_event/.test(q.sql) && q.params[0] === 'lead'),
