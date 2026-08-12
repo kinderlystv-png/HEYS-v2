@@ -729,7 +729,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             if (key === 'cycleTrackingEnabled') {
                 const hf = HEYS.healthFeatures;
                 const available = hf && typeof hf.isCycleFeatureAvailable === 'function'
-                  ? hf.isCycleFeatureAvailable()
+                  ? hf.isCycleFeatureAvailable(profile)
                   : false;
                 if (!available && validatedValue) return;
                 if (!available) validatedValue = false;

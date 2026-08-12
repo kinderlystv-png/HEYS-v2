@@ -8,13 +8,11 @@
   // Keep module/code; close all enable/write paths until device-only return.
   const CYCLE_TRACKING_IN_RELEASE = false;
 
-  // Owner exception 2026-08-12: spouse account keeps cycle tracking while release gate stays off.
-  // Keep in sync with yandex-cloud-functions/heys-mcp/lib/cycle_release_gate.cjs
-  const CYCLE_TRACKING_EXCEPTION_CLIENT_IDS = Object.freeze([
-    '4545ee50-4f5f-4fc0-b862-7ca45fa1bafc', // Александра
-  ]);
+  // All three optional health features share the same release gate.
+  const OPTIONAL_HEALTH_FEATURES_IN_RELEASE = CYCLE_TRACKING_IN_RELEASE;
 
   const DEFAULT_PROFILE_FLAGS = Object.freeze({
+    internalAccount: false,
     cycleTrackingEnabled: false,
     measurementsTrackingEnabled: false,
     supplementsTrackingEnabled: false,
@@ -53,28 +51,48 @@
     }
   }
 
-  function isCycleTrackingExceptionClient(clientId) {
-    const id = resolveClientId(clientId);
-    if (!id) return false;
-    return CYCLE_TRACKING_EXCEPTION_CLIENT_IDS.includes(id);
+  function resolveProfile(profile) {
+    if (profile && typeof profile === 'object' && !Array.isArray(profile)) return profile;
+    try {
+      if (HEYS.store && typeof HEYS.store.get === 'function') {
+        const fromStore = HEYS.store.get('heys_profile', null);
+        if (fromStore && typeof fromStore === 'object') return fromStore;
+      }
+    } catch (_) { /* noop */ }
+    return null;
   }
 
-  function isCycleFeatureAvailable(clientId) {
-    if (CYCLE_TRACKING_IN_RELEASE === true) return true;
-    return isCycleTrackingExceptionClient(clientId);
+  function isInternalAccount(profile) {
+    const resolved = resolveProfile(profile);
+    return !!(resolved && resolved.internalAccount === true);
+  }
+
+  function isOptionalHealthFeatureAvailable(profile) {
+    if (OPTIONAL_HEALTH_FEATURES_IN_RELEASE === true) return true;
+    return isInternalAccount(profile);
+  }
+
+  function isCycleFeatureAvailable(profile) {
+    return isOptionalHealthFeatureAvailable(profile);
   }
 
   function isCycleTrackingEnabled(profile, clientId) {
-    if (!isCycleFeatureAvailable(clientId)) return false;
-    return !!(profile && profile.gender === 'Женский' && profile.cycleTrackingEnabled === true);
+    void clientId;
+    if (!isCycleFeatureAvailable(profile)) return false;
+    const resolved = resolveProfile(profile);
+    return !!(resolved && resolved.gender === 'Женский' && resolved.cycleTrackingEnabled === true);
   }
 
   function isMeasurementsTrackingEnabled(profile) {
-    return !!(profile && profile.measurementsTrackingEnabled === true);
+    if (!isOptionalHealthFeatureAvailable(profile)) return false;
+    const resolved = resolveProfile(profile);
+    return !!(resolved && resolved.measurementsTrackingEnabled === true);
   }
 
   function isSupplementsTrackingEnabled(profile) {
-    return !!(profile && profile.supplementsTrackingEnabled === true);
+    if (!isOptionalHealthFeatureAvailable(profile)) return false;
+    const resolved = resolveProfile(profile);
+    return !!(resolved && resolved.supplementsTrackingEnabled === true);
   }
 
   function isKnownSupplementId(id) {
@@ -175,22 +193,21 @@
       label: 'Трекинг цикла',
       purgeDay: purgeCycleDataFromDay,
       purgeProfile: purgeCycleDataFromProfile,
-      // Hidden for release; feature returns later as device-only.
-      visible: () => isCycleFeatureAvailable(),
+      visible: (profile) => isOptionalHealthFeatureAvailable(profile),
     },
     measurementsTrackingEnabled: {
       consentType: 'body_measurements',
       label: 'Замеры тела',
       purgeDay: purgeMeasurementsFromDay,
       purgeProfile: purgeMeasurementsFromProfile,
-      visible: () => true,
+      visible: (profile) => isOptionalHealthFeatureAvailable(profile),
     },
     supplementsTrackingEnabled: {
       consentType: 'supplements_tracking',
       label: 'Добавки',
       purgeDay: purgeSupplementsFromDay,
       purgeProfile: purgeSupplementsFromProfile,
-      visible: () => true,
+      visible: (profile) => isOptionalHealthFeatureAvailable(profile),
     },
   });
 
@@ -230,6 +247,12 @@
     }
   }
 
+  const OPTIONAL_FEATURE_FLAG_KEYS = Object.freeze([
+    'cycleTrackingEnabled',
+    'measurementsTrackingEnabled',
+    'supplementsTrackingEnabled',
+  ]);
+
   /**
    * Enable/disable optional health feature with consent gate and local purge on disable.
    * Returns true when toggle should be applied to profile.
@@ -237,6 +260,9 @@
   async function requestHealthFeatureToggle(flagKey, nextEnabled) {
     const cfg = FEATURE_TOGGLES[flagKey];
     if (!cfg) return false;
+    if (OPTIONAL_FEATURE_FLAG_KEYS.includes(flagKey) && nextEnabled && !isOptionalHealthFeatureAvailable()) {
+      return false;
+    }
     if (flagKey === 'cycleTrackingEnabled' && !isCycleFeatureAvailable()) {
       if (nextEnabled) return false;
       // Allow explicit disable/purge path while feature is out of release.
@@ -273,8 +299,9 @@
     CONSENT_TYPES,
     KNOWN_SUPPLEMENT_IDS,
     CYCLE_TRACKING_IN_RELEASE,
-    CYCLE_TRACKING_EXCEPTION_CLIENT_IDS,
-    isCycleTrackingExceptionClient,
+    OPTIONAL_HEALTH_FEATURES_IN_RELEASE,
+    isInternalAccount,
+    isOptionalHealthFeatureAvailable,
     isCycleFeatureAvailable,
     isCycleTrackingEnabled,
     isMeasurementsTrackingEnabled,

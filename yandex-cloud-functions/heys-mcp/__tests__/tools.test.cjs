@@ -11,6 +11,11 @@ const CLIENT = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
 const SESSION = 'session-token';
 const NOW = Date.UTC(2026, 7, 1, 12, 54); // 15:54 по Москве
 
+/** Optional health features require internalAccount while out of release. */
+function internalHealthProfile(overrides = {}) {
+  return { internalAccount: true, ...overrides };
+}
+
 const SHARED_ROWS = [
   { id: 's-americano', name: 'Кофе американо', protein100: 0.1, simple100: 0.3, complex100: 0, badfat100: 0, goodfat100: 0 },
   { id: 's-milk', name: 'Молоко ультрапастеризованное 3.5', protein100: 3, simple100: 4.7, complex100: 0, badfat100: 2.2, goodfat100: 1.3 },
@@ -1466,7 +1471,7 @@ test('heys_checkin submit — гасит кураторскую метку, а �
 test('heys_checkin submit — замеры пишутся, а незаполненные поля остаются null', async () => {
   const api = fakeApi({
     day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
-    card: { [PROFILE_KEY]: { measurementsTrackingEnabled: true } },
+    card: { [PROFILE_KEY]: internalHealthProfile({ measurementsTrackingEnabled: true }) },
   });
   const res = await build(api).heys_checkin({ action: 'submit', measurements: { waist: 82 } });
   const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
@@ -1478,7 +1483,7 @@ test('heys_checkin submit — замеры пишутся, а незаполне
 test('heys_checkin submit — пустые замеры отклоняются, а не пишутся тихим нулём', async () => {
   const api = fakeApi({
     day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
-    card: { [PROFILE_KEY]: { measurementsTrackingEnabled: true } },
+    card: { [PROFILE_KEY]: internalHealthProfile({ measurementsTrackingEnabled: true }) },
   });
   await assert.rejects(
     () => build(api).heys_checkin({ action: 'submit', measurements: {} }),
@@ -1489,7 +1494,7 @@ test('heys_checkin submit — пустые замеры отклоняются, 
 test('heys_checkin submit — measurements_tracking_disabled отказывает явно', async () => {
   const api = fakeApi({
     day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
-    card: { [PROFILE_KEY]: { measurementsTrackingEnabled: false } },
+    card: { [PROFILE_KEY]: internalHealthProfile({ measurementsTrackingEnabled: false }) },
   });
   await assert.rejects(
     () => build(api).heys_checkin({ action: 'submit', measurements: { waist: 82 } }),
@@ -1498,10 +1503,22 @@ test('heys_checkin submit — measurements_tracking_disabled отказывае�
   assert.equal(api.saves.length, 0);
 });
 
+test('heys_checkin submit — measurements_tracking_removed для обычного аккаунта', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
+    card: { [PROFILE_KEY]: { measurementsTrackingEnabled: true } },
+  });
+  await assert.rejects(
+    () => build(api).heys_checkin({ action: 'submit', measurements: { waist: 82 } }),
+    (e) => e.code === 'measurements_tracking_removed',
+  );
+  assert.equal(api.saves.length, 0);
+});
+
 test('heys_checkin submit — добавки из каталога пишутся списком целиком', async () => {
   const api = fakeApi({
     day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
-    card: { [PROFILE_KEY]: { supplementsTrackingEnabled: true } },
+    card: { [PROFILE_KEY]: internalHealthProfile({ supplementsTrackingEnabled: true }) },
   });
   const res = await build(api).heys_checkin({ action: 'submit', supplements: ['vitD', 'omega3'] });
   const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
@@ -1512,7 +1529,7 @@ test('heys_checkin submit — добавки из каталога пишутс�
 test('heys_checkin submit — custom_* добавки отклоняются', async () => {
   const api = fakeApi({
     day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
-    card: { [PROFILE_KEY]: { supplementsTrackingEnabled: true } },
+    card: { [PROFILE_KEY]: internalHealthProfile({ supplementsTrackingEnabled: true }) },
   });
   await assert.rejects(
     () => build(api).heys_checkin({ action: 'submit', supplements: ['vitD', 'omega3', 'custom_777'] }),
@@ -1524,7 +1541,7 @@ test('heys_checkin submit — custom_* добавки отклоняются', a
 test('heys_checkin submit — добавка не из каталога отклоняется, а не пишется как есть', async () => {
   const api = fakeApi({
     day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
-    card: { [PROFILE_KEY]: { supplementsTrackingEnabled: true } },
+    card: { [PROFILE_KEY]: internalHealthProfile({ supplementsTrackingEnabled: true }) },
   });
   await assert.rejects(
     () => build(api).heys_checkin({ action: 'submit', supplements: ['vitD', 'магический-порошок'] }),
@@ -1536,7 +1553,7 @@ test('heys_checkin submit — добавка не из каталога откл
 test('heys_update_day — supplements_mark отмечает выбранные id', async () => {
   const api = fakeApi({
     day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111, supplementsPlanned: ['vitD', 'omega3', 'magnesium'] },
-    card: { [PROFILE_KEY]: { supplementsTrackingEnabled: true } },
+    card: { [PROFILE_KEY]: internalHealthProfile({ supplementsTrackingEnabled: true }) },
   });
   const res = await build(api).heys_update_day({ supplements_mark: ['vitD', 'omega3'] });
   const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
@@ -1551,7 +1568,7 @@ test('heys_update_day — supplements_timing morning отмечает тольк
       date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111,
       supplementsPlanned: ['vitD', 'b12', 'magnesium', 'iron'],
     },
-    card: { [PROFILE_KEY]: { supplementsTrackingEnabled: true } },
+    card: { [PROFILE_KEY]: internalHealthProfile({ supplementsTrackingEnabled: true }) },
   });
   await build(api).heys_update_day({ supplements_timing: 'morning' });
   const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
@@ -1561,7 +1578,7 @@ test('heys_update_day — supplements_timing morning отмечает тольк
 test('heys_update_profile — planned_supplements_add дополняет курс и синхронизирует день', async () => {
   const api = fakeApi({
     day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111, supplementsPlanned: ['vitD'] },
-    card: { [PROFILE_KEY]: { plannedSupplements: ['vitD'], supplementsTrackingEnabled: true, updatedAt: 50 } },
+    card: { [PROFILE_KEY]: internalHealthProfile({ plannedSupplements: ['vitD'], supplementsTrackingEnabled: true, updatedAt: 50 }) },
   });
   await build(api).heys_update_profile({ planned_supplements_add: ['omega3'] });
   const profileSave = api.saves.find((s) => s.key === PROFILE_KEY);
@@ -1639,25 +1656,29 @@ test('heys_update_profile — cycle_tracking_enabled отклонён (снят 
   assert.equal(api.saves.length, 0);
 });
 
-const SPOUSE_CLIENT = '4545ee50-4f5f-4fc0-b862-7ca45fa1bafc';
+const INTERNAL_PROFILE = {
+  gender: 'Женский',
+  internalAccount: true,
+  cycleTrackingEnabled: false,
+};
 
-test('heys_update_profile — cycle_tracking_enabled разрешён для spouse exception', async () => {
+test('heys_update_profile — cycle_tracking_enabled разрешён для internalAccount', async () => {
   const api = fakeApi({
-    card: { [PROFILE_KEY]: { gender: 'Женский', cycleTrackingEnabled: false } },
+    card: { [PROFILE_KEY]: { ...INTERNAL_PROFILE, cycleTrackingEnabled: false } },
   });
-  const tools = createTools({ api, sessionToken: SESSION, clientId: SPOUSE_CLIENT, nowMs: NOW }).tools;
+  const tools = createTools({ api, sessionToken: SESSION, clientId: 'any-client', nowMs: NOW }).tools;
   const res = await tools.heys_update_profile({ cycle_tracking_enabled: true });
   assert.ok(res.structured.updated.some((line) => /цикл/i.test(line) || /cycle/i.test(line)));
   const saved = api.saves.find((s) => s.key === PROFILE_KEY);
   assert.equal(saved.value.cycleTrackingEnabled, true);
 });
 
-test('heys_checkin submit — cycle_day разрешён для spouse exception при флаге', async () => {
+test('heys_checkin submit — cycle_day разрешён для internalAccount при флаге', async () => {
   const api = fakeApi({
     day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
-    card: { [PROFILE_KEY]: { gender: 'Женский', cycleTrackingEnabled: true } },
+    card: { [PROFILE_KEY]: { ...INTERNAL_PROFILE, cycleTrackingEnabled: true } },
   });
-  const tools = createTools({ api, sessionToken: SESSION, clientId: SPOUSE_CLIENT, nowMs: NOW }).tools;
+  const tools = createTools({ api, sessionToken: SESSION, clientId: 'any-client', nowMs: NOW }).tools;
   await tools.heys_checkin({ action: 'submit', cycle_day: 3 });
   assert.ok(api.saves.some((s) => s.key.startsWith('heys_dayv2_')));
 });

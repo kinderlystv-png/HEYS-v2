@@ -142,14 +142,30 @@ function applyFields(current, fields, schema, nowMs) {
 }
 
 function applyProfileFields(current, fields, nowMs, options = {}) {
-  if (fields && Object.prototype.hasOwnProperty.call(fields, 'cycle_tracking_enabled')) {
-    // prompt-cycle-removal: closed for release, except owner allowlist (spouse).
-    if (!cycleReleaseGate.isCycleFeatureAvailableForClient(options.clientId)) {
-      throw new ProfileError(
-        'cycle_tracking_removed',
-        'Трекинг менструального цикла снят с релиза: cycle_tracking_enabled не пишется. Функция вернётся после релиза в архитектуре device-only.',
-      );
-    }
+  void options;
+  const currentProfile = (current && typeof current === 'object' && !Array.isArray(current))
+    ? current
+    : {};
+  const enabling = (key) => fields
+    && Object.prototype.hasOwnProperty.call(fields, key)
+    && fields[key] === true;
+  if (enabling('cycle_tracking_enabled') && !cycleReleaseGate.isOptionalHealthFeatureAvailable(currentProfile)) {
+    throw new ProfileError(
+      'cycle_tracking_removed',
+      'Трекинг менструального цикла снят с релиза: cycle_tracking_enabled не пишется. Функция вернётся после релиза в архитектуре device-only.',
+    );
+  }
+  if (enabling('measurements_tracking_enabled') && !cycleReleaseGate.isOptionalHealthFeatureAvailable(currentProfile)) {
+    throw new ProfileError(
+      'measurements_tracking_removed',
+      'Трекинг замеров тела снят с релиза: measurements_tracking_enabled не пишется для обычных аккаунтов.',
+    );
+  }
+  if (enabling('supplements_tracking_enabled') && !cycleReleaseGate.isOptionalHealthFeatureAvailable(currentProfile)) {
+    throw new ProfileError(
+      'supplements_tracking_removed',
+      'Трекинг добавок снят с релиза: supplements_tracking_enabled не пишется для обычных аккаунтов.',
+    );
   }
   return applyFields(current, fields, PROFILE_FIELDS, nowMs);
 }
