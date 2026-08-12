@@ -474,7 +474,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (event.key !== 'Escape') return;
         event.preventDefault();
         closeFn?.();
-        HEYS.StepModal?.hide?.();
       };
 
       window.addEventListener('keydown', handleKeyDown);
@@ -3937,20 +3936,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Доступ к навигации StepModal
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
-    const { goToStep, closeModal, updateStepData, stepData: modalStepData } = stepContext;
+    const { goToStep, updateStepData, stepData: modalStepData } = stepContext;
+
+    const closeFlow = useCallback(() => {
+      context?.onClose?.();
+    }, [context]);
 
     const requestCloseModal = useCallback(() => {
       if (hasApsDraftToLose(modalStepData, data, context)) {
         setExitPromptOpen(true);
         return;
       }
-      closeModal?.();
-    }, [closeModal, modalStepData, data, context]);
+      closeFlow();
+    }, [closeFlow, modalStepData, data, context]);
 
     const confirmExitModal = useCallback(() => {
       setExitPromptOpen(false);
-      closeModal?.();
-    }, [closeModal]);
+      closeFlow();
+    }, [closeFlow]);
 
     const { dateKey = '', day: contextDay } = context || {};
     const usageWindowDays = 21;
@@ -5856,8 +5859,12 @@ NOVA: 1
 
     // Доступ к навигации StepModal
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
-    const { goToStep, closeModal, updateStepData, stepData: modalStepData } = stepContext;
+    const { goToStep, updateStepData, stepData: modalStepData } = stepContext;
     const [exitPromptOpen, setExitPromptOpen] = useState(false);
+
+    const closeFlow = useCallback(() => {
+      context?.onClose?.();
+    }, [context]);
 
     const requestCloseModal = useCallback(() => {
       const hasCreateDraft = !!(
@@ -5870,13 +5877,13 @@ NOVA: 1
         setExitPromptOpen(true);
         return;
       }
-      closeModal?.();
-    }, [closeModal, modalStepData, data, context, pasteText, parsedPreview, brandInput, effectiveBarcode]);
+      closeFlow();
+    }, [closeFlow, modalStepData, data, context, pasteText, parsedPreview, brandInput, effectiveBarcode]);
 
     const confirmExitModal = useCallback(() => {
       setExitPromptOpen(false);
-      closeModal?.();
-    }, [closeModal]);
+      closeFlow();
+    }, [closeFlow]);
 
     useEscapeToClose(requestCloseModal, true);
 
@@ -6578,9 +6585,9 @@ NOVA: 1
   // === Шаг 1: Редактор базовых полей продукта ===
   function ProductEditBasicStep({ data, onChange, context, stepData }) {
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
-    const { goToStep, updateStepData, closeModal } = stepContext;
+    const { goToStep, updateStepData } = stepContext;
 
-    useEscapeToClose(closeModal, true);
+    useEscapeToClose(() => context?.onClose?.(), true);
 
     const sourceProduct = context?.editProduct
       || stepData?.edit_extra?.product
@@ -7176,9 +7183,9 @@ NOVA: 1
   // === Шаг 2: Редактор расширенных полей ===
   function ProductEditExtraStep({ data, onChange, context, stepData }) {
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
-    const { goToStep, updateStepData, closeModal } = stepContext;
+    const { goToStep, updateStepData } = stepContext;
 
-    useEscapeToClose(closeModal, true);
+    useEscapeToClose(() => context?.onClose?.(), true);
 
     const sourceProduct = stepData?.edit_basic?.product
       || context?.editProduct
@@ -7519,21 +7526,25 @@ NOVA: 1
   // === Компонент выбора порций (Шаг portions) ===
   function PortionsStep({ data, onChange, context, stepData }) {
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
-    const { goToStep, updateStepData, closeModal } = stepContext;
+    const { goToStep, updateStepData } = stepContext;
     const [exitPromptOpen, setExitPromptOpen] = useState(false);
+
+    const closeFlow = useCallback(() => {
+      context?.onClose?.();
+    }, [context]);
 
     const requestCloseModal = useCallback(() => {
       if (hasApsDraftToLose(stepData, data, context)) {
         setExitPromptOpen(true);
         return;
       }
-      closeModal?.();
-    }, [closeModal, stepData, data, context]);
+      closeFlow();
+    }, [closeFlow, stepData, data, context]);
 
     const confirmExitModal = useCallback(() => {
       setExitPromptOpen(false);
-      closeModal?.();
-    }, [closeModal]);
+      closeFlow();
+    }, [closeFlow]);
 
     useEscapeToClose(requestCloseModal, true);
 
@@ -8746,21 +8757,25 @@ NOVA: 1
   // === Компонент выбора граммов (Шаг 2) ===
   function GramsStep({ data, onChange, context, stepData }) {
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
-    const { closeModal, goToStep, updateStepData } = stepContext;
+    const { goToStep, updateStepData } = stepContext;
     const [exitPromptOpen, setExitPromptOpen] = useState(false);
+
+    const closeFlow = useCallback(() => {
+      context?.onClose?.();
+    }, [context]);
 
     const requestCloseModal = useCallback(() => {
       if (hasApsDraftToLose(stepData, data, context)) {
         setExitPromptOpen(true);
         return;
       }
-      closeModal?.();
-    }, [closeModal, stepData, data, context]);
+      closeFlow();
+    }, [closeFlow, stepData, data, context]);
 
     const confirmExitModal = useCallback(() => {
       setExitPromptOpen(false);
-      closeModal?.();
-    }, [closeModal]);
+      closeFlow();
+    }, [closeFlow]);
 
     const {
       fileInputRef,
