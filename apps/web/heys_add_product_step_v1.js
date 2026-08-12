@@ -3769,6 +3769,130 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     );
   }
 
+  function useMealPhotoAttachment(context) {
+    const fileInputRef = useRef(null);
+    const [showPhotoConfirm, setShowPhotoConfirm] = useState(false);
+    const [pendingPhotoData, setPendingPhotoData] = useState(null);
+    const currentPhotoCount = context?.mealPhotos?.length || 0;
+    const photoLimit = 10;
+    const canAddPhoto = currentPhotoCount < photoLimit;
+
+    const handlePhotoSelect = useCallback((e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      haptic('medium');
+      const MAX_SIZE = 800;
+      const QUALITY = 0.7;
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > MAX_SIZE || height > MAX_SIZE) {
+          if (width > height) {
+            height = Math.round(height * MAX_SIZE / width);
+            width = MAX_SIZE;
+          } else {
+            width = Math.round(width * MAX_SIZE / height);
+            height = MAX_SIZE;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedData = canvas.toDataURL('image/jpeg', QUALITY);
+        setPendingPhotoData({
+          compressedData,
+          filename: file.name,
+          originalSize: file.size
+        });
+        setShowPhotoConfirm(true);
+      };
+      img.onerror = () => {
+        console.error('[AddProductStep] Failed to load image');
+      };
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    }, []);
+
+    const confirmPhoto = useCallback(() => {
+      if (!pendingPhotoData || !context?.onAddPhoto) {
+        setShowPhotoConfirm(false);
+        return;
+      }
+      haptic('success');
+      context.onAddPhoto({
+        mealIndex: context.mealIndex,
+        mealId: context.mealId,
+        photo: pendingPhotoData.compressedData,
+        filename: pendingPhotoData.filename,
+        timestamp: Date.now()
+      });
+      setShowPhotoConfirm(false);
+      setPendingPhotoData(null);
+    }, [pendingPhotoData, context]);
+
+    const cancelPhoto = useCallback(() => {
+      haptic('light');
+      setShowPhotoConfirm(false);
+      setPendingPhotoData(null);
+    }, []);
+
+    const handlePhotoClick = useCallback(() => {
+      haptic('medium');
+      fileInputRef.current?.click();
+    }, []);
+
+    const renderPhotoConfirmModal = () => {
+      if (!showPhotoConfirm || !pendingPhotoData) return null;
+      return React.createElement('div', {
+        className: 'photo-confirm-overlay',
+        onClick: cancelPhoto
+      },
+        React.createElement('div', {
+          className: 'photo-confirm-modal',
+          onClick: (ev) => ev.stopPropagation()
+        },
+          React.createElement('div', { className: 'photo-confirm-header' }, 'Сохранить это фото?'),
+          React.createElement('div', { className: 'photo-confirm-preview' },
+            React.createElement('img', {
+              src: pendingPhotoData.compressedData,
+              alt: 'Превью фото'
+            })
+          ),
+          React.createElement('div', { className: 'photo-confirm-info' },
+            Math.round(pendingPhotoData.compressedData.length / 1024) + ' КБ'
+          ),
+          React.createElement('div', { className: 'photo-confirm-buttons' },
+            React.createElement('button', {
+              className: 'photo-confirm-btn cancel',
+              onClick: cancelPhoto
+            }, 'Отмена'),
+            React.createElement('button', {
+              className: 'photo-confirm-btn confirm',
+              onClick: confirmPhoto
+            }, 'Сохранить')
+          )
+        )
+      );
+    };
+
+    return {
+      fileInputRef,
+      handlePhotoSelect,
+      handlePhotoClick,
+      currentPhotoCount,
+      photoLimit,
+      canAddPhoto,
+      renderPhotoConfirmModal
+    };
+  }
+
   function ProductSearchStep({ data, onChange, context }) {
     const initialProductsSyncState = getAddProductInitialSyncState();
     const [searchInput, setSearchInput] = useState(data?.searchQuery || '');
@@ -3796,10 +3920,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [hiddenProducts, setHiddenProducts] = useState(() =>
       HEYS.store?.getHiddenProducts?.() || new Set()
     );
-    const [selectedPhoto, setSelectedPhoto] = useState(null);
-    const [photoPreview, setPhotoPreview] = useState(null);
-    const [showPhotoConfirm, setShowPhotoConfirm] = useState(false); // Модалка подтверждения
-    const [pendingPhotoData, setPendingPhotoData] = useState(null);  // Данные для подтверждения
     const [presetsOpen, setPresetsOpen] = useState(() => !!context?._openPresetsCreate); // 🍽️ Готовые наборы overlay
     const [suggestedPresetsCount, setSuggestedPresetsCount] = useState(
       () => (HEYS.store?.getSuggestedPresets?.() || []).length
@@ -3810,14 +3930,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [barcodeLookupBusy, setBarcodeLookupBusy] = useState(false);
     const [barcodeResults, setBarcodeResults] = useState([]);
     const [barcodeNotice, setBarcodeNotice] = useState(null);
+    const [exitPromptOpen, setExitPromptOpen] = useState(false);
     const startWithBarcodeScannerRef = useRef(false);
 
     const inputRef = useRef(null);
-    const fileInputRef = useRef(null);
 
     // Доступ к навигации StepModal
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
     const { goToStep, closeModal, updateStepData, stepData: modalStepData } = stepContext;
+
+    const requestCloseModal = useCallback(() => {
+      if (hasApsDraftToLose(modalStepData, data, context)) {
+        setExitPromptOpen(true);
+        return;
+      }
+      closeModal?.();
+    }, [closeModal, modalStepData, data, context]);
+
+    const confirmExitModal = useCallback(() => {
+      setExitPromptOpen(false);
+      closeModal?.();
+    }, [closeModal]);
 
     const { dateKey = '', day: contextDay } = context || {};
     const usageWindowDays = 21;
@@ -4194,7 +4327,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       };
     }, [showSharedProducts]);
 
-    useEscapeToClose(closeModal, true);
+    useEscapeToClose(requestCloseModal, true);
 
     // Debug: проверяем что products пришли
     // useEffect(() => {
@@ -5071,107 +5204,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }
     }, [latestProducts, selectProduct, saveBarcodeForProduct]);
 
-    // Обработчик выбора фото
-    const handlePhotoSelect = useCallback((e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      haptic('medium');
-      setSelectedPhoto(file);
-      // console.log('[AddProductStep] Photo selected:', file.name, file.size, 'bytes');
-
-      // Сжимаем фото перед сохранением (localStorage лимит ~5МБ)
-      const MAX_SIZE = 800; // Максимальный размер по большей стороне
-      const QUALITY = 0.7;  // Качество JPEG
-
-      const img = new Image();
-      img.onload = () => {
-        // Расчёт новых размеров
-        let { width, height } = img;
-        if (width > MAX_SIZE || height > MAX_SIZE) {
-          if (width > height) {
-            height = Math.round(height * MAX_SIZE / width);
-            width = MAX_SIZE;
-          } else {
-            width = Math.round(width * MAX_SIZE / height);
-            height = MAX_SIZE;
-          }
-        }
-
-        // Canvas для сжатия
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // Конвертируем в JPEG (меньше размер чем PNG)
-        const compressedData = canvas.toDataURL('image/jpeg', QUALITY);
-        // console.log('[AddProductStep] Photo compressed:', ...);
-
-        setPhotoPreview(compressedData);
-
-        // Показываем превью для подтверждения
-        setPendingPhotoData({
-          compressedData,
-          filename: file.name,
-          originalSize: file.size
-        });
-        setShowPhotoConfirm(true);
-      };
-
-      img.onerror = () => {
-        console.error('[AddProductStep] Failed to load image');
-      };
-
-      // Загружаем изображение из файла
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
-
-      // Сбрасываем input чтобы можно было выбрать то же фото повторно
-      e.target.value = '';
-    }, []);
-
-    // Подтверждение сохранения фото
-    const confirmPhoto = useCallback(() => {
-      if (!pendingPhotoData || !context?.onAddPhoto) {
-        console.warn('[AddProductStep] Cannot confirm photo - missing data or callback');
-        setShowPhotoConfirm(false);
-        return;
-      }
-
-      haptic('success');
-      context.onAddPhoto({
-        mealIndex: context.mealIndex,
-        mealId: context.mealId,
-        photo: pendingPhotoData.compressedData,
-        filename: pendingPhotoData.filename,
-        timestamp: Date.now()
-      });
-      // console.log('[AddProductStep] Photo confirmed and added to meal:', context.mealIndex);
-
-      setShowPhotoConfirm(false);
-      setPendingPhotoData(null);
-    }, [pendingPhotoData, context]);
-
-    // Отмена фото
-    const cancelPhoto = useCallback(() => {
-      haptic('light');
-      setShowPhotoConfirm(false);
-      setPendingPhotoData(null);
-      setPhotoPreview(null);
-      // console.log('[AddProductStep] Photo cancelled');
-    }, []);
-
-    // Открыть выбор фото
-    const handlePhotoClick = useCallback(() => {
-      haptic('medium');
-      fileInputRef.current?.click();
-    }, []);
-
     // Удаление продукта из базы
     const handleDeleteProduct = useCallback((e, product) => {
       e.stopPropagation();
@@ -5429,13 +5461,52 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // Что показывать: результаты поиска или умный список
     const shouldRenderSettledProducts = !isWaitingForProductsSettle;
+    const isOfflineBrowse = typeof navigator !== 'undefined' && navigator.onLine === false;
+    const searchBrowseState = useMemo(() => {
+      if (showSearch) return null;
+      if (isOfflineBrowse) return 'offline';
+      if (!shouldRenderSettledProducts) return null;
+      const personalCount = Array.isArray(latestProducts) ? latestProducts.length : 0;
+      const hasSmart = Array.isArray(smartProducts) && smartProducts.length > 0;
+      const hasFallback = Array.isArray(modalFallbackProducts) && modalFallbackProducts.length > 0;
+      if (personalCount === 0 && !hasSmart && !hasFallback) {
+        if (sharedCatalogLoading) return null;
+        if (!showSharedProducts || visibleSharedCatalogPreview.length === 0) {
+          return initialProductsSyncState.syncSettled && !initialProductsSyncState.syncInFlight
+            ? 'empty_base'
+            : 'load_failed';
+        }
+      }
+      return null;
+    }, [
+      showSearch,
+      isOfflineBrowse,
+      shouldRenderSettledProducts,
+      latestProducts,
+      smartProducts,
+      modalFallbackProducts,
+      sharedCatalogLoading,
+      showSharedProducts,
+      visibleSharedCatalogPreview.length,
+      initialProductsSyncState.syncSettled,
+      initialProductsSyncState.syncInFlight
+    ]);
 
-    // Счётчик фото в текущем приёме
-    const currentPhotoCount = context?.mealPhotos?.length || 0;
-    const photoLimit = 10;
-    const canAddPhoto = currentPhotoCount < photoLimit;
+    // Счётчик фото в текущем приёме — на шаге граммов (канвас v4)
 
-    return React.createElement('div', { className: 'aps-search-step' },
+    return React.createElement('div', { className: 'aps-search-step aps-v4-flow' },
+      exitPromptOpen && React.createElement(ApsExitDialog, {
+        summary: (() => {
+          const picked = data?.selectedProduct || modalStepData?.search?.selectedProduct;
+          const grams = data?.grams || modalStepData?.grams?.grams;
+          if (picked?.name && grams) return `${picked.name}, ${grams} г — ещё не добавлен в приём. Черновик не сохраняется.`;
+          if (picked?.name) return `${picked.name} — ещё не добавлен в приём. Черновик не сохраняется.`;
+          if (grams && +grams !== 100) return `${grams} г — ещё не добавлены в приём. Черновик не сохраняется.`;
+          return 'Черновик не сохраняется.';
+        })(),
+        onStay: () => setExitPromptOpen(false),
+        onLeave: confirmExitModal
+      }),
       barcodeModal && React.createElement(BarcodeScannerModal, {
         title: barcodeModal.mode === 'product'
           ? (barcodeModal.returnToManager ? 'Добавить штрихкод' : 'Привязать штрихкод')
@@ -5477,66 +5548,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
       }),
 
-      // Модалка подтверждения фото
-      showPhotoConfirm && pendingPhotoData && React.createElement('div', {
-        className: 'photo-confirm-overlay',
-        onClick: cancelPhoto
-      },
-        React.createElement('div', {
-          className: 'photo-confirm-modal',
-          onClick: e => e.stopPropagation()
-        },
-          React.createElement('div', { className: 'photo-confirm-header' }, 'Сохранить это фото?'),
-          React.createElement('div', { className: 'photo-confirm-preview' },
-            React.createElement('img', {
-              src: pendingPhotoData.compressedData,
-              alt: 'Превью фото'
-            })
-          ),
-          React.createElement('div', { className: 'photo-confirm-info' },
-            Math.round(pendingPhotoData.compressedData.length / 1024) + ' КБ'
-          ),
-          React.createElement('div', { className: 'photo-confirm-buttons' },
-            React.createElement('button', {
-              className: 'photo-confirm-btn cancel',
-              onClick: cancelPhoto
-            }, 'Отмена'),
-            React.createElement('button', {
-              className: 'photo-confirm-btn confirm',
-              onClick: confirmPhoto
-            }, 'Сохранить')
-          )
-        )
-      ),
-
-      // Скрытый input для выбора фото
-      React.createElement('input', {
-        ref: fileInputRef,
-        type: 'file',
-        accept: 'image/*',
-        capture: 'environment', // Камера на мобильных
-        style: { display: 'none' },
-        onChange: handlePhotoSelect
-      }),
-
       // === Фиксированная шапка: кнопки + поиск + категории ===
       React.createElement('div', { className: 'aps-fixed-header' },
-        // Ряд кнопок: Добавить фото + Новый продукт
+        // Ряд кнопок: Новый продукт + Наборы (фото — на шаге «Приём собран»)
         React.createElement('div', { className: 'aps-action-buttons' },
-          // Кнопка "Добавить фото" с счётчиком
-          React.createElement('button', {
-            className: 'aps-new-product-btn aps-photo-btn' + (!canAddPhoto ? ' disabled' : ''),
-            onClick: canAddPhoto ? handlePhotoClick : null,
-            disabled: !canAddPhoto,
-            title: !canAddPhoto ? `Лимит ${photoLimit} фото` : 'Добавить фото'
-          },
-            React.createElement('span', { className: 'aps-new-icon' }, '📷'),
-            React.createElement('span', null,
-              currentPhotoCount > 0
-                ? `Фото ${currentPhotoCount}/${photoLimit}`
-                : 'Добавить фото'
-            )
-          ),
           // Кнопка "Новый продукт"
           React.createElement('button', {
             className: 'aps-new-product-btn',
@@ -5655,41 +5670,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           combinedResults?.length > 0 && React.createElement('div', { className: 'aps-products-list' },
             combinedResults.map(p => renderProductCard(p, true, false, true, true))
           ),
-          // Пустой результат
-          combinedResults.length === 0 && !sharedLoading && React.createElement('div', { className: 'aps-empty' },
-            React.createElement('span', null, '😕'),
+          combinedResults.length === 0 && !sharedLoading && renderApsSearchEmptyState('no_results', {
+            onCreate: handleNewProduct,
+            createLabel: search ? `+ Добавить «${search}»` : 'Создать продукт'
+          })
+        ),
 
-            canSuggestSharedSearch && React.createElement('div', {
-              className: 'aps-did-you-mean',
-              style: {
-                marginTop: '12px',
-                padding: '12px',
-                backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                borderRadius: '8px',
-                textAlign: 'left'
-              }
-            },
-              React.createElement('div', {
-                style: {
-                  fontSize: '13px',
-                  color: 'var(--text-secondary)',
-                  marginBottom: '8px'
-                }
-              }, 'В личных продуктах ничего не найдено. Можно поискать в общей базе.'),
-              React.createElement('button', {
-                className: 'aps-add-new-btn',
-                onClick: () => setShowSharedProducts(true)
-              }, 'Искать в общих')
-            ),
-
-            !canSuggestSharedSearch && React.createElement('span', null, 'Попробуйте другой запрос'),
-
-            React.createElement('button', {
-              className: 'aps-add-new-btn',
-              onClick: handleNewProduct,
-              style: { marginTop: canSuggestSharedSearch ? '12px' : '8px' }
-            }, '+ Добавить "' + search + '"')
-          )
+        shouldRenderSettledProducts && !showSearch && searchBrowseState && React.createElement('div', { className: 'aps-section' },
+          renderApsSearchEmptyState(searchBrowseState, {
+            onCreate: handleNewProduct,
+            onRetry: () => {
+              setIsWaitingForProductsSettle(true);
+              try { window.dispatchEvent(new CustomEvent('heys:products-updated')); } catch (_) { /* noop */ }
+            }
+          })
         ),
 
         // Умный список: часто + недавно используемые (объединённый)
@@ -5862,9 +5856,29 @@ NOVA: 1
 
     // Доступ к навигации StepModal
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
-    const { goToStep, closeModal, updateStepData } = stepContext;
+    const { goToStep, closeModal, updateStepData, stepData: modalStepData } = stepContext;
+    const [exitPromptOpen, setExitPromptOpen] = useState(false);
 
-    useEscapeToClose(closeModal, true);
+    const requestCloseModal = useCallback(() => {
+      const hasCreateDraft = !!(
+        pasteText?.trim()
+        || parsedPreview
+        || normalizeProductBrand(brandInput)
+        || effectiveBarcode
+      );
+      if (hasCreateDraft || hasApsDraftToLose(modalStepData, data, context)) {
+        setExitPromptOpen(true);
+        return;
+      }
+      closeModal?.();
+    }, [closeModal, modalStepData, data, context, pasteText, parsedPreview, brandInput, effectiveBarcode]);
+
+    const confirmExitModal = useCallback(() => {
+      setExitPromptOpen(false);
+      closeModal?.();
+    }, [closeModal]);
+
+    useEscapeToClose(requestCloseModal, true);
 
     // Фокус на textarea при монтировании
     useEffect(() => {
@@ -6337,7 +6351,12 @@ NOVA: 1
       }
     }, [createBrandSuggestion, parsedPreview]);
 
-    return React.createElement('div', { className: 'aps-create-step' },
+    return React.createElement('div', { className: 'aps-create-step aps-v4-flow' },
+      exitPromptOpen && React.createElement(ApsExitDialog, {
+        summary: 'Введённые данные продукта ещё не сохранены. Черновик не сохраняется.',
+        onStay: () => setExitPromptOpen(false),
+        onLeave: confirmExitModal
+      }),
       barcodeModal && React.createElement(BarcodeScannerModal, {
         title: 'Сканировать штрихкод',
         subtitle: 'Код будет сохранён у нового продукта',
@@ -7501,8 +7520,22 @@ NOVA: 1
   function PortionsStep({ data, onChange, context, stepData }) {
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
     const { goToStep, updateStepData, closeModal } = stepContext;
+    const [exitPromptOpen, setExitPromptOpen] = useState(false);
 
-    useEscapeToClose(closeModal, true);
+    const requestCloseModal = useCallback(() => {
+      if (hasApsDraftToLose(stepData, data, context)) {
+        setExitPromptOpen(true);
+        return;
+      }
+      closeModal?.();
+    }, [closeModal, stepData, data, context]);
+
+    const confirmExitModal = useCallback(() => {
+      setExitPromptOpen(false);
+      closeModal?.();
+    }, [closeModal]);
+
+    useEscapeToClose(requestCloseModal, true);
 
     // Ищем продукт из всех возможных источников
     const product = stepData?.edit_extra?.product
@@ -7730,7 +7763,14 @@ NOVA: 1
       );
     }
 
-    return React.createElement('div', { className: 'aps-portions-step' },
+    return React.createElement('div', { className: 'aps-portions-step aps-v4-flow' },
+      exitPromptOpen && React.createElement(ApsExitDialog, {
+        summary: product?.name
+          ? `${product.name} — порции ещё не сохранены. Черновик не сохраняется.`
+          : 'Черновик не сохраняется.',
+        onStay: () => setExitPromptOpen(false),
+        onLeave: confirmExitModal
+      }),
       React.createElement('div', { className: 'aps-portions-header' },
         React.createElement('span', { className: 'aps-portions-icon' }, '🥣'),
         React.createElement('span', { className: 'aps-portions-title' }, 'Порции')
@@ -7888,6 +7928,296 @@ NOVA: 1
     return '🍽️';
   }
 
+  // === Исходы модерации и отказ сохранения (prompt-food шаг 2) ===
+  const APS_MODERATION_OUTCOME_META = {
+    pending: { kind: 'ok', message: 'Продукт сохранён, заявка ушла куратору' },
+    exists: { kind: 'ok', message: 'Такой продукт уже есть в общей базе — заявка не нужна' },
+    pending_dup: { kind: 'neutral', message: 'Такая заявка уже на проверке' },
+    offline: {
+      kind: 'warn',
+      title: 'Продукт сохранён, но заявка не ушла',
+      message: 'Он уже ваш и работает. Заявку можно отправить позже — со шага вредности.'
+    },
+    invalid_session: {
+      kind: 'warn',
+      title: 'Нужно войти заново',
+      message: 'Сессия истекла. Введите PIN — продукт и заявка сохранятся.',
+      pinAction: true
+    }
+  };
+
+  const renderApsOutcomeIcon = (kind) => {
+    const stroke = kind === 'ok'
+      ? 'var(--v4-sand-ok-fill, var(--v4-ok-fill, #7a8a5e))'
+      : 'var(--v4-ink-3, rgba(0,0,0,.45))';
+    if (kind === 'ok') {
+      return React.createElement('svg', {
+        className: 'aps-v4-outcome__icon',
+        width: 17,
+        height: 17,
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke,
+        strokeWidth: 3.2,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        'aria-hidden': true
+      }, React.createElement('path', { d: 'M5 13l4 4L19 7' }));
+    }
+    return React.createElement('svg', {
+      className: 'aps-v4-outcome__icon',
+      width: 17,
+      height: 17,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke,
+      strokeWidth: 2.5,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': true
+    },
+      React.createElement('circle', { cx: 12, cy: 12, r: 8.5 }),
+      React.createElement('path', { d: 'M12 8v5M12 16h.01' })
+    );
+  };
+
+  function ProductModerationOutcomeView({ outcomeKey, onContinue, onEnterPin, busy }) {
+    const meta = APS_MODERATION_OUTCOME_META[outcomeKey];
+    if (!meta) return null;
+    const e = React.createElement;
+    if (meta.kind === 'warn') {
+      return e('div', { className: 'aps-v4-step', role: 'status', 'aria-live': 'polite' },
+        e('div', { className: 'aps-v4-outcome aps-v4-outcome--warn' },
+          e('div', { className: 'aps-v4-outcome__warn-title' }, meta.title),
+          e('div', { className: 'aps-v4-outcome__warn-body' }, meta.message),
+          meta.pinAction && e('button', {
+            type: 'button',
+            className: 'aps-v4-btn-pin',
+            onClick: onEnterPin,
+            disabled: !!busy
+          }, 'Ввести PIN')
+        ),
+        !meta.pinAction && e('div', { className: 'aps-v4-footer' },
+          e('button', {
+            type: 'button',
+            className: 'aps-v4-btn-primary',
+            onClick: onContinue,
+            disabled: !!busy
+          }, 'Продолжить')
+        )
+      );
+    }
+    return e('div', { className: 'aps-v4-step', role: 'status', 'aria-live': 'polite' },
+      e('div', { className: `aps-v4-outcome aps-v4-outcome--${meta.kind}` },
+        renderApsOutcomeIcon(meta.kind),
+        e('span', { className: 'aps-v4-outcome__text' }, meta.message)
+      ),
+      e('div', { className: 'aps-v4-footer' },
+        e('button', {
+          type: 'button',
+          className: 'aps-v4-btn-primary',
+          onClick: onContinue,
+          disabled: !!busy
+        }, 'Продолжить')
+      )
+    );
+  }
+
+  function ProductCommitErrorView({ onRetry, onSaveLocalOnly, busy }) {
+    const e = React.createElement;
+    return e('div', { className: 'aps-v4-step', role: 'alert' },
+      e('div', { className: 'aps-v4-error-hero' },
+        e('div', { className: 'aps-v4-error-hero__title' }, 'Продукт не сохранён'),
+        e('div', { className: 'aps-v4-error-hero__body' },
+          'Нет связи с базой. Всё введённое на месте — заполнять заново ничего не нужно.')
+      ),
+      e('div', { className: 'aps-v4-tier' }, 'Что сохранено'),
+      e('div', { className: 'aps-v4-card' },
+        e('div', { className: 'aps-v4-card__row' },
+          e('span', null, 'Название и бренд'),
+          e('span', { className: 'aps-v4-card__value' }, 'на месте')
+        ),
+        e('div', { className: 'aps-v4-card__row' },
+          e('span', null, 'Состав, 12 значений'),
+          e('span', { className: 'aps-v4-card__value' }, 'на месте')
+        ),
+        e('div', { className: 'aps-v4-card__row' },
+          e('span', null, 'Порции и вредность'),
+          e('span', { className: 'aps-v4-card__value' }, 'на месте')
+        )
+      ),
+      e('div', { className: 'aps-v4-footer' },
+        e('button', {
+          type: 'button',
+          className: 'aps-v4-btn-primary',
+          onClick: onRetry,
+          disabled: !!busy
+        }, 'Повторить'),
+        e('button', {
+          type: 'button',
+          className: 'aps-v4-btn-ghost',
+          onClick: onSaveLocalOnly,
+          disabled: !!busy
+        }, 'Сохранить только себе')
+      )
+    );
+  }
+
+  function ApsExitDialog({ summary, onStay, onLeave }) {
+    const e = React.createElement;
+    return e(React.Fragment, null,
+      e('div', { className: 'aps-v4-exit-backdrop', onClick: onStay }),
+      e('div', { className: 'aps-v4-exit-dialog', role: 'dialog', 'aria-modal': 'true' },
+        e('div', { className: 'aps-v4-exit-dialog__title' }, 'Выйти и потерять выбор?'),
+        e('div', { className: 'aps-v4-exit-dialog__body' }, summary || 'Черновик не сохраняется.'),
+        e('button', {
+          type: 'button',
+          className: 'aps-v4-btn-primary aps-v4-exit-dialog__stay',
+          onClick: onStay
+        }, 'Остаться'),
+        e('button', {
+          type: 'button',
+          className: 'aps-v4-btn-ghost aps-v4-exit-dialog__leave',
+          onClick: onLeave
+        }, 'Выйти без сохранения')
+      )
+    );
+  }
+
+  const hasApsDraftToLose = (stepData, data, context) => {
+    const grams = data?.grams ?? stepData?.grams?.grams ?? stepData?.create?.grams ?? context?.editGrams;
+    const hasGrams = Number.isFinite(+grams) && +grams > 0 && +grams !== 100;
+    const hasProduct = !!(
+      data?.selectedProduct
+      || stepData?.search?.selectedProduct
+      || stepData?.create?.selectedProduct
+      || stepData?.create?.newProduct
+      || stepData?.grams?.selectedProduct
+      || context?.editProduct
+    );
+    return hasProduct || hasGrams;
+  };
+
+  function renderApsSearchEmptyState(state, handlers = {}) {
+    const e = React.createElement;
+    if (state === 'offline') {
+      return e('div', { className: 'aps-v4-search-offline', role: 'status' },
+        'Нет сети — поиск по общей базе недоступен. Личные продукты и наборы работают.'
+      );
+    }
+    if (state === 'empty_base') {
+      return e('div', { className: 'aps-v4-search-state' },
+        e('div', { className: 'aps-v4-search-state__title' }, 'Личная база пока пуста'),
+        e('div', { className: 'aps-v4-search-state__body' },
+          'Создайте первый продукт или найдите его в общей базе — так быстрее добавлять еду в приём.'),
+        handlers.onCreate && e('button', {
+          type: 'button',
+          className: 'aps-v4-btn-primary',
+          style: { marginTop: '12px' },
+          onClick: handlers.onCreate
+        }, 'Создать продукт')
+      );
+    }
+    if (state === 'load_failed') {
+      return e('div', { className: 'aps-v4-search-state aps-v4-search-state--warn' },
+        e('div', { className: 'aps-v4-search-state__title' }, 'База не загрузилась'),
+        e('div', { className: 'aps-v4-search-state__body' },
+          'Проверьте сеть и попробуйте ещё раз. Пока можно искать только среди уже загруженных продуктов.'),
+        handlers.onRetry && e('button', {
+          type: 'button',
+          className: 'aps-v4-btn-primary',
+          style: { marginTop: '12px' },
+          onClick: handlers.onRetry
+        }, 'Повторить')
+      );
+    }
+    if (state === 'no_results') {
+      return e('div', { className: 'aps-v4-search-state' },
+        e('div', { className: 'aps-v4-search-state__title' }, 'Ничего не найдено'),
+        e('div', { className: 'aps-v4-search-state__body' },
+          'Попробуйте другое название или создайте продукт вручную.'),
+        handlers.onCreate && e('button', {
+          type: 'button',
+          className: 'aps-v4-btn-primary',
+          style: { marginTop: '12px' },
+          onClick: handlers.onCreate
+        }, handlers.createLabel || 'Создать продукт')
+      );
+    }
+    return null;
+  }
+
+  async function publishProductModerationOutcome(updatedProduct, { publishToShared, isCurator } = {}) {
+    if (!publishToShared || !updatedProduct) return null;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      return 'offline';
+    }
+
+    let fingerprint = null;
+    let brandFingerprint = null;
+    if (HEYS.models?.computeProductFingerprint) {
+      try { fingerprint = await HEYS.models.computeProductFingerprint(updatedProduct); } catch (_) { /* noop */ }
+      try {
+        if (normalizeProductBrand(updatedProduct.brand) && HEYS.models.computeProductBrandFingerprint) {
+          brandFingerprint = await HEYS.models.computeProductBrandFingerprint(updatedProduct);
+        }
+      } catch (_) { /* noop */ }
+      if ((brandFingerprint || fingerprint) && HEYS.cloud?.searchSharedProducts) {
+        try {
+          const existing = await HEYS.cloud.searchSharedProducts('', brandFingerprint
+            ? { brandFingerprint, limit: 1 }
+            : { fingerprint, limit: 1 });
+          if (existing?.data?.length > 0) {
+            return 'exists';
+          }
+        } catch (_) { /* fingerprint check best-effort */ }
+      }
+    }
+
+    if (isCurator && HEYS.cloud?.publishToShared) {
+      const result = await HEYS.cloud.publishToShared(updatedProduct);
+      if (result && result.status === 'exists') return 'exists';
+      if (result && (result.error || result.status === 'error')) {
+        const msg = result.message || (typeof result.error === 'string' ? result.error : (result.error?.message || 'неизвестная ошибка'));
+        throw new Error(msg);
+      }
+      return null;
+    }
+
+    if (!HEYS.cloud?.createPendingProduct) return null;
+
+    const clientId = readGlobalValue('heys_client_current', null);
+    if (typeof clientId !== 'string' || !clientId.trim()) {
+      throw new Error('clientId отсутствует');
+    }
+
+    const result = await HEYS.cloud.createPendingProduct(clientId, updatedProduct);
+    const status = result?.status;
+    if (status === 'pending') {
+      try { window.dispatchEvent(new CustomEvent('heys:pending-product-created')); } catch (_) { /* noop */ }
+      try {
+        const bc = new BroadcastChannel('heys_pending_products');
+        const _ownerCid = (HEYS.cloud && typeof HEYS.cloud.getCurrentClientId === 'function')
+          ? HEYS.cloud.getCurrentClientId()
+          : (window.HEYS && window.HEYS.currentClientId) || null;
+        bc.postMessage({ type: 'pending-created', clientId: _ownerCid, at: Date.now() });
+        setTimeout(() => { try { bc.close(); } catch (_) { /* noop */ } }, 200);
+      } catch (_) { /* noop */ }
+      notifyPendingProductsUpdatedForAddStep();
+      return 'pending';
+    }
+    if (status === 'exists') return 'exists';
+    if (status === 'pending_dup') return 'pending_dup';
+    if (status === 'error' || result?.error) {
+      const msg = result?.message || (typeof result?.error === 'string' ? result.error : (result?.error?.message || 'неизвестная ошибка'));
+      if (/invalid_session|No session token|Нет активной сессии/i.test(String(msg))) {
+        return 'invalid_session';
+      }
+      throw new Error(msg);
+    }
+    return null;
+  }
+
   // === Компонент выбора Harm Score (Шаг harm) — минималистичный UI ===
   function HarmSelectStep({ data, onChange, context, stepData }) {
     const e = React.createElement;
@@ -7935,6 +8265,10 @@ NOVA: 1
 
     // 🛡 Anti-double-fire: блокирует повторный запуск публикации при двойном тапе.
     const isProcessingPublishRef = useRef(false);
+    const [publishBusy, setPublishBusy] = useState(false);
+    const [moderationOutcome, setModerationOutcome] = useState(null);
+    const [commitError, setCommitError] = useState(null);
+    const pendingHarmRef = useRef(null);
 
     // WheelPicker для кастомного значения
     const WheelPicker = HEYS.StepModal?.WheelPicker;
@@ -7992,9 +8326,13 @@ NOVA: 1
     }, [selectedHarm]);
 
     // Выбрать вариант, СОХРАНИТЬ ПРОДУКТ и перейти дальше
-	    const selectAndContinue = useCallback(async (harm) => {
+	    const selectAndContinue = useCallback(async (harm, options = {}) => {
+      const { retryLocalOnly = false } = options;
       haptic('light');
       setSelectedHarm(harm);
+      pendingHarmRef.current = harm;
+      setCommitError(null);
+      setModerationOutcome(null);
 
       // Обновляем продукт с выбранным harm
       const updatedProduct = product ? {
@@ -8015,219 +8353,172 @@ NOVA: 1
         });
       }
 
+      const goToGramsStep = () => {
+        setTimeout(() => goToStep?.(4, 'left'), 150);
+      };
+
       // 🔐 СОХРАНЕНИЕ ПРОДУКТА В БАЗУ (перенесено из CreateProductStep)
-      // ⚡ Для разовых продуктов (_oneTime: true) — НЕ сохраняем в базу.
-      // Стамп уже инлайнится в meal item, getProductFromItem умеет фоллбэкать на стамп.
       const isOneTime = !!(updatedProduct && updatedProduct._oneTime);
       if (updatedProduct && isOneTime && updatedProduct.id == null) {
-        // Выдаём префикс 'oneoff_' для дебаг-видимости в логах/LS.
         const uid = (HEYS.utils && HEYS.utils.uid) || ((prefix = 'oneoff_') => prefix + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
         updatedProduct.id = uid('oneoff_');
         console.info('[HarmSelectStep] ⚡ One-time product (НЕ сохраняем в базу):', updatedProduct.name, 'id:', updatedProduct.id);
       }
-	      if (updatedProduct && !isOneTime) {
-	        const U = HEYS.utils || {};
-	        const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
 
-        // CRITICAL: ensure id is set BEFORE save. Without id, OverlayStore.migrate
-        // filters the product out (id == null guard) → product disappears from overlay.
-        if (updatedProduct.id == null) {
-          const uid = (HEYS.utils && HEYS.utils.uid) || ((prefix = 'p_') => prefix + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
-          updatedProduct.id = uid('p_');
-        }
+      if (updatedProduct && !isOneTime) {
+        if (publishBusy || isProcessingPublishRef.current) return;
+        setPublishBusy(true);
+        isProcessingPublishRef.current = true;
 
-        // Проверка на дубликат
-        const normName = (updatedProduct.name || '').trim().toLowerCase();
-        const normBrand = normalizeProductBrand(updatedProduct.brand).toLowerCase();
-	        const existingPersonal = products.find(p =>
-	          (p.name || '').trim().toLowerCase() === normName
-            && normalizeProductBrand(p.brand).toLowerCase() === normBrand
-	        );
-
-	        if (!existingPersonal) {
-	          // 🆕 v4.8.0: Удаляем из игнор-листа если был там
-	          if (HEYS.deletedProducts?.remove) {
-	            HEYS.deletedProducts.remove(updatedProduct.name, updatedProduct.id);
-	          }
-	        } else {
-	          console.log('[HarmSelectStep] ⚠️ Продукт уже есть в базе:', existingPersonal.name);
-	          // Используем существующий ID
-	          updatedProduct.id = existingPersonal.id;
-	          // 🆕 Обновляем updatedAt чтобы продукт поднялся вверх в списке
-	          updatedProduct.updatedAt = Date.now();
-	        }
-
-	        const commit = await commitPersonalProduct(updatedProduct, true, existingPersonal ? 'harm-select-update' : 'harm-select-add');
-	        if (!commit.ok) {
-	          showProductCommitError(commit.reason);
-	          try {
-	            window.HEYS?.eventLog?.write?.(
-	              'product-persist-blocked',
-	              `${updatedProduct.name || 'product'} blocked (${commit.reason || 'unknown'})`,
-	              { productId: updatedProduct.id, name: updatedProduct.name, reason: commit.reason },
-	              'harm-select'
-	            );
-	          } catch (_) { /* noop */ }
-	          return;
-	        }
-	        Object.assign(updatedProduct, commit.product || {});
-	        if (updateStepData) {
-	          updateStepData('create', {
-	            ...stepData?.create,
-	            newProduct: updatedProduct,
-	            selectedProduct: updatedProduct
-	          });
-	          updateStepData('grams', {
-	            ...(stepData?.grams || {}),
-	            selectedProduct: updatedProduct,
-	            grams: stepData?.create?.grams || stepData?.grams?.grams || 100
-	          });
-	        }
-	        console.info('[HarmSelectStep] ✅ Продукт сохранён в canonical overlay с cloud ack:', updatedProduct.name);
-	        try {
-	          window.HEYS?.eventLog?.write?.(
-	            'product-persist-ok',
-	            `${updatedProduct.name || 'product'} committed`,
-	            { productId: updatedProduct.id, name: updatedProduct.name },
-	            'harm-select'
-	          );
-	        } catch (_) { /* noop */ }
-
-        // 🔄 Orphan recovery
-        if (HEYS.orphanProducts?.recalculate) {
-          HEYS.orphanProducts.recalculate();
-        }
-        if (HEYS.orphanProducts?.remove && updatedProduct.name) {
-          HEYS.orphanProducts.remove(updatedProduct.name);
-        }
-
-        // 🌐 Публикация в shared (async, не блокируем переход)
-        // ⛔ oneTime отрезан внешним if (!isOneTime). Здесь работаем только с persist-продуктами.
-        const publishToShared = stepData?.create?.publishToShared ?? true;
-        const isCurator = isCuratorUser();
-        const Toast = HEYS.Toast;
-
-        if (publishToShared && HEYS.cloud && !isProcessingPublishRef.current) {
-          // 🌐 Offline-guard: без сети RPC всё равно упадёт — лучше явный Toast.
-          if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-            Toast?.warning?.('Нет сети — заявка не отправлена. Попробуйте позже.');
-          } else {
-            isProcessingPublishRef.current = true;
-            (async () => {
-              try {
-                // 🔍 Дедуп: брендовые продукты сравниваем точным v2-ключом, legacy fingerprint — только fallback.
-                let fingerprint = null;
-                let brandFingerprint = null;
-                if (HEYS.models?.computeProductFingerprint) {
-                  try { fingerprint = await HEYS.models.computeProductFingerprint(updatedProduct); } catch (_) { /* noop */ }
-                  try {
-                    if (normalizeProductBrand(updatedProduct.brand) && HEYS.models.computeProductBrandFingerprint) {
-                      brandFingerprint = await HEYS.models.computeProductBrandFingerprint(updatedProduct);
-                    }
-                  } catch (_) { /* noop */ }
-                  if ((brandFingerprint || fingerprint) && HEYS.cloud.searchSharedProducts) {
-                    try {
-                      const existing = await HEYS.cloud.searchSharedProducts('', brandFingerprint
-                        ? { brandFingerprint, limit: 1 }
-                        : { fingerprint, limit: 1 });
-                      if (existing?.data?.length > 0) {
-                        const existingName = existing.data[0]?.name || updatedProduct.name;
-                        console.info('[HarmSelectStep] ℹ️ Похожий уже в shared:', existingName);
-                        Toast?.info?.(`Похожий продукт уже в общей базе: «${existingName}»`);
-                        return;
-                      }
-                    } catch (_) { /* fingerprint check best-effort, не блокируем основной путь */ }
-                  }
-                }
-
-                if (isCurator && HEYS.cloud.publishToShared) {
-                  // ✨ JWT-куратор: прямая публикация
-                  const result = await HEYS.cloud.publishToShared(updatedProduct);
-                  if (result && (result.error || result.status === 'error')) {
-                    const msg = result.message || (typeof result.error === 'string' ? result.error : (result.error?.message || 'неизвестная ошибка'));
-                    console.error('[HarmSelectStep] ❌ Ошибка публикации в shared:', result);
-                    Toast?.error?.(`Не удалось опубликовать в общую базу: ${msg}`);
-                  } else if (result && result.status === 'exists') {
-                    console.info('[HarmSelectStep] ℹ️ Уже в shared:', result);
-                    Toast?.info?.('Продукт уже есть в общей базе');
-                  } else {
-                    console.info('[HarmSelectStep] ✅ Опубликован в shared:', result);
-                    Toast?.success?.('Продукт опубликован в общую базу');
-                    try {
-                      window.dispatchEvent(new CustomEvent('heys:shared-products-updated'));
-                    } catch (_) { /* noop */ }
-                  }
-                } else if (HEYS.cloud.createPendingProduct) {
-                  // 📨 PIN-клиент: заявка на модерацию
-                  const clientId = readGlobalValue('heys_client_current', null);
-                  if (typeof clientId !== 'string' || !clientId.trim()) {
-                    console.error('[HarmSelectStep] ❌ clientId отсутствует или невалидный');
-                    Toast?.error?.('Не удалось отправить на модерацию: clientId отсутствует');
-                    return;
-                  }
-                  const result = await HEYS.cloud.createPendingProduct(clientId, updatedProduct);
-                  const status = result?.status;
-                  if (status === 'pending') {
-                    console.info('[HarmSelectStep] 📨 Заявка отправлена куратору:', result);
-                    Toast?.success?.('Заявка на модерацию отправлена куратору');
-                    // 📡 Уведомляем UI куратора (та же вкладка + cross-tab через BroadcastChannel)
-                    try {
-                      window.dispatchEvent(new CustomEvent('heys:pending-product-created'));
-                    } catch (_) { /* noop */ }
-                    try {
-                      const bc = new BroadcastChannel('heys_pending_products');
-                      // 🛡️ 2026-05-30 Wave 3 audit (G2): добавляем clientId в payload
-                      // чтобы receiver в другой tab мог фильтровать чужие события.
-                      // Без этого Tab A постит для clientA, Tab B (другой client) применит
-                      // как-будто для своего.
-                      const _ownerCid = (HEYS.cloud && typeof HEYS.cloud.getCurrentClientId === 'function')
-                        ? HEYS.cloud.getCurrentClientId()
-                        : (window.HEYS && window.HEYS.currentClientId) || null;
-                      bc.postMessage({ type: 'pending-created', clientId: _ownerCid, at: Date.now() });
-                      setTimeout(() => { try { bc.close(); } catch (_) { /* noop */ } }, 200);
-                    } catch (_) { /* BroadcastChannel может отсутствовать в старых браузерах */ }
-                  } else if (status === 'exists') {
-                    console.info('[HarmSelectStep] ℹ️ Уже в shared:', result);
-                    Toast?.info?.('Продукт уже есть в общей базе');
-                  } else if (status === 'pending_dup') {
-                    console.info('[HarmSelectStep] ℹ️ Заявка с таким продуктом уже на модерации:', result);
-                    Toast?.info?.('Заявка уже отправлена ранее — ждёт модерации');
-                  } else if (status === 'error' || result?.error) {
-                    const msg = result?.message || (typeof result?.error === 'string' ? result.error : (result?.error?.message || 'неизвестная ошибка'));
-                    // PIN-сессия живёт 30 дней. Если RPC говорит invalid_session ИЛИ клиент
-                    // вообще не нашёл активную сессию — это не нормальное «истёк», это сигнал
-                    // что cookie/LS повреждены или браузер их не сохраняет (incognito,
-                    // ITP cleanup, явное удаление). Просим обновить страницу — bootstrap
-                    // покажет PIN-форму если auth действительно потерян.
-                    const isSessionMissing = /invalid_session|No session token|Нет активной сессии/i.test(String(msg));
-                    console.error('[HarmSelectStep] ❌ Ошибка отправки на модерацию:', result);
-                    if (isSessionMissing) {
-                      Toast?.error?.('Не удалось подтвердить сессию. Обновите страницу — если попросит PIN, введите его заново.');
-                      try { HEYS.Auth?.requestPinReentry?.(); } catch (_) { /* no API — toast уже показан */ }
-                    } else {
-                      Toast?.error?.(`Не удалось отправить на модерацию: ${msg}`);
-                    }
-                  } else {
-                    console.warn('[HarmSelectStep] ⚠️ Неожиданный ответ createPendingProduct:', result);
-                  }
-                }
-              } catch (publishErr) {
-                console.error('[HarmSelectStep] ❌ Unexpected publish error:', publishErr);
-                Toast?.error?.(`Ошибка публикации: ${publishErr?.message || publishErr}`);
-              } finally {
-                isProcessingPublishRef.current = false;
-              }
-            })();
+        try {
+          const U = HEYS.utils || {};
+          const products = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
+          if (updatedProduct.id == null) {
+            const uid = (HEYS.utils && HEYS.utils.uid) || ((prefix = 'p_') => prefix + Date.now() + '_' + Math.random().toString(36).slice(2, 8));
+            updatedProduct.id = uid('p_');
           }
+
+          const normName = (updatedProduct.name || '').trim().toLowerCase();
+          const normBrand = normalizeProductBrand(updatedProduct.brand).toLowerCase();
+          const existingPersonal = products.find(p =>
+            (p.name || '').trim().toLowerCase() === normName
+            && normalizeProductBrand(p.brand).toLowerCase() === normBrand
+          );
+
+          let commit;
+          if (retryLocalOnly) {
+            const localSave = upsertLocalProduct(updatedProduct, true);
+            commit = {
+              ok: !!localSave.product,
+              product: localSave.product || updatedProduct,
+              reason: localSave.overlaySaved ? 'overlay_saved' : 'local_only'
+            };
+            if (commit.ok) {
+              Object.assign(updatedProduct, commit.product || {});
+              if (updateStepData) {
+                updateStepData('create', {
+                  ...stepData?.create,
+                  newProduct: updatedProduct,
+                  selectedProduct: updatedProduct
+                });
+                updateStepData('grams', {
+                  ...(stepData?.grams || {}),
+                  selectedProduct: updatedProduct,
+                  grams: stepData?.create?.grams || stepData?.grams?.grams || 100
+                });
+              }
+              goToGramsStep();
+              return;
+            }
+          } else if (!existingPersonal) {
+            if (HEYS.deletedProducts?.remove) {
+              HEYS.deletedProducts.remove(updatedProduct.name, updatedProduct.id);
+            }
+            commit = await commitPersonalProduct(updatedProduct, true, 'harm-select-add');
+          } else {
+            console.log('[HarmSelectStep] ⚠️ Продукт уже есть в базе:', existingPersonal.name);
+            updatedProduct.id = existingPersonal.id;
+            updatedProduct.updatedAt = Date.now();
+            commit = await commitPersonalProduct(updatedProduct, true, 'harm-select-update');
+          }
+
+          if (!commit.ok) {
+            setCommitError({ reason: commit.reason || 'product_save_failed', product: updatedProduct });
+            try {
+              window.HEYS?.eventLog?.write?.(
+                'product-persist-blocked',
+                `${updatedProduct.name || 'product'} blocked (${commit.reason || 'unknown'})`,
+                { productId: updatedProduct.id, name: updatedProduct.name, reason: commit.reason },
+                'harm-select'
+              );
+            } catch (_) { /* noop */ }
+            return;
+          }
+
+          Object.assign(updatedProduct, commit.product || {});
+          if (updateStepData) {
+            updateStepData('create', {
+              ...stepData?.create,
+              newProduct: updatedProduct,
+              selectedProduct: updatedProduct
+            });
+            updateStepData('grams', {
+              ...(stepData?.grams || {}),
+              selectedProduct: updatedProduct,
+              grams: stepData?.create?.grams || stepData?.grams?.grams || 100
+            });
+          }
+          console.info('[HarmSelectStep] ✅ Продукт сохранён в canonical overlay с cloud ack:', updatedProduct.name);
+          try {
+            window.HEYS?.eventLog?.write?.(
+              'product-persist-ok',
+              `${updatedProduct.name || 'product'} committed`,
+              { productId: updatedProduct.id, name: updatedProduct.name },
+              'harm-select'
+            );
+          } catch (_) { /* noop */ }
+
+          if (HEYS.orphanProducts?.recalculate) {
+            HEYS.orphanProducts.recalculate();
+          }
+          if (HEYS.orphanProducts?.remove && updatedProduct.name) {
+            HEYS.orphanProducts.remove(updatedProduct.name);
+          }
+
+          const publishToShared = stepData?.create?.publishToShared ?? true;
+          const isCurator = isCuratorUser();
+          if (publishToShared) {
+            try {
+              const outcome = await publishProductModerationOutcome(updatedProduct, { publishToShared, isCurator });
+              if (outcome) {
+                setModerationOutcome(outcome);
+                return;
+              }
+            } catch (publishErr) {
+              console.error('[HarmSelectStep] ❌ Unexpected publish error:', publishErr);
+              const msg = publishErr?.message || String(publishErr);
+              if (/invalid_session|No session token|Нет активной сессии/i.test(msg)) {
+                setModerationOutcome('invalid_session');
+                return;
+              }
+              setModerationOutcome('offline');
+              return;
+            }
+          }
+        } finally {
+          setPublishBusy(false);
+          isProcessingPublishRef.current = false;
         }
       }
 
-      // Переходим на шаг граммов
-      setTimeout(() => goToStep?.(4, 'left'), 150);
-    }, [product, stepData, updateStepData, goToStep, manualHarm]);
+      goToGramsStep();
+    }, [product, stepData, updateStepData, goToStep, manualHarm, publishBusy]);
 
     // Значения для WheelPicker: 0, 0.5, 1, ... 10
     const wheelValues = useMemo(() => Array.from({ length: 21 }, (_, i) => i * 0.5), []);
+
+    const continueAfterOutcome = useCallback(() => {
+      haptic('light');
+      setModerationOutcome(null);
+      setTimeout(() => goToStep?.(4, 'left'), 120);
+    }, [goToStep]);
+
+    const handleEnterPin = useCallback(() => {
+      haptic('light');
+      try { HEYS.Auth?.requestPinReentry?.(); } catch (_) { /* noop */ }
+    }, []);
+
+    const handleCommitRetry = useCallback(() => {
+      const harm = pendingHarmRef.current ?? selectedHarm;
+      if (harm == null) return;
+      selectAndContinue(harm);
+    }, [selectAndContinue, selectedHarm]);
+
+    const handleSaveLocalOnly = useCallback(() => {
+      const harm = pendingHarmRef.current ?? selectedHarm;
+      if (harm == null) return;
+      selectAndContinue(harm, { retryLocalOnly: true });
+    }, [selectAndContinue, selectedHarm]);
 
     if (!product) {
       return e('div', { className: 'flex items-center justify-center h-40 text-gray-400' },
@@ -8235,7 +8526,24 @@ NOVA: 1
       );
     }
 
-    return e('div', { className: 'harm-select-step' },
+    if (commitError) {
+      return e(ProductCommitErrorView, {
+        busy: publishBusy,
+        onRetry: handleCommitRetry,
+        onSaveLocalOnly: handleSaveLocalOnly
+      });
+    }
+
+    if (moderationOutcome) {
+      return e(ProductModerationOutcomeView, {
+        outcomeKey: moderationOutcome,
+        busy: publishBusy,
+        onContinue: continueAfterOutcome,
+        onEnterPin: handleEnterPin
+      });
+    }
+
+    return e('div', { className: 'harm-select-step aps-v4-flow' },
       // Название продукта
       e('div', { className: 'text-center mb-4' },
         e('span', { className: 'text-lg font-medium text-gray-900' }, product.name)
@@ -8439,8 +8747,32 @@ NOVA: 1
   function GramsStep({ data, onChange, context, stepData }) {
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
     const { closeModal, goToStep, updateStepData } = stepContext;
+    const [exitPromptOpen, setExitPromptOpen] = useState(false);
 
-    useEscapeToClose(closeModal, true);
+    const requestCloseModal = useCallback(() => {
+      if (hasApsDraftToLose(stepData, data, context)) {
+        setExitPromptOpen(true);
+        return;
+      }
+      closeModal?.();
+    }, [closeModal, stepData, data, context]);
+
+    const confirmExitModal = useCallback(() => {
+      setExitPromptOpen(false);
+      closeModal?.();
+    }, [closeModal]);
+
+    const {
+      fileInputRef,
+      handlePhotoSelect,
+      handlePhotoClick,
+      currentPhotoCount,
+      photoLimit,
+      canAddPhoto,
+      renderPhotoConfirmModal
+    } = useMealPhotoAttachment(context);
+
+    useEscapeToClose(requestCloseModal, true);
     // Продукт берём: 1) из context (для edit mode), 2) из своих данных, 3) из create (newProduct или selectedProduct), 4) из search
     // ВАЖНО: stepData?.create проверяется т.к. при создании нового продукта data.selectedProduct может не успеть обновиться
     const product = context?.editProduct
@@ -8941,7 +9273,26 @@ NOVA: 1
     const harmVal = product.harm ?? product.harmScore ?? product.harm100;
     const harmToneStyle = getHarmToneStyle(harmVal, { strong: true, surface: 'hero' });
 
-    return React.createElement('div', { className: 'aps-grams-step' },
+    return React.createElement('div', { className: 'aps-grams-step aps-v4-flow' },
+      exitPromptOpen && React.createElement(ApsExitDialog, {
+        summary: (() => {
+          if (product?.name && grams) return `${product.name}, ${grams} г — ещё не добавлен в приём. Черновик не сохраняется.`;
+          if (product?.name) return `${product.name} — ещё не добавлен в приём. Черновик не сохраняется.`;
+          if (grams && +grams !== 100) return `${grams} г — ещё не добавлены в приём. Черновик не сохраняется.`;
+          return 'Черновик не сохраняется.';
+        })(),
+        onStay: () => setExitPromptOpen(false),
+        onLeave: confirmExitModal
+      }),
+      renderPhotoConfirmModal(),
+      React.createElement('input', {
+        ref: fileInputRef,
+        type: 'file',
+        accept: 'image/*',
+        capture: 'environment',
+        style: { display: 'none' },
+        onChange: handlePhotoSelect
+      }),
       // Название продукта
       React.createElement('div', {
         className: 'aps-product-header',
@@ -9066,25 +9417,28 @@ NOVA: 1
         )
       ),
 
+      // Фото приёма (канвас v4 — экран «Приём собран»)
+      context?.onAddPhoto && React.createElement('div', { className: 'aps-v4-meal-photo' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'aps-v4-btn-ghost aps-v4-meal-photo__btn' + (!canAddPhoto ? ' is-disabled' : ''),
+          onClick: canAddPhoto ? handlePhotoClick : undefined,
+          disabled: !canAddPhoto,
+          title: !canAddPhoto ? `Лимит ${photoLimit} фото` : 'Добавить фото к приёму'
+        },
+          React.createElement('span', { className: 'aps-v4-meal-photo__icon', 'aria-hidden': true }, '📷'),
+          React.createElement('span', null,
+            currentPhotoCount > 0
+              ? `Фото приёма · ${currentPhotoCount}/${photoLimit}`
+              : 'Добавить фото к приёму'
+          )
+        )
+      ),
+
       // === БОЛЬШАЯ КНОПКА ДОБАВИТЬ/ИЗМЕНИТЬ ===
       React.createElement('button', {
-        className: 'aps-add-hero-btn',
-        onClick: handleSubmit,
-        style: {
-          display: 'block',
-          width: '100%',
-          padding: '16px',
-          marginTop: '16px',
-          marginBottom: '16px',
-          fontSize: '18px',
-          fontWeight: '600',
-          color: '#fff',
-          background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-          border: 'none',
-          borderRadius: '12px',
-          boxShadow: '0 4px 14px rgba(34, 197, 94, 0.4)',
-          cursor: 'pointer'
-        }
+        className: 'aps-add-hero-btn aps-v4-btn-primary',
+        onClick: handleSubmit
       }, context?.isEditMode ? '✓ Изменить' : '✓ Добавить'),
 
       // Переключатель режима: граммы / ккал
