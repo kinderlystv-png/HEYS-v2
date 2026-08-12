@@ -477,9 +477,9 @@ async function cleanupExpiredTrialCandidates(client) {
  * Idempotent via trial_candidates.purge_warn_sent_at.
  */
 async function warnTrialCandidatePurge(client) {
-  const botApiUrl = process.env.BOT_API_URL || 'https://api.heyslab.ru';
-  const cronToken = process.env.INTERNAL_CRON_TOKEN;
   const appUrl = (process.env.APP_URL || 'https://app.heyslab.ru').replace(/\/$/, '');
+  const clientToken = process.env.TELEGRAM_CLIENT_BOT_TOKEN;
+  const startToken = process.env.HEYS_START_BOT_TOKEN;
 
   let targets;
   try {
@@ -488,13 +488,13 @@ async function warnTrialCandidatePurge(client) {
     return { processed: 0, sent: 0, skipped: 0, errors: 0, error: e.message };
   }
 
-  if (!cronToken) {
+  if (!clientToken && !startToken) {
     return {
       processed: targets.rows.length,
       sent: 0,
       skipped: 0,
       errors: 0,
-      error: 'missing INTERNAL_CRON_TOKEN',
+      error: 'missing TELEGRAM_CLIENT_BOT_TOKEN/HEYS_START_BOT_TOKEN',
     };
   }
 
@@ -521,6 +521,7 @@ async function warnTrialCandidatePurge(client) {
     processed += 1;
     const chatId = row.telegram_chat_id != null ? Number(row.telegram_chat_id) : null;
     const botKind = row.bot_kind === 'start' ? 'start' : 'client';
+    const token = botKind === 'start' ? startToken : clientToken;
 
     if (!chatId) {
       try {
@@ -535,25 +536,33 @@ async function warnTrialCandidatePurge(client) {
       continue;
     }
 
+    if (!token) {
+      errors += 1;
+      console.error(
+        `[Maintenance] purge-warn missing token bot=${botKind} candidate=${row.candidate_id}`,
+      );
+      continue;
+    }
+
     try {
-      const res = await fetch(`${botApiUrl}/bot/send`, {
+      const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Internal-Cron-Token': cronToken,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: chatId,
           text: textFor(row.days_until_purge),
+          parse_mode: 'HTML',
+          disable_web_page_preview: true,
           reply_markup: {
             inline_keyboard: [[{ text: 'Открыть анкету', url: `${appUrl}/?intake=1` }]],
           },
-          bot: botKind,
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(`bot/send ${res.status}: ${data.error || 'unknown'}`);
+      if (!res.ok || data.ok === false) {
+        throw new Error(
+          `telegram sendMessage ${res.status}: ${data.description || data.error || 'unknown'}`,
+        );
       }
       await client.query('SELECT public.mark_trial_candidate_purge_warn_sent($1::uuid)', [
         row.candidate_id,

@@ -7,30 +7,26 @@
  *
  * 1. SELECT check_expired_subscriptions() — переводит истёкшие триалы в read_only
  * 2. SELECT * FROM get_trial_drip_targets() — список (client_id, name, telegram_chat_id, drip_stage, days_left)
- * 3. Для каждого: POST https://api.heyslab.ru/bot/send (с X-Internal-Cron-Token)
- * 4. SELECT mark_drip_sent(client_id, stage) — помечаем как отправленное
+ * 3. Шлёт сообщение напрямую в Telegram Bot API (client/start tokens из Lockbox).
+ * 4. Помечает стейдж как отправленный через RPC `mark_drip_sent`.
  * 5. Pre-purge warn for incomplete trial_candidates (~2d before 30d TTL)
  *
  * ENV:
  *   PG_HOST, PG_PORT, PG_DATABASE, PG_USER, PG_PASSWORD — БД (передаются deploy-all.sh)
- *   BOT_API_URL                 — base URL (default https://api.heyslab.ru)
- *   INTERNAL_CRON_TOKEN         — общий с heys-bot-client (из Lockbox)
+ *   TELEGRAM_CLIENT_BOT_TOKEN / HEYS_START_BOT_TOKEN — из Lockbox (прямая отправка)
  *   APP_URL                     — куда вести клиента (default https://app.heyslab.ru)
  */
 
 const { getPool } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
 
-function getBotApiUrl() {
-  return process.env.BOT_API_URL || 'https://api.heyslab.ru';
-}
-
-function getInternalCronToken() {
-  return process.env.INTERNAL_CRON_TOKEN;
-}
-
 function getAppUrl() {
   return process.env.APP_URL || 'https://app.heyslab.ru';
+}
+
+function getBotToken(botKind) {
+  if (botKind === 'start') return process.env.HEYS_START_BOT_TOKEN;
+  return process.env.TELEGRAM_CLIENT_BOT_TOKEN;
 }
 
 async function recordWorkerHeartbeat(client) {
@@ -116,22 +112,28 @@ function purgeWarnButtons() {
 }
 
 async function sendBotMessage(chatId, text, replyMarkup, botKind = 'client') {
-  const res = await fetch(`${getBotApiUrl()}/bot/send`, {
+  // Direct Telegram Bot API (not /bot/send via API Gateway): gateway historically
+  // dropped X-Internal-Cron-Token → 403, so drip/purge-warn never left the CF.
+  const token = getBotToken(botKind);
+  if (!token) {
+    throw new Error(`missing telegram token for bot=${botKind}`);
+  }
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Internal-Cron-Token': getInternalCronToken(),
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       chat_id: chatId,
       text,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
       reply_markup: replyMarkup,
-      bot: botKind === 'start' ? 'start' : 'client',
     }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(`bot/send ${res.status}: ${data.error || 'unknown'}`);
+  if (!res.ok || data.ok === false) {
+    throw new Error(
+      `telegram sendMessage ${res.status}: ${data.description || data.error || 'unknown'}`,
+    );
   }
   return data;
 }
@@ -208,9 +210,9 @@ module.exports.handler = async function (event, context) {
   const started = Date.now();
   console.log(`[CRON-DRIP] started at ${new Date().toISOString()}`);
 
-  if (!getInternalCronToken()) {
-    console.error('[CRON-DRIP] INTERNAL_CRON_TOKEN not set');
-    return { statusCode: 500, body: JSON.stringify({ error: 'missing token' }) };
+  if (!getBotToken('client') && !getBotToken('start')) {
+    console.error('[CRON-DRIP] TELEGRAM_CLIENT_BOT_TOKEN/HEYS_START_BOT_TOKEN not set');
+    return { statusCode: 500, body: JSON.stringify({ error: 'missing bot token' }) };
   }
 
   const pool = getPool();
