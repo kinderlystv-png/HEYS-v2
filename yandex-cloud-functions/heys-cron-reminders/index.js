@@ -29,6 +29,7 @@
 
 const { getPool } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
+const { clientHasLivePushConsent } = require('./push-consent');
 const webpush = require('web-push');
 const { collapseNetChange, bucketize, formatBody } = require('./curator-action-format');
 const { deliverIdempotently, isInReminderDeliveryWindow } = require('./push-idempotency');
@@ -177,6 +178,15 @@ async function sendToSubscriptions(client, table, idCol, ownerId, payload) {
 }
 
 async function sendToClient(client, clientId, payload) {
+  const hasConsent = await clientHasLivePushConsent(client, clientId);
+  if (!hasConsent) {
+    console.warn('[cron-reminders] push skipped', {
+      reason: 'push_consent_missing',
+      identity_kind: 'client',
+      identity_id: clientId,
+    });
+    return { sent: 0, total: 0, cleaned: 0, skipped: 'push_consent_missing' };
+  }
   return sendToSubscriptions(client, 'push_subscriptions', 'client_id', clientId, payload);
 }
 

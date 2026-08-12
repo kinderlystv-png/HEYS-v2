@@ -42,6 +42,7 @@ const {
 const webpush = require('web-push');
 const crypto = require('crypto');
 const https = require('https');
+const { clientHasLivePushConsent } = require('./push-consent');
 
 // ── VAPID config: лениво, после initSecrets() ────────────────────────────
 let vapidConfigured = false;
@@ -1030,6 +1031,15 @@ async function sendPushToClient(clientId, payload) {
   const client = await pool.connect();
   let subs = [];
   try {
+    const hasConsent = await clientHasLivePushConsent(client, clientId);
+    if (!hasConsent) {
+      console.warn('[messages] push skipped', {
+        reason: 'push_consent_missing',
+        identity_kind: 'client',
+        identity_id: clientId,
+      });
+      return { sent: 0, total: 0, skipped: 'push_consent_missing' };
+    }
     const r = await client.query(
       `SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE client_id = $1`,
       [clientId]
