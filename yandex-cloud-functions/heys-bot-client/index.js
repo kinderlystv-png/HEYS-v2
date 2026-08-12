@@ -1210,23 +1210,24 @@ async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram
     if (!leadId) {
       const insertRes = await client.query(
         `INSERT INTO public.leads (
-           name, phone, messenger,
+           name, phone, messenger, telegram_chat_id,
            utm_source, utm_medium, utm_campaign,
            quiz_segment, readiness, how_heard,
            landing_page, notes,
            consent_privacy_version, consent_method
          )
          VALUES (
-           $1, $2, 'telegram',
-           $3, 'bot', $4,
-           $5, $6, 'telegram_bot',
-           'https://t.me/heys_start_bot', $7,
-           $8, 'telegram_contact'
+           $1, $2, 'telegram', $3,
+           $4, 'bot', $5,
+           $6, $7, 'telegram_bot',
+           'https://t.me/heys_start_bot', $8,
+           $9, 'telegram_contact'
          )
          RETURNING id`,
         [
           cleanOptionalText(displayName, 120) || 'Telegram lead',
           normalizedPhone,
+          Number(chatId) || null,
           state.source || 'telegram',
           state.campaign || 'heys_start',
           state.segment || null,
@@ -1253,6 +1254,7 @@ async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram
                 consent_privacy_sha256 = registry.document_sha256,
                 consent_accepted_at = NOW(),
                 consent_method = 'telegram_contact',
+                telegram_chat_id = COALESCE(lead.telegram_chat_id, $3::bigint),
                 updated_at = NOW()
            FROM public.legal_consent_registry AS registry
           WHERE lead.id = $1
@@ -1261,7 +1263,7 @@ async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram
             AND registry.document_version = $2
             AND registry.status = 'active'
           RETURNING lead.id`,
-        [leadId, START_LEAD_PRIVACY_VERSION],
+        [leadId, START_LEAD_PRIVACY_VERSION, Number(chatId) || null],
       );
       if (!consentRes.rows?.[0]?.id) {
         throw new Error('lead_privacy_consent_not_recorded');
@@ -1884,14 +1886,21 @@ async function handleInternalSend(body, headers) {
     return jsonResponse(403, { error: 'forbidden' });
   }
 
-  const { chat_id, text, reply_markup } = body || {};
+  const { chat_id, text, reply_markup, bot } = body || {};
   if (!chat_id || !text) {
     return jsonResponse(400, { error: 'chat_id and text required' });
   }
 
+  const botKind = bot === 'start' ? 'start' : 'client';
+
   try {
-    const result = await sendMessage(chat_id, text, reply_markup ? { reply_markup } : {});
-    return jsonResponse(200, { ok: true, message_id: result.message_id });
+    const result = await sendMessage(
+      chat_id,
+      text,
+      reply_markup ? { reply_markup } : {},
+      botKind,
+    );
+    return jsonResponse(200, { ok: true, message_id: result.message_id, bot: botKind });
   } catch (e) {
     console.error('[BOT] internal-send error:', e.message);
     return jsonResponse(502, { error: e.message });

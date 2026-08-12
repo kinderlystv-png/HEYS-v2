@@ -472,6 +472,106 @@ async function cleanupExpiredTrialCandidates(client) {
 }
 
 /**
+ * ~2 days before incomplete trial_candidate purge: warn via client/start bot.
+ * Runs before hard-delete so the same daily_cleanup pass can still message.
+ * Idempotent via trial_candidates.purge_warn_sent_at.
+ */
+async function warnTrialCandidatePurge(client) {
+  const botApiUrl = process.env.BOT_API_URL || 'https://api.heyslab.ru';
+  const cronToken = process.env.INTERNAL_CRON_TOKEN;
+  const appUrl = (process.env.APP_URL || 'https://app.heyslab.ru').replace(/\/$/, '');
+
+  let targets;
+  try {
+    targets = await client.query('SELECT * FROM public.get_trial_candidate_purge_warn_targets()');
+  } catch (e) {
+    return { processed: 0, sent: 0, skipped: 0, errors: 0, error: e.message };
+  }
+
+  if (!cronToken) {
+    return {
+      processed: targets.rows.length,
+      sent: 0,
+      skipped: 0,
+      errors: 0,
+      error: 'missing INTERNAL_CRON_TOKEN',
+    };
+  }
+
+  let processed = 0;
+  let sent = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  const textFor = (daysUntilPurge) => {
+    const days =
+      Number.isFinite(Number(daysUntilPurge)) && Number(daysUntilPurge) > 0
+        ? Math.max(1, Math.min(3, Number(daysUntilPurge)))
+        : 2;
+    return (
+      '<b>Черновик анкеты HEYS скоро будет удалён</b>\n\n' +
+      `Из‑за неактивности ответы удалятся примерно через ${days} дн.\n\n` +
+      'Чтобы сохранить черновик — откройте анкету по ссылке из сообщения куратора ' +
+      'и продолжите заполнение. Код из того сообщения по‑прежнему действует.\n\n' +
+      'Если анкета больше не нужна — ничего делать не требуется.'
+    );
+  };
+
+  for (const row of targets.rows) {
+    processed += 1;
+    const chatId = row.telegram_chat_id != null ? Number(row.telegram_chat_id) : null;
+    const botKind = row.bot_kind === 'start' ? 'start' : 'client';
+
+    if (!chatId) {
+      try {
+        await client.query('SELECT public.mark_trial_candidate_purge_warn_sent($1::uuid)', [
+          row.candidate_id,
+        ]);
+        skipped += 1;
+      } catch (e) {
+        errors += 1;
+        console.error('[Maintenance] purge-warn mark skip failed:', e.message);
+      }
+      continue;
+    }
+
+    try {
+      const res = await fetch(`${botApiUrl}/bot/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Cron-Token': cronToken,
+        },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: textFor(row.days_until_purge),
+          reply_markup: {
+            inline_keyboard: [[{ text: 'Открыть анкету', url: `${appUrl}/?intake=1` }]],
+          },
+          bot: botKind,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(`bot/send ${res.status}: ${data.error || 'unknown'}`);
+      }
+      await client.query('SELECT public.mark_trial_candidate_purge_warn_sent($1::uuid)', [
+        row.candidate_id,
+      ]);
+      sent += 1;
+    } catch (e) {
+      errors += 1;
+      console.error(
+        `[Maintenance] purge-warn error candidate=${row.candidate_id}:`,
+        e.message,
+      );
+    }
+  }
+
+  return { processed, sent, skipped, errors };
+}
+
+/**
  * Synthetic defense check (2026-06-01 wave 4, layer A) — каждый день
  * проверяем что наши защитные механизмы ЖИВЫ (DB CHECK trigger, validate
  * functions, snapshot table). Если кто-то случайно дропнул триггер или
@@ -1584,6 +1684,11 @@ module.exports.handler = async (event, context) => {
 
       results.trial_intakes_cleanup = await cleanupExpiredTrialIntakes(client);
       console.log(`[Maintenance] Trial intake TTL: deleted ${results.trial_intakes_cleanup.rows} rows`);
+
+      results.trial_candidates_purge_warn = await warnTrialCandidatePurge(client);
+      console.log(
+        `[Maintenance] Trial candidate purge-warn: ${JSON.stringify(results.trial_candidates_purge_warn)}`,
+      );
 
       results.trial_candidates_cleanup = await cleanupExpiredTrialCandidates(client);
       console.log(`[Maintenance] Trial candidate TTL: deleted ${results.trial_candidates_cleanup.rows} rows`);

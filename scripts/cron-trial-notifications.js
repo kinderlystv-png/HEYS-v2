@@ -112,9 +112,9 @@ function dripButtons(stage) {
 // HTTP к /bot/send
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function sendBotMessage(chatId, text, replyMarkup) {
+async function sendBotMessage(chatId, text, replyMarkup, botKind = 'client') {
   if (DRY_RUN) {
-    console.log(`[DRY_RUN] Would POST /bot/send chat_id=${chatId}`);
+    console.log(`[DRY_RUN] Would POST /bot/send chat_id=${chatId} bot=${botKind}`);
     return { ok: true };
   }
   const res = await fetch(`${BOT_API_URL}/bot/send`, {
@@ -123,13 +123,78 @@ async function sendBotMessage(chatId, text, replyMarkup) {
       'Content-Type': 'application/json',
       'X-Internal-Cron-Token': INTERNAL_CRON_TOKEN,
     },
-    body: JSON.stringify({ chat_id: chatId, text, reply_markup: replyMarkup }),
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      reply_markup: replyMarkup,
+      bot: botKind === 'start' ? 'start' : 'client',
+    }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(`bot/send ${res.status}: ${data.error || 'unknown'}`);
   }
   return data;
+}
+
+function purgeWarnText(daysUntilPurge) {
+  const days =
+    Number.isFinite(Number(daysUntilPurge)) && Number(daysUntilPurge) > 0
+      ? Math.max(1, Math.min(3, Number(daysUntilPurge)))
+      : 2;
+  return (
+    '<b>Черновик анкеты HEYS скоро будет удалён</b>\n\n' +
+    `Из‑за неактивности ответы удалятся примерно через ${days} дн.\n\n` +
+    'Чтобы сохранить черновик — откройте анкету по ссылке из сообщения куратора ' +
+    'и продолжите заполнение. Код из того сообщения по‑прежнему действует.\n\n' +
+    'Если анкета больше не нужна — ничего делать не требуется.'
+  );
+}
+
+async function processCandidatePurgeWarnings(client) {
+  let processed = 0;
+  let sent = 0;
+  let skipped = 0;
+  let errors = 0;
+  let targets;
+  try {
+    targets = await client.query(`SELECT * FROM get_trial_candidate_purge_warn_targets()`);
+  } catch (e) {
+    console.warn('[CRON-DRIP] purge-warn targets unavailable:', e.message);
+    return { processed, sent, skipped, errors, error: e.message };
+  }
+  console.log(`[CRON-DRIP] purge-warn candidates: ${targets.rows.length}`);
+  for (const row of targets.rows) {
+    processed += 1;
+    const chatId = row.telegram_chat_id != null ? Number(row.telegram_chat_id) : null;
+    const botKind = row.bot_kind === 'start' ? 'start' : 'client';
+    if (!chatId) {
+      try {
+        await client.query(`SELECT mark_trial_candidate_purge_warn_sent($1::uuid)`, [row.candidate_id]);
+        skipped += 1;
+      } catch (e) {
+        errors += 1;
+        console.error(`[CRON-DRIP] purge-warn mark skip failed:`, e.message);
+      }
+      continue;
+    }
+    try {
+      await sendBotMessage(
+        chatId,
+        purgeWarnText(row.days_until_purge),
+        {
+          inline_keyboard: [[{ text: 'Открыть анкету', url: `${APP_URL.replace(/\/$/, '')}/?intake=1` }]],
+        },
+        botKind,
+      );
+      await client.query(`SELECT mark_trial_candidate_purge_warn_sent($1::uuid)`, [row.candidate_id]);
+      sent += 1;
+    } catch (e) {
+      errors += 1;
+      console.error(`[CRON-DRIP] purge-warn error candidate=${row.candidate_id}:`, e.message);
+    }
+  }
+  return { processed, sent, skipped, errors };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -147,6 +212,7 @@ async function main() {
   let sent = 0;
   let skipped = 0;
   let errors = 0;
+  let purgeWarn = null;
 
   try {
     // 1. Переводим истёкшие триалы в read_only
@@ -186,16 +252,18 @@ async function main() {
         console.error(`[CRON-DRIP] error stage=${stage} client=${row.client_id}:`, e.message);
       }
     }
+
+    purgeWarn = await processCandidatePurgeWarnings(client);
   } finally {
     await client.end();
   }
 
   const duration = ((Date.now() - started) / 1000).toFixed(1);
   console.log(
-    `[CRON-DRIP] done in ${duration}s — processed=${processed}, sent=${sent}, skipped=${skipped}, errors=${errors}`,
+    `[CRON-DRIP] done in ${duration}s — processed=${processed}, sent=${sent}, skipped=${skipped}, errors=${errors}, purge_warn=${JSON.stringify(purgeWarn)}`,
   );
 
-  if (errors > 0) process.exit(2);
+  if (errors > 0 || (purgeWarn && purgeWarn.errors > 0)) process.exit(2);
 }
 
 main().catch((err) => {
