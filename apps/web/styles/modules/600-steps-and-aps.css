@@ -7282,7 +7282,7 @@ button.meal-quality-badge:active {
   font-size: 15px;
   font-weight: 700;
   line-height: 1.35;
-  color: var(--v4-sand-ink, var(--v4-ink, #201e1d));
+  color: var(--v4-sand-ink, #201e1d);
 }
 
 .aps-v4-step__hint {
@@ -7302,11 +7302,11 @@ button.meal-quality-badge:active {
 
 .aps-v4-outcome--ok {
   background: var(--v4-ok-bg, #eaefe0);
-  color: var(--v4-sand-ok-text, var(--v4-ok-text, #5c6a45));
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .aps-v4-outcome--neutral {
-  background: var(--v4-hero, #efe3cf);
+  background: var(--v4-sand-hero, #efe3cf);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.6));
 }
 
@@ -7314,8 +7314,8 @@ button.meal-quality-badge:active {
   flex-direction: column;
   align-items: stretch;
   gap: 0;
-  background: var(--v4-accent-bg, #f0dcc6);
-  color: var(--v4-sand-act-deep, var(--v4-act-text, #8a4a20));
+  background: var(--v4-sand-accent-bg, #f0dcc6);
+  color: var(--v4-sand-act-deep, #8a4a20);
   padding: 15px;
 }
 
@@ -7358,7 +7358,7 @@ button.meal-quality-badge:active {
 
 .aps-v4-card {
   border-radius: 20px;
-  background: var(--v4-sand-surface-soft, var(--v4-bg, #fffaf1));
+  background: var(--v4-sand-surface-soft, #fffaf1);
 }
 
 .aps-v4-card__row {
@@ -7379,20 +7379,20 @@ button.meal-quality-badge:active {
 .aps-v4-card__value {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--v4-sand-ok-text, var(--v4-ok-text, #5c6a45));
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .aps-v4-error-hero {
   border-radius: 22px;
   padding: 20px;
-  background: var(--v4-accent-bg, #f0dcc6);
+  background: var(--v4-sand-accent-bg, #f0dcc6);
 }
 
 .aps-v4-error-hero__title {
   font-size: 15px;
   font-weight: 700;
   line-height: 1.4;
-  color: var(--v4-sand-ink, var(--v4-ink, #201e1d));
+  color: var(--v4-sand-ink, #201e1d);
 }
 
 .aps-v4-error-hero__body {
@@ -7408,7 +7408,7 @@ button.meal-quality-badge:active {
   bottom: 0;
   margin: 16px -4px 0;
   padding: 12px 4px 4px;
-  background: linear-gradient(180deg, transparent 0%, var(--v4-sand-surface-soft, var(--v4-bg, #fffaf1)) 28%);
+  background: linear-gradient(180deg, transparent 0%, var(--v4-sand-surface-soft, #fffaf1) 28%);
   box-shadow: 0 -8px 18px color-mix(in srgb, var(--v4-sand-surface-soft, #fffaf1) 90%, transparent);
 }
 
@@ -7425,7 +7425,7 @@ button.meal-quality-badge:active {
   font-weight: 700;
   line-height: 1;
   color: var(--v4-btn-on-act, #2b1608);
-  background: var(--v4-sand-act, var(--v4-act, #c67139));
+  background: var(--v4-sand-act, #c67139);
   cursor: pointer;
 }
 
@@ -7446,7 +7446,7 @@ button.meal-quality-badge:active {
   font-size: 12.5px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-sand-act-deep, var(--v4-act-text, #8a4a20));
+  color: var(--v4-sand-act-deep, #8a4a20);
   cursor: pointer;
 }
 
@@ -7462,7 +7462,7 @@ button.meal-quality-badge:active {
   font-size: 12px;
   font-weight: 700;
   color: var(--v4-btn-on-act, #2b1608);
-  background: var(--v4-sand-act, var(--v4-act, #c67139));
+  background: var(--v4-sand-act, #c67139);
   cursor: pointer;
 }
 
@@ -7482,7 +7482,7 @@ button.meal-quality-badge:active {
   transform: translateY(-50%);
   border-radius: 26px;
   padding: 24px 20px 20px;
-  background: var(--v4-sand-surface-soft, var(--v4-bg, #fffaf1));
+  background: var(--v4-sand-surface-soft, #fffaf1);
   box-shadow:
     0 4px 12px color-mix(in srgb, var(--v4-sand-act-deep, #8a4a20) 16%, transparent),
     0 24px 56px color-mix(in srgb, var(--v4-sand-act-deep, #8a4a20) 22%, transparent);
@@ -7492,7 +7492,7 @@ button.meal-quality-badge:active {
   font-size: 16px;
   font-weight: 700;
   line-height: 1.35;
-  color: var(--v4-sand-ink, var(--v4-ink, #201e1d));
+  color: var(--v4-sand-ink, #201e1d);
 }
 
 .aps-v4-exit-dialog__body {
@@ -7514,18 +7514,18 @@ button.meal-quality-badge:active {
 .aps-v4-search-state {
   border-radius: 18px;
   padding: 16px 18px;
-  background: var(--v4-hero, #efe3cf);
+  background: var(--v4-sand-hero, #efe3cf);
 }
 
 .aps-v4-search-state--warn {
-  background: var(--v4-accent-bg, #f0dcc6);
+  background: var(--v4-sand-accent-bg, #f0dcc6);
 }
 
 .aps-v4-search-state__title {
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1.4;
-  color: var(--v4-sand-ink, var(--v4-ink, #201e1d));
+  color: var(--v4-sand-ink, #201e1d);
 }
 
 .aps-v4-search-state__body {
@@ -7540,17 +7540,17 @@ button.meal-quality-badge:active {
   margin-top: 12px;
   border-radius: 16px;
   padding: 12px 14px;
-  background: var(--v4-accent-bg, #f0dcc6);
+  background: var(--v4-sand-accent-bg, #f0dcc6);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.45;
-  color: var(--v4-sand-act-deep, var(--v4-act-text, #8a4a20));
+  color: var(--v4-sand-act-deep, #8a4a20);
 }
 
 /* === APS v4 · happy path shell (prompt-food шаги 3–5) === */
 
 .aps-v4-flow {
-  color: var(--v4-sand-ink, var(--v4-ink, #201e1d));
+  color: var(--v4-sand-ink, #201e1d);
 }
 
 .aps-v4-flow .aps-fixed-header,
@@ -7558,13 +7558,13 @@ button.meal-quality-badge:active {
 .aps-v4-flow .aps-create-header,
 .aps-v4-flow .aps-portions-header,
 .aps-v4-flow .aps-product-header {
-  background: var(--v4-sand-surface-soft, var(--v4-surface, #fffaf1));
+  background: var(--v4-sand-surface-soft, #fffaf1);
 }
 
 .aps-v4-flow .aps-new-product-btn,
 .aps-v4-flow .aps-portions-next-btn,
 .aps-v4-flow .aps-create-submit-btn {
-  background: var(--v4-sand-act, var(--v4-act, #c67139));
+  background: var(--v4-sand-act, #c67139);
   color: var(--v4-btn-on-act, #2b1608);
   border-color: transparent;
 }

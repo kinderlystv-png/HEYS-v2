@@ -7948,7 +7948,7 @@ NOVA: 1
 
   const renderApsOutcomeIcon = (kind) => {
     const stroke = kind === 'ok'
-      ? 'var(--v4-sand-ok-fill, var(--v4-ok-fill, #7a8a5e))'
+      ? 'var(--v4-sand-ok-fill, #7a8a5e)'
       : 'var(--v4-ink-3, rgba(0,0,0,.45))';
     if (kind === 'ok') {
       return React.createElement('svg', {

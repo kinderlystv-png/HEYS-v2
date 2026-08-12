@@ -7,6 +7,26 @@ broken, what was fixed, and the pattern to watch for.
 
 ---
 
+## UI v4 classic-drift: вложенный `var(--sand, var(--classic, #литерал))` (2026-08-12)
+
+При перекраске еды (prompt-food) и ранее виджетов Главной в CSS попал
+антипаттерн: `var(--v4-sand-роль, var(--v4-роль, #литерал))`. На classic/blue
+внешняя sand-роль задана, но внутренняя generic-роль (`--v4-ink`,
+`--v4-ok-fill`, `--v4-accent-bg`…) тоже задана в палитре — и её значение
+синее/зелёное. Литерал в конце не срабатывает, а `ui-v4-classic-drift` ловит
+сдвиг относительно канона классики (20 мест, гейт деплоя).
+
+**Рецепт (owner 2026-08-12, A5):** во внешнем `var()` только sand-роль и
+литерал. Classic/generic-роль внутрь не вкладывать:
+`var(--v4-sand-ink, #201e1d)`, не `var(--v4-sand-ink, var(--v4-ink, #201e1d))`.
+Для подложек внимания в еде — `var(--v4-sand-accent-bg, #f0dcc6)` по образцу
+`--v4-sand-hero`; не подставлять `--v4-accent-bg` (на classic синяя `#dbeafe`).
+
+**Проверка:** `node scripts/ui-v4-check-classic-drift.mjs` и
+`cd apps/web && npx vitest run __tests__/ui-v4-classic-drift.test.js`.
+
+---
+
 ## Экран входа: любой отказ сервера выдавался за неверный PIN (2026-08-11)
 
 Вход по PIN отключён на сервере 2026-08-11 (временная мера против перебора,
