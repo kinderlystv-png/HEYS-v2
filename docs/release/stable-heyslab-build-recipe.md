@@ -10,15 +10,15 @@ Cherry-pick readonly-коммитов на `36df9ce3` **конфликтует**
 `000-base-and-gamification.css`). Одной командой не повторяется — только этот
 рецепт.
 
-## Что лежит на копии сейчас (после consent-readonly, 2026-08-12)
+## Что лежит на копии сейчас (после readonly round 2, 2026-08-13)
 
 | Поле                                | Значение                                                                                                    |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | База UI                             | git `36df9ce3`                                                                                              |
 | Patches                             | `d75ec593d` readonly, `3d1904513` write-context RPC, `4a7ced768` consent gate, `00c443259` readonly round 2 |
-| `boot-app.bundle`                   | `526ae52da151.js`                                                                                           |
+| `boot-app.bundle`                   | `20343613fc3a.js`                                                                                           |
 | `version.json` → `hash`             | `36df9ce3` (линия эталона)                                                                                  |
-| `version.json` → `stableRebuild.id` | `consent-readonly-20260812`                                                                                 |
+| `version.json` → `stableRebuild.id` | `readonly-round2-20260813`                                                                                  |
 
 ## Пошагово
 
@@ -51,6 +51,9 @@ git show 00c443259:apps/web/heys_app_gate_flow_v1.js > apps/web/heys_app_gate_fl
 git show 00c443259:apps/web/heys_app_shell_v1.js > apps/web/heys_app_shell_v1.js
 git show 00c443259:apps/web/heys_consents_v1.js > apps/web/heys_consents_v1.js
 git show 00c443259:apps/web/heys_gamification_v1.js > apps/web/heys_gamification_v1.js
+# ⚠️ НЕ копировать heys_gamification_v1.js целиком с main: на базе 36df9ce3
+# GamificationBar в boot-app всё ещё зовёт HEYS.game.getRankBadge, а в main
+# API убрали. Берите 36df9ce3 + только readonly-guards в scheduleCloudSync/syncToCloud.
 git show 00c443259:apps/web/heys_health_features_v1.js > apps/web/heys_health_features_v1.js
 git show 00c443259:apps/web/heys_products_overlay_v1.js > apps/web/heys_products_overlay_v1.js
 git show 00c443259:apps/web/heys_yandex_api_v1.js > apps/web/heys_yandex_api_v1.js
@@ -83,6 +86,12 @@ aws s3 cp dist/build-meta.json s3://${BUCKET}/build-meta.json \
 aws s3 cp dist/sw.js s3://${BUCKET}/sw.js \
   --endpoint-url=$ENDPOINT --cache-control "no-cache, no-store, must-revalidate" \
   --content-type "application/javascript"
+aws s3 cp dist/lazy-manifest.json s3://${BUCKET}/lazy-manifest.json \
+  --endpoint-url=$ENDPOINT --cache-control "no-cache, no-store, must-revalidate" \
+  --content-type "application/json"
+aws s3 cp dist/bundle-manifest.json s3://${BUCKET}/bundle-manifest.json \
+  --endpoint-url=$ENDPOINT --cache-control "no-cache, no-store, must-revalidate" \
+  --content-type "application/json"
 # boot-app.bundle.*.js(.gz) — см. index.html, загрузить новый hash
 
 # 4b. Если index всё же из d75ec593d (v4 login shell) — обязательно залить
