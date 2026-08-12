@@ -1,0 +1,477 @@
+{
+  "exported_at": "2026-08-12 01:10:39",
+  "timezone": "Europe/Moscow",
+  "purpose": "pre-migration snapshot for destruction act: health/safety answers before schema 1.2 rewrite",
+  "note": "trial_intakes PK=client_id; trial_candidates PK=id. Decrypted in one transaction with heys.encryption_key.",
+  "trial_intakes": [
+    {
+      "client_id": "45d9e94c-f6ec-4ba7-9e19-0c2be9098eb1",
+      "curator_id": "6d4dbb32-fd9d-45b3-8e01-512595e2cb2c",
+      "status": "approved",
+      "current_step": 5,
+      "schema_version": "1.1",
+      "created_at": "2026-08-11T14:55:27.431776+03:00",
+      "updated_at": "2026-08-11T14:55:27.431776+03:00",
+      "completed_at": "2026-08-11T14:54:16.848868+03:00",
+      "reviewed_at": "2026-08-11T14:55:27.431776+03:00",
+      "answers": {
+        "meta": {
+          "schema_version": "1.1"
+        },
+        "goals": {
+          "primary_goal": "123",
+          "time_expectations": "",
+          "success_definition": "123"
+        },
+        "health": {
+          "allergies": "123",
+          "medications": "",
+          "allergies_status": "yes",
+          "chronic_conditions": "123",
+          "medications_status": "prefer_not",
+          "doctor_restrictions": "123",
+          "injuries_operations": "",
+          "pregnancy_lactation": "pregnancy",
+          "eating_disorder_history": "prefer_not",
+          "chronic_conditions_status": "yes",
+          "doctor_restrictions_status": "yes",
+          "injuries_operations_status": "no"
+        },
+        "safety": {
+          "acute_symptoms": "no",
+          "recent_surgery": "yes",
+          "active_ed_concern": "no",
+          "medical_supervision": "yes"
+        },
+        "lifestyle": {
+          "sleep": "123",
+          "schedule": "123"
+        },
+        "experience": {
+          "what_worked": "121",
+          "what_did_not_work": "123",
+          "previous_experience": "self"
+        },
+        "collaboration": {
+          "daily_tracking": "unsure",
+          "feedback_style": "gentle"
+        }
+      }
+    },
+    {
+      "client_id": "7397a9db-03bb-45ce-a202-74b3aea2836e",
+      "curator_id": "6d4dbb32-fd9d-45b3-8e01-512595e2cb2c",
+      "status": "approved",
+      "current_step": 5,
+      "schema_version": "1.1",
+      "created_at": "2026-07-30T16:52:15.728581+03:00",
+      "updated_at": "2026-07-30T16:52:15.728581+03:00",
+      "completed_at": "2026-07-30T16:52:15.728581+03:00",
+      "reviewed_at": "2026-07-30T16:52:15.728581+03:00",
+      "answers": {
+        "meta": {
+          "schema_version": "1.1"
+        },
+        "goals": {
+          "primary_goal": "health",
+          "success_definition": "production smoke"
+        },
+        "health": {
+          "allergies_status": "no",
+          "medications_status": "no",
+          "chronic_conditions_status": "no",
+          "doctor_restrictions_status": "no",
+          "injuries_operations_status": "no"
+        },
+        "safety": {
+          "acute_symptoms": "no",
+          "recent_surgery": "no",
+          "active_ed_concern": "no",
+          "medical_supervision": "no"
+        },
+        "lifestyle": {
+          "sleep": "8",
+          "schedule": "regular"
+        },
+        "experience": {
+          "previous_experience": "self"
+        },
+        "collaboration": {
+          "daily_tracking": "yes",
+          "feedback_style": "concise"
+        }
+      }
+    },
+    {
+      "client_id": "9bc6f6c3-77e1-49cd-a270-ab3356f8bdb6",
+      "curator_id": "6d4dbb32-fd9d-45b3-8e01-512595e2cb2c",
+      "status": "approved",
+      "current_step": 5,
+      "schema_version": "1.1",
+      "created_at": "2026-07-30T16:36:55.425115+03:00",
+      "updated_at": "2026-07-30T16:36:55.425115+03:00",
+      "completed_at": "2026-07-30T16:36:55.425115+03:00",
+      "reviewed_at": "2026-07-30T16:36:55.425115+03:00",
+      "answers": {
+        "meta": {
+          "schema_version": "1.1"
+        },
+        "goals": {
+          "primary_goal": "health",
+          "success_definition": "production smoke"
+        },
+        "health": {
+          "allergies_status": "no",
+          "medications_status": "no",
+          "chronic_conditions_status": "no",
+          "doctor_restrictions_status": "no",
+          "injuries_operations_status": "no"
+        },
+        "safety": {
+          "acute_symptoms": "no",
+          "recent_surgery": "no",
+          "active_ed_concern": "no",
+          "medical_supervision": "no"
+        },
+        "lifestyle": {
+          "sleep": "8",
+          "schedule": "regular"
+        },
+        "experience": {
+          "previous_experience": "self"
+        },
+        "collaboration": {
+          "daily_tracking": "yes",
+          "feedback_style": "concise"
+        }
+      }
+    },
+    {
+      "client_id": "c3a19a47-313f-4379-8f10-1768d0aec97b",
+      "curator_id": "6d4dbb32-fd9d-45b3-8e01-512595e2cb2c",
+      "status": "approved",
+      "current_step": 5,
+      "schema_version": "1.1",
+      "created_at": "2026-07-30T19:29:19.749795+03:00",
+      "updated_at": "2026-07-30T19:29:19.749795+03:00",
+      "completed_at": "2026-07-30T19:27:33.39031+03:00",
+      "reviewed_at": "2026-07-30T19:29:19.749795+03:00",
+      "answers": {
+        "meta": {
+          "schema_version": "1.1"
+        },
+        "goals": {
+          "primary_goal": "пупс",
+          "time_expectations": "мупс",
+          "success_definition": "тупс"
+        },
+        "health": {
+          "allergies": "",
+          "medications": "",
+          "allergies_status": "no",
+          "chronic_conditions": "",
+          "medications_status": "no",
+          "doctor_restrictions": "",
+          "injuries_operations": "",
+          "pregnancy_lactation": "no",
+          "eating_disorder_history": "no",
+          "chronic_conditions_status": "no",
+          "doctor_restrictions_status": "no",
+          "injuries_operations_status": "no"
+        },
+        "safety": {
+          "details": "ничего",
+          "acute_symptoms": "no",
+          "recent_surgery": "no",
+          "active_ed_concern": "no",
+          "medical_supervision": "no"
+        },
+        "lifestyle": {
+          "sleep": "7 часов",
+          "activity": "норм",
+          "schedule": "работа",
+          "constraints": "не знаю "
+        },
+        "experience": {
+          "what_worked": "хз",
+          "what_did_not_work": "кук",
+          "previous_experience": "self"
+        },
+        "collaboration": {
+          "daily_tracking": "mostly",
+          "feedback_style": "detailed",
+          "expectations_from_curator": "ничего"
+        }
+      }
+    }
+  ],
+  "trial_candidates": [
+    {
+      "id": "3666a59d-cf42-40ee-8c7d-f25679a0ee20",
+      "lead_id": "524009b2-b847-403c-84e0-246744f1733a",
+      "client_id": "9bc6f6c3-77e1-49cd-a270-ab3356f8bdb6",
+      "curator_id": "6d4dbb32-fd9d-45b3-8e01-512595e2cb2c",
+      "status": "promoted",
+      "current_step": 5,
+      "schema_version": "1.1",
+      "created_at": "2026-07-30T16:36:55.425115+03:00",
+      "updated_at": "2026-07-30T16:36:55.425115+03:00",
+      "completed_at": "2026-07-30T16:36:55.425115+03:00",
+      "reviewed_at": "2026-07-30T16:36:55.425115+03:00",
+      "answers": {
+        "meta": {
+          "schema_version": "1.1"
+        },
+        "goals": {
+          "primary_goal": "health",
+          "success_definition": "production smoke"
+        },
+        "health": {
+          "allergies_status": "no",
+          "medications_status": "no",
+          "chronic_conditions_status": "no",
+          "doctor_restrictions_status": "no",
+          "injuries_operations_status": "no"
+        },
+        "safety": {
+          "acute_symptoms": "no",
+          "recent_surgery": "no",
+          "active_ed_concern": "no",
+          "medical_supervision": "no"
+        },
+        "lifestyle": {
+          "sleep": "8",
+          "schedule": "regular"
+        },
+        "experience": {
+          "previous_experience": "self"
+        },
+        "collaboration": {
+          "daily_tracking": "yes",
+          "feedback_style": "concise"
+        }
+      }
+    },
+    {
+      "id": "6e19b47e-c05e-46b5-a64f-1031d5162ade",
+      "lead_id": "69d0c396-0168-4a5a-af22-fc854c5b10b9",
+      "client_id": "45d9e94c-f6ec-4ba7-9e19-0c2be9098eb1",
+      "curator_id": "6d4dbb32-fd9d-45b3-8e01-512595e2cb2c",
+      "status": "promoted",
+      "current_step": 5,
+      "schema_version": "1.1",
+      "created_at": "2026-08-11T14:46:47.081651+03:00",
+      "updated_at": "2026-08-11T14:55:27.431776+03:00",
+      "completed_at": "2026-08-11T14:54:16.848868+03:00",
+      "reviewed_at": "2026-08-11T14:55:27.431776+03:00",
+      "answers": {
+        "meta": {
+          "schema_version": "1.1"
+        },
+        "goals": {
+          "primary_goal": "123",
+          "time_expectations": "",
+          "success_definition": "123"
+        },
+        "health": {
+          "allergies": "123",
+          "medications": "",
+          "allergies_status": "yes",
+          "chronic_conditions": "123",
+          "medications_status": "prefer_not",
+          "doctor_restrictions": "123",
+          "injuries_operations": "",
+          "pregnancy_lactation": "pregnancy",
+          "eating_disorder_history": "prefer_not",
+          "chronic_conditions_status": "yes",
+          "doctor_restrictions_status": "yes",
+          "injuries_operations_status": "no"
+        },
+        "safety": {
+          "acute_symptoms": "no",
+          "recent_surgery": "yes",
+          "active_ed_concern": "no",
+          "medical_supervision": "yes"
+        },
+        "lifestyle": {
+          "sleep": "123",
+          "schedule": "123"
+        },
+        "experience": {
+          "what_worked": "121",
+          "what_did_not_work": "123",
+          "previous_experience": "self"
+        },
+        "collaboration": {
+          "daily_tracking": "unsure",
+          "feedback_style": "gentle"
+        }
+      }
+    },
+    {
+      "id": "b8a513fc-255a-4d5a-a2a3-7a20ebd357b7",
+      "lead_id": "7708afad-54e9-4593-ac57-6429bb0febd8",
+      "client_id": null,
+      "curator_id": "6d4dbb32-fd9d-45b3-8e01-512595e2cb2c",
+      "status": "promoted",
+      "current_step": 5,
+      "schema_version": "1.1",
+      "created_at": "2026-07-30T00:59:20.177507+03:00",
+      "updated_at": "2026-07-30T12:50:08.315389+03:00",
+      "completed_at": "2026-07-30T02:44:19.445547+03:00",
+      "reviewed_at": "2026-07-30T12:50:08.315389+03:00",
+      "answers": {
+        "meta": {
+          "schema_version": "1.1"
+        },
+        "goals": {
+          "primary_goal": "Похудеть",
+          "time_expectations": "3 месяца ",
+          "success_definition": "Вес снижается"
+        },
+        "health": {
+          "allergies": "",
+          "medications": "",
+          "allergies_status": "no",
+          "chronic_conditions": "гипертония",
+          "medications_status": "no",
+          "doctor_restrictions": "",
+          "injuries_operations": "",
+          "pregnancy_lactation": "not_applicable",
+          "eating_disorder_history": "no",
+          "chronic_conditions_status": "yes",
+          "doctor_restrictions_status": "no",
+          "injuries_operations_status": "prefer_not"
+        },
+        "safety": {
+          "acute_symptoms": "yes",
+          "recent_surgery": "no",
+          "active_ed_concern": "yes",
+          "medical_supervision": "no"
+        },
+        "lifestyle": {
+          "sleep": "7-9 часов не стабильно ",
+          "activity": "кардио чаще но редко. силовых уже нет 5 лет стабильных ",
+          "schedule": "работа, семья, ребенок",
+          "constraints": "?с куратором ? ничего "
+        },
+        "experience": {
+          "what_worked": "подсчет калорий ",
+          "what_did_not_work": "со временем прокис ",
+          "previous_experience": "self"
+        },
+        "collaboration": {
+          "daily_tracking": "yes",
+          "feedback_style": "detailed",
+          "expectations_from_curator": "участия и вникания "
+        }
+      }
+    },
+    {
+      "id": "c4659a02-60c4-437b-9224-8ae475e29524",
+      "lead_id": "c40f2fe0-fc64-4a7d-92f1-e99e16cde0fd",
+      "client_id": "7397a9db-03bb-45ce-a202-74b3aea2836e",
+      "curator_id": "6d4dbb32-fd9d-45b3-8e01-512595e2cb2c",
+      "status": "promoted",
+      "current_step": 5,
+      "schema_version": "1.1",
+      "created_at": "2026-07-30T16:52:15.728581+03:00",
+      "updated_at": "2026-07-30T16:52:15.728581+03:00",
+      "completed_at": "2026-07-30T16:52:15.728581+03:00",
+      "reviewed_at": "2026-07-30T16:52:15.728581+03:00",
+      "answers": {
+        "meta": {
+          "schema_version": "1.1"
+        },
+        "goals": {
+          "primary_goal": "health",
+          "success_definition": "production smoke"
+        },
+        "health": {
+          "allergies_status": "no",
+          "medications_status": "no",
+          "chronic_conditions_status": "no",
+          "doctor_restrictions_status": "no",
+          "injuries_operations_status": "no"
+        },
+        "safety": {
+          "acute_symptoms": "no",
+          "recent_surgery": "no",
+          "active_ed_concern": "no",
+          "medical_supervision": "no"
+        },
+        "lifestyle": {
+          "sleep": "8",
+          "schedule": "regular"
+        },
+        "experience": {
+          "previous_experience": "self"
+        },
+        "collaboration": {
+          "daily_tracking": "yes",
+          "feedback_style": "concise"
+        }
+      }
+    },
+    {
+      "id": "fa1b4c60-95e9-4aa3-8707-db87c3a28db1",
+      "lead_id": "bfa841c8-9cee-418f-8db5-2fd2e6df4744",
+      "client_id": "c3a19a47-313f-4379-8f10-1768d0aec97b",
+      "curator_id": "6d4dbb32-fd9d-45b3-8e01-512595e2cb2c",
+      "status": "promoted",
+      "current_step": 5,
+      "schema_version": "1.1",
+      "created_at": "2026-07-30T19:23:18.152542+03:00",
+      "updated_at": "2026-07-30T19:29:19.749795+03:00",
+      "completed_at": "2026-07-30T19:27:33.39031+03:00",
+      "reviewed_at": "2026-07-30T19:29:19.749795+03:00",
+      "answers": {
+        "meta": {
+          "schema_version": "1.1"
+        },
+        "goals": {
+          "primary_goal": "пупс",
+          "time_expectations": "мупс",
+          "success_definition": "тупс"
+        },
+        "health": {
+          "allergies": "",
+          "medications": "",
+          "allergies_status": "no",
+          "chronic_conditions": "",
+          "medications_status": "no",
+          "doctor_restrictions": "",
+          "injuries_operations": "",
+          "pregnancy_lactation": "no",
+          "eating_disorder_history": "no",
+          "chronic_conditions_status": "no",
+          "doctor_restrictions_status": "no",
+          "injuries_operations_status": "no"
+        },
+        "safety": {
+          "details": "ничего",
+          "acute_symptoms": "no",
+          "recent_surgery": "no",
+          "active_ed_concern": "no",
+          "medical_supervision": "no"
+        },
+        "lifestyle": {
+          "sleep": "7 часов",
+          "activity": "норм",
+          "schedule": "работа",
+          "constraints": "не знаю "
+        },
+        "experience": {
+          "what_worked": "хз",
+          "what_did_not_work": "кук",
+          "previous_experience": "self"
+        },
+        "collaboration": {
+          "daily_tracking": "mostly",
+          "feedback_style": "detailed",
+          "expectations_from_curator": "ничего"
+        }
+      }
+    }
+  ]
+}

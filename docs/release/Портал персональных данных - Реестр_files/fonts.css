@@ -1,0 +1,153 @@
+@font-face {
+    font-family: 'Open Sans';
+    src: url('/css/fonts/OpenSans-SemiBoldItalic.eot');
+    src: local('Open Sans SemiBold Italic'), local('OpenSans-SemiBoldItalic'),
+    url('/css/fonts/OpenSans-SemiBoldItalic.eot?#iefix') format('embedded-opentype'),
+    url('/css/fonts/OpenSans-SemiBoldItalic.woff') format('woff'),
+    url('/css/fonts/OpenSans-SemiBoldItalic.ttf') format('truetype');
+    font-weight: 600;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    src: url('/css/fonts/OpenSans-LightItalic.eot');
+    src: local('Open Sans Light Italic'), local('OpenSans-LightItalic'),
+    url('/css/fonts/OpenSans-LightItalic.eot?#iefix') format('embedded-opentype'),
+    url('/css/fonts/OpenSans-LightItalic.woff') format('woff'),
+    url('/css/fonts/OpenSans-LightItalic.ttf') format('truetype');
+    font-weight: 300;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    src: url('/css/fonts/OpenSans-Bold.eot');
+    src: local('Open Sans Bold'), local('OpenSans-Bold'),
+    url('/css/fonts/OpenSans-Bold.eot?#iefix') format('embedded-opentype'),
+    url('/css/fonts/OpenSans-Bold.woff') format('woff'),
+    url('/css/fonts/OpenSans-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    src: url('/css/fonts/OpenSans-ExtraBoldItalic.eot');
+    src: local('Open Sans ExtraBold Italic'), local('OpenSans-ExtraBoldItalic'),
+    url('/css/fonts/OpenSans-ExtraBoldItalic.eot?#iefix') format('embedded-opentype'),
+    url('/css/fonts/OpenSans-ExtraBoldItalic.woff') format('woff'),
+    url('/css/fonts/OpenSans-ExtraBoldItalic.ttf') format('truetype');
+    font-weight: 800;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    src: url('/css/fonts/OpenSans-Light.eot');
+    src: local('Open Sans Light'), local('OpenSans-Light'),
+    url('/css/fonts/OpenSans-Light.eot?#iefix') format('embedded-opentype'),
+    url('/css/fonts/OpenSans-Light.woff') format('woff'),
+    url('/css/fonts/OpenSans-Light.ttf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    src: url('/css/fonts/OpenSans-Italic.eot');
+    src: local('Open Sans Italic'), local('OpenSans-Italic'),
+    url('/css/fonts/OpenSans-Italic.eot?#iefix') format('embedded-opentype'),
+    url('/css/fonts/OpenSans-Italic.woff') format('woff'),
+    url('/css/fonts/OpenSans-Italic.ttf') format('truetype');
+    font-weight: normal;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    src: url('/css/fonts/OpenSans-Regular.eot');
+    src: local('Open Sans Regular'), local('OpenSans-Regular'),
+    url('/css/fonts/OpenSans-Regular.eot?#iefix') format('embedded-opentype'),
+    url('/css/fonts/OpenSans-Regular.woff') format('woff'),
+    url('/css/fonts/OpenSans-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    src: url('/css/fonts/OpenSans-SemiBold.eot');
+    src: local('Open Sans SemiBold'), local('OpenSans-SemiBold'),
+    url('/css/fonts/OpenSans-SemiBold.eot?#iefix') format('embedded-opentype'),
+    url('/css/fonts/OpenSans-SemiBold.woff') format('woff'),
+    url('/css/fonts/OpenSans-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    src: url('/css/fonts/OpenSans-ExtraBold.eot');
+    src: local('Open Sans ExtraBold'), local('OpenSans-ExtraBold'),
+    url('/css/fonts/OpenSans-ExtraBold.eot?#iefix') format('embedded-opentype'),
+    url('/css/fonts/OpenSans-ExtraBold.woff') format('woff'),
+    url('/css/fonts/OpenSans-ExtraBold.ttf') format('truetype');
+    font-weight: 800;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Open Sans';
+    src: url('/css/fonts/OpenSans-BoldItalic.eot');
+    src: local('Open Sans Bold Italic'), local('OpenSans-BoldItalic'),
+    url('/css/fonts/OpenSans-BoldItalic.eot?#iefix') format('embedded-opentype'),
+    url('/css/fonts/OpenSans-BoldItalic.woff') format('woff'),
+    url('/css/fonts/OpenSans-BoldItalic.ttf') format('truetype');
+    font-weight: bold;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Cuprum';
+    src: url('/css/fonts/Cuprum-BoldItalic.eot');
+    src: local('Cuprum Bold Italic'), local('Cuprum-BoldItalic'),
+    url('/css/fonts/Cuprum-BoldItalic.eot?#iefix') format('embedded-opentype'),
+    url('/css/fonts/Cuprum-BoldItalic.woff') format('woff'),
+    url('/css/fonts/Cuprum-BoldItalic.ttf') format('truetype');
+    font-weight: bold;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Cuprum';
+    src: url('/css/fonts/Cuprum-Italic.eot');
+    src: local('Cuprum Italic'), local('Cuprum-Italic'),
+    url('/css/fonts/Cuprum-Italic.eot?#iefix') format('embedded-opentype'),
+    url('/css/fonts/Cuprum-Italic.woff') format('woff'),
+    url('/css/fonts/Cuprum-Italic.ttf') format('truetype');
+    font-weight: normal;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Cuprum';
+    src: url('/css/fonts/Cuprum-Regular.eot');
+    src: local('Cuprum Regular'), local('Cuprum-Regular'),
+    url('/css/fonts/Cuprum-Regular.eot?#iefix') format('embedded-opentype'),
+    url('/css/fonts/Cuprum-Regular.woff') format('woff'),
+    url('/css/fonts/Cuprum-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Cuprum';
+    src: url('/css/fonts/Cuprum-Bold.eot');
+    src: local('Cuprum Bold'), local('Cuprum-Bold'),
+    url('/css/fonts/Cuprum-Bold.eot?#iefix') format('embedded-opentype'),
+    url('/css/fonts/Cuprum-Bold.woff') format('woff'),
+    url('/css/fonts/Cuprum-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
