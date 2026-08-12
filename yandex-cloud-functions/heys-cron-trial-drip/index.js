@@ -117,17 +117,21 @@ function purgeWarnButtons() {
 
 async function sendBotMessage(chatId, text, replyMarkup, botKind = 'client') {
   // Single outbound path: heys-bot-client POST /bot/send (owns tokens + HTML).
+  const cronToken = getInternalCronToken();
   const res = await fetch(`${getBotApiUrl()}/bot/send`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Internal-Cron-Token': getInternalCronToken(),
+      'X-Internal-Cron-Token': cronToken,
     },
+    // cron_token in body: API Gateway has historically dropped undeclared custom
+    // headers; OpenAPI now declares the header, body keeps a single /bot/send path.
     body: JSON.stringify({
       chat_id: chatId,
       text,
       reply_markup: replyMarkup,
       bot: botKind === 'start' ? 'start' : 'client',
+      cron_token: cronToken,
     }),
   });
   const data = await res.json().catch(() => ({}));

@@ -334,6 +334,12 @@ paths:
   /bot/send:
     post:
       summary: Internal send (cron drip → Telegram message via bot). Protected by X-Internal-Cron-Token header.
+      parameters:
+        - name: X-Internal-Cron-Token
+          in: header
+          required: true
+          schema:
+            type: string
       x-yc-apigateway-integration:
         type: cloud_functions
         function_id: d4ednfmrg21i8j1svtqs

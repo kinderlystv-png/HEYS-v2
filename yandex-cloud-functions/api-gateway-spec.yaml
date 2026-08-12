@@ -417,6 +417,13 @@ paths:
   /bot/send:
     post:
       summary: Internal send endpoint for trial drip messages
+      parameters:
+        - name: X-Internal-Cron-Token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Shared INTERNAL_CRON_TOKEN (Lockbox heys-app-secrets)
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek

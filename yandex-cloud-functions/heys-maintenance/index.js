@@ -549,6 +549,7 @@ async function warnTrialCandidatePurge(client) {
             inline_keyboard: [[{ text: 'Открыть анкету', url: `${appUrl}/?intake=1` }]],
           },
           bot: botKind,
+          cron_token: cronToken,
         }),
       });
       const data = await res.json().catch(() => ({}));

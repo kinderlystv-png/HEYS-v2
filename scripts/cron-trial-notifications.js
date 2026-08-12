@@ -128,6 +128,7 @@ async function sendBotMessage(chatId, text, replyMarkup, botKind = 'client') {
       text,
       reply_markup: replyMarkup,
       bot: botKind === 'start' ? 'start' : 'client',
+      cron_token: INTERNAL_CRON_TOKEN,
     }),
   });
   const data = await res.json().catch(() => ({}));

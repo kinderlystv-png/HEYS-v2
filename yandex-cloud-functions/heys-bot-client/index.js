@@ -67,8 +67,15 @@ async function ensureConfig() {
       const secrets = lockboxSecretId ? await getSecret(lockboxSecretId) : null;
 
       const pick = (key) => {
-        const v = secrets && secrets[key];
-        return v && String(v).length > 0 ? v : process.env[key];
+        const fromSecrets = secrets && secrets[key];
+        if (fromSecrets && String(fromSecrets).length > 0 && !isLockboxPlaceholder(fromSecrets)) {
+          return fromSecrets;
+        }
+        const fromEnv = process.env[key];
+        if (fromEnv && String(fromEnv).length > 0 && !isLockboxPlaceholder(fromEnv)) {
+          return fromEnv;
+        }
+        return undefined;
       };
 
       // ⚠️ Только TELEGRAM_CLIENT_BOT_TOKEN — это отдельный клиент-бот,
@@ -144,10 +151,43 @@ function resolveHttpPath(event) {
   return raw;
 }
 
-function isInternalCronCall(headers) {
+function firstString(...candidates) {
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.length > 0) return value;
+    if (Array.isArray(value) && typeof value[0] === 'string' && value[0].length > 0) {
+      return value[0];
+    }
+  }
+  return null;
+}
+
+/**
+ * Resolve X-Internal-Cron-Token from gateway event shapes.
+ * API Gateway may put declared header params into params/parameters, and/or
+ * only multiValueHeaders, while leaving headers empty for undeclared customs.
+ */
+function extractInternalCronToken(event, body) {
+  const headers = event?.headers || {};
+  const multi = event?.multiValueHeaders || {};
+  const params = event?.params || event?.parameters || {};
+  const multiParams = event?.multiValueParams || event?.multiValueParameters || {};
+  return firstString(
+    headers['x-internal-cron-token'],
+    headers['X-Internal-Cron-Token'],
+    multi['x-internal-cron-token'],
+    multi['X-Internal-Cron-Token'],
+    params['X-Internal-Cron-Token'],
+    params['x-internal-cron-token'],
+    multiParams['X-Internal-Cron-Token'],
+    multiParams['x-internal-cron-token'],
+    body && body.cron_token,
+  );
+}
+
+function isInternalCronCall(event, body) {
   if (!INTERNAL_CRON_TOKEN) return false;
-  const provided = headers?.['x-internal-cron-token'] || headers?.['X-Internal-Cron-Token'];
-  if (!provided || typeof provided !== 'string') return false;
+  const provided = extractInternalCronToken(event, body);
+  if (!provided) return false;
   const a = Buffer.from(provided, 'utf8');
   const b = Buffer.from(INTERNAL_CRON_TOKEN, 'utf8');
   if (a.length !== b.length) return false;
@@ -1901,8 +1941,14 @@ async function handleTelegramWebhook(body) {
 // /bot/send — внутренний endpoint для cron-drip
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function handleInternalSend(body, headers) {
-  if (!isInternalCronCall(headers)) {
+async function handleInternalSend(body, event) {
+  if (!isInternalCronCall(event, body)) {
+    const headerKeys = Object.keys(event?.headers || {});
+    const paramKeys = Object.keys(event?.params || event?.parameters || {});
+    console.warn(
+      '[BOT] /bot/send forbidden: cron token missing/mismatch',
+      JSON.stringify({ headerKeys, paramKeys, path: resolveHttpPath(event) }),
+    );
     return jsonResponse(403, { error: 'forbidden' });
   }
 
@@ -1993,7 +2039,7 @@ module.exports.handler = async function (event) {
   // 403 forbidden on /bot/send (looked like "token header dropped").
   if (method === 'POST' && (path === '/bot/send' || path.endsWith('/bot/send') || path.includes('/send'))) {
     await ensureRuntimeConfig();
-    return await handleInternalSend(body, event?.headers || {});
+    return await handleInternalSend(body, event || {});
   }
 
   if (method === 'POST' && (path === '/start-bot/webhook' || path.endsWith('/start-bot/webhook'))) {
@@ -2038,4 +2084,5 @@ module.exports.__test = {
   handleCuratorBotUpdate,
   isAuthorizedCuratorCallback,
   resolveHttpPath,
+  extractInternalCronToken,
 };
