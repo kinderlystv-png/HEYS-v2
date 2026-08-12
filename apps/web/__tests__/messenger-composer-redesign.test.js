@@ -184,9 +184,9 @@ describe('ряд ввода и отправка', () => {
     expect(shiftTimeLabel('13:05', -60)).toBe('12:05');
   });
 
-  it('FAB — сплошной акцент со stroke-иконкой', () => {
+  it('FAB — вторичная приподнятая поверхность (--v4-float) со stroke-иконкой', () => {
     const fab = cssSource.match(/\.fab-group \.message-fab \{[^}]*\}/)[0];
-    expect(fab).toMatch(/background:\s*#1d70b7/);
+    expect(fab).toMatch(/background:\s*var\(--v4-float/);
     expect(fab).not.toMatch(/linear-gradient/);
     expect(messengerSource).toMatch(/className: 'message-fab-icon' \},\s*React\.createElement\(Icon, \{ name: 'chat'/);
   });

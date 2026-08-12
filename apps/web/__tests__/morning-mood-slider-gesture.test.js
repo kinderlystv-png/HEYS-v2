@@ -25,6 +25,11 @@ function loadSteps() {
     dayUtils: {
       todayISO: () => '2026-06-21',
     },
+    // UI v4 centralized scales — MorningMoodStep reads moodRating/stressRating colors.
+    scales: {
+      moodRating: () => ({ color: '#84cc16', step: 'GOOD_SOFT' }),
+      stressRating: () => ({ color: '#fbbf24', step: 'NEUTRAL' }),
+    },
   };
   Object.defineProperty(window.navigator, 'vibrate', {
     configurable: true,

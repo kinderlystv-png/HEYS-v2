@@ -155,11 +155,13 @@
       case 'training_added':
         target.tab = 'activity';
         if (trainingIndex != null) target.selectors.push(`[data-training-index="${trainingIndex}"]`);
-        target.selectors.push('[data-curator-target="training"]', '.month-trainings-card', '.compact-activity');
+        // Activity v4: .month-trainings-card removed from DOM; live markers only.
+        target.selectors.push('[data-curator-target="training"]', '.compact-activity', '[data-curator-target="activity"]');
         break;
       case 'training_removed':
         target.tab = 'activity';
-        target.selectors.push('[data-curator-target="training-summary"]', '.month-trainings-card', '[data-curator-target="activity"]');
+        // training-summary / month-trainings-card gone after Activity v4 tiers.
+        target.selectors.push('[data-curator-target="activity"]');
         break;
       case 'weight_set':
         target.tab = 'stats';
