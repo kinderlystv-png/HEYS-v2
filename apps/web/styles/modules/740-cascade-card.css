@@ -7,7 +7,7 @@
 .cascade-card {
   position: relative;
   isolation: isolate;
-  background-color: var(--card-bg, #fff);
+  background-color: var(--v4-surface, var(--card-bg, #fff));
   border: 1px solid var(--heys-diary-outline-border-light, rgba(255, 255, 255, 0.5));
   border-radius: 16px;
   box-shadow: var(--heys-diary-glass-card-shadow, 0 2px 12px rgba(0, 0, 0, 0.06));

@@ -269,14 +269,14 @@
 
 .insights-v4 .heys-score-insights-card {
   border-radius: 20px;
-  background: var(--v4-sand-surface-soft, #fffaf1);
+  background: var(--v4-surface);
 }
 
 [data-palette="sand"] .insights-v4-hero,
 [data-palette="sand-dark"] .insights-v4-hero,
 [data-palette="blue"] .insights-v4-hero,
 [data-palette="blue-dark"] .insights-v4-hero {
-  background: var(--v4-sand-hero, #efe3cf);
+  background: var(--v4-hero);
 }
 
 [data-palette="sand"] .insights-v4-attention,
@@ -287,5 +287,5 @@
 [data-palette="sand-dark"] .insights-v4-patterns,
 [data-palette="blue"] .insights-v4-patterns,
 [data-palette="blue-dark"] .insights-v4-patterns {
-  background: var(--v4-sand-surface-soft, #fffaf1);
+  background: var(--v4-surface);
 }
