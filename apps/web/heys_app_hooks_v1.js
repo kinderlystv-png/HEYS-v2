@@ -2217,23 +2217,22 @@
                 if (createWithPin && clientPhone && clientPin) {
                     const created = await createWithPin({ name: clientName, phone: clientPhone, pin: clientPin });
                     if (created && created.ok && created.clientId) {
-                        const result = await fetchClientsFromCloud(userId);
-                        setClients(result.data);
+                        try {
+                            const result = await fetchClientsFromCloud(userId);
+                            setClients(result.data);
+                        } catch (refreshErr) {
+                            console.warn('[HEYS.clients] refresh after create failed:', refreshErr);
+                        }
                         setClientId(created.clientId);
                         writeGlobalValue('heys_client_current', created.clientId);
-                        // 🆕 Сохраняем имя для pre-fill в профиле (без namespace — напрямую в localStorage)
                         try {
                             writeGlobalValue('heys_pending_client_name', clientName);
                         } catch (_) { }
-                        try {
-                            HEYS.Toast?.success('Клиент создан') || alert('✅ Клиент создан');
-                        } catch (_) { }
-	                        return created;
-	                    }
-	                    if (created && created.error) {
-	                        HEYS.Toast?.error('Ошибка создания клиента: ' + created.error) || alert('Ошибка создания клиента: ' + created.error);
-	                        return created;
-	                    }
+                        return created;
+                    }
+                    if (created && created.error) {
+                        return created;
+                    }
                 }
             } catch (e) {
                 // Падаем в fallback insert ниже

@@ -260,6 +260,12 @@
     // перебора). Миграции в репозитории нет — код известен только отсюда.
     pin_login_disabled: { kind: 'explained' },
     access_code_login_required: { kind: 'explained' },
+    access_code_required: { kind: 'explained' },
+    invalid_access_code: { kind: 'wrong_pin' },
+    access_code_rate_limited: { kind: 'rate_limit' },
+    weak_access_code: { kind: 'explained' },
+    access_code_matches_onetime_pin: { kind: 'explained' },
+    invalid_device_id: { kind: 'explained' },
   };
 
   // Приводит серверный отказ к коду для экрана. Незнакомый код НЕ схлопывается
@@ -286,6 +292,181 @@
 
     const isWrongPin = Boolean(known && known.kind === 'wrong_pin');
     return { error, serverError, serverMessage, isWrongPin };
+  }
+
+  const CLIENT_DEVICE_ID_KEY = 'heys_client_device_id_v1';
+  const PEP_ACCEPTED_STORAGE_KEY = 'heys_pep_agreement_accepted_v1_';
+
+  function hasPepAgreementAccepted(clientId) {
+    if (!clientId) return false;
+    try {
+      return localStorage.getItem(PEP_ACCEPTED_STORAGE_KEY + clientId) === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function markPepAgreementAccepted(clientId) {
+    if (!clientId) return;
+    try {
+      localStorage.setItem(PEP_ACCEPTED_STORAGE_KEY + clientId, '1');
+    } catch (_) { }
+  }
+
+  function getClientDeviceId() {
+    try {
+      let v = localStorage.getItem(CLIENT_DEVICE_ID_KEY);
+      if (v && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)) {
+        return v;
+      }
+      if (global.crypto && typeof global.crypto.randomUUID === 'function') {
+        v = global.crypto.randomUUID();
+      } else {
+        v = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+          const r = Math.random() * 16 | 0;
+          const val = c === 'x' ? r : (r & 0x3 | 0x8);
+          return val.toString(16);
+        });
+      }
+      localStorage.setItem(CLIENT_DEVICE_ID_KEY, v);
+      return v;
+    } catch (_) {
+      return '00000000-0000-4000-8000-000000000001';
+    }
+  }
+
+  function extractRpcRow(rawData, rpcName) {
+    if (!rawData) return null;
+    if (rawData[rpcName]) return rawData[rpcName];
+    if (Array.isArray(rawData)) return rawData[0];
+    return rawData;
+  }
+
+  function mapRpcTransportError(vRes, rpcName) {
+    if (vRes.error) {
+      if (vRes.error.code === 'NETWORK_ERROR') {
+        return {
+          ok: false,
+          error: 'network_error',
+          serverError: '',
+          serverMessage: '',
+          isWrongPin: false,
+          _debug: { stage: rpcName, rpc: rpcName, code: vRes.error.code },
+        };
+      }
+      const transport = classifyServerLoginError(vRes.error.message, vRes.error.raw && vRes.error.raw.message);
+      return {
+        ok: false,
+        error: transport.error,
+        serverError: transport.serverError,
+        serverMessage: transport.serverMessage,
+        isWrongPin: transport.isWrongPin,
+        _debug: { stage: rpcName, rpc: rpcName, code: vRes.error.code, message: vRes.error.message },
+      };
+    }
+    return null;
+  }
+
+  async function finalizeClientLogin({ clientId, sessionToken, clientName, phoneNorm, api, rpcName }) {
+    if (!clientId || !sessionToken) {
+      return {
+        ok: false,
+        error: 'session_not_issued',
+        _debug: {
+          stage: rpcName,
+          rpc: rpcName,
+          hasClientId: !!clientId,
+          hasSessionToken: !!sessionToken,
+        },
+      };
+    }
+
+    try {
+      const cleanup = await api.curatorLogout?.();
+      if (cleanup && cleanup.ok === false) {
+        throw new Error(cleanup.error?.message || cleanup.error?.error || 'role_switch_cleanup_failed');
+      }
+    } catch (cleanupErr) {
+      try { await api.clientLogout?.(); } catch (_) { /* rollback best-effort */ }
+      return {
+        ok: false,
+        error: 'role_switch_cleanup_failed',
+        _debug: {
+          stage: 'clear_curator_cookie',
+          message: cleanupErr?.message || String(cleanupErr || ''),
+        },
+      };
+    }
+
+    setSessionToken(sessionToken);
+
+    try {
+      localStorage.setItem('heys_pin_auth_client', clientId);
+      setCookieSessionHint('pin', true);
+    } catch (_) { }
+
+    if (clientName) {
+      localStorage.setItem('heys_pending_client_name', JSON.stringify(clientName));
+    }
+
+    window.dispatchEvent(new Event('heys:auth-changed'));
+    console.info(`[HEYS.auth] 🔐 Вход выполнен: ${clientId.slice(0, 8)}***`);
+
+    return { ok: true, clientId, sessionToken, clientName, phone: phoneNorm };
+  }
+
+  async function callLoginClientV1(api, phoneNorm, deviceId, accessCode) {
+    const vRes = await api.rpc('login_client_v1', {
+      p_phone: phoneNorm,
+      p_device_id: deviceId,
+      p_access_code: accessCode || null,
+    });
+    const transportErr = mapRpcTransportError(vRes, 'login_client_v1');
+    if (transportErr) return { row: null, transportErr };
+
+    const row = extractRpcRow(vRes.data, 'login_client_v1');
+    if (!row?.success) {
+      const rejected = classifyServerLoginError(row?.error, row?.message);
+      return {
+        row,
+        transportErr: {
+          ok: false,
+          error: rejected.error,
+          serverError: rejected.serverError,
+          serverMessage: rejected.serverMessage,
+          isWrongPin: rejected.isWrongPin,
+          _debug: { stage: 'login_client_v1', rpc: 'login_client_v1', serverError: row?.error },
+        },
+      };
+    }
+    return { row, transportErr: null };
+  }
+
+  async function callVerifyClientOnetimePin(api, phoneNorm, pin, deviceId) {
+    const vRes = await api.rpc('verify_client_onetime_pin', {
+      p_phone: phoneNorm,
+      p_pin: pin,
+      p_device_id: deviceId,
+    });
+    const transportErr = mapRpcTransportError(vRes, 'verify_client_onetime_pin');
+    if (transportErr) return { row: null, transportErr };
+
+    const row = extractRpcRow(vRes.data, 'verify_client_onetime_pin');
+    if (!row?.success) {
+      const rejected = classifyServerLoginError(row?.error, row?.message);
+      return {
+        row,
+        transportErr: {
+          ok: false,
+          error: rejected.error,
+          serverError: rejected.serverError,
+          serverMessage: rejected.serverMessage,
+          isWrongPin: rejected.isWrongPin,
+          _debug: { stage: 'verify_client_onetime_pin', rpc: 'verify_client_onetime_pin', serverError: row?.error },
+        },
+      };
+    }
+    return { row, transportErr: null };
   }
 
   async function loginClient({ phone, pin }) {
@@ -333,126 +514,93 @@
     }
 
     try {
-      // v3: одношаговая авторизация (сервер сам хеширует PIN)
-      const vRes = await api.rpc('verify_client_pin_v3', {
-        p_phone: phoneNorm,
-        p_pin: pin,
-      });
+      const deviceId = getClientDeviceId();
 
-      if (vRes.error) {
-        // Транспорт: `error.message` — это код из тела ответа (`data.error`),
-        // а человеческий текст, если сервер его прислал, лежит в `error.raw`.
-        const transport = vRes.error.code === 'NETWORK_ERROR'
-          ? { error: 'network_error', serverError: '', serverMessage: '', isWrongPin: false }
-          : classifyServerLoginError(vRes.error.message, vRes.error.raw && vRes.error.raw.message);
-        // В локальный счётчик идёт только реально неверный код. Иначе падение
-        // бэкенда запирало бы человека в его же браузере после десяти попыток,
-        // хотя он ни разу не ошибся. Перебор PIN это не ослабляет: подбор
-        // всегда даёт invalid_credentials, а настоящая защита — серверная
-        // блокировка по номеру клиента.
-        if (transport.isWrongPin) registerFail('login', phoneNorm);
-        return {
-          ok: false,
-          error: transport.error,
-          serverError: transport.serverError,
-          serverMessage: transport.serverMessage,
-          _debug: {
-            stage: 'verify_pin',
-            rpc: 'verify_client_pin_v3',
-            code: vRes.error.code,
-            message: vRes.error.message,
-          },
-        };
+      let attempt = await callLoginClientV1(api, phoneNorm, deviceId, null);
+      if (attempt.row?.success) {
+        return finalizeClientLogin({
+          clientId: attempt.row.client_id,
+          sessionToken: attempt.row.session_token,
+          clientName: attempt.row.name || attempt.row.client_name || '',
+          phoneNorm,
+          api,
+          rpcName: 'login_client_v1',
+        });
       }
 
-      // YandexAPI возвращает { verify_client_pin_v3: { success, client_id, ... } }
-      const rawData = vRes.data;
-      const vRow = rawData?.verify_client_pin_v3 || (Array.isArray(rawData) ? rawData[0] : rawData);
+      let serverError = attempt.row?.error || attempt.transportErr?.serverError || '';
 
-      // v3 возвращает { success, client_id, session_token, error }
-      if (!vRow?.success) {
-        const rejected = classifyServerLoginError(vRow?.error, vRow?.message);
-        if (rejected.isWrongPin) registerFail('login', phoneNorm);
-        return {
-          ok: false,
-          error: rejected.error,
-          serverError: rejected.serverError,
-          serverMessage: rejected.serverMessage,
-          _debug: {
-            stage: 'verify_pin',
-            rpc: 'verify_client_pin_v3',
-            serverError: vRow?.error,
-          },
-        };
-      }
-
-      const clientId = vRow.client_id;
-      const sessionToken = vRow.session_token;
-      const clientName = vRow.name || vRow.client_name || ''; // Имя введённое куратором при создании
-
-      if (!clientId || !sessionToken) {
-        // Сервер подтвердил код, но не выдал сессию — это сбой на стороне
-        // сервера, а не неверный PIN. Отдельный код, чтобы экран не отправлял
-        // клиента вспоминать несуществующую ошибку в PIN; в счётчик неудач
-        // такая попытка не идёт — PIN человек ввёл правильный.
-        return {
-          ok: false,
-          error: 'session_not_issued',
-          _debug: {
-            stage: 'verify_pin',
-            rpc: 'verify_client_pin_v3',
-            hasClientId: !!clientId,
-            hasSessionToken: !!sessionToken,
-          },
-        };
-      }
-
-      // HttpOnly curator cookie cannot be removed through localStorage. After
-      // a successful PIN login clear it server-side, otherwise a stale curator
-      // cookie can coexist with the new client session.
-      try {
-        const cleanup = await api.curatorLogout?.();
-        if (cleanup && cleanup.ok === false) {
-          throw new Error(cleanup.error?.message || cleanup.error?.error || 'role_switch_cleanup_failed');
+      if (serverError === 'access_code_required') {
+        attempt = await callLoginClientV1(api, phoneNorm, deviceId, pin);
+        if (attempt.row?.success) {
+          return finalizeClientLogin({
+            clientId: attempt.row.client_id,
+            sessionToken: attempt.row.session_token,
+            clientName: attempt.row.name || attempt.row.client_name || '',
+            phoneNorm,
+            api,
+            rpcName: 'login_client_v1',
+          });
         }
-      } catch (cleanupErr) {
-        try { await api.clientLogout?.(); } catch (_) { /* rollback best-effort */ }
-        return {
-          ok: false,
-          error: 'role_switch_cleanup_failed',
-          _debug: {
-            stage: 'clear_curator_cookie',
-            message: cleanupErr?.message || String(cleanupErr || ''),
-          },
-        };
+        if (attempt.transportErr) {
+          if (attempt.transportErr.isWrongPin) registerFail('login', phoneNorm);
+          return attempt.transportErr;
+        }
+        serverError = attempt.row?.error || '';
       }
 
-      // 🔐 Сохраняем session_token для безопасных RPC вызовов
-      setSessionToken(sessionToken);
-
-      // 🔐 Сохраняем PIN-клиента заранее (на случай сбоя switchClient)
-      try {
-        localStorage.setItem('heys_pin_auth_client', clientId);
-        setCookieSessionHint('pin', true);
-      } catch (_) { }
-
-      // 💡 Сохраняем имя клиента для предзаполнения профиля
-      // ⚠️ v1.15 FIX: Используем localStorage.setItem напрямую (без namespace),
-      // т.к. heys_profile_step_v1.js читает через localStorage.getItem('heys_pending_client_name')
-      if (clientName) {
-        localStorage.setItem('heys_pending_client_name', JSON.stringify(clientName));
+      if (serverError === 'access_code_not_set') {
+        const onetime = await callVerifyClientOnetimePin(api, phoneNorm, pin, deviceId);
+        if (onetime.row?.success) {
+          if (onetime.row.needs_access_code) {
+            setSessionToken(onetime.row.session_token);
+            try {
+              localStorage.setItem('heys_pin_auth_client', onetime.row.client_id);
+              setCookieSessionHint('pin', true);
+            } catch (_) { }
+            return {
+              ok: false,
+              error: 'needs_access_code_setup',
+              clientId: onetime.row.client_id,
+              sessionToken: onetime.row.session_token,
+              phone: phoneNorm,
+              skipPepAgreement: hasPepAgreementAccepted(onetime.row.client_id),
+            };
+          }
+          return finalizeClientLogin({
+            clientId: onetime.row.client_id,
+            sessionToken: onetime.row.session_token,
+            clientName: onetime.row.name || onetime.row.client_name || '',
+            phoneNorm,
+            api,
+            rpcName: 'verify_client_onetime_pin',
+          });
+        }
+        if (onetime.transportErr) {
+          if (onetime.transportErr.isWrongPin) registerFail('login', phoneNorm);
+          return onetime.transportErr;
+        }
       }
 
-      // 📡 Notify components about auth state change (for curator status refresh)
-      window.dispatchEvent(new Event('heys:auth-changed'));
+      if (attempt.transportErr) {
+        if (attempt.transportErr.isWrongPin) registerFail('login', phoneNorm);
+        return attempt.transportErr;
+      }
 
-      console.info(`[HEYS.auth] 🔐 Вход выполнен: ${clientId.slice(0, 8)}***`);
-
-      return { ok: true, clientId, sessionToken, clientName };
+      const rejected = classifyServerLoginError(serverError, attempt.row?.message);
+      if (rejected.isWrongPin) registerFail('login', phoneNorm);
+      return {
+        ok: false,
+        error: rejected.error,
+        serverError: rejected.serverError,
+        serverMessage: rejected.serverMessage,
+        _debug: {
+          stage: 'login_client_v1',
+          rpc: 'login_client_v1',
+          serverError,
+        },
+      };
     } catch (e) {
-      // Исключение — сбой на нашей стороне, а не ошибка человека: в счётчик
-      // неудач не идёт. Текст исключения остаётся в _debug и не показывается:
-      // на экране от него нет пользы, а внутренности он выдаёт.
       return {
         ok: false,
         error: 'exception',
@@ -460,6 +608,66 @@
       };
     }
   }
+
+  async function setClientAccessCode({ accessCode, sessionToken, clientId, phone }) {
+    if (!validatePinStrict(accessCode)) {
+      return { ok: false, error: 'weak_access_code' };
+    }
+
+    const api = HEYS.YandexAPI;
+    if (!api) {
+      return { ok: false, error: 'api_not_ready' };
+    }
+
+    const token = sessionToken || getSessionToken();
+    if (!token) {
+      return { ok: false, error: 'session_not_issued' };
+    }
+
+    const deviceId = getClientDeviceId();
+    const phoneNorm = phone ? normalizePhone(phone) : null;
+
+    try {
+      const res = await api.rpc('set_client_access_code', {
+        p_session_token: token,
+        p_access_code: accessCode,
+        p_device_id: deviceId,
+      });
+
+      const transportErr = mapRpcTransportError(res, 'set_client_access_code');
+      if (transportErr) return transportErr;
+
+      const row = extractRpcRow(res.data, 'set_client_access_code');
+      if (!row?.success) {
+        const rejected = classifyServerLoginError(row?.error, row?.message);
+        return {
+          ok: false,
+          error: rejected.error,
+          serverError: rejected.serverError,
+          serverMessage: rejected.serverMessage,
+          _debug: { stage: 'set_client_access_code', serverError: row?.error },
+        };
+      }
+
+      markPepAgreementAccepted(clientId || row.client_id);
+
+      return finalizeClientLogin({
+        clientId: clientId || row.client_id,
+        sessionToken: token,
+        clientName: '',
+        phoneNorm: phoneNorm || '',
+        api,
+        rpcName: 'set_client_access_code',
+      });
+    } catch (e) {
+      return {
+        ok: false,
+        error: 'exception',
+        _debug: { stage: 'set_client_access_code', message: e?.message || String(e) },
+      };
+    }
+  }
+
 
   async function createClientWithPin({ name, phone, pin }) {
     const phoneNorm = normalizePhone(phone);
@@ -490,7 +698,7 @@
       return { ok: false, error: 'server_error', message: res.error.message };
     }
 
-    const row = Array.isArray(res.data) ? res.data[0] : res.data;
+    const row = extractRpcRow(res.data, 'create_client_with_pin');
     const clientId = row && (row.client_id || row.id);
     const pinToken = row && (row.pin_token || row.pinToken);
     const botUsername = HEYS.config?.clientBotUsername || 'heyslab_bot';
@@ -657,6 +865,8 @@
     generateSalt,
     hashPin,
     loginClient,
+    setClientAccessCode,
+    getClientDeviceId,
     // Контракт кодов отказа на входе: читает тест, сверяющий его с SQL и с
     // ветками экрана входа.
     LOGIN_SERVER_ERRORS,

@@ -1,5 +1,5 @@
 /**
- * Production-path tests for HEYS.auth.loginClient (verify_client_pin_v3).
+ * Production-path tests for HEYS.auth.loginClient (login_client_v1 + onetime PIN).
  * Loads real heys_auth_v1.js IIFE with mocked localStorage, YandexAPI.rpc.
  * Uses default happy-dom environment (window + Event).
  */
@@ -38,7 +38,7 @@ function loadAuthModule() {
     eval(source);
 }
 
-describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
+describe('HEYS.auth.loginClient (login_client_v1 + onetime PIN)', () => {
     let mockStorage;
     let rpc;
     let curatorLogout;
@@ -94,6 +94,46 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
         await vi.advanceTimersByTimeAsync(900);
     }
 
+    function mockLoginNotConfigured() {
+        rpc.mockResolvedValueOnce({
+            data: { login_client_v1: { success: false, error: 'access_code_not_set' } },
+            error: null,
+        });
+    }
+
+    function mockTrustedLogin(row = {}) {
+        rpc.mockResolvedValueOnce({
+            data: {
+                login_client_v1: {
+                    success: true,
+                    client_id: 'client-uuid-1',
+                    session_token: 'session-token-abc',
+                    name: 'Иван',
+                    ...row,
+                },
+            },
+            error: null,
+        });
+    }
+
+    function mockOnetimeLogin(row = {}) {
+        mockLoginNotConfigured();
+        rpc.mockResolvedValueOnce({
+            data: {
+                verify_client_onetime_pin: {
+                    success: true,
+                    client_id: 'client-uuid-1',
+                    session_token: 'session-token-abc',
+                    needs_access_code: false,
+                    name: 'Иван',
+                    ...row,
+                },
+            },
+            error: null,
+        });
+    }
+
+
     it('returns invalid_phone before RPC', async () => {
         const p = window.HEYS.auth.loginClient({ phone: '123', pin: '1234' });
         await flushLoginDelay();
@@ -143,18 +183,18 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
         expect(result).toMatchObject({
             ok: false,
             error: 'rate_limited',
-            _debug: { stage: 'verify_pin', rpc: 'verify_client_pin_v3' },
+            _debug: { stage: 'login_client_v1', rpc: 'login_client_v1' },
         });
-        expect(rpc).toHaveBeenCalledWith('verify_client_pin_v3', {
+        expect(rpc).toHaveBeenCalledWith('login_client_v1', expect.objectContaining({
             p_phone: '79991234567',
-            p_pin: '1234',
-        });
+        }));
     });
 
     it('maps other RPC errors to invalid_credentials', async () => {
-        rpc.mockResolvedValue({
-            data: null,
-            error: { message: 'invalid_credentials', code: 401 },
+        mockLoginNotConfigured();
+        rpc.mockResolvedValueOnce({
+            data: { verify_client_onetime_pin: { success: false, error: 'invalid_credentials' } },
+            error: null,
         });
         const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
         await flushLoginDelay();
@@ -166,8 +206,9 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
     });
 
     it('maps server vRow.error rate_limited to rate_limited', async () => {
-        rpc.mockResolvedValue({
-            data: { verify_client_pin_v3: { success: false, error: 'rate_limited' } },
+        mockLoginNotConfigured();
+        rpc.mockResolvedValueOnce({
+            data: { verify_client_onetime_pin: { success: false, error: 'rate_limited' } },
             error: null,
         });
         const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
@@ -177,10 +218,7 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
     });
 
     it('returns session_not_issued (not invalid_credentials) when success but missing client_id or session_token', async () => {
-        rpc.mockResolvedValue({
-            data: { verify_client_pin_v3: { success: true, client_id: null, session_token: 'tok' } },
-            error: null,
-        });
+        mockTrustedLogin({ client_id: null, session_token: 'tok' });
         const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
         await flushLoginDelay();
         const result = await p;
@@ -195,9 +233,10 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
     // другой серверный код обязан доехать до экрана вместе с текстом сервера —
     // иначе клиент решит, что забыл код (инцидент 2026-08-11).
     it('passes pin_login_disabled through with the server message', async () => {
-        rpc.mockResolvedValue({
+        mockLoginNotConfigured();
+        rpc.mockResolvedValueOnce({
             data: {
-                verify_client_pin_v3: {
+                verify_client_onetime_pin: {
                     success: false,
                     error: 'pin_login_disabled',
                     message: 'Вход по PIN временно отключён. Куратор откроет доступ после обновления входа.',
@@ -217,9 +256,9 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
     });
 
     it('maps server pin_rate_limited to rate_limited and keeps the server message', async () => {
-        rpc.mockResolvedValue({
+        rpc.mockResolvedValueOnce({
             data: {
-                verify_client_pin_v3: {
+                login_client_v1: {
                     success: false,
                     error: 'pin_rate_limited',
                     message: 'Слишком много попыток. Попробуйте позже или напишите куратору.',
@@ -239,9 +278,10 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
     });
 
     it('does not collapse an unknown server code into invalid_credentials', async () => {
-        rpc.mockResolvedValue({
+        mockLoginNotConfigured();
+        rpc.mockResolvedValueOnce({
             data: {
-                verify_client_pin_v3: {
+                verify_client_onetime_pin: {
                     success: false,
                     error: 'client_archived',
                     message: 'Доступ закрыт куратором.',
@@ -260,8 +300,9 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
     });
 
     it('still reports invalid_credentials when the server gives no reason at all', async () => {
-        rpc.mockResolvedValue({
-            data: { verify_client_pin_v3: { success: false } },
+        mockLoginNotConfigured();
+        rpc.mockResolvedValueOnce({
+            data: { verify_client_onetime_pin: { success: false } },
             error: null,
         });
         const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
@@ -304,29 +345,18 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
         mockStorage.setItem('heys_supabase_auth_token', JSON.stringify({ access_token: 'x' }));
         mockStorage.setItem('heys_curator_session', 'curator-jwt-stale');
 
-        rpc.mockResolvedValue({
-            data: {
-                verify_client_pin_v3: {
-                    success: true,
-                    client_id: 'client-uuid-1',
-                    session_token: 'session-token-abc',
-                    name: 'Иван',
-                },
-            },
-            error: null,
-        });
+        mockTrustedLogin();
 
         const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
         await flushLoginDelay();
         const result = await p;
 
-        // sessionToken всё ещё возвращается в response body — backward-compat для
-        // caller'ов которые читали его из payload. Не значит что он осел в LS.
-        expect(result).toEqual({
+        expect(result).toMatchObject({
             ok: true,
             clientId: 'client-uuid-1',
             sessionToken: 'session-token-abc',
             clientName: 'Иван',
+            phone: '79991234567',
         });
 
         expect(mockStorage.removeItem).toHaveBeenCalledWith('heys_supabase_auth_token');
@@ -354,18 +384,7 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
             ok: false,
             error: { message: 'cleanup_failed' },
         });
-        rpc.mockResolvedValue({
-            data: {
-                verify_client_pin_v3: {
-                    success: true,
-                    client_id: 'client-uuid-1',
-                    session_token: 'session-token-abc',
-                    name: 'Иван',
-                },
-            },
-            error: null,
-        });
-
+        mockTrustedLogin();
         const p = window.HEYS.auth.loginClient({ phone: '+7 999 123-45-67', pin: '1234' });
         await flushLoginDelay();
         const result = await p;
@@ -409,15 +428,25 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
     });
 
     it('does not lock the browser while PIN login is disabled server-side', async () => {
-        rpc.mockResolvedValue({
-            data: {
-                verify_client_pin_v3: {
-                    success: false,
-                    error: 'pin_login_disabled',
-                    message: 'Вход по PIN временно отключён.',
+        let call = 0;
+        rpc.mockImplementation(() => {
+            call += 1;
+            if (call % 2 === 1) {
+                return Promise.resolve({
+                    data: { login_client_v1: { success: false, error: 'access_code_not_set' } },
+                    error: null,
+                });
+            }
+            return Promise.resolve({
+                data: {
+                    verify_client_onetime_pin: {
+                        success: false,
+                        error: 'pin_login_disabled',
+                        message: 'Вход по PIN временно отключён.',
+                    },
                 },
-            },
-            error: null,
+                error: null,
+            });
         });
 
         await attemptTimes(10);
@@ -428,12 +457,12 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
         const result = await p;
 
         expect(result).toMatchObject({ ok: false, error: 'pin_login_disabled' });
-        expect(rpc).toHaveBeenCalledTimes(1);
+        expect(rpc).toHaveBeenCalledTimes(2);
     });
 
     it('does not lock the browser when the server fails to issue a session', async () => {
         rpc.mockResolvedValue({
-            data: { verify_client_pin_v3: { success: true, client_id: null, session_token: null } },
+            data: { login_client_v1: { success: true, client_id: null, session_token: null } },
             error: null,
         });
 
@@ -464,11 +493,19 @@ describe('HEYS.auth.loginClient (verify_client_pin_v3)', () => {
     });
 
     it('rate limits locally after 10 failed RPC attempts (11th does not call RPC)', async () => {
-        // invalid_credentials больше не идёт в локальный счётчик (kind explained);
-        // перебор PIN на сервере даёт wrong_pin / invalid_pin.
-        rpc.mockResolvedValue({
-            data: null,
-            error: { message: 'wrong_pin', code: 401 },
+        let call = 0;
+        rpc.mockImplementation(() => {
+            call += 1;
+            if (call % 2 === 1) {
+                return Promise.resolve({
+                    data: { login_client_v1: { success: false, error: 'access_code_required' } },
+                    error: null,
+                });
+            }
+            return Promise.resolve({
+                data: null,
+                error: { message: 'invalid_access_code', code: 401 },
+            });
         });
 
         const phone = '+7 999 123-45-67';

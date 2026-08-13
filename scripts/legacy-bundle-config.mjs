@@ -168,6 +168,7 @@ export const LEGACY_BUNDLES = {
         'heys_paywall_v1.js',
         'heys_login_theme_picker_v1.js',
         'heys_login_screen_v1.js',
+        'heys_client_access_code_setup_v1.js',
         'heys_ui_onboarding_v1.js',
         'heys_app_hooks_v1.js',
         'heys_app_tabs_v1.js',

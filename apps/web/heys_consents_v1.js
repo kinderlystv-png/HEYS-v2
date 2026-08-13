@@ -206,6 +206,17 @@
           if (result.error) throw new Error(result.error?.message || result.error);
           console.log('[Consents] ✅ Logged:', result);
           const payload = result.data?.log_consents_by_session || result.data;
+          if (payload?.success === false) {
+            const errCode = payload.error || '';
+            if (errCode === 'signing_requires_access_code' || errCode === 'pin_confirm_requires_access_code') {
+              return {
+                success: false,
+                error: errCode,
+                needsAccessCode: true,
+                data: result.data,
+              };
+            }
+          }
           return { success: payload?.success ?? !result.error, data: result.data };
         }
 
@@ -213,6 +224,28 @@
         return { success: false, error: 'No API client' };
       } catch (err) {
         console.error('[Consents] ❌ Error logging:', err);
+        return { success: false, error: err.message };
+      }
+    },
+
+    async signConsentsWithAccessCode(consents, accessCode) {
+      try {
+        if (!HEYS.YandexAPI?.signConsentsWithAccessCodeBySession) {
+          return { success: false, error: 'API not ready' };
+        }
+        const result = await HEYS.YandexAPI.signConsentsWithAccessCodeBySession(
+          consents,
+          accessCode,
+          typeof navigator !== 'undefined' ? navigator.userAgent : null
+        );
+        if (result.error) throw new Error(result.error?.message || result.error);
+        const payload = result.data?.sign_consents_with_access_code_by_session || result.data;
+        if (payload?.success === false) {
+          throw new Error(payload.error || payload.message || 'sign_failed');
+        }
+        return { success: true, data: payload };
+      } catch (err) {
+        console.error('[Consents] ❌ Error signing with access code:', err);
         return { success: false, error: err.message };
       }
     },
@@ -440,6 +473,33 @@
       onComplete?.(consentList);
     }, [buildConsentList, onComplete]);
 
+    const finishConsentFlow = useCallback(async (consentList) => {
+      if (notificationsOptIn && HEYS.push) {
+        HEYS.push.subscribe().then((r) => {
+          if (r && r.reason === 'ios_needs_install') {
+            try { localStorage.setItem('heys_push_pending_install', '1'); } catch (_) { /* noop */ }
+          }
+        }).catch((err) =>
+          console.warn('[Consents] push.subscribe failed:', err?.message)
+        );
+      }
+      onComplete?.(consentList);
+    }, [notificationsOptIn, onComplete]);
+
+    const persistConsentsOrRequestAccessCode = useCallback(async (consentList) => {
+      const result = await consentsAPI.logConsents(clientId, consentList);
+      if (result.needsAccessCode) {
+        setStep('access_code_sign');
+        setAccessSignCode('');
+        return { deferred: true };
+      }
+      if (!result.success) {
+        throw new Error(result.error || 'Ошибка сохранения согласий');
+      }
+      consentsAPI.saveLocal(clientId, consentList);
+      return { deferred: false, consentList };
+    }, [clientId]);
+
     useEffect(() => {
       HEYS.BlankScreenGuard?.reportVisibleFrame?.({
         element: screenRef.current,
@@ -450,6 +510,7 @@
 
     // SMS verification state
     const [code, setCode] = useState('');
+    const [accessSignCode, setAccessSignCode] = useState('');
     const [codeSent, setCodeSent] = useState(false);
     const [resendTimer, setResendTimer] = useState(0);
     const codeInputRef = useRef(null);
@@ -540,38 +601,17 @@
         // заново — это часть будущей схемы подписи, не текущей.
         const consentList = buildConsentList('checkbox');
 
-        // Логируем в Supabase
-        const result = await consentsAPI.logConsents(clientId, consentList);
+        const persisted = await persistConsentsOrRequestAccessCode(consentList);
+        if (persisted.deferred) return;
 
-        if (!result.success) {
-          throw new Error(result.error || 'Ошибка сохранения согласий');
-        }
-
-        // Сохраняем локально
-        consentsAPI.saveLocal(clientId, consentList);
-
-        // Push opt-in (если пользователь согласился во время онбординга).
-        if (notificationsOptIn && HEYS.push) {
-          HEYS.push.subscribe().then((r) => {
-            // iOS Safari вне PWA — нельзя подписаться. Запоминаем, что юзер
-            // хотел уведомления, и попросим заново после установки PWA.
-            if (r && r.reason === 'ios_needs_install') {
-              try { localStorage.setItem('heys_push_pending_install', '1'); } catch (_) { /* noop */ }
-            }
-          }).catch((err) =>
-            console.warn('[Consents] push.subscribe failed:', err?.message)
-          );
-        }
-
-        // Успех!
-        onComplete?.(consentList);
+        await finishConsentFlow(consentList);
       } catch (err) {
         setError(err.message);
         onError?.(err);
       } finally {
         setLoading(false);
       }
-    }, [clientId, phone, code, buildConsentList, isReadonlyHost, completeWithoutWrite, notificationsOptIn, onComplete, onError]);
+    }, [clientId, phone, code, buildConsentList, isReadonlyHost, completeWithoutWrite, finishConsentFlow, persistConsentsOrRequestAccessCode, onError]);
 
     // Переход к шагу верификации
     const handleProceedToVerify = useCallback(async () => {
@@ -592,26 +632,10 @@
         try {
           const consentList = buildConsentList('checkbox');
 
-          const result = await consentsAPI.logConsents(clientId, consentList);
-          if (!result.success) throw new Error(result.error || 'Ошибка сохранения согласий');
+          const persisted = await persistConsentsOrRequestAccessCode(consentList);
+          if (persisted.deferred) return;
 
-          consentsAPI.saveLocal(clientId, consentList);
-
-          // Push opt-in: если пользователь согласился — подписываемся.
-          // Не блокируем onComplete если подписка не получится (например, iOS без install).
-          if (notificationsOptIn && HEYS.push) {
-            HEYS.push.subscribe().then(
-              (r) => {
-                console.info('[Consents] push.subscribe →', r);
-                if (r && r.reason === 'ios_needs_install') {
-                  try { localStorage.setItem('heys_push_pending_install', '1'); } catch (_) { /* noop */ }
-                }
-              },
-              (err) => console.warn('[Consents] push.subscribe failed:', err?.message)
-            );
-          }
-
-          onComplete?.(consentList);
+          await finishConsentFlow(consentList);
         } catch (err) {
           setError(err.message || 'Неизвестная ошибка');
           onError?.(err);
@@ -627,7 +651,7 @@
       await sendVerificationCode();
       // Фокус на поле ввода
       setTimeout(() => codeInputRef.current?.focus(), 100);
-    }, [allRequiredAccepted, buildConsentList, clientId, phone, isReadonlyHost, completeWithoutWrite, notificationsOptIn, onComplete, onError, sendVerificationCode]);
+    }, [allRequiredAccepted, buildConsentList, clientId, phone, isReadonlyHost, completeWithoutWrite, finishConsentFlow, persistConsentsOrRequestAccessCode, onError, sendVerificationCode]);
 
     // Старый handleSubmit для обратной совместимости (без верификации)
     const handleSubmit = useCallback(async () => {
@@ -645,38 +669,53 @@
         // Формируем массив согласий
         const consentList = buildConsentList('checkbox');
 
-        // Логируем в Supabase
-        const result = await consentsAPI.logConsents(clientId, consentList);
+        const persisted = await persistConsentsOrRequestAccessCode(consentList);
+        if (persisted.deferred) return;
 
-        if (!result.success) {
-          throw new Error(result.error || 'Ошибка сохранения согласий');
-        }
-
-        // Сохраняем локально
-        consentsAPI.saveLocal(clientId, consentList);
-
-        // Push opt-in (если пользователь согласился во время онбординга).
-        if (notificationsOptIn && HEYS.push) {
-          HEYS.push.subscribe().then((r) => {
-            // iOS Safari вне PWA — нельзя подписаться. Запоминаем, что юзер
-            // хотел уведомления, и попросим заново после установки PWA.
-            if (r && r.reason === 'ios_needs_install') {
-              try { localStorage.setItem('heys_push_pending_install', '1'); } catch (_) { /* noop */ }
-            }
-          }).catch((err) =>
-            console.warn('[Consents] push.subscribe failed:', err?.message)
-          );
-        }
-
-        // Успех!
-        onComplete?.(consentList);
+        await finishConsentFlow(consentList);
       } catch (err) {
         setError(err.message);
         onError?.(err);
       } finally {
         setLoading(false);
       }
-    }, [clientId, buildConsentList, allRequiredAccepted, isReadonlyHost, completeWithoutWrite, notificationsOptIn, onComplete, onError]);
+    }, [clientId, buildConsentList, allRequiredAccepted, isReadonlyHost, completeWithoutWrite, finishConsentFlow, persistConsentsOrRequestAccessCode, onError]);
+
+    const handleAccessCodeSign = useCallback(async () => {
+      if (!HEYS.auth?.validatePinStrict?.(accessSignCode)) {
+        setError('Введите код доступа из 4 цифр');
+        return;
+      }
+
+      if (isReadonlyHost) {
+        completeWithoutWrite();
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const signList = await buildConsentListForSigning(consents);
+        if (!signList.length) {
+          throw new Error('Нет документов для подписи');
+        }
+        const result = await consentsAPI.signConsentsWithAccessCode(signList, accessSignCode);
+        if (!result.success) {
+          const msg = result.error === 'invalid_access_code'
+            ? 'Код доступа не подошёл'
+            : (result.error || 'Не удалось подписать документы');
+          throw new Error(msg);
+        }
+        consentsAPI.saveLocal(clientId, signList);
+        await finishConsentFlow(signList);
+      } catch (err) {
+        setError(err.message);
+        onError?.(err);
+      } finally {
+        setLoading(false);
+      }
+    }, [accessSignCode, clientId, consents, finishConsentFlow, isReadonlyHost, completeWithoutWrite, onError]);
 
     return React.createElement('div', {
       ref: screenRef,
@@ -692,15 +731,19 @@
         React.createElement('h1', {
           className: 'text-xl font-semibold',
           style: { color: '#18181b' }
-        }, step === 'verify_code' ? '📱 Подтверждение' : '📋 Согласия и условия'),
+        }, step === 'access_code_sign'
+          ? '✍️ Подпись документов'
+          : (step === 'verify_code' ? '📱 Подтверждение' : '📋 Согласия и условия'),
         React.createElement('p', {
           className: 'text-sm mt-1',
           style: { color: '#71717a' }
-        }, step === 'verify_code'
-          ? 'Введите код из SMS для подтверждения согласия на обработку данных о здоровье'
-          : hasOutdatedDocuments
-            ? 'Проверьте содержание документов и подтвердите актуальные условия'
-            : 'Коротко объяснили каждый пункт. Для продолжения примите обязательные условия')
+        }, step === 'access_code_sign'
+          ? 'Введите код доступа — им вы подписываете документы в приложении'
+          : (step === 'verify_code'
+            ? 'Введите код из SMS для подтверждения согласия на обработку данных о здоровье'
+            : (hasOutdatedDocuments
+              ? 'Проверьте содержание документов и подтвердите актуальные условия'
+              : 'Коротко объяснили каждый пункт. Для продолжения примите обязательные условия')))
       ),
 
       // READONLY: постоянный баннер — эталон для скринов, запись недоступна
@@ -795,6 +838,46 @@
           ),
 
           // Error
+          error && React.createElement('div', {
+            className: 'rounded-xl p-4',
+            style: { backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }
+          }, '❌ ', error)
+        )
+      ) : step === 'access_code_sign' ? (
+        React.createElement('div', {
+          className: 'flex-1 overflow-auto p-4 space-y-4'
+        },
+          React.createElement('div', {
+            className: 'rounded-xl p-4',
+            style: { backgroundColor: '#eff6ff', border: '1px solid #bfdbfe' }
+          },
+            React.createElement('p', {
+              className: 'text-sm',
+              style: { color: '#1e40af' }
+            }, 'Код доступа — ваша простая электронная подпись. Никому его не сообщайте, в том числе куратору.')
+          ),
+          React.createElement('div', { className: 'space-y-2' },
+            React.createElement('label', {
+              className: 'block text-sm font-medium',
+              style: { color: '#3f3f46' }
+            }, 'Код доступа'),
+            React.createElement('input', {
+              type: 'tel',
+              inputMode: 'numeric',
+              pattern: '[0-9]*',
+              maxLength: 4,
+              placeholder: '• • • •',
+              value: accessSignCode,
+              onChange: (e) => setAccessSignCode(e.target.value.replace(/\D/g, '').slice(0, 4)),
+              className: 'w-full px-4 py-4 text-center text-2xl font-bold tracking-widest rounded-xl',
+              style: {
+                border: '2px solid #e5e7eb',
+                outline: 'none',
+                letterSpacing: '0.5em'
+              },
+              disabled: loading
+            })
+          ),
           error && React.createElement('div', {
             className: 'rounded-xl p-4',
             style: { backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }
@@ -909,6 +992,16 @@
               cursor: allRequiredAccepted && !loading ? 'pointer' : 'not-allowed'
             }
           }, loading ? '⏳ Загрузка...' : '✅ Продолжить')
+        ) : step === 'access_code_sign' ? (
+          React.createElement('button', {
+            onClick: handleAccessCodeSign,
+            disabled: accessSignCode.length < 4 || loading,
+            className: 'w-full py-4 rounded-xl font-semibold text-white transition-all',
+            style: {
+              backgroundColor: accessSignCode.length >= 4 && !loading ? '#22c55e' : '#d4d4d8',
+              cursor: accessSignCode.length >= 4 && !loading ? 'pointer' : 'not-allowed'
+            }
+          }, loading ? '⏳ Подписываем...' : '✅ Подписать')
         ) : (
           // Кнопка "Подтвердить" код
           React.createElement('button', {
@@ -926,6 +1019,13 @@
         step === 'verify_code' ? (
           React.createElement('button', {
             onClick: () => { setStep('consents'); setError(null); setCode(''); },
+            disabled: loading,
+            className: 'w-full py-3 rounded-xl font-medium transition-all',
+            style: { color: '#71717a' }
+          }, '← Назад к согласиям')
+        ) : step === 'access_code_sign' ? (
+          React.createElement('button', {
+            onClick: () => { setStep('consents'); setError(null); setAccessSignCode(''); },
             disabled: loading,
             className: 'w-full py-3 rounded-xl font-medium transition-all',
             style: { color: '#71717a' }
@@ -1080,8 +1180,63 @@
       // Отдельный документ согласия на данные о здоровье (152-ФЗ ст.10)
       versioned: buildVersionedDocPath('health-data-consent.md', CURRENT_VERSIONS.health_data),
       latest: buildLatestDocPath('health-data-consent.md', CURRENT_VERSIONS.health_data)
+    },
+    marketing: {
+      versioned: buildVersionedDocPath('marketing-consent.md', CURRENT_VERSIONS.marketing),
+      latest: buildLatestDocPath('marketing-consent.md', CURRENT_VERSIONS.marketing)
     }
   };
+
+  const rawMarkdownCache = {};
+
+  async function fetchConsentDocumentMarkdown(type) {
+    if (rawMarkdownCache[type]) return rawMarkdownCache[type];
+
+    const docInfo = DOC_PATHS[type];
+    if (!docInfo) {
+      throw new Error('document_not_found:' + type);
+    }
+
+    async function fetchMarkdown(url) {
+      const response = await fetch(url, { cache: 'no-store' });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.text();
+    }
+
+    const expectedVersion = CURRENT_VERSIONS[type];
+    let markdown;
+    try {
+      markdown = await fetchMarkdown(docInfo.versioned);
+      if (!isExpectedDocVersion(markdown, expectedVersion)) {
+        throw new Error('DOC_VERSION_MISMATCH');
+      }
+    } catch (_) {
+      markdown = await fetchMarkdown(docInfo.latest);
+      if (!isExpectedDocVersion(markdown, expectedVersion)) {
+        throw new Error('DOC_VERSION_MISMATCH:' + type);
+      }
+    }
+
+    rawMarkdownCache[type] = markdown;
+    return markdown;
+  }
+
+  async function buildConsentListForSigning(consentsState) {
+    const list = [];
+    for (const [type, granted] of Object.entries(consentsState || {})) {
+      if (!granted || !DOC_PATHS[type]) continue;
+      const version = CURRENT_VERSIONS[type] || '1.0';
+      const document_text = await fetchConsentDocumentMarkdown(type);
+      list.push({
+        type,
+        granted: true,
+        version,
+        signature_method: 'pin_confirm',
+        document_text,
+      });
+    }
+    return list;
+  }
 
   // Кеш загруженных документов (с версией)
   const docCache = {};

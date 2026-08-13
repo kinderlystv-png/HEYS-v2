@@ -10,6 +10,13 @@
     supportLead: 'Забыли PIN? ',
   });
 
+  const NEW_DEVICE_LOGIN_COPY = Object.freeze({
+    title: 'Новое устройство',
+    instruction: 'Введите свой код доступа. Это устройство запомнится на 30 дней.',
+    pinLabel: 'Код доступа',
+    supportLead: 'Забыли код? ',
+  });
+
   const TRIAL_INTAKE_LOGIN_COPY = Object.freeze({
     title: 'Вход в анкету',
     instruction: 'Введите номер из заявки и одноразовый код из сообщения куратора.',
@@ -84,6 +91,7 @@
 
     const {
       onClientLogin,
+      onClientSessionReady,
       onCuratorLogin,
       initialMode = 'client',
       initialEmail = '',
@@ -97,6 +105,10 @@
     const LoginThemePicker = HEYS.LoginThemePicker
       && typeof HEYS.LoginThemePicker.createReactComponent === 'function'
       ? HEYS.LoginThemePicker.createReactComponent(React)
+      : null;
+    const AccessCodeSetup = HEYS.ClientAccessCodeSetup
+      && typeof HEYS.ClientAccessCodeSetup.createReactComponent === 'function'
+      ? HEYS.ClientAccessCodeSetup.createReactComponent(React)
       : null;
 
     const [mode, setMode] = useState(initialMode);
@@ -126,6 +138,8 @@
 
 	    const [busy, setBusy] = useState(false);
 	    const [err, setErr] = useState('');
+	    const [accessSetup, setAccessSetup] = useState(null);
+	    const [clientEntryMode, setClientEntryMode] = useState('default');
 	    const [supportOpen, setSupportOpen] = useState(false);
 	    const curatorAutoLoginTriedRef = useRef(false);
     const pinErrorTimers = useRef({ reset: null, clear: null });
@@ -142,7 +156,10 @@
 
     const canClientLogin = clientPhoneValid && clientPinValid && !busy;
     const canCuratorLogin = Boolean(email && password) && !busy;
-    const clientLoginCopy = getClientLoginCopy(isTrialIntakeLogin());
+    const clientLoginCopy = clientEntryMode === 'new_device'
+      ? NEW_DEVICE_LOGIN_COPY
+      : getClientLoginCopy(isTrialIntakeLogin());
+    const pinFieldLabel = clientEntryMode === 'new_device' ? NEW_DEVICE_LOGIN_COPY.pinLabel : 'PIN-код';
 
     function getCuratorAutologinKey() {
       return (curatorAutologinConfig && curatorAutologinConfig.onceKey) || 'heys_temp_curator_autologin_v1';
@@ -333,6 +350,15 @@
         const phoneDigits = fullPhone; // 7 + 10 цифр = 11 цифр
         const effectivePin = typeof pinOverride === 'string' ? pinOverride : pin;
         const res = await onClientLogin({ phone: phoneDigits, pin: effectivePin });
+        if (res && res.error === 'needs_access_code_setup') {
+          setAccessSetup({
+            clientId: res.clientId,
+            sessionToken: res.sessionToken,
+            phone: phoneDigits,
+            skipPepAgreement: res.skipPepAgreement === true,
+          });
+          return;
+        }
         if (!res || res.ok === false) {
           const code = res && res.error;
 
@@ -352,6 +378,20 @@
             setErr(serverMessage || 'Вход по PIN временно отключён. Куратор откроет доступ после обновления входа.');
           } else if (code === 'access_code_login_required') {
             setErr(serverMessage || 'Используйте код доступа или вход с зарегистрированного устройства.');
+          } else if (code === 'access_code_required') {
+            setClientEntryMode('new_device');
+            setErr(serverMessage || 'Введите свой код доступа от этого аккаунта.');
+            resetPinToFirstSlot();
+          } else if (code === 'invalid_access_code') {
+            setErr(
+              serverMessage || 'Код доступа не подошёл. Проверьте цифры или попросите куратора выдать новый одноразовый код.'
+            );
+          } else if (code === 'invalid_device_id') {
+            setErr('Не удалось определить устройство. Обновите страницу и попробуйте снова.');
+          } else if (code === 'weak_access_code' || code === 'access_code_matches_onetime_pin') {
+            setErr('Код слишком простой или совпадает с одноразовым. Придумайте другой.');
+          } else if (code === 'needs_access_code_setup') {
+            setErr('');
           } else if (code === 'onetime_pin_consumed') {
             setErr(serverMessage || 'Этот код уже использован. Попросите куратора выдать новый.');
           } else if (code === 'onetime_pin_expired') {
@@ -831,7 +871,7 @@
 
           // PIN ввод — 4 отдельных поля (как в модных приложениях)
 	          React.createElement('div', { className: 'heys-auth-pin-section space-y-3 ' + (!clientPhoneValid ? 'is-muted ' : '') + (activeEntry === 'pin' ? 'is-active' : '') },
-	            React.createElement('div', { className: 'heys-auth-label text-base' }, 'PIN-код'),
+	            React.createElement('div', { className: 'heys-auth-label text-base' }, pinFieldLabel),
             React.createElement('div', {
               className: 'heys-auth-pin-grid'
             },
@@ -1126,7 +1166,29 @@
       {
         className: 'heys-auth-shell fixed inset-0 z-[9999] flex flex-col items-center justify-center px-5 py-10',
       },
-      mode === 'start'
+      accessSetup && AccessCodeSetup
+        ? React.createElement(AccessCodeSetup, {
+          phone: accessSetup.phone,
+          clientId: accessSetup.clientId,
+          sessionToken: accessSetup.sessionToken,
+          skipPepAgreement: accessSetup.skipPepAgreement,
+          onCancel: () => setAccessSetup(null),
+          onComplete: async (res) => {
+            setBusy(true);
+            try {
+              if (onClientSessionReady) {
+                await onClientSessionReady({
+                  clientId: res.clientId,
+                  phone: accessSetup.phone,
+                });
+              }
+              setAccessSetup(null);
+            } finally {
+              setBusy(false);
+            }
+          },
+        })
+        : mode === 'start'
         ? renderStart()
         : mode === 'client'
           ? renderClientLogin()

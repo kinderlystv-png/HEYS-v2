@@ -70,6 +70,9 @@ apps/web/heys_auth_v1.js::JSON.stringify(v)
 apps/web/heys_auth_v1.js::setItem(key, '1')
 apps/web/heys_auth_v1.js::heys_pin_auth_client
 apps/web/heys_auth_v1.js::heys_pending_client_name
+apps/web/heys_auth_v1.js::CLIENT_DEVICE_ID_KEY
+apps/web/heys_auth_v1.js::PEP_ACCEPTED_STORAGE_KEY
+apps/web/heys_consents_v1.js::localStorage.setItem(key, JSON.stringify(data))
 apps/web/heys_cascade_card_v1.js:1268
 apps/web/heys_cascade_card_v1.js:3864
 apps/web/heys_cascade_card_v1.js:3873

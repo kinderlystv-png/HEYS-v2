@@ -2725,6 +2725,32 @@
   }
 
   /**
+   * Подписать согласия кодом доступа (ПЭП pin_confirm)
+   * @param {Array<{type, version, granted, document_text}>} consents
+   * @param {string} accessCode
+   * @param {string} userAgent
+   */
+  async function signConsentsWithAccessCodeBySession(consents, accessCode, userAgent = null) {
+    try {
+      const deviceId = HEYS.auth?.getClientDeviceId?.() || null;
+      const sessionRpc = buildSessionRpcParams({
+        p_access_code: accessCode,
+        p_consents: JSON.stringify(consents),
+        p_device_id: deviceId,
+        p_ip: null,
+        p_user_agent: userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : null),
+      });
+      if (!sessionRpc.ok) return { data: null, error: { message: 'No session token' } };
+
+      const result = await rpc('sign_consents_with_access_code_by_session', sessionRpc.params);
+      return result;
+    } catch (e) {
+      err('signConsentsWithAccessCodeBySession failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
+  /**
    * Проверить наличие обязательных согласий
    * @param {string} clientId - ID клиента
    * @returns {Promise<{data: {valid, missing}, error: any}>}
@@ -3260,6 +3286,7 @@
 
     // �📝 Consents
     logConsentsBySession,
+    signConsentsWithAccessCodeBySession,
     checkRequiredConsentsBySession,
     revokeConsentBySession,
     deleteMyAccount,

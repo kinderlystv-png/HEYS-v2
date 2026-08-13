@@ -981,8 +981,17 @@
         };
 
         const handleCreate = async () => {
-            const canCreate = newName.trim() && newPhone.trim() && /^\d{4}$/.test(newPin);
-            if (!canCreate || loading) return;
+            const auth = HEYS.auth;
+            const phoneNorm = auth?.normalizePhone ? auth.normalizePhone(newPhone) : newPhone;
+            const canCreate = newName.trim()
+                && auth?.isValidPhone?.(phoneNorm)
+                && /^\d{4}$/.test(newPin);
+            if (!canCreate || loading) {
+                if (newName.trim() && newPhone.trim() && !auth?.isValidPhone?.(phoneNorm)) {
+                    HEYS.Toast?.error?.('Введите корректный номер: 11 цифр, начинается с 7');
+                }
+                return;
+            }
             setLoading(true);
             try {
                 const created = await addClientToCloud({ name: newName, phone: newPhone, pin: newPin });
@@ -998,9 +1007,13 @@
                     });
                     HEYS.Toast?.success?.('Клиент создан');
                 } else if (created?.error) {
-                    HEYS.Toast?.error?.('Ошибка создания: ' + (created.message || created.error));
-                } else {
+                    const msg = created.message || created.error;
+                    HEYS.Toast?.error?.('Ошибка создания: ' + msg);
+                } else if (created?.id && !created?.clientId) {
+                    HEYS.Toast?.success?.('Клиент создан');
                     closeModal();
+                } else if (!created?.ok) {
+                    HEYS.Toast?.error?.('Не удалось создать клиента. Проверьте номер и попробуйте снова.');
                 }
             } finally {
                 setLoading(false);
@@ -1917,6 +1930,53 @@
                         }
                         // Inherit screen choice from HTML gate (curator/client)
                         var _inheritedMode = window.__hlgCurrentScreen === 'curator' ? 'curator' : 'client';
+                        async function finalizeClientSessionAfterLogin(targetClientId, phone) {
+                            const phoneNorm = (HEYS.auth?.normalizePhone?.(phone) || phone);
+                            let resolved = false;
+                            let resolveCriticalReady;
+                            const criticalReadyPromise = new Promise((resolve) => {
+                                resolveCriticalReady = resolve;
+                            });
+                            const finalize = () => {
+                                if (resolved) return;
+                                resolved = true;
+                                writeGlobalValue('heys_last_client_id', targetClientId);
+                                try { writeGlobalValue('heys_client_phone', phoneNorm); } catch (_) { }
+                                try {
+                                    window.HEYS = window.HEYS || {};
+                                    window.HEYS.currentClientId = targetClientId;
+                                } catch (_) { }
+                                setClientId(targetClientId);
+                                try {
+                                    window.dispatchEvent(new CustomEvent('heys:client-changed', {
+                                        detail: { clientId: targetClientId, source: 'pin-login', startVisit: true }
+                                    }));
+                                } catch (_) { }
+                                resolveCriticalReady();
+                            };
+                            const phaseAHandler = (e) => {
+                                if (resolved) return;
+                                if (e && e.detail && e.detail.phaseA && e.detail.clientId === targetClientId) {
+                                    window.removeEventListener('heysSyncCompleted', phaseAHandler);
+                                    finalize();
+                                }
+                            };
+                            window.addEventListener('heysSyncCompleted', phaseAHandler);
+
+                            if (HEYS.cloud && HEYS.cloud.switchClient) {
+                                HEYS.cloud.switchClient(targetClientId)
+                                    .catch(() => { })
+                                    .finally(() => {
+                                        window.removeEventListener('heysSyncCompleted', phaseAHandler);
+                                        finalize();
+                                    });
+                            } else {
+                                try { U.lsSet('heys_client_current', targetClientId); } catch (_) { }
+                                window.removeEventListener('heysSyncCompleted', phaseAHandler);
+                                finalize();
+                            }
+                            await criticalReadyPromise;
+                        }
                         return React.createElement(
                             HEYS.LoginScreen,
                             {
@@ -1941,64 +2001,15 @@
                                     const fn = auth && auth.loginClient;
                                     const res = fn ? await fn({ phone, pin }) : { ok: false, error: 'cloud_not_ready' };
                                     if (res && res.ok && res.clientId) {
-                                        const targetClientId = res.clientId;
-                                        const phoneNorm = (HEYS.auth?.normalizePhone?.(phone) || phone);
-
-                                        // Держим LoginScreen в едином состоянии «Проверяем PIN» до Phase A.
-                                        // Полный sync продолжится в фоне, но промежуточный idle-кадр формы
-                                        // и полусобранный AppShell пользователь больше не увидит.
-                                        let resolved = false;
-                                        let resolveCriticalReady;
-                                        const criticalReadyPromise = new Promise((resolve) => {
-                                            resolveCriticalReady = resolve;
-                                        });
-                                        const finalize = () => {
-                                            if (resolved) return;
-                                            resolved = true;
-                                            writeGlobalValue('heys_last_client_id', targetClientId);
-                                            try { writeGlobalValue('heys_client_phone', phoneNorm); } catch (_) { }
-                                            // Sync HEYS.currentClientId до setClientId, чтобы lsGet
-                                            // (с auto-scope для clientSpecificKeys) корректно подхватил
-                                            // scoped профиль до того как стартует wizard-проверка.
-                                            try {
-                                                window.HEYS = window.HEYS || {};
-                                                window.HEYS.currentClientId = targetClientId;
-                                            } catch (_) { }
-                                            setClientId(targetClientId);
-                                            try {
-                                                window.dispatchEvent(new CustomEvent('heys:client-changed', {
-                                                    detail: { clientId: targetClientId, source: 'pin-login', startVisit: true }
-                                                }));
-                                            } catch (_) { }
-                                            resolveCriticalReady();
-                                        };
-                                        const phaseAHandler = (e) => {
-                                            if (resolved) return;
-                                            if (e && e.detail && e.detail.phaseA && e.detail.clientId === targetClientId) {
-                                                window.removeEventListener('heysSyncCompleted', phaseAHandler);
-                                                finalize();
-                                            }
-                                        };
-                                        window.addEventListener('heysSyncCompleted', phaseAHandler);
-
-                                        if (HEYS.cloud && HEYS.cloud.switchClient) {
-                                            // Fire-and-forget: фон ведёт полный sync, мы ждём только Phase A
-                                            HEYS.cloud.switchClient(targetClientId)
-                                                .catch(() => { /* sync ошибки обрабатываются нижестоящими слоями */ })
-                                                .finally(() => {
-                                                    window.removeEventListener('heysSyncCompleted', phaseAHandler);
-                                                    // Fallback: если Phase A не запускалась (delta fast-path
-                                                    // на повторном входе) — финализируем сейчас.
-                                                    finalize();
-                                                });
-                                        } else {
-                                            try { U.lsSet('heys_client_current', targetClientId); } catch (_) { }
-                                            window.removeEventListener('heysSyncCompleted', phaseAHandler);
-                                            finalize();
-                                        }
-                                        await criticalReadyPromise;
+                                        await finalizeClientSessionAfterLogin(res.clientId, phone);
                                     }
                                     return res;
+                                },
+                                onClientSessionReady: async ({ clientId, phone }) => {
+                                    if (clientId) {
+                                        await finalizeClientSessionAfterLogin(clientId, phone);
+                                    }
+                                    return { ok: true, clientId };
                                 },
                             }
                         );
