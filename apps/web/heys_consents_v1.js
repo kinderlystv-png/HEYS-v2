@@ -733,7 +733,7 @@
           style: { color: '#18181b' }
         }, step === 'access_code_sign'
           ? '✍️ Подпись документов'
-          : (step === 'verify_code' ? '📱 Подтверждение' : '📋 Согласия и условия'),
+          : (step === 'verify_code' ? '📱 Подтверждение' : '📋 Согласия и условия')),
         React.createElement('p', {
           className: 'text-sm mt-1',
           style: { color: '#71717a' }
