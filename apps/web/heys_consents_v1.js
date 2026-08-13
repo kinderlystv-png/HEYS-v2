@@ -484,14 +484,21 @@
     }, [buildConsentList, onComplete]);
 
     const finishConsentFlow = useCallback(async (consentList) => {
-      if (notificationsOptIn && HEYS.push) {
-        HEYS.push.subscribe().then((r) => {
-          if (r && r.reason === 'ios_needs_install') {
-            try { localStorage.setItem('heys_push_pending_install', '1'); } catch (_) { /* noop */ }
-          }
-        }).catch((err) =>
-          console.warn('[Consents] push.subscribe failed:', err?.message)
-        );
+      if (notificationsOptIn) {
+        try {
+          await consentsAPI.setPushConsent(true);
+        } catch (err) {
+          console.warn('[Consents] setPushConsent failed:', err?.message);
+        }
+        if (HEYS.push) {
+          HEYS.push.subscribe().then((r) => {
+            if (r && r.reason === 'ios_needs_install') {
+              try { localStorage.setItem('heys_push_pending_install', '1'); } catch (_) { /* noop */ }
+            }
+          }).catch((err) =>
+            console.warn('[Consents] push.subscribe failed:', err?.message)
+          );
+        }
       }
       onComplete?.(consentList);
     }, [notificationsOptIn, onComplete]);
