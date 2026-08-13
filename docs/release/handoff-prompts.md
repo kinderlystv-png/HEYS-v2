@@ -1,6 +1,6 @@
 # Промпты исполнителям
 
-> **Штамп канона: 13.08.2026 01:22 MSK.** Живая копия — `docs/release/` на
+> **Штамп канона: 13.08.2026 12:50 MSK.** Живая копия — `docs/release/` на
 > рабочей машине владельца. Копия в git может отставать: канон правится по ходу
 > дня, а коммитится попутно. Если у вас файл со штампом старше даты вашего
 > задания — у вас не та копия, остановитесь и спросите.
@@ -14,7 +14,9 @@
 
 ### Отправлять сейчас
 
-Нет открытых промптов.
+| Промпт                   | Кому   | Состояние                                        |
+| ------------------------ | ------ | ------------------------------------------------ |
+| `prompt-revoke-deletion` | кодеру | **ВЫПОЛНЕН 13.08** — см. ниже; условие 8 закрыто |
 
 ### Готовы, но тела промпта нет — писать заново при необходимости
 
@@ -54,6 +56,9 @@
 | `prompt-login-pin-diag`      | 13.08 — рассинхрон найден и починен, коммит `d0d0fe896`                                                                                                                                                                                                                                                                                                               |
 | `prompt-transfer-measures`   | 13.08 — обе меры на проде, коммит `b8e00b87d`, деплой `heys-api-push` version `d4ei20s3fblieque3967`. §5 п. 5 оценки стал правдив                                                                                                                                                                                                                                     |
 | `prompt-push-consent-gate`   | 13.08 — гейт согласия на клиентский push, коммит `a900a76ee`, миграция на проде, деплой push `d4er203c3jmc9pl6kppp` / messages `d4e76p38f6cro19kge6g` / cron `d4ep4crjo2o4ojqkcgg8`                                                                                                                                                                                   |
+
+| `prompt-revoke-deletion` | 13.08 — purge personal_data, UI confirm, prod
+migration, deploy `31692431580`, smoke; onboarding health summary |
 
 ### Устарели, не отправлять
 
@@ -107,6 +112,14 @@ docs/ — источником истины НЕ является. При рас
   явным списком функций, проверка подписи была за выключенным флагом,
   счётчик попыток потерялся при обновлении функции, маскирование снято
   миграцией.
+— Факты в самом задании — тоже предположения, даже помеченные словом
+  «проверено». Их собирал такой же человек, по grep, и он ошибается. 13.08 в
+  промпте было написано «отправитель push в репозитории один — handleTest,
+  проверено»; на деле их три, и два ненайденных были настоящими отправителями,
+  а найденный — тестовой кнопкой. Причина ошибки: вывод grep обрезали, а
+  отсутствие в обрезанном списке приняли за отсутствие в репозитории. Нашёл
+  расхождение с заданием — не подстраивайся под текст задания, проверь сам и
+  скажи в отчёте.
 — Непроверенный предохранитель — предохранитель с неизвестным состоянием.
   Написал тест — сломай его нарочно и убедись, что он падает.
 — Агрегат за период не описывает текущее состояние. Нужно распределение.
@@ -252,6 +265,234 @@ docs/release/handoff-prompts.md и docs/release/landing-cards.md — по-пре
 
 ---
 
+## prompt-revoke-deletion · кодеру, удаление данных при отзыве согласия (условие 8 / B2)
+
+Отправляется вместе с обязательной преамбулой и `release-plan.md`. Календарь:
+начать не позже 15.08 (`release-plan.md` §11.5), закрыть до 22.08
+(`release-track-b.md` B2). Это **внутреннее удаление у оператора**, не ждать
+окна РКН и не трогать ст. 12.
+
+```
+КОНТЕКСТ ПРОЕКТА — вставь обязательную преамбулу из начала этого файла.
+
+Задача: отзыв согласия реально удаляет данные субъекта. Сейчас механизм есть,
+покрытие узкое. Не «дописать удаление», а перевесить его на верную категорию
+(`personal_data`) и покрыть хранилища, которые условие 8 называет прямо.
+
+Канон:
+- docs/release/release-plan.md, условие 8 (~строка 458): отзыв удаляет переписку,
+  транскрипты, фото, снапшоты и audit_logs. Ч. 5 ст. 21 срабатывает при первом
+  отзыве первого клиента, пока это не так.
+- docs/release/release-track-b.md B2 (~389–410): revoke_consent_by_session
+  помечает согласие; при health_data и personal_data гасит сессии; при
+  health_data чистит KV по is_health_key; при personal_data (после 13.08 ещё
+  и push_subscriptions) дневник/переписку/фото/audit не трогает.
+
+Это не delete_my_account. Аккаунт и строка consents с revoked_at остаются
+(доказательство факта согласия). Бэкапы и «реестр удалённых субъектов» — другой
+пункт B2, до 27.08, сюда не входят. A4 (журнал перестаёт писать копии дневников
+вперёд) — тоже другой пункт; здесь нужно убрать уже лежащие копии при отзыве.
+
+## Факт на 13.08, проверено по боевому коду (не по тестам)
+
+Перепроверь сам: преамбула требует. Ниже — ориентир, с которого начинать grep.
+
+Живая функция — последняя CREATE OR REPLACE:
+scripts/db/migrations/2026-08-13_revoke_consent_detach_push_v1.sql:42–112
+revoke_consent_by_session(p_session_token, p_consent_type).
+
+Что она делает:
+1. require_client_id → UPDATE consents SET granted=false, revoked_at=now()
+   по (client_id, consent_type), только granted=true AND revoked_at IS NULL.
+2. Если health_data: DELETE FROM client_kv_store WHERE is_health_key(k).
+3. Если health_data ИЛИ personal_data: revoke всех client_sessions.
+4. Если push_notifications ИЛИ personal_data: DELETE FROM push_subscriptions.
+5. log_data_access('revoke_consent') + JSON (deleted_keys, sessions_killed,
+   deleted_push_subscriptions).
+
+Чего нет: client_messages, вложения/S3, транскрипты, audit_logs,
+data_access_audit_log, снапшоты, overlay продуктов. При personal_data KV
+не трогается вообще.
+
+Параллельный путь revoke_consent(UUID, TEXT) в том же файле (строки 4–40):
+только метка согласия + push. В allowlist RPC его нет
+(yandex-cloud-functions/heys-api-rpc/index.js:1005 — только
+revoke_consent_by_session). Не открывать его заново. Если найдёшь другой
+живой вход отзыва — покрой тем же удалением, в отчёте перечисли.
+
+Историческая копия: database/2026-07-27_trial_intake_flow.sql:582. Тесты
+apps/web/__tests__/trial-intake-flow.test.js:511 извлекают функцию ИЗ ЭТОГО
+файла (sqlFunction(..., 'admin_convert_lead')). Строковый тест по старому SQL
+будет зелёным, пока прод живёт миграцией 13.08. Не чини прод правкой
+исторического SQL. Новая миграция в scripts/db/migrations/. Тесты направь
+на неё или на живой вызов, как scripts/db/test-trial-intake-migration.mjs.
+
+is_health_key — единственное определение в репозитории:
+database/2026-01-24_audit_masking.sql:6–8
+  p_key ~ '^heys_(profile|dayv2_|hr_zones)'
+Других CREATE OR REPLACE не найдено. Значит отзыв health_data уже сносит
+дневник (dayv2), профиль и пульсовые зоны. Юридически после минимизации
+дневник живёт под personal_data; regex остался health-классификацией для
+шифрования. Перекос B2 именно такой: удаление стоит на категории, которую
+минимизация опустошила, и отсутствует там, где данные есть. Не оставляй
+дневник только на health_data-пути.
+
+Триггер database/2026-07-27_trial_intake_flow_v2.sql:1000
+purge_trial_intake_on_health_revoke: при отзыве health_data сносит
+trial_intakes, ещё раз health-KV и сессии. Health-специфику оставь на
+health_data. Personal_data этим триггером не пользуйся.
+
+UI сегодня врёт в одну сторону:
+apps/web/heys_user_tab_impl_v1.js:3093 handleRevokeHealth — кнопка обещает
+удалить дневник/вес/активность и зовёт Consents.api.revokeHealthDataAndPurge
+→ revokeConsentBySession('health_data').
+apps/web/heys_consents_v1.js:251 комментарий всё ещё говорит, что удаление
+делает purge_health_data; EXECUTE с heys_rpc снят
+(database/2026-07-27_trial_intake_flow.sql:947). Кнопки отзыва personal_data
+нет. После переноса удаления либо эта кнопка зовёт путь, который реально
+сносит дневник, либо появляется отзыв personal_data, а копия кнопки
+перестаёт обещать то, чего health_data больше не удаляет. Лжи в UI не оставлять.
+
+Хранилища, которые условие 8 называет и которые сейчас не чистятся при
+personal_data (проверено grep 13.08):
+
+- Переписка: public.client_messages (database/2026-05-27_client_messages.sql),
+  FK ON DELETE CASCADE только при DELETE клиента. Отзыв клиента не удаляет.
+- Транскрипты: client_messages.attachments[].transcript_text
+  (database/2026-06-18_message_transcription_pilot.sql,
+  set_message_attachment_transcript) плюс public.message_transcription_jobs.
+- Фото и голос: Yandex Object Storage, бакет heys-photos (env S3_PHOTOS_BUCKET),
+  ключи `<client_id>/...`. Пути лежат в attachments[].path.
+  yandex-cloud-functions/heys-api-photos/index.js DeleteObjectCommand — точечное
+  удаление одного path. heys-cron-photo-cleanup чистит prefix ТОЛЬКО если
+  строки клиента уже нет в clients; при отзыве клиент остаётся — cron не поможет.
+  Готовый путь: public.messenger_media_cleanup_queue
+  (scripts/db/migrations/2026-07-21_messenger_reliability_privacy.sql:32)
+  + processQueuedCleanup в heys-cron-photo-cleanup. CHECK reason сейчас
+  ('message_deleted','abandoned_upload') — при нужде расширь, параллельный
+  S3-deleter не пиши.
+- Снапшоты (FK CASCADE только с DELETE клиента): profile_snapshots
+  (scripts/db/migrations/2026-06-01_create_profile_snapshots.sql),
+  leaderboard_snapshots, ews_weekly_snapshots. Grep подтверди состав сам.
+- audit_logs: database/2026-01-24_audit_masking.sql создаёт таблицу;
+  scripts/db/migrations/2026-05-30_unmask_health_keys_in_audit_log.sql снял
+  маскирование — триггер trigger_audit_log пишет полный JSON KV, включая
+  дневник. resource_id для client_kv_store = client_id.
+  ЛОВУШКА: DELETE FROM client_kv_store сам допишет в audit_logs копию
+  old_values. Сначала отключи/обойди триггер на время purge либо удаляй
+  audit_logs этого клиента ПОСЛЕ KV, включая строки от самого purge.
+- data_access_audit_log (database/2026-05-20_compliance_overhaul.sql:161):
+  client_id БЕЗ FK, переживает даже delete_my_account. Если в metadata/
+  resource_keys лежит копия дневника — чисти. Сам факт «был отзыв» можно
+  оставить одной строкой revoke_consent без содержимого данных.
+- KV personal: кроме is_health_key (profile, dayv2_, hr_zones) есть
+  heys_products_overlay_v2, heys_norms, heys_game и scoped-варианты
+  heys_<uuid>_…. Явный список ключей/префиксов, не «есть поле .name → валидно».
+  Cloud — source of truth: чисти client_kv_store, не localStorage как канон.
+  Клиентский LS после kill-session — best-effort, как в deleteAccount
+  (heys_consents_v1.js:292), с фильтром чужого scope
+  /^heys_([0-9a-f-]{36})_/i === currentClientId. Auth keys не трогать:
+  heys_supabase_auth_token, heys_pin_auth_client, ^sb-*.
+
+packages/ на 13.08 по revoke не Grep-нулся как боевой путь — подтверди.
+
+## Что должно измениться
+
+1. Новая миграция: REPLACE revoke_consent_by_session. При personal_data после
+   метки согласия и kill-session удалить (в одной транзакции, где это SQL):
+   - client_messages этого client_id;
+   - message_transcription_jobs этого клиента;
+   - явные KV-ключи ПДн (минимум dayv2 / profile / overlay / norms / game —
+     список подтверди grep по боевым писателям, не по тестам);
+   - profile_snapshots, leaderboard_snapshots, ews_weekly_snapshots этого
+     client_id (и другие client-scoped snapshot-таблицы, которые найдёшь);
+   - строки audit_logs с копиями данных этого клиента;
+   - содержимое-копии в data_access_audit_log;
+   - постановка attachments.path в messenger_media_cleanup_queue ДО DELETE
+     сообщений (как delete_message_as_client в миграции 2026-07-21).
+   Push-подписки уже снимаются — не сломай.
+2. health_data: оставь чистку is_health_key + триггер intake. Не переноси
+   переписку/фото на health_data. Если dayv2 уезжает на personal_data-путь,
+   не оставляй двойное молчаливое удаление без отчёта — напиши, как развёл.
+3. UI: копия и вызов совпадают с тем, что удаляется. Не обещать дневник на
+   кнопке health, если дневник уехал на personal_data.
+4. Тесты: не string-contains по database/2026-07-27_trial_intake_flow.sql как
+   единственное доказательство. Нужен тест, который сажает клиента с
+   dayv2 + client_messages (+ attachment path) + строка audit_logs, зовёт
+   revoke personal_data, проверяет пусто у этого client_id и непусто у
+   соседнего. Сломай тест нарочно один раз.
+5. Статус в release-plan.md условие 8 и строку B2 — только после «закрывай»
+   ревьюера, со ссылкой на миграцию и проверку. Сам план не закрывай.
+
+## Файлы (ориентир после grep 13.08; список не закрытый)
+
+Трогать:
+- scripts/db/migrations/2026-08-13_*.sql — образец REPLACE; писать НОВУЮ дату
+- scripts/db/migrations/2026-07-21_messenger_reliability_privacy.sql — очередь S3
+- yandex-cloud-functions/heys-cron-photo-cleanup/index.js — только если очередь
+  не подхватывает новые reason/path
+- apps/web/heys_consents_v1.js
+- apps/web/heys_user_tab_impl_v1.js
+- apps/web/heys_yandex_api_v1.js — только если меняется контракт ответа RPC
+- apps/web/__tests__/trial-intake-flow.test.js и/или новый тест рядом
+- scripts/db/test-trial-intake-migration.mjs — если живой SQL-тест удобнее
+- docs/release/release-track-b.md / release-plan.md — после «закрывай»
+
+Не трогать:
+- чужой dirty / generated / бандлы в коммите
+- docs/release/ocenka-pravovogo-rezhima.md, prinyatie-riska-ch14-st12.md
+- пакет 1.11 (тексты согласий, оферта, политика)
+- лендинг и канвасы
+- A4 «журнал перестаёт хранить копии» как отдельный рефактор триггера,
+  кроме обхода на время purge
+- delete_my_account, кроме явного «не вызывать его из отзыва»
+- auth keys, UPSERT без SET user_id = EXCLUDED.user_id на таблицах с
+  auth-триггером NEW.user_id
+- cleanup через shape inference (.name / .id → валидно)
+- push/deploy/production build без прямой команды владельца
+
+## Инварианты
+
+- Cloud — единственный SoT. Overlay продуктов = HEYS.OverlayStore, не
+  legacy heys_products LS как канон.
+- Не shape-inference cleanup.
+- Scan LS только своего scope.
+- Auth keys не трогать.
+- Не ждать РКН / ст. 12.
+- Коммит — source-only, если коммитишь:
+  HEYS_COMMIT_SOURCE_ONLY=1 git commit -F <msg> -- <явные пути>
+  Бандлы, manifest, public/*.bundle.* в коммит не класть.
+  Push / deploy / pnpm ship без --no-push — только по отдельной команде.
+- Перед коммитом: docs/operations/AGENT_SHIPPING_RUNBOOK.md. Чужой dirty
+  не stash/restore.
+
+## Критерий готово
+
+Отзыв personal_data одним RPC для тестового клиента:
+- client_messages = 0, message_transcription_jobs = 0;
+- KV dayv2/profile/overlay этого client_id нет;
+- снапшоты этого client_id нет;
+- audit_logs без old_values/new_values дневника этого client_id
+  (в том числе строк, которые написал сам purge);
+- объект в heys-photos/<cid>/… либо удалён, либо стоит pending в
+  messenger_media_cleanup_queue и обрабатывается существующим cron
+  (не «потом когда-нибудь invent»);
+- соседний клиент не задет;
+- строка consents с revoked_at на месте, clients.id на месте;
+- сессии этого клиента revoked;
+- UI не обещает удаления, которого путь не делает.
+
+Проверки:
+- точечный тест на миграцию / RPC (не полный lint/tsc «по привычке»);
+- если трогал UI — pnpm bundle:legacy:auto --files=<свои source>, не full
+  bundle:legacy; бандл локальный QA, не в коммите;
+- git diff своих файлов; в отчёте: миграция, что удаляется по типам
+  согласия, какие пути отзыва нашёл, как обошёл ловушку audit_logs.
+
+Чего не делать: не писать универсальный GC «по всем таблицам с client_id»;
+не удалять клиента; не править юридические тексты; не ждать ст. 12.
+```
+
 ## prompt-transcript-split · кодеру, разделить писателей стенограммы
 
 Отправляется вместе с обязательной преамбулой. Правило поведения, не задача по
@@ -344,7 +585,8 @@ docs/release/handoff-prompts.md и docs/release/landing-cards.md — по-пре
   журналирование доступа, сроки бэкапов, удаление при отзыве согласия, DSAR-экспорты,
   версии документов в трёх местах. По каждой — как в документе и как в коде;
 — удаление при отзыве согласия (условие 8 готовности): что реально удаляется, а
-  что остаётся — переписка, транскрипты, фото, снапшоты, audit_logs;
+  что остаётся — переписка, транскрипты, фото, снапшоты, audit_logs.
+  Реализация — `prompt-revoke-deletion`, не этот аудит;
 — перечень полей после минимизации: что фактически осталось в базе. Нужен для
   раздела 3 согласия на обработку — любое поле, оставшееся и не названное в
   согласии, это дефект документа;
@@ -732,6 +974,16 @@ HEYS · лендинг: шесть экранов по принятым реше
 `consents.consent_type = 'push_notifications'`, `granted = true`,
 `revoked_at IS NULL`. Кураторская ветка вне задачи. Отдельно оговорено, что
 подписи оценки правового режима это не касается — чтобы не ждали её.
+
+---
+
+## prompt-revoke-deletion — ВЫПОЛНЕН 13.08
+
+Условие 8 закрыто. Коммиты `3f33938ec` (P1), `7edc54942` (manifest), `48da4e492`
+(allowlist); prod migration `2026-08-13_revoke_personal_data_purge_v1` (ledger
+29/29); deploy `31692431580`; smoke confirm health/personal на проде (владелец).
+Onboarding health summary выровнен в том же релизном цикле. Полный текст промпта
+— секция `prompt-revoke-deletion` выше (история).
 
 ## prompt-transfer-measures — ВЫПОЛНЕН 13.08
 

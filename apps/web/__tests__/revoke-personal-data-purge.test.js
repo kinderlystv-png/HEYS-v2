@@ -88,4 +88,10 @@ describe('privacy settings copy', () => {
     expect(userTabSource).toMatch(/handleRevoke[\s\S]*?revokePersonalDataAndPurge/);
     expect(userTabSource).toMatch(/handleRevoke[\s\S]*?пульсовые зоны, анкета пробного периода/);
   });
+
+  it('onboarding health summary does not promise diary without personal_data', () => {
+    expect(consentsSource).toMatch(/health_data:[\s\S]*?summary:[\s\S]*?пульсовых зон/);
+    expect(consentsSource).not.toMatch(/для анкеты, дневника и ручной работы/);
+    expect(consentsSource).toMatch(/health_data:[\s\S]*?Дневник, переписка и фото — под согласием на персональные данные/);
+  });
 });
