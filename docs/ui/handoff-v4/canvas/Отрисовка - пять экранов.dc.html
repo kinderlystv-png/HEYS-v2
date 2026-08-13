@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#14181D; font-family:'Golos Text',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#C3CBD4; } a:hover { color:#E8EBEF; }
+</style>
+</helmet>
+
+<section style="padding:44px 40px 60px;color:#E8EBEF">
+  <h1 style="margin:0 0 8px;font-size:15px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#7C8794">Отрисовка · пять экранов</h1>
+  <p style="margin:0 0 10px;max-width:900px;font-size:14px;line-height:1.6;color:#A5AEB9">Всё, что в сборке помечено «требует отрисовки», собрано здесь чистовыми макетами. Сборка не тронута — это отдельный файл для порта.</p>
+  <p style="margin:0 0 36px;max-width:900px;font-size:13.5px;line-height:1.6;color:#8D97A3">Один пункт требует выбора владельца — подача цены Self во время акции, A или B. Остальные четыре готовы к порту как есть. Экран скрининга рисуется впервые: в сборке он был только текстом решения.</p>
+
+  <div style="display:flex;align-items:flex-start;gap:32px;width:max-content">
+
+    <div style="display:flex;flex-direction:column;gap:14px;width:390px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;width:390px;gap:6px 10px">
+        <span style="display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;padding:0 9px;border-radius:999px;background:#2A3138;font-size:12px;font-weight:600;color:#E8EBEF">01</span>
+        <span style="font-size:13.5px;font-weight:600;color:#B6C2CE">Self · состояния акции</span>
+        <span style="font-size:12.5px;color:#D8A0A0">нужен выбор: A или B</span>
+      </div>
+      <div style="width:390px;box-sizing:border-box;background:#F7F6F2;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,0.4);padding:22px 18px">
+        <p style="margin:0 0 6px;font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#5F6A77">Во время акции · подача A</p>
+        <p style="margin:0 0 12px;font-size:12.5px;line-height:1.5;color:#5B6472">Крупно ноль, условие мелким рядом.</p>
+        <div style="background:#FFFFFF;border:1px solid rgba(16,24,38,0.12);border-radius:18px;overflow:hidden">
+          <div style="background:linear-gradient(180deg,#E9EFF6,#F3F7FB);padding:18px">
+            <span style="display:inline-flex;align-items:center;gap:6px;background:#1F3329;color:#8FD3A8;border-radius:999px;padding:4px 11px;font-size:10.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase"><span style="width:5px;height:5px;border-radius:50%;background:#8FD3A8"></span>Акция</span>
+            <p style="margin:11px 0 0;font-size:22px;font-weight:600;color:#101826">Self</p>
+            <div style="margin-top:5px;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 9px">
+              <span style="font-size:34px;font-weight:600;letter-spacing:-0.025em;color:#101826">0 ₽</span>
+              <span style="font-size:12.5px;color:#5F6A77">до 31 октября · дальше 490 ₽/мес</span>
+            </div>
+          </div>
+          <p style="margin:0;padding:13px 18px 15px;font-size:13.5px;line-height:1.5;color:#3C4552">Дневник, база продуктов, сон и вес — та же система, куда вы вернётесь за сопровождением, с уже накопленной историей.</p>
+        </div>
+
+        <p style="margin:22px 0 6px;font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#5F6A77">Во время акции · подача B</p>
+        <p style="margin:0 0 12px;font-size:12.5px;line-height:1.5;color:#5B6472">Зачёркнутая цена рядом с нулём: контраст сильнее, но ближе к языку распродаж.</p>
+        <div style="background:#FFFFFF;border:1px solid rgba(16,24,38,0.12);border-radius:18px;overflow:hidden">
+          <div style="background:linear-gradient(180deg,#E9EFF6,#F3F7FB);padding:18px">
+            <span style="display:inline-flex;align-items:center;gap:6px;background:#1F3329;color:#8FD3A8;border-radius:999px;padding:4px 11px;font-size:10.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase"><span style="width:5px;height:5px;border-radius:50%;background:#8FD3A8"></span>Акция</span>
+            <p style="margin:11px 0 0;font-size:22px;font-weight:600;color:#101826">Self</p>
+            <div style="margin-top:5px;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 9px">
+              <span style="font-size:26px;font-weight:600;color:#8A94A2;text-decoration:line-through">490</span>
+              <span style="font-size:34px;font-weight:600;letter-spacing:-0.025em;color:#101826">0 ₽</span>
+              <span style="font-size:12.5px;color:#5F6A77">до 31 октября</span>
+            </div>
+          </div>
+          <p style="margin:0;padding:13px 18px 15px;font-size:13.5px;line-height:1.5;color:#3C4552">Дневник, база продуктов, сон и вес — та же система, куда вы вернётесь за сопровождением, с уже накопленной историей.</p>
+        </div>
+
+        <p style="margin:22px 0 6px;font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#5F6A77">Последние дни</p>
+        <div style="background:#FFFFFF;border:1px solid rgba(16,24,38,0.12);border-radius:18px;overflow:hidden">
+          <div style="background:linear-gradient(180deg,#F8F1E6,#FBF6EE);padding:18px">
+            <span style="display:inline-flex;align-items:center;gap:6px;background:#F0E2CB;color:#7A5D28;border-radius:999px;padding:4px 11px;font-size:10.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase">Осталось 5 дней</span>
+            <p style="margin:11px 0 0;font-size:22px;font-weight:600;color:#101826">Self</p>
+            <div style="margin-top:5px;display:flex;align-items:baseline;gap:9px">
+              <span style="font-size:34px;font-weight:600;letter-spacing:-0.025em;color:#101826">0 ₽</span>
+              <span style="font-size:12.5px;color:#7A5D28;font-weight:600">до 31 октября</span>
+            </div>
+          </div>
+          <p style="margin:0;padding:13px 18px 15px;font-size:13px;line-height:1.5;color:#5F6A77">Число дней из конфига. Блок появляется за неделю до конца.</p>
+        </div>
+
+        <p style="margin:22px 0 6px;font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#5F6A77">После окончания</p>
+        <div style="background:#FFFFFF;border:1px solid rgba(16,24,38,0.12);border-radius:18px;overflow:hidden">
+          <div style="background:linear-gradient(180deg,#E9EFF6,#F3F7FB);padding:18px">
+            <span style="display:inline-flex;border:1px solid rgba(16,24,38,0.2);border-radius:999px;padding:5px 12px;font-size:11px;font-weight:600;letter-spacing:0.14em;line-height:1.35;text-transform:uppercase;color:#5B6472">Самостоятельно</span>
+            <p style="margin:11px 0 0;font-size:22px;font-weight:600;color:#101826">Self</p>
+            <div style="margin-top:5px;display:flex;align-items:baseline;gap:8px">
+              <span style="font-size:34px;font-weight:600;letter-spacing:-0.025em;color:#101826">490</span>
+              <span style="font-size:13px;color:#5F6A77">₽/мес</span>
+            </div>
+          </div>
+          <p style="margin:0;padding:13px 18px 15px;font-size:13px;line-height:1.5;color:#5F6A77">Следов акции не остаётся: ни зачёркнутой цены, ни срока.</p>
+        </div>
+        <p style="margin:18px 0 0;padding-top:12px;border-top:1px solid rgba(16,24,38,0.1);font-size:12.5px;line-height:1.5;color:#5F6A77">Даты в макете нет: старт зависит от включения ПЭП, конечная приходит из конфига. Колонка Self в сравнительной таблице на время акции — «0 ₽ до 31 октября».</p>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;width:390px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;width:390px;gap:6px 10px">
+        <span style="display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;padding:0 9px;border-radius:999px;background:#2A3138;font-size:12px;font-weight:600;color:#E8EBEF">02</span>
+        <span style="font-size:13.5px;font-weight:600;color:#B6C2CE">Pro · две цены</span>
+        <span style="font-size:12.5px;color:#8FD3A8">готово к порту</span>
+      </div>
+      <div style="width:390px;box-sizing:border-box;background:#F7F6F2;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,0.4);padding:22px 18px">
+        <div style="background:#FFFFFF;border-radius:18px;overflow:hidden;box-shadow:0 14px 34px rgba(10,17,25,0.1)">
+          <div style="background:linear-gradient(180deg,#12263B,#0A1420);padding:20px;position:relative;overflow:hidden">
+            <div style="position:absolute;inset:0;opacity:0.06;background-size:56px 56px;background-image:url(&quot;data:image/svg+xml,%3Csvg width='28' height='28' viewBox='0 0 28 28' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M14 5.5c.9 4.1.9 4.1 5 4.9-4.1.9-4.1.9-5 5-.9-4.1-.9-4.1-5-5 4.1-.8 4.1-.8 5-4.9Z' fill='%23FFFFFF'/%3E%3C/svg%3E&quot;)" aria-hidden="true"></div>
+            <div style="position:relative">
+              <span style="display:inline-flex;border:1px solid rgba(255,255,255,0.28);border-radius:999px;padding:5px 12px;font-size:11px;font-weight:600;letter-spacing:0.14em;line-height:1.35;text-transform:uppercase;color:rgba(255,255,255,0.82)">Первый набор</span>
+              <p style="margin:12px 0 0;font-size:24px;font-weight:600;color:#FFFFFF">Pro</p>
+              <div style="margin-top:5px;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px">
+                <span style="font-size:38px;font-weight:600;letter-spacing:-0.025em;color:#FFFFFF">7 990</span>
+                <span style="font-size:14px;color:rgba(255,255,255,0.6)">₽/мес</span>
+                <span style="font-size:14px;color:rgba(255,255,255,0.5);text-decoration:line-through">11 990</span>
+              </div>
+              <p style="margin:9px 0 0;font-size:12.5px;line-height:1.45;color:rgba(255,255,255,0.6)">Цена первого набора закрепляется за участником</p>
+            </div>
+          </div>
+          <p style="margin:0;background:#FBFAF7;border-bottom:1px solid rgba(16,24,38,0.08);padding:14px 20px;font-family:'Playfair Display',serif;font-style:italic;font-weight:500;font-size:17.5px;line-height:1.35;color:#101826">Дневник ведёт куратор, <span style="color:#2E7CC0">который вас знает</span></p>
+          <div style="padding:15px 20px 18px">
+            <p style="margin:0;text-align:center;font-size:12.5px;line-height:1.5;color:#5F6A77">Состав карточки не меняется — правка только в цене.</p>
+          </div>
+        </div>
+        <p style="margin:16px 0 0;font-size:12.5px;line-height:1.5;color:#5F6A77">Строку «Около 270 ₽ в день» пересчитать под цену, которая стоит на витрине.</p>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;width:390px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;width:390px;gap:6px 10px">
+        <span style="display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;padding:0 9px;border-radius:999px;background:#2A3138;font-size:12px;font-weight:600;color:#E8EBEF">03</span>
+        <span style="font-size:13.5px;font-weight:600;color:#B6C2CE">05 · Кто ведёт, тезисами</span>
+        <span style="font-size:12.5px;color:#8FD3A8">готово к порту</span>
+      </div>
+      <div style="width:390px;box-sizing:border-box;background:#FFFFFF;border-radius:20px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.4);padding:30px 20px">
+        <h2 style="margin:0;text-align:center;font-size:27px;font-weight:600;line-height:1.18;letter-spacing:-0.02em;color:#101826">Вникание здесь — не обещание, а <span style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500;color:#2E7CC0">стандарт работы.</span></h2>
+        <p style="margin:14px 0 0;text-align:center;font-size:14.5px;line-height:1.6;color:#5B6472">За словом «вникает» стоят опыт, один порядок разбора и ограниченное число участников — чтобы времени хватало на каждого.</p>
+        <div style="margin-top:22px;background:#FBFAF7;border:1px solid rgba(16,24,38,0.1);border-radius:22px;padding:20px 18px">
+          <img src="ref/curator.webp" alt="Куратор за работой: распечатка недели с пометками, блокнот и ноутбук" width="700" height="875" style="display:block;width:100%;height:auto;aspect-ratio:4/5;object-fit:cover;border-radius:16px"></img>
+          <p style="margin:18px 0 0;font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8A94A2">Куратор HEYS</p>
+          <p style="margin:7px 0 0;font-size:20px;font-weight:600;line-height:1;letter-spacing:-0.02em;color:#101826">Антон</p>
+          <ul style="margin:16px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px">
+            <li style="display:flex;gap:10px;font-size:14px;line-height:1.55;color:#3C4552"><span style="color:#2E7CC0">—</span>Зал с 2004 года — сначала для себя</li>
+            <li style="display:flex;gap:10px;font-size:14px;line-height:1.55;color:#3C4552"><span style="color:#2E7CC0">—</span>Свои схемы и учёт КБЖУ в таблицах, до всяких приложений</li>
+            <li style="display:flex;gap:10px;font-size:14px;line-height:1.55;color:#3C4552"><span style="color:#2E7CC0">—</span>Режим ломается не от незнания, а от того, что вечером некому сказать, как прошёл день</li>
+            <li style="display:flex;gap:10px;font-size:14px;line-height:1.55;color:#3C4552"><span style="color:#2E7CC0">—</span>Поэтому написал своё приложение: дневник ведёт тот, кто его читает</li>
+          </ul>
+          <div style="margin-top:14px;background:#FFFFFF;border:1px solid rgba(16,24,38,0.1);border-radius:14px;padding:13px 15px">
+            <p style="margin:0;font-size:13px;line-height:1.6;color:#3C4552">Не врач и не диетолог с медицинским дипломом. <span style="font-weight:600;color:#101826">Двадцать лет практики на себе</span> — знаю, где обычно ломается режим.</p>
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="border:1px solid rgba(16,24,38,0.1);border-radius:18px;padding:18px 16px">
+            <p style="margin:0;font-size:16px;font-weight:600;line-height:1.35;color:#101826">Один порядок разбора</p>
+            <p style="margin:10px 0 0;font-size:14px;line-height:1.6;color:#5B6472">Сначала факты вашей недели, затем возможные причины, и только потом — один следующий шаг. <span style="font-weight:500;color:#101826">Порядок один у всех, выводы — нет:</span> они держатся на том, что происходило именно у вас. <span style="font-weight:600;color:#101826">Кураторов обучаю я, их разборы проверяю тоже я.</span></p>
+          </div>
+          <div style="border:1px solid rgba(16,24,38,0.1);border-radius:18px;padding:18px 16px">
+            <p style="margin:0;font-size:16px;font-weight:600;line-height:1.35;color:#101826">Ваши данные</p>
+            <p style="margin:10px 0 0;font-size:14px;line-height:1.6;color:#5B6472">Дневник и переписку <span style="font-weight:500;color:#101826">видите только вы и ваш куратор.</span> Данные о здоровье — по отдельному согласию, отозвать его можно в любой момент. Примеры на сайте обезличены.</p>
+          </div>
+          <div style="border:1px solid rgba(16,24,38,0.1);border-radius:18px;padding:18px 16px">
+            <p style="margin:0;font-size:16px;font-weight:600;line-height:1.35;color:#101826">Чего HEYS не делает</p>
+            <p style="margin:10px 0 0;font-size:14px;line-height:1.6;color:#5B6472">Не ставит диагнозов, не назначает лечение и не трактует анализы. Не предлагает голодать или «отрабатывать» съеденное. <span style="font-weight:500;color:#101826">При заболеваниях нужен врач.</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;width:390px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;width:390px;gap:6px 10px">
+        <span style="display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;padding:0 9px;border-radius:999px;background:#2A3138;font-size:12px;font-weight:600;color:#E8EBEF">04</span>
+        <span style="font-size:13.5px;font-weight:600;color:#B6C2CE">02 · Разрыв ночи в диалоге</span>
+        <span style="font-size:12.5px;color:#8FD3A8">готово к порту</span>
+      </div>
+      <div style="width:390px;box-sizing:border-box;background:#F7F6F2;border-radius:20px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.4);padding:26px 20px 30px">
+        <p style="margin:0;text-align:center;font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8A94A2">Пример разбора по дневнику</p>
+        <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;flex-direction:column;align-items:flex-end">
+            <span style="padding:0 4px 4px;font-size:10.5px;color:#9AA3B0">вы · 20:40</span>
+            <p style="margin:0;max-width:80%;background:#2A72B2;color:#FFFFFF;border-radius:16px 16px 5px 16px;padding:12px 16px;font-size:13.5px;line-height:1.5">Сегодня вечером опять сорвался.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-start">
+            <span style="padding:0 4px 4px;font-size:10.5px;color:#9AA3B0">куратор · 20:56</span>
+            <p style="margin:0;max-width:88%;background:#FFFFFF;color:#101826;border-radius:16px 16px 16px 5px;padding:12px 16px;font-size:13.5px;line-height:1.5;box-shadow:0 10px 28px rgba(16,24,38,0.05)">Сегодня ничего не отрабатываем и не голодаем, ложитесь. Завтра утром разберём.</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;padding:6px 0">
+            <span style="flex:1;height:1px;background:rgba(16,24,38,0.12)"></span>
+            <span style="font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:#9AA3B0">Ночь</span>
+            <span style="flex:1;height:1px;background:rgba(16,24,38,0.12)"></span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-start">
+            <span style="padding:0 4px 4px;font-size:10.5px;color:#9AA3B0">куратор · 09:02</span>
+            <p style="margin:0;max-width:88%;background:#FFFFFF;color:#101826;border-radius:16px 16px 16px 5px;padding:12px 16px;font-size:13.5px;line-height:1.5;box-shadow:0 10px 28px rgba(16,24,38,0.05)">Вижу: обед вчера снова пропущен, ужин поздний и слишком обильный. Так же было в среду. Это те же авралы, или что-то новое?</p>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end">
+            <span style="padding:0 4px 4px;font-size:10.5px;color:#9AA3B0">вы · 09:15</span>
+            <p style="margin:0;max-width:80%;background:#2A72B2;color:#FFFFFF;border-radius:16px 16px 5px 16px;padding:12px 16px;font-size:13.5px;line-height:1.5">Те же. Перехватываю на бегу, нормально поесть некогда до вечера.</p>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-start">
+            <span style="padding:0 4px 4px;font-size:10.5px;color:#9AA3B0">куратор · 09:21</span>
+            <p style="margin:0;max-width:88%;background:#FFFFFF;color:#101826;border-radius:16px 16px 16px 5px;padding:12px 16px;font-size:13.5px;line-height:1.5;box-shadow:0 10px 28px rgba(16,24,38,0.05)">Тогда это не про силу воли: днём копится голод — вечером он догоняет. Вернём полноценный обед и посмотрим, станет ли вечер спокойнее.</p>
+          </div>
+        </div>
+        <p style="margin:22px 0 0;text-align:center;font-size:17px;line-height:1.4;color:#101826">Куратор отвечает в тот же вечер.<br><span style="font-family:'Playfair Display',serif;font-style:italic;font-weight:500;color:#2E7CC0">Разбор — утром, когда его есть чем выполнить.</span></p>
+        <p style="margin:14px 0 0;text-align:center;font-size:12px;line-height:1.5;color:#8A94A2">Разделитель «Ночь» — не декор: он показывает, что молчание между 21:00 и 09:00 намеренное, а не потерянный ответ.</p>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;width:390px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;width:390px;gap:6px 10px">
+        <span style="display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;padding:0 9px;border-radius:999px;background:#2A3138;font-size:12px;font-weight:600;color:#E8EBEF">05</span>
+        <span style="font-size:13.5px;font-weight:600;color:#B6C2CE">Скрининг · старт Pro Спорт</span>
+        <span style="font-size:12.5px;color:#D8737F">новый экран</span>
+      </div>
+      <div style="width:390px;box-sizing:border-box;background:#F7F6F2;border-radius:20px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.4);padding:24px 20px">
+        <div style="background:#FFFFFF;border:1px solid rgba(16,24,38,0.1);border-radius:22px;padding:24px 20px;box-shadow:0 16px 44px rgba(16,24,38,0.05)">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px">
+            <span style="font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#5F6A77">Перед стартом</span>
+            <span style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#4A4C7E">Pro Спорт</span>
+          </div>
+          <h3 style="margin:12px 0 0;font-family:'Playfair Display',serif;font-style:italic;font-weight:500;font-size:22px;line-height:1.3;color:#101826">Что нужно учесть по нагрузке</h3>
+          <p style="margin:9px 0 0;font-size:13.5px;line-height:1.55;color:#5B6472">Отметьте всё, что было или есть сейчас. Это не диагностика — куратор учтёт это при составлении программы, а при необходимости попросит сначала показаться врачу.</p>
+
+          <div style="margin-top:18px;display:flex;flex-direction:column;gap:9px">
+            <span style="display:flex;align-items:flex-start;gap:10px;border:1px solid rgba(16,24,38,0.14);border-radius:14px;padding:12px 14px">
+              <span style="flex-shrink:0;width:18px;height:18px;margin-top:1px;border:1px solid rgba(16,24,38,0.3);border-radius:5px"></span>
+              <span style="font-size:14.5px;line-height:1.45;color:#101826">Операции за последний год</span>
+            </span>
+            <span style="display:flex;align-items:flex-start;gap:10px;background:#12283E;border:1px solid #12283E;border-radius:14px;padding:12px 14px">
+              <span style="flex-shrink:0;width:18px;height:18px;margin-top:1px;border:1px solid rgba(255,255,255,0.5);border-radius:5px;background:rgba(255,255,255,0.9)"></span>
+              <span style="font-size:14.5px;line-height:1.45;color:#FFFFFF">Грыжи или протрузии позвоночника</span>
+            </span>
+            <span style="display:flex;align-items:flex-start;gap:10px;border:1px solid rgba(16,24,38,0.14);border-radius:14px;padding:12px 14px">
+              <span style="flex-shrink:0;width:18px;height:18px;margin-top:1px;border:1px solid rgba(16,24,38,0.3);border-radius:5px"></span>
+              <span style="font-size:14.5px;line-height:1.45;color:#101826">Старые травмы суставов — колено, плечо, голеностоп</span>
+            </span>
+            <span style="display:flex;align-items:flex-start;gap:10px;border:1px solid rgba(16,24,38,0.14);border-radius:14px;padding:12px 14px">
+              <span style="flex-shrink:0;width:18px;height:18px;margin-top:1px;border:1px solid rgba(16,24,38,0.3);border-radius:5px"></span>
+              <span style="font-size:14.5px;line-height:1.45;color:#101826">Боль, которая есть прямо сейчас</span>
+            </span>
+            <span style="display:flex;align-items:flex-start;gap:10px;border:1px dashed rgba(16,24,38,0.2);border-radius:14px;padding:12px 14px">
+              <span style="flex-shrink:0;width:18px;height:18px;margin-top:1px;border:1px solid rgba(16,24,38,0.25);border-radius:5px"></span>
+              <span style="font-size:14.5px;line-height:1.45;color:#5B6472">Ничего из перечисленного</span>
+            </span>
+          </div>
+
+          <label style="display:block;margin-top:16px">
+            <span style="display:block;font-size:12.5px;font-weight:600;color:#5B6472">Что-то ещё, что стоит знать</span>
+            <textarea rows="2" placeholder="Пара фраз своими словами — необязательно" style="margin-top:6px;width:100%;box-sizing:border-box;background:#FBFAF7;border:1px solid rgba(16,24,38,0.14);border-radius:12px;padding:12px 14px;font-family:'Golos Text',sans-serif;font-size:14.5px;line-height:1.5;color:#101826;resize:none"></textarea>
+          </label>
+
+          <div style="margin-top:16px;background:#F8F1E6;border-left:3px solid #A8823C;border-radius:14px;padding:13px 15px">
+            <p style="margin:0;font-size:13px;line-height:1.55;color:#3C4552"><span style="font-weight:600;color:#101826">Правило простое:</span> если упражнение отзывается болью — убираем его и идём к врачу. Программа ждёт, здоровье нет.</p>
+          </div>
+
+          <button type="button" style="margin-top:20px;width:100%;background:#4A4C7E;border:none;color:#FFFFFF;font-family:'Golos Text',sans-serif;font-weight:600;font-size:15px;border-radius:14px;padding:16px 20px;cursor:pointer">Отправить куратору</button>
+          <p style="margin:10px 0 0;text-align:center;font-size:12px;line-height:1.5;color:#5F6A77">Ответы видит только ваш куратор · § 6.2 оферты</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:360px;display:flex;flex-direction:column;gap:16px;padding-top:38px">
+      <p style="margin:0;font-size:11px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#7C8794">Что решить перед портом</p>
+      <div style="border-top:1px solid #262C33;padding-top:12px">
+        <p style="margin:0;font-size:14px;font-weight:600;color:#E8EBEF">Подача цены Self — A или B</p>
+        <p style="margin:5px 0 0;font-size:13px;line-height:1.6;color:#A5AEB9">Единственный пункт, где нужен ваш выбор. A спокойнее и ближе к тону страницы, B сильнее по контрасту, но это язык распродаж. Я бы взял A.</p>
+      </div>
+      <div style="border-top:1px solid #262C33;padding-top:12px">
+        <p style="margin:0;font-size:14px;font-weight:600;color:#E8EBEF">Скрининг — где он живёт</p>
+        <p style="margin:5px 0 0;font-size:13px;line-height:1.6;color:#A5AEB9">Нарисован как экран онбординга после оплаты Pro Спорт, не как часть лендинга. Если он должен стоять до оплаты — скажите, перерисую под шаг заявки.</p>
+      </div>
+      <div style="border-top:1px solid #262C33;padding-top:12px">
+        <p style="margin:0;font-size:14px;font-weight:600;color:#E8EBEF">Карточка 12 в сборке устарела</p>
+        <p style="margin:5px 0 0;font-size:13px;line-height:1.6;color:#A5AEB9">Она предлагает нарисовать обязательное поле для квалификации, а квалификация уже работает полнее: заявка — лид, дальше PIN, анкета, экран сверки, очередь со слотами. Сборку не трогал по вашей просьбе — правку внесу отдельно, когда скажете.</p>
+      </div>
+      <div style="border-top:1px solid #262C33;padding-top:12px">
+        <p style="margin:0;font-size:14px;font-weight:600;color:#D8A0A0">Что осталось вне отрисовки</p>
+        <p style="margin:5px 0 0;font-size:13px;line-height:1.6;color:#A5AEB9">Три текстовые правки в коде: цена Self 490, «тренер» → «куратор», 11 990 рядом с 7 990. Макетов не требуют.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+</body>
+</html>
