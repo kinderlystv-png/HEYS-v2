@@ -186,8 +186,8 @@ test('страница входа не встраивается в iframe и н�
   assert.equal(res.headers['Cache-Control'], 'no-store');
   assert.match(res.headers['Content-Security-Policy'], /base-uri 'none'/);
   assert.doesNotMatch(res.headers['Content-Security-Policy'], /form-action/);
-  assert.match(res.body, /Разрешить доступ/);
-  assert.match(res.body, /autocomplete="tel"/);
+  assert.match(res.body, /Войти как куратор/);
+  assert.doesNotMatch(res.body, /autocomplete="tel"/);
   assert.match(res.body, /autocomplete="current-password"/);
 });
 

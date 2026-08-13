@@ -453,11 +453,12 @@ function escapeHtml(value) {
 }
 
 /**
- * Страница входа. Две формы: клиент (телефон + PIN) и, под <details>,
- * куратор (email + пароль + опциональный код 2FA). JS на странице нет
- * намеренно — CSP default-src 'none'; раскрытие секции через <details>.
+ * Страница входа. Только куратор (email + пароль + опциональный код 2FA).
+ * Клиентский вход (телефон + PIN) снят намеренно — доступ к MCP через
+ * ассистента ограничен владельцем, вход по PIN клиентам открывать не
+ * планируется. JS на странице нет намеренно — CSP default-src 'none'.
  */
-function renderLoginPage(request, { error = '', phone = '', email = '', curatorMode = false } = {}) {
+function renderLoginPage(request, { error = '', email = '' } = {}) {
   const hidden = [
     ['client_id', request.clientId],
     ['redirect_uri', request.redirectUri],
@@ -524,33 +525,22 @@ function renderLoginPage(request, { error = '', phone = '', email = '', curatorM
     ${error ? `<div class="err">${escapeHtml(error)}</div>` : ''}
     <form method="post" action="/mcp/authorize">
       ${hidden}
-      <label for="phone">Телефон</label>
-      <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+7 900 000-00-00" value="${escapeHtml(phone)}" ${curatorMode ? '' : 'required'}>
-      <label for="pin">PIN</label>
-      <input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="current-password" pattern="[0-9]*" maxlength="6" ${curatorMode ? '' : 'required'}>
-      <button type="submit">Разрешить доступ</button>
+      <label for="email">Email куратора</label>
+      <input id="email" name="email" type="email" autocomplete="username" value="${escapeHtml(email)}">
+      <label for="password">Пароль</label>
+      <input id="password" name="password" type="password" autocomplete="current-password">
+      <label for="mfa_code">Код 2FA (если включена)</label>
+      <input id="mfa_code" name="mfa_code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8">
+      <button type="submit">Войти как куратор</button>
     </form>
-    <details${curatorMode ? ' open' : ''}>
-      <summary>Я куратор — вход по email</summary>
-      <form method="post" action="/mcp/authorize">
-        ${hidden}
-        <label for="email">Email куратора</label>
-        <input id="email" name="email" type="email" autocomplete="username" value="${escapeHtml(email)}">
-        <label for="password">Пароль</label>
-        <input id="password" name="password" type="password" autocomplete="current-password">
-        <label for="mfa_code">Код 2FA (если включена)</label>
-        <input id="mfa_code" name="mfa_code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8">
-        <button type="submit">Войти как куратор</button>
-      </form>
-      <!-- 🔐 SEC-030: до фикса здесь было сказано только про «дневники», хотя
-           кураторский вход открывает ещё управление клиентами, подписками и
-           лидами. Согласие обязано называть реальный объём. -->
-      <p class="foot">Кураторский вход открывает не только дневники. Ассистент сможет: читать и вести дневники всех ваших клиентов; читать переписку и отвечать клиентам; заводить клиентов и выдавать им доступ, включая смену PIN; продлевать и отменять подписки; работать с заявками и лидами. Он всегда называет, кому вносит данные.</p>
-    </details>
+    <!-- 🔐 SEC-030: до фикса здесь было сказано только про «дневники», хотя
+         кураторский вход открывает ещё управление клиентами, подписками и
+         лидами. Согласие обязано называть реальный объём. -->
+    <p class="foot">Кураторский вход открывает не только дневники. Ассистент сможет: читать и вести дневники всех ваших клиентов; читать переписку и отвечать клиентам; заводить клиентов и выдавать им доступ, включая смену PIN; продлевать и отменять подписки; работать с заявками и лидами. Он всегда называет, кому вносит данные.</p>
     <!-- 🔐 SEC-031: прежний текст обещал отзыв через отключение коннектора в
          MCP-клиенте. Для куратора это неправда: кураторские JWT stateless,
          отзыва на сервере нет. Пишем как есть. -->
-    <p class="foot">Клиент может прекратить доступ в любой момент — выйдя из аккаунта в приложении. У куратора мгновенного отзыва нет: отключение коннектора в ChatGPT или Claude прекращает доступ только со стороны этого сервиса, а выданный доступ действует до суток. Если доступ мог утечь — смените пароль и сообщите администратору.</p>
+    <p class="foot">У куратора мгновенного отзыва нет: отключение коннектора в ChatGPT или Claude прекращает доступ только со стороны этого сервиса, а выданный доступ действует до суток. Если доступ мог утечь — смените пароль и сообщите администратору.</p>
   </div>
 </body>
 </html>`;

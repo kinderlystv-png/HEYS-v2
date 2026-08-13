@@ -315,66 +315,41 @@ async function handleAuthorizePost(event, { secret, apiUrl }) {
   const api = createApiClient({ apiUrl });
   const email = String(form.email || '').trim();
 
-  // ── Куратор: email + пароль (+ TOTP при включённой 2FA) ────────────────
-  if (email) {
-    const password = String(form.password || '');
-    if (!password) {
-      return html(400, oauth.renderLoginPage(validation, { error: 'Введите email и пароль куратора.', email, curatorMode: true }));
-    }
-    const mfaCode = String(form.mfa_code || '').trim();
-    const login = await api.curatorLogin(email, password, mfaCode);
-    if (!login.ok) {
-      const message = login.error === 'mfa_required'
-        ? 'Включена двухфакторная защита: введите код из приложения-аутентификатора.'
-        : login.error === 'rate_limited'
-          ? 'Слишком много попыток. Подождите минуту и повторите.'
-          : 'Неверный email или пароль.';
-      return html(401, oauth.renderLoginPage(validation, { error: message, email, curatorMode: true }));
-    }
-
-    const code = oauth.issueAuthorizationCode({
-      clientId: validation.clientId,
-      redirectUri: validation.redirectUri,
-      codeChallenge: validation.codeChallenge,
-      heysClientId: login.curatorId,
-      sessionToken: login.token,
-      role: 'curator',
-      subjectName: login.name,
-      email,
-      resource: validation.resource,
-    }, secret);
-
-    console.info('[heys-mcp] authorize granted (curator)', { curator: String(login.curatorId).slice(0, 8) });
-    return redirect(oauth.buildRedirect(validation.redirectUri, { code, state: validation.state }));
+  // ── Только куратор: email + пароль (+ TOTP при включённой 2FA) ─────────
+  // Клиентский вход (телефон + PIN) снят намеренно: MCP-доступ к дневникам
+  // через ассистента ограничен владельцем, пока не оформлена трансграничная
+  // передача для клиентского канала (см. release-plan трек B).
+  if (!email) {
+    return html(400, oauth.renderLoginPage(validation, { error: 'Введите email и пароль куратора.' }));
   }
-
-  // ── Клиент: телефон + PIN ──────────────────────────────────────────────
-  const phone = String(form.phone || '').trim();
-  const pin = String(form.pin || '').trim();
-  if (!phone || !pin) {
-    return html(400, oauth.renderLoginPage(validation, { error: 'Введите телефон и PIN.', phone }));
+  const password = String(form.password || '');
+  if (!password) {
+    return html(400, oauth.renderLoginPage(validation, { error: 'Введите email и пароль куратора.', email }));
   }
-
-  const verified = await api.verifyPin(phone, pin);
-  if (!verified.ok) {
-    const message = verified.error === 'rate_limited'
-      ? 'Слишком много попыток. Подождите минуту и повторите.'
-      : 'Неверный телефон или PIN.';
-    return html(401, oauth.renderLoginPage(validation, { error: message, phone }));
+  const mfaCode = String(form.mfa_code || '').trim();
+  const login = await api.curatorLogin(email, password, mfaCode);
+  if (!login.ok) {
+    const message = login.error === 'mfa_required'
+      ? 'Включена двухфакторная защита: введите код из приложения-аутентификатора.'
+      : login.error === 'rate_limited'
+        ? 'Слишком много попыток. Подождите минуту и повторите.'
+        : 'Неверный email или пароль.';
+    return html(401, oauth.renderLoginPage(validation, { error: message, email }));
   }
 
   const code = oauth.issueAuthorizationCode({
     clientId: validation.clientId,
     redirectUri: validation.redirectUri,
     codeChallenge: validation.codeChallenge,
-    heysClientId: verified.clientId,
-    sessionToken: verified.sessionToken,
-    role: 'client',
-    subjectName: verified.name,
+    heysClientId: login.curatorId,
+    sessionToken: login.token,
+    role: 'curator',
+    subjectName: login.name,
+    email,
     resource: validation.resource,
   }, secret);
 
-  console.info('[heys-mcp] authorize granted', { client: String(verified.clientId).slice(0, 8) });
+  console.info('[heys-mcp] authorize granted (curator)', { curator: String(login.curatorId).slice(0, 8) });
   return redirect(oauth.buildRedirect(validation.redirectUri, { code, state: validation.state }));
 }
 

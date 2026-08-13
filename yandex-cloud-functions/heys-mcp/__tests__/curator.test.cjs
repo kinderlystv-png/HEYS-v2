@@ -510,16 +510,15 @@ test('client_required доходит до модели как isError со сп�
 
 // ── Форма входа ──────────────────────────────────────────────────────────
 
-test('страница входа содержит обе формы и экранирует кураторский email', () => {
+test('страница входа — только кураторская форма, email экранируется', () => {
   const req = { clientId: 'c', redirectUri: 'https://x/cb', state: 's', codeChallenge: 'cc', resource: '', clientName: 'Claude' };
   const page = oauth.renderLoginPage(req);
-  assert.equal((page.match(/<form/g) || []).length, 2);
-  assert.match(page, /Я куратор/);
+  assert.equal((page.match(/<form/g) || []).length, 1);
+  assert.equal(page.includes('name="phone"'), false);
+  assert.equal(page.includes('name="pin"'), false);
   assert.match(page, /name="mfa_code"/);
-  // В кураторском режиме секция раскрыта, а клиентские поля не required.
-  const curatorPage = oauth.renderLoginPage(req, { curatorMode: true, email: '<img src=x>' });
-  assert.match(curatorPage, /<details open>/);
-  assert.equal(curatorPage.includes('<img src=x>'), false);
+  const escapedPage = oauth.renderLoginPage(req, { email: '<img src=x>' });
+  assert.equal(escapedPage.includes('<img src=x>'), false);
 });
 
 // ── Деградация общей базы продуктов ──────────────────────────────────────
