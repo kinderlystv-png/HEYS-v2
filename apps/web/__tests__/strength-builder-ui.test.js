@@ -111,6 +111,85 @@ describe('конструктор: подходы и типы', () => {
     expect(screen.getByLabelText('Отметить выполненным').disabled).toBe(false);
   });
 
+  it('unit=time показывает поле секунд, а не повторы, и пишет duration_sec', () => {
+    const seen = [];
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{
+        name: 'Планка', unit: 'time',
+        approaches: [{ weightKg: '', durationSec: 60, done: false }],
+      }]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: (next) => seen.push(next),
+      onClose: () => {},
+    }));
+    expect(screen.getByLabelText('Время, сек').value).toBe('60');
+    expect(screen.queryByLabelText('Повторы')).toBeNull();
+    expect(screen.getByLabelText('Вес, кг')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Время, сек'), { target: { value: '45' } });
+    expect(seen[0][0].approaches[0].durationSec).toBe(45);
+  });
+
+  it('unit=distance показывает поле метров и пишет distance_m, вес остаётся отдельным полем', () => {
+    const seen = [];
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{
+        name: 'Фермерская переноска', unit: 'distance',
+        approaches: [{ weightKg: '24', distanceM: 40, done: false }],
+      }]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: (next) => seen.push(next),
+      onClose: () => {},
+    }));
+    expect(screen.getByLabelText('Дистанция, м').value).toBe('40');
+    expect(screen.getByLabelText('Вес, кг').value).toBe('24');
+    fireEvent.change(screen.getByLabelText('Дистанция, м'), { target: { value: '50' } });
+    expect(seen[0][0].approaches[0].distanceM).toBe(50);
+  });
+
+  it('галочка на time/distance подходе доступна только когда мера заполнена', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{
+        name: 'Планка', unit: 'time',
+        approaches: [{ weightKg: '', durationSec: 0, done: false }],
+      }]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onClose: () => {},
+    }));
+    expect(screen.getByLabelText('Отметить выполненным').disabled).toBe(true);
+  });
+
+  it('«+ Сброс» скрыт для time/distance — дропсет там не имеет смысла', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{
+        name: 'Планка', unit: 'time',
+        approaches: [{ weightKg: '', durationSec: 60, done: false }],
+      }]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onClose: () => {},
+    }));
+    expect(screen.queryByText('+ Сброс')).toBeNull();
+  });
+
+  it('дискомфорт на time-подходе показывается так же, как на весовом', () => {
+    render(React.createElement(SB.BuilderScreen, {
+      training: training([{
+        name: 'Планка', unit: 'time',
+        approaches: [{ weightKg: '', durationSec: 60, done: true, discomfort: true, discomfortNote: 'поясница' }],
+      }]),
+      dateKey: '2026-08-09',
+      profile: {},
+      onPatch: () => {},
+      onClose: () => {},
+    }));
+    expect(screen.getByText(/Дискомфорт: поясница/)).toBeTruthy();
+  });
+
   it('правка подхода видна на экране, а не только уходит наружу', () => {
     const seen = [];
     render(React.createElement(SB.BuilderScreen, {

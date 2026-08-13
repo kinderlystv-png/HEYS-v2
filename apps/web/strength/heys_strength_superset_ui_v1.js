@@ -209,9 +209,73 @@
   // ——— Строка подхода (экраны 07, 13, 24) ———
 
   function ApproachRow(props) {
-    const { approach, index, workNumber, onPatch, onToggleType, readOnly } = props;
+    const { approach, index, workNumber, onPatch, onToggleType, readOnly, unit } = props;
     const SK = kernel();
     const warmup = SK ? SK.isWarmupApproach(approach) : false;
+
+    // Время/дистанция — не про ступени сброса (это про вес), поэтому у них
+    // своя однострочная ветка вместо approachStages: та же сетка из 4 колонок
+    // (номер/вес/мера/галочка), только вторая колонка меряет секунды или метры,
+    // а не повторы. Вес остаётся полем — фермерская переноска весит.
+    if (unit === 'time' || unit === 'distance') {
+      const isTime = unit === 'time';
+      const field = isTime ? 'durationSec' : 'distanceM';
+      const value = approach && approach[field];
+      const blankMeasured = !(approach && (approach.weightKg || value || approach.done));
+      const rowState = approach.done ? ' is-done' : (!warmup && !approach.done ? ' is-current' : '');
+      const rows = [
+        h('div', {
+          key: 'st0',
+          className: 'sb-ap' + (blankMeasured ? ' is-blank' : '') + rowState
+        },
+          h('button', {
+            type: 'button',
+            className: 'sb-ap-num' + (warmup ? ' is-warmup' : ''),
+            onClick: function () { if (!readOnly) onToggleType(index); },
+            title: warmup ? 'Разминка — вне тоннажа. Нажмите, чтобы сделать рабочим' : 'Рабочий подход. Нажмите, чтобы сделать разминочным',
+            'aria-label': warmup ? 'Разминочный подход' : 'Рабочий подход номер ' + workNumber
+          }, warmup ? 'разм' : String(workNumber || '—')),
+          h('input', {
+            className: 'sb-ap-field',
+            type: 'text',
+            inputMode: 'decimal',
+            value: approach.weightKg || '',
+            placeholder: 'свой',
+            disabled: readOnly,
+            onChange: function (e) { if (!readOnly) onPatch(index, { weightKg: e.target.value }); },
+            'aria-label': 'Вес, кг'
+          }),
+          h('input', {
+            className: 'sb-ap-field',
+            type: 'text',
+            inputMode: 'numeric',
+            value: value ? String(value) : '',
+            placeholder: isTime ? 'сек' : 'м',
+            disabled: readOnly,
+            onChange: function (e) {
+              const n = parseInt(String(e.target.value).replace(/\D/g, ''), 10);
+              const max = isTime ? 86400 : 200000;
+              const clamped = isFinite(n) ? Math.max(0, Math.min(max, n)) : 0;
+              if (!readOnly) onPatch(index, isTime ? { durationSec: clamped } : { distanceM: clamped });
+            },
+            'aria-label': isTime ? 'Время, сек' : 'Дистанция, м'
+          }),
+          h('button', {
+            type: 'button',
+            className: 'sb-ap-check' + (approach.done ? ' is-done' : ''),
+            disabled: readOnly || !(+value > 0),
+            onClick: function () { if (!readOnly) onPatch(index, { done: !approach.done }); },
+            'aria-label': approach.done ? 'Отменить отметку' : 'Отметить выполненным'
+          }, approach.done ? '✓' : '○')
+        )
+      ];
+      if (approach && approach.discomfort) {
+        rows.push(h('div', { key: 'pain', className: 'sb-ap-note' },
+          '⚠️ Дискомфорт' + (approach.discomfortNote ? ': ' + approach.discomfortNote : '')));
+      }
+      return h(React.Fragment, { key: 'ap' + index }, rows);
+    }
+
     const stages = SK ? SK.approachStages(approach) : [];
     const blank = SK ? SK.isBlankApproach(approach) : false;
     const base = stages[0] || { weightKg: '', reps: 0, done: false };
@@ -314,7 +378,8 @@
         workNumber: warmup ? 0 : workNo,
         onPatch: onPatchApproach,
         onToggleType: onToggleType,
-        readOnly: readOnly
+        readOnly: readOnly,
+        unit: unit
       });
     });
 
@@ -386,7 +451,7 @@
         h('div', { className: 'sb-aps-head' },
           h('span', null, ''),
           h('span', null, 'Вес, кг'),
-          h('span', null, 'Повторы'),
+          h('span', null, unit === 'time' ? 'Время, сек' : (unit === 'distance' ? 'Дистанция, м' : 'Повторы')),
           h('span', null, '✓')
         ),
         h('div', { className: 'sb-aps' }, rows),
@@ -438,7 +503,7 @@
             onClick: function () { onAddApproach(index); },
             disabled: readOnly
           }, '+ Подход'),
-          h('button', {
+          (unit === 'weight_reps' || unit === 'bodyweight') && h('button', {
             type: 'button', className: 'sb-btn',
             onClick: function () { onAddDrop(index); },
             disabled: readOnly,
