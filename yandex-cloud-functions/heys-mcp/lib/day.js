@@ -1139,11 +1139,20 @@ function buildWorkoutLog(exercises, { durationMin, defaultDone } = {}) {
     const rawUnit = raw.unit === undefined || raw.unit === null || raw.unit === ''
       ? 'weight_reps'
       : String(raw.unit);
-    if (!['weight_reps', 'time', 'distance'].includes(rawUnit)) {
-      return { error: `${where} «${name}»: unit — weight_reps, time или distance.` };
+    if (!['weight_reps', 'bodyweight', 'time', 'distance'].includes(rawUnit)) {
+      return { error: `${where} «${name}»: unit — weight_reps, bodyweight, time или distance.` };
     }
     const measuredByTime = rawUnit === 'time';
     const measuredByDistance = rawUnit === 'distance';
+    // Коэффициент — снимок со справочника, а не переменная настройка: где
+    // неизвестен, остаётся null, тоннаж честно не считается (как в приложении).
+    let bodyweightFactor = null;
+    if (rawUnit === 'bodyweight' && raw.bodyweight_factor !== undefined && raw.bodyweight_factor !== null) {
+      bodyweightFactor = strictNum(raw.bodyweight_factor);
+      if (bodyweightFactor === null || !(bodyweightFactor > 0) || bodyweightFactor > 2) {
+        return { error: `${where} «${name}»: bodyweight_factor — число от 0 до 2.` };
+      }
+    }
     const approaches = [];
     for (let k = 0; k < rawAps.length; k += 1) {
       const a = rawAps[k] || {};
@@ -1275,6 +1284,7 @@ function buildWorkoutLog(exercises, { durationMin, defaultDone } = {}) {
       weightKg: approaches[0].weightKg,
     };
     if (rawUnit !== 'weight_reps') exOut.unit = rawUnit;
+    if (rawUnit === 'bodyweight') exOut.bodyweightFactor = bodyweightFactor;
     out.push(exOut);
   }
 

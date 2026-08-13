@@ -2664,7 +2664,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_log_strength_workout',
-    description: 'Записать силовую тренировку конструктором — так же, как её ведёт клиент в приложении: упражнения, подходы с весом и повторами, суперсеты, RPE, отдых. Куратор диктует тренировку целиком, поэтому вся она пишется ОДНИМ вызовом: список exercises и есть пачка. Проверяются все упражнения до записи — ошибка в одном не оставит половину тренировки записанной. Подходы по умолчанию считаются выполненными: вносится состоявшаяся тренировка, а не план. Дропсет — это ступени сброса ВНУТРИ одного подхода (поле drops), а не отдельные подходы: иначе счётчик подходов завысится. Разминочный подход помечается set_type=warmup и в тоннаж не идёт. Упражнение на время или дистанцию (планка, фермерская переноска) — unit=time/distance на упражнении, тогда у подходов вместо reps duration_sec/distance_m. Обычная тренировка по пульсовым зонам пишется через heys_log_training.',
+    description: 'Записать силовую тренировку конструктором — так же, как её ведёт клиент в приложении: упражнения, подходы с весом и повторами, суперсеты, RPE, отдых. Куратор диктует тренировку целиком, поэтому вся она пишется ОДНИМ вызовом: список exercises и есть пачка. Проверяются все упражнения до записи — ошибка в одном не оставит половину тренировки записанной. Подходы по умолчанию считаются выполненными: вносится состоявшаяся тренировка, а не план. Дропсет — это ступени сброса ВНУТРИ одного подхода (поле drops), а не отдельные подходы: иначе счётчик подходов завысится. Разминочный подход помечается set_type=warmup и в тоннаж не идёт. Упражнение на своём весе (подтягивания, отжимания) — unit=bodyweight + bodyweight_factor, иначе довес (extra_weight_kg) в тоннаж не попадёт. Упражнение на время или дистанцию (планка, фермерская переноска) — unit=time/distance на упражнении, тогда у подходов вместо reps duration_sec/distance_m. Обычная тренировка по пульсовым зонам пишется через heys_log_training.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -2675,7 +2675,8 @@ const TOOL_SCHEMAS = [
             type: 'object',
             properties: {
               name: { type: 'string', description: 'Название упражнения, свободная строка: «Жим лёжа».' },
-              unit: { type: 'string', enum: ['weight_reps', 'time', 'distance'], description: 'Как измеряется подход. По умолчанию weight_reps (вес×повторы). time — планка и т.п. (нужен duration_sec у подходов), distance — переноски и т.п. (нужен distance_m).' },
+              unit: { type: 'string', enum: ['weight_reps', 'bodyweight', 'time', 'distance'], description: 'Как измеряется подход. По умолчанию weight_reps (вес×повторы). bodyweight — свой вес (подтягивания, отжимания; нужен bodyweight_factor), time — планка и т.п. (нужен duration_sec у подходов), distance — переноски и т.п. (нужен distance_m).' },
+              bodyweight_factor: { type: 'number', description: 'Доля веса тела в движении, 0–2 (подтягивания 1.0, брусья 0.95, отжимания 0.64, обратные отжимания 0.4). Только при unit=bodyweight; без него тоннаж честно не считается — дефолт не выдумывается.' },
               approaches: {
                 type: 'array',
                 description: 'Подходы по порядку. Дропсет — не отдельные подходы, а ступени drops внутри одного подхода.',
@@ -2738,7 +2739,8 @@ const TOOL_SCHEMAS = [
             type: 'object',
             properties: {
               name: { type: 'string', description: 'Название упражнения, свободная строка: «Жим лёжа».' },
-              unit: { type: 'string', enum: ['weight_reps', 'time', 'distance'], description: 'Как измеряется подход. По умолчанию weight_reps. time — нужен duration_sec у подходов, distance — distance_m.' },
+              unit: { type: 'string', enum: ['weight_reps', 'bodyweight', 'time', 'distance'], description: 'Как измеряется подход. По умолчанию weight_reps. bodyweight — нужен bodyweight_factor, time — нужен duration_sec у подходов, distance — distance_m.' },
+              bodyweight_factor: { type: 'number', description: 'Доля веса тела в движении, 0–2 (подтягивания 1.0, брусья 0.95, отжимания 0.64). Только при unit=bodyweight.' },
               approaches: {
                 type: 'array',
                 description: 'Подходы по порядку. Дропсет — не отдельные подходы, а ступени drops внутри одного подхода.',
@@ -2807,18 +2809,38 @@ const TOOL_SCHEMAS = [
             type: 'object',
             properties: {
               name: { type: 'string', description: 'Название упражнения.' },
+              unit: { type: 'string', enum: ['weight_reps', 'bodyweight', 'time', 'distance'], description: 'Как измеряется подход. По умолчанию weight_reps. bodyweight — нужен bodyweight_factor, time — duration_sec у подходов, distance — distance_m.' },
+              bodyweight_factor: { type: 'number', description: 'Доля веса тела в движении, 0–2 (подтягивания 1.0, брусья 0.95, отжимания 0.64). Только при unit=bodyweight; без него тоннаж не считается — дефолт не выдумывается.' },
               approaches: {
                 type: 'array',
-                description: 'Подходы по порядку.',
+                description: 'Подходы по порядку. Дропсет — не отдельные подходы, а ступени drops внутри одного подхода.',
                 items: {
                   type: 'object',
                   properties: {
                     weight_kg: { type: 'number', description: 'Вес, кг. Пусто или 0 — свой вес.' },
-                    reps: { type: 'integer', description: 'Повторы, 1–200.' },
+                    reps: { type: 'integer', description: 'Повторы, 1–200. Не нужен при unit=time/distance.' },
+                    duration_sec: { type: 'integer', description: 'Время под нагрузкой, секунды, 1–86400. Только при unit=time.' },
+                    distance_m: { type: 'number', description: 'Дистанция, метры, 1–200000. Только при unit=distance.' },
+                    done: { type: 'boolean', description: 'Выполнен ли.' },
                     set_type: { type: 'string', enum: ['work', 'warmup'], description: 'Рабочий или разминочный.' },
                     extra_weight_kg: { type: 'number', description: 'Довес к своему весу, 0–500.' },
+                    discomfort: { type: 'boolean', description: 'Был дискомфорт/боль на этом подходе.' },
+                    discomfort_note: { type: 'string', description: 'Где именно и что почувствовал, до 100 символов.' },
+                    drops: {
+                      type: 'array',
+                      description: 'Ступени сброса внутри этого подхода, по порядку. Вес каждой следующей ниже предыдущей, всего не больше двух ступеней. В связке дропсет запрещён.',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          weight_kg: { type: 'number', description: 'Вес ступени, кг — ниже предыдущей.' },
+                          reps: { type: 'integer', description: 'Повторы на ступени, 1–200.' },
+                          done: { type: 'boolean', description: 'Выполнена ли ступень. По умолчанию как у подхода.' },
+                        },
+                        required: ['weight_kg', 'reps'],
+                      },
+                    },
                   },
-                  required: ['reps'],
+                  required: [],
                 },
               },
               rpe: { type: 'integer', description: 'Субъективная тяжесть упражнения, 0–10.' },
@@ -2884,7 +2906,8 @@ const TOOL_SCHEMAS = [
                   type: 'object',
                   properties: {
                     name: { type: 'string', description: 'Название упражнения, свободная строка: «Жим лёжа».' },
-                    unit: { type: 'string', enum: ['weight_reps', 'time', 'distance'], description: 'Как измеряется подход. По умолчанию weight_reps. time — нужен duration_sec у подходов, distance — distance_m.' },
+                    unit: { type: 'string', enum: ['weight_reps', 'bodyweight', 'time', 'distance'], description: 'Как измеряется подход. По умолчанию weight_reps. bodyweight — нужен bodyweight_factor, time — нужен duration_sec у подходов, distance — distance_m.' },
+              bodyweight_factor: { type: 'number', description: 'Доля веса тела в движении, 0–2 (подтягивания 1.0, брусья 0.95, отжимания 0.64). Только при unit=bodyweight.' },
                     approaches: {
                       type: 'array',
                       description: 'Подходы по порядку.',

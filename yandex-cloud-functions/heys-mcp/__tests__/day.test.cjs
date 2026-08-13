@@ -1616,6 +1616,35 @@ test('неизвестный unit отклоняется, а weight_reps по у
   assert.equal(log.exercises[0].unit, undefined);
 });
 
+test('bodyweight с фактором даёт тоннаж своего веса+довеса; без фактора — честный ноль', () => {
+  const web = require('../lib/web-mirror');
+  const { log } = day.buildWorkoutLog([{
+    name: 'Подтягивания', unit: 'bodyweight', bodyweight_factor: 1.0,
+    approaches: [{ reps: 8, extra_weight_kg: 15 }],
+  }]);
+  assert.equal(log.exercises[0].unit, 'bodyweight');
+  assert.equal(log.exercises[0].bodyweightFactor, 1);
+  const t = web.trainingTonnage(
+    { type: 'strength', strengthEntryMode: 'workout_builder', workoutLog: log },
+    { bodyWeightKg: 80 },
+  );
+  assert.equal(t.totalVolume, (80 * 1.0 + 15) * 8);
+
+  const { log: log2 } = day.buildWorkoutLog([{ name: 'Неизвестное движение', unit: 'bodyweight', approaches: [{ reps: 8 }] }]);
+  assert.equal(log2.exercises[0].bodyweightFactor, null);
+  const t2 = web.trainingTonnage(
+    { type: 'strength', strengthEntryMode: 'workout_builder', workoutLog: log2 },
+    { bodyWeightKg: 80 },
+  );
+  assert.equal(t2.totalVolume, 0);
+  assert.equal(t2.unmeasuredExercises, 1);
+});
+
+test('bodyweight_factor вне 0–2 отклоняется', () => {
+  const bad = day.buildWorkoutLog([{ name: 'X', unit: 'bodyweight', bodyweight_factor: 3, approaches: [{ reps: 5 }] }]);
+  assert.match(bad.error, /bodyweight_factor/);
+});
+
 test('дискомфорт на подходе пишется с заметкой, без флага заметка не сохраняется', () => {
   const { log } = day.buildWorkoutLog([{
     name: 'Жим', approaches: [
