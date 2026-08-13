@@ -328,6 +328,58 @@ describe('HEYS.Subscription curator guard', () => {
     expect(subscriptionSectionSource).not.toContain("status?.status === 'trial' || status?.status === 'read_only'");
   });
 
+  it('does not remount trial welcome after dismiss in the same session', () => {
+    const render = vi.fn();
+    window.React = React;
+    window.ReactDOM = {
+      createRoot: vi.fn(() => ({ render })),
+    };
+    const storage = createMockStorage({});
+    Object.defineProperty(window, 'localStorage', {
+      value: storage,
+      writable: true,
+      configurable: true,
+    });
+
+    const clientId = '846F2B16-AAAA-BBBB-CCCC-DDDDEEEEFFFF';
+    window.HEYS = {
+      currentClientId: clientId.toLowerCase(),
+      cloud: { isInitialSyncCompleted: () => true },
+      store: {
+        get: vi.fn(() => null),
+        set: vi.fn(),
+      },
+    };
+
+    const subscriptions = loadSubscriptions();
+    const futureTrialEnd = new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)).toISOString();
+    const opts = {
+      clientId,
+      clientName: 'пупсы qwe',
+      subscriptionStatus: 'trial',
+      trialEndsAt: futureTrialEnd,
+    };
+
+    subscriptions.mountTrialUI(opts);
+    expect(document.getElementById('heys-welcome-host')).not.toBeNull();
+    expect(render).toHaveBeenCalledTimes(1);
+
+    const welcomeProps = render.mock.calls[0][0].props;
+    welcomeProps.onClose();
+
+    render.mockClear();
+    subscriptions.mountTrialUI(opts);
+    expect(document.getElementById('heys-welcome-host')).toBeNull();
+    const welcomeRenders = render.mock.calls.filter(
+      (call) => call[0]?.props?.onClose,
+    );
+    expect(welcomeRenders).toHaveLength(0);
+    expect(storage.setItem).toHaveBeenCalledWith(
+      `heys_first_login_${clientId.toLowerCase()}`,
+      '1',
+    );
+  });
+
   it('registers payment_required after the canonical StepModal ready event', () => {
     window.React = React;
     loadSubscriptions();

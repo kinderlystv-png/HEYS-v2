@@ -20,6 +20,58 @@
   };
   const canWriteStatus = (value) => HEYS.Subscription?.canWriteStatus?.(value) === true;
 
+  // Закрытие welcome в этой сессии вкладки — страховка от race, когда
+  // heys:profile-updated / SW KV invalidation приходит раньше, чем успевает
+  // записаться heys_first_login в store/облако.
+  const _welcomeDismissedSession = new Set();
+
+  function normalizeWelcomeClientId(clientId) {
+    if (!clientId) return '';
+    return String(clientId).replace(/"/g, '').trim().toLowerCase();
+  }
+
+  function dismissWelcomeHost() {
+    const welcomeHost = typeof document !== 'undefined'
+      ? document.getElementById('heys-welcome-host')
+      : null;
+    if (!welcomeHost) return;
+    try {
+      if (welcomeHost._heysRoot) welcomeHost._heysRoot.render(null);
+    } catch (_) { /* noop */ }
+    welcomeHost.remove();
+  }
+
+  function markWelcomeSeen(clientId) {
+    const normalizedCid = normalizeWelcomeClientId(clientId);
+    if (!normalizedCid) return;
+    _welcomeDismissedSession.add(normalizedCid);
+    const welcomeKey = `heys_first_login_${normalizedCid}`;
+    const isCurrentClient = normalizeWelcomeClientId(HEYS.currentClientId) === normalizedCid;
+    // Legacy LS — синхронно и первым: переживает debounced cloud sync.
+    try { localStorage.setItem(welcomeKey, '1'); } catch (_) { /* noop */ }
+    try {
+      if (isCurrentClient && HEYS.store?.set) HEYS.store.set('heys_first_login', 1);
+    } catch (_) { /* noop */ }
+  }
+
+  function welcomeAlreadySeen(clientId) {
+    const normalizedCid = normalizeWelcomeClientId(clientId);
+    if (!normalizedCid) return false;
+    if (_welcomeDismissedSession.has(normalizedCid)) return true;
+    const isCurrentClient = normalizeWelcomeClientId(HEYS.currentClientId) === normalizedCid;
+    try {
+      if (isCurrentClient && HEYS.store?.get && HEYS.store.get('heys_first_login', null)) return true;
+    } catch (_) { /* store недоступен — падаем на legacy */ }
+    const welcomeKey = `heys_first_login_${normalizedCid}`;
+    try {
+      if (localStorage.getItem(welcomeKey)) return true;
+      // Старые сессии могли писать ключ без lower-case.
+      const rawCid = String(clientId).replace(/"/g, '').trim();
+      if (rawCid && rawCid !== normalizedCid && localStorage.getItem(`heys_first_login_${rawCid}`)) return true;
+    } catch (_) { return false; }
+    return false;
+  }
+
   // =====================================================
   // КОНФИГУРАЦИЯ
   // =====================================================
@@ -1382,15 +1434,7 @@
     // очистки данных сайта или в приватном окне приветствие показывалось бы
     // заново. Legacy-ключ `heys_first_login_<clientId>` остаётся как fallback
     // для тех, кто уже закрыл окно до этого изменения.
-    const welcomeKey = `heys_first_login_${clientId}`;
-    const isCurrentClient = HEYS.currentClientId === clientId;
-
-    const welcomeAlreadySeen = () => {
-      try {
-        if (isCurrentClient && HEYS.store?.get && HEYS.store.get('heys_first_login', null)) return true;
-      } catch (_) { /* store недоступен — падаем на legacy */ }
-      try { return !!localStorage.getItem(welcomeKey); } catch (_) { return false; }
-    };
+    const normalizedCid = normalizeWelcomeClientId(clientId);
 
     // Показ проверяется через ~100 мс после загрузки скрипта, когда облачные
     // данные ещё не пришли. Без этого гейта синхронизированный признак не
@@ -1405,11 +1449,17 @@
       (window.HEYS?.StepModal && window.HEYS.StepModal.isOpen?.())
     ));
 
+    const seenWelcome = welcomeAlreadySeen(clientId);
+
+    if (seenWelcome || subscriptionStatus !== 'trial') {
+      dismissWelcomeHost();
+    }
+
     if (
       subscriptionStatus === 'trial' &&
-      clientId &&
+      normalizedCid &&
       initialSyncDone &&
-      !welcomeAlreadySeen() &&
+      !seenWelcome &&
       !stepModalOpen
     ) {
       let welcomeHost = document.getElementById('heys-welcome-host');
@@ -1422,13 +1472,7 @@
       welcomeHost._heysRoot = welcomeRoot;
 
       const close = () => {
-        // Пишем в client-scoped KV — оттуда признак уедет в облако и вернётся
-        // на другом устройстве. Legacy-ключ пишем тоже: он покрывает случай,
-        // когда store недоступен или клиент не является текущим.
-        try {
-          if (isCurrentClient && HEYS.store?.set) HEYS.store.set('heys_first_login', 1);
-        } catch (_) { /* ниже всё равно останется legacy-запись */ }
-        try { localStorage.setItem(welcomeKey, '1'); } catch {}
+        markWelcomeSeen(clientId);
         welcomeRoot.render(null);
         // Полностью убираем host из DOM, чтобы пустой div с inset:0 не висел
         // и не перехватывал клики случайно.
