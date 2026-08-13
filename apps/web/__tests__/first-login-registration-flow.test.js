@@ -283,4 +283,22 @@ describe('first login registration flow', () => {
     expect(window.HEYS.ProfileSteps.isProfileIncomplete(partialProfile)).toBe(true);
     expect(storage._store.heys_registration_in_progress).toBe('true');
   });
+
+  it('does not rewrite registration marker on repeated incomplete checks', () => {
+    const storage = createMockStorage({
+      heys_client_current: JSON.stringify('client-5'),
+      heys_profile: JSON.stringify({}),
+    });
+    loadProfileSteps(storage);
+
+    expect(window.HEYS.ProfileSteps.isProfileIncomplete({})).toBe(true);
+    expect(storage._store.heys_registration_in_progress).toBe('true');
+    const writesAfterFirst = storage.setItem.mock.calls.length;
+
+    for (let i = 0; i < 24; i += 1) {
+      expect(window.HEYS.ProfileSteps.isProfileIncomplete({})).toBe(true);
+    }
+
+    expect(storage.setItem.mock.calls.length).toBe(writesAfterFirst);
+  });
 });

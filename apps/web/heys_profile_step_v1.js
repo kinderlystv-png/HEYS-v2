@@ -103,6 +103,22 @@
     return true;
   }
 
+  function isRegistrationMarkerActive() {
+    const raw = localStorage.getItem('heys_registration_in_progress');
+    return raw === 'true' || raw === '"true"';
+  }
+
+  // Idempotent: isProfileIncomplete вызывается из render-путей (gate_flow).
+  // Повторная запись маркера → HOT WRITE loop и React #301.
+  function ensureRegistrationInProgressMarker(meta) {
+    if (isRegistrationMarkerActive()) return false;
+    lsSet('heys_registration_in_progress', true);
+    if (meta) {
+      console.warn('[ProfileSteps] registrationInProgress set', meta);
+    }
+    return true;
+  }
+
   function hasActiveWriteAccess() {
     const subscription = HEYS.Subscription;
     if (!subscription?.canWriteStatus) return false;
@@ -605,11 +621,11 @@
         isDefaultGender && isDefaultWeight && isDefaultHeight && noBirthDate && isDefaultAge;
 
       if (isProbablyIncomplete) {
-        lsSet('heys_registration_in_progress', true);
-        console.warn('[ProfileSteps] registrationInProgress set (profile incomplete)', {
+        ensureRegistrationInProgressMarker({
+          source: 'profile-personal.getInitialData',
           profileCompleted: profile?.profileCompleted,
           hasFirstName: !!profile?.firstName,
-          hasBirthDate: !!profile?.birthDate
+          hasBirthDate: !!profile?.birthDate,
         });
       } else if (!isRegistrationInProgress(profile)) {
         console.warn('[ProfileSteps] registrationInProgress cleared (profile complete)', {
@@ -1171,7 +1187,7 @@
         updatedAt: Date.now()
       };
 
-      lsSet('heys_registration_in_progress', true);
+      ensureRegistrationInProgressMarker({ source: 'profile-metabolism.save' });
       lsSet('heys_profile', updatedProfile);
 
       // ⚠️ v1.16 FIX: Инвалидируем кэш HEYS.store.memory
@@ -1282,7 +1298,7 @@
       updatedAt: Date.now()
     };
 
-    lsSet('heys_registration_in_progress', true);
+    ensureRegistrationInProgressMarker({ source: 'saveProfileFromStepData' });
     lsSet('heys_profile', updatedProfile);
 
     // Диспатчим событие для обновления UI профиля
@@ -1787,7 +1803,7 @@
             localStorage.removeItem('heys_registration_in_progress');
             return false;
           }
-          lsSet('heys_registration_in_progress', true);
+          ensureRegistrationInProgressMarker({ source: 'legacy-profile-migration' });
           return true;
         }
 
@@ -1806,7 +1822,7 @@
     // Частичный профиль (например, только имя и дата рождения после шага 1)
     // не должен открывать prestart-gate. Полным считается только подтверждённый
     // `profileCompleted` либо legacy-профиль, прошедший строгий auto-detect выше.
-    lsSet('heys_registration_in_progress', true);
+    ensureRegistrationInProgressMarker({ source: 'isProfileIncomplete' });
     return true;
   }
 
