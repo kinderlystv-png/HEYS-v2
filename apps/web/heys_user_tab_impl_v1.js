@@ -16,6 +16,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         getEmojiStyle: () => 'android', setEmojiStyle: () => { }
     };
 
+    function useFallbackCuratorPinField() {
+        const [value, setValue] = React.useState('');
+        return {
+            pinValue: value,
+            isComplete: value.length >= 4,
+            resetDigits: () => setValue(''),
+            applyPinDigits: (arr) => setValue((arr || []).slice(0, 4).join('')),
+        };
+    }
+
     // Дефолтный профиль (единый источник)
     const DEFAULT_PROFILE = {
         firstName: '', lastName: '', gender: 'Мужской',
@@ -375,9 +385,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const [profileSaved, setProfileSaved] = React.useState(false);
 
         // Смена PIN
-        const [pinForm, setPinForm] = React.useState({ pin: '', confirm: '' });
         const [pinStatus, setPinStatus] = React.useState('idle'); // idle | pending | success | error
         const [pinMessage, setPinMessage] = React.useState('');
+        const pinKeypadKit = HEYS.AuthPinKeypad?.createKit?.(React);
+        const useCuratorPinField = pinKeypadKit ? pinKeypadKit.usePinKeypad : useFallbackCuratorPinField;
+        const newPinField = useCuratorPinField({
+            disabled: pinStatus === 'pending',
+            idPrefix: 'curator-new-pin',
+            autoFocus: false,
+        });
+        const confirmPinField = useCuratorPinField({
+            disabled: pinStatus === 'pending',
+            idPrefix: 'curator-confirm-pin',
+            autoFocus: false,
+        });
+        const newPinKeypadRef = React.useRef(null);
+        const confirmPinKeypadRef = React.useRef(null);
 
         // === Accordion state (с сохранением в localStorage) ===
         const SECTIONS_KEY = 'heys_profile_sections';
@@ -454,7 +477,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             }
 
             // Сначала проверка формата (ровно 4 цифры), отдельным сообщением.
-            if (!/^\d{4}$/.test(String(pinForm.pin)) || !/^\d{4}$/.test(String(pinForm.confirm))) {
+            if (!/^\d{4}$/.test(String(newPinField.pinValue)) || !/^\d{4}$/.test(String(confirmPinField.pinValue))) {
                 setPinStatus('error');
                 setPinMessage('PIN должен состоять из 4 цифр.');
                 return;
@@ -462,20 +485,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             // Затем проверка на «слабый» PIN — отдельным сообщением, чтобы
             // куратор понимал почему отказ.
-            if (typeof auth.isWeakPin === 'function' && (auth.isWeakPin(pinForm.pin) || auth.isWeakPin(pinForm.confirm))) {
+            if (typeof auth.isWeakPin === 'function' && (auth.isWeakPin(newPinField.pinValue) || auth.isWeakPin(confirmPinField.pinValue))) {
                 setPinStatus('error');
                 setPinMessage('Слишком простой PIN. Не используйте 0000, 1234, повторяющиеся цифры или клавиатурные паттерны.');
                 return;
             }
 
             // Финальная валидация (комбинированная — на случай если правила расширены).
-            if (!auth.validatePin(pinForm.pin) || !auth.validatePin(pinForm.confirm)) {
+            if (!auth.validatePin(newPinField.pinValue) || !auth.validatePin(confirmPinField.pinValue)) {
                 setPinStatus('error');
                 setPinMessage('PIN не прошёл проверку. Выберите другой.');
                 return;
             }
 
-            if (pinForm.pin !== pinForm.confirm) {
+            if (newPinField.pinValue !== confirmPinField.pinValue) {
                 setPinStatus('error');
                 setPinMessage('PIN и подтверждение не совпадают.');
                 return;
@@ -483,7 +506,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             setPinStatus('pending');
             try {
-                const res = await auth.resetClientPin({ clientId, newPin: pinForm.pin });
+                const res = await auth.resetClientPin({ clientId, newPin: newPinField.pinValue });
                 if (!res || !res.ok) {
                     const msg = res && res.message ? res.message : 'Не удалось обновить PIN';
                     setPinStatus('error');
@@ -495,7 +518,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 }
                 setPinStatus('success');
                 setPinMessage('PIN обновлён. Не забудьте сообщить его клиенту.');
-                setPinForm({ pin: '', confirm: '' });
+                newPinField.resetDigits();
+                confirmPinField.resetDigits();
                 setTimeout(() => { setPinStatus('idle'); setPinMessage(''); }, 2000);
             } catch (e) {
                 setPinStatus('error');
@@ -1463,36 +1487,51 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 React.createElement('span', { className: 'profile-field-group__badge' }, `Client ID: ${getShortClientId(getCurrentClientId())}`)
                             ),
                             React.createElement('div', { className: 'muted', style: { marginBottom: '8px' } }, 'Новый PIN должен состоять из 4 цифр. Старый PIN не требуется — изменение доступно только куратору.'),
-                            React.createElement('div', { className: 'field-list' },
-                                React.createElement('div', { className: 'inline-field' },
-                                    React.createElement('label', null, 'Новый PIN'),
-                                    React.createElement('span', { className: 'sep' }, '-'),
-                                    React.createElement('input', {
-                                        type: 'password',
-                                        inputMode: 'numeric',
-                                        pattern: '\\d*',
-                                        maxLength: 4,
-                                        value: pinForm.pin,
-                                        onChange: e => setPinForm(prev => ({ ...prev, pin: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) })),
-                                        placeholder: '4 цифры',
-                                        style: { width: '120px' }
-                                    })
-                                ),
-                                React.createElement('div', { className: 'inline-field' },
-                                    React.createElement('label', null, 'Подтверждение'),
-                                    React.createElement('span', { className: 'sep' }, '-'),
-                                    React.createElement('input', {
-                                        type: 'password',
-                                        inputMode: 'numeric',
-                                        pattern: '\\d*',
-                                        maxLength: 4,
-                                        value: pinForm.confirm,
-                                        onChange: e => setPinForm(prev => ({ ...prev, confirm: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) })),
-                                        placeholder: 'Ещё раз',
-                                        style: { width: '120px' }
+                            pinKeypadKit
+                                ? React.createElement('div', { className: 'space-y-4' },
+                                    pinKeypadKit.renderPinKeypadSection({
+                                        pin: newPinField,
+                                        label: 'Новый PIN',
+                                        sectionClassName: 'heys-auth-pin-section space-y-3 is-active',
+                                        keypadRef: newPinKeypadRef,
+                                    }),
+                                    pinKeypadKit.renderPinKeypadSection({
+                                        pin: confirmPinField,
+                                        label: 'Подтверждение',
+                                        sectionClassName: 'heys-auth-pin-section space-y-3 is-active',
+                                        keypadRef: confirmPinKeypadRef,
                                     })
                                 )
-                            ),
+                                : React.createElement('div', { className: 'field-list' },
+                                    React.createElement('div', { className: 'inline-field' },
+                                        React.createElement('label', null, 'Новый PIN'),
+                                        React.createElement('span', { className: 'sep' }, '-'),
+                                        React.createElement('input', {
+                                            type: 'password',
+                                            inputMode: 'numeric',
+                                            pattern: '\\d*',
+                                            maxLength: 4,
+                                            value: newPinField.pinValue,
+                                            onChange: e => newPinField.applyPinDigits?.((e.target.value || '').replace(/[^0-9]/g, '').slice(0, 4).split('').concat(['', '', '', '']).slice(0, 4)),
+                                            placeholder: '4 цифры',
+                                            style: { width: '120px' }
+                                        })
+                                    ),
+                                    React.createElement('div', { className: 'inline-field' },
+                                        React.createElement('label', null, 'Подтверждение'),
+                                        React.createElement('span', { className: 'sep' }, '-'),
+                                        React.createElement('input', {
+                                            type: 'password',
+                                            inputMode: 'numeric',
+                                            pattern: '\\d*',
+                                            maxLength: 4,
+                                            value: confirmPinField.pinValue,
+                                            onChange: e => confirmPinField.applyPinDigits?.((e.target.value || '').replace(/[^0-9]/g, '').slice(0, 4).split('').concat(['', '', '', '']).slice(0, 4)),
+                                            placeholder: 'Ещё раз',
+                                            style: { width: '120px' }
+                                        })
+                                    )
+                                ),
                             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' } },
                                 React.createElement('button', {
                                     className: 'btn',

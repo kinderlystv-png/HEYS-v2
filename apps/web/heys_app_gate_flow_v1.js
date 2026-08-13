@@ -9,6 +9,20 @@
     const U = HEYS.utils || {};
     const CLIENT_ACTION_MODAL_Z = 12050;
 
+    function useFallbackPinFieldState() {
+        const [value, setValue] = React.useState('');
+        return {
+            pinValue: value,
+            isComplete: value.length >= 4,
+            resetDigits: () => setValue(''),
+            applyPinDigits: (arr) => setValue((arr || []).slice(0, 4).join('')),
+        };
+    }
+
+    function getPinKeypadKit() {
+        return HEYS.AuthPinKeypad?.createKit?.(React) || null;
+    }
+
     const tryParseStoredValue = (raw, fallback) => {
         if (raw === null || raw === undefined) return fallback;
         if (typeof raw === 'string') {
@@ -759,7 +773,15 @@
         const [loading, setLoading] = React.useState(false);
         const [name, setName] = React.useState(client.name || '');
         const [phone, setPhone] = React.useState(client.phone_normalized || client.phone || '');
-        const [pin, setPin] = React.useState('');
+        const pinKeypadKit = getPinKeypadKit();
+        const useEditPinField = pinKeypadKit ? pinKeypadKit.usePinKeypad : useFallbackPinFieldState;
+        const editPinField = useEditPinField({
+            disabled: loading,
+            idPrefix: 'edit-client-pin',
+            autoFocus: false,
+        });
+        const editPinKeypadRef = React.useRef(null);
+        const pin = editPinField.pinValue;
 
         const formatPhone = (val) => {
             const d = (val || '').replace(/\D/g, '').slice(0, 11);
@@ -780,7 +802,7 @@
             setOpen(false);
             setName(client.name || '');
             setPhone(client.phone_normalized || client.phone || '');
-            setPin('');
+            editPinField.resetDigits();
         };
 
         const handleSave = async () => {
@@ -832,7 +854,7 @@
                 e.stopPropagation();
                 setName(client.name || '');
                 setPhone(client.phone_normalized || client.phone || '');
-                setPin('');
+                editPinField.resetDigits();
                 setOpen(true);
             },
             style: { width: 30, height: 30, borderRadius: 6, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }
@@ -890,15 +912,22 @@
                             ? React.createElement('span', { style: { fontSize: 12, color: '#6b7280', background: '#f3f4f6', borderRadius: 6, padding: '2px 8px', letterSpacing: '2px' } }, 'Текущий: ••••')
                             : React.createElement('span', { style: { fontSize: 12, color: '#ef4444', background: '#fef2f2', borderRadius: 6, padding: '2px 8px' } }, 'PIN не установлен')
                     ),
-                    React.createElement('input', {
-                        placeholder: 'Оставьте пустым, если не меняется',
-                        value: pin,
-                        type: 'text',
-                        maxLength: 6,
-                        onChange: (e) => setPin(e.target.value.replace(/\D/g, '')),
-                        onKeyDown: (e) => { if (e.key === 'Enter') handleSave(); },
-                        style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none', letterSpacing: pin ? '2px' : 'normal' }
-                    })
+                    React.createElement('div', { className: 'muted', style: { fontSize: 12, marginBottom: 8 } }, 'Оставьте пустым, если PIN не меняется'),
+                    pinKeypadKit
+                        ? pinKeypadKit.renderPinKeypadSection({
+                            pin: editPinField,
+                            sectionClassName: 'heys-auth-pin-section space-y-3 is-active',
+                            keypadRef: editPinKeypadRef,
+                        })
+                        : React.createElement('input', {
+                            placeholder: 'Оставьте пустым, если не меняется',
+                            value: pin,
+                            type: 'text',
+                            maxLength: 6,
+                            onChange: (e) => editPinField.applyPinDigits((e.target.value || '').replace(/\D/g, '').slice(0, 4).split('').concat(['', '', '', '']).slice(0, 4)),
+                            onKeyDown: (e) => { if (e.key === 'Enter') handleSave(); },
+                            style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none', letterSpacing: pin ? '2px' : 'normal' }
+                        })
                 ),
                 // Buttons
                 React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 10 } },
@@ -947,6 +976,18 @@
         const [open, setOpen] = React.useState(false);
         const [loading, setLoading] = React.useState(false);
         const [accessResult, setAccessResult] = React.useState(null);
+        const pinKeypadKit = getPinKeypadKit();
+        const useCreatePinField = pinKeypadKit ? pinKeypadKit.usePinKeypad : useFallbackPinFieldState;
+        const createPinField = useCreatePinField({
+            disabled: loading || !!accessResult,
+            idPrefix: 'create-client-pin',
+            autoFocus: false,
+        });
+        const createPinKeypadRef = React.useRef(null);
+
+        React.useEffect(() => {
+            setNewPin(createPinField.pinValue);
+        }, [createPinField.pinValue, setNewPin]);
 
         const copyText = async (text, successMessage) => {
             if (!text) return false;
@@ -976,6 +1017,7 @@
             setOpen(false);
             setNewName('');
             setNewPhone('');
+            createPinField.resetDigits();
             setNewPin('');
             setAccessResult(null);
         };
@@ -985,7 +1027,7 @@
             const phoneNorm = auth?.normalizePhone ? auth.normalizePhone(newPhone) : newPhone;
             const canCreate = newName.trim()
                 && auth?.isValidPhone?.(phoneNorm)
-                && /^\d{4}$/.test(newPin);
+                && createPinField.isComplete;
             if (!canCreate || loading) {
                 if (newName.trim() && newPhone.trim() && !auth?.isValidPhone?.(phoneNorm)) {
                     HEYS.Toast?.error?.('Введите корректный номер: 11 цифр, начинается с 7');
@@ -994,7 +1036,7 @@
             }
             setLoading(true);
             try {
-                const created = await addClientToCloud({ name: newName, phone: newPhone, pin: newPin });
+                const created = await addClientToCloud({ name: newName, phone: newPhone, pin: createPinField.pinValue });
                 if (created?.ok && created.clientId) {
                     const nextAccess = {
                         phone: created.phone,
@@ -1115,15 +1157,21 @@
                 // PIN
                 React.createElement('div', null,
                     React.createElement('label', { style: { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 } }, 'PIN код (4 цифры)'),
-                    React.createElement('input', {
-	                        placeholder: '1234',
-	                        value: newPin,
-	                        maxLength: 4,
-	                        onChange: (e) => setNewPin((e.target.value || '').replace(/\D/g, '').slice(0, 4)),
-                        onKeyDown: (e) => { if (e.key === 'Enter') handleCreate(); },
-                        type: 'tel', /* numeric keyboard */
-                        style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none', letterSpacing: 4, textAlign: 'center', fontWeight: 700 }
-                    })
+                    pinKeypadKit
+                        ? pinKeypadKit.renderPinKeypadSection({
+                            pin: createPinField,
+                            sectionClassName: 'heys-auth-pin-section space-y-3 is-active',
+                            keypadRef: createPinKeypadRef,
+                        })
+                        : React.createElement('input', {
+                            placeholder: '1234',
+                            value: createPinField.pinValue,
+                            maxLength: 4,
+                            onChange: (e) => createPinField.applyPinDigits((e.target.value || '').replace(/\D/g, '').slice(0, 4).split('').concat(['', '', '', '']).slice(0, 4)),
+                            onKeyDown: (e) => { if (e.key === 'Enter') handleCreate(); },
+                            type: 'tel',
+                            style: { width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #d1d5db', fontSize: 15, outline: 'none', letterSpacing: 4, textAlign: 'center', fontWeight: 700 }
+                        })
                 ),
                 // Info
                 React.createElement('div', { style: { padding: '12px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 13, color: '#64748b', lineHeight: 1.4 } },
@@ -1172,19 +1220,19 @@
                 // Button
                 React.createElement('button', {
                     onClick: accessResult ? closeModal : handleCreate,
-                    disabled: loading || (!accessResult && !(newName.trim() && newPhone.trim() && /^\d{4}$/.test(newPin))),
+                    disabled: loading || (!accessResult && !(newName.trim() && newPhone.trim() && createPinField.isComplete)),
                     style: {
                         marginTop: 8,
                         width: '100%',
                         padding: '14px',
                         borderRadius: 12,
-                        background: (!loading && (accessResult || (newName.trim() && newPhone.trim() && /^\d{4}$/.test(newPin)))) ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : '#e2e8f0',
-                        color: (!loading && (accessResult || (newName.trim() && newPhone.trim() && /^\d{4}$/.test(newPin)))) ? '#fff' : '#94a3b8',
+                        background: (!loading && (accessResult || (newName.trim() && newPhone.trim() && createPinField.isComplete))) ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : '#e2e8f0',
+                        color: (!loading && (accessResult || (newName.trim() && newPhone.trim() && createPinField.isComplete))) ? '#fff' : '#94a3b8',
                         border: 'none',
                         fontWeight: 700,
                         fontSize: 16,
-                        cursor: (!loading && (accessResult || (newName.trim() && newPhone.trim() && /^\d{4}$/.test(newPin)))) ? 'pointer' : 'not-allowed',
-                        boxShadow: (!loading && (accessResult || (newName.trim() && newPhone.trim() && /^\d{4}$/.test(newPin)))) ? '0 4px 6px -1px rgba(37,99,235,0.2)' : 'none'
+                        cursor: (!loading && (accessResult || (newName.trim() && newPhone.trim() && createPinField.isComplete))) ? 'pointer' : 'not-allowed',
+                        boxShadow: (!loading && (accessResult || (newName.trim() && newPhone.trim() && createPinField.isComplete))) ? '0 4px 6px -1px rgba(37,99,235,0.2)' : 'none'
                     }
                 }, accessResult ? 'Готово' : loading ? 'Создание...' : 'Создать клиента')
             )

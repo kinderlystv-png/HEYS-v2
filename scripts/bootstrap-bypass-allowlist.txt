@@ -40,7 +40,7 @@ apps/web/advice/_other.js:973
 apps/web/advice/_outcomes.js:132
 apps/web/advice/_outcomes.js:170
 apps/web/heys_add_product_step_v1.js:180
-apps/web/heys_app_gate_flow_v1.js:48
+apps/web/heys_app_gate_flow_v1.js:62
 # [sync-UI] Pending sync toast queue — device-local UI feedback, not diary OverlayStore data.
 # Needle form: stable across line drift when hooks file is edited.
 apps/web/heys_app_hooks_v1.js::PENDING_SYNC_UI_QUEUE_KEY
@@ -207,8 +207,8 @@ apps/web/heys_ui_onboarding_v1.js:1665
 apps/web/heys_ui_onboarding_v1.js:1680
 apps/web/heys_ui_onboarding_v1.js:174
 apps/web/heys_ui_onboarding_v1.js:781
-apps/web/heys_user_tab_impl_v1.js:402
-apps/web/heys_user_tab_impl_v1.js:652
+apps/web/heys_user_tab_impl_v1.js:425
+apps/web/heys_user_tab_impl_v1.js:676
 apps/web/heys_user_v12.js:149
 apps/web/heys_user_v12.js:160
 apps/web/heys_weekly_reports_v2.js:36

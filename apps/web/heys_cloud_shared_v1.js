@@ -654,12 +654,13 @@
           return { data: null, error, status: 'error' };
         }
 
-        log('[SHARED PRODUCTS] Pending created:', data);
+        const inner = data?.create_pending_product_by_session ?? data;
+        log('[SHARED PRODUCTS] Pending created:', inner);
         return {
-          data,
+          data: inner,
           error: null,
-          status: data.status,
-          message: data.message
+          status: inner?.status,
+          message: inner?.message || ''
         };
       } catch (e) {
         err('[SHARED PRODUCTS] Unexpected error:', e);
@@ -711,11 +712,12 @@
           return { data: null, error, status: 'error' };
         }
 
+        const inner = data?.create_pending_shared_product_change_by_session ?? data;
         return {
-          data,
+          data: inner,
           error: null,
-          status: data?.status || 'pending',
-          message: data?.message || ''
+          status: inner?.status,
+          message: inner?.message || ''
         };
       } catch (e) {
         err('[SHARED PRODUCTS] Pending change unexpected error:', e);

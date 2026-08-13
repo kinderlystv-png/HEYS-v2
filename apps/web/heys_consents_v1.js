@@ -9,6 +9,16 @@
   const React = global.React;
   const { useState, useEffect, useCallback, useRef } = React || {};
 
+  function useFallbackAccessSignPin() {
+    const [value, setValue] = useState('');
+    return {
+      pinValue: value,
+      isComplete: value.length >= 4,
+      resetDigits: () => setValue(''),
+      applyPinDigits: (arr) => setValue((arr || []).slice(0, 4).join('')),
+    };
+  }
+
   // =====================================================
   // Константы
   // =====================================================
@@ -490,7 +500,6 @@
       const result = await consentsAPI.logConsents(clientId, consentList);
       if (result.needsAccessCode) {
         setStep('access_code_sign');
-        setAccessSignCode('');
         return { deferred: true };
       }
       if (!result.success) {
@@ -510,10 +519,24 @@
 
     // SMS verification state
     const [code, setCode] = useState('');
-    const [accessSignCode, setAccessSignCode] = useState('');
     const [codeSent, setCodeSent] = useState(false);
     const [resendTimer, setResendTimer] = useState(0);
     const codeInputRef = useRef(null);
+    const accessSignKeypadRef = useRef(null);
+    const pinKeypadKit = HEYS.AuthPinKeypad?.createKit?.(React);
+    const useAccessSignPin = pinKeypadKit ? pinKeypadKit.usePinKeypad : useFallbackAccessSignPin;
+    const accessSignPinApi = useAccessSignPin({
+      disabled: loading,
+      idPrefix: 'consent-access-code',
+      autoFocus: step === 'access_code_sign',
+    });
+    const accessSignCode = accessSignPinApi.pinValue;
+
+    useEffect(() => {
+      if (step === 'access_code_sign' && accessSignPinApi) {
+        accessSignPinApi.resetDigits();
+      }
+    }, [step]);
 
     const allRequiredAccepted = REQUIRED_CONSENTS.every(type => consents[type]);
 
@@ -857,26 +880,39 @@
             }, 'Код доступа — ваша простая электронная подпись. Никому его не сообщайте, в том числе куратору.')
           ),
           React.createElement('div', { className: 'space-y-2' },
-            React.createElement('label', {
-              className: 'block text-sm font-medium',
-              style: { color: '#3f3f46' }
-            }, 'Код доступа'),
-            React.createElement('input', {
-              type: 'tel',
-              inputMode: 'numeric',
-              pattern: '[0-9]*',
-              maxLength: 4,
-              placeholder: '• • • •',
-              value: accessSignCode,
-              onChange: (e) => setAccessSignCode(e.target.value.replace(/\D/g, '').slice(0, 4)),
-              className: 'w-full px-4 py-4 text-center text-2xl font-bold tracking-widest rounded-xl',
-              style: {
-                border: '2px solid #e5e7eb',
-                outline: 'none',
-                letterSpacing: '0.5em'
-              },
-              disabled: loading
-            })
+            pinKeypadKit
+              ? pinKeypadKit.renderPinKeypadSection({
+                pin: accessSignPinApi,
+                label: 'Код доступа',
+                labelClassName: 'block text-sm font-medium',
+                sectionClassName: 'heys-auth-pin-section space-y-3 is-active',
+                keypadRef: accessSignKeypadRef,
+              })
+              : React.createElement(React.Fragment, null,
+                React.createElement('label', {
+                  className: 'block text-sm font-medium',
+                  style: { color: '#3f3f46' }
+                }, 'Код доступа'),
+                React.createElement('input', {
+                  type: 'tel',
+                  inputMode: 'numeric',
+                  pattern: '[0-9]*',
+                  maxLength: 4,
+                  placeholder: '• • • •',
+                  value: accessSignCode,
+                  onChange: (e) => {
+                    const next = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    accessSignPinApi.applyPinDigits(next.split('').concat(['', '', '', '']).slice(0, 4));
+                  },
+                  className: 'w-full px-4 py-4 text-center text-2xl font-bold tracking-widest rounded-xl',
+                  style: {
+                    border: '2px solid #e5e7eb',
+                    outline: 'none',
+                    letterSpacing: '0.5em'
+                  },
+                  disabled: loading
+                })
+              )
           ),
           error && React.createElement('div', {
             className: 'rounded-xl p-4',
@@ -995,11 +1031,11 @@
         ) : step === 'access_code_sign' ? (
           React.createElement('button', {
             onClick: handleAccessCodeSign,
-            disabled: accessSignCode.length < 4 || loading,
+            disabled: !accessSignPinApi.isComplete || loading,
             className: 'w-full py-4 rounded-xl font-semibold text-white transition-all',
             style: {
-              backgroundColor: accessSignCode.length >= 4 && !loading ? '#22c55e' : '#d4d4d8',
-              cursor: accessSignCode.length >= 4 && !loading ? 'pointer' : 'not-allowed'
+              backgroundColor: accessSignPinApi.isComplete && !loading ? '#22c55e' : '#d4d4d8',
+              cursor: accessSignPinApi.isComplete && !loading ? 'pointer' : 'not-allowed'
             }
           }, loading ? '⏳ Подписываем...' : '✅ Подписать')
         ) : (

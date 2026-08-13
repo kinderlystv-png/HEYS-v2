@@ -8226,6 +8226,9 @@ NOVA: 1
       }
       throw new Error(msg);
     }
+    if (!status) {
+      throw new Error(result?.message || 'Неизвестный ответ сервера при отправке заявки');
+    }
     return null;
   }
 
