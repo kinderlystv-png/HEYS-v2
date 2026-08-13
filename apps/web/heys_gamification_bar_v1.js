@@ -88,7 +88,14 @@
         const [xpHistory, setXpHistory] = useState(() => {
             return HEYS.game && HEYS.game.getXPHistory ? HEYS.game.getXPHistory() : [];
         });
-        const [levelGuardActive, setLevelGuardActive] = useState(true);
+        const [levelGuardActive, setLevelGuardActive] = useState(() => {
+            if (typeof window !== 'undefined'
+                && window.__HEYS_READONLY_MODE__
+                && window.__HEYS_READONLY_MODE__.enabled) {
+                return false;
+            }
+            return true;
+        });
         const levelGuardTimerRef = useRef(null);
         const prevLevelRef = useRef(stats.level);
 
@@ -455,6 +462,9 @@
         // чем loadFromCloud завершится (~1400-1640ms). Guard теперь снимается event-driven
         // через reason: 'cloud_load_complete' в handleUpdate. Оставлен только 15s safety fallback.
         useEffect(() => {
+            const isReadonlyHost = !!(typeof window !== 'undefined'
+                && window.__HEYS_READONLY_MODE__
+                && window.__HEYS_READONLY_MODE__.enabled);
             const handleSyncCompleted = () => {
                 logSyncInfo('UI event:heysSyncCompleted', { action: 'pipeline_started_data_driven_guard' });
                 // НЕ устанавливаем таймер здесь — guard снимется через heysGameUpdate(cloud_load_complete)
@@ -462,12 +472,14 @@
 
             window.addEventListener('heysSyncCompleted', handleSyncCompleted);
 
-            // FIX v7.1: Снижен fallback с 45s до 10s — event-driven guard release теперь работает для session path
-            if (levelGuardTimerRef.current) clearTimeout(levelGuardTimerRef.current);
-            levelGuardTimerRef.current = setTimeout(() => {
-                logSyncInfo('UI guard:OFF', { reason: 'fallback_timeout_10000ms' });
-                setLevelGuardActive(false);
-            }, 10000);
+            if (!isReadonlyHost) {
+                // FIX v7.1: Снижен fallback с 45s до 10s — event-driven guard release теперь работает для session path
+                if (levelGuardTimerRef.current) clearTimeout(levelGuardTimerRef.current);
+                levelGuardTimerRef.current = setTimeout(() => {
+                    logSyncInfo('UI guard:OFF', { reason: 'fallback_timeout_10000ms' });
+                    setLevelGuardActive(false);
+                }, 10000);
+            }
 
             return () => {
                 window.removeEventListener('heysSyncCompleted', handleSyncCompleted);
@@ -481,15 +493,22 @@
         // 🔄 v3.1: Полный сброс UI при смене клиента куратором
         useEffect(() => {
             const handleClientChanged = () => {
-                logSyncInfo('UI guard:ON', { reason: 'client_changed' });
-                setLevelGuardActive(true);
+                const isReadonlyHost = !!(typeof window !== 'undefined'
+                    && window.__HEYS_READONLY_MODE__
+                    && window.__HEYS_READONLY_MODE__.enabled);
+                if (!isReadonlyHost) {
+                    logSyncInfo('UI guard:ON', { reason: 'client_changed' });
+                    setLevelGuardActive(true);
+                }
                 // RC-4 fix: перезапускаем fallback-таймер при смене клиента.
                 // Guard включился, но pipeline стартует заново — нужен свежий safety timeout.
-                if (levelGuardTimerRef.current) clearTimeout(levelGuardTimerRef.current);
-                levelGuardTimerRef.current = setTimeout(() => {
-                    logSyncInfo('UI guard:OFF', { reason: 'client_changed_fallback_timeout_10000ms' });
-                    setLevelGuardActive(false);
-                }, 10000);
+                if (!isReadonlyHost) {
+                    if (levelGuardTimerRef.current) clearTimeout(levelGuardTimerRef.current);
+                    levelGuardTimerRef.current = setTimeout(() => {
+                        logSyncInfo('UI guard:OFF', { reason: 'client_changed_fallback_timeout_10000ms' });
+                        setLevelGuardActive(false);
+                    }, 10000);
+                }
                 // Немедленно обнуляем все данные до дефолтов, пока грузятся новые
                 const freshStats = HEYS.game ? HEYS.game.getStats() : {
                     totalXP: 0, level: 1,

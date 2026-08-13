@@ -3178,10 +3178,10 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const visiblePendingActionItems = Array.isArray(pendingActionItems)
             ? pendingActionItems.slice(0, 4)
             : [];
-        const shouldShowPendingSyncBanner = pendingCount > 0 && showPendingSyncBanner;
         const isReadonlyHost = !!(typeof window !== 'undefined'
             && window.__HEYS_READONLY_MODE__
             && window.__HEYS_READONLY_MODE__.enabled);
+        const shouldShowPendingSyncBanner = pendingCount > 0 && showPendingSyncBanner && !isReadonlyHost;
         const isBackgroundPendingSync = !!showPendingSyncBanner;
         const pendingSyncBannerEyebrow = isReadonlyHost
             ? 'Копия для просмотра'

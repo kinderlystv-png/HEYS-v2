@@ -347,4 +347,13 @@ describe('consent readonly stable copy', () => {
       delete window.React;
     }
   });
+
+  it('AppHeader объявляет isReadonlyHost до shouldShowPendingSyncBanner (TDZ)', () => {
+    const shellSource = fs.readFileSync(path.resolve(__dirname, '../heys_app_shell_v1.js'), 'utf8');
+    const declareAt = shellSource.indexOf('const isReadonlyHost = !!(typeof window !== \'undefined\'');
+    const useAt = shellSource.indexOf('const shouldShowPendingSyncBanner = pendingCount > 0 && showPendingSyncBanner && !isReadonlyHost');
+    expect(declareAt).toBeGreaterThan(-1);
+    expect(useAt).toBeGreaterThan(-1);
+    expect(declareAt).toBeLessThan(useAt);
+  });
 });

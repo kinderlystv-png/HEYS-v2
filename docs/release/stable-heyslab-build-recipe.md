@@ -10,15 +10,16 @@ Cherry-pick readonly-коммитов на `36df9ce3` **конфликтует**
 `000-base-and-gamification.css`). Одной командой не повторяется — только этот
 рецепт.
 
-## Что лежит на копии сейчас (после readonly round 2, 2026-08-13)
+## Что лежит на копии сейчас (после old-nav-restore, 2026-08-13)
 
-| Поле                                | Значение                                                                                                    |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| База UI                             | git `36df9ce3`                                                                                              |
-| Patches                             | `d75ec593d` readonly, `3d1904513` write-context RPC, `4a7ced768` consent gate, `00c443259` readonly round 2 |
-| `boot-app.bundle`                   | `20343613fc3a.js`                                                                                           |
-| `version.json` → `hash`             | `36df9ce3` (линия эталона)                                                                                  |
-| `version.json` → `stableRebuild.id` | `readonly-round2-20260813`                                                                                  |
+| Поле                                | Значение                                                                                                                               |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| База UI                             | git `36df9ce3`                                                                                                                         |
+| Patches                             | `d75ec593d` readonly, `3d1904513` write-context RPC, `4a7ced768` consent gate, `00c443259` readonly round 2; chrome = `36df9ce3` shell |
+| `boot-app.bundle`                   | `4592100534db.js` (лампочка 💡 + настройки; не v4 `renderNavIcon`)                                                                     |
+| `boot-core.bundle`                  | `3b5581270022.js` — **не** hash из local `main`                                                                                        |
+| `version.json` → `hash`             | `36df9ce3` (линия эталона)                                                                                                             |
+| `version.json` → `stableRebuild.id` | `old-nav-restore-20260813`                                                                                                             |
 
 ## Пошагово
 
@@ -40,7 +41,11 @@ cd "$WT"
 # (см. apps/web/index.html строки ~107–122 в main).
 git show 36df9ce3:apps/web/index.html > apps/web/index.html
 # …вручную вставить READONLY_MODE <script> после DEMO_MODE-блока…
-git show d75ec593d:apps/web/heys_app_shell_v1.js > apps/web/heys_app_shell_v1.js
+# ⚠️ НЕ копировать heys_app_shell_v1.js из d75ec593d / 00c443259 / main:
+# там уже v4-навигация (renderNavIcon, без 💡). Chrome эталона — shell с 36df9ce3.
+# В него вручную: hdr-readonly-banner после { className: 'hdr' } и
+# isReadonlyHost ПЕРЕД shouldShowPendingSyncBanner (иначе TDZ/ErrorBoundary).
+# git show d75ec593d:apps/web/heys_app_shell_v1.js  — НЕ использовать как chrome
 git show d75ec593d:apps/web/heys_storage_supabase_v1.js > apps/web/heys_storage_supabase_v1.js
 git show d75ec593d:apps/web/styles/modules/000-base-and-gamification.css > apps/web/styles/modules/000-base-and-gamification.css
 git show 3d1904513:apps/web/heys_yandex_api_v1.js > apps/web/heys_yandex_api_v1.js
@@ -48,15 +53,13 @@ git show 3d1904513:apps/web/heys_yandex_api_v1.js > apps/web/heys_yandex_api_v1.
 git show 00c443259:apps/web/heys_app_derived_state_v1.js > apps/web/heys_app_derived_state_v1.js
 git show 00c443259:apps/web/heys_app_root_impl_v1.js > apps/web/heys_app_root_impl_v1.js
 git show 00c443259:apps/web/heys_app_gate_flow_v1.js > apps/web/heys_app_gate_flow_v1.js
-git show 00c443259:apps/web/heys_app_shell_v1.js > apps/web/heys_app_shell_v1.js
 git show 00c443259:apps/web/heys_consents_v1.js > apps/web/heys_consents_v1.js
-git show 00c443259:apps/web/heys_gamification_v1.js > apps/web/heys_gamification_v1.js
 # ⚠️ НЕ копировать heys_gamification_v1.js целиком с main: на базе 36df9ce3
 # GamificationBar в boot-app всё ещё зовёт HEYS.game.getRankBadge, а в main
 # API убрали. Берите 36df9ce3 + только readonly-guards в scheduleCloudSync/syncToCloud.
-git show 00c443259:apps/web/heys_health_features_v1.js > apps/web/heys_health_features_v1.js
 git show 00c443259:apps/web/heys_products_overlay_v1.js > apps/web/heys_products_overlay_v1.js
-git show 00c443259:apps/web/heys_yandex_api_v1.js > apps/web/heys_yandex_api_v1.js
+# boot-core на бакете уже 3b5581270022 — не перезаливать yandex_api / boot-core
+# с worktree 36df9ce3: его index указывает на boot-core.bundle.2ff5c7b961dd.js (404).
 
 # 2. Зависимости и бандлы (только затронутые файлы)
 pnpm install --frozen-lockfile
@@ -93,6 +96,13 @@ aws s3 cp dist/bundle-manifest.json s3://${BUCKET}/bundle-manifest.json \
   --endpoint-url=$ENDPOINT --cache-control "no-cache, no-store, must-revalidate" \
   --content-type "application/json"
 # boot-app.bundle.*.js(.gz) — см. index.html, загрузить новый hash
+#
+# ⚠️ index.html НЕ брать из worktree 36df9ce3 и НЕ из local main.
+# Worktree index ссылается на boot-core.bundle.2ff5c7b961dd.js (нет в бакете → 404 → PIN).
+# Main index подставит свой boot-core hash, которого тоже нет.
+# Правильно: скачать ЖИВОЙ index с stable, заменить только boot-app hash,
+# оставить boot-core.bundle.3b5581270022.js. После upload каждый boot-*.js = 200.
+# Бандл boot-app обязан содержать tab-advice / 💡 и НЕ содержать renderNavIcon.
 
 # 4b. Если index всё же из d75ec593d (v4 login shell) — обязательно залить
 # статику, иначе после PIN пустой экран (404 на theme + v4 CSS):
@@ -123,9 +133,15 @@ cd "$REPO" && git worktree remove --force "$WT"
 2. `app.heyslab.ru/version.json` — **без изменений**.
 3. PIN-вход на stable не упирается в ConsentScreen; экран согласий открывается с
    плашкой; «Продолжить» без READONLY на `log_consents`.
+4. Нижнее меню — старое: вкладка советов с 💡 и шестерёнка настроек, не v4
+   SVG/`more`.
 
 ## Нельзя
 
 - `pnpm --filter @heys/web build` от HEAD `main` → в stable-бакет.
 - Деплой в `heys-app` / `app.heyslab.ru` под видом stable-fix.
 - Cherry-pick без ручной сверки readonly-файлов — конфликт ожидаем.
+- Копировать `heys_app_shell_v1.js` с `00c443259` / `main` в эталон — ломает
+  меню (v4 nav).
+- Заливать `index.html` из worktree `36df9ce3` или из local `main` — 404 на
+  boot-core.
