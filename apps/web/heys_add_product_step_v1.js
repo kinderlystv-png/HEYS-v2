@@ -7951,6 +7951,181 @@ NOVA: 1
     return '🍽️';
   }
 
+  // === Очередь повторной отправки заявки в общую базу («Сохранить только себе», хвост) ===
+  // Продукт уже сохранён локально (upsertLocalProduct/commitPersonalProduct) —
+  // очередь отвечает только за обогащение общей базы модерацией.
+  // Решения зафиксированы в ADD_FOOD_FLOW_AUDIT_2026-08-09.md § «Два хвоста в
+  // данных»: минимальный интервал между попытками (не расписание), 5 попыток,
+  // идемпотентность по id продукта, exists/invalid_session — как при первой
+  // попытке, продукт удалён локально — заявка выбрасывается молча.
+  const PENDING_PRODUCT_QUEUE_KEY = 'heys_pending_product_retry_queue_v1';
+  // 1мин / 5мин / 30мин / 2ч / 12ч — минимальный интервал перед следующей из
+  // пяти попыток, отсчитывается от последней попытки.
+  const PENDING_PRODUCT_RETRY_INTERVALS_MS = [60000, 300000, 1800000, 7200000, 43200000];
+  const PENDING_PRODUCT_MAX_ATTEMPTS = PENDING_PRODUCT_RETRY_INTERVALS_MS.length;
+
+  const readPendingProductQueue = () => {
+    const raw = readGlobalValue(PENDING_PRODUCT_QUEUE_KEY, {});
+    return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  };
+
+  const writePendingProductQueue = (queue) => {
+    writeRawValue(PENDING_PRODUCT_QUEUE_KEY, queue);
+  };
+
+  const pendingProductQueueListeners = new Set();
+  const notifyPendingProductQueueChanged = () => {
+    pendingProductQueueListeners.forEach((cb) => { try { cb(); } catch (_) { /* noop */ } });
+    try { window.dispatchEvent(new CustomEvent('heys:pending-product-queue-changed')); } catch (_) { /* noop */ }
+  };
+
+  const isLocalProductStillPresent = (productId) => {
+    try {
+      const U = HEYS.utils || {};
+      const list = HEYS.products?.getAll?.() || U.lsGet?.('heys_products', []) || [];
+      return Array.isArray(list) && list.some((p) => String(p?.id) === String(productId));
+    } catch (_) {
+      return true; // при неопределённости не выбрасываем заявку молча
+    }
+  };
+
+  // Ставит заявку в очередь (или обновляет её, если уже там — идемпотентно по id).
+  const enqueuePendingProductRetry = (clientId, product) => {
+    if (!product?.id) return;
+    const queue = readPendingProductQueue();
+    const existing = queue[product.id];
+    queue[product.id] = {
+      id: product.id,
+      clientId: clientId || existing?.clientId || null,
+      product,
+      attempts: existing?.attempts || 0,
+      createdAt: existing?.createdAt || Date.now(),
+      lastAttemptAt: existing?.lastAttemptAt || Date.now(),
+      exhausted: false
+    };
+    writePendingProductQueue(queue);
+    notifyPendingProductQueueChanged();
+  };
+
+  const getPendingProductRetryState = (productId) => {
+    const entry = readPendingProductQueue()[productId];
+    if (!entry) return null;
+    return { exhausted: !!entry.exhausted, attempts: entry.attempts };
+  };
+
+  const CLIENT_ID_MISSING_MSG = 'clientId отсутствует';
+
+  // Один сетевой заход по записи очереди. Возвращает 'ok' | 'exhausted' | 'kept'.
+  const attemptPendingProductQueueEntry = async (queue, entry) => {
+    if (!HEYS.cloud?.createPendingProduct) return 'kept';
+    let result;
+    try {
+      result = await HEYS.cloud.createPendingProduct(entry.clientId, entry.product);
+    } catch (err) {
+      result = { status: 'error', error: err };
+    }
+    const status = result?.status;
+    if (status === 'pending' || status === 'pending_dup') {
+      delete queue[entry.id];
+      try { window.dispatchEvent(new CustomEvent('heys:pending-product-created')); } catch (_) { /* noop */ }
+      notifyPendingProductsUpdatedForAddStep();
+      return 'ok';
+    }
+    if (status === 'exists') {
+      // локальный продукт уже стоит в приёмах — не трогаем, заявка просто закрыта
+      delete queue[entry.id];
+      return 'ok';
+    }
+    const msg = result?.message || (typeof result?.error === 'string' ? result.error : (result?.error?.message || ''));
+    if (status === 'invalid_session' || /invalid_session|No session token|Нет активной сессии/i.test(String(msg))) {
+      delete queue[entry.id];
+      try { HEYS.Auth?.requestPinReentry?.(); } catch (_) { /* noop */ }
+      return 'exhausted';
+    }
+    if (String(msg).includes(CLIENT_ID_MISSING_MSG)) {
+      // без clientId повтор бессмыслен так же, как и первая попытка — не копим
+      delete queue[entry.id];
+      return 'exhausted';
+    }
+    entry.attempts += 1;
+    entry.lastAttemptAt = Date.now();
+    if (entry.attempts >= PENDING_PRODUCT_MAX_ATTEMPTS) {
+      entry.exhausted = true;
+      queue[entry.id] = entry;
+      return 'exhausted';
+    }
+    queue[entry.id] = entry;
+    return 'kept';
+  };
+
+  let pendingProductQueueProcessing = false;
+  // Повтор по сети/открытию приложения — не по таймеру (решение зафиксировано).
+  const processPendingProductQueue = async () => {
+    if (pendingProductQueueProcessing) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    pendingProductQueueProcessing = true;
+    try {
+      const queue = readPendingProductQueue();
+      const now = Date.now();
+      let changed = false;
+      for (const productId of Object.keys(queue)) {
+        const entry = queue[productId];
+        if (!entry || entry.exhausted) continue;
+        if (!isLocalProductStillPresent(productId)) {
+          delete queue[productId];
+          changed = true;
+          continue;
+        }
+        const minGap = PENDING_PRODUCT_RETRY_INTERVALS_MS[entry.attempts] ?? Infinity;
+        const elapsed = now - (entry.lastAttemptAt || entry.createdAt || 0);
+        if (elapsed < minGap) continue;
+        await attemptPendingProductQueueEntry(queue, entry);
+        changed = true;
+      }
+      if (changed) writePendingProductQueue(queue);
+    } finally {
+      pendingProductQueueProcessing = false;
+      notifyPendingProductQueueChanged();
+    }
+  };
+
+  // Ручной повтор из состояния «в общую базу не отправлено» — обходит паузу,
+  // но саму попытку и её результат считает как обычную (может снова исчерпаться).
+  const retryPendingProductNow = async (productId) => {
+    const queue = readPendingProductQueue();
+    const entry = queue[productId];
+    if (!entry) return { ok: false, reason: 'not_found' };
+    if (!isLocalProductStillPresent(productId)) {
+      delete queue[productId];
+      writePendingProductQueue(queue);
+      notifyPendingProductQueueChanged();
+      return { ok: false, reason: 'product_removed' };
+    }
+    entry.exhausted = false;
+    const outcome = await attemptPendingProductQueueEntry(queue, entry);
+    writePendingProductQueue(queue);
+    notifyPendingProductQueueChanged();
+    return { ok: outcome === 'ok', exhausted: outcome === 'exhausted' };
+  };
+
+  if (typeof window !== 'undefined' && !HEYS.__pendingProductQueueWired) {
+    HEYS.__pendingProductQueueWired = true;
+    window.addEventListener('online', () => { processPendingProductQueue(); });
+    const kickoff = () => { processPendingProductQueue(); };
+    if (document.readyState === 'complete') setTimeout(kickoff, 1500);
+    else window.addEventListener('load', () => setTimeout(kickoff, 1500));
+  }
+
+  HEYS.pendingProductQueue = {
+    getState: getPendingProductRetryState,
+    retryNow: retryPendingProductNow,
+    subscribe(cb) {
+      if (typeof cb !== 'function') return () => { };
+      pendingProductQueueListeners.add(cb);
+      return () => pendingProductQueueListeners.delete(cb);
+    }
+  };
+
   // === Исходы модерации и отказ сохранения (prompt-food шаг 2) ===
   const APS_MODERATION_OUTCOME_META = {
     pending: { kind: 'ok', message: 'Продукт сохранён, заявка ушла куратору' },
@@ -8045,6 +8220,41 @@ NOVA: 1
       )
     );
   }
+
+  // Компактная плашка «в общую базу не отправлено» на самом продукте
+  // (дневник/список продуктов) — после исчерпания 5 попыток очереди.
+  // Живёт своей жизнью: сама подписывается на очередь, дневнику достаточно
+  // отрендерить <HEYS.pendingProductQueue.NotSentChip productId={p.id} />.
+  function PendingProductNotSentChip({ productId }) {
+    if (!productId) return null;
+    const e = React.createElement;
+    const [state, setState] = useState(() => getPendingProductRetryState(productId));
+    const [busy, setBusy] = useState(false);
+    useEffect(() => {
+      setState(getPendingProductRetryState(productId));
+      const unsubscribe = HEYS.pendingProductQueue.subscribe(() => {
+        setState(getPendingProductRetryState(productId));
+      });
+      return unsubscribe;
+    }, [productId]);
+    if (!state?.exhausted) return null;
+    const handleRetry = async () => {
+      if (busy) return;
+      setBusy(true);
+      try { await retryPendingProductNow(productId); } finally { setBusy(false); }
+    };
+    return e('span', { className: 'aps-v4-notsent-chip' },
+      'в общую базу не отправлено',
+      e('button', {
+        type: 'button',
+        className: 'aps-v4-notsent-chip__retry',
+        onClick: handleRetry,
+        disabled: busy
+      }, busy ? 'отправляю…' : 'отправить заявку')
+    );
+  }
+
+  HEYS.pendingProductQueue.NotSentChip = PendingProductNotSentChip;
 
   function ProductCommitErrorView({ onRetry, onSaveLocalOnly, busy }) {
     const e = React.createElement;
@@ -8173,6 +8383,7 @@ NOVA: 1
   async function publishProductModerationOutcome(updatedProduct, { publishToShared, isCurator } = {}) {
     if (!publishToShared || !updatedProduct) return null;
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+      enqueuePendingProductRetry(readGlobalValue('heys_client_current', null), updatedProduct);
       return 'offline';
     }
 
@@ -8514,6 +8725,9 @@ NOVA: 1
               if (/invalid_session|No session token|Нет активной сессии/i.test(msg)) {
                 setModerationOutcome('invalid_session');
                 return;
+              }
+              if (!msg.includes(CLIENT_ID_MISSING_MSG)) {
+                enqueuePendingProductRetry(readGlobalValue('heys_client_current', null), updatedProduct);
               }
               setModerationOutcome('offline');
               return;

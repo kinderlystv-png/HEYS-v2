@@ -2124,6 +2124,8 @@
                                 onClick: (e) => { e.stopPropagation(); openEditGramsModal(mealIndex, it.id, G, p); },
                             }, G + 'г'),
                         ),
+                        window.HEYS?.pendingProductQueue?.NotSentChip
+                            && React.createElement(window.HEYS.pendingProductQueue.NotSentChip, { productId: p.id }),
                         React.createElement('div', { className: 'mpc-grid mpc-header' },
                             React.createElement('span', null, 'ккал'),
                             React.createElement('span', null, 'У'),
@@ -2234,6 +2236,8 @@
                                 onClick: () => removeItem(mealIndex, it.id),
                             }, '×'),
                         ),
+                        window.HEYS?.pendingProductQueue?.NotSentChip
+                            && React.createElement(window.HEYS.pendingProductQueue.NotSentChip, { productId: p.id }),
                         React.createElement('div', { className: 'mpc-grid mpc-header' },
                             React.createElement('span', null, 'ккал'),
                             React.createElement('span', null, 'У'),

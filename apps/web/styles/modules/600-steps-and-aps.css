@@ -7466,6 +7466,39 @@ button.meal-quality-badge:active {
   cursor: pointer;
 }
 
+/* «В общую базу не отправлено» — исчерпание очереди повтора заявки на
+   модерацию (heys_add_product_step_v1.js pendingProductQueue). Появляется
+   на самом продукте в дневнике, не тостом. Стиль — как aps-v4-outcome--warn. */
+.aps-v4-notsent-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--v4-sand-accent-bg, #f0dcc6);
+  color: var(--v4-sand-act-deep, #8a4a20);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.aps-v4-notsent-chip__retry {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  color: var(--v4-sand-act-deep, #8a4a20);
+  cursor: pointer;
+}
+
+.aps-v4-notsent-chip__retry:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .aps-v4-exit-backdrop {
   position: fixed;
   inset: 0;
