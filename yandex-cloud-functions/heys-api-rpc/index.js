@@ -9,6 +9,7 @@ const { initSecrets } = require('./shared/secrets');
 
 const { getPool } = require('./shared/db-pool');
 const { classifyCriticalKey, validateCriticalKvPayload } = require('./shared/kv-payload-contracts');
+const { isCheckViolation, mapCheckViolation } = require('./shared/pg-check-violation');
 const { createServerlessCapacityGuard } = require('./shared/serverless-capacity-guard');
 const { shouldSendImmediateTelegramAlert: _shouldSendTgAlert } = require('./ops-alert-policy.cjs');
 const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergePlanningRecords, mergeHungerStatusEvents, mergeInsightsFeedback, mergeScalarKvWithOutcome, mergeMorningCheckinProgress, hasMorningCheckinProgressConflict } = require('./lib/heys_sync_merge_v1.cjs');
@@ -5425,6 +5426,18 @@ async function handleRpcRequest(event, context) {
           error: error.message,
           code: error.code
         })
+      };
+    }
+
+    // 23514 = check_violation. Табличный CHECK и RAISE ... ERRCODE =
+    // 'check_violation' — отказ по правилу (нутриенты > 105 г, bounds
+    // профиля), не падение БД. Иначе куратор и UI видят "Database error"
+    // (инцидент MEDUTEUT / клетчатка, 2026-08-13).
+    if (isCheckViolation(error)) {
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify(mapCheckViolation(error, params))
       };
     }
 

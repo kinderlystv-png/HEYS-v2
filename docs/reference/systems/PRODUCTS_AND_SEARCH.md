@@ -1,10 +1,10 @@
 # Продукты, overlay и поиск
 
-> **Статус:** core source-контракты проверены 2026-07-18 **Охват:** shared
-> catalog, client overlay, merge/sync, commit gate, moderation entrypoints и
-> поиск в основном web flow **Не подтверждено:** production catalog
-> contents/count, runtime feature flags, database function bodies после
-> последней migration и browser/E2E поведение
+> **Статус:** core source-контракты проверены 2026-07-18, CHECK-violation UX
+> публикации — 2026-08-13 **Охват:** shared catalog, client overlay, merge/sync,
+> commit gate, moderation entrypoints и поиск в основном web flow **Не
+> подтверждено:** production catalog contents/count, runtime feature flags,
+> database function bodies после последней migration и browser/E2E поведение
 
 ## Модель владения данными
 
@@ -225,6 +225,13 @@ Workspace package `@heys/search` имеет собственный TypeScript AP
 `shared_products_mass_within_100g` (сумма нутриентов ≤ 105 г на 100 г) — именно
 он поймал бы какао и грецкий орех, если бы существовал в мае.
 
+Нарушение этого CHECK — бизнес-отказ, не падение БД. `heys-api-rpc` мапит
+SQLSTATE `23514` в HTTP 200 `{ success: false, code: 'CHECK_VIOLATION', error }`
+с текстом про сумму и лимит 105 г; коннектор и вкладка каталога показывают
+`error`, а не сырой `"Database error"`. Личная карточка клиента при этом уже
+создана: общая база отказала, overlay нет. `heys_update_product` общую карточку
+не перепубликует — это личный override, не баг публикации.
+
 ## Ограничение модели: энергия алкоголя не учитывается
 
 Калорийность считается как `3*белок + 4*углеводы + 9*жир` (NET-Atwater, белок
@@ -270,8 +277,10 @@ Bakalář, Жигулёвское пшеничное.
   карточек 2026-08-02 нашло потерянные макронутриенты (сало 394 вместо ~800
   ккал, чипсы 353 вместо ~530), перепутанные сахара и крахмал, инверсии `harm` и
   трансжиры у продуктов, где их не бывает. Исправлена часть; остаток и разбор —
-  `scripts/db/migrations/2026-08-02_*`. Валидации на вход, которая ловила бы
-  такие значения при публикации, нет.
+  `scripts/db/migrations/2026-08-02_*`. На вход общей базы стоят CHECK
+  (отрицательные нутриенты, сумма > 105 г, энергия > 950, трансжиры, GI,
+  вредность); форма редактора по-прежнему не считает сумму до отправки, поэтому
+  отказ приходит с сервера.
 - Сахарные спирты (мальтит и подобные) в протеиновых батончиках записываются в
   `fiber100`, из-за чего выпадают из расчёта и калорийность занижается примерно
   вдвое. Отдельного поля для полиолов в модели нет — та же природа пробела, что
@@ -302,3 +311,4 @@ Bakalář, Жигулёвское пшеничное.
 | P19 | Энергия алкоголя внесена эквивалентом в сложные углеводы, поля для этанола нет           | `bash scripts/db/psql.sh -c "SELECT name, description FROM shared_products WHERE description ILIKE '%спирт%';"`                                                                                                                                                                                                                                                                                | применено 2026-08-02: 3 позиции, обход задокументирован в разделе «Ограничение модели»         |
 | P20 | Имя колонки в REST-фильтре и в INSERT проходит whitelist таблицы, иначе 400              | `node --test yandex-cloud-functions/__tests__/rest-filter-column-injection.contract.test.cjs`                                                                                                                                                                                                                                                                                                  | 11/11 pass 2026-08-02 (SEC-029); в рабочем дереве, не задеплоено                               |
 | P21 | PATCH/DELETE по `shared_products_pending` всегда ограничены `curator_id` из JWT          | `node --test yandex-cloud-functions/__tests__/rest-pending-ownership.contract.test.cjs`                                                                                                                                                                                                                                                                                                        | 6/6 pass 2026-08-02 (SEC-032); в рабочем дереве, не задеплоено                                 |
+| P22 | CHECK `shared_products_mass_within_100g` на RPC отдаётся как `CHECK_VIOLATION`, не 500   | `node --test yandex-cloud-functions/heys-api-rpc/__tests__/pg-check-violation.test.js && node yandex-cloud-functions/heys-api-rpc/tests/shared_product_check_violation.contract.test.js`                                                                                                                                                                                                       | проверено 2026-08-13: MEDUTEUT 107 г → текст про 105 г, без `Database error`                   |
