@@ -1583,6 +1583,52 @@ test('длительность согласована между zoneMinutes и 
   assert.equal(log.totalDurationMinutes, 180);
 });
 
+test('упражнение на время пишет duration_sec, а не reps, и снимок unit', () => {
+  const { log } = day.buildWorkoutLog([{
+    name: 'Планка', unit: 'time',
+    approaches: [{ duration_sec: 60 }, { duration_sec: 45, done: false }],
+  }]);
+  assert.equal(log.exercises[0].unit, 'time');
+  assert.equal(log.exercises[0].approaches[0].durationSec, 60);
+  assert.equal(log.exercises[0].approaches[0].reps, undefined);
+  assert.equal(log.exercises[0].approaches[1].done, false);
+});
+
+test('упражнение на время без duration_sec отклоняется', () => {
+  const bad = day.buildWorkoutLog([{ name: 'Планка', unit: 'time', approaches: [{ reps: 5 }] }]);
+  assert.match(bad.error, /duration_sec/);
+});
+
+test('упражнение на дистанцию пишет distance_m и держит вес снаряда отдельно', () => {
+  const { log } = day.buildWorkoutLog([{
+    name: 'Фермерская переноска', unit: 'distance',
+    approaches: [{ distance_m: 40, weight_kg: 24 }],
+  }]);
+  assert.equal(log.exercises[0].unit, 'distance');
+  assert.equal(log.exercises[0].approaches[0].distanceM, 40);
+  assert.equal(log.exercises[0].approaches[0].weightKg, '24');
+});
+
+test('неизвестный unit отклоняется, а weight_reps по умолчанию не пишет unit в снимок', () => {
+  const bad = day.buildWorkoutLog([{ name: 'X', unit: 'весом', approaches: [{ reps: 5 }] }]);
+  assert.match(bad.error, /unit/);
+  const { log } = day.buildWorkoutLog([{ name: 'Жим', approaches: [{ reps: 5, weight_kg: 40 }] }]);
+  assert.equal(log.exercises[0].unit, undefined);
+});
+
+test('дискомфорт на подходе пишется с заметкой, без флага заметка не сохраняется', () => {
+  const { log } = day.buildWorkoutLog([{
+    name: 'Жим', approaches: [
+      { reps: 8, weight_kg: 60, discomfort: true, discomfort_note: 'плечо тянет' },
+      { reps: 8, weight_kg: 60, discomfort_note: 'без флага — не считается' },
+    ],
+  }]);
+  assert.equal(log.exercises[0].approaches[0].discomfort, true);
+  assert.equal(log.exercises[0].approaches[0].discomfortNote, 'плечо тянет');
+  assert.equal(log.exercises[0].approaches[1].discomfort, undefined);
+  assert.equal(log.exercises[0].approaches[1].discomfortNote, undefined);
+});
+
 test('силовая не перезаписывает чужую кардио-тренировку молча', () => {
   const base = {
     ...day.emptyDay('2026-08-01', CLIENT, 1000),

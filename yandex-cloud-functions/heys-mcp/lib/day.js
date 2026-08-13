@@ -1133,12 +1133,40 @@ function buildWorkoutLog(exercises, { durationMin, defaultDone } = {}) {
     const rawSsGroup = raw.superset_group === undefined || raw.superset_group === null
       ? 0
       : strictNum(raw.superset_group);
+    // Единица измерения — снимок со справочника (heys_exercise_catalog_v1.js).
+    // Пусто = weight_reps, как у старых записей. Время/дистанция — планка,
+    // фермерская переноска и т.п.: там повторов нет вовсе.
+    const rawUnit = raw.unit === undefined || raw.unit === null || raw.unit === ''
+      ? 'weight_reps'
+      : String(raw.unit);
+    if (!['weight_reps', 'time', 'distance'].includes(rawUnit)) {
+      return { error: `${where} «${name}»: unit — weight_reps, time или distance.` };
+    }
+    const measuredByTime = rawUnit === 'time';
+    const measuredByDistance = rawUnit === 'distance';
     const approaches = [];
     for (let k = 0; k < rawAps.length; k += 1) {
       const a = rawAps[k] || {};
-      const reps = strictNum(a.reps);
-      if (reps === null || !Number.isInteger(reps) || reps < 1 || reps > 200) {
-        return { error: `${where} «${name}», подход ${k + 1}: reps — целое число от 1 до 200.` };
+      let reps = null;
+      if (!measuredByTime && !measuredByDistance) {
+        reps = strictNum(a.reps);
+        if (reps === null || !Number.isInteger(reps) || reps < 1 || reps > 200) {
+          return { error: `${where} «${name}», подход ${k + 1}: reps — целое число от 1 до 200.` };
+        }
+      }
+      let durSec = null;
+      if (measuredByTime) {
+        durSec = strictNum(a.duration_sec);
+        if (durSec === null || !(durSec > 0) || durSec > 86400) {
+          return { error: `${where} «${name}», подход ${k + 1}: duration_sec — число секунд от 1 до 86400.` };
+        }
+      }
+      let distM = null;
+      if (measuredByDistance) {
+        distM = strictNum(a.distance_m);
+        if (distM === null || !(distM > 0) || distM > 200000) {
+          return { error: `${where} «${name}», подход ${k + 1}: distance_m — число метров от 1 до 200000.` };
+        }
       }
       let w = null;
       if (a.weight_kg !== undefined && a.weight_kg !== null && a.weight_kg !== '') {
@@ -1152,6 +1180,15 @@ function buildWorkoutLog(exercises, { durationMin, defaultDone } = {}) {
       }
       if (a.set_type !== undefined && a.set_type !== null && !['work', 'warmup'].includes(a.set_type)) {
         return { error: `${where} «${name}», подход ${k + 1}: set_type — work или warmup.` };
+      }
+      if (a.discomfort !== undefined && typeof a.discomfort !== 'boolean') {
+        return { error: `${where} «${name}», подход ${k + 1}: discomfort — true или false.` };
+      }
+      if (a.discomfort_note !== undefined && a.discomfort_note !== null && typeof a.discomfort_note !== 'string') {
+        return { error: `${where} «${name}», подход ${k + 1}: discomfort_note — строка.` };
+      }
+      if (typeof a.discomfort_note === 'string' && a.discomfort_note.length > 100) {
+        return { error: `${where} «${name}», подход ${k + 1}: discomfort_note длиннее 100 символов.` };
       }
 
       // Сброс — ступень ВНУТРИ подхода, а не отдельный подход: иначе счётчик
@@ -1182,16 +1219,23 @@ function buildWorkoutLog(exercises, { durationMin, defaultDone } = {}) {
       const approach = {
         id: makeId('ap_'),
         weightKg: w === null ? '' : String(w),
-        reps,
         done: a.done === undefined ? doneDefault : a.done,
       };
+      if (reps !== null) approach.reps = reps;
+      if (durSec !== null) approach.durationSec = durSec;
+      if (distM !== null) approach.distanceM = distM;
       if (a.set_type === 'warmup') approach.type = 'warmup';
       if (extra !== null && extra !== 0) approach.extraWeightKg = extra;
       if (drops.length) approach.drops = drops;
+      if (a.discomfort) {
+        approach.discomfort = true;
+        const note = typeof a.discomfort_note === 'string' ? a.discomfort_note.trim() : '';
+        if (note) approach.discomfortNote = note;
+      }
 
       // Правила подхода живут в ядре в одном экземпляре — свой набор условий
       // здесь разошёлся бы с приложением молча.
-      const verdict = webMirror.validateApproach(approach, { inSuperset: rawSsGroup > 0 });
+      const verdict = webMirror.validateApproach(approach, { inSuperset: rawSsGroup > 0, unit: rawUnit });
       if (!verdict.ok) {
         return { error: `${where} «${name}», подход ${k + 1}: ${verdict.errors.join('; ')}.` };
       }
@@ -1216,7 +1260,7 @@ function buildWorkoutLog(exercises, { durationMin, defaultDone } = {}) {
     let exId = makeId('ex_');
     while (usedIds.has(exId)) exId = makeId('ex_');
     usedIds.add(exId);
-    out.push({
+    const exOut = {
       id: exId,
       name,
       approaches,
@@ -1227,9 +1271,11 @@ function buildWorkoutLog(exercises, { durationMin, defaultDone } = {}) {
       restManual: false,
       collapsed: false,
       sets: approaches.length,
-      reps: approaches[0].reps,
+      reps: approaches[0].reps || 0,
       weightKg: approaches[0].weightKg,
-    });
+    };
+    if (rawUnit !== 'weight_reps') exOut.unit = rawUnit;
+    out.push(exOut);
   }
 
   // Суперсет из одного упражнения приложение распускает само (pruneSsGroups) —
