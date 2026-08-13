@@ -39,15 +39,15 @@
     };
 
     const ZONE_META = {
-        stagnation: { label: 'Нет прогресса', color: '#f59e0b', light: '#fef3c7', emoji: '⏸' },
-        optimal: { label: 'Оптимально', color: '#10b981', light: '#d1fae5', emoji: '✅' },
-        fast: { label: 'Быстро', color: 'var(--v4-water, #3b82f6)', light: '#dbeafe', emoji: '⚡' },
-        too_fast: { label: 'Слишком быстро', color: '#f97316', light: '#ffedd5', emoji: '⚠️' },
-        warning: { label: 'Предупреждение', color: '#ef4444', light: '#fee2e2', emoji: '🔴' },
-        danger: { label: 'Критично', color: '#b91c1c', light: '#fee2e2', emoji: '🚨' },
+        stagnation: { label: 'Нет прогресса', color: 'var(--v4-wgt-amber, #f59e0b)', light: 'var(--v4-wgt-cream, #fef3c7)', emoji: '⏸' },
+        optimal: { label: 'Оптимально', color: 'var(--v4-wgt-emerald, #10b981)', light: 'var(--v4-wgt-mint, #d1fae5)', emoji: '✅' },
+        fast: { label: 'Быстро', color: 'var(--v4-water, #3b82f6)', light: 'var(--v4-wgt-sky, #dbeafe)', emoji: '⚡' },
+        too_fast: { label: 'Слишком быстро', color: 'var(--v4-wgt-orange, #f97316)', light: 'var(--v4-wgt-peach, #ffedd5)', emoji: '⚠️' },
+        warning: { label: 'Предупреждение', color: '#ef4444', light: 'var(--v4-wgt-danger-bg, #fee2e2)', emoji: '🔴' },
+        danger: { label: 'Критично', color: 'var(--v4-wgt-danger-text, #b91c1c)', light: 'var(--v4-wgt-danger-bg, #fee2e2)', emoji: '🚨' },
         stable: { label: 'Стабильный вес', color: '#64748b', light: '#f1f5f9', emoji: '→' },
-        gaining: { label: 'Набор веса', color: '#8b5cf6', light: '#ede9fe', emoji: '↑' },
-        gaining_fast: { label: 'Быстрый набор', color: '#f97316', light: '#ffedd5', emoji: '⚡↑' },
+        gaining: { label: 'Набор веса', color: 'var(--v4-wgt-violet, #8b5cf6)', light: 'var(--v4-wgt-lilac, #ede9fe)', emoji: '↑' },
+        gaining_fast: { label: 'Быстрый набор', color: 'var(--v4-wgt-orange, #f97316)', light: 'var(--v4-wgt-peach, #ffedd5)', emoji: '⚡↑' },
         noisy: { label: 'Данные нестабильны', color: '#64748b', light: '#f1f5f9', emoji: '〰' },
     };
 

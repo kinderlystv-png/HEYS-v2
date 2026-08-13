@@ -1761,7 +1761,7 @@
 
     const mainLabel = status === 'complete' ? 'Окно завершено' : 'После еды';
 
-    const mainLabelColor = status === 'complete' ? '#167D61' : '#2F6BFF';
+    const mainLabelColor = status === 'complete' ? 'var(--v4-wgt-ok-deep, #167D61)' : 'var(--v4-wgt-link, #2F6BFF)';
 
     const timeLabelColor = 'var(--v4-water, #3b82f6)'; // всегда синий
 
@@ -1776,7 +1776,7 @@
     const subText = status === 'complete'
       ? 'Ориентируйся на голод и план'
       : (data?.endTimeRange ? `Диапазон ${data.endTimeRange}` : endTime ? `Ориентир ${endTime}` : 'Уточняем диапазон');
-    const subTextColor = '#6B7C93';
+    const subTextColor = 'var(--v4-wgt-slate, #6B7C93)';
 
     const sparkline = React.createElement(InsulinWaveSparkline, {
       progress, isLipolysis, color, width: '100%', height: isShort ? 34 : 50
@@ -3031,7 +3031,7 @@
         y1: goalY,
         x2: svgW - paddingX,
         y2: goalY,
-        stroke: '#8b5cf6',
+        stroke: 'var(--v4-wgt-violet, #8b5cf6)',
         strokeWidth: 1,
         strokeDasharray: '4 2',
         opacity: 0.5
@@ -3646,7 +3646,7 @@
     // 2x2 — Оптимальный layout с кольцевым прогрессом
     if (size === '2x2') {
       const progressPct = Math.round((day / cycleLength) * 100);
-      const phaseColor = phase?.color || '#ec4899';
+      const phaseColor = phase?.color || 'var(--v4-wgt-magenta, #ec4899)';
 
       // SVG кольцо
       const ringSize = 48;
@@ -3671,7 +3671,7 @@
             // Фон
             React.createElement('circle', {
               cx: ringSize / 2, cy: ringSize / 2, r: radius,
-              fill: 'none', stroke: '#fce7f3', strokeWidth
+              fill: 'none', stroke: 'var(--v4-wgt-rose, #fce7f3)', strokeWidth
             }),
             // Прогресс
             React.createElement('circle', {
@@ -5761,7 +5761,7 @@
                 key: factor.id || factor.label,
                 className: 'widget-relapse-risk__impact-chip widget-relapse-risk__impact-chip--down',
                 style: {
-                  '--chip-accent': '#10b981',
+                  '--chip-accent': 'var(--v4-wgt-emerald, #10b981)',
                   '--chip-bg': '#10b98112',
                   '--chip-border': '#10b98124'
                 }

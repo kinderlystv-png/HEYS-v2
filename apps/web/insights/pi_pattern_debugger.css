@@ -54,7 +54,7 @@
 
 @media (prefers-color-scheme: dark) {
   .pattern-debug-modal__content {
-    background: #1f2937;
+    background: var(--v4-surface, #1f2937);
   }
 }
 
@@ -84,7 +84,7 @@
 
 @media (prefers-color-scheme: dark) {
   .pattern-debug-modal__title {
-    color: #f9fafb;
+    color: var(--v4-ink, #f9fafb);
   }
 }
 
@@ -117,7 +117,7 @@
 @media (prefers-color-scheme: dark) {
   .pattern-debug-modal__close:hover {
     background: #374151;
-    color: #f9fafb;
+    color: var(--v4-ink, #f9fafb);
   }
 }
 
@@ -133,7 +133,7 @@
 
 @media (prefers-color-scheme: dark) {
   .pattern-debug-modal__stats {
-    background: #111827;
+    background: var(--v4-bg, #111827);
     border-bottom-color: #374151;
   }
 }
@@ -263,7 +263,7 @@
 
 @media (prefers-color-scheme: dark) {
   .pattern-debug-modal__stat-value {
-    color: #f9fafb;
+    color: var(--v4-ink, #f9fafb);
   }
 }
 
@@ -329,7 +329,7 @@
 @media (prefers-color-scheme: dark) {
   .pattern-debug-modal__select {
     background: #374151;
-    color: #f9fafb;
+    color: var(--v4-ink, #f9fafb);
     border-color: #4b5563;
   }
 
@@ -350,7 +350,7 @@
 
 @media (prefers-color-scheme: dark) {
   .pattern-debug-modal__checkbox-label {
-    color: #f9fafb;
+    color: var(--v4-ink, #f9fafb);
   }
 }
 
@@ -385,7 +385,7 @@
 
 @media (prefers-color-scheme: dark) {
   .pattern-debug-modal__table thead {
-    background: #111827;
+    background: var(--v4-bg, #111827);
   }
 }
 
@@ -423,7 +423,7 @@
 
 @media (prefers-color-scheme: dark) {
   .pattern-debug-modal__table tbody tr:hover {
-    background: #1f2937;
+    background: var(--v4-surface, #1f2937);
   }
 }
 
@@ -438,7 +438,7 @@
 
 @media (prefers-color-scheme: dark) {
   .pattern-debug-modal__cell {
-    color: #f9fafb;
+    color: var(--v4-ink, #f9fafb);
   }
 }
 
@@ -479,7 +479,7 @@
 }
 
 .pattern-debug-modal__status--inactive {
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .pattern-debug-modal__cell--score {
@@ -538,7 +538,7 @@
 
 .pattern-debug-modal__correlation-p--nonsignificant {
   background: rgba(156, 163, 175, 0.1);
-  color: #6b7280;
+  color: var(--v4-ink-2, #6b7280);
 }
 
 .pattern-debug-modal__correlation-na {
@@ -679,7 +679,7 @@
 
 @media (prefers-color-scheme: dark) {
   .pattern-debug-modal__breakdown {
-    background: #111827;
+    background: var(--v4-bg, #111827);
     border-top-color: #374151;
   }
 }
@@ -711,7 +711,7 @@
 
 @media (prefers-color-scheme: dark) {
   .pattern-debug-modal__breakdown-item {
-    background: #1f2937;
+    background: var(--v4-surface, #1f2937);
   }
 }
 
@@ -734,7 +734,7 @@
 
 @media (prefers-color-scheme: dark) {
   .pattern-debug-modal__breakdown-score {
-    color: #f9fafb;
+    color: var(--v4-ink, #f9fafb);
   }
 }
 
@@ -823,7 +823,7 @@
 
 @media (prefers-color-scheme: dark) {
   .pattern-debug-modal__table-wrap::-webkit-scrollbar-track {
-    background: #111827;
+    background: var(--v4-bg, #111827);
   }
 
   .pattern-debug-modal__table-wrap::-webkit-scrollbar-thumb {
