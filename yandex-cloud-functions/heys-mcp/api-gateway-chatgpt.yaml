@@ -11,19 +11,19 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     post:
       summary: ChatGPT MCP Streamable HTTP endpoint
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: CORS preflight for ChatGPT MCP
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/register:
     post:
@@ -34,13 +34,13 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: CORS preflight for OAuth registration
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/authorize:
     get:
@@ -48,7 +48,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     post:
       summary: OAuth authorization form submit
       x-yc-apigateway-throttling:
@@ -57,7 +57,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /mcp/token:
     post:
@@ -68,13 +68,13 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: CORS preflight for OAuth token endpoint
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /.well-known/oauth-protected-resource:
     get:
@@ -82,13 +82,13 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: CORS preflight for OAuth protected resource metadata
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /.well-known/oauth-protected-resource/mcp/chatgpt/curator:
     get:
@@ -96,13 +96,13 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
     options:
       summary: CORS preflight for ChatGPT OAuth protected resource metadata
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /.well-known/oauth-authorization-server:
     get:
@@ -120,7 +120,7 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
 
   /.well-known/oauth-authorization-server/mcp/chatgpt/curator:
     get:
@@ -138,4 +138,4 @@ paths:
       x-yc-apigateway-integration:
         type: cloud_functions
         service_account_id: aje85rjgpj4nk9m384ek
-        function_id: d4egv2a6pdhmf5hbrgp8
+        function_id: d4epjmd9lnk059u29bg8
