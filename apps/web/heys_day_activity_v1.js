@@ -59,7 +59,12 @@
   function getChargeTimeToday(day) {
     const trainings = Array.isArray(day?.trainings) ? day.trainings : [];
     const charge = trainings.find((t) => t && isMorningActivationTraining(t));
-    return charge?.time || day?.morningActivation?.decidedAt?.slice(11, 16) || null;
+    if (charge?.time) return charge.time;
+    const decidedAt = day?.morningActivation?.decidedAt;
+    if (!decidedAt) return null;
+    const d = new Date(decidedAt);
+    if (Number.isNaN(d.getTime())) return null;
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   }
 
   function hasMorningActivationDone(day) {
