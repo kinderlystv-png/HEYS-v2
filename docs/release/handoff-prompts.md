@@ -58,7 +58,10 @@
 | `prompt-push-consent-gate`   | 13.08 — гейт согласия на клиентский push, коммит `a900a76ee`, миграция на проде, деплой push `d4er203c3jmc9pl6kppp` / messages `d4e76p38f6cro19kge6g` / cron `d4ep4crjo2o4ojqkcgg8`                                                                                                                                                                                   |
 
 | `prompt-revoke-deletion` | 13.08 — purge personal_data, UI confirm, prod
-migration, deploy `31692431580`, smoke; onboarding health summary |
+migration, deploy `31692431580`, smoke; onboarding health summary | |
+registration profile order | 13.08 — `a97c58cb8` (canonical
+personal→body→goals→metabolism on resume); финальный deploy `31697815190` green,
+build `2026.08.13.1457.cfc18c4f` (PEP contract `cfc18c4f1` разблокировал gate) |
 
 ### Устарели, не отправлять
 
