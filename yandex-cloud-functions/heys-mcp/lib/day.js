@@ -521,12 +521,17 @@ function updateMeal(day, mealId, patch, { nowMs, clientId }) {
     }
     const grams = Number(value);
     if (!Number.isFinite(grams) || grams <= 0 || grams > 5000) throw new Error(`invalid_grams:${itemId}`);
-    meal.items[position] = { ...meal.items[position], grams };
+    // item.updatedAt нужен merge-save: без него stale PWA с тем же day.updatedAt
+    // побеждает в mergeItemsById (legacy prefer-local) и затирает граммы куратора.
+    meal.items[position] = { ...meal.items[position], grams, updatedAt: nowMs };
     changed.push(`${meal.items[position].name} → ${grams} г`);
   }
 
   if (Array.isArray(patch.addItems) && patch.addItems.length) {
-    meal.items = [...meal.items, ...patch.addItems];
+    const stamped = patch.addItems.map((item) => (
+      item && typeof item === 'object' ? { ...item, updatedAt: nowMs } : item
+    ));
+    meal.items = [...meal.items, ...stamped];
     changed.push(`добавлено: ${patch.addItems.map((item) => `${item.name} ${item.grams} г`).join(', ')}`);
   }
 
@@ -547,6 +552,8 @@ function updateMeal(day, mealId, patch, { nowMs, clientId }) {
   }
 
   if (!changed.length) return { day, meal: meals[index], changed, unknownItems };
+
+  meal.updatedAt = nowMs;
 
   // Правка меняет не только состав, но и суть приёма: к «перекусу» добавили
   // тарелку супа — это уже обед, и подписан он должен быть обедом. Понижать

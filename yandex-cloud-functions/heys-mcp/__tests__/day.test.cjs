@@ -402,6 +402,13 @@ test('updateMeal меняет граммовку и убирает позици�
   assert.equal(res.day.deletedItemIds.it_mayo, 777);
 });
 
+test('updateMeal ставит item.updatedAt при смене граммовки (guard от stale PWA)', () => {
+  const res = day.updateMeal(MEAL_DAY(), 'm_dinner', { setGrams: { it_soba: 300 } }, CTX);
+  const soba = res.meal.items.find((i) => i.id === 'it_soba');
+  assert.equal(soba.updatedAt, 777);
+  assert.equal(res.meal.updatedAt, 777);
+});
+
 test('updateMeal ставит tombstone deletedItemIds при удалении позиции', () => {
   const source = MEAL_DAY();
   source.deletedItemIds = { it_old: 100 };
