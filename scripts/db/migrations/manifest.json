@@ -216,6 +216,13 @@
       "path": "scripts/db/migrations/2026-08-02_curator_day_summary_real_trainings.sql",
       "description": "Count only trainings with non-zero zones and return training minutes",
       "destructive": false
+    },
+    {
+      "id": "2026-08-13_revoke_personal_data_purge_v1",
+      "order": 29,
+      "path": "scripts/db/migrations/2026-08-13_revoke_personal_data_purge_v1.sql",
+      "description": "Purge personal data stores on personal_data consent revoke (152-FZ art. 21)",
+      "destructive": false
     }
   ]
 }
