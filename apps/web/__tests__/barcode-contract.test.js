@@ -221,6 +221,16 @@ describe('product barcode contract', () => {
       expect(normalize('12345')).toBe('');
       expect(normalize('A'.repeat(33))).toBe('');
       expect(normalize(null)).toBe('');
+      expect(normalize('OBJECTOBJECT')).toBe('');
+      expect(normalize('[object Object]')).toBe('');
     }
+  });
+
+  it('does not fetch arbitrary shared row when search has no filters', () => {
+    const storage = read('apps/web/heys_storage_supabase_v1.js');
+    const cloudShared = read('apps/web/heys_cloud_shared_v1.js');
+    expect(storage).toContain('Object.keys(filters).length === 0');
+    expect(storage).toContain('data = [];');
+    expect(cloudShared).toContain('Object.keys(filters).length === 0');
   });
 });

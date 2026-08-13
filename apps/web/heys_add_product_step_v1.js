@@ -307,10 +307,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     cameraStart?.streamPromise?.then(scheduleBarcodeCameraRelease).catch(() => { });
   };
 
+  const isGarbageBarcode = (code) => {
+    if (!code) return true;
+    if (/^OBJECTOBJECT$/i.test(code)) return true;
+    if (/^(UNDEFINED|NULL|NAN)$/i.test(code)) return true;
+    if (/^(.+)\1+$/.test(code) && code.length >= 8) return true;
+    return false;
+  };
+
   const normalizeBarcode = (value) => {
     if (value == null) return '';
     const cleaned = String(value).trim().replace(/[\s-]+/g, '').toUpperCase();
     const alnum = cleaned.replace(/[^0-9A-Z]/g, '');
+    if (isGarbageBarcode(alnum)) return '';
     return alnum.length >= 6 && alnum.length <= 32 ? alnum : '';
   };
 
@@ -5899,7 +5908,10 @@ NOVA: 1
       const draft = HEYS.store?.get?.(draftKey, null) ?? utils.lsGet?.(draftKey, null);
       if (!draft || pasteText) return;
       if (draft.pasteText != null) setPasteText(draft.pasteText);
-      if (!barcodeInput && draft.barcode != null) setBarcodeInput(normalizeBarcode(draft.barcode) || draft.barcode);
+      if (!barcodeInput && draft.barcode != null) {
+        const code = normalizeBarcode(draft.barcode);
+        if (code) setBarcodeInput(code);
+      }
       if (!brandInput && draft.brand != null) setBrandInput(normalizeProductBrand(draft.brand));
       if (typeof draft.publishToShared === 'boolean') setPublishToShared(draft.publishToShared);
     }, []);
@@ -8173,11 +8185,19 @@ NOVA: 1
           brandFingerprint = await HEYS.models.computeProductBrandFingerprint(updatedProduct);
         }
       } catch (_) { /* noop */ }
-      if ((brandFingerprint || fingerprint) && HEYS.cloud?.searchSharedProducts) {
+      const barcode = getProductBarcode(updatedProduct);
+      if (barcode && HEYS.cloud?.searchSharedProducts) {
         try {
-          const existing = await HEYS.cloud.searchSharedProducts('', brandFingerprint
-            ? { brandFingerprint, limit: 1 }
-            : { fingerprint, limit: 1 });
+          const existing = await HEYS.cloud.searchSharedProducts('', { barcode, limit: 1 });
+          if (existing?.data?.length > 0) return 'exists';
+        } catch (_) { /* barcode check best-effort */ }
+      }
+      const fingerprintQuery = brandFingerprint
+        ? { brandFingerprint, limit: 1 }
+        : (/^[a-f0-9]{64}$/i.test(String(fingerprint || '')) ? { fingerprint, limit: 1 } : null);
+      if (fingerprintQuery && HEYS.cloud?.searchSharedProducts) {
+        try {
+          const existing = await HEYS.cloud.searchSharedProducts('', fingerprintQuery);
           if (existing?.data?.length > 0) {
             return 'exists';
           }

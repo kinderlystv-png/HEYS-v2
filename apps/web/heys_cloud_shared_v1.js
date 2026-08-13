@@ -254,6 +254,10 @@
     function normalizeSharedProductBarcode(value) {
       if (value == null) return '';
       const cleaned = String(value).trim().replace(/[\s-]+/g, '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+      if (!cleaned || /^OBJECTOBJECT$/i.test(cleaned) || /^(UNDEFINED|NULL|NAN)$/i.test(cleaned)
+        || (/^(.+)\1+$/.test(cleaned) && cleaned.length >= 8)) {
+        return '';
+      }
       return cleaned.length >= 6 && cleaned.length <= 32 ? cleaned : '';
     }
 
@@ -412,6 +416,9 @@
             data = null;
             error = e;
           }
+        } else if (Object.keys(filters).length === 0) {
+          data = [];
+          error = null;
         } else {
           ({ data, error } = await YandexAPI.rest('shared_products', {
             select: '*',
@@ -635,12 +642,15 @@
             nameNorm = HEYS.models.normalizeProductName(product?.name || '');
           }
         } catch (_) { }
+        const pendingBarcodes = normalizeSharedProductBarcodes(product);
         const rpcParams = {
           p_name: product.name,
           p_product_data: {
             ...product,
             brand: normalizeSharedProductBrand(product.brand),
-            brand_fingerprint: normalizeSharedProductBrandFingerprint(brandFingerprint)
+            brand_fingerprint: normalizeSharedProductBrandFingerprint(brandFingerprint),
+            barcode: pendingBarcodes[0] || null,
+            barcodes: pendingBarcodes
           },
           p_fingerprint: fingerprint,
           p_name_norm: nameNorm
