@@ -10,6 +10,7 @@
 
 const { acquireHealthyClient } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
+const { fetchTelegramWithDnsFallback } = require('./shared/telegram-fetch');
 
 // DB pool — shared canonical implementation (CA-cert verify-full SSL).
 
@@ -77,11 +78,14 @@ async function sendTelegramNotification(message) {
   const tryOnce = async (parseMode) => {
     const body = { chat_id: chatId, text: message };
     if (parseMode) body.parse_mode = parseMode;
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    const response = await fetchTelegramWithDnsFallback(
+      `https://api.telegram.org/bot${botToken}/sendMessage`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+    );
     return { status: response.status, ok: response.ok, body: response.ok ? null : await response.text() };
   };
 
@@ -112,8 +116,9 @@ async function sendTelegramNotification(message) {
 
     return { ok: false, error: `markdown-${first.status}`, body: first.body };
   } catch (err) {
-    console.error('[Telegram] Error:', err.message);
-    return { ok: false, error: 'exception', message: err.message };
+    const cause = err.cause?.code || err.cause?.message || err.code || '';
+    console.error('[Telegram] Error:', err.message, cause || '');
+    return { ok: false, error: 'exception', message: err.message, cause: cause || null };
   }
 }
 
@@ -1027,12 +1032,12 @@ async function fetchTelegramWebhookInfoSafe(label, token) {
   if (!token || String(token).startsWith('__IN_LOCKBOX__')) {
     return { label, status: 'unknown' };
   }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 2500);
   try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`, {
-      signal: controller.signal,
-    });
+    const res = await fetchTelegramWithDnsFallback(
+      `https://api.telegram.org/bot${token}/getWebhookInfo`,
+      { method: 'GET' },
+      2500,
+    );
     const data = await res.json().catch(() => ({}));
     const info = data.result || {};
     return {
@@ -1044,8 +1049,6 @@ async function fetchTelegramWebhookInfoSafe(label, token) {
     };
   } catch (e) {
     return { label, status: 'error', error: e.message };
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -1053,19 +1056,16 @@ async function deleteTelegramWebhookSafe(label, token) {
   if (!token || String(token).startsWith('__IN_LOCKBOX__')) {
     return { label, ok: false, skipped: 'token_missing' };
   }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 2500);
   try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/deleteWebhook?drop_pending_updates=false`, {
-      method: 'POST',
-      signal: controller.signal,
-    });
+    const res = await fetchTelegramWithDnsFallback(
+      `https://api.telegram.org/bot${token}/deleteWebhook?drop_pending_updates=false`,
+      { method: 'POST' },
+      2500,
+    );
     const data = await res.json().catch(() => ({}));
     return { label, ok: Boolean(data.ok), description: data.description || null };
   } catch (e) {
     return { label, ok: false, error: e.message };
-  } finally {
-    clearTimeout(timer);
   }
 }
 
