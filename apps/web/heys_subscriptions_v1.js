@@ -41,6 +41,22 @@
     welcomeHost.remove();
   }
 
+  function welcomeSessionKey(normalizedCid) {
+    return `heys_welcome_seen_${normalizedCid}`;
+  }
+
+  function hasReturningUserProfile() {
+    try {
+      const profile = HEYS.utils?.lsGet?.('heys_profile') || {};
+      return profile.profileCompleted === true
+        || profile.weight != null
+        || profile.firstName
+        || profile.name;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function markWelcomeSeen(clientId) {
     const normalizedCid = normalizeWelcomeClientId(clientId);
     if (!normalizedCid) return;
@@ -49,6 +65,7 @@
     const isCurrentClient = normalizeWelcomeClientId(HEYS.currentClientId) === normalizedCid;
     // Legacy LS — синхронно и первым: переживает debounced cloud sync.
     try { localStorage.setItem(welcomeKey, '1'); } catch (_) { /* noop */ }
+    try { sessionStorage.setItem(welcomeSessionKey(normalizedCid), '1'); } catch (_) { /* noop */ }
     try {
       if (isCurrentClient && HEYS.store?.set) HEYS.store.set('heys_first_login', 1);
     } catch (_) { /* noop */ }
@@ -58,6 +75,10 @@
     const normalizedCid = normalizeWelcomeClientId(clientId);
     if (!normalizedCid) return false;
     if (_welcomeDismissedSession.has(normalizedCid)) return true;
+    try {
+      if (sessionStorage.getItem(welcomeSessionKey(normalizedCid))) return true;
+    } catch (_) { /* noop */ }
+    if (hasReturningUserProfile()) return true;
     const isCurrentClient = normalizeWelcomeClientId(HEYS.currentClientId) === normalizedCid;
     try {
       if (isCurrentClient && HEYS.store?.get && HEYS.store.get('heys_first_login', null)) return true;
@@ -1440,7 +1461,7 @@
     // данные ещё не пришли. Без этого гейта синхронизированный признак не
     // успевал бы прочитаться и окно всё равно мелькало бы на новом устройстве.
     // Перемонтаж произойдёт по `heys:profile-updated` / `heys:client-changed`.
-    const initialSyncDone = HEYS.cloud?.isInitialSyncCompleted?.() !== false;
+    const initialSyncDone = HEYS.cloud?.isInitialSyncCompleted?.() === true;
 
     const stepModalOpen = !!(typeof document !== 'undefined' && (
       document.querySelector('[data-step-modal]') ||
@@ -1559,7 +1580,7 @@
     }
   }
 
-  function autoMountTrialUI() {
+  function autoMountTrialUINow() {
     const data = readProfileForUI();
     if (!data.clientId || !data.subscriptionStatus) return;
     // active и none без trial_ends_at — нечего показывать
@@ -1581,6 +1602,15 @@
         }
       },
     });
+  }
+
+  let _autoMountTrialUITimer = null;
+  function autoMountTrialUI() {
+    if (_autoMountTrialUITimer) clearTimeout(_autoMountTrialUITimer);
+    _autoMountTrialUITimer = setTimeout(() => {
+      _autoMountTrialUITimer = null;
+      try { autoMountTrialUINow(); } catch (e) { console.warn('[Subs.autoMount] error:', e.message); }
+    }, 280);
   }
 
   /**
@@ -1653,7 +1683,15 @@
   }
 
   if (typeof window !== 'undefined') {
-    // На профиль-апдейт пере-монтируем
+    // Сразу убираем welcome, если признак уже известен — до debounced autoMount.
+    try {
+      const earlyCid = normalizeWelcomeClientId(
+        HEYS.currentClientId || localStorage.getItem('heys_client_current'),
+      );
+      if (earlyCid && welcomeAlreadySeen(earlyCid)) dismissWelcomeHost();
+    } catch (_) { /* noop */ }
+
+    // На профиль-апдейт пере-монтируем (debounced)
     window.addEventListener('heys:profile-updated', () => {
       try { autoMountTrialUI(); } catch (e) { console.warn('[Subs.autoMount] error:', e.message); }
     });
@@ -1667,7 +1705,7 @@
       // Небольшая задержка, чтобы сервер успел дать актуальную сессию
       setTimeout(() => { refreshProfileSubscription(); }, 200);
     });
-    // Первоначальный mount после загрузки скрипта (через 1 тик чтобы успели прийти LS-данные)
+    // Первоначальный mount после загрузки скрипта
     setTimeout(() => {
       try { autoMountTrialUI(); } catch {}
     }, 100);

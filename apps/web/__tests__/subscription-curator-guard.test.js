@@ -380,6 +380,41 @@ describe('HEYS.Subscription curator guard', () => {
     );
   });
 
+  it('does not mount trial welcome when profile already has onboarding markers', () => {
+    const render = vi.fn();
+    window.React = React;
+    window.ReactDOM = {
+      createRoot: vi.fn(() => ({ render })),
+    };
+    const storage = createMockStorage({});
+    Object.defineProperty(window, 'localStorage', {
+      value: storage,
+      writable: true,
+      configurable: true,
+    });
+
+    const clientId = '846f2b16-aaaa-bbbb-cccc-ddddeeeeffff';
+    window.HEYS = {
+      currentClientId: clientId,
+      cloud: { isInitialSyncCompleted: () => true },
+      store: { get: vi.fn(() => null), set: vi.fn() },
+      utils: {
+        lsGet: vi.fn((key) => (key === 'heys_profile' ? { weight: 70, name: 'пупсы qwe' } : null)),
+      },
+    };
+
+    const subscriptions = loadSubscriptions();
+    subscriptions.mountTrialUI({
+      clientId,
+      clientName: 'пупсы qwe',
+      subscriptionStatus: 'trial',
+      trialEndsAt: new Date(Date.now() + (7 * 24 * 60 * 60 * 1000)).toISOString(),
+    });
+
+    expect(document.getElementById('heys-welcome-host')).toBeNull();
+    expect(render).not.toHaveBeenCalled();
+  });
+
   it('registers payment_required after the canonical StepModal ready event', () => {
     window.React = React;
     loadSubscriptions();
