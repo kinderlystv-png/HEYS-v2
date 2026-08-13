@@ -441,6 +441,90 @@ describe('morning check-in journal resume', () => {
     expect(values.has(PROGRESS_KEY)).toBe(false);
   });
 
+  it('keeps registration steps in canonical order when resuming a mixed daily ledger', () => {
+    const ledger = {
+      version: 1,
+      clientId: CLIENT_ID,
+      dateKey: DATE_KEY,
+      flowId: 'registration-mixed',
+      plannedStepIds: [
+        'weight',
+        'sleepTime',
+        'profile-personal',
+        'profile-body',
+        'profile-goals',
+        'profile-metabolism',
+        'morningRoutine',
+      ],
+      steps: {
+        'profile-personal': { status: 'synced', updatedAt: 2000 },
+        weight: { status: 'planned', updatedAt: 1000 },
+        sleepTime: { status: 'planned', updatedAt: 1000 },
+        'profile-body': { status: 'planned', updatedAt: 1000 },
+        'profile-goals': { status: 'planned', updatedAt: 1000 },
+        'profile-metabolism': { status: 'planned', updatedAt: 1000 },
+        morningRoutine: { status: 'planned', updatedAt: 1000 },
+        __flow__: { status: 'open', updatedAt: 1000 },
+      },
+      updatedAt: 2000,
+    };
+    const { utils } = loadMorning({
+      profileIncomplete: true,
+      profile: {
+        firstName: 'Анна',
+        birthDate: '1990-05-01',
+        gender: 'Женский',
+      },
+      subscriptionStatus: 'trial',
+      ledger,
+    });
+
+    const plan = utils.buildMorningCheckinPlan({ dateKey: DATE_KEY, clientId: CLIENT_ID });
+
+    expect(plan.steps.slice(0, 4)).toEqual([
+      'profile-body',
+      'profile-goals',
+      'profile-metabolism',
+      'welcome',
+    ]);
+    expect(plan.steps).not.toContain('profile-personal');
+    expect(plan.steps.indexOf('profile-metabolism')).toBeLessThan(plan.steps.indexOf('weight'));
+  });
+
+  it('does not replan profile-personal when personal data is already saved in profile', () => {
+    const ledger = fullIncidentLedger('open');
+    ledger.plannedStepIds = [
+      'profile-personal',
+      'profile-body',
+      'profile-goals',
+      'profile-metabolism',
+      'weight',
+    ];
+    ledger.steps = {
+      'profile-personal': { status: 'synced', updatedAt: 3000 },
+      'profile-body': { status: 'planned', updatedAt: 1000 },
+      'profile-goals': { status: 'planned', updatedAt: 1000 },
+      'profile-metabolism': { status: 'planned', updatedAt: 1000 },
+      weight: { status: 'planned', updatedAt: 1000 },
+      __flow__: { status: 'open', updatedAt: 1000 },
+    };
+    const { utils } = loadMorning({
+      profileIncomplete: true,
+      profile: {
+        firstName: 'Иван',
+        birthDate: '1988-03-12',
+        gender: 'Мужской',
+      },
+      subscriptionStatus: 'trial',
+      ledger,
+    });
+
+    const plan = utils.buildMorningCheckinPlan({ dateKey: DATE_KEY, clientId: CLIENT_ID });
+
+    expect(plan.steps[0]).toBe('profile-body');
+    expect(plan.steps).not.toContain('profile-personal');
+  });
+
   it('opens a historical reset against the selected date without adding today-only steps', () => {
     const historicalDate = '2026-07-25';
     const { HEYS } = loadMorning({

@@ -958,12 +958,39 @@
     return false;
   }
 
-  const REGISTRATION_STEP_IDS = new Set([
+  const REGISTRATION_PROFILE_ORDER = [
     'profile-personal',
     'profile-body',
     'profile-goals',
-    'profile-metabolism'
-  ]);
+    'profile-metabolism',
+  ];
+  const REGISTRATION_STEP_IDS = new Set(REGISTRATION_PROFILE_ORDER);
+
+  function isRegistrationPersonalComplete(profile) {
+    const firstName = String(profile?.firstName || '').trim();
+    return firstName.length > 0
+      && firstName !== '?'
+      && !!profile?.birthDate
+      && !!profile?.gender;
+  }
+
+  function isMorningLedgerStepTerminal(row) {
+    const status = row?.status;
+    return status === 'synced'
+      || status === 'saved_local'
+      || status === 'skipped'
+      || status === 'data_present';
+  }
+
+  function normalizeRegistrationStepOrder(steps, profile) {
+    if (!Array.isArray(steps) || steps.length === 0) return steps;
+    const hasRegistration = steps.some((id) => REGISTRATION_STEP_IDS.has(id));
+    if (!hasRegistration) return steps;
+    const registration = REGISTRATION_PROFILE_ORDER.filter((id) => steps.includes(id));
+    const welcome = steps.includes('welcome') ? ['welcome'] : [];
+    const rest = steps.filter((id) => !REGISTRATION_STEP_IDS.has(id) && id !== 'welcome');
+    return [...registration, ...welcome, ...rest];
+  }
 
   function isProfileCompletionConfirmedByFullSync(profile, clientId) {
     const lastSync = HEYS.cloud?._lastClientSync;
@@ -1420,7 +1447,7 @@
     'measurements',
     'cold_exposure',
     'supplements',
-    'profile-metabolism'
+    ...REGISTRATION_PROFILE_ORDER,
   ]);
   const MORNING_REPLANNABLE_REQUIRED_STEPS = new Set([
     ...MORNING_CORE_STEPS,
@@ -1649,7 +1676,7 @@
     return plannedStepIds.map((id) => {
       const row = ledger?.steps?.[id] || {};
       const completeByData = (id === 'yesterdayVerify' || MORNING_DATA_COMPLETABLE_STEPS.has(id))
-        && isMorningStepComplete(id, { dateKey, clientId, day, profile });
+        && isMorningStepComplete(id, { dateKey, clientId, day, profile, ledger });
       return {
         id,
         status: row.status || (completeByData ? 'data_present' : 'missing'),
@@ -1661,13 +1688,18 @@
   function mergeFreshStepsWithProgress(freshSteps, existingLedger, state = {}) {
     const dateKey = state.dateKey || getTodayKey();
     const clientId = state.clientId || getCurrentClientId();
-    const day = getFreshMorningDay(dateKey);
-    const profile = getFreshMorningProfile(clientId);
+    const day = state.day || getFreshMorningDay(dateKey);
+    const profile = state.profile || getFreshMorningProfile(clientId);
     const merged = existingLedger
       ? getRemainingMorningSteps({ ledger: existingLedger, dateKey, clientId }).map((row) => row.id)
       : [];
     const alreadyPlanned = new Set(existingLedger?.plannedStepIds || []);
-    const replannedStepIds = getReplannedMorningStepIds(freshSteps, existingLedger);
+    const replannedStepIds = getReplannedMorningStepIds(freshSteps, existingLedger, {
+      dateKey,
+      clientId,
+      day,
+      profile,
+    });
     replannedStepIds.forEach((id) => {
       if (!merged.includes(id)) merged.push(id);
     });
@@ -1675,19 +1707,28 @@
     freshSteps.forEach((id) => {
       if (merged.includes(id) || alreadyPlanned.has(id)) return;
       const completeByData = (id === 'yesterdayVerify' || MORNING_DATA_COMPLETABLE_STEPS.has(id))
-        && isMorningStepComplete(id, { dateKey, clientId, day, profile });
-      if (!completeByData) merged.push(id);
+        && isMorningStepComplete(id, { dateKey, clientId, day, profile, ledger: existingLedger });
+      if (completeByData) return;
+      merged.push(id);
     });
-    return merged;
+    return normalizeRegistrationStepOrder(merged, profile);
   }
 
-  function getReplannedMorningStepIds(freshSteps, existingLedger) {
+  function getReplannedMorningStepIds(freshSteps, existingLedger, state = {}) {
     if (!existingLedger) return [];
+    const dateKey = state.dateKey || getTodayKey();
+    const clientId = state.clientId || getCurrentClientId();
+    const day = state.day || getFreshMorningDay(dateKey);
+    const profile = state.profile || getFreshMorningProfile(clientId);
     const planned = new Set(existingLedger.plannedStepIds || []);
     return freshSteps.filter((id) => {
       if (!planned.has(id) || !MORNING_REPLANNABLE_REQUIRED_STEPS.has(id)) return false;
       const status = existingLedger.steps?.[id]?.status;
-      return status === 'synced' || status === 'data_present';
+      if (status !== 'synced' && status !== 'data_present') return false;
+      if (isMorningStepComplete(id, { dateKey, clientId, day, profile, ledger: existingLedger })) {
+        return false;
+      }
+      return true;
     });
   }
 
@@ -1765,7 +1806,7 @@
     const profile = getFreshMorningProfile(clientId);
     return plannedStepIds.map((id) => {
       const row = ledger?.steps?.[id] || {};
-      const completeByData = isMorningStepComplete(id, { dateKey, clientId, day, profile });
+      const completeByData = isMorningStepComplete(id, { dateKey, clientId, day, profile, ledger });
       return {
         id,
         status: row.status || (completeByData ? 'data_present' : 'missing'),
@@ -1879,9 +1920,14 @@
       case 'welcome':
         return true;
       case 'profile-personal':
+        if (HEYS.ProfileSteps?.isProfileIncomplete?.(profile) === false) return true;
+        return isRegistrationPersonalComplete(profile);
       case 'profile-body':
+        if (HEYS.ProfileSteps?.isProfileIncomplete?.(profile) === false) return true;
+        return isMorningLedgerStepTerminal(state.ledger?.steps?.['profile-body']);
       case 'profile-goals':
-        return true;
+        if (HEYS.ProfileSteps?.isProfileIncomplete?.(profile) === false) return true;
+        return isMorningLedgerStepTerminal(state.ledger?.steps?.['profile-goals']);
       case 'profile-metabolism':
         return !(HEYS.ProfileSteps?.isProfileIncomplete?.(profile));
       default:
@@ -1977,10 +2023,13 @@
       ...derivedFreshSteps
     ]));
     const existingLedger = readMorningProgress(dateKey, clientId);
-    const mergedSteps = mergeFreshStepsWithProgress(freshSteps, existingLedger, { dateKey, clientId });
+    const mergedSteps = mergeFreshStepsWithProgress(freshSteps, existingLedger, { dateKey, clientId, profile });
     // Keep explicit reset steps after data-derived filtering too: localStorage
     // may still contain the pre-reset day for a few frames.
-    const steps = Array.from(new Set([...forcedStepIds, ...mergedSteps]));
+    const steps = normalizeRegistrationStepOrder(
+      Array.from(new Set([...forcedStepIds, ...mergedSteps])),
+      profile
+    );
     const replannedStepIds = getReplannedMorningStepIds(freshSteps, existingLedger);
     const fullPlannedStepIds = Array.from(new Set([
       ...(existingLedger?.plannedStepIds || []),
