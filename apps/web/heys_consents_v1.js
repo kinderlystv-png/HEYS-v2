@@ -248,22 +248,62 @@
     },
 
     /**
-     * Отзыв согласия на обработку health-данных + удаление самих данных
-     * (152-ФЗ ст. 21). revoke_consent сам по себе только помечает consents
-     * как revoked — фактическое удаление делает purge_health_data.
+     * Отзыв согласия на обработку health-данных (152-ФЗ ст. 21).
+     * Удаляет только health-классифицированные KV (is_health_key) и trial intake
+     * через серверный триггер. Дневник и переписка — под personal_data.
      */
     async revokeHealthDataAndPurge() {
       try {
-        // Сервер отзывает согласие, удаляет health-KV/intake и завершает сессии
-        // одной транзакцией. Отдельного client_id или второго purge-RPC нет.
         const result = await consentsAPI.revokeConsentBySession('health_data');
         if (!result?.success) throw new Error(result?.error || 'Не удалось отозвать согласие');
 
         const deletedKeys = result.deleted_keys ?? 0;
-        console.log('[Consents] ✅ Health-data revoked + purged:', deletedKeys, 'keys');
+        console.log('[Consents] ✅ Health-data consent revoked, KV keys:', deletedKeys);
         return { success: true, deleted_keys: deletedKeys };
       } catch (err) {
         console.error('[Consents] ❌ Error revoking health-data:', err);
+        return { success: false, error: err.message };
+      }
+    },
+
+    /**
+     * Отзыв согласия на обработку персональных данных + удаление ПДн на сервере
+     * (дневник, переписка, фото в очереди cleanup, снапшоты, audit-копии).
+     */
+    async revokePersonalDataAndPurge() {
+      try {
+        const result = await consentsAPI.revokeConsentBySession('personal_data');
+        if (!result?.success) throw new Error(result?.error || 'Не удалось отозвать согласие');
+
+        const clientId = (HEYS.currentClientId || '').toLowerCase();
+        const authKeep = new Set([
+          'heys_supabase_auth_token',
+          'heys_pin_auth_client',
+          'heys_cookie_info_seen',
+        ]);
+        try {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (!k || authKeep.has(k) || k.startsWith('sb-')) continue;
+            if (!clientId) {
+              localStorage.removeItem(k);
+              continue;
+            }
+            const scopedMatch = /^heys_([0-9a-f-]{36})_/i.exec(k);
+            if (scopedMatch && scopedMatch[1].toLowerCase() !== clientId) continue;
+            localStorage.removeItem(k);
+          }
+        } catch (_) { /* best-effort */ }
+
+        const purge = result.personal_data_purge || {};
+        console.log('[Consents] ✅ Personal-data revoked + purged:', purge);
+        return {
+          success: true,
+          deleted_keys: result.deleted_keys ?? purge.deleted_kv ?? 0,
+          personal_data_purge: purge,
+        };
+      } catch (err) {
+        console.error('[Consents] ❌ Error revoking personal-data:', err);
         return { success: false, error: err.message };
       }
     },

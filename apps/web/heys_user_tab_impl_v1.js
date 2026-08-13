@@ -2818,8 +2818,20 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             let msg;
             if (consentType === 'health_data') {
                 msg = 'Отозвать согласие "' + docName + '"?\n\n' +
-                      'Будут удалены все данные о здоровье (дневник питания, вес, активность). ' +
+                      'После отзыва будут удалены данные, отнесённые к категории «здоровье» ' +
+                      '(пульсовые зоны, анкета пробного периода при её наличии).\n\n' +
+                      'Дневник питания, переписка и фото удаляются отдельно — ' +
+                      'кнопкой отзыва согласия на персональные данные.\n\n' +
                       'Дальнейшее использование сервиса станет невозможным до повторного согласия.';
+            } else if (consentType === 'personal_data') {
+                msg = 'Отозвать согласие "' + docName + '"?\n\n' +
+                      'После отзыва будут удалены:\n' +
+                      '• дневник питания и профиль\n' +
+                      '• переписка с куратором и расшифровки голосовых\n' +
+                      '• фото и голосовые (поставлены в очередь удаления)\n' +
+                      '• локальные копии на этом устройстве\n\n' +
+                      'Запись о факте согласия сохранится. Аккаунт останется, ' +
+                      'но войти снова можно будет только после повторного согласия.';
             } else if (isRequired) {
                 msg = 'Отозвать обязательное согласие "' + docName + '"?\n\n' +
                       'Это равнозначно удалению аккаунта — без этого согласия пользоваться сервисом нельзя.';
@@ -2834,11 +2846,22 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 let res;
                 if (consentType === 'health_data') {
                     res = await Consents.api.revokeHealthDataAndPurge();
+                } else if (consentType === 'personal_data') {
+                    res = await Consents.api.revokePersonalDataAndPurge();
                 } else {
                     res = await Consents.api.revokeConsentBySession(consentType);
                 }
                 if (res?.success) {
-                    setMessage('✅ Согласие отозвано. Обновите страницу.');
+                    let okMsg = '✅ Согласие отозвано';
+                    if (consentType === 'personal_data') {
+                        const queued = res.personal_data_purge?.queued_media;
+                        okMsg = '✅ Согласие на персональные данные отозвано' +
+                            (res.deleted_keys ? ' (записей: ' + res.deleted_keys + ')' : '') +
+                            (queued ? ', фото в очереди удаления: ' + queued : '');
+                    } else if (consentType === 'health_data' && res.deleted_keys) {
+                        okMsg += ' (записей: ' + res.deleted_keys + ')';
+                    }
+                    setMessage(okMsg + '. Обновите страницу.');
                     await refresh();
                 } else {
                     setMessage('❌ ' + (res?.error || 'Не удалось отозвать'));
@@ -2987,7 +3010,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                             color: isRequired ? '#dc2626' : '#3f3f46',
                                             border: '1px solid ' + (isRequired ? '#fecaca' : '#d4d4d8')
                                         }
-                                    }, busy === c.type ? '⏳' : '🚫 Отозвать' + (isRequired ? ' (= удалить аккаунт)' : ''))
+                                    }, busy === c.type ? '⏳' : '🚫 Отозвать' + (c.type === 'user_agreement' ? ' (= удалить аккаунт)' : ''))
                                 )
                             );
                         })
@@ -3093,10 +3116,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const handleRevokeHealth = async function () {
             const confirmed = window.confirm(
                 'Отозвать согласие на обработку данных о здоровье?\n\n' +
-                'После отзыва будут удалены:\n' +
-                '• дневник питания\n' +
-                '• данные о весе и динамике\n' +
-                '• данные об активности, сне, цикле, самочувствии\n\n' +
+                'После отзыва будут удалены данные, отнесённые к категории «здоровье» ' +
+                '(пульсовые зоны, анкета пробного периода при её наличии).\n\n' +
+                'Дневник питания, переписка и фото удаляются отдельно — ' +
+                'кнопкой отзыва согласия на персональные данные.\n\n' +
                 'Дальнейшее использование сервиса станет невозможным до повторного согласия.'
             );
             if (!confirmed) return;
@@ -3105,8 +3128,40 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             try {
                 const res = await Consents.api.revokeHealthDataAndPurge();
                 if (res.success) {
-                    setMessage('✅ Согласие отозвано, данные о здоровье удалены' +
+                    setMessage('✅ Согласие на данные о здоровье отозвано' +
                         (res.deleted_keys ? ' (записей: ' + res.deleted_keys + ')' : '') +
+                        '. Перезагрузите страницу для применения изменений.');
+                } else {
+                    setMessage('❌ Ошибка: ' + (res.error || 'не удалось отозвать согласие'));
+                }
+            } catch (e) {
+                setMessage('❌ Ошибка: ' + e.message);
+            } finally {
+                setRevokeBusy(false);
+            }
+        };
+
+        const handleRevokePersonal = async function () {
+            const confirmed = window.confirm(
+                'Отозвать согласие на обработку персональных данных?\n\n' +
+                'После отзыва будут удалены:\n' +
+                '• дневник питания и профиль\n' +
+                '• переписка с куратором и расшифровки голосовых\n' +
+                '• фото и голосовые (поставлены в очередь удаления)\n' +
+                '• локальные копии на этом устройстве\n\n' +
+                'Запись о факте согласия сохранится. Аккаунт останется, ' +
+                'но войти снова можно будет только после повторного согласия.'
+            );
+            if (!confirmed) return;
+            setRevokeBusy(true);
+            setMessage('');
+            try {
+                const res = await Consents.api.revokePersonalDataAndPurge();
+                if (res.success) {
+                    const queued = res.personal_data_purge?.queued_media;
+                    setMessage('✅ Согласие на персональные данные отозвано' +
+                        (res.deleted_keys ? ' (записей: ' + res.deleted_keys + ')' : '') +
+                        (queued ? ', фото в очереди удаления: ' + queued : '') +
                         '. Перезагрузите страницу для применения изменений.');
                 } else {
                     setMessage('❌ Ошибка: ' + (res.error || 'не удалось отозвать согласие'));
@@ -3200,6 +3255,21 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         opacity: revokeBusy ? 0.7 : 1
                     }
                 }, revokeBusy ? 'Отзываю...' : 'Отозвать согласие на данные о здоровье'),
+                React.createElement('button', {
+                    type: 'button',
+                    onClick: handleRevokePersonal,
+                    disabled: revokeBusy || deleteStage === 'busy',
+                    style: {
+                        padding: '8px 14px',
+                        borderRadius: '8px',
+                        border: '1px solid #dc2626',
+                        background: '#fef2f2',
+                        color: '#991b1b',
+                        cursor: revokeBusy ? 'wait' : 'pointer',
+                        fontWeight: 500,
+                        opacity: revokeBusy ? 0.7 : 1
+                    }
+                }, revokeBusy ? 'Отзываю...' : 'Отозвать согласие на персональные данные'),
                 React.createElement('button', {
                     type: 'button',
                     onClick: handleDeleteAccount,
