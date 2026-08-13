@@ -955,6 +955,23 @@
         night: { name: 'Ночной приём', icon: '🌙', order: 7 }
     };
 
+    const MEAL_NAME_ALIASES = {
+        'coffee-break': 'coffee_break',
+        'coffee break': 'coffee_break'
+    };
+
+    function localizeMealName(rawName, fallbackName = 'Приём') {
+        if (rawName == null) return fallbackName;
+        const normalized = String(rawName).trim();
+        if (!normalized) return fallbackName;
+        const key = normalized.toLowerCase();
+        const resolvedKey = MEAL_NAME_ALIASES[key] || key;
+        if (MEAL_TYPES[resolvedKey]?.name) {
+            return MEAL_TYPES[resolvedKey].name;
+        }
+        return normalized;
+    }
+
     // Пороги для определения "основного приёма" vs "перекуса"
     const MAIN_MEAL_THRESHOLDS = {
         minProducts: 3,      // минимум продуктов для основного приёма
@@ -2278,6 +2295,7 @@
         getMealTypeSimple,
         getMealTypeForPreview,
         fallbackMealType,
+        localizeMealName,
         // Calendar indicators
         getDayCalories,
         getProductsMap,

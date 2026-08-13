@@ -3753,6 +3753,10 @@
     const U = HEYS.dayUtils || {};
     const getProductFromItem = U.getProductFromItem || (() => null);
     const formatMealTime = U.formatMealTime || ((time) => time);
+    const localizeMealName = U.localizeMealName || ((name, fallback = 'Приём') => {
+        const normalized = String(name || '').trim();
+        return normalized || fallback;
+    });
     const MEAL_TYPES = U.MEAL_TYPES || {};
     const per100 = U.per100 || (() => ({
         kcal100: 0,
@@ -6347,7 +6351,7 @@
         const autoTypeInfo = getMealType(mealIndex, meal, allMeals, pIndex);
         return {
             type: autoTypeInfo?.type || 'snack',
-            name: autoTypeInfo?.label || meal?.name || 'Приём',
+            name: autoTypeInfo?.label || localizeMealName(meal?.name, 'Приём'),
         };
     }
 
@@ -6386,7 +6390,7 @@
             onExpand,
         } = params || {};
         const timeText = formatMealTime(meal?.time || '') || '—';
-        const typeName = mealTypeInfo?.name || meal?.name || 'Приём';
+        const typeName = mealTypeInfo?.name || localizeMealName(meal?.name, 'Приём');
         const typeClass = mealTypeInfo?.type ? ' meal-type-' + mealTypeInfo.type : '';
         const mealKcal = Math.round((M.mealTotals ? M.mealTotals(meal, pIndex) : { kcal: 0 }).kcal || 0);
         const productsCount = Array.isArray(meal?.items) ? meal.items.length : 0;
@@ -7525,7 +7529,7 @@
                                         setMealQualityPopup({
                                             meal: p.meal,
                                             quality,
-                                            mealTypeInfo: { label: p.meal.name, icon: p.meal.icon },
+                                            mealTypeInfo: { label: localizeMealName(p.meal.name, 'Приём'), icon: p.meal.icon },
                                             x: screenX,
                                             y: screenY + 15,
                                         });
@@ -7602,7 +7606,7 @@
                         setMealQualityPopup({
                             meal,
                             quality,
-                            mealTypeInfo: { label: meal.name, icon: meal.icon },
+                            mealTypeInfo: { label: localizeMealName(meal.name, 'Приём'), icon: meal.icon },
                             x: rect.left + rect.width / 2,
                             y: rect.bottom,
                         });
@@ -7694,7 +7698,7 @@
                                     textDecoration: 'none',
                                     textAlign: 'left',
                                 },
-                            }, meal.name),
+                            }, localizeMealName(meal.name, 'Приём')),
                         ),
                         React.createElement('div', {
                             className: 'meal-bar-container' + (isBest ? ' meal-bar-best' : '') + (quality && quality.score >= 80 ? ' meal-bar-excellent' : ''),
@@ -10250,7 +10254,7 @@
                 return;
             }
             const itemCount = (meal.items || []).length;
-            const sourceLabel = `Переносим: ${meal.name || 'Приём'}${meal.time ? ' (' + meal.time + ')' : ''}, ${itemCount} ${itemCount === 1 ? 'продукт' : (itemCount < 5 ? 'продукта' : 'продуктов')}`;
+            const sourceLabel = `Переносим: ${localizeMealName(meal.name, 'Приём')}${meal.time ? ' (' + meal.time + ')' : ''}, ${itemCount} ${itemCount === 1 ? 'продукт' : (itemCount < 5 ? 'продукта' : 'продуктов')}`;
 
             HEYS.MoveModal.show({
                 mode: 'meal-move',
