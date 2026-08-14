@@ -1376,6 +1376,25 @@ body.planning-tab-active .fab-group {
   margin-top: 0;
 }
 
+/* UI v4 (2026-08-10): группа EWS-предупреждений — плотнее и заметнее
+   категорий советов, всегда первая, не сворачивается. */
+.advice-group--ews {
+  gap: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--v4-card-border, rgba(0, 0, 0, 0.08));
+  margin-bottom: 4px;
+}
+.advice-group-header--ews {
+  color: var(--v4-warn-2, #dc2626);
+  font-weight: 700;
+}
+[data-theme$="dark"] .advice-group--ews {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+[data-theme$="dark"] .advice-group-header--ews {
+  color: #fca5a5;
+}
+
 /* Карточка совета */
 .advice-list-item-wrapper {
   position: relative;

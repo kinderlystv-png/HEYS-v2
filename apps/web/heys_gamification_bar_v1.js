@@ -68,6 +68,21 @@
             };
         });
         const [streak, setStreak] = useState(() => safeGetStreak());
+
+        // EWS слит со счётчиком лампочки советов (UI v4, 2026-08-10): app_shell
+        // публикует ewsData через window.HEYS.ewsSummary + событие
+        // heysEWSSummaryUpdated. Счётчик лампочки = советы + предупреждения,
+        // цвет — ровно две степени: критично (highSeverityCount > 0) / нейтрально.
+        const [ewsSummary, setEwsSummary] = useState(() => window.HEYS?.ewsSummary || null);
+        useEffect(() => {
+            const onUpdate = (e) => setEwsSummary(e.detail || null);
+            window.addEventListener('heysEWSSummaryUpdated', onUpdate);
+            return () => window.removeEventListener('heysEWSSummaryUpdated', onUpdate);
+        }, []);
+        const ewsCritical = (ewsSummary?.highSeverityCount || 0) > 0;
+        // Сам счётчик (советы + EWS) считает и пишет в #nav-advice-badge
+        // day/_advice.js (единственный владелец DOM этого span) — он же слушает
+        // heysEWSSummaryUpdated и суммирует. Здесь только цвет кнопки.
         const [streakJustGrew, setStreakJustGrew] = useState(false);
         const prevStreakRef = useRef(streak);
         const [expanded, setExpanded] = useState(false);
@@ -1352,15 +1367,14 @@
                     title: title?.title || '',
                 }, levelGuardActive ? '' : (title?.title || '')),
 
-                // Правая часть: push-slot + советы + настройки (v4 Prompt 3b)
+                // Правая часть: советы (+ EWS) + настройки (UI v4, 2026-08-10 —
+                // push-колокольчик убран из шапки, EWS слит со счётчиком лампочки)
                 React.createElement('div', {
                     className: `game-bar-slots game-bar-slots--compact${levelGuardActive ? ' is-loading' : ' is-loaded'}`
                 },
-                    React.createElement('span', { id: 'push-badge-slot', className: 'gamification-push-slot', key: 'push-slot' }),
-
                     React.createElement('div', { className: 'hdr-header-actions' },
                         React.createElement('button', {
-                            className: 'hdr-header-icon-btn hdr-header-icon-btn--advice',
+                            className: 'hdr-header-icon-btn hdr-header-icon-btn--advice' + (ewsCritical ? ' hdr-header-icon-btn--advice-critical' : ''),
                             onClick: (e) => {
                                 e.stopPropagation();
                                 setTimeout(() => {

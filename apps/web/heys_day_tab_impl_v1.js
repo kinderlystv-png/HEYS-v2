@@ -2103,6 +2103,12 @@
             if (date !== todayKey) return;
             if (!HEYS.game?.checkDayCompleted) return;
             HEYS.game.checkDayCompleted(currentRatio, todayKey);
+            // Разовое предложение включить push — момент выбран точно: первый
+            // заполненный день (UI v4, 2026-08-10). Тот же порог, что у
+            // day_completed XP в checkDayCompleted (apps/web/heys_gamification_v1.js).
+            if (currentRatio >= 0.75 && currentRatio <= 1.1) {
+                window.dispatchEvent(new CustomEvent('heys:day-completed-for-push-prompt'));
+            }
         }, [date, todayKey, currentRatio]);
 
         // === Hero display (tour override + colors + deficit) — extracted ===

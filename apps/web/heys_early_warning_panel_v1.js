@@ -402,6 +402,10 @@
     HEYS.EarlyWarningPanel = EarlyWarningPanel;
     HEYS.showEWSPanel = showEWSPanel;
     HEYS.hideEWSPanel = hideEWSPanel;
+    // UI v4 (2026-08-10): карточка предупреждения переиспользуется как есть в
+    // общей шторке советов (день/_advice.js) — группа предупреждений первой,
+    // до всех категорий советов. См. dayAdviceListUI.renderManualAdviceList.
+    HEYS.EWSWarningCard = WarningCard;
 
     // Event listener для совместимости с существующим кодом
     if (global.window) {

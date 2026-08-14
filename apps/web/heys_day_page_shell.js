@@ -181,6 +181,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             openAdviceTechnicalDetails,
             closeAdviceTechnicalDetails,
             ADVICE_CATEGORY_NAMES,
+            ewsWarnings,
             AdviceCard,
             displayedAdvice,
             adviceExpanded,
@@ -535,6 +536,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     openAdviceTechnicalDetails,
                     closeAdviceTechnicalDetails,
                     ADVICE_CATEGORY_NAMES,
+                    ewsWarnings,
                     AdviceCard
                 }) || null,
 

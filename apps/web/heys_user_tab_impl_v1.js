@@ -384,6 +384,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         });
         const [profileSaved, setProfileSaved] = React.useState(false);
 
+        // Строка «Уведомления» листа настроек: текст состояния до раскрытия
+        // (UI v4, 2026-08-10 — колокольчик убран из шапки, единый вход сюда).
+        const [pushRowStatus, setPushRowStatus] = React.useState(null);
+        React.useEffect(() => {
+            if (!HEYS.push) return;
+            let cancelled = false;
+            const refresh = () => HEYS.push.getStatus().then((s) => { if (!cancelled) setPushRowStatus(s); }).catch(() => {});
+            refresh();
+            window.addEventListener('focus', refresh);
+            return () => { cancelled = true; window.removeEventListener('focus', refresh); };
+        }, []);
+        const pushRowStatusLabel = !pushRowStatus ? 'Напоминания, итог дня, стрики'
+            : pushRowStatus.subscribed ? 'Включены'
+                : pushRowStatus.needsInstall ? 'Нужно добавить HEYS на главный экран'
+                    : pushRowStatus.permission === 'denied' ? 'Запрещены в браузере'
+                        : 'Выключены';
+
         // Смена PIN
         const [pinStatus, setPinStatus] = React.useState('idle'); // idle | pending | success | error
         const [pinMessage, setPinMessage] = React.useState('');
@@ -1459,7 +1476,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     id: 'notifications',
                     icon: '🔔',
                     title: 'Уведомления',
-                    subtitle: 'Напоминания, итог дня, стрики',
+                    subtitle: pushRowStatusLabel,
                     tone: 'cyan',
                     expanded: expandedSections.notifications,
                     onToggle: () => toggleSection('notifications')

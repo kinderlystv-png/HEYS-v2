@@ -1533,6 +1533,7 @@
         openAdviceTechnicalDetails,
         closeAdviceTechnicalDetails,
         ADVICE_CATEGORY_NAMES,
+        ewsWarnings,
         AdviceCard,
     }) {
         // 2026-05-31: Кураторская сессия видит советы так же как клиент при
@@ -1548,7 +1549,8 @@
             : adviceRelevant;
         const displayAdviceCount = typeof totalAdviceCount === 'number' ? totalAdviceCount : 0;
 
-        if (!(adviceTrigger === 'manual' && drawerAdvices?.length > 0 && toastVisible)) return null;
+        const safeEwsWarnings = Array.isArray(ewsWarnings) ? ewsWarnings : [];
+        if (!(adviceTrigger === 'manual' && toastVisible && (drawerAdvices?.length > 0 || safeEwsWarnings.length > 0))) return null;
 
         const { sorted, groups } = getSortedGroupedAdvices(drawerAdvices);
         const groupKeys = Object.keys(groups);
@@ -1638,6 +1640,21 @@
                     )
                 ),
                 React.createElement('div', { className: 'advice-list-items' },
+                    // Группа предупреждений EWS — первой, до всех категорий советов,
+                    // визуально плотнее и не сворачивается (UI v4, 2026-08-10).
+                    safeEwsWarnings.length > 0 && React.createElement('div', {
+                        key: 'ews-group',
+                        className: 'advice-group advice-group--ews'
+                    },
+                        React.createElement('div', { className: 'advice-group-header advice-group-header--ews' },
+                            '🚨 Предупреждения'
+                        ),
+                        safeEwsWarnings.map((warning, idx) =>
+                            HEYS.EWSWarningCard
+                                ? React.createElement(HEYS.EWSWarningCard, { key: warning.id || idx, warning })
+                                : null
+                        )
+                    ),
                     groupKeys.length > 1
                         // 🚀 PERF A1: removed redundant .filter() — sorted already excludes dismissed/hidden
                         ? groupKeys.map(category => {
@@ -2849,7 +2866,7 @@
         const safeDismissedAdvices = dismissedAdvices instanceof Set ? dismissedAdvices : new Set();
         const safeHiddenUntilTomorrow = hiddenUntilTomorrow instanceof Set ? hiddenUntilTomorrow : new Set();
 
-        const totalAdviceCount = useMemo(() => {
+        const adviceOnlyCount = useMemo(() => {
             if (!Array.isArray(safeBadgeAdvices) || safeBadgeAdvices.length === 0) return 0;
             try {
                 return safeBadgeAdvices.filter(a =>
@@ -2859,6 +2876,19 @@
                 return 0;
             }
         }, [safeBadgeAdvices, safeDismissedAdvices, safeHiddenUntilTomorrow]);
+
+        // EWS слит со счётчиком лампочки советов (UI v4, 2026-08-10): app_shell
+        // публикует свежий ewsData через window.HEYS.ewsSummary + событие
+        // heysEWSSummaryUpdated (см. apps/web/heys_app_shell_v1.js). Лампочка
+        // одна, счётчик = советы + предупреждения.
+        const [ewsSummary, setEwsSummary] = useState(() => (typeof window !== 'undefined' ? window.HEYS?.ewsSummary : null) || null);
+        useEffect(() => {
+            const onUpdate = (e) => setEwsSummary(e.detail || null);
+            window.addEventListener('heysEWSSummaryUpdated', onUpdate);
+            return () => window.removeEventListener('heysEWSSummaryUpdated', onUpdate);
+        }, []);
+        const ewsWarnings = ewsSummary?.warnings || [];
+        const totalAdviceCount = adviceOnlyCount + (ewsSummary?.count || 0);
 
         useEffect(() => {
             const badge = document.getElementById('nav-advice-badge');
@@ -3684,6 +3714,7 @@
             totalAdviceCount,
             dismissToast,
             ADVICE_CATEGORY_NAMES,
+            ewsWarnings,
         };
     };
 

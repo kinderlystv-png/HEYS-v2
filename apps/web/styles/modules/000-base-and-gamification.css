@@ -4103,6 +4103,69 @@ color: var(--v4-sand-ink-slate, #1f2937);
   right: 6px;
 }
 
+/* UI v4 (2026-08-10): лампочка советов — ровно две степени цвета. Критично
+   (есть высок-severity EWS-предупреждение) — во внимании; иначе нейтральная,
+   даже если внутри есть некритичные советы/предупреждения. */
+.hdr-header-icon-btn--advice-critical {
+  color: var(--v4-warn-2, #dc2626);
+}
+[data-theme$="dark"] .hdr-header-icon-btn--advice-critical {
+  color: #fca5a5;
+}
+
+/* UI v4 (2026-08-10): разовое предложение включить push после первого
+   заполненного дня — заменяет постоянный колокольчик в шапке. */
+.push-first-day-prompt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 8px 14px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--v4-card-bg, rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--v4-card-border, rgba(0, 0, 0, 0.08));
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+.push-first-day-prompt__text {
+  flex: 1 1 200px;
+  color: var(--v4-sand-ink, #201e1d);
+}
+.push-first-day-prompt__actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
+}
+.push-first-day-prompt__btn {
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.push-first-day-prompt__btn--accept {
+  background: var(--v4-accent, #c67139);
+  color: #fff;
+}
+.push-first-day-prompt__btn--decline {
+  background: transparent;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  border-color: var(--v4-card-border, rgba(0, 0, 0, 0.12));
+}
+[data-theme$="dark"] .push-first-day-prompt {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+[data-theme$="dark"] .push-first-day-prompt__text {
+  color: #f3ede4;
+}
+[data-theme$="dark"] .push-first-day-prompt__btn--decline {
+  color: rgba(255, 255, 255, 0.7);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
 .hdr-header-icon-btn:hover {
 color: var(--v4-sand-ink, #201e1d);
 }

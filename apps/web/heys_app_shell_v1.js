@@ -409,20 +409,50 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const [opsLastCheck, setOpsLastCheck] = React.useState(null);
         const [opsCheckMessage, setOpsCheckMessage] = React.useState('');
 
-        // Portal target: push-badge живёт в state app_shell, но рендерится слева от 🌙
-        // в GamificationBar. См. heys_gamification_bar_v1.js → #push-badge-slot.
-        const [pushBadgeSlot, setPushBadgeSlot] = React.useState(null);
+        // Разовое предложение включить push — после первого заполненного дня.
+        // Колокольчик убран из шапки (UI v4, 2026-08-10) — постоянный переход в
+        // «Уведомления» лежит в листе настроек (см. NotificationsSettingsRow).
+        const [pushPromptDismissed, setPushPromptDismissed] = React.useState(
+            () => !!(U && U.lsGet ? U.lsGet('heys_push_first_day_prompt_dismissed', false) : localStorage.getItem('heys_push_first_day_prompt_dismissed'))
+        );
+        const [showPushFirstDayPrompt, setShowPushFirstDayPrompt] = React.useState(false);
         React.useEffect(() => {
-            let cancelled = false;
-            const find = () => {
-                const el = document.getElementById('push-badge-slot');
-                if (!cancelled) setPushBadgeSlot(el);
+            const onDayCompleted = () => {
+                if (pushPromptDismissed) return;
+                if (!pushStatus || pushStatus.capable === false || pushStatus.subscribed) return;
+                if (pushStatus.permission === 'denied' || pushStatus.needsInstall) return;
+                setShowPushFirstDayPrompt(true);
             };
-            find();
-            const t1 = setTimeout(find, 200);
-            const t2 = setTimeout(find, 800);
-            return () => { cancelled = true; clearTimeout(t1); clearTimeout(t2); };
-        }, []);
+            window.addEventListener('heys:day-completed-for-push-prompt', onDayCompleted);
+            return () => window.removeEventListener('heys:day-completed-for-push-prompt', onDayCompleted);
+        }, [pushPromptDismissed, pushStatus]);
+        const dismissPushFirstDayPrompt = () => {
+            setShowPushFirstDayPrompt(false);
+            setPushPromptDismissed(true);
+            if (U && U.lsSet) U.lsSet('heys_push_first_day_prompt_dismissed', true);
+            else localStorage.setItem('heys_push_first_day_prompt_dismissed', '1');
+        };
+        const acceptPushFirstDayPrompt = async () => {
+            dismissPushFirstDayPrompt();
+            try {
+                if (window.HEYS?.push?.subscribe) {
+                    await window.HEYS.push.subscribe();
+                    const s = await window.HEYS.push.getStatus();
+                    setPushStatus(s);
+                }
+            } catch (e) { /* тихо — строка «Уведомления» в настройках даст повторить */ }
+        };
+
+        // Счётчик лампочки советов = советы + EWS-предупреждения (UI v4,
+        // 2026-08-10, слияние отдельного ews-badge с лампочкой). Раз ewsData —
+        // локальный state этого компонента, публикуем его глобально для
+        // heys_gamification_bar_v1.js (цвет лампочки) и day/_advice.js (группа
+        // предупреждений первой в шторке советов).
+        React.useEffect(() => {
+            window.HEYS = window.HEYS || {};
+            window.HEYS.ewsSummary = ewsData;
+            window.dispatchEvent(new CustomEvent('heysEWSSummaryUpdated', { detail: ewsData }));
+        }, [ewsData]);
         React.useEffect(() => {
             if (!window.HEYS?.push) return;
             // Синхронная проверка capable — показываем бейдж сразу, не ждём SW.ready
@@ -807,126 +837,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     )
                 )
             );
-        };
-        // Собирает полный отладочный отчёт о состоянии push-подписки.
-        // Цель — пользователь может одним тапом скопировать всё в буфер и прислать.
-        const buildPushDiagnostic = async (subscribeResult, exception) => {
-            const lines = [];
-            const safe = (fn, fallback = 'n/a') => { try { return fn(); } catch { return fallback; } };
-            lines.push('=== HEYS Push Diagnostic ===');
-            lines.push('Time: ' + new Date().toISOString());
-            lines.push('URL: ' + safe(() => location.href));
-            lines.push('UA: ' + safe(() => navigator.userAgent));
-            lines.push('Standalone: ' + safe(() => window.matchMedia?.('(display-mode: standalone)').matches));
-            lines.push('iOS standalone: ' + safe(() => navigator.standalone));
-            lines.push('Notification API: ' + safe(() => 'Notification' in window));
-            lines.push('Notification.permission: ' + safe(() => Notification?.permission));
-            lines.push('ServiceWorker: ' + safe(() => 'serviceWorker' in navigator));
-            lines.push('PushManager: ' + safe(() => 'PushManager' in window));
-            lines.push('SW controller: ' + safe(() => !!navigator.serviceWorker?.controller));
-            try {
-                const reg = await navigator.serviceWorker?.ready;
-                if (reg) {
-                    const sub = await reg.pushManager.getSubscription();
-                    lines.push('SW scope: ' + reg.scope);
-                    lines.push('Subscription exists: ' + !!sub);
-                    if (sub) lines.push('Subscription endpoint host: ' + new URL(sub.endpoint).host);
-                }
-            } catch (e) {
-                lines.push('SW check error: ' + e?.message);
-            }
-            try {
-                const status = await window.HEYS?.push?.getStatus?.();
-                lines.push('HEYS.push.getStatus: ' + JSON.stringify(status));
-            } catch (e) {
-                lines.push('getStatus error: ' + e?.message);
-            }
-            lines.push('Cached pushStatus: ' + JSON.stringify(pushStatus));
-            if (subscribeResult !== undefined) {
-                lines.push('subscribe() returned: ' + JSON.stringify(subscribeResult));
-            }
-            if (exception) {
-                lines.push('Exception: ' + exception?.message);
-                if (exception?.stack) lines.push('Stack: ' + exception.stack.split('\n').slice(0, 3).join(' | '));
-            }
-            const cl = window.HEYS?.cloud;
-            lines.push('Curator: ' + safe(() => !!cl?.currentCuratorId));
-            lines.push('Client: ' + safe(() => window.HEYS?.currentClientId || 'none'));
-            return lines.join('\n');
-        };
-
-        const copyToClipboard = async (text) => {
-            try {
-                if (navigator.clipboard?.writeText) {
-                    await navigator.clipboard.writeText(text);
-                    return true;
-                }
-            } catch { /* fallthrough */ }
-            try {
-                const ta = document.createElement('textarea');
-                ta.value = text;
-                ta.style.position = 'fixed';
-                ta.style.opacity = '0';
-                document.body.appendChild(ta);
-                ta.focus();
-                ta.select();
-                const ok = document.execCommand('copy');
-                document.body.removeChild(ta);
-                return ok;
-            } catch { return false; }
-        };
-
-        const handlePushBadgeClick = async () => {
-            // Если уже подписан и устройство, и сервер согласны — переходим на settings.
-            if (pushStatus?.subscribed && window.HEYS?.push) {
-                if (typeof haptic === 'function') haptic('light');
-                commitUndoAndSwitchTab(setTab, 'user', { currentTab: tab, reason: 'push-settings-badge' });
-                setTimeout(() => window.dispatchEvent(new CustomEvent('heys:scroll-to-push-settings')), 80);
-                return;
-            }
-
-            // Иначе пробуем подписаться и в любом случае собираем диагностику
-            setPushBusy(true);
-            let subscribeResult, exception;
-            try {
-                if (window.HEYS?.push?.subscribe) {
-                    subscribeResult = await window.HEYS.push.subscribe();
-                }
-                const s = await window.HEYS?.push?.getStatus?.();
-                if (s) setPushStatus(s);
-            } catch (e) {
-                exception = e;
-                console.warn('[push.badge] subscribe failed:', e?.message, e);
-            } finally {
-                setPushBusy(false);
-            }
-
-            const report = await buildPushDiagnostic(subscribeResult, exception);
-            const copied = await copyToClipboard(report);
-
-            // Короткий человеческий summary поверх + полный отчёт уже в буфере
-            let summary;
-            if (subscribeResult?.ok === true) {
-                summary = '✅ Подписка успешно создана.';
-            } else if (subscribeResult?.reason === 'ios_needs_install') {
-                summary = 'iPhone Safari: нужно «Поделиться → На экран Домой» и запустить с иконки.';
-            } else if (subscribeResult?.reason === 'permission_denied' || subscribeResult?.reason === 'permission_blocked') {
-                summary = 'Браузер заблокировал. Site Settings → Notifications → Allow → перезагрузить.';
-            } else if (subscribeResult?.reason === 'not_capable') {
-                summary = 'Браузер не поддерживает Web Push.';
-            } else if (exception) {
-                summary = 'Ошибка: ' + (exception.message || 'unknown');
-            } else if (subscribeResult?.ok === false) {
-                summary = 'Не подписалось: ' + (subscribeResult.reason || 'unknown');
-            } else {
-                summary = 'Состояние не изменилось. Полный лог скопирован.';
-            }
-            alert(
-              summary + '\n\n' +
-              (copied ? '📋 Полный диагностический лог скопирован в буфер обмена — пришли в чат.' : '⚠ Не удалось скопировать в буфер. Лог в консоли DevTools.') +
-              '\n\nКраткая выжимка:\n' + report
-            );
-            if (!copied) console.log(report);
         };
         const clientDropdownAnchorRef = React.useRef(null);
         const [clientDropdownMaxHeight, setClientDropdownMaxHeight] = React.useState(320);
@@ -3860,68 +3770,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                                 React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
                                             )
                 ),
-                // 🚨 EWS Badge (v1.3 - показывает актуальные предупреждения без ручного скрытия)
-                ewsData && React.createElement('div', {
-                    className: 'ews-badge' + (
-                        ewsData.count === 0 ? ' ews-badge--ok' :
-                            ewsData.highSeverityCount > 0 ? ' ews-badge--high' : ' ews-badge--medium'
-                    ),
-                    title: (() => {
-                        if (ewsData.count === 0) {
-                            return '✅ Early Warning System: все показатели в норме';
-                        }
-                        const high = ewsData.highSeverityCount || 0;
-                        const medium = ewsData.count - high;
-                        const parts = [];
-                        if (high > 0) parts.push(`${high} критич.`);
-                        if (medium > 0) parts.push(`${medium} предупр.`);
-                        return `⚠️ Early Warning System: ${parts.join(', ')}`;
-                    })(),
-                    onClick: () => {
-                        haptic('medium');
-                        if (ewsData.count === 0) {
-                            console.info('ews / badge ✅ Badge clicked (all ok) → opening panel globally');
-                        } else {
-                            console.info('ews / badge 🚨 Badge clicked → opening panel globally (acute mode)');
-                        }
-                        // Отправляем событие с warnings для глобального менеджера панели
-                        window.dispatchEvent(new CustomEvent('heysShowEWSPanel', {
-                            detail: {
-                                warnings: ewsData.warnings || [],
-                                mode: 'acute'
-                            }
-                        }));
-                    }
-                }, [
-                    React.createElement('span', { className: 'ews-badge__icon' }, ewsData.count === 0 ? '✅' : '⚠️'),
-                    ewsData.count > 0 && React.createElement('span', { className: 'ews-badge__count' }, ewsData.count)
-                ]),
-
-                // 🔔 Push notifications indicator — рендерится через Portal в GamificationBar,
-                // слева от 🌙 (heys_gamification_bar_v1.js → #push-badge-slot).
-                pushStatus && pushStatus.capable !== false && pushBadgeSlot && window.ReactDOM?.createPortal && window.ReactDOM.createPortal(
-                    React.createElement('div', {
-                        key: 'pushbadge',
-                        className: 'push-badge' + (
-                            pushStatus.subscribed ? ' push-badge--on' :
-                            (pushStatus.permission === 'denied' || pushStatus.needsInstall) ? ' push-badge--blocked' :
-                            ' push-badge--off'
-                        ),
-                        title: pushStatus.subscribed
-                            ? '🔔 Уведомления включены — тап для настроек'
-                            : pushStatus.needsInstall
-                                ? '📲 Добавь HEYS на главный экран чтобы включить уведомления'
-                                : pushStatus.permission === 'denied'
-                                    ? '🔕 Уведомления заблокированы в браузере'
-                                    : '🔕 Уведомления выключены — тап чтобы включить',
-                        onClick: pushBusy ? undefined : handlePushBadgeClick,
-                        style: {
-                            cursor: pushBusy ? 'wait' : 'pointer',
-                            opacity: pushBusy ? 0.6 : 1
-                        }
-                    }, pushStatus.subscribed ? '🔔' : '🔕'),
-                    pushBadgeSlot
-                ),
+                // EWS-бейдж и колокольчик пушей убраны из шапки (UI v4, 2026-08-10):
+                // EWS слит со счётчиком лампочки советов (см. window.HEYS.ewsSummary /
+                // событие heysEWSSummaryUpdated, читает heys_gamification_bar_v1.js и
+                // day/_advice.js), push — в строку «Уведомления» листа настроек +
+                // разовый баннер showPushFirstDayPrompt ниже.
 
                                    // Строка даты v4: стрелки + DatePicker (месяц — шторкой по тапу)
                 (tab === 'stats' || tab === 'diary' || tab === 'activity' || tab === 'insights' || tab === 'widgets') && window.HEYS.DatePicker
@@ -3950,6 +3803,27 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         }),
                     )
                     : null
+            ),
+            // Разовое предложение включить push — после первого заполненного дня
+            // (UI v4, 2026-08-10). Отказ прячет баннер насовсем; постоянный вход —
+            // строка «Уведомления» в листе настроек.
+            showPushFirstDayPrompt && React.createElement('div', {
+                className: 'push-first-day-prompt',
+                role: 'status',
+                'aria-live': 'polite'
+            },
+                React.createElement('span', { className: 'push-first-day-prompt__text' },
+                    '🔔 Включить уведомления? Напомним, если забудешь внести день.'),
+                React.createElement('div', { className: 'push-first-day-prompt__actions' },
+                    React.createElement('button', {
+                        className: 'push-first-day-prompt__btn push-first-day-prompt__btn--accept',
+                        onClick: acceptPushFirstDayPrompt,
+                    }, 'Включить'),
+                    React.createElement('button', {
+                        className: 'push-first-day-prompt__btn push-first-day-prompt__btn--decline',
+                        onClick: dismissPushFirstDayPrompt,
+                    }, 'Не сейчас')
+                )
             ),
             shouldShowPendingSyncBanner && React.createElement(
                 'div',

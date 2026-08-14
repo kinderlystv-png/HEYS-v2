@@ -185,6 +185,7 @@
             openAdviceTechnicalDetails: adviceState.openAdviceTechnicalDetails,
             closeAdviceTechnicalDetails: adviceState.closeAdviceTechnicalDetails,
             ADVICE_CATEGORY_NAMES: adviceState.ADVICE_CATEGORY_NAMES,
+            ewsWarnings: adviceState.ewsWarnings,
             AdviceCard: ctx.AdviceCard,
             displayedAdvice: adviceState.displayedAdvice,
             adviceExpanded: adviceState.adviceExpanded,
