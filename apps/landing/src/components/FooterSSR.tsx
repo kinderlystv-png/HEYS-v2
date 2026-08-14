@@ -36,10 +36,10 @@ export default function FooterSSR() {
                 Политика конфиденциальности
               </a>
               <a
-                href="/legal/health-data-consent"
+                href="/legal/personal-data-consent"
                 className="text-gray-400 hover:text-white transition-colors"
               >
-                Данные о здоровье
+                Персональные данные
               </a>
               <a
                 href="/legal/refund"

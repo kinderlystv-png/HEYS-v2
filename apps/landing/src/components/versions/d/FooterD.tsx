@@ -32,7 +32,7 @@ import { OPERATOR, SUPPORT_CONTACTS } from '@/config/legal-versions';
 const LEGAL_LINKS = [
   { href: '/legal/user-agreement', label: 'Пользовательское соглашение' },
   { href: '/legal/privacy-policy', label: 'Политика конфиденциальности' },
-  { href: '/legal/health-data-consent', label: 'Данные о здоровье' },
+  { href: '/legal/personal-data-consent', label: 'Персональные данные' },
   { href: '/legal/refund', label: 'Возврат' },
   { href: '/legal/marketing-consent', label: 'Маркетинговые материалы' },
   { href: '/legal/cookie-policy', label: 'Cookies' },

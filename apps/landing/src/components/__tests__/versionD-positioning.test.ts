@@ -162,6 +162,31 @@ describe('формулировки, закреплённые решением в
     expect(quiz).not.toMatch(/−\s?\d+\s?кг/i);
     expect(quiz).toContain('Заявка не гарантирует начало пробной недели');
   });
+
+  it('«сила воли» остаётся только на экране вопроса квиза', () => {
+    const quiz = read(QUIZ_DIR, 'TrialQuiz.tsx');
+    const model = read(QUIZ_DIR, 'quizModel.ts');
+    expect(quiz).toContain('Это не тест на силу воли');
+    expect(quiz).not.toContain('тест на силу воли и занимает');
+    expect(model).not.toMatch(/[Сс]ила воли/);
+  });
+
+  it('футер ведёт на согласие ПДн, а не на изъятое здоровье', () => {
+    const footer = read(D_DIR, 'FooterD.tsx');
+    expect(footer).toContain('/legal/personal-data-consent');
+    expect(footer).not.toContain('/legal/health-data-consent');
+  });
+
+  it('на витрине D нет звания «тренер» и ложных 20 лет сопровождения', () => {
+    const pricing = read(D_DIR, 'PricingD.tsx');
+    const curator = read(D_DIR, 'CuratorSection.tsx');
+    expect(pricing).toContain("title: 'Как работает куратор'");
+    expect(pricing).not.toContain("title: 'Как работает тренер'");
+    expect(pricing).not.toMatch(/'Тренер'/);
+    expect(curator).toContain('Двадцать лет практики на себе, с 2004 года');
+    expect(curator).not.toContain('в питании и сопровождении');
+    expect(curator).not.toContain('Данные о здоровье — по');
+  });
 });
 
 describe('цены и реквизиты не хардкодятся', () => {

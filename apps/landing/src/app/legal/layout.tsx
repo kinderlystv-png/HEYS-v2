@@ -48,8 +48,8 @@ export default function LegalLayout({
               Пользовательское соглашение
             </a>
             {' · '}
-            <a href="/legal/health-data-consent" className="hover:text-gray-700 transition-colors">
-              Данные о здоровье
+            <a href="/legal/personal-data-consent" className="hover:text-gray-700 transition-colors">
+              Персональные данные
             </a>
             {' · '}
             <a href="/legal/refund" className="hover:text-gray-700 transition-colors">
