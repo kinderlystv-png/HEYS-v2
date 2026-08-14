@@ -23,11 +23,23 @@ CAPACITY_POLICY="$SCRIPT_DIR/serverless-capacity-policy.cjs"
 CAPACITY_CHECK="$SCRIPT_DIR/check-serverless-capacity.cjs"
 PAYMENTS_SECRET_CHECK="$SCRIPT_DIR/check-payments-secret-payload.cjs"
 
-API_INSTANCE_CONCURRENCY="$(node -p "require('$CAPACITY_POLICY').POLICY.runtime.instanceConcurrency")"
-API_INSTANCE_ADMISSION_LIMIT="$(node -p "require('$CAPACITY_POLICY').POLICY.runtime.instanceAdmissionLimit")"
-API_ZONE_INSTANCES_LIMIT="$(node -p "require('$CAPACITY_POLICY').POLICY.runtime.scaling.zoneInstancesLimit")"
-API_ZONE_REQUESTS_LIMIT="$(node -p "require('$CAPACITY_POLICY').POLICY.runtime.scaling.zoneRequestsLimit")"
-OVERLOAD_RETRY_AFTER_SECONDS="$(node -p "require('$CAPACITY_POLICY').POLICY.runtime.overloadRetryAfterSeconds")"
+# Git Bash gives /c/Users/... ; Windows node cannot require() that path.
+# cygpath -m → C:/Users/... which works in require() and stays POSIX-safe.
+_node_module_path() {
+    local p="$1"
+    if command -v cygpath >/dev/null 2>&1; then
+        cygpath -m "$p"
+    else
+        printf '%s' "$p"
+    fi
+}
+CAPACITY_POLICY_NODE="$(_node_module_path "$CAPACITY_POLICY")"
+
+API_INSTANCE_CONCURRENCY="$(node -p "require('$CAPACITY_POLICY_NODE').POLICY.runtime.instanceConcurrency")"
+API_INSTANCE_ADMISSION_LIMIT="$(node -p "require('$CAPACITY_POLICY_NODE').POLICY.runtime.instanceAdmissionLimit")"
+API_ZONE_INSTANCES_LIMIT="$(node -p "require('$CAPACITY_POLICY_NODE').POLICY.runtime.scaling.zoneInstancesLimit")"
+API_ZONE_REQUESTS_LIMIT="$(node -p "require('$CAPACITY_POLICY_NODE').POLICY.runtime.scaling.zoneRequestsLimit")"
+OVERLOAD_RETRY_AFTER_SECONDS="$(node -p "require('$CAPACITY_POLICY_NODE').POLICY.runtime.overloadRetryAfterSeconds")"
 
 # Parse flags
 TARGET_FUNCTIONS=()
