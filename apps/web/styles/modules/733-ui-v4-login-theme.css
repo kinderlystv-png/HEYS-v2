@@ -8,8 +8,8 @@
   padding: 28px 18px 18px !important;
   padding-top: max(28px, calc(env(safe-area-inset-top, 0px) + 28px)) !important;
   padding-bottom: max(18px, calc(env(safe-area-inset-bottom, 0px) + 18px)) !important;
-  background: var(--v4-hero, #efe3cf);
-  color: var(--v4-ink, #201e1d);
+  background: #efe3cf;
+  color: #201e1d;
   font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   transition: background 0.24s ease;
@@ -28,7 +28,7 @@
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -52,7 +52,7 @@
   flex: 0 0 auto;
   margin: 0;
   line-height: 0;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .heys-auth-mark svg,
@@ -64,12 +64,12 @@
 
 .heys-auth-logo path,
 .heys-auth-logo rect {
-  fill: var(--v4-ink, #201e1d);
+  fill: #201e1d;
 }
 
 .heys-auth-logo > g > g > path,
 .heys-auth-logo > g > g > rect {
-  stroke: var(--v4-ink, #201e1d);
+  stroke: #201e1d;
   stroke-width: 2.6;
   stroke-linejoin: round;
   paint-order: stroke;
@@ -81,7 +81,7 @@
 }
 
 .heys-auth-logo .lp path {
-  fill: var(--v4-ok-fill, #7a8a5e);
+  fill: #7a8a5e;
   stroke: none;
 }
 
@@ -104,7 +104,7 @@
 .heys-auth-title,
 .heys-auth-brand {
   margin: 32px 0 4px;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   font-size: 17px;
   font-weight: 700;
   letter-spacing: 0;
@@ -183,7 +183,7 @@
 
 .heys-auth-pin-section.is-active .heys-auth-label,
 .heys-auth-pin-section:not(.is-muted) .heys-auth-label {
-  color: var(--v4-warn-3, var(--v4-act-text, #a1471c));
+  color: #a1471c;
 }
 
 .heys-auth-field {
@@ -195,7 +195,7 @@
   padding: 14px 16px;
   border: 0;
   border-radius: 16px;
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
   box-shadow: none;
   transition: background 0.2s ease, box-shadow 0.2s ease;
 }
@@ -204,11 +204,11 @@
 .heys-auth-field.is-active {
   background: var(--v4-bg, #fffaf1);
   border-color: transparent;
-  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
+  box-shadow: inset 0 0 0 2px #c67139;
 }
 
 .heys-auth-field.is-complete {
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
   border-color: transparent;
   box-shadow: none;
 }
@@ -224,7 +224,7 @@
 
 .heys-auth-phone-input,
 .heys-auth-input {
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   font-family: inherit;
   font-variant-numeric: tabular-nums;
 }
@@ -261,7 +261,7 @@
   padding: 15px 16px;
   border: 0;
   border-radius: 16px;
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
   outline: none;
   font-size: 14px;
   font-weight: 600;
@@ -270,7 +270,7 @@
 
 .heys-auth-input:focus {
   background: var(--v4-bg, #fffaf1);
-  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
+  box-shadow: inset 0 0 0 2px #c67139;
 }
 
 .heys-auth-input[type="password"]:focus {
@@ -315,7 +315,7 @@
   height: 100%;
   border: 0;
   border-radius: 16px;
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
   text-align: center;
   color: transparent;
   caret-color: transparent;
@@ -327,12 +327,12 @@
 .heys-auth-pin-input:focus,
 .heys-auth-pin-input.is-active:not(.is-complete) {
   background: var(--v4-bg, #fffaf1);
-  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
+  box-shadow: inset 0 0 0 2px #c67139;
 }
 
 .heys-auth-pin-input.is-filled,
 .heys-auth-pin-input.is-complete {
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
   box-shadow: none;
   color: transparent;
 }
@@ -346,7 +346,7 @@
   width: 9px;
   height: 9px;
   border-radius: 999px;
-  background: var(--v4-ok-fill, #7a8a5e);
+  background: #7a8a5e;
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
@@ -360,7 +360,7 @@
 .heys-auth-pin-input.hlg-pin-error,
 .heys-auth-pin-box.is-error .heys-auth-pin-input {
   background: #f3e0d2;
-  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
+  box-shadow: inset 0 0 0 2px #c67139;
   animation: heys-auth-pin-error-shake 0.34s ease-out;
 }
 
@@ -370,7 +370,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   pointer-events: none;
 }
 
@@ -384,7 +384,7 @@
   border: 0;
   border-radius: 16px;
   background: transparent;
-  color: var(--v4-warn-3, #a1471c);
+  color: #a1471c;
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
@@ -444,9 +444,9 @@
 .heys-auth-key {
   border: 0;
   border-radius: 14px;
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
   box-shadow: none;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   cursor: pointer;
   font-family: inherit;
   font-size: 19px;
@@ -459,13 +459,13 @@
 
 .heys-auth-key:active {
   transform: scale(0.97);
-  background: color-mix(in srgb, var(--v4-surface, #f7efe2) 82%, var(--v4-ink, #201e1d));
+  background: color-mix(in srgb, #f7efe2 82%, #201e1d);
 }
 
 .heys-auth-key--muted,
 html .heys-auth-key.heys-auth-key--delete,
 html .heys-auth-key.heys-auth-key--delete.is-available {
-  background: var(--v4-hero, #efe3cf);
+  background: #efe3cf;
   border: 0;
   box-shadow: none;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
@@ -473,7 +473,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available {
 }
 
 html .heys-auth-key.heys-auth-key--delete.is-available:active {
-  background: color-mix(in srgb, var(--v4-hero, #efe3cf) 82%, var(--v4-ink, #201e1d));
+  background: color-mix(in srgb, #efe3cf 82%, #201e1d);
 }
 
 .heys-auth-footer-row {
@@ -500,7 +500,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   border: 0;
   background: none;
   padding: 0;
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
   cursor: pointer;
   font: inherit;
   font-weight: 500;
@@ -515,8 +515,8 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   margin-top: 16px;
   padding: 13px 14px;
   border-radius: 16px;
-  background: var(--v4-hero, #efe3cf);
-  color: var(--v4-ink, #201e1d);
+  background: #efe3cf;
+  color: #201e1d;
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1.45;
@@ -550,7 +550,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-auth-btn--primary {
   margin-top: 22px;
-  background: var(--v4-act, #c67139);
+  background: #c67139;
   box-shadow: none;
   color: var(--v4-sand-ink-deep, #2b1608);
 }
@@ -563,8 +563,8 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-auth-btn--secondary,
 .heys-auth-btn--ghost {
-  background: var(--v4-surface, #f7efe2);
-  color: var(--v4-ink, #201e1d);
+  background: #f7efe2;
+  color: #201e1d;
 }
 
 .heys-auth-btn:disabled {
@@ -600,8 +600,8 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   border: 0;
   border-radius: 999px;
   background: var(--v4-bg, #fffaf1);
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--v4-ink, #201e1d) 12%, transparent);
-  color: var(--v4-ok-text, #5c6a45);
+  box-shadow: 0 6px 18px color-mix(in srgb, #201e1d 12%, transparent);
+  color: #5c6a45;
   font-size: 11.5px;
   font-weight: 700;
   line-height: 1;
@@ -617,7 +617,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: var(--v4-ok-fill, #7a8a5e);
+  background: #7a8a5e;
   animation: heys-auth-status-pulse 0.9s ease-in-out infinite;
 }
 
@@ -664,7 +664,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   border: 0;
   border-radius: 26px;
   background: var(--v4-bg, #fffaf1);
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   text-align: center;
   box-shadow: none;
 }
@@ -677,7 +677,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   height: 32px;
   border: 0;
   border-radius: 10px;
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.45));
   cursor: pointer;
   font-size: 22px;
@@ -686,7 +686,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-auth-support-title {
   margin-bottom: 8px;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   font-size: 15px;
   font-weight: 700;
 }
@@ -706,7 +706,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   margin-top: 10px;
   border: 0;
   border-radius: 999px;
-  background: var(--v4-act, #c67139);
+  background: #c67139;
   color: var(--v4-sand-ink-deep, #2b1608);
   font-size: 13px;
   font-weight: 700;
@@ -817,7 +817,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   font-size: 15px;
   font-weight: 700;
   line-height: 1;
@@ -859,7 +859,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   padding: 12px 8px;
   border: 0;
   border-radius: 14px;
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   font-size: 12.5px;
   font-weight: 700;
@@ -868,7 +868,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 .heys-login-theme__chip.is-active {
-  background: var(--v4-act, #c67139);
+  background: #c67139;
   color: var(--v4-sand-ink-deep, #2b1608);
 }
 
@@ -887,15 +887,15 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   padding: 12px;
   border: 0;
   border-radius: 14px;
-  background: var(--v4-surface, #f7efe2);
-  color: var(--v4-ink, #201e1d);
+  background: #f7efe2;
+  color: #201e1d;
   cursor: pointer;
   text-align: left;
 }
 
 .heys-login-theme__soft-card.is-active {
-  background: var(--v4-surface, #f7efe2);
-  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
+  background: #f7efe2;
+  box-shadow: inset 0 0 0 2px #c67139;
 }
 
 .heys-login-theme__soft-swatch {
@@ -942,14 +942,14 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 [data-theme="dark"] #heys-login-gate.heys-auth-shell,
 [data-theme="sand-dark"] #heys-login-gate.heys-auth-shell,
 [data-theme="blue-dark"] #heys-login-gate.heys-auth-shell {
-  background: var(--v4-hero, #2f2820);
+  background: #2f2820;
 }
 
 [data-theme="dark"] .heys-auth-card,
 [data-theme="classic-dark"] .heys-auth-card,
 [data-theme="sand-dark"] .heys-auth-card,
 [data-theme="blue-dark"] .heys-auth-card {
-  background: var(--v4-bg, #141210);
+  background: #141210;
   border: 0;
   box-shadow: none;
 }
@@ -981,7 +981,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-auth-card--pep .heys-auth-label {
   margin: 0 0 12px;
-  color: var(--v4-act, #c67139);
+  color: #c67139;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0;
@@ -992,7 +992,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-auth-card--pep .heys-auth-pin-section.is-active .heys-auth-label,
 .heys-auth-card--pep .heys-auth-pin-section:not(.is-muted) .heys-auth-label {
-  color: var(--v4-act, #c67139);
+  color: #c67139;
 }
 
 .heys-auth-card--pep .heys-auth-pin-box {
@@ -1002,27 +1002,27 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-auth-card--pep .heys-auth-pin-input {
   border-radius: 14px;
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
 }
 
 .heys-auth-card--pep .heys-auth-pin-input:focus,
 .heys-auth-card--pep .heys-auth-pin-input.is-active:not(.is-complete) {
   background: var(--v4-bg, #fffaf1);
-  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
+  box-shadow: inset 0 0 0 2px #c67139;
 }
 
 .heys-auth-card--pep .heys-auth-pin-box.is-filled::after,
 .heys-auth-card--pep .heys-auth-pin-box.is-complete::after {
   width: 8px;
   height: 8px;
-  background: var(--v4-ink, #201e1d);
+  background: #201e1d;
 }
 
 .heys-auth-card--pep .heys-auth-key--muted,
 .heys-auth-card--pep .heys-auth-key.heys-auth-key--delete,
 .heys-auth-card--pep .heys-auth-key.heys-auth-key--delete.is-available {
-  background: var(--v4-hero, #efe3cf);
-  color: var(--v4-act, #c67139);
+  background: #efe3cf;
+  color: #c67139;
 }
 
 .heys-auth-card--pep .heys-auth-key.heys-auth-key--delete:disabled,
@@ -1045,7 +1045,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   height: 20px;
   flex-shrink: 0;
   margin: 1px 0 0;
-  accent-color: var(--v4-act, #c67139);
+  accent-color: #c67139;
 }
 
 .heys-auth-card--pep .heys-auth-primary {
@@ -1058,7 +1058,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   padding: 17px 22px;
   border: none;
   border-radius: 999px;
-  background: var(--v4-act, #c67139);
+  background: #c67139;
   font-size: 13px;
   font-weight: 700;
   line-height: 1;

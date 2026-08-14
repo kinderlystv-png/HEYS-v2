@@ -1532,7 +1532,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 15px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .mc-modal--meal-create .mc-header-btn--back {

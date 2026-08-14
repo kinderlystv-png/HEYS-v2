@@ -725,10 +725,11 @@
       return diff <= 30;
     }, [realHours, minutes]);
 
+    const wave = liveWave;
     const showWavePlaque = !!(
-      liveWave
-      && (liveWave.rangeStatus || liveWave.status) === 'settling'
+      wave
       && selectedCloseToNow
+      && !((wave.rangeStatus || wave.status) !== 'settling')
     );
 
     useEffect(() => {

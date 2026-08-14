@@ -103,7 +103,7 @@
 
 [data-theme$="dark"] .meal-time-hero .mc-wheel-value--current,
 [data-theme$="dark"] .meal-time-hero .mc-time-sep {
-  color: var(--v4-act-text, #d4a574);
+  color: #d4a574;
 }
 
 [data-theme$="dark"] .meal-time-hero .mc-wheel-value--prev,
@@ -180,7 +180,7 @@
 [data-theme$="dark"] .meal-time-step .meal-type-label,
 [data-theme$="dark"] .meal-time-step .meal-type-label:hover {
   background: none;
-  color: var(--v4-act-text, #d4a574);
+  color: #d4a574;
 }
 
 .meal-type-chips {
@@ -225,11 +225,11 @@
   font-size: 12px;
   font-weight: 600;
   line-height: 1.45;
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 [data-theme$="dark"] .meal-time-wave {
-  background: var(--v4-hero, #2f2820);
+  background: #2f2820;
 }
 
 .meal-time-cta {
@@ -242,7 +242,7 @@
   padding: 17px 22px;
   border: none;
   border-radius: 999px;
-  background: var(--v4-act, #c67139);
+  background: #c67139;
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
@@ -292,8 +292,8 @@
   padding: 18px;
   border: none;
   border-radius: 22px;
-  background: var(--v4-hero, #efe3cf);
-  color: var(--v4-ink, #201e1d);
+  background: #efe3cf;
+  color: #201e1d;
   text-align: left;
   cursor: pointer;
 }
@@ -304,7 +304,7 @@
   gap: 12px;
   padding: 14px 16px;
   border-radius: 16px;
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
 }
 
 .flow-selection-row .flow-selection-btn {
@@ -329,7 +329,7 @@
   font-size: 15px;
   font-weight: 600;
   line-height: 1.25;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .flow-selection-btn__sub {
@@ -352,8 +352,8 @@
   width: 8px;
   height: 8px;
   flex-shrink: 0;
-  border-right: 2px solid var(--v4-act, #c67139);
-  border-bottom: 2px solid var(--v4-act, #c67139);
+  border-right: 2px solid #c67139;
+  border-bottom: 2px solid #c67139;
   transform: rotate(-45deg);
 }
 
@@ -367,7 +367,7 @@
   padding: 0;
   border: none;
   border-radius: 10px;
-  background: var(--v4-hero, #efe3cf);
+  background: #efe3cf;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
 }
@@ -398,7 +398,7 @@
   padding: 16px 18px 0;
   font-size: 15px;
   font-weight: 600;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .confirm-modal:has(.flow-add-products) .confirm-modal-text {
@@ -497,7 +497,7 @@
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .meal-mood-scale__value {
