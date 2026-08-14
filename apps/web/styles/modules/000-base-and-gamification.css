@@ -3777,7 +3777,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 /* Клиентский shell v4: шапка фиксирована в layout, скролл — внутри вкладки.
-   При смене tab-active-viewport remount'ится по key → контент с начала. */
+   При смене вкладки scrollTop viewport сбрасывается в JS (без remount/fade). */
 .wrap:not(.wrap--no-header) {
   display: flex;
   flex-direction: column;
@@ -3810,23 +3810,13 @@ color: var(--v4-sand-ink-slate, #1f2937);
   overscroll-behavior: contain;
   padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
-  animation: tab-view-enter 0.12s ease-out;
 }
 
-/* Tap: лёгкий fade на remount viewport. Свайп: slide на shell, без двойного fade. */
+/* Tap: мгновенная смена (DayTab/widgets остаются смонтированными).
+   Свайп: slide на shell. */
 .tab-content-swipeable:is(.slide-out-left, .slide-out-right, .slide-in-left, .slide-in-right)
   > .tab-active-viewport {
   animation: none;
-}
-
-@keyframes tab-view-enter {
-  from {
-    opacity: 0.94;
-  }
-
-  to {
-    opacity: 1;
-  }
 }
 
 .wrap.wrap--no-header {
@@ -9630,10 +9620,6 @@ svg.date-picker-icon {
   .tab-content-swipeable.slide-in-right,
   .tab-content-swipeable.edge-bounce-left,
   .tab-content-swipeable.edge-bounce-right {
-    animation: none;
-  }
-
-  .wrap:not(.wrap--no-header) > .tab-content-swipeable > .tab-active-viewport {
     animation: none;
   }
 

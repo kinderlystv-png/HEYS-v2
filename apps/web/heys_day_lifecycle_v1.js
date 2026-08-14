@@ -95,14 +95,17 @@
       };
     }, [flush]);
 
-    // Effect 2: Save current date to storage
+    // Effect 2: Save current date to storage (skip identical value — remount-safe)
     useEffect(() => {
+      if (!date) return;
+      const current = lsGet ? lsGet('heys_dayv2_date', null) : storeGet('heys_dayv2_date', null);
+      if (current === date) return;
       if (lsSet) {
         lsSet('heys_dayv2_date', date);
       } else {
         storeSet('heys_dayv2_date', date);
       }
-    }, [date, lsSet]);
+    }, [date]);
 
     // Effect 3: Load day data from localStorage and cloud when date changes
     useEffect(() => {

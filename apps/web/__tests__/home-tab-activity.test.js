@@ -49,9 +49,11 @@ describe('домашняя вкладка', () => {
         expect(missing).toEqual([]);
     });
 
-    it('при смене вкладки монтирует свежую scroll-surface с начала', () => {
+    it('при смене вкладки сбрасывает scroll viewport без remount', () => {
         expect(shellSrc).toContain('tab-active-viewport');
-        expect(shellSrc).toMatch(/key: 'tab-view-' \+ String\(tab/);
+        expect(shellSrc).toContain('tabViewportRef');
+        expect(shellSrc).toMatch(/scrollTop = 0/);
+        expect(shellSrc).not.toMatch(/key: 'tab-view-' \+ String\(tab/);
         expect(tabStateSrc).not.toContain('resetAppScrollTop');
         const baseCss = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8');
         expect(baseCss).toContain('.wrap:not(.wrap--no-header) > .tab-content-swipeable > .tab-active-viewport');

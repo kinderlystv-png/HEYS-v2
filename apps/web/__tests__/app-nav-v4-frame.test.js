@@ -175,13 +175,15 @@ describe('UI v4 — свайп между вкладками', () => {
         expect(swipeKeys).not.toContain('tasks');
     });
 
-    it('tap fade и swipe slide не конфликтуют', () => {
-        expect(baseCss).toContain('@keyframes tab-view-enter');
-        expect(baseCss).toMatch(/\.tab-active-viewport[\s\S]*animation: tab-view-enter 0\.12s/);
+    it('tap мгновенный, swipe slide не конфликтует с viewport', () => {
+        expect(baseCss).not.toContain('@keyframes tab-view-enter');
+        expect(baseCss).not.toMatch(/\.tab-active-viewport[\s\S]*animation: tab-view-enter/);
         expect(baseCss).toMatch(/slide-in-left[\s\S]*> \.tab-active-viewport[\s\S]*animation: none/);
         expect(shellSrc).toContain("className: 'tab-active-viewport'");
+        expect(shellSrc).toContain('tabViewportRef');
         expect(shellSrc).toMatch(/tab-active-viewport[\s\S]*onTouchStart: onTouchStart/);
         expect(shellSrc).not.toMatch(/tab-content-swipeable' \+[\s\S]{0,220}onTouchStart: onTouchStart/);
+        expect(shellSrc).not.toMatch(/key: 'tab-view-' \+ String\(tab/);
     });
 });
 

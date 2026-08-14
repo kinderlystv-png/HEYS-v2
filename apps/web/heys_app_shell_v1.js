@@ -5185,7 +5185,13 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             UserTabWithCloudSync,
         } = props;
         const tabContentRef = React.useRef(null);
+        const tabViewportRef = React.useRef(null);
         const isDayTab = tab === 'stats' || tab === 'diary' || tab === 'activity';
+
+        React.useEffect(() => {
+            const viewport = tabViewportRef.current;
+            if (viewport) viewport.scrollTop = 0;
+        }, [tab]);
 
         const [, _tickPostboot] = React.useReducer(function(n) { return n + 1; }, 0);
         React.useEffect(function() {
@@ -5285,7 +5291,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             React.createElement(
                 'div',
                 {
-                    key: 'tab-view-' + String(tab || ''),
+                    ref: tabViewportRef,
                     className: 'tab-active-viewport',
                     onTouchStart: onTouchStart,
                     onTouchEnd: onTouchEnd,

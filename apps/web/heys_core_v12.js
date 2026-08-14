@@ -5841,7 +5841,22 @@
       // 2026-05-29 anti-loop dedup для dayv2 keys (см. fc1ce544/9b6d8124):
       // курaторская сессия имела источник в boot-calc bundle который писал
       // dayv2 ~3/сек с identical content. Дедуплицируем по JSON + 1500ms window.
-      if (/_dayv2_\d{4}-\d{2}-\d{2}$/.test(finalKey)) {
+      // dayv2_date — meta-key без updatedAt: identical string → skip навсегда в сессии.
+      if (/(^|_)dayv2_date$/.test(finalKey)) {
+        try {
+          const serialized = (typeof v === 'string') ? v : JSON.stringify(v);
+          const stats = global.__heysLsSetDayv2DateDedup = global.__heysLsSetDayv2DateDedup || {
+            lastByKey: new Map(),
+            totalSuppressed: 0,
+          };
+          const prev = stats.lastByKey.get(finalKey);
+          if (prev === serialized) {
+            stats.totalSuppressed++;
+            return;
+          }
+          stats.lastByKey.set(finalKey, serialized);
+        } catch (_) { /* noop */ }
+      } else if (/_dayv2_\d{4}-\d{2}-\d{2}$/.test(finalKey)) {
         try {
           const stats = global.__heysLsSetDayv2Dedup = global.__heysLsSetDayv2Dedup || {
             lastByKey: new Map(),

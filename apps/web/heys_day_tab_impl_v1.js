@@ -702,7 +702,12 @@
         // ...existing code...
 
         // ...удалены дублирующиеся объявления useState...
-        useEffect(() => { lsSet('heys_dayv2_date', date); }, [date]);
+        useEffect(() => {
+            if (!date) return;
+            const current = lsGet('heys_dayv2_date', null);
+            if (current === date) return;
+            lsSet('heys_dayv2_date', date);
+        }, [date]);
 
         // Effects (sync + heys:day-updated listener) — вынесено в модуль
         if (!HEYS.dayEffects?.useDaySyncEffects) {
