@@ -47,7 +47,7 @@ test('snapshotClientBundle keeps KV and account reads in one repeatable-read sna
     assert.equal(queries.filter((sql) => sql === 'ROLLBACK').length, 0);
 });
 
-test('executeFullRestore rolls KV back when an account write fails', async () => {
+test('executeFullRestore writes clients before KV and rolls back when account write fails', async () => {
     const queries = [];
     const committed = [];
     let pending = [];
@@ -65,7 +65,7 @@ test('executeFullRestore rolls KV back when an account write fails', async () =>
                 return { rows: [] };
             }
             if (sql.startsWith('INSERT INTO clients')) {
-                throw new Error('fault-after-kv');
+                throw new Error('fault-on-clients');
             }
             if (sql === 'COMMIT') {
                 committed.push(...pending);
@@ -99,12 +99,13 @@ test('executeFullRestore rolls KV back when an account write fails', async () =>
             ['heys_profile'],
             tableDiffs,
         ),
-        /fault-after-kv/,
+        /fault-on-clients/,
     );
 
     assert.equal(queries.filter((sql) => sql === 'BEGIN').length, 1);
     assert.equal(queries.filter((sql) => sql === 'ROLLBACK').length, 1);
     assert.equal(queries.filter((sql) => sql === 'COMMIT').length, 0);
+    assert.equal(queries.some((sql) => sql.startsWith('INSERT INTO client_kv_store')), false);
     assert.deepEqual(committed, []);
     assert.equal(released, 1);
 });
@@ -142,5 +143,30 @@ test('executeFullRestore commits KV and account rows together on success', async
     assert.equal(queries.filter((sql) => sql === 'BEGIN').length, 1);
     assert.equal(queries.filter((sql) => sql === 'COMMIT').length, 1);
     assert.equal(queries.filter((sql) => sql === 'ROLLBACK').length, 0);
+    const clientsIdx = queries.findIndex((sql) => sql.startsWith('INSERT INTO clients'));
+    const kvIdx = queries.findIndex((sql) => sql.startsWith('INSERT INTO client_kv_store'));
+    assert.ok(clientsIdx >= 0 && kvIdx >= 0 && clientsIdx < kvIdx);
     assert.equal(released, 1);
+});
+
+test('readClientKvSnapshot omits plaintext v when the row is encrypted', async () => {
+    const dbClient = {
+        async query() {
+            return {
+                rows: [{
+                    k: 'heys_dayv2_2026-08-14',
+                    v: { meals: ['secret'] },
+                    v_encrypted: Buffer.from('cipher'),
+                    key_version: 1,
+                    updated_at: '2026-08-14T00:00:00.000Z',
+                }],
+            };
+        },
+    };
+
+    const result = await backup.readClientKvSnapshot(dbClient, CLIENT_ID);
+    const entry = result.kvSnapshot['heys_dayv2_2026-08-14'];
+    assert.equal(entry.v, undefined);
+    assert.equal(entry.v_encrypted_b64, Buffer.from('cipher').toString('base64'));
+    assert.equal(entry.key_version, 1);
 });

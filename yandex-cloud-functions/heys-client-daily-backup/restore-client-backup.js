@@ -329,6 +329,9 @@ async function restoreKvRows(client, clientId, kvSnapshot, keysToRestore) {
             ? Buffer.from(entry.v_encrypted_b64, 'base64')
             : null;
         const restoredAt = normalizeTimestamp(entry?.updated_at) || new Date().toISOString();
+        const restoredV = entry?.v !== undefined
+            ? JSON.stringify(entry.v)
+            : '{}';
 
         await client.query(
             `INSERT INTO client_kv_store (client_id, k, v, v_encrypted, key_version, updated_at)
@@ -341,7 +344,7 @@ async function restoreKvRows(client, clientId, kvSnapshot, keysToRestore) {
             [
                 clientId,
                 key,
-                JSON.stringify(entry.v),
+                restoredV,
                 encryptedBuffer,
                 entry?.key_version ?? null,
                 restoredAt,
@@ -412,7 +415,9 @@ async function computeAccountDiff(pool, clientId, accountData) {
             const { rows } = await client.query(
                 `SELECT id, client_id, consent_type, document_version,
                         granted, signature_method, ip_address, user_agent,
-                        created_at, revoked_at
+                        created_at, revoked_at,
+                        document_sha256, accepted_at, device_id,
+                        session_auth_method, document_text_snapshot
                    FROM consents WHERE client_id = $1 ORDER BY created_at`,
                 [clientId],
             );
@@ -488,11 +493,16 @@ function printAccountDiff(tableDiffs) {
  * Build a parameterised UPSERT for a given table and columns.
  * Columns must match the snapshot field names exactly.
  */
-function buildUpsert(table, columns, pkField = 'id') {
+function buildUpsert(table, columns, pkField = 'id', coalesceColumns = []) {
     const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
     const setClauses = columns
         .filter((c) => c !== pkField)
-        .map((c) => `${c} = EXCLUDED.${c}`)
+        .map((c) => {
+            if (coalesceColumns.includes(c)) {
+                return `${c} = COALESCE(EXCLUDED.${c}, ${table}.${c})`;
+            }
+            return `${c} = EXCLUDED.${c}`;
+        })
         .join(', ');
     return `INSERT INTO ${table} (${columns.join(', ')})
             VALUES (${placeholders})
@@ -520,8 +530,14 @@ async function restoreAccountRows(client, tableDiffs) {
                 'id', 'client_id', 'consent_type', 'document_version',
                 'granted', 'signature_method', 'ip_address', 'user_agent',
                 'created_at', 'revoked_at',
+                'document_sha256', 'accepted_at', 'device_id',
+                'session_auth_method', 'document_text_snapshot',
             ],
             pk: 'id',
+            coalesceColumns: [
+                'document_sha256', 'accepted_at', 'device_id',
+                'session_auth_method', 'document_text_snapshot',
+            ],
         },
         subscriptions: {
             columns: [
@@ -550,14 +566,17 @@ async function restoreAccountRows(client, tableDiffs) {
         },
     };
 
-    for (const [table, diff] of Object.entries(tableDiffs)) {
+    const tableOrder = ['clients', 'consents', 'subscriptions', 'trial_queue', 'payments'];
+    for (const table of tableOrder) {
+        const diff = tableDiffs[table];
+        if (!diff) continue;
         const cfg = tableConfigs[table];
         if (!cfg) continue;
 
         const rows = [...diff.toInsert, ...diff.toUpdate];
         if (rows.length === 0) continue;
 
-        const sql = buildUpsert(table, cfg.columns, cfg.pk);
+        const sql = buildUpsert(table, cfg.columns, cfg.pk, cfg.coalesceColumns || []);
         for (const row of rows) {
             const values = cfg.columns.map((col) => {
                 const val = row[col];
@@ -581,8 +600,9 @@ async function executeAccountRestore(pool, tableDiffs) {
 
 async function executeFullRestore(pool, clientId, kvSnapshot, keysToRestore, tableDiffs) {
     return withTransaction(pool, async (client) => {
-        const kvRestored = await restoreKvRows(client, clientId, kvSnapshot, keysToRestore);
+        // clients row first: KV has FK client_id → clients(id).
         const accountRestored = await restoreAccountRows(client, tableDiffs);
+        const kvRestored = await restoreKvRows(client, clientId, kvSnapshot, keysToRestore);
         return { kvRestored, accountRestored };
     });
 }

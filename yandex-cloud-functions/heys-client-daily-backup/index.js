@@ -193,15 +193,16 @@ async function readClientKvSnapshot(dbClient, clientId) {
 
     const kvSnapshot = {};
     for (const row of rows) {
-        kvSnapshot[row.k] = {
-            v: row.v,
-            updated_at: row.updated_at,
-        };
-        // Preserve encrypted payload if present (binary → base64 for JSON)
+        const entry = { updated_at: row.updated_at };
+        // Encrypted keys: keep ciphertext only. Dual-writing plaintext `v`
+        // into a 365-day S3 object undoes at-rest encryption.
         if (row.v_encrypted != null) {
-            kvSnapshot[row.k].v_encrypted_b64 = row.v_encrypted.toString('base64');
-            kvSnapshot[row.k].key_version = row.key_version;
+            entry.v_encrypted_b64 = row.v_encrypted.toString('base64');
+            entry.key_version = row.key_version;
+        } else {
+            entry.v = row.v;
         }
+        kvSnapshot[row.k] = entry;
     }
 
     return { keyCount: rows.length, kvSnapshot };
@@ -228,7 +229,9 @@ async function readClientAccountSnapshot(dbClient, clientId) {
     const { rows: consentRows } = await dbClient.query(
         `SELECT id, client_id, consent_type, document_version,
                 granted, signature_method, ip_address, user_agent,
-                created_at, revoked_at
+                created_at, revoked_at,
+                document_sha256, accepted_at, device_id,
+                session_auth_method, document_text_snapshot
            FROM consents WHERE client_id = $1 ORDER BY created_at`,
         [clientId],
     );
