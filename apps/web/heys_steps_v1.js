@@ -1930,49 +1930,240 @@
   // STEPS GOAL STEP
   // ============================================================
 
-  function getWeeklyStepsStats(weight = 70) {
-    const today = new Date();
+  const STEPS_GOAL_MIN = 7000;
+  const STEPS_GOAL_MAX = 12000;
+  const STEPS_HISTORY_LOOKBACK_DAYS = 14;
+  const STEPS_HISTORY_MIN_DAYS = 3;
+
+  function roundStepsGoal(value) {
+    return Math.round(Number(value) / 100) * 100;
+  }
+
+  function medianStepsValue(values) {
+    if (!Array.isArray(values) || values.length === 0) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    if (sorted.length % 2 === 1) return sorted[mid];
+    return Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+  }
+
+  function collectRecentStepsHistory(readDay, today, lookbackDays = STEPS_HISTORY_LOOKBACK_DAYS) {
     const stepsData = [];
-    for (let i = 1; i <= 7; i++) {
-      const d = new Date(today);
+    const anchor = today instanceof Date && !Number.isNaN(today.getTime()) ? new Date(today) : new Date();
+    for (let i = 1; i <= lookbackDays; i++) {
+      const d = new Date(anchor);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = readDayData(key, {});
+      const dayData = readDay(key, {});
       if (dayData.steps && dayData.steps > 0) {
         stepsData.push(dayData.steps);
       }
     }
-    if (stepsData.length === 0) {
-      return { avg: 0, daysWithData: 0, recommended: 7000, minHealthy: 7000 };
-    }
-    const avg = Math.round(stepsData.reduce((a, b) => a + b, 0) / stepsData.length);
-    const minHealthy = 7000;
-    const rawRecommended = Math.round(avg * 1.2 / 100) * 100;
-    const recommended = Math.max(rawRecommended, minHealthy);
-    return { avg, daysWithData: stepsData.length, recommended, minHealthy };
+    return stepsData;
   }
 
-  function StepsGoalStepComponent({ data, onChange, stepData }) {
+  function getTrainingMinutesLoad(training) {
+    const zones = Array.isArray(training?.z) ? training.z : [];
+    return zones.reduce((sum, value) => sum + (Number(value) || 0), 0);
+  }
+
+  function isMorningActivationTraining(training) {
+    if (!training || typeof training !== 'object') return false;
+    if (training.source === 'morning_activation') return true;
+    const label = typeof training.activityLabel === 'string' ? training.activityLabel.trim().toLowerCase() : '';
+    return label === 'зарядка';
+  }
+
+  function isStepsGoalTrainingDay(trainings) {
+    const list = Array.isArray(trainings) ? trainings : [];
+    return list.some((training) => {
+      if (!training || typeof training !== 'object') return false;
+      if (isMorningActivationTraining(training)) return false;
+      const planStatus = training.plan?.status;
+      if (planStatus === 'skipped') return false;
+      const load = getTrainingMinutesLoad(training);
+      if (load <= 40) return false;
+      const type = String(training.type || '').toLowerCase();
+      const isStrengthOrCardio = type === 'strength' || type === 'cardio' || type.includes('cardio') || type === 'run';
+      if (type && !isStrengthOrCardio) return false;
+      if (planStatus === 'assigned' || planStatus === 'started' || planStatus === 'done') return true;
+      return !training.plan && load > 40;
+    });
+  }
+
+  function resolveStepsGoalContext(context = {}, allStepData = {}, readDay = readDayData) {
+    const dateKey = resolveDateKey(context?.dateKey);
+    const dayData = readDay(dateKey, {}) || {};
+    const sleepTime = allStepData?.sleepTime || {};
+    const sleepQualityStep = allStepData?.sleepQuality || {};
+    const moodStep = allStepData?.morning_mood || {};
+
+    const sleepHoursRaw = Number(sleepTime.sleepHours ?? dayData.sleepHours);
+    const sleepHours = Number.isFinite(sleepHoursRaw) ? sleepHoursRaw : null;
+    const sleepQualityRaw = Number(sleepQualityStep.sleepQuality ?? dayData.sleepQuality);
+    const sleepQuality = Number.isFinite(sleepQualityRaw) ? sleepQualityRaw : null;
+
+    const moodRaw = Number(moodStep.mood ?? dayData.moodMorning);
+    const wellbeingRaw = Number(moodStep.wellbeing ?? dayData.wellbeingMorning);
+    const stressRaw = Number(moodStep.stress ?? dayData.stressMorning);
+    const mood = Number.isFinite(moodRaw) ? moodRaw : null;
+    const wellbeing = Number.isFinite(wellbeingRaw) ? wellbeingRaw : null;
+    const stress = Number.isFinite(stressRaw) ? stressRaw : null;
+
+    const hasMorningSignals = [mood, wellbeing, stress].some((value) => Number.isFinite(value));
+    const energyBucket = hasMorningSignals ? getEnergyBucket(mood, wellbeing, stress) : 'mid';
+    const trainings = Array.isArray(dayData.trainings) ? dayData.trainings : [];
+
+    return {
+      dateKey,
+      sleepHours,
+      sleepQuality,
+      mood,
+      wellbeing,
+      stress,
+      energyBucket,
+      trainings,
+      hasMorningSignals
+    };
+  }
+
+  function buildStepsGoalReasonLine(recommended, median, ctx, modifiers) {
+    if (!Number.isFinite(recommended) || recommended <= 0) return '';
+    const parts = [];
+    if (median > 0) {
+      parts.push(`обычно ~${median.toLocaleString('ru-RU')}`);
+    }
+    if (Number.isFinite(ctx.sleepHours)) {
+      if (ctx.sleepHours < 6.5) parts.push('сон короче обычного');
+      else parts.push(`сон ${ctx.sleepHours.toFixed(1)} ч`);
+    }
+    if (ctx.energyBucket === 'high') parts.push('самочувствие высокое');
+    else if (ctx.energyBucket === 'low') parts.push('ресурс ниже обычного');
+    if (modifiers.some((item) => item.id === 'training')) {
+      parts.push('есть тренировка');
+    }
+    if (!parts.length) {
+      return `Рекомендуем ${recommended.toLocaleString('ru-RU')} шагов`;
+    }
+    return `Рекомендуем ${recommended.toLocaleString('ru-RU')}: ${parts.join(', ')}`;
+  }
+
+  function computeAdaptiveStepsGoal(options = {}) {
+    const profile = options.profile || lsGet('heys_profile', {}) || {};
+    const readDay = typeof options.readDay === 'function' ? options.readDay : readDayData;
+    const today = options.today instanceof Date ? options.today : new Date();
+    const ctx = resolveStepsGoalContext(options.context || {}, options.allStepData || {}, readDay);
+    const stepsData = collectRecentStepsHistory(readDay, today, STEPS_HISTORY_LOOKBACK_DAYS);
+    const daysWithData = stepsData.length;
+    const minHealthy = STEPS_GOAL_MIN;
+    const avg7Slice = stepsData.slice(0, 7);
+    const avg7 = avg7Slice.length
+      ? Math.round(avg7Slice.reduce((sum, value) => sum + value, 0) / avg7Slice.length)
+      : 0;
+    const avg = avg7;
+    const median = medianStepsValue(stepsData);
+
+    if (daysWithData < STEPS_HISTORY_MIN_DAYS) {
+      const fallbackRecommended = Math.max(
+        minHealthy,
+        Math.min(STEPS_GOAL_MAX, roundStepsGoal(profile.stepsGoal || 10000))
+      );
+      return {
+        recommended: fallbackRecommended,
+        median,
+        avg7,
+        avg,
+        daysWithData,
+        baseline: fallbackRecommended,
+        minHealthy,
+        modifiers: [],
+        reasonLine: '',
+        fallback: true,
+        context: ctx
+      };
+    }
+
+    const rawBaseline = median * 1.05;
+    const baseline = roundStepsGoal(Math.min(STEPS_GOAL_MAX, Math.max(minHealthy, rawBaseline)));
+    let adjusted = baseline;
+    const modifiers = [];
+
+    if ((Number.isFinite(ctx.sleepHours) && ctx.sleepHours < 6.5)
+      || (Number.isFinite(ctx.sleepQuality) && ctx.sleepQuality <= 4)) {
+      adjusted *= 0.85;
+      modifiers.push({ id: 'sleep', factor: 0.85, label: 'короткий или плохой сон' });
+    }
+    if (ctx.energyBucket === 'low') {
+      adjusted *= 0.85;
+      modifiers.push({ id: 'energy_low', factor: 0.85, label: 'утренний ресурс ниже обычного' });
+    } else if (ctx.energyBucket === 'high') {
+      adjusted *= 1.05;
+      modifiers.push({ id: 'energy_high', factor: 1.05, label: 'утренний ресурс высокий' });
+    }
+    if (isStepsGoalTrainingDay(ctx.trainings)) {
+      adjusted *= 0.85;
+      modifiers.push({ id: 'training', factor: 0.85, label: 'запланирована тренировка' });
+    }
+
+    const recommended = roundStepsGoal(Math.max(minHealthy, Math.min(STEPS_GOAL_MAX, adjusted)));
+    const reasonLine = buildStepsGoalReasonLine(recommended, median, ctx, modifiers);
+
+    return {
+      recommended,
+      median,
+      avg7,
+      avg,
+      daysWithData,
+      baseline,
+      minHealthy,
+      modifiers,
+      reasonLine,
+      fallback: false,
+      context: ctx
+    };
+  }
+
+  function getWeeklyStepsStats(weight = 70, context, allStepData) {
+    const stats = computeAdaptiveStepsGoal({
+      profile: { ...(lsGet('heys_profile', {}) || {}), weight },
+      context,
+      allStepData
+    });
+    return {
+      avg: stats.avg7 || stats.avg || 0,
+      daysWithData: stats.daysWithData,
+      recommended: stats.recommended,
+      minHealthy: stats.minHealthy || STEPS_GOAL_MIN,
+      median: stats.median,
+      avg7: stats.avg7,
+      baseline: stats.baseline,
+      modifiers: stats.modifiers,
+      reasonLine: stats.reasonLine,
+      fallback: stats.fallback,
+      context: stats.context
+    };
+  }
+
+  function StepsGoalStepComponent({ data, onChange, stepData, context }) {
     const profile = useMemo(() => lsGet('heys_profile', {}), []);
     const weight = stepData?.weight?.weightKg ? (stepData.weight.weightKg + (stepData.weight.weightG || 0) / 10) : profile.weight || 70;
-    const stepsStats = useMemo(() => getWeeklyStepsStats(weight), [weight]);
+    const stepsStats = useMemo(
+      () => computeAdaptiveStepsGoal({ profile: { ...profile, weight }, context, allStepData: stepData }),
+      [weight, profile, context, stepData]
+    );
 
-    const defaultStepsGoal = useMemo(() => {
-      if (stepsStats.daysWithData >= 3) {
-        return stepsStats.recommended;
-      }
-      return profile.stepsGoal || 10000;
-    }, [stepsStats, profile.stepsGoal]);
+    const defaultStepsGoal = useMemo(() => stepsStats.recommended, [stepsStats.recommended]);
 
     const sliderMin = 3000;
     const sliderMax = 30000;
     const stepsGoal = Math.max(sliderMin, Math.min(sliderMax, data.stepsGoal ?? defaultStepsGoal));
-    const hasStepsHistory = stepsStats.daysWithData >= 3;
+    const hasStepsHistory = stepsStats.daysWithData >= STEPS_HISTORY_MIN_DAYS && !stepsStats.fallback;
 
     // Расчёт бонуса ккал
     const isFemale = profile.gender === 'Женский';
     const coef = isFemale ? 0.5 : 0.57;
-    const bonusSteps = stepsGoal - stepsStats.avg;
+    const referenceSteps = stepsStats.median || stepsStats.avg7 || stepsStats.avg || 0;
+    const bonusSteps = stepsGoal - referenceSteps;
     const bonusKm = bonusSteps * 0.7 / 1000;
     const bonusKcal = Math.round(coef * weight * bonusKm);
 
@@ -2030,13 +2221,27 @@
       ),
       hasStepsHistory && React.createElement('div', { className: 'mc-steps-stats' },
         React.createElement('div', { className: 'mc-steps-avg' },
-          React.createElement('span', { className: 'mc-steps-avg-label' }, '📊 Среднее за неделю: '),
-          React.createElement('span', { className: 'mc-steps-avg-value' }, stepsStats.avg.toLocaleString())
+          React.createElement('span', { className: 'mc-steps-avg-label' }, '📊 Медиана за 2 нед.: '),
+          React.createElement('span', { className: 'mc-steps-avg-value' }, stepsStats.median.toLocaleString())
         ),
-        stepsGoal > stepsStats.avg && bonusKcal > 0 && React.createElement('div', { className: 'mc-steps-bonus' },
+        stepsStats.avg7 > 0 && stepsStats.avg7 !== stepsStats.median && React.createElement('div', { className: 'mc-steps-avg' },
+          React.createElement('span', { className: 'mc-steps-avg-label' }, 'Среднее за неделю: '),
+          React.createElement('span', { className: 'mc-steps-avg-value' }, stepsStats.avg7.toLocaleString())
+        ),
+        stepsStats.modifiers?.length > 0 && React.createElement('div', { className: 'mc-steps-modifiers' },
+          stepsStats.modifiers.map((modifier) =>
+            React.createElement('div', { key: modifier.id, className: 'mc-steps-modifier' },
+              React.createElement('span', { className: 'mc-steps-modifier-label' }, modifier.label),
+              React.createElement('span', { className: 'mc-steps-modifier-factor' },
+                modifier.factor < 1 ? ` ×${modifier.factor}` : ` +${Math.round((modifier.factor - 1) * 100)}%`
+              )
+            )
+          )
+        ),
+        stepsGoal > referenceSteps && bonusKcal > 0 && React.createElement('div', { className: 'mc-steps-bonus' },
           React.createElement('span', { className: 'mc-steps-bonus-icon' }, '🔥'),
           React.createElement('span', { className: 'mc-steps-bonus-text' },
-            `+${(stepsGoal - stepsStats.avg).toLocaleString()} шагов = +${bonusKcal} ккал`
+            `+${(stepsGoal - referenceSteps).toLocaleString()} шагов = +${bonusKcal} ккал`
           )
         )
       ),
@@ -2049,10 +2254,10 @@
         )
       ),
       React.createElement('div', { className: 'mc-steps-recommendation' },
-        stepsGoal < 7000
+        stepsGoal < STEPS_GOAL_MIN
           ? '❤️ Минимум 7000 шагов для здоровья сердца и сосудов'
-          : hasStepsHistory && stepsGoal === stepsStats.recommended
-            ? '✨ Рекомендуем: ваше среднее +20%'
+          : hasStepsHistory && stepsGoal === stepsStats.recommended && stepsStats.reasonLine
+            ? `✨ ${stepsStats.reasonLine}`
             : stepsGoal >= 10000
               ? '🏆 Отличная цель! 10К+ шагов — активный образ жизни'
               : '👍 Хорошая цель для поддержания здоровья'
@@ -2068,7 +2273,11 @@
       ),
       // Подсказка внизу
       React.createElement('div', { className: 'mc-steps-footer-hint' },
-        '😴 Сон 7-8 часов = меньше тяги к сладкому'
+        Number.isFinite(stepsStats.context?.sleepHours) && stepsStats.context.sleepHours < 6.5
+          ? '😴 Короткий сон — цель сегодня чуть мягче, чем в активные дни'
+          : Number.isFinite(stepsStats.context?.sleepHours) && stepsStats.context.sleepHours >= 8
+            ? '😴 Сон 7-8 часов = меньше тяги к сладкому'
+            : '😴 Хороший сон помогает держать энергию в течение дня'
       )
     );
   }
@@ -2078,11 +2287,11 @@
     hint: 'Какой день тебя ждёт?',
     icon: '👟',
     component: StepsGoalStepComponent,
-    getInitialData: () => {
+    getInitialData: (context, allStepData) => {
       const profile = lsGet('heys_profile', {});
-      const stats = getWeeklyStepsStats(profile.weight || 70);
+      const stats = computeAdaptiveStepsGoal({ profile, context, allStepData });
       return {
-        stepsGoal: stats.daysWithData >= 3 ? stats.recommended : (profile.stepsGoal || 10000)
+        stepsGoal: stats.recommended
       };
     },
     save: (data) => {
@@ -4888,6 +5097,8 @@
     getWeightForecast,
     getLastSleepData,
     getWeeklyStepsStats,
+    computeAdaptiveStepsGoal,
+    resolveStepsGoalContext,
     calcSleepHours,
     getCurrentDeficit,
     calcHouseholdKcal,
