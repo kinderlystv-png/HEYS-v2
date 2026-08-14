@@ -5711,12 +5711,10 @@
             }
             if (!dateConfirmed) return false;
 
-            if (options?.skipPlateGuide === true) {
-                return runAddMealFlow();
-            }
-
-            const guideWasShown = showMealPlateGuide({ onContinue: runAddMealFlow });
-            if (!guideWasShown) return runAddMealFlow();
+            // Решение владельца 2026-08-13: гайд с тарелкой убран — показывался
+            // при каждом создании приёма без флага «не показывать снова» и
+            // раздражал больше, чем помогал.
+            return runAddMealFlow();
         }, [date, runAddMealFlow]);
 
         const replanEmitTimersRef = React.useRef({});

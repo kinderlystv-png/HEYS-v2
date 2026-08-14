@@ -328,7 +328,7 @@ describe('meal plate guide', () => {
         expect(HEYS.MealStep.showAddMeal).not.toHaveBeenCalled();
     });
 
-    it('does not start meal creation until the guide primary action', async () => {
+    it('starts meal creation directly — the plate guide was removed 2026-08-13 (owner decision: shown every time, no "don\'t show again", pure annoyance)', async () => {
         const HEYS = loadMealModule();
         const { deps, getHandlers } = renderHandlersHarness(HEYS);
 
@@ -336,69 +336,15 @@ describe('meal plate guide', () => {
             getHandlers().addMeal();
         });
 
-        expect(HEYS.ConfirmModal.show).toHaveBeenCalledTimes(1);
-        expect(HEYS.MealStep.showAddMeal).not.toHaveBeenCalled();
-        expect(deps.setDay).not.toHaveBeenCalled();
-
-        const modalOptions = HEYS.ConfirmModal.show.mock.calls[0][0];
-        expect(modalOptions.text.props.variant).toBeTruthy();
-        render(modalOptions.text);
-
-        expect(screen.getByText('Это — важно.')).toBeTruthy();
-        expect(screen.getByText(/овощи\s+и фрукты/)).toBeTruthy();
-        expect(screen.getByText('белок')).toBeTruthy();
-        expect(screen.getByText('крупы')).toBeTruthy();
-        expect(screen.getByText('Сердце')).toBeTruthy();
-        expect(screen.getByText('Сахар крови')).toBeTruthy();
-        expect(screen.getByText('Мозг')).toBeTruthy();
-        expect(screen.getByText('Кишечник')).toBeTruthy();
-        expect(screen.queryByText('По принципам средиземноморского рациона')).toBeNull();
-        expect(screen.queryByText('Ориентир, а не строгое правило.')).toBeNull();
-        expect(screen.queryByText('Потенциальные эффекты')).toBeNull();
-        expect(screen.queryByRole('button', { name: /пример/i })).toBeNull();
-
-        await act(async () => {
-            fireEvent.click(screen.getByRole('button', { name: 'Создать приём' }));
-        });
-
-        expect(document.querySelector('.meal-plate-guide--slide-left')).toBeTruthy();
-        expect(HEYS.ConfirmModal.hide).not.toHaveBeenCalled();
-
-        await act(async () => {
-            vi.runAllTimers();
-        });
-
-        expect(HEYS.ConfirmModal.hide).toHaveBeenCalledTimes(1);
+        expect(HEYS.ConfirmModal.show).not.toHaveBeenCalled();
         expect(HEYS.MealStep.showAddMeal).toHaveBeenCalledTimes(1);
-        expect(HEYS.MealStep.showAddMeal.mock.invocationCallOrder[0])
-            .toBeLessThan(HEYS.ConfirmModal.hide.mock.invocationCallOrder[0]);
-        expect(HEYS.MealStep.showAddMeal.mock.calls[0][0].initialSlideInDirection).toBe('from-right');
-        expect(deps.setDay).not.toHaveBeenCalled();
-    });
-
-    it('cancels without creating a meal and lets technical entry points bypass the guide', async () => {
-        const HEYS = loadMealModule();
-        const { deps, getHandlers } = renderHandlersHarness(HEYS);
-
-        await act(async () => {
-            getHandlers().addMeal();
-        });
-        const modalOptions = HEYS.ConfirmModal.show.mock.calls[0][0];
-
-        await act(async () => {
-            modalOptions.text.props.onCancel();
-            vi.runAllTimers();
-        });
-
-        expect(HEYS.ConfirmModal.hide).toHaveBeenCalledTimes(1);
-        expect(HEYS.MealStep.showAddMeal).not.toHaveBeenCalled();
         expect(deps.setDay).not.toHaveBeenCalled();
 
         await act(async () => {
             getHandlers().addMeal({ skipPlateGuide: true });
         });
 
-        expect(HEYS.ConfirmModal.show).toHaveBeenCalledTimes(1);
-        expect(HEYS.MealStep.showAddMeal).toHaveBeenCalledTimes(1);
+        expect(HEYS.ConfirmModal.show).not.toHaveBeenCalled();
+        expect(HEYS.MealStep.showAddMeal).toHaveBeenCalledTimes(2);
     });
 });
