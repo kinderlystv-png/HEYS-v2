@@ -408,7 +408,8 @@ function runVitest({ full = false, tests = [] } = {}) {
       cwd: path.join(testRoot, 'apps', 'web'),
       stdio: 'inherit',
       encoding: 'utf8',
-      shell: false,
+      // Windows cannot spawn .cmd shims with shell:false (Node EINVAL).
+      shell: process.platform === 'win32',
       env,
     });
     if (result.error || result.status === null) {
