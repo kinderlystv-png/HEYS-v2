@@ -3196,6 +3196,16 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
 
         if (!clientId) return null;
 
+        // Клиентская вторая строка шапки (см. ниже, isRpcMode) — название
+        // вкладки вместо переключателя клиентов, по канвасу «Дата и остатки v4».
+        const CLIENT_TAB_TITLES = {
+            widgets: 'Главная',
+            diary: 'Питание',
+            activity: 'Актив',
+            stats: 'Отчёты',
+            insights: 'Инсайты'
+        };
+
         return React.createElement(
             'div',
             { className: 'hdr' },
@@ -3215,8 +3225,20 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             React.createElement(
                 'div',
                 { className: 'hdr-bottom' },
-                // Информация о клиенте + DatePicker
-                React.createElement(
+                // Клиентский вход (isRpcMode) идёт по канвасу «Дата и остатки v4»:
+                // вторая строка — название вкладки, не переключатель клиентов (у
+                // клиента нет чужих профилей). Кураторский вход держит старую
+                // строку с именем/dropdown — макета под куратора пока нет,
+                // зафиксировано в UI_V4_IMPLEMENTATION_PLAN раздел «Что заказать
+                // дизайнеру».
+                isRpcMode
+                    ? React.createElement('div', { className: 'hdr-client hdr-client--tab-title' },
+                        React.createElement('span', { className: 'hdr-client-tab-title-text' },
+                            CLIENT_TAB_TITLES[tab] || ''
+                        )
+                    )
+                    // Информация о клиенте + DatePicker
+                    : React.createElement(
                     'div',
                     { className: 'hdr-client', 'data-dropdown': 'client', style: { position: 'relative', display: 'flex', alignItems: 'center', gap: '8px' }, ref: clientDropdownAnchorRef },
                     // Кликабельный блок для dropdown

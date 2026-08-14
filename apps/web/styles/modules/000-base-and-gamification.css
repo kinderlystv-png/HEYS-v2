@@ -6984,6 +6984,22 @@ color: var(--v4-sand-act-soft, #e2a468);
   text-overflow: ellipsis;
 }
 
+/* Клиентский вход (UI v4, канвас «Дата и остатки v4»): название вкладки
+   вместо переключателя клиентов. Кураторский вход — .hdr-client выше. */
+.hdr-client--tab-title {
+  padding: 4px 6px 4px 4px;
+}
+
+.hdr-client-tab-title-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--v4-ink, #201e1d);
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Cloud sync indicator */
 .cloud-sync-indicator {
   display: flex;
