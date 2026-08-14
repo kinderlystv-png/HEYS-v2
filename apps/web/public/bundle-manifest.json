@@ -1,11 +1,11 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.c3feec50d62c.js",
-    "hash": "c3feec50d62c",
-    "sourceFingerprint": "034c0eaf0048",
+    "file": "boot-core.bundle.f9efc427bfd9.js",
+    "hash": "f9efc427bfd9",
+    "sourceFingerprint": "c323a5b7fd35",
     "fileCount": 44,
-    "size": 1267624,
-    "builtAt": "2026-08-14T22:50:40.874Z"
+    "size": 1267985,
+    "builtAt": "2026-08-14T23:12:25.864Z"
   },
   "boot-calc": {
     "file": "boot-calc.bundle.89972a79a45a.js",
@@ -16,20 +16,20 @@
     "builtAt": "2026-08-14T22:39:36.454Z"
   },
   "boot-day": {
-    "file": "boot-day.bundle.7d1efa38dcf5.js",
-    "hash": "7d1efa38dcf5",
-    "sourceFingerprint": "9d002bf68459",
+    "file": "boot-day.bundle.4b20e69a8024.js",
+    "hash": "4b20e69a8024",
+    "sourceFingerprint": "e186b045fec7",
     "fileCount": 63,
-    "size": 961161,
-    "builtAt": "2026-08-14T22:39:24.054Z"
+    "size": 961239,
+    "builtAt": "2026-08-14T23:12:37.112Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.73ccf5ef38b6.js",
-    "hash": "73ccf5ef38b6",
-    "sourceFingerprint": "1f4110eff6e2",
+    "file": "boot-app.bundle.37aa99b84ef8.js",
+    "hash": "37aa99b84ef8",
+    "sourceFingerprint": "0952c005917c",
     "fileCount": 57,
-    "size": 1481340,
-    "builtAt": "2026-08-14T22:42:10.155Z"
+    "size": 1481466,
+    "builtAt": "2026-08-14T23:12:48.041Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.3b0b24c92433.js",
