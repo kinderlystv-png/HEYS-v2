@@ -292,7 +292,7 @@
   padding: 18px;
   border: none;
   border-radius: 22px;
-  background: #efe3cf;
+  background: var(--v4-sand-hero, #efe3cf);
   color: #201e1d;
   text-align: left;
   cursor: pointer;
@@ -304,7 +304,7 @@
   gap: 12px;
   padding: 14px 16px;
   border-radius: 16px;
-  background: #f7efe2;
+  background: var(--v4-sand-surface, #f7efe2);
 }
 
 .flow-selection-row .flow-selection-btn {

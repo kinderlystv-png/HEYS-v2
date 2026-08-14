@@ -24,7 +24,7 @@ describe('login v4 canvas structure', () => {
   });
 
   it('uses canvas card and shell tokens, not glass', () => {
-    expect(css).toMatch(/\.heys-auth-shell[\s\S]*?background:\s*var\(--v4-hero/);
+    expect(css).toMatch(/\.heys-auth-shell[\s\S]*?background:\s*var\(--v4-sand-hero/);
     expect(css).toMatch(/\.heys-auth-card\s*\{[\s\S]*?max-width:\s*294px/);
     expect(css).toMatch(/\.heys-auth-card\s*\{[\s\S]*?border-radius:\s*26px/);
     expect(css).toMatch(/\.heys-auth-card\s*\{[\s\S]*?background:\s*var\(--v4-bg/);

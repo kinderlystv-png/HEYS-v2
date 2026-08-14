@@ -32,9 +32,9 @@ describe('meal add-products fork v4 structure', () => {
 
   it('paints hero and quiet rows with v4 roles, scanner as a square', () => {
     expect(cssSource).toContain('.flow-selection-btn--repeat-recent');
-    expect(cssSource).toContain('var(--v4-hero, #efe3cf)');
+    expect(cssSource).toContain('var(--v4-sand-hero, #efe3cf)');
     expect(cssSource).toContain('.flow-selection-row');
-    expect(cssSource).toContain('var(--v4-surface, #f7efe2)');
+    expect(cssSource).toContain('var(--v4-sand-surface, #f7efe2)');
     expect(cssSource).toMatch(/\.flow-selection-btn__barcode-tap \{[\s\S]*?width:\s*36px/);
     expect(cssSource).toMatch(/\.flow-selection-btn__barcode-tap \{[\s\S]*?height:\s*36px/);
     expect(cssSource).toContain('.confirm-modal:has(.flow-add-products)');

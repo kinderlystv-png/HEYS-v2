@@ -8,7 +8,7 @@
   padding: 28px 18px 18px !important;
   padding-top: max(28px, calc(env(safe-area-inset-top, 0px) + 28px)) !important;
   padding-bottom: max(18px, calc(env(safe-area-inset-bottom, 0px) + 18px)) !important;
-  background: #efe3cf;
+  background: var(--v4-sand-hero, #efe3cf);
   color: #201e1d;
   font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
