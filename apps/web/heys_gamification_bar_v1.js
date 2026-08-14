@@ -40,7 +40,8 @@
     }
     HEYS.utils.safeGetStreakDetails = safeGetStreakDetails;
 
-    function GamificationBar() {
+    function GamificationBar(props) {
+        const leadingHeaderActions = props?.leadingHeaderActions || null;
         const React = window.React;
         const ReactDOM = window.ReactDOM;
         const { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } = React;
@@ -1373,6 +1374,10 @@
                     className: `game-bar-slots game-bar-slots--compact${levelGuardActive ? ' is-loading' : ' is-loaded'}`
                 },
                     React.createElement('div', { className: 'hdr-header-actions' },
+                        leadingHeaderActions && React.createElement('div', {
+                            className: 'hdr-header-actions__debug',
+                            onClick: (e) => e.stopPropagation(),
+                        }, leadingHeaderActions),
                         React.createElement('button', {
                             className: 'hdr-header-icon-btn hdr-header-icon-btn--advice' + (ewsCritical ? ' hdr-header-icon-btn--advice-critical' : ''),
                             onClick: (e) => {
@@ -1403,9 +1408,13 @@
                             className: 'hdr-header-icon-btn hdr-header-icon-btn--settings',
                             onClick: (e) => {
                                 e.stopPropagation();
-                                if (typeof window.HEYS?.App?.setTab === 'function') {
-                                    window.HEYS.App.setTab('user');
-                                }
+                                setTimeout(() => {
+                                    try {
+                                        if (typeof window.__heysToggleTabSettingsHandler === 'function') {
+                                            window.__heysToggleTabSettingsHandler();
+                                        }
+                                    } catch (_) { /* noop */ }
+                                }, 0);
                             },
                             title: 'Настройки',
                             type: 'button',
@@ -1687,11 +1696,7 @@
         );
     }
 
-    // PERF (2026-05-27): React.memo wrap. Component вызывается через
-    // React.createElement(GamificationBar) БЕЗ props (heys_app_shell_v1.js:1328).
-    // Без memo каждый rerender AppShell (tab switch, любое state change в shell)
-    // триггерил перерендер GamificationBar тоже. С memo + пустыми props — React
-    // shallow compare всегда equal → skip render. Internal state (useState/useEffect)
-    // сохраняется, реактивность через global HEYS.gamification events работает как было.
+    // PERF (2026-05-27): React.memo wrap. leadingHeaderActions приходит из AppShell
+    // (временные ☁️/🌓 для отладки); остальная реактивность — через global events.
     HEYS.GamificationBar = React.memo(GamificationBar);
 })();

@@ -95,6 +95,13 @@ describe('UI v4 Prompt 3b — шапка', () => {
         expect(baseCss).toMatch(/\.hdr-header-actions[\s\S]*?gap:\s*8px/);
     });
 
+    it('кнопка настроек в шапке тоглит меню «Ещё», не setTab user', () => {
+        expect(gamificationSrc).toContain('__heysToggleTabSettingsHandler');
+        expect(gamificationSrc).not.toMatch(/hdr-header-icon-btn--settings[\s\S]{0,320}setTab\('user'\)/);
+        expect(shellSrc).toContain('__heysToggleTabSettingsHandler');
+        expect(shellSrc).toContain("target.closest('.hdr-header-icon-btn--settings')");
+    });
+
     it('standalone messenger FAB скрывается при tab fab-group', () => {
         expect(messengerCss).toMatch(
             /body:has\(\.fab-group:not\(\.fab-group--messenger-only\) \.message-fab\) \.fab-group--messenger-only/,

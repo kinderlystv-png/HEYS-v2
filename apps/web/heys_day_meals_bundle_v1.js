@@ -5349,6 +5349,8 @@
                                 onClick: (e) => { e.stopPropagation(); openEditGramsModal(mealIndex, it.id, G, p); },
                             }, G + 'г'),
                         ),
+                        window.HEYS?.pendingProductQueue?.NotSentChip
+                            && React.createElement(window.HEYS.pendingProductQueue.NotSentChip, { productId: p.id }),
                         React.createElement('div', { className: 'mpc-grid mpc-header' },
                             React.createElement('span', null, 'ккал'),
                             React.createElement('span', null, 'У'),
@@ -5459,6 +5461,8 @@
                                 onClick: () => removeItem(mealIndex, it.id),
                             }, '×'),
                         ),
+                        window.HEYS?.pendingProductQueue?.NotSentChip
+                            && React.createElement(window.HEYS.pendingProductQueue.NotSentChip, { productId: p.id }),
                         React.createElement('div', { className: 'mpc-grid mpc-header' },
                             React.createElement('span', null, 'ккал'),
                             React.createElement('span', null, 'У'),
@@ -8932,12 +8936,10 @@
             }
             if (!dateConfirmed) return false;
 
-            if (options?.skipPlateGuide === true) {
-                return runAddMealFlow();
-            }
-
-            const guideWasShown = showMealPlateGuide({ onContinue: runAddMealFlow });
-            if (!guideWasShown) return runAddMealFlow();
+            // Решение владельца 2026-08-13: гайд с тарелкой убран — показывался
+            // при каждом создании приёма без флага «не показывать снова» и
+            // раздражал больше, чем помогал.
+            return runAddMealFlow();
         }, [date, runAddMealFlow]);
 
         const replanEmitTimersRef = React.useRef({});

@@ -887,6 +887,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const [displayStatus, setDisplayStatus] = React.useState(cloudStatus);
         const lastSyncedAtRef = React.useRef(null);
         const syncFadeTimerRef = React.useRef(null);
+        const SYNC_BADGE_MIN_PENDING = 2;
         const [checkinStatus, setCheckinStatus] = React.useState(null);
 
         React.useEffect(() => {
@@ -1606,16 +1607,21 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         // ☁️ Auto-fade synced → idle after 2s + track last sync time (v2.0)
         React.useEffect(() => {
             if (cloudStatus === 'synced') {
+                // hooks выставляет synced только при peak >= 2; pending к этому моменту уже 0
                 lastSyncedAtRef.current = Date.now();
                 setDisplayStatus('synced');
                 clearTimeout(syncFadeTimerRef.current);
                 syncFadeTimerRef.current = setTimeout(() => setDisplayStatus('idle'), 2000);
             } else {
                 clearTimeout(syncFadeTimerRef.current);
-                setDisplayStatus(cloudStatus);
+                const quietPending = pendingCount > 0 && pendingCount < SYNC_BADGE_MIN_PENDING;
+                const nextStatus = quietPending && (cloudStatus === 'queued' || cloudStatus === 'syncing')
+                    ? 'idle'
+                    : cloudStatus;
+                setDisplayStatus(nextStatus);
             }
             return () => clearTimeout(syncFadeTimerRef.current);
-        }, [cloudStatus]);
+        }, [cloudStatus, pendingCount]);
 
         React.useEffect(() => {
             const refresh = (event) => {
@@ -1640,7 +1646,13 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         }, [clientIdValue, todayISO]);
 
         const isBackgroundQueuedState = showPendingSyncBanner && displayStatus === 'syncing';
-        const effectiveDisplayStatus = isBackgroundQueuedState ? 'queued' : displayStatus;
+        const isCriticalSyncStatus = displayStatus === 'offline' || displayStatus === 'error' || displayStatus === 'session';
+        const quietPending = pendingCount > 0 && pendingCount < SYNC_BADGE_MIN_PENDING;
+        const rawDisplayStatus = isBackgroundQueuedState ? 'queued' : displayStatus;
+        const effectiveDisplayStatus = (quietPending && (rawDisplayStatus === 'queued' || rawDisplayStatus === 'syncing'))
+            ? 'idle'
+            : rawDisplayStatus;
+        const showPendingBadge = pendingCount >= SYNC_BADGE_MIN_PENDING;
         const haptic = HEYS?.haptic || (() => { });
         const formatSyncAge = (ts) => {
             if (!ts) return '';
@@ -3183,6 +3195,30 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             };
         }, [selectDateWithPrefetch]);
 
+        const [diaryMetaTick, setDiaryMetaTick] = React.useState(0);
+        React.useEffect(() => {
+            if (tab !== 'diary') return undefined;
+            const bump = () => setDiaryMetaTick((value) => value + 1);
+            window.addEventListener('heys:day-updated', bump);
+            window.addEventListener('heys:client-changed', bump);
+            return () => {
+                window.removeEventListener('heys:day-updated', bump);
+                window.removeEventListener('heys:client-changed', bump);
+            };
+        }, [tab, selectedDate, clientId]);
+
+        const diaryTabMetaLine = React.useMemo(() => {
+            if (tab !== 'diary') return null;
+            const formatLine = HEYS.NutritionV4?.formatTabMetaLine;
+            const loadDay = HEYS.dayUtils?.loadDay;
+            if (!formatLine || !loadDay) return null;
+            try {
+                return formatLine(selectedDate || todayISO, loadDay(selectedDate || todayISO));
+            } catch (_) {
+                return null;
+            }
+        }, [tab, selectedDate, todayISO, diaryMetaTick]);
+
         const commitPendingUndoBeforeContextChange = (reason, meta) => {
             try {
                 if (!HEYS?.Undo?.pending) return;
@@ -3205,6 +3241,112 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             stats: 'Отчёты',
             insights: 'Инсайты'
         };
+        const showDateRow = (tab === 'stats' || tab === 'diary' || tab === 'activity' || tab === 'insights' || tab === 'widgets') && window.HEYS.DatePicker;
+        const showPastDayBanner = !!(showDateRow && selectedDate && resolvedTodayISO && selectedDate !== resolvedTodayISO);
+        const handlePastDayGoToday = () => {
+            if (window.HEYS?.ui?.setSelectedDate) {
+                window.HEYS.ui.setSelectedDate(resolvedTodayISO);
+                return;
+            }
+            if (typeof setSelectedDate === 'function') setSelectedDate(resolvedTodayISO);
+        };
+
+        // Временно для отладки (2026-08-14): ☁️ и 🌓 слева от «Советы» в gamification bar.
+        const debugHeaderLeadingActions = [
+                React.createElement('div', {
+                    key: 'cloudsync',
+                    className: 'cloud-sync-indicator ' + effectiveDisplayStatus + (effectiveDisplayStatus !== 'syncing' && effectiveDisplayStatus !== 'offline' && effectiveDisplayStatus !== 'session' ? ' cloud-sync-indicator--clickable' : ''),
+                    title: (() => {
+                        const routingMode = HEYS?.cloud?.getRoutingStatus?.()?.mode || 'unknown';
+                        const modeLabel = routingMode === 'direct' ? '🔗 Direct' : routingMode === 'proxy' ? '🔀 Proxy' : '';
+                        const checkinTitle = checkinStatus
+                            ? `Чек-ин: ${checkinStatus.label}${checkinStatus.flowStatus ? ` (${checkinStatus.flowStatus})` : ''}`
+                            : '';
+                        let baseTitle;
+                        if (effectiveDisplayStatus === 'syncing') {
+                            baseTitle = syncProgress?.total > 1
+                                ? `Синхронизация... ${syncProgress.synced}/${syncProgress.total}`
+                                : 'Синхронизация...';
+                            if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
+                        } else if (effectiveDisplayStatus === 'queued') {
+                            baseTitle = isBackgroundQueuedState
+                                ? (pendingCount > 0
+                                    ? `${pendingCount} изменений отправляются в фоне`
+                                    : 'Изменения отправляются в фоне')
+                                : (pendingCount > 0
+                                    ? `${pendingCount} локальных изменений ждут отправки`
+                                    : 'Локальные изменения ждут отправки');
+                            if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
+                            baseTitle += isBackgroundQueuedState
+                                ? ' — можно продолжать работу'
+                                : ' — нажмите для синхронизации';
+                        } else if (effectiveDisplayStatus === 'offline') {
+                            baseTitle = pendingCount > 0
+                                ? `Офлайн — ${pendingCount} изменений ожидают синхронизации`
+                                : 'Офлайн — данные сохраняются локально';
+                            if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
+                        } else if (effectiveDisplayStatus === 'session') {
+                            baseTitle = 'Сессия истекла — войдите снова';
+                        } else if (effectiveDisplayStatus === 'error') {
+                            baseTitle = retryCountdown > 0
+                                ? `Ошибка. Повтор через ${retryCountdown}с — нажмите для повтора`
+                                : 'Ошибка синхронизации — нажмите для повтора';
+                            if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
+                        } else if (lastSyncedAtRef.current) {
+                            const age = formatSyncAge(lastSyncedAtRef.current);
+                            baseTitle = `Сохранено ${age} — нажмите для синхронизации`;
+                        } else {
+                            baseTitle = 'Нажмите для синхронизации';
+                        }
+                        if (checkinTitle) baseTitle += ` · ${checkinTitle}`;
+                        return modeLabel ? `${baseTitle} (${modeLabel})` : baseTitle;
+                    })(),
+                    onClick: (e) => {
+                        e.stopPropagation();
+                        handleSyncBadgeClick();
+                    },
+                },
+                    effectiveDisplayStatus === 'syncing' ? [
+                        React.createElement('div', { key: 'spin', className: 'sync-spinner' }),
+                        syncProgress?.total > 1 && React.createElement('span', { key: 'prog', className: 'sync-progress' }, `${syncProgress.synced}/${syncProgress.total}`)
+                    ]
+                        : effectiveDisplayStatus === 'synced'
+                            ? React.createElement('span', { key: 'ok', className: 'cloud-icon synced' }, '✓')
+                            : effectiveDisplayStatus === 'offline' ? [
+                                React.createElement('svg', { key: 'ic', className: 'cloud-icon offline', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
+                                    React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' }),
+                                    React.createElement('line', { x1: '1', y1: '1', x2: '23', y2: '23', stroke: 'currentColor', strokeWidth: '2' })
+                                ),
+                                pendingCount > 0 && showPendingBadge && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
+                            ]
+                                : effectiveDisplayStatus === 'session' ? [
+                                    React.createElement('span', { key: 'sess', className: 'cloud-icon session', 'aria-hidden': 'true' }, '🔑'),
+                                ]
+                                    : effectiveDisplayStatus === 'queued' ? [
+                                        React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
+                                            React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
+                                        ),
+                                        pendingCount > 0 && showPendingBadge && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
+                                    ]
+                                        : effectiveDisplayStatus === 'error' ? [
+                                            React.createElement('span', { key: 'warn', className: 'cloud-icon error' }, '⚠'),
+                                            retryCountdown > 0 && React.createElement('span', { key: 'cd', className: 'retry-countdown' }, retryCountdown)
+                                        ]
+                                            : React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
+                                                React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
+                                            )
+                ),
+                React.createElement('button', {
+                    key: 'theme-toggle-temp',
+                    type: 'button',
+                    className: 'hdr-theme-btn hdr-theme-toggle-temp',
+                    title: 'Переключить тему (временно)',
+                    onClick: (e) => {
+                        e.stopPropagation();
+                        window.HEYS?.Theme?.toggleModePreference?.();
+                    },
+                }, '🌓'),
+        ];
 
         return React.createElement(
             'div',
@@ -3219,22 +3361,61 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             React.createElement(
                 'div',
                 { className: 'hdr-top hdr-gamification' },
-                React.createElement(GamificationBar)
+                React.createElement(GamificationBar, { leadingHeaderActions: debugHeaderLeadingActions })
             ),
-            // === НИЖНЯЯ ЛИНИЯ: Клиент + Действия ===
+            // === СТРОКА ДАТЫ (канвас «Дата и остатки v4»: под геймификацией, inset 18px) ===
+            showDateRow
+                ? React.createElement('div', { className: 'hdr-date-row' },
+                    React.createElement('div', { className: 'hdr-date-group' },
+                        React.createElement(window.HEYS.DatePicker, {
+                            valueISO: selectedDate,
+                            onSelect: (nextDate) => selectDateWithPrefetch(nextDate, { reason: 'date-picker' }),
+                            activeDays: datePickerActiveDays,
+                            getActiveDaysForMonth: (year, month) => {
+                                const getActiveDaysForMonthFn = window.HEYS.dayUtils && window.HEYS.dayUtils.getActiveDaysForMonth;
+                                const effectiveProducts = (products && products.length > 0) ? products
+                                    : (window.HEYS.products?.getAll?.() || []);
+                                const effectiveProfile = cachedProfile || (U && U.lsGet ? U.lsGet('heys_profile', {}) : {});
+                                if (!getActiveDaysForMonthFn || !clientId) {
+                                    return new Map();
+                                }
+                                try {
+                                    return getActiveDaysForMonthFn(year, month, effectiveProfile, effectiveProducts);
+                                } catch (e) {
+                                    return new Map();
+                                }
+                            }
+                        }),
+                    )
+                )
+                : null,
+            showPastDayBanner && React.createElement('div', { className: 'past-day-banner-wrap' },
+                React.createElement('div', { className: 'past-day-banner' },
+                    React.createElement('span', { className: 'past-day-banner__text' }, 'Вы смотрите прошлый день'),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'past-day-banner__today',
+                        onClick: handlePastDayGoToday
+                    }, 'Сегодня')
+                )
+            ),
+            // === НИЖНЯЯ ЛИНИЯ: название вкладки / клиент + отладочные действия ===
             React.createElement(
                 'div',
-                { className: 'hdr-bottom' },
-                // Клиентский вход (isRpcMode) идёт по канвасу «Дата и остатки v4»:
-                // вторая строка — название вкладки, не переключатель клиентов (у
-                // клиента нет чужих профилей). Кураторский вход держит старую
-                // строку с именем/dropdown — макета под куратора пока нет,
-                // зафиксировано в UI_V4_IMPLEMENTATION_PLAN раздел «Что заказать
-                // дизайнеру».
+                { className: 'hdr-bottom' + (isRpcMode ? ' hdr-tab-row' : '') },
+                // Клиентский вход (isRpcMode): название вкладки + мета дня на «Питание».
+                // Календарь — строкой выше; на прошлом дне между ними баннер
+                // «Вы смотрите прошлый день» (канвас «Дата и остатки v4»).
                 isRpcMode
-                    ? React.createElement('div', { className: 'hdr-client hdr-client--tab-title' },
+                    ? React.createElement('div', { className: 'hdr-tab-title-row' },
                         React.createElement('span', { className: 'hdr-client-tab-title-text' },
                             CLIENT_TAB_TITLES[tab] || ''
+                        ),
+                        tab === 'diary' && diaryTabMetaLine && React.createElement('span', { className: 'hdr-tab-meta' },
+                            diaryTabMetaLine.text,
+                            diaryTabMetaLine.syncLabel && React.createElement('span', { className: 'hdr-tab-meta__sync' },
+                                ' ' + diaryTabMetaLine.syncLabel
+                            )
                         )
                     )
                     // Информация о клиенте + DatePicker
@@ -3711,135 +3892,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
 	                        cursor: 'pointer'
 	                    }
 	                }, 'Ops'),
-	                // ☁️ Cloud sync indicator (v2.0: forceSync on click, auto-fade, relative time tooltip)
-	                React.createElement('div', {
-                    key: 'cloudsync',
-                    className: 'cloud-sync-indicator ' + effectiveDisplayStatus + (effectiveDisplayStatus !== 'syncing' && effectiveDisplayStatus !== 'offline' && effectiveDisplayStatus !== 'session' ? ' cloud-sync-indicator--clickable' : ''),
-                    title: (() => {
-                        const routingMode = HEYS?.cloud?.getRoutingStatus?.()?.mode || 'unknown';
-                        const modeLabel = routingMode === 'direct' ? '🔗 Direct' : routingMode === 'proxy' ? '🔀 Proxy' : '';
-                        const checkinTitle = checkinStatus
-                            ? `Чек-ин: ${checkinStatus.label}${checkinStatus.flowStatus ? ` (${checkinStatus.flowStatus})` : ''}`
-                            : '';
-                        let baseTitle;
-                        if (effectiveDisplayStatus === 'syncing') {
-                            baseTitle = syncProgress?.total > 1
-                                ? `Синхронизация... ${syncProgress.synced}/${syncProgress.total}`
-                                : 'Синхронизация...';
-                            if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
-                        } else if (effectiveDisplayStatus === 'queued') {
-                            baseTitle = isBackgroundQueuedState
-                                ? (pendingCount > 0
-                                    ? `${pendingCount} изменений отправляются в фоне`
-                                    : 'Изменения отправляются в фоне')
-                                : (pendingCount > 0
-                                    ? `${pendingCount} локальных изменений ждут отправки`
-                                    : 'Локальные изменения ждут отправки');
-                            if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
-                            baseTitle += isBackgroundQueuedState
-                                ? ' — можно продолжать работу'
-                                : ' — нажмите для синхронизации';
-                        } else if (effectiveDisplayStatus === 'offline') {
-                            baseTitle = pendingCount > 0
-                                ? `Офлайн — ${pendingCount} изменений ожидают синхронизации`
-                                : 'Офлайн — данные сохраняются локально';
-                            if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
-                        } else if (effectiveDisplayStatus === 'session') {
-                            baseTitle = 'Сессия истекла — войдите снова';
-                        } else if (effectiveDisplayStatus === 'error') {
-                            baseTitle = retryCountdown > 0
-                                ? `Ошибка. Повтор через ${retryCountdown}с — нажмите для повтора`
-                                : 'Ошибка синхронизации — нажмите для повтора';
-                            if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
-                        } else if (lastSyncedAtRef.current) {
-                            const age = formatSyncAge(lastSyncedAtRef.current);
-                            baseTitle = `Сохранено ${age} — нажмите для синхронизации`;
-                        } else {
-                            baseTitle = 'Нажмите для синхронизации';
-                        }
-                        if (checkinTitle) baseTitle += ` · ${checkinTitle}`;
-                        return modeLabel ? `${baseTitle} (${modeLabel})` : baseTitle;
-                    })(),
-                    onClick: handleSyncBadgeClick,
-                },
-                    effectiveDisplayStatus === 'syncing' ? [
-                        React.createElement('div', { key: 'spin', className: 'sync-spinner' }),
-                        syncProgress?.total > 1 && React.createElement('span', { key: 'prog', className: 'sync-progress' }, `${syncProgress.synced}/${syncProgress.total}`)
-                    ]
-                        : effectiveDisplayStatus === 'synced'
-                            ? React.createElement('span', { key: 'ok', className: 'cloud-icon synced' }, '✓')
-                            : effectiveDisplayStatus === 'offline' ? [
-                                React.createElement('svg', { key: 'ic', className: 'cloud-icon offline', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
-                                    React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' }),
-                                    React.createElement('line', { x1: '1', y1: '1', x2: '23', y2: '23', stroke: 'currentColor', strokeWidth: '2' })
-                                ),
-                                pendingCount > 0 && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
-                            ]
-                                : effectiveDisplayStatus === 'session' ? [
-                                    React.createElement('span', { key: 'sess', className: 'cloud-icon session', 'aria-hidden': 'true' }, '🔑'),
-                                ]
-                                    : effectiveDisplayStatus === 'queued' ? [
-                                        React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
-                                            React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
-                                        ),
-                                        pendingCount > 0 && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
-                                    ]
-                                        : effectiveDisplayStatus === 'error' ? [
-                                            React.createElement('span', { key: 'warn', className: 'cloud-icon error' }, '⚠'),
-                                            retryCountdown > 0 && React.createElement('span', { key: 'cd', className: 'retry-countdown' }, retryCountdown)
-                                        ]
-                                            : React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
-                                                React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
-                                            )
-                ),
-                // Временный тогл светлая/тёмная — решение владельца 2026-08-14,
-                // для быстрой сверки с макетом на обеих темах. Не по канвасу,
-                // снять когда постоянный вход появится в настройках/макете.
-                React.createElement('button', {
-                    key: 'theme-toggle-temp',
-                    type: 'button',
-                    className: 'hdr-theme-btn hdr-theme-toggle-temp',
-                    title: 'Переключить тему (временно)',
-                    onClick: () => window.HEYS?.Theme?.toggleModePreference?.(),
-                }, '🌓'),
                 // EWS-бейдж и колокольчик пушей убраны из шапки (UI v4, 2026-08-10):
                 // EWS слит со счётчиком лампочки советов (см. window.HEYS.ewsSummary /
                 // событие heysEWSSummaryUpdated, читает heys_gamification_bar_v1.js и
                 // day/_advice.js), push — в строку «Уведомления» листа настроек +
                 // разовый баннер showPushFirstDayPrompt ниже.
             ),
-            // Строка даты v4: отдельная полноширинная строка под клиентом/облаком
-            // (канвас «Дата и остатки v4» — дата делит ряд только со стрелками
-            // назад/вперёд, не с именем клиента; была втиснута в hdr-bottom и
-            // обрезалась до "С..", см. UI_V4_IMPLEMENTATION_PLAN раздел «осталось»).
-            (tab === 'stats' || tab === 'diary' || tab === 'activity' || tab === 'insights' || tab === 'widgets') && window.HEYS.DatePicker
-                ? React.createElement('div', { className: 'hdr-date-row' },
-                    React.createElement('div', { className: 'hdr-date-group' },
-                        React.createElement(window.HEYS.DatePicker, {
-                            valueISO: selectedDate,
-                            onSelect: (nextDate) => selectDateWithPrefetch(nextDate, { reason: 'date-picker' }),
-                            activeDays: datePickerActiveDays,
-                            // Функция для загрузки данных при смене месяца
-                            getActiveDaysForMonth: (year, month) => {
-                                const getActiveDaysForMonthFn = window.HEYS.dayUtils && window.HEYS.dayUtils.getActiveDaysForMonth;
-                                // Fallback chain для products
-                                const effectiveProducts = (products && products.length > 0) ? products
-                                    : (window.HEYS.products?.getAll?.() || []);
-                                // Fallback chain для profile
-                                const effectiveProfile = cachedProfile || (U && U.lsGet ? U.lsGet('heys_profile', {}) : {});
-                                if (!getActiveDaysForMonthFn || !clientId) {
-                                    return new Map();
-                                }
-                                try {
-                                    return getActiveDaysForMonthFn(year, month, effectiveProfile, effectiveProducts);
-                                } catch (e) {
-                                    return new Map();
-                                }
-                            }
-                        }),
-                    )
-                )
-                : null,
             // Разовое предложение включить push — после первого заполненного дня
             // (UI v4, 2026-08-10). Отказ прячет баннер насовсем; постоянный вход —
             // строка «Уведомления» в листе настроек.
@@ -4278,9 +4336,32 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         }, [tab]);
 
         React.useEffect(() => {
+            const handleToggleTabSettings = () => setSettingsMenuOpen((open) => !open);
+            window.__heysToggleTabSettingsHandler = handleToggleTabSettings;
+            return () => {
+                if (window.__heysToggleTabSettingsHandler === handleToggleTabSettings) {
+                    window.__heysToggleTabSettingsHandler = null;
+                }
+            };
+        }, []);
+
+        React.useEffect(() => {
+            if (!settingsMenuOpen) return undefined;
+            const wrapEl = document.querySelector('.wrap');
+            if (wrapEl) wrapEl.classList.add('dropdown-blur-active');
+            return () => {
+                if (wrapEl) wrapEl.classList.remove('dropdown-blur-active');
+            };
+        }, [settingsMenuOpen]);
+
+        React.useEffect(() => {
             if (!settingsMenuOpen) return undefined;
 
             const handleOutsidePointer = (event) => {
+                const target = event?.target;
+                if (target && typeof target.closest === 'function') {
+                    if (target.closest('.hdr-header-icon-btn--settings')) return;
+                }
                 const wrap = settingsWrapRef.current;
                 if (!wrap) return;
                 const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
@@ -4763,18 +4844,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         } = props;
         const tabContentRef = React.useRef(null);
         const isDayTab = tab === 'stats' || tab === 'diary' || tab === 'activity';
-        const todayStr = (HEYS.dayUtils && typeof HEYS.dayUtils.todayISO === 'function')
-            ? HEYS.dayUtils.todayISO()
-            : '';
-        const showPastDayBanner = !!(selectedDate && todayStr && selectedDate !== todayStr
-            && (tab === 'stats' || tab === 'diary' || tab === 'activity' || tab === 'insights' || tab === 'widgets'));
-        const handlePastDayGoToday = () => {
-            if (window.HEYS?.ui?.setSelectedDate) {
-                window.HEYS.ui.setSelectedDate(todayStr);
-                return;
-            }
-            if (typeof setSelectedDate === 'function') setSelectedDate(todayStr);
-        };
 
         const [, _tickPostboot] = React.useReducer(function(n) { return n + 1; }, 0);
         React.useEffect(function() {
@@ -4851,16 +4920,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         return React.createElement(
             React.Fragment,
             null,
-            showPastDayBanner && React.createElement('div', { className: 'past-day-banner-wrap' },
-                React.createElement('div', { className: 'past-day-banner' },
-                    React.createElement('span', { className: 'past-day-banner__text' }, 'Вы смотрите прошлый день'),
-                    React.createElement('button', {
-                        type: 'button',
-                        className: 'past-day-banner__today',
-                        onClick: handlePastDayGoToday
-                    }, 'Сегодня')
-                )
-            ),
             React.createElement(
             'div',
             {

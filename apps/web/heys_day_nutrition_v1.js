@@ -25,6 +25,22 @@
     return meals.filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0).length;
   }
 
+  function formatMealCountLabel(count) {
+    const n = Number(count) || 0;
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    let word = 'приёмов';
+    if (mod10 === 1 && mod100 !== 11) word = 'приём';
+    else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) word = 'приёма';
+    return n + ' ' + word;
+  }
+
+  function formatTabMetaLine(dateKey, day) {
+    const syncLabel = syncMetaLabel();
+    const text = formatShortDate(dateKey || day?.date) + ' · ' + formatMealCountLabel(countFilledMeals(day));
+    return { text, syncLabel };
+  }
+
   function syncMetaLabel() {
     try {
       if (typeof navigator !== 'undefined' && !navigator.onLine) return null;
@@ -153,11 +169,6 @@
     const progressPct = budget > 0 ? Math.min(100, Math.round((eaten / budget) * 100)) : 0;
 
     const meals = sortMealsAscending(day?.meals || []).filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0);
-    const mealCount = countFilledMeals(day);
-    const syncLabel = syncMetaLabel();
-
-    const metaParts = [formatShortDate(date || day?.date), mealCount + ' приёма'];
-    if (syncLabel) metaParts.push(syncLabel);
 
     const fiberEaten = Math.round(Number(dayTot?.fiber) || 0);
     const fiberNorm = Math.round(Number(normAbs?.fiber) || 0);
@@ -179,16 +190,6 @@
       className: 'compact-nutrition nutrition-section nutrition-v4',
       'data-curator-target': 'nutrition'
     },
-      React.createElement('div', { className: 'nutrition-v4-meta' },
-        React.createElement('span', { className: 'nutrition-v4-meta__title' }, 'Питание'),
-        React.createElement('span', { className: 'nutrition-v4-meta__details' },
-          metaParts.map((part, idx) => React.createElement('span', {
-            key: 'meta-' + idx,
-            className: idx === metaParts.length - 1 && syncLabel ? 'nutrition-v4-meta__sync' : null
-          }, idx > 0 ? (idx === 1 ? ' · ' + part : ' ' + part) : part))
-        )
-      ),
-
       React.createElement('div', { className: 'nutrition-v4-hero' },
         React.createElement('div', { className: 'nutrition-v4-hero__label' }, 'Осталось на сегодня'),
         React.createElement('div', { className: 'nutrition-v4-hero__value-row' },
@@ -337,6 +338,13 @@
   HEYS.dayNutrition = {
     render: renderNutritionCard,
     NutritionTabV4
+  };
+
+  HEYS.NutritionV4 = {
+    formatShortDate,
+    countFilledMeals,
+    formatMealCountLabel,
+    formatTabMetaLine
   };
 
 })(window);
