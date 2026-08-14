@@ -16,8 +16,8 @@ const {
   detectStagingMode,
   getForbiddenAgentStagedFiles,
   isGeneratedOrReleaseFile,
-} = await import(scriptUrl);
-const { isIntegrationPush, isIntegrationPushBranch } = await import(pushPreflightUrl);
+} = await import('../../../scripts/check-agent-staging.mjs');
+const { isIntegrationPush, isIntegrationPushBranch } = await import('../../../scripts/push-preflight.mjs');
 
 describe('agent staging guard', () => {
   it('detects agent mode from codex branches without overriding trunk policy', () => {

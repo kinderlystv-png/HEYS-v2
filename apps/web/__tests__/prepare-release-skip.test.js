@@ -33,7 +33,7 @@ const {
   isReleaseMetaOnlyFile,
   isTechnicalFile,
   normalizeCoveredCommits,
-} = await import(scriptUrl);
+} = await import('../../../scripts/prepare-release.mjs');
 
 describe('parseConventionalCommitType', () => {
   test('extracts type from simple conventional commit', () => {

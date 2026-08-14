@@ -52,7 +52,7 @@ describe('Activity tab v4 structure', () => {
   });
 
   it('activity renders only on activity mobile subtab', () => {
-    expect(shellSource).toMatch(/mobileSubTab === 'activity'\) && compactActivity/);
+    expect(shellSource).toMatch(/mobileSubTab === 'activity'\) && isTabActive && compactActivity/);
     expect(shellSource).not.toMatch(/mobileSubTab === 'stats' \|\| mobileSubTab === 'activity'\) && compactActivity/);
   });
 

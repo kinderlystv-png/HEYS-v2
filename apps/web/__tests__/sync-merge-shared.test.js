@@ -512,7 +512,7 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     const rpcSource = fs.readFileSync(
       path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'),
       'utf8',
-    );
+    ).replace(/\r\n/g, '\n');
 
     expect(rpcSource).toContain('function mergeBatchDayv2ExistingRows(items, currentByKey)');
     expect(rpcSource).toContain('const dayv2Merged = mergeBatchDayv2ExistingRows(params.p_items, prevMap);');
@@ -529,7 +529,7 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     const rpcSource = fs.readFileSync(
       path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'),
       'utf8',
-    );
+    ).replace(/\r\n/g, '\n');
 
     expect(rpcSource).toContain('[upsert_client_kv_by_session] dayv2_guard_merged:');
     expect(rpcSource).toContain('direct upsert_client_kv_by_session(dayv2) bypasses');
@@ -546,14 +546,14 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     const rpcSource = fs.readFileSync(
       path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'),
       'utf8',
-    );
+    ).replace(/\r\n/g, '\n');
 
     expect(rpcSource).toContain('const hasSubjectiveDrop = isDayv2Key && hasSubjectiveFieldDrop(incomingValue, currentValue);');
     expect(rpcSource).toContain(
       'isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop || hasCurrentOnlyContent || hasIncomingTombstonedContent)',
     );
     expect(rpcSource).toContain(
-      "hasSubjectiveDrop\n                  ? 'day_subjective_guard_merged'\n                  : (hasCurrentOnlyContent\n                    ? 'day_missing_content_guard_merged'\n                    : (hasIncomingTombstonedContent ? 'day_tombstone_guard_merged' : 'day_merged'))",
+      "hasNewerCurrentItemEdit\n                ? 'day_item_guard_merged'\n                : (hasSubjectiveDrop\n                  ? 'day_subjective_guard_merged'\n                  : (hasCurrentOnlyContent\n                    ? 'day_missing_content_guard_merged'\n                    : (hasIncomingTombstonedContent ? 'day_tombstone_guard_merged' : 'day_merged')))",
     );
   });
 
@@ -566,7 +566,7 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     const rpcSource = fs.readFileSync(
       path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'),
       'utf8',
-    );
+    ).replace(/\r\n/g, '\n');
 
     expect(rpcSource).toContain('function hasCurrentOnlyDayContent(incomingValue, currentValue)');
     expect(rpcSource).toContain('function hasIncomingTombstonedDayContent(incomingValue, currentValue)');
@@ -598,7 +598,7 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     const rpcSource = fs.readFileSync(
       path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'),
       'utf8',
-    );
+    ).replace(/\r\n/g, '\n');
 
     expect(rpcSource).toContain('MORNING_CHECKIN_PROGRESS_KEY_RE.test(k)');
     expect(rpcSource).toContain('hasMorningCheckinProgressConflict(incomingValue, currentValue)');
@@ -630,7 +630,7 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     const rpcSource = fs.readFileSync(
       path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'),
       'utf8',
-    );
+    ).replace(/\r\n/g, '\n');
     const restSource = fs.readFileSync(
       path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rest/index.js'),
       'utf8',
@@ -653,7 +653,7 @@ describe('heys-api-rpc batch dayv2 guard contract', () => {
     const rpcSource = fs.readFileSync(
       path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/index.js'),
       'utf8',
-    );
+    ).replace(/\r\n/g, '\n');
     const restSource = fs.readFileSync(
       path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rest/index.js'),
       'utf8',

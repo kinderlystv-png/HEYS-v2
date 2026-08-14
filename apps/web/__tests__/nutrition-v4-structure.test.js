@@ -57,7 +57,7 @@ describe('Nutrition tab v4 structure', () => {
   });
 
   it('nutrition renders only on diary mobile subtab', () => {
-    expect(shellSource).toMatch(/mobileSubTab === 'diary'\) && compactNutrition/);
+    expect(shellSource).toMatch(/mobileSubTab === 'diary'\) && isTabActive && compactNutrition/);
     expect(shellSource).not.toMatch(/mobileSubTab === 'stats' \|\| mobileSubTab === 'diary'\) && compactNutrition/);
   });
 

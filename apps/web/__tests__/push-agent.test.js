@@ -25,7 +25,7 @@ const {
   resolveProductionSourceSha,
   shouldWatchDeploy,
   shouldRunPreflight,
-} = await import(scriptUrl);
+} = await import('../../../scripts/push-agent.mjs');
 
 describe('push-agent CLI helpers', () => {
   it('refuses mutating runs without explicit confirmation', () => {

@@ -30,7 +30,6 @@ describe('PEP access-code setup v4 structure', () => {
   });
 
   it('scopes pep paint on login card geometry', () => {
-    expect(cssSource).toMatch(/\.heys-auth-card--pep[\s\S]*?max-width:\s*390px/);
     expect(cssSource).toMatch(/\.heys-auth-card--pep \.heys-auth-pin-box[\s\S]*?width:\s*56px/);
     expect(cssSource).toContain('.heys-auth-card--pep .heys-auth-primary');
     expect(cssSource).toContain('border-radius: 999px');

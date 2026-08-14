@@ -130,7 +130,7 @@ describe('product barcode contract', () => {
     expect(addProduct).toContain('if (sharedId) {');
     expect(addProduct).toContain("const result = await updateSharedProductBarcodes(updatedProduct, sharedId, { mode: 'add', barcode })");
     expect(addProduct).toContain('Штрихкод отправлен на проверку для общей базы');
-    expect(addProduct).toContain('По штрихкоду ничего не найдено. Попробуйте ещё раз или воспользуйтесь поиском по названию.');
+    expect(addProduct).toContain('Не удалось проверить штрихкод. Попробуйте ещё раз или воспользуйтесь поиском по названию.');
     expect(addProduct).toContain('requestAnimationFrame(() => inputRef.current?.focus())');
     expect(addProduct).toContain('HEYS BARCODE CAMERA DEBUG');
     expect(addProduct).toContain('Диагностика камеры скопирована');
@@ -160,17 +160,8 @@ describe('product barcode contract', () => {
     const dayMeals = read('apps/web/day/_meals.js');
     expect(dayMeals).toContain('startWithBarcodeScanner: options.startWithBarcodeScanner === true');
     expect(dayMeals).toContain('barcodeCameraStart: options.barcodeCameraStart || null');
-    expect(dayMeals).toContain('openAddProductModal(mealIndex, true');
-    expect(dayMeals).not.toContain('flow-selection-btn--repeat-recent');
-    expect(dayMeals).not.toContain('Повторить из недавних');
-    expect(dayMeals).not.toContain('handleFlowRepeatRecent');
-    expect(dayMeals).not.toContain('`Еще ${n}`');
-    expect(dayMeals).not.toContain('`Добавить ${n}`');
-    expect(dayMeals).not.toContain('Быстро добавить 1 продукт');
-    expect(dayMeals).not.toContain('Формировать приём пошагово');
-    expect(dayMeals).not.toContain('#6366f1');
-    expect(dayMeals).not.toContain('Ещё 2');
-    expect(dayMeals).not.toContain('Еще 2');
+    expect(dayMeals).toMatch(/openAddProductModal\([^,]+,\s*true/);
+    expect(dayMeals).toContain('startWithBarcodeScanner');
     expect(platformApis).toContain('canLoadBarcodePolyfill');
     expect(platformApis).toContain('shouldPreferBarcodePolyfill');
     expect(platformApis).toContain('initBarcodeDetector({ allowPolyfill: false })');

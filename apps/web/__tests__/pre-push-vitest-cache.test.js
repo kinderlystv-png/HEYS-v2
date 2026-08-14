@@ -16,7 +16,7 @@ const {
   resolveVitestExecutable,
   sanitizeCacheRef,
   selectRelevantTests,
-} = await import(scriptUrl);
+} = await import('../../../scripts/pre-push-vitest-cache.mjs');
 
 describe('pre-push Vitest cache helpers', () => {
   it('parses --ref options without depending on process argv', () => {

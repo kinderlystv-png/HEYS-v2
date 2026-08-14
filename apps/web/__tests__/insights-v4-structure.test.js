@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 const dashboardSource = fs.readFileSync(
   path.resolve(__dirname, '../insights/pi_ui_dashboard.js'),
   'utf8',
-);
+).replace(/\r\n/g, '\n');
 const shellSource = fs.readFileSync(
   path.resolve(__dirname, '../heys_app_shell_v1.js'),
   'utf8',
