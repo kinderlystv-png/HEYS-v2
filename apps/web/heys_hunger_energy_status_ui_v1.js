@@ -5968,7 +5968,7 @@
     const style = document.createElement('style');
     style.id = 'hunger-energy-status-style';
     style.textContent = `
-.fab-group .hunger-energy-fab{width:40px;height:40px;border-radius:50%;border:none;background:var(--v4-float,#fffaf1);color:var(--v4-act-text,#8a4a20);box-shadow:0 1px 2px rgba(0,0,0,.08),0 6px 16px rgba(15,23,42,.14),inset 0 1px 0 rgba(255,255,255,.22);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1;transition:transform .2s cubic-bezier(.34,1.42,.64,1),box-shadow .2s ease;touch-action:manipulation}
+.fab-group .hunger-energy-fab{width:40px;height:40px;border-radius:50%;border:none;background:var(--v4-float,#fffaf1);color:#8a4a20;box-shadow:0 1px 2px rgba(0,0,0,.08),0 6px 16px rgba(15,23,42,.14),inset 0 1px 0 rgba(255,255,255,.22);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1;transition:transform .2s cubic-bezier(.34,1.42,.64,1),box-shadow .2s ease;touch-action:manipulation}
 .fab-group .hunger-energy-fab .hes-fab-icon{width:19px;height:19px;display:block;overflow:visible}
 .fab-group .hunger-energy-fab .hes-fab-icon__ring{fill:none;stroke:currentColor;stroke-width:2.2}
 .fab-group .hunger-energy-fab .hes-fab-icon__fill{fill:currentColor;stroke:none}

@@ -21,13 +21,47 @@
 
 /* === 01. Meal Step (Time + Mood) === */
 
-/* Step 1: Время и тип */
+/* Step 1: Время и тип — канвас «Добавление еды» #1 */
 .meal-time-step {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 16px;
   padding: 8px 0;
+}
+
+.meal-time-step--v4 {
+  gap: 0;
+  padding: 4px 0 8px;
+}
+
+.meal-time-hero {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 24px 20px;
+  border: none;
+  border-radius: 26px;
+  background: #efe3cf;
+  text-align: center;
+  cursor: pointer;
+}
+
+.meal-time-hero__label {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+}
+
+.meal-time-hero__value {
+  margin-top: 12px;
+  font-size: 54px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: #8a4a20;
+  font-variant-numeric: tabular-nums;
 }
 
 .meal-time-display {
@@ -37,7 +71,7 @@
 .meal-time-value {
   font-size: 48px;
   font-weight: 800;
-  color: var(--color-blue-500);
+  color: #8a4a20;
   letter-spacing: -2px;
 }
 
@@ -77,78 +111,138 @@
 /* Meal type selection */
 .meal-type-section {
   width: 100%;
-  padding: 0 8px;
+  padding: 0;
 }
 
 .meal-type-label {
-  font-size: 13px;
+  margin: 20px 0 10px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a4a20;
+  text-align: left;
+}
+
+.meal-type-chips {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.meal-type-chip {
+  min-height: 44px;
+  padding: 11px 14px;
+  border: none;
+  border-radius: 14px;
+  background: #f7efe2;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--color-slate-500);
-  margin-bottom: 10px;
+  line-height: 1;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.55));
   text-align: center;
+  cursor: pointer;
+}
+
+.meal-type-chip.is-on {
+  background: #efe3cf;
+  color: #8a4a20;
+  font-weight: 700;
+}
+
+.meal-type-hint {
+  margin-top: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.42));
+}
+
+.meal-time-wave {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 20px;
+  background: #efe3cf;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #8a4a20;
+}
+
+.meal-time-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 12px;
+  padding: 17px 22px;
+  border: none;
+  border-radius: 999px;
+  background: #c67139;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  color: #2b1608;
+  cursor: pointer;
+}
+
+[data-palette="blue"] .meal-time-cta,
+[data-palette="blue-dark"] .meal-time-cta {
+  color: var(--v4-ink, #ffffff);
+}
+
+.meal-time-wait {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  text-align: center;
+  cursor: pointer;
+}
+
+.meal-time-step--v4 .meal-time-pickers {
+  margin-top: 12px;
 }
 
 .meal-type-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .meal-type-btn {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 8px 4px;
-  background: var(--color-slate-100);
-  border: 2px solid transparent;
-  border-radius: 10px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 11px 14px;
+  background: #f7efe2;
+  border: none;
+  border-radius: 14px;
   cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.meal-type-btn:active {
-  transform: scale(0.95);
 }
 
 .meal-type-btn.active {
-  background: var(--v4-accent-bg, #dbeafe);
-  border-color: var(--color-blue-500);
-}
-
-.meal-type-btn-icon {
-  font-size: 20px;
+  background: #efe3cf;
 }
 
 .meal-type-btn-name {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--color-slate-500);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.55));
 }
 
 .meal-type-btn.active .meal-type-btn-name {
-  color: var(--v4-act, #2563eb);
-}
-
-[data-theme='dark'] .meal-type-btn {
-  background: var(--color-slate-700);
-}
-
-[data-theme='dark'] .meal-type-btn-name {
-  color: var(--color-slate-400);
-}
-
-[data-theme='dark'] .meal-type-btn.active {
-  background: #1e3a8a;
-  border-color: var(--color-blue-500);
-}
-
-[data-theme='dark'] .meal-type-btn.active .meal-type-btn-name {
-  color: #93c5fd;
+  color: #8a4a20;
+  font-weight: 700;
 }
 
 /* Step 2: Оценки — в стиле оценки дня */

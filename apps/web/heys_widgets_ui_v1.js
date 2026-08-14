@@ -1559,7 +1559,7 @@
         }),
         React.createElement('circle', {
           cx: 22, cy: 22, r: 18, fill: 'none',
-          stroke: 'var(--v4-ok-fill, #7a8a5e)', strokeWidth: 5,
+          stroke: '#7a8a5e', strokeWidth: 5,
           strokeLinecap: 'round',
           strokeDasharray: `${dash} ${circ}`,
           transform: 'rotate(-90 22 22)'
@@ -1990,14 +1990,14 @@
         React.createElement('polyline', {
           points: trendPts,
           fill: 'none',
-          stroke: 'var(--v4-ok-fill, #7a8a5e)',
+          stroke: '#7a8a5e',
           strokeWidth: 2.5,
           strokeLinecap: 'round',
           strokeLinejoin: 'round'
         }),
         React.createElement('circle', {
           cx: lastPt[0], cy: lastPt[1], r: 3.5,
-          fill: 'var(--v4-ok-fill, #7a8a5e)'
+          fill: '#7a8a5e'
         })
       )
     );
@@ -2753,14 +2753,14 @@
           React.createElement('polyline', {
             points: sparkPoints,
             fill: 'none',
-            stroke: 'var(--v4-act, #c67139)',
+            stroke: '#c67139',
             strokeWidth: 2.5,
             strokeLinecap: 'round',
             strokeLinejoin: 'round'
           }),
           React.createElement('circle', {
             cx: last[0], cy: last[1], r: 3.5,
-            fill: 'var(--v4-act, #c67139)'
+            fill: '#c67139'
           })
         )
       );

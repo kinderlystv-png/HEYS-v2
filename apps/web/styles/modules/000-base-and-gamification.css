@@ -4178,7 +4178,7 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 [data-theme$="dark"] .game-level-number {
-  color: var(--v4-act-text, #e2a468);
+  color: #e2a468;
 }
 
 [data-theme$="dark"] .game-rank-title,
@@ -4187,7 +4187,7 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 [data-theme$="dark"] .tabs.tabs--v4-primary {
-  background: var(--v4-bg, #141210);
+  background: #141210;
   border-top: none;
   box-shadow: none;
   backdrop-filter: none;
@@ -4199,8 +4199,8 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 [data-theme$="dark"] .tabs--v4-primary .tab.tab-primary-nav.active {
-  color: var(--v4-act-text, #e2a468);
-  background: var(--v4-hero, #2f2820);
+  color: #e2a468;
+  background: #2f2820;
   box-shadow: none;
 }
 
@@ -6972,7 +6972,7 @@ color: var(--v4-sand-ink, #201e1d);
 
 .hdr-widgets-edit-btn--primary,
 .hdr-widgets-edit-btn--done {
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 .hdr-widgets-edit-btn--cancel {
@@ -6984,7 +6984,7 @@ color: var(--v4-sand-ink, #201e1d);
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   text-align: center;
   flex: 1;
 }
@@ -7122,7 +7122,7 @@ color: var(--v4-sand-ink, #201e1d);
 .hdr-client-tab-title-text {
   font-size: 15px;
   font-weight: 700;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   line-height: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -7870,7 +7870,7 @@ body:has(.offline-banner) .wrap {
   padding: 0;
   border: none;
   border-radius: 999px;
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
   display: flex;
@@ -7897,7 +7897,7 @@ body:has(.offline-banner) .wrap {
 }
 
 [data-theme$="dark"] .date-picker--v4 .date-picker-day-nav {
-  background: var(--v4-surface, #23201b);
+  background: #23201b;
   color: var(--v4-ink-3, rgba(242, 237, 230, 0.5));
 }
 
@@ -7917,7 +7917,7 @@ body:has(.offline-banner) .wrap {
   gap: 3px;
   padding: 6px 12px;
   height: auto;
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
   border: none;
   border-radius: 16px;
   cursor: pointer;
@@ -7937,16 +7937,16 @@ body:has(.offline-banner) .wrap {
 
 /* Сегодня — тот же грунт, что у стрелок (канвас «Дата v4») */
 .date-picker--v4 .date-picker-trigger--today {
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
   border: none;
 }
 
 [data-theme$="dark"] .date-picker--v4 .date-picker-trigger {
-  background: var(--v4-surface, #23201b);
+  background: #23201b;
 }
 
 [data-theme$="dark"] .date-picker--v4 .date-picker-trigger--today {
-  background: var(--v4-surface, #23201b);
+  background: #23201b;
 }
 
 @media (hover: hover) {
@@ -7958,16 +7958,16 @@ body:has(.offline-banner) .wrap {
 .date-picker--v4 .date-picker-trigger--today .date-picker-main--today {
   font-size: 12.5px;
   font-weight: 700;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .date-picker--v4 .date-picker-trigger--not-today {
-  background: var(--v4-accent-bg, #f3e0d2);
+  background: #f3e0d2;
   border: none;
 }
 
 .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
-  background: var(--v4-accent-bg, #f3e0d2);
+  background: #f3e0d2;
 }
 
 @media (hover: hover) {
@@ -7983,14 +7983,14 @@ body:has(.offline-banner) .wrap {
 .date-picker--v4 .date-picker-trigger--not-today .date-picker-main--past {
   font-size: 12.5px;
   font-weight: 700;
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 .date-picker--v4 .date-picker-sub--relative {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 .date-picker--v4 .date-picker-text {
@@ -8050,7 +8050,7 @@ body:has(.offline-banner) .wrap {
   gap: 3px;
   border-radius: 12px;
   font-weight: 600;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   background: transparent;
   animation: none;
 }
@@ -8269,14 +8269,14 @@ body:has(.offline-banner) .wrap {
   gap: 12px;
   padding: 13px 15px;
   border-radius: 18px;
-  background: var(--v4-accent-bg, #f3e0d2);
+  background: #f3e0d2;
 }
 
 .past-day-banner__text {
   font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 .past-day-banner__today {
@@ -8284,7 +8284,7 @@ body:has(.offline-banner) .wrap {
   border: none;
   padding: 9px 14px;
   border-radius: 999px;
-  background: var(--v4-act, #c67139);
+  background: #c67139;
   color: var(--v4-btn-on-act, #2b1608);
   font-size: 11.5px;
   font-weight: 700;

@@ -179,11 +179,11 @@ body:has(.page-day) .hdr::after {
 [data-theme$="dark"] body:has(.widgets-tab),
 [data-theme$="dark"] html:has(.page-day),
 [data-theme$="dark"] body:has(.page-day) {
-  background: var(--v4-bg, #141210);
+  background: #141210;
 }
 
 [data-theme$="dark"] body:has(.page-day) .hdr {
-  background: var(--v4-bg, #141210) !important;
+  background: #141210 !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   overflow: visible;
@@ -205,7 +205,7 @@ body:has(.widgets-tab) .hdr::after {
 }
 
 [data-theme$="dark"] body:has(.widgets-tab) .hdr {
-  background: var(--v4-bg, #141210) !important;
+  background: #141210 !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   overflow: visible;
@@ -227,7 +227,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 [data-theme$="dark"] body:has(.page-reports) .hdr {
-  background: var(--v4-bg, #141210) !important;
+  background: #141210 !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   overflow: visible;
@@ -275,7 +275,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 [data-theme$="dark"] .page-reports {
-  background-color: var(--v4-bg, #141210);
+  background-color: #141210;
 }
 
 /* tab-content-swipeable для вкладок — не переопределяем overflow.
@@ -445,7 +445,7 @@ body:has(.page-reports) .hdr::after {
 
 [data-theme$="dark"] .widgets-tab,
 [data-theme$="dark"] .page-day {
-  background-color: var(--v4-bg, #141210);
+  background-color: #141210;
   background-image: none;
 }
 
@@ -9544,7 +9544,7 @@ html.heys-android body:has(.page-reports) .hdr {
 html.heys-android[data-theme$="dark"] body:has(.page-day) .hdr,
 html.heys-android[data-theme$="dark"] body:has(.widgets-tab) .hdr,
 html.heys-android[data-theme$="dark"] body:has(.page-reports) .hdr {
-  background: var(--v4-bg, #141210) !important;
+  background: #141210 !important;
 }
 
 /* ===================================================================
@@ -9557,7 +9557,7 @@ body:has(.widgets-tab) .widgets-grid {
 }
 
 body:has(.widgets-tab:not(.widgets-tab--editing)) .widget {
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   border: none;
@@ -9571,7 +9571,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget::before {
 }
 
 body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--calories {
-  background: var(--v4-hero, #efe3cf);
+  background: #efe3cf;
   padding: 14px;
 }
 
@@ -9624,7 +9624,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   font-weight: 600;
   line-height: 0.9;
   letter-spacing: -0.035em;
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
   font-variant-numeric: tabular-nums;
 }
 
@@ -9658,7 +9658,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 .widget-calories__hero-bar-fill {
   height: 6px;
   border-radius: 999px;
-  background: var(--v4-act, #c67139);
+  background: #c67139;
   transition: width 0.35s ease;
 }
 
@@ -9674,16 +9674,16 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 [data-theme$="dark"] body:has(.widgets-tab:not(.widgets-tab--editing)) .widget {
-  background: color-mix(in srgb, var(--v4-surface, #2a2722) 92%, transparent);
+  background: color-mix(in srgb, #2a2722 92%, transparent);
   border: 1px solid var(--v4-line, rgba(255, 255, 255, 0.08));
 }
 
 [data-theme$="dark"] body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--calories {
-  background: color-mix(in srgb, var(--v4-hero, #3a3228) 88%, transparent);
+  background: color-mix(in srgb, #3a3228 88%, transparent);
 }
 
 [data-theme$="dark"] body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--healthTrend {
-  background: color-mix(in srgb, var(--v4-ok-bg, #2a3028) 88%, transparent);
+  background: color-mix(in srgb, #2a3028 88%, transparent);
 }
 
 .widget-v4-stack {
@@ -9716,7 +9716,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget--dayScore .widget-v4-row__value {
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 .widget-v4-row__value {
@@ -9757,14 +9757,14 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-ok {
-  color: var(--v4-ok-text, #5c6a45);
+  color: #5c6a45;
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
 }
 
 .widget-v4-warn {
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
@@ -9789,16 +9789,16 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   font-variant-numeric: tabular-nums;
 }
 
 .widget-v4-hero-num__val.widget-v4-ok {
-  color: var(--v4-ok-text, #5c6a45);
+  color: #5c6a45;
 }
 
 .widget-v4-hero-num__val.widget-v4-warn {
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 .widget-v4-stack__footer {
@@ -9817,7 +9817,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-wave__fill {
-  fill: color-mix(in srgb, var(--v4-act) 22%, var(--v4-hero));
+  fill: color-mix(in srgb, var(--v4-act, #2563eb) 22%, var(--v4-hero, #f8fafc));
   stroke: none;
 }
 
@@ -9841,7 +9841,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   font-variant-numeric: tabular-nums;
 }
 
@@ -9859,7 +9859,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-mini__bar-fill--water {
-  background: var(--v4-water, #7d98a6);
+  background: #7d98a6;
 }
 
 .widget-v4-macros {
@@ -9891,7 +9891,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 
 .widget-v4-macro__num {
   font: 600 14px Figtree, system-ui, sans-serif;
-  fill: var(--v4-ink, #201e1d);
+  fill: #201e1d;
   font-variant-numeric: tabular-nums;
 }
 
@@ -9910,11 +9910,11 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-heat__bar--ok {
-  background: var(--v4-ok-fill, #7a8a5e);
+  background: #7a8a5e;
 }
 
 .widget-v4-heat__bar--warn {
-  background: var(--v4-warn-soft, #d99a63);
+  background: #d99a63;
 }
 
 .widget-v4-kv {
@@ -9954,8 +9954,8 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-periods__btn.is-active {
-  color: var(--v4-act-text, #8a4a20);
-  border-bottom: 2px solid var(--v4-act, #c67139);
+  color: #8a4a20;
+  border-bottom: 2px solid #c67139;
 }
 
 .widget-v4-periods__suffix {
@@ -10006,7 +10006,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
   border: none;
   border-radius: 16px;
   padding: 13px 14px;
@@ -10071,7 +10071,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 .widget-v4-empty {
   margin: 14px 16px;
   border-radius: 20px;
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
   padding: 26px 20px;
   text-align: center;
   min-height: 0;
@@ -10081,7 +10081,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 .widget-v4-empty .widgets-empty__title {
   font-size: 13px;
   font-weight: 700;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .widget-v4-empty .widgets-empty__desc {
@@ -10100,7 +10100,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   padding: 12px 20px;
   border: none;
   border-radius: 999px;
-  background: var(--v4-act, #c67139);
+  background: #c67139;
   color: var(--v4-btn-on-act, #2b1608);
   font-size: 12px;
   font-weight: 700;
@@ -10120,8 +10120,8 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widgets-tab--editing .widget--drag-over {
-  background: color-mix(in srgb, var(--v4-act, #c67139) 14%, transparent);
-  border: 2px solid var(--v4-act, #c67139);
+  background: color-mix(in srgb, #c67139 14%, transparent);
+  border: 2px solid #c67139;
   box-shadow: none;
 }
 

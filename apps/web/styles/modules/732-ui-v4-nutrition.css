@@ -65,7 +65,7 @@
   font-weight: 600;
   line-height: 0.9;
   letter-spacing: -0.045em;
-  color: var(--v4-ink, #0f172a);
+  color: #8a4a20;
   font-variant-numeric: tabular-nums;
 }
 
@@ -124,11 +124,11 @@
 }
 
 .nutrition-v4-window__label {
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.55));
 }
 
 .nutrition-v4-window__value {
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
   text-align: right;
 }
 
@@ -263,7 +263,7 @@
 }
 
 .nutrition-v4-breakdown__row-label--muted {
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.5));
   font-weight: 600;
 }
 
@@ -281,7 +281,7 @@
 }
 
 .nutrition-v4-breakdown__cell--dev.is-warn {
-  color: var(--v4-warn, #dc2626);
+  color: #8a4a20;
 }
 
 .nutrition-v4-mini-cards {
@@ -319,6 +319,14 @@
   line-height: 1;
   color: var(--v4-ink, #0f172a);
   font-variant-numeric: tabular-nums;
+}
+
+.nutrition-v4-mini-card--fiber .nutrition-v4-mini-card__value {
+  color: #8a4a20;
+}
+
+.nutrition-v4-mini-card--harm .nutrition-v4-mini-card__value {
+  color: var(--v4-ok-text, #16a34a);
 }
 
 .nutrition-v4-mini-card__value-row {
@@ -405,10 +413,8 @@
   display: none;
 }
 
-/* Цифра героя остаётся нейтральной во всех наборах. Была переопределена на
- * --v4-act-text для песочной и синей — снято 2026-08-10 по ревью владельца:
- * «Осталось на сегодня» это факт, а не действие, и акцент несёт действие.
- * Цветом в этом блоке отмечается только строка отклонения. */
+/* Цифра героя и клетчатки — --v4-act-text, как в канвасе #w2 / #w2d
+ * (2026-08-14). Отклонение ниже нормы тоже act-text, не красный warn. */
 
 /* v4-intentional: sand/blue tier label uses act-text */
 [data-palette="sand"] .nutrition-v4-tier,

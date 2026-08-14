@@ -1808,7 +1808,7 @@ body.planning-tab-active .fab-group {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: var(--v4-act, #c67139);
+  background: #c67139;
   border: none;
   color: var(--v4-btn-on-act, #2b1608);
   display: flex;

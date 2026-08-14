@@ -1222,6 +1222,13 @@
 
   const rawMarkdownCache = {};
 
+  // Реестр считает sha256 по LF (verify-legal-release / миграция).
+  // Windows checkout отдаёт те же файлы с CRLF — без нормализации подпись
+  // падает с document_text_hash_mismatch.
+  function normalizeLegalDocumentText(text) {
+    return String(text ?? '').replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+  }
+
   async function fetchConsentDocumentMarkdown(type) {
     if (rawMarkdownCache[type]) return rawMarkdownCache[type];
 
@@ -1250,8 +1257,8 @@
       }
     }
 
-    rawMarkdownCache[type] = markdown;
-    return markdown;
+    rawMarkdownCache[type] = normalizeLegalDocumentText(markdown);
+    return rawMarkdownCache[type];
   }
 
   async function buildConsentListForSigning(consentsState) {
@@ -1289,7 +1296,7 @@
 
   /**
    * Markdown → HTML для модалок согласий.
-   * Байты legal-файлов не трогаем: хэш документа считается по исходнику.
+   * Хэш подписи считается по LF-нормализованному исходнику, как в реестре.
    * Поддержка: заголовки, blockquote (в т.ч. многострочный), списки ul/ol,
    * таблицы, жирный/курсив, hr, ссылки, инлайн-код, literal br из шаблонов.
    */
@@ -2171,7 +2178,8 @@
 
     // Utils
     getCurrentLegalVersions,
-    parseMarkdown
+    parseMarkdown,
+    normalizeLegalDocumentText
   });
 
   // Verbose init log removed

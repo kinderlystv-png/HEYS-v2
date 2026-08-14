@@ -52,9 +52,12 @@ describe('переключение вкладки из шапки', () => {
     expect(code).not.toContain('setActiveTab');
   });
 
-  it('бейдж пушей уводит на user через общий хелпер', () => {
+  it('бейдж пушей убран из шапки (UI v4); скролл к push — во вкладке user', () => {
     const header = componentBody('AppHeader');
-    expect(header.body).toContain("reason: 'push-settings-badge'");
+    expect(header.body).not.toContain("reason: 'push-settings-badge'");
+    expect(header.body).toMatch(/Колокольчик убран из шапки/);
+    const userTab = fs.readFileSync(path.join(WEB_DIR, 'heys_user_tab_impl_v1.js'), 'utf8');
+    expect(userTab).toContain('heys:scroll-to-push-settings');
   });
 
   it('оба компонента реально получают tab и setTab из props', () => {

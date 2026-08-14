@@ -717,29 +717,29 @@ body.board-dark-nav .heys-tab-skeleton {
   min-width: 0;
   width: auto;
   max-width: none;
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
   border: none;
   box-shadow: none;
 }
 
 .hdr-date-group .date-picker--v4 .date-picker-trigger--today {
-  background: var(--v4-surface, #f7efe2);
+  background: #f7efe2;
 }
 
 .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
-  background: var(--v4-accent-bg, #f3e0d2);
+  background: #f3e0d2;
 }
 
 [data-theme$="dark"] .hdr-date-group .date-picker--v4 .date-picker-trigger {
-  background: var(--v4-surface, #23201b);
+  background: #23201b;
 }
 
 [data-theme$="dark"] .hdr-date-group .date-picker--v4 .date-picker-trigger--today {
-  background: var(--v4-surface, #23201b);
+  background: #23201b;
 }
 
 [data-theme$="dark"] .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
-  background: var(--v4-accent-bg, #3a2620);
+  background: #3a2620;
 }
 
 @media (max-width: 640px) {
@@ -942,7 +942,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr {
-  background: var(--v4-bg, #141210);
+  background: #141210;
 }
 
 [data-theme$="dark"] .hdr-bottom {
@@ -1039,11 +1039,11 @@ body:has(.page-day) {
 
 [data-theme$="dark"] html:has(.page-day),
 [data-theme$="dark"] body:has(.page-day) {
-  background: var(--v4-bg, #141210);
+  background: #141210;
 }
 
 [data-theme$="dark"] .page-day {
-  background-color: var(--v4-bg, #141210);
+  background-color: #141210;
   background-image: none;
 }
 

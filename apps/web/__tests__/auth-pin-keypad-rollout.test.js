@@ -11,6 +11,7 @@ const gateFlowSource = fs.readFileSync(path.join(webRoot, 'heys_app_gate_flow_v1
 const loginSource = fs.readFileSync(path.join(webRoot, 'heys_login_screen_v1.js'), 'utf8');
 const accessSetupSource = fs.readFileSync(path.join(webRoot, 'heys_client_access_code_setup_v1.js'), 'utf8');
 const bundleConfig = fs.readFileSync(path.resolve(webRoot, '../../scripts/legacy-bundle-config.mjs'), 'utf8');
+const pinCss = fs.readFileSync(path.join(webRoot, 'styles/heys-components.css'), 'utf8');
 
 describe('auth pin keypad rollout', () => {
   it('exports shared keypad kit before login bundle consumers', () => {
@@ -54,5 +55,13 @@ describe('auth pin keypad rollout', () => {
     expect(accessSetupSource).toContain('readOnly: true');
     expect(accessSetupSource).toContain('heys-auth-pin-dot');
     expect(accessSetupSource).toContain('if (!v && existing) return');
+  });
+
+  it('keeps PIN cells on a login-width row so consents and setup do not stretch', () => {
+    const gridBlock = pinCss.match(/\.heys-auth-pin-grid\s*\{[^}]+\}/);
+    expect(gridBlock?.[0]).toContain('max-width: 276px');
+    expect(gridBlock?.[0]).toContain('justify-content: center');
+    expect(gridBlock?.[0]).not.toContain('space-between');
+    expect(pinCss).toMatch(/\.heys-auth-keypad\s*\{[\s\S]*?max-width:\s*276px/);
   });
 });

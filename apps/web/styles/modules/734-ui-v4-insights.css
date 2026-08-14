@@ -269,23 +269,29 @@
 
 .insights-v4 .heys-score-insights-card {
   border-radius: 20px;
-  background: var(--v4-surface);
+  background: var(--v4-surface, #ffffff);
 }
 
 [data-palette="sand"] .insights-v4-hero,
+[data-palette="blue"] .insights-v4-hero {
+  background: var(--v4-hero, #f8fafc);
+}
+
 [data-palette="sand-dark"] .insights-v4-hero,
-[data-palette="blue"] .insights-v4-hero,
 [data-palette="blue-dark"] .insights-v4-hero {
-  background: var(--v4-hero);
+  background: var(--v4-hero, #1e293b);
 }
 
 [data-palette="sand"] .insights-v4-attention,
-[data-palette="sand-dark"] .insights-v4-attention,
 [data-palette="blue"] .insights-v4-attention,
-[data-palette="blue-dark"] .insights-v4-attention,
 [data-palette="sand"] .insights-v4-patterns,
+[data-palette="blue"] .insights-v4-patterns {
+  background: var(--v4-surface, #ffffff);
+}
+
+[data-palette="sand-dark"] .insights-v4-attention,
+[data-palette="blue-dark"] .insights-v4-attention,
 [data-palette="sand-dark"] .insights-v4-patterns,
-[data-palette="blue"] .insights-v4-patterns,
 [data-palette="blue-dark"] .insights-v4-patterns {
-  background: var(--v4-surface);
+  background: var(--v4-surface, #1e293b);
 }

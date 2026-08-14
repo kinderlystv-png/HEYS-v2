@@ -1812,11 +1812,11 @@ body:has(.insights-tab) .hdr::after {
 
 [data-theme$="dark"] html:has(.insights-tab),
 [data-theme$="dark"] body:has(.insights-tab) {
-  background: var(--v4-bg, #23201b);
+  background: #23201b;
 }
 
 [data-theme$="dark"] body:has(.insights-tab) .hdr {
-  background: var(--v4-bg, #23201b) !important;
+  background: #23201b !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   overflow: visible;

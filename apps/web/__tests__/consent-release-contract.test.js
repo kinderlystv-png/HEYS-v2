@@ -88,4 +88,21 @@ describe('legal release contract', () => {
     expect(banner).toContain("decide('granted')");
     expect(banner).not.toContain("getItem('heys_cookie_info_seen')");
   });
+
+  it('normalizes Windows CRLF before signing so the payload matches the registry hash', () => {
+    const source = read('apps/web/heys_consents_v1.js');
+    expect(source).toContain('function normalizeLegalDocumentText');
+    expect(source).toContain('rawMarkdownCache[type] = normalizeLegalDocumentText(markdown)');
+
+    const workingTree = read(manifest.documents.user_agreement.snapshotPath);
+    const lf = workingTree.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+    const crlf = lf.replace(/\n/g, '\r\n');
+    const normalized = crlf.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+    expect(crypto.createHash('sha256').update(lf).digest('hex')).toBe(
+      manifest.documents.user_agreement.sha256,
+    );
+    expect(crypto.createHash('sha256').update(normalized).digest('hex')).toBe(
+      manifest.documents.user_agreement.sha256,
+    );
+  });
 });
