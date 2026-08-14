@@ -967,7 +967,7 @@ body:has(:is(
   html:not([data-theme]) .hdr-top {
     background: transparent;
     border: none;
-    color: var(--v4-ink, #f5ead8);
+    color: #f5ead8;
   }
 
   html:not([data-theme]) .hdr-bottom {
@@ -1013,7 +1013,7 @@ body:has(:is(
 [data-theme$="dark"] .hdr-top {
   background: transparent;
   border: none;
-  color: var(--v4-ink, #f5ead8);
+  color: #f5ead8;
 }
 
 [data-theme$="dark"] .hdr-bottom {

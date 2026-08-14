@@ -68,7 +68,7 @@ describe('ClientAccessCodeSetup keypad', () => {
     expect(document.querySelectorAll('.heys-auth-pin-dot, .pin-digit-overlay').length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
-    expect(screen.getByText('Повторите код')).toBeTruthy();
+    expect(document.querySelector('.heys-auth-title')?.textContent).toContain('Повторите код');
 
     fireEvent.click(screen.getByRole('button', { name: '2' }));
     fireEvent.click(screen.getByRole('button', { name: '1' }));
@@ -122,7 +122,7 @@ describe('ClientAccessCodeSetup keypad', () => {
     fireEvent.click(screen.getByRole('button', { name: '3' }));
     fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
 
-    expect(screen.getByText('Повторите код')).toBeTruthy();
+    expect(document.querySelector('.heys-auth-title')?.textContent).toContain('Повторите код');
     expect(screen.getByRole('button', { name: 'Изменить код' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: '← Изменить код' })).toBeNull();
     expect(document.querySelector('.heys-auth-pep-check')).toBeTruthy();

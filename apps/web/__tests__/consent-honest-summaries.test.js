@@ -14,6 +14,7 @@ function renderConsentScreen(outdatedTypes = []) {
     useState: initial => [typeof initial === 'function' ? initial() : initial, () => {}],
     useEffect: () => {},
     useCallback: callback => callback,
+    useMemo: fn => fn(),
     useRef: initial => ({ current: initial }),
     createElement: (type, props, ...children) => (
       typeof type === 'function'

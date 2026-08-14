@@ -166,7 +166,7 @@
   justify-content: center;
   width: 22px;
   height: 22px;
-  background: var(--v4-accent-bg, #f0dcc6);
+  background: #f0dcc6;
   color: var(--v4-sand-act-text, #8a4a20);
   border-radius: 999px;
   font-size: 11px;
@@ -180,7 +180,7 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  background: var(--v4-accent-bg, #f0dcc6);
+  background: #f0dcc6;
   border-radius: 8px;
   color: var(--v4-sand-act-text, #8a4a20);
   flex-shrink: 0;

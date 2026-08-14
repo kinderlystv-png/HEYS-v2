@@ -9633,7 +9633,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   font-weight: 600;
   line-height: 0.9;
   letter-spacing: -0.035em;
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
   font-variant-numeric: tabular-nums;
 }
 
@@ -9667,7 +9667,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 .widget-calories__hero-bar-fill {
   height: 6px;
   border-radius: 999px;
-  background: var(--v4-act, #c67139);
+  background: #c67139;
   transition: width 0.35s ease;
 }
 
@@ -9683,21 +9683,21 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 [data-theme$="dark"] body:has(.widgets-tab:not(.widgets-tab--editing)) .widget {
-  background: color-mix(in srgb, var(--v4-sand-surface, #23201b) 92%, transparent);
+  background: color-mix(in srgb, #23201b 92%, transparent);
   border: 1px solid var(--v4-line, rgba(255, 255, 255, 0.08));
 }
 
 [data-theme$="dark"] body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--calories {
-  background: color-mix(in srgb, var(--v4-sand-hero, #2f2820) 88%, transparent);
+  background: color-mix(in srgb, #2f2820 88%, transparent);
 }
 
 [data-theme$="dark"] body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--healthTrend {
-  background: color-mix(in srgb, var(--v4-ok-bg, #242c20) 88%, transparent);
+  background: color-mix(in srgb, #242c20 88%, transparent);
 }
 
 [data-theme$="dark"] body:has(.widgets-tab) .widget-v4-catalog__item,
 [data-theme$="dark"] body:has(.widgets-tab) .widget-v4-empty {
-  background: var(--v4-sand-surface, #23201b);
+  background: #23201b;
 }
 
 .widget-v4-stack {
@@ -9736,7 +9736,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 .widget-v4-row__value--sm {
@@ -9744,7 +9744,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-row__value.widget-v4-ok {
-  color: var(--v4-ok-text, #5c6a45);
+  color: #5c6a45;
 }
 
 .widget-v4-row--tight {
@@ -9772,14 +9772,14 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-ok {
-  color: var(--v4-ok-text, #5c6a45);
+  color: #5c6a45;
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
 }
 
 .widget-v4-warn {
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
@@ -9804,16 +9804,16 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   font-variant-numeric: tabular-nums;
 }
 
 .widget-v4-hero-num__val.widget-v4-ok {
-  color: var(--v4-ok-text, #5c6a45);
+  color: #5c6a45;
 }
 
 .widget-v4-hero-num__val.widget-v4-warn {
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 .widget-v4-stack__footer {
@@ -9856,7 +9856,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   font-variant-numeric: tabular-nums;
 }
 
@@ -9874,7 +9874,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-mini__bar-fill--water {
-  background: var(--v4-water, #7d98a6);
+  background: #7d98a6;
 }
 
 .widget-v4-macros__head {
@@ -9921,7 +9921,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 
 .widget-v4-macro__num {
   font: 600 14px Figtree, system-ui, sans-serif;
-  fill: var(--v4-ink, #201e1d);
+  fill: #201e1d;
   font-variant-numeric: tabular-nums;
 }
 
@@ -9936,7 +9936,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-macro__ring-fill {
-  stroke: var(--v4-ok-fill, #7a8a5e);
+  stroke: #7a8a5e;
 }
 
 .widget-v4-macro__ring-over {
@@ -9951,7 +9951,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-macro__ring-over--protein {
-  stroke: var(--v4-ok-fill, #7a8a5e);
+  stroke: #7a8a5e;
 }
 
 .widget-v4-heat {
@@ -9969,11 +9969,11 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-heat__bar--ok {
-  background: var(--v4-ok-fill, #7a8a5e);
+  background: #7a8a5e;
 }
 
 .widget-v4-heat__bar--warn {
-  background: var(--v4-warn-soft, #d99a63);
+  background: #d99a63;
 }
 
 .widget-v4-kv {
@@ -10013,8 +10013,8 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-periods__btn.is-active {
-  color: var(--v4-act-text, #8a4a20);
-  border-bottom: 2px solid var(--v4-act, #c67139);
+  color: #8a4a20;
+  border-bottom: 2px solid #c67139;
 }
 
 .widget-v4-periods__suffix {
@@ -10024,19 +10024,19 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-spark--ok polyline {
-  stroke: var(--v4-ok-fill, #7a8a5e);
+  stroke: #7a8a5e;
 }
 
 .widget-v4-spark--ok circle {
-  fill: var(--v4-ok-fill, #7a8a5e);
+  fill: #7a8a5e;
 }
 
 .widget-v4-spark--act polyline {
-  stroke: var(--v4-act, #c67139);
+  stroke: #c67139;
 }
 
 .widget-v4-spark--act circle {
-  fill: var(--v4-act, #c67139);
+  fill: #c67139;
 }
 
 .widget-v4-add {
@@ -10156,7 +10156,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 .widget-v4-empty .widgets-empty__title {
   font-size: 13px;
   font-weight: 700;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .widget-v4-empty .widgets-empty__desc {
@@ -10175,7 +10175,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   padding: 12px 20px;
   border: none;
   border-radius: 999px;
-  background: var(--v4-act, #c67139);
+  background: #c67139;
   color: var(--v4-btn-on-act, #2b1608);
   font-size: 12px;
   font-weight: 700;
@@ -10195,8 +10195,8 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widgets-tab--editing .widget--drag-over {
-  background: color-mix(in srgb, var(--v4-act, #c67139) 14%, transparent);
-  border: 2px solid var(--v4-act, #c67139);
+  background: color-mix(in srgb, #c67139 14%, transparent);
+  border: 2px solid #c67139;
   box-shadow: none;
 }
 

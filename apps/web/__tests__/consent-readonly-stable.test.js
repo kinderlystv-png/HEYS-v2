@@ -84,6 +84,7 @@ function renderConsentScreenWithAcceptedConsents() {
     },
     useEffect: () => {},
     useCallback: (callback) => callback,
+    useMemo: (fn) => fn(),
     useRef: (initial) => ({ current: initial }),
     createElement: (type, props, ...children) => {
       if (typeof type === 'function') {
@@ -202,6 +203,7 @@ describe('consent readonly stable copy', () => {
       },
       useEffect: () => {},
       useCallback: (callback) => callback,
+      useMemo: (fn) => fn(),
       useRef: (initial) => ({ current: initial }),
       createElement: (type, props, ...children) => {
         if (typeof type === 'function') {
@@ -264,6 +266,7 @@ describe('consent readonly stable copy', () => {
       },
       useEffect: () => {},
       useCallback: (callback) => callback,
+      useMemo: (fn) => fn(),
       useRef: (initial) => ({ current: initial }),
       createElement: (type, props, ...children) => {
         if (typeof type === 'function') {

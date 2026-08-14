@@ -345,7 +345,12 @@ describe('Meal preset bulk add', () => {
     expect(mealsSource).toContain('addProductsToMealRef.current = addProductsToMeal;');
     expect(mealsSource).toContain('onAddMany: async ({ entries, mealIndex: addMealIndex = targetMealIndex, mealId: addMealId = targetMealId');
     expect(mealsSource).toContain('const targetMealIndex = resolveMealIndex(baseDay, mi, targetMealId);');
-    expect(mealsSource).toContain('openAddProductModal(actualIdx, multiProductMode, undefined, autoRepeatCount, { mealId: newMealId');
+    expect(mealsSource).toContain('openAddProductModal(');
+    expect(mealsSource).toContain('mealIndex,');
+    expect(mealsSource).toContain('multiProductMode,');
+    expect(mealsSource).toContain('newDayData,');
+    expect(mealsSource).toContain('autoRepeatCount,');
+    expect(mealsSource).toContain('{ mealId: newMealId, startWithBarcodeScanner, barcodeCameraStart }');
     expect(mealsSource).toContain('ensureMealProductReady');
     expect(mealsSource).toContain("source: options?.source || 'day-add-products-to-meal'");
     expect(mealsSource).toContain("source: 'day-inline-add-product-single'");

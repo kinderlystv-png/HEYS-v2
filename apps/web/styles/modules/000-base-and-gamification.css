@@ -4158,7 +4158,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 .game-streak-chip__icon {
   flex-shrink: 0;
-  color: var(--v4-act, #c67139);
+  color: #c67139;
 }
 
 .game-streak-chip__text {
@@ -7144,7 +7144,7 @@ color: var(--v4-sand-ink, #201e1d);
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   text-align: center;
   flex: 1;
 }
@@ -7309,7 +7309,7 @@ color: var(--v4-sand-ink, #201e1d);
 .hdr-client-tab-title-text {
   font-size: 15px;
   font-weight: 700;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   line-height: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -8248,7 +8248,7 @@ body:has(.offline-banner) .wrap {
 
 [data-theme$="dark"] .date-picker-sheet__card {
   border-color: rgba(242, 237, 230, 0.1);
-  background: var(--v4-bg, #141210);
+  background: #141210;
   box-shadow:
     0 22px 54px rgba(0, 0, 0, 0.42),
     0 8px 22px rgba(0, 0, 0, 0.28);
@@ -8821,7 +8821,7 @@ svg.date-picker-icon {
   text-align: center;
   font-size: 15px;
   font-weight: 600;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   text-transform: capitalize;
 }
 
@@ -9097,7 +9097,7 @@ svg.date-picker-icon {
 
 [data-theme$="dark"] .date-picker-sheet .date-picker-streak--v4 {
   background: #3a2620;
-  color: var(--v4-sand-act-text, #e2a468);
+  color: #e2a468;
 }
 
 /* Легенда цветов */
@@ -10439,14 +10439,14 @@ body:has(:is(
   border: 0;
   border-radius: 999px;
   padding: 9px 12px;
-  background: var(--v4-hero, #efe3cf);
+  background: #efe3cf;
   color: var(--v4-ink-1, #201e1d);
   font: 700 11.5px/1 Figtree, system-ui, sans-serif;
   cursor: pointer;
 }
 
 .hdr-settings-sheet__chip.is-on {
-  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
+  box-shadow: inset 0 0 0 2px #c67139;
 }
 
 .hdr-settings-sheet__hint {
@@ -10456,7 +10456,7 @@ body:has(:is(
 
 [data-theme$="dark"] .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__card {
   border-color: rgba(242, 237, 230, 0.1);
-  background: var(--v4-bg, #141210);
+  background: #141210;
   box-shadow:
     0 22px 54px rgba(0, 0, 0, 0.42),
     0 8px 22px rgba(0, 0, 0, 0.28);
@@ -10480,7 +10480,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__row--exit .hdr-settings-sheet__label {
-  color: var(--v4-act-text, #e2a468);
+  color: #e2a468;
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__chip {
@@ -15418,7 +15418,7 @@ body:has(:is(
 
 .profile-section td input:focus {
   outline: none;
-  border-color: var(--v4-sand-act, var(--v4-act, #c67139));
+  border-color: var(--v4-sand-act, #c67139);
   box-shadow: 0 0 0 3px rgba(198, 113, 57, 0.12);
   background: var(--v4-bg, #fff);
 }
@@ -15732,7 +15732,7 @@ body:has(:is(
 
 .profile-push-status__title {
   font-weight: 600;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .profile-push-status__meta {
@@ -15766,7 +15766,7 @@ body:has(:is(
 }
 
 .profile-push-row__label {
-  color: var(--v4-ink, #3f3f46);
+  color: #3f3f46;
   font-size: 14px;
 }
 
@@ -15775,7 +15775,7 @@ body:has(:is(
   border-radius: 8px;
   border: 1px solid rgba(138, 74, 32, 0.16);
   background: var(--v4-bg, #fffaf1);
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .profile-push-input--num {
@@ -15797,7 +15797,7 @@ body:has(:is(
   border-radius: 12px;
   background: var(--v4-sand-hero, #f7efe2);
   border: 1px solid rgba(138, 74, 32, 0.12);
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .profile-ios-install__title {
@@ -15846,7 +15846,7 @@ body:has(:is(
   border-radius: 8px;
   font-size: 13px;
   background: var(--v4-sand-hero, #f7efe2);
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   border: 1px solid rgba(138, 74, 32, 0.1);
 }
 
@@ -15858,7 +15858,7 @@ body:has(:is(
 
 .profile-message--err {
   background: #f7efe2;
-  color: var(--v4-wgt-danger-text, #a1471c);
+  color: #a1471c;
   border-color: rgba(161, 71, 28, 0.18);
 }
 
@@ -15896,7 +15896,7 @@ body:has(:is(
 .profile-subscription-card__title {
   font-size: 17px;
   font-weight: 600;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .profile-subscription-card__days {
@@ -15929,7 +15929,7 @@ body:has(:is(
 .profile-goal-panel__title {
   font-weight: 600;
   font-size: 14px;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .profile-goal-panel__badge {
@@ -15978,7 +15978,7 @@ body:has(:is(
 .profile-goal-metric__val {
   font-size: 18px;
   font-weight: 700;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .profile-goal-metric__lbl {
@@ -15996,7 +15996,7 @@ body:has(:is(
 }
 
 .profile-goal-warn--high {
-  color: var(--v4-wgt-danger-text, #a1471c);
+  color: #a1471c;
 }
 
 .profile-hr-zone {
@@ -16127,7 +16127,7 @@ body:has(:is(
 }
 
 .profile-accordion .sound-settings-card__label--strong {
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   font-weight: 500;
 }
 
@@ -16163,7 +16163,7 @@ body:has(:is(
 
 .profile-goal-progress__label {
   font-weight: 500;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .profile-goal-progress__status {
@@ -16207,7 +16207,7 @@ body:has(:is(
 .profile-advice-stats__count {
   font-weight: 600;
   font-size: 18px;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .profile-advice-stats__meta {
@@ -16235,7 +16235,7 @@ body:has(:is(
 .profile-weight-diff--up {
   margin-left: 8px;
   font-size: 13px;
-  color: var(--v4-wgt-danger-text, #a1471c);
+  color: #a1471c;
 }
 
 .profile-consent-row {
@@ -16266,7 +16266,7 @@ body:has(:is(
 [data-theme$="dark"] .profile-section[class*="tone-"] {
   --profile-tone-wash: rgba(207, 129, 68, 0.12);
   --profile-tone-swatch: rgba(207, 129, 68, 0.22);
-  --profile-tone-ink: var(--v4-sand-act, #cf8144);
+  --profile-tone-ink: #cf8144;
   --profile-tone-line: rgba(226, 164, 104, 0.22);
 }
 
@@ -16342,7 +16342,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .profile-section td input:focus {
-  border-color: var(--v4-sand-act, #e2a468);
+  border-color: #e2a468;
   box-shadow: 0 0 0 3px rgba(226, 164, 104, 0.14);
   background: rgba(255, 255, 255, 0.12);
 }

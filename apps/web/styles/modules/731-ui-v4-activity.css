@@ -193,7 +193,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-steps__fill {
   height: 5px;
   border-radius: 999px;
-  background: var(--v4-ok-fill, #7a8a5e);
+  background: #7a8a5e;
 }
 
 .activity-v4-steps__slider {

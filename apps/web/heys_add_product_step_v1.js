@@ -5478,9 +5478,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     const getHarmStripeColor = (harmVal) => {
       const h = Number(harmVal);
-      if (!Number.isFinite(h)) return 'var(--v4-ok-fill, #7a8a5e)';
-      if (h <= 4) return 'var(--v4-ok-fill, #7a8a5e)';
-      if (h <= 6) return 'var(--v4-warn-soft, #d99a63)';
+      if (!Number.isFinite(h)) return '#7a8a5e';
+      if (h <= 4) return '#7a8a5e';
+      if (h <= 6) return '#d99a63';
       return 'var(--v4-sand-act, #c67139)';
     };
 

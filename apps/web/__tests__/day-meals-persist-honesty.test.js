@@ -15,13 +15,14 @@ describe('day/_meals.js — честность после записи в localS
     expect(source).toContain('return lsSet(key, safeDayData);');
   });
 
-  it('тост «Приём создан» показывается только при успешной записи', () => {
+  it('не показывает ложный успех при провале записи приёма (fork-модалка вместо toast)', () => {
     const source = readDayMealsSource();
     const anchor = "const mealPersisted = persistDayData(newDayData, 'create_meal_mobile_flow');";
     const mealCreateBlock = source.slice(source.indexOf(anchor), source.indexOf(anchor) + 700);
     expect(mealCreateBlock).toContain('const mealPersisted = persistDayData(');
     expect(mealCreateBlock).toContain('if (mealPersisted) {');
-    expect(mealCreateBlock).toContain("HEYS.Toast?.success('Приём создан');");
+    expect(mealCreateBlock).not.toContain("HEYS.Toast?.success('Приём создан');");
+    expect(mealCreateBlock).toContain('toast не нужен');
     expect(mealCreateBlock).toContain("HEYS.Toast?.error('Не удалось сохранить приём. Попробуйте ещё раз.');");
   });
 

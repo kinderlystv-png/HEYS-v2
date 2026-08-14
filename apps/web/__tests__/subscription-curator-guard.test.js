@@ -262,7 +262,7 @@ describe('HEYS.Subscription curator guard', () => {
   it('keeps writes fail-closed without showing a false trial-ended banner for unknown status', () => {
     const consumerSource = `${dayHandlersSource}\n${mealsSource}`;
 
-    expect(consumerSource.match(/if \(!HEYS\.Paywall\?\.canWriteSync\?\.\(\)\)/g)).toHaveLength(9);
+    expect(consumerSource.match(/if \(!HEYS\.Paywall\?\.canWriteSync\?\.\(\)\)/g)).toHaveLength(10);
     expect(consumerSource).not.toContain('if (HEYS.Paywall && !HEYS.Paywall.canWriteSync())');
     expect(dayTabRenderSource).toContain(
       "const isReadOnly = normalizedSubscriptionStatus === 'read_only'",

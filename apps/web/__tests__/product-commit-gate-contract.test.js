@@ -54,7 +54,7 @@ describe('personal product commit gate contract', () => {
     expect(addProduct).toContain('BarcodeScannerModal');
     expect(addProduct).toContain('aps-create-barcode-field');
     expect(addProduct).toContain(
-      'const productWithBarcode = effectiveBarcode ? mergeProductBarcode(parsedPreview, effectiveBarcode) : parsedPreview;',
+      'const productWithBarcode = effectiveBarcode ? mergeProductBarcode(sourceProduct, effectiveBarcode) : sourceProduct;',
     );
     expect(addProduct).toContain('newProduct: preparedProduct');
     expect(addProduct).toContain('selectedProduct: preparedProduct');
@@ -77,9 +77,10 @@ describe('personal product commit gate contract', () => {
     expect(addProduct).toContain('const shouldDisplayProductBrand = (product) =>');
     expect(addProduct).toContain('const getProductSearchText = (product, normalizeFn) =>');
     expect(addProduct).toContain('const [brandInput, setBrandInput]');
-    expect(addProduct).toContain('aps-create-brand-field');
+    expect(addProduct).toContain("htmlFor: 'aps-create-brand'");
+    expect(addProduct).toContain("id: 'aps-create-brand'");
     expect(addProduct).toContain(
-      "React.createElement('label', { className: 'aps-create-brand-label' }, 'Бренд')",
+      "React.createElement('label', { htmlFor: 'aps-create-brand' }, 'Бренд')",
     );
     expect(addProduct).toContain('brand: normalizeProductBrand(brandInput) || null');
     expect(addProduct).toContain('brand_fingerprint: brandFingerprint || null');

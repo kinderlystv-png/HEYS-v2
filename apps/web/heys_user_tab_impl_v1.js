@@ -1533,7 +1533,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             ),
                             pinMessage && React.createElement('div', {
                                 className: 'muted',
-                                style: { marginTop: '6px', color: pinStatus === 'error' ? 'var(--v4-wgt-danger-text, #a1471c)' : undefined }
+                                style: { marginTop: '6px', color: pinStatus === 'error' ? '#a1471c' : undefined }
                             }, pinMessage)
                         )
                     )
@@ -2899,7 +2899,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                             fontSize: 12, padding: '4px 10px',
                                             ...(isRequired ? {
                                                 background: '#f7efe2',
-                                                color: 'var(--v4-wgt-danger-text, #a1471c)',
+                                                color: '#a1471c',
                                                 border: '1px solid rgba(161, 71, 28, 0.22)'
                                             } : {})
                                         }
