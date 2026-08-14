@@ -11,7 +11,7 @@
 | **C**    | [lawyer-C-consents-and-screens.md](./lawyer-C-consents-and-screens.md) | Тексты + экраны (вход/ПЭП, опц. функции); [`lawyer-C-texts/`](./lawyer-C-texts/) |
 | **D**    | [lawyer-D-consent-signing.md](./lawyer-D-consent-signing.md)           | Механика подписания согласия                                                     |
 | **E**    | [lawyer-E-access-audit.md](./lawyer-E-access-audit.md)                 | Разграничение прав и журнал обращений — **нет**                                  |
-| **F**    | [lawyer-F-backups.md](./lawyer-F-backups.md)                           | Резервные копии: 14 дней PG + 365 дней суточные снимки                           |
+| **F**    | [lawyer-F-backups.md](./lawyer-F-backups.md)                           | Резервные копии: PG 14 дней + суточные снимки 365 дней; фото/голос не бэкапятся  |
 | **G**    | [lawyer-G-rkn-notification.md](./lawyer-G-rkn-notification.md)         | Уведомление ст. 22 / 26-22-005319; [`lawyer-G-rkn/`](./lawyer-G-rkn/)            |
 | **H**    | [lawyer-H-ip-requisites.md](./lawyer-H-ip-requisites.md)               | Реквизиты ИП                                                                     |
 | **—**    | [lawyer-cycle-device-check.md](./lawyer-cycle-device-check.md)         | **Новое:** четыре условия по циклу + смета device-only                           |

@@ -8,8 +8,8 @@ Storage.
 1. Читает список клиентов из таблицы `clients`.
 2. Для каждого клиента в одной `REPEATABLE READ` транзакции снимает
    `client_kv_store` и account tables без PIN/session hashes.
-3. Включает KV `v` (JSONB), `v_encrypted` (base64), `key_version`, `updated_at`
-   и `accountData`.
+3. Включает KV `v` (JSONB) для незашифрованных ключей либо только `v_encrypted`
+   (base64) + `key_version` для encrypted; плюс `updated_at` и `accountData`.
 4. Сериализует → SHA-256 checksum → gzip (level 9) → загружает в S3.
 5. Ротация: удаляет объекты старше 365 дней.
 6. Telegram-алерт при ошибках (без ПДн), еженедельный success-отчёт по
@@ -46,7 +46,6 @@ s3://heys-backups/client-daily/2026-03-29/4545ee50-4f5f-4fc0-b862-7ca45fa1bafc.j
       "updated_at": "2026-03-28T18:00:00.000Z"
     },
     "heys_dayv2_2026-03-29": {
-      "v": { "meals": [...], ... },
       "v_encrypted_b64": "base64...",
       "key_version": 1,
       "updated_at": "2026-03-29T20:30:00.000Z"
@@ -174,10 +173,9 @@ echo "Computed: $COMPUTED"
 
 Restore-скрипт реализован в `restore-client-backup.js`: сначала запускайте его с
 `--dry-run`, затем без флага для live restore. Поддерживаются `--keys`,
-`--account-only` и `--kv-only`. Полный KV + account restore выполняется одной
-транзакцией; ошибка любого account write откатывает KV writes. Явные
-single-scope режимы используют отдельную транзакцию только для выбранной
-области.
+`--account-only` и `--kv-only`. Полный restore пишет `clients` (и остальные
+account-таблицы) до KV в одной транзакции, чтобы не упереться в FK удалённого
+клиента.
 
 ## Monitoring
 

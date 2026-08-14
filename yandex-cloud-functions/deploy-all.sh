@@ -492,6 +492,13 @@ build_env_flags() {
         env_flags+=" --environment LOCKBOX_S3_SECRET_ID=$LOCKBOX_S3_ID"
     fi
 
+    # Photo/voice are not backed up. Orphan delete must actually run.
+    # Code default remains dry-run if this env is omitted (fail-safe).
+    if [[ "$func_name" == "heys-cron-photo-cleanup" ]]; then
+        env_flags+=" --environment DRY_RUN=0"
+        env_flags+=" --environment S3_PHOTOS_BUCKET=${S3_PHOTOS_BUCKET:-heys-photos}"
+    fi
+
     # SpeechKit credentials приходят только из App Lockbox. В env остаются
     # только non-secret runtime controls/pricing.
     if [[ "$func_name" == "heys-cron-speechkit-transcribe" ]]; then

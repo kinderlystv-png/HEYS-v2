@@ -1,63 +1,79 @@
 # Backup retention policy — HEYS
 
-**Действует с:** 2026-05-20 **Версия:** 1.1 (2026-05-22)
+**Действует с:** 2026-05-20 **Версия:** 1.2 (2026-08-15)
 
-## Где хранятся бэкапы
+Два слоя резервного копирования. Их нельзя описывать одной цифрой «14 дней на
+всё». Живая сверка 2026-08-15: кластер `heys-production`, функция
+`heys-client-daily-backup`, бакеты `heys-backups` / `heys-photos`.
 
-База данных HEYS (PostgreSQL) живёт в управляемом сервисе **Yandex.Cloud Managed
-Service for PostgreSQL**, регион `ru-central1-a`. Бэкапы создаются автоматически
-на стороне Yandex.Cloud:
+## Слой 1. База PostgreSQL (управляемый сервис Yandex)
 
-- **Тип:** инкрементальные снапшоты + полные дампы.
+База HEYS живёт в **Yandex.Cloud Managed Service for PostgreSQL**, регион
+`ru-central1-a`, кластер `heys-production`.
+
+- **Тип:** автоматические снапшоты сервиса (BASE + INCREMENTAL) + PITR.
+- **Окно:** около 22:00 UTC (`backup_window_start`).
 - **Местоположение:** Yandex Object Storage (Россия).
-- **Шифрование:** AES-256 (server-side, Yandex KMS).
-- **Retention period:** **14 дней** (текущая настройка кластера
-  `heys-production`, проверяется через
+- **Шифрование:** AES-256 на стороне сервиса.
+- **Retention:** **14 дней** (`backup_retain_period_days`, проверка:
   `yc managed-postgresql cluster get c9qk0squejja8jast509`).
-- **Point-in-time recovery (PITR):** доступен в пределах retention окна.
+- **Состав:** вся база, включая чат (`client_messages`), согласия, платежи,
+  дневник в `client_kv_store`.
+
+## Слой 2. Суточные снимки клиента (`heys-client-daily-backup`)
+
+- **Частота:** ежедневно, timer `heys-client-daily-backup-timer` (01:00 UTC).
+- **Куда:** бакет `heys-backups`, префикс
+  `client-daily/YYYY-MM-DD/<clientId>.json.gz`.
+- **Retention:** **365 дней** (`RETENTION_DAYS` в коде функции, по умолчанию).
+- **Состав:** `client_kv_store` клиента (дневник, профиль) + часть
+  account-таблиц (`clients`, `consents`, `subscriptions`, `trial_queue`,
+  `payments`) без `pin_hash` / session secrets.
+- **Не входит:** фото, голосовые файлы, таблица чата `client_messages`.
+
+## Что не копируется
+
+Фото еды и голосовые сообщения хранятся только в бакете `heys-photos`.
+Отдельного резервного копирования этого бакета нет (решение оператора
+2026-08-15): источник правды по питанию — дневник, не файл. Versioning бакета
+выключен. После удаления аккаунта orphan-объекты должен убирать
+`heys-cron-photo-cleanup` (grace 7 дней; задание активно; `DRY_RUN=0` задаётся
+при деплое через `deploy-all.sh`).
 
 ## Что происходит при удалении аккаунта
 
 При вызове `delete_my_account()`:
 
-1. **В active БД:** запись клиента и все связанные данные удаляются немедленно
+1. **В active БД:** запись клиента и связанные данные удаляются сразу
    (cascade-delete для `client_kv_store`, `client_sessions`, `subscriptions`,
-   `trial_queue`). Записи `consents` обнуляются по PII (IP/UA) для сохранения
-   audit-trail.
+   `trial_queue`). Записи `consents` обнуляются по PII (IP/UA) для audit-trail.
 2. **В Telegram/уведомлениях:** payload содержит только UUID-prefix, не PII.
-3. **В `data_access_audit_log`:** регистрируется событие `account_deleted` с
-   UUID клиента (без имени/телефона).
-4. **В `leads`:** запись клиента (если была конверсия из лида) anonymized через
-   trigger `leads_anonymize_on_client_delete` —
-   `name`/`phone`/`email`/`ip_address`/`user_agent` обнуляются на `[deleted]`
-   или `NULL`. Marketing-аналитика (UTM-метки, messenger, status) сохраняется.
+3. **В `data_access_audit_log`:** событие `account_deleted` с UUID клиента (без
+   имени/телефона).
+4. **В `leads`:** контактные поля обезличиваются триггером
+   `leads_anonymize_on_client_delete`.
 
-## Что происходит с данными в бэкапах
+После удаления:
 
-После delete_my_account:
-
-- **В Yandex.Cloud Postgres backups:** запись остаётся в течение retention
-  period (14 дней). После 14 дней — окончательно перезаписана.
-
-**Важно:** мы не можем «принудительно» удалить данные из истёкших бэкапов на
-стороне Yandex — это часть управляемого сервиса. Но через 14 дней максимум
-данные физически отсутствуют во всех слоях.
+- **PostgreSQL backups:** данные клиента могут вернуться при restore снимка
+  младше **14 дней**. Потом слой перезаписывается. Вырезать одного человека из
+  уже сделанного снимка Yandex Managed PostgreSQL нельзя.
+- **Суточные снимки:** объект в `heys-backups` может оставаться до **365 дней**,
+  пока ротация его не сотрёт. Автоматического «не восстанавливать удалённых»
+  нет: restore — ручной скрипт по `client_id` и дате.
+- **Фото/голос в `heys-photos`:** не в бэкапе; должны уйти cleanup-заданием
+  после grace.
 
 ## Согласно 152-ФЗ ст. 21
 
-«Оператор обязан прекратить обработку и уничтожить персональные данные» в
-течение 30 дней после требования субъекта.
+Срок уничтожения после требования субъекта — до 30 дней.
 
-**HEYS соответствует:**
-
-- Active БД: удаление **немедленное** (≤ 1 секунды).
-- Backups: уничтожение **в течение 14 дней** (естественный retention Yandex).
-- Уведомления (Telegram, push payloads): не содержат PII.
-
-## Согласно GDPR Art. 17 (Right to erasure)
-
-«Including backups» — да, бэкапы естественным retention'ом перезаписываются
-через 14 дней. Активные слои чистятся сразу.
+- Active БД: удаление немедленное.
+- Слой PostgreSQL: естественный retention **14 дней** (внутри 30 дней).
+- Слой суточных снимков: **365 дней** — дольше 30 дней. Это открытый правовой
+  зазор относительно желаемой политики; смена `RETENTION_DAYS` — отдельное
+  решение оператора, не маскируется формулировкой «14 дней на всё».
+- Уведомления (Telegram, push): не содержат PII.
 
 ## Контакты для запросов
 

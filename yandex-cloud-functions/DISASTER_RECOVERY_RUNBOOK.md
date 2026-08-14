@@ -276,9 +276,13 @@ aws s3 cp s3://heys-backups/client-daily/<YYYY-MM-DD>/<clientId>.json.gz /tmp/ \
 gunzip /tmp/<clientId>.json.gz
 cat /tmp/<clientId>.json | jq .
 
-# 4. Restore via existing script (see heys-client-daily-backup/restore-client-backup.js — TODO: пересоздать если был удалён)
+# 4. Restore via existing script
 node yandex-cloud-functions/heys-client-daily-backup/restore-client-backup.js \
-  --client-id=<UUID> --snapshot=/tmp/<clientId>.json
+  --client-id <UUID> --date <YYYY-MM-DD> --dry-run
+
+# live (after dry-run looks right):
+node yandex-cloud-functions/heys-client-daily-backup/restore-client-backup.js \
+  --client-id <UUID> --date <YYYY-MM-DD>
 
 # 4. Verify restoration
 psql -h <host> -p 6432 -U heys_admin -d heys_production -c "

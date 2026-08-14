@@ -1,10 +1,10 @@
 # Отчёты, пользовательский backup и серверное восстановление
 
-> **Статус:** backup/restore consistency проверена 2026-07-18; reports —
-> частично<br> **Охват:** browser export/import v3, local snapshots, server
-> daily snapshot, admin restore и границы с отчётами<br> **Не подтверждено:**
-> расписание и успешность production backup, bucket policy, актуальные RPO/RTO и
-> полный контракт каждого отчёта
+> **Статус:** backup/restore consistency проверена 2026-07-18; production chain
+> сверена 2026-08-15; reports — частично<br> **Охват:** browser export/import
+> v3, local snapshots, server daily snapshot, admin restore и границы с
+> отчётами<br> **Не подтверждено:** restore drill, RTO, KMS/SSE policy бакета,
+> photo-bucket replica, полный контракт каждого отчёта
 
 ## Три разных механизма
 
@@ -111,11 +111,14 @@ transaction.
 2. Export куратора не включает ключи другого клиента.
 3. Overlay и days восстанавливаются их специализированными путями.
 4. Частичный restore не должен зеркалиться в cloud до завершения локальной фазы.
-5. Server snapshot сохраняет encrypted representation и key version.
+5. Server snapshot сохраняет encrypted representation и key version и не кладёт
+   plaintext `v` рядом с `v_encrypted`.
 6. Restore обязан сверить target client с snapshot client.
-7. Dry-run ничего не изменяет; полный live restore атомарен между KV и account.
+7. Dry-run ничего не изменяет; полный live restore атомарен: сначала account
+   (`clients` до KV), затем KV.
 8. Отчёты переиспользуют domain calculations, а не становятся новым source of
    truth.
+9. Фото и голос в `heys-photos` не входят в backup-контур.
 
 ## Подтверждённые слабые места и пробелы
 
@@ -124,9 +127,22 @@ transaction.
 - Browser export использует allow-by-default. Это уменьшает риск пропустить
   новую фичу, но повышает цену корректности deny-list и финального secret leak
   probe.
-- Production trigger, Object Storage retention и restore drill не проверялись в
-  этом проходе; repository code — недостаточное доказательство operational
-  health.
+- Production trigger `heys-client-daily-backup-timer` ACTIVE (`0 1 * * ? *`);
+  2026-08-14 в `s3://heys-backups/client-daily/2026-08-14/` лежит 16 объектов
+  (проверено 2026-08-15). Restore drill по-прежнему не выполнялся.
+- В префиксах daily backup есть исторический разрыв `2026-04-14`… `2026-05-10`
+  (совпадает с комментарием `backup_chain_gap` про accidentally deleted
+  version). Цепочка с `2026-05-11` по `2026-08-14` непрерывна.
+- `heys-photos` и `heys-backups`: versioning disabled; у photos нет отдельного
+  backup-слоя.
+- Admin restore — merge, не replace: ключи новее снимка не удаляются. Полный
+  restore пишет `clients` до KV. Чат и медиа в daily snapshot по-прежнему не
+  входят.
+- `docs/legal/backup-retention.md` с 15.08 описывает два слоя (14 / 365) и явно
+  говорит, что фото/голос не бэкапятся. Срок daily 365 дней vs 30 дней 152-ФЗ
+  остаётся открытым правовым зазором, не маскируется.
+- Photo cleanup: `DRY_RUN=0` задаётся в `deploy-all.sh`. До выкладки этой версии
+  функции orphan delete на проде ещё dry-run.
 - Полный аудит отчётных формул не выполнен; карта помечает reports как partial.
 
 ## Facts Table
@@ -138,7 +154,11 @@ transaction.
 | D3  | V3 restore отделяет priority, overlay, days и remaining KV              | `rg -n -e 'async function restoreV3' -e 'PRIORITY_KEYS' -e 'applyOverlay' -e 'Object.keys\(data.days\)' apps/web/heys_app_backup_import_v1.js`                      | проверено 2026-07-17            |
 | D4  | Server snapshot читает KV и account в одной repeatable-read transaction | `rg -n -e 'snapshotClientBundle' -e 'BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ' yandex-cloud-functions/heys-client-daily-backup/index.js`                   | исправлено и покрыто 2026-07-18 |
 | D5  | Server snapshot schema v2 содержит accountData и checksum               | `rg -n -e 'schemaVersion: 2' -e 'accountData' -e 'snapshot.checksum' yandex-cloud-functions/heys-client-daily-backup/index.js`                                      | проверено 2026-07-18            |
-| D6  | Полный restore использует одну transaction для KV и account             | `rg -n -e 'executeFullRestore' -e 'withTransaction' yandex-cloud-functions/heys-client-daily-backup/restore-client-backup.js`                                       | исправлено и покрыто 2026-07-18 |
+| D6  | Полный restore пишет account (`clients`) до KV в одной transaction      | `rg -n -e 'executeFullRestore' -e 'restoreAccountRows' -e 'restoreKvRows' yandex-cloud-functions/heys-client-daily-backup/restore-client-backup.js`                 | исправлено 2026-08-15           |
 | D7  | KV restore сохраняет `v_encrypted`, `key_version`, `updated_at`         | `rg -n -e 'v_encrypted = EXCLUDED' -e 'key_version = EXCLUDED' -e 'updated_at = EXCLUDED' yandex-cloud-functions/heys-client-daily-backup/restore-client-backup.js` | проверено 2026-07-18            |
 | D8  | Reports entrypoint делегирует `ReportsTabImpl`                          | `rg -n 'ReportsTabImpl.*createReportsTab' apps/web/heys_reports_v12.js`                                                                                             | проверено 2026-07-17            |
 | D9  | Concurrent snapshot и fault-after-KV rollback защищены регрессиями      | `node --test yandex-cloud-functions/heys-client-daily-backup/__tests__/backup-consistency.test.cjs`                                                                 | 3/3 пройдено 2026-07-18         |
+| D10 | Production daily backup trigger активен и пишет объекты                 | `yc serverless trigger list --folder-id b1gnv1a4q8i6de6atl6n`; `yc storage s3api list-objects --bucket heys-backups --prefix client-daily/2026-08-14/`              | 16 объектов, 2026-08-14T01:01Z  |
+| D11 | Managed PG backup 14 дней, окно 22:00 UTC, живые AUTOMATED копии        | `yc managed-postgresql cluster get c9qk0squejja8jast509`; `yc managed-postgresql backup list --folder-id b1gnv1a4q8i6de6atl6n`                                      | retain=14; 14.08 CREATING       |
+| D12 | Photo cleanup на проде без `DRY_RUN=0`                                  | `yc serverless function version list --function-name heys-cron-photo-cleanup --limit 1`                                                                             | env не содержит DRY_RUN=0       |
+| D13 | Encrypted KV в daily snapshot без plaintext `v`                         | `node --test yandex-cloud-functions/heys-client-daily-backup/__tests__/backup-consistency.test.cjs`                                                                 | добавлено 2026-08-15            |
