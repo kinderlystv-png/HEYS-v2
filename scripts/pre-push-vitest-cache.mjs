@@ -282,12 +282,16 @@ function getMissingVitestRuntimeMessage() {
 function createCleanRefWorktree(ref) {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'heys-prepush-'));
   const checkoutDir = path.join(tempRoot, 'checkout');
-  const add = spawnSync('git', ['worktree', 'add', '--detach', checkoutDir, ref], {
-    cwd: ROOT_DIR,
-    stdio: 'pipe',
-    encoding: 'utf8',
-    shell: false,
-  });
+  const add = spawnSync(
+    'git',
+    ['-c', 'core.autocrlf=false', 'worktree', 'add', '--detach', checkoutDir, ref],
+    {
+      cwd: ROOT_DIR,
+      stdio: 'pipe',
+      encoding: 'utf8',
+      shell: false,
+    },
+  );
   if (add.status !== 0) {
     fs.rmSync(tempRoot, { recursive: true, force: true });
     return { ok: false, error: String(add.stderr || add.stdout || '').trim() };
@@ -315,6 +319,20 @@ function attachWorkspaceRuntime(
 
   try {
     symlinkSync(runtimeNodeModules, checkoutNodeModules, platform === 'win32' ? 'junction' : 'dir');
+    const runtimeWebNodeModules = path.join(
+      path.resolve(runtimeNodeModules, '..'),
+      'apps',
+      'web',
+      'node_modules',
+    );
+    const checkoutWebNodeModules = path.join(checkoutDir, 'apps', 'web', 'node_modules');
+    if (existsSync(runtimeWebNodeModules) && !existsSync(checkoutWebNodeModules)) {
+      symlinkSync(
+        runtimeWebNodeModules,
+        checkoutWebNodeModules,
+        platform === 'win32' ? 'junction' : 'dir',
+      );
+    }
     return { ok: true, runtimeNodeModules, checkoutNodeModules, created: true };
   } catch (error) {
     return {
