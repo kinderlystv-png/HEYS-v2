@@ -52,9 +52,9 @@ describe('advice v4 panels from canvas', () => {
     expect(adviceUiSource).toContain("renderAdviceV4Icon(React, 'close')");
     expect(adviceUiSource).toMatch(/Технические детали',\s*renderAdviceV4Icon\(React,\s*'chevron-right'\)/);
     expect(cssSource).toMatch(/\.advice-v4-detail-overlay[\s\S]*?background:\s*var\(--v4-bg,\s*#fffaf1\)/);
-    expect(cssSource).toMatch(/\.advice-v4-detail__close[\s\S]*?background:\s*var\(--v4-surface,\s*#f7efe2\)/);
-    expect(cssSource).toMatch(/\.advice-v4-detail__science-box[\s\S]*?background:\s*var\(--v4-surface,\s*#f7efe2\)/);
-    expect(cssSource).toMatch(/\.advice-v4-detail__hero[\s\S]*?background:\s*var\(--v4-hero,\s*#efe3cf\)/);
+    expect(cssSource).toMatch(/\.advice-v4-detail__close[\s\S]*?background:\s*#f7efe2/);
+    expect(cssSource).toMatch(/\.advice-v4-detail__science-box[\s\S]*?background:\s*#f7efe2/);
+    expect(cssSource).toMatch(/\.advice-v4-detail__hero[\s\S]*?background:\s*#efe3cf/);
   });
 
   it('exposes canvas overlays: disclaimer, settings, toast, empty, science', () => {
