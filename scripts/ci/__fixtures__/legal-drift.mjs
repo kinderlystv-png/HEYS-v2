@@ -1,7 +1,6 @@
 export const CURRENT_VERSIONS = Object.freeze({
-  user_agreement: '1.7',
-  personal_data: '1.7',
-  health_data: '1.5',
+  user_agreement: '1.11',
+  personal_data: '1.0',
 });
 
 const APP_ORIGIN = 'https://app.example.test';
@@ -10,6 +9,10 @@ const BOOT_FILE = 'boot-core.bundle.aaaaaaaaaaaa.js';
 
 function page(version) {
   return `<html><body><article><p>Версия: ${version} · Дата вступления в силу</p></article></body></html>`;
+}
+
+function healthWithdrawalPage() {
+  return '<html><body><p>Документ изъят из обязательного набора. Снимок версии 1.5 в архиве.</p></body></html>';
 }
 
 export function createLegalDriftFixture({
@@ -22,11 +25,11 @@ export function createLegalDriftFixture({
     [`${APP_ORIGIN}/`, `<script src="${BOOT_FILE}"></script>`],
     [
       `${APP_ORIGIN}/${BOOT_FILE}`,
-      `const versions={user_agreement:"${bundleVersions.user_agreement}",personal_data:"${bundleVersions.personal_data}",health_data:"${bundleVersions.health_data}"};`,
+      `const versions={user_agreement:"${bundleVersions.user_agreement}",personal_data:"${bundleVersions.personal_data}"};`,
     ],
     [`${LANDING_ORIGIN}/legal/user-agreement/`, page(registryVersions.user_agreement)],
-    [`${LANDING_ORIGIN}/legal/privacy-policy/`, page(registryVersions.personal_data)],
-    [`${LANDING_ORIGIN}/legal/health-data-consent/`, page(registryVersions.health_data)],
+    [`${LANDING_ORIGIN}/legal/personal-data-consent/`, page(registryVersions.personal_data)],
+    [`${LANDING_ORIGIN}/legal/health-data-consent/`, healthWithdrawalPage()],
   ]);
 
   return {

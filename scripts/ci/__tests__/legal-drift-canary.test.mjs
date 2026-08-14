@@ -20,18 +20,18 @@ test('registry and live bundle version skew fails with a concise diff', async ()
 
   await assert.rejects(
     runLegalDriftCanary({ ...fixture, attempts: 1 }),
-    /personal_data: bundle=1\.7, registry=1\.8/,
+    /personal_data: bundle=1\.0, registry=1\.8/,
   );
 });
 
-test('stale CDN boot-core 1.6/1.6/1.5 is blocked', async () => {
+test('stale CDN boot-core 1.6/1.6 is blocked', async () => {
   const fixture = createLegalDriftFixture({
-    bundleVersions: { user_agreement: '1.6', personal_data: '1.6', health_data: '1.5' },
+    bundleVersions: { user_agreement: '1.6', personal_data: '1.6' },
   });
 
   await assert.rejects(runLegalDriftCanary({ ...fixture, attempts: 1 }), (error) => {
-    assert.match(error.message, /user_agreement: bundle=1\.6, registry=1\.7/);
-    assert.match(error.message, /personal_data: bundle=1\.6, registry=1\.7/);
+    assert.match(error.message, /user_agreement: bundle=1\.6, registry=1\.11/);
+    assert.match(error.message, /personal_data: bundle=1\.6, registry=1\.0/);
     return true;
   });
 });
