@@ -398,10 +398,12 @@ Self.
   состояния (неверный код, повтор не совпал, отказ ПЭП, слот ошибки) _— до
   15.08_
 - ⬜ Отрисовать все экраны чек-ина (первый и обычный) _— до 15.08_
-- ⬜ Отрисовать плашки PWA установки: Android/Desktop (`beforeinstallprompt`,
-  «Установить HEYS») и iOS Safari (шаги Share → «На экран Домой»). Сейчас живут
-  в `heys_app_overlays_v1.js`, показываются после чек-ина, канваса нет _— до
-  15.08_
+- ✅ Отрисовать и внедрить плашки PWA установки: Android/Desktop
+  (`beforeinstallprompt`, «Установить HEYS» + «Позже») и iOS Safari (шторка,
+  шаги Share → «На экран Домой», «Понял»). Канвас
+  `canvases/pwa-install-banner.canvas.tsx`; код — `heys_app_overlays_v1.js`,
+  `500-pwa-and-offline.css`; проверка —
+  `apps/web/__tests__/pwa-install-banner-v4-structure.test.js` _— 2026-08-14_
 - ⬜ Выгрузить канвасы в `docs/ui/handoff-v4/canvas/` поверх, без суффиксов
   `_v2` _— до 15.08_
 
