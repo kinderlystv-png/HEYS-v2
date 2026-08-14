@@ -7757,24 +7757,24 @@ body:has(.offline-banner) .wrap {
 .date-picker--v4 .date-picker-trigger--today .date-picker-main--today {
   font-size: 12.5px;
   font-weight: 700;
-  color: var(--v4-sand-ink, #201e1d);
+  color: var(--v4-ink, #201e1d);
 }
 
 .date-picker--v4 .date-picker-trigger--not-today {
-  background: var(--v4-sand-tint, #f3e0d2);
+  background: var(--v4-accent-bg, #f3e0d2);
 }
 
 .date-picker--v4 .date-picker-trigger--not-today .date-picker-main--past {
   font-size: 12.5px;
   font-weight: 700;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .date-picker--v4 .date-picker-sub--relative {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .date-picker--v4 .date-picker-text {
