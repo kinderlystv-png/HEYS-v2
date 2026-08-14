@@ -659,6 +659,9 @@
         return { longSyncLockMs: DEFAULT_LOCK_MS, slowInternetHintMs: DEFAULT_HINT_MS };
     };
 
+    /** Badge / spinner / галочка — только при 2+ изменениях в очереди (hot sync с 1 ключом тихий). */
+    const SYNC_BADGE_MIN_PENDING = 2;
+
     function useCloudSyncStatus() {
         const React = window.React;
         const { useState, useRef, useCallback, useEffect } = React;
@@ -713,6 +716,8 @@
         const cloudSyncTimeoutRef = useRef(null);
         const queueDrainedFallbackRef = useRef(null);
         const pendingChangesRef = useRef(false);
+        /** Пик очереди за текущий цикл синка — для quiet-finish без галочки при 1 ключе. */
+        const syncPeakPendingRef = useRef(0);
         const syncingStartRef = useRef(null);
         const syncedTimeoutRef = useRef(null);
         const syncingDelayTimeoutRef = useRef(null);
@@ -960,15 +965,52 @@
             setShowPendingSyncBanner(false);
         }, []);
 
+        const shouldPromoteSyncBadge = useCallback((pending) => {
+            return pending >= SYNC_BADGE_MIN_PENDING;
+        }, []);
+
+        const resolveBadgePending = useCallback((pendingHint) => {
+            if (typeof pendingHint === 'number' && Number.isFinite(pendingHint)) {
+                return Math.max(pendingHint, pendingCountRef.current, syncPeakPendingRef.current);
+            }
+            return Math.max(getRuntimePendingCount(), pendingCountRef.current, syncPeakPendingRef.current);
+        }, [getRuntimePendingCount]);
+
+        const shouldShowPromotedSyncUi = useCallback((pendingHint) => {
+            return shouldPromoteSyncBadge(resolveBadgePending(pendingHint)) || shouldUseBlockingSyncOverlay();
+        }, [resolveBadgePending, shouldPromoteSyncBadge, shouldUseBlockingSyncOverlay]);
+
+        const demoteCloudStatusToIdle = useCallback(() => {
+            syncingStartRef.current = null;
+            syncPeakPendingRef.current = 0;
+            lastIdleAtRef.current = Date.now();
+            if (cloudStatusRef.current === 'queued' || cloudStatusRef.current === 'syncing' || cloudStatusRef.current === 'synced') {
+                setCloudStatus('idle');
+            }
+        }, []);
+
+        const setPromotedCloudStatus = useCallback((status, pendingHint) => {
+            if (status === 'idle' || status === 'offline' || status === 'error' || status === 'session') {
+                setCloudStatus(status);
+                return true;
+            }
+            if (!shouldShowPromotedSyncUi(pendingHint)) {
+                demoteCloudStatusToIdle();
+                return false;
+            }
+            setCloudStatus(status);
+            return true;
+        }, [demoteCloudStatusToIdle, shouldShowPromotedSyncUi]);
+
         const enterBackgroundPendingSync = useCallback(() => {
             longSyncFallbackActiveRef.current = true;
             clearSyncLockOverlay();
             clearSlowInternetHint();
             setShowPendingSyncBanner(true);
             if (navigator.onLine) {
-                setCloudStatus('queued');
+                setPromotedCloudStatus('queued');
             }
-        }, [clearSlowInternetHint, clearSyncLockOverlay]);
+        }, [clearSlowInternetHint, clearSyncLockOverlay, setPromotedCloudStatus]);
 
         const armSyncLockOverlay = useCallback(() => {
             if (syncLockTimeoutRef.current || showSyncLockOverlay) return;
@@ -1048,9 +1090,17 @@
                 return;
             }
 
+            const runtimePending = getRuntimePendingCount();
+            syncPeakPendingRef.current = Math.max(syncPeakPendingRef.current, runtimePending, pendingCountRef.current);
+
+            if (!shouldPromoteSyncBadge(syncPeakPendingRef.current) && !shouldUseBlockingSyncOverlay()) {
+                indLog('[HEYS.sync] [IND] startSyncingState: quiet skip (peakPending=' + syncPeakPendingRef.current + ')');
+                return;
+            }
+
             if (longSyncFallbackActiveRef.current) {
                 setShowPendingSyncBanner(true);
-                setCloudStatus('queued');
+                setPromotedCloudStatus('queued');
                 return;
             }
 
@@ -1086,17 +1136,22 @@
                             const snap = window.HEYS?.cloud?.getPendingQueuesSnapshot?.();
                             const uq = snap ? ((snap.userQueueLen || 0) + (snap.userInFlightLen || 0)) : 0;
                             indLog('[HEYS.sync] [IND] syncing-delay: остаёмся queued (нет heys_client_current, только user-queue pending=' + uq + ') — полноэкранный «синк» не показываем');
-                            setCloudStatus('queued');
+                            setPromotedCloudStatus('queued');
                             return;
                         }
-                        setCloudStatus('syncing');
+                        setPromotedCloudStatus('syncing');
                     }
                 }, SYNCING_DELAY);
             }
-        }, [armLongSyncFallback, armSlowInternetHint, armSyncLockOverlay, ensureSyncingStart]);
+        }, [armLongSyncFallback, armSlowInternetHint, armSyncLockOverlay, ensureSyncingStart, getRuntimePendingCount, setPromotedCloudStatus, shouldPromoteSyncBadge, shouldUseBlockingSyncOverlay]);
 
         const showSyncedWithMinDuration = useCallback(() => {
             if (syncedTimeoutRef.current) return;
+
+            if (!shouldShowPromotedSyncUi(syncPeakPendingRef.current)) {
+                demoteCloudStatusToIdle();
+                return;
+            }
 
             clearSyncLockOverlay();
             clearSlowInternetHint();
@@ -1107,11 +1162,13 @@
             syncedTimeoutRef.current = setTimeout(() => {
                 const runtimePending = getRuntimePendingCount();
                 const uploadInProgress = isRuntimeUploadInProgress();
+                const peakPending = syncPeakPendingRef.current;
 
                 syncedTimeoutRef.current = null;
 
                 if (!navigator.onLine) {
                     syncingStartRef.current = null;
+                    syncPeakPendingRef.current = 0;
                     setCloudStatus('offline');
                     return;
                 }
@@ -1123,14 +1180,23 @@
 
                 if (runtimePending > 0) {
                     syncingStartRef.current = null;
-                    setCloudStatus('queued');
+                    if (shouldPromoteSyncBadge(runtimePending)) {
+                        setPromotedCloudStatus('queued', runtimePending);
+                    } else {
+                        demoteCloudStatusToIdle();
+                    }
                     return;
                 }
 
                 resetLongSyncFallback();
                 clearPendingActionItems();
                 syncingStartRef.current = null;
-                setCloudStatus('synced');
+                if (!shouldPromoteSyncBadge(peakPending) && !shouldUseBlockingSyncOverlay()) {
+                    demoteCloudStatusToIdle();
+                    return;
+                }
+                syncPeakPendingRef.current = 0;
+                setPromotedCloudStatus('synced', peakPending);
                 // Звук синхронизации убран — теперь звуки только в геймификации
                 setSyncProgress({ synced: 0, total: 0 });
                 if (cloudSyncTimeoutRef.current) clearTimeout(cloudSyncTimeoutRef.current);
@@ -1144,7 +1210,7 @@
                     setCloudStatus('idle');
                 }, 2000);
             }, remaining);
-        }, [clearPendingActionItems, clearSlowInternetHint, clearSyncLockOverlay, getRuntimePendingCount, isRuntimeUploadInProgress, resetLongSyncFallback, startSyncingState]);
+        }, [clearPendingActionItems, clearSlowInternetHint, clearSyncLockOverlay, demoteCloudStatusToIdle, getRuntimePendingCount, isRuntimeUploadInProgress, resetLongSyncFallback, setPromotedCloudStatus, shouldPromoteSyncBadge, shouldShowPromotedSyncUi, shouldUseBlockingSyncOverlay, startSyncingState]);
 
         useEffect(() => {
             const runtimeDeadlock = isUserQueueBlockedWithoutClient();
@@ -1220,9 +1286,12 @@
 
                 if (runtimePending > 0) {
                     pendingChangesRef.current = true;
+                    syncPeakPendingRef.current = Math.max(syncPeakPendingRef.current, runtimePending);
                     // Не сбрасываем syncingStartRef: иначе handleDataSaved снова вызывает
                     // startSyncingState на каждом heys:data-saved (например пачка dayv2).
-                    setCloudStatus('queued');
+                    if (shouldPromoteSyncBadge(runtimePending)) {
+                        setPromotedCloudStatus('queued', runtimePending);
+                    }
                     return;
                 }
 
@@ -1343,7 +1412,9 @@
                                 }
 
                                 if (runtimePending > 0) {
-                                    setCloudStatus('queued');
+                                    if (shouldPromoteSyncBadge(runtimePending)) {
+                                        setPromotedCloudStatus('queued', runtimePending);
+                                    }
                                     return;
                                 }
 
@@ -1400,6 +1471,9 @@
                     _batchFn(() => {
                         setPendingCount(count);
                         setPendingDetails(details);
+                        if (count > 0) {
+                            syncPeakPendingRef.current = Math.max(syncPeakPendingRef.current, count);
+                        }
 
                         if (count > 0) {
                             ensureFallbackPendingActionItems(details);
@@ -1423,11 +1497,11 @@
                             if (syncingStartRef.current) {
                                 // syncingStart уже активен — ничего делать не нужно, цикл уже запущен
                             } else if (uploadInProgress || syncProgressTotalRef.current > 0) {
-                                if (cloudStatusRef.current !== 'syncing') {
+                                if (cloudStatusRef.current !== 'syncing' && shouldPromoteSyncBadge(count)) {
                                     startSyncingState();
                                 }
-                            } else {
-                                setCloudStatus('queued');
+                            } else if (shouldPromoteSyncBadge(count)) {
+                                setPromotedCloudStatus('queued', count);
                             }
                         } else if (count === 0 && !uploadInProgress && !syncingStartRef.current && navigator.onLine && cloudStatusRef.current !== 'synced') {
                             setCloudStatus('idle');
@@ -1450,7 +1524,8 @@
                     r.at = now;
                     indLog('[HEYS.sync] [IND] sync-progress: completed=' + completed + ' total=' + total);
                     setSyncProgress({ synced: completed, total });
-                    if (navigator.onLine && total > 0 && !syncingStartRef.current) {
+                    syncPeakPendingRef.current = Math.max(syncPeakPendingRef.current, total, getRuntimePendingCount(), pendingCountRef.current);
+                    if (navigator.onLine && total > 0 && !syncingStartRef.current && shouldShowPromotedSyncUi(total)) {
                         startSyncingState();
                     }
                 }
@@ -1541,6 +1616,7 @@
             };
 
             const handleQueueDrained = () => {
+                const peakPending = syncPeakPendingRef.current;
                 setPendingCount(0);
                 setPendingDetails(createEmptyPendingDetails());
                 pendingChangesRef.current = false;
@@ -1548,6 +1624,7 @@
                 resetLongSyncFallback();
 
                 if (!navigator.onLine) {
+                    syncPeakPendingRef.current = 0;
                     setCloudStatus('offline');
                     return;
                 }
@@ -1555,7 +1632,14 @@
                 // Не показываем галочку если анимация синка не запускалась
                 // (данные синкались тихо, в фоне, без уведомления пользователя)
                 if (!syncingStartRef.current && cloudStatusRef.current === 'idle') {
+                    syncPeakPendingRef.current = 0;
                     indLog('[HEYS.sync] [IND] queue-drained: skip (syncingStart=null, status=idle)');
+                    return;
+                }
+
+                if (!shouldPromoteSyncBadge(peakPending) && !shouldUseBlockingSyncOverlay()) {
+                    demoteCloudStatusToIdle();
+                    indLog('[HEYS.sync] [IND] queue-drained: quiet finish (peakPending=' + peakPending + ')');
                     return;
                 }
 
@@ -1574,9 +1658,12 @@
                             const stillPending = getRuntimePendingCount();
                             const stillUploading = isRuntimeUploadInProgress();
                             const st = cloudStatusRef.current;
-                            if (navigator.onLine && !stillPending && !stillUploading && (st === 'queued' || st === 'syncing')) {
+                            if (navigator.onLine && !stillPending && !stillUploading && (st === 'queued' || st === 'syncing')
+                                && shouldPromoteSyncBadge(peakPending)) {
                                 indLog('[HEYS.sync] [IND] queue-drained: fallback showSynced (post hot-sync cooldown) status=' + st);
                                 showSyncedWithMinDuration();
+                            } else if (!shouldPromoteSyncBadge(peakPending)) {
+                                demoteCloudStatusToIdle();
                             }
                         }, Math.max(0, 3000 - sinceHotSyncQd + 150));
                     }
@@ -1598,6 +1685,11 @@
 
                 if (uploadInProgress || runtimePending > 0) {
                     startSyncingState();
+                    return;
+                }
+
+                if (!shouldShowPromotedSyncUi(syncPeakPendingRef.current)) {
+                    demoteCloudStatusToIdle();
                     return;
                 }
 
@@ -1634,10 +1726,13 @@
 
                 if (pendingChangesRef.current || pendingCountRef.current > 0 || runtimePending > 0 || uploadInProgress) {
                     pendingChangesRef.current = true;
+                    syncPeakPendingRef.current = Math.max(syncPeakPendingRef.current, runtimePending, pendingCountRef.current);
                     if (uploadInProgress || syncProgressTotalRef.current > 0) {
                         startSyncingState();
+                    } else if (shouldPromoteSyncBadge(runtimePending)) {
+                        setPromotedCloudStatus('queued', runtimePending);
                     } else {
-                        setCloudStatus('queued');
+                        demoteCloudStatusToIdle();
                     }
                 } else {
                     clearPendingActionItems();
@@ -1715,7 +1810,12 @@
                         startSyncingState();
                     } else if (initialPending > 0) {
                         pendingChangesRef.current = true;
-                        setCloudStatus('queued');
+                        syncPeakPendingRef.current = Math.max(syncPeakPendingRef.current, initialPending);
+                        if (shouldPromoteSyncBadge(initialPending)) {
+                            setPromotedCloudStatus('queued', initialPending);
+                        } else {
+                            setCloudStatus('idle');
+                        }
                     } else {
                         setCloudStatus('idle');
                     }
@@ -1772,7 +1872,7 @@
                 // 🔥 Очистка таймера auth error debounce
                 if (authErrorTimeoutRef.current) clearTimeout(authErrorTimeoutRef.current);
             };
-        }, [clearPendingActionItems, ensureFallbackPendingActionItems, enterBackgroundPendingSync, getRuntimePendingCount, getRuntimePendingDetails, isRuntimeUploadInProgress, pushPendingActionItem, resetLongSyncFallback, showSyncedWithMinDuration, startSyncingState]);
+        }, [clearPendingActionItems, demoteCloudStatusToIdle, ensureFallbackPendingActionItems, enterBackgroundPendingSync, getRuntimePendingCount, getRuntimePendingDetails, isRuntimeUploadInProgress, pushPendingActionItem, resetLongSyncFallback, setPromotedCloudStatus, shouldPromoteSyncBadge, shouldShowPromotedSyncUi, showSyncedWithMinDuration, startSyncingState]);
 
         useEffect(() => {
             if (cloudStatus !== 'syncing' && !showSyncLockOverlay && !showPendingSyncBanner && !syncingStartRef.current) return;
@@ -1883,8 +1983,12 @@
                         clearSyncLockOverlay();
                     }
                     indLog('[HEYS.sync] [IND] tick: → queued, pending=' + runtimePending);
-                    setCloudStatus('queued');
-                    schedule(true);
+                    if (shouldPromoteSyncBadge(runtimePending)) {
+                        setPromotedCloudStatus('queued', runtimePending);
+                    } else if (cloudStatusRef.current === 'queued' || cloudStatusRef.current === 'syncing' || cloudStatusRef.current === 'synced') {
+                        demoteCloudStatusToIdle();
+                    }
+                    schedule(shouldPromoteSyncBadge(runtimePending));
                     return;
                 }
 
@@ -1900,8 +2004,8 @@
 
                 if (syncVisualActive && !longSyncFallbackActiveRef.current) {
                     const { slowInternetHintMs } = getPinProxySyncOverlayDelaysMs();
-                    if (cloudStatusRef.current !== 'syncing') {
-                        setCloudStatus('syncing');
+                    if (cloudStatusRef.current !== 'syncing' && shouldShowPromotedSyncUi(runtimePending)) {
+                        setPromotedCloudStatus('syncing', runtimePending);
                     }
 
                     // Full-screen lock: only via armSyncLockOverlay (startSyncingState) — avoids
@@ -1945,10 +2049,14 @@
             clearSlowInternetHint,
             clearSyncLockOverlay,
             cloudStatus,
+            demoteCloudStatusToIdle,
             enterBackgroundPendingSync,
             getRuntimePendingCount,
             getRuntimePendingDetails,
             isRuntimeUploadInProgress,
+            setPromotedCloudStatus,
+            shouldPromoteSyncBadge,
+            shouldShowPromotedSyncUi,
             showPendingSyncBanner,
             showSlowInternetHint,
             showSyncLockOverlay,
