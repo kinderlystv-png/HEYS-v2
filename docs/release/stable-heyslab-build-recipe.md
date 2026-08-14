@@ -10,16 +10,17 @@ Cherry-pick readonly-коммитов на `36df9ce3` **конфликтует**
 `000-base-and-gamification.css`). Одной командой не повторяется — только этот
 рецепт.
 
-## Что лежит на копии сейчас (после old-nav-restore, 2026-08-13)
+## Что лежит на копии сейчас (после pin-login-v1, 2026-08-14)
 
-| Поле                                | Значение                                                                                                                               |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| База UI                             | git `36df9ce3`                                                                                                                         |
-| Patches                             | `d75ec593d` readonly, `3d1904513` write-context RPC, `4a7ced768` consent gate, `00c443259` readonly round 2; chrome = `36df9ce3` shell |
-| `boot-app.bundle`                   | `4592100534db.js` (лампочка 💡 + настройки; не v4 `renderNavIcon`)                                                                     |
-| `boot-core.bundle`                  | `3b5581270022.js` — **не** hash из local `main`                                                                                        |
-| `version.json` → `hash`             | `36df9ce3` (линия эталона)                                                                                                             |
-| `version.json` → `stableRebuild.id` | `old-nav-restore-20260813`                                                                                                             |
+| Поле                                | Значение                                                                                                                                                   |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| База UI                             | git `36df9ce3`                                                                                                                                             |
+| Patches                             | `d75ec593d` readonly, `3d1904513` write-context RPC, `4a7ced768` consent gate, `00c443259` readonly round 2; chrome = `36df9ce3` shell; `pin-login-bridge` |
+| `boot-app.bundle`                   | `4592100534db.js` (лампочка 💡 + настройки; не v4 `renderNavIcon`) — **не менялся**                                                                        |
+| `boot-core.bundle`                  | `fce9d94d6c84.js` — живой `3b5581270022` + `login_client_v1` / `verify_client_onetime_pin` в readonly allowlist                                            |
+| PIN-мост                            | `heys_stable_pin_bridge_v1.js` (`scripts/stable/`) — старый экран, новый вход если v3 отвечает `access_code_login_required`                                |
+| `version.json` → `hash`             | `36df9ce3` (линия эталона)                                                                                                                                 |
+| `version.json` → `stableRebuild.id` | `pin-login-v1-20260814`                                                                                                                                    |
 
 ## Пошагово
 
@@ -135,6 +136,25 @@ cd "$REPO" && git worktree remove --force "$WT"
    плашкой; «Продолжить» без READONLY на `log_consents`.
 4. Нижнее меню — старое: вкладка советов с 💡 и шестерёнка настроек, не v4
    SVG/`more`.
+
+## PIN-мост (2026-08-14) — не пересобирать UI
+
+Живой вход после 11.08 закрывает `verify_client_pin_v3` для клиентов с
+`access_code_hash`. Замороженный экран этого не знает. Чтобы PIN проходил
+**без** выкладки нового дизайна:
+
+1. Скачать живой `boot-core.bundle.<hash>.js` со stable.
+2. В `READONLY_ALLOWED_RPC_EXACT` добавить `login_client_v1` и
+   `verify_client_onetime_pin`. Не трогать остальной бандл.
+3. Залить новый boot-core hash + `scripts/stable/heys_stable_pin_bridge_v1.js`.
+4. В живом `index.html` заменить только boot-core hash и вставить
+   `<script defer src="heys_stable_pin_bridge_v1.js">` сразу после boot-core.
+5. `boot-app.bundle.4592100534db.js` не перезаливать — там эталон вкладок.
+
+Мост сначала зовёт старый `verify_client_pin_v3`. На
+`access_code_login_required` / `pin_login_disabled` повторяет вход через
+`login_client_v1` (PIN как код доступа) или `verify_client_onetime_pin`. Ответ
+маскируется под форму v3 — экран и вкладки не меняются.
 
 ## Нельзя
 
