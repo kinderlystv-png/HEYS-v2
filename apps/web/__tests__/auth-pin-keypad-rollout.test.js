@@ -19,6 +19,8 @@ describe('auth pin keypad rollout', () => {
     expect(keypadSource).toContain('heys-auth-keypad');
     expect(keypadSource).toContain('usesTouchKeypad');
     expect(keypadSource).toContain('readOnly: touchKeypad');
+    expect(keypadSource).toContain('if (!v && existing) return');
+    expect(keypadSource).toContain('heys-auth-pin-dot');
 
     const loginIdx = bundleConfig.indexOf('heys_login_screen_v1.js');
     const keypadIdx = bundleConfig.indexOf('heys_auth_pin_keypad_v1.js');
@@ -49,6 +51,8 @@ describe('auth pin keypad rollout', () => {
     expect(loginSource).toContain('heys-auth-keypad');
     expect(loginSource).toContain('heys-auth-pin-box');
     expect(accessSetupSource).toContain('heys-auth-keypad');
-    expect(accessSetupSource).toContain('readOnly: touchKeypad');
+    expect(accessSetupSource).toContain('readOnly: true');
+    expect(accessSetupSource).toContain('heys-auth-pin-dot');
+    expect(accessSetupSource).toContain('if (!v && existing) return');
   });
 });

@@ -48,21 +48,27 @@
       const pinRefs = useRef([]);
       const keypadRef = useRef(null);
       const pinHideTimers = useRef([null, null, null, null]);
+      const codeDigitsRef = useRef(codeDigits);
+      const confirmDigitsRef = useRef(confirmDigits);
+      codeDigitsRef.current = codeDigits;
+      confirmDigitsRef.current = confirmDigits;
 
       const touchKeypad = usesTouchKeypad();
       const digits = phase === 'code' ? codeDigits : confirmDigits;
-      const setDigits = phase === 'code' ? setCodeDigits : setConfirmDigits;
       const pinOverlay = phase === 'code' ? codeOverlay : confirmOverlay;
       const setPinOverlay = phase === 'code' ? setCodeOverlay : setConfirmOverlay;
       const pinLabel = phase === 'code' ? 'Придумайте код доступа' : 'Повторите код';
 
       const code = useMemo(() => codeDigits.join(''), [codeDigits]);
       const confirm = useMemo(() => confirmDigits.join(''), [confirmDigits]);
-      const codeValid = auth && auth.validatePinStrict(code);
       const confirmValid = auth && auth.validatePinStrict(confirm) && code === confirm;
       const canContinue = phase === 'code'
-        ? codeValid
+        ? code.length === 4
         : confirmValid && (skipPepAgreement || pepAccepted);
+
+      function getActiveDigits() {
+        return phase === 'code' ? codeDigitsRef.current : confirmDigitsRef.current;
+      }
 
       function resetOverlayState(setOverlayFn) {
         setOverlayFn([
@@ -143,7 +149,13 @@
         const arr = (nextDigits || []).slice(0, 4);
         while (arr.length < 4) arr.push('');
         setErr('');
-        setDigits(arr);
+        if (phase === 'code') {
+          codeDigitsRef.current = arr;
+          setCodeDigits(arr);
+        } else {
+          confirmDigitsRef.current = arr;
+          setConfirmDigits(arr);
+        }
         if (typeof changedIndex === 'number') {
           if (changedDigit) showPinOverlayDigit(changedIndex, changedDigit, 1200);
           else clearHidePinDigit(changedIndex);
@@ -152,9 +164,10 @@
       }
 
       function appendPinDigit(digit) {
-        if (busy || !/^\d$/.test(String(digit)) || (digits || []).every(Boolean)) return;
-        const idx = getNextPinIndex(digits);
-        const arr = (digits || []).slice(0, 4);
+        const current = getActiveDigits();
+        if (busy || !/^\d$/.test(String(digit)) || (current || []).every(Boolean)) return;
+        const idx = getNextPinIndex(current);
+        const arr = (current || []).slice(0, 4);
         while (arr.length < 4) arr.push('');
         arr[idx] = String(digit);
         applyPinDigits(arr, idx, String(digit));
@@ -163,7 +176,7 @@
 
       function erasePinDigit() {
         if (busy) return;
-        const arr = (digits || []).slice(0, 4);
+        const arr = (getActiveDigits() || []).slice(0, 4);
         while (arr.length < 4) arr.push('');
         for (let i = 3; i >= 0; i--) {
           if (arr[i]) {
@@ -172,6 +185,21 @@
             focusPinInput(i);
             return;
           }
+        }
+      }
+
+      function handleCardKeyDown(e) {
+        if (busy) return;
+        if (e.target && e.target.classList && e.target.classList.contains('heys-auth-pin-input')) return;
+        if (e.target && e.target.type === 'checkbox') return;
+        if (/^\d$/.test(e.key)) {
+          e.preventDefault();
+          appendPinDigit(e.key);
+          return;
+        }
+        if (e.key === 'Backspace') {
+          e.preventDefault();
+          erasePinDigit();
         }
       }
 
@@ -196,16 +224,38 @@
       const canEraseKeypadDigit = !busy && (digits || []).some(Boolean);
 
       async function handleSubmit() {
-        if (!canContinue || busy || !auth) return;
+        if (busy || !auth) return;
+        const codeNow = (codeDigitsRef.current || []).join('');
+        const confirmNow = (confirmDigitsRef.current || []).join('');
+        if (phase === 'code') {
+          if (!auth.validatePinStrict(codeNow)) {
+            setErr(codeNow.length === 4
+              ? 'Код слишком простой. Придумайте другой из 4 цифр.'
+              : 'Введите код из 4 цифр');
+            return;
+          }
+          setErr('');
+          setBusy(true);
+          try {
+            setPhase('confirm');
+          } finally {
+            setBusy(false);
+          }
+          return;
+        }
+        if (!auth.validatePinStrict(confirmNow) || confirmNow !== codeNow) {
+          setErr('Коды не совпали. Введите тот же код ещё раз.');
+          return;
+        }
+        if (!skipPepAgreement && !pepAccepted) {
+          setErr('Чтобы продолжить, примите соглашение об электронной подписи.');
+          return;
+        }
         setErr('');
         setBusy(true);
         try {
-          if (phase === 'code') {
-            setPhase('confirm');
-            return;
-          }
           const res = await auth.setClientAccessCode({
-            accessCode: code,
+            accessCode: codeNow,
             sessionToken,
             clientId,
             phone,
@@ -215,6 +265,8 @@
             if (codeErr === 'weak_access_code' || codeErr === 'access_code_matches_onetime_pin') {
               setErr('Код слишком простой или совпадает с одноразовым. Придумайте другой.');
               setPhase('code');
+              codeDigitsRef.current = ['', '', '', ''];
+              confirmDigitsRef.current = ['', '', '', ''];
               setCodeDigits(['', '', '', '']);
               setConfirmDigits(['', '', '', '']);
               resetOverlayState(setCodeOverlay);
@@ -245,7 +297,7 @@
 
       return React.createElement(
         'div',
-        { className: 'heys-auth-card mx-auto w-full max-w-md p-6' },
+        { className: 'heys-auth-card mx-auto w-full max-w-md p-6', onKeyDown: handleCardKeyDown },
         React.createElement('div', { className: 'heys-auth-brand text-center mb-2' }, 'Подпись документов в приложении'),
         React.createElement(
           'p',
@@ -268,9 +320,11 @@
               const digit = (digits && digits[i]) || '';
               const isFilled = Boolean(digit);
               const overlay = (pinOverlay && pinOverlay[i]) || { d: '', k: 0 };
-              const pinInputStyle = overlay.d
-                ? { WebkitTextSecurity: 'none', color: 'transparent', caretColor: 'transparent' }
-                : { WebkitTextSecurity: 'disc' };
+              const pinInputStyle = {
+                WebkitTextSecurity: 'none',
+                color: 'transparent',
+                caretColor: 'transparent',
+              };
               return React.createElement(
                 'div',
                 {
@@ -285,15 +339,20 @@
                   type: 'text',
                   inputMode: 'numeric',
                   pattern: '[0-9]*',
-                  autoComplete: i === 0 ? 'one-time-code' : 'off',
-                  readOnly: touchKeypad,
+                  autoComplete: 'off',
+                  readOnly: true,
                   maxLength: 1,
                   value: digit,
                   style: pinInputStyle,
                   onChange: (e) => {
                     if (busy) return;
                     const v = String(e.target.value || '').replace(/\D/g, '').slice(0, 1);
-                    let arr = (digits || []).slice(0, 4);
+                    const current = getActiveDigits();
+                    const existing = (current && current[i]) || '';
+                    // Overlay / -webkit-text-security can emit an empty input event
+                    // after ~1s and wipe the digit the keypad just wrote.
+                    if (!v && existing) return;
+                    let arr = (current || []).slice(0, 4);
                     while (arr.length < 4) arr.push('');
                     arr[i] = v;
                     arr = applyPinDigits(arr, i, v);
@@ -301,25 +360,15 @@
                   },
                   onKeyDown: (e) => {
                     if (busy) return;
+                    if (/^\d$/.test(e.key)) {
+                      e.preventDefault();
+                      appendPinDigit(e.key);
+                      return;
+                    }
                     if (e.key === 'Backspace') {
-                      const cur = (digits && digits[i]) || '';
-                      if (!cur && i > 0) {
-                        e.preventDefault();
-                        const arr = (digits || []).slice(0, 4);
-                        while (arr.length < 4) arr.push('');
-                        arr[i - 1] = '';
-                        applyPinDigits(arr, i - 1, '');
-                        focusPinInput(i - 1);
-                        return;
-                      }
-                      if (cur) {
-                        e.preventDefault();
-                        const arr = (digits || []).slice(0, 4);
-                        while (arr.length < 4) arr.push('');
-                        arr[i] = '';
-                        applyPinDigits(arr, i, '');
-                        return;
-                      }
+                      e.preventDefault();
+                      erasePinDigit();
+                      return;
                     }
                     if (e.key === 'ArrowLeft' && i > 0) {
                       e.preventDefault();
@@ -333,8 +382,6 @@
                       handleSubmit();
                     }
                   },
-                  onFocus: () => focusPinInput(getNextPinIndex(digits)),
-                  onClick: () => focusPinInput(getNextPinIndex(digits)),
                   onPaste: (e) => {
                     try {
                       const txt = (e.clipboardData && e.clipboardData.getData('text')) || '';
@@ -348,7 +395,7 @@
                           if (arr[k]) showPinOverlayDigit(k, arr[k], 1400);
                           else clearHidePinDigit(k);
                         }
-                        setDigits(arr);
+                        applyPinDigits(arr);
                         focusPinInput(Math.min(3, pasted.length));
                       }
                     } catch (_) { }
@@ -374,7 +421,16 @@
                     },
                     overlay.d,
                   )
-                  : null,
+                  : (isFilled
+                    ? React.createElement(
+                      'span',
+                      {
+                        className: 'heys-auth-pin-dot absolute inset-0 flex items-center justify-center heys-auth-pin-overlay pointer-events-none',
+                        'aria-hidden': 'true',
+                      },
+                      '•',
+                    )
+                    : null),
               );
             }),
           ),
@@ -464,6 +520,7 @@
               disabled: busy,
               onClick: () => {
                 setPhase('code');
+                confirmDigitsRef.current = ['', '', '', ''];
                 setConfirmDigits(['', '', '', '']);
                 resetOverlayState(setConfirmOverlay);
                 setErr('');

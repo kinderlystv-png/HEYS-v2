@@ -162,6 +162,10 @@
       function handleInputChange(i, rawValue) {
         if (disabled) return;
         const v = String(rawValue || '').replace(/\D/g, '').slice(0, 1);
+        const existing = (digits && digits[i]) || '';
+        // Overlay / -webkit-text-security can emit an empty input event
+        // after the fade and wipe the digit the keypad just wrote.
+        if (!v && existing) return;
         let arr = (digits || []).slice(0, 4);
         while (arr.length < 4) arr.push('');
         arr[i] = v;
@@ -171,6 +175,11 @@
 
       function handleInputKeyDown(i, e) {
         if (disabled) return;
+        if (/^\d$/.test(e.key)) {
+          e.preventDefault();
+          appendPinDigit(e.key);
+          return;
+        }
         if (e.key === 'Backspace') {
           const cur = (digits && digits[i]) || '';
           if (!cur && i > 0) {
@@ -274,9 +283,11 @@
           const digit = (digits && digits[i]) || '';
           const isFilled = Boolean(digit);
           const ov = (overlay && overlay[i]) || { d: '', k: 0 };
-          const pinInputStyle = ov.d
-            ? { WebkitTextSecurity: 'none', color: 'transparent', caretColor: 'transparent' }
-            : { WebkitTextSecurity: 'disc' };
+          const pinInputStyle = {
+            WebkitTextSecurity: 'none',
+            color: 'transparent',
+            caretColor: 'transparent',
+          };
           return React.createElement(
             'div',
             {
@@ -325,7 +336,16 @@
                 },
                 ov.d,
               )
-              : null,
+              : (isFilled
+                ? React.createElement(
+                  'span',
+                  {
+                    className: 'heys-auth-pin-dot absolute inset-0 flex items-center justify-center heys-auth-pin-overlay pointer-events-none',
+                    'aria-hidden': 'true',
+                  },
+                  '•',
+                )
+                : null),
           );
         }),
       );

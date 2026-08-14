@@ -913,6 +913,8 @@
                       }
                       setErr('');
                       const v = String(e.target.value || '').replace(/\D/g, '').slice(0, 1);
+                      const existing = (pinDigits && pinDigits[i]) || '';
+                      if (!v && existing) return;
                       let arr = (pinDigits || []).slice(0, 4);
                       while (arr.length < 4) arr.push('');
                       arr[i] = v;

@@ -13,7 +13,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -26,7 +26,7 @@ const CJS_PATHS = [
 const CHECK_STAGED = process.argv.includes('--staged');
 
 function repoRelative(filePath) {
-  return filePath.replace(repoRoot + '/', '');
+  return relative(repoRoot, filePath).replace(/\\/g, '/');
 }
 
 function readCommittedCandidate(filePath) {
