@@ -15305,6 +15305,23 @@ body:has(.tabs.tabs--settings-open) :is(
 }
 }
 
+/* Облачко синка — без рамки во всех состояниях/темах (решение владельца
+   2026-08-14, временно, до макета кураторской шапки). Остальные кнопки
+   группы (hdr-theme-btn, yesterday-quick-btn) рамку сохраняют. */
+.cloud-sync-indicator,
+.cloud-sync-indicator.syncing,
+.cloud-sync-indicator.offline,
+.cloud-sync-indicator.session,
+[data-theme$="dark"] .cloud-sync-indicator {
+  border: none !important;
+}
+@media (hover: hover) {
+  .cloud-sync-indicator:hover,
+  [data-theme$="dark"] .cloud-sync-indicator:hover {
+    border: none !important;
+  }
+}
+
 /* Push-badge slot в GamificationBar — display: contents чтобы пустой span
  * не занимал flex-место и не дублировал gap между ▼ и 🌙.
  * Когда push-badge зарендерится через Portal — он сам встанет в flex-row
