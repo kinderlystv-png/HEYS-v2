@@ -672,7 +672,13 @@
 	        setErr('');
 	        const input = e.target.value;
         // Извлекаем только цифры из того что ввели
-        let newDigits = input.replace(/\D/g, '').slice(0, 10);
+        let rawDigits = input.replace(/\D/g, '');
+        // Вставка полного номера (11 цифр с 7/8 в начале) — снимаем код страны,
+        // иначе он остаётся и склеивается с '7', добавляемой в fullPhone (152)
+        if (rawDigits.length === 11 && (rawDigits[0] === '7' || rawDigits[0] === '8')) {
+          rawDigits = rawDigits.slice(1);
+        }
+        let newDigits = rawDigits.slice(0, 10);
         // Mobile-фикс: на Android backspace приходит как input
         // (key==='Unidentified' в keydown). Если стёрся только разделитель
         // маски, число цифр не уменьшилось — снимаем последнюю цифру руками,
