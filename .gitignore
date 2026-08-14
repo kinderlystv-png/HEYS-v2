@@ -175,6 +175,8 @@ test-results/
 # Temporary files
 temp/
 tmp/
+tmp-stable-pin/
+yandex-cloud-functions/_tmp-*.sh
 *.tmp
 
 # Local database files
