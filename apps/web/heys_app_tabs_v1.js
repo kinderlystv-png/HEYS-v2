@@ -102,7 +102,7 @@
     function DayTabSkeleton({ subTab = 'diary' } = {}) {
         const SharedTabSkeleton = window.HEYS?.AppSkeletons?.TabSkeleton;
         if (SharedTabSkeleton) {
-            return React.createElement(SharedTabSkeleton, { tab: subTab });
+            return React.createElement(SharedTabSkeleton, { tab: subTab, embedded: true });
         }
         return React.createElement('div', { className: 'day-tab-skeleton', style: { padding: 16 } },
             // Sparkline skeleton
@@ -347,7 +347,7 @@
     function RationSkeleton() {
         const SharedTabSkeleton = window.HEYS?.AppSkeletons?.TabSkeleton;
         if (SharedTabSkeleton) {
-            return React.createElement(SharedTabSkeleton, { tab: 'ration' });
+            return React.createElement(SharedTabSkeleton, { tab: 'ration', embedded: true });
         }
         return React.createElement('div', { style: { padding: 16 } },
             React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
@@ -904,7 +904,7 @@
     function UserSkeleton() {
         const SharedTabSkeleton = window.HEYS?.AppSkeletons?.TabSkeleton;
         if (SharedTabSkeleton) {
-            return React.createElement(SharedTabSkeleton, { tab: 'user' });
+            return React.createElement(SharedTabSkeleton, { tab: 'user', embedded: true });
         }
         return React.createElement('div', { style: { padding: 16 } },
             React.createElement('div', { className: 'skeleton-header', style: { width: 120, marginBottom: 16 } }),

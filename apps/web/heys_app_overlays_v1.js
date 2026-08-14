@@ -327,23 +327,24 @@
             // === PWA Install Banner for Android/Desktop (только после Morning Check-in) ===
             !isMorningCheckinBlocking && showPwaBanner && !(typeof window !== 'undefined' && window.__HEYS_DEMO_MODE__ && window.__HEYS_DEMO_MODE__.enabled) && React.createElement(
                 'div',
-                { className: 'pwa-install-banner' },
-                React.createElement('div', { className: 'pwa-banner-content' },
-                    React.createElement('div', { className: 'pwa-banner-icon' }, '📱'),
-                    React.createElement('div', { className: 'pwa-banner-text' },
-                        React.createElement('div', { className: 'pwa-banner-title' }, 'Установить HEYS'),
-                        React.createElement('div', { className: 'pwa-banner-desc' }, 'Быстрый доступ с главного экрана')
-                    ),
-                    React.createElement('div', { className: 'pwa-banner-actions' },
+                { className: 'pwa-install-banner pwa-install-banner--android' },
+                React.createElement('div', { className: 'pwa-banner-content pwa-banner-content--android' },
+                    React.createElement('div', { className: 'pwa-banner-main' },
+                        React.createElement('div', { className: 'pwa-banner-text' },
+                            React.createElement('div', { className: 'pwa-banner-title' }, 'Установить HEYS'),
+                            React.createElement('div', { className: 'pwa-banner-desc' }, 'Иконка на главном экране — открывается сразу')
+                        ),
                         React.createElement('button', {
+                            type: 'button',
                             className: 'pwa-banner-install',
                             onClick: handlePwaInstall
-                        }, 'Установить'),
-                        React.createElement('button', {
-                            className: 'pwa-banner-dismiss',
-                            onClick: dismissPwaBanner
-                        }, '✕')
-                    )
+                        }, 'Установить')
+                    ),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'pwa-banner-later',
+                        onClick: dismissPwaBanner
+                    }, 'Позже')
                 )
             ),
             // === iOS Safari PWA Banner ===
@@ -351,40 +352,34 @@
                 'div',
                 { className: 'pwa-install-banner ios-pwa-banner' },
                 React.createElement('div', { className: 'pwa-banner-content ios-banner-content' },
-                    React.createElement('div', { className: 'pwa-banner-icon' }, '📲'),
-                    React.createElement('div', { className: 'pwa-banner-text' },
-                        React.createElement('div', { className: 'pwa-banner-title' }, 'Установить HEYS'),
-                        React.createElement('div', { className: 'ios-benefit-hint' },
-                            '✨ Полный экран • Быстрый доступ • Работа offline'
-                        ),
-                        React.createElement('div', { className: 'ios-steps' },
-                            React.createElement('div', { className: 'ios-step' },
-                                React.createElement('span', { className: 'ios-step-num' }, '1'),
-                                'Нажмите ',
-                                React.createElement('span', { className: 'ios-share-icon' },
-                                    React.createElement('svg', { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 },
-                                        React.createElement('path', { d: 'M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8' }),
-                                        React.createElement('polyline', { points: '16 6 12 2 8 6' }),
-                                        React.createElement('line', { x1: 12, y1: 2, x2: 12, y2: 15 })
-                                    )
-                                ),
-                                ' внизу'
+                    React.createElement('div', { className: 'ios-sheet-handle', 'aria-hidden': 'true' }),
+                    React.createElement('div', { className: 'pwa-banner-title' }, 'Установить HEYS'),
+                    React.createElement('div', { className: 'ios-benefit-hint' },
+                        'На весь экран, с главного экрана — и без сети'
+                    ),
+                    React.createElement('div', { className: 'ios-steps' },
+                        React.createElement('div', { className: 'ios-step' },
+                            React.createElement('span', { className: 'ios-step-num' }, '1'),
+                            React.createElement('span', { className: 'ios-step-text' }, 'Нажмите'),
+                            React.createElement('span', { className: 'ios-share-icon', 'aria-hidden': 'true' },
+                                React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 },
+                                    React.createElement('path', { d: 'M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8' }),
+                                    React.createElement('polyline', { points: '16 6 12 2 8 6' }),
+                                    React.createElement('line', { x1: 12, y1: 2, x2: 12, y2: 15 })
+                                )
                             ),
-                            React.createElement('div', { className: 'ios-step' },
-                                React.createElement('span', { className: 'ios-step-num' }, '2'),
-                                '«На экран Домой»'
-                            )
+                            React.createElement('span', { className: 'ios-step-text' }, 'внизу экрана')
+                        ),
+                        React.createElement('div', { className: 'ios-step' },
+                            React.createElement('span', { className: 'ios-step-num' }, '2'),
+                            React.createElement('span', { className: 'ios-step-text' }, '«На экран Домой»')
                         )
                     ),
                     React.createElement('button', {
+                        type: 'button',
                         className: 'ios-got-it-btn',
                         onClick: dismissIosPwaBanner
                     }, 'Понял')
-                ),
-                React.createElement('div', { className: 'ios-arrow-hint' },
-                    React.createElement('svg', { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'currentColor' },
-                        React.createElement('path', { d: 'M12 16l-6-6h12l-6 6z' })
-                    )
                 )
             ),
             // === Update Toast (только после Morning Check-in) ===

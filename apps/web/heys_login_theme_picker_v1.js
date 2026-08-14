@@ -15,6 +15,7 @@
         modeAuto: 'Как в системе',
         hint: 'Выбор запоминается на этом устройстве',
         dotsLabel: 'Выбор оформления',
+        done: 'Готово',
         collapse: 'Свернуть выбор оформления',
     });
 
@@ -84,6 +85,7 @@
 
     function createDomPicker(options) {
         const opts = options || {};
+        const loginOnly = opts.scope === 'login';
         const themeApi = getThemeApi();
         let expanded = false;
         let dimmed = false;
@@ -125,9 +127,9 @@
 
         const collapseBtn = document.createElement('button');
         collapseBtn.type = 'button';
-        collapseBtn.className = 'heys-login-theme__collapse';
-        collapseBtn.setAttribute('aria-label', COPY.collapse);
-        collapseBtn.textContent = '×';
+        collapseBtn.className = loginOnly ? 'heys-login-theme__done' : 'heys-login-theme__collapse';
+        collapseBtn.setAttribute('aria-label', loginOnly ? COPY.done : COPY.collapse);
+        collapseBtn.textContent = loginOnly ? COPY.done : '×';
 
         const paletteLabel = document.createElement('div');
         paletteLabel.className = 'heys-login-theme__section-label';
@@ -180,9 +182,12 @@
         panel.appendChild(panelHead);
         panel.appendChild(paletteLabel);
         panel.appendChild(paletteRow);
-        panel.appendChild(modeLabel);
-        panel.appendChild(modeRow);
-        panel.appendChild(hint);
+        if (!loginOnly) {
+            panel.appendChild(modeLabel);
+            panel.appendChild(modeRow);
+            panel.appendChild(hint);
+        }
+        root.className = 'heys-login-theme' + (loginOnly ? ' heys-login-theme--login-only' : '');
         root.appendChild(panel);
         root.appendChild(dots);
 
@@ -195,12 +200,42 @@
             }
         }
 
-        function syncKeypadVisibility() {
-            const keypad = opts.keypadEl;
+        function applyKeypadVisibility(keypad, hideKeypad) {
             if (!keypad) return;
-            const hideKeypad = expanded || dimmed;
+            if (hideKeypad) {
+                const active = typeof document !== 'undefined' ? document.activeElement : null;
+                if (active && keypad.contains(active)) {
+                    try { active.blur(); } catch (_) { /* noop */ }
+                }
+            }
             keypad.classList.toggle('is-hidden', hideKeypad);
             keypad.setAttribute('aria-hidden', hideKeypad ? 'true' : 'false');
+        }
+
+        function syncKeypadVisibility() {
+            applyKeypadVisibility(opts.keypadEl, expanded);
+        }
+
+        function syncPanelPlacement() {
+            if (!opts.dockLayout || !opts.panelSlotEl) return;
+            const slot = opts.panelSlotEl;
+            if (expanded) {
+                let slotRoot = slot.querySelector('.heys-login-theme');
+                if (!slotRoot) {
+                    slotRoot = document.createElement('div');
+                    slot.appendChild(slotRoot);
+                }
+                slotRoot.className = root.className + ' is-expanded';
+                slotRoot.classList.toggle('is-dimmed', dimmed);
+                if (panel.parentNode !== slotRoot) slotRoot.appendChild(panel);
+                root.classList.remove('is-expanded');
+                root.classList.toggle('is-dimmed', dimmed);
+            } else {
+                slot.textContent = '';
+                if (panel.parentNode !== root) root.insertBefore(panel, dots);
+                root.classList.toggle('is-expanded', false);
+                root.classList.toggle('is-dimmed', dimmed);
+            }
         }
 
         function paint() {
@@ -230,6 +265,7 @@
             panel.hidden = !expanded;
             dots.hidden = expanded;
             syncKeypadVisibility();
+            syncPanelPlacement();
             notify();
         }
 
@@ -296,9 +332,14 @@
             const {
                 keypadRef,
                 phoneInputRef,
+                panelSlotEl = null,
+                dockLayout = false,
                 dimmed = false,
+                scope = 'login',
                 onExpandedChange,
             } = props || {};
+            const loginOnly = scope === 'login';
+            const ReactDOM = typeof window !== 'undefined' ? window.ReactDOM : null;
 
             const themeApi = getThemeApi();
             const [expanded, setExpanded] = useState(false);
@@ -329,7 +370,13 @@
             useEffect(() => {
                 const keypad = keypadRef && keypadRef.current;
                 if (!keypad) return;
-                const hideKeypad = expanded || dimmed;
+                const hideKeypad = expanded;
+                if (hideKeypad) {
+                    const active = typeof document !== 'undefined' ? document.activeElement : null;
+                    if (active && keypad.contains(active)) {
+                        try { active.blur(); } catch (_) { /* noop */ }
+                    }
+                }
                 keypad.classList.toggle('is-hidden', hideKeypad);
                 keypad.setAttribute('aria-hidden', hideKeypad ? 'true' : 'false');
             }, [expanded, dimmed, keypadRef]);
@@ -381,11 +428,11 @@
                         'button',
                         {
                             type: 'button',
-                            className: 'heys-login-theme__collapse',
-                            'aria-label': COPY.collapse,
+                            className: loginOnly ? 'heys-login-theme__done' : 'heys-login-theme__collapse',
+                            'aria-label': loginOnly ? COPY.done : COPY.collapse,
                             onClick: () => setExpanded(false),
                         },
-                        '×',
+                        loginOnly ? COPY.done : '×',
                     ),
                 ),
                 React.createElement('div', { className: 'heys-login-theme__section-label' }, COPY.paletteLabel),
@@ -412,8 +459,8 @@
                         React.createElement('span', { className: 'heys-login-theme__soft-label' }, variant.label),
                     )),
                 ),
-                React.createElement('div', { className: 'heys-login-theme__section-label' }, COPY.modeLabel),
-                React.createElement(
+                !loginOnly && React.createElement('div', { className: 'heys-login-theme__section-label' }, COPY.modeLabel),
+                !loginOnly && React.createElement(
                     'div',
                     { className: 'heys-login-theme__row heys-login-theme__row--mode' },
                     MODE_OPTIONS.map((mode) => React.createElement('button', {
@@ -424,17 +471,41 @@
                         onClick: () => chooseMode(mode.id),
                     }, mode.label)),
                 ),
-                React.createElement('div', { className: 'heys-login-theme__hint' }, COPY.hint),
+                !loginOnly && React.createElement('div', { className: 'heys-login-theme__hint' }, COPY.hint),
             );
 
-            return React.createElement(
+            const rootClassName = 'heys-login-theme'
+                + (loginOnly ? ' heys-login-theme--login-only' : '')
+                + (expanded && !(dockLayout && panelSlotEl) ? ' is-expanded' : '')
+                + (dimmed ? ' is-dimmed' : '');
+
+            const dockRoot = React.createElement(
                 'div',
-                {
-                    className: 'heys-login-theme' + (expanded ? ' is-expanded' : '') + (dimmed ? ' is-dimmed' : ''),
-                },
-                panel,
+                { className: rootClassName },
+                !(dockLayout && panelSlotEl) ? panel : null,
                 dots,
             );
+
+            if (dockLayout && panelSlotEl && expanded && ReactDOM && typeof ReactDOM.createPortal === 'function') {
+                const slotRoot = React.createElement(
+                    'div',
+                    {
+                        className: 'heys-login-theme'
+                            + (loginOnly ? ' heys-login-theme--login-only' : '')
+                            + ' is-expanded'
+                            + (dimmed ? ' is-dimmed' : ''),
+                    },
+                    panel,
+                );
+                return React.createElement(
+                    React.Fragment,
+                    null,
+                    ReactDOM.createPortal(slotRoot, panelSlotEl),
+                    dockRoot,
+                );
+            }
+
+            return dockRoot;
         };
     }
 

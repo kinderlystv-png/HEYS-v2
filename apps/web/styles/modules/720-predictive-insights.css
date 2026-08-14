@@ -1774,6 +1774,10 @@
   background-image: none !important;
 }
 
+.tab-content-swipeable:has(.insights-tab) > .tab-active-viewport {
+  padding: 0 !important;
+}
+
 /* v4: плоский фон — без fixed ::before gradient (2026-08-14) */
 body:has(.insights-tab)::before {
   content: none;

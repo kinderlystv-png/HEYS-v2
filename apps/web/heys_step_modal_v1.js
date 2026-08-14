@@ -474,6 +474,7 @@
     steps = [],
     onComplete,
     onClose,
+    onRequestClose = null,
     initialStep = 0,
     initialSlideInDirection = null,
     modalClassName = '',
@@ -1009,10 +1010,18 @@
       }
     }, [stepAllowSwipe, currentStepIndex, totalSteps, goToStep, currentConfig, handleNext]);
 
-    // Закрытие
-    const handleClose = useCallback(() => {
+    const forceClose = useCallback(() => {
       onClose && onClose();
     }, [onClose]);
+
+    // Закрытие — опционально через onRequestClose (APS exit guard и др.)
+    const handleClose = useCallback(() => {
+      if (typeof onRequestClose === 'function') {
+        onRequestClose(forceClose);
+        return;
+      }
+      forceClose();
+    }, [forceClose, onRequestClose]);
 
     // Контекст для шагов
     const contextValue = useMemo(() => ({
@@ -1025,10 +1034,10 @@
 
     // Закрытие по клику на backdrop (вне модалки)
     const handleBackdropClick = useCallback((e) => {
-      if (e.target.classList.contains('mc-backdrop') && onClose) {
-        onClose();
+      if (e.target.classList.contains('mc-backdrop')) {
+        handleClose();
       }
-    }, [onClose]);
+    }, [handleClose]);
 
     if (!currentConfig) {
       return React.createElement('div', {
@@ -1072,9 +1081,22 @@
         currentStepIndex,
         totalSteps,
         context,
-        goToStep // Добавляем для навигации на другие шаги
+        goToStep,
+        updateStepData
       })
       : context.headerRight;
+
+    const headerCenterContent = typeof context.resolveHeaderCenter === 'function'
+      ? context.resolveHeaderCenter({
+        stepData,
+        currentConfig,
+        currentStepIndex,
+        totalSteps,
+        context,
+        goToStep,
+        updateStepData
+      })
+      : null;
 
     return React.createElement(StepModalContext.Provider, { value: contextValue },
       React.createElement('div', {
@@ -1108,7 +1130,9 @@
 
             // Центр: Title / hint / точки прогресса
             React.createElement('div', { className: 'mc-header-center' },
-              context.headerExtra
+              headerCenterContent
+                ? headerCenterContent
+                : context.headerExtra
                 ? context.headerExtra
                 : (currentConfig.title || currentConfig.hint) && React.createElement('div', { className: 'mc-header-titles' },
                   currentConfig.title && React.createElement(AutoFitText, {
@@ -1173,7 +1197,7 @@
               data: stepData[currentConfig.id] || {},
               onChange: (data) => updateStepData(currentConfig.id, data),
               stepData: stepData,
-              context: { ...context, onNext: handleNext, onClose: handleClose }  // Передаём onNext и onClose для кастомных кнопок
+              context: { ...context, onNext: handleNext, onClose: forceClose, onRequestClose: handleClose }  // onClose = force; onRequestClose = guarded
             })
           ),
 
@@ -1217,7 +1241,7 @@
     // Регистрируем в ModalManager
     if (HEYS.ModalManager) {
       modalCleanup = HEYS.ModalManager.register('step-modal', () => {
-        hideStepModal({ skipManagerNotify: true });
+        handleClose();
       });
     }
 
@@ -1246,16 +1270,24 @@
       }
     };
 
-    const handleClose = () => {
-      // При закрытии без сохранения тоже прокручиваем к дневнику
+    const forceClose = () => {
       hideStepModal({ scrollToDiary: options.scrollToDiary !== false });
       options.onClose && options.onClose();
+    };
+
+    const handleClose = () => {
+      if (typeof options.onRequestClose === 'function') {
+        options.onRequestClose(forceClose);
+        return;
+      }
+      forceClose();
     };
 
     currentModalElement = React.createElement(StepModal, {
       ...options,
       onComplete: handleComplete,
-      onClose: handleClose
+      onClose: forceClose,
+      onRequestClose: handleClose
     });
 
     // React 18: createRoot API

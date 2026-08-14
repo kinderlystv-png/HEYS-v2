@@ -49,6 +49,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         );
     }
 
+    function portalAdviceOverlay(node) {
+        if (!node) return null;
+        const ReactDOM = global.ReactDOM;
+        const body = typeof document !== 'undefined' ? document.body : null;
+        if (body && ReactDOM && typeof ReactDOM.createPortal === 'function') {
+            return ReactDOM.createPortal(node, body);
+        }
+        return node;
+    }
+
     function renderFabNavIcon(name, emojiFallback, size) {
         const NavIcon = HEYS.AppNavIcons?.NavIcon;
         if (NavIcon) {
@@ -176,6 +186,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             scheduleAdvice,
             undoLastDismiss,
             clearLastDismissed,
+            undoCountdownSeconds,
+            adviceServiceOpen,
+            openAdviceService,
+            closeAdviceService,
+            openAdviceRulesPool,
+            closeAdviceRulesPool,
+            adviceRulesPoolOpen,
+            retryAdviceMarksSync,
             copyAdviceTrace,
             adviceTraceAvailable,
             adviceTraceCopyState,
@@ -194,6 +212,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             ADVICE_CATEGORY_NAMES,
             ewsWarnings,
             AdviceCard,
+            adviceSettingsOpen,
+            closeAdviceSettings,
+            adviceCategorySettings,
+            toggleAdviceCategoryGroup,
+            medicalDisclaimerSessionDismissed,
+            medicalDisclaimerNeverShow,
+            setMedicalDisclaimerNeverShow,
+            dismissMedicalDisclaimerGate,
             displayedAdvice,
             adviceExpanded,
             toastSwiped,
@@ -447,16 +473,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     )
                 ),
 
-                (!isMobile || mobileSubTab === 'stats') && orphanAlert,
-                (!isMobile || mobileSubTab === 'stats') && lowCalBanner,
-                (!isMobile || mobileSubTab === 'stats') && statsBlock,
-                (!isMobile || mobileSubTab === 'activity') && compactActivity,
-                (!isMobile || mobileSubTab === 'diary') && compactNutrition,
-                (!isMobile || mobileSubTab === 'stats') && sideBlock,
-                (!isMobile || mobileSubTab === 'stats') && cycleCard,
-                (!isMobile || mobileSubTab === 'stats') && reportsOverviewCard,
+                (!isMobile || mobileSubTab === 'stats') && isTabActive && orphanAlert,
+                (!isMobile || mobileSubTab === 'stats') && isTabActive && lowCalBanner,
+                (!isMobile || mobileSubTab === 'stats') && isTabActive && statsBlock,
+                (!isMobile || mobileSubTab === 'activity') && isTabActive && compactActivity,
+                (!isMobile || mobileSubTab === 'diary') && isTabActive && compactNutrition,
+                (!isMobile || mobileSubTab === 'stats') && isTabActive && sideBlock,
+                (!isMobile || mobileSubTab === 'stats') && isTabActive && cycleCard,
+                (!isMobile || mobileSubTab === 'stats') && isTabActive && reportsOverviewCard,
 
-                reportsFullscreenModal,
+                isTabActive && reportsFullscreenModal,
 
                 isMobile && isTabActive && (mobileSubTab === 'stats' || mobileSubTab === 'diary' || mobileSubTab === 'activity') && !offlineColdStart && React.createElement(QuickActionsFabGroup, {
                     id: 'tour-fab-buttons',
@@ -496,7 +522,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                 diarySection,
 
-                HEYS.dayAdviceListUI?.renderManualAdviceList?.({
+                portalAdviceOverlay(HEYS.dayAdviceListUI?.renderAdviceSharedOverlays?.({
+                    React,
+                    adviceTrigger,
+                    toastVisible,
+                    medicalDisclaimerSessionDismissed,
+                    medicalDisclaimerNeverShow,
+                    onMedicalDisclaimerNeverShowChange: setMedicalDisclaimerNeverShow,
+                    onMedicalDisclaimerContinue: dismissMedicalDisclaimerGate,
+                    adviceSettingsOpen,
+                    closeAdviceSettings,
+                    toastsEnabled,
+                    toggleToastsEnabled,
+                    adviceSoundEnabled,
+                    toggleAdviceSoundEnabled,
+                    adviceCategorySettings,
+                    toggleAdviceCategoryGroup,
+                })),
+
+                portalAdviceOverlay(HEYS.dayAdviceListUI?.renderManualAdviceList?.({
                     React,
                     adviceTrigger,
                     adviceRelevant,
@@ -531,6 +575,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     scheduleAdvice,
                     undoLastDismiss,
                     clearLastDismissed,
+                    undoCountdownSeconds,
+                    adviceServiceOpen,
+                    openAdviceService,
+                    closeAdviceService,
+                    openAdviceRulesPool,
+                    closeAdviceRulesPool,
+                    adviceRulesPoolOpen,
+                    retryAdviceMarksSync,
                     copyAdviceTrace,
                     adviceTraceAvailable,
                     adviceTraceCopyState,
@@ -548,45 +600,38 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     closeAdviceTechnicalDetails,
                     ADVICE_CATEGORY_NAMES,
                     ewsWarnings,
-                    AdviceCard
-                }) || null,
+                    AdviceCard,
+                    medicalDisclaimerSessionDismissed,
+                })),
 
-                HEYS.dayAdviceListUI?.renderEmptyAdviceToast?.({
+                portalAdviceOverlay(HEYS.dayAdviceListUI?.renderEmptyAdviceToast?.({
                     React,
                     adviceTrigger,
                     toastVisible,
-                    dismissToast
-                }) || null,
+                    dismissToast,
+                    medicalDisclaimerSessionDismissed,
+                })),
 
-                HEYS.dayAdviceToastUI?.renderAutoAdviceToast?.({
+                portalAdviceOverlay(HEYS.dayAdviceToastUI?.renderAutoAdviceToast?.({
                     React,
                     adviceTrigger,
                     displayedAdvice,
                     toastVisible,
-                    adviceExpanded,
                     toastSwiped,
                     toastSwipeX,
-                    toastDetailsOpen,
-                    toastAppearedAtRef,
                     toastRatedState,
-                    toastScheduledConfirm,
-                    haptic,
                     dismissToast,
                     handleToastRate,
-                    setToastDetailsOpen,
-                    setAdviceExpanded,
-                    setAdviceTrigger,
                     handleToastTouchStart,
                     handleToastTouchMove,
                     handleToastTouchEnd,
-                    handleToastUndo,
-                    handleToastSchedule
-                    ,
+                    openAdviceDetailModal,
+                    medicalDisclaimerSessionDismissed,
+                    ADVICE_CATEGORY_NAMES,
                     adviceTechnicalDetails,
                     adviceTechnicalDetailsOpen,
-                    openAdviceTechnicalDetails,
-                    closeAdviceTechnicalDetails
-                }) || null,
+                    closeAdviceTechnicalDetails,
+                })),
 
                 null,
 

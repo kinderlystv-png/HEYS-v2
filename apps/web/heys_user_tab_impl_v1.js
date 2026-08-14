@@ -240,17 +240,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         if (loading) {
             return React.createElement('div', { className: 'profile-section__fields' },
-                React.createElement('div', { style: { textAlign: 'center', padding: '20px', color: 'var(--gray-500)' } },
-                    'Загрузка...'
-                )
+                React.createElement('div', { className: 'profile-loading' }, 'Загрузка...')
             );
         }
 
         if (!window.HEYS?.Subscription) {
             return React.createElement('div', { className: 'profile-section__fields' },
-                React.createElement('div', { style: { textAlign: 'center', padding: '20px', color: 'var(--gray-500)' } },
-                    'Модуль подписок не загружен'
-                )
+                React.createElement('div', { className: 'profile-loading' }, 'Модуль подписок не загружен')
             );
         }
 
@@ -259,48 +255,27 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const daysLeft = statusData?.days_left || 0;
 
         return React.createElement('div', { className: 'profile-section__fields' },
-            // Статус карточка
-            React.createElement('div', {
-                className: 'profile-field-group',
-                style: {
-                    backgroundColor: meta?.bg || 'var(--gray-100)',
-                    borderRadius: '12px',
-                    padding: '16px',
-                    border: `2px solid ${meta?.color || 'var(--gray-300)'}`
-                }
-            },
-                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' } },
-                    React.createElement('span', { style: { fontSize: '32px' } }, meta?.emoji || '💎'),
+            React.createElement('div', { className: 'profile-field-group profile-subscription-card' },
+                React.createElement('div', { className: 'profile-subscription-card__head' },
+                    React.createElement('span', { className: 'profile-subscription-card__icon' }, profileSvg('gem', 22)),
                     React.createElement('div', null,
-                        React.createElement('div', { style: { fontSize: '18px', fontWeight: '600', color: meta?.color || 'inherit' } },
+                        React.createElement('div', { className: 'profile-subscription-card__title' },
                             meta?.label || 'Подписка'
                         ),
-                        React.createElement('div', { style: { fontSize: '14px', color: 'var(--gray-600)' } },
+                        React.createElement('div', { className: 'muted' },
                             meta?.desc || ''
                         )
                     )
                 ),
 
-                // Дни до окончания
                 (status === 'trial' || status === 'active') && daysLeft > 0 &&
-                React.createElement('div', {
-                    style: {
-                        backgroundColor: 'rgba(0,0,0,0.05)',
-                        borderRadius: '8px',
-                        padding: '12px',
-                        textAlign: 'center',
-                        marginBottom: '12px'
-                    }
-                },
-                    React.createElement('div', { style: { fontSize: '24px', fontWeight: '700', color: meta?.color } },
-                        daysLeft
-                    ),
-                    React.createElement('div', { style: { fontSize: '12px', color: 'var(--gray-600)' } },
+                React.createElement('div', { className: 'profile-subscription-card__days' },
+                    React.createElement('div', { className: 'profile-subscription-card__days-num' }, daysLeft),
+                    React.createElement('div', { className: 'muted', style: { fontSize: '12px' } },
                         daysLeft === 1 ? 'день осталось' : (daysLeft < 5 ? 'дня осталось' : 'дней осталось')
                     )
                 ),
 
-                // Кнопка оплаты (для read_only или none)
                 (status === 'read_only' || status === 'none') &&
                 React.createElement('button', {
                     className: 'btn btn-primary',
@@ -309,12 +284,34 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         if (window.HEYS?.Paywall?.show) {
                             window.HEYS.Paywall.show();
                         } else {
-                            alert('Оплата скоро будет доступна! 💎');
+                            alert('Оплата скоро будет доступна');
                         }
                     }
-                }, status === 'read_only' ? '🔓 Продлить подписку' : '🚀 Начать пробный период')
+                }, status === 'read_only' ? 'Продлить подписку' : 'Начать пробный период')
             )
         );
+    }
+
+    function profileSvg(name, size) {
+        const NavIcon = HEYS.AppNavIcons && HEYS.AppNavIcons.NavIcon;
+        if (!NavIcon) return null;
+        return React.createElement(NavIcon, {
+            name: name,
+            size: size || 18,
+            strokeWidth: 2,
+            className: 'profile-icon-svg'
+        });
+    }
+
+    function profileHint(kind, text) {
+        return React.createElement('span', { className: `profile-hint profile-hint--${kind}` }, text);
+    }
+
+    function profileMessageClass(text) {
+        if (!text) return 'profile-message';
+        if (text.startsWith('✅') || text.startsWith('✓')) return 'profile-message profile-message--ok';
+        if (text.startsWith('❌') || text.startsWith('⚠')) return 'profile-message profile-message--err';
+        return 'profile-message';
     }
 
     // === ProfileSection — FAQ-style collapsible section ===
@@ -374,6 +371,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     }
 
     function UserTabBase() {
+        const isCuratorSession = (() => {
+            try {
+                if (HEYS.auth?.isCuratorSession?.() === true) return true;
+            } catch { /* noop */ }
+            return false;
+        })();
+
         // Twemoji: reparse emoji after render
         React.useEffect(() => {
             if (window.scheduleTwemojiParse) window.scheduleTwemojiParse();
@@ -421,49 +425,75 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         // === Accordion state (с сохранением в localStorage) ===
         const SECTIONS_KEY = 'heys_profile_sections';
+        const normalizeExclusiveSections = (saved, fallbackId) => {
+            if (!saved || typeof saved !== 'object') {
+                return fallbackId ? { [fallbackId]: true } : {};
+            }
+            const openId = Object.keys(saved).find((key) => saved[key]);
+            return openId ? { [openId]: true } : (fallbackId ? { [fallbackId]: true } : {});
+        };
+        const persistExpandedSections = (next) => {
+            try {
+                if (HEYS.store?.set) HEYS.store.set(SECTIONS_KEY, next);
+                else if (lsSet) lsSet(SECTIONS_KEY, next);
+                else localStorage.setItem(SECTIONS_KEY, JSON.stringify(next));
+            } catch { /* noop */ }
+        };
         const [expandedSections, setExpandedSections] = React.useState(() => {
             try {
                 if (HEYS.store?.get) {
                     const saved = HEYS.store.get(SECTIONS_KEY, null);
-                    if (saved) return typeof saved === 'string' ? JSON.parse(saved) : saved;
+                    if (saved) return normalizeExclusiveSections(typeof saved === 'string' ? JSON.parse(saved) : saved, 'basic');
                 }
                 const saved = lsGet ? lsGet(SECTIONS_KEY, null) : null;
-                if (saved) return saved;
+                if (saved) return normalizeExclusiveSections(saved, 'basic');
                 const raw = localStorage.getItem(SECTIONS_KEY);
-                return raw ? JSON.parse(raw) : { basic: true };
+                return raw ? normalizeExclusiveSections(JSON.parse(raw), 'basic') : { basic: true };
             } catch { return { basic: true }; }
         });
         const toggleSection = (id) => {
             setExpandedSections(prev => {
-                const next = { ...prev, [id]: !prev[id] };
-                try {
-                    if (HEYS.store?.set) HEYS.store.set(SECTIONS_KEY, next);
-                    else if (lsSet) lsSet(SECTIONS_KEY, next);
-                    else localStorage.setItem(SECTIONS_KEY, JSON.stringify(next));
-                } catch { }
+                const isOpen = !!prev[id];
+                const next = isOpen ? {} : { [id]: true };
+                persistExpandedSections(next);
                 return next;
             });
         };
 
-        // Переключение на секцию уведомлений из колокольчика в шапке
-        React.useEffect(() => {
-            const handler = () => {
-                setExpandedSections(prev => {
-                    if (prev.notifications) return prev;
-                    const next = { ...prev, notifications: true };
-                    try {
-                        if (HEYS.store?.set) HEYS.store.set(SECTIONS_KEY, next);
-                        else if (lsSet) lsSet(SECTIONS_KEY, next);
-                    } catch { }
-                    return next;
-                });
+        const openProfileSection = (sectionId) => {
+            if (!sectionId) return;
+            setExpandedSections(prev => {
+                if (prev[sectionId] && Object.keys(prev).filter((key) => prev[key]).length === 1) return prev;
+                const next = { [sectionId]: true };
+                persistExpandedSections(next);
+                return next;
+            });
+            requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
-                    const el = document.getElementById('profile-section-notifications');
+                    const el = document.getElementById('profile-section-' + sectionId);
                     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 });
+            });
+        };
+
+        React.useEffect(() => {
+            const handler = (event) => {
+                const fromLegacyPush = event?.type === 'heys:scroll-to-push-settings';
+                const sectionId = fromLegacyPush ? 'notifications' : (event?.detail?.id || '');
+                if (sectionId) window.__heysPendingUserSection = null;
+                openProfileSection(sectionId);
             };
+            window.addEventListener('heys:open-user-section', handler);
             window.addEventListener('heys:scroll-to-push-settings', handler);
-            return () => window.removeEventListener('heys:scroll-to-push-settings', handler);
+            const pending = window.__heysPendingUserSection;
+            if (pending) {
+                window.__heysPendingUserSection = null;
+                openProfileSection(pending);
+            }
+            return () => {
+                window.removeEventListener('heys:open-user-section', handler);
+                window.removeEventListener('heys:scroll-to-push-settings', handler);
+            };
         }, []);
 
         const getCurrentClientId = () => {
@@ -749,14 +779,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const FieldStatus = ({ fieldKey }) => {
             if (lastEditedField !== fieldKey) return null;
             if (fieldStatus === 'pending') {
-                return React.createElement('span', {
-                    style: { marginLeft: '6px', color: '#f59e0b', fontSize: '12px', fontWeight: 500 }
-                }, '⏳ Сохраняется...');
+                return profileHint('pending', 'Сохраняется...');
             }
             if (fieldStatus === 'saved') {
-                return React.createElement('span', {
-                    style: { marginLeft: '6px', color: '#22c55e', fontSize: '12px', fontWeight: 500 }
-                }, '✓ Сохранено');
+                return profileHint('saved', 'Сохранено');
             }
             return null;
         };
@@ -826,7 +852,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // === СЕКЦИЯ 1: Базовые параметры ===
                 React.createElement(ProfileSection, {
                     id: 'basic',
-                    icon: '👤',
+                    icon: profileSvg('person'),
                     title: 'Базовые параметры',
                     subtitle: 'Рост, вес, возраст, цели',
                     tone: 'blue',
@@ -836,7 +862,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     React.createElement('div', { className: 'profile-section__fields' },
 
                         // === ГРУППА 1: Личные данные ===
-                        React.createElement(ProfileFieldGroup, { icon: '👤', title: 'Личные данные' },
+                        React.createElement(ProfileFieldGroup, { icon: profileSvg('person', 16), title: 'Личные данные' },
                             React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Имя'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { value: profile.firstName, onChange: e => updateProfileField('firstName', e.target.value) }), React.createElement(FieldStatus, { fieldKey: 'firstName' })),
                             React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Фамилия'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { value: profile.lastName, onChange: e => updateProfileField('lastName', e.target.value) }), React.createElement(FieldStatus, { fieldKey: 'lastName' })),
                             React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Пол'), React.createElement('span', { className: 'sep' }, '-'),
@@ -857,7 +883,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         ),
 
                         // === ГРУППА 2: Параметры тела ===
-                        React.createElement(ProfileFieldGroup, { icon: '📏', title: 'Параметры тела' },
+                        React.createElement(ProfileFieldGroup, { icon: profileSvg('ruler', 16), title: 'Параметры тела' },
                             React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Рост (см)'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { type: 'number', value: profile.height, onChange: e => updateProfileField('height', Number(e.target.value) || 0), onFocus: e => e.target.select() }), React.createElement(FieldStatus, { fieldKey: 'height' })),
                             React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Базовый вес (кг)'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { type: 'number', step: '1', value: profile.baseWeight || profile.weight, onChange: e => updateProfileField('baseWeight', Number(e.target.value) || 0), onFocus: e => e.target.select() }), React.createElement(FieldStatus, { fieldKey: 'baseWeight' })),
                             // Текущий вес (из последнего чек-ина)
@@ -880,12 +906,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 const baseWeight = profile.baseWeight || profile.weight;
                                 const diff = currentWeight && baseWeight ? round1(currentWeight - baseWeight) : null;
                                 return React.createElement('div', { className: 'inline-field' },
-                                    React.createElement('label', null, '⚖️ Текущий вес'),
+                                    React.createElement('label', null, 'Текущий вес'),
                                     React.createElement('span', { className: 'sep' }, '-'),
                                     currentWeight
                                         ? React.createElement('span', { style: { fontWeight: 600 } },
                                             `${currentWeight} кг`,
-                                            diff !== null && diff !== 0 && React.createElement('span', { style: { marginLeft: '8px', fontSize: '13px', color: diff < 0 ? '#22c55e' : diff > 0 ? '#f97316' : 'var(--gray-500)' } },
+                                            diff !== null && diff !== 0 && React.createElement('span', {
+                                                className: diff < 0 ? 'profile-weight-diff--down' : 'profile-weight-diff--up'
+                                            },
                                                 diff > 0 ? `+${diff}` : diff, ' от базы'
                                             )
                                         )
@@ -924,15 +952,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
                                 const weightToLose = round1(currentWeight - goalWeight);
                                 if (weightToLose <= 0) {
-                                    return React.createElement('div', {
-                                        className: 'goal-calculator', style: {
-                                            marginTop: '12px', padding: '12px 14px', background: 'linear-gradient(135deg, #dcfce7 0%, #f0fdf4 100%)',
-                                            borderRadius: '10px', border: '1px solid #86efac'
-                                        }
-                                    },
-                                        React.createElement('div', { style: { fontWeight: 600, color: '#15803d', display: 'flex', alignItems: 'center', gap: '6px' } },
-                                            '🎉 Цель достигнута!',
-                                            React.createElement('span', { style: { fontWeight: 400, fontSize: '13px', color: '#166534' } },
+                                    return React.createElement('div', { className: 'profile-goal-panel profile-goal-panel--success' },
+                                        React.createElement('div', { className: 'profile-goal-panel__title' },
+                                            'Цель достигнута!',
+                                            React.createElement('span', { className: 'muted', style: { marginLeft: '6px', fontWeight: 400, fontSize: '13px' } },
                                                 weightToLose < 0 ? `Вы на ${Math.abs(weightToLose)} кг ниже цели` : 'Поздравляем!'
                                             )
                                         )
@@ -1076,115 +1099,86 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 // Предупреждения (ACSM Position Stand 2009)
                                 const warnings = [];
                                 if (isVeryAggressive) {
-                                    warnings.push({ icon: '⚠️', text: 'Дефицит >30% — высокий риск потери мышц и метаболической адаптации', color: '#dc2626' });
+                                    warnings.push({ level: 'high', text: 'Дефицит >30% — высокий риск потери мышц и метаболической адаптации' });
                                 } else if (isAggressive) {
-                                    warnings.push({ icon: '⚡', text: 'Дефицит >20% — добавьте силовые тренировки для сохранения мышц', color: '#f97316' });
+                                    warnings.push({ level: 'high', text: 'Дефицит >20% — добавьте силовые тренировки для сохранения мышц' });
                                 }
                                 if (kgPerWeek > 1) {
-                                    warnings.push({ icon: '🏃', text: `${kgPerWeek} кг/нед — рекомендация ACSM: 0.5-0.9 кг/нед`, color: '#eab308' });
+                                    warnings.push({ text: `${kgPerWeek} кг/нед — рекомендация ACSM: 0.5-0.9 кг/нед` });
                                 }
                                 if (kgPerWeek > 1.5) {
-                                    warnings.push({ icon: '🚨', text: 'Потеря >1.5 кг/нед увеличивает потерю мышц на 20-30%', color: '#dc2626' });
+                                    warnings.push({ level: 'high', text: 'Потеря >1.5 кг/нед увеличивает потерю мышц на 20-30%' });
                                 }
                                 if (deficitPct === 0) {
-                                    warnings.push({ icon: '📊', text: 'Установите дефицит в "Цели и метаболизм" для расчёта', color: '#6b7280' });
+                                    warnings.push({ text: 'Установите дефицит в «Цели и метаболизм» для расчёта' });
                                 }
 
                                 // Дата достижения цели
                                 const targetDate = daysToGoal ? new Date(Date.now() + daysToGoal * 24 * 60 * 60 * 1000) : null;
 
-                                return React.createElement('div', {
-                                    className: 'goal-calculator', style: {
-                                        marginTop: '12px', padding: '14px 16px',
-                                        background: 'linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%)',
-                                        borderRadius: '12px', border: '1px solid #bfdbfe',
-                                        position: 'relative'
-                                    }
-                                },
-                                    // Заголовок
+                                return React.createElement('div', { className: 'profile-goal-panel' },
                                     React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' } },
                                         React.createElement('span', {
-                                            style: { fontWeight: 600, color: '#1e40af', fontSize: '14px' },
+                                            className: 'profile-goal-panel__title',
                                             title: 'Источники: Mifflin (1990), Hall KD (2008), Forbes GB (2000), ACSM (2009). Колебания веса на весах частично вода и гликоген — ориентир на недельный тренд; подробнее в инсайте «Прогноз веса».'
-                                        }, '📐 Расчёт достижения цели'),
-                                        daysToGoal && React.createElement('span', {
-                                            style: {
-                                                padding: '4px 10px', background: '#3b82f6', color: '#fff', borderRadius: '12px', fontSize: '12px', fontWeight: 600
-                                            }
-                                        },
+                                        }, 'Расчёт достижения цели'),
+                                        daysToGoal && React.createElement('span', { className: 'profile-goal-panel__badge' },
                                             weeksToGoal <= 4 ? `~${weeksToGoal} нед.` :
                                                 monthsToGoal <= 12 ? `~${monthsToGoal} мес.` :
                                                     `~${round1(monthsToGoal / 12)} г.`
                                         )
                                     ),
 
-                                    // Индикатор источника TDEE
                                     React.createElement('div', {
-                                        style: {
-                                            display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px',
-                                            padding: '6px 10px', borderRadius: '8px',
-                                            background: tdeeSource === 'real' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(234, 179, 8, 0.1)',
-                                            border: `1px solid ${tdeeSource === 'real' ? '#10b981' : '#eab308'}`
-                                        }
+                                        className: 'profile-goal-panel__source' + (tdeeSource === 'real' ? ' profile-goal-panel__source--real' : '')
                                     },
-                                        React.createElement('span', { style: { fontSize: '12px' } },
-                                            tdeeSource === 'real' ? '📊' : '📐'
-                                        ),
-                                        React.createElement('span', {
-                                            style: {
-                                                fontSize: '12px',
-                                                color: tdeeSource === 'real' ? '#059669' : '#b45309'
-                                            }
-                                        },
+                                        React.createElement('span', null,
                                             tdeeSource === 'real'
                                                 ? `TDEE ${tdee} ккал — по вашим данным (${activityDays.length} дней)`
                                                 : `TDEE ${tdee} ккал — теория (нужно ≥3 дня активности)`
                                         )
                                     ),
 
-                                    // Разбивка потери веса (научная модель: жир + гликоген/вода + мышцы)
-                                    React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '10px' } },
-                                        React.createElement('div', { style: { textAlign: 'center', padding: '8px', background: 'rgba(251, 191, 36, 0.15)', borderRadius: '8px' } },
-                                            React.createElement('div', { style: { fontSize: '18px', fontWeight: 700, color: '#b45309' } }, `${fatToLose} кг`),
-                                            React.createElement('div', { style: { fontSize: '11px', color: '#92400e' } }, `🔥 Жир (${Math.round(fatPercent * 100)}%)`)
+                                    React.createElement('div', { className: 'profile-goal-metrics' },
+                                        React.createElement('div', { className: 'profile-goal-metric' },
+                                            React.createElement('div', { className: 'profile-goal-metric__val' }, `${fatToLose} кг`),
+                                            React.createElement('div', { className: 'profile-goal-metric__lbl' }, `Жир (${Math.round(fatPercent * 100)}%)`)
                                         ),
-                                        React.createElement('div', { style: { textAlign: 'center', padding: '8px', background: 'rgba(59, 130, 246, 0.15)', borderRadius: '8px' } },
-                                            React.createElement('div', { style: { fontSize: '18px', fontWeight: 700, color: '#1d4ed8' } }, `${glycogenWaterToLose} кг`),
-                                            React.createElement('div', { style: { fontSize: '11px', color: '#1e40af' } }, `💧 Гликоген+вода`)
+                                        React.createElement('div', { className: 'profile-goal-metric' },
+                                            React.createElement('div', { className: 'profile-goal-metric__val' }, `${glycogenWaterToLose} кг`),
+                                            React.createElement('div', { className: 'profile-goal-metric__lbl' }, 'Гликоген+вода')
                                         ),
-                                        React.createElement('div', { style: { textAlign: 'center', padding: '8px', background: 'rgba(239, 68, 68, 0.15)', borderRadius: '8px' } },
-                                            React.createElement('div', { style: { fontSize: '18px', fontWeight: 700, color: '#dc2626' } }, `${leanMuscleToLose} кг`),
-                                            React.createElement('div', { style: { fontSize: '11px', color: '#b91c1c' } }, `💪 Мышцы (${Math.round(leanMusclePercent * 100)}%)`)
+                                        React.createElement('div', { className: 'profile-goal-metric' },
+                                            React.createElement('div', { className: 'profile-goal-metric__val' }, `${leanMuscleToLose} кг`),
+                                            React.createElement('div', { className: 'profile-goal-metric__lbl' }, `Мышцы (${Math.round(leanMusclePercent * 100)}%)`)
                                         )
                                     ),
 
-                                    // Калории и сроки
                                     React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' } },
-                                        React.createElement('span', { className: 'pill', style: { fontSize: '12px' } },
-                                            `🔋 Нужно сжечь: ${(totalKcalDeficit / 1000).toFixed(0)}к ккал`
+                                        React.createElement('span', { className: 'pill profile-section__pill', style: { fontSize: '12px' } },
+                                            `Нужно сжечь: ${(totalKcalDeficit / 1000).toFixed(0)}к ккал`
                                         ),
-                                        dailyDeficit > 0 && React.createElement('span', { className: 'pill', style: { fontSize: '12px' } },
-                                            `📉 Дефицит: ${dailyDeficit} ккал/день`
+                                        dailyDeficit > 0 && React.createElement('span', { className: 'pill profile-section__pill', style: { fontSize: '12px' } },
+                                            `Дефицит: ${dailyDeficit} ккал/день`
                                         ),
-                                        kgPerWeek > 0 && React.createElement('span', { className: 'pill', style: { fontSize: '12px', background: kgPerWeek > 1 ? '#fef3c7' : '#dcfce7' } },
-                                            `⚖️ ~${kgPerWeek} кг/нед`
+                                        kgPerWeek > 0 && React.createElement('span', { className: 'pill profile-section__pill', style: { fontSize: '12px' } },
+                                            `~${kgPerWeek} кг/нед`
                                         ),
-                                        targetDate && React.createElement('span', { className: 'pill', style: { fontSize: '12px' } },
-                                            `📅 ${targetDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                                        targetDate && React.createElement('span', { className: 'pill profile-section__pill', style: { fontSize: '12px' } },
+                                            targetDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })
                                         )
                                     ),
 
-                                    // Предупреждения
                                     warnings.length > 0 && React.createElement('div', { style: { marginTop: '8px' } },
                                         warnings.map((w, i) =>
-                                            React.createElement('div', { key: i, style: { fontSize: '12px', color: w.color, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' } },
-                                                w.icon, w.text
-                                            )
+                                            React.createElement('div', {
+                                                key: i,
+                                                className: 'profile-goal-warn' + (w.level === 'high' ? ' profile-goal-warn--high' : '')
+                                            }, w.text)
                                         )
                                     ),
 
-                                    // Формула
-                                    React.createElement('div', { style: { marginTop: '10px', paddingTop: '8px', borderTop: '1px solid rgba(0,0,0,0.06)', fontSize: '11px', color: 'var(--gray-500)' } },
+                                    React.createElement('div', { className: 'muted', style: { marginTop: '10px', paddingTop: '8px', borderTop: '1px solid rgba(138, 74, 32, 0.08)', fontSize: '11px' } },
                                         `Формула: TDEE ${tdee} ккал × ${Math.abs(deficitPct)}% дефицит = ${dailyDeficit} ккал/день. `,
                                         `Жир 7700 ккал/кг, мышцы 1100 ккал/кг.`
                                     )
@@ -1193,7 +1187,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         ),
 
                         // === ГРУППА 3: Цели и метаболизм ===
-                        React.createElement(ProfileFieldGroup, { icon: '🎯', title: 'Цели и метаболизм' },
+                        React.createElement(ProfileFieldGroup, { icon: profileSvg('target', 16), title: 'Цели и метаболизм' },
                             // Целевой дефицит: пресеты + своё значение
                             (() => {
                                 const currentVal = toNum(profile.deficitPctTarget || 0);
@@ -1332,39 +1326,35 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             }
 
                             return React.createElement('div', { style: { marginTop: '10px' } },
-                                // Пилюли с метриками
                                 React.createElement('div', { className: 'row', style: { gap: '12px', flexWrap: 'wrap' } },
-                                    React.createElement('div', { className: 'pill' }, `Макс. пульс: ${maxHR} уд/мин`),
-                                    React.createElement('div', { className: 'pill' }, `Кал/мин на 1 MET: ${calPerMinPerMET}`),
-                                    React.createElement('div', { className: 'pill', style: { background: '#f0fdf4', border: '1px solid #86efac' } }, `BMR: ${bmr} ккал/сут`),
-                                    React.createElement('div', { className: 'pill', style: { background: '#f0f9ff', border: `1px solid ${bmiColor}` } },
+                                    React.createElement('div', { className: 'pill profile-section__pill' }, `Макс. пульс: ${maxHR} уд/мин`),
+                                    React.createElement('div', { className: 'pill profile-section__pill' }, `Кал/мин на 1 MET: ${calPerMinPerMET}`),
+                                    React.createElement('div', { className: 'pill profile-section__pill' }, `BMR: ${bmr} ккал/сут`),
+                                    React.createElement('div', { className: 'pill profile-section__pill' },
                                         `BMI: ${bmi}`,
-                                        React.createElement('span', { style: { marginLeft: '4px', color: bmiColor, fontSize: '12px' } }, `(${bmiCat})`)
+                                        React.createElement('span', { className: 'muted', style: { marginLeft: '4px', fontSize: '12px' } }, `(${bmiCat})`)
                                     ),
-                                    React.createElement('div', { className: 'pill', style: { background: '#eff6ff', border: '1px solid #93c5fd' } }, `💧 Норма воды: ${waterNorm} л/сут`)
+                                    React.createElement('div', { className: 'pill profile-section__pill' }, `Норма воды: ${waterNorm} л/сут`)
                                 ),
-                                // Прогресс-бар к цели (если задан целевой вес)
-                                wGoal > 0 && React.createElement('div', { style: { marginTop: '12px', padding: '10px 12px', background: 'var(--gray-50)', borderRadius: '8px' } },
-                                    React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' } },
-                                        React.createElement('span', { style: { fontWeight: 500 } }, `🎯 Цель: ${wGoal} кг`),
-                                        React.createElement('span', { style: { color: weightDiff === 0 ? '#22c55e' : 'var(--gray-600)', fontWeight: weightDiff === 0 ? 600 : 400 } },
-                                            weightDiff === 0 ? '✅ Достигнуто!' :
+                                wGoal > 0 && React.createElement('div', { className: 'profile-goal-progress' },
+                                    React.createElement('div', { className: 'profile-goal-progress__head' },
+                                        React.createElement('span', { className: 'profile-goal-progress__label' }, `Цель: ${wGoal} кг`),
+                                        React.createElement('span', {
+                                            className: 'profile-goal-progress__status' + (weightDiff === 0 ? ' profile-goal-progress__status--ok' : '')
+                                        },
+                                            weightDiff === 0 ? 'Достигнуто' :
                                                 weightDiff > 0 ? `Осталось сбросить: ${weightDiff} кг` :
                                                     `Осталось набрать: ${Math.abs(weightDiff)} кг`
                                         )
                                     ),
-                                    // Прогресс-бар
-                                    (() => {
-                                        // Рассчитываем прогресс от стартового веса (базовый вес в профиле)
-                                        const progressPct = weightDiff === 0 ? 100 : Math.max(0, Math.min(100, 100 - Math.abs(weightDiff) / Math.abs(w - wGoal) * 100)) || 0;
-                                        const barColor = weightDiff === 0 ? '#22c55e' : weightDiff > 0 ? '#3b82f6' : '#3b82f6';
-                                        return React.createElement('div', { style: { height: '8px', background: 'var(--gray-200)', borderRadius: '4px', overflow: 'hidden' } },
-                                            React.createElement('div', { style: { height: '100%', width: (weightDiff === 0 ? 100 : 50) + '%', background: barColor, borderRadius: '4px', transition: 'width 0.3s' } })
-                                        );
-                                    })(),
-                                    // Время достижения
-                                    weeksToGoal && deficitPct !== 0 && React.createElement('div', { style: { marginTop: '6px', fontSize: '13px', color: 'var(--gray-500)' } },
-                                        `⏱ При дефиците ${Math.abs(deficitPct)}%: ~${weeksToGoal} нед.`
+                                    React.createElement('div', { className: 'profile-progress-bar' },
+                                        React.createElement('div', {
+                                            className: 'profile-progress-bar__fill' + (weightDiff === 0 ? ' profile-progress-bar__fill--ok' : ''),
+                                            style: { width: (weightDiff === 0 ? 100 : 50) + '%' }
+                                        })
+                                    ),
+                                    weeksToGoal && deficitPct !== 0 && React.createElement('div', { className: 'muted', style: { marginTop: '6px', fontSize: '13px' } },
+                                        `При дефиците ${Math.abs(deficitPct)}%: ~${weeksToGoal} нед.`
                                     )
                                 )
                             );
@@ -1378,7 +1368,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // === СЕКЦИЯ 2: Пульсовые зоны ===
                 React.createElement(ProfileSection, {
                     id: 'hrZones',
-                    icon: '💓',
+                    icon: profileSvg('heart'),
                     title: 'Пульсовые зоны',
                     subtitle: 'Настройка зон для тренировок',
                     badge: `${zones.length} зон`,
@@ -1394,53 +1384,33 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         React.createElement('div', { className: 'hr-zones-list' },
                             zones.map((z, i) => {
                                 const calPerMin = round1((toNum(z.MET || 0) * calPerMinPerMET) - 1);
-                                return React.createElement('div', {
-                                    key: i, className: 'hr-zone-row', style: {
-                                        display: 'flex', flexDirection: 'column', gap: '8px',
-                                        padding: '12px 14px', marginBottom: '8px',
-                                        background: 'rgba(255,255,255,0.7)', borderRadius: '12px',
-                                        border: '1px solid rgba(244,63,94,0.15)'
-                                    }
-                                },
-                                    // Название зоны
+                                return React.createElement('div', { key: i, className: 'profile-hr-zone' },
                                     React.createElement('input', {
+                                        className: 'profile-hr-zone__name',
                                         value: z.name,
                                         onChange: e => updateZone(i, { name: e.target.value }),
-                                        onFocus: e => e.target.select(),
-                                        style: {
-                                            width: '100%', padding: '8px 12px', fontSize: '14px', fontWeight: 600,
-                                            border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px',
-                                            background: 'rgba(255,255,255,0.9)'
-                                        }
+                                        onFocus: e => e.target.select()
                                     }),
-                                    // Параметры в ряд
-                                    React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' } },
-                                        // Пульс от-до
-                                        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: 'rgba(244,63,94,0.08)', borderRadius: '8px' } },
-                                            React.createElement('span', { style: { fontSize: '12px', color: 'var(--gray-500)' } }, '💓'),
+                                    React.createElement('div', { className: 'profile-hr-zone__params' },
+                                        React.createElement('div', { className: 'profile-hr-zone__chip' },
+                                            React.createElement('span', { className: 'profile-hr-zone__chip-label' }, 'Пульс'),
                                             React.createElement('input', {
-                                                type: 'number', value: z.hrFrom, onChange: e => updateZone(i, { hrFrom: Number(e.target.value) || 0 }), onFocus: e => e.target.select(),
-                                                style: { width: '50px', padding: '4px 6px', fontSize: '13px', textAlign: 'center', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '6px' }
+                                                type: 'number', value: z.hrFrom, onChange: e => updateZone(i, { hrFrom: Number(e.target.value) || 0 }), onFocus: e => e.target.select()
                                             }),
-                                            React.createElement('span', { style: { color: 'var(--gray-400)' } }, '—'),
+                                            React.createElement('span', { className: 'muted' }, '—'),
                                             React.createElement('input', {
-                                                type: 'number', value: z.hrTo, onChange: e => updateZone(i, { hrTo: Number(e.target.value) || 0 }), onFocus: e => e.target.select(),
-                                                style: { width: '50px', padding: '4px 6px', fontSize: '13px', textAlign: 'center', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '6px' }
+                                                type: 'number', value: z.hrTo, onChange: e => updateZone(i, { hrTo: Number(e.target.value) || 0 }), onFocus: e => e.target.select()
                                             }),
-                                            React.createElement('span', { style: { fontSize: '11px', color: 'var(--gray-400)' } }, 'уд/мин')
+                                            React.createElement('span', { className: 'muted', style: { fontSize: '11px' } }, 'уд/мин')
                                         ),
-                                        // MET
-                                        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', background: 'rgba(59,130,246,0.08)', borderRadius: '8px' } },
-                                            React.createElement('span', { style: { fontSize: '12px', color: 'var(--gray-500)' } }, '⚡'),
-                                            React.createElement('span', { style: { fontSize: '12px', color: 'var(--gray-500)' } }, 'MET'),
+                                        React.createElement('div', { className: 'profile-hr-zone__chip' },
+                                            React.createElement('span', { className: 'profile-hr-zone__chip-label' }, 'MET'),
                                             React.createElement('input', {
-                                                type: 'number', step: '0.1', value: z.MET, onChange: e => updateZone(i, { MET: Number(e.target.value) || 0 }), onFocus: e => e.target.select(),
-                                                style: { width: '45px', padding: '4px 6px', fontSize: '13px', textAlign: 'center', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '6px' }
+                                                type: 'number', step: '0.1', value: z.MET, onChange: e => updateZone(i, { MET: Number(e.target.value) || 0 }), onFocus: e => e.target.select()
                                             })
                                         ),
-                                        // Калории в минуту (computed)
-                                        React.createElement('div', { style: { padding: '6px 12px', background: 'rgba(34,197,94,0.1)', borderRadius: '8px', marginLeft: 'auto' } },
-                                            React.createElement('span', { style: { fontSize: '13px', fontWeight: 600, color: '#15803d' } }, `${calPerMin} кал/мин`)
+                                        React.createElement('div', { className: 'profile-hr-zone__kcal' },
+                                            `${calPerMin} кал/мин`
                                         )
                                     )
                                 );
@@ -1448,8 +1418,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         ),
                         React.createElement('div', { className: 'muted', style: { marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' } },
                             'Макс пульс = 220 − возраст. Кал/мин = MET × (вес × 0.0175) − 1.',
-                            zonesPending && React.createElement('span', { style: { color: '#f59e0b', fontSize: '13px', fontWeight: 500 } }, '⏳ Сохраняется...'),
-                            zonesSaved && React.createElement('span', { style: { color: '#22c55e', fontSize: '13px', fontWeight: 500 } }, '✓ Сохранено')
+                            zonesPending && profileHint('pending', 'Сохраняется...'),
+                            zonesSaved && profileHint('saved', 'Сохранено')
                         )
                     ) // end profile-section__fields
                 ), // end ProfileSection hrZones
@@ -1457,7 +1427,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // === СЕКЦИЯ 3: Нормы и зоны ===
                 React.createElement(ProfileSection, {
                     id: 'norms',
-                    icon: '📊',
+                    icon: profileSvg('stats'),
                     title: 'Нормы питания',
                     subtitle: 'Зоны калорийности и распределение БЖУ',
                     tone: 'violet',
@@ -1474,22 +1444,23 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // === СЕКЦИЯ: Уведомления (push) ===
                 React.createElement(ProfileSection, {
                     id: 'notifications',
-                    icon: '🔔',
-                    title: 'Уведомления',
+                    icon: profileSvg('bell'),
+                    title: 'Уведомления и звук',
                     subtitle: pushRowStatusLabel,
                     tone: 'cyan',
                     expanded: expandedSections.notifications,
                     onToggle: () => toggleSection('notifications')
                 },
                     React.createElement('div', { className: 'profile-section__fields' },
-                        React.createElement(HEYS_PushSettingsCard, null)
+                        React.createElement(HEYS_PushSettingsCard, null),
+                        React.createElement(SoundSettingsCard, null)
                     )
                 ),
 
-                // === СЕКЦИЯ 4: Безопасность (PIN) ===
-                React.createElement(ProfileSection, {
+                // === СЕКЦИЯ 4: Безопасность (PIN) — только куратор ===
+                isCuratorSession && React.createElement(ProfileSection, {
                     id: 'security',
-                    icon: '🔒',
+                    icon: profileSvg('lock'),
                     title: 'Безопасность',
                     subtitle: 'Смена PIN для входа',
                     tone: 'amber',
@@ -1499,7 +1470,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     React.createElement('div', { className: 'profile-section__fields' },
                         React.createElement('div', { className: 'profile-field-group' },
                             React.createElement('div', { className: 'profile-field-group__header', style: { alignItems: 'center', gap: '8px' } },
-                                React.createElement('span', { className: 'profile-field-group__icon' }, '📞'),
+                                React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('phone', 16)),
                                 React.createElement('span', { className: 'profile-field-group__title' }, 'PIN клиента'),
                                 React.createElement('span', { className: 'profile-field-group__badge' }, `Client ID: ${getShortClientId(getCurrentClientId())}`)
                             ),
@@ -1556,11 +1527,14 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                     disabled: pinStatus === 'pending',
                                     style: { minWidth: '140px' }
                                 }, pinStatus === 'pending' ? 'Сохраняю…' : 'Обновить PIN'),
-                                pinStatus === 'pending' && React.createElement('span', { style: { color: '#f59e0b' } }, '⏳'),
-                                pinStatus === 'success' && React.createElement('span', { style: { color: '#22c55e' } }, '✓ Готово'),
-                                pinStatus === 'error' && React.createElement('span', { style: { color: '#ef4444' } }, '⚠️ Ошибка')
+                                pinStatus === 'pending' && profileHint('pending', '…'),
+                                pinStatus === 'success' && profileHint('saved', 'Готово'),
+                                pinStatus === 'error' && React.createElement('span', { className: 'profile-hint profile-goal-warn--high' }, 'Ошибка')
                             ),
-                            pinMessage && React.createElement('div', { className: 'muted', style: { marginTop: '6px', color: pinStatus === 'error' ? '#ef4444' : 'var(--gray-600)' } }, pinMessage)
+                            pinMessage && React.createElement('div', {
+                                className: 'muted',
+                                style: { marginTop: '6px', color: pinStatus === 'error' ? 'var(--v4-wgt-danger-text, #a1471c)' : undefined }
+                            }, pinMessage)
                         )
                     )
                 ), // end ProfileSection security
@@ -1568,7 +1542,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // === СЕКЦИЯ 4.5: Мои согласия и данные (152-ФЗ ст.14/21, GDPR Art.15-18) ===
                 React.createElement(ProfileSection, {
                     id: 'consents',
-                    icon: '📋',
+                    icon: profileSvg('document'),
                     title: 'Мои согласия и данные',
                     subtitle: 'Просмотр, отзыв, экспорт по 152-ФЗ',
                     tone: 'blue',
@@ -1583,7 +1557,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // === СЕКЦИЯ 5: Подписка (новый модуль HEYS.Subscription) ===
                 React.createElement(ProfileSection, {
                     id: 'subscription',
-                    icon: '💎',
+                    icon: profileSvg('gem'),
                     title: 'Подписка',
                     subtitle: getSubscriptionSettingsSubtitle(window.HEYS?.Subscription),
                     tone: 'emerald',
@@ -1597,7 +1571,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 // === СЕКЦИЯ 6: Система и аналитика ===
                 React.createElement(ProfileSection, {
                     id: 'system',
-                    icon: '⚙️',
+                    icon: profileSvg('settings'),
                     title: 'Система',
                     subtitle: 'Советы, достижения и аналитика',
                     tone: 'slate',
@@ -1605,10 +1579,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     onToggle: () => toggleSection('system')
                 },
                     React.createElement('div', { className: 'profile-section__fields' },
-                        // 🖥️ Доступ с компьютера
-                        React.createElement('div', { className: 'profile-field-group' },
+                        isCuratorSession && React.createElement('div', { className: 'profile-field-group' },
                             React.createElement('div', { className: 'profile-field-group__header' },
-                                React.createElement('span', { className: 'profile-field-group__icon' }, '🖥️'),
+                                React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('desktop', 16)),
                                 React.createElement('span', { className: 'profile-field-group__title' }, 'Доступ с компьютера')
                             ),
                             React.createElement('div', { style: { marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
@@ -1626,7 +1599,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             ),
                             React.createElement('div', { className: 'muted', style: { marginTop: '6px', fontSize: '13px' } },
                                 profile.desktopAllowed
-                                    ? '✓ Можно открывать на компьютере'
+                                    ? 'Можно открывать на компьютере'
                                     : 'Приложение работает только на телефоне'
                             )
                         ),
@@ -1634,16 +1607,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         // Обучение временно выключено до актуализации тура.
                         React.createElement('div', { className: 'profile-field-group' },
                             React.createElement('div', { className: 'profile-field-group__header' },
-                                React.createElement('span', { className: 'profile-field-group__icon' }, '🎓'),
+                                React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('cap', 16)),
                                 React.createElement('span', { className: 'profile-field-group__title' }, 'Обучение')
                             ),
                             React.createElement('div', { className: 'muted', style: { marginTop: '6px', fontSize: '13px' } },
                                 'Обучение временно выключено'
                             )
                         ),
-
-                        // 🔊 Звуковые эффекты
-                        React.createElement(SoundSettingsCard, null),
 
                         // Статистика советов
                         React.createElement(HEYS_AdviceStatsCard, null),
@@ -1653,7 +1623,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         window.HEYS.analyticsUI
                             ? React.createElement('div', { className: 'profile-field-group' },
                                 React.createElement('div', { className: 'profile-field-group__header' },
-                                    React.createElement('span', { className: 'profile-field-group__icon' }, '📊'),
+                                    React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('stats', 16)),
                                     React.createElement('span', { className: 'profile-field-group__title' }, 'Аналитика')
                                 ),
                                 React.createElement('div', { style: { marginTop: '8px' } },
@@ -1691,7 +1661,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         return React.createElement('div', { className: 'profile-field-group' },
             React.createElement('div', { className: 'profile-field-group__header' },
-                React.createElement('span', { className: 'profile-field-group__icon' }, '🏆'),
+                React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('trophy', 16)),
                 React.createElement('span', { className: 'profile-field-group__title' }, 'Рейтинг баланса дня')
             ),
             React.createElement('div', { style: { marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
@@ -1765,7 +1735,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         return React.createElement('div', { className: 'profile-field-group' },
             React.createElement('div', { className: 'profile-field-group__header' },
-                React.createElement('span', { className: 'profile-field-group__icon' }, '🔊'),
+                React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('speaker', 16)),
                 React.createElement('span', { className: 'profile-field-group__title' }, 'Звук и вибрация')
             ),
             React.createElement('div', { className: 'sound-settings-card' },
@@ -1831,15 +1801,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             React.createElement('button', {
                                 className: 'btn-secondary sound-settings-card__preview-button',
                                 onClick: previewReward
-                            }, '✨ XP'),
+                            }, 'Награда'),
                             React.createElement('button', {
                                 className: 'btn-secondary sound-settings-card__preview-button',
                                 onClick: previewSuccess
-                            }, '✅ Цель'),
+                            }, 'Цель'),
                             React.createElement('button', {
                                 className: 'btn-secondary sound-settings-card__preview-button',
                                 onClick: previewTriumph
-                            }, '🏆 Уровень')
+                            }, 'Уровень')
                         )
                     )
                 )
@@ -1892,62 +1862,29 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         return React.createElement('div', { className: 'profile-field-group' },
             React.createElement('div', { className: 'profile-field-group__header' },
-                React.createElement('span', { className: 'profile-field-group__icon' }, '💡'),
+                React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('advice', 16)),
                 React.createElement('span', { className: 'profile-field-group__title' }, 'Советы')
             ),
-            React.createElement('div', { style: { marginTop: '8px' } },
-                React.createElement('div', {
-                    style: {
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: '8px'
-                    }
-                },
-                    React.createElement('span', { style: { color: 'var(--gray-600)' } }, 'Прочитано советов:'),
-                    React.createElement('span', { style: { fontWeight: 600, fontSize: '18px' } }, total)
+            React.createElement('div', { className: 'profile-advice-stats' },
+                React.createElement('div', { className: 'profile-advice-stats__row' },
+                    React.createElement('span', { className: 'muted' }, 'Прочитано советов:'),
+                    React.createElement('span', { className: 'profile-advice-stats__count' }, total)
                 ),
                 nextMilestone && React.createElement('div', null,
-                    React.createElement('div', {
-                        style: {
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            fontSize: '13px',
-                            color: 'var(--gray-500)',
-                            marginBottom: '4px'
-                        }
-                    },
-                        React.createElement('span', null, `До достижения "${nextMilestone === 50 ? '💡 Внимательный' : '🧠 Мудрец'}"`),
+                    React.createElement('div', { className: 'profile-advice-stats__meta' },
+                        React.createElement('span', null, `До достижения «${nextMilestone === 50 ? 'Внимательный' : 'Мудрец'}»`),
                         React.createElement('span', null, `${remaining} осталось`)
                     ),
-                    React.createElement('div', {
-                        style: {
-                            height: '8px',
-                            background: 'var(--gray-200)',
-                            borderRadius: '4px',
-                            overflow: 'hidden'
-                        }
-                    },
+                    React.createElement('div', { className: 'profile-progress-bar' },
                         React.createElement('div', {
-                            style: {
-                                height: '100%',
-                                width: progress + '%',
-                                background: 'linear-gradient(90deg, var(--blue-400), var(--blue-500))',
-                                borderRadius: '4px',
-                                transition: 'width 0.3s ease'
-                            }
+                            className: 'profile-progress-bar__fill',
+                            style: { width: progress + '%' }
                         })
                     )
                 ),
-                !nextMilestone && React.createElement('div', {
-                    style: {
-                        padding: '8px 12px',
-                        background: 'var(--green-50)',
-                        borderRadius: '8px',
-                        color: 'var(--green-700)',
-                        fontSize: '14px'
-                    }
-                }, '🏆 Все достижения за советы получены!')
+                !nextMilestone && React.createElement('div', { className: 'profile-advice-stats__done' },
+                    'Все достижения за советы получены'
+                )
             )
         );
     }
@@ -1985,19 +1922,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         return React.createElement('div', { className: 'profile-field-group' },
             React.createElement('div', { className: 'profile-field-group__header' },
-                React.createElement('span', { className: 'profile-field-group__icon' }, '⚙️'),
+                React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('settings', 16)),
                 React.createElement('span', { className: 'profile-field-group__title' }, 'Настройки советов')
             ),
 
-            // Категории — компактный grid 3 колонки
-            React.createElement('div', {
-                style: {
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '8px',
-                    marginTop: '12px'
-                }
-            },
+            React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px' } },
                 catEntries.map(function (entry) {
                     var cat = entry[0];
                     var info = entry[1];
@@ -2007,107 +1936,44 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         key: cat,
                         title: info.desc,
                         onClick: function () { toggleCategory(cat, !isEnabled); },
-                        style: {
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '8px 14px',
-                            background: isEnabled ? 'rgba(59, 130, 246, 0.08)' : 'var(--gray-50)',
-                            borderRadius: '12px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            fontSize: '14px',
-                            fontWeight: 500,
-                            color: isEnabled ? 'var(--blue-600)' : 'var(--gray-500)',
-                            border: isEnabled ? '2px solid var(--blue-400)' : '2px solid var(--gray-200)',
-                            userSelect: 'none'
-                        }
+                        className: 'profile-advice-chip' + (isEnabled ? ' is-on' : '')
                     },
-                        React.createElement('span', { style: { fontSize: '16px' } }, info.icon),
+                        React.createElement('span', { className: 'profile-advice-chip__icon' }, info.icon),
                         React.createElement('span', null, info.name)
                     );
                 })
             ),
 
-            // Общие настройки — горизонтальная строка
-            React.createElement('div', {
-                style: {
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    alignItems: 'center',
-                    gap: '16px',
-                    marginTop: '16px',
-                    paddingTop: '12px',
-                    borderTop: '1px solid var(--gray-200)'
-                }
-            },
-                // Haptic
-                React.createElement('label', {
-                    style: {
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        cursor: 'pointer',
-                        fontSize: '13px'
-                    }
-                },
+            React.createElement('div', { className: 'profile-inline-checks' },
+                React.createElement('label', { className: 'profile-inline-check' },
                     React.createElement('input', {
                         type: 'checkbox',
                         checked: settings.hapticEnabled !== false,
-                        onChange: function (e) { updateSetting('hapticEnabled', e.target.checked); },
-                        style: { width: '16px', height: '16px' }
+                        onChange: function (e) { updateSetting('hapticEnabled', e.target.checked); }
                     }),
-                    React.createElement('span', null, '📳 Вибрация')
+                    React.createElement('span', null, 'Вибрация')
                 ),
 
-                // Sound
-                React.createElement('label', {
-                    style: {
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        cursor: 'pointer',
-                        fontSize: '13px'
-                    }
-                },
+                React.createElement('label', { className: 'profile-inline-check' },
                     React.createElement('input', {
                         type: 'checkbox',
                         checked: settings.soundEnabled !== false,
-                        onChange: function (e) { updateSetting('soundEnabled', e.target.checked); },
-                        style: { width: '16px', height: '16px' }
+                        onChange: function (e) { updateSetting('soundEnabled', e.target.checked); }
                     }),
-                    React.createElement('span', null, '🔔 Звук')
+                    React.createElement('span', null, 'Звук')
                 ),
 
-                // Show details
-                React.createElement('label', {
-                    style: {
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        cursor: 'pointer',
-                        fontSize: '13px'
-                    }
-                },
+                React.createElement('label', { className: 'profile-inline-check' },
                     React.createElement('input', {
                         type: 'checkbox',
                         checked: settings.showDetails !== false,
-                        onChange: function (e) { updateSetting('showDetails', e.target.checked); },
-                        style: { width: '16px', height: '16px' }
+                        onChange: function (e) { updateSetting('showDetails', e.target.checked); }
                     }),
-                    React.createElement('span', null, '📖 Детали')
+                    React.createElement('span', null, 'Детали')
                 ),
 
-                // Max per day
-                React.createElement('label', {
-                    style: {
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontSize: '13px'
-                    }
-                },
-                    React.createElement('span', null, '📊 Макс:'),
+                React.createElement('label', { className: 'profile-inline-check' },
+                    React.createElement('span', null, 'Макс:'),
                     React.createElement('input', {
                         type: 'number',
                         min: 5,
@@ -2118,17 +1984,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             width: '50px',
                             padding: '4px 6px',
                             borderRadius: '6px',
-                            border: '1px solid var(--gray-300)',
+                            border: '1px solid rgba(138, 74, 32, 0.12)',
                             textAlign: 'center',
-                            fontSize: '13px'
+                            fontSize: '13px',
+                            background: 'var(--v4-bg, #fffaf1)'
                         }
                     })
                 )
             ),
 
-            saved && React.createElement('div', {
-                style: { marginTop: '8px', color: 'var(--green-600)', fontSize: '12px', textAlign: 'center' }
-            }, '✓ Сохранено')
+            saved && profileHint('saved', 'Сохранено')
         );
     }
 
@@ -2191,7 +2056,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         return React.createElement('div', { className: 'profile-field-group' },
             React.createElement('div', { className: 'profile-field-group__header', style: { justifyContent: 'space-between' } },
                 React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-                    React.createElement('span', { className: 'profile-field-group__icon' }, '🎨'),
+                    React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('palette', 16)),
                     React.createElement('span', { className: 'profile-field-group__title' }, 'Зоны калорийности')
                 ),
                 React.createElement('button', { className: 'btn btn-sm', onClick: resetZones, style: { marginLeft: 'auto' } }, 'Сбросить')
@@ -2292,7 +2157,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             ),
             React.createElement('div', { className: 'muted', style: { marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' } },
                 'Зоны применяются везде: календарь, sparkline, heatmap, советы.',
-                saved && React.createElement('span', { style: { color: '#22c55e', fontSize: '13px', fontWeight: 500 } }, '✓ Сохранено')
+                saved && profileHint('saved', 'Сохранено')
             )
         );
     }
@@ -2425,73 +2290,62 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         // iOS не-standalone — баннер про установку.
         if (status?.needsInstall) {
-            return React.createElement('div', {
-                style: {
-                    padding: '14px', borderRadius: '12px',
-                    background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-                    color: 'white'
-                }
-            },
-                React.createElement('div', { style: { fontWeight: 600, marginBottom: '6px' } },
-                    '📲 Сначала установи HEYS на домашний экран'),
-                React.createElement('div', { style: { fontSize: '14px', opacity: 0.9 } },
+            return React.createElement('div', { className: 'profile-ios-install' },
+                React.createElement('div', { className: 'profile-ios-install__title' },
+                    'Сначала установите HEYS на домашний экран'),
+                React.createElement('div', { className: 'profile-ios-install__text' },
                     'На iPhone уведомления работают только из установленного приложения. Нажми ' +
                     'Поделиться → «На экран Домой», запусти HEYS с домашнего экрана и вернись сюда.')
             );
         }
 
         const Toggle = ({ value, onChange }) =>
-            React.createElement('input', {
-                type: 'checkbox', checked: !!value, onChange: (e) => onChange(e.target.checked),
-                style: { width: '20px', height: '20px', cursor: 'pointer' }
-            });
+            React.createElement('label', { className: 'toggle-switch' },
+                React.createElement('input', {
+                    type: 'checkbox', checked: !!value, onChange: (e) => onChange(e.target.checked)
+                }),
+                React.createElement('span', { className: 'toggle-slider' })
+            );
 
         const TimeInput = ({ value, onChange }) =>
             React.createElement('input', {
                 type: 'time', value: value || '', onChange: (e) => onChange(e.target.value),
-                style: { padding: '4px 8px', borderRadius: '6px', border: '1px solid #d4d4d8' }
+                className: 'profile-push-input'
             });
 
         const NumberInput = ({ value, min, max, onChange }) =>
             React.createElement('input', {
                 type: 'number', value: value || '', min, max,
                 onChange: (e) => onChange(Math.max(min, Math.min(max, Number(e.target.value) || min))),
-                style: { padding: '4px 8px', borderRadius: '6px', border: '1px solid #d4d4d8', width: '60px' }
+                className: 'profile-push-input profile-push-input--num'
             });
 
         const Row = (label, control) =>
-            React.createElement('div', {
-                style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', gap: '12px' }
-            },
-                React.createElement('span', { style: { color: '#3f3f46', fontSize: '14px' } }, label),
+            React.createElement('div', { className: 'profile-push-row' },
+                React.createElement('span', { className: 'profile-push-row__label' }, label),
                 control
             );
 
-        return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
+        return React.createElement('div', { className: 'profile-push-card' },
             // Статус + главная кнопка
             React.createElement('div', {
-                style: {
-                    padding: '12px', borderRadius: '10px',
-                    background: status?.subscribed ? '#dcfce7' : '#f4f4f5',
-                    border: status?.subscribed ? '1px solid #22c55e' : '1px solid #e4e4e7',
-                    marginBottom: '8px'
-                }
+                className: 'profile-push-status' + (status?.subscribed ? ' profile-push-status--on' : '')
             },
-                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                React.createElement('div', { className: 'profile-push-status__row' },
                     React.createElement('div', null,
-                        React.createElement('div', { style: { fontWeight: 600 } },
-                            status?.subscribed ? '✓ Уведомления включены' : 'Уведомления выключены'),
-                        React.createElement('div', { style: { fontSize: '12px', color: '#71717a', marginTop: '2px' } },
-                            'Permission: ', status?.permission || '—')
+                        React.createElement('div', { className: 'profile-push-status__title' },
+                            status?.subscribed ? 'Уведомления включены' : 'Уведомления выключены'),
+                        React.createElement('div', { className: 'profile-push-status__meta' },
+                            'Разрешение: ', status?.permission || '—')
                     ),
                     status?.subscribed
                         ? React.createElement('button', {
                             onClick: handleDisableClick, disabled: busy,
-                            style: { padding: '6px 14px', borderRadius: '6px', background: 'transparent', border: '1px solid #71717a', color: '#71717a', cursor: 'pointer' }
+                            className: 'profile-push-status__btn'
                         }, 'Отключить')
                         : React.createElement('button', {
                             onClick: handleEnableClick, disabled: busy,
-                            style: { padding: '6px 14px', borderRadius: '6px', background: '#22c55e', border: 'none', color: 'white', fontWeight: 500, cursor: 'pointer' }
+                            className: 'profile-push-status__btn profile-push-status__btn--act'
                         }, busy ? '…' : 'Включить')
                 )
             ),
@@ -2539,8 +2393,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             // ── Группа: Утро ────────────────────────────────────
             !isCurator && status?.subscribed && React.createElement('div', {
-                style: { fontWeight: 600, fontSize: '12px', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '12px', marginBottom: '4px' }
-            }, '☀️ Утро'),
+                className: 'profile-push-group'
+            }, 'Утро'),
             !isCurator && status?.subscribed && Row(
                 'Напоминание про завтрак (если нет к 12:00)',
                 React.createElement(Toggle, {
@@ -2565,8 +2419,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             // ── Группа: В течение дня ──────────────────────────
             !isCurator && status?.subscribed && React.createElement('div', {
-                style: { fontWeight: 600, fontSize: '12px', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '12px', marginBottom: '4px' }
-            }, '🌤 В течение дня'),
+                className: 'profile-push-group'
+            }, 'В течение дня'),
             !isCurator && status?.subscribed && Row(
                 'Напоминание про воду',
                 React.createElement(Toggle, {
@@ -2591,8 +2445,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             // ── Группа: Тренды ─────────────────────────────────
             !isCurator && status?.subscribed && React.createElement('div', {
-                style: { fontWeight: 600, fontSize: '12px', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '12px', marginBottom: '4px' }
-            }, '📊 Тренды'),
+                className: 'profile-push-group'
+            }, 'Тренды'),
             !isCurator && status?.subscribed && Row(
                 '3 дня переедания → разгрузка',
                 React.createElement(Toggle, {
@@ -2617,8 +2471,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             // ── Quiet hours ────────────────────────────────────
             status?.subscribed && React.createElement('div', {
-                style: { fontWeight: 600, fontSize: '12px', color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '12px', marginBottom: '4px' }
-            }, '🌙 Тихие часы'),
+                className: 'profile-push-group'
+            }, 'Тихие часы'),
             status?.subscribed && Row(
                 'Тишина с',
                 React.createElement(TimeInput, {
@@ -2635,21 +2489,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             ),
 
             // Toast «✓ Сохранено» — мягкое подтверждение для тогглов
-            savedHint && React.createElement('div', {
-                style: {
-                    position: 'fixed', bottom: '20px', right: '20px',
-                    padding: '8px 14px', borderRadius: '8px',
-                    background: '#22c55e', color: 'white', fontSize: '13px',
-                    fontWeight: 500, boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                    zIndex: 100, opacity: 0.95, pointerEvents: 'none'
-                }
-            }, savedHint),
+            savedHint && React.createElement('div', { className: 'profile-push-toast' }, savedHint),
 
             // Тестовая кнопка
             status?.subscribed && React.createElement('div', { style: { marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e4e4e7' } },
                 React.createElement('button', {
                     onClick: handleTest, disabled: busy,
-                    style: { padding: '8px 16px', borderRadius: '8px', background: '#3b82f6', border: 'none', color: 'white', cursor: 'pointer' }
+                    className: 'profile-push-status__btn profile-push-status__btn--act'
                 }, 'Отправить тестовый пуш'),
                 testResult && React.createElement('div', { style: { marginTop: '8px', fontSize: '13px', color: '#3f3f46' } }, testResult)
             )
@@ -2770,16 +2616,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         // Индикатор статуса для норм
         const NormFieldStatus = ({ fieldKey }) => {
             if (lastEditedNorm !== fieldKey) return null;
-            if (normsPending) {
-                return React.createElement('span', {
-                    style: { marginLeft: '6px', color: '#f59e0b', fontSize: '12px', fontWeight: 500 }
-                }, '⏳ Сохраняется...');
-            }
-            if (normsSaved) {
-                return React.createElement('span', {
-                    style: { marginLeft: '6px', color: '#22c55e', fontSize: '12px', fontWeight: 500 }
-                }, '✓ Сохранено');
-            }
+            if (normsPending) return profileHint('pending', 'Сохраняется...');
+            if (normsSaved) return profileHint('saved', 'Сохранено');
             return null;
         };
 
@@ -2801,7 +2639,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         return React.createElement('div', { className: 'profile-field-group' },
             React.createElement('div', { className: 'profile-field-group__header' },
-                React.createElement('span', { className: 'profile-field-group__icon' }, '📊'),
+                React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('stats', 16)),
                 React.createElement('span', { className: 'profile-field-group__title' }, 'Нормы')
             ),
             React.createElement('div', { className: 'field-list' },
@@ -2818,7 +2656,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Клетчатка (г/1000 ккал) — вручную'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { type: 'number', min: 0, max: 100, step: '1', value: clamp(norms.fiberPct), onChange: e => update('fiberPct', e.target.value), onFocus: e => e.target.select() }), React.createElement(NormFieldStatus, { fieldKey: 'fiberPct' }))
             ),
             (overMacro || overFatSplit || overCarbSplit) ?
-                React.createElement('div', { className: 'muted', style: { marginTop: '6px', color: '#dc2626' } },
+                React.createElement('div', { className: 'profile-message profile-message--err', style: { marginTop: '6px' } },
                     (overMacro ? 'Предупреждение: У% + Б% превышают 100. Жиры будут обнулены. ' : ''),
                     (overFatSplit ? 'Предупреждение: Вредные% + Супервредные% > 100. Полезные будут обнулены. ' : ''),
                     (overCarbSplit ? 'Предупреждение: Простые% > 100. Сложные будут обнулены.' : '')
@@ -3017,7 +2855,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         return React.createElement('div', { className: 'profile-field-group' },
             React.createElement('div', { className: 'profile-field-group__header' },
-                React.createElement('span', { className: 'profile-field-group__icon' }, '📋'),
+                React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('document', 16)),
                 React.createElement('span', { className: 'profile-field-group__title' }, 'Мои согласия')
             ),
             React.createElement('div', { className: 'muted', style: { marginTop: '6px', fontSize: '13px' } },
@@ -3025,7 +2863,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             // ── Список согласий ─────────────────────────────────────────
             loading
-                ? React.createElement('div', { className: 'muted', style: { marginTop: 12 } }, '⏳ Загрузка...')
+                ? React.createElement('div', { className: 'profile-loading', style: { marginTop: 12 } }, 'Загрузка...')
                 : (consentsList.length === 0
                     ? React.createElement('div', { className: 'muted', style: { marginTop: 12 } },
                         'Согласий пока нет. Они появятся после первого входа.')
@@ -3033,40 +2871,39 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         consentsList.map(function (c) {
                             const isRequired = REQUIRED.indexOf(c.type) >= 0;
                             const label = versionLabels[c.type] || (labels[c.type]?.label) || c.type;
-                            const statusColor = c.granted ? '#16a34a' : '#71717a';
                             const statusText = c.granted ? 'Активно' : 'Отозвано';
                             return React.createElement('div', {
                                 key: c.id,
-                                style: {
-                                    padding: '10px 12px', borderRadius: 8,
-                                    border: '1px solid ' + (c.granted ? '#d1fae5' : '#e5e7eb'),
-                                    background: c.granted ? '#f0fdf4' : '#f9fafb'
-                                }
+                                className: 'profile-consent-row' + (c.granted ? ' is-granted' : '')
                             },
                                 React.createElement('div', { style: { fontWeight: 500, fontSize: 14 } }, label),
                                 React.createElement('div', { className: 'muted', style: { fontSize: 12, marginTop: 4 } },
                                     'Версия ', c.version || '—',
                                     ' • Подписано ', formatDate(c.created_at),
                                     ' • Способ: ', c.signature_method || 'checkbox',
-                                    ' • ', React.createElement('span', { style: { color: statusColor, fontWeight: 500 } }, statusText)),
+                                    ' • ', React.createElement('span', {
+                                        style: { fontWeight: 500, color: c.granted ? 'var(--v4-sand-ok-text, #5c6a45)' : undefined }
+                                    }, statusText)),
                                 React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' } },
                                     React.createElement('button', {
                                         className: 'btn btn--secondary',
                                         disabled: busy === ('proof_' + c.type),
                                         onClick: function () { return handleDownloadProof(c.type); },
                                         style: { fontSize: 12, padding: '4px 10px' }
-                                    }, busy === ('proof_' + c.type) ? '⏳' : '📄 Скачать подтверждение'),
+                                    }, busy === ('proof_' + c.type) ? 'Готовим…' : 'Скачать подтверждение'),
                                     c.granted && React.createElement('button', {
-                                        className: 'btn',
+                                        className: 'btn' + (isRequired ? '' : ' btn--secondary'),
                                         disabled: busy === c.type,
                                         onClick: function () { return handleRevoke(c.type, isRequired); },
                                         style: {
                                             fontSize: 12, padding: '4px 10px',
-                                            background: isRequired ? '#fef2f2' : '#fff',
-                                            color: isRequired ? '#dc2626' : '#3f3f46',
-                                            border: '1px solid ' + (isRequired ? '#fecaca' : '#d4d4d8')
+                                            ...(isRequired ? {
+                                                background: '#f7efe2',
+                                                color: 'var(--v4-wgt-danger-text, #a1471c)',
+                                                border: '1px solid rgba(161, 71, 28, 0.22)'
+                                            } : {})
                                         }
-                                    }, busy === c.type ? '⏳' : '🚫 Отозвать' + (c.type === 'user_agreement' ? ' (= удалить аккаунт)' : ''))
+                                    }, busy === c.type ? 'Отзываю…' : ('Отозвать' + (c.type === 'user_agreement' ? ' (= удалить аккаунт)' : '')))
                                 )
                             );
                         })
@@ -3074,7 +2911,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             // ── Toggles: marketing & push ───────────────────────────────
             React.createElement('div', {
-                style: { marginTop: 16, padding: '12px', borderTop: '1px solid #e5e7eb' }
+                style: { marginTop: 16, padding: '12px 0 0', borderTop: '1px solid rgba(138, 74, 32, 0.1)' }
             },
                 React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 } },
                     React.createElement('div', null,
@@ -3110,34 +2947,31 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             // ── Actions: DSAR / restriction / revoke curator ────────────
             React.createElement('div', {
-                style: { marginTop: 16, padding: '12px 0', borderTop: '1px solid #e5e7eb', display: 'flex', flexDirection: 'column', gap: 8 }
+                style: { marginTop: 16, padding: '12px 0 0', borderTop: '1px solid rgba(138, 74, 32, 0.1)', display: 'flex', flexDirection: 'column', gap: 8 }
             },
                 React.createElement('button', {
                     className: 'btn btn--secondary btn--full',
                     onClick: handleDownloadData,
                     disabled: busy === 'dsar',
                     style: { justifyContent: 'center' }
-                }, busy === 'dsar' ? '⏳ Готовим...' : '⬇️ Скачать мои данные (DSAR, 152-ФЗ ст.14)'),
+                }, busy === 'dsar' ? 'Готовим…' : 'Скачать мои данные (DSAR, 152-ФЗ ст.14)'),
                 React.createElement('button', {
                     className: 'btn btn--secondary btn--full',
                     onClick: handleRestriction,
                     disabled: busy === 'restriction',
                     style: { justifyContent: 'center' }
-                }, busy === 'restriction' ? '⏳' : (restrictionActive ? '▶️ Возобновить обработку' : '⏸ Запросить ограничение обработки')),
+                }, busy === 'restriction' ? '…' : (restrictionActive ? 'Возобновить обработку' : 'Запросить ограничение обработки')),
                 React.createElement('button', {
                     className: 'btn btn--secondary btn--full',
                     onClick: handleRevokeCurator,
                     disabled: busy === 'curator',
                     style: { justifyContent: 'center' }
-                }, busy === 'curator' ? '⏳' : '👤 Убрать куратора (остаться в self-service)')
+                }, busy === 'curator' ? '…' : 'Убрать куратора (остаться в self-service)')
             ),
 
             message && React.createElement('div', {
-                className: 'muted',
-                style: { marginTop: 10, padding: '8px 12px', borderRadius: 6,
-                         background: message.startsWith('✅') ? '#f0fdf4' : '#fef2f2',
-                         color: message.startsWith('✅') ? '#166534' : '#dc2626',
-                         fontSize: 13 }
+                className: profileMessageClass(message),
+                style: { marginTop: 10, fontSize: 13 }
             }, message)
         );
     }
@@ -3267,7 +3101,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         return React.createElement('div', { className: 'profile-field-group' },
             React.createElement('div', { className: 'profile-field-group__header' },
-                React.createElement('span', { className: 'profile-field-group__icon' }, '🔒'),
+                React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('shield', 16)),
                 React.createElement('span', { className: 'profile-field-group__title' }, 'Конфиденциальность')
             ),
             React.createElement('div', { className: 'muted', style: { marginTop: '6px', fontSize: '13px' } },
@@ -3276,23 +3110,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             // Если пользователь заблокировал push в браузере — мини-инструкция
             // как разблокировать. Чтобы не «пропадать» из-за разового отказа.
             pushPermission === 'denied'
-                ? React.createElement('div', {
-                    style: {
-                        marginTop: '10px',
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        border: '1px solid #fde68a',
-                        background: '#fffbeb',
-                        color: '#92400e',
-                        fontSize: '13px',
-                        lineHeight: '1.5',
-                    }
-                },
+                ? React.createElement('div', { className: 'profile-message', style: { marginTop: '10px', lineHeight: '1.5' } },
                     React.createElement('div', { style: { fontWeight: 600, marginBottom: '4px' } },
-                        '🔕 Уведомления отключены'),
+                        'Уведомления отключены'),
                     React.createElement('div', null,
                         'Чтобы получать напоминания и сообщения куратора — разрешите уведомления ' +
-                        'в настройках сайта (значок 🔒/ⓘ рядом с адресом → «Уведомления» → «Разрешить»).')
+                        'в настройках сайта (значок замка рядом с адресом → «Уведомления» → «Разрешить»).')
                 )
                 : null,
             React.createElement('div', { style: { marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' } },
@@ -3348,7 +3171,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             ),
             message
                 ? React.createElement('div', {
-                    className: 'muted',
+                    className: profileMessageClass(message),
                     style: { marginTop: '10px', fontSize: '13px', whiteSpace: 'pre-line' }
                 }, message)
                 : null

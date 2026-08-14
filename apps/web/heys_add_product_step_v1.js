@@ -1192,7 +1192,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (!Overlay || typeof Overlay.readRaw !== 'function') return [];
 
     const rows = Overlay.readRaw();
-    if (!Array.isArray(rows) || rows.length === 0) return [];
+    if (!Array.isArray(rows) || rows.length === 0) return null;
 
     try {
       if (typeof Overlay.toMergedView === 'function') {
@@ -2526,6 +2526,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return { id: null, items, createdAt: null };
     });
     const [createSearch, setCreateSearch] = useState('');
+    const [deleteConfirmPreset, setDeleteConfirmPreset] = useState(null);
+    const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
+    const [listEditMode, setListEditMode] = useState(false);
 
     // Запускаем анализ истории при открытии оверлея
     useEffect(() => {
@@ -2551,12 +2554,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       HEYS.store?.dismissSuggestedPreset?.(preset.id);
       refreshPresets();
       console.info('[HEYS.presets] ✅ Рекомендация отклонена:', preset.name);
-    };
-
-    const handlePreviewSuggested = (preset) => {
-      setSelectedPreset(preset);
-      setPreviewItems((preset.items || []).map((item) => ({ ...item })));
-      setView('preview');
     };
 
     const handleCreateFromMeal = () => {
@@ -2637,6 +2634,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       console.info('[HEYS.presets] ✅ Preset deleted:', preset.name);
     };
 
+    const requestDeletePreset = (preset, event) => {
+      event?.stopPropagation?.();
+      setDeleteConfirmPreset(preset);
+    };
+
+    const confirmDeletePreset = () => {
+      if (deleteConfirmPreset) handleDeletePreset(deleteConfirmPreset);
+      setDeleteConfirmPreset(null);
+    };
+
     const handleSavePreset = () => {
       if (!createName.trim()) return;
       const preset = {
@@ -2649,6 +2656,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       refreshPresets();
       setView('list');
       console.info('[HEYS.presets] ✅ Preset saved:', { name: preset.name, itemCount: preset.items.length });
+      setSaveConfirmOpen(false);
+    };
+
+    const requestSavePreset = () => {
+      if (!createName.trim()) return;
+      setSaveConfirmOpen(true);
     };
 
     const handleAddAll = () => {
@@ -2869,99 +2882,91 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const pluralProduct = (n) =>
       n === 1 ? 'продукт' : n <= 4 ? 'продукта' : 'продуктов';
 
+    const handleMySetRowClick = (preset) => {
+      if (!listEditMode) return;
+      handleEditPreset(preset);
+    };
+
+    const handleMySetRowKeyDown = (event, preset) => {
+      if (!listEditMode || (event.key !== 'Enter' && event.key !== ' ')) return;
+      event.preventDefault();
+      handleEditPreset(preset);
+    };
+
     // --- List view ---
     const renderList = () =>
       React.createElement('div', { className: 'mpr-list' },
-        // 🤖 Секция рекомендаций (если есть)
         suggestedPresets.length > 0 && React.createElement('div', { className: 'mpr-suggested-section' },
-          React.createElement('div', { className: 'mpr-section-label mpr-section-label--suggested' },
-            React.createElement('span', { className: 'mpr-section-label-icon' }, '✨'),
-            React.createElement('span', null, 'Рекомендуемые'),
-            React.createElement('span', { className: 'mpr-section-label-hint' }, 'из вашей истории')
-          ),
+          React.createElement('div', { className: 'mpr-tier' }, 'Замечено в истории'),
           suggestedPresets.map((preset) =>
-            React.createElement('div', { key: preset.id, className: 'mpr-card mpr-card--suggested' },
-              React.createElement('div', { className: 'mpr-card-info' },
-                React.createElement('div', { className: 'mpr-card-name' }, preset.name),
-                React.createElement('div', { className: 'mpr-card-meta' },
-                  `${preset.items.length} ${pluralProduct(preset.items.length)} · повторялось ${preset.frequency}×`
-                )
+            React.createElement('div', { key: preset.id, className: 'mpr-suggested-card' },
+              React.createElement('div', { className: 'mpr-suggested-card__head' },
+                React.createElement('div', { className: 'mpr-suggested-card__name' }, preset.name),
+                React.createElement('div', { className: 'mpr-suggested-card__freq' },
+                  `повторялось ${preset.frequency || 0}×`)
               ),
-              React.createElement('div', { className: 'mpr-card-actions' },
+              React.createElement('div', { className: 'mpr-suggested-card__actions' },
                 React.createElement('button', {
-                  className: 'mpr-btn mpr-btn--apply',
-                  onClick: () => handlePreviewSuggested(preset),
-                  title: 'Просмотреть и применить'
-                }, '▶'),
-                React.createElement('button', {
-                  className: 'mpr-btn mpr-btn--confirm',
+                  type: 'button',
+                  className: 'mpr-btn mpr-btn--save-suggested',
                   onClick: () => handleConfirmSuggested(preset),
                   title: 'Сохранить в мои наборы'
-                }, '✓'),
+                }, 'Сохранить как набор'),
                 React.createElement('button', {
-                  className: 'mpr-btn mpr-btn--dismiss',
+                  type: 'button',
+                  className: 'mpr-btn mpr-btn--hide-suggested',
                   onClick: () => handleDismissSuggested(preset),
                   title: 'Скрыть рекомендацию'
-                }, '✕')
+                }, 'Скрыть')
               )
             )
           )
         ),
-        // Разделитель если есть и рекомендации, и пользовательские наборы
-        suggestedPresets.length > 0 && presets.length > 0 && React.createElement('div', { className: 'mpr-section-label mpr-section-label--my' },
-          React.createElement('span', { className: 'mpr-section-label-icon' }, '💾'),
-          React.createElement('span', null, 'Мои наборы')
+        presets.length > 0 && React.createElement('div', { className: 'mpr-my-sets-block' },
+          React.createElement('div', { className: 'mpr-tier' }, 'Мои наборы'),
+          React.createElement('div', { className: 'mpr-my-sets-list' },
+            presets.map((preset) => {
+              const presetKcal = (preset.items || []).reduce((sum, item) => sum + calcKcal(item), 0);
+              const rowClass = 'mpr-my-set-row' + (listEditMode ? ' mpr-my-set-row--editable' : '');
+              return React.createElement('div', {
+                key: preset.id,
+                className: rowClass,
+                onClick: () => handleMySetRowClick(preset),
+                onKeyDown: (event) => handleMySetRowKeyDown(event, preset),
+                role: listEditMode ? 'button' : undefined,
+                tabIndex: listEditMode ? 0 : undefined
+              },
+                React.createElement('div', { className: 'mpr-my-set-row__main' },
+                  React.createElement('div', { className: 'mpr-my-set-row__name' }, preset.name),
+                  React.createElement('div', { className: 'mpr-my-set-row__meta' },
+                    `${preset.items.length} ${pluralProduct(preset.items.length)} · ${presetKcal} ккал`)
+                ),
+                !listEditMode && React.createElement('button', {
+                  type: 'button',
+                  className: 'mpr-btn mpr-btn--add-row',
+                  onClick: (event) => {
+                    event.stopPropagation();
+                    handleApplyPreset(preset);
+                  },
+                  title: 'Добавить набор'
+                }, 'Добавить')
+              );
+            })
+          )
         ),
         presets.length === 0 && suggestedPresets.length === 0
           ? React.createElement('div', { className: 'mpr-empty' },
-            React.createElement('div', { className: 'mpr-empty-icon' }, '🍽️'),
             React.createElement('div', { className: 'mpr-empty-text' }, 'Нет сохранённых наборов'),
-            React.createElement('div', { className: 'mpr-empty-hint' }, 'Создайте набор из текущего приёма')
+            React.createElement('div', { className: 'mpr-empty-hint' }, 'Соберите набор из продуктов — добавится одним тапом')
           )
-          : presets.map(preset =>
-            React.createElement('div', { key: preset.id, className: 'mpr-card' },
-              React.createElement('div', { className: 'mpr-card-info' },
-                React.createElement('div', { className: 'mpr-card-name' }, preset.name),
-                React.createElement('div', { className: 'mpr-card-meta' },
-                  `${preset.items.length} ${pluralProduct(preset.items.length)}`
-                )
-              ),
-              React.createElement('div', { className: 'mpr-card-actions' },
-                React.createElement('button', {
-                  className: 'mpr-btn mpr-btn--apply',
-                  onClick: () => handleApplyPreset(preset),
-                  title: 'Применить набор'
-                }, '▶'),
-                React.createElement('button', {
-                  className: 'mpr-btn mpr-btn--edit',
-                  onClick: () => handleEditPreset(preset),
-                  title: 'Редактировать'
-                }, '✏️'),
-                React.createElement('button', {
-                  className: 'mpr-btn mpr-btn--delete',
-                  onClick: () => handleDeletePreset(preset),
-                  title: 'Удалить'
-                }, '🗑️')
-              )
-            )
-          ),
-        React.createElement('div', { className: 'mpr-create-buttons' },
-          React.createElement('button', {
-            className: 'mpr-create-btn mpr-create-btn--scratch',
-            onClick: handleCreateFromScratch
-          },
-            React.createElement('span', null, '✏️'),
-            React.createElement('span', null, ' Создать новый набор')
-          ),
-          contextMealItems.length > 0 &&
-          React.createElement('button', {
-            className: 'mpr-create-btn',
-            onClick: handleCreateFromMeal
-          },
-            React.createElement('span', null, '💾'),
-            React.createElement('span', null, ' Сохранить текущий приём')
-          )
-        )
+          : null,
+        React.createElement('button', {
+          type: 'button',
+          className: 'mpr-assemble-btn',
+          onClick: handleCreateFromScratch
+        }, 'Собрать новый набор'),
+        presets.length > 0 && React.createElement('div', { className: 'mpr-footnote' },
+          'Правка и удаление — по тапу на строку, чтобы три иконки не висели у каждой. Долгое нажатие во флоу не используется нигде.')
       );
 
     // --- Preview view ---
@@ -3036,7 +3041,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           onClick: handleAddAll,
           disabled: active.length === 0 || isApplyingPreset
         },
-          isApplyingPreset ? 'Добавляем...' : `✓ Добавить ${active.length} ${pluralProduct(active.length)} в приём`
+          isApplyingPreset
+            ? 'Добавляем...'
+            : `Добавить ${active.length} ${pluralProduct(active.length)} · ${totalKcal} ккал`
         )
       );
     };
@@ -3150,33 +3157,95 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         React.createElement('button', {
           className: 'mpr-save-btn',
           disabled: !createName.trim() || (editPreset?.items || []).length === 0,
-          onClick: handleSavePreset
-        }, '💾 Сохранить набор')
+          onClick: requestSavePreset
+        }, 'Сохранить набор'),
+        editPreset?.id && React.createElement('button', {
+          type: 'button',
+          className: 'mpr-delete-preset-btn',
+          onClick: () => setDeleteConfirmPreset(editPreset)
+        }, 'Удалить набор')
       );
     };
 
-    const viewTitle = view === 'list' ? 'Готовые наборы'
+    const viewTitle = view === 'list' ? 'Наборы'
       : view === 'preview' ? (selectedPreset?.name || 'Просмотр набора')
         : (editPreset?.id ? 'Редактировать набор' : 'Создать набор');
 
     return React.createElement('div', { className: 'mpr-overlay' },
       React.createElement('div', { className: 'mpr-header' },
-        view !== 'list'
-          ? React.createElement('button', {
-            className: 'mpr-back-btn',
-            onClick: () => setView('list')
-          }, '←')
-          : React.createElement('button', {
-            className: 'mpr-back-btn',
-            onClick: onClose
-          }, '✕'),
+        React.createElement('button', {
+          type: 'button',
+          className: 'mpr-back-btn',
+          onClick: () => {
+            if (view !== 'list') {
+              setView('list');
+              return;
+            }
+            onClose?.();
+          },
+          'aria-label': view === 'list' ? 'Назад' : 'К списку наборов'
+        }, '←'),
         React.createElement('div', { className: 'mpr-title' }, viewTitle),
-        React.createElement('div', { className: 'mpr-header-spacer' })
+        view === 'list'
+          ? React.createElement('button', {
+            type: 'button',
+            className: 'mpr-header-edit-btn' + (listEditMode ? ' is-active' : ''),
+            onClick: () => setListEditMode((active) => !active)
+          }, listEditMode ? 'Готово' : 'Править')
+          : React.createElement('div', { className: 'mpr-header-spacer' })
       ),
       React.createElement('div', { className: 'mpr-body' },
         view === 'list' ? renderList()
           : view === 'preview' ? renderPreview()
             : renderCreate()
+      ),
+      deleteConfirmPreset && React.createElement('div', { className: 'aps-v4-preset-confirm', role: 'dialog', 'aria-modal': 'true' },
+        React.createElement('div', { className: 'aps-v4-preset-confirm__card' },
+          React.createElement('div', { className: 'aps-v4-search-state__title', style: { color: 'var(--v4-sand-act-deep, #8a4a20)' } }, 'Удалить набор'),
+          React.createElement('div', { style: { fontWeight: 700, fontSize: '16px', marginTop: '11px' } }, `«${deleteConfirmPreset.name}»`),
+          React.createElement('div', { className: 'aps-v4-search-state__body' },
+            'Набор исчезнет из списка. Уже добавленные приёмы останутся как есть — удаляется только заготовка.'),
+          React.createElement('div', { className: 'aps-v4-search-state__actions' },
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-v4-btn-ghost aps-v4-btn-paper',
+              onClick: () => setDeleteConfirmPreset(null)
+            }, 'Отмена'),
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-v4-btn-attention',
+              onClick: confirmDeletePreset
+            }, 'Удалить'))
+        )
+      ),
+      saveConfirmOpen && React.createElement('div', { className: 'aps-v4-preset-confirm', role: 'dialog', 'aria-modal': 'true' },
+        React.createElement('div', { className: 'aps-v4-preset-confirm__card' },
+          React.createElement('div', { style: { fontWeight: 700, fontSize: '16px' } }, 'Сохранить как набор'),
+          React.createElement('div', { className: 'aps-v4-search-state__body' },
+            `${(editPreset?.items || []).length || 0} ${((editPreset?.items || []).length === 1) ? 'продукт' : 'продукта'} с граммовкой. В следующий раз добавится одним тапом.`),
+          React.createElement('div', { className: 'aps-v4-create-field', style: { marginTop: '16px' } },
+            React.createElement('label', null, 'Название'),
+            React.createElement('input', {
+              type: 'text',
+              value: createName,
+              onChange: (e) => setCreateName(e.target.value)
+            })),
+          React.createElement('div', { className: 'aps-v4-search-state__tier', style: { marginTop: '14px' } }, 'Состав'),
+          React.createElement('div', { className: 'aps-v4-search-state__tier-list' },
+            (editPreset?.items || []).slice(0, 6).map((item, index) =>
+              React.createElement('div', { key: index }, `${item.name} · ${item.grams} г`))),
+          React.createElement('div', { className: 'aps-v4-search-state__actions' },
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-v4-btn-primary',
+              onClick: handleSavePreset
+            }, 'Сохранить'),
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-v4-btn-ghost aps-v4-btn-paper',
+              onClick: () => setSaveConfirmOpen(false)
+            }, 'Отмена'))
+        )
       )
     );
   }
@@ -3219,7 +3288,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     );
   }
 
-  function BarcodeScannerModal({ title, subtitle, initialValue = '', autoStart = false, cameraStart = null, onDetected, onClose }) {
+  function BarcodeScannerModal({ title, subtitle, initialValue = '', autoStart = false, cameraStart = null, onDetected, onClose, fullscreen = false }) {
     const [manualValue, setManualValue] = useState(initialValue);
     const [error, setError] = useState('');
     const [cameraState, setCameraState] = useState(() => (
@@ -3660,13 +3729,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         : cameraState === 'starting'
         ? 'Запускаем камеру...'
         : cameraState === 'manual'
-          ? 'Введите код вручную'
+          ? (fullscreen ? 'Нет доступа к камере — введите код вручную' : 'Введите код вручную')
           : 'Наведите камеру на штрихкод';
     const willAutoStart = !!cameraStart?.streamPromise || shouldAutoStartCamera();
     const showStartButton = cameraState === 'manual' || (cameraState === 'idle' && !willAutoStart);
 
-    return React.createElement('div', { className: 'aps-barcode-overlay', onClick: onClose },
-      React.createElement('div', { className: 'aps-barcode-modal', onClick: (e) => e.stopPropagation() },
+    return React.createElement('div', {
+      className: 'aps-barcode-overlay' + (fullscreen ? ' aps-barcode-overlay--v4-fullscreen' : ''),
+      onClick: onClose
+    },
+      React.createElement('div', {
+        className: 'aps-barcode-modal' + (fullscreen ? ' aps-barcode-modal--v4-fullscreen' : ''),
+        onClick: (e) => e.stopPropagation()
+      },
         React.createElement('div', { className: 'aps-barcode-head' },
           React.createElement('div', null,
             React.createElement('div', { className: 'aps-barcode-title' }, title || 'Штрихкод'),
@@ -3680,6 +3755,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }, '×')
         ),
         React.createElement('div', { className: 'aps-barcode-camera' },
+          fullscreen && React.createElement('div', { className: 'aps-barcode-finder-frame', 'aria-hidden': 'true' },
+            React.createElement('span', { className: 'aps-barcode-finder-corner aps-barcode-finder-corner--tl' }),
+            React.createElement('span', { className: 'aps-barcode-finder-corner aps-barcode-finder-corner--tr' }),
+            React.createElement('span', { className: 'aps-barcode-finder-corner aps-barcode-finder-corner--bl' }),
+            React.createElement('span', { className: 'aps-barcode-finder-corner aps-barcode-finder-corner--br' })
+          ),
           React.createElement('video', {
             ref: videoRef,
             className: 'aps-barcode-video',
@@ -3910,8 +3991,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [searchInput, setSearchInput] = useState(data?.searchQuery || '');
     const [search, setSearch] = useState(data?.searchQuery || '');
     const [selectedCategory, setSelectedCategory] = useState('all');
-    const [quickList, setQuickList] = useState('smart');
-    const [showSharedProducts, setShowSharedProducts] = useState(true);
+    const [quickList, setQuickList] = useState('frequent');
 
     // v25.8.6.7: Sync searchQuery from StepModal's getInitialData
     // useState initializer runs only once at mount, but stepData is set via useEffect
@@ -3942,6 +4022,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [barcodeLookupBusy, setBarcodeLookupBusy] = useState(false);
     const [barcodeResults, setBarcodeResults] = useState([]);
     const [barcodeNotice, setBarcodeNotice] = useState(null);
+    const [barcodeNotFoundCode, setBarcodeNotFoundCode] = useState(null);
     const [exitPromptOpen, setExitPromptOpen] = useState(false);
     const startWithBarcodeScannerRef = useRef(false);
 
@@ -4091,14 +4172,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       const refreshUsageFromHistory = () => {
         try {
+          const lsGet = typeof HEYS.store?.get === 'function'
+            ? HEYS.store.get.bind(HEYS.store)
+            : undefined;
+          if (HEYS?.SmartSearchWithTypos?.loadUserStats) {
+            HEYS.SmartSearchWithTypos.loadUserStats();
+          }
           if (HEYS?.SmartSearchWithTypos?.ensureUsageStatsFresh) {
             const refreshed = HEYS.SmartSearchWithTypos.ensureUsageStatsFresh({
               maxHours: 6,
               daysWindow: usageWindowDays,
               dateKey: dateKey || new Date().toISOString().slice(0, 10),
-              lsGet: HEYS.store?.get
+              lsGet
             });
             if (refreshed) setUsageStatsVersion(v => v + 1);
+            else if ((HEYS.SmartSearchWithTypos.getUsageStats?.() || new Map()).size > 0) {
+              setUsageStatsVersion(v => v + 1);
+            }
           }
         } catch (e) {
           // no-op
@@ -4290,7 +4380,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     }, []);
 
     useEffect(() => {
-      if (!showSharedProducts) {
+      if (quickList !== 'shared') {
         setSharedCatalogPreview([]);
         setSharedCatalogLoading(false);
         return undefined;
@@ -4341,8 +4431,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         cancelled = true;
         window.removeEventListener('heys:shared-products-updated', handleSharedProductsUpdated);
       };
-    }, [showSharedProducts]);
+    }, [quickList]);
 
+    useApsCloseGuard(context?.apsCloseGuardRef, requestCloseModal);
     useEscapeToClose(requestCloseModal, true);
 
     // Debug: проверяем что products пришли
@@ -4357,15 +4448,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     useEffect(() => {
       try {
+        const lsGet = typeof HEYS.store?.get === 'function'
+          ? HEYS.store.get.bind(HEYS.store)
+          : undefined;
+        if (HEYS?.SmartSearchWithTypos?.loadUserStats) {
+          HEYS.SmartSearchWithTypos.loadUserStats();
+        }
         if (HEYS?.SmartSearchWithTypos?.ensureUsageStatsFresh) {
-          const refreshed = HEYS.SmartSearchWithTypos.ensureUsageStatsFresh({
+          HEYS.SmartSearchWithTypos.ensureUsageStatsFresh({
             maxHours: 6,
             daysWindow: usageWindowDays,
             dateKey: dateKey || new Date().toISOString().slice(0, 10),
-            lsGet: HEYS.store?.get
+            lsGet
           });
-          if (refreshed) setUsageStatsVersion(v => v + 1);
         }
+        setUsageStatsVersion(v => v + 1);
       } catch (e) {
         console.error('[HEYS.search] ensureUsageStatsFresh error:', e);
       }
@@ -4380,10 +4477,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return () => clearTimeout(timer);
     }, [searchInput]);
 
+    const normalizeSearch = HEYS?.SmartSearchWithTypos?.utils?.normalizeText
+      || ((text) => String(text || '').toLowerCase().replace(/ё/g, 'е'));
+    const lc = normalizeSearch(search.trim());
+    const showSearch = lc.length > 0;
+    const effectiveSharedEnabled = quickList === 'shared' || showSearch;
+
     // 🌐 Асинхронный поиск по общей базе (debounced)
     useEffect(() => {
       const trimmed = search.trim();
-      if (!showSharedProducts || trimmed.length < 2) {
+      if (!effectiveSharedEnabled || trimmed.length < 2) {
         setSharedResults([]);
         setSharedLoading(false);
         return;
@@ -4409,7 +4512,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       }, 300);
 
       return () => clearTimeout(timeoutId);
-    }, [search, showSharedProducts]);
+    }, [search, effectiveSharedEnabled]);
 
     // Умный список: частота + свежесть (объединяет "часто" и "последние")
     const usageStats = useMemo(() =>
@@ -4439,7 +4542,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       meals.forEach((meal) => {
         (meal?.items || []).forEach((item) => {
+          if (item?.isEstimated || item?.virtualProduct || item?.skipOrphanTracking) return;
           const pid = String(item?.product_id ?? item?.productId ?? '').trim();
+          if (pid.indexOf('estimated_') === 0 || pid.indexOf('oneoff_') === 0) return;
           const name = String(item?.name || '').trim();
           if (pid) bump(pid);
           if (name) {
@@ -4600,12 +4705,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       } catch (_) { /* noop */ }
     }, [latestProducts, smartProducts, modalFallbackProducts, favorites, effectiveUsageStats, hiddenProducts]);
 
-    // Поиск с фильтром категории
-    // Используем normalizeText из SmartSearch (единый источник)
-    const normalizeSearch = HEYS?.SmartSearchWithTypos?.utils?.normalizeText
-      || ((text) => String(text || '').toLowerCase().replace(/ё/g, 'е'));
-    const lc = normalizeSearch(search.trim());
-    const showSearch = lc.length > 0;
+    // Поиск с фильтром категории (normalizeSearch/lc/showSearch — выше, до shared-search effect)
+    const savedPresetsCount = useMemo(
+      () => (HEYS.store?.getMealPresets?.() || []).length,
+      [presetsOpen, suggestedPresetsCount, productsVersion]
+    );
     const searchResults = useMemo(() => {
       let results = [];
 
@@ -4666,7 +4770,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (!lc) return [];
 
       // Фильтруем shared тоже по категории (иначе переключатель категории кажется «сломанный»)
-      const visibleSharedResults = showSharedProducts ? sharedResults : [];
+      const visibleSharedResults = effectiveSharedEnabled ? sharedResults : [];
       const sharedFiltered = selectedCategory !== 'all'
         ? visibleSharedResults.filter(p => matchCategory(p, selectedCategory))
         : visibleSharedResults;
@@ -4799,18 +4903,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       });
 
       return combined.slice(0, 25);
-    }, [barcodeResults, searchResults, sharedResults, lc, normalizeSearch, selectedCategory, showSharedProducts]);
-
-    const canSuggestSharedSearch = !showSharedProducts && search.trim().length >= 2;
+    }, [barcodeResults, searchResults, sharedResults, lc, normalizeSearch, selectedCategory, effectiveSharedEnabled]);
 
     const visibleSharedCatalogPreview = useMemo(() => {
-      if (!showSharedProducts || showSearch) return [];
+      if (quickList !== 'shared' || showSearch) return [];
       const list = Array.isArray(sharedCatalogPreview) ? sharedCatalogPreview : [];
       const filtered = selectedCategory !== 'all'
         ? list.filter(p => matchCategory(p, selectedCategory))
         : list;
-      return filtered.slice(0, 12);
-    }, [sharedCatalogPreview, selectedCategory, showSearch, showSharedProducts]);
+      return filtered.slice(0, 24);
+    }, [sharedCatalogPreview, selectedCategory, showSearch, quickList]);
 
     // Toggle избранного
     const toggleFavorite = useCallback((e, productId) => {
@@ -5148,6 +5250,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       setBarcodeModal(null);
       setBarcodeResults([]);
       setBarcodeNotice(null);
+      setBarcodeNotFoundCode(null);
 
       if (targetProduct) {
         const saved = await saveBarcodeForProduct(targetProduct, barcode);
@@ -5187,7 +5290,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         const matches = dedupeBarcodeMatches([...localMatches, ...sharedMatches], barcode);
 
         if (matches.length === 1) {
-          HEYS.Toast?.success?.('Продукт найден по штрихкоду');
+          setBarcodeNotice({
+            type: 'found',
+            text: 'Найден по штрихкоду'
+          });
+          setBarcodeNotFoundCode(null);
           selectProduct(matches[0]);
           return;
         }
@@ -5202,10 +5309,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
         setSearchInput('');
         setSearch('');
-        setBarcodeNotice({
-          type: 'not-found',
-          text: 'По штрихкоду ничего не найдено. Попробуйте ещё раз или воспользуйтесь поиском по названию.'
-        });
+        setBarcodeNotice(null);
+        setBarcodeNotFoundCode(barcode);
         requestAnimationFrame(() => inputRef.current?.focus());
       } catch (e) {
         setSearchInput('');
@@ -5361,6 +5466,111 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       });
     }, [context]);
 
+    const formatUsageTimes = (count) => {
+      const n = Number(count) || 0;
+      if (n <= 0) return '';
+      const mod10 = n % 10;
+      const mod100 = n % 100;
+      if (mod10 === 1 && mod100 !== 11) return `${n} раз`;
+      if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return `${n} раза`;
+      return `${n} раз`;
+    };
+
+    const getHarmStripeColor = (harmVal) => {
+      const h = Number(harmVal);
+      if (!Number.isFinite(h)) return 'var(--v4-ok-fill, #7a8a5e)';
+      if (h <= 4) return 'var(--v4-ok-fill, #7a8a5e)';
+      if (h <= 6) return 'var(--v4-warn-soft, #d99a63)';
+      return 'var(--v4-sand-act, #c67139)';
+    };
+
+    const buildV4ProductMeta = (product, { showUsage = false, showMacros = false } = {}) => {
+      const kcal = Math.round(product.kcal100 || 0);
+      const parts = [`${kcal} ккал`];
+      if (showMacros) {
+        const prot = Math.round(product.protein100 || 0);
+        const carbs = Math.round((product.simple100 || 0) + (product.complex100 || 0));
+        const fat = Math.round((product.badFat100 || 0) + (product.goodFat100 || 0) + (product.trans100 || 0));
+        parts.push(`Б${prot} Ж${fat} У${carbs}`);
+      }
+      if (showUsage) {
+        const pid = String(product.id ?? product.product_id ?? product.name);
+        const usageCount = getUsageCount(pid, product.name);
+        if (usageCount > 0) parts.push(formatUsageTimes(usageCount));
+        else if (product._source === 'shared' || product._fromShared) parts.push('общая база');
+      }
+      return parts.join(' · ');
+    };
+
+    const renderV4ProductRow = (product, options = {}) => {
+      product = mergeSharedBarcodeIntoProductForAddStep(product);
+      const pid = String(product.id ?? product.product_id ?? product.name);
+      const isNutrientsPending = product._nutrientsPending === true || product._selectionDisabled === true;
+      const harmVal = product.harm ?? product.harmScore ?? product.harm100;
+      const highlightedName = lc && HEYS?.SmartSearchWithTypos?.renderHighlightedText
+        ? HEYS.SmartSearchWithTypos.renderHighlightedText(product.name, search, React)
+        : product.name;
+      const meta = buildV4ProductMeta(product, options);
+
+      return React.createElement('button', {
+        key: pid,
+        type: 'button',
+        className: 'aps-v4-product-row' + (isNutrientsPending ? ' aps-v4-product-row--disabled' : ''),
+        onClick: isNutrientsPending ? undefined : () => selectProduct(product),
+        disabled: isNutrientsPending,
+        'aria-disabled': isNutrientsPending ? 'true' : undefined
+      },
+        React.createElement('span', {
+          className: 'aps-v4-product-row__stripe',
+          style: { background: getHarmStripeColor(harmVal) },
+          'aria-hidden': 'true'
+        }),
+        React.createElement('span', { className: 'aps-v4-product-row__main' },
+          React.createElement('span', { className: 'aps-v4-product-row__name' }, highlightedName),
+          meta && React.createElement('span', { className: 'aps-v4-product-row__meta' }, meta)
+        ),
+        React.createElement('span', { className: 'aps-v4-product-row__add', 'aria-hidden': 'true' },
+          React.createElement('svg', {
+            width: 15,
+            height: 15,
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: 2.75,
+            strokeLinecap: 'round'
+          }, React.createElement('path', { d: 'M12 5v14M5 12h14' }))
+        )
+      );
+    };
+
+    const handleBrowseTab = (tabId) => {
+      if (tabId === 'presets') {
+        setPresetsOpen(true);
+        return;
+      }
+      setQuickList(tabId);
+    };
+
+    const browseLead = (() => {
+      if (showSearch) {
+        if (barcodeResults.length > 0) {
+          return barcodeResults.length > 1
+            ? `По штрихкоду ${barcodeResults.length} совпадения — выберите продукт`
+            : `Найдено по штрихкоду: ${barcodeResults.length}`;
+        }
+        if (sharedLoading && combinedResults.length === 0) return 'Поиск…';
+        if (combinedResults.length > 0) return `Найдено ${combinedResults.length}`;
+        return null;
+      }
+      if (quickList === 'frequent') return `За ${usageWindowDays} день · чаще всего`;
+      if (quickList === 'recent') return 'За последние 3 дня';
+      if (quickList === 'shared') {
+        if (sharedCatalogLoading && visibleSharedCatalogPreview.length === 0) return 'Общие продукты: загрузка…';
+        return 'Общая база';
+      }
+      return null;
+    })();
+
     // Рендер карточки продукта с подсветкой совпадений
     const renderProductCard = (product, showFavorite = true, showHide = true, showUsageCount = false, showEditAction = false) => {
       product = mergeSharedBarcodeIntoProductForAddStep(product);
@@ -5487,7 +5697,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       const hasFallback = Array.isArray(modalFallbackProducts) && modalFallbackProducts.length > 0;
       if (personalCount === 0 && !hasSmart && !hasFallback) {
         if (sharedCatalogLoading) return null;
-        if (!showSharedProducts || visibleSharedCatalogPreview.length === 0) {
+        if (quickList !== 'shared' && visibleSharedCatalogPreview.length === 0) {
           return initialProductsSyncState.syncSettled && !initialProductsSyncState.syncInFlight
             ? 'empty_base'
             : 'load_failed';
@@ -5502,11 +5712,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       smartProducts,
       modalFallbackProducts,
       sharedCatalogLoading,
-      showSharedProducts,
+      quickList,
       visibleSharedCatalogPreview.length,
       initialProductsSyncState.syncSettled,
       initialProductsSyncState.syncInFlight
     ]);
+
+    const similarProducts = useMemo(() => {
+      if (!showSearch || !search || combinedResults.length > 0) return [];
+      return findSimilarPersonalProducts(search, latestProducts);
+    }, [showSearch, search, combinedResults.length, latestProducts]);
+
+    const searchFieldFocused = showSearch && !!search && combinedResults.length === 0 && !sharedLoading;
 
     // Счётчик фото в текущем приёме — на шаге граммов (канвас v4)
 
@@ -5526,10 +5743,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       barcodeModal && React.createElement(BarcodeScannerModal, {
         title: barcodeModal.mode === 'product'
           ? (barcodeModal.returnToManager ? 'Добавить штрихкод' : 'Привязать штрихкод')
-          : 'Сканировать упаковку',
+          : 'Штрихкод',
         subtitle: barcodeModal.mode === 'product'
           ? `К продукту: ${barcodeModal.product?.name || 'Продукт'}`
-          : 'HEYS найдёт продукт в личной и общей базе',
+          : 'Наведите камеру на штрихкод упаковки',
+        fullscreen: barcodeModal.mode !== 'product',
         initialValue: barcodeModal.mode === 'product' && !barcodeModal.returnToManager
           ? getProductBarcode(barcodeModal.product)
           : '',
@@ -5564,62 +5782,37 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
       }),
 
-      // === Фиксированная шапка: кнопки + поиск + категории ===
+      // === Фиксированная шапка: поиск + табы (канвас v4 #3) ===
       React.createElement('div', { className: 'aps-fixed-header' },
-        // Ряд кнопок: Новый продукт + Наборы (фото — на шаге «Приём собран»)
-        React.createElement('div', { className: 'aps-action-buttons' },
-          // Кнопка "Новый продукт"
-          React.createElement('button', {
-            className: 'aps-new-product-btn',
-            onClick: handleNewProduct
-          },
-            React.createElement('span', { className: 'aps-new-icon' }, '+'),
-            React.createElement('span', null, 'Новый продукт')
-          ),
-          // Кнопка "Готовые наборы" — в одной строке с фото/новый продукт
-          React.createElement('button', {
-            className: 'aps-new-product-btn aps-ready-sets-btn',
-            onClick: () => {
-              console.info('[HEYS.presets] ✅ Открываем Готовые наборы');
-              setPresetsOpen(true);
-            }
-          },
-            React.createElement('span', { className: 'aps-new-icon aps-ready-sets-icon' }, '🍽️'),
-            React.createElement('span', null, 'Наборы'),
-            suggestedPresetsCount > 0 && React.createElement('span', {
-              className: 'aps-ready-sets-badge',
-              title: `${suggestedPresetsCount} рекомендаций ждут подтверждения`
-            }, suggestedPresetsCount)
-          )
-        ),
-
-        // Поле поиска
         React.createElement('div', { className: 'aps-search-container' },
-          React.createElement('div', { className: 'aps-search-field' },
-            React.createElement('span', { className: 'aps-search-icon' }, '🔍'),
+          React.createElement('div', { className: 'aps-search-field' + (searchFieldFocused ? ' is-focused' : '') },
+            React.createElement('span', { className: 'aps-search-icon', 'aria-hidden': 'true' }),
             React.createElement('input', {
               ref: inputRef,
               type: 'text',
               className: 'aps-search-input',
-              placeholder: 'Поиск продукта...',
+              placeholder: 'Поиск продукта',
               value: searchInput,
               onChange: (e) => {
                 setSearchInput(e.target.value);
                 setBarcodeResults([]);
                 setBarcodeNotice(null);
+                setBarcodeNotFoundCode(null);
               },
               autoComplete: 'off',
               autoCorrect: 'off',
               spellCheck: false
             }),
             search && React.createElement('button', {
+              type: 'button',
               className: 'aps-search-clear',
               onClick: () => {
                 setSearchInput('');
                 setSearch('');
                 setBarcodeResults([]);
                 setBarcodeNotice(null);
-              }
+              },
+              'aria-label': 'Очистить поиск'
             }, '×'),
             React.createElement('button', {
               type: 'button',
@@ -5629,22 +5822,48 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               'aria-label': 'Сканировать штрихкод',
               title: 'Сканировать штрихкод'
             }, barcodeLookupBusy ? '…' : React.createElement(BarcodeScanIcon))
-          ),
-          React.createElement('label', {
-            className: 'aps-shared-toggle' + (showSharedProducts ? ' is-active' : ''),
-            title: showSharedProducts ? 'Общие продукты включены' : 'Включить общие продукты'
-          },
-            React.createElement('input', {
-              type: 'checkbox',
-              checked: showSharedProducts,
-              onChange: (e) => setShowSharedProducts(e.target.checked)
-            }),
-            React.createElement('span', { className: 'aps-shared-toggle__icon', 'aria-hidden': 'true' }, '🌐'),
-            React.createElement('span', { className: 'aps-shared-toggle__label' }, 'Общие')
           )
         ),
-        barcodeNotice && React.createElement('div', {
-          className: 'aps-barcode-notice' + (barcodeNotice.type === 'error' ? ' is-error' : ''),
+        barcodeNotice && barcodeNotice.type === 'found' && React.createElement('div', {
+          className: 'aps-barcode-notice',
+          role: 'status',
+          'aria-live': 'polite'
+        },
+          React.createElement('span', { className: 'aps-barcode-notice__icon', 'aria-hidden': 'true' }, '✓'),
+          React.createElement('span', null, barcodeNotice.text)
+        ),
+        barcodeNotFoundCode && React.createElement('div', { className: 'aps-barcode-not-found-screen', role: 'status' },
+          React.createElement('div', { className: 'aps-v4-search-state__title', style: { color: 'var(--v4-sand-act-deep, #8a4a20)' } },
+            `Код ${barcodeNotFoundCode}`),
+          React.createElement('div', { style: { fontWeight: 700, fontSize: '14px', marginTop: '10px' } }, 'Такого продукта нет в базе'),
+          React.createElement('div', { className: 'aps-v4-search-state__body' },
+            'Код прочитан, но совпадений нет. Создайте продукт — код подставится автоматически.'),
+          React.createElement('div', { className: 'aps-v4-search-state__actions' },
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-v4-btn-primary',
+              onClick: () => handleNewProduct(barcodeNotFoundCode)
+            }, `Создать продукт с кодом ${barcodeNotFoundCode}`),
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-v4-btn-ghost aps-v4-btn-paper',
+              onClick: () => {
+                setBarcodeNotFoundCode(null);
+                setBarcodeModal({ autoStart: true, cameraStart: createBarcodeCameraStart?.() || null });
+              }
+            }, 'Сканировать ещё'),
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-v4-btn-ghost aps-v4-btn-paper',
+              onClick: () => {
+                setBarcodeNotFoundCode(null);
+                setBarcodeResults([]);
+                requestAnimationFrame(() => inputRef.current?.focus());
+              }
+            }, 'Искать по названию'))
+        ),
+        barcodeNotice && barcodeNotice.type === 'error' && React.createElement('div', {
+          className: 'aps-barcode-notice is-error',
           role: 'status',
           'aria-live': 'polite'
         },
@@ -5652,22 +5871,40 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           React.createElement('span', null, barcodeNotice.text)
         ),
         !showSearch && React.createElement('div', {
-          className: 'aps-quick-filters',
-          role: 'group',
+          className: 'aps-v4-search-tabs',
+          role: 'tablist',
           'aria-label': 'Подборка продуктов'
         },
           React.createElement('button', {
             type: 'button',
-            className: 'aps-quick-filter' + (quickList === 'smart' ? ' active' : ''),
-            onClick: () => setQuickList('smart'),
-            'aria-pressed': quickList === 'smart'
-          }, '⚡ Частые и избранные'),
+            role: 'tab',
+            className: 'aps-v4-search-tab' + (quickList === 'frequent' ? ' is-active' : ''),
+            onClick: () => handleBrowseTab('frequent'),
+            'aria-selected': quickList === 'frequent'
+          }, 'Частые'),
           React.createElement('button', {
             type: 'button',
-            className: 'aps-quick-filter' + (quickList === 'recent' ? ' active' : ''),
-            onClick: () => setQuickList('recent'),
-            'aria-pressed': quickList === 'recent'
-          }, '🕘 Недавние · 3 дня')
+            role: 'tab',
+            className: 'aps-v4-search-tab' + (quickList === 'recent' ? ' is-active' : ''),
+            onClick: () => handleBrowseTab('recent'),
+            'aria-selected': quickList === 'recent'
+          }, 'Недавние'),
+          React.createElement('button', {
+            type: 'button',
+            role: 'tab',
+            className: 'aps-v4-search-tab' + (presetsOpen ? ' is-active' : ''),
+            onClick: () => handleBrowseTab('presets'),
+            'aria-selected': presetsOpen
+          }, 'Наборы', savedPresetsCount > 0
+            ? React.createElement('span', { className: 'aps-v4-search-tab__badge' }, ` · ${savedPresetsCount}`)
+            : null),
+          React.createElement('button', {
+            type: 'button',
+            role: 'tab',
+            className: 'aps-v4-search-tab' + (quickList === 'shared' ? ' is-active' : ''),
+            onClick: () => handleBrowseTab('shared'),
+            'aria-selected': quickList === 'shared'
+          }, 'Общие')
         )
       ),
 
@@ -5675,58 +5912,65 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       React.createElement('div', { className: 'aps-products-scroll' },
         !shouldRenderSettledProducts && showProductsSkeleton && React.createElement(AddProductResultsSkeleton),
 
+        browseLead && React.createElement('div', { className: 'aps-v4-search-lead' }, browseLead),
+
+        shouldRenderSettledProducts && showSearch && barcodeResults.length > 1 && React.createElement('div', { className: 'aps-v4-barcode-multi' },
+          React.createElement('div', { className: 'aps-v4-search-state__title' }, 'Несколько совпадений по коду'),
+          React.createElement('div', { className: 'aps-v4-search-state__body' },
+            'У одного штрихкода может быть и личный, и общий продукт. Выберите нужный из списка ниже.')
+        ),
+
         shouldRenderSettledProducts && showSearch && React.createElement('div', { className: 'aps-section' },
-          React.createElement('div', { className: 'aps-section-title' },
-            barcodeResults.length > 0
-              ? `Найдено по штрихкоду: ${barcodeResults.length}`
-              : combinedResults.length > 0
-              ? `Найдено: ${combinedResults.length}${sharedLoading ? ' ⏳' : ''}`
-              : (sharedLoading ? '⏳ Поиск...' : 'Ничего не найдено')
-          ),
-          combinedResults?.length > 0 && React.createElement('div', { className: 'aps-products-list' },
-            combinedResults.map(p => renderProductCard(p, true, false, true, true))
+          combinedResults?.length > 0 && React.createElement('div', { className: 'aps-v4-browse-list' },
+            combinedResults.map(p => renderV4ProductRow(p, { showUsage: true, showMacros: true }))
           ),
           combinedResults.length === 0 && !sharedLoading && renderApsSearchEmptyState('no_results', {
             onCreate: handleNewProduct,
-            createLabel: search ? `+ Добавить «${search}»` : 'Создать продукт'
-          })
+            createLabel: search ? `+ Добавить «${search}»` : 'Создать продукт',
+            similarProducts,
+            onPickSimilar: selectProduct
+          }),
+          combinedResults.length === 0 && sharedLoading && React.createElement('div', { className: 'aps-v4-search-lead' }, 'Поиск…')
         ),
 
         shouldRenderSettledProducts && !showSearch && searchBrowseState && React.createElement('div', { className: 'aps-section' },
           renderApsSearchEmptyState(searchBrowseState, {
             onCreate: handleNewProduct,
+            onSearchShared: () => {
+              setPresetsOpen(false);
+              setQuickList('shared');
+            },
             onRetry: () => {
               setIsWaitingForProductsSettle(true);
               try { window.dispatchEvent(new CustomEvent('heys:products-updated')); } catch (_) { /* noop */ }
-            }
+            },
+            tierItems: searchBrowseState === 'empty_base'
+              ? ['✓ Общая база', '✓ Создание продукта']
+              : searchBrowseState === 'load_failed'
+                ? ['✓ Личные продукты из кэша', '✗ Свежая общая база']
+                : null
           })
         ),
 
-        // Умный список: часто + недавно используемые (объединённый)
-        shouldRenderSettledProducts && !showSearch && quickList === 'smart' && smartProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
-          React.createElement('div', { className: 'aps-products-list' },
-            smartProducts.map(p => renderProductCard(p, true, true, true))
+        shouldRenderSettledProducts && !showSearch && quickList === 'frequent' && smartProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
+          React.createElement('div', { className: 'aps-v4-browse-list' },
+            smartProducts.map(p => renderV4ProductRow(p, { showUsage: true }))
           )
         ),
 
         shouldRenderSettledProducts && !showSearch && quickList === 'recent' && React.createElement('div', { className: 'aps-section' },
           recentProducts.length > 0
-            ? React.createElement('div', { className: 'aps-products-list' },
-              recentProducts.map(p => renderProductCard(p, true, true, true))
+            ? React.createElement('div', { className: 'aps-v4-browse-list' },
+              recentProducts.map(p => renderV4ProductRow(p, { showUsage: true }))
             )
             : React.createElement('div', { className: 'aps-empty' },
               React.createElement('span', null, 'За последние 3 дня продуктов нет')
             )
         ),
 
-        shouldRenderSettledProducts && !showSearch && quickList === 'smart' && showSharedProducts && React.createElement('div', { className: 'aps-section' },
-          React.createElement('div', { className: 'aps-section-title' },
-            sharedCatalogLoading && visibleSharedCatalogPreview.length === 0
-              ? '🌐 Общие продукты: загрузка...'
-              : '🌐 Общие продукты'
-          ),
-          visibleSharedCatalogPreview.length > 0 && React.createElement('div', { className: 'aps-products-list' },
-            visibleSharedCatalogPreview.map(p => renderProductCard(p, false, false, false))
+        shouldRenderSettledProducts && !showSearch && quickList === 'shared' && React.createElement('div', { className: 'aps-section' },
+          visibleSharedCatalogPreview.length > 0 && React.createElement('div', { className: 'aps-v4-browse-list' },
+            visibleSharedCatalogPreview.map(p => renderV4ProductRow(p, { showUsage: false }))
           ),
           visibleSharedCatalogPreview.length === 0 && !sharedCatalogLoading && React.createElement('div', { className: 'aps-empty' },
             React.createElement('span', null, selectedCategory === 'all'
@@ -5735,12 +5979,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           )
         ),
 
-        // Fallback: если умный список пуст, всё равно показываем продукты
-        shouldRenderSettledProducts && !showSearch && quickList === 'smart' && (!smartProducts || smartProducts.length === 0) && modalFallbackProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
-          React.createElement('div', { className: 'aps-section-title' }, '🧩 Ваши продукты (резервный список)'),
-          React.createElement('div', { className: 'aps-products-list' },
-            modalFallbackProducts.map(p => renderProductCard(p, true, true, true))
+        shouldRenderSettledProducts && !showSearch && quickList === 'frequent' && (!smartProducts || smartProducts.length === 0) && modalFallbackProducts?.length > 0 && React.createElement('div', { className: 'aps-section' },
+          React.createElement('div', { className: 'aps-v4-browse-list' },
+            modalFallbackProducts.map(p => renderV4ProductRow(p, { showUsage: true }))
           )
+        ),
+
+        shouldRenderSettledProducts && !showSearch && quickList === 'frequent' && React.createElement('div', { className: 'aps-v4-search-footnote' },
+          'Поиск и частые — сразу, без экрана-развилки. Сколько продуктов будет, решается по ходу.'
         )
       )
     );
@@ -5853,6 +6099,18 @@ NOVA: 1
       || data?.scannedBarcode
     );
     const [pasteText, setPasteText] = useState('');
+    const [formName, setFormName] = useState(() => searchQuery || '');
+    const [formProtein, setFormProtein] = useState('');
+    const [formSimple, setFormSimple] = useState('');
+    const [formComplex, setFormComplex] = useState('');
+    const [formBadFat, setFormBadFat] = useState('');
+    const [formGoodFat, setFormGoodFat] = useState('');
+    const [formTrans, setFormTrans] = useState('');
+    const [formFiber, setFormFiber] = useState('');
+    const [formGi, setFormGi] = useState('');
+    const [showAdvancedDetail, setShowAdvancedDetail] = useState(false);
+    const [showCreateAdvanced, setShowCreateAdvanced] = useState(false);
+    const [showPasteLayer, setShowPasteLayer] = useState(false);
     const [barcodeInput, setBarcodeInput] = useState(initialBarcode);
     const [brandInput, setBrandInput] = useState(() => normalizeProductBrand(stepData?.create?.brand || data?.brand));
     const [barcodeModal, setBarcodeModal] = useState(null);
@@ -5883,6 +6141,15 @@ NOVA: 1
       const hasCreateDraft = !!(
         pasteText?.trim()
         || parsedPreview
+        || formName?.trim()
+        || formProtein?.trim()
+        || formSimple?.trim()
+        || formComplex?.trim()
+        || formBadFat?.trim()
+        || formGoodFat?.trim()
+        || formTrans?.trim()
+        || formFiber?.trim()
+        || formGi?.trim()
         || normalizeProductBrand(brandInput)
         || effectiveBarcode
       );
@@ -5891,19 +6158,21 @@ NOVA: 1
         return;
       }
       closeFlow();
-    }, [closeFlow, modalStepData, data, context, pasteText, parsedPreview, brandInput, effectiveBarcode]);
+    }, [closeFlow, modalStepData, data, context, pasteText, parsedPreview, formName, formProtein, formSimple, formComplex, formBadFat, formGoodFat, formTrans, formFiber, formGi, brandInput, effectiveBarcode]);
 
     const confirmExitModal = useCallback(() => {
       setExitPromptOpen(false);
       closeFlow();
     }, [closeFlow]);
 
+    useApsCloseGuard(context?.apsCloseGuardRef, requestCloseModal);
     useEscapeToClose(requestCloseModal, true);
 
-    // Фокус на textarea при монтировании
     useEffect(() => {
-      setTimeout(() => textareaRef.current?.focus(), 100);
-    }, []);
+      if (!showPasteLayer) return undefined;
+      const timer = setTimeout(() => textareaRef.current?.focus(), 100);
+      return () => clearTimeout(timer);
+    }, [showPasteLayer]);
 
     const draftKey = 'heys_product_draft';
 
@@ -6228,33 +6497,25 @@ NOVA: 1
       HEYS.Toast?.success?.('Штрихкод добавлен к новому продукту');
     }, []);
 
-    // Подготовить продукт и перейти на шаг вредности (БЕЗ СОХРАНЕНИЯ В БАЗУ!)
-    // Сохранение происходит ПОСЛЕ подтверждения вредности в HarmSelectStep — но
-    // ТОЛЬКО если createMode === 'persist'. Для 'oneTime' setAll пропускается.
-    const handleCreate = useCallback(async () => {
-      if (!parsedPreview) return;
+    // Подготовить продукт и перейти на шаг порций (БЕЗ СОХРАНЕНИЯ В БАЗУ!)
+    const continueWithProduct = useCallback(async (sourceProduct) => {
+      if (!sourceProduct) return;
 
       haptic('medium');
 
-      const productWithBarcode = effectiveBarcode ? mergeProductBarcode(parsedPreview, effectiveBarcode) : parsedPreview;
+      const productWithBarcode = effectiveBarcode ? mergeProductBarcode(sourceProduct, effectiveBarcode) : sourceProduct;
       const productWithBrand = {
         ...productWithBarcode,
         brand: normalizeProductBrand(brandInput) || null
       };
       const baseProduct = await ensureProductFingerprint(productWithBrand);
-      // Помечаем продукт _oneTime: true когда mode === 'oneTime'.
-      // Флаг едет с продуктом через все steps и в итоге попадает в meal item.
       const preparedProduct = createMode === 'oneTime'
         ? { ...baseProduct, _oneTime: true }
         : baseProduct;
-      if (preparedProduct?.fingerprint && preparedProduct !== parsedPreview) {
+      if (preparedProduct?.fingerprint && preparedProduct !== sourceProduct) {
         setParsedPreview(preparedProduct);
       }
 
-      console.log('[CreateProductStep] 📝 Подготовлен продукт:', preparedProduct?.name || parsedPreview.name, 'mode:', createMode);
-      console.log('[CreateProductStep] ⏭️ Переходим на шаг порций (сохранение в базу: ' + (createMode === 'persist' ? 'да' : 'нет — разово') + ')');
-
-      // 1. Обновляем данные текущего шага (БЕЗ сохранения в базу!)
       onChange({
         ...data,
         newProduct: preparedProduct,
@@ -6265,10 +6526,6 @@ NOVA: 1
         brand: normalizeProductBrand(brandInput)
       });
 
-      // 4. ТАКЖЕ обновляем данные шага harm и grams (чтобы сразу видели продукт)
-      // 🌐 publishToShared прокидываем в stepData.create — иначе HarmSelectStep
-      // прочитает дефолт (?? true) и публикация сработает даже при снятой галочке.
-      // Для oneTime — принудительно false (продукт в общую базу не предлагаем).
       const effectivePublishToShared = createMode === 'oneTime' ? false : !!publishToShared;
       if (updateStepData) {
         updateStepData('create', {
@@ -6292,12 +6549,78 @@ NOVA: 1
         });
       }
 
-      // 5. Переходим на шаг порций (index 2) перед подтверждением вредности
-      // Увеличен таймаут для гарантии обновления state
       if (goToStep) {
         setTimeout(() => goToStep(2, 'left'), 150);
       }
-    }, [parsedPreview, data, onChange, context, goToStep, updateStepData, publishToShared, isCurator, ensureProductFingerprint, createMode, effectiveBarcode, brandInput]);
+    }, [data, onChange, goToStep, updateStepData, publishToShared, ensureProductFingerprint, createMode, effectiveBarcode, brandInput]);
+
+    const handleCreate = useCallback(async () => {
+      if (!parsedPreview) return;
+      await continueWithProduct(parsedPreview);
+    }, [parsedPreview, continueWithProduct]);
+
+    const parseFormNumber = useCallback((value, fallback = 0) => {
+      const n = Number(String(value ?? '').replace(',', '.'));
+      return Number.isFinite(n) ? n : fallback;
+    }, []);
+
+    const autoMacros = useMemo(() => {
+      const protein100 = parseFormNumber(formProtein, 0);
+      const simple100 = parseFormNumber(formSimple, 0);
+      const complex100 = parseFormNumber(formComplex, 0);
+      const badFat100 = parseFormNumber(formBadFat, 0);
+      const goodFat100 = parseFormNumber(formGoodFat, 0);
+      const trans100 = parseFormNumber(formTrans, 0);
+      const carbs100 = Math.round((simple100 + complex100) * 10) / 10;
+      const fat100 = Math.round((badFat100 + goodFat100 + trans100) * 10) / 10;
+      const kcal100 = Math.round((3 * protein100 + 4 * carbs100 + 9 * fat100) * 10) / 10;
+      return {
+        protein100,
+        simple100,
+        complex100,
+        badFat100,
+        goodFat100,
+        trans100,
+        fiber100: parseFormNumber(formFiber, 0),
+        gi: parseFormNumber(formGi, 0),
+        carbs100,
+        fat100,
+        kcal100
+      };
+    }, [formProtein, formSimple, formComplex, formBadFat, formGoodFat, formTrans, formFiber, formGi, parseFormNumber]);
+
+    const handleFormContinue = useCallback(async () => {
+      const name = (formName || searchQuery || '').trim();
+      if (!name) {
+        setError('Укажите название продукта');
+        return;
+      }
+      if (autoMacros.kcal100 <= 0 && autoMacros.protein100 <= 0) {
+        setError('Укажите белок или раскройте состав подробнее');
+        return;
+      }
+
+      const product = {
+        name,
+        brand: normalizeProductBrand(brandInput) || null,
+        kcal100: autoMacros.kcal100,
+        protein100: autoMacros.protein100,
+        fat100: autoMacros.fat100,
+        carbs100: autoMacros.carbs100,
+        simple100: autoMacros.simple100,
+        complex100: autoMacros.complex100,
+        badFat100: autoMacros.badFat100,
+        goodFat100: autoMacros.goodFat100,
+        trans100: autoMacros.trans100,
+        fiber100: autoMacros.fiber100,
+        gi: autoMacros.gi,
+        harm: 0
+      };
+
+      setParsedPreview(product);
+      setError('');
+      await continueWithProduct(product);
+    }, [formName, searchQuery, autoMacros, brandInput, continueWithProduct]);
 
     // Авто-добавление fingerprint для превью (после парсинга)
     useEffect(() => {
@@ -6389,100 +6712,242 @@ NOVA: 1
         onDetected: handleCreateBarcodeDetected,
         onClose: () => setBarcodeModal(null)
       }),
-      // Заголовок
-      React.createElement('div', { className: 'aps-create-header' },
-        React.createElement('span', { className: 'aps-create-icon' }, '➕'),
-        React.createElement('span', { className: 'aps-create-title' }, 'Создать новый продукт')
+      React.createElement('div', { className: 'aps-v4-create-shell' },
+        React.createElement('div', { className: 'aps-v4-create-shell__title' }, 'Название и состав'),
+        renderApsCreateDots(0)
       ),
 
-      // 📥 Чузер режима: в базу (дефолт) vs разово
-      React.createElement('div', {
-        className: 'aps-create-mode-selector',
-        role: 'radiogroup',
-        'aria-label': 'Режим добавления продукта'
-      },
-        React.createElement('button', {
-          type: 'button',
-          className: 'aps-create-mode-btn' + (createMode === 'persist' ? ' active' : ''),
-          role: 'radio',
-          'aria-checked': createMode === 'persist',
-          onClick: () => { haptic('light'); setCreateMode('persist'); setPublishToShared(true); }
-        },
-          React.createElement('span', { className: 'aps-create-mode-icon' }, '📥'),
-          React.createElement('span', { className: 'aps-create-mode-label' }, 'Сохранить в базу'),
-          React.createElement('span', { className: 'aps-create-mode-hint' }, 'Можно использовать снова')
-        ),
-        React.createElement('button', {
-          type: 'button',
-          className: 'aps-create-mode-btn' + (createMode === 'oneTime' ? ' active' : ''),
-          role: 'radio',
-          'aria-checked': createMode === 'oneTime',
-          onClick: () => { haptic('light'); setCreateMode('oneTime'); setPublishToShared(false); }
-        },
-          React.createElement('span', { className: 'aps-create-mode-icon' }, '⚡'),
-          React.createElement('span', { className: 'aps-create-mode-label' }, 'Разово в этот приём'),
-          React.createElement('span', { className: 'aps-create-mode-hint' }, 'Не засорит базу')
-        )
-      ),
-
-      // Подсказка о поисковом запросе
       searchQuery && React.createElement('div', { className: 'aps-create-search-hint' },
-        '🔍 Вы искали: ',
+        'Вы искали: ',
         React.createElement('strong', null, searchQuery)
       ),
 
-      React.createElement('div', { className: 'aps-create-barcode-field' },
-        React.createElement('label', { className: 'aps-create-barcode-label' }, 'Штрихкод'),
-        React.createElement('div', { className: 'aps-create-barcode-row' },
+      !showPasteLayer && React.createElement('div', { className: 'aps-v4-create-form' },
+        React.createElement('div', { className: 'aps-v4-create-field' },
+          React.createElement('label', { htmlFor: 'aps-create-name' }, 'Название'),
           React.createElement('input', {
-            className: 'aps-create-barcode-input',
+            id: 'aps-create-name',
             type: 'text',
-            inputMode: 'text',
-            autoComplete: 'off',
-            value: barcodeInput,
-            onChange: (e) => setBarcodeInput(normalizeBarcode(e.target.value) || e.target.value),
-            placeholder: 'EAN / UPC'
+            value: formName,
+            onChange: (e) => setFormName(e.target.value),
+            placeholder: searchQuery || 'Например: Гречка отварная'
+          })
+        ),
+        React.createElement('div', { className: 'aps-v4-create-field' },
+          React.createElement('label', { htmlFor: 'aps-create-brand' }, 'Бренд'),
+          React.createElement('input', {
+            id: 'aps-create-brand',
+            type: 'text',
+            autoComplete: 'organization',
+            value: brandInput,
+            onChange: (e) => setBrandInput(e.target.value),
+            placeholder: 'Необязательно'
           }),
-          barcodeInput && React.createElement('button', {
+          createBrandSuggestion && React.createElement('button', {
             type: 'button',
-            className: 'aps-create-barcode-clear',
-            onClick: () => setBarcodeInput(''),
-            'aria-label': 'Очистить штрихкод',
-            title: 'Очистить штрихкод'
-          }, '×'),
-          React.createElement('button', {
-            type: 'button',
-            className: 'aps-create-barcode-scan',
-            onClick: openCreateBarcodeScanner
-          },
-            React.createElement('span', { className: 'aps-create-barcode-scan-icon', 'aria-hidden': 'true' }, '▦'),
-            React.createElement('span', null, effectiveBarcode ? 'Сканировать заново' : 'Сканировать')
+            className: 'aps-brand-extract-btn',
+            onClick: applyCreateBrandSuggestion
+          }, `Вынести «${createBrandSuggestion.brand}» из названия`)
+        ),
+        React.createElement('div', { className: 'aps-v4-create-field' },
+          React.createElement('label', { htmlFor: 'aps-create-protein' }, 'Белок / 100 г'),
+          React.createElement('input', {
+            id: 'aps-create-protein',
+            type: 'text',
+            inputMode: 'decimal',
+            value: formProtein,
+            onChange: (e) => setFormProtein(e.target.value),
+            placeholder: '0'
+          })
+        ),
+        React.createElement('div', { className: 'aps-v4-create-macros aps-v4-create-macros--auto' },
+          React.createElement('div', { className: 'aps-v4-create-auto-field' },
+            React.createElement('span', { className: 'aps-v4-create-auto-field__label' }, 'Ккал / 100 г'),
+            React.createElement('span', { className: 'aps-v4-create-auto-field__value' }, String(autoMacros.kcal100 || '—')),
+            React.createElement('span', { className: 'aps-v4-create-auto-field__tag' }, 'авто')
+          ),
+          React.createElement('div', { className: 'aps-v4-create-auto-field' },
+            React.createElement('span', { className: 'aps-v4-create-auto-field__label' }, 'Жиры / 100 г'),
+            React.createElement('span', { className: 'aps-v4-create-auto-field__value' }, String(autoMacros.fat100 || '—')),
+            React.createElement('span', { className: 'aps-v4-create-auto-field__tag' }, 'авто')
+          ),
+          React.createElement('div', { className: 'aps-v4-create-auto-field' },
+            React.createElement('span', { className: 'aps-v4-create-auto-field__label' }, 'Углеводы / 100 г'),
+            React.createElement('span', { className: 'aps-v4-create-auto-field__value' }, String(autoMacros.carbs100 || '—')),
+            React.createElement('span', { className: 'aps-v4-create-auto-field__tag' }, 'авто')
           )
         ),
-        React.createElement('div', { className: 'aps-create-barcode-note' },
-          effectiveBarcode ? 'Этот код сохранится у продукта в личной базе.' : 'Можно ввести вручную или считать камерой.'
+        React.createElement('button', {
+          type: 'button',
+          className: 'aps-v4-create-advanced-toggle',
+          onClick: () => { haptic('light'); setShowAdvancedDetail((prev) => !prev); }
+        }, showAdvancedDetail ? 'Скрыть состав подробнее' : 'Состав подробнее'),
+        showAdvancedDetail && React.createElement('div', { className: 'aps-v4-create-advanced-grid' },
+          React.createElement('div', { className: 'aps-v4-create-field' },
+            React.createElement('label', { htmlFor: 'aps-create-simple' }, 'Простые углеводы'),
+            React.createElement('input', {
+              id: 'aps-create-simple',
+              type: 'text',
+              inputMode: 'decimal',
+              value: formSimple,
+              onChange: (e) => setFormSimple(e.target.value),
+              placeholder: '0'
+            })
+          ),
+          React.createElement('div', { className: 'aps-v4-create-field' },
+            React.createElement('label', { htmlFor: 'aps-create-complex' }, 'Сложные углеводы'),
+            React.createElement('input', {
+              id: 'aps-create-complex',
+              type: 'text',
+              inputMode: 'decimal',
+              value: formComplex,
+              onChange: (e) => setFormComplex(e.target.value),
+              placeholder: '0'
+            })
+          ),
+          React.createElement('div', { className: 'aps-v4-create-field' },
+            React.createElement('label', { htmlFor: 'aps-create-bad-fat' }, 'Вредные жиры'),
+            React.createElement('input', {
+              id: 'aps-create-bad-fat',
+              type: 'text',
+              inputMode: 'decimal',
+              value: formBadFat,
+              onChange: (e) => setFormBadFat(e.target.value),
+              placeholder: '0'
+            })
+          ),
+          React.createElement('div', { className: 'aps-v4-create-field' },
+            React.createElement('label', { htmlFor: 'aps-create-good-fat' }, 'Полезные жиры'),
+            React.createElement('input', {
+              id: 'aps-create-good-fat',
+              type: 'text',
+              inputMode: 'decimal',
+              value: formGoodFat,
+              onChange: (e) => setFormGoodFat(e.target.value),
+              placeholder: '0'
+            })
+          ),
+          React.createElement('div', { className: 'aps-v4-create-field' },
+            React.createElement('label', { htmlFor: 'aps-create-trans' }, 'Транс-жиры'),
+            React.createElement('input', {
+              id: 'aps-create-trans',
+              type: 'text',
+              inputMode: 'decimal',
+              value: formTrans,
+              onChange: (e) => setFormTrans(e.target.value),
+              placeholder: '0'
+            })
+          ),
+          React.createElement('div', { className: 'aps-v4-create-field' },
+            React.createElement('label', { htmlFor: 'aps-create-fiber' }, 'Клетчатка'),
+            React.createElement('input', {
+              id: 'aps-create-fiber',
+              type: 'text',
+              inputMode: 'decimal',
+              value: formFiber,
+              onChange: (e) => setFormFiber(e.target.value),
+              placeholder: '0'
+            })
+          ),
+          React.createElement('div', { className: 'aps-v4-create-field' },
+            React.createElement('label', { htmlFor: 'aps-create-gi' }, 'ГИ'),
+            React.createElement('input', {
+              id: 'aps-create-gi',
+              type: 'text',
+              inputMode: 'decimal',
+              value: formGi,
+              onChange: (e) => setFormGi(e.target.value),
+              placeholder: '0'
+            })
+          )
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'aps-v4-create-advanced-toggle',
+          onClick: () => { haptic('light'); setShowCreateAdvanced((prev) => !prev); }
+        }, showCreateAdvanced ? 'Скрыть дополнительно' : 'Дополнительно'),
+        showCreateAdvanced && React.createElement('div', { className: 'aps-v4-create-extra' },
+          React.createElement('div', {
+            className: 'aps-create-mode-selector',
+            role: 'radiogroup',
+            'aria-label': 'Режим добавления продукта'
+          },
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-create-mode-btn' + (createMode === 'persist' ? ' active' : ''),
+              role: 'radio',
+              'aria-checked': createMode === 'persist',
+              onClick: () => { haptic('light'); setCreateMode('persist'); setPublishToShared(true); }
+            },
+              React.createElement('span', { className: 'aps-create-mode-label' }, 'Сохранить в базу'),
+              React.createElement('span', { className: 'aps-create-mode-hint' }, 'Можно использовать снова')
+            ),
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-create-mode-btn' + (createMode === 'oneTime' ? ' active' : ''),
+              role: 'radio',
+              'aria-checked': createMode === 'oneTime',
+              onClick: () => { haptic('light'); setCreateMode('oneTime'); setPublishToShared(false); }
+            },
+              React.createElement('span', { className: 'aps-create-mode-label' }, 'Разово в этот приём'),
+              React.createElement('span', { className: 'aps-create-mode-hint' }, 'Не засорит базу')
+            )
+          ),
+          React.createElement('div', { className: 'aps-create-barcode-field' },
+            React.createElement('label', { className: 'aps-create-barcode-label' }, 'Штрихкод'),
+            React.createElement('div', { className: 'aps-create-barcode-row' },
+              React.createElement('input', {
+                className: 'aps-create-barcode-input',
+                type: 'text',
+                inputMode: 'text',
+                autoComplete: 'off',
+                value: barcodeInput,
+                onChange: (e) => setBarcodeInput(normalizeBarcode(e.target.value) || e.target.value),
+                placeholder: 'EAN / UPC'
+              }),
+              barcodeInput && React.createElement('button', {
+                type: 'button',
+                className: 'aps-create-barcode-clear',
+                onClick: () => setBarcodeInput(''),
+                'aria-label': 'Очистить штрихкод',
+                title: 'Очистить штрихкод'
+              }, '×'),
+              React.createElement('button', {
+                type: 'button',
+                className: 'aps-create-barcode-scan',
+                onClick: openCreateBarcodeScanner
+              },
+                React.createElement('span', { className: 'aps-create-barcode-scan-icon', 'aria-hidden': 'true' }, '▦'),
+                React.createElement('span', null, effectiveBarcode ? 'Сканировать заново' : 'Сканировать')
+              )
+            ),
+            React.createElement('div', { className: 'aps-create-barcode-note' },
+              effectiveBarcode ? 'Этот код сохранится у продукта в личной базе.' : 'Можно ввести вручную или считать камерой.'
+            )
+          )
+        ),
+        error && React.createElement('div', { className: 'aps-create-error' }, '⚠️ ' + error),
+        React.createElement('div', { className: 'aps-v4-footer' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'aps-v4-btn-primary',
+            onClick: handleFormContinue
+          }, 'Далее'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'aps-v4-btn-ghost aps-v4-btn-paper',
+            onClick: () => { haptic('light'); setShowPasteLayer(true); }
+          }, 'Вставить строку с данными')
         )
       ),
 
-      React.createElement('div', { className: 'aps-create-brand-field' },
-        React.createElement('label', { className: 'aps-create-brand-label' }, 'Бренд'),
-        React.createElement('input', {
-          className: 'aps-create-brand-input',
-          type: 'text',
-          autoComplete: 'organization',
-          value: brandInput,
-          onChange: (e) => setBrandInput(e.target.value),
-          placeholder: 'Например: Простоквашино'
-        }),
-        React.createElement('div', { className: 'aps-create-brand-note' },
-          brandInput ? 'Бренд будет показан отдельно от названия.' : 'Необязательно: оставьте пустым для обычных продуктов.'
-        ),
-        createBrandSuggestion && React.createElement('button', {
+      showPasteLayer && React.createElement('div', { className: 'aps-create-paste-layer' },
+        React.createElement('button', {
           type: 'button',
-          className: 'aps-brand-extract-btn',
-          onClick: applyCreateBrandSuggestion
-        }, `Вынести «${createBrandSuggestion.brand}» из названия`)
-      ),
+          className: 'aps-v4-btn-ghost aps-v4-btn-paper',
+          style: { marginBottom: '12px' },
+          onClick: () => { haptic('light'); setShowPasteLayer(false); }
+        }, '← К форме'),
 
       // Инструкция
       React.createElement('div', { className: 'aps-create-hint' },
@@ -6538,14 +7003,12 @@ NOVA: 1
         React.createElement('div', { className: 'aps-preview-title' }, '✅ Распознано:'),
         React.createElement('div', { className: 'aps-preview-name' }, parsedPreview.name),
         shouldDisplayProductBrand(parsedPreview) && React.createElement('div', { className: 'aps-preview-brand' }, getProductBrand(parsedPreview)),
-        // Основные макросы
         React.createElement('div', { className: 'aps-preview-macros' },
           React.createElement('span', { className: 'aps-preview-kcal' }, parsedPreview.kcal100 + ' ккал'),
           React.createElement('span', null, 'Б ' + parsedPreview.protein100 + 'г'),
           React.createElement('span', null, 'Ж ' + parsedPreview.fat100 + 'г'),
           React.createElement('span', null, 'У ' + parsedPreview.carbs100 + 'г')
         ),
-        // Детальная таблица всех параметров
         React.createElement('div', { className: 'aps-preview-details' },
           PREVIEW_FIELDS.map((field) => React.createElement('div', { className: 'aps-preview-row', key: field.key },
             React.createElement('span', { className: 'aps-preview-label' }, field.label),
@@ -6554,7 +7017,6 @@ NOVA: 1
         )
       ),
 
-      // 🌐 Checkbox: Опубликовать в общую базу — скрыт для oneTime (продукт не сохраняется локально)
       parsedPreview && createMode === 'persist' && React.createElement('label', {
         style: {
           display: 'flex',
@@ -6580,7 +7042,6 @@ NOVA: 1
         }, isCurator ? 'сразу доступен всем' : 'на модерацию')
       ),
 
-      // Кнопка добавить
       React.createElement('button', {
         className: 'aps-create-btn' + (parsedPreview ? ' active' : ''),
         onClick: handleCreate,
@@ -6591,9 +7052,9 @@ NOVA: 1
           : 'Вставьте данные продукта'
       ),
 
-      // Подсказка про формат
       React.createElement('div', { className: 'aps-create-tip' },
         '💡 Скопируйте строку из таблицы Google Sheets или Excel. Поддерживаются запятые и точки.'
+      )
       )
     );
   }
@@ -7562,6 +8023,7 @@ NOVA: 1
       closeFlow();
     }, [closeFlow]);
 
+    useApsCloseGuard(context?.apsCloseGuardRef, requestCloseModal);
     useEscapeToClose(requestCloseModal, true);
 
     // Ищем продукт из всех возможных источников
@@ -7790,7 +8252,7 @@ NOVA: 1
       );
     }
 
-    return React.createElement('div', { className: 'aps-portions-step aps-v4-flow' },
+    return React.createElement('div', { className: 'aps-v4-portions-step aps-v4-flow' },
       exitPromptOpen && React.createElement(ApsExitDialog, {
         summary: product?.name
           ? `${product.name} — порции ещё не сохранены. Черновик не сохраняется.`
@@ -7798,77 +8260,84 @@ NOVA: 1
         onStay: () => setExitPromptOpen(false),
         onLeave: confirmExitModal
       }),
-      React.createElement('div', { className: 'aps-portions-header' },
-        React.createElement('span', { className: 'aps-portions-icon' }, '🥣'),
-        React.createElement('span', { className: 'aps-portions-title' }, 'Порции')
+      React.createElement('div', { className: 'aps-v4-create-shell' },
+        React.createElement('div', { className: 'aps-v4-create-shell__title' }, 'Порции'),
+        renderApsCreateDots(1)
       ),
-
-      React.createElement('div', { className: 'aps-portions-subtitle' },
-        'Удобные порции для «' + product.name + '»'
+      React.createElement('div', { className: 'aps-v4-portions-subtitle' },
+        'Чтобы не считать граммы каждый раз. Можно пропустить — тогда останется ввод в граммах.'
       ),
+      React.createElement('div', { className: 'aps-v4-portions-product' }, product.name),
 
-      autoPortions?.length > 0 && React.createElement('div', { className: 'aps-portions-suggest' },
-        React.createElement('div', { className: 'aps-portions-suggest-title' }, 'Рекомендованные'),
-        React.createElement('div', { className: 'aps-portions-suggest-list' },
+      autoPortions?.length > 0 && portions.length === 0 && React.createElement('div', { className: 'aps-v4-portions-suggest' },
+        React.createElement('div', { className: 'aps-v4-portions-suggest__title' }, 'Рекомендованные'),
+        React.createElement('div', { className: 'aps-v4-portions-list' },
           autoPortions.map((p, i) =>
-            React.createElement('div', { key: i, className: 'aps-portions-suggest-chip' },
-              p.name + (String(p.name).includes('г') ? '' : ` (${p.grams}г)`)
+            React.createElement('div', { key: i, className: 'aps-v4-portions-row aps-v4-portions-row--readonly' },
+              React.createElement('span', { className: 'aps-v4-portions-row__name' }, p.name),
+              React.createElement('span', { className: 'aps-v4-portions-row__grams' }, `${p.grams} г`)
             )
           )
         ),
         React.createElement('button', {
-          className: 'aps-portions-apply-btn',
+          type: 'button',
+          className: 'aps-v4-btn-ghost aps-v4-btn-paper',
           onClick: handleApplyAuto
         }, 'Использовать шаблон')
       ),
 
-      React.createElement('div', { className: 'aps-portions-editor' },
-        portions.length === 0 && React.createElement('div', { className: 'aps-portions-empty' },
+      React.createElement('div', { className: 'aps-v4-portions-list' },
+        portions.length === 0 && React.createElement('div', { className: 'aps-v4-portions-empty' },
           'Нет порций — добавьте свои или пропустите'
         ),
         portions.map((p, i) =>
-          React.createElement('div', { key: i, className: 'aps-portions-row' },
+          React.createElement('div', { key: i, className: 'aps-v4-portions-row' },
             React.createElement('input', {
-              className: 'aps-portions-input aps-portions-input--name',
+              className: 'aps-v4-portions-row__input aps-v4-portions-row__input--name',
               placeholder: 'Например: 1 яблоко',
               value: p.name,
               onChange: (e) => handleUpdatePortion(i, 'name', e.target.value)
             }),
-            React.createElement('div', { className: 'aps-portions-grams' },
+            React.createElement('div', { className: 'aps-v4-portions-row__grams-wrap' },
               React.createElement('input', {
-                className: 'aps-portions-input aps-portions-input--grams',
+                className: 'aps-v4-portions-row__input aps-v4-portions-row__input--grams',
                 type: 'number',
                 inputMode: 'numeric',
                 placeholder: 'г',
                 value: p.grams,
                 onChange: (e) => handleUpdatePortion(i, 'grams', e.target.value)
               }),
-              React.createElement('span', { className: 'aps-portions-grams-unit' }, 'г')
+              React.createElement('span', { className: 'aps-v4-portions-row__grams' }, 'г')
             ),
             React.createElement('button', {
-              className: 'aps-portions-remove-btn',
-              onClick: () => handleRemovePortion(i)
+              type: 'button',
+              className: 'aps-v4-portions-row__remove',
+              onClick: () => handleRemovePortion(i),
+              'aria-label': 'Удалить порцию'
             }, '×')
           )
         )
       ),
 
       React.createElement('button', {
-        className: 'aps-portions-add-btn',
+        type: 'button',
+        className: 'aps-v4-btn-ghost aps-v4-btn-paper aps-v4-portions-add',
         onClick: handleAddPortion
       }, '+ Добавить порцию'),
 
       error && React.createElement('div', { className: 'aps-portions-error' }, '⚠️ ' + error),
 
-      React.createElement('div', { className: 'aps-portions-actions' },
+      React.createElement('div', { className: 'aps-v4-footer aps-v4-footer--split' },
         React.createElement('button', {
-          className: 'aps-portions-skip-btn',
+          type: 'button',
+          className: 'aps-v4-btn-ghost aps-v4-btn-paper',
           onClick: handleSkip
         }, 'Пропустить'),
         React.createElement('button', {
-          className: 'aps-portions-next-btn',
+          type: 'button',
+          className: 'aps-v4-btn-primary',
           onClick: handleContinue
-        }, context?.isProductEditor ? 'Готово' : (context?.isEditMode ? 'Далее' : 'Далее к вредности'))
+        }, context?.isProductEditor ? 'Готово' : (context?.isEditMode ? 'Далее' : 'Далее'))
       )
     );
   }
@@ -8335,11 +8804,43 @@ NOVA: 1
     return hasProduct || hasGrams;
   };
 
+  function useApsCloseGuard(ref, requestCloseModal) {
+    useEffect(() => {
+      if (!ref) return undefined;
+      ref.current = requestCloseModal;
+      return () => {
+        if (ref.current === requestCloseModal) ref.current = null;
+      };
+    }, [ref, requestCloseModal]);
+  }
+
+  function renderApsCreateDots(activeStep) {
+    const e = React.createElement;
+    return e('div', { className: 'aps-v4-create-dots', 'aria-hidden': 'true' },
+      [0, 1, 2].map((stepIndex) => e('span', {
+        key: stepIndex,
+        className: 'aps-v4-create-dot' + (activeStep === stepIndex ? ' is-active' : '')
+      }))
+    );
+  }
+
   function renderApsSearchEmptyState(state, handlers = {}) {
     const e = React.createElement;
+    const tierBlock = handlers.tierItems?.length
+      ? e('div', { className: 'aps-v4-search-state__tier' }, 'Доступно сейчас',
+        e('div', { className: 'aps-v4-search-state__tier-list' },
+          handlers.tierItems.map((line, index) => e('div', { key: index }, line))))
+      : null;
+
     if (state === 'offline') {
-      return e('div', { className: 'aps-v4-search-offline', role: 'status' },
-        'Нет сети — поиск по общей базе недоступен. Личные продукты и наборы работают.'
+      return e('div', { className: 'aps-v4-search-offline-card', role: 'status' },
+        e('div', { className: 'aps-v4-search-offline-card__title' }, 'Нет сети'),
+        e('div', { className: 'aps-v4-search-offline-card__body' },
+          'Общая база недоступна. Личные продукты, наборы и уже загруженные позиции работают. Приём сохранится локально и уйдёт в облако, когда связь вернётся.'),
+        e('div', { className: 'aps-v4-search-state__tier-list', style: { marginTop: '12px' } },
+          e('div', null, '✓ Личные продукты и наборы'),
+          e('div', null, '✓ Уже загруженные общие продукты'),
+          e('div', null, '✗ Поиск по общей базе'))
       );
     }
     if (state === 'empty_base') {
@@ -8347,12 +8848,20 @@ NOVA: 1
         e('div', { className: 'aps-v4-search-state__title' }, 'Личная база пока пуста'),
         e('div', { className: 'aps-v4-search-state__body' },
           'Создайте первый продукт или найдите его в общей базе — так быстрее добавлять еду в приём.'),
-        handlers.onCreate && e('button', {
-          type: 'button',
-          className: 'aps-v4-btn-primary',
-          style: { marginTop: '12px' },
-          onClick: handlers.onCreate
-        }, 'Создать продукт')
+        e('div', { className: 'aps-v4-search-state__actions' },
+          handlers.onSearchShared && e('button', {
+            type: 'button',
+            className: 'aps-v4-btn-primary',
+            onClick: handlers.onSearchShared
+          }, 'Искать в общей базе'),
+          handlers.onCreate && e('button', {
+            type: 'button',
+            className: 'aps-v4-btn-ghost aps-v4-btn-paper',
+            onClick: handlers.onCreate
+          }, 'Создать продукт')),
+        tierBlock || e('div', { className: 'aps-v4-search-state__tier-list', style: { marginTop: '14px' } },
+          e('div', null, '✓ Общая база'),
+          e('div', null, '✓ Создание продукта'))
       );
     }
     if (state === 'load_failed') {
@@ -8360,12 +8869,20 @@ NOVA: 1
         e('div', { className: 'aps-v4-search-state__title' }, 'База не загрузилась'),
         e('div', { className: 'aps-v4-search-state__body' },
           'Проверьте сеть и попробуйте ещё раз. Пока можно искать только среди уже загруженных продуктов.'),
-        handlers.onRetry && e('button', {
-          type: 'button',
-          className: 'aps-v4-btn-primary',
-          style: { marginTop: '12px' },
-          onClick: handlers.onRetry
-        }, 'Повторить')
+        e('div', { className: 'aps-v4-search-state__actions' },
+          handlers.onRetry && e('button', {
+            type: 'button',
+            className: 'aps-v4-btn-primary',
+            onClick: handlers.onRetry
+          }, 'Повторить'),
+          handlers.onCreate && e('button', {
+            type: 'button',
+            className: 'aps-v4-btn-ghost aps-v4-btn-paper',
+            onClick: handlers.onCreate
+          }, 'Создать продукт')),
+        tierBlock || e('div', { className: 'aps-v4-search-state__tier-list', style: { marginTop: '14px' } },
+          e('div', null, '✓ Личные продукты из кэша'),
+          e('div', null, '✗ Свежая общая база'))
       );
     }
     if (state === 'no_results') {
@@ -8373,6 +8890,15 @@ NOVA: 1
         e('div', { className: 'aps-v4-search-state__title' }, 'Ничего не найдено'),
         e('div', { className: 'aps-v4-search-state__body' },
           'Попробуйте другое название или создайте продукт вручную.'),
+        Array.isArray(handlers.similarProducts) && handlers.similarProducts.length > 0 && e('div', { className: 'aps-v4-search-state__similar' },
+          e('div', { className: 'aps-v4-search-state__similar-title' }, 'Близкое по названию'),
+          e('div', { className: 'aps-v4-search-state__similar-list' },
+            handlers.similarProducts.map((product) => e('button', {
+              key: String(product.id ?? product.product_id ?? product.name),
+              type: 'button',
+              className: 'aps-v4-btn-ghost aps-v4-btn-paper',
+              onClick: () => handlers.onPickSimilar?.(product)
+            }, product.name)))),
         handlers.onCreate && e('button', {
           type: 'button',
           className: 'aps-v4-btn-primary',
@@ -8530,6 +9056,41 @@ NOVA: 1
     // Навигация
     const stepContext = useContext(HEYS.StepModal?.Context || React.createContext({}));
     const { goToStep, updateStepData } = stepContext;
+    const [exitPromptOpen, setExitPromptOpen] = useState(false);
+
+    const closeFlow = useCallback(() => {
+      context?.onClose?.();
+    }, [context]);
+
+    const requestCloseModal = useCallback(() => {
+      if (hasApsDraftToLose(stepData, data, context)) {
+        setExitPromptOpen(true);
+        return;
+      }
+      closeFlow();
+    }, [closeFlow, stepData, data, context]);
+
+    const confirmExitModal = useCallback(() => {
+      setExitPromptOpen(false);
+      closeFlow();
+    }, [closeFlow]);
+
+    useApsCloseGuard(context?.apsCloseGuardRef, requestCloseModal);
+
+    const [harmSourceMode, setHarmSourceMode] = useState('system');
+    const createMode = stepData?.create?.mode || 'persist';
+    const publishToShared = stepData?.create?.publishToShared ?? true;
+    const systemHarmValue = calculatedHarm ?? (hasManualHarm ? manualHarm : selectedHarm);
+    const systemCategory = useMemo(() => {
+      return HEYS.Harm?.getHarmCategory?.(systemHarmValue) || { name: '—', color: '#5c6a45', emoji: '' };
+    }, [systemHarmValue]);
+
+    const commitHarm = useMemo(() => {
+      if (harmSourceMode === 'system') return systemHarmValue;
+      if (showCustom) return selectedHarm;
+      if (hasManualHarm) return manualHarm;
+      return selectedHarm;
+    }, [harmSourceMode, systemHarmValue, showCustom, selectedHarm, hasManualHarm, manualHarm]);
 
     // Похожие продукты в личном списке — мягкое предупреждение перед сохранением.
     // Только для новых продуктов: у разового и при редактировании существующего
@@ -8795,14 +9356,22 @@ NOVA: 1
       });
     }
 
-    return e('div', { className: 'harm-select-step aps-v4-flow' },
-      // Название продукта
-      e('div', { className: 'text-center mb-4' },
-        e('span', { className: 'text-lg font-medium text-gray-900' }, product.name)
+    return e('div', { className: 'aps-v4-harm-step aps-v4-flow' },
+      exitPromptOpen && e(ApsExitDialog, {
+        summary: product?.name
+          ? `${product.name} — продукт ещё не сохранён. Черновик не сохраняется.`
+          : 'Черновик не сохраняется.',
+        onStay: () => setExitPromptOpen(false),
+        onLeave: confirmExitModal
+      }),
+
+      e('div', { className: 'aps-v4-create-shell' },
+        e('div', { className: 'aps-v4-create-shell__title' }, 'Вредность'),
+        renderApsCreateDots(2)
       ),
 
-      // Похожее уже есть в списке — предлагаем взять его вместо нового.
-      // Не блокируем: у клиента законно бывают близкие названия.
+      e('div', { className: 'aps-v4-harm-product' }, product.name),
+
       similarProducts.length > 0 && !similarDismissed && e('div', { className: 'aps-similar-warn' },
         e('div', { className: 'aps-similar-warn__title' },
           similarProducts.length === 1 ? 'Похоже, такой продукт уже есть' : 'Похожие продукты уже есть'
@@ -8830,157 +9399,105 @@ NOVA: 1
         }, 'Это другой продукт')
       ),
 
-      // Два варианта: Manual vs Calculated
-      e('div', { className: 'flex gap-3 mb-4' },
-        // Карточка: Введённое вручную (если есть и отличается)
-        hasManualHarm && e('button', {
-          className: `harm-card ${selectedHarm === manualHarm ? 'selected' : ''}`,
-          onClick: () => selectAndContinue(manualHarm),
-          style: {
-            flex: 1,
-            background: selectedHarm === manualHarm ? (HEYS.Harm?.getHarmColor?.(manualHarm) || '#6b7280') + '15' : (document.documentElement.getAttribute('data-theme') === 'dark' ? '#1f2937' : '#f9fafb'),
-            border: selectedHarm === manualHarm ? `2px solid ${HEYS.Harm?.getHarmColor?.(manualHarm) || '#6b7280'}` : '2px solid transparent',
-            borderRadius: '16px',
-            padding: '16px 12px',
-            cursor: 'pointer',
-            textAlign: 'center',
-            transition: 'all 0.2s'
-          }
-        },
-          e('div', { className: 'text-xs text-gray-500 mb-1' }, '✏️ AI'),
-          e('div', {
-            className: 'text-4xl font-bold mb-1',
-            style: { color: HEYS.Harm?.getHarmColor?.(manualHarm) || '#6b7280' }
-          }, manualHarm.toFixed(1)),
-          e('div', {
-            className: 'text-xs font-medium',
-            style: { color: HEYS.Harm?.getHarmColor?.(manualHarm) || '#6b7280' }
-          }, HEYS.Harm?.getHarmCategory?.(manualHarm)?.emoji || '')
+      calculatedHarm != null && e('div', { className: 'aps-v4-harm-calc-card' },
+        e('div', { className: 'aps-v4-harm-calc-card__head' },
+          e('span', { className: 'aps-v4-harm-calc-card__label' }, 'Расчёт системы'),
+          e('span', { className: 'aps-v4-harm-calc-card__value' }, `${Number(systemHarmValue).toFixed(1)} из 10`)
         ),
+        e('div', { className: 'aps-v4-harm-calc-card__category' }, systemCategory.name || '—')
+      ),
 
-        // Карточка: Рассчитано системой
-        calculatedHarm != null && e('button', {
-          className: `harm-card ${selectedHarm === calculatedHarm ? 'selected' : ''}`,
-          onClick: () => selectAndContinue(calculatedHarm),
-          style: {
-            flex: 1,
-            background: selectedHarm === calculatedHarm ? (calculatedBreakdown?.category?.color || '#6b7280') + '15' : (document.documentElement.getAttribute('data-theme') === 'dark' ? '#1f2937' : '#f9fafb'),
-            border: selectedHarm === calculatedHarm ? `2px solid ${calculatedBreakdown?.category?.color || '#6b7280'}` : '2px solid transparent',
-            borderRadius: '16px',
-            padding: '16px 12px',
-            cursor: 'pointer',
-            textAlign: 'center',
-            transition: 'all 0.2s'
-          }
-        },
-          e('div', { className: 'text-xs text-gray-500 mb-1' }, '🧪 Расчёт'),
-          e('div', {
-            className: 'text-4xl font-bold mb-1',
-            style: { color: calculatedBreakdown?.category?.color || '#6b7280' }
-          }, calculatedHarm.toFixed(1)),
-          e('div', {
-            className: 'text-xs font-medium',
-            style: { color: calculatedBreakdown?.category?.color || '#6b7280' }
-          }, calculatedBreakdown?.category?.emoji || '')
+      e('div', { className: 'aps-v4-harm-radio-group', role: 'radiogroup', 'aria-label': 'Выбор вредности' },
+        e('label', { className: 'aps-v4-harm-radio' + (harmSourceMode === 'system' ? ' is-active' : '') },
+          e('input', {
+            type: 'radio',
+            name: 'harmSourceMode',
+            checked: harmSourceMode === 'system',
+            onChange: () => { haptic('light'); setHarmSourceMode('system'); setShowCustom(false); }
+          }),
+          e('span', null, 'Оставить расчёт системы')
+        ),
+        e('label', { className: 'aps-v4-harm-radio' + (harmSourceMode === 'own' ? ' is-active' : '') },
+          e('input', {
+            type: 'radio',
+            name: 'harmSourceMode',
+            checked: harmSourceMode === 'own',
+            onChange: () => {
+              haptic('light');
+              setHarmSourceMode('own');
+              if (hasManualHarm) setSelectedHarm(manualHarm);
+            }
+          }),
+          e('span', null, hasManualHarm ? 'Поставить свою оценку' : 'Указать своё значение')
         )
       ),
 
-      // Сравнение разницы (если есть оба значения и они отличаются)
-      hasManualHarm && calculatedHarm != null && Math.abs(manualHarm - calculatedHarm) >= 0.5 && e('div', {
-        className: 'text-center text-xs py-2 px-3 rounded-lg mb-3',
-        style: {
-          background: document.documentElement.getAttribute('data-theme') === 'dark'
-            ? (Math.abs(manualHarm - calculatedHarm) >= 2 ? 'rgba(120, 53, 15, 0.6)' : '#374151')
-            : (Math.abs(manualHarm - calculatedHarm) >= 2 ? '#fef3c7' : '#f3f4f6'),
-          color: document.documentElement.getAttribute('data-theme') === 'dark'
-            ? (Math.abs(manualHarm - calculatedHarm) >= 2 ? '#fcd34d' : '#9ca3af')
-            : (Math.abs(manualHarm - calculatedHarm) >= 2 ? '#92400e' : '#6b7280')
-        }
-      },
-        Math.abs(manualHarm - calculatedHarm) >= 2
-          ? `⚠️ Разница ${Math.abs(manualHarm - calculatedHarm).toFixed(1)} — AI и расчёт сильно расходятся`
-          : `Δ ${Math.abs(manualHarm - calculatedHarm).toFixed(1)} между AI и расчётом`
-      ),
+      harmSourceMode === 'own' && hasManualHarm && calculatedHarm != null
+        && Math.abs(manualHarm - calculatedHarm) >= 0.5
+        && e('div', { className: 'aps-v4-harm-diff' },
+          Math.abs(manualHarm - calculatedHarm) >= 2
+            ? `Разница ${Math.abs(manualHarm - calculatedHarm).toFixed(1)} — вставка и расчёт сильно расходятся`
+            : `Разница ${Math.abs(manualHarm - calculatedHarm).toFixed(1)} между вставкой и расчётом`
+        ),
 
-      // Кнопка "Своё значение"
-      e('button', {
-        className: 'w-full py-2 text-sm text-gray-600 hover:text-gray-900 transition-colors',
+      harmSourceMode === 'own' && e('button', {
+        type: 'button',
+        className: 'aps-v4-harm-custom-toggle',
         onClick: () => { setShowCustom(!showCustom); haptic('light'); }
-      }, showCustom ? '▼ Скрыть выбор' : '⚙️ Указать своё значение'),
+      }, showCustom ? 'Скрыть шкалу' : 'Настроить на шкале'),
 
-      // WheelPicker для кастомного значения
-      showCustom && WheelPicker && e('div', { className: 'mt-3 mb-4' },
-        e('div', { className: 'flex items-center justify-center gap-4' },
-          e('div', { className: 'w-32' },
-            e(WheelPicker, {
-              values: wheelValues,
-              value: selectedHarm,
-              onChange: (v) => setSelectedHarm(v),
-              height: 140,
-              compact: true
-            })
-          ),
-          e('div', { className: 'text-center' },
-            e('div', {
-              className: 'text-3xl font-bold',
-              style: { color: selectedCategory.color }
-            }, selectedHarm.toFixed(1)),
-            e('div', {
-              className: 'text-sm',
-              style: { color: selectedCategory.color }
-            }, selectedCategory.name)
-          )
+      harmSourceMode === 'own' && showCustom && WheelPicker && e('div', { className: 'aps-v4-harm-wheel' },
+        e('div', { className: 'aps-v4-harm-wheel__picker' },
+          e(WheelPicker, {
+            values: wheelValues,
+            value: selectedHarm,
+            onChange: (v) => setSelectedHarm(v),
+            height: 140,
+            compact: true
+          })
         ),
-        e('button', {
-          className: 'w-full mt-3 py-3 rounded-xl font-medium text-white',
-          style: { background: selectedCategory.color },
-          onClick: () => selectAndContinue(selectedHarm)
-        }, '✓ Выбрать ' + selectedHarm.toFixed(1))
+        e('div', { className: 'aps-v4-harm-wheel__value' },
+          e('div', {
+            className: 'aps-v4-harm-wheel__score',
+            style: { color: selectedCategory.color }
+          }, selectedHarm.toFixed(1)),
+          e('div', {
+            className: 'aps-v4-harm-wheel__label',
+            style: { color: selectedCategory.color }
+          }, selectedCategory.name)
+        )
       ),
 
-      // Кнопка "Как посчитано?" — раскрывает breakdown
       calculatedBreakdown && e('button', {
-        className: 'w-full py-2 mt-2 text-xs text-gray-500 hover:text-gray-700 transition-colors',
+        type: 'button',
+        className: 'aps-v4-harm-breakdown-toggle',
         onClick: () => { setShowBreakdown(!showBreakdown); haptic('light'); }
-      }, showBreakdown ? '▲ Скрыть расшифровку' : '❓ Как посчитано?'),
+      }, showBreakdown ? 'Скрыть расшифровку' : 'Как посчитано?'),
 
-      // Breakdown расчёта
-      showBreakdown && calculatedBreakdown && e('div', {
-        className: 'mt-3 p-3 bg-gray-50 rounded-xl text-xs space-y-2'
-      },
-        // Формула
-        e('div', { className: 'text-center text-gray-600 mb-2 font-mono' },
-          calculatedBreakdown.formula
-        ),
-        // Версия формулы
-        e('div', { className: 'text-center text-[10px] text-gray-400' },
+      showBreakdown && calculatedBreakdown && e('div', { className: 'aps-v4-harm-breakdown' },
+        e('div', { className: 'aps-v4-harm-breakdown__formula' }, calculatedBreakdown.formula),
+        e('div', { className: 'aps-v4-harm-breakdown__version' },
           `Формула v${calculatedBreakdown.version || '3.0'}`
         ),
-
-        // Штрафы
-        calculatedBreakdown.penalties.length > 0 && e('div', null,
-          e('div', { className: 'text-red-600 font-medium mb-1' }, '🔴 Штрафы:'),
+        calculatedBreakdown.penalties.length > 0 && e('div', { className: 'aps-v4-harm-breakdown__section' },
+          e('div', { className: 'aps-v4-harm-breakdown__section-title' }, 'Штрафы'),
           calculatedBreakdown.penalties.map((p, i) =>
-            e('div', { key: i, className: 'flex justify-between text-gray-600 pl-4' },
+            e('div', { key: i, className: 'aps-v4-harm-breakdown__row' },
               e('span', null, `${p.icon} ${p.label}`),
-              e('span', { className: 'text-red-500' }, `+${p.contribution.toFixed(2)}`)
+              e('span', null, `+${p.contribution.toFixed(2)}`)
             )
           )
         ),
-
-        // Бонусы
-        calculatedBreakdown.bonuses.length > 0 && e('div', { className: 'mt-2' },
-          e('div', { className: 'text-green-600 font-medium mb-1' }, '🟢 Бонусы:'),
+        calculatedBreakdown.bonuses.length > 0 && e('div', { className: 'aps-v4-harm-breakdown__section' },
+          e('div', { className: 'aps-v4-harm-breakdown__section-title' }, 'Бонусы'),
           calculatedBreakdown.bonuses.map((b, i) =>
-            e('div', { key: i, className: 'flex justify-between text-gray-600 pl-4' },
+            e('div', { key: i, className: 'aps-v4-harm-breakdown__row' },
               e('span', null, `${b.icon} ${b.label}`),
-              e('span', { className: 'text-green-500' }, `−${b.contribution.toFixed(2)}`)
+              e('span', null, `−${b.contribution.toFixed(2)}`)
             )
           )
         ),
-
-        // NOVA info
-        e('div', { className: 'mt-2 text-gray-500 text-center' },
+        e('div', { className: 'aps-v4-harm-breakdown__nova' },
           `NOVA ${calculatedBreakdown.novaGroup}: ${calculatedBreakdown.novaGroup === 4 ? 'Ультрапереработанный' :
             calculatedBreakdown.novaGroup === 3 ? 'Переработанный' :
               calculatedBreakdown.novaGroup === 2 ? 'Ингредиент' : 'Необработанный'
@@ -8988,9 +9505,29 @@ NOVA: 1
         )
       ),
 
-      // Подсказка
-      e('div', { className: 'text-center text-xs text-gray-400 mt-4' },
-        '0 = суперполезный • 10 = супервредный'
+      createMode !== 'oneTime' && e('div', { className: 'aps-v4-search-state__tier' }, 'Куда попадёт продукт',
+        e('div', { className: 'aps-v4-search-state__tier-list' },
+          e('div', null, publishToShared ? '✓ Личная база и заявка в общую' : '✓ Только личная база'),
+          e('div', null, publishToShared ? '○ После проверки куратором — в общей базе' : '✗ В общую базу не отправляем')
+        )
+      ),
+
+      createMode === 'oneTime' && e('div', { className: 'aps-v4-search-state__tier' }, 'Куда попадёт продукт',
+        e('div', { className: 'aps-v4-search-state__tier-list' },
+          e('div', null, '✓ Только этот приём'),
+          e('div', null, '✗ В личную базу не сохраняем')
+        )
+      ),
+
+      e('div', { className: 'aps-v4-harm-scale-note' }, '0 = суперполезный · 10 = супервредный'),
+
+      e('div', { className: 'aps-v4-footer' },
+        e('button', {
+          type: 'button',
+          className: 'aps-v4-btn-primary',
+          disabled: publishBusy,
+          onClick: () => selectAndContinue(commitHarm)
+        }, publishBusy ? 'Сохраняем…' : 'Сохранить продукт')
       )
     );
   }
@@ -9018,16 +9555,7 @@ NOVA: 1
       closeFlow();
     }, [closeFlow]);
 
-    const {
-      fileInputRef,
-      handlePhotoSelect,
-      handlePhotoClick,
-      currentPhotoCount,
-      photoLimit,
-      canAddPhoto,
-      renderPhotoConfirmModal
-    } = useMealPhotoAttachment(context);
-
+    useApsCloseGuard(context?.apsCloseGuardRef, requestCloseModal);
     useEscapeToClose(requestCloseModal, true);
     // Продукт берём: 1) из context (для edit mode), 2) из своих данных, 3) из create (newProduct или selectedProduct), 4) из search
     // ВАЖНО: stepData?.create проверяется т.к. при создании нового продукта data.selectedProduct может не успеть обновиться
@@ -9040,39 +9568,9 @@ NOVA: 1
     const lastGrams = stepData?.search?.lastGrams || stepData?.create?.lastGrams; // Последние использованные
     const grams = data.grams || context?.editGrams || stepData?.create?.grams || stepData?.search?.grams || 100;
 
-    // Режим ввода: grams или kcal
-    const [inputMode, setInputMode] = useState('grams');
-    const [kcalInput, setKcalInput] = useState('');
     const gramsInputRef = useRef(null);
 
-    const [favorites, setFavorites] = useState(() =>
-      HEYS.store?.getFavorites?.() || new Set()
-    );
-
-    const productId = useMemo(() => {
-      if (!product) return '';
-      return String(product.id ?? product.product_id ?? product.name ?? '');
-    }, [product]);
-
-    useEffect(() => {
-      if (HEYS.store?.getFavorites) {
-        setFavorites(HEYS.store.getFavorites());
-      }
-    }, [productId]);
-
-    const isFavorite = productId ? favorites.has(productId) : false;
-    const isShared = isSharedProduct(product);
-
-    const toggleFavorite = useCallback((e) => {
-      e.stopPropagation();
-      if (!productId || !HEYS.store?.toggleFavorite) return;
-      HEYS.store.toggleFavorite(productId);
-      if (HEYS.store?.getFavorites) {
-        setFavorites(HEYS.store.getFavorites());
-      }
-    }, [productId]);
-
-    // ВАЖНО: Значения продукта с fallback для ситуации когда product ещё не загружен
+    // === ВСЕ ХУКИ ДОЛЖНЫ БЫТЬ ДО ЛЮБОГО RETURN ===
     const toNum = (v) => {
       if (v == null || v === '') return 0;
       if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
@@ -9179,17 +9677,6 @@ NOVA: 1
       }
       onChange({ ...data, grams: val });
     }, [data, onChange]);
-
-    // Расчёт граммов из ккал
-    const setKcalAndCalcGrams = useCallback((kcalStr) => {
-      setKcalInput(kcalStr);
-      const kcal = Number(kcalStr) || 0;
-      if (kcal > 0 && kcal100 > 0) {
-        const calcGrams = Math.round(kcal / kcal100 * 100);
-        const val = Math.max(1, Math.min(2000, calcGrams));
-        onChange({ ...data, grams: val });
-      }
-    }, [data, onChange, kcal100]);
 
     const handleSubmit = useCallback(() => {
       // 🔬 [HEYS.day-trace] 0/8 button click — green «✓ Добавить» pressed in GramsStep modal.
@@ -9481,7 +9968,6 @@ NOVA: 1
     // позициями в приёме 24:40 — «Торт Наполеон» и «Торт Наполеон222».
     // Первый слой (предупреждение при создании) можно проигнорировать, этот
     // срабатывает в момент добавления и виден даже для продуктов из каталога.
-    const [mealDuplicateDismissed, setMealDuplicateDismissed] = useState(false);
     const mealDuplicate = useMemo(() => {
       if (!product?.name || context?.isEditMode) return null;
       const dayData = lsGet(`heys_dayv2_${dateKey}`, {});
@@ -9524,10 +10010,17 @@ NOVA: 1
 
     // Быстрые кнопки порций
     const quickPortions = [50, 100, 150, 200, 300];
-
-    // Фон хедера по вредности
-    const harmVal = product.harm ?? product.harmScore ?? product.harm100;
-    const harmToneStyle = getHarmToneStyle(harmVal, { strong: true, surface: 'hero' });
+    const namedPortions = (localPortions || []).filter((portion) => {
+      const portionGrams = Number(portion?.grams) || 0;
+      if (!portionGrams || quickPortions.includes(portionGrams)) return false;
+      const portionName = String(portion?.name || '').trim();
+      return portionName && !/^(\d+\s*г)$/i.test(portionName);
+    });
+    const dayAfterAddKcal = dayTotalKcal + currentKcal;
+    const dayPct = dailyGoal > 0 ? Math.round(dayAfterAddKcal / dailyGoal * 100) : 0;
+    const duplicateGrams = mealDuplicate
+      ? HEYS.models.normalizeItemGrams(mealDuplicate.item.grams, 100)
+      : 0;
 
     return React.createElement('div', { className: 'aps-grams-step aps-v4-flow' },
       exitPromptOpen && React.createElement(ApsExitDialog, {
@@ -9540,214 +10033,102 @@ NOVA: 1
         onStay: () => setExitPromptOpen(false),
         onLeave: confirmExitModal
       }),
-      renderPhotoConfirmModal(),
-      React.createElement('input', {
-        ref: fileInputRef,
-        type: 'file',
-        accept: 'image/*',
-        capture: 'environment',
-        style: { display: 'none' },
-        onChange: handlePhotoSelect
-      }),
-      // Название продукта
-      React.createElement('div', {
-        className: 'aps-product-header',
-        style: harmToneStyle || undefined
-      },
-        React.createElement('div', { className: 'aps-product-header__main' },
-          product.category && React.createElement('span', { className: 'aps-product-icon-lg' },
-            getCategoryIcon(product.category)
+
+      React.createElement('div', { className: 'aps-v4-grams-hero' },
+        React.createElement('div', { className: 'aps-v4-grams-hero__label' }, 'Сколько'),
+        React.createElement('div', { className: 'aps-v4-grams-hero__controls' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'aps-v4-grams-hero__step',
+            onClick: () => setGrams(grams - 10),
+            'aria-label': 'Меньше на 10 г'
+          }, '−'),
+          React.createElement('div', { className: 'aps-v4-grams-hero__value' },
+            React.createElement('input', {
+              ref: gramsInputRef,
+              type: 'number',
+              className: 'aps-v4-grams-hero__input',
+              value: grams,
+              onChange: (e) => setGrams(e.target.value),
+              onKeyDown: (e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              },
+              onFocus: (e) => e.target.select(),
+              onClick: (e) => e.target.select(),
+              inputMode: 'numeric',
+              min: 1,
+              max: 2000,
+              'aria-label': 'Граммы'
+            }),
+            React.createElement('span', { className: 'aps-v4-grams-hero__unit' }, ' г')
           ),
-          React.createElement('div', { className: 'aps-product-title' }, product.name)
+          React.createElement('button', {
+            type: 'button',
+            className: 'aps-v4-grams-hero__step',
+            onClick: () => setGrams(grams + 10),
+            'aria-label': 'Больше на 10 г'
+          }, '+')
         ),
-        !isShared && React.createElement('button', {
-          className: 'aps-fav-btn aps-product-header__fav' + (isFavorite ? ' active' : ''),
-          onClick: toggleFavorite,
-          title: isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'
-        }, isFavorite ? '★' : '☆')
+        React.createElement('div', { className: 'aps-v4-grams-chips' },
+          quickPortions.map((g) =>
+            React.createElement('button', {
+              key: g,
+              type: 'button',
+              className: 'aps-v4-grams-chip' + (grams === g ? ' is-active' : ''),
+              onClick: () => setGrams(g)
+            }, String(g))
+          )
+        ),
+        namedPortions.length > 0 && React.createElement('div', { className: 'aps-v4-grams-chips aps-v4-grams-chips--portions' },
+          namedPortions.map((portion, index) =>
+            React.createElement('button', {
+              key: `${portion.name}-${portion.grams}-${index}`,
+              type: 'button',
+              className: 'aps-v4-grams-chip aps-v4-grams-chip--portion' + (grams === portion.grams ? ' is-active' : ''),
+              onClick: () => setGrams(portion.grams)
+            }, `${portion.name} · ${portion.grams} г`)
+          )
+        ),
+        lastGrams && React.createElement('div', { className: 'aps-v4-grams-last' },
+          `В прошлый раз было ${lastGrams} г`
+        )
       ),
 
-      // Этот продукт уже в приёме — предупреждаем о двойном учёте.
-      mealDuplicate && !mealDuplicateDismissed && React.createElement('div',
-        { className: 'aps-similar-warn aps-similar-warn--meal' },
-        React.createElement('div', { className: 'aps-similar-warn__title' },
-          mealDuplicate.kind === 'same'
-            ? 'Этот продукт уже есть в приёме'
-            : 'Похожий продукт уже есть в приёме'
+      React.createElement('div', { className: 'aps-v4-grams-impact' },
+        React.createElement('div', { className: 'aps-v4-grams-impact__head' },
+          React.createElement('span', { className: 'aps-v4-grams-impact__label' }, 'Добавится'),
+          React.createElement('span', { className: 'aps-v4-grams-impact__kcal' }, `${currentKcal} ккал`)
         ),
-        React.createElement('div', { className: 'aps-similar-warn__hint' },
-          mealDuplicate.kind === 'same'
-            ? `Уже добавлено ${HEYS.models.normalizeItemGrams(mealDuplicate.item.grams, 100)} г. Если хотите больше — измените граммовку у той записи, иначе еда посчитается дважды.`
-            : `В приёме уже есть «${mealDuplicate.item.name}». Проверьте, не тот ли это продукт.`
+        React.createElement('div', { className: 'aps-v4-grams-impact__macros' },
+          React.createElement('span', null, `Б ${currentProt}`),
+          React.createElement('span', null, `Ж ${currentFat}`),
+          React.createElement('span', null, `У ${currentCarbs}`)
         ),
-        React.createElement('button', {
-          type: 'button',
-          className: 'aps-similar-warn__dismiss',
-          onClick: () => { haptic('light'); setMealDuplicateDismissed(true); }
-        }, 'Всё верно, добавляю ещё')
-      ),
-
-      // Подсказка про последние граммы
-      lastGrams && React.createElement('div', { className: 'aps-last-grams-hint' },
-        React.createElement('span', null, 'В прошлый раз: '),
-        React.createElement('button', {
-          className: 'aps-last-grams-btn',
-          onClick: () => setGrams(lastGrams)
-        }, lastGrams + 'г')
-      ),
-
-      // === HERO: Большой input (граммы или ккал в зависимости от режима) ===
-      React.createElement('div', { className: 'aps-grams-hero' },
-        React.createElement('button', {
-          className: 'aps-grams-hero-btn',
-          onClick: () => inputMode === 'grams'
-            ? setGrams(grams - 10)
-            : setKcalAndCalcGrams(Math.max(10, (Number(kcalInput) || 0) - 10))
-        }, '−'),
-        React.createElement('div', { className: 'aps-grams-hero-field' },
-          React.createElement('input', {
-            ref: gramsInputRef,
-            type: 'number',
-            className: 'aps-grams-hero-input',
-            value: inputMode === 'grams' ? grams : kcalInput,
-            onChange: (e) => inputMode === 'grams'
-              ? setGrams(e.target.value)
-              : setKcalAndCalcGrams(e.target.value),
-            onKeyDown: (e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleSubmit();
-              }
-            },
-            onFocus: (e) => e.target.select(),
-            onClick: (e) => e.target.select(),
-            inputMode: 'numeric',
-            min: 1,
-            max: inputMode === 'grams' ? 2000 : 5000
+        React.createElement('div', { className: 'aps-v4-grams-impact__bar' },
+          React.createElement('div', {
+            className: 'aps-v4-grams-impact__bar-fill',
+            style: { width: `${Math.min(100, Math.max(0, dayPct))}%` }
           })
         ),
-        React.createElement('button', {
-          className: 'aps-grams-hero-btn',
-          onClick: () => inputMode === 'grams'
-            ? setGrams(grams + 10)
-            : setKcalAndCalcGrams((Number(kcalInput) || 0) + 10)
-        }, '+')
-      ),
-
-      // Подпись под инпутом (грамм / ккал)
-      React.createElement('div', { className: 'aps-grams-hero-label' },
-        inputMode === 'grams' ? 'грамм' : 'ккал'
-      ),
-
-      // Быстрые кнопки граммовки — сразу под вводом, всегда видны
-      React.createElement('div', { className: 'aps-quick-grams' },
-        quickPortions.map(g =>
-          React.createElement('button', {
-            key: g,
-            className: 'aps-quick-btn' + (grams === g ? ' active' : ''),
-            onClick: () => setGrams(g)
-          }, g + 'г')
+        React.createElement('div', { className: 'aps-v4-grams-impact__foot' },
+          `${dayAfterAddKcal} из ${dailyGoal} за день · ${dayPct} %`
         )
       ),
 
-      // Вторичная информация (калории или граммы)
-      React.createElement('div', { className: 'aps-kcal-secondary' },
-        React.createElement('span', { className: 'aps-kcal-secondary-value' },
-          inputMode === 'grams' ? (currentKcal + ' ккал') : ('= ' + grams + 'г')
-        )
+      mealDuplicate && React.createElement('div', { className: 'aps-v4-grams-duplicate' },
+        mealDuplicate.kind === 'same'
+          ? `Этот продукт уже есть в приёме — ${duplicateGrams} г. Добавите ещё, и еда посчитается дважды.`
+          : `В приёме уже есть «${mealDuplicate.item.name}». Проверьте, не тот ли это продукт.`
       ),
 
-      // БЖУ
-      React.createElement('div', { className: 'aps-macros' },
-        React.createElement('div', { className: 'aps-macro' },
-          React.createElement('span', { className: 'aps-macro-label' }, 'Б'),
-          React.createElement('span', { className: 'aps-macro-value' }, currentProt + 'г')
-        ),
-        React.createElement('div', { className: 'aps-macro' },
-          React.createElement('span', { className: 'aps-macro-label' }, 'Ж'),
-          React.createElement('span', { className: 'aps-macro-value' }, currentFat + 'г')
-        ),
-        React.createElement('div', { className: 'aps-macro' },
-          React.createElement('span', { className: 'aps-macro-label' }, 'У'),
-          React.createElement('span', { className: 'aps-macro-value' }, currentCarbs + 'г')
-        )
-      ),
-
-      // Фото приёма (канвас v4 — экран «Приём собран»)
-      context?.onAddPhoto && React.createElement('div', { className: 'aps-v4-meal-photo' },
-        React.createElement('button', {
-          type: 'button',
-          className: 'aps-v4-btn-ghost aps-v4-meal-photo__btn' + (!canAddPhoto ? ' is-disabled' : ''),
-          onClick: canAddPhoto ? handlePhotoClick : undefined,
-          disabled: !canAddPhoto,
-          title: !canAddPhoto ? `Лимит ${photoLimit} фото` : 'Добавить фото к приёму'
-        },
-          React.createElement('span', { className: 'aps-v4-meal-photo__icon', 'aria-hidden': true }, '📷'),
-          React.createElement('span', null,
-            currentPhotoCount > 0
-              ? `Фото приёма · ${currentPhotoCount}/${photoLimit}`
-              : 'Добавить фото к приёму'
-          )
-        )
-      ),
-
-      // === БОЛЬШАЯ КНОПКА ДОБАВИТЬ/ИЗМЕНИТЬ ===
       React.createElement('button', {
+        type: 'button',
         className: 'aps-add-hero-btn aps-v4-btn-primary',
         onClick: handleSubmit
-      }, context?.isEditMode ? '✓ Изменить' : '✓ Добавить'),
-
-      // Переключатель режима: граммы / ккал
-      React.createElement('div', { className: 'aps-input-mode-toggle' },
-        React.createElement('button', {
-          className: 'aps-mode-btn' + (inputMode === 'grams' ? ' active' : ''),
-          onClick: () => setInputMode('grams')
-        }, '⚖️ Граммы'),
-        React.createElement('button', {
-          className: 'aps-mode-btn' + (inputMode === 'kcal' ? ' active' : ''),
-          onClick: () => setInputMode('kcal')
-        }, '🔥 Ккал')
-      ),
-
-      // Слайдер (только в режиме граммов)
-      inputMode === 'grams' && React.createElement('input', {
-        type: 'range',
-        className: 'aps-grams-slider',
-        min: 10,
-        max: 500,
-        step: 5,
-        value: Math.min(500, grams),
-        onChange: (e) => setGrams(Number(e.target.value)),
-        onTouchStart: (e) => e.stopPropagation(),
-        onTouchEnd: (e) => e.stopPropagation(),
-        onTouchMove: (e) => e.stopPropagation()
-      }),
-
-      // Порции продукта
-      localPortions?.length > 0 && React.createElement('div', { className: 'aps-portions' },
-        React.createElement('div', { className: 'aps-portions-title' }, 'Порции:'),
-        React.createElement('div', { className: 'aps-portions-list' },
-          localPortions.map((p, i) =>
-            React.createElement('button', {
-              key: i,
-              className: 'aps-portion-btn' + (grams === p.grams ? ' active' : ''),
-              onClick: () => setGrams(p.grams)
-            }, p.name + (p.name.includes('г') ? '' : ` (${p.grams}г)`))
-          )
-        )
-      ),
-
-      // Итог дня: +ккал → всего/норма (%)
-      React.createElement('div', { className: 'aps-day-total' },
-        React.createElement('span', { className: 'aps-day-plus' }, '+' + currentKcal + ' ккал'),
-        React.createElement('span', { className: 'aps-day-arrow' }, ' → '),
-        React.createElement('span', { className: 'aps-day-sum' },
-          (dayTotalKcal + currentKcal) + '/' + dailyGoal
-        ),
-        React.createElement('span', { className: 'aps-day-pct' },
-          ' (' + Math.round((dayTotalKcal + currentKcal) / dailyGoal * 100) + '%)'
-        )
-      )
+      }, context?.isEditMode ? 'Изменить' : 'Добавить')
     );
   }
 
@@ -10291,6 +10672,8 @@ NOVA: 1
   }
 
   // === Главная функция показа модалки ===
+  const apsCloseGuardRef = { current: null };
+
   function showAddProductModal(options = {}) {
     const {
       mealIndex = 0,
@@ -10346,6 +10729,7 @@ NOVA: 1
     });
 
     const handleModalClose = () => {
+      apsCloseGuardRef.current = null;
       onClose?.();
     };
 
@@ -10357,11 +10741,20 @@ NOVA: 1
       return;
     }
 
+    const localizeMealName = HEYS.dayUtils?.localizeMealName;
+    const flowMeal = Array.isArray(day?.meals) ? day.meals[mealIndex] : null;
+    const searchStepTitle = flowMeal
+      ? [
+        typeof localizeMealName === 'function' ? localizeMealName(flowMeal.name, 'Приём') : (flowMeal.name || 'Приём'),
+        flowMeal.time
+      ].filter(Boolean).join(' · ')
+      : 'Добавление';
+
     HEYS.StepModal.show({
       steps: [
         {
           id: 'search',
-          title: '',
+          title: searchStepTitle,
           hint: '',
           icon: '',
           component: ProductSearchStep,
@@ -10419,6 +10812,7 @@ NOVA: 1
         dateKey,
         mealIndex,
         mealId,
+        apsCloseGuardRef,
         multiProductMode,
         startWithBarcodeScanner,
         barcodeCameraStart,
@@ -10433,7 +10827,17 @@ NOVA: 1
         onAdd, // Передаём callback для добавления в приём пищи
         onAddMany, // Callback для атомарного добавления готового набора
         onAddPhoto, // Callback для добавления фото к приёму
-        headerRight: ({ stepData, currentConfig, goToStep }) => {
+        resolveHeaderCenter: ({ stepData, currentConfig }) => {
+          if (currentConfig?.id !== 'grams') return null;
+          const gramsProduct = stepData?.grams?.selectedProduct
+            || stepData?.create?.newProduct
+            || stepData?.create?.selectedProduct
+            || stepData?.search?.selectedProduct;
+          if (!gramsProduct?.name) return null;
+          return React.createElement('span', { className: 'mc-header-title' }, gramsProduct.name);
+        },
+        headerRight: ({ stepData, currentConfig, updateStepData }) => {
+          if (currentConfig?.id === 'search') return null;
           const countLabel = `🗃️ ${currentProducts.length}`;
           if (currentConfig?.id !== 'grams') return countLabel;
 
@@ -10441,26 +10845,28 @@ NOVA: 1
             || stepData?.create?.newProduct
             || stepData?.create?.selectedProduct
             || stepData?.search?.selectedProduct;
+          if (!product || isSharedProduct(product)) return null;
 
-          const canEdit = canEditProduct(product);
+          const productId = String(product.id ?? product.product_id ?? product.name ?? '');
+          const favorites = HEYS.store?.getFavorites?.() || new Set();
+          const isFavorite = productId ? favorites.has(productId) : false;
 
-          return React.createElement('div', { className: 'mc-header-right-group' },
-            React.createElement('span', { className: 'mc-header-right-count' }, countLabel),
-            canEdit && React.createElement('button', {
-              className: 'mc-header-right-btn',
-              onClick: (e) => {
-                e.stopPropagation();
-                if (HEYS.StepModal?.hide) {
-                  HEYS.StepModal.hide({ scrollToDiary: false });
-                }
-                setTimeout(() => {
-                  showEditProductModal(product);
-                }, 80);
-              },
-              title: 'Редактировать продукт'
-            }, '✏️ Изменить')
-          );
-        }, // Счётчик + кнопка редактирования порций
+          return React.createElement('button', {
+            type: 'button',
+            className: 'mc-header-btn mc-header-btn--fav' + (isFavorite ? ' is-active' : ''),
+            onClick: (e) => {
+              e.stopPropagation();
+              if (!productId || !HEYS.store?.toggleFavorite) return;
+              HEYS.store.toggleFavorite(productId);
+              updateStepData?.('grams', {
+                ...(stepData?.grams || {}),
+                _favRev: Date.now()
+              });
+            },
+            title: isFavorite ? 'Убрать из избранного' : 'Добавить в избранное',
+            'aria-label': isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'
+          }, isFavorite ? '★' : '☆');
+        }, // На grams — звёздочка избранного; на остальных — счётчик базы
         // Callback при создании продукта — обновляем список (не используется при 2 шагах, оставляем для совместимости)
         onProductCreated: (product) => {
           currentProducts = [...currentProducts, product];
@@ -10562,7 +10968,14 @@ NOVA: 1
           });
         }
       },
-      onClose: handleModalClose
+      onClose: handleModalClose,
+      onRequestClose: (proceed) => {
+        if (typeof apsCloseGuardRef.current === 'function') {
+          apsCloseGuardRef.current();
+          return;
+        }
+        proceed();
+      }
     });
   }
 

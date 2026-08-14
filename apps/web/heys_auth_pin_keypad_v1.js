@@ -128,28 +128,43 @@
       }, [autoFocus, touchKeypad]);
 
       const appendPinDigit = useCallback((digit) => {
-        if (disabled || !/^\d$/.test(String(digit)) || (digits || []).every(Boolean)) return;
-        const idx = getNextPinIndex(digits);
-        const arr = (digits || []).slice(0, 4);
-        while (arr.length < 4) arr.push('');
-        arr[idx] = String(digit);
-        applyPinDigits(arr, idx, String(digit));
-        if (idx < 3) focusPinInput(idx + 1);
-      }, [applyPinDigits, digits, disabled, touchKeypad]);
+        if (disabled || !/^\d$/.test(String(digit))) return;
+        let sideEffect = null;
+        setDigits((prev) => {
+          const list = (prev || []).slice(0, 4);
+          while (list.length < 4) list.push('');
+          if (list.every(Boolean)) return prev;
+          const idx = getNextPinIndex(list);
+          const arr = list.slice();
+          arr[idx] = String(digit);
+          sideEffect = { idx, digit: String(digit) };
+          return arr;
+        });
+        if (!sideEffect) return;
+        showPinOverlayDigit(sideEffect.idx, sideEffect.digit, 1200);
+        if (sideEffect.idx < 3) focusPinInput(sideEffect.idx + 1);
+      }, [disabled, touchKeypad]);
 
       const erasePinDigit = useCallback(() => {
         if (disabled) return;
-        const arr = (digits || []).slice(0, 4);
-        while (arr.length < 4) arr.push('');
-        for (let i = 3; i >= 0; i--) {
-          if (arr[i]) {
-            arr[i] = '';
-            applyPinDigits(arr, i, '');
-            focusPinInput(i);
-            return;
+        let eraseIndex = -1;
+        setDigits((prev) => {
+          const arr = (prev || []).slice(0, 4);
+          while (arr.length < 4) arr.push('');
+          for (let i = 3; i >= 0; i--) {
+            if (arr[i]) {
+              const next = arr.slice();
+              next[i] = '';
+              eraseIndex = i;
+              return next;
+            }
           }
-        }
-      }, [applyPinDigits, digits, disabled, touchKeypad]);
+          return prev;
+        });
+        if (eraseIndex < 0) return;
+        clearHidePinDigit(eraseIndex);
+        focusPinInput(eraseIndex);
+      }, [disabled, touchKeypad]);
 
       useEffect(() => () => clearAllHideTimers(), []);
 

@@ -56,25 +56,20 @@
         return label.charAt(0).toUpperCase() + label.slice(1);
     }
 
-    function MealDateWarning({ dateKey, todayKey }) {
-        const targetLabel = formatMealDateLabel(dateKey, true);
-        const todayLabel = formatMealDateLabel(todayKey);
+    function MealDateWarning({ dateKey }) {
+        const targetLabel = formatMealDateLabel(dateKey);
 
         return React.createElement('div', {
             className: 'meal-date-warning',
             role: 'alert',
             'aria-live': 'assertive',
         },
-            React.createElement('div', { className: 'meal-date-warning__badge' }, 'НЕ СЕГОДНЯ'),
-            React.createElement('div', { className: 'meal-date-warning__date' }, targetLabel),
+            React.createElement('div', { className: 'meal-date-warning__badge' }, 'Внимание'),
             React.createElement('div', { className: 'meal-date-warning__question' },
-                'Точно записать новый приём на эту дату?'
+                `Приём запишется на ${targetLabel}, а не на сегодня`
             ),
             React.createElement('p', { className: 'meal-date-warning__copy' },
-                'Он появится в выбранном дне, а не в сегодняшнем дневнике.'
-            ),
-            React.createElement('div', { className: 'meal-date-warning__today' },
-                'Сегодня — ', React.createElement('strong', null, todayLabel)
+                'В календаре выбран другой день. Еда уйдёт туда и в сегодняшнюю норму не попадёт.'
             )
         );
     }
@@ -88,15 +83,14 @@
         }
 
         const targetShortLabel = formatMealDateLabel(dateKey);
-        const todayShortLabel = formatMealDateLabel(todayKey);
         const result = await HEYS.ConfirmModal.show({
-            icon: '⚠️',
-            title: 'Выбрана другая дата',
-            text: React.createElement(MealDateWarning, { dateKey, todayKey }),
+            icon: '',
+            title: '',
+            text: React.createElement(MealDateWarning, { dateKey }),
             actions: [
                 {
                     key: 'return-today',
-                    label: `Вернуться на сегодня · ${todayShortLabel}`,
+                    label: 'Перейти на сегодня',
                     value: 'today',
                     style: 'primary',
                     variant: 'fill',
@@ -107,10 +101,10 @@
                 },
                 {
                     key: 'confirm-other-date',
-                    label: `Да, записать на ${targetShortLabel}`,
+                    label: `Всё-таки записать на ${targetShortLabel}`,
                     value: 'confirm',
-                    style: 'warning',
-                    variant: 'fill',
+                    style: 'neutral',
+                    variant: 'text',
                     row: 1,
                     className: 'meal-date-warning__confirm-action',
                 },
@@ -5045,7 +5039,7 @@
                             if (window.HEYS && window.HEYS.analytics) {
                                 window.HEYS.analytics.trackDataOperation('meal-created');
                             }
-                            HEYS.Toast?.success('Приём создан');
+                            // Fork-модалка с названием приёма — достаточное подтверждение, toast не нужен.
                         } else {
                             HEYS.Toast?.error('Не удалось сохранить приём. Попробуйте ещё раз.');
                         }
@@ -5061,28 +5055,88 @@
                             );
                         } catch (_) { /* noop */ }
 
-                        // 🆕 Стабильный флоу: lazy-вычисление индекса через HEYS.Day, retry через rAF
-                        const findMealIndex = () => {
-                            const currentDay = HEYS.Day?.getDay?.();
-                            if (!currentDay?.meals) return -1;
-                            return currentDay.meals.findIndex((m) => m.id === newMealId);
+                        // Индекс нового приёма — синхронно из только что собранного newDayData.
+                        // HEYS.Day.getDay() читает dayRef DayTab и отстаёт до React commit.
+                        const newMealIndex = newMeals.findIndex((m) => m.id === newMealId);
+                        const unlockScrollSafely = () => {
+                            document.body.style.overflow = '';
+                            document.documentElement.style.overflow = '';
                         };
 
-                        const showFlowModal = (attempt) => {
-                            const maxAttempts = 5;
-                            const mealIndex = findMealIndex();
-
-                            if (mealIndex < 0) {
-                                if (attempt < maxAttempts) {
-                                    // Retry: React ещё не применил state update
-                                    requestAnimationFrame(() => showFlowModal(attempt + 1));
-                                    return;
-                                }
-                                console.warn('[HEYS.Day] ⚠️ Flow modal skipped: meal not found after', maxAttempts, 'attempts', { newMealId });
+                        const showFlowModal = () => {
+                            if (newMealIndex < 0) {
+                                console.warn('[HEYS.Day] ⚠️ Flow modal skipped: meal not found in newDayData', { newMealId });
+                                unlockScrollSafely();
                                 return;
                             }
 
+                            const mealIndex = newMealIndex;
                             expandOnlyMeal(mealIndex);
+
+                            const PHOTO_LIMIT_PER_MEAL = HEYS.dayGallery?.PHOTO_LIMIT_PER_MEAL || 10;
+
+                            const handleAddPhoto = async ({ mealIndex: photoMealIndex, mealId: requestedMealId, photo, filename, timestamp }) => {
+                                const activeDay = HEYS.Day?.getDay?.() || day || {};
+                                const resolvedMealIndex = resolveMealIndex(activeDay, photoMealIndex, requestedMealId);
+                                const activeMeal = activeDay?.meals?.[resolvedMealIndex];
+                                const currentPhotos = activeMeal?.photos?.length || 0;
+                                if (currentPhotos >= PHOTO_LIMIT_PER_MEAL) {
+                                    HEYS.Toast?.warning?.(`Максимум ${PHOTO_LIMIT_PER_MEAL} фото на приём пищи`);
+                                    return;
+                                }
+
+                                const clientId = HEYS.utils?.getCurrentClientId?.() || 'default';
+                                const mealId = activeMeal?.id || requestedMealId || uid('meal_');
+                                const photoId = uid('photo_');
+                                const photoData = {
+                                    id: photoId,
+                                    data: photo,
+                                    filename,
+                                    timestamp,
+                                    pending: true,
+                                    uploading: true,
+                                    uploaded: false
+                                };
+
+                                setDay((prevDay = {}) => {
+                                    const targetIndex = resolveMealIndex(prevDay, photoMealIndex, mealId);
+                                    const meals = (prevDay.meals || []).map((m, i) =>
+                                        i === targetIndex
+                                            ? { ...m, photos: [...(m.photos || []), photoData] }
+                                            : m
+                                    );
+                                    const nextDay = { ...prevDay, meals, updatedAt: Date.now() };
+                                    persistDayData(nextDay, 'meal_photo_add');
+                                    return nextDay;
+                                });
+
+                                if (HEYS.cloud?.uploadPhoto) {
+                                    try {
+                                        const result = await HEYS.cloud.uploadPhoto(photo, clientId, date, mealId);
+                                        if (result?.uploaded && result?.path) {
+                                            setDay((prevDay = {}) => {
+                                                const targetIndex = resolveMealIndex(prevDay, photoMealIndex, mealId);
+                                                const meals = (prevDay.meals || []).map((m, i) => {
+                                                    if (i !== targetIndex || !m.photos) return m;
+                                                    return {
+                                                        ...m,
+                                                        photos: m.photos.map((p) =>
+                                                            p.id === photoId
+                                                                ? { ...p, path: result.path, data: undefined, pending: false, uploading: false, uploaded: true }
+                                                                : p
+                                                        )
+                                                    };
+                                                });
+                                                const nextDay = { ...prevDay, meals, updatedAt: Date.now() };
+                                                persistDayData(nextDay, 'meal_photo_uploaded');
+                                                return nextDay;
+                                            });
+                                        }
+                                    } catch (e) {
+                                        console.warn('[HEYS.day] Photo upload failed:', e);
+                                    }
+                                }
+                            };
 
                             // Функция открытия модалки добавления продукта
                             const openAddProductModal = (targetMealIndex, multiProductMode, dayOverride, autoRepeatCount, options = {}) => {
@@ -5100,6 +5154,7 @@
                                     dateKey: date,
                                     startWithBarcodeScanner: options.startWithBarcodeScanner === true,
                                     barcodeCameraStart: options.barcodeCameraStart || null,
+                                    openPresetsCreate: options.openPresetsCreate === true,
 		                                    onAdd: async ({ product, grams, mealIndex: addMealIndex, mealId: addMealId = targetMealId, productCommitVerified }) => {
 		                                        let finalProduct = product;
 		                                        const ready = productCommitVerified === true
@@ -5297,6 +5352,18 @@
 	                                                        scale,
 	                                                        onAddMore: (updatedDay, autoRepeatCount) => openAddProductModal(summaryMealIndex, true, updatedDay, autoRepeatCount || 0, { mealId: addMealId }),
 	                                                        onAddLast: (updatedDay) => openAddProductModal(summaryMealIndex, false, updatedDay, undefined, { mealId: addMealId }),
+	                                                        onPhoto: (payload) => handleAddPhoto({
+	                                                            ...payload,
+	                                                            mealIndex: summaryMealIndex,
+	                                                            mealId: payload?.mealId || addMealId
+	                                                        }),
+	                                                        onSavePreset: () => {
+	                                                            const latestDay = HEYS.Day?.getDay?.() || updatedDayForSummary;
+	                                                            openAddProductModal(summaryMealIndex, true, latestDay, 0, {
+	                                                                mealId: addMealId,
+	                                                                openPresetsCreate: true
+	                                                            });
+	                                                        },
 	                                                    });
 	                                                }, 100);
 	                                            });
@@ -5360,27 +5427,26 @@
                                     'aria-hidden': 'true'
                                 }, BarcodeIcon
                                     ? React.createElement(BarcodeIcon)
-                                    : React.createElement('span', { className: 'flow-selection-btn__barcode-fallback' }, '▥')
+                                    : React.createElement('span', { className: 'flow-selection-btn__barcode-fallback' }, '▮')
                                 );
                             };
 
-	                            // Показываем модалку выбора флоу
-	                            if (!window.HEYS?.ConfirmModal?.show) {
-	                                // Fallback: сразу открываем быстрый режим
-	                                openAddProductModal(mealIndex, false, undefined, undefined, { mealId: newMealId });
-	                                return;
-	                            }
+                            if (!window.HEYS?.ConfirmModal?.show) {
+                                if (!window.HEYS?.AddProductStep?.show) {
+                                    console.warn('[HEYS.Day] ⚠️ AddProductStep unavailable after meal create');
+                                    unlockScrollSafely();
+                                    return;
+                                }
+                                openAddProductModal(mealIndex, false, newDayData, undefined, { mealId: newMealId });
+                                return;
+                            }
 
-                            // Подгружаем недавние приёмы — для опциональной кнопки «Повторить из недавних».
-                            // Только когда новый приём ещё пуст и у нас есть что предложить за последние 2 дня.
-                            const currentMealForFlow = HEYS.Day?.getDay?.()?.meals?.[mealIndex];
+                            const currentMealForFlow = newDayData?.meals?.[mealIndex];
                             const newMealIsEmpty = !((currentMealForFlow?.items || []).length);
                             const recentMealsForFlow = newMealIsEmpty ? loadRecentMealsForDate(date, 2) : [];
 
                             const handleFlowRepeatRecent = () => {
                                 window.HEYS.ConfirmModal.hide();
-                                const actualIdx = findMealIndex();
-                                if (actualIdx < 0) return;
                                 const fresh = loadRecentMealsForDate(date, 2);
                                 if (!fresh.length) {
                                     HEYS.Toast?.info?.('За последние 2 дня нет приёмов с продуктами');
@@ -5398,11 +5464,11 @@
                                             );
                                             if (!cloned || cloned.length === 0) return;
                                             markUndoWindow(3000);
-                                            const baseDay = dayRef.current || {};
-                                            const newMeals = (baseDay.meals || []).map((m, i) =>
-                                                i === actualIdx ? { ...m, items: [...(m.items || []), ...cloned] } : m
+                                            const baseDay = dayRef.current || newDayData || {};
+                                            const updatedMeals = (baseDay.meals || []).map((m, i) =>
+                                                i === mealIndex ? { ...m, items: [...(m.items || []), ...cloned] } : m
                                             );
-                                            const updated = { ...baseDay, meals: newMeals, updatedAt: Date.now() };
+                                            const updated = { ...baseDay, meals: updatedMeals, updatedAt: Date.now() };
                                             persistDayData(updated, 'flow_repeat_recent_meal');
                                             setDay(() => updated);
                                             HEYS.Toast?.success?.(`Скопировано продуктов: ${cloned.length}`);
@@ -5411,13 +5477,21 @@
                                 }, 100);
                             };
 
-	                            const openFlowAddProduct = (multiProductMode, autoRepeatCount = 0, startWithBarcodeScanner = false, barcodeCameraStart = null) => {
-	                                window.HEYS.ConfirmModal.hide();
-	                                const actualIdx = findMealIndex();
-	                                if (actualIdx >= 0) {
-	                                    setTimeout(() => openAddProductModal(actualIdx, multiProductMode, undefined, autoRepeatCount, { mealId: newMealId, startWithBarcodeScanner, barcodeCameraStart }), 100);
-	                                }
-	                            };
+                            const openFlowAddProduct = (multiProductMode, autoRepeatCount = 0, startWithBarcodeScanner = false, barcodeCameraStart = null) => {
+                                window.HEYS.ConfirmModal.hide();
+                                if (!window.HEYS?.AddProductStep?.show) {
+                                    HEYS.Toast?.error?.('Добавление продукта временно недоступно');
+                                    unlockScrollSafely();
+                                    return;
+                                }
+                                setTimeout(() => openAddProductModal(
+                                    mealIndex,
+                                    multiProductMode,
+                                    newDayData,
+                                    autoRepeatCount,
+                                    { mealId: newMealId, startWithBarcodeScanner, barcodeCameraStart }
+                                ), 100);
+                            };
 
                             const renderFlowBarcodeButton = (multiProductMode, autoRepeatCount = 0, compact = false) => (
                                 React.createElement('button', {
@@ -5512,12 +5586,22 @@
                                 confirmText: '',
                                 cancelText: 'Отмена',
                                 cancelStyle: 'neutral',
-                                cancelVariant: 'text'
+                                cancelVariant: 'text',
+                                onCancel: unlockScrollSafely
                             });
                         };
 
-                        // Запускаем через rAF — ждём пока React применит state update
-                        requestAnimationFrame(() => showFlowModal(1));
+                        // Meal StepModal закрывается после onComplete (closeOnComplete: 'after').
+                        // Ждём heys-stepmodal-closed, чтобы fork-модалка не гонялась с hide/unmount.
+                        const scheduleAfterMealModalClosed = () => {
+                            const run = () => requestAnimationFrame(() => requestAnimationFrame(showFlowModal));
+                            if (document.getElementById('heys-step-modal-root')) {
+                                document.addEventListener('heys-stepmodal-closed', () => run(), { once: true });
+                            } else {
+                                run();
+                            }
+                        };
+                        scheduleAfterMealModalClosed();
                     },
                 });
             } else if (isMobile) {
@@ -5545,7 +5629,6 @@
                 if (window.HEYS && window.HEYS.analytics) {
                     window.HEYS.analytics.trackDataOperation('meal-created');
                 }
-                HEYS.Toast?.success('Приём создан');
                 window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
 
                 // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
@@ -6260,6 +6343,52 @@
                 onAdd: addProductToMeal,
             });
         }, [day, date, addProductToMeal]);
+
+        const openAddProductForMeal = React.useCallback((target) => {
+            if (!HEYS.Paywall?.canWriteSync?.()) {
+                HEYS.Paywall?.showBlockedToast?.('Добавление продукта недоступно');
+                return;
+            }
+            const opts = (target && typeof target === 'object') ? target : { mealIndex: target };
+            const currentDay = dayRef.current || day;
+            const resolvedIndex = resolveMealIndex(currentDay, opts.mealIndex, opts.mealId);
+            const meal = currentDay?.meals?.[resolvedIndex];
+            if (!meal) {
+                HEYS.Toast?.error?.('Приём не найден');
+                return;
+            }
+            if (!HEYS.AddProductStep?.show) {
+                HEYS.Toast?.info?.('Добавление продукта временно недоступно');
+                return;
+            }
+            if (typeof expandOnlyMeal === 'function') expandOnlyMeal(resolvedIndex);
+            const mealId = meal.id || opts.mealId || null;
+            HEYS.AddProductStep.show({
+                mealIndex: resolvedIndex,
+                mealId,
+                multiProductMode: opts.multiProductMode !== false,
+                autoRepeatCount: opts.autoRepeatCount || 0,
+                products,
+                day: currentDay,
+                dateKey: date,
+                startWithBarcodeScanner: opts.startWithBarcodeScanner === true,
+                barcodeCameraStart: opts.barcodeCameraStart || null,
+                onAdd: addProductToMeal,
+                onAddMany: async ({ entries, mealIndex: addMealIndex, mealId: addMealId } = {}) => {
+                    const idx = resolveMealIndex(
+                        dayRef.current || currentDay,
+                        addMealIndex ?? resolvedIndex,
+                        addMealId || mealId,
+                    );
+                    return addProductsToMeal(idx, entries, {
+                        mealId: addMealId || mealId,
+                        source: opts.source || 'nutrition-v4-meal-row',
+                        origin: opts.origin || 'nutrition-v4-meal-row',
+                        productCommitVerified: false,
+                    });
+                },
+            });
+        }, [date, day, products, expandOnlyMeal, addProductToMeal, addProductsToMeal]);
 
         // Helpers для копирования в произвольную дату (today, обычно)
         const navigateAndScrollToMeal = React.useCallback((targetDate, mealId) => {
@@ -7028,6 +7157,7 @@
             copyItemsToMeal,
             openCopyMealModal,
             saveAsPreset,
+            openAddProductForMeal,
             repeatYesterdayMeal,
             setGrams,
             removeItem,

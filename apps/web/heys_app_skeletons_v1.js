@@ -283,11 +283,13 @@
     function buildSkeleton(h, tab, options) {
         const opts = options || {};
         const layout = resolveLayout(tab, opts);
+        const embedded = !!opts.embedded;
         const navCount = opts.hasClient ? 7 : 6;
         const classes = [
             'heys-tab-skeleton',
             `heys-tab-skeleton--${layout.tab}`,
             opts.boot ? 'heys-skeleton heys-tab-skeleton--boot' : 'heys-tab-skeleton--runtime',
+            embedded ? 'heys-tab-skeleton--embedded' : '',
             opts.className || '',
         ].filter(Boolean).join(' ');
 
@@ -299,11 +301,11 @@
             'aria-busy': 'true',
         },
             h('div', { className: 'heys-tab-skeleton__page' },
-                h('div', { className: 'heys-tab-skeleton__toolbar' },
+                !embedded && h('div', { className: 'heys-tab-skeleton__toolbar' },
                     h('div', { className: 'heys-tab-skeleton__brand-line' }),
                     h('div', { className: 'heys-tab-skeleton__toolbar-actions' }, h('div', { className: 'heys-tab-skeleton__toolbar-button' }), h('div', { className: 'heys-tab-skeleton__toolbar-button' }))
                 ),
-                layout.date && h('div', { className: 'heys-tab-skeleton__dates' }, repeat(5, (itemIndex) => h('div', { key: itemIndex, className: 'heys-tab-skeleton__date' + (itemIndex === 2 ? ' is-active' : '') }))),
+                !embedded && layout.date && h('div', { className: 'heys-tab-skeleton__dates' }, repeat(5, (itemIndex) => h('div', { key: itemIndex, className: 'heys-tab-skeleton__date' + (itemIndex === 2 ? ' is-active' : '') }))),
                 h('div', { className: 'heys-tab-skeleton__body' }, layout.sections.map((section, index) => renderSection(h, section, index)))
             ),
             opts.withNav && h('div', { className: 'heys-tab-skeleton__nav', 'aria-hidden': 'true' }, repeat(navCount, (itemIndex) => h('div', { key: itemIndex, className: 'heys-tab-skeleton__nav-item' }, h('div', { className: 'heys-tab-skeleton__nav-icon' }), h('div', { className: 'heys-tab-skeleton__nav-label' }))))

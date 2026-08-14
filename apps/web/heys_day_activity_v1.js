@@ -457,6 +457,7 @@
           React.createElement('span', { className: 'activity-v4-steps__label' }, 'Шаги'),
           React.createElement('span', { className: 'activity-v4-steps__values' },
             React.createElement('span', {
+              className: 'activity-v4-steps__value',
               onClick: (e) => {
                 e.stopPropagation();
                 const rect = e.currentTarget.getBoundingClientRect();
@@ -484,7 +485,7 @@
           React.createElement('div', { className: 'activity-v4-steps__track' },
             React.createElement('div', {
               className: 'activity-v4-steps__fill',
-              style: { width: stepsPercent + '%', background: stepsColor }
+              style: { width: stepsPercent + '%' }
             })
           ),
           React.createElement('div', { className: 'activity-v4-steps__slider steps-slider-container' },
@@ -495,7 +496,7 @@
               ),
               React.createElement('div', {
                 className: 'steps-slider-fill',
-                style: { width: stepsPercent + '%', background: stepsColor }
+                style: { width: stepsPercent + '%' }
               }),
               React.createElement('div', {
                 className: 'steps-slider-thumb',

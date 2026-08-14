@@ -1211,6 +1211,7 @@
             openMoveMealModal,
             moveMealToDate,
             saveAsPreset,
+            openAddProductForMeal,
             repeatYesterdayMeal,
             setGrams,
             removeItem,
@@ -2396,9 +2397,10 @@
                 waterGoal,
                 addMeal,
                 addWater,
+                openAddProductForMeal,
                 haptic
             });
-        }, [showNutritionContent, day?.meals, day?.waterMl, day?.water, day?.date, eatenKcal, displayOptimum, displayRemainingKcal, dayTot, normAbs, insulinWaveData, mealsUI, waterGoal, date, pIndex, prof]);
+        }, [showNutritionContent, day?.meals, day?.waterMl, day?.water, day?.date, eatenKcal, displayOptimum, displayRemainingKcal, dayTot, normAbs, insulinWaveData, mealsUI, waterGoal, date, pIndex, prof, openAddProductForMeal]);
 
         if (!HEYS.dayTabRender?.renderDayTabLayout) {
             throw new Error('[heys_day_v12] HEYS.dayTabRender not loaded before heys_day_v12.js');

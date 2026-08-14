@@ -1547,11 +1547,21 @@
     return n.toFixed(digits).replace('.', ',');
   }
 
-  function v4SageRing({ value, target, label }) {
-    const ratio = target > 0 ? Math.min(1, (Number(value) || 0) / target) : 0;
-    const circ = 113;
-    const dash = Math.round(ratio * circ);
-    return React.createElement('div', { className: 'widget-v4-macro' },
+  function v4SageRing({ value, target, label, toneClass = 'carbs' }) {
+    const num = Number(value) || 0;
+    const tgt = Number(target) || 0;
+    const remaining = tgt - num;
+    const remainingRounded = Math.round(Math.abs(remaining));
+    const centerLabel = remaining >= 0 ? String(remainingRounded) : null;
+    const ratio = tgt > 0 ? num / tgt : 0;
+    const ringCapCompPct = 5;
+    const basePctRaw = Math.min(100, Math.round(ratio * 100));
+    const basePct = Math.max(0, basePctRaw - (ratio > 0 ? ringCapCompPct : 0));
+    const hasOver = ratio > 1;
+    const overPctRaw = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0;
+    const overPct = Math.max(0, overPctRaw - ringCapCompPct);
+    const overTone = toneClass === 'protein' ? 'protein' : 'warn';
+    return React.createElement('div', { className: `widget-v4-macro${hasOver ? ' widget-v4-macro--over' : ''}` },
       React.createElement('svg', { width: 60, height: 60, viewBox: '0 0 44 44', 'aria-hidden': 'true' },
         React.createElement('circle', {
           cx: 22, cy: 22, r: 18, fill: 'none',
@@ -1559,21 +1569,47 @@
         }),
         React.createElement('circle', {
           cx: 22, cy: 22, r: 18, fill: 'none',
-          stroke: '#7a8a5e', strokeWidth: 5,
+          className: 'widget-v4-macro__ring-fill',
+          pathLength: 100,
+          strokeWidth: 5,
           strokeLinecap: 'round',
-          strokeDasharray: `${dash} ${circ}`,
+          strokeDasharray: `${basePct} 100`,
           transform: 'rotate(-90 22 22)'
         }),
+        hasOver && overPct > 0
+          ? React.createElement('circle', {
+            cx: 22, cy: 22, r: 18, fill: 'none',
+            className: `widget-v4-macro__ring-over widget-v4-macro__ring-over--${overTone}`,
+            pathLength: 100,
+            strokeWidth: 5,
+            strokeLinecap: 'round',
+            strokeDasharray: `${overPct} ${100 - overPct}`,
+            style: { '--v4-macro-over-offset': -(100 - overPct) },
+            transform: 'rotate(-90 22 22)'
+          })
+          : null,
         React.createElement('text', {
           x: 22, y: 26, textAnchor: 'middle',
-          className: 'widget-v4-macro__num'
-        }, Math.round(Number(value) || 0))
+          className: `widget-v4-macro__num${hasOver ? ' widget-v4-macro__num--over' : ''}`
+        }, centerLabel != null
+          ? centerLabel
+          : [
+            React.createElement('tspan', { key: 'sign', className: 'widget-v4-macro__num-sign' }, '-'),
+            React.createElement('tspan', { key: 'val' }, String(remainingRounded))
+          ])
       ),
       React.createElement('div', { className: 'widget-v4-kicker' }, label)
     );
   }
 
   // === Day Score Widget Content (Оценка дня 0-100 — unified: Status + Subjective + Momentum) ===
+  function widgetHealthScoreColor(score, fallback = '#94a3b8') {
+    const fn = HEYS.scales?.healthScore;
+    if (typeof fn !== 'function') return fallback;
+    const entry = fn(score);
+    return entry?.color ?? fallback;
+  }
+
   function DayScoreWidgetContent({ widget, data }) {
     const score = data?.score ?? 0;
     const level = data?.level ?? 'none';
@@ -1583,7 +1619,7 @@
     const showAction = widget.settings?.showAction !== false;
     const showLevel = widget.settings?.showLevel !== false;
 
-    const getColor = () => HEYS.scales.healthScore(score).color;
+    const getColor = () => widgetHealthScoreColor(score);
 
     const getLevelEmoji = () => {
       switch (level) {
@@ -1892,7 +1928,7 @@
     const d = getWidgetDims(widget);
     const isShort = d.isShort; // 2x1
 
-    const getColor = (s) => HEYS.scales.healthScore(s).color;
+    const getColor = (s) => widgetHealthScoreColor(s);
 
     const color = getColor(score);
 
@@ -1981,7 +2017,7 @@
         React.createElement('span', { className: 'widget-v4-unit' }, `за ${periodDays} дней`)
       ),
       React.createElement('svg', {
-        className: 'widget-v4-spark',
+        className: 'widget-v4-spark widget-v4-spark--ok',
         viewBox: '0 0 130 40',
         width: '100%',
         height: 40,
@@ -1990,14 +2026,12 @@
         React.createElement('polyline', {
           points: trendPts,
           fill: 'none',
-          stroke: '#7a8a5e',
           strokeWidth: 2.5,
           strokeLinecap: 'round',
           strokeLinejoin: 'round'
         }),
         React.createElement('circle', {
-          cx: lastPt[0], cy: lastPt[1], r: 3.5,
-          fill: '#7a8a5e'
+          cx: lastPt[0], cy: lastPt[1], r: 3.5
         })
       )
     );
@@ -2016,7 +2050,7 @@
     const score = data.status?.score ?? data.score ?? 0;
     const level = data.status?.level ?? { label: 'Нет данных', color: '#94a3b8' };
 
-    const getColor = () => HEYS.scales.healthScore(score).color;
+    const getColor = () => widgetHealthScoreColor(score);
 
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-day-score widget-day-score--micro' },
@@ -2744,7 +2778,7 @@
           ? React.createElement('div', { className: 'widget-v4-ok widget-v4-delta' }, weekText)
           : null,
         React.createElement('svg', {
-          className: 'widget-v4-spark',
+          className: 'widget-v4-spark widget-v4-spark--act',
           viewBox: '0 0 130 38',
           width: '100%',
           height: 38,
@@ -2753,14 +2787,12 @@
           React.createElement('polyline', {
             points: sparkPoints,
             fill: 'none',
-            stroke: '#c67139',
             strokeWidth: 2.5,
             strokeLinecap: 'round',
             strokeLinejoin: 'round'
           }),
           React.createElement('circle', {
-            cx: last[0], cy: last[1], r: 3.5,
-            fill: '#c67139'
+            cx: last[0], cy: last[1], r: 3.5
           })
         )
       );
@@ -3356,11 +3388,14 @@
 
     if (size === '3x2') {
       return React.createElement('div', { className: 'widget-macros widget-macros--3x2 widget-v4-stack' },
-        v4Kicker('БЖУ'),
+        React.createElement('div', { className: 'widget-v4-macros__head widget-v4-kicker' },
+          React.createElement('span', null, 'БЖУ'),
+          React.createElement('span', { className: 'widget-v4-macros__hint' }, '· Осталось сегодня')
+        ),
         React.createElement('div', { className: 'widget-v4-macros' },
-          v4SageRing({ value: protein, target: proteinTarget, label: 'Белки' }),
-          v4SageRing({ value: fat, target: fatTarget, label: 'Жиры' }),
-          v4SageRing({ value: carbs, target: carbsTarget, label: 'Углеводы' })
+          v4SageRing({ value: protein, target: proteinTarget, label: 'Белки', toneClass: 'protein' }),
+          v4SageRing({ value: fat, target: fatTarget, label: 'Жиры', toneClass: 'fat' }),
+          v4SageRing({ value: carbs, target: carbsTarget, label: 'Углеводы', toneClass: 'carbs' })
         )
       );
     }
@@ -4869,7 +4904,7 @@
     const breakdown = Array.isArray(status.breakdown) ? status.breakdown : [];
     const topActions = Array.isArray(status.topActions) ? status.topActions : [];
 
-    const getColor = (s) => HEYS.scales.healthScore(s).color;
+    const getColor = (s) => widgetHealthScoreColor(s);
 
     const copyStatusLog = async () => {
       try {
@@ -5306,7 +5341,7 @@
     const statusBreakdown = Array.isArray(statusResult.breakdown) ? statusResult.breakdown : [];
     const topActions = Array.isArray(statusResult.topActions) ? statusResult.topActions : [];
 
-    const getColor = (s) => HEYS.scales.healthScore(s).color;
+    const getColor = (s) => widgetHealthScoreColor(s);
 
     const getLevelLabel = (lvl) => {
       switch (lvl) {
@@ -6301,87 +6336,24 @@
     return ReactDOM?.createPortal ? ReactDOM.createPortal(modal, document.body) : modal;
   }
 
-  // === Sync Loading Skeleton for WidgetsTab ===
-  function WidgetsSyncSkeleton() {
-    const SharedTabSkeleton = HEYS.AppSkeletons?.TabSkeleton;
-    if (SharedTabSkeleton) {
-      return React.createElement(SharedTabSkeleton, { tab: 'widgets', className: 'widgets-sync-skeleton' });
+  // === Main WidgetsTab Component ===
+  function bootstrapWidgetsLayout() {
+    try {
+      HEYS.Widgets.state?.init?.();
+      return [...(HEYS.Widgets.state?.getWidgets?.() || [])];
+    } catch (_) {
+      return [];
     }
-    return React.createElement('div', {
-      className: 'widgets-sync-skeleton',
-      style: { padding: '0 8px', marginTop: 8 }
-    },
-      React.createElement('div', {
-        style: {
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 8,
-          gridAutoRows: 80
-        }
-      },
-        // Row 1: two 2×2 cards (calories + insulin wave)
-        React.createElement('div', {
-          className: 'skeleton-card',
-          style: { gridColumn: 'span 2', gridRow: 'span 2', borderRadius: 16 }
-        }),
-        React.createElement('div', {
-          className: 'skeleton-card',
-          style: { gridColumn: 'span 2', gridRow: 'span 2', borderRadius: 16 }
-        }),
-        // Row 3: macros 2×1 + sleep 1×1 + empty 1×1
-        React.createElement('div', {
-          className: 'skeleton-card',
-          style: { gridColumn: 'span 2', borderRadius: 16 }
-        }),
-        React.createElement('div', {
-          className: 'skeleton-card',
-          style: { borderRadius: 16 }
-        }),
-        React.createElement('div', {
-          className: 'skeleton-card',
-          style: { borderRadius: 16 }
-        }),
-        // Row 4: cascade 2×1 + streak 1×1 + score 1×1
-        React.createElement('div', {
-          className: 'skeleton-card',
-          style: { gridColumn: 'span 2', borderRadius: 16 }
-        }),
-        React.createElement('div', {
-          className: 'skeleton-card',
-          style: { borderRadius: 16 }
-        }),
-        React.createElement('div', {
-          className: 'skeleton-card',
-          style: { borderRadius: 16 }
-        }),
-        // Row 5: four 1×1 cards
-        React.createElement('div', {
-          className: 'skeleton-card',
-          style: { borderRadius: 16 }
-        }),
-        React.createElement('div', {
-          className: 'skeleton-card',
-          style: { borderRadius: 16 }
-        }),
-        React.createElement('div', {
-          className: 'skeleton-card',
-          style: { borderRadius: 16 }
-        }),
-        React.createElement('div', {
-          className: 'skeleton-card',
-          style: { borderRadius: 16 }
-        })
-      )
-    );
   }
 
-  // === Main WidgetsTab Component ===
   function WidgetsTab({ selectedDate, clientId, cloudUser, setTab, setSelectedDate }) {
-    const canUseTasksAsHome = !cloudUser && !!clientId;
-    const canUseBoardAsHome = canUseTasksAsHome && (
-      HEYS.Board?.isBoardClient?.(clientId)
-      || String(clientId).toLowerCase() === 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a'
+    const canUsePostReleaseLabs = !cloudUser && (
+      HEYS.AppTabState?.isPostReleaseLabsClient?.(clientId)
+      || HEYS.Board?.isBoardClient?.(clientId)
+      || String(clientId || '').toLowerCase() === 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a'
     );
+    const canUseTasksAsHome = canUsePostReleaseLabs;
+    const canUseBoardAsHome = canUsePostReleaseLabs;
     const VALID_HOME_TABS = useMemo(() => {
       const keys = ['widgets', 'stats', 'diary', 'insights', 'month'];
       if (canUseTasksAsHome) keys.push('tasks');
@@ -6395,8 +6367,8 @@
       const profile = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
       return VALID_HOME_TABS.includes(profile?.defaultTab) ? profile.defaultTab : 'diary';
     }, [VALID_HOME_TABS]);
-    const [widgets, setWidgets] = useState([]);
-    const [isLayoutHydrated, setIsLayoutHydrated] = useState(false);
+    const [widgets, setWidgets] = useState(() => bootstrapWidgetsLayout());
+    const [isLayoutHydrated, setIsLayoutHydrated] = useState(() => !!HEYS.Widgets.state?._initialized);
     const [isEditMode, setIsEditMode] = useState(false);
     const [defaultHomeTab, setDefaultHomeTab] = useState(() => getCurrentDefaultTab());
     const [settingsWidget, setSettingsWidget] = useState(null);
@@ -6408,9 +6380,20 @@
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const containerRef = useRef(null);
     const gridRef = useRef(null);
-    const [isSyncLoading, setIsSyncLoading] = useState(false);
-    const syncLoadingTimerRef = useRef(null);
     const prevClientIdRef = useRef(clientId);
+
+    const updateHistoryInfo = useCallback(() => {
+      setHistoryInfo({
+        canUndo: HEYS.Widgets.canUndo?.() || false,
+        canRedo: HEYS.Widgets.canRedo?.() || false
+      });
+    }, []);
+
+    const applyWidgetsLayout = useCallback((layout) => {
+      setWidgets([...(layout || [])]);
+      updateHistoryInfo();
+      setIsLayoutHydrated(true);
+    }, [updateHistoryInfo]);
 
     // Mobile detection (используем существующий хук Day)
     const isMobile = (HEYS.dayHooks && typeof HEYS.dayHooks.useMobileDetection === 'function')
@@ -6484,44 +6467,15 @@
         }
         // Передаём clientId явно, т.к. HEYS.currentClientId может ещё не обновиться (race condition)
         HEYS.Widgets.state?.reinit?.(clientId);
-        // НЕ вызываем setWidgets здесь — reinit асинхронный: getWidgets() вернёт []
-        // и вызовет вспышку empty-state. Подписка на layout:loaded обновит widgets когда данные готовы.
-        updateHistoryInfo();
-
-        // Sync gate: show skeleton only on real client switch (not first mount)
-        // On first mount, data from previous sync is already in localStorage.
-        if (isRealSwitch) {
-          const cloud = window.HEYS?.cloud;
-          const needsSync = cloud?.shouldSyncClient?.(clientId, 4000) !== false;
-          if (needsSync) {
-            setIsSyncLoading(true);
-            // Fallback: don't block forever — reveal widgets after 6s even if sync is slow
-            if (syncLoadingTimerRef.current) clearTimeout(syncLoadingTimerRef.current);
-            syncLoadingTimerRef.current = setTimeout(() => {
-              console.info('[WidgetsTab] sync loading fallback timeout, revealing widgets');
-              HEYS.Widgets.data?.refresh?.();
-              setIsSyncLoading(false);
-            }, 6000);
-          } else {
-            // No sync needed — data is fresh, immediately refresh widget cache
-            HEYS.Widgets.data?.refresh?.();
-            setIsSyncLoading(false);
-          }
-        }
+        applyWidgetsLayout(HEYS.Widgets.state?.getWidgets?.() || []);
+        HEYS.Widgets.data?.refresh?.();
       }
-      return () => {
-        if (syncLoadingTimerRef.current) {
-          clearTimeout(syncLoadingTimerRef.current);
-          syncLoadingTimerRef.current = null;
-        }
-      };
-    }, [clientId]);
+    }, [clientId, applyWidgetsLayout]);
 
     // 🔗 Sync event bridge: DOM events from sync layer → widget data refresh
     // Sync layer dispatches heysSyncCompleted and heys:day-updated as DOM CustomEvents,
     // but widgets listen to HEYS.events / HEYS.Widgets internal event bus.
     // This effect bridges the gap so widgets update after client switch / cloud sync.
-    // Also clears isSyncLoading to reveal widgets with all animations at once.
     useEffect(() => {
       let dayRefreshTimer = null;
       const onSyncCompleted = (event) => {
@@ -6531,12 +6485,6 @@
         const phase = event?.detail?.phase || (event?.detail?.phaseA ? 'A' : 'unknown');
         console.info(`[WidgetsTab] heysSyncCompleted phase=${phase}, refreshing widget data`);
         HEYS.Widgets.data?.refresh?.();
-        // Reveal widgets after data refresh — Phase A is enough for today's widgets
-        if (syncLoadingTimerRef.current) {
-          clearTimeout(syncLoadingTimerRef.current);
-          syncLoadingTimerRef.current = null;
-        }
-        setIsSyncLoading(false);
       };
 
       const onDayUpdated = (detail) => {
@@ -6576,22 +6524,32 @@
 
     // Initialize and subscribe to state changes
     useEffect(() => {
-      // Важно: на первом рендере widgets=[] и UI может кратко показать empty-state.
-      // Поэтому показываем empty-state только после первичной инициализации.
-      setIsLayoutHydrated(false);
+      const maybeStartWidgetsTour = (delayMs) => {
+        setTimeout(() => {
+          if (HEYS.WidgetsTour?.shouldShow?.() && HEYS.WidgetsTour.start) {
+            HEYS.WidgetsTour.start();
+          }
+        }, delayMs);
+      };
 
-      // Initialize state if not already
+      const unsubLoaded = HEYS.Widgets.on('layout:loaded', ({ layout }) => {
+        applyWidgetsLayout(layout);
+        maybeStartWidgetsTour(500);
+      });
+
+      const unsubLayout = HEYS.Widgets.on('layout:changed', ({ layout }) => {
+        applyWidgetsLayout(layout);
+      });
+
       HEYS.Widgets.state?.init?.();
 
-      // Get initial widgets
-      setWidgets(HEYS.Widgets.state?.getWidgets?.() || []);
+      if (HEYS.Widgets.state?._initialized) {
+        applyWidgetsLayout(HEYS.Widgets.state?.getWidgets?.() || []);
+      }
+
       setIsEditMode(HEYS.Widgets.state?.isEditMode?.() || false);
       setDefaultHomeTab(getCurrentDefaultTab());
-      updateHistoryInfo();
-      setIsLayoutHydrated(true);
 
-      // 🔧 v1.19: Проверяем WidgetsTour при монтировании компонента
-      // (layout:loaded может уже произойти до завершения основного тура)
       const tourTimer = setTimeout(() => {
         console.log('[WidgetsTab] Checking WidgetsTour eligibility...', {
           hasTour: !!HEYS.WidgetsTour,
@@ -6603,27 +6561,6 @@
           HEYS.WidgetsTour.start();
         }
       }, 800);
-
-      // Subscribe to layout loaded (первичная загрузка)
-      const unsubLoaded = HEYS.Widgets.on('layout:loaded', ({ layout }) => {
-        setWidgets([...(layout || [])]);
-        updateHistoryInfo();
-        setIsLayoutHydrated(true);
-
-        // Auto-start WidgetsTour if applicable (after layout is ready)
-        setTimeout(() => {
-          if (HEYS.WidgetsTour?.shouldShow?.() && HEYS.WidgetsTour.start) {
-            HEYS.WidgetsTour.start();
-          }
-        }, 500);
-      });
-
-      // Subscribe to layout changes
-      const unsubLayout = HEYS.Widgets.on('layout:changed', ({ layout }) => {
-        setWidgets([...layout]);
-        updateHistoryInfo();
-        setIsLayoutHydrated(true);
-      });
 
       // Subscribe to edit mode changes
       const unsubEditEnter = HEYS.Widgets.on('editmode:enter', () => {
@@ -6657,15 +6594,16 @@
         unsubHistory?.();
         window.removeEventListener('heys:default-tab-changed', handleDefaultTabChanged);
       };
-    }, [getCurrentDefaultTab, VALID_HOME_TABS]);
+    }, [applyWidgetsLayout, getCurrentDefaultTab, VALID_HOME_TABS]);
 
-    // Update history info
-    const updateHistoryInfo = useCallback(() => {
-      setHistoryInfo({
-        canUndo: HEYS.Widgets.canUndo?.() || false,
-        canRedo: HEYS.Widgets.canRedo?.() || false
+    useEffect(() => {
+      if (!isLayoutHydrated) return;
+      window.HEYS?.BlankScreenGuard?.reportVisibleFrame?.({
+        element: containerRef.current,
+        screen: 'widgets',
+        reason: 'widgets_dashboard_painted'
       });
-    }, []);
+    }, [isLayoutHydrated, widgets.length]);
 
     // Handle catalog widget selection
     const handleCatalogSelect = useCallback((widgetType) => {
@@ -6973,9 +6911,12 @@
     const pullIndicatorEl = null;
 
     // Render empty state (только после первичной гидратации layout)
-    // Don't show empty state during sync loading — layout for new client may not have arrived yet
-    if (isLayoutHydrated && widgets.length === 0 && !isEditMode && !isSyncLoading) {
-      return React.createElement('div', { className: 'widgets-tab' },
+    if (isLayoutHydrated && widgets.length === 0 && !isEditMode) {
+      return React.createElement('div', {
+        className: 'widgets-tab',
+        ref: containerRef,
+        'data-heys-visible-frame': 'widgets'
+      },
         pullIndicatorEl,
         React.createElement('div', { className: 'widgets-empty widget-v4-empty' },
           React.createElement('div', { className: 'widgets-empty__title' }, 'Виджетов нет'),
@@ -7000,19 +6941,15 @@
 
     return React.createElement('div', {
       className: `widgets-tab ${isEditMode ? 'widgets-tab--editing' : ''}`,
-      ref: containerRef
+      ref: containerRef,
+      'data-heys-visible-frame': isLayoutHydrated ? 'widgets' : undefined
     },
       // Pull-to-refresh indicator
       pullIndicatorEl,
 
-      // Sync loading skeleton — shown during client switch while cloud data syncs
-      isSyncLoading && !isEditMode && React.createElement(WidgetsSyncSkeleton),
+      React.createElement('div', { className: 'widgets-header' }),
 
-      // Header (пустой - кнопки перенесены в fixed блок снизу)
-      !isSyncLoading && React.createElement('div', { className: 'widgets-header' }),
-
-      // Widgets Grid (hidden during sync loading)
-      !isSyncLoading && React.createElement('div', { className: 'widgets-grid-container' },
+      React.createElement('div', { className: 'widgets-grid-container' },
         React.createElement('div', {
           className: `widgets-grid ${isEditMode ? 'widgets-grid--editing' : ''}`,
           ref: gridRef
@@ -7027,7 +6964,7 @@
               onSettings: setSettingsWidget
             })
           ),
-          !isEditMode && React.createElement('button', {
+          !isEditMode && widgets.length > 0 && React.createElement('button', {
             type: 'button',
             className: 'widget-v4-add',
             onClick: () => HEYS.Widgets.enterEditMode?.()

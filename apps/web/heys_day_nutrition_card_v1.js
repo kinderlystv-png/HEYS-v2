@@ -22,6 +22,7 @@
             waterGoal,
             addMeal,
             addWater,
+            openAddProductForMeal,
             haptic
         } = params || {};
 
@@ -47,6 +48,7 @@
         const nutritionActions = {
             addMeal,
             addWater,
+            openAddProductForMeal,
             haptic
         };
 

@@ -324,6 +324,14 @@
     return message.includes('invalid_session') || message.includes('invalid_or_expired_session') || message.includes('no session token');
   }
 
+  /** Pre-login maintenance probe: optional RPC, fail-open when not deployed/allowed yet. */
+  function isExpectedOptionalPublicRpcFailure(fnName, status, data) {
+    if (fnName !== 'get_public_app_status') return false;
+    if (status === 403) return true;
+    const message = String(data?.error || data?.message || '').toLowerCase();
+    return message.includes('not allowed') || message.includes('not found');
+  }
+
   /**
    * 🔁 Phase A SWR invalidation: уведомить SW что cache для GET /rest/client_kv_store
    * больше не валиден. Вызывается после успешных write-операций (saveKV / batchSaveKV /
@@ -651,7 +659,8 @@
       const data = await response.json();
 
       if (!response.ok) {
-        if (!isExpectedPassiveSessionAuthFailure(fnName, response.status, data)) {
+        if (!isExpectedPassiveSessionAuthFailure(fnName, response.status, data)
+          && !isExpectedOptionalPublicRpcFailure(fnName, response.status, data)) {
           try {
             console.error('[HEYS.api] ❌ RPC failed', {
               fn: fnName,
@@ -695,7 +704,7 @@
   async function rest(table, options = {}) {
     const {
       method = 'GET', filters = {}, data = null, select, limit, offset, order,
-      upsert, onConflict, requestPriority, requestClass
+      upsert, onConflict, requestPriority, requestClass, maxRetries
     } = options;
 
     if (isReadonlyMode && method !== 'GET') {
@@ -758,7 +767,8 @@
         fetchOptions.body = JSON.stringify(data);
       }
 
-      const response = await fetchWithRetry(url, fetchOptions, CONFIG.MAX_RETRIES, {
+      const retryCount = typeof maxRetries === 'number' ? maxRetries : CONFIG.MAX_RETRIES;
+      const response = await fetchWithRetry(url, fetchOptions, retryCount, {
         priority: classifyRestPriority(table, method, requestPriority),
         requestClass: requestClass || `rest:${method}:${table}`
       });
@@ -774,8 +784,20 @@
 
       return { data: result, error: null };
     } catch (e) {
-      err(`REST ${method} ${table} failed:`, e.message);
-      return { data: null, error: { message: e.message, code: 'NETWORK_ERROR' } };
+      const msg = e?.message || String(e);
+      const payload502 = String(msg).includes('502');
+      const isSyncKvPage = requestClass === 'sync:bootstrap-kv-page';
+      if (!(payload502 && isSyncKvPage)) {
+        err(`REST ${method} ${table} failed:`, msg);
+      }
+      return {
+        data: null,
+        error: {
+          message: msg,
+          code: payload502 ? 502 : 'NETWORK_ERROR',
+          isNetworkFailure: !payload502
+        }
+      };
     }
   }
 

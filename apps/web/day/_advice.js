@@ -154,6 +154,36 @@
         return parts.slice(0, 3);
     }
 
+    function getAdviceCategoryRu(advice, categoryNames = {}) {
+        const category = advice?.category || advice?.ruleCategory || '';
+        if (category && categoryNames[category]) return categoryNames[category];
+        if (typeof category === 'string' && category.trim()) {
+            const normalized = category.trim();
+            return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+        }
+        return 'Совет';
+    }
+
+    function getAdviceHeroText(advice) {
+        if (!advice) return '';
+
+        const actionNowLabel = advice?.expertMeta?.actionNow?.label;
+        if (typeof actionNowLabel === 'string' && actionNowLabel.trim()) {
+            return actionNowLabel.trim();
+        }
+
+        const scienceRationale = advice?.expertMeta?.science?.rationale;
+        if (typeof scienceRationale === 'string' && scienceRationale.trim()) {
+            const firstSentence = scienceRationale.trim().match(/[^.!?…]+[.!?…]?/);
+            if (firstSentence?.[0]) return firstSentence[0].trim();
+        }
+
+        const whyNowParts = getHumanWhyNowParts(advice);
+        if (whyNowParts.length > 0) return whyNowParts[0];
+
+        return '';
+    }
+
     function getAdviceDescription(advice) {
         if (!advice) return '';
 
@@ -174,6 +204,14 @@
         return '';
     }
 
+    function getAdviceScienceBlurb(advice) {
+        const scienceRationale = advice?.expertMeta?.science?.rationale;
+        if (typeof scienceRationale === 'string' && scienceRationale.trim()) {
+            return scienceRationale.trim();
+        }
+        return getAdviceScienceSummary(advice);
+    }
+
     function getAdviceScienceSummary(advice) {
         if (!advice) return '';
 
@@ -192,6 +230,517 @@
 
         if (sentences.length === 0) return normalizedText;
         return sentences.slice(0, 3).join(' ');
+    }
+
+    const ADVICE_UNDO_SECONDS = 3;
+    const ADVICE_MARK_SYNC_KEYS = ['heys_advice_read_today', 'heys_advice_hidden_today'];
+
+    function getAdvicePendingMarkSyncCount(dismissedAdvices, hiddenUntilTomorrow) {
+        try {
+            const cloud = (typeof HEYS !== 'undefined' && HEYS?.cloud) || window.HEYS?.cloud;
+            const detail = cloud?.getPendingItemsDetail?.();
+            const queue = [
+                ...(Array.isArray(detail?.queue) ? detail.queue : []),
+                ...(Array.isArray(detail?.inflight) ? detail.inflight : []),
+            ];
+            const hasPendingAdviceMarks = queue.some((item) => {
+                const key = String(item?.k || '');
+                return ADVICE_MARK_SYNC_KEYS.some((markKey) => key.includes(markKey));
+            });
+            if (!hasPendingAdviceMarks) return 0;
+            const dismissedCount = dismissedAdvices instanceof Set ? dismissedAdvices.size : 0;
+            const hiddenCount = hiddenUntilTomorrow instanceof Set ? hiddenUntilTomorrow.size : 0;
+            return Math.max(dismissedCount + hiddenCount, 1);
+        } catch (_) {
+            return 0;
+        }
+    }
+
+    function renderAdviceV4Icon(React, kind) {
+        const common = {
+            className: 'advice-v4-icon',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+            'aria-hidden': true,
+        };
+        if (kind === 'check') {
+            return React.createElement('svg', {
+                ...common,
+                className: 'advice-v4-icon advice-v4-icon--check',
+                width: 17,
+                height: 17,
+                viewBox: '0 0 24 24',
+                strokeWidth: 3.2,
+            }, React.createElement('path', { d: 'M5 13l4 4L19 7' }));
+        }
+        if (kind === 'thumb-up') {
+            return React.createElement('svg', {
+                ...common,
+                width: 15,
+                height: 15,
+                viewBox: '0 0 24 24',
+                strokeWidth: 2.5,
+            }, React.createElement('path', { d: 'M7 11v9H4v-9zM7 11l4.5-8A2 2 0 0115 5v4h4a2 2 0 012 2.4l-1.4 7A2 2 0 0117.6 20H7' }));
+        }
+        if (kind === 'thumb-down') {
+            return React.createElement('svg', {
+                ...common,
+                width: 15,
+                height: 15,
+                viewBox: '0 0 24 24',
+                strokeWidth: 2.5,
+            }, React.createElement('path', { d: 'M17 13V4h3v9zM17 13l-4.5 8A2 2 0 019 19v-4H5a2 2 0 01-2-2.4l1.4-7A2 2 0 016.4 4H17' }));
+        }
+        if (kind === 'cloud-off') {
+            return React.createElement('svg', {
+                ...common,
+                className: 'advice-v4-icon advice-v4-icon--cloud-off',
+                width: 18,
+                height: 18,
+                viewBox: '0 0 24 24',
+                strokeWidth: 2.5,
+            },
+                React.createElement('path', { d: 'M18 16.5A3.5 3.5 0 0016.5 10a5.5 5.5 0 00-10.6 1.4A3 3 0 006.5 17' }),
+                React.createElement('path', { d: 'M12 20v-7M9 16l3 3 3-3' })
+            );
+        }
+        if (kind === 'chevron-left') {
+            return React.createElement('svg', {
+                ...common,
+                width: 17,
+                height: 17,
+                viewBox: '0 0 24 24',
+                strokeWidth: 2.75,
+            }, React.createElement('path', { d: 'M15 18l-6-6 6-6' }));
+        }
+        if (kind === 'chevron-right') {
+            return React.createElement('svg', {
+                ...common,
+                width: 14,
+                height: 14,
+                viewBox: '0 0 24 24',
+                strokeWidth: 2.75,
+            }, React.createElement('path', { d: 'M9 6l6 6-6 6' }));
+        }
+        if (kind === 'close') {
+            return React.createElement('svg', {
+                ...common,
+                width: 14,
+                height: 14,
+                viewBox: '0 0 24 24',
+                strokeWidth: 2.75,
+            },
+                React.createElement('path', { d: 'M6 6l12 12' }),
+                React.createElement('path', { d: 'M18 6L6 18' })
+            );
+        }
+        return null;
+    }
+
+    function formatAdviceSyncCountLabel(pendingCount) {
+        const count = Math.max(1, Number(pendingCount) || 1);
+        if (count === 1) return 'Один совет отмечен';
+        if (count === 2) return 'Два совета отмечены';
+        if (count >= 5) return `${count} советов отмечено`;
+        return `${count} совета отмечены`;
+    }
+
+    function renderAdviceHideRing(React, secondsLeft) {
+        const radius = 15;
+        const circumference = 2 * Math.PI * radius;
+        const safeSeconds = Math.max(0, Math.min(ADVICE_UNDO_SECONDS, Number(secondsLeft) || 0));
+        const progress = safeSeconds / ADVICE_UNDO_SECONDS;
+        const dashOffset = circumference * (1 - progress);
+
+        return React.createElement('div', { className: 'advice-v4-hide-ring', 'aria-hidden': true },
+            React.createElement('svg', { className: 'advice-v4-hide-ring__svg', viewBox: '0 0 36 36' },
+                React.createElement('circle', {
+                    className: 'advice-v4-hide-ring__track',
+                    cx: 18,
+                    cy: 18,
+                    r: radius,
+                }),
+                React.createElement('circle', {
+                    className: 'advice-v4-hide-ring__progress',
+                    cx: 18,
+                    cy: 18,
+                    r: radius,
+                    strokeDasharray: `${circumference} ${circumference}`,
+                    strokeDashoffset: dashOffset,
+                })
+            ),
+            React.createElement('span', { className: 'advice-v4-hide-ring__num' }, String(Math.max(safeSeconds, 1)))
+        );
+    }
+
+    function renderAdviceReadFeedbackPanel(React, {
+        onRatePositive,
+        onRateNegative,
+        onSkip,
+    }) {
+        return React.createElement('div', { className: 'advice-v4-panel advice-v4-panel--read' },
+            React.createElement('div', { className: 'advice-v4-panel__head' },
+                renderAdviceV4Icon(React, 'check'),
+                React.createElement('span', { className: 'advice-v4-panel__title' }, 'Прочитано')
+            ),
+            React.createElement('div', { className: 'advice-v4-panel__hint' },
+                'Ответ влияет на то, какие советы вы увидите дальше — с двух оценок совет начинает подниматься или уходить вниз.'
+            ),
+            React.createElement('div', { className: 'advice-v4-panel__actions' },
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'advice-v4-panel__btn advice-v4-panel__btn--useful',
+                    onClick: onRatePositive,
+                }, renderAdviceV4Icon(React, 'thumb-up'), 'Полезно'),
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'advice-v4-panel__btn advice-v4-panel__btn--miss',
+                    onClick: onRateNegative,
+                }, renderAdviceV4Icon(React, 'thumb-down'), 'Мимо')
+            ),
+            React.createElement('button', {
+                type: 'button',
+                className: 'advice-v4-panel__skip',
+                onClick: onSkip,
+            }, 'Пропустить')
+        );
+    }
+
+    function renderAdviceHideUndoPanel(React, {
+        advice,
+        secondsLeft,
+        onUndo,
+    }) {
+        return React.createElement('div', { className: 'advice-v4-panel advice-v4-panel--hide' },
+            React.createElement('div', { className: 'advice-v4-hide-row' },
+                renderAdviceHideRing(React, secondsLeft),
+                React.createElement('div', { className: 'advice-v4-hide-copy' },
+                    React.createElement('span', { className: 'advice-v4-hide-copy__title' }, 'Совет скрыт до завтра'),
+                    React.createElement('span', { className: 'advice-v4-hide-copy__subtitle' }, advice?.text || '')
+                ),
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'advice-v4-hide-return',
+                    onClick: onUndo,
+                }, 'Вернуть')
+            )
+        );
+    }
+
+    function renderAdviceSyncBanner(React, {
+        pendingCount,
+        onRetry,
+    }) {
+        if (!pendingCount) return null;
+        const countLabel = formatAdviceSyncCountLabel(pendingCount);
+
+        return React.createElement('div', { className: 'advice-v4-panel advice-v4-panel--sync', role: 'status' },
+            React.createElement('div', { className: 'advice-v4-sync-head' },
+                renderAdviceV4Icon(React, 'cloud-off'),
+                React.createElement('div', { className: 'advice-v4-sync-copy' },
+                    React.createElement('div', { className: 'advice-v4-panel__title advice-v4-panel__title--accent' }, 'Отметки не сохранились'),
+                    React.createElement('div', { className: 'advice-v4-panel__hint advice-v4-panel__hint--sync' },
+                        `${countLabel} прочитанными только на этом устройстве. Отправим, как появится связь — ничего делать не нужно.`
+                    )
+                )
+            ),
+            typeof onRetry === 'function' && React.createElement('button', {
+                type: 'button',
+                className: 'advice-v4-panel__retry',
+                onClick: onRetry,
+            }, 'Попробовать сейчас')
+        );
+    }
+
+    function renderAdviceServiceScreen(React, {
+        onClose,
+        onOpenTechLog,
+        onOpenDiagnostics,
+        onOpenRulesPool,
+    }) {
+        return React.createElement('div', {
+            className: 'advice-service-overlay',
+            onClick: (e) => e.stopPropagation(),
+        },
+            React.createElement('div', { className: 'advice-service-header' },
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'advice-service-back',
+                    onClick: onClose,
+                    'aria-label': 'Назад',
+                }, renderAdviceV4Icon(React, 'chevron-left')),
+                React.createElement('span', { className: 'advice-service-title' }, 'Служебное')
+            ),
+            React.createElement('div', { className: 'advice-service-body' },
+                React.createElement('div', { className: 'advice-service-note' },
+                    'Раздел виден только по входу куратора. Клиент сюда не попадает ни из шапки, ни из настроек.'
+                ),
+                React.createElement('div', { className: 'advice-service-section-label' }, 'Советы'),
+                React.createElement('div', { className: 'advice-service-list' },
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'advice-service-row',
+                        onClick: onOpenTechLog,
+                    },
+                        React.createElement('span', null,
+                            React.createElement('span', { className: 'advice-service-row__title' }, 'Техлог'),
+                            React.createElement('span', { className: 'advice-service-row__hint' }, 'Что и почему сработало за день')
+                        ),
+                        React.createElement('span', { className: 'advice-service-row__chevron', 'aria-hidden': true },
+                            renderAdviceV4Icon(React, 'chevron-right')
+                        )
+                    ),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'advice-service-row',
+                        onClick: onOpenDiagnostics,
+                    },
+                        React.createElement('span', null,
+                            React.createElement('span', { className: 'advice-service-row__title' }, 'Диагностика'),
+                            React.createElement('span', { className: 'advice-service-row__hint' }, 'Почему совет не показался')
+                        ),
+                        React.createElement('span', { className: 'advice-service-row__chevron', 'aria-hidden': true },
+                            renderAdviceV4Icon(React, 'chevron-right')
+                        )
+                    ),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'advice-service-row',
+                        onClick: onOpenRulesPool,
+                    },
+                        React.createElement('span', null,
+                            React.createElement('span', { className: 'advice-service-row__title' }, 'Пул правил'),
+                            React.createElement('span', { className: 'advice-service-row__hint' }, 'Какие правила активны сейчас')
+                        ),
+                        React.createElement('span', { className: 'advice-service-row__chevron', 'aria-hidden': true },
+                            renderAdviceV4Icon(React, 'chevron-right')
+                        )
+                    )
+                ),
+                React.createElement('div', { className: 'advice-service-footer-note' },
+                    'Раньше эти три кнопки стояли в шапке шторки советов рядом с «Прочитать все» — на одном уровне с клиентским действием.'
+                )
+            ),
+            React.createElement('div', { className: 'advice-service-footer-tag' }, 'служебный раздел')
+        );
+    }
+
+    function AdviceRulesPoolModal({
+        React,
+        diagnostics,
+        onClose,
+    }) {
+        if (!diagnostics) return null;
+        const moduleReport = Array.isArray(diagnostics.moduleReport) ? diagnostics.moduleReport : [];
+        const sortedModules = [...moduleReport].sort((a, b) => (b.withOutput || 0) - (a.withOutput || 0));
+
+        return React.createElement('div', {
+            className: 'advice-service-overlay advice-rules-pool-overlay',
+            onClick: (e) => e.stopPropagation(),
+        },
+            React.createElement('div', { className: 'advice-service-header' },
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'advice-service-back',
+                    onClick: onClose,
+                    'aria-label': 'Назад',
+                }, renderAdviceV4Icon(React, 'chevron-left')),
+                React.createElement('span', { className: 'advice-service-title' }, 'Пул правил')
+            ),
+            React.createElement('div', { className: 'advice-service-body' },
+                React.createElement('div', { className: 'advice-service-note' },
+                    `Снимок за ${diagnostics.date || 'сегодня'} · модулей ${moduleReport.length}`
+                ),
+                sortedModules.length === 0
+                    ? React.createElement('div', { className: 'advice-rules-pool-empty' },
+                        'За день ещё нет данных по модулям правил.'
+                    )
+                    : React.createElement('div', { className: 'advice-service-list advice-rules-pool-list' },
+                        sortedModules.map((item) => React.createElement('div', {
+                            key: item.module,
+                            className: `advice-rules-pool-row${(item.withOutput || 0) > 0 ? ' advice-rules-pool-row--active' : ''}`,
+                        },
+                            React.createElement('span', null,
+                                React.createElement('span', { className: 'advice-service-row__title' }, item.module),
+                                React.createElement('span', { className: 'advice-service-row__hint' },
+                                    (item.withOutput || 0) > 0
+                                        ? `Выдал советы · запусков ${item.runs || 0}`
+                                        : `Без выхода · запусков ${item.runs || 0}`
+                                )
+                            ),
+                            (item.withOutput || 0) > 0 && React.createElement('span', { className: 'advice-rules-pool-badge' }, 'активен')
+                        ))
+                    )
+            ),
+            React.createElement('div', { className: 'advice-service-footer-tag' }, 'служебный раздел')
+        );
+    }
+
+    const ADVICE_SETTINGS_GROUPS = [
+        {
+            id: 'nutrition_meals',
+            label: 'Питание и режим приёмов',
+            keys: ['nutrition', 'timing', 'hydration'],
+        },
+        {
+            id: 'training_activity',
+            label: 'Тренировки и активность',
+            keys: ['training', 'correlation'],
+        },
+        {
+            id: 'sleep_wellness',
+            label: 'Сон и самочувствие',
+            keys: ['sleep', 'emotional', 'lifestyle'],
+        },
+        {
+            id: 'motivation',
+            label: 'Мотивация и достижения',
+            keys: ['achievement'],
+        },
+    ];
+
+    function shouldShowMedicalDisclaimerGate(adviceTrigger, toastVisible, sessionDismissed) {
+        if (isMedicalDisclaimerAccepted() || sessionDismissed) return false;
+        if (!toastVisible || !adviceTrigger) return false;
+        return true;
+    }
+
+    function formatAdviceSourceCitation(source) {
+        if (!source || typeof source !== 'object') return null;
+        const org = source.org || source.title || 'Источник';
+        const year = source.year ? `, ${source.year}` : '';
+        const metaParts = [];
+        if (source.type) metaParts.push(source.type);
+        if (source.n) {
+            const count = Number(source.n);
+            const noun = count === 1 ? 'участник' : (count >= 2 && count <= 4 ? 'участника' : 'участников');
+            metaParts.push(`${count.toLocaleString('ru-RU')} ${noun}`);
+        }
+        return {
+            title: `${org}${year}`,
+            meta: metaParts.join(' · '),
+        };
+    }
+
+    function AdviceMedicalDisclaimerGate({ React, onContinue, neverShow, onNeverShowChange }) {
+        return React.createElement('div', {
+            className: 'advice-v4-disclaimer-overlay',
+            role: 'dialog',
+            'aria-modal': 'true',
+            'aria-label': 'Первый совет',
+            onClick: (e) => e.stopPropagation(),
+        },
+            React.createElement('div', { className: 'advice-v4-disclaimer-card' },
+                React.createElement('div', { className: 'advice-v4-disclaimer-card__title' }, 'Первый совет'),
+                React.createElement('p', { className: 'advice-v4-disclaimer-card__lead' },
+                    'Дальше приложение будет замечать закономерности в ваших данных'
+                ),
+                React.createElement('p', { className: 'advice-v4-disclaimer-card__text' },
+                    'Это наблюдения по вашим записям, а не назначение врача. При заболеваниях, беременности и приёме лекарств решения принимает врач — приложение их не заменяет.'
+                ),
+                React.createElement('label', { className: 'advice-v4-disclaimer-card__check' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        checked: !!neverShow,
+                        onChange: (e) => onNeverShowChange && onNeverShowChange(e.target.checked),
+                    }),
+                    React.createElement('span', null, 'Больше не показывать')
+                ),
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'advice-v4-disclaimer-card__primary',
+                    onClick: onContinue,
+                }, 'Показать совет')
+            )
+        );
+    }
+
+    function renderAdviceSettingsScreen(React, {
+        onClose,
+        toastsEnabled,
+        adviceSoundEnabled,
+        onToggleToasts,
+        onToggleSound,
+        categorySettings,
+        onToggleCategoryGroup,
+    }) {
+        return React.createElement('div', {
+            className: 'advice-v4-settings-overlay',
+            role: 'presentation',
+            onClick: onClose,
+        },
+            React.createElement('div', {
+                className: 'advice-v4-settings',
+                role: 'dialog',
+                'aria-modal': 'true',
+                'aria-label': 'Настройки советов',
+                onClick: (e) => e.stopPropagation(),
+            },
+                React.createElement('div', { className: 'advice-v4-settings__header' },
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'advice-v4-settings__back',
+                        onClick: onClose,
+                        'aria-label': 'Назад',
+                    }, '←'),
+                    React.createElement('span', { className: 'advice-v4-settings__title' }, 'Советы')
+                ),
+                React.createElement('div', { className: 'advice-v4-settings__body' },
+                    React.createElement('p', { className: 'advice-v4-settings__intro' },
+                        'Единственное место, где это настраивается. В шторке советов тумблеров нет — там только чтение.'
+                    ),
+                    React.createElement('div', { className: 'advice-v4-settings__section-label' }, 'Как приходят'),
+                    React.createElement('div', { className: 'advice-v4-settings__row' },
+                        React.createElement('div', { className: 'advice-v4-settings__row-copy' },
+                            React.createElement('span', { className: 'advice-v4-settings__row-title' }, 'Показывать советы сами'),
+                            React.createElement('span', { className: 'advice-v4-settings__row-hint' },
+                                'Всплывают поверх экрана, когда система что-то замечает. Выключено — ждут в лампочке.'
+                            )
+                        ),
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'advice-v4-settings__toggle' + (toastsEnabled ? ' is-on' : ''),
+                            onClick: onToggleToasts,
+                            'aria-pressed': toastsEnabled ? 'true' : 'false',
+                        }, React.createElement('span', { className: 'advice-v4-settings__toggle-thumb' }))
+                    ),
+                    React.createElement('div', { className: 'advice-v4-settings__row' },
+                        React.createElement('div', { className: 'advice-v4-settings__row-copy' },
+                            React.createElement('span', { className: 'advice-v4-settings__row-title' }, 'Звук'),
+                            React.createElement('span', { className: 'advice-v4-settings__row-hint' },
+                                'Только у советов. Остальные звуки приложения не затрагивает.'
+                            )
+                        ),
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'advice-v4-settings__toggle' + (adviceSoundEnabled ? ' is-on' : ''),
+                            onClick: onToggleSound,
+                            'aria-pressed': adviceSoundEnabled ? 'true' : 'false',
+                        }, React.createElement('span', { className: 'advice-v4-settings__toggle-thumb' }))
+                    ),
+                    React.createElement('div', { className: 'advice-v4-settings__section-label' }, 'О чём'),
+                    ADVICE_SETTINGS_GROUPS.map((group) => {
+                        const enabled = group.keys.every((key) => categorySettings?.[key] !== false);
+                        return React.createElement('div', { key: group.id, className: 'advice-v4-settings__row' },
+                            React.createElement('div', { className: 'advice-v4-settings__row-copy' },
+                                React.createElement('span', { className: 'advice-v4-settings__row-title' }, group.label)
+                            ),
+                            React.createElement('button', {
+                                type: 'button',
+                                className: 'advice-v4-settings__toggle' + (enabled ? ' is-on' : ''),
+                                onClick: () => onToggleCategoryGroup && onToggleCategoryGroup(group.keys, !enabled),
+                                'aria-pressed': enabled ? 'true' : 'false',
+                            }, React.createElement('span', { className: 'advice-v4-settings__toggle-thumb' }))
+                        );
+                    }),
+                    React.createElement('p', { className: 'advice-v4-settings__footnote' },
+                        'Предупреждения приходят всегда. Наблюдения по вашим записям — тоже: это не тема, а способ подачи.'
+                    )
+                )
+            )
+        );
     }
 
     function renderAdviceEvidence(advice, options = {}) {
@@ -590,17 +1139,15 @@
         advice,
         onClose,
     }) {
-        if (!advice || !hasExpertContent(advice)) return null;
+        if (!advice) return null;
 
-        const facts = getAdviceTechnicalFacts(advice);
-        const whyNowParts = getHumanWhyNowParts(advice);
-        const science = facts.science;
-        const causal = facts.causal;
-        const responseMemory = facts.responseMemory;
-        const uncertainty = facts.uncertainty;
+        const scienceBlurb = getAdviceScienceBlurb(advice);
+        const sources = Array.isArray(advice?.expertMeta?.science?.sources)
+            ? advice.expertMeta.science.sources
+            : [];
 
         return React.createElement('div', {
-            className: 'advice-diagnostics-modal-overlay',
+            className: 'advice-v4-science-overlay',
             role: 'presentation',
             onClick: (e) => {
                 e.stopPropagation();
@@ -608,128 +1155,53 @@
             }
         },
             React.createElement('div', {
-                className: 'advice-diagnostics-modal advice-diagnostics-modal--technical',
+                className: 'advice-v4-science',
                 role: 'dialog',
                 'aria-modal': 'true',
-                'aria-label': 'Технические детали совета',
+                'aria-label': 'Научное описание',
                 onClick: (e) => e.stopPropagation()
             },
-                React.createElement('div', { className: 'advice-diagnostics-modal__header' },
-                    React.createElement('div', { className: 'advice-diagnostics-modal__title-wrap' },
-                        React.createElement('div', { className: 'advice-diagnostics-modal__eyebrow' }, 'Advice tech details'),
-                        React.createElement('div', { className: 'advice-diagnostics-modal__title' }, 'Технические детали по совету'),
-                        React.createElement('div', { className: 'advice-diagnostics-modal__subtitle' }, advice.text || advice.id || 'Совет')
-                    ),
+                React.createElement('div', { className: 'advice-v4-science__header' },
+                    React.createElement('span', { className: 'advice-v4-science__title' }, 'Научное описание'),
                     React.createElement('button', {
-                        className: 'advice-diagnostics-modal__close',
+                        className: 'advice-v4-science__close',
                         onClick: onClose,
                         type: 'button',
-                        'aria-label': 'Закрыть технические детали'
+                        'aria-label': 'Закрыть'
                     }, '×')
                 ),
-                React.createElement('div', { className: 'advice-diagnostics-modal__body' },
-                    facts.summary.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
-                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Сводка решения'),
-                        React.createElement('div', { className: 'advice-diagnostics-tags' },
-                            facts.summary.map((item, index) => React.createElement('span', {
-                                key: `summary_${index}`,
-                                className: 'advice-diagnostics-tag is-muted'
-                            }, item))
+                React.createElement('div', { className: 'advice-v4-science__body' },
+                    React.createElement('h2', { className: 'advice-v4-science__advice-title' }, advice.text || 'Совет'),
+                    scienceBlurb && React.createElement('section', { className: 'advice-v4-science__section' },
+                        React.createElement('div', { className: 'advice-v4-science__section-label' }, 'Что за этим стоит'),
+                        React.createElement('p', { className: 'advice-v4-science__text' }, scienceBlurb)
+                    ),
+                    sources.length > 0 && React.createElement('section', { className: 'advice-v4-science__section' },
+                        React.createElement('div', { className: 'advice-v4-science__section-label' }, 'Исследования'),
+                        React.createElement('div', { className: 'advice-v4-science__sources' },
+                            sources.slice(0, 5).map((source, index) => {
+                                const citation = formatAdviceSourceCitation(source);
+                                if (!citation) return null;
+                                return React.createElement('div', {
+                                    key: `source_${index}`,
+                                    className: 'advice-v4-science__source',
+                                },
+                                    React.createElement('div', { className: 'advice-v4-science__source-title' }, citation.title),
+                                    citation.meta && React.createElement('div', { className: 'advice-v4-science__source-meta' }, citation.meta)
+                                );
+                            })
                         )
                     ),
-                    whyNowParts.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
-                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Почему этот совет сейчас к месту'),
-                        React.createElement('ul', { className: 'advice-diagnostics-list' },
-                            whyNowParts.map((item, index) => React.createElement('li', {
-                                key: `why_now_${index}`,
-                                className: 'advice-diagnostics-list__item'
-                            }, item))
-                        )
-                    ),
-                    facts.drivers.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
-                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Primary drivers'),
-                        React.createElement('ul', { className: 'advice-diagnostics-list' },
-                            facts.drivers.map((item, index) => React.createElement('li', {
-                                key: `driver_${index}`,
-                                className: 'advice-diagnostics-list__item'
-                            }, item))
-                        )
-                    ),
-                    facts.crossConfirmedBy.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
-                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Cross confirmation'),
-                        React.createElement('ul', { className: 'advice-diagnostics-list' },
-                            facts.crossConfirmedBy.map((item, index) => React.createElement('li', {
-                                key: `cross_${index}`,
-                                className: 'advice-diagnostics-list__item'
-                            }, item))
-                        )
-                    ),
-                    facts.contradictions.length > 0 && React.createElement('section', { className: 'advice-diagnostics-section' },
-                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Contradictions'),
-                        React.createElement('ul', { className: 'advice-diagnostics-list' },
-                            facts.contradictions.map((item, index) => React.createElement('li', {
-                                key: `contradiction_${index}`,
-                                className: 'advice-diagnostics-list__item'
-                            }, item))
-                        )
-                    ),
-                    facts.actionNow?.label && React.createElement('section', { className: 'advice-diagnostics-section' },
-                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Actionability'),
-                        React.createElement('div', { className: 'advice-diagnostics-module-row' },
-                            React.createElement('div', { className: 'advice-diagnostics-module-row__name' }, facts.actionNow.label),
-                            React.createElement('div', { className: 'advice-diagnostics-module-row__meta' }, `urgency: ${facts.actionNow.urgency || 'watch'}`),
-                            facts.actionNow.rationale && React.createElement('div', { className: 'advice-diagnostics-module-row__sub' }, facts.actionNow.rationale)
-                        )
-                    ),
-                    science && React.createElement('section', { className: 'advice-diagnostics-section' },
-                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Science registry'),
-                        React.createElement('div', { className: 'advice-diagnostics-module-row' },
-                            React.createElement('div', { className: 'advice-diagnostics-module-row__name' }, `${science.topic || '—'} (${science.key || 'no-key'})`),
-                            React.createElement('div', { className: 'advice-diagnostics-module-row__meta' }, [
-                                science.evidenceLevel ? `evidence: ${science.evidenceLevel}` : null,
-                                typeof science.confidenceScore === 'number' ? `confidence: ${Math.round(science.confidenceScore * 100)}%` : null,
-                                typeof science.impactScore === 'number' ? `impact: ${Math.round(science.impactScore * 100)}%` : null,
-                            ].filter(Boolean).join(' · ')),
-                            science.rationale && React.createElement('div', { className: 'advice-diagnostics-module-row__sub' }, science.rationale)
-                        )
-                    ),
-                    causal && React.createElement('section', { className: 'advice-diagnostics-section' },
-                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Causal model'),
-                        React.createElement('div', { className: 'advice-diagnostics-module-row' },
-                            React.createElement('div', { className: 'advice-diagnostics-module-row__name' }, `${causal.name || '—'} (${causal.relevance || 'unknown'})`),
-                            React.createElement('div', { className: 'advice-diagnostics-module-row__meta' }, [
-                                typeof causal.confidence === 'number' ? `confidence: ${Math.round(causal.confidence * 100)}%` : null,
-                                typeof causal.coverage === 'number' ? `coverage: ${Math.round(causal.coverage)}%` : null,
-                            ].filter(Boolean).join(' · ')),
-                            causal.mechanism && React.createElement('div', { className: 'advice-diagnostics-module-row__sub' }, causal.mechanism),
-                            causal.path && React.createElement('div', { className: 'advice-diagnostics-module-row__sub' }, `path: ${causal.path}`)
-                        )
-                    ),
-                    responseMemory && React.createElement('section', { className: 'advice-diagnostics-section' },
-                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Response memory'),
-                        React.createElement('div', { className: 'advice-diagnostics-module-row' },
-                            React.createElement('div', { className: 'advice-diagnostics-module-row__name' }, responseMemory.label || '—'),
-                            React.createElement('div', { className: 'advice-diagnostics-module-row__meta' }, [
-                                typeof responseMemory.score === 'number' ? `score: ${responseMemory.score}` : null,
-                                typeof responseMemory.sampleCount === 'number' ? `samples: ${responseMemory.sampleCount}` : null,
-                            ].filter(Boolean).join(' · ')),
-                            responseMemory.message && React.createElement('div', { className: 'advice-diagnostics-module-row__sub' }, responseMemory.message)
-                        )
-                    ),
-                    uncertainty && React.createElement('section', { className: 'advice-diagnostics-section' },
-                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Uncertainty model'),
-                        React.createElement('div', { className: 'advice-diagnostics-module-row' },
-                            React.createElement('div', { className: 'advice-diagnostics-module-row__name' }, uncertainty.label || '—'),
-                            uncertainty.message && React.createElement('div', { className: 'advice-diagnostics-module-row__sub' }, uncertainty.message)
-                        )
+                    React.createElement('p', { className: 'advice-v4-science__footnote' },
+                        'Общие выводы исследований. Ваш случай может отличаться — при заболеваниях решения принимает врач.'
                     )
                 ),
-                React.createElement('div', { className: 'advice-diagnostics-modal__footer' },
+                React.createElement('div', { className: 'advice-v4-science__footer' },
                     React.createElement('button', {
-                        className: 'advice-diagnostics-modal__action advice-diagnostics-modal__action--secondary',
+                        type: 'button',
+                        className: 'advice-v4-science__primary',
                         onClick: onClose,
-                        type: 'button'
-                    }, 'Закрыть')
+                    }, 'Понятно')
                 )
             )
         );
@@ -740,14 +1212,18 @@
         advice,
         onClose,
         onOpenTechnicalDetails,
+        ADVICE_CATEGORY_NAMES,
     }) {
         if (!advice) return null;
 
         const adviceDescription = getAdviceDescription(advice);
+        const heroText = getAdviceHeroText(advice);
+        const scienceBlurb = getAdviceScienceBlurb(advice);
         const hasEvidence = hasExpertContent(advice);
+        const categoryRu = getAdviceCategoryRu(advice, ADVICE_CATEGORY_NAMES || {});
 
         return React.createElement('div', {
-            className: 'advice-diagnostics-modal-overlay advice-diagnostics-modal-overlay--fullscreen',
+            className: 'advice-v4-detail-overlay',
             role: 'presentation',
             onClick: (e) => {
                 e.stopPropagation();
@@ -755,58 +1231,54 @@
             }
         },
             React.createElement('div', {
-                className: `advice-diagnostics-modal advice-diagnostics-modal--fullscreen advice-detail-modal advice-list-item-${advice.type || 'tip'}`,
+                className: 'advice-v4-detail',
                 role: 'dialog',
                 'aria-modal': 'true',
                 'aria-label': 'Детали совета',
                 onClick: (e) => e.stopPropagation()
             },
-                React.createElement('div', { className: 'advice-diagnostics-modal__header advice-detail-modal__header' },
-                    React.createElement('div', { className: 'advice-diagnostics-modal__title-wrap' },
-                        React.createElement('div', { className: 'advice-diagnostics-modal__eyebrow' }, 'Advice'),
-                        React.createElement('div', { className: 'advice-diagnostics-modal__title advice-detail-modal__title-row' },
-                            React.createElement('span', { className: 'advice-detail-modal__icon', 'aria-hidden': 'true' }, advice.icon || '💡'),
-                            React.createElement('span', null, advice.text || 'Совет')
+                React.createElement('div', { className: 'advice-v4-detail__header' },
+                    React.createElement('div', { className: 'advice-v4-detail__heading' },
+                        React.createElement('span', { className: 'advice-v4-detail__eyebrow' },
+                            `Совет · ${String(categoryRu).toLowerCase()}`
                         ),
-                        advice.category && React.createElement('div', { className: 'advice-diagnostics-modal__subtitle' }, advice.category)
+                        React.createElement('h2', { className: 'advice-v4-detail__title' }, advice.text || 'Совет')
                     ),
                     React.createElement('button', {
-                        className: 'advice-diagnostics-modal__close',
+                        className: 'advice-v4-detail__close',
                         onClick: onClose,
                         type: 'button',
                         'aria-label': 'Закрыть совет'
-                    }, '×')
+                    }, renderAdviceV4Icon(React, 'close'))
                 ),
-                React.createElement('div', { className: 'advice-diagnostics-modal__body advice-detail-modal__body' },
-                    React.createElement('div', { className: 'advice-detail-modal__hero' },
-                        React.createElement('div', { className: 'advice-detail-modal__hero-label' }, 'Что важно сейчас'),
-                        React.createElement('div', { className: 'advice-detail-modal__hero-text' }, advice.text || '—')
+                React.createElement('div', { className: 'advice-v4-detail__body' },
+                    heroText && React.createElement('section', { className: 'advice-v4-detail__hero' },
+                        React.createElement('div', { className: 'advice-v4-detail__hero-label' }, 'Что важно сейчас'),
+                        React.createElement('p', { className: 'advice-v4-detail__hero-text' }, heroText)
                     ),
-                    adviceDescription && React.createElement('section', { className: 'advice-diagnostics-section' },
-                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Детали'),
-                        React.createElement('div', { className: 'advice-detail-modal__description' }, adviceDescription)
+                    adviceDescription && React.createElement('section', { className: 'advice-v4-detail__section' },
+                        React.createElement('div', { className: 'advice-v4-detail__section-title' }, 'Детали'),
+                        React.createElement('p', { className: 'advice-v4-detail__text' }, adviceDescription)
                     ),
-                    hasEvidence && React.createElement('section', { className: 'advice-diagnostics-section' },
-                        React.createElement('div', { className: 'advice-diagnostics-section__title' }, 'Научное описание'),
-                        renderAdviceEvidence(advice)
-                    )
+                    hasEvidence && scienceBlurb && React.createElement('section', { className: 'advice-v4-detail__section' },
+                        React.createElement('div', { className: 'advice-v4-detail__section-title' }, 'Научное описание'),
+                        React.createElement('div', { className: 'advice-v4-detail__science-box' }, scienceBlurb)
+                    ),
+                    hasEvidence && React.createElement('button', {
+                        type: 'button',
+                        className: 'advice-v4-detail__tech-link',
+                        onClick: (e) => {
+                            e.stopPropagation();
+                            onOpenTechnicalDetails && onOpenTechnicalDetails(advice, e);
+                        },
+                    }, 'Технические детали', renderAdviceV4Icon(React, 'chevron-right'))
                 ),
-                React.createElement('div', { className: 'advice-diagnostics-modal__footer advice-detail-modal__footer' },
-                    hasEvidence
-                        ? React.createElement('button', {
-                            className: 'advice-diagnostics-modal__action advice-diagnostics-modal__action--secondary',
-                            onClick: (e) => {
-                                e.stopPropagation();
-                                onOpenTechnicalDetails && onOpenTechnicalDetails(advice, e);
-                            },
-                            type: 'button'
-                        }, 'Тех. детали')
-                        : React.createElement('div', null),
+                React.createElement('div', { className: 'advice-v4-detail__footer' },
                     React.createElement('button', {
-                        className: 'advice-diagnostics-modal__action advice-diagnostics-modal__action--primary',
-                        onClick: () => setTimeout(onClose, 0), // 🚀 PERF R39: defer modal close (169–174ms → ~0ms)
-                        type: 'button'
-                    }, 'Закрыть')
+                        type: 'button',
+                        className: 'advice-v4-detail__primary',
+                        onClick: () => setTimeout(onClose, 0),
+                    }, 'Понятно')
                 )
             )
         );
@@ -837,8 +1309,6 @@
         onOpenDetails,
         onOpenTechnicalDetails,
     }) {
-        const [scheduledConfirm, setScheduledConfirm] = React.useState(false);
-        const [ratedState, setRatedState] = React.useState(null); // 'positive' | 'negative' | null
         const adviceDescription = getAdviceScienceSummary(advice);
         const hasTechnicalDetails = hasExpertContent(advice);
         const hasExpandedContent = !!(adviceDescription || hasTechnicalDetails);
@@ -847,44 +1317,13 @@
         const swipeDirection = swipeState?.direction;
         const swipeProgress = Math.min(1, Math.abs(swipeX) / 100);
         const showUndo = isLastDismissed && (isDismissed || isHidden);
-        const showReadFeedback = showUndo && lastDismissedAction === 'read';
-
-        const handleSchedule = React.useCallback((e) => {
-            e.stopPropagation();
-            if (onSchedule) {
-                setScheduledConfirm(true);
-                if (navigator.vibrate) navigator.vibrate(50);
-                // 🚀 PERF R50: defer heavy schedule callback (51ms → ~0ms click)
-                setTimeout(() => { onSchedule(advice, 120); }, 0);
-                setTimeout(() => {
-                    onClearLastDismissed && onClearLastDismissed();
-                }, 1500);
-            }
-        }, [advice, onSchedule, onClearLastDismissed]);
-
-        const handleRate = React.useCallback((isPositive, e) => {
-            e.stopPropagation();
-            if (!onRate) return;
-            setRatedState(isPositive ? 'positive' : 'negative');
-            if (navigator.vibrate) navigator.vibrate(30);
-            // 🚀 PERF R41: defer heavy rate callback (89ms → ~0ms click)
-            setTimeout(() => { onRate(advice, isPositive); }, 0);
-            setTimeout(() => {
-                onClearLastDismissed && onClearLastDismissed();
-            }, 900);
-        }, [advice, onRate, onClearLastDismissed]);
-
-        React.useEffect(() => {
-            if (!showUndo) {
-                setScheduledConfirm(false);
-                setRatedState(null);
-            }
-        }, [showUndo]);
 
         if ((isDismissed || isHidden) && !showUndo) return null;
+        if (showUndo) return null;
 
         return React.createElement('div', {
             className: 'advice-list-item-wrapper',
+            'data-advice-category': advice.category || advice.ruleCategory || 'general',
             style: {
                 animationDelay: `${globalIndex * 50}ms`,
                 '--stagger-delay': `${globalIndex * 50}ms`,
@@ -892,218 +1331,29 @@
                 overflow: 'hidden',
             },
         },
-            showUndo && React.createElement('div', {
-                className: `advice-undo-overlay advice-list-item-${advice.type}`,
-                style: {
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'var(--advice-bg, #ecfdf5)',
-                    borderRadius: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    color: 'var(--color-slate-700, #334155)',
-                    fontWeight: 600,
-                    fontSize: '14px',
-                    cursor: 'pointer',
-                    zIndex: 10,
-                },
-            },
-                showReadFeedback
-                    ? React.createElement(React.Fragment, null,
-                        React.createElement('button', {
-                            onClick: (e) => {
-                                e.stopPropagation();
-                                // 🚀 PERF R50: defer dismiss to avoid sync React render in click handler
-                                setTimeout(() => { onClearLastDismissed && onClearLastDismissed(); }, 0);
-                            },
-                            style: {
-                                position: 'absolute',
-                                top: '8px',
-                                right: '8px',
-                                border: 'none',
-                                background: 'rgba(0,0,0,0.05)',
-                                borderRadius: '999px',
-                                width: '24px',
-                                height: '24px',
-                                cursor: 'pointer',
-                                color: '#64748b'
-                            }
-                        }, '×'),
-                        scheduledConfirm
-                            ? React.createElement('span', {
-                                style: {
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    color: '#3b82f6',
-                                    animation: 'fadeIn 0.3s ease',
-                                },
-                            }, '⏰ Напомню через 2 часа ✓')
-                            : ratedState
-                                ? React.createElement('span', {
-                                    style: {
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                        color: ratedState === 'positive' ? '#16a34a' : '#dc2626',
-                                        animation: 'fadeIn 0.2s ease',
-                                    }
-                                }, ratedState === 'positive' ? '👍 Учту как полезный' : '👎 Учту как слабый / вредный')
-                                : React.createElement('div', {
-                                    style: {
-                                        display: 'flex',
-                                        alignItems: 'stretch',
-                                        justifyContent: 'stretch',
-                                        gap: '10px',
-                                        width: '100%',
-                                        height: '100%',
-                                        padding: '8px 10px',
-                                        boxSizing: 'border-box',
-                                    }
-                                },
-                                    React.createElement('button', {
-                                        onClick: (e) => handleRate(false, e),
-                                        style: {
-                                            border: 'none',
-                                            background: 'rgba(220, 38, 38, 0.16)',
-                                            color: '#b91c1c',
-                                            padding: '10px 14px',
-                                            borderRadius: '18px',
-                                            fontSize: '15px',
-                                            fontWeight: 700,
-                                            cursor: 'pointer',
-                                            flex: '1 1 40%',
-                                            minWidth: '0',
-                                            minHeight: '72px',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            textAlign: 'center',
-                                            lineHeight: 1.1,
-                                            boxShadow: 'inset 0 0 0 1px rgba(220, 38, 38, 0.06)'
-                                        }
-                                    }, '👎 Вредный'),
-                                    onSchedule && React.createElement('button', {
-                                        onClick: handleSchedule,
-                                        style: {
-                                            border: 'none',
-                                            background: 'rgba(59, 130, 246, 0.14)',
-                                            color: '#2563eb',
-                                            padding: '10px 8px',
-                                            borderRadius: '18px',
-                                            fontSize: '15px',
-                                            fontWeight: 700,
-                                            cursor: 'pointer',
-                                            flex: '0 0 20%',
-                                            minWidth: '70px',
-                                            minHeight: '72px',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            textAlign: 'center',
-                                            lineHeight: 1.1,
-                                            boxShadow: 'inset 0 0 0 1px rgba(59, 130, 246, 0.06)'
-                                        }
-                                    }, '⏰ 2ч'),
-                                    React.createElement('button', {
-                                        onClick: (e) => handleRate(true, e),
-                                        style: {
-                                            border: 'none',
-                                            background: 'rgba(22, 163, 74, 0.16)',
-                                            color: '#15803d',
-                                            padding: '10px 14px',
-                                            borderRadius: '18px',
-                                            fontSize: '15px',
-                                            fontWeight: 700,
-                                            cursor: 'pointer',
-                                            flex: '1 1 40%',
-                                            minWidth: '0',
-                                            minHeight: '72px',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            textAlign: 'center',
-                                            lineHeight: 1.1,
-                                            boxShadow: 'inset 0 0 0 1px rgba(22, 163, 74, 0.06)'
-                                        }
-                                    }, '👍 Полезный')
-                                )
-                    )
-                    : React.createElement(React.Fragment, null,
-                        scheduledConfirm
-                            ? React.createElement('span', {
-                                style: {
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    color: '#3b82f6',
-                                    animation: 'fadeIn 0.3s ease',
-                                },
-                            }, '⏰ Напомню через 2 часа ✓')
-                            : React.createElement(React.Fragment, null,
-                                React.createElement('span', {
-                                    style: { color: '#f97316' },
-                                }, '🔕 Скрыто'),
-                                React.createElement('div', { style: { display: 'flex', gap: '8px' } },
-                                    React.createElement('span', {
-                                        onClick: (e) => { e.stopPropagation(); onUndo(); },
-                                        style: {
-                                            background: 'rgba(0,0,0,0.08)',
-                                            padding: '4px 10px',
-                                            borderRadius: '12px',
-                                            fontSize: '13px',
-                                            cursor: 'pointer',
-                                        },
-                                    }, 'Отменить'),
-                                    onSchedule && React.createElement('span', {
-                                        onClick: handleSchedule,
-                                        style: {
-                                            background: 'rgba(0,0,0,0.06)',
-                                            padding: '4px 10px',
-                                            borderRadius: '12px',
-                                            fontSize: '13px',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '4px',
-                                        },
-                                    }, 'Напомнить через 2ч.')
-                                )
-                            )
-                    ),
-                !showReadFeedback && !scheduledConfirm && React.createElement('div', {
-                    style: {
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        height: '3px',
-                        background: 'rgba(0,0,0,0.15)',
-                        width: '100%',
-                        animation: 'undoProgress 3s linear forwards',
-                    },
-                })
-            ),
-            !showUndo && React.createElement('div', {
+            React.createElement('div', {
                 className: 'advice-list-item-bg advice-list-item-bg-left',
                 style: { opacity: swipeDirection === 'left' ? swipeProgress : 0 },
-            }, React.createElement('span', null, '✓ Прочитано')),
-            !showUndo && React.createElement('div', {
+            }, React.createElement('span', { className: 'advice-list-item-bg__label' },
+                renderAdviceV4Icon(React, 'check'),
+                'Прочитано'
+            )),
+            React.createElement('div', {
                 className: 'advice-list-item-bg advice-list-item-bg-right',
                 style: { opacity: swipeDirection === 'right' ? swipeProgress : 0 },
-            }, React.createElement('span', null, '🔕 До завтра')),
+            }, React.createElement('span', { className: 'advice-list-item-bg__label' },
+                renderAdviceV4Icon(React, 'thumb-down'),
+                'Скрыть'
+            )),
             React.createElement('div', {
                 ref: (el) => registerCardRef(advice.id, el),
-                className: `advice-list-item advice-list-item-${advice.type}${isExpanded ? ' expanded' : ''}`,
+                className: `advice-list-item advice-list-item-v4 advice-list-item-${advice.type}${isExpanded ? ' expanded' : ''}`,
                 style: {
-                    transform: showUndo ? 'none' : `translateX(${swipeX}px)`,
-                    opacity: showUndo ? 0.1 : (1 - swipeProgress * 0.3),
-                    pointerEvents: showUndo ? 'none' : 'auto',
+                    transform: `translateX(${swipeX}px)`,
                     touchAction: 'pan-y',
                 },
                 onClick: (e) => {
-                    if (showUndo || Math.abs(swipeX) > 10) return;
+                    if (Math.abs(swipeX) > 10) return;
                     e.stopPropagation();
                     // 🚀 PERF R38: defer heavy details open (167–184ms → ~0ms click)
                     setTimeout(() => {
@@ -1112,18 +1362,14 @@
                     }, 0);
                 },
                 onTouchStart: (e) => {
-                    if (showUndo) return;
                     onSwipeStart(advice.id, e);
                     onLongPressStart(advice.id);
                 },
                 onTouchMove: (e) => {
-                    if (showUndo) return;
                     onSwipeMove(advice.id, e);
                     onLongPressEnd();
                 },
                 onTouchEnd: () => {
-                    if (showUndo) return;
-                    // 🚀 PERF R33: defer swipe-end + longPress cleanup (124ms → ~0ms touchend)
                     setTimeout(() => { onSwipeEnd(advice.id); onLongPressEnd(); }, 0);
                 },
             },
@@ -1432,55 +1678,53 @@
         } catch (e) { /* noop */ }
     }
 
-    // Самостоятельный компонент с локальным state: клик по кнопке скрывает
-    // дисклеймер мгновенно через собственный ре-рендер. Раньше это была чистая
-    // функция, а onAccept в call-site был пустой заглушкой (`() => {}`), поэтому
-    // запись в localStorage происходила, но дисклеймер не исчезал до перезахода
-    // в drawer — кнопка выглядела «ненажимающейся».
-    function MedicalDisclaimer(props) {
-        const React = props.React;
-        const [accepted, setAccepted] = React.useState(isMedicalDisclaimerAccepted);
-        if (accepted) return null;
-        // 🎨 Phase A.7 (2026-05-30): explicit color: inherit для совместимости
-        // с dark theme. Background rgba transparent overlay работает на любом
-        // фоне, но без `color: inherit` browser default button text может быть
-        // black на dark → invisible. Inherit'им text color от родителя advice
-        // drawer (который уже theme-aware).
-        return React.createElement('div', {
-            className: 'advice-medical-disclaimer',
-            style: {
-                background: 'rgba(255,200,100,0.12)',
-                border: '1px solid rgba(255,200,100,0.4)',
-                borderRadius: '8px',
-                padding: '10px 12px',
-                margin: '0 0 12px 0',
-                fontSize: '12px',
-                lineHeight: '1.45',
-                color: 'inherit'
-            }
-        },
-            React.createElement('div', { style: { fontWeight: 600, marginBottom: '4px', color: 'inherit' } },
-                '⚕️ Важно про советы'),
-            React.createElement('div', { style: { opacity: 0.9, color: 'inherit' } },
-                'Все советы здесь основаны на peer-reviewed research (ESPEN, ACSM, WHO, EFSA и meta-analyses), но не заменяют консультацию врача. При хронических заболеваниях, беременности, приёме лекарств — сверяйся с врачом или диетологом.'),
-            React.createElement('button', {
-                onClick: (e) => { e.stopPropagation(); acceptMedicalDisclaimer(); setAccepted(true); },
-                style: {
-                    marginTop: '8px', padding: '6px 14px',
-                    background: 'rgba(255,200,100,0.25)',
-                    border: '1px solid rgba(255,200,100,0.5)',
-                    borderRadius: '6px', cursor: 'pointer',
-                    fontSize: '12px', fontWeight: 500,
-                    color: 'inherit'  // dark-theme safe
-                }
-            }, 'Понятно, дальше не показывать')
-        );
+    function renderMedicalDisclaimer() {
+        return null;
     }
 
-    function renderMedicalDisclaimer(React) {
-        if (isMedicalDisclaimerAccepted()) return null;
-        return React.createElement(MedicalDisclaimer, { React });
-    }
+    dayAdviceListUI.renderAdviceSharedOverlays = function renderAdviceSharedOverlays({
+        React,
+        adviceTrigger,
+        toastVisible,
+        medicalDisclaimerSessionDismissed,
+        medicalDisclaimerNeverShow,
+        onMedicalDisclaimerNeverShowChange,
+        onMedicalDisclaimerContinue,
+        adviceSettingsOpen,
+        closeAdviceSettings,
+        toastsEnabled,
+        toggleToastsEnabled,
+        adviceSoundEnabled,
+        toggleAdviceSoundEnabled,
+        adviceCategorySettings,
+        toggleAdviceCategoryGroup,
+    }) {
+        const showDisclaimer = shouldShowMedicalDisclaimerGate(
+            adviceTrigger,
+            toastVisible,
+            medicalDisclaimerSessionDismissed
+        );
+
+        if (!showDisclaimer && !adviceSettingsOpen) return null;
+
+        return React.createElement(React.Fragment, null,
+            showDisclaimer && React.createElement(AdviceMedicalDisclaimerGate, {
+                React,
+                neverShow: medicalDisclaimerNeverShow,
+                onNeverShowChange: onMedicalDisclaimerNeverShowChange,
+                onContinue: onMedicalDisclaimerContinue,
+            }),
+            adviceSettingsOpen && renderAdviceSettingsScreen(React, {
+                onClose: closeAdviceSettings,
+                toastsEnabled,
+                adviceSoundEnabled,
+                onToggleToasts: toggleToastsEnabled,
+                onToggleSound: toggleAdviceSoundEnabled,
+                categorySettings: adviceCategorySettings,
+                onToggleCategoryGroup: toggleAdviceCategoryGroup,
+            })
+        );
+    };
 
     dayAdviceListUI.renderManualAdviceList = function renderManualAdviceList({
         React,
@@ -1535,6 +1779,15 @@
         ADVICE_CATEGORY_NAMES,
         ewsWarnings,
         AdviceCard,
+        undoCountdownSeconds,
+        adviceServiceOpen,
+        openAdviceService,
+        closeAdviceService,
+        openAdviceRulesPool,
+        closeAdviceRulesPool,
+        adviceRulesPoolOpen,
+        retryAdviceMarksSync,
+        medicalDisclaimerSessionDismissed,
     }) {
         // 2026-05-31: Кураторская сессия видит советы так же как клиент при
         // нажатии на 💡 (manual mode), но auto-toast принудительно выключен
@@ -1550,10 +1803,23 @@
         const displayAdviceCount = typeof totalAdviceCount === 'number' ? totalAdviceCount : 0;
 
         const safeEwsWarnings = Array.isArray(ewsWarnings) ? ewsWarnings : [];
+        const showDisclaimer = shouldShowMedicalDisclaimerGate(
+            adviceTrigger,
+            toastVisible,
+            medicalDisclaimerSessionDismissed
+        );
+        if (showDisclaimer) return null;
         if (!(adviceTrigger === 'manual' && toastVisible && (drawerAdvices?.length > 0 || safeEwsWarnings.length > 0))) return null;
 
         const { sorted, groups } = getSortedGroupedAdvices(drawerAdvices);
         const groupKeys = Object.keys(groups);
+        const feedbackAdvice = lastDismissedAdvice?.id
+            ? (sorted.find((item) => item?.id === lastDismissedAdvice.id)
+                || drawerAdvices.find((item) => item?.id === lastDismissedAdvice.id)
+                || null)
+            : null;
+        const showSwipeFeedback = !!lastDismissedAdvice && !!feedbackAdvice;
+        const pendingAdviceMarksCount = getAdvicePendingMarkSyncCount(dismissedAdvices, hiddenUntilTomorrow);
 
         return React.createElement('div', {
             className: 'advice-list-overlay',
@@ -1561,81 +1827,28 @@
             onClick: () => setTimeout(dismissToast, 0),
         },
             React.createElement('div', {
-                className: `advice-list-container${dismissAllAnimation ? ' shake-warning' : ''}`,
+                className: `advice-list-container advice-list-container--v4${dismissAllAnimation ? ' shake-warning' : ''}${showSwipeFeedback ? ' advice-list-container--feedback-open' : ''}`,
                 onClick: e => e.stopPropagation(),
                 onTouchStart: handleAdviceListTouchStart,
                 onTouchMove: handleAdviceListTouchMove,
                 onTouchEnd: handleAdviceListTouchEnd,
             },
-                // Phase 6: Medical disclaimer (one-time, top of drawer)
-                renderMedicalDisclaimer(React),
-                React.createElement('div', { className: 'advice-list-header' },
+                React.createElement('div', { className: 'advice-list-handle', 'aria-hidden': true }),
+                React.createElement('div', { className: 'advice-list-header advice-list-header--v4' },
                     React.createElement('div', { className: 'advice-list-header-top' },
-                        React.createElement('span', { className: 'advice-list-title' }, `💡 Советы (${displayAdviceCount})`),
+                        React.createElement('span', { className: 'advice-list-title' }, 'Советы'),
                         React.createElement('div', { className: 'advice-list-header-actions' },
-                            _isCurator && adviceTraceAvailable && React.createElement('button', {
-                                className: 'advice-list-header-link',
-                                onClick: copyAdviceTrace,
-                                title: 'Скопировать технический лог принятия решений по советам',
-                            },
-                                adviceTraceCopyState === 'success'
-                                    ? 'Скопировано'
-                                    : adviceTraceCopyState === 'error'
-                                        ? 'Ошибка'
-                                        : 'Техлог'
-                            ),
-                            _isCurator && adviceDiagnostics && React.createElement('button', {
-                                className: 'advice-list-header-link',
-                                onClick: openAdviceDiagnostics,
-                                title: 'Показать компактную диагностику advice engine',
-                            }, 'Диагностика'),
+                            _isCurator && (adviceTraceAvailable || adviceDiagnostics) && React.createElement('button', {
+                                className: 'advice-list-header-link advice-list-header-link--service',
+                                onClick: openAdviceService,
+                                title: 'Служебные инструменты советов',
+                            }, 'Служебное'),
                             displayAdviceCount > 1 && React.createElement('button', {
                                 className: 'advice-list-header-link advice-list-header-link--read-all',
                                 onClick: handleDismissAll,
                                 disabled: dismissAllAnimation,
                                 title: 'Пометить все советы прочитанными',
                             }, 'Прочитать все')
-                        )
-                    ),
-                    React.createElement('div', { className: 'advice-list-header-left' },
-                        React.createElement('div', { className: 'advice-list-toggles' },
-                            // 2026-05-31: Для куратора toggle disabled и принудительно
-                            // off — чтобы куратор не получал toast'ы советов клиента
-                            // случайно (он смотрит чужие данные).
-                            React.createElement('label', {
-                                className: 'ios-toggle-label' + (_isCurator ? ' ios-toggle-label--disabled' : ''),
-                                title: _isCurator
-                                    ? 'У куратора всплывающие советы отключены — чтобы не отвлекать от чужих данных'
-                                    : (toastsEnabled ? 'Отключить всплывающие советы' : 'Включить всплывающие советы'),
-                                style: _isCurator ? { opacity: 0.55, cursor: 'not-allowed' } : null
-                            },
-                                React.createElement('div', {
-                                    className: `ios-toggle ${(toastsEnabled && !_isCurator) ? 'ios-toggle-on' : ''}`,
-                                    onClick: _isCurator ? (e) => { e.preventDefault(); e.stopPropagation(); } : toggleToastsEnabled,
-                                    style: _isCurator ? { pointerEvents: 'none' } : null
-                                }, React.createElement('div', { className: 'ios-toggle-thumb' })),
-                                React.createElement('div', { className: 'advice-toggle-text-group' },
-                                    React.createElement('span', { className: 'ios-toggle-text' }, '🔔'),
-                                    React.createElement('span', { className: 'advice-toggle-hint' },
-                                        _isCurator
-                                            ? 'Автопоказ выключен (режим куратора)'
-                                            : 'Показывать советы сами'
-                                    )
-                                )
-                            ),
-                            React.createElement('label', {
-                                className: 'ios-toggle-label',
-                                title: adviceSoundEnabled ? 'Выключить звук советов' : 'Включить звук советов',
-                            },
-                                React.createElement('div', {
-                                    className: `ios-toggle ${adviceSoundEnabled ? 'ios-toggle-on' : ''}`,
-                                    onClick: toggleAdviceSoundEnabled,
-                                }, React.createElement('div', { className: 'ios-toggle-thumb' })),
-                                React.createElement('div', { className: 'advice-toggle-text-group' },
-                                    React.createElement('span', { className: 'ios-toggle-text' }, adviceSoundEnabled ? '🔊' : '🔇'),
-                                    React.createElement('span', { className: 'advice-toggle-hint' }, adviceSoundEnabled ? 'Звук советов включён' : 'Звук советов выключен')
-                                )
-                            )
                         )
                     )
                 ),
@@ -1726,19 +1939,70 @@
                     React.createElement('span', { className: 'advice-list-hint-divider' }, '•'),
                     React.createElement('span', { className: 'advice-list-hint-item' }, 'скрыть →'),
                     React.createElement('span', { className: 'advice-list-hint-divider' }, '•'),
-                    React.createElement('span', { className: 'advice-list-hint-item' }, 'тап = открыть')
-                )
+                    React.createElement('span', { className: 'advice-list-hint-item' }, 'тап — открыть')
+                ),
+                renderAdviceSyncBanner(React, {
+                    pendingCount: pendingAdviceMarksCount,
+                    onRetry: retryAdviceMarksSync,
+                }),
+                showSwipeFeedback && lastDismissedAdvice.action === 'read' && renderAdviceReadFeedbackPanel(React, {
+                    onRatePositive: (e) => {
+                        e?.stopPropagation?.();
+                        if (navigator.vibrate) navigator.vibrate(30);
+                        setTimeout(() => { rateAdvice && rateAdvice(feedbackAdvice, true); clearLastDismissed(); }, 0);
+                    },
+                    onRateNegative: (e) => {
+                        e?.stopPropagation?.();
+                        if (navigator.vibrate) navigator.vibrate(30);
+                        setTimeout(() => { rateAdvice && rateAdvice(feedbackAdvice, false); clearLastDismissed(); }, 0);
+                    },
+                    onSkip: (e) => {
+                        e?.stopPropagation?.();
+                        clearLastDismissed();
+                    },
+                }),
+                showSwipeFeedback && lastDismissedAdvice.action === 'hidden' && renderAdviceHideUndoPanel(React, {
+                    advice: feedbackAdvice,
+                    secondsLeft: undoCountdownSeconds,
+                    onUndo: (e) => {
+                        e?.stopPropagation?.();
+                        undoLastDismiss();
+                    },
+                })
             ),
+            adviceServiceOpen && renderAdviceServiceScreen(React, {
+                onClose: closeAdviceService,
+                onOpenTechLog: (e) => {
+                    e?.stopPropagation?.();
+                    closeAdviceService();
+                    copyAdviceTrace();
+                },
+                onOpenDiagnostics: (e) => {
+                    e?.stopPropagation?.();
+                    closeAdviceService();
+                    openAdviceDiagnostics(e);
+                },
+                onOpenRulesPool: (e) => {
+                    e?.stopPropagation?.();
+                    openAdviceRulesPool(e);
+                },
+            }),
             adviceDetailModalOpen && React.createElement(AdviceDetailModal, {
                 React,
                 advice: adviceDetailModalAdvice,
                 onClose: closeAdviceDetailModal,
-                onOpenTechnicalDetails: openAdviceTechnicalDetails
+                onOpenTechnicalDetails: openAdviceTechnicalDetails,
+                ADVICE_CATEGORY_NAMES,
             }),
             adviceDiagnosticsOpen && React.createElement(AdviceDiagnosticsModal, {
                 React,
                 diagnostics: adviceDiagnostics,
                 onClose: closeAdviceDiagnostics
+            }),
+            adviceRulesPoolOpen && React.createElement(AdviceRulesPoolModal, {
+                React,
+                diagnostics: adviceDiagnostics,
+                onClose: closeAdviceRulesPool,
             }),
             adviceTechnicalDetailsOpen && React.createElement(AdviceTechnicalModal, {
                 React,
@@ -1753,22 +2017,28 @@
         adviceTrigger,
         toastVisible,
         dismissToast,
+        medicalDisclaimerSessionDismissed,
     }) {
+        if (shouldShowMedicalDisclaimerGate(adviceTrigger, toastVisible, medicalDisclaimerSessionDismissed)) {
+            return null;
+        }
         if (!(adviceTrigger === 'manual_empty' && toastVisible)) return null;
 
         return React.createElement('div', {
-            className: 'macro-toast macro-toast-success visible',
-            role: 'alert',
-            onClick: dismissToast,
-            style: { transform: 'translateX(-50%) translateY(0)' },
+            className: 'advice-list-overlay',
+            onClick: () => setTimeout(dismissToast, 0),
         },
-            React.createElement('div', { className: 'macro-toast-main' },
-                React.createElement('span', { className: 'macro-toast-icon' }, '✨'),
-                React.createElement('span', { className: 'macro-toast-text' }, 'Всё отлично! Советов нет'),
-                React.createElement('button', {
-                    className: 'macro-toast-close',
-                    onClick: (e) => { e.stopPropagation(); setTimeout(() => dismissToast(), 0); },
-                }, '×')
+            React.createElement('div', {
+                className: 'advice-list-container advice-list-container--v4 advice-list-container--empty',
+                onClick: (e) => e.stopPropagation(),
+            },
+                React.createElement('div', { className: 'advice-list-handle', 'aria-hidden': true }),
+                React.createElement('div', { className: 'advice-list-header advice-list-header--v4' },
+                    React.createElement('span', { className: 'advice-list-title' }, 'Советы')
+                ),
+                React.createElement('div', { className: 'advice-v4-empty-copy' },
+                    'Пока всё по плану — советов нет'
+                )
             )
         );
     };
@@ -1783,364 +2053,80 @@
         adviceTrigger,
         displayedAdvice,
         toastVisible,
-        adviceExpanded,
         toastSwiped,
         toastSwipeX,
-        toastDetailsOpen,
-        toastAppearedAtRef,
         toastRatedState,
-        toastScheduledConfirm,
         haptic,
         dismissToast,
         handleToastRate,
-        handleToastInteraction,
-        setToastDetailsOpen,
-        setAdviceExpanded,
-        setAdviceTrigger,
         handleToastTouchStart,
         handleToastTouchMove,
         handleToastTouchEnd,
-        handleToastUndo,
-        handleToastSchedule,
-        adviceTechnicalDetails,
+        openAdviceDetailModal,
+        medicalDisclaimerSessionDismissed,
+        ADVICE_CATEGORY_NAMES,
         adviceTechnicalDetailsOpen,
-        openAdviceTechnicalDetails,
+        adviceTechnicalDetails,
         closeAdviceTechnicalDetails,
     }) {
         if (adviceTrigger === 'manual' || adviceTrigger === 'manual_empty') return null;
         if (!displayedAdvice || !toastVisible) return null;
-        const adviceDescription = getAdviceScienceSummary(displayedAdvice);
-        const hasDetailsContent = !!(adviceDescription || hasExpertContent(displayedAdvice));
+        if (shouldShowMedicalDisclaimerGate(adviceTrigger, toastVisible, medicalDisclaimerSessionDismissed)) {
+            return null;
+        }
+
+        const categoryRu = getAdviceCategoryRu(displayedAdvice, ADVICE_CATEGORY_NAMES || {});
 
         return React.createElement('div', {
-            className: 'macro-toast macro-toast-' + displayedAdvice.type +
-                ' visible' +
-                (adviceExpanded ? ' expanded' : '') +
-                (toastSwiped ? ' swiped' : '') +
-                (displayedAdvice.animationClass ? ' anim-' + displayedAdvice.animationClass : '') +
-                (displayedAdvice.id?.startsWith('personal_best') ? ' personal-best' : ''),
+            className: 'advice-v4-toast-wrap' + (toastSwiped ? ' advice-v4-toast-wrap--swiped' : ''),
             role: 'alert',
             'aria-live': 'polite',
-            onClick: () => {
-                if (toastSwiped) return;
-                if (Math.abs(toastSwipeX) < 10 && hasDetailsContent) {
-                    handleToastInteraction && handleToastInteraction('details_toggle');
-                    haptic && haptic('light');
-                    setToastDetailsOpen(!toastDetailsOpen);
-                }
-            },
             onTouchStart: handleToastTouchStart,
             onTouchMove: handleToastTouchMove,
             onTouchEnd: handleToastTouchEnd,
-            style: {
-                transform: toastSwiped
-                    ? 'translateX(-50%) translateY(0)'
-                    : `translateX(calc(-50% + ${toastSwipeX}px)) translateY(0)`,
-                opacity: toastSwiped ? 1 : 1 - Math.abs(toastSwipeX) / 150,
+            style: toastSwiped ? undefined : {
+                transform: `translateX(${toastSwipeX || 0}px)`,
+                opacity: 1 - Math.abs(toastSwipeX || 0) / 150,
             },
         },
-            toastSwiped && React.createElement('div', {
-                className: 'advice-undo-overlay',
-                style: {
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '12px',
-                    background: 'var(--toast-bg, #ecfdf5)',
-                    borderRadius: '10px',
-                    color: 'var(--color-slate-700, #334155)',
-                    fontWeight: 600,
-                    fontSize: '14px',
-                    zIndex: 10,
-                },
-            },
-                React.createElement('button', {
-                    onClick: (e) => {
-                        e.stopPropagation();
+            toastSwiped && (toastRatedState
+                ? React.createElement('div', { className: 'advice-v4-panel advice-v4-panel--toast-confirm' },
+                    React.createElement('div', { className: 'advice-v4-panel__title advice-v4-panel__title--inline' },
+                        renderAdviceV4Icon(React, toastRatedState === 'positive' ? 'thumb-up' : 'thumb-down'),
+                        toastRatedState === 'positive' ? 'Учту как полезный' : 'Учту как мимо'
+                    )
+                )
+                : renderAdviceReadFeedbackPanel(React, {
+                    onRatePositive: (e) => handleToastRate && handleToastRate(true, e),
+                    onRateNegative: (e) => handleToastRate && handleToastRate(false, e),
+                    onSkip: (e) => {
+                        e?.stopPropagation?.();
                         dismissToast && dismissToast();
                     },
-                    style: {
-                        position: 'absolute',
-                        top: '8px',
-                        right: '8px',
-                        border: 'none',
-                        background: 'rgba(0,0,0,0.05)',
-                        borderRadius: '999px',
-                        width: '24px',
-                        height: '24px',
-                        cursor: 'pointer',
-                        color: '#64748b'
-                    }
-                }, '×'),
-                toastScheduledConfirm
-                    ? React.createElement('span', {
-                        style: { display: 'flex', alignItems: 'center', gap: '8px', color: '#3b82f6' },
-                    }, '⏰ Напомню через 2 часа ✓')
-                    : toastRatedState
-                        ? React.createElement('span', {
-                            style: {
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                color: toastRatedState === 'positive' ? '#16a34a' : '#dc2626',
-                                animation: 'fadeIn 0.2s ease',
-                            }
-                        }, toastRatedState === 'positive' ? '👍 Учту как полезный' : '👎 Учту как слабый / вредный')
-                        : (displayedAdvice?.action?.primary
-                            // 🎯 Phase B.3 (2026-05-31): in-card action buttons.
-                            // Когда rule имеет advice.action.primary → render 2 кнопки:
-                            // Primary (handler exec) + Snooze (scheduleAdvice).
-                            // Иначе fallback на existing 3-button rate layout.
-                            ? React.createElement('div', {
-                                style: {
-                                    display: 'flex',
-                                    alignItems: 'stretch',
-                                    justifyContent: 'stretch',
-                                    gap: '10px',
-                                    width: '100%',
-                                    height: '100%',
-                                    padding: '8px 10px',
-                                    boxSizing: 'border-box',
-                                }
-                            },
-                                React.createElement('button', {
-                                    onClick: (e) => {
-                                        e.stopPropagation();
-                                        const ok = window.HEYS?.adviceActions?.execute?.(displayedAdvice);
-                                        if (handleToastRate && ok !== false) handleToastRate(true, e);
-                                        else if (dismissToast) dismissToast();
-                                    },
-                                    style: {
-                                        border: 'none',
-                                        background: 'rgba(22, 163, 74, 0.18)',
-                                        color: '#15803d',
-                                        padding: '10px 14px',
-                                        borderRadius: '18px',
-                                        fontSize: '15px',
-                                        fontWeight: 700,
-                                        cursor: 'pointer',
-                                        flex: '1 1 65%',
-                                        minWidth: '0',
-                                        minHeight: '72px',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        textAlign: 'center',
-                                        lineHeight: 1.15,
-                                        boxShadow: 'inset 0 0 0 1px rgba(22, 163, 74, 0.10)'
-                                    },
-                                }, displayedAdvice.action.primary.label || '✓ Сделать'),
-                                displayedAdvice.action.snooze && React.createElement('button', {
-                                    onClick: (e) => {
-                                        e.stopPropagation();
-                                        // Reuse existing schedule handler — он cleanly интегрирован
-                                        // в outcome tracking. Default 120 мин.
-                                        const minutes = Number(displayedAdvice.action.snooze.remindAfterMinutes) || 120;
-                                        if (handleToastSchedule) handleToastSchedule(e, minutes);
-                                        else if (dismissToast) dismissToast();
-                                    },
-                                    style: {
-                                        border: 'none',
-                                        background: 'rgba(59, 130, 246, 0.14)',
-                                        color: '#2563eb',
-                                        padding: '10px 8px',
-                                        borderRadius: '18px',
-                                        fontSize: '14px',
-                                        fontWeight: 600,
-                                        cursor: 'pointer',
-                                        flex: '1 1 35%',
-                                        minWidth: '0',
-                                        minHeight: '72px',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        textAlign: 'center',
-                                        lineHeight: 1.15,
-                                        boxShadow: 'inset 0 0 0 1px rgba(59, 130, 246, 0.06)'
-                                    },
-                                }, displayedAdvice.action.snooze.label || '⏰ Позже')
-                            )
-                            : React.createElement('div', {
-                            style: {
-                                display: 'flex',
-                                alignItems: 'stretch',
-                                justifyContent: 'stretch',
-                                gap: '10px',
-                                width: '100%',
-                                height: '100%',
-                                padding: '8px 10px',
-                                boxSizing: 'border-box',
-                            }
-                        },
-                            React.createElement('button', {
-                                onClick: (e) => handleToastRate && handleToastRate(false, e),
-                                style: {
-                                    border: 'none',
-                                    background: 'rgba(220, 38, 38, 0.16)',
-                                    color: '#b91c1c',
-                                    padding: '10px 14px',
-                                    borderRadius: '18px',
-                                    fontSize: '15px',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    flex: '1 1 40%',
-                                    minWidth: '0',
-                                    minHeight: '72px',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    textAlign: 'center',
-                                    lineHeight: 1.1,
-                                    boxShadow: 'inset 0 0 0 1px rgba(220, 38, 38, 0.06)'
-                                },
-                            }, '👎 Вредный'),
-                            React.createElement('button', {
-                                onClick: handleToastSchedule,
-                                style: {
-                                    border: 'none',
-                                    background: 'rgba(59, 130, 246, 0.14)',
-                                    color: '#2563eb',
-                                    padding: '10px 8px',
-                                    borderRadius: '18px',
-                                    fontSize: '15px',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    flex: '0 0 20%',
-                                    minWidth: '70px',
-                                    minHeight: '72px',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    textAlign: 'center',
-                                    lineHeight: 1.1,
-                                    boxShadow: 'inset 0 0 0 1px rgba(59, 130, 246, 0.06)'
-                                },
-                            }, '⏰ 2ч'),
-                            React.createElement('button', {
-                                onClick: (e) => handleToastRate && handleToastRate(true, e),
-                                style: {
-                                    border: 'none',
-                                    background: 'rgba(22, 163, 74, 0.16)',
-                                    color: '#15803d',
-                                    padding: '10px 14px',
-                                    borderRadius: '18px',
-                                    fontSize: '15px',
-                                    fontWeight: 700,
-                                    cursor: 'pointer',
-                                    flex: '1 1 40%',
-                                    minWidth: '0',
-                                    minHeight: '72px',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    textAlign: 'center',
-                                    lineHeight: 1.1,
-                                    boxShadow: 'inset 0 0 0 1px rgba(22, 163, 74, 0.06)'
-                                },
-                            }, '👍 Полезный')
-                        ))
-            ),
-            React.createElement('div', {
-                className: 'macro-toast-main',
-                style: { visibility: toastSwiped ? 'hidden' : 'visible' },
-            },
-                React.createElement('span', { className: 'macro-toast-icon' }, displayedAdvice.icon),
-                React.createElement('span', { className: 'macro-toast-text' }, displayedAdvice.text),
-                React.createElement('div', {
-                    className: 'macro-toast-expand',
-                    onClick: (e) => {
-                        e.stopPropagation();
-                        const timeSinceAppear = Date.now() - toastAppearedAtRef.current;
-                        if (timeSinceAppear < 500) return;
-                        handleToastInteraction && handleToastInteraction('expand_all', e);
-                        haptic && haptic('light');
-                        setAdviceExpanded(true);
-                        setAdviceTrigger('manual');
-                    },
-                    style: {
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        padding: '4px 8px',
-                        cursor: 'pointer',
-                        opacity: 0.7,
-                        transition: 'opacity 0.2s',
-                        lineHeight: 1.1,
-                    },
-                },
-                    React.createElement('span', { style: { fontSize: '14px' } }, '▲'),
-                    React.createElement('span', { style: { fontSize: '9px' } }, 'все'),
-                    React.createElement('span', { style: { fontSize: '9px' } }, 'советы')
-                )
-            ),
-            React.createElement('div', {
-                style: {
-                    display: 'flex',
-                    visibility: toastSwiped ? 'hidden' : 'visible',
-                    alignItems: 'center',
-                    justifyContent: hasDetailsContent ? 'space-between' : 'flex-end',
-                    padding: '6px 0 2px 0',
-                    marginTop: '2px',
-                },
-            },
-                hasDetailsContent && React.createElement('div', {
-                    onClick: (e) => {
-                        e.stopPropagation();
-                        handleToastInteraction && handleToastInteraction('details_toggle', e);
-                        haptic && haptic('light');
-                        setToastDetailsOpen(!toastDetailsOpen);
-                    },
-                    style: {
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        color: 'rgba(100, 100, 100, 0.8)',
-                        fontWeight: 500,
-                    },
-                },
-                    React.createElement('span', {
-                        style: {
-                            display: 'inline-block',
-                            transition: 'transform 0.2s',
-                            transform: toastDetailsOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                        },
-                    }, '▼'),
-                    toastDetailsOpen ? 'Скрыть' : 'Детали'
+                })),
+            !toastSwiped && React.createElement('div', { className: 'advice-v4-toast-card' },
+                React.createElement('p', { className: 'advice-v4-toast-card__text' }, displayedAdvice.text),
+                React.createElement('p', { className: 'advice-v4-toast-card__meta' },
+                    `${categoryRu} · тап — подробнее`
                 ),
-                React.createElement('span', {
-                    style: {
-                        fontSize: '11px',
-                        color: 'rgba(128, 128, 128, 0.6)',
-                    },
-                }, '← свайп — прочитано')
-            ),
-            !toastSwiped && toastDetailsOpen && hasDetailsContent && React.createElement('div', {
-                style: {
-                    padding: '8px 12px',
-                    fontSize: '13px',
-                    lineHeight: '1.4',
-                    color: 'rgba(80, 80, 80, 0.9)',
-                    background: 'rgba(0, 0, 0, 0.03)',
-                    borderRadius: '8px',
-                    marginTop: '4px',
-                    marginBottom: '4px',
-                },
-            },
-                adviceDescription && React.createElement('div', { className: 'advice-list-details__description' }, adviceDescription)
-            ),
-            !toastSwiped && toastDetailsOpen && hasExpertContent(displayedAdvice) && React.createElement('div', { className: 'advice-list-details__actions advice-list-details__actions--subtle' },
-                React.createElement('button', {
-                    type: 'button',
-                    className: 'advice-technical-trigger',
-                    onClick: (e) => {
-                        e.stopPropagation();
-                        openAdviceTechnicalDetails && openAdviceTechnicalDetails(displayedAdvice, e);
-                    }
-                }, 'Тех. детали')
+                React.createElement('div', { className: 'advice-v4-toast-card__actions' },
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'advice-v4-toast-card__secondary',
+                        onClick: (e) => {
+                            e.stopPropagation();
+                            dismissToast && dismissToast();
+                        },
+                    }, 'Позже'),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'advice-v4-toast-card__primary',
+                        onClick: (e) => {
+                            e.stopPropagation();
+                            openAdviceDetailModal && openAdviceDetailModal(displayedAdvice, e);
+                        },
+                    }, 'Открыть')
+                )
             ),
             adviceTechnicalDetailsOpen && React.createElement(AdviceTechnicalModal, {
                 React,
@@ -2449,6 +2435,13 @@
         const [dismissAllAnimation, setDismissAllAnimation] = useState(false);
         const [lastDismissedAdvice, setLastDismissedAdvice] = useState(null);
         const [undoFading, setUndoFading] = useState(false);
+        const [adviceServiceOpen, setAdviceServiceOpen] = useState(false);
+        const [adviceRulesPoolOpen, setAdviceRulesPoolOpen] = useState(false);
+        const [adviceSettingsOpen, setAdviceSettingsOpen] = useState(false);
+        const [medicalDisclaimerSessionDismissed, setMedicalDisclaimerSessionDismissed] = useState(false);
+        const [medicalDisclaimerNeverShow, setMedicalDisclaimerNeverShow] = useState(false);
+        const [adviceCategorySettings, setAdviceCategorySettings] = useState({});
+        const [undoCountdownSeconds, setUndoCountdownSeconds] = useState(ADVICE_UNDO_SECONDS);
         const adviceSwipeStart = useRef({});
         const adviceCardRefs = useRef({});
         const dismissToastRef = useRef(null);
@@ -2493,6 +2486,7 @@
         const ADVICE_CATEGORY_NAMES = {
             nutrition: 'Питание',
             training: 'Тренировки',
+            weight: 'Вес',
             lifestyle: 'Режим',
             hydration: 'Вода',
             emotional: 'Психология',
@@ -2934,11 +2928,6 @@
                             visibleAdviceCount: 0,
                             badgeCount: 0
                         });
-                        if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-                        toastTimeoutRef.current = setTimeout(() => {
-                            setToastVisible(false);
-                            setAdviceTrigger(null);
-                        }, 2000);
                     }
                 };
                 // Manual menu open must be synchronous for all sessions. Otherwise
@@ -3271,7 +3260,7 @@
 
         useEffect(() => {
             const isManualAdviceDrawerOpen = adviceTrigger === 'manual' && toastVisible;
-            const isAdviceOverlayOpen = isManualAdviceDrawerOpen || adviceDetailModalOpen || adviceTechnicalDetailsOpen || adviceDiagnosticsOpen;
+            const isAdviceOverlayOpen = isManualAdviceDrawerOpen || adviceDetailModalOpen || adviceTechnicalDetailsOpen || adviceDiagnosticsOpen || adviceRulesPoolOpen || adviceServiceOpen;
             if (!isAdviceOverlayOpen || typeof document === 'undefined') return undefined;
 
             const { body, documentElement } = document;
@@ -3425,6 +3414,103 @@
             }
             setLastDismissedAdvice(null);
         }, [lastDismissedAdvice]);
+
+        useEffect(() => {
+            if (!lastDismissedAdvice) {
+                setUndoCountdownSeconds(ADVICE_UNDO_SECONDS);
+                return undefined;
+            }
+            setUndoCountdownSeconds(ADVICE_UNDO_SECONDS);
+            const startedAt = Date.now();
+            const tick = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+                setUndoCountdownSeconds(Math.max(0, ADVICE_UNDO_SECONDS - elapsed));
+            }, 250);
+            return () => clearInterval(tick);
+        }, [lastDismissedAdvice?.id, lastDismissedAdvice?.action]);
+
+        const openAdviceService = useCallback((e) => {
+            e?.stopPropagation?.();
+            setAdviceServiceOpen(true);
+        }, []);
+
+        const closeAdviceService = useCallback(() => {
+            setAdviceServiceOpen(false);
+        }, []);
+
+        const openAdviceSettings = useCallback(() => {
+            setAdviceSettingsOpen(true);
+        }, []);
+
+        const closeAdviceSettings = useCallback(() => {
+            setAdviceSettingsOpen(false);
+        }, []);
+
+        useEffect(() => {
+            const handleOpenAdviceSettings = () => setAdviceSettingsOpen(true);
+            window.addEventListener('heys:open-advice-settings', handleOpenAdviceSettings);
+            return () => window.removeEventListener('heys:open-advice-settings', handleOpenAdviceSettings);
+        }, []);
+
+        useEffect(() => {
+            const syncCategorySettings = () => {
+                try {
+                    const settings = readAdviceSettings();
+                    if (settings?.categories) {
+                        setAdviceCategorySettings({ ...settings.categories });
+                    }
+                } catch (_) { }
+            };
+            window.addEventListener('heysAdviceSettingsChanged', syncCategorySettings);
+            window.addEventListener('heysSyncCompleted', syncCategorySettings);
+            return () => {
+                window.removeEventListener('heysAdviceSettingsChanged', syncCategorySettings);
+                window.removeEventListener('heysSyncCompleted', syncCategorySettings);
+            };
+        }, [readAdviceSettings]);
+
+        const toggleAdviceCategoryGroup = useCallback((keys, enabled) => {
+            try {
+                const settings = readAdviceSettings();
+                const categories = { ...(settings.categories || {}) };
+                keys.forEach((key) => {
+                    if (key !== 'health') categories[key] = enabled;
+                });
+                settings.categories = categories;
+                settings.updatedAt = Date.now();
+                if (HEYSRef.store?.set) {
+                    HEYSRef.store.set('heys_advice_settings', settings);
+                } else if (utils.lsSet) {
+                    utils.lsSet('heys_advice_settings', settings);
+                }
+                window.dispatchEvent(new CustomEvent('heysAdviceSettingsChanged', { detail: settings }));
+                setAdviceCategorySettings(categories);
+            } catch (_) { }
+        }, [HEYSRef.store, readAdviceSettings, utils.lsSet]);
+
+        const dismissMedicalDisclaimerGate = useCallback(() => {
+            if (medicalDisclaimerNeverShow) acceptMedicalDisclaimer();
+            setMedicalDisclaimerSessionDismissed(true);
+        }, [medicalDisclaimerNeverShow]);
+
+        const openAdviceRulesPool = useCallback((e) => {
+            e?.stopPropagation?.();
+            setAdviceServiceOpen(false);
+            setAdviceRulesPoolOpen(true);
+            if (typeof haptic === 'function') haptic('light');
+        }, [haptic]);
+
+        const closeAdviceRulesPool = useCallback((e) => {
+            e?.stopPropagation?.();
+            setAdviceRulesPoolOpen(false);
+        }, []);
+
+        const retryAdviceMarksSync = useCallback(async (e) => {
+            e?.stopPropagation?.();
+            try {
+                await HEYSRef?.cloud?.flushPendingQueue?.(5000);
+            } catch (_) { }
+        }, [HEYSRef]);
 
         const handleAdviceSwipeEnd = useCallback((adviceId) => {
             const gesture = adviceSwipeStart.current[adviceId];
@@ -3711,10 +3797,27 @@
             adviceSoundEnabled,
             undoLastDismiss,
             clearLastDismissed,
+            undoCountdownSeconds,
+            adviceServiceOpen,
+            openAdviceService,
+            closeAdviceService,
+            openAdviceRulesPool,
+            closeAdviceRulesPool,
+            adviceRulesPoolOpen,
+            retryAdviceMarksSync,
             totalAdviceCount,
             dismissToast,
             ADVICE_CATEGORY_NAMES,
             ewsWarnings,
+            adviceSettingsOpen,
+            openAdviceSettings,
+            closeAdviceSettings,
+            adviceCategorySettings,
+            toggleAdviceCategoryGroup,
+            medicalDisclaimerSessionDismissed,
+            medicalDisclaimerNeverShow,
+            setMedicalDisclaimerNeverShow,
+            dismissMedicalDisclaimerGate,
         };
     };
 

@@ -14,44 +14,23 @@
     shortDuration: 2000,      // ms — для коротких подтверждений
     maxVisible: 3,            // Максимум одновременно показанных
     animationDuration: 300,   // ms — длительность анимации
-    toastTopOffset: 72,       // px — отступ от верха (до шапки)
+    toastTopOffset: 72,       // px — отступ от верха (legacy fallback)
     tooltipToastEnabled: true, // Показывать подсказки (title) как toast на мобилке
     tooltipCooldown: 1200,     // ms — защита от спама
     tooltipMaxDepth: 4,        // Макс. глубина поиска title у родителя
-    tooltipTitle: 'ℹ️ Подсказка'
+    tooltipTitle: 'Подсказка'
   };
 
   // === ТИПЫ TOASTS ===
   const TOAST_TYPES = {
-    success: {
-      icon: '✅',
-      gradient: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-      shadowColor: 'rgba(16, 185, 129, 0.4)',
-    },
-    error: {
-      icon: '❌',
-      gradient: 'linear-gradient(135deg, #dc2626 0%, #ef4444 100%)',
-      shadowColor: 'rgba(239, 68, 68, 0.4)',
-    },
-    warning: {
-      icon: '⚠️',
-      gradient: 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)',
-      shadowColor: 'rgba(245, 158, 11, 0.4)',
-    },
-    info: {
-      icon: 'ℹ️',
-      gradient: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)',
-      shadowColor: 'rgba(59, 130, 246, 0.4)',
-    },
-    tip: {
-      icon: '💡',
-      gradient: 'linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%)',
-      shadowColor: 'rgba(139, 92, 246, 0.4)',
-    },
+    success: { icon: '✓' },
+    error: { icon: '!' },
+    warning: { icon: '!' },
+    info: { icon: 'i' },
+    tip: { icon: 'i' },
   };
 
   // === СОСТОЯНИЕ ===
-  let toastQueue = [];
   let visibleToasts = [];
   let containerId = 'heys-toast-container';
 
@@ -61,19 +40,6 @@
     if (!container) {
       container = document.createElement('div');
       container.id = containerId;
-      container.style.cssText = `
-        position: fixed;
-        top: calc(${CONFIG.toastTopOffset}px + env(safe-area-inset-top));
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 10002;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        align-items: center;
-        pointer-events: none;
-        max-width: 90vw;
-      `;
       document.body.appendChild(container);
     }
     return container;
@@ -81,105 +47,52 @@
 
   // === СОЗДАНИЕ TOAST ЭЛЕМЕНТА ===
   function createToastElement(options) {
-    const { type = 'info', title, message, icon, duration, action } = options;
+    const { type = 'info', title, message, icon, action } = options;
     const typeConfig = TOAST_TYPES[type] || TOAST_TYPES.info;
     const displayIcon = icon || typeConfig.icon;
 
     const toast = document.createElement('div');
-    toast.className = 'heys-toast';
-    toast.style.cssText = `
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 14px 18px;
-      background: ${typeConfig.gradient};
-      border-radius: 16px;
-      box-shadow: 0 4px 20px ${typeConfig.shadowColor}, 0 2px 8px rgba(0, 0, 0, 0.1);
-      backdrop-filter: blur(10px);
-      max-width: 360px;
-      min-width: 280px;
-      pointer-events: auto;
-      opacity: 0;
-      transform: translateY(-100%) scale(0.9);
-      transition: all ${CONFIG.animationDuration}ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
-      cursor: pointer;
-    `;
+    toast.className = `heys-toast heys-toast--${type}`;
 
-    // Иконка
     const iconEl = document.createElement('span');
-    iconEl.style.cssText = `
-      font-size: 22px;
-      flex-shrink: 0;
-      line-height: 1;
-    `;
+    iconEl.className = 'heys-toast__icon';
+    iconEl.setAttribute('aria-hidden', 'true');
     iconEl.textContent = displayIcon;
     toast.appendChild(iconEl);
 
-    // Контент
     const content = document.createElement('div');
-    content.style.cssText = `
-      flex: 1;
-      min-width: 0;
-    `;
+    content.className = 'heys-toast__content';
 
     if (title) {
       const titleEl = document.createElement('div');
-      titleEl.style.cssText = `
-        font-size: 14px;
-        font-weight: 600;
-        color: white;
-        margin-bottom: ${message ? '4px' : '0'};
-        line-height: 1.3;
-      `;
+      titleEl.className = 'heys-toast__title';
       titleEl.textContent = title;
       content.appendChild(titleEl);
     }
 
-    if (message) {
+    const messageText = message || (!title ? '' : null);
+    if (messageText) {
       const messageEl = document.createElement('div');
-      messageEl.style.cssText = `
-        font-size: 13px;
-        color: rgba(255, 255, 255, 0.9);
-        line-height: 1.4;
-        white-space: pre-line;
-      `;
-      messageEl.textContent = message;
+      messageEl.className = title ? 'heys-toast__message' : 'heys-toast__title';
+      messageEl.textContent = messageText;
       content.appendChild(messageEl);
     }
 
     toast.appendChild(content);
 
-    // Кнопка действия (опционально)
     if (action) {
       const actionBtn = document.createElement('button');
-      actionBtn.style.cssText = `
-        padding: 6px 12px;
-        background: rgba(255, 255, 255, 0.25);
-        color: white;
-        font-size: 12px;
-        font-weight: 600;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        flex-shrink: 0;
-        transition: background 0.15s;
-      `;
+      actionBtn.type = 'button';
+      actionBtn.className = 'heys-toast__action';
       actionBtn.textContent = action.label;
       actionBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         action.onClick?.();
         hideToast(toast);
       });
-      actionBtn.addEventListener('mouseenter', () => {
-        actionBtn.style.background = 'rgba(255, 255, 255, 0.35)';
-      });
-      actionBtn.addEventListener('mouseleave', () => {
-        actionBtn.style.background = 'rgba(255, 255, 255, 0.25)';
-      });
       toast.appendChild(actionBtn);
     }
 
-    // Закрытие по клику
     toast.addEventListener('click', () => hideToast(toast));
 
     return toast;
@@ -187,17 +100,14 @@
 
   // === ПОКАЗ TOAST ===
   function showToast(options) {
-    // Нормализация опций
     if (typeof options === 'string') {
       options = { message: options };
     }
 
     const { duration = CONFIG.defaultDuration } = options;
 
-    // Если превышен лимит — убираем старые
     while (visibleToasts.length >= CONFIG.maxVisible) {
-      const oldest = visibleToasts[0];
-      hideToast(oldest);
+      hideToast(visibleToasts[0]);
     }
 
     const container = ensureContainer();
@@ -206,13 +116,10 @@
     container.appendChild(toast);
     visibleToasts.push(toast);
 
-    // Анимация появления
     requestAnimationFrame(() => {
-      toast.style.opacity = '1';
-      toast.style.transform = 'translateY(0) scale(1)';
+      toast.classList.add('is-visible');
     });
 
-    // Автоскрытие
     if (duration > 0) {
       toast._timeout = setTimeout(() => hideToast(toast), duration);
     }
@@ -229,8 +136,8 @@
       clearTimeout(toast._timeout);
     }
 
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(-20px) scale(0.9)';
+    toast.classList.remove('is-visible');
+    toast.classList.add('is-hiding');
 
     setTimeout(() => {
       toast.remove();
@@ -238,7 +145,6 @@
     }, CONFIG.animationDuration);
   }
 
-  // === УДОБНЫЕ МЕТОДЫ ===
   const Toast = {
     show: showToast,
 
@@ -262,29 +168,23 @@
       return showToast({ type: 'tip', message, duration: CONFIG.longDuration, ...options });
     },
 
-    // Для критических действий — с кнопкой
     confirm(message, actionLabel, onAction) {
       return showToast({
         type: 'warning',
         message,
-        duration: 0, // Не закрывать автоматически
+        duration: 0,
         action: { label: actionLabel, onClick: onAction }
       });
     },
 
-    // Скрыть все
     hideAll() {
       [...visibleToasts].forEach(hideToast);
     }
   };
 
-  // === ЭКСПОРТ ===
   HEYS.Toast = Toast;
-
-  // Глобальный хелпер для замены alert()
   HEYS.toast = Toast.show;
 
-  // === MOBILE TOOLTIP → TOAST ===
   let lastTooltipAt = 0;
   let lastTooltipText = '';
 
@@ -329,17 +229,6 @@
   if (typeof document !== 'undefined') {
     document.addEventListener('click', handleTooltipTap, true);
   }
-
-  // === ИНТЕРЦЕПТОР alert() (опционально, для legacy) ===
-  // Можно включить если нужно перехватывать все alert()
-  // const originalAlert = window.alert;
-  // window.alert = function(message) {
-  //   if (HEYS.Toast) {
-  //     HEYS.Toast.info(message);
-  //   } else {
-  //     originalAlert(message);
-  //   }
-  // };
 
   devLog('[HEYS] Toast module loaded');
 

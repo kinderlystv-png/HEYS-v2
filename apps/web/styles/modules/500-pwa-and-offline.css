@@ -7,12 +7,22 @@
 /* === 01. PWA Install Banner === */
 .pwa-install-banner {
   position: fixed;
-  bottom: 0;
   left: 0;
   right: 0;
-  z-index: 1000;
-  padding: 0 16px calc(16px + env(safe-area-inset-bottom, 0px)) 16px;
+  bottom: 0;
+  z-index: 1100;
+  padding: 0;
   animation: slideUpBanner 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
+  pointer-events: none;
+}
+
+.pwa-install-banner > * {
+  pointer-events: auto;
+}
+
+.pwa-install-banner.ios-pwa-banner {
+  padding: 0;
 }
 
 @keyframes slideUpBanner {
@@ -27,32 +37,22 @@
   }
 }
 
-.pwa-banner-content {
+.pwa-banner-content--android {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 18px calc(16px + env(safe-area-inset-bottom, 0px));
+  background: var(--v4-float, var(--v4-bg, #fffaf1));
+  border: 0;
+  border-top: 1px solid var(--v4-line, rgba(32, 30, 29, 0.1));
+  border-radius: 26px 26px 0 0;
+  box-shadow: 0 -10px 36px rgba(80, 50, 20, 0.1);
+}
+
+.pwa-banner-main {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
-  background: linear-gradient(135deg, #1e40af 0%, var(--color-blue-500) 100%);
-  border-radius: 16px;
-  box-shadow: 0 -4px 20px rgba(59, 130, 246, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.pwa-banner-icon {
-  font-size: 32px;
-  flex-shrink: 0;
-  animation: bounceIcon 2s ease-in-out infinite;
-}
-
-@keyframes bounceIcon {
-
-  0%,
-  100% {
-    transform: scale(1);
-  }
-
-  50% {
-    transform: scale(1.1);
-  }
 }
 
 .pwa-banner-text {
@@ -63,124 +63,112 @@
 .pwa-banner-title {
   font-size: 15px;
   font-weight: 700;
-  color: var(--color-white);
-  margin-bottom: 2px;
+  color: var(--v4-sand-ink, #201e1d);
+  margin-bottom: 4px;
 }
 
 .pwa-banner-desc {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.pwa-banner-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
+  line-height: 1.35;
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.42));
 }
 
 .pwa-banner-install {
-  padding: 10px 20px;
-  background: var(--color-white);
-  color: #1e40af;
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 16px;
+  background: var(--v4-sand-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
   font-size: 13px;
   font-weight: 700;
   border: none;
-  border-radius: 10px;
+  border-radius: 999px;
   cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
 .pwa-banner-install:active {
-  transform: scale(0.95);
-  background: #f0f9ff;
+  transform: scale(0.97);
+  opacity: 0.92;
 }
 
-.pwa-banner-dismiss {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.2);
-  color: var(--color-white);
-  font-size: 14px;
+.pwa-banner-later {
+  width: 100%;
+  padding: 0;
+  background: transparent;
   border: none;
-  border-radius: 50%;
+  color: var(--v4-sand-act-text, #8a4a20);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
   cursor: pointer;
-  transition: all 0.15s ease;
 }
 
-.pwa-banner-dismiss:active {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(0.9);
-}
-
-/* Dark theme */
-[data-theme$="dark"] .pwa-banner-content {
-  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-  box-shadow: 0 -4px 20px rgba(37, 99, 235, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-[data-theme$="dark"] .pwa-banner-install {
-  background: var(--v4-hero, #1e293b);
-  color: var(--v4-act-text, #60a5fa);
-}
-
-[data-theme$="dark"] .pwa-banner-install:active {
-  background: var(--color-slate-700);
+.pwa-banner-later:active {
+  opacity: 0.72;
 }
 
 /* === 02. iOS Safari PWA Banner === */
-.ios-pwa-banner .pwa-banner-content {
-  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
-}
-
+.ios-pwa-banner .pwa-banner-content,
 .ios-banner-content {
+  display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 12px;
+  gap: 0;
+  padding: 8px 18px calc(16px + env(safe-area-inset-bottom, 0px));
+  background: var(--v4-float, var(--v4-bg, #fffaf1));
+  border: 0;
+  border-top: 1px solid var(--v4-line, rgba(32, 30, 29, 0.1));
+  border-radius: 26px 26px 0 0;
+  box-shadow: 0 -10px 36px rgba(80, 50, 20, 0.1);
 }
 
-.ios-banner-content .pwa-banner-icon {
-  display: none;
+.ios-sheet-handle {
+  width: 38px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--v4-line, rgba(32, 30, 29, 0.12));
+  margin: 0 auto 14px;
 }
 
-.ios-banner-content .pwa-banner-text {
-  flex: none;
+.ios-banner-content .pwa-banner-title {
+  color: var(--v4-sand-ink, #201e1d);
+  font-size: 15px;
+  margin-bottom: 0;
 }
 
 .ios-benefit-hint {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 8px;
-  letter-spacing: 0.3px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.42));
+  margin-top: 6px;
 }
 
 .ios-steps {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 4px;
+  gap: 10px;
+  margin-top: 16px;
 }
 
 .ios-step {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--v4-sand-ink, #201e1d);
 }
 
 .ios-step-num {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  background: var(--v4-accent-bg, #f0dcc6);
+  color: var(--v4-sand-act-text, #8a4a20);
+  border-radius: 999px;
   font-size: 11px;
   font-weight: 700;
   flex-shrink: 0;
@@ -192,68 +180,30 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  background: #007AFF;
-  border-radius: 6px;
-  color: var(--color-white);
-  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.4);
-  animation: iosPulse 2s ease-in-out infinite;
-}
-
-@keyframes iosPulse {
-
-  0%,
-  100% {
-    transform: scale(1);
-    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.4);
-  }
-
-  50% {
-    transform: scale(1.1);
-    box-shadow: 0 2px 12px rgba(0, 122, 255, 0.6);
-  }
+  background: var(--v4-accent-bg, #f0dcc6);
+  border-radius: 8px;
+  color: var(--v4-sand-act-text, #8a4a20);
+  flex-shrink: 0;
 }
 
 .ios-got-it-btn {
   width: 100%;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--color-white);
+  min-height: 44px;
+  margin-top: 18px;
+  padding: 0 16px;
+  background: var(--v4-sand-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
   font-size: 14px;
-  font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
+  font-weight: 700;
+  border: none;
+  border-radius: 999px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
 .ios-got-it-btn:active {
-  background: rgba(255, 255, 255, 0.25);
   transform: scale(0.98);
-}
-
-.ios-arrow-hint {
-  position: absolute;
-  bottom: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: rgba(255, 255, 255, 0.6);
-  animation: iosArrowBounce 1s ease-in-out infinite;
-}
-
-@keyframes iosArrowBounce {
-
-  0%,
-  100% {
-    transform: translateX(-50%) translateY(0);
-  }
-
-  50% {
-    transform: translateX(-50%) translateY(4px);
-  }
-}
-
-[data-theme$="dark"] .ios-pwa-banner .pwa-banner-content {
-  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  opacity: 0.92;
 }
 
 /* ========================================

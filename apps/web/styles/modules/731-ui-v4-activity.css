@@ -162,7 +162,7 @@ body:has(.activity-v4) .hdr::after {
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1;
-  color: #475569;
+  color: var(--v4-ink-2, #64748b);
 }
 
 .activity-v4-steps__values {
@@ -193,6 +193,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-steps__fill {
   height: 5px;
   border-radius: 999px;
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 .activity-v4-steps__slider {

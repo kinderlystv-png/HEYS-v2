@@ -183,7 +183,185 @@
     } catch (_) { }
   }
 
-  // ✅ Общий helper: summary-модалка для multiProductMode
+  const PHOTO_LIMIT_PER_MEAL = HEYS.dayGallery?.PHOTO_LIMIT_PER_MEAL || 10;
+
+  // ✅ Общий helper: summary-модалка для multiProductMode (канвас v4 · экран 6)
+  function MealSummaryV4Step({ context }) {
+    const fileInputRef = React.useRef(null);
+    const {
+      mealItems,
+      mealKcal,
+      mealItemCount,
+      remainingKcal,
+      isGoalReached,
+      onAddMore,
+      onSavePreset,
+      onPhoto,
+      onDone,
+      mealIndex,
+      mealId,
+      mealPhotos: initialMealPhotos,
+      summaryTitle
+    } = context || {};
+
+    const [mealPhotos, setMealPhotos] = React.useState(() => Array.isArray(initialMealPhotos) ? initialMealPhotos : []);
+
+    React.useEffect(() => {
+      if (Array.isArray(initialMealPhotos)) {
+        setMealPhotos(initialMealPhotos);
+      }
+    }, [initialMealPhotos]);
+
+    const productWord = mealItemCount === 1
+      ? 'продукт'
+      : (mealItemCount >= 2 && mealItemCount <= 4 ? 'продукта' : 'продуктов');
+
+    const photosAtLimit = mealPhotos.length >= PHOTO_LIMIT_PER_MEAL;
+
+    const handlePhotoPick = () => {
+      if (typeof onPhoto !== 'function' || photosAtLimit) return;
+      fileInputRef.current?.click();
+    };
+
+    const handlePhotoFile = (event) => {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file || typeof onPhoto !== 'function') return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const payload = {
+          mealIndex,
+          mealId,
+          photo: reader.result,
+          filename: file.name,
+          timestamp: Date.now()
+        };
+        onPhoto(payload);
+        setMealPhotos((prev) => [...prev, {
+          id: `local_${Date.now()}`,
+          data: payload.photo,
+          filename: payload.filename,
+          timestamp: payload.timestamp,
+          pending: true,
+          uploading: true
+        }]);
+      };
+      reader.readAsDataURL(file);
+    };
+
+    const openPhotoViewer = (photoIndex) => {
+      if (!mealPhotos.length) return;
+      if (typeof HEYS.showPhotoViewer === 'function') {
+        HEYS.showPhotoViewer([...mealPhotos], photoIndex, null);
+      } else {
+        const src = mealPhotos[photoIndex]?.data || mealPhotos[photoIndex]?.url;
+        if (src) window.open(src, '_blank');
+      }
+    };
+
+    return React.createElement('div', { className: 'aps-v4-meal-summary' },
+      typeof onPhoto === 'function' && React.createElement('input', {
+        ref: fileInputRef,
+        type: 'file',
+        accept: 'image/*',
+        capture: 'environment',
+        style: { display: 'none' },
+        onChange: handlePhotoFile
+      }),
+      React.createElement('div', { className: 'aps-v4-meal-summary__hero' },
+        React.createElement('div', { className: 'aps-v4-meal-summary__hero-label' }, 'Итого за приём'),
+        React.createElement('div', { className: 'aps-v4-meal-summary__hero-metrics' },
+          React.createElement('span', { className: 'aps-v4-meal-summary__hero-kcal' }, String(mealKcal)),
+          React.createElement('span', { className: 'aps-v4-meal-summary__hero-meta' },
+            `ккал · ${mealItemCount} ${productWord}`)
+        ),
+        React.createElement('div', { className: 'aps-v4-meal-summary__hero-foot' },
+          isGoalReached
+            ? 'Норма дня выполнена'
+            : `До нормы дня остаётся ${Math.max(0, remainingKcal)}`)
+      ),
+      React.createElement('div', { className: 'aps-v4-meal-summary__list' },
+        (mealItems || []).map((item, index) =>
+          React.createElement('div', {
+            key: `${item.name}-${item.grams}-${index}`,
+            className: 'aps-v4-meal-summary__row' + (index === mealItems.length - 1 ? ' is-last' : '')
+          },
+            React.createElement('span', { className: 'aps-v4-meal-summary__row-name' },
+              item.name,
+              ' ',
+              React.createElement('span', { className: 'aps-v4-meal-summary__row-grams' }, `${item.grams} г`)
+            ),
+            React.createElement('span', { className: 'aps-v4-meal-summary__row-kcal' }, String(item.kcal))
+          )
+        )
+      ),
+      typeof onPhoto === 'function' && React.createElement('div', { className: 'aps-v4-meal-summary__photo-tier' }, 'Фото приёма'),
+      typeof onPhoto === 'function' && React.createElement('div', { className: 'aps-v4-meal-summary__photo-grid' },
+        mealPhotos.map((photo, photoIndex) => {
+          const src = photo.data || photo.url;
+          if (!src) return null;
+          const timeStr = photo.timestamp
+            ? new Date(photo.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+            : null;
+          const handleDeletePhoto = (event) => {
+            event?.stopPropagation?.();
+            event?.preventDefault?.();
+            setMealPhotos((prev) => prev.filter((_, index) => index !== photoIndex));
+          };
+          return React.createElement('div', {
+            key: photo.id || photoIndex,
+            className: 'aps-v4-meal-summary__photo-thumb-wrap'
+          },
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-v4-meal-summary__photo-thumb',
+              onClick: () => openPhotoViewer(photoIndex),
+              'aria-label': 'Открыть фото приёма'
+            },
+              React.createElement('img', { src, alt: '' }),
+              timeStr && React.createElement('span', { className: 'aps-v4-meal-summary__photo-time' }, timeStr)
+            ),
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-v4-meal-summary__photo-delete',
+              onClick: handleDeletePhoto,
+              'aria-label': 'Удалить фото'
+            }, '×')
+          );
+        }),
+        !photosAtLimit && React.createElement('button', {
+          type: 'button',
+          className: 'aps-v4-meal-summary__photo-add',
+          onClick: handlePhotoPick,
+          'aria-label': 'Добавить фото приёма'
+        },
+          React.createElement('span', { className: 'aps-v4-meal-summary__photo-add-icon', 'aria-hidden': 'true' }, '+'),
+          React.createElement('span', null, 'Добавить')
+        )
+      ),
+      typeof onPhoto === 'function' && React.createElement('div', { className: 'aps-v4-meal-summary__photo-note' },
+        'Фото принадлежит приёму, а не отдельному продукту.'
+      ),
+      React.createElement('div', { className: 'aps-v4-meal-summary__actions aps-v4-meal-summary__actions--row' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'aps-v4-btn-ghost aps-v4-meal-summary__btn aps-v4-btn-paper',
+          onClick: onAddMore
+        }, 'Добавить ещё'),
+        typeof onSavePreset === 'function' && React.createElement('button', {
+          type: 'button',
+          className: 'aps-v4-btn-ghost aps-v4-meal-summary__btn aps-v4-btn-paper',
+          onClick: onSavePreset
+        }, 'Сохранить как набор')
+      ),
+      React.createElement('button', {
+        type: 'button',
+        className: 'aps-v4-btn-primary aps-v4-meal-summary__done',
+        onClick: onDone
+      }, 'Готово')
+    );
+  }
+
   async function showMultiProductSummary({
     day,
     mealIndex,
@@ -192,21 +370,22 @@
     per100,
     scale,
     onAddMore,
-    onAddLast
+    onAddLast,
+    onPhoto,
+    onSavePreset,
+    mealId: requestedMealId
   }) {
-    if (!HEYS.ConfirmModal?.show) return;
+    if (!HEYS.StepModal?.show) return;
 
     const currentDay = day || HEYS.Day?.getDay?.() || {};
-    const currentMeal = currentDay?.meals?.[mealIndex];
+    const resolvedMealIndex = resolveMealIndex(currentDay, mealIndex, requestedMealId);
+    const currentMeal = currentDay?.meals?.[resolvedMealIndex];
     if (!currentMeal) return;
 
     const localPIndex = pIndex || HEYS.dayUtils?.buildProductIndex?.() || HEYS.products?.buildIndex?.() || {};
     const mealTotals = HEYS.models?.mealTotals?.(currentMeal, localPIndex) || {};
     const mealKcal = Math.round(mealTotals.kcal || 0);
 
-    // HEYS.dayUtils.getOptimumForDay — призрак, такого метода нет ни в одном
-    // исходнике: оптимум всегда падал в жёсткий фолбэк 2000, и «осталось
-    // ккал» после добавления еды считалось не против реальной цели дня.
     const profile = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
     const optimumData = HEYS.TDEE?.resolveDailyTargets?.(profile, currentDay) || {};
     const optimum = Math.round(optimumData.kcal || 2000);
@@ -214,241 +393,117 @@
     const dayTotals = HEYS.dayCalculations?.calculateDayTotals?.(currentDay, localPIndex) || {};
     const eatenKcal = Math.round(dayTotals.kcal || 0);
     const remainingKcal = optimum - eatenKcal;
-
-    const mealScore = HEYS.mealScoring?.calcKcalScore?.(mealKcal, null, optimum, currentMeal.time, null);
-    const mealQuality = HEYS.mealScoring?.getMealQualityScore?.(currentMeal, null, optimum, localPIndex, null);
-    const mealKcalStatus = (() => {
-      let status = 'good';
-      if (mealScore?.ok === false) status = 'bad';
-      else if ((mealScore?.issues || []).length > 0) status = 'warn';
-      if (mealQuality?.score != null) {
-        if (mealQuality.score < 50) status = 'bad';
-        else if (mealQuality.score < 75 && status !== 'bad') status = 'warn';
-      }
-      return status;
-    })();
-    const mealKcalColor = mealKcalStatus === 'bad'
-      ? '#ef4444'
-      : mealKcalStatus === 'warn'
-        ? '#eab308'
-        : '#22c55e';
-
-    const heroMetrics = HEYS.dayHeroMetrics?.computeHeroMetrics?.({
-      day: currentDay,
-      eatenKcal,
-      optimum,
-      dayTargetDef: currentDay?.deficitPct,
-      factDefPct: currentDay?.deficitPct,
-      r0: (v) => Math.round(v),
-      ratioZones: HEYS.ratioZones
-    });
-    const remainingColor = heroMetrics?.remainCol?.text
-      || (remainingKcal > 100 ? '#22c55e' : remainingKcal >= 0 ? '#eab308' : '#ef4444');
-
-    const mealOverLimit = (mealScore?.issues || []).some((issue) =>
-      String(issue).includes('переед') || String(issue).includes('много')
-    ) || mealScore?.ok === false;
-
     const isGoalReached = remainingKcal <= 0;
-    const mealName = currentMeal.name || `Приём ${mealIndex + 1}`;
-    const summaryActions = [
-      {
-        key: 'finish',
-        label: 'Завершить',
-        value: 'finish',
-        style: 'primary',
-        variant: 'fill',
-        row: 0,
-        isCancel: true
-      },
-      {
-        key: 'add-last',
-        label: 'Добавить последний',
-        value: 'add-last',
-        style: 'warning',
-        variant: 'fill',
-        row: 0,
-        isDefault: true,
-        className: 'confirm-modal-btn--last-one'
-      },
-      {
-        key: 'add-more',
-        label: 'Добавить ещё несколько',
-        value: 'add-more',
-        style: 'success',
-        variant: 'fill',
-        row: 1,
-        className: 'confirm-modal-btn--multi-continue'
-      },
-      // 🆕 «Ещё N продуктов» — без промежуточной summary-модалки
-      ...[2, 3, 4].map((n) => ({
-        key: `add-${n}`,
-        label: `ещё ${n}`,
-        value: `add-${n}`,
-        style: 'primary',
-        variant: 'outline',
-        row: 2,
-        className: 'confirm-modal-btn--repeat'
-      }))
-    ];
+
+    const localizeMealName = HEYS.dayUtils?.localizeMealName;
+    const summaryTitle = [
+      typeof localizeMealName === 'function'
+        ? localizeMealName(currentMeal.name, 'Приём')
+        : (currentMeal.name || 'Приём'),
+      currentMeal.time
+    ].filter(Boolean).join(' · ');
 
     const mealItems = (currentMeal.items || []).map((item) => {
       const product = getProductFromItem(item, localPIndex) || { name: item.name || '?' };
       const grams = +item.grams || 0;
       const p100 = per100(product);
       const itemKcal = Math.round(scale(p100.kcal100, grams));
-      let name = product.name || item.name || '?';
-      if (name.length > 22) name = name.slice(0, 20) + '…';
-      return { name, grams, kcal: itemKcal };
+      return {
+        name: product.name || item.name || '?',
+        grams,
+        kcal: itemKcal
+      };
     });
 
-    const ProductsList = mealItems.length > 0 ? React.createElement('div', {
-      className: 'confirm-modal-products-list',
-      style: {
-        margin: '10px 0',
-        padding: '8px 10px',
-        background: 'var(--bg-secondary, #f8fafc)',
-        borderRadius: '8px',
-        fontSize: '13px'
-      }
-    },
-      React.createElement('div', {
-        style: {
-          fontSize: '11px',
-          fontWeight: '600',
-          color: '#64748b',
-          marginBottom: '6px',
-          textTransform: 'uppercase',
-          letterSpacing: '0.3px'
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        resolve(result);
+      };
+
+      const dispatchFinished = () => {
+        try {
+          window.dispatchEvent(new CustomEvent('heys:meal-flow-finished', {
+            detail: {
+              source: 'day-add-product-summary',
+              dateKey: currentDay?.date || null,
+              mealIndex: resolvedMealIndex,
+              mealId: currentMeal.id || requestedMealId || null
+            }
+          }));
+        } catch (_) {
+          // ignore
         }
-      }, 'В приёме:'),
-      mealItems.slice(0, 6).map((item, idx) =>
-        React.createElement('div', {
-          key: idx,
-          style: {
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '3px 0',
-            borderBottom: idx < Math.min(mealItems.length, 6) - 1 ? '1px dotted #e2e8f0' : 'none'
+      };
+
+      const closeSummary = (result, { scrollToDiary = false } = {}) => {
+        HEYS.StepModal?.hide?.({ scrollToDiary });
+        finish(result);
+      };
+
+      HEYS.StepModal.show({
+        steps: [{
+          id: 'meal-summary',
+          title: summaryTitle,
+          component: MealSummaryV4Step,
+          hideHeaderNext: true
+        }],
+        modalClassName: 'aps-v4-meal-summary-modal',
+        showGreeting: false,
+        showStreak: false,
+        showTip: false,
+        showProgress: false,
+        hidePrimaryOnFirst: true,
+        context: {
+          day: currentDay,
+          mealIndex: resolvedMealIndex,
+          mealId: currentMeal.id || requestedMealId || null,
+          dateKey: currentDay?.date || null,
+          mealItems,
+          mealKcal,
+          mealItemCount: mealItems.length,
+          remainingKcal: Math.max(0, remainingKcal),
+          isGoalReached,
+          mealPhotos: currentMeal.photos || [],
+          summaryTitle,
+          onAddMore: () => {
+            closeSummary('add-more', { scrollToDiary: false });
+            onAddMore?.(currentDay);
+          },
+          onSavePreset: typeof onSavePreset === 'function'
+            ? () => {
+              closeSummary('save-preset', { scrollToDiary: false });
+              onSavePreset(currentDay);
+            }
+            : null,
+          onPhoto: typeof onPhoto === 'function' ? onPhoto : null,
+          onDone: () => {
+            dispatchFinished();
+            if (isGoalReached && HEYS.Confetti?.fire) {
+              HEYS.Confetti.fire();
+            }
+            closeSummary('finish', { scrollToDiary: true });
           }
         },
-          React.createElement('span', { style: { color: '#334155' } },
-            item.name,
-            ' ',
-            React.createElement('span', { style: { color: '#94a3b8', fontSize: '11px' } }, item.grams + 'г')
-          ),
-          React.createElement('span', {
-            style: { fontWeight: '600', color: '#475569', minWidth: '45px', textAlign: 'right' }
-          }, item.kcal)
-        )
-      ),
-      mealItems.length > 6 && React.createElement('div', {
-        style: { fontSize: '11px', color: '#94a3b8', marginTop: '4px', textAlign: 'center' }
-      }, '...и ещё ' + (mealItems.length - 6)),
-      React.createElement('div', {
-        style: {
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginTop: '6px',
-          paddingTop: '6px',
-          borderTop: '1px solid #cbd5e1',
-          fontWeight: '700'
+        onClose: () => {
+          dispatchFinished();
+          finish('finish');
         }
-      },
-        React.createElement('span', { style: { color: '#334155' } }, 'Итого'),
-        React.createElement('span', { style: { color: mealKcalColor } }, mealKcal + ' ккал')
-      )
-    ) : null;
-
-    let modalResult = false;
-
-    if (isGoalReached) {
-      modalResult = await HEYS.ConfirmModal.show({
-        icon: '🎉',
-        title: 'Норма выполнена!',
-        text: React.createElement('div', { className: 'confirm-modal-text-block' },
-          React.createElement('div', null,
-            'Отличная работа! В "',
-            mealName,
-            '" уже ',
-            React.createElement('span', {
-              className: 'confirm-modal-kcal',
-              style: { color: mealKcalColor }
-            }, mealKcal + ' ккал'),
-            '.'
-          ),
-          ProductsList,
-          React.createElement('div', { style: { marginTop: '8px' } },
-            'Всего за день: ',
-            React.createElement('span', {
-              className: 'confirm-modal-kcal',
-              style: { color: remainingColor }
-            }, eatenKcal + ' ккал')
-          )
-        ),
-        actions: summaryActions,
-        defaultActionValue: 'add-last',
-        cancelActionValue: 'finish'
       });
-
-      if (modalResult === 'finish' && HEYS.Confetti?.fire) {
-        HEYS.Confetti.fire();
+    }).then((modalResult) => {
+      if (modalResult === 'add-last' && onAddLast) {
+        onAddLast(currentDay);
       }
-    } else {
-      modalResult = await HEYS.ConfirmModal.show({
-        icon: '🍽️',
-        title: `Добавить ещё в ${String(mealName).toLowerCase()}?`,
-        text: React.createElement('div', { className: 'confirm-modal-text-block' },
-          ProductsList,
-          React.createElement('div', { style: { marginTop: ProductsList ? '8px' : '0' } },
-            'До нормы сегодня осталось ',
-            React.createElement('span', {
-              className: 'confirm-modal-remaining',
-              style: { color: remainingColor }
-            }, Math.max(0, remainingKcal) + ' ккал'),
-            '.'
-          ),
-          mealOverLimit && React.createElement('div', { className: 'confirm-modal-warning' },
-            '⚠️ Похоже, приём уже тяжеловат.'
-          )
-        ),
-        actions: summaryActions,
-        defaultActionValue: 'add-last',
-        cancelActionValue: 'finish'
-      });
-    }
-
-    if (modalResult === 'add-last' && onAddLast) {
-      onAddLast(currentDay);
-    }
-
-    if (modalResult === 'add-more' && onAddMore) {
-      onAddMore(currentDay);
-    }
-
-    if (modalResult === 'finish' || modalResult === false) {
-      try {
-        window.dispatchEvent(new CustomEvent('heys:meal-flow-finished', {
-          detail: {
-            source: 'day-add-product-summary',
-            dateKey: currentDay?.date || null,
-            mealIndex
-          }
-        }));
-      } catch (_) {
-        // ignore
+      if (typeof modalResult === 'string' && /^add-(\d+)$/.test(modalResult) && onAddMore) {
+        const repeatCount = parseInt(modalResult.slice(4), 10);
+        if (Number.isFinite(repeatCount) && repeatCount > 1) {
+          onAddMore(currentDay, repeatCount);
+        }
       }
-    }
-
-    // 🆕 add-2 / add-3 / add-4 → autoRepeat
-    if (typeof modalResult === 'string' && /^add-(\d+)$/.test(modalResult) && onAddMore) {
-      const repeatCount = parseInt(modalResult.slice(4), 10);
-      if (Number.isFinite(repeatCount) && repeatCount > 1) {
-        onAddMore(currentDay, repeatCount);
-      }
-    }
+      return modalResult;
+    });
   }
 
   HEYS.dayAddProductSummary = HEYS.dayAddProductSummary || {};
@@ -1127,6 +1182,7 @@
               HEYS.dayAddProductSummary.show({
                 day: updatedDayForSummary,
                 mealIndex: summaryMealIndex,
+                mealId,
                 pIndex: HEYS.dayUtils?.buildProductIndex?.() || HEYS.products?.buildIndex?.() || {},
                 getProductFromItem,
                 per100,
@@ -1136,7 +1192,23 @@
                   mealId,
                   autoRepeatCount: autoRepeatCount || 0
                 }),
-                onAddLast: (updatedDay) => openAddModal({ day: updatedDay, mealId, multiProductMode: false })
+                onAddLast: (updatedDay) => openAddModal({ day: updatedDay, mealId, multiProductMode: false }),
+                onPhoto: (payload) => handleAddPhoto({
+                  ...payload,
+                  mealIndex: summaryMealIndex,
+                  mealId: payload?.mealId || mealId
+                }),
+                onSavePreset: () => {
+                  const latestDay = HEYS.Day?.getDay?.() || updatedDayForSummary;
+                  HEYS.AddProductStep?.show?.({
+                    mealIndex: summaryMealIndex,
+                    mealId,
+                    day: latestDay,
+                    dateKey: date,
+                    openPresetsCreate: true,
+                    onAdd: handleAdd
+                  });
+                }
               });
             }, 100);
           });

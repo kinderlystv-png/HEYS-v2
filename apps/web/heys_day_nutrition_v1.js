@@ -96,6 +96,15 @@
     });
   }
 
+  function findMealIndexInDay(dayData, meal) {
+    const meals = Array.isArray(dayData?.meals) ? dayData.meals : [];
+    if (meal?.id) {
+      const byId = meals.findIndex((entry) => entry && entry.id === meal.id);
+      if (byId >= 0) return byId;
+    }
+    return meals.indexOf(meal);
+  }
+
   function formatDurationShort(totalMinutes) {
     const mins = Math.max(0, Math.round(Number(totalMinutes) || 0));
     const h = Math.floor(mins / 60);
@@ -162,14 +171,14 @@
       waterGoal
     } = ctx;
 
-    const { addMeal, addWater, haptic } = actions || {};
+    const { addMeal, addWater, openAddProductForMeal, haptic } = actions || {};
 
     const budget = Math.round(Number(displayOptimum) || 0);
     const eaten = Math.round(Number(eatenKcal) || 0);
     const remaining = Math.max(0, Math.round(Number(displayRemainingKcal) || 0));
     const progressPct = budget > 0 ? Math.min(100, Math.round((eaten / budget) * 100)) : 0;
 
-    const meals = sortMealsAscending(day?.meals || []).filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0);
+    const meals = sortMealsAscending(day?.meals || []);
 
     const fiberEaten = Math.round(Number(dayTot?.fiber) || 0);
     const fiberNorm = Math.round(Number(normAbs?.fiber) || 0);
@@ -224,15 +233,41 @@
             const kcal = Math.round(Number(totals.kcal) || 0);
             const time = meal?.time || '--:--';
             const title = mealTypeLabel(meal);
+            const mealIndex = findMealIndexInDay(day, meal);
+            const isEmpty = !Array.isArray(meal?.items) || meal.items.length === 0;
+            const summary = mealItemSummary(meal, pIndex, 3);
+            const openAddProduct = () => {
+              if (typeof openAddProductForMeal !== 'function') return;
+              openAddProductForMeal({
+                mealIndex,
+                mealId: meal?.id || null,
+                source: 'nutrition-v4-meal-row',
+              });
+              haptic?.('light');
+            };
             return React.createElement('div', {
               key: 'meal-row-' + idx + '-' + (meal.id || meal.time || idx),
-              className: 'nutrition-v4-meal-row'
+              className: 'nutrition-v4-meal-row' + (isEmpty ? ' nutrition-v4-meal-row--empty' : ''),
+              'data-meal-id': meal?.id || undefined,
             },
               React.createElement('div', { className: 'nutrition-v4-meal-row__head' },
                 React.createElement('span', { className: 'nutrition-v4-meal-row__title' }, time + ' · ' + title),
                 React.createElement('span', { className: 'nutrition-v4-meal-row__kcal' }, kcal)
               ),
-              React.createElement('div', { className: 'nutrition-v4-meal-row__items' }, mealItemSummary(meal, pIndex, 3))
+              React.createElement('div', { className: 'nutrition-v4-meal-row__body' },
+                React.createElement('div', { className: 'nutrition-v4-meal-row__items' }, summary),
+                React.createElement('button', {
+                  type: 'button',
+                  className: 'nutrition-v4-meal-row__add',
+                  'aria-label': (isEmpty ? 'Добавить продукт в ' : 'Добавить ещё продукт в ') + title,
+                  'data-add-product': 'single',
+                  onClick: (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openAddProduct();
+                  }
+                }, isEmpty ? '+ продукт' : '+ ещё')
+              )
             );
           })
       ),

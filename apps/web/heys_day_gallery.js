@@ -181,11 +181,10 @@
     
     // Создаём overlay
     const overlay = document.createElement('div');
-    overlay.className = 'photo-viewer-overlay';
+    overlay.className = 'photo-viewer-overlay photo-viewer-overlay--v4';
     overlay.style.cssText = `
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.95);
       z-index: 10000;
       display: flex;
       flex-direction: column;
@@ -199,6 +198,7 @@
     
     // Верхняя панель
     const topBar = document.createElement('div');
+    topBar.className = 'photo-viewer-topbar';
     topBar.style.cssText = `
       position: absolute;
       top: 0; left: 0; right: 0;
@@ -337,7 +337,7 @@
         const dot = document.createElement('span');
         dot.style.cssText = `
           width: 8px; height: 8px; border-radius: 50%;
-          background: ${i === currentIndex ? 'white' : 'rgba(255,255,255,0.4)'};
+          background: ${i === currentIndex ? 'var(--v4-sand-act, #c67139)' : 'rgba(255,255,255,0.35)'};
           transition: background 0.2s;
         `;
         dotsContainer.appendChild(dot);

@@ -341,6 +341,24 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
 
     const CURATOR_COMPETITION_CACHE_TTL_MS = 2 * 60 * 1000;
 
+    const CLIENT_TAB_TITLES = {
+        widgets: 'Главная',
+        diary: 'Питание',
+        activity: 'Актив',
+        stats: 'Отчёты',
+        insights: 'Инсайты',
+        tasks: 'Задачи',
+        board: 'Доска',
+        user: 'Профиль',
+        overview: 'Обзор',
+    };
+
+    function applyBrowserTabTitle(tabKey) {
+        if (typeof document === 'undefined') return;
+        const label = CLIENT_TAB_TITLES[tabKey];
+        document.title = label ? `HEYS — ${label}` : 'HEYS';
+    }
+
     // Переключение вкладки с коммитом висящего undo. Живёт на уровне модуля:
     // пользуются и AppHeader (бейдж пушей, «Настройки» в дропдауне аккаунта),
     // и AppTabsNav. Раньше хелпер был локальным в AppTabsNav, а AppHeader звал
@@ -357,6 +375,15 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             }
         } catch (e) { }
         setTab(nextTab);
+    }
+
+    /** Single owner for .wrap.dropdown-blur-active — only account dropdown blurs .wrap. */
+    function syncDropdownBlurActive() {
+        if (typeof document === 'undefined') return;
+        var wrapEl = document.querySelector('.wrap');
+        if (!wrapEl) return;
+        var clientOpen = !!document.querySelector('.client-dropdown-backdrop');
+        wrapEl.classList.toggle('dropdown-blur-active', clientOpen);
     }
 
     function AppHeader(props) {
@@ -891,6 +918,24 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const syncFadeTimerRef = React.useRef(null);
         const SYNC_BADGE_MIN_PENDING = 2;
         const [checkinStatus, setCheckinStatus] = React.useState(null);
+        const readHeaderDarkMode = React.useCallback(() => {
+            try {
+                const themeAttr = document.documentElement.getAttribute('data-theme') || '';
+                if (themeAttr.endsWith('-dark')) return true;
+                const stored = HEYS?.Theme?.readStoredThemeId?.();
+                return HEYS?.Theme?.resolveResolvedMode?.(stored) === 'dark';
+            } catch (_) {
+                return false;
+            }
+        }, []);
+        const [headerDarkMode, setHeaderDarkMode] = React.useState(readHeaderDarkMode);
+
+        React.useEffect(() => {
+            const refreshThemeMode = () => setHeaderDarkMode(readHeaderDarkMode());
+            refreshThemeMode();
+            window.addEventListener('heys:theme-change', refreshThemeMode);
+            return () => window.removeEventListener('heys:theme-change', refreshThemeMode);
+        }, [readHeaderDarkMode]);
 
         React.useEffect(() => {
             if (!showClientDropdown) return;
@@ -957,7 +1002,10 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         // .hdr's will-change:transform containing block (which traps position:fixed children).
         // Backdrop click-overlay + blur-class on .wrap
         React.useEffect(function () {
-            if (!showClientDropdown) return;
+            if (!showClientDropdown) {
+                syncDropdownBlurActive();
+                return undefined;
+            }
 
             var wrapEl = document.querySelector('.wrap');
 
@@ -971,12 +1019,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             var container = wrapEl || document.body;
             container.appendChild(backdropEl);
 
-            // Toggle blur class — filter:blur applied via CSS to content/tabs/header children
-            if (wrapEl) wrapEl.classList.add('dropdown-blur-active');
+            syncDropdownBlurActive();
 
             return function () {
-                if (wrapEl) wrapEl.classList.remove('dropdown-blur-active');
                 if (backdropEl.parentNode) backdropEl.parentNode.removeChild(backdropEl);
+                syncDropdownBlurActive();
             };
         }, [showClientDropdown, setShowClientDropdown]);
 
@@ -1606,14 +1653,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             };
         }, [selectedDate, clientId]);
 
-        // ☁️ Auto-fade synced → idle after 2s + track last sync time (v2.0)
+        // ☁️ После успешного синка сразу idle-облачко (без галочки)
         React.useEffect(() => {
             if (cloudStatus === 'synced') {
-                // hooks выставляет synced только при peak >= 2; pending к этому моменту уже 0
                 lastSyncedAtRef.current = Date.now();
-                setDisplayStatus('synced');
                 clearTimeout(syncFadeTimerRef.current);
-                syncFadeTimerRef.current = setTimeout(() => setDisplayStatus('idle'), 2000);
+                setDisplayStatus('idle');
             } else {
                 clearTimeout(syncFadeTimerRef.current);
                 const quietPending = pendingCount > 0 && pendingCount < SYNC_BADGE_MIN_PENDING;
@@ -1654,7 +1699,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const effectiveDisplayStatus = (quietPending && (rawDisplayStatus === 'queued' || rawDisplayStatus === 'syncing'))
             ? 'idle'
             : rawDisplayStatus;
-        const showPendingBadge = pendingCount >= SYNC_BADGE_MIN_PENDING;
         const haptic = HEYS?.haptic || (() => { });
         const formatSyncAge = (ts) => {
             if (!ts) return '';
@@ -3225,16 +3269,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
 
         if (!clientId) return null;
 
-        // Клиентская вторая строка шапки (см. ниже, isRpcMode) — название
-        // вкладки вместо переключателя клиентов, по канвасу «Дата и остатки v4».
-        const CLIENT_TAB_TITLES = {
-            widgets: 'Главная',
-            diary: 'Питание',
-            activity: 'Актив',
-            stats: 'Отчёты',
-            insights: 'Инсайты'
-        };
-        const showDateRow = (tab === 'stats' || tab === 'diary' || tab === 'activity' || tab === 'insights') && window.HEYS.DatePicker;
+        const isPeriodAnalyticsTab = tab === 'stats' || tab === 'insights';
+        const showDateRow = !isPeriodAnalyticsTab && (tab === 'diary' || tab === 'activity') && window.HEYS.DatePicker;
+        const showHdrBottom = !isRpcMode || !isPeriodAnalyticsTab;
         const widgetsHeaderDateLine = (() => {
             if (tab !== 'widgets' || !selectedDate) return null;
             const utils = window.HEYS?.dayUtils;
@@ -3268,11 +3305,21 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             if (typeof setSelectedDate === 'function') setSelectedDate(resolvedTodayISO);
         };
 
-        // Временно для отладки (2026-08-14): ☁️ и 🌓 слева от «Советы» в gamification bar.
-        const debugHeaderLeadingActions = [
+        const cloudIndicatorClass = (() => {
+            if (effectiveDisplayStatus === 'syncing') return 'syncing';
+            if (effectiveDisplayStatus === 'offline' || effectiveDisplayStatus === 'error' || effectiveDisplayStatus === 'session') {
+                return 'problem';
+            }
+            return 'idle';
+        })();
+        const cloudIndicatorClickable = effectiveDisplayStatus !== 'syncing'
+            && effectiveDisplayStatus !== 'offline'
+            && effectiveDisplayStatus !== 'session';
+
+        const cloudSyncHeaderActions = [
                 React.createElement('div', {
                     key: 'cloudsync',
-                    className: 'cloud-sync-indicator ' + effectiveDisplayStatus + (effectiveDisplayStatus !== 'syncing' && effectiveDisplayStatus !== 'offline' && effectiveDisplayStatus !== 'session' ? ' cloud-sync-indicator--clickable' : ''),
+                    className: 'cloud-sync-indicator ' + cloudIndicatorClass + (cloudIndicatorClickable ? ' cloud-sync-indicator--clickable' : ''),
                     title: (() => {
                         const routingMode = HEYS?.cloud?.getRoutingStatus?.()?.mode || 'unknown';
                         const modeLabel = routingMode === 'direct' ? '🔗 Direct' : routingMode === 'proxy' ? '🔀 Proxy' : '';
@@ -3281,9 +3328,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             : '';
                         let baseTitle;
                         if (effectiveDisplayStatus === 'syncing') {
-                            baseTitle = syncProgress?.total > 1
-                                ? `Синхронизация... ${syncProgress.synced}/${syncProgress.total}`
-                                : 'Синхронизация...';
+                            baseTitle = 'Синхронизация...';
                             if (pendingBreakdownText) baseTitle += ` · ${pendingBreakdownText}`;
                         } else if (effectiveDisplayStatus === 'queued') {
                             baseTitle = isBackgroundQueuedState
@@ -3323,46 +3368,37 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         handleSyncBadgeClick();
                     },
                 },
-                    effectiveDisplayStatus === 'syncing' ? [
-                        React.createElement('div', { key: 'spin', className: 'sync-spinner' }),
-                        syncProgress?.total > 1 && React.createElement('span', { key: 'prog', className: 'sync-progress' }, `${syncProgress.synced}/${syncProgress.total}`)
-                    ]
-                        : effectiveDisplayStatus === 'synced'
-                            ? React.createElement('span', { key: 'ok', className: 'cloud-icon synced' }, '✓')
-                            : effectiveDisplayStatus === 'offline' ? [
-                                React.createElement('svg', { key: 'ic', className: 'cloud-icon offline', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
-                                    React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' }),
-                                    React.createElement('line', { x1: '1', y1: '1', x2: '23', y2: '23', stroke: 'currentColor', strokeWidth: '2' })
-                                ),
-                                pendingCount > 0 && showPendingBadge && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
-                            ]
-                                : effectiveDisplayStatus === 'session' ? [
-                                    React.createElement('span', { key: 'sess', className: 'cloud-icon session', 'aria-hidden': 'true' }, '🔑'),
-                                ]
-                                    : effectiveDisplayStatus === 'queued' ? [
-                                        React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
-                                            React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
-                                        ),
-                                        pendingCount > 0 && showPendingBadge && React.createElement('span', { key: 'pb', className: 'pending-badge' }, pendingCount)
-                                    ]
-                                        : effectiveDisplayStatus === 'error' ? [
-                                            React.createElement('span', { key: 'warn', className: 'cloud-icon error' }, '⚠'),
-                                            retryCountdown > 0 && React.createElement('span', { key: 'cd', className: 'retry-countdown' }, retryCountdown)
-                                        ]
-                                            : React.createElement('svg', { key: 'cloud', className: 'cloud-icon idle', viewBox: '0 0 24 24', width: 16, height: 16, fill: 'currentColor' },
-                                                React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
-                                            )
+                    React.createElement('svg', {
+                        key: 'cloud',
+                        className: 'cloud-icon '
+                            + (cloudIndicatorClass === 'problem' ? 'problem' : cloudIndicatorClass === 'syncing' ? 'syncing' : 'idle'),
+                        viewBox: '0 0 24 24',
+                        width: 16,
+                        height: 16,
+                        fill: 'currentColor',
+                        'aria-hidden': 'true',
+                    },
+                        React.createElement('path', { d: 'M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z' })
+                    )
                 ),
                 React.createElement('button', {
-                    key: 'theme-toggle-temp',
+                    key: 'theme-mode',
                     type: 'button',
-                    className: 'hdr-theme-btn hdr-theme-toggle-temp',
-                    title: 'Переключить тему (временно)',
+                    className: 'hdr-header-icon-btn hdr-header-icon-btn--theme',
+                    title: headerDarkMode ? 'Светлая тема' : 'Тёмная тема',
+                    'aria-label': headerDarkMode ? 'Переключить на светлую тему' : 'Переключить на тёмную тему',
                     onClick: (e) => {
                         e.stopPropagation();
-                        window.HEYS?.Theme?.toggleModePreference?.();
+                        HEYS?.Theme?.toggleModePreference?.();
                     },
-                }, '🌓'),
+                },
+                    HEYS.AppNavIcons?.NavIcon
+                        ? React.createElement(HEYS.AppNavIcons.NavIcon, {
+                            name: headerDarkMode ? 'sun' : 'moon',
+                            size: 18,
+                        })
+                        : React.createElement('span', { 'aria-hidden': 'true' }, headerDarkMode ? '☀' : '☽')
+                ),
         ];
 
         return React.createElement(
@@ -3381,50 +3417,15 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             React.createElement(
                 'div',
                 { className: 'hdr-top hdr-gamification' },
-                React.createElement(GamificationBar, { leadingHeaderActions: debugHeaderLeadingActions })
-            ),
-            // === СТРОКА ДАТЫ (канвас «Дата и остатки v4»: под геймификацией, inset 18px) ===
-            showDateRow
-                ? React.createElement('div', { className: 'hdr-date-row' },
-                    React.createElement('div', { className: 'hdr-date-group' },
-                        React.createElement(window.HEYS.DatePicker, {
-                            valueISO: selectedDate,
-                            onSelect: (nextDate) => selectDateWithPrefetch(nextDate, { reason: 'date-picker' }),
-                            activeDays: datePickerActiveDays,
-                            getActiveDaysForMonth: (year, month) => {
-                                const getActiveDaysForMonthFn = window.HEYS.dayUtils && window.HEYS.dayUtils.getActiveDaysForMonth;
-                                const effectiveProducts = (products && products.length > 0) ? products
-                                    : (window.HEYS.products?.getAll?.() || []);
-                                const effectiveProfile = cachedProfile || (U && U.lsGet ? U.lsGet('heys_profile', {}) : {});
-                                if (!getActiveDaysForMonthFn || !clientId) {
-                                    return new Map();
-                                }
-                                try {
-                                    return getActiveDaysForMonthFn(year, month, effectiveProfile, effectiveProducts);
-                                } catch (e) {
-                                    return new Map();
-                                }
-                            }
-                        }),
-                    )
-                )
-                : null,
-            showPastDayBanner && React.createElement('div', { className: 'past-day-banner-wrap' },
-                React.createElement('div', { className: 'past-day-banner' },
-                    React.createElement('span', { className: 'past-day-banner__text' }, 'Вы смотрите прошлый день'),
-                    React.createElement('button', {
-                        type: 'button',
-                        className: 'past-day-banner__today',
-                        onClick: handlePastDayGoToday
-                    }, 'Сегодня')
-                )
+                React.createElement(GamificationBar, { leadingHeaderActions: cloudSyncHeaderActions })
             ),
             // === НИЖНЯЯ ЛИНИЯ: название вкладки / клиент + отладочные действия ===
-            React.createElement(
+            showHdrBottom && React.createElement(
                 'div',
                 { className: 'hdr-bottom' + (isRpcMode ? ' hdr-tab-row' : '') },
                 // Клиентский вход (isRpcMode): название вкладки + мета дня на «Питание».
-                // Календарь — строкой выше; на прошлом дне между ними баннер
+                // «Отчёты» / «Инсайты» — заголовок только внутри v4-meta; без календаря.
+                // Календарь — строкой ниже; на прошлом дне между ними баннер
                 // «Вы смотрите прошлый день» (канвас «Дата и остатки v4»).
                 isRpcMode
                     ? React.createElement('div', { className: 'hdr-tab-title-row' + (tab === 'widgets' ? ' hdr-tab-title-row--widgets' : '') },
@@ -3945,6 +3946,42 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 // day/_advice.js), push — в строку «Уведомления» листа настроек +
                 // разовый баннер showPushFirstDayPrompt ниже.
             ),
+            showPastDayBanner && React.createElement('div', { className: 'past-day-banner-wrap' },
+                React.createElement('div', { className: 'past-day-banner' },
+                    React.createElement('span', { className: 'past-day-banner__text' }, 'Вы смотрите прошлый день'),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'past-day-banner__today',
+                        onClick: handlePastDayGoToday
+                    }, 'Сегодня')
+                )
+            ),
+            // === СТРОКА ДАТЫ (канвас «Дата и остатки v4»: под названием вкладки) ===
+            showDateRow
+                ? React.createElement('div', { className: 'hdr-date-row' },
+                    React.createElement('div', { className: 'hdr-date-group' },
+                        React.createElement(window.HEYS.DatePicker, {
+                            valueISO: selectedDate,
+                            onSelect: (nextDate) => selectDateWithPrefetch(nextDate, { reason: 'date-picker' }),
+                            activeDays: datePickerActiveDays,
+                            getActiveDaysForMonth: (year, month) => {
+                                const getActiveDaysForMonthFn = window.HEYS.dayUtils && window.HEYS.dayUtils.getActiveDaysForMonth;
+                                const effectiveProducts = (products && products.length > 0) ? products
+                                    : (window.HEYS.products?.getAll?.() || []);
+                                const effectiveProfile = cachedProfile || (U && U.lsGet ? U.lsGet('heys_profile', {}) : {});
+                                if (!getActiveDaysForMonthFn || !clientId) {
+                                    return new Map();
+                                }
+                                try {
+                                    return getActiveDaysForMonthFn(year, month, effectiveProfile, effectiveProducts);
+                                } catch (e) {
+                                    return new Map();
+                                }
+                            }
+                        }),
+                    )
+                )
+                : null,
             // Разовое предложение включить push — после первого заполненного дня
             // (UI v4, 2026-08-10). Отказ прячет баннер насовсем; постоянный вход —
             // строка «Уведомления» в листе настроек.
@@ -4042,9 +4079,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             setDefaultTab,
             clientId,
             cloudUser,
+            handleSignOut,
+            products,
         } = props;
 
         const [settingsMenuOpen, setSettingsMenuOpen] = React.useState(false);
+        const [sheetExtra, setSheetExtra] = React.useState(null);
         const [boardNavTheme, setBoardNavTheme] = React.useState(() => (
             window.HEYS?.Board?.readTheme?.()
             || window.__HEYS_BOOT_THEME__?.boardTheme
@@ -4088,6 +4128,10 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 setTab('stats');
             }
         }, [tab, setTab]);
+
+        React.useEffect(() => {
+            applyBrowserTabTitle(tab);
+        }, [tab]);
 
         // Bulletproof fallback: document-level capture listener для «Советы» в шапке.
         // Pending badge: показываем JWT-куратору количество pending-заявок.
@@ -4161,11 +4205,13 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         }, [isCuratorBadge]);
 
         const TASKS_BOARD_CLIENT_ID = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
-        const canUseTasksAsHome = !cloudUser && !!clientId;
-        const canUseBoardAsHome = canUseTasksAsHome && (
-            HEYS.Board?.isBoardClient?.(clientId)
-            || String(clientId).toLowerCase() === TASKS_BOARD_CLIENT_ID
+        const canUsePostReleaseLabs = !cloudUser && (
+            HEYS.AppTabState?.isPostReleaseLabsClient?.(clientId)
+            || HEYS.Board?.isBoardClient?.(clientId)
+            || String(clientId || '').toLowerCase() === TASKS_BOARD_CLIENT_ID
         );
+        const canUseTasksAsHome = canUsePostReleaseLabs;
+        const canUseBoardAsHome = canUsePostReleaseLabs;
         const HOME_TAB_OPTIONS = React.useMemo(() => {
             const options = [
                 { key: 'widgets', label: 'Главная', iconName: 'home' },
@@ -4395,6 +4441,137 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const switchTabWithUndoCommit = (nextTab, reason) =>
             commitUndoAndSwitchTab(setTab, nextTab, { currentTab: tab, reason });
 
+        const closeSettingsAndSwitch = (nextTab, reason) => {
+            setSettingsMenuOpen(false);
+            switchTabWithUndoCommit(nextTab, reason);
+        };
+
+        const openUserSection = (sectionId, reason) => {
+            window.__heysPendingUserSection = sectionId;
+            setSettingsMenuOpen(false);
+            switchTabWithUndoCommit('user', reason);
+            requestAnimationFrame(() => {
+                window.dispatchEvent(new CustomEvent('heys:open-user-section', { detail: { id: sectionId } }));
+            });
+        };
+
+        const SETTINGS_PALETTE_LABEL = { sand: 'Бежево-зелёная', blue: 'Синяя' };
+        const readSettingsPalette = () => {
+            try {
+                const api = window.HEYS?.Theme;
+                if (!api) return 'sand';
+                const themeId = (typeof api.readStoredThemeId === 'function' && api.readStoredThemeId())
+                    || (typeof api.getThemeId === 'function' && api.getThemeId())
+                    || '';
+                return (typeof api.getPalette === 'function' && api.getPalette(themeId)) || 'sand';
+            } catch (_) {
+                return 'sand';
+            }
+        };
+        const [settingsPalette, setSettingsPalette] = React.useState(readSettingsPalette);
+        const [settingsMode, setSettingsMode] = React.useState(() => {
+            try { return window.HEYS?.Theme?.getModePreference?.() || 'light'; } catch (_) { return 'light'; }
+        });
+        const [sheetPushStatus, setSheetPushStatus] = React.useState(null);
+        React.useEffect(() => {
+            const api = window.HEYS?.Theme;
+            if (!api || typeof api.subscribeThemeChange !== 'function') return undefined;
+            return api.subscribeThemeChange(() => {
+                setSettingsPalette(readSettingsPalette());
+                try { setSettingsMode(api.getModePreference?.() || 'light'); } catch (_) { /* noop */ }
+            });
+        }, []);
+        React.useEffect(() => {
+            if (!settingsMenuOpen) {
+                setSheetExtra(null);
+                document.documentElement.style.removeProperty('--settings-sheet-top');
+                return undefined;
+            }
+            const syncSettingsSheetAnchor = () => {
+                const anchor = document.querySelector('.hdr-header-actions')
+                    || document.querySelector('.hdr-header-icon-btn--settings')
+                    || document.querySelector('.hdr-top.hdr-gamification');
+                if (!anchor) return;
+                const rect = anchor.getBoundingClientRect();
+                document.documentElement.style.setProperty('--settings-sheet-top', `${Math.round(rect.bottom + 10)}px`);
+            };
+            syncSettingsSheetAnchor();
+            if (!window.HEYS?.push?.getStatus) {
+                window.addEventListener('resize', syncSettingsSheetAnchor);
+                window.addEventListener('scroll', syncSettingsSheetAnchor, true);
+                return () => {
+                    window.removeEventListener('resize', syncSettingsSheetAnchor);
+                    window.removeEventListener('scroll', syncSettingsSheetAnchor, true);
+                    document.documentElement.style.removeProperty('--settings-sheet-top');
+                };
+            }
+            let cancelled = false;
+            Promise.resolve(window.HEYS.push.getStatus()).then((status) => {
+                if (!cancelled) setSheetPushStatus(status || null);
+            }).catch(() => { /* статус строки останется пустым */ });
+            window.addEventListener('resize', syncSettingsSheetAnchor);
+            window.addEventListener('scroll', syncSettingsSheetAnchor, true);
+            return () => {
+                cancelled = true;
+                window.removeEventListener('resize', syncSettingsSheetAnchor);
+                window.removeEventListener('scroll', syncSettingsSheetAnchor, true);
+                document.documentElement.style.removeProperty('--settings-sheet-top');
+            };
+        }, [settingsMenuOpen, tab]);
+
+        const settingsProductCount = Array.isArray(products)
+            ? products.length
+            : (window.HEYS?.products?.getAll?.() || []).length;
+        const settingsPushLabel = !sheetPushStatus
+            ? ''
+            : sheetPushStatus.needsInstall
+                ? 'Нужно на главный экран'
+                : sheetPushStatus.permission === 'denied'
+                    ? 'Запрещены в браузере'
+                    : sheetPushStatus.subscribed
+                        ? 'Включены'
+                        : 'Выключены';
+
+        const toggleSheetExtra = (key) => {
+            setSheetExtra((current) => (current === key ? null : key));
+        };
+
+        const renderSettingsChevron = (expanded) => React.createElement('svg', {
+            width: 14,
+            height: 14,
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: 2.75,
+            strokeLinecap: 'round',
+            className: 'hdr-settings-sheet__chevron' + (expanded ? ' is-open' : ''),
+            'aria-hidden': 'true',
+        }, React.createElement('path', { d: expanded ? 'M6 9l6 6 6-6' : 'M9 6l6 6-6 6' }));
+
+        const renderSettingsRow = ({ key, label, meta, expanded, danger, onClick }) =>
+            React.createElement('button', {
+                key,
+                type: 'button',
+                className: 'hdr-settings-sheet__row' + (danger ? ' hdr-settings-sheet__row--exit' : ''),
+                onClick: (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (typeof onClick === 'function') onClick(event);
+                },
+            },
+                React.createElement('span', { className: 'hdr-settings-sheet__label' }, label),
+                React.createElement('span', { className: 'hdr-settings-sheet__meta' },
+                    meta ? React.createElement('span', null, meta) : null,
+                    !danger && renderSettingsChevron(!!expanded)
+                )
+            );
+
+        const renderSettingsGroup = (label, children) =>
+            React.createElement('div', {
+                key: 'group-' + label,
+                className: 'hdr-settings-sheet__group',
+            }, children);
+
         const handlePrimaryTabClick = (nextTab) => {
             if (widgetsEditMode) {
                 setDefaultTab(nextTab);
@@ -4424,13 +4601,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         }, []);
 
         React.useEffect(() => {
-            if (!settingsMenuOpen) return undefined;
-            const wrapEl = document.querySelector('.wrap');
-            if (wrapEl) wrapEl.classList.add('dropdown-blur-active');
+            syncDropdownBlurActive();
             return () => {
-                if (wrapEl) wrapEl.classList.remove('dropdown-blur-active');
+                syncDropdownBlurActive();
             };
-        }, [settingsMenuOpen]);
+        }, [settingsMenuOpen, tab]);
 
         React.useEffect(() => {
             if (!settingsMenuOpen) return undefined;
@@ -4624,12 +4799,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     React.createElement('span', { className: 'tab-text' }, item.label),
                 )),
             ),
-            // Настройки — раскрывающееся меню вверх
+            // Лист настроек от ползунков (канвас «Советы v4», экран ad5a)
             React.createElement(
                 'div',
                 { className: 'tab-settings-wrap', ref: settingsWrapRef },
                 settingsMenuOpen && React.createElement('div', {
-                    className: 'tab-settings-backdrop',
+                    className: 'tab-settings-backdrop tab-settings-backdrop--v4-popover',
                     onClick: () => setSettingsMenuOpen(false)
                 }),
                 React.createElement(
@@ -4658,166 +4833,255 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 ),
                 settingsMenuOpen && React.createElement(
                     'div',
-                    { className: 'tab-settings-menu tab-settings-menu--with-home' + (defaultTab === 'tasks' ? ' tab-settings-menu--tasks-home' : '') },
-                    canUseTasksAsHome && React.createElement(
-                        'div',
-                        {
-                            className: 'tab-settings-item',
-                            onClick: () => {
-                                setSettingsMenuOpen(false);
-                                switchTabWithUndoCommit('tasks', 'tab-settings-tasks-switch');
-                            }
-                        },
-                        renderNavIcon('tasks'),
-                        React.createElement('span', null, 'Задачи')
-                    ),
-                    canUseBoardAsHome && React.createElement(
-                        'div',
-                        {
-                            className: 'tab-settings-item',
-                            onClick: () => {
-                                setSettingsMenuOpen(false);
-                                switchTabWithUndoCommit('board', 'tab-settings-board-switch');
-                            }
-                        },
-                        renderNavIcon('board'),
-                        React.createElement('span', null, 'Доска')
-                    ),
-                    React.createElement(
-                        'div',
-                        {
-                            className: 'tab-settings-item',
-                            onClick: () => {
-                                setSettingsMenuOpen(false);
-                                switchTabWithUndoCommit('ration', 'tab-settings-ration-switch');
-                            }
-                        },
-                        renderNavIcon('products'),
-                        React.createElement('span', null, 'Список продуктов')
-                    ),
-                    React.createElement(
-                        'div',
-                        {
-                            className: 'tab-settings-home-wrap',
-                            role: 'group',
-                            'aria-label': 'Выбор домашней вкладки',
+                    {
+                        className: 'tab-settings-menu tab-settings-menu--v4-sheet'
+                            + (sheetExtra ? ' tab-settings-menu--v4-sheet-extra' : ''),
+                        role: 'menu',
+                        'aria-label': 'Настройки',
+                    },
+                    React.createElement('div', { className: 'hdr-settings-sheet__card' },
+                    renderSettingsGroup('me', [
+                        renderSettingsRow({
+                            key: 'profile',
+                            label: 'Профиль и цели',
+                            onClick: () => openUserSection('basic', 'settings-sheet-profile'),
+                        }),
+                    ]),
+                    renderSettingsGroup('look', [
+                        renderSettingsRow({
+                            key: 'theme',
+                            label: 'Оформление',
+                            meta: SETTINGS_PALETTE_LABEL[settingsPalette] || SETTINGS_PALETTE_LABEL.sand,
+                            expanded: sheetExtra === 'theme',
+                            onClick: () => toggleSheetExtra('theme'),
+                        }),
+                        sheetExtra === 'theme' && React.createElement('div', {
+                            key: 'theme-panel',
+                            className: 'hdr-settings-sheet__panel',
                             onClick: (e) => e.stopPropagation(),
                         },
-                        React.createElement('div', {
-                            className: 'widgets-home-tab-picker tab-settings-home-picker' + (defaultTab === 'tasks' ? ' tab-settings-home-picker--tasks-open' : ''),
-                        },
-                            React.createElement('div', { className: 'widgets-home-tab-picker__title' }, 'Домашняя вкладка'),
-                            React.createElement('div', { className: 'widgets-home-tab-picker__hint' },
-                                'С неё приложение откроется в следующий раз'
-                            ),
-                            defaultTab === 'tasks' && currentTasksHomeOption && React.createElement('div', {
-                                className: 'widgets-home-tab-picker__current-subtab',
-                            }, `Внутри задач откроется: ${currentTasksHomeOption.label}`),
-                            React.createElement('div', { className: 'widgets-home-tab-picker__layout' },
-                                React.createElement('div', { className: 'widgets-home-tab-picker__options' },
-                                    HOME_TAB_OPTIONS.map((option) => React.createElement('button', {
-                                        key: option.key,
-                                        type: 'button',
-                                        className: `widgets-home-tab-picker__option ${defaultTab === option.key ? 'active' : ''}`,
-                                        onClick: (e) => {
-                                            e.stopPropagation();
-                                            handlePickHomeTab(option.key);
-                                        },
-                                        'aria-pressed': defaultTab === option.key,
-                                        title: `Сделать домашней вкладкой: ${option.label}`,
-                                    },
-                                        React.createElement('span', { className: 'widgets-home-tab-picker__option-icon' },
-                                            option.iconName ? renderNavIcon(option.iconName) : null
-                                        ),
-                                        React.createElement('span', { className: 'widgets-home-tab-picker__option-label' }, option.label),
-                                        defaultTab === option.key && React.createElement('span', {
-                                            className: 'widgets-home-tab-picker__option-badge',
-                                            'aria-hidden': 'true',
-                                        }, '🏠')
-                                    ))
-                                ),
-                                canUseTasksAsHome && TASKS_HOME_SUBTAB_OPTIONS.length > 0 && React.createElement('div', {
-                                    className: 'widgets-home-tab-picker__subtabs',
+                            React.createElement('div', { className: 'hdr-settings-sheet__panel-label' }, 'Палитра'),
+                            React.createElement('div', { className: 'hdr-settings-sheet__soft-row' },
+                                [
+                                    { id: 'sand', label: 'Бежево-зелёная', act: '#c67139', hero: '#efe3cf', ok: '#7a8a5e' },
+                                    { id: 'blue', label: 'Синяя', act: '#2e7cc0', hero: '#e2edf7', ok: '#3e9a6b' },
+                                ].map((palette) => React.createElement('button', {
+                                    key: palette.id,
+                                    type: 'button',
+                                    className: 'hdr-settings-sheet__soft-card' + (settingsPalette === palette.id ? ' is-on' : ''),
+                                    onClick: () => window.HEYS?.Theme?.setPalette?.(palette.id),
                                 },
-                                    React.createElement('div', { className: 'widgets-home-tab-picker__subtitle' }, 'Старт задач'),
-                                    React.createElement('div', {
-                                        className: 'widgets-home-tab-picker__hint widgets-home-tab-picker__hint--nested',
-                                    }, 'Что открыть при входе в задачи'),
-                                    React.createElement('div', {
-                                        className: 'widgets-home-tab-picker__options widgets-home-tab-picker__options--nested',
-                                    },
-                                        TASKS_HOME_SUBTAB_OPTIONS.map((option) => React.createElement('button', {
+                                    React.createElement('span', {
+                                        className: 'hdr-settings-sheet__soft-swatch',
+                                        style: {
+                                            '--swatch-act': palette.act,
+                                            '--swatch-hero': palette.hero,
+                                            '--swatch-ok': palette.ok,
+                                        },
+                                    }),
+                                    palette.label,
+                                ))
+                            ),
+                            React.createElement('div', { className: 'hdr-settings-sheet__panel-label' }, 'Режим'),
+                            React.createElement('div', { className: 'hdr-settings-sheet__chips' },
+                                [
+                                    { id: 'light', label: 'Светлый' },
+                                    { id: 'dark', label: 'Тёмный' },
+                                    { id: 'auto', label: 'Как в системе' },
+                                ].map((mode) => React.createElement('button', {
+                                    key: mode.id,
+                                    type: 'button',
+                                    className: 'hdr-settings-sheet__chip' + (settingsMode === mode.id ? ' is-on' : ''),
+                                    onClick: () => window.HEYS?.Theme?.setModePreference?.(mode.id),
+                                }, mode.label))
+                            ),
+                            React.createElement('div', { className: 'hdr-settings-sheet__hint' },
+                                'Выбор запоминается на этом устройстве. «Как в системе» следит за настройкой телефона, пока вы не выберете режим руками.',
+                            )
+                        ),
+                        renderSettingsRow({
+                            key: 'home',
+                            label: 'Домашняя вкладка',
+                            meta: (HOME_TAB_OPTIONS.find((option) => option.key === defaultTab) || {}).label || '',
+                            expanded: sheetExtra === 'home',
+                            onClick: () => toggleSheetExtra('home'),
+                        }),
+                        sheetExtra === 'home' && React.createElement(React.Fragment, { key: 'home-extra' },
+                        React.createElement(
+                            'div',
+                            {
+                                className: 'tab-settings-home-wrap hdr-settings-sheet__inline-panel',
+                                role: 'group',
+                                'aria-label': 'Выбор домашней вкладки',
+                                onClick: (e) => e.stopPropagation(),
+                            },
+                            React.createElement('div', {
+                                className: 'widgets-home-tab-picker tab-settings-home-picker' + (defaultTab === 'tasks' ? ' tab-settings-home-picker--tasks-open' : ''),
+                            },
+                                React.createElement('div', { className: 'widgets-home-tab-picker__hint' },
+                                    'С неё приложение откроется в следующий раз'
+                                ),
+                                defaultTab === 'tasks' && currentTasksHomeOption && React.createElement('div', {
+                                    className: 'widgets-home-tab-picker__current-subtab',
+                                }, `Внутри задач откроется: ${currentTasksHomeOption.label}`),
+                                React.createElement('div', { className: 'widgets-home-tab-picker__layout' },
+                                    React.createElement('div', { className: 'widgets-home-tab-picker__options' },
+                                        HOME_TAB_OPTIONS.map((option) => React.createElement('button', {
                                             key: option.key,
                                             type: 'button',
-                                            className: `widgets-home-tab-picker__option widgets-home-tab-picker__option--subtab ${resolvedDefaultTasksSubtab === option.key ? 'active' : ''}`,
+                                            className: `widgets-home-tab-picker__option ${defaultTab === option.key ? 'active' : ''}`,
                                             onClick: (e) => {
                                                 e.stopPropagation();
-                                                handlePickTasksHomeSubtab(option.key);
+                                                handlePickHomeTab(option.key);
                                             },
-                                            'aria-pressed': resolvedDefaultTasksSubtab === option.key,
-                                            title: `Открывать внутри задач: ${option.label}`,
+                                            'aria-pressed': defaultTab === option.key,
+                                            title: `Сделать домашней вкладкой: ${option.label}`,
                                         },
-                                            React.createElement('span', { className: 'widgets-home-tab-picker__option-icon' }, option.icon),
+                                            React.createElement('span', { className: 'widgets-home-tab-picker__option-icon' },
+                                                option.iconName ? renderNavIcon(option.iconName) : null
+                                            ),
                                             React.createElement('span', { className: 'widgets-home-tab-picker__option-label' }, option.label),
-                                            resolvedDefaultTasksSubtab === option.key && React.createElement('span', {
+                                            defaultTab === option.key && React.createElement('span', {
                                                 className: 'widgets-home-tab-picker__option-badge',
                                                 'aria-hidden': 'true',
                                             }, '🏠')
                                         ))
+                                    ),
+                                    canUseTasksAsHome && TASKS_HOME_SUBTAB_OPTIONS.length > 0 && React.createElement('div', {
+                                        className: 'widgets-home-tab-picker__subtabs',
+                                    },
+                                        React.createElement('div', { className: 'widgets-home-tab-picker__subtitle' }, 'Старт задач'),
+                                        React.createElement('div', {
+                                            className: 'widgets-home-tab-picker__hint widgets-home-tab-picker__hint--nested',
+                                        }, 'Что открыть при входе в задачи'),
+                                        React.createElement('div', {
+                                            className: 'widgets-home-tab-picker__options widgets-home-tab-picker__options--nested',
+                                        },
+                                            TASKS_HOME_SUBTAB_OPTIONS.map((option) => React.createElement('button', {
+                                                key: option.key,
+                                                type: 'button',
+                                                className: `widgets-home-tab-picker__option widgets-home-tab-picker__option--subtab ${resolvedDefaultTasksSubtab === option.key ? 'active' : ''}`,
+                                                onClick: (e) => {
+                                                    e.stopPropagation();
+                                                    handlePickTasksHomeSubtab(option.key);
+                                                },
+                                                'aria-pressed': resolvedDefaultTasksSubtab === option.key,
+                                                title: `Открывать внутри задач: ${option.label}`,
+                                            },
+                                                React.createElement('span', { className: 'widgets-home-tab-picker__option-icon' }, option.icon),
+                                                React.createElement('span', { className: 'widgets-home-tab-picker__option-label' }, option.label),
+                                                resolvedDefaultTasksSubtab === option.key && React.createElement('span', {
+                                                    className: 'widgets-home-tab-picker__option-badge',
+                                                    'aria-hidden': 'true',
+                                                }, '🏠')
+                                            ))
+                                        )
                                     )
                                 )
                             )
                         )
-                    ),
-                    React.createElement(
-                        'div',
-                        {
-                            className: 'tab-settings-diary-wrap',
-                            role: 'group',
-                            'aria-label': 'Настройки дневника',
-                            onClick: (e) => e.stopPropagation(),
-                        },
-                        React.createElement('div', { className: 'tab-settings-diary-card' },
-                            React.createElement('div', { className: 'tab-settings-diary-card__head' },
-                                React.createElement('span', { className: 'tab-settings-diary-card__title' }, 'Дневник'),
-                                React.createElement('span', { className: 'tab-settings-diary-card__status' },
-                                    DIARY_PANEL_VISIBILITY_OPTIONS.filter((option) => diaryPanelsVisibility[option.key] !== false).length
-                                        + '/'
-                                        + DIARY_PANEL_VISIBILITY_OPTIONS.length
-                                        + ' включено'
-                                )
-                            ),
-                            React.createElement('div', { className: 'tab-settings-diary-toggle-list' },
-                                DIARY_PANEL_VISIBILITY_OPTIONS.map((option) => {
-                                    const enabled = diaryPanelsVisibility[option.key] !== false;
-                                    return React.createElement('button', {
-                                        key: option.key,
-                                        type: 'button',
-                                        className: 'tab-settings-diary-toggle' + (enabled ? ' is-on' : ''),
-                                        role: 'switch',
-                                        'aria-checked': enabled ? 'true' : 'false',
-                                        onClick: (e) => {
-                                            e.stopPropagation();
-                                            handleToggleDiaryPanel(option, !enabled);
+                        ),
+                        canUsePostReleaseLabs && renderSettingsRow({
+                            key: 'diary',
+                            label: 'Дневник',
+                            meta: DIARY_PANEL_VISIBILITY_OPTIONS.filter((option) => diaryPanelsVisibility[option.key] !== false).length
+                                + ' из '
+                                + DIARY_PANEL_VISIBILITY_OPTIONS.length,
+                            expanded: sheetExtra === 'diary',
+                            onClick: () => toggleSheetExtra('diary'),
+                        }),
+                        canUsePostReleaseLabs && sheetExtra === 'diary' && React.createElement(
+                            'div',
+                            {
+                                className: 'tab-settings-diary-wrap hdr-settings-sheet__inline-panel',
+                                role: 'group',
+                                'aria-label': 'Настройки дневника',
+                                onClick: (e) => e.stopPropagation(),
+                            },
+                            React.createElement('div', { className: 'tab-settings-diary-card' },
+                                React.createElement('div', { className: 'tab-settings-diary-toggle-list' },
+                                    DIARY_PANEL_VISIBILITY_OPTIONS.map((option) => {
+                                        const enabled = diaryPanelsVisibility[option.key] !== false;
+                                        return React.createElement('button', {
+                                            key: option.key,
+                                            type: 'button',
+                                            className: 'tab-settings-diary-toggle' + (enabled ? ' is-on' : ''),
+                                            role: 'switch',
+                                            'aria-checked': enabled ? 'true' : 'false',
+                                            onClick: (e) => {
+                                                e.stopPropagation();
+                                                handleToggleDiaryPanel(option, !enabled);
+                                            },
+                                            title: enabled ? option.titleOn : option.titleOff,
                                         },
-                                        title: enabled ? option.titleOn : option.titleOff,
-                                    },
-                                        React.createElement('span', { className: 'tab-settings-diary-toggle__copy' },
-                                            React.createElement('span', { className: 'tab-settings-diary-toggle__label' }, option.label),
-                                            React.createElement('span', { className: 'tab-settings-diary-toggle__hint' },
-                                                enabled ? option.enabledHint : option.disabledHint
+                                            React.createElement('span', { className: 'tab-settings-diary-toggle__copy' },
+                                                React.createElement('span', { className: 'tab-settings-diary-toggle__label' }, option.label),
+                                                React.createElement('span', { className: 'tab-settings-diary-toggle__hint' },
+                                                    enabled ? option.enabledHint : option.disabledHint
+                                                )
+                                            ),
+                                            React.createElement('span', {
+                                                className: 'tab-settings-diary-toggle__switch',
+                                                'aria-hidden': 'true'
+                                            },
+                                                React.createElement('span', { className: 'tab-settings-diary-toggle__knob' })
                                             )
-                                        ),
-                                        React.createElement('span', {
-                                            className: 'tab-settings-diary-toggle__switch',
-                                            'aria-hidden': 'true'
-                                        },
-                                            React.createElement('span', { className: 'tab-settings-diary-toggle__knob' })
-                                        )
-                                    );
-                                })
+                                        );
+                                    })
+                                )
                             )
-                        )
+                        ),
+                    ]),
+                    renderSettingsGroup('notify', [
+                        renderSettingsRow({
+                            key: 'notify',
+                            label: 'Уведомления и звук',
+                            meta: settingsPushLabel,
+                            onClick: () => openUserSection('notifications', 'settings-sheet-notify'),
+                        }),
+                        renderSettingsRow({
+                            key: 'advice',
+                            label: 'Советы',
+                            onClick: () => {
+                                setSettingsMenuOpen(false);
+                                window.dispatchEvent(new CustomEvent('heys:open-advice-settings'));
+                            },
+                        }),
+                    ]),
+                    renderSettingsGroup('places', [
+                        renderSettingsRow({
+                            key: 'products',
+                            label: 'Продукты',
+                            meta: settingsProductCount > 0 ? String(settingsProductCount) : '',
+                            onClick: () => closeSettingsAndSwitch('ration', 'settings-sheet-ration'),
+                        }),
+                        canUseTasksAsHome && renderSettingsRow({
+                            key: 'tasks',
+                            label: 'Задачи',
+                            onClick: () => closeSettingsAndSwitch('tasks', 'tab-settings-tasks-switch'),
+                        }),
+                        canUseBoardAsHome && renderSettingsRow({
+                            key: 'board',
+                            label: 'Доска',
+                            onClick: () => closeSettingsAndSwitch('board', 'tab-settings-board-switch'),
+                        }),
+                    ]),
+                    renderSettingsGroup('data', [
+                        renderSettingsRow({
+                            key: 'export',
+                            label: 'Данные и выгрузка',
+                            onClick: () => openUserSection('consents', 'settings-sheet-export'),
+                        }),
+                        renderSettingsRow({
+                            key: 'logout',
+                            label: 'Выйти',
+                            danger: true,
+                            onClick: () => {
+                                setSettingsMenuOpen(false);
+                                if (typeof handleSignOut === 'function') handleSignOut();
+                            },
+                        }),
+                    ])
                     )
                 )
             ),
@@ -4980,6 +5244,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 return React.createElement(SharedTabSkeleton, {
                     tab: tabKey,
                     tasksSubtab: options.tasksSubtab || defaultTasksSubtab,
+                    embedded: true,
                 });
             }
 
@@ -5002,7 +5267,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             'div',
             {
                 ref: tabContentRef,
-                'data-heys-visible-frame': isDayTab ? undefined : tab,
+                // Главная: метку ставит WidgetsTab только когда сетка готова,
+                // иначе boot-скелетон снимается на пустой «Добавить».
+                'data-heys-visible-frame': (isDayTab || tab === 'widgets') ? undefined : tab,
                 className: 'tab-content-swipeable' +
                     (slideDirection === 'out-left' ? ' slide-out-left' : '') +
                     (slideDirection === 'out-right' ? ' slide-out-right' : '') +
@@ -5010,19 +5277,30 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     (slideDirection === 'in-right' ? ' slide-in-right' : '') +
                     (edgeBounce === 'left' ? ' edge-bounce-left' : '') +
                     (edgeBounce === 'right' ? ' edge-bounce-right' : ''),
-                onTouchStart: onTouchStart,
-                onTouchEnd: onTouchEnd,
             },
             // Edge indicators
             edgeBounce && React.createElement('div', {
                 className: 'edge-indicator ' + edgeBounce
             }),
-            // DayTabWithCloudSync is always mounted so heysShowAdvice listener is always active.
-            // Advice overlay is position:fixed — it appears over any tab regardless of which is active.
-            // height:0 + overflow:hidden hides regular content; fixed children are unclipped by overflow.
             React.createElement(
                 'div',
-                { style: (tab === 'stats' || tab === 'diary' || tab === 'activity') ? undefined : { height: 0, overflow: 'hidden' } },
+                {
+                    key: 'tab-view-' + String(tab || ''),
+                    className: 'tab-active-viewport',
+                    onTouchStart: onTouchStart,
+                    onTouchEnd: onTouchEnd,
+                },
+            // DayTabWithCloudSync is always mounted so heysShowAdvice listener is always active.
+            // Advice overlay is position:fixed — it appears over any tab regardless of which is active.
+            // display:none fully hides day/reports chrome when another tab (e.g. user) is active.
+            React.createElement(
+                'div',
+                {
+                    style: (tab === 'stats' || tab === 'diary' || tab === 'activity')
+                        ? undefined
+                        : { display: 'none' },
+                    'aria-hidden': (tab === 'stats' || tab === 'diary' || tab === 'activity') ? undefined : 'true',
+                },
                 wrapReactProfiler('DayTab', React.createElement(DayTabWithCloudSync, {
                     key: 'day_' + String(clientId || ''),
                     products,
@@ -5092,7 +5370,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                                     }
                                                 ))
                                             : tab === 'tasks'
-                                                ? ((!cloudUser && clientId)
+                                                ? (canUsePostReleaseLabs
                                                     ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('tasks', { tasksSubtab: defaultTasksSubtab }) },
                                                         React.createElement(
                                                             _lazyTab('tasks', '__loadPostboot3Ui', function() { return window.HEYS?.PlanningTab; }),
@@ -5112,6 +5390,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                                             ))
                                                         : null)
                                                 : renderTabFallback('default_' + String(tab || 'unknown'), tabFallbackSkeleton(tab || 'fallback'))
+            )
             )
             )
         );

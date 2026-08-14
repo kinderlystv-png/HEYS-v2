@@ -1927,7 +1927,185 @@
     } catch (_) { }
   }
 
-  // ✅ Общий helper: summary-модалка для multiProductMode
+  const PHOTO_LIMIT_PER_MEAL = HEYS.dayGallery?.PHOTO_LIMIT_PER_MEAL || 10;
+
+  // ✅ Общий helper: summary-модалка для multiProductMode (канвас v4 · экран 6)
+  function MealSummaryV4Step({ context }) {
+    const fileInputRef = React.useRef(null);
+    const {
+      mealItems,
+      mealKcal,
+      mealItemCount,
+      remainingKcal,
+      isGoalReached,
+      onAddMore,
+      onSavePreset,
+      onPhoto,
+      onDone,
+      mealIndex,
+      mealId,
+      mealPhotos: initialMealPhotos,
+      summaryTitle
+    } = context || {};
+
+    const [mealPhotos, setMealPhotos] = React.useState(() => Array.isArray(initialMealPhotos) ? initialMealPhotos : []);
+
+    React.useEffect(() => {
+      if (Array.isArray(initialMealPhotos)) {
+        setMealPhotos(initialMealPhotos);
+      }
+    }, [initialMealPhotos]);
+
+    const productWord = mealItemCount === 1
+      ? 'продукт'
+      : (mealItemCount >= 2 && mealItemCount <= 4 ? 'продукта' : 'продуктов');
+
+    const photosAtLimit = mealPhotos.length >= PHOTO_LIMIT_PER_MEAL;
+
+    const handlePhotoPick = () => {
+      if (typeof onPhoto !== 'function' || photosAtLimit) return;
+      fileInputRef.current?.click();
+    };
+
+    const handlePhotoFile = (event) => {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file || typeof onPhoto !== 'function') return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const payload = {
+          mealIndex,
+          mealId,
+          photo: reader.result,
+          filename: file.name,
+          timestamp: Date.now()
+        };
+        onPhoto(payload);
+        setMealPhotos((prev) => [...prev, {
+          id: `local_${Date.now()}`,
+          data: payload.photo,
+          filename: payload.filename,
+          timestamp: payload.timestamp,
+          pending: true,
+          uploading: true
+        }]);
+      };
+      reader.readAsDataURL(file);
+    };
+
+    const openPhotoViewer = (photoIndex) => {
+      if (!mealPhotos.length) return;
+      if (typeof HEYS.showPhotoViewer === 'function') {
+        HEYS.showPhotoViewer([...mealPhotos], photoIndex, null);
+      } else {
+        const src = mealPhotos[photoIndex]?.data || mealPhotos[photoIndex]?.url;
+        if (src) window.open(src, '_blank');
+      }
+    };
+
+    return React.createElement('div', { className: 'aps-v4-meal-summary' },
+      typeof onPhoto === 'function' && React.createElement('input', {
+        ref: fileInputRef,
+        type: 'file',
+        accept: 'image/*',
+        capture: 'environment',
+        style: { display: 'none' },
+        onChange: handlePhotoFile
+      }),
+      React.createElement('div', { className: 'aps-v4-meal-summary__hero' },
+        React.createElement('div', { className: 'aps-v4-meal-summary__hero-label' }, 'Итого за приём'),
+        React.createElement('div', { className: 'aps-v4-meal-summary__hero-metrics' },
+          React.createElement('span', { className: 'aps-v4-meal-summary__hero-kcal' }, String(mealKcal)),
+          React.createElement('span', { className: 'aps-v4-meal-summary__hero-meta' },
+            `ккал · ${mealItemCount} ${productWord}`)
+        ),
+        React.createElement('div', { className: 'aps-v4-meal-summary__hero-foot' },
+          isGoalReached
+            ? 'Норма дня выполнена'
+            : `До нормы дня остаётся ${Math.max(0, remainingKcal)}`)
+      ),
+      React.createElement('div', { className: 'aps-v4-meal-summary__list' },
+        (mealItems || []).map((item, index) =>
+          React.createElement('div', {
+            key: `${item.name}-${item.grams}-${index}`,
+            className: 'aps-v4-meal-summary__row' + (index === mealItems.length - 1 ? ' is-last' : '')
+          },
+            React.createElement('span', { className: 'aps-v4-meal-summary__row-name' },
+              item.name,
+              ' ',
+              React.createElement('span', { className: 'aps-v4-meal-summary__row-grams' }, `${item.grams} г`)
+            ),
+            React.createElement('span', { className: 'aps-v4-meal-summary__row-kcal' }, String(item.kcal))
+          )
+        )
+      ),
+      typeof onPhoto === 'function' && React.createElement('div', { className: 'aps-v4-meal-summary__photo-tier' }, 'Фото приёма'),
+      typeof onPhoto === 'function' && React.createElement('div', { className: 'aps-v4-meal-summary__photo-grid' },
+        mealPhotos.map((photo, photoIndex) => {
+          const src = photo.data || photo.url;
+          if (!src) return null;
+          const timeStr = photo.timestamp
+            ? new Date(photo.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+            : null;
+          const handleDeletePhoto = (event) => {
+            event?.stopPropagation?.();
+            event?.preventDefault?.();
+            setMealPhotos((prev) => prev.filter((_, index) => index !== photoIndex));
+          };
+          return React.createElement('div', {
+            key: photo.id || photoIndex,
+            className: 'aps-v4-meal-summary__photo-thumb-wrap'
+          },
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-v4-meal-summary__photo-thumb',
+              onClick: () => openPhotoViewer(photoIndex),
+              'aria-label': 'Открыть фото приёма'
+            },
+              React.createElement('img', { src, alt: '' }),
+              timeStr && React.createElement('span', { className: 'aps-v4-meal-summary__photo-time' }, timeStr)
+            ),
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-v4-meal-summary__photo-delete',
+              onClick: handleDeletePhoto,
+              'aria-label': 'Удалить фото'
+            }, '×')
+          );
+        }),
+        !photosAtLimit && React.createElement('button', {
+          type: 'button',
+          className: 'aps-v4-meal-summary__photo-add',
+          onClick: handlePhotoPick,
+          'aria-label': 'Добавить фото приёма'
+        },
+          React.createElement('span', { className: 'aps-v4-meal-summary__photo-add-icon', 'aria-hidden': 'true' }, '+'),
+          React.createElement('span', null, 'Добавить')
+        )
+      ),
+      typeof onPhoto === 'function' && React.createElement('div', { className: 'aps-v4-meal-summary__photo-note' },
+        'Фото принадлежит приёму, а не отдельному продукту.'
+      ),
+      React.createElement('div', { className: 'aps-v4-meal-summary__actions aps-v4-meal-summary__actions--row' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'aps-v4-btn-ghost aps-v4-meal-summary__btn aps-v4-btn-paper',
+          onClick: onAddMore
+        }, 'Добавить ещё'),
+        typeof onSavePreset === 'function' && React.createElement('button', {
+          type: 'button',
+          className: 'aps-v4-btn-ghost aps-v4-meal-summary__btn aps-v4-btn-paper',
+          onClick: onSavePreset
+        }, 'Сохранить как набор')
+      ),
+      React.createElement('button', {
+        type: 'button',
+        className: 'aps-v4-btn-primary aps-v4-meal-summary__done',
+        onClick: onDone
+      }, 'Готово')
+    );
+  }
+
   async function showMultiProductSummary({
     day,
     mealIndex,
@@ -1936,21 +2114,22 @@
     per100,
     scale,
     onAddMore,
-    onAddLast
+    onAddLast,
+    onPhoto,
+    onSavePreset,
+    mealId: requestedMealId
   }) {
-    if (!HEYS.ConfirmModal?.show) return;
+    if (!HEYS.StepModal?.show) return;
 
     const currentDay = day || HEYS.Day?.getDay?.() || {};
-    const currentMeal = currentDay?.meals?.[mealIndex];
+    const resolvedMealIndex = resolveMealIndex(currentDay, mealIndex, requestedMealId);
+    const currentMeal = currentDay?.meals?.[resolvedMealIndex];
     if (!currentMeal) return;
 
     const localPIndex = pIndex || HEYS.dayUtils?.buildProductIndex?.() || HEYS.products?.buildIndex?.() || {};
     const mealTotals = HEYS.models?.mealTotals?.(currentMeal, localPIndex) || {};
     const mealKcal = Math.round(mealTotals.kcal || 0);
 
-    // HEYS.dayUtils.getOptimumForDay — призрак, такого метода нет ни в одном
-    // исходнике: оптимум всегда падал в жёсткий фолбэк 2000, и «осталось
-    // ккал» после добавления еды считалось не против реальной цели дня.
     const profile = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
     const optimumData = HEYS.TDEE?.resolveDailyTargets?.(profile, currentDay) || {};
     const optimum = Math.round(optimumData.kcal || 2000);
@@ -1958,241 +2137,117 @@
     const dayTotals = HEYS.dayCalculations?.calculateDayTotals?.(currentDay, localPIndex) || {};
     const eatenKcal = Math.round(dayTotals.kcal || 0);
     const remainingKcal = optimum - eatenKcal;
-
-    const mealScore = HEYS.mealScoring?.calcKcalScore?.(mealKcal, null, optimum, currentMeal.time, null);
-    const mealQuality = HEYS.mealScoring?.getMealQualityScore?.(currentMeal, null, optimum, localPIndex, null);
-    const mealKcalStatus = (() => {
-      let status = 'good';
-      if (mealScore?.ok === false) status = 'bad';
-      else if ((mealScore?.issues || []).length > 0) status = 'warn';
-      if (mealQuality?.score != null) {
-        if (mealQuality.score < 50) status = 'bad';
-        else if (mealQuality.score < 75 && status !== 'bad') status = 'warn';
-      }
-      return status;
-    })();
-    const mealKcalColor = mealKcalStatus === 'bad'
-      ? '#ef4444'
-      : mealKcalStatus === 'warn'
-        ? '#eab308'
-        : '#22c55e';
-
-    const heroMetrics = HEYS.dayHeroMetrics?.computeHeroMetrics?.({
-      day: currentDay,
-      eatenKcal,
-      optimum,
-      dayTargetDef: currentDay?.deficitPct,
-      factDefPct: currentDay?.deficitPct,
-      r0: (v) => Math.round(v),
-      ratioZones: HEYS.ratioZones
-    });
-    const remainingColor = heroMetrics?.remainCol?.text
-      || (remainingKcal > 100 ? '#22c55e' : remainingKcal >= 0 ? '#eab308' : '#ef4444');
-
-    const mealOverLimit = (mealScore?.issues || []).some((issue) =>
-      String(issue).includes('переед') || String(issue).includes('много')
-    ) || mealScore?.ok === false;
-
     const isGoalReached = remainingKcal <= 0;
-    const mealName = currentMeal.name || `Приём ${mealIndex + 1}`;
-    const summaryActions = [
-      {
-        key: 'finish',
-        label: 'Завершить',
-        value: 'finish',
-        style: 'primary',
-        variant: 'fill',
-        row: 0,
-        isCancel: true
-      },
-      {
-        key: 'add-last',
-        label: 'Добавить последний',
-        value: 'add-last',
-        style: 'warning',
-        variant: 'fill',
-        row: 0,
-        isDefault: true,
-        className: 'confirm-modal-btn--last-one'
-      },
-      {
-        key: 'add-more',
-        label: 'Добавить ещё несколько',
-        value: 'add-more',
-        style: 'success',
-        variant: 'fill',
-        row: 1,
-        className: 'confirm-modal-btn--multi-continue'
-      },
-      // 🆕 «Ещё N продуктов» — без промежуточной summary-модалки
-      ...[2, 3, 4].map((n) => ({
-        key: `add-${n}`,
-        label: `ещё ${n}`,
-        value: `add-${n}`,
-        style: 'primary',
-        variant: 'outline',
-        row: 2,
-        className: 'confirm-modal-btn--repeat'
-      }))
-    ];
+
+    const localizeMealName = HEYS.dayUtils?.localizeMealName;
+    const summaryTitle = [
+      typeof localizeMealName === 'function'
+        ? localizeMealName(currentMeal.name, 'Приём')
+        : (currentMeal.name || 'Приём'),
+      currentMeal.time
+    ].filter(Boolean).join(' · ');
 
     const mealItems = (currentMeal.items || []).map((item) => {
       const product = getProductFromItem(item, localPIndex) || { name: item.name || '?' };
       const grams = +item.grams || 0;
       const p100 = per100(product);
       const itemKcal = Math.round(scale(p100.kcal100, grams));
-      let name = product.name || item.name || '?';
-      if (name.length > 22) name = name.slice(0, 20) + '…';
-      return { name, grams, kcal: itemKcal };
+      return {
+        name: product.name || item.name || '?',
+        grams,
+        kcal: itemKcal
+      };
     });
 
-    const ProductsList = mealItems.length > 0 ? React.createElement('div', {
-      className: 'confirm-modal-products-list',
-      style: {
-        margin: '10px 0',
-        padding: '8px 10px',
-        background: 'var(--bg-secondary, #f8fafc)',
-        borderRadius: '8px',
-        fontSize: '13px'
-      }
-    },
-      React.createElement('div', {
-        style: {
-          fontSize: '11px',
-          fontWeight: '600',
-          color: '#64748b',
-          marginBottom: '6px',
-          textTransform: 'uppercase',
-          letterSpacing: '0.3px'
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        resolve(result);
+      };
+
+      const dispatchFinished = () => {
+        try {
+          window.dispatchEvent(new CustomEvent('heys:meal-flow-finished', {
+            detail: {
+              source: 'day-add-product-summary',
+              dateKey: currentDay?.date || null,
+              mealIndex: resolvedMealIndex,
+              mealId: currentMeal.id || requestedMealId || null
+            }
+          }));
+        } catch (_) {
+          // ignore
         }
-      }, 'В приёме:'),
-      mealItems.slice(0, 6).map((item, idx) =>
-        React.createElement('div', {
-          key: idx,
-          style: {
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '3px 0',
-            borderBottom: idx < Math.min(mealItems.length, 6) - 1 ? '1px dotted #e2e8f0' : 'none'
+      };
+
+      const closeSummary = (result, { scrollToDiary = false } = {}) => {
+        HEYS.StepModal?.hide?.({ scrollToDiary });
+        finish(result);
+      };
+
+      HEYS.StepModal.show({
+        steps: [{
+          id: 'meal-summary',
+          title: summaryTitle,
+          component: MealSummaryV4Step,
+          hideHeaderNext: true
+        }],
+        modalClassName: 'aps-v4-meal-summary-modal',
+        showGreeting: false,
+        showStreak: false,
+        showTip: false,
+        showProgress: false,
+        hidePrimaryOnFirst: true,
+        context: {
+          day: currentDay,
+          mealIndex: resolvedMealIndex,
+          mealId: currentMeal.id || requestedMealId || null,
+          dateKey: currentDay?.date || null,
+          mealItems,
+          mealKcal,
+          mealItemCount: mealItems.length,
+          remainingKcal: Math.max(0, remainingKcal),
+          isGoalReached,
+          mealPhotos: currentMeal.photos || [],
+          summaryTitle,
+          onAddMore: () => {
+            closeSummary('add-more', { scrollToDiary: false });
+            onAddMore?.(currentDay);
+          },
+          onSavePreset: typeof onSavePreset === 'function'
+            ? () => {
+              closeSummary('save-preset', { scrollToDiary: false });
+              onSavePreset(currentDay);
+            }
+            : null,
+          onPhoto: typeof onPhoto === 'function' ? onPhoto : null,
+          onDone: () => {
+            dispatchFinished();
+            if (isGoalReached && HEYS.Confetti?.fire) {
+              HEYS.Confetti.fire();
+            }
+            closeSummary('finish', { scrollToDiary: true });
           }
         },
-          React.createElement('span', { style: { color: '#334155' } },
-            item.name,
-            ' ',
-            React.createElement('span', { style: { color: '#94a3b8', fontSize: '11px' } }, item.grams + 'г')
-          ),
-          React.createElement('span', {
-            style: { fontWeight: '600', color: '#475569', minWidth: '45px', textAlign: 'right' }
-          }, item.kcal)
-        )
-      ),
-      mealItems.length > 6 && React.createElement('div', {
-        style: { fontSize: '11px', color: '#94a3b8', marginTop: '4px', textAlign: 'center' }
-      }, '...и ещё ' + (mealItems.length - 6)),
-      React.createElement('div', {
-        style: {
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginTop: '6px',
-          paddingTop: '6px',
-          borderTop: '1px solid #cbd5e1',
-          fontWeight: '700'
+        onClose: () => {
+          dispatchFinished();
+          finish('finish');
         }
-      },
-        React.createElement('span', { style: { color: '#334155' } }, 'Итого'),
-        React.createElement('span', { style: { color: mealKcalColor } }, mealKcal + ' ккал')
-      )
-    ) : null;
-
-    let modalResult = false;
-
-    if (isGoalReached) {
-      modalResult = await HEYS.ConfirmModal.show({
-        icon: '🎉',
-        title: 'Норма выполнена!',
-        text: React.createElement('div', { className: 'confirm-modal-text-block' },
-          React.createElement('div', null,
-            'Отличная работа! В "',
-            mealName,
-            '" уже ',
-            React.createElement('span', {
-              className: 'confirm-modal-kcal',
-              style: { color: mealKcalColor }
-            }, mealKcal + ' ккал'),
-            '.'
-          ),
-          ProductsList,
-          React.createElement('div', { style: { marginTop: '8px' } },
-            'Всего за день: ',
-            React.createElement('span', {
-              className: 'confirm-modal-kcal',
-              style: { color: remainingColor }
-            }, eatenKcal + ' ккал')
-          )
-        ),
-        actions: summaryActions,
-        defaultActionValue: 'add-last',
-        cancelActionValue: 'finish'
       });
-
-      if (modalResult === 'finish' && HEYS.Confetti?.fire) {
-        HEYS.Confetti.fire();
+    }).then((modalResult) => {
+      if (modalResult === 'add-last' && onAddLast) {
+        onAddLast(currentDay);
       }
-    } else {
-      modalResult = await HEYS.ConfirmModal.show({
-        icon: '🍽️',
-        title: `Добавить ещё в ${String(mealName).toLowerCase()}?`,
-        text: React.createElement('div', { className: 'confirm-modal-text-block' },
-          ProductsList,
-          React.createElement('div', { style: { marginTop: ProductsList ? '8px' : '0' } },
-            'До нормы сегодня осталось ',
-            React.createElement('span', {
-              className: 'confirm-modal-remaining',
-              style: { color: remainingColor }
-            }, Math.max(0, remainingKcal) + ' ккал'),
-            '.'
-          ),
-          mealOverLimit && React.createElement('div', { className: 'confirm-modal-warning' },
-            '⚠️ Похоже, приём уже тяжеловат.'
-          )
-        ),
-        actions: summaryActions,
-        defaultActionValue: 'add-last',
-        cancelActionValue: 'finish'
-      });
-    }
-
-    if (modalResult === 'add-last' && onAddLast) {
-      onAddLast(currentDay);
-    }
-
-    if (modalResult === 'add-more' && onAddMore) {
-      onAddMore(currentDay);
-    }
-
-    if (modalResult === 'finish' || modalResult === false) {
-      try {
-        window.dispatchEvent(new CustomEvent('heys:meal-flow-finished', {
-          detail: {
-            source: 'day-add-product-summary',
-            dateKey: currentDay?.date || null,
-            mealIndex
-          }
-        }));
-      } catch (_) {
-        // ignore
+      if (typeof modalResult === 'string' && /^add-(\d+)$/.test(modalResult) && onAddMore) {
+        const repeatCount = parseInt(modalResult.slice(4), 10);
+        if (Number.isFinite(repeatCount) && repeatCount > 1) {
+          onAddMore(currentDay, repeatCount);
+        }
       }
-    }
-
-    // 🆕 add-2 / add-3 / add-4 → autoRepeat
-    if (typeof modalResult === 'string' && /^add-(\d+)$/.test(modalResult) && onAddMore) {
-      const repeatCount = parseInt(modalResult.slice(4), 10);
-      if (Number.isFinite(repeatCount) && repeatCount > 1) {
-        onAddMore(currentDay, repeatCount);
-      }
-    }
+      return modalResult;
+    });
   }
 
   HEYS.dayAddProductSummary = HEYS.dayAddProductSummary || {};
@@ -2871,6 +2926,7 @@
               HEYS.dayAddProductSummary.show({
                 day: updatedDayForSummary,
                 mealIndex: summaryMealIndex,
+                mealId,
                 pIndex: HEYS.dayUtils?.buildProductIndex?.() || HEYS.products?.buildIndex?.() || {},
                 getProductFromItem,
                 per100,
@@ -2880,7 +2936,23 @@
                   mealId,
                   autoRepeatCount: autoRepeatCount || 0
                 }),
-                onAddLast: (updatedDay) => openAddModal({ day: updatedDay, mealId, multiProductMode: false })
+                onAddLast: (updatedDay) => openAddModal({ day: updatedDay, mealId, multiProductMode: false }),
+                onPhoto: (payload) => handleAddPhoto({
+                  ...payload,
+                  mealIndex: summaryMealIndex,
+                  mealId: payload?.mealId || mealId
+                }),
+                onSavePreset: () => {
+                  const latestDay = HEYS.Day?.getDay?.() || updatedDayForSummary;
+                  HEYS.AddProductStep?.show?.({
+                    mealIndex: summaryMealIndex,
+                    mealId,
+                    day: latestDay,
+                    dateKey: date,
+                    openPresetsCreate: true,
+                    onAdd: handleAdd
+                  });
+                }
               });
             }, 100);
           });
@@ -3281,25 +3353,20 @@
         return label.charAt(0).toUpperCase() + label.slice(1);
     }
 
-    function MealDateWarning({ dateKey, todayKey }) {
-        const targetLabel = formatMealDateLabel(dateKey, true);
-        const todayLabel = formatMealDateLabel(todayKey);
+    function MealDateWarning({ dateKey }) {
+        const targetLabel = formatMealDateLabel(dateKey);
 
         return React.createElement('div', {
             className: 'meal-date-warning',
             role: 'alert',
             'aria-live': 'assertive',
         },
-            React.createElement('div', { className: 'meal-date-warning__badge' }, 'НЕ СЕГОДНЯ'),
-            React.createElement('div', { className: 'meal-date-warning__date' }, targetLabel),
+            React.createElement('div', { className: 'meal-date-warning__badge' }, 'Внимание'),
             React.createElement('div', { className: 'meal-date-warning__question' },
-                'Точно записать новый приём на эту дату?'
+                `Приём запишется на ${targetLabel}, а не на сегодня`
             ),
             React.createElement('p', { className: 'meal-date-warning__copy' },
-                'Он появится в выбранном дне, а не в сегодняшнем дневнике.'
-            ),
-            React.createElement('div', { className: 'meal-date-warning__today' },
-                'Сегодня — ', React.createElement('strong', null, todayLabel)
+                'В календаре выбран другой день. Еда уйдёт туда и в сегодняшнюю норму не попадёт.'
             )
         );
     }
@@ -3313,15 +3380,14 @@
         }
 
         const targetShortLabel = formatMealDateLabel(dateKey);
-        const todayShortLabel = formatMealDateLabel(todayKey);
         const result = await HEYS.ConfirmModal.show({
-            icon: '⚠️',
-            title: 'Выбрана другая дата',
-            text: React.createElement(MealDateWarning, { dateKey, todayKey }),
+            icon: '',
+            title: '',
+            text: React.createElement(MealDateWarning, { dateKey }),
             actions: [
                 {
                     key: 'return-today',
-                    label: `Вернуться на сегодня · ${todayShortLabel}`,
+                    label: 'Перейти на сегодня',
                     value: 'today',
                     style: 'primary',
                     variant: 'fill',
@@ -3332,10 +3398,10 @@
                 },
                 {
                     key: 'confirm-other-date',
-                    label: `Да, записать на ${targetShortLabel}`,
+                    label: `Всё-таки записать на ${targetShortLabel}`,
                     value: 'confirm',
-                    style: 'warning',
-                    variant: 'fill',
+                    style: 'neutral',
+                    variant: 'text',
                     row: 1,
                     className: 'meal-date-warning__confirm-action',
                 },
@@ -8270,7 +8336,7 @@
                             if (window.HEYS && window.HEYS.analytics) {
                                 window.HEYS.analytics.trackDataOperation('meal-created');
                             }
-                            HEYS.Toast?.success('Приём создан');
+                            // Fork-модалка с названием приёма — достаточное подтверждение, toast не нужен.
                         } else {
                             HEYS.Toast?.error('Не удалось сохранить приём. Попробуйте ещё раз.');
                         }
@@ -8286,31 +8352,88 @@
                             );
                         } catch (_) { /* noop */ }
 
-                        // 🆕 Стабильный флоу: lazy-вычисление индекса через HEYS.Day, retry через rAF
-                        const savedMealName = (newMeal.name || '').toLowerCase();
-
-                        const findMealIndex = () => {
-                            const currentDay = HEYS.Day?.getDay?.();
-                            if (!currentDay?.meals) return -1;
-                            return currentDay.meals.findIndex((m) => m.id === newMealId);
+                        // Индекс нового приёма — синхронно из только что собранного newDayData.
+                        // HEYS.Day.getDay() читает dayRef DayTab и отстаёт до React commit.
+                        const newMealIndex = newMeals.findIndex((m) => m.id === newMealId);
+                        const unlockScrollSafely = () => {
+                            document.body.style.overflow = '';
+                            document.documentElement.style.overflow = '';
                         };
 
-                        const showFlowModal = (attempt) => {
-                            const maxAttempts = 5;
-                            const mealIndex = findMealIndex();
-
-                            if (mealIndex < 0) {
-                                if (attempt < maxAttempts) {
-                                    // Retry: React ещё не применил state update
-                                    requestAnimationFrame(() => showFlowModal(attempt + 1));
-                                    return;
-                                }
-                                console.warn('[HEYS.Day] ⚠️ Flow modal skipped: meal not found after', maxAttempts, 'attempts', { newMealId });
+                        const showFlowModal = () => {
+                            if (newMealIndex < 0) {
+                                console.warn('[HEYS.Day] ⚠️ Flow modal skipped: meal not found in newDayData', { newMealId });
+                                unlockScrollSafely();
                                 return;
                             }
 
+                            const mealIndex = newMealIndex;
                             expandOnlyMeal(mealIndex);
-                            const mealName = savedMealName || `приём ${mealIndex + 1}`;
+
+                            const PHOTO_LIMIT_PER_MEAL = HEYS.dayGallery?.PHOTO_LIMIT_PER_MEAL || 10;
+
+                            const handleAddPhoto = async ({ mealIndex: photoMealIndex, mealId: requestedMealId, photo, filename, timestamp }) => {
+                                const activeDay = HEYS.Day?.getDay?.() || day || {};
+                                const resolvedMealIndex = resolveMealIndex(activeDay, photoMealIndex, requestedMealId);
+                                const activeMeal = activeDay?.meals?.[resolvedMealIndex];
+                                const currentPhotos = activeMeal?.photos?.length || 0;
+                                if (currentPhotos >= PHOTO_LIMIT_PER_MEAL) {
+                                    HEYS.Toast?.warning?.(`Максимум ${PHOTO_LIMIT_PER_MEAL} фото на приём пищи`);
+                                    return;
+                                }
+
+                                const clientId = HEYS.utils?.getCurrentClientId?.() || 'default';
+                                const mealId = activeMeal?.id || requestedMealId || uid('meal_');
+                                const photoId = uid('photo_');
+                                const photoData = {
+                                    id: photoId,
+                                    data: photo,
+                                    filename,
+                                    timestamp,
+                                    pending: true,
+                                    uploading: true,
+                                    uploaded: false
+                                };
+
+                                setDay((prevDay = {}) => {
+                                    const targetIndex = resolveMealIndex(prevDay, photoMealIndex, mealId);
+                                    const meals = (prevDay.meals || []).map((m, i) =>
+                                        i === targetIndex
+                                            ? { ...m, photos: [...(m.photos || []), photoData] }
+                                            : m
+                                    );
+                                    const nextDay = { ...prevDay, meals, updatedAt: Date.now() };
+                                    persistDayData(nextDay, 'meal_photo_add');
+                                    return nextDay;
+                                });
+
+                                if (HEYS.cloud?.uploadPhoto) {
+                                    try {
+                                        const result = await HEYS.cloud.uploadPhoto(photo, clientId, date, mealId);
+                                        if (result?.uploaded && result?.path) {
+                                            setDay((prevDay = {}) => {
+                                                const targetIndex = resolveMealIndex(prevDay, photoMealIndex, mealId);
+                                                const meals = (prevDay.meals || []).map((m, i) => {
+                                                    if (i !== targetIndex || !m.photos) return m;
+                                                    return {
+                                                        ...m,
+                                                        photos: m.photos.map((p) =>
+                                                            p.id === photoId
+                                                                ? { ...p, path: result.path, data: undefined, pending: false, uploading: false, uploaded: true }
+                                                                : p
+                                                        )
+                                                    };
+                                                });
+                                                const nextDay = { ...prevDay, meals, updatedAt: Date.now() };
+                                                persistDayData(nextDay, 'meal_photo_uploaded');
+                                                return nextDay;
+                                            });
+                                        }
+                                    } catch (e) {
+                                        console.warn('[HEYS.day] Photo upload failed:', e);
+                                    }
+                                }
+                            };
 
                             // Функция открытия модалки добавления продукта
                             const openAddProductModal = (targetMealIndex, multiProductMode, dayOverride, autoRepeatCount, options = {}) => {
@@ -8328,6 +8451,7 @@
                                     dateKey: date,
                                     startWithBarcodeScanner: options.startWithBarcodeScanner === true,
                                     barcodeCameraStart: options.barcodeCameraStart || null,
+                                    openPresetsCreate: options.openPresetsCreate === true,
 		                                    onAdd: async ({ product, grams, mealIndex: addMealIndex, mealId: addMealId = targetMealId, productCommitVerified }) => {
 		                                        let finalProduct = product;
 		                                        const ready = productCommitVerified === true
@@ -8525,6 +8649,18 @@
 	                                                        scale,
 	                                                        onAddMore: (updatedDay, autoRepeatCount) => openAddProductModal(summaryMealIndex, true, updatedDay, autoRepeatCount || 0, { mealId: addMealId }),
 	                                                        onAddLast: (updatedDay) => openAddProductModal(summaryMealIndex, false, updatedDay, undefined, { mealId: addMealId }),
+	                                                        onPhoto: (payload) => handleAddPhoto({
+	                                                            ...payload,
+	                                                            mealIndex: summaryMealIndex,
+	                                                            mealId: payload?.mealId || addMealId
+	                                                        }),
+	                                                        onSavePreset: () => {
+	                                                            const latestDay = HEYS.Day?.getDay?.() || updatedDayForSummary;
+	                                                            openAddProductModal(summaryMealIndex, true, latestDay, 0, {
+	                                                                mealId: addMealId,
+	                                                                openPresetsCreate: true
+	                                                            });
+	                                                        },
 	                                                    });
 	                                                }, 100);
 	                                            });
@@ -8584,50 +8720,30 @@
                             const renderFlowBarcodeIcon = (compact = false, bare = false) => {
                                 const BarcodeIcon = window.HEYS?.AddProductStep?.BarcodeScanIcon;
                                 return React.createElement('span', {
-                                    className: 'flow-selection-btn__barcode',
-                                    'aria-hidden': 'true',
-                                    style: {
-                                        flexShrink: 0,
-                                        width: compact ? '24px' : '34px',
-                                        height: compact ? '24px' : '34px',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        marginLeft: bare || compact ? '0' : '8px',
-                                        borderRadius: compact ? '7px' : '10px',
-                                        background: bare ? 'transparent' : (compact ? 'rgba(67,69,135,0.08)' : 'rgba(255,255,255,0.18)'),
-                                        color: compact ? '#434587' : '#ffffff',
-                                        overflow: 'hidden'
-                                    }
+                                    className: 'flow-selection-btn__barcode' + (compact ? ' is-compact' : '') + (bare ? ' is-bare' : ''),
+                                    'aria-hidden': 'true'
                                 }, BarcodeIcon
-                                    ? React.createElement('span', {
-                                        style: {
-                                            display: 'block',
-                                            transform: compact ? 'scale(0.68)' : 'scale(0.9)',
-                                            transformOrigin: 'center'
-                                        }
-                                    }, React.createElement(BarcodeIcon))
-                                    : React.createElement('span', { style: { fontSize: compact ? '17px' : '24px', lineHeight: 1 } }, '▥')
+                                    ? React.createElement(BarcodeIcon)
+                                    : React.createElement('span', { className: 'flow-selection-btn__barcode-fallback' }, '▮')
                                 );
                             };
 
-	                            // Показываем модалку выбора флоу
-	                            if (!window.HEYS?.ConfirmModal?.show) {
-	                                // Fallback: сразу открываем быстрый режим
-	                                openAddProductModal(mealIndex, false, undefined, undefined, { mealId: newMealId });
-	                                return;
-	                            }
+                            if (!window.HEYS?.ConfirmModal?.show) {
+                                if (!window.HEYS?.AddProductStep?.show) {
+                                    console.warn('[HEYS.Day] ⚠️ AddProductStep unavailable after meal create');
+                                    unlockScrollSafely();
+                                    return;
+                                }
+                                openAddProductModal(mealIndex, false, newDayData, undefined, { mealId: newMealId });
+                                return;
+                            }
 
-                            // Подгружаем недавние приёмы — для опциональной кнопки «Повторить из недавних».
-                            // Только когда новый приём ещё пуст и у нас есть что предложить за последние 2 дня.
-                            const currentMealForFlow = HEYS.Day?.getDay?.()?.meals?.[mealIndex];
+                            const currentMealForFlow = newDayData?.meals?.[mealIndex];
                             const newMealIsEmpty = !((currentMealForFlow?.items || []).length);
                             const recentMealsForFlow = newMealIsEmpty ? loadRecentMealsForDate(date, 2) : [];
 
                             const handleFlowRepeatRecent = () => {
                                 window.HEYS.ConfirmModal.hide();
-                                const actualIdx = findMealIndex();
-                                if (actualIdx < 0) return;
                                 const fresh = loadRecentMealsForDate(date, 2);
                                 if (!fresh.length) {
                                     HEYS.Toast?.info?.('За последние 2 дня нет приёмов с продуктами');
@@ -8645,11 +8761,11 @@
                                             );
                                             if (!cloned || cloned.length === 0) return;
                                             markUndoWindow(3000);
-                                            const baseDay = dayRef.current || {};
-                                            const newMeals = (baseDay.meals || []).map((m, i) =>
-                                                i === actualIdx ? { ...m, items: [...(m.items || []), ...cloned] } : m
+                                            const baseDay = dayRef.current || newDayData || {};
+                                            const updatedMeals = (baseDay.meals || []).map((m, i) =>
+                                                i === mealIndex ? { ...m, items: [...(m.items || []), ...cloned] } : m
                                             );
-                                            const updated = { ...baseDay, meals: newMeals, updatedAt: Date.now() };
+                                            const updated = { ...baseDay, meals: updatedMeals, updatedAt: Date.now() };
                                             persistDayData(updated, 'flow_repeat_recent_meal');
                                             setDay(() => updated);
                                             HEYS.Toast?.success?.(`Скопировано продуктов: ${cloned.length}`);
@@ -8658,13 +8774,21 @@
                                 }, 100);
                             };
 
-	                            const openFlowAddProduct = (multiProductMode, autoRepeatCount = 0, startWithBarcodeScanner = false, barcodeCameraStart = null) => {
-	                                window.HEYS.ConfirmModal.hide();
-	                                const actualIdx = findMealIndex();
-	                                if (actualIdx >= 0) {
-	                                    setTimeout(() => openAddProductModal(actualIdx, multiProductMode, undefined, autoRepeatCount, { mealId: newMealId, startWithBarcodeScanner, barcodeCameraStart }), 100);
-	                                }
-	                            };
+                            const openFlowAddProduct = (multiProductMode, autoRepeatCount = 0, startWithBarcodeScanner = false, barcodeCameraStart = null) => {
+                                window.HEYS.ConfirmModal.hide();
+                                if (!window.HEYS?.AddProductStep?.show) {
+                                    HEYS.Toast?.error?.('Добавление продукта временно недоступно');
+                                    unlockScrollSafely();
+                                    return;
+                                }
+                                setTimeout(() => openAddProductModal(
+                                    mealIndex,
+                                    multiProductMode,
+                                    newDayData,
+                                    autoRepeatCount,
+                                    { mealId: newMealId, startWithBarcodeScanner, barcodeCameraStart }
+                                ), 100);
+                            };
 
                             const renderFlowBarcodeButton = (multiProductMode, autoRepeatCount = 0, compact = false) => (
                                 React.createElement('button', {
@@ -8672,22 +8796,6 @@
                                     className: 'flow-selection-btn__barcode-tap',
                                     'aria-label': 'Сканировать штрихкод',
                                     title: 'Сканировать штрихкод',
-                                    style: {
-                                        flexShrink: 0,
-                                        width: compact ? '38px' : '56px',
-                                        minHeight: compact ? '46px' : '100%',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        border: compact ? '1px solid #86efac' : 'none',
-                                        borderLeft: compact ? 'none' : '1px solid rgba(255,255,255,0.34)',
-                                        borderRadius: '0 12px 12px 0',
-                                        background: compact ? '#f0fdf4' : 'rgba(255,255,255,0.24)',
-                                        color: compact ? '#434587' : '#ffffff',
-                                        cursor: 'pointer',
-                                        padding: 0,
-                                        transition: 'all 0.15s ease'
-                                    },
                                     onClick: (event) => {
                                         event.preventDefault();
                                         event.stopPropagation();
@@ -8701,176 +8809,96 @@
                                 }, renderFlowBarcodeIcon(compact, true))
                             );
 
-                            const renderFlowOption = ({ className, style, icon, title, subtitle, multiProductMode }) => (
+                            const renderFlowOption = ({ className, title, subtitle, multiProductMode }) => (
                                 React.createElement('div', {
-                                    className: `${className}-split`,
-                                    style: {
-                                        display: 'flex',
-                                        borderRadius: '12px',
-                                        overflow: 'hidden',
-                                        background: style.background
-                                    }
+                                    className: `${className}-split flow-selection-row`
                                 },
                                     React.createElement('button', {
+                                        type: 'button',
                                         className,
-                                        style: {
-                                            ...style,
-                                            flex: 1,
-                                            borderRadius: '12px 0 0 12px'
-                                        },
                                         onClick: () => openFlowAddProduct(multiProductMode, 0, false)
                                     },
-                                        React.createElement('span', {
-                                            style: { fontSize: '28px' }
-                                        }, icon),
-                                        React.createElement('div', {
-                                            style: { flex: 1 }
-                                        },
-                                            React.createElement('div', {
-                                                style: { fontWeight: '700', color: '#ffffff', fontSize: '15px' }
-                                            }, title),
-                                            React.createElement('div', {
-                                                style: { fontSize: '12px', color: 'rgba(255,255,255,0.88)', marginTop: '2px' }
-                                            }, subtitle)
+                                        React.createElement('div', { className: 'flow-selection-btn__copy' },
+                                            React.createElement('div', { className: 'flow-selection-btn__title' }, title),
+                                            React.createElement('div', { className: 'flow-selection-btn__sub' }, subtitle)
                                         )
                                     ),
                                     renderFlowBarcodeButton(multiProductMode)
                                 )
                             );
 
-                            const renderFlowRepeatOption = (n) => (
-                                React.createElement('div', {
-                                    key: `repeat-${n}`,
-                                    className: 'flow-selection-btn--repeat-split',
-                                    style: {
-                                        flex: 1,
-                                        display: 'flex',
-                                        minWidth: 0
-                                    }
-                                },
-                                    React.createElement('button', {
-                                        className: 'flow-selection-btn flow-selection-btn--repeat',
-                                        style: {
-                                            flex: 1,
-                                            minWidth: 0,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            padding: '12px 6px',
-                                            border: '1px solid #86efac',
-                                            borderRight: 'none',
-                                            borderRadius: '12px 0 0 12px',
-                                            background: '#dcfce7',
-                                            color: '#14532d',
-                                            fontSize: '15px',
-                                            fontWeight: '700',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.15s ease'
-                                        },
-                                        onClick: () => openFlowAddProduct(true, n, false)
-                                    }, `Еще ${n}`),
-                                    renderFlowBarcodeButton(true, n, true)
-                                )
-                            );
+                            const recentPreview = (() => {
+                                const meal = recentMealsForFlow[0] && recentMealsForFlow[0].meal;
+                                const items = (meal && meal.items) || [];
+                                if (!items.length) return null;
+                                const names = [];
+                                let kcal = 0;
+                                for (let i = 0; i < items.length; i++) {
+                                    const it = items[i];
+                                    const product = getProductFromItem ? getProductFromItem(it, pIndex) : null;
+                                    const name = String((product && product.name) || it.name || '').trim();
+                                    if (name) names.push(name);
+                                    const grams = Number(it.grams) || 0;
+                                    const kcal100 = Number((product && (product.kcal100 ?? product.kcal)) || it.kcal100 || 0) || 0;
+                                    if (grams && kcal100) kcal += (kcal100 * grams) / 100;
+                                }
+                                const shown = names.slice(0, 3).join(', ');
+                                const kcalPart = kcal > 0 ? `${Math.round(kcal)} ккал` : '';
+                                const line = [shown, kcalPart].filter(Boolean).join(' · ');
+                                return line || null;
+                            })();
+                            const flowTitle = [localizeMealName(newMeal.name, 'Приём'), newMeal.time].filter(Boolean).join(' · ');
 
                             window.HEYS.ConfirmModal.show({
-                                icon: '🍽️',
-                                title: `Добавить продукты в ${mealName}`,
+                                icon: '',
+                                title: flowTitle,
                                 text: React.createElement('div', {
-                                    style: {
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '12px',
-                                        margin: '8px 0'
-                                    }
+                                    className: 'flow-add-products'
                                 },
-                                    // Кнопка "↩ Повторить приём из недавних" — фиолетовый, только если есть недавние и приём пуст
                                     recentMealsForFlow.length > 0 && React.createElement('button', {
+                                        type: 'button',
                                         className: 'flow-selection-btn flow-selection-btn--repeat-recent',
-                                        style: {
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '12px',
-                                            padding: '14px 16px',
-                                            border: 'none',
-                                            borderRadius: '12px',
-                                            background: '#6366f1',
-                                            color: '#ffffff',
-                                            cursor: 'pointer',
-                                            textAlign: 'left',
-                                            transition: 'all 0.15s ease'
-                                        },
                                         onClick: handleFlowRepeatRecent
                                     },
-                                        React.createElement('span', { style: { fontSize: '28px' } }, '↩'),
-                                        React.createElement('div', { style: { flex: 1 } },
-                                            React.createElement('div', {
-                                                style: { fontWeight: '700', color: '#ffffff', fontSize: '15px' }
-                                            }, 'Повторить приём из недавних'),
-                                            React.createElement('div', {
-                                                style: { fontSize: '12px', color: 'rgba(255,255,255,0.85)', marginTop: '2px' }
-                                            }, 'Скопировать продукты из приёма за последние 2 дня')
-                                        )
+                                        React.createElement('div', { className: 'flow-selection-btn__copy' },
+                                            React.createElement('div', { className: 'flow-selection-btn__title' }, 'Повторить из недавних'),
+                                            recentPreview && React.createElement('div', { className: 'flow-selection-btn__sub' }, recentPreview),
+                                            React.createElement('div', { className: 'flow-selection-btn__hint' }, 'из приёма за последние 2 дня')
+                                        ),
+                                        React.createElement('span', { className: 'flow-selection-btn__chevron', 'aria-hidden': 'true' })
                                     ),
-                                    // Кнопка "Быстро добавить 1 продукт" — основной клик открывает поиск, barcode-зона сразу сканирует
                                     renderFlowOption({
                                         className: 'flow-selection-btn flow-selection-btn--quick',
-                                        style: {
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '12px',
-                                            padding: '14px 16px',
-                                            border: 'none',
-                                            borderRadius: '12px',
-                                            background: '#3b82f6',
-                                            color: '#ffffff',
-                                            cursor: 'pointer',
-                                            textAlign: 'left',
-                                            transition: 'all 0.15s ease'
-                                        },
-                                        icon: '➕',
-                                        title: 'Быстро добавить 1 продукт',
-                                        subtitle: 'Выбрать продукт и сразу закрыть',
+                                        title: 'Один продукт',
+                                        subtitle: 'Выбрать и сразу закрыть',
                                         multiProductMode: false
                                     }),
-                                    // Кнопка "Добавить несколько продуктов" — основной клик открывает поиск, barcode-зона сразу сканирует
                                     renderFlowOption({
                                         className: 'flow-selection-btn flow-selection-btn--multi',
-                                        style: {
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '12px',
-                                            padding: '14px 16px',
-                                            border: 'none',
-                                            borderRadius: '12px',
-                                            background: '#22c55e',
-                                            color: '#ffffff',
-                                            cursor: 'pointer',
-                                            textAlign: 'left',
-                                            transition: 'all 0.15s ease'
-                                        },
-                                        icon: '📝',
-                                        title: 'Добавить несколько продуктов',
-                                        subtitle: 'Формировать приём пошагово',
+                                        title: 'Несколько продуктов',
+                                        subtitle: 'Остаться в добавлении',
                                         multiProductMode: true
-                                    }),
-                                    // 🆕 Кнопки «Добавить 2/3/4» — без промежуточной summary-модалки
-                                    React.createElement('div', {
-                                        style: { display: 'flex', gap: '8px', marginTop: '4px' }
-                                    },
-                                        [2, 3, 4].map(renderFlowRepeatOption)
-                                    )
+                                    })
                                 ),
-                                // Скрываем стандартную кнопку confirm — используем кастомные внутри text
                                 confirmText: '',
                                 cancelText: 'Отмена',
-                                cancelStyle: 'primary',
-                                cancelVariant: 'outline'
+                                cancelStyle: 'neutral',
+                                cancelVariant: 'text',
+                                onCancel: unlockScrollSafely
                             });
                         };
 
-                        // Запускаем через rAF — ждём пока React применит state update
-                        requestAnimationFrame(() => showFlowModal(1));
+                        // Meal StepModal закрывается после onComplete (closeOnComplete: 'after').
+                        // Ждём heys-stepmodal-closed, чтобы fork-модалка не гонялась с hide/unmount.
+                        const scheduleAfterMealModalClosed = () => {
+                            const run = () => requestAnimationFrame(() => requestAnimationFrame(showFlowModal));
+                            if (document.getElementById('heys-step-modal-root')) {
+                                document.addEventListener('heys-stepmodal-closed', () => run(), { once: true });
+                            } else {
+                                run();
+                            }
+                        };
+                        scheduleAfterMealModalClosed();
                     },
                 });
             } else if (isMobile) {
@@ -8898,7 +8926,6 @@
                 if (window.HEYS && window.HEYS.analytics) {
                     window.HEYS.analytics.trackDataOperation('meal-created');
                 }
-                HEYS.Toast?.success('Приём создан');
                 window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal } }));
 
                 // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
@@ -9613,6 +9640,52 @@
                 onAdd: addProductToMeal,
             });
         }, [day, date, addProductToMeal]);
+
+        const openAddProductForMeal = React.useCallback((target) => {
+            if (!HEYS.Paywall?.canWriteSync?.()) {
+                HEYS.Paywall?.showBlockedToast?.('Добавление продукта недоступно');
+                return;
+            }
+            const opts = (target && typeof target === 'object') ? target : { mealIndex: target };
+            const currentDay = dayRef.current || day;
+            const resolvedIndex = resolveMealIndex(currentDay, opts.mealIndex, opts.mealId);
+            const meal = currentDay?.meals?.[resolvedIndex];
+            if (!meal) {
+                HEYS.Toast?.error?.('Приём не найден');
+                return;
+            }
+            if (!HEYS.AddProductStep?.show) {
+                HEYS.Toast?.info?.('Добавление продукта временно недоступно');
+                return;
+            }
+            if (typeof expandOnlyMeal === 'function') expandOnlyMeal(resolvedIndex);
+            const mealId = meal.id || opts.mealId || null;
+            HEYS.AddProductStep.show({
+                mealIndex: resolvedIndex,
+                mealId,
+                multiProductMode: opts.multiProductMode !== false,
+                autoRepeatCount: opts.autoRepeatCount || 0,
+                products,
+                day: currentDay,
+                dateKey: date,
+                startWithBarcodeScanner: opts.startWithBarcodeScanner === true,
+                barcodeCameraStart: opts.barcodeCameraStart || null,
+                onAdd: addProductToMeal,
+                onAddMany: async ({ entries, mealIndex: addMealIndex, mealId: addMealId } = {}) => {
+                    const idx = resolveMealIndex(
+                        dayRef.current || currentDay,
+                        addMealIndex ?? resolvedIndex,
+                        addMealId || mealId,
+                    );
+                    return addProductsToMeal(idx, entries, {
+                        mealId: addMealId || mealId,
+                        source: opts.source || 'nutrition-v4-meal-row',
+                        origin: opts.origin || 'nutrition-v4-meal-row',
+                        productCommitVerified: false,
+                    });
+                },
+            });
+        }, [date, day, products, expandOnlyMeal, addProductToMeal, addProductsToMeal]);
 
         // Helpers для копирования в произвольную дату (today, обычно)
         const navigateAndScrollToMeal = React.useCallback((targetDate, mealId) => {
@@ -10381,6 +10454,7 @@
             copyItemsToMeal,
             openCopyMealModal,
             saveAsPreset,
+            openAddProductForMeal,
             repeatYesterdayMeal,
             setGrams,
             removeItem,

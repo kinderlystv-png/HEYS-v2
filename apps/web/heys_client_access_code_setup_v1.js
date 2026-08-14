@@ -297,22 +297,39 @@
 
       return React.createElement(
         'div',
-        { className: 'heys-auth-card heys-auth-card--pep mx-auto w-full max-w-md p-6', onKeyDown: handleCardKeyDown },
-        React.createElement('div', { className: 'heys-auth-brand text-center mb-2' }, 'Подпись документов в приложении'),
+        { className: 'heys-auth-card heys-auth-card--pep mx-auto w-full', onKeyDown: handleCardKeyDown },
         React.createElement(
-          'p',
-          { className: 'heys-auth-subtitle text-sm mb-4' },
-          'Ваш код доступа заменяет собственноручную подпись. Когда вы подписываете им согласие или другой документ, приложение сохраняет запись: какой документ, какая версия, когда и с какого устройства.',
-        ),
-        React.createElement(
-          'p',
-          { className: 'heys-auth-subtitle text-sm mb-4' },
-          'Никому не сообщайте свой код, в том числе куратору. Если код узнал кто-то ещё — напишите куратору, код заблокируют.',
+          'div',
+          { className: 'heys-auth-heading text-center' },
+          React.createElement(
+            'div',
+            {
+              className: 'heys-auth-mark',
+              'aria-label': 'HEYS lab',
+              dangerouslySetInnerHTML: {
+                __html: (HEYS.LoginScreen && typeof HEYS.LoginScreen.getAuthLogoHtml === 'function'
+                  ? HEYS.LoginScreen.getAuthLogoHtml()
+                  : ''),
+              },
+            },
+          ),
+          React.createElement(
+            'div',
+            { className: 'heys-auth-title' },
+            phase === 'code' ? 'Придумайте код' : 'Повторите код',
+          ),
+          phase === 'confirm' && skipPepAgreement
+            ? React.createElement(
+              'div',
+              { className: 'heys-auth-subtitle' },
+              'Код доступа уже был принят раньше — подтвердите новый.',
+            )
+            : null,
         ),
         React.createElement(
           'div',
           { className: 'heys-auth-pin-section space-y-3 is-active' },
-          React.createElement('div', { className: 'heys-auth-label text-base' }, pinLabel),
+          React.createElement('div', { className: 'heys-auth-label' }, pinLabel),
           React.createElement(
             'div',
             { className: 'heys-auth-pin-grid' },
@@ -499,7 +516,11 @@
             ),
           ),
         ),
-        err && React.createElement('div', { className: 'heys-auth-error mt-3', role: 'alert' }, err),
+        err && React.createElement(
+          'div',
+          { className: 'heys-auth-error heys-auth-error-slot is-pin-error', role: 'alert' },
+          err,
+        ),
         React.createElement(
           'div',
           { className: 'mt-5 space-y-2' },

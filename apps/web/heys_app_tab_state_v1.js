@@ -7,18 +7,25 @@
     // 'activity' обязан быть здесь: пикер домашней вкладки предлагает «Актив»,
     // и без него resolveHomeTab молча откатывал выбор на 'diary' — настройка
     // сохранялась, но не применялась.
-    const BASE_HOME_TABS = ['widgets', 'stats', 'diary', 'activity', 'insights', 'month', 'tasks'];
+    const BASE_HOME_TABS = ['widgets', 'stats', 'diary', 'activity', 'insights', 'month'];
     const TASKS_HOME_SUBTABS = ['tasks', 'goals', 'calendar', 'gantt', 'chrono', 'checklists', 'reading'];
     const DEFAULT_TASKS_SUBTAB = 'calendar';
 
-    function isBoardHomeTabAllowed(clientId) {
+    function isPostReleaseLabsClient(clientId) {
         if (HEYS.Board?.isBoardClient) return HEYS.Board.isBoardClient(clientId);
         return String(clientId || '').toLowerCase() === BOARD_CLIENT_ID;
     }
 
+    function isBoardHomeTabAllowed(clientId) {
+        return isPostReleaseLabsClient(clientId);
+    }
+
     function getHomeTabs(clientId) {
         const tabs = BASE_HOME_TABS.slice();
-        if (isBoardHomeTabAllowed(clientId)) tabs.push('board');
+        if (isPostReleaseLabsClient(clientId)) {
+            tabs.push('tasks');
+            tabs.push('board');
+        }
         return tabs;
     }
 
@@ -370,5 +377,7 @@
 
     HEYS.AppTabState = {
         useTabState,
+        isPostReleaseLabsClient,
+        getHomeTabs,
     };
 })();

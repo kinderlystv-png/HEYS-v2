@@ -166,6 +166,16 @@
         invalidateMergedView();
         // γ.3: notify other tabs that overlay changed.
         _broadcastOverlayWrite(rows.length);
+        try {
+          if (typeof global.dispatchEvent === 'function') {
+            global.dispatchEvent(new CustomEvent('heys:product-updated', {
+              detail: {
+                source: (opts && opts.source) || 'overlay-write',
+                rows: rows.length
+              }
+            }));
+          }
+        } catch (_) { /* same-tab catalog refresh; never block write */ }
         // skipCloudSync=true пропускает upload — используется applyCloudSnapshot
         // (данные пришли ИЗ cloud, нет смысла отправлять обратно).
         if (!skipCloudSync) {

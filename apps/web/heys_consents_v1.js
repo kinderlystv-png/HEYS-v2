@@ -7,7 +7,7 @@
 
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
-  const { useState, useEffect, useCallback, useRef } = React || {};
+  const { useState, useEffect, useCallback, useRef, useMemo } = React || {};
 
   function useFallbackAccessSignPin() {
     const [value, setValue] = useState('');
@@ -537,10 +537,29 @@
       autoFocus: step === 'access_code_sign',
     });
     const accessSignCode = accessSignPinApi.pinValue;
+    const [signAttemptsRemaining, setSignAttemptsRemaining] = useState(3);
+    const [signPinError, setSignPinError] = useState(false);
+    const [signSuccess, setSignSuccess] = useState(false);
+    const [signedConsentList, setSignedConsentList] = useState(null);
+
+    const primarySignDocType = useMemo(() => {
+      if (consents.personal_data) return 'personal_data';
+      if (consents.user_agreement) return 'user_agreement';
+      return Object.keys(consents).find((type) => consents[type] && CONSENT_TEXTS.checkboxes[type]) || 'personal_data';
+    }, [consents]);
+
+    const primarySignDocTitle = (CONSENT_TEXTS.checkboxes[primarySignDocType]?.label
+      || 'Документ для подписи').replace(/^Принимаю условия /, '').replace(/^Даю согласие на обработку /, 'Согласие на обработку ');
+    const primarySignDocRevision = `Редакция ${CURRENT_VERSIONS[primarySignDocType] || '1.0'}`;
 
     useEffect(() => {
       if (step === 'access_code_sign' && accessSignPinApi) {
         accessSignPinApi.resetDigits();
+        setSignAttemptsRemaining(3);
+        setSignPinError(false);
+        setSignSuccess(false);
+        setSignedConsentList(null);
+        setError(null);
       }
     }, [step]);
 
@@ -711,6 +730,11 @@
     }, [clientId, buildConsentList, allRequiredAccepted, isReadonlyHost, completeWithoutWrite, finishConsentFlow, persistConsentsOrRequestAccessCode, onError]);
 
     const handleAccessCodeSign = useCallback(async () => {
+      if (signSuccess) {
+        await finishConsentFlow(signedConsentList || await buildConsentListForSigning(consents));
+        return;
+      }
+
       if (!HEYS.auth?.validatePinStrict?.(accessSignCode)) {
         setError('Введите код доступа из 4 цифр');
         return;
@@ -723,6 +747,7 @@
 
       setLoading(true);
       setError(null);
+      setSignPinError(false);
 
       try {
         const signList = await buildConsentListForSigning(consents);
@@ -731,20 +756,99 @@
         }
         const result = await consentsAPI.signConsentsWithAccessCode(signList, accessSignCode);
         if (!result.success) {
-          const msg = result.error === 'invalid_access_code'
-            ? 'Код доступа не подошёл'
-            : (result.error || 'Не удалось подписать документы');
-          throw new Error(msg);
+          const errCode = String(result.error || '');
+          if (errCode.includes('invalid_access_code') || errCode.includes('access_code')) {
+            const nextAttempts = Math.max(0, signAttemptsRemaining - 1);
+            setSignAttemptsRemaining(nextAttempts);
+            setSignPinError(true);
+            accessSignPinApi.resetDigits();
+            throw new Error(nextAttempts > 0
+              ? `Код не подошёл. Осталось ${nextAttempts} ${nextAttempts === 1 ? 'попытка' : (nextAttempts < 5 ? 'попытки' : 'попыток')}.`
+              : 'Код не подошёл. Попробуйте позже или напишите куратору.');
+          }
+          throw new Error(errCode || 'Не удалось подписать документы');
         }
         consentsAPI.saveLocal(clientId, signList);
-        await finishConsentFlow(signList);
+        setSignedConsentList(signList);
+        setSignSuccess(true);
+        setSignPinError(false);
+        setError(null);
       } catch (err) {
         setError(err.message);
         onError?.(err);
       } finally {
         setLoading(false);
       }
-    }, [accessSignCode, clientId, consents, finishConsentFlow, isReadonlyHost, completeWithoutWrite, onError]);
+    }, [accessSignCode, clientId, consents, signAttemptsRemaining, signSuccess, signedConsentList, finishConsentFlow, isReadonlyHost, completeWithoutWrite, onError, accessSignPinApi]);
+
+    if (step === 'access_code_sign') {
+      return React.createElement('div', {
+        ref: screenRef,
+        'data-heys-visible-frame': 'consent-sign',
+        className: 'heys-consent-sign-root',
+      },
+        React.createElement('div', {
+          className: 'heys-consent-sign-backdrop',
+          onClick: () => { if (!loading && typeof onCancel === 'function') onCancel(); },
+        }),
+        React.createElement('div', {
+          className: 'heys-consent-sign-sheet',
+          role: 'dialog',
+          'aria-modal': 'true',
+          'aria-label': 'Подписание',
+        },
+          React.createElement('div', { className: 'heys-consent-sign-sheet__handle', 'aria-hidden': 'true' }),
+          React.createElement('div', { className: 'heys-consent-sign-sheet__title' }, 'Подписание'),
+          React.createElement('div', { className: 'heys-consent-sign-sheet__doc' },
+            React.createElement('div', { className: 'heys-consent-sign-sheet__doc-title' }, primarySignDocTitle),
+            React.createElement('div', { className: 'heys-consent-sign-sheet__doc-meta' }, primarySignDocRevision),
+            React.createElement('button', {
+              type: 'button',
+              className: 'heys-consent-sign-sheet__read',
+              onClick: () => setShowFullText(primarySignDocType),
+            }, 'Читать'),
+          ),
+          signSuccess
+            ? React.createElement('div', { className: 'heys-consent-sign-sheet__success', role: 'status' },
+              `Подписано ${new Date().toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}`,
+            )
+            : pinKeypadKit
+              ? pinKeypadKit.renderPinKeypadSection({
+                pin: accessSignPinApi,
+                label: 'Код доступа',
+                labelClassName: 'heys-auth-label',
+                sectionClassName: 'heys-auth-pin-section space-y-3 is-active'
+                  + (signPinError ? ' is-error' : ''),
+                gridClassName: signPinError ? 'is-error' : '',
+                keypadRef: accessSignKeypadRef,
+              })
+              : null,
+          !signSuccess && React.createElement('p', { className: 'heys-consent-sign-sheet__hint' },
+            'Код вводится каждый раз при подписании — даже на запомненном устройстве. Так подпись не зависит от того, у кого в руках телефон.',
+          ),
+          error && React.createElement('div', { className: 'heys-consent-sign-sheet__error', role: 'alert' }, error),
+          React.createElement('div', { className: 'heys-consent-sign-sheet__actions' },
+            React.createElement('button', {
+              type: 'button',
+              className: 'heys-consent-sign-sheet__primary',
+              disabled: (!signSuccess && !accessSignPinApi.isComplete) || loading,
+              onClick: handleAccessCodeSign,
+            }, loading ? 'Подписываем…' : (signSuccess ? 'Готово' : 'Подписать')),
+            !signSuccess && React.createElement('button', {
+              type: 'button',
+              className: 'heys-consent-sign-sheet__secondary',
+              disabled: loading,
+              onClick: () => { if (typeof onCancel === 'function') onCancel(); },
+            }, 'Отмена'),
+          ),
+        ),
+        showFullText && React.createElement(FullTextModal, {
+          type: showFullText,
+          onClose: () => setShowFullText(null),
+          onAccept: () => setShowFullText(null),
+        }),
+      );
+    }
 
     return React.createElement('div', {
       ref: screenRef,

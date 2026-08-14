@@ -952,14 +952,14 @@
     </script>
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>HEYS Nutrition Tracker - Production</title>
+    <title>HEYS</title>
 
     <!-- Tailwind CSS — render-blocking (69KB, нужен для skeleton/app UI) -->
     <!-- Login gate имеет inline стили и не зависит от Tailwind -->
     <link rel="stylesheet" href="/styles/tailwind.css" />
 
     <!-- Critical CSS for instant rendering -->
-    <link rel="stylesheet" href="styles/critical.css?v=11" />
+    <link rel="stylesheet" href="styles/critical.css?v=13" />
     <link rel="stylesheet" href="styles/modules/002-ui-v4-palette-roles.css" />
     <link rel="stylesheet" href="styles/modules/733-ui-v4-login-theme.css" />
 
@@ -975,10 +975,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.08525c0102e7.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.01807ca5b051.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.2465ac52f597.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.7c3c0602dac1.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.c3feec50d62c.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.89972a79a45a.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.7d1efa38dcf5.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.73ccf5ef38b6.js" as="script" />
     <link rel="preload" href="boot-init.bundle.3b0b24c92433.js" as="script" />
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
          Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
@@ -1075,7 +1075,7 @@
 
     <!-- PWA Manifest and Meta Tags -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#2563eb" />
+    <meta name="theme-color" content="#141210" />
 
     <!-- PWA Support (iOS + Android) -->
     <meta name="mobile-web-app-capable" content="yes" />
@@ -1733,10 +1733,11 @@
 
     <!-- Шаг 2: Статичный HTML логин-оверлей -->
     <div id="heys-login-gate" class="heys-auth-shell"
-        style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:max(20px,calc(env(safe-area-inset-top,0px) + 20px)) 20px max(20px,calc(env(safe-area-inset-bottom,0px) + 20px));overflow-y:auto;opacity:0;pointer-events:none;transition:opacity 0.14s ease, background 0.24s ease;will-change:opacity">
+        style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:max(28px,calc(env(safe-area-inset-top,0px) + 28px)) 18px 0;overflow:hidden;opacity:0;pointer-events:none;transition:opacity 0.14s ease, background 0.24s ease;will-change:opacity">
 
 	        <!-- Экран: client (телефон + PIN) — показывается сразу -->
-	        <div id="hlg-screen-client">
+	        <div id="hlg-screen-client" class="heys-auth-shell-client">
+	            <div class="heys-auth-shell-stage">
 	            <div class="heys-auth-card">
 	                <div class="heys-auth-heading">
                         <div class="heys-auth-mark" aria-label="HEYS lab">
@@ -1768,7 +1769,7 @@
                     <!-- Телефон -->
                     <div class="space-y-3">
                         <div class="heys-auth-label">Телефон</div>
-                        <div id="hlg-phone-wrap" class="heys-auth-field is-active">
+                        <div id="hlg-phone-wrap" class="heys-auth-field">
                             <span class="phone-prefix-large heys-auth-prefix">+7</span>
 	                            <input id="hlg-phone" name="phone" type="tel" inputmode="numeric" autocomplete="tel"
                                 placeholder="(999) 123-45-67" maxlength="15"
@@ -1815,7 +1816,7 @@
                         <button type="button" class="heys-auth-key" data-pin-key="0">0</button>
                         <button type="button" class="heys-auth-key heys-auth-key--muted" data-pin-backspace aria-label="Удалить цифру PIN">⌫</button>
                     </div>
-                    <div id="hlg-theme-mount" class="heys-login-theme-mount"></div>
+                    <div id="hlg-theme-panel-slot" class="heys-auth-theme-panel-slot"></div>
 	                    <button id="hlg-client-submit" class="heys-auth-submit-hidden" type="button" onclick="hlgClientLogin()" disabled aria-label="Войти"></button>
                 </div>
 	                <div id="hlg-intake-explanation" class="heys-auth-intake-note" style="display:none">Это только анкета. Приложение откроется, когда куратор её проверит.</div>
@@ -1823,6 +1824,10 @@
 		                    <div class="heys-auth-support-line"><span id="hlg-support-prefix">Не помните код? </span><button onclick="hlgOpenSupportPopup()" class="heys-auth-support-link" type="button" id="hlg-support-action">Напишите куратору</button></div>
 		                </div>
 		            </div>
+                    </div>
+                    <div class="heys-auth-shell-dock">
+                        <div id="hlg-theme-mount" class="heys-login-theme-mount"></div>
+                    </div>
                     <div id="hlg-client-status" class="heys-auth-status" role="status" aria-live="polite">
                         <span class="heys-auth-status-dot" aria-hidden="true"></span>
                         <span>Проверяем код</span>
@@ -2209,6 +2214,8 @@
 	            window.hlgShowScreen = function (screen) {
 	                document.getElementById('hlg-screen-client').style.display = screen === 'client' ? '' : 'none';
 	                document.getElementById('hlg-screen-curator').style.display = screen === 'curator' ? '' : 'none';
+	                var gate = document.getElementById('heys-login-gate');
+	                if (gate) gate.classList.toggle('heys-auth-shell--curator', screen === 'curator');
 	                var serviceEntry = document.getElementById('hlg-service-entry');
 	                if (serviceEntry) serviceEntry.style.display = screen === 'client' ? '' : 'none';
 	                if (screen === 'curator') {
@@ -2230,14 +2237,13 @@
 	                            activeEntry = 'phone';
 	                            updatePhoneStyles();
 	                            updatePinStyles();
-	                            ph.focus();
 	                        }
 	                        else if (ph && phoneDigits.length === 10) {
 	                            activeEntry = 'pin';
 	                            updatePhoneStyles();
 	                            updatePinStyles();
 	                            focusPinInput(0);
-	                        } else if (ph) ph.focus();
+	                        }
 	                    }, 50);
                 }
                 if (screen === 'curator') {
@@ -2347,10 +2353,13 @@
 
             function updatePhoneStyles() {
                 var wrap = document.getElementById('hlg-phone-wrap');
+                var inp = document.getElementById('hlg-phone');
                 if (!wrap) return;
                 wrap.classList.toggle('is-complete', phoneDigits.length === 10);
                 wrap.classList.toggle('phone-complete', phoneDigits.length === 10);
-                wrap.classList.toggle('is-active', activeEntry === 'phone');
+                wrap.classList.toggle('is-active', activeEntry === 'phone'
+                    && phoneDigits.length < 10
+                    && ((inp && document.activeElement === inp) || phoneDigits.length > 0));
             }
 
             function pulsePhoneComplete() {
@@ -2590,6 +2599,7 @@
 	                });
 
 	                inp.addEventListener('focus', function () { setActiveEntry('phone'); });
+	                inp.addEventListener('blur', function () { updatePhoneStyles(); });
 	                inp.addEventListener('click', function () { setActiveEntry('phone'); });
 	            }
 
@@ -2699,6 +2709,7 @@
 
             function initLoginThemePicker() {
                 var mount = document.getElementById('hlg-theme-mount');
+                var panelSlot = document.getElementById('hlg-theme-panel-slot');
                 var pickerApi = window.HEYS && window.HEYS.LoginThemePicker;
                 if (!mount || !pickerApi || typeof pickerApi.mountDom !== 'function') return;
                 var phoneInput = document.getElementById('hlg-phone');
@@ -2706,6 +2717,9 @@
                 window.__hlgThemePicker = pickerApi.mountDom({
                     keypadEl: keypad,
                     phoneInputEl: phoneInput,
+                    scope: 'login',
+                    dockLayout: true,
+                    panelSlotEl: panelSlot,
                 });
                 mount.appendChild(window.__hlgThemePicker.root);
             }
@@ -3354,10 +3368,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.08525c0102e7.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.01807ca5b051.js"></script>
-    <script defer src="boot-day.bundle.2465ac52f597.js"></script>
-    <script defer src="boot-app.bundle.7c3c0602dac1.js"></script>
+    <script defer src="boot-core.bundle.c3feec50d62c.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.89972a79a45a.js"></script>
+    <script defer src="boot-day.bundle.7d1efa38dcf5.js"></script>
+    <script defer src="boot-app.bundle.73ccf5ef38b6.js"></script>
     <script defer src="boot-init.bundle.3b0b24c92433.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
@@ -3417,9 +3431,9 @@
     <script>
         (function () {
             var POST_BOOT_BUNDLES = [
-                'postboot-1-game-eager.bundle.bb651c659737.js',
-                'postboot-2-insights-eager.bundle.807cb783ab2f.js',
-                'postboot-3-ui-eager.bundle.51c8e6b6cb06.js'
+                'postboot-1-game-eager.bundle.4a5d778b7355.js',
+                'postboot-2-insights-eager.bundle.e7dcc353395b.js',
+                'postboot-3-ui-eager.bundle.e8cad9b983c9.js'
             ];
             var LOCALHOST_TASKS_SOURCE_OVERRIDE = 'heys_planning_tasks_v1.js';
             var total = POST_BOOT_BUNDLES.length;

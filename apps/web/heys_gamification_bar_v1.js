@@ -40,6 +40,40 @@
     }
     HEYS.utils.safeGetStreakDetails = safeGetStreakDetails;
 
+    function formatStreakDayLabel(count) {
+        const n = Number(count) || 0;
+        const mod10 = n % 10;
+        const mod100 = n % 100;
+        if (mod10 === 1 && mod100 !== 11) return 'день';
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'дня';
+        return 'дней';
+    }
+
+    function renderGameStreakFlameIcon() {
+        const React = window.React;
+        return React.createElement('svg', {
+            className: 'game-streak-chip__icon',
+            width: 14,
+            height: 14,
+            viewBox: '0 0 16 16',
+            'aria-hidden': 'true'
+        },
+            React.createElement('path', {
+                d: 'M8 14c2.5-1.8 4-3.8 4-6.2C12 4.8 10.2 3 8 1 5.8 3 4 4.8 4 7.8 4 10.2 5.5 12.2 8 14Z',
+                fill: 'none',
+                stroke: 'currentColor',
+                strokeWidth: 1.4,
+                strokeLinejoin: 'round'
+            }),
+            React.createElement('path', {
+                d: 'M8 11.5c1-0.8 1.6-1.7 1.6-2.8 0-1.2-0.8-2-1.6-2.6-0.8 0.6-1.6 1.4-1.6 2.6 0 1.1 0.6 2 1.6 2.8Z',
+                fill: 'currentColor',
+                stroke: 'none',
+                opacity: 0.72
+            })
+        );
+    }
+
     function GamificationBar(props) {
         const leadingHeaderActions = props?.leadingHeaderActions || null;
         const React = window.React;
@@ -633,6 +667,11 @@
                 clearInterval(interval);
                 document.removeEventListener('visibilitychange', onVis);
             };
+        }, []);
+
+        // Не празднуем milestone повторно при каждом reload — только рост в сессии
+        useEffect(() => {
+            streakMilestoneRef.current = safeGetStreak();
         }, []);
 
         useEffect(() => {
@@ -1323,48 +1362,62 @@
             },
                 // Level number — компактно, без эмодзи звания (v4 mockup)
                 React.createElement('span', {
-                    className: `game-level-number${levelGuardActive ? ' is-syncing' : ''}`,
+                    className: `game-level-number${levelGuardActive ? ' is-syncing' : ''}${streakCelebration ? ' is-streak-muted' : ''}`,
                 }, levelGuardActive ? '· · ·' : String(stats.level)),
 
-                // Progress bar
+                // XP progress ↔ streak milestone (v4: chip в слоте полосы)
                 React.createElement('div', {
-                    className: `game-progress ${levelGuardActive ? 'syncing' : ''} ${isGlowing ? 'glowing' : ''} ${isShimmering ? 'shimmer' : ''} ${isPulsing ? 'pulse' : ''} ${!levelGuardActive && progress.percent >= 85 && progress.percent < 100 ? 'near-goal' : ''}`,
-                    onClick: handleProgressClick
+                    className: `game-progress-slot${streakCelebration ? ' game-progress-slot--streak' : ''}`
                 },
                     React.createElement('div', {
-                        className: 'game-progress-fill',
-                        style: {
-                            width: `${progressPercent}%`,
-                            background: levelGuardActive ? 'transparent' : getProgressGradient(progress.percent)
-                        }
-                    }),
-                    React.createElement('div', {
-                        className: 'game-progress-milestones'
+                        className: `game-progress ${levelGuardActive ? 'syncing' : ''} ${isGlowing ? 'glowing' : ''} ${isShimmering ? 'shimmer' : ''} ${isPulsing ? 'pulse' : ''} ${!levelGuardActive && progress.percent >= 85 && progress.percent < 100 ? 'near-goal' : ''}`,
+                        onClick: handleProgressClick
                     },
-                        React.createElement('span', {
-                            className: `game-progress-milestone ${progressMilestone === 25 ? 'hit' : ''}`,
-                            'data-step': '25'
+                        React.createElement('div', {
+                            className: 'game-progress-fill',
+                            style: {
+                                width: `${progressPercent}%`,
+                                background: levelGuardActive ? 'transparent' : getProgressGradient(progress.percent)
+                            }
                         }),
-                        React.createElement('span', {
-                            className: `game-progress-milestone ${progressMilestone === 50 ? 'hit' : ''}`,
-                            'data-step': '50'
-                        }),
-                        React.createElement('span', {
-                            className: `game-progress-milestone ${progressMilestone === 75 ? 'hit' : ''}`,
-                            'data-step': '75'
-                        })
+                        React.createElement('div', {
+                            className: 'game-progress-milestones'
+                        },
+                            React.createElement('span', {
+                                className: `game-progress-milestone ${progressMilestone === 25 ? 'hit' : ''}`,
+                                'data-step': '25'
+                            }),
+                            React.createElement('span', {
+                                className: `game-progress-milestone ${progressMilestone === 50 ? 'hit' : ''}`,
+                                'data-step': '50'
+                            }),
+                            React.createElement('span', {
+                                className: `game-progress-milestone ${progressMilestone === 75 ? 'hit' : ''}`,
+                                'data-step': '75'
+                            })
+                        ),
+                        // Tooltip — скрываем пока guard активен
+                        !levelGuardActive && React.createElement('span', { className: 'game-progress-tooltip' },
+                            isMaxLevel
+                                ? `Максимальный уровень · всего ${stats.totalXP} XP`
+                                : `Ещё ${progress.required - progress.current} XP до ур.${stats.level + 1}`
+                        )
                     ),
-                    // Tooltip — скрываем пока guard активен
-                    !levelGuardActive && React.createElement('span', { className: 'game-progress-tooltip' },
-                        isMaxLevel
-                            ? `Максимальный уровень · всего ${stats.totalXP} XP`
-                            : `Ещё ${progress.required - progress.current} XP до ур.${stats.level + 1}`
+                    streakCelebration != null && React.createElement('div', {
+                        className: 'game-streak-chip',
+                        role: 'status',
+                        'aria-live': 'polite'
+                    },
+                        renderGameStreakFlameIcon(),
+                        React.createElement('span', { className: 'game-streak-chip__text' },
+                            `Серия · ${streakCelebration} ${formatStreakDayLabel(streakCelebration)}`
+                        )
                     )
                 ),
 
                 // Rank title — видимый текст между полосой и иконками
                 React.createElement('span', {
-                    className: `game-rank-title${levelGuardActive ? ' is-syncing' : ''}`,
+                    className: `game-rank-title${levelGuardActive ? ' is-syncing' : ''}${streakCelebration ? ' is-streak-muted' : ''}`,
                     title: title?.title || '',
                 }, levelGuardActive ? '' : (title?.title || '')),
 
@@ -1595,12 +1648,6 @@
                 )
             ),
 
-            streakCelebration && portalToBody(
-                React.createElement('div', {
-                    className: 'streak-milestone-toast'
-                }, `🔥 Streak ${streakCelebration} дней!`)
-            ),
-
             // === Onboarding Fusion Ceremony ===
             fusionPhase && portalToBody(
                 React.createElement('div', {
@@ -1697,6 +1744,6 @@
     }
 
     // PERF (2026-05-27): React.memo wrap. leadingHeaderActions приходит из AppShell
-    // (временные ☁️/🌓 для отладки); остальная реактивность — через global events.
+    // leadingHeaderActions — облачко синка слева от «Советы» (UI v4).
     HEYS.GamificationBar = React.memo(GamificationBar);
 })();

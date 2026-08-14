@@ -22,6 +22,9 @@
   // === CONFIGURATION ===
 
   const ONBOARDING_TOUR_ENABLED = false;
+  // Post-release: довести мини-туры и включить после smoke.
+  const WIDGETS_TOUR_ENABLED = false;
+  const INSIGHTS_TOUR_ENABLED = false;
   const TOUR_ID = 'onboarding_tour_v1';
   const STORAGE_KEY = 'heys_tour_completed';
   const HAPTIC_ENABLED = true; // navigator.vibrate на переходах
@@ -919,6 +922,8 @@
    * Проверить, нужно ли показывать мини-тур Insights
    */
   function shouldShowInsightsTour() {
+    if (!INSIGHTS_TOUR_ENABLED) return false;
+
     // Не показываем если основной тур ещё не пройден
     const mainTourCompleted = getStoredFlag(STORAGE_KEY, false);
     if (!mainTourCompleted) return false;
@@ -1380,6 +1385,8 @@
    * Проверка: показывать ли мини-тур виджетов
    */
   function shouldShowWidgetsTour() {
+    if (!WIDGETS_TOUR_ENABLED) return false;
+
     // Главный тур должен быть пройден
     const mainCompleted = getStoredFlag(STORAGE_KEY, false);
     if (!mainCompleted) return false;

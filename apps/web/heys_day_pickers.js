@@ -9,10 +9,63 @@
   // Lazy getter for dayUtils (loaded asynchronously)
   const getDayUtils = () => HEYS.dayUtils || {};
 
+  function formatStreakDayLabel(count) {
+    const n = Math.abs(Number(count)) || 0;
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'день';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'дня';
+    return 'дней';
+  }
+
   // Компактный DatePicker с dropdown
   // activeDays: Map<dateStr, {kcal, target, ratio}> — данные о заполненных днях (опционально)
   // getActiveDaysForMonth: (year, month) => Map — функция для загрузки данных при смене месяца
   function DatePicker({valueISO, onSelect, onRemove, activeDays, getActiveDaysForMonth}) {
+    const hasDayUtils = () => {
+      const u = getDayUtils();
+      return !!(u.parseISO && u.todayISO && u.fmtDate);
+    };
+    const [utilsReady, setUtilsReady] = React.useState(hasDayUtils);
+    React.useEffect(() => {
+      if (utilsReady) return undefined;
+      if (hasDayUtils()) {
+        setUtilsReady(true);
+        return undefined;
+      }
+      let cancelled = false;
+      const timerId = setInterval(() => {
+        if (cancelled) return;
+        if (hasDayUtils()) {
+          cancelled = true;
+          clearInterval(timerId);
+          setUtilsReady(true);
+        }
+      }, 16);
+      const stopId = setTimeout(() => {
+        cancelled = true;
+        clearInterval(timerId);
+      }, 3000);
+      return () => {
+        cancelled = true;
+        clearInterval(timerId);
+        clearTimeout(stopId);
+      };
+    }, [utilsReady]);
+
+    if (!utilsReady) {
+      return React.createElement('div', {
+        className: 'date-picker date-picker--v4 date-picker--pending',
+        'aria-hidden': 'true'
+      },
+        React.createElement('div', { className: 'date-picker-row date-picker-row--placeholder' },
+          React.createElement('span', { className: 'date-picker-day-nav date-picker-day-nav--placeholder' }),
+          React.createElement('span', { className: 'date-picker-trigger date-picker-trigger--placeholder' }),
+          React.createElement('span', { className: 'date-picker-day-nav date-picker-day-nav--placeholder' })
+        )
+      );
+    }
+
     const utils = getDayUtils();
     if (!utils.parseISO || !utils.todayISO || !utils.fmtDate) {
       console.error('[heys_day_pickers] dayUtils not loaded yet');
@@ -95,6 +148,27 @@
     }, [daysDataMap, fmtDate]);
     
     React.useEffect(() => { setCur(parseISO(valueISO || todayISO())); }, [valueISO]);
+
+    React.useEffect(() => {
+      if (!isOpen) {
+        document.documentElement.style.removeProperty('--date-picker-sheet-top');
+        return undefined;
+      }
+      const syncSheetAnchor = () => {
+        const anchor = wrapperRef.current || document.querySelector('.hdr-date-row');
+        if (!anchor) return;
+        const rect = anchor.getBoundingClientRect();
+        document.documentElement.style.setProperty('--date-picker-sheet-top', `${Math.round(rect.bottom + 10)}px`);
+      };
+      syncSheetAnchor();
+      window.addEventListener('resize', syncSheetAnchor);
+      window.addEventListener('scroll', syncSheetAnchor, true);
+      return () => {
+        window.removeEventListener('resize', syncSheetAnchor);
+        window.removeEventListener('scroll', syncSheetAnchor, true);
+        document.documentElement.style.removeProperty('--date-picker-sheet-top');
+      };
+    }, [isOpen]);
     
     const first = new Date(y, m, 1), start = (first.getDay() + 6) % 7;
     const dim = new Date(y, m + 1, 0).getDate();
@@ -203,7 +277,7 @@
       isOpen && ReactDOM.createPortal(
         React.createElement(React.Fragment, null,
           React.createElement('div', { 
-            className: 'date-picker-backdrop',
+            className: 'date-picker-backdrop date-picker-backdrop--v4-modal',
             onClick: () => { setIsOpen(false); setTooltip(null); }
           }),
           // Tooltip
@@ -214,19 +288,25 @@
           React.createElement('div', { 
             className: 'date-picker-dropdown date-picker-sheet',
           },
-        React.createElement('div', { className: 'date-picker-sheet-handle', 'aria-hidden': 'true' }),
+        React.createElement('div', { className: 'date-picker-sheet__card' },
         React.createElement('div', { className: 'date-picker-header' },
-          React.createElement('button', { 
-            className: 'date-picker-nav', 
-            onClick: () => setCur(new Date(y, m - 1, 1)) 
-          }, '‹'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'date-picker-day-nav date-picker-sheet-month-nav',
+            onClick: () => setCur(new Date(y, m - 1, 1)),
+            'aria-label': 'Предыдущий месяц',
+            title: 'Предыдущий месяц'
+          }, navChevron('left')),
           React.createElement('span', { className: 'date-picker-title' },
             cur.toLocaleString('ru-RU', { month: 'long', year: 'numeric' })
           ),
-          React.createElement('button', { 
-            className: 'date-picker-nav', 
-            onClick: () => setCur(new Date(y, m + 1, 1)) 
-          }, '›')
+          React.createElement('button', {
+            type: 'button',
+            className: 'date-picker-day-nav date-picker-sheet-month-nav',
+            onClick: () => setCur(new Date(y, m + 1, 1)),
+            'aria-label': 'Следующий месяц',
+            title: 'Следующий месяц'
+          }, navChevron('right'))
         ),
         // Кнопка "Вернуться к сегодня" если не текущий месяц
         !isCurrentMonth && React.createElement('button', {
@@ -276,9 +356,9 @@
           })
         ),
         // Streak индикатор
-        streakInfo.count > 1 && React.createElement('div', { className: 'date-picker-streak' },
-          '🔥 ', streakInfo.count, ' дней подряд в норме!'
-        ),
+        streakInfo.count > 1 && React.createElement('div', {
+          className: 'date-picker-streak date-picker-streak--v4'
+        }, `Серия · ${streakInfo.count} ${formatStreakDayLabel(streakInfo.count)}`),
         // Легенда: точка = факт записи; цикл/загрузка — форма; сегодня/выбран — навигация
         React.createElement('div', { className: 'date-picker-legend' },
           React.createElement('span', { className: 'legend-item has-data' },
@@ -310,6 +390,7 @@
               setIsOpen(false);
             }
           }, 'Сегодня')
+        )
         )
       )
     ), document.body)

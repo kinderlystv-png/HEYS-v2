@@ -52,6 +52,62 @@
     return trialIntakeLogin ? TRIAL_INTAKE_LOGIN_COPY : CLIENT_LOGIN_COPY;
   }
 
+  const LOGIN_MAINTENANCE_COPY = Object.freeze({
+    title: 'Вход временно закрыт',
+    body: 'Идут технические работы. Данные на месте, ничего делать не нужно.',
+  });
+
+  function readLoginMaintenanceFlag() {
+    try {
+      const boot = global.__HEYS_AUTH_MAINTENANCE;
+      if (boot === true) return { closed: true, ...LOGIN_MAINTENANCE_COPY };
+      if (boot && typeof boot === 'object' && (boot.closed === true || boot.loginClosed === true)) {
+        return {
+          closed: true,
+          title: boot.title || LOGIN_MAINTENANCE_COPY.title,
+          body: boot.body || boot.message || LOGIN_MAINTENANCE_COPY.body,
+        };
+      }
+    } catch (_) { }
+
+    try {
+      const params = new URLSearchParams(global.location && global.location.search || '');
+      if (params.get('maintenance') === '1') return { closed: true, ...LOGIN_MAINTENANCE_COPY };
+    } catch (_) { }
+
+    try {
+      if (global.localStorage && global.localStorage.getItem('heys_login_maintenance_preview') === '1') {
+        return { closed: true, ...LOGIN_MAINTENANCE_COPY };
+      }
+    } catch (_) { }
+
+    return null;
+  }
+
+  async function resolveLoginMaintenanceFlag() {
+    const boot = readLoginMaintenanceFlag();
+    if (boot) return boot;
+
+    try {
+      const rpc = HEYS.YandexAPI && typeof HEYS.YandexAPI.rpc === 'function'
+        ? HEYS.YandexAPI.rpc.bind(HEYS.YandexAPI)
+        : null;
+      if (!rpc) return null;
+      const res = await rpc('get_public_app_status', {});
+      if (res?.error) return null;
+      const payload = res?.data?.get_public_app_status || res?.data || null;
+      if (payload && (payload.login_closed === true || payload.auth_maintenance === true)) {
+        return {
+          closed: true,
+          title: payload.login_closed_title || LOGIN_MAINTENANCE_COPY.title,
+          body: payload.login_closed_message || LOGIN_MAINTENANCE_COPY.body,
+        };
+      }
+    } catch (_) { }
+
+    return null;
+  }
+
   let cachedAuthLogoHtml = '';
   function captureAuthLogoHtml() {
     if (cachedAuthLogoHtml) return cachedAuthLogoHtml;
@@ -143,6 +199,7 @@
     const [phoneMasked, setPhoneMasked] = useState('');
     const [pinDigits, setPinDigits] = useState(['', '', '', '']);
     const [activeEntry, setActiveEntry] = useState('phone');
+    const [phoneFocused, setPhoneFocused] = useState(false);
     const [pinErrorActive, setPinErrorActive] = useState(false);
     const [pinErrorVisible, setPinErrorVisible] = useState(false);
     const [phoneConfirmPulse, setPhoneConfirmPulse] = useState(false);
@@ -153,8 +210,11 @@
       { d: '', k: 0 },
     ]);
     const phoneInputRef = useRef(null);
+    const phoneDigitsRef = useRef('');
+    const pinDigitsRef = useRef(['', '', '', '']);
     const pinRefs = useRef([]);
     const keypadRef = useRef(null);
+    const [themePanelSlotEl, setThemePanelSlotEl] = useState(null);
     const pinHideTimers = useRef([null, null, null, null]);
     const phonePulseTimer = useRef(null);
 
@@ -167,6 +227,7 @@
 	    const [accessSetup, setAccessSetup] = useState(null);
 	    const [clientEntryMode, setClientEntryMode] = useState('default');
 	    const [supportOpen, setSupportOpen] = useState(false);
+	    const [loginMaintenance, setLoginMaintenance] = useState(() => readLoginMaintenanceFlag());
 	    const curatorAutoLoginTriedRef = useRef(false);
     const pinErrorTimers = useRef({ reset: null, clear: null });
 
@@ -176,7 +237,10 @@
     // phoneMasked теперь хранит только 10 цифр (без 7)
     // Для валидации и отправки добавляем 7 в начало
     const fullPhone = '7' + phoneMasked;
-    const clientPhoneValid = useMemo(() => phoneMasked.length === 10, [phoneMasked]);
+    const clientPhoneValid = useMemo(
+      () => String(phoneMasked || '').replace(/\D/g, '').length === 10,
+      [phoneMasked],
+    );
     const pin = useMemo(() => (pinDigits || []).join(''), [pinDigits]);
     const clientPinValid = useMemo(() => auth && auth.validatePin(pin), [auth, pin]);
 
@@ -185,9 +249,25 @@
     const clientLoginCopy = clientEntryMode === 'new_device'
       ? NEW_DEVICE_LOGIN_COPY
       : getClientLoginCopy(isTrialIntakeLogin());
+    const isIntakeLogin = isTrialIntakeLogin() && clientEntryMode !== 'new_device';
+    const isNewDeviceLogin = clientEntryMode === 'new_device';
+    const loginBlocked = !!(loginMaintenance && loginMaintenance.closed);
     const pinFieldLabel = clientEntryMode === 'new_device'
       ? NEW_DEVICE_LOGIN_COPY.pinLabel
       : (clientLoginCopy.pinLabel || 'Код доступа');
+    const intakePinErrorDefault = 'Код не подошёл — проверьте цифры';
+    const defaultPinError = isIntakeLogin
+      ? intakePinErrorDefault
+      : 'Код не подошёл — попробуйте ещё раз';
+
+    useEffect(() => {
+      let cancelled = false;
+      if (loginMaintenance) return undefined;
+      resolveLoginMaintenanceFlag().then((flag) => {
+        if (!cancelled && flag) setLoginMaintenance(flag);
+      });
+      return () => { cancelled = true; };
+    }, [loginMaintenance]);
 
     function getCuratorAutologinKey() {
       return (curatorAutologinConfig && curatorAutologinConfig.onceKey) || 'heys_temp_curator_autologin_v1';
@@ -280,7 +360,7 @@
       } catch (_) { }
     }
 
-    function showInvalidPinFeedback(message = 'Код не подошёл — попробуйте ещё раз') {
+    function showInvalidPinFeedback(message = defaultPinError) {
       try {
         const timers = pinErrorTimers.current || {};
         if (timers.reset) clearTimeout(timers.reset);
@@ -369,20 +449,23 @@
     }
 
     async function handleClientLogin(pinOverride) {
-      if (!onClientLogin) return;
+      if (!onClientLogin) {
+        setErr('Приложение ещё загружается. Попробуйте через несколько секунд.');
+        return;
+      }
       setErr('');
       setPinErrorVisible(false);
       setPinErrorActive(false);
       setBusy(true);
       try {
-        const phoneDigits = fullPhone; // 7 + 10 цифр = 11 цифр
+        const phoneNorm = '7' + String(phoneDigitsRef.current || '').replace(/\D/g, '').slice(0, 10);
         const effectivePin = typeof pinOverride === 'string' ? pinOverride : pin;
-        const res = await onClientLogin({ phone: phoneDigits, pin: effectivePin });
+        const res = await onClientLogin({ phone: phoneNorm, pin: effectivePin });
         if (res && res.error === 'needs_access_code_setup') {
           setAccessSetup({
             clientId: res.clientId,
             sessionToken: res.sessionToken,
-            phone: phoneDigits,
+            phone: phoneNorm,
             skipPepAgreement: res.skipPepAgreement === true,
           });
           return;
@@ -425,10 +508,7 @@
           } else if (code === 'onetime_pin_expired') {
             setErr(serverMessage || 'Срок действия кода истёк. Попросите куратора выдать новый.');
           } else if (code === 'invalid_credentials') {
-            showInvalidPinFeedback(
-              'Не удалось войти. Проверьте номер телефона и код доступа. '
-              + 'Если код выдавали недавно — попросите куратор один новый.'
-            );
+            showInvalidPinFeedback();
           } else if (code === 'session_not_issued') {
             setErr('Код верный, но вход не завершился. Попробуйте ещё раз или напишите куратору.');
           } else if (code === 'network_error') {
@@ -542,7 +622,12 @@
     const Card = (...children) =>
       React.createElement(
         'div',
-        { className: 'heys-auth-card' },
+        {
+          className: 'heys-auth-card'
+            + (isIntakeLogin ? ' heys-auth-card--intake' : '')
+            + (isNewDeviceLogin ? ' heys-auth-card--new-device' : '')
+            + (loginBlocked ? ' heys-auth-card--maintenance' : ''),
+        },
         ...children,
       );
 
@@ -697,9 +782,12 @@
     function renderClientLogin() {
       // Храним только 10 цифр (без 7)
       const phoneDigits = phoneMasked.replace(/\D/g, '').slice(0, 10);
+      phoneDigitsRef.current = phoneDigits;
+      pinDigitsRef.current = (pinDigits || []).slice(0, 4);
+      while (pinDigitsRef.current.length < 4) pinDigitsRef.current.push('');
       const isPhoneComplete = phoneDigits.length === 10;
       const isPinComplete = (pinDigits || []).every(Boolean);
-      const touchKeypad = usesTouchKeypad();
+      const touchKeypad = usesTouchKeypad() && !isNewDeviceLogin;
 
       // Обработчик ввода телефона
 	      const handlePhoneInput = (e) => {
@@ -724,6 +812,7 @@
         // Обновляем состояние — храним форматированную строку для display
 	        const wasComplete = phoneDigits.length === 10;
 	        setPhoneMasked(newDigits);
+	        phoneDigitsRef.current = newDigits;
 	        // Автофокус на PIN после ввода 10 цифр
 	        if (newDigits.length === 10) {
 	          if (!wasComplete) pulsePhoneComplete();
@@ -740,7 +829,9 @@
       const handlePhoneKeyDown = (e) => {
 	        if (e.key === 'Backspace' && phoneDigits.length > 0) {
 	          e.preventDefault();
-	          setPhoneMasked(phoneDigits.slice(0, -1));
+	          const next = phoneDigits.slice(0, -1);
+	          phoneDigitsRef.current = next;
+	          setPhoneMasked(next);
 	          setActiveEntry('phone');
 	        }
 	      };
@@ -760,78 +851,111 @@
 
       const maybeLoginWithPin = (nextDigits) => {
         const nextPin = (nextDigits || []).join('');
-        const isPinValid = auth && auth.validatePin(nextPin);
-        if (clientPhoneValid && isPinValid && !busy) {
+        const isPinValid = (HEYS.auth || auth) && (HEYS.auth || auth).validatePin(nextPin);
+        if (phoneDigitsRef.current.length === 10 && isPinValid && !busy) {
           setTimeout(() => handleClientLogin(nextPin), 100);
         }
       };
 
 	      const appendPhoneDigit = (digit) => {
-	        if (busy || !/^\d$/.test(String(digit)) || phoneDigits.length >= 10) return;
-	        const next = (phoneDigits + String(digit)).slice(0, 10);
-        setErr('');
+	        if (busy || !/^\d$/.test(String(digit))) return;
+	        const current = phoneDigitsRef.current;
+	        if (current.length >= 10) {
+	          appendPinDigit(digit);
+	          return;
+	        }
+	        const next = (current + String(digit)).slice(0, 10);
+	        phoneDigitsRef.current = next;
 	        setPhoneMasked(next);
+	        setErr('');
 	        if (next.length === 10) {
 	          pulsePhoneComplete();
 	          setActiveEntry('pin');
-	          setTimeout(() => focusPinInput(getNextPinIndex(pinDigits)), 50);
-        } else {
-          setActiveEntry('phone');
-        }
+	          setTimeout(() => focusPinInput(0), 50);
+	        } else {
+	          setActiveEntry('phone');
+	        }
       };
 
       const erasePhoneDigit = () => {
-        if (busy || phoneDigits.length <= 0) return;
+        if (busy) return;
+        const current = phoneDigitsRef.current;
+        if (current.length <= 0) return;
+        const next = current.slice(0, -1);
+        phoneDigitsRef.current = next;
+        setPhoneMasked(next);
         setErr('');
-        setPhoneMasked(phoneDigits.slice(0, -1));
         setActiveEntry('phone');
         try { if (phoneInputRef.current && !usesTouchKeypad()) phoneInputRef.current.focus(); } catch (_) { }
       };
 
       const appendPinDigit = (digit) => {
-        if (!clientPhoneValid) {
+        if (phoneDigitsRef.current.length !== 10 && !isNewDeviceLogin) {
           appendPhoneDigit(digit);
           return;
         }
         if (pinErrorActive) return;
-        if (busy || !/^\d$/.test(String(digit)) || (pinDigits || []).every(Boolean)) return;
+        if (busy || !/^\d$/.test(String(digit))) return;
         setActiveEntry('pin');
-        const idx = getNextPinIndex(pinDigits);
-        const arr = (pinDigits || []).slice(0, 4);
-        while (arr.length < 4) arr.push('');
+        const list = pinDigitsRef.current.slice(0, 4);
+        while (list.length < 4) list.push('');
+        if (list.every(Boolean)) return;
+        const idx = getNextPinIndex(list);
+        const arr = list.slice();
         arr[idx] = String(digit);
-        const next = applyPinDigits(arr, idx, String(digit));
+        pinDigitsRef.current = arr;
+        setPinDigits(arr);
+        setErr('');
+        showPinOverlayDigit(idx, String(digit), 1200);
         if (idx < 3) focusPinInput(idx + 1);
-        maybeLoginWithPin(next);
+        maybeLoginWithPin(arr);
       };
 
       const erasePinDigit = () => {
         if (busy) return;
         if (pinErrorActive) return;
         setActiveEntry('pin');
-        const arr = (pinDigits || []).slice(0, 4);
-        while (arr.length < 4) arr.push('');
+        const list = pinDigitsRef.current.slice(0, 4);
+        while (list.length < 4) list.push('');
+        let eraseIndex = -1;
         for (let i = 3; i >= 0; i--) {
-          if (arr[i]) {
-            arr[i] = '';
-            applyPinDigits(arr, i, '');
-            focusPinInput(i);
-            return;
+          if (list[i]) {
+            const next = list.slice();
+            next[i] = '';
+            eraseIndex = i;
+            pinDigitsRef.current = next;
+            setPinDigits(next);
+            break;
           }
         }
-        if (clientPhoneValid) {
-          setPhoneMasked(phoneDigits.slice(0, -1));
+        if (eraseIndex >= 0) {
+          clearHidePinDigit(eraseIndex);
+          focusPinInput(eraseIndex);
+          return;
+        }
+        if (phoneDigitsRef.current.length === 10) {
+          const nextPhone = phoneDigitsRef.current.slice(0, -1);
+          phoneDigitsRef.current = nextPhone;
+          setPhoneMasked(nextPhone);
           setActiveEntry('phone');
         }
       };
 
       const handleKeypadDigit = (digit) => {
-        if (activeEntry === 'phone' || !clientPhoneValid) appendPhoneDigit(digit);
+        if (isNewDeviceLogin) {
+          appendPinDigit(digit);
+          return;
+        }
+        if (phoneDigitsRef.current.length < 10) appendPhoneDigit(digit);
         else appendPinDigit(digit);
       };
 
       const handleKeypadBackspace = () => {
-        if (activeEntry === 'phone' || !clientPhoneValid) erasePhoneDigit();
+        if (isNewDeviceLogin) {
+          erasePinDigit();
+          return;
+        }
+        if (phoneDigitsRef.current.length < 10) erasePhoneDigit();
         else erasePinDigit();
       };
 
@@ -843,7 +967,13 @@
       return React.createElement(
         React.Fragment,
         null,
-	        Card(
+        React.createElement(
+          'div',
+          { className: 'heys-auth-shell-client' },
+          React.createElement(
+            'div',
+            { className: 'heys-auth-shell-stage' },
+            Card(
 	          // Заголовок
 	        React.createElement(
 	          'div',
@@ -865,42 +995,50 @@
           className: 'space-y-6',
           onSubmit: (e) => {
             e.preventDefault();
-            if (canClientLogin) handleClientLogin();
+            if (canClientLogin && !loginBlocked) handleClientLogin();
           },
         },
-          // Современный ввод телефона с фиксированным +7
-	          React.createElement('div', { className: 'space-y-3' },
-	            React.createElement('div', { className: 'heys-auth-label' }, 'Телефон'),
-	            React.createElement('div', {
-	              className: 'heys-auth-field ' + (isPhoneComplete ? 'is-complete' : '') + (activeEntry === 'phone' ? ' is-active' : '') + (phoneConfirmPulse ? ' is-confirm-pulse' : '')
-	            },
-              // Фиксированный префикс +7 (размер и baseline синхронизированы с input)
+          !isNewDeviceLogin && React.createElement('div', { className: 'space-y-3' },
+            React.createElement('div', { className: 'heys-auth-label' }, 'Телефон'),
+            React.createElement('div', {
+              className: 'heys-auth-field ' + (isPhoneComplete ? 'is-complete' : '') + (activeEntry === 'phone' && !isPhoneComplete && (phoneFocused || phoneDigits.length > 0) ? ' is-active' : '') + (phoneConfirmPulse ? ' is-confirm-pulse' : '')
+            },
               React.createElement('span', {
                 className: 'phone-prefix-large heys-auth-prefix'
               }, '+7'),
-              // Поле ввода — ширина по содержимому
-	              React.createElement('input', {
-	                ref: phoneInputRef,
-	                id: 'heys-client-phone',
-	                name: 'phone',
-	                type: 'tel',
-	                inputMode: 'numeric',
+              React.createElement('input', {
+                ref: phoneInputRef,
+                id: 'heys-client-phone',
+                name: 'phone',
+                type: 'tel',
+                inputMode: 'numeric',
                 autoComplete: 'tel',
-                autoFocus: true,
-                readOnly: touchKeypad,
+                autoFocus: false,
+                readOnly: touchKeypad || loginBlocked,
                 placeholder: '(999) 123-45-67',
                 value: formatPhoneBody(phoneDigits),
                 onChange: handlePhoneInput,
                 onKeyDown: handlePhoneKeyDown,
-                onFocus: () => setActiveEntry('phone'),
+                onFocus: () => { setPhoneFocused(true); setActiveEntry('phone'); },
+                onBlur: () => setPhoneFocused(false),
                 onClick: () => setActiveEntry('phone'),
                 className: 'phone-input-large heys-auth-phone-input',
               }),
             ),
           ),
 
+          isNewDeviceLogin && NEW_DEVICE_LOGIN_COPY.instruction
+            ? React.createElement('div', { className: 'heys-auth-subtitle text-center' }, NEW_DEVICE_LOGIN_COPY.instruction)
+            : null,
+
+          isNewDeviceLogin && NEW_DEVICE_LOGIN_COPY.deviceNotice
+            ? React.createElement('div', { className: 'heys-auth-notice' },
+              React.createElement('div', { className: 'heys-auth-notice-title' }, 'На прежнее устройство ушло уведомление о входе'),
+            )
+            : null,
+
           // PIN ввод — 4 отдельных поля (как в модных приложениях)
-	          React.createElement('div', { className: 'heys-auth-pin-section space-y-3 ' + (!clientPhoneValid ? 'is-muted ' : '') + (activeEntry === 'pin' ? 'is-active' : '') },
+	          React.createElement('div', { className: 'heys-auth-pin-section space-y-3 ' + ((!clientPhoneValid && !isNewDeviceLogin) ? 'is-muted ' : '') + (activeEntry === 'pin' ? 'is-active' : '') },
 	            React.createElement('div', { className: 'heys-auth-label' }, pinFieldLabel),
             React.createElement('div', {
               className: 'heys-auth-pin-grid'
@@ -932,7 +1070,7 @@
 	                    // Скрываем текст input пока показывается overlay (иначе видна «маленькая цифра» браузера)
 	                    style: pinInputStyle,
                     onChange: (e) => {
-                      if (!clientPhoneValid || pinErrorActive) {
+                      if ((!clientPhoneValid && !isNewDeviceLogin) || pinErrorActive) {
                         setActiveEntry('phone');
                         return;
                       }
@@ -953,7 +1091,7 @@
                       }
                     },
                     onKeyDown: (e) => {
-                      if (!clientPhoneValid || pinErrorActive) {
+                      if ((!clientPhoneValid && !isNewDeviceLogin) || pinErrorActive) {
                         setActiveEntry('phone');
                         return;
                       }
@@ -989,8 +1127,8 @@
                         handleClientLogin();
                       }
                     },
-                    onFocus: () => setActiveEntry(clientPhoneValid ? 'pin' : 'phone'),
-                    onClick: () => setActiveEntry(clientPhoneValid ? 'pin' : 'phone'),
+                    onFocus: () => setActiveEntry((clientPhoneValid || isNewDeviceLogin) ? 'pin' : 'phone'),
+                    onClick: () => setActiveEntry((clientPhoneValid || isNewDeviceLogin) ? 'pin' : 'phone'),
                     onPaste: (e) => {
                       try {
                         const txt = (e.clipboardData && e.clipboardData.getData('text')) || '';
@@ -1037,9 +1175,12 @@
             ),
           ),
 
-          clientEntryMode === 'new_device' && NEW_DEVICE_LOGIN_COPY.deviceNotice
-            ? React.createElement('div', { className: 'heys-auth-notice' }, NEW_DEVICE_LOGIN_COPY.deviceNotice)
-            : null,
+          loginBlocked && React.createElement(
+            'div',
+            { className: 'heys-auth-maintenance-block', role: 'status' },
+            React.createElement('div', { className: 'heys-auth-maintenance-block__title' }, loginMaintenance.title || LOGIN_MAINTENANCE_COPY.title),
+            React.createElement('div', { className: 'heys-auth-maintenance-block__body' }, loginMaintenance.body || LOGIN_MAINTENANCE_COPY.body),
+          ),
 
           React.createElement(
             'div',
@@ -1048,10 +1189,10 @@
               role: 'alert',
               'aria-live': 'polite',
             },
-            err || '',
+            err || null,
           ),
 
-          React.createElement(
+          !loginBlocked && !isNewDeviceLogin && React.createElement(
             'div',
             { className: 'heys-auth-keypad', ref: keypadRef, 'aria-label': 'Цифровая клавиатура PIN' },
             [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) =>
@@ -1091,25 +1232,26 @@
             ),
           ),
 
-          LoginThemePicker
-            ? React.createElement(LoginThemePicker, {
-              keypadRef,
-              phoneInputRef,
-              dimmed: pinErrorVisible,
-            })
+          !loginBlocked && isNewDeviceLogin
+            ? React.createElement('div', { className: 'heys-auth-pin-spacer', 'aria-hidden': 'true' })
             : null,
+
+          !isIntakeLogin && React.createElement('div', {
+            className: 'heys-auth-theme-panel-slot',
+            ref: setThemePanelSlotEl,
+          }),
 
           React.createElement(
             'button',
             { type: 'submit', disabled: !canClientLogin, className: 'heys-auth-submit-hidden', tabIndex: -1, 'aria-label': 'Войти' },
           ),
 	        ),
-	        clientLoginCopy.explanation && React.createElement(
+	        !isIntakeLogin && clientLoginCopy.explanation && React.createElement(
 	          'div',
 	          { className: 'heys-auth-intake-note' },
 	          clientLoginCopy.explanation,
 	        ),
-	        React.createElement(
+	        !isIntakeLogin && React.createElement(
 	          'div',
 	          { className: 'heys-auth-footer-row' },
 	          React.createElement(
@@ -1127,8 +1269,51 @@
 	            ),
 	          ),
 	        ),
+	        isIntakeLogin && React.createElement(
+	          'div',
+	          { className: 'heys-auth-intake-dock' },
+	          React.createElement(
+	            'div',
+	            { className: 'heys-auth-intake-note' },
+	            clientLoginCopy.explanation,
+	          ),
+	          React.createElement(
+	            'div',
+	            { className: 'heys-auth-footer-row' },
+	            React.createElement(
+	              'div',
+	              { className: 'heys-auth-support-line' },
+	              clientLoginCopy.supportLead,
+	              React.createElement(
+	                'button',
+	                {
+	                  type: 'button',
+	                  className: 'heys-auth-support-link',
+	                  onClick: () => setSupportOpen(true),
+	                },
+	                clientLoginCopy.supportAction || 'Ответьте на сообщение бота',
+	              ),
+	            ),
+	          ),
+	        ),
 	        renderSupportPopup(),
 	      ),
+          ),
+        ),
+        !isIntakeLogin && LoginThemePicker
+          ? React.createElement(
+            'div',
+            { className: 'heys-auth-shell-dock' },
+            React.createElement(LoginThemePicker, {
+              keypadRef,
+              phoneInputRef,
+              panelSlotEl: themePanelSlotEl,
+              dockLayout: true,
+              dimmed: pinErrorVisible || loginBlocked,
+              scope: 'login',
+            }),
+          )
+          : null,
         React.createElement(
           'div',
           { className: 'heys-auth-status ' + (busy ? 'is-visible' : ''), role: 'status', 'aria-live': 'polite' },
@@ -1136,7 +1321,7 @@
           React.createElement('span', null, 'Проверяем код'),
         ),
       );
-	    }
+    }
 
     function renderCuratorLogin() {
       return Card(
@@ -1212,7 +1397,11 @@
     return React.createElement(
       'div',
       {
-        className: 'heys-auth-shell fixed inset-0 z-[9999] flex flex-col items-center justify-center px-5 py-10',
+        className: 'heys-auth-shell z-[9999] flex flex-col items-center'
+          + (mode === 'curator' ? ' heys-auth-shell--curator' : '')
+          + (isIntakeLogin ? ' heys-auth-shell--intake' : '')
+          + (isNewDeviceLogin ? ' heys-auth-shell--new-device' : '')
+          + (loginBlocked ? ' heys-auth-shell--maintenance' : ''),
       },
       accessSetup && AccessCodeSetup
         ? React.createElement(AccessCodeSetup, {
@@ -1247,5 +1436,8 @@
 
   LoginScreen.isTrialIntakeLogin = isTrialIntakeLogin;
   LoginScreen.getClientLoginCopy = getClientLoginCopy;
+  LoginScreen.getAuthLogoHtml = getAuthLogoHtml;
+  LoginScreen.readLoginMaintenanceFlag = readLoginMaintenanceFlag;
+  LoginScreen.resolveLoginMaintenanceFlag = resolveLoginMaintenanceFlag;
   HEYS.LoginScreen = LoginScreen;
 })(typeof window !== 'undefined' ? window : globalThis);

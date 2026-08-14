@@ -684,6 +684,13 @@
     return Math.round(frequencyBoost + recencyBoost * 0.5);
   }
 
+  function isDisposableMealItem(item) {
+    if (!item || typeof item !== 'object') return true;
+    if (item.isEstimated || item.virtualProduct || item.skipOrphanTracking) return true;
+    const pid = String(item.product_id || item.productId || item.id || '');
+    return pid.indexOf('estimated_') === 0 || pid.indexOf('oneoff_') === 0;
+  }
+
   /**
    * Загрузить статистику использования из localStorage
    */
@@ -697,13 +704,14 @@
           ? HEYS.utils.lsGet(USER_STATS_KEY, null)
           : (localStorage.getItem(USER_STATS_KEY) ? JSON.parse(localStorage.getItem(USER_STATS_KEY)) : null);
 
-      if (storedObj && typeof storedObj === 'object') {
+      if (storedObj && typeof storedObj === 'object' && !Array.isArray(storedObj)) {
         // Ключи храним строками для совместимости (productId может быть number/string)
         userProductStats = new Map(Object.entries(storedObj));
       }
     } catch (e) {
       console.warn('[HEYS.search] loadUserStats error:', e);
     }
+    return userProductStats.size;
   }
 
   function normalizeClientId(raw) {
@@ -849,7 +857,15 @@
 
     if (typeof document !== 'undefined' && document.addEventListener) {
       document.addEventListener('heysClientReady', () => {
-        ensureUsageStatsMigrated();
+        loadUserStats();
+        if (userProductStats.size === 0 && hasDayHistory()) {
+          syncUsageStatsFromDays({
+            daysWindow: 21,
+            dateKey: new Date().toISOString().slice(0, 10)
+          });
+        } else {
+          ensureUsageStatsMigrated();
+        }
       }, { once: true });
     }
 
@@ -998,6 +1014,7 @@
           dayData.meals.forEach((meal) => {
             if (!meal?.items) return;
             meal.items.forEach((item) => {
+              if (isDisposableMealItem(item)) return;
               const pid = String(item.product_id || item.productId || '');
               const rawName = String(item.name || '').trim();
               const normName = normalizeText(rawName);
@@ -1022,10 +1039,7 @@
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
       const dayKey = `heys_dayv2_${key}`;
-      if (HEYS.store?.invalidate) {
-        HEYS.store.invalidate(dayKey);
-      }
-      const dayData = lsGetFn(dayKey, null) || readDayRaw(dayKey);
+      const dayData = readDayRaw(dayKey) || lsGetFn(dayKey, null);
       const dayTs = d.getTime();
 
       if (dayData && dayData.meals) {
@@ -1034,6 +1048,7 @@
           if (!meal.items) return;
           foundMeals++;
           meal.items.forEach(item => {
+            if (isDisposableMealItem(item)) return;
             const pid = String(item.product_id || item.productId || '');
             const rawName = String(item.name || '').trim();
             const normName = normalizeText(rawName);
@@ -1105,18 +1120,26 @@
   }
 
   function ensureUsageStatsFresh(options = {}) {
+    const before = userProductStats.size;
+    loadUserStats();
     const maxHours = Math.max(1, Number(options.maxHours) || 12);
     const lastSync = getUsageStatsLastSync();
     const maxAgeMs = maxHours * 60 * 60 * 1000;
-    const shouldSync = !lastSync || (Date.now() - lastSync) > maxAgeMs;
-    if (!shouldSync) return false;
-
-    syncUsageStatsFromDays({
-      daysWindow: Math.max(1, Math.min(60, Number(options.daysWindow) || 21)),
-      dateKey: options.dateKey,
-      lsGet: options.lsGet
-    });
-    return true;
+    const shouldSync = userProductStats.size === 0
+      || !lastSync
+      || (Date.now() - lastSync) > maxAgeMs;
+    if (shouldSync) {
+      const lsGet = options.lsGet
+        || (HEYS.store && typeof HEYS.store.get === 'function'
+          ? HEYS.store.get.bind(HEYS.store)
+          : undefined);
+      syncUsageStatsFromDays({
+        daysWindow: Math.max(1, Math.min(60, Number(options.daysWindow) || 21)),
+        dateKey: options.dateKey,
+        lsGet
+      });
+    }
+    return userProductStats.size > before;
   }
 
   // Загружаем статистику при инициализации
@@ -3165,6 +3188,7 @@
 
     // 🆕 Доступ к usage stats
     getUsageStats,
+    loadUserStats,
     syncUsageStatsFromDays,
     ensureUsageStatsFresh,
 

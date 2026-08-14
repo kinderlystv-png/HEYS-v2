@@ -77,9 +77,13 @@
             const rect = slider.getBoundingClientRect();
             // Cache DOM nodes for direct updates during drag
             const thumbEl = slider.querySelector('.steps-slider-thumb');
-            const fillEl = slider.querySelector('.steps-slider-fill');
-            const containerEl = slider.closest('.compact-activity');
-            const valueEl = containerEl?.querySelector('.steps-value b');
+            const fillEl = slider.closest('.activity-v4-steps__track-wrap')
+              ?.querySelector('.activity-v4-steps__fill')
+              || slider.querySelector('.steps-slider-fill');
+            const containerEl = slider.closest('.activity-v4-steps')
+              || slider.closest('.compact-activity');
+            const valueEl = containerEl?.querySelector('.activity-v4-steps__value')
+              || containerEl?.querySelector('.steps-value b');
 
             const computeSteps = (clientX) => {
                 const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
@@ -110,10 +114,9 @@
                 pendingStepsRef.current = null;
                 latestStepsRef.current = val;
                 const pct = computePercent(val) + '%';
-                const color = getStepsColor(Math.min(100, (val / stepsGoal) * 100));
-                if (thumbEl) { thumbEl.style.left = pct; thumbEl.style.borderColor = color; }
-                if (fillEl) { fillEl.style.width = pct; fillEl.style.background = color; }
-                if (valueEl) { valueEl.textContent = val.toLocaleString(); valueEl.style.color = color; }
+                if (thumbEl) { thumbEl.style.left = pct; }
+                if (fillEl) { fillEl.style.width = pct; }
+                if (valueEl) { valueEl.textContent = val.toLocaleString(); }
             };
 
             const onMove = (ev) => {
