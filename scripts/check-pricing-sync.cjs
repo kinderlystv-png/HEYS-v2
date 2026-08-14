@@ -71,6 +71,8 @@ function checkMdFile(relPath, pricing) {
 
   const priceRe = /(\d{1,3}(?:[\s ]\d{3})*)\s*₽\/мес/g;
   const allowed = new Set(Object.values(pricing).map((p) => p.price));
+  // Обычная цена Pro в оферте 1.11; paywall по-прежнему берёт цену первого набора.
+  allowed.add('11 990');
   let m;
   while ((m = priceRe.exec(text)) !== null) {
     const found = m[1].replace(/ /g, ' ');

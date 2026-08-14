@@ -47,7 +47,7 @@ const BOT_GET_UPDATES_MAX_TIMEOUT_SEC = 3;
 const TELEGRAM_API_FALLBACK_IPV4 = '149.154.167.220';
 const TELEGRAM_CONNECT_ATTEMPT_TIMEOUT_MS = 250;
 const MAX_TELEGRAM_RESPONSE_BYTES = 5 * 1024 * 1024;
-const START_LEAD_PRIVACY_VERSION = '1.7';
+const START_LEAD_PRIVACY_VERSION = '1.8';
 const START_LEAD_PRIVACY_URL = 'https://heyslab.ru/legal/privacy-policy';
 
 function isLockboxPlaceholder(value) {
@@ -1319,7 +1319,7 @@ async function createStartLeadFromContact(chatId, phone, displayName = 'Telegram
            FROM public.legal_consent_registry AS registry
           WHERE lead.id = $1
             AND lead.status IN ('new', 'contacted', 'trial_started')
-            AND registry.consent_type = 'personal_data'
+            AND registry.consent_type = 'privacy_policy'
             AND registry.document_version = $2
             AND registry.status = 'active'
           RETURNING lead.id`,

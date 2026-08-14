@@ -75,6 +75,16 @@ public/workbox-*.js
 **/sw.js
 **/workbox-*.js
 
+# Lawyer-signed texts: sha256 is the registry contract
+docs/legal/*-consent.md
+docs/legal/user-agreement.md
+docs/legal/privacy-policy.md
+docs/legal/pep-agreement.md
+docs/legal/refund.md
+docs/legal/subprocessors.md
+docs/legal/warning-intake.md
+apps/web/public/docs/**/*.md
+
 # Auto-generated
 auto-imports.d.ts
 components.d.ts

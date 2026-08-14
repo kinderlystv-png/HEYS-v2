@@ -33,7 +33,7 @@ import {
   type WhenCode,
 } from './quizModel';
 
-import { LEGAL_DOCS, SUPPORT_CONTACTS } from '@/config/legal-versions';
+import { APPLICATION_CONSENT_LABEL, SUPPORT_CONTACTS } from '@/config/legal-versions';
 import { funnelTrail, track } from '@/lib/funnel';
 import { readUtmParams, readYandexClientId, submitLead, type Messenger } from '@/lib/leads';
 
@@ -689,7 +689,7 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
               className="mt-0.5 h-[18px] w-[18px] shrink-0 rounded-[5px] accent-[#12283E]"
             />
             <span className="text-[12px] leading-[1.6] text-[#5F6A77]">
-              Даю согласие на обработку персональных данных в соответствии с{' '}
+              {APPLICATION_CONSENT_LABEL}{' '}
               <a
                 href="/legal/privacy-policy"
                 target="_blank"
@@ -697,10 +697,9 @@ export default function TrialQuiz({ abVariant }: TrialQuizProps) {
                 className="text-[#2467A3] underline decoration-[0.5px] underline-offset-2"
                 onClick={(event) => event.stopPropagation()}
               >
-                политикой конфиденциальности
-              </a>{' '}
-              (версия {LEGAL_DOCS.privacyPolicy.version}). Согласие относится только к заявке и
-              обратной связи по ней.
+                Как оператор работает с данными
+              </a>
+              .
             </span>
           </label>
           {fieldErrors.consent ? (

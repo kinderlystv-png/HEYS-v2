@@ -356,4 +356,25 @@ describe('consent readonly stable copy', () => {
     expect(useAt).toBeGreaterThan(-1);
     expect(declareAt).toBeLessThan(useAt);
   });
+
+  it('readonly allowlist keeps current login RPCs so the frozen screen can enter', () => {
+    const apiSource = fs.readFileSync(path.resolve(__dirname, '../heys_yandex_api_v1.js'), 'utf8');
+    const start = apiSource.indexOf('const READONLY_ALLOWED_RPC_EXACT = new Set([');
+    const end = apiSource.indexOf(']);', start);
+    const allow = apiSource.slice(start, end);
+    expect(allow).toContain("'verify_client_pin_v3'");
+    expect(allow).toContain("'login_client_v1'");
+    expect(allow).toContain("'verify_client_onetime_pin'");
+  });
+
+  it('stable PIN bridge falls back only after legacy v3 rejects access-code clients', () => {
+    const bridge = fs.readFileSync(
+      path.resolve(__dirname, '../../../scripts/stable/heys_stable_pin_bridge_v1.js'),
+      'utf8'
+    );
+    expect(bridge).toContain("fnName !== 'verify_client_pin_v3'");
+    expect(bridge).toContain("err !== 'access_code_login_required'");
+    expect(bridge).toContain("origRpc('login_client_v1'");
+    expect(bridge).toContain("origRpc('verify_client_onetime_pin'");
+  });
 });

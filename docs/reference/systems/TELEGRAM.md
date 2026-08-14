@@ -73,10 +73,11 @@ events; после выбора заявки бот просит Telegram contac
 Versioned privacy proof разрешён только после сообщения с прямой ссылкой на
 действующую policy и последующей отправки контакта пользователем. Для нового
 лида version/method проходят через insert trigger; для уже связанного активного
-лида bot source берёт active `personal_data` version/hash из серверного
-`legal_consent_registry` и обновляет proof в той же транзакции. Если active
-registry row не найден или лид уже не в допустимом статусе, транзакция
-откатывается и заявка не объявляется сохранённой.
+лида bot source берёт active `privacy_policy` version/hash из серверного
+`legal_consent_registry` (`START_LEAD_PRIVACY_VERSION`, сейчас 1.8) и обновляет
+proof в той же транзакции. Если active registry row не найден или лид уже не в
+допустимом статусе, транзакция откатывается и заявка не объявляется сохранённой.
+In-app `personal_data` 1.0 этим путём не ставится.
 
 Start bot также имеет webhook path, но source поддерживает отдельный long poll с
 `message` и `callback_query`, прямой доставкой ответов и commit offset.

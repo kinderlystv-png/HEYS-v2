@@ -359,6 +359,8 @@ describe('protected trial intake contract', () => {
     expect(healthMinimizationSql).toContain("p_current_step > 4");
     expect(healthMinimizationSql).not.toContain('health_consent_required');
     expect(intakeSource).toContain('WARNING_TEXT_VERSION');
+    expect(intakeSource).toContain('тренировочной части');
+    expect(intakeSource).toContain('Мне 18 лет или больше');
     expect(intakeSource).not.toContain('ConditionalHealthField');
     expect(intakeSource).not.toContain('function CheckField');
   });
@@ -643,7 +645,11 @@ describe('protected trial intake contract', () => {
   });
 
   it('uses the real sharing action, one autosave status and the supported unsure option', () => {
-    expect(intakeSource).not.toMatch(/дневник/i);
+    const withoutWarning = intakeSource.replace(
+      /const WARNING_TEXT_PARAGRAPHS[\s\S]*?const WARNING_CHECKBOX_LABEL =[\s\S]*?;/,
+      '',
+    );
+    expect(withoutWarning).not.toMatch(/дневник/i);
     expect(intakeSource).toContain('фото, текст или голосовые сообщения');
     expect(intakeSource).toContain('фото или короткие сообщения');
     expect(intakeSource.match(/Сохраняем…/g)).toHaveLength(1);

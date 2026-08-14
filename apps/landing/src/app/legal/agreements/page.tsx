@@ -17,17 +17,24 @@ export default function AgreementsPage() {
             icon: '🤝',
         },
         {
-            title: 'Политика конфиденциальности',
+            title: 'Политика обработки персональных данных',
             href: '/legal/privacy-policy',
             version: LEGAL_DOCS.privacyPolicy.version,
-            description: 'Какие данные мы собираем, как обрабатываем и защищаем. Соответствие 152-ФЗ.',
+            description: 'Как оператор работает с данными. Публичный документ, не заменяет согласие.',
+            icon: '📄',
+        },
+        {
+            title: 'Согласие на обработку персональных данных',
+            href: '/legal/personal-data-consent',
+            version: LEGAL_DOCS.personalDataConsent.version,
+            description: 'Отдельное согласие: перечень данных, получатели, срок и отзыв.',
             icon: '🔒',
         },
         {
-            title: 'Согласие на обработку данных о здоровье',
+            title: 'Согласие на обработку данных о здоровье (прекращено)',
             href: '/legal/health-data-consent',
             version: LEGAL_DOCS.healthDataConsent.version,
-            description: 'Отдельное согласие на обработку специальной категории персональных данных (ст. 10 152-ФЗ).',
+            description: 'Документ изъят из набора. Снимок 1.5 хранится в архиве.',
             icon: '❤️',
         },
         {

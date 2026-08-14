@@ -1,23 +1,29 @@
 {
-  "updatedAt": "2026-08-13",
+  "updatedAt": "2026-08-14",
   "documents": {
     "pep_agreement": {
       "version": "1.1",
       "canonicalPath": "docs/legal/pep-agreement.md",
       "snapshotPath": "apps/web/public/docs/v1.1/pep-agreement.md",
-      "sha256": "0ee377e187b4764bc4b39ad821d6ab57bd95cce1272f9c4a1fe90b64b83bea6a"
+      "sha256": "c70000fe4362ce08b4b68eb79056f5f21871df412d1d62c1e4147ecb8353b0e6"
     },
     "user_agreement": {
-      "version": "1.10",
+      "version": "1.11",
       "canonicalPath": "docs/legal/user-agreement.md",
-      "snapshotPath": "apps/web/public/docs/v1.10/user-agreement.md",
-      "sha256": "6623707bdc2ab1867143012b7f54834cef5b35f0b06aefaf52ab5bdbaaf495a5"
+      "snapshotPath": "apps/web/public/docs/v1.11/user-agreement.md",
+      "sha256": "9d4645844bd409b9a84381e0cddc307a181060516f82aefd586603676040c29e"
+    },
+    "privacy_policy": {
+      "version": "1.8",
+      "canonicalPath": "docs/legal/privacy-policy.md",
+      "snapshotPath": "apps/web/public/docs/v1.8/privacy-policy.md",
+      "sha256": "d306c2eaab111a43868ca2e58699f7e13ce7b32768af17b1c2698fa1bfeddcfb"
     },
     "personal_data": {
-      "version": "1.7",
-      "canonicalPath": "docs/legal/privacy-policy.md",
-      "snapshotPath": "apps/web/public/docs/v1.7/privacy-policy.md",
-      "sha256": "30e0821966128f06d34d356b0fc1d87a7851c5d9f5d6df1b653bc3fc0b3e1317"
+      "version": "1.0",
+      "canonicalPath": "docs/legal/personal-data-consent.md",
+      "snapshotPath": "apps/web/public/docs/v1.0/personal-data-consent.md",
+      "sha256": "0fa643d3238157fd5505185e673009effac2b2b04c7ba172d2edfc46c709231d"
     },
     "health_data": {
       "version": "1.5",
@@ -26,16 +32,16 @@
       "sha256": "a05365f23b7758deb1d6858d6816e7ee34fd5239c9d1fc84b2786c6027428256"
     },
     "payment_oferta": {
-      "version": "1.10",
+      "version": "1.11",
       "canonicalPath": "docs/legal/user-agreement.md",
-      "snapshotPath": "apps/web/public/docs/v1.10/user-agreement.md",
-      "sha256": "6623707bdc2ab1867143012b7f54834cef5b35f0b06aefaf52ab5bdbaaf495a5"
+      "snapshotPath": "apps/web/public/docs/v1.11/user-agreement.md",
+      "sha256": "9d4645844bd409b9a84381e0cddc307a181060516f82aefd586603676040c29e"
     },
     "refund": {
-      "version": "1.1",
+      "version": "1.2",
       "canonicalPath": "docs/legal/refund.md",
-      "snapshotPath": "apps/web/public/docs/v1.1/refund.md",
-      "sha256": "efed493603bfc88024ffb82ad6bf0e70b9f1c2a9d24cbd1ef518bbf70111ce70"
+      "snapshotPath": "apps/web/public/docs/v1.2/refund.md",
+      "sha256": "5416bacfc9c0f644172cd7db4693fdc1852c8e105143141692e606f388092cdd"
     },
     "cookie_policy": {
       "version": "1.1",
@@ -44,28 +50,46 @@
       "sha256": "be1dd07df10d6fed174943c2bd16ea3500069007988e87eb0d383f2ff4c164f5"
     },
     "speech_transcription": {
-      "version": "1.1",
+      "version": "1.2",
       "canonicalPath": "docs/legal/speech-transcription-consent.md",
-      "snapshotPath": "apps/web/public/docs/v1.1/speech-transcription-consent.md",
-      "sha256": "c95880e472cfe6237e0b99581f2e745cf775440a376f89ce96e39186e2d5edb8"
+      "snapshotPath": "apps/web/public/docs/v1.2/speech-transcription-consent.md",
+      "sha256": "6748cc9e45b03b26d03cef2b99dd48f098778c611471e350a5d4f6b265e646f6"
     },
     "marketing": {
-      "version": "1.3",
+      "version": "1.4",
       "canonicalPath": "docs/legal/marketing-consent.md",
-      "snapshotPath": "apps/web/public/docs/v1.3/marketing-consent.md",
-      "sha256": "8627a1daa46e20250ec9aeb4baa9a8d6053094cbb90a3d2f8466ffba02eefd43"
+      "snapshotPath": "apps/web/public/docs/v1.4/marketing-consent.md",
+      "sha256": "710a741e5681cab2d91b1d91a1315dcef2f75d3c3eebdaab7c9987a1cf906f7b"
     },
     "push_notifications": {
-      "version": "1.0",
+      "version": "1.1",
       "canonicalPath": "docs/legal/push-notifications-consent.md",
-      "snapshotPath": "apps/web/public/docs/v1.0/push-notifications-consent.md",
-      "sha256": "a179b6e2e499d0bdd48538dd743168460bd143fc3b098a07ba816fdf9a7fd0de"
+      "snapshotPath": "apps/web/public/docs/v1.1/push-notifications-consent.md",
+      "sha256": "99433c270c3432dd8f13a23db1eca61fe13b5379ed51aec15bdab3bcb8083bab"
     },
     "curator_access": {
-      "version": "1.0",
+      "version": "1.1",
       "canonicalPath": "docs/legal/curator-access-consent.md",
-      "snapshotPath": "apps/web/public/docs/v1.0/curator-access-consent.md",
-      "sha256": "a3bca78a3bb0b86ce4993f9bd979694dcbe90a62cef417a544cf0daeb59feb91"
+      "snapshotPath": "apps/web/public/docs/v1.1/curator-access-consent.md",
+      "sha256": "fd235890934df7bfaf55fdb15ac703cca0836feddb773648baf55b9c5ddfd12b"
+    },
+    "warning_intake": {
+      "version": "1.0",
+      "canonicalPath": "docs/legal/warning-intake.md",
+      "snapshotPath": "apps/web/public/docs/v1.0/warning-intake.md",
+      "sha256": "2dd546b41f683018acad431734d306374c9ce4c8e98727f1e88cb633fd93d45f"
+    },
+    "body_measurements": {
+      "version": "1.0",
+      "canonicalPath": "docs/legal/body-measurements-consent.md",
+      "snapshotPath": "apps/web/public/docs/v1.0/body-measurements-consent.md",
+      "sha256": "db51751753de4725a8d79ed0c9e2d5509b269d900b66d320fd3c9e2613a9111b"
+    },
+    "supplements_tracking": {
+      "version": "1.0",
+      "canonicalPath": "docs/legal/supplements-consent.md",
+      "snapshotPath": "apps/web/public/docs/v1.0/supplements-consent.md",
+      "sha256": "4aa7a696020ba5f0f74c8a69c2beed54d7e27b0b611bac74a737988a1354827f"
     }
   },
   "candidates": {

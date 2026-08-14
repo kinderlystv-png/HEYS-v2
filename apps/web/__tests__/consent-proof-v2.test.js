@@ -12,19 +12,21 @@ const legalActivationMigrationV19 = read('database/2026-07-29_activate_user_agre
 const legalHashCorrectionMigration = read(
   'database/2026-07-30_update_user_agreement_v1_9_document_hash.sql',
 );
-const registryMigrations = `${migration}\n${legalActivationMigration}\n${legalActivationMigrationV19}\n${legalHashCorrectionMigration}`;
+const legalActivationMigrationV110 = read('database/2026-08-08_activate_user_agreement_v1_10.sql');
+const legalActivationMigrationV111 = read('database/2026-08-14_activate_legal_v1_11.sql');
+const registryMigrations = `${migration}\n${legalActivationMigration}\n${legalActivationMigrationV19}\n${legalHashCorrectionMigration}\n${legalActivationMigrationV110}\n${legalActivationMigrationV111}`;
 const manifest = JSON.parse(read('docs/legal/legal-document-manifest.json'));
 const migrationManifest = JSON.parse(read('scripts/db/migrations/manifest.json'));
 
-const sha256 = (relative) => createHash('sha256').update(read(relative)).digest('hex');
+const sha256 = (relative) =>
+  createHash('sha256').update(read(relative).replace(/\r\n/g, '\n')).digest('hex');
 
 test('server allowlist rejects arbitrary versions before any consent mutation', () => {
   const validation = migration.indexOf(
     'Validate the whole request before revoking or inserting anything.',
   );
-  const mutation = migration.indexOf(
-    'UPDATE public.consents\n       SET granted = false',
-    validation,
+  const mutation = migration.search(
+    /UPDATE public\.consents\r?\n       SET granted = false/,
   );
   assert.ok(validation > 0 && mutation > validation);
   assert.match(migration, /status = 'active'/);
@@ -63,7 +65,7 @@ test('consent proof migration is managed and every registry hash matches the imm
   for (const type of [
     'user_agreement',
     'personal_data',
-    'health_data',
+    'privacy_policy',
     'marketing',
     'payment_oferta',
     'push_notifications',
@@ -80,6 +82,11 @@ test('consent proof migration is managed and every registry hash matches the imm
       ),
     );
   }
+  const health = manifest.documents.health_data;
+  assert.equal(sha256(health.canonicalPath), health.sha256);
+  assert.equal(sha256(health.snapshotPath), health.sha256);
+  assert.match(legalActivationMigrationV111, /consent_type = 'health_data'/);
+  assert.match(legalActivationMigrationV111, /SET status = 'retired'/);
   const candidate = manifest.candidates.health_data_2_0;
   assert.match(
     migration,
@@ -103,6 +110,17 @@ test('legal 1.9 activation is forward-only and retires older active agreement ve
   assert.match(legalActivationMigrationV19, /SET status = 'retired'/);
 });
 
+test('legal 1.11 activation retires health_data and splits privacy_policy from personal_data', () => {
+  assert.match(legalActivationMigrationV111, /'user_agreement', '1\.11'/);
+  assert.match(legalActivationMigrationV111, /'payment_oferta', '1\.11'/);
+  assert.match(legalActivationMigrationV111, /'personal_data', '1\.0'/);
+  assert.match(legalActivationMigrationV111, /'privacy_policy', '1\.8'/);
+  assert.match(legalActivationMigrationV111, /v_required TEXT\[] := ARRAY\['user_agreement','personal_data'\]/);
+  assert.match(legalActivationMigrationV111, /consent_type = 'privacy_policy'/);
+  assert.match(legalActivationMigrationV111, /consent_type = 'health_data'/);
+  assert.match(legalActivationMigrationV111, /SET status = 'retired'/);
+});
+
 test('document hash and accepted_at are server-owned with no historical backfill', () => {
   assert.match(migration, /NEW\.document_sha256 := v_hash/);
   assert.match(migration, /NEW\.accepted_at := NOW\(\)/);
@@ -111,9 +129,9 @@ test('document hash and accepted_at are server-owned with no historical backfill
   assert.doesNotMatch(migration, /UPDATE public\.leads\s+SET consent_privacy_sha256/i);
 });
 
-test('marketing 1.3 proof is exact and conversion never borrows privacy version', () => {
+test('marketing 1.4 proof is exact and conversion never borrows privacy version', () => {
   const marketing = manifest.documents.marketing;
-  assert.equal(marketing.version, '1.3');
+  assert.equal(marketing.version, '1.4');
   assert.equal(sha256(marketing.canonicalPath), marketing.sha256);
   assert.equal(sha256(marketing.snapshotPath), marketing.sha256);
   assert.match(migration, /v_lead\.consent_marketing_version/);

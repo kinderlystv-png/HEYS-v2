@@ -13,11 +13,15 @@ const MIGRATION_PATHS = [
   'database/2026-07-29_activate_user_agreement_v1_9.sql',
   'database/2026-07-30_update_user_agreement_v1_9_document_hash.sql',
   'database/2026-08-08_activate_user_agreement_v1_10.sql',
+  'database/2026-08-14_activate_legal_v1_11.sql',
 ];
 
 const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
 const digest = (relativePath) =>
-  crypto.createHash('sha256').update(read(relativePath)).digest('hex');
+  crypto
+    .createHash('sha256')
+    .update(read(relativePath).replace(/\r\n/g, '\n'))
+    .digest('hex');
 
 function fail(message) {
   throw new Error(message);
@@ -84,15 +88,19 @@ function verifySourceContract() {
   for (const type of [
     'user_agreement',
     'personal_data',
-    'health_data',
+    'privacy_policy',
     'marketing',
     'payment_oferta',
     'push_notifications',
     'curator_access',
     'speech_transcription',
+    'warning_intake',
+    'body_measurements',
+    'supplements_tracking',
   ]) {
     assertEntry(registry, type, manifest.documents[type]);
   }
+  assertEntry(registry, 'health_data', manifest.documents.health_data, 'retired');
 
   const healthCandidate = manifest.candidates.health_data_2_0;
   assertEntry(
@@ -112,13 +120,20 @@ function verifySourceContract() {
   const required = {
     user_agreement: manifest.documents.user_agreement.version,
     personal_data: manifest.documents.personal_data.version,
-    health_data: manifest.documents.health_data.version,
   };
   const landingKeys = {
     user_agreement: 'userAgreement',
-    personal_data: 'privacyPolicy',
-    health_data: 'healthDataConsent',
+    personal_data: 'personalDataConsent',
   };
+  if (extractLandingVersion(landing, 'privacyPolicy') !== manifest.documents.privacy_policy.version) {
+    fail('landing privacyPolicy is not the manifest privacy_policy version');
+  }
+  if (extractPlainVersion(webLegal, 'health_data') !== manifest.documents.health_data.version) {
+    fail('web legal health_data is not the archived 1.5 snapshot');
+  }
+  if (extractLandingVersion(landing, 'healthDataConsent') !== manifest.documents.health_data.version) {
+    fail('landing healthDataConsent is not the archived 1.5 snapshot');
+  }
 
   for (const [type, version] of Object.entries(required)) {
     if (extractPlainVersion(webLegal, type) !== version)

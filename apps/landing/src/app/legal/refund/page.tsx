@@ -69,19 +69,22 @@ export default function RefundPolicyPage() {
           Направьте заявление на{' '}
           <a href={`mailto:${SUPPORT_CONTACTS.generalEmail}`}>
             {SUPPORT_CONTACTS.generalEmail}
-          </a>{' '}
-          или в Telegram{' '}
-          <a href={SUPPORT_CONTACTS.telegramUrl} target="_blank" rel="noopener noreferrer">
-            {SUPPORT_CONTACTS.telegramHandle}
-          </a>.
+          </a>
+          .
         </li>
         <li>
           Укажите номер телефона аккаунта, дату и сумму платежа либо его
           идентификатор. Причину можно сообщить добровольно.
         </li>
         <li>
-          Поддержка запросит только сведения, без которых нельзя
-          идентифицировать платёж или выполнить возврат.
+          Telegram-бот {SUPPORT_CONTACTS.telegramHandle} принимает только сигнал
+          «хочу обратиться» и направляет в приложение или на почту. Номер телефона,
+          сумму и идентификатор платежа через Telegram направлять не нужно.
+        </li>
+        <li>
+          Поддержка подтвердит получение заявления и при необходимости запросит
+          только сведения, без которых нельзя идентифицировать платёж или выполнить
+          возврат.
         </li>
       </ol>
 

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { DEFAULT_VARIANT } from '@/config/landing-variants';
-import { LEGAL_DOCS, SUPPORT_CONTACTS } from '@/config/legal-versions';
+import { APPLICATION_CONSENT_LABEL, LEGAL_DOCS, SUPPORT_CONTACTS } from '@/config/legal-versions';
 
 declare global {
   interface Window {
@@ -421,7 +421,7 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
           className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         />
         <span className="text-gray-500 text-xs leading-5">
-          Даю согласие на обработку персональных данных в соответствии с{' '}
+          {APPLICATION_CONSENT_LABEL}{' '}
           <a
             href="/legal/privacy-policy"
             target="_blank"
@@ -429,9 +429,9 @@ export default function TrialForm({ ctaLabel }: TrialFormProps) {
             className="text-blue-600 hover:underline"
             onClick={(e) => e.stopPropagation()}
           >
-            политикой конфиденциальности
+            Как оператор работает с данными
           </a>
-          . Согласие относится только к заявке и обратной связи по ней.
+          .
         </span>
       </label>
       {fieldErrors.consent ? <p id="privacy-consent-error" className="-mt-1 mb-3 pl-7 text-xs text-red-700" role="alert">{fieldErrors.consent}</p> : null}

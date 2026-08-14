@@ -46,24 +46,21 @@ describe('honest consent summaries', () => {
   it('shows short plain-language disclosures for a new client', () => {
     const text = collectText(renderConsentScreen()).join(' ');
 
-    expect(text.match(/Коротко и честно/g)).toHaveLength(5);
+    expect(text.match(/Коротко и честно/g)).toHaveLength(4);
     expect(text).toContain('условия тарифа и оплаты');
-    expect(text).toContain('данные не продаём');
-    expect(text).toContain('согласие можно отозвать');
+    expect(text).toContain('не заменяет это согласие');
     expect(text).toContain('без потери доступа к HEYS');
-    expect(text).toContain('рекламное согласие оформляется отдельно');
+    expect(text).toContain('Рекламное согласие оформляется отдельно');
   });
 
   it('keeps the same plain-language contents for re-consent', () => {
     const text = collectText(renderConsentScreen([
-      { type: 'personal_data', current: '1.5', expected: '1.6' },
-      { type: 'health_data', current: '1.4', expected: '1.5' },
+      { type: 'personal_data', current: '1.7', expected: '1.0' },
     ])).join(' ');
 
-    expect(text.match(/Коротко и честно/g)).toHaveLength(5);
+    expect(text.match(/Коротко и честно/g)).toHaveLength(4);
     expect(text).not.toContain('Что изменилось');
-    expect(text).toContain('данные не продаём');
-    expect(text).toContain('согласие можно отозвать');
+    expect(text).toContain('не заменяет это согласие');
     expect(text).toContain('Проверьте содержание документов и подтвердите актуальные условия');
   });
 });

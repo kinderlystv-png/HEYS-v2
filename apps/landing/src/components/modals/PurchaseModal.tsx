@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-import { LEGAL_DOCS } from '../../config/legal-versions'
+import { APPLICATION_CONSENT_LABEL, LEGAL_DOCS } from '../../config/legal-versions'
 import { logger } from '../../lib/logger'
 
 type FormState = 'idle' | 'loading' | 'success' | 'error'
@@ -93,7 +93,7 @@ export default function PurchaseModal({ isOpen, onClose, planName, planPrice }: 
         setErrorMessage('')
 
         if (!consentAccepted) {
-            setErrorMessage('Необходимо принять политику конфиденциальности')
+            setErrorMessage('Подтвердите согласие на обработку данных заявки')
             return
         }
 
@@ -309,11 +309,11 @@ export default function PurchaseModal({ isOpen, onClose, planName, planPrice }: 
                                     className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                 />
                                 <span className="text-slate-500 text-xs leading-5">
-                                    Даю согласие на обработку персональных данных в соответствии с{' '}
+                                    {APPLICATION_CONSENT_LABEL}{' '}
                                     <a href="/legal/privacy-policy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
-                                        политикой конфиденциальности
+                                        Как оператор работает с данными
                                     </a>
-                                    . Согласие относится только к заявке и обратной связи по ней.{' '}
+                                    .{' '}
                                     <a href="/legal/user-agreement" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline" onClick={e => e.stopPropagation()}>
                                         Условия использования
                                     </a>{' '}

@@ -20,8 +20,14 @@
 
   const CONSENT_TYPES = Object.freeze({
     cycle_tracking: 'pending-owner-text',
-    body_measurements: 'pending-owner-text',
-    supplements_tracking: 'pending-owner-text',
+    body_measurements: '1.0',
+    supplements_tracking: '1.0',
+  });
+  const CONSENT_PROMPTS = Object.freeze({
+    body_measurements:
+      'Замеры тела. Обрабатываются обхваты и даты. Видят вы и куратор. Пока функция включена; выключение удаляет замеры. Документ: /docs/v1.0/body-measurements-consent.md',
+    supplements_tracking:
+      'Отметки о добавках из справочника сервиса и даты. Лекарства вносить нельзя. Видят вы и куратор. Пока функция включена; выключение удаляет отметки. Документ: /docs/v1.0/supplements-consent.md',
   });
 
   const KNOWN_SUPPLEMENT_IDS = new Set([
@@ -270,7 +276,7 @@
     }
     if (nextEnabled) {
       const ok = global.confirm(
-        `Текст согласия на «${cfg.label}» будет предоставлен владельцем проекта.\n\nВключить функцию?`
+        `${CONSENT_PROMPTS[cfg.consentType] || `Согласие на «${cfg.label}».`}\n\nВключить функцию?`
       );
       if (!ok) return false;
       if (isReadonlyHost) {

@@ -11,14 +11,19 @@ export interface LegalDocMeta {
 
 export const LEGAL_DOCS = {
   userAgreement: {
-    version: '1.10',
-    effectiveDate: '8 августа 2026 г.',
-    lastUpdated: '8 августа 2026 г.',
+    version: '1.11',
+    effectiveDate: '14 августа 2026 г.',
+    lastUpdated: '14 августа 2026 г.',
   },
   privacyPolicy: {
-    version: '1.7',
-    effectiveDate: '27 июля 2026 г.',
-    lastUpdated: '27 июля 2026 г.',
+    version: '1.8',
+    effectiveDate: '14 августа 2026 г.',
+    lastUpdated: '14 августа 2026 г.',
+  },
+  personalDataConsent: {
+    version: '1.0',
+    effectiveDate: '14 августа 2026 г.',
+    lastUpdated: '14 августа 2026 г.',
   },
   healthDataConsent: {
     version: '1.5',
@@ -26,9 +31,9 @@ export const LEGAL_DOCS = {
     lastUpdated: '27 июля 2026 г.',
   },
   refund: {
-    version: '1.1',
-    effectiveDate: '27 июля 2026 г.',
-    lastUpdated: '27 июля 2026 г.',
+    version: '1.2',
+    effectiveDate: '14 августа 2026 г.',
+    lastUpdated: '14 августа 2026 г.',
   },
   cookiePolicy: {
     version: '1.1',
@@ -36,16 +41,20 @@ export const LEGAL_DOCS = {
     lastUpdated: '27 июля 2026 г.',
   },
   speechTranscriptionConsent: {
-    version: '1.1',
-    effectiveDate: '27 июля 2026 г.',
-    lastUpdated: '27 июля 2026 г.',
+    version: '1.2',
+    effectiveDate: '14 августа 2026 г.',
+    lastUpdated: '14 августа 2026 г.',
   },
   marketingConsent: {
-    version: '1.3',
-    effectiveDate: '27 июля 2026 г.',
-    lastUpdated: '27 июля 2026 г.',
+    version: '1.4',
+    effectiveDate: '14 августа 2026 г.',
+    lastUpdated: '14 августа 2026 г.',
   },
 } as const satisfies Record<string, LegalDocMeta>;
+
+/** Согласие на заявку с лендинга: цель, перечень, срок и отзыв в самой отметке. */
+export const APPLICATION_CONSENT_LABEL =
+  'Даю согласие ИП Поплавскому А. С. на обработку имени, телефона, выбранного мессенджера и года рождения, чтобы ответить по этой заявке. Ответ может быть направлен в выбранный мной мессенджер; в этом случае идентификатор в мессенджере и номер телефона передаются Telegram Messenger Inc. (Британские Виргинские острова). Согласие действует до отзыва или отказа в услуге. Отозвать — письмом на poplanton@mail.ru.';
 
 export const SUPPORT_CONTACTS = {
   generalEmail: 'poplanton@mail.ru',

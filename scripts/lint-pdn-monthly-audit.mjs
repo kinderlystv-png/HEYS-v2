@@ -33,10 +33,14 @@ const FILES = {
   userAgreement: 'apps/web/public/docs/user-agreement.md',
   userAgreementV18: 'apps/web/public/docs/v1.8/user-agreement.md',
   userAgreementV19: 'apps/web/public/docs/v1.9/user-agreement.md',
+  userAgreementV111: 'apps/web/public/docs/v1.11/user-agreement.md',
   privacyV17: 'apps/web/public/docs/v1.7/privacy-policy.md',
+  privacyV18: 'apps/web/public/docs/v1.8/privacy-policy.md',
+  personalDataConsent: 'apps/web/public/docs/personal-data-consent.md',
+  personalDataV10: 'apps/web/public/docs/v1.0/personal-data-consent.md',
   healthV14: 'apps/web/public/docs/v1.4/health-data-consent.md',
   healthV15: 'apps/web/public/docs/v1.5/health-data-consent.md',
-  consentForms: 'apps/web/public/docs/consent-forms.md',
+  consentForms: 'docs/legal/consent-forms.md',
   marketingPrivacyGuard: 'scripts/lint-marketing-privacy-metadata.mjs',
   paymentsGatewayGuard: 'scripts/prepare-payments-gateway.mjs',
   packageJson: 'package.json',
@@ -372,7 +376,7 @@ function checkLegalVersions() {
 
   const expected = {
     user_agreement: extractObjectVersion(landing, 'LEGAL_DOCS', 'userAgreement'),
-    personal_data: extractObjectVersion(landing, 'LEGAL_DOCS', 'privacyPolicy'),
+    personal_data: extractObjectVersion(landing, 'LEGAL_DOCS', 'personalDataConsent'),
     health_data: extractObjectVersion(landing, 'LEGAL_DOCS', 'healthDataConsent'),
   };
 
@@ -410,8 +414,9 @@ function checkLegalVersions() {
   }
 
   for (const [currentKey, snapshotKey, label] of [
-    ['userAgreement', 'userAgreementV19', 'user_agreement 1.9'],
-    ['privacyPolicy', 'privacyV17', 'personal_data 1.7'],
+    ['userAgreement', 'userAgreementV111', 'user_agreement 1.11'],
+    ['privacyPolicy', 'privacyV18', 'privacy_policy 1.8'],
+    ['personalDataConsent', 'personalDataV10', 'personal_data 1.0'],
     ['healthConsent', 'healthV15', 'health_data 1.5'],
   ]) {
     if (normalizeLegalSnapshot(FILES[currentKey]) === normalizeLegalSnapshot(FILES[snapshotKey])) {
@@ -432,11 +437,11 @@ function checkConsentFormsContract() {
   requireIncludes(
     FILES.consentForms,
     [
-      '| Общие персональные данные       | 1.7    |',
+      '| Согласие на персональные данные | 1.0    |',
       '| Данные о здоровье               | 1.5    |',
       '/docs/v1.5/health-data-consent.md',
-      '`health_data` 1.4 и ниже',
-      'Маркетинговый пункт не влияет на заявку, триал или доступ к HEYS.',
+      '`health_data` больше не входит в обязательный набор.',
+      'Маркетинговый пункт и уведомления не влияют на заявку, триал или доступ к HEYS.',
       'SMS-подтверждение сейчас выключено',
       '№ 26-22-005319',
     ],

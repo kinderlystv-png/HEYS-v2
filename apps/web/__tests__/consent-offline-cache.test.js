@@ -10,10 +10,9 @@ const runtimeEffectsSource = fs.readFileSync(
 
 const CLIENT_ID = '11111111-1111-1111-1111-111111111111';
 const LEGAL_VERSIONS = {
-  required: ['user_agreement', 'personal_data', 'health_data'],
+  required: ['user_agreement', 'personal_data'],
   user_agreement: '1.6',
   personal_data: '1.6',
-  health_data: '1.5',
 };
 
 afterEach(() => {
@@ -35,7 +34,6 @@ describe('offline consent validation cache', () => {
       requiredVersions: {
         user_agreement: '1.6',
         personal_data: '1.6',
-        health_data: '1.5',
       },
       validatedAt: Date.now(),
     }));
@@ -92,7 +90,6 @@ describe('offline consent validation cache', () => {
       requiredVersions: {
         user_agreement: '1.6',
         personal_data: '1.6',
-        health_data: '1.5',
       },
       validatedAt: Date.now(),
     }));

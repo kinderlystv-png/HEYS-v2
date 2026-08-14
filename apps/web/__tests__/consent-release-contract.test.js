@@ -6,7 +6,8 @@ import { describe, expect, it } from 'vitest';
 
 const repo = path.resolve(__dirname, '../../..');
 const read = (relative) => fs.readFileSync(path.join(repo, relative), 'utf8');
-const hash = (relative) => crypto.createHash('sha256').update(read(relative)).digest('hex');
+const hash = (relative) =>
+  crypto.createHash('sha256').update(read(relative).replace(/\r\n/g, '\n')).digest('hex');
 const escapeRegExp = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const manifest = JSON.parse(read('docs/legal/legal-document-manifest.json'));
 
@@ -43,7 +44,8 @@ describe('legal release contract', () => {
   it('keeps current legal markdown byte-identical to each immutable snapshot', () => {
     for (const [current, snapshot] of [
       ['apps/web/public/docs/user-agreement.md', manifest.documents.user_agreement.snapshotPath],
-      ['apps/web/public/docs/privacy-policy.md', manifest.documents.personal_data.snapshotPath],
+      ['apps/web/public/docs/privacy-policy.md', manifest.documents.privacy_policy.snapshotPath],
+      ['apps/web/public/docs/personal-data-consent.md', manifest.documents.personal_data.snapshotPath],
       ['apps/web/public/docs/refund.md', manifest.documents.refund.snapshotPath],
       ['apps/web/public/docs/cookie-policy.md', manifest.documents.cookie_policy.snapshotPath],
       [

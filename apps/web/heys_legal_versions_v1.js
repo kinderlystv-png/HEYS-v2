@@ -12,30 +12,29 @@
   const HEYS = global.HEYS = global.HEYS || {};
 
   const versions = {
-    user_agreement:     '1.10',
-    personal_data:      '1.7',
+    user_agreement:     '1.11',
+    personal_data:      '1.0',
     health_data:        '1.5',
-    marketing:          '1.3',
-    payment_oferta:     '1.10',
-    push_notifications: '1.0',
-    curator_access:     '1.0',
-    speech_transcription: '1.1',
-    _updatedAt:         '2026-07-29'
+    marketing:          '1.4',
+    payment_oferta:     '1.11',
+    push_notifications: '1.1',
+    curator_access:     '1.1',
+    speech_transcription: '1.2',
+    _updatedAt:         '2026-08-14'
   };
 
   // Required types для check_required_consents_v2 — обязательные согласия,
-  // без которых нельзя пользоваться сервисом.
+  // без которых нельзя пользоваться сервисом. health_data изъят из набора 1.11.
   versions.required = Object.freeze([
     'user_agreement',
-    'personal_data',
-    'health_data'
+    'personal_data'
   ]);
 
   // Human-readable метки для UI ("Мои согласия и данные" в профиле).
   versions.labels = Object.freeze({
     user_agreement:     'Пользовательское соглашение',
-    personal_data:      'Политика обработки персональных данных',
-    health_data:        'Согласие на обработку данных о здоровье',
+    personal_data:      'Согласие на обработку персональных данных',
+    health_data:        'Согласие на обработку данных о здоровье (прекращено)',
     marketing:          'Маркетинговые материалы',
     payment_oferta:     'Оферта на оплату',
     push_notifications: 'Push-уведомления',

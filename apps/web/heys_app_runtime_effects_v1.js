@@ -7,7 +7,7 @@
         const versions = HEYS.LegalVersions || {};
         const required = Array.isArray(versions.required)
             ? versions.required
-            : ['user_agreement', 'personal_data', 'health_data'];
+            : ['user_agreement', 'personal_data'];
         return required.reduce((result, type) => {
             result[type] = String(versions[type] || '');
             return result;
