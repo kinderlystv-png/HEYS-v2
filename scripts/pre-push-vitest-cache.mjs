@@ -46,6 +46,15 @@ const RELEASE_FLOW_TESTS = [
   '__tests__/whats-new-seen-flag-preserved.test.js',
 ];
 
+// Vitest + Vite on Windows cannot reliably import repo-root scripts/*.mjs in
+// happy-dom tests (SyntaxError at dynamic import). CI/Linux still runs them.
+const WINDOWS_SCRIPT_IMPORT_TESTS = new Set([
+  '__tests__/agent-staging.test.js',
+  '__tests__/pre-push-vitest-cache.test.js',
+  '__tests__/prepare-release-skip.test.js',
+  '__tests__/push-agent.test.js',
+]);
+
 const SYNC_DATA_TESTS = [
   '__tests__/sync-queue-runtime-pure.test.js',
   '__tests__/sync-merge-shared.test.js',
@@ -235,6 +244,11 @@ function selectRelevantTests(changedFiles = []) {
   if (syncOrDataChanged) SYNC_DATA_TESTS.forEach((file) => selected.add(file));
 
   return [...selected];
+}
+
+function filterTestsForPlatform(tests = []) {
+  if (process.platform !== 'win32') return tests;
+  return tests.filter((file) => !WINDOWS_SCRIPT_IMPORT_TESTS.has(file));
 }
 
 function listWorktreeRoots() {
@@ -456,7 +470,13 @@ function runIfNeeded() {
       );
       return 1;
     }
-    const tests = selectRelevantTests(changed.files);
+    const selected = selectRelevantTests(changed.files);
+    const tests = filterTestsForPlatform(selected);
+    if (process.platform === 'win32' && tests.length !== selected.length) {
+      writeLine(
+        `Windows: skipped ${selected.length - tests.length} script-import Vitest file(s); CI/Linux runs them.`,
+      );
+    }
     writeLine(
       `Running ${tests.length} fast relevant/safety test file(s) for ${changed.baseRef}..${changed.ref}.`,
     );
