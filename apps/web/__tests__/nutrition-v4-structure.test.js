@@ -30,6 +30,13 @@ describe('Nutrition tab v4 structure', () => {
     expect(nutritionSource).toContain('nutrition-v4-water');
   });
 
+  it('localizes diary meal titles instead of showing english type keys', () => {
+    expect(nutritionSource).toContain('function mealTypeLabel');
+    expect(nutritionSource).toMatch(/info\?\.name \|\| info\?\.label \|\| meal\?\.name/);
+    expect(nutritionSource).toContain('localizeMealName');
+    expect(nutritionSource).not.toMatch(/if \(info\?\.type\) return info\.type/);
+  });
+
   it('keeps legacy meals UI in hidden mount for editing', () => {
     expect(nutritionSource).toContain('nutrition-v4-legacy-meals');
     expect(nutritionSource).toContain('id: \'diary-heading\'');

@@ -5062,8 +5062,6 @@
                         } catch (_) { /* noop */ }
 
                         // 🆕 Стабильный флоу: lazy-вычисление индекса через HEYS.Day, retry через rAF
-                        const savedMealName = (newMeal.name || '').toLowerCase();
-
                         const findMealIndex = () => {
                             const currentDay = HEYS.Day?.getDay?.();
                             if (!currentDay?.meals) return -1;
@@ -5085,7 +5083,6 @@
                             }
 
                             expandOnlyMeal(mealIndex);
-                            const mealName = savedMealName || `приём ${mealIndex + 1}`;
 
                             // Функция открытия модалки добавления продукта
                             const openAddProductModal = (targetMealIndex, multiProductMode, dayOverride, autoRepeatCount, options = {}) => {
@@ -5359,30 +5356,11 @@
                             const renderFlowBarcodeIcon = (compact = false, bare = false) => {
                                 const BarcodeIcon = window.HEYS?.AddProductStep?.BarcodeScanIcon;
                                 return React.createElement('span', {
-                                    className: 'flow-selection-btn__barcode',
-                                    'aria-hidden': 'true',
-                                    style: {
-                                        flexShrink: 0,
-                                        width: compact ? '24px' : '34px',
-                                        height: compact ? '24px' : '34px',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        marginLeft: bare || compact ? '0' : '8px',
-                                        borderRadius: compact ? '7px' : '10px',
-                                        background: bare ? 'transparent' : (compact ? 'rgba(67,69,135,0.08)' : 'rgba(255,255,255,0.18)'),
-                                        color: compact ? '#434587' : '#ffffff',
-                                        overflow: 'hidden'
-                                    }
+                                    className: 'flow-selection-btn__barcode' + (compact ? ' is-compact' : '') + (bare ? ' is-bare' : ''),
+                                    'aria-hidden': 'true'
                                 }, BarcodeIcon
-                                    ? React.createElement('span', {
-                                        style: {
-                                            display: 'block',
-                                            transform: compact ? 'scale(0.68)' : 'scale(0.9)',
-                                            transformOrigin: 'center'
-                                        }
-                                    }, React.createElement(BarcodeIcon))
-                                    : React.createElement('span', { style: { fontSize: compact ? '17px' : '24px', lineHeight: 1 } }, '▥')
+                                    ? React.createElement(BarcodeIcon)
+                                    : React.createElement('span', { className: 'flow-selection-btn__barcode-fallback' }, '▥')
                                 );
                             };
 
@@ -5447,22 +5425,6 @@
                                     className: 'flow-selection-btn__barcode-tap',
                                     'aria-label': 'Сканировать штрихкод',
                                     title: 'Сканировать штрихкод',
-                                    style: {
-                                        flexShrink: 0,
-                                        width: compact ? '38px' : '56px',
-                                        minHeight: compact ? '46px' : '100%',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        border: compact ? '1px solid #86efac' : 'none',
-                                        borderLeft: compact ? 'none' : '1px solid rgba(255,255,255,0.34)',
-                                        borderRadius: '0 12px 12px 0',
-                                        background: compact ? '#f0fdf4' : 'rgba(255,255,255,0.24)',
-                                        color: compact ? '#434587' : '#ffffff',
-                                        cursor: 'pointer',
-                                        padding: 0,
-                                        transition: 'all 0.15s ease'
-                                    },
                                     onClick: (event) => {
                                         event.preventDefault();
                                         event.stopPropagation();
@@ -5476,171 +5438,81 @@
                                 }, renderFlowBarcodeIcon(compact, true))
                             );
 
-                            const renderFlowOption = ({ className, style, icon, title, subtitle, multiProductMode }) => (
+                            const renderFlowOption = ({ className, title, subtitle, multiProductMode }) => (
                                 React.createElement('div', {
-                                    className: `${className}-split`,
-                                    style: {
-                                        display: 'flex',
-                                        borderRadius: '12px',
-                                        overflow: 'hidden',
-                                        background: style.background
-                                    }
+                                    className: `${className}-split flow-selection-row`
                                 },
                                     React.createElement('button', {
+                                        type: 'button',
                                         className,
-                                        style: {
-                                            ...style,
-                                            flex: 1,
-                                            borderRadius: '12px 0 0 12px'
-                                        },
                                         onClick: () => openFlowAddProduct(multiProductMode, 0, false)
                                     },
-                                        React.createElement('span', {
-                                            style: { fontSize: '28px' }
-                                        }, icon),
-                                        React.createElement('div', {
-                                            style: { flex: 1 }
-                                        },
-                                            React.createElement('div', {
-                                                style: { fontWeight: '700', color: '#ffffff', fontSize: '15px' }
-                                            }, title),
-                                            React.createElement('div', {
-                                                style: { fontSize: '12px', color: 'rgba(255,255,255,0.88)', marginTop: '2px' }
-                                            }, subtitle)
+                                        React.createElement('div', { className: 'flow-selection-btn__copy' },
+                                            React.createElement('div', { className: 'flow-selection-btn__title' }, title),
+                                            React.createElement('div', { className: 'flow-selection-btn__sub' }, subtitle)
                                         )
                                     ),
                                     renderFlowBarcodeButton(multiProductMode)
                                 )
                             );
 
-                            const renderFlowRepeatOption = (n) => (
-                                React.createElement('div', {
-                                    key: `repeat-${n}`,
-                                    className: 'flow-selection-btn--repeat-split',
-                                    style: {
-                                        flex: 1,
-                                        display: 'flex',
-                                        minWidth: 0
-                                    }
-                                },
-                                    React.createElement('button', {
-                                        className: 'flow-selection-btn flow-selection-btn--repeat',
-                                        style: {
-                                            flex: 1,
-                                            minWidth: 0,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            padding: '12px 6px',
-                                            border: '1px solid #86efac',
-                                            borderRight: 'none',
-                                            borderRadius: '12px 0 0 12px',
-                                            background: '#dcfce7',
-                                            color: '#14532d',
-                                            fontSize: '15px',
-                                            fontWeight: '700',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.15s ease'
-                                        },
-                                        onClick: () => openFlowAddProduct(true, n, false)
-                                    }, `Еще ${n}`),
-                                    renderFlowBarcodeButton(true, n, true)
-                                )
-                            );
+                            const recentPreview = (() => {
+                                const meal = recentMealsForFlow[0] && recentMealsForFlow[0].meal;
+                                const items = (meal && meal.items) || [];
+                                if (!items.length) return null;
+                                const names = [];
+                                let kcal = 0;
+                                for (let i = 0; i < items.length; i++) {
+                                    const it = items[i];
+                                    const product = getProductFromItem ? getProductFromItem(it, pIndex) : null;
+                                    const name = String((product && product.name) || it.name || '').trim();
+                                    if (name) names.push(name);
+                                    const grams = Number(it.grams) || 0;
+                                    const kcal100 = Number((product && (product.kcal100 ?? product.kcal)) || it.kcal100 || 0) || 0;
+                                    if (grams && kcal100) kcal += (kcal100 * grams) / 100;
+                                }
+                                const shown = names.slice(0, 3).join(', ');
+                                const kcalPart = kcal > 0 ? `${Math.round(kcal)} ккал` : '';
+                                const line = [shown, kcalPart].filter(Boolean).join(' · ');
+                                return line || null;
+                            })();
+                            const flowTitle = [localizeMealName(newMeal.name, 'Приём'), newMeal.time].filter(Boolean).join(' · ');
 
                             window.HEYS.ConfirmModal.show({
-                                icon: '🍽️',
-                                title: `Добавить продукты в ${mealName}`,
+                                icon: '',
+                                title: flowTitle,
                                 text: React.createElement('div', {
-                                    style: {
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        gap: '12px',
-                                        margin: '8px 0'
-                                    }
+                                    className: 'flow-add-products'
                                 },
-                                    // Кнопка "↩ Повторить приём из недавних" — фиолетовый, только если есть недавние и приём пуст
                                     recentMealsForFlow.length > 0 && React.createElement('button', {
+                                        type: 'button',
                                         className: 'flow-selection-btn flow-selection-btn--repeat-recent',
-                                        style: {
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '12px',
-                                            padding: '14px 16px',
-                                            border: 'none',
-                                            borderRadius: '12px',
-                                            background: '#6366f1',
-                                            color: '#ffffff',
-                                            cursor: 'pointer',
-                                            textAlign: 'left',
-                                            transition: 'all 0.15s ease'
-                                        },
                                         onClick: handleFlowRepeatRecent
                                     },
-                                        React.createElement('span', { style: { fontSize: '28px' } }, '↩'),
-                                        React.createElement('div', { style: { flex: 1 } },
-                                            React.createElement('div', {
-                                                style: { fontWeight: '700', color: '#ffffff', fontSize: '15px' }
-                                            }, 'Повторить приём из недавних'),
-                                            React.createElement('div', {
-                                                style: { fontSize: '12px', color: 'rgba(255,255,255,0.85)', marginTop: '2px' }
-                                            }, 'Скопировать продукты из приёма за последние 2 дня')
-                                        )
+                                        React.createElement('div', { className: 'flow-selection-btn__copy' },
+                                            React.createElement('div', { className: 'flow-selection-btn__title' }, 'Повторить из недавних'),
+                                            recentPreview && React.createElement('div', { className: 'flow-selection-btn__sub' }, recentPreview),
+                                            React.createElement('div', { className: 'flow-selection-btn__hint' }, 'из приёма за последние 2 дня')
+                                        ),
+                                        React.createElement('span', { className: 'flow-selection-btn__chevron', 'aria-hidden': 'true' })
                                     ),
-                                    // Кнопка "Быстро добавить 1 продукт" — основной клик открывает поиск, barcode-зона сразу сканирует
                                     renderFlowOption({
                                         className: 'flow-selection-btn flow-selection-btn--quick',
-                                        style: {
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '12px',
-                                            padding: '14px 16px',
-                                            border: 'none',
-                                            borderRadius: '12px',
-                                            background: '#3b82f6',
-                                            color: '#ffffff',
-                                            cursor: 'pointer',
-                                            textAlign: 'left',
-                                            transition: 'all 0.15s ease'
-                                        },
-                                        icon: '➕',
-                                        title: 'Быстро добавить 1 продукт',
-                                        subtitle: 'Выбрать продукт и сразу закрыть',
+                                        title: 'Один продукт',
+                                        subtitle: 'Выбрать и сразу закрыть',
                                         multiProductMode: false
                                     }),
-                                    // Кнопка "Добавить несколько продуктов" — основной клик открывает поиск, barcode-зона сразу сканирует
                                     renderFlowOption({
                                         className: 'flow-selection-btn flow-selection-btn--multi',
-                                        style: {
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '12px',
-                                            padding: '14px 16px',
-                                            border: 'none',
-                                            borderRadius: '12px',
-                                            background: '#22c55e',
-                                            color: '#ffffff',
-                                            cursor: 'pointer',
-                                            textAlign: 'left',
-                                            transition: 'all 0.15s ease'
-                                        },
-                                        icon: '📝',
-                                        title: 'Добавить несколько продуктов',
-                                        subtitle: 'Формировать приём пошагово',
+                                        title: 'Несколько продуктов',
+                                        subtitle: 'Остаться в добавлении',
                                         multiProductMode: true
-                                    }),
-                                    // 🆕 Кнопки «Добавить 2/3/4» — без промежуточной summary-модалки
-                                    React.createElement('div', {
-                                        style: { display: 'flex', gap: '8px', marginTop: '4px' }
-                                    },
-                                        [2, 3, 4].map(renderFlowRepeatOption)
-                                    )
+                                    })
                                 ),
-                                // Скрываем стандартную кнопку confirm — используем кастомные внутри text
                                 confirmText: '',
                                 cancelText: 'Отмена',
-                                cancelStyle: 'primary',
-                                cancelVariant: 'outline'
+                                cancelStyle: 'neutral',
+                                cancelVariant: 'text'
                             });
                         };
 

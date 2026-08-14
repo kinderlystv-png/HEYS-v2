@@ -49,6 +49,11 @@
     // бесполезна целиком: это единственное исключение из «read-only» —
     // авторизация, а не изменение прикладных данных клиента.
     'verify_client_pin_v3',
+    // Живой вход после 11.08 — login_client_v1 + одноразовый PIN. Старый
+    // verify_client_pin_v3 на клиентах с access_code_hash отвечает
+    // access_code_login_required; без этих имён зеркало не пускает.
+    'login_client_v1',
+    'verify_client_onetime_pin',
     // issue_write_context_by_session/_by_curator выдают capability token
     // (session/curator-scoped), а не меняют данные клиента. Без него сервер
     // резолвит все последующие *_by_session чтения без контекста — это тоже

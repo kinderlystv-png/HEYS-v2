@@ -78,9 +78,10 @@
 
   function mealTypeLabel(meal) {
     const info = HEYS.getMealType?.(meal);
-    if (info?.label) return info.label;
-    if (info?.type) return info.type;
-    return 'Приём';
+    const raw = info?.name || info?.label || meal?.name || info?.type;
+    const localize = HEYS.dayUtils?.localizeMealName;
+    if (typeof localize === 'function') return localize(raw, 'Приём');
+    return raw || 'Приём';
   }
 
   function sortMealsAscending(meals) {
@@ -344,7 +345,8 @@
     formatShortDate,
     countFilledMeals,
     formatMealCountLabel,
-    formatTabMetaLine
+    formatTabMetaLine,
+    mealTypeLabel
   };
 
 })(window);

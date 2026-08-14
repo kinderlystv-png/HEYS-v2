@@ -957,7 +957,8 @@
 
     const MEAL_NAME_ALIASES = {
         'coffee-break': 'coffee_break',
-        'coffee break': 'coffee_break'
+        'coffee break': 'coffee_break',
+        snack: 'snack1'
     };
 
     function localizeMealName(rawName, fallbackName = 'Приём') {
@@ -1100,7 +1101,7 @@
     function getMealType(mealIndex, meal, allMeals, pIndex) {
         // Защита от undefined
         if (!allMeals || !Array.isArray(allMeals) || allMeals.length === 0) {
-            return { type: 'snack', ...MEAL_TYPES.snack };
+            return { type: 'snack', ...MEAL_TYPES.snack1 };
         }
 
         // Первый приём дня всегда Завтрак

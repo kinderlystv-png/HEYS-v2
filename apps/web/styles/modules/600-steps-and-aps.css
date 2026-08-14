@@ -39,29 +39,76 @@
   display: block;
   width: 100%;
   margin: 0;
-  padding: 24px 20px;
+  padding: 14px 16px 16px;
   border: none;
   border-radius: 26px;
   background: #efe3cf;
   text-align: center;
-  cursor: pointer;
 }
 
 .meal-time-hero__label {
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
-.meal-time-hero__value {
-  margin-top: 12px;
+.meal-time-hero .meal-time-pickers,
+.meal-time-hero .mc-time-picker,
+.meal-time-hero .mc-time-pickers {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 0;
+}
+
+.meal-time-hero .mc-wheel-picker--compact .mc-wheel-values {
+  height: 132px;
+}
+
+.meal-time-hero .mc-wheel-value {
+  min-width: 72px;
+  font-variant-numeric: tabular-nums;
+}
+
+.meal-time-hero .mc-wheel-value--current {
+  height: auto;
+  min-height: 54px;
   font-size: 54px;
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.04em;
   color: #8a4a20;
-  font-variant-numeric: tabular-nums;
+}
+
+.meal-time-hero .mc-wheel-value--prev,
+.meal-time-hero .mc-wheel-value--next {
+  height: 22px;
+  font-size: 16px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.35);
+  opacity: 1;
+}
+
+.meal-time-hero .mc-time-sep {
+  margin-top: 0;
+  padding-bottom: 2px;
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: #8a4a20;
+}
+
+[data-theme$="dark"] .meal-time-hero .mc-wheel-value--current,
+[data-theme$="dark"] .meal-time-hero .mc-time-sep {
+  color: var(--v4-act-text, #d4a574);
+}
+
+[data-theme$="dark"] .meal-time-hero .mc-wheel-value--prev,
+[data-theme$="dark"] .meal-time-hero .mc-wheel-value--next {
+  color: var(--v4-ink-4, rgba(255, 255, 255, 0.35));
 }
 
 .meal-time-display {
@@ -114,8 +161,13 @@
   padding: 0;
 }
 
-.meal-type-label {
+.meal-time-step .meal-type-label {
+  display: block;
   margin: 20px 0 10px;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  cursor: default;
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
@@ -123,6 +175,12 @@
   text-transform: uppercase;
   color: #8a4a20;
   text-align: left;
+}
+
+[data-theme$="dark"] .meal-time-step .meal-type-label,
+[data-theme$="dark"] .meal-time-step .meal-type-label:hover {
+  background: none;
+  color: var(--v4-act-text, #d4a574);
 }
 
 .meal-type-chips {
@@ -163,11 +221,15 @@
   margin-top: 16px;
   padding: 16px;
   border-radius: 20px;
-  background: #efe3cf;
+  background: #f0dcc6;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.45;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+[data-theme$="dark"] .meal-time-wave {
+  background: var(--v4-hero, #2f2820);
 }
 
 .meal-time-cta {
@@ -180,7 +242,7 @@
   padding: 17px 22px;
   border: none;
   border-radius: 999px;
-  background: #c67139;
+  background: var(--v4-act, #c67139);
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
@@ -188,8 +250,12 @@
   cursor: pointer;
 }
 
-[data-palette="blue"] .meal-time-cta,
-[data-palette="blue-dark"] .meal-time-cta {
+.mc-modal--meal-create .meal-time-cta {
+  color: #2b1608;
+}
+
+[data-palette="blue"] .mc-modal--meal-create .meal-time-cta,
+[data-palette="blue-dark"] .mc-modal--meal-create .meal-time-cta {
   color: var(--v4-ink, #ffffff);
 }
 
@@ -208,8 +274,158 @@
   cursor: pointer;
 }
 
-.meal-time-step--v4 .meal-time-pickers {
-  margin-top: 12px;
+/* Meal add-products fork (canvas meal-add-products) */
+.flow-add-products {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  text-align: left;
+}
+
+.flow-selection-btn--repeat-recent {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 18px;
+  border: none;
+  border-radius: 22px;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-ink, #201e1d);
+  text-align: left;
+  cursor: pointer;
+}
+
+.flow-selection-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.flow-selection-row .flow-selection-btn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.flow-selection-btn__copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.flow-selection-btn__title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--v4-ink, #201e1d);
+}
+
+.flow-selection-btn__sub {
+  margin-top: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.flow-selection-btn__hint {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.flow-selection-btn__chevron {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-right: 2px solid var(--v4-act, #c67139);
+  border-bottom: 2px solid var(--v4-act, #c67139);
+  transform: rotate(-45deg);
+}
+
+.flow-selection-btn__barcode-tap {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  cursor: pointer;
+}
+
+.flow-selection-btn__barcode {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: inherit;
+}
+
+.flow-selection-btn__barcode svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.confirm-modal:has(.flow-add-products) {
+  max-width: 330px;
+  border-radius: 28px;
+  background: var(--v4-bg, #fffaf1);
+  box-shadow: none;
+}
+
+.confirm-modal:has(.flow-add-products) .confirm-modal-title {
+  padding: 16px 18px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--v4-ink, #201e1d);
+}
+
+.confirm-modal:has(.flow-add-products) .confirm-modal-text {
+  padding: 24px 18px 8px;
+  color: inherit;
+}
+
+.confirm-modal:has(.flow-add-products) .confirm-modal-buttons {
+  display: block;
+  border-top: none;
+}
+
+.confirm-modal:has(.flow-add-products) .confirm-modal-btn.cancel {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 16px 18px;
+  border: none;
+  background: none;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.meal-time-step--v4 .meal-time-hero .meal-time-pickers {
+  margin-top: 0;
 }
 
 .meal-type-grid {
@@ -245,13 +461,138 @@
   font-weight: 700;
 }
 
-/* Step 2: Оценки — в стиле оценки дня */
+/* Step 2: Оценки — канвас «Добавление еды» #2 */
 .meal-mood-step {
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 0;
   position: relative;
+}
+
+.meal-mood-step--v4 {
+  gap: 0;
+  padding: 24px 0 6px;
+}
+
+.meal-mood-scale {
+  padding: 16px;
+  border-radius: 20px;
+  background: #f7efe2;
+}
+
+.meal-mood-scale + .meal-mood-scale {
+  margin-top: 10px;
+}
+
+.meal-mood-scale__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.meal-mood-scale__label {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--v4-ink, #201e1d);
+}
+
+.meal-mood-scale__value {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.meal-mood-scale__value--ok {
+  color: #5c6a45;
+}
+
+.meal-mood-scale__value--warn {
+  color: #8a4a20;
+}
+
+.meal-mood-scale__slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  margin-top: 14px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--mood-fill, #7a8a5e) var(--mood-pct, 50%), rgba(0, 0, 0, 0.08) var(--mood-pct, 50%));
+}
+
+.meal-mood-scale__slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 999px;
+  background: #fffaf1;
+  box-shadow: 0 1px 4px rgba(80, 50, 20, 0.25);
+  cursor: pointer;
+}
+
+.meal-mood-scale__slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 999px;
+  background: #fffaf1;
+  box-shadow: 0 1px 4px rgba(80, 50, 20, 0.25);
+  cursor: pointer;
+}
+
+.meal-mood-tier {
+  margin: 20px 0 10px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a4a20;
+}
+
+.meal-mood-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.meal-mood-chip {
+  padding: 9px 13px;
+  border: none;
+  border-radius: 14px;
+  background: #f7efe2;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.55));
+  cursor: pointer;
+}
+
+.meal-mood-chip.is-on {
+  background: #efe3cf;
+  color: #8a4a20;
+  font-weight: 700;
+}
+
+.meal-mood-cta {
+  margin-top: 20px;
+}
+
+.meal-mood-cta::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-left: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
 }
 
 /* Grid из трёх карточек — компактный */

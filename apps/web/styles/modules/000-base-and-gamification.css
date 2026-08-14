@@ -13715,39 +13715,10 @@ body:has(.tabs.tabs--settings-open) :is(
     transform: scale(0.98);
   }
 
-  .flow-selection-btn--quick:active {
-    background: var(--v4-hero, #f1f5f9) !important;
-    border-color: #cbd5e1 !important;
-  }
-
-  .flow-selection-btn--multi:active {
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
-  }
-
-  [data-theme$="dark"] .flow-selection-btn--quick {
-    background: var(--v4-hero, #1e293b) !important;
-    border-color: var(--v4-line, #334155) !important;
-  }
-
-  [data-theme$="dark"] .flow-selection-btn--quick span:first-child~div>div:first-child {
-    color: var(--v4-ink, #f1f5f9) !important;
-  }
-
-  [data-theme$="dark"] .flow-selection-btn--quick span:first-child~div>div:last-child {
-    color: var(--v4-ink-2, #94a3b8) !important;
-  }
-
-  [data-theme$="dark"] .flow-selection-btn--multi {
-    background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%) !important;
-    border-color: var(--v4-act, #3b82f6) !important;
-  }
-
-  [data-theme$="dark"] .flow-selection-btn--multi span:first-child~div>div:first-child {
-    color: #dbeafe !important;
-  }
-
-  [data-theme$="dark"] .flow-selection-btn--multi span:first-child~div>div:last-child {
-    color: #93c5fd !important;
+  .flow-selection-btn--quick:active,
+  .flow-selection-btn--multi:active,
+  .flow-selection-btn--repeat-recent:active {
+    opacity: 0.92;
   }
 
   /* 🆕 Products List in Confirm Modal */

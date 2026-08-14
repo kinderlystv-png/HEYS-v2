@@ -1498,6 +1498,137 @@ body.tour-active .ios-pwa-banner {
   max-width: min(420px, calc(100vw - 40px));
   height: min(calc(100vw + 310px), 770px, calc(100dvh - 40px));
   max-height: calc(100dvh - 40px);
+  background: var(--v4-bg, #fffaf1);
+  box-shadow: none;
+}
+
+.mc-modal--meal-create .mc-header,
+.mc-modal--meal-create .mc-header--nav {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  min-height: 0;
+  padding: 16px 18px 0;
+  gap: 0;
+  border-bottom: none;
+}
+
+.mc-modal--meal-create .mc-header-left,
+.mc-modal--meal-create .mc-header-right {
+  min-width: 0;
+}
+
+.mc-modal--meal-create .mc-header-center {
+  justify-content: center;
+  overflow: visible;
+}
+
+.mc-modal--meal-create .mc-header-titles {
+  flex: none;
+}
+
+.mc-modal--meal-create .mc-header-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-ink, #201e1d);
+}
+
+.mc-modal--meal-create .mc-header-btn--back {
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+}
+
+.mc-modal--meal-create .mc-header-btn--back::before {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 8px;
+  margin-left: 3px;
+  border-left: 1.75px solid rgba(0, 0, 0, 0.45);
+  border-bottom: 1.75px solid rgba(0, 0, 0, 0.45);
+  transform: rotate(45deg);
+}
+
+[data-theme$="dark"] .mc-modal--meal-create .mc-header-btn--back::before {
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.mc-modal--meal-create .mc-header-btn--close {
+  position: relative;
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+}
+
+.mc-modal--meal-create .mc-header-btn--close::before,
+.mc-modal--meal-create .mc-header-btn--close::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 1.75px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.mc-modal--meal-create .mc-header-btn--close::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.mc-modal--meal-create .mc-header-btn--close::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+[data-theme$="dark"] .mc-modal--meal-create .mc-header-btn--close::before,
+[data-theme$="dark"] .mc-modal--meal-create .mc-header-btn--close::after {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.mc-modal--meal-create .mc-header-center:has(.mc-progress-dots--in-header) {
+  flex-direction: column;
+  justify-content: center;
+}
+
+.mc-modal--meal-create .mc-progress-dots--in-header {
+  position: absolute;
+  right: 18px;
+  top: 16px;
+  height: 17px;
+  transform: none;
+  gap: 5px;
+  padding: 0;
+}
+
+.mc-modal--meal-create .mc-progress-dots--in-header .mc-progress-dot {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.14);
+  transform: none;
+}
+
+.mc-modal--meal-create .mc-progress-dots--in-header .mc-progress-dot.active {
+  width: 16px;
+  height: 6px;
+  background: #c67139;
+  transform: none;
+}
+
+.mc-modal--meal-create .mc-progress-dots--in-header .mc-progress-dot.completed {
+  background: rgba(0, 0, 0, 0.14);
+  transform: none;
 }
 
 .mc-modal--meal-create .mc-step-content[data-heys-step-id="mealTime"] {
@@ -1508,7 +1639,7 @@ body.tour-active .ios-pwa-banner {
 .mc-modal--meal-create .meal-time-step {
   flex: 1 1 auto;
   justify-content: flex-start;
-  padding: 8px 0 6px;
+  padding: 24px 0 6px;
 }
 
 .confirm-modal:has(.meal-plate-guide) .confirm-modal-text {
@@ -13948,1067 +14079,27 @@ body:has(.wrap.dropdown-blur-active) .tabs {
 }
 
 /* === AUTH SURFACES ===================================================== */
-
-.heys-auth-shell {
-  justify-content: center !important;
-  overflow-y: auto;
-  padding-top: max(20px, calc(env(safe-area-inset-top, 0px) + 20px)) !important;
-  padding-bottom: max(20px, calc(env(safe-area-inset-bottom, 0px) + 20px)) !important;
-  background: var(--v4-sand-hero-cool, #e8ecf1);
-  transition: background 0.24s ease;
-}
-
-.heys-auth-card {
-  position: relative;
-  width: 100%;
-  max-width: 360px;
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  background: rgba(255, 255, 255, 0.95);
-  margin: 0 auto;
-  padding: 24px;
-  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-}
-
-.heys-auth-brand,
-.heys-auth-title {
-  color: var(--v4-ink, #0f172a);
-  font-weight: 800;
-  letter-spacing: 0;
-}
-
-.heys-auth-brand {
-  font-size: 24px;
-}
-
-.heys-auth-title {
-  font-size: 22px;
-  font-weight: 650;
-  color: #475569;
-}
-
-.heys-auth-heading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 22px;
-  margin-bottom: 24px;
-}
-
-.heys-auth-mark {
-  display: block;
-  width: 92px;
-  flex: 0 0 auto;
-  margin: 0;
-  line-height: 0;
-}
-
-.heys-auth-mark img {
-  display: block;
-  width: 100%;
-  height: auto;
-  filter: contrast(1.12) saturate(1.06) drop-shadow(0 8px 14px rgba(29, 112, 183, 0.1));
-}
-
-.heys-auth-card form.space-y-6 {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.heys-auth-card form.space-y-6 > :not([hidden]) {
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-}
-
-.heys-auth-card form.space-y-6 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 0 !important;
-}
-
-.heys-auth-card .space-y-3 > :not([hidden]) ~ :not([hidden]) {
-  margin-top: 10px !important;
-  margin-bottom: 0 !important;
-}
-
-.heys-auth-subtitle,
-.heys-auth-meta {
-  color: var(--v4-ink-2, #64748b);
-}
-
-.heys-auth-label {
-  text-align: center;
-  font-size: 15px;
-  font-weight: 600;
-  color: #334155;
-}
-
-.heys-auth-field {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border-radius: 16px;
-  border: 2px solid #e2e8f0;
-  background: var(--v4-bg, #ffffff);
-  padding: 12px 16px;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.18s ease;
-}
-
-.heys-auth-field:focus-within,
-.heys-auth-field.is-active {
-  border-color: rgba(96, 165, 250, 0.82);
-  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.18);
-}
-
-.heys-auth-field.is-complete {
-  border-color: rgba(82, 160, 216, 0.72);
-  background: #f3f9fd;
-}
-
-.heys-auth-field.is-confirm-pulse {
-  animation: heys-auth-phone-confirm 0.22s ease-out;
-}
-
-.heys-auth-prefix {
-  flex-shrink: 0;
-  font-weight: 700;
-  color: #334155;
-  user-select: none;
-}
-
-.heys-auth-phone-input,
-.heys-auth-input {
-  color: var(--v4-ink, #0f172a);
-  font-family: inherit;
-}
-
-.heys-auth-phone-input {
-  width: min(224px, calc(100% - 42px)) !important;
-  font-size: clamp(23px, 6.4vw, 26px) !important;
-  line-height: clamp(29px, 7.2vw, 32px) !important;
-  height: clamp(29px, 7.2vw, 32px) !important;
-  letter-spacing: 0 !important;
-}
-
-.heys-auth-field > .heys-auth-prefix {
-  font-size: clamp(23px, 6.4vw, 26px) !important;
-  line-height: clamp(29px, 7.2vw, 32px) !important;
-}
-
-.heys-auth-phone-input::placeholder,
-.heys-auth-input::placeholder {
-  color: var(--v4-ink-3, #94a3b8);
-}
-
-.heys-auth-input {
-  width: 100%;
-  box-sizing: border-box;
-  border-radius: 16px;
-  border: 2px solid #e2e8f0;
-  background: var(--v4-bg, #ffffff);
-  padding: 12px 16px;
-  font-size: 16px;
-  outline: none;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    color 0.2s ease;
-}
-
-.heys-auth-input:focus {
-  border-color: rgba(96, 165, 250, 0.82);
-  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.18);
-}
+/* Visual source of truth: styles/modules/733-ui-v4-login-theme.css
+   (canvas «Вход v4»). Keep PIN row contract here so shared keypad screens
+   stay on a login-width grid even if 733 is not yet loaded. */
 
 .heys-auth-pin-grid {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   max-width: 276px;
   margin-inline: auto;
 }
 
-.heys-auth-pin-section {
-  margin-top: 0;
-  transition:
-    opacity 0.2s ease,
-    filter 0.2s ease,
-    transform 0.2s ease;
-}
-
-.heys-auth-pin-section.is-muted {
-  opacity: 0.48;
-  filter: saturate(0.72);
-}
-
-.heys-auth-pin-section.is-muted .heys-auth-label {
-  color: var(--v4-ink-3, #94a3b8);
-}
-
-.heys-auth-pin-section.is-active {
-  opacity: 1;
-  filter: none;
-}
-
-.heys-auth-pin-section.is-active .heys-auth-label {
-  color: #1d70b7;
-}
-
-.heys-auth-pin-section.is-muted .heys-auth-pin-input {
-  background: var(--v4-hero, #f8fafc);
-}
-
-.heys-auth-pin-box {
-  position: relative;
-  width: 56px;
-  height: 72px;
-  flex-shrink: 0;
-}
-
-.heys-auth-pin-input,
-.heys-auth-pin-overlay {
-  font-size: 32px;
-  font-weight: 700;
-  line-height: 1;
-  font-family: inherit;
-}
-
-.heys-auth-pin-input {
-  width: 100%;
-  height: 100%;
-  border-radius: 16px;
-  border: 2px solid #e2e8f0;
-  background: var(--v4-bg, #ffffff);
-  text-align: center;
-  color: #1e293b;
-  outline: none;
-  caret-color: transparent;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    color 0.2s ease;
-}
-
-.heys-auth-pin-input:focus {
-  border-color: rgba(96, 165, 250, 0.82);
-  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.18);
-}
-
-.heys-auth-pin-input.is-filled {
-  border-color: #cbd5e1;
-}
-
-.heys-auth-pin-input.is-complete {
-  border-color: var(--v4-ok-fill, #22c55e);
-  background: var(--v4-ok-bg, #f0fdf4);
-}
-
-.heys-auth-pin-input.is-active:not(.is-complete) {
-  border-color: #60a5fa;
-  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.18);
-}
-
-.heys-auth-pin-input.is-error {
-  animation: heys-auth-pin-error-shake 0.34s ease-out;
-  border-color: #f472b6;
-  background: #fff1f7;
-  box-shadow: 0 0 0 4px rgba(244, 114, 182, 0.16);
-}
-
-.heys-auth-error.is-pin-error {
-  position: fixed;
-  top: max(16px, calc(env(safe-area-inset-top, 0px) + 16px));
-  left: 50%;
-  z-index: 10020;
-  width: min(320px, calc(100vw - 48px));
-  animation: heys-auth-error-pop 0.22s ease-out;
-  border-color: #fbcfe8;
-  background: #fff5f9;
-  box-shadow: 0 14px 32px rgba(190, 24, 93, 0.14);
-  color: #be185d;
-  pointer-events: none;
-  transform: translateX(-50%);
-}
-
-@keyframes heys-auth-pin-error-shake {
-  0%, 100% {
-    transform: translateX(0);
-  }
-
-  25% {
-    transform: translateX(-4px);
-  }
-
-  55% {
-    transform: translateX(4px);
-  }
-
-  78% {
-    transform: translateX(-2px);
-  }
-}
-
-@keyframes heys-auth-error-pop {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-6px) scale(0.98);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
-  }
-}
-
-@keyframes heys-auth-phone-confirm {
-  0% {
-    transform: scale(1);
-  }
-
-  45% {
-    transform: scale(1.015);
-    box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.18);
-  }
-
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes heys-auth-status-pulse {
-  0%, 100% {
-    opacity: 0.55;
-    transform: scale(0.88);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .heys-auth-field.is-confirm-pulse,
-  .heys-auth-pin-input.is-error,
-  .heys-auth-error.is-pin-error,
-  .heys-auth-status-dot {
-    animation: none;
-  }
-}
-
 .heys-auth-keypad {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  width: min(100%, 276px);
-  max-width: 276px;
-  margin: 24px auto 28px !important;
-}
-
-.heys-auth-card form.space-y-6 > .heys-auth-keypad {
-  margin-top: 24px !important;
-  margin-bottom: 28px !important;
-}
-
-.heys-auth-card form.space-y-6 > :not([hidden]) ~ .heys-auth-keypad {
-  margin-top: 24px !important;
-}
-
-.heys-auth-key {
-  width: 100%;
-  min-height: 52px;
-  border: 1px solid #dbe4f0;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
-  color: #1e293b;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 22px;
-  font-weight: 750;
-  line-height: 1;
-  touch-action: manipulation;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    color 0.2s ease,
-    transform 0.12s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.heys-auth-key:active {
-  transform: scale(0.97);
-  border-color: #93c5fd;
-  background: #eef6ff;
-}
-
-.heys-auth-key--muted {
-  color: var(--v4-ink-2, #64748b);
-  font-size: 21px;
-}
-
-html .heys-auth-key.heys-auth-key--delete.is-available {
-  border-color: #edcccc;
-  background: rgba(243, 215, 215, 0.42);
-  box-shadow: 0 8px 18px rgba(132, 71, 80, 0.07);
-  color: #9f5f68;
-}
-
-html .heys-auth-key.heys-auth-key--delete.is-available:active {
-  border-color: #e4b9bd;
-  background: rgba(243, 215, 215, 0.68);
-}
-
-@media (min-width: 768px) {
-  .heys-auth-keypad {
-    width: min(100%, 236px);
-    max-width: 236px;
-    gap: 6px;
-    margin: 18px auto 22px !important;
-  }
-
-  .heys-auth-key {
-    min-height: 46px;
-    border-radius: 12px;
-    font-size: 20px;
-  }
-
-  .heys-auth-pin-box {
-    width: 52px;
-    height: 64px;
-  }
-
-  .heys-auth-key-spacer {
-    min-height: 46px;
-  }
-}
-
-@media (max-height: 760px) {
-  .heys-auth-shell {
-    padding-top: max(10px, calc(env(safe-area-inset-top, 0px) + 10px)) !important;
-    padding-bottom: max(10px, calc(env(safe-area-inset-bottom, 0px) + 10px)) !important;
-  }
-
-  .heys-auth-card {
-    padding: 18px !important;
-    border-radius: 22px;
-  }
-
-  .heys-auth-heading {
-    gap: 12px !important;
-    margin-bottom: 14px !important;
-  }
-
-  .heys-auth-mark {
-    width: 76px;
-  }
-
-  .heys-auth-title {
-    font-size: 19px;
-  }
-
-  .heys-auth-card form.space-y-6 {
-    gap: 9px;
-  }
-
-  .heys-auth-card .space-y-3 > :not([hidden]) ~ :not([hidden]) {
-    margin-top: 8px !important;
-  }
-
-  .heys-auth-label {
-    font-size: 14px;
-  }
-
-  .heys-auth-field {
-    padding: 9px 12px !important;
-  }
-
-  .heys-auth-pin-box {
-    width: 48px !important;
-    height: 58px !important;
-  }
-
-  .heys-auth-pin-input,
-  .heys-auth-pin-overlay {
-    font-size: 28px;
-  }
-
-  .heys-auth-keypad {
-    width: min(100%, 246px);
-    max-width: 246px;
-    gap: 5px;
-    margin-top: 12px !important;
-    margin-bottom: 14px !important;
-  }
-
-  .heys-auth-card form.space-y-6 > .heys-auth-keypad,
-  .heys-auth-card form.space-y-6 > :not([hidden]) ~ .heys-auth-keypad {
-    margin-top: 12px !important;
-  }
-
-  .heys-auth-key,
-  .heys-auth-key-spacer {
-    min-height: 44px;
-  }
-
-  .heys-auth-key {
-    font-size: 20px;
-  }
-
-  .heys-auth-footer-row {
-    margin-top: 10px;
-  }
-
-  .heys-auth-support-line {
-    font-size: 12.5px;
-  }
-}
-
-@media (max-height: 690px) {
-  .heys-auth-card {
-    padding: 16px !important;
-  }
-
-  .heys-auth-heading {
-    gap: 10px !important;
-    margin-bottom: 12px !important;
-  }
-
-  .heys-auth-mark {
-    width: 70px;
-  }
-
-  .heys-auth-title {
-    font-size: 18px;
-  }
-
-  .heys-auth-card form.space-y-6 {
-    gap: 8px;
-  }
-
-  .heys-auth-field {
-    padding: 8px 10px !important;
-  }
-
-  .heys-auth-phone-input,
-  .heys-auth-field > .heys-auth-prefix {
-    font-size: clamp(21px, 6vw, 23px) !important;
-    line-height: 27px !important;
-    height: 27px !important;
-  }
-
-  .heys-auth-pin-box {
-    width: 44px !important;
-    height: 52px !important;
-  }
-
-  .heys-auth-pin-input,
-  .heys-auth-pin-overlay {
-    font-size: 26px;
-  }
-
-  .heys-auth-keypad {
-    width: min(100%, 234px);
-    max-width: 234px;
-    margin-top: 8px !important;
-    margin-bottom: 10px !important;
-  }
-
-  .heys-auth-card form.space-y-6 > .heys-auth-keypad,
-  .heys-auth-card form.space-y-6 > :not([hidden]) ~ .heys-auth-keypad {
-    margin-top: 8px !important;
-  }
-
-  .heys-auth-key,
-  .heys-auth-key-spacer {
-    min-height: 44px;
-  }
-
-  .heys-auth-footer-row {
-    margin-top: 8px;
-  }
-}
-
-.heys-auth-key-spacer {
-  min-height: 52px;
-}
-
-@media (min-width: 768px) {
-  .heys-auth-key-spacer {
-    min-height: 46px;
-  }
-}
-
-.heys-auth-footer-row {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 20px;
-  margin-top: 20px;
-}
-
-.heys-auth-support-line {
-  color: var(--v4-ink-2, #64748b);
-  font-size: 13px;
-  line-height: 1.35;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.heys-auth-support-link {
-  border: none;
-  background: none;
-  padding: 0;
-  color: var(--v4-act, #2563eb);
-  cursor: pointer;
-  font: inherit;
-  font-weight: 650;
-  text-decoration: none;
-}
-
-.heys-auth-support-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 10001;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: rgba(15, 23, 42, 0.32);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-}
-
-.heys-auth-support-panel {
-  position: relative;
-  width: min(320px, 100%);
-  border: 1px solid rgba(219, 228, 240, 0.9);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.98);
-  padding: 22px;
-  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.24);
-  color: #1e293b;
-  text-align: center;
-}
-
-.heys-auth-support-close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 10px;
-  background: var(--v4-hero, #f1f5f9);
-  color: var(--v4-ink-2, #64748b);
-  cursor: pointer;
-  font-size: 22px;
-  line-height: 1;
-}
-
-.heys-auth-support-title {
-  margin-bottom: 8px;
-  color: var(--v4-ink, #0f172a);
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.heys-auth-support-text {
-  margin-bottom: 16px;
-  color: var(--v4-ink-2, #64748b);
-  font-size: 14px;
-  line-height: 1.45;
-}
-
-.heys-auth-support-action {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  margin-top: 10px;
-  border: 1px solid #dbe4f0;
-  border-radius: 14px;
-  background: var(--v4-hero, #f8fafc);
-  color: var(--v4-act, #2563eb);
-  font-size: 15px;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.heys-auth-pin-overlay {
-  color: #1e293b;
-}
-
-.heys-auth-error {
-  border-radius: 14px;
-  border: 1px solid #fecaca;
-  background: #fef2f2;
-  padding: 12px 16px;
-  text-align: center;
-  font-size: 14px;
-  color: var(--v4-warn-2, #dc2626);
-}
-
-.heys-auth-submit-hidden {
-  position: absolute !important;
-  width: 1px !important;
-  height: 1px !important;
-  margin: -1px !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-  clip: rect(0 0 0 0) !important;
-  white-space: nowrap !important;
-  border: 0 !important;
-}
-
-.heys-auth-status {
-  position: fixed;
-  top: max(16px, calc(env(safe-area-inset-top, 0px) + 16px));
-  left: 50%;
-  z-index: 10020;
-  display: none;
-  align-items: center;
-  justify-content: center;
   gap: 8px;
-  width: max-content;
-  max-width: calc(100vw - 48px);
-  min-height: 38px;
-  padding: 9px 14px;
-  border: 1px solid rgba(82, 160, 216, 0.22);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 14px 32px rgba(29, 112, 183, 0.14);
-  color: #2f5f8f;
-  font-size: 13px;
-  font-weight: 650;
-  pointer-events: none;
-  transform: translateX(-50%);
-}
-
-.heys-auth-status.is-visible {
-  display: flex;
-  animation: heys-auth-error-pop 0.22s ease-out;
-}
-
-.heys-auth-status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: #52a0d8;
-  box-shadow: 0 0 0 4px rgba(82, 160, 216, 0.14);
-  animation: heys-auth-status-pulse 0.9s ease-in-out infinite;
-}
-
-.heys-auth-diagnostics {
-  border-radius: 14px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(15, 23, 42, 0.04);
-  padding: 10px 12px;
-  text-align: left;
-  font-size: 12px;
-  color: #334155;
-}
-
-.heys-auth-btn {
   width: 100%;
-  border: none;
-  border-radius: 16px;
-  padding: 14px 16px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    transform 0.12s ease,
-    box-shadow 0.18s ease,
-    opacity 0.2s ease,
-    background 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease;
-}
-
-.heys-auth-btn:not(:disabled):active {
-  transform: scale(0.99);
-}
-
-.heys-auth-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.heys-auth-btn--primary {
-  background: linear-gradient(135deg, #4b5fca, #434587);
-  color: var(--v4-bg, #ffffff);
-  box-shadow: 0 18px 40px -24px rgba(67, 69, 135, 0.78);
-}
-
-.heys-auth-btn--backup {
-  border: 1px solid rgba(67, 69, 135, 0.22);
-  background: rgba(67, 69, 135, 0.1);
-  color: #434587;
-  box-shadow: none;
-}
-
-.heys-auth-btn--secondary {
-  border: 1px solid #e2e8f0;
-  background: var(--v4-hero, #f8fafc);
-  color: var(--v4-ink, #0f172a);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    0 12px 24px -20px rgba(15, 23, 42, 0.18);
-}
-
-@media (hover: hover) {
-  .heys-auth-btn--secondary:hover {
-  background: var(--v4-hero, #f1f5f9);
-}
-}
-
-.heys-auth-btn--ghost {
-  border: 1px solid rgba(255, 255, 255, 0.34);
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--v4-bg, #ffffff);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-@media (hover: hover) {
-  .heys-auth-btn--ghost:hover {
-  background: rgba(255, 255, 255, 0.18);
-}
-}
-
-.heys-auth-link {
-  color: var(--v4-act, #2563eb);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-@media (hover: hover) {
-  .heys-auth-link:hover {
-  text-decoration: underline;
-}
-}
-
-.heys-auth-link-btn {
-  border: none;
-  background: none;
-  padding: 0;
-  color: var(--v4-water, #3b82f6);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-@media (hover: hover) {
-  .heys-auth-link-btn:hover {
-  text-decoration: underline;
-}
-}
-
-.heys-auth-version {
-  position: absolute;
-  left: 50%;
-  bottom: max(14px, calc(env(safe-area-inset-bottom, 0px) + 14px));
-  margin-top: 0 !important;
-  color: rgba(255, 255, 255, 0.38);
-  transform: translateX(-50%);
-}
-
-.heys-auth-service-entry {
-  border: 0;
-  background: transparent;
-  padding: 4px 8px;
-  color: rgba(255, 255, 255, 0.24);
-  cursor: pointer;
-}
-
-[data-theme="dark"] .heys-auth-shell {
-  background: var(--v4-sand-hero-night, #0f172a);
-}
-
-[data-theme="dark"] .heys-auth-card {
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(2, 6, 23, 0.94));
-  border-color: rgba(148, 163, 184, 0.18);
-  box-shadow:
-    0 32px 80px -36px rgba(2, 6, 23, 0.96),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-
-[data-theme="dark"] .heys-auth-brand,
-[data-theme="dark"] .heys-auth-title,
-[data-theme="dark"] .heys-auth-label,
-[data-theme="dark"] .heys-auth-prefix {
-  color: var(--v4-ink, #f8fafc);
-}
-
-[data-theme="dark"] .heys-auth-mark {
-  color: #c7d2fe;
-}
-
-[data-theme="dark"] .heys-auth-subtitle,
-[data-theme="dark"] .heys-auth-meta {
-  color: var(--v4-ink-2, #94a3b8);
-}
-
-[data-theme="dark"] .heys-auth-field,
-[data-theme="dark"] .heys-auth-input,
-[data-theme="dark"] .heys-auth-pin-input,
-[data-theme="dark"] .heys-auth-key {
-  background: rgba(15, 23, 42, 0.78);
-  border-color: rgba(148, 163, 184, 0.16);
-  color: var(--v4-ink, #f8fafc);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
-}
-
-[data-theme="dark"] .heys-auth-phone-input {
-  color: var(--v4-ink, #f8fafc);
-}
-
-[data-theme="dark"] .heys-auth-field:focus-within,
-[data-theme="dark"] .heys-auth-input:focus,
-[data-theme="dark"] .heys-auth-pin-input:focus {
-  border-color: rgba(96, 165, 250, 0.75);
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
-}
-
-[data-theme="dark"] .heys-auth-field.is-complete,
-[data-theme="dark"] .heys-auth-pin-input.is-complete {
-  background: rgba(16, 185, 129, 0.14);
-  border-color: rgba(52, 211, 153, 0.55);
-}
-
-[data-theme="dark"] .heys-auth-pin-section.is-muted .heys-auth-pin-input {
-  background: rgba(15, 23, 42, 0.56);
-}
-
-[data-theme="dark"] .heys-auth-pin-input.is-filled {
-  border-color: rgba(148, 163, 184, 0.34);
-}
-
-[data-theme="dark"] .heys-auth-support-line {
-  color: var(--v4-ink-2, #94a3b8);
-}
-
-[data-theme="dark"] .heys-auth-support-panel,
-[data-theme="dark"] .heys-auth-support-action,
-[data-theme="dark"] .heys-auth-support-close {
-  background: rgba(15, 23, 42, 0.88);
-  border-color: rgba(148, 163, 184, 0.22);
-  color: #93c5fd;
-}
-
-[data-theme="dark"] .heys-auth-support-title {
-  color: var(--v4-ink, #f8fafc);
-}
-
-[data-theme="dark"] .heys-auth-support-text {
-  color: var(--v4-ink-2, #94a3b8);
-}
-
-[data-theme="dark"] .heys-auth-pin-input.is-active:not(.is-complete) {
-  border-color: rgba(96, 165, 250, 0.75);
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
-}
-
-[data-theme="dark"] .heys-auth-key:active {
-  border-color: rgba(147, 197, 253, 0.5);
-  background: rgba(30, 64, 175, 0.38);
-}
-
-[data-theme="dark"] .heys-auth-key.heys-auth-key--delete.is-available {
-  border-color: rgba(243, 215, 215, 0.3);
-  background: rgba(159, 95, 104, 0.2);
-  color: #f0c9ce;
-}
-
-[data-theme="dark"] .heys-auth-key.heys-auth-key--delete.is-available:active {
-  border-color: rgba(243, 215, 215, 0.42);
-  background: rgba(159, 95, 104, 0.3);
-}
-
-[data-theme="dark"] .heys-auth-phone-input::placeholder,
-[data-theme="dark"] .heys-auth-input::placeholder {
-  color: var(--v4-ink-3, #64748b);
-}
-
-[data-theme="dark"] .heys-auth-pin-overlay {
-  color: var(--v4-ink, #f8fafc);
-}
-
-[data-theme="dark"] .heys-auth-error {
-  background: rgba(127, 29, 29, 0.24);
-  border-color: rgba(248, 113, 113, 0.24);
-  color: #fecaca;
-}
-
-[data-theme="dark"] .heys-auth-diagnostics {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(148, 163, 184, 0.14);
-  color: #cbd5e1;
-}
-
-[data-theme="dark"] .heys-auth-btn--primary {
-  box-shadow: 0 20px 40px -24px rgba(59, 130, 246, 0.75);
-}
-
-[data-theme="dark"] .heys-auth-btn--backup {
-  border-color: rgba(199, 210, 254, 0.2);
-  background: rgba(199, 210, 254, 0.1);
-  color: #c7d2fe;
-  box-shadow: none;
-}
-
-[data-theme="dark"] .heys-auth-btn--secondary {
-  border-color: rgba(148, 163, 184, 0.16);
-  background: rgba(255, 255, 255, 0.04);
-  color: #e2e8f0;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 20px 40px -32px rgba(2, 6, 23, 0.92);
-}
-
-@media (hover: hover) {
-  [data-theme="dark"] .heys-auth-btn--secondary:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-}
-
-[data-theme="dark"] .heys-auth-btn--ghost {
-  border-color: rgba(148, 163, 184, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-}
-
-@media (hover: hover) {
-  [data-theme="dark"] .heys-auth-btn--ghost:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-}
-
-[data-theme="dark"] .heys-auth-link,
-[data-theme="dark"] .heys-auth-link-btn {
-  color: #93c5fd;
-}
-
-[data-theme="dark"] .heys-auth-version {
-  color: rgba(226, 232, 240, 0.42);
-}
-
-[data-theme="dark"] .heys-auth-service-entry {
-  color: rgba(226, 232, 240, 0.24);
+  max-width: 276px;
+  margin: 18px auto 0;
 }
 
 /* Dark-theme polish for What's New modal */

@@ -41,13 +41,19 @@
   // Pad number to 2 digits
   const pad2 = (n) => String(n).padStart(2, '0');
 
-  const formatPostprandialRemaining = (minutes) => {
-    const value = Math.max(0, Math.round(Number(minutes) || 0));
-    if (value < 60) return `${value} мин`;
-    const hours = Math.floor(value / 60);
-    const rest = value % 60;
-    return rest ? `${hours} ч ${rest} мин` : `${hours} ч`;
-  };
+  function formatWaveCloseClock(minutesAhead) {
+    const mins = Math.max(0, Math.round(Number(minutesAhead) || 0));
+    const target = new Date(Date.now() + mins * 60000);
+    return pad2(target.getHours()) + ':' + pad2(target.getMinutes());
+  }
+
+  function buildWavePlaqueText(wave) {
+    const remaining = Number(wave?.rangeRemaining ?? wave?.remaining);
+    if (!Number.isFinite(remaining) || remaining <= 0) {
+      return 'Прошлый приём ещё усваивается.';
+    }
+    return 'Прошлый приём ещё усваивается — окно закроется в ' + formatWaveCloseClock(remaining) + '.';
+  }
 
   // ============================================================
   // ХЕЛПЕРЫ ВРЕМЕНИ
@@ -371,20 +377,46 @@
   // КОМПОНЕНТ: MealTypeGrid — сетка выбора типа приёма
   // ============================================================
 
-  function MealTypeGrid({ types, currentType, onSelect }) {
+  const MEAL_TYPE_CHIPS = [
+    { id: 'breakfast', name: 'Завтрак' },
+    { id: 'lunch', name: 'Обед' },
+    { id: 'snack', name: 'Перекус', slots: ['snack', 'snack1', 'snack2', 'snack3'] },
+    { id: 'dinner', name: 'Ужин' },
+    { id: 'coffee_break', name: 'Кофе-брейк' },
+    { id: 'night', name: 'Ночной приём' }
+  ];
+
+  function chipIdForType(type) {
+    const key = String(type || '');
+    const chip = MEAL_TYPE_CHIPS.find((item) => item.id === key || item.slots?.includes(key));
+    return chip?.id || key;
+  }
+
+  function typeForChip(chipId, hour) {
+    if (chipId !== 'snack') return chipId;
+    const auto = getMealTypeByHour(hour);
+    if (auto === 'snack1' || auto === 'snack2' || auto === 'snack3') return auto;
+    if (hour < 12) return 'snack1';
+    if (hour < 18) return 'snack2';
+    return 'snack3';
+  }
+
+  function MealTypeGrid({ currentType, onSelect }) {
+    const activeChip = chipIdForType(currentType);
     return React.createElement('div', { className: 'meal-type-section' },
-      React.createElement('div', { className: 'meal-type-label' }, 'Тип приёма:'),
-      React.createElement('div', { className: 'meal-type-grid' },
-        Object.entries(types).map(([key, val]) =>
+      React.createElement('div', { className: 'meal-type-label' }, 'Тип приёма'),
+      React.createElement('div', { className: 'meal-type-chips' },
+        MEAL_TYPE_CHIPS.map((chip) =>
           React.createElement('button', {
-            key,
-            className: `meal-type-btn ${currentType === key ? 'active' : ''}`,
-            onClick: () => onSelect(key)
-          },
-            React.createElement('span', { className: 'meal-type-btn-icon' }, val.icon),
-            React.createElement('span', { className: 'meal-type-btn-name' }, val.name)
-          )
+            key: chip.id,
+            type: 'button',
+            className: 'meal-type-chip' + (activeChip === chip.id ? ' is-on' : ''),
+            onClick: () => onSelect(chip.id)
+          }, chip.name)
         )
+      ),
+      React.createElement('div', { className: 'meal-type-hint' },
+        'Тип предложен по времени — менять не обязательно.'
       )
     );
   }
@@ -528,7 +560,6 @@
     const analytics = HEYS.analytics;
     const isEditMode = context?.mealIndex !== undefined || context?.initialHourIndex !== undefined;
     const [hasShownWarning, setHasShownWarning] = useState(false);
-    const [warningOpen, setWarningOpen] = useState(false);
     const [cachedWave, setCachedWave] = useState(null);
 
     // Индекс колеса для часов (не реальный час!)
@@ -601,9 +632,9 @@
       // Предупреждение о волне теперь показывается при переходе на следующий шаг, не при касании колеса
     };
 
-    const selectType = (type) => {
+    const selectType = (chipId) => {
       haptic(10);
-      onChange({ ...data, mealType: type });
+      onChange({ ...data, mealType: typeForChip(chipId, realHours) });
     };
 
     // === Инсулиновая волна — предупреждение ===
@@ -665,221 +696,114 @@
       });
     }, [analytics]);
 
-    const computeWaveData = useCallback(() => {
-      if (shouldSkipWarning) return null;
-      const wave = insulinWave.calculate({
-        meals: mealsForWave,
-        pIndex: pIndexForWave,
-        getProductFromItem: getProductFromItemFn,
-        baseWaveHours,
-        trainings: trainingsForWave,
-        dayData: context?.dayData || { meals: mealsForWave, trainings: trainingsForWave, deficitPct: context?.deficitPct }
-      });
-      setCachedWave(wave);
-      return wave;
+    const liveWave = useMemo(() => {
+      if (shouldSkipWarning || !insulinWave?.calculate) return null;
+      try {
+        return insulinWave.calculate({
+          meals: mealsForWave,
+          pIndex: pIndexForWave,
+          getProductFromItem: getProductFromItemFn,
+          baseWaveHours,
+          trainings: trainingsForWave,
+          dayData: context?.dayData || {
+            meals: mealsForWave,
+            trainings: trainingsForWave,
+            deficitPct: context?.deficitPct
+          }
+        });
+      } catch (_) {
+        return null;
+      }
     }, [shouldSkipWarning, insulinWave, mealsForWave, pIndexForWave, getProductFromItemFn, baseWaveHours, trainingsForWave, context?.dayData, context?.deficitPct]);
 
-    // Проверяем, близко ли выбранное время к текущему (в пределах 30 минут)
-    const isSelectedTimeCloseToNow = useCallback(() => {
+    const selectedCloseToNow = useMemo(() => {
       const now = new Date();
       const nowMinutes = now.getHours() * 60 + now.getMinutes();
       const selectedMinutes = realHours * 60 + minutes;
-      // Разница в минутах (учитываем переход через полночь)
       let diff = Math.abs(selectedMinutes - nowMinutes);
-      if (diff > 720) diff = 1440 - diff; // Если больше 12 часов — считаем с другой стороны
-      return diff <= 30; // В пределах 30 минут от текущего времени
+      if (diff > 720) diff = 1440 - diff;
+      return diff <= 30;
     }, [realHours, minutes]);
 
-    const maybeShowInsulinWaveWarning = useCallback(() => {
-      if (hasShownWarning) return false;
-      if (shouldSkipWarning) return false;
-      // Не показываем предупреждение если заполняем приём из прошлого
-      if (!isSelectedTimeCloseToNow()) return false;
-      const wave = cachedWave || computeWaveData();
-      if (!wave) return false;
-      if ((wave.rangeStatus || wave.status) !== 'settling') return false;
+    const showWavePlaque = !!(
+      liveWave
+      && (liveWave.rangeStatus || liveWave.status) === 'settling'
+      && selectedCloseToNow
+    );
+
+    useEffect(() => {
+      if (!showWavePlaque || hasShownWarning) return;
       setHasShownWarning(true);
-      setWarningOpen(true);
-      trackInsulinEvent('show', wave);
-      return true; // Вернули true — предупреждение показано
-    }, [hasShownWarning, shouldSkipWarning, isSelectedTimeCloseToNow, cachedWave, computeWaveData, trackInsulinEvent]);
+      setCachedWave(liveWave);
+      trackInsulinEvent('show', liveWave);
+    }, [showWavePlaque, hasShownWarning, liveWave, trackInsulinEvent]);
 
     const handleWait = useCallback(() => {
-      setWarningOpen(false);
-      trackInsulinEvent('wait', cachedWave);
+      trackInsulinEvent('wait', cachedWave || liveWave);
       HEYS.StepModal?.hide?.();
-    }, [cachedWave, trackInsulinEvent]);
+    }, [cachedWave, liveWave, trackInsulinEvent]);
 
-    const handleContinue = useCallback(() => {
-      setWarningOpen(false);
-      setHasShownWarning(true);
-      trackInsulinEvent('continue', cachedWave);
-      // После подтверждения — переходим к следующему шагу
-      if (context?.onNext) {
-        context.onNext();
-      }
-    }, [cachedWave, trackInsulinEvent, context]);
+    const handleNextStep = useCallback(() => {
+      if (showWavePlaque) trackInsulinEvent('continue', cachedWave || liveWave);
+      if (context?.onNext) context.onNext();
+    }, [showWavePlaque, cachedWave, liveWave, trackInsulinEvent, context]);
 
-    // Keyboard Escape handler
     useEffect(() => {
-      if (!warningOpen) return;
-      const handleEscape = (e) => {
+      if (!showWavePlaque) return undefined;
+      const onKey = (e) => {
         if (e.key === 'Escape') handleWait();
       };
-      document.addEventListener('keydown', handleEscape);
-      return () => document.removeEventListener('keydown', handleEscape);
-    }, [warningOpen, handleWait]);
+      document.addEventListener('keydown', onKey);
+      return () => document.removeEventListener('keydown', onKey);
+    }, [showWavePlaque, handleWait]);
 
-    // Обработчик перехода к следующему шагу — проверяем инсулиновую волну
-    const handleNextStep = useCallback(() => {
-      // Показываем предупреждение если нужно
-      const warningShown = maybeShowInsulinWaveWarning();
-      // Если предупреждение не показано — сразу переходим к следующему шагу
-      if (!warningShown && context?.onNext) {
-        context.onNext();
-      }
-    }, [maybeShowInsulinWaveWarning, context]);
-
-    return React.createElement('div', { className: 'meal-time-step' },
-      warningOpen && React.createElement('div', {
-        style: {
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '1rem',
-          backgroundColor: 'rgba(0, 0, 0, 0.75)'
-        }
+    return React.createElement('div', { className: 'meal-time-step meal-time-step--v4' },
+      React.createElement('div', {
+        className: 'meal-time-hero',
+        role: 'group',
+        'aria-label': 'Время приёма'
       },
-        React.createElement('div', {
-          style: {
-            width: '100%',
-            maxWidth: '400px',
-            borderRadius: '16px',
-            backgroundColor: 'var(--card, #fff)',
-            padding: '20px',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px'
-          }
-        },
-          React.createElement('div', {
-            style: {
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              color: '#d97706',
-              fontWeight: 600,
-              fontSize: '18px'
-            }
-          },
-            React.createElement('span', null, '⚠️'),
-            React.createElement('span', null, 'Расчётный постпрандиальный период ещё продолжается')
-          ),
-          // Progress bar wrapper с отступами
-          React.createElement('div', { style: { margin: '4px 0' } },
-            (insulinWave?.renderProgressBar && cachedWave)
-              ? insulinWave.renderProgressBar(cachedWave)
-              : React.createElement('div', { style: { fontSize: '14px', color: '#475569' } },
-                `До расчётного восстановления условий для липолиза осталось около ${formatPostprandialRemaining(cachedWave?.rangeRemaining ?? cachedWave?.remaining)}`)
-          ),
-          React.createElement('div', { style: { fontSize: '14px', color: '#334155', lineHeight: 1.6 } },
-            `До расчётного восстановления условий для липолиза осталось около ${formatPostprandialRemaining(cachedWave?.rangeRemaining ?? cachedWave?.remaining)}. Ориентируйся также на голод, самочувствие и дневной план. Эта оценка не запрещает есть.`
-          ),
-          React.createElement('div', { style: { fontSize: '13px', color: '#64748b' } },
-            '💧 Напитки без калорий обычно не меняют расчёт пищевой нагрузки модели.'
-          ),
-          React.createElement('div', { style: { display: 'flex', gap: '12px', paddingTop: '4px' } },
-            React.createElement('button', {
-              style: {
-                flex: 1,
-                borderRadius: '12px',
-                backgroundColor: '#f1f5f9',
-                padding: '12px 16px',
-                minHeight: '44px',
-                fontSize: '14px',
-                fontWeight: 600,
-                color: '#334155',
-                border: 'none',
-                cursor: 'pointer'
-              },
-              onClick: handleWait
-            }, 'Подождать'),
-            React.createElement('button', {
-              style: {
-                flex: 1,
-                borderRadius: '12px',
-                backgroundColor: '#10b981',
-                padding: '12px 16px',
-                minHeight: '44px',
-                fontSize: '14px',
-                fontWeight: 600,
-                color: '#fff',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-              },
-              onClick: handleContinue
-            }, 'Всё равно добавить')
-          )
-        )
-      ),
-      // Время
-      React.createElement('div', { className: 'meal-time-display' },
-        React.createElement('span', { className: 'meal-time-value' },
-          `${pad2(realHours)}:${pad2(minutes)}`
-        )
+        React.createElement('div', { className: 'meal-time-hero__label' }, 'Время'),
+        React.createElement(TimePicker, {
+          hours: realHours,
+          minutes: minutes,
+          onHoursChange: updateHours,
+          onMinutesChange: updateMinutes,
+          onTimeChange: updateTime,
+          hoursValues: hoursValues,
+          minutesValues: minutesValues,
+          hoursLabel: '',
+          minutesLabel: '',
+          linkedScroll: true,
+          wrap: true,
+          compact: true,
+          display: null,
+          className: 'meal-time-pickers'
+        })
       ),
 
-      // Переиспользуемый TimePicker с linkedScroll
-      React.createElement(TimePicker, {
-        hours: realHours,
-        minutes: minutes,
-        onHoursChange: updateHours,
-        onMinutesChange: updateMinutes,
-        onTimeChange: updateTime, // Единый callback для linkedScroll
-        hoursValues: hoursValues,
-        minutesValues: minutesValues,
-        hoursLabel: '',
-        minutesLabel: '',
-        linkedScroll: true,
-        wrap: true,
-        display: null,
-        className: 'meal-time-pickers'
-      }),
-
-      // Подсказка для ночных часов
       React.createElement(NightHint, { isNightHour, dateLabel }),
 
-      // Выбор типа приёма
       React.createElement(MealTypeGrid, {
-        types: MEAL_TYPES,
         currentType,
         onSelect: selectType
       }),
 
-      // Кнопка "Далее" — внутри компонента для проверки инсулиновой волны при переходе
+      showWavePlaque && React.createElement('div', { className: 'meal-time-wave' },
+        buildWavePlaqueText(liveWave)
+      ),
+
       React.createElement('button', {
-        className: 'meal-time-next-btn',
-        onClick: handleNextStep,
-        style: {
-          marginTop: '16px',
-          width: '100%',
-          padding: '14px 24px',
-          borderRadius: '12px',
-          backgroundColor: '#10b981',
-          color: '#fff',
-          fontWeight: 600,
-          fontSize: '16px',
-          border: 'none',
-          cursor: 'pointer',
-          minHeight: '48px',
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-        }
-      }, 'Далее →')
+        type: 'button',
+        className: 'meal-time-cta',
+        onClick: handleNextStep
+      }, showWavePlaque ? 'Всё равно продолжить' : 'Далее'),
+
+      showWavePlaque && React.createElement('button', {
+        type: 'button',
+        className: 'meal-time-wait',
+        onClick: handleWait
+      }, 'Подождать')
     );
   }
 
@@ -887,214 +811,121 @@
   // STEP 2: ОЦЕНКИ + КОММЕНТАРИЙ
   // ============================================================
 
-  function MealMoodStepComponent({ data, onChange, stepData, context }) {
+  const INFLUENCE_CHIPS = ['Радость', 'Успех', 'Встреча', 'Природа', 'Недосып'];
+
+  function scaleTone(field, value) {
+    if (field === 'stress') return value >= 6 ? 'warn' : 'ok';
+    return value <= 4 ? 'warn' : 'ok';
+  }
+
+  function MoodScaleRow({ field, title, value, getText, onChange }) {
+    const tone = scaleTone(field, value);
+    const pct = ((Number(value) - 1) / 9) * 100;
+    const fill = tone === 'ok' ? '#7a8a5e' : '#d99a63';
+    return React.createElement('div', { className: 'meal-mood-scale' },
+      React.createElement('div', { className: 'meal-mood-scale__top' },
+        React.createElement('span', { className: 'meal-mood-scale__label' }, title),
+        React.createElement('span', {
+          className: 'meal-mood-scale__value meal-mood-scale__value--' + tone
+        }, value + ' · ' + String(getText(value) || '').toLowerCase())
+      ),
+      React.createElement('input', {
+        type: 'range',
+        className: 'meal-mood-scale__slider',
+        min: 1,
+        max: 10,
+        value: value,
+        style: { '--mood-fill': fill, '--mood-pct': pct + '%' },
+        'aria-label': title,
+        onChange: (e) => onChange(field, Number(e.target.value)),
+        onTouchStart: (e) => e.stopPropagation(),
+        onTouchEnd: (e) => e.stopPropagation(),
+        onTouchMove: (e) => e.stopPropagation()
+      })
+    );
+  }
+
+  function MealMoodStepComponent({ data, onChange, context }) {
     const mood = data.mood ?? 5;
     const wellbeing = data.wellbeing ?? 5;
     const stress = data.stress ?? 5;
     const comment = data.comment ?? '';
+    const isEditMood = context?.mealIndex !== undefined;
+    const selectedChips = comment.split(',').map((part) => part.trim()).filter(Boolean);
 
-    // Состояние анимации эмодзи и чисел
-    const [emojiAnim, setEmojiAnim] = useState({ mood: '', wellbeing: '', stress: '' });
-    const [numAnim, setNumAnim] = useState({ mood: false, wellbeing: false, stress: false });
-    const [emojiTap, setEmojiTap] = useState({ mood: false, wellbeing: false, stress: false });
-
-    // Confetti state
-    const [showConfetti, setShowConfetti] = useState(false);
-
-    // Показывать pulse на пресетах (только первые 3 секунды)
-    const [showPulse, setShowPulse] = useState(true);
-    useEffect(() => {
-      const timer = setTimeout(() => setShowPulse(false), 3000);
-      return () => clearTimeout(timer);
-    }, []);
-
-    // Ref для автофокуса на комментарий
-    const commentRef = useRef(null);
-
-    // История оценок за сегодня
-    const todayMoods = useMemo(() => {
-      const dateKey = context?.dateKey || new Date().toISOString().slice(0, 10);
-      const dayData = safeLsGet(`heys_dayv2_${dateKey}`, null);
-      // Защита от null — день может ещё не существовать
-      const meals = dayData?.meals || [];
-      return meals.map(m => {
-        const moodVal = m.mood || 5;
-        const wellVal = m.wellbeing || 5;
-        const stressVal = m.stress || 5;
-        // Средняя оценка: mood + wellbeing + (10 - stress) / 3, шкала 0-10
-        const avg = (moodVal + wellVal + (10 - stressVal)) / 3;
-
-        // Название: из name, или из mealType, или fallback
-        let displayName = m.name;
-        if (!displayName || displayName === 'Приём') {
-          if (m.mealType && MEAL_TYPES[m.mealType]) {
-            displayName = MEAL_TYPES[m.mealType].name;
-          } else {
-            displayName = 'Приём';
-          }
-        }
-
-        return {
-          name: displayName,
-          mood: moodVal,
-          wellbeing: wellVal,
-          stress: stressVal,
-          avg: Math.round(avg * 10) / 10
-        };
-      });
-    }, [context?.dateKey]);
-
-    // === Динамический комментарий ===
-    // Используем вынесенные хелперы
-    const moodState = getMoodState(mood, wellbeing, stress);
-    const chips = getQuickChips(moodState, mood, wellbeing, stress);
-
-    // Confetti при идеальных оценках
-    const triggerConfetti = useCallback(() => {
-      if (!showConfetti) {
-        setShowConfetti(true);
-        haptic([50, 50, 50, 50, 100]);
-        setTimeout(() => setShowConfetti(false), 2000);
-      }
-    }, [showConfetti]);
-
-    // Тап на emoji — увеличение
-    const handleEmojiTap = (field) => {
-      haptic(5);
-      setEmojiTap(prev => ({ ...prev, [field]: true }));
-      setTimeout(() => setEmojiTap(prev => ({ ...prev, [field]: false })), 300);
-    };
-
-    // Обработчик изменения слайдера
     const handleSliderChange = (field, value) => {
       haptic(value >= 8 || value <= 2 ? 15 : 10);
-
-      // Анимация emoji
-      const animType = (field === 'stress' && value >= 7) ||
-        ((field === 'mood' || field === 'wellbeing') && value <= 3)
-        ? 'shake' : 'bounce';
-      setEmojiAnim(prev => ({ ...prev, [field]: animType }));
-      setTimeout(() => setEmojiAnim(prev => ({ ...prev, [field]: '' })), 400);
-
-      // Анимация числа (bounce)
-      setNumAnim(prev => ({ ...prev, [field]: true }));
-      setTimeout(() => setNumAnim(prev => ({ ...prev, [field]: false })), 200);
-
-      const newData = { ...data, [field]: value };
-      onChange(newData);
-
-      // Автофокус на комментарий при негативных оценках
-      if ((field === 'mood' && value <= 3) || (field === 'stress' && value >= 8)) {
-        setTimeout(() => commentRef.current?.focus(), 300);
-      }
-
-      // Проверяем идеальные оценки для confetti
-      const isPerfect = (field === 'mood' ? value : mood) >= 8 &&
-        (field === 'wellbeing' ? value : wellbeing) >= 8 &&
-        (field === 'stress' ? value : stress) > 0 &&
-        (field === 'stress' ? value : stress) <= 2;
-      if (isPerfect) triggerConfetti();
+      onChange({ ...data, [field]: value, skipRatings: false });
     };
 
-    // Добавить chip в комментарий
-    const addChip = (chip) => {
+    const toggleChip = (chip) => {
       haptic(5);
-      const newComment = comment ? comment + ', ' + chip : chip;
-      onChange({ ...data, comment: newComment });
+      const next = selectedChips.includes(chip)
+        ? selectedChips.filter((item) => item !== chip)
+        : selectedChips.concat(chip);
+      onChange({ ...data, comment: next.join(', ') });
     };
 
-    // Общий индикатор состояния (используем вынесенный хелпер)
-    const overallStatus = getOverallStatus(mood, wellbeing, stress);
+    const handleNext = () => {
+      if (context?.onNext) context.onNext();
+    };
 
-    // Текущая средняя оценка для спарклайна
-    const currentAvg = Math.round((mood + wellbeing + (10 - stress)) / 3 * 10) / 10;
+    const handleSkip = () => {
+      onChange({
+        ...data,
+        skipRatings: true,
+        mood: null,
+        wellbeing: null,
+        stress: null
+      });
+      setTimeout(() => {
+        if (context?.onNext) context.onNext();
+      }, 0);
+    };
 
-    return React.createElement('div', { className: 'meal-mood-step' },
-      // Мини-график настроения за день — используем вынесенный компонент
-      React.createElement(MoodHistorySection, { todayMoods, currentAvg }),
-
-      // Общий индикатор состояния
-      React.createElement('div', { className: 'meal-overall-status' },
-        React.createElement('span', { className: 'meal-overall-emoji' }, overallStatus.emoji),
-        React.createElement('span', { className: 'meal-overall-text' }, overallStatus.text)
+    return React.createElement('div', { className: 'meal-mood-step meal-mood-step--v4' },
+      React.createElement(MoodScaleRow, {
+        field: 'mood',
+        title: 'Настроение',
+        value: mood,
+        getText: getMoodText,
+        onChange: handleSliderChange
+      }),
+      React.createElement(MoodScaleRow, {
+        field: 'wellbeing',
+        title: 'Самочувствие',
+        value: wellbeing,
+        getText: getWellbeingText,
+        onChange: handleSliderChange
+      }),
+      React.createElement(MoodScaleRow, {
+        field: 'stress',
+        title: 'Стресс',
+        value: stress,
+        getText: getStressText,
+        onChange: handleSliderChange
+      }),
+      React.createElement('div', { className: 'meal-mood-tier' }, 'Что повлияло'),
+      React.createElement('div', { className: 'meal-mood-chips' },
+        INFLUENCE_CHIPS.map((chip) =>
+          React.createElement('button', {
+            key: chip,
+            type: 'button',
+            className: 'meal-mood-chip' + (selectedChips.includes(chip) ? ' is-on' : ''),
+            onClick: () => toggleChip(chip)
+          }, chip)
+        )
       ),
-
-      // Confetti — используем вынесенный компонент
-      React.createElement(ConfettiEffect, { show: showConfetti }),
-
-      // Три карточки оценок — используем RatingCard компонент
-      React.createElement('div', { className: 'meal-ratings-grid' },
-
-        // === Настроение ===
-        React.createElement(RatingCard, {
-          field: 'mood',
-          value: mood,
-          emoji: MOOD_EMOJI[mood] || '😐',
-          title: 'Настроение',
-          presets: PRESETS_POSITIVE,
-          getColor: getPositiveColor,
-          getBg: getCardBg,
-          getText: getMoodText,
-          emojiAnim: emojiAnim.mood,
-          numAnim: numAnim.mood,
-          emojiTap: emojiTap.mood,
-          showPulse,
-          onSliderChange: handleSliderChange,
-          onEmojiTap: handleEmojiTap,
-          isNegative: false
-        }),
-
-        // === Самочувствие ===
-        React.createElement(RatingCard, {
-          field: 'wellbeing',
-          value: wellbeing,
-          emoji: WELLBEING_EMOJI[wellbeing] || '😐',
-          title: 'Самочувствие',
-          presets: PRESETS_POSITIVE,
-          getColor: getPositiveColor,
-          getBg: getCardBg,
-          getText: getWellbeingText,
-          emojiAnim: emojiAnim.wellbeing,
-          numAnim: numAnim.wellbeing,
-          emojiTap: emojiTap.wellbeing,
-          showPulse,
-          onSliderChange: handleSliderChange,
-          onEmojiTap: handleEmojiTap,
-          isNegative: false
-        }),
-
-        // === Стресс ===
-        React.createElement(RatingCard, {
-          field: 'stress',
-          value: stress,
-          emoji: STRESS_EMOJI[stress] || '😐',
-          title: 'Стресс',
-          presets: PRESETS_NEGATIVE,
-          getColor: getNegativeColor,
-          getBg: getStressCardBg,
-          getText: getStressText,
-          emojiAnim: emojiAnim.stress,
-          numAnim: numAnim.stress,
-          emojiTap: emojiTap.stress,
-          showPulse,
-          onSliderChange: handleSliderChange,
-          onEmojiTap: handleEmojiTap,
-          isNegative: true
-        })
-      ),
-
-      // Динамический комментарий — используем вынесенный компонент
-      React.createElement(CommentSection, {
-        moodState,
-        mood,
-        wellbeing,
-        stress,
-        comment,
-        chips,
-        onAddChip: addChip,
-        onChangeComment: (val) => onChange({ ...data, comment: val }),
-        commentRef
-      })
+      React.createElement('button', {
+        type: 'button',
+        className: 'meal-time-cta meal-mood-cta',
+        onClick: handleNext
+      }, isEditMood ? 'Сохранить' : 'Дальше'),
+      !isEditMood && React.createElement('button', {
+        type: 'button',
+        className: 'meal-time-wait',
+        onClick: handleSkip
+      }, 'Сохранить приём без оценок')
     );
   }
 
@@ -1107,9 +938,9 @@
 
     // Шаг 1: Время и тип
     registerStep('mealTime', {
-      title: 'Время приёма',
-      hint: 'Выберите время и тип',
-      icon: '🕐',
+      title: 'Новый приём',
+      hint: '',
+      icon: '',
       component: MealTimeStepComponent,
       getInitialData: (ctx) => {
         // При редактировании берём начальные значения из context
@@ -1134,10 +965,11 @@
 
     // Шаг 2: Оценки и комментарий
     registerStep('mealMood', {
-      title: 'Самочувствие',
-      hint: 'Как вы себя чувствуете?',
-      icon: '😊',
-      allowSwipe: false, // Отключаем свайп — конфликтует со слайдерами
+      title: 'Как вы сейчас',
+      hint: '',
+      icon: '',
+      allowSwipe: false,
+      hideHeaderNext: true,
       component: MealMoodStepComponent,
       getInitialData: (ctx) => {
         // При редактировании берём начальные значения из context
@@ -1304,11 +1136,13 @@
           name: mealName,
           time: timeStr,
           mealType: mealType,
-          mood: moodData.mood || 5,
-          wellbeing: moodData.wellbeing || 5,
-          stress: moodData.stress || 5,
           items: []
         };
+        if (!moodData.skipRatings) {
+          newMeal.mood = moodData.mood || 5;
+          newMeal.wellbeing = moodData.wellbeing || 5;
+          newMeal.stress = moodData.stress || 5;
+        }
 
         // Сохраняем комментарий если есть
         if (moodData.comment && moodData.comment.trim()) {
@@ -1384,7 +1218,13 @@
 
         // Тип приёма
         const mealType = timeData.mealType || meal.mealType || null;
-        const mealName = mealType ? (MEAL_TYPES[mealType]?.name || meal.name) : meal.name;
+        const localize = HEYS.dayUtils?.localizeMealName;
+        const localizedStored = typeof localize === 'function'
+          ? localize(meal.name, 'Приём')
+          : (meal.name || 'Приём');
+        const mealName = mealType
+          ? (MEAL_TYPES[mealType]?.name || localizedStored)
+          : localizedStored;
 
         // Возвращаем обновлённые данные
         if (onComplete) {

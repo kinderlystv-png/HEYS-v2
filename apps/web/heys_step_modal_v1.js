@@ -454,7 +454,7 @@
       id,
       title: config.title || id,
       hint: config.hint || '',
-      icon: config.icon || '📋',
+      icon: Object.prototype.hasOwnProperty.call(config, 'icon') ? (config.icon || '') : '📋',
       component: config.component,
       shouldShow: config.shouldShow || null,
       getInitialData: config.getInitialData || (() => ({})),
@@ -1113,7 +1113,7 @@
                 : (currentConfig.title || currentConfig.hint) && React.createElement('div', { className: 'mc-header-titles' },
                   currentConfig.title && React.createElement(AutoFitText, {
                     className: 'mc-header-title',
-                    text: `${currentConfig.icon || ''} ${currentConfig.title}`.trim(),
+                    text: [currentConfig.icon, currentConfig.title].filter(Boolean).join(' '),
                     maxFontSize: 16,
                     minFontSize: 11
                   }),

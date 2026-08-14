@@ -25,8 +25,11 @@ beforeAll(() => {
 describe('day utils meal name localization', () => {
   it('maps english canonical meal keys to russian labels', () => {
     expect(localizeMealName('breakfast')).toBe('Завтрак');
+    expect(localizeMealName('Breakfast')).toBe('Завтрак');
     expect(localizeMealName('lunch')).toBe('Обед');
     expect(localizeMealName('dinner')).toBe('Ужин');
+    expect(localizeMealName('snack')).toBe('Перекус');
+    expect(localizeMealName('Snack')).toBe('Перекус');
   });
 
   it('maps coffee-break aliases', () => {

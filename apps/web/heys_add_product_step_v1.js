@@ -2483,7 +2483,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function formatContextMealLabel(context, fallback = 'приём') {
     const meal = resolveContextMeal(context);
     if (!meal) return fallback;
-    return [meal.time, meal.name || fallback].filter(Boolean).join(' ');
+    const localize = HEYS.dayUtils?.localizeMealName;
+    const name = typeof localize === 'function'
+      ? localize(meal.name, fallback)
+      : (meal.name || fallback);
+    return [meal.time, name].filter(Boolean).join(' ');
   }
 
   function MealPresetsOverlay({ context, onClose }) {
