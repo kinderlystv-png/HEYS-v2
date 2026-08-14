@@ -9627,11 +9627,11 @@ html.heys-android body:has(.page-reports) .hdr {
   background: rgba(248, 250, 255, 0.98) !important;
 }
 
-html.heys-android[data-theme='dark'] body:has(.page-day) .hdr,
-html.heys-android[data-theme='dark'] body:has(.widgets-tab) .hdr {
+html.heys-android[data-theme$="dark"] body:has(.page-day) .hdr,
+html.heys-android[data-theme$="dark"] body:has(.widgets-tab) .hdr {
   background: rgba(14, 20, 36, 0.96) !important;
 }
 
-html.heys-android[data-theme='dark'] body:has(.page-reports) .hdr {
+html.heys-android[data-theme$="dark"] body:has(.page-reports) .hdr {
   background: rgba(18, 18, 28, 0.97) !important;
 }

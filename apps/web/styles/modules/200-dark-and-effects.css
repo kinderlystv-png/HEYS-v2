@@ -2105,9 +2105,12 @@
   color: var(--color-slate-200);
 }
 
-/* Header bottom */
+/* Header bottom — легаси-литерал #2a2a2a перебивал v4-роль var(--v4-bg) из
+   .hdr-bottom (000-base-and-gamification.css) по специфичности; строка даты
+   рядом (.hdr-date-row) этого правила не имела и была в цвет с верхней
+   строкой, средняя — нет. Возвращена та же роль, тень оставлена. */
 [data-theme$="dark"] .hdr-bottom {
-  background: #2a2a2a;
+  background: var(--v4-bg, #2a2a2a);
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.2);
 }
 
