@@ -12,6 +12,10 @@ const cssSource = fs.readFileSync(
   'utf8',
 );
 const shellSource = fs.readFileSync(
+  path.resolve(__dirname, '../heys_app_shell_v1.js'),
+  'utf8',
+);
+const shellSourceLegacy = fs.readFileSync(
   path.resolve(__dirname, '../heys_day_page_shell.js'),
   'utf8',
 );
@@ -45,9 +49,16 @@ describe('Reports tab v4 structure', () => {
     expect(statsSource).toContain('!useReportsV4 && HEYS.CascadeCard?.HeysScoreTile');
   });
 
-  it('stats block renders only on stats mobile subtab', () => {
-    expect(shellSource).toMatch(/mobileSubTab === 'stats'\) && statsBlock/);
-    expect(shellSource).not.toMatch(/mobileSubTab === 'stats' \|\| mobileSubTab === 'activity'\) && statsBlock/);
+  it('stats block renders only on active stats mobile subtab', () => {
+    expect(shellSourceLegacy).toMatch(/mobileSubTab === 'stats'\) && isTabActive && statsBlock/);
+    expect(shellSourceLegacy).not.toMatch(/mobileSubTab === 'stats' \|\| mobileSubTab === 'activity'\) && statsBlock/);
+  });
+
+  it('period analytics tabs hide shell title and day calendar', () => {
+    expect(shellSource).toContain('isPeriodAnalyticsTab = tab === \'stats\' || tab === \'insights\'');
+    expect(shellSource).toMatch(/showDateRow = !isPeriodAnalyticsTab && \(tab === 'diary' \|\| tab === 'activity'\)/);
+    expect(shellSource).toContain('showHdrBottom = !isRpcMode || !isPeriodAnalyticsTab');
+    expect(statsSource).toContain('reports-v4-meta__title');
   });
 
   it('structure css is imported and uses v4 paint roles', () => {

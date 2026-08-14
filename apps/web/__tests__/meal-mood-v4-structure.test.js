@@ -25,7 +25,7 @@ describe('meal mood step v4 structure', () => {
 
   it('paints mood scales with v4 roles', () => {
     expect(cssSource).toContain('.meal-mood-scale');
-    expect(cssSource).toContain('background: #f7efe2');
+    expect(cssSource).toContain('var(--v4-sand-surface');
     expect(cssSource).toContain('.meal-mood-scale__value--ok');
     expect(cssSource).toContain('.meal-mood-chip.is-on');
   });

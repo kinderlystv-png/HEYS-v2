@@ -62,8 +62,16 @@ describe('Activity tab v4 structure', () => {
     expect(cssSource).toContain('.activity-v4-cta');
     expect(cssSource).toContain('var(--v4-hero');
     expect(cssSource).toContain('var(--v4-ink-2');
+    expect(cssSource).toContain('.activity-v4-steps__fill');
+    expect(cssSource).toMatch(/\.activity-v4-steps__fill[^}]*var\(--v4-ok-fill/s);
+    expect(cssSource).toMatch(/\.activity-v4-steps__label[^}]*var\(--v4-ink-2/s);
     expect(cssSource).toContain('ma-habit-cal-grid--dot');
     expect(cssSource).not.toMatch(/\.activity-v4-hero\s*\{[^}]*border:\s*1px/s);
     expect(cssSource).toMatch(/v4-intentional.*var\(--v4-act\)/s);
+  });
+
+  it('steps progress bar uses css fill role, not legacy scale color inline', () => {
+    expect(activitySource).toMatch(/activity-v4-steps__fill[\s\S]*width: stepsPercent \+ '%'/);
+    expect(activitySource).not.toMatch(/activity-v4-steps__fill[\s\S]*background: stepsColor/);
   });
 });

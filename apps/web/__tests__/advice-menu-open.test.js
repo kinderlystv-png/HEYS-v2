@@ -17,4 +17,21 @@ describe('advice menu manual open', () => {
     expect(handlerSource).toContain('_runUpdate();');
     expect(handlerSource).not.toContain('React.startTransition(_runUpdate)');
   });
+
+  it('keeps empty advice drawer open until user dismisses it', () => {
+    expect(source).not.toMatch(/manual_empty[\s\S]{0,400}setTimeout\([\s\S]{0,120}2000\)/);
+  });
+});
+
+describe('advice overlays portal from day shell', () => {
+  it('portals advice overlays to body so they work on non-day tabs', () => {
+    const shellSource = fs.readFileSync(
+      path.resolve(__dirname, '../heys_day_page_shell.js'),
+      'utf8'
+    );
+    expect(shellSource).toContain('function portalAdviceOverlay');
+    expect(shellSource).toContain('ReactDOM.createPortal');
+    expect(shellSource).toContain('portalAdviceOverlay(HEYS.dayAdviceListUI?.renderManualAdviceList');
+    expect(shellSource).toContain('portalAdviceOverlay(HEYS.dayAdviceListUI?.renderEmptyAdviceToast');
+  });
 });

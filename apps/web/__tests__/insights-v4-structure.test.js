@@ -7,6 +7,10 @@ const dashboardSource = fs.readFileSync(
   path.resolve(__dirname, '../insights/pi_ui_dashboard.js'),
   'utf8',
 );
+const shellSource = fs.readFileSync(
+  path.resolve(__dirname, '../heys_app_shell_v1.js'),
+  'utf8',
+);
 
 describe('Insights tab v4 structure', () => {
   it('exports v4 helpers and keeps CascadeInsightsSlot listener pattern', () => {
@@ -73,5 +77,11 @@ describe('Insights tab v4 structure', () => {
   it('period pills use 7/14/30 days', () => {
     expect(dashboardSource).toContain('INSIGHTS_V4_PERIODS = [7, 14, 30]');
     expect(dashboardSource).toContain('insights-v4-period-pill');
+  });
+
+  it('shell hides duplicate title and day calendar on insights tab', () => {
+    expect(shellSource).toContain('isPeriodAnalyticsTab = tab === \'stats\' || tab === \'insights\'');
+    expect(shellSource).not.toMatch(/showDateRow = .*tab === 'insights'/);
+    expect(dashboardSource).toContain('insights-v4-meta__title');
   });
 });

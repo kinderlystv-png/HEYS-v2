@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const POST_RELEASE_LABS_CLIENT_ID = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
 const originalHEYS = window.HEYS;
 const originalReact = window.React;
 const originalDEV = window.DEV;
@@ -119,6 +120,7 @@ describe('HEYS default tab sync regression', () => {
         window.HEYS = {
             utils: profileStore.utils,
             cloud: {},
+            currentClientId: POST_RELEASE_LABS_CLIENT_ID,
         };
         window.React = fakeReact;
 
@@ -132,6 +134,7 @@ describe('HEYS default tab sync regression', () => {
         window.localStorage.removeItem('heys_pin_auth_client');
         window.localStorage.removeItem('heys_client-1_profile');
         window.localStorage.removeItem('heys_client-2_profile');
+        window.localStorage.removeItem(`heys_${POST_RELEASE_LABS_CLIENT_ID}_profile`);
         window.HEYS = originalHEYS;
         window.React = originalReact;
         window.DEV = originalDEV;
@@ -153,8 +156,8 @@ describe('HEYS default tab sync regression', () => {
 
     it('uses boot-scoped profile before HEYS.currentClientId is restored', () => {
         window.localStorage.setItem('heys_profile', JSON.stringify({ defaultTab: 'diary', defaultTasksSubtab: 'calendar' }));
-        window.localStorage.setItem('heys_client_current', JSON.stringify('client-1'));
-        window.localStorage.setItem('heys_client-1_profile', JSON.stringify({ defaultTab: 'tasks', defaultTasksSubtab: 'chrono' }));
+        window.localStorage.setItem('heys_client_current', JSON.stringify(POST_RELEASE_LABS_CLIENT_ID));
+        window.localStorage.setItem(`heys_${POST_RELEASE_LABS_CLIENT_ID}_profile`, JSON.stringify({ defaultTab: 'tasks', defaultTasksSubtab: 'chrono' }));
         profileStore.setProfile({ defaultTab: 'diary', defaultTasksSubtab: 'calendar' });
         fakeReact = createFakeReact({ runEffects: false });
         window.React = fakeReact;
@@ -168,8 +171,8 @@ describe('HEYS default tab sync regression', () => {
 
     it('uses PIN-auth scoped profile before HEYS.currentClientId is restored', () => {
         window.localStorage.setItem('heys_profile', JSON.stringify({ defaultTab: 'diary', defaultTasksSubtab: 'calendar' }));
-        window.localStorage.setItem('heys_pin_auth_client', 'client-2');
-        window.localStorage.setItem('heys_client-2_profile', JSON.stringify({ defaultTab: 'tasks', defaultTasksSubtab: 'chrono' }));
+        window.localStorage.setItem('heys_pin_auth_client', POST_RELEASE_LABS_CLIENT_ID);
+        window.localStorage.setItem(`heys_${POST_RELEASE_LABS_CLIENT_ID}_profile`, JSON.stringify({ defaultTab: 'tasks', defaultTasksSubtab: 'chrono' }));
         profileStore.setProfile({ defaultTab: 'diary', defaultTasksSubtab: 'calendar' });
         fakeReact = createFakeReact({ runEffects: false });
         window.React = fakeReact;

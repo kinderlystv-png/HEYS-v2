@@ -22,6 +22,7 @@ describe('auth pin keypad rollout', () => {
     expect(keypadSource).toContain('readOnly: touchKeypad');
     expect(keypadSource).toContain('if (!v && existing) return');
     expect(keypadSource).toContain('heys-auth-pin-dot');
+    expect(keypadSource).toContain('setDigits((prev)');
 
     const loginIdx = bundleConfig.indexOf('heys_login_screen_v1.js');
     const keypadIdx = bundleConfig.indexOf('heys_auth_pin_keypad_v1.js');
@@ -51,6 +52,9 @@ describe('auth pin keypad rollout', () => {
   it('keeps reference login and first-access setup implementations intact', () => {
     expect(loginSource).toContain('heys-auth-keypad');
     expect(loginSource).toContain('heys-auth-pin-box');
+    expect(loginSource).toContain('phoneDigitsRef');
+    expect(loginSource).toContain('pinDigitsRef');
+    expect(loginSource).toContain('phoneDigitsRef.current.length < 10');
     expect(accessSetupSource).toContain('heys-auth-keypad');
     expect(accessSetupSource).toContain('readOnly: true');
     expect(accessSetupSource).toContain('heys-auth-pin-dot');

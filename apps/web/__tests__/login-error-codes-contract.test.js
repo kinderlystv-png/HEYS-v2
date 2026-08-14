@@ -193,7 +193,8 @@ describe('контракт кодов отказа на входе клиент�
         ).not.toContain('else if');
 
         const invalidBranch = handler.slice(branchIndex, handler.indexOf('} else if', callIndex));
-        expect(invalidBranch).toContain('Не удалось войти');
+        expect(invalidBranch).toContain('showInvalidPinFeedback()');
+        expect(invalidBranch).not.toContain('Не удалось войти');
         expect(invalidBranch).not.toContain("'PIN не подошёл'");
     });
 });

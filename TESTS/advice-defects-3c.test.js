@@ -94,9 +94,26 @@ describe('advice defects 3c', () => {
   describe('curator-only tech controls in advice drawer', () => {
     const adviceUiSource = readSource('apps/web/day/_advice.js');
 
-    it('gates trace and diagnostics header buttons behind curator session', () => {
-      expect(adviceUiSource).toMatch(/_isCurator && adviceTraceAvailable && React\.createElement\('button'/);
-      expect(adviceUiSource).toMatch(/_isCurator && adviceDiagnostics && React\.createElement\('button'/);
+    it('moves trace/diagnostics behind curator service screen', () => {
+      expect(adviceUiSource).toMatch(/_isCurator && \(adviceTraceAvailable \|\| adviceDiagnostics\)/);
+      expect(adviceUiSource).toContain('renderAdviceServiceScreen');
+      expect(adviceUiSource).toContain('Служебное');
+      expect(adviceUiSource).not.toMatch(/title: 'Скопировать технический лог принятия решений по советам'/);
+    });
+  });
+
+  describe('advice v4 swipe feedback panels', () => {
+    const adviceUiSource = readSource('apps/web/day/_advice.js');
+
+    it('uses v4 read/hide/sync panels from canvas', () => {
+      expect(adviceUiSource).toContain('renderAdviceReadFeedbackPanel');
+      expect(adviceUiSource).toContain('renderAdviceHideUndoPanel');
+      expect(adviceUiSource).toContain('renderAdviceSyncBanner');
+      expect(adviceUiSource).toMatch(/👍 Полезно/);
+      expect(adviceUiSource).toMatch(/👎 Мимо/);
+      expect(adviceUiSource).toContain('Совет скрыт до завтра');
+      expect(adviceUiSource).toContain('Отметки не сохранились');
+      expect(adviceUiSource).toContain('advice-v4-hide-ring');
     });
   });
 });

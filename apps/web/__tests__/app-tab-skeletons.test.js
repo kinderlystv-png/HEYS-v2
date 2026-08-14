@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const originalHEYS = window.HEYS;
@@ -85,5 +86,24 @@ describe('HEYS tab-aware skeleton layouts', () => {
         const fallbackElement = skeletons.TabSkeleton({ tab: 'unknown', React });
         expect(fallbackElement.props['data-skeleton-tab']).toBe('fallback');
         expect(fallbackElement.props['aria-busy']).toBe('true');
+    });
+
+    it('embedded runtime skeleton skips duplicate shell chrome', () => {
+        const skeletons = loadSkeletonModule();
+        const mount = document.createElement('div');
+        document.body.appendChild(mount);
+
+        ReactDOM.render(
+            React.createElement(skeletons.TabSkeleton, { tab: 'activity', embedded: true, React }),
+            mount
+        );
+
+        expect(mount.querySelector('.heys-tab-skeleton--embedded')).not.toBeNull();
+        expect(mount.querySelector('.heys-tab-skeleton__toolbar')).toBeNull();
+        expect(mount.querySelector('.heys-tab-skeleton__dates')).toBeNull();
+        expect(mount.querySelector('.heys-tab-skeleton__hero')).not.toBeNull();
+
+        ReactDOM.unmountComponentAtNode(mount);
+        mount.remove();
     });
 });

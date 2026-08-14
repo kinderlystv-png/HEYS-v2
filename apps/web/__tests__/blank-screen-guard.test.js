@@ -78,7 +78,7 @@ describe('iOS/PWA blank-screen visual guard', () => {
     expect(tabsSource).toContain("window.addEventListener('heys:blank-screen-retry'");
     expect(tabsSource).toContain("'data-heys-visible-frame': isActive ? 'day' : undefined");
     expect(tabsSource).toContain('BlankScreenGuard?.reportVisibleFrame?.({');
-    expect(shellSource).toContain("'data-heys-visible-frame': isDayTab ? undefined : tab");
+    expect(shellSource).toContain("'data-heys-visible-frame': (isDayTab || tab === 'widgets') ? undefined : tab");
     expect(tabsSource).toContain("HEYS?.LogTrace?.event?.('boot_ready'");
   });
 

@@ -152,6 +152,10 @@ describe('first login onboarding guardrails', () => {
     expect(appOnboardingSource).toContain("reason: 'disabled'");
     expect(appOnboardingSource).toContain('isEnabled: () => ONBOARDING_TOUR_ENABLED');
     expect(uiOnboardingSource).toContain('const ONBOARDING_TOUR_ENABLED = false');
+    expect(uiOnboardingSource).toContain('const WIDGETS_TOUR_ENABLED = false');
+    expect(uiOnboardingSource).toContain('const INSIGHTS_TOUR_ENABLED = false');
+    expect(uiOnboardingSource).toContain('if (!WIDGETS_TOUR_ENABLED) return false;');
+    expect(uiOnboardingSource).toContain('if (!INSIGHTS_TOUR_ENABLED) return false;');
     expect(uiOnboardingSource).toContain('return false;');
     expect(uiOnboardingSource).toContain('isEnabled()');
     expect(userTabSource).not.toContain('OnboardingTour.start({ force: true })');

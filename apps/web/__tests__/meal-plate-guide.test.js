@@ -286,18 +286,18 @@ describe('meal plate guide', () => {
 
         expect(HEYS.ConfirmModal.show).toHaveBeenCalledTimes(1);
         const modalOptions = HEYS.ConfirmModal.show.mock.calls[0][0];
-        expect(modalOptions.title).toBe('Выбрана другая дата');
+        expect(modalOptions.title).toBe('');
         expect(modalOptions.defaultActionValue).toBe('today');
         expect(modalOptions.cancelActionValue).toBe('today');
         expect(modalOptions.actions[0]).toMatchObject({ value: 'today', isDefault: true, isCancel: true });
-        expect(modalOptions.actions[1]).toMatchObject({ value: 'confirm', style: 'warning' });
+        expect(modalOptions.actions[1]).toMatchObject({ value: 'confirm', variant: 'text' });
         expect(modalOptions.actions[1].label).toContain('2 января');
 
         render(modalOptions.text);
         expect(screen.getByRole('alert')).toBeTruthy();
-        expect(screen.getByText('НЕ СЕГОДНЯ')).toBeTruthy();
-        expect(screen.getByText('Четверг, 2 января')).toBeTruthy();
-        expect(screen.getByText('Точно записать новый приём на эту дату?')).toBeTruthy();
+        expect(screen.getByText('Внимание')).toBeTruthy();
+        expect(screen.getByText(/Приём запишется на 2 января, а не на сегодня/)).toBeTruthy();
+        expect(screen.getByText(/В календаре выбран другой день/)).toBeTruthy();
         expect(HEYS.MealStep.showAddMeal).toHaveBeenCalledTimes(1);
     });
 

@@ -43,6 +43,15 @@ describe('Nutrition tab v4 structure', () => {
     expect(nutritionSource).toContain('legacyMealsUI');
   });
 
+  it('shows every meal in diary with inline add-product control', () => {
+    expect(nutritionSource).toContain('function findMealIndexInDay');
+    expect(nutritionSource).toContain('nutrition-v4-meal-row__add');
+    expect(nutritionSource).toContain('openAddProductForMeal');
+    expect(nutritionSource).not.toMatch(/sortMealsAscending\(day\?\.meals[^\)]*\)\.filter\(\(meal\) => Array\.isArray\(meal\?\.items\)/);
+    expect(cssSource).toContain('.nutrition-v4-meal-row__add');
+    expect(cssSource).toContain('.nutrition-v4-meal-row__body');
+  });
+
   it('does not use inline lazy module race checks', () => {
     expect(nutritionSource).not.toMatch(/HEYS\.\w+\s*&&\s*HEYS\./);
   });

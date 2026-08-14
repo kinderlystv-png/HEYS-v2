@@ -13,27 +13,25 @@ const cssSource = fs.readFileSync(
 );
 
 describe('PEP access-code setup v4 structure', () => {
-  it('keeps legal copy and scoped pep classes', () => {
+  it('keeps login-card frame copy and scoped pep classes', () => {
     expect(setupSource).toContain('heys-auth-card--pep');
+    expect(setupSource).toContain('heys-auth-heading');
+    expect(setupSource).toContain('heys-auth-mark');
     expect(setupSource).toContain('Придумайте код доступа');
     expect(setupSource).toContain('Повторите код');
     expect(setupSource).toContain("'Далее'");
     expect(setupSource).toContain("'Продолжить'");
     expect(setupSource).toContain("'Изменить код'");
     expect(setupSource).not.toContain('← Изменить код');
-    expect(setupSource).toContain('Ваш код доступа заменяет собственноручную подпись');
-    expect(setupSource).toContain('Никому не сообщайте свой код, в том числе куратору');
-    expect(setupSource).toContain('Нажимая «Продолжить», вы заключаете соглашение и создаёте код доступа');
+    expect(setupSource).not.toContain('Подпись документов в приложении');
     expect(setupSource).toContain('heys-auth-pep-agree');
     expect(setupSource).toContain('heys-auth-pep-check');
+    expect(setupSource).toContain('heys-auth-error-slot');
   });
 
-  it('scopes pep paint so login selectors stay generic', () => {
-    expect(cssSource).toContain('.heys-auth-card--pep .heys-auth-label');
-    expect(cssSource).toContain('font-size: 13px');
-    expect(cssSource).toContain('text-transform: none');
-    expect(cssSource).toContain('.heys-auth-card--pep .heys-auth-subtitle');
-    expect(cssSource).toContain('max-width: none');
+  it('scopes pep paint on login card geometry', () => {
+    expect(cssSource).toMatch(/\.heys-auth-card--pep[\s\S]*?max-width:\s*390px/);
+    expect(cssSource).toMatch(/\.heys-auth-card--pep \.heys-auth-pin-box[\s\S]*?width:\s*56px/);
     expect(cssSource).toContain('.heys-auth-card--pep .heys-auth-primary');
     expect(cssSource).toContain('border-radius: 999px');
     expect(cssSource).toContain('.heys-auth-card--pep .heys-auth-pep-check');

@@ -45,10 +45,10 @@ describe('meal time step v4 structure', () => {
   it('paints time hero and chips with v4 roles', () => {
     expect(cssSource).toContain('.meal-time-hero');
     expect(cssSource).toContain('.meal-type-chips');
-    expect(cssSource).toContain('var(--v4-hero');
-    expect(cssSource).toContain('var(--v4-act-text');
+    expect(cssSource).toContain('var(--v4-sand-hero');
+    expect(cssSource).toContain('var(--v4-sand-surface');
     expect(cssSource).toContain('grid-template-columns: 1fr 1fr');
-    expect(cssSource).toMatch(/\.meal-type-chip \{[\s\S]*?background: #f7efe2;/);
+    expect(cssSource).toMatch(/\.meal-type-chip \{[\s\S]*?var\(--v4-sand-surface/);
     expect(cssSource).toMatch(/\.meal-time-step \.meal-type-label \{[\s\S]*?background: none;/);
     expect(cssSource).toContain('.meal-time-hero .mc-wheel-value--current');
     expect(cssSource).toContain('font-size: 54px');
@@ -68,5 +68,18 @@ describe('meal time step v4 structure', () => {
     expect(mealStepSource).toContain('compact: true');
     expect(mealStepSource).toContain("display: null");
     expect(mealStepSource).toContain("className: 'meal-time-hero'");
+  });
+
+  it('styles night intake hint as sand grp block below time hero', () => {
+    expect(mealStepSource).toContain("className: 'meal-night-hint'");
+    expect(mealStepSource).toContain('Ночной приём — запишется в ');
+    expect(mealStepSource).toMatch(
+      /React\.createElement\(NightHint[\s\S]*?\)[\s\S]*?React\.createElement\(MealTypeGrid/,
+    );
+    expect(cssSource).toContain('.meal-night-hint');
+    expect(cssSource).toContain('border-radius: 20px');
+    expect(cssSource).toContain('.meal-night-icon');
+    expect(cssSource).toMatch(/\.meal-night-hint \{[\s\S]*?var\(--v4-sand-accent-bg/);
+    expect(cssSource).toMatch(/\.meal-time-step--v4 \.meal-night-hint[\s\S]*?margin-top: 16px/);
   });
 });

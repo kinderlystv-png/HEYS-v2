@@ -53,6 +53,14 @@ describe('Gamification screens v4 · structure', () => {
     expect(barSource).toContain('game-panel-expanded--v4');
   });
 
+  it('streak milestone — chip в шапке вместо нижнего toast', () => {
+    expect(barSource).toContain('game-progress-slot--streak');
+    expect(barSource).toContain('game-streak-chip');
+    expect(barSource).toContain('formatStreakDayLabel');
+    expect(barSource).toContain('Серия · ${streakCelebration}');
+    expect(barSource).not.toContain('streak-milestone-toast');
+  });
+
   it('levels tab uses XP_ACTIONS, isMax and level titles', () => {
     expect(screensSource).toContain('XP_ACTIONS');
     expect(screensSource).toContain('isMax');

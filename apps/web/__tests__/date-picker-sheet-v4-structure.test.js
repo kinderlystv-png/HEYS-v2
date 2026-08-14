@@ -51,4 +51,41 @@ describe('Date picker sheet v4 · вариант А', () => {
     expect(sheetCss).toContain('.date-picker-sheet .legend-swatch--dot');
     expect(sheetCss).not.toContain('.date-picker-sheet .day-status');
   });
+
+  it('sheet opens as v4 modal card under date row', () => {
+    expect(sheetBlock).toContain('date-picker-sheet__card');
+    expect(pickersSource).toContain('date-picker-backdrop--v4-modal');
+    expect(pickersSource).toContain('--date-picker-sheet-top');
+    expect(sheetBlock).not.toContain('date-picker-sheet-handle');
+  });
+
+  it('sheet не наследует legacy datePickerSlide (anti left-flash)', () => {
+    const sheetRule = sheetCss.match(
+      /\.date-picker-dropdown\.date-picker-sheet\s*\{[^}]+\}/,
+    )?.[0] || '';
+    expect(sheetRule).toContain('animation: datePickerSheetModalIn');
+    expect(sheetRule).toContain('left: 50%');
+    expect(sheetRule).toContain('width: min(360px');
+    expect(sheetRule).toContain('--date-picker-sheet-top');
+    expect(sheetRule).not.toContain('bottom: 0');
+    expect(sheetRule).not.toContain('datePickerSlide');
+    expect(sheetCss).toMatch(/\.date-picker-backdrop\.date-picker-backdrop--v4-modal[\s\S]*?background:\s*transparent/);
+  });
+
+  it('sheet month nav uses v4 sand arrows, not legacy date-picker-nav', () => {
+    expect(sheetBlock).toContain('date-picker-sheet-month-nav');
+    expect(sheetBlock).toContain("navChevron('left')");
+    expect(sheetBlock).not.toMatch(/className:\s*'date-picker-nav'/);
+    expect(sheetCss).toContain('.date-picker-sheet .date-picker-sheet-month-nav');
+    expect(sheetCss).toMatch(/\.date-picker-sheet \.date-picker-sheet-month-nav[\s\S]*?background:\s*#f7efe2/);
+  });
+
+  it('sheet streak banner uses v4 sand chip copy', () => {
+    expect(sheetBlock).toContain('date-picker-streak--v4');
+    expect(sheetBlock).toContain('formatStreakDayLabel(streakInfo.count)');
+    expect(sheetBlock).toContain('Серия ·');
+    expect(sheetBlock).not.toContain('дней подряд в норме');
+    expect(sheetCss).toContain('.date-picker-sheet .date-picker-streak--v4');
+    expect(sheetCss).toMatch(/\.date-picker-sheet \.date-picker-streak--v4[\s\S]*?background:\s*#f3e0d2/);
+  });
 });

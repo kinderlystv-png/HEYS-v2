@@ -18,7 +18,8 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(chunk).not.toContain('V52');
         expect(cssSrc).toContain('.widget-v4-wave__fill');
         expect(cssSrc).toContain('stroke: none');
-        expect(cssSrc).toMatch(/color-mix\(in srgb, var\(--v4-act(?:,\s*#[0-9a-fA-F]{3,8})?/);
+        expect(cssSrc).toContain('var(--v4-sand-wave-fill');
+        expect(cssRoles).toContain('--v4-sand-wave-fill');
     });
 
     it('оценка дня 2×1 — строка как в g1, число из --v4-act-text', () => {
@@ -27,8 +28,7 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(chunk).toContain('widget-v4-row');
         expect(chunk).toContain("widget-v4-unit");
         expect(cssSrc).toContain('.widget--dayScore .widget-day-score--short.widget-v4-row');
-        expect(cssSrc).toContain('.widget--dayScore .widget-v4-row__value');
-        expect(cssSrc).toContain('align-items: center');
+        expect(cssSrc).toContain('.widget-v4-row__value');
         expect(cssSrc).toContain('var(--v4-act-text');
     });
 
@@ -57,12 +57,40 @@ describe('виджеты g1 в сфере палитры', () => {
 
     it('БЖУ 3×2 — кольца 60px, ряд по центру с щелью 20px', () => {
         const start = uiSrc.indexOf('function v4SageRing');
-        const chunk = uiSrc.slice(start, start + 500);
+        const chunk = uiSrc.slice(start, start + 1400);
         expect(chunk).toContain('width: 60');
         expect(chunk).toContain('height: 60');
         expect(cssSrc).toContain('.widget-v4-macros');
         expect(cssSrc).toContain('justify-content: center');
         expect(cssSrc).toContain('gap: 20px');
+    });
+
+    it('БЖУ 3×2 — перебор второй дугой (как macro-ring-fill--over)', () => {
+        const start = uiSrc.indexOf('function v4SageRing');
+        const chunk = uiSrc.slice(start, start + 2200);
+        expect(chunk).toContain('widget-v4-macro__ring-over');
+        expect(chunk).toContain('hasOver && overPct > 0');
+        expect(chunk).toContain('--v4-macro-over-offset');
+        expect(cssSrc).toContain('.widget-v4-macro__ring-over--warn');
+    });
+
+    it('БЖУ 3×2 — в кольце остаток, в шапке «Осталось сегодня»', () => {
+        const ringStart = uiSrc.indexOf('function v4SageRing');
+        const ringChunk = uiSrc.slice(ringStart, ringStart + 2400);
+        expect(ringChunk).toContain('const remaining = tgt - num');
+        expect(ringChunk).toContain('widget-v4-macro__num--over');
+        expect(ringChunk).toContain("className: 'widget-v4-macro__num-sign'");
+        expect(ringChunk).toContain("}, '-'),");
+
+        const macrosStart = uiSrc.indexOf("className: 'widget-macros widget-macros--3x2 widget-v4-stack'");
+        const macrosChunk = uiSrc.slice(macrosStart, macrosStart + 600);
+        expect(macrosChunk).toContain('widget-v4-macros__head widget-v4-kicker');
+        expect(macrosChunk).toContain('· Осталось сегодня');
+
+        expect(cssSrc).toContain('.widget-v4-macros__head');
+        expect(cssSrc).toContain('.widget-v4-macros__hint');
+        expect(cssSrc).toContain('.widget-v4-macro__num--over');
+        expect(cssSrc).toContain('.widget-v4-macro__num--over .widget-v4-macro__num-sign');
     });
 
     it('риск-радар 2×2 не красит «низкий» классическим ratio-green', () => {
@@ -72,5 +100,15 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(chunk).not.toContain('style: { color }');
         expect(cssSrc).toContain('.widget-v4-hero-num__val.widget-v4-ok');
         expect(cssSrc).toContain('var(--v4-ok-text');
+    });
+
+    it('главная — layout из localStorage сразу, без sync-скелетона', () => {
+        expect(uiSrc).toContain('function bootstrapWidgetsLayout()');
+        expect(uiSrc).toContain('useState(() => bootstrapWidgetsLayout())');
+        expect(uiSrc).not.toContain('WidgetsSyncSkeleton');
+        expect(uiSrc).not.toContain('showDashboardSkeleton');
+        expect(uiSrc).not.toContain('isSyncLoading');
+        expect(uiSrc).toContain('const applyWidgetsLayout = useCallback');
+        expect(uiSrc).toMatch(/!isEditMode && widgets\.length > 0 && React\.createElement\('button', \{\s*\n\s*type: 'button',\s*\n\s*className: 'widget-v4-add'/);
     });
 });

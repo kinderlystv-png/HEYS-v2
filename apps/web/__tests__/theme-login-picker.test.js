@@ -70,20 +70,67 @@ describe('heys_login_theme_picker_v1', () => {
         expect(document.documentElement.getAttribute('data-palette')).toBe('blue');
     });
 
+    it('moves expanded panel into card slot when dockLayout is enabled', () => {
+        loadModules();
+        const keypad = document.createElement('div');
+        keypad.className = 'heys-auth-keypad';
+        document.body.appendChild(keypad);
+        const panelSlot = document.createElement('div');
+        panelSlot.className = 'heys-auth-theme-panel-slot';
+        document.body.appendChild(panelSlot);
+        const mount = document.createElement('div');
+        document.body.appendChild(mount);
+
+        const picker = window.HEYS.LoginThemePicker.mountDom({
+            keypadEl: keypad,
+            scope: 'login',
+            dockLayout: true,
+            panelSlotEl: panelSlot,
+        });
+        mount.appendChild(picker.root);
+
+        picker.setExpanded(true);
+        expect(panelSlot.querySelector('.heys-login-theme.is-expanded .heys-login-theme__panel')).toBeTruthy();
+        expect(picker.root.classList.contains('is-expanded')).toBe(false);
+        picker.collapse();
+        expect(panelSlot.textContent).toBe('');
+        expect(keypad.classList.contains('is-hidden')).toBe(false);
+    });
+
     it('replaces keypad with expanded panel and restores on collapse', () => {
         loadModules();
         const keypad = document.createElement('div');
         keypad.className = 'heys-auth-keypad';
         document.body.appendChild(keypad);
 
-        const picker = window.HEYS.LoginThemePicker.mountDom({ keypadEl: keypad });
+        const picker = window.HEYS.LoginThemePicker.mountDom({ keypadEl: keypad, scope: 'login' });
         document.body.appendChild(picker.root);
 
         expect(keypad.classList.contains('is-hidden')).toBe(false);
         picker.setExpanded(true);
         expect(keypad.classList.contains('is-hidden')).toBe(true);
         expect(picker.root.classList.contains('is-expanded')).toBe(true);
+        expect(picker.root.classList.contains('heys-login-theme--login-only')).toBe(true);
+        expect(picker.root.querySelector('.heys-login-theme__done')?.textContent).toBe('Готово');
+        expect(picker.root.querySelector('.heys-login-theme__section-label')?.textContent).toBe('Палитра');
+        expect(picker.root.querySelector('[data-mode="dark"]')).toBeNull();
         picker.collapse();
+        expect(keypad.classList.contains('is-hidden')).toBe(false);
+    });
+
+    it('keeps keypad visible when picker is dimmed for PIN error', () => {
+        loadModules();
+        const keypad = document.createElement('div');
+        keypad.className = 'heys-auth-keypad';
+        document.body.appendChild(keypad);
+
+        const picker = window.HEYS.LoginThemePicker.mountDom({ keypadEl: keypad, scope: 'login' });
+        document.body.appendChild(picker.root);
+
+        picker.setDimmed(true);
+        expect(picker.root.classList.contains('is-dimmed')).toBe(true);
+        expect(keypad.classList.contains('is-hidden')).toBe(false);
+        picker.setDimmed(false);
         expect(keypad.classList.contains('is-hidden')).toBe(false);
     });
 

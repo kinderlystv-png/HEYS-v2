@@ -32,6 +32,14 @@ describe('домашняя вкладка', () => {
         expect(baseHomeTabs()).toContain('activity');
     });
 
+    it('tasks и board добавляются только post-release labs клиенту', () => {
+        expect(baseHomeTabs()).not.toContain('tasks');
+        expect(baseHomeTabs()).not.toContain('board');
+        expect(tabStateSrc).toContain('isPostReleaseLabsClient');
+        expect(tabStateSrc).toContain("tabs.push('tasks')");
+        expect(tabStateSrc).toContain("tabs.push('board')");
+    });
+
     it('каждая вкладка из пикера настроек действительно применима', () => {
         // Пикер не должен предлагать то, что resolveHomeTab потом откатит.
         // 'board' и 'tasks' добавляются условно, по правам клиента.
@@ -39,5 +47,14 @@ describe('домашняя вкладка', () => {
         const allowed = baseHomeTabs();
         const missing = pickerKeys().filter((k) => !conditional.includes(k) && !allowed.includes(k));
         expect(missing).toEqual([]);
+    });
+
+    it('при смене вкладки монтирует свежую scroll-surface с начала', () => {
+        expect(shellSrc).toContain('tab-active-viewport');
+        expect(shellSrc).toMatch(/key: 'tab-view-' \+ String\(tab/);
+        expect(tabStateSrc).not.toContain('resetAppScrollTop');
+        const baseCss = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8');
+        expect(baseCss).toContain('.wrap:not(.wrap--no-header) > .tab-content-swipeable > .tab-active-viewport');
+        expect(baseCss).toMatch(/\.wrap:not\(\.wrap--no-header\) > \.tab-content-swipeable[\s\S]*min-height: 0/);
     });
 });

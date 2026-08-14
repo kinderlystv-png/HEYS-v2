@@ -106,6 +106,7 @@ describe('AddProductStep smart products', () => {
 
     expect(smartProductsSource).not.toContain('usageStats.forEach');
     expect(source).toContain('ensureUsageStatsFresh({');
+    expect(source).toContain('SmartSearchWithTypos.loadUserStats');
     expect(source).toContain('getSharedBarcodeNameIndex(cached).get(name)');
     expect(source).toContain('[context?.products, pendingDeletedProductIds, productsVersion]');
     expect(source).toContain('if (productsWatchSignatureRef.current === nextSignature) return;');
