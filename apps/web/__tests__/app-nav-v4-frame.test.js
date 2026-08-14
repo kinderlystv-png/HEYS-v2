@@ -39,17 +39,27 @@ describe('UI v4 — нижняя навигация', () => {
         expect(chunk).not.toContain("label: 'Виджеты'");
     });
 
+    it('document.title обновляется по вкладке (HEYS — …)', () => {
+        expect(shellSrc).toContain('function applyBrowserTabTitle');
+        expect(shellSrc).toContain('document.title = label ? `HEYS — ${label}` : \'HEYS\'');
+        expect(shellSrc).toContain('applyBrowserTabTitle(tab)');
+        expect(shellSrc).toContain("widgets: 'Главная'");
+    });
+
     it('разметка v4 primary nav без iOS switch', () => {
         expect(shellSrc).toContain('tabs--v4-primary');
         expect(shellSrc).toContain('tab-primary-nav-row');
         expect(shellSrc).not.toMatch(/primaryTabsVariant/);
     });
 
-    it('Задачи и Доска в меню «Ещё» с прежними условиями', () => {
-        expect(shellSrc).toContain('canUseTasksAsHome && React.createElement');
-        expect(shellSrc).toContain('canUseBoardAsHome && React.createElement');
-        expect(shellSrc).toContain("switchTabWithUndoCommit('tasks'");
-        expect(shellSrc).toContain("switchTabWithUndoCommit('board'");
+    it('Задачи, Доска и Дневник в листе — только post-release labs клиент', () => {
+        expect(shellSrc).toContain('canUsePostReleaseLabs');
+        expect(shellSrc).toContain('canUseTasksAsHome && renderSettingsRow');
+        expect(shellSrc).toContain('canUseBoardAsHome && renderSettingsRow');
+        expect(shellSrc).toContain('canUsePostReleaseLabs && renderSettingsRow');
+        expect(shellSrc).toContain("closeSettingsAndSwitch('tasks'");
+        expect(shellSrc).toContain("closeSettingsAndSwitch('board'");
+        expect(shellSrc).toContain('ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a');
     });
 
     it('советы и настройки убраны из меню «Ещё»', () => {
@@ -92,7 +102,7 @@ describe('UI v4 Prompt 3b — шапка', () => {
         expect(btnRule).toMatch(/width:\s*44px/);
         expect(btnRule).toMatch(/height:\s*44px/);
         expect(btnRule).toMatch(/min-width:\s*44px/);
-        expect(baseCss).toMatch(/\.hdr-header-actions[\s\S]*?gap:\s*8px/);
+        expect(baseCss).toMatch(/\.hdr-gamification \.hdr-header-actions[\s\S]*?gap:\s*0/);
     });
 
     it('кнопка настроек в шапке тоглит меню «Ещё», не setTab user', () => {
@@ -100,6 +110,48 @@ describe('UI v4 Prompt 3b — шапка', () => {
         expect(gamificationSrc).not.toMatch(/hdr-header-icon-btn--settings[\s\S]{0,320}setTab\('user'\)/);
         expect(shellSrc).toContain('__heysToggleTabSettingsHandler');
         expect(shellSrc).toContain("target.closest('.hdr-header-icon-btn--settings')");
+    });
+
+    it('лист настроек от ползунков ведёт в профиль и даёт выход', () => {
+        expect(shellSrc).toContain("label: 'Профиль и цели'");
+        expect(shellSrc).toContain("openUserSection('basic', 'settings-sheet-profile')");
+        expect(shellSrc).toContain("label: 'Выйти'");
+        expect(shellSrc).toContain('handleSignOut()');
+        expect(shellSrc).toContain('syncSettingsSheetAnchor');
+        expect(shellSrc).toContain('tab-settings-menu--v4-sheet');
+        expect(baseCss).toContain('.tab-settings-menu.tab-settings-menu--v4-sheet');
+        expect(baseCss).toContain('settingsMenuSlideDown');
+    });
+
+    it('лист настроек полный и сгруппированный, выгрузка открывает согласия', () => {
+        expect(shellSrc).toContain("renderSettingsGroup('me'");
+        expect(shellSrc).toContain("renderSettingsGroup('look'");
+        expect(shellSrc).toContain("renderSettingsGroup('notify'");
+        expect(shellSrc).toContain("renderSettingsGroup('places'");
+        expect(shellSrc).toContain("renderSettingsGroup('data'");
+        expect(shellSrc).toContain("label: 'Домашняя вкладка'");
+        expect(shellSrc).toContain("canUsePostReleaseLabs && renderSettingsRow");
+        expect(shellSrc).toContain("label: 'Дневник'");
+        expect(shellSrc).toContain("openUserSection('consents', 'settings-sheet-export')");
+        expect(shellSrc).toContain("openUserSection('notifications', 'settings-sheet-notify')");
+        expect(shellSrc).not.toContain("closeSettingsAndSwitch('overview'");
+        expect(shellSrc).not.toContain('hdr-settings-sheet__group-label');
+        expect(baseCss).not.toContain('.hdr-settings-sheet__group-label');
+        const userTabSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_user_tab_impl_v1.js'), 'utf8');
+        expect(userTabSrc).toContain('heys:open-user-section');
+        expect(userTabSrc).toContain("title: 'Уведомления и звук'");
+        expect(userTabSrc).toContain('isCuratorSession && React.createElement(ProfileSection');
+        expect(userTabSrc).toContain('normalizeExclusiveSections');
+        expect(userTabSrc).toMatch(/const next = isOpen \? \{\} : \{ \[id\]: true \}/);
+        expect(userTabSrc).toContain('React.createElement(SoundSettingsCard, null)');
+    });
+
+    it('меню «Ещё» на вкладке профиля не размывает контент', () => {
+        expect(shellSrc).toContain('function syncDropdownBlurActive');
+        expect(shellSrc).toContain('tab-settings-backdrop--v4-popover');
+        expect(baseCss).toContain('.tab-settings-backdrop--v4-popover');
+        expect(baseCss).toContain('background: transparent');
+        expect(shellSrc).toMatch(/dropdown-blur-active',\s*clientOpen\)/);
     });
 
     it('standalone messenger FAB скрывается при tab fab-group', () => {
@@ -110,6 +162,8 @@ describe('UI v4 Prompt 3b — шапка', () => {
 });
 
 describe('UI v4 — свайп между вкладками', () => {
+    const baseCss = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8');
+
     it('SWIPEABLE_TABS совпадает с пятью primary tabs', () => {
         const m = /const SWIPEABLE_TABS = \[([^\]]+)\]/.exec(swipeSrc);
         expect(m, 'SWIPEABLE_TABS не найден').toBeTruthy();
@@ -119,6 +173,15 @@ describe('UI v4 — свайп между вкладками', () => {
             .filter(Boolean);
         expect(swipeKeys).toEqual(['widgets', 'diary', 'activity', 'stats', 'insights']);
         expect(swipeKeys).not.toContain('tasks');
+    });
+
+    it('tap fade и swipe slide не конфликтуют', () => {
+        expect(baseCss).toContain('@keyframes tab-view-enter');
+        expect(baseCss).toMatch(/\.tab-active-viewport[\s\S]*animation: tab-view-enter 0\.12s/);
+        expect(baseCss).toMatch(/slide-in-left[\s\S]*> \.tab-active-viewport[\s\S]*animation: none/);
+        expect(shellSrc).toContain("className: 'tab-active-viewport'");
+        expect(shellSrc).toMatch(/tab-active-viewport[\s\S]*onTouchStart: onTouchStart/);
+        expect(shellSrc).not.toMatch(/tab-content-swipeable' \+[\s\S]{0,220}onTouchStart: onTouchStart/);
     });
 });
 
@@ -139,14 +202,51 @@ describe('UI v4 — иконки', () => {
         expect(dayShell).toContain("renderFabNavIcon('meal'");
         expect(dayShell).not.toMatch(/className: 'water-fab'[\s\S]{0,80}'🥛'/);
     });
+
+    it('профиль использует NavIcon вместо emoji в секциях', () => {
+        const userSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_user_tab_impl_v1.js'), 'utf8');
+        const iconsSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_app_nav_icons_v1.js'), 'utf8');
+        expect(iconsSrc).toContain('person:');
+        expect(iconsSrc).toContain('heart:');
+        expect(userSrc).toContain("profileSvg('person')");
+        expect(userSrc).toContain("profileSvg('bell')");
+        expect(userSrc).not.toMatch(/icon: '👤'/);
+        expect(userSrc).not.toMatch(/icon: '🔔'/);
+    });
 });
 
 describe('UI v4 chrome paint — рама', () => {
+    it('название вкладки в шапке выше строки даты', () => {
+        const hdrStart = shellSrc.indexOf("className: 'hdr-top hdr-gamification'");
+        expect(hdrStart).toBeGreaterThan(-1);
+        const titleIdx = shellSrc.indexOf("'hdr-bottom'", hdrStart);
+        const dateIdx = shellSrc.indexOf("'hdr-date-row'", hdrStart);
+        expect(titleIdx).toBeGreaterThan(-1);
+        expect(dateIdx).toBeGreaterThan(titleIdx);
+    });
+
+    it('date-picker v4 без flex-basis 0% в critical CSS (anti flash)', () => {
+        const criticalCss = fs.readFileSync(path.join(WEB_DIR, 'styles/critical.css'), 'utf8');
+        const hdrPickerRules = criticalCss.match(/\.hdr-date-group[\s\S]{0,900}\.date-picker--v4[\s\S]{0,400}/g) || [];
+        expect(hdrPickerRules.length).toBeGreaterThan(0);
+        hdrPickerRules.forEach((rule) => {
+            expect(rule).not.toMatch(/flex:\s*1\s+1\s+0%/);
+        });
+    });
+
     it('hdr-bottom без legacy синей рамки #4285f4', () => {
         const rules = [...baseCss.matchAll(/\.hdr-bottom\s*\{[^}]+\}/g)].map((m) => m[0]);
         const painted = rules.find((rule) => rule.includes('background: transparent')) || '';
         expect(painted).not.toContain('#4285f4');
         expect(painted).toMatch(/border:\s*none/);
+    });
+
+    it('critical hdr-top без legacy синего градиента #4285f4', () => {
+        const criticalCss = fs.readFileSync(path.join(WEB_DIR, 'styles/critical.css'), 'utf8');
+        const hdrTopRule = criticalCss.match(/\.hdr-top\s*\{[^}]+\}/)?.[0] || '';
+        expect(hdrTopRule).not.toContain('#4285f4');
+        expect(hdrTopRule).not.toContain('#2563eb');
+        expect(hdrTopRule).toMatch(/background:\s*transparent/);
     });
 
     it('активная вкладка nav на sand-роли, не голый литерал', () => {
