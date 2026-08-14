@@ -63,4 +63,10 @@ describe('honest consent summaries', () => {
     expect(text).toContain('не заменяет это согласие');
     expect(text).toContain('Проверьте содержание документов и подтвердите актуальные условия');
   });
+
+  it('stacks above bottom tabs so iPhone can tap Continue', () => {
+    expect(source).toContain("data-heys-visible-frame': 'consent'");
+    expect(source).toContain('zIndex: 11000');
+    expect(source).toContain("paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))'");
+  });
 });

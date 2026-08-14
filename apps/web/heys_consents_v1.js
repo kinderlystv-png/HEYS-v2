@@ -749,8 +749,8 @@
     return React.createElement('div', {
       ref: screenRef,
       'data-heys-visible-frame': 'consent',
-      className: 'fixed inset-0 z-50 flex flex-col',
-      style: { backgroundColor: '#ffffff' }
+      className: 'fixed inset-0 flex flex-col',
+      style: { backgroundColor: '#ffffff', zIndex: 11000 }
     },
       // Header
       React.createElement('div', {
@@ -1011,8 +1011,11 @@
 
       // Footer
       React.createElement('div', {
-        className: 'p-4 safe-area-bottom space-y-3',
-        style: { borderTop: '1px solid #e5e7eb' }
+        className: 'p-4 space-y-3',
+        style: {
+          borderTop: '1px solid #e5e7eb',
+          paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))'
+        }
       },
         step === 'consents' ? (
           // Кнопка "Продолжить" → переход к верификации

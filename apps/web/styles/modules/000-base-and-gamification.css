@@ -9333,6 +9333,12 @@ svg.date-picker-icon {
   box-shadow: none;
 }
 
+/* ConsentScreen: нижнее меню не должно перехватывать тап по «Продолжить». */
+body:has([data-heys-visible-frame="consent"]) .tabs {
+  display: none !important;
+  pointer-events: none;
+}
+
 .tab-primary-nav-row {
   display: flex;
   flex: 1 1 0;

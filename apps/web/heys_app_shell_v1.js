@@ -5147,7 +5147,10 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             profilerMountKey = heysReactProfilerEnabled() ? 'p1' : 'p0';
         } catch (_) { /* noop */ }
 
-        const tabsNav = shouldRenderContent
+        // hideContent прячет только .wrap. Табы порталятся в body, иначе на
+        // iPhone нижнее меню оказывается поверх ConsentScreen (z-50 < 1000)
+        // и перекрывает «Продолжить».
+        const tabsNav = shouldRenderContent && !hideContent
             ? portalAppShellChrome(React.createElement(MemoAppTabsNav, props))
             : null;
 

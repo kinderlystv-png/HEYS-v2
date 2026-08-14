@@ -167,6 +167,7 @@ describe('UI v4 chrome paint — рама', () => {
         expect(baseCss).toMatch(/@media \(max-width: 768px\)[\s\S]*?\.tabs[\s\S]*?max-width:\s*100vw !important/);
         expect(shellSrc).toContain('portalAppShellChrome');
         expect(shellSrc).toContain('ReactDOM.createPortal');
+        expect(shellSrc).toMatch(/shouldRenderContent && !hideContent/);
     });
 
     it('primary tabs — пять равных колонок, без legacy cap 48px', () => {
@@ -201,5 +202,6 @@ describe('UI v4 chrome paint — рама', () => {
         expect(start).toBeGreaterThan(-1);
         expect(baseCss.slice(start, start + 800)).toMatch(/padding:\s*8px 10px/);
         expect(baseCss).toMatch(/\.tabs--v4-primary \.crs-bar-container[\s\S]*?display:\s*none/);
+        expect(baseCss).toMatch(/body:has\(\[data-heys-visible-frame="consent"\]\) \.tabs/);
     });
 });
