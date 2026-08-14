@@ -163,3 +163,12 @@ describe('client-specific storage allowlist', () => {
     expect(keysArea).toContain(`'${key}'`);
   });
 });
+
+describe('dayv2 empty-shell cloud restore', () => {
+  it('does not keep newer empty local day when remote has meals', () => {
+    expect(source).toContain('function shouldKeepLocalDayv2WhenRemoteIsOlder(local, remote)');
+    expect(source).toContain('localMealsCount === 0 && remoteMealsCount > 0');
+    expect(source).toContain('shouldKeepLocalDayv2WhenRemoteIsOlder(localObj, value)');
+    expect(source).toContain('shouldKeepLocalDayv2WhenRemoteIsOlder(existing, valueToStore)');
+  });
+});

@@ -76,4 +76,15 @@ describe('stable first-frame readiness contract', () => {
     expect(loadingSource).toContain("percent: 100, message: 'Готово'");
     expect(loadingSource).toContain("d.phase === 'ready' ? Math.min(99, d.percent)");
   });
+
+  it('loads effective dayv2 keys in Phase A (night threshold, not calendar date only)', () => {
+    expect(storageSource).toContain('function getEffectiveTodayISO()');
+    expect(storageSource).toContain('function getSyncPriorityDayv2Keys()');
+    expect(storageSource).toContain('...getSyncPriorityDayv2Keys()');
+    const criticalFn = storageSource.slice(
+      storageSource.indexOf('function getCriticalFirstFrameKeys()'),
+      storageSource.indexOf('function getForegroundHotSyncKeys'),
+    );
+    expect(criticalFn).not.toContain('toISOString().slice(0, 10)');
+  });
 });

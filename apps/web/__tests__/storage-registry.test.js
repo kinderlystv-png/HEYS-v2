@@ -133,6 +133,9 @@ describe('storage registry — Phase 1 surface', () => {
     expect(names).toContain('fingers_active_session');
     expect(names).toContain('drums_finger_active_session');
     expect(names).toContain('planning_assemble_day_campaign');
+    expect(names).toContain('shared_products_cache');
+    expect(names).toContain('planning_chrono_entries');
+    expect(names).toContain('planning_client_state');
     expect(names).toContain('dayv2');
     expect(names).toContain('test_large_fixture');
     expect(names).toContain('audit_log');
@@ -164,6 +167,16 @@ describe('storage registry — Phase 1 surface', () => {
     expect(HEYS.storageRegistry.match(`heys_${cid}_drums_finger_active_session`)?.name).toBe('drums_finger_active_session');
     expect(HEYS.storageRegistry.match(`heys_${cid}_planning_assemble_day_campaign_v1`)?.name)
       .toBe('planning_assemble_day_campaign');
+    expect(HEYS.storageRegistry.match('heys_shared_products_cache_v1')?.name)
+      .toBe('shared_products_cache');
+    expect(HEYS.storageRegistry.match(`heys_${cid}_planning_chrono_entries`)?.name)
+      .toBe('planning_chrono_entries');
+    expect(HEYS.storageRegistry.match(`heys_${cid}_planning_chrono_timer`)?.name)
+      .toBe('planning_chrono_timer');
+    expect(HEYS.storageRegistry.match(`heys_${cid}_planning_tasks`)?.name)
+      .toBe('planning_client_state');
+    expect(HEYS.storageRegistry.match(`heys_${cid}_products_overlay_v2`)?.name)
+      .toBe('products_overlay');
     expect(HEYS.storageRegistry.match('completely_unknown_key')).toBeNull();
   });
 
@@ -357,6 +370,39 @@ describe('storage registry — Phase 2a shadow audit', () => {
     expect(r.decisions.some(d => d.key === 'heys_supabase_auth_token')).toBe(false);
   });
 
+  it('proposes wipe for oversized shared products cache', async () => {
+    const HEYS = loadRegistry({ asTest: true });
+    localStorage.setItem('heys_shared_products_cache_v1', JSON.stringify({
+      ts: Date.now(),
+      data: 'X'.repeat(300 * 1024),
+    }));
+    const r = await HEYS.storageRegistry.runAuditOnce({ bypassIdle: true, bypassLock: true });
+    expect(r.decisions.some((d) => (
+      d.key === 'heys_shared_products_cache_v1' && d.action === 'wipe-proposed'
+    ))).toBe(true);
+  });
+
+  it('proposes wipe-by-age for stale shared products cache payload ts', async () => {
+    const HEYS = loadRegistry({ asTest: true });
+    localStorage.setItem('heys_shared_products_cache_v1', JSON.stringify({
+      ts: Date.now() - 31 * 60 * 1000,
+      data: ['ok'],
+    }));
+    const r = await HEYS.storageRegistry.runAuditOnce({ bypassIdle: true, bypassLock: true });
+    expect(r.decisions.some((d) => (
+      d.key === 'heys_shared_products_cache_v1' && d.action === 'wipe-by-age-proposed'
+    ))).toBe(true);
+  });
+
+  it('does not prune typical chrono entries under 256KB cap', async () => {
+    const HEYS = loadRegistry({ asTest: true });
+    const cid = '12345678-aaaa-bbbb-cccc-1234567890ab';
+    const key = `heys_${cid}_planning_chrono_entries`;
+    localStorage.setItem(key, JSON.stringify([{ id: 'e1', minutes: 25 }]));
+    const r = await HEYS.storageRegistry.runAuditOnce({ bypassIdle: true, bypassLock: true });
+    expect(r.decisions.some((d) => d.key === key)).toBe(false);
+  });
+
   it('runStorageAuditNow() forces a run + returns decisions', async () => {
     const HEYS = loadRegistry({ asTest: true });
     localStorage.setItem('test_large', 'X'.repeat(2 * 1024));
@@ -489,6 +535,26 @@ describe('storage registry — Phase 2b enforce mode', () => {
     const arr = JSON.parse(remaining);
     expect(Array.isArray(arr)).toBe(true);
     expect(arr.length).toBeGreaterThan(0);
+  });
+
+  it('enforce mode does not wipe oversize dayv2 object (meals must survive audit)', async () => {
+    const HEYS = loadRegistry({ asTest: true, enforceMode: true });
+    const cid = '12345678-aaaa-bbbb-cccc-1234567890ab';
+    const dayKey = `heys_${cid}_dayv2_2026-08-14`;
+    const meals = Array.from({ length: 400 }, (_, i) => ({
+      id: `meal-${i}`,
+      name: `Meal ${i}`,
+      products: [{ id: `p-${i}`, grams: 100, kcal: 250, note: 'X'.repeat(120) }]
+    }));
+    const raw = JSON.stringify({ meals, weight: 72.5, date: '2026-08-14' });
+    expect(raw.length).toBeGreaterThan(32 * 1024);
+    localStorage.setItem(dayKey, raw);
+
+    const r = await HEYS.storageRegistry.runAuditOnce({ bypassIdle: true, bypassLock: true });
+
+    const d = r.decisions.find((row) => row.key === dayKey);
+    expect(d).toBeUndefined();
+    expect(localStorage.getItem(dayKey)).toBe(raw);
   });
 });
 

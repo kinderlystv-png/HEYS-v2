@@ -16,6 +16,36 @@ window.__heysLogControl.reset(); // logs back to default groups (см. ниже)
 window.__heysNativeConsole.error(x); // bypass log filtering (см. ниже)
 ```
 
+## localStorage budget 95%
+
+`[HEYS.storage] HEYS budget 95% — emergency audit triggered` — внутренний лимит
+HEYS **4.5 МБ**, не квота Chrome. Пишется каждые 50 `Store.set`.
+
+Emergency path вызывает `HEYS.diagnostics.runStorageAuditNow()`
+(`storageRegistry.runAuditOnce`). Во время `bootstrapClientSync` audit
+**откладывается** (`cloud.isBootstrapSyncInProgress()`), чтобы не стирать dayv2
+на первом кадре. Oversize dayv2 (>32 KB) **не удаляется** enforce-audit: объект
+не поддерживает oldest-first prune (incident 2026-08-15). Если после audit всё
+ещё ≥95%, дополнительно `cloud.cleanupRecoverableStorage()` (shared cache, чужие
+client-scoped ключи) и `cloud.cleanupStorage(30)` (локальные dayv2 старше 30
+дней; cloud остаётся). Auth keys и product tombstones не трогаются.
+
+```js
+HEYS.diagnostics.storageAudit({ redact: true, topN: 20 });
+HEYS.cloud.getStorageQuotaDiag({ topN: 15 });
+await HEYS.diagnostics.browserStorageEstimate();
+await HEYS.diagnostics.runStorageAuditNow();
+HEYS.cloud.cleanupStorage(30);
+```
+
+Цель: `heysBudgetUsagePercent < 85`. Не `Clear site data` как первый шаг. Если
+`recentDayv2Blocks` показывает `localMeals:0 remoteMeals:N` при
+`localUpdatedAt > remoteUpdatedAt` — это пустая оболочка после audit/cascade;
+hot-sync должен восстановить meals из cloud (fix 2026-08-15). Живой снимок
+2026-08-15: `heys_shared_products_cache_v1` = 1.19 МБ (~85% занятого LS) при
+общем бюджете 30% — recoverable cache, audit его выкидывает по oversize (cap 512
+KB).
+
 ---
 
 ## Products / orphan / tombstones (Wave 2-4, 2026-05-24)

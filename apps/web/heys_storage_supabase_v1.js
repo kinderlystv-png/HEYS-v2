@@ -3951,6 +3951,7 @@
 
   /** Принудительная очистка старых данных */
   cloud.cleanupStorage = cleanupOldData;
+  cloud.cleanupRecoverableStorage = cleanupRecoverableStorage;
 
   // ═══════════════════════════════════════════════════════════════════
   // 📜 SYNC HISTORY LOG — ЖУРНАЛ СИНХРОНИЗАЦИЙ
@@ -6419,9 +6420,9 @@
                   return;
                 }
 
-                const existingUpdatedAt = getDayPayloadUpdatedAt(existing);
-                const incomingUpdatedAt = getDayPayloadUpdatedAt(valueToStore);
-                if (existingUpdatedAt > incomingUpdatedAt) {
+                if (shouldKeepLocalDayv2WhenRemoteIsOlder(existing, valueToStore)) {
+                  const existingUpdatedAt = getDayPayloadUpdatedAt(existing);
+                  const incomingUpdatedAt = getDayPayloadUpdatedAt(valueToStore);
                   logCritical(`🛡️ [BOOTSTRAP] KEEP LOCAL: local is newer (${existingUpdatedAt} > ${incomingUpdatedAt}) for ${key}`);
                   return;
                 }
@@ -6615,10 +6616,9 @@
                   return; // skip this row
                 }
 
-                // Не затираем если local новее по timestamp
-                const existingUpdatedAt = getDayPayloadUpdatedAt(existing);
-                const incomingUpdatedAt = getDayPayloadUpdatedAt(valueToStore);
-                if (existingUpdatedAt > incomingUpdatedAt) {
+                if (shouldKeepLocalDayv2WhenRemoteIsOlder(existing, valueToStore)) {
+                  const existingUpdatedAt = getDayPayloadUpdatedAt(existing);
+                  const incomingUpdatedAt = getDayPayloadUpdatedAt(valueToStore);
                   logCritical(`🛡️ [YANDEX SYNC] KEEP LOCAL: local is newer (${existingUpdatedAt} > ${incomingUpdatedAt}) for ${localKey}`);
                   return; // skip this row
                 }
@@ -7542,6 +7542,24 @@
     return false;
   };
 
+  /** Локальный dayv2 новее remote — держим local только если там есть реальные данные. */
+  function shouldKeepLocalDayv2WhenRemoteIsOlder(local, remote) {
+    const localUpdatedAt = getDayPayloadUpdatedAt(local);
+    const incomingUpdatedAt = getDayPayloadUpdatedAt(remote);
+    if (!(localUpdatedAt > incomingUpdatedAt)) return false;
+
+    const localMeaningful = isMeaningfulDayData(local);
+    const remoteMeaningful = isMeaningfulDayData(remote);
+    const localMealsCount = Array.isArray(local?.meals) ? local.meals.length : 0;
+    const remoteMealsCount = Array.isArray(remote?.meals) ? remote.meals.length : 0;
+
+    // Incident 2026-08-15: пустая оболочка с bumped updatedAt не должна блокировать cloud restore.
+    if (!localMeaningful && remoteMeaningful) return false;
+    if (localMealsCount === 0 && remoteMealsCount > 0) return false;
+
+    return true;
+  }
+
   function getDayDataSyncScore(value) {
     const meals = Array.isArray(value?.meals) ? value.meals : [];
     const mealsWithItems = meals.filter(meal => Array.isArray(meal?.items) && meal.items.length > 0).length;
@@ -7678,6 +7696,9 @@
 
   // Флаг для дедупликации параллельных вызовов bootstrapClientSync
   let _syncInProgress = null; // null | Promise
+  cloud.isBootstrapSyncInProgress = function () {
+    return !!_syncInProgress;
+  };
   // options.force = true — bypass throttling (для pull-to-refresh)
   cloud.bootstrapClientSync = async function (client_id, options) {
     console.info(`[HEYS.sync] 🚀 Начало синхронизации для клиента ${client_id?.slice(0, 8)}...`);
@@ -8148,7 +8169,8 @@
         // Загружаем порциями по 250 записей, чтобы оставить запас по размеру ответа.
         // 🚀 Delta Sync: при наличии since — фильтруем по updated_at на сервере
         log('🔄 [CLIENT_SYNC] Loading data for client (paginated):', client_id);
-        const PAGE_SIZE = 250;
+        // Gateway body limit: 250 rows with heavy `v` JSON can exceed ~1.1MB (502 at offset 1000+).
+        const PAGE_SIZE = 200;
         let allData = [];
         let pageOffset = 0;
         let fetchError = null;
@@ -8182,21 +8204,49 @@
           const fetchPage = async (offset) => {
             const filters = { 'eq.client_id': client_id };
             if (deltaSince) filters['gt.updated_at'] = deltaSince;
-            const reqOpts = {
-              select: 'k,v,updated_at',
-              filters,
-              order: 'k.asc',
-              limit: PAGE_SIZE,
-              offset
+
+            const isPayload502 = (error) => {
+              if (!error) return false;
+              if (Number(error.code) === 502) return true;
+              return String(error.message || '').includes('502');
             };
-            let res = await YandexAPI.rest('client_kv_store', reqOpts);
-            // 🔧 v63 FIX #10: per-page retry — single retry after 2s on server error.
-            if (res.error && !res.error.isNetworkFailure) {
-              logCritical(`⚠️ [SYNC] Page offset=${offset} failed: ${res.error.message}, retrying in 2s`);
-              await new Promise(r => setTimeout(r, 2000));
-              res = await YandexAPI.rest('client_kv_store', reqOpts);
-            }
-            return res;
+
+            const fetchPageChunk = async (chunkOffset, chunkLimit, depth = 0) => {
+              const reqOpts = {
+                select: 'k,v,updated_at',
+                filters,
+                order: 'k.asc',
+                limit: chunkLimit,
+                offset: chunkOffset,
+                requestClass: 'sync:bootstrap-kv-page',
+                // Large pages can exceed gateway body limit → deterministic 502.
+                // Fail fast (no 3× retry storm) and split into smaller chunks.
+                maxRetries: chunkLimit >= 150 ? 0 : undefined,
+              };
+              let res = await YandexAPI.rest('client_kv_store', reqOpts);
+              if (res.error && isPayload502(res.error) && chunkLimit > 50) {
+                const half = Math.floor(chunkLimit / 2);
+                logCritical(`⚠️ [SYNC] Page offset=${chunkOffset} limit=${chunkLimit} hit payload 502 — splitting into ${half}+${chunkLimit - half}`);
+                const left = await fetchPageChunk(chunkOffset, half, depth + 1);
+                if (left.error) return left;
+                const right = await fetchPageChunk(chunkOffset + half, chunkLimit - half, depth + 1);
+                if (right.error) return right;
+                const merged = (left.data || []).concat(right.data || []);
+                if (isDebugSync()) {
+                  logCritical(`🔍 [SYNC PAGINATED] split offset=${chunkOffset} limit=${chunkLimit} → ${merged.length} rows`);
+                }
+                return { data: merged, error: null };
+              }
+              if (res.error && !res.error.isNetworkFailure && !isPayload502(res.error)) {
+                // 🔧 v63 FIX #10: per-page retry — single retry after 2s on server error.
+                logCritical(`⚠️ [SYNC] Page offset=${chunkOffset} limit=${chunkLimit} failed: ${res.error.message}, retrying in 2s`);
+                await new Promise(r => setTimeout(r, 2000));
+                res = await YandexAPI.rest('client_kv_store', reqOpts);
+              }
+              return res;
+            };
+
+            return fetchPageChunk(offset, PAGE_SIZE, 0);
           };
 
           // 🚀 Stage 2: параллельная пагинация. Раньше 4 страницы по ~250 записей
@@ -8912,7 +8962,7 @@
 
                 // � Диагностика: логируем решения по dayv2 для сегодня
                 const _syncDayDate = key.match(/dayv2_(\d{4}-\d{2}-\d{2})$/);
-                const _isTodaySync = _syncDayDate && _syncDayDate[1] === new Date().toISOString().slice(0, 10);
+                const _isTodaySync = _syncDayDate && _syncDayDate[1] === getEffectiveTodayISO();
                 if (_isTodaySync) {
                   const _rMeals = Array.isArray(row.v?.meals) ? row.v.meals.length : 0;
                   const _lMeals = Array.isArray(local?.meals) ? local.meals.length : 0;
@@ -9928,12 +9978,9 @@
                     const existingRaw = ls.getItem(key);
                     if (existingRaw) {
                       const existing = tryParse(existingRaw);
-                      const existingUpdatedAt = existing?.updatedAt || 0;
-
-                      if (existingUpdatedAt > incomingUpdatedAt) {
+                      if (shouldKeepLocalDayv2WhenRemoteIsOlder(existing, valueToSave)) {
+                        const existingUpdatedAt = getDayPayloadUpdatedAt(existing);
                         logCritical(`🛡️ [DAYV2] BLOCKED localStorage overwrite: local (${existingUpdatedAt}) > remote (${incomingUpdatedAt}) for ${key}`);
-                        // Не перезаписываем! Локальные данные новее.
-                        // Push локальные данные обратно в cloud чтобы синхронизировать
                         const pushObj = {
                           client_id: client_id,
                           k: normalizeKeyForSupabase(row.k, client_id),
@@ -10125,11 +10172,11 @@
         // 🚀 PERF: Force-written dayv2 dates — dispatch ONE batch event instead of N individual
         if (forceWrittenDates.length > 0) {
           cloud._syncCompletedAt = cloud._syncCompletedAt || Date.now();
-          // 1. Today fires immediately so the visible day page is always fresh
-          const _today = new Date().toISOString().slice(0, 10);
-          if (forceWrittenDates.includes(_today)) {
+          // 1. Effective «сегодня» fires immediately so the visible day page is always fresh
+          const _visibleToday = getEffectiveTodayISO();
+          if (forceWrittenDates.includes(_visibleToday)) {
             window.dispatchEvent(new CustomEvent('heys:day-updated', {
-              detail: { date: _today, source: 'force-sync', forceReload: true }
+              detail: { date: _visibleToday, source: 'force-sync', forceReload: true }
             }));
           }
           // 2. Full historical batch is deferred ~300 ms so React can render the post-switch
@@ -13656,11 +13703,36 @@
     } catch (_) { /* noop */ }
   }
 
+  // Согласовано с HEYS.dayUtils.todayISO / heys_morning_checkin getTodayKey:
+  // до 03:00 «сегодня» приложения = предыдущий календарный день.
+  function getEffectiveTodayISO() {
+    try {
+      const todayFn = global.HEYS?.dayUtils?.todayISO;
+      if (typeof todayFn === 'function') return todayFn();
+    } catch (_) { /* fall through */ }
+    const d = new Date();
+    if (d.getHours() < 3) d.setDate(d.getDate() - 1);
+    const pad2 = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  }
+
+  function getCalendarTodayISO() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  /** Phase A / hot-sync: effective day + календарный после полуночи (00:00–02:59). */
+  function getSyncPriorityDayv2Keys() {
+    const effective = getEffectiveTodayISO();
+    const calendar = getCalendarTodayISO();
+    const keys = [`heys_dayv2_${effective}`];
+    if (calendar !== effective) keys.push(`heys_dayv2_${calendar}`);
+    return keys;
+  }
+
   function getCriticalFirstFrameKeys() {
-    const today = new Date().toISOString().slice(0, 10);
     return [
       'heys_profile', 'heys_norms', 'heys_products',
-      'heys_hr_zones', `heys_dayv2_${today}`,
+      'heys_hr_zones', ...getSyncPriorityDayv2Keys(),
       'heys_advice_settings', 'heys_advice_read_today',
       'heys_game',
       'heys_subscription_status',
@@ -13688,17 +13760,19 @@
   }
 
   function getForegroundHotSyncKeys(reason) {
-    const today = new Date().toISOString().slice(0, 10);
+    const effectiveToday = getEffectiveTodayISO();
+    const calendarToday = getCalendarTodayISO();
     const allClientKeys = Array.isArray(CLIENT_SPECIFIC_KEYS) ? CLIENT_SPECIFIC_KEYS.slice() : [];
 
     // Screen-awareness: include actively viewed day if different from today.
     // Can be disabled: localStorage.setItem('heys_disable_screen_aware', '1')
-    const activeDayKeys = [`heys_dayv2_${today}`];
+    const activeDayKeys = getSyncPriorityDayv2Keys();
     if (!isScreenAwareDisabled()) {
       try {
         const activeDate = global.HEYS?.DayUI?.getActiveDate?.() ||
           global.HEYS?.store?.get?.('heys_active_day_date');
-        if (activeDate && typeof activeDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(activeDate) && activeDate !== today) {
+        if (activeDate && typeof activeDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(activeDate)
+          && activeDate !== effectiveToday && activeDate !== calendarToday) {
           activeDayKeys.push(`heys_dayv2_${activeDate}`);
         }
       } catch (_) { /* no active date available — use today only */ }
@@ -14015,7 +14089,7 @@
           const localObj = currentRaw ? JSON.parse(currentRaw) : null;
           const localUp = localObj?.updatedAt;
           const remoteUp = value?.updatedAt;
-          if (typeof localUp === 'number' && typeof remoteUp === 'number' && localUp > remoteUp) {
+          if (shouldKeepLocalDayv2WhenRemoteIsOlder(localObj, value)) {
             try {
               const localMeals = Array.isArray(localObj?.meals) ? localObj.meals : [];
               const remoteMeals = Array.isArray(value?.meals) ? value.meals : [];
@@ -14037,7 +14111,7 @@
               if (global.HEYS._hotsyncDayv2Blocks.length > 25) global.HEYS._hotsyncDayv2Blocks.shift();
             } catch (_) { /* noop */ }
             logCritical(`🛡️ [DAYV2 HOT] BLOCKED overwrite (local ${localUp} > remote ${remoteUp}): ${scopedKey}`);
-            return false; // local is newer — don't overwrite
+            return false; // local is newer with meaningful data — don't overwrite
           }
         } catch (_) { /* parse error — proceed normally */ }
         const wroteDay = writeAutomaticInboundDayKey(scopedKey, value, {

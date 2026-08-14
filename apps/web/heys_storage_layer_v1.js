@@ -597,13 +597,44 @@
     return total;
   }
 
+  function _resetQuotaWarnFlags(pct) {
+    if (pct < 0.75) _quotaWarned75 = false;
+    if (pct < 0.85) _quotaWarned85 = false;
+    if (pct < 0.85) _quotaWarned95 = false;
+  }
+
   function _triggerEmergencyAudit() {
     try {
-      const reg = global.HEYS?.storageRegistry;
-      if (reg && typeof reg.runStorageAuditOnce === 'function') {
-        reg.runStorageAuditOnce({ force: true, bypassIdle: true });
+      if (global.HEYS?.cloud?.isBootstrapSyncInProgress?.()) {
+        console.info('[HEYS.storage] emergency audit deferred — bootstrap sync in progress');
+        return;
       }
-    } catch (_) {}
+      const heys = global.HEYS;
+      const runNow = heys?.diagnostics?.runStorageAuditNow;
+      const runOnce = heys?.storageRegistry?.runAuditOnce;
+      const runner = typeof runNow === 'function'
+        ? (opts) => runNow(opts)
+        : (typeof runOnce === 'function' ? (opts) => runOnce(opts) : null);
+      if (!runner) {
+        console.warn('[HEYS.storage] emergency audit skipped — runAuditOnce unavailable');
+        return;
+      }
+      Promise.resolve(runner({ force: true, bypassIdle: true, bypassLock: true }))
+        .then(() => {
+          let used = _measureLsBytes();
+          let pct = used / HEYS_BUDGET_BYTES;
+          if (pct >= 0.95) {
+            try { heys?.cloud?.cleanupRecoverableStorage?.(); } catch (_) { /* noop */ }
+            try { heys?.cloud?.cleanupStorage?.(30); } catch (_) { /* noop */ }
+            used = _measureLsBytes();
+            pct = used / HEYS_BUDGET_BYTES;
+          }
+          _resetQuotaWarnFlags(pct);
+        })
+        .catch((err) => {
+          console.warn('[HEYS.storage] emergency audit failed:', err && err.message);
+        });
+    } catch (_) { /* noop */ }
   }
 
   function maybeReportQuota() {

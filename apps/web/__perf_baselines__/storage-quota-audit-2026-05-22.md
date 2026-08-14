@@ -124,3 +124,19 @@ users — **частичный**: 28 dayv2 cloud-only означает что:
 - `apps/web/heys_storage_supabase_v1.js:8829-8851` — batch fetchDays
 - `apps/web/heys_dayv2_cache_v1.js` — in-memory LRU
 - Browser logs от user 2026-05-22 (clientId `4545ee50-...`)
+
+## Follow-up 2026-08-15
+
+Warning `HEYS budget 95%` на login — soft-budget, не QuotaExceeded. Живой снимок
+localhost: **30.4%** бюджета, но `heys_shared_products_cache_v1` = **1190.7 KB
+(85% занятого LS)**, policy была `null`. Chrono ~55 KB в логе логина — канон, не
+wipe.
+
+Починено в том же скоупе:
+
+- `_triggerEmergencyAudit` зовёт `runAuditOnce` / `runStorageAuditNow`, не
+  phantom `runStorageAuditOnce`; при ≥95% после audit — recoverable +
+  `cleanupStorage(30)`.
+- Registry: `shared_products_cache` (wipe-by-age / oversize 512 KB),
+  `planning_chrono_entries` (mirror, sliding-window, 256 KB), соседние planning
+  keys как `manual` mirror.

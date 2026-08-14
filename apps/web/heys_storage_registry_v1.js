@@ -282,6 +282,30 @@
     cloudSync: 'never', pruneStrategy: 'manual',
     description: 'Gantt v2 UI prefs (zoom, toggles, collapsed groups, view position, schema flag).',
   });
+  register('shared_products_cache', {
+    pattern: /^heys_shared_products_cache_v1$/,
+    scope: 'global', maxSize: 512 * KB, maxAge: 30 * 60 * 1000,
+    cloudSync: 'never', pruneStrategy: 'wipe-by-age',
+    description: 'Recoverable shared-products LS cache (loader TTL 30min; drop on oversize/age before dayv2).',
+  });
+  register('planning_chrono_entries', {
+    pattern: /^heys_[a-f0-9-]{36}_planning_chrono_entries$/,
+    scope: 'per-client', maxSize: 256 * KB, maxAge: 0,
+    cloudSync: 'mirror', pruneStrategy: 'sliding-window',
+    description: 'Chrono diary entries (cloud-mirrored). Cap bloated JSON; typical ~55KB.',
+  });
+  register('planning_chrono_timer', {
+    pattern: /^heys_[a-f0-9-]{36}_planning_chrono_timer$/,
+    scope: 'per-client', maxSize: 16 * KB, maxAge: 0,
+    cloudSync: 'never', pruneStrategy: 'manual',
+    description: 'Active chrono stopwatch. Local-only; never cloud-synced.',
+  });
+  register('planning_client_state', {
+    pattern: /^heys_[a-f0-9-]{36}_planning_(projects|tasks|slots|links_v1|chrono_activities|chrono_snapshots|chrono_tombstones_v1|chrono_untracked_tail_dismissed_v1|checklists_v1|checklist_tombstones_v1|goals_v1|entity_tombstones_v1|goal_map_records_v1|commands_v1)$/,
+    scope: 'per-client', maxSize: 512 * KB, maxAge: 0,
+    cloudSync: 'mirror', pruneStrategy: 'manual',
+    description: 'Planning module client keys (cloud-mirrored). Classify-only; prune is manual.',
+  });
   register('planning_assemble_day_campaign', {
     pattern: /^heys_[a-f0-9-]{36}_planning_assemble_day_campaign_v1$/,
     scope: 'per-client', maxSize: 512 * KB, maxAge: 0,
@@ -301,7 +325,7 @@
     description: 'Drums finger-control active session recovery snapshot. Local-only; never cloud-synced.',
   });
   register('products_overlay', {
-    pattern: /^heys_[a-f0-9-]{36}_heys_products_overlay_v2$/,
+    pattern: /^heys_[a-f0-9-]{36}_(heys_)?products_overlay_v2$/,
     scope: 'per-client', /* maxSize unbounded */ maxAge: 0,
     cloudSync: 'mirror', pruneStrategy: 'manual',
     description: 'Per-client overlay store (canonical post-Phase ε).',
@@ -331,7 +355,7 @@
     pattern: /^heys_[a-f0-9-]{36}_dayv2_\d{4}-\d{2}-\d{2}$/,
     scope: 'per-date', maxSize: 32 * KB, maxAge: 90 * DAY_MS,
     cloudSync: 'mirror', pruneStrategy: 'oldest-first',
-    description: 'Per-date day data (existing 60-day cleanup; align to 90d here).',
+    description: 'Per-date day data. Oversize never auto-wiped (object shape); age cleanup via cloud.cleanupStorage.',
   });
 
   // Tombstones.
@@ -631,6 +655,10 @@
     return policy.cloudSync !== 'merge';
   }
 
+  function _isDayv2StorageKey(rawKey) {
+    return /^heys_(?:[0-9a-f-]{36}_)?dayv2_\d{4}-\d{2}-\d{2}$/i.test(String(rawKey || ''));
+  }
+
   function _classifyForStrategy(entry, policy, now) {
     // Returns { action, reason } or null if no proposal.
     if (!policy) return null;
@@ -641,8 +669,14 @@
       // Forbidden — propose wipe.
       return { action: 'wipe-proposed', reason: 'forbidden-policy' };
     }
+    // dayv2 — объект, не массив: oversize+oldest-first degrades to full wipe (H4).
+    // Нельзя удалять день из enforce-audit: incident 2026-08-15 boot @ budget 95%.
+    if (typeof policy.maxSize === 'number' && policy.maxSize > 0 && entry.sizeBytes > policy.maxSize
+      && _isDayv2StorageKey(entry.rawKey)) {
+      return null;
+    }
     if (typeof policy.maxSize === 'number' && policy.maxSize > 0 && entry.sizeBytes > policy.maxSize) {
-      if (strategy === 'wipe') return { action: 'wipe-proposed', reason: 'oversize+wipe' };
+      if (strategy === 'wipe' || strategy === 'wipe-by-age') return { action: 'wipe-proposed', reason: 'oversize+' + strategy };
       if (strategy === 'oldest-first' || strategy === 'sliding-window') {
         return { action: 'prune-proposed', reason: 'oversize+' + strategy };
       }
@@ -668,6 +702,13 @@
           return { action: 'wipe-by-age-proposed', reason: 'date>maxAge', ageMs: now - dt };
         }
       }
+      try {
+        const parsed = JSON.parse(entry.raw);
+        const ts = Number(parsed && parsed.ts);
+        if (Number.isFinite(ts) && ts > 1e11 && (now - ts) > policy.maxAge) {
+          return { action: 'wipe-by-age-proposed', reason: 'payload-ts>maxAge', ageMs: now - ts };
+        }
+      } catch (_) { /* not JSON / no ts */ }
     }
     return null;
   }
