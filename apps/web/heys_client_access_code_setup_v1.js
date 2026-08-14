@@ -297,7 +297,7 @@
 
       return React.createElement(
         'div',
-        { className: 'heys-auth-card mx-auto w-full max-w-md p-6', onKeyDown: handleCardKeyDown },
+        { className: 'heys-auth-card heys-auth-card--pep mx-auto w-full max-w-md p-6', onKeyDown: handleCardKeyDown },
         React.createElement('div', { className: 'heys-auth-brand text-center mb-2' }, 'Подпись документов в приложении'),
         React.createElement(
           'p',
@@ -481,9 +481,10 @@
         ),
         !skipPepAgreement && phase === 'confirm' && React.createElement(
           'label',
-          { className: 'mt-4 flex items-start gap-2 text-sm heys-auth-subtitle' },
+          { className: 'heys-auth-pep-agree heys-auth-subtitle' },
           React.createElement('input', {
             type: 'checkbox',
+            className: 'heys-auth-pep-check',
             checked: pepAccepted,
             onChange: (e) => setPepAccepted(e.target.checked === true),
           }),
@@ -516,7 +517,7 @@
             'button',
             {
               type: 'button',
-              className: 'heys-auth-link-btn w-full text-center',
+              className: 'heys-auth-change-code',
               disabled: busy,
               onClick: () => {
                 setPhase('code');
@@ -526,7 +527,7 @@
                 setErr('');
               },
             },
-            '← Изменить код',
+            'Изменить код',
           ),
         ),
         !skipPepAgreement && phase === 'confirm' && React.createElement(

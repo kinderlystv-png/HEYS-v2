@@ -26,9 +26,11 @@ describe('trial-intake login copy', () => {
 
     expect(copy).toEqual({
       title: 'Вход в анкету',
-      instruction: 'Введите номер из заявки и одноразовый код из сообщения куратора.',
-      explanation: 'Код действует один раз и три дня после отправки приглашения. Сейчас вы входите только в анкету — доступ к HEYS появится после её проверки и подтверждения пробной недели куратором.',
-      supportLead: 'Не получается войти? ',
+      instruction: '',
+      explanation: 'Это только анкета. Приложение откроется, когда куратор её проверит.',
+      pinLabel: 'Код от куратора',
+      supportLead: 'Код не пришёл? ',
+      supportAction: 'Ответьте на сообщение бота',
     });
     expect(copy.title).not.toBe('Вход клиента');
     expect(copy.supportLead).not.toContain('Забыли PIN?');
@@ -47,16 +49,17 @@ describe('trial-intake login copy', () => {
       title: 'Вход клиента',
       instruction: '',
       explanation: '',
-      supportLead: 'Забыли PIN? ',
+      pinLabel: 'Код доступа',
+      supportLead: 'Не помните код? ',
+      supportAction: 'Напишите куратору',
     });
   });
 
   it('keeps the static pre-React screen synchronized with both variants', () => {
     expect(staticHtml).toContain('id="hlg-greeting-client"');
-    expect(staticHtml).toContain('Введите номер из заявки и одноразовый код из сообщения куратора.');
-    expect(staticHtml).toContain('Код действует один раз и три дня после отправки приглашения.');
+    expect(staticHtml).toContain('Это только анкета. Приложение откроется, когда куратор её проверит.');
     expect(staticHtml).toContain("title.textContent = 'Вход в анкету'");
-    expect(staticHtml).toContain("supportPrefix.textContent = 'Не получается войти? '");
-    expect(staticHtml).toContain('<span id="hlg-support-prefix">Забыли PIN? </span>');
+    expect(staticHtml).toContain("supportPrefix.textContent = 'Код не пришёл? '");
+    expect(staticHtml).toContain('<span id="hlg-support-prefix">Не помните код? </span>');
   });
 });

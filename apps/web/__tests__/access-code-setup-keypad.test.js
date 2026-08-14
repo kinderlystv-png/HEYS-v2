@@ -102,4 +102,30 @@ describe('ClientAccessCodeSetup keypad', () => {
     expect(screen.getByText('Придумайте код доступа')).toBeTruthy();
     expect(window.HEYS.auth.setClientAccessCode).not.toHaveBeenCalled();
   });
+
+  it('paints the setup card as pep and keeps change-code copy quiet', () => {
+    const Setup = loadSetup();
+    render(React.createElement(Setup, {
+      phone: '76666666666',
+      clientId: 'client-1',
+      sessionToken: 'sess-1',
+      onCancel: vi.fn(),
+    }));
+
+    expect(document.querySelector('.heys-auth-card--pep')).toBeTruthy();
+    expect(screen.getByText('Придумайте код доступа')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Далее' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: '2' }));
+    fireEvent.click(screen.getByRole('button', { name: '1' }));
+    fireEvent.click(screen.getByRole('button', { name: '2' }));
+    fireEvent.click(screen.getByRole('button', { name: '3' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Далее' }));
+
+    expect(screen.getByText('Повторите код')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Изменить код' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '← Изменить код' })).toBeNull();
+    expect(document.querySelector('.heys-auth-pep-check')).toBeTruthy();
+    expect(document.querySelector('.heys-auth-change-code')).toBeTruthy();
+  });
 });

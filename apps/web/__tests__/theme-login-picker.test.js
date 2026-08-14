@@ -87,11 +87,12 @@ describe('heys_login_theme_picker_v1', () => {
         expect(keypad.classList.contains('is-hidden')).toBe(false);
     });
 
-    it('uses ink ring for active sand dot', () => {
+    it('paints current palette as three-dot swatch', () => {
         loadModules();
         window.HEYS.Theme.setPalette('sand');
-        const style = window.HEYS.LoginThemePicker.dotStyle('sand', 'sand', 'sand');
+        const style = window.HEYS.LoginThemePicker.dotStyle('sand', 'sand', 'act');
         expect(style.background).toContain('#c67139');
-        expect(style.border).toContain('--v4-ink');
+        const ring = window.HEYS.LoginThemePicker.dotStyle('sand', 'sand', 'ring');
+        expect(ring.background).toBe('transparent');
     });
 });

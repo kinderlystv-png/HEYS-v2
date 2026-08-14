@@ -19,8 +19,8 @@
     });
 
     const PALETTE_VARIANTS = Object.freeze([
-        { id: 'sand', label: COPY.softSand, palette: 'sand', act: '#c67139', hero: '#efe3cf' },
-        { id: 'blue', label: COPY.softBlue, palette: 'blue', act: '#2e7cc0', hero: '#e2edf7' },
+        { id: 'sand', label: COPY.softSand, palette: 'sand', act: '#c67139', hero: '#efe3cf', ok: '#7a8a5e' },
+        { id: 'blue', label: COPY.softBlue, palette: 'blue', act: '#2e7cc0', hero: '#e2edf7', ok: '#3e9a6b' },
     ]);
 
     const MODE_OPTIONS = Object.freeze([
@@ -62,22 +62,24 @@
         themeApi.setModePreference(modePref);
     }
 
-    function dotStyle(palette, activePalette, kind) {
-        const sandAct = '#c67139';
-        const blueAct = '#2e7cc0';
-        const isActive = palette === activePalette;
-        if (kind === 'sand') {
+    function paletteSwatch(palette) {
+        if (palette === 'blue') return { act: '#2e7cc0', ok: '#3e9a6b' };
+        return { act: '#c67139', ok: '#7a8a5e' };
+    }
+
+    function dotStyle(palette, _activePalette, kind) {
+        const swatch = paletteSwatch(palette);
+        if (kind === 'ok') {
+            return { background: swatch.ok, border: '0', boxShadow: 'none' };
+        }
+        if (kind === 'ring') {
             return {
-                background: sandAct,
-                border: isActive ? '2px solid var(--v4-ink, #111827)' : '2px solid transparent',
-                boxShadow: isActive ? '0 0 0 2px var(--v4-bg, #fff)' : 'none',
+                background: 'transparent',
+                border: '0',
+                boxShadow: 'inset 0 0 0 1.5px var(--v4-ink-3, rgba(0, 0, 0, 0.42))',
             };
         }
-        return {
-            background: blueAct,
-            border: isActive ? '2px solid var(--v4-ink-2, #64748b)' : '2px solid transparent',
-            boxShadow: isActive ? '0 0 0 2px var(--v4-bg, #fff)' : 'none',
-        };
+        return { background: swatch.act, border: '0', boxShadow: 'none' };
     }
 
     function createDomPicker(options) {
@@ -98,13 +100,20 @@
         dots.setAttribute('aria-label', COPY.dotsLabel);
         dots.setAttribute('aria-expanded', 'false');
 
-        const dotEls = ['sand', 'blue'].map((kind) => {
+        const dotEls = ['act', 'ok', 'ring'].map((kind) => {
             const el = document.createElement('span');
-            el.className = 'heys-login-theme__dot';
+            el.className = 'heys-login-theme__dot' + (kind === 'ring' ? ' is-ring' : '');
             el.setAttribute('aria-hidden', 'true');
-            dots.appendChild(el);
             return { kind, el };
         });
+        const swatch = document.createElement('span');
+        swatch.className = 'heys-login-theme__swatch';
+        dotEls.forEach(({ el }) => swatch.appendChild(el));
+        const caption = document.createElement('span');
+        caption.className = 'heys-login-theme__caption';
+        caption.textContent = COPY.title;
+        dots.appendChild(swatch);
+        dots.appendChild(caption);
 
         const panel = document.createElement('div');
         panel.className = 'heys-login-theme__panel';
@@ -136,6 +145,7 @@
             swatch.className = 'heys-login-theme__soft-swatch';
             swatch.style.setProperty('--swatch-act', variant.act);
             swatch.style.setProperty('--swatch-hero', variant.hero);
+            swatch.style.setProperty('--swatch-ok', variant.ok);
             const text = document.createElement('span');
             text.className = 'heys-login-theme__soft-label';
             text.textContent = variant.label;
@@ -344,15 +354,20 @@
                     hidden: expanded,
                     onClick: () => setExpanded(true),
                 },
-                ['sand', 'blue'].map((kind) => {
-                    const style = dotStyle(palette, palette, kind);
-                    return React.createElement('span', {
-                        key: kind,
-                        className: 'heys-login-theme__dot',
-                        'aria-hidden': 'true',
-                        style,
-                    });
-                }),
+                React.createElement(
+                    'span',
+                    { className: 'heys-login-theme__swatch' },
+                    ['act', 'ok', 'ring'].map((kind) => {
+                        const style = dotStyle(palette, palette, kind);
+                        return React.createElement('span', {
+                            key: kind,
+                            className: 'heys-login-theme__dot' + (kind === 'ring' ? ' is-ring' : ''),
+                            'aria-hidden': 'true',
+                            style,
+                        });
+                    }),
+                ),
+                React.createElement('span', { className: 'heys-login-theme__caption' }, COPY.title),
             );
 
             const panel = React.createElement(
@@ -388,7 +403,11 @@
                         },
                         React.createElement('span', {
                             className: 'heys-login-theme__soft-swatch',
-                            style: { '--swatch-act': variant.act, '--swatch-hero': variant.hero },
+                            style: {
+                                '--swatch-act': variant.act,
+                                '--swatch-hero': variant.hero,
+                                '--swatch-ok': variant.ok,
+                            },
                         }),
                         React.createElement('span', { className: 'heys-login-theme__soft-label' }, variant.label),
                     )),

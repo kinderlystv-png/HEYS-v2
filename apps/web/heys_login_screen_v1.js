@@ -7,21 +7,27 @@
     title: 'Вход клиента',
     instruction: '',
     explanation: '',
-    supportLead: 'Забыли PIN? ',
+    pinLabel: 'Код доступа',
+    supportLead: 'Не помните код? ',
+    supportAction: 'Напишите куратору',
   });
 
   const NEW_DEVICE_LOGIN_COPY = Object.freeze({
     title: 'Новое устройство',
-    instruction: 'Введите свой код доступа. Это устройство запомнится на 30 дней.',
+    instruction: 'Мы не узнаём это устройство. Введите свой код — устройство запомнится на 30 дней.',
     pinLabel: 'Код доступа',
-    supportLead: 'Забыли код? ',
+    deviceNotice: 'На прежнее устройство ушло уведомление о входе',
+    supportLead: 'Не помните код? ',
+    supportAction: 'Напишите куратору',
   });
 
   const TRIAL_INTAKE_LOGIN_COPY = Object.freeze({
     title: 'Вход в анкету',
-    instruction: 'Введите номер из заявки и одноразовый код из сообщения куратора.',
-    explanation: 'Код действует один раз и три дня после отправки приглашения. Сейчас вы входите только в анкету — доступ к HEYS появится после её проверки и подтверждения пробной недели куратором.',
-    supportLead: 'Не получается войти? ',
+    instruction: '',
+    explanation: 'Это только анкета. Приложение откроется, когда куратор её проверит.',
+    pinLabel: 'Код от куратора',
+    supportLead: 'Код не пришёл? ',
+    supportAction: 'Ответьте на сообщение бота',
   });
 
   function isTrialIntakeLogin() {
@@ -45,6 +51,26 @@
   function getClientLoginCopy(trialIntakeLogin) {
     return trialIntakeLogin ? TRIAL_INTAKE_LOGIN_COPY : CLIENT_LOGIN_COPY;
   }
+
+  let cachedAuthLogoHtml = '';
+  function captureAuthLogoHtml() {
+    if (cachedAuthLogoHtml) return cachedAuthLogoHtml;
+    try {
+      const existing = global.document && global.document.querySelector('.heys-auth-logo');
+      if (existing) cachedAuthLogoHtml = existing.outerHTML;
+    } catch (_) { }
+    return cachedAuthLogoHtml;
+  }
+  function getAuthLogoHtml() {
+    return captureAuthLogoHtml();
+  }
+  try {
+    if (global.document && global.document.readyState === 'loading') {
+      global.document.addEventListener('DOMContentLoaded', captureAuthLogoHtml);
+    } else {
+      captureAuthLogoHtml();
+    }
+  } catch (_) { }
 
   function clamp(v, a, b) {
     return Math.max(a, Math.min(b, v));
@@ -159,7 +185,9 @@
     const clientLoginCopy = clientEntryMode === 'new_device'
       ? NEW_DEVICE_LOGIN_COPY
       : getClientLoginCopy(isTrialIntakeLogin());
-    const pinFieldLabel = clientEntryMode === 'new_device' ? NEW_DEVICE_LOGIN_COPY.pinLabel : 'PIN-код';
+    const pinFieldLabel = clientEntryMode === 'new_device'
+      ? NEW_DEVICE_LOGIN_COPY.pinLabel
+      : (clientLoginCopy.pinLabel || 'Код доступа');
 
     function getCuratorAutologinKey() {
       return (curatorAutologinConfig && curatorAutologinConfig.onceKey) || 'heys_temp_curator_autologin_v1';
@@ -252,7 +280,7 @@
       } catch (_) { }
     }
 
-    function showInvalidPinFeedback(message = 'PIN не подошёл') {
+    function showInvalidPinFeedback(message = 'Код не подошёл — попробуйте ещё раз') {
       try {
         const timers = pinErrorTimers.current || {};
         if (timers.reset) clearTimeout(timers.reset);
@@ -614,7 +642,7 @@
 	        'button',
 	        {
 	          type: 'button',
-	          className: 'heys-auth-version heys-auth-service-entry mt-6 text-xs font-medium tracking-wider font-mono',
+	          className: 'heys-auth-service-entry',
 	          'aria-label': 'Служебный вход',
 	          title: 'Служебный вход',
 	          onClick: () => {
@@ -623,7 +651,13 @@
 	            setMode('curator');
 	          },
 	        },
-	        'служебный вход',
+	        React.createElement('svg', {
+	          width: 14,
+	          height: 14,
+	          viewBox: '0 0 24 24',
+	          fill: 'currentColor',
+	          'aria-hidden': 'true',
+	        }, React.createElement('path', { d: 'M7 14a5 5 0 1 1 4.9-6H21v3h-2v3h-2v-3h-2.1A5 5 0 0 1 7 14zm0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6z' })),
 	      );
 	    }
 
@@ -816,18 +850,12 @@
 	          { className: 'heys-auth-heading text-center' },
 	          React.createElement(
 	            'div',
-	            { className: 'heys-auth-mark', 'aria-label': 'HEYS lab' },
-	            React.createElement('img', {
-	              src: 'heys-logo-hero-blue.png',
-	              alt: '',
-	              loading: 'eager',
-	              decoding: 'async',
-	            }),
+	            { className: 'heys-auth-mark', 'aria-label': 'HEYS lab', dangerouslySetInnerHTML: { __html: getAuthLogoHtml() } },
 	          ),
 	          React.createElement('div', { className: 'heys-auth-title' }, clientLoginCopy.title),
 	          clientLoginCopy.instruction && React.createElement(
 	            'div',
-	            { className: 'heys-auth-subtitle', style: { maxWidth: '300px', fontSize: '14px', lineHeight: '1.45' } },
+	            { className: 'heys-auth-subtitle' },
 	            clientLoginCopy.instruction,
 	          ),
 	        ),
@@ -842,7 +870,7 @@
         },
           // Современный ввод телефона с фиксированным +7
 	          React.createElement('div', { className: 'space-y-3' },
-	            React.createElement('div', { className: 'heys-auth-label text-base' }, 'Телефон'),
+	            React.createElement('div', { className: 'heys-auth-label' }, 'Телефон'),
 	            React.createElement('div', {
 	              className: 'heys-auth-field ' + (isPhoneComplete ? 'is-complete' : '') + (activeEntry === 'phone' ? ' is-active' : '') + (phoneConfirmPulse ? ' is-confirm-pulse' : '')
 	            },
@@ -867,17 +895,13 @@
                 onFocus: () => setActiveEntry('phone'),
                 onClick: () => setActiveEntry('phone'),
                 className: 'phone-input-large heys-auth-phone-input',
-                style: {
-                  width: '224px',
-                  fontWeight: 700,
-                }
               }),
             ),
           ),
 
           // PIN ввод — 4 отдельных поля (как в модных приложениях)
 	          React.createElement('div', { className: 'heys-auth-pin-section space-y-3 ' + (!clientPhoneValid ? 'is-muted ' : '') + (activeEntry === 'pin' ? 'is-active' : '') },
-	            React.createElement('div', { className: 'heys-auth-label text-base' }, pinFieldLabel),
+	            React.createElement('div', { className: 'heys-auth-label' }, pinFieldLabel),
             React.createElement('div', {
               className: 'heys-auth-pin-grid'
             },
@@ -885,12 +909,13 @@
 	                const digit = (pinDigits && pinDigits[i]) || '';
 	                const isFilled = Boolean(digit);
 	                const overlay = (pinOverlay && pinOverlay[i]) || { d: '', k: 0 };
-	                const pinInputStyle = overlay.d
-	                  ? { WebkitTextSecurity: 'none', color: 'transparent', caretColor: 'transparent' }
-	                  : { WebkitTextSecurity: 'disc' };
+	                const pinInputStyle = { WebkitTextSecurity: 'none', color: 'transparent', caretColor: 'transparent' };
 	                return React.createElement('div', {
 	                  key: 'pin_wrap_' + i,
-	                  className: 'heys-auth-pin-box',
+	                  className: 'heys-auth-pin-box'
+	                    + (pinErrorActive ? ' is-error' : '')
+	                    + (isPinComplete && !pinErrorActive ? ' is-complete' : isFilled ? ' is-filled' : '')
+	                    + (i === activePinIndex ? ' is-active' : ''),
 	                },
 	                  React.createElement('input', {
 	                    key: 'pin_' + i,
@@ -1012,6 +1037,20 @@
             ),
           ),
 
+          clientEntryMode === 'new_device' && NEW_DEVICE_LOGIN_COPY.deviceNotice
+            ? React.createElement('div', { className: 'heys-auth-notice' }, NEW_DEVICE_LOGIN_COPY.deviceNotice)
+            : null,
+
+          React.createElement(
+            'div',
+            {
+              className: 'heys-auth-error heys-auth-error-slot' + (pinErrorVisible ? ' is-pin-error' : ''),
+              role: 'alert',
+              'aria-live': 'polite',
+            },
+            err || '',
+          ),
+
           React.createElement(
             'div',
             { className: 'heys-auth-keypad', ref: keypadRef, 'aria-label': 'Цифровая клавиатура PIN' },
@@ -1061,22 +1100,13 @@
             : null,
 
           React.createElement(
-            'div',
-            {
-              className: 'heys-auth-error heys-auth-error-slot' + (pinErrorVisible ? ' is-pin-error' : ''),
-              role: 'alert',
-              'aria-live': 'polite',
-            },
-            err || '',
-          ),
-          React.createElement(
             'button',
             { type: 'submit', disabled: !canClientLogin, className: 'heys-auth-submit-hidden', tabIndex: -1, 'aria-label': 'Войти' },
           ),
 	        ),
 	        clientLoginCopy.explanation && React.createElement(
 	          'div',
-	          { className: 'heys-auth-subtitle', style: { marginTop: '18px', textAlign: 'center', fontSize: '13px', lineHeight: '1.45' } },
+	          { className: 'heys-auth-intake-note' },
 	          clientLoginCopy.explanation,
 	        ),
 	        React.createElement(
@@ -1093,7 +1123,7 @@
 	                className: 'heys-auth-support-link',
 	                onClick: () => setSupportOpen(true),
 	              },
-	              'Обратитесь в поддержку.',
+	              clientLoginCopy.supportAction || 'Напишите куратору',
 	            ),
 	          ),
 	        ),
@@ -1103,7 +1133,7 @@
           'div',
           { className: 'heys-auth-status ' + (busy ? 'is-visible' : ''), role: 'status', 'aria-live': 'polite' },
           React.createElement('span', { className: 'heys-auth-status-dot', 'aria-hidden': 'true' }),
-          React.createElement('span', null, 'Проверяем PIN'),
+          React.createElement('span', null, 'Проверяем код'),
         ),
       );
 	    }
@@ -1112,46 +1142,56 @@
       return Card(
         React.createElement(
           'div',
-          { className: 'text-center' },
-          React.createElement('div', { className: 'mb-2 text-4xl drop-shadow' }, '🍎'),
-          React.createElement('div', { className: 'heys-auth-brand' }, 'HEYS'),
-          React.createElement('div', { className: 'heys-auth-subtitle text-sm' }, 'Вход куратора'),
+          { className: 'heys-auth-heading' },
+          React.createElement('div', {
+            className: 'heys-auth-mark',
+            'aria-label': 'HEYS lab',
+            dangerouslySetInnerHTML: { __html: getAuthLogoHtml() },
+          }),
+          React.createElement('div', { className: 'heys-auth-title' }, 'Вход куратора'),
+          React.createElement('div', { className: 'heys-auth-subtitle' }, 'Служебный доступ. Клиенты входят по телефону и коду.'),
         ),
         React.createElement(
           'form',
           {
-            className: 'mt-5 space-y-3',
+            className: 'space-y-6',
+            style: { width: '100%' },
             onSubmit: (e) => {
               e.preventDefault();
               if (canCuratorLogin) handleCuratorLogin();
             },
           },
-          Input({
-            type: 'email',
-            name: 'email',
-            autoComplete: 'email',
-            placeholder: 'Email',
-            value: email,
-            onChange: (e) => { setErr(''); setEmail(e.target.value); },
-          }),
-          Input({
-            type: 'password',
-            name: 'password',
-            autoComplete: 'current-password',
-            placeholder: 'Пароль',
-            value: password,
-            onChange: (e) => { setErr(''); setPassword(e.target.value); },
-          }),
-          err && React.createElement('div', { className: 'heys-auth-error' }, err),
+          React.createElement('div', { className: 'space-y-3' },
+            React.createElement('div', { className: 'heys-auth-label' }, 'Почта'),
+            Input({
+              type: 'email',
+              name: 'email',
+              autoComplete: 'email',
+              placeholder: 'Почта',
+              value: email,
+              onChange: (e) => { setErr(''); setEmail(e.target.value); },
+            }),
+          ),
+          React.createElement('div', { className: 'space-y-3' },
+            React.createElement('div', { className: 'heys-auth-label' }, 'Пароль'),
+            Input({
+              type: 'password',
+              name: 'password',
+              autoComplete: 'current-password',
+              placeholder: 'Пароль',
+              value: password,
+              onChange: (e) => { setErr(''); setPassword(e.target.value); },
+            }),
+          ),
+          React.createElement('div', { className: 'heys-auth-error heys-auth-error-slot' + (err ? ' is-pin-error' : '') }, err || ''),
           PrimaryBtn(
             { type: 'submit', disabled: !canCuratorLogin },
-            busy ? 'Входим...' : 'Войти →',
+            busy ? 'Входим...' : 'Войти',
           ),
         ),
         React.createElement(
           'div',
-          { className: 'heys-auth-meta mt-5 space-y-2 text-center text-sm' },
-          React.createElement('div', null, greeting),
+          { className: 'heys-auth-footer-row' },
           React.createElement(
             'button',
             {
@@ -1163,7 +1203,7 @@
                 setMode('client');
               }
             },
-            '← Назад',
+            'Вернуться ко входу клиента',
           ),
         ),
       );
