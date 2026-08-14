@@ -144,9 +144,9 @@ describe('UI v4 — иконки', () => {
 describe('UI v4 chrome paint — рама', () => {
     it('hdr-bottom без legacy синей рамки #4285f4', () => {
         const rules = [...baseCss.matchAll(/\.hdr-bottom\s*\{[^}]+\}/g)].map((m) => m[0]);
-        const painted = rules.find((rule) => rule.includes('var(--v4-line')) || '';
+        const painted = rules.find((rule) => rule.includes('background: transparent')) || '';
         expect(painted).not.toContain('#4285f4');
-        expect(painted).toContain('var(--v4-line');
+        expect(painted).toMatch(/border:\s*none/);
     });
 
     it('активная вкладка nav на sand-роли, не голый литерал', () => {
