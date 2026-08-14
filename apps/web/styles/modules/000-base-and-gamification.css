@@ -15314,11 +15314,13 @@ body:has(.tabs.tabs--settings-open) :is(
 .cloud-sync-indicator.session,
 [data-theme$="dark"] .cloud-sync-indicator {
   border: none !important;
+  box-shadow: none !important;
 }
 @media (hover: hover) {
   .cloud-sync-indicator:hover,
   [data-theme$="dark"] .cloud-sync-indicator:hover {
     border: none !important;
+    box-shadow: none !important;
   }
 }
 
