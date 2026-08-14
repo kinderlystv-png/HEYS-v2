@@ -6871,6 +6871,25 @@ color: var(--v4-sand-act-soft, #e2a468);
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
 }
 
+/* Строка даты v4 — отдельная полноширинная строка под hdr-bottom (канвас
+   «Дата и остатки v4»). Когда она есть, скругление/тень снизу переезжают на
+   неё, а hdr-bottom становится прямоугольным средним блоком. */
+.hdr-bottom:has(+ .hdr-date-row) {
+  border-radius: 0;
+  border-bottom: none;
+  box-shadow: none;
+}
+
+.hdr-date-row {
+  display: flex;
+  padding: 6px 8px 8px;
+  background: var(--v4-bg, #ffffff);
+  border: 1px solid var(--v4-line, #e5e7eb);
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+}
+
 /* Информация о клиенте */
 .hdr-client {
   display: flex;
@@ -6889,7 +6908,7 @@ color: var(--v4-sand-act-soft, #e2a468);
   overflow: hidden;
 }
 
-/* Группа кнопок даты в header */
+/* Группа кнопок даты — теперь во всю ширину hdr-date-row */
 .hdr-date-group {
   display: flex;
   align-items: center;
@@ -6897,7 +6916,6 @@ color: var(--v4-sand-act-soft, #e2a468);
   flex: 1;
   min-width: 0;
   max-width: 100%;
-  margin-left: auto;
 }
 
 .hdr-date-group .date-picker--v4 {

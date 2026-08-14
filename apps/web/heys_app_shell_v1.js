@@ -3775,10 +3775,14 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 // событие heysEWSSummaryUpdated, читает heys_gamification_bar_v1.js и
                 // day/_advice.js), push — в строку «Уведомления» листа настроек +
                 // разовый баннер showPushFirstDayPrompt ниже.
-
-                                   // Строка даты v4: стрелки + DatePicker (месяц — шторкой по тапу)
-                (tab === 'stats' || tab === 'diary' || tab === 'activity' || tab === 'insights' || tab === 'widgets') && window.HEYS.DatePicker
-                    ? React.createElement('div', { className: 'hdr-date-group' },
+            ),
+            // Строка даты v4: отдельная полноширинная строка под клиентом/облаком
+            // (канвас «Дата и остатки v4» — дата делит ряд только со стрелками
+            // назад/вперёд, не с именем клиента; была втиснута в hdr-bottom и
+            // обрезалась до "С..", см. UI_V4_IMPLEMENTATION_PLAN раздел «осталось»).
+            (tab === 'stats' || tab === 'diary' || tab === 'activity' || tab === 'insights' || tab === 'widgets') && window.HEYS.DatePicker
+                ? React.createElement('div', { className: 'hdr-date-row' },
+                    React.createElement('div', { className: 'hdr-date-group' },
                         React.createElement(window.HEYS.DatePicker, {
                             valueISO: selectedDate,
                             onSelect: (nextDate) => selectDateWithPrefetch(nextDate, { reason: 'date-picker' }),
@@ -3802,8 +3806,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             }
                         }),
                     )
-                    : null
-            ),
+                )
+                : null,
             // Разовое предложение включить push — после первого заполненного дня
             // (UI v4, 2026-08-10). Отказ прячет баннер насовсем; постоянный вход —
             // строка «Уведомления» в листе настроек.
