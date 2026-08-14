@@ -133,9 +133,17 @@ describe('формулировки, закреплённые решением в
 
   it('FAQ отвечает про живого человека и не выдаёт AI за куратора', () => {
     const faq = read(D_DIR, 'FaqD.tsx');
-    expect(faq).toContain('живой человек или это AI');
+    expect(faq).toContain('живой человек или AI');
     expect(faq).toContain('Живой человек.');
     expect(faq).toContain('Автоматических советов HEYS не выдаёт.');
+  });
+
+  it('FAQ про общение указывает мессенджер приложения, а не внешние каналы', () => {
+    const faq = read(D_DIR, 'FaqD.tsx');
+    expect(faq).toContain('В мессенджере HEYS внутри приложения — рядом с дневником');
+    expect(faq).toContain('фото и голосовые не теряются между перепиской и записью еды');
+    expect(faq).toContain('09:00–21:00 МСК');
+    expect(faq).not.toContain('или в привычном вам');
   });
 
   it('ёмкость набора описана без счётчика мест', () => {
