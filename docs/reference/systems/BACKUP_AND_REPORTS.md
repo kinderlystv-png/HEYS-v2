@@ -141,8 +141,9 @@ transaction.
 - `docs/legal/backup-retention.md` с 15.08 описывает два слоя (14 / 365) и явно
   говорит, что фото/голос не бэкапятся. Срок daily 365 дней vs 30 дней 152-ФЗ
   остаётся открытым правовым зазором, не маскируется.
-- Photo cleanup: `DRY_RUN=0` задаётся в `deploy-all.sh`. До выкладки этой версии
-  функции orphan delete на проде ещё dry-run.
+- Photo cleanup на проде с `DRY_RUN=0` (выложено 2026-08-15). Ручной прогон: 45
+  abandoned messenger-объектов удалены; 1 orphan-префикс клиента ещё не прошёл
+  7-дневный grace, поэтому не удалён.
 - Полный аудит отчётных формул не выполнен; карта помечает reports как partial.
 
 ## Facts Table
@@ -157,8 +158,8 @@ transaction.
 | D6  | Полный restore пишет account (`clients`) до KV в одной transaction      | `rg -n -e 'executeFullRestore' -e 'restoreAccountRows' -e 'restoreKvRows' yandex-cloud-functions/heys-client-daily-backup/restore-client-backup.js`                 | исправлено 2026-08-15           |
 | D7  | KV restore сохраняет `v_encrypted`, `key_version`, `updated_at`         | `rg -n -e 'v_encrypted = EXCLUDED' -e 'key_version = EXCLUDED' -e 'updated_at = EXCLUDED' yandex-cloud-functions/heys-client-daily-backup/restore-client-backup.js` | проверено 2026-07-18            |
 | D8  | Reports entrypoint делегирует `ReportsTabImpl`                          | `rg -n 'ReportsTabImpl.*createReportsTab' apps/web/heys_reports_v12.js`                                                                                             | проверено 2026-07-17            |
-| D9  | Concurrent snapshot и fault-after-KV rollback защищены регрессиями      | `node --test yandex-cloud-functions/heys-client-daily-backup/__tests__/backup-consistency.test.cjs`                                                                 | 3/3 пройдено 2026-07-18         |
-| D10 | Production daily backup trigger активен и пишет объекты                 | `yc serverless trigger list --folder-id b1gnv1a4q8i6de6atl6n`; `yc storage s3api list-objects --bucket heys-backups --prefix client-daily/2026-08-14/`              | 16 объектов, 2026-08-14T01:01Z  |
+| D9  | Concurrent snapshot и fault-after-KV rollback защищены регрессиями      | `node --test yandex-cloud-functions/heys-client-daily-backup/__tests__/backup-consistency.test.cjs`                                                                 | 4/4 пройдено 2026-08-15         |
+| D10 | Production daily backup trigger активен и пишет объекты                 | `yc serverless trigger list --folder-id b1gnv1a4q8i6de6atl6n`; ручной invoke 2026-08-15                                                                             | 16/16, businessDate 2026-08-14  |
 | D11 | Managed PG backup 14 дней, окно 22:00 UTC, живые AUTOMATED копии        | `yc managed-postgresql cluster get c9qk0squejja8jast509`; `yc managed-postgresql backup list --folder-id b1gnv1a4q8i6de6atl6n`                                      | retain=14; 14.08 CREATING       |
-| D12 | Photo cleanup на проде без `DRY_RUN=0`                                  | `yc serverless function version list --function-name heys-cron-photo-cleanup --limit 1`                                                                             | env не содержит DRY_RUN=0       |
+| D12 | Photo cleanup на проде с `DRY_RUN=0`                                    | live env `DRY_RUN=0`; invoke 2026-08-15 `deletedCount=45`, `eligibleForDelete=0`, `dryRun=false`                                                                    | выложено 2026-08-15             |
 | D13 | Encrypted KV в daily snapshot без plaintext `v`                         | `node --test yandex-cloud-functions/heys-client-daily-backup/__tests__/backup-consistency.test.cjs`                                                                 | добавлено 2026-08-15            |

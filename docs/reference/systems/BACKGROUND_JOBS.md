@@ -109,14 +109,14 @@ function; polling уже запущенных operations арендует стр
 завершаются ошибкой. Результат записывается в attachment через серверную SQL
 функцию, а не напрямую в клиентский KV.
 
-Backup делает для каждого клиента repeatable-read snapshot KV и отдельный
-repeatable-read snapshot account tables, затем gzip + checksum и upload в Object
-Storage. Ошибка одного клиента не останавливает остальных. Эти две транзакции не
-образуют единый моментальный snapshot — этот контракт подробнее описан в
-`BACKUP_AND_REPORTS.md`.
+Backup делает для каждого клиента один `REPEATABLE READ` snapshot KV и account
+tables (`snapshotClientBundle`), затем gzip + checksum и upload в Object
+Storage. Ошибка одного клиента не останавливает остальных. Контракт подробнее
+описан в `BACKUP_AND_REPORTS.md`.
 
-Photo cleanup сравнивает UUID prefixes bucket с таблицей `clients`. По умолчанию
-он dry-run; реальное удаление требует `DRY_RUN=0`, повторного обнаружения orphan
+Photo cleanup сравнивает UUID prefixes bucket с таблицей `clients`. В коде по
+умолчанию dry-run; на проде `deploy-all.sh` задаёт `DRY_RUN=0` (выложено
+2026-08-15). Удаление orphan-префикса всё равно требует повторного обнаружения
 через soft-grace и ограничено hard cap за запуск. Результат сохраняется в
 `photo_cleanup_log`.
 
