@@ -7852,13 +7852,14 @@ body:has(.offline-banner) .wrap {
   gap: 3px;
   border-radius: 12px;
   font-weight: 600;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   background: transparent;
   animation: none;
 }
 
 .date-picker-sheet .date-picker-day.has-data:not(.today):not(.selected) {
   background: #f7efe2;
+  color: #201e1d;
 }
 
 .date-picker-sheet .date-picker-day.selected:not(.today) {
@@ -8275,6 +8276,12 @@ svg.date-picker-icon {
   max-width: calc(100vw - 32px);
   box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.2), 0 4px 12px -2px rgba(0, 0, 0, 0.1);
   animation: datePickerSlide 0.2s ease;
+}
+
+/* Sheet-вариант (v4) не наследует белый фон легаси-дропдауна выше — тот
+   написан позже в файле и той же специфичности, поэтому побеждал. */
+.date-picker-dropdown.date-picker-sheet {
+  background: var(--v4-bg, #fffaf1);
 }
 
 /* Backdrop для календаря */
