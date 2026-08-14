@@ -63,7 +63,7 @@ describe('Activity tab v4 structure', () => {
     expect(cssSource).toContain('var(--v4-hero');
     expect(cssSource).toContain('var(--v4-ink-2');
     expect(cssSource).toContain('.activity-v4-steps__fill');
-    expect(cssSource).toMatch(/\.activity-v4-steps__fill[^}]*var\(--v4-ok-fill/s);
+    expect(cssSource).toMatch(/\.activity-v4-steps__fill[^}]*background:\s*#7a8a5e/s);
     expect(cssSource).toMatch(/\.activity-v4-steps__label[^}]*var\(--v4-ink-2/s);
     expect(cssSource).toContain('ma-habit-cal-grid--dot');
     expect(cssSource).not.toMatch(/\.activity-v4-hero\s*\{[^}]*border:\s*1px/s);
