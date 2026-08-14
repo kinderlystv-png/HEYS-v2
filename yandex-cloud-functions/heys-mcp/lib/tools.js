@@ -1083,7 +1083,10 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const saved = await writeDay(date, res.day, Number(current.updatedAt) || 0);
       const after = await dayAfterWrite(saved, res.day);
       const written = res.day.trainings[res.index];
-      const agg = webMirror.trainingTonnage(written);
+      // Свой вес — из веса тела за сегодня (чек-ин), а не из воздуха: без него
+      // bodyweight-упражнения честно остаются «без тоннажа», как в приложении.
+      const bodyWeightKg = Number(res.day.weightMorning) || 0;
+      const agg = webMirror.trainingTonnage(written, { bodyWeightKg });
       const exCount = written.workoutLog.exercises.length;
       const tonnage = agg.totalVolume >= 1000
         ? `${(agg.totalVolume / 1000).toFixed(1).replace(/\.0$/, '')} т`
@@ -2108,9 +2111,10 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         counts[status] = (counts[status] || 0) + 1;
         const out = { ...base, status };
         if (status === 'done' && training.planSnapshot && training.workoutLog) {
+          const bodyWeightKg = Number(blob && blob.weightMorning) || 0;
           const plannedShell = { type: 'strength', strengthEntryMode: 'workout_builder', workoutLog: training.planSnapshot };
-          out.planned_volume_kg = Math.round(webMirror.trainingTonnage(plannedShell).plannedVolume);
-          out.actual_volume_kg = Math.round(webMirror.trainingTonnage(training).totalVolume);
+          out.planned_volume_kg = Math.round(webMirror.trainingTonnage(plannedShell, { bodyWeightKg }).plannedVolume);
+          out.actual_volume_kg = Math.round(webMirror.trainingTonnage(training, { bodyWeightKg }).totalVolume);
           out.deviations = compareProgramExercises(training.planSnapshot.exercises, training.workoutLog.exercises);
         }
         return out;

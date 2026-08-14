@@ -317,6 +317,27 @@ test('log_strength_workout принимает свой вес без указа�
   assert.equal(saved.value.trainings[0].workoutLog.exercises[0].approaches[0].weightKg, '');
 });
 
+test('log_strength_workout bodyweight-тоннаж считается по весу тела за сегодня, а не нулём', async () => {
+  const api = fakeApi({ day: { date: '2026-08-13', weightMorning: 80, meals: [], waterMl: 0, updatedAt: 1 } });
+  const res = await build(api).heys_log_strength_workout({
+    date: '2026-08-13',
+    exercises: [{
+      name: 'Подтягивания', unit: 'bodyweight', bodyweight_factor: 1,
+      approaches: [{ reps: 8, extra_weight_kg: 10 }, { reps: 6, extra_weight_kg: 10 }],
+    }],
+  });
+  // (80×1 + 10) × 8 + (80×1 + 10) × 6 = 1260
+  assert.equal(res.structured.total_volume_kg, 1260);
+});
+
+test('log_strength_workout без записанного веса тела честно даёт нулевой bodyweight-тоннаж', async () => {
+  const api = fakeApi({ day: null });
+  const res = await build(api).heys_log_strength_workout({
+    exercises: [{ name: 'Подтягивания', unit: 'bodyweight', bodyweight_factor: 1, approaches: [{ reps: 8 }] }],
+  });
+  assert.equal(res.structured.total_volume_kg, 0);
+});
+
 test('delete_training ставит tombstone, иначе merge вернёт тренировку из облака', async () => {
   const api = fakeApi({
     day: {
