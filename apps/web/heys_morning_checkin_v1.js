@@ -1053,6 +1053,60 @@
     return written;
   }
 
+  /** Если core-поля дня уже в LS/cloud, закрываем stale ledger-шаги (гонка с audit/sync). */
+  function reconcileDailyProgressWithDayData(ledger, clientId, dateKey) {
+    if (!ledger) return ledger;
+    const day = getFreshMorningDay(dateKey);
+    const profile = getFreshMorningProfile(clientId);
+    const coreSteps = ['weight', 'sleepTime', 'sleepQuality', 'morning_mood', 'stepsGoal'];
+    let changed = false;
+    const resolvedAt = Date.now();
+    ledger.steps = ledger.steps || {};
+    coreSteps.forEach((id) => {
+      if (!Array.isArray(ledger.plannedStepIds) || !ledger.plannedStepIds.includes(id)) return;
+      if (!isMorningStepComplete(id, { dateKey, clientId, day, profile, ledger })) return;
+      const row = ledger.steps[id] || {};
+      if (isMorningStatusTerminal({ ...row, completeByData: true })) return;
+      ledger.steps[id] = {
+        ...row,
+        status: 'data_present',
+        completeByData: true,
+        dataPresentAt: resolvedAt,
+        updatedAt: resolvedAt,
+        cloudPending: false,
+        error: null
+      };
+      changed = true;
+    });
+    const blocking = getBlockingMorningSteps({ ledger, dateKey, clientId });
+    const unsynced = Object.entries(ledger.steps || {})
+      .filter(([id, row]) => id !== '__flow__' && isUnresolvedProgressStatus(row && row.status));
+    if (changed && blocking.length === 0 && unsynced.length === 0
+      && !coreCheckinDataMissing(day) && hasStepsGoal(profile)) {
+      const flow = ledger.steps.__flow__ || {};
+      if (flow.status !== 'synced' && flow.status !== 'closed') {
+        ledger.steps.__flow__ = {
+          ...flow,
+          status: 'synced',
+          syncedAt: resolvedAt,
+          updatedAt: resolvedAt,
+          cloudPending: false,
+          error: null
+        };
+        changed = true;
+      }
+    }
+    if (!changed) return ledger;
+    ledger.updatedAt = Math.max(resolvedAt, Number(ledger.updatedAt) || 0);
+    const written = writeMorningProgress(ledger, clientId);
+    console.info('[MorningCheckin] reconciled progress with day data', {
+      clientId: String(clientId).slice(0, 8),
+      dateKey,
+      corePresence: getMorningCorePresence(day, profile)
+    });
+    return written;
+  }
+
   function shouldShowMorningCheckin() {
     const U = HEYS.utils || {};
     _reopenRequiredOnly = false;
@@ -1091,6 +1145,7 @@
     _nextPlanYesterdayVerifyRequired = yesterdayVerifyRequired;
     let existingProgress = readMorningProgress(todayKey, currentClientId);
     existingProgress = resolveStaleRegistrationProgress(existingProgress, currentClientId);
+    existingProgress = reconcileDailyProgressWithDayData(existingProgress, currentClientId, todayKey);
     let remainingProgressSteps = getRemainingMorningSteps({
       ledger: existingProgress,
       dateKey: todayKey,
@@ -1179,6 +1234,13 @@
       ? Object.entries(existingProgress.steps || {})
         .filter(([id, row]) => id !== '__flow__' && isUnresolvedProgressStatus(row && row.status))
       : [];
+    if (flowStatus === 'closed' && unsyncedProgressSteps.length === 0) {
+      if (yesterdayVerifyRequired) {
+        markDailyRequiredOnlyIfApplicable(profile);
+        return true;
+      }
+      return false;
+    }
     if (existingProgress && (blockingProgressSteps.length > 0 || unsyncedProgressSteps.length > 0)) {
       console.info('[MorningCheckin] ↩️ Resuming flow with unfinished steps', {
         flowId: existingProgress.flowId,

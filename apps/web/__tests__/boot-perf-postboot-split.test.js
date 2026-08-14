@@ -121,7 +121,7 @@ describe('postboot-1-game façade (heys_game_facade_v1.js)', () => {
         const p = window.HEYS.__loadPostboot1Game();
         await flushFetch();
 
-        expect(window.fetch).toHaveBeenCalledWith('/lazy-manifest.json');
+        expect(window.fetch).toHaveBeenCalledWith('/lazy-manifest.json', { cache: 'no-store' });
         const script = h.lastScript();
         expect(script).toBeDefined();
         expect(script.src).toContain('postboot-1-game-lazy');

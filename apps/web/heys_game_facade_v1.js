@@ -19,7 +19,7 @@
     function _loadLazyChunk() {
         if (_lazyPromise) return _lazyPromise;
 
-        _lazyPromise = fetch('/lazy-manifest.json')
+        _lazyPromise = fetch('/lazy-manifest.json', { cache: 'no-store' })
             .then(function (r) {
                 if (!r.ok) throw new Error('lazy-manifest fetch failed: ' + r.status);
                 return r.json();
