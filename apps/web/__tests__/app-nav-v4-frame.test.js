@@ -150,9 +150,55 @@ describe('UI v4 chrome paint — рама', () => {
     });
 
     it('активная вкладка nav на sand-роли, не голый литерал', () => {
-        const rule = baseCss.match(/\.tabs--v4-primary \.tab\.tab-primary-nav\.active \{[^}]+\}/)?.[0] || '';
-        // Sand UI language (owner 2026-08-12): не общий --v4-act-text с warm fallback.
-        expect(rule).toMatch(/var\(--v4-sand-act(?:-text|-deep)?/);
-        expect(rule).not.toMatch(/color:\s*#8a4a20\s*;/);
+        const lightRule = baseCss.match(
+            /(?<!dark"\] )\n\.tabs--v4-primary \.tab\.tab-primary-nav\.active \{[^}]+\}/,
+        )?.[0] || '';
+        // Светлая: sand-роль (решение 2026-08-12). Тёмная: --v4-act-text как в g1d.
+        expect(lightRule).toMatch(/var\(--v4-sand-act(?:-text|-deep)?/);
+        expect(lightRule).not.toMatch(/color:\s*#8a4a20\s*;/);
+        expect(baseCss).toMatch(
+            /\[data-theme\$="dark"\] \.tabs--v4-primary \.tab\.tab-primary-nav\.active \{\s*color:\s*var\(--v4-act-text[\s\S]*?background:\s*var\(--v4-hero/,
+        );
+    });
+
+    it('mobile shell: bottom nav viewport full-bleed, wrap без боковых inset', () => {
+        expect(baseCss).toMatch(/@media \(max-width: 768px\)[\s\S]*?\.wrap[\s\S]*?padding-inline:\s*0 !important/);
+        expect(baseCss).toMatch(/@media \(max-width: 768px\)[\s\S]*?\.tabs[\s\S]*?max-width:\s*100vw !important/);
+        expect(shellSrc).toContain('portalAppShellChrome');
+        expect(shellSrc).toContain('ReactDOM.createPortal');
+    });
+
+    it('primary tabs — пять равных колонок, без legacy cap 48px', () => {
+        expect(baseCss).toMatch(/\.tab:not\(\.tab-primary-nav\)[\s\S]*?max-width:\s*48px/);
+        expect(baseCss).toMatch(/\.tabs--v4-primary \.tab\.tab-primary-nav[\s\S]*?flex:\s*1 1 0/);
+        expect(baseCss).toMatch(/@media \(max-width: 768px\)[\s\S]*?\.tabs--v4-primary \.tab-settings-wrap > \.tab[\s\S]*?display:\s*none !important/);
+    });
+
+    it('шапка расстановки — Отмена откатывает, Готово сохраняет', () => {
+        expect(shellSrc).toContain('handleWidgetsEditCancel');
+        expect(shellSrc).toContain("exitEditMode({ revert: true })");
+        expect(shellSrc).toContain('handleWidgetsEditDone');
+        expect(shellSrc).toContain("hdr-widgets-edit-title");
+    });
+
+    it('v4 nav chrome — отступы и фон как в макете', () => {
+        const shellRules = [...baseCss.matchAll(/\.tabs\.tabs--v4-primary \{[^}]+\}/g)].map((m) => m[0]);
+        const shellRule = shellRules.find((rule) => rule.includes('padding:')) || '';
+        expect(shellRule).toMatch(/padding:\s*4px 16px calc\(16px \+ env\(safe-area-inset-bottom/);
+        expect(shellRule).toMatch(/background:\s*var\(--v4-bg/);
+        expect(shellRule).toMatch(/border-top:\s*none/);
+        expect(baseCss).toMatch(
+            /\.tabs--v4-primary \.tab\.tab-primary-nav\.active \{\s*color:\s*var\(--v4-sand-act-text[\s\S]*?background:\s*var\(--v4-hero/,
+        );
+        expect(baseCss).toMatch(
+            /\[data-theme\$="dark"\] \.tabs\.tabs--v4-primary \{[\s\S]*?background:\s*var\(--v4-bg/,
+        );
+        expect(baseCss).toMatch(
+            /\[data-theme\$="dark"\] \.tabs--v4-primary \.tab\.tab-primary-nav\.active \{\s*color:\s*var\(--v4-act-text[\s\S]*?background:\s*var\(--v4-hero/,
+        );
+        const start = baseCss.indexOf('.tab-primary-nav-row');
+        expect(start).toBeGreaterThan(-1);
+        expect(baseCss.slice(start, start + 800)).toMatch(/padding:\s*8px 10px/);
+        expect(baseCss).toMatch(/\.tabs--v4-primary \.crs-bar-container[\s\S]*?display:\s*none/);
     });
 });

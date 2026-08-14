@@ -861,12 +861,12 @@ html.dark .water-tip-text {
 /* === 02. FAB группа: советы + вода === */
 .fab-group {
   position: fixed;
-  bottom: calc(90px + env(safe-area-inset-bottom, 0px));
-  right: 16px;
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  right: 14px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: 9px;
   z-index: 1001;
   opacity: 1;
   transform: translateY(0) scale(1);
@@ -876,6 +876,23 @@ html.dark .water-tip-text {
     transform 460ms cubic-bezier(0.22, 1, 0.36, 1) 70ms,
     filter 360ms ease 90ms;
   /* Выше меню .tabs (z-index: 1000) */
+}
+
+/* Канвас g1: снизу вверх еда → вода → голод → чат. Группа общая для четырёх вкладок. */
+.fab-group:not(.fab-group--messenger-only) .message-fab {
+  order: 1;
+}
+
+.fab-group:not(.fab-group--messenger-only) .hunger-energy-fab {
+  order: 2;
+}
+
+.fab-group:not(.fab-group--messenger-only) .water-fab {
+  order: 3;
+}
+
+.fab-group:not(.fab-group--messenger-only) .meal-fab {
+  order: 4;
 }
 
 body:has(.iw-response-card.expanded) .fab-group,
@@ -1778,7 +1795,8 @@ body.planning-tab-active .fab-group {
 /* === 06. FAB для воды (в группе) === */
 .fab-group .water-fab {
   position: static;
-  color: var(--v4-ink, #0f172a);
+  background: var(--v4-float, #fffaf1);
+  color: #5e808f;
 }
 
 /* === FAB для добавления приёма пищи ===
@@ -1790,9 +1808,9 @@ body.planning-tab-active .fab-group {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: var(--v4-act, #2563eb);
+  background: var(--v4-act, #c67139);
   border: none;
-  color: #ffffff;
+  color: var(--v4-btn-on-act, #2b1608);
   display: flex;
   align-items: center;
   justify-content: center;

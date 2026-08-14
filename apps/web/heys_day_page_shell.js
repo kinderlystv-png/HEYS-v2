@@ -87,11 +87,22 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 }, React.createElement('svg', {
                     className: 'hes-fab-icon',
                     viewBox: '0 0 24 24',
+                    width: 19,
+                    height: 19,
                     focusable: 'false',
                     'aria-hidden': 'true'
                 },
-                    React.createElement('circle', { cx: 12, cy: 12, r: 8.2 }),
-                    React.createElement('path', { d: 'M8.4 12h7.2' })
+                    React.createElement('defs', null,
+                        React.createElement('clipPath', { id: 'hes-fab-fill-two-thirds-fallback' },
+                            React.createElement('rect', { x: 0, y: 9, width: 24, height: 15 })
+                        )
+                    ),
+                    React.createElement('circle', { className: 'hes-fab-icon__ring', cx: 12, cy: 12, r: 8.5 }),
+                    React.createElement('circle', {
+                        className: 'hes-fab-icon__fill',
+                        cx: 12, cy: 12, r: 8.5,
+                        clipPath: 'url(#hes-fab-fill-two-thirds-fallback)'
+                    })
                 )),
             MessageFabButton
                 ? React.createElement(MessageFabButton, { key: 'msg-fab' })

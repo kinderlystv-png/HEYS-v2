@@ -1237,8 +1237,15 @@
         onPointerUp: (e) => e.stopPropagation(),
         onPointerMove: (e) => e.stopPropagation(),
         onClick: handleRemoveClick,
-        title: 'Удалить'
-      }, '✕'),
+        title: 'Удалить',
+        'aria-label': 'Убрать виджет'
+      },
+        React.createElement('svg', {
+          width: 11, height: 11, viewBox: '0 0 24 24', fill: 'none',
+          stroke: 'currentColor', strokeWidth: 3.4, strokeLinecap: 'round',
+          'aria-hidden': 'true'
+        }, React.createElement('path', { d: 'M6 12h12' }))
+      ),
 
       // Edit Mode: Settings button (optional)
       isEditMode && (widgetType?.settings || widgetType?.scalableElements) && React.createElement('button', {
@@ -1530,6 +1537,42 @@
 
   // === Individual Widget Content Components ===
 
+  function v4Kicker(text) {
+    return React.createElement('div', { className: 'widget-v4-kicker' }, text);
+  }
+
+  function formatRuDecimal(value, digits = 1) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    return n.toFixed(digits).replace('.', ',');
+  }
+
+  function v4SageRing({ value, target, label }) {
+    const ratio = target > 0 ? Math.min(1, (Number(value) || 0) / target) : 0;
+    const circ = 113;
+    const dash = Math.round(ratio * circ);
+    return React.createElement('div', { className: 'widget-v4-macro' },
+      React.createElement('svg', { width: 60, height: 60, viewBox: '0 0 44 44', 'aria-hidden': 'true' },
+        React.createElement('circle', {
+          cx: 22, cy: 22, r: 18, fill: 'none',
+          stroke: 'var(--v4-line, rgba(0,0,0,.09))', strokeWidth: 5
+        }),
+        React.createElement('circle', {
+          cx: 22, cy: 22, r: 18, fill: 'none',
+          stroke: 'var(--v4-ok-fill, #7a8a5e)', strokeWidth: 5,
+          strokeLinecap: 'round',
+          strokeDasharray: `${dash} ${circ}`,
+          transform: 'rotate(-90 22 22)'
+        }),
+        React.createElement('text', {
+          x: 22, y: 26, textAnchor: 'middle',
+          className: 'widget-v4-macro__num'
+        }, Math.round(Number(value) || 0))
+      ),
+      React.createElement('div', { className: 'widget-v4-kicker' }, label)
+    );
+  }
+
   // === Day Score Widget Content (Оценка дня 0-100 — unified: Status + Subjective + Momentum) ===
   function DayScoreWidgetContent({ widget, data }) {
     const score = data?.score ?? 0;
@@ -1596,20 +1639,16 @@
       }
     }, `${getLevelEmoji()} ${getLevelLabel()}`) : null;
 
-    // 2x1 — горизонтальный: цифра слева, уровень + рекомендация справа
+    // 2x1 — канвас g1: «Оценка дня» слева, «6,2 / 10» справа
     if (isShort) {
       return React.createElement('div', {
-        className: rootClassName
+        className: `${rootClassName} widget-v4-row`
       },
-        // Score
-        React.createElement('div', {
-          className: 'widget-day-score__score',
-          style: { fontSize: '2rem', fontWeight: 800, color, lineHeight: 1, letterSpacing: '-1px', flexShrink: 0 }
-        }, Math.round(score)),
-        // Top right: level badge
-        levelBadge ? React.createElement('div', { className: 'widget-day-score__badge-row' }, levelBadge) : null,
-        // Bottom full-width recommendation
-        actionEl ? React.createElement('div', { className: 'widget-day-score__action-row' }, actionEl) : null
+        v4Kicker('Оценка дня'),
+        React.createElement('div', { className: 'widget-v4-row__value' },
+          formatRuDecimal(score / 10, 1),
+          React.createElement('span', { className: 'widget-v4-unit' }, ' / 10')
+        )
       );
     }
 
@@ -1801,30 +1840,36 @@
       );
     }
 
-    // === 2×2 vertical ===
-    return React.createElement('div', {
-      style: { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%', padding: '8px 8px 6px' }
-    },
-      // Header row
-      React.createElement('div', {
-        style: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }
+    // === 2×2 — канвас g1: kicker + песочная волна + статус
+    const waveCount = Number(data?.waveCount || data?.waves?.length || data?.mealCount || 0);
+    const waveStatus = (status === 'complete' || isLipolysis) ? 'без критичных' : 'идёт волна';
+    const waveCountLabel = waveCount > 0
+      ? (waveCount === 1 ? '1 волна' : (waveCount < 5 ? `${waveCount} волны` : `${waveCount} волн`))
+      : (timeLabel || '');
+    return React.createElement('div', { className: 'widget-v4-stack' },
+      v4Kicker('Инсулиновая волна'),
+      React.createElement('svg', {
+        className: 'widget-v4-wave',
+        viewBox: '0 0 130 52',
+        width: '100%',
+        height: 52,
+        'aria-hidden': 'true'
       },
-        React.createElement('div', {
-          style: { fontSize: '0.8rem', fontWeight: 700, color: mainLabelColor, lineHeight: 1.2 }
-        }, mainLabel)
+        React.createElement('line', {
+          x1: 0, y1: 46, x2: 130, y2: 46,
+          stroke: 'var(--v4-line, rgba(0,0,0,.1))',
+          strokeWidth: 1.5
+        }),
+        React.createElement('path', {
+          className: 'widget-v4-wave__fill',
+          d: 'M3,46 C22,46 28,16 42,16 C56,16 62,46 78,46 C92,46 98,12 112,12 C122,12 126,46 128,46 L3,46 Z',
+          opacity: 0.85
+        })
       ),
-      // Time (big)
-      React.createElement('div', {
-        style: { fontSize: '1.2rem', fontWeight: 800, color: timeLabelColor, letterSpacing: '-0.5px', lineHeight: 1, marginTop: '2px' }
-      }, timeLabel),
-      // Sparkline
-      React.createElement('div', {
-        style: { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', marginTop: '4px', marginBottom: '4px' }
-      }, sparkline),
-      // Subtext
-      React.createElement('div', {
-        style: { fontSize: '0.6rem', fontWeight: 600, color: subTextColor, lineHeight: 1.3 }
-      }, subText)
+      React.createElement('div', { className: 'widget-v4-stack__footer' },
+        React.createElement('span', { className: 'widget-v4-ok' }, waveStatus),
+        React.createElement('span', { className: 'widget-v4-muted' }, waveCountLabel)
+      )
     );
   }
 
@@ -1915,52 +1960,46 @@
       );
     }
 
-    // === 2×2 vertical: score + label + categories + period ===
-    return React.createElement('div', {
-      style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '4px', padding: '8px 6px' }
-    },
-      // Score
-      React.createElement('div', {
-        style: { fontSize: '2.8rem', fontWeight: 800, color, lineHeight: 1, letterSpacing: '-1px' }
-      }, Math.round(score)),
-      // Label
-      React.createElement('div', {
-        style: { fontSize: '0.65rem', fontWeight: 600, color: 'var(--heys-text-secondary,#64748b)' }
-      }, 'Тренд здоровья'),
-      // Category mini-bars
-      showCategories && categories.length > 0
-        ? React.createElement('div', {
-          style: { display: 'flex', gap: '4px', marginTop: '4px', width: '100%', justifyContent: 'center' }
-        }, categories.map(cat => {
-          const catColor = getColor(cat.score);
-          return React.createElement('div', {
-            key: cat.key,
-            title: `${cat.label}: ${cat.score}`,
-            style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', minWidth: 0, flex: 1 }
-          },
-            React.createElement('div', {
-              style: {
-                width: '100%', maxWidth: '22px', height: '28px',
-                borderRadius: '4px', background: 'var(--heys-bg-secondary,#f1f5f9)',
-                overflow: 'hidden', position: 'relative'
-              }
-            },
-              React.createElement('div', {
-                style: {
-                  position: 'absolute', bottom: 0, left: 0, right: 0,
-                  height: `${cat.score}%`, background: catColor, opacity: 0.8,
-                  borderRadius: '3px', transition: 'height 0.4s ease'
-                }
-              })
-            ),
-            React.createElement('div', {
-              style: { fontSize: '0.55rem', color: 'var(--heys-text-tertiary,#94a3b8)', whiteSpace: 'nowrap' }
-            }, cat.icon)
-          );
-        }))
-        : null,
-      // Period buttons
-      React.createElement('div', { style: { marginTop: '4px' } }, periodRow)
+    // === 2×2 — канвас g1: kicker + число + «за N дней» + линия тренда
+    const trendPts = (showCategories && categories.length
+      ? categories.map((cat, i) => {
+        const x = 4 + (i / Math.max(1, categories.length - 1)) * 122;
+        const y = 36 - Math.max(0, Math.min(100, Number(cat.score) || 0)) / 100 * 28;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      : ['4,32', '26,28', '48,30', '70,20', '92,16', '114,10', '126,8']
+    ).join(' ');
+    const lastPt = trendPts.split(' ').pop().split(',');
+    const delta = Number(data?.delta);
+    const hero = Number.isFinite(delta)
+      ? `${delta > 0 ? '+' : (delta < 0 ? '−' : '')}${Math.abs(Math.round(delta))}`
+      : String(Math.round(score));
+    return React.createElement('div', { className: 'widget-v4-stack' },
+      v4Kicker('Тренд здоровья'),
+      React.createElement('div', { className: 'widget-v4-hero-num' },
+        React.createElement('span', { className: 'widget-v4-hero-num__val widget-v4-ok' }, hero),
+        React.createElement('span', { className: 'widget-v4-unit' }, `за ${periodDays} дней`)
+      ),
+      React.createElement('svg', {
+        className: 'widget-v4-spark',
+        viewBox: '0 0 130 40',
+        width: '100%',
+        height: 40,
+        'aria-hidden': 'true'
+      },
+        React.createElement('polyline', {
+          points: trendPts,
+          fill: 'none',
+          stroke: 'var(--v4-ok-fill, #7a8a5e)',
+          strokeWidth: 2.5,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round'
+        }),
+        React.createElement('circle', {
+          cx: lastPt[0], cy: lastPt[1], r: 3.5,
+          fill: 'var(--v4-ok-fill, #7a8a5e)'
+        })
+      )
     );
   }
 
@@ -2071,99 +2110,33 @@
       );
     }
 
-    // 2x2 — Thick volumetric ring layout (pathLength=100, overeat red arc)
+    // 2×2 — v4 hero: число «осталось» + полоса прогресса (канвас g1)
     if (size === '2x2') {
-      const ringStartOffset = 9;
-      const ringCapComp = 5;
       const ratio = target > 0 ? eaten / target : 0;
-      const gradientId = `cal-ring-grad-${widget?.id || '0'}`;
+      const barPct = Math.min(100, Math.round(ratio * 100));
+      const hasOver = eaten > target && target > 0;
+      const heroValue = remaining > 0 ? remaining : (hasOver ? eaten - target : eaten);
+      const heroLabel = remaining > 0 ? 'осталось' : (hasOver ? 'перебор' : 'съедено');
 
-      // Time-aware color: compare eaten pace vs expected pace for current time of day
-      const getTimeAwareColor = () => {
-        const now = new Date();
-        const hour = now.getHours() + now.getMinutes() / 60;
-        const EATING_START = 7;
-        const EATING_END = 22;
-        const actualFraction = target > 0 ? eaten / target : 0;
-        if (actualFraction >= 1.1) return 'var(--heys-ratio-over)';
-        if (hour <= EATING_START) return actualFraction < 0.05 ? 'var(--heys-ratio-good)' : 'var(--heys-ratio-over)';
-        const dayProgress = Math.min(1, (hour - EATING_START) / (EATING_END - EATING_START));
-        const paceRatio = dayProgress > 0 ? actualFraction / dayProgress : actualFraction;
-        if (paceRatio >= 1.05) return 'var(--heys-ratio-over)';
-        if (paceRatio >= 0.75) return 'var(--heys-ratio-good)';
-        if (paceRatio >= 0.45) return 'var(--heys-ratio-low)';
-        return 'var(--heys-ratio-crash)';
-      };
-      const color = getTimeAwareColor();
-      // Gradient colors mapped to time-aware color state
-      const getGradientColors = (c) => {
-        if (c === 'var(--heys-ratio-good)') return ['#86efac', '#22c55e']; // green
-        if (c === 'var(--heys-ratio-over)') return ['#fcd34d', '#f59e0b']; // amber (overeat)
-        if (c === 'var(--heys-ratio-low)') return ['#fde68a', '#eab308']; // yellow (low)
-        if (c === 'var(--heys-ratio-crash)') return ['#fca5a5', '#ef4444']; // red (crash)
-        return ['#ffd166', '#ff9500'];
-      };
-      const [gradStart, gradEnd] = getGradientColors(color);
-      // Font size: shrink for 4+ digit numbers to fit inside ring
-      const valueFontSize = eaten >= 10000 ? '18px' : eaten >= 1000 ? '21px' : '26px';
-      // Main arc: up to 100%
-      const basePctRaw = Math.min(100, Math.round(ratio * 100));
-      const basePct = Math.max(0, basePctRaw - ringCapComp);
-      // Overeat arc: beyond 100%
-      const hasOver = ratio > 1;
-      const overPctRaw = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0;
-      const overPct = Math.max(0, overPctRaw - ringCapComp);
-
-      const showPct2x2 = widget.settings?.showPercentage !== false;
-      const showRemaining2x2 = widget.settings?.showRemaining !== false;
-
-      return React.createElement('div', { className: 'widget-calories widget-calories--2x2' },
-        React.createElement('div', { className: 'widget-calories__ring-wrap' },
-          React.createElement('svg', { className: 'widget-calories__ring', viewBox: '0 0 44 44' },
-            React.createElement('defs', null,
-              React.createElement('linearGradient', { id: gradientId, x1: '0%', y1: '0%', x2: '100%', y2: '100%' },
-                React.createElement('stop', { offset: '0%', stopColor: gradStart }),
-                React.createElement('stop', { offset: '100%', stopColor: gradEnd })
-              )
-            ),
-            React.createElement('circle', {
-              className: 'widget-calories__ring-track', cx: '22', cy: '22', r: '18', pathLength: '100'
-            }),
-            React.createElement('circle', {
-              className: 'widget-calories__ring-fill', cx: '22', cy: '22', r: '18', pathLength: '100',
-              style: {
-                strokeDasharray: `${displayBasePct} 100`,
-                '--ring-dasharray': `${basePct} 100`,
-                '--ring-start-offset': -ringStartOffset,
-                stroke: `url(#${gradientId})`
-              }
-            }),
-            hasOver ? React.createElement('circle', {
-              className: 'widget-calories__ring-fill--over', cx: '22', cy: '22', r: '18', pathLength: '100',
-              style: {
-                strokeDasharray: `${displayOverPct} ${100 - displayOverPct}`,
-                '--over-dasharray': `${overPct} ${100 - overPct}`,
-                '--over-offset': -(100 - overPct)
-              }
-            }) : null
-          ),
-          React.createElement('div', { className: 'widget-calories__ring-inner' },
-            React.createElement('div', { className: 'widget-calories__value--lg', style: { color, fontSize: valueFontSize } }, formatKcal(eaten)),
-            React.createElement('div', { className: 'widget-calories__ring-sublabel' },
-              showPct2x2 ? `${pct}%` : 'ккал'
-            )
-          )
+      return React.createElement('div', { className: 'widget-calories widget-calories--2x2 widget-calories--v4-hero' },
+        React.createElement('div', { className: 'widget-v4-kicker' }, 'Калории'),
+        React.createElement('div', { className: 'widget-calories__hero-value' },
+          React.createElement('div', { className: 'widget-calories__value--lg' }, formatKcal(heroValue)),
+          React.createElement('span', { className: 'widget-calories__hero-unit' }, 'ккал')
         ),
-        showRemaining2x2 ? React.createElement('div', { className: 'widget-calories__info-bar' },
-          React.createElement('div', { className: 'widget-calories__info-cell' },
-            React.createElement('span', { className: 'widget-calories__meta-label' }, 'Цель'),
-            React.createElement('span', { className: 'widget-calories__meta-val' }, formatKcal(target))
+        React.createElement('div', { className: 'widget-calories__hero-remaining-label' }, heroLabel),
+        React.createElement('div', { className: 'widget-calories__hero-bar-wrap' },
+          React.createElement('div', { className: 'widget-calories__hero-bar' },
+            React.createElement('div', {
+              className: 'widget-calories__hero-bar-fill',
+              style: { width: `${barPct}%` }
+            })
           ),
-          React.createElement('div', { className: 'widget-calories__info-cell' },
-            React.createElement('span', { className: 'widget-calories__meta-label' }, remaining > 0 ? 'Ост.' : (hasOver ? 'Пер.' : 'Ок')),
-            React.createElement('span', { className: 'widget-calories__meta-val' }, remaining > 0 ? formatKcal(remaining) : (hasOver ? formatKcal(eaten - target) : '✓'))
+          React.createElement('div', { className: 'widget-calories__hero-bar-labels' },
+            React.createElement('span', null, formatKcal(eaten)),
+            React.createElement('span', null, formatKcal(target))
           )
-        ) : null
+        )
       );
     }
 
@@ -2242,22 +2215,23 @@
 
     const getWaterColor = () => HEYS.scales.waterProgress(pct).color;
 
-    // 1x1 Micro
+    // 1x1 — канвас g1: «Вода» + литры + тонкая полоса
     if (d.isMicro) {
-      const waterColor = getWaterColor();
-      return React.createElement('div', { className: 'widget-water widget-water--micro' },
+      const liters = (drunk || 0) / 1000;
+      return React.createElement('div', { className: 'widget-water widget-water--micro widget-v4-mini' },
+        v4Kicker('Вода'),
+        React.createElement('div', { className: 'widget-v4-mini__value' },
+          formatRuDecimal(liters, 1),
+          React.createElement('span', { className: 'widget-v4-unit' }, ' л')
+        ),
         showProgress
-          ? React.createElement('div', { className: 'widget-water__progress widget-water__progress--micro' },
+          ? React.createElement('div', { className: 'widget-v4-mini__bar' },
             React.createElement('div', {
-              className: 'widget-water__bar widget-water__bar--micro',
-              style: {
-                width: `${Math.min(100, Math.max(0, pct))}%`,
-                background: waterColor
-              }
+              className: 'widget-v4-mini__bar-fill widget-v4-mini__bar-fill--water',
+              style: { width: `${Math.min(100, Math.max(0, pct))}%` }
             })
           )
-          : null,
-        React.createElement('div', { className: 'widget-water__value' }, primaryValue)
+          : null
       );
     }
 
@@ -2351,11 +2325,14 @@
       return '😴';
     };
 
-    // 1x1 Micro
+    // 1x1 — канвас g1: «Сон» + часы
     if (d.isMicro) {
-      return React.createElement('div', { className: 'widget-sleep widget-sleep--micro' },
-        React.createElement('div', { className: 'widget-micro__label' }, '😴'),
-        React.createElement('div', { className: 'widget-sleep__value' }, `${hours.toFixed(1)}ч`)
+      return React.createElement('div', { className: 'widget-sleep widget-sleep--micro widget-v4-mini' },
+        v4Kicker('Сон'),
+        React.createElement('div', { className: 'widget-v4-mini__value' },
+          formatRuDecimal(hours, 1),
+          React.createElement('span', { className: 'widget-v4-unit' }, ' ч')
+        )
       );
     }
 
@@ -2735,18 +2712,57 @@
       );
     }
 
-    // COMPACT (2×2) — число + тренд + (график или цель/BMI)
+    // COMPACT (2×2) — канвас g1: «Вес» + кг + неделя + линия
     if (size === '2x2') {
-      return React.createElement('div', { className: 'widget-weight widget-weight--2x2' },
-        React.createElement(WeightValue, { scale: 'lg' }),
-        React.createElement(TrendBlock, { showText: true }),
-        hasSparkline
-          ? React.createElement('div', { className: 'widget-weight__chart-compact' },
-            React.createElement(ChartBlock, { days: 7, height: 46, showDots: false })
-          )
-          : (showGoal && hasGoal
-            ? React.createElement(GoalBlock, { inline: true })
-            : React.createElement(BMIBlock, { compact: true }))
+      const weekText = Number.isFinite(weekChange)
+        ? `${weekChange > 0 ? '+' : '−'}${formatRuDecimal(Math.abs(weekChange), 1)} за неделю`
+        : null;
+      const pts = hasSparkline
+        ? sparklinePoints.slice(-7)
+        : [];
+      const sparkPoints = pts.length >= 2
+        ? pts.map((p, i) => {
+          const weights = pts.map((x) => x.weight);
+          const min = Math.min(...weights);
+          const max = Math.max(...weights);
+          const span = Math.max(0.1, max - min);
+          const x = 4 + (i / (pts.length - 1)) * 122;
+          const y = 32 - ((p.weight - min) / span) * 24;
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(' ')
+        : '4,14 26,24 48,24 70,6 92,14 114,18 126,19';
+      const last = sparkPoints.split(' ').pop().split(',');
+      return React.createElement('div', { className: 'widget-weight widget-weight--2x2 widget-v4-stack' },
+        v4Kicker('Вес'),
+        React.createElement('div', { className: 'widget-v4-hero-num' },
+          React.createElement('span', { className: 'widget-v4-hero-num__val' },
+            hasCurrent ? formatRuDecimal(current, 1) : '—'
+          ),
+          React.createElement('span', { className: 'widget-v4-unit' }, 'кг')
+        ),
+        weekText
+          ? React.createElement('div', { className: 'widget-v4-ok widget-v4-delta' }, weekText)
+          : null,
+        React.createElement('svg', {
+          className: 'widget-v4-spark',
+          viewBox: '0 0 130 38',
+          width: '100%',
+          height: 38,
+          'aria-hidden': 'true'
+        },
+          React.createElement('polyline', {
+            points: sparkPoints,
+            fill: 'none',
+            stroke: 'var(--v4-act, #c67139)',
+            strokeWidth: 2.5,
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round'
+          }),
+          React.createElement('circle', {
+            cx: last[0], cy: last[1], r: 3.5,
+            fill: 'var(--v4-act, #c67139)'
+          })
+        )
       );
     }
 
@@ -3339,27 +3355,12 @@
     }
 
     if (size === '3x2') {
-      return React.createElement('div', { className: 'widget-macros widget-macros--3x2 widget-macros--rings widget-macros--rings-md' },
-        React.createElement('div', { className: 'widget-macros__rings-wrap' },
-          React.createElement('div', { className: 'macro-rings widget-macros__rings' },
-            macroItems.map((item) => buildMacroRing(item, {
-              centerMode: centerValueMode,
-              hidePercentBadge: true,
-              valueColor: getMacroValueTone(item)
-            }))
-          )
-        ),
-        React.createElement('div', { className: 'widget-macros__cascade-row' },
-          renderCascadeStrip(cascade || {}, {
-            size: '3x1',
-            maxDots: Array.isArray(cascade?.events) && cascade.events.length > 0 ? cascade.events.length : 8,
-            placeholderCount: 6,
-            className: 'widget-cascade--embedded',
-            showDayBalanceBadge: true,
-            metricInlineWithLabel: true,
-            footerLabel: 'Позитивный каскад',
-            useLiveCurrentCascade: true
-          })
+      return React.createElement('div', { className: 'widget-macros widget-macros--3x2 widget-v4-stack' },
+        v4Kicker('БЖУ'),
+        React.createElement('div', { className: 'widget-v4-macros' },
+          v4SageRing({ value: protein, target: proteinTarget, label: 'Белки' }),
+          v4SageRing({ value: fat, target: fatTarget, label: 'Жиры' }),
+          v4SageRing({ value: carbs, target: carbsTarget, label: 'Углеводы' })
         )
       );
     }
@@ -3583,15 +3584,24 @@
     }
 
     if (size === '2x1' || size === '3x1') {
-      const compactWeekDays = days.slice(-7).map(buildWeekDayMeta);
-      const compactCellClass = size === '2x1'
-        ? 'widget-heatmap__cell--compact widget-heatmap__cell--compact-2x1'
-        : 'widget-heatmap__cell--compact widget-heatmap__cell--compact-3x1';
-      return React.createElement('div', { className: `widget-heatmap widget-heatmap--${size}` },
-        React.createElement('div', {
-          className: 'widget-heatmap__grid widget-heatmap__grid--week'
-        },
-          compactWeekDays.map((meta, index) => renderHeatmapCell(meta, index, compactCellClass))
+      const week = days.slice(-7);
+      while (week.length < 7) week.unshift(null);
+      const filled = week.filter((day) => day?.status && day.status !== 'empty').length;
+      const barTone = (status) => {
+        if (status === 'green' || status === 'good' || status === 'ok') return 'ok';
+        if (status === 'yellow' || status === 'warn' || status === 'red') return 'warn';
+        return 'empty';
+      };
+      return React.createElement('div', { className: `widget-heatmap widget-heatmap--${size} widget-v4-stack` },
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('Тепловая карта'),
+          React.createElement('span', { className: 'widget-v4-ok widget-v4-row__meta' }, `${filled} из 7`)
+        ),
+        React.createElement('div', { className: 'widget-v4-heat' },
+          week.map((day, index) => React.createElement('span', {
+            key: `${day?.date || 'empty'}-${index}`,
+            className: `widget-v4-heat__bar widget-v4-heat__bar--${barTone(day?.status)}`
+          }))
         )
       );
     }
@@ -3790,85 +3800,32 @@
       );
     }
 
-    // === 2×1 COMPACT ===
+    // === 2×1 — канвас g1: «Динамика веса» + кг/мес + 7/14/30
     if (size === '2x1') {
+      const monthKg = Number.isFinite(slopePerWeek) ? slopePerWeek * 4 : totalDeltaKg;
+      const monthLabel = `${monthKg > 0 ? '+' : '−'}${formatRuDecimal(Math.abs(monthKg), 1)}`;
       return React.createElement('div', {
-        className: `widget-crash-risk widget-crash-risk--short widget-crash-risk--${zone}`,
-        style: {
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '6px',
-          alignSelf: 'stretch',
-          width: '100%'
-        }
+        className: `widget-crash-risk widget-crash-risk--short widget-crash-risk--${zone} widget-v4-stack`
       },
-        React.createElement('div', {
-          style: {
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start',
-            justifyContent: 'center',
-            minWidth: 0,
-            flex: '1 1 auto'
-          }
-        },
-          React.createElement('div', {
-            style: { color, fontSize: '1.15rem', fontWeight: 800, lineHeight: 1 }
-          }, `${dirArrow} ${absPct.toFixed(1)}%`),
-          React.createElement('div', {
-            className: 'widget-crash-risk__ews-badge',
-            style: {
-              background: colorLight,
-              color,
-              fontSize: '0.62rem',
-              padding: '1px 6px',
-              lineHeight: 1.2,
-              fontWeight: 600,
-              marginTop: '4px',
-              maxWidth: '100%',
-              borderRadius: '999px',
-              display: 'inline-block'
-            }
-          }, `${zoneMeta.emoji} ${zoneMeta.label}`)
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('Динамика веса'),
+          React.createElement('span', { className: 'widget-v4-row__value widget-v4-row__value--sm widget-v4-ok' },
+            monthLabel,
+            React.createElement('span', { className: 'widget-v4-unit' }, ' кг / мес')
+          )
         ),
-        React.createElement('div', {
-          style: {
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '3px',
-            alignItems: 'stretch',
-            justifyContent: 'center',
-            flex: '0 0 auto'
-          }
-        }, PRESETS.map((days) => {
-          const isActive = periodDays === days;
-          return React.createElement('button', {
+        React.createElement('div', { className: 'widget-v4-periods' },
+          PRESETS.map((days) => React.createElement('button', {
             key: `short-${days}`,
             type: 'button',
+            className: 'widget-v4-periods__btn' + (periodDays === days ? ' is-active' : ''),
             onClick: (event) => handlePeriodSwitch(days, event),
             onPointerDown: (event) => event.stopPropagation(),
             onPointerUp: (event) => event.stopPropagation(),
-            onTouchStart: (event) => event.stopPropagation(),
-            style: {
-              border: 'none',
-              borderRadius: '999px',
-              padding: '0 6px',
-              height: '14px',
-              minWidth: '38px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              fontSize: '0.58rem',
-              lineHeight: '14px',
-              fontWeight: isActive ? 700 : 500,
-              background: isActive ? color : 'var(--heys-bg-secondary,#f1f5f9)',
-              color: isActive ? '#fff' : 'var(--heys-text-secondary,#94a3b8)',
-              transition: 'all 0.15s ease',
-              display: 'block'
-            }
-          }, `${days} дн.`);
-        }))
+            onTouchStart: (event) => event.stopPropagation()
+          }, days)),
+          React.createElement('span', { className: 'widget-v4-periods__suffix' }, 'дней')
+        )
       );
     }
 
@@ -4818,29 +4775,39 @@
     }
 
     if (size === '2x2') {
-      const showConfidence = widget.settings?.showConfidence !== false;
-      const showSource = widget.settings?.showSource !== false;
-      const srcLabel = getSourceLabel();
-      return React.createElement('div', { className: 'widget-relapse-risk widget-relapse-risk--2x2' },
-        React.createElement('div', { className: 'widget-relapse-risk__gauge-wrap' },
-          React.createElement(RelapseRiskSpeedometer, {
-            score: displayPct,
-            level,
-            size: 136,
-            label: 'Риск-радар',
-            compact: true,
-            gaugeStrokeWidth: widget.settings?.gaugeStrokeWidth
-          })
-        ),
-        React.createElement('div', { className: 'widget-relapse-risk__footer-badge-wrap' },
+      const levelWord = (level === 'low' || !level) ? 'низкий' : getRelapseLevelLabel(level);
+      const sleepDriver = primaryDrivers.find((d) => /сон|недосып|sleep/i.test(`${d?.label || ''} ${d?.key || ''}`));
+      const relapseDriver = primaryDrivers.find((d) => /срыв|relapse|эмоц/i.test(`${d?.label || ''} ${d?.key || ''}`));
+      const driverRows = [
+        {
+          label: 'Срывы',
+          value: relapseScore < 20 && !relapseDriver ? 'нет' : (relapseDriver?.text || relapseDriver?.value || (relapseScore ? `${relapseScore}%` : 'нет')),
+          warn: relapseScore >= 20
+        },
+        {
+          label: 'Недосып',
+          value: sleepDriver?.text || sleepDriver?.value || (crashScore >= 20 ? `${crashScore}` : 'нет'),
+          warn: !!(sleepDriver || crashScore >= 20)
+        }
+      ];
+      return React.createElement('div', { className: 'widget-relapse-risk widget-relapse-risk--2x2 widget-v4-stack' },
+        v4Kicker('Риск-радар'),
+        React.createElement('div', { className: 'widget-v4-hero-num' },
           React.createElement('div', {
-            className: 'widget-relapse-risk__gauge-status-pill widget-relapse-risk__gauge-status-pill--footer',
-            style: { color, background: `${color}16`, borderColor: `${color}22` },
-            // В 2x2 места под строку нет — источник даём подсказкой.
-            title: showSource && srcLabel ? `Источник риска: ${srcLabel}` : undefined
-          }, getRelapseLevelLabel(level)),
+            className: 'widget-v4-hero-num__val ' + (level === 'low' || !level ? 'widget-v4-ok' : 'widget-v4-warn')
+          }, levelWord)
         ),
-        showConfidence ? React.createElement('div', { className: 'widget-relapse-risk__label' }, `conf ${confidence}%`) : null
+        React.createElement('div', { className: 'widget-v4-kv' },
+          driverRows.map((driver, index) => React.createElement('div', {
+            key: `${driver?.key || driver?.label || 'd'}-${index}`,
+            className: 'widget-v4-kv__row'
+          },
+            React.createElement('span', null, driver?.label || driver?.key || 'Фактор'),
+            React.createElement('span', {
+              className: driver?.warn ? 'widget-v4-warn' : 'widget-v4-ok'
+            }, driver?.value)
+          ))
+        )
       );
     }
 
@@ -5858,6 +5825,41 @@
   }
 
   // === Catalog Modal Component ===
+  function CatalogStrip({ onSelect, existingTypes }) {
+    const registry = HEYS.Widgets.registry;
+    const availableTypes = registry?.getAvailableTypes() || [];
+    const existingTypeSet = existingTypes instanceof Set ? existingTypes : new Set(existingTypes || []);
+
+    return React.createElement('div', { className: 'widget-v4-catalog' },
+      React.createElement('div', { className: 'widget-v4-catalog__tier' }, 'Каталог'),
+      React.createElement('div', { className: 'widget-v4-catalog__grid' },
+        availableTypes.map((type) => {
+          const isAlreadyAdded = existingTypeSet.has(type.type);
+          return React.createElement('button', {
+            key: type.type,
+            type: 'button',
+            className: 'widget-v4-catalog__item' + (isAlreadyAdded ? ' widget-v4-catalog__item--on' : ''),
+            disabled: isAlreadyAdded,
+            onClick: () => {
+              if (isAlreadyAdded) return;
+              onSelect?.(type);
+              HEYS.Widgets.emit('catalog:select', { type: type.type });
+            }
+          },
+            React.createElement('span', { className: 'widget-v4-catalog__name' }, type.name),
+            isAlreadyAdded
+              ? React.createElement('span', { className: 'widget-v4-catalog__hint' }, 'на экране')
+              : React.createElement('svg', {
+                width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
+                stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+                'aria-hidden': 'true'
+              }, React.createElement('path', { d: 'M12 5v14M5 12h14' }))
+          );
+        })
+      )
+    );
+  }
+
   function CatalogModal({ isOpen, onClose, onSelect, existingTypes }) {
     const registry = HEYS.Widgets.registry;
     const categories = registry?.getCategories() || [];
@@ -6397,7 +6399,6 @@
     const [isLayoutHydrated, setIsLayoutHydrated] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [defaultHomeTab, setDefaultHomeTab] = useState(() => getCurrentDefaultTab());
-    const [catalogOpen, setCatalogOpen] = useState(false);
     const [settingsWidget, setSettingsWidget] = useState(null);
     const [relapseDetails, setRelapseDetails] = useState(null);
     const [dayScoreDetails, setDayScoreDetails] = useState(null);
@@ -6436,7 +6437,7 @@
           const cellW = (w - gap * (cols - 1)) / cols;
           if (!Number.isFinite(cellW) || cellW <= 0) return;
 
-          const target = Math.max(60, Math.min(Math.round(cellW), 140));
+          const target = 64;
           const rowHeight = `${target}px`;
 
           // Важно: overlay — соседний элемент внутри .widgets-grid-container,
@@ -6976,22 +6977,24 @@
     if (isLayoutHydrated && widgets.length === 0 && !isEditMode && !isSyncLoading) {
       return React.createElement('div', { className: 'widgets-tab' },
         pullIndicatorEl,
-        React.createElement('div', { className: 'widgets-empty' },
-          React.createElement('div', { className: 'widgets-empty__icon' }, '📊'),
-          React.createElement('div', { className: 'widgets-empty__title' }, 'Нет виджетов'),
+        React.createElement('div', { className: 'widgets-empty widget-v4-empty' },
+          React.createElement('div', { className: 'widgets-empty__title' }, 'Виджетов нет'),
           React.createElement('div', { className: 'widgets-empty__desc' },
-            'Добавьте виджеты для отслеживания важных показателей'
+            'Соберите экран из того, что смотрите каждый день'
           ),
           React.createElement('button', {
-            className: 'widgets-empty__btn',
-            onClick: () => setCatalogOpen(true)
-          }, '+ Добавить виджет')
-        ),
-        React.createElement(CatalogModal, {
-          isOpen: catalogOpen,
-          onClose: () => setCatalogOpen(false),
-          onSelect: handleCatalogSelect
-        })
+            type: 'button',
+            className: 'widget-v4-empty__btn',
+            onClick: () => HEYS.Widgets.enterEditMode?.()
+          },
+            React.createElement('svg', {
+              width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+              'aria-hidden': 'true'
+            }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
+            'Добавить виджет'
+          )
+        )
       );
     }
 
@@ -7023,6 +7026,18 @@
               onRemove: handleRemove,
               onSettings: setSettingsWidget
             })
+          ),
+          !isEditMode && React.createElement('button', {
+            type: 'button',
+            className: 'widget-v4-add',
+            onClick: () => HEYS.Widgets.enterEditMode?.()
+          },
+            React.createElement('svg', {
+              width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+              'aria-hidden': 'true'
+            }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
+            React.createElement('span', null, 'Добавить')
           )
         ),
         isEditMode && showGridOverlay && React.createElement('div', {
@@ -7038,13 +7053,52 @@
         )
       ),
 
-      // Modals
-      React.createElement(CatalogModal, {
-        isOpen: catalogOpen,
-        onClose: () => setCatalogOpen(false),
+      isEditMode && React.createElement(CatalogStrip, {
         onSelect: handleCatalogSelect,
         existingTypes: new Set((widgets || []).map(w => w.type))
       }),
+
+      isEditMode && React.createElement('div', { className: 'widget-v4-edit-footer' },
+        React.createElement('span', { className: 'widget-v4-edit-footer__hint' }, 'Долгое нажатие — взять виджет'),
+        React.createElement('span', { className: 'widget-v4-edit-footer__history' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'widget-v4-edit-footer__icon' + (!historyInfo.canUndo ? ' is-off' : ''),
+            onClick: handleUndo,
+            disabled: !historyInfo.canUndo,
+            title: 'Отменить',
+            'aria-label': 'Отменить'
+          },
+            React.createElement('svg', {
+              width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round',
+              'aria-hidden': 'true'
+            },
+              React.createElement('path', { d: 'M9 14L4 9l5-5' }),
+              React.createElement('path', { d: 'M4 9h11a5 5 0 010 10h-1' })
+            )
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'widget-v4-edit-footer__icon' + (!historyInfo.canRedo ? ' is-off' : ''),
+            onClick: handleRedo,
+            disabled: !historyInfo.canRedo,
+            title: 'Повторить',
+            'aria-label': 'Повторить'
+          },
+            React.createElement('svg', {
+              width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round',
+              'aria-hidden': 'true'
+            },
+              React.createElement('path', { d: 'M15 14l5-5-5-5' }),
+              React.createElement('path', { d: 'M20 9H9a5 5 0 000 10h1' })
+            )
+          )
+        )
+      ),
+
+      // Modals
       React.createElement(SettingsModal, {
         widget: settingsWidget,
         isOpen: !!settingsWidget,
@@ -7078,61 +7132,14 @@
         onConfirm: handleConfirmResetLayout
       }),
 
-      // === Fixed bottom edit controls (для всех устройств) ===
-      React.createElement('div', { className: 'widgets-edit-controls' },
-        // Кнопки добавить/отменить/вернуть - показываем только в edit mode
-        isEditMode && React.createElement('div', { className: 'widgets-edit-controls__stack' },
-          React.createElement('div', { className: 'widgets-edit-controls__actions' },
-            React.createElement('button', {
-              id: 'tour-widgets-add',
-              className: 'widgets-header__btn widgets-header__btn--add',
-              onClick: () => setCatalogOpen(true)
-            }, '+ Добавить'),
-            React.createElement('button', {
-              className: 'widgets-header__btn widgets-header__btn--copy-layout',
-              onClick: handleCopyLayoutLog,
-              title: 'Скопировать лог раскладки виджетов по клеткам',
-              'aria-label': 'Скопировать лог раскладки виджетов по клеткам'
-            }, '📋'),
-            React.createElement('button', {
-              className: 'widgets-header__btn widgets-header__btn--reset',
-              onClick: handleResetLayout,
-              title: 'Сбросить виджеты к дефолтной раскладке',
-              'aria-label': 'Сбросить виджеты к дефолтной раскладке'
-            }, '↺'),
-            React.createElement('button', {
-              className: `widgets-header__btn widgets-header__btn--undo ${!historyInfo.canUndo ? 'disabled' : ''}`,
-              onClick: handleUndo,
-              disabled: !historyInfo.canUndo,
-              title: 'Отменить (Ctrl+Z)'
-            }, '↩'),
-            React.createElement('button', {
-              className: `widgets-header__btn widgets-header__btn--redo ${!historyInfo.canRedo ? 'disabled' : ''}`,
-              onClick: handleRedo,
-              disabled: !historyInfo.canRedo,
-              title: 'Повторить (Ctrl+Shift+Z)'
-            }, '↪'),
-            React.createElement('button', {
-              className: `widgets-header__btn widgets-header__btn--grid ${showGridOverlay ? 'active' : ''}`,
-              onClick: () => setShowGridOverlay(prev => !prev),
-              title: 'Показать нумерацию ячеек сетки'
-            }, '⊞')
-          )
-        ),
-        // FAB кнопка редактирования - всегда видна (только на desktop)
-        !isMobile && React.createElement('button', {
-          id: 'tour-widgets-edit',
-          className: `widgets-edit-controls__fab ${isEditMode ? 'active' : ''}`,
-          onClick: toggleEdit
-        }, isEditMode ? '✓ Готово' : '✏️ Изменить')
-      ),
+      React.createElement('div', { className: 'widgets-edit-controls' }),
 
       // === FABs (mobile) ===
       isMobile && React.createElement(React.Fragment, null,
-        // Edit FAB — снизу слева
-        React.createElement('div', { className: 'widgets-fab-left' },
+        // Edit FAB — в шапке (канвас g1), не дублируем слева
+        false && React.createElement('div', { className: 'widgets-fab-left' },
           React.createElement('button', {
-            id: 'tour-widgets-edit', // ID для onboarding тура
+            id: 'tour-widgets-edit',
             className: `widgets-edit-fab ${isEditMode ? 'active' : ''}`,
             onClick: toggleEdit,
             'aria-label': isEditMode ? 'Готово' : 'Изменить'

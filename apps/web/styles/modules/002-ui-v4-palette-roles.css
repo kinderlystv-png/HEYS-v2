@@ -254,7 +254,7 @@
 
 [data-theme-id="sand-dark"],
 [data-theme="sand-dark"][data-palette="sand"] {
-  --v4-bg: #23201b;
+  --v4-bg: #141210;
   --v4-hero: #2f2820;
   --v4-surface: #23201b;
   --v4-ok-bg: #242c20;
@@ -265,8 +265,8 @@
   --v4-warn-soft: #cf9257;
   --v4-ink: #f2ede6;
   --v4-water: #8fb2c2;
-  --v4-ink-2: rgba(242, 237, 230, 0.72);
-  --v4-ink-3: rgba(242, 237, 230, 0.58);
+  --v4-ink-2: rgba(242, 237, 230, 0.63);
+  --v4-ink-3: rgba(242, 237, 230, 0.5);
   --v4-ink-4: rgba(242, 237, 230, 0.46);
   --v4-line: rgba(242, 237, 230, 0.12);
   --v4-card: #23201b;
@@ -286,26 +286,26 @@
   --v4-warn-3: #c9662c;
   /* Sand UI language: painted modules keep warm look on every theme
      (owner 2026-08-12: not shared --v4-act with warm fallback). */
-  --v4-sand-act: #c67139;
-  --v4-sand-act-deep: #8a4a20;
-  --v4-sand-act-text: #8a4a20;
-  --v4-sand-act-mid: #a75c2b;
+  --v4-sand-act: #cf8144;
+  --v4-sand-act-deep: #e2a468;
+  --v4-sand-act-text: #e2a468;
+  --v4-sand-act-mid: #e2a468;
   --v4-sand-act-soft: #e2a468;
-  --v4-sand-hero: #efe3cf;
-  --v4-sand-hero-cool: #e8ecf1;
-  --v4-sand-hero-dark: #211e19;
-  --v4-sand-hero-night: #0f172a;
-  --v4-sand-accent-bg: #f0dcc6;
-  --v4-sand-surface: #f7efe2;
-  --v4-sand-surface-soft: #fffaf1;
-  --v4-sand-ink: #201e1d;
-  --v4-sand-ink-deep: #2b1608;
-  --v4-sand-ink-slate: #1f2937;
-  --v4-sand-ok-text: #5c6a45;
-  --v4-sand-ok-fill: #7a8a5e;
-  --v4-sand-ok-fill-soft: #dfe6d1;
-  --v4-sand-tint: #f3e0d2;
-  --v4-sand-warn-bg: #fef3c7;
+  --v4-sand-hero: #2f2820;
+  --v4-sand-hero-cool: #2f2820;
+  --v4-sand-hero-dark: #141210;
+  --v4-sand-hero-night: #141210;
+  --v4-sand-accent-bg: #3a2620;
+  --v4-sand-surface: #23201b;
+  --v4-sand-surface-soft: #141210;
+  --v4-sand-ink: #f2ede6;
+  --v4-sand-ink-deep: #1a0f04;
+  --v4-sand-ink-slate: #f2ede6;
+  --v4-sand-ok-text: #9fb981;
+  --v4-sand-ok-fill: #8faa6d;
+  --v4-sand-ok-fill-soft: #242c20;
+  --v4-sand-tint: #3a2c20;
+  --v4-sand-warn-bg: #3a2c20;
   --v4-wgt-emerald: #8faa6d;
   --v4-wgt-ok-deep: #9fb981;
   --v4-wgt-link: #cf8144;
@@ -433,8 +433,8 @@
   --v4-warn-soft: #e0a93e;
   --v4-ink: #eef3f8;
   --v4-water: #6fa8c8;
-  --v4-ink-2: rgba(238, 243, 248, 0.72);
-  --v4-ink-3: rgba(238, 243, 248, 0.58);
+  --v4-ink-2: rgba(238, 243, 248, 0.63);
+  --v4-ink-3: rgba(238, 243, 248, 0.5);
   --v4-ink-4: rgba(238, 243, 248, 0.46);
   --v4-line: rgba(238, 243, 248, 0.12);
   --v4-card: #182a3a;

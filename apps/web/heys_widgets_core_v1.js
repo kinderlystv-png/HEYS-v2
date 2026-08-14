@@ -1142,6 +1142,7 @@
     enterEditMode() {
       if (this._editMode) return;
       this._editMode = true;
+      this._editSnapshot = JSON.stringify(this._widgets || []);
       document.body.classList.add('widgets-edit-mode');
 
       // Отключаем swipe навигацию
@@ -1152,12 +1153,23 @@
       HEYS.Widgets.emit('editmode:enter');
     },
 
-    exitEditMode() {
+    exitEditMode(opts) {
       if (!this._editMode) return;
 
       // 🛡️ CRITICAL: Не выходить из edit mode если resize активен!
       if (HEYS.Widgets.dnd?._resizeActive) return;
 
+      if (opts?.revert && this._editSnapshot) {
+        try {
+          const restored = JSON.parse(this._editSnapshot);
+          this._widgets = (Array.isArray(restored) ? restored : []).map((w) => this._normalizeWidget(w));
+          this.saveLayout();
+          HEYS.Widgets.emit('layout:changed', { layout: this._widgets, source: 'edit-cancel' });
+        } catch (e) {
+          warn('edit snapshot restore failed:', e?.message || e);
+        }
+      }
+      this._editSnapshot = null;
       this._editMode = false;
       document.body.classList.remove('widgets-edit-mode');
 
@@ -2429,7 +2441,7 @@
       // Escape — выход из edit mode
       if (e.key === 'Escape' && state.isEditMode()) {
         e.preventDefault();
-        state.exitEditMode();
+        state.exitEditMode({ revert: true });
       }
 
       // Ctrl/Cmd + Z — undo
@@ -2559,7 +2571,7 @@
   HEYS.Widgets.removeWidget = (id) => state.removeWidget(id);
   HEYS.Widgets.isEditMode = () => state.isEditMode();
   HEYS.Widgets.enterEditMode = () => state.enterEditMode();
-  HEYS.Widgets.exitEditMode = () => state.exitEditMode();
+  HEYS.Widgets.exitEditMode = (opts) => state.exitEditMode(opts);
   HEYS.Widgets.toggleEditMode = () => state.toggleEditMode();
   HEYS.Widgets.undo = () => state.undo();
   HEYS.Widgets.redo = () => state.redo();

@@ -3829,7 +3829,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   background: var(--v4-bg, #f8f9fa);
 
   /* Padding как у карточек */
-  padding: 16px 18px 0;
+  padding: 16px 16px 0;
   max-width: 100%;
 
   /* 🚀 PERF: GPU layer + containment — isolate header layout/style from page reflow */
@@ -4178,21 +4178,30 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 [data-theme$="dark"] .game-level-number {
-color: var(--v4-sand-act-soft, #e2a468);
+  color: var(--v4-act-text, #e2a468);
 }
 
 [data-theme$="dark"] .game-rank-title,
 [data-theme$="dark"] .hdr-header-icon-btn {
-  color: rgba(242, 237, 230, 0.46);
+  color: var(--v4-ink-4, rgba(242, 237, 230, 0.46));
+}
+
+[data-theme$="dark"] .tabs.tabs--v4-primary {
+  background: var(--v4-bg, #141210);
+  border-top: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 [data-theme$="dark"] .tabs--v4-primary .tab.tab-primary-nav {
-  color: rgba(242, 237, 230, 0.63);
+  color: var(--v4-ink-2, rgba(242, 237, 230, 0.63));
 }
 
 [data-theme$="dark"] .tabs--v4-primary .tab.tab-primary-nav.active {
-  color: var(--v4-sand-act-soft, #e2a468);
-  background: color-mix(in srgb, var(--v4-sand-hero-dark, #211e19) 88%, var(--v4-sand-act-soft, #e2a468) 12%);
+  color: var(--v4-act-text, #e2a468);
+  background: var(--v4-hero, #2f2820);
+  box-shadow: none;
 }
 
 .game-bar-container {
@@ -6925,6 +6934,65 @@ color: var(--v4-sand-act-soft, #e2a468);
   min-width: 0;
 }
 
+.hdr-tab-title-row--widgets {
+  align-items: center;
+}
+
+.hdr-tab-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.hdr-tab-meta--inline-date {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  flex-shrink: 0;
+}
+
+.hdr-widgets-edit-btn {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  padding: 10px 0;
+  margin: -10px 0;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.hdr-widgets-edit-btn--primary,
+.hdr-widgets-edit-btn--done {
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.hdr-widgets-edit-btn--cancel {
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  font-size: 12px;
+}
+
+.hdr-widgets-edit-title {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-ink, #201e1d);
+  text-align: center;
+  flex: 1;
+}
+
+.hdr-tab-title-row--widgets:has(.hdr-widgets-edit-title) {
+  align-items: center;
+}
+
 .hdr-tab-meta {
   flex-shrink: 1;
   min-width: 0;
@@ -7829,8 +7897,8 @@ body:has(.offline-banner) .wrap {
 }
 
 [data-theme$="dark"] .date-picker--v4 .date-picker-day-nav {
-  background: var(--v4-bg, #23201b);
-  color: var(--v4-ink-3, rgba(242, 237, 230, 0.58));
+  background: var(--v4-surface, #23201b);
+  color: var(--v4-ink-3, rgba(242, 237, 230, 0.5));
 }
 
 @media (hover: hover) {
@@ -7874,11 +7942,11 @@ body:has(.offline-banner) .wrap {
 }
 
 [data-theme$="dark"] .date-picker--v4 .date-picker-trigger {
-  background: var(--v4-bg, #23201b);
+  background: var(--v4-surface, #23201b);
 }
 
 [data-theme$="dark"] .date-picker--v4 .date-picker-trigger--today {
-  background: var(--v4-bg, #23201b);
+  background: var(--v4-surface, #23201b);
 }
 
 @media (hover: hover) {
@@ -9257,21 +9325,22 @@ svg.date-picker-icon {
 }
 
 .tabs.tabs--v4-primary {
-  justify-content: flex-start;
-  gap: 4px;
-  padding: 4px 6px calc(10px + env(safe-area-inset-bottom, 0px));
-  background: var(--v4-bg, #ffffff);
-  border-top: 1px solid var(--v4-line, #e5e7eb);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04);
+  justify-content: stretch;
+  gap: 0;
+  padding: 4px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  background: var(--v4-bg, #fffaf1);
+  border-top: none;
+  box-shadow: none;
 }
 
 .tab-primary-nav-row {
   display: flex;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   align-items: stretch;
-  justify-content: space-between;
+  justify-content: stretch;
   gap: 0;
   min-width: 0;
+  width: 100%;
 }
 
 .tabs--v4-primary .tab.tab-primary-nav {
@@ -9279,7 +9348,7 @@ svg.date-picker-icon {
   min-width: 0;
   max-width: none;
   min-height: 44px;
-  padding: 8px 6px;
+  padding: 8px 10px;
   gap: 6px;
   border-radius: 12px;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
@@ -9317,6 +9386,66 @@ svg.date-picker-icon {
   flex: 0 0 auto;
   min-width: 44px;
   max-width: 44px;
+}
+
+/* Канвас HEYS v4 — все пять вкладок: полоски CRS в nav нет */
+.tabs--v4-primary .crs-bar-container {
+  display: none;
+}
+
+/* v4 mobile shell: bottom nav = viewport full-bleed; content inset lives on .page-* */
+@media (max-width: 768px) {
+  .wrap {
+    max-width: 100% !important;
+    width: 100%;
+    margin-inline: 0;
+    padding-inline: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .tabs,
+  .tabs.tabs--v4-primary {
+    position: fixed !important;
+    inset-inline: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin-inline: 0 !important;
+    margin-left: calc(50% - 50vw) !important;
+    box-sizing: border-box;
+  }
+
+  .tabs.tabs--v4-primary {
+    justify-content: stretch;
+    gap: 0;
+    padding: 4px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .tabs--v4-primary .tab-primary-nav-row {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  /* «Ещё» в шапке; снизу только пять primary tabs как в v4-макете */
+  .tabs--v4-primary .tab-settings-wrap {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 0;
+    height: 0;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .tabs--v4-primary .tab-settings-wrap > .tab {
+    display: none !important;
+  }
+
+  .tabs--v4-primary .tab-settings-menu {
+    pointer-events: auto;
+  }
 }
 
 .tab-settings-item .tab-icon-svg {
@@ -9565,15 +9694,18 @@ body:has(:is(
   line-height: 1.2;
   border: none;
   background: transparent;
-  flex: 0 0 auto;
-  min-width: 48px;
-  max-width: 48px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
   -webkit-tap-highlight-color: transparent;
+}
+
+.tab:not(.tab-primary-nav) {
+  flex: 0 0 auto;
+  min-width: 48px;
+  max-width: 48px;
 }
 
 .tab .tab-icon {
@@ -9610,6 +9742,14 @@ body:has(:is(
 
 .tab.active .tab-text {
   font-weight: 600;
+}
+
+/* v4 primary nav: пять равных колонок, без legacy cap 48px */
+.tabs--v4-primary .tab.tab-primary-nav {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+  width: auto;
 }
 
 /* === 32. iOS Switch стиль для stats/diary вкладок === */
@@ -12200,7 +12340,8 @@ body:has(.tabs.tabs--settings-open) :is(
   }
 
   .wrap {
-    padding: 12px 14px 80px;
+    padding-block: 12px 80px;
+    padding-inline: 0;
   }
 }
 
@@ -12281,7 +12422,7 @@ body:has(.tabs.tabs--settings-open) :is(
 
   /* === 40.1 СОВРЕМЕННАЯ ШАПКА НА МОБИЛЬНЫХ === */
   .hdr {
-    padding: 8px 14px 0;
+    padding: 8px 16px 0;
     margin-bottom: 0;
   }
 
@@ -12306,7 +12447,7 @@ body:has(.tabs.tabs--settings-open) :is(
   }
 
   .hdr-bottom {
-    padding: 6px 14px;
+    padding: 6px 0;
     gap: 8px;
     border-radius: 0 0 12px 12px;
   }

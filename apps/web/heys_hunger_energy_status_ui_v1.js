@@ -5968,8 +5968,10 @@
     const style = document.createElement('style');
     style.id = 'hunger-energy-status-style';
     style.textContent = `
-.fab-group .hunger-energy-fab{width:40px;height:40px;border-radius:50%;border:none;background:var(--v4-float,#ffffff);color:var(--v4-ink,#0f172a);box-shadow:0 1px 2px rgba(0,0,0,.08),0 6px 16px rgba(15,23,42,.14),inset 0 1px 0 rgba(255,255,255,.22);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1;transition:transform .2s cubic-bezier(.34,1.42,.64,1),box-shadow .2s ease;touch-action:manipulation}
-.fab-group .hunger-energy-fab .hes-fab-icon{width:20px;height:20px;display:block;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.fab-group .hunger-energy-fab{width:40px;height:40px;border-radius:50%;border:none;background:var(--v4-float,#fffaf1);color:var(--v4-act-text,#8a4a20);box-shadow:0 1px 2px rgba(0,0,0,.08),0 6px 16px rgba(15,23,42,.14),inset 0 1px 0 rgba(255,255,255,.22);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1;transition:transform .2s cubic-bezier(.34,1.42,.64,1),box-shadow .2s ease;touch-action:manipulation}
+.fab-group .hunger-energy-fab .hes-fab-icon{width:19px;height:19px;display:block;overflow:visible}
+.fab-group .hunger-energy-fab .hes-fab-icon__ring{fill:none;stroke:currentColor;stroke-width:2.2}
+.fab-group .hunger-energy-fab .hes-fab-icon__fill{fill:currentColor;stroke:none}
 .fab-group .hunger-energy-fab:hover{transform:scale(1.04)}
 .fab-group .hunger-energy-fab:active{transform:scale(.94)}
 .hes-backdrop{position:fixed;inset:0;z-index:3000;background:rgba(15,23,42,.26);display:flex;align-items:flex-end;justify-content:flex-end;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));overscroll-behavior:contain;touch-action:none}
@@ -6451,11 +6453,22 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
     return h('svg', {
       className: 'hes-fab-icon',
       viewBox: '0 0 24 24',
+      width: 19,
+      height: 19,
       focusable: 'false',
       'aria-hidden': 'true'
     },
-      h('circle', { cx: 12, cy: 12, r: 8.2 }),
-      h('path', { d: 'M8.4 12h7.2' })
+      h('defs', null,
+        h('clipPath', { id: 'hes-fab-fill-two-thirds' },
+          h('rect', { x: 0, y: 9, width: 24, height: 15 })
+        )
+      ),
+      h('circle', { className: 'hes-fab-icon__ring', cx: 12, cy: 12, r: 8.5 }),
+      h('circle', {
+        className: 'hes-fab-icon__fill',
+        cx: 12, cy: 12, r: 8.5,
+        clipPath: 'url(#hes-fab-fill-two-thirds)'
+      })
     );
   }
 

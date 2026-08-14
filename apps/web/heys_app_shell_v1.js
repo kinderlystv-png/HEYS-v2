@@ -393,6 +393,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             retryCountdown,
             GamificationBar,
             setTab,
+            widgetsEditMode,
         } = props;
 
         // 🚨 EWS Badge State (v1.0)
@@ -403,6 +404,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const [pushStatus, setPushStatus] = React.useState(null);
         const [pushBusy, setPushBusy] = React.useState(false);
         const [showOpsDashboard, setShowOpsDashboard] = React.useState(false);
+        const [showVpnHelpPage, setShowVpnHelpPage] = React.useState(false);
         const [opsDashboard, setOpsDashboard] = React.useState(null);
         const [opsLoading, setOpsLoading] = React.useState(false);
         const [opsError, setOpsError] = React.useState('');
@@ -3097,35 +3099,26 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             if (details.other > 0) parts.push(`${details.other} др.`);
             return parts.join(', ');
         })();
-        const visiblePendingActionItems = Array.isArray(pendingActionItems)
-            ? pendingActionItems.slice(0, 4)
-            : [];
         const isReadonlyHost = !!(typeof window !== 'undefined'
             && window.__HEYS_READONLY_MODE__
             && window.__HEYS_READONLY_MODE__.enabled);
         const shouldShowPendingSyncBanner = pendingCount > 0 && showPendingSyncBanner && !isReadonlyHost;
         const isBackgroundPendingSync = !!showPendingSyncBanner;
-        const pendingSyncBannerEyebrow = isReadonlyHost
-            ? 'Копия для просмотра'
-            : (isBackgroundPendingSync ? 'Сохранил локально' : 'Ждут отправки');
+        const isDisconnectedPendingSync = displayStatus === 'offline'
+            || displayStatus === 'error'
+            || cloudStatus === 'offline'
+            || cloudStatus === 'error'
+            || (typeof navigator !== 'undefined' && navigator.onLine === false);
+        const shouldShowVpnHint = shouldShowPendingSyncBanner && !isReadonlyHost;
         const pendingSyncBannerTitle = isReadonlyHost
             ? 'Изменения здесь не сохраняются'
-            : (isBackgroundPendingSync
-                ? 'Можно продолжать — отправляю изменения в фоне'
-                : pendingCount > 1
-                    ? `${pendingCount} изменений ждут синхронизации`
-                    : '1 изменение ждёт синхронизации');
+            : 'Сохранено на устройстве';
         const pendingSyncBannerSummary = isReadonlyHost
             ? (pendingBreakdownText
                 ? `${pendingBreakdownText} · это замороженная копия, запись отключена`
                 : 'Это замороженная копия для сравнения — данные клиента не меняются.')
-            : (pendingBreakdownText
-                ? (isBackgroundPendingSync
-                    ? `${pendingBreakdownText} · ничего не потеряется. Если включён VPN — попробуйте отключить, часто ускоряет синхронизацию.`
-                    : `${pendingBreakdownText} · можно нажать на облако`)
-                : (isBackgroundPendingSync
-                    ? 'Если интернет тормозит — ничего не потеряется. Если включён VPN — попробуйте отключить, часто ускоряет синхронизацию.'
-                    : 'Нажми на облако, чтобы подтолкнуть отправку.'));
+            : 'Отправлю, как появится связь';
+        const pendingSyncBannerVpnHint = 'Если VPN — отключите';
         const pad2 = (n) => String(n).padStart(2, '0');
         const formatLocalISO = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
         const shiftISO = (iso, delta) => {
@@ -3241,7 +3234,31 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             stats: 'Отчёты',
             insights: 'Инсайты'
         };
-        const showDateRow = (tab === 'stats' || tab === 'diary' || tab === 'activity' || tab === 'insights' || tab === 'widgets') && window.HEYS.DatePicker;
+        const showDateRow = (tab === 'stats' || tab === 'diary' || tab === 'activity' || tab === 'insights') && window.HEYS.DatePicker;
+        const widgetsHeaderDateLine = (() => {
+            if (tab !== 'widgets' || !selectedDate) return null;
+            const utils = window.HEYS?.dayUtils;
+            if (!utils?.parseISO) return null;
+            const d = utils.parseISO(selectedDate);
+            const wd = d.toLocaleDateString('ru-RU', { weekday: 'short' }).replace(/\.$/, '');
+            const dayMonth = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+            return `${wd}, ${dayMonth}`;
+        })();
+        const handleWidgetsEditToggle = () => {
+            if (window.HEYS?.Widgets?.toggleEditMode) {
+                window.HEYS.Widgets.toggleEditMode();
+            }
+        };
+        const handleWidgetsEditCancel = () => {
+            if (window.HEYS?.Widgets?.exitEditMode) {
+                window.HEYS.Widgets.exitEditMode({ revert: true });
+            }
+        };
+        const handleWidgetsEditDone = () => {
+            if (window.HEYS?.Widgets?.exitEditMode) {
+                window.HEYS.Widgets.exitEditMode();
+            }
+        };
         const showPastDayBanner = !!(showDateRow && selectedDate && resolvedTodayISO && selectedDate !== resolvedTodayISO);
         const handlePastDayGoToday = () => {
             if (window.HEYS?.ui?.setSelectedDate) {
@@ -3349,6 +3366,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         ];
 
         return React.createElement(
+            React.Fragment,
+            null,
+        React.createElement(
             'div',
             { className: 'hdr' },
             // Замороженная копия прода (stable.heyslab.ru) — видимый признак,
@@ -3407,16 +3427,43 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 // Календарь — строкой выше; на прошлом дне между ними баннер
                 // «Вы смотрите прошлый день» (канвас «Дата и остатки v4»).
                 isRpcMode
-                    ? React.createElement('div', { className: 'hdr-tab-title-row' },
-                        React.createElement('span', { className: 'hdr-client-tab-title-text' },
-                            CLIENT_TAB_TITLES[tab] || ''
-                        ),
-                        tab === 'diary' && diaryTabMetaLine && React.createElement('span', { className: 'hdr-tab-meta' },
-                            diaryTabMetaLine.text,
-                            diaryTabMetaLine.syncLabel && React.createElement('span', { className: 'hdr-tab-meta__sync' },
-                                ' ' + diaryTabMetaLine.syncLabel
+                    ? React.createElement('div', { className: 'hdr-tab-title-row' + (tab === 'widgets' ? ' hdr-tab-title-row--widgets' : '') },
+                        tab === 'widgets' && widgetsEditMode
+                            ? React.createElement(React.Fragment, null,
+                                React.createElement('button', {
+                                    type: 'button',
+                                    className: 'hdr-widgets-edit-btn hdr-widgets-edit-btn--cancel',
+                                    onClick: handleWidgetsEditCancel
+                                }, 'Отмена'),
+                                React.createElement('span', { className: 'hdr-widgets-edit-title' }, 'Расстановка'),
+                                React.createElement('button', {
+                                    type: 'button',
+                                    className: 'hdr-widgets-edit-btn hdr-widgets-edit-btn--done',
+                                    onClick: handleWidgetsEditDone
+                                }, 'Готово')
                             )
-                        )
+                            : React.createElement(React.Fragment, null,
+                                React.createElement('span', { className: 'hdr-tab-title-group' },
+                                    React.createElement('span', { className: 'hdr-client-tab-title-text' },
+                                        CLIENT_TAB_TITLES[tab] || ''
+                                    ),
+                                    tab === 'widgets' && widgetsHeaderDateLine && React.createElement('span', { className: 'hdr-tab-meta hdr-tab-meta--inline-date' },
+                                        widgetsHeaderDateLine
+                                    ),
+                                    tab === 'diary' && diaryTabMetaLine && React.createElement('span', { className: 'hdr-tab-meta' },
+                                        diaryTabMetaLine.text,
+                                        diaryTabMetaLine.syncLabel && React.createElement('span', { className: 'hdr-tab-meta__sync' },
+                                            ' ' + diaryTabMetaLine.syncLabel
+                                        )
+                                    )
+                                ),
+                                tab === 'widgets' && !widgetsEditMode && React.createElement('button', {
+                                    type: 'button',
+                                    id: 'tour-widgets-edit',
+                                    className: 'hdr-widgets-edit-btn hdr-widgets-edit-btn--primary',
+                                    onClick: handleWidgetsEditToggle
+                                }, 'Изменить')
+                            )
                     )
                     // Информация о клиенте + DatePicker
                     : React.createElement(
@@ -3922,36 +3969,67 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             shouldShowPendingSyncBanner && React.createElement(
                 'div',
                 {
-                    className: 'sync-pending-banner' + (isBackgroundPendingSync ? ' sync-pending-banner--background' : ' sync-pending-banner--queued'),
+                    className: 'sync-pending-banner sync-pending-banner--strip'
+                        + (isBackgroundPendingSync ? ' sync-pending-banner--background' : ' sync-pending-banner--queued')
+                        + (isDisconnectedPendingSync ? ' sync-pending-banner--offline' : ''),
                     role: 'status',
                     'aria-live': 'polite'
                 },
                 React.createElement(
                     'div',
-                    { className: 'sync-pending-banner__header' },
-                    React.createElement(
-                        'div',
-                        { className: 'sync-pending-banner__copy' },
-                        React.createElement('div', { className: 'sync-pending-banner__eyebrow' }, pendingSyncBannerEyebrow),
-                        React.createElement('div', { className: 'sync-pending-banner__title' }, pendingSyncBannerTitle),
-                        React.createElement('div', { className: 'sync-pending-banner__summary' }, pendingSyncBannerSummary)
-                    ),
-                    React.createElement('div', { className: 'sync-pending-banner__count', 'aria-hidden': 'true' }, pendingCount)
+                    { className: 'sync-pending-banner__copy' },
+                    React.createElement('div', { className: 'sync-pending-banner__title' }, pendingSyncBannerTitle),
+                    React.createElement('div', { className: 'sync-pending-banner__summary' }, pendingSyncBannerSummary),
+                    shouldShowVpnHint && React.createElement(
+                        'button',
+                        {
+                            type: 'button',
+                            className: 'sync-pending-banner__vpn',
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                setShowVpnHelpPage(true);
+                            }
+                        },
+                        pendingSyncBannerVpnHint
+                    )
                 ),
-	                visiblePendingActionItems.length > 0 && React.createElement(
-	                    'div',
-	                    { className: 'sync-pending-banner__items' },
-	                    visiblePendingActionItems.map((item) => React.createElement(
-                        'div',
-                        { key: item.id, className: 'sync-pending-banner__item' },
-                        React.createElement('span', { className: 'sync-pending-banner__item-icon', 'aria-hidden': 'true' }, item.icon || '💾'),
-                        React.createElement('span', { className: 'sync-pending-banner__item-label' }, item.title || 'Изменения'),
-                        item.scopeLabel && React.createElement('span', { className: 'sync-pending-banner__item-scope' }, item.scopeLabel)
-	                    ))
-	                )
-	            ),
-	            renderOpsDashboardModal()
-	        );
+                React.createElement('div', { className: 'sync-pending-banner__count', 'aria-hidden': 'true' }, pendingCount)
+            ),
+            renderOpsDashboardModal()
+        ),
+        showVpnHelpPage && React.createElement(
+            'div',
+            {
+                className: 'sync-vpn-help',
+                role: 'dialog',
+                'aria-modal': 'true',
+                'aria-labelledby': 'sync-vpn-help-title'
+            },
+            React.createElement('button', {
+                type: 'button',
+                className: 'sync-vpn-help__backdrop',
+                'aria-label': 'Закрыть',
+                onClick: () => setShowVpnHelpPage(false)
+            }),
+            React.createElement(
+                'div',
+                { className: 'sync-vpn-help__page' },
+                React.createElement('div', { className: 'sync-vpn-help__kicker' }, 'Связь'),
+                React.createElement('h2', { id: 'sync-vpn-help-title', className: 'sync-vpn-help__title' }, 'Отключите VPN'),
+                React.createElement('p', { className: 'sync-vpn-help__text' },
+                    'Записи уже на устройстве. Чтобы они дошли до дневника на других устройствах и до куратора, нужна прямая связь.'
+                ),
+                React.createElement('p', { className: 'sync-vpn-help__text' },
+                    'VPN часто её обрывает или сильно замедляет. Отключите VPN и вернитесь в приложение. Интернет выключать не нужно.'
+                ),
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'sync-vpn-help__done',
+                    onClick: () => setShowVpnHelpPage(false)
+                }, 'Понятно')
+            )
+        )
+        );
     }
 
     function AppTabsNav(props) {
@@ -5049,6 +5127,16 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
     const MemoAppTabContent = React.memo(AppTabContent);
     MemoAppTabContent.displayName = 'AppTabContent';
 
+    function portalAppShellChrome(node) {
+        if (!node) return null;
+        const body = typeof document !== 'undefined' ? document.body : null;
+        const ReactDOM = window.ReactDOM;
+        if (body && ReactDOM && typeof ReactDOM.createPortal === 'function') {
+            return ReactDOM.createPortal(node, body);
+        }
+        return node;
+    }
+
     function AppShell(props) {
         const { hideContent, clientId, tab } = props;
         const shouldRenderContent = !!clientId;
@@ -5059,31 +5147,39 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             profilerMountKey = heysReactProfilerEnabled() ? 'p1' : 'p0';
         } catch (_) { /* noop */ }
 
+        const tabsNav = shouldRenderContent
+            ? portalAppShellChrome(React.createElement(MemoAppTabsNav, props))
+            : null;
+
         return React.createElement(
-            'div',
-            {
-                className: 'wrap' + (hideProductHeader ? ' wrap--no-header' : ''),
-                style: hideContent ? { display: 'none' } : undefined
-            },
-            shouldRenderContent && React.createElement(
+            React.Fragment,
+            null,
+            React.createElement(
                 'div',
                 {
-                    className: 'app-header-wrapper',
-                    style: hideProductHeader ? { display: 'none' } : null,
-                    'aria-hidden': hideProductHeader ? 'true' : undefined,
-                    inert: hideProductHeader ? '' : undefined
+                    className: 'wrap' + (hideProductHeader ? ' wrap--no-header' : ''),
+                    style: hideContent ? { display: 'none' } : undefined
                 },
-                React.createElement(MemoAppHeader, props)
+                shouldRenderContent && React.createElement(
+                    'div',
+                    {
+                        className: 'app-header-wrapper',
+                        style: hideProductHeader ? { display: 'none' } : null,
+                        'aria-hidden': hideProductHeader ? 'true' : undefined,
+                        inert: hideProductHeader ? '' : undefined
+                    },
+                    React.createElement(MemoAppHeader, props)
+                ),
+                shouldRenderContent && React.createElement(MemoAppTabContent, Object.assign({}, props, {
+                    key: 'appTabContent_' + String(clientId || '') + '_' + profilerMountKey
+                })),
+                shouldRenderContent && MessageFabButton && !hideProductHeader && React.createElement(
+                    'div',
+                    { className: 'fab-group fab-group--messenger-only', id: 'global-messenger-fab' },
+                    React.createElement(MessageFabButton, { key: 'global-msg-fab' })
+                )
             ),
-            shouldRenderContent && React.createElement(MemoAppTabsNav, props),
-            shouldRenderContent && React.createElement(MemoAppTabContent, Object.assign({}, props, {
-                key: 'appTabContent_' + String(clientId || '') + '_' + profilerMountKey
-            })),
-            shouldRenderContent && MessageFabButton && !hideProductHeader && React.createElement(
-                'div',
-                { className: 'fab-group fab-group--messenger-only', id: 'global-messenger-fab' },
-                React.createElement(MessageFabButton, { key: 'global-msg-fab' })
-            )
+            tabsNav
         );
     }
 

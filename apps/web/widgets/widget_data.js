@@ -1235,7 +1235,8 @@
               return {
                 ...result,
                 hasData: true,
-                isPastDay
+                isPastDay,
+                waveCount: mealsWithTime.length
               };
             }
           } catch (e) {
@@ -1319,9 +1320,36 @@
           total, periodDays: days, daysWithData: result.daysWithData, categories: categories.length
         });
 
+        let delta = null;
+        try {
+          const rawLsGet = (typeof HEYS.utils?.lsGet === 'function')
+            ? (key, fallback) => HEYS.utils.lsGet(key, fallback)
+            : (key, fallback) => {
+              try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; }
+            };
+          const shiftedLsGet = (key, fallback) => {
+            const match = /^heys_dayv2_(\d{4}-\d{2}-\d{2})$/.exec(key);
+            if (!match) return rawLsGet(key, fallback);
+            const shifted = new Date(`${match[1]}T12:00:00`);
+            shifted.setDate(shifted.getDate() - days);
+            const yyyy = shifted.getFullYear();
+            const mm = String(shifted.getMonth() + 1).padStart(2, '0');
+            const dd = String(shifted.getDate()).padStart(2, '0');
+            return rawLsGet(`heys_dayv2_${yyyy}-${mm}-${dd}`, fallback);
+          };
+          const previous = analyze({ daysBack: days, lsGet: shiftedLsGet });
+          const prevTotal = previous?.healthScore?.total;
+          if (previous?.available && Number.isFinite(prevTotal)) {
+            delta = total - prevTotal;
+          }
+        } catch (e) {
+          delta = null;
+        }
+
         return {
           hasData,
           score: total,
+          delta,
           goalMode: hs.goalMode || 'unknown',
           categories,
           daysWithData: result.daysWithData,
