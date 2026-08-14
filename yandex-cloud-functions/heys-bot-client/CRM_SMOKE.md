@@ -109,7 +109,7 @@ Expected:
 - `readiness` is `this_week` or `next_week`;
 - `how_heard = telegram_bot`;
 - `consent_method = telegram_contact`;
-- `consent_privacy_version = 1.7`;
+- `consent_privacy_version = 1.8`;
 - `has_privacy_hash = true` and `has_consent_timestamp = true`;
 - after the curator click, `status = contacted` and `contacted_at IS NOT NULL`.
 
