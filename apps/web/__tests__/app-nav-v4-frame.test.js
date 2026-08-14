@@ -249,6 +249,14 @@ describe('UI v4 chrome paint — рама', () => {
         expect(hdrTopRule).toMatch(/background:\s*transparent/);
     });
 
+    it('heys-components dark hdr-top без синего shell-gradient', () => {
+        const componentsCss = fs.readFileSync(path.join(WEB_DIR, 'styles/heys-components.css'), 'utf8');
+        const darkHdrTop = componentsCss.match(/\[data-theme\$="dark"\] \.hdr-top\s*\{[^}]+\}/)?.[0] || '';
+        expect(darkHdrTop).not.toMatch(/rgba\(29,\s*78,\s*216/);
+        expect(darkHdrTop).not.toMatch(/rgba\(37,\s*99,\s*235/);
+        expect(darkHdrTop).toMatch(/background:\s*transparent/);
+    });
+
     it('активная вкладка nav на sand-роли, не голый литерал', () => {
         const lightRule = baseCss.match(
             /(?<!dark"\] )\n\.tabs--v4-primary \.tab\.tab-primary-nav\.active \{[^}]+\}/,
