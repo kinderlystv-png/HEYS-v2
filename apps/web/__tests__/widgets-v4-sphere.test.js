@@ -18,7 +18,7 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(chunk).not.toContain('V52');
         expect(cssSrc).toContain('.widget-v4-wave__fill');
         expect(cssSrc).toContain('stroke: none');
-        expect(cssSrc).toContain('color-mix(in srgb, var(--v4-act)');
+        expect(cssSrc).toMatch(/color-mix\(in srgb, var\(--v4-act(?:,\s*#[0-9a-fA-F]{3,8})?/);
     });
 
     it('оценка дня 2×1 — строка как в g1, число из --v4-act-text', () => {

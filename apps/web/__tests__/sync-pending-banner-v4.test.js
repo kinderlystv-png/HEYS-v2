@@ -39,8 +39,8 @@ describe('sync-pending-banner v4', () => {
 
     it('цвет полосы из --v4-surface, без синего градиента', () => {
         const css = bannerCss();
-        expect(css).toContain('background: var(--v4-surface)');
-        expect(css).toContain('color: var(--v4-act)');
+        expect(css).toMatch(/background:\s*var\(--v4-surface(?:,\s*#[0-9a-fA-F]{3,8})?\)/);
+        expect(css).toMatch(/color:\s*var\(--v4-act(?:,\s*#[0-9a-fA-F]{3,8})?\)/);
         expect(css).not.toContain('59, 130, 246');
         expect(css).not.toContain('239, 246, 255');
         expect(css).not.toContain('linear-gradient');
