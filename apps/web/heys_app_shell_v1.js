@@ -3798,7 +3798,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 React.createElement('button', {
                     key: 'theme-toggle-temp',
                     type: 'button',
-                    className: 'hdr-theme-btn',
+                    className: 'hdr-theme-btn hdr-theme-toggle-temp',
                     title: 'Переключить тему (временно)',
                     onClick: () => window.HEYS?.Theme?.toggleModePreference?.(),
                 }, '🌓'),

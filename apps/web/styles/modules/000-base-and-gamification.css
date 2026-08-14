@@ -15305,22 +15305,39 @@ body:has(.tabs.tabs--settings-open) :is(
 }
 }
 
-/* Облачко синка — без рамки во всех состояниях/темах (решение владельца
-   2026-08-14, временно, до макета кураторской шапки). Остальные кнопки
-   группы (hdr-theme-btn, yesterday-quick-btn) рамку сохраняют. */
+/* Облачко синка и временный тогл темы — "голый" стиль как у лампочки/
+   ползунков (.hdr-header-icon-btn), не плашка glass-pill (решение
+   владельца 2026-08-14: единообразие в шапке важнее унификации со всей
+   группой .hdr-theme-btn — та используется ещё в планировщике, там
+   плашка остаётся, поэтому тогл получил свой класс hdr-theme-toggle-temp).
+   Временно, до макета кураторской шапки. */
 .cloud-sync-indicator,
 .cloud-sync-indicator.syncing,
 .cloud-sync-indicator.offline,
 .cloud-sync-indicator.session,
-[data-theme$="dark"] .cloud-sync-indicator {
+.hdr-theme-toggle-temp,
+[data-theme$="dark"] .cloud-sync-indicator,
+[data-theme$="dark"] .hdr-theme-toggle-temp {
+  background: transparent !important;
   border: none !important;
   box-shadow: none !important;
 }
+/* Цвет облачка несёт статус синка (idle/syncing/offline/session/error) —
+   не трогаем его здесь, только форму. Тогл темы не имеет статуса, ему
+   отдельный нейтральный цвет как у лампочки/ползунков. */
+.hdr-theme-toggle-temp,
+[data-theme$="dark"] .hdr-theme-toggle-temp {
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.35)) !important;
+}
 @media (hover: hover) {
   .cloud-sync-indicator:hover,
-  [data-theme$="dark"] .cloud-sync-indicator:hover {
+  .hdr-theme-toggle-temp:hover,
+  [data-theme$="dark"] .cloud-sync-indicator:hover,
+  [data-theme$="dark"] .hdr-theme-toggle-temp:hover {
+    background: transparent !important;
     border: none !important;
     box-shadow: none !important;
+    transform: none !important;
   }
 }
 
