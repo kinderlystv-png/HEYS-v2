@@ -72,7 +72,8 @@ R  apps/web/old.ts -> apps/web/src/new.ts
   });
 
   it('resolves Vitest from another linked worktree without installing dependencies again', () => {
-    const runtime = path.resolve('/runtime/node_modules/.bin/vitest');
+    const vitestName = process.platform === 'win32' ? 'vitest.cmd' : 'vitest';
+    const runtime = path.join(path.resolve('/runtime'), 'node_modules', '.bin', vitestName);
     const resolved = resolveVitestExecutable({
       roots: ['/clean-worktree', '/runtime'],
       existsSync: (candidate) => candidate === runtime,
@@ -82,11 +83,14 @@ R  apps/web/old.ts -> apps/web/src/new.ts
 
   it('attaches the existing workspace runtime only inside the disposable checkout', () => {
     const links = [];
+    const checkoutDir = path.resolve('/tmp/clean-checkout');
+    const runtimeNodeModules = path.resolve('/runtime/node_modules');
+    const checkoutNodeModules = path.join(checkoutDir, 'node_modules');
     const result = attachWorkspaceRuntime(
-      '/tmp/clean-checkout',
-      '/runtime/node_modules/.bin/vitest',
+      checkoutDir,
+      path.join(runtimeNodeModules, '.bin', 'vitest'),
       {
-        existsSync: (candidate) => candidate === '/runtime/node_modules',
+        existsSync: (candidate) => candidate === runtimeNodeModules,
         symlinkSync: (...args) => links.push(args),
         platform: 'darwin',
       },
@@ -94,17 +98,18 @@ R  apps/web/old.ts -> apps/web/src/new.ts
 
     expect(result).toMatchObject({
       ok: true,
-      runtimeNodeModules: '/runtime/node_modules',
-      checkoutNodeModules: '/tmp/clean-checkout/node_modules',
+      runtimeNodeModules,
+      checkoutNodeModules,
       created: true,
     });
-    expect(links).toEqual([['/runtime/node_modules', '/tmp/clean-checkout/node_modules', 'dir']]);
+    expect(links).toEqual([[runtimeNodeModules, checkoutNodeModules, 'dir']]);
   });
 
   it('reports the exact missing runtime before Vitest starts', () => {
+    const missingRuntime = path.resolve('/missing/node_modules');
     const result = attachWorkspaceRuntime(
-      '/tmp/clean-checkout',
-      '/missing/node_modules/.bin/vitest',
+      path.resolve('/tmp/clean-checkout'),
+      path.join(missingRuntime, '.bin', 'vitest'),
       {
         existsSync: () => false,
       },
@@ -112,7 +117,7 @@ R  apps/web/old.ts -> apps/web/src/new.ts
 
     expect(result).toEqual({
       ok: false,
-      error: 'resolved workspace runtime is missing: /missing/node_modules',
+      error: `resolved workspace runtime is missing: ${missingRuntime}`,
     });
   });
 

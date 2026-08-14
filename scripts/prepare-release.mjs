@@ -12,7 +12,7 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isWhatsNewEnabled } from './release-features.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1736,7 +1736,9 @@ export {
 
 // Only run CLI dispatch when this file is invoked directly via `node`,
 // not when imported by a test runner.
-const isEntryPoint = import.meta.url === `file://${process.argv[1]}`;
+const isEntryPoint = Boolean(
+  process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href,
+);
 if (isEntryPoint) {
   if (hasCliFlag('--is-release-only-push')) {
     const idx = CLI_ARGS.indexOf('--is-release-only-push');
