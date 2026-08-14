@@ -33,7 +33,7 @@
 
     const THEME_COLOR_META = Object.freeze({
         sand: '#c67139',
-        'sand-dark': '#141210',
+        'sand-dark': '#23201b',
         blue: '#2e7cc0',
         'blue-dark': '#0d1a26',
     });

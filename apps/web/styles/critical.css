@@ -542,13 +542,12 @@ body.board-dark-nav .heys-tab-skeleton {
  * Literal-цвета — независимость от design tokens.
  * ═══════════════════════════════════════════════════════════════ */
 
-/* Layout wrapper — отступ сверху для fixed header */
+/* Layout wrapper */
 .wrap {
   max-width: 1600px;
   margin: 0 auto;
   padding: 12px 18px 80px;
   box-sizing: border-box;
-  padding-top: 110px;
   isolation: isolate;
 }
 
@@ -578,26 +577,18 @@ body.board-dark-nav .heys-tab-skeleton {
   width: 100%;
 }
 
-/* Fixed header
- * PERF (2026-05-27): `contain: paint` добавлен для изоляции repaints внутри header
- * от остального layout (раньше layout+style только). `will-change: transform` промоут
- * на отдельный GPU layer — scroll плавнее на Android.
- */
+/* Header — скроллится с контентом (v4) */
 .hdr {
   display: flex;
   flex-direction: column;
   gap: 0;
   box-sizing: border-box;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
+  position: relative;
+  z-index: 10;
   background: var(--v4-hero, #f8f9fa);
   padding: 12px 18px 0;
   max-width: 100%;
   contain: layout style paint;
-  will-change: transform;
 }
 
 /* Header top: blue gradient bar */
@@ -678,13 +669,88 @@ body.board-dark-nav .heys-tab-skeleton {
   text-overflow: ellipsis;
 }
 
-/* Date group in header */
+/* Date row v4 — full width inside .hdr padding (main.css has full picker skin) */
+.hdr-date-row {
+  display: flex;
+  width: 100%;
+  padding: 0;
+  margin-top: 16px;
+}
+
 .hdr-date-group {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  margin-left: auto;
+  gap: 8px;
+  flex: 1 1 0%;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin-left: 0;
+}
+
+.hdr-date-group > .date-picker.date-picker--v4 {
+  flex: 1 1 0%;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  flex-shrink: 1;
+  align-self: stretch;
+}
+
+.hdr-date-group .date-picker--v4 {
+  flex: 1 1 0%;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+.hdr-date-group .date-picker--v4 .date-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.hdr-date-group .date-picker--v4 .date-picker-trigger {
+  flex: 1 1 0%;
+  min-width: 0;
+  width: auto;
+  max-width: none;
+  background: var(--v4-surface, #f7efe2);
+  border: none;
+  box-shadow: none;
+}
+
+.hdr-date-group .date-picker--v4 .date-picker-trigger--today {
+  background: var(--v4-surface, #f7efe2);
+}
+
+.hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
+  background: var(--v4-accent-bg, #f3e0d2);
+}
+
+[data-theme$="dark"] .hdr-date-group .date-picker--v4 .date-picker-trigger {
+  background: var(--v4-bg, #23201b);
+}
+
+[data-theme$="dark"] .hdr-date-group .date-picker--v4 .date-picker-trigger--today {
+  background: var(--v4-bg, #23201b);
+}
+
+[data-theme$="dark"] .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
+  background: var(--v4-accent-bg, #3a2620);
+}
+
+@media (max-width: 640px) {
+  .hdr-date-group .date-picker--v4 .date-picker-trigger {
+    flex: 1 1 0%;
+    min-width: 0;
+    max-width: none;
+    min-height: 44px;
+    height: auto;
+    padding: 6px 12px;
+  }
 }
 
 /* Fixed bottom tabs
@@ -816,8 +882,9 @@ body:has(:is(
   }
 
   html:not([data-theme]) .hdr-bottom {
-    background: #2a2a2a;
-    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.2);
+    background: transparent;
+    border: none;
+    box-shadow: none;
   }
 
   html:not([data-theme]) .hdr-client-firstname,
@@ -851,12 +918,13 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr {
-  background: var(--v4-bg, #111827);
+  background: var(--v4-bg, #23201b);
 }
 
 [data-theme$="dark"] .hdr-bottom {
-  background: #2a2a2a;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.2);
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 [data-theme$="dark"] .hdr-client-firstname,
@@ -924,10 +992,35 @@ body:has(:is(
 }
 
 /* Page backgrounds (источник: 730-widgets-dashboard.css :140-203, 287-325) */
+body:has(.page-day)::before {
+  content: none;
+}
+
+html:has(.page-day),
+body:has(.page-day) {
+  background: var(--v4-bg, #fffaf1);
+}
+
 .page-day {
   position: relative;
   padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px));
   min-height: calc(100vh - 60px);
+  background-color: var(--v4-bg, #fffaf1);
+  background-image: none;
+}
+
+[data-theme$="dark"] body:has(.page-day)::before {
+  content: none;
+}
+
+[data-theme$="dark"] html:has(.page-day),
+[data-theme$="dark"] body:has(.page-day) {
+  background: var(--v4-bg, #23201b);
+}
+
+[data-theme$="dark"] .page-day {
+  background-color: var(--v4-bg, #23201b);
+  background-image: none;
 }
 
 .page-reports {

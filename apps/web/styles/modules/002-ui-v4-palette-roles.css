@@ -254,7 +254,7 @@
 
 [data-theme-id="sand-dark"],
 [data-theme="sand-dark"][data-palette="sand"] {
-  --v4-bg: #141210;
+  --v4-bg: #23201b;
   --v4-hero: #2f2820;
   --v4-surface: #23201b;
   --v4-ok-bg: #242c20;
@@ -280,7 +280,7 @@
   --v4-tint-warm: #cf8144;
   --v4-tint-cool: #8faa6d;
   --v4-float: #23201b;
-  --v4-accent-bg: #3a2c20;
+  --v4-accent-bg: #3a2620;
   --v4-warn-1: #d39673;
   --v4-warn-2: #d07d4e;
   --v4-warn-3: #c9662c;

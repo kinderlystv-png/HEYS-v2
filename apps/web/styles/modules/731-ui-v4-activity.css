@@ -1,5 +1,54 @@
 /* 731-ui-v4-activity.css — Activity tab v4 (stage 4 structure + paint) */
 
+/* v4: плоский --v4-bg на вкладке Актив — без gradient ::before */
+body:has(.activity-v4)::before {
+  content: none;
+}
+
+html:has(.activity-v4),
+body:has(.activity-v4) {
+  background: var(--v4-bg, #fffaf1);
+}
+
+body:has(.activity-v4) .hdr {
+  background: var(--v4-bg, #fffaf1) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body:has(.activity-v4) .hdr::after {
+  content: none;
+}
+
+[data-theme$="dark"] body:has(.activity-v4)::before {
+  content: none;
+}
+
+[data-theme$="dark"] html:has(.activity-v4),
+[data-theme$="dark"] body:has(.activity-v4) {
+  background: var(--v4-bg, #23201b);
+}
+
+[data-theme$="dark"] body:has(.activity-v4) .hdr {
+  background: var(--v4-bg, #23201b) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+[data-theme$="dark"] body:has(.activity-v4) .hdr::after {
+  content: none;
+}
+
+.page-day:has(.activity-v4) {
+  background-color: var(--v4-bg, #fffaf1);
+  background-image: none;
+}
+
+[data-theme$="dark"] .page-day:has(.activity-v4) {
+  background-color: var(--v4-bg, #23201b);
+  background-image: none;
+}
+
 .activity-v4 {
   display: flex;
   flex-direction: column;

@@ -3772,10 +3772,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   margin: 0 auto;
   padding: 12px 18px 80px;
   box-sizing: border-box;
-  /* Отступ сверху для fixed шапки (40px gamification + 40px calendar + .hdr padding) */
-  padding-top: 94px;
-  /* 🚀 PERF: isolation creates a stacking context boundary that helps
-     the compositor limit backdrop-filter sampling scope on .hdr / .tabs */
+  /* 🚀 PERF: isolation creates a stacking context boundary */
   isolation: isolate;
 }
 
@@ -3826,16 +3823,13 @@ color: var(--v4-sand-ink-slate, #1f2937);
   gap: 0;
   box-sizing: border-box;
 
-  /* Fixed header — всегда виден при прокрутке */
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 100;
+  /* Шапка скроллится с контентом (v4) */
+  position: relative;
+  z-index: 10;
   background: var(--v4-bg, #f8f9fa);
 
   /* Padding как у карточек */
-  padding: 12px 18px 0;
+  padding: 16px 18px 0;
   max-width: 100%;
 
   /* 🚀 PERF: GPU layer + containment — isolate header layout/style from page reflow */
@@ -3852,11 +3846,10 @@ color: var(--v4-sand-ink-slate, #1f2937);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  background: var(--v4-bg, #ffffff);
-  border-radius: 16px 16px 0 0;
-  border: 1px solid var(--v4-line, #e5e7eb);
-  border-bottom: none;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   color: var(--v4-ink, #111827);
 }
 
@@ -4012,9 +4005,9 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 /* === 14. Gamification Bar (Phase 1 Live) === */
 .hdr-top.hdr-gamification {
-  padding: 6px 12px;
-  min-height: 40px;
-  background: var(--v4-bg, #ffffff);
+  padding: 0;
+  min-height: 0;
+  background: transparent;
   position: relative;
   /* 🚀 PERF: contain gamification layout — prevents child animations from triggering parent reflow */
   contain: layout style;
@@ -4068,6 +4061,20 @@ color: var(--v4-sand-ink-slate, #1f2937);
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.hdr-header-actions__debug {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.hdr-gamification .hdr-header-actions__debug .cloud-sync-indicator,
+.hdr-gamification .hdr-header-actions__debug .hdr-theme-toggle-temp {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
 }
 
 .hdr-header-icon-btn {
@@ -6828,7 +6835,9 @@ color: var(--v4-sand-act-soft, #e2a468);
 
   .hdr-gamification .game-expand-btn,
   .hdr-gamification .push-badge,
-  .hdr-gamification .hdr-theme-btn {
+  .hdr-gamification .hdr-theme-btn,
+  .hdr-gamification .hdr-header-actions__debug .cloud-sync-indicator,
+  .hdr-gamification .hdr-header-actions__debug .hdr-theme-toggle-temp {
     width: 26px !important;
     min-width: 26px !important;
     height: 26px !important;
@@ -6846,48 +6855,92 @@ color: var(--v4-sand-act-soft, #e2a468);
   }
 
   .hdr-bottom {
-    gap: 4px;
-    padding: 5px 8px;
+    gap: 8px;
+    padding: 0;
   }
 }
 
 /* Нижняя линия: клиент + действия */
+.hdr-top.hdr-gamification .game-progress-milestones {
+  display: none;
+}
+
 .hdr-bottom {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
-  padding: 5px 8px;
-  background: var(--v4-bg, #ffffff);
-  border: 1px solid var(--v4-line, #e5e7eb);
-  border-top: none;
-  border-radius: 0 0 16px 16px;
+  gap: 8px;
+  padding: 0;
+  margin-top: 16px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   flex-wrap: nowrap;
   overflow: visible;
   position: relative;
   z-index: 10;
-  min-height: 40px;
-  /* Тень снизу как у нижнего меню */
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
-}
-
-/* Строка даты v4 — отдельная полноширинная строка под hdr-bottom (канвас
-   «Дата и остатки v4»). Когда она есть, скругление/тень снизу переезжают на
-   неё, а hdr-bottom становится прямоугольным средним блоком. */
-.hdr-bottom:has(+ .hdr-date-row) {
-  border-radius: 0;
-  border-bottom: none;
+  min-height: 0;
   box-shadow: none;
 }
 
+/* Строка даты v4 — между геймификацией и баннером/названием вкладки */
 .hdr-date-row {
   display: flex;
-  padding: 6px 8px 8px;
-  background: var(--v4-bg, #ffffff);
-  border: 1px solid var(--v4-line, #e5e7eb);
-  border-top: none;
-  border-radius: 0 0 16px 16px;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+  width: 100%;
+  padding: 0;
+  margin-top: 16px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.hdr-date-row + .hdr-bottom {
+  margin-top: 16px;
+}
+
+.hdr-date-row + .past-day-banner-wrap {
+  margin-top: 12px;
+}
+
+.hdr .past-day-banner-wrap {
+  padding: 0;
+  margin-top: 12px;
+}
+
+.past-day-banner-wrap + .hdr-bottom {
+  margin-top: 16px;
+}
+
+.hdr-bottom.hdr-tab-row {
+  align-items: center;
+}
+
+.hdr-tab-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.hdr-tab-meta {
+  flex-shrink: 1;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+
+.hdr-tab-meta__sync {
+  color: var(--v4-ok-fill, #22c55e);
+  font-weight: 600;
 }
 
 /* Информация о клиенте */
@@ -6908,20 +6961,28 @@ color: var(--v4-sand-act-soft, #e2a468);
   overflow: hidden;
 }
 
-/* Группа кнопок даты — теперь во всю ширину hdr-date-row */
+/* Группа кнопок даты — во всю ширину hdr-date-row (канвас v4: inset 18px через .hdr) */
 .hdr-date-group {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
   max-width: 100%;
+  margin-left: 0;
 }
 
 .hdr-date-group .date-picker--v4 {
-  flex: 1;
+  flex: 1 1 0%;
+  width: 100%;
   min-width: 0;
-  max-width: 100%;
+  max-width: none;
+  flex-shrink: 1;
+  align-self: stretch;
+}
+
+.hdr-date-group .date-picker--v4 .date-picker-row {
+  width: 100%;
 }
 
 .hdr-client-avatar {
@@ -6987,7 +7048,7 @@ color: var(--v4-sand-act-soft, #e2a468);
 /* Клиентский вход (UI v4, канвас «Дата и остатки v4»): название вкладки
    вместо переключателя клиентов. Кураторский вход — .hdr-client выше. */
 .hdr-client--tab-title {
-  padding: 4px 6px 4px 4px;
+  padding: 0;
 }
 
 .hdr-client-tab-title-text {
@@ -7014,6 +7075,8 @@ color: var(--v4-sand-act-soft, #e2a468);
   transition: color, background-color 0.3s ease;
   cursor: default;
   flex-shrink: 0;
+  position: relative;
+  overflow: visible;
 }
 
 /* Не использовать эмодзи, только обычные символы для offline-безопасности */
@@ -7728,6 +7791,10 @@ body:has(.offline-banner) .wrap {
   min-width: 0;
 }
 
+.date-picker--v4 > .date-picker-row {
+  width: 100%;
+}
+
 .date-picker--v4 .date-picker-day-nav {
   flex-shrink: 0;
   width: 44px;
@@ -7735,13 +7802,13 @@ body:has(.offline-banner) .wrap {
   padding: 0;
   border: none;
   border-radius: 999px;
-  background: var(--v4-hero, #f7efe2);
+  background: var(--v4-surface, #f7efe2);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color, opacity 0.15s ease;
+  transition: opacity 0.15s ease;
 }
 
 @media (hover: hover) {
@@ -7761,6 +7828,17 @@ body:has(.offline-banner) .wrap {
   pointer-events: none;
 }
 
+[data-theme$="dark"] .date-picker--v4 .date-picker-day-nav {
+  background: var(--v4-bg, #23201b);
+  color: var(--v4-ink-3, rgba(242, 237, 230, 0.58));
+}
+
+@media (hover: hover) {
+  [data-theme$="dark"] .date-picker--v4 .date-picker-day-nav:hover:not(:disabled) {
+    background: var(--v4-bg-secondary, #2f2820);
+  }
+}
+
 .date-picker--v4 .date-picker-trigger {
   flex: 1;
   min-width: 0;
@@ -7771,11 +7849,12 @@ body:has(.offline-banner) .wrap {
   gap: 3px;
   padding: 6px 12px;
   height: auto;
-  background: var(--v4-hero, #f7efe2);
+  background: var(--v4-surface, #f7efe2);
   border: none;
   border-radius: 16px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  box-shadow: none;
+  transition: box-shadow 0.15s ease;
 }
 
 @media (hover: hover) {
@@ -7788,6 +7867,26 @@ body:has(.offline-banner) .wrap {
   box-shadow: 0 0 0 2px var(--v4-sand-act, #c67139);
 }
 
+/* Сегодня — тот же грунт, что у стрелок (канвас «Дата v4») */
+.date-picker--v4 .date-picker-trigger--today {
+  background: var(--v4-surface, #f7efe2);
+  border: none;
+}
+
+[data-theme$="dark"] .date-picker--v4 .date-picker-trigger {
+  background: var(--v4-bg, #23201b);
+}
+
+[data-theme$="dark"] .date-picker--v4 .date-picker-trigger--today {
+  background: var(--v4-bg, #23201b);
+}
+
+@media (hover: hover) {
+  [data-theme$="dark"] .date-picker--v4 .date-picker-trigger--today:hover {
+    background: var(--v4-bg-secondary, #2f2820);
+  }
+}
+
 .date-picker--v4 .date-picker-trigger--today .date-picker-main--today {
   font-size: 12.5px;
   font-weight: 700;
@@ -7796,6 +7895,21 @@ body:has(.offline-banner) .wrap {
 
 .date-picker--v4 .date-picker-trigger--not-today {
   background: var(--v4-accent-bg, #f3e0d2);
+  border: none;
+}
+
+.hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
+  background: var(--v4-accent-bg, #f3e0d2);
+}
+
+@media (hover: hover) {
+  .date-picker--v4 .date-picker-trigger--not-today:hover {
+    background: var(--v4-surface-2, #efe3cf);
+  }
+
+  [data-theme$="dark"] .date-picker--v4 .date-picker-trigger--not-today:hover {
+    background: var(--v4-bg-secondary, #2f2820);
+  }
 }
 
 .date-picker--v4 .date-picker-trigger--not-today .date-picker-main--past {
@@ -8074,7 +8188,7 @@ body:has(.offline-banner) .wrap {
   background: rgba(32, 30, 29, 0.34);
 }
 
-/* Баннер «прошлый день» под шапкой */
+/* Баннер «прошлый день» — в шапке между датой и названием вкладки */
 .past-day-banner-wrap {
   padding: 0 18px;
   margin-top: 8px;
@@ -8087,14 +8201,14 @@ body:has(.offline-banner) .wrap {
   gap: 12px;
   padding: 13px 15px;
   border-radius: 18px;
-  background: #f3e0d2;
+  background: var(--v4-accent-bg, #f3e0d2);
 }
 
 .past-day-banner__text {
   font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .past-day-banner__today {
@@ -8102,8 +8216,8 @@ body:has(.offline-banner) .wrap {
   border: none;
   padding: 9px 14px;
   border-radius: 999px;
-  background: #c67139;
-  color: var(--v4-act-ink, #2b1608);
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
   font-size: 11.5px;
   font-weight: 700;
   line-height: 1;
@@ -8671,6 +8785,17 @@ svg.date-picker-icon {
     gap: 4px;
   }
 
+  /* v4 header: та же ширина что у «Сегодня» — flex:1 между стрелками на любом дне */
+  .date-picker--v4 .date-picker-trigger {
+    max-width: none;
+    min-width: 0;
+    flex: 1 1 0%;
+    padding: 6px 12px;
+    height: auto;
+    min-height: 44px;
+    gap: 3px;
+  }
+
   /* Одна строка «Сегодня, 15 мая» */
   .date-picker-trigger--today {
     max-width: none;
@@ -8885,11 +9010,11 @@ svg.date-picker-icon {
   }
 
   .hdr-bottom {
-    padding: 6px 16px;
+    padding: 0;
     flex-direction: row;
-    align-items: center;
-    gap: 10px;
-    border-radius: 0 0 12px 12px;
+    align-items: baseline;
+    gap: 8px;
+    border-radius: 0;
   }
 
   .hdr-client {
@@ -9838,11 +9963,15 @@ body:has(:is(
 .tab-settings-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.34);
+  background: color-mix(in srgb, var(--v4-ink-1, #0f172a) 34%, transparent);
   backdrop-filter: blur(7px) saturate(0.92);
   -webkit-backdrop-filter: blur(7px) saturate(0.92);
   z-index: 1001;
   animation: settingsBackdropFade 0.16s ease;
+}
+
+[data-theme$="dark"] .tab-settings-backdrop {
+  background: color-mix(in srgb, var(--v4-bg, #0f172a) 78%, transparent);
 }
 
 @keyframes settingsBackdropFade {
@@ -10083,13 +10212,17 @@ body:has(:is(
 
 [data-theme$="dark"] .tab-settings-menu {
   background:
-    linear-gradient(180deg, rgba(30, 32, 38, 0.96), rgba(18, 20, 26, 0.95)) padding-box,
-    linear-gradient(145deg, rgba(96, 165, 250, 0.36), rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.08)) border-box;
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--v4-bg, #0f172a) 96%, #ffffff 4%),
+      color-mix(in srgb, var(--v4-bg, #0f172a) 94%, #000000 6%)
+    ) padding-box,
+    linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.05)) border-box;
   border-color: transparent;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.1) inset,
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
     0 20px 46px rgba(0, 0, 0, 0.48),
-    0 4px 14px rgba(37, 99, 235, 0.14);
+    0 4px 14px rgba(0, 0, 0, 0.22);
 }
 
 [data-theme$="dark"] .tab-settings-item {
@@ -12068,8 +12201,6 @@ body:has(.tabs.tabs--settings-open) :is(
 
   .wrap {
     padding: 12px 14px 80px;
-    /* Отступ сверху для fixed шапки на мобильных (gamification 40px + bottom 40px + .hdr padding) */
-    padding-top: 109px;
   }
 }
 
