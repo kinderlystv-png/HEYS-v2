@@ -304,6 +304,16 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     }
 
     function profileHint(kind, text) {
+        const mark = window.HEYS?.WaitMark?.button;
+        if (mark && (kind === 'pending' || kind === 'saved')) {
+            return mark(React, {
+                busy: kind === 'pending',
+                ok: kind === 'saved',
+                idle: text,
+                busyLabel: text,
+                okLabel: text,
+            });
+        }
         return React.createElement('span', { className: `profile-hint profile-hint--${kind}` }, text);
     }
 
@@ -1526,10 +1536,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                     onClick: handlePinUpdate,
                                     disabled: pinStatus === 'pending',
                                     style: { minWidth: '140px' }
-                                }, pinStatus === 'pending' ? 'Сохраняю…' : 'Обновить PIN'),
-                                pinStatus === 'pending' && profileHint('pending', '…'),
-                                pinStatus === 'success' && profileHint('saved', 'Готово'),
-                                pinStatus === 'error' && React.createElement('span', { className: 'profile-hint profile-goal-warn--high' }, 'Ошибка')
+                                }, window.HEYS?.WaitMark?.button?.(React, {
+                                    busy: pinStatus === 'pending',
+                                    ok: pinStatus === 'success',
+                                    fail: pinStatus === 'error',
+                                    idle: 'Обновить PIN',
+                                    busyLabel: 'Сохраняем',
+                                    okLabel: 'Сохранено',
+                                    failLabel: 'Не удалось',
+                                }) || (pinStatus === 'pending' ? 'Сохраняем…' : 'Обновить PIN')),
                             ),
                             pinMessage && React.createElement('div', {
                                 className: 'muted',

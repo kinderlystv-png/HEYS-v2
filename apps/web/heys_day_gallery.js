@@ -114,9 +114,7 @@
       try { navigator.vibrate?.(10); } catch(e) {}
     }, [photo.id, mealIndex, setDay]);
     
-    // Классы с skeleton
     let finalClass = thumbClass;
-    if (!isLoaded && isVisible) finalClass += ' skeleton';
     if (photo.processed) finalClass += ' processed';
     
     return React.createElement('div', { 
@@ -126,12 +124,12 @@
     },
       // Изображение — только когда видимо И источник уже разрешён: пока идёт
       // авторизованный запрос, photoSrc пуст, и пустой src у <img> перезагрузил
-      // бы текущую страницу вместо показа скелетона.
+      // бы текущую страницу.
       isVisible && photoSrc && React.createElement('img', {
         src: photoSrc,
         alt: 'Фото приёма',
         onLoad: () => setIsLoaded(true),
-        onError: () => setIsLoaded(true) // Убираем skeleton даже при ошибке
+        onError: () => setIsLoaded(true)
       }),
       // Чекбокс "обработано" (круглый, в левом верхнем углу)
       isLoaded && React.createElement('button', {

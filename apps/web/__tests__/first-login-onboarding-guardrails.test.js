@@ -20,6 +20,8 @@ describe('first login onboarding guardrails', () => {
     expect(stepModalSource).toContain('await saveStepConfig');
     expect(stepModalSource).toContain('await completionResult');
     expect(stepModalSource).toContain('Сохраняю...');
+    expect(stepModalSource).toContain('Сохраняем профиль');
+    expect(stepModalSource).toContain('heys-wait-mark-overlay');
     expect(profileStepSource).toContain('return syncCurrentClientName(fullName,');
     expect(profileStepSource).toContain("HEYS.cloud.waitForSync('heys_profile', 10000)");
     expect(profileStepSource).toContain("api.getKV(clientId, 'heys_profile')");

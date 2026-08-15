@@ -1409,7 +1409,7 @@
         const [landscape, setLandscape] = React.useState(false);
         const [data, setData] = React.useState(() => readCache());
         const [offline, setOffline] = React.useState(!navigator.onLine);
-        const [loading, setLoading] = React.useState(false);
+        const [loading, setLoading] = React.useState(!data);
         const [error, setError] = React.useState('');
         const [talkTarget, setTalkTarget] = React.useState(null);
         const [talkText, setTalkText] = React.useState('');
@@ -1792,6 +1792,11 @@
         };
 
         const tabClass = 'board-tab board-tab--' + boardTheme;
+        const firstCloudWait = loading && !data;
+        const bodyWait = firstCloudWait
+            ? (window.HEYS?.WaitMark?.render?.(React, { mode: 'embedded', sr: 'Загружаем' })
+                || React.createElement('div', { className: 'heys-wait-mark heys-wait-mark--embedded', role: 'status' }, 'Загружаем'))
+            : null;
 
         return React.createElement('div', { className: tabClass },
             React.createElement('header', { className: 'board-header' },
@@ -1806,7 +1811,7 @@
                     }, boardTheme === 'dark' ? '☀️' : '🌙'),
                     React.createElement('button', {
                         type: 'button',
-                        className: 'board-header__refresh' + (loading ? ' board-header__refresh--spin' : ''),
+                        className: 'board-header__refresh',
                         disabled: loading,
                         onClick: reload,
                         'aria-label': 'Обновить',
@@ -1814,6 +1819,7 @@
                     }, '↻'))),
             React.createElement(StaleBanner, { fetchedAt: data && data.fetched_at, offline }),
             error ? React.createElement('p', { className: 'board-error', role: 'alert' }, error) : null,
+            bodyWait || React.createElement(React.Fragment, null,
             React.createElement(BoardChips, {
                 screen,
                 setScreen,
@@ -1873,7 +1879,7 @@
                 error: talkError,
                 onClose: closeTalk,
                 onSave: saveTalk,
-            }));
+            })));
     }
 
     HEYS.BoardTab = BoardTab;

@@ -2290,7 +2290,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     );
   }
 
-  // ── Пустой тред и скелетон ───────────────────────────────────────────
+  // ── Пустой тред ──────────────────────────────────────────────────────
 
   // Подсказки закрывают самый частый ступор первого сообщения: человек не
   // знает, что именно от него ждут. Тап начинает сообщение за него.
@@ -2335,17 +2335,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     );
   }
 
-  // Скелетон вместо «Загружаю...»: показывает форму будущего треда, поэтому
-  // переход к реальным сообщениям не выглядит скачком.
+  // Знак 56 в теле вкладки: история приходит из облака, рама уже живая.
   function ThreadSkeleton() {
-    return React.createElement(
-      'div',
-      { className: 'messenger-skeleton', 'aria-label': 'История загружается', role: 'status' },
-      ['theirs', 'mine', 'theirs'].map((side, index) => React.createElement('div', {
-        key: index,
-        className: `messenger-skeleton__bubble messenger-skeleton__bubble--${side}`,
-      })),
-    );
+    const mark = window.HEYS?.WaitMark?.render?.(React, { mode: 'embedded', sr: 'Загружаем' });
+    return mark || React.createElement('div', {
+      className: 'heys-wait-mark heys-wait-mark--embedded',
+      role: 'status',
+    }, 'Загружаем');
   }
 
   // ── Плашка «время и граммы» ──────────────────────────────────────────

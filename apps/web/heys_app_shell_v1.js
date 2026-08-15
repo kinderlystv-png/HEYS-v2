@@ -1,4 +1,23 @@
 // heys_app_shell_v1.js — App header + navigation shell
+//
+// MODULE MAP (agent navigation — jump by line; do not read whole file)
+// Related docs: docs/reference/systems/HOW_HEYS_WORKS.md (boot → AppShell)
+//                 apps/web/.instructions.md (React bridge)
+//
+//   ~4    ADVICE TAB CAPTURE — document-level click (outside React IIFE)
+//  ~34    IIFE entry — React guard, profiler ring, dropdown blur sync
+// ~141    HeysReactSubtreeProbe — commit timing without React.Profiler
+// ~389    AppHeader — client picker, sync badge, date row, account menu
+//  ~871   CLIENT DROPDOWN — layout, leaderboard fetch, competition cache
+// ~1200   Weekly leaderboard (RPC + curator competition warm)
+// ~3150   PENDING SYNC BANNER — offline/readonly copy, VPN hint
+// ~3273   DATE PICKER ROW — HEYS.DatePicker in diary/activity header
+// ~3387   Header icon buttons (theme, advice, sync status)
+// ~4030   VPN help page overlay
+// ~4072   AppTabsNav — bottom nav, settings sheet, board theme
+// ~5168   AppTabContent — lazy tab mount, day/ration/user routing
+// ~5427   AppShell — composes header + tabs + content
+// ~5479   HEYS.AppShell export
 
 // ═══════════════════════════════════════════════════════════════════
 // BULLETPROOF advice tab click — document-level capture listener.
@@ -5225,71 +5244,15 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         }, []);
 
         React.useEffect(() => {
-            if (!clientId || isDayTab) return;
+            // Главная: кадр подтверждает WidgetsTab после гидратации layout,
+            // иначе boot-знак снимается на пустой сетке до появления виджетов.
+            if (!clientId || isDayTab || tab === 'widgets') return;
             window.HEYS?.BlankScreenGuard?.reportVisibleFrame?.({
                 element: tabContentRef.current,
                 screen: tab,
                 reason: 'tab_content_painted'
             });
         }, [clientId, isDayTab, tab]);
-
-        const TAB_SKELETON_DELAY_MS = 240;
-        const tabSkeletonSince = window.__heysTabSkeletonSince = window.__heysTabSkeletonSince || Object.create(null);
-        const tabSkeletonState = window.__heysTabSkeletonState = window.__heysTabSkeletonState || Object.create(null);
-        const renderTabFallback = (fallbackKey, fallbackNode) => {
-            const now = Date.now();
-            if (!tabSkeletonSince[fallbackKey]) {
-                tabSkeletonSince[fallbackKey] = now;
-            }
-            const elapsedMs = now - tabSkeletonSince[fallbackKey];
-
-            if (elapsedMs < TAB_SKELETON_DELAY_MS) {
-                if (tabSkeletonState[fallbackKey] !== 'wait_delay') {
-                    console.info('[HEYS.sceleton] ⏱️ tab_wait_delay', {
-                        key: fallbackKey,
-                        elapsedMs,
-                        delayMs: TAB_SKELETON_DELAY_MS,
-                        tab,
-                    });
-                    tabSkeletonState[fallbackKey] = 'wait_delay';
-                }
-                return null;
-            }
-
-            if (tabSkeletonState[fallbackKey] !== 'show_skeleton') {
-                console.info('[HEYS.sceleton] 🦴 tab_show_skeleton', {
-                    key: fallbackKey,
-                    elapsedMs,
-                    delayMs: TAB_SKELETON_DELAY_MS,
-                    tab,
-                });
-                tabSkeletonState[fallbackKey] = 'show_skeleton';
-            }
-
-            return fallbackNode;
-        };
-
-        const tabFallbackSkeleton = (tabKey, options = {}) => {
-            const SharedTabSkeleton = window.HEYS?.AppSkeletons?.TabSkeleton;
-            if (SharedTabSkeleton) {
-                return React.createElement(SharedTabSkeleton, {
-                    tab: tabKey,
-                    tasksSubtab: options.tasksSubtab || defaultTasksSubtab,
-                    embedded: true,
-                });
-            }
-
-            return React.createElement('div',
-                { className: 'deferred-card-slot deferred-card-slot--loading', style: { padding: 16 } },
-                React.createElement('div',
-                    {
-                        className: 'deferred-card-skeleton',
-                        style: { minHeight: 'min(640px, calc(100dvh - 176px))' }
-                    },
-                    React.createElement('div', { className: 'deferred-card-skeleton__shimmer' })
-                )
-            );
-        };
 
         return React.createElement(
             React.Fragment,
@@ -5351,7 +5314,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         clientId,
                     }))
                     : tab === 'insights'
-                        ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('insights') },
+                        ? React.createElement(React.Suspense, { fallback: null },
                             wrapReactProfiler('InsightsTab', React.createElement(
                                 _lazyTab('insights', '__loadPostboot3Ui', function() { return window.HEYS?.PredictiveInsights?.components?.InsightsTab; }),
                                 {
@@ -5374,7 +5337,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                         clientId,
                                     })
                                     : tab === 'overview'
-                                        ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('overview') },
+                                        ? React.createElement(React.Suspense, { fallback: null },
                                             React.createElement(
                                                 _lazyTab('overview', '__loadPostboot3Ui', function() { return window.HEYS?.DataOverviewTab; }),
                                                 {
@@ -5385,7 +5348,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                                 }
                                             ))
                                         : tab === 'widgets'
-                                            ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('widgets') },
+                                            ? React.createElement(React.Suspense, { fallback: null },
                                                 React.createElement(
                                                     _lazyTab('widgets', '__loadPostboot3Ui', function() { return window.HEYS?.Widgets?.WidgetsTab; }),
                                                     {
@@ -5402,7 +5365,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                                 ))
                                             : tab === 'tasks'
                                                 ? (canUsePostReleaseLabs
-                                                    ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('tasks', { tasksSubtab: defaultTasksSubtab }) },
+                                                    ? React.createElement(React.Suspense, { fallback: null },
                                                         React.createElement(
                                                             _lazyTab('tasks', '__loadPostboot3Ui', function() { return window.HEYS?.PlanningTab; }),
                                                             {
@@ -5414,13 +5377,13 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                                     : null)
                                                 : tab === 'board'
                                                     ? ((!cloudUser && clientId && String(clientId).toLowerCase() === 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a')
-                                                        ? React.createElement(React.Suspense, { fallback: tabFallbackSkeleton('board') },
+                                                        ? React.createElement(React.Suspense, { fallback: null },
                                                             React.createElement(
                                                                 _lazyTab('board', '__loadPostboot3Ui', function() { return window.HEYS?.BoardTab; }),
                                                                 { key: 'board_' + String(clientId || '') }
                                                             ))
                                                         : null)
-                                                : renderTabFallback('default_' + String(tab || 'unknown'), tabFallbackSkeleton(tab || 'fallback'))
+                                                : null
             )
             )
             )

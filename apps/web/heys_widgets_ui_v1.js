@@ -9,6 +9,31 @@
  * - Long press (500ms) для входа в edit mode
  * - Ghost элемент и placeholder preview
  * - Undo/Redo кнопки в header
+ *
+ * MODULE MAP (agent navigation — jump by line; do not read whole file)
+ * Related docs: docs/reference/IMPROVEMENT_HISTORY.md (W-01/W-02 widgets)
+ *                 widgets/widget_data.js + heys_widgets_core_v1.js (data layer)
+ *
+ *  ~13   IIFE entry — debug helpers, dead-setting filters
+ *  ~83   LAYOUT UTILS — getWidgetDims, grid cells, element-scale CSS vars
+ * ~502   WidgetCard — drag-resize handles, DnD pointer hooks
+// ~1372  WidgetContent — type router to per-widget renderers
+// ~1613  DayScoreWidgetContent — unified day score (Status + Momentum)
+// ~1731  InsulinWaveSparkline + InsulinWaveWidgetContent
+// ~1920  HealthTrendWidgetContent
+// ~2040  CascadeWidgetContent, StatusWidgetContent (deprecated redirect)
+// ~2082  Calories / Water / Sleep / Streak widget contents
+// ~2491  WeightWidgetContent + WeightMiniSparkline
+// ~3130  Steps / Macros / Insulin / Heatmap / Cycle contents
+// ~3760  CrashRiskWidgetContent + RelapseRiskSpeedometer
+// ~4745  RelapseRiskWidgetContent
+// ~4891  StatusDetailsModal, CrashRiskDetailsModal
+// ~5323  DayScoreDetailsModal, RelapseRiskDetailsModal
+// ~5863  CatalogStrip / CatalogModal — add widget picker
+// ~5983  SettingsModal — per-widget settings editor
+// ~6236  ResetLayoutConfirmModal
+// ~6349  WidgetsTab — main tab: edit mode, undo/redo, layout bootstrap
+// ~7119  HEYS.Widgets exports
  */
 (function (global) {
   'use strict';
@@ -6369,6 +6394,7 @@
     }, [VALID_HOME_TABS]);
     const [widgets, setWidgets] = useState(() => bootstrapWidgetsLayout());
     const [isLayoutHydrated, setIsLayoutHydrated] = useState(() => !!HEYS.Widgets.state?._initialized);
+    const [isDashboardPainted, setIsDashboardPainted] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [defaultHomeTab, setDefaultHomeTab] = useState(() => getCurrentDefaultTab());
     const [settingsWidget, setSettingsWidget] = useState(null);
@@ -6393,6 +6419,7 @@
       setWidgets([...(layout || [])]);
       updateHistoryInfo();
       setIsLayoutHydrated(true);
+      setIsDashboardPainted(false);
     }, [updateHistoryInfo]);
 
     // Mobile detection (используем существующий хук Day)
@@ -6597,12 +6624,30 @@
     }, [applyWidgetsLayout, getCurrentDefaultTab, VALID_HOME_TABS]);
 
     useEffect(() => {
-      if (!isLayoutHydrated) return;
-      window.HEYS?.BlankScreenGuard?.reportVisibleFrame?.({
-        element: containerRef.current,
-        screen: 'widgets',
-        reason: 'widgets_dashboard_painted'
+      if (!isLayoutHydrated) {
+        setIsDashboardPainted(false);
+        return;
+      }
+      let cancelled = false;
+      const markPainted = () => {
+        if (cancelled) return;
+        const root = containerRef.current;
+        if (!root) return;
+        const grid = root.querySelector('.widgets-grid');
+        const gridReady = widgets.length === 0
+          || (grid && grid.childElementCount > 0);
+        if (!gridReady) return;
+        setIsDashboardPainted(true);
+        window.HEYS?.BlankScreenGuard?.reportVisibleFrame?.({
+          element: root,
+          screen: 'widgets',
+          reason: 'widgets_dashboard_painted'
+        });
+      };
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(markPainted);
       });
+      return () => { cancelled = true; };
     }, [isLayoutHydrated, widgets.length]);
 
     // Handle catalog widget selection
@@ -6910,6 +6955,14 @@
 
     const pullIndicatorEl = null;
 
+    // До гидратации layout — пустая оболочка. Boot-знак держит кадр до paint.
+    if (!isLayoutHydrated) {
+      return React.createElement('div', {
+        className: 'widgets-tab',
+        ref: containerRef,
+      }, pullIndicatorEl);
+    }
+
     // Render empty state (только после первичной гидратации layout)
     if (isLayoutHydrated && widgets.length === 0 && !isEditMode) {
       return React.createElement('div', {
@@ -6942,7 +6995,7 @@
     return React.createElement('div', {
       className: `widgets-tab ${isEditMode ? 'widgets-tab--editing' : ''}`,
       ref: containerRef,
-      'data-heys-visible-frame': isLayoutHydrated ? 'widgets' : undefined
+      'data-heys-visible-frame': isDashboardPainted ? 'widgets' : undefined
     },
       // Pull-to-refresh indicator
       pullIndicatorEl,

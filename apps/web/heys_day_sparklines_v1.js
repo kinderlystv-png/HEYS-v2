@@ -36,16 +36,8 @@
     const safeSetBrushing = typeof setBrushing === 'function' ? setBrushing : () => { };
     const safeSetBrushRange = typeof setBrushRange === 'function' ? setBrushRange : () => { };
 
-    // Skeleton loader пока данные загружаются
     if (!data) {
-      return React.createElement('div', { className: 'sparkline-skeleton' },
-        React.createElement('div', { className: 'sparkline-skeleton-line' }),
-        React.createElement('div', { className: 'sparkline-skeleton-dots' },
-          Array.from({ length: 7 }).map((_, i) =>
-            React.createElement('div', { key: i, className: 'sparkline-skeleton-dot' })
-          )
-        )
-      );
+      return null;
     }
 
     if (data.length === 0) return null;
@@ -1827,16 +1819,8 @@
     const safeHaptic = typeof haptic === 'function' ? haptic : () => { };
     const safeOpenPopup = typeof openExclusivePopup === 'function' ? openExclusivePopup : () => { };
 
-    // Skeleton loader пока данные загружаются
     if (!data) {
-      return React.createElement('div', { className: 'sparkline-skeleton' },
-        React.createElement('div', { className: 'sparkline-skeleton-line' }),
-        React.createElement('div', { className: 'sparkline-skeleton-dots' },
-          Array.from({ length: 7 }).map((_, i) =>
-            React.createElement('div', { key: i, className: 'sparkline-skeleton-dot' })
-          )
-        )
-      );
+      return null;
     }
 
     if (data.length === 0) return null;

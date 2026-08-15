@@ -1,11 +1,9 @@
-// heys_app_tabs_v1.js — Tab wrappers and skeletons for HEYS app
+// heys_app_tabs_v1.js — Tab wrappers for HEYS app
 
 (function () {
     const HEYS = window.HEYS = window.HEYS || {};
     const React = window.React;
     if (!React) return;
-
-    const TAB_SKELETON_DELAY_MS = 260;
 
     // ──────────────────────────────────────────────────────────────────────
     // Phase 5C: one-shot cleanup of *_insights_feedback_default keys.
@@ -61,71 +59,6 @@
         } catch (_) { /* noop */ }
     }
 
-    function useDelayedSkeleton(shouldShow, key) {
-        const [visible, setVisible] = React.useState(false);
-
-        React.useEffect(() => {
-            if (!shouldShow) {
-                if (window.__heysTabWrapSkeletonState?.[key] !== 'ready') {
-                    window.__heysTabWrapSkeletonState = window.__heysTabWrapSkeletonState || Object.create(null);
-                    window.__heysTabWrapSkeletonState[key] = 'ready';
-                    console.info('[HEYS.sceleton] ✅ tabwrap_ready', { key });
-                }
-                setVisible(false);
-                return;
-            }
-
-            window.__heysTabWrapSkeletonState = window.__heysTabWrapSkeletonState || Object.create(null);
-            if (window.__heysTabWrapSkeletonState[key] !== 'wait_delay') {
-                window.__heysTabWrapSkeletonState[key] = 'wait_delay';
-                console.info('[HEYS.sceleton] ⏱️ tabwrap_wait_delay', {
-                    key,
-                    delayMs: TAB_SKELETON_DELAY_MS
-                });
-            }
-
-            const t = setTimeout(() => {
-                setVisible(true);
-                if (window.__heysTabWrapSkeletonState[key] !== 'show_skeleton') {
-                    window.__heysTabWrapSkeletonState[key] = 'show_skeleton';
-                    console.info('[HEYS.sceleton] 🦴 tabwrap_show_skeleton', { key });
-                }
-            }, TAB_SKELETON_DELAY_MS);
-
-            return () => clearTimeout(t);
-        }, [shouldShow, key]);
-
-        return visible;
-    }
-
-    // Skeleton для DayTab — структура зависит от открытого дневного подраздела.
-    function DayTabSkeleton({ subTab = 'diary' } = {}) {
-        const SharedTabSkeleton = window.HEYS?.AppSkeletons?.TabSkeleton;
-        if (SharedTabSkeleton) {
-            return React.createElement(SharedTabSkeleton, { tab: subTab, embedded: true });
-        }
-        return React.createElement('div', { className: 'day-tab-skeleton', style: { padding: 16 } },
-            // Sparkline skeleton
-            React.createElement('div', {
-                className: 'skeleton-sparkline',
-                style: { height: 80, marginBottom: 16, borderRadius: 12 }
-            }),
-            // Cards skeleton
-            React.createElement('div', { style: { display: 'flex', gap: 8, marginBottom: 16 } },
-                React.createElement('div', { className: 'skeleton-card', style: { flex: 1, height: 60 } }),
-                React.createElement('div', { className: 'skeleton-card', style: { flex: 1, height: 60 } })
-            ),
-            // Progress skeleton
-            React.createElement('div', { className: 'skeleton-progress', style: { height: 48, marginBottom: 16 } }),
-            // Macros skeleton
-            React.createElement('div', { className: 'skeleton-macros', style: { marginBottom: 16 } },
-                React.createElement('div', { className: 'skeleton-ring' }),
-                React.createElement('div', { className: 'skeleton-ring' }),
-                React.createElement('div', { className: 'skeleton-ring' })
-            )
-        );
-    }
-
     // v9.7: Phase A Immediate Render — DayTab appears as soon as today's data ready (~4s on cold login)
     // Previously v6.0–v9.3: Adaptive Gate waited up to 2500ms after Phase A for full sync (gated=true)
     // Now: render immediately on Phase A (gated=false) → cascade/planner show skeleton → fill in via
@@ -139,8 +72,6 @@
         const [loading, setLoading] = React.useState(true);
         const [blankScreenRetryAttempt, setBlankScreenRetryAttempt] = React.useState(0);
         const visibleFrameRef = React.useRef(null);
-        const needsSkeleton = !clientId || loading || !window.HEYS || !window.HEYS.DayTab;
-        const showSkeleton = useDelayedSkeleton(needsSkeleton, 'daytab');
 
         // Mount/remount diagnostic log
         React.useEffect(() => {
@@ -302,11 +233,11 @@
 
         // 🔐 Не рендерим DayTab пока нет клиента — иначе advice показываются до входа!
         if (!clientId) {
-            return showSkeleton ? React.createElement(DayTabSkeleton, { subTab }) : null;
+            return null;
         }
 
         if (loading || !window.HEYS || !window.HEYS.DayTab) {
-            return showSkeleton ? React.createElement(DayTabSkeleton, { subTab }) : null;
+            return null;
         }
         return React.createElement('div', {
             ref: visibleFrameRef,
@@ -343,24 +274,6 @@
         return true;
     });
 
-    // Skeleton для Ration/Products
-    function RationSkeleton() {
-        const SharedTabSkeleton = window.HEYS?.AppSkeletons?.TabSkeleton;
-        if (SharedTabSkeleton) {
-            return React.createElement(SharedTabSkeleton, { tab: 'ration', embedded: true });
-        }
-        return React.createElement('div', { style: { padding: 16 } },
-            React.createElement('div', { className: 'skeleton-header', style: { width: 150, marginBottom: 16 } }),
-            ...Array.from({ length: 5 }, (_, i) =>
-                React.createElement('div', {
-                    key: i,
-                    className: 'skeleton-block',
-                    style: { height: 56, marginBottom: 8 }
-                })
-            )
-        );
-    }
-
     // Кэш синхронизированных клиентов (в рамках сессии) — обычная переменная модуля
     const syncedClientsCache = new Set();
     const recoveryRunCache = new Set();
@@ -370,8 +283,6 @@
         // Проверяем был ли sync для ЭТОГО клиента
         const alreadySynced = clientId && syncedClientsCache.has(clientId);
         const [loading, setLoading] = React.useState(!alreadySynced);
-        const needsSkeleton = !clientId || loading || !window.HEYS || !window.HEYS.Ration;
-        const showSkeleton = useDelayedSkeleton(needsSkeleton, 'rationtab');
         const getLatestProducts = (event) => {
             const fromEvent = event?.detail?.products;
             if (Array.isArray(fromEvent)) return fromEvent;
@@ -380,7 +291,7 @@
 
         // 🔐 Не рендерим Ration пока нет клиента
         if (!clientId) {
-            return showSkeleton ? React.createElement(RationSkeleton) : null;
+            return null;
         }
 
         // 📦 Слушатель событий для гарантированного обновления продуктов
@@ -895,34 +806,18 @@
             };
         }, [clientId]);
         if (loading || !window.HEYS || !window.HEYS.Ration) {
-            return showSkeleton ? React.createElement(RationSkeleton) : null;
+            return null;
         }
         return React.createElement(window.HEYS.Ration, { products, setProducts });
-    }
-
-    // Skeleton для UserTab
-    function UserSkeleton() {
-        const SharedTabSkeleton = window.HEYS?.AppSkeletons?.TabSkeleton;
-        if (SharedTabSkeleton) {
-            return React.createElement(SharedTabSkeleton, { tab: 'user', embedded: true });
-        }
-        return React.createElement('div', { style: { padding: 16 } },
-            React.createElement('div', { className: 'skeleton-header', style: { width: 120, marginBottom: 16 } }),
-            React.createElement('div', { className: 'skeleton-block', style: { height: 100, marginBottom: 12 } }),
-            React.createElement('div', { className: 'skeleton-block', style: { height: 80, marginBottom: 12 } }),
-            React.createElement('div', { className: 'skeleton-block', style: { height: 80 } })
-        );
     }
 
     function UserTabWithCloudSync(props) {
         const { clientId } = props;
         const [loading, setLoading] = React.useState(true);
-        const needsSkeleton = !clientId || loading || !window.HEYS || !window.HEYS.UserTab;
-        const showSkeleton = useDelayedSkeleton(needsSkeleton, 'usertab');
 
         // 🔐 Не рендерим UserTab пока нет клиента
         if (!clientId) {
-            return showSkeleton ? React.createElement(UserSkeleton) : null;
+            return null;
         }
 
         React.useEffect(() => {
@@ -979,7 +874,7 @@
             };
         }, [clientId]);
         if (loading || !window.HEYS || !window.HEYS.UserTab) {
-            return showSkeleton ? React.createElement(UserSkeleton) : null;
+            return null;
         }
         return React.createElement(window.HEYS.UserTab, {});
     }
@@ -1016,11 +911,7 @@
         }, [autoRefresh]);
 
         if (!stats) {
-            return React.createElement('div', { style: { padding: 16 } },
-                React.createElement('div', { className: 'skeleton-header', style: { width: 180, marginBottom: 16 } }),
-                React.createElement('div', { className: 'skeleton-block', style: { height: 60, marginBottom: 12 } }),
-                React.createElement('div', { className: 'skeleton-block', style: { height: 120 } })
-            );
+            return null;
         }
 
         return React.createElement(

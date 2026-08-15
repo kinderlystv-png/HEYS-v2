@@ -1919,42 +1919,9 @@
             setCuratorTab,
         } = props;
 
-        const GATE_SKELETON_DELAY_MS = 280;
-        const gateLoaderSinceKey = '__heysGateLoaderSince';
-
         const gate = !clientId
             ? (isInitializing
-                ? (() => {
-                    const now = Date.now();
-                    if (!window[gateLoaderSinceKey]) {
-                        window[gateLoaderSinceKey] = now;
-                    }
-                    const elapsedMs = now - window[gateLoaderSinceKey];
-
-                    if (elapsedMs < GATE_SKELETON_DELAY_MS) {
-                        if (window.__heysGateSkeletonState !== 'wait_delay') {
-                            console.info('[HEYS.sceleton] ⏱️ gate_wait_delay', {
-                                elapsedMs,
-                                delayMs: GATE_SKELETON_DELAY_MS,
-                            });
-                            window.__heysGateSkeletonState = 'wait_delay';
-                        }
-                        return null;
-                    }
-
-                    if (window.__heysGateSkeletonState !== 'show_loader') {
-                        console.info('[HEYS.sceleton] 🦴 gate_show_loader', {
-                            elapsedMs,
-                            delayMs: GATE_SKELETON_DELAY_MS,
-                        });
-                        window.__heysGateSkeletonState = 'show_loader';
-                    }
-
-                    return React.createElement(HEYS.AppLoader, {
-                        message: 'Загрузка...',
-                        subtitle: 'Подключение к серверу'
-                    });
-                })()
+                ? null
                 : !cloudUser
                     ? (() => {
                         // v9.11: Remove HTML login gate before mounting React LoginScreen
@@ -2705,14 +2672,6 @@
             )
             : null;
 
-        if (!isInitializing && window[gateLoaderSinceKey]) {
-            delete window[gateLoaderSinceKey];
-            if (window.__heysGateSkeletonState !== 'ready') {
-                console.info('[HEYS.sceleton] ✅ gate_ready');
-                window.__heysGateSkeletonState = 'ready';
-            }
-        }
-
         return gate;
     }
 
@@ -3048,33 +3007,17 @@
             // Профиль остаётся доступен до триала. Как только он подтверждён в
             // облаке, основной интерфейс заменяется отдельным экраном ожидания.
             //
-            // Пока статус подписки едет — показываем скелетон вкладки, а не
-            // карточку «Проверяем доступ». Прежний текст обещал человеку, что
-            // уточняется дата пробной недели, и видел его каждый входящий, в том
-            // числе клиент с давним активным доступом, у которого никакой
-            // пробной недели нет. Ожидание сети — не повод объяснять его
-            // пользователю чужими словами: он пришёл в дневник, а не читать
-            // про наши запросы.
+            // Пока статус подписки едет — пустой кадр под boot-знаком.
+            // Прежний скелетон вкладки обещал чужой экран; карточка
+            // «Проверяем доступ» обещала пробную неделю даже клиенту
+            // с давним активным доступом. Метка остаётся: защита от
+            // белого экрана считает кадр без неё зависанием, но
+            // subscription-loading — transient и overlay не снимает.
             if (!profileIncomplete && subscriptionState.isLoading) {
-                const Skeleton = HEYS.AppSkeletons?.TabSkeleton;
-                // Вкладка берётся из профиля — та же, что откроется после
-                // загрузки. Скелетон чужой вкладки хуже пустого экрана: он
-                // обещает не то, что появится.
-                const bootContext = HEYS.AppSkeletons?.readBootContext?.() || {};
-                // Метка обязательна: защита от белого экрана считает кадр без
-                // неё зависанием и через таймаут показывает «Ошибка загрузки»
-                // с кнопкой починки. Скелетон — полноценный видимый кадр,
-                // поэтому метку он несёт наравне с прежней карточкой.
                 return React.createElement('div', {
-                    key: 'subscription-loading-skeleton',
+                    key: 'subscription-loading',
                     'data-heys-visible-frame': 'subscription-loading',
-                }, Skeleton
-                    ? React.createElement(Skeleton, {
-                        React,
-                        tab: bootContext.tab,
-                        tasksSubtab: bootContext.tasksSubtab,
-                    })
-                    : null);
+                });
             }
 
             const status = subscriptionState.status || 'none';

@@ -502,6 +502,8 @@
     const [validationError, setValidationError] = useState(false);
     const [validationMessage, setValidationMessage] = useState(null);
     const [savingStep, setSavingStep] = useState(false);
+    const [profileSaveFail, setProfileSaveFail] = useState(false);
+    const [profileSaveOk, setProfileSaveOk] = useState(false);
     const [slideInDirection, setSlideInDirection] = useState(() =>
       initialSlideInDirection === 'from-right' || initialSlideInDirection === 'from-left'
         ? initialSlideInDirection
@@ -759,6 +761,10 @@
         return true;
       } catch (e) {
         console.error('[StepModal] step save failed:', config.id, e);
+        if (config.id === 'profile-metabolism') {
+          setProfileSaveFail(true);
+          return false;
+        }
         showSaveError(requireStepAck ? (e?.message || 'Не удалось сохранить шаг в облако. Попробуйте ещё раз.') : 'Не удалось сохранить шаг. Попробуйте ещё раз.');
         return false;
       }
@@ -832,13 +838,24 @@
       // синхронный, goToStep уже сам управляет анимацией через свой
       // setTimeout(200), второй внешний wrapper избыточен.
       actionInFlightRef.current = true;
+      if (currentConfig?.id === 'profile-metabolism') {
+        setProfileSaveFail(false);
+        setProfileSaveOk(false);
+      }
       setSavingStep(true);
       try {
         // Let the explicit "Сохраняю..." state reach one frame even
         // when local persistence resolves synchronously.
         await waitForSavingPaint();
+        const holdProfileSaveOk = async () => {
+          if (currentConfig?.id !== 'profile-metabolism') return;
+          setProfileSaveOk(true);
+          await new Promise((resolve) => setTimeout(resolve, 400));
+        };
         if (currentStepIndex < totalSteps - 1) {
           if (!(await saveStepConfig(currentConfig, stepData))) return;
+          await holdProfileSaveOk();
+          setProfileSaveOk(false);
           goToStep(currentStepIndex + 1, 'left');
         } else {
           if (requireStepAck) {
@@ -870,6 +887,8 @@
               detail: { date: getTodayKey(), source: 'step-modal' }
             }));
           }
+
+          await holdProfileSaveOk();
 
           if (onComplete) {
             try {
@@ -1217,7 +1236,30 @@
           ),
 
           // Daily tip
-          showTip && React.createElement('div', { className: 'mc-tip' }, dailyTip)
+          showTip && React.createElement('div', { className: 'mc-tip' }, dailyTip),
+
+          (profileSaveFail || profileSaveOk || (savingStep && currentConfig?.id === 'profile-metabolism')) && React.createElement('div', {
+            className: 'heys-wait-mark-overlay',
+          }, HEYS.WaitMark?.render?.(React, {
+            mode: 'screen',
+            state: profileSaveFail ? 'fail' : profileSaveOk ? 'ok' : 'wait',
+            title: profileSaveFail ? 'Не удалось сохранить' : profileSaveOk ? 'Сохранено' : 'Сохраняем профиль',
+            text: profileSaveFail
+              ? 'Данные не потерялись — они на устройстве. Проверьте связь и попробуйте ещё раз.'
+              : profileSaveOk ? 'Профиль обновлён.' : 'Пара секунд.',
+            actions: profileSaveFail ? [
+              React.createElement('button', {
+                key: 'retry', type: 'button', className: 'heys-wait-mark__btn', onClick: handleNext,
+              }, 'Повторить'),
+              React.createElement('a', {
+                key: 'curator',
+                className: 'heys-wait-mark__btn heys-wait-mark__btn--ghost',
+                href: 'https://t.me/heyslab_support_bot',
+                target: '_blank',
+                rel: 'noopener noreferrer',
+              }, 'Написать куратору'),
+            ] : null,
+          }))
         )
       )
     );

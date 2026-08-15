@@ -725,14 +725,14 @@
     const FieldStatus = ({ fieldKey }) => {
       if (lastEditedField !== fieldKey) return null;
       if (fieldStatus === 'pending') {
-        return React.createElement('span', {
-          style: { marginLeft: '6px', color: '#f59e0b', fontSize: '12px', fontWeight: 500 }
-        }, '⏳ Сохраняется...');
+        return window.HEYS?.WaitMark?.button?.(React, {
+          busy: true, idle: 'Сохраняем', busyLabel: 'Сохраняем',
+        }) || React.createElement('span', { style: { marginLeft: '6px', fontSize: '12px' } }, 'Сохраняем');
       }
       if (fieldStatus === 'saved') {
-        return React.createElement('span', {
-          style: { marginLeft: '6px', color: '#22c55e', fontSize: '12px', fontWeight: 500 }
-        }, '✓ Сохранено');
+        return window.HEYS?.WaitMark?.button?.(React, {
+          ok: true, idle: 'Сохранено', okLabel: 'Сохранено',
+        }) || React.createElement('span', { style: { marginLeft: '6px', fontSize: '12px' } }, 'Сохранено');
       }
       return null;
     };
@@ -1544,10 +1544,15 @@
                   onClick: handlePinUpdate,
                   disabled: pinStatus === 'pending',
                   style: { minWidth: '140px' }
-                }, pinStatus === 'pending' ? 'Сохраняю…' : 'Обновить PIN'),
-                pinStatus === 'pending' && React.createElement('span', { style: { color: '#f59e0b' } }, '⏳'),
-                pinStatus === 'success' && React.createElement('span', { style: { color: '#22c55e' } }, '✓ Готово'),
-                pinStatus === 'error' && React.createElement('span', { style: { color: '#ef4444' } }, '⚠️ Ошибка')
+                }, window.HEYS?.WaitMark?.button?.(React, {
+                  busy: pinStatus === 'pending',
+                  ok: pinStatus === 'success',
+                  fail: pinStatus === 'error',
+                  idle: 'Обновить PIN',
+                  busyLabel: 'Сохраняем',
+                  okLabel: 'Сохранено',
+                  failLabel: 'Не удалось',
+                }) || (pinStatus === 'pending' ? 'Сохраняем…' : 'Обновить PIN')),
               ),
               pinMessage && React.createElement('div', { className: 'muted', style: { marginTop: '6px', color: pinStatus === 'error' ? '#ef4444' : 'var(--gray-600)' } }, pinMessage)
             )
@@ -2587,14 +2592,14 @@
     const NormFieldStatus = ({ fieldKey }) => {
       if (lastEditedNorm !== fieldKey) return null;
       if (normsPending) {
-        return React.createElement('span', {
-          style: { marginLeft: '6px', color: '#f59e0b', fontSize: '12px', fontWeight: 500 }
-        }, '⏳ Сохраняется...');
+        return window.HEYS?.WaitMark?.button?.(React, {
+          busy: true, idle: 'Сохраняем', busyLabel: 'Сохраняем',
+        }) || React.createElement('span', { style: { marginLeft: '6px', fontSize: '12px' } }, 'Сохраняем');
       }
       if (normsSaved) {
-        return React.createElement('span', {
-          style: { marginLeft: '6px', color: '#22c55e', fontSize: '12px', fontWeight: 500 }
-        }, '✓ Сохранено');
+        return window.HEYS?.WaitMark?.button?.(React, {
+          ok: true, idle: 'Сохранено', okLabel: 'Сохранено',
+        }) || React.createElement('span', { style: { marginLeft: '6px', fontSize: '12px' } }, 'Сохранено');
       }
       return null;
     };

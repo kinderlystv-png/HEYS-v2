@@ -289,102 +289,12 @@
         );
     }
 
-    function renderSkeletonChip(className, style) {
-        return React.createElement('span', {
-            className: 'client-dropdown-leaderboard__skeleton-chip ' + className,
-            style: style || undefined,
-            'aria-hidden': 'true'
-        });
-    }
-
-    function renderLeaderboardSkeleton(weekDates) {
-        var safeWeekDates = Array.isArray(weekDates) && weekDates.length > 0
-            ? weekDates
-            : buildFullWeekDates();
-        var headerCells = [
-            React.createElement('div', { key: 'h-rank', className: 'client-dropdown-leaderboard__head-rank' },
-                renderSkeletonChip('client-dropdown-leaderboard__skeleton-chip--header-rank')),
-            React.createElement('div', { key: 'h-name', className: 'client-dropdown-leaderboard__head-name' },
-                renderSkeletonChip('client-dropdown-leaderboard__skeleton-chip--header-name'))
-        ];
-
-        for (var di = 0; di < safeWeekDates.length; di++) {
-            headerCells.push(
-                React.createElement('div', {
-                    key: 'h-d' + di,
-                    className: 'client-dropdown-leaderboard__head-day'
-                }, renderSkeletonChip('client-dropdown-leaderboard__skeleton-chip--header-day'))
-            );
-        }
-
-        headerCells.push(
-            React.createElement('div', {
-                key: 'h-avg',
-                className: 'client-dropdown-leaderboard__head-balance'
-            }, renderSkeletonChip('client-dropdown-leaderboard__skeleton-chip--header-avg'))
-        );
-
-        var nameWidths = ['72%', '58%', '66%'];
-        var rows = [];
-        for (var ri = 0; ri < 3; ri++) {
-            var rowCells = [
-                React.createElement('div', {
-                    key: 'r-rank',
-                    className: 'client-dropdown-leaderboard__rank-badge client-dropdown-leaderboard__rank-badge--skeleton'
-                }, renderSkeletonChip('client-dropdown-leaderboard__skeleton-chip--rank')),
-                React.createElement('div', {
-                    key: 'r-name',
-                    className: 'client-dropdown-leaderboard__name'
-                }, renderSkeletonChip('client-dropdown-leaderboard__skeleton-chip--name', {
-                    width: nameWidths[ri % nameWidths.length]
-                }))
-            ];
-
-            for (var wi = 0; wi < safeWeekDates.length; wi++) {
-                rowCells.push(
-                    React.createElement('div', {
-                        key: 'r-d' + wi,
-                        className: 'client-dropdown-leaderboard__day-score client-dropdown-leaderboard__day-score--skeleton'
-                    }, renderSkeletonChip('client-dropdown-leaderboard__skeleton-chip--day'))
-                );
-            }
-
-            rowCells.push(
-                React.createElement('div', {
-                    key: 'r-avg',
-                    className: 'client-dropdown-leaderboard__avg-wrap'
-                }, renderSkeletonChip('client-dropdown-leaderboard__skeleton-chip--avg'))
-            );
-
-            rows.push(
-                React.createElement('div', {
-                    key: 'lb-skeleton-' + ri,
-                    className: 'client-dropdown-leaderboard__row client-dropdown-leaderboard__row--skeleton'
-                }, rowCells)
-            );
-        }
-
-        return React.createElement('div', {
-            className: 'client-dropdown-leaderboard__scroll client-dropdown-leaderboard__scroll--skeleton',
-            'aria-hidden': 'true'
-        }, [
-            React.createElement('div', {
-                key: 'lb-skeleton-header',
-                className: 'client-dropdown-leaderboard__header-row client-dropdown-leaderboard__header-row--skeleton'
-            }, headerCells)
-        ].concat(rows));
-    }
-
     function renderLeaderboardSection(weeklyData, options) {
         var config = options || {};
         var entries = weeklyData && Array.isArray(weeklyData.entries) ? weeklyData.entries : [];
         var weekDates = weeklyData && Array.isArray(weeklyData.weekDates) && weeklyData.weekDates.length > 0
             ? weeklyData.weekDates
             : buildFullWeekDates(config.fallbackDateStr);
-
-        if (config.isLoading) {
-            return renderLeaderboardShell(renderLeaderboardSkeleton(weekDates), weekDates, { isLoading: true });
-        }
 
         if (entries.length === 0) {
             return null;
@@ -488,7 +398,7 @@
                 className: 'client-dropdown-leaderboard__scroll'
             }, [headerRow].concat(rows)),
             weekDates,
-            { isLoading: false }
+            { isLoading: !!config.isLoading }
         );
     }
 

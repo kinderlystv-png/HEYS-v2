@@ -70,11 +70,9 @@ describe('stable first-frame readiness contract', () => {
   it('keeps the boot loader until a real React screen is committed', () => {
     expect(rootSource).toContain("new CustomEvent('heys:app-content-ready'");
     expect(rootSource).toContain('isInitializing || (!clientId && !gate)');
-    expect(loadingSource).toContain(
-      "global.addEventListener('heys:app-content-ready', onAppContentReady, { once: true })",
-    );
-    expect(loadingSource).toContain("percent: 100, message: 'Готово'");
-    expect(loadingSource).toContain("d.phase === 'ready' ? Math.min(99, d.percent)");
+    expect(loadingSource).toContain("global.addEventListener('heys:app-content-ready'");
+    expect(loadingSource).toContain("state.message = 'Готово'");
+    expect(loadingSource).toContain('const STALL_MS = 60000');
   });
 
   it('loads effective dayv2 keys in Phase A (night threshold, not calendar date only)', () => {

@@ -507,7 +507,7 @@
             };
             window.__heysPerfMark('HTML parsing started');
 
-            // 🦴 Skeleton timing: запоминаем момент первого paint
+            // Boot wait: грунт палитры с T0, знак 56 после 300 мс.
             window.__heysSkelStart = Date.now();
             window.__heysSkelVisible = true;
         })();
@@ -519,14 +519,8 @@
          мобильных где DevTools недоступен и вкладку закрывают не предупредив. -->
     <script src="heys_client_log_trace_v1.js"></script>
 
-    <!-- 📊 Loading Progress UI (P1-R, 2026-05-22) — pure DOM bar + chip, без зависимостей.
-         Грузится sync (no defer) сразу после __heysPerfMark, чтобы юзер видел прогресс с T0. -->
+    <!-- Boot wait: ступени знака 56 (15 с / байты / отказ). Sync, без React. -->
     <script src="heys_loading_progress_v1.js"></script>
-
-    <!-- 🦴 Tab-aware skeleton: small standalone source starts before the boot bundles;
-         runtime owners retain a full-screen fallback if this resource is unavailable. -->
-    <link rel="preload" href="heys_app_skeletons_v1.js" as="script" />
-    <script defer src="heys_app_skeletons_v1.js"></script>
 
     <script>
         (function () {
@@ -726,14 +720,27 @@
                 // (кроме safety-fences, которые защищают от stale writes),
                 // reload через cache-busted URL (обходит HTTP-cache на
                 // iOS Safari).
-                document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;padding:20px;background:#f3f4f6">' +
-                    '<div style="background:white;padding:32px;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.1);max-width:400px;text-align:center">' +
-                    '<div style="font-size:48px;margin-bottom:16px">⚠️</div>' +
-                    '<h2 style="margin:0 0 8px;font-size:20px">Ошибка загрузки</h2>' +
-                    '<p style="margin:0 0 24px;color:#6b7280;font-size:14px">' + (errorMsg || 'Произошла критическая ошибка') + '</p>' +
-                    '<div id="heys-recovery-status" style="margin:0 0 16px;color:#6b7280;font-size:12px"></div>' +
-                    '<button id="heys-recovery-fix" onclick="window.__heysFixAndReload && window.__heysFixAndReload()" style="padding:14px 24px;border-radius:8px;border:none;background:#10b981;color:white;font-weight:500;font-size:16px;cursor:pointer;width:100%">🔧 Починить</button>' +
-                    '<div style="margin-top:12px;color:#9ca3af;font-size:12px">Локальные данные не пострадают</div>' +
+                if (window.__heysBootWait && typeof window.__heysBootWait.showFail === 'function') {
+                    window.__heysBootWait.showFail(errorMsg);
+                    return;
+                }
+                var failCount = 0;
+                try { failCount = parseInt(sessionStorage.getItem('heys_boot_fail_count') || '0', 10) || 0; } catch (_) {}
+                failCount += 1;
+                try { sessionStorage.setItem('heys_boot_fail_count', String(failCount)); } catch (_) {}
+                var again = failCount >= 2;
+                document.body.innerHTML = '<div class="heys-boot-mark is-fail' + (again ? ' is-fail-again' : '') + '" role="alert">' +
+                    '<div class="heys-boot-mark__sign">' +
+                    '<span class="heys-boot-mark__disc" aria-hidden="true">' +
+                    '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 7v6M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>' +
+                    '</span>' +
+                    '<div class="heys-boot-mark__title">' + (again ? 'Всё ещё не получается' : 'Не удалось загрузить приложение') + '</div>' +
+                    '<div class="heys-boot-mark__text">' + (again
+                        ? 'Данные на месте. Если связь есть, а приложение не открывается — напишите куратору, он посмотрит.'
+                        : 'Похоже, нет связи. Ваши данные на месте — они хранятся на устройстве.') + '</div>' +
+                    (again ? '<a class="heys-boot-mark__btn" href="https://t.me/heyslab_support_bot" target="_blank" rel="noopener noreferrer">Написать куратору</a>' : '') +
+                    '<button type="button" class="heys-boot-mark__retry' + (again ? ' heys-boot-mark__retry--ghost' : ' heys-boot-mark__btn') + '" onclick="location.reload()">' + (again ? 'Повторить ещё раз' : 'Повторить') + '</button>' +
+                    '<div id="heys-recovery-status" class="heys-boot-mark__status"></div>' +
                     '</div></div>';
             }
 
@@ -852,46 +859,51 @@
                 }
             };
 
-            // Watchdog: прогрессивный таймер с heartbeat
-            // Вместо жёсткого 15s cutoff — проверяем каждые 5s,
-            // и ждём до 120s пока есть heartbeat (скрипты загружаются)
-            // 🔄 v5: увеличено с 60s до 120s для throttled-сетей
+            // Watchdog: отказ только если нет прироста байтов boot-файлов 60 с
+            // или загрузка прервалась. Heartbeat сам по себе прогрессом не считается.
             window.__heysLoadingHeartbeat = Date.now();
-            // 🆕 v9.1: Автообновление heartbeat из HTML (не зависит от загрузки бандлов).
-            // С бандлами boot-init скачивается ~30s на throttled-сети,
-            // поэтому heartbeat из waitForDependencies не успевает обновиться до watchdog.
-            (function autoHeartbeat() {
-                if (window.__heysAppReady) return;
-                window.__heysLoadingHeartbeat = Date.now();
-                setTimeout(autoHeartbeat, 2000);
-            })();
-            var watchdogChecks = 0;
             var WATCHDOG_INTERVAL = 5000;
-            var WATCHDOG_MAX_CHECKS = 24; // 120s максимум (was 12/60s — слишком мало для slow 3G)
-            var WATCHDOG_STALE_MS = 10000; // 10s без heartbeat = зависло
+            var STALL_MS = 60000;
+            var lastBootBytes = -1;
+            var lastByteAt = Date.now();
+            var BOOT_RES = /\/(react-bundle|boot-(init|core|calc|day|app)\.bundle\.)/;
+
+            function readBootBytes() {
+                if (typeof performance === 'undefined' || !performance.getEntriesByType) return 0;
+                var total = 0;
+                try {
+                    var resources = performance.getEntriesByType('resource');
+                    for (var i = 0; i < resources.length; i++) {
+                        var name = resources[i].name || '';
+                        if (!BOOT_RES.test(name)) continue;
+                        var size = resources[i].transferSize || resources[i].encodedBodySize || 0;
+                        total += size > 0 ? size : 1;
+                    }
+                } catch (_) {}
+                return total;
+            }
 
             function watchdogCheck() {
-                watchdogChecks++;
-                if (window.__heysAppReady) {
+                if (window.__heysAppReady || window.__heysContentReady) {
                     window.__heysPerfMark && window.__heysPerfMark('Watchdog: appReady confirmed');
-                    return; // App загрузился — отлично
+                    return;
                 }
-
-                var now = Date.now();
-                var heartbeatAge = now - (window.__heysLoadingHeartbeat || 0);
-                var totalElapsed = watchdogChecks * WATCHDOG_INTERVAL;
-
-                // Если есть свежий heartbeat — скрипты ещё грузятся, ждём
-                if (heartbeatAge < WATCHDOG_STALE_MS && watchdogChecks < WATCHDOG_MAX_CHECKS) {
-                    window.__heysLog && window.__heysLog('[WATCHDOG] Still loading... (' + (totalElapsed / 1000) + 's, heartbeat ' + (heartbeatAge / 1000).toFixed(1) + 's ago)');
+                if (window.__heysBootWait && window.__heysBootWait.ownsWatchdog) {
                     setTimeout(watchdogCheck, WATCHDOG_INTERVAL);
                     return;
                 }
-
-                // Heartbeat устарел или превышен максимум — показываем recovery
-                window.__heysLog && window.__heysLog('[WATCHDOG] App not ready after ' + (totalElapsed / 1000) + 's (heartbeat age: ' + (heartbeatAge / 1000).toFixed(1) + 's)');
+                var bytes = readBootBytes();
+                if (bytes > lastBootBytes) {
+                    lastBootBytes = bytes;
+                    lastByteAt = Date.now();
+                }
+                if (Date.now() - lastByteAt < STALL_MS) {
+                    setTimeout(watchdogCheck, WATCHDOG_INTERVAL);
+                    return;
+                }
+                window.__heysLog && window.__heysLog('[WATCHDOG] No boot-byte progress for ' + STALL_MS + 'ms');
                 if (window.__heysShowRecoveryUI) {
-                    window.__heysShowRecoveryUI('Приложение не загрузилось за ' + (totalElapsed / 1000) + ' секунд');
+                    window.__heysShowRecoveryUI('Приложение не загрузилось: нет продвижения загрузки');
                 }
             }
             setTimeout(watchdogCheck, WATCHDOG_INTERVAL);
@@ -960,6 +972,7 @@
 
     <!-- Critical CSS for instant rendering -->
     <link rel="stylesheet" href="styles/critical.css?v=13" />
+    <link rel="stylesheet" href="styles/heys-boot-mark.css" />
     <link rel="stylesheet" href="styles/modules/002-ui-v4-palette-roles.css" />
     <link rel="stylesheet" href="styles/modules/733-ui-v4-login-theme.css" />
 
@@ -1495,195 +1508,57 @@
             }
         })();
     </script>
+    <script>
+        (function () {
+            try {
+                var hasPin = !!localStorage.getItem('heys_pin_auth_client');
+                var hasPinHint = !!localStorage.getItem('heys_pin_cookie_session_hint');
+                var hasCurHint = !!localStorage.getItem('heys_curator_cookie_session_hint');
+                var tok = localStorage.getItem('heys_session_token');
+                var last = localStorage.getItem('heys_last_client_id');
+                var recoverable = !!(tok && last);
+                document.documentElement.setAttribute('data-heys-session',
+                    (hasPin || hasPinHint || hasCurHint || recoverable) ? '1' : '0');
+            } catch (_) {
+                document.documentElement.setAttribute('data-heys-session', '0');
+            }
+        })();
+    </script>
     <div id="root">
-        <!-- 🦴 Skeleton UI v1.0: показывается мгновенно (0ms) пока грузятся JS-бандлы.
-             React.render() автоматически перезаписывает содержимое <div id="root">.
-             Никакого JS не нужно — чистый HTML/CSS. -->
-        <div class="heys-skeleton" data-heys-boot-skeleton="true"
-            style="max-width:480px;min-height:100dvh;box-sizing:border-box;margin:0 auto;padding:16px 16px 92px;font-family:system-ui,-apple-system,sans-serif">
-            <!-- Header bar -->
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0 16px">
-                <div style="width:90px;height:18px;background:#e5e7eb;border-radius:6px"></div>
-                <div style="display:flex;gap:8px">
-                    <div style="width:28px;height:28px;background:#e5e7eb;border-radius:50%"></div>
-                    <div style="width:28px;height:28px;background:#e5e7eb;border-radius:50%"></div>
+        <!-- Холодный старт: грунт палитры + круг 56. Без шапки и меню. -->
+        <div class="heys-boot-mark" data-heys-boot-mark="true" role="status" aria-live="polite" aria-busy="true">
+            <div class="heys-boot-mark__sign">
+                <span class="heys-boot-mark__disc" aria-hidden="true">
+                    <svg class="heys-boot-mark__spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round">
+                        <path d="M21 12a9 9 0 11-9-9" opacity=".22"></path>
+                        <path d="M12 3a9 9 0 019 9"></path>
+                    </svg>
+                    <svg class="heys-boot-mark__warn" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round">
+                        <path d="M12 7v6M12 17h.01"></path>
+                        <circle cx="12" cy="12" r="9"></circle>
+                    </svg>
+                </span>
+                <span class="heys-boot-mark__sr">Загружаем</span>
+                <div class="heys-boot-mark__slow">
+                    <div class="heys-boot-mark__slow-text">Медленная сеть, продолжаем загружать</div>
+                    <button type="button" class="heys-boot-mark__retry heys-boot-mark__retry--ghost">Повторить</button>
                 </div>
-            </div>
-            <!-- Date selector -->
-            <div style="display:flex;justify-content:center;gap:6px;margin-bottom:16px">
-                <div style="width:36px;height:36px;background:#f3f4f6;border-radius:50%"></div>
-                <div style="width:36px;height:36px;background:#f3f4f6;border-radius:50%"></div>
-                <div style="width:36px;height:36px;background:#dbeafe;border-radius:50%;border:2px solid #93c5fd"></div>
-                <div style="width:36px;height:36px;background:#f3f4f6;border-radius:50%"></div>
-                <div style="width:36px;height:36px;background:#f3f4f6;border-radius:50%"></div>
-            </div>
-            <!-- Hero metrics card -->
-            <div style="background:#f9fafb;border-radius:16px;padding:20px;margin-bottom:12px">
-                <div style="display:flex;justify-content:space-between;margin-bottom:16px">
-                    <div style="text-align:center;flex:1">
-                        <div
-                            style="width:48px;height:48px;margin:0 auto 6px;background:linear-gradient(135deg,#dbeafe,#bfdbfe);border-radius:50%">
-                        </div>
-                        <div style="width:60px;height:10px;margin:0 auto;background:#e5e7eb;border-radius:4px"></div>
-                    </div>
-                    <div style="text-align:center;flex:1">
-                        <div
-                            style="width:48px;height:48px;margin:0 auto 6px;background:linear-gradient(135deg,#dcfce7,#bbf7d0);border-radius:50%">
-                        </div>
-                        <div style="width:60px;height:10px;margin:0 auto;background:#e5e7eb;border-radius:4px"></div>
-                    </div>
-                    <div style="text-align:center;flex:1">
-                        <div
-                            style="width:48px;height:48px;margin:0 auto 6px;background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:50%">
-                        </div>
-                        <div style="width:60px;height:10px;margin:0 auto;background:#e5e7eb;border-radius:4px"></div>
-                    </div>
-                </div>
-                <div style="width:100%;height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden">
-                    <div class="heys-skeleton__progress"
-                        style="width:0%;height:100%;background:linear-gradient(90deg,#93c5fd,#60a5fa);border-radius:4px">
-                    </div>
-                </div>
-            </div>
-            <!-- Meal cards -->
-            <div style="display:flex;flex-direction:column;gap:10px">
-                <div
-                    style="background:#fff;border:1px solid #f3f4f6;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px">
-                    <div style="width:32px;height:32px;background:#dbeafe;border-radius:8px"></div>
-                    <div style="flex:1">
-                        <div style="width:70px;height:10px;background:#e5e7eb;border-radius:4px;margin-bottom:6px">
-                        </div>
-                        <div style="width:120px;height:8px;background:#f3f4f6;border-radius:4px"></div>
-                    </div>
-                    <div style="width:40px;height:16px;background:#f3f4f6;border-radius:4px"></div>
-                </div>
-                <div
-                    style="background:#fff;border:1px solid #f3f4f6;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px">
-                    <div style="width:32px;height:32px;background:#dcfce7;border-radius:8px"></div>
-                    <div style="flex:1">
-                        <div style="width:50px;height:10px;background:#e5e7eb;border-radius:4px;margin-bottom:6px">
-                        </div>
-                        <div style="width:100px;height:8px;background:#f3f4f6;border-radius:4px"></div>
-                    </div>
-                    <div style="width:40px;height:16px;background:#f3f4f6;border-radius:4px"></div>
-                </div>
-                <div
-                    style="background:#fff;border:1px solid #f3f4f6;border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px">
-                    <div style="width:32px;height:32px;background:#fef3c7;border-radius:8px"></div>
-                    <div style="flex:1">
-                        <div style="width:80px;height:10px;background:#e5e7eb;border-radius:4px;margin-bottom:6px">
-                        </div>
-                        <div style="width:90px;height:8px;background:#f3f4f6;border-radius:4px"></div>
-                    </div>
-                    <div style="width:40px;height:16px;background:#f3f4f6;border-radius:4px"></div>
-                </div>
-            </div>
-            <!-- Bottom tab bar -->
-            <div
-                style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #f3f4f6;padding:8px 0 env(safe-area-inset-bottom,0);display:flex;justify-content:space-around">
-                <div style="text-align:center;padding:4px 12px">
-                    <div style="width:22px;height:22px;margin:0 auto 3px;background:#93c5fd;border-radius:4px"></div>
-                    <div style="width:24px;height:6px;margin:0 auto;background:#bfdbfe;border-radius:3px"></div>
-                </div>
-                <div style="text-align:center;padding:4px 12px">
-                    <div style="width:22px;height:22px;margin:0 auto 3px;background:#e5e7eb;border-radius:4px"></div>
-                    <div style="width:24px;height:6px;margin:0 auto;background:#f3f4f6;border-radius:3px"></div>
-                </div>
-                <div style="text-align:center;padding:4px 12px">
-                    <div style="width:22px;height:22px;margin:0 auto 3px;background:#e5e7eb;border-radius:4px"></div>
-                    <div style="width:24px;height:6px;margin:0 auto;background:#f3f4f6;border-radius:3px"></div>
-                </div>
-                <div style="text-align:center;padding:4px 12px">
-                    <div style="width:22px;height:22px;margin:0 auto 3px;background:#e5e7eb;border-radius:4px"></div>
-                    <div style="width:24px;height:6px;margin:0 auto;background:#f3f4f6;border-radius:3px"></div>
+                <div class="heys-boot-mark__fail">
+                    <div class="heys-boot-mark__title">Не удалось загрузить приложение</div>
+                    <div class="heys-boot-mark__text">Похоже, нет связи. Ваши данные на месте — они хранятся на устройстве.</div>
+                    <a class="heys-boot-mark__btn heys-boot-mark__curator" href="https://t.me/heyslab_support_bot" target="_blank" rel="noopener noreferrer">Написать куратору</a>
+                    <button type="button" class="heys-boot-mark__btn heys-boot-mark__retry heys-boot-mark__retry--fail">Повторить</button>
+                    <button type="button" class="heys-boot-mark__retry heys-boot-mark__retry--ghost">Повторить ещё раз</button>
+                    <div class="heys-boot-mark__status" id="heys-recovery-status"></div>
                 </div>
             </div>
         </div>
-        <style>
-            .heys-skeleton__progress {
-                animation: heys-skel-progress 3s ease-out forwards;
-            }
-
-            @keyframes heys-skel-progress {
-                0% {
-                    width: 0%
-                }
-
-                30% {
-                    width: 40%
-                }
-
-                60% {
-                    width: 65%
-                }
-
-                100% {
-                    width: 85%
-                }
-            }
-
-            @media(prefers-color-scheme:dark) {
-                html:not([data-theme]) .heys-skeleton {
-                    background: #111827 !important;
-                    color: #f9fafb !important
-                }
-
-                html:not([data-theme]) .heys-skeleton div[style*="background:#f9fafb"] {
-                    background: #1f2937 !important
-                }
-
-                html:not([data-theme]) .heys-skeleton div[style*="background:#fff"] {
-                    background: #1f2937 !important;
-                    border-color: #374151 !important
-                }
-
-                html:not([data-theme]) .heys-skeleton div[style*="background:#e5e7eb"] {
-                    background: #374151 !important
-                }
-
-                html:not([data-theme]) .heys-skeleton div[style*="background:#f3f4f6"] {
-                    background: #374151 !important
-                }
-
-                html:not([data-theme]) .heys-skeleton div[style*="border-top:1px solid #f3f4f6"] {
-                    background: #111827 !important;
-                    border-color: #374151 !important
-                }
-            }
-
-            [data-theme="dark"] .heys-skeleton {
-                background: #111827 !important;
-                color: #f9fafb !important
-            }
-
-            [data-theme="dark"] .heys-skeleton div[style*="background:#f9fafb"] {
-                background: #1f2937 !important
-            }
-
-            [data-theme="dark"] .heys-skeleton div[style*="background:#fff"] {
-                background: #1f2937 !important;
-                border-color: #374151 !important
-            }
-
-            [data-theme="dark"] .heys-skeleton div[style*="background:#e5e7eb"] {
-                background: #374151 !important
-            }
-
-            [data-theme="dark"] .heys-skeleton div[style*="background:#f3f4f6"] {
-                background: #374151 !important
-            }
-
-            [data-theme="dark"] .heys-skeleton div[style*="border-top:1px solid #f3f4f6"] {
-                background: #111827 !important;
-                border-color: #374151 !important
-            }
-        </style>
     </div>
 
-    <!-- 🚀 LOGIN-FIRST BOOT: Статичный HTML логин поверх скелетона.
+    <!-- 🚀 LOGIN-FIRST BOOT: Статичный HTML логин поверх грунта.
          Появляется мгновенно (0ms) для разлогиненных пользователей.
          Бандлы грузятся в фоне пока пользователь вводит данные.
-         После успешного входа оверлей скрывается → скелетон/приложение. -->
+         После успешного входа оверлей скрывается → знак 56 / приложение. -->
 
     <!-- Шаг 1: Детекция сессии (выполняется мгновенно при парсинге) -->
 	    <script>
@@ -1723,9 +1598,11 @@
                 })();
 		                window.__heysHasSession = hasPinAuth || hasRecoverablePin || hasPinCookieHint || hasCuratorCookieHint;
                 window.__heysHasRecoverablePin = hasRecoverablePin;
+                document.documentElement.setAttribute('data-heys-session', window.__heysHasSession ? '1' : '0');
             } catch (_) {
                 window.__heysHasSession = false;
                 window.__heysHasRecoverablePin = false;
+                document.documentElement.setAttribute('data-heys-session', '0');
             }
             window.__heysLog && window.__heysLog('Session detected: ' + window.__heysHasSession + (window.__heysHasRecoverablePin ? ' (via session_token recovery)' : ''));
         })();
@@ -2786,6 +2663,7 @@
                     // v10.1: НЕ делаем reload — бандлы уже загружены/загружаются.
                     // Устанавливаем __heysHasSession и диспатчим событие для React.
                     window.__heysHasSession = true;
+                    document.documentElement.setAttribute('data-heys-session', '1');
                     console.info('[HEYS.entry] 🔔 dispatching heys-auth-ready, mode:', (window.__heysPreAuth || {}).mode);
                     // Уведомляем boot-core/sync о новой сессии
                     try {

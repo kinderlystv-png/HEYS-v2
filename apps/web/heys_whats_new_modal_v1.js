@@ -266,7 +266,6 @@
         if (!src || error) return null;
 
         return React.createElement('div', { className: 'wn-image-wrap' },
-            !loaded && React.createElement('div', { className: 'wn-image-skeleton' }),
             React.createElement('img', {
                 src,
                 alt: alt || '',

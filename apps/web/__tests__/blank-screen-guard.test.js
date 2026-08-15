@@ -79,6 +79,7 @@ describe('iOS/PWA blank-screen visual guard', () => {
     expect(tabsSource).toContain("'data-heys-visible-frame': isActive ? 'day' : undefined");
     expect(tabsSource).toContain('BlankScreenGuard?.reportVisibleFrame?.({');
     expect(shellSource).toContain("'data-heys-visible-frame': (isDayTab || tab === 'widgets') ? undefined : tab");
+    expect(shellSource).toContain("if (!clientId || isDayTab || tab === 'widgets') return");
     expect(tabsSource).toContain("HEYS?.LogTrace?.event?.('boot_ready'");
   });
 
@@ -101,32 +102,57 @@ describe('iOS/PWA blank-screen visual guard', () => {
     expect(trialIntakeSource).toContain("reason: 'trial_intake_screen_painted'");
   });
 
-  it('accepts the route-level subscription loading screen before the timeout', async () => {
-    // Экран ожидания подписки — это скелетон вкладки, а не карточка с текстом:
-    // человеку с давним доступом нечего сообщать про пробную неделю. Метку
-    // видимого кадра он несёт сам, иначе защита сочла бы загрузку зависанием.
+  it('keeps boot mark during subscription-loading until a real tab frame', () => {
+    // subscription-loading несёт метку для dev/trace, но не должен снимать boot-overlay:
+    // иначе на домашней «Главной» между проверкой подписки и lazy-widgets виден
+    // пустой кадр с шапкой.
     expect(gateFlowSource).toContain("'data-heys-visible-frame': 'subscription-loading'");
     expect(gateFlowSource).toContain("'data-heys-visible-frame': visibleFrame || undefined");
 
     const runtime = createRuntime({ observe: true });
     expect(runtime.guard.arm(runtime.root)).toBe(true);
 
-    const frame = visible(document.createElement('div'));
-    frame.dataset.heysVisibleFrame = 'subscription-loading';
-    runtime.root.replaceChildren(frame);
+    const loading = visible(document.createElement('div'));
+    loading.dataset.heysVisibleFrame = 'subscription-loading';
+    runtime.root.replaceChildren(loading);
+    runtime.guard.reportVisibleFrame({ element: loading, screen: 'subscription-loading' });
 
-    await vi.waitFor(() => {
-      expect(runtime.events.filter((event) => event.name === 'first_visible_frame')).toEqual([
-        expect.objectContaining({
-          context: expect.objectContaining({ reason: 'visible_marker_detected' }),
-        }),
-      ]);
-    });
-    runtime.setClock(15000);
-    runtime.timers[0]();
+    expect(document.getElementById('heys-boot-visual-guard')).not.toBeNull();
+    expect(runtime.events.filter((event) => event.name === 'first_visible_frame')).toHaveLength(0);
+
+    const widgets = visible(document.createElement('div'));
+    widgets.dataset.heysVisibleFrame = 'widgets';
+    runtime.root.replaceChildren(widgets);
+    runtime.guard.reportVisibleFrame({ element: widgets, screen: 'widgets' });
 
     expect(document.getElementById('heys-boot-visual-guard')).toBeNull();
-    expect(runtime.events.filter((event) => event.name === 'blank_screen_guard_triggered')).toHaveLength(0);
+    expect(runtime.events.filter((event) => event.name === 'first_visible_frame')).toHaveLength(1);
+  });
+
+  it('ignores subscription-loading as a transient visible frame', () => {
+    const runtime = createRuntime();
+    expect(runtime.guard.arm(runtime.root)).toBe(true);
+
+    const frame = visible(document.createElement('div'));
+    frame.dataset.heysVisibleFrame = 'subscription-loading';
+    runtime.root.appendChild(frame);
+    runtime.guard.reportVisibleFrame({ element: frame, screen: 'subscription-loading' });
+
+    expect(document.getElementById('heys-boot-visual-guard')).not.toBeNull();
+    expect(runtime.events.filter((event) => event.name === 'first_visible_frame')).toHaveLength(0);
+  });
+
+  it('ignores a visible container without data-heys-visible-frame', () => {
+    const runtime = createRuntime();
+    expect(runtime.guard.arm(runtime.root)).toBe(true);
+
+    const shell = visible(document.createElement('div'));
+    shell.className = 'tab-content-swipeable';
+    runtime.root.appendChild(shell);
+    runtime.guard.reportVisibleFrame({ element: shell, screen: 'widgets', reason: 'tab_content_painted' });
+
+    expect(document.getElementById('heys-boot-visual-guard')).not.toBeNull();
+    expect(runtime.events.filter((event) => event.name === 'first_visible_frame')).toHaveLength(0);
   });
 
   it('keeps the skeleton until a visible frame is confirmed after paint', () => {
@@ -194,7 +220,7 @@ describe('iOS/PWA blank-screen visual guard', () => {
     runtime.guard._test.onTimeout();
 
     expect(runtime.events.filter((event) => event.name === 'blank_screen_guard_triggered')).toHaveLength(0);
-    expect(document.getElementById('heys-boot-visual-guard')?.textContent).not.toContain('Экран не загрузился');
+    expect(document.getElementById('heys-boot-visual-guard')?.textContent).not.toContain('Не удалось загрузить приложение');
 
     window.HEYS.currentClientId = 'client-1';
     window.dispatchEvent(new CustomEvent('heys:client-changed', { detail: { clientId: 'client-1' } }));
@@ -227,9 +253,9 @@ describe('iOS/PWA blank-screen visual guard', () => {
     runtime.timers[0]();
 
     const overlay = document.getElementById('heys-boot-visual-guard');
-    expect(overlay.textContent).toContain('Экран не загрузился');
+    expect(overlay.textContent).toContain('Не удалось загрузить приложение');
     expect(overlay.textContent).toContain('Повторить');
-    expect(overlay.textContent).toContain('Перезагрузить приложение');
+    expect(overlay.textContent).not.toContain('Перезагрузить приложение');
     expect(runtime.events).toEqual(expect.arrayContaining([
       expect.objectContaining({
         name: 'blank_screen_guard_triggered',

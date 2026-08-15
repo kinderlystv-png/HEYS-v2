@@ -684,7 +684,12 @@
       )
     ));
 
-    if (loading) return React.createElement('div', shellProps, React.createElement('div', { style: cardStyle }, 'Загружаем анкету…'));
+    if (loading) {
+      return React.createElement('div', shellProps,
+        window.HEYS?.WaitMark?.render?.(React, { mode: 'screen', title: 'Загружаем анкету', text: 'Пара секунд.' })
+        || React.createElement('div', { style: cardStyle }, 'Загружаем анкету…')
+      );
+    }
     if (error && !hydrated) return React.createElement('div', shellProps, React.createElement('div', { style: cardStyle },
       React.createElement('h1', { style: { marginTop: 0 } }, 'Не удалось открыть анкету'),
       React.createElement('p', null, error),
@@ -842,7 +847,17 @@
         React.createElement('button', {
           type: 'button', onClick: next, disabled: saveState === 'saving',
           style: { ...inputStyle, minHeight: 46, flex: 1, background: '#434587', color: '#fff', border: 0, cursor: 'pointer', fontWeight: 750, opacity: saveState === 'saving' ? 0.65 : 1 },
-        }, step === STEPS.length - 1 ? 'Отправить куратору' : 'Продолжить')
+        }, HEYS.WaitMark?.button?.(React, {
+          busy: saveState === 'saving',
+          ok: saveState === 'saved',
+          fail: saveState === 'error',
+          idle: step === STEPS.length - 1 ? 'Отправить куратору' : 'Продолжить',
+          busyLabel: step === STEPS.length - 1 ? 'Отправляем' : 'Сохраняем',
+          okLabel: 'Отправлено',
+          failLabel: 'Не удалось',
+        }) || (saveState === 'saving'
+          ? (step === STEPS.length - 1 ? 'Отправляем' : 'Сохраняем')
+          : (step === STEPS.length - 1 ? 'Отправить куратору' : 'Продолжить')))
       )
     ));
   }

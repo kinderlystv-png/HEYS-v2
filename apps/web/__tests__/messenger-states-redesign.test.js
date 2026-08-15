@@ -21,7 +21,7 @@ function loadMessengerComponentInternals() {
   return window.HEYS.Messenger._test;
 }
 
-describe('пустой тред и скелетон', () => {
+describe('пустой тред и ожидание истории', () => {
   beforeEach(() => { window.HEYS = {}; });
   afterEach(() => {
     globalThis.React = originalReact;
@@ -48,11 +48,13 @@ describe('пустой тред и скелетон', () => {
     expect(container.querySelector('.messenger-empty__prompts')).toBeNull();
   });
 
-  it('вместо «Загружаю...» показывается скелетон в форме треда', () => {
+  it('пока история едет из облака, в теле вкладки стоит знак 56', () => {
     const { ThreadSkeleton } = loadMessengerComponentInternals();
 
     const { container } = render(RealReact.createElement(ThreadSkeleton));
-    expect(container.querySelectorAll('.messenger-skeleton__bubble')).toHaveLength(3);
+    expect(container.querySelector('.heys-wait-mark--embedded') || container.textContent).toBeTruthy();
+    expect(messengerSource).toContain('heys-wait-mark--embedded');
+    expect(messengerSource).not.toContain('messenger-skeleton__bubble');
     expect(messengerSource).not.toMatch(/messenger-loading/);
   });
 
@@ -60,7 +62,6 @@ describe('пустой тред и скелетон', () => {
     // Скелетон, пульс записи и волна проигрывания — самодвижущиеся анимации;
     // подъезд модалки заменяется появлением без сдвига.
     const block = cssSource.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/)[0];
-    expect(block).toContain('.messenger-skeleton__bubble');
     expect(block).toContain('.messenger-recording-dot');
     expect(block).toContain('.msg-audio.is-playing .msg-audio-wave span');
     expect(block).toContain('animation: none');
@@ -76,7 +77,7 @@ describe('пустой тред и скелетон', () => {
     const rules = cssSource.match(/\[data-theme\$="dark"\] \.messenger-recording-live/g) || [];
     expect(rules).toHaveLength(1);
 
-    const block = cssSource.match(/\[data-theme\$="dark"\] \.messenger-recording-live,\n\[data-theme\$="dark"\] \.messenger-audio-draft \{[^}]*\}/)[0];
+    const block = cssSource.match(/\[data-theme\$="dark"\] \.messenger-recording-live,\r?\n\[data-theme\$="dark"\] \.messenger-audio-draft \{[^}]*\}/)[0];
     expect(block).toContain('#2a1b1d');
     expect(block).toContain('box-shadow: none');
   });
@@ -333,9 +334,9 @@ describe('контраст и узкий экран', () => {
   it('мета-текст поднят до читаемого контраста', () => {
     // 11px #A8B0B8 на #FCFBF8 давал ~2.5:1 — ниже нормы.
     // UI v4: ink-2 роль с fallback #667079.
-    const meta = cssSource.match(/\.msg-meta,\n\.msg-edited-marker \{[^}]*\}/)[0];
+    const meta = cssSource.match(/\.msg-meta,\r?\n\.msg-edited-marker \{[^}]*\}/)[0];
     expect(meta).toMatch(/color:\s*var\(--v4-ink-2,\s*#667079\)/);
-    expect(cssSource).toMatch(/\[data-theme\$="dark"\] \.msg-meta,\n\[data-theme\$="dark"\] \.msg-edited-marker \{\s*color:\s*#8b949d/);
+    expect(cssSource).toMatch(/\[data-theme\$="dark"\] \.msg-meta,\r?\n\[data-theme\$="dark"\] \.msg-edited-marker \{\s*color:\s*#8b949d/);
   });
 
   it('на 320 px уменьшаются шапка, кнопки и поле', () => {

@@ -1027,8 +1027,8 @@
 
       // Don't show card if no module or no warnings
       if (!HEYS.InsightsPI?.earlyWarning) return null;
-      // R-INS-5E: skeleton placeholder при загрузке EWS вместо blank.
-      if (loading) return h(SkeletonCard, { variant: 'card', lines: 2, height: '64px' });
+      // Данные считаются на устройстве: карточка появляется целиком, без скелетона.
+      if (loading) return null;
       if (warnings.length === 0) {
         // Show success state briefly + resolved badge
         return h('div', null,

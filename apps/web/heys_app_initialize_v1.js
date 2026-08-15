@@ -17,7 +17,7 @@
 
     function createBlankScreenGuard(options) {
         const opts = options || {};
-        const timeoutMs = Number(opts.timeoutMs) || 15000;
+        const timeoutMs = Number(opts.timeoutMs) || 60000;
         const retryTimeoutMs = Number(opts.retryTimeoutMs) || 10000;
         const now = typeof opts.now === 'function' ? opts.now : () => Date.now();
         const schedule = typeof opts.setTimeout === 'function' ? opts.setTimeout : window.setTimeout.bind(window);
@@ -89,11 +89,34 @@
             return !!rect && rect.width > 1 && rect.height > 1;
         }
 
+        const TRANSIENT_VISIBLE_FRAMES = new Set(['subscription-loading']);
+
+        function getVisibleFrameMarker(element) {
+            if (!element) return '';
+            if (element.getAttribute?.('data-heys-visible-frame')) {
+                return element.getAttribute('data-heys-visible-frame') || '';
+            }
+            const marked = element.querySelector?.('[data-heys-visible-frame]');
+            return marked?.getAttribute?.('data-heys-visible-frame') || '';
+        }
+
         function visibleFrameElement(candidate) {
-            if (isVisible(candidate)) return candidate;
+            if (candidate) {
+                const marker = getVisibleFrameMarker(candidate);
+                if (!marker || TRANSIENT_VISIBLE_FRAMES.has(marker)) return null;
+                if (candidate.getAttribute?.('data-heys-visible-frame') && isVisible(candidate)) {
+                    return candidate;
+                }
+                const markedInCandidate = candidate.querySelector?.('[data-heys-visible-frame]');
+                if (markedInCandidate && isVisible(markedInCandidate)) return markedInCandidate;
+                return null;
+            }
             if (!rootElement) return null;
             const marked = rootElement.querySelector('[data-heys-visible-frame]');
-            return isVisible(marked) ? marked : null;
+            if (!marked || !isVisible(marked)) return null;
+            const marker = marked.getAttribute('data-heys-visible-frame') || '';
+            if (TRANSIENT_VISIBLE_FRAMES.has(marker)) return null;
+            return marked;
         }
 
         function finishVisibleFrame(params) {
@@ -147,28 +170,27 @@
         function showRecovery() {
             if (!overlay) return;
             overlay.style.pointerEvents = 'auto';
+            if (window.__heysBootWait && typeof window.__heysBootWait.showFail === 'function') {
+                window.__heysBootWait.showFail();
+                return;
+            }
             overlay.innerHTML = '';
-            const card = document.createElement('div');
-            card.setAttribute('role', 'alert');
-            card.style.cssText = 'width:min(400px,calc(100% - 32px));margin:auto;padding:28px 24px;border-radius:18px;background:#fff;color:#111827;box-shadow:0 12px 36px rgba(15,23,42,.18);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center';
-            const title = document.createElement('h2');
-            title.textContent = 'Экран не загрузился';
-            title.style.cssText = 'margin:0 0 8px;font-size:20px';
+            const mark = document.createElement('div');
+            mark.className = 'heys-boot-mark is-fail';
+            mark.setAttribute('role', 'alert');
+            const title = document.createElement('div');
+            title.className = 'heys-boot-mark__title';
+            title.textContent = 'Не удалось загрузить приложение';
             const text = document.createElement('p');
-            text.textContent = 'Данные сохранены. Попробуйте продолжить загрузку или перезапустите приложение.';
-            text.style.cssText = 'margin:0 0 20px;color:#64748b;font-size:14px;line-height:1.45';
+            text.className = 'heys-boot-mark__text';
+            text.textContent = 'Похоже, нет связи. Ваши данные на месте — они хранятся на устройстве.';
             const retry = document.createElement('button');
             retry.type = 'button';
+            retry.className = 'heys-boot-mark__btn heys-boot-mark__retry';
             retry.textContent = 'Повторить';
-            retry.style.cssText = 'width:100%;padding:13px 18px;border:0;border-radius:10px;background:#4964c7;color:#fff;font-size:16px;font-weight:600';
-            const reload = document.createElement('button');
-            reload.type = 'button';
-            reload.textContent = 'Перезагрузить приложение';
-            reload.style.cssText = 'width:100%;margin-top:10px;padding:12px 18px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#334155;font-size:15px;font-weight:600';
             retry.addEventListener('click', retryRecovery);
-            reload.addEventListener('click', reloadApp);
-            card.append(title, text, retry, reload);
-            overlay.appendChild(card);
+            mark.append(title, text, retry);
+            overlay.appendChild(mark);
         }
 
         function onTimeout() {
@@ -261,14 +283,15 @@
             armed = true;
             rootElement = element;
             startedAt = now();
-            const sourceSkeleton = element.querySelector('.heys-skeleton');
+            const sourceSkeleton = element.querySelector('[data-heys-boot-mark], .heys-boot-mark, .heys-skeleton');
             overlay = document.createElement('div');
             overlay.id = 'heys-boot-visual-guard';
+            overlay.className = 'heys-boot-visual-guard';
             overlay.setAttribute('aria-live', 'polite');
-            overlay.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;overflow:auto;background:var(--bg-primary,#f8fafc);pointer-events:none';
+            overlay.style.pointerEvents = 'none';
             skeletonTemplate = sourceSkeleton
                 ? sourceSkeleton.cloneNode(true)
-                : Object.assign(document.createElement('div'), { textContent: 'Загружаем приложение…' });
+                : Object.assign(document.createElement('div'), { className: 'heys-boot-mark', textContent: 'Загружаем' });
             overlay.appendChild(skeletonTemplate.cloneNode(true));
             document.body.appendChild(overlay);
             if (opts.observe !== false && typeof window.MutationObserver === 'function') {

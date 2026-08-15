@@ -1,5 +1,40 @@
 // heys_add_product_step_v1.js — Шаг добавления продукта через StepModal
 // Двухшаговый flow: поиск → граммы/порции
+//
+// MODULE MAP (agent navigation — jump by line; do not read whole file)
+// Related docs: docs/reference/systems/PRODUCTS_AND_SEARCH.md
+//                 apps/web/ARCHITECTURE.md (OverlayStore, commit gate)
+//
+//   ~4    IIFE entry — React hooks, daytrace helpers, meal-flow events
+//  ~97    GLOBAL PRODUCTS VERSION — preset suggestion engine trigger
+// ~128    UTILS — read/write stored values, barcode camera session
+// ~318    BARCODE + BRAND — normalizeBarcode, brand extraction, merge rules
+// ~660    OVERLAY UPSERT — upsertProductOverlayRow (TypeA/TypeB rows)
+// ~714    LOCAL UPSERT — upsertLocalProduct (legacy + overlay bridge)
+// ~755    COMMIT GATE — showProductCommitError, commitPersonalProduct
+// ~1147   SHARED NORMALIZE — normalizeSharedProductForAddStep, merge barcode match
+// ~1529   MEAL CASCADE — cascadeMealItemsOnProductUpdate (rename/nutrients → days)
+// ~1691   BATCH CASCADE — cascadeBatchProductUpdates (cloud sync listener)
+// ~1928   SHARED WRITE — updateSharedProduct, updateSharedProductPortions
+// ~2261   SMART LIST — computeSmartProducts, computeRecentProducts
+// ~2449   CATEGORY FILTER — CATEGORIES, matchCategory
+// ~2471   MEAL PRESETS OVERLAY — MealPresetsOverlay, resolveContextMeal
+// ~3253   STEP 1 SEARCH UI — BarcodeScannerModal, ProductBarcodeManager
+// ~3989   ProductSearchStep — search/filter/select, barcode detect, smart list
+// ~6091   CreateProductStep — AI-assisted new product wizard
+// ~7062   ProductEditBasicStep — name, macros, brand (editor step 1)
+// ~7660   ProductEditExtraStep — vitamins, additives (editor step 2)
+// ~8003   PortionsStep — portion presets editor
+// ~8427   PENDING MODERATION QUEUE — retry tail for «save local only»
+// ~8602   MODERATION OUTCOMES — APS_MODERATION_OUTCOME_META, commit error views
+// ~8996   HarmSelectStep — harm score picker (minimal UI)
+// ~9535   GramsStep — grams/portions picker (add-to-meal step 2)
+// ~10135  showEditProductModal — full 3-step product editor
+// ~10674  showAddProductModal — main entry (search → grams flow)
+// ~10982  showEditGramsModal — edit grams from meal card
+// ~11053  HEYS.AddProductStep export — public API surface
+// ~11075  GLOBAL LISTENERS — initializeGlobalProductListeners (edit flow events)
+
 if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
@@ -3251,7 +3286,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   // === Компонент поиска продукта (Шаг 1) ===
-  const APS_PRODUCTS_SKELETON_DELAY_MS = 260;
   const APS_PRODUCTS_SETTLE_FALLBACK_MS = 2200;
 
   function getAddProductInitialSyncState() {
@@ -3263,29 +3297,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     );
     const syncInFlight = !!cloud?.isSyncing?.();
     return { syncSettled, syncInFlight };
-  }
-
-  function AddProductResultsSkeleton() {
-    return React.createElement('div', { className: 'aps-results-skeleton' },
-      React.createElement('div', { className: 'aps-skeleton-title skeleton-block' }),
-      React.createElement('div', { className: 'aps-products-list aps-products-list--skeleton' },
-        Array.from({ length: 7 }, (_, index) => React.createElement('div', {
-          key: index,
-          className: 'aps-skeleton-card'
-        },
-          React.createElement('div', { className: 'aps-skeleton-icon skeleton-block' }),
-          React.createElement('div', { className: 'aps-skeleton-lines' },
-            React.createElement('div', { className: 'aps-skeleton-line aps-skeleton-line--primary skeleton-block' }),
-            React.createElement('div', { className: 'aps-skeleton-line aps-skeleton-line--secondary skeleton-block' })
-          ),
-          React.createElement('div', { className: 'aps-skeleton-actions' },
-            React.createElement('div', { className: 'aps-skeleton-action skeleton-block' }),
-            React.createElement('div', { className: 'aps-skeleton-action skeleton-block' }),
-            React.createElement('div', { className: 'aps-skeleton-action skeleton-block' })
-          )
-        ))
-      )
-    );
   }
 
   function BarcodeScannerModal({ title, subtitle, initialValue = '', autoStart = false, cameraStart = null, onDetected, onClose, fullscreen = false }) {
@@ -4065,7 +4076,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [isWaitingForProductsSettle, setIsWaitingForProductsSettle] = useState(
       () => initialProductsSyncState.syncInFlight && !initialProductsSyncState.syncSettled
     );
-    const [showProductsSkeleton, setShowProductsSkeleton] = useState(false);
 
     // Preset suggestions depend on meal history, not product catalog versions.
     // Run once per modal mount; module-level cooldown covers repeat-add remounts.
@@ -4097,7 +4107,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     useEffect(() => {
       if (!isWaitingForProductsSettle) {
-        setShowProductsSkeleton(false);
         return;
       }
 
@@ -4108,7 +4117,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         });
         initialSyncDoneRef.current = true;
         setIsWaitingForProductsSettle(false);
-        setShowProductsSkeleton(false);
       };
 
       const maybeSettle = (reason) => {
@@ -4123,10 +4131,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       if (maybeSettle('already-settled')) {
         return undefined;
       }
-
-      const skeletonTimer = setTimeout(() => {
-        setShowProductsSkeleton(true);
-      }, APS_PRODUCTS_SKELETON_DELAY_MS);
 
       const fallbackTimer = setTimeout(() => {
         console.info('[HEYS.addProduct] ⏱️ Products settle fallback', {
@@ -4151,7 +4155,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       window.addEventListener('heys:products-version-changed', handleSettledEvent);
 
       return () => {
-        clearTimeout(skeletonTimer);
         clearTimeout(fallbackTimer);
         window.removeEventListener('heysSyncCompleted', handleSettledEvent);
         window.removeEventListener('heys:products-updated', handleSettledEvent);
@@ -5910,8 +5913,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
       // === Скроллируемый список продуктов ===
       React.createElement('div', { className: 'aps-products-scroll' },
-        !shouldRenderSettledProducts && showProductsSkeleton && React.createElement(AddProductResultsSkeleton),
-
         browseLead && React.createElement('div', { className: 'aps-v4-search-lead' }, browseLead),
 
         shouldRenderSettledProducts && showSearch && barcodeResults.length > 1 && React.createElement('div', { className: 'aps-v4-barcode-multi' },

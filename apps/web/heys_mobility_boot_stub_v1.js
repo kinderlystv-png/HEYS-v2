@@ -76,7 +76,7 @@
     LazyPill = function LazyPill(props) {
       const setState = React.useState(0)[1];
       React.useEffect(function () {
-        lazyLoad().catch(function () { /* silent; pill stays as skeleton */ });
+        lazyLoad().catch(function () { /* silent; pill stays until module ready */ });
         if (Mobility.renderPreviewPill !== stubRenderPreviewPill) {
           setState(function (n) { return n + 1; });
           return undefined;
@@ -89,7 +89,7 @@
       const T = (props && props.training) || {};
       const log = T.mobilityLog || {};
       return h('div', {
-        className: 'mobility-pill-skeleton',
+        className: 'mobility-pill-pending',
         style: {
           display: 'flex',
           alignItems: 'center',
@@ -99,15 +99,14 @@
           borderRadius: 12,
           border: '1px solid rgba(0,0,0,0.06)',
           background: 'rgba(0,0,0,0.02)',
-          opacity: 0.75,
-          cursor: 'wait'
+          cursor: 'default'
         },
-        'aria-label': 'Мобильность загружается'
+        'aria-busy': 'true',
+        'aria-label': 'Мобильность'
       },
         h('span', { style: { fontWeight: 700, width: 28, textAlign: 'center' } }, 'M'),
         h('div', { style: { flex: 1, minWidth: 0 } },
-          h('div', { style: { fontWeight: 600, fontSize: 14 } }, log.mode || log.modeId || 'Мобильность'),
-          h('div', { style: { fontSize: 12, opacity: 0.6 } }, 'Загрузка')
+          h('div', { style: { fontWeight: 600, fontSize: 14 } }, log.mode || log.modeId || 'Мобильность')
         )
       );
     };

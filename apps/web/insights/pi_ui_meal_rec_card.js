@@ -2166,11 +2166,8 @@
             return () => window.removeEventListener('heysProductAdded', handleProductAdded);
         }, [recommendation, prof]);
 
-        // 🚀 PERF v6.0: Skeleton пока идёт async расчёт рекомендации (useEffect)
         if (isCalculating) {
-            return h('div', { className: 'meal-rec-card widget widget--meal-rec-diary meal-rec-card--skeleton', 'aria-busy': true },
-                h('div', { className: 'meal-rec-card__skeleton-pulse' })
-            );
+            return null;
         }
 
         // Если рекомендация недоступна — не рендерим карточку
