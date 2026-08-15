@@ -1,4 +1,4 @@
-// heys_day_tab_render_v1.js — DayTab render assembly (skeleton/read-only/diary/shell)
+// heys_day_tab_render_v1.js — DayTab render assembly (read-only/diary/shell)
 
 ; (function (global) {
     const HEYS = global.HEYS = global.HEYS || {};
@@ -9,57 +9,13 @@
         const React = ctx.React || global.React;
         const heysRef = ctx.HEYS || HEYS;
 
-        // === SKELETON LOADER ===
-        const skeletonLoader = React.createElement('div', { className: 'skeleton-page' },
-            // Skeleton для СТАТИСТИКА
-            React.createElement('div', { className: 'skeleton-card skeleton-stats' },
-                React.createElement('div', { className: 'skeleton-header' }),
-                React.createElement('div', { className: 'skeleton-metrics' },
-                    React.createElement('div', { className: 'skeleton-metric' }),
-                    React.createElement('div', { className: 'skeleton-metric' }),
-                    React.createElement('div', { className: 'skeleton-metric' }),
-                    React.createElement('div', { className: 'skeleton-metric' })
-                ),
-                React.createElement('div', { className: 'skeleton-sparkline' }),
-                React.createElement('div', { className: 'skeleton-progress' }),
-                React.createElement('div', { className: 'skeleton-macros' },
-                    React.createElement('div', { className: 'skeleton-ring' }),
-                    React.createElement('div', { className: 'skeleton-ring' }),
-                    React.createElement('div', { className: 'skeleton-ring' })
-                )
-            ),
-            // Skeleton для АКТИВНОСТЬ
-            React.createElement('div', { className: 'skeleton-card skeleton-activity' },
-                React.createElement('div', { className: 'skeleton-header' }),
-                React.createElement('div', { className: 'skeleton-slider' }),
-                React.createElement('div', { className: 'skeleton-row' },
-                    React.createElement('div', { className: 'skeleton-block' }),
-                    React.createElement('div', { className: 'skeleton-block' })
-                )
-            ),
-            // Skeleton для приёмов пищи
-            React.createElement('div', { className: 'skeleton-card skeleton-meal' },
-                React.createElement('div', { className: 'skeleton-meal-header' }),
-                React.createElement('div', { className: 'skeleton-search' }),
-                React.createElement('div', { className: 'skeleton-item' }),
-                React.createElement('div', { className: 'skeleton-item' })
-            )
-        );
-
-        // УБРАНО: Скелетон вызывал мерцание при каждой загрузке
-        // Теперь данные показываются мгновенно из localStorage (useState инициализирован из кэша)
-        // isHydrated оставлен только для блокировки autosave до завершения sync
-        // if (!isHydrated) {
-        //   return React.createElement('div', { className: 'page page-day' }, skeletonLoader);
-        // }
-
         // === READ-ONLY BANNER: показываем только для подтверждённого read_only ===
         const subscriptionStatus = heysRef.Subscription?.getCachedStatus?.() || ctx.prof?.subscription_status || 'none';
         const normalizedSubscriptionStatus = heysRef.Subscription?.normalizeStatus?.(subscriptionStatus) || subscriptionStatus;
         const isReadOnly = normalizedSubscriptionStatus === 'read_only';
 
         // === Diary Section (extracted) ===
-        // Phase split: render lightweight placeholder first, heavy diary mounts after first paint.
+        // Heavy diary mounts after first paint; until then the boot-mark stays.
         const diarySection = ctx.heavyUiReady
             ? (heysRef.dayDiarySection?.renderDiarySection?.({
                 React,
@@ -88,18 +44,7 @@
                 normAbs: ctx.normAbs,
                 HEYS: heysRef
             }) || null)
-            : React.createElement('div', { className: 'deferred-card-slot deferred-card-slot--loading', style: { marginTop: 10 } },
-                React.createElement('div', {
-                    className: 'deferred-card-skeleton deferred-card-skeleton--delayed',
-                    style: { minHeight: '260px' }
-                },
-                    React.createElement('div', { className: 'deferred-card-skeleton__shimmer' }),
-                    React.createElement('div', { className: 'deferred-card-skeleton__content' },
-                        React.createElement('div', { className: 'deferred-card-skeleton__icon' }, '📔'),
-                        React.createElement('div', { className: 'deferred-card-skeleton__label' }, 'Готовим дневник…')
-                    )
-                )
-            );
+            : null;
 
         if (!heysRef.dayPageShell?.renderDayPage) {
             throw new Error('[heys_day_tab_render_v1] HEYS.dayPageShell not loaded before renderDayTabLayout');
