@@ -179,7 +179,7 @@ describe('runtime recovery policy', () => {
     );
 
     expect(handled).toBe(true);
-    expect(document.body.textContent).toContain('Ошибка загрузки');
+    expect(document.body.textContent).toContain('Не удалось загрузить приложение');
   });
 
   it('requires three post-ready boot-critical errors before full recovery', () => {
@@ -188,10 +188,10 @@ describe('runtime recovery policy', () => {
 
     const error = new Error('ReactDOM is not defined');
     expect(window.onerror('ReactDOM is not defined', 'boot-init.bundle.js', 1, 1, error)).toBe(false);
-    expect(document.body.textContent).not.toContain('Ошибка загрузки');
+    expect(document.body.textContent).not.toContain('Не удалось загрузить приложение');
     expect(window.onerror('ReactDOM is not defined', 'boot-init.bundle.js', 1, 1, error)).toBe(false);
-    expect(document.body.textContent).not.toContain('Ошибка загрузки');
+    expect(document.body.textContent).not.toContain('Не удалось загрузить приложение');
     expect(window.onerror('ReactDOM is not defined', 'boot-init.bundle.js', 1, 1, error)).toBe(true);
-    expect(document.body.textContent).toContain('Ошибка загрузки');
+    expect(document.body.textContent).toContain('Не удалось загрузить приложение');
   });
 });
