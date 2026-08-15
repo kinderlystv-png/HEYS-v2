@@ -5,6 +5,7 @@ const { EventEmitter } = require('node:events');
 const https = require('node:https');
 const Module = require('node:module');
 const path = require('node:path');
+const fs = require('node:fs');
 const { Readable } = require('node:stream');
 
 const MODULE_PATH = path.resolve(__dirname, '../index.js');
@@ -682,11 +683,19 @@ test('client bot pin claim success sends direct Telegram reply', async (t) => {
   assert.equal(fetchCalls.length, 1);
   assert.match(fetchCalls[0].url, /sendMessage$/);
   assert.equal(fetchCalls[0].body.chat_id, 123456);
-  assert.match(fetchCalls[0].body.text, /Здравствуйте, <b>Ivan<\/b>\./);
+  assert.match(fetchCalls[0].body.text, /^Здравствуйте\. Это клиентский бот HEYS/);
+  assert.equal(fetchCalls[0].body.text.includes('Ivan'), false);
+  assert.equal(/Здравствуйте,\s*<b>/.test(fetchCalls[0].body.text), false);
   assert.match(fetchCalls[0].body.text, /привязывает ваш Telegram к приложению/);
   assert.match(fetchCalls[0].body.text, /PIN из сообщения куратора/);
   assert.match(fetchCalls[0].body.text, /https:\/\/app\.heyslab\.ru/);
   assert.equal(queries.filter((q) => /claim_pin_token_chat/.test(q.sql)).length, 1);
+});
+
+test('client bot start template does not interpolate a personal name onto Telegram', () => {
+  const source = fs.readFileSync(MODULE_PATH, 'utf8');
+  assert.equal(/dbResult\.name/.test(source), false);
+  assert.equal(/Здравствуйте,\s*<b>/.test(source), false);
 });
 
 test('client bot pin claim failure sends direct Telegram reply', async (t) => {

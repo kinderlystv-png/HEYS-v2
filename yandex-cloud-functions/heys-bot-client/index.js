@@ -747,11 +747,12 @@ async function handleStartCommand(chatId, payload) {
   // На iOS Telegram при долгом тапе на ссылку даёт выбор «Открыть в Safari»,
   // что нужно для добавления PWA на главный экран. Inline-keyboard кнопки
   // открываются только во встроенном Telegram-браузере, откуда PWA не ставится.
-  const name = dbResult.name || 'там';
+  //
+  // Имя клиента в этот текст не подставлять: уведомление РКН № 100383874 §12
+  // заявляет, что имена в outbound к Telegram API не передаются. heys/6ae97d.
   return clientBotMessageResponse(
     chatId,
-    `Здравствуйте, <b>${escapeHtml(name)}</b>.\n\n` +
-      'Это клиентский бот HEYS. Он привязывает ваш Telegram к приложению и отправляет важные уведомления по триалу и подписке.\n\n' +
+    'Здравствуйте. Это клиентский бот HEYS. Он привязывает ваш Telegram к приложению и отправляет важные уведомления по триалу и подписке.\n\n' +
       '<b>Откройте приложение:</b>\n' +
       `<a href="${APP_URL}">${APP_URL}</a>\n\n` +
       '<i>iPhone:</i> зажмите ссылку → «Открыть в Safari» → меню «Поделиться» → «На экран «Домой»». Так HEYS поставится как иконка-приложение.\n\n' +
@@ -1204,8 +1205,111 @@ async function handleCuratorLeadCallback(query) {
   }
 }
 
+const SUPPORT_REFUND_CALLBACK = 'refund_signal';
+const SUPPORT_REFUND_PHRASES = new Set([
+  'хочу вернуть деньги',
+  '/refund',
+]);
+
+function normalizeSupportText(text) {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/@[\w]+/g, '')
+    .replace(/[^\u0400-\u04ffa-z0-9\s/]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isSupportRefundSignal(text) {
+  return SUPPORT_REFUND_PHRASES.has(normalizeSupportText(text));
+}
+
+function hashSupportChatId(chatId) {
+  return crypto
+    .createHash('sha256')
+    .update(`heys-support:${String(chatId)}`)
+    .digest('hex')
+    .slice(0, 32);
+}
+
+function supportRefundReplyText() {
+  return (
+    'Заявление на возврат направляется на poplanton@mail.ru. ' +
+    'Укажите номер телефона аккаунта, дату и сумму платежа либо идентификатор платежа.\n\n' +
+    'В этом чате эти сведения направлять не нужно.'
+  );
+}
+
+function supportStartReplyText() {
+  return (
+    'Это бот поддержки HEYS.\n\n' +
+    'Чтобы вернуть деньги, нажмите кнопку ниже. Заявление направляется на poplanton@mail.ru — ' +
+    'в этот чат номер телефона, сумму и идентификатор платежа писать не нужно.'
+  );
+}
+
+function supportRefundKeyboard() {
+  return {
+    inline_keyboard: [[{ text: 'Хочу вернуть деньги', callback_data: SUPPORT_REFUND_CALLBACK }]],
+  };
+}
+
+function classifySupportInbound(message) {
+  if (message?.contact) return 'contact_dropped';
+  const text = String(message?.text || '').trim();
+  if (text === '/start' || text.startsWith('/start ')) return 'start';
+  if (isSupportRefundSignal(text)) return 'refund_signal';
+  return 'free_text';
+}
+
+function logSupportInbound(kind, chatId) {
+  console.log('[support-bot] inbound', JSON.stringify({
+    kind,
+    chat_hash: hashSupportChatId(chatId),
+  }));
+}
+
+async function handleSupportBotMessage(message) {
+  const chatId = message?.chat?.id;
+  if (!chatId) return { outcome: 'ignored' };
+  await ensureRuntimeConfig();
+  const kind = classifySupportInbound(message);
+  logSupportInbound(kind, chatId);
+  const text = kind === 'start' ? supportStartReplyText() : supportRefundReplyText();
+  try {
+    await sendMessage(chatId, text, { reply_markup: supportRefundKeyboard() }, 'curator');
+    return { outcome: 'refund_redirect', kind };
+  } catch (error) {
+    console.warn('[support-bot] reply failed:', error.message);
+    return { outcome: 'error', kind };
+  }
+}
+
+async function handleSupportRefundCallback(query) {
+  await ensureRuntimeConfig();
+  const chatId = query?.message?.chat?.id;
+  logSupportInbound('refund_signal', chatId || query?.from?.id || 'unknown');
+  await answerCallbackQueryFast(query?.id, 'curator');
+  if (!chatId) return { outcome: 'missing_chat', kind: 'refund_signal' };
+  try {
+    await sendMessage(chatId, supportRefundReplyText(), {
+      reply_markup: supportRefundKeyboard(),
+    }, 'curator');
+    return { outcome: 'refund_redirect', kind: 'refund_signal' };
+  } catch (error) {
+    console.warn('[support-bot] reply failed:', error.message);
+    return { outcome: 'error', kind: 'refund_signal' };
+  }
+}
+
 async function handleCuratorBotUpdate(update) {
+  if (update?.message) {
+    return handleSupportBotMessage(update.message);
+  }
   if (!update?.callback_query) return { outcome: 'ignored' };
+  if (String(update.callback_query.data || '') === SUPPORT_REFUND_CALLBACK) {
+    return handleSupportRefundCallback(update.callback_query);
+  }
   if (!String(update.callback_query.data || '').startsWith('lead_taken_')) {
     await ensureRuntimeConfig();
     await answerCallbackQueryFast(update.callback_query.id, 'curator', {
@@ -1769,7 +1873,7 @@ async function runCuratorBotPoll(payload = {}) {
       updates = await tgRequest('getUpdates', {
         timeout: timeoutSec,
         limit: 20,
-        allowed_updates: ['callback_query'],
+        allowed_updates: ['callback_query', 'message'],
       }, 'curator', (timeoutSec + 3) * 1000);
       getUpdatesOk = true;
     } catch (e) {
@@ -1796,7 +1900,7 @@ async function runCuratorBotPoll(payload = {}) {
           offset: lastUpdateId + 1,
           timeout: 0,
           limit: 1,
-          allowed_updates: ['callback_query'],
+          allowed_updates: ['callback_query', 'message'],
         }, 'curator');
       } catch (e) {
         console.warn('[Curator Bot] poll offset commit failed:', e.message);
@@ -2082,7 +2186,11 @@ module.exports.__test = {
   fetchWithTimeout,
   handleCuratorLeadCallback,
   handleCuratorBotUpdate,
+  handleSupportBotMessage,
   isAuthorizedCuratorCallback,
+  isSupportRefundSignal,
+  classifySupportInbound,
+  supportRefundReplyText,
   resolveHttpPath,
   extractInternalCronToken,
 };
