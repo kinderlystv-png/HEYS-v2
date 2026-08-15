@@ -225,4 +225,43 @@ describe('consent gate flow', () => {
       window.React = previousReact;
     }
   });
+
+  it('shows optional feature offer to existing PIN clients before the app', () => {
+    const previousHEYS = window.HEYS;
+    const previousReact = window.React;
+
+    function OptionalFeatureOfferScreen() {}
+    window.HEYS = {
+      cloud: { isPinAuthClient: () => true },
+      Consents: {
+        OptionalFeatureOfferScreen,
+        shouldOfferOptionalFeatures: () => true,
+      },
+    };
+    window.React = {
+      createElement: (type, props) => ({ type, props }),
+    };
+
+    try {
+      // eslint-disable-next-line no-eval
+      (0, eval)(source);
+      const gate = window.HEYS.AppGateFlow.buildConsentGate({
+        gate: null,
+        desktopGate: null,
+        cloudUser: null,
+        clientId: 'client-1',
+        needsConsent: false,
+        checkingConsent: false,
+        setNeedsConsent: () => {},
+        setShowMorningCheckin: () => {},
+      });
+
+      expect(gate).toBeTruthy();
+      expect(gate.type).toBe(OptionalFeatureOfferScreen);
+      expect(gate.props.clientId).toBe('client-1');
+    } finally {
+      window.HEYS = previousHEYS;
+      window.React = previousReact;
+    }
+  });
 });

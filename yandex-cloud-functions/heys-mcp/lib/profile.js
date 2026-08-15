@@ -149,19 +149,19 @@ function applyProfileFields(current, fields, nowMs, options = {}) {
   const enabling = (key) => fields
     && Object.prototype.hasOwnProperty.call(fields, key)
     && fields[key] === true;
-  if (enabling('cycle_tracking_enabled') && !cycleReleaseGate.isOptionalHealthFeatureAvailable(currentProfile)) {
+  if (enabling('cycle_tracking_enabled') && !cycleReleaseGate.isCycleFeatureAvailable(currentProfile)) {
     throw new ProfileError(
       'cycle_tracking_removed',
       'Трекинг менструального цикла снят с релиза: cycle_tracking_enabled не пишется. Функция вернётся после релиза в архитектуре device-only.',
     );
   }
-  if (enabling('measurements_tracking_enabled') && !cycleReleaseGate.isOptionalHealthFeatureAvailable(currentProfile)) {
+  if (enabling('measurements_tracking_enabled') && !cycleReleaseGate.isMeasurementsFeatureAvailable(currentProfile)) {
     throw new ProfileError(
       'measurements_tracking_removed',
       'Трекинг замеров тела снят с релиза: measurements_tracking_enabled не пишется для обычных аккаунтов.',
     );
   }
-  if (enabling('supplements_tracking_enabled') && !cycleReleaseGate.isOptionalHealthFeatureAvailable(currentProfile)) {
+  if (enabling('supplements_tracking_enabled') && !cycleReleaseGate.isSupplementsFeatureAvailable(currentProfile)) {
     throw new ProfileError(
       'supplements_tracking_removed',
       'Трекинг добавок снят с релиза: supplements_tracking_enabled не пишется для обычных аккаунтов.',

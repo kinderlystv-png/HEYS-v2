@@ -7,9 +7,16 @@
   // Release gate (prompt-cycle-removal, 2026-08): cycle tracking is out of release.
   // Keep module/code; close all enable/write paths until device-only return.
   const CYCLE_TRACKING_IN_RELEASE = false;
+  const MEASUREMENTS_TRACKING_IN_RELEASE = true;
+  // Supplements: отдельное согласие 1.0, не спецкатегория — в релизе после 1.11.
+  const SUPPLEMENTS_TRACKING_IN_RELEASE = true;
 
-  // All three optional health features share the same release gate.
-  const OPTIONAL_HEALTH_FEATURES_IN_RELEASE = CYCLE_TRACKING_IN_RELEASE;
+  // Legacy alias: true only when every optional feature is in release.
+  const OPTIONAL_HEALTH_FEATURES_IN_RELEASE = (
+    CYCLE_TRACKING_IN_RELEASE
+    && MEASUREMENTS_TRACKING_IN_RELEASE
+    && SUPPLEMENTS_TRACKING_IN_RELEASE
+  );
 
   const DEFAULT_PROFILE_FLAGS = Object.freeze({
     internalAccount: false,
@@ -78,8 +85,21 @@
     return isInternalAccount(profile);
   }
 
+  function isFeatureInRelease(inReleaseFlag, profile) {
+    if (inReleaseFlag === true) return true;
+    return isInternalAccount(profile);
+  }
+
   function isCycleFeatureAvailable(profile) {
-    return isOptionalHealthFeatureAvailable(profile);
+    return isFeatureInRelease(CYCLE_TRACKING_IN_RELEASE, profile);
+  }
+
+  function isMeasurementsFeatureAvailable(profile) {
+    return isFeatureInRelease(MEASUREMENTS_TRACKING_IN_RELEASE, profile);
+  }
+
+  function isSupplementsFeatureAvailable(profile) {
+    return isFeatureInRelease(SUPPLEMENTS_TRACKING_IN_RELEASE, profile);
   }
 
   function isCycleTrackingEnabled(profile, clientId) {
@@ -90,13 +110,13 @@
   }
 
   function isMeasurementsTrackingEnabled(profile) {
-    if (!isOptionalHealthFeatureAvailable(profile)) return false;
+    if (!isMeasurementsFeatureAvailable(profile)) return false;
     const resolved = resolveProfile(profile);
     return !!(resolved && resolved.measurementsTrackingEnabled === true);
   }
 
   function isSupplementsTrackingEnabled(profile) {
-    if (!isOptionalHealthFeatureAvailable(profile)) return false;
+    if (!isSupplementsFeatureAvailable(profile)) return false;
     const resolved = resolveProfile(profile);
     return !!(resolved && resolved.supplementsTrackingEnabled === true);
   }
@@ -157,6 +177,7 @@
     const next = {
       ...profile,
       supplementsTrackingEnabled: false,
+      showDiarySupplementsPanel: false,
       plannedSupplements: [],
       customSupplements: [],
       supplementSettings: {},
@@ -206,14 +227,14 @@
       label: 'Замеры тела',
       purgeDay: purgeMeasurementsFromDay,
       purgeProfile: purgeMeasurementsFromProfile,
-      visible: (profile) => isOptionalHealthFeatureAvailable(profile),
+      visible: (profile) => isMeasurementsFeatureAvailable(profile),
     },
     supplementsTrackingEnabled: {
       consentType: 'supplements_tracking',
       label: 'Добавки',
       purgeDay: purgeSupplementsFromDay,
       purgeProfile: purgeSupplementsFromProfile,
-      visible: (profile) => isOptionalHealthFeatureAvailable(profile),
+      visible: (profile) => isSupplementsFeatureAvailable(profile),
     },
   });
 
@@ -259,6 +280,21 @@
     'supplementsTrackingEnabled',
   ]);
 
+  async function ensureOptionalFeatureConsentApi(timeoutMs = 8000) {
+    if (HEYS.Consents?.api?.requestOptionalFeatureConsent) return HEYS.Consents.api;
+    if (typeof HEYS.__loadPostboot1Game === 'function') {
+      try {
+        await HEYS.__loadPostboot1Game();
+      } catch (_) { /* noop */ }
+    }
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+      if (HEYS.Consents?.api?.requestOptionalFeatureConsent) return HEYS.Consents.api;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    return HEYS.Consents?.api || null;
+  }
+
   /**
    * Enable/disable optional health feature with consent gate and local purge on disable.
    * Returns true when toggle should be applied to profile.
@@ -267,7 +303,10 @@
     const cfg = FEATURE_TOGGLES[flagKey];
     if (!cfg) return false;
     const isReadonlyHost = !!(global.__HEYS_READONLY_MODE__ && global.__HEYS_READONLY_MODE__.enabled);
-    if (OPTIONAL_FEATURE_FLAG_KEYS.includes(flagKey) && nextEnabled && !isOptionalHealthFeatureAvailable()) {
+    if (flagKey === 'measurementsTrackingEnabled' && nextEnabled && !isMeasurementsFeatureAvailable()) {
+      return false;
+    }
+    if (flagKey === 'supplementsTrackingEnabled' && nextEnabled && !isSupplementsFeatureAvailable()) {
       return false;
     }
     if (flagKey === 'cycleTrackingEnabled' && !isCycleFeatureAvailable()) {
@@ -275,6 +314,18 @@
       // Allow explicit disable/purge path while feature is out of release.
     }
     if (nextEnabled) {
+      const consentType = cfg.consentType;
+      if (consentType && consentType !== 'pending-owner-text' && consentType !== 'cycle_tracking') {
+        const consentsApi = await ensureOptionalFeatureConsentApi();
+        if (consentsApi?.requestOptionalFeatureConsent) {
+          const result = await consentsApi.requestOptionalFeatureConsent(consentType);
+          if (!result?.granted) return false;
+          if (isReadonlyHost || result.readonly) {
+            console.info('[healthFeatures] READONLY_MODE — optional feature consent preview only');
+          }
+          return true;
+        }
+      }
       const ok = global.confirm(
         `${CONSENT_PROMPTS[cfg.consentType] || `Согласие на «${cfg.label}».`}\n\nВключить функцию?`
       );
@@ -310,10 +361,15 @@
     CONSENT_TYPES,
     KNOWN_SUPPLEMENT_IDS,
     CYCLE_TRACKING_IN_RELEASE,
+    MEASUREMENTS_TRACKING_IN_RELEASE,
+    SUPPLEMENTS_TRACKING_IN_RELEASE,
     OPTIONAL_HEALTH_FEATURES_IN_RELEASE,
     isInternalAccount,
     isOptionalHealthFeatureAvailable,
+    isFeatureInRelease,
     isCycleFeatureAvailable,
+    isMeasurementsFeatureAvailable,
+    isSupplementsFeatureAvailable,
     isCycleTrackingEnabled,
     isMeasurementsTrackingEnabled,
     isSupplementsTrackingEnabled,

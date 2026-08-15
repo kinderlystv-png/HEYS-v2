@@ -2995,6 +2995,23 @@
             });
         }
 
+        // Уже вошедшие: один раз предложить замеры и добавки без повторной оферты.
+        if (baseEligible && !shouldBlockForConsents && !consentCheckError && isPinSessionActive
+            && HEYS.Consents?.OptionalFeatureOfferScreen
+            && HEYS.Consents?.shouldOfferOptionalFeatures?.()) {
+            return React.createElement(HEYS.Consents.OptionalFeatureOfferScreen, {
+                key: 'optional-feature-offer',
+                clientId,
+                onComplete: () => {
+                    try {
+                        window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+                            detail: { source: 'optional-feature-offer' },
+                        }));
+                    } catch (_) { /* noop */ }
+                },
+            });
+        }
+
         // ── Сценарий C: fallback-баннер для старого bundle, если ConsentScreen
         // ещё не загрузился. Нормальный PIN-flow блокируется сценарием A.
         if (baseEligible && (outdatedTypes || []).length > 0 && HEYS.Consents?.ConsentOutdatedBanner) {

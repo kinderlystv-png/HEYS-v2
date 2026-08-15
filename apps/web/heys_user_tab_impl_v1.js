@@ -2705,7 +2705,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         const labels = Consents.TEXTS?.checkboxes || {};
         const versionLabels = (window.HEYS?.LegalVersions?.labels) || {};
-        const REQUIRED = ['user_agreement', 'personal_data', 'health_data'];
+        const REQUIRED = ['user_agreement', 'personal_data'];
 
         const handleRevoke = async function (consentType, isRequired) {
             const docName = versionLabels[consentType] || consentType;
@@ -2716,7 +2716,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                       '(пульсовые зоны, анкета пробного периода при её наличии).\n\n' +
                       'Дневник питания, переписка и фото удаляются отдельно — ' +
                       'кнопкой отзыва согласия на персональные данные.\n\n' +
-                      'Дальнейшее использование сервиса станет невозможным до повторного согласия.';
+                      'Доступ к HEYS сохранится.';
             } else if (consentType === 'personal_data') {
                 msg = 'Отозвать согласие "' + docName + '"?\n\n' +
                       'После отзыва будут удалены:\n' +
@@ -2977,7 +2977,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     }
 
     // === Приватность (152-ФЗ ст. 21) ===
-    // Отзыв согласия на обработку данных о здоровье + удаление аккаунта.
+    // Отзыв согласий и удаление аккаунта. health_data больше не обязателен.
     function PrivacySettingsCard() {
         const Consents = window.HEYS?.Consents;
         if (!Consents) return null;
@@ -3010,7 +3010,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 '(пульсовые зоны, анкета пробного периода при её наличии).\n\n' +
                 'Дневник питания, переписка и фото удаляются отдельно — ' +
                 'кнопкой отзыва согласия на персональные данные.\n\n' +
-                'Дальнейшее использование сервиса станет невозможным до повторного согласия.'
+                'Доступ к HEYS сохранится.'
             );
             if (!confirmed) return;
             setRevokeBusy(true);

@@ -2361,11 +2361,12 @@
   }
 
   function isDiarySupplementsPanelEnabled() {
+    if (!isSupplementsTrackingEnabled()) return false;
     try {
       const profile = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
       return profile.showDiarySupplementsPanel !== false;
     } catch (_) {
-      return true;
+      return false;
     }
   }
 

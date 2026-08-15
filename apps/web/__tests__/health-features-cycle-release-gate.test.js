@@ -1,5 +1,5 @@
 /**
- * prompt-internal-account: optional health features gated by profile.internalAccount.
+ * Optional health features: per-feature release gates (cycle off, supplements on).
  */
 const fs = require('fs');
 const path = require('path');
@@ -34,27 +34,31 @@ function loadHealthFeatures({ profile } = {}) {
 }
 
 describe('optional health features release gate', () => {
-  test('CYCLE_TRACKING_IN_RELEASE is false and features unavailable by default', () => {
+  test('cycle stays out of release; supplements and measurements are in release', () => {
     const hf = loadHealthFeatures();
     expect(hf.CYCLE_TRACKING_IN_RELEASE).toBe(false);
+    expect(hf.SUPPLEMENTS_TRACKING_IN_RELEASE).toBe(true);
+    expect(hf.MEASUREMENTS_TRACKING_IN_RELEASE).toBe(true);
     expect(hf.isCycleFeatureAvailable()).toBe(false);
-    expect(hf.isMeasurementsTrackingEnabled({ measurementsTrackingEnabled: true })).toBe(false);
-    expect(hf.isSupplementsTrackingEnabled({ supplementsTrackingEnabled: true })).toBe(false);
+    expect(hf.isSupplementsFeatureAvailable()).toBe(true);
+    expect(hf.isMeasurementsFeatureAvailable()).toBe(true);
   });
 
-  test('isCycleTrackingEnabled ignores profile flag while out of release', () => {
+  test('regular profile can enable supplements and measurements but not cycle', () => {
     const hf = loadHealthFeatures();
     expect(hf.isCycleTrackingEnabled({
       gender: 'Женский',
       cycleTrackingEnabled: true,
     })).toBe(false);
+    expect(hf.isMeasurementsTrackingEnabled({ measurementsTrackingEnabled: true })).toBe(true);
+    expect(hf.isSupplementsTrackingEnabled({ supplementsTrackingEnabled: true })).toBe(true);
   });
 
-  test('optional feature toggles are not visible by default', () => {
+  test('optional feature toggles visibility matches per-feature gates', () => {
     const hf = loadHealthFeatures();
     expect(hf.FEATURE_TOGGLES.cycleTrackingEnabled.visible({ gender: 'Женский' })).toBe(false);
-    expect(hf.FEATURE_TOGGLES.measurementsTrackingEnabled.visible({})).toBe(false);
-    expect(hf.FEATURE_TOGGLES.supplementsTrackingEnabled.visible({})).toBe(false);
+    expect(hf.FEATURE_TOGGLES.measurementsTrackingEnabled.visible({})).toBe(true);
+    expect(hf.FEATURE_TOGGLES.supplementsTrackingEnabled.visible({})).toBe(true);
   });
 
   test('stripDisabledHealthFields nulls cycle fields even when flag was true', () => {
@@ -75,6 +79,27 @@ describe('optional health features release gate', () => {
     expect(next.waterMl).toBe(500);
   });
 
+  test('supplements day fields survive when tracking enabled on regular profile', () => {
+    const hf = loadHealthFeatures();
+    const day = {
+      supplementsPlanned: ['vitD'],
+      supplementsTaken: [],
+    };
+    const next = hf.stripDisabledHealthFields(day, {
+      supplementsTrackingEnabled: true,
+    });
+    expect(next.supplementsPlanned).toEqual(['vitD']);
+  });
+
+  test('enable path uses optional feature consent popup API', () => {
+    const source = fs.readFileSync(
+      path.resolve(__dirname, '../heys_health_features_v1.js'),
+      'utf8',
+    );
+    expect(source).toContain('ensureOptionalFeatureConsentApi');
+    expect(source).toContain('requestOptionalFeatureConsent');
+  });
+
   test('internalAccount profile keeps all optional health features available', () => {
     const hf = loadHealthFeatures({ profile: INTERNAL_PROFILE });
     expect(hf.isInternalAccount(INTERNAL_PROFILE)).toBe(true);
@@ -85,23 +110,5 @@ describe('optional health features release gate', () => {
     expect(hf.FEATURE_TOGGLES.cycleTrackingEnabled.visible(INTERNAL_PROFILE)).toBe(true);
     expect(hf.FEATURE_TOGGLES.measurementsTrackingEnabled.visible(INTERNAL_PROFILE)).toBe(true);
     expect(hf.FEATURE_TOGGLES.supplementsTrackingEnabled.visible(INTERNAL_PROFILE)).toBe(true);
-  });
-
-  test('profile without internalAccount stays gated even with tracking flags on', () => {
-    const hf = loadHealthFeatures({
-      profile: {
-        gender: 'Женский',
-        cycleTrackingEnabled: true,
-        measurementsTrackingEnabled: true,
-        supplementsTrackingEnabled: true,
-      },
-    });
-    expect(hf.isCycleFeatureAvailable()).toBe(false);
-    expect(hf.isCycleTrackingEnabled({
-      gender: 'Женский',
-      cycleTrackingEnabled: true,
-    })).toBe(false);
-    expect(hf.isMeasurementsTrackingEnabled({ measurementsTrackingEnabled: true })).toBe(false);
-    expect(hf.isSupplementsTrackingEnabled({ supplementsTrackingEnabled: true })).toBe(false);
   });
 });

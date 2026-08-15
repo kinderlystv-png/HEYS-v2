@@ -29,7 +29,9 @@
     HEALTH_DATA: 'health_data',
     MARKETING: 'marketing',
     PAYMENT_OFERTA: 'payment_oferta',
-    SPEECH_TRANSCRIPTION: 'speech_transcription'
+    SPEECH_TRANSCRIPTION: 'speech_transcription',
+    SUPPLEMENTS_TRACKING: 'supplements_tracking',
+    BODY_MEASUREMENTS: 'body_measurements'
   };
 
   const CURRENT_VERSIONS = {
@@ -38,7 +40,9 @@
     health_data: '1.5',  // изъято из обязательного набора; снимок 1.5 в архиве
     marketing: '1.4',
     payment_oferta: '1.11',
-    speech_transcription: '1.2'
+    speech_transcription: '1.2',
+    supplements_tracking: '1.0',
+    body_measurements: '1.0'
   };
 
   const REQUIRED_CONSENTS = [
@@ -116,6 +120,18 @@
         summary: 'Передаём выбранное аудио в Yandex SpeechKit и показываем текст в чате. В записи не сообщайте сведения о заболеваниях. Отказ не мешает отправить голосовое без расшифровки.',
         link: '/docs/speech-transcription-consent.md',
         required: false
+      },
+      supplements_tracking: {
+        label: 'Вести отметки о добавках из справочника сервиса',
+        summary: 'Сохраняем выбранные позиции и даты приёма. Лекарства вносить нельзя. Видят вы и куратор. Можно отказаться без потери доступа к HEYS.',
+        link: '/docs/v1.0/supplements-consent.md',
+        required: false
+      },
+      body_measurements: {
+        label: 'Вести замеры тела в дневнике',
+        summary: 'Сохраняем обхваты и даты, чтобы видеть динамику вам и куратору. Можно отказаться без потери доступа к HEYS. Выключение удаляет внесённые замеры.',
+        link: '/docs/v1.0/body-measurements-consent.md',
+        required: false
       }
     },
 
@@ -176,6 +192,34 @@
           '🔕 Можно отписаться в любой момент в настройках',
           '✅ Отказ не влияет на заявку, триал или использование HEYS'
         ]
+      },
+      supplements_tracking: {
+        emoji: '💊',
+        title: 'Что сохраняем по добавкам?',
+        color: '#ecfdf5',
+        borderColor: '#10b981',
+        textColor: '#065f46',
+        points: [
+          '📋 Только позиции из справочника сервиса и даты приёма',
+          '🚫 Лекарства и свободный ввод недоступны',
+          '👤 Видят вы и назначенный куратор',
+          '🚪 Можно отказаться сейчас или выключить позже — доступ к HEYS сохранится',
+          '🗑️ Выключение удаляет сохранённые отметки'
+        ]
+      },
+      body_measurements: {
+        emoji: '📏',
+        title: 'Что сохраняем по замерам?',
+        color: '#eef2ff',
+        borderColor: '#6366f1',
+        textColor: '#312e81',
+        points: [
+          '📐 Обхваты тела и даты замеров',
+          '📈 Динамика нужна вам и куратору, не для диагноза',
+          '👤 Видят вы и назначенный куратор',
+          '🚪 Можно отказаться сейчас или выключить позже — доступ к HEYS сохранится',
+          '🗑️ Выключение удаляет внесённые замеры'
+        ]
       }
     },
 
@@ -191,8 +235,9 @@
     consentSummary: `
 Нажимая «Продолжить», вы подтверждаете:
 • Ознакомление с Пользовательским соглашением (Офертой)
-• Согласие на обработку персональных данных  
-• Явное согласие на обработку данных о здоровье
+• Согласие на обработку персональных данных
+
+Замеры тела и отметки о добавках подключаются только если вы отдельно отметили эти пункты. Их можно не давать и позже включить в настройках.
 
 Согласие даётся до начала обработки данных и может быть отозвано в любой момент через настройки профиля.
     `.trim()
@@ -424,6 +469,92 @@
     }
   };
 
+  function readClientProfile() {
+    let profile = null;
+    try {
+      if (HEYS.store && typeof HEYS.store.get === 'function') {
+        profile = HEYS.store.get('heys_profile', null);
+      }
+    } catch (_) { /* noop */ }
+    if (!profile || typeof profile !== 'object') {
+      try {
+        profile = HEYS.utils?.lsGet?.('heys_profile', {}) || {};
+      } catch (_) {
+        profile = {};
+      }
+    }
+    return { ...profile };
+  }
+
+  function writeClientProfile(next, fields, source) {
+    try {
+      if (HEYS.store && typeof HEYS.store.set === 'function') {
+        HEYS.store.set('heys_profile', next);
+      } else if (HEYS.utils?.lsSet) {
+        HEYS.utils.lsSet('heys_profile', next);
+      }
+    } catch (_) { /* noop */ }
+    try {
+      window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+        detail: { fields: fields || [], source: source || 'consents' }
+      }));
+    } catch (_) { /* noop */ }
+  }
+
+  function getPendingOptionalFeatureTypes(profile) {
+    const p = profile || {};
+    const pending = [];
+    if (p.measurementsTrackingEnabled !== true) pending.push('body_measurements');
+    if (p.supplementsTrackingEnabled !== true) pending.push('supplements_tracking');
+    return pending;
+  }
+
+  function shouldOfferOptionalFeatures() {
+    try {
+      if (typeof window !== 'undefined' && window.__HEYS_READONLY_MODE__?.enabled) return false;
+    } catch (_) { /* noop */ }
+    const clientId = String(HEYS.currentClientId || '');
+    if (clientId && HEYS._optionalFeatureOfferDoneClientId === clientId) return false;
+    const profile = readClientProfile();
+    if (profile.optionalFeatureConsentsOfferedAt) return false;
+    return getPendingOptionalFeatureTypes(profile).length > 0;
+  }
+
+  function markOptionalFeatureConsentsOffered(extraFields, source) {
+    const clientId = String(HEYS.currentClientId || '');
+    if (clientId) HEYS._optionalFeatureOfferDoneClientId = clientId;
+    const profile = readClientProfile();
+    const extra = extraFields && typeof extraFields === 'object' ? extraFields : {};
+    const next = {
+      ...profile,
+      ...extra,
+      optionalFeatureConsentsOfferedAt: profile.optionalFeatureConsentsOfferedAt || Date.now(),
+      revision: (Number(profile.revision) || 0) + 1,
+      updatedAt: Date.now(),
+    };
+    writeClientProfile(
+      next,
+      Object.keys(extra).concat('optionalFeatureConsentsOfferedAt'),
+      source || 'optional-feature-offer'
+    );
+  }
+
+  function applyOptionalFeatureFlagsFromConsents(consentList) {
+    const granted = {};
+    (Array.isArray(consentList) ? consentList : []).forEach((item) => {
+      if (item && item.granted && item.type) granted[item.type] = true;
+    });
+    const extra = {};
+    if (granted.supplements_tracking) {
+      extra.supplementsTrackingEnabled = true;
+      extra.showDiarySupplementsPanel = true;
+    }
+    if (granted.body_measurements) {
+      extra.measurementsTrackingEnabled = true;
+    }
+    markOptionalFeatureConsentsOffered(extra, 'consent-screen');
+  }
+
   // =====================================================
   // React компоненты
   // =====================================================
@@ -445,7 +576,9 @@
       user_agreement: false,
       personal_data: false,
       health_data: false,
-      marketing: false
+      marketing: false,
+      supplements_tracking: false,
+      body_measurements: false
     });
     // notifications — отдельный preference, НЕ 152-ФЗ согласие.
     // Default ON: пользователь явно решил включить уведомления при онбординге.
@@ -468,21 +601,28 @@
     const hasOutdatedDocuments = outdatedTypeSet.size > 0;
 
     const buildConsentList = useCallback((signatureMethod) => (
-      Object.entries(consents).map(([type, granted]) => ({
-        type,
-        granted,
-        version: CURRENT_VERSIONS[type] || '1.0',
-        signature_method: signatureMethod || 'checkbox'
-      }))
+      Object.entries(consents)
+        .filter(([type, granted]) => {
+          if (type === 'supplements_tracking' || type === 'body_measurements') return !!granted;
+          return true;
+        })
+        .map(([type, granted]) => ({
+          type,
+          granted,
+          version: CURRENT_VERSIONS[type] || '1.0',
+          signature_method: signatureMethod || 'checkbox'
+        }))
     ), [consents]);
 
     const completeWithoutWrite = useCallback(() => {
       const consentList = buildConsentList('checkbox');
       console.info('[Consents] READONLY_MODE — skip log_consents, continue without write');
+      applyOptionalFeatureFlagsFromConsents(consentList);
       onComplete?.(consentList);
     }, [buildConsentList, onComplete]);
 
     const finishConsentFlow = useCallback(async (consentList) => {
+      applyOptionalFeatureFlagsFromConsents(consentList);
       if (notificationsOptIn) {
         try {
           await consentsAPI.setPushConsent(true);
@@ -833,7 +973,10 @@
               className: 'heys-consent-sign-sheet__primary',
               disabled: (!signSuccess && !accessSignPinApi.isComplete) || loading,
               onClick: handleAccessCodeSign,
-            }, loading ? 'Подписываем…' : (signSuccess ? 'Готово' : 'Подписать')),
+            }, HEYS.WaitMark?.button?.(React, {
+              busy: loading, ok: !!signSuccess,
+              idle: 'Подписать', busyLabel: 'Подписываем', okLabel: 'Готово',
+            }) || (loading ? 'Подписываем…' : (signSuccess ? 'Готово' : 'Подписать'))),
             !signSuccess && React.createElement('button', {
               type: 'button',
               className: 'heys-consent-sign-sheet__secondary',
@@ -940,6 +1083,22 @@
             React.createElement('hr', {
               className: 'my-4',
               style: { borderColor: '#e5e7eb' }
+            }),
+
+            React.createElement(ConsentCheckbox, {
+              type: 'body_measurements',
+              checked: consents.body_measurements,
+              onChange: () => handleToggle('body_measurements'),
+              config: CONSENT_TEXTS.checkboxes.body_measurements,
+              onShowFull: () => setShowFullText('body_measurements')
+            }),
+
+            React.createElement(ConsentCheckbox, {
+              type: 'supplements_tracking',
+              checked: consents.supplements_tracking,
+              onChange: () => handleToggle('supplements_tracking'),
+              config: CONSENT_TEXTS.checkboxes.supplements_tracking,
+              onShowFull: () => setShowFullText('supplements_tracking')
             }),
 
             // Marketing (optional)
@@ -1131,7 +1290,10 @@
               backgroundColor: allRequiredAccepted && !loading ? '#22c55e' : '#d4d4d8',
               cursor: allRequiredAccepted && !loading ? 'pointer' : 'not-allowed'
             }
-          }, loading ? '⏳ Загрузка...' : '✅ Продолжить')
+          }, HEYS.WaitMark?.button?.(React, {
+            busy: loading,
+            idle: 'Продолжить', busyLabel: 'Загружаем',
+          }) || (loading ? 'Загружаем…' : 'Продолжить'))
         ) : step === 'access_code_sign' ? (
           React.createElement('button', {
             onClick: handleAccessCodeSign,
@@ -1141,7 +1303,10 @@
               backgroundColor: accessSignPinApi.isComplete && !loading ? '#22c55e' : '#d4d4d8',
               cursor: accessSignPinApi.isComplete && !loading ? 'pointer' : 'not-allowed'
             }
-          }, loading ? '⏳ Подписываем...' : '✅ Подписать')
+          }, HEYS.WaitMark?.button?.(React, {
+            busy: loading,
+            idle: 'Подписать', busyLabel: 'Подписываем',
+          }) || (loading ? 'Подписываем…' : 'Подписать'))
         ) : (
           // Кнопка "Подтвердить" код
           React.createElement('button', {
@@ -1152,7 +1317,10 @@
               backgroundColor: code.length >= 4 && !loading ? '#22c55e' : '#d4d4d8',
               cursor: code.length >= 4 && !loading ? 'pointer' : 'not-allowed'
             }
-          }, loading ? '⏳ Проверка...' : '✅ Подтвердить')
+          }, HEYS.WaitMark?.button?.(React, {
+            busy: loading,
+            idle: 'Подтвердить', busyLabel: 'Проверяем',
+          }) || (loading ? 'Проверяем…' : 'Подтвердить'))
         ),
 
         // Кнопка "Назад" или "Выйти"
@@ -1324,8 +1492,28 @@
     marketing: {
       versioned: buildVersionedDocPath('marketing-consent.md', CURRENT_VERSIONS.marketing),
       latest: buildLatestDocPath('marketing-consent.md', CURRENT_VERSIONS.marketing)
+    },
+    supplements_tracking: {
+      versioned: buildVersionedDocPath('supplements-consent.md', '1.0'),
+      latest: buildLatestDocPath('supplements-consent.md', '1.0')
+    },
+    body_measurements: {
+      versioned: buildVersionedDocPath('body-measurements-consent.md', '1.0'),
+      latest: buildLatestDocPath('body-measurements-consent.md', '1.0')
     }
   };
+
+  const OPTIONAL_FEATURE_VERSIONS = Object.freeze({
+    supplements_tracking: '1.0',
+    body_measurements: '1.0',
+  });
+
+  function getDocExpectedVersion(type) {
+    return CURRENT_VERSIONS[type]
+      || HEYS.LegalVersions?.[type]
+      || OPTIONAL_FEATURE_VERSIONS[type]
+      || null;
+  }
 
   const rawMarkdownCache = {};
 
@@ -1350,7 +1538,7 @@
       return response.text();
     }
 
-    const expectedVersion = CURRENT_VERSIONS[type];
+    const expectedVersion = getDocExpectedVersion(type);
     let markdown;
     try {
       markdown = await fetchMarkdown(docInfo.versioned);
@@ -1592,7 +1780,7 @@
    * Загружает и парсит markdown файлы из /docs/legal/
    * Требует прокрутки до конца для подтверждения
    */
-  function FullTextModal({ type, onClose, onAccept }) {
+  function FullTextModal({ type, onClose, onAccept, acceptLabel, busy, error: externalError }) {
     const [content, setContent] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -1660,7 +1848,7 @@
           // 2) Если /docs/vX ещё не задеплоены — пробуем /docs/latest, НО только если версия в тексте совпадает.
           //    Это принципиально: нельзя показывать пользователю устаревший юридический документ из CDN-кэша.
           let markdown;
-          const expectedVersion = CURRENT_VERSIONS[type];
+          const expectedVersion = getDocExpectedVersion(type);
 
           try {
             markdown = await fetchMarkdown(docInfo.versioned);
@@ -1706,8 +1894,8 @@
     };
 
     return React.createElement('div', {
-      className: 'fixed inset-0 z-[60] flex items-end',
-      style: { backgroundColor: 'rgba(0, 0, 0, 0.5)' }
+      className: 'fixed inset-0 flex items-end',
+      style: { backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 12000 }
     },
       React.createElement('div', {
         className: 'rounded-t-2xl w-full max-h-[80vh] flex flex-col',
@@ -1801,21 +1989,257 @@
           className: 'p-4 space-y-2',
           style: { borderTop: '1px solid #e5e7eb' }
         },
+          externalError && React.createElement('div', {
+            className: 'rounded-lg px-3 py-2 text-sm',
+            style: { backgroundColor: '#fef2f2', color: '#b91c1c' },
+            role: 'alert',
+          }, externalError),
           // Кнопка "Ознакомлен" — появляется после прокрутки
           hasScrolledToEnd && !loading && !error && React.createElement('button', {
             onClick: onAccept,
+            disabled: !!busy,
             className: 'w-full py-3 rounded-xl font-semibold text-white transition-all',
-            style: { backgroundColor: '#22c55e' }
-          }, '✅ Ознакомлен, принимаю'),
+            style: { backgroundColor: busy ? '#86efac' : '#22c55e', opacity: busy ? 0.8 : 1 }
+          }, HEYS.WaitMark?.button?.(React, {
+            busy: !!busy,
+            idle: (acceptLabel || 'Ознакомлен, принимаю'),
+            busyLabel: 'Сохраняем',
+          }) || (busy ? 'Сохраняем…' : (acceptLabel || 'Ознакомлен, принимаю'))),
 
           // Кнопка "Закрыть" — всегда видна
           React.createElement('button', {
             onClick: onClose,
+            disabled: !!busy,
             className: 'w-full py-3 rounded-xl font-medium',
-            style: { backgroundColor: '#f4f4f5', color: '#3f3f46' }
+            style: { backgroundColor: '#f4f4f5', color: '#3f3f46', opacity: busy ? 0.6 : 1 }
           }, hasScrolledToEnd ? 'Закрыть без принятия' : 'Закрыть')
         )
       )
+    );
+  }
+
+  let optionalFeatureConsentHost = null;
+  let optionalFeatureConsentRoot = null;
+
+  function OptionalFeatureConsentFlow({ consentType, onDone }) {
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState(null);
+    const isReadonlyHost = !!(global.__HEYS_READONLY_MODE__ && global.__HEYS_READONLY_MODE__.enabled);
+
+    const handleAccept = useCallback(async () => {
+      if (busy) return;
+      setBusy(true);
+      setError(null);
+      try {
+        if (isReadonlyHost) {
+          onDone({ granted: true, readonly: true });
+          return;
+        }
+        const version = getDocExpectedVersion(consentType) || '1.0';
+        if (!HEYS.YandexAPI?.logConsentsBySession) {
+          throw new Error('API not ready');
+        }
+        const result = await HEYS.YandexAPI.logConsentsBySession([{
+          type: consentType,
+          version,
+          granted: true,
+        }]);
+        if (result?.error) {
+          throw new Error(result.error?.message || result.error);
+        }
+        onDone({ granted: true });
+      } catch (err) {
+        setError(err.message || 'Не удалось сохранить согласие');
+        setBusy(false);
+      }
+    }, [busy, consentType, isReadonlyHost, onDone]);
+
+    return React.createElement(FullTextModal, {
+      type: consentType,
+      busy,
+      error,
+      acceptLabel: '✅ Даю согласие',
+      onClose: () => {
+        if (!busy) onDone({ granted: false });
+      },
+      onAccept: handleAccept,
+    });
+  }
+
+  function mountOptionalFeatureConsentFlow(consentType) {
+    return new Promise((resolve) => {
+      if (!React || !global.ReactDOM) {
+        resolve({ granted: false, error: 'react_unavailable' });
+        return;
+      }
+      if (!optionalFeatureConsentHost) {
+        optionalFeatureConsentHost = document.createElement('div');
+        optionalFeatureConsentHost.id = 'heys-optional-feature-consent-root';
+        document.body.appendChild(optionalFeatureConsentHost);
+        optionalFeatureConsentRoot = global.ReactDOM.createRoot
+          ? global.ReactDOM.createRoot(optionalFeatureConsentHost)
+          : null;
+      }
+      const finish = (result) => {
+        try {
+          if (optionalFeatureConsentRoot) {
+            optionalFeatureConsentRoot.render(null);
+          } else if (global.ReactDOM.render) {
+            global.ReactDOM.unmountComponentAtNode(optionalFeatureConsentHost);
+          }
+        } catch (_) { /* noop */ }
+        resolve(result);
+      };
+      const element = React.createElement(OptionalFeatureConsentFlow, {
+        consentType,
+        onDone: finish,
+      });
+      if (optionalFeatureConsentRoot) {
+        optionalFeatureConsentRoot.render(element);
+      } else if (global.ReactDOM.render) {
+        global.ReactDOM.render(element, optionalFeatureConsentHost);
+      } else {
+        finish({ granted: false, error: 'react_dom_unavailable' });
+      }
+    });
+  }
+
+  /**
+   * UI-гейт: цель — один раз предложить уже вошедшим замеры и добавки;
+   * главное действие — Продолжить без обязательных галочек; слой 1 — чекбоксы;
+   * слой 2 — полный текст; критическое — отказ не блокирует вход.
+   */
+  function OptionalFeatureOfferScreen({ clientId, onComplete }) {
+    const profile = readClientProfile();
+    const pendingTypes = getPendingOptionalFeatureTypes(profile);
+    const [consents, setConsents] = useState(() => {
+      const initial = {};
+      pendingTypes.forEach((type) => { initial[type] = false; });
+      return initial;
+    });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [showFullText, setShowFullText] = useState(null);
+    const screenRef = useRef(null);
+    const isReadonlyHost = !!(typeof window !== 'undefined'
+      && window.__HEYS_READONLY_MODE__
+      && window.__HEYS_READONLY_MODE__.enabled);
+
+    useEffect(() => {
+      HEYS.BlankScreenGuard?.reportVisibleFrame?.({
+        element: screenRef.current,
+        screen: 'consent',
+        reason: 'optional_feature_offer_painted'
+      });
+    }, []);
+
+    const handleToggle = useCallback((type) => {
+      setConsents((prev) => ({ ...prev, [type]: !prev[type] }));
+    }, []);
+
+    const handleContinue = useCallback(async () => {
+      if (loading) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const grantedTypes = pendingTypes.filter((type) => consents[type]);
+        if (grantedTypes.length && !isReadonlyHost) {
+          const consentList = grantedTypes.map((type) => ({
+            type,
+            granted: true,
+            version: CURRENT_VERSIONS[type] || '1.0',
+            signature_method: 'checkbox'
+          }));
+          const result = await consentsAPI.logConsents(clientId, consentList);
+          if (!result.success && !result.needsAccessCode) {
+            throw new Error(result.error || 'Не удалось сохранить согласие');
+          }
+          if (result.success) consentsAPI.saveLocal(clientId, consentList);
+          applyOptionalFeatureFlagsFromConsents(consentList);
+        } else {
+          markOptionalFeatureConsentsOffered({}, 'optional-feature-offer');
+        }
+        onComplete?.();
+      } catch (err) {
+        setError(err.message || 'Не удалось сохранить');
+        setLoading(false);
+      }
+    }, [clientId, consents, isReadonlyHost, loading, onComplete, pendingTypes]);
+
+    return React.createElement('div', {
+      ref: screenRef,
+      'data-heys-visible-frame': 'consent',
+      className: 'fixed inset-0 flex flex-col',
+      style: { backgroundColor: '#ffffff', zIndex: 11000 }
+    },
+      React.createElement('div', {
+        className: 'p-4 border-b',
+        style: { borderColor: '#e5e7eb' }
+      },
+        React.createElement('h1', {
+          className: 'text-xl font-semibold',
+          style: { color: '#18181b' }
+        }, 'Замеры тела и добавки'),
+        React.createElement('p', {
+          className: 'text-sm mt-1',
+          style: { color: '#71717a' }
+        }, 'Можно включить сейчас или позже в профиле. Отказ не мешает пользоваться дневником.')
+      ),
+      React.createElement('div', {
+        className: 'flex-1 overflow-auto p-4 space-y-4'
+      },
+        React.createElement('div', { className: 'space-y-3' },
+          pendingTypes.includes('body_measurements') && React.createElement(ConsentCheckbox, {
+            type: 'body_measurements',
+            checked: !!consents.body_measurements,
+            onChange: () => handleToggle('body_measurements'),
+            config: CONSENT_TEXTS.checkboxes.body_measurements,
+            onShowFull: () => setShowFullText('body_measurements')
+          }),
+          pendingTypes.includes('supplements_tracking') && React.createElement(ConsentCheckbox, {
+            type: 'supplements_tracking',
+            checked: !!consents.supplements_tracking,
+            onChange: () => handleToggle('supplements_tracking'),
+            config: CONSENT_TEXTS.checkboxes.supplements_tracking,
+            onShowFull: () => setShowFullText('supplements_tracking')
+          })
+        ),
+        error && React.createElement('div', {
+          className: 'rounded-xl p-4',
+          style: { backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }
+        }, error)
+      ),
+      React.createElement('div', {
+        className: 'p-4 space-y-3',
+        style: {
+          borderTop: '1px solid #e5e7eb',
+          paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))'
+        }
+      },
+        React.createElement('button', {
+          type: 'button',
+          onClick: handleContinue,
+          disabled: loading,
+          className: 'w-full py-4 rounded-xl font-semibold text-white transition-all',
+          style: {
+            backgroundColor: loading ? '#86efac' : '#22c55e',
+            cursor: loading ? 'not-allowed' : 'pointer'
+          }
+        }, HEYS.WaitMark?.button?.(React, {
+          busy: loading,
+          idle: 'Продолжить',
+          busyLabel: 'Сохраняем'
+        }) || (loading ? 'Сохраняем…' : 'Продолжить'))
+      ),
+      showFullText && React.createElement(FullTextModal, {
+        type: showFullText,
+        onClose: () => setShowFullText(null),
+        onAccept: () => {
+          setConsents((prev) => ({ ...prev, [showFullText]: true }));
+          setShowFullText(null);
+        },
+        acceptLabel: '✅ Даю согласие'
+      })
     );
   }
 
@@ -2077,6 +2501,13 @@
     }
   };
 
+  consentsAPI.requestOptionalFeatureConsent = async function (consentType) {
+    if (!DOC_PATHS[consentType]) {
+      return { granted: false, error: 'unknown_consent_type' };
+    }
+    return mountOptionalFeatureConsentFlow(consentType);
+  };
+
   // ── ConsentOutdatedBanner (sticky top, мягкий призыв пере-подписать) ────
   function ConsentOutdatedBanner({ outdatedTypes, graceExpiresAt, onClick }) {
     if (!outdatedTypes || outdatedTypes.length === 0) return null;
@@ -2211,7 +2642,10 @@
             background: '#22c55e', color: '#fff', border: 'none',
             borderRadius: 8, fontSize: 16, cursor: 'pointer'
           }
-        }, loading ? '⏳ Сохранение...' : 'Подтвердить'),
+        }, HEYS.WaitMark?.button?.(React, {
+          busy: loading,
+          idle: 'Подтвердить', busyLabel: 'Сохраняем',
+        }) || (loading ? 'Сохраняем…' : 'Подтвердить')),
         onDismiss && React.createElement('button', {
           onClick: onDismiss,
           style: {
@@ -2273,12 +2707,14 @@
     // Компоненты
     ConsentScreen,
     ConsentCheckbox,
+    OptionalFeatureOfferScreen,
     DisclaimerBanner,
     NotMedicineBadge,
     FullTextModal,
     ConsentOutdatedBanner,
     AgeGateModal,
     ReConsentScreen,
+    shouldOfferOptionalFeatures,
 
     // Hook
     useConsentsRequired,

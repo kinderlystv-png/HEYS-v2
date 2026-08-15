@@ -1405,7 +1405,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       }
       const supplementsWriteRequested = hasPlannedSet || hasPlannedAdd || hasPlannedRemove
         || hasSupplementsMark || hasSupplementsUnmark || hasSupplementsTiming;
-      if (supplementsWriteRequested && !cycleReleaseGate.isOptionalHealthFeatureAvailable(profileBlob)) {
+      if (supplementsWriteRequested && !cycleReleaseGate.isSupplementsFeatureAvailable(profileBlob)) {
         throw new ToolError('supplements_tracking_removed',
           'Трекинг добавок снят с релиза: запись отклоняется для обычных аккаунтов.');
       }
@@ -1583,7 +1583,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         profileForStatus = currentProfile;
       }
       if ((hasCycleDay || hasCycleStatus)) {
-        if (!cycleReleaseGate.isOptionalHealthFeatureAvailable(currentProfile)) {
+        if (!cycleReleaseGate.isCycleFeatureAvailable(currentProfile)) {
           throw new ToolError('cycle_tracking_removed',
             'Трекинг менструального цикла снят с релиза: cycle_day / cycle_status не пишутся ни одним путём. Функция вернётся после релиза в архитектуре device-only.');
         }
@@ -1592,7 +1592,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
             'Трекинг цикла выключен в профиле клиента — для служебного аккаунта включи cycle_tracking_enabled через heys_update_profile.');
         }
       }
-      if (hasMeasurements && !cycleReleaseGate.isOptionalHealthFeatureAvailable(currentProfile)) {
+      if (hasMeasurements && !cycleReleaseGate.isMeasurementsFeatureAvailable(currentProfile)) {
         throw new ToolError('measurements_tracking_removed',
           'Трекинг замеров снят с релиза: measurements не пишутся для обычных аккаунтов.');
       }
@@ -1600,7 +1600,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         throw new ToolError('measurements_tracking_disabled',
           'Трекинг замеров выключен в профиле клиента — включи measurements_tracking_enabled через heys_update_profile.');
       }
-      if (hasSupplements && !cycleReleaseGate.isOptionalHealthFeatureAvailable(currentProfile)) {
+      if (hasSupplements && !cycleReleaseGate.isSupplementsFeatureAvailable(currentProfile)) {
         throw new ToolError('supplements_tracking_removed',
           'Трекинг добавок снят с релиза: supplements не пишутся для обычных аккаунтов.');
       }
@@ -2184,7 +2184,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       let plannedChanged = [];
       let plannedList = null;
       if (hasPlanned) {
-        if (!cycleReleaseGate.isOptionalHealthFeatureAvailable(profileValue)) {
+        if (!cycleReleaseGate.isSupplementsFeatureAvailable(profileValue)) {
           throw new ToolError('supplements_tracking_removed',
             'Трекинг добавок снят с релиза: planned_supplements не пишутся для обычных аккаунтов.');
         }

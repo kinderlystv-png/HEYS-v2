@@ -1524,16 +1524,15 @@ test('heys_checkin submit — measurements_tracking_disabled отказывае�
   assert.equal(api.saves.length, 0);
 });
 
-test('heys_checkin submit — measurements_tracking_removed для обычного аккаунта', async () => {
+test('heys_checkin submit — замеры пишутся для обычного аккаунта при включённом трекинге', async () => {
   const api = fakeApi({
     day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
     card: { [PROFILE_KEY]: { measurementsTrackingEnabled: true } },
   });
-  await assert.rejects(
-    () => build(api).heys_checkin({ action: 'submit', measurements: { waist: 82 } }),
-    (e) => e.code === 'measurements_tracking_removed',
-  );
-  assert.equal(api.saves.length, 0);
+  const res = await build(api).heys_checkin({ action: 'submit', measurements: { waist: 82 } });
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  assert.equal(saved.value.measurements.waist, 82);
+  assert.ok(res);
 });
 
 test('heys_checkin submit — добавки из каталога пишутся списком целиком', async () => {

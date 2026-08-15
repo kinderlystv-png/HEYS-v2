@@ -47,11 +47,13 @@ describe('honest consent summaries', () => {
   it('shows short plain-language disclosures for a new client', () => {
     const text = collectText(renderConsentScreen()).join(' ');
 
-    expect(text.match(/Коротко и честно/g)).toHaveLength(4);
+    expect(text.match(/Коротко и честно/g)).toHaveLength(6);
     expect(text).toContain('условия тарифа и оплаты');
     expect(text).toContain('не заменяет это согласие');
     expect(text).toContain('без потери доступа к HEYS');
     expect(text).toContain('Рекламное согласие оформляется отдельно');
+    expect(text).toContain('Вести замеры тела в дневнике');
+    expect(text).toContain('Вести отметки о добавках из справочника сервиса');
   });
 
   it('keeps the same plain-language contents for re-consent', () => {
@@ -59,7 +61,7 @@ describe('honest consent summaries', () => {
       { type: 'personal_data', current: '1.7', expected: '1.0' },
     ])).join(' ');
 
-    expect(text.match(/Коротко и честно/g)).toHaveLength(4);
+    expect(text.match(/Коротко и честно/g)).toHaveLength(6);
     expect(text).not.toContain('Что изменилось');
     expect(text).toContain('не заменяет это согласие');
     expect(text).toContain('Проверьте содержание документов и подтвердите актуальные условия');
@@ -69,5 +71,45 @@ describe('honest consent summaries', () => {
     expect(source).toContain("data-heys-visible-frame': 'consent'");
     expect(source).toContain('zIndex: 11000');
     expect(source).toContain("paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))'");
+  });
+
+  it('offers measurements and supplements to existing clients without repeating the oferta', () => {
+    const previousHEYS = window.HEYS;
+    const previousReact = window.React;
+
+    window.HEYS = {};
+    window.React = {
+      useState: initial => [typeof initial === 'function' ? initial() : initial, () => {}],
+      useEffect: () => {},
+      useCallback: callback => callback,
+      useMemo: fn => fn(),
+      useRef: initial => ({ current: initial }),
+      createElement: (type, props, ...children) => (
+        typeof type === 'function'
+          ? type(props || {})
+          : { type, props: props || {}, children }
+      ),
+    };
+
+    try {
+      // eslint-disable-next-line no-eval
+      (0, eval)(source);
+      const text = collectText(window.HEYS.Consents.OptionalFeatureOfferScreen({
+        clientId: 'client-1',
+      })).join(' ');
+
+      expect(text).toContain('Замеры тела и добавки');
+      expect(text).toContain('Отказ не мешает пользоваться дневником');
+      expect(text).toContain('Вести замеры тела в дневнике');
+      expect(text).toContain('Вести отметки о добавках из справочника сервиса');
+      expect(text).toContain('Продолжить');
+      expect(text).not.toContain('Принимаю условия Пользовательского соглашения');
+      expect(text).not.toContain('Даю согласие на обработку моих персональных данных');
+      expect(source).toContain('optionalFeatureConsentsOfferedAt');
+      expect(source).toContain('shouldOfferOptionalFeatures');
+    } finally {
+      window.HEYS = previousHEYS;
+      window.React = previousReact;
+    }
   });
 });

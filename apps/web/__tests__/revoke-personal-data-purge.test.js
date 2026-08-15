@@ -89,6 +89,14 @@ describe('privacy settings copy', () => {
     expect(userTabSource).toMatch(/handleRevoke[\s\S]*?пульсовые зоны, анкета пробного периода/);
   });
 
+  it('does not treat health_data as a required profile consent after 1.11', () => {
+    expect(userTabSource).toMatch(/const REQUIRED = \['user_agreement', 'personal_data'\];/);
+    expect(userTabSource).toContain('Доступ к HEYS сохранится.');
+    expect(userTabSource).not.toContain(
+      'Дальнейшее использование сервиса станет невозможным до повторного согласия.',
+    );
+  });
+
   it('onboarding health summary reflects 1.11 withdrawal, not diary under health_data', () => {
     expect(consentsSource).toMatch(/health_data:[\s\S]*?summary:[\s\S]*?изъят из обязательного набора/);
     expect(consentsSource).not.toMatch(/для анкеты, дневника и ручной работы/);

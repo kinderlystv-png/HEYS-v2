@@ -14,13 +14,22 @@ test('isInternalAccount is true when profile flag is set', () => {
   assert.equal(gate.isInternalAccount({ internalAccount: true }), true);
 });
 
-test('optional health features unavailable for regular profiles', () => {
-  assert.equal(gate.isOptionalHealthFeatureAvailable(null), false);
-  assert.equal(gate.isOptionalHealthFeatureAvailable({ cycleTrackingEnabled: true }), false);
+test('cycle unavailable for regular profiles', () => {
+  assert.equal(gate.isCycleFeatureAvailable(null), false);
+  assert.equal(gate.isCycleFeatureAvailable({ cycleTrackingEnabled: true }), false);
 });
 
-test('optional health features available for internalAccount profiles', () => {
+test('supplements and measurements available for regular profiles', () => {
+  assert.equal(gate.isSupplementsFeatureAvailable(null), true);
+  assert.equal(gate.isSupplementsFeatureAvailable({ supplementsTrackingEnabled: true }), true);
+  assert.equal(gate.isMeasurementsFeatureAvailable(null), true);
+  assert.equal(gate.isMeasurementsFeatureAvailable({ measurementsTrackingEnabled: true }), true);
+});
+
+test('internalAccount keeps cycle and measurements available', () => {
   const profile = { internalAccount: true, cycleTrackingEnabled: true };
-  assert.equal(gate.isOptionalHealthFeatureAvailable(profile), true);
+  assert.equal(gate.isCycleFeatureAvailable(profile), true);
+  assert.equal(gate.isMeasurementsFeatureAvailable(profile), true);
+  assert.equal(gate.isSupplementsFeatureAvailable(profile), true);
   assert.equal(gate.isCycleFeatureAvailableForClient('any-client-id', profile), true);
 });

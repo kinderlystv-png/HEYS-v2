@@ -4335,13 +4335,21 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const readDiaryPanelsVisibility = React.useCallback(() => {
             try {
                 const profile = window.HEYS?.utils?.lsGet?.('heys_profile', {}) || {};
+                const hf = window.HEYS?.healthFeatures;
                 return DIARY_PANEL_VISIBILITY_OPTIONS.reduce((acc, option) => {
-                    acc[option.key] = profile[option.field] !== false;
+                    if (option.key === 'supplements') {
+                        const trackingOn = hf && typeof hf.isSupplementsTrackingEnabled === 'function'
+                            ? hf.isSupplementsTrackingEnabled(profile)
+                            : profile.supplementsTrackingEnabled === true;
+                        acc[option.key] = trackingOn && profile[option.field] !== false;
+                    } else {
+                        acc[option.key] = profile[option.field] !== false;
+                    }
                     return acc;
                 }, {});
             } catch (_) {
                 return DIARY_PANEL_VISIBILITY_OPTIONS.reduce((acc, option) => {
-                    acc[option.key] = true;
+                    acc[option.key] = option.key !== 'supplements';
                     return acc;
                 }, {});
             }
@@ -4362,18 +4370,33 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             };
         }, [readDiaryPanelsVisibility]);
 
-        const handleToggleDiaryPanel = (option, nextEnabled) => {
+        const handleToggleDiaryPanel = async (option, nextEnabled) => {
             try {
                 const U = window.HEYS?.utils;
                 const profile = U?.lsGet?.('heys_profile', {}) || {};
-                const updatedProfile = {
-                    ...profile,
-                    [option.field]: nextEnabled !== false,
-                };
+                const updatedProfile = { ...profile };
+
+                if (option.key === 'supplements' && nextEnabled) {
+                    const hf = window.HEYS?.healthFeatures;
+                    if (hf && typeof hf.requestHealthFeatureToggle === 'function') {
+                        const allowed = await hf.requestHealthFeatureToggle('supplementsTrackingEnabled', true);
+                        if (!allowed) return;
+                    }
+                    updatedProfile.supplementsTrackingEnabled = true;
+                    updatedProfile.showDiarySupplementsPanel = true;
+                } else {
+                    updatedProfile[option.field] = nextEnabled !== false;
+                    if (option.key === 'supplements' && nextEnabled === false) {
+                        updatedProfile.showDiarySupplementsPanel = false;
+                    }
+                }
+
                 U?.lsSet?.('heys_profile', updatedProfile);
                 setDiaryPanelsVisibility((prev) => ({
                     ...prev,
-                    [option.key]: nextEnabled !== false,
+                    [option.key]: option.key === 'supplements'
+                        ? (updatedProfile.supplementsTrackingEnabled === true && updatedProfile.showDiarySupplementsPanel !== false)
+                        : (nextEnabled !== false),
                 }));
                 window.dispatchEvent(new CustomEvent(option.eventName, {
                     detail: {
@@ -4384,7 +4407,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 window.dispatchEvent(new CustomEvent('heys:profile-updated', {
                     detail: {
                         field: option.field,
-                        fields: [option.field],
+                        fields: option.key === 'supplements'
+                            ? ['showDiarySupplementsPanel', 'supplementsTrackingEnabled']
+                            : [option.field],
                         source: 'tab-settings',
                     }
                 }));

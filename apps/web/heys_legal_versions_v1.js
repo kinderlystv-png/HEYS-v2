@@ -20,7 +20,9 @@
     push_notifications: '1.1',
     curator_access:     '1.1',
     speech_transcription: '1.2',
-    _updatedAt:         '2026-08-14'
+    supplements_tracking: '1.0',
+    body_measurements:    '1.0',
+    _updatedAt:         '2026-08-15'
   };
 
   // Required types для check_required_consents_v2 — обязательные согласия,
@@ -39,7 +41,9 @@
     payment_oferta:     'Оферта на оплату',
     push_notifications: 'Push-уведомления',
     curator_access:     'Доступ куратора к моим данным',
-    speech_transcription: 'Расшифровка голосовых сообщений'
+    speech_transcription: 'Расшифровка голосовых сообщений',
+    supplements_tracking: 'Отметки о добавках',
+    body_measurements:    'Замеры тела'
   });
 
   HEYS.LegalVersions = Object.freeze(versions);

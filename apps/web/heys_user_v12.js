@@ -765,7 +765,11 @@
       if (!allowed) return;
       const cfg = hf.FEATURE_TOGGLES[flagKey];
       const purged = nextEnabled
-        ? { ...profile, [flagKey]: true }
+        ? {
+          ...profile,
+          [flagKey]: true,
+          ...(flagKey === 'supplementsTrackingEnabled' ? { showDiarySupplementsPanel: true } : {}),
+        }
         : (cfg && cfg.purgeProfile ? cfg.purgeProfile(profile) : { ...profile, [flagKey]: false });
       setLastEditedField(flagKey);
       setFieldStatus('pending');

@@ -150,6 +150,13 @@
 
     function readDiaryPanelEnabled(profile, field) {
         const source = getDiaryPanelVisibilitySource(profile, field);
+        if (field === SUPPLEMENTS_PANEL_PROFILE_FIELD) {
+            const hf = global.HEYS?.healthFeatures;
+            const trackingOn = hf && typeof hf.isSupplementsTrackingEnabled === 'function'
+                ? hf.isSupplementsTrackingEnabled(profile)
+                : source?.supplementsTrackingEnabled === true;
+            if (!trackingOn) return false;
+        }
         return source?.[field] !== false;
     }
 
@@ -716,7 +723,7 @@
                     supplements: readDiaryPanelEnabled(profile, SUPPLEMENTS_PANEL_PROFILE_FIELD),
                     distribution: readDiaryPanelEnabled(profile, DISTRIBUTION_PANEL_PROFILE_FIELD),
                 });
-            }, [profile?.showDiaryPlannerPanel, profile?.showDiarySupplementsPanel, profile?.showDiaryDistributionPanel]);
+            }, [profile?.showDiaryPlannerPanel, profile?.showDiarySupplementsPanel, profile?.showDiaryDistributionPanel, profile?.supplementsTrackingEnabled]);
 
             React.useEffect(function listenDiaryOptionalPanelsVisibility() {
                 const sync = function syncDiaryOptionalPanelsVisibility() {
