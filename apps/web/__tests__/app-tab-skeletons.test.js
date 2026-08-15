@@ -51,6 +51,7 @@ describe('HEYS loading surfaces do not use tab skeletons', () => {
         expect(shell).toContain('fallback: null');
         expect(shell).toContain('Модуль не загрузился. Обнови экран.');
         expect(gate).not.toContain('HEYS.AppLoader');
+        expect(fs.readFileSync(path.join(webRoot, 'heys_app_gates_v1.js'), 'utf8')).not.toContain('app-loader-skeleton');
         expect(widgets).not.toContain('widgets-tab--loading');
         expect(gate).toContain("'data-heys-visible-frame': 'subscription-loading'");
     });

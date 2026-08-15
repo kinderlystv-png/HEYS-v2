@@ -176,60 +176,15 @@
         }
 
         if (!HEYS.AppLoader) {
-            function AppLoader({ message = 'Загрузка...', subtitle = 'Подключение к серверу' }) {
-                return React.createElement('div', { className: 'app-loader' },
-                    // Лого и сообщение
-                    React.createElement('div', { className: 'app-loader-header' },
-                        React.createElement('div', { className: 'app-loader-logo' }, '🥗'),
-                        React.createElement('div', { className: 'app-loader-title' }, message),
-                        React.createElement('div', { className: 'app-loader-subtitle' }, subtitle)
-                    ),
-                    // Скелетон UI
-                    React.createElement('div', { className: 'app-loader-skeleton' },
-                        // Header skeleton
-                        React.createElement('div', { className: 'skeleton-header' },
-                            React.createElement('div', { className: 'skeleton-bar skeleton-bar-xp' }),
-                            React.createElement('div', { className: 'skeleton-nav' },
-                                React.createElement('div', { className: 'skeleton-circle' }),
-                                React.createElement('div', { className: 'skeleton-rect skeleton-client' }),
-                                React.createElement('div', { className: 'skeleton-circle' })
-                            )
-                        ),
-                        // Content skeleton - sparkline
-                        React.createElement('div', { className: 'skeleton-content' },
-                            React.createElement('div', { className: 'skeleton-sparkline' },
-                                // Имитация точек графика
-                                ...Array.from({ length: 14 }, (_, i) =>
-                                    React.createElement('div', {
-                                        key: i,
-                                        className: 'skeleton-dot',
-                                        style: {
-                                            height: `${20 + Math.random() * 60}%`,
-                                            animationDelay: `${i * 0.05}s`
-                                        }
-                                    })
-                                )
-                            ),
-                            // Cards skeleton
-                            React.createElement('div', { className: 'skeleton-cards' },
-                                React.createElement('div', { className: 'skeleton-card' }),
-                                React.createElement('div', { className: 'skeleton-card' }),
-                                React.createElement('div', { className: 'skeleton-card skeleton-card-wide' })
-                            )
-                        ),
-                        // Bottom nav skeleton
-                        React.createElement('div', { className: 'skeleton-tabs' },
-                            ...Array.from({ length: 5 }, (_, i) =>
-                                React.createElement('div', {
-                                    key: i,
-                                    className: `skeleton-tab ${i === 1 ? 'skeleton-tab-active' : ''}`
-                                })
-                            )
-                        )
-                    ),
-                    // Spinner
-                    React.createElement('div', { className: 'app-loader-spinner' })
-                );
+            function AppLoader({ message = 'Загружаем', subtitle = 'Пара секунд.' }) {
+                const mark = window.HEYS?.WaitMark?.render?.(React, {
+                    mode: 'screen',
+                    state: 'wait',
+                    title: message,
+                    text: subtitle,
+                    sr: message,
+                });
+                return React.createElement('div', { className: 'app-loader' }, mark || message);
             }
             HEYS.AppLoader = AppLoader;
         }

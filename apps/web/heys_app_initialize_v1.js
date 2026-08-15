@@ -339,7 +339,6 @@
         HEYS.Gates?.initReactGates?.(React);
         const ErrorBoundary = window.HEYS.ErrorBoundary;
         const DesktopGateScreen = window.HEYS.DesktopGateScreen;
-        const AppLoader = window.HEYS.AppLoader;
         const GamificationBar = window.HEYS.GamificationBar;
         const AppShellModule = getModule('AppShell');
         const AppOverlaysModule = getModule('AppOverlays');

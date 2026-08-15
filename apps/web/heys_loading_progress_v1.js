@@ -11,6 +11,10 @@
 
     const HEYS = global.HEYS = global.HEYS || {};
 
+    const WAIT_SHOW_MS = 300;
+    const WAIT_LABEL_MS = 2000;
+    const WAIT_MIN_VISIBLE_MS = 400;
+
     function waitGlyph(h, size) {
         const sw = size <= 16 ? '3' : '2.75';
         return h('svg', {
@@ -41,7 +45,7 @@
         }, h('path', { d: 'M12 7v6M12 17h.01' }), h('circle', { cx: '12', cy: '12', r: '9' }));
     }
 
-    function renderWaitMark(React, opts) {
+    function renderWaitMarkStatic(React, opts) {
         if (!React || !React.createElement) return null;
         const h = React.createElement;
         const mode = (opts && opts.mode) || 'embedded';
@@ -79,16 +83,164 @@
         );
     }
 
+    let waitMarkHost = null;
+
+    function getWaitMarkHost(React) {
+        if (waitMarkHost) return waitMarkHost;
+        const { useState, useEffect, useRef } = React;
+
+        function useWaitPhases(waiting) {
+            const [phase, setPhase] = useState('idle');
+            const glyphAt = useRef(0);
+            const timers = useRef([]);
+
+            useEffect(() => {
+                timers.current.forEach(clearTimeout);
+                timers.current = [];
+                if (waiting) {
+                    setPhase('idle');
+                    glyphAt.current = 0;
+                    timers.current.push(setTimeout(() => {
+                        glyphAt.current = Date.now();
+                        setPhase('glyph');
+                    }, WAIT_SHOW_MS));
+                    timers.current.push(setTimeout(() => setPhase('labeled'), WAIT_LABEL_MS));
+                } else if (glyphAt.current) {
+                    const remain = Math.max(0, WAIT_MIN_VISIBLE_MS - (Date.now() - glyphAt.current));
+                    timers.current.push(setTimeout(() => {
+                        setPhase('idle');
+                        glyphAt.current = 0;
+                    }, remain));
+                } else {
+                    setPhase('idle');
+                }
+                return () => {
+                    timers.current.forEach(clearTimeout);
+                    timers.current = [];
+                };
+            }, [waiting]);
+
+            return { phase, glyphAt };
+        }
+
+        function useDeferredResult(result, waiting, glyphAt) {
+            const [shown, setShown] = useState(false);
+            useEffect(() => {
+                if (!result) {
+                    setShown(false);
+                    return;
+                }
+                const since = glyphAt.current;
+                if (!since) {
+                    setShown(true);
+                    return;
+                }
+                const remain = Math.max(0, WAIT_MIN_VISIBLE_MS - (Date.now() - since));
+                const t = setTimeout(() => setShown(true), remain);
+                return () => clearTimeout(t);
+            }, [result, waiting]);
+            return shown;
+        }
+
+        function WaitMarkButton(props) {
+            const waiting = !!(props.busy && !props.ok && !props.fail);
+            const { phase, glyphAt } = useWaitPhases(waiting);
+            const showOk = useDeferredResult(!!props.ok, waiting, glyphAt);
+            const showFail = useDeferredResult(!!props.fail, waiting, glyphAt);
+
+            if (!waiting && !showOk && !showFail) return props.idle || '';
+
+            let state = 'wait';
+            let label = null;
+            if (showFail) {
+                state = 'fail';
+                label = props.failLabel || props.idle;
+            } else if (showOk) {
+                state = 'ok';
+                label = props.okLabel || props.idle;
+            } else if (phase === 'labeled') {
+                label = props.busyLabel || props.idle;
+            } else if (phase === 'idle' && waiting) {
+                return props.idle || '';
+            }
+
+            return renderWaitMarkStatic(React, { mode: 'button', state, label });
+        }
+
+        function WaitMarkScreen(props) {
+            const waiting = props.state === 'wait';
+            const hasCaption = !!(props.title || props.text);
+            const { phase, glyphAt } = useWaitPhases(waiting);
+            const showOk = useDeferredResult(props.state === 'ok', waiting, glyphAt);
+            const showFail = useDeferredResult(props.state === 'fail', waiting, glyphAt);
+
+            if (waiting && hasCaption) {
+                if (phase === 'idle') return null;
+                return renderWaitMarkStatic(React, {
+                    mode: 'screen',
+                    state: 'wait',
+                    sr: props.sr,
+                    title: phase === 'labeled' ? props.title : null,
+                    text: phase === 'labeled' ? props.text : null,
+                    actions: null,
+                });
+            }
+
+            if (waiting) {
+                return renderWaitMarkStatic(React, props);
+            }
+
+            const state = showFail ? 'fail' : showOk ? 'ok' : props.state;
+            if ((props.state === 'ok' && !showOk) || (props.state === 'fail' && !showFail)) {
+                if (phase === 'idle') return null;
+                return renderWaitMarkStatic(React, {
+                    mode: 'screen',
+                    state: 'wait',
+                    sr: props.sr,
+                    title: phase === 'labeled' ? props.title : null,
+                    text: phase === 'labeled' ? props.text : null,
+                    actions: null,
+                });
+            }
+
+            return renderWaitMarkStatic(React, Object.assign({}, props, { state }));
+        }
+
+        waitMarkHost = { WaitMarkButton, WaitMarkScreen };
+        return waitMarkHost;
+    }
+
+    function renderWaitMark(React, opts) {
+        if (!React || !React.createElement) return null;
+        const mode = (opts && opts.mode) || 'embedded';
+        if (mode === 'screen' && typeof React.useState === 'function') {
+            const Host = getWaitMarkHost(React);
+            return React.createElement(Host.WaitMarkScreen, opts || {});
+        }
+        return renderWaitMarkStatic(React, opts);
+    }
+
     HEYS.WaitMark = {
+        thresholds: {
+            showMs: WAIT_SHOW_MS,
+            labelMs: WAIT_LABEL_MS,
+            minVisibleMs: WAIT_MIN_VISIBLE_MS,
+        },
         render: renderWaitMark,
         button(React, opts) {
             const busy = !!(opts && opts.busy);
             const ok = !!(opts && opts.ok);
             const fail = !!(opts && opts.fail);
             if (!busy && !ok && !fail) return (opts && opts.idle) || '';
-            const state = fail ? 'fail' : ok ? 'ok' : 'wait';
-            const label = fail ? (opts.failLabel || opts.idle) : ok ? (opts.okLabel || opts.idle) : (opts.busyLabel || opts.idle);
-            return renderWaitMark(React, { mode: 'button', state, label });
+            if (!React || !React.createElement || typeof React.useState !== 'function') {
+                const state = fail ? 'fail' : ok ? 'ok' : 'wait';
+                const label = fail ? (opts.failLabel || opts.idle)
+                    : ok ? (opts.okLabel || opts.idle)
+                        : (opts.busyLabel || opts.idle);
+                return renderWaitMarkStatic(React, { mode: 'button', state, label });
+            }
+            const Host = getWaitMarkHost(React);
+            return React.createElement(Host.WaitMarkButton, opts || {});
         },
     };
 

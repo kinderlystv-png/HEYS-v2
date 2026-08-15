@@ -28,8 +28,8 @@ html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: #0d1
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 0 26px 10vh;
+    justify-content: flex-start;
+    padding: max(120px, calc(45vh - 28px)) 26px 0;
     font-family: Figtree, system-ui, -apple-system, sans-serif;
     color: var(--boot-ink);
     background: inherit;
@@ -53,7 +53,8 @@ html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: #0d1
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    padding-top: max(120px, calc(45vh - 28px));
     background: transparent;
 }
 html[data-heys-session="0"] .heys-boot-mark { display: none !important; }
@@ -304,8 +305,8 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 0 26px 10%;
+    justify-content: flex-start;
+    padding: max(96px, calc(45% - 28px)) 26px 0;
     min-height: 240px;
     flex: 1;
     font-family: Figtree, system-ui, -apple-system, sans-serif;

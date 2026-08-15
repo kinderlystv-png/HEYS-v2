@@ -108,4 +108,13 @@ describe('cold-start spinner mark', () => {
     expect(css).toContain('@keyframes heys-wait-check');
     expect(css).toContain('animation: heys-wait-check 100ms ease-out 100ms forwards');
   });
+
+  it('applies canvas wait thresholds for user actions', () => {
+    expect(loading).toContain('const WAIT_SHOW_MS = 300');
+    expect(loading).toContain('const WAIT_LABEL_MS = 2000');
+    expect(loading).toContain('const WAIT_MIN_VISIBLE_MS = 400');
+    expect(loading).toContain('WaitMarkButton');
+    expect(loading).toContain('WaitMarkScreen');
+    expect(loading).toContain('thresholds:');
+  });
 });
