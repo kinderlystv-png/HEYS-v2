@@ -14,9 +14,15 @@ const manifest = JSON.parse(read('docs/legal/legal-document-manifest.json'));
 describe('legal release contract', () => {
   it('verifies every canonical document against the version manifest', () => {
     for (const item of Object.values(manifest.documents)) {
-      expect(read(item.canonicalPath)).toBe(read(item.snapshotPath));
+      const snapshot = read(item.snapshotPath);
+      expect(read(item.canonicalPath)).toBe(snapshot);
       expect(hash(item.snapshotPath)).toBe(item.sha256);
-      expect(read(item.snapshotPath)).toContain(`**Версия:** ${item.version}`);
+      // Lawyer 16.08 push texts use "Версия: 1.2." without markdown bold.
+      // Older pack still uses "> **Версия:** 1.11<br>". Both are valid markers.
+      const declaresVersion =
+        snapshot.includes(`**Версия:** ${item.version}`) ||
+        snapshot.includes(`Версия: ${item.version}.`);
+      expect(declaresVersion).toBe(true);
     }
   });
 
