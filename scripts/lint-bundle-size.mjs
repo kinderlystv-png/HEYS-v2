@@ -20,8 +20,9 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { execFileSync, execSync } from 'node:child_process';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
+const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const BASELINE_REL = 'apps/web/__perf_baselines__/boot-split-baselines.json';
 const MANIFEST_REL = 'apps/web/public/bundle-manifest.json';
 const BASELINE_PATH = resolve(ROOT, BASELINE_REL);

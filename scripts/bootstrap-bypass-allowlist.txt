@@ -39,7 +39,7 @@ apps/web/advice/_other.js:350
 apps/web/advice/_other.js:973
 apps/web/advice/_outcomes.js:132
 apps/web/advice/_outcomes.js:170
-apps/web/heys_add_product_step_v1.js:180
+apps/web/heys_add_product_step_v1.js:215
 apps/web/heys_app_gate_flow_v1.js:62
 # [sync-UI] Pending sync toast queue — device-local UI feedback, not diary OverlayStore data.
 # Needle form: stable across line drift when hooks file is edited.
@@ -48,19 +48,19 @@ apps/web/heys_app_hooks_v1.js::PENDING_SYNC_UI_QUEUE_KEY
 apps/web/heys_app_runtime_effects_v1.js:22
 apps/web/heys_app_shell_v1.js:145
 apps/web/heys_app_shell_v1.js:261
-apps/web/heys_app_tabs_v1.js:53
-apps/web/heys_app_tabs_v1.js:669
-apps/web/heys_app_tabs_v1.js:668
-apps/web/heys_app_tabs_v1.js:667
-apps/web/heys_app_tabs_v1.js:728
-apps/web/heys_app_tabs_v1.js:713
-apps/web/heys_app_tabs_v1.js:727
-apps/web/heys_app_tabs_v1.js:712
-apps/web/heys_app_tabs_v1.js:773
-apps/web/heys_app_tabs_v1.js:774
-apps/web/heys_app_tabs_v1.js:788
-apps/web/heys_app_tabs_v1.js:787
-apps/web/heys_app_tabs_v1.js:786
+apps/web/heys_app_tabs_v1.js:51
+apps/web/heys_app_tabs_v1.js:580
+apps/web/heys_app_tabs_v1.js:579
+apps/web/heys_app_tabs_v1.js:578
+apps/web/heys_app_tabs_v1.js:639
+apps/web/heys_app_tabs_v1.js:624
+apps/web/heys_app_tabs_v1.js:638
+apps/web/heys_app_tabs_v1.js:623
+apps/web/heys_app_tabs_v1.js:684
+apps/web/heys_app_tabs_v1.js:685
+apps/web/heys_app_tabs_v1.js:699
+apps/web/heys_app_tabs_v1.js:698
+apps/web/heys_app_tabs_v1.js:697
 apps/web/heys_app_update_notifications_v1.js:17
 apps/web/heys_audio_v1.js:15
 apps/web/heys_audio_v1.js:75
@@ -91,12 +91,12 @@ apps/web/heys_demo_mode_v1.js:144
 apps/web/heys_demo_mode_v1.js:160
 apps/web/heys_demo_mode_v1.js:201
 apps/web/heys_demo_mode_v1.js:202
-apps/web/heys_core_v12.js:238
-apps/web/heys_core_v12.js:856
-apps/web/heys_core_v12.js:1951
-apps/web/heys_core_v12.js:4385
-apps/web/heys_core_v12.js:5644
-apps/web/heys_core_v12.js:5755
+apps/web/heys_core_v12.js:255
+apps/web/heys_core_v12.js:873
+apps/web/heys_core_v12.js:1968
+apps/web/heys_core_v12.js:4402
+apps/web/heys_core_v12.js:5661
+apps/web/heys_core_v12.js:5772
 apps/web/heys_cycle_v1.js:44
 # Generated bundles excluded from scanner (2026-08-12); day_core line entries dropped.
 apps/web/heys_day_orphan_alert.js:142
@@ -170,11 +170,11 @@ apps/web/heys_planning_tasks_v1.js:2295
 apps/web/heys_platform_apis_v1.js:241
 apps/web/heys_platform_apis_v1.js:645
 apps/web/heys_predictive_insights_v1.js:48
-apps/web/heys_products_overlay_v1.js:566
-apps/web/heys_products_overlay_v1.js:1121
-apps/web/heys_products_overlay_v1.js:1122
-apps/web/heys_products_overlay_v1.js:1123
-apps/web/heys_products_overlay_v1.js:1182
+apps/web/heys_products_overlay_v1.js:576
+apps/web/heys_products_overlay_v1.js:1131
+apps/web/heys_products_overlay_v1.js:1132
+apps/web/heys_products_overlay_v1.js:1133
+apps/web/heys_products_overlay_v1.js:1192
 apps/web/heys_profile_step_v1.js:1638
 apps/web/heys_profile_step_v1.js:1039
 apps/web/heys_profile_step_v1.js:1191
@@ -187,9 +187,9 @@ apps/web/heys_refeed_v1.js:76
 apps/web/heys_simple_analytics.js:106
 apps/web/heys_simple_analytics.js:123
 apps/web/heys_simple_analytics.js:130
-apps/web/heys_smart_search_v2.js:801
-apps/web/heys_smart_search_v2.js:872
-apps/web/heys_smart_search_v2.js:899
+apps/web/heys_smart_search_v2.js:809
+apps/web/heys_smart_search_v2.js:888
+apps/web/heys_smart_search_v2.js:915
 apps/web/heys_step_modal_v1.js:29
 apps/web/heys_steps_v1.js:58
 apps/web/heys_storage_layer_v1.js:169
@@ -201,14 +201,14 @@ apps/web/heys_subscriptions_v1.js:67
 apps/web/heys_subscriptions_v1.js:768
 apps/web/heys_training_step_v1.js:29
 apps/web/heys_trial_queue_v1.js:57
-apps/web/heys_ui_onboarding_v1.js:1133
-apps/web/heys_ui_onboarding_v1.js:1159
-apps/web/heys_ui_onboarding_v1.js:1665
-apps/web/heys_ui_onboarding_v1.js:1680
-apps/web/heys_ui_onboarding_v1.js:174
-apps/web/heys_ui_onboarding_v1.js:781
-apps/web/heys_user_tab_impl_v1.js:442
-apps/web/heys_user_tab_impl_v1.js:693
+apps/web/heys_ui_onboarding_v1.js:1138
+apps/web/heys_ui_onboarding_v1.js:1164
+apps/web/heys_ui_onboarding_v1.js:1672
+apps/web/heys_ui_onboarding_v1.js:1687
+apps/web/heys_ui_onboarding_v1.js:177
+apps/web/heys_ui_onboarding_v1.js:784
+apps/web/heys_user_tab_impl_v1.js:449
+apps/web/heys_user_tab_impl_v1.js:733
 apps/web/heys_user_v12.js:149
 apps/web/heys_user_v12.js:160
 apps/web/heys_weekly_reports_v2.js:36
@@ -221,8 +221,8 @@ apps/web/heys_client_log_trace_v1.js:148
 apps/web/heys_whats_new_modal_v1.js:87
 apps/web/heys_widgets_core_v1.js:1046
 apps/web/heys_widgets_core_v1.js:383
-apps/web/heys_widgets_ui_v1.js:4635
-apps/web/heys_widgets_ui_v1.js:6855
+apps/web/heys_widgets_ui_v1.js:4652
+apps/web/heys_widgets_ui_v1.js:6839
 apps/web/heys_yesterday_verify_v1.js:1221
 apps/web/heys_yesterday_verify_v1.js:1219
 apps/web/heys_yesterday_verify_v1.js:36
@@ -233,7 +233,7 @@ apps/web/insights/pi_early_warning.js:843
 apps/web/insights/pi_early_warning.js:1348
 apps/web/insights/pi_ui_meal_rec_card.js:1138
 apps/web/insights/pi_ui_meal_rec_card.js:1399
-apps/web/insights/pi_ui_meal_rec_card.js:2456
+apps/web/insights/pi_ui_meal_rec_card.js:2453
 apps/web/heys_curator_push_onboarding_banner_v1.js:62
 apps/web/heys_app_shell_v1.js:176
 apps/web/heys_app_shell_v1.js:292
@@ -248,7 +248,7 @@ apps/web/fingers/heys_fingers_records_store_v1.js:56
 apps/web/fingers/heys_fingers_session_persistence_v1.js:60
 apps/web/fingers/heys_fingers_session_persistence_v1.js:140
 apps/web/fingers/heys_fingers_voice_v1.js:167
-apps/web/heys_storage_layer_v1.js:1649
+apps/web/heys_storage_layer_v1.js:1680
 apps/web/advice/_core.js:3290
 # chrono planning UI state (collapsed toggle) — added by parallel agent
 # 2026-06-02 (c9c5ec51); should migrate to HEYS.utils.lsSet but не
@@ -264,8 +264,8 @@ apps/web/heys_app_auth_init_v1.js:545
 apps/web/heys_app_auth_init_v1.js:546
 apps/web/heys_app_auth_init_v1.js:548
 apps/web/heys_app_auth_init_v1.js:620
-apps/web/heys_yandex_api_v1.js:281
-apps/web/heys_yandex_api_v1.js:866
+apps/web/heys_yandex_api_v1.js:286
+apps/web/heys_yandex_api_v1.js:893
 
 # [theme prefs] UI theme preference — not diary OverlayStore data.
 apps/web/heys_theme_v1.js::global.localStorage.setItem(key, value)
@@ -292,7 +292,7 @@ apps/web/heys_planning_reading_v1.js:119
 apps/web/heys_messenger_v1.js:1660
 apps/web/heys_messenger_v1.js:1714
 apps/web/heys_messenger_v1.js:1719
-apps/web/heys_messenger_v1.js:2381
+apps/web/heys_messenger_v1.js:2377
 
 # [phase3] Собранная копия advice-исходников. Те же три записи уже разрешены
 # в apps/web/advice/_actions.js:175 и _commitments.js:52,200 — в бандл они

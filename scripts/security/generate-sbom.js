@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 
-const rootDir = path.resolve(new URL('../..', import.meta.url).pathname);
+const rootDir = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const packagePath = path.join(rootDir, 'package.json');
 const lockfilePath = path.join(rootDir, 'pnpm-lock.yaml');
 const outputPath = path.join(rootDir, 'security-reports/sbom.cdx.json');

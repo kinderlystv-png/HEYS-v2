@@ -31,8 +31,9 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, existsSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
+const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const ALLOWLIST_REL = 'scripts/bootstrap-bypass-allowlist.txt';
 const ALLOWLIST_FILE = resolve(ROOT, ALLOWLIST_REL);
 const STRICT = process.argv.includes('--strict');

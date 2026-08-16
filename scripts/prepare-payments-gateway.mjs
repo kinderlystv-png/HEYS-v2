@@ -4,7 +4,7 @@ import path from 'node:path';
 import process from 'node:process';
 import YAML from 'yaml';
 
-const ROOT = path.resolve(new URL('..', import.meta.url).pathname);
+const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const DEFAULT_SPEC = path.join(ROOT, 'yandex-cloud-functions/api-gateway-spec.yaml');
 const DEFAULT_SERVICE_ACCOUNT_ID = 'aje85rjgpj4nk9m384ek';
 

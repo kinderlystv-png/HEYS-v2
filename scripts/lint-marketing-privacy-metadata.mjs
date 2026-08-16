@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-const ROOT = path.resolve(new URL('..', import.meta.url).pathname);
+const ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const BOT_FILE = path.join(ROOT, 'yandex-cloud-functions/heys-bot-client/index.js');
 const PAYMENTS_FILE = path.join(ROOT, 'yandex-cloud-functions/heys-api-payments/index.js');
 

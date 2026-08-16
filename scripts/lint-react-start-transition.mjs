@@ -26,8 +26,9 @@
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
+const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const BASELINE = 13;
 const STRICT = process.argv.includes('--strict');
 

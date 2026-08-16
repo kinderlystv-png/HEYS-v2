@@ -28,8 +28,9 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
+const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const ALLOWLIST_REL = 'scripts/unscoped-client-writes-allowlist.txt';
 const ALLOWLIST_FILE = resolve(ROOT, ALLOWLIST_REL);
 const REF = getCliOption('--ref');
