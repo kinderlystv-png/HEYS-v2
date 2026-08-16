@@ -172,6 +172,24 @@
     } = ctx;
 
     const { addMeal, addWater, openAddProductForMeal, haptic } = actions || {};
+    const [curatorCue, setCuratorCue] = React.useState(null);
+    React.useEffect(() => {
+      const sync = () => {
+        const api = window.HEYS && window.HEYS.CuratorActionsBanner;
+        if (!api) {
+          setCuratorCue(null);
+          return;
+        }
+        if (typeof api.getVisibleCue === 'function') {
+          setCuratorCue(api.getVisibleCue(date));
+          return;
+        }
+        setCuratorCue(typeof api.getDayCue === 'function' ? api.getDayCue(date) : null);
+      };
+      window.addEventListener('heys:curator-review-cues', sync);
+      sync();
+      return () => window.removeEventListener('heys:curator-review-cues', sync);
+    }, [date]);
 
     const budget = Math.round(Number(displayOptimum) || 0);
     const eaten = Math.round(Number(eatenKcal) || 0);
@@ -200,6 +218,30 @@
       className: 'compact-nutrition nutrition-section nutrition-v4',
       'data-curator-target': 'nutrition'
     },
+      curatorCue && React.createElement('button', {
+        type: 'button',
+        className: 'ca-day-entry',
+        onClick: () => {
+          const api = window.HEYS && window.HEYS.CuratorActionsBanner;
+          const cueDate = (curatorCue && curatorCue.date) || date;
+          if (api && typeof api.openFromCue === 'function') api.openFromCue(cueDate);
+          const ui = window.HEYS && window.HEYS.ui;
+          if (cueDate && cueDate !== date && ui && typeof ui.setSelectedDate === 'function') {
+            ui.setSelectedDate(cueDate);
+          }
+          haptic?.('light');
+        }
+      },
+        React.createElement('span', { className: 'ca-day-entry__copy' },
+          React.createElement('b', { className: 'ca-day-entry__title' }, curatorCue.title),
+          React.createElement('span', { className: 'ca-day-entry__sub' }, curatorCue.subtitle)
+        ),
+        React.createElement('span', { className: 'ca-modal__chevron', 'aria-hidden': 'true' },
+          React.createElement('svg', { width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round', strokeLinejoin: 'round' },
+            React.createElement('path', { d: 'M9 6l6 6-6 6' })
+          )
+        )
+      ),
       React.createElement('div', { className: 'nutrition-v4-hero' },
         React.createElement('div', { className: 'nutrition-v4-hero__label' }, 'Осталось на сегодня'),
         React.createElement('div', { className: 'nutrition-v4-hero__value-row' },

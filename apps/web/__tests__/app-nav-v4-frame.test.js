@@ -315,3 +315,27 @@ describe('UI v4 chrome paint — рама', () => {
         expect(baseCss).toMatch(/body:has\(\[data-heys-visible-frame="consent"\]\) \.tabs/);
     });
 });
+
+describe('UI v4 — точка правок куратора на «Питании»', () => {
+    const pwaCss = fs.readFileSync(
+        path.join(WEB_DIR, 'styles/modules/500-pwa-and-offline.css'),
+        'utf8',
+    );
+
+    it('точка 7px на иконке «Питания», без счётчика, скрыта на самой вкладке', () => {
+        expect(shellSrc).toContain('ca-tab-dot-mark');
+        expect(shellSrc).toContain("tab !== 'diary'");
+        expect(shellSrc).toContain('shouldShowNutritionDot');
+        expect(shellSrc).toContain('openFromTab');
+        expect(shellSrc).not.toMatch(/shouldShowNutritionDot[\s\S]{0,120}tab === 'widgets'/);
+        expect(shellSrc).not.toMatch(/ca-tab-dot-mark[\s\S]{0,80}43/);
+        expect(pwaCss).toMatch(/\.ca-tab-dot-mark \{[\s\S]*?width:\s*7px/);
+        expect(pwaCss).toMatch(/\.ca-tab-dot-mark \{[\s\S]*?height:\s*7px/);
+    });
+
+    it('тап «Питание» с другой вкладки открывает лист, если точка горит', () => {
+        expect(shellSrc).toContain('openCuratorFromDot');
+        expect(shellSrc).toMatch(/nextTab === 'diary' && tab !== 'diary'/);
+        expect(shellSrc).toContain('CuratorActionsBanner?.openFromTab');
+    });
+});

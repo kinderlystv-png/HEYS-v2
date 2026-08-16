@@ -74,4 +74,15 @@ describe('Nutrition tab v4 structure', () => {
     expect(cssSource).toContain('var(--v4-ink-2');
     expect(cssSource).toMatch(/v4-intentional.*var\(--v4-act\)/s);
   });
+
+  it('wires the in-tab curator day cue to the same filtered sheet', () => {
+    expect(nutritionSource).toContain('ca-day-entry');
+    expect(nutritionSource).toContain('getVisibleCue');
+    expect(nutritionSource).toContain('getDayCue');
+    expect(nutritionSource).toContain('openFromCue');
+    expect(nutritionSource).toContain('heys:curator-review-cues');
+    expect(nutritionSource).toContain('curatorCue.title');
+    expect(nutritionSource).toContain('curatorCue.date');
+    expect(nutritionSource).toContain('setSelectedDate');
+  });
 });

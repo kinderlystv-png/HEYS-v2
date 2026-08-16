@@ -88,6 +88,61 @@
   .bldk .dots span.on{background:#3f8fd0}
   .bldk .kb{background:#101d29}
   .bldk .kbk{background:#182a3a;color:#e8eef6;box-shadow:0 1px 0 rgba(0,0,0,.5)}
+  .bd{position:absolute;inset:0;z-index:2;background:rgba(42,26,12,.5);backdrop-filter:blur(2.5px);display:flex;flex-direction:column;justify-content:flex-end;padding:12px}
+  .md{background:#fffaf1;border-radius:26px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 18px 50px rgba(40,20,0,.34);max-height:100%}
+  .mdh{padding:17px 16px 12px;display:flex;align-items:flex-start;gap:11px}
+  .mdi{width:40px;height:40px;flex:none;border-radius:999px;background:#f6e6dd;display:flex;align-items:center;justify-content:center}
+  .mdt{font:700 15.5px/1.3 Figtree,sans-serif;color:#201e1d;text-wrap:pretty}
+  .mds{font:500 11.5px/1.45 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:4px;text-wrap:pretty}
+  .mdx{width:44px;height:44px;margin:-12px -12px 0 0;flex:none;display:flex;align-items:center;justify-content:center}
+  .mdb{padding:0 16px;overflow:hidden;display:flex;flex-direction:column;gap:8px}
+  .mdf{padding:13px 16px 15px;display:flex;gap:9px}
+  .gh{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-top:5px}
+  .ghd{font:700 9.5px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.4)}
+  .ghv{font:700 11px/1 Figtree,sans-serif;color:#8a4a20}
+  .row{background:#f7efe2;border-radius:16px;padding:10px 13px;display:flex;align-items:center;gap:10px;min-height:44px}
+  .rowt{flex:1}
+  .rowt b{font:600 12.5px/1.4 Figtree,sans-serif;color:#201e1d;display:block;text-wrap:pretty}
+  .rowt span{font:500 11px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.5);display:block;margin-top:2px}
+  .mc{background:#f7efe2;border-radius:18px;padding:11px 13px 12px}
+  .pr{display:flex;justify-content:space-between;gap:12px;font:500 11.5px/1.6 Figtree,sans-serif;color:rgba(0,0,0,.55)}
+  .cv{color:rgba(0,0,0,.28);display:flex;flex:none}
+  .btn2{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#efe3cf;font:700 13px/1 Figtree,sans-serif;color:rgba(0,0,0,.58);padding:0 22px}
+  .dk .md{background:#191613;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+  .dk .mdi{background:#2c231c}
+  .dk .mdt{color:#f2ede6}
+  .dk .mds,.dk .rowt span,.dk .pr{color:rgba(242,237,230,.5)}
+  .dk .row,.dk .mc{background:#23201b}
+  .dk .rowt b{color:#f2ede6}
+  .dk .ghd{color:rgba(242,237,230,.42)}
+  .dk .ghv{color:#e2a468}
+  .dk .cv{color:rgba(242,237,230,.32)}
+  .dk .btn2{background:#23201b;color:rgba(242,237,230,.6)}
+  .bl .md{background:#ffffff;box-shadow:0 18px 50px rgba(16,24,38,.3)}
+  .bl .mdi{background:#e2ecf6}
+  .bl .mdt,.bl .rowt b{color:#101826}
+  .bl .mds,.bl .rowt span,.bl .pr{color:rgba(16,24,38,.52)}
+  .bl .row,.bl .mc{background:#eef3f9}
+  .bl .ghd{color:rgba(16,24,38,.42)}
+  .bl .ghv{color:#1d5e96}
+  .bl .cv{color:rgba(16,24,38,.3)}
+  .bl .btn2{background:#eef3f9;color:rgba(16,24,38,.6)}
+  .bldk .md{background:#12222f;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+  .bldk .mdi{background:#1e3448}
+  .bldk .mdt,.bldk .rowt b{color:#e8eef6}
+  .bldk .mds,.bldk .rowt span,.bldk .pr{color:rgba(232,238,246,.5)}
+  .bldk .row,.bldk .mc{background:#182a3a}
+  .bldk .ghd{color:rgba(232,238,246,.42)}
+  .bldk .ghv{color:#7fbceb}
+  .bldk .cv{color:rgba(232,238,246,.32)}
+  .bldk .btn2{background:#182a3a;color:rgba(232,238,246,.6)}
+  .mdi{color:#a1471c}
+  .dk .mdi{color:#e2a468}
+  .bl .mdi{color:#1d5e96}
+  .bldk .mdi{color:#7fbceb}
+  .dv{height:1px;background:rgba(0,0,0,.07);margin:9px 0}
+  .dk .dv,.bldk .dv{background:rgba(255,255,255,.09)}
+  .bl .dv{background:rgba(16,24,38,.08)}
 
 </style>
 </helmet>
@@ -99,6 +154,13 @@
     <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Два флоу подряд: настройка профиля один раз, утренний чек-ин каждый день</span>
   </div>
   <p style="margin:0 0 34px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Оба флоу на слое v4: герой один на экран, ярусы терракотовыми заголовками, точки прогресса вместо процентов, тач-цели 44 pt. Регистрация — согласия, подпись кодом и четыре шага профиля. Чек-ин — четыре экрана утром: приветствие живёт на первом вопросе, оценка сна — рядом со временем сна.</p>
+
+    <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:0 0 14px;">Утро · три правила</div>
+  <div style="display:flex;gap:22px;margin-bottom:38px;max-width:1180px;">
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Пропуск веса закрывает шаг, а не день</b><span>«Не взвешивался» ставит в день средний вес за последние три дня с меткой «расчётный»: норма калорий его берёт, тренд и график — нет, иначе линия учится на цифре, которой не было. Если трёх дней ещё нет — вес из профиля. Серия растёт, день же закрыт, но в её истории день помечен точкой, чтобы «5 дней подряд» не означало пять взвешиваний.</span></div></div>
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Вчерашний день — разбор, а не шаг</b><span>Экран появляется, только если во вчерашнем дне есть подозрительные дырки: калорий вбито заметно меньше нормы, шаги 0, вода 0. Два пути — дописать точно или отметить по ощущениям; «Пропустить» остаётся, потому что заставлять человека закрывать прошлое перед взвешиванием нельзя. Точки в индикаторе у экрана нет: мастер начинается с веса.</span></div></div>
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Пятый экран — управление, не отметки</b><span>Холод стоит первой строкой и крупнее: нужен каждый день, привычка ещё не выросла. Добавки — это правка курса, а не «выпил»: список с галочками и «＋», чтобы новый витамин добавлялся тут же. Рутина — напоминание про зарядку. Замеры всплывают строкой, если их не было больше недели. Пусто — это норма, «Готово» активно сразу.</span></div></div>
+  </div>
 
     <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:0 0 14px;">Регистрация · согласия и 4 шага</div>
   <div style="display:flex;gap:30px;align-items:flex-start;">
@@ -1827,7 +1889,7 @@
 
     <div><div class="lab"><b>1 · Вес</b><span>открывается сам по утрам</span></div>
     <div class="ph" data-screen-label="Чек-ин · вес">
-      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:14px;">
         <div style="font:700 20px/1.25 Figtree,sans-serif;color:#201e1d;">Доброе утро, Александра</div>
         <div style="font:500 11.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:6px;">Воскресенье, 16 августа</div>
@@ -1862,7 +1924,7 @@
 
     <div><div class="lab"><b>2 · Сон</b><span>время, длительность и оценка вместе</span></div>
     <div class="ph" data-screen-label="Чек-ин · сон">
-      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span class="on"></span><span></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:22px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(0,0,0,.6);">Сон этой ночью</div>
         <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 50px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.04em;">6:30</span></div>
@@ -1914,7 +1976,7 @@
 
     <div><div class="lab"><b>3 · Как вы сегодня</b><span>три шкалы одним экраном</span></div>
     <div class="ph" data-screen-label="Чек-ин · как вы сегодня">
-      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span class="on"></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:24px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(0,0,0,.6);text-align:center;">Как вы сегодня</div>
         <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:8px;text-wrap:pretty;text-align:center;">Три коротких шкалы — по ним куратор видит, чем объяснить день.</div>
@@ -1946,32 +2008,96 @@
 
     <div><div class="lab"><b>4 · Цель по шагам</b><span>план на день, расход считается по факту</span></div>
     <div class="ph" data-screen-label="Чек-ин · цель по шагам">
-      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(0,0,0,.6);">Шаги на сегодня</div>
         <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 54px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.045em;">10 500</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">шагов</span></div>
         <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:12px;text-align:center;text-wrap:pretty;">Обычно вы проходите около 10 000 — берём чуть выше</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:24px;">
-          <span style="width:48px;height:48px;border-radius:999px;background:#f7efe2;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
-          <span style="font:600 11px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.42);width:96px;text-align:center;text-wrap:pretty;">Можно поставить своё</span>
-          <span style="width:48px;height:48px;border-radius:999px;background:#f7efe2;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+        <div style="width:100%;margin-top:20px;">
+          <div style="position:relative;height:17px;">
+            <div style="position:absolute;left:27.8%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <span style="font:700 9px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8a4a20;white-space:nowrap;">Совет</span>
+              <span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #8a4a20;"></span>
+            </div>
+          </div>
+          <div style="position:relative;height:26px;border-radius:999px;background:#efe3cf;">
+            <div style="position:absolute;left:0;top:0;height:26px;width:27.8%;border-radius:999px;background:#7a8a5e;"></div>
+            <div style="position:absolute;left:27.8%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:999px;background:#fffaf1;box-shadow:0 1px 3px rgba(80,50,20,.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.3);"><span>3 000</span><span>30 000</span></div>
+          <div style="font:600 10.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:11px;text-align:center;text-wrap:pretty;">Сдвиньте пальцем, если день будет другим</div>
         </div>
         <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:26px;text-align:center;text-wrap:pretty;">План на день — его видит куратор. Расход считается по факту пройденного.</div>
+      </div>
+      <div class="foot"><div class="btn">Дальше</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>5 · Остальное</b><span>всё редкое одним экраном</span></div>
+    <div class="ph" data-screen-label="Чек-ин · остальное">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:18px;">
+        <div style="border-radius:20px;background:#f7efe2;padding:16px 17px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+            <span style="font:700 16px/1.25 Figtree,sans-serif;color:#201e1d;">Прохладный душ</span>
+            <span style="font:700 10px/1.2 Figtree,sans-serif;color:#5c6b42;white-space:nowrap;">4 дня подряд</span>
+          </div>
+          <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:5px;text-wrap:pretty;">Хотя бы тридцать секунд в конце обычного душа — этого достаточно.</div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <div style="flex:1;min-height:44px;border-radius:999px;background:#c67139;display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:#2b1608;">Было</div>
+            <div style="flex:none;min-width:96px;min-height:44px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;font:600 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.5);">Не сегодня</div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+          <div style="border-radius:16px;background:#f7efe2;padding:12px 14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+              <span style="font:600 13px/1 Figtree,sans-serif;color:#201e1d;">Добавки</span>
+              <span style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid rgba(0,0,0,.35);"></span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px;margin-top:11px;">
+              <div style="display:flex;align-items:center;gap:9px;"><span style="width:19px;height:19px;border-radius:6px;background:#7a8a5e;flex:none;display:flex;align-items:center;justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f7efe2" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><span style="font:500 12px/1.3 Figtree,sans-serif;color:#201e1d;">Витамин D · 5000 МЕ</span></div>
+              <div style="display:flex;align-items:center;gap:9px;"><span style="width:19px;height:19px;border-radius:6px;background:#7a8a5e;flex:none;display:flex;align-items:center;justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f7efe2" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><span style="font:500 12px/1.3 Figtree,sans-serif;color:#201e1d;">Магний · вечером</span></div>
+              <div style="display:flex;align-items:center;gap:9px;"><span style="width:19px;height:19px;border-radius:6px;border:1.5px solid rgba(0,0,0,.2);flex:none;"></span><span style="font:500 12px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">Омега-3 · курс кончился</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px;margin-top:11px;min-height:44px;"><span style="width:26px;height:26px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;flex:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span><span style="font:600 12px/1 Figtree,sans-serif;color:#8a4a20;">Добавить в курс</span></div>
+          </div>
+
+          <div style="border-radius:16px;background:#f7efe2;padding:13px 14px;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div><div style="font:600 13px/1 Figtree,sans-serif;color:#201e1d;">Утренняя рутина</div><div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:3px;">Резинки, разогрев — 6 минут</div></div>
+            <span style="font:700 15px/1 Figtree,sans-serif;color:rgba(0,0,0,.3);">›</span>
+          </div>
+
+          <div style="border-radius:16px;background:#f7efe2;padding:13px 14px;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div><div style="font:600 13px/1 Figtree,sans-serif;color:#201e1d;">Замеры</div><div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:3px;">Прошло 9 дней с прошлых</div></div>
+            <span style="font:700 15px/1 Figtree,sans-serif;color:rgba(0,0,0,.3);">›</span>
+          </div>
+        </div>
+
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:14px;text-wrap:pretty;">Ничего не тронули — «Готово» всё равно активно.</div>
       </div>
       <div class="foot"><div class="btn">Готово</div></div>
     </div></div>
 
     <div><div class="lab"><b>4 · Короткий сон</b><span>цифра мягче, причина названа</span></div>
     <div class="ph" data-screen-label="Чек-ин · шаги при коротком сне">
-      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(0,0,0,.6);">Шаги на сегодня</div>
         <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 54px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.045em;">8 900</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">шагов</span></div>
         <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:12px;text-align:center;text-wrap:pretty;">Спали 5 ч 40 мин — сегодня берём мягче обычных 10 500</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:24px;">
-          <span style="width:48px;height:48px;border-radius:999px;background:#f7efe2;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
-          <span style="font:600 11px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.42);width:96px;text-align:center;text-wrap:pretty;">Можно поставить своё</span>
-          <span style="width:48px;height:48px;border-radius:999px;background:#f7efe2;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+        <div style="width:100%;margin-top:20px;">
+          <div style="position:relative;height:17px;">
+            <div style="position:absolute;left:21.9%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <span style="font:700 9px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8a4a20;white-space:nowrap;">Совет</span>
+              <span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #8a4a20;"></span>
+            </div>
+          </div>
+          <div style="position:relative;height:26px;border-radius:999px;background:#efe3cf;">
+            <div style="position:absolute;left:0;top:0;height:26px;width:21.9%;border-radius:999px;background:#7a8a5e;"></div>
+            <div style="position:absolute;left:21.9%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:999px;background:#fffaf1;box-shadow:0 1px 3px rgba(80,50,20,.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.3);"><span>3 000</span><span>30 000</span></div>
+          <div style="font:600 10.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:11px;text-align:center;text-wrap:pretty;">Сдвиньте пальцем, если день будет другим</div>
         </div>
         <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:26px;text-align:center;text-wrap:pretty;">Мягче — не меньше: план остаётся, просто по силам этого утра.</div>
       </div>
@@ -1980,32 +2106,50 @@
 
     <div><div class="lab"><b>4 · Тяжёлое утро</b><span>сон и ресурс вместе</span></div>
     <div class="ph" data-screen-label="Чек-ин · шаги при тяжёлом утре">
-      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(0,0,0,.6);">Шаги на сегодня</div>
         <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 54px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.045em;">7 600</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">шагов</span></div>
         <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:12px;text-align:center;text-wrap:pretty;">Короткий сон и тяжёлое самочувствие — цель заметно ниже обычной</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:24px;">
-          <span style="width:48px;height:48px;border-radius:999px;background:#f7efe2;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
-          <span style="font:600 11px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.42);width:96px;text-align:center;text-wrap:pretty;">Можно поставить своё</span>
-          <span style="width:48px;height:48px;border-radius:999px;background:#f7efe2;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+        <div style="width:100%;margin-top:20px;">
+          <div style="position:relative;height:17px;">
+            <div style="position:absolute;left:17%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <span style="font:700 9px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8a4a20;white-space:nowrap;">Совет</span>
+              <span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #8a4a20;"></span>
+            </div>
+          </div>
+          <div style="position:relative;height:26px;border-radius:999px;background:#efe3cf;">
+            <div style="position:absolute;left:0;top:0;height:26px;width:17%;border-radius:999px;background:#7a8a5e;"></div>
+            <div style="position:absolute;left:17%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:999px;background:#fffaf1;box-shadow:0 1px 3px rgba(80,50,20,.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.3);"><span>3 000</span><span>30 000</span></div>
+          <div style="font:600 10.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:11px;text-align:center;text-wrap:pretty;">Сдвиньте пальцем, если день будет другим</div>
         </div>
-        <div style="width:100%;background:#f7efe2;border-radius:16px;padding:12px 14px;margin-top:22px;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);text-wrap:pretty;">Два смягчения подряд — короткий сон и тяжёлое утро; каждое снимает по 15 %.</div>
+        <div style="width:100%;background:#f7efe2;border-radius:16px;padding:12px 14px;margin-top:22px;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);text-wrap:pretty;">Два смягчения подряд — короткий сон и тяжёлое утро.</div>
       </div>
       <div class="foot"><div class="btn">Готово</div></div>
     </div></div>
 
     <div><div class="lab"><b>4 · День с тренировкой</b><span>сегодня запланирована силовая</span></div>
     <div class="ph" data-screen-label="Чек-ин · шаги после тренировки">
-      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(0,0,0,.6);">Шаги на сегодня</div>
         <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 54px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.045em;">8 900</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">шагов</span></div>
-        <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:12px;text-align:center;text-wrap:pretty;">Сегодня есть тренировка — оставляем место на восстановление</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:24px;">
-          <span style="width:48px;height:48px;border-radius:999px;background:#f7efe2;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
-          <span style="font:600 11px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.42);width:96px;text-align:center;text-wrap:pretty;">Можно поставить своё</span>
-          <span style="width:48px;height:48px;border-radius:999px;background:#f7efe2;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+        <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:12px;text-align:center;text-wrap:pretty;">Сегодня есть тренировка — оставляем место на саму сессию</div>
+        <div style="width:100%;margin-top:20px;">
+          <div style="position:relative;height:17px;">
+            <div style="position:absolute;left:21.9%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <span style="font:700 9px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8a4a20;white-space:nowrap;">Совет</span>
+              <span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #8a4a20;"></span>
+            </div>
+          </div>
+          <div style="position:relative;height:26px;border-radius:999px;background:#efe3cf;">
+            <div style="position:absolute;left:0;top:0;height:26px;width:21.9%;border-radius:999px;background:#7a8a5e;"></div>
+            <div style="position:absolute;left:21.9%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:999px;background:#fffaf1;box-shadow:0 1px 3px rgba(80,50,20,.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.3);"><span>3 000</span><span>30 000</span></div>
+          <div style="font:600 10.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:11px;text-align:center;text-wrap:pretty;">Сдвиньте пальцем, если день будет другим</div>
         </div>
         <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:26px;text-align:center;text-wrap:pretty;">Зарядка на цифру не влияет — только полноценная тренировка дольше сорока минут.</div>
       </div>
@@ -2014,34 +2158,77 @@
 
     <div><div class="lab"><b>4 · Потолок</b><span>активный человек, выше не поднимаем</span></div>
     <div class="ph" data-screen-label="Чек-ин · шаги на потолке">
-      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(0,0,0,.6);">Шаги на сегодня</div>
         <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 54px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.045em;">12 000</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">шагов</span></div>
-        <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:12px;text-align:center;text-wrap:pretty;">Вы ходите много — выше двенадцати тысяч приложение не поднимает</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:24px;">
-          <span style="width:48px;height:48px;border-radius:999px;background:#f7efe2;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
-          <span style="font:600 11px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.42);width:96px;text-align:center;text-wrap:pretty;">Можно поставить своё</span>
-          <span style="width:48px;height:48px;border-radius:999px;background:#f7efe2;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+        <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:12px;text-align:center;text-wrap:pretty;">Вы ходите много — выше двенадцати тысяч совет не поднимается</div>
+        <div style="width:100%;margin-top:20px;">
+          <div style="position:relative;height:17px;">
+            <div style="position:absolute;left:33.3%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <span style="font:700 9px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8a4a20;white-space:nowrap;">Совет</span>
+              <span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #8a4a20;"></span>
+            </div>
+          </div>
+          <div style="position:relative;height:26px;border-radius:999px;background:#efe3cf;">
+            <div style="position:absolute;left:0;top:0;height:26px;width:33.3%;border-radius:999px;background:#7a8a5e;"></div>
+            <div style="position:absolute;left:33.3%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:999px;background:#fffaf1;box-shadow:0 1px 3px rgba(80,50,20,.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.3);"><span>3 000</span><span>30 000</span></div>
+          <div style="font:600 10.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:11px;text-align:center;text-wrap:pretty;">Сдвиньте пальцем, если день будет другим</div>
         </div>
-        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:26px;text-align:center;text-wrap:pretty;">Больше можно пройти и без цели — недостижимый план работает хуже выполнимого.</div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:26px;text-align:center;text-wrap:pretty;">Совет выше двенадцати тысяч не поднимается, но своё число можно увести до 30 000.</div>
       </div>
       <div class="foot"><div class="btn">Готово</div></div>
     </div></div>
 
     <div><div class="lab"><b>4 · Мало данных</b><span>меньше трёх дней с шагами</span></div>
     <div class="ph" data-screen-label="Чек-ин · шаги без истории">
-      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(0,0,0,.6);">Шаги на сегодня</div>
         <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 54px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.045em;">10 000</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">шагов</span></div>
         <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:12px;text-align:center;text-wrap:pretty;">Пока не из чего считать вашу обычную ходьбу — это просто начало</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-top:24px;">
-          <span style="width:48px;height:48px;border-radius:999px;background:#f7efe2;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
-          <span style="font:600 11px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.42);width:96px;text-align:center;text-wrap:pretty;">Можно поставить своё</span>
-          <span style="width:48px;height:48px;border-radius:999px;background:#f7efe2;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+        <div style="width:100%;margin-top:20px;">
+          <div style="position:relative;height:17px;">
+            <div style="position:absolute;left:25.9%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <span style="font:700 9px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8a4a20;white-space:nowrap;">Старт</span>
+              <span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #8a4a20;"></span>
+            </div>
+          </div>
+          <div style="position:relative;height:26px;border-radius:999px;background:#efe3cf;">
+            <div style="position:absolute;left:0;top:0;height:26px;width:25.9%;border-radius:999px;background:#7a8a5e;"></div>
+            <div style="position:absolute;left:25.9%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:999px;background:#fffaf1;box-shadow:0 1px 3px rgba(80,50,20,.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.3);"><span>3 000</span><span>30 000</span></div>
+          <div style="font:600 10.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:11px;text-align:center;text-wrap:pretty;">Сдвиньте пальцем, если день будет другим</div>
         </div>
         <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:26px;text-align:center;text-wrap:pretty;">Через несколько дней цифра начнёт подстраиваться под вас.</div>
+      </div>
+      <div class="foot"><div class="btn">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>4 · Своё число</b><span>увели выше совета</span></div>
+    <div class="ph" data-screen-label="Чек-ин · шаги своё число">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
+        <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(0,0,0,.6);">Шаги на сегодня</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 54px/.9 Figtree,sans-serif;color:#c67139;letter-spacing:-.045em;">18 000</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">шагов</span></div>
+        <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:12px;text-align:center;text-wrap:pretty;">Выходной с прогулкой — поставили своё, выше совета</div>
+        <div style="width:100%;margin-top:20px;">
+          <div style="position:relative;height:17px;">
+            <div style="position:absolute;left:27.8%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <span style="font:700 9px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8a4a20;white-space:nowrap;">Совет · 10 500</span>
+              <span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid #8a4a20;"></span>
+            </div>
+          </div>
+          <div style="position:relative;height:26px;border-radius:999px;background:#efe3cf;">
+            <div style="position:absolute;left:0;top:0;height:26px;width:55.6%;border-radius:999px;background:#c67139;"></div>
+            <div style="position:absolute;left:55.6%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:999px;background:#fffaf1;box-shadow:0 1px 3px rgba(80,50,20,.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.3);"><span>3 000</span><span>30 000</span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:20px;text-align:center;text-wrap:pretty;">Метка стоит на совете — касание по ней возвращает 10 500.</div>
       </div>
       <div class="foot"><div class="btn">Готово</div></div>
     </div></div>
@@ -2069,8 +2256,8 @@
         <div class="nt"><b>Дневной сон утром не спрашиваем</b><span>День ещё не начался — в чек-ине этого вопроса быть не может. Дневной сон добавляется в дневнике тем же днём, когда он случился.</span></div>
         <div class="nt"><b>Оценки тянутся, а не нажимаются</b><span>Ползунок от одного до десяти с крупной цифрой. Десять кнопок на телефоне не читаются, а пять превратили бы плавное движение в скачки: разрешение шкалы сохраняем, способ ввода меняем.</span></div>
         <div class="nt"><b>Настроение, самочувствие и стресс — один экран</b><span>Три шкалы пишутся в данные по отдельности, и терять их нельзя, но три экрана подряд утром — перебор. Поэтому здесь единственное место, где героев три: это один вопрос «как вы сегодня» в трёх измерениях, и ползунки идут строками, а не полноэкранными числами.</span></div>
-        <div class="nt"><b>Число одно, причина одна</b><span>Алгоритм берёт медиану за две недели с надбавкой 5 % и смягчает её, если ночь была короткой, ресурс низкий или вчера была тренировка. Показывать эту кухню нельзя: коэффициенты «×0,85» и таблица поправок — язык разработки. На экране остаётся результат и одна фраза, почему он такой именно сегодня. Коридор 7 000–12 000 назван только там, где он действительно сработал.</span></div>
-        <div class="nt"><b>Готовые чипы убраны</b><span>«6 / 7 / 8 / 10 тысяч» не совпадают с рекомендациями вида 10 500, 8 900, 7 600 — человек нажимал бы на круглое число и ломал подстройку. Вместо ряда — плюс и минус рядом с цифрой: своё значение ставится от рекомендации, а не вместо неё.</span></div>
+        <div class="nt"><b>Число одно, причина одна</b><span>Алгоритм берёт медиану за две недели с надбавкой 5 % и смягчает её, если ночь была короткой, ресурс низкий или на сегодня запланирована тренировка. Показывать эту кухню нельзя: коэффициенты «×0,85» и таблица поправок — язык разработки. На экране остаётся результат и одна фраза, почему он такой именно сегодня. Коридор 7 000–12 000 назван только там, где он действительно сработал.</span></div>
+        <div class="nt"><b>Цель тянется, как оценка</b><span>Ползунок 3 000–30 000 с шагом 500 — тот же жест и та же дорожка, что у шкал самочувствия. Рекомендация показана меткой над дорожкой и стоит под пальцем в момент открытия: ничего не нажимая, человек уже видит совет и может увести число куда угодно одним движением. Метка остаётся на совете, касание по ней возвращает рекомендованную цифру. Готовые чипы «6 / 7 / 8 / 10 тысяч» убраны — они не совпадают с рекомендациями вида 10 500 или 7 600, человек жал бы круглое число и ломал подстройку. Совет не поднимается выше 12 000, но это потолок совета, а не запрет: руками доступен весь диапазон. Цель живёт один день как план (`stepsGoal` + дата подтверждения), а завтрашняя медиана учится на факте пройденного, не на поставленной цифре.</span></div>
         <div class="nt"><b>Цель по шагам — план, а не множитель</b><span>Расход считается по факту пройденного, поэтому утренняя цель ничего не прибавляет к норме: она нужна куратору и вам как ориентир. Норма на утро помечена предварительной и уточняется к вечеру — обещать иначе значит врать про расчёт.</span></div>
         <div class="nt"><b>Пропустить можно только вес</b><span>Он единственный зависит от предмета вне приложения — весов может не оказаться под рукой, и формулировка это признаёт: «Не взвешивался». Сон, оценки и цель шагов обязательны, иначе утро не считается закрытым.</span></div>
         <div class="ntl"><b>Конец ритуала показывает результат</b><span>Последний экран не отчитывается о сохранении, а отдаёт то, ради чего утро и нужно: серию, утреннюю норму и план по шагам. Мотивационный шаг про зарядку и растяжку сюда не входит — он в отложенном ряду условных шагов.</span></div>
@@ -2078,6 +2265,297 @@
       <div class="h">Общее с регистрацией</div><div style="background:#efe3cf;border-radius:24px;padding:20px;">
         <div class="nt"><b>Точки прогресса, не проценты</b><span>Четыре точки, активная — вытянутая пилюля. Проценты обещают точность, которой в короткой форме нет.</span></div>
         <div class="ntl"><b>Герой один на экран</b><span>Вес, длительность сна, оценка, цель — каждое крупное число одно и по центру. Второй герой на экране обнуляет первого.</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:56px 0 14px;">Изменения куратора · три правила</div>
+  <div style="display:flex;gap:22px;margin-bottom:38px;max-width:1180px;">
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Показываем итог дня, а не список нажатий</b><span>Человеку важно не то, что куратор «добавил приём», а то, что его день теперь выглядит иначе: было 1 240 ккал, стало 1 937. Поэтому шапка каждой даты несёт дельту по калориям, а подробности лежат под ней. Дельта — это первое «было» и последнее «стало» среди неподтверждённых записей дня: куратор мог сохранять день трижды, и человек должен увидеть путь целиком, а не последний отрезок. Пока полей нет на сервере, шапка идёт без калорий — как в кадре «Без еды»; выдуманное число хуже, чем его отсутствие. Отдельный чип-сводка сверху убран: при одном изменении он дословно повторял единственную строку, при десяти — не помещался.</span></div></div>
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Подтверждение никуда не уводит</b><span>В коде «Ознакомился» подтверждает записи и перебрасывает в дневник к первой правке. Это отбирает управление: человек согласился, что видел, и оказался на другой вкладке. Здесь подтверждение просто закрывает лист и возвращает туда, где человек был. Переход — только по явному касанию строки, и оно же помечает эту запись прочитанной, так что «Показать» отдельной кнопкой не нужен: строка нажимается целиком.</span></div></div>
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Утро важнее правок</b><span>Лист не встаёт поверх утреннего мастера: пока чек-ин открыт или идёт, он ждёт очереди. Требовать закрытого утра нельзя — человек может не делать чек-ин весь день, и правки куратора зависли бы вместе с ним. «Позже» откладывает на 15 минут, после двух показов за сессию третий лист не приходит — вместо него на «Питании» остаётся точка. Навязчивость здесь дороже задержки: правки куратора не срочные.</span></div></div>
+  </div>
+
+  <div style="display:flex;gap:30px;align-items:flex-start;">
+
+    <div><div class="lab"><b>Один приём</b><span>частый случай — куратор внёс ужин</span></div>
+    <div class="ph" data-screen-label="Куратор · один приём">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:#201e1d;">Питание</div><div style="height:74px;border-radius:20px;background:#efe3cf;margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:#f7efe2;margin-top:10px;"></div><div style="height:104px;border-radius:20px;background:#f7efe2;margin-top:10px;"></div></div>
+      <div class="bd"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Куратор Антон обновил ваш дневник</div><div class="mds">Проверьте, что изменилось по вашим данным</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="gh"><span class="ghd">15 августа</span><span class="ghv n">1 240 → 1 937 ккал</span></div>
+          <div class="mc">
+            <div style="display:flex;align-items:center;gap:10px;"><div class="rowt"><b>Ужин в 16:46 · 697 ккал</b><span>Приём добавлен · 7 продуктов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+            <div class="dv"></div>
+            <div class="pr"><span>Люля куриные на гриле</span><span class="n">70 г</span></div>
+            <div class="pr"><span>Бризоль куриная</span><span class="n">70 г</span></div>
+            <div class="pr"><span>Рис с овощами</span><span class="n">288 г</span></div>
+            <div class="ghv" style="margin-top:8px;">и ещё 4 продукта</div>
+          </div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+    <div><div class="lab"><b>День целиком</b><span>шесть правок разного рода</span></div>
+    <div class="ph" data-screen-label="Куратор · много правок за день">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:#201e1d;">Питание</div><div style="height:74px;border-radius:20px;background:#efe3cf;margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:#f7efe2;margin-top:10px;"></div></div>
+      <div class="bd"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Куратор Антон обновил ваш дневник</div><div class="mds">Шесть изменений за вчера</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="gh"><span class="ghd">15 августа</span><span class="ghv n">1 240 → 1 757 ккал</span></div>
+          <div class="row"><div class="rowt"><b>Ужин в 16:46 · 697 ккал</b><span>Приём добавлен · 7 продуктов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Рис в обеде: 200 → 288 г</b><span>+ 118 ккал</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Из завтрака убраны два продукта</b><span>− 298 ккал</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Тренировка: силовая, 45 минут</b><span>18:30 · вкладка «Актив»</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Вес: 82 → 81,5 кг</b></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Обновлены нормы</b><span>Калории и белок</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Две даты</b><span>прошлые дни свёрнуты</span></div>
+    <div class="ph" data-screen-label="Куратор · две даты">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:#201e1d;">Питание</div><div style="height:74px;border-radius:20px;background:#efe3cf;margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:#f7efe2;margin-top:10px;"></div></div>
+      <div class="bd"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Куратор Антон обновил ваш дневник</div><div class="mds">Изменения за два дня</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="gh"><span class="ghd">15 августа</span><span class="ghv n">1 240 → 1 937 ккал</span></div>
+          <div class="row"><div class="rowt"><b>Ужин в 16:46 · 697 ккал</b><span>Приём добавлен · 7 продуктов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Вода: 1 800 мл</b><span>Проставлена задним числом</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="gh"><span class="ghd">14 августа</span><span class="ghv n">2 010 → 1 866 ккал</span></div>
+          <div class="row"><div class="rowt"><b>Три изменения по еде и шагам</b><span>Развернуть</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Длинный приём</b><span>развёрнутый список продуктов</span></div>
+    <div class="ph" data-screen-label="Куратор · длинный приём">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:#201e1d;">Питание</div><div style="height:74px;border-radius:20px;background:#efe3cf;margin-top:14px;"></div></div>
+      <div class="bd"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Куратор Антон обновил ваш дневник</div><div class="mds">Проверьте, что изменилось по вашим данным</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="gh"><span class="ghd">15 августа</span><span class="ghv n">1 240 → 1 937 ккал</span></div>
+          <div class="mc">
+            <div style="display:flex;align-items:center;gap:10px;"><div class="rowt"><b>Ужин в 16:46 · 697 ккал</b><span>Приём добавлен · 7 продуктов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+            <div class="dv"></div>
+            <div class="pr"><span>Люля куриные на гриле</span><span class="n">70 г</span></div>
+            <div class="pr"><span>Бризоль куриная</span><span class="n">70 г</span></div>
+            <div class="pr"><span>Рис с овощами</span><span class="n">288 г</span></div>
+            <div class="pr"><span>Капуста квашеная</span><span class="n">100 г</span></div>
+            <div class="pr"><span>Кофе американо</span><span class="n">150 г</span></div>
+            <div class="pr"><span>Молоко 3.2</span><span class="n">200 г</span></div>
+            <div class="pr"><span>Кетчуп томатный</span><span class="n">15 г</span></div>
+            <div class="ghv" style="margin-top:8px;">Свернуть</div>
+          </div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Без еды</b><span>вес, тренировка, нормы</span></div>
+    <div class="ph" data-screen-label="Куратор · сухие строки">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:#201e1d;">Питание</div><div style="height:74px;border-radius:20px;background:#efe3cf;margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:#f7efe2;margin-top:10px;"></div></div>
+      <div class="bd"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Куратор Антон обновил ваш дневник</div><div class="mds">Еду не трогали — правки по весу и активности</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="gh"><span class="ghd">15 августа</span></div>
+          <div class="row"><div class="rowt"><b>Вес: 82 → 81,5 кг</b><span>Утреннее взвешивание</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Тренировка: силовая, 45 минут</b><span>18:30 · вкладка «Актив»</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Шаги: 8 432</b><span>Подтянуты с часов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Обновлены нормы</b><span>Калории 1 940, белок 128 г</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Долгое отсутствие</b><span>больше сотни записей</span></div>
+    <div class="ph" data-screen-label="Куратор · много дней">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:#201e1d;">Питание</div><div style="height:74px;border-radius:20px;background:#efe3cf;margin-top:14px;"></div></div>
+      <div class="bd"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Куратор Антон обновил ваш дневник</div><div class="mds">Пока вас не было — правки за шесть дней</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="gh"><span class="ghd">15 августа</span><span class="ghv n">1 240 → 1 937 ккал</span></div>
+          <div class="row"><div class="rowt"><b>Ужин в 16:46 · 697 ккал</b><span>Приём добавлен · 7 продуктов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="gh"><span class="ghd">14 августа</span><span class="ghv n">2 010 → 1 866 ккал</span></div>
+          <div class="row"><div class="rowt"><b>Четыре изменения по еде</b><span>Развернуть</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div>
+          <div class="gh"><span class="ghd">9 — 13 августа</span></div>
+          <div class="row"><div class="rowt"><b>Ещё 43 изменения за пять дней</b><span>Развернуть по дням</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Точка вместо листа</b><span>после двух «Позже» за сессию</span></div>
+    <div class="ph" data-screen-label="Куратор · точка на Питании">
+      <div class="sc" style="padding-top:20px;">
+        <div style="font:700 19px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div>
+        <div style="height:88px;border-radius:20px;background:#efe3cf;margin-top:14px;"></div>
+        <div style="height:104px;border-radius:20px;background:#f7efe2;margin-top:10px;"></div>
+        <div style="height:104px;border-radius:20px;background:#f7efe2;margin-top:10px;"></div>
+        <div style="height:104px;border-radius:20px;background:#f7efe2;margin-top:10px;"></div>
+      </div>
+      <div style="display:flex;padding:4px 10px 16px;background:#fffaf1;">
+        <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#8a4a20;">Главная</span></div></div>
+        <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><span style="position:relative;display:flex;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="position:absolute;top:-3px;right:-5px;width:7px;height:7px;border-radius:999px;background:#c67139;box-shadow:0 0 0 2px #fffaf1;"></span></span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Питание</span></div></div>
+        <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Актив</span></div></div>
+        <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Отчёты</span></div></div>
+        <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Инсайты</span></div></div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Вход внутри вкладки</b><span>человек уже на «Питании»</span></div>
+    <div class="ph" data-screen-label="Куратор · строка входа в дне">
+      <div class="sc" style="padding-top:20px;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 19px/1.2 Figtree,sans-serif;color:#201e1d;">15 августа</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);">1 937 ккал</span></div>
+        <div style="background:#f6e6dd;border-radius:16px;padding:11px 13px;margin-top:12px;display:flex;align-items:center;gap:10px;min-height:44px;">
+          <div class="rowt"><b>Куратор обновил этот день</b><span>Шесть изменений · посмотреть</span></div>
+          <span class="cv" style="color:#a1471c;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+        </div>
+        <div style="height:96px;border-radius:20px;background:#f7efe2;margin-top:10px;"></div>
+        <div style="height:96px;border-radius:20px;background:#f7efe2;margin-top:10px;"></div>
+        <div style="height:96px;border-radius:20px;background:#f7efe2;margin-top:10px;"></div>
+      </div>
+      <div style="display:flex;padding:4px 10px 16px;background:#fffaf1;">
+        <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Главная</span></div></div>
+        <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.75" stroke-linecap="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#8a4a20;">Питание</span></div></div>
+        <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Актив</span></div></div>
+        <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Отчёты</span></div></div>
+        <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Инсайты</span></div></div>
+      </div>
+    </div></div>
+
+    <div style="width:400px;flex:none;">
+      <div class="h" style="margin-top:0;">Решения по листу</div><div style="background:#fffaf1;border-radius:24px;padding:20px;">
+        <div class="nt"><b>Лист снизу, а не карточка по центру</b><span>Содержимое непредсказуемой длины: то одна строка, то шесть дат. Лист растёт вверх от нижнего края, поэтому обе кнопки всегда стоят там, где их ждёт большой палец, а короткое содержимое не превращается в карточку, повисшую в середине экрана. Максимум — почти весь экран, шапка и подвал приклеены, скроллится только середина.</span></div>
+        <div class="nt"><b>«Показать» у каждой строки убрано</b><span>Кнопка внутри строки конкурировала с главной кнопкой листа и обещала выбор, которого нет: строка и так ведёт ровно в одно место. Теперь нажимается вся строка, а справа стоит шеврон — сорок четыре точки высоты остаются, кнопки нет. Заодно снят конфликт из кода: раньше переход по «Показать» уходил без подтверждения, и лист возвращался через пятнадцать минут, будто человек ничего не смотрел. Просмотренная строка гасится сама, но запись на сервере не подтверждается: один сейв куратора — это одна запись и до шести строк в листе, и подтвердить её целиком из-за одного ужина значило бы спрятать непрочитанные вес, нормы и тренировку. Запись уходит подтверждённой, когда по ней не осталось видимых строк — или когда нажали «Понятно».</span></div>
+        <div class="nt"><b>Продукты сворачиваются до трёх</b><span>Семь строк по семьдесят грамм — это не изменения, а содержимое приёма: его читают в дневнике. В листе достаточно названия приёма, времени, калорий и трёх первых продуктов; «и ещё четыре продукта» разворачивает остальное на месте. Итог по калориям стоит в шапке карточки, потому что именно он меняет день.</span></div>
+        <div class="nt"><b>Старые дни свёрнуты по умолчанию</b><span>Раскрыт только самый свежий день — тот, про который человек ещё помнит, что ел. Прошлые даты стоят строкой «три изменения по еде и шагам» с дельтой калорий в шапке: этого хватает, чтобы решить, разворачивать или нет. Порог «показываем последние сто изменений, остальное потом» из кода при этом не нужен — свёрнутые дни занимают одну строку каждый, обрезать список нечем.</span></div>
+        <div class="nt"><b>«Понятно» вместо «Ознакомился»</b><span>«Ознакомился» — язык документа под подпись; здесь ничего не подписывают, а просто смотрят, что поменялось. Смысл подтверждения сохраняется: нажатие помечает записи прочитанными на сервере. Если юридически нужна именно формулировка про ознакомление — она вернётся, но тогда и тон листа придётся делать строже.</span></div>
+        <div class="nt"><b>Имя куратора — из данных</b><span>«Антон» в коде зашит. В заголовке подставляется имя закреплённого куратора, а если его нет — «Ваш куратор обновил дневник». Строчка «Проверьте, что изменилось» под заголовком заменяется на сводку, когда изменений больше трёх: «шесть изменений за вчера», «правки за шесть дней».</span></div>
+        <div class="nt"><b>Точка на «Питании» — не бейдж со счётчиком</b><span>После двух показов за сессию третий лист не приходит, и единственным следом остаётся точка семь пикселей у иконки вкладки. Числа в ней нет: «43» превращает помощь куратора в долг, который нужно разгрести. Точка гаснет, когда неподтверждённых записей не осталось.</span></div>
+        <div class="nt"><b>Точка на текущей вкладке недостижима — нужна строка входа</b><span>Человек, который уже стоит на «Питании», по точке нажать не может: вкладка активна. Поэтому в шапке дня, который правил куратор, стоит строка «Куратор обновил этот день · шесть изменений» — она открывает тот же лист, отфильтрованный этой датой. Это же единственный способ вернуться к правкам после «Понятно», если человек передумал и хочет перечитать. Если правки за другой день, а на экране сегодняшний — строка всё равно стоит в шапке текущего дня: «Куратор обновил 4 июля», и ведёт к той дате. Точку на активной «Питании» не возвращаем: человек не нажимает вкладку, на которой уже стоит.</span></div>
+        <div class="ntl"><b>Пустого состояния не рисуем</b><span>Лист без записей открываться не должен: если после фильтрации показывать нечего, показ отменяется, а не заменяется экраном «новых изменений нет». Экран-заглушка тут — это лишнее касание в ответ на ничего.</span></div>
+      </div>
+      <div class="h">Что взято из кода без изменений</div><div style="background:#efe3cf;border-radius:24px;padding:20px;">
+        <div class="nt"><b>Появление</b><span>После полной синхронизации с облаком, при возврате во вкладку, после входа по PIN и по ссылке из пуша. Если открыт другой блокирующий экран — ждёт очереди.</span></div>
+        <div class="nt"><b>Склейка правок</b><span>Серия правок по еде копится до тридцати минут и приходит одним листом; добавленная тренировка приходит сразу.</span></div>
+        <div class="ntl"><b>Адреса переходов</b><span>Еда, вес, вода, сон — дневник нужного дня. Шаги и тренировки — «Актив». Нормы, профиль и план — дневник по умолчанию. После перехода цель подсвечивается вспышкой.</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:50px 0 14px;">Изменения куратора · три палитры</div>
+  <div style="display:flex;gap:30px;align-items:flex-start;">
+
+    <div class="dk"><div class="lab"><b>Песочная тёмная</b><span>тот же лист ночью</span></div>
+    <div class="ph" data-screen-label="Куратор · песочная тёмная">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:#f2ede6;">Питание</div><div style="height:74px;border-radius:20px;background:#2c231c;margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:#23201b;margin-top:10px;"></div><div style="height:104px;border-radius:20px;background:#23201b;margin-top:10px;"></div></div>
+      <div class="bd" style="background:rgba(0,0,0,.62);"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Куратор Антон обновил ваш дневник</div><div class="mds">Проверьте, что изменилось по вашим данным</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="gh"><span class="ghd">15 августа</span><span class="ghv n">1 240 → 1 937 ккал</span></div>
+          <div class="mc">
+            <div style="display:flex;align-items:center;gap:10px;"><div class="rowt"><b>Ужин в 16:46 · 697 ккал</b><span>Приём добавлен · 7 продуктов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+            <div class="dv"></div>
+            <div class="pr"><span>Люля куриные на гриле</span><span class="n">70 г</span></div>
+            <div class="pr"><span>Бризоль куриная</span><span class="n">70 г</span></div>
+            <div class="pr"><span>Рис с овощами</span><span class="n">288 г</span></div>
+            <div class="ghv" style="margin-top:8px;">и ещё 4 продукта</div>
+          </div>
+          <div class="row"><div class="rowt"><b>Вес: 82 → 81,5 кг</b></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+    <div class="bl"><div class="lab"><b>Синяя светлая</b><span>тот же лист</span></div>
+    <div class="ph" data-screen-label="Куратор · синяя светлая">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:#101826;">Питание</div><div style="height:74px;border-radius:20px;background:#e2ecf6;margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:#eef3f9;margin-top:10px;"></div><div style="height:104px;border-radius:20px;background:#eef3f9;margin-top:10px;"></div></div>
+      <div class="bd" style="background:rgba(10,22,38,.5);"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Куратор Антон обновил ваш дневник</div><div class="mds">Проверьте, что изменилось по вашим данным</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="gh"><span class="ghd">15 августа</span><span class="ghv n">1 240 → 1 937 ккал</span></div>
+          <div class="mc">
+            <div style="display:flex;align-items:center;gap:10px;"><div class="rowt"><b>Ужин в 16:46 · 697 ккал</b><span>Приём добавлен · 7 продуктов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+            <div class="dv"></div>
+            <div class="pr"><span>Люля куриные на гриле</span><span class="n">70 г</span></div>
+            <div class="pr"><span>Бризоль куриная</span><span class="n">70 г</span></div>
+            <div class="pr"><span>Рис с овощами</span><span class="n">288 г</span></div>
+            <div class="ghv" style="margin-top:8px;">и ещё 4 продукта</div>
+          </div>
+          <div class="row"><div class="rowt"><b>Вес: 82 → 81,5 кг</b></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+    <div class="bldk"><div class="lab"><b>Синяя тёмная</b><span>тот же лист</span></div>
+    <div class="ph" data-screen-label="Куратор · синяя тёмная">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:#e8eef6;">Питание</div><div style="height:74px;border-radius:20px;background:#1e3448;margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:#182a3a;margin-top:10px;"></div><div style="height:104px;border-radius:20px;background:#182a3a;margin-top:10px;"></div></div>
+      <div class="bd" style="background:rgba(0,8,16,.62);"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Куратор Антон обновил ваш дневник</div><div class="mds">Проверьте, что изменилось по вашим данным</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="gh"><span class="ghd">15 августа</span><span class="ghv n">1 240 → 1 937 ккал</span></div>
+          <div class="mc">
+            <div style="display:flex;align-items:center;gap:10px;"><div class="rowt"><b>Ужин в 16:46 · 697 ккал</b><span>Приём добавлен · 7 продуктов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+            <div class="dv"></div>
+            <div class="pr"><span>Люля куриные на гриле</span><span class="n">70 г</span></div>
+            <div class="pr"><span>Бризоль куриная</span><span class="n">70 г</span></div>
+            <div class="pr"><span>Рис с овощами</span><span class="n">288 г</span></div>
+            <div class="ghv" style="margin-top:8px;">и ещё 4 продукта</div>
+          </div>
+          <div class="row"><div class="rowt"><b>Вес: 82 → 81,5 кг</b></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+    <div style="width:400px;flex:none;">
+      <div class="h" style="margin-top:0;">Палитры</div><div style="background:#fffaf1;border-radius:24px;padding:20px;">
+        <div class="nt"><b>Затемнение считается от грунта</b><span>На светлых палитрах подложка тёплая и полупрозрачная, на тёмных — почти чёрная и плотнее: иначе лист сливается с экраном под ним. Размытие слабое, два с половиной пикселя — приложение должно оставаться узнаваемым, человек не уходит с места, а получает надстройку.</span></div>
+        <div class="ntl"><b>Дельта дня — акцентом, дальше нейтрально</b><span>Единственный цветной элемент содержимого — калории в шапке даты и ссылка разворачивания. Строки нейтральны: правки куратора не событие и не тревога, поэтому красного и зелёного тут нет — даже когда калорий стало меньше.</span></div>
       </div>
     </div>
 

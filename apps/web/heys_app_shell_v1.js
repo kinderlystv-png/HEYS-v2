@@ -483,7 +483,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const acceptPushFirstDayPrompt = async () => {
             dismissPushFirstDayPrompt();
             try {
-                if (window.HEYS?.push?.subscribe) {
+                if (window.HEYS?.push?.setEnabled) {
+                    await window.HEYS.push.setEnabled(true);
+                    const s = await window.HEYS.push.getStatus();
+                    setPushStatus(s);
+                } else if (window.HEYS?.push?.subscribe) {
                     await window.HEYS.push.subscribe();
                     const s = await window.HEYS.push.getStatus();
                     setPushStatus(s);
@@ -4481,6 +4485,17 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 ? React.createElement(NavIcon, { name: iconName, active: !!active })
                 : React.createElement('span', { className: 'tab-icon', 'aria-hidden': 'true' }, '•')
         );
+        const [curatorNutritionDot, setCuratorNutritionDot] = React.useState(false);
+        React.useEffect(() => {
+            const sync = () => {
+                const show = window.HEYS?.CuratorActionsBanner?.shouldShowNutritionDot?.() === true
+                    && tab !== 'diary';
+                setCuratorNutritionDot(!!show);
+            };
+            window.addEventListener('heys:curator-review-cues', sync);
+            sync();
+            return () => window.removeEventListener('heys:curator-review-cues', sync);
+        }, [tab]);
 
         const switchTabWithUndoCommit = (nextTab, reason) =>
             commitUndoAndSwitchTab(setTab, nextTab, { currentTab: tab, reason });
@@ -4553,10 +4568,17 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             Promise.resolve(window.HEYS.push.getStatus()).then((status) => {
                 if (!cancelled) setSheetPushStatus(status || null);
             }).catch(() => { /* статус строки останется пустым */ });
+            const onPushEnabledChanged = () => {
+                Promise.resolve(window.HEYS.push.getStatus()).then((status) => {
+                    if (!cancelled) setSheetPushStatus(status || null);
+                }).catch(() => {});
+            };
+            window.addEventListener('heys:push-enabled-changed', onPushEnabledChanged);
             window.addEventListener('resize', syncSettingsSheetAnchor);
             window.addEventListener('scroll', syncSettingsSheetAnchor, true);
             return () => {
                 cancelled = true;
+                window.removeEventListener('heys:push-enabled-changed', onPushEnabledChanged);
                 window.removeEventListener('resize', syncSettingsSheetAnchor);
                 window.removeEventListener('scroll', syncSettingsSheetAnchor, true);
                 document.documentElement.style.removeProperty('--settings-sheet-top');
@@ -4575,6 +4597,22 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     : sheetPushStatus.subscribed
                         ? 'Включены'
                         : 'Выключены';
+        const sheetPushOn = !!(sheetPushStatus && sheetPushStatus.subscribed);
+        const handleSheetPushToggle = async () => {
+            if (pushBusy || !window.HEYS?.push?.setEnabled) return;
+            if (sheetPushStatus?.capable === false) return;
+            setPushBusy(true);
+            try {
+                const r = await window.HEYS.push.setEnabled(!sheetPushOn);
+                if (r && r.ok === false && r.reason === 'ios_needs_install') {
+                    /* статус строки уже говорит про главный экран */
+                }
+                const s = await window.HEYS.push.getStatus();
+                setSheetPushStatus(s || null);
+                setPushStatus(s || null);
+            } catch (_) { /* статус перечитается событием */ }
+            finally { setPushBusy(false); }
+        };
 
         const toggleSheetExtra = (key) => {
             setSheetExtra((current) => (current === key ? null : key));
@@ -4622,7 +4660,14 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             } else if (nextTab === 'widgets') {
                 window.HEYS?.debugPanel?.handleTap();
             }
+            const openCuratorFromDot = nextTab === 'diary' && tab !== 'diary'
+                && window.HEYS?.CuratorActionsBanner?.shouldShowNutritionDot?.();
             switchTabWithUndoCommit(nextTab, `tab-${nextTab}-switch`);
+            if (openCuratorFromDot) {
+                requestAnimationFrame(() => {
+                    window.HEYS?.CuratorActionsBanner?.openFromTab?.();
+                });
+            }
         };
 
         React.useEffect(() => {
@@ -4836,10 +4881,18 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         title: item.label,
                         role: 'tab',
                         'aria-selected': tab === item.key ? 'true' : 'false',
+                        'aria-label': item.key === 'diary' && curatorNutritionDot
+                            ? 'Питание, есть правки куратора'
+                            : undefined,
                         onClick: () => handlePrimaryTabClick(item.key),
                     },
                     widgetsEditMode && defaultTab === item.key && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
-                    renderNavIcon(item.iconName, tab === item.key),
+                    item.key === 'diary'
+                        ? React.createElement('span', { className: 'tab-icon-wrap' },
+                            renderNavIcon(item.iconName, tab === item.key),
+                            curatorNutritionDot && React.createElement('span', { className: 'ca-tab-dot-mark', 'aria-hidden': 'true' })
+                        )
+                        : renderNavIcon(item.iconName, tab === item.key),
                     React.createElement('span', { className: 'tab-text' }, item.label),
                 )),
             ),
@@ -4884,6 +4937,36 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         'aria-label': 'Настройки',
                     },
                     React.createElement('div', { className: 'hdr-settings-sheet__card' },
+                    React.createElement('div', {
+                        className: 'hdr-settings-sheet__push',
+                        onClick: (e) => e.stopPropagation(),
+                    },
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'tab-settings-diary-toggle' + (sheetPushOn ? ' is-on' : ''),
+                            role: 'switch',
+                            'aria-checked': sheetPushOn ? 'true' : 'false',
+                            disabled: pushBusy || sheetPushStatus?.capable === false,
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                handleSheetPushToggle();
+                            },
+                            title: settingsPushLabel || 'Уведомления',
+                        },
+                            React.createElement('span', { className: 'tab-settings-diary-toggle__copy' },
+                                React.createElement('span', { className: 'tab-settings-diary-toggle__label' }, 'Уведомления'),
+                                React.createElement('span', { className: 'tab-settings-diary-toggle__hint' },
+                                    settingsPushLabel || 'Напоминания, дневник, сообщения куратора'
+                                )
+                            ),
+                            React.createElement('span', {
+                                className: 'tab-settings-diary-toggle__switch',
+                                'aria-hidden': 'true',
+                            },
+                                React.createElement('span', { className: 'tab-settings-diary-toggle__knob' })
+                            )
+                        )
+                    ),
                     renderSettingsGroup('me', [
                         renderSettingsRow({
                             key: 'profile',
