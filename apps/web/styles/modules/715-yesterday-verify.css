@@ -731,3 +731,137 @@
   background: var(--v4-card, #23201b);
   color: rgba(242, 237, 230, 0.6);
 }
+
+.yv-food-card {
+  background: var(--v4-sand-hero, #f7efe2);
+  border-radius: 20px;
+  padding: 14px 16px;
+  margin-top: 16px;
+}
+
+.yv-food-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.yv-food-row + .yv-food-row {
+  margin-top: 13px;
+}
+
+.yv-food-value {
+  color: #a1471c;
+  font-variant-numeric: tabular-nums;
+}
+
+.yv-food-muted {
+  color: rgba(0, 0, 0, 0.42);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.yv-force-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.yv-force {
+  background: var(--v4-sand-hero, #f7efe2);
+  border: none;
+  border-radius: 16px;
+  padding: 12px 14px;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.yv-force--on {
+  background: var(--v4-chip, #efe3cf);
+  box-shadow: inset 0 0 0 2px var(--v4-sand-act, #c67139);
+}
+
+.yv-force-title {
+  font: 600 12.5px/1.4 Figtree, system-ui, sans-serif;
+  color: #201e1d;
+}
+
+.yv-force-kcal {
+  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.yv-pack-day {
+  width: 100%;
+  background: var(--v4-sand-hero, #f7efe2);
+  border: none;
+  border-radius: 16px;
+  padding: 11px 13px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.yv-days {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.yv-pack-day-copy {
+  flex: 1;
+}
+
+.yv-pack-day-title {
+  font: 600 12.5px/1.4 Figtree, system-ui, sans-serif;
+  color: #201e1d;
+}
+
+.yv-pack-day-meta {
+  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.5);
+  margin-top: 2px;
+}
+
+.yv-pack-chevron {
+  font: 700 15px/1 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.3);
+}
+
+.yv-canvas-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.yv-text-later {
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+}
+
+.mc-modal--daily .yv-step {
+  min-height: 100%;
+  padding-top: 4px;
+}
+
+.yv-step--feelings .yv-hero-title,
+.yv-step--single .yv-hero-title {
+  font: 700 20px/1.25 Figtree, system-ui, sans-serif;
+}

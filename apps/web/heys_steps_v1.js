@@ -97,7 +97,10 @@
     className = 'mc-quality-slider',
     background,
     ariaLabel,
-    style
+    style,
+    variant,
+    fill,
+    thumbSize
   }) {
     const trackRef = useRef(null);
     const draggingRef = useRef(false);
@@ -197,9 +200,15 @@
       onValue(Math.max(safeMin, Math.min(safeMax, nextValue)), event);
     };
 
+    const isV4 = variant === 'v4' || String(className || '').indexOf('mc-v4-scale') !== -1;
+    const fillColor = fill === 'act'
+      ? 'var(--v4-sand-act, #c67139)'
+      : '#7a8a5e';
+    const thumbPx = isV4 ? (Number(thumbSize) || 20) : 34;
+
     return React.createElement('div', {
       ref: trackRef,
-      className: `${className} mc-drag-slider`,
+      className: `${className} mc-drag-slider${isV4 ? ' mc-v4-scale' : ''}${fill === 'act' ? ' mc-v4-scale--act' : ''}`,
       role: 'slider',
       tabIndex: 0,
       'aria-label': ariaLabel,
@@ -222,17 +231,43 @@
         position: 'relative',
         display: 'block',
         width: '100%',
-        height: '39px',
-        borderRadius: '4px',
+        height: isV4 ? '26px' : '39px',
+        borderRadius: isV4 ? '999px' : '4px',
         touchAction: 'none',
         userSelect: 'none',
         cursor: 'grab',
-        background
+        background: isV4 ? (background || 'var(--v4-chip, #efe3cf)') : background
       }, style || {})
     },
+      isV4 && React.createElement('span', {
+        'aria-hidden': 'true',
+        className: 'mc-v4-scale-fill',
+        style: {
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          height: '26px',
+          width: `${clampedPercent}%`,
+          borderRadius: 999,
+          background: fillColor,
+          pointerEvents: 'none'
+        }
+      }),
       React.createElement('span', {
         'aria-hidden': 'true',
-        style: {
+        className: isV4 ? 'mc-v4-scale-thumb' : undefined,
+        style: isV4 ? {
+          position: 'absolute',
+          left: `${clampedPercent}%`,
+          top: '50%',
+          width: thumbPx,
+          height: thumbPx,
+          transform: 'translate(-50%, -50%)',
+          borderRadius: 999,
+          background: 'var(--v4-bg, #fffaf1)',
+          boxShadow: '0 1px 3px rgba(80, 50, 20, 0.25)',
+          pointerEvents: 'none'
+        } : {
           position: 'absolute',
           left: `calc(${clampedPercent}% - 17px)`,
           top: '50%',
@@ -1241,43 +1276,55 @@
     };
   }
 
-  function buildDailyCheckinGreeting() {
+  function getWeekWeightDelta(currentWeight) {
+    const samples = collectRecentMeasuredWeights(14);
+    if (!samples.length) return null;
+    const todayKey = typeof getTodayKey === 'function' ? getTodayKey() : new Date().toISOString().slice(0, 10);
+    const [year, month, day] = String(todayKey).split('-').map(Number);
+    const today = new Date(year, (month || 1) - 1, day || 1);
+    let best = null;
+    let bestDist = 99;
+    samples.forEach((sample) => {
+      const [sy, sm, sd] = String(sample.date).split('-').map(Number);
+      const then = new Date(sy, (sm || 1) - 1, sd || 1);
+      const daysAgo = Math.round((today - then) / 86400000);
+      const dist = Math.abs(daysAgo - 7);
+      if (daysAgo >= 4 && dist < bestDist) {
+        best = sample;
+        bestDist = dist;
+      }
+    });
+    if (!best) return null;
+    const delta = Number(currentWeight) - Number(best.weight);
+    if (!Number.isFinite(delta)) return null;
+    return Math.round(delta * 10) / 10;
+  }
+
+  function buildDailyCheckinGreeting({ firstMorning } = {}) {
     const profile = lsGet('heys_profile', {}) || {};
     const firstName = String(profile.firstName || '').trim();
     const now = new Date();
     const weekday = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
     const capWeekday = weekday ? weekday.charAt(0).toUpperCase() + weekday.slice(1) : '';
-    const streak = Number(HEYS.Day?.getStreak?.() || 0);
+    const dateLine = firstMorning && capWeekday ? `${capWeekday} — первый день недели` : capWeekday;
+    const streak = firstMorning ? 0 : Number(HEYS.Day?.getStreak?.() || 0);
     const title = firstName ? `Доброе утро, ${firstName}` : 'Доброе утро';
-    return React.createElement('div', { className: 'mc-daily-greeting', style: { width: '100%', marginBottom: 8 } },
-      React.createElement('div', {
-        style: { font: '700 20px/1.25 Figtree, system-ui, sans-serif', color: 'var(--v4-ink, #201e1d)' }
-      }, title),
-      React.createElement('div', {
-        style: { font: '500 11.5px/1.4 Figtree, system-ui, sans-serif', color: 'var(--v4-ink-2, rgba(0,0,0,.45))', marginTop: 6 }
-      }, capWeekday),
-      streak > 0 && React.createElement('div', {
-        style: {
-          display: 'flex', alignItems: 'center', gap: 10, background: 'var(--v4-sand-hero, #f7efe2)',
-          borderRadius: 16, padding: '11px 14px', marginTop: 14
-        }
-      },
-        React.createElement('span', {
-          style: { font: '800 15px/1 Figtree, system-ui, sans-serif', color: 'var(--v4-sand-act-text, #8a4a20)' }
-        }, String(streak)),
-        React.createElement('span', {
-          style: { font: '600 11.5px/1.35 Figtree, system-ui, sans-serif', color: 'var(--v4-ink-2, rgba(0,0,0,.6))' }
-        }, streak === 1
-          ? 'день подряд — отметьте сегодня, чтобы продолжить серию'
-          : 'дней подряд — отметьте сегодня, чтобы продолжить серию')
+    return React.createElement('div', { className: 'mc-daily-greeting' },
+      React.createElement('div', { className: 'mc-daily-greeting-title' }, title),
+      React.createElement('div', { className: 'mc-daily-greeting-date' }, dateLine),
+      streak > 0 && React.createElement('div', { className: 'mc-daily-streak-banner' },
+        React.createElement('span', { className: 'mc-daily-streak-count' }, String(streak)),
+        React.createElement('span', { className: 'mc-daily-streak-text' },
+          streak === 1
+            ? 'день подряд — отметьте сегодня, чтобы продолжить серию'
+            : 'дней подряд — отметьте сегодня, чтобы продолжить серию')
       )
     );
   }
 
   function WeightStepComponent({ data, onChange, context }) {
     const lastWeight = useMemo(() => getLastKnownWeight(), []);
-    const yesterdayWeight = useMemo(() => getYesterdayWeight(), []);
-    const weightForecast = useMemo(() => getWeightForecast(), []);
+    const measuredHistory = useMemo(() => collectRecentMeasuredWeights(14), []);
 
     const estimated = data.estimated === true;
     const estimateSource = data.estimateSource || 'profile';
@@ -1285,9 +1332,12 @@
     const weightKg = data.weightKg ?? Math.floor(lastWeight.weight);
     const weightG = data.weightG ?? Math.round((lastWeight.weight % 1) * 10);
     const currentWeight = weightKg + weightG / 10;
-    const weightDelta = !estimated && yesterdayWeight ? currentWeight - yesterdayWeight : null;
+    const isFirstMorning = !estimated && measuredHistory.length === 0;
+    const weekDelta = !estimated && !isFirstMorning ? getWeekWeightDelta(currentWeight) : null;
     const weightLabel = currentWeight.toFixed(1).replace('.', ',');
-    const greeting = context?.dailyCheckin ? buildDailyCheckinGreeting() : null;
+    const greeting = context?.dailyCheckin && !estimated
+      ? buildDailyCheckinGreeting({ firstMorning: isFirstMorning })
+      : null;
 
     const kgValues = useMemo(() => Array.from({ length: 101 }, (_, i) => 40 + i), []);
     const gValues = useMemo(() => Array.from({ length: 10 }, (_, i) => i), []);
@@ -1362,16 +1412,16 @@
       ? 'Расчётный'
       : 'Из профиля';
     const estimatedHint = estimateSource === 'estimated_avg' || estimateSource === 'average3'
-      ? 'Норма дня эту цифру берёт, тренд и график — нет. Серия растёт.'
+      ? 'Норма дня эту цифру берёт, тренд и график — нет. Серия растёт, но в её истории день помечен точкой.'
       : 'Как только наберётся три взвешивания, расчётный вес начнёт считаться по ним.';
 
     if (estimated) {
       return React.createElement('div', {
         className: 'mc-weight-step',
-        style: { display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 8 }
+        style: { display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 34 }
       },
         greeting,
-        React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--v4-ink-2, rgba(0,0,0,.6))' } }, 'Вес на утро'),
+        React.createElement('div', { className: 'mc-step-kicker' }, 'Вес на утро'),
         React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 14 } },
           React.createElement('span', { style: { fontSize: 58, fontWeight: 600, lineHeight: 0.9, color: 'rgba(0,0,0,.45)', letterSpacing: '-0.045em' } }, weightLabel),
           React.createElement('span', { style: { fontSize: 13, fontWeight: 600, color: 'rgba(0,0,0,.38)' } }, 'кг')
@@ -1419,37 +1469,44 @@
 
     return React.createElement('div', { className: 'mc-weight-step' },
       greeting,
-      React.createElement('div', { className: 'mc-weight-display' },
-        React.createElement('span', { className: 'mc-weight-value' }, currentWeight.toFixed(1)),
-        React.createElement('span', { className: 'mc-weight-unit' }, ' кг'),
-        weightDelta !== null && React.createElement('div', {
-          className: `mc-weight-delta ${weightDelta > 0 ? 'mc-delta-up' : weightDelta < 0 ? 'mc-delta-down' : 'mc-delta-same'}`
-        },
-          weightDelta > 0 ? `+${weightDelta.toFixed(1)}` : weightDelta.toFixed(1),
-          ' кг за вчера'
+      React.createElement('div', { className: 'mc-weight-hero' },
+        React.createElement('div', { className: 'mc-step-kicker' }, 'Вес на утро'),
+        React.createElement('div', { className: 'mc-weight-hero-row' },
+          React.createElement('span', { className: 'mc-weight-hero-value' }, weightLabel),
+          React.createElement('span', { className: 'mc-weight-hero-unit' }, 'кг')
+        ),
+        weekDelta !== null && React.createElement('div', { className: 'mc-weight-week-delta' },
+          `${weekDelta > 0 ? '+' : ''}${String(weekDelta).replace('.', ',')} кг за неделю`
+        ),
+        isFirstMorning && React.createElement('div', {
+          className: 'mc-recorded-hint',
+          style: { textAlign: 'center', marginTop: 12 }
+        }, 'Из профиля — поправьте, если весы показывают другое')
+      ),
+      React.createElement('div', { className: 'mc-weight-kilo-card' },
+        React.createElement('div', { className: 'mc-kilo-label' }, 'Килограммы'),
+        React.createElement('div', { className: 'mc-weight-pickers' },
+          React.createElement(WheelPicker, {
+            values: kgValues,
+            value: weightKg,
+            onChange: setWeightKg,
+            label: '',
+            compact: true
+          }),
+          React.createElement('span', { className: 'mc-weight-comma' }, ','),
+          React.createElement(WheelPicker, {
+            values: gValues,
+            value: weightG,
+            onChange: setWeightG,
+            label: '',
+            compact: true
+          })
         )
       ),
-      React.createElement('div', { className: 'mc-weight-pickers' },
-        React.createElement(WheelPicker, {
-          values: kgValues,
-          value: weightKg,
-          onChange: setWeightKg,
-          label: 'кг'
-        }),
-        React.createElement('span', { className: 'mc-weight-dot' }, '.'),
-        React.createElement(WheelPicker, {
-          values: gValues,
-          value: weightG,
-          onChange: setWeightG,
-          label: 'г'
-        })
-      ),
-      weightForecast && !estimated && React.createElement('div', { className: 'mc-weight-forecast' },
-        React.createElement('span', { className: 'mc-forecast-text' },
-          `Прогноз через 2 нед: ${weightForecast.weight} кг`,
-          weightForecast.weeklyChange !== 0 && ` (${weightForecast.weeklyChange > 0 ? '+' : ''}${weightForecast.weeklyChange} кг/нед)`
-        )
-      ),
+      isFirstMorning && React.createElement('p', {
+        className: 'mc-recorded-hint',
+        style: { textAlign: 'center', marginTop: 16 }
+      }, 'Динамика появится через неделю взвешиваний.'),
       !context?.dailyCheckin && React.createElement('button', {
         type: 'button',
         onClick: applyEstimate,
@@ -2148,6 +2205,20 @@
     return `${h}:${String(m).padStart(2, '0')}`;
   }
 
+  function sleepNormLine(hours) {
+    const profile = lsGet('heys_profile', {}) || {};
+    const norm = Number(profile.sleepHours) || 8;
+    const diff = Number(hours) - norm;
+    if (!Number.isFinite(diff) || Math.abs(diff) < 0.2) return 'как ваша норма';
+    const absMin = Math.round(Math.abs(diff) * 2) / 2;
+    const amount = absMin === 0.5
+      ? 'полчаса'
+      : (absMin === 1 ? 'час' : `${String(absMin).replace('.', ',')} ч`);
+    return diff < 0
+      ? `на ${amount} меньше вашей нормы`
+      : `на ${amount} больше вашей нормы`;
+  }
+
   function CombinedSleepStepComponent({ data, onChange }) {
     const TimePicker = HEYS.StepModal.TimePicker;
     const lastSleep = useMemo(() => getLastSleepData(), []);
@@ -2165,6 +2236,7 @@
     return React.createElement('div', { className: 'mc-sleep-combined' },
       React.createElement('div', { className: 'mc-step-kicker' }, 'Сон этой ночью'),
       React.createElement('div', { className: 'mc-hero-number' }, formatSleepDuration(sleepHours)),
+      React.createElement('div', { className: 'mc-sleep-norm' }, sleepNormLine(sleepHours)),
       React.createElement('div', { className: 'mc-sleep-times mc-sleep-times--split' },
         React.createElement('div', { className: 'mc-sleep-block' },
           React.createElement('div', { className: 'mc-sleep-label' }, 'Легли'),
@@ -2178,6 +2250,7 @@
             minutesLabel: '',
             display: null,
             linkedScroll: true,
+            compact: true,
             className: 'mc-time-pickers'
           })
         ),
@@ -2193,6 +2266,7 @@
             minutesLabel: '',
             display: null,
             linkedScroll: true,
+            compact: true,
             className: 'mc-time-pickers'
           })
         )
@@ -2202,13 +2276,15 @@
           React.createElement('span', null, 'Насколько выспались'),
           React.createElement('span', { className: 'mc-scale-value' }, `${sleepQuality} · ${String(qualityWord).toLowerCase()}`)
         ),
-        React.createElement('input', Object.assign({
-          type: 'range',
-          className: 'mc-v4-slider',
+        React.createElement(DragValueSlider, {
+          className: 'mc-v4-scale',
+          variant: 'v4',
           min: 1,
           max: 10,
           value: sleepQuality,
-        }, getRangeGestureProps((nextValue) => update({ sleepQuality: nextValue })))),
+          onValue: (nextValue) => update({ sleepQuality: nextValue }),
+          ariaLabel: 'Насколько выспались'
+        }),
         React.createElement('button', {
           type: 'button',
           className: 'mc-note-toggle',
@@ -2538,33 +2614,43 @@
 
     return React.createElement('div', { className: 'mc-steps-step' },
       React.createElement('div', { className: 'mc-step-kicker' }, 'Шаги на сегодня'),
-      React.createElement('div', { className: 'mc-hero-number' }, Math.round(stepsGoal).toLocaleString('ru-RU')),
-      React.createElement('div', { className: 'mc-recorded-sub', style: { textAlign: 'center' } }, reason),
+      React.createElement('div', { className: 'mc-hero-number', style: { fontSize: 54 } },
+        Math.round(stepsGoal).toLocaleString('ru-RU'),
+        React.createElement('span', { className: 'mc-steps-unit' }, ' шагов')
+      ),
+      React.createElement('div', { className: 'mc-recorded-sub', style: { textAlign: 'center', fontWeight: 600 } }, reason),
       React.createElement('div', { className: 'mc-steps-slider-container', style: { width: '100%', marginTop: 20 } },
         React.createElement('div', { style: { position: 'relative', height: 17 } },
           React.createElement('div', {
-            style: {
-              position: 'absolute', left: `${advicePercent}%`, transform: 'translateX(-50%)',
-              font: '700 9px/1 Figtree, system-ui, sans-serif', letterSpacing: '0.1em',
-              textTransform: 'uppercase', color: 'var(--v4-sand-act-text, #8a4a20)'
-            }
+            className: 'mc-steps-advice-mark',
+            style: { left: `${advicePercent}%` }
           }, 'Совет')
         ),
-        React.createElement('input', Object.assign({
-          type: 'range',
-          className: 'mc-v4-slider',
+        React.createElement(DragValueSlider, {
+          className: 'mc-v4-scale',
+          variant: 'v4',
           min: sliderMin,
           max: sliderMax,
           step: 500,
           value: stepsGoal,
-        }, getRangeGestureProps((nextValue) => onChange({ ...data, stepsGoal: nextValue })), {
-          style: { touchAction: 'none' }
-        })),
+          thumbSize: 22,
+          onValue: (nextValue) => onChange({ ...data, stepsGoal: nextValue }),
+          ariaLabel: 'Цель по шагам',
+          style: { marginTop: 0 }
+        }),
         React.createElement('div', { className: 'mc-steps-slider-labels' },
           React.createElement('span', null, '3 000'),
           React.createElement('span', null, '30 000')
-        )
-      )
+        ),
+        React.createElement('div', {
+          className: 'mc-recorded-hint',
+          style: { textAlign: 'center', marginTop: 11, fontWeight: 600 }
+        }, 'Сдвиньте пальцем, если день будет другим')
+      ),
+      React.createElement('div', {
+        className: 'mc-recorded-hint',
+        style: { textAlign: 'center', marginTop: 26 }
+      }, 'План на день — его видит куратор. Расход считается по факту пройденного.')
     );
   }
 
@@ -4272,115 +4358,9 @@
     const wellbeing = data.wellbeing ?? 5;
     const stress = data.stress ?? 5;
 
-    // Состояние для анимации pulse
-    const [pulsingField, setPulsingField] = useState(null);
-    const [poppingEmoji, setPoppingEmoji] = useState(null);
-
     const updateField = (field, value) => {
       hapticLight();
       onChange({ ...data, [field]: value });
-
-      // Запускаем pulse-анимацию
-      setPulsingField(field);
-      setPoppingEmoji(field);
-      setTimeout(() => setPulsingField(null), 300);
-      setTimeout(() => setPoppingEmoji(null), 250);
-    };
-
-    // Компонент одного рейтинга с пресетами и градиентом
-    const RatingCard = ({ field, value, emoji, emojiFn, title, color, colorFn, presets, isNegative, index }) => {
-      const handleSliderValue = (nextValue) => {
-        if (nextValue === Number(value)) return;
-        updateField(field, nextValue);
-      };
-
-      return React.createElement('div', {
-        className: 'mood-rating-card',
-        style: {
-          padding: '10px 12px',
-          borderRadius: '12px',
-          background: 'var(--card, #fff)',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-          border: '1px solid #e2e8f0'
-        }
-      },
-        // Заголовок с эмодзи и значением
-        React.createElement('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '6px'
-          }
-        },
-          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
-            React.createElement('span', {
-              className: poppingEmoji === field ? 'mood-emoji-pop' : '',
-              style: { fontSize: '22px', transition: 'all 0.2s' }
-            }, emojiFn(value)),
-            React.createElement('span', { style: { fontWeight: '600', fontSize: '14px', color: 'var(--text, #1e293b)' } }, title)
-          ),
-          React.createElement('span', {
-            className: pulsingField === field ? 'mood-value-pulse' : '',
-            style: {
-              fontWeight: '700',
-              fontSize: '18px',
-              color: colorFn(value),
-              minWidth: '45px',
-              textAlign: 'right'
-            }
-          }, value + '/10')
-        ),
-
-        // Пресеты быстрого выбора (5 вариантов)
-        React.createElement('div', {
-          style: {
-            display: 'flex',
-            gap: '4px',
-            marginBottom: '6px'
-          }
-        },
-          presets.map(p => {
-            const isSelected = value === p.value;
-            const btnColor = colorFn(p.value);
-            return React.createElement('button', {
-              key: p.value,
-              className: 'mood-preset-btn',
-              onClick: () => updateField(field, p.value),
-              style: {
-                flex: 1,
-                padding: '6px 2px',
-                borderRadius: '8px',
-                border: isSelected ? `2px solid ${btnColor}` : '1px solid #e5e7eb',
-                background: isSelected ? `${btnColor}20` : '#fff',
-                cursor: 'pointer',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                minHeight: '36px'
-              }
-            },
-              React.createElement('span', { style: { fontSize: '20px' } }, p.emoji)
-            );
-          })
-        ),
-
-        // Слайдер — кастомный drag, чтобы модалка не перехватывала жест.
-        React.createElement(DragValueSlider, {
-          className: 'mc-quality-slider',
-          min: 1,
-          max: 10,
-          value: value,
-          onValue: handleSliderValue,
-          ariaLabel: title,
-          background: isNegative
-            ? `linear-gradient(to right, #10b981 0%, #22c55e 30%, #eab308 50%, #f97316 70%, #ef4444 100%)`
-            : `linear-gradient(to right, #ef4444 0%, #f97316 30%, #eab308 50%, #22c55e 70%, #10b981 100%)`,
-          style: {
-            marginTop: '2px'
-          }
-        })
-      );
     };
 
     return React.createElement('div', { className: 'mc-mood-step' },
@@ -4395,10 +4375,15 @@
       ].map((row) => React.createElement('div', { key: row.field, className: 'mc-scale-card' },
         React.createElement('div', { className: 'mc-scale-head' },
           React.createElement('span', null, row.title),
-          React.createElement('span', { className: 'mc-scale-value' }, `${row.value} · ${scaleWord(row.value, row.kind)}`)
+          React.createElement('span', { className: 'mc-scale-value' },
+            React.createElement('b', { className: 'n', style: { font: '700 13px/1 Figtree, system-ui, sans-serif', color: 'var(--v4-sand-act-text, #8a4a20)' } }, String(row.value)),
+            ` · ${scaleWord(row.value, row.kind)}`
+          )
         ),
         React.createElement(DragValueSlider, {
-          className: 'mc-v4-slider',
+          className: 'mc-v4-scale',
+          variant: 'v4',
+          fill: row.kind === 'stress' ? 'act' : 'olive',
           min: 1,
           max: 10,
           value: row.value,
@@ -4406,7 +4391,7 @@
           ariaLabel: row.title
         })
       )),
-      React.createElement('div', { className: 'mc-recorded-hint' }, 'Шкалы 1–10. Подпись справа называет значение словом.')
+      React.createElement('div', { className: 'mc-recorded-hint' }, 'Шкалы 1–10. Подпись справа называет значение словом — число одно не читается.')
     );
   }
 
@@ -5348,6 +5333,16 @@
       onChange({ ...data, coldType: type, coldTime: type === 'none' ? null : (data.coldTime || time), coldPicked: true, coldOpen: type !== 'none' });
     };
 
+    const lastMeasurements = (HEYS.Steps && typeof HEYS.Steps.getLastMeasurements === 'function')
+      ? HEYS.Steps.getLastMeasurements()
+      : getLastMeasurements();
+    const measurementHint = lastMeasurements?.daysAgo == null
+      ? 'Ещё не было замеров'
+      : (lastMeasurements.daysAgo === 0
+        ? 'Сегодня уже были'
+        : `Прошло ${lastMeasurements.daysAgo} ${lastMeasurements.daysAgo === 1 ? 'день' : (lastMeasurements.daysAgo >= 2 && lastMeasurements.daysAgo <= 4 ? 'дня' : 'дней')} с прошлых`);
+    const restIsSparse = planned.length === 0 && !showMeasurements && !showRefeed;
+
     return React.createElement('div', { className: 'mc-rest-step' },
       React.createElement('div', { className: 'mc-rest-cold' },
         React.createElement('div', { className: 'mc-rest-cold-title' }, coldOpen && coldType !== 'none' ? 'Холод сегодня был' : 'Прохладный душ'),
@@ -5357,8 +5352,8 @@
             : 'Хотя бы тридцать секунд в конце обычного душа — этого достаточно.'
         ),
         !(coldOpen && coldType !== 'none') && React.createElement('div', { className: 'mc-rest-cold-actions' },
-          React.createElement('button', { type: 'button', className: 'mc-btn mc-btn--primary', onClick: () => setCold('coldShower') }, 'Было'),
-          React.createElement('button', { type: 'button', className: 'mc-btn mc-btn--ghost', onClick: () => setCold('none') }, 'Не сегодня')
+          React.createElement('button', { type: 'button', className: 'mc-pill mc-pill--act', onClick: () => setCold('coldShower') }, 'Было'),
+          React.createElement('button', { type: 'button', className: 'mc-pill mc-pill--quiet', onClick: () => setCold('none') }, 'Не сегодня')
         ),
         coldOpen && coldType !== 'none' && React.createElement('div', { className: 'mc-rest-cold-types' },
           [
@@ -5395,7 +5390,7 @@
       },
         React.createElement('div', null,
           React.createElement('div', { className: 'mc-rest-card-title' }, 'Утренняя рутина'),
-          React.createElement('div', { className: 'mc-rest-card-hint' }, 'Резинки, разогрев')
+          React.createElement('div', { className: 'mc-rest-card-hint' }, 'Резинки, разогрев — 6 минут')
         ),
         React.createElement('span', { className: 'mc-rest-chevron' }, '›')
       ),
@@ -5406,7 +5401,7 @@
       },
         React.createElement('div', null,
           React.createElement('div', { className: 'mc-rest-card-title' }, 'Замеры'),
-          React.createElement('div', { className: 'mc-rest-card-hint' }, 'Обхваты тела')
+          React.createElement('div', { className: 'mc-rest-card-hint' }, measurementHint)
         ),
         React.createElement('span', { className: 'mc-rest-chevron' }, '›')
       ),
@@ -5429,15 +5424,18 @@
         React.createElement('div', { className: 'mc-rest-yesno' },
           React.createElement('button', {
             type: 'button',
-            className: 'mc-btn' + (data.isRefeedDay === true ? ' mc-btn--primary' : ' mc-btn--ghost'),
+            className: 'mc-pill mc-pill--mini' + (data.isRefeedDay === true ? ' mc-pill--act' : ' mc-pill--quiet'),
             onClick: () => onChange({ ...data, isRefeedDay: true })
           }, 'Да'),
           React.createElement('button', {
             type: 'button',
-            className: 'mc-btn' + (data.isRefeedDay === false ? ' mc-btn--primary' : ' mc-btn--ghost'),
+            className: 'mc-pill mc-pill--mini' + (data.isRefeedDay === false ? ' mc-pill--act' : ' mc-pill--quiet'),
             onClick: () => onChange({ ...data, isRefeedDay: false })
           }, 'Нет')
         )
+      ),
+      restIsSparse && React.createElement('div', { className: 'mc-rest-empty-note' },
+        'Добавок в курсе нет, замеры свежие, загрузочный не рекомендован — строк тоже нет. Пусто здесь нормально.'
       )
     );
   }
@@ -5518,7 +5516,12 @@
     const source = mapEstimateSource(day.weightMorningSource || day.weightMorningEstimateSource || 'profile');
     const sourceLabel = source === 'estimated_avg' ? 'расчётный' : source === 'estimated_profile' ? 'из профиля' : '';
     return React.createElement('div', { className: 'mc-recorded' },
-      React.createElement('div', { className: 'mc-recorded-title' }, 'Чек-ин записан'),
+      React.createElement('div', { className: 'mc-recorded-check', 'aria-hidden': 'true' },
+        React.createElement('svg', { width: 26, height: 26, viewBox: '0 0 24 24', fill: 'none', stroke: '#5c6a45', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
+          React.createElement('path', { d: 'M5 13l4 4L19 7' })
+        )
+      ),
+      React.createElement('div', { className: 'mc-recorded-title', style: { marginTop: 16 } }, 'Чек-ин записан'),
       React.createElement('div', { className: 'mc-recorded-sub' },
         streak > 0
           ? (estimated ? `Серия — ${streak} дней подряд, сегодня без взвешивания` : `Серия — ${streak} дней подряд`)
