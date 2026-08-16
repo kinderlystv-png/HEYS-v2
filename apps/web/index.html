@@ -971,10 +971,10 @@
     <link rel="stylesheet" href="/styles/tailwind.css" />
 
     <!-- Critical CSS for instant rendering -->
-    <link rel="stylesheet" href="styles/critical.css?v=13" />
-    <link rel="stylesheet" href="styles/heys-boot-mark.css" />
+    <link rel="stylesheet" href="styles/critical.css?v=14" />
+    <link rel="stylesheet" href="styles/heys-boot-mark.css?v=4" />
     <link rel="stylesheet" href="styles/modules/002-ui-v4-palette-roles.css" />
-    <link rel="stylesheet" href="styles/modules/733-ui-v4-login-theme.css" />
+    <link rel="stylesheet" href="styles/modules/733-ui-v4-login-theme.css?v=14" />
 
     <!-- Pattern Debugger CSS (отладочная модалка — загружаем async, не нужен для FCP) -->
     <link rel="preload" href="insights/pi_pattern_debugger.css?v=2" as="style"
@@ -988,10 +988,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.a16c6183c48f.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.11fb66997c2d.js" as="script" />
     <link rel="preload" href="boot-calc.bundle.2493859fd08b.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.0afdddd3a83d.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.44fd86df8afc.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.3461aaf14ade.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.0aed5029363d.js" as="script" />
     <link rel="preload" href="boot-init.bundle.09acfb876cb4.js" as="script" />
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
          Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
@@ -1022,10 +1022,10 @@
     <!-- Main CSS — async load (1.19MB via @import, не нужен для login gate) -->
     <!-- v12: Login gate имеет inline стили, main.css нужен только после загрузки бандлов -->
     <!-- v9.8: флаг __heysMainCSSLoaded + событие heysMainCSSLoaded для gate DayTab -->
-    <link rel="preload" href="styles/main.css?v=57" as="style"
+    <link rel="preload" href="styles/main.css?v=78" as="style"
         onload="this.onload=null;this.rel='stylesheet';window.__heysMainCSSLoaded=true;window.dispatchEvent(new CustomEvent('heysMainCSSLoaded'));(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='styles/main-deferred.css?v=5';l.onload=function(){window.__heysMainDeferredCSSLoaded=true;window.dispatchEvent(new CustomEvent('heysMainDeferredCSSLoaded'));};l.onerror=function(){console.warn('[HEYS.css] ⚠️ main-deferred.css load failed — Insights/Metabolic/Planning tabs will render unstyled');};document.head.appendChild(l);setTimeout(function(){if(!window.__heysMainDeferredCSSLoaded){console.warn('[HEYS.css] ⚠️ main-deferred.css not loaded after 30s');}},30000);})();" />
     <noscript>
-        <link rel="stylesheet" href="styles/main.css?v=57" />
+        <link rel="stylesheet" href="styles/main.css?v=78" />
         <link rel="stylesheet" href="styles/main-deferred.css?v=5" />
     </noscript>
 
@@ -1529,10 +1529,12 @@
         <div class="heys-boot-mark" data-heys-boot-mark="true" role="status" aria-live="polite" aria-busy="true">
             <div class="heys-boot-mark__sign">
                 <span class="heys-boot-mark__disc" aria-hidden="true">
-                    <svg class="heys-boot-mark__spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round">
-                        <path d="M21 12a9 9 0 11-9-9" opacity=".22"></path>
-                        <path d="M12 3a9 9 0 019 9"></path>
-                    </svg>
+                    <span class="heys-boot-mark__spin animate-always" aria-hidden="true">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round">
+                            <path d="M21 12a9 9 0 11-9-9" opacity=".22"></path>
+                            <path d="M12 3a9 9 0 019 9"></path>
+                        </svg>
+                    </span>
                     <svg class="heys-boot-mark__warn" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round">
                         <path d="M12 7v6M12 17h.01"></path>
                         <circle cx="12" cy="12" r="9"></circle>
@@ -3246,10 +3248,10 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.a16c6183c48f.js" fetchpriority="high"></script>
+    <script defer src="boot-core.bundle.11fb66997c2d.js" fetchpriority="high"></script>
     <script defer src="boot-calc.bundle.2493859fd08b.js"></script>
-    <script defer src="boot-day.bundle.0afdddd3a83d.js"></script>
-    <script defer src="boot-app.bundle.44fd86df8afc.js"></script>
+    <script defer src="boot-day.bundle.3461aaf14ade.js"></script>
+    <script defer src="boot-app.bundle.0aed5029363d.js"></script>
     <script defer src="boot-init.bundle.09acfb876cb4.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 

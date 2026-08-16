@@ -81,7 +81,7 @@ async function main() {
           widgetsLoading: !!q('.widgets-tab--loading'),
           widgetCards: qa('.widgets-grid .widget-card'),
           hdrTitle: text('.hdr-client-tab-title-text'),
-          editBtn: text('.hdr-widgets-edit-btn--primary'),
+          editBtn: text('#tour-widgets-edit'),
           progressChip: text('#heys-loading-progress-chip'),
           visibleFrame: q('[data-heys-visible-frame]')?.getAttribute('data-heys-visible-frame') || '',
           badFlash,
