@@ -356,6 +356,132 @@ test('planning_changed if planning value differs', () => {
   assert.equal(a2.length, 0);
 });
 
+test('dayv2 payload carries day_kcal_before/after from meal totals', () => {
+  const oldV = {
+    meals: [{
+      id: 'm_lunch',
+      mealType: 'lunch',
+      items: [{ name: 'Рис', grams: 200, kcal100: 130 }],
+    }],
+  };
+  const newV = {
+    meals: [
+      {
+        id: 'm_lunch',
+        mealType: 'lunch',
+        items: [{ name: 'Рис', grams: 288, kcal100: 130 }],
+      },
+      {
+        id: 'm_dinner',
+        mealType: 'dinner',
+        time: '16:46',
+        items: [{ name: 'Курица', grams: 140, kcal100: 150 }],
+      },
+    ],
+  };
+  const payload = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-08-15');
+  assert.equal(payload.day_kcal_before, 260);
+  assert.equal(payload.day_kcal_after, 584);
+  assert.deepStrictEqual(payload.day_kcal_by_date, {
+    '2026-08-15': { before: 260, after: 584 },
+  });
+});
+
+test('empty old day → day_kcal_before is 0, not null', () => {
+  const newV = {
+    meals: [{ id: 'm_1', mealType: 'dinner', items: [{ name: 'Овсянка', grams: 100, kcal100: 350 }] }],
+  };
+  const payload = computeCuratorActionPayload({ meals: [] }, newV, 'heys_dayv2_2026-05-18');
+  assert.equal(payload.day_kcal_before, 0);
+  assert.equal(payload.day_kcal_after, 350);
+});
+
+test('profile/norms payload has no day_kcal fields', () => {
+  const payload = computeCuratorActionPayload({ kcal: 1800 }, { kcal: 1940 }, 'heys_norms');
+  assert.equal(payload.day_kcal_before, undefined);
+  assert.equal(payload.day_kcal_after, undefined);
+  assert.equal(payload.day_kcal_by_date, undefined);
+});
+
+test('meal item changed: kcal_delta only when both sides compute', () => {
+  const oldV = {
+    meals: [{ id: 'm_1', mealType: 'lunch', items: [{ id: 'it_1', name: 'Рис', grams: 200, kcal100: 130 }] }],
+  };
+  const newV = {
+    meals: [{ id: 'm_1', mealType: 'lunch', items: [{ id: 'it_1', name: 'Рис', grams: 288, kcal100: 130 }] }],
+  };
+  const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-05-18');
+  assert.equal(actions[0].kcal_delta, 114);
+  assert.equal(actions[0].from_kcal, 260);
+  assert.equal(actions[0].to_kcal, 374);
+});
+
+test('meal item changed: no kcal_delta without kcal100', () => {
+  const oldV = {
+    meals: [{ id: 'm_1', mealType: 'lunch', items: [{ id: 'it_1', name: 'Рис', grams: 100 }] }],
+  };
+  const newV = {
+    meals: [{ id: 'm_1', mealType: 'lunch', items: [{ id: 'it_1', name: 'Рис', grams: 120 }] }],
+  };
+  const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-05-18');
+  assert.equal(actions[0].kcal_delta, undefined);
+});
+
+test('meal item removed: signed kcal_delta when items have kcal', () => {
+  const oldV = {
+    meals: [{
+      id: 'm_1',
+      mealType: 'breakfast',
+      items: [
+        { id: 'a', name: 'A', grams: 100, kcal100: 200 },
+        { id: 'b', name: 'B', grams: 50, kcal100: 196 },
+      ],
+    }],
+  };
+  const newV = {
+    meals: [{ id: 'm_1', mealType: 'breakfast', items: [{ id: 'a', name: 'A', grams: 100, kcal100: 200 }] }],
+  };
+  const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-05-18');
+  assert.equal(actions[0].type, 'meal_item_removed');
+  assert.equal(actions[0].kcal_delta, -98);
+});
+
+test('buildChangelogActionsEnvelope: one date copies top-level before/after', () => {
+  const { buildChangelogActionsEnvelope } = require('../curator-action-diff');
+  const payload = {
+    actions: [{ type: 'meal_added' }],
+    day_kcal_by_date: { '2026-08-15': { before: 1240, after: 1937 } },
+  };
+  const envelope = buildChangelogActionsEnvelope([payload], payload.actions);
+  assert.equal(envelope.day_kcal_before, 1240);
+  assert.equal(envelope.day_kcal_after, 1937);
+  assert.deepStrictEqual(envelope.day_kcal_by_date['2026-08-15'], { before: 1240, after: 1937 });
+});
+
+test('buildChangelogActionsEnvelope: two dates keep only by_date map', () => {
+  const { buildChangelogActionsEnvelope } = require('../curator-action-diff');
+  const envelope = buildChangelogActionsEnvelope([
+    { day_kcal_by_date: { '2026-08-15': { before: 100, after: 200 } } },
+    { day_kcal_by_date: { '2026-08-14': { before: 300, after: 250 } } },
+  ], []);
+  assert.equal(envelope.day_kcal_before, undefined);
+  assert.equal(envelope.day_kcal_after, undefined);
+  assert.equal(envelope.day_kcal_by_date['2026-08-15'].after, 200);
+  assert.equal(envelope.day_kcal_by_date['2026-08-14'].before, 300);
+});
+
+test('actions cap at 50 still attaches day kcal', () => {
+  const meals = [];
+  for (let i = 0; i < 60; i++) {
+    meals.push({ id: `m_${i}`, name: `M${i}`, items: [{ name: 'X', grams: 10, kcal100: 100 }] });
+  }
+  const payload = computeCuratorActionPayload({ meals: [] }, { meals }, 'heys_dayv2_2026-05-18');
+  assert.equal(payload.actions.length, 50);
+  assert.equal(payload.actions[49].type, 'truncated');
+  assert.equal(payload.day_kcal_before, 0);
+  assert.equal(payload.day_kcal_after, 600);
+});
+
 test('actions cap at 50 — truncation sentinel', () => {
   // Create a dayv2 with 60 meals — should be capped.
   const meals = [];

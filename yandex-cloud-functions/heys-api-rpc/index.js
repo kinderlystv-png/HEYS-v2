@@ -13,7 +13,7 @@ const { isCheckViolation, mapCheckViolation } = require('./shared/pg-check-viola
 const { createServerlessCapacityGuard } = require('./shared/serverless-capacity-guard');
 const { shouldSendImmediateTelegramAlert: _shouldSendTgAlert } = require('./ops-alert-policy.cjs');
 const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergePlanningRecords, mergeHungerStatusEvents, mergeInsightsFeedback, mergeScalarKvWithOutcome, mergeMorningCheckinProgress, hasMorningCheckinProgressConflict } = require('./lib/heys_sync_merge_v1.cjs');
-const { computeCuratorActionPayload } = require('./curator-action-diff');
+const { computeCuratorActionPayload, buildChangelogActionsEnvelope } = require('./curator-action-diff');
 
 const requestCapacityGuard = createServerlessCapacityGuard({ functionName: 'heys-api-rpc' });
 
@@ -3428,7 +3428,7 @@ async function handleRpcRequest(event, context) {
                   resolvedClientId,
                   curatorId,
                   [k],
-                  JSON.stringify({ actions: actionsWithMeta }),
+                  JSON.stringify(buildChangelogActionsEnvelope([payload], actionsWithMeta)),
                 ]
               );
             }
@@ -4182,6 +4182,7 @@ async function handleRpcRequest(event, context) {
       try {
         const allActions = [];
         const loggedKeys = [];
+        const loggedPayloads = [];
         for (const it of items) {
           if (!it || typeof it.k !== 'string') continue;
           const oldV = oldByKey.has(it.k) ? oldByKey.get(it.k) : null;
@@ -4190,6 +4191,7 @@ async function handleRpcRequest(event, context) {
           if (payload && Array.isArray(payload.actions) && payload.actions.length > 0) {
             allActions.push(...attachCuratorActionKeyMeta(payload.actions, it.k));
             loggedKeys.push(it.k);
+            loggedPayloads.push(payload);
           }
         }
         if (allActions.length > 0) {
@@ -4206,7 +4208,7 @@ async function handleRpcRequest(event, context) {
               targetClientId,
               curatorId,
               loggedKeys,
-              JSON.stringify({ actions: finalActions }),
+              JSON.stringify(buildChangelogActionsEnvelope(loggedPayloads, finalActions)),
             ]
           );
         }

@@ -6,11 +6,20 @@
 //   2) in-app banner'ом для показа клиенту списка изменений.
 //
 // Контракт:
-//   computeCuratorActionPayload(oldV, newV, key) → { actions: [...] }
+//   computeCuratorActionPayload(oldV, newV, key) → {
+//     actions: [...],
+//     day_kcal_before?: number,  // сумма ккал приёмов old dayv2; пустой день = 0
+//     day_kcal_after?: number,
+//     day_kcal_by_date?: { [YYYY-MM-DD]: { before?, after? } }
+//   }
 //   - oldV: JSONB (может быть null если INSERT)
 //   - newV: JSONB (всегда не null)
 //   - key: string ('heys_dayv2_YYYY-MM-DD' | 'heys_profile' | 'heys_norms' | etc.)
 //   - Возврат: { actions: [...] }, пустой массив если no-op.
+//     day_kcal_* только для dayv2. Старые changelog rows без полей — легально:
+//     клиент рисует шапку даты без калорий.
+//   buildChangelogActionsEnvelope(payloads, actionsWithMeta) — JSONB записи
+//     client_data_changelog.actions (merge_save и batch_upsert).
 //
 // Cap: max 50 actions, лишние схлопываются в {type:'truncated',count:N}.
 
@@ -132,6 +141,36 @@ function mealTotalKcal(m) {
   return any ? Math.round(sum) : null;
 }
 
+function itemsKcalSum(items) {
+  let sum = 0;
+  let any = false;
+  for (const it of safeArr(items)) {
+    const k = computeItemKcal(it);
+    if (isNumber(k)) { sum += k; any = true; }
+  }
+  return any ? Math.round(sum) : null;
+}
+
+/** Сумма ккал приёмов дня. Пустой день → 0. Приёмы есть, но ккал не считаются → null. */
+function dayMealsKcal(dayV) {
+  const day = safeObj(dayV);
+  if (!day) return 0;
+  const meals = safeArr(day.meals);
+  let sum = 0;
+  let any = false;
+  for (const m of meals) {
+    const k = mealTotalKcal(m);
+    if (isNumber(k)) { sum += k; any = true; }
+  }
+  if (any) return Math.round(sum);
+  return meals.length === 0 ? 0 : null;
+}
+
+function dateFromDayv2Key(key) {
+  const m = String(key || '').match(/^heys_dayv2_(\d{4}-\d{2}-\d{2})$/);
+  return m ? m[1] : null;
+}
+
 // Сохраняем для backward-compat — возвращает то же что mealTotalKcal.
 function mealKcal(m) {
   return mealTotalKcal(m);
@@ -202,6 +241,13 @@ function buildItemChangedAction(meal, oldItem, newItem) {
   if (oldGrams !== null && newGrams !== null && Math.abs(oldGrams - newGrams) >= 0.5) {
     a.from_grams = oldGrams;
     a.to_grams = newGrams;
+    const fromKcal = computeItemKcal(oldItem);
+    const toKcal = computeItemKcal(newItem);
+    if (isNumber(fromKcal) && isNumber(toKcal)) {
+      a.from_kcal = Math.round(fromKcal);
+      a.to_kcal = Math.round(toKcal);
+      a.kcal_delta = a.to_kcal - a.from_kcal;
+    }
   }
   return (a.from_name !== undefined || a.from_grams !== undefined) ? a : null;
 }
@@ -274,6 +320,8 @@ function diffMeals(oldMeals, newMeals, actions) {
         const a = mealBaseAction('meal_item_added', nm);
         a.items = mealItemsSummary(added);
         a.count = added.length;
+        const addedKcal = itemsKcalSum(added);
+        if (isNumber(addedKcal)) a.kcal_delta = addedKcal;
         actions.push(a);
       }
 
@@ -286,6 +334,8 @@ function diffMeals(oldMeals, newMeals, actions) {
         const a = mealBaseAction('meal_item_removed', nm);
         a.items = mealItemsSummary(removed);
         a.count = removed.length;
+        const removedKcal = itemsKcalSum(removed);
+        if (isNumber(removedKcal)) a.kcal_delta = -removedKcal;
         actions.push(a);
       }
 
@@ -443,17 +493,62 @@ function computeCuratorActionPayload(oldV, newV, key) {
     }
   }
 
+  let resultActions = actions;
   if (actions.length > ACTIONS_CAP) {
     const head = actions.slice(0, ACTIONS_CAP - 1);
     const rest = actions.length - head.length;
     head.push({ type: 'truncated', count: rest });
-    return { actions: head };
+    resultActions = head;
   }
-  return { actions };
+
+  const result = { actions: resultActions };
+  attachDayKcalFields(result, oldV, newV, key);
+  return result;
+}
+
+function attachDayKcalFields(result, oldV, newV, key) {
+  const date = dateFromDayv2Key(key);
+  if (!date) return;
+  const before = dayMealsKcal(oldV);
+  const after = dayMealsKcal(newV);
+  if (isNumber(before)) result.day_kcal_before = before;
+  if (isNumber(after)) result.day_kcal_after = after;
+  if (!isNumber(before) && !isNumber(after)) return;
+  result.day_kcal_by_date = {
+    [date]: {
+      ...(isNumber(before) ? { before } : {}),
+      ...(isNumber(after) ? { after } : {}),
+    },
+  };
+}
+
+function isFiniteNumber(n) {
+  return typeof n === 'number' && Number.isFinite(n);
+}
+
+/** Собирает JSONB envelope changelog из одного или нескольких payload. */
+function buildChangelogActionsEnvelope(payloads, actionsWithMeta) {
+  const list = Array.isArray(payloads) ? payloads.filter(Boolean) : [];
+  const envelope = { actions: Array.isArray(actionsWithMeta) ? actionsWithMeta : [] };
+  const byDate = {};
+  for (const payload of list) {
+    if (payload.day_kcal_by_date && typeof payload.day_kcal_by_date === 'object') {
+      Object.assign(byDate, payload.day_kcal_by_date);
+    }
+  }
+  const dates = Object.keys(byDate);
+  if (dates.length === 1) {
+    const slice = byDate[dates[0]] || {};
+    if (isFiniteNumber(slice.before)) envelope.day_kcal_before = slice.before;
+    if (isFiniteNumber(slice.after)) envelope.day_kcal_after = slice.after;
+  }
+  if (dates.length > 0) envelope.day_kcal_by_date = byDate;
+  return envelope;
 }
 
 module.exports = {
   computeCuratorActionPayload,
+  buildChangelogActionsEnvelope,
   _internal: {
     diffDayv2,
     diffMeals,
@@ -468,6 +563,8 @@ module.exports = {
     mealLabel,
 	    mealTotalKcal,
 	    mealKcal,
+	    dayMealsKcal,
+	    dateFromDayv2Key,
 	    mealItemsSummary,
 	    itemIdentityKey,
 	    isEmptyTraining,
