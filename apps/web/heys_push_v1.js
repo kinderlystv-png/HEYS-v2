@@ -149,6 +149,20 @@
     }
   }
 
+  // На localhost / demo SW не регистрируется (см. heys_platform_apis_v1).
+  // `navigator.serviceWorker.ready` без регистрации зависает навсегда — тумблер
+  // «молчит», getStatus не возвращается. Сначала проверяем, есть ли reg.
+  async function getPushRegistration() {
+    if (!('serviceWorker' in navigator)) return null;
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      if (!regs || !regs.length) return null;
+      return await navigator.serviceWorker.ready;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ── Status ────────────────────────────────────────────────────────────
   async function getStatus() {
     const capable = isCapable();
@@ -156,15 +170,25 @@
     const ios = isIosSafari();
     const permission = capable ? Notification.permission : 'unsupported';
     let subscription = null;
+    let swAvailable = false;
     if (capable) {
       try {
-        const reg = await navigator.serviceWorker.ready;
-        subscription = await reg.pushManager.getSubscription();
+        const reg = await getPushRegistration();
+        swAvailable = !!reg;
+        if (reg) subscription = await reg.pushManager.getSubscription();
       } catch (e) { /* ignore */ }
     }
     // На iOS Safari пуши работают только из standalone PWA.
     const needsInstall = ios && !standalone;
-    return { capable, ios, standalone, needsInstall, permission, subscribed: !!subscription };
+    return {
+      capable,
+      ios,
+      standalone,
+      needsInstall,
+      permission,
+      subscribed: !!subscription,
+      swAvailable,
+    };
   }
 
   // ── Subscribe / unsubscribe ───────────────────────────────────────────
@@ -188,7 +212,10 @@
       return { ok: false, reason: 'permission_blocked' };
     }
 
-    const reg = await navigator.serviceWorker.ready;
+    const reg = await getPushRegistration();
+    if (!reg) {
+      return { ok: false, reason: 'sw_unavailable' };
+    }
     let sub = await reg.pushManager.getSubscription();
 
     // Ключ нужен и для сверки существующей подписки, а не только для новой.
@@ -317,7 +344,8 @@
   async function unsubscribe() {
     if (!isCapable()) return { ok: false, reason: 'not_capable' };
     try {
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await getPushRegistration();
+      if (!reg) return { ok: true, reason: 'sw_unavailable' };
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
         await api('POST', '/push/unsubscribe', { endpoint: sub.endpoint });
@@ -361,7 +389,8 @@
     const onboarded = lsGet('heys_push_onboarded', null);
     if (onboarded?.state !== 'granted') return;
     try {
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await getPushRegistration();
+      if (!reg) return;
       const sub = await reg.pushManager.getSubscription();
       if (!sub) {
         await subscribe();
@@ -389,6 +418,291 @@
     }
   }
 
+  function svgEl(tag, attrs, children) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const node = document.createElementNS(ns, tag);
+    if (attrs) {
+      Object.keys(attrs).forEach((key) => {
+        node.setAttribute(key, attrs[key]);
+      });
+    }
+    (children || []).forEach((child) => {
+      if (child) node.appendChild(child);
+    });
+    return node;
+  }
+
+  function iconPhone() {
+    return svgEl('svg', {
+      width: '28', height: '28', viewBox: '0 0 24 24', fill: 'none',
+      stroke: 'currentColor', 'stroke-width': '1.8', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      'aria-hidden': 'true',
+    }, [
+      svgEl('rect', { x: '7', y: '2', width: '10', height: '20', rx: '2' }),
+      svgEl('line', { x1: '11', y1: '18', x2: '13', y2: '18' }),
+    ]);
+  }
+
+  function iconShare() {
+    return svgEl('svg', {
+      width: '22', height: '22', viewBox: '0 0 24 24', fill: 'none',
+      stroke: 'currentColor', 'stroke-width': '1.9', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      'aria-hidden': 'true',
+    }, [
+      svgEl('path', { d: 'M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8' }),
+      svgEl('polyline', { points: '16 6 12 2 8 6' }),
+      svgEl('line', { x1: '12', y1: '2', x2: '12', y2: '15' }),
+    ]);
+  }
+
+  function iconAddHome() {
+    return svgEl('svg', {
+      width: '22', height: '22', viewBox: '0 0 24 24', fill: 'none',
+      stroke: 'currentColor', 'stroke-width': '1.9', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      'aria-hidden': 'true',
+    }, [
+      svgEl('rect', { x: '4', y: '4', width: '16', height: '16', rx: '4' }),
+      svgEl('line', { x1: '12', y1: '8', x2: '12', y2: '16' }),
+      svgEl('line', { x1: '8', y1: '12', x2: '16', y2: '12' }),
+    ]);
+  }
+
+  function iconOpen() {
+    return svgEl('svg', {
+      width: '22', height: '22', viewBox: '0 0 24 24', fill: 'none',
+      stroke: 'currentColor', 'stroke-width': '1.9', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+      'aria-hidden': 'true',
+    }, [
+      svgEl('line', { x1: '5', y1: '12', x2: '19', y2: '12' }),
+      svgEl('polyline', { points: '12 5 19 12 12 19' }),
+    ]);
+  }
+
+  let iosHomeInstallRoot = null;
+  let iosHomeInstallOnKey = null;
+
+  function hideIosHomeInstallGuide() {
+    if (iosHomeInstallOnKey) {
+      document.removeEventListener('keydown', iosHomeInstallOnKey);
+      iosHomeInstallOnKey = null;
+    }
+    if (iosHomeInstallRoot && iosHomeInstallRoot.parentNode) {
+      iosHomeInstallRoot.parentNode.removeChild(iosHomeInstallRoot);
+    }
+    iosHomeInstallRoot = null;
+  }
+
+  function showIosHomeInstallGuide(options) {
+    if (typeof document === 'undefined') return false;
+    hideIosHomeInstallGuide();
+
+    const onLater = typeof options?.onLater === 'function' ? options.onLater : null;
+    const onOk = typeof options?.onOk === 'function' ? options.onOk : null;
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'ios-home-install-backdrop';
+    backdrop.setAttribute('role', 'dialog');
+    backdrop.setAttribute('aria-modal', 'true');
+    backdrop.setAttribute('aria-label', 'Чтобы напоминания приходили, добавьте иконку');
+
+    const modal = document.createElement('div');
+    modal.className = 'ios-home-install-modal';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'ios-home-install-modal__close';
+    closeBtn.setAttribute('aria-label', 'Закрыть');
+    closeBtn.textContent = '×';
+
+    const phone = document.createElement('div');
+    phone.className = 'ios-home-install-modal__phone';
+    phone.appendChild(iconPhone());
+
+    const title = document.createElement('h2');
+    title.className = 'ios-home-install-modal__title';
+    title.textContent = 'Чтобы напоминания приходили, добавьте иконку';
+
+    const lead = document.createElement('p');
+    lead.className = 'ios-home-install-modal__lead';
+    lead.textContent = 'На iPhone уведомления работают только из приложения, открытого с домашнего экрана.';
+
+    const stepsWrap = document.createElement('div');
+    stepsWrap.className = 'ios-home-install-modal__steps';
+
+    const steps = [
+      {
+        num: '1',
+        title: 'Нажмите «Поделиться»',
+        hint: 'Квадрат со стрелкой внизу Safari',
+        icon: iconShare,
+      },
+      {
+        num: '2',
+        title: 'Выберите «На экран „Домой“»',
+        hint: 'Пункт в середине списка',
+        icon: iconAddHome,
+      },
+      {
+        num: '3',
+        title: 'Откройте HEYS с иконки',
+        hint: 'Дальше — как обычно, данные на месте',
+        icon: iconOpen,
+      },
+    ];
+
+    steps.forEach((step) => {
+      const row = document.createElement('div');
+      row.className = 'ios-home-install-modal__step';
+
+      const num = document.createElement('span');
+      num.className = 'ios-home-install-modal__num';
+      num.textContent = step.num;
+
+      const copy = document.createElement('div');
+      copy.className = 'ios-home-install-modal__step-copy';
+      const stepTitle = document.createElement('div');
+      stepTitle.className = 'ios-home-install-modal__step-title';
+      stepTitle.textContent = step.title;
+      const stepHint = document.createElement('div');
+      stepHint.className = 'ios-home-install-modal__step-hint';
+      stepHint.textContent = step.hint;
+      copy.appendChild(stepTitle);
+      copy.appendChild(stepHint);
+
+      const iconWrap = document.createElement('span');
+      iconWrap.className = 'ios-home-install-modal__step-icon';
+      iconWrap.appendChild(step.icon());
+
+      row.appendChild(num);
+      row.appendChild(copy);
+      row.appendChild(iconWrap);
+      stepsWrap.appendChild(row);
+    });
+
+    const footnote = document.createElement('p');
+    footnote.className = 'ios-home-install-modal__footnote';
+    footnote.textContent = 'Ничего не скачивается: иконка — ярлык на то же приложение.';
+
+    const actions = document.createElement('div');
+    actions.className = 'ios-home-install-modal__actions';
+
+    const laterBtn = document.createElement('button');
+    laterBtn.type = 'button';
+    laterBtn.className = 'ios-home-install-modal__btn ios-home-install-modal__btn--later';
+    laterBtn.textContent = 'Позже';
+
+    const okBtn = document.createElement('button');
+    okBtn.type = 'button';
+    okBtn.className = 'ios-home-install-modal__btn ios-home-install-modal__btn--ok';
+    okBtn.textContent = 'Понятно';
+
+    const close = (kind) => {
+      hideIosHomeInstallGuide();
+      if (kind === 'later') onLater?.();
+      else onOk?.();
+    };
+
+    closeBtn.addEventListener('click', () => close('ok'));
+    laterBtn.addEventListener('click', () => close('later'));
+    okBtn.addEventListener('click', () => close('ok'));
+    backdrop.addEventListener('click', (event) => {
+      if (event.target === backdrop) close('later');
+    });
+    iosHomeInstallOnKey = (event) => {
+      if (event.key === 'Escape') close('later');
+    };
+    document.addEventListener('keydown', iosHomeInstallOnKey);
+
+    actions.appendChild(laterBtn);
+    actions.appendChild(okBtn);
+
+    modal.appendChild(closeBtn);
+    modal.appendChild(phone);
+    modal.appendChild(title);
+    modal.appendChild(lead);
+    modal.appendChild(stepsWrap);
+    modal.appendChild(footnote);
+    modal.appendChild(actions);
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+    iosHomeInstallRoot = backdrop;
+    try { okBtn.focus(); } catch (_) { /* ignore */ }
+    return true;
+  }
+
+  function getEnableFailureCopy(reason) {
+    switch (reason) {
+      case 'ios_needs_install':
+        return {
+          icon: '📱',
+          title: 'Чтобы напоминания приходили, добавьте иконку',
+          text: 'На iPhone уведомления работают только из приложения, открытого с домашнего экрана.',
+        };
+      case 'permission_blocked':
+        return {
+          icon: '🔕',
+          title: 'Уведомления запрещены',
+          text: 'Разблокируй их в настройках сайта: значок замка в адресной строке → Уведомления → Разрешить.',
+        };
+      case 'permission_denied':
+        return {
+          icon: '🔔',
+          title: 'Без разрешения не получится',
+          text: 'Уведомления можно включить позже из этого же переключателя, когда будешь готов разрешить их браузеру.',
+        };
+      case 'not_capable':
+        return {
+          icon: '💻',
+          title: 'Браузер не поддерживает',
+          text: 'Этот браузер не умеет push-уведомления. Попробуй Chrome, Safari или установленное приложение HEYS.',
+        };
+      case 'sw_unavailable':
+        return {
+          icon: '🔧',
+          title: 'Подписка здесь недоступна',
+          text: 'На локальной разработке service worker не включается. Согласие можно подписать кодом доступа, а саму подписку устройства проверь на app.heyslab.ru.',
+        };
+      case 'consent_failed':
+        return {
+          icon: '⚠️',
+          title: 'Не удалось записать согласие',
+          text: 'Попробуй ещё раз. Если снова не выйдет — выйди и зайди по коду доступа.',
+        };
+      default:
+        return null;
+    }
+  }
+
+  // Красивая модалка вместо browser alert для отказов включения push.
+  function explainEnableFailure(reason) {
+    if (reason === 'ios_needs_install') {
+      return showIosHomeInstallGuide();
+    }
+    const copy = getEnableFailureCopy(reason);
+    if (!copy) return false;
+    if (typeof HEYS.ConfirmModal?.show === 'function') {
+      HEYS.ConfirmModal.show({
+        icon: copy.icon,
+        title: copy.title,
+        text: copy.text,
+        confirmStyle: 'primary',
+        confirmVariant: 'fill',
+        actions: [{
+          key: 'ok',
+          label: 'Понятно',
+          value: 'ok',
+          style: 'primary',
+          variant: 'fill',
+          row: 0,
+          isDefault: true,
+        }],
+      });
+      return true;
+    }
+    try { window.alert(copy.text); } catch (_) { /* ignore */ }
+    return true;
+  }
+
   // ── Public API ────────────────────────────────────────────────────────
   HEYS.push = {
     isCapable,
@@ -403,6 +717,10 @@
     maybeAutoResubscribe,
     maybePromptIosAfterInstall,
     fetchVapidPublicKey,
+    getEnableFailureCopy,
+    explainEnableFailure,
+    showIosHomeInstallGuide,
+    hideIosHomeInstallGuide,
   };
 
   // Авто-проверка на старте — через небольшой timeout, чтобы SW успел встать.
