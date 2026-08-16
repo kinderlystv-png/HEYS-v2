@@ -463,6 +463,14 @@
       canSkip: config.canSkip || false,
       nextLabel: config.nextLabel || null,  // Кастомный текст кнопки "Далее"/"Готово"
       hideHeaderNext: config.hideHeaderNext || false,  // Скрыть кнопку в хедере
+      disableBack: config.disableBack === true,
+      hideProgressDots: config.hideProgressDots === true,
+      hiddenFromProgress: config.hiddenFromProgress === true,
+      hideDailyFooter: config.hideDailyFooter === true || typeof config.hideDailyFooter === 'function'
+        ? config.hideDailyFooter
+        : false,
+      secondaryLabelWhen: typeof config.secondaryLabelWhen === 'function' ? config.secondaryLabelWhen : null,
+      applySecondary: typeof config.applySecondary === 'function' ? config.applySecondary : null,
     };
     try {
       document.dispatchEvent(new CustomEvent('heys-step-registered', { detail: { id } }));
@@ -493,7 +501,8 @@
     requireStepAck = false,
     onStepSaved = null,
     onStepShown = null,
-    allowProgressForwardNav = true
+    allowProgressForwardNav = true,
+    layout = 'default'
   }) {
     const [currentStepIndex, setCurrentStepIndex] = useState(initialStep);
     const [animating, setAnimating] = useState(false);
@@ -584,6 +593,27 @@
 
     const totalSteps = visibleStepConfigs.length;
     const currentConfig = visibleStepConfigs[currentStepIndex];
+    const isDailyLayout = layout === 'daily';
+    const progressStepConfigs = visibleStepConfigs.filter((config) => (
+      config && !config.hidden && !config.hiddenFromProgress
+    ));
+    const progressActiveIndex = currentConfig
+      ? progressStepConfigs.findIndex((config) => config.id === currentConfig.id)
+      : -1;
+    const showDailyProgressDots = showProgress
+      && isDailyLayout
+      && !currentConfig?.hideProgressDots
+      && !currentConfig?.hiddenFromProgress
+      && progressStepConfigs.length > 1;
+    const currentStepData = currentConfig ? (stepData[currentConfig.id] || {}) : {};
+    const hideDailyFooter = isDailyLayout && (
+      currentConfig?.hideDailyFooter === true
+      || (typeof currentConfig?.hideDailyFooter === 'function'
+        && currentConfig.hideDailyFooter(currentStepData, { currentConfig, context }) === true)
+    );
+    const secondaryLabel = isDailyLayout && !hideDailyFooter && currentConfig?.secondaryLabelWhen
+      ? currentConfig.secondaryLabelWhen(currentStepData, { currentConfig, context })
+      : null;
     const requestedStepIdsKey = steps.map((step) => (
       typeof step === 'string' ? step : (step?.id || '')
     )).join('|');
@@ -777,12 +807,19 @@
       });
     }, [totalSteps]);
 
+    const stepDataRef = useRef(stepData);
+    stepDataRef.current = stepData;
+
     // Обновление данных шага
     const updateStepData = useCallback((stepId, data) => {
-      setStepData(prev => ({
-        ...prev,
-        [stepId]: data // Полностью заменяем данные шага (компонент передаёт полный объект)
-      }));
+      setStepData(prev => {
+        const next = {
+          ...prev,
+          [stepId]: data // Полностью заменяем данные шага (компонент передаёт полный объект)
+        };
+        stepDataRef.current = next;
+        return next;
+      });
     }, []);
 
     // Навигация
@@ -805,18 +842,33 @@
       }, 200);
     }, [animating, totalSteps]);
 
+    const isStepDataPatch = useCallback((value) => (
+      !!value
+      && typeof value === 'object'
+      && typeof value.preventDefault !== 'function'
+      && !value.nativeEvent
+    ), []);
+
     // 🚀 PERF R30: defer step transition/save — validation stays sync for immediate UX feedback
-    const handleNext = useCallback(async () => {
+    const handleNext = useCallback(async (maybePatch) => {
       if (actionInFlightRef.current || transitionInFlightRef.current || savingStep || animating) return;
+
+      let allStepData = stepDataRef.current || stepData;
+      if (isStepDataPatch(maybePatch) && currentConfig) {
+        const nextStep = { ...(allStepData[currentConfig.id] || {}), ...maybePatch };
+        allStepData = { ...allStepData, [currentConfig.id]: nextStep };
+        stepDataRef.current = allStepData;
+        setStepData(allStepData);
+      }
 
       // Валидация текущего шага
       const validation = currentConfig.validate
-        ? normalizeValidationResult(currentConfig.validate(stepData[currentConfig.id], stepData))
+        ? normalizeValidationResult(currentConfig.validate(allStepData[currentConfig.id], allStepData))
         : { valid: true, message: null };
       if (!validation.valid) {
         // Получаем сообщение об ошибке если есть
         const errorMsg = currentConfig.getValidationMessage
-          ? currentConfig.getValidationMessage(stepData[currentConfig.id], stepData)
+          ? currentConfig.getValidationMessage(allStepData[currentConfig.id], allStepData)
           : validation.message;
         setValidationMessage(errorMsg);
         // Показываем shake-анимацию при ошибке
@@ -853,17 +905,17 @@
           await new Promise((resolve) => setTimeout(resolve, 400));
         };
         if (currentStepIndex < totalSteps - 1) {
-          if (!(await saveStepConfig(currentConfig, stepData))) return;
+          if (!(await saveStepConfig(currentConfig, allStepData))) return;
           await holdProfileSaveOk();
           setProfileSaveOk(false);
           goToStep(currentStepIndex + 1, 'left');
         } else {
           if (requireStepAck) {
-            if (!(await saveStepConfig(currentConfig, stepData))) return;
+            if (!(await saveStepConfig(currentConfig, allStepData))) return;
           } else {
             // Сохраняем все данные
             for (const config of visibleStepConfigs) {
-              if (!(await saveStepConfig(config, stepData))) return;
+              if (!(await saveStepConfig(config, allStepData))) return;
             }
           }
 
@@ -892,7 +944,7 @@
 
           if (onComplete) {
             try {
-              const completionResult = onComplete(stepData);
+              const completionResult = onComplete(allStepData);
               if (completionResult && typeof completionResult.then === 'function') {
                 await completionResult;
               }
@@ -907,9 +959,10 @@
         actionInFlightRef.current = false;
         setSavingStep(false);
       }
-    }, [savingStep, animating, currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete, saveStepConfig, showSaveError, requireStepAck, normalizeValidationResult, getUserFacingCompletionError, waitForSavingPaint]);
+    }, [savingStep, animating, currentStepIndex, totalSteps, currentConfig, stepData, visibleStepConfigs, goToStep, onComplete, saveStepConfig, showSaveError, requireStepAck, normalizeValidationResult, getUserFacingCompletionError, waitForSavingPaint, isStepDataPatch]);
 
     const handlePrev = useCallback(() => {
+      if (visibleStepConfigs[currentStepIndex]?.disableBack) return;
       if (currentStepIndex > 0) {
         // Пропускаем скрытые шаги при навигации назад
         let prevIndex = currentStepIndex - 1;
@@ -919,6 +972,18 @@
         goToStep(prevIndex, 'right');
       }
     }, [currentStepIndex, goToStep, visibleStepConfigs]);
+
+    const handleSecondary = useCallback(() => {
+      if (!currentConfig?.applySecondary || savingStep || animating) return;
+      const nextData = currentConfig.applySecondary(currentStepData, {
+        context,
+        stepData,
+        currentConfig
+      });
+      if (nextData && typeof nextData === 'object') {
+        updateStepData(currentConfig.id, nextData);
+      }
+    }, [animating, context, currentConfig, currentStepData, savingStep, stepData, updateStepData]);
 
     const handleSkip = useCallback(async () => {
       if (actionInFlightRef.current || transitionInFlightRef.current || savingStep || animating || currentStepIndex >= totalSteps - 1) return;
@@ -1126,25 +1191,27 @@
         onTouchEnd: handleTouchEnd
       },
         React.createElement('div', {
-          className: `mc-modal${modalClassName ? ` ${modalClassName}` : ''}`,
+          className: `mc-modal${modalClassName ? ` ${modalClassName}` : ''}${isDailyLayout ? ' mc-modal--daily' : ''}`,
           'data-heys-step-modal': 'true',
           'data-heys-step-id': currentConfig.id,
-          'data-heys-saving': savingStep ? 'true' : 'false'
+          'data-heys-saving': savingStep ? 'true' : 'false',
+          'data-heys-layout': isDailyLayout ? 'daily' : 'default'
         },
           // Header — iOS-style с кнопками слева/справа
           React.createElement('div', { className: 'mc-header mc-header--nav' },
             // Левая часть: Назад или Закрыть
             React.createElement('div', { className: 'mc-header-left' },
-              currentStepIndex > 0
+              currentStepIndex > 0 && !currentConfig?.disableBack
                 ? React.createElement('button', {
                   className: 'mc-header-btn mc-header-btn--back',
-                  onClick: handlePrev
-                }, '← Назад')
-                : onClose && React.createElement('button', {
+                  onClick: handlePrev,
+                  'aria-label': 'Назад'
+                }, isDailyLayout ? '←' : '← Назад')
+                : (!isDailyLayout && onClose && React.createElement('button', {
                   className: 'mc-header-btn mc-header-btn--close',
                   onClick: handleClose,
                   'aria-label': 'Закрыть'
-                }, '×')
+                }, '×'))
             ),
 
             // Центр: Title / hint / точки прогресса
@@ -1153,7 +1220,7 @@
                 ? headerCenterContent
                 : context.headerExtra
                 ? context.headerExtra
-                : (currentConfig.title || currentConfig.hint) && React.createElement('div', { className: 'mc-header-titles' },
+                : (!isDailyLayout && (currentConfig.title || currentConfig.hint) && React.createElement('div', { className: 'mc-header-titles' },
                   currentConfig.title && React.createElement(AutoFitText, {
                     className: 'mc-header-title',
                     text: [currentConfig.icon, currentConfig.title].filter(Boolean).join(' '),
@@ -1166,9 +1233,27 @@
                     maxFontSize: 12,
                     minFontSize: 9
                   })
-                ),
-              // 🆕 Точки прогресса в шапке (компактный вариант)
-              showProgress && totalSteps > 1 && React.createElement('div', { className: 'mc-progress-dots mc-progress-dots--in-header' },
+                )),
+              showDailyProgressDots && React.createElement('div', { className: 'mc-progress-dots mc-progress-dots--in-header mc-progress-dots--pills' },
+                progressStepConfigs.map((config, i) =>
+                  React.createElement('button', {
+                    key: config.id || i,
+                    className: 'mc-progress-dot' + (i === progressActiveIndex ? ' active' : '') + (i < progressActiveIndex ? ' completed' : ''),
+                    onClick: () => {
+                      const targetIndex = visibleStepConfigs.findIndex((item) => item.id === config.id);
+                      if (targetIndex >= 0 && targetIndex !== currentStepIndex) {
+                        if (targetIndex > currentStepIndex) {
+                          if (allowProgressForwardNav) handleNext();
+                        }
+                        else goToStep(targetIndex, 'right');
+                      }
+                    },
+                    disabled: !allowProgressForwardNav && i > progressActiveIndex,
+                    'aria-label': `Шаг ${i + 1}`
+                  })
+                )
+              ),
+              !isDailyLayout && showProgress && totalSteps > 1 && !currentConfig?.hideProgressDots && React.createElement('div', { className: 'mc-progress-dots mc-progress-dots--in-header' },
                 visibleStepConfigs.map((config, i) =>
                   config.hidden ? null : React.createElement('button', {
                     key: i,
@@ -1195,7 +1280,7 @@
             React.createElement('div', { className: 'mc-header-right' },
               headerRightContent
                 ? React.createElement('span', { className: 'mc-header-right-text' }, headerRightContent)
-                : (!(hidePrimaryOnFirst && currentStepIndex === 0) && !currentConfig.hideHeaderNext && React.createElement('button', {
+                : (!isDailyLayout && !(hidePrimaryOnFirst && currentStepIndex === 0) && !currentConfig.hideHeaderNext && React.createElement('button', {
                   className: 'mc-header-btn mc-header-btn--primary',
                   onClick: handleNext,
                   disabled: savingStep || animating
@@ -1226,13 +1311,31 @@
             React.createElement('span', null, validationMessage)
           ),
 
-          // Skip button (если разрешён пропуск) — оставляем внизу
-          allowSkip && currentStepIndex < totalSteps - 1 && React.createElement('div', { className: 'mc-buttons mc-buttons--skip-only' },
+          allowSkip && !isDailyLayout && currentStepIndex < totalSteps - 1 && React.createElement('div', { className: 'mc-buttons mc-buttons--skip-only' },
             React.createElement('button', {
               className: 'mc-btn mc-btn--ghost',
               onClick: handleSkip,
               disabled: savingStep || animating
             }, 'Пропустить')
+          ),
+
+          isDailyLayout && !hideDailyFooter && React.createElement('div', { className: 'mc-daily-footer' },
+            secondaryLabel && React.createElement('button', {
+              type: 'button',
+              className: 'mc-btn mc-btn--ghost mc-daily-footer-secondary',
+              onClick: handleSecondary,
+              disabled: savingStep || animating
+            }, secondaryLabel),
+            React.createElement('button', {
+              type: 'button',
+              className: 'mc-btn mc-btn--primary mc-daily-footer-primary',
+              onClick: handleNext,
+              disabled: savingStep || animating
+            }, savingStep
+              ? 'Сохраняю...'
+              : currentStepIndex === totalSteps - 1
+                ? (currentConfig.nextLabel || finishLabel)
+                : (currentConfig.nextLabel || 'Дальше'))
           ),
 
           // Daily tip

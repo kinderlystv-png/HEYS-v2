@@ -62,7 +62,8 @@ describe('morning check-in stability', () => {
   });
 
   it('keeps strict final completion single-step and marks cloud-pending local completion explicitly', () => {
-    expect(STEP_MODAL_SRC).toContain('if (requireStepAck) {\n            if (!(await saveStepConfig(currentConfig, stepData))) return;');
+    expect(STEP_MODAL_SRC).toContain('if (requireStepAck)');
+    expect(STEP_MODAL_SRC).toContain('if (!(await saveStepConfig(currentConfig, allStepData))) return;');
     expect(MORNING_SRC).toContain('markMorningProgressCloudPending');
     expect(MORNING_SRC).toContain("? 'background_sync'");
     expect(MORNING_SRC).toContain("traceMorningCheckin('step_sync_background'");
@@ -79,9 +80,11 @@ describe('morning check-in stability', () => {
   });
 
   it('acknowledges a successfully persisted weight without waiting for a read-back render', () => {
-    expect(STEPS_SRC).toContain('const saved = saveDayData(dateKey, dayData);');
+    expect(STEPS_SRC).toContain('persistMorningWeight');
+    expect(STEPS_SRC).toContain('if (!persisted.saved)');
     expect(STEPS_SRC).toContain("throw new Error('Не удалось сохранить вес. Попробуйте ещё раз.');");
-    expect(STEPS_SRC).toContain('affectedKeys: [`heys_dayv2_${dateKey}`],\n        completed: true');
+    expect(STEPS_SRC).toContain('affectedKeys: [`heys_dayv2_${dateKey}`],');
+    expect(STEPS_SRC).toContain('completed: true');
   });
 
   it('does not call preventDefault from a passive touch slider event', () => {
@@ -104,8 +107,9 @@ describe('morning check-in stability', () => {
     expect(MORNING_SRC).toContain('HEYS.caloricDebt?.needsRefeed === true');
     expect(MORNING_SRC).toContain("case 'refeedDay': return typeof day?.isRefeedDay === 'boolean' || !shouldIncludeRefeedStep(profile, dateKey);");
     expect(MORNING_SRC).toContain('function getBlockingMorningSteps');
-    expect(MORNING_SRC).toContain("const MORNING_OPTIONAL_TAIL_STEPS = new Set(['refeedDay', 'cycle', 'measurements', 'cold_exposure', 'supplements']);");
-    expect(MORNING_SRC).toContain("return status === 'synced'\n      || status === 'saved_local'");
+    expect(MORNING_SRC).toContain("const MORNING_OPTIONAL_TAIL_STEPS = new Set(['morningRest', 'checkinRecorded'");
+    expect(MORNING_SRC).toContain("return status === 'synced'");
+    expect(MORNING_SRC).toContain("|| status === 'saved_local'");
     expect(MORNING_SRC).toContain('isMorningFinalBlockingStep(row.id) && !isMorningStatusTerminal(row)');
     expect(MORNING_SRC).toContain('checkin_incomplete_steps');
     expect(STEP_MODAL_SRC).toContain("raw.startsWith('checkin_incomplete_steps:')");
@@ -127,7 +131,8 @@ describe('morning check-in stability', () => {
   });
 
   it('keeps the final morning routine step blocking until the user confirms it', () => {
-    expect(MORNING_SRC).toContain("case 'morningRoutine':\n        return false;");
+    expect(MORNING_SRC).toContain("case 'morningRoutine':");
+    expect(MORNING_SRC).toMatch(/case 'morningRoutine':\s+return false;/);
     expect(STEPS_SRC).toContain("registerStep('morningRoutine'");
     expect(STEPS_SRC).toContain('completed: true');
     expect(STEPS_SRC).toContain('affectedKeys: data?.selectedCopyId ? [`heys_dayv2_${dateKey}`] : []');

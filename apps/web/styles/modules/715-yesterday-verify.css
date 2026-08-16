@@ -653,3 +653,81 @@
     flex: 1;
   }
 }
+
+.yv-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.yv-hero-title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--v4-sand-ink, #201e1d);
+  text-wrap: pretty;
+}
+
+.yv-hero-sub {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
+  text-wrap: pretty;
+}
+
+.yv-pack-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.yv-pack-primary,
+.yv-pack-secondary {
+  min-height: 48px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.yv-pack-primary {
+  background: var(--v4-sand-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
+}
+
+.yv-pack-row {
+  display: flex;
+  gap: 8px;
+}
+
+.yv-pack-secondary {
+  flex: 1;
+  background: var(--v4-chip, #f7efe2);
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
+}
+
+.yv-pack-note {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.42));
+  text-wrap: pretty;
+}
+
+[data-theme$="dark"] .yv-hero-title {
+  color: var(--v4-ink, #f2ede6);
+}
+
+[data-theme$="dark"] .yv-hero-sub,
+[data-theme$="dark"] .yv-pack-note {
+  color: rgba(242, 237, 230, 0.55);
+}
+
+[data-theme$="dark"] .yv-pack-secondary {
+  background: var(--v4-card, #23201b);
+  color: rgba(242, 237, 230, 0.6);
+}

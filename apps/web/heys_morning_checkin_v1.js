@@ -856,7 +856,10 @@
   }
 
   function markDailyRequiredOnlyIfApplicable(profile) {
-    if (!isRegistrationProfilePending(profile)) _dailyRequiredOnly = true;
+    // v4: полный дневной план всегда включает пятый экран. requiredOnly
+    // остаётся только у reopen пропавших core (_reopenRequiredOnly /
+    // markDailyRequiredOnlyIfPartialPrefill), не у каждого утра.
+    void profile;
   }
 
   /** Хотя бы одно core-поле дня уже заполнено (куратор или частичное прохождение). */
@@ -988,6 +991,15 @@
     'profile-metabolism',
   ];
   const REGISTRATION_STEP_IDS = new Set(REGISTRATION_PROFILE_ORDER);
+  const REGISTRATION_BODY_FRESH_MS = 3 * 24 * 60 * 60 * 1000;
+
+  function isRegistrationEndingStep(stepId) {
+    return stepId === 'welcome';
+  }
+
+  function isRegistrationPlanStep(stepId) {
+    return REGISTRATION_STEP_IDS.has(stepId) || isRegistrationEndingStep(stepId);
+  }
 
   function isRegistrationPersonalComplete(profile) {
     const firstName = String(profile?.firstName || '').trim();
@@ -995,6 +1007,27 @@
       && firstName !== '?'
       && !!profile?.birthDate
       && !!profile?.gender;
+  }
+
+  function getRegistrationBodyCapturedAt(profile) {
+    const stamped = Number(profile?.profileBodyCapturedAt || 0);
+    if (stamped > 0) return stamped;
+    // Старые черновики без метки: не считаем «свежими», иначе тренд/резюме
+    // проглотит вес из анкеты без явного подтверждения.
+    return 0;
+  }
+
+  function isRegistrationBodyFresh(profile, nowMs = Date.now()) {
+    const weight = Number(profile?.weight);
+    const height = Number(profile?.height);
+    if (!(weight > 0) || !(height > 0)) return false;
+    const capturedAt = getRegistrationBodyCapturedAt(profile);
+    if (!(capturedAt > 0)) return false;
+    return (nowMs - capturedAt) <= REGISTRATION_BODY_FRESH_MS;
+  }
+
+  function isRegistrationGoalsCaptured(profile) {
+    return profile?.deficitPctTarget !== undefined && profile?.deficitPctTarget !== null;
   }
 
   function isMorningLedgerStepTerminal(row) {
@@ -1005,14 +1038,56 @@
       || status === 'data_present';
   }
 
+  // welcome — хвост живой регистрации. Держим, пока идёт первый вход
+  // (профиль неполон или в журнале реально собрали registration-шаги).
+  function shouldKeepRegistrationWelcome(ledger, profile) {
+    if (HEYS.ProfileSteps?.isProfileIncomplete?.(profile) === true) return true;
+    const registrationActed = REGISTRATION_PROFILE_ORDER.some((id) => {
+      const status = ledger?.steps?.[id]?.status;
+      return status === 'synced' || status === 'saved_local' || status === 'data_present';
+    });
+    return registrationActed;
+  }
+
+  function isMorningStepSatisfiedByData(id, state) {
+    if (id === 'welcome') return !shouldKeepRegistrationWelcome(state.ledger, state.profile);
+    return (id === 'yesterdayVerify' || MORNING_DATA_COMPLETABLE_STEPS.has(id))
+      && isMorningStepComplete(id, state);
+  }
+
   function normalizeRegistrationStepOrder(steps, profile) {
     if (!Array.isArray(steps) || steps.length === 0) return steps;
-    const hasRegistration = steps.some((id) => REGISTRATION_STEP_IDS.has(id));
+    const hasRegistration = steps.some((id) => isRegistrationPlanStep(id));
     if (!hasRegistration) return steps;
     const registration = REGISTRATION_PROFILE_ORDER.filter((id) => steps.includes(id));
     const welcome = steps.includes('welcome') ? ['welcome'] : [];
-    const rest = steps.filter((id) => !REGISTRATION_STEP_IDS.has(id) && id !== 'welcome');
+    const rest = steps.filter((id) => !isRegistrationPlanStep(id));
     return [...registration, ...welcome, ...rest];
+  }
+
+  /**
+   * Регистрация = 4 шага профиля + терминальный итог (welcome).
+   * Дневной ledger / dayv2 сюда не входят.
+   */
+  function getRegistrationSteps(profile) {
+    if (!HEYS.ProfileSteps?.isProfileIncomplete?.(profile)) return [];
+    return [
+      'profile-personal',
+      'profile-body',
+      'profile-goals',
+      'profile-metabolism',
+      'welcome',
+    ];
+  }
+
+  function canUseMorningDailyFlow() {
+    const subscription = HEYS.Subscription;
+    const hasSubscriptionGate = typeof subscription?.canWriteStatus === 'function';
+    const subscriptionStatus = subscription?.getCachedStatus?.()
+      || subscription?.getLocalStatus?.()
+      || 'none';
+    return !hasSubscriptionGate
+      || subscription.canWriteStatus(subscriptionStatus) === true;
   }
 
   function isProfileCompletionConfirmedByFullSync(profile, clientId) {
@@ -1030,13 +1105,22 @@
   // подтвердиться между открытием мастера и следующим запуском приложения.
   // Не удаляем весь ledger: в нём могут быть независимые дневные шаги.
   function resolveStaleRegistrationProgress(ledger, clientId) {
-    if (!ledger || !isProfileCompletionConfirmedByFullSync(
-      getFreshMorningProfile(clientId), clientId
-    )) return ledger;
-
-    const staleStepIds = (ledger.plannedStepIds || [])
-      .filter((id) => REGISTRATION_STEP_IDS.has(id))
-      .filter((id) => !isMorningStatusTerminal(ledger.steps?.[id] || {}));
+    if (!ledger) return ledger;
+    const profile = getFreshMorningProfile(clientId);
+    const staleStepIds = [];
+    if (isProfileCompletionConfirmedByFullSync(profile, clientId)) {
+      (ledger.plannedStepIds || []).forEach((id) => {
+        if (!REGISTRATION_STEP_IDS.has(id)) return;
+        if (isMorningStatusTerminal(ledger.steps?.[id] || {})) return;
+        staleStepIds.push(id);
+      });
+    }
+    if ((ledger.plannedStepIds || []).includes('welcome')
+      && !isMorningStatusTerminal(ledger.steps?.welcome || {})
+      && !shouldKeepRegistrationWelcome(ledger, profile)
+      && !staleStepIds.includes('welcome')) {
+      staleStepIds.push('welcome');
+    }
     if (!staleStepIds.length) return ledger;
 
     const resolvedAt = Date.now();
@@ -1045,7 +1129,9 @@
       ledger.steps[id] = {
         ...(ledger.steps[id] || {}),
         status: 'skipped',
-        skippedReason: 'profile_completed_after_full_sync',
+        skippedReason: id === 'welcome'
+          ? 'welcome_without_registration_flow'
+          : 'profile_completed_after_full_sync',
         skippedAt: resolvedAt,
         cloudPending: false,
         error: null,
@@ -1252,7 +1338,7 @@
     const blockingProgressSteps = (existingProgress
       ? getBlockingMorningSteps({ ledger: existingProgress, dateKey: todayKey, clientId: currentClientId })
       : [])
-      .filter((row) => !(row.id === 'morningRoutine' && coreDone));
+      .filter((row) => !(row.id === 'morningRoutine' && coreDone) && !(row.id === 'morningRest' && coreDone) && row.id !== 'checkinRecorded');
     const unsyncedProgressSteps = existingProgress
       ? Object.entries(existingProgress.steps || {})
         .filter(([id, row]) => id !== '__flow__' && isUnresolvedProgressStatus(row && row.status))
@@ -1262,7 +1348,12 @@
         markDailyRequiredOnlyIfApplicable(profile);
         return true;
       }
-      return false;
+      // Прерванный флоу (× / «Прервать») не должен глушить авто-показ, пока
+      // обязательные шаги не закрыты данными. Иначе refresh после dismiss
+      // навсегда прячет чек-ин, хотя диалог обещает «продолжите при открытии».
+      if (blockingProgressSteps.length === 0) {
+        return false;
+      }
     }
     if (existingProgress && (blockingProgressSteps.length > 0 || unsyncedProgressSteps.length > 0)) {
       console.info('[MorningCheckin] ↩️ Resuming flow with unfinished steps', {
@@ -1361,6 +1452,7 @@
   /**
    * Централизованная функция для получения списка шагов чек-ина
    * Используется и в MorningCheckin, и в showCheckin.morning()
+   * Регистрация (profile + welcome) сюда не входит — см. getRegistrationSteps.
    */
   function getCheckinSteps(profile, opts) {
     const {
@@ -1370,26 +1462,7 @@
       dateKey = null
     } = opts || {};
     const steps = [];
-    let hasProfileSteps = false;
-    const subscription = HEYS.Subscription;
-    const hasSubscriptionGate = typeof subscription?.canWriteStatus === 'function';
-    const subscriptionStatus = subscription?.getCachedStatus?.()
-      || subscription?.getLocalStatus?.()
-      || 'none';
-    const canUseDailyFlow = !hasSubscriptionGate
-      || subscription.canWriteStatus(subscriptionStatus) === true;
-
-    // 1. Проверяем профиль для новых пользователей
-    if (HEYS.ProfileSteps && HEYS.ProfileSteps.isProfileIncomplete) {
-      if (HEYS.ProfileSteps.isProfileIncomplete(profile)) {
-        steps.push('profile-personal', 'profile-body', 'profile-goals', 'profile-metabolism');
-        hasProfileSteps = true;
-        // До назначения/старта триала регистрация заканчивается профилем.
-        // Чекин и welcome с переходом в дневник откроются только после доступа.
-        if (!canUseDailyFlow) return steps;
-        steps.push('welcome');
-      }
-    }
+    const canUseDailyFlow = canUseMorningDailyFlow();
 
     // Защита второго слоя: даже если UI-gate ещё не успел отрисоваться,
     // клиент без активного доступа не получает ни одного шага чекина.
@@ -1416,49 +1489,17 @@
     //
     // Вес в регистрации (целый) → профиль; вес в чек-ине (с десятыми) → день.
     steps.push('weight');
-    steps.push('sleepTime', 'sleepQuality');
+    steps.push('sleep');
     steps.push('morning_mood');
     steps.push('stepsGoal');
-
-    // 3. 🔄 Загрузочный день (Refeed) — опциональный, после required-блока.
-    // Добавляем только когда сам шаг реально будет видимым в StepModal.
-    if (shouldIncludeRefeedStep(profile, dateKey || getTodayKey())) {
-      steps.push('refeedDay');
-    }
-
-    // 4. Условные шаги (cycle, measurements, supplements)
-    if (HEYS.Steps && HEYS.Steps.shouldShowCycleStep && HEYS.Steps.shouldShowCycleStep()) {
-      steps.push('cycle');
-    }
-    const hf = HEYS.healthFeatures;
-    const measurementsEnabled = hf && typeof hf.isMeasurementsTrackingEnabled === 'function'
-      ? hf.isMeasurementsTrackingEnabled(profile)
-      : profile && profile.measurementsTrackingEnabled === true;
-    const supplementsEnabled = hf && typeof hf.isSupplementsTrackingEnabled === 'function'
-      ? hf.isSupplementsTrackingEnabled(profile)
-      : profile && profile.supplementsTrackingEnabled === true;
-
-    if (measurementsEnabled
-      && HEYS.Steps && HEYS.Steps.shouldShowMeasurements && HEYS.Steps.shouldShowMeasurements()) {
-      steps.push('measurements');
-    }
-
-    // 5. 🧊 Холодовое воздействие (опциональный шаг)
-    steps.push('cold_exposure');
-
-    // 6. 💊 Витамины (опциональный шаг, запоминается на след. день)
-    if (supplementsEnabled) {
-      steps.push('supplements');
-    }
-
-    // 7. 🌟 Мотивирующий финальный шаг
-    steps.push('morningRoutine');
+    steps.push('morningRest');
+    if (!requiredOnly) steps.push('checkinRecorded');
 
     if (!filterCompleted && !requiredOnly) return steps;
 
     // Фильтруем уже-выполненные required-шаги (data-derived completion).
-    // Регистрационные / opaque / opt-in шаги оставляем как есть — они либо нужны атомарно (registration),
-    // либо conditional-gated на уровне push, либо canSkip:true и не требуют detection.
+    // Opaque / opt-in шаги оставляем как есть — они либо conditional-gated на уровне push,
+    // либо canSkip:true и не требуют detection.
     const todayKey = getTodayKey();
     const targetDateKey = dateKey || todayKey;
     const dayDataF = readDayV2ScopedFirst(targetDateKey, {}) || {};
@@ -1471,20 +1512,25 @@
     const filtered = steps.filter(id => {
       switch (id) {
         case 'weight': return !hasCheckinWeight(day);
+        case 'sleep': return !(hasSleepTime(day) && hasSleepQuality(day));
         case 'sleepTime': return !hasSleepTime(day);
         case 'sleepQuality': return !hasSleepQuality(day);
         case 'morning_mood': return !hasMorningMood(day);
         case 'stepsGoal': return needsStepsGoalCheckin(profile, targetDateKey);
-        case 'cycle': return !hasCycleDecision(day, profile);
-        default: return true;
+        case 'morningRest':
+        case 'checkinRecorded':
+          return !isMorningStepComplete(id, { dateKey: targetDateKey, day, profile });
+        case 'yesterdayVerify':
+          return !isMorningStepComplete(id, { dateKey: targetDateKey, day, profile });
+        default:
+          return true;
       }
     });
 
     // 🆕 TASK-003 follow-up: режим «переоткрытие для восстановления» — только
-    // недостающие обязательные шаги, без опционального хвоста. Регистрацию
-    // (profile-incomplete) не урезаем — её шаги нужны атомарно.
-    if (requiredOnly && !hasProfileSteps) {
-      const REQUIRED = new Set(['weight', 'sleepTime', 'sleepQuality', 'morning_mood', 'stepsGoal', 'yesterdayVerify']);
+    // недостающие обязательные шаги, без опционального хвоста.
+    if (requiredOnly) {
+      const REQUIRED = new Set(['weight', 'sleep', 'sleepTime', 'sleepQuality', 'morning_mood', 'stepsGoal', 'yesterdayVerify']);
       return filtered.filter(id => REQUIRED.has(id));
     }
 
@@ -1523,10 +1569,15 @@
     return `heys_morning_checkin_progress_v1_${dateKey}`;
   }
 
-  const MORNING_CORE_STEPS = ['weight', 'sleepTime', 'sleepQuality', 'morning_mood', 'stepsGoal'];
-  const MORNING_OPTIONAL_TAIL_STEPS = new Set(['refeedDay', 'cycle', 'measurements', 'cold_exposure', 'supplements']);
+  const MORNING_CORE_STEPS = ['weight', 'sleep', 'morning_mood', 'stepsGoal'];
+  const LEGACY_SLEEP_STEP_IDS = new Set(['sleepTime', 'sleepQuality']);
+  const LEGACY_REST_STEP_IDS = new Set(['refeedDay', 'cycle', 'measurements', 'cold_exposure', 'supplements', 'morningRoutine']);
+  const MORNING_OPTIONAL_TAIL_STEPS = new Set(['morningRest', 'checkinRecorded', ...LEGACY_REST_STEP_IDS]);
   const MORNING_DATA_COMPLETABLE_STEPS = new Set([
     ...MORNING_CORE_STEPS,
+    'sleepTime',
+    'sleepQuality',
+    'morningRest',
     'refeedDay',
     'cycle',
     'measurements',
@@ -1544,11 +1595,14 @@
   ]);
   const MORNING_STEP_LABELS = {
     weight: 'вес',
+    sleep: 'сон',
     sleepTime: 'сон',
     sleepQuality: 'качество сна',
     morning_mood: 'самочувствие',
     stepsGoal: 'цель шагов',
     yesterdayVerify: 'проверка вчера',
+    morningRest: 'остальное',
+    checkinRecorded: 'записано',
     refeedDay: 'загрузочный день',
     cycle: 'цикл',
     measurements: 'замеры',
@@ -1760,8 +1814,7 @@
     const profile = getFreshMorningProfile(clientId);
     return plannedStepIds.map((id) => {
       const row = ledger?.steps?.[id] || {};
-      const completeByData = (id === 'yesterdayVerify' || MORNING_DATA_COMPLETABLE_STEPS.has(id))
-        && isMorningStepComplete(id, { dateKey, clientId, day, profile, ledger });
+      const completeByData = isMorningStepSatisfiedByData(id, { dateKey, clientId, day, profile, ledger });
       return {
         id,
         status: row.status || (completeByData ? 'data_present' : 'missing'),
@@ -1770,13 +1823,42 @@
     }).filter((row) => !isMorningStatusTerminal(row));
   }
 
+  function collapseLegacyCheckinStepIds(stepIds) {
+    if (!Array.isArray(stepIds) || stepIds.length === 0) return stepIds || [];
+    const out = [];
+    let sawSleep = false;
+    let sawRest = false;
+    stepIds.forEach((id) => {
+      if (id === 'sleep' || LEGACY_SLEEP_STEP_IDS.has(id)) {
+        if (!sawSleep) {
+          out.push('sleep');
+          sawSleep = true;
+        }
+        return;
+      }
+      if (id === 'morningRest' || LEGACY_REST_STEP_IDS.has(id)) {
+        if (!sawRest) {
+          out.push('morningRest');
+          sawRest = true;
+        }
+        return;
+      }
+      out.push(id);
+    });
+    return out;
+  }
+
   function mergeFreshStepsWithProgress(freshSteps, existingLedger, state = {}) {
     const dateKey = state.dateKey || getTodayKey();
     const clientId = state.clientId || getCurrentClientId();
     const day = state.day || getFreshMorningDay(dateKey);
     const profile = state.profile || getFreshMorningProfile(clientId);
     const merged = existingLedger
-      ? getRemainingMorningSteps({ ledger: existingLedger, dateKey, clientId }).map((row) => row.id)
+      ? collapseLegacyCheckinStepIds(
+        getRemainingMorningSteps({ ledger: existingLedger, dateKey, clientId }).map((row) => row.id)
+      ).filter((id) => !isMorningStepSatisfiedByData(id, {
+        dateKey, clientId, day, profile, ledger: existingLedger
+      }))
       : [];
     const alreadyPlanned = new Set(existingLedger?.plannedStepIds || []);
     const replannedStepIds = getReplannedMorningStepIds(freshSteps, existingLedger, {
@@ -1791,8 +1873,9 @@
 
     freshSteps.forEach((id) => {
       if (merged.includes(id) || alreadyPlanned.has(id)) return;
-      const completeByData = (id === 'yesterdayVerify' || MORNING_DATA_COMPLETABLE_STEPS.has(id))
-        && isMorningStepComplete(id, { dateKey, clientId, day, profile, ledger: existingLedger });
+      const completeByData = isMorningStepSatisfiedByData(id, {
+        dateKey, clientId, day, profile, ledger: existingLedger
+      });
       if (completeByData) return;
       merged.push(id);
     });
@@ -1986,6 +2069,7 @@
     if (state.saveResult?.completed === true) return true;
     switch (stepId) {
       case 'weight': return hasCheckinWeight(day);
+      case 'sleep': return hasSleepTime(day) && hasSleepQuality(day);
       case 'sleepTime': return hasSleepTime(day);
       case 'sleepQuality': return hasSleepQuality(day);
       case 'morning_mood': return hasMorningMood(day);
@@ -2000,19 +2084,28 @@
       }
       case 'cold_exposure': return !!day?.coldExposure && typeof day.coldExposure === 'object' && !!day.coldExposure.type;
       case 'supplements': return Array.isArray(day?.supplementsPlanned);
+      case 'morningRest':
+        if (isMorningLedgerStepTerminal(state.ledger?.steps?.morningRest)) return true;
+        return !coreCheckinDataMissing(day) && hasStepsGoalConfirmedToday(profile, dateKey);
+      case 'checkinRecorded':
+        return !coreCheckinDataMissing(day) && hasStepsGoalConfirmedToday(profile, dateKey);
       case 'morningRoutine':
         return false;
       case 'welcome':
-        return true;
+        // Итог регистрации терминальный: человек закрывает его кнопкой,
+        // а не «данными уже есть». Иначе merge выбросит welcome.
+        return false;
       case 'profile-personal':
         if (HEYS.ProfileSteps?.isProfileIncomplete?.(profile) === false) return true;
         return isRegistrationPersonalComplete(profile);
       case 'profile-body':
         if (HEYS.ProfileSteps?.isProfileIncomplete?.(profile) === false) return true;
-        return isMorningLedgerStepTerminal(state.ledger?.steps?.['profile-body']);
+        if (isMorningLedgerStepTerminal(state.ledger?.steps?.['profile-body'])) return true;
+        return isRegistrationBodyFresh(profile);
       case 'profile-goals':
         if (HEYS.ProfileSteps?.isProfileIncomplete?.(profile) === false) return true;
-        return isMorningLedgerStepTerminal(state.ledger?.steps?.['profile-goals']);
+        if (isMorningLedgerStepTerminal(state.ledger?.steps?.['profile-goals'])) return true;
+        return isRegistrationGoalsCaptured(profile);
       case 'profile-metabolism':
         return !(HEYS.ProfileSteps?.isProfileIncomplete?.(profile));
       default:
@@ -2084,21 +2177,26 @@
     const dateKey = opts.dateKey || getTodayKey();
     const clientId = opts.clientId || getCurrentClientId();
     const profile = opts.profile || getFreshMorningProfile(clientId);
+    const forceDaily = opts.mode === 'daily';
+    const wantRegistration = !forceDaily
+      && HEYS.ProfileSteps?.isProfileIncomplete?.(profile) === true;
     const cachedYesterdayVerifyRequired = opts.source === 'MorningCheckin'
       && typeof _nextPlanYesterdayVerifyRequired === 'boolean'
       ? _nextPlanYesterdayVerifyRequired
       : null;
     if (opts.source === 'MorningCheckin') _nextPlanYesterdayVerifyRequired = null;
-    const derivedFreshSteps = getCheckinSteps(profile, {
-      filterCompleted: opts.filterCompleted !== false,
-      requiredOnly: typeof opts.requiredOnly === 'boolean'
-        ? opts.requiredOnly
-        : (opts.source === 'MorningCheckin' && (!!_reopenRequiredOnly || !!_dailyRequiredOnly)),
-      yesterdayVerifyRequired: typeof opts.yesterdayVerifyRequired === 'boolean'
-        ? opts.yesterdayVerifyRequired
-        : cachedYesterdayVerifyRequired,
-      dateKey
-    });
+    const derivedFreshSteps = wantRegistration
+      ? getRegistrationSteps(profile)
+      : getCheckinSteps(profile, {
+        filterCompleted: opts.filterCompleted !== false,
+        requiredOnly: typeof opts.requiredOnly === 'boolean'
+          ? opts.requiredOnly
+          : (opts.source === 'MorningCheckin' && (!!_reopenRequiredOnly || !!_dailyRequiredOnly)),
+        yesterdayVerifyRequired: typeof opts.yesterdayVerifyRequired === 'boolean'
+          ? opts.yesterdayVerifyRequired
+          : cachedYesterdayVerifyRequired,
+        dateKey
+      });
     // Explicit reset flows cannot wait for the React day-state write to reach
     // localStorage before the plan is built. Force their known reset steps so
     // a stale pre-reset snapshot cannot produce an empty loading modal.
@@ -2107,23 +2205,40 @@
       ...forcedStepIds,
       ...derivedFreshSteps
     ]));
-    const existingLedger = readMorningProgress(dateKey, clientId);
-    const mergedSteps = mergeFreshStepsWithProgress(freshSteps, existingLedger, { dateKey, clientId, profile });
+    const existingLedger = wantRegistration
+      ? null
+      : resolveStaleRegistrationProgress(
+        readMorningProgress(dateKey, clientId),
+        clientId
+      );
+    const mergedSteps = wantRegistration
+      ? normalizeRegistrationStepOrder(
+        freshSteps.filter((id) => {
+          if (isRegistrationEndingStep(id)) return true;
+          return !isMorningStepSatisfiedByData(id, {
+            dateKey, clientId, profile, ledger: null
+          });
+        }),
+        profile
+      )
+      : mergeFreshStepsWithProgress(freshSteps, existingLedger, { dateKey, clientId, profile });
     // Keep explicit reset steps after data-derived filtering too: localStorage
     // may still contain the pre-reset day for a few frames.
     const steps = normalizeRegistrationStepOrder(
       Array.from(new Set([...forcedStepIds, ...mergedSteps])),
       profile
     );
-    const replannedStepIds = getReplannedMorningStepIds(freshSteps, existingLedger);
+    const replannedStepIds = wantRegistration
+      ? []
+      : getReplannedMorningStepIds(freshSteps, existingLedger);
     const fullPlannedStepIds = Array.from(new Set([
       ...(existingLedger?.plannedStepIds || []),
       ...freshSteps
     ]));
     const flowId = createMorningFlowId(dateKey);
-    const isRegistrationCheckin = steps.includes('profile-personal');
+    const isRegistrationCheckin = steps.some((stepId) => isRegistrationPlanStep(stepId));
     const isProfileOnlyRegistration = isRegistrationCheckin
-      && steps.every((stepId) => stepId.startsWith('profile-'));
+      && steps.every((stepId) => isRegistrationPlanStep(stepId));
     const ledger = isProfileOnlyRegistration ? null : ensureMorningProgress({
       dateKey,
       clientId,
@@ -2140,7 +2255,8 @@
       flowId: ledger?.flowId || flowId,
       skipYesterdayVerify: opts.yesterdayVerifyRequired === false,
       isRegistrationCheckin,
-      isProfileOnlyRegistration
+      isProfileOnlyRegistration,
+      mode: wantRegistration ? 'registration' : 'daily'
     };
   }
 
@@ -2333,40 +2449,15 @@
 
   /**
    * MorningCheckin — обёртка над новым StepModal
-   * Использует шаги: [profile-steps], weight, sleepTime, sleepQuality, [measurements], stepsGoal
-   * 
+   * Регистрация: profile-* + welcome (три конца). Дневной чек-ин — отдельно,
+   * без крестика; выход только вперёд.
+   *
    * @param {function} onComplete - Вызывается при завершении всех шагов
-   * @param {function} onClose - Вызывается при закрытии крестиком (отложить на потом)
+   *   может получить { startDailyCheckin: true } после «Начать утренний чек-ин»
+   *   или live-выдачи триала с экрана ожидания
+   * @param {string} [mode] - 'daily' форсирует дневной план (после handoff с регистрации)
    */
-  function MorningCheckin({ onComplete, onClose }) {
-    // 🛡️ Render-time guard: backstop под cold-start VPN race, когда
-    // shouldShowMorningCheckin вернул true на устаревшем (incomplete) профиле,
-    // а scoped LS уже содержит profileCompleted=true. В этом случае повторный
-    // вызов shouldShowMorningCheckin со свежими данными вернёт false, и мы
-    // закроем визард на следующем коммите React.
-    //
-    // ВАЖНО: для completed-профиля визард легитимно открывается ради дневного
-    // флоу (например, утренний вес ещё не введён). В этом случае повторный
-    // shouldShow всё равно вернёт true — не закрываем.
-    if (window.React && typeof window.React.useEffect === 'function') {
-      window.React.useEffect(function () {
-        try {
-          var cid = (window.HEYS && window.HEYS.currentClientId) || '';
-          var helper = window.HEYS && window.HEYS.MorningCheckinUtils && window.HEYS.MorningCheckinUtils.readProfileForceRawScoped;
-          if (!cid || typeof helper !== 'function') return;
-          var scoped = helper(cid);
-          if (!scoped || scoped.profileCompleted !== true) return;
-          var stillNeeded = typeof window.HEYS.shouldShowMorningCheckin === 'function'
-            ? window.HEYS.shouldShowMorningCheckin()
-            : false;
-          if (stillNeeded) return;
-          console.warn('[MorningCheckin] 🛡️ render-time guard: profileCompleted=true и shouldShow=false (stale-data race) → auto-close wizard');
-          if (typeof onClose === 'function') onClose();
-        } catch (_) { }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, []);
-    }
-
+  function MorningCheckin({ onComplete, mode }) {
     // 🛡️ Замораживаем список шагов на время сессии визарда.
     // Без заморозки: WeightStepComponent immediate-write (500ms debounce) кладёт
     // dayv2.weightMorning в LS до того как пользователь нажмёт «Далее». На любом
@@ -2386,8 +2477,72 @@
       // показываем только недостающие обязательные шаги, без опционального хвоста.
       planRef.current = buildMorningCheckinPlan({
         source: 'MorningCheckin',
+        mode: mode === 'daily' ? 'daily' : undefined,
         requiredOnly: !!_reopenRequiredOnly || !!_dailyRequiredOnly
       });
+    }
+
+    // 🛡️ Render-time guard: backstop под cold-start VPN race, когда
+    // shouldShowMorningCheckin вернул true на устаревшем (incomplete) профиле,
+    // а scoped LS уже содержит profileCompleted=true. В этом случае повторный
+    // вызов shouldShowMorningCheckin со свежими данными вернёт false, и мы
+    // закроем визард на следующем коммите React.
+    //
+    // ВАЖНО: для completed-профиля визард легитимно открывается ради дневного
+    // флоу (например, утренний вес ещё не введён). В этом случае повторный
+    // shouldShow всё равно вернёт true — не закрываем.
+    // Регистрационный итог (ожидание) тоже легитимен при profileCompleted:
+    // не гасим его guard'ом — иначе subscription-waiting перехватит кадр.
+    if (window.React && typeof window.React.useEffect === 'function') {
+      window.React.useEffect(function () {
+        try {
+          var cid = (window.HEYS && window.HEYS.currentClientId) || '';
+          var helper = window.HEYS && window.HEYS.MorningCheckinUtils && window.HEYS.MorningCheckinUtils.readProfileForceRawScoped;
+          if (!cid || typeof helper !== 'function') return;
+          var scoped = helper(cid);
+          if (!scoped || scoped.profileCompleted !== true) return;
+          var planMode = planRef.current && planRef.current.mode;
+          if (planMode === 'registration') return;
+          var stillNeeded = typeof window.HEYS.shouldShowMorningCheckin === 'function'
+            ? window.HEYS.shouldShowMorningCheckin()
+            : false;
+          if (stillNeeded) return;
+          console.warn('[MorningCheckin] 🛡️ render-time guard: profileCompleted=true и shouldShow=false (stale-data race) → auto-complete wizard');
+          if (typeof onComplete === 'function') onComplete();
+        } catch (_) { }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
+    }
+
+    // Live-выдача триала с итога регистрации — сразу в дневной чек-ин,
+    // без повторной сводки «Профиль готов».
+    if (window.React && typeof window.React.useEffect === 'function') {
+      window.React.useEffect(function () {
+        const plan = planRef.current;
+        if (!plan || plan.mode !== 'registration') return undefined;
+        const onSubscriptionChanged = function (event) {
+          try {
+            const status = event?.detail?.status
+              || HEYS.Subscription?.getCachedStatus?.()
+              || HEYS.Subscription?.getLocalStatus?.()
+              || 'none';
+            const canWrite = typeof HEYS.Subscription?.canWriteStatus === 'function'
+              ? HEYS.Subscription.canWriteStatus(status)
+              : status === 'trial' || status === 'active';
+            if (!canWrite) return;
+            const profile = getFreshMorningProfile(plan.clientId);
+            if (HEYS.ProfileSteps?.isProfileIncomplete?.(profile) === true) return;
+            if (typeof onComplete === 'function') {
+              onComplete({ startDailyCheckin: true });
+            }
+          } catch (_) { /* noop */ }
+        };
+        window.addEventListener('heys:subscription-changed', onSubscriptionChanged);
+        return function () {
+          window.removeEventListener('heys:subscription-changed', onSubscriptionChanged);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, []);
     }
 
     // Если StepModal доступен — используем его
@@ -2395,14 +2550,20 @@
       const plan = planRef.current;
       const steps = plan.steps;
 
-      // Определяем: это регистрационный чек-ин (есть profile-шаги)?
-      const isRegistrationCheckin = plan.isRegistrationCheckin;
+      const startDailyCheckin = () => {
+        if (typeof onComplete === 'function') onComplete({ startDailyCheckin: true });
+      };
 
       // Обёртка для onComplete: обновляем данные дня
       const wrappedOnComplete = () => {
         if (plan.isProfileOnlyRegistration) {
-          if (typeof onComplete === 'function') onComplete();
-          return true;
+          // Итог ожидания/даты не должен закрывать мастер сам — только CTA
+          // «Начать чек-ин» / live trial через startDailyCheckin.
+          if (canUseMorningDailyFlow()) {
+            startDailyCheckin();
+            return true;
+          }
+          return false;
         }
         return completeMorningCheckin(plan, onComplete);
       };
@@ -2421,68 +2582,29 @@
       }
       if (steps.length === 0) return null;
 
-      // Защита от случайного закрытия чек-ина mid-flow.
-      // Backdrop-click / крестик дёргают onClose — оборачиваем confirm-диалогом
-      // (HEYS.ConfirmModal — нативный, fallback на window.confirm если модуль не загружен).
-      // Render-time guard (787-803) и wrappedOnComplete вызывают исходный onClose/onComplete
-      // напрямую (без обёртки) — это легитимные пути и не нуждаются в confirm.
-      const onCloseWithConfirm = () => {
-        if (isRegistrationCheckin) {
-          const cm = HEYS && HEYS.ConfirmModal;
-          if (cm && typeof cm.confirmAction === 'function') {
-            cm.confirmAction({
-              icon: '⚠️',
-              title: 'Завершите первый вход',
-              text: 'Сначала нужно подписать документы, заполнить профиль и пройти обязательный чек-ин.',
-              actions: [
-                { label: 'Продолжить', value: 'continue', style: 'primary', variant: 'fill', isDefault: true }
-              ],
-              onConfirm: () => {},
-            });
-          } else {
-            window.alert('Сначала нужно завершить регистрацию и обязательный чек-ин.');
-          }
-          return;
-        }
-        const proceed = () => {
-          markMorningProgressStep(plan.dateKey, '__flow__', {
-            status: 'closed',
-            closedAt: Date.now(),
-            error: null
-          }, plan.clientId);
-          traceMorningCheckin('flow_closed_by_user', {
-            dateKey: plan.dateKey,
-            clientId: plan.clientId,
-            flowId: plan.flowId,
-            status: 'closed'
-          });
-          if (typeof onClose === 'function') onClose();
-        };
-        const cm = HEYS && HEYS.ConfirmModal;
-        if (cm && typeof cm.confirmAction === 'function') {
-          cm.confirmAction({
-            icon: '⚠️',
-            title: 'Прервать утренний чек-ин?',
-            text: 'Уже сохранённые шаги останутся. Текущий незаконченный шаг не запишется — продолжите с него при следующем открытии.',
-            confirmText: 'Прервать',
-            cancelText: 'Продолжить',
-            onConfirm: proceed,
-          });
-        } else if (window.confirm('Прервать утренний чек-ин? Уже сохранённые шаги останутся, текущий — нет.')) {
-          proceed();
-        }
-      };
-
       return React.createElement(HEYS.StepModal.Component, {
         steps: steps,
         onComplete: wrappedOnComplete,
-        onClose: onCloseWithConfirm,
         showProgress: true,
-        showStreak: true,
-        showGreeting: true,
-        showTip: true,
+        showStreak: plan.mode !== 'registration',
+        showGreeting: plan.mode !== 'registration',
+        showTip: false,
         allowSwipe: false,
-        context: { dateKey: plan.dateKey },
+        layout: plan.mode === 'registration' ? 'default' : 'daily',
+        context: {
+          dateKey: plan.dateKey,
+          registrationMode: plan.mode === 'registration',
+          dailyCheckin: plan.mode !== 'registration',
+          onStartDailyCheckin: startDailyCheckin,
+          onRefreshAccess: () => {
+            try {
+              return HEYS.Subscription?.getStatusDetails?.(true)
+                || HEYS.Subscription?.refresh?.(true);
+            } catch (_) {
+              return null;
+            }
+          }
+        },
         freezeVisibleSteps: true,
         forceVisibleStepIds: steps.includes('yesterdayVerify') ? ['yesterdayVerify'] : [],
         requireStepAck: true,
@@ -2523,13 +2645,14 @@
   HEYS.MorningCheckinUtils.dayHasMorningActivationSyncedActivity = dayHasMorningActivationSyncedActivity;
   HEYS.MorningCheckinUtils.isMorningActivationClearedByUser = isMorningActivationClearedByUser;
   HEYS.MorningCheckinUtils.getCheckinSteps = getCheckinSteps;
+  HEYS.MorningCheckinUtils.getRegistrationSteps = getRegistrationSteps;
   HEYS.MorningCheckinUtils.coreCheckinDataMissing = coreCheckinDataMissing;
   HEYS.MorningCheckinUtils.hasPartialCoreCheckinPrefill = hasPartialCoreCheckinPrefill;
   HEYS.MorningCheckinUtils.hasStepsGoalConfirmedToday = hasStepsGoalConfirmedToday;
   HEYS.MorningCheckinUtils.needsStepsGoalCheckin = needsStepsGoalCheckin;
   HEYS.MorningCheckinUtils.isMorningStepComplete = isMorningStepComplete;
   HEYS.MorningCheckinUtils.buildMorningCheckinPlan = buildMorningCheckinPlan;
-  HEYS.MorningCheckinUtils.mergeFreshStepsWithProgress = mergeFreshStepsWithProgress;
+  HEYS.MorningCheckinUtils.collapseLegacyCheckinStepIds = collapseLegacyCheckinStepIds;
   HEYS.MorningCheckinUtils.getRemainingMorningSteps = getRemainingMorningSteps;
   HEYS.MorningCheckinUtils.getBlockingMorningSteps = getBlockingMorningSteps;
   HEYS.MorningCheckinUtils.flushAndMarkMorningStep = flushAndMarkMorningStep;
@@ -2594,7 +2717,9 @@
           onComplete: wrappedOnComplete,
           closeOnComplete: 'after',
           allowSwipe: false,
-          context: { dateKey: plan.dateKey },
+          showTip: false,
+          layout: plan.isRegistrationCheckin ? 'default' : 'daily',
+          context: { dateKey: plan.dateKey, dailyCheckin: !plan.isRegistrationCheckin },
           freezeVisibleSteps: true,
           forceVisibleStepIds: steps.includes('yesterdayVerify') ? ['yesterdayVerify'] : [],
           requireStepAck: true,

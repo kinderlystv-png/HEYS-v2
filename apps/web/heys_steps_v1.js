@@ -1092,24 +1092,106 @@
   // WEIGHT STEP
   // ============================================================
 
+  function isEstimatedMorningWeight(day) {
+    const source = String(day?.weightMorningSource || '');
+    if (source === 'estimated_avg' || source === 'estimated_profile') return true;
+    return !!(day && day.weightMorningEstimated === true);
+  }
+
+  function isMeasuredMorningWeight(day) {
+    const weight = Number(day?.weightMorning);
+    return Number.isFinite(weight) && weight > 0 && !isEstimatedMorningWeight(day);
+  }
+
+  function formatEstimateSampleDate(iso) {
+    try {
+      const date = new Date(`${iso}T12:00:00`);
+      if (Number.isNaN(date.getTime())) return iso;
+      return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    } catch (_) {
+      return iso;
+    }
+  }
+
+  function collectRecentMeasuredWeights(limit = 3) {
+    const todayKey = typeof getTodayKey === 'function' ? getTodayKey() : new Date().toISOString().slice(0, 10);
+    const [year, month, day] = String(todayKey).split('-').map(Number);
+    const today = new Date(year, (month || 1) - 1, day || 1);
+    const samples = [];
+    for (let i = 1; i <= 60 && samples.length < limit; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      const dayData = readDayData(key, {});
+      if (isMeasuredMorningWeight(dayData)) {
+        samples.push({ date: key, weight: +dayData.weightMorning });
+      }
+    }
+    return samples;
+  }
+
+  function estimateMorningWeight() {
+    const samples = collectRecentMeasuredWeights(3);
+    if (samples.length >= 3) {
+      const avg = samples.reduce((sum, item) => sum + item.weight, 0) / samples.length;
+      return {
+        weight: Math.round(avg * 10) / 10,
+        source: 'estimated_avg',
+        samples,
+      };
+    }
+    const profile = lsGet('heys_profile', { weight: 70 }) || {};
+    const profileWeight = Number(profile.weight);
+    return {
+      weight: Math.round((profileWeight > 0 ? profileWeight : 70) * 10) / 10,
+      source: 'estimated_profile',
+      samples,
+    };
+  }
+
+  function mapEstimateSource(raw) {
+    if (raw === 'estimated_avg' || raw === 'average3') return 'estimated_avg';
+    if (raw === 'estimated_profile' || raw === 'profile') return 'estimated_profile';
+    return raw === 'measured' ? 'measured' : 'estimated_profile';
+  }
+
+  function persistMorningWeight(dateKey, weight, { estimated = false, source = null } = {}) {
+    const dayData = getFreshDayData(dateKey);
+    const mutationAt = Math.max(Date.now(), (Number(dayData.weightUpdatedAt) || 0) + 1);
+    dayData.date = dateKey;
+    dayData.weightMorning = weight;
+    dayData.weightUpdatedAt = mutationAt;
+    dayData.updatedAt = mutationAt;
+    if (estimated) {
+      const mapped = mapEstimateSource(source || 'profile');
+      dayData.weightMorningSource = mapped;
+      dayData.weightMorningEstimated = true;
+      dayData.weightMorningEstimateSource = mapped;
+    } else {
+      dayData.weightMorningSource = 'measured';
+      delete dayData.weightMorningEstimated;
+      delete dayData.weightMorningEstimateSource;
+      dayData._curatorEdits = HEYS.models?.clearCuratorMarks?.(dayData, 'weightMorning', mutationAt);
+    }
+    return { saved: saveDayData(dateKey, dayData), dayData, mutationAt };
+  }
+
   function getLastKnownWeight() {
     const profile = lsGet('heys_profile', { weight: 70 });
     const today = new Date();
 
-    // Сначала проверяем сегодняшний вес (для редактирования из карточки)
     const todayKey = today.toISOString().slice(0, 10);
     const todayData = readDayData(todayKey, {});
-    if (todayData.weightMorning) {
+    if (isMeasuredMorningWeight(todayData)) {
       return { weight: todayData.weightMorning, daysAgo: 0, date: todayKey };
     }
 
-    // Если сегодня нет — ищем в прошлых днях (для утреннего чек-ина)
     for (let i = 1; i <= 60; i++) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
       const dayData = readDayData(key, {});
-      if (dayData.weightMorning) {
+      if (isMeasuredMorningWeight(dayData)) {
         return { weight: dayData.weightMorning, daysAgo: i, date: key };
       }
     }
@@ -1124,7 +1206,7 @@
     yesterday.setDate(yesterday.getDate() - 1);
     const key = yesterday.toISOString().slice(0, 10);
     const dayData = readDayData(key, {});
-    return dayData.weightMorning || null;
+    return isMeasuredMorningWeight(dayData) ? dayData.weightMorning : null;
   }
 
   function getWeightForecast() {
@@ -1135,7 +1217,7 @@
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
       const dayData = readDayData(key, {});
-      if (dayData.weightMorning) {
+      if (isMeasuredMorningWeight(dayData)) {
         weights.push({ day: -i, weight: dayData.weightMorning });
       }
     }
@@ -1159,15 +1241,53 @@
     };
   }
 
-  function WeightStepComponent({ data, onChange }) {
+  function buildDailyCheckinGreeting() {
+    const profile = lsGet('heys_profile', {}) || {};
+    const firstName = String(profile.firstName || '').trim();
+    const now = new Date();
+    const weekday = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+    const capWeekday = weekday ? weekday.charAt(0).toUpperCase() + weekday.slice(1) : '';
+    const streak = Number(HEYS.Day?.getStreak?.() || 0);
+    const title = firstName ? `Доброе утро, ${firstName}` : 'Доброе утро';
+    return React.createElement('div', { className: 'mc-daily-greeting', style: { width: '100%', marginBottom: 8 } },
+      React.createElement('div', {
+        style: { font: '700 20px/1.25 Figtree, system-ui, sans-serif', color: 'var(--v4-ink, #201e1d)' }
+      }, title),
+      React.createElement('div', {
+        style: { font: '500 11.5px/1.4 Figtree, system-ui, sans-serif', color: 'var(--v4-ink-2, rgba(0,0,0,.45))', marginTop: 6 }
+      }, capWeekday),
+      streak > 0 && React.createElement('div', {
+        style: {
+          display: 'flex', alignItems: 'center', gap: 10, background: 'var(--v4-sand-hero, #f7efe2)',
+          borderRadius: 16, padding: '11px 14px', marginTop: 14
+        }
+      },
+        React.createElement('span', {
+          style: { font: '800 15px/1 Figtree, system-ui, sans-serif', color: 'var(--v4-sand-act-text, #8a4a20)' }
+        }, String(streak)),
+        React.createElement('span', {
+          style: { font: '600 11.5px/1.35 Figtree, system-ui, sans-serif', color: 'var(--v4-ink-2, rgba(0,0,0,.6))' }
+        }, streak === 1
+          ? 'день подряд — отметьте сегодня, чтобы продолжить серию'
+          : 'дней подряд — отметьте сегодня, чтобы продолжить серию')
+      )
+    );
+  }
+
+  function WeightStepComponent({ data, onChange, context }) {
     const lastWeight = useMemo(() => getLastKnownWeight(), []);
     const yesterdayWeight = useMemo(() => getYesterdayWeight(), []);
     const weightForecast = useMemo(() => getWeightForecast(), []);
 
+    const estimated = data.estimated === true;
+    const estimateSource = data.estimateSource || 'profile';
+    const estimateSamples = Array.isArray(data.estimateSamples) ? data.estimateSamples : [];
     const weightKg = data.weightKg ?? Math.floor(lastWeight.weight);
     const weightG = data.weightG ?? Math.round((lastWeight.weight % 1) * 10);
     const currentWeight = weightKg + weightG / 10;
-    const weightDelta = yesterdayWeight ? currentWeight - yesterdayWeight : null;
+    const weightDelta = !estimated && yesterdayWeight ? currentWeight - yesterdayWeight : null;
+    const weightLabel = currentWeight.toFixed(1).replace('.', ',');
+    const greeting = context?.dailyCheckin ? buildDailyCheckinGreeting() : null;
 
     const kgValues = useMemo(() => Array.from({ length: 101 }, (_, i) => 40 + i), []);
     const gValues = useMemo(() => Array.from({ length: 10 }, (_, i) => i), []);
@@ -1178,42 +1298,29 @@
       prevWeightGRef.current = weightG;
     }, [weightG]);
 
-    // Immediate-write веса в day.weightMorning (НЕ в profile) при изменении WheelPicker.
-    // Защита от потери ввода если пользователь закроет чекин крестиком до финала
-    // (config.save вызывается только на финале StepModal handleNext).
-    // profile.weight остаётся за финальным save — «профильный вес = подтверждённое
-    // взвешивание», промежуточные slider-drag'и не должны пересчитывать TDEE/BMR.
     const weightInitialRef = useRef(null);
     useEffect(() => {
+      if (estimated) return undefined;
       if (weightInitialRef.current === null) {
-        // Первый mount: запоминаем seed из getInitialData (lastWeight) и не пишем.
         weightInitialRef.current = { kg: weightKg, g: weightG };
-        return;
+        return undefined;
       }
       if (weightKg === weightInitialRef.current.kg && weightG === weightInitialRef.current.g) {
-        // Значения совпадают с seed — пользователь не трогал slider, не пишем.
-        return;
+        return undefined;
       }
       const timer = setTimeout(() => {
         const dateKey = getTodayKey();
-        const dayData = getFreshDayData(dateKey);
-        const weight = (weightKg || 70) + (weightG || 0) / 10;
-        const mutationAt = Math.max(Date.now(), (Number(dayData.weightUpdatedAt) || 0) + 1);
-        dayData.date = dateKey;
-        dayData.weightMorning = weight;
-        dayData.weightUpdatedAt = mutationAt;
-        dayData.updatedAt = mutationAt;
-        saveDayData(dateKey, dayData);
+        persistMorningWeight(dateKey, (weightKg || 70) + (weightG || 0) / 10, { estimated: false });
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('heys:day-updated', {
-            detail: { date: dateKey, field: 'weightMorning', value: weight, source: 'weight-step-immediate' }
+            detail: { date: dateKey, field: 'weightMorning', value: (weightKg || 70) + (weightG || 0) / 10, source: 'weight-step-immediate' }
           }));
         }
       }, 500);
       return () => clearTimeout(timer);
-    }, [weightKg, weightG]);
+    }, [weightKg, weightG, estimated]);
 
-    const setWeightKg = (v) => onChange({ ...data, weightKg: v, weightG: data.weightG ?? weightG });
+    const setWeightKg = (v) => onChange({ ...data, estimated: false, weightKg: v, weightG: data.weightG ?? weightG });
     const setWeightG = (v) => {
       const prevG = prevWeightGRef.current;
       const currentKg = data.weightKg ?? weightKg;
@@ -1234,10 +1341,84 @@
       }
 
       prevWeightGRef.current = v;
-      onChange({ ...data, weightKg: nextKg, weightG: v });
+      onChange({ ...data, estimated: false, weightKg: nextKg, weightG: v });
     };
 
+    const applyEstimate = () => {
+      const estimate = estimateMorningWeight();
+      onChange({
+        ...data,
+        estimated: true,
+        estimateSource: estimate.source,
+        estimateSamples: estimate.samples,
+        weightKg: Math.floor(estimate.weight),
+        weightG: Math.round((estimate.weight % 1) * 10),
+      });
+      const dateKey = getTodayKey();
+      persistMorningWeight(dateKey, estimate.weight, { estimated: true, source: estimate.source });
+    };
+
+    const estimatedBadge = estimateSource === 'estimated_avg' || estimateSource === 'average3'
+      ? 'Расчётный'
+      : 'Из профиля';
+    const estimatedHint = estimateSource === 'estimated_avg' || estimateSource === 'average3'
+      ? 'Норма дня эту цифру берёт, тренд и график — нет. Серия растёт.'
+      : 'Как только наберётся три взвешивания, расчётный вес начнёт считаться по ним.';
+
+    if (estimated) {
+      return React.createElement('div', {
+        className: 'mc-weight-step',
+        style: { display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 8 }
+      },
+        greeting,
+        React.createElement('div', { style: { fontSize: 13, fontWeight: 600, color: 'var(--v4-ink-2, rgba(0,0,0,.6))' } }, 'Вес на утро'),
+        React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 14 } },
+          React.createElement('span', { style: { fontSize: 58, fontWeight: 600, lineHeight: 0.9, color: 'rgba(0,0,0,.45)', letterSpacing: '-0.045em' } }, weightLabel),
+          React.createElement('span', { style: { fontSize: 13, fontWeight: 600, color: 'rgba(0,0,0,.38)' } }, 'кг')
+        ),
+        React.createElement('div', {
+          style: {
+            marginTop: 12, padding: '5px 12px', borderRadius: 999, background: '#efe3cf',
+            fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#8a4a20'
+          }
+        }, estimatedBadge),
+        React.createElement('div', {
+          style: { width: '100%', background: '#f7efe2', borderRadius: 20, padding: '15px 17px', marginTop: 22 }
+        },
+          estimateSource === 'estimated_avg' || estimateSource === 'average3'
+            ? [
+              React.createElement('div', {
+                key: 'title',
+                style: { fontSize: 11.5, fontWeight: 600, lineHeight: 1.5, color: 'rgba(0,0,0,.6)' }
+              }, 'Среднее за три последних взвешивания'),
+              ...estimateSamples.map((sample) => React.createElement('div', {
+                key: sample.date,
+                style: { display: 'flex', justifyContent: 'space-between', marginTop: 11, fontSize: 12, fontWeight: 600, color: 'rgba(0,0,0,.5)' }
+              },
+                React.createElement('span', null, formatEstimateSampleDate(sample.date)),
+                React.createElement('span', null, `${Number(sample.weight).toFixed(1).replace('.', ',')} кг`)
+              ))
+            ]
+            : React.createElement('div', {
+              style: { fontSize: 11.5, fontWeight: 600, lineHeight: 1.5, color: 'rgba(0,0,0,.6)' }
+            }, 'Взвешиваний пока меньше трёх — среднее считать не из чего, берём вес из анкеты.')
+        ),
+        React.createElement('p', {
+          style: { fontSize: 11, lineHeight: 1.5, color: 'rgba(0,0,0,.45)', marginTop: 14, textAlign: 'center' }
+        }, estimatedHint),
+        !context?.dailyCheckin && React.createElement('button', {
+          type: 'button',
+          onClick: () => onChange({ ...data, estimated: false }),
+          style: {
+            marginTop: 18, minHeight: 44, padding: '10px 16px', border: 'none', background: 'transparent',
+            color: 'rgba(0,0,0,.5)', fontSize: 13, fontWeight: 700, cursor: 'pointer'
+          }
+        }, 'Ввести вес')
+      );
+    }
+
     return React.createElement('div', { className: 'mc-weight-step' },
+      greeting,
       React.createElement('div', { className: 'mc-weight-display' },
         React.createElement('span', { className: 'mc-weight-value' }, currentWeight.toFixed(1)),
         React.createElement('span', { className: 'mc-weight-unit' }, ' кг'),
@@ -1263,33 +1444,64 @@
           label: 'г'
         })
       ),
-      weightForecast && React.createElement('div', { className: 'mc-weight-forecast' },
-        React.createElement('span', { className: 'mc-forecast-icon' }, '📈'),
+      weightForecast && !estimated && React.createElement('div', { className: 'mc-weight-forecast' },
         React.createElement('span', { className: 'mc-forecast-text' },
           `Прогноз через 2 нед: ${weightForecast.weight} кг`,
           weightForecast.weeklyChange !== 0 && ` (${weightForecast.weeklyChange > 0 ? '+' : ''}${weightForecast.weeklyChange} кг/нед)`
         )
-      )
+      ),
+      !context?.dailyCheckin && React.createElement('button', {
+        type: 'button',
+        onClick: applyEstimate,
+        style: {
+          marginTop: 16, width: '100%', minHeight: 48, borderRadius: 999, border: 'none',
+          background: 'var(--v4-sand-hero, #f7efe2)', color: 'rgba(0,0,0,.55)', fontSize: 12, fontWeight: 700, cursor: 'pointer'
+        }
+      }, 'Не взвешивался')
     );
   }
 
   registerStep('weight', {
     title: 'Вес',
     hint: 'Взвесьтесь натощак',
-    icon: '⚖️',
+    icon: '',
     component: WeightStepComponent,
+    secondaryLabelWhen: (data) => (data && data.estimated ? 'Ввести вес' : 'Не взвешивался'),
+    applySecondary: (data) => {
+      if (data && data.estimated) {
+        return { ...data, estimated: false };
+      }
+      const estimate = estimateMorningWeight();
+      const dateKey = getTodayKey();
+      persistMorningWeight(dateKey, estimate.weight, { estimated: true, source: estimate.source });
+      return {
+        ...(data || {}),
+        estimated: true,
+        estimateSource: estimate.source,
+        estimateSamples: estimate.samples,
+        weightKg: Math.floor(estimate.weight),
+        weightG: Math.round((estimate.weight % 1) * 10),
+      };
+    },
     getInitialData: (context) => {
-      // Если есть dateKey в context — берём вес из того дня (для редактирования)
       if (context && context.dateKey) {
         const dayData = readDayData(context.dateKey, {});
-        if (dayData.weightMorning) {
+        if (isEstimatedMorningWeight(dayData) && Number(dayData.weightMorning) > 0) {
+          return {
+            estimated: true,
+            estimateSource: mapEstimateSource(dayData.weightMorningSource || dayData.weightMorningEstimateSource || 'profile'),
+            estimateSamples: collectRecentMeasuredWeights(3),
+            weightKg: Math.floor(dayData.weightMorning),
+            weightG: Math.round((dayData.weightMorning % 1) * 10)
+          };
+        }
+        if (isMeasuredMorningWeight(dayData)) {
           return {
             weightKg: Math.floor(dayData.weightMorning),
             weightG: Math.round((dayData.weightMorning % 1) * 10)
           };
         }
       }
-      // Иначе — последний известный вес
       const last = getLastKnownWeight();
       return {
         weightKg: Math.floor(last.weight),
@@ -1297,55 +1509,52 @@
       };
     },
     save: (data, context) => {
-      // Используем dateKey из context, или сегодняшний день как fallback
       const dateKey = (context && context.dateKey) || getTodayKey();
-      const dayData = getFreshDayData(dateKey);
-      const weight = (data.weightKg || 70) + (data.weightG || 0) / 10;
-      const mutationAt = Math.max(Date.now(), (Number(dayData.weightUpdatedAt) || 0) + 1);
-      dayData.date = dateKey;
-      dayData.weightMorning = weight;
-      dayData.weightUpdatedAt = mutationAt;
-      dayData._curatorEdits = HEYS.models?.clearCuratorMarks?.(dayData, 'weightMorning', mutationAt);
-      dayData.updatedAt = mutationAt;
-      const saved = saveDayData(dateKey, dayData);
-      if (!saved) {
+      const estimated = data.estimated === true;
+      const estimate = estimated ? estimateMorningWeight() : null;
+      const fromPicker = (data.weightKg || 70) + (data.weightG || 0) / 10;
+      const weight = estimated
+        ? (Number.isFinite(fromPicker) && (data.weightKg != null || data.weightG != null) ? fromPicker : estimate.weight)
+        : fromPicker;
+      const persisted = persistMorningWeight(dateKey, weight, {
+        estimated,
+        source: estimate?.source || data.estimateSource
+      });
+      if (!persisted.saved) {
         throw new Error('Не удалось сохранить вес. Попробуйте ещё раз.');
       }
 
-      // Также обновляем текущий вес в профиле (для расчёта TDEE, BMR и т.д.)
-      const profile = lsGet('heys_profile', {});
-      if (profile.weight !== weight) {
-        profile.weight = weight;
-        profile.updatedAt = Date.now();
-        lsSet('heys_profile', profile);
-        console.log('[WeightStep] Profile weight updated:', weight, 'kg');
+      if (!estimated) {
+        const profile = lsGet('heys_profile', {});
+        if (profile.weight !== weight) {
+          profile.weight = weight;
+          profile.updatedAt = Date.now();
+          lsSet('heys_profile', profile);
+          console.log('[WeightStep] Profile weight updated:', weight, 'kg');
 
-        // Диспатчим событие для обновления UI профиля
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('heys:profile-updated', {
-            detail: { profile, source: 'weight-step' }
-          }));
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+              detail: { profile, source: 'weight-step' }
+            }));
+          }
         }
       }
 
-      // Диспатчим событие для обновления UI дня
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('heys:day-updated', {
           detail: { date: dateKey, field: 'weightMorning', value: weight, forceReload: true }
         }));
-        // 🎮 XP: шлём по факту записи веса, а не в конце StepModal — тогда XP
-        // не теряется, если чек-ин закрыли на одном из следующих шагов.
-        // Дубли гасит геймификация (weight_logged: maxPerDay 1 + dedup-guard).
-        window.dispatchEvent(new CustomEvent('heysWeightLogged', {
-          detail: { weight, date: dateKey, source: 'weight-step' }
-        }));
+        if (!estimated) {
+          window.dispatchEvent(new CustomEvent('heysWeightLogged', {
+            detail: { weight, date: dateKey, source: 'weight-step' }
+          }));
+        }
       }
       return {
         affectedKeys: [`heys_dayv2_${dateKey}`],
         completed: true
       };
-    },
-    xpAction: 'weight_logged'
+    }
   });
 
   // ============================================================
@@ -1926,6 +2135,161 @@
     }
   });
 
+  function sleepNotePrompt(quality) {
+    if (quality <= 4) return 'Что помешало спать';
+    if (quality >= 8) return 'Что помогло';
+    return 'Заметка о ночи';
+  }
+
+  function formatSleepDuration(hours) {
+    const total = Math.max(0, Math.round(Number(hours) * 60));
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    return `${h}:${String(m).padStart(2, '0')}`;
+  }
+
+  function CombinedSleepStepComponent({ data, onChange }) {
+    const lastSleep = useMemo(() => getLastSleepData(), []);
+    const sleepStartH = data.sleepStartH ?? parseInt(String(lastSleep.sleepStart || '23:00').split(':')[0], 10);
+    const sleepStartM = data.sleepStartM ?? parseInt(String(lastSleep.sleepStart || '23:00').split(':')[1], 10);
+    const sleepEndH = data.sleepEndH ?? parseInt(String(lastSleep.sleepEnd || '07:00').split(':')[0], 10);
+    const sleepEndM = data.sleepEndM ?? parseInt(String(lastSleep.sleepEnd || '07:00').split(':')[1], 10);
+    const sleepQuality = data.sleepQuality ?? lastSleep.sleepQuality ?? 7;
+    const sleepNote = data.sleepNote ?? '';
+    const noteOpen = data.noteOpen === true || String(sleepNote).length > 0;
+    const sleepHours = calcSleepHours(sleepStartH, sleepStartM, sleepEndH, sleepEndM);
+    const qualityWord = SLEEP_QUALITY_LABELS[Math.max(0, Math.min(9, sleepQuality - 1))] || '';
+    const update = (patch) => onChange({ ...data, sleepStartH, sleepStartM, sleepEndH, sleepEndM, sleepQuality, sleepNote, ...patch });
+
+    return React.createElement('div', { className: 'mc-sleep-combined' },
+      React.createElement('div', { className: 'mc-step-kicker' }, 'Сон этой ночью'),
+      React.createElement('div', { className: 'mc-hero-number' }, formatSleepDuration(sleepHours)),
+      React.createElement('div', { className: 'mc-sleep-times mc-sleep-times--split' },
+        React.createElement('div', { className: 'mc-sleep-block' },
+          React.createElement('div', { className: 'mc-sleep-label' }, 'Легли'),
+          React.createElement(TimePicker, {
+            hours: sleepStartH,
+            minutes: sleepStartM,
+            onHoursChange: (h) => update({ sleepStartH: h }),
+            onMinutesChange: (m) => update({ sleepStartM: m }),
+            onTimeChange: (h, m) => update({ sleepStartH: h, sleepStartM: m }),
+            hoursLabel: '',
+            minutesLabel: '',
+            display: null,
+            linkedScroll: true,
+            className: 'mc-time-pickers'
+          })
+        ),
+        React.createElement('div', { className: 'mc-sleep-block' },
+          React.createElement('div', { className: 'mc-sleep-label' }, 'Встали'),
+          React.createElement(TimePicker, {
+            hours: sleepEndH,
+            minutes: sleepEndM,
+            onHoursChange: (h) => update({ sleepEndH: h }),
+            onMinutesChange: (m) => update({ sleepEndM: m }),
+            onTimeChange: (h, m) => update({ sleepEndH: h, sleepEndM: m }),
+            hoursLabel: '',
+            minutesLabel: '',
+            display: null,
+            linkedScroll: true,
+            className: 'mc-time-pickers'
+          })
+        )
+      ),
+      React.createElement('div', { className: 'mc-scale-card' },
+        React.createElement('div', { className: 'mc-scale-head' },
+          React.createElement('span', null, 'Насколько выспались'),
+          React.createElement('span', { className: 'mc-scale-value' }, `${sleepQuality} · ${String(qualityWord).toLowerCase()}`)
+        ),
+        React.createElement('input', Object.assign({
+          type: 'range',
+          className: 'mc-v4-slider',
+          min: 1,
+          max: 10,
+          value: sleepQuality,
+        }, getRangeGestureProps((nextValue) => update({ sleepQuality: nextValue })))),
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-note-toggle',
+          onClick: () => update({ noteOpen: !noteOpen })
+        }, sleepNotePrompt(sleepQuality)),
+        noteOpen && React.createElement('textarea', {
+          className: 'mc-note-input',
+          rows: 2,
+          value: sleepNote,
+          placeholder: 'Необязательно',
+          onChange: (e) => update({ sleepNote: e.target.value })
+        })
+      )
+    );
+  }
+
+  registerStep('sleep', {
+    title: 'Сон',
+    hint: '',
+    icon: '',
+    component: CombinedSleepStepComponent,
+    getInitialData: (context) => {
+      const dateKey = resolveDateKey(context?.dateKey);
+      const dayData = dateKey ? readDayData(dateKey, {}) : {};
+      const last = getLastSleepData();
+      const start = hasSleepTime(dayData) ? dayData.sleepStart : last.sleepStart;
+      const end = hasSleepTime(dayData) ? dayData.sleepEnd : last.sleepEnd;
+      const sleepStartH = parseInt(String(start).split(':')[0], 10);
+      const sleepStartM = parseInt(String(start).split(':')[1], 10);
+      const sleepEndH = parseInt(String(end).split(':')[0], 10);
+      const sleepEndM = parseInt(String(end).split(':')[1], 10);
+      return {
+        sleepStartH,
+        sleepStartM,
+        sleepEndH,
+        sleepEndM,
+        sleepQuality: hasPositiveStepNumber(dayData.sleepQuality) ? dayData.sleepQuality : (last.sleepQuality || 7),
+        sleepNote: '',
+        noteOpen: false
+      };
+    },
+    save: (data, context) => {
+      const dateKey = resolveDateKey(context?.dateKey);
+      const dayData = getFreshDayData(dateKey);
+      const sleepStart = `${String(data.sleepStartH).padStart(2, '0')}:${String(data.sleepStartM).padStart(2, '0')}`;
+      const sleepEnd = `${String(data.sleepEndH).padStart(2, '0')}:${String(data.sleepEndM).padStart(2, '0')}`;
+      const daySleepMinutes = normalizeDaySleepMinutes(dayData.daySleepMinutes ?? data.daySleepMinutes);
+      const sleepHours = calcSleepHours(data.sleepStartH, data.sleepStartM, data.sleepEndH, data.sleepEndM);
+      dayData.date = dateKey;
+      dayData.sleepStart = sleepStart;
+      dayData.sleepEnd = sleepEnd;
+      dayData.daySleepMinutes = daySleepMinutes;
+      dayData.sleepHours = Math.round((sleepHours + daySleepMinutes / 60) * 10) / 10;
+      dayData.sleepQuality = data.sleepQuality;
+      if (data.sleepNote && String(data.sleepNote).trim()) {
+        const timeStr = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        const noteWithTime = `[${timeStr}] ${String(data.sleepNote).trim()}`;
+        dayData.sleepNote = dayData.sleepNote ? dayData.sleepNote + '\n' + noteWithTime : noteWithTime;
+        dayData.sleepNoteUpdatedAt = Math.max(Date.now(), (Number(dayData.sleepNoteUpdatedAt) || 0) + 1);
+      }
+      dayData.updatedAt = Date.now();
+      dayData._curatorEdits = HEYS.models?.clearCuratorMarks?.(dayData, ['sleepStart', 'sleepEnd', 'sleepQuality'], dayData.updatedAt);
+      const savedSleep = saveDayData(dateKey, dayData);
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: {
+          date: dateKey, field: 'sleep', source: 'sleep-combined-step', forceReload: true,
+          data: mergeDayMealsPreferLiveIfRicher(dateKey, { ...dayData, date: dateKey })
+        }
+      }));
+      if (savedSleep) {
+        window.dispatchEvent(new CustomEvent('heysSleepLogged', {
+          detail: {
+            date: dateKey, sleepStart, sleepEnd,
+            sleepHours: dayData.sleepHours, source: 'sleep-combined-step'
+          }
+        }));
+      }
+      return { affectedKeys: [`heys_dayv2_${dateKey}`], completed: true };
+    },
+    xpAction: 'sleep_logged'
+  });
+
   // ============================================================
   // STEPS GOAL STEP
   // ============================================================
@@ -2168,116 +2532,37 @@
     const bonusKcal = Math.round(coef * weight * bonusKm);
 
     const sliderPercent = Math.min(100, Math.max(0, ((stepsGoal - sliderMin) / (sliderMax - sliderMin)) * 100));
-    const sliderColor = HEYS.scales.stepsGoal(stepsGoal).color;
-
-    const stepsValues = useMemo(() => [5000, 6000, 7000, 8000, 9000, 10000, 12000, 15000, 20000, 30000], []);
-
-    // Определяем тип дня по цели
-    const getDayTypeLabel = () => {
-      if (stepsGoal <= 5000) return { emoji: '🛋️', label: 'Малоподвижный день', desc: 'офис, дом, отдых' };
-      if (stepsGoal <= 7000) return { emoji: '💼', label: 'Обычный день', desc: 'работа, дела по дому' };
-      if (stepsGoal <= 10000) return { emoji: '🚶', label: 'Активный день', desc: 'прогулки, встречи' };
-      if (stepsGoal <= 15000) return { emoji: '🏃', label: 'Очень активный день', desc: 'много перемещений' };
-      return { emoji: '🏔️', label: 'Максимальная активность', desc: 'поход, экскурсия' };
-    };
-    const dayType = getDayTypeLabel();
+    const advicePercent = Math.min(100, Math.max(0, ((stepsStats.recommended - sliderMin) / (sliderMax - sliderMin)) * 100));
+    const reason = stepsStats.reasonLine || 'Сдвиньте пальцем, если день будет другим';
 
     return React.createElement('div', { className: 'mc-steps-step' },
-      // Пояснение зачем нужна цель
-      React.createElement('div', { className: 'mc-steps-purpose' },
-        React.createElement('div', { className: 'mc-steps-purpose-main' },
-          '🎯 Какая активность ждёт тебя сегодня?'
+      React.createElement('div', { className: 'mc-step-kicker' }, 'Шаги на сегодня'),
+      React.createElement('div', { className: 'mc-hero-number' }, Math.round(stepsGoal).toLocaleString('ru-RU')),
+      React.createElement('div', { className: 'mc-recorded-sub', style: { textAlign: 'center' } }, reason),
+      React.createElement('div', { className: 'mc-steps-slider-container', style: { width: '100%', marginTop: 20 } },
+        React.createElement('div', { style: { position: 'relative', height: 17 } },
+          React.createElement('div', {
+            style: {
+              position: 'absolute', left: `${advicePercent}%`, transform: 'translateX(-50%)',
+              font: '700 9px/1 Figtree, system-ui, sans-serif', letterSpacing: '0.1em',
+              textTransform: 'uppercase', color: 'var(--v4-sand-act-text, #8a4a20)'
+            }
+          }, 'Совет')
         ),
-        React.createElement('div', { className: 'mc-steps-purpose-sub' },
-          'Куратор увидит твой план и подстроит рекомендации по питанию. Шаги и бытовое движение дополняют расход, но основной рычаг дефицита — питание относительно нормы дня.'
-        )
-      ),
-      React.createElement('div', { className: 'mc-steps-display' },
-        React.createElement('span', { className: 'mc-steps-value' }, stepsGoal.toLocaleString()),
-        React.createElement('span', { className: 'mc-steps-unit' }, ' шагов')
-      ),
-      React.createElement('div', { className: 'mc-steps-slider-container' },
         React.createElement('input', Object.assign({
           type: 'range',
-          className: 'mc-steps-slider',
+          className: 'mc-v4-slider',
           min: sliderMin,
           max: sliderMax,
           step: 500,
           value: stepsGoal,
         }, getRangeGestureProps((nextValue) => onChange({ ...data, stepsGoal: nextValue })), {
-          style: {
-            touchAction: 'none',
-            background: `linear-gradient(to right, ${sliderColor} ${sliderPercent}%, #e5e7eb ${sliderPercent}%)`
-          }
+          style: { touchAction: 'none' }
         })),
         React.createElement('div', { className: 'mc-steps-slider-labels' },
-          React.createElement('span', null, '3к'),
-          React.createElement('span', { className: 'mc-steps-slider-label-health' }, '7к ❤️'),
-          React.createElement('span', null, '10к'),
-          React.createElement('span', null, '15к'),
-          React.createElement('span', null, '20к'),
-          React.createElement('span', null, '30к')
+          React.createElement('span', null, '3 000'),
+          React.createElement('span', null, '30 000')
         )
-      ),
-      hasStepsHistory && React.createElement('div', { className: 'mc-steps-stats' },
-        React.createElement('div', { className: 'mc-steps-avg' },
-          React.createElement('span', { className: 'mc-steps-avg-label' }, '📊 Медиана за 2 нед.: '),
-          React.createElement('span', { className: 'mc-steps-avg-value' }, stepsStats.median.toLocaleString())
-        ),
-        stepsStats.avg7 > 0 && stepsStats.avg7 !== stepsStats.median && React.createElement('div', { className: 'mc-steps-avg' },
-          React.createElement('span', { className: 'mc-steps-avg-label' }, 'Среднее за неделю: '),
-          React.createElement('span', { className: 'mc-steps-avg-value' }, stepsStats.avg7.toLocaleString())
-        ),
-        stepsStats.modifiers?.length > 0 && React.createElement('div', { className: 'mc-steps-modifiers' },
-          stepsStats.modifiers.map((modifier) =>
-            React.createElement('div', { key: modifier.id, className: 'mc-steps-modifier' },
-              React.createElement('span', { className: 'mc-steps-modifier-label' }, modifier.label),
-              React.createElement('span', { className: 'mc-steps-modifier-factor' },
-                modifier.factor < 1 ? ` ×${modifier.factor}` : ` +${Math.round((modifier.factor - 1) * 100)}%`
-              )
-            )
-          )
-        ),
-        stepsGoal > referenceSteps && bonusKcal > 0 && React.createElement('div', { className: 'mc-steps-bonus' },
-          React.createElement('span', { className: 'mc-steps-bonus-icon' }, '🔥'),
-          React.createElement('span', { className: 'mc-steps-bonus-text' },
-            `+${(stepsGoal - referenceSteps).toLocaleString()} шагов = +${bonusKcal} ккал`
-          )
-        )
-      ),
-      // Тип дня — что означает выбранная цель
-      React.createElement('div', { className: 'mc-steps-day-type' },
-        React.createElement('span', { className: 'mc-steps-day-type-emoji' }, dayType.emoji),
-        React.createElement('div', { className: 'mc-steps-day-type-info' },
-          React.createElement('span', { className: 'mc-steps-day-type-label' }, dayType.label),
-          React.createElement('span', { className: 'mc-steps-day-type-desc' }, dayType.desc)
-        )
-      ),
-      React.createElement('div', { className: 'mc-steps-recommendation' },
-        stepsGoal < STEPS_GOAL_MIN
-          ? '❤️ Минимум 7000 шагов для здоровья сердца и сосудов'
-          : hasStepsHistory && stepsGoal === stepsStats.recommended && stepsStats.reasonLine
-            ? `✨ ${stepsStats.reasonLine}`
-            : stepsGoal >= 10000
-              ? '🏆 Отличная цель! 10К+ шагов — активный образ жизни'
-              : '👍 Хорошая цель для поддержания здоровья'
-      ),
-      React.createElement('div', { className: 'mc-steps-grid' },
-        stepsValues.map(v =>
-          React.createElement('button', {
-            key: v,
-            className: `mc-steps-btn ${stepsGoal === v ? 'mc-steps-btn--active' : ''} ${v === stepsStats.recommended && hasStepsHistory ? 'mc-steps-btn--recommended' : ''}`,
-            onClick: () => onChange({ ...data, stepsGoal: v })
-          }, v >= 10000 ? `${v / 1000}к` : v.toLocaleString())
-        )
-      ),
-      // Подсказка внизу
-      React.createElement('div', { className: 'mc-steps-footer-hint' },
-        Number.isFinite(stepsStats.context?.sleepHours) && stepsStats.context.sleepHours < 6.5
-          ? '😴 Короткий сон — цель сегодня чуть мягче, чем в активные дни'
-          : Number.isFinite(stepsStats.context?.sleepHours) && stepsStats.context.sleepHours >= 8
-            ? '😴 Сон 7-8 часов = меньше тяги к сладкому'
-            : '😴 Хороший сон помогает держать энергию в течение дня'
       )
     );
   }
@@ -4097,79 +4382,30 @@
       );
     };
 
-    return React.createElement('div', {
-      className: 'ts-step morning-mood-step',
-      style: { opacity: 1 }
-    },
-
-      // === Заголовок ===
-      React.createElement('div', {
-        style: {
-          textAlign: 'center',
-          marginBottom: '12px',
-          padding: '10px',
-          background: 'linear-gradient(135deg, #f59e0b, #ea580c)',
-          borderRadius: '12px'
-        }
-      },
-        React.createElement('div', { style: { fontSize: '26px', marginBottom: '2px' } }, '🌅'),
-        React.createElement('div', { style: { fontWeight: '700', fontSize: '15px', color: '#fff', textShadow: '0 1px 2px rgba(0,0,0,0.2)' } },
-          'Как себя чувствуешь?'
-        )
+    return React.createElement('div', { className: 'mc-mood-step' },
+      React.createElement('div', { className: 'mc-step-kicker' }, 'Как вы сегодня'),
+      React.createElement('div', { className: 'mc-recorded-sub', style: { textAlign: 'center' } },
+        'Три коротких шкалы — по ним куратор видит, чем объяснить день.'
       ),
-
-      // === Оценки с анимацией ===
-      React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
-
-        // Настроение
-        RatingCard({
-          field: 'mood',
-          value: mood,
-          emojiFn: getMoodEmoji,
-          title: 'Настроение',
-          colorFn: getMoodColor,
-          presets: MOOD_PRESETS,
-          isNegative: false,
-          index: 0
-        }),
-
-        // Бодрость
-        RatingCard({
-          field: 'wellbeing',
-          value: wellbeing,
-          emojiFn: getWellbeingEmoji,
-          title: 'Бодрость',
-          colorFn: getMoodColor,
-          presets: MOOD_PRESETS,
-          isNegative: false,
-          index: 1
-        }),
-
-        // Стресс
-        RatingCard({
-          field: 'stress',
-          value: stress,
-          emojiFn: getStressEmoji,
-          title: 'Стресс',
-          colorFn: getStressColor,
-          presets: STRESS_PRESETS,
-          isNegative: true,
-          index: 2
+      [
+        { field: 'mood', value: mood, title: 'Настроение', kind: 'mood' },
+        { field: 'wellbeing', value: wellbeing, title: 'Самочувствие', kind: 'mood' },
+        { field: 'stress', value: stress, title: 'Стресс', kind: 'stress' }
+      ].map((row) => React.createElement('div', { key: row.field, className: 'mc-scale-card' },
+        React.createElement('div', { className: 'mc-scale-head' },
+          React.createElement('span', null, row.title),
+          React.createElement('span', { className: 'mc-scale-value' }, `${row.value} · ${scaleWord(row.value, row.kind)}`)
+        ),
+        React.createElement(DragValueSlider, {
+          className: 'mc-v4-slider',
+          min: 1,
+          max: 10,
+          value: row.value,
+          onValue: (nextValue) => updateField(row.field, nextValue),
+          ariaLabel: row.title
         })
-      ),
-
-      // === Подсказка ===
-      React.createElement('div', {
-        style: {
-          marginTop: '16px',
-          padding: '10px 14px',
-          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.06), rgba(147, 197, 253, 0.08))',
-          borderRadius: '10px',
-          fontSize: '12px',
-          color: '#64748b',
-          textAlign: 'center'
-        }
-      }, '💡 Эти данные помогут отследить влияние еды на настроение')
+      )),
+      React.createElement('div', { className: 'mc-recorded-hint' }, 'Шкалы 1–10. Подпись справа называет значение словом.')
     );
   }
 
@@ -5075,6 +5311,254 @@
     save: () => { }
   });
 
+  function scaleWord(value, kind) {
+    const n = Number(value);
+    if (kind === 'stress') {
+      if (n <= 2) return 'нет';
+      if (n <= 4) return 'немного';
+      if (n <= 6) return 'средне';
+      if (n <= 8) return 'сильно';
+      return 'очень сильно';
+    }
+    if (n <= 2) return 'плохо';
+    if (n <= 4) return 'так себе';
+    if (n <= 6) return 'средне';
+    if (n <= 8) return 'хорошо';
+    return 'отлично';
+  }
+
+  function MorningRestStepComponent({ data, onChange, context }) {
+    const coldType = data.coldType || 'none';
+    const coldOpen = data.coldOpen === true || (coldType !== 'none' && data.coldPicked === true);
+    const showMeasurements = data.showMeasurements === true
+      || (HEYS.Steps && typeof HEYS.Steps.shouldShowMeasurements === 'function' && HEYS.Steps.shouldShowMeasurements());
+    const showRefeed = data.showRefeed === true
+      || (typeof HEYS.MorningCheckinUtils?.shouldIncludeRefeedStep === 'function'
+        ? false
+        : !!(HEYS.Refeed?.shouldShowRefeedStep?.()));
+    const planned = Array.isArray(data.selected) ? data.selected : [];
+    const catalog = HEYS.Supplements?.getCatalog?.() || HEYS.Supplements?.CATALOG || [];
+    const nameOf = (id) => {
+      const row = Array.isArray(catalog) ? catalog.find((item) => item.id === id || item.key === id) : null;
+      return row?.name || row?.title || id;
+    };
+    const setCold = (type) => {
+      const time = new Date().toTimeString().slice(0, 5);
+      onChange({ ...data, coldType: type, coldTime: type === 'none' ? null : (data.coldTime || time), coldPicked: true, coldOpen: type !== 'none' });
+    };
+
+    return React.createElement('div', { className: 'mc-rest-step' },
+      React.createElement('div', { className: 'mc-rest-cold' },
+        React.createElement('div', { className: 'mc-rest-cold-title' }, coldOpen && coldType !== 'none' ? 'Холод сегодня был' : 'Прохладный душ'),
+        React.createElement('div', { className: 'mc-rest-cold-hint' },
+          coldOpen && coldType !== 'none'
+            ? 'Выберите, что именно — от этого зависит инсулиновая волна дня.'
+            : 'Хотя бы тридцать секунд в конце обычного душа — этого достаточно.'
+        ),
+        !(coldOpen && coldType !== 'none') && React.createElement('div', { className: 'mc-rest-cold-actions' },
+          React.createElement('button', { type: 'button', className: 'mc-btn mc-btn--primary', onClick: () => setCold('coldShower') }, 'Было'),
+          React.createElement('button', { type: 'button', className: 'mc-btn mc-btn--ghost', onClick: () => setCold('none') }, 'Не сегодня')
+        ),
+        coldOpen && coldType !== 'none' && React.createElement('div', { className: 'mc-rest-cold-types' },
+          [
+            { id: 'coldShower', label: 'Прохладный душ', wave: 'волна −5 %' },
+            { id: 'coldBath', label: 'Холодная ванна', wave: 'волна −10 %' },
+            { id: 'coldSwim', label: 'Прорубь', wave: 'волна −12 %' }
+          ].map((row) => React.createElement('button', {
+            key: row.id,
+            type: 'button',
+            className: 'mc-rest-type' + (coldType === row.id ? ' is-on' : ''),
+            onClick: () => setCold(row.id)
+          },
+            React.createElement('span', null, row.label),
+            React.createElement('span', { className: 'mc-rest-wave' }, row.wave)
+          ))
+        )
+      ),
+      planned.length > 0 && React.createElement('div', { className: 'mc-rest-card' },
+        React.createElement('div', { className: 'mc-rest-card-title' }, 'Добавки на сегодня'),
+        planned.map((id) => React.createElement('div', { key: id, className: 'mc-rest-supp-row' }, nameOf(id))),
+        React.createElement('div', { className: 'mc-rest-card-hint' }, 'Это курс на день, а не отметка «выпил»: факт приёма отмечается в дневнике.')
+      ),
+      React.createElement('button', {
+        type: 'button',
+        className: 'mc-rest-row',
+        onClick: () => {
+          if (typeof context?.onClose === 'function' && HEYS.showCheckin?.morningRoutine) {
+            // вход в протокол зарядки — отдельный оверлей, не шаг чек-ина
+          }
+          if (HEYS.MorningActivation?.openProtocol) {
+            HEYS.MorningActivation.openProtocol();
+          }
+        }
+      },
+        React.createElement('div', null,
+          React.createElement('div', { className: 'mc-rest-card-title' }, 'Утренняя рутина'),
+          React.createElement('div', { className: 'mc-rest-card-hint' }, 'Резинки, разогрев')
+        ),
+        React.createElement('span', { className: 'mc-rest-chevron' }, '›')
+      ),
+      showMeasurements && React.createElement('button', {
+        type: 'button',
+        className: 'mc-rest-row',
+        onClick: () => onChange({ ...data, measurementsOpen: !data.measurementsOpen })
+      },
+        React.createElement('div', null,
+          React.createElement('div', { className: 'mc-rest-card-title' }, 'Замеры'),
+          React.createElement('div', { className: 'mc-rest-card-hint' }, 'Обхваты тела')
+        ),
+        React.createElement('span', { className: 'mc-rest-chevron' }, '›')
+      ),
+      data.measurementsOpen && React.createElement('div', { className: 'mc-rest-card' },
+        ['waist', 'hips', 'thigh', 'biceps'].map((key) => React.createElement('label', { key, className: 'mc-rest-field' },
+          React.createElement('span', null, key === 'waist' ? 'Талия' : key === 'hips' ? 'Бёдра' : key === 'thigh' ? 'Бедро' : 'Бицепс'),
+          React.createElement('input', {
+            type: 'text',
+            inputMode: 'decimal',
+            value: data[key] ?? '',
+            onChange: (e) => onChange({ ...data, [key]: e.target.value })
+          })
+        ))
+      ),
+      showRefeed && React.createElement('div', { className: 'mc-rest-row mc-rest-refeed' },
+        React.createElement('div', null,
+          React.createElement('div', { className: 'mc-rest-card-title' }, 'Загрузочный день'),
+          React.createElement('div', { className: 'mc-rest-card-hint' }, 'Сегодня по рекомендации')
+        ),
+        React.createElement('div', { className: 'mc-rest-yesno' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'mc-btn' + (data.isRefeedDay === true ? ' mc-btn--primary' : ' mc-btn--ghost'),
+            onClick: () => onChange({ ...data, isRefeedDay: true })
+          }, 'Да'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'mc-btn' + (data.isRefeedDay === false ? ' mc-btn--primary' : ' mc-btn--ghost'),
+            onClick: () => onChange({ ...data, isRefeedDay: false })
+          }, 'Нет')
+        )
+      )
+    );
+  }
+
+  registerStep('morningRest', {
+    title: 'Остальное',
+    hint: '',
+    icon: '',
+    canSkip: true,
+    nextLabel: 'Готово',
+    component: MorningRestStepComponent,
+    getInitialData: (context) => {
+      const dateKey = context?.dateKey || getTodayKey();
+      const dayData = readDayData(dateKey, {});
+      const profile = lsGet('heys_profile', {}) || {};
+      const hf = HEYS.healthFeatures;
+      const supplementsEnabled = hf && typeof hf.isSupplementsTrackingEnabled === 'function'
+        ? hf.isSupplementsTrackingEnabled(profile)
+        : profile.supplementsTrackingEnabled === true;
+      const planned = supplementsEnabled ? (HEYS.Supplements?.getPlanned?.() || []) : [];
+      const cold = dayData.coldExposure || {};
+      return {
+        coldType: cold.type || 'none',
+        coldTime: cold.time || new Date().toTimeString().slice(0, 5),
+        coldPicked: !!cold.type,
+        selected: planned,
+        isRefeedDay: typeof dayData.isRefeedDay === 'boolean' ? dayData.isRefeedDay : null,
+        showMeasurements: !!(HEYS.Steps?.shouldShowMeasurements?.()),
+        showRefeed: !!(HEYS.Refeed?.shouldShowRefeedStep?.()),
+        _dateKey: dateKey
+      };
+    },
+    save: (data, context) => {
+      const dateKey = data._dateKey || context?.dateKey || getTodayKey();
+      const dayData = getFreshDayData(dateKey);
+      dayData.date = dateKey;
+      dayData.coldExposure = {
+        type: data.coldType || 'none',
+        time: data.coldType && data.coldType !== 'none' ? (data.coldTime || new Date().toTimeString().slice(0, 5)) : null,
+        answeredAt: Date.now()
+      };
+      if (Array.isArray(data.selected)) {
+        dayData.supplementsPlanned = data.selected;
+        dayData.supplementsPlannedUpdatedAt = Date.now();
+      }
+      if (typeof data.isRefeedDay === 'boolean') {
+        dayData.isRefeedDay = data.isRefeedDay;
+      }
+      const waist = parseFloat(String(data.waist || '').replace(',', '.'));
+      if (Number.isFinite(waist) && waist > 0) {
+        dayData.measurements = {
+          ...(dayData.measurements || {}),
+          waist,
+          hips: parseFloat(String(data.hips || '').replace(',', '.')) || dayData.measurements?.hips,
+          thigh: parseFloat(String(data.thigh || '').replace(',', '.')) || dayData.measurements?.thigh,
+          biceps: parseFloat(String(data.biceps || '').replace(',', '.')) || dayData.measurements?.biceps,
+          measuredAt: Date.now()
+        };
+      }
+      dayData.updatedAt = Date.now();
+      saveDayData(dateKey, dayData);
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: { date: dateKey, field: 'morningRest', source: 'morning-rest-step', forceReload: true }
+      }));
+      return { affectedKeys: [`heys_dayv2_${dateKey}`], completed: true };
+    }
+  });
+
+  function CheckinRecordedStepComponent({ stepData, context }) {
+    const dateKey = context?.dateKey || getTodayKey();
+    const day = readDayData(dateKey, {}) || {};
+    const profile = lsGet('heys_profile', {}) || {};
+    const estimated = isEstimatedMorningWeight(day);
+    const weight = Number(day.weightMorning);
+    const streak = Number(HEYS.Day?.getStreak?.() || 0);
+    const stepsGoal = Number(profile.stepsGoal) || 0;
+    const kcal = Number(HEYS.TDEE?.getMorningKcal?.(dateKey) || HEYS.TDEE?.getKcalTarget?.(profile) || profile.kcalTarget || 0);
+    const source = mapEstimateSource(day.weightMorningSource || day.weightMorningEstimateSource || 'profile');
+    const sourceLabel = source === 'estimated_avg' ? 'расчётный' : source === 'estimated_profile' ? 'из профиля' : '';
+    return React.createElement('div', { className: 'mc-recorded' },
+      React.createElement('div', { className: 'mc-recorded-title' }, 'Чек-ин записан'),
+      React.createElement('div', { className: 'mc-recorded-sub' },
+        streak > 0
+          ? (estimated ? `Серия — ${streak} дней подряд, сегодня без взвешивания` : `Серия — ${streak} дней подряд`)
+          : (estimated ? 'Сегодня без взвешивания' : 'Утро закрыто')
+      ),
+      React.createElement('div', { className: 'mc-recorded-card' },
+        Number.isFinite(weight) && weight > 0 && React.createElement('div', { className: 'mc-recorded-row' },
+          React.createElement('span', null, 'Вес дня'),
+          React.createElement('span', null,
+            `${weight.toFixed(1).replace('.', ',')} кг`,
+            estimated && sourceLabel ? ` · ${sourceLabel}` : ''
+          )
+        ),
+        kcal > 0 && React.createElement('div', { className: 'mc-recorded-row' },
+          React.createElement('span', null, 'Норма на утро'),
+          React.createElement('span', null, `${Math.round(kcal).toLocaleString('ru-RU')} ккал`)
+        ),
+        stepsGoal > 0 && React.createElement('div', { className: 'mc-recorded-row' },
+          React.createElement('span', null, 'План по шагам'),
+          React.createElement('span', null, Math.round(stepsGoal).toLocaleString('ru-RU'))
+        )
+      ),
+      estimated && React.createElement('div', { className: 'mc-recorded-hint' },
+        'График веса эту точку не ставит — в нём только реальные взвешивания.'
+      )
+    );
+  }
+
+  registerStep('checkinRecorded', {
+    title: 'Записано',
+    hint: '',
+    icon: '',
+    hideProgressDots: true,
+    hiddenFromProgress: true,
+    disableBack: true,
+    nextLabel: 'На главную',
+    component: CheckinRecordedStepComponent,
+    getInitialData: () => ({}),
+    save: () => ({ completed: true, affectedKeys: [] })
+  });
+
   // =============================================
 
   // === Экспорт шагов ===
@@ -5099,6 +5583,9 @@
     getLastKnownWeight,
     getYesterdayWeight,
     getWeightForecast,
+    estimateMorningWeight,
+    isMeasuredMorningWeight,
+    isEstimatedMorningWeight,
     getLastSleepData,
     getWeeklyStepsStats,
     computeAdaptiveStepsGoal,

@@ -19,8 +19,14 @@ function loadStepConfigs() {
       TimePicker: () => null,
       registerStep: (id, config) => { configs[id] = config; },
       utils: {
-        lsGet: (_key, fallback) => fallback,
-        lsSet: vi.fn(),
+        lsGet: (key, fallback) => {
+          const raw = window.localStorage.getItem(key);
+          if (raw == null) return fallback;
+          try { return JSON.parse(raw); } catch { return raw; }
+        },
+        lsSet: (key, value) => {
+          window.localStorage.setItem(key, JSON.stringify(value));
+        },
         getTodayKey: () => '2026-08-10',
       },
     },
@@ -100,5 +106,40 @@ describe('XP events for sleep and weight', () => {
 
     expect(sleep.events).toHaveLength(0);
     expect(weight.events).toHaveLength(0);
+  });
+
+  it('estimated weight save does not dispatch heysWeightLogged and keeps the flag', () => {
+    localStorage.setItem('heys_profile', JSON.stringify({ weight: 74.2 }));
+    const captured = captureEvent('heysWeightLogged');
+    try {
+      configs.weight.save(
+        { estimated: true, estimateSource: 'profile', weightKg: 74, weightG: 2 },
+        { dateKey: '2026-08-10' }
+      );
+    } finally {
+      captured.stop();
+    }
+
+    expect(captured.events).toHaveLength(0);
+    const saved = JSON.parse(localStorage.getItem('heys_dayv2_2026-08-10'));
+    expect(saved.weightMorning).toBe(74.2);
+    expect(saved.weightMorningEstimated).toBe(true);
+    expect(JSON.parse(localStorage.getItem('heys_profile')).weight).toBe(74.2);
+  });
+
+  it('estimateMorningWeight averages three measured days and ignores estimated ones', () => {
+    localStorage.setItem('heys_profile', JSON.stringify({ weight: 80 }));
+    localStorage.setItem('heys_dayv2_2026-08-09', JSON.stringify({ weightMorning: 73.4 }));
+    localStorage.setItem('heys_dayv2_2026-08-08', JSON.stringify({ weightMorning: 73.5 }));
+    localStorage.setItem('heys_dayv2_2026-08-07', JSON.stringify({ weightMorning: 73.9 }));
+    localStorage.setItem('heys_dayv2_2026-08-06', JSON.stringify({
+      weightMorning: 90,
+      weightMorningEstimated: true,
+    }));
+
+    const estimate = window.HEYS.Steps.estimateMorningWeight();
+    expect(estimate.source).toBe('estimated_avg');
+    expect(estimate.weight).toBe(73.6);
+    expect(estimate.samples).toHaveLength(3);
   });
 });

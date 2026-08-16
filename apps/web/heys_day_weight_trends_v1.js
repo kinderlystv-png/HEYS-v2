@@ -50,7 +50,7 @@
             }
           } catch (e) { }
 
-          if (dayData && dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0) {
+          if (dayData && dayData.weightMorning != null && dayData.weightMorning !== '' && dayData.weightMorning !== 0 && dayData.weightMorningEstimated !== true && dayData.weightMorningSource !== 'estimated_avg' && dayData.weightMorningSource !== 'estimated_profile') {
             const cycleDayValue = dayData.cycleDay || null;
             const cycleExclude = H.Cycle?.shouldExcludeFromWeightTrend?.(cycleDayValue) || false;
             const refeedExclude = H.Refeed?.shouldExcludeFromWeightTrend?.(dayData) || false;
@@ -159,7 +159,7 @@
             if (!raw) return null;
             const Store = window.HEYS?.store;
             const dayData = Store?.decompress ? Store.decompress(raw) : JSON.parse(raw);
-            if (dayData?.weightMorning > 0) {
+            if (dayData?.weightMorning > 0 && dayData.weightMorningEstimated !== true && dayData.weightMorningSource !== 'estimated_avg' && dayData.weightMorningSource !== 'estimated_profile') {
               const cycleDayValue = dayData.cycleDay || null;
               const retentionInfo = H.Cycle?.getWaterRetentionInfo?.(cycleDayValue) || { hasRetention: false };
               const trainings = dayData.trainings || [];
@@ -189,7 +189,7 @@
           const dateStr = fmtDate(d);
 
           if (dateStr === realTodayStr) {
-            if (+day?.weightMorning > 0) {
+            if (+day?.weightMorning > 0 && day?.weightMorningEstimated !== true && day?.weightMorningSource !== 'estimated_avg' && day?.weightMorningSource !== 'estimated_profile') {
               firstDataDay = dateStr;
               break;
             }
@@ -227,7 +227,7 @@
 
           if (isRealToday) {
             const todayWeight = +day?.weightMorning || 0;
-            if (todayWeight > 0) {
+            if (todayWeight > 0 && day?.weightMorningEstimated !== true && day?.weightMorningSource !== 'estimated_avg' && day?.weightMorningSource !== 'estimated_profile') {
               const retentionInfo = H.Cycle?.getWaterRetentionInfo?.(todayCycleDay) || { hasRetention: false };
               const trainings = day?.trainings || [];
               const hasTraining = trainings.some(t => t?.z?.some(z => z > 0));

@@ -436,8 +436,10 @@ describe('morning check-in journal resume', () => {
       'profile-body',
       'profile-goals',
       'profile-metabolism',
+      'welcome',
     ]);
     expect(plan.isProfileOnlyRegistration).toBe(true);
+    expect(plan.mode).toBe('registration');
     expect(values.has(PROGRESS_KEY)).toBe(false);
   });
 
@@ -481,14 +483,16 @@ describe('morning check-in journal resume', () => {
 
     const plan = utils.buildMorningCheckinPlan({ dateKey: DATE_KEY, clientId: CLIENT_ID });
 
-    expect(plan.steps.slice(0, 4)).toEqual([
+    expect(plan.mode).toBe('registration');
+    expect(plan.isProfileOnlyRegistration).toBe(true);
+    expect(plan.steps).toEqual([
       'profile-body',
       'profile-goals',
       'profile-metabolism',
       'welcome',
     ]);
     expect(plan.steps).not.toContain('profile-personal');
-    expect(plan.steps.indexOf('profile-metabolism')).toBeLessThan(plan.steps.indexOf('weight'));
+    expect(plan.steps).not.toContain('weight');
   });
 
   it('does not replan profile-personal when personal data is already saved in profile', () => {
@@ -550,7 +554,7 @@ describe('morning check-in journal resume', () => {
 
     expect(HEYS.StepModal.show).toHaveBeenCalledTimes(1);
     const options = HEYS.StepModal.show.mock.calls[0][0];
-    expect(options.context).toEqual({ dateKey: historicalDate });
+    expect(options.context.dateKey).toBe(historicalDate);
     expect(options.steps).toEqual(['weight', 'sleepTime', 'sleepQuality']);
     expect(options.forceVisibleStepIds).toEqual([]);
   });
@@ -666,10 +670,155 @@ describe('morning check-in journal resume', () => {
     const plan = utils.buildMorningCheckinPlan({ dateKey: DATE_KEY, clientId: CLIENT_ID });
     const written = values.get(PROGRESS_KEY);
 
-    expect(plan.steps).toEqual(['morningRoutine']);
+    expect(plan.steps).toEqual([]);
     expect(plan.flowId).toBe('flow-original');
     expect(written.steps.cold_exposure.status).toBe('saved_local');
-    expect(written.steps.__flow__.status).toBe('open');
+    expect(written.steps.__flow__.status).toBe('closed');
+  });
+
+  it('shows check-in again after refresh when user closed flow before required core steps', () => {
+    const ledger = {
+      version: 1,
+      clientId: CLIENT_ID,
+      dateKey: DATE_KEY,
+      flowId: 'flow-interrupted',
+      plannedStepIds: [
+        'welcome',
+        'weight',
+        'sleepTime',
+        'sleepQuality',
+        'morning_mood',
+        'stepsGoal',
+        'cold_exposure',
+        'morningRoutine',
+      ],
+      steps: {
+        welcome: { status: 'planned', attempt: 1 },
+        weight: { status: 'planned', attempt: 1 },
+        sleepTime: { status: 'planned', attempt: 1 },
+        sleepQuality: { status: 'planned', attempt: 1 },
+        morning_mood: { status: 'planned', attempt: 1 },
+        stepsGoal: { status: 'planned', attempt: 1 },
+        cold_exposure: { status: 'planned', attempt: 1 },
+        morningRoutine: { status: 'planned', attempt: 1 },
+        __flow__: { status: 'closed', closedAt: Date.now() },
+      },
+    };
+    const { HEYS, utils } = loadMorning({
+      day: {},
+      profile: { stepsGoal: 7000 },
+      ledger,
+    });
+
+    expect(HEYS.shouldShowMorningCheckin()).toBe(true);
+    const plan = utils.buildMorningCheckinPlan({ dateKey: DATE_KEY, clientId: CLIENT_ID });
+    expect(plan.steps).toContain('weight');
+    expect(plan.steps).toContain('sleep');
+    expect(plan.steps).not.toContain('sleepTime');
+    expect(plan.steps).toContain('morning_mood');
+    expect(plan.steps).not.toContain('welcome');
+  });
+
+  it('does not reopen leftover welcome when profile was already complete', () => {
+    const ledger = {
+      version: 1,
+      clientId: CLIENT_ID,
+      dateKey: DATE_KEY,
+      flowId: '2026-08-16-msvfgscm-sc68fy',
+      plannedStepIds: [
+        'profile-personal',
+        'profile-body',
+        'profile-goals',
+        'profile-metabolism',
+        'welcome',
+        'weight',
+        'sleepTime',
+        'sleepQuality',
+        'morning_mood',
+        'stepsGoal',
+        'cold_exposure',
+        'morningRoutine',
+      ],
+      steps: {
+        'profile-personal': { status: 'skipped', skippedReason: 'profile_completed_after_full_sync' },
+        'profile-body': { status: 'skipped', skippedReason: 'profile_completed_after_full_sync' },
+        'profile-goals': { status: 'skipped', skippedReason: 'profile_completed_after_full_sync' },
+        'profile-metabolism': { status: 'skipped', skippedReason: 'profile_completed_after_full_sync' },
+        welcome: { status: 'planned', attempt: 1 },
+        weight: { status: 'planned', attempt: 1 },
+        sleepTime: { status: 'planned', attempt: 1 },
+        sleepQuality: { status: 'planned', attempt: 1 },
+        morning_mood: { status: 'planned', attempt: 1 },
+        stepsGoal: { status: 'planned', attempt: 1 },
+        cold_exposure: { status: 'planned', attempt: 1 },
+        morningRoutine: { status: 'planned', attempt: 1 },
+        __flow__: { status: 'closed' },
+      },
+    };
+    const { HEYS, utils, values } = loadMorning({
+      day: {},
+      profile: { firstName: 'Антон', weight: 82.4, weightGoal: 80, stepsGoal: 7000 },
+      ledger,
+    });
+
+    expect(HEYS.shouldShowMorningCheckin()).toBe(true);
+    const plan = utils.buildMorningCheckinPlan({ dateKey: DATE_KEY, clientId: CLIENT_ID });
+    expect(plan.steps[0]).toBe('weight');
+    expect(plan.steps).not.toContain('welcome');
+    expect(values.get(PROGRESS_KEY).steps.welcome).toMatchObject({
+      status: 'skipped',
+      skippedReason: 'welcome_without_registration_flow',
+    });
+  });
+
+  it('keeps welcome only after a real registration collected profile data', () => {
+    const ledger = {
+      version: 1,
+      clientId: CLIENT_ID,
+      dateKey: DATE_KEY,
+      flowId: 'registration-just-finished',
+      plannedStepIds: [
+        'profile-personal',
+        'profile-body',
+        'profile-goals',
+        'profile-metabolism',
+        'welcome',
+        'weight',
+      ],
+      steps: {
+        'profile-personal': { status: 'synced', updatedAt: 2000 },
+        'profile-body': { status: 'synced', updatedAt: 2000 },
+        'profile-goals': { status: 'synced', updatedAt: 2000 },
+        'profile-metabolism': { status: 'synced', updatedAt: 2000 },
+        welcome: { status: 'planned', updatedAt: 2000 },
+        weight: { status: 'planned', updatedAt: 2000 },
+        __flow__: { status: 'open', updatedAt: 2000 },
+      },
+    };
+    const { utils } = loadMorning({
+      profileIncomplete: false,
+      profile: { firstName: 'Анна', weight: 64, weightGoal: 60, profileCompleted: true },
+      subscriptionStatus: 'trial',
+      ledger,
+    });
+
+    const plan = utils.buildMorningCheckinPlan({ dateKey: DATE_KEY, clientId: CLIENT_ID });
+    expect(plan.steps[0]).toBe('welcome');
+    expect(plan.steps).toContain('weight');
+  });
+
+  it('keeps check-in hidden after close when required core data is already present', () => {
+    const ledger = fullIncidentLedger('closed');
+    ledger.steps.yesterdayVerify = { status: 'synced' };
+    ledger.steps.cold_exposure = { status: 'synced' };
+    ledger.steps.morningRoutine = { status: 'synced' };
+    const { HEYS } = loadMorning({
+      day: completedDay(),
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
+      ledger,
+    });
+
+    expect(HEYS.shouldShowMorningCheckin()).toBe(false);
   });
 
   it('adds a newly required yesterday step to a synced daily flow without replacing its journal', () => {
@@ -752,7 +901,7 @@ describe('morning check-in journal resume', () => {
       source: 'MorningCheckin',
     });
 
-    expect(plan.steps).toEqual(['weight', 'sleepQuality', 'morning_mood']);
+    expect(plan.steps).toEqual(['weight', 'sleep', 'morning_mood']);
     expect(plan.steps).not.toContain('sleepTime');
     expect(plan.steps).not.toContain('cold_exposure');
     expect(plan.steps).not.toContain('supplements');

@@ -354,6 +354,225 @@
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
 }
 
+.mc-modal--daily {
+  background: var(--v4-bg, #fffaf1);
+  box-shadow: none;
+  border-radius: 0;
+  max-width: none;
+  max-height: 100dvh;
+  height: 100%;
+}
+
+.mc-modal--daily .mc-header--nav {
+  border-bottom: none;
+  background: transparent;
+}
+
+.mc-modal--daily .mc-step-content {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 20px 12px;
+}
+
+.mc-daily-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px calc(12px + var(--safe-area-bottom));
+}
+
+.mc-daily-footer-secondary,
+.mc-daily-footer-primary {
+  min-height: 48px;
+  border-radius: 999px;
+  border: none;
+  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.mc-daily-footer-secondary {
+  flex: 1;
+  background: var(--v4-sand-hero, #f7efe2);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+.mc-daily-footer-primary {
+  flex: 1.3;
+  background: var(--v4-sand-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
+}
+
+.mc-progress-dots--pills .mc-progress-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--v4-sand-hero, #efe3cf);
+  border-radius: 999px;
+}
+
+.mc-progress-dots--pills .mc-progress-dot.active {
+  width: 22px;
+  background: var(--v4-ok-fill, #7a8a5e);
+}
+
+.mc-progress-dots--pills .mc-progress-dot.completed {
+  background: var(--v4-ok-fill, #7a8a5e);
+}
+
+.mc-step-kicker,
+.mc-hero-number {
+  text-align: center;
+}
+
+.mc-step-kicker {
+  font: 600 13px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.6));
+}
+
+.mc-hero-number {
+  margin-top: 14px;
+  font: 600 50px/0.9 Figtree, system-ui, sans-serif;
+  letter-spacing: -0.04em;
+  color: var(--v4-sand-act-text, #8a4a20);
+  font-variant-numeric: tabular-nums;
+}
+
+.mc-scale-card,
+.mc-rest-cold,
+.mc-rest-card,
+.mc-recorded-card {
+  width: 100%;
+  background: var(--v4-sand-hero, #f7efe2);
+  border-radius: 18px;
+  padding: 13px 15px 15px;
+  margin-top: 16px;
+}
+
+.mc-scale-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.mc-scale-value {
+  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.45));
+}
+
+.mc-v4-slider {
+  width: 100%;
+  margin-top: 11px;
+  accent-color: var(--v4-ok-fill, #7a8a5e);
+}
+
+.mc-note-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 10px;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-sand-act-text, #8a4a20);
+  cursor: pointer;
+}
+
+.mc-note-input {
+  width: 100%;
+  margin-top: 8px;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: 500 13px/1.4 Figtree, system-ui, sans-serif;
+  background: var(--v4-bg, #fffaf1);
+  color: var(--v4-ink, #201e1d);
+}
+
+.mc-rest-cold-title,
+.mc-rest-card-title {
+  font: 700 16px/1.25 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.mc-rest-cold-hint,
+.mc-rest-card-hint,
+.mc-recorded-hint,
+.mc-recorded-sub {
+  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+  margin-top: 5px;
+}
+
+.mc-rest-cold-actions,
+.mc-rest-yesno {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.mc-rest-cold-types {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.mc-rest-type,
+.mc-rest-row {
+  width: 100%;
+  border: none;
+  background: var(--v4-sand-hero, #f7efe2);
+  border-radius: 16px;
+  padding: 13px 14px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+  margin-top: 8px;
+  color: inherit;
+}
+
+.mc-rest-type.is-on {
+  box-shadow: inset 0 0 0 2px var(--v4-sand-act, #c67139);
+}
+
+.mc-rest-wave,
+.mc-rest-chevron {
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.4));
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+}
+
+.mc-recorded {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 24px;
+}
+
+.mc-recorded-title {
+  font: 700 16px/1.35 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.mc-recorded-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.mc-recorded-row:first-child {
+  margin-top: 0;
+}
+
 .mc-header {
   display: flex;
   align-items: center;
