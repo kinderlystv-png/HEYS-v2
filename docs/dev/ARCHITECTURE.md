@@ -116,7 +116,7 @@ localStorage.setItem('heys_client_current', clientId);
 
 ```bash
 pnpm install           # Bootstrap (Node ≥18, pnpm ≥8)
-pnpm dev              # Dev server → localhost:3001
+pnpm dev:local        # web :3001 + API :4001 (web без API не работает)
 pnpm build            # Production build (Turbo)
 pnpm type-check       # TypeScript validation
 pnpm lint             # ESLint check

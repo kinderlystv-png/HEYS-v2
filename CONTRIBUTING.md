@@ -23,8 +23,8 @@ cd HEYS-v2
 # Install dependencies (uses pnpm workspaces)
 pnpm install
 
-# Run development servers
-pnpm dev
+# Run development servers (web :3001 + API :4001)
+pnpm dev:local
 
 # Run tests
 pnpm test

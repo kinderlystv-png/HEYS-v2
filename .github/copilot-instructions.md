@@ -76,7 +76,7 @@ When changing `apps/web/heys_*.js` that affects runtime:
 
 ## Commands
 
-- `pnpm dev:web` / `pnpm dev:landing`
+- `pnpm dev:local` (web :3001 + API :4001 — всегда оба) / `pnpm dev:landing`
 - `pnpm bundle:legacy:auto --files=<paths>`
 - `pnpm type-check` / `pnpm test:run`
 - `pnpm ship` / `pnpm push:agent -- --confirm-push ...` /

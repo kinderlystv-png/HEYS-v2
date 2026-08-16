@@ -127,7 +127,7 @@ pnpm run test:all
 pnpm run build
 
 # Локальный запуск dev-сервера
-pnpm dev   # port 3001 (PWA) + port 4001 (API local)
+pnpm dev:local   # web :3001 + API :4001; всегда оба, web без API не работает
 
 # Health check production API
 curl https://api.heyslab.ru/health
