@@ -8,9 +8,13 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PSQL_WRAPPER = path.join(ROOT, 'scripts/db/psql.sh');
 const MIGRATION_RUNNER = path.join(ROOT, 'scripts/db/migrate.mjs');
 
-// Legal 1.11: only user_agreement + personal_data are active required consents.
+// Legal 1.11: only user_agreement + personal_data are active required consents
+// with landing pages. Push types are optional (no landing) but still must match
+// LegalVersions in the live boot-core bundle — otherwise signing breaks quietly.
 // health_data 1.5 is retired; landing shows withdrawal banner, not an active registry row.
 export const ACTIVE_CONSENT_TYPES = ['user_agreement', 'personal_data'];
+export const PUSH_CONSENT_TYPES = ['push_notifications', 'curator_push_notifications'];
+export const CANARY_CONSENT_TYPES = [...ACTIVE_CONSENT_TYPES, ...PUSH_CONSENT_TYPES];
 /** @deprecated alias — health_data removed from active sync in legal 1.11 */
 export const REQUIRED_CONSENT_TYPES = ACTIVE_CONSENT_TYPES;
 
@@ -30,7 +34,12 @@ export const REGISTRY_SQL = `
   )::text
   FROM public.legal_consent_registry
   WHERE status = 'active'
-    AND consent_type IN ('user_agreement', 'personal_data')
+    AND consent_type IN (
+      'user_agreement',
+      'personal_data',
+      'push_notifications',
+      'curator_push_notifications'
+    )
   ORDER BY consent_type, document_version;
 `;
 
@@ -103,7 +112,7 @@ export function extractBundleVersions(bundleSource) {
   const objectMatch = String(bundleSource).match(/\bversions\s*=\s*\{([^}]+)\}/);
   if (!objectMatch) fail('live boot-core does not contain the legal versions contract');
   const versions = {};
-  for (const type of ACTIVE_CONSENT_TYPES) {
+  for (const type of CANARY_CONSENT_TYPES) {
     const match = objectMatch[1].match(new RegExp(`(?:^|,)\\s*${type}\\s*:\\s*["']([^"']+)["']`));
     if (!match) fail(`live boot-core is missing ${type}`);
     versions[type] = match[1];
@@ -114,19 +123,25 @@ export function extractBundleVersions(bundleSource) {
 function assertRegistryVersions(rows) {
   const versions = {};
   for (const row of rows) {
-    if (!ACTIVE_CONSENT_TYPES.includes(row?.type)) continue;
+    if (!CANARY_CONSENT_TYPES.includes(row?.type)) continue;
     if (versions[row.type]) fail(`registry has multiple active versions for ${row.type}`);
     versions[row.type] = String(row.version || '');
   }
-  for (const type of ACTIVE_CONSENT_TYPES) {
+  for (const type of CANARY_CONSENT_TYPES) {
     if (!versions[type]) fail(`registry has no active version for ${type}`);
   }
   return versions;
 }
 
-export function compareVersionSets(actualLabel, actual, expectedLabel, expected) {
+export function compareVersionSets(
+  actualLabel,
+  actual,
+  expectedLabel,
+  expected,
+  types = CANARY_CONSENT_TYPES,
+) {
   const drift = [];
-  for (const type of ACTIVE_CONSENT_TYPES) {
+  for (const type of types) {
     if (actual[type] !== expected[type]) {
       drift.push(`${type}: ${actualLabel}=${actual[type] || 'missing'}, ${expectedLabel}=${expected[type] || 'missing'}`);
     }

@@ -18,11 +18,12 @@
     marketing:          '1.4',
     payment_oferta:     '1.11',
     push_notifications: '1.2',
+    curator_push_notifications: '1.1',
     curator_access:     '1.1',
     speech_transcription: '1.2',
     supplements_tracking: '1.0',
     body_measurements:    '1.0',
-    _updatedAt:         '2026-08-15'
+    _updatedAt:         '2026-08-16'
   };
 
   // Required types для check_required_consents_v2 — обязательные согласия,
@@ -40,6 +41,7 @@
     marketing:          'Маркетинговые материалы',
     payment_oferta:     'Оферта на оплату',
     push_notifications: 'Push-уведомления',
+    curator_push_notifications: 'Push-уведомления куратора',
     curator_access:     'Доступ куратора к моим данным',
     speech_transcription: 'Расшифровка голосовых сообщений',
     supplements_tracking: 'Отметки о добавках',

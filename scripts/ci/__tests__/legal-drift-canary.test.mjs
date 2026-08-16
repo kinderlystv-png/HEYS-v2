@@ -26,7 +26,11 @@ test('registry and live bundle version skew fails with a concise diff', async ()
 
 test('stale CDN boot-core 1.6/1.6 is blocked', async () => {
   const fixture = createLegalDriftFixture({
-    bundleVersions: { user_agreement: '1.6', personal_data: '1.6' },
+    bundleVersions: {
+      ...CURRENT_VERSIONS,
+      user_agreement: '1.6',
+      personal_data: '1.6',
+    },
   });
 
   await assert.rejects(runLegalDriftCanary({ ...fixture, attempts: 1 }), (error) => {
@@ -34,6 +38,44 @@ test('stale CDN boot-core 1.6/1.6 is blocked', async () => {
     assert.match(error.message, /personal_data: bundle=1\.6, registry=1\.0/);
     return true;
   });
+});
+
+test('push registry and live bundle version skew fails without landing fetch', async () => {
+  const fixture = createLegalDriftFixture({
+    registryVersions: { ...CURRENT_VERSIONS, push_notifications: '1.1' },
+  });
+
+  await assert.rejects(
+    runLegalDriftCanary({ ...fixture, attempts: 1 }),
+    /push_notifications: bundle=1\.2, registry=1\.1/,
+  );
+});
+
+test('missing push type in live boot-core fails closed', async () => {
+  const fixture = createLegalDriftFixture({
+    bundleVersions: {
+      user_agreement: CURRENT_VERSIONS.user_agreement,
+      personal_data: CURRENT_VERSIONS.personal_data,
+      push_notifications: CURRENT_VERSIONS.push_notifications,
+      // curator_push_notifications omitted from bundle string below via override
+    },
+  });
+  const baseFetch = fixture.fetchImpl;
+  fixture.fetchImpl = async (input) => {
+    const url = new URL(String(input));
+    if (url.pathname.includes('boot-core.bundle')) {
+      return new Response(
+        `const versions={user_agreement:"${CURRENT_VERSIONS.user_agreement}",personal_data:"${CURRENT_VERSIONS.personal_data}",push_notifications:"${CURRENT_VERSIONS.push_notifications}"};`,
+        { status: 200 },
+      );
+    }
+    return baseFetch(input);
+  };
+
+  await assert.rejects(
+    runLegalDriftCanary({ ...fixture, attempts: 1 }),
+    /live boot-core is missing curator_push_notifications/,
+  );
 });
 
 test('unavailable registry fails closed without HTTP or document payloads', async () => {
@@ -65,6 +107,9 @@ test('production database contract is read-only', async () => {
 
   assert.match(REGISTRY_SQL, /^\s*SELECT\b/i);
   assert.doesNotMatch(REGISTRY_SQL, /\b(?:INSERT|UPDATE|DELETE|ALTER|DROP|CREATE|TRUNCATE)\b/i);
+  assert.match(REGISTRY_SQL, /push_notifications/);
+  assert.match(REGISTRY_SQL, /curator_push_notifications/);
+  assert.match(canarySource, /PUSH_CONSENT_TYPES/);
   assert.match(canarySource, /MIGRATION_RUNNER, '--status', '--require-current'/);
   assert.doesNotMatch(canarySource, /MIGRATION_RUNNER, '--apply'/);
 });
