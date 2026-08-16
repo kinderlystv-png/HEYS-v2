@@ -10436,7 +10436,7 @@ body:has(:is(
   font: 700 10px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 .hdr-settings-sheet__group {
