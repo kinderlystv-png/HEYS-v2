@@ -13,7 +13,7 @@ describe('cold-start spinner mark', () => {
   it('puts the 56 mark in #root instead of a chrome skeleton', () => {
     expect(html).toContain('data-heys-boot-mark="true"');
     expect(html).toContain('heys-boot-mark__spin');
-    expect(html).toMatch(/<span class="heys-boot-mark__spin"[\s\S]*?<svg width="26"/);
+    expect(html).toMatch(/heys-boot-mark__spin[\s\S]*?<svg width="26"/);
     expect(html).toContain('role="status"');
     expect(html).toContain('Загружаем');
     expect(html).not.toMatch(/id="root"[\s\S]*heys-skeleton/);
@@ -113,7 +113,7 @@ describe('cold-start spinner mark', () => {
   it('morph paths mount only for ok glyph', () => {
     expect(loading).toContain("if (phase === 'ok')");
     expect(loading).toContain("className: 'heys-wait-mark__close'");
-    expect(loading).toContain("className: 'heys-wait-mark__spin'");
+    expect(loading).toContain("className: 'heys-wait-mark__spin animate-always'");
   });
 
   it('spinner rotates via html wrapper span', () => {

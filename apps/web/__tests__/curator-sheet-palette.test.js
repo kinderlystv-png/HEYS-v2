@@ -25,7 +25,7 @@ describe('curator sheet palette contract', () => {
     expect(css).toMatch(/html\[data-theme-id="sand-dark"\][^{]*\.ca-modal-backdrop--visible[^}]*rgba\(0,\s*0,\s*0,\s*0\.62\)/);
     expect(css).toMatch(/html\[data-theme-id="blue"\][^{]*\.ca-modal-backdrop--visible[^}]*rgba\(10,\s*22,\s*38,\s*0\.5\)/);
     expect(css).toMatch(/html\[data-theme-id="blue-dark"\][^{]*\.ca-modal-backdrop--visible[^}]*rgba\(0,\s*8,\s*16,\s*0\.62\)/);
-    expect(css).toMatch(/\.ca-modal-backdrop--visible\s*\{[^}]*backdrop-filter:\s*blur\(2\.5px\)/);
+    expect(css).toMatch(/\.ca-modal-backdrop--visible\s*\{[^}]*backdrop-filter:\s*blur\(var\(--v4-modal-backdrop-blur,\s*2\.5px\)\)/);
   });
 
   it('paints blue delta accent #1d5e96 / #7fbceb, not terracotta', () => {
