@@ -7128,6 +7128,24 @@
 
 // ===== Begin day/_meals.js =====
 ;// day/_meals.js — consolidated DayTab meals modules (card/list/display/chart/state/handlers)
+//
+// MODULE MAP (agent navigation — jump by line; do not read whole file)
+// Related docs: docs/reference/systems/NUTRITION_AND_INSULIN.md
+//                 docs/reference/systems/MEAL_PLANNER.md
+//
+//   ~3    IIFE entry — scoped dayv2 key, daytrace helpers
+//  ~44    Meal date guard — formatMealDateLabel, MealDateWarning
+// ~128    Meal flow events — dispatchMealFlowFinished
+// ~139    MEAL PLATE GUIDE — variants, preload, showMealPlateGuide
+// ~510    resolveMealIndex helper
+// ~519    MealCard — main meal card UI (items, totals, actions)
+// ~2950  MealStickyBar — fixed scroll-sync bar for active meal
+// ~3098  Meals list — collapsed plaques, renderMealsList, empty state
+// ~3429  useMealsDisplay — sorting + list composition hook
+// ~3713  Meals chart UI — insulin wave overview, wave interactions
+// ~4592  useMealExpandState — expand/collapse stale meals
+// ~4682  createMealHandlers — add/edit/delete/copy meal actions
+// ~7179  HEYS.dayMealHandlers export
 
 ; (function (global) {
     'use strict';
@@ -14466,6 +14484,13 @@
 
     function readDiaryPanelEnabled(profile, field) {
         const source = getDiaryPanelVisibilitySource(profile, field);
+        if (field === SUPPLEMENTS_PANEL_PROFILE_FIELD) {
+            const hf = global.HEYS?.healthFeatures;
+            const trackingOn = hf && typeof hf.isSupplementsTrackingEnabled === 'function'
+                ? hf.isSupplementsTrackingEnabled(profile)
+                : source?.supplementsTrackingEnabled === true;
+            if (!trackingOn) return false;
+        }
         return source?.[field] !== false;
     }
 
@@ -15032,7 +15057,7 @@
                     supplements: readDiaryPanelEnabled(profile, SUPPLEMENTS_PANEL_PROFILE_FIELD),
                     distribution: readDiaryPanelEnabled(profile, DISTRIBUTION_PANEL_PROFILE_FIELD),
                 });
-            }, [profile?.showDiaryPlannerPanel, profile?.showDiarySupplementsPanel, profile?.showDiaryDistributionPanel]);
+            }, [profile?.showDiaryPlannerPanel, profile?.showDiarySupplementsPanel, profile?.showDiaryDistributionPanel, profile?.supplementsTrackingEnabled]);
 
             React.useEffect(function listenDiaryOptionalPanelsVisibility() {
                 const sync = function syncDiaryOptionalPanelsVisibility() {
@@ -15338,10 +15363,8 @@
         const DiaryOptionalPanels = getDiaryOptionalPanelsComponent(React);
         const DiaryPanelGate = getDiaryPanelGateComponent(React);
 
-        // PERF v8.3: Deferred card slot — skeleton only after postboot completes
-        // If postboot is still loading scripts, return null (invisible).
-        // Skeleton only shows if postboot finished but module is STILL not ready (abnormal).
-        const DEFERRED_SKELETON_DELAY_MS = 260;
+        // Deferred card slot: empty placeholder until the module is ready.
+        // No shimmer — boot-mark covers cold start; in-app slots wait silently.
         const DEFERRED_SLOT_DEBUG = (() => {
             try {
                 return window.localStorage?.getItem('heys_deferred_slot_debug') === '1';
@@ -15353,7 +15376,6 @@
             if (!DEFERRED_SLOT_DEBUG) return;
             console.info(...args);
         };
-        const deferredSlotLoadSince = window.__heysDeferredSlotLoadSince = window.__heysDeferredSlotLoadSince || Object.create(null);
         const deferredSkeletonState = window.__heysDeferredSkeletonState = window.__heysDeferredSkeletonState || Object.create(null);
         const deferredPendingSlot = (slotKey, minHeightPx) => React.createElement('div', {
             key: slotKey,
@@ -15363,61 +15385,14 @@
                 ? { minHeight: Math.max(0, Number(minHeightPx) || 0) + 'px' }
                 : undefined,
         });
-        const deferredSlot = (ready, content, slotKey, skeletonH, skeletonIcon, skeletonLabel) => {
+        const deferredSlot = (ready, content, slotKey, skeletonH) => {
             const debugKey = slotKey || 'unknown-slot';
             if (!ready) {
-                // Don't show skeleton while postboot is still loading scripts
-                if (!window.__heysPostbootDone) {
-                    if (deferredSkeletonState[debugKey] !== 'wait_postboot') {
-                        logDeferredSlot('[HEYS.sceleton] ⏳ wait_postboot', { slotKey: debugKey });
-                        deferredSkeletonState[debugKey] = 'wait_postboot';
-                    }
-                    return deferredPendingSlot(slotKey, skeletonH);
+                if (deferredSkeletonState[debugKey] !== 'wait_content') {
+                    logDeferredSlot('[HEYS.sceleton] ⏳ wait_content', { slotKey: debugKey });
+                    deferredSkeletonState[debugKey] = 'wait_content';
                 }
-
-                // Anti-flicker: render skeleton only if module is still not ready after a small delay
-                const now = Date.now();
-                if (slotKey && !deferredSlotLoadSince[slotKey]) {
-                    deferredSlotLoadSince[slotKey] = now;
-                }
-                const waitStart = slotKey ? deferredSlotLoadSince[slotKey] : now;
-                if ((now - waitStart) < DEFERRED_SKELETON_DELAY_MS) {
-                    if (deferredSkeletonState[debugKey] !== 'wait_delay') {
-                        logDeferredSlot('[HEYS.sceleton] ⏱️ wait_delay', {
-                            slotKey: debugKey,
-                            elapsedMs: now - waitStart,
-                            delayMs: DEFERRED_SKELETON_DELAY_MS
-                        });
-                        deferredSkeletonState[debugKey] = 'wait_delay';
-                    }
-                    return deferredPendingSlot(slotKey, skeletonH);
-                }
-
-                if (deferredSkeletonState[debugKey] !== 'show_skeleton') {
-                    logDeferredSlot('[HEYS.sceleton] 🦴 show_skeleton', {
-                        slotKey: debugKey,
-                        elapsedMs: now - waitStart,
-                        delayMs: DEFERRED_SKELETON_DELAY_MS
-                    });
-                    deferredSkeletonState[debugKey] = 'show_skeleton';
-                }
-
-                return React.createElement('div', { key: slotKey, className: 'deferred-card-slot deferred-card-slot--loading' },
-                    React.createElement('div', {
-                        className: 'deferred-card-skeleton',
-                        style: { minHeight: skeletonH + 'px' }
-                    },
-                        React.createElement('div', { className: 'deferred-card-skeleton__shimmer' }),
-                        React.createElement('div', { className: 'deferred-card-skeleton__content' },
-                            skeletonIcon && React.createElement('div', { className: 'deferred-card-skeleton__icon' }, skeletonIcon),
-                            skeletonLabel && React.createElement('div', { className: 'deferred-card-skeleton__label' }, skeletonLabel)
-                        )
-                    )
-                );
-            }
-
-            if (slotKey && deferredSlotLoadSince[slotKey]) {
-                delete deferredSlotLoadSince[slotKey];
+                return deferredPendingSlot(slotKey, skeletonH);
             }
 
             if (!content) {
