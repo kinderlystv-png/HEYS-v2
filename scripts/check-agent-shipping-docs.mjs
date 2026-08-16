@@ -160,6 +160,10 @@ const RUNBOOK_HOOK_TERMS = [
   'relevant Vitest',
 ];
 
+function normalizeLineEndings(value) {
+  return value.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+}
+
 function lineNumber(text, offset) {
   return text.slice(0, Math.max(0, offset)).split('\n').length;
 }
@@ -584,7 +588,7 @@ export function loadRepositoryState({ rootDir = ROOT_DIR } = {}) {
   const files = new Map();
   for (const file of REQUIRED_FILES) {
     const absolute = path.resolve(rootDir, file);
-    if (existsSync(absolute)) files.set(file, readFileSync(absolute, 'utf8'));
+    if (existsSync(absolute)) files.set(file, normalizeLineEndings(readFileSync(absolute, 'utf8')));
   }
   return {
     rootDir,
