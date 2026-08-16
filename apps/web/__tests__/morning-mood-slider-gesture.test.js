@@ -65,7 +65,7 @@ describe('morning mood slider gestures', () => {
       })
     ));
 
-    const sliders = view.container.querySelectorAll('.mc-quality-slider');
+    const sliders = view.container.querySelectorAll('.mc-v4-scale');
     expect(sliders.length).toBe(3);
 
     sliders[0].getBoundingClientRect = () => ({

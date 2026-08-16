@@ -98,7 +98,7 @@ describe('метка авторства куратора', () => {
 
   it('ввод клиента гасит метку во всех шагах чек-ина', () => {
     const steps = read('apps/web/heys_steps_v1.js');
-    expect(steps.match(/clearCuratorMarks/g)).toHaveLength(4);
+    expect(steps.match(/clearCuratorMarks/g)).toHaveLength(5);
     expect(read('apps/web/heys_day_main_block_v1.js')).toContain('clearCuratorMarks');
   });
 
