@@ -16,6 +16,42 @@
 // v62: [HEYS.sinhron] dayv2 sync diagnostics
 // v63: Fix backup keys in diagnostics, auto-cleanup old backups
 // v64: Fix null dayv2 values from cloud, cleanup "null" in LS, debounce double heysSyncCompleted
+//
+// MODULE MAP (agent navigation — jump by line; do not read whole file)
+// Related docs: apps/web/ARCHITECTURE.md (Products storage, sync invariants)
+//                 docs/reference/systems/HOW_HEYS_WORKS.md
+//                 docs/reference/systems/PRODUCTS_AND_SEARCH.md
+//
+//   ~20   IIFE entry, DEMO_MODE stub short-circuit
+//  ~157   SYNC TRACE BUFFER — pushSyncTrace, HEYS.debug.getSyncTraceBuffer
+//  ~197   CONSTANTS — CLIENT_SPECIFIC_KEYS, overlay/products RPC tail keys
+//  ~392   UTILS — key normalize/scope, RPC tail merge, default-tab grace
+//  ~484   WRITE-TIME CLIENT ISOLATION — assertSyncWriteOwnership
+//  ~511   POST-SWITCH ANOMALY TELEMETRY — detectPostSwitchAnomalies
+//  ~928   GLOBAL STATE — queues, muteMirror, connection status, PIN auth flags
+// ~1133   CURATOR COOKIE VERIFY — refresh dedup before sync
+// ~1323   cloud.syncClient — main delta sync entry (curator + client paths)
+// ~1509   cloud.pullRefresh — flush + force sync orchestration
+// ~1596   PERSISTENT SYNC QUEUE — pending/inflight keys, hydrate/persist
+// ~1600   MERGE LOGIC — dayv2, products, morning checkin conflict resolution
+// ~2529   SWITCH AUDIT LOG — heys_curator_switch_log_v1 cross-client trail
+// ~2883   QUOTA MANAGEMENT — cleanup, hydration skip, storage diagnostics
+// ~3777   QUEUE PUBLIC API — getPendingCount, flushPendingQueue, getQueueDebug
+// ~3956   SYNC HISTORY LOG — heys_sync_log, progress events
+// ~4359   EXPONENTIAL BACKOFF — retry scheduling for uploads
+// ~4993   LOCALSTORAGE INTERCEPTOR — setItem mirror, needsClientStorage, enqueue
+// ~6005   AUTH SESSION — getUser, signOut, bootstrapSync
+// ~6458   PIN SYNC VIA YANDEX API — syncClientViaRPC (phone+PIN, no curator JWT)
+// ~7703   cloud.bootstrapClientSync — Phase A/B download, apply cloud snapshot
+// ~10560  cloud.getCurrentClientId, RPC-only mode, sync status helpers
+// ~12025  WRITE CONTEXT — server capability token, validate_write_context path
+// ~13308  NETWORK INFO — online/offline reactions
+// ~13427  FOREGROUND HOT-SYNC — periodic delta, tab focus, overlay branch
+// ~15212  cloud.switchClient — curator client switch, purge + reload
+// ~15862  PHOTO STORAGE delegate — HEYS.StoragePhotos.attachToCloud
+// ~15878  BEFOREUNLOAD guard — unsaved products/dayv2 warning
+// ~15919  SHARED PRODUCTS API — cache, getSharedIndex, overlay bootstrap
+// ~16708  PRODUCTS MODERATION — pending products, blocklist RPC
 
 ; (function (global) {
   (global.console || console).info('[HEYS.sinhron] 🚀 Storage v64 загружен — защита от null dayv2 активна');

@@ -93,6 +93,24 @@
 Не нужно обновлять справочник при внутреннем рефакторинге, который не меняет
 описанный поток, контракт или инвариант.
 
+## MODULE MAP в крупных legacy-файлах
+
+Некоторые monolith-файлы в `apps/web/` содержат блок `MODULE MAP` в шапке —
+якоря по номерам строк для быстрой навигации агента. Это комментарии, не
+runtime-контракт; перед правкой всё равно сверяйте символ по коду.
+
+| Файл                                 | Зона                                        | Связанное досье                               |
+| ------------------------------------ | ------------------------------------------- | --------------------------------------------- |
+| `heys_storage_supabase_v1.js`        | cloud sync, interceptor, overlay hot-sync   | `HOW_HEYS_WORKS.md`, `PRODUCTS_AND_SEARCH.md` |
+| `heys_add_product_step_v1.js`        | add/edit product wizard, moderation queue   | `PRODUCTS_AND_SEARCH.md`                      |
+| `heys_core_v12.js`                   | products facade, overlay wrapper, RationTab | `ARCHITECTURE.md`, `PRODUCTS_AND_SEARCH.md`   |
+| `day/_meals.js`                      | meal cards, list, chart, handlers           | `NUTRITION_AND_INSULIN.md`, `MEAL_PLANNER.md` |
+| `heys_widgets_ui_v1.js`              | widgets tab, catalog, per-widget content    | `IMPROVEMENT_HISTORY.md` (W-01/W-02)          |
+| `heys_app_shell_v1.js`               | header, nav, tab shell                      | `HOW_HEYS_WORKS.md`                           |
+| `heys_hunger_energy_status_ui_v1.js` | hunger modal, diary card, follow-ups        | `NUTRITION_AND_INSULIN.md`                    |
+
+При добавлении нового MODULE MAP обновите эту таблицу в том же scope.
+
 ## Definition of done для досье
 
 Досье достаточно полное, когда агент может понять назначение системы, пройти

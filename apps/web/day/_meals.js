@@ -1,4 +1,22 @@
 // day/_meals.js — consolidated DayTab meals modules (card/list/display/chart/state/handlers)
+//
+// MODULE MAP (agent navigation — jump by line; do not read whole file)
+// Related docs: docs/reference/systems/NUTRITION_AND_INSULIN.md
+//                 docs/reference/systems/MEAL_PLANNER.md
+//
+//   ~3    IIFE entry — scoped dayv2 key, daytrace helpers
+//  ~44    Meal date guard — formatMealDateLabel, MealDateWarning
+// ~128    Meal flow events — dispatchMealFlowFinished
+// ~139    MEAL PLATE GUIDE — variants, preload, showMealPlateGuide
+// ~510    resolveMealIndex helper
+// ~519    MealCard — main meal card UI (items, totals, actions)
+// ~2950  MealStickyBar — fixed scroll-sync bar for active meal
+// ~3098  Meals list — collapsed plaques, renderMealsList, empty state
+// ~3429  useMealsDisplay — sorting + list composition hook
+// ~3713  Meals chart UI — insulin wave overview, wave interactions
+// ~4592  useMealExpandState — expand/collapse stale meals
+// ~4682  createMealHandlers — add/edit/delete/copy meal actions
+// ~7179  HEYS.dayMealHandlers export
 
 ; (function (global) {
     'use strict';

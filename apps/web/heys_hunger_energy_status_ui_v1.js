@@ -1,4 +1,35 @@
 // heys_hunger_energy_status_ui_v1.js - Hunger & Energy Status FAB modal.
+//
+// MODULE MAP (agent navigation — jump by line; do not read whole file)
+// Related docs: docs/reference/systems/NUTRITION_AND_INSULIN.md (§ hunger)
+//                 heys_hunger_energy_status_engine_v1.js (assessHungerEvent)
+//
+//   ~2    IIFE entry — constants, copy maps, modal root state
+// ~345    EVENT STORAGE — readEvents, writeEvents, compaction, undo
+// ~653    FEATURE SETTINGS — read/writeHungerFeatureSettings toggles
+// ~713    SCROLL LOCK — lock/unlock page scroll during modal
+// ~832    AUTO-OPEN — scheduleAutoOpen, smart reminder gates
+// ~895    installAutoOpen bootstrap hook
+// ~1405  writeEvents / addEvent / updateEvent persistence
+// ~1508  DAY RESOLVE — getStoredDay, getRecentDayCandidates
+// ~2305  LOW HUNGER MEAL — buildLowHungerMealReview, weekly digest
+// ~2680  resolveDayData
+// ~2757  buildContextFromDay — meals, sleep, intake signals for engine
+// ~3133  MissingPrompt — required safety inputs UI
+// ~3471  LOW HUNGER PROMPTS — reason/deferred/data-fix flows
+// ~3682  HungerSlider + TimelineSpark visualization
+// ~3997  DiaryHungerCard — inline diary integration
+// ~4070  Follow-up prompts — meal effect, outcome, stress-calorie
+// ~4213  HungerFeatureSettings panel
+// ~4585  Engine bridge — HEYS.HungerEnergyStatus.assessHungerEvent
+// ~4921  ModalShell — main assessment modal state machine
+// ~5966  ensureStyles — injected CSS
+// ~6410  show / hide — public open/close entry
+// ~6475  FabButton — floating action trigger
+// ~6484  HEYS.HungerEnergyStatusStorage export
+// ~6503  HEYS.HungerEnergyStatusAdapter export
+// ~6539  HEYS.HungerEnergyStatusModal export + boot listeners
+
 (function (global) {
   'use strict';
 

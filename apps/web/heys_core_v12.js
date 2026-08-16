@@ -1,4 +1,21 @@
 // heys_core_v12.js — Product search, localStorage, RationTab, utilities
+//
+// MODULE MAP (agent navigation — jump by line; do not read whole file)
+// Related docs: apps/web/ARCHITECTURE.md (Products storage, overlay)
+//                 docs/reference/systems/PRODUCTS_AND_SEARCH.md
+//
+//   ~2    IIFE entry (1/2) — debug mode, module fallback logger
+//  ~53    BASE UTILS — lsGet/lsSet, computeDerived, getCurrentClientId
+// ~251    PARSE PASTED — parsePasted (+ Web Worker proxy ~338)
+// ~462    RationTab — curator products tab UI (search, moderation, add/delete)
+// ~1512  RationTab.addProduct flow
+// ~4583  HEYS.products — getAll, getById, buildIndex
+// ~4705  ensurePersonalProductCommitted — overlay commit gate + cloud ack
+// ~4955  products.setAll — write path with overlay/legacy dual-write
+// ~5581  installOverlayWrapper — getAll/getById → OverlayStore merged view
+// ~5735  HEYS.RationTab export
+// ~5740  IIFE entry (2/2) — client-scoped lsGet/lsSet wrapper (nsKey)
+
 (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
