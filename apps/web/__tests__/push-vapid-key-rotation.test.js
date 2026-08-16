@@ -76,6 +76,7 @@ function loadPush({ existing, serverKey = NEW_KEY, networkFails = false }) {
     configurable: true,
     value: {
       ready: Promise.resolve({ pushManager }),
+      getRegistrations: vi.fn(async () => [{ pushManager }]),
       addEventListener: () => {},
       removeEventListener: () => {},
     },

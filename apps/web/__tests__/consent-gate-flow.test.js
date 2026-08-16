@@ -237,6 +237,8 @@ describe('consent gate flow', () => {
         OptionalFeatureOfferScreen,
         shouldOfferOptionalFeatures: () => true,
       },
+      ProfileSteps: { isProfileIncomplete: () => false },
+      utils: { lsGet: () => ({ profileCompleted: true }) },
     };
     window.React = {
       createElement: (type, props) => ({ type, props }),
