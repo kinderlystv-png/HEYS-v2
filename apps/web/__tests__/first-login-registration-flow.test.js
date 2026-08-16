@@ -140,7 +140,7 @@ describe('first login registration flow', () => {
           cycleTrackingEnabled: true,
         },
         'profile-body': { weight: 64, height: 172, weightGoal: 60 },
-        'profile-goals': { deficitPctTarget: -10 },
+        'profile-goals': { deficitPctTarget: -10, activityLevel: 'light' },
         'profile-metabolism': { sleepHours: 8, insulinWaveHours: 3 },
       }
     );
@@ -155,6 +155,8 @@ describe('first login registration flow', () => {
       name: 'Анна Петрова',
       displayName: 'Анна Петрова',
       profileCompleted: true,
+      activityLevel: 'light',
+      deficitPctTarget: -10,
     });
     expect(notifyClientsUpdated).toHaveBeenCalledWith([{ id: clientId, name: 'Анна Петрова' }], 'profile-wizard');
     expect(storage._store.heys_registration_in_progress).toBeUndefined();
@@ -181,7 +183,7 @@ describe('first login registration flow', () => {
       {
         'profile-personal': { firstName: 'Иван', gender: 'Мужской', birthDate: '1990-01-01' },
         'profile-body': { weight: 80, height: 180, weightGoal: 76 },
-        'profile-goals': { deficitPctTarget: -10 },
+        'profile-goals': { deficitPctTarget: -10, activityLevel: 'light' },
         'profile-metabolism': { sleepHours: 8, insulinWaveHours: 3 },
       },
     )).resolves.toBe(true);
@@ -213,7 +215,7 @@ describe('first login registration flow', () => {
       {
         'profile-personal': { firstName: 'Пётр', gender: 'Мужской', birthDate: '1991-02-02' },
         'profile-body': { weight: 82, height: 181, weightGoal: 78 },
-        'profile-goals': { deficitPctTarget: -10 },
+        'profile-goals': { deficitPctTarget: -10, activityLevel: 'light' },
         'profile-metabolism': { sleepHours: 8, insulinWaveHours: 3 },
       },
     )).rejects.toThrow('subscription_profile_write_denied');
@@ -300,5 +302,31 @@ describe('first login registration flow', () => {
     }
 
     expect(storage.setItem.mock.calls.length).toBe(writesAfterFirst);
+  });
+
+  it('reads saved profile on welcome when wizard stepData is empty', () => {
+    const storage = createMockStorage({
+      heys_client_current: JSON.stringify('client-welcome'),
+      heys_profile: JSON.stringify({
+        firstName: 'Антон',
+        weight: 82.4,
+        weightGoal: 80,
+        deficitPctTarget: -10,
+        gender: 'Мужской',
+        birthDate: '1988-03-12',
+        profileCompleted: true,
+      }),
+    });
+    const { steps } = loadProfileSteps(storage);
+    const tree = steps.welcome.component({
+      stepData: {},
+      context: { onStartDailyCheckin: vi.fn() },
+    });
+
+    const text = JSON.stringify(tree);
+    expect(text).toContain('Профиль готов, Антон');
+    expect(text).toContain('80 кг');
+    expect(text).toContain('Начать утренний чек-ин');
+    expect(text).not.toContain('70 кг');
   });
 });

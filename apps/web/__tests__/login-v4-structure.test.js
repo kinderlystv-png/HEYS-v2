@@ -151,12 +151,21 @@ describe('login v4 frame groups', () => {
   it('uses v4 bottom sheet for access-code document signing', () => {
     expect(consents).toContain('heys-consent-sign-root');
     expect(consents).toContain('heys-consent-sign-sheet');
-    expect(consents).toContain('Подписание');
+    expect(consents).toContain('heys-consent-sign-backdrop');
+    expect(consents).toContain('Документы подписаны');
+    expect(consents).toContain('Продолжить');
     expect(consents).toContain('Осталось');
     expect(consents).toContain('signSuccess');
-    expect(css).toContain('.heys-consent-sign-sheet__handle');
-    expect(css).toContain('.heys-consent-sign-sheet__success');
-    expect(css).toMatch(/\.heys-consent-sign-sheet\s*\{[\s\S]*?padding:\s*18px 18px calc\(22px \+ env\(safe-area-inset-bottom/);
+    expect(consents).toContain('consent-signed');
+    expect(consents).toContain('heys-consent-sign-frame');
+    expect(consents).toContain('CONSENT_SIGN_FRAME_STYLE');
+    expect(consents).toContain('CONSENT_SIGN_ROOT_STYLE');
+    expect(consents).toContain('CONSENT_SIGN_SHEET_STYLE');
+    expect(css).toContain('.heys-consent-sign-sheet__done');
+    expect(css).toContain('.heys-consent-sign-frame');
+    expect(css).toContain('var(--v4-modal-backdrop-blur');
+    expect(css).toMatch(/\.heys-consent-sign-sheet\s*\{[\s\S]*?padding:\s*20px 18px 18px/);
+    expect(css).toMatch(/\.heys-consent-sign-sheet\s*\{[\s\S]*?border-radius:\s*26px/);
   });
 
   it('restyles in-app settings theme sheet as header popover ad5a', () => {

@@ -2723,6 +2723,7 @@
             setNeedsConsent,
             setCheckingConsent,
             setShowMorningCheckin,
+            showMorningCheckin = false,
             // Compliance overhaul 2026-05-20
             outdatedTypes = [],
             graceExpiresAt = null,
@@ -2955,20 +2956,27 @@
         }
 
         // Уже вошедшие: один раз предложить замеры и добавки без повторной оферты.
+        // Не между согласиями и регистрацией: оферта только после заполненного профиля.
         if (baseEligible && !shouldBlockForConsents && !consentCheckError && isPinSessionActive
             && HEYS.Consents?.OptionalFeatureOfferScreen
             && HEYS.Consents?.shouldOfferOptionalFeatures?.()) {
-            return React.createElement(HEYS.Consents.OptionalFeatureOfferScreen, {
-                key: 'optional-feature-offer',
-                clientId,
-                onComplete: () => {
-                    try {
-                        window.dispatchEvent(new CustomEvent('heys:profile-updated', {
-                            detail: { source: 'optional-feature-offer' },
-                        }));
-                    } catch (_) { /* noop */ }
-                },
-            });
+            const offerProfile = HEYS.utils?.lsGet ? HEYS.utils.lsGet('heys_profile', {}) : {};
+            const offerProfileIncomplete = HEYS.ProfileSteps?.isProfileIncomplete
+                ? HEYS.ProfileSteps.isProfileIncomplete(offerProfile)
+                : offerProfile?.profileCompleted !== true;
+            if (!offerProfileIncomplete) {
+                return React.createElement(HEYS.Consents.OptionalFeatureOfferScreen, {
+                    key: 'optional-feature-offer',
+                    clientId,
+                    onComplete: () => {
+                        try {
+                            window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+                                detail: { source: 'optional-feature-offer' },
+                            }));
+                        } catch (_) { /* noop */ }
+                    },
+                });
+            }
         }
 
         // ── Сценарий C: fallback-баннер для старого bundle, если ConsentScreen
@@ -3021,7 +3029,10 @@
             }
 
             const status = subscriptionState.status || 'none';
-            if (!profileIncomplete && (status === 'none' || status === 'trial_pending')) {
+            // Пока открыт итог регистрации (MorningCheckin mode=registration),
+            // ending и есть waiting — не дублируем route-level заглушку сверху.
+            if (!profileIncomplete && (status === 'none' || status === 'trial_pending')
+                && !showMorningCheckin) {
                 const startRaw = subscriptionState.details?.trial_started_at;
                 const startDate = startRaw ? new Date(startRaw) : null;
                 const hasValidStartDate = startDate && !Number.isNaN(startDate.getTime());

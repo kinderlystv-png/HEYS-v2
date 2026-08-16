@@ -40,6 +40,7 @@
         setNeedsConsent,
         setCheckingConsent,
         setShowMorningCheckin,
+        showMorningCheckin,
         isInitializing,
         tab,
         // 2026-05-20 compliance overhaul — optional state из useRuntimeState
@@ -184,6 +185,7 @@
             setNeedsConsent,
             setCheckingConsent,
             setShowMorningCheckin,
+            showMorningCheckin,
             // Compliance overhaul 2026-05-20 — re-consent + age gate state
             outdatedTypes: complianceState?.outdatedTypes,
             graceExpiresAt: complianceState?.graceExpiresAt,

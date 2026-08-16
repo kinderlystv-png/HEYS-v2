@@ -18,21 +18,95 @@
   // ============================================================
 
   // Дублируем пресеты из heys_user_v12.js (они внутри scope UserPage)
-  const GOAL_PRESETS = [
-    { value: -20, label: 'Агрессивное похудение', emoji: '🔥🔥', color: '#ef4444' },
-    { value: -15, label: 'Активное похудение', emoji: '🔥', color: '#f97316' },
-    { value: -10, label: 'Умеренное похудение', emoji: '🎯', color: '#eab308' },
-    { value: 0, label: 'Поддержание веса', emoji: '⚖️', color: '#22c55e' },
-    { value: 10, label: 'Умеренный набор', emoji: '💪', color: '#3b82f6' },
-    { value: 15, label: 'Активный набор', emoji: '💪💪', color: '#3b82f6' }
+  const GOAL_DIRECTIONS = [
+    {
+      id: 'lose',
+      label: 'Снизить вес',
+      tempos: [
+        { id: 'slow', label: 'Плавно', value: -10, hint: 'Плавно — минус 10 % от расхода: мягкий темп.' },
+        { id: 'mid', label: 'Умеренно', value: -15, hint: 'Умеренно — минус 15 % от расхода: заметный результат без строгих ограничений.' },
+        { id: 'fast', label: 'Быстро', value: -20, hint: 'Быстро — минус 20 % от расхода. Быстрее, сложнее удержать.' },
+      ],
+    },
+    {
+      id: 'hold',
+      label: 'Удержать текущий вес',
+      tempos: [{ id: 'hold', label: 'Удержать', value: 0, hint: 'Норма без дефицита и профицита.' }],
+    },
+    {
+      id: 'gain',
+      label: 'Набрать вес и мышцы',
+      tempos: [
+        { id: 'slow', label: 'Плавно', value: 10, hint: 'Плавно — плюс 10 % от расхода.' },
+        { id: 'mid', label: 'Умеренно', value: 15, hint: 'Умеренно — плюс 15 % от расхода.' },
+      ],
+    },
   ];
 
-  const INSULIN_PRESETS = [
-    { value: 2.5, label: 'Быстрый метаболизм', desc: 'спортсмены, низкоуглеводка' },
-    { value: 3, label: 'Нормальный', desc: 'большинство людей' },
-    { value: 4, label: 'Медленный', desc: 'склонность к полноте' },
-    { value: 4.5, label: 'Инсулинорезистентность', desc: 'преддиабет, СПКЯ' }
+  const ACTIVITY_LEVELS = [
+    { id: 'sedentary', label: 'Сидячая' },
+    { id: 'light', label: 'Лёгкая' },
+    { id: 'active', label: 'Высокая' },
   ];
+
+  function goalDirectionFromPct(pct) {
+    const n = Number(pct);
+    if (!(Number.isFinite(n))) return null;
+    if (n < 0) return 'lose';
+    if (n > 0) return 'gain';
+    return 'hold';
+  }
+
+
+  const INSULIN_PRESETS = [
+    { value: 2.5, label: '2,5 часа', desc: 'быстрый обмен' },
+    { value: 3, label: '3 часа', desc: 'по умолчанию' },
+    { value: 4, label: '4 часа', desc: 'спокойный' },
+    { value: 4.5, label: '4,5 часа', desc: 'медленный' }
+  ];
+
+  function isValidGivenName(value) {
+    const text = String(value || '').trim();
+    if (!text || /\d/.test(text)) return false;
+    const letters = text.replace(/[^\p{L}]/gu, '');
+    return letters.length >= 2;
+  }
+
+  function givenNameError(value) {
+    const text = String(value || '').trim();
+    if (!text) return 'Осталось имя';
+    if (!isValidGivenName(text)) return 'Имя — минимум две буквы, без цифр';
+    return null;
+  }
+
+  function minAdultBirthYear(now = new Date()) {
+    return now.getFullYear() - 18;
+  }
+
+  function bmiCategoryWord(bmi) {
+    if (!(bmi > 0)) return '';
+    if (bmi < 18.5) return 'недостаток';
+    if (bmi < 25) return 'норма';
+    if (bmi < 30) return 'избыток';
+    return 'ожирение';
+  }
+
+  function minNormalWeightKg(heightCm) {
+    const heightM = Number(heightCm) / 100;
+    if (!(heightM > 0)) return 0;
+    return Math.round(18.5 * heightM * heightM);
+  }
+
+  function formatWeeksForecast(weeks) {
+    const rounded = Math.round(Number(weeks));
+    if (!Number.isFinite(rounded) || rounded <= 0) return 'уже на цели';
+    const mod10 = rounded % 10;
+    const mod100 = rounded % 100;
+    let word = 'недель';
+    if (mod10 === 1 && mod100 !== 11) word = 'неделя';
+    else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) word = 'недели';
+    return `около ${rounded} ${word}`;
+  }
 
   // Расчёт возраста из даты рождения (переиспользуем логику из heys_user_v12.js)
   function calcAgeFromBirthDate(birthDate) {
@@ -111,6 +185,8 @@
   // Idempotent: isProfileIncomplete вызывается из render-путей (gate_flow).
   // Повторная запись маркера → HOT WRITE loop и React #301.
   function ensureRegistrationInProgressMarker(meta) {
+    // HEYS_DEBUG_REPLAY_REGISTRATION — не помечаем клиента «недорегистрированным»
+    if (HEYS._registrationReplay) return false;
     if (isRegistrationMarkerActive()) return false;
     lsSet('heys_registration_in_progress', true);
     if (meta) {
@@ -377,7 +453,7 @@
     const dp = Number(deficitPct) || 0;
 
     const diff = Math.abs(gw - cw);
-    if (diff < 0.5 || !isFinite(diff)) return '✨ Уже на цели!';
+    if (diff < 0.5 || !isFinite(diff)) return 'уже на цели';
 
     // Безопасная скорость: 0.5-1 кг/нед в зависимости от дефицита
     let weeklyRate;
@@ -387,12 +463,8 @@
     else weeklyRate = 0.4;
 
     const weeks = Math.ceil(diff / weeklyRate);
-    const months = Math.floor(weeks / 4);
-
-    if (!isFinite(weeks) || weeks <= 0) return '✨ Уже на цели!';
-    if (months >= 12) return `~${Math.floor(months / 12)} год${months >= 24 ? 'а' : ''}`;
-    if (months > 0) return `~${months} мес`;
-    return `~${weeks} нед`;
+    if (!isFinite(weeks) || weeks <= 0) return 'уже на цели';
+    return formatWeeksForecast(weeks);
   }
 
   // Smart default для инсулиновой волны
@@ -445,14 +517,11 @@
   // ============================================================
 
   function ProfilePersonalComponent({ data, onChange }) {
-    const [showBirthDateHint, setShowBirthDateHint] = useState(false);
-
-    // Получаем WheelPicker из StepModal
     const WheelPicker = HEYS.StepModal?.WheelPicker;
 
     const firstName = data.firstName || '';
     const lastName = data.lastName || '';
-    const gender = data.gender || 'Мужской';
+    const gender = data.gender || '';
     // cycleTrackingEnabled снят с релиза — поле в data не пишем.
 
     // Разбираем дату на компоненты
@@ -473,7 +542,7 @@
     const monthValues = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], []);
     const yearValues = useMemo(() => {
       const years = [];
-      for (let y = currentYear - 10; y >= 1940; y--) years.push(y);
+      for (let y = minAdultBirthYear(); y >= 1940; y--) years.push(y);
       return years;
     }, [currentYear]);
 
@@ -481,83 +550,116 @@
     const formatMonth = (m) => monthNames[m - 1];
     const pad2 = (v) => String(v).padStart(2, '0');
 
-    return React.createElement('div', { className: 'flex flex-col gap-6 p-4' },
-      // Имя и фамилия
-      React.createElement('div', { className: 'grid grid-cols-1 gap-3' },
-        React.createElement('div', { className: 'flex flex-col gap-2' },
-          React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '👤 Имя *'),
-          React.createElement('input', {
-            type: 'text',
-            value: firstName,
-            onChange: (e) => onChange({ ...data, firstName: e.target.value }),
-            placeholder: 'Имя',
-            autoComplete: 'given-name',
-            className: `w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent ${!firstName.trim() ? 'border-red-300 bg-red-50' : 'border-gray-300'
-              }`
-          })
-        ),
-        React.createElement('div', { className: 'flex flex-col gap-2' },
-          React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '👤 Фамилия'),
-          React.createElement('input', {
-            type: 'text',
-            value: lastName,
-            onChange: (e) => onChange({ ...data, lastName: e.target.value }),
-            placeholder: 'Фамилия',
-            autoComplete: 'family-name',
-            className: 'w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent'
-          })
-        )
-      ),
+    const nameError = givenNameError(firstName);
+    const under18 = age > 0 && age < 18;
 
-      // Пол (обязательно) - только Мужской/Женский
+    return React.createElement('div', { className: 'flex flex-col gap-4 p-4' },
+      React.createElement('div', {
+        style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
+      }, 'Расскажите о себе'),
       React.createElement('div', { className: 'flex flex-col gap-2' },
-        React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '👤 Пол *'),
-        React.createElement('div', { className: 'grid grid-cols-2 gap-3' },
-          ['Мужской', 'Женский'].map(g =>
+        React.createElement('label', { className: 'text-sm font-medium', style: { color: 'rgba(0,0,0,.7)' } },
+          'Имя ',
+          React.createElement('span', { style: { color: '#8a4a20' } }, '*')
+        ),
+        React.createElement('input', {
+          type: 'text',
+          value: firstName,
+          onChange: (e) => onChange({ ...data, firstName: e.target.value }),
+          placeholder: 'Имя',
+          autoComplete: 'given-name',
+          className: 'w-full',
+          style: {
+            minHeight: 44,
+            borderRadius: 18,
+            border: 'none',
+            padding: '12px 15px',
+            background: '#f7efe2',
+            font: '600 13px/1.5 Figtree, system-ui, sans-serif',
+            color: '#201e1d',
+            ...(nameError && firstName
+              ? { boxShadow: 'inset 0 0 0 2px #a1471c' }
+              : null),
+          }
+        }),
+        nameError && firstName && React.createElement('div', {
+          className: 'text-xs font-semibold',
+          style: { color: '#a1471c' }
+        }, nameError),
+        nameError && firstName && React.createElement('div', {
+          className: 'text-xs',
+          style: { color: 'rgba(0,0,0,.42)' }
+        }, 'Куратор обращается к вам по имени, поэтому оно должно читаться.')
+      ),
+      React.createElement('div', { className: 'flex flex-col gap-2' },
+        React.createElement('label', { className: 'text-sm', style: { color: 'rgba(0,0,0,.42)' } },
+          'Фамилия ',
+          React.createElement('span', { style: { fontWeight: 500 } }, '· необязательно')
+        ),
+        React.createElement('input', {
+          type: 'text',
+          value: lastName,
+          onChange: (e) => onChange({ ...data, lastName: e.target.value }),
+          placeholder: 'Фамилия',
+          autoComplete: 'family-name',
+          className: 'w-full',
+          style: {
+            minHeight: 44,
+            borderRadius: 18,
+            border: 'none',
+            padding: '12px 15px',
+            background: '#f7efe2',
+            font: '600 13px/1.5 Figtree, system-ui, sans-serif',
+            color: '#201e1d',
+          }
+        })
+      ),
+      React.createElement('div', { className: 'flex flex-col gap-2' },
+        React.createElement('label', { className: 'text-sm font-medium', style: { color: 'rgba(0,0,0,.7)' } },
+          'Пол ',
+          React.createElement('span', { style: { color: '#8a4a20' } }, '*')
+        ),
+        React.createElement('div', { style: { display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 } },
+          ['Женский', 'Мужской'].map(g =>
             React.createElement('button', {
               key: g,
               type: 'button',
-              onClick: () => {
-                onChange({ ...data, gender: g });
-                if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                  navigator.vibrate(10);
-                }
-              },
-              className: `px-4 py-3 rounded-xl border-2 font-medium transition-all ${gender === g
-                ? 'border-emerald-500 bg-emerald-50 text-emerald-700 scale-105'
-                : 'border-gray-300 bg-white text-gray-700 hover:border-emerald-300'
-                }`,
-              style: gender === g ? { animation: 'pulse 0.3s ease-out' } : {}
+              onClick: () => onChange({ ...data, gender: g }),
+              style: {
+                padding: '0 16px',
+                minHeight: 44,
+                display: 'inline-flex',
+                alignItems: 'center',
+                borderRadius: 999,
+                border: 'none',
+                font: '600 12px/1 Figtree, system-ui, sans-serif',
+                background: gender === g ? '#c67139' : '#f7efe2',
+                color: gender === g ? '#2b1608' : 'rgba(0,0,0,.55)',
+                cursor: 'pointer',
+              }
             }, g)
           )
-        )
+        ),
+        !gender && isValidGivenName(firstName)
+          ? React.createElement('div', { className: 'text-xs font-semibold', style: { color: '#a1471c' } },
+            'Выберите один вариант')
+          : React.createElement('div', { className: 'text-xs', style: { color: 'rgba(0,0,0,.42)' } },
+            'Формула основного обмена у мужчин и женщин разная.')
       ),
 
       // Дата рождения (WheelPickers v2)
       React.createElement('div', { className: 'flex flex-col gap-3' },
         React.createElement('div', { className: 'flex items-center justify-between' },
-          React.createElement('div', { className: 'flex items-center gap-2 relative' },
-            React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '🎂 Дата рождения *'),
-            React.createElement('button', {
-              type: 'button',
-              onClick: () => setShowBirthDateHint(!showBirthDateHint),
-              className: 'w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs font-medium hover:bg-emerald-100 hover:text-emerald-600 transition-colors flex items-center justify-center'
-            }, '?'),
-            React.createElement(HintTooltip, {
-              show: showBirthDateHint,
-              onClose: () => setShowBirthDateHint(false)
-            },
-              'Возраст влияет на норму сна и потребность в белке.',
-              React.createElement('br'),
-              React.createElement('span', { className: 'text-[10px] text-gray-400 mt-1 block' }, 'Источник: National Sleep Foundation, 2015')
-            )
-          ),
-          age > 0 && React.createElement('span', {
-            className: 'text-lg font-bold text-emerald-600'
-          }, `${age} лет`)
+          React.createElement('label', { className: 'text-sm font-medium', style: { color: 'rgba(0,0,0,.7)' } },
+            'Дата рождения ',
+            React.createElement('span', { style: { color: '#8a4a20' } }, '*')
+          )
         ),
         // WheelPickers: День / Месяц / Год
-        WheelPicker ? React.createElement('div', { className: 'flex justify-center gap-2 bg-gray-50 rounded-xl p-4' },
+        WheelPicker ? React.createElement('div', {
+          className: 'flex justify-center gap-2',
+          style: { background: '#f7efe2', borderRadius: 18, padding: '12px 10px 13px', marginTop: 8 }
+        },
           // День
           React.createElement(WheelPicker, {
             values: dayValues,
@@ -591,9 +693,22 @@
             const [y, m, d] = e.target.value.split('-').map(Number);
             onChange({ ...data, birthYear: y, birthMonth: m, birthDay: d });
           },
-          max: new Date().toISOString().split('T')[0],
+          max: `${minAdultBirthYear()}-12-31`,
           className: 'w-full px-4 py-3 border border-gray-300 rounded-xl'
-        })
+        }),
+        React.createElement('div', {
+          className: 'text-center font-bold',
+          style: { fontSize: 24, color: under18 ? '#a1471c' : '#8a4a20', marginTop: 14 }
+        }, `${age} лет`),
+        under18 && React.createElement('div', {
+          className: 'rounded-2xl p-3 mt-3',
+          style: { background: '#f6e6dd' }
+        },
+          React.createElement('div', { className: 'text-xs font-bold', style: { color: '#a1471c' } },
+            'Приложением можно пользоваться с 18 лет'),
+          React.createElement('div', { className: 'text-xs mt-1', style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.55 } },
+            'Программа рассчитана на взрослых, и документы подписывает совершеннолетний. Колесо дальше не идёт.')
+        )
       ),
 
       // Активация трекинга особого периода — снята с релиза (prompt-cycle-removal).
@@ -602,9 +717,10 @@
   }
 
   registerStep('profile-personal', {
-    title: 'Персональные данные',
-    hint: 'Расскажите о себе',
-    icon: '👤',
+    title: 'Расскажите о себе',
+    hint: '',
+    nextLabel: 'Дальше',
+    icon: '',
     component: ProfilePersonalComponent,
     getInitialData: () => {
       const profile = lsGet('heys_profile', {}) || {};
@@ -660,7 +776,7 @@
       return {
         firstName,
         lastName,
-        gender: profile.gender || 'Мужской',
+        gender: profile.gender || '',
         birthDay,
         birthMonth,
         birthYear,
@@ -669,15 +785,21 @@
       };
     },
     validate: (data) => {
-      if (!data.firstName || !data.firstName.trim()) return 'Пожалуйста, укажите имя';
-      if (!data.gender) return 'Пожалуйста, укажите пол';
-      if (!data.birthYear || !data.birthMonth || !data.birthDay) return 'Пожалуйста, укажите дату рождения';
+      if (!isValidGivenName(data.firstName)) return 'Имя — минимум две буквы, без цифр';
+      if (!data.gender) return 'Выберите один вариант';
+      if (!data.birthYear || !data.birthMonth || !data.birthDay) return 'Укажите дату рождения';
+      const birthDate = `${data.birthYear}-${String(data.birthMonth).padStart(2, '0')}-${String(data.birthDay).padStart(2, '0')}`;
+      if (calcAgeFromBirthDate(birthDate) < 18) return 'Приложением можно пользоваться с 18 лет';
       return true;
     },
     getValidationMessage: (data) => {
-      if (!data.firstName || !data.firstName.trim()) return 'Укажите ваше имя';
-      if (!data.gender) return 'Выберите пол';
-      if (!data.birthYear || !data.birthMonth || !data.birthDay) return 'Укажите дату рождения';
+      const nameText = String(data.firstName || '').trim();
+      if (!nameText) return 'Осталось имя';
+      if (!isValidGivenName(nameText)) return '';
+      if (!data.gender) return 'Остался пол';
+      if (!data.birthYear || !data.birthMonth || !data.birthDay) return 'Осталась дата рождения';
+      const birthDate = `${data.birthYear}-${String(data.birthMonth).padStart(2, '0')}-${String(data.birthDay).padStart(2, '0')}`;
+      if (calcAgeFromBirthDate(birthDate) < 18) return '';
       return null;
     },
     save: (data) => {
@@ -712,122 +834,80 @@
   // ============================================================
 
   function ProfileBodyComponent({ data, onChange }) {
-    const [showGoalHint, setShowGoalHint] = useState(false);
-
     const weight = data.weight || 70;
     const height = data.height || 175;
     const weightGoal = data.weightGoal || weight;
 
     const bmi = calcBMI(weight, height);
-    const bmiCat = getBMICategory(bmi);
-    const weightDiff = weightGoal - weight;
+    const goalBmi = calcBMI(weightGoal, height);
+    const bmiWord = bmiCategoryWord(bmi);
+    const weightDiff = Math.round(Math.abs(weightGoal - weight));
+    const goalTooLow = goalBmi > 0 && goalBmi < 18.5;
+    const minKg = minNormalWeightKg(height);
 
     const weightValues = useMemo(() => Array.from({ length: 171 }, (_, i) => 30 + i), []);
     const heightValues = useMemo(() => Array.from({ length: 111 }, (_, i) => 120 + i), []);
 
+    const wheelCard = (label, values, value, keyName) => React.createElement('div', {
+      style: { flex: 1, background: '#f7efe2', borderRadius: 18, padding: '13px 0 14px', textAlign: 'center' }
+    },
+      React.createElement('div', { className: 'text-xs font-semibold', style: { color: 'rgba(0,0,0,.55)' } }, label),
+      React.createElement(WheelPicker, {
+        values,
+        value,
+        onChange: (v) => onChange({ ...data, [keyName]: v }),
+        height: 100
+      })
+    );
+
     return React.createElement('div', { className: 'flex flex-col gap-3 p-3' },
-      // === Ряд 1: Вес и Рост в 2 карточки ===
-      React.createElement('div', { className: 'grid grid-cols-2 gap-3' },
-        // Карточка веса
-        React.createElement('div', {
-          className: 'bg-white rounded-xl border border-gray-200 p-3 shadow-sm'
-        },
-          React.createElement('div', {
-            className: 'bg-gray-100 rounded-lg px-3 py-1.5 mb-2 text-center'
-          },
-            React.createElement('span', { className: 'text-xs font-semibold text-gray-700' }, '⚖️ Вес')
-          ),
-          React.createElement(WheelPicker, {
-            values: weightValues,
-            value: weight,
-            onChange: (v) => onChange({ ...data, weight: v }),
-            label: 'кг',
-            height: 100
-          })
-        ),
-        // Карточка роста
-        React.createElement('div', {
-          className: 'bg-white rounded-xl border border-gray-200 p-3 shadow-sm'
-        },
-          React.createElement('div', {
-            className: 'bg-gray-100 rounded-lg px-3 py-1.5 mb-2 text-center'
-          },
-            React.createElement('span', { className: 'text-xs font-semibold text-gray-700' }, '📏 Рост')
-          ),
-          React.createElement(WheelPicker, {
-            values: heightValues,
-            value: height,
-            onChange: (v) => onChange({ ...data, height: v }),
-            label: 'см',
-            height: 100
-          })
-        )
-      ),
-
-      // === BMI — бейдж ===
-      bmi > 0 && React.createElement('div', {
-        className: 'flex items-center justify-center gap-2 py-2 px-4 rounded-xl border',
-        style: {
-          backgroundColor: bmiCat.color + '10',
-          borderColor: bmiCat.color + '30'
-        }
-      },
-        React.createElement('span', { className: 'text-xs text-gray-600' }, '📊 ИМТ:'),
-        React.createElement('span', {
-          className: 'text-sm font-bold',
-          style: { color: bmiCat.color }
-        }, `${bmi.toFixed(1)} — ${bmiCat.label}`)
-      ),
-
-      // === Карточка целевого веса ===
       React.createElement('div', {
-        className: 'bg-white rounded-xl border border-gray-200 p-3 shadow-sm'
-      },
-        React.createElement('div', {
-          className: 'bg-emerald-100 rounded-lg px-3 py-1.5 mb-2 flex items-center justify-center gap-2 relative'
+        style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
+      }, 'Рост и вес'),
+      React.createElement('div', {
+        className: 'text-xs',
+        style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.5 }
+      }, 'Целых чисел достаточно — десятые вводятся в чек-ине.'),
+      React.createElement('div', { style: { display: 'flex', gap: 10, marginTop: 8 } },
+        wheelCard('Рост, см', heightValues, height, 'height'),
+        wheelCard('Вес сейчас, кг', weightValues, weight, 'weight')
+      ),
+      wheelCard('Желаемый вес, кг', weightValues, weightGoal, 'weightGoal'),
+      goalTooLow
+        ? React.createElement('div', {
+          className: 'rounded-2xl p-3',
+          style: { background: '#f6e6dd' }
         },
-          React.createElement('span', { className: 'text-xs font-semibold text-emerald-700' }, '🎯 Целевой вес'),
-          React.createElement('button', {
-            type: 'button',
-            onClick: () => setShowGoalHint(!showGoalHint),
-            className: 'w-4 h-4 rounded-full bg-emerald-200 text-emerald-600 text-[10px] font-bold hover:bg-emerald-300 transition-colors flex items-center justify-center'
-          }, '?'),
-          React.createElement(HintTooltip, {
-            show: showGoalHint,
-            onClose: () => setShowGoalHint(false)
-          },
-            'Безопасная скорость: 0.5-1 кг/неделю.',
-            React.createElement('br'),
-            React.createElement('span', { className: 'text-[10px] text-gray-400 mt-1 block' }, 'Источник: CDC, NHS guidelines')
-          )
-        ),
-        React.createElement(WheelPicker, {
-          values: weightValues,
-          value: weightGoal,
-          onChange: (v) => onChange({ ...data, weightGoal: v }),
-          label: 'кг',
-          height: 100
-        }),
-        // Прогноз внутри карточки
-        Math.abs(weightDiff) >= 0.5 && React.createElement('div', {
-          className: 'mt-2 pt-2 border-t border-gray-100 text-center'
-        },
-          React.createElement('span', { className: 'text-xs text-gray-500' }, '⏱ До цели: '),
-          React.createElement('span', {
-            className: 'text-sm font-bold',
-            style: { color: weightDiff < 0 ? '#22c55e' : '#3b82f6' }
-          },
-            `${weightDiff > 0 ? '+' : ''}${weightDiff.toFixed(1)} кг`
+          React.createElement('div', { className: 'text-xs font-bold', style: { color: '#a1471c' } },
+            `ИМТ цели ${goalBmi.toFixed(1).replace('.', ',')} — ниже нормы`),
+          React.createElement('div', { className: 'text-xs mt-1', style: { color: 'rgba(0,0,0,.55)', lineHeight: 1.55 } },
+            `При росте ${height} см нижняя граница нормы — ${minKg} кг. Цель можно оставить, но прогноз по срокам для неё мы не строим — обсудите её с куратором.`)
+        )
+        : React.createElement('div', { style: { display: 'flex', gap: 8 } },
+          React.createElement('div', { style: { flex: 1, background: '#efe3cf', borderRadius: 16, padding: '12px 14px' } },
+            React.createElement('div', { className: 'text-xs', style: { color: 'rgba(0,0,0,.45)' } }, 'ИМТ сейчас'),
+            React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 6 } },
+              React.createElement('span', { style: { fontSize: 18, fontWeight: 700, color: '#201e1d' } },
+                bmi > 0 ? bmi.toFixed(1).replace('.', ',') : '—'),
+              React.createElement('span', { className: 'text-xs font-semibold', style: { color: bmi < 18.5 ? '#a1471c' : 'rgba(0,0,0,.45)' } }, bmiWord)
+            )
+          ),
+          React.createElement('div', { style: { flex: 1, background: '#efe3cf', borderRadius: 16, padding: '12px 14px' } },
+            React.createElement('div', { className: 'text-xs', style: { color: 'rgba(0,0,0,.45)' } }, 'До цели'),
+            React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 6 } },
+              React.createElement('span', { style: { fontSize: 18, fontWeight: 700, color: '#201e1d' } }, String(weightDiff)),
+              React.createElement('span', { className: 'text-xs font-semibold', style: { color: 'rgba(0,0,0,.45)' } }, 'кг')
+            )
           )
         )
-      )
     );
   }
 
   registerStep('profile-body', {
-    title: 'Физические данные',
-    hint: 'Текущие параметры и цели',
-    icon: '📊',
+    title: 'Рост и вес',
+    hint: '',
+    nextLabel: 'Дальше',
+    icon: '',
     component: ProfileBodyComponent,
     getInitialData: () => {
       const profile = lsGet('heys_profile', {}) || {};
@@ -848,6 +928,18 @@
       if (!data.height || data.height < 120) return 'Укажите рост (мин. 120 см)';
       if (!data.weightGoal || data.weightGoal < 30) return 'Укажите целевой вес';
       return null;
+    },
+    // Черновик тела: нужен для resume и правила «переспросить через 3 дня».
+    // profileCompleted не трогаем — финал только на metabolism.
+    save: async (data) => {
+      const profile = lsGet('heys_profile', {}) || {};
+      profile.weight = Number(data.weight) || profile.weight;
+      profile.height = Number(data.height) || profile.height;
+      profile.weightGoal = Number(data.weightGoal) || profile.weightGoal || profile.weight;
+      profile.profileBodyCapturedAt = Date.now();
+      profile.updatedAt = Date.now();
+      lsSet('heys_profile', profile);
+      return { ok: true, affectedKeys: ['heys_profile'] };
     }
   });
 
@@ -856,131 +948,116 @@
   // ============================================================
 
   function ProfileGoalsComponent({ data, onChange }) {
-    const [showHints, setShowHints] = useState({});
+    const deficitPctTarget = Number.isFinite(Number(data.deficitPctTarget))
+      ? Number(data.deficitPctTarget)
+      : null;
+    const directionId = data.goalDirection || goalDirectionFromPct(deficitPctTarget);
+    const direction = GOAL_DIRECTIONS.find((item) => item.id === directionId) || null;
+    const activityLevel = data.activityLevel || '';
+    const selectedTempo = direction?.tempos.find((tempo) => tempo.value === deficitPctTarget) || null;
 
-    const deficitPctTarget = data.deficitPctTarget ?? 0;
-    const selectedPreset = GOAL_PRESETS.find(p => p.value === deficitPctTarget) || GOAL_PRESETS[3];
-
-    // Для авто-норм нужны данные из предыдущих шагов
-    const profile = lsGet('heys_profile', {}) || {};
-    const gender = data.gender || profile.gender || 'Мужской';
-    const birthDate = data.birthDate || profile.birthDate || '';
-    const age = birthDate ? calcAgeFromBirthDate(birthDate) : profile.age || 30;
-
-    const norms = calcNormsFromGoal(deficitPctTarget, gender, age);
-    const isFemale = gender === 'Женский';
-
-    const toggleHint = (key) => {
-      setShowHints(prev => ({ ...prev, [key]: !prev[key] }));
+    const pickDirection = (next) => {
+      const defaultTempo = next.tempos.find((tempo) => tempo.id === 'mid') || next.tempos[0];
+      onChange({
+        ...data,
+        goalDirection: next.id,
+        deficitPctTarget: defaultTempo.value,
+      });
     };
 
     return React.createElement('div', { className: 'flex flex-col gap-6 p-4' },
-      // Заголовок
-      React.createElement('div', { className: 'text-center' },
-        React.createElement('h3', { className: 'text-lg font-semibold text-gray-800 mb-2' }, 'Какая у вас цель?'),
-        React.createElement('p', { className: 'text-sm text-gray-600' }, 'Это определит ваш целевой калораж')
-      ),
-
-      // Карточки целей
-      React.createElement('div', { className: 'grid grid-cols-1 gap-3' },
-        GOAL_PRESETS.map((preset, idx) =>
-          React.createElement('div', {
-            key: preset.value,
-            style: { animation: `fadeIn 0.3s ease-out ${idx * 0.05}s both` }
-          },
-            React.createElement('button', {
-              type: 'button',
-              onClick: () => {
-                onChange({ ...data, deficitPctTarget: preset.value });
-                if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                  navigator.vibrate(10);
-                }
-              },
-              className: `w-full p-4 rounded-xl border-2 text-left transition-all ${deficitPctTarget === preset.value
-                ? 'border-emerald-500 bg-emerald-50 scale-105'
-                : 'border-gray-300 bg-white hover:border-emerald-300'
-                }`,
-              style: deficitPctTarget === preset.value ? {
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)',
-                animation: 'scaleIn 0.2s ease-out'
-              } : {}
-            },
-              React.createElement('div', { className: 'flex items-center justify-between' },
-                React.createElement('div', { className: 'flex items-center gap-3' },
-                  React.createElement('span', { className: 'text-2xl' }, preset.emoji),
-                  React.createElement('div', null,
-                    React.createElement('div', { className: 'font-medium text-gray-800' }, preset.label),
-                    React.createElement('div', { className: 'text-xs text-gray-500' },
-                      `${preset.value > 0 ? '+' : ''}${preset.value}%`
-                    )
-                  )
-                ),
-                (preset.value === -20 || preset.value === 15) && React.createElement('div', { className: 'relative' },
-                  React.createElement('button', {
-                    type: 'button',
-                    onClick: (e) => {
-                      e.stopPropagation();
-                      toggleHint(`goal_${preset.value}`);
-                    },
-                    className: 'w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs font-medium hover:bg-emerald-100 hover:text-emerald-600 transition-colors flex items-center justify-center'
-                  }, '?'),
-                  React.createElement(HintTooltip, {
-                    show: showHints[`goal_${preset.value}`],
-                    onClose: () => toggleHint(`goal_${preset.value}`),
-                    position: 'left'
-                  },
-                    preset.value === -20
-                      ? 'Быстрый результат, сложнее удержать. Белок 1.6-2.4 г/кг.'
-                      : 'Профицит для роста мышц. Белок 1.6-2.2 г/кг + тренировки.',
-                    React.createElement('span', { className: 'text-[10px] text-gray-400 block mt-1' }, 'Источник: ISSN Position Stand, 2017')
-                  )
-                )
-              )
-            )
-          )
-        )
-      ),
-
-      // Авто-нормы БЖУ
       React.createElement('div', {
-        className: 'bg-gradient-to-br from-emerald-50 to-blue-50 rounded-xl p-4 border border-emerald-200',
-        style: { animation: 'fadeIn 0.4s ease-out 0.3s both' }
-      },
-        React.createElement('div', { className: 'text-center mb-3' },
-          React.createElement('div', { className: 'text-sm font-medium text-gray-700 mb-1' }, '📊 Ваши нормы'),
-          React.createElement('div', { className: 'text-lg font-bold text-emerald-700' },
-            `Б ${norms.proteinPct}% / У ${norms.carbsPct}% / Ж ${100 - norms.proteinPct - norms.carbsPct}%`
-          )
+        style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
+      }, 'Цель и активность'),
+      React.createElement('div', { className: 'text-xs font-semibold tracking-widest uppercase', style: { color: '#8a4a20' } }, 'Цель'),
+      React.createElement('div', { className: 'flex flex-col gap-2' },
+        GOAL_DIRECTIONS.map((item) => React.createElement('button', {
+          key: item.id,
+          type: 'button',
+          onClick: () => pickDirection(item),
+          className: 'w-full text-left px-4 py-3 rounded-xl border-2',
+          style: directionId === item.id
+            ? { borderColor: '#c67139', background: '#efe3cf' }
+            : { borderColor: '#e5e7eb', background: '#fff' }
+        }, item.label))
+      ),
+      direction && direction.id !== 'hold' && React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'text-xs font-semibold tracking-widest uppercase', style: { color: '#8a4a20' } }, 'Темп'),
+        React.createElement('div', { className: 'flex flex-wrap gap-2' },
+          direction.tempos.map((tempo) => React.createElement('button', {
+            key: tempo.id,
+            type: 'button',
+            onClick: () => onChange({ ...data, goalDirection: direction.id, deficitPctTarget: tempo.value }),
+            className: 'px-4 py-2 rounded-full text-sm font-semibold',
+            style: deficitPctTarget === tempo.value
+              ? { background: '#c67139', color: '#2b1608' }
+              : { background: '#f7efe2', color: 'rgba(0,0,0,.55)' }
+          }, tempo.label))
         ),
-        isFemale && deficitPctTarget <= -10 && React.createElement('div', {
-          className: 'text-xs text-gray-600 text-center'
-        }, 'ℹ️ Больше жиров для гормонального баланса')
+        selectedTempo && React.createElement('p', { className: 'text-xs text-gray-500' }, selectedTempo.hint)
+      ),
+      React.createElement('div', { className: 'text-xs font-semibold tracking-widest uppercase', style: { color: '#8a4a20' } }, 'Активность сейчас'),
+      React.createElement('div', { className: 'flex flex-wrap gap-2' },
+        ACTIVITY_LEVELS.map((item) => React.createElement('button', {
+          key: item.id,
+          type: 'button',
+          onClick: () => onChange({ ...data, activityLevel: item.id }),
+          className: 'px-4 py-2 rounded-full text-sm font-semibold',
+          style: activityLevel === item.id
+            ? { background: '#c67139', color: '#2b1608' }
+            : { background: '#f7efe2', color: 'rgba(0,0,0,.55)' }
+        }, item.label))
+      ),
+      React.createElement('p', { className: 'text-xs text-gray-500' },
+        'Спрашиваем один раз — пока нет факта шагов, отсюда берётся прогноз недель до цели. Сам расход дня считается по факту: шагам, тренировкам и бытовой активности.'
       )
     );
   }
 
   registerStep('profile-goals', {
-    title: 'Ваша цель',
-    hint: 'Похудение, набор или поддержание',
-    icon: '🎯',
+    title: 'Цель и активность',
+    hint: '',
+    nextLabel: 'Дальше',
+    icon: '',
     component: ProfileGoalsComponent,
     getInitialData: () => {
       const profile = lsGet('heys_profile', {}) || {};
+      const deficitPctTarget = Number.isFinite(Number(profile.deficitPctTarget))
+        ? Number(profile.deficitPctTarget)
+        : undefined;
       return {
-        deficitPctTarget: profile.deficitPctTarget ?? 0
+        deficitPctTarget,
+        activityLevel: profile.activityLevel || '',
+        goalDirection: profile.goalDirection || goalDirectionFromPct(deficitPctTarget),
       };
     },
     validate: (data) => {
-      if (data.deficitPctTarget === undefined || data.deficitPctTarget === null) {
-        return 'Пожалуйста, выберите цель';
+      if (!Number.isFinite(Number(data.deficitPctTarget))) {
+        return 'Выберите цель';
+      }
+      if (!ACTIVITY_LEVELS.some((item) => item.id === data.activityLevel)) {
+        return 'Выберите активность';
       }
       return true;
     },
     getValidationMessage: (data) => {
-      if (data.deficitPctTarget === undefined || data.deficitPctTarget === null) {
-        return 'Выберите вашу цель';
+      if (!Number.isFinite(Number(data.deficitPctTarget))) {
+        return 'Выберите цель';
+      }
+      if (!ACTIVITY_LEVELS.some((item) => item.id === data.activityLevel)) {
+        return 'Выберите активность';
       }
       return null;
+    },
+    // Цель не устаревает: сохраняем черновик, чтобы не переспрашивать при resume.
+    save: async (data) => {
+      const profile = lsGet('heys_profile', {}) || {};
+      profile.deficitPctTarget = data.deficitPctTarget;
+      if (data.activityLevel) profile.activityLevel = data.activityLevel;
+      if (data.goalDirection) profile.goalDirection = data.goalDirection;
+      profile.updatedAt = Date.now();
+      lsSet('heys_profile', profile);
+      return { ok: true, affectedKeys: ['heys_profile'] };
     }
   });
 
@@ -991,7 +1068,6 @@
   function ProfileMetabolismComponent({ data, onChange }) {
     const [showSleepHint, setShowSleepHint] = useState(false);
     const [showInsulinHint, setShowInsulinHint] = useState(false);
-    const [showInsulinPresetHints, setShowInsulinPresetHints] = useState({});
 
     const profile = lsGet('heys_profile', {}) || {};
     const gender = data.gender || profile.gender || 'Мужской';
@@ -999,26 +1075,25 @@
     const age = birthDate ? calcAgeFromBirthDate(birthDate) : profile.age || 30;
 
     const sleepNorm = calcSleepNorm(age, gender);
-    const sleepHours = data.sleepHours ?? sleepNorm.hours;
+    const sleepHours = Number(data.sleepHours ?? sleepNorm.hours);
     const insulinWaveHours = data.insulinWaveHours ?? getSmartInsulinDefault(age);
+    const sleepLabel = `${String(sleepHours).replace('.', ',')} ч`;
 
-    const sleepValues = useMemo(() => {
-      const arr = [];
-      for (let i = 4; i <= 12; i += 0.5) {
-        arr.push(i);
-      }
-      return arr;
-    }, []);
-
-    const toggleInsulinPresetHint = (value) => {
-      setShowInsulinPresetHints(prev => ({ ...prev, [value]: !prev[value] }));
+    const nudgeSleep = (delta) => {
+      const next = Math.min(12, Math.max(4, Math.round((sleepHours + delta) * 2) / 2));
+      onChange({ ...data, sleepHours: next });
     };
 
     return React.createElement('div', { className: 'flex flex-col gap-6 p-4' },
-      // Норма сна
+      React.createElement('div', {
+        style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
+      }, 'Сон и инсулиновая волна'),
       React.createElement('div', { className: 'flex flex-col gap-2' },
         React.createElement('div', { className: 'flex items-center gap-2 relative' },
-          React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '💤 Норма сна (часов)'),
+          React.createElement('div', {
+            className: 'text-xs font-semibold tracking-widest uppercase',
+            style: { color: '#8a4a20' }
+          }, 'Сколько обычно спите'),
           React.createElement('button', {
             type: 'button',
             onClick: () => setShowSleepHint(!showSleepHint),
@@ -1032,23 +1107,32 @@
             React.createElement('span', { className: 'text-[10px] text-gray-400 block mt-1' }, 'Источник: National Sleep Foundation, 2015')
           )
         ),
-        React.createElement('div', { className: 'bg-emerald-50 rounded-xl p-3 border border-emerald-200 mb-2' },
-          React.createElement('div', { className: 'text-sm text-gray-700' },
-            `💡 Рекомендовано: ${sleepNorm.hours}ч (${sleepNorm.range})`
-          )
-        ),
-        React.createElement(WheelPicker, {
-          values: sleepValues,
-          value: sleepHours,
-          onChange: (v) => onChange({ ...data, sleepHours: v }),
-          label: 'ч'
-        })
+        React.createElement('div', { className: 'flex items-center justify-center gap-2' },
+          React.createElement('button', {
+            type: 'button',
+            onClick: () => nudgeSleep(-0.5),
+            className: 'px-4 py-2 rounded-full text-sm font-semibold',
+            style: { background: '#f7efe2', color: 'rgba(0,0,0,.55)', minWidth: 52 }
+          }, '−'),
+          React.createElement('div', {
+            className: 'px-4 py-2 rounded-full text-sm font-semibold',
+            style: { background: '#c67139', color: '#2b1608', minWidth: 84, textAlign: 'center' }
+          }, sleepLabel),
+          React.createElement('button', {
+            type: 'button',
+            onClick: () => nudgeSleep(0.5),
+            className: 'px-4 py-2 rounded-full text-sm font-semibold',
+            style: { background: '#f7efe2', color: 'rgba(0,0,0,.55)', minWidth: 52 }
+          }, '+')
+        )
       ),
 
-      // Инсулиновая волна
       React.createElement('div', { className: 'flex flex-col gap-2' },
         React.createElement('div', { className: 'flex items-center gap-2 relative' },
-          React.createElement('label', { className: 'text-sm font-medium text-gray-700' }, '⏱ Инсулиновая волна'),
+          React.createElement('div', {
+            className: 'text-xs font-semibold tracking-widest uppercase',
+            style: { color: '#8a4a20' }
+          }, 'Инсулиновая волна'),
           React.createElement('button', {
             type: 'button',
             onClick: () => setShowInsulinHint(!showInsulinHint),
@@ -1063,68 +1147,42 @@
           )
         ),
 
-        // Карточки пресетов
-        React.createElement('div', { className: 'grid grid-cols-1 gap-3 mt-3' },
-          INSULIN_PRESETS.map((preset, idx) => {
+        React.createElement('div', { className: 'flex flex-col gap-2 mt-1' },
+          INSULIN_PRESETS.map((preset) => {
             const isSelected = Math.abs(insulinWaveHours - preset.value) < 0.1;
-            const isDefault = Math.abs(getSmartInsulinDefault(age) - preset.value) < 0.1;
-
-            return React.createElement('div', {
+            return React.createElement('button', {
               key: preset.value,
-              style: { animation: `fadeIn 0.3s ease-out ${idx * 0.05}s both` }
+              type: 'button',
+              onClick: () => onChange({ ...data, insulinWaveHours: preset.value }),
+              className: 'w-full px-4 py-3 rounded-xl text-left flex items-center justify-between',
+              style: isSelected
+                ? { background: '#efe3cf', boxShadow: 'inset 0 0 0 2px #c67139' }
+                : { background: '#f7efe2' }
             },
-              React.createElement('button', {
-                type: 'button',
-                onClick: () => {
-                  onChange({ ...data, insulinWaveHours: preset.value });
-                  if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                    navigator.vibrate(10);
-                  }
-                },
-                className: `w-full p-4 rounded-xl border-2 text-left transition-all ${isSelected
-                  ? 'border-emerald-500 bg-emerald-50'
-                  : 'border-gray-300 bg-white hover:border-emerald-300'
-                  }`
-              },
-                React.createElement('div', { className: 'flex items-center justify-between' },
-                  React.createElement('div', null,
-                    React.createElement('div', { className: 'font-medium text-gray-800' },
-                      preset.label,
-                      isDefault && ' ✓'
-                    ),
-                    React.createElement('div', { className: 'text-xs text-gray-500 mt-1' }, preset.desc)
-                  ),
-                  preset.value === 4.5 && React.createElement('div', { className: 'relative' },
-                    React.createElement('button', {
-                      type: 'button',
-                      onClick: (e) => {
-                        e.stopPropagation();
-                        toggleInsulinPresetHint(preset.value);
-                      },
-                      className: 'w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs font-medium hover:bg-emerald-100 hover:text-emerald-600 transition-colors flex items-center justify-center'
-                    }, '?'),
-                    React.createElement(HintTooltip, {
-                      show: showInsulinPresetHints[preset.value],
-                      onClose: () => toggleInsulinPresetHint(preset.value),
-                      position: 'left'
-                    },
-                      'При инсулинорезистентности волна длиннее. Рекомендуется консультация врача.',
-                      React.createElement('span', { className: 'text-[10px] text-gray-400 block mt-1' }, 'Источник: DeFronzo, 1979')
-                    )
-                  )
-                )
-              )
+              React.createElement('span', {
+                className: 'text-sm font-semibold',
+                style: { color: isSelected ? '#201e1d' : 'rgba(0,0,0,.55)' }
+              }, preset.label),
+              React.createElement('span', {
+                className: 'text-xs',
+                style: { color: 'rgba(0,0,0,.4)' }
+              }, preset.desc)
             );
           })
-        )
+        ),
+        React.createElement('p', {
+          className: 'text-xs mt-2',
+          style: { color: 'rgba(0,0,0,.42)', lineHeight: 1.45 }
+        }, 'Волна задаёт, сколько после приёма пищи держится подъём инсулина: от неё зависят подсказки о перекусах. Меняется в настройках.')
       )
     );
   }
 
   registerStep('profile-metabolism', {
-    title: 'Метаболизм',
-    hint: 'Сон и инсулиновая волна',
-    icon: '⚡',
+    title: 'Сон и инсулиновая волна',
+    hint: '',
+    nextLabel: 'Готово',
+    icon: '',
     component: ProfileMetabolismComponent,
     getInitialData: () => {
       const profile = lsGet('heys_profile', {}) || {};
@@ -1181,6 +1239,7 @@
         // Целевой вес (из регистрации)
         weightGoal: step2.weightGoal || profile.weightGoal || registrationWeight,
         deficitPctTarget: step3.deficitPctTarget ?? profile.deficitPctTarget ?? 0,
+        activityLevel: step3.activityLevel || profile.activityLevel || undefined,
         sleepHours: step4.sleepHours || profile.sleepHours || 8,
         insulinWaveHours: step4.insulinWaveHours || profile.insulinWaveHours || 3,
         profileCompleted: true,
@@ -1292,6 +1351,7 @@
       // Целевой вес (из регистрации)
       weightGoal: step2.weightGoal || profile.weightGoal || registrationWeight,
       deficitPctTarget: step3.deficitPctTarget ?? profile.deficitPctTarget ?? 0,
+      activityLevel: step3.activityLevel || profile.activityLevel || undefined,
       sleepHours: step4.sleepHours || profile.sleepHours || 8,
       insulinWaveHours: step4.insulinWaveHours || profile.insulinWaveHours || 3,
       profileCompleted: true,
@@ -1372,57 +1432,312 @@
     }
   }
 
+  function readWelcomeProfile() {
+    const cid = getCurrentClientId();
+    const helper = HEYS.MorningCheckinUtils?.readProfileForceRawScoped;
+    if (cid && typeof helper === 'function') {
+      const scoped = helper(cid);
+      if (scoped && typeof scoped === 'object') return scoped;
+    }
+    return lsGet('heys_profile', {}) || {};
+  }
+
+  function resolveProductTodayISO() {
+    if (typeof HEYS.dateUtils?.todayISO === 'function') return HEYS.dateUtils.todayISO();
+    if (typeof HEYS.utils?.todayISO === 'function') return HEYS.utils.todayISO();
+    const d = new Date();
+    if (d.getHours() < 3) d.setDate(d.getDate() - 1);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  function toDateKeyISO(value) {
+    if (!value) return null;
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+      return value.slice(0, 10);
+    }
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  function formatRuLongDate(value) {
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  }
+
+  function formatRuDateWithWeekday(value) {
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'long' });
+  }
+
+  function resolveAssignedCuratorName(profile) {
+    const fromProfile = String(
+      profile?.curatorName
+      || profile?.curator_name
+      || profile?.curatorFirstName
+      || ''
+    ).trim();
+    if (fromProfile) return fromProfile;
+    const hasAssignment = !!(profile?.curatorId || profile?.curator_id || profile?.hasCurator);
+    if (!hasAssignment) return null;
+    const fromConfig = String(
+      HEYS.config?.curatorDisplayName
+      || HEYS.config?.curatorName
+      || HEYS.curatorDisplayName
+      || ''
+    ).trim();
+    return fromConfig || null;
+  }
+
+  /**
+   * Три конца регистрации:
+   * - open: доступ есть → сводка + «Начать утренний чек-ин»
+   * - dated: trial_pending + дата старта ещё впереди по todayISO
+   * - waiting: куратор ещё не открыл доступ
+   */
+  function resolveRegistrationEndingKind() {
+    const subscription = HEYS.Subscription;
+    // Без subscription-gate доступ открыт (локальная/legacy-среда и тесты).
+    if (!subscription || typeof subscription.canWriteStatus !== 'function') {
+      return { kind: 'open', status: 'none', details: null };
+    }
+    const details = subscription.getCachedDetails?.() || null;
+    const status = details?.status
+      || subscription.getCachedStatus?.()
+      || subscription.getLocalStatus?.()
+      || 'none';
+    const canWrite = subscription.canWriteStatus(status) === true;
+    if (canWrite) return { kind: 'open', status, details };
+
+    const startRaw = details?.trial_started_at || null;
+    const startKey = toDateKeyISO(startRaw);
+    const todayKey = resolveProductTodayISO();
+    if (startKey && todayKey && startKey > todayKey) {
+      return { kind: 'dated', status, details, startRaw, startKey };
+    }
+    if (status === 'trial_pending' && startKey && todayKey && startKey <= todayKey) {
+      // Дата по продуктовым суткам уже наступила, а статус ещё pending —
+      // показываем ожидание с проверкой доступа, не сводку чек-ина.
+      return { kind: 'waiting', status, details, startRaw, startKey };
+    }
+    return { kind: 'waiting', status, details, startRaw, startKey };
+  }
+
   function WelcomeStepComponent({ stepData, context }) {
-    // 🔧 v2.0.0: Читаем данные из stepData напрямую, т.к. localStorage ещё не сохранён
-    const step1 = stepData['profile-personal'] || {};
-    const step2 = stepData['profile-body'] || {};
-    const step3 = stepData['profile-goals'] || {};
-    const step4 = stepData['profile-metabolism'] || {};
+    // Живая регистрация держит цифры в stepData до save. Resume/повторный
+    // показ читает уже сохранённый профиль — иначе в карточке остаются
+    // дефолты 70 кг / 30 лет, как будто профиль не подтянулся.
+    const steps = stepData || {};
+    const step1 = steps['profile-personal'] || {};
+    const step2 = steps['profile-body'] || {};
+    const step3 = steps['profile-goals'] || {};
+    const profile = readWelcomeProfile();
+    const ending = resolveRegistrationEndingKind();
+    const curatorName = resolveAssignedCuratorName(profile);
+    const onStartDaily = context?.onStartDailyCheckin;
+    const onRefreshAccess = context?.onRefreshAccess;
 
-    // Функции из контекста
-    const onNext = context?.onNext;
-    const onClose = context?.onClose;
+    const firstName = step1.firstName || profile.firstName || '';
+    const weight = Number(step2.weight) || Number(profile.weight) || 70;
+    const weightGoal = Number(step2.weightGoal) || Number(profile.weightGoal) || weight;
+    const deficitPctTarget = Number.isFinite(Number(step3.deficitPctTarget))
+      ? Number(step3.deficitPctTarget)
+      : (Number.isFinite(Number(profile.deficitPctTarget)) ? Number(profile.deficitPctTarget) : 0);
+    const gender = step1.gender || profile.gender || 'Мужской';
 
-    // Имя из stepData
-    const firstName = step1.firstName || '';
-
-    // Данные тела из stepData
-    const weight = Number(step2.weight) || 70;
-    const height = Number(step2.height) || 170;
-    const weightGoal = Number(step2.weightGoal) || weight;
-    const weightDiff = weightGoal - weight;
-    const diffSign = weightDiff > 0 ? '+' : '';
-
-    // Данные цели из stepData
-    const deficitPctTarget = Number(step3.deficitPctTarget) || 0;
-    const gender = step1.gender || 'Мужской';
-
-    // Рассчитываем возраст из даты рождения
-    // 🔧 v2.0.1: Собираем birthDate из отдельных полей (birthYear, birthMonth, birthDay)
-    // т.к. в stepData они хранятся отдельно, а birthDate собирается только при save()
-    let age = 30; // default
+    let age = 30;
     if (step1.birthYear && step1.birthMonth && step1.birthDay) {
-      const birthDate = `${step1.birthYear}-${String(step1.birthMonth).padStart(2, '0')}-${String(step1.birthDay).padStart(2, '0')}`;
-      const today = new Date();
-      const birth = new Date(birthDate);
-      age = today.getFullYear() - birth.getFullYear();
-      const monthDiff = today.getMonth() - birth.getMonth();
-      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-        age--;
-      }
+      age = calcAgeFromBirthDate(`${step1.birthYear}-${String(step1.birthMonth).padStart(2, '0')}-${String(step1.birthDay).padStart(2, '0')}`) || 30;
+    } else if (profile.birthDate) {
+      age = calcAgeFromBirthDate(profile.birthDate) || Number(profile.age) || 30;
+    } else if (Number(profile.age) > 0) {
+      age = Number(profile.age);
     }
 
-    // Рассчитываем нормы БЖУ напрямую (не из localStorage!)
     const calculatedNorms = calcNormsFromGoal(deficitPctTarget, gender, age);
-
-    // Расчёт прогноза
     const weeks = calcTimeToGoal(weight, weightGoal, deficitPctTarget);
-
-    // Проценты БЖУ из рассчитанных норм
     const protPct = calculatedNorms.proteinPct || 25;
     const carbsPct = calculatedNorms.carbsPct || 50;
     const fatPct = 100 - protPct - carbsPct;
 
+    const row = (label, value, valueStyle) => React.createElement('div', {
+      style: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 12,
+        fontSize: 13,
+        fontWeight: 600
+      }
+    },
+      React.createElement('span', { style: { color: 'rgba(0,0,0,.55)', fontWeight: 600 } }, label),
+      React.createElement('span', { style: valueStyle || { color: '#201e1d' } }, value)
+    );
+
+    const primaryBtn = (label, onClick) => React.createElement('button', {
+      type: 'button',
+      style: {
+        width: '100%',
+        maxWidth: 320,
+        minHeight: 48,
+        padding: '14px 24px',
+        background: '#c67139',
+        color: 'white',
+        border: 'none',
+        borderRadius: 999,
+        fontSize: 15,
+        fontWeight: 700,
+        cursor: 'pointer'
+      },
+      onClick
+    }, label);
+
+    const secondaryBtn = (label, onClick) => React.createElement('button', {
+      type: 'button',
+      style: {
+        width: '100%',
+        maxWidth: 320,
+        minHeight: 44,
+        marginTop: 6,
+        padding: '10px 16px',
+        background: 'transparent',
+        color: 'rgba(0,0,0,.5)',
+        border: 'none',
+        borderRadius: 12,
+        fontSize: 13,
+        fontWeight: 700,
+        cursor: 'pointer',
+        order: 2
+      },
+      onClick
+    }, label);
+
+    const cardShell = (children) => React.createElement('div', {
+      style: {
+        width: '100%',
+        maxWidth: 320,
+        background: '#f7efe2',
+        borderRadius: 20,
+        padding: '16px 18px',
+        marginTop: 20,
+        textAlign: 'left'
+      }
+    }, children);
+
+    if (ending.kind === 'waiting') {
+      return React.createElement('div', {
+        className: 'welcome-step-content',
+        style: {
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          padding: '20px',
+          textAlign: 'center'
+        }
+      },
+        React.createElement('div', {
+          style: {
+            width: 60,
+            height: 60,
+            borderRadius: 999,
+            background: '#efe3cf',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 28
+          }
+        }, '⏱'),
+        React.createElement('h2', {
+          style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 18, marginBottom: 0 }
+        }, 'Профиль сохранён'),
+        React.createElement('p', {
+          style: { fontSize: 13, color: 'rgba(0,0,0,.55)', marginTop: 9, lineHeight: 1.55, maxWidth: 320 }
+        }, 'Куратор назначит дату начала недели и откроет дневник.'),
+        cardShell([
+          curatorName ? row('Куратор', curatorName) : null,
+          row('Профиль', 'заполнен', { color: '#5c6a45' }),
+          row('Дневник', 'откроется после старта', { color: 'rgba(0,0,0,.42)', fontWeight: 500 })
+        ].filter(Boolean)),
+        React.createElement('div', {
+          style: { width: '100%', maxWidth: 320, marginTop: 24, display: 'flex', flexDirection: 'column' }
+        },
+          primaryBtn('Проверить доступ', () => {
+            Promise.resolve(onRefreshAccess?.()).catch(() => null);
+          }),
+          curatorName
+            ? secondaryBtn('Написать куратору', () => {
+              window.open('https://t.me/heyslab_support_bot', '_blank', 'noopener,noreferrer');
+            })
+            : null
+        )
+      );
+    }
+
+    if (ending.kind === 'dated') {
+      const startLabel = formatRuLongDate(ending.startRaw) || ending.startKey;
+      const startDetailed = formatRuDateWithWeekday(ending.startRaw) || startLabel;
+      return React.createElement('div', {
+        className: 'welcome-step-content',
+        style: {
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          padding: '20px',
+          textAlign: 'center'
+        }
+      },
+        React.createElement('div', {
+          style: {
+            width: 60,
+            height: 60,
+            borderRadius: 999,
+            background: '#efe3cf',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 28
+          }
+        }, '📅'),
+        React.createElement('h2', {
+          style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 18, marginBottom: 0, textWrap: 'pretty' }
+        }, `Неделя начнётся ${startLabel}`),
+        React.createElement('p', {
+          style: { fontSize: 13, color: 'rgba(0,0,0,.55)', marginTop: 9, lineHeight: 1.55, maxWidth: 320 }
+        }, 'Профиль готов. До этого дня дневник закрыт — считать нечего.'),
+        cardShell([
+          curatorName ? row('Куратор', curatorName) : null,
+          row('Старт недели', startDetailed, { color: '#8a4a20' }),
+          row('Первый чек-ин', `утром ${startLabel}`, { color: 'rgba(0,0,0,.42)', fontWeight: 500 })
+        ].filter(Boolean)),
+        React.createElement('p', {
+          style: {
+            fontSize: 11,
+            color: 'rgba(0,0,0,.42)',
+            marginTop: 12,
+            lineHeight: 1.5,
+            maxWidth: 320
+          }
+        }, 'До этого дня приложение можно не открывать — считать ещё нечего.'),
+        React.createElement('div', {
+          style: { width: '100%', maxWidth: 320, marginTop: 24, display: 'flex', flexDirection: 'column' }
+        },
+          primaryBtn('Проверить доступ', () => {
+            Promise.resolve(onRefreshAccess?.()).catch(() => null);
+          }),
+          curatorName
+            ? secondaryBtn('Написать куратору', () => {
+              window.open('https://t.me/heyslab_support_bot', '_blank', 'noopener,noreferrer');
+            })
+            : null
+        )
+      );
+    }
+
+    // open: доступ есть
     return React.createElement('div', {
       className: 'welcome-step-content',
       style: {
@@ -1433,135 +1748,144 @@
         textAlign: 'center'
       }
     },
-      // Эмодзи
       React.createElement('div', {
-        style: { fontSize: '72px', marginBottom: '16px' }
-      }, '🎉'),
-
-      // Заголовок
+        style: {
+          width: 60,
+          height: 60,
+          borderRadius: 999,
+          background: '#eaefe0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 28,
+          color: '#5c6a45',
+          fontWeight: 700
+        }
+      }, '✓'),
       React.createElement('h2', {
-        style: {
-          fontSize: '24px',
-          fontWeight: 'bold',
-          color: 'var(--text, #1f2937)',
-          marginBottom: '8px'
-        }
-      }, firstName ? `Добро пожаловать, ${firstName}!` : 'Добро пожаловать!'),
-
-      // Подзаголовок
+        style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 18, marginBottom: 0 }
+      }, firstName ? `Профиль готов, ${firstName}` : 'Профиль готов'),
+      React.createElement('p', {
+        style: { fontSize: 13, color: 'rgba(0,0,0,.55)', marginTop: 9, lineHeight: 1.55, maxWidth: 320 }
+      }, 'Дальше — утренний чек-ин: полминуты, и день начнёт считаться.'),
+      cardShell([
+        row('Целевой вес', `${weightGoal} кг`),
+        row('Белки · углеводы · жиры', `${protPct} · ${carbsPct} · ${fatPct} %`),
+        row('Прогноз', weeks, { color: '#8a4a20' })
+      ]),
       React.createElement('p', {
         style: {
-          fontSize: '16px',
-          color: '#6b7280',
-          marginBottom: '24px'
+          fontSize: 11,
+          color: 'rgba(0,0,0,.42)',
+          marginTop: 12,
+          marginBottom: 20,
+          lineHeight: 1.5,
+          maxWidth: 320
         }
-      }, 'Ваш персональный план готов'),
-
-      // Карточка с параметрами
-      React.createElement('div', {
-        style: {
-          background: '#ecfdf5',
-          borderRadius: '16px',
-          padding: '20px',
-          width: '100%',
-          maxWidth: '320px',
-          marginBottom: '24px'
-        }
-      },
-        // Цель
-        React.createElement('div', {
-          style: {
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '12px'
-          }
-        },
-          React.createElement('span', { style: { color: 'var(--text, #374151)' } }, '🎯 Цель:'),
-          React.createElement('span', {
-            style: { fontWeight: '500', color: '#059669' }
-          }, `${weightGoal} кг (${diffSign}${Math.abs(weightDiff).toFixed(1)} кг)`)
-        ),
-
-        // БЖУ
-        React.createElement('div', {
-          style: {
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '12px'
-          }
-        },
-          React.createElement('span', { style: { color: 'var(--text, #374151)' } }, '📊 БЖУ:'),
-          React.createElement('span', {
-            style: { fontWeight: '500', color: '#059669' }
-          }, `Б${protPct}% У${carbsPct}% Ж${fatPct}%`)
-        ),
-
-        // Прогноз
-        React.createElement('div', {
-          style: {
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
-          }
-        },
-          React.createElement('span', { style: { color: 'var(--text, #374151)' } }, '⏱ Прогноз:'),
-          React.createElement('span', {
-            style: { fontWeight: '500', color: '#059669' }
-          }, weeks)
-        )
-      ),
-
-      // Сноска
-      React.createElement('p', {
-        style: {
-          fontSize: '14px',
-          color: '#9ca3af',
-          marginBottom: '24px'
-        }
-      }, 'Нормы рассчитаны по вашим данным. Можете изменить в Профиле.'),
-
-      // Кнопка "Начать чек-ин"
-      React.createElement('button', {
-        style: {
-          width: '100%',
-          maxWidth: '320px',
-          padding: '14px 24px',
-          background: '#10b981',
-          color: 'white',
-          border: 'none',
-          borderRadius: '12px',
-          fontSize: '16px',
-          fontWeight: '600',
-          cursor: 'pointer',
-          marginBottom: '12px'
-        },
-        onClick: () => {
-          // Вес из регистрации остаётся в профиле (базовый)
-          // Чек-ин спросит утренний вес с десятыми долями
-          console.log('[WelcomeStep] Starting checkin (weight will be asked)');
-          onNext && onNext();
-        }
-      }, '☀️ Начать утренний чек-ин'),
-
-      null
+      }, 'Норма калорий считается каждый день по факту: шагам, тренировкам и бытовой активности.'),
+      primaryBtn('Начать утренний чек-ин', () => {
+        console.log('[WelcomeStep] Starting daily checkin after registration');
+        if (typeof onStartDaily === 'function') onStartDaily();
+      })
     );
   }
+
+  function formatResumeCapturedDate(ms) {
+    const date = new Date(Number(ms) || 0);
+    if (!Number.isFinite(date.getTime()) || date.getTime() <= 0) return '';
+    return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  }
+
+  function ProfileResumeComponent({ data }) {
+    const firstName = data.firstName || '';
+    const bodyStale = data.bodyStale === true;
+    const capturedLabel = data.capturedLabel || '';
+    const rows = [
+      { done: true, current: false, label: 'Согласия подписаны' },
+      { done: data.personalDone === true, current: false, label: 'Персональные данные' },
+      { done: data.bodyDone === true, current: !data.bodyDone, label: bodyStale ? 'Рост и вес — заново' : 'Рост и вес' },
+      { done: data.goalsDone === true, current: data.bodyDone && !data.goalsDone, label: 'Цель и активность' },
+      { done: false, current: data.bodyDone && data.goalsDone, label: 'Сон и волна' },
+    ];
+    return React.createElement('div', {
+      style: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 8px', textAlign: 'center' }
+    },
+      React.createElement('div', {
+        style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 8, lineHeight: 1.3 }
+      }, firstName ? `Продолжим, ${firstName}` : 'Продолжим'),
+      React.createElement('p', {
+        style: { fontSize: 13, color: 'rgba(0,0,0,.55)', marginTop: 9, lineHeight: 1.55, maxWidth: 320 }
+      }, bodyStale && capturedLabel
+        ? `Профиль заполнен наполовину. Заполнено ${capturedLabel} — вес спросим заново, за неделю он мог измениться.`
+        : 'Профиль заполнен наполовину. Продолжим с того места, где остановились.'),
+      React.createElement('div', {
+        style: {
+          width: '100%', maxWidth: 320, background: '#f7efe2', borderRadius: 20,
+          padding: '16px 18px', marginTop: 20, textAlign: 'left'
+        }
+      }, rows.map((row) => React.createElement('div', {
+        key: row.label,
+        style: {
+          display: 'flex', alignItems: 'center', gap: 9, marginTop: row.label === rows[0].label ? 0 : 12,
+          fontSize: 12, fontWeight: row.current ? 700 : 600,
+          color: row.done ? 'rgba(0,0,0,.55)' : (row.current ? '#201e1d' : 'rgba(0,0,0,.3)')
+        }
+      }, row.label)))
+    );
+  }
+
+  registerStep('profile-resume', {
+    title: 'Продолжим',
+    hint: '',
+    icon: '',
+    hiddenFromProgress: true,
+    hideProgressDots: true,
+    disableBack: true,
+    nextLabel: (data) => data?.continueLabel || 'Продолжить',
+    component: ProfileResumeComponent,
+    getInitialData: () => {
+      const profile = lsGet('heys_profile', {}) || {};
+      const capturedAt = Number(profile.profileBodyCapturedAt || 0);
+      const bodyFresh = Number(profile.weight) > 0
+        && Number(profile.height) > 0
+        && capturedAt > 0
+        && (Date.now() - capturedAt) <= (3 * 24 * 60 * 60 * 1000);
+      const goalsDone = Number.isFinite(Number(profile.deficitPctTarget))
+        && ['sedentary', 'light', 'active'].includes(profile.activityLevel);
+      const personalDone = String(profile.firstName || '').trim().length > 0 && !!profile.gender && !!profile.birthDate;
+      let continueLabel = 'Продолжить с шага 4';
+      if (!bodyFresh) continueLabel = 'Продолжить с шага 2';
+      else if (!goalsDone) continueLabel = 'Продолжить с шага 3';
+      return {
+        firstName: profile.firstName || '',
+        personalDone,
+        bodyDone: bodyFresh,
+        bodyStale: personalDone && !bodyFresh,
+        goalsDone,
+        capturedLabel: formatResumeCapturedDate(capturedAt),
+        continueLabel
+      };
+    },
+    validate: () => true,
+    save: () => ({ completed: true, affectedKeys: [] })
+  });
 
   // Регистрируем шаг welcome (с отложенной регистрацией на случай если StepModal загрузится позже)
   function registerWelcomeStep() {
     if (HEYS.StepModal && HEYS.StepModal.registerStep) {
       HEYS.StepModal.registerStep('welcome', {
-        title: 'Готово!',
-        hint: 'Регистрация завершена',
-        icon: '🎉',
+        title: 'Готово',
+        hint: '',
+        icon: '',
         component: WelcomeStepComponent,
         canSkip: false,
-        hideHeaderNext: true,  // Скрываем кнопку в хедере — используем кнопки в контенте
+        disableBack: true,
+        hideHeaderNext: true,
+        hideDailyFooter: true,
+        hideProgressDots: true,
         getInitialData: () => ({}),
         validate: () => true,
-        save: () => { } // Ничего не сохраняем, это информационный шаг
+        save: () => { }
       });
       return true;
     }
@@ -1831,6 +2155,12 @@
     calcNormsFromGoal,
     calcAgeFromBirthDate,
     calcSleepNorm,
+    isValidGivenName,
+    givenNameError,
+    minAdultBirthYear,
+    bmiCategoryWord,
+    minNormalWeightKg,
+    formatWeeksForecast,
     showCongratulationsModal
   };
 

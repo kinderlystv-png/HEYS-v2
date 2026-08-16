@@ -547,6 +547,7 @@
                 setNeedsConsent,
                 setCheckingConsent,
                 setShowMorningCheckin,
+                showMorningCheckin,
                 isInitializing,
                 tab,
                 // 2026-05-20 compliance overhaul — пробрасываем из runtimeState в buildConsentGate
