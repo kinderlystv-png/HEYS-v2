@@ -171,7 +171,8 @@ describe('first login onboarding guardrails', () => {
 
 describe('first login profile identity', () => {
   it('collects first and last name separately and syncs full name to curator clients', () => {
-    expect(profileStepSource).toContain('Имя *');
+    expect(profileStepSource).toContain("'Имя '");
+    expect(profileStepSource).toContain("React.createElement('span', { style: { color: '#8a4a20' } }, '*')");
     expect(profileStepSource).toContain('Фамилия');
     expect(profileStepSource).toContain('const lastName = profile.lastName || pendingNameParts.lastName ||');
     expect(profileStepSource).toContain('profile.lastName = lastName');

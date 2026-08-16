@@ -486,6 +486,7 @@ describe('morning check-in journal resume', () => {
     expect(plan.mode).toBe('registration');
     expect(plan.isProfileOnlyRegistration).toBe(true);
     expect(plan.steps).toEqual([
+      'profile-resume',
       'profile-body',
       'profile-goals',
       'profile-metabolism',
@@ -525,7 +526,7 @@ describe('morning check-in journal resume', () => {
 
     const plan = utils.buildMorningCheckinPlan({ dateKey: DATE_KEY, clientId: CLIENT_ID });
 
-    expect(plan.steps[0]).toBe('profile-body');
+    expect(plan.steps[0]).toBe('profile-resume');
     expect(plan.steps).not.toContain('profile-personal');
   });
 
