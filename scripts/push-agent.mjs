@@ -830,7 +830,12 @@ function push() {
       baseRef: getOption('--base'),
       full: hasFlag('--full'),
     });
-    const preflight = run('pnpm', preflightArgs);
+    // spawnSync cannot launch the pnpm shim on Windows with shell: false, so run
+    // the preflight entrypoint directly the way .husky/pre-push already does.
+    const preflight = runNode(
+      'scripts/push-preflight.mjs',
+      preflightArgs.slice(preflightArgs.indexOf('--') + 1),
+    );
     if (preflight.status !== 0) process.exit(preflight.status || 1);
   }
 
