@@ -35,10 +35,12 @@ describe('first login onboarding guardrails', () => {
   it('does not allow first-login check-in skip or close-through', () => {
     expect(profileStepSource).not.toContain('Пока пропустить и ознакомиться с приложением');
     expect(profileStepSource).not.toContain('heys_morning_checkin_done');
-    expect(morningCheckinSource).toContain('Завершите первый вход');
-    expect(morningCheckinSource).toContain('обязательный чек-ин');
     expect(morningCheckinSource).toContain('isProfileOnlyRegistration');
+    expect(morningCheckinSource).toContain('getRegistrationSteps');
+    expect(morningCheckinSource).toContain("mode: wantRegistration ? 'registration' : 'daily'");
     expect(morningCheckinSource).toContain('if (!canUseDailyFlow) return steps');
+    expect(morningCheckinSource).not.toContain('Прервать утренний чек-ин?');
+    expect(profileStepSource).toContain('Начать утренний чек-ин');
   });
 
   it('keeps registration blocked until required consents are valid', () => {

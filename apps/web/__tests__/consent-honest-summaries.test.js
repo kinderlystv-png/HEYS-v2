@@ -47,13 +47,20 @@ describe('honest consent summaries', () => {
   it('shows short plain-language disclosures for a new client', () => {
     const text = collectText(renderConsentScreen()).join(' ');
 
-    expect(text.match(/Коротко и честно/g)).toHaveLength(6);
-    expect(text).toContain('условия тарифа и оплаты');
-    expect(text).toContain('не заменяет это согласие');
-    expect(text).toContain('без потери доступа к HEYS');
-    expect(text).toContain('Рекламное согласие оформляется отдельно');
-    expect(text).toContain('Вести замеры тела в дневнике');
-    expect(text).toContain('Вести отметки о добавках из справочника сервиса');
+    expect(text.match(/Коротко и честно/g)).toHaveLength(2);
+    expect(text).toContain('Согласия и условия');
+    expect(text).toContain('Оба документа открываются целиком');
+    expect(text).toContain('Пользовательское соглашение');
+    expect(text).toContain('Доступ к HEYS, условия тарифа и отмены.');
+    expect(text).toContain('Обработка персональных данных');
+    expect(text).toContain('Храним имя, контакт и профиль в России');
+    expect(text).toContain('Замеры тела');
+    expect(text).toContain('Обхваты тела в дневнике');
+    expect(text).toContain('Добавки и витамины');
+    expect(text).toContain('Напоминания');
+    expect(text).toContain('Новости и советы');
+    expect(text).toContain('Необязательное отмечается тапом');
+    expect(text).not.toContain('Вести замеры тела в дневнике');
   });
 
   it('keeps the same plain-language contents for re-consent', () => {
@@ -61,9 +68,9 @@ describe('honest consent summaries', () => {
       { type: 'personal_data', current: '1.7', expected: '1.0' },
     ])).join(' ');
 
-    expect(text.match(/Коротко и честно/g)).toHaveLength(6);
+    expect(text.match(/Коротко и честно/g)).toHaveLength(2);
     expect(text).not.toContain('Что изменилось');
-    expect(text).toContain('не заменяет это согласие');
+    expect(text).toContain('Храним имя, контакт и профиль в России');
     expect(text).toContain('Проверьте содержание документов и подтвердите актуальные условия');
   });
 
