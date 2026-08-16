@@ -120,6 +120,69 @@ describe('morning check-in v4 plan', () => {
     expect(steps).toContain('stepsGoal');
   });
 
+  it('morningRest stays blocking until coldExposure is saved', () => {
+    expect(MORNING_SRC).toContain("const MORNING_OPTIONAL_TAIL_STEPS = new Set(['checkinRecorded'");
+    expect(MORNING_SRC).not.toMatch(/!\(row\.id === 'morningRest' && coreDone\)/);
+    const { utils } = loadMorning({
+      day: {
+        weightMorning: 72,
+        sleepStart: '23:00',
+        sleepEnd: '07:00',
+        sleepQuality: 7,
+        morningMood: 5,
+        wellbeing: 5,
+        stress: 3,
+      },
+      profile: { stepsGoal: 10000, stepsGoalConfirmedDate: DATE_KEY },
+    });
+    expect(utils.isMorningStepComplete('morningRest', {
+      dateKey: DATE_KEY,
+      day: {
+        weightMorning: 72,
+        sleepStart: '23:00',
+        sleepEnd: '07:00',
+        sleepQuality: 7,
+        morningMood: 5,
+        wellbeing: 5,
+        stress: 3,
+      },
+      profile: { stepsGoal: 10000, stepsGoalConfirmedDate: DATE_KEY },
+    })).toBe(false);
+    expect(utils.isMorningStepComplete('morningRest', {
+      dateKey: DATE_KEY,
+      day: {
+        weightMorning: 72,
+        sleepStart: '23:00',
+        sleepEnd: '07:00',
+        sleepQuality: 7,
+        morningMood: 5,
+        wellbeing: 5,
+        stress: 3,
+        coldExposure: { type: 'none', answeredAt: 1 },
+      },
+      profile: { stepsGoal: 10000, stepsGoalConfirmedDate: DATE_KEY },
+    })).toBe(true);
+  });
+
+  it('v4 daily plan keeps full core after weight is already saved (canvas progress + back)', () => {
+    const { utils } = loadMorning({
+      day: { weightMorning: 73.4, weightMorningSource: 'measured' },
+    });
+    const plan = utils.buildMorningCheckinPlan({
+      dateKey: DATE_KEY,
+      clientId: CLIENT_ID,
+      source: 'MorningCheckin',
+    });
+    expect(plan.steps).toEqual([
+      'weight',
+      'sleep',
+      'morning_mood',
+      'stepsGoal',
+      'morningRest',
+      'checkinRecorded',
+    ]);
+  });
+
   it('collapses a stale sleepTime/sleepQuality ledger into one sleep screen', () => {
     const { utils } = loadMorning({
       day: {},

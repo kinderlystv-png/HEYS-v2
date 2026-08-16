@@ -69,6 +69,13 @@ describe('morning check-in required module readiness', () => {
         cleanups.forEach((fn) => fn());
     });
 
+    it('keeps an open daily check-in when shouldShow flips false after core saves', () => {
+        // Контракт: после stepsGoal ядро «готово», shouldShow→false, но пятый
+        // экран ещё на экране — gate не размонтирует мастер.
+        expect(appMorningSource).toContain('if (prev === true && shouldShow === false) return prev;');
+        expect(appMorningSource).not.toContain('if (!canWrite) return prev;');
+    });
+
     it('defers the shouldShow decision until YesterdayVerify is ready', () => {
         const setter = vi.fn();
         const cleanups = [];

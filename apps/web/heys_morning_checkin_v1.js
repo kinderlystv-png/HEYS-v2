@@ -997,8 +997,14 @@
     return stepId === 'welcome';
   }
 
+  function isRegistrationResumeStep(stepId) {
+    return stepId === 'profile-resume';
+  }
+
   function isRegistrationPlanStep(stepId) {
-    return REGISTRATION_STEP_IDS.has(stepId) || isRegistrationEndingStep(stepId);
+    return REGISTRATION_STEP_IDS.has(stepId)
+      || isRegistrationEndingStep(stepId)
+      || isRegistrationResumeStep(stepId);
   }
 
   function isRegistrationPersonalComplete(profile) {
@@ -1027,7 +1033,8 @@
   }
 
   function isRegistrationGoalsCaptured(profile) {
-    return profile?.deficitPctTarget !== undefined && profile?.deficitPctTarget !== null;
+    return Number.isFinite(Number(profile?.deficitPctTarget))
+      && ['sedentary', 'light', 'active'].includes(profile?.activityLevel);
   }
 
   function isMorningLedgerStepTerminal(row) {
@@ -1060,24 +1067,30 @@
     const hasRegistration = steps.some((id) => isRegistrationPlanStep(id));
     if (!hasRegistration) return steps;
     const registration = REGISTRATION_PROFILE_ORDER.filter((id) => steps.includes(id));
+    const resume = steps.includes('profile-resume') ? ['profile-resume'] : [];
     const welcome = steps.includes('welcome') ? ['welcome'] : [];
     const rest = steps.filter((id) => !isRegistrationPlanStep(id));
-    return [...registration, ...welcome, ...rest];
+    return [...resume, ...registration, ...welcome, ...rest];
   }
 
   /**
    * Регистрация = 4 шага профиля + терминальный итог (welcome).
    * Дневной ledger / dayv2 сюда не входят.
+   * forceReplay — диагностика: все шаги на уже готовом профиле, без «Продолжим».
+   * HEYS_DEBUG_REPLAY_REGISTRATION
    */
-  function getRegistrationSteps(profile) {
-    if (!HEYS.ProfileSteps?.isProfileIncomplete?.(profile)) return [];
-    return [
+  function getRegistrationSteps(profile, opts = {}) {
+    const forceReplay = opts.forceReplay === true;
+    if (!forceReplay && !HEYS.ProfileSteps?.isProfileIncomplete?.(profile)) return [];
+    const steps = [
       'profile-personal',
       'profile-body',
       'profile-goals',
       'profile-metabolism',
       'welcome',
     ];
+    if (!forceReplay && isRegistrationPersonalComplete(profile)) steps.unshift('profile-resume');
+    return steps;
   }
 
   function canUseMorningDailyFlow() {
@@ -1338,7 +1351,7 @@
     const blockingProgressSteps = (existingProgress
       ? getBlockingMorningSteps({ ledger: existingProgress, dateKey: todayKey, clientId: currentClientId })
       : [])
-      .filter((row) => !(row.id === 'morningRoutine' && coreDone) && !(row.id === 'morningRest' && coreDone) && row.id !== 'checkinRecorded');
+      .filter((row) => !(row.id === 'morningRoutine' && coreDone) && row.id !== 'checkinRecorded');
     const unsyncedProgressSteps = existingProgress
       ? Object.entries(existingProgress.steps || {})
         .filter(([id, row]) => id !== '__flow__' && isUnresolvedProgressStatus(row && row.status))
@@ -1569,10 +1582,36 @@
     return `heys_morning_checkin_progress_v1_${dateKey}`;
   }
 
+  function shouldUseV4DailyCanonicalPlan(opts, wantRegistration, dateKey) {
+    if (wantRegistration) return false;
+    if (!canUseMorningDailyFlow()) return false;
+    const requiredOnly = typeof opts.requiredOnly === 'boolean'
+      ? opts.requiredOnly
+      : (opts.source === 'MorningCheckin' && (!!_reopenRequiredOnly || !!_dailyRequiredOnly));
+    if (requiredOnly) return false;
+    if (dateKey && dateKey !== getTodayKey()) return false;
+    return opts.mode === 'daily'
+      || opts.source === 'MorningCheckin'
+      || opts.source === 'showCheckin.morning';
+  }
+
+  function expandV4DailyCanonicalSteps(steps) {
+    const list = Array.isArray(steps) ? steps : [];
+    const hasYesterday = list.includes('yesterdayVerify');
+    const hasRecorded = list.includes('checkinRecorded');
+    return [
+      ...(hasYesterday ? ['yesterdayVerify'] : []),
+      ...V4_DAILY_CANONICAL_CORE,
+      ...(hasRecorded ? ['checkinRecorded'] : [])
+    ];
+  }
+
   const MORNING_CORE_STEPS = ['weight', 'sleep', 'morning_mood', 'stepsGoal'];
+  /** v4 canvas: пять точек прогресса и «назад» со 2-го экрана — ядро всегда в плане. */
+  const V4_DAILY_CANONICAL_CORE = ['weight', 'sleep', 'morning_mood', 'stepsGoal', 'morningRest'];
   const LEGACY_SLEEP_STEP_IDS = new Set(['sleepTime', 'sleepQuality']);
   const LEGACY_REST_STEP_IDS = new Set(['refeedDay', 'cycle', 'measurements', 'cold_exposure', 'supplements', 'morningRoutine']);
-  const MORNING_OPTIONAL_TAIL_STEPS = new Set(['morningRest', 'checkinRecorded', ...LEGACY_REST_STEP_IDS]);
+  const MORNING_OPTIONAL_TAIL_STEPS = new Set(['checkinRecorded', ...LEGACY_REST_STEP_IDS]);
   const MORNING_DATA_COMPLETABLE_STEPS = new Set([
     ...MORNING_CORE_STEPS,
     'sleepTime',
@@ -2086,10 +2125,13 @@
       case 'supplements': return Array.isArray(day?.supplementsPlanned);
       case 'morningRest':
         if (isMorningLedgerStepTerminal(state.ledger?.steps?.morningRest)) return true;
-        return !coreCheckinDataMissing(day) && hasStepsGoalConfirmedToday(profile, dateKey);
+        // Пятый экран обязателен до явного «Готово» (тип холода, в т.ч. none).
+        return !!day?.coldExposure && typeof day.coldExposure === 'object' && !!day.coldExposure.type;
       case 'checkinRecorded':
         return !coreCheckinDataMissing(day) && hasStepsGoalConfirmedToday(profile, dateKey);
       case 'morningRoutine':
+        return false;
+      case 'profile-resume':
         return false;
       case 'welcome':
         // Итог регистрации терминальный: человек закрывает его кнопкой,
@@ -2177,26 +2219,31 @@
     const dateKey = opts.dateKey || getTodayKey();
     const clientId = opts.clientId || getCurrentClientId();
     const profile = opts.profile || getFreshMorningProfile(clientId);
-    const forceDaily = opts.mode === 'daily';
-    const wantRegistration = !forceDaily
-      && HEYS.ProfileSteps?.isProfileIncomplete?.(profile) === true;
+    // HEYS_DEBUG_REPLAY_REGISTRATION / HEYS_DEBUG_REPLAY_CHECKIN
+    const forceReplay = opts.forceReplay === true;
+    const forceCheckinReplay = opts.forceCheckinReplay === true;
+    const forceDaily = (opts.mode === 'daily' || forceCheckinReplay) && !forceReplay;
+    const wantRegistration = forceReplay
+      || (!forceDaily && HEYS.ProfileSteps?.isProfileIncomplete?.(profile) === true);
     const cachedYesterdayVerifyRequired = opts.source === 'MorningCheckin'
       && typeof _nextPlanYesterdayVerifyRequired === 'boolean'
       ? _nextPlanYesterdayVerifyRequired
       : null;
     if (opts.source === 'MorningCheckin') _nextPlanYesterdayVerifyRequired = null;
-    const derivedFreshSteps = wantRegistration
-      ? getRegistrationSteps(profile)
-      : getCheckinSteps(profile, {
-        filterCompleted: opts.filterCompleted !== false,
-        requiredOnly: typeof opts.requiredOnly === 'boolean'
-          ? opts.requiredOnly
-          : (opts.source === 'MorningCheckin' && (!!_reopenRequiredOnly || !!_dailyRequiredOnly)),
-        yesterdayVerifyRequired: typeof opts.yesterdayVerifyRequired === 'boolean'
-          ? opts.yesterdayVerifyRequired
-          : cachedYesterdayVerifyRequired,
-        dateKey
-      });
+    const derivedFreshSteps = forceCheckinReplay
+      ? [...V4_DAILY_CANONICAL_CORE, 'checkinRecorded']
+      : wantRegistration
+        ? getRegistrationSteps(profile, { forceReplay })
+        : getCheckinSteps(profile, {
+          filterCompleted: opts.filterCompleted !== false,
+          requiredOnly: typeof opts.requiredOnly === 'boolean'
+            ? opts.requiredOnly
+            : (opts.source === 'MorningCheckin' && (!!_reopenRequiredOnly || !!_dailyRequiredOnly)),
+          yesterdayVerifyRequired: typeof opts.yesterdayVerifyRequired === 'boolean'
+            ? opts.yesterdayVerifyRequired
+            : cachedYesterdayVerifyRequired,
+          dateKey
+        });
     // Explicit reset flows cannot wait for the React day-state write to reach
     // localStorage before the plan is built. Force their known reset steps so
     // a stale pre-reset snapshot cannot produce an empty loading modal.
@@ -2211,24 +2258,34 @@
         readMorningProgress(dateKey, clientId),
         clientId
       );
-    const mergedSteps = wantRegistration
-      ? normalizeRegistrationStepOrder(
-        freshSteps.filter((id) => {
-          if (isRegistrationEndingStep(id)) return true;
-          return !isMorningStepSatisfiedByData(id, {
-            dateKey, clientId, profile, ledger: null
-          });
-        }),
-        profile
-      )
-      : mergeFreshStepsWithProgress(freshSteps, existingLedger, { dateKey, clientId, profile });
+    const mergedSteps = forceCheckinReplay
+      ? freshSteps
+      : wantRegistration
+        ? normalizeRegistrationStepOrder(
+          forceReplay
+            ? freshSteps
+            : freshSteps.filter((id) => {
+              if (isRegistrationEndingStep(id)) return true;
+              return !isMorningStepSatisfiedByData(id, {
+                dateKey, clientId, profile, ledger: null
+              });
+            }),
+          profile
+        )
+        : mergeFreshStepsWithProgress(freshSteps, existingLedger, { dateKey, clientId, profile });
     // Keep explicit reset steps after data-derived filtering too: localStorage
     // may still contain the pre-reset day for a few frames.
-    const steps = normalizeRegistrationStepOrder(
-      Array.from(new Set([...forcedStepIds, ...mergedSteps])),
-      profile
-    );
-    const replannedStepIds = wantRegistration
+    const steps = (() => {
+      const normalized = normalizeRegistrationStepOrder(
+        Array.from(new Set([...forcedStepIds, ...mergedSteps])),
+        profile
+      );
+      if (forceCheckinReplay) return expandV4DailyCanonicalSteps(normalized);
+      return shouldUseV4DailyCanonicalPlan(opts, wantRegistration, dateKey)
+        ? expandV4DailyCanonicalSteps(normalized)
+        : normalized;
+    })();
+    const replannedStepIds = wantRegistration || forceCheckinReplay
       ? []
       : getReplannedMorningStepIds(freshSteps, existingLedger);
     const fullPlannedStepIds = Array.from(new Set([
@@ -2253,9 +2310,11 @@
       profile,
       steps,
       flowId: ledger?.flowId || flowId,
-      skipYesterdayVerify: opts.yesterdayVerifyRequired === false,
+      skipYesterdayVerify: opts.yesterdayVerifyRequired === false || forceCheckinReplay,
       isRegistrationCheckin,
       isProfileOnlyRegistration,
+      forceReplay,
+      forceCheckinReplay,
       mode: wantRegistration ? 'registration' : 'daily'
     };
   }
@@ -2590,7 +2649,7 @@
         showGreeting: plan.mode !== 'registration',
         showTip: false,
         allowSwipe: false,
-        layout: plan.mode === 'registration' ? 'default' : 'daily',
+        layout: 'daily',
         context: {
           dateKey: plan.dateKey,
           registrationMode: plan.mode === 'registration',
@@ -2663,6 +2722,115 @@
   HEYS.MorningCheckinUtils.markMorningProgressCloudSynced = markMorningProgressCloudSynced;
   HEYS.MorningCheckinUtils.requiredDecisionModules = ['YesterdayVerify'];
   HEYS.MorningCheckinUtils.isYesterdayVerifyDecisionReady = isYesterdayVerifyDecisionReady;
+
+  // HEYS_DEBUG_REPLAY_REGISTRATION — временная диагностика; grep чтобы выкинуть
+  function clearRegistrationReplayFlag() {
+    try { delete HEYS._registrationReplay; } catch (_) { HEYS._registrationReplay = false; }
+  }
+
+  function openRegistrationReplayWizard() {
+    if (!HEYS.StepModal?.show) {
+      console.warn('[debug.replayRegistration] StepModal unavailable');
+      clearRegistrationReplayFlag();
+      return;
+    }
+    const plan = buildMorningCheckinPlan({
+      mode: 'registration',
+      forceReplay: true,
+      source: 'debug.replayRegistration',
+    });
+    const closeReplay = () => {
+      clearRegistrationReplayFlag();
+      try {
+        if (typeof HEYS.StepModal?.hide === 'function') {
+          HEYS.StepModal.hide({ scrollToDiary: false });
+        }
+      } catch (_) { /* noop */ }
+    };
+    HEYS.StepModal.show({
+      steps: plan.steps,
+      onComplete: () => {
+        closeReplay();
+        return true;
+      },
+      closeOnComplete: 'after',
+      allowSwipe: false,
+      showTip: false,
+      showProgress: true,
+      showStreak: false,
+      showGreeting: false,
+      layout: 'daily',
+      freezeVisibleSteps: true,
+      requireStepAck: true,
+      allowProgressForwardNav: false,
+      onStepSaved: createMorningStepAck(plan),
+      onStepShown: createMorningStepShownTrace(plan),
+      context: {
+        dateKey: plan.dateKey,
+        dailyCheckin: false,
+        registrationReplay: true,
+        onStartDailyCheckin: closeReplay,
+        onRefreshAccess: () => Promise.resolve(),
+      },
+    });
+  }
+
+  function replayRegistration() {
+    // HEYS_DEBUG_REPLAY_REGISTRATION
+    HEYS._registrationReplay = true;
+    const consentsApi = HEYS.Consents;
+    if (typeof consentsApi?.showDiagnosticReplay === 'function') {
+      consentsApi.showDiagnosticReplay({
+        onComplete: () => openRegistrationReplayWizard(),
+        onCancel: () => clearRegistrationReplayFlag(),
+      });
+      return;
+    }
+    console.warn('[debug.replayRegistration] Consents.showDiagnosticReplay missing — opening profile steps only');
+    openRegistrationReplayWizard();
+  }
+
+  // HEYS_DEBUG_REPLAY_CHECKIN — временная диагностика; grep чтобы выкинуть
+  function replayCheckin() {
+    if (!HEYS.StepModal?.show) {
+      console.warn('[debug.replayCheckin] StepModal unavailable');
+      return;
+    }
+    const plan = buildMorningCheckinPlan({
+      mode: 'daily',
+      forceCheckinReplay: true,
+      source: 'debug.replayCheckin',
+      yesterdayVerifyRequired: false,
+      filterCompleted: false,
+    });
+    HEYS.StepModal.show({
+      steps: plan.steps,
+      onComplete: () => completeMorningCheckin(plan, () => true),
+      closeOnComplete: 'after',
+      allowSwipe: false,
+      showTip: false,
+      showProgress: true,
+      showStreak: true,
+      showGreeting: false,
+      layout: 'daily',
+      freezeVisibleSteps: true,
+      requireStepAck: true,
+      allowProgressForwardNav: false,
+      onStepSaved: createMorningStepAck(plan),
+      onStepShown: createMorningStepShownTrace(plan),
+      context: {
+        dateKey: plan.dateKey,
+        dailyCheckin: true,
+        checkinReplay: true,
+      },
+    });
+  }
+
+  HEYS.debug = Object.assign(HEYS.debug || {}, {
+    replayRegistration,
+    replayCheckin,
+  });
+  HEYS.MorningCheckinUtils.openRegistrationReplayWizard = openRegistrationReplayWizard;
   HEYS.MorningCheckinDebug = HEYS.MorningCheckinDebug || {};
   HEYS.MorningCheckinDebug.getStatus = getMorningCheckinStatus;
   HEYS.MorningCheckinDebug.readProgress = readMorningProgress;
@@ -2718,7 +2886,7 @@
           closeOnComplete: 'after',
           allowSwipe: false,
           showTip: false,
-          layout: plan.isRegistrationCheckin ? 'default' : 'daily',
+          layout: 'daily',
           context: { dateKey: plan.dateKey, dailyCheckin: !plan.isRegistrationCheckin },
           freezeVisibleSteps: true,
           forceVisibleStepIds: steps.includes('yesterdayVerify') ? ['yesterdayVerify'] : [],

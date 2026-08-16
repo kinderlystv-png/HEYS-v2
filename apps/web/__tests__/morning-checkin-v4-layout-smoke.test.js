@@ -1,0 +1,145 @@
+import fs from 'fs';
+import path from 'path';
+
+import { describe, expect, it } from 'vitest';
+
+const STEPS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_steps_v1.js'), 'utf8');
+const YESTERDAY_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_yesterday_verify_v1.js'), 'utf8');
+const MODAL_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_step_modal_v1.js'), 'utf8');
+const DAILY_CSS = fs.readFileSync(path.resolve(__dirname, '../styles/modules/500-pwa-and-offline.css'), 'utf8');
+const PALETTE_CSS = fs.readFileSync(path.resolve(__dirname, '../styles/modules/002-ui-v4-palette-roles.css'), 'utf8');
+const YV_CSS = fs.readFileSync(path.resolve(__dirname, '../styles/modules/715-yesterday-verify.css'), 'utf8');
+const FIGTREE_FONT = path.resolve(__dirname, '../public/fonts/figtree/Figtree-Variable.ttf');
+
+describe('morning check-in v4 layout vs canvas', () => {
+  it('daily chrome: terracotta pills, full-width single primary, no green override', () => {
+    expect(fs.existsSync(FIGTREE_FONT)).toBe(true);
+    expect(PALETTE_CSS).toContain("url('/fonts/figtree/Figtree-Variable.ttf')");
+    expect(DAILY_CSS).toMatch(/\.mc-progress-dots--pills \.mc-progress-dot\.active \{[\s\S]*?background: var\(--v4-sand-act, #c67139\)/);
+    expect(DAILY_CSS).toContain('.mc-daily-footer-primary:only-child');
+    expect(DAILY_CSS).toContain('.mc-modal--daily .mc-daily-footer-primary.mc-btn--primary');
+    expect(DAILY_CSS).toContain('.mc-daily-header-caption');
+    expect(DAILY_CSS).toContain('.mc-modal--daily .mc-header-spacer');
+    expect(DAILY_CSS).toContain('.mc-modal--daily .mc-daily-greeting-title');
+    expect(DAILY_CSS).toMatch(/mc-daily-streak-banner[\s\S]*--v4-sand-surface, #f7efe2/);
+    expect(DAILY_CSS).toContain('padding: 16px 18px 0');
+    expect(DAILY_CSS).toContain('padding: 14px 18px 12px');
+    expect(DAILY_CSS).toContain('border-radius: 28px');
+    expect(DAILY_CSS).toContain('.mc-backdrop:has(.mc-modal--daily)');
+    expect(STEPS_SRC).toContain('borderRadius: 20');
+    expect(STEPS_SRC).toContain('borderRadius: 16');
+    expect(DAILY_CSS).toContain('border-radius: 20px !important');
+    expect(DAILY_CSS).toContain('border-radius: 16px !important');
+    expect(MODAL_SRC).toContain('headerCaption');
+    expect(MODAL_SRC).toContain('showHeaderBack');
+    expect(MODAL_SRC).toContain('showDailyStepBack');
+    expect(MODAL_SRC).toContain('mc-header-back-icon');
+    expect(MODAL_SRC).toContain('currentStepIndex > 0');
+    expect(MODAL_SRC).toContain('mc-v4-scale');
+  });
+
+  it('weight screens: greeting, kilo card, week delta, first morning, estimate copy', () => {
+    expect(STEPS_SRC).toContain('Вес на утро');
+    expect(STEPS_SRC).toContain('Килограммы');
+    expect(DAILY_CSS).toMatch(/\.mc-weight-kilo-card \{[\s\S]*?width:\s*186px/);
+    expect(STEPS_SRC).toContain('кг за неделю');
+    expect(STEPS_SRC).toContain('первый день недели');
+    expect(STEPS_SRC).toContain('Динамика появится через неделю взвешиваний.');
+    expect(STEPS_SRC).toContain('Из профиля — поправьте, если весы показывают другое');
+    expect(STEPS_SRC).toContain('Серия растёт, но в её истории день помечен точкой.');
+    expect(STEPS_SRC).toContain('mc-daily-greeting-title');
+    expect(STEPS_SRC).toMatch(/mc-weight-pickers[\s\S]*compact: true/);
+    expect(DAILY_CSS).toContain('.mc-modal--daily .mc-wheel-value--current');
+    expect(DAILY_CSS).toMatch(/\.mc-modal--daily \.mc-wheel-value--current[\s\S]*#8a4a20/);
+    expect(DAILY_CSS).toContain('.mc-modal--daily .mc-btn.mc-daily-footer-primary');
+  });
+
+  it('sleep / mood / steps use canvas scale, not native range or blue thumb', () => {
+    expect(STEPS_SRC).toContain("variant: 'v4'");
+    expect(STEPS_SRC).toContain("fill: row.kind === 'stress' ? 'act' : 'olive'");
+    expect(STEPS_SRC).toContain('function sleepNormLine');
+    expect(STEPS_SRC).toContain('mc-steps-hero-value');
+    expect(STEPS_SRC).toContain("className: 'mc-steps-unit'");
+    expect(DAILY_CSS).toContain('.mc-modal--daily .mc-steps-unit');
+    expect(DAILY_CSS).toMatch(/mc-steps-unit[\s\S]*letter-spacing: 0/);
+    expect(STEPS_SRC).toContain("secondaryLabelWhen: (data) => (data && data.estimated ? 'Ввести вес' : 'Не взвешивался')");
+    expect(STEPS_SRC).toMatch(/CombinedSleepStepComponent[\s\S]*compact: true/);
+    expect(STEPS_SRC).not.toMatch(/function CombinedSleepStepComponent[\s\S]*type: 'range'[\s\S]*function CombinedSleepStepComponent/);
+    expect(STEPS_SRC).not.toMatch(/function CombinedSleepStepComponent[\s\S]*type: 'range'[\s\S]*registerStep\('sleep'/);
+    expect(STEPS_SRC).not.toMatch(/function StepsGoalStepComponent[\s\S]*type: 'range'[\s\S]*registerStep\('stepsGoal'/);
+    expect(STEPS_SRC).toContain('STEPS_GOAL_SLIDER_ANCHOR_RATIO = 2 / 3');
+    expect(STEPS_SRC).toContain('valueToRatio: stepsGoalSliderValueToRatio');
+    expect(STEPS_SRC).toContain('ratioToValue: stepsGoalSliderRatioToValue');
+    expect(STEPS_SRC).toContain("hasStepsHistory ? 'Совет' : 'Старт'");
+    expect(STEPS_SRC).toContain("className: 'mc-steps-advice-mark'");
+    expect(STEPS_SRC).toContain('restoreAdvice');
+    expect(DAILY_CSS).toContain('.mc-steps-advice-mark');
+    expect(DAILY_CSS).toContain('cursor: pointer');
+    expect(DAILY_CSS).toContain('.mc-steps-hero--custom');
+  });
+
+  it('rest and recorded match canvas buttons and empty fifth copy', () => {
+    expect(STEPS_SRC).toContain('mc-pill mc-pill--choice');
+    expect(STEPS_SRC).toContain('Резинки, разогрев — 6 минут');
+    expect(STEPS_SRC).toContain('Прошло ');
+    expect(STEPS_SRC).toContain('Добавок в курсе нет, замеры свежие');
+    expect(STEPS_SRC).toContain('mc-recorded-check');
+    expect(STEPS_SRC).toContain('Норма на утро');
+    expect(STEPS_SRC).toContain('resolveDailyTargets');
+    expect(STEPS_SRC).not.toContain('getMorningKcal');
+    expect(STEPS_SRC).toContain('Норма уточнится к вечеру по факту шагов и тренировок.');
+    expect(STEPS_SRC).toContain('mc-recorded-row__mark');
+    expect(STEPS_SRC).toContain('showWeightRow');
+    expect(STEPS_SRC).not.toMatch(/registerStep\('checkinRecorded'[\s\S]*?disableBack:\s*true/);
+    expect(DAILY_CSS).toContain('.mc-modal--daily .mc-step-content:has(.mc-recorded)');
+    expect(DAILY_CSS).toContain('.mc-recorded-row__kcal');
+    expect(DAILY_CSS).toContain('.mc-recorded-row__mark');
+    expect(DAILY_CSS).toMatch(/\.mc-recorded \{[\s\S]*justify-content:\s*center/);
+    expect(DAILY_CSS).toMatch(/\.mc-recorded \{[\s\S]*min-height:\s*100%/);
+    expect(STEPS_SRC).not.toMatch(/function MorningRestStepComponent[\s\S]*mc-btn--primary[\s\S]*registerStep\('morningRest'/);
+    expect(STEPS_SRC).toContain("mc-pill--choice");
+    expect(STEPS_SRC).toContain('openColdLayer');
+    expect(STEPS_SRC).toContain("mc-rest-step--layer");
+    expect(STEPS_SRC).toContain('showHeaderBack: (data) => !!(data && (data.coldOpen === true || data.measurementsOpen === true))');
+    expect(STEPS_SRC).toContain('applyHeaderBack:');
+    expect(STEPS_SRC).toContain('mc-rest-cold-head');
+    expect(STEPS_SRC).toContain('mc-rest-cold-streak');
+    expect(STEPS_SRC).toContain("mc-rest-cold-time");
+    expect(STEPS_SRC).toContain("className: 'mc-rest-cold-clock'");
+    expect(STEPS_SRC).not.toMatch(/mc-rest-cold-time[\s\S]{0,220}className: 'mc-time-pickers'/);
+    expect(STEPS_SRC).toContain('Убрать отметку');
+    expect(STEPS_SRC).toContain('clearColdMark');
+    expect(STEPS_SRC).toContain('clearMeasurementsMark');
+    expect(STEPS_SRC).toContain('mc-rest-clear-mark');
+    expect(STEPS_SRC).toContain('mc-rest-measure-row');
+    expect(STEPS_SRC).toContain('Не сейчас');
+    expect(STEPS_SRC).toContain('Пропустите — напомним через неделю.');
+    expect(STEPS_SRC).toContain('openMeasurementsLayer');
+    expect(STEPS_SRC).toContain('setColdClock');
+    expect(STEPS_SRC).toMatch(/applyHeaderBack:[\s\S]*?next\.measurementsOpen = false[\s\S]*?next\.coldOpen = false/);
+    expect(DAILY_CSS).toContain('.mc-pill--choice');
+    expect(DAILY_CSS).toContain('.mc-rest-cold-streak');
+    expect(DAILY_CSS).toContain('.mc-rest-cold-time');
+    expect(DAILY_CSS).toContain('.mc-rest-clear-mark');
+    expect(DAILY_CSS).toContain('.mc-rest-measure-row');
+    expect(DAILY_CSS).toContain('.mc-rest-measure-side-pill');
+    expect(DAILY_CSS).toContain('.mc-rest-cold-time .mc-wheel-value--current');
+    expect(DAILY_CSS).toContain('.mc-rest-cold-time .mc-time-sep');
+    expect(DAILY_CSS).toMatch(/\.mc-rest-type \{[\s\S]*--v4-sand-surface-soft, #fffaf1/);
+    expect(DAILY_CSS).toMatch(/\.mc-rest-type\.is-on \{[\s\S]*--v4-sand-hero, #efe3cf/);
+  });
+
+  it('yesterday: single footer, feelings four forces, pack chevron list', () => {
+    expect(YESTERDAY_SRC).toContain('Вчерашний день выглядит неполным');
+    expect(YESTERDAY_SRC).toContain('Дописать точно');
+    expect(YESTERDAY_SRC).toContain('Как вы вчера ели?');
+    expect(YESTERDAY_SRC).toContain("title: 'Не доел'");
+    expect(YESTERDAY_SRC).toContain("title: 'Как надо'");
+    expect(YESTERDAY_SRC).toContain('hideDailyFooter: true');
+    expect(YESTERDAY_SRC).toContain('Перед чек-ином');
+    expect(YESTERDAY_SRC).toContain('openDiaryForDate');
+    expect(YESTERDAY_SRC).toContain('yv-force');
+    expect(YV_CSS).toContain('.yv-force--on');
+    expect(YV_CSS).toContain('.yv-canvas-foot');
+  });
+});

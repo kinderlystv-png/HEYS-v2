@@ -88,7 +88,14 @@
             return true;
         }
 
-        setShowMorningCheckin((prev) => (prev === shouldShow ? prev : shouldShow));
+        setShowMorningCheckin((prev) => {
+            if (prev === shouldShow) return prev;
+            // Уже открытый мастер не гасим по shouldShow→false: после stepsGoal
+            // ядро «готово», gate решил бы закрыть, а на экране ещё morningRest /
+            // checkinRecorded. Закрытие только через onComplete (или явный false).
+            if (prev === true && shouldShow === false) return prev;
+            return shouldShow;
+        });
         return true;
     }
 
@@ -262,14 +269,9 @@
                 const activeClientId = clientIdRef.current || clientId || HEYS.utils?.getCurrentClientId?.() || '';
 
                 if (!canWrite) {
-                    const profile = readProfileForceRawScopedInline(activeClientId)
-                        || HEYS.MorningCheckinUtils?.readProfileForceRawScoped?.(activeClientId)
-                        || HEYS.utils?.lsGet?.('heys_profile', {})
-                        || {};
-                    const isProfileIncomplete = HEYS.ProfileSteps?.isProfileIncomplete?.(profile) === true;
-                    if (!isProfileIncomplete) {
-                        setShowMorningCheckin(false);
-                    }
+                    // Не гасим регистрационный итог: ending и есть waiting до
+                    // открытия доступа. Route-level subscription-waiting остаётся
+                    // для холодного входа после reload.
                     return;
                 }
 

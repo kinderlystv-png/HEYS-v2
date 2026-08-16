@@ -107,7 +107,11 @@ describe('morning check-in stability', () => {
     expect(MORNING_SRC).toContain('HEYS.caloricDebt?.needsRefeed === true');
     expect(MORNING_SRC).toContain("case 'refeedDay': return typeof day?.isRefeedDay === 'boolean' || !shouldIncludeRefeedStep(profile, dateKey);");
     expect(MORNING_SRC).toContain('function getBlockingMorningSteps');
-    expect(MORNING_SRC).toContain("const MORNING_OPTIONAL_TAIL_STEPS = new Set(['morningRest', 'checkinRecorded'");
+    expect(MORNING_SRC).toContain("const MORNING_OPTIONAL_TAIL_STEPS = new Set(['checkinRecorded'");
+    expect(MORNING_SRC).not.toContain("const MORNING_OPTIONAL_TAIL_STEPS = new Set(['morningRest', 'checkinRecorded'");
+    expect(MORNING_SRC).toContain("case 'morningRest':");
+    expect(MORNING_SRC).toContain('!!day?.coldExposure && typeof day.coldExposure === \'object\' && !!day.coldExposure.type');
+    expect(STEPS_SRC).toMatch(/registerStep\('morningRest'[\s\S]*canSkip: false/);
     expect(MORNING_SRC).toContain("return status === 'synced'");
     expect(MORNING_SRC).toContain("|| status === 'saved_local'");
     expect(MORNING_SRC).toContain('isMorningFinalBlockingStep(row.id) && !isMorningStatusTerminal(row)');
