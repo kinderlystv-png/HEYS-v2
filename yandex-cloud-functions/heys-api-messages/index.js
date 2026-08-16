@@ -1849,6 +1849,7 @@ module.exports._test = {
   resolveDayScopeClientId,
   buildDayChecklistResponse,
   dayChecklistKeys,
+  buildAttachmentBadge,
   sendPushToCurator,
   sendPushToClient,
   normalizeAttachmentType,
