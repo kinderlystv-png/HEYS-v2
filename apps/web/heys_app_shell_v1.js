@@ -15,8 +15,9 @@
 // ~3387   Header icon buttons (theme, advice, sync status)
 // ~4030   VPN help page overlay
 // ~4072   AppTabsNav — bottom nav, settings sheet, board theme
-// ~5168   AppTabContent — lazy tab mount, day/ration/user routing
-// ~5427   AppShell — composes header + tabs + content
+// ~5168   AppTabContent — lazy tab mount, header inside viewport
+// ~5427   AppShell — wrap + tabs + content
+// ~5863   bindHdrStickyPin — sentinel IO for is-pinned
 // ~5479   HEYS.AppShell export
 
 // ═══════════════════════════════════════════════════════════════════
@@ -3294,7 +3295,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
 
         const isPeriodAnalyticsTab = tab === 'stats' || tab === 'insights';
         const showDateRow = !isPeriodAnalyticsTab && (tab === 'diary' || tab === 'activity') && window.HEYS.DatePicker;
-        const showHdrBottom = !isRpcMode || !isPeriodAnalyticsTab;
         const widgetsHeaderDateLine = (() => {
             if (tab !== 'widgets' || !selectedDate) return null;
             const utils = window.HEYS?.dayUtils;
@@ -3304,11 +3304,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             const dayMonth = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
             return `${wd}, ${dayMonth}`;
         })();
-        const handleWidgetsEditToggle = () => {
-            if (window.HEYS?.Widgets?.toggleEditMode) {
-                window.HEYS.Widgets.toggleEditMode();
-            }
-        };
+        const showHdrBottom = (!isRpcMode || !isPeriodAnalyticsTab)
+            && !(tab === 'widgets' && !widgetsEditMode && !widgetsHeaderDateLine);
         const handleWidgetsEditCancel = () => {
             if (window.HEYS?.Widgets?.exitEditMode) {
                 window.HEYS.Widgets.exitEditMode({ revert: true });
@@ -3429,7 +3426,17 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             null,
         React.createElement(
             'div',
-            { className: 'hdr' },
+            {
+                className: 'hdr' + (showDateRow ? ' hdr--date-collapse' : ''),
+                'data-hdr-date-collapse': showDateRow ? '1' : undefined,
+            },
+            // Chrome выше даты: в потоке скроллера уезжает 1:1 с пальцем.
+            React.createElement(
+                'div',
+                { className: 'hdr-chrome' },
+            React.createElement(
+                'div',
+                { className: 'hdr-chrome__inner' },
             // Замороженная копия прода (stable.heyslab.ru) — видимый признак,
             // чтобы человек понимал, что смотрит не боевое приложение.
             (typeof window !== 'undefined' && window.__HEYS_READONLY_MODE__ && window.__HEYS_READONLY_MODE__.enabled) &&
@@ -3466,13 +3473,15 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                     onClick: handleWidgetsEditDone
                                 }, 'Готово')
                             )
-                            : React.createElement(React.Fragment, null,
-                                React.createElement('span', { className: 'hdr-tab-title-group' },
+                            : tab === 'widgets'
+                                ? (widgetsHeaderDateLine
+                                    ? React.createElement('span', { className: 'hdr-tab-meta hdr-tab-meta--inline-date' },
+                                        widgetsHeaderDateLine
+                                    )
+                                    : null)
+                                : React.createElement('span', { className: 'hdr-tab-title-group' },
                                     React.createElement('span', { className: 'hdr-client-tab-title-text' },
                                         CLIENT_TAB_TITLES[tab] || ''
-                                    ),
-                                    tab === 'widgets' && widgetsHeaderDateLine && React.createElement('span', { className: 'hdr-tab-meta hdr-tab-meta--inline-date' },
-                                        widgetsHeaderDateLine
                                     ),
                                     tab === 'diary' && diaryTabMetaLine && React.createElement('span', { className: 'hdr-tab-meta' },
                                         diaryTabMetaLine.text,
@@ -3480,14 +3489,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                             ' ' + diaryTabMetaLine.syncLabel
                                         )
                                     )
-                                ),
-                                tab === 'widgets' && !widgetsEditMode && React.createElement('button', {
-                                    type: 'button',
-                                    id: 'tour-widgets-edit',
-                                    className: 'hdr-widgets-edit-btn hdr-widgets-edit-btn--primary',
-                                    onClick: handleWidgetsEditToggle
-                                }, 'Изменить')
-                            )
+                                )
                     )
                     // Информация о клиенте + DatePicker
                     : React.createElement(
@@ -3969,45 +3971,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 // day/_advice.js), push — в строку «Уведомления» листа настроек +
                 // разовый баннер showPushFirstDayPrompt ниже.
             ),
-            showPastDayBanner && React.createElement('div', { className: 'past-day-banner-wrap' },
-                React.createElement('div', { className: 'past-day-banner' },
-                    React.createElement('span', { className: 'past-day-banner__text' }, 'Вы смотрите прошлый день'),
-                    React.createElement('button', {
-                        type: 'button',
-                        className: 'past-day-banner__today',
-                        onClick: handlePastDayGoToday
-                    }, 'Сегодня')
-                )
-            ),
-            // === СТРОКА ДАТЫ (канвас «Дата и остатки v4»: под названием вкладки) ===
-            showDateRow
-                ? React.createElement('div', { className: 'hdr-date-row' },
-                    React.createElement('div', { className: 'hdr-date-group' },
-                        React.createElement(window.HEYS.DatePicker, {
-                            valueISO: selectedDate,
-                            onSelect: (nextDate) => selectDateWithPrefetch(nextDate, { reason: 'date-picker' }),
-                            activeDays: datePickerActiveDays,
-                            getActiveDaysForMonth: (year, month) => {
-                                const getActiveDaysForMonthFn = window.HEYS.dayUtils && window.HEYS.dayUtils.getActiveDaysForMonth;
-                                const effectiveProducts = (products && products.length > 0) ? products
-                                    : (window.HEYS.products?.getAll?.() || []);
-                                const effectiveProfile = cachedProfile || (U && U.lsGet ? U.lsGet('heys_profile', {}) : {});
-                                if (!getActiveDaysForMonthFn || !clientId) {
-                                    return new Map();
-                                }
-                                try {
-                                    return getActiveDaysForMonthFn(year, month, effectiveProfile, effectiveProducts);
-                                } catch (e) {
-                                    return new Map();
-                                }
-                            }
-                        }),
-                    )
-                )
-                : null,
-            // Разовое предложение включить push — после первого заполненного дня
-            // (UI v4, 2026-08-10). Отказ прячет баннер насовсем; постоянный вход —
-            // строка «Уведомления» в листе настроек.
+            // Разовое предложение push + sync-баннер — внутри chrome, уезжают со скроллом.
             showPushFirstDayPrompt && React.createElement('div', {
                 className: 'push-first-day-prompt',
                 role: 'status',
@@ -4055,8 +4019,56 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 ),
                 React.createElement('div', { className: 'sync-pending-banner__count', 'aria-hidden': 'true' }, pendingCount)
             ),
+            ), // .hdr-chrome__inner
+            ), // .hdr-chrome
             renderOpsDashboardModal()
         ),
+            // Полоса — сосед .hdr, ребёнок viewport. Внутри короткого .hdr
+            // sticky держится только пока шапка на экране, потом уезжает.
+            (showPastDayBanner || showDateRow) && React.createElement('div', {
+                className: 'hdr-sticky-sentinel',
+                'aria-hidden': 'true',
+            }),
+            (showPastDayBanner || showDateRow) && React.createElement(
+                'div',
+                { className: 'hdr-sticky-strip' },
+            showPastDayBanner && React.createElement('div', { className: 'past-day-banner-wrap' },
+                React.createElement('div', { className: 'past-day-banner' },
+                    React.createElement('span', { className: 'past-day-banner__text' }, 'Вы смотрите прошлый день'),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'past-day-banner__today',
+                        onClick: handlePastDayGoToday
+                    }, 'Сегодня')
+                )
+            ),
+            // === СТРОКА ДАТЫ (канвас «Дата и остатки v4»: под названием вкладки) ===
+            showDateRow
+                ? React.createElement('div', { className: 'hdr-date-row' },
+                    React.createElement('div', { className: 'hdr-date-group' },
+                        React.createElement(window.HEYS.DatePicker, {
+                            valueISO: selectedDate,
+                            onSelect: (nextDate) => selectDateWithPrefetch(nextDate, { reason: 'date-picker' }),
+                            activeDays: datePickerActiveDays,
+                            getActiveDaysForMonth: (year, month) => {
+                                const getActiveDaysForMonthFn = window.HEYS.dayUtils && window.HEYS.dayUtils.getActiveDaysForMonth;
+                                const effectiveProducts = (products && products.length > 0) ? products
+                                    : (window.HEYS.products?.getAll?.() || []);
+                                const effectiveProfile = cachedProfile || (U && U.lsGet ? U.lsGet('heys_profile', {}) : {});
+                                if (!getActiveDaysForMonthFn || !clientId) {
+                                    return new Map();
+                                }
+                                try {
+                                    return getActiveDaysForMonthFn(year, month, effectiveProfile, effectiveProducts);
+                                } catch (e) {
+                                    return new Map();
+                                }
+                            }
+                        }),
+                    )
+                )
+                : null
+            ), // .hdr-sticky-strip
         showVpnHelpPage && React.createElement(
             'div',
             {
@@ -4090,6 +4102,19 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             )
         )
         );
+    }
+
+    function useFallbackSheetPushPinField(options) {
+        const disabled = !!(options && options.disabled);
+        const [value, setValue] = React.useState('');
+        return {
+            pinValue: value,
+            isComplete: value.length >= 4,
+            resetDigits: () => { if (!disabled) setValue(''); },
+            applyPinDigits: (arr) => {
+                if (!disabled) setValue((arr || []).slice(0, 4).join(''));
+            },
+        };
     }
 
     function AppTabsNav(props) {
@@ -4514,7 +4539,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             });
         };
 
-        const SETTINGS_PALETTE_LABEL = { sand: 'Бежево-зелёная', blue: 'Синяя' };
         const readSettingsPalette = () => {
             try {
                 const api = window.HEYS?.Theme;
@@ -4532,6 +4556,19 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             try { return window.HEYS?.Theme?.getModePreference?.() || 'light'; } catch (_) { return 'light'; }
         });
         const [sheetPushStatus, setSheetPushStatus] = React.useState(null);
+        const [pushBusy, setPushBusy] = React.useState(false);
+        const [sheetPushAccessOpen, setSheetPushAccessOpen] = React.useState(false);
+        const [sheetPushAccessError, setSheetPushAccessError] = React.useState('');
+        const sheetPushPinKeypadKit = window.HEYS?.AuthPinKeypad?.createKit?.(React) || null;
+        const sheetPushAccessKeypadRef = React.useRef(null);
+        const useSheetPushAccessPin = sheetPushPinKeypadKit
+            ? sheetPushPinKeypadKit.usePinKeypad
+            : useFallbackSheetPushPinField;
+        const sheetPushAccessPin = useSheetPushAccessPin({
+            disabled: pushBusy,
+            idPrefix: 'sheet-push-consent-pin',
+            autoFocus: sheetPushAccessOpen,
+        });
         React.useEffect(() => {
             const api = window.HEYS?.Theme;
             if (!api || typeof api.subscribeThemeChange !== 'function') return undefined;
@@ -4554,6 +4591,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 const rect = anchor.getBoundingClientRect();
                 document.documentElement.style.setProperty('--settings-sheet-top', `${Math.round(rect.bottom + 10)}px`);
             };
+            // Повторно якорим на resize/scroll; первое значение уже выставлено
+            // синхронно в toggleSettingsMenu до paint (иначе шторка прыгает вниз).
             syncSettingsSheetAnchor();
             if (!window.HEYS?.push?.getStatus) {
                 window.addEventListener('resize', syncSettingsSheetAnchor);
@@ -4585,12 +4624,32 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             };
         }, [settingsMenuOpen, tab]);
 
+        const syncSettingsSheetAnchorNow = () => {
+            try {
+                const anchor = document.querySelector('.hdr-header-actions')
+                    || document.querySelector('.hdr-header-icon-btn--settings')
+                    || document.querySelector('.hdr-top.hdr-gamification');
+                if (!anchor) return;
+                const rect = anchor.getBoundingClientRect();
+                document.documentElement.style.setProperty('--settings-sheet-top', `${Math.round(rect.bottom + 10)}px`);
+            } catch (_) { /* якорь опционален */ }
+        };
+
+        const toggleSettingsMenu = () => {
+            setSettingsMenuOpen((open) => {
+                if (!open) syncSettingsSheetAnchorNow();
+                return !open;
+            });
+        };
+
         const settingsProductCount = Array.isArray(products)
             ? products.length
             : (window.HEYS?.products?.getAll?.() || []).length;
         const settingsPushLabel = !sheetPushStatus
             ? ''
-            : sheetPushStatus.needsInstall
+            : sheetPushStatus.swAvailable === false
+                ? 'Локально без SW'
+                : sheetPushStatus.needsInstall
                 ? 'Нужно на главный экран'
                 : sheetPushStatus.permission === 'denied'
                     ? 'Запрещены в браузере'
@@ -4598,43 +4657,122 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         ? 'Включены'
                         : 'Выключены';
         const sheetPushOn = !!(sheetPushStatus && sheetPushStatus.subscribed);
+        const refreshSheetPushStatus = async () => {
+            if (!window.HEYS?.push?.getStatus) return;
+            try {
+                const s = await window.HEYS.push.getStatus();
+                setSheetPushStatus(s || null);
+                window.dispatchEvent(new CustomEvent('heys:push-enabled-changed', { detail: s || null }));
+            } catch (_) { /* статус останется прежним */ }
+        };
+        const explainSheetPushFailure = (reason) => {
+            if (window.HEYS?.push?.explainEnableFailure?.(reason)) return;
+            // Fallback, если push-модуль ещё не отдал helper.
+            try {
+                const copy = window.HEYS?.push?.getEnableFailureCopy?.(reason);
+                if (copy?.text) window.alert(copy.text);
+            } catch (_) { /* ignore */ }
+        };
         const handleSheetPushToggle = async () => {
             if (pushBusy || !window.HEYS?.push?.setEnabled) return;
             if (sheetPushStatus?.capable === false) return;
             setPushBusy(true);
+            setSheetPushAccessError('');
             try {
-                const r = await window.HEYS.push.setEnabled(!sheetPushOn);
-                if (r && r.ok === false && r.reason === 'ios_needs_install') {
-                    /* статус строки уже говорит про главный экран */
+                if (sheetPushOn) {
+                    await window.HEYS.push.setEnabled(false);
+                    await refreshSheetPushStatus();
+                    return;
                 }
-                const s = await window.HEYS.push.getStatus();
-                setSheetPushStatus(s || null);
-                setPushStatus(s || null);
+                const r = await window.HEYS.push.setEnabled(true);
+                if (r && r.ok === false && r.reason === 'consent_needs_access_code') {
+                    setSheetPushAccessOpen(true);
+                    sheetPushAccessPin.resetDigits?.();
+                    return;
+                }
+                if (r && r.ok === false) {
+                    explainSheetPushFailure(r.reason);
+                }
+                await refreshSheetPushStatus();
             } catch (_) { /* статус перечитается событием */ }
             finally { setPushBusy(false); }
+        };
+        const handleSheetPushAccessSign = async () => {
+            if (!window.HEYS?.push?.setEnabled) return;
+            if (!window.HEYS?.auth?.validatePinStrict?.(sheetPushAccessPin.pinValue)) {
+                setSheetPushAccessError('Введите код доступа из 4 цифр');
+                return;
+            }
+            setPushBusy(true);
+            setSheetPushAccessError('');
+            try {
+                const r = await window.HEYS.push.setEnabled(true, {
+                    accessCode: sheetPushAccessPin.pinValue,
+                });
+                if (r && r.ok === false) {
+                    if (r.reason === 'consent_failed' || r.reason === 'consent_needs_access_code') {
+                        setSheetPushAccessError('Код не подошёл или не удалось подписать согласие');
+                        sheetPushAccessPin.resetDigits?.();
+                        return;
+                    }
+                    setSheetPushAccessOpen(false);
+                    explainSheetPushFailure(r.reason);
+                    return;
+                }
+                setSheetPushAccessOpen(false);
+                await refreshSheetPushStatus();
+            } catch (_) {
+                setSheetPushAccessError('Не удалось подписать согласие. Попробуй ещё раз.');
+            } finally {
+                setPushBusy(false);
+            }
         };
 
         const toggleSheetExtra = (key) => {
             setSheetExtra((current) => (current === key ? null : key));
         };
 
-        const renderSettingsChevron = (expanded) => React.createElement('svg', {
-            width: 14,
-            height: 14,
+        const renderSettingsChevron = (expanded, direction = 'row') => React.createElement('svg', {
+            width: 15,
+            height: 15,
             viewBox: '0 0 24 24',
             fill: 'none',
             stroke: 'currentColor',
             strokeWidth: 2.75,
             strokeLinecap: 'round',
-            className: 'hdr-settings-sheet__chevron' + (expanded ? ' is-open' : ''),
+            strokeLinejoin: 'round',
+            className: 'hdr-settings-sheet__chevron'
+                + (expanded ? ' is-open' : '')
+                + (direction === 'fold' ? ' hdr-settings-sheet__chevron--fold' : ''),
             'aria-hidden': 'true',
-        }, React.createElement('path', { d: expanded ? 'M6 9l6 6 6-6' : 'M9 6l6 6-6 6' }));
+        }, React.createElement('path', {
+            d: direction === 'fold'
+                ? (expanded ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6')
+                : (expanded ? 'M6 9l6 6 6-6' : 'M9 6l6 6-6 6'),
+        }));
 
-        const renderSettingsRow = ({ key, label, meta, expanded, danger, onClick }) =>
+        const renderPaletteDots = (paletteId) => {
+            const dots = paletteId === 'blue'
+                ? ['#2e7cc0', '#3e9a6b', '#e2edf7']
+                : ['#c67139', '#7a8a5e', '#efe3cf'];
+            return React.createElement('span', {
+                className: 'hdr-settings-sheet__dots',
+                'aria-hidden': 'true',
+            }, dots.map((color, index) => React.createElement('span', {
+                key: String(index),
+                className: 'hdr-settings-sheet__dot'
+                    + (paletteId === 'blue' && index === 2 ? ' hdr-settings-sheet__dot--outline' : ''),
+                style: { background: color },
+            })));
+        };
+
+        const renderSettingsRow = ({ key, label, meta, metaNode, metaTone, expanded, danger, onClick }) =>
             React.createElement('button', {
                 key,
                 type: 'button',
-                className: 'hdr-settings-sheet__row' + (danger ? ' hdr-settings-sheet__row--exit' : ''),
+                className: 'hdr-settings-sheet__row'
+                    + (danger ? ' hdr-settings-sheet__row--exit' : '')
+                    + (expanded ? ' is-expanded' : ''),
                 onClick: (event) => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -4643,16 +4781,45 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             },
                 React.createElement('span', { className: 'hdr-settings-sheet__label' }, label),
                 React.createElement('span', { className: 'hdr-settings-sheet__meta' },
-                    meta ? React.createElement('span', null, meta) : null,
+                    metaNode || (meta
+                        ? React.createElement('span', {
+                            className: 'hdr-settings-sheet__meta-text'
+                                + (metaTone === 'accent' ? ' hdr-settings-sheet__meta-text--accent' : ''),
+                        }, meta)
+                        : null),
                     !danger && renderSettingsChevron(!!expanded)
                 )
             );
 
-        const renderSettingsGroup = (label, children) =>
-            React.createElement('div', {
-                key: 'group-' + label,
-                className: 'hdr-settings-sheet__group',
-            }, children);
+        // UI-гейт: цель — найти настройку по группе; главное — выбрать строку / закрыть;
+        // слой 1 — ярусы + тумблер уведомлений; слой 2 — раскрытия; критическое не скрывать — выход/данные.
+        const renderSettingsGroup = (key, title, children) => {
+            const items = (Array.isArray(children) ? children : [children]).filter(Boolean);
+            if (!items.length) return null;
+            return React.createElement(React.Fragment, { key: 'group-' + key },
+                React.createElement('div', { className: 'hdr-settings-sheet__tier' }, title),
+                React.createElement('div', { className: 'hdr-settings-sheet__group' }, items)
+            );
+        };
+
+        const isLocalDiagnosticsHost = typeof location !== 'undefined'
+            && (location.hostname === 'localhost'
+                || location.hostname === '127.0.0.1'
+                || String(location.hostname || '').endsWith('.local'));
+
+        const settingsBuildLine = (() => {
+            const version = String(window.HEYS?.version || window.APP_VERSION || '');
+            const parts = version.split('.').filter(Boolean);
+            const build = parts.length >= 2 ? parts[parts.length - 2] : '';
+            const cid = String(clientId || window.HEYS?.currentClientId || '')
+                .replace(/[^a-fA-F0-9]/g, '')
+                .slice(0, 8)
+                .toLowerCase();
+            let line = 'HEYS 4.0';
+            if (build) line += ` · сборка ${build}`;
+            if (cid) line += ` · клиент ${cid}`;
+            return line;
+        })();
 
         const handlePrimaryTabClick = (nextTab) => {
             if (widgetsEditMode) {
@@ -4680,7 +4847,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         }, [tab]);
 
         React.useEffect(() => {
-            const handleToggleTabSettings = () => setSettingsMenuOpen((open) => !open);
+            const handleToggleTabSettings = () => toggleSettingsMenu();
             window.__heysToggleTabSettingsHandler = handleToggleTabSettings;
             return () => {
                 if (window.__heysToggleTabSettingsHandler === handleToggleTabSettings) {
@@ -4910,7 +5077,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         className: 'tab ' + (tab === 'user' ? 'active' : '') + (widgetsEditMode ? ' tab--disabled-home' : ''),
                         onClick: () => {
                             if (widgetsEditMode) return;
-                            setSettingsMenuOpen(!settingsMenuOpen);
+                            toggleSettingsMenu();
                         },
                     },
                     React.createElement(
@@ -4937,13 +5104,37 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         'aria-label': 'Настройки',
                     },
                     React.createElement('div', { className: 'hdr-settings-sheet__card' },
+                    React.createElement('div', { className: 'hdr-settings-sheet__head' },
+                        React.createElement('span', { className: 'hdr-settings-sheet__title' }, 'Настройки'),
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'hdr-settings-sheet__close',
+                            'aria-label': 'Закрыть настройки',
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                setSettingsMenuOpen(false);
+                            },
+                        },
+                            React.createElement('svg', {
+                                width: 15,
+                                height: 15,
+                                viewBox: '0 0 24 24',
+                                fill: 'none',
+                                stroke: 'currentColor',
+                                strokeWidth: 2.75,
+                                strokeLinecap: 'round',
+                                'aria-hidden': 'true',
+                            }, React.createElement('path', { d: 'M18 6L6 18M6 6l12 12' }))
+                        )
+                    ),
                     React.createElement('div', {
                         className: 'hdr-settings-sheet__push',
                         onClick: (e) => e.stopPropagation(),
                     },
                         React.createElement('button', {
                             type: 'button',
-                            className: 'tab-settings-diary-toggle' + (sheetPushOn ? ' is-on' : ''),
+                            className: 'tab-settings-diary-toggle hdr-settings-sheet__push-toggle'
+                                + (sheetPushOn ? ' is-on' : ''),
                             role: 'switch',
                             'aria-checked': sheetPushOn ? 'true' : 'false',
                             disabled: pushBusy || sheetPushStatus?.capable === false,
@@ -4956,7 +5147,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             React.createElement('span', { className: 'tab-settings-diary-toggle__copy' },
                                 React.createElement('span', { className: 'tab-settings-diary-toggle__label' }, 'Уведомления'),
                                 React.createElement('span', { className: 'tab-settings-diary-toggle__hint' },
-                                    settingsPushLabel || 'Напоминания, дневник, сообщения куратора'
+                                    'Напоминания, дневник, сообщения куратора'
                                 )
                             ),
                             React.createElement('span', {
@@ -4967,18 +5158,81 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             )
                         )
                     ),
-                    renderSettingsGroup('me', [
+                    renderSettingsGroup('you', 'Вы', [
                         renderSettingsRow({
                             key: 'profile',
                             label: 'Профиль и цели',
                             onClick: () => openUserSection('basic', 'settings-sheet-profile'),
                         }),
+                        canUsePostReleaseLabs && renderSettingsRow({
+                            key: 'diary',
+                            label: 'Дневник',
+                            meta: DIARY_PANEL_VISIBILITY_OPTIONS.filter((option) => diaryPanelsVisibility[option.key] !== false).length
+                                + ' из '
+                                + DIARY_PANEL_VISIBILITY_OPTIONS.length
+                                + ' блоков',
+                            expanded: sheetExtra === 'diary',
+                            onClick: () => toggleSheetExtra('diary'),
+                        }),
+                        canUsePostReleaseLabs && sheetExtra === 'diary' && React.createElement(
+                            'div',
+                            {
+                                key: 'diary-panel',
+                                className: 'tab-settings-diary-wrap hdr-settings-sheet__inline-panel',
+                                role: 'group',
+                                'aria-label': 'Настройки дневника',
+                                onClick: (e) => e.stopPropagation(),
+                            },
+                            React.createElement('div', { className: 'tab-settings-diary-card' },
+                                React.createElement('div', { className: 'tab-settings-diary-toggle-list' },
+                                    DIARY_PANEL_VISIBILITY_OPTIONS.map((option) => {
+                                        const enabled = diaryPanelsVisibility[option.key] !== false;
+                                        return React.createElement('button', {
+                                            key: option.key,
+                                            type: 'button',
+                                            className: 'tab-settings-diary-toggle' + (enabled ? ' is-on' : ''),
+                                            role: 'switch',
+                                            'aria-checked': enabled ? 'true' : 'false',
+                                            onClick: (e) => {
+                                                e.stopPropagation();
+                                                handleToggleDiaryPanel(option, !enabled);
+                                            },
+                                            title: enabled ? option.titleOn : option.titleOff,
+                                        },
+                                            React.createElement('span', { className: 'tab-settings-diary-toggle__copy' },
+                                                React.createElement('span', { className: 'tab-settings-diary-toggle__label' }, option.label),
+                                                React.createElement('span', { className: 'tab-settings-diary-toggle__hint' },
+                                                    enabled ? option.enabledHint : option.disabledHint
+                                                )
+                                            ),
+                                            React.createElement('span', {
+                                                className: 'tab-settings-diary-toggle__switch',
+                                                'aria-hidden': 'true'
+                                            },
+                                                React.createElement('span', { className: 'tab-settings-diary-toggle__knob' })
+                                            )
+                                        );
+                                    })
+                                )
+                            )
+                        ),
+                        renderSettingsRow({
+                            key: 'products',
+                            label: 'Мои продукты',
+                            meta: settingsProductCount > 0 ? String(settingsProductCount) : '',
+                            onClick: () => closeSettingsAndSwitch('ration', 'settings-sheet-ration'),
+                        }),
+                        renderSettingsRow({
+                            key: 'export',
+                            label: 'Данные и выгрузка',
+                            onClick: () => openUserSection('consents', 'settings-sheet-export'),
+                        }),
                     ]),
-                    renderSettingsGroup('look', [
+                    renderSettingsGroup('app', 'Приложение', [
                         renderSettingsRow({
                             key: 'theme',
                             label: 'Оформление',
-                            meta: SETTINGS_PALETTE_LABEL[settingsPalette] || SETTINGS_PALETTE_LABEL.sand,
+                            metaNode: renderPaletteDots(settingsPalette),
                             expanded: sheetExtra === 'theme',
                             onClick: () => toggleSheetExtra('theme'),
                         }),
@@ -5108,79 +5362,20 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             )
                         )
                         ),
-                        canUsePostReleaseLabs && renderSettingsRow({
-                            key: 'diary',
-                            label: 'Дневник',
-                            meta: DIARY_PANEL_VISIBILITY_OPTIONS.filter((option) => diaryPanelsVisibility[option.key] !== false).length
-                                + ' из '
-                                + DIARY_PANEL_VISIBILITY_OPTIONS.length,
-                            expanded: sheetExtra === 'diary',
-                            onClick: () => toggleSheetExtra('diary'),
-                        }),
-                        canUsePostReleaseLabs && sheetExtra === 'diary' && React.createElement(
-                            'div',
-                            {
-                                className: 'tab-settings-diary-wrap hdr-settings-sheet__inline-panel',
-                                role: 'group',
-                                'aria-label': 'Настройки дневника',
-                                onClick: (e) => e.stopPropagation(),
-                            },
-                            React.createElement('div', { className: 'tab-settings-diary-card' },
-                                React.createElement('div', { className: 'tab-settings-diary-toggle-list' },
-                                    DIARY_PANEL_VISIBILITY_OPTIONS.map((option) => {
-                                        const enabled = diaryPanelsVisibility[option.key] !== false;
-                                        return React.createElement('button', {
-                                            key: option.key,
-                                            type: 'button',
-                                            className: 'tab-settings-diary-toggle' + (enabled ? ' is-on' : ''),
-                                            role: 'switch',
-                                            'aria-checked': enabled ? 'true' : 'false',
-                                            onClick: (e) => {
-                                                e.stopPropagation();
-                                                handleToggleDiaryPanel(option, !enabled);
-                                            },
-                                            title: enabled ? option.titleOn : option.titleOff,
-                                        },
-                                            React.createElement('span', { className: 'tab-settings-diary-toggle__copy' },
-                                                React.createElement('span', { className: 'tab-settings-diary-toggle__label' }, option.label),
-                                                React.createElement('span', { className: 'tab-settings-diary-toggle__hint' },
-                                                    enabled ? option.enabledHint : option.disabledHint
-                                                )
-                                            ),
-                                            React.createElement('span', {
-                                                className: 'tab-settings-diary-toggle__switch',
-                                                'aria-hidden': 'true'
-                                            },
-                                                React.createElement('span', { className: 'tab-settings-diary-toggle__knob' })
-                                            )
-                                        );
-                                    })
-                                )
-                            )
-                        ),
-                    ]),
-                    renderSettingsGroup('notify', [
                         renderSettingsRow({
                             key: 'notify',
-                            label: 'Уведомления и звук',
-                            meta: settingsPushLabel,
+                            label: 'Звук и время напоминаний',
                             onClick: () => openUserSection('notifications', 'settings-sheet-notify'),
                         }),
+                    ]),
+                    renderSettingsGroup('support', 'Сопровождение', [
                         renderSettingsRow({
                             key: 'advice',
-                            label: 'Советы',
+                            label: 'Советы куратора',
                             onClick: () => {
                                 setSettingsMenuOpen(false);
                                 window.dispatchEvent(new CustomEvent('heys:open-advice-settings'));
                             },
-                        }),
-                    ]),
-                    renderSettingsGroup('places', [
-                        renderSettingsRow({
-                            key: 'products',
-                            label: 'Продукты',
-                            meta: settingsProductCount > 0 ? String(settingsProductCount) : '',
-                            onClick: () => closeSettingsAndSwitch('ration', 'settings-sheet-ration'),
                         }),
                         canUseTasksAsHome && renderSettingsRow({
                             key: 'tasks',
@@ -5193,22 +5388,173 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             onClick: () => closeSettingsAndSwitch('board', 'tab-settings-board-switch'),
                         }),
                     ]),
-                    renderSettingsGroup('data', [
-                        renderSettingsRow({
-                            key: 'export',
-                            label: 'Данные и выгрузка',
-                            onClick: () => openUserSection('consents', 'settings-sheet-export'),
-                        }),
-                        renderSettingsRow({
-                            key: 'logout',
-                            label: 'Выйти',
-                            danger: true,
+                    // HEYS_DEBUG_REPLAY_REGISTRATION / HEYS_DEBUG_REPLAY_CHECKIN / HEYS_DEBUG_REPLAY_CURATOR_REVIEW
+                    isLocalDiagnosticsHost && React.createElement('button', {
+                        key: 'diagnostics-toggle',
+                        type: 'button',
+                        className: 'hdr-settings-sheet__diag-toggle'
+                            + (sheetExtra === 'diagnostics' ? ' is-open' : ''),
+                        onClick: (e) => {
+                            e.stopPropagation();
+                            toggleSheetExtra('diagnostics');
+                        },
+                    },
+                        React.createElement('span', null, 'Диагностика'),
+                        renderSettingsChevron(sheetExtra === 'diagnostics', 'fold')
+                    ),
+                    isLocalDiagnosticsHost && sheetExtra === 'diagnostics' && React.createElement('div', {
+                        key: 'diagnostics-panel',
+                        className: 'hdr-settings-sheet__diag-panel',
+                        onClick: (e) => e.stopPropagation(),
+                    },
+                        React.createElement('div', { className: 'hdr-settings-sheet__diag-copy' },
+                            'Локальные сценарии без сброса клиента. Профиль и день пишутся как обычно.'
+                        ),
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'hdr-settings-sheet__diag-btn',
                             onClick: () => {
                                 setSettingsMenuOpen(false);
-                                if (typeof handleSignOut === 'function') handleSignOut();
+                                setSheetExtra(null);
+                                if (typeof window.HEYS?.debug?.replayRegistration === 'function') {
+                                    window.HEYS.debug.replayRegistration();
+                                } else {
+                                    console.warn('[Диагностика] HEYS.debug.replayRegistration недоступен');
+                                }
                             },
+                        }, 'Пройти регистрацию'),
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'hdr-settings-sheet__diag-btn',
+                            onClick: () => {
+                                setSettingsMenuOpen(false);
+                                setSheetExtra(null);
+                                if (typeof window.HEYS?.debug?.replayCheckin === 'function') {
+                                    window.HEYS.debug.replayCheckin();
+                                } else {
+                                    console.warn('[Диагностика] HEYS.debug.replayCheckin недоступен');
+                                }
+                            },
+                        }, 'Пройти утренний чек-ин'),
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'hdr-settings-sheet__diag-btn',
+                            onClick: () => {
+                                setSettingsMenuOpen(false);
+                                setSheetExtra(null);
+                                const run = async () => {
+                                    // postboot-3 грузится лениво — подождём API до 2с
+                                    let replay = null;
+                                    for (let i = 0; i < 20; i += 1) {
+                                        replay = window.HEYS?.debug?.replayCuratorReview
+                                            || window.HEYS?.CuratorActionsBanner?.forceShowLastReview;
+                                        if (typeof replay === 'function') break;
+                                        await new Promise((resolve) => setTimeout(resolve, 100));
+                                    }
+                                    if (typeof replay !== 'function') {
+                                        console.warn('[Диагностика] HEYS.debug.replayCuratorReview недоступен');
+                                        return;
+                                    }
+                                    // Дать шторке настроек закрыться, иначе z-index/overlay мешают
+                                    await new Promise((resolve) => setTimeout(resolve, 80));
+                                    const ok = await replay({ allowSample: true });
+                                    if (!ok) {
+                                        console.warn('[Диагностика] шторка правок куратора не открылась');
+                                    }
+                                };
+                                run().catch((err) => {
+                                    console.warn('[Диагностика] правки куратора:', err?.message || err);
+                                });
+                            },
+                        }, 'Правки куратора (снова)')
+                    ),
+                    React.createElement('div', {
+                        key: 'settings-build',
+                        className: 'hdr-settings-sheet__build',
+                    }, settingsBuildLine),
+                    renderSettingsRow({
+                        key: 'logout',
+                        label: 'Выйти',
+                        danger: true,
+                        onClick: () => {
+                            setSettingsMenuOpen(false);
+                            if (typeof handleSignOut === 'function') handleSignOut();
+                        },
+                    })
+                    )
+                )
+            ),
+            sheetPushAccessOpen && React.createElement('div', {
+                className: 'sheet-push-access-sign',
+                style: {
+                    position: 'fixed', inset: 0, zIndex: 12000,
+                    background: 'rgba(0,0,0,0.45)', display: 'flex',
+                    alignItems: 'flex-end', justifyContent: 'center',
+                },
+                onClick: (e) => {
+                    if (e.target === e.currentTarget && !pushBusy) {
+                        setSheetPushAccessOpen(false);
+                        setSheetPushAccessError('');
+                    }
+                },
+            },
+                React.createElement('div', {
+                    role: 'dialog',
+                    'aria-label': 'Подпись согласия на push',
+                    style: {
+                        width: '100%', maxWidth: '480px', background: '#fff',
+                        borderRadius: '16px 16px 0 0',
+                        padding: '16px 16px calc(16px + env(safe-area-inset-bottom, 0px))',
+                    },
+                    onClick: (e) => e.stopPropagation(),
+                },
+                    React.createElement('div', { style: { fontSize: '18px', fontWeight: 600, marginBottom: '8px' } },
+                        'Подпись согласия на push'),
+                    React.createElement('div', { style: { fontSize: '14px', color: '#71717a', marginBottom: '12px' } },
+                        'Введите код доступа из 4 цифр, чтобы подписать обновлённое согласие на уведомления.'),
+                    sheetPushPinKeypadKit
+                        ? sheetPushPinKeypadKit.renderPinKeypadSection({
+                            pin: sheetPushAccessPin,
+                            keypadRef: sheetPushAccessKeypadRef,
+                            title: 'Код доступа',
+                        })
+                        : React.createElement('input', {
+                            type: 'password',
+                            inputMode: 'numeric',
+                            maxLength: 4,
+                            value: sheetPushAccessPin.pinValue || '',
+                            onChange: (e) => sheetPushAccessPin.applyPinDigits?.(
+                                String(e.target.value || '').replace(/\D/g, '').slice(0, 4).split('')
+                            ),
+                            style: {
+                                width: '100%', padding: '12px', borderRadius: '12px',
+                                border: '1px solid #e4e4e7', fontSize: '18px', letterSpacing: '0.3em',
+                            },
+                            placeholder: '••••',
+                            'aria-label': 'Код доступа',
                         }),
-                    ])
+                    sheetPushAccessError && React.createElement('div', {
+                        style: { color: '#dc2626', fontSize: '13px', marginTop: '8px' },
+                    }, sheetPushAccessError),
+                    React.createElement('div', { style: { display: 'flex', gap: '8px', marginTop: '12px' } },
+                        React.createElement('button', {
+                            type: 'button',
+                            onClick: () => { setSheetPushAccessOpen(false); setSheetPushAccessError(''); },
+                            style: {
+                                flex: 1, padding: '12px', borderRadius: '12px',
+                                border: '1px solid #e4e4e7', background: '#fff',
+                            },
+                        }, 'Отмена'),
+                        React.createElement('button', {
+                            type: 'button',
+                            onClick: handleSheetPushAccessSign,
+                            disabled: pushBusy || !sheetPushAccessPin.isComplete,
+                            style: {
+                                flex: 1, padding: '12px', borderRadius: '12px', border: 'none',
+                                background: sheetPushAccessPin.isComplete && !pushBusy ? '#22c55e' : '#d4d4d8',
+                                color: '#fff', fontWeight: 600,
+                            },
+                        }, pushBusy ? '…' : 'Подписать')
                     )
                 )
             ),
@@ -5292,6 +5638,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         return _lazyTabCache[key];
     }
 
+    const MemoAppHeader = React.memo(AppHeader);
+    MemoAppHeader.displayName = 'AppHeader';
+
     function AppTabContent(props) {
         const {
             tab,
@@ -5314,11 +5663,23 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const tabContentRef = React.useRef(null);
         const tabViewportRef = React.useRef(null);
         const isDayTab = tab === 'stats' || tab === 'diary' || tab === 'activity';
+        const hideProductHeader = tab === 'tasks' || tab === 'board';
 
         React.useEffect(() => {
             const viewport = tabViewportRef.current;
             if (viewport) viewport.scrollTop = 0;
         }, [tab]);
+
+        // diary/activity: native sticky полосы даты; IO на сентинел → is-pinned.
+        React.useEffect(() => {
+            const canPin = tab === 'diary' || tab === 'activity';
+            const viewport = tabViewportRef.current;
+            if (!canPin || !viewport || typeof bindHdrStickyPin !== 'function') {
+                clearHdrStickyTopVar();
+                return undefined;
+            }
+            return bindHdrStickyPin(viewport);
+        }, [tab, clientId]);
 
         const [, _tickPostboot] = React.useReducer(function(n) { return n + 1; }, 0);
         React.useEffect(function() {
@@ -5367,6 +5728,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     onTouchStart: onTouchStart,
                     onTouchEnd: onTouchEnd,
                 },
+            !hideProductHeader && React.createElement(MemoAppHeader, props),
             // DayTabWithCloudSync is always mounted so heysShowAdvice listener is always active.
             // Advice overlay is position:fixed — it appears over any tab regardless of which is active.
             // display:none fully hides day/reports chrome when another tab (e.g. user) is active.
@@ -5474,9 +5836,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
     }
 
     // Memoize sub-components before AppShell uses them
-    const MemoAppHeader = React.memo(AppHeader);
-    MemoAppHeader.displayName = 'AppHeader';
-
     const MemoAppTabsNav = React.memo(AppTabsNav);
     MemoAppTabsNav.displayName = 'AppTabsNav';
 
@@ -5491,6 +5850,64 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             return ReactDOM.createPortal(node, body);
         }
         return node;
+    }
+
+    // Native sticky даты: сентинел + IO → is-pinned; замер высоты полосы для meal-bar.
+    function syncHdrStickyTopVar(strip) {
+        if (!strip || typeof document === 'undefined') return;
+        const bottom = Math.max(0, Math.round(strip.getBoundingClientRect().bottom));
+        document.documentElement.style.setProperty('--heys-hdr-sticky-top', bottom + 'px');
+    }
+
+    function clearHdrStickyTopVar() {
+        if (typeof document === 'undefined') return;
+        document.documentElement.style.removeProperty('--heys-hdr-sticky-top');
+    }
+
+    function bindHdrStickyPin(viewport) {
+        if (!viewport || typeof viewport.querySelector !== 'function') return function noop() {};
+        const sentinel = viewport.querySelector(':scope > .hdr-sticky-sentinel')
+            || viewport.querySelector('.hdr-sticky-sentinel');
+        const strip = viewport.querySelector(':scope > .hdr-sticky-strip')
+            || viewport.querySelector('.hdr-sticky-strip');
+        if (!sentinel || !strip) return function noop() {};
+
+        function setPinned(pinned) {
+            strip.classList.toggle('is-pinned', !!pinned);
+            if (pinned) syncHdrStickyTopVar(strip);
+            else clearHdrStickyTopVar();
+        }
+
+        let io = null;
+        if (typeof IntersectionObserver === 'function') {
+            io = new IntersectionObserver(function (entries) {
+                const entry = entries && entries[0];
+                if (!entry) return;
+                setPinned(!entry.isIntersecting);
+            }, { root: viewport, threshold: 0 });
+            io.observe(sentinel);
+        }
+
+        let ro = null;
+        if (typeof ResizeObserver === 'function') {
+            ro = new ResizeObserver(function () {
+                if (strip.classList.contains('is-pinned')) syncHdrStickyTopVar(strip);
+            });
+            ro.observe(strip);
+        }
+
+        return function unbind() {
+            if (io) {
+                try { io.disconnect(); } catch (_) { /* noop */ }
+                io = null;
+            }
+            if (ro) {
+                try { ro.disconnect(); } catch (_) { /* noop */ }
+                ro = null;
+            }
+            strip.classList.remove('is-pinned');
+            clearHdrStickyTopVar();
+        };
     }
 
     function AppShell(props) {
@@ -5519,16 +5936,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     className: 'wrap' + (hideProductHeader ? ' wrap--no-header' : ''),
                     style: hideContent ? { display: 'none' } : undefined
                 },
-                shouldRenderContent && React.createElement(
-                    'div',
-                    {
-                        className: 'app-header-wrapper',
-                        style: hideProductHeader ? { display: 'none' } : null,
-                        'aria-hidden': hideProductHeader ? 'true' : undefined,
-                        inert: hideProductHeader ? '' : undefined
-                    },
-                    React.createElement(MemoAppHeader, props)
-                ),
                 shouldRenderContent && React.createElement(MemoAppTabContent, Object.assign({}, props, {
                     key: 'appTabContent_' + String(clientId || '') + '_' + profilerMountKey
                 })),
@@ -5550,5 +5957,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         AppHeader: MemoAppHeader,
         AppTabsNav: MemoAppTabsNav,
         AppTabContent: MemoAppTabContent,
+        bindHdrStickyPin: bindHdrStickyPin,
     };
 })();

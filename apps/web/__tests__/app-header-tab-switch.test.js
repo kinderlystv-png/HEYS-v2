@@ -16,7 +16,7 @@ const SRC = fs.readFileSync(path.join(WEB_DIR, 'heys_app_shell_v1.js'), 'utf8');
 // Тело компонента верхнего уровня: от объявления до закрывающей скобки
 // с той же индентацией (4 пробела).
 function componentBody(name) {
-  const lines = SRC.split('\n');
+  const lines = SRC.split(/\r?\n/);
   const start = lines.findIndex((l) => l.startsWith(`    function ${name}(`));
   expect(start, `компонент ${name} не найден`).toBeGreaterThan(-1);
   const end = lines.findIndex((l, i) => i > start && l === '    }');
@@ -69,6 +69,23 @@ describe('переключение вкладки из шапки', () => {
     }
   });
 
+  it('лист «Ещё»: pushBusy объявлен в AppTabsNav, без чужого setPushStatus', () => {
+    const nav = componentBody('AppTabsNav');
+    // Открытие листа рендерит disabled: pushBusy — без локального state это
+    // ReferenceError и ErrorBoundary (2026-08-16).
+    expect(nav.body).toContain('const [pushBusy, setPushBusy] = React.useState(false)');
+    expect(nav.body).toContain('disabled: pushBusy');
+    expect(nav.body).not.toContain('setPushStatus(');
+  });
+
+  it('лист «Ещё»: тумблер push открывает PIN при consent_needs_access_code', () => {
+    const nav = componentBody('AppTabsNav');
+    expect(nav.body).toContain("r.reason === 'consent_needs_access_code'");
+    expect(nav.body).toContain('setSheetPushAccessOpen(true)');
+    expect(nav.body).toContain('handleSheetPushAccessSign');
+    expect(nav.body).toContain('accessCode: sheetPushAccessPin.pinValue');
+  });
+
   it('setTab действительно передаётся в AppHeader сборщиком пропсов', () => {
     const props = fs.readFileSync(path.join(WEB_DIR, 'heys_app_shell_props_v1.js'), 'utf8');
     expect(props).toMatch(/^\s+setTab,$/m);
@@ -79,10 +96,11 @@ describe('commitUndoAndSwitchTab: поведение', () => {
   // Хелпер самодостаточен — вытаскиваем его исходник и исполняем как есть.
   function loadHelper() {
     const start = SRC.indexOf('    function commitUndoAndSwitchTab(');
-    const end = SRC.indexOf('\n    }\n', start);
+    const endMatch = SRC.slice(start).match(/\r?\n    }\r?\n/);
+    const end = endMatch ? start + endMatch.index : -1;
     expect(start).toBeGreaterThan(-1);
     expect(end).toBeGreaterThan(start);
-    const src = SRC.slice(start, end + 6);
+    const src = SRC.slice(start, end + endMatch[0].length);
     // eslint-disable-next-line no-new-func
     return new Function('window', 'console', `${src}; return commitUndoAndSwitchTab;`);
   }

@@ -635,7 +635,6 @@ body.board-dark-nav .heys-tab-skeleton {
   background: var(--v4-bg, #fffaf1);
   padding: 16px 16px 0;
   max-width: 100%;
-  contain: layout style paint;
 }
 
 /* Header top: v4 flat chrome (gamification row on page ground) */
@@ -1360,4 +1359,43 @@ body:has(.page-day) {
 [data-theme$="dark"] .formula-card {
   background: var(--v4-surface, #1f2937);
   border-color: var(--v4-line, #374151);
+}
+
+/* Consent PIN sign sheet — critical shell (canvas nc5/nc8/nc9); beats stale 733 cache */
+.heys-consent-sign-root {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 11000 !important;
+  pointer-events: none;
+}
+
+.heys-consent-sign-backdrop {
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: auto;
+}
+
+.heys-consent-sign-frame {
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-end !important;
+  padding: 12px !important;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+  box-sizing: border-box !important;
+  pointer-events: none;
+}
+
+.heys-consent-sign-sheet {
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  border-radius: 26px !important;
+  box-sizing: border-box !important;
+  pointer-events: auto;
 }

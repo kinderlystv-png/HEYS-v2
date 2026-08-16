@@ -3776,7 +3776,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   isolation: isolate;
 }
 
-/* Клиентский shell v4: шапка фиксирована в layout, скролл — внутри вкладки.
+/* Клиентский shell v4: скролл — .tab-active-viewport; шапка внутри него.
    При смене вкладки scrollTop viewport сбрасывается в JS (без remount/fade). */
 .wrap:not(.wrap--no-header) {
   display: flex;
@@ -3785,10 +3785,6 @@ color: var(--v4-sand-ink-slate, #1f2937);
   max-height: 100dvh;
   overflow: hidden;
   padding-bottom: 0;
-}
-
-.wrap:not(.wrap--no-header) > .app-header-wrapper {
-  flex: 0 0 auto;
 }
 
 .wrap:not(.wrap--no-header) > .tab-content-swipeable {
@@ -3866,7 +3862,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   gap: 0;
   box-sizing: border-box;
 
-  /* Шапка скроллится с контентом (v4) */
+  /* Шапка — первый ребёнок .tab-active-viewport (скроллер вкладки). */
   position: relative;
   z-index: 10;
   background: var(--v4-bg, #f8f9fa);
@@ -3875,8 +3871,91 @@ color: var(--v4-sand-ink-slate, #1f2937);
   padding: 16px 16px 0;
   max-width: 100%;
 
-  /* 🚀 PERF: GPU layer + containment — isolate header layout/style from page reflow */
-  contain: layout style;
+  /* layout-containment на .hdr создаёт containing block и ломает sticky полосы. */
+  contain: none;
+}
+
+/* Без даты: вся шапка sticky — визуально как прежняя фиксированная рама. */
+.tab-active-viewport > .hdr:not(.hdr--date-collapse) {
+  position: sticky;
+  top: 0;
+}
+
+/* diary/activity: chrome в потоке, полоса даты sticky. contain обязателен none. */
+.hdr.hdr--date-collapse,
+.tab-active-viewport > .hdr.hdr--date-collapse {
+  contain: none;
+  position: relative;
+  top: auto;
+  box-sizing: border-box;
+}
+
+.hdr-chrome {
+  flex: 0 0 auto;
+}
+
+.hdr--date-collapse .hdr-chrome {
+  margin-bottom: 12px;
+}
+
+.hdr-chrome__inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.hdr-sticky-sentinel {
+  display: block;
+  height: 1px;
+  margin: 0 0 -1px;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.hdr-sticky-strip {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  min-width: 0;
+  box-sizing: border-box;
+  padding-left: 16px;
+  padding-right: 16px;
+  background: transparent;
+}
+
+/* Прямой ребёнок скроллера — иначе sticky клипается высотой .hdr.
+   top с safe-area сразу: is-pinned не меняет layout (без padding-top). */
+.tab-active-viewport > .hdr-sticky-strip {
+  position: sticky;
+  top: calc(8px + env(safe-area-inset-top, 0px));
+  z-index: 11;
+}
+
+/* is-pinned — только визуал (тень). Layout не трогаем: иначе капсула
+   сначала липнет, потом IO добавляет padding и «опускается». */
+.hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-day-nav,
+.hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-trigger:not(.open) {
+  box-shadow: 0 4px 14px rgba(17, 24, 39, 0.12);
+}
+
+[data-theme$="dark"] .hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-day-nav,
+[data-theme$="dark"] .hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-trigger:not(.open) {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.hdr-sticky-strip .past-day-banner-wrap {
+  margin-top: 0;
+}
+
+.hdr-sticky-strip .past-day-banner-wrap + .hdr-date-row {
+  margin-top: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-day-nav,
+  .hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-trigger:not(.open) {
+    transition: none;
+  }
 }
 
 /* Верхняя линия: Gamification
@@ -7081,6 +7160,10 @@ color: var(--v4-sand-ink, #201e1d);
   margin-top: 12px;
 }
 
+.tab-active-viewport > .hdr-sticky-strip > .past-day-banner-wrap {
+  margin-top: 0;
+}
+
 .hdr-bottom.hdr-tab-row {
   align-items: center;
 }
@@ -10238,7 +10321,8 @@ body:has(:is(
   border-radius: 18px;
 }
 
-/* Лист настроек v4 — popover под иконками шапки, без dim/blur подложки */
+/* Лист настроек v4 — popover под иконками шапки.
+   Высота до нижнего меню; фон под карточкой — тот же blur 2.5px, что у v4-модалок. */
 .tab-settings-menu.tab-settings-menu--v4-sheet {
   position: fixed;
   top: var(--settings-sheet-top, calc(env(safe-area-inset-top, 0px) + 56px));
@@ -10248,9 +10332,12 @@ body:has(:is(
   width: min(360px, calc(100vw - 28px));
   min-width: 0;
   max-width: none;
-  max-height: min(
-    calc(100dvh - var(--settings-sheet-top, calc(env(safe-area-inset-top, 0px) + 56px)) - 20px),
-    72vh
+  max-height: calc(
+    100dvh
+    - var(--settings-sheet-top, calc(env(safe-area-inset-top, 0px) + 56px))
+    - 12px
+    - 72px
+    - env(safe-area-inset-bottom, 0px)
   );
   overflow: visible;
   padding: 0;
@@ -10268,7 +10355,7 @@ body:has(:is(
 }
 
 .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__card {
-  padding: 4px 16px 8px;
+  padding: 0 16px 14px;
   border-radius: 22px;
   border: 1px solid rgba(0, 0, 0, 0.06);
   background: var(--v4-bg, #fffaf1);
@@ -10276,9 +10363,12 @@ body:has(:is(
     0 22px 54px rgba(15, 23, 42, 0.16),
     0 8px 22px rgba(15, 23, 42, 0.08),
     0 1px 0 rgba(255, 255, 255, 0.65) inset;
-  max-height: min(
-    calc(100dvh - var(--settings-sheet-top, calc(env(safe-area-inset-top, 0px) + 56px)) - 20px),
-    72vh
+  max-height: calc(
+    100dvh
+    - var(--settings-sheet-top, calc(env(safe-area-inset-top, 0px) + 56px))
+    - 12px
+    - 72px
+    - env(safe-area-inset-bottom, 0px)
   );
   overflow-x: hidden;
   overflow-y: auto;
@@ -10289,11 +10379,82 @@ body:has(:is(
   display: none;
 }
 
-.tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__panel {
-  margin: 0 0 8px;
-  padding: 14px;
-  border-radius: 20px;
+.hdr-settings-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 2px 10px;
+}
+
+.hdr-settings-sheet__title {
+  font: 700 20px/1.2 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-1, #201e1d);
+}
+
+.hdr-settings-sheet__close {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
   background: #f7efe2;
+  color: rgba(0, 0, 0, 0.5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push {
+  margin: 0 0 2px;
+}
+
+.tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push-toggle {
+  width: 100%;
+  min-height: 44px;
+  padding: 13px 15px;
+  border-radius: 18px;
+  background: #f6e6dd;
+  border: 0;
+  box-shadow: none;
+}
+
+.tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push-toggle .tab-settings-diary-toggle__label {
+  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-1, #201e1d);
+}
+
+.tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push-toggle .tab-settings-diary-toggle__hint {
+  margin-top: 4px;
+  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.hdr-settings-sheet__tier {
+  margin: 14px 2px 8px;
+  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.hdr-settings-sheet__group {
+  background: #f7efe2;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.hdr-settings-sheet__group + .hdr-settings-sheet__tier {
+  margin-top: 14px;
+}
+
+.tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__panel {
+  margin: 0;
+  padding: 12px 15px 14px;
+  border-radius: 0;
+  background: rgba(255, 250, 241, 0.55);
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__soft-row {
@@ -10339,32 +10500,27 @@ body:has(:is(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
-  padding: 13px 0;
+  min-height: 44px;
+  padding: 12px 15px;
   border: 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   background: transparent;
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 13px/1 Figtree, system-ui, sans-serif;
   text-align: left;
   cursor: pointer;
   color: inherit;
 }
 
-.hdr-settings-sheet__group + .hdr-settings-sheet__group {
-  margin-top: 4px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(0, 0, 0, 0.07);
-}
-
 .hdr-settings-sheet__group .hdr-settings-sheet__row:last-child,
-.hdr-settings-sheet__row:last-child {
+.hdr-settings-sheet__group .hdr-settings-sheet__inline-panel:last-child .hdr-settings-sheet__row,
+.hdr-settings-sheet__group > .hdr-settings-sheet__panel:last-child {
   border-bottom: 0;
-  padding-bottom: 6px;
 }
 
 .hdr-settings-sheet__label {
-  color: var(--v4-mark-1, rgba(32, 30, 29, 0.72));
+  color: var(--v4-ink-1, #201e1d);
 }
 
 .hdr-settings-sheet__meta {
@@ -10372,19 +10528,47 @@ body:has(:is(
   align-items: center;
   gap: 8px;
   flex: none;
-  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.hdr-settings-sheet__meta-text--accent {
+  color: #8a4a20;
+}
+
+.hdr-settings-sheet__dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hdr-settings-sheet__dot {
+  width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  display: block;
+}
+
+.hdr-settings-sheet__dot--outline {
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.14);
 }
 
 .hdr-settings-sheet__chevron {
   display: block;
-  width: 14px;
-  height: 14px;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  width: 15px;
+  height: 15px;
+  color: rgba(0, 0, 0, 0.42);
+}
+
+.hdr-settings-sheet__row--exit {
+  margin-top: 2px;
+  padding: 8px 3px 2px;
+  border-bottom: 0;
 }
 
 .hdr-settings-sheet__row--exit .hdr-settings-sheet__label {
   color: var(--v4-act-text, var(--v4-sand-act-text, #8a4a20));
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
 }
 
 .hdr-settings-sheet__panel {
@@ -10400,9 +10584,10 @@ body:has(:is(
 }
 
 .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__inline-panel {
-  margin: 0 0 4px;
-  padding: 0 0 8px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  margin: 0;
+  padding: 8px 12px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 250, 241, 0.55);
 }
 
 .tab-settings-menu.tab-settings-menu--v4-sheet .tab-settings-home-picker {
@@ -10417,9 +10602,10 @@ body:has(:is(
 }
 
 .tab-settings-menu.tab-settings-menu--v4-sheet .tab-settings-diary-wrap {
-  padding: 0;
+  padding: 8px 12px 12px;
   border: 0;
-  background: transparent;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(255, 250, 241, 0.55);
 }
 
 .tab-settings-menu.tab-settings-menu--v4-sheet .tab-settings-diary-card {
@@ -10454,6 +10640,67 @@ body:has(:is(
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
+.hdr-settings-sheet__diag-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 6px;
+  padding: 0 3px;
+  border: 0;
+  background: transparent;
+  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  text-align: left;
+}
+
+.hdr-settings-sheet__diag-toggle.is-open {
+  color: #8a4a20;
+}
+
+.hdr-settings-sheet__diag-toggle.is-open .hdr-settings-sheet__chevron {
+  color: #8a4a20;
+}
+
+.hdr-settings-sheet__diag-panel {
+  margin-top: 2px;
+  padding: 14px 15px;
+  border-radius: 18px;
+  background: #efe3cf;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hdr-settings-sheet__diag-copy {
+  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.55);
+  text-wrap: pretty;
+  margin-bottom: 4px;
+}
+
+.hdr-settings-sheet__diag-btn {
+  min-height: 44px;
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  background: #fffaf1;
+  box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.14);
+  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.62);
+  cursor: pointer;
+}
+
+.hdr-settings-sheet__build {
+  margin-top: 8px;
+  padding: 0 3px;
+  font: 500 10.5px/1.4 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.32);
+}
+
 [data-theme$="dark"] .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__card {
   border-color: rgba(242, 237, 230, 0.1);
   background: #141210;
@@ -10462,25 +10709,68 @@ body:has(:is(
     0 8px 22px rgba(0, 0, 0, 0.28);
 }
 
-[data-theme$="dark"] .hdr-settings-sheet__row {
-  border-bottom-color: rgba(242, 237, 230, 0.1);
+[data-theme$="dark"] .hdr-settings-sheet__title {
+  color: #f2ede6;
 }
 
-[data-theme$="dark"] .hdr-settings-sheet__label {
-  color: rgba(242, 237, 230, 0.78);
-}
-
-[data-theme$="dark"] .hdr-settings-sheet__meta,
-[data-theme$="dark"] .hdr-settings-sheet__panel-label {
+[data-theme$="dark"] .hdr-settings-sheet__close {
+  background: #23201b;
   color: rgba(242, 237, 230, 0.5);
 }
 
-[data-theme$="dark"] .hdr-settings-sheet__group + .hdr-settings-sheet__group {
-  border-top-color: rgba(242, 237, 230, 0.1);
+[data-theme$="dark"] .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push-toggle {
+  background: #2c231c;
+}
+
+[data-theme$="dark"] .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push-toggle .tab-settings-diary-toggle__label {
+  color: #f2ede6;
+}
+
+[data-theme$="dark"] .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push-toggle .tab-settings-diary-toggle__hint {
+  color: rgba(242, 237, 230, 0.5);
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__tier {
+  color: #e2a468;
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__group {
+  background: #23201b;
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__row {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__label {
+  color: #f2ede6;
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__meta,
+[data-theme$="dark"] .hdr-settings-sheet__panel-label,
+[data-theme$="dark"] .hdr-settings-sheet__diag-toggle {
+  color: rgba(242, 237, 230, 0.45);
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__meta-text--accent,
+[data-theme$="dark"] .hdr-settings-sheet__diag-toggle.is-open,
+[data-theme$="dark"] .hdr-settings-sheet__diag-toggle.is-open .hdr-settings-sheet__chevron {
+  color: #e2a468;
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__chevron {
+  color: rgba(242, 237, 230, 0.45);
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__row--exit .hdr-settings-sheet__label {
   color: #e2a468;
+}
+
+[data-theme$="dark"] .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__panel,
+[data-theme$="dark"] .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__inline-panel,
+[data-theme$="dark"] .tab-settings-menu.tab-settings-menu--v4-sheet .tab-settings-diary-wrap {
+  background: rgba(20, 18, 16, 0.55);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__chip {
@@ -10488,8 +10778,27 @@ body:has(:is(
   color: #f2ede6;
 }
 
-[data-theme$="dark"] .hdr-settings-sheet__hint {
-  color: rgba(242, 237, 230, 0.62);
+[data-theme$="dark"] .hdr-settings-sheet__hint,
+[data-theme$="dark"] .hdr-settings-sheet__diag-copy {
+  color: rgba(242, 237, 230, 0.55);
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__diag-panel {
+  background: #2c231c;
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__diag-btn {
+  background: #141210;
+  color: rgba(242, 237, 230, 0.78);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.14);
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__build {
+  color: rgba(242, 237, 230, 0.32);
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__dot--outline {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
 .tab-settings-home-wrap {
@@ -10697,10 +11006,11 @@ body:has(:is(
   animation: settingsBackdropFade 0.16s ease;
 }
 
+/* v4: тот же фон под модалкой, что у чек-ина / куратора — --v4-modal-backdrop-blur */
 .tab-settings-backdrop--v4-popover {
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+  backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
+  -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   z-index: 1200;
 }
 
@@ -10709,7 +11019,9 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .tab-settings-backdrop--v4-popover {
-  background: transparent;
+  background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));
+  backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
+  -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
 }
 
 @keyframes settingsBackdropFade {
@@ -10749,12 +11061,10 @@ body:has(:is(
 @keyframes settingsMenuSlideDown {
   from {
     opacity: 0;
-    transform: translate(-50%, -8px);
   }
 
   to {
     opacity: 1;
-    transform: translate(-50%, 0);
   }
 }
 
@@ -12131,7 +12441,7 @@ body:has(:is(
  * нет активного приёма → плавный fade при появлении/исчезновении. */
 .meal-sticky-bar {
   position: fixed;
-  top: 120px;
+  top: var(--heys-hdr-sticky-top, 120px);
   left: 12px;
   right: 12px;
   z-index: 50;
@@ -12164,7 +12474,9 @@ body:has(:is(
 
 @supports (top: env(safe-area-inset-top)) {
   .meal-sticky-bar {
-    top: calc(env(safe-area-inset-top, 0px) + 120px);
+    /* --heys-hdr-sticky-top уже от getBoundingClientRect (с учётом safe-area в layout).
+       Fallback без var: прежние 120px + inset. */
+    top: var(--heys-hdr-sticky-top, calc(env(safe-area-inset-top, 0px) + 120px));
   }
 }
 

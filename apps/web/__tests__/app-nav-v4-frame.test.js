@@ -15,6 +15,14 @@ const baseCss = fs.readFileSync(
     path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'),
     'utf8',
 );
+const paletteCss = fs.readFileSync(
+    path.join(WEB_DIR, 'styles/modules/002-ui-v4-palette-roles.css'),
+    'utf8',
+);
+const pwaCss = fs.readFileSync(
+    path.join(WEB_DIR, 'styles/modules/500-pwa-and-offline.css'),
+    'utf8',
+);
 const swipeSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_app_swipe_nav_v1.js'), 'utf8');
 const bundleCfg = fs.readFileSync(
     path.resolve(WEB_DIR, '../../scripts/legacy-bundle-config.mjs'),
@@ -118,25 +126,39 @@ describe('UI v4 Prompt 3b — шапка', () => {
         expect(shellSrc).toContain("label: 'Выйти'");
         expect(shellSrc).toContain('handleSignOut()');
         expect(shellSrc).toContain('syncSettingsSheetAnchor');
+        expect(shellSrc).toContain('syncSettingsSheetAnchorNow');
+        expect(shellSrc).toContain('toggleSettingsMenu');
         expect(shellSrc).toContain('tab-settings-menu--v4-sheet');
         expect(baseCss).toContain('.tab-settings-menu.tab-settings-menu--v4-sheet');
-        expect(baseCss).toContain('settingsMenuSlideDown');
+        expect(baseCss).toMatch(/@keyframes settingsMenuSlideDown \{\s*from \{\s*opacity:\s*0;\s*\}/);
     });
 
     it('лист настроек полный и сгруппированный, выгрузка открывает согласия', () => {
-        expect(shellSrc).toContain("renderSettingsGroup('me'");
-        expect(shellSrc).toContain("renderSettingsGroup('look'");
-        expect(shellSrc).toContain("renderSettingsGroup('notify'");
-        expect(shellSrc).toContain("renderSettingsGroup('places'");
-        expect(shellSrc).toContain("renderSettingsGroup('data'");
+        expect(shellSrc).toContain("renderSettingsGroup('you', 'Вы'");
+        expect(shellSrc).toContain("renderSettingsGroup('app', 'Приложение'");
+        expect(shellSrc).toContain("renderSettingsGroup('support', 'Сопровождение'");
         expect(shellSrc).toContain("label: 'Домашняя вкладка'");
+        expect(shellSrc).toContain("label: 'Мои продукты'");
+        expect(shellSrc).toContain("label: 'Звук и время напоминаний'");
+        expect(shellSrc).toContain("label: 'Советы куратора'");
         expect(shellSrc).toContain("canUsePostReleaseLabs && renderSettingsRow");
         expect(shellSrc).toContain("label: 'Дневник'");
+        expect(shellSrc).toContain("'Диагностика'");
+        expect(shellSrc).toContain('hdr-settings-sheet__diag-toggle');
+        expect(shellSrc).toContain('Пройти регистрацию');
+        expect(shellSrc).toContain('Пройти утренний чек-ин');
+        expect(shellSrc).toContain('Правки куратора (снова)');
+        expect(shellSrc).toContain('HEYS_DEBUG_REPLAY_CHECKIN');
+        expect(shellSrc).toContain('HEYS_DEBUG_REPLAY_CURATOR_REVIEW');
+        expect(shellSrc).toContain('replayCuratorReview');
+        expect(shellSrc).toContain('hdr-settings-sheet__build');
+        expect(shellSrc).toContain('HEYS 4.0');
         expect(shellSrc).toContain("openUserSection('consents', 'settings-sheet-export')");
         expect(shellSrc).toContain("openUserSection('notifications', 'settings-sheet-notify')");
         expect(shellSrc).not.toContain("closeSettingsAndSwitch('overview'");
-        expect(shellSrc).not.toContain('hdr-settings-sheet__group-label');
-        expect(baseCss).not.toContain('.hdr-settings-sheet__group-label');
+        expect(baseCss).toContain('.hdr-settings-sheet__tier');
+        expect(baseCss).toContain('.hdr-settings-sheet__diag-panel');
+        expect(baseCss).toContain('[data-theme$="dark"] .hdr-settings-sheet__group');
         const userTabSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_user_tab_impl_v1.js'), 'utf8');
         expect(userTabSrc).toContain('heys:open-user-section');
         expect(userTabSrc).toContain("title: 'Уведомления и звук'");
@@ -146,11 +168,21 @@ describe('UI v4 Prompt 3b — шапка', () => {
         expect(userTabSrc).toContain('React.createElement(SoundSettingsCard, null)');
     });
 
-    it('меню «Ещё» на вкладке профиля не размывает контент', () => {
+    it('меню «Ещё»: фон под карточкой — v4 blur 2.5px, не blur аккаунта', () => {
         expect(shellSrc).toContain('function syncDropdownBlurActive');
         expect(shellSrc).toContain('tab-settings-backdrop--v4-popover');
         expect(baseCss).toContain('.tab-settings-backdrop--v4-popover');
-        expect(baseCss).toContain('background: transparent');
+        expect(paletteCss).toContain('--v4-modal-backdrop-blur: 2.5px');
+        expect(baseCss).toMatch(
+            /\.tab-settings-backdrop--v4-popover\s*\{[\s\S]*?backdrop-filter:\s*blur\(var\(--v4-modal-backdrop-blur/,
+        );
+        expect(pwaCss).toMatch(
+            /\.mc-backdrop:has\(\.mc-modal--daily\)\s*\{[\s\S]*?backdrop-filter:\s*blur\(var\(--v4-modal-backdrop-blur/,
+        );
+        expect(pwaCss).toMatch(
+            /\.ca-modal-backdrop--visible\s*\{[\s\S]*?backdrop-filter:\s*blur\(var\(--v4-modal-backdrop-blur/,
+        );
+        expect(baseCss).toMatch(/\.hdr-settings-sheet__card\s*\{[\s\S]*?72px/);
         expect(shellSrc).toMatch(/dropdown-blur-active',\s*clientOpen\)/);
     });
 
@@ -225,6 +257,14 @@ describe('UI v4 chrome paint — рама', () => {
         const dateIdx = shellSrc.indexOf("'hdr-date-row'", hdrStart);
         expect(titleIdx).toBeGreaterThan(-1);
         expect(dateIdx).toBeGreaterThan(titleIdx);
+        const chromeIdx = shellSrc.indexOf("className: 'hdr-chrome'");
+        const stickyIdx = shellSrc.indexOf("className: 'hdr-sticky-strip'");
+        expect(chromeIdx).toBeGreaterThan(-1);
+        expect(stickyIdx).toBeGreaterThan(chromeIdx);
+        expect(dateIdx).toBeGreaterThan(stickyIdx);
+        expect(shellSrc).not.toContain('app-header-wrapper');
+        const viewportIdx = shellSrc.indexOf("className: 'tab-active-viewport'");
+        expect(shellSrc.indexOf('MemoAppHeader, props', viewportIdx)).toBeGreaterThan(viewportIdx);
     });
 
     it('date-picker v4 без flex-basis 0% в critical CSS (anti flash)', () => {
