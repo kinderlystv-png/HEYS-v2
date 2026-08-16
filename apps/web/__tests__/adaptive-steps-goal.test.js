@@ -76,6 +76,9 @@ function loadStepsModule(profile = {}, options = {}) {
     profileStore,
     computeAdaptiveStepsGoal: window.HEYS.Steps.computeAdaptiveStepsGoal,
     resolveStepsGoalContext: window.HEYS.Steps.resolveStepsGoalContext,
+    stepsGoalSliderValueToRatio: window.HEYS.Steps.stepsGoalSliderValueToRatio,
+    stepsGoalSliderRatioToValue: window.HEYS.Steps.stepsGoalSliderRatioToValue,
+    stepsGoalSliderStepForValue: window.HEYS.Steps.stepsGoalSliderStepForValue,
   };
 }
 
@@ -242,5 +245,45 @@ describe('stepsGoal getInitialData', () => {
     );
 
     expect(initial.stepsGoal).toBe(7600);
+  });
+});
+
+describe('stepsGoal slider visual map', () => {
+  afterEach(() => {
+    delete window.HEYS;
+    delete window.React;
+  });
+
+  it('puts the 10k norm near two-thirds of the track', () => {
+    const {
+      stepsGoalSliderValueToRatio,
+      stepsGoalSliderRatioToValue,
+      stepsGoalSliderStepForValue,
+    } = loadStepsModule();
+
+    expect(stepsGoalSliderValueToRatio(3000)).toBeCloseTo(0, 5);
+    expect(stepsGoalSliderValueToRatio(10000)).toBeCloseTo(2 / 3, 5);
+    expect(stepsGoalSliderValueToRatio(30000)).toBeCloseTo(1, 5);
+    // Linear 3k–30k would put 10k at ~26%; keep it clearly past mid.
+    expect(stepsGoalSliderValueToRatio(10000)).toBeGreaterThan(0.6);
+
+    expect(stepsGoalSliderRatioToValue(0)).toBe(3000);
+    expect(stepsGoalSliderRatioToValue(2 / 3)).toBe(10000);
+    expect(stepsGoalSliderRatioToValue(1)).toBe(30000);
+
+    expect(stepsGoalSliderStepForValue(9000)).toBe(100);
+    expect(stepsGoalSliderStepForValue(10000)).toBe(500);
+    expect(stepsGoalSliderStepForValue(15000)).toBe(500);
+  });
+
+  it('uses finer steps below the norm and coarser above', () => {
+    const { stepsGoalSliderRatioToValue } = loadStepsModule();
+    const leftMid = stepsGoalSliderRatioToValue(1 / 3);
+    const rightMid = stepsGoalSliderRatioToValue(5 / 6);
+
+    expect(leftMid % 100).toBe(0);
+    expect(leftMid).toBeLessThan(10000);
+    expect(rightMid % 500).toBe(0);
+    expect(rightMid).toBeGreaterThan(10000);
   });
 });

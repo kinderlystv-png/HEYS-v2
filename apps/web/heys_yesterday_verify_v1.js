@@ -1180,7 +1180,7 @@
     {
       id: 'under_norm',
       icon: '🫶',
-      title: 'Не доел до нормы',
+      title: 'Не доел',
       desc: 'Чувствую, что явно не доел',
       percent: 78,
       rangeLabel: '≈ 75–80%'
@@ -1188,7 +1188,7 @@
     {
       id: 'around_norm',
       icon: '👌',
-      title: 'Поел как надо',
+      title: 'Как надо',
       desc: 'По норме, но без точных деталей',
       percent: 110,
       rangeLabel: '≈ 100–120%'
@@ -1211,10 +1211,48 @@
     }
   ];
 
+  function shortMealCount(count) {
+    const n = Number(count) || 0;
+    if (n === 1) return 'один приём';
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return n + ' приёма';
+    return n + ' приёмов';
+  }
+
+  function lastMealCaption(day) {
+    const meals = Array.isArray(day?.meals) ? day.meals.slice() : [];
+    if (!meals.length) return 'нет записей';
+    meals.sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+    const last = meals[meals.length - 1];
+    const time = String(last?.time || '').slice(0, 5);
+    const typed = typeof HEYS.dayUtils?.getMealType === 'function'
+      ? HEYS.dayUtils.getMealType(meals.indexOf(last), last, meals)
+      : null;
+    const name = String(typed?.name || (meals.indexOf(last) === 0 ? 'завтрак' : 'приём')).toLowerCase();
+    return time ? `${name}, ${time}` : name;
+  }
+
+  function openDiaryForDate(dateKey, context) {
+    try {
+      if (dateKey && typeof HEYS.ui?.setSelectedDate === 'function') {
+        HEYS.ui.setSelectedDate(dateKey);
+      }
+      if (typeof HEYS.ui?.switchTab === 'function') {
+        HEYS.ui.switchTab('diary');
+      }
+    } catch (_) { }
+    if (typeof context?.onClose === 'function') context.onClose();
+  }
+
+  function kcalLine(value) {
+    const n = Math.round(Number(value) || 0);
+    return n.toLocaleString('ru-RU');
+  }
+
   // === React компонент шага ===
   function YesterdayVerifyStepComponent({ data, onChange, context }) {
     const [pendingInfo, setPendingInfo] = React.useState(null);
-    const [expandedDateKey, setExpandedDateKey] = React.useState(null);
 
     // Загружаем пропущенные дни
     React.useEffect(() => {
@@ -1333,28 +1371,91 @@
         presetId: preset.id,
         percent: preset.percent
       });
-      setExpandedDateKey(dateKey);
     };
 
-    const handleSliderChange = (dateKey, value) => {
-      updateQuickFill(dateKey, {
-        percent: value,
-        presetId: quickFillByDate[dateKey]?.presetId || null
+    const feelingsDate = data.feelingsDate || null;
+    const feelingsDay = feelingsDate
+      ? (visibleDays.find((day) => day.date === feelingsDate) || null)
+      : null;
+
+    const openFeelings = (dateKey) => {
+      const existing = quickFillByDate[dateKey];
+      const preset = (existing?.presetId && QUICK_FILL_PRESETS.find((item) => item.id === existing.presetId))
+        || getAroundNormPreset();
+      onChange({
+        ...data,
+        pendingDateKeys,
+        feelingsDate: dateKey,
+        quickFillByDate: {
+          ...quickFillByDate,
+          [dateKey]: {
+            presetId: preset.id,
+            percent: existing?.percent ?? preset.percent
+          }
+        }
       });
+    };
+
+    const closeFeelings = () => {
+      onChange({ ...data, feelingsDate: null, pendingDateKeys });
+    };
+
+    const commitFeelings = () => {
+      const remaining = unresolvedDays.filter((day) => day.date !== feelingsDate);
+      if (remaining.length === 0) {
+        commitAction({ incompleteAction: 'estimated_fill', feelingsDate: null });
+        return;
+      }
+      onChange({ ...data, pendingDateKeys, feelingsDate: null });
     };
 
     if (!pendingInfo) {
       return React.createElement('div', { className: 'yv-loading' }, 'Загрузка...');
     }
 
-    return React.createElement('div', { className: 'yv-step' + (isPack ? ' yv-step--pack' : '') },
+    if (feelingsDay) {
+      const selectedPresetId = quickFillByDate[feelingsDay.date]?.presetId || getAroundNormPreset().id;
+      return React.createElement('div', { className: 'yv-step yv-step--feelings' },
+        React.createElement('div', { className: 'yv-hero-title' }, 'Как вы вчера ели?'),
+        React.createElement('div', { className: 'yv-hero-sub' },
+          'Запишем примерные приёмы с меткой «по ощущениям» — точность ниже, но день не пропадёт.'
+        ),
+        React.createElement('div', { className: 'yv-force-list' },
+          QUICK_FILL_PRESETS.map((preset) => {
+            const kcal = getQuickFillSummary(feelingsDay, preset.percent).kcal;
+            const selected = selectedPresetId === preset.id;
+            return React.createElement('button', {
+              key: preset.id,
+              type: 'button',
+              className: 'yv-force' + (selected ? ' yv-force--on' : ''),
+              onClick: () => applyPreset(feelingsDay.date, preset)
+            },
+              React.createElement('span', { className: 'yv-force-title' }, preset.title),
+              React.createElement('span', { className: 'yv-force-kcal' }, 'около ' + kcalLine(kcal) + ' ккал')
+            );
+          })
+        ),
+        React.createElement('div', { className: 'yv-pack-note', style: { marginTop: 12 } },
+          'Цифры считаются от вашей нормы того дня — ' + kcalLine(feelingsDay.target) + ' ккал.'
+        ),
+        React.createElement('div', { className: 'yv-canvas-foot' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'yv-pack-primary',
+            onClick: commitFeelings
+          }, 'Записать день')
+        )
+      );
+    }
+
+    const single = !isPack && visibleDays[0] ? visibleDays[0] : null;
+
+    return React.createElement('div', { className: 'yv-step' + (isPack ? ' yv-step--pack' : ' yv-step--single') },
       React.createElement('div', { className: 'yv-hero' },
         React.createElement('div', { className: 'yv-hero-title' },
           isPack
             ? visibleDays.length + ' ' + pluralizeDays(visibleDays.length) + ' остались незакрытыми'
-            : (visibleDays[0]
-              ? formatDateRu(visibleDays[0].date, true)
-              : 'Пропуски в прошлых днях')
+            : 'Вчерашний день выглядит неполным'
         ),
         React.createElement('div', { className: 'yv-hero-sub' },
           isPack
@@ -1364,106 +1465,62 @@
                 : '')
               + 'Можно дописать любой из них или отложить и сразу начать утро.'
             )
-            : (visibleDays[0] && (visibleDays[0].mealCount > 0 || visibleDays[0].kcal > 0)
-              ? visibleDays[0].kcal + ' из ' + visibleDays[0].target + ' ккал'
-                + (visibleDays[0].mealCount ? ' · ' + visibleDays[0].mealCount + ' ' + pluralizeMeals(visibleDays[0].mealCount) : '')
-              : 'День попадает сюда только из-за еды: приёмов нет, ноль калорий или меньше половины нормы.')
+            : (single
+              ? formatDateRu(single.date, true) + '. Проверьте, прежде чем закрывать утро — потом цифры уйдут в статистику как есть.'
+              : 'Проверьте, прежде чем закрывать утро — потом цифры уйдут в статистику как есть.')
         )
       ),
 
-      React.createElement('div', { className: 'yv-days' },
+      single && React.createElement('div', { className: 'yv-food-card' },
+        React.createElement('div', { className: 'yv-food-row' },
+          React.createElement('span', null, 'Еда'),
+          React.createElement('span', { className: 'yv-food-value' }, kcalLine(single.kcal) + ' из ' + kcalLine(single.target) + ' ккал')
+        ),
+        React.createElement('div', { className: 'yv-food-row' },
+          React.createElement('span', null, 'Приёмы'),
+          React.createElement('span', { className: 'yv-food-value' },
+            single.mealCount > 0 ? shortMealCount(single.mealCount) + ' за день' : 'нет приёмов'
+          )
+        ),
+        React.createElement('div', { className: 'yv-food-row' },
+          React.createElement('span', null, 'Последняя запись'),
+          React.createElement('span', { className: 'yv-food-muted' }, lastMealCaption(single))
+        )
+      ),
+
+      single && React.createElement('div', { className: 'yv-pack-note' },
+        'День попадает сюда только из-за еды: приёмов нет, ноль калорий или меньше половины нормы. Нулевые шаги и вода сами по себе вопросом не становятся.'
+      ),
+
+      isPack && React.createElement('div', { className: 'yv-days' },
         visibleDays.map((day) => {
           const quickFill = quickFillByDate[day.date] || null;
-          const isExpanded = expandedDateKey === day.date;
-          const quickSummary = quickFill ? getQuickFillSummary(day, quickFill.percent) : null;
-          return React.createElement('div', {
+          return React.createElement('button', {
             key: day.date,
-            className: 'yv-day-card' + (quickFill ? ' yv-day-card--resolved' : '')
+            type: 'button',
+            className: 'yv-pack-day' + (quickFill ? ' yv-pack-day--resolved' : ''),
+            onClick: () => openFeelings(day.date)
           },
-            React.createElement('div', { className: 'yv-day-header' },
-              React.createElement('div', { className: 'yv-day-title-wrap' },
-                React.createElement('div', { className: 'yv-day-title-row' },
-                  React.createElement('span', { className: 'yv-day-icon' }, day.mealCount > 0 ? '🍽️' : '📭'),
-                  React.createElement('div', { className: 'yv-day-title' }, formatDateRu(day.date, isPack)),
-                  quickFill && React.createElement('span', { className: 'yv-day-chip' }, 'оценочно заполнен')
-                ),
-                React.createElement('div', { className: 'yv-day-meta' },
-                  day.mealCount > 0 || day.kcal > 0
-                    ? `${day.kcal} из ${day.target} ккал${day.mealCount ? ` · ${day.mealCount} ${pluralizeMeals(day.mealCount)}` : ''}`
-                    : 'День пустой'
-                ),
-                quickSummary && React.createElement('div', { className: 'yv-day-estimate' }, quickSummary.label)
-              ),
-              React.createElement('div', { className: 'yv-day-actions' },
-                React.createElement('button', {
-                  type: 'button',
-                  className: 'yv-day-action-btn',
-                  onClick: () => setExpandedDateKey(isExpanded ? null : day.date)
-                },
-                  quickFill ? 'Изменить' : 'По ощущениям'
-                ),
-                quickFill && React.createElement('button', {
-                  type: 'button',
-                  className: 'yv-day-action-btn yv-day-action-btn--ghost',
-                  onClick: () => updateQuickFill(day.date, null)
-                }, 'Сбросить')
+            React.createElement('div', { className: 'yv-pack-day-copy' },
+              React.createElement('div', { className: 'yv-pack-day-title' }, formatDateRu(day.date, true)),
+              React.createElement('div', { className: 'yv-pack-day-meta' },
+                quickFill
+                  ? getQuickFillSummary(day, quickFill.percent).label
+                  : (day.mealCount > 0 || day.kcal > 0
+                    ? `${kcalLine(day.kcal)} из ${kcalLine(day.target)} ккал${day.mealCount ? ` · ${shortMealCount(day.mealCount)}` : ''}`
+                    : 'День пустой')
               )
             ),
-
-            isExpanded && React.createElement('div', { className: 'yv-day-editor' },
-              React.createElement('div', { className: 'yv-day-editor-title' },
-                'Оцени день по ощущениям'
-              ),
-              React.createElement('div', { className: 'yv-day-editor-subtitle' },
-                day.mealCount > 0
-                  ? 'Сохраним один примерный день и заменим текущие неполные записи на оценочную версию по средним последних заполненных дней.'
-                  : 'Сохраним примерный день по средним последних заполненных дней, чтобы история и аналитика не были пустыми.'
-              ),
-              React.createElement('div', { className: 'yv-presets' },
-                QUICK_FILL_PRESETS.map((preset) =>
-                  React.createElement('button', {
-                    key: preset.id,
-                    type: 'button',
-                    className: 'yv-preset' + (quickFill?.presetId === preset.id ? ' yv-preset--active' : ''),
-                    onClick: () => applyPreset(day.date, preset)
-                  },
-                    React.createElement('span', { className: 'yv-preset-icon' }, preset.icon),
-                    React.createElement('span', { className: 'yv-preset-copy' },
-                      React.createElement('span', { className: 'yv-preset-title' }, preset.title),
-                      React.createElement('span', { className: 'yv-preset-desc' }, `${preset.desc} · ${preset.rangeLabel}`)
-                    )
-                  )
-                )
-              ),
-              React.createElement('div', { className: 'yv-slider-block' },
-                React.createElement('div', { className: 'yv-slider-header' },
-                  React.createElement('span', { className: 'yv-slider-label' }, 'Насколько от нормы это было'),
-                  React.createElement('span', { className: 'yv-slider-value' }, `${getQuickFillSummary(day, quickFill?.percent || 100).percent}%`)
-                ),
-                React.createElement('input', {
-                  type: 'range',
-                  className: 'mood-slider',
-                  min: 50,
-                  max: 200,
-                  step: 5,
-                  value: getQuickFillSummary(day, quickFill?.percent || 100).percent,
-                  onChange: (e) => handleSliderChange(day.date, e.target.value)
-                }),
-                React.createElement('div', { className: 'yv-slider-labels' },
-                  React.createElement('span', null, '50%'),
-                  React.createElement('span', null, '100%'),
-                  React.createElement('span', null, '200%')
-                ),
-                React.createElement('div', { className: 'yv-slider-note' },
-                  `Будет записано примерно ${getQuickFillSummary(day, quickFill?.percent || 100).kcal} ккал при дневной норме ${Math.round(day.target || 0)} ккал.`
-                )
-              )
-            )
+            React.createElement('span', { className: 'yv-pack-chevron', 'aria-hidden': 'true' }, '›')
           );
         })
       ),
 
-      isPack && React.createElement('div', { className: 'yv-pack-actions' },
+      isPack && React.createElement('div', { className: 'yv-pack-note' },
+        'Отложенные дни не исчезают — вернутся завтра тем же списком.'
+      ),
+
+      isPack && React.createElement('div', { className: 'yv-canvas-foot' },
         React.createElement('button', {
           type: 'button',
           className: 'yv-pack-primary',
@@ -1480,53 +1537,32 @@
             className: 'yv-pack-secondary',
             onClick: handlePackFillLater
           }, 'Заполню позже')
-        ),
-        React.createElement('div', { className: 'yv-pack-note' },
-          'Отложенные дни не исчезают — вернутся завтра тем же списком.'
         )
       ),
 
-      !isPack && unresolvedDaysCount > 0 && React.createElement(React.Fragment, null,
-        React.createElement('div', { className: 'yv-subtitle' },
-          'Что сделать с этим днём?'
+      single && React.createElement('div', { className: 'yv-canvas-foot' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'yv-pack-primary',
+          onClick: () => openDiaryForDate(single.date, context)
+        }, 'Дописать точно'),
+        React.createElement('div', { className: 'yv-pack-row' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'yv-pack-secondary',
+            onClick: () => commitAction({ incompleteAction: 'confirm_real_data' })
+          }, 'Так и было'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'yv-pack-secondary',
+            onClick: () => openFeelings(single.date)
+          }, 'По ощущениям')
         ),
-
-        React.createElement('div', { className: 'yv-options' },
-          INCOMPLETE_ACTIONS.map(act =>
-            React.createElement('button', {
-              key: act.id,
-              type: 'button',
-              className: 'yv-option' + (selectedAction === act.id ? ' yv-option--selected' : ''),
-              onClick: () => handleActionSelect(act.id)
-            },
-              React.createElement('span', { className: 'yv-option-icon' }, act.icon),
-              React.createElement('div', { className: 'yv-option-content' },
-                React.createElement('div', { className: 'yv-option-title' }, act.title),
-                React.createElement('div', { className: 'yv-option-desc' }, act.desc),
-                recommendedAction === act.id && React.createElement('div', { className: 'yv-option-recommended' }, 'Рекомендуем')
-              ),
-              selectedAction === act.id && React.createElement('span', {
-                className: 'yv-option-check'
-              }, '✓')
-            )
-          )
-        ),
-
-        selectedAction === 'clear_day' && React.createElement('div', { className: 'yv-warning' },
-          'Пустой день будет отмечен пустым. День с калориями это действие не трогает.'
-        ),
-
-        selectedAction === 'confirm_real_data' && React.createElement('div', { className: 'yv-hint yv-hint--success' },
-          'Цифры верные — день идёт в статистику как есть.'
-        ),
-
-        selectedAction === 'fill_later' && React.createElement('div', { className: 'yv-hint' },
-          'Закрывает утро, но возвращает день завтра.'
-        )
-      ),
-
-      !isPack && unresolvedDaysCount === 0 && React.createElement('div', { className: 'yv-hint yv-hint--success' },
-        'День получил оценку. Можно продолжать чек-ин.'
+        React.createElement('button', {
+          type: 'button',
+          className: 'yv-text-later',
+          onClick: () => commitAction({ incompleteAction: 'fill_later' })
+        }, 'Заполню позже')
       )
     );
   }
@@ -1780,7 +1816,10 @@
       canSkip: false, // Обязательный шаг если показывается
       hideProgressDots: true,
       hiddenFromProgress: true,
-      hideDailyFooter: (data) => Array.isArray(data?.pendingDateKeys) && data.pendingDateKeys.length > 1,
+      hideDailyFooter: true,
+      headerCaption: (data) => (data && data.feelingsDate ? formatDateRu(data.feelingsDate) : 'Перед чек-ином'),
+      showHeaderBack: (data) => !!(data && data.feelingsDate),
+      applyHeaderBack: (data) => ({ ...(data || {}), feelingsDate: null }),
 
       shouldShow: () => {
         return shouldShowYesterdayVerify();

@@ -100,7 +100,10 @@
     style,
     variant,
     fill,
-    thumbSize
+    thumbSize,
+    valueToRatio = null,
+    ratioToValue = null,
+    stepForValue = null
   }) {
     const trackRef = useRef(null);
     const draggingRef = useRef(false);
@@ -108,18 +111,41 @@
     const safeMin = Number(min);
     const safeMax = Number(max);
     const safeStep = Number(step) || 1;
-    const percent = safeMax > safeMin
-      ? ((numericValue - safeMin) / (safeMax - safeMin)) * 100
-      : 0;
+    const resolveStep = (currentValue) => {
+      if (typeof stepForValue === 'function') {
+        const nextStep = Number(stepForValue(currentValue));
+        if (Number.isFinite(nextStep) && nextStep > 0) return nextStep;
+      }
+      return safeStep;
+    };
+    const ratioFromValue = (currentValue) => {
+      if (typeof valueToRatio === 'function') {
+        const mapped = Number(valueToRatio(currentValue, safeMin, safeMax));
+        if (Number.isFinite(mapped)) return Math.max(0, Math.min(1, mapped));
+      }
+      if (!(safeMax > safeMin)) return 0;
+      return (Number(currentValue) - safeMin) / (safeMax - safeMin);
+    };
+    const valueFromRatio = (ratio) => {
+      const clampedRatio = Math.max(0, Math.min(1, ratio));
+      if (typeof ratioToValue === 'function') {
+        const mapped = Number(ratioToValue(clampedRatio, safeMin, safeMax));
+        if (Number.isFinite(mapped)) {
+          return Math.max(safeMin, Math.min(safeMax, mapped));
+        }
+      }
+      const rawValue = safeMin + clampedRatio * (safeMax - safeMin);
+      const stepped = Math.round(rawValue / safeStep) * safeStep;
+      return Math.max(safeMin, Math.min(safeMax, stepped));
+    };
+    const percent = ratioFromValue(numericValue) * 100;
     const clampedPercent = Math.max(0, Math.min(100, percent));
 
     const valueFromClientX = (clientX) => {
       const rect = trackRef.current?.getBoundingClientRect?.();
       if (!rect || rect.width <= 0) return numericValue;
       const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-      const rawValue = safeMin + ratio * (safeMax - safeMin);
-      const stepped = Math.round(rawValue / safeStep) * safeStep;
-      return Math.max(safeMin, Math.min(safeMax, stepped));
+      return valueFromRatio(ratio);
     };
 
     const applyClientX = (clientX, event) => {
@@ -191,8 +217,9 @@
 
     const handleKeyDown = (event) => {
       let nextValue = numericValue;
-      if (event.key === 'ArrowRight' || event.key === 'ArrowUp') nextValue += safeStep;
-      else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') nextValue -= safeStep;
+      const keyStep = resolveStep(numericValue);
+      if (event.key === 'ArrowRight' || event.key === 'ArrowUp') nextValue += keyStep;
+      else if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') nextValue -= keyStep;
       else if (event.key === 'Home') nextValue = safeMin;
       else if (event.key === 'End') nextValue = safeMax;
       else return;
@@ -1312,7 +1339,10 @@
     return React.createElement('div', { className: 'mc-daily-greeting' },
       React.createElement('div', { className: 'mc-daily-greeting-title' }, title),
       React.createElement('div', { className: 'mc-daily-greeting-date' }, dateLine),
-      streak > 0 && React.createElement('div', { className: 'mc-daily-streak-banner' },
+      streak > 0 && React.createElement('div', {
+        className: 'mc-daily-streak-banner',
+        style: { borderRadius: 16 }
+      },
         React.createElement('span', { className: 'mc-daily-streak-count' }, String(streak)),
         React.createElement('span', { className: 'mc-daily-streak-text' },
           streak === 1
@@ -1483,7 +1513,10 @@
           style: { textAlign: 'center', marginTop: 12 }
         }, 'Из профиля — поправьте, если весы показывают другое')
       ),
-      React.createElement('div', { className: 'mc-weight-kilo-card' },
+      React.createElement('div', {
+        className: 'mc-weight-kilo-card',
+        style: { borderRadius: 20, overflow: 'hidden' }
+      },
         React.createElement('div', { className: 'mc-kilo-label' }, 'Килограммы'),
         React.createElement('div', { className: 'mc-weight-pickers' },
           React.createElement(WheelPicker, {
@@ -2238,7 +2271,10 @@
       React.createElement('div', { className: 'mc-hero-number' }, formatSleepDuration(sleepHours)),
       React.createElement('div', { className: 'mc-sleep-norm' }, sleepNormLine(sleepHours)),
       React.createElement('div', { className: 'mc-sleep-times mc-sleep-times--split' },
-        React.createElement('div', { className: 'mc-sleep-block' },
+        React.createElement('div', {
+          className: 'mc-sleep-block',
+          style: { borderRadius: 20, overflow: 'hidden' }
+        },
           React.createElement('div', { className: 'mc-sleep-label' }, 'Легли'),
           React.createElement(TimePicker, {
             hours: sleepStartH,
@@ -2254,7 +2290,10 @@
             className: 'mc-time-pickers'
           })
         ),
-        React.createElement('div', { className: 'mc-sleep-block' },
+        React.createElement('div', {
+          className: 'mc-sleep-block',
+          style: { borderRadius: 20, overflow: 'hidden' }
+        },
           React.createElement('div', { className: 'mc-sleep-label' }, 'Встали'),
           React.createElement(TimePicker, {
             hours: sleepEndH,
@@ -2375,6 +2414,51 @@
   const STEPS_GOAL_MAX = 12000;
   const STEPS_HISTORY_LOOKBACK_DAYS = 14;
   const STEPS_HISTORY_MIN_DAYS = 3;
+  // Visual range of the goal slider. Norm (~10k) sits at ~2/3 of the track
+  // so a typical day does not feel "near zero" on a linear 3k–30k scale.
+  const STEPS_GOAL_SLIDER_MIN = 3000;
+  const STEPS_GOAL_SLIDER_MAX = 30000;
+  const STEPS_GOAL_SLIDER_ANCHOR = 10000;
+  const STEPS_GOAL_SLIDER_ANCHOR_RATIO = 2 / 3;
+
+  function stepsGoalSliderValueToRatio(value, min = STEPS_GOAL_SLIDER_MIN, max = STEPS_GOAL_SLIDER_MAX) {
+    const safeMin = Number(min);
+    const safeMax = Number(max);
+    const anchor = Math.max(safeMin, Math.min(safeMax, STEPS_GOAL_SLIDER_ANCHOR));
+    const v = Math.max(safeMin, Math.min(safeMax, Number(value) || safeMin));
+    if (!(safeMax > safeMin)) return 0;
+    if (v <= anchor) {
+      if (!(anchor > safeMin)) return 0;
+      return ((v - safeMin) / (anchor - safeMin)) * STEPS_GOAL_SLIDER_ANCHOR_RATIO;
+    }
+    if (!(safeMax > anchor)) return 1;
+    return STEPS_GOAL_SLIDER_ANCHOR_RATIO
+      + ((v - anchor) / (safeMax - anchor)) * (1 - STEPS_GOAL_SLIDER_ANCHOR_RATIO);
+  }
+
+  function stepsGoalSliderRatioToValue(ratio, min = STEPS_GOAL_SLIDER_MIN, max = STEPS_GOAL_SLIDER_MAX) {
+    const safeMin = Number(min);
+    const safeMax = Number(max);
+    const anchor = Math.max(safeMin, Math.min(safeMax, STEPS_GOAL_SLIDER_ANCHOR));
+    const r = Math.max(0, Math.min(1, Number(ratio) || 0));
+    let raw;
+    let step;
+    if (r <= STEPS_GOAL_SLIDER_ANCHOR_RATIO) {
+      raw = safeMin + (STEPS_GOAL_SLIDER_ANCHOR_RATIO > 0
+        ? (r / STEPS_GOAL_SLIDER_ANCHOR_RATIO) * (anchor - safeMin)
+        : 0);
+      step = 100;
+    } else {
+      raw = anchor + ((r - STEPS_GOAL_SLIDER_ANCHOR_RATIO) / (1 - STEPS_GOAL_SLIDER_ANCHOR_RATIO))
+        * (safeMax - anchor);
+      step = 500;
+    }
+    return Math.max(safeMin, Math.min(safeMax, Math.round(raw / step) * step));
+  }
+
+  function stepsGoalSliderStepForValue(value) {
+    return Number(value) < STEPS_GOAL_SLIDER_ANCHOR ? 100 : 500;
+  }
 
   function roundStepsGoal(value) {
     return Math.round(Number(value) / 100) * 100;
@@ -2595,8 +2679,8 @@
 
     const defaultStepsGoal = useMemo(() => stepsStats.recommended, [stepsStats.recommended]);
 
-    const sliderMin = 3000;
-    const sliderMax = 30000;
+    const sliderMin = STEPS_GOAL_SLIDER_MIN;
+    const sliderMax = STEPS_GOAL_SLIDER_MAX;
     const stepsGoal = Math.max(sliderMin, Math.min(sliderMax, data.stepsGoal ?? defaultStepsGoal));
     const hasStepsHistory = stepsStats.daysWithData >= STEPS_HISTORY_MIN_DAYS && !stepsStats.fallback;
 
@@ -2608,32 +2692,61 @@
     const bonusKm = bonusSteps * 0.7 / 1000;
     const bonusKcal = Math.round(coef * weight * bonusKm);
 
-    const sliderPercent = Math.min(100, Math.max(0, ((stepsGoal - sliderMin) / (sliderMax - sliderMin)) * 100));
-    const advicePercent = Math.min(100, Math.max(0, ((stepsStats.recommended - sliderMin) / (sliderMax - sliderMin)) * 100));
+    const adviceValue = Math.max(
+      sliderMin,
+      Math.min(sliderMax, Math.round(Number(stepsStats.recommended) || defaultStepsGoal))
+    );
+    const advicePercent = Math.min(
+      100,
+      Math.max(0, stepsGoalSliderValueToRatio(adviceValue, sliderMin, sliderMax) * 100)
+    );
+    const adviceLabel = `${hasStepsHistory ? 'Совет' : 'Старт'} · ${adviceValue.toLocaleString('ru-RU')}`;
+    const awayFromAdvice = Math.round(stepsGoal) !== adviceValue;
     const reason = stepsStats.reasonLine || 'Сдвиньте пальцем, если день будет другим';
+
+    const restoreAdvice = (event) => {
+      if (event) {
+        if (typeof event.preventDefault === 'function') event.preventDefault();
+        if (typeof event.stopPropagation === 'function') event.stopPropagation();
+      }
+      onChange({ ...data, stepsGoal: adviceValue });
+    };
 
     return React.createElement('div', { className: 'mc-steps-step' },
       React.createElement('div', { className: 'mc-step-kicker' }, 'Шаги на сегодня'),
-      React.createElement('div', { className: 'mc-hero-number', style: { fontSize: 54 } },
-        Math.round(stepsGoal).toLocaleString('ru-RU'),
-        React.createElement('span', { className: 'mc-steps-unit' }, ' шагов')
+      React.createElement('div', {
+        className: 'mc-steps-hero' + (awayFromAdvice ? ' mc-steps-hero--custom' : '')
+      },
+        React.createElement('span', { className: 'mc-steps-hero-value' },
+          Math.round(stepsGoal).toLocaleString('ru-RU')
+        ),
+        React.createElement('span', { className: 'mc-steps-unit' }, 'шагов')
       ),
       React.createElement('div', { className: 'mc-recorded-sub', style: { textAlign: 'center', fontWeight: 600 } }, reason),
       React.createElement('div', { className: 'mc-steps-slider-container', style: { width: '100%', marginTop: 20 } },
         React.createElement('div', { style: { position: 'relative', height: 17 } },
-          React.createElement('div', {
+          React.createElement('button', {
+            type: 'button',
             className: 'mc-steps-advice-mark',
-            style: { left: `${advicePercent}%` }
-          }, 'Совет')
+            style: { left: `${advicePercent}%` },
+            onClick: restoreAdvice,
+            'aria-label': hasStepsHistory
+              ? `Вернуть совет ${adviceValue.toLocaleString('ru-RU')} шагов`
+              : `Вернуть старт ${adviceValue.toLocaleString('ru-RU')} шагов`
+          }, adviceLabel)
         ),
         React.createElement(DragValueSlider, {
           className: 'mc-v4-scale',
           variant: 'v4',
+          fill: awayFromAdvice ? 'act' : undefined,
           min: sliderMin,
           max: sliderMax,
           step: 500,
           value: stepsGoal,
           thumbSize: 22,
+          valueToRatio: stepsGoalSliderValueToRatio,
+          ratioToValue: stepsGoalSliderRatioToValue,
+          stepForValue: stepsGoalSliderStepForValue,
           onValue: (nextValue) => onChange({ ...data, stepsGoal: nextValue }),
           ariaLabel: 'Цель по шагам',
           style: { marginTop: 0 }
@@ -2650,7 +2763,9 @@
       React.createElement('div', {
         className: 'mc-recorded-hint',
         style: { textAlign: 'center', marginTop: 26 }
-      }, 'План на день — его видит куратор. Расход считается по факту пройденного.')
+      }, hasStepsHistory
+        ? 'План на день — его видит куратор. Расход считается по факту пройденного.'
+        : 'Через несколько дней цифра начнёт подстраиваться под вас.')
     );
   }
 
@@ -5313,9 +5428,42 @@
     return 'отлично';
   }
 
+  function getColdExposureStreak(dateKey = getTodayKey()) {
+    let streak = 0;
+    const anchor = new Date(`${dateKey}T12:00:00`);
+    if (Number.isNaN(anchor.getTime())) return 0;
+    const toKey = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
+    for (let i = 1; i <= 60; i += 1) {
+      const d = new Date(anchor);
+      d.setDate(d.getDate() - i);
+      const day = readDayData(toKey(d), {}) || {};
+      const type = day?.coldExposure?.type;
+      if (type && type !== 'none') streak += 1;
+      else break;
+    }
+    return streak;
+  }
+
+  function formatColdStreakLabel(streak) {
+    const n = Number(streak) || 0;
+    if (n <= 0) return null;
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    let word = 'дней';
+    if (mod10 === 1 && mod100 !== 11) word = 'день';
+    else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) word = 'дня';
+    return `${n} ${word} подряд`;
+  }
+
   function MorningRestStepComponent({ data, onChange, context }) {
     const coldType = data.coldType || 'none';
-    const coldOpen = data.coldOpen === true || (coldType !== 'none' && data.coldPicked === true);
+    const coldFocus = data.coldOpen === true;
+    const measurementsFocus = data.measurementsOpen === true;
     const showMeasurements = data.showMeasurements === true
       || (HEYS.Steps && typeof HEYS.Steps.shouldShowMeasurements === 'function' && HEYS.Steps.shouldShowMeasurements());
     const showRefeed = data.showRefeed === true
@@ -5328,47 +5476,269 @@
       const row = Array.isArray(catalog) ? catalog.find((item) => item.id === id || item.key === id) : null;
       return row?.name || row?.title || id;
     };
-    const setCold = (type) => {
-      const time = new Date().toTimeString().slice(0, 5);
-      onChange({ ...data, coldType: type, coldTime: type === 'none' ? null : (data.coldTime || time), coldPicked: true, coldOpen: type !== 'none' });
+    const nowTime = () => new Date().toTimeString().slice(0, 5);
+    const openColdLayer = () => {
+      const time = data.coldTime || nowTime();
+      onChange({
+        ...data,
+        coldOpen: true,
+        coldType: coldType !== 'none' ? coldType : 'coldShower',
+        coldTime: time,
+        coldPicked: true,
+        measurementsOpen: false
+      });
     };
+    const setColdType = (type) => {
+      onChange({
+        ...data,
+        coldOpen: true,
+        coldType: type,
+        coldTime: data.coldTime || nowTime(),
+        coldPicked: true
+      });
+    };
+    const setColdNone = () => {
+      onChange({
+        ...data,
+        coldOpen: false,
+        coldType: 'none',
+        coldTime: null,
+        coldPicked: true,
+        coldTimeOpen: false
+      });
+    };
+    const clearColdMark = () => {
+      onChange({
+        ...data,
+        coldOpen: false,
+        coldType: 'none',
+        coldTime: null,
+        coldPicked: false,
+        coldTimeOpen: false
+      });
+    };
+    const clearMeasurementsMark = () => {
+      onChange({
+        ...data,
+        measurementsOpen: false,
+        waist: '',
+        hips: '',
+        thigh: '',
+        biceps: '',
+        measurementsSide: null
+      });
+    };
+    const renderClearMark = (onClick, label = 'Убрать отметку') => React.createElement('button', {
+      type: 'button',
+      className: 'mc-rest-clear-mark',
+      onClick
+    },
+      React.createElement('svg', {
+        width: 13,
+        height: 13,
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 2.75,
+        strokeLinecap: 'round',
+        'aria-hidden': 'true'
+      }, React.createElement('path', { d: 'M18 6L6 18M6 6l12 12' })),
+      React.createElement('span', null, label)
+    );
+    const formatCmField = (raw) => {
+      if (raw == null || raw === '') return '';
+      const n = Number(String(raw).replace(',', '.'));
+      if (!Number.isFinite(n) || n <= 0) return String(raw);
+      return n.toFixed(1).replace('.', ',');
+    };
+    const coldTimeLabel = (data.coldTime && String(data.coldTime).slice(0, 5)) || nowTime();
+    const parseColdTime = (raw) => {
+      const parts = String(raw || coldTimeLabel).split(':');
+      let hours = Math.max(0, Math.min(23, Number(parts[0]) || 0));
+      let minutes = Math.max(0, Math.min(59, Number(parts[1]) || 0));
+      // TimePicker minutes step is 5 — snap for wheel highlight
+      minutes = Math.round(minutes / 5) * 5;
+      if (minutes === 60) {
+        minutes = 0;
+        hours = (hours + 1) % 24;
+      }
+      return { hours, minutes };
+    };
+    const coldClock = parseColdTime(data.coldTime);
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const setColdHours = (hours) => {
+      onChange({ ...data, coldTime: `${pad2(hours)}:${pad2(coldClock.minutes)}` });
+    };
+    const setColdMinutes = (minutes) => {
+      onChange({ ...data, coldTime: `${pad2(coldClock.hours)}:${pad2(minutes)}` });
+    };
+    const setColdClock = (hours, minutes) => {
+      onChange({ ...data, coldTime: `${pad2(hours)}:${pad2(minutes)}` });
+    };
+    const TimePicker = HEYS.StepModal?.TimePicker;
 
     const lastMeasurements = (HEYS.Steps && typeof HEYS.Steps.getLastMeasurements === 'function')
       ? HEYS.Steps.getLastMeasurements()
       : getLastMeasurements();
+    const openMeasurementsLayer = () => {
+      const last = lastMeasurements || {};
+      const side = data.measurementsSide || getMeasurementSide() || 'left';
+      onChange({
+        ...data,
+        measurementsOpen: true,
+        coldOpen: false,
+        waist: data.waist !== undefined && data.waist !== '' ? data.waist : formatCmField(last.waist),
+        hips: data.hips !== undefined && data.hips !== '' ? data.hips : formatCmField(last.hips),
+        thigh: data.thigh !== undefined && data.thigh !== '' ? data.thigh : formatCmField(last.thigh),
+        biceps: data.biceps !== undefined && data.biceps !== '' ? data.biceps : formatCmField(last.biceps),
+        measurementsSide: side
+      });
+    };
     const measurementHint = lastMeasurements?.daysAgo == null
       ? 'Ещё не было замеров'
       : (lastMeasurements.daysAgo === 0
         ? 'Сегодня уже были'
         : `Прошло ${lastMeasurements.daysAgo} ${lastMeasurements.daysAgo === 1 ? 'день' : (lastMeasurements.daysAgo >= 2 && lastMeasurements.daysAgo <= 4 ? 'дня' : 'дней')} с прошлых`);
     const restIsSparse = planned.length === 0 && !showMeasurements && !showRefeed;
+    const coldNoneSelected = data.coldPicked === true && coldType === 'none' && !coldFocus;
+    const coldStreakLabel = formatColdStreakLabel(
+      data.coldStreak != null ? data.coldStreak : getColdExposureStreak(context?.dateKey || getTodayKey())
+    );
+    const measureSide = data.measurementsSide || getMeasurementSide() || 'left';
+    const measureFields = [
+      { key: 'waist', label: 'Талия' },
+      { key: 'hips', label: 'Бёдра' },
+      { key: 'thigh', label: 'Бедро' },
+      { key: 'biceps', label: 'Бицепс' }
+    ];
+
+    if (measurementsFocus) {
+      return React.createElement('div', { className: 'mc-rest-step mc-rest-step--layer' },
+        React.createElement('div', { className: 'mc-rest-layer-title' }, 'Замеры'),
+        React.createElement('div', { className: 'mc-rest-layer-hint' },
+          measurementHint === 'Ещё не было замеров'
+            ? 'Сантиметр честнее весов на короткой дистанции.'
+            : `${measurementHint}. Сантиметр честнее весов на короткой дистанции.`
+        ),
+        React.createElement('div', { className: 'mc-rest-measure-list' },
+          measureFields.map((row) => React.createElement('label', {
+            key: row.key,
+            className: 'mc-rest-measure-row'
+          },
+            React.createElement('span', { className: 'mc-rest-measure-label' }, row.label),
+            React.createElement('span', { className: 'mc-rest-measure-value' },
+              React.createElement('input', {
+                type: 'text',
+                inputMode: 'decimal',
+                className: 'mc-rest-measure-input',
+                value: data[row.key] ?? '',
+                placeholder: '—',
+                'aria-label': `${row.label}, см`,
+                onChange: (e) => onChange({ ...data, [row.key]: e.target.value })
+              }),
+              React.createElement('span', { className: 'mc-rest-measure-unit' }, 'см')
+            )
+          ))
+        ),
+        React.createElement('div', { className: 'mc-rest-measure-side' },
+          React.createElement('span', { className: 'mc-rest-measure-side-label' }, 'Сторона'),
+          React.createElement('div', { className: 'mc-rest-measure-side-pills' },
+            React.createElement('button', {
+              type: 'button',
+              className: 'mc-rest-measure-side-pill' + (measureSide === 'left' ? ' is-on' : ''),
+              onClick: () => {
+                setMeasurementSide('left');
+                onChange({ ...data, measurementsSide: 'left' });
+              }
+            }, 'Левая'),
+            React.createElement('button', {
+              type: 'button',
+              className: 'mc-rest-measure-side-pill' + (measureSide === 'right' ? ' is-on' : ''),
+              onClick: () => {
+                setMeasurementSide('right');
+                onChange({ ...data, measurementsSide: 'right' });
+              }
+            }, 'Правая')
+          )
+        ),
+        renderClearMark(clearMeasurementsMark, 'Не сейчас'),
+        React.createElement('div', {
+          className: 'mc-recorded-hint mc-rest-clear-mark-hint mc-rest-measure-foot-hint'
+        }, 'Можно заполнить только талию. Пропустите — напомним через неделю.')
+      );
+    }
+
+    if (coldFocus) {
+      return React.createElement('div', { className: 'mc-rest-step mc-rest-step--layer' },
+        React.createElement('div', { className: 'mc-rest-cold' },
+          React.createElement('div', { className: 'mc-rest-cold-head' },
+            React.createElement('div', { className: 'mc-rest-cold-title' }, 'Холод сегодня был'),
+            coldStreakLabel && React.createElement('div', { className: 'mc-rest-cold-streak' }, coldStreakLabel)
+          ),
+          React.createElement('div', { className: 'mc-rest-cold-hint' },
+            'Выберите, что именно — от этого зависит инсулиновая волна дня.'
+          ),
+          React.createElement('div', { className: 'mc-rest-cold-types' },
+            [
+              { id: 'coldShower', label: 'Прохладный душ', wave: 'волна −5 %' },
+              { id: 'coldBath', label: 'Холодная ванна', wave: 'волна −10 %' },
+              { id: 'coldSwim', label: 'Прорубь', wave: 'волна −12 %' }
+            ].map((row) => React.createElement('button', {
+              key: row.id,
+              type: 'button',
+              className: 'mc-rest-type' + (coldType === row.id ? ' is-on' : ''),
+              onClick: () => setColdType(row.id)
+            },
+              React.createElement('span', null, row.label),
+              React.createElement('span', { className: 'mc-rest-wave' }, row.wave)
+            ))
+          ),
+          React.createElement('div', {
+            className: 'mc-rest-cold-time'
+          },
+            React.createElement('div', { className: 'mc-sleep-label mc-rest-cold-when-label' }, 'Когда'),
+            TimePicker && React.createElement(TimePicker, {
+              hours: coldClock.hours,
+              minutes: coldClock.minutes,
+              onHoursChange: setColdHours,
+              onMinutesChange: setColdMinutes,
+              onTimeChange: setColdClock,
+              hoursLabel: '',
+              minutesLabel: '',
+              display: null,
+              linkedScroll: true,
+              compact: true,
+              className: 'mc-rest-cold-clock'
+            })
+          )
+        ),
+        renderClearMark(clearColdMark),
+        React.createElement('div', {
+          className: 'mc-recorded-hint mc-rest-clear-mark-hint'
+        }, '«Не сегодня» тоже записывается — иначе вопрос вернётся через час.')
+      );
+    }
 
     return React.createElement('div', { className: 'mc-rest-step' },
       React.createElement('div', { className: 'mc-rest-cold' },
-        React.createElement('div', { className: 'mc-rest-cold-title' }, coldOpen && coldType !== 'none' ? 'Холод сегодня был' : 'Прохладный душ'),
+        React.createElement('div', { className: 'mc-rest-cold-head' },
+          React.createElement('div', { className: 'mc-rest-cold-title' }, 'Прохладный душ'),
+          coldStreakLabel && React.createElement('div', { className: 'mc-rest-cold-streak' }, coldStreakLabel)
+        ),
         React.createElement('div', { className: 'mc-rest-cold-hint' },
-          coldOpen && coldType !== 'none'
-            ? 'Выберите, что именно — от этого зависит инсулиновая волна дня.'
-            : 'Хотя бы тридцать секунд в конце обычного душа — этого достаточно.'
+          'Хотя бы тридцать секунд в конце обычного душа — этого достаточно.'
         ),
-        !(coldOpen && coldType !== 'none') && React.createElement('div', { className: 'mc-rest-cold-actions' },
-          React.createElement('button', { type: 'button', className: 'mc-pill mc-pill--act', onClick: () => setCold('coldShower') }, 'Было'),
-          React.createElement('button', { type: 'button', className: 'mc-pill mc-pill--quiet', onClick: () => setCold('none') }, 'Не сегодня')
-        ),
-        coldOpen && coldType !== 'none' && React.createElement('div', { className: 'mc-rest-cold-types' },
-          [
-            { id: 'coldShower', label: 'Прохладный душ', wave: 'волна −5 %' },
-            { id: 'coldBath', label: 'Холодная ванна', wave: 'волна −10 %' },
-            { id: 'coldSwim', label: 'Прорубь', wave: 'волна −12 %' }
-          ].map((row) => React.createElement('button', {
-            key: row.id,
+        React.createElement('div', { className: 'mc-rest-cold-actions' },
+          React.createElement('button', {
             type: 'button',
-            className: 'mc-rest-type' + (coldType === row.id ? ' is-on' : ''),
-            onClick: () => setCold(row.id)
-          },
-            React.createElement('span', null, row.label),
-            React.createElement('span', { className: 'mc-rest-wave' }, row.wave)
-          ))
+            className: 'mc-pill mc-pill--choice',
+            onClick: openColdLayer
+          }, 'Было'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'mc-pill mc-pill--choice' + (coldNoneSelected ? ' is-on' : ''),
+            onClick: setColdNone
+          }, 'Не сегодня')
         )
       ),
       planned.length > 0 && React.createElement('div', { className: 'mc-rest-card' },
@@ -5380,9 +5750,6 @@
         type: 'button',
         className: 'mc-rest-row',
         onClick: () => {
-          if (typeof context?.onClose === 'function' && HEYS.showCheckin?.morningRoutine) {
-            // вход в протокол зарядки — отдельный оверлей, не шаг чек-ина
-          }
           if (HEYS.MorningActivation?.openProtocol) {
             HEYS.MorningActivation.openProtocol();
           }
@@ -5397,24 +5764,13 @@
       showMeasurements && React.createElement('button', {
         type: 'button',
         className: 'mc-rest-row',
-        onClick: () => onChange({ ...data, measurementsOpen: !data.measurementsOpen })
+        onClick: openMeasurementsLayer
       },
         React.createElement('div', null,
           React.createElement('div', { className: 'mc-rest-card-title' }, 'Замеры'),
           React.createElement('div', { className: 'mc-rest-card-hint' }, measurementHint)
         ),
         React.createElement('span', { className: 'mc-rest-chevron' }, '›')
-      ),
-      data.measurementsOpen && React.createElement('div', { className: 'mc-rest-card' },
-        ['waist', 'hips', 'thigh', 'biceps'].map((key) => React.createElement('label', { key, className: 'mc-rest-field' },
-          React.createElement('span', null, key === 'waist' ? 'Талия' : key === 'hips' ? 'Бёдра' : key === 'thigh' ? 'Бедро' : 'Бицепс'),
-          React.createElement('input', {
-            type: 'text',
-            inputMode: 'decimal',
-            value: data[key] ?? '',
-            onChange: (e) => onChange({ ...data, [key]: e.target.value })
-          })
-        ))
       ),
       showRefeed && React.createElement('div', { className: 'mc-rest-row mc-rest-refeed' },
         React.createElement('div', null,
@@ -5424,12 +5780,12 @@
         React.createElement('div', { className: 'mc-rest-yesno' },
           React.createElement('button', {
             type: 'button',
-            className: 'mc-pill mc-pill--mini' + (data.isRefeedDay === true ? ' mc-pill--act' : ' mc-pill--quiet'),
+            className: 'mc-pill mc-pill--mini mc-pill--choice' + (data.isRefeedDay === true ? ' is-on' : ''),
             onClick: () => onChange({ ...data, isRefeedDay: true })
           }, 'Да'),
           React.createElement('button', {
             type: 'button',
-            className: 'mc-pill mc-pill--mini' + (data.isRefeedDay === false ? ' mc-pill--act' : ' mc-pill--quiet'),
+            className: 'mc-pill mc-pill--mini mc-pill--choice' + (data.isRefeedDay === false ? ' is-on' : ''),
             onClick: () => onChange({ ...data, isRefeedDay: false })
           }, 'Нет')
         )
@@ -5444,9 +5800,17 @@
     title: 'Остальное',
     hint: '',
     icon: '',
-    canSkip: true,
+    canSkip: false,
     nextLabel: 'Готово',
     component: MorningRestStepComponent,
+    showHeaderBack: (data) => !!(data && (data.coldOpen === true || data.measurementsOpen === true)),
+    applyHeaderBack: (data) => {
+      // Внутри блока шапка возвращает на обзор «Остальное», не на предыдущий шаг мастера.
+      const next = { ...(data || {}) };
+      next.measurementsOpen = false;
+      next.coldOpen = false;
+      return next;
+    },
     getInitialData: (context) => {
       const dateKey = context?.dateKey || getTodayKey();
       const dayData = readDayData(dateKey, {});
@@ -5459,8 +5823,9 @@
       const cold = dayData.coldExposure || {};
       return {
         coldType: cold.type || 'none',
-        coldTime: cold.time || new Date().toTimeString().slice(0, 5),
+        coldTime: cold.time || null,
         coldPicked: !!cold.type,
+        coldOpen: false,
         selected: planned,
         isRefeedDay: typeof dayData.isRefeedDay === 'boolean' ? dayData.isRefeedDay : null,
         showMeasurements: !!(HEYS.Steps?.shouldShowMeasurements?.()),
@@ -5505,6 +5870,8 @@
   });
 
   function CheckinRecordedStepComponent({ stepData, context }) {
+    // UI-гейт: цель — итог утра; главное — «На главную»; слой 1 — серия/норма/шаги;
+    // слой 2 — нет; критическое — норма и план не прятать.
     const dateKey = context?.dateKey || getTodayKey();
     const day = readDayData(dateKey, {}) || {};
     const profile = lsGet('heys_profile', {}) || {};
@@ -5512,42 +5879,72 @@
     const weight = Number(day.weightMorning);
     const streak = Number(HEYS.Day?.getStreak?.() || 0);
     const stepsGoal = Number(profile.stepsGoal) || 0;
-    const kcal = Number(HEYS.TDEE?.getMorningKcal?.(dateKey) || HEYS.TDEE?.getKcalTarget?.(profile) || profile.kcalTarget || 0);
-    const source = mapEstimateSource(day.weightMorningSource || day.weightMorningEstimateSource || 'profile');
-    const sourceLabel = source === 'estimated_avg' ? 'расчётный' : source === 'estimated_profile' ? 'из профиля' : '';
+    // Канон утренней нормы = resolveDailyTargets → optimum.
+    let kcal = 0;
+    try {
+      const targets = HEYS.TDEE?.resolveDailyTargets?.(profile, day);
+      kcal = Number(targets?.kcal) || 0;
+    } catch (_) { /* TDEE может ещё не загрузиться */ }
+    if (!(kcal > 0)) {
+      try {
+        const calc = HEYS.TDEE?.calculate?.(day, profile);
+        kcal = Number(calc?.optimum) || 0;
+      } catch (_) { /* noop */ }
+    }
+    if (!(kcal > 0)) kcal = Number(profile.kcalTarget || profile.optimum || 0) || 0;
+
+    const streakText = streak > 0
+      ? (estimated
+        ? `Серия — ${streak} ${pluralDays(streak)} подряд, сегодня без взвешивания`
+        : `Серия — ${streak} ${pluralDays(streak)} подряд`)
+      : (estimated ? 'Сегодня без взвешивания' : 'Утро закрыто');
+
+    const showWeightRow = estimated && Number.isFinite(weight) && weight > 0;
+
     return React.createElement('div', { className: 'mc-recorded' },
       React.createElement('div', { className: 'mc-recorded-check', 'aria-hidden': 'true' },
         React.createElement('svg', { width: 26, height: 26, viewBox: '0 0 24 24', fill: 'none', stroke: '#5c6a45', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
           React.createElement('path', { d: 'M5 13l4 4L19 7' })
         )
       ),
-      React.createElement('div', { className: 'mc-recorded-title', style: { marginTop: 16 } }, 'Чек-ин записан'),
-      React.createElement('div', { className: 'mc-recorded-sub' },
-        streak > 0
-          ? (estimated ? `Серия — ${streak} дней подряд, сегодня без взвешивания` : `Серия — ${streak} дней подряд`)
-          : (estimated ? 'Сегодня без взвешивания' : 'Утро закрыто')
-      ),
+      React.createElement('div', { className: 'mc-recorded-title' }, 'Чек-ин записан'),
+      React.createElement('div', { className: 'mc-recorded-sub' }, streakText),
       React.createElement('div', { className: 'mc-recorded-card' },
-        Number.isFinite(weight) && weight > 0 && React.createElement('div', { className: 'mc-recorded-row' },
+        showWeightRow && React.createElement('div', { className: 'mc-recorded-row' },
           React.createElement('span', null, 'Вес дня'),
-          React.createElement('span', null,
-            `${weight.toFixed(1).replace('.', ',')} кг`,
-            estimated && sourceLabel ? ` · ${sourceLabel}` : ''
+          React.createElement('span', { className: 'mc-recorded-row__value' },
+            `${weight.toFixed(1).replace('.', ',')} кг · `,
+            React.createElement('span', { className: 'mc-recorded-row__mark' }, 'расчётный')
           )
         ),
         kcal > 0 && React.createElement('div', { className: 'mc-recorded-row' },
           React.createElement('span', null, 'Норма на утро'),
-          React.createElement('span', null, `${Math.round(kcal).toLocaleString('ru-RU')} ккал`)
+          React.createElement('span', { className: 'mc-recorded-row__kcal' },
+            `${Math.round(kcal).toLocaleString('ru-RU')} ккал`
+          )
         ),
         stepsGoal > 0 && React.createElement('div', { className: 'mc-recorded-row' },
           React.createElement('span', null, 'План по шагам'),
-          React.createElement('span', null, Math.round(stepsGoal).toLocaleString('ru-RU'))
+          React.createElement('span', { className: 'mc-recorded-row__value' },
+            Math.round(stepsGoal).toLocaleString('ru-RU')
+          )
         )
       ),
-      estimated && React.createElement('div', { className: 'mc-recorded-hint' },
-        'График веса эту точку не ставит — в нём только реальные взвешивания.'
+      React.createElement('div', { className: 'mc-recorded-hint' },
+        estimated
+          ? 'График веса эту точку не ставит — в нём только реальные взвешивания.'
+          : 'Норма уточнится к вечеру по факту шагов и тренировок.'
       )
     );
+  }
+
+  function pluralDays(n) {
+    const abs = Math.abs(Number(n) || 0) % 100;
+    const d = abs % 10;
+    if (abs > 10 && abs < 20) return 'дней';
+    if (d === 1) return 'день';
+    if (d >= 2 && d <= 4) return 'дня';
+    return 'дней';
   }
 
   registerStep('checkinRecorded', {
@@ -5556,7 +5953,6 @@
     icon: '',
     hideProgressDots: true,
     hiddenFromProgress: true,
-    disableBack: true,
     nextLabel: 'На главную',
     component: CheckinRecordedStepComponent,
     getInitialData: () => ({}),
@@ -5594,6 +5990,9 @@
     getWeeklyStepsStats,
     computeAdaptiveStepsGoal,
     resolveStepsGoalContext,
+    stepsGoalSliderValueToRatio,
+    stepsGoalSliderRatioToValue,
+    stepsGoalSliderStepForValue,
     calcSleepHours,
     getCurrentDeficit,
     calcHouseholdKcal,

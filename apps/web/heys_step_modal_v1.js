@@ -57,7 +57,7 @@
     // Native interactives: button, input, a, label, textarea, select, summary.
     if (target.closest('button, input, a[href], label, textarea, select, summary')) return true;
     // App-specific scrollable / draggable widgets.
-    if (target.closest('.mc-quality-slider, .mood-rating-card, .mc-wheel-picker, .mc-progress-dot, .mc-header-btn')) return true;
+    if (target.closest('.mc-quality-slider, .mc-v4-scale, .mc-drag-slider, .mood-rating-card, .mc-wheel-picker, .mc-progress-dot, .mc-header-btn')) return true;
     // role="button" / contenteditable areas.
     if (target.closest('[role="button"], [contenteditable="true"]')) return true;
     return false;
@@ -614,6 +614,40 @@
     const secondaryLabel = isDailyLayout && !hideDailyFooter && currentConfig?.secondaryLabelWhen
       ? currentConfig.secondaryLabelWhen(currentStepData, { currentConfig, context })
       : null;
+    const dailyHeaderCaption = isDailyLayout && currentConfig
+      ? (typeof currentConfig.headerCaption === 'function'
+        ? currentConfig.headerCaption(currentStepData, { currentConfig, context })
+        : (currentConfig.headerCaption
+          || ((currentConfig.hideProgressDots || currentConfig.hiddenFromProgress) ? currentConfig.hint : null)))
+      : null;
+    const showLayerBack = !!(isDailyLayout
+      && currentConfig
+      && typeof currentConfig.showHeaderBack === 'function'
+      && currentConfig.showHeaderBack(currentStepData, { currentConfig, context }) === true);
+    const showDailyStepBack = !!(isDailyLayout
+      && currentConfig
+      && !currentConfig.disableBack
+      && (
+        showLayerBack
+        || currentStepIndex > 0
+        || (showDailyProgressDots && progressActiveIndex > 0)
+      ));
+    const handleDailyHeaderBack = () => {
+      if (showLayerBack && typeof currentConfig.applyHeaderBack === 'function') {
+        updateStepData(currentConfig.id, currentConfig.applyHeaderBack(currentStepData, { currentConfig, context }));
+        return;
+      }
+      handlePrev();
+    };
+    const resolvedNextLabel = currentConfig && typeof currentConfig.nextLabel === 'function'
+      ? currentConfig.nextLabel(currentStepData, { currentConfig, context })
+      : currentConfig?.nextLabel;
+    const liveInvalidReason = isDailyLayout
+      && currentConfig
+      && typeof currentConfig.getValidationMessage === 'function'
+      ? currentConfig.getValidationMessage(currentStepData, stepData)
+      : null;
+    const dailyPrimaryDisabled = savingStep || animating || liveInvalidReason != null;
     const requestedStepIdsKey = steps.map((step) => (
       typeof step === 'string' ? step : (step?.id || '')
     )).join('|');
@@ -1201,13 +1235,34 @@
           React.createElement('div', { className: 'mc-header mc-header--nav' },
             // Левая часть: Назад или Закрыть
             React.createElement('div', { className: 'mc-header-left' },
-              currentStepIndex > 0 && !currentConfig?.disableBack
+              (showDailyStepBack || (!isDailyLayout && currentStepIndex > 0 && !currentConfig?.disableBack))
                 ? React.createElement('button', {
                   className: 'mc-header-btn mc-header-btn--back',
-                  onClick: handlePrev,
+                  onClick: handleDailyHeaderBack,
                   'aria-label': 'Назад'
-                }, isDailyLayout ? '←' : '← Назад')
-                : (!isDailyLayout && onClose && React.createElement('button', {
+                },
+                  isDailyLayout
+                    ? React.createElement('svg', {
+                      className: 'mc-header-back-icon',
+                      width: 17,
+                      height: 17,
+                      viewBox: '0 0 24 24',
+                      fill: 'none',
+                      'aria-hidden': 'true'
+                    },
+                      React.createElement('path', {
+                        d: 'M15 18l-6-6 6-6',
+                        stroke: 'currentColor',
+                        strokeWidth: 2.75,
+                        strokeLinecap: 'round',
+                        strokeLinejoin: 'round'
+                      })
+                    )
+                    : '← Назад')
+                : (isDailyLayout
+                  ? React.createElement('span', { className: 'mc-header-spacer', 'aria-hidden': 'true' })
+                  : null)
+                || (!isDailyLayout && onClose && React.createElement('button', {
                   className: 'mc-header-btn mc-header-btn--close',
                   onClick: handleClose,
                   'aria-label': 'Закрыть'
@@ -1234,6 +1289,9 @@
                     minFontSize: 9
                   })
                 )),
+              !showDailyProgressDots && dailyHeaderCaption && React.createElement('div', {
+                className: 'mc-daily-header-caption'
+              }, dailyHeaderCaption),
               showDailyProgressDots && React.createElement('div', { className: 'mc-progress-dots mc-progress-dots--in-header mc-progress-dots--pills' },
                 progressStepConfigs.map((config, i) =>
                   React.createElement('button', {
@@ -1280,7 +1338,10 @@
             React.createElement('div', { className: 'mc-header-right' },
               headerRightContent
                 ? React.createElement('span', { className: 'mc-header-right-text' }, headerRightContent)
-                : (!isDailyLayout && !(hidePrimaryOnFirst && currentStepIndex === 0) && !currentConfig.hideHeaderNext && React.createElement('button', {
+                : (isDailyLayout
+                  ? React.createElement('span', { className: 'mc-header-spacer', 'aria-hidden': 'true' })
+                  : null)
+                || (!isDailyLayout && !(hidePrimaryOnFirst && currentStepIndex === 0) && !currentConfig.hideHeaderNext && React.createElement('button', {
                   className: 'mc-header-btn mc-header-btn--primary',
                   onClick: handleNext,
                   disabled: savingStep || animating
@@ -1305,8 +1366,8 @@
             })
           ),
 
-          // Validation message
-          validationMessage && React.createElement('div', { className: 'mc-validation-message' },
+          // Validation message — в daily причина живёт над кнопкой, без эмодзи
+          validationMessage && !isDailyLayout && React.createElement('div', { className: 'mc-validation-message' },
             React.createElement('span', { className: 'mc-validation-icon' }, '⚠️'),
             React.createElement('span', null, validationMessage)
           ),
@@ -1320,6 +1381,10 @@
           ),
 
           isDailyLayout && !hideDailyFooter && React.createElement('div', { className: 'mc-daily-footer' },
+            (liveInvalidReason || validationMessage) && React.createElement('div', {
+              className: 'mc-daily-footer-reason',
+              style: { textAlign: 'center', fontWeight: 600, fontSize: 13, color: '#a1471c', lineHeight: 1.45, marginBottom: 6 }
+            }, liveInvalidReason || validationMessage),
             secondaryLabel && React.createElement('button', {
               type: 'button',
               className: 'mc-btn mc-btn--ghost mc-daily-footer-secondary',
@@ -1330,12 +1395,12 @@
               type: 'button',
               className: 'mc-btn mc-btn--primary mc-daily-footer-primary',
               onClick: handleNext,
-              disabled: savingStep || animating
+              disabled: dailyPrimaryDisabled
             }, savingStep
               ? 'Сохраняю...'
               : currentStepIndex === totalSteps - 1
-                ? (currentConfig.nextLabel || finishLabel)
-                : (currentConfig.nextLabel || 'Дальше'))
+                ? (resolvedNextLabel || finishLabel)
+                : (resolvedNextLabel || 'Дальше'))
           ),
 
           // Daily tip
@@ -1346,21 +1411,14 @@
           }, HEYS.WaitMark?.render?.(React, {
             mode: 'screen',
             state: profileSaveFail ? 'fail' : profileSaveOk ? 'ok' : 'wait',
-            title: profileSaveFail ? 'Не удалось сохранить' : profileSaveOk ? 'Сохранено' : 'Сохраняем профиль',
+            title: profileSaveFail ? 'Профиль не сохранился' : profileSaveOk ? 'Сохранено' : 'Сохраняем профиль',
             text: profileSaveFail
-              ? 'Данные не потерялись — они на устройстве. Проверьте связь и попробуйте ещё раз.'
+              ? 'Ответы на месте, они на устройстве. Повторяем автоматически, пока облако не подтвердит запись.'
               : profileSaveOk ? 'Профиль обновлён.' : 'Пара секунд.',
             actions: profileSaveFail ? [
               React.createElement('button', {
                 key: 'retry', type: 'button', className: 'heys-wait-mark__btn', onClick: handleNext,
-              }, 'Повторить'),
-              React.createElement('a', {
-                key: 'curator',
-                className: 'heys-wait-mark__btn heys-wait-mark__btn--ghost',
-                href: 'https://t.me/heyslab_support_bot',
-                target: '_blank',
-                rel: 'noopener noreferrer',
-              }, 'Написать куратору'),
+              }, 'Повторить сейчас'),
             ] : null,
           }))
         )
