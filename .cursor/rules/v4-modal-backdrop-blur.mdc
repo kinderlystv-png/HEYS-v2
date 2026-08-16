@@ -1,0 +1,18 @@
+---
+description: Product modal scrim — только --v4-modal-backdrop-blur (2.5px)
+globs: apps/web/styles/**/*.css
+alwaysApply: false
+---
+
+# Подложка product-модалок
+
+Один стандарт scrim (не glass шапок/виджетов/fingers):
+
+- `--v4-modal-backdrop-blur: 2.5px`
+- `--v4-modal-backdrop-dim` / `--v4-modal-backdrop-dim-dark`
+
+Токены: `apps/web/styles/modules/002-ui-v4-palette-roles.css`.
+Эталон: daily чек-ин, кураторский лист, меню «Ещё» v4.
+
+Не вводить `blur(4|7|8|12|18)` на новых product-scrim. Копируй существующие
+классы с `var(--v4-modal-backdrop-blur)`.

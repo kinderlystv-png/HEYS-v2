@@ -12,11 +12,16 @@ const SHARED_SECTIONS = [
     heading: 'Актуальность контекстной документации',
     stopBefore: /^Tone,/u,
   },
+  { id: 'project-communication', heading: 'Project-specific communication' },
   { id: 'rustore-release-flow', heading: 'RuStore mobile release — проверенный flow' },
   { id: 'training-module-completeness', heading: 'Полнота модулей: релиз без MVP' },
   {
     id: 'training-mode-architecture',
     heading: 'Архитектура тренировочных режимов: общее ядро + контент домена',
+  },
+  {
+    id: 'smoke-simulation-required',
+    heading: 'Smoke-симуляция: не просить пользователя собирать условия',
   },
   { id: 'product-ui-invariants', heading: 'Product UI invariants' },
   { id: 'landing-copy', heading: 'Landing & user-facing copy' },
@@ -78,6 +83,12 @@ const DISTRIBUTED_INVARIANTS = [
     label: 'implementation protocol for non-trivial web/UI work',
     scopes: { agents: 'Web/UI local QA and coder handoff', claude: 'Local dev' },
     markers: [/«Протокол реализации»/u],
+  },
+  {
+    id: 'smoke-simulation-required-qa',
+    label: 'smoke-simulate rare flows instead of asking the user to reproduce them',
+    scopes: { agents: 'Web/UI local QA and coder handoff', claude: 'Local dev' },
+    markers: [/Смоук-симуляция обязательна/u],
   },
   {
     id: 'policy-parity-command',

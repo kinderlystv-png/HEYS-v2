@@ -9,13 +9,13 @@
       "autoPort": false
     },
     {
-      "name": "web",
+      "name": "web-only (avoid — no API)",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["run", "dev:web"],
       "port": 3001
     },
     {
-      "name": "api",
+      "name": "api-only (avoid — use dev:local)",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["run", "dev:api"],
       "port": 4001

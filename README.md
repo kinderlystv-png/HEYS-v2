@@ -28,12 +28,13 @@ cd HEYS-v2
 # Install dependencies (using pnpm workspaces)
 pnpm install
 
-# Start development environment (Port 3001)
-pnpm dev
+# Full stack (API :4001 + web :3001) — всегда так для работы с продуктом
+pnpm dev:local
 
-# Or start specific applications
-pnpm dev:web      # Main web app on port 3001
+# Только landing (отдельное приложение)
 pnpm dev:landing  # Landing app on port 3003
+
+# Не использовать для HEYS web: dev:web без API → ERR_CONNECTION_REFUSED:4001
 
 # Web + IW config watcher (dev)
 pnpm --dir apps/web run dev:full
