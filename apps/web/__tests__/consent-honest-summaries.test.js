@@ -54,13 +54,14 @@ describe('honest consent summaries', () => {
     expect(text).toContain('Доступ к HEYS, условия тарифа и отмены.');
     expect(text).toContain('Обработка персональных данных');
     expect(text).toContain('Храним имя, контакт и профиль в России');
-    expect(text).toContain('Замеры тела');
-    expect(text).toContain('Обхваты тела в дневнике');
-    expect(text).toContain('Добавки и витамины');
-    expect(text).toContain('Напоминания');
-    expect(text).toContain('Новости и советы');
-    expect(text).toContain('Необязательное отмечается тапом');
+    expect(text).toContain('Читать полностью →');
+    expect(text).toContain('Подписать оба');
+    expect(source).toContain("'Выйти без регистрации'");
+    // Canvas: необязательные только после двух обязательных
+    expect(text).not.toContain('Замеры тела');
+    expect(text).not.toContain('Можно включить, можно нет');
     expect(text).not.toContain('Вести замеры тела в дневнике');
+    expect(source).toContain('allRequiredAccepted && React.createElement(React.Fragment');
   });
 
   it('keeps the same plain-language contents for re-consent', () => {
@@ -77,7 +78,7 @@ describe('honest consent summaries', () => {
   it('stacks above bottom tabs so iPhone can tap Continue', () => {
     expect(source).toContain("data-heys-visible-frame': 'consent'");
     expect(source).toContain('zIndex: 11000');
-    expect(source).toContain("paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))'");
+    expect(source).toContain("padding: '10px 18px calc(14px + env(safe-area-inset-bottom, 0px))'");
   });
 
   it('offers measurements and supplements to existing clients without repeating the oferta', () => {

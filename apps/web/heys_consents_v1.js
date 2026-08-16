@@ -73,6 +73,62 @@
   // Подробнее в docs/legal/subprocessors.md §4.
   const SMS_VERIFICATION_ENABLED = false;
 
+  const CONSENT_SIGN_SHEET_DOCS = ['user_agreement', 'personal_data'];
+
+  // Inline shell — первый кадр с отступами (как канвас: backdrop full-screen + frame padding 12px).
+  const CONSENT_SIGN_ROOT_STYLE = {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 11000,
+    pointerEvents: 'none',
+  };
+
+  const CONSENT_SIGN_BACKDROP_STYLE = {
+    position: 'absolute',
+    inset: 0,
+    background: 'var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45))',
+    backdropFilter: 'blur(var(--v4-modal-backdrop-blur, 2.5px))',
+    WebkitBackdropFilter: 'blur(var(--v4-modal-backdrop-blur, 2.5px))',
+    pointerEvents: 'auto',
+  };
+
+  const CONSENT_SIGN_FRAME_STYLE = {
+    position: 'absolute',
+    inset: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'flex-end',
+    padding: 12,
+    paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
+    boxSizing: 'border-box',
+    pointerEvents: 'none',
+  };
+
+  const CONSENT_SIGN_SHEET_STYLE = {
+    position: 'relative',
+    width: '100%',
+    borderRadius: 26,
+    boxSizing: 'border-box',
+    pointerEvents: 'auto',
+  };
+
+  function formatAccessCodeSignMeta(signedAt) {
+    const date = signedAt instanceof Date ? signedAt : new Date();
+    const day = date.getDate();
+    const month = date.toLocaleString('ru-RU', { month: 'long' });
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `Подпись — код доступа, ${day} ${month} в ${hours}:${minutes}`;
+  }
+
+  function renderConsentSignDoneIcon() {
+    return React.createElement('svg', {
+      width: 25, height: 25, viewBox: '0 0 24 24', fill: 'none',
+      stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round', strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+    }, React.createElement('path', { d: 'M20 6L9 17l-5-5' }));
+  }
+
   // =====================================================
   // Тексты документов
   // =====================================================
@@ -581,9 +637,10 @@
    * @param {function} onCancel - Вызывается при отказе (выход без принятия)
    * @param {function} onError - Вызывается при ошибке
    */
-  function ConsentScreen({ clientId, phone, outdatedTypes = [], onComplete, onCancel, onError }) {
+  function ConsentScreen({ clientId, phone, outdatedTypes = [], onComplete, onCancel, onError, diagnosticReplay = false }) {
     // Шаги: 'consents' → 'verify_code' → done
     // ВАЖНО: если SMS выключен — verify_code никогда не используется!
+    // HEYS_DEBUG_REPLAY_REGISTRATION: diagnosticReplay — тот же UI, без записи ПЭП
     const [step, setStep] = useState('consents');
     const [consents, setConsents] = useState({
       user_agreement: false,
@@ -606,6 +663,7 @@
     const isReadonlyHost = !!(typeof window !== 'undefined'
       && window.__HEYS_READONLY_MODE__
       && window.__HEYS_READONLY_MODE__.enabled);
+    const isDiagnosticReplay = diagnosticReplay === true;
     const outdatedTypeSet = new Set(
       (Array.isArray(outdatedTypes) ? outdatedTypes : [])
         .map(item => item?.type || item)
@@ -694,17 +752,24 @@
     const [signPinError, setSignPinError] = useState(false);
     const [signSuccess, setSignSuccess] = useState(false);
     const [signedConsentList, setSignedConsentList] = useState(null);
+    const [signedAt, setSignedAt] = useState(null);
+    const prevConsentStepRef = useRef(step);
 
     useEffect(() => {
-      if (step === 'access_code_sign' && accessSignPinApi) {
-        accessSignPinApi.resetDigits();
-        setSignAttemptsRemaining(3);
-        setSignPinError(false);
-        setSignSuccess(false);
-        setSignedConsentList(null);
-        setError(null);
+      if (step !== 'access_code_sign' || !accessSignPinApi) {
+        prevConsentStepRef.current = step;
+        return;
       }
-    }, [step]);
+      if (prevConsentStepRef.current === 'access_code_sign') return;
+      prevConsentStepRef.current = step;
+      accessSignPinApi.resetDigits();
+      setSignAttemptsRemaining(3);
+      setSignPinError(false);
+      setSignSuccess(false);
+      setSignedConsentList(null);
+      setSignedAt(null);
+      setError(null);
+    }, [step, accessSignPinApi]);
 
     const allRequiredAccepted = REQUIRED_CONSENTS.every(type => consents[type]);
     const requiredConsentReason = (() => {
@@ -832,6 +897,13 @@
         return;
       }
 
+      // HEYS_DEBUG_REPLAY_REGISTRATION — UI шторки кода, без записи ПЭП
+      if (isDiagnosticReplay) {
+        setError(null);
+        setStep('access_code_sign');
+        return;
+      }
+
       // SMS верификация отключена — используем только чекбоксы + логирование
       // Для health-data юридическая достаточность ПЭП подтверждается отдельно.
       if (!SMS_VERIFICATION_ENABLED || !HEYS.sms || !phone) {
@@ -860,7 +932,7 @@
       await sendVerificationCode();
       // Фокус на поле ввода
       setTimeout(() => codeInputRef.current?.focus(), 100);
-    }, [allRequiredAccepted, buildConsentList, clientId, phone, isReadonlyHost, completeWithoutWrite, finishConsentFlow, persistConsentsOrRequestAccessCode, onError, sendVerificationCode]);
+    }, [allRequiredAccepted, buildConsentList, clientId, phone, isReadonlyHost, isDiagnosticReplay, completeWithoutWrite, finishConsentFlow, persistConsentsOrRequestAccessCode, onError, sendVerificationCode]);
 
     // Старый handleSubmit для обратной совместимости (без верификации)
     const handleSubmit = useCallback(async () => {
@@ -892,6 +964,11 @@
 
     const handleAccessCodeSign = useCallback(async () => {
       if (signSuccess) {
+        if (isDiagnosticReplay) {
+          // HEYS_DEBUG_REPLAY_REGISTRATION — закрыть UI, не трогать push/флаги
+          onComplete?.(signedConsentList || buildConsentList('checkbox'));
+          return;
+        }
         await finishConsentFlow(signedConsentList || await buildConsentListForSigning(consents));
         return;
       }
@@ -903,6 +980,17 @@
 
       if (isReadonlyHost) {
         completeWithoutWrite();
+        return;
+      }
+
+      // HEYS_DEBUG_REPLAY_REGISTRATION — имитация подписи без API
+      if (isDiagnosticReplay) {
+        const signList = buildConsentList('access_code');
+        setSignedConsentList(signList);
+        setSignSuccess(true);
+        setSignedAt(new Date());
+        setSignPinError(false);
+        setError(null);
         return;
       }
 
@@ -932,6 +1020,7 @@
         consentsAPI.saveLocal(clientId, signList);
         setSignedConsentList(signList);
         setSignSuccess(true);
+        setSignedAt(new Date());
         setSignPinError(false);
         setError(null);
       } catch (err) {
@@ -940,7 +1029,7 @@
       } finally {
         setLoading(false);
       }
-    }, [accessSignCode, clientId, consents, signAttemptsRemaining, signSuccess, signedConsentList, finishConsentFlow, isReadonlyHost, completeWithoutWrite, onError, accessSignPinApi]);
+    }, [accessSignCode, clientId, consents, signAttemptsRemaining, signSuccess, signedConsentList, finishConsentFlow, isReadonlyHost, isDiagnosticReplay, completeWithoutWrite, onComplete, onError, accessSignPinApi, buildConsentList]);
 
     const signAutoSubmitLockRef = useRef(false);
     useEffect(() => {
@@ -954,49 +1043,102 @@
     }, [step, signSuccess, loading, accessSignPinApi?.isComplete, handleAccessCodeSign]);
 
     if (step === 'access_code_sign') {
+      const signedDocRows = (signedConsentList || [])
+        .filter((item) => item?.granted && CONSENT_SIGN_SHEET_DOCS.includes(item.type));
+      const signedDocsForDisplay = signedDocRows.length
+        ? signedDocRows
+        : CONSENT_SIGN_SHEET_DOCS.map((type) => ({
+          type,
+          granted: true,
+          version: CURRENT_VERSIONS[type] || '1.0',
+        }));
+
       return React.createElement('div', {
         ref: screenRef,
-        'data-heys-visible-frame': 'consent-sign',
+        'data-heys-visible-frame': signSuccess ? 'consent-signed' : 'consent-sign',
         className: 'heys-consent-sign-root',
+        style: CONSENT_SIGN_ROOT_STYLE,
       },
         React.createElement('div', {
           className: 'heys-consent-sign-backdrop',
-          onClick: () => { if (!loading && typeof onCancel === 'function') onCancel(); },
+          style: CONSENT_SIGN_BACKDROP_STYLE,
+          onClick: () => { if (!loading && !signSuccess && typeof onCancel === 'function') onCancel(); },
         }),
         React.createElement('div', {
-          className: 'heys-consent-sign-sheet',
-          role: 'dialog',
-          'aria-modal': 'true',
-          'aria-label': 'Подписание',
+          className: 'heys-consent-sign-frame',
+          style: CONSENT_SIGN_FRAME_STYLE,
         },
-          React.createElement('div', { className: 'heys-consent-sign-sheet__handle', 'aria-hidden': 'true' }),
-          React.createElement('div', { className: 'heys-consent-sign-sheet__title' }, 'Подпишите документы'),
-          !signSuccess && React.createElement('p', { className: 'heys-consent-sign-sheet__hint' },
-            'Введите код доступа — он заменяет собственноручную подпись.',
-          ),
+          React.createElement('div', {
+            className: 'heys-consent-sign-sheet'
+              + (signSuccess ? ' heys-consent-sign-sheet--done' : ' heys-consent-sign-sheet--sign'),
+            style: CONSENT_SIGN_SHEET_STYLE,
+            role: 'dialog',
+            'aria-modal': 'true',
+            'aria-label': signSuccess ? 'Документы подписаны' : 'Подписание',
+          },
           signSuccess
-            ? React.createElement('div', { className: 'heys-consent-sign-sheet__success', role: 'status' },
-              `Подписано ${new Date().toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}`,
+            ? React.createElement(React.Fragment, null,
+              React.createElement('div', { className: 'heys-consent-sign-sheet__done', role: 'status' },
+                React.createElement('span', { className: 'heys-consent-sign-sheet__done-icon' },
+                  renderConsentSignDoneIcon()
+                ),
+                React.createElement('div', { className: 'heys-consent-sign-sheet__done-title' },
+                  'Документы подписаны'
+                ),
+                React.createElement('div', { className: 'heys-consent-sign-sheet__done-meta' },
+                  formatAccessCodeSignMeta(signedAt)
+                )
+              ),
+              React.createElement('div', { className: 'heys-consent-sign-sheet__doc-card' },
+                signedDocsForDisplay.map((item, index) => {
+                  const label = CONSENT_TEXTS.checkboxes[item.type]?.screenLabel
+                    || CONSENT_TEXTS.checkboxes[item.type]?.label
+                    || item.type;
+                  const version = item.version || CURRENT_VERSIONS[item.type] || '1.0';
+                  return React.createElement(React.Fragment, { key: item.type },
+                    index > 0 && React.createElement('div', {
+                      className: 'heys-consent-sign-sheet__doc-divider',
+                      'aria-hidden': 'true',
+                    }),
+                    React.createElement('div', { className: 'heys-consent-sign-sheet__doc-row' },
+                      React.createElement('span', { className: 'heys-consent-sign-sheet__doc-name' }, label),
+                      React.createElement('span', { className: 'heys-consent-sign-sheet__doc-version' }, `в. ${version}`)
+                    )
+                  );
+                })
+              ),
+              React.createElement('p', { className: 'heys-consent-sign-sheet__done-note' },
+                'Копия подписи хранится в профиле — её видно в настройках'
+              ),
+              React.createElement('button', {
+                type: 'button',
+                className: 'heys-consent-sign-sheet__primary heys-consent-sign-sheet__primary--continue',
+                disabled: !!loading,
+                onClick: handleAccessCodeSign,
+              }, 'Продолжить')
             )
-            : pinKeypadKit
-              ? pinKeypadKit.renderPinKeypadSection({
-                pin: accessSignPinApi,
-                label: '',
-                labelClassName: 'heys-auth-label',
-                sectionClassName: 'heys-auth-pin-section space-y-3 is-active'
-                  + (signPinError ? ' is-error' : ''),
-                gridClassName: signPinError ? 'is-error' : '',
-                keypadRef: accessSignKeypadRef,
-              })
-              : null,
-          error && React.createElement('div', { className: 'heys-consent-sign-sheet__error', role: 'alert' }, error),
-          signSuccess && React.createElement('div', { className: 'heys-consent-sign-sheet__actions' },
-            React.createElement('button', {
-              type: 'button',
-              className: 'heys-consent-sign-sheet__primary',
-              onClick: handleAccessCodeSign,
-            }, 'Готово'),
-          ),
+            : React.createElement(React.Fragment, null,
+              React.createElement('div', { className: 'heys-consent-sign-sheet__title' }, 'Подпишите документы'),
+              React.createElement('p', { className: 'heys-consent-sign-sheet__hint' },
+                'Введите код доступа — он заменяет собственноручную подпись.',
+              ),
+              pinKeypadKit
+                ? pinKeypadKit.renderPinKeypadSection({
+                  pin: accessSignPinApi,
+                  label: '',
+                  labelClassName: 'heys-auth-label',
+                  sectionClassName: 'heys-auth-pin-section space-y-3 is-active'
+                    + (signPinError ? ' is-error' : ''),
+                  gridClassName: signPinError ? 'is-error' : '',
+                  keypadRef: accessSignKeypadRef,
+                })
+                : null,
+              error && React.createElement('div', {
+                className: 'heys-consent-sign-sheet__error',
+                role: 'alert',
+              }, error)
+            )
+          )
         ),
         showFullText && React.createElement(FullTextModal, {
           type: showFullText,
@@ -1006,33 +1148,31 @@
       );
     }
 
+    // UI-гейт: цель — подписать обязательные; главное — Подписать оба / Подписать;
+    // слой 1 — документы и галочки; слой 2 — необязательные после обязательных;
+    // критическое — «Важно» и полный текст до галочки.
     return React.createElement('div', {
       ref: screenRef,
       'data-heys-visible-frame': 'consent',
       className: 'fixed inset-0 flex flex-col',
       style: { backgroundColor: '#fffaf1', zIndex: 11000 }
     },
-      // Header
-      React.createElement('div', {
-        className: 'p-4 border-b',
-        style: { borderColor: '#e5e7eb' }
+      step !== 'consents' && React.createElement('div', {
+        className: 'p-4',
+        style: { paddingTop: 20 }
       },
         React.createElement('h1', {
-          className: 'text-xl font-semibold',
-          style: { color: '#18181b' }
-        }, step === 'access_code_sign'
-          ? 'Подпишите документы'
-          : (step === 'verify_code' ? 'Подтверждение' : 'Согласия и условия')),
+          style: { font: '700 20px/1.3 Figtree, system-ui, sans-serif', color: '#201e1d' }
+        }, step === 'verify_code' ? 'Подтверждение' : 'Подпишите документы'),
         React.createElement('p', {
-          className: 'text-sm mt-1',
-          style: { color: '#71717a' }
-        }, step === 'access_code_sign'
-          ? 'Введите код доступа — он заменяет собственноручную подпись.'
-          : (step === 'verify_code'
-            ? 'Введите код из SMS для подтверждения согласия на обработку данных о здоровье'
-            : (hasOutdatedDocuments
-              ? 'Проверьте содержание документов и подтвердите актуальные условия'
-              : 'Оба документа открываются целиком: отметка появится, когда дочитаете до конца.')))
+          style: {
+            marginTop: 8,
+            font: '500 12px/1.5 Figtree, system-ui, sans-serif',
+            color: 'rgba(0,0,0,.55)',
+          }
+        }, step === 'verify_code'
+          ? 'Введите код из SMS для подтверждения согласия на обработку данных о здоровье'
+          : 'Введите код доступа — он заменяет собственноручную подпись.')
       ),
 
       // READONLY: постоянный баннер — эталон для скринов, запись недоступна
@@ -1044,30 +1184,62 @@
 
       // Content - разные шаги
       step === 'consents' ? (
-        // Шаг 1: Чекбоксы согласий
         React.createElement('div', {
-          className: 'flex-1 overflow-auto p-4 space-y-4'
+          className: 'flex-1 overflow-auto',
+          style: { padding: '16px 18px 0' }
         },
-          !allRequiredAccepted && React.createElement('div', {
-            className: 'rounded-xl p-4',
-            style: { backgroundColor: '#f6e6dd' }
-          },
-            React.createElement('p', {
-              className: 'font-medium',
-              style: { color: '#a1471c' }
-            }, 'Важно'),
-            React.createElement('p', {
-              className: 'text-sm mt-1',
-              style: { color: 'rgba(0,0,0,.6)' }
-            }, CONSENT_TEXTS.disclaimer.short)
+          !allRequiredAccepted && React.createElement(React.Fragment, null,
+            React.createElement('div', {
+              style: {
+                font: '700 20px/1.3 Figtree, system-ui, sans-serif',
+                color: '#201e1d',
+                marginTop: 6,
+                textWrap: 'pretty',
+              }
+            }, 'Согласия и условия'),
+            React.createElement('div', {
+              style: {
+                marginTop: 8,
+                font: '500 12px/1.5 Figtree, system-ui, sans-serif',
+                color: 'rgba(0,0,0,.55)',
+                textWrap: 'pretty',
+              }
+            }, hasOutdatedDocuments
+              ? 'Проверьте содержание документов и подтвердите актуальные условия'
+              : 'Оба документа открываются целиком: отметка появится, когда дочитаете до конца.'),
+            React.createElement('div', {
+              style: {
+                backgroundColor: '#f6e6dd',
+                borderRadius: 18,
+                padding: '13px 15px',
+                marginTop: 16,
+              }
+            },
+              React.createElement('div', {
+                style: { font: '700 12px/1.4 Figtree, system-ui, sans-serif', color: '#a1471c' }
+              }, 'Важно'),
+              React.createElement('div', {
+                style: {
+                  marginTop: 4,
+                  font: '500 11.5px/1.5 Figtree, system-ui, sans-serif',
+                  color: 'rgba(0,0,0,.6)',
+                  textWrap: 'pretty',
+                }
+              }, CONSENT_TEXTS.disclaimer.short)
+            )
           ),
 
           React.createElement('div', {
-            className: 'space-y-3'
+            style: { display: 'flex', flexDirection: 'column', gap: allRequiredAccepted ? 6 : 8, marginTop: allRequiredAccepted ? 16 : 8 }
           },
             allRequiredAccepted && React.createElement('div', {
-              className: 'text-xs font-semibold tracking-widest uppercase',
-              style: { color: '#8a4a20', marginTop: 4, marginBottom: 8 }
+              style: {
+                font: '600 10px/1 Figtree, system-ui, sans-serif',
+                letterSpacing: '0.16em',
+                textTransform: 'uppercase',
+                color: '#8a4a20',
+                marginBottom: 2,
+              }
             }, 'Обязательные'),
             React.createElement(ConsentCheckbox, {
               type: 'user_agreement',
@@ -1093,55 +1265,66 @@
               onShowFull: () => setShowFullText('personal_data')
             }),
 
-            React.createElement('div', {
-              className: 'text-xs font-semibold tracking-widest uppercase',
-              style: { color: '#8a4a20', marginTop: 16 }
-            }, 'Можно включить, можно нет'),
+            allRequiredAccepted && React.createElement(React.Fragment, null,
+              React.createElement('div', {
+                style: {
+                  font: '600 10px/1 Figtree, system-ui, sans-serif',
+                  letterSpacing: '0.16em',
+                  textTransform: 'uppercase',
+                  color: '#8a4a20',
+                  marginTop: 10,
+                  marginBottom: 2,
+                }
+              }, 'Можно включить, можно нет'),
 
-            React.createElement(ConsentCheckbox, {
-              type: 'body_measurements',
-              checked: consents.body_measurements,
-              useScreenCopy: true,
-              onChange: () => handleToggle('body_measurements'),
-              config: CONSENT_TEXTS.checkboxes.body_measurements,
-              onShowFull: () => setShowFullText('body_measurements')
-            }),
+              React.createElement(ConsentCheckbox, {
+                type: 'body_measurements',
+                checked: consents.body_measurements,
+                useScreenCopy: true,
+                onChange: () => handleToggle('body_measurements'),
+                config: CONSENT_TEXTS.checkboxes.body_measurements,
+                onShowFull: () => setShowFullText('body_measurements')
+              }),
 
-            React.createElement(ConsentCheckbox, {
-              type: 'supplements_tracking',
-              checked: consents.supplements_tracking,
-              useScreenCopy: true,
-              onChange: () => handleToggle('supplements_tracking'),
-              config: CONSENT_TEXTS.checkboxes.supplements_tracking,
-              onShowFull: () => setShowFullText('supplements_tracking')
-            }),
+              React.createElement(ConsentCheckbox, {
+                type: 'supplements_tracking',
+                checked: consents.supplements_tracking,
+                useScreenCopy: true,
+                onChange: () => handleToggle('supplements_tracking'),
+                config: CONSENT_TEXTS.checkboxes.supplements_tracking,
+                onShowFull: () => setShowFullText('supplements_tracking')
+              }),
 
-            React.createElement(ConsentCheckbox, {
-              type: 'notifications',
-              checked: notificationsOptIn,
-              useScreenCopy: true,
-              onChange: () => setNotificationsOptIn(v => !v),
-              config: CONSENT_TEXTS.checkboxes.notifications
-            }),
+              React.createElement(ConsentCheckbox, {
+                type: 'notifications',
+                checked: notificationsOptIn,
+                useScreenCopy: true,
+                onChange: () => setNotificationsOptIn(v => !v),
+                config: CONSENT_TEXTS.checkboxes.notifications
+              }),
 
-            React.createElement(ConsentCheckbox, {
-              type: 'marketing',
-              checked: consents.marketing,
-              useScreenCopy: true,
-              onChange: () => handleToggle('marketing'),
-              config: CONSENT_TEXTS.checkboxes.marketing
-            }),
+              React.createElement(ConsentCheckbox, {
+                type: 'marketing',
+                checked: consents.marketing,
+                useScreenCopy: true,
+                onChange: () => handleToggle('marketing'),
+                config: CONSENT_TEXTS.checkboxes.marketing
+              }),
 
-            React.createElement('p', {
-              className: 'text-xs',
-              style: { color: 'rgba(0,0,0,.42)', marginTop: 12, lineHeight: 1.5 }
-            }, 'Необязательное отмечается тапом и меняется в настройках в любой момент. Заранее ничего не включено.')
+              React.createElement('p', {
+                style: {
+                  marginTop: 12,
+                  font: '500 11px/1.5 Figtree, system-ui, sans-serif',
+                  color: 'rgba(0,0,0,.42)',
+                  textWrap: 'pretty',
+                }
+              }, 'Необязательное отмечается тапом и меняется в настройках в любой момент. Заранее ничего не включено.')
+            )
           ),
 
-          // Error
           error && React.createElement('div', {
             className: 'rounded-xl p-4',
-            style: { backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }
+            style: { backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', marginTop: 12 }
           }, '❌ ', error)
         )
       ) : step === 'access_code_sign' ? (
@@ -1292,10 +1475,12 @@
 
       // Footer
       React.createElement('div', {
-        className: 'p-4 space-y-3',
         style: {
-          borderTop: '1px solid #e5e7eb',
-          paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))'
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4,
+          padding: '10px 18px calc(14px + env(safe-area-inset-bottom, 0px))',
+          backgroundColor: '#fffaf1',
         }
       },
         step === 'consents' ? (
@@ -1303,26 +1488,46 @@
             requiredConsentReason && React.createElement('div', {
               style: {
                 textAlign: 'center',
-                fontWeight: 600,
-                fontSize: 13,
+                font: '600 11.5px/1.45 Figtree, system-ui, sans-serif',
                 color: 'rgba(0,0,0,.5)',
-                lineHeight: 1.45,
               }
             }, requiredConsentReason),
             React.createElement('button', {
               onClick: handleProceedToVerify,
               disabled: !allRequiredAccepted || loading,
-              className: 'w-full py-4 rounded-xl font-semibold transition-all',
               style: {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: 48,
+                borderRadius: 999,
+                border: 'none',
+                font: '700 13px/1 Figtree, system-ui, sans-serif',
                 backgroundColor: allRequiredAccepted && !loading ? '#c67139' : '#f7efe2',
-                color: allRequiredAccepted && !loading ? '#fff' : 'rgba(0,0,0,.3)',
-                cursor: allRequiredAccepted && !loading ? 'pointer' : 'not-allowed'
+                color: allRequiredAccepted && !loading ? '#2b1608' : 'rgba(0,0,0,.3)',
+                cursor: allRequiredAccepted && !loading ? 'pointer' : 'not-allowed',
               }
             }, HEYS.WaitMark?.button?.(React, {
               busy: loading,
               idle: isReadonlyHost ? 'Продолжить' : (allRequiredAccepted ? 'Подписать' : 'Подписать оба'),
               busyLabel: 'Загружаем',
-            }) || (loading ? 'Загружаем…' : (isReadonlyHost ? 'Продолжить' : (allRequiredAccepted ? 'Подписать' : 'Подписать оба'))))
+            }) || (loading ? 'Загружаем…' : (isReadonlyHost ? 'Продолжить' : (allRequiredAccepted ? 'Подписать' : 'Подписать оба')))),
+            !allRequiredAccepted && onCancel && React.createElement('button', {
+              onClick: onCancel,
+              disabled: loading,
+              type: 'button',
+              style: {
+                minHeight: 40,
+                border: 'none',
+                background: 'transparent',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                font: '700 12px/1 Figtree, system-ui, sans-serif',
+                color: 'rgba(0,0,0,.5)',
+                cursor: loading ? 'not-allowed' : 'pointer',
+              }
+            }, 'Выйти без регистрации')
           )
         ) : step === 'access_code_sign' ? (
           React.createElement('button', {
@@ -1353,7 +1558,7 @@
           }) || (loading ? 'Проверяем…' : 'Подтвердить'))
         ),
 
-        // Кнопка "Назад" или "Выйти"
+        // Кнопка "Назад" для verify / access (не canvas-кадр согласий)
         step === 'verify_code' ? (
           React.createElement('button', {
             onClick: () => { setStep('consents'); setError(null); setCode(''); },
@@ -1368,14 +1573,7 @@
             className: 'w-full py-3 rounded-xl font-medium transition-all',
             style: { color: '#71717a' }
           }, '← Назад к согласиям')
-        ) : (
-          onCancel && React.createElement('button', {
-            onClick: onCancel,
-            disabled: loading,
-            className: 'w-full py-3 rounded-xl font-medium transition-all',
-            style: { color: '#71717a' }
-          }, '← Выйти без регистрации')
-        )
+        ) : null
       ),
 
       // Full text modal
@@ -1412,12 +1610,16 @@
     const lockUntilRead = requireRead && !hasRead && !checked;
     const canvasCard = useScreenCopy === true;
     const cardStyle = canvasCard
-      ? { backgroundColor: '#f7efe2', border: 'none' }
+      ? {
+        backgroundColor: '#f7efe2',
+        border: 'none',
+        borderRadius: compact ? 14 : 18,
+      }
       : (checked ? checkedStyle : uncheckedStyle);
     const boxStyle = canvasCard
       ? (checked
-        ? { border: 'none', backgroundColor: '#c67139' }
-        : { border: '2px solid rgba(0,0,0,.18)', backgroundColor: '#fffaf1' })
+        ? { border: 'none', backgroundColor: '#c67139', boxShadow: 'none' }
+        : { border: 'none', backgroundColor: '#fffaf1', boxShadow: 'inset 0 0 0 2px rgba(0,0,0,.18)' })
       : (checked
         ? { border: '2px solid #22c55e', backgroundColor: '#22c55e' }
         : { border: '2px solid #d4d4d8', backgroundColor: 'transparent' });
@@ -1429,52 +1631,91 @@
     };
 
     return React.createElement('label', {
-      className: 'flex items-start gap-3 p-4 rounded-xl cursor-pointer transition-all',
-      style: { ...cardStyle, padding: compact ? '11px 13px' : (canvasCard ? '11px 14px' : undefined) }
+      className: canvasCard ? '' : 'flex items-start gap-3 p-4 rounded-xl cursor-pointer transition-all',
+      style: canvasCard
+        ? {
+          ...cardStyle,
+          display: 'flex',
+          alignItems: compact ? 'center' : 'flex-start',
+          gap: 11,
+          padding: compact ? '11px 13px' : '11px 14px',
+          cursor: 'pointer',
+        }
+        : { ...cardStyle, padding: compact ? '11px 13px' : undefined }
     },
       React.createElement('div', {
-        className: 'w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5',
-        style: boxStyle
+        style: {
+          ...boxStyle,
+          width: 22,
+          height: 22,
+          borderRadius: 6,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flex: 'none',
+          marginTop: compact ? 0 : 1,
+        }
       },
-        checked && React.createElement('span', {
-          className: 'text-white text-sm',
-          style: canvasCard ? { color: '#fffaf1', fontWeight: 700 } : null
-        }, '✓')
+        checked && (canvasCard
+          ? React.createElement('svg', {
+            width: compact ? 12 : 12,
+            height: compact ? 12 : 12,
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            stroke: '#fffaf1',
+            strokeWidth: 3.5,
+            strokeLinecap: 'round',
+            'aria-hidden': 'true',
+          }, React.createElement('path', { d: 'M5 13l4 4L19 7' }))
+          : React.createElement('span', { className: 'text-white text-sm' }, '✓'))
       ),
 
       React.createElement('div', {
-        className: 'flex-1'
+        style: { flex: 1, minWidth: 0 }
       },
         React.createElement('span', {
-          className: 'text-sm',
-          style: { color: checked && canvasCard ? '#201e1d' : (canvasCard ? 'rgba(0,0,0,.55)' : '#3f3f46'), fontWeight: canvasCard ? 600 : undefined }
+          style: {
+            display: 'inline',
+            font: canvasCard
+              ? (compact ? '600 12px/1.35 Figtree, system-ui, sans-serif' : '600 12.5px/1.4 Figtree, system-ui, sans-serif')
+              : undefined,
+            color: checked && canvasCard ? '#201e1d' : (canvasCard ? 'rgba(0,0,0,.55)' : '#3f3f46'),
+          },
+          className: canvasCard ? undefined : 'text-sm'
         }, title),
 
         config.required && !compact && React.createElement('span', {
-          className: 'ml-2 text-xs',
-          style: { color: canvasCard ? '#8a4a20' : '#ef4444' }
+          style: { color: canvasCard ? '#8a4a20' : '#ef4444', marginLeft: 4 }
         }, '*'),
 
         !compact && (config.required || !useScreenCopy) && disclosure && React.createElement('div', {
-          className: 'mt-2 rounded-lg px-3 py-2',
           style: {
+            marginTop: 8,
             backgroundColor: '#fffaf1',
-            border: '1px solid #efe3cf'
+            borderRadius: 14,
+            padding: '9px 12px',
           }
         },
-          React.createElement('span', {
-            className: 'block text-xs font-semibold',
-            style: { color: '#5c6a45', letterSpacing: '0.01em' }
+          React.createElement('div', {
+            style: { font: '700 10.5px/1.3 Figtree, system-ui, sans-serif', color: '#5c6a45' }
           }, 'Коротко и честно'),
-          React.createElement('span', {
-            className: 'block text-xs mt-1',
-            style: { color: '#52525b', lineHeight: 1.45 }
+          React.createElement('div', {
+            style: {
+              marginTop: 4,
+              font: '500 11px/1.5 Figtree, system-ui, sans-serif',
+              color: 'rgba(0,0,0,.55)',
+              textWrap: 'pretty',
+            }
           }, disclosure)
         ),
 
         !config.required && optionalHint && React.createElement('span', {
-          className: 'block text-xs mt-1',
-          style: { color: 'rgba(0,0,0,.42)', lineHeight: 1.4 }
+          style: {
+            display: 'block',
+            marginTop: 3,
+            font: '500 10.5px/1.4 Figtree, system-ui, sans-serif',
+            color: 'rgba(0,0,0,.42)',
+          }
         }, optionalHint),
 
         !compact && config.link && (!useScreenCopy || config.required) && React.createElement('button', {
@@ -1484,8 +1725,21 @@
             e.stopPropagation();
             onShowFull?.();
           },
-          className: 'block mt-1 text-xs hover:underline',
-          style: { color: canvasCard ? '#8a4a20' : '#3b82f6', fontWeight: canvasCard ? 700 : undefined }
+          style: canvasCard
+            ? {
+              display: 'flex',
+              alignItems: 'center',
+              minHeight: 40,
+              marginTop: 0,
+              padding: 0,
+              border: 'none',
+              background: 'transparent',
+              font: '700 11.5px/1 Figtree, system-ui, sans-serif',
+              color: '#8a4a20',
+              cursor: 'pointer',
+            }
+            : { color: '#3b82f6' },
+          className: canvasCard ? undefined : 'block mt-1 text-xs hover:underline'
         }, 'Читать полностью →')
       ),
 
@@ -1651,12 +1905,66 @@
   })();
 
   /**
+   * Выносит метаданные документа в шапку экрана (канвас «Документ · чтение»).
+   * Юридический markdown не меняем — только presentation-слой для UI.
+   */
+  function prepareConsentMarkdown(md) {
+    const text = String(md || '').replace(/\r\n/g, '\n');
+    let title = '';
+    const h1Match = text.match(/^#\s+(.+)$/m);
+    if (h1Match) {
+      title = h1Match[1].replace(/\s*\([^)]*\)\s*$/g, '').trim();
+    }
+
+    let version = '';
+    let effectiveDate = '';
+    const versionMatch = text.match(/\*\*Версия:\*\*\s*([0-9][0-9.]*)/);
+    if (versionMatch) version = versionMatch[1].trim();
+    const effectiveMatch = text.match(/\*\*Дата вступления в силу:\*\*\s*([^<\n]+)/);
+    if (effectiveMatch) {
+      effectiveDate = effectiveMatch[1]
+        .replace(/<br\s*\/?>/gi, '')
+        .replace(/\s*г\.?\s*$/i, '')
+        .trim();
+    }
+
+    let body = text
+      .replace(/^#\s+.+\n+/, '')
+      .replace(/^>\s*[\s\S]*?\n\n---\n\n/m, '')
+      .replace(/^---\n\n/m, '');
+
+    return { title, version, effectiveDate, body };
+  }
+
+  function enhanceConsentContactSection(html) {
+    return String(html || '').replace(
+      /<h2 class="consent-doc-h2">13\. Контакты<\/h2>\s*<ul class="consent-doc-ul">([\s\S]*?)<\/ul>/,
+      (_, listBody) => (
+        '<h2 class="consent-doc-h2">13. Контакты</h2>'
+        + '<div class="consent-doc-contact-card">'
+        + '<ul class="consent-doc-contact-list">'
+        + listBody
+        + '</ul>'
+        + '</div>'
+      )
+    );
+  }
+
+  function parseConsentDocument(md) {
+    const presentation = prepareConsentMarkdown(md);
+    let html = parseMarkdown(presentation.body, { consentDoc: true });
+    html = enhanceConsentContactSection(html);
+    return { html, presentation };
+  }
+
+  /**
    * Markdown → HTML для модалок согласий.
    * Хэш подписи считается по LF-нормализованному исходнику, как в реестре.
-   * Поддержка: заголовки, blockquote (в т.ч. многострочный), списки ul/ol,
+   * Поддержка: заголовки, blockquote (в т.ч. многостричный), списки ul/ol,
    * таблицы, жирный/курсив, hr, ссылки, инлайн-код, literal br из шаблонов.
    */
-  function parseMarkdown(md) {
+  function parseMarkdown(md, options) {
+    const opts = options || {};
     if (!md) return '';
 
     let text = String(md)
@@ -1723,7 +2031,9 @@
       }
 
       if (/^---+$/.test(trimmed)) {
-        out.push('<hr class="my-4 border-zinc-300 dark:border-zinc-600">');
+        out.push(opts.consentDoc
+          ? '<hr class="consent-doc-hr">'
+          : '<hr class="my-4 border-zinc-300 dark:border-zinc-600">');
         i += 1;
         continue;
       }
@@ -1731,17 +2041,29 @@
       const heading = trimmed.match(/^(#{1,4})\s+(.+)$/);
       if (heading) {
         const level = heading[1].length;
-        const cls =
-          level === 1
-            ? 'text-2xl font-bold mb-4'
-            : level === 2
-              ? 'text-xl font-bold mt-8 mb-4'
-              : level === 3
-                ? 'text-lg font-semibold mt-6 mb-3'
-                : 'text-base font-semibold mt-4 mb-2';
-        out.push(
-          `<h${level} class="${cls}">${formatInline(heading[2])}</h${level}>`
-        );
+        if (opts.consentDoc) {
+          const clsMap = {
+            1: 'consent-doc-h1',
+            2: 'consent-doc-h2',
+            3: 'consent-doc-h3',
+            4: 'consent-doc-h4',
+          };
+          out.push(
+            `<h${level} class="${clsMap[level] || 'consent-doc-h4'}">${formatInline(heading[2])}</h${level}>`
+          );
+        } else {
+          const cls =
+            level === 1
+              ? 'text-2xl font-bold mb-4'
+              : level === 2
+                ? 'text-xl font-bold mt-8 mb-4'
+                : level === 3
+                  ? 'text-lg font-semibold mt-6 mb-3'
+                  : 'text-base font-semibold mt-4 mb-2';
+          out.push(
+            `<h${level} class="${cls}">${formatInline(heading[2])}</h${level}>`
+          );
+        }
         i += 1;
         continue;
       }
@@ -1752,9 +2074,9 @@
           parts.push(lines[i].replace(/^&gt;\s?/, ''));
           i += 1;
         }
-        out.push(
-          `<blockquote class="border-l-4 border-zinc-300 dark:border-zinc-600 pl-4 italic text-zinc-600 dark:text-zinc-400 my-2">${formatInline(parts.join(' '))}</blockquote>`
-        );
+        out.push(opts.consentDoc
+          ? `<blockquote class="consent-doc-bq">${formatInline(parts.join(' '))}</blockquote>`
+          : `<blockquote class="border-l-4 border-zinc-300 dark:border-zinc-600 pl-4 italic text-zinc-600 dark:text-zinc-400 my-2">${formatInline(parts.join(' '))}</blockquote>`);
         continue;
       }
 
@@ -1796,11 +2118,13 @@
       }
 
       if (isUl(line)) {
-        out.push('<ul class="my-2 list-disc pl-5">');
+        out.push(opts.consentDoc
+          ? '<ul class="consent-doc-ul">'
+          : '<ul class="my-2 list-disc pl-5">');
         while (i < lines.length && isUl(lines[i])) {
-          out.push(
-            `<li class="my-1">${formatInline(lines[i].replace(/^[-•] /, ''))}</li>`
-          );
+          out.push(opts.consentDoc
+            ? `<li class="consent-doc-li">${formatInline(lines[i].replace(/^[-•] /, ''))}</li>`
+            : `<li class="my-1">${formatInline(lines[i].replace(/^[-•] /, ''))}</li>`);
           i += 1;
         }
         out.push('</ul>');
@@ -1810,11 +2134,13 @@
       if (isOl(line)) {
         // Отдельный <ol> на каждый непрерывный блок — иначе list-decimal
         // нумерует сквозь весь документ (симптом «36.» вместо «4.»).
-        out.push('<ol class="my-2 list-decimal pl-5">');
+        out.push(opts.consentDoc
+          ? '<ol class="consent-doc-ol">'
+          : '<ol class="my-2 list-decimal pl-5">');
         while (i < lines.length && isOl(lines[i])) {
-          out.push(
-            `<li class="my-1">${formatInline(lines[i].replace(/^\d+\. /, ''))}</li>`
-          );
+          out.push(opts.consentDoc
+            ? `<li class="consent-doc-li">${formatInline(lines[i].replace(/^\d+\. /, ''))}</li>`
+            : `<li class="my-1">${formatInline(lines[i].replace(/^\d+\. /, ''))}</li>`);
           i += 1;
         }
         out.push('</ol>');
@@ -1830,7 +2156,9 @@
         paraParts.push(chunk);
         i += 1;
       }
-      out.push(`<p class="my-2">${formatInline(paraParts.join(' '))}</p>`);
+      out.push(opts.consentDoc
+        ? `<p class="consent-doc-p">${formatInline(paraParts.join(' '))}</p>`
+        : `<p class="my-2">${formatInline(paraParts.join(' '))}</p>`);
     }
 
     return out.join('\n');
@@ -1842,13 +2170,20 @@
    * Требует прокрутки до конца для подтверждения
    */
   function FullTextModal({ type, onClose, onAccept, acceptLabel, busy, error: externalError }) {
-    const [content, setContent] = useState(null);
+    const [docView, setDocView] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [retryCount, setRetryCount] = useState(0);
     const [hasScrolledToEnd, setHasScrolledToEnd] = useState(false);
     const [scrollProgress, setScrollProgress] = useState(0);
     const contentRef = useRef(null);
+    const screenLabel = CONSENT_TEXTS.checkboxes[type]?.screenLabel
+      || CONSENT_TEXTS.checkboxes[type]?.label
+      || type;
+    const progressPct = Math.round((hasScrolledToEnd ? 1 : scrollProgress) * 100);
+    const docTitle = docView?.presentation?.title || screenLabel;
+    const docVersion = docView?.presentation?.version || getDocExpectedVersion(type) || '';
+    const docEffectiveDate = docView?.presentation?.effectiveDate || '';
 
     const handleScroll = useCallback(() => {
       if (!contentRef.current) return;
@@ -1867,7 +2202,7 @@
 
     // Проверка при загрузке контента (если документ короткий)
     useEffect(() => {
-      if (content && contentRef.current) {
+      if (docView?.html && contentRef.current) {
         const { scrollHeight, clientHeight } = contentRef.current;
         // Если контент помещается без скролла — сразу разрешаем
         if (scrollHeight <= clientHeight + 10) {
@@ -1875,7 +2210,7 @@
           setScrollProgress(1);
         }
       }
-    }, [content]);
+    }, [docView]);
 
     useEffect(() => {
       async function loadDocument() {
@@ -1894,7 +2229,7 @@
 
         // Проверяем кеш (только если не retry)
         if (retryCount === 0 && docCache[type]) {
-          setContent(docCache[type]);
+          setDocView(docCache[type]);
           setLoading(false);
           return;
         }
@@ -1935,12 +2270,12 @@
           }
 
           // Теперь health_data имеет свой отдельный документ — парсим полностью
-          const html = parseMarkdown(markdown);
+          const parsed = parseConsentDocument(markdown);
 
           // Сохраняем в кеш
-          docCache[type] = html;
+          docCache[type] = parsed;
 
-          setContent(html);
+          setDocView(parsed);
           setError(null);
         } catch (err) {
           console.error('[Consents] Ошибка загрузки документа:', err);
@@ -1960,106 +2295,101 @@
     };
 
     return React.createElement('div', {
-      className: 'fixed inset-0 flex flex-col',
-      style: { backgroundColor: '#fffaf1', zIndex: 12000 }
+      className: 'consent-fulltext-backdrop',
+      style: { zIndex: 12000 }
     },
-      React.createElement('div', {
-        className: 'flex items-center justify-between px-2',
-        style: { minHeight: 52 }
-      },
-        React.createElement('button', {
-          onClick: onClose,
-          className: 'p-3 rounded-full',
-          style: { color: 'rgba(0,0,0,.45)' },
-          'aria-label': 'Закрыть'
-        }, '✕'),
-        React.createElement('h2', {
-          className: 'font-semibold text-center flex-1',
-          style: { color: '#201e1d', fontSize: 15 }
-        }, CONSENT_TEXTS.checkboxes[type]?.screenLabel || CONSENT_TEXTS.checkboxes[type]?.label || type),
-        React.createElement('span', { style: { width: 44 } })
-      ),
-      React.createElement('div', { style: { padding: '0 18px' } },
-        React.createElement('div', {
-          style: { height: 3, borderRadius: 999, background: 'rgba(0,0,0,.08)', marginTop: 2 }
-        },
-          React.createElement('div', {
-            style: {
-              width: `${Math.round((hasScrolledToEnd ? 1 : scrollProgress) * 100)}%`,
-              height: 3,
-              borderRadius: 999,
-              background: '#c67139'
-            }
-          })
-        )
-      ),
-
-      React.createElement('div', {
-        ref: contentRef,
-        onScroll: handleScroll,
-        className: 'flex-1 overflow-auto p-4'
-      },
-        loading
-          ? React.createElement('div', {
-            className: 'text-center py-8',
-            style: { color: '#71717a' }
-          }, 'Загрузка документа...')
-          : error
-            ? React.createElement('div', {
-              className: 'text-center py-8',
-              style: { color: '#ef4444' }
+      React.createElement('div', { className: 'consent-fulltext' },
+        React.createElement('div', { className: 'consent-fulltext__top' },
+          React.createElement('div', { className: 'consent-fulltext__header' },
+            React.createElement('button', {
+              type: 'button',
+              onClick: onClose,
+              className: 'consent-fulltext__close',
+              'aria-label': 'Закрыть'
             },
+              React.createElement('svg', {
+                width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none',
+                stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+                'aria-hidden': 'true',
+              },
+                React.createElement('path', { d: 'M18 6L6 18M6 6l12 12' })
+              )
+            ),
+            React.createElement('span', { className: 'consent-fulltext__screen-label' }, screenLabel),
+            React.createElement('span', { className: 'consent-fulltext__progress-label' }, `${progressPct} %`)
+          ),
+          React.createElement('div', { className: 'consent-fulltext__progress-track' },
+            React.createElement('div', {
+              className: 'consent-fulltext__progress-fill',
+              style: { width: `${progressPct}%` }
+            })
+          ),
+          React.createElement('div', {
+            className: 'consent-fulltext__bridge',
+            'aria-hidden': 'true'
+          })
+        ),
+
+        React.createElement('div', {
+          ref: contentRef,
+          onScroll: handleScroll,
+          className: 'consent-fulltext__scroll'
+        },
+        loading
+          ? React.createElement('div', { className: 'consent-fulltext__state' }, 'Загрузка документа...')
+          : error
+            ? React.createElement('div', { className: 'consent-fulltext__state consent-fulltext__state--error' },
               React.createElement('p', null, error),
               React.createElement('button', {
+                type: 'button',
                 onClick: handleRetry,
-                className: 'mt-4 text-sm underline',
-                style: { color: '#8a4a20' }
+                className: 'consent-fulltext__retry'
               }, 'Попробовать снова')
             )
-            : React.createElement('div', {
-              className: 'prose max-w-none text-sm leading-relaxed',
-              style: { color: '#3f3f46' },
-              dangerouslySetInnerHTML: { __html: content }
-            })
+            : React.createElement(React.Fragment, null,
+              React.createElement('div', { className: 'consent-fulltext__hero' },
+                React.createElement('h1', { className: 'consent-fulltext__title' }, docTitle),
+                (docVersion || docEffectiveDate) && React.createElement('div', { className: 'consent-fulltext__badges' },
+                  docVersion && React.createElement('span', { className: 'consent-fulltext__badge consent-fulltext__badge--version' }, `Версия ${docVersion}`),
+                  docEffectiveDate && React.createElement('span', { className: 'consent-fulltext__badge consent-fulltext__badge--date' }, `В силе с ${docEffectiveDate}`)
+                ),
+                React.createElement('div', { className: 'consent-fulltext__hero-divider' })
+              ),
+              React.createElement('div', {
+                className: 'consent-doc-body',
+                dangerouslySetInnerHTML: { __html: docView?.html || '' }
+              })
+            )
       ),
 
-      !loading && !error && !hasScrolledToEnd && React.createElement('div', {
-        className: 'px-4 py-2 text-center',
-        style: { color: 'rgba(0,0,0,.45)' }
-      },
-        React.createElement('p', { className: 'text-xs font-semibold' }, 'Долистайте до конца, чтобы принять')
-      ),
-
-      React.createElement('div', {
-        className: 'p-4 space-y-2',
-        style: { borderTop: '1px solid #e5e7eb' }
-      },
+      React.createElement('div', { className: 'consent-fulltext__footer' },
         externalError && React.createElement('div', {
-          className: 'rounded-lg px-3 py-2 text-sm',
-          style: { backgroundColor: '#fef2f2', color: '#b91c1c' },
+          className: 'consent-fulltext__alert',
           role: 'alert',
         }, externalError),
+        !loading && !error && !hasScrolledToEnd && React.createElement('p', {
+          className: 'consent-fulltext__scroll-hint'
+        }, 'Долистайте до конца, чтобы принять'),
         !loading && !error && React.createElement('button', {
+          type: 'button',
           onClick: onAccept,
           disabled: !!busy || !hasScrolledToEnd,
-          className: 'w-full py-3 rounded-xl font-semibold transition-all',
-          style: {
-            backgroundColor: hasScrolledToEnd ? (busy ? '#86efac' : '#c67139') : '#f7efe2',
-            color: hasScrolledToEnd ? '#fff' : 'rgba(0,0,0,.3)',
-            opacity: busy ? 0.8 : 1
-          }
+          className: 'consent-fulltext__accept'
+            + (hasScrolledToEnd ? ' is-ready' : '')
+            + (busy ? ' is-busy' : ''),
         }, HEYS.WaitMark?.button?.(React, {
           busy: !!busy,
           idle: (acceptLabel || 'Ознакомлен, принимаю'),
           busyLabel: 'Сохраняем',
         }) || (busy ? 'Сохраняем…' : (acceptLabel || 'Ознакомлен, принимаю'))),
 
-        hasScrolledToEnd && React.createElement('button', {
+        !loading && !error && hasScrolledToEnd && React.createElement('button', {
+          type: 'button',
           onClick: onClose,
           disabled: !!busy,
-          className: 'w-full py-3 rounded-xl font-medium',
-          style: { backgroundColor: 'transparent', color: 'rgba(0,0,0,.45)', opacity: busy ? 0.6 : 1 }
+          className: 'consent-fulltext__decline'
         }, 'Закрыть без принятия')
+      )
       )
     );
   }
@@ -2738,6 +3068,59 @@
     );
   }
 
+  // ── HEYS_DEBUG_REPLAY_REGISTRATION ─────────────────────────────────────
+  // Временный mount ConsentScreen без записи ПЭП. Grep чтобы выкинуть.
+  let diagnosticReplayHost = null;
+  let diagnosticReplayRoot = null;
+
+  function showDiagnosticReplay({ onComplete, onCancel } = {}) {
+    if (!React || !global.ReactDOM) {
+      onCancel?.({ error: 'react_unavailable' });
+      return;
+    }
+    if (!diagnosticReplayHost) {
+      diagnosticReplayHost = document.createElement('div');
+      diagnosticReplayHost.id = 'heys-diagnostic-replay-consent-root';
+      document.body.appendChild(diagnosticReplayHost);
+      diagnosticReplayRoot = global.ReactDOM.createRoot
+        ? global.ReactDOM.createRoot(diagnosticReplayHost)
+        : null;
+    }
+    const clientId =
+      (window.HEYS && window.HEYS.currentClientId) ||
+      localStorage.getItem('heys_client_current') || '';
+    const unmount = () => {
+      try {
+        if (diagnosticReplayRoot) {
+          diagnosticReplayRoot.render(null);
+        } else if (global.ReactDOM.unmountComponentAtNode) {
+          global.ReactDOM.unmountComponentAtNode(diagnosticReplayHost);
+        }
+      } catch (_) { /* noop */ }
+    };
+    const element = React.createElement(ConsentScreen, {
+      clientId,
+      phone: null,
+      diagnosticReplay: true,
+      onComplete: (list) => {
+        unmount();
+        onComplete?.(list);
+      },
+      onCancel: () => {
+        unmount();
+        onCancel?.();
+      },
+      onError: () => { /* swallow in diagnostic */ },
+    });
+    if (diagnosticReplayRoot) {
+      diagnosticReplayRoot.render(element);
+    } else if (global.ReactDOM.render) {
+      global.ReactDOM.render(element, diagnosticReplayHost);
+    } else {
+      onCancel?.({ error: 'react_dom_unavailable' });
+    }
+  }
+
   // ── Self-service ConsentScreen wrapper для re-consent flow ─────────────
   // Простая обёртка: пере-используем существующий ConsentScreen,
   // передаём clientId из текущей сессии, после complete — closе.
@@ -2794,6 +3177,7 @@
     ConsentOutdatedBanner,
     AgeGateModal,
     ReConsentScreen,
+    showDiagnosticReplay,
     shouldOfferOptionalFeatures,
 
     // Hook
@@ -2802,6 +3186,8 @@
     // Utils
     getCurrentLegalVersions,
     parseMarkdown,
+    parseConsentDocument,
+    prepareConsentMarkdown,
     normalizeLegalDocumentText
   });
 

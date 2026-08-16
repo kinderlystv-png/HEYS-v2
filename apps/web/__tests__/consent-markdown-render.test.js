@@ -29,11 +29,16 @@ function loadParseMarkdown() {
     useCallback: (callback) => callback,
     useRef: (initial) => ({ current: initial }),
     createElement: () => null,
+    Fragment: 'fragment',
   };
   try {
     // eslint-disable-next-line no-eval
     (0, eval)(source);
-    return window.HEYS.Consents.parseMarkdown;
+    return {
+      parseMarkdown: window.HEYS.Consents.parseMarkdown,
+      parseConsentDocument: window.HEYS.Consents.parseConsentDocument,
+      prepareConsentMarkdown: window.HEYS.Consents.prepareConsentMarkdown,
+    };
   } finally {
     window.HEYS = previousHEYS;
     window.React = previousReact;
@@ -41,10 +46,29 @@ function loadParseMarkdown() {
 }
 
 describe('consent markdown render', () => {
-  const parseMarkdown = loadParseMarkdown();
+  const { parseMarkdown, parseConsentDocument, prepareConsentMarkdown } = loadParseMarkdown();
 
   it('exports parseMarkdown', () => {
     expect(typeof parseMarkdown).toBe('function');
+    expect(typeof parseConsentDocument).toBe('function');
+    expect(typeof prepareConsentMarkdown).toBe('function');
+  });
+
+  it('prepareConsentMarkdown strips (Оферта) and metadata blockquote for canvas hero', () => {
+    const meta = prepareConsentMarkdown(offer);
+    expect(meta.title).toBe('Пользовательское соглашение');
+    expect(meta.version).toBeTruthy();
+    expect(meta.effectiveDate).toContain('августа');
+    expect(meta.body).not.toMatch(/^#\s+/m);
+    expect(meta.body).not.toContain('**Версия:**');
+  });
+
+  it('parseConsentDocument renders canvas typography classes, not prose italics', () => {
+    const parsed = parseConsentDocument(offer);
+    expect(parsed.html).toContain('consent-doc-h2');
+    expect(parsed.html).toContain('consent-doc-p');
+    expect(parsed.html).not.toContain('**Версия:**');
+    expect(parsed.html).not.toContain('Пользовательское соглашение (Оферта)');
   });
 
   it('renders literal <br> from legal templates as breaks, not text', () => {
@@ -96,5 +120,22 @@ describe('consent notifications default', () => {
     expect(source).not.toMatch(
       /notificationsOptIn,\s*setNotificationsOptIn\]\s*=\s*useState\(true\)/
     );
+  });
+});
+
+describe('PEP: обязательные согласия только после чтения', () => {
+  it('не ставит галочку обязательного без дочитывания — открывает полный текст', () => {
+    expect(source).toContain('readRequiredTypes');
+    expect(source).toContain('handleRequiredOrOptionalToggle');
+    expect(source).toContain('lockUntilRead');
+    expect(source).toContain("idle: isReadonlyHost ? 'Продолжить' : (allRequiredAccepted ? 'Подписать' : 'Подписать оба')");
+    expect(source).toMatch(/if \(isRequiredRead && !readRequiredTypes\[type\] && !consents\[type\]\)/);
+    expect(source).toContain('setShowFullText(type)');
+  });
+
+  it('кнопка «Ознакомлен» в полном тексте только после прокрутки', () => {
+    expect(source).toContain('!loading && !error && React.createElement(\'button\'');
+    expect(source).toContain('disabled: !!busy || !hasScrolledToEnd');
+    expect(source).toContain("idle: (acceptLabel || 'Ознакомлен, принимаю')");
   });
 });
