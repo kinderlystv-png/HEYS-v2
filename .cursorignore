@@ -9,3 +9,14 @@ apps/web/public/react-bundle.js.gz
 
 # --- Optional: large binary/reference dumps in repo root ---
 src/**/*.pdf
+
+# --- Legacy source concat bundles (generated; edit inputs in legacy-bundle-config.mjs) ---
+apps/web/**/*_bundle_v1.js
+
+# --- Reading book summaries (content data, rarely edited) ---
+apps/web/reading/books/*.js
+
+# --- Generated bundle manifests (CI/hooks rebuild; not agent edit targets) ---
+apps/web/bundle-manifest.json
+apps/web/public/bundle-manifest.json
+apps/web/public/lazy-manifest.json

@@ -515,7 +515,6 @@ button.messenger-day-checklist__chip:active {
    мерцание скелетона, подъезд модалки, пульс записи и волну проигрывания.
    Появление модалки остаётся, но без сдвига: иначе непонятно, что открылось. */
 @media (prefers-reduced-motion: reduce) {
-  .messenger-skeleton__bubble,
   .messenger-recording-dot,
   .msg-audio.is-playing .msg-audio-wave span {
     animation: none;
