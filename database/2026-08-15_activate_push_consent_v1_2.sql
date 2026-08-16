@@ -1,25 +1,32 @@
 -- Activate push-notifications consent 1.2.
 --
--- HALT: DO NOT APPLY.
--- Hash fba4df9d… is from an unsigned draft. After lawyer edits it will change.
--- legal_signoff_ref currently points at the draft itself, not a sign-off.
+-- Lawyer sign-off 16.08.2026: docs/release/vychitka-push-1.2-2026-08-16.md.
+-- Text: docs/legal/push-notifications-consent.md == the v1.2 snapshot, byte for
+-- byte. sha256 b1b03ad2… is recomputed from that signed text (the earlier
+-- draft hash fba4df9d… is dead, do not resurrect it).
 --
--- Deploy order after sign-off (same principle as the curator gate):
---   1) apply this SQL (registry first)
---   2) then frontend with LegalVersions.push_notifications = 1.2
--- Reverse order (frontend before registry) breaks signing for everyone:
--- consent_version_not_allowed. Caught locally 15.08.2026.
+-- DEPLOY ORDER IS INVERTED HERE — read before applying.
+-- The general rule is registry first, frontend second, because frontend ahead
+-- of registry gives consent_version_not_allowed. On 16.08 the frontend went
+-- first anyway (0552c9a5 bumped LegalVersions.push_notifications to 1.2 and
+-- shipped), so prod is already asking for 1.2 while the registry is on 1.1:
+-- nobody can sign, and nobody has signed 1.2.
+-- In that state applying this SQL BEFORE the corrected text reaches prod is
+-- the worse failure: the client would sign the old draft on screen while
+-- enforce_consent_document_proof stamps the hash of the new text. False proof.
+-- So, this once:
+--   1) ship the text (docs/legal + apps/web/public/docs/v1.2) and let the
+--      deploy go green;
+--   2) verify prod bytes:
+--      curl -s https://app.heyslab.ru/docs/v1.2/push-notifications-consent.md | sha256sum
+--      == b1b03ad270746c73af93a60cc36fbcf19a0e8bbacbe5766969a5ad83b9d29108
+--   3) only then apply this file.
+-- Until step 3 signing stays broken exactly as it is now — nothing degrades.
 --
--- Prod 15.08.2026: push_notifications 1.1 still active (99433c270c3432dd…).
--- Do not rewrite 1.1: that hash is registered proof.
+-- Do not rewrite 1.1: its hash (99433c270c3432dd…) is registered proof.
 --
--- To apply: delete the RAISE block below, recompute sha256 from the signed
--- text, then: bash scripts/db/psql.sh -f database/2026-08-15_activate_push_consent_v1_2.sql
-
-DO $$
-BEGIN
-  RAISE EXCEPTION 'DO NOT APPLY: push_notifications 1.2 is an unsigned draft (heys/2bab34). Recompute hash after lawyer sign-off, then registry before frontend.';
-END $$;
+-- File keeps its 2026-08-15 name (it was never applied); content finalized 16.08.
+-- Apply: bash scripts/db/psql.sh -f database/2026-08-15_activate_push_consent_v1_2.sql
 
 INSERT INTO public.legal_consent_registry (
   consent_type,
@@ -30,7 +37,7 @@ INSERT INTO public.legal_consent_registry (
   effective_at,
   legal_signoff_ref
 ) VALUES
-  ('push_notifications', '1.2', 'fba4df9d1c745e48654b50c509304ea993eaf623b85e967752747626d4dec43a', 'apps/web/public/docs/v1.2/push-notifications-consent.md', 'active', '2026-08-15 00:00:00+03', 'docs/release/push-consent-v1.2-draft-2026-08-15.md')
+  ('push_notifications', '1.2', 'b1b03ad270746c73af93a60cc36fbcf19a0e8bbacbe5766969a5ad83b9d29108', 'apps/web/public/docs/v1.2/push-notifications-consent.md', 'active', '2026-08-16 00:00:00+03', 'docs/release/vychitka-push-1.2-2026-08-16.md')
 ON CONFLICT (consent_type, document_version) DO UPDATE SET
   document_sha256 = EXCLUDED.document_sha256,
   document_path = EXCLUDED.document_path,

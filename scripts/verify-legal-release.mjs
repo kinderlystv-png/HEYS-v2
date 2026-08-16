@@ -16,6 +16,7 @@ const MIGRATION_PATHS = [
   'database/2026-08-14_activate_legal_v1_11.sql',
   'database/2026-08-15_activate_push_consent_v1_2.sql',
   'scripts/db/migrations/2026-08-15_curator_push_consent_gate_v1.sql',
+  'database/2026-08-16_activate_curator_push_consent_v1_1.sql',
 ];
 
 const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
