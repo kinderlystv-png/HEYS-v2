@@ -13350,9 +13350,9 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 /* Пользователи с "Уменьшить движение" в настройках ОС получат статичный UI */
 @media (prefers-reduced-motion: reduce) {
 
-  *,
-  *::before,
-  *::after {
+  *:not(.animate-always):not(.animate-always *),
+  *:not(.animate-always):not(.animate-always *)::before,
+  *:not(.animate-always):not(.animate-always *)::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

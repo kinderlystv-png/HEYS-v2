@@ -506,6 +506,17 @@ body:has(.page-reports) .hdr::after {
   border-color: var(--primary, #3b82f6);
 }
 
+.widgets-tab__edit-row {
+  display: flex;
+  justify-content: center;
+  padding: 4px 16px 12px;
+}
+
+.widgets-tab__edit-btn {
+  padding: 10px 16px;
+  margin: 0;
+}
+
 @media (hover: hover) {
   .widgets-tab__btn--primary:hover {
   background: var(--primary-dark, #2563eb);

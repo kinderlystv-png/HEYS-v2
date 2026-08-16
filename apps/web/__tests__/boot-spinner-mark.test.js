@@ -13,6 +13,7 @@ describe('cold-start spinner mark', () => {
   it('puts the 56 mark in #root instead of a chrome skeleton', () => {
     expect(html).toContain('data-heys-boot-mark="true"');
     expect(html).toContain('heys-boot-mark__spin');
+    expect(html).toMatch(/<span class="heys-boot-mark__spin"[\s\S]*?<svg width="26"/);
     expect(html).toContain('role="status"');
     expect(html).toContain('Загружаем');
     expect(html).not.toMatch(/id="root"[\s\S]*heys-skeleton/);
@@ -107,6 +108,22 @@ describe('cold-start spinner mark', () => {
     expect(css).toContain('@keyframes heys-wait-close');
     expect(css).toContain('@keyframes heys-wait-check');
     expect(css).toContain('animation: heys-wait-check 100ms ease-out 100ms forwards');
+  });
+
+  it('morph paths mount only for ok glyph', () => {
+    expect(loading).toContain("if (phase === 'ok')");
+    expect(loading).toContain("className: 'heys-wait-mark__close'");
+    expect(loading).toContain("className: 'heys-wait-mark__spin'");
+  });
+
+  it('spinner rotates via html wrapper span', () => {
+    expect(css).toMatch(/\.heys-boot-mark__spin[\s\S]*?display:\s*inline-flex/);
+    expect(css).toContain('transform-origin: center center');
+    expect(css).toContain('animation: heys-boot-spin 1.1s linear infinite !important');
+    expect(html).toContain('heys-boot-mark__spin animate-always');
+    expect(css).not.toMatch(/prefers-reduced-motion: reduce[\s\S]*heys-boot-breathe[\s\S]*heys-boot-mark__spin/);
+    expect(loading).toContain("className: 'heys-wait-mark__spin animate-always'");
+    expect(loading).toContain("return h('span', { className: 'heys-wait-mark__spin animate-always'");
   });
 
   it('applies canvas wait thresholds for user actions', () => {

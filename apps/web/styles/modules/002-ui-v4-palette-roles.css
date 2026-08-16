@@ -14,6 +14,14 @@
  * (prompt-food шаг 1, 2026-08-12).
  */
 
+@font-face {
+  font-family: Figtree;
+  src: url('/fonts/figtree/Figtree-Variable.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+}
+
 [data-theme-id="classic"],
 [data-theme="light"][data-palette="classic"] {
   --v4-bg: #ffffff;
@@ -518,6 +526,12 @@
   --v4-mark-1: color-mix(in srgb, var(--v4-ink, #111827) 62%, transparent);
   --v4-mark-2: color-mix(in srgb, var(--v4-ink, #111827) 45%, transparent);
   --v4-mark-3: color-mix(in srgb, var(--v4-ink, #111827) 28%, transparent);
+  /* Product modal scrim (2026-08-16): один blur для чек-ина, настроек, куратора.
+     Не плодить blur(4/7/8/12/18) на подложках product UI. Glass шапок/виджетов —
+     вне этого инварианта. */
+  --v4-modal-backdrop-blur: 2.5px;
+  --v4-modal-backdrop-dim: rgba(42, 26, 12, 0.45);
+  --v4-modal-backdrop-dim-dark: rgba(0, 0, 0, 0.55);
 }
 
 /* --v4-tint-warm / --v4-tint-cool — декоративные пятна фона экрана: радиальные
