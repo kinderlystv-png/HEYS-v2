@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createHash, randomUUID } from 'node:crypto';
 
 const rootDir = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
