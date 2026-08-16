@@ -40,8 +40,10 @@
 
 ### Команды (рабочие)
 
-- Локалка full-stack: `pnpm dev:local`
-- Web-only: `pnpm dev:web` (без API синка не будет)
+- Локалка: **всегда** `pnpm dev:local` (API :4001 + web :3001). «Запусти 3001» =
+  `dev:local`, не `dev:web`.
+- `dev:web` / `dev:api` по отдельности — только явная изоляция; без API auth и
+  sync падают с `ERR_CONNECTION_REFUSED:4001`.
 - Тесты: `pnpm test` / `pnpm test:unit` / `pnpm test:web:critical` / e2e
   Playwright
 - Линт: `pnpm lint`; shipping docs: `pnpm docs:shipping:check`

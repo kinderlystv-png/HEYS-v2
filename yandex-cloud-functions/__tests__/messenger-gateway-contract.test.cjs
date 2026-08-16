@@ -4,8 +4,8 @@ const path = require('node:path');
 const test = require('node:test');
 
 const root = path.resolve(__dirname, '..');
-const canonicalSpec = fs.readFileSync(path.join(root, 'api-gateway-spec.yaml'), 'utf8');
-const historicalSpec = fs.readFileSync(path.join(root, 'api-gateway-spec-v2.yaml'), 'utf8');
+const canonicalSpec = fs.readFileSync(path.join(root, 'api-gateway-spec.yaml'), 'utf8').replace(/\r\n/g, '\n');
+const historicalSpec = fs.readFileSync(path.join(root, 'api-gateway-spec-v2.yaml'), 'utf8').replace(/\r\n/g, '\n');
 const workflow = fs.readFileSync(path.resolve(root, '../.github/workflows/cloud-functions-deploy.yml'), 'utf8');
 const messageFunctionId = 'd4ep21a89307vs93b0ns';
 

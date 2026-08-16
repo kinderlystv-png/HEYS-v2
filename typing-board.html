@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Слепая печать — доска прогресса</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --series-1: #2a78d6;
+    --band: rgba(42,120,214,0.10);
+    --good: #0ca30c;
+    --good-text: #006300;
+    --warning: #fab219;
+    --critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      --surface-1: #1a1a19;
+      --page: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --border: rgba(255,255,255,0.10);
+      --series-1: #3987e5;
+      --band: rgba(57,135,229,0.14);
+      --good-text: #0ca30c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 28px 20px 56px;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+  header { margin-bottom: 24px; }
+  h1 { font-size: 22px; font-weight: 650; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--text-secondary); font-size: 13px; }
+  h2 { font-size: 14px; font-weight: 650; margin: 0 0 2px; }
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .tile .label { color: var(--text-secondary); font-size: 12px; margin-bottom: 6px; }
+  .tile .value { font-size: 28px; font-weight: 620; letter-spacing: -0.02em; line-height: 1.1; }
+  .tile .unit { font-size: 14px; font-weight: 500; color: var(--text-secondary); margin-left: 3px; }
+  .tile .foot { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .chart-head { margin-bottom: 10px; }
+  .chart-head .hint { font-size: 12px; color: var(--muted); }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .tick { fill: var(--muted); font-size: 10px; font-variant-numeric: tabular-nums; }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .baseline { stroke: var(--axis); stroke-width: 1; }
+  .dot-hit { fill: transparent; cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+  th:first-child, td:first-child { text-align: left; font-variant-numeric: normal; }
+  th { color: var(--text-secondary); font-weight: 550; font-size: 12px; }
+  tbody tr:last-child td { border-bottom: none; }
+  .road { display: grid; gap: 10px; margin-top: 4px; }
+  .step { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; }
+  .step .mark { font-size: 15px; line-height: 1.4; }
+  .step .t { font-weight: 600; }
+  .step .d { color: var(--text-secondary); font-size: 13px; }
+  .step.done .t { color: var(--good-text); }
+  .rules { columns: 2; column-gap: 26px; font-size: 13px; color: var(--text-secondary); }
+  .rules p { margin: 0 0 10px; break-inside: avoid; }
+  .rules b { color: var(--text-primary); font-weight: 600; }
+  @media (max-width: 640px) { .rules { columns: 1; } }
+  .section { margin-bottom: 20px; }
+  .tt {
+    position: fixed; pointer-events: none; opacity: 0;
+    background: var(--surface-1); color: var(--text-primary);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 12px; line-height: 1.45;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18); transition: opacity .12s; z-index: 10;
+    font-variant-numeric: tabular-nums; max-width: 240px;
+  }
+  .tt b { font-weight: 620; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Слепая печать — доска прогресса</h1>
+    <div class="sub" id="sub"></div>
+  </header>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="charts" id="charts"></div>
+
+  <div class="card section">
+    <div class="chart-head">
+      <h2>Журнал по дням</h2>
+      <div class="hint">Итог за день — последний заход. «До буквы» — текущая клавиша в % от порога 35 wpm, при котором keybr открывает следующую.</div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>День</th><th>Скорость</th><th>Лучшая</th><th>Точность</th><th>До буквы</th><th>Букв</th><th>Минут</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="card section">
+    <div class="chart-head">
+      <h2>По буквам</h2>
+      <div class="hint">Синим — текущая скорость клавиши в % от порога 35 wpm. Штрих — личный максимум по этой клавише. Разрыв между ними показывает, сколько уже наработано и потеряно на усложнении урока.</div>
+    </div>
+    <div id="letters"></div>
+  </div>
+
+  <div class="card section">
+    <div class="chart-head">
+      <h2>Раскладка пальцев</h2>
+      <div class="hint">Тёмным — уже открытые буквы. Один палец — одна клавиша, всегда. Опорные клавиши с пупырышками: А и О.</div>
+    </div>
+    <div id="fingers"></div>
+  </div>
+
+  <div class="card section">
+    <div class="chart-head">
+      <h2>Маршрут</h2>
+      <div class="hint">Цель — пересечение: слепая печать быстрее старого двухпальцевого способа.</div>
+    </div>
+    <div class="road" id="road"></div>
+  </div>
+
+  <div class="card section">
+    <div class="chart-head"><h2>Правила подхода</h2></div>
+    <div class="rules">
+      <p><b>Точность 95–97%.</b> Ниже — тормози. 100% — значит едешь слишком осторожно и рост замедляется.</p>
+      <p><b>Клавиши закрыты.</b> Наклейки или накидка на руки. Это работает вместо силы воли: подглядеть физически нельзя.</p>
+      <p><b>Домашний ряд.</b> После каждого слова пальцы возвращаются на ФЫВА / ОЛДЖ, опора — пупырышки на А и О.</p>
+      <p><b>Новые буквы сами.</b> keybr открывает следующую, когда текущая клавиша выходит на 35 wpm при низкой ошибке. Нажимать ничего не надо.</p>
+      <p><b>Разгон 1–2 урока.</b> Раз в несколько сессий сознательно быстрее на 20–30%, точность до ~90%. Ломает плато.</p>
+      <p><b>Зоны.</b> Личная переписка и заметки — только вслепую. Срочная работа — можно по-старому, без вины.</p>
+      <p><b>Не больше 30–40 минут за раз.</b> Моторный навык закрепляется во сне, а не в лишних повторах. После 40 минут ошибки растут, и ты заучиваешь брак.</p>
+      <p><b>Одинаковый палец подряд — самое сложное.</b> Пары вроде О→Р, Н→Т, К→А идут одним пальцем. Палец должен подниматься и переставляться, а не скользить.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="tt" id="tt"></div>
+
+<script>
+/* ─────────────────────────────────────────────────────────────
+   ДАННЫЕ. Одна запись = один день (итог за день).
+   Чтобы добавить день — скопируй блок и поправь значения.
+   ───────────────────────────────────────────────────────────── */
+const DAYS = [
+  {
+    date: '2026-08-16',
+    speed: 36.9,        // финальная скорость за день, wpm
+    best: 48.2,         // лучшая за день, wpm
+    accuracy: 97.6,     // финальная точность, %
+    weakKey: 'Е',
+    weakWpm: 22.8,      // скорость самой слабой клавиши, wpm (null — ещё калибруется)
+    weakPct: 65,        // она же в % от порога разблокировки (35 wpm)
+    letters: 8,         // открыто букв на keybr
+    minutes: 89,        // минут практики
+    note: 'Старт. Разгон до 48.2 wpm на 6 буквах → провал до 25.4 после открытия Р и К → восстановление до 36.9 wpm при точности 97.6%. Провал был контекстным, а не потерей навыка: за вечер выросли семь клавиш из восьми, сильнее всех Е (+5.1 wpm). Норма дня 297% — почти полтора часа, переработка.'
+  },
+];
+
+const LETTERS_TOTAL = 33;
+const UNLOCK_WPM = 35;   // порог keybr: новая буква открывается при ~35 wpm на текущей клавише
+const OLD_METHOD_WPM = 45;   // ориентир: старый двухпальцевый способ на реальном тексте
+
+/* ───────────────────────────────────────────────────────────── */
+
+const fmt = (n, d = 1) => Number(n).toFixed(d).replace('.', ',');
+const dLabel = s => {
+  const [y, m, d] = s.split('-');
+  return `${d}.${m}`;
+};
+const tt = document.getElementById('tt');
+function showTip(html, e) {
+  tt.innerHTML = html;
+  tt.style.opacity = 1;
+  const r = tt.getBoundingClientRect();
+  let x = e.clientX + 14, y = e.clientY - r.height - 10;
+  if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+  if (y < 8) y = e.clientY + 16;
+  tt.style.left = x + 'px';
+  tt.style.top = y + 'px';
+}
+const hideTip = () => { tt.style.opacity = 0; };
+
+/* ── шапка ── */
+const last = DAYS[DAYS.length - 1];
+const first = DAYS[0];
+let streak = 1;
+for (let i = DAYS.length - 1; i > 0; i--) {
+  const a = new Date(DAYS[i].date), b = new Date(DAYS[i - 1].date);
+  if (Math.round((a - b) / 86400000) === 1) streak++; else break;
+}
+const totalMin = DAYS.reduce((s, d) => s + d.minutes, 0);
+document.getElementById('sub').textContent =
+  `Старт ${dLabel(first.date)}.${first.date.slice(0,4)} · день ${DAYS.length} · всего ${Math.round(totalMin/60*10)/10} ч практики`;
+
+/* ── плитки ── */
+const prev = DAYS.length > 1 ? DAYS[DAYS.length - 2] : null;
+const delta = (cur, p, d = 1) => {
+  if (p === null || p === undefined) return '';
+  const v = cur - p;
+  if (Math.abs(v) < 0.05) return '<span style="color:var(--muted)">без изменений</span>';
+  const col = v > 0 ? 'var(--good-text)' : 'var(--critical)';
+  return `<span style="color:${col}">${v > 0 ? '↑' : '↓'} ${fmt(Math.abs(v), d)} за день</span>`;
+};
+const tiles = [
+  { label: 'Скорость', value: fmt(last.speed), unit: 'wpm', foot: prev ? delta(last.speed, prev.speed) : 'первый замер' },
+  { label: 'Точность', value: fmt(last.accuracy), unit: '%', foot: last.accuracy > 97.5 ? 'выше коридора — можно ускоряться' : (last.accuracy < 95 ? 'ниже коридора — тормози' : 'в коридоре 95–97%') },
+  last.weakPct === null
+    ? { label: 'До новой буквы', value: '—', unit: '', foot: `«${last.weakKey}» ещё калибруется` }
+    : { label: 'До новой буквы', value: last.weakPct, unit: '%', foot: `«${last.weakKey}» — ${fmt(last.weakWpm)} из ${UNLOCK_WPM} wpm` },
+  { label: 'Букв открыто', value: last.letters, unit: `/ ${LETTERS_TOTAL}`, foot: `${Math.round(last.letters / LETTERS_TOTAL * 100)}% раскладки` },
+  { label: 'Дней подряд', value: streak, unit: '', foot: `${last.minutes} мин сегодня` },
+];
+document.getElementById('tiles').innerHTML = tiles.map(t => `
+  <div class="card tile">
+    <div class="label">${t.label}</div>
+    <div class="value">${t.value}<span class="unit">${t.unit}</span></div>
+    <div class="foot">${t.foot}</div>
+  </div>`).join('');
+
+/* ── графики ── */
+const CHARTS = [
+  { key: 'speed', title: 'Скорость', hint: 'wpm, итог дня', unit: ' wpm', min: 0, band: null, dec: 1 },
+  { key: 'accuracy', title: 'Точность', hint: 'целевой коридор 95–97%', unit: '%', min: 90, max: 100, band: [95, 97], dec: 1 },
+  { key: 'weakPct', title: 'До новой буквы', hint: `текущая клавиша, % от порога ${UNLOCK_WPM} wpm`, unit: '%', min: 0, max: 100, band: [95, 100], dec: 0 },
+];
+
+function renderChart(cfg) {
+  const W = 340, H = 150, ml = 34, mr = 12, mt = 10, mb = 24;
+  const iw = W - ml - mr, ih = H - mt - mb;
+  const pts = DAYS.map((d, i) => ({ i, v: d[cfg.key], d })).filter(p => p.v !== null && p.v !== undefined);
+  const vals = pts.map(p => p.v);
+  if (!vals.length) {
+    return `<div class="card">
+      <div class="chart-head"><h2>${cfg.title}</h2><div class="hint">${cfg.hint}</div></div>
+      <div style="height:150px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px">пока нет замеров</div>
+    </div>`;
+  }
+  let lo = cfg.min !== undefined ? cfg.min : Math.min(...vals);
+  let hi = cfg.max !== undefined ? cfg.max : Math.max(...vals, ...(cfg.key === 'speed' ? [OLD_METHOD_WPM] : []));
+  if (cfg.key === 'speed') { lo = 0; hi = Math.max(hi * 1.15, 60); }
+  const x = i => DAYS.length === 1 ? ml + iw / 2 : ml + (i / (DAYS.length - 1)) * iw;
+  const y = v => mt + ih - ((v - lo) / (hi - lo)) * ih;
+
+  const ticks = [lo, lo + (hi - lo) / 2, hi];
+  let s = '';
+  ticks.forEach(t => {
+    s += `<line class="gridline" x1="${ml}" y1="${y(t).toFixed(1)}" x2="${W - mr}" y2="${y(t).toFixed(1)}"/>`;
+    s += `<text class="tick" x="${ml - 6}" y="${(y(t) + 3.5).toFixed(1)}" text-anchor="end">${Math.round(t)}</text>`;
+  });
+  if (cfg.band) {
+    s += `<rect x="${ml}" y="${y(cfg.band[1]).toFixed(1)}" width="${iw}" height="${Math.abs(y(cfg.band[0]) - y(cfg.band[1])).toFixed(1)}" fill="var(--band)"/>`;
+  }
+  if (cfg.key === 'speed' && OLD_METHOD_WPM < hi) {
+    s += `<line x1="${ml}" y1="${y(OLD_METHOD_WPM).toFixed(1)}" x2="${W - mr}" y2="${y(OLD_METHOD_WPM).toFixed(1)}" stroke="var(--axis)" stroke-width="1" stroke-dasharray="3 3"/>`;
+    s += `<text class="tick" x="${W - mr}" y="${(y(OLD_METHOD_WPM) - 5).toFixed(1)}" text-anchor="end">старый способ ≈${OLD_METHOD_WPM}</text>`;
+  }
+  s += `<line class="baseline" x1="${ml}" y1="${mt + ih}" x2="${W - mr}" y2="${mt + ih}"/>`;
+
+  if (pts.length > 1) {
+    const poly = pts.map(p => `${x(p.i).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ');
+    s += `<polyline points="${poly}" fill="none" stroke="var(--series-1)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+  pts.forEach(p => {
+    s += `<circle cx="${x(p.i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="4.5" fill="var(--series-1)" stroke="var(--surface-1)" stroke-width="2"/>`;
+  });
+  // подпись последнего значения
+  const lp = pts[pts.length - 1];
+  s += `<text x="${(x(lp.i) + 9).toFixed(1)}" y="${(y(lp.v) - 8).toFixed(1)}" class="tick" text-anchor="${pts.length === 1 ? 'middle' : 'end'}" fill="var(--text-primary)" style="font-size:11px;font-weight:600">${fmt(lp.v, cfg.dec)}</text>`;
+  // ось X
+  const li = DAYS.length - 1;
+  DAYS.forEach((d, i) => {
+    if (DAYS.length > 8 && i % Math.ceil(DAYS.length / 8) !== 0 && i !== li) return;
+    s += `<text class="tick" x="${x(i).toFixed(1)}" y="${mt + ih + 15}" text-anchor="middle">${dLabel(d.date)}</text>`;
+  });
+  // hit-области
+  pts.forEach(p => {
+    s += `<circle class="dot-hit" data-i="${p.i}" data-k="${cfg.key}" cx="${x(p.i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="14"/>`;
+  });
+
+  return `<div class="card">
+    <div class="chart-head"><h2>${cfg.title}</h2><div class="hint">${cfg.hint}</div></div>
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${cfg.title} по дням">${s}</svg>
+  </div>`;
+}
+document.getElementById('charts').innerHTML = CHARTS.map(renderChart).join('');
+
+document.querySelectorAll('.dot-hit').forEach(el => {
+  el.addEventListener('mousemove', e => {
+    const d = DAYS[+el.dataset.i];
+    const wk = d.weakWpm === null
+      ? `Клавиша «${d.weakKey}» — калибруется`
+      : `Клавиша «${d.weakKey}» — ${fmt(d.weakWpm)} из ${UNLOCK_WPM} wpm (${d.weakPct}%)`;
+    showTip(`<b>${dLabel(d.date)}</b><br>Скорость ${fmt(d.speed)} wpm (лучшая ${fmt(d.best)})<br>Точность ${fmt(d.accuracy)}%<br>${wk}<br>${d.letters} букв · ${d.minutes} мин`, e);
+  });
+  el.addEventListener('mouseleave', hideTip);
+});
+
+/* ── таблица ── */
+document.getElementById('tbody').innerHTML = DAYS.slice().reverse().map(d => `
+  <tr>
+    <td>${dLabel(d.date)}${d.note ? `<div style="color:var(--muted);font-size:12px">${d.note}</div>` : ''}</td>
+    <td>${fmt(d.speed)}</td>
+    <td>${fmt(d.best)}</td>
+    <td>${fmt(d.accuracy)}%</td>
+    <td>${d.weakPct === null ? '—' : d.weakPct + '%'}</td>
+    <td>${d.letters}</td>
+    <td>${d.minutes}</td>
+  </tr>`).join('');
+
+/* ── по буквам ────────────────────────────────────────────────
+   Данные из всплывающих карточек keybr (наведение на букву).
+   last/top — wpm; порог разблокировки 35 wpm; lr — learning rate.
+   ───────────────────────────────────────────────────────────── */
+const LETTER_STATS = [
+  { k: 'Е', finger: 'лев. указательный', last: 22.8, top: 54.8, lr: -0.1, prev: 17.7 },
+  { k: 'И', finger: 'лев. указательный', last: 24.5, top: 35.6, lr: +0.1, prev: 23.4 },
+  { k: 'Т', finger: 'прав. указательный', last: 28.0, top: 43.2, lr: -0.3, prev: 23.8 },
+  { k: 'Н', finger: 'прав. указательный', last: 29.2, top: 48.4, lr: -0.2, prev: 26.3 },
+  { k: 'К', finger: 'лев. указательный', last: 29.3, top: 29.3, lr: +0.3, prev: 25.1 },
+  { k: 'О', finger: 'прав. указательный (опора)', last: 30.3, top: 39.5, lr: +0.3, prev: 30.4 },
+  { k: 'А', finger: 'лев. указательный (опора)', last: 32.9, top: 35.6, lr: +0.5, prev: 28.3 },
+  { k: 'Р', finger: 'прав. указательный', last: 33.5, top: 36.9, lr: -0.2, prev: 28.7 },
+];
+const BAR_MAX = 160; // % шкалы (топ-скорости уходят выше 100%)
+document.getElementById('letters').innerHTML = LETTER_STATS
+  .slice().sort((a, b) => a.last - b.last).map(s => {
+    const lastPct = s.last / UNLOCK_WPM * 100;
+    const topPct = s.top / UNLOCK_WPM * 100;
+    const w = v => Math.min(v / BAR_MAX * 100, 100);
+    const lrTxt = s.lr === null
+      ? '<span style="color:var(--muted)">калибруется</span>'
+      : `<span style="color:${s.lr > 0 ? 'var(--good-text)' : 'var(--critical)'}">${s.lr > 0 ? '+' : ''}${fmt(s.lr)}</span>`;
+    const d = s.prev === undefined ? null : s.last - s.prev;
+    const dTxt = d === null ? ''
+      : Math.abs(d) < 0.05 ? '<span style="color:var(--muted)">±0</span>'
+      : `<span style="color:${d > 0 ? 'var(--good-text)' : 'var(--critical)'}">${d > 0 ? '+' : '−'}${fmt(Math.abs(d))}</span>`;
+    return `<div style="display:grid;grid-template-columns:26px 1fr 92px 52px 52px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--grid)">
+      <div style="font-weight:650;font-size:15px">${s.k}</div>
+      <div style="position:relative;height:16px;background:var(--grid);border-radius:4px;overflow:visible">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:${w(lastPct).toFixed(1)}%;background:var(--series-1);border-radius:4px"></div>
+        <div style="position:absolute;left:${w(100).toFixed(1)}%;top:-3px;bottom:-3px;width:1px;background:var(--axis)"></div>
+        <div title="личный максимум" style="position:absolute;left:${w(topPct).toFixed(1)}%;top:-2px;bottom:-2px;width:2px;background:var(--text-secondary)"></div>
+      </div>
+      <div style="font-size:12px;color:var(--text-secondary);font-variant-numeric:tabular-nums">${fmt(s.last)} / ${fmt(s.top)} wpm</div>
+      <div style="font-size:12px;text-align:right;font-variant-numeric:tabular-nums">${dTxt}</div>
+      <div style="font-size:12px;text-align:right;font-variant-numeric:tabular-nums">${lrTxt}</div>
+    </div>`;
+  }).join('') + `
+  <div style="margin-top:10px;font-size:12px;color:var(--muted)">
+    Тонкая вертикаль — порог разблокировки 35&nbsp;wpm. Предпоследняя колонка — прирост за вечерний заход,
+    последняя — learning rate по версии keybr.
+  </div>`;
+
+/* ── раскладка пальцев (ЙЦУКЕН) ── */
+const OPEN = new Set(['А','Т','И','О','Е','Н','Р','К']);
+const FINGERS = [
+  { hand: 'Левая', name: 'мизинец',    home: 'Ф', keys: ['Й','Ф','Я'] },
+  { hand: 'Левая', name: 'безымянный', home: 'Ы', keys: ['Ц','Ы','Ч'] },
+  { hand: 'Левая', name: 'средний',    home: 'В', keys: ['У','В','С'] },
+  { hand: 'Левая', name: 'указательный', home: 'А', keys: ['К','Е','А','П','М','И'] },
+  { hand: 'Правая', name: 'указательный', home: 'О', keys: ['Н','Г','Р','О','Т','Ь'] },
+  { hand: 'Правая', name: 'средний',    home: 'Л', keys: ['Ш','Л','Б'] },
+  { hand: 'Правая', name: 'безымянный', home: 'Д', keys: ['Щ','Д','Ю'] },
+  { hand: 'Правая', name: 'мизинец',    home: 'Ж', keys: ['З','Х','Ъ','Ж','Э','.'] },
+];
+document.getElementById('fingers').innerHTML = `
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px">
+  ${FINGERS.map(f => `
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px solid var(--grid)">
+      <div style="min-width:132px;font-size:12px;color:var(--text-secondary)">${f.hand} · ${f.name}</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${f.keys.map(k => {
+          const on = OPEN.has(k);
+          const isHome = k === f.home;
+          return `<span style="
+            display:inline-flex;align-items:center;justify-content:center;
+            min-width:22px;height:22px;padding:0 4px;border-radius:5px;font-size:12px;
+            font-weight:${on ? 600 : 400};
+            background:${on ? 'var(--series-1)' : 'transparent'};
+            color:${on ? '#fff' : 'var(--muted)'};
+            border:1px solid ${isHome ? 'var(--text-secondary)' : (on ? 'transparent' : 'var(--grid)')};
+          ">${k}</span>`;
+        }).join('')}
+      </div>
+    </div>`).join('')}
+  </div>
+  <div style="margin-top:10px;font-size:12px;color:var(--muted)">
+    Обведены опорные клавиши домашнего ряда. Спорная клавиша одна — <b style="color:var(--text-primary)">И</b>:
+    она принадлежит левому указательному, хотя тянет нажать правым.
+  </div>`;
+
+/* ── маршрут ── */
+const ROAD = [
+  { t: 'Старт', d: `Первый день практики, открыто ${last.letters} букв.`, done: () => true },
+  { t: 'Клавиши закрыты', d: 'Наклейки или накидка на руки — подглядывать физически нельзя.', done: () => false },
+  { t: 'Половина раскладки', d: '17 из 33 букв открыто на keybr.', done: () => last.letters >= 17 },
+  { t: 'Вся раскладка', d: 'Все 33 буквы открыты.', done: () => last.letters >= LETTERS_TOTAL },
+  { t: 'Пересечение', d: `Слепая печать на реальном тексте обгоняет старый способ (≈${OLD_METHOD_WPM} wpm). После этой точки срывы прекращаются сами.`, done: () => last.letters >= LETTERS_TOTAL && last.speed >= OLD_METHOD_WPM },
+];
+document.getElementById('road').innerHTML = ROAD.map(r => {
+  const ok = r.done();
+  return `<div class="step ${ok ? 'done' : ''}">
+    <div class="mark" style="color:${ok ? 'var(--good)' : 'var(--muted)'}">${ok ? '●' : '○'}</div>
+    <div><div class="t">${r.t}</div><div class="d">${r.d}</div></div>
+  </div>`;
+}).join('');
+</script>
+</body>
+</html>
