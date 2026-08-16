@@ -859,6 +859,20 @@
     if (!isRegistrationProfilePending(profile)) _dailyRequiredOnly = true;
   }
 
+  /** Хотя бы одно core-поле дня уже заполнено (куратор или частичное прохождение). */
+  function hasPartialCoreCheckinPrefill(day) {
+    const d = day || {};
+    return hasCheckinWeight(d)
+      || hasSleepTime(d)
+      || hasSleepQuality(d)
+      || hasMorningMood(d);
+  }
+
+  function markDailyRequiredOnlyIfPartialPrefill(profile, mergedDay) {
+    if (isRegistrationProfilePending(profile)) return;
+    if (hasPartialCoreCheckinPrefill(mergedDay)) _dailyRequiredOnly = true;
+  }
+
   function hasCheckinValue(value) {
     return value !== undefined && value !== null && value !== '';
   }
@@ -914,6 +928,15 @@
 
   function hasStepsGoal(profile) {
     return hasPositiveCheckinNumber(profile?.stepsGoal);
+  }
+
+  function hasStepsGoalConfirmedToday(profile, dateKey = getTodayKey()) {
+    if (!hasStepsGoal(profile)) return false;
+    return String(profile?.stepsGoalConfirmedDate || '') === String(dateKey);
+  }
+
+  function needsStepsGoalCheckin(profile, dateKey = getTodayKey()) {
+    return !hasStepsGoalConfirmedToday(profile, dateKey);
   }
 
   function isYesterdayVerifyDecisionReady() {
@@ -1082,7 +1105,7 @@
     const unsynced = Object.entries(ledger.steps || {})
       .filter(([id, row]) => id !== '__flow__' && isUnresolvedProgressStatus(row && row.status));
     if (changed && blocking.length === 0 && unsynced.length === 0
-      && !coreCheckinDataMissing(day) && hasStepsGoal(profile)) {
+      && !coreCheckinDataMissing(day) && hasStepsGoalConfirmedToday(profile, dateKey)) {
       const flow = ledger.steps.__flow__ || {};
       if (flow.status !== 'synced' && flow.status !== 'closed') {
         ledger.steps.__flow__ = {
@@ -1102,7 +1125,7 @@
     console.info('[MorningCheckin] reconciled progress with day data', {
       clientId: String(clientId).slice(0, 8),
       dateKey,
-      corePresence: getMorningCorePresence(day, profile)
+      corePresence: getMorningCorePresence(day, profile, dateKey)
     });
     return written;
   }
@@ -1180,20 +1203,20 @@
       // Session-флаг — только подсказка. Он закрывает gate, когда основные данные
       // на месте, в журнале нет незавершённых шагов и не появилась проверка прошлых дней.
       if (!coreCheckinDataMissing(mergedDay)
-        && hasStepsGoal(profile)
+        && hasStepsGoalConfirmedToday(profile, todayKey)
         && remainingProgressSteps.length === 0
         && !yesterdayVerifyRequired) {
         console.info('[MorningCheckin] 🚫 Skip — sessionStorage флаг активен, данные чекина на месте:', sessionKey);
         return false;
       }
-      _reopenRequiredOnly = coreCheckinDataMissing(mergedDay) || !hasStepsGoal(profile);
+      _reopenRequiredOnly = coreCheckinDataMissing(mergedDay) || needsStepsGoalCheckin(profile, todayKey);
       console.warn('[MorningCheckin] ⚠️ session-флаг стоит, но чек-ин требует продолжения', {
         sessionKey,
         hasWeight: hasCheckinWeight(mergedDay),
         hasSleep: hasSleepTime(mergedDay),
         hasSleepQuality: hasSleepQuality(mergedDay),
         hasMood: hasMorningMood(mergedDay),
-        hasStepsGoal: hasStepsGoal(profile),
+        hasStepsGoal: hasStepsGoalConfirmedToday(profile, todayKey),
         remainingSteps: remainingProgressSteps.map((row) => row.id),
         yesterdayVerifyRequired,
       });
@@ -1225,7 +1248,7 @@
     // записывает и завершённым по данным не становится никогда, только явным
     // проходом. Когда обязательное собрано и всё синхронизировано, держать
     // модалку ради него — значит открывать её каждое утро ни за чем.
-    const coreDone = !coreCheckinDataMissing(mergedDay) && hasStepsGoal(profile);
+    const coreDone = !coreCheckinDataMissing(mergedDay) && hasStepsGoalConfirmedToday(profile, todayKey);
     const blockingProgressSteps = (existingProgress
       ? getBlockingMorningSteps({ ledger: existingProgress, dateKey: todayKey, clientId: currentClientId })
       : [])
@@ -1317,7 +1340,7 @@
     if (!hasSleepTime(mergedDay)) pending.push('sleepTime');
     if (!hasSleepQuality(mergedDay)) pending.push('sleepQuality');
     if (!hasMorningMood(mergedDay)) pending.push('morning_mood');
-    if (!hasStepsGoal(profile)) pending.push('stepsGoal');
+    if (needsStepsGoalCheckin(profile, todayKey)) pending.push('stepsGoal');
 
     if (yesterdayVerifyRequired) {
       pending.push('yesterdayVerify');
@@ -1331,7 +1354,7 @@
       sessionFlag: sessionStorage.getItem(sessionKey),
     });
 
-    if (pending.length > 0) markDailyRequiredOnlyIfApplicable(profile);
+    if (pending.length > 0) markDailyRequiredOnlyIfPartialPrefill(profile, mergedDay);
     return pending.length > 0;
   }
 
@@ -1451,7 +1474,7 @@
         case 'sleepTime': return !hasSleepTime(day);
         case 'sleepQuality': return !hasSleepQuality(day);
         case 'morning_mood': return !hasMorningMood(day);
-        case 'stepsGoal': return !hasStepsGoal(profile);
+        case 'stepsGoal': return needsStepsGoalCheckin(profile, targetDateKey);
         case 'cycle': return !hasCycleDecision(day, profile);
         default: return true;
       }
@@ -1830,13 +1853,13 @@
     return readProfileForceRawScoped(clientId) || readStoredValue('heys_profile', {}) || {};
   }
 
-  function getMorningCorePresence(day, profile) {
+  function getMorningCorePresence(day, profile, dateKey = getTodayKey()) {
     return {
       weight: hasCheckinWeight(day),
       sleepTime: hasSleepTime(day),
       sleepQuality: hasSleepQuality(day),
       morningMood: hasMorningMood(day),
-      stepsGoal: hasStepsGoal(profile)
+      stepsGoal: hasStepsGoalConfirmedToday(profile, dateKey)
     };
   }
 
@@ -1903,7 +1926,7 @@
     const ledger = ledgerOverride || readMorningProgress(dateKey, clientId);
     const day = getFreshMorningDay(dateKey);
     const profile = getFreshMorningProfile(clientId);
-    const corePresence = getMorningCorePresence(day, profile);
+    const corePresence = getMorningCorePresence(day, profile, dateKey);
     const plannedStepIds = Array.isArray(ledger?.plannedStepIds) ? ledger.plannedStepIds.slice() : [];
     const stepIds = plannedStepIds.length
       ? plannedStepIds
@@ -1966,7 +1989,7 @@
       case 'sleepTime': return hasSleepTime(day);
       case 'sleepQuality': return hasSleepQuality(day);
       case 'morning_mood': return hasMorningMood(day);
-      case 'stepsGoal': return hasStepsGoal(profile);
+      case 'stepsGoal': return hasStepsGoalConfirmedToday(profile, dateKey);
       case 'yesterdayVerify':
         return isYesterdayVerifyDecisionReady() && !shouldShowYesterdayVerifyRequired();
       case 'refeedDay': return typeof day?.isRefeedDay === 'boolean' || !shouldIncludeRefeedStep(profile, dateKey);
@@ -2501,6 +2524,9 @@
   HEYS.MorningCheckinUtils.isMorningActivationClearedByUser = isMorningActivationClearedByUser;
   HEYS.MorningCheckinUtils.getCheckinSteps = getCheckinSteps;
   HEYS.MorningCheckinUtils.coreCheckinDataMissing = coreCheckinDataMissing;
+  HEYS.MorningCheckinUtils.hasPartialCoreCheckinPrefill = hasPartialCoreCheckinPrefill;
+  HEYS.MorningCheckinUtils.hasStepsGoalConfirmedToday = hasStepsGoalConfirmedToday;
+  HEYS.MorningCheckinUtils.needsStepsGoalCheckin = needsStepsGoalCheckin;
   HEYS.MorningCheckinUtils.isMorningStepComplete = isMorningStepComplete;
   HEYS.MorningCheckinUtils.buildMorningCheckinPlan = buildMorningCheckinPlan;
   HEYS.MorningCheckinUtils.mergeFreshStepsWithProgress = mergeFreshStepsWithProgress;

@@ -39,8 +39,22 @@ beforeEach(() => {
   window.dispatchEvent = vi.fn();
   window.addEventListener = vi.fn();
   kv = {};
+  globalThis.localStorage = {
+    getItem: (key) => {
+      if (!Object.prototype.hasOwnProperty.call(kv, key)) return null;
+      const value = kv[key];
+      return typeof value === 'string' ? value : JSON.stringify(value);
+    },
+    setItem: (key, value) => {
+      kv[key] = value;
+    },
+    removeItem: (key) => {
+      delete kv[key];
+    },
+  };
   window.HEYS = {
     currentClientId: CID,
+    _consentsValid: true,
     utils: {
       getCurrentClientId: () => CID,
       lsGet: (k, d) => (Object.prototype.hasOwnProperty.call(kv, k) ? kv[k] : d),
@@ -56,6 +70,19 @@ beforeEach(() => {
 
 const setDay = (day) => { kv[`heys_${CID}_dayv2_${TODAY}`] = { date: TODAY, ...day }; };
 
+const setProfile = (profile) => {
+  kv[`heys_${CID}_profile`] = JSON.stringify({
+    profileCompleted: true,
+    _sourceClientId: CID,
+    ...profile,
+  });
+};
+
+const confirmedStepsProfile = (stepsGoal = 6000) => ({
+  stepsGoal,
+  stepsGoalConfirmedDate: TODAY,
+});
+
 describe('TASK-003 follow-up: переоткрытие чек-ина по недостающим шагам', () => {
   it('coreCheckinDataMissing: true при пропуске сна/настроения, false когда всё на месте', () => {
     const missing = window.HEYS.MorningCheckinUtils.coreCheckinDataMissing;
@@ -69,7 +96,7 @@ describe('TASK-003 follow-up: переоткрытие чек-ина по нед
 
   it('requiredOnly → только недостающие обязательные шаги, без опционального хвоста', () => {
     setDay({ weightMorning: 90.9 }); // вес есть, сон/настроение нет
-    const profile = { stepsGoal: 6000 }; // цель шагов есть → не pending
+    const profile = confirmedStepsProfile(); // цель шагов уже подтверждена сегодня → не pending
 
     const steps = window.HEYS.MorningCheckinUtils.getCheckinSteps(profile, {
       filterCompleted: true,
@@ -94,7 +121,7 @@ describe('TASK-003 follow-up: переоткрытие чек-ина по нед
       wellbeingMorning: 0,
       stressMorning: 0,
     });
-    const profile = { stepsGoal: 6000 };
+    const profile = confirmedStepsProfile();
 
     const missing = window.HEYS.MorningCheckinUtils.coreCheckinDataMissing;
     const steps = window.HEYS.MorningCheckinUtils.getCheckinSteps(profile, {
@@ -108,15 +135,15 @@ describe('TASK-003 follow-up: переоткрытие чек-ина по нед
 
   it('обычный режим (без requiredOnly) сохраняет опциональный хвост', () => {
     setDay({ weightMorning: 90.9 });
-    const profile = { stepsGoal: 6000 };
+    const profile = confirmedStepsProfile();
 
     const steps = window.HEYS.MorningCheckinUtils.getCheckinSteps(profile, {
       filterCompleted: true,
     });
 
     expect(steps).toEqual(expect.arrayContaining(['sleepTime', 'sleepQuality', 'morning_mood']));
-    // хвост на месте
-    expect(steps).toEqual(expect.arrayContaining(['cold_exposure', 'supplements', 'morningRoutine']));
+    // хвост на месте (supplements — только при supplementsTrackingEnabled)
+    expect(steps).toEqual(expect.arrayContaining(['cold_exposure', 'morningRoutine']));
     expect(steps).not.toContain('weight'); // заполнен → отфильтрован
   });
 
@@ -129,7 +156,7 @@ describe('TASK-003 follow-up: переоткрытие чек-ина по нед
       moodMorning: 6,
       cycleDay: 2,
     });
-    const profile = { stepsGoal: 6000 };
+    const profile = confirmedStepsProfile();
 
     const steps = window.HEYS.MorningCheckinUtils.getCheckinSteps(profile, {
       filterCompleted: true,
@@ -151,5 +178,52 @@ describe('TASK-003 follow-up: переоткрытие чек-ина по нед
     });
 
     expect(steps).toEqual(['stepsGoal']);
+  });
+
+  it('stepsGoal остаётся обязательным каждое утро, пока не подтверждён сегодня', () => {
+    setDay({});
+    const profile = { stepsGoal: 6000 }; // вчерашняя цель без stepsGoalConfirmedDate
+
+    const steps = window.HEYS.MorningCheckinUtils.getCheckinSteps(profile, {
+      filterCompleted: true,
+      dateKey: TODAY,
+    });
+
+    expect(steps).toEqual(expect.arrayContaining([
+      'weight', 'sleepTime', 'sleepQuality', 'morning_mood', 'stepsGoal',
+    ]));
+  });
+
+  it('пустой день → полный флоу с хвостом, без requiredOnly', () => {
+    setDay({});
+    setProfile({ stepsGoal: 6000 });
+
+    expect(window.HEYS.shouldShowMorningCheckin()).toBe(true);
+    const plan = window.HEYS.MorningCheckinUtils.buildMorningCheckinPlan({
+      source: 'MorningCheckin',
+      dateKey: TODAY,
+      clientId: CID,
+    });
+
+    expect(plan.steps).toEqual(expect.arrayContaining([
+      'weight', 'sleepTime', 'sleepQuality', 'morning_mood', 'stepsGoal',
+      'cold_exposure', 'morningRoutine',
+    ]));
+  });
+
+  it('частично заполненный день → requiredOnly без опционального хвоста', () => {
+    setDay({ weightMorning: 90.9 });
+    setProfile(confirmedStepsProfile());
+
+    expect(window.HEYS.shouldShowMorningCheckin()).toBe(true);
+    const plan = window.HEYS.MorningCheckinUtils.buildMorningCheckinPlan({
+      source: 'MorningCheckin',
+      dateKey: TODAY,
+      clientId: CID,
+    });
+
+    expect(plan.steps).toEqual(['sleepTime', 'sleepQuality', 'morning_mood']);
+    expect(plan.steps).not.toContain('morningRoutine');
+    expect(plan.steps).not.toContain('cold_exposure');
   });
 });

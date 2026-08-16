@@ -342,6 +342,7 @@
 }
 
 .mc-modal {
+  position: relative;
   width: 100%;
   max-width: 360px;
   max-height: calc(100dvh - 32px - var(--safe-area-top) - var(--safe-area-bottom));

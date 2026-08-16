@@ -537,7 +537,7 @@ describe('morning check-in journal resume', () => {
         sleepQuality: 7,
         moodMorning: 7,
       },
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: historicalDate },
       yesterdayRequired: true,
     });
     HEYS.StepModal = { show: vi.fn() };
@@ -564,7 +564,7 @@ describe('morning check-in journal resume', () => {
     ledger.steps.cold_exposure = { status: 'synced', updatedAt: 3000 };
     const { utils } = loadMorning({
       day: completedDay(),
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       ledger,
     });
 
@@ -606,7 +606,7 @@ describe('morning check-in journal resume', () => {
   it('reconciles an obsolete planned yesterdayVerify after the current-day decision is already stored', () => {
     const { utils, values } = loadMorning({
       day: completedDay(),
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       ledger: fullIncidentLedger(),
       yesterdayRequired: false,
     });
@@ -626,7 +626,7 @@ describe('morning check-in journal resume', () => {
   it('keeps a planned yesterdayVerify blocking while its decision module is not ready', () => {
     const { utils } = loadMorning({
       day: completedDay(),
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       ledger: fullIncidentLedger(),
       yesterdayReady: false,
     });
@@ -643,7 +643,7 @@ describe('morning check-in journal resume', () => {
     ledger.steps.yesterdayVerify = { status: 'synced' };
     const { utils } = loadMorning({
       day: completedDay(),
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       ledger,
     });
 
@@ -659,7 +659,7 @@ describe('morning check-in journal resume', () => {
     ledger.steps.morningRoutine = { status: 'planned' };
     const { utils, values } = loadMorning({
       day: completedDay(),
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       ledger,
     });
 
@@ -678,7 +678,7 @@ describe('morning check-in journal resume', () => {
     delete ledger.steps.yesterdayVerify;
     const { utils, values } = loadMorning({
       day: completedDay(),
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       ledger,
       yesterdayRequired: true,
     });
@@ -701,7 +701,7 @@ describe('morning check-in journal resume', () => {
     sessionStorage.setItem(`heys_morning_checkin_done_${CLIENT_ID}_${DATE_KEY}`, 'true');
     const { HEYS, utils, values } = loadMorning({
       day,
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       ledger,
     });
 
@@ -724,7 +724,7 @@ describe('morning check-in journal resume', () => {
     });
     const { HEYS } = loadMorning({
       day,
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
     });
 
     expect(HEYS.shouldShowMorningCheckin()).toBe(false);
@@ -742,7 +742,7 @@ describe('morning check-in journal resume', () => {
     };
     const { HEYS, utils } = loadMorning({
       day,
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
     });
 
     expect(HEYS.shouldShowMorningCheckin()).toBe(true);
@@ -773,7 +773,7 @@ describe('morning check-in journal resume', () => {
     delete day.measurements;
     delete day.coldExposure;
 
-    const { HEYS } = loadMorning({ day, profile: { stepsGoal: 9000 }, ledger });
+    const { HEYS } = loadMorning({ day, profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY }, ledger });
     expect(HEYS.shouldShowMorningCheckin()).toBe(false);
   });
 
@@ -789,7 +789,7 @@ describe('morning check-in journal resume', () => {
 
     const { HEYS } = loadMorning({
       day: completedDay(),
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       ledger,
     });
     expect(HEYS.shouldShowMorningCheckin()).toBe(false);
@@ -806,7 +806,7 @@ describe('morning check-in journal resume', () => {
 
     const { HEYS } = loadMorning({
       day: completedDay(),
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       ledger,
     });
     expect(HEYS.shouldShowMorningCheckin()).toBe(true);
@@ -818,14 +818,14 @@ describe('morning check-in journal resume', () => {
     unfinishedLedger.steps.morningRoutine = { status: 'planned' };
     const withLedger = loadMorning({
       day: completedDay(),
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       ledger: unfinishedLedger,
     });
     expect(withLedger.HEYS.shouldShowMorningCheckin()).toBe(true);
 
     const withCurrentYesterday = loadMorning({
       day: completedDay(),
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       yesterdayRequired: true,
     });
     expect(withCurrentYesterday.HEYS.shouldShowMorningCheckin()).toBe(true);
@@ -843,7 +843,7 @@ describe('morning check-in journal resume', () => {
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(persisted));
     const { utils, values } = loadMorning({
       day: completedDay(),
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       ledger: staleShell,
     });
 
@@ -860,7 +860,7 @@ describe('morning check-in journal resume', () => {
     delete ledger.steps.yesterdayVerify;
     const { HEYS, utils, values } = loadMorning({
       day: completedDay(),
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       ledger,
       yesterdayRequired: false,
     });
@@ -887,7 +887,7 @@ describe('morning check-in journal resume', () => {
     ledger.steps.__flow__ = { status: 'saved_local', cloudPending: true, updatedAt: 2000 };
     const { utils, values } = loadMorning({
       day: completedDay(),
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       ledger,
     });
 
@@ -906,7 +906,7 @@ describe('morning check-in journal resume', () => {
     ledger.steps.sleepTime = { status: 'saved_local', cloudPending: true, updatedAt: 3000 };
     const { utils } = loadMorning({
       day: completedDay(),
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       ledger,
     });
 
@@ -918,7 +918,7 @@ describe('morning check-in journal resume', () => {
     ledger.steps.weight = { status: 'planned' };
     const { HEYS, utils } = loadMorning({
       day: completedDay(),
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       ledger,
     });
     HEYS.cloud = { flushPendingQueue: vi.fn() };
@@ -941,7 +941,7 @@ describe('morning check-in journal resume', () => {
     ledger.steps.weight = { status: 'planned' };
     const { HEYS, utils, values } = loadMorning({
       day: completedDay(),
-      profile: { stepsGoal: 9000 },
+      profile: { stepsGoal: 9000, stepsGoalConfirmedDate: DATE_KEY },
       ledger,
     });
     delete HEYS.cloud;

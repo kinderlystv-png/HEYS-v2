@@ -2294,14 +2294,18 @@
         stepsGoal: stats.recommended
       };
     },
-    save: (data) => {
+    save: (data, context) => {
       const profile = lsGet('heys_profile', {});
+      const dateKey = context?.dateKey
+        || HEYS.dayUtils?.todayISO?.()
+        || new Date().toISOString().slice(0, 10);
       profile.stepsGoal = data.stepsGoal;
+      profile.stepsGoalConfirmedDate = dateKey;
       profile.updatedAt = Date.now();
       lsSet('heys_profile', profile);
       // Диспатчим событие обновления профиля для реактивного обновления UI
       window.dispatchEvent(new CustomEvent('heys:profile-updated', {
-        detail: { stepsGoal: data.stepsGoal }
+        detail: { stepsGoal: data.stepsGoal, stepsGoalConfirmedDate: dateKey }
       }));
     }
   });
