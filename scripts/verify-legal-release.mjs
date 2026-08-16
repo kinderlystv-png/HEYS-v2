@@ -14,6 +14,8 @@ const MIGRATION_PATHS = [
   'database/2026-07-30_update_user_agreement_v1_9_document_hash.sql',
   'database/2026-08-08_activate_user_agreement_v1_10.sql',
   'database/2026-08-14_activate_legal_v1_11.sql',
+  'database/2026-08-15_activate_push_consent_v1_2.sql',
+  'scripts/db/migrations/2026-08-15_curator_push_consent_gate_v1.sql',
 ];
 
 const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), 'utf8');
@@ -92,6 +94,7 @@ function verifySourceContract() {
     'marketing',
     'payment_oferta',
     'push_notifications',
+    'curator_push_notifications',
     'curator_access',
     'speech_transcription',
     'warning_intake',

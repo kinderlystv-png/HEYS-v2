@@ -17,7 +17,7 @@
 const { getPool } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
 const { validatePushSubscribeEndpoint } = require('./push-endpoint-host');
-const { clientHasLivePushConsent, pushConsentMissingResponse } = require('./push-consent');
+const { clientHasLivePushConsent, curatorHasLivePushConsent, pushConsentMissingResponse } = require('./push-consent');
 const webpush = require('web-push');
 const crypto = require('crypto');
 
@@ -217,6 +217,15 @@ async function handleSubscribe(identity, body, userAgent) {
         [identity.id, endpoint, keys.p256dh, keys.auth, userAgent || null]
       );
     } else {
+      const hasConsent = await curatorHasLivePushConsent(client, identity.id);
+      if (!hasConsent) {
+        console.warn('[push] subscribe rejected', {
+          reason: 'push_consent_missing',
+          identity_kind: identity.kind,
+          identity_id: identity.id,
+        });
+        return pushConsentMissingResponse();
+      }
       await client.query(
         `INSERT INTO curator_push_subscriptions (curator_id, endpoint, p256dh, auth, user_agent, created_at, last_used_at)
          VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
@@ -350,6 +359,15 @@ async function handleTest(identity) {
       );
       subs = r.rows;
     } else {
+      const hasConsent = await curatorHasLivePushConsent(client, identity.id);
+      if (!hasConsent) {
+        console.warn('[push] test rejected', {
+          reason: 'push_consent_missing',
+          identity_kind: identity.kind,
+          identity_id: identity.id,
+        });
+        return pushConsentMissingResponse();
+      }
       const r = await client.query(
         `SELECT endpoint, p256dh, auth FROM curator_push_subscriptions WHERE curator_id = $1`,
         [identity.id]

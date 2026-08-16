@@ -29,7 +29,7 @@
 
 const { getPool } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
-const { clientHasLivePushConsent } = require('./push-consent');
+const { clientHasLivePushConsent, curatorHasLivePushConsent } = require('./push-consent');
 const webpush = require('web-push');
 const { collapseNetChange, bucketize, formatBody } = require('./curator-action-format');
 const { deliverIdempotently, isInReminderDeliveryWindow } = require('./push-idempotency');
@@ -191,6 +191,15 @@ async function sendToClient(client, clientId, payload) {
 }
 
 async function sendToCurator(client, curatorId, payload) {
+  const hasConsent = await curatorHasLivePushConsent(client, curatorId);
+  if (!hasConsent) {
+    console.warn('[cron-reminders] push skipped', {
+      reason: 'push_consent_missing',
+      identity_kind: 'curator',
+      identity_id: curatorId,
+    });
+    return { sent: 0, total: 0, cleaned: 0, skipped: 'push_consent_missing' };
+  }
   return sendToSubscriptions(client, 'curator_push_subscriptions', 'curator_id', curatorId, payload);
 }
 
@@ -1299,4 +1308,9 @@ module.exports.handler = async function (event, context) {
   const duration = Date.now() - startedAt;
   console.log('[cron-reminders] done', { duration_ms: duration, stats });
   return { statusCode: 200, body: JSON.stringify({ ok: true, duration_ms: duration, stats }) };
+};
+
+module.exports._test = {
+  sendToClient,
+  sendToCurator,
 };

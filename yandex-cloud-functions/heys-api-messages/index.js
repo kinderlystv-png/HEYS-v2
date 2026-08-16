@@ -42,7 +42,7 @@ const {
 const webpush = require('web-push');
 const crypto = require('crypto');
 const https = require('https');
-const { clientHasLivePushConsent } = require('./push-consent');
+const { clientHasLivePushConsent, curatorHasLivePushConsent } = require('./push-consent');
 
 // ── VAPID config: лениво, после initSecrets() ────────────────────────────
 let vapidConfigured = false;
@@ -978,6 +978,15 @@ async function sendPushToCurator(curatorId, payload) {
   const client = await pool.connect();
   let subs = [];
   try {
+    const hasConsent = await curatorHasLivePushConsent(client, curatorId);
+    if (!hasConsent) {
+      console.warn('[messages] push skipped', {
+        reason: 'push_consent_missing',
+        identity_kind: 'curator',
+        identity_id: curatorId,
+      });
+      return { sent: 0, total: 0, skipped: 'push_consent_missing' };
+    }
     const r = await client.query(
       `SELECT endpoint, p256dh, auth FROM curator_push_subscriptions WHERE curator_id = $1`,
       [curatorId]
@@ -1840,7 +1849,8 @@ module.exports._test = {
   resolveDayScopeClientId,
   buildDayChecklistResponse,
   dayChecklistKeys,
-  buildAttachmentBadge,
+  sendPushToCurator,
+  sendPushToClient,
   normalizeAttachmentType,
   normalizeMime,
   estimateSpeechKitCost,

@@ -17,7 +17,7 @@
     health_data:        '1.5',
     marketing:          '1.4',
     payment_oferta:     '1.11',
-    push_notifications: '1.1',
+    push_notifications: '1.2',
     curator_access:     '1.1',
     speech_transcription: '1.2',
     supplements_tracking: '1.0',

@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-14",
+  "updatedAt": "2026-08-15",
   "documents": {
     "pep_agreement": {
       "version": "1.1",
@@ -62,10 +62,16 @@
       "sha256": "710a741e5681cab2d91b1d91a1315dcef2f75d3c3eebdaab7c9987a1cf906f7b"
     },
     "push_notifications": {
-      "version": "1.1",
+      "version": "1.2",
       "canonicalPath": "docs/legal/push-notifications-consent.md",
-      "snapshotPath": "apps/web/public/docs/v1.1/push-notifications-consent.md",
-      "sha256": "99433c270c3432dd8f13a23db1eca61fe13b5379ed51aec15bdab3bcb8083bab"
+      "snapshotPath": "apps/web/public/docs/v1.2/push-notifications-consent.md",
+      "sha256": "fba4df9d1c745e48654b50c509304ea993eaf623b85e967752747626d4dec43a"
+    },
+    "curator_push_notifications": {
+      "version": "1.0",
+      "canonicalPath": "docs/legal/curator-push-notifications-consent.md",
+      "snapshotPath": "apps/web/public/docs/v1.0/curator-push-notifications-consent.md",
+      "sha256": "13d4f89332b96eb073934ec8213f8287be88e47f5e52908cf4ccf2359a3700ce"
     },
     "curator_access": {
       "version": "1.1",

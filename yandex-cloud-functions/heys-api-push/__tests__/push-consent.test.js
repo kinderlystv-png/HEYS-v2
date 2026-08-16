@@ -3,7 +3,9 @@ const assert = require('node:assert/strict');
 
 const {
   LIVE_PUSH_CONSENT_SQL,
+  LIVE_CURATOR_PUSH_CONSENT_SQL,
   clientHasLivePushConsent,
+  curatorHasLivePushConsent,
   pushConsentMissingResponse,
 } = require('../push-consent');
 
@@ -43,5 +45,39 @@ describe('push-consent predicate', () => {
       },
     };
     assert.equal(await clientHasLivePushConsent(queryable, 'client-1'), false);
+  });
+});
+
+describe('curator push-consent predicate', () => {
+  it('exports curator SQL against curator_consents', () => {
+    assert.match(LIVE_CURATOR_PUSH_CONSENT_SQL, /FROM public\.curator_consents/);
+    assert.match(LIVE_CURATOR_PUSH_CONSENT_SQL, /consent_type = 'curator_push_notifications'/);
+    assert.match(LIVE_CURATOR_PUSH_CONSENT_SQL, /granted = true/);
+    assert.match(LIVE_CURATOR_PUSH_CONSENT_SQL, /revoked_at IS NULL/);
+    assert.doesNotMatch(LIVE_CURATOR_PUSH_CONSENT_SQL, /client_id/);
+  });
+
+  it('treats missing curator id as no consent', async () => {
+    assert.equal(await curatorHasLivePushConsent({ query: async () => ({ rows: [] }) }, null), false);
+  });
+
+  it('reads EXISTS result from the queryable', async () => {
+    const queryable = {
+      async query(sql, params) {
+        assert.equal(params[0], 'curator-1');
+        assert.match(sql, /curator_push_notifications/);
+        return { rows: [{ ok: true }] };
+      },
+    };
+    assert.equal(await curatorHasLivePushConsent(queryable, 'curator-1'), true);
+  });
+
+  it('treats false EXISTS as missing consent', async () => {
+    const queryable = {
+      async query() {
+        return { rows: [{ ok: false }] };
+      },
+    };
+    assert.equal(await curatorHasLivePushConsent(queryable, 'curator-1'), false);
   });
 });

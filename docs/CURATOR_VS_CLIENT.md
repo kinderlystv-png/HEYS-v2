@@ -79,7 +79,7 @@ window.__heysHasSession = hasPinAuth || hasCuratorSession || hasSupabaseToken;
 **Если сессия есть (returning user):**
 
 - HTML gate скрывается (`display: none`)
-- Показывается skeleton из `<div id="root">` (PERF v7.1)
+- Показывается знак 56 из `<div id="root">` (`data-heys-boot-mark`)
 - Флаг `window.__heysReturningUser = true`
 
 **Если сессии нет (new/logged out user):**
@@ -158,7 +158,7 @@ HTML gate submit
 ### 4.1 Curator restore
 
 1. `index.html`: `heys_supabase_auth_token` детектируется →
-   `__heysHasSession = true` → gate hidden, skeleton виден
+   `__heysHasSession = true` → gate hidden, знак 56 виден
 2. `heys_storage_supabase_v1.js`: `restoreSessionFromStorage()` — парсит JWT,
    проверяет `expires_at` (с 1-час буфером). Если валиден: `user = storedUser`,
    `_rpcOnlyMode = true`, через `setTimeout(100)` → `cloud.syncClient(clientId)`
@@ -171,7 +171,7 @@ HTML gate submit
 ### 4.2 PIN restore
 
 1. `index.html`: `heys_pin_auth_client` детектируется →
-   `__heysHasSession = true` → gate hidden, skeleton виден
+   `__heysHasSession = true` → gate hidden, знак 56 виден
 2. `heys_storage_supabase_v1.js`: `_pinAuthClientId = pinAuthClient`,
    `_rpcOnlyMode = true` → **`_authSyncPending = true`** (v62: флаг set ДО
    вызова sync) → `cloud.syncClient(pinAuthClient)` (async)
@@ -217,19 +217,18 @@ condition.
 
 ---
 
-## 5. Skeleton/Loading различия
+## 5. Loading различия
 
-| Аспект                        | Curator                                         | PIN                                    |
-| ----------------------------- | ----------------------------------------------- | -------------------------------------- |
-| HTML skeleton                 | Одинаковый `div.heys-skeleton` (~0.2s)          | Одинаковый `div.heys-skeleton` (~0.2s) |
-| Gate скрытие (returning user) | `__heysHasSession` → `display: none`            | `__heysHasSession` → `display: none`   |
-| Gate skeleton delay           | `GATE_SKELETON_DELAY_MS = 280ms`                | `GATE_SKELETON_DELAY_MS = 280ms`       |
-| Tab skeleton delay            | `TAB_SKELETON_DELAY_MS = 240ms`                 | `TAB_SKELETON_DELAY_MS = 240ms`        |
-| После auth                    | Показывает client picker overlay                | Прямой переход к app (single client)   |
-| AppLoader (initializing)      | Если `isInitializing && !clientId`, delay 280ms | Аналогично                             |
+| Аспект            | Curator                                   | PIN                                  |
+| ----------------- | ----------------------------------------- | ------------------------------------ |
+| HTML cold start   | Один знак 56 (`data-heys-boot-mark`)      | Тот же знак                          |
+| Без сессии        | `html[data-heys-session="0"]` прячет знак | То же                                |
+| Gate initializing | `null` — boot-знак держит кадр            | То же                                |
+| Смена вкладки     | Suspense `fallback: null`, без скелетона  | То же                                |
+| После auth        | Показывает client picker overlay          | Прямой переход к app (single client) |
 
-**Вывод:** Skeleton поведение визуально **идентично**. Различие — в gate UI
-(client picker для curator vs прямой переход для PIN).
+**Вывод:** ожидание визуально **идентично**. Различие — в gate UI (client picker
+для curator vs прямой переход для PIN).
 
 ---
 
