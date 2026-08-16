@@ -2149,6 +2149,7 @@
   }
 
   function CombinedSleepStepComponent({ data, onChange }) {
+    const TimePicker = HEYS.StepModal.TimePicker;
     const lastSleep = useMemo(() => getLastSleepData(), []);
     const sleepStartH = data.sleepStartH ?? parseInt(String(lastSleep.sleepStart || '23:00').split(':')[0], 10);
     const sleepStartM = data.sleepStartM ?? parseInt(String(lastSleep.sleepStart || '23:00').split(':')[1], 10);

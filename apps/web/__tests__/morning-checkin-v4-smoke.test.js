@@ -83,6 +83,7 @@ describe('morning check-in v4 plan', () => {
     expect(MORNING_SRC).toContain("steps.push('checkinRecorded')");
     expect(MORNING_SRC).toContain('function collapseLegacyCheckinStepIds');
     expect(STEPS_SRC).toContain("registerStep('sleep'");
+    expect(STEPS_SRC).toMatch(/function CombinedSleepStepComponent[\s\S]*const TimePicker = HEYS\.StepModal\.TimePicker/);
     expect(STEPS_SRC).toContain("registerStep('morningRest'");
     expect(STEPS_SRC).toContain("registerStep('checkinRecorded'");
     expect(STEPS_SRC).toContain("weightMorningSource");
