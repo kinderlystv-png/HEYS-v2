@@ -46,8 +46,9 @@ apps/web/heys_app_gate_flow_v1.js:62
 apps/web/heys_app_hooks_v1.js::PENDING_SYNC_UI_QUEUE_KEY
 # [local-only] Version-bound consent proof must survive reload/offline without entering the cloud sync queue.
 apps/web/heys_app_runtime_effects_v1.js:22
-apps/web/heys_app_shell_v1.js:145
-apps/web/heys_app_shell_v1.js:261
+# [app-shell] OverlayStore fallback + first-day push prompt dismiss. Needle form: line numbers drifted.
+apps/web/heys_app_shell_v1.js::localStorage.setItem(key, serialized);
+apps/web/heys_app_shell_v1.js::heys_push_first_day_prompt_dismissed
 apps/web/heys_app_tabs_v1.js:51
 apps/web/heys_app_tabs_v1.js:580
 apps/web/heys_app_tabs_v1.js:579
@@ -235,9 +236,6 @@ apps/web/insights/pi_ui_meal_rec_card.js:1138
 apps/web/insights/pi_ui_meal_rec_card.js:1399
 apps/web/insights/pi_ui_meal_rec_card.js:2453
 apps/web/heys_curator_push_onboarding_banner_v1.js:62
-apps/web/heys_app_shell_v1.js:176
-apps/web/heys_app_shell_v1.js:292
-apps/web/heys_app_shell_v1.js:433
 apps/web/advice/_actions.js:175
 apps/web/advice/_commitments.js:52
 apps/web/advice/_commitments.js:200
