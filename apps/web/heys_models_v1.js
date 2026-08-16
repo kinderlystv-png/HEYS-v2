@@ -483,6 +483,8 @@
       sleepQuality: (d.sleepQuality === '') ? '' : (d.sleepQuality != null ? d.sleepQuality : ''),
       // Вес: если явно задан, берём его; иначе пустое значение (не из профиля)
       weightMorning: hasExplicitWeight ? d.weightMorning : (d.weightMorning || ''),
+      weightMorningEstimated: hasExplicitWeight && d.weightMorningEstimated === true,
+      weightMorningEstimateSource: hasExplicitWeight ? (d.weightMorningEstimateSource || undefined) : undefined,
       // Целевой дефицит: если есть явный вес, берём из профиля или сохранённое значение
       deficitPct: hasExplicitWeight ?
         (d.deficitPct != null ? d.deficitPct : (prof && prof.deficitPctTarget) || 0) :

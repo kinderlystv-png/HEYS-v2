@@ -15,25 +15,30 @@
     const WAIT_LABEL_MS = 2000;
     const WAIT_MIN_VISIBLE_MS = 400;
 
-    function waitGlyph(h, size) {
+    function waitGlyph(h, size, phase) {
         const sw = size <= 16 ? '3' : '2.75';
-        return h('svg', {
-            className: 'heys-wait-mark__glyph',
+        const paths = [
+            h('path', { d: 'M21 12a9 9 0 11-9-9', opacity: '.22' }),
+            h('path', { d: 'M12 3a9 9 0 019 9' }),
+        ];
+        const spinSvg = h('svg', {
             width: size, height: size, viewBox: '0 0 24 24', fill: 'none',
             stroke: 'currentColor', strokeWidth: sw,
-            strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': 'true',
-        },
-            h('svg', {
-                className: 'heys-wait-mark__spin',
-                x: '0', y: '0', width: '24', height: '24', viewBox: '0 0 24 24',
-                fill: 'none', overflow: 'visible',
+            strokeLinecap: 'round', strokeLinejoin: 'round',
+        }, ...paths);
+        if (phase === 'ok') {
+            return h('svg', {
+                className: 'heys-wait-mark__glyph',
+                width: size, height: size, viewBox: '0 0 24 24', fill: 'none',
+                stroke: 'currentColor', strokeWidth: sw,
+                strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': 'true',
             },
-                h('path', { d: 'M21 12a9 9 0 11-9-9', opacity: '.22' }),
-                h('path', { d: 'M12 3a9 9 0 019 9' })
-            ),
-            h('circle', { className: 'heys-wait-mark__close', cx: '12', cy: '12', r: '9' }),
-            h('path', { className: 'heys-wait-mark__check', d: 'M5 13l4 4L19 7' })
-        );
+                h('g', { className: 'heys-wait-mark__spin animate-always' }, ...paths),
+                h('circle', { className: 'heys-wait-mark__close', cx: '12', cy: '12', r: '9' }),
+                h('path', { className: 'heys-wait-mark__check', d: 'M5 13l4 4L19 7' })
+            );
+        }
+        return h('span', { className: 'heys-wait-mark__spin animate-always', 'aria-hidden': 'true' }, spinSvg);
     }
 
     function waitFailSvg(h, size) {
@@ -57,7 +62,7 @@
         const phase = state === 'ok' ? 'ok' : state === 'fail' ? 'fail' : 'wait';
         const glyph = phase === 'fail'
             ? waitFailSvg(h, mode === 'button' ? 15 : 26)
-            : waitGlyph(h, mode === 'button' ? 15 : 26);
+            : waitGlyph(h, mode === 'button' ? 15 : 26, phase === 'ok' ? 'ok' : 'wait');
         if (mode === 'button') {
             return h('span', {
                 className: 'heys-wait-mark heys-wait-mark--button is-' + phase,

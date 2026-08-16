@@ -146,6 +146,8 @@
             dismissWhatsNew,
         } = props;
 
+        const [checkinMountKey, setCheckinMountKey] = React.useState('boot');
+        const [checkinMode, setCheckinMode] = React.useState(undefined);
         const activeEditableRef = React.useRef(null);
         const [showKeyboardDismiss, setShowKeyboardDismiss] = React.useState(false);
 
@@ -254,14 +256,25 @@
             desktopGate,
             consentGate,
             // === MORNING CHECK-IN (вес, сон, шаги — показывается ВМЕСТО контента, НО после согласий) ===
+            // Крестика нет: выход только вперёд. После регистрации «Начать чек-ин»
+            // перемонтирует мастер с mode=daily (новый key сбрасывает planRef).
             !isConsentBlocking && isMorningCheckinBlocking && React.createElement(HEYS.MorningCheckin, {
-                onComplete: () => {
+                key: checkinMountKey,
+                mode: checkinMode,
+                onComplete: (result) => {
+                    if (result && result.startDailyCheckin) {
+                        setCheckinMode('daily');
+                        setCheckinMountKey('daily-' + Date.now());
+                        setShowMorningCheckin(true);
+                        return;
+                    }
                     setShowMorningCheckin(false);
-                },
-                onClose: () => {
-                    // Закрытие крестиком — скрываем до следующей перезагрузки страницы
-                    // При reload чек-ин снова появится если не заполнен вес
-                    setShowMorningCheckin(false);
+                    setCheckinMode(undefined);
+                    setCheckinMountKey('boot');
+                    try {
+                        const homeTab = HEYS.AppTabState?.resolveHomeTab?.('widgets') || 'widgets';
+                        HEYS.App?.setTab?.(homeTab);
+                    } catch (_) { /* noop */ }
                 }
             }),
             // === OFFLINE BANNER (показывается пока нет сети) ===

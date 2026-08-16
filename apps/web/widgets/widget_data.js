@@ -1085,7 +1085,7 @@
         const dateStr = this._formatDate(date);
         const dayData = this._getDayByDate(dateStr);
 
-        if (dayData?.weightMorning) {
+        if (dayData?.weightMorning && dayData.weightMorningEstimated !== true) {
           weights.push({
             date: dateStr,
             weight: dayData.weightMorning,

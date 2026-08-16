@@ -379,5 +379,6 @@
         useTabState,
         isPostReleaseLabsClient,
         getHomeTabs,
+        resolveHomeTab,
     };
 })();

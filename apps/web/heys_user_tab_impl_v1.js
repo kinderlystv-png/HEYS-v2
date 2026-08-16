@@ -2280,16 +2280,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         pushAccessPin.resetDigits?.();
                         return;
                     }
-                    if (r.reason === 'ios_needs_install') {
-                        alert('На iPhone уведомления работают только из установленного PWA. Поделиться → На экран Домой, потом запусти HEYS с домашнего экрана.');
-                    } else if (r.reason === 'permission_blocked') {
-                        alert('Уведомления заблокированы в браузере. Разблокируй их в настройках сайта (значок замка в адресной строке).');
-                    } else if (r.reason === 'permission_denied') {
-                        alert('Без разрешения уведомления не работают. Можно включить позже из этого окна.');
-                    } else if (r.reason === 'not_capable') {
-                        alert('Браузер не поддерживает push-уведомления.');
-                    } else if (r.reason === 'consent_failed') {
-                        alert('Не удалось записать согласие на уведомления. Попробуй ещё раз.');
+                    if (!HEYS.push?.explainEnableFailure?.(r.reason)) {
+                        if (r.reason === 'consent_failed') {
+                            try { alert('Не удалось записать согласие на уведомления. Попробуй ещё раз.'); } catch (_) { /* ignore */ }
+                        }
                     }
                 } else {
                     setAccessSignOpen(false);
@@ -2317,15 +2311,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         return;
                     }
                     setAccessSignOpen(false);
-                    if (r.reason === 'ios_needs_install') {
-                        alert('На iPhone уведомления работают только из установленного PWA. Поделиться → На экран Домой, потом запусти HEYS с домашнего экрана.');
-                    } else if (r.reason === 'permission_blocked') {
-                        alert('Уведомления заблокированы в браузере. Разблокируй их в настройках сайта (значок замка в адресной строке).');
-                    } else if (r.reason === 'permission_denied') {
-                        alert('Без разрешения уведомления не работают. Можно включить позже из этого окна.');
-                    } else if (r.reason === 'not_capable') {
-                        alert('Браузер не поддерживает push-уведомления.');
-                    }
+                    HEYS.push?.explainEnableFailure?.(r.reason);
                     return;
                 }
                 setAccessSignOpen(false);

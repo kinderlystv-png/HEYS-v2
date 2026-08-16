@@ -7043,6 +7043,15 @@
         )
       ),
 
+      !isEditMode && React.createElement('div', { className: 'widgets-tab__edit-row' },
+        React.createElement('button', {
+          type: 'button',
+          id: 'tour-widgets-edit',
+          className: 'widgets-tab__edit-btn hdr-widgets-edit-btn hdr-widgets-edit-btn--primary',
+          onClick: toggleEdit
+        }, 'Изменить')
+      ),
+
       isEditMode && React.createElement(CatalogStrip, {
         onSelect: handleCatalogSelect,
         existingTypes: new Set((widgets || []).map(w => w.type))
