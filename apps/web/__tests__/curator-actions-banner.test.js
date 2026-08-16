@@ -553,6 +553,56 @@ describe('CuratorActionsBanner review modal', () => {
     expect(banner.getDayCue('2026-07-05')?.title).toBe('Куратор обновил этот день');
   });
 
+  it('forceShowLastReview opens the sheet again after Понятно', async () => {
+    const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', [
+      { type: 'training_added', date: '2026-07-05', kind: 'Активное хобби', duration_min: 45, time: '10:40' },
+    ]);
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([entry]));
+
+    await banner.checkAndShow();
+    document.querySelector('.ca-modal__ack-btn').click();
+    await flushMicrotasks();
+    await vi.advanceTimersByTimeAsync(300);
+    expect(document.querySelector('.ca-modal-backdrop')).toBeFalsy();
+
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([]));
+    const opened = await banner.forceShowLastReview({ allowSample: false });
+    expect(opened).toBe(true);
+    expect(document.querySelector('.ca-modal-backdrop')).toBeTruthy();
+    expect(document.querySelector('.ca-modal__ack-btn')?.textContent).toBe('Понятно');
+    expect(typeof window.HEYS.debug.replayCuratorReview).toBe('function');
+  });
+
+  it('forceShowLastReview shows a sample sheet when nothing is left to replay', async () => {
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([]));
+    const opened = await banner.forceShowLastReview({ allowSample: true });
+    expect(opened).toBe(true);
+    expect(document.querySelector('.ca-modal-backdrop')).toBeTruthy();
+    expect(document.body.textContent).toMatch(/куратор|дневник/i);
+  });
+
+  it('forceShowLastReview reopens after local hide of an action', async () => {
+    const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', [
+      { type: 'training_added', date: '2026-07-05', kind: 'Активное хобби', duration_min: 45, time: '10:40' },
+      { type: 'steps_set', date: '2026-07-05', steps: 9000 },
+    ]);
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([entry]));
+
+    await banner.checkAndShow();
+    banner._test.hideActionLocally(entry, entry.actions.actions[0]);
+    document.querySelector('.ca-modal__ack-btn').click();
+    await flushMicrotasks();
+    await vi.advanceTimersByTimeAsync(300);
+
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([]));
+    const opened = await banner.forceShowLastReview({ allowSample: false });
+    expect(opened).toBe(true);
+    expect(document.querySelector('.ca-modal-backdrop')).toBeTruthy();
+  });
+
   it('navigates from a training row with scroll and pulse', async () => {
     const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', [
       { type: 'training_added', date: '2026-07-05', kind: 'Активное хобби', duration_min: 45, time: '10:40' },
@@ -699,6 +749,33 @@ describe('CuratorActionsBanner review modal', () => {
 
     await banner.checkAndShow();
 
+    expect(document.querySelector('.ca-modal__header-title')?.textContent).toBe('Куратор Антон обновил ваш дневник');
+  });
+
+  it('uses curatorDisplayName from config when profile has no name', async () => {
+    const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z');
+    const banner = loadBanner();
+    window.HEYS.utils.lsGet.mockImplementation((key) => (
+      key === 'heys_profile' ? { curatorId: 'c1' } : null
+    ));
+    window.HEYS.config = { curatorDisplayName: 'Антон Волков' };
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([entry]));
+
+    await banner.checkAndShow();
+
+    expect(document.querySelector('.ca-modal__header-title')?.textContent).toBe('Куратор Антон обновил ваш дневник');
+    expect(document.querySelector('.ca-modal__close-svg')).toBeTruthy();
+  });
+
+  it('diag sample uses canvas name when profile has none', async () => {
+    const banner = loadBanner();
+    window.HEYS.utils.lsGet.mockReturnValue({});
+    window.HEYS.config = {};
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([]));
+
+    const ok = await banner.forceShowLastReview({ allowSample: true });
+
+    expect(ok).toBe(true);
     expect(document.querySelector('.ca-modal__header-title')?.textContent).toBe('Куратор Антон обновил ваш дневник');
   });
 

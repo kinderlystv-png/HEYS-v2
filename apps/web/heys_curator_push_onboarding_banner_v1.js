@@ -173,7 +173,9 @@
         actionBtn.disabled = true;
         const originalText = actionBtn.textContent;
         actionBtn.textContent = '...';
-        const r = await HEYS.push?.subscribe?.();
+        const r = await (HEYS.push?.setEnabled
+          ? HEYS.push.setEnabled(true)
+          : HEYS.push?.subscribe?.());
         if (r && r.ok === true) {
           hideBanner();
           markDismissed();
@@ -186,11 +188,13 @@
         actionBtn.textContent = originalText;
         actionBtn.disabled = false;
         if (r?.reason === 'permission_denied' || r?.reason === 'permission_blocked') {
-          alert('Без разрешения уведомления не работают. Можно включить позже из шапки 🔔.');
+          alert('Без разрешения уведомления не работают. Можно включить позже в настройках.');
           hideBanner();
           markDismissed();
         } else if (r?.reason === 'ios_needs_install') {
-          alert('На iPhone уведомления работают только из установленного приложения. Поделиться → На экран «Домой», потом запусти HEYS с иконки.');
+          if (!HEYS.push?.explainEnableFailure?.('ios_needs_install')) {
+            alert('На iPhone уведомления работают только из установленного приложения. Поделиться → На экран «Домой», потом запусти HEYS с иконки.');
+          }
         } else if (r?.reason === 'not_capable') {
           // браузер не поддерживает — просто скрываем, чтоб не мозолил
           hideBanner();

@@ -59,6 +59,8 @@
   let _hiddenActionKeys = null;
   let _reviewedByDate = null;
   let _cuesTimer = null;
+  // Диагностика: образец без имени куратора → «Антон» как в canvas.
+  let _titleNameOverride = null;
 
   // ─── Utilities ────────────────────────────────────────────────────
 
@@ -622,9 +624,21 @@
       const profile = HEYS.utils && typeof HEYS.utils.lsGet === 'function'
         ? (HEYS.utils.lsGet('heys_profile', {}) || {})
         : {};
-      const raw = profile.curatorName || profile.curator_name || profile.curatorFirstName
-        || (HEYS.config && HEYS.config.curatorName)
-        || '';
+      // Те же источники, что welcome (`resolveAssignedCuratorName`), плюс config
+      // без флага назначения — у PIN-клиента имя часто только в config/display.
+      const fromProfile = String(
+        profile.curatorName
+        || profile.curator_name
+        || profile.curatorFirstName
+        || profile.curatorDisplayName
+        || ''
+      ).trim();
+      const fromConfig = String(
+        (HEYS.config && (HEYS.config.curatorDisplayName || HEYS.config.curatorName))
+        || HEYS.curatorDisplayName
+        || ''
+      ).trim();
+      const raw = fromProfile || fromConfig;
       const first = String(raw).trim().split(/\s+/)[0];
       return first || null;
     } catch (_) {
@@ -633,7 +647,7 @@
   }
 
   function sheetTitle() {
-    const name = getCuratorFirstName();
+    const name = _titleNameOverride || getCuratorFirstName();
     return name ? `Куратор ${name} обновил ваш дневник` : 'Ваш куратор обновил дневник';
   }
 
@@ -1276,6 +1290,14 @@
     _previousFocus = null;
   }
 
+  function closeIconSvg() {
+    return `
+      <svg class="ca-modal__close-svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" aria-hidden="true" focusable="false">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    `;
+  }
+
   function getFocusableElements(root) {
     if (!root || !root.querySelectorAll) return [];
     return Array.from(root.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
@@ -1450,7 +1472,7 @@
             <div class="ca-modal__header-title" id="ca-modal-title">${escapeHtml(sheetTitle())}</div>
             <div class="ca-modal__header-subtitle" id="ca-modal-summary">${escapeHtml(subtitle)}</div>
           </div>
-          <button class="ca-modal__close" type="button" aria-label="Позже">×</button>
+          <button class="ca-modal__close" type="button" aria-label="Позже">${closeIconSvg()}</button>
         </div>
         <div class="ca-modal__content">${groupsHtml}</div>
         <div class="ca-modal__footer">
@@ -1467,6 +1489,7 @@
       }, 'warn');
       markSnoozed();
       _filterDate = null;
+      _titleNameOverride = null;
       removeExistingModal();
       emitCueChange();
       if (getShowCount() < MAX_AUTO_SHOWS_PER_SESSION) scheduleReviewAttempt(SNOOZE_MS);
@@ -1481,6 +1504,7 @@
       _reviewEntries = _reviewEntries.filter((e) => !ids.has(e.id));
       _renderedEntries = [];
       _filterDate = null;
+      _titleNameOverride = null;
       removeExistingModal();
       emitCueChange();
       flushPendingAcks().catch((err) => {
@@ -1660,6 +1684,137 @@
     return attemptOpenReview({ manual: true, force: true });
   }
 
+  function collectReplayEntries() {
+    const byId = new Map();
+    const push = (list) => {
+      for (const entry of (list || [])) {
+        if (!entry || !entry.id || byId.has(entry.id)) continue;
+        byId.set(entry.id, entry);
+      }
+    };
+    push(_reviewEntries);
+    push(_entries);
+    const reviewed = reviewedByDateMap();
+    for (const date of Object.keys(reviewed)) {
+      const snap = reviewed[date];
+      if (snap && Array.isArray(snap.entries)) push(snap.entries);
+    }
+    return Array.from(byId.values());
+  }
+
+  function buildDiagnosticSampleEntries() {
+    const today = todayYmd() || '2026-08-16';
+    const yesterday = shiftYmd(today, -1) || today;
+    return [
+      {
+        id: 'diag-curator-review-sample-1',
+        created_at: `${today}T09:12:00.000Z`,
+        keys: [`heys_dayv2_${today}`],
+        actions: {
+          actions: [
+            {
+              type: 'training_added',
+              date: today,
+              kind: 'Активное хобби',
+              duration_min: 45,
+              time: '10:40',
+            },
+            {
+              type: 'meal_item_changed',
+              date: today,
+              meal_id: 'diag-lunch',
+              meal_name: 'Обед',
+              item_name: 'Гречка',
+              kcal_before: 420,
+              kcal_after: 380,
+            },
+          ],
+          day_kcal_before: 1860,
+          day_kcal_after: 1820,
+        },
+      },
+      {
+        id: 'diag-curator-review-sample-2',
+        created_at: `${yesterday}T18:40:00.000Z`,
+        keys: [`heys_dayv2_${yesterday}`],
+        actions: {
+          actions: [
+            {
+              type: 'steps_set',
+              date: yesterday,
+              steps: 9200,
+            },
+          ],
+        },
+      },
+    ];
+  }
+
+  // HEYS_DEBUG_REPLAY_CURATOR_REVIEW — показать шторку даже после «Понятно».
+  // Берёт живые записи и session-снимки; скрытые тапом строки снова видны.
+  // Если данных нет — образец для локальной диагностики.
+  async function forceShowLastReview(opts = {}) {
+    const allowSample = opts.allowSample !== false;
+    try {
+      sessionStorage.removeItem(SNOOZE_UNTIL_KEY);
+    } catch (_) { /* ignore */ }
+    removeExistingModal();
+    _titleNameOverride = null;
+    _filterDate = null;
+    _expandedTail = false;
+    _expandedDates = new Set();
+    _expandedMeals = new Set();
+    // Иначе после тапов по строкам / «Понятно» groupVisibleByDate даёт 0 пар.
+    _hiddenActionKeys = new Set();
+    try {
+      sessionStorage.removeItem(HIDDEN_ACTIONS_KEY);
+    } catch (_) { /* ignore */ }
+
+    let collected = collectReplayEntries();
+    if (collected.length === 0) {
+      try {
+        await checkAndShow();
+      } catch (err) {
+        console.warn('[HEYS.curatorReview] forceShowLastReview fetch:', err?.message || err);
+      }
+      collected = collectReplayEntries();
+    }
+
+    let usedSample = false;
+    if (collected.length === 0 && allowSample) {
+      collected = buildDiagnosticSampleEntries();
+      usedSample = true;
+      console.info('[HEYS.curatorReview] forceShowLastReview: показываю диагностический образец');
+    }
+    if (collected.length === 0) {
+      console.warn('[HEYS.curatorReview] forceShowLastReview: нет правок для показа');
+      return false;
+    }
+
+    if (usedSample && !getCuratorFirstName()) _titleNameOverride = 'Антон';
+    _entries = collected;
+    _reviewEntries = collected;
+    const opened = renderModal();
+    if (!opened) {
+      if (!usedSample && allowSample) {
+        _entries = buildDiagnosticSampleEntries();
+        _reviewEntries = _entries;
+        _hiddenActionKeys = new Set();
+        if (!getCuratorFirstName()) _titleNameOverride = 'Антон';
+        const sampleOpened = renderModal();
+        if (sampleOpened) {
+          console.info('[HEYS.curatorReview] forceShowLastReview: снимки пусты после фильтра, образец');
+          emitCueChange();
+          return true;
+        }
+      }
+      console.warn('[HEYS.curatorReview] forceShowLastReview: группы пусты после фильтра');
+      return false;
+    }
+    emitCueChange();
+    return true;
+  }
+
   function computeLiveDelayMs(entries, serverNowMs) {
     let firstMs = null;
     for (const e of (entries || [])) {
@@ -1826,6 +1981,7 @@
     shouldShowNutritionDot,
     openFromCue,
     openFromTab,
+    forceShowLastReview,
     _test: {
       summarizeEntries,
       actionText,
@@ -1849,6 +2005,8 @@
       enqueueAckForEntries,
       flushPendingAcks,
       hideActionLocally,
+      collectReplayEntries,
+      forceShowLastReview,
       dismissStorageName: 'sessionStorage',
       constants: {
         LIVE_ACCUMULATE_MS,
@@ -1863,6 +2021,10 @@
     },
     _verify: VERIFY_MARK,
   };
+
+  HEYS.debug = HEYS.debug || {};
+  // HEYS_DEBUG_REPLAY_CURATOR_REVIEW
+  HEYS.debug.replayCuratorReview = forceShowLastReview;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', mount, { once: true });
