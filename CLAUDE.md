@@ -85,14 +85,15 @@ Tone, communication length, adjacent observations — см. user-level CLAUDE.md
   invariants, copy/marketing guardrails, local-dev verify и hook discipline.
 - После изменения общих правил запусти `pnpm agents:policy:check`; проверка
   должна пройти до завершения задачи.
-- Различаться могут только agent-specific execution mechanics. Общий invariant:
-  commit/staging под commit/push/PR/publication выполняются только по отдельной
-  прямой команде пользователя. `AGENTS.md` может описывать работу Codex только в
-  `main`, а `CLAUDE.md` — Claude-worktrees; эти различия не дают разрешения на
-  shipping. Если в правилах найден конфликт и оба policy-файла входят в текущий
-  scope, сначала синхронизируй общий safety-инвариант, затем оставь явное
-  agent-specific исключение. Иначе не расширяй задачу молча: зафиксируй конфликт
-  пользователю.
+- Различаться могут только agent-specific execution mechanics. Общий invariant
+  (обновлён 2026-08-09 решением владельца): staging и commit — на усмотрение
+  агента, отдельной команды не требуют; **push, deploy, PR и любая внешняя
+  публикация — только по отдельной прямой команде пользователя**. `AGENTS.md`
+  может описывать работу Codex только в `main`, а `CLAUDE.md` —
+  Claude-worktrees; эти различия не дают разрешения на shipping. Если в правилах
+  найден конфликт и оба policy-файла входят в текущий scope, сначала
+  синхронизируй общий safety-инвариант, затем оставь явное agent-specific
+  исключение. Иначе не расширяй задачу молча: зафиксируй конфликт пользователю.
 
 ## Coding guardrails
 
@@ -243,6 +244,7 @@ readiness-математику, валидатор-фреймворк, онбо�
 ## Execution autonomy
 
 <!-- POLICY {"id":"shipping-runbook-required","path":"docs/operations/AGENT_SHIPPING_RUNBOOK.md","before":["staging","commit","production-build","integration","push","pr"],"grantsPermission":false} -->
+<!-- POLICY {"id":"commit-is-agent-discretion","actions":["staging","commit"],"requiresDirectInstruction":false,"since":"2026-08-09"} -->
 <!-- POLICY {"id":"commit-only-no-push","command":"pnpm ship","requiredArgs":["--no-push"],"push":false} -->
 <!-- POLICY {"id":"push-requires-grant","taskApproval":false,"allowedGrants":["direct","session-wide-scoped"]} -->
 <!-- POLICY {"id":"hook-bypass-explicit-only","tokens":["--no-verify","HUSKY=0"],"requires":"explicit-exact-operation"} -->

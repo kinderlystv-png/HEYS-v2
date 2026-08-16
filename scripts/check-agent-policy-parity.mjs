@@ -35,6 +35,15 @@ const DISTRIBUTED_INVARIANTS = [
     markers: [/production build \(`pnpm build`\)/u, /отдельн(?:ой|ую) прям(?:ой|ую) команд/u],
   },
   {
+    id: 'commit-is-agent-discretion',
+    label: 'staging and commit are the agent\'s call',
+    scopes: { agents: 'Execution autonomy', claude: 'Execution autonomy' },
+    markers: [
+      /\*\*Commit — на усмотрение агента\*\*/u,
+      /не требуют отдельной команды/u,
+    ],
+  },
+  {
     id: 'git-deploy-fact-check',
     label: 'Git/deploy fact-check before answering',
     scopes: { agents: 'Execution autonomy', claude: 'Execution autonomy' },

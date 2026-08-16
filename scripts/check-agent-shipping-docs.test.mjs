@@ -51,6 +51,34 @@ test('reports when the commit-only operation loses --no-push', () => {
   assert.ok(failures.some((failure) => failure.file === RUNBOOK));
 });
 
+test('reports when commit-is-agent-discretion requires a direct instruction', () => {
+  const state = withFile(loadRepositoryState(), RUNBOOK, (text) => {
+    const changed = text.replace(
+      '"id":"commit-is-agent-discretion","actions":["staging","commit"],"requiresDirectInstruction":false,"since":"2026-08-09"',
+      '"id":"commit-is-agent-discretion","actions":["staging","commit"],"requiresDirectInstruction":true,"since":"2026-08-09"',
+    );
+    assert.notEqual(changed, text, 'test fixture must flip requiresDirectInstruction');
+    return changed;
+  });
+
+  const failures = invariantFailures(state, 'commit-is-agent-discretion');
+  assert.ok(failures.some((failure) => failure.file === RUNBOOK));
+});
+
+test('reports a missing commit-is-agent-discretion marker', () => {
+  const state = withFile(loadRepositoryState(), 'AGENTS.md', (text) => {
+    const changed = text.replace(
+      '<!-- POLICY {"id":"commit-is-agent-discretion","actions":["staging","commit"],"requiresDirectInstruction":false,"since":"2026-08-09"} -->\n',
+      '',
+    );
+    assert.notEqual(changed, text, 'test fixture must remove the marker');
+    return changed;
+  });
+
+  const failures = invariantFailures(state, 'commit-is-agent-discretion');
+  assert.ok(failures.some((failure) => failure.file === 'AGENTS.md'));
+});
+
 test('reports when the Codex main-only policy allows branch creation', () => {
   const state = withFile(loadRepositoryState(), RUNBOOK, (text) => {
     const changed = text.replace(

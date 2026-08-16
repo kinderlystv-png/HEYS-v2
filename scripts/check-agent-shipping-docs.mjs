@@ -56,6 +56,12 @@ const COMMON_POLICIES = {
     before: ['staging', 'commit', 'production-build', 'integration', 'push', 'pr'],
     grantsPermission: false,
   },
+  'commit-is-agent-discretion': {
+    id: 'commit-is-agent-discretion',
+    actions: ['staging', 'commit'],
+    requiresDirectInstruction: false,
+    since: '2026-08-09',
+  },
   'commit-only-no-push': {
     id: 'commit-only-no-push',
     command: 'pnpm ship',

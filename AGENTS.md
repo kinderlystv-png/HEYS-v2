@@ -233,6 +233,7 @@ fail-closed: чужое не портится, но коммит придётс�
 ## Execution autonomy
 
 <!-- POLICY {"id":"shipping-runbook-required","path":"docs/operations/AGENT_SHIPPING_RUNBOOK.md","before":["staging","commit","production-build","integration","push","pr"],"grantsPermission":false} -->
+<!-- POLICY {"id":"commit-is-agent-discretion","actions":["staging","commit"],"requiresDirectInstruction":false,"since":"2026-08-09"} -->
 <!-- POLICY {"id":"commit-only-no-push","command":"pnpm ship","requiredArgs":["--no-push"],"push":false} -->
 <!-- POLICY {"id":"push-requires-grant","taskApproval":false,"allowedGrants":["direct","session-wide-scoped"]} -->
 <!-- POLICY {"id":"hook-bypass-explicit-only","tokens":["--no-verify","HUSKY=0"],"requires":"explicit-exact-operation"} -->
@@ -250,13 +251,16 @@ fail-closed: чужое не портится, но коммит придётс�
   работающем frontend или локальном preview. Сразу доведи всю цепочку до
   фактической проверки в целевой среде; остановка допустима только при реальном
   внешнем блокере, который нельзя устранить в текущей сессии.
-- В дополнение к глобальному permission gate HEYS требует отдельной прямой
-  команды на staging/commit, production build (`pnpm build`), standalone/full
-  legacy build, `pnpm push:*`, `pnpm ship`, integration/release artifacts, push
-  и PR. Команда «сделай» разрешает source-правки, точечные проверки и локальный
-  preview flow выше, но не эти действия. Разрешённый commit включает
-  обязательные hook side effects только для staged scope, но не отдельный
-  full/integration flow.
+- **Commit — на усмотрение агента** (решение владельца 2026-08-09). Staging и
+  `git commit` не требуют отдельной команды: коммить по ходу работы, когда
+  логический блок готов и проверен. Переспрашивать «коммитить?» не нужно. Коммит
+  включает обязательные hook side effects для staged scope.
+- **Только по отдельной прямой команде:** `git push`, `pnpm push:*`, deploy, PR,
+  внешняя публикация, а также production build (`pnpm build`), standalone/full
+  legacy build и integration/release artifacts, когда они не являются неизбежным
+  hook side effect уже сделанного коммита. Команда «сделай» разрешает
+  source-правки, точечные проверки, локальный preview и commit готовых блоков,
+  но не эти действия. Approval задачи ≠ approval push/deploy.
 - Перед первым в сессии разрешённым staging/commit/production build/integration/
   push/PR полностью прочитай общий обязательный runbook:
   [docs/operations/AGENT_SHIPPING_RUNBOOK.md](docs/operations/AGENT_SHIPPING_RUNBOOK.md).
