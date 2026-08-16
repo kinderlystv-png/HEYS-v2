@@ -12,11 +12,18 @@
 -- consent is not a condition of performing curator duties (freely given
 -- consent, matters at the first hire).
 --
--- NO signature rows are stamped here. The 15.08 gate migration stamped 1.0 for
--- the then-active curators; 1.1 must be signed by each curator personally.
--- There is no signing screen yet (curator_consents is server-side only) —
--- owner decides: a small screen in the curator profile, or a paper act
--- referenced from legal_signoff_ref. Until then 1.1 is registered but unsigned.
+-- Block 3 stamps ONE signature row, for the owner-curator only
+-- (poplanton@mail.ru), on the basis of the signed paper act
+-- docs/release/подписано в реальности/act-curator-push-consent-1.1-2026-08-16.md.
+-- Do not widen it to
+-- all active curators: a hired curator must sign 1.1 himself, and there is no
+-- signing screen yet (curator_consents is server-side only). Building that
+-- screen is a prerequisite for the first hire — consent obtained under threat
+-- of losing access to work is not freely given (lawyer, 16.08).
+--
+-- Apply block 3 only after the act is physically signed. Order matters inside
+-- this file: the registry row must exist first, because
+-- enforce_consent_document_proof stamps document_sha256 from the registry.
 --
 -- The send-path gate does not look at the version
 -- (yandex-cloud-functions/*/push-consent.js: granted = true AND revoked_at IS
@@ -46,3 +53,32 @@ UPDATE public.legal_consent_registry
  WHERE consent_type = 'curator_push_notifications'
    AND document_version <> '1.1'
    AND status = 'active';
+
+-- Block 3: owner-curator signature under 1.1, basis — the signed paper act.
+INSERT INTO public.curator_consents (
+  curator_id,
+  consent_type,
+  document_version,
+  granted,
+  consent_method,
+  signature_method
+)
+SELECT
+  c.id,
+  'curator_push_notifications',
+  '1.1',
+  true,
+  'paper_act',
+  'paper'
+FROM public.curators c
+WHERE c.email = 'poplanton@mail.ru'
+  AND c.is_active IS TRUE
+  AND NOT EXISTS (
+    SELECT 1
+      FROM public.curator_consents cc
+     WHERE cc.curator_id = c.id
+       AND cc.consent_type = 'curator_push_notifications'
+       AND cc.document_version = '1.1'
+       AND cc.granted = true
+       AND cc.revoked_at IS NULL
+  );
