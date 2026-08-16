@@ -40,6 +40,7 @@
     health_data: '1.5',  // изъято из обязательного набора; снимок 1.5 в архиве
     marketing: '1.4',
     payment_oferta: '1.11',
+    push_notifications: '1.2',
     speech_transcription: '1.2',
     supplements_tracking: '1.0',
     body_measurements: '1.0'
@@ -81,13 +82,17 @@
     checkboxes: {
       user_agreement: {
         label: 'Принимаю условия Пользовательского соглашения (Оферты)',
+        screenLabel: 'Пользовательское соглашение',
         summary: 'Определяет доступ к HEYS, условия тарифа и оплаты, правила отмены и то, что сервис не является медицинской услугой.',
+        screenSummary: 'Доступ к HEYS, условия тарифа и отмены.',
         link: '/legal/user-agreement',
         required: true
       },
       personal_data: {
         label: 'Даю согласие на обработку моих персональных данных',
+        screenLabel: 'Обработка персональных данных',
         summary: 'Отдельный документ: какие данные, для чего, кому передаются, срок и как отозвать. Политика описывает работу оператора и не заменяет это согласие.',
+        screenSummary: 'Храним имя, контакт и профиль в России. Доступ у вас и куратора. Telegram, Google и Apple получают только то, что названо в согласии, — приглашение, статус заявки и доставку уведомлений.',
         link: '/legal/personal-data-consent',
         required: true
       },
@@ -99,12 +104,16 @@
       },
       marketing: {
         label: 'Согласен получать информационные и рекламные материалы сервиса',
+        screenLabel: 'Новости и советы',
+        screenHint: 'Письма о продукте, не чаще раза в месяц',
         summary: 'Можем присылать материалы, новости и акции по email и push. Это необязательно: можно отказаться без потери доступа к HEYS.',
         link: '/docs/marketing-consent.md',
         required: false
       },
       notifications: {
         label: 'Напоминания, события по дневнику и факт нового сообщения куратора',
+        screenLabel: 'Напоминания',
+        screenHint: 'Статус пробной недели и сообщения куратора',
         summary: 'Служебные уведомления. Сообщение куратора — без текста переписки. Остальные могут содержать сведения из дневника. Доставка через Google, Apple и Mozilla. Рекламное согласие оформляется отдельно.',
         link: '/docs/v1.2/push-notifications-consent.md',
         required: false
@@ -123,12 +132,16 @@
       },
       supplements_tracking: {
         label: 'Вести отметки о добавках из справочника сервиса',
+        screenLabel: 'Добавки и витамины',
+        screenHint: 'Учёт приёма в дневнике',
         summary: 'Сохраняем выбранные позиции и даты приёма. Лекарства вносить нельзя. Видят вы и куратор. Можно отказаться без потери доступа к HEYS.',
         link: '/docs/v1.0/supplements-consent.md',
         required: false
       },
       body_measurements: {
         label: 'Вести замеры тела в дневнике',
+        screenLabel: 'Замеры тела',
+        screenHint: 'Обхваты тела в дневнике',
         summary: 'Сохраняем обхваты и даты, чтобы видеть динамику вам и куратору. Можно отказаться без потери доступа к HEYS. Выключение удаляет внесённые замеры.',
         link: '/docs/v1.0/body-measurements-consent.md',
         required: false
@@ -225,7 +238,7 @@
 
     // Дисклеймер
     disclaimer: {
-      short: 'HEYS — сервис учёта питания и сопровождения. Не является медицинской услугой.',
+      short: 'HEYS — учёт питания и сопровождение куратора, не медицинская услуга.',
       full: 'HEYS предоставляет информационные услуги по учёту питания и коучинговое сопровождение. ' +
         'Сервис НЕ является медицинской организацией, не оказывает медицинские услуги, ' +
         'не ставит диагнозы и не назначает лечение. При наличии заболеваний обратитесь к врачу.'
@@ -581,9 +594,9 @@
       body_measurements: false
     });
     // notifications — отдельный preference, НЕ 152-ФЗ согласие.
-    // Default ON: пользователь явно решил включить уведомления при онбординге.
-    // Юрист: предустановка ≠ активное действие субъекта (lawyer-review-5 §1).
+    // Default OFF: предустановка ≠ активное действие субъекта (lawyer-review-5 §1).
     const [notificationsOptIn, setNotificationsOptIn] = useState(false);
+    const [readRequiredTypes, setReadRequiredTypes] = useState({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [showFullText, setShowFullText] = useState(null);
@@ -625,18 +638,18 @@
       applyOptionalFeatureFlagsFromConsents(consentList);
       if (notificationsOptIn) {
         try {
-          await consentsAPI.setPushConsent(true);
+          if (HEYS.push?.setEnabled) {
+            await HEYS.push.setEnabled(true);
+          } else {
+            await consentsAPI.setPushConsent(true);
+            if (HEYS.push) {
+              HEYS.push.subscribe().catch((err) =>
+                console.warn('[Consents] push.subscribe failed:', err?.message)
+              );
+            }
+          }
         } catch (err) {
           console.warn('[Consents] setPushConsent failed:', err?.message);
-        }
-        if (HEYS.push) {
-          HEYS.push.subscribe().then((r) => {
-            if (r && r.reason === 'ios_needs_install') {
-              try { localStorage.setItem('heys_push_pending_install', '1'); } catch (_) { /* noop */ }
-            }
-          }).catch((err) =>
-            console.warn('[Consents] push.subscribe failed:', err?.message)
-          );
         }
       }
       onComplete?.(consentList);
@@ -682,16 +695,6 @@
     const [signSuccess, setSignSuccess] = useState(false);
     const [signedConsentList, setSignedConsentList] = useState(null);
 
-    const primarySignDocType = useMemo(() => {
-      if (consents.personal_data) return 'personal_data';
-      if (consents.user_agreement) return 'user_agreement';
-      return Object.keys(consents).find((type) => consents[type] && CONSENT_TEXTS.checkboxes[type]) || 'personal_data';
-    }, [consents]);
-
-    const primarySignDocTitle = (CONSENT_TEXTS.checkboxes[primarySignDocType]?.label
-      || 'Документ для подписи').replace(/^Принимаю условия /, '').replace(/^Даю согласие на обработку /, 'Согласие на обработку ');
-    const primarySignDocRevision = `Редакция ${CURRENT_VERSIONS[primarySignDocType] || '1.0'}`;
-
     useEffect(() => {
       if (step === 'access_code_sign' && accessSignPinApi) {
         accessSignPinApi.resetDigits();
@@ -704,6 +707,24 @@
     }, [step]);
 
     const allRequiredAccepted = REQUIRED_CONSENTS.every(type => consents[type]);
+    const requiredConsentReason = (() => {
+      const missing = REQUIRED_CONSENTS.filter((type) => !consents[type]);
+      if (missing.length === 0) return null;
+      if (missing.length === 2) return 'Откройте и дочитайте оба документа';
+      if (missing[0] === CONSENT_TYPES.USER_AGREEMENT) {
+        return 'Откройте и дочитайте пользовательское соглашение';
+      }
+      return 'Откройте и дочитайте согласие на персональные данные';
+    })();
+
+    const handleRequiredOrOptionalToggle = useCallback((type) => {
+      const isRequiredRead = REQUIRED_CONSENTS.includes(type);
+      if (isRequiredRead && !readRequiredTypes[type] && !consents[type]) {
+        setShowFullText(type);
+        return;
+      }
+      setConsents((prev) => ({ ...prev, [type]: !prev[type] }));
+    }, [consents, readRequiredTypes]);
 
     // =====================================================
     // АВАРИЙНЫЙ ВЫКЛЮЧАТЕЛЬ: если SMS выключен — verify_code невозможен
@@ -921,6 +942,17 @@
       }
     }, [accessSignCode, clientId, consents, signAttemptsRemaining, signSuccess, signedConsentList, finishConsentFlow, isReadonlyHost, completeWithoutWrite, onError, accessSignPinApi]);
 
+    const signAutoSubmitLockRef = useRef(false);
+    useEffect(() => {
+      if (step !== 'access_code_sign' || signSuccess || loading) return;
+      if (!accessSignPinApi?.isComplete) return;
+      if (signAutoSubmitLockRef.current) return;
+      signAutoSubmitLockRef.current = true;
+      Promise.resolve(handleAccessCodeSign()).finally(() => {
+        signAutoSubmitLockRef.current = false;
+      });
+    }, [step, signSuccess, loading, accessSignPinApi?.isComplete, handleAccessCodeSign]);
+
     if (step === 'access_code_sign') {
       return React.createElement('div', {
         ref: screenRef,
@@ -938,15 +970,9 @@
           'aria-label': 'Подписание',
         },
           React.createElement('div', { className: 'heys-consent-sign-sheet__handle', 'aria-hidden': 'true' }),
-          React.createElement('div', { className: 'heys-consent-sign-sheet__title' }, 'Подписание'),
-          React.createElement('div', { className: 'heys-consent-sign-sheet__doc' },
-            React.createElement('div', { className: 'heys-consent-sign-sheet__doc-title' }, primarySignDocTitle),
-            React.createElement('div', { className: 'heys-consent-sign-sheet__doc-meta' }, primarySignDocRevision),
-            React.createElement('button', {
-              type: 'button',
-              className: 'heys-consent-sign-sheet__read',
-              onClick: () => setShowFullText(primarySignDocType),
-            }, 'Читать'),
+          React.createElement('div', { className: 'heys-consent-sign-sheet__title' }, 'Подпишите документы'),
+          !signSuccess && React.createElement('p', { className: 'heys-consent-sign-sheet__hint' },
+            'Введите код доступа — он заменяет собственноручную подпись.',
           ),
           signSuccess
             ? React.createElement('div', { className: 'heys-consent-sign-sheet__success', role: 'status' },
@@ -955,7 +981,7 @@
             : pinKeypadKit
               ? pinKeypadKit.renderPinKeypadSection({
                 pin: accessSignPinApi,
-                label: 'Код доступа',
+                label: '',
                 labelClassName: 'heys-auth-label',
                 sectionClassName: 'heys-auth-pin-section space-y-3 is-active'
                   + (signPinError ? ' is-error' : ''),
@@ -963,26 +989,13 @@
                 keypadRef: accessSignKeypadRef,
               })
               : null,
-          !signSuccess && React.createElement('p', { className: 'heys-consent-sign-sheet__hint' },
-            'Код вводится каждый раз при подписании — даже на запомненном устройстве. Так подпись не зависит от того, у кого в руках телефон.',
-          ),
           error && React.createElement('div', { className: 'heys-consent-sign-sheet__error', role: 'alert' }, error),
-          React.createElement('div', { className: 'heys-consent-sign-sheet__actions' },
+          signSuccess && React.createElement('div', { className: 'heys-consent-sign-sheet__actions' },
             React.createElement('button', {
               type: 'button',
               className: 'heys-consent-sign-sheet__primary',
-              disabled: (!signSuccess && !accessSignPinApi.isComplete) || loading,
               onClick: handleAccessCodeSign,
-            }, HEYS.WaitMark?.button?.(React, {
-              busy: loading, ok: !!signSuccess,
-              idle: 'Подписать', busyLabel: 'Подписываем', okLabel: 'Готово',
-            }) || (loading ? 'Подписываем…' : (signSuccess ? 'Готово' : 'Подписать'))),
-            !signSuccess && React.createElement('button', {
-              type: 'button',
-              className: 'heys-consent-sign-sheet__secondary',
-              disabled: loading,
-              onClick: () => { if (typeof onCancel === 'function') onCancel(); },
-            }, 'Отмена'),
+            }, 'Готово'),
           ),
         ),
         showFullText && React.createElement(FullTextModal, {
@@ -997,7 +1010,7 @@
       ref: screenRef,
       'data-heys-visible-frame': 'consent',
       className: 'fixed inset-0 flex flex-col',
-      style: { backgroundColor: '#ffffff', zIndex: 11000 }
+      style: { backgroundColor: '#fffaf1', zIndex: 11000 }
     },
       // Header
       React.createElement('div', {
@@ -1008,18 +1021,18 @@
           className: 'text-xl font-semibold',
           style: { color: '#18181b' }
         }, step === 'access_code_sign'
-          ? '✍️ Подпись документов'
-          : (step === 'verify_code' ? '📱 Подтверждение' : '📋 Согласия и условия')),
+          ? 'Подпишите документы'
+          : (step === 'verify_code' ? 'Подтверждение' : 'Согласия и условия')),
         React.createElement('p', {
           className: 'text-sm mt-1',
           style: { color: '#71717a' }
         }, step === 'access_code_sign'
-          ? 'Введите код доступа — им вы подписываете документы в приложении'
+          ? 'Введите код доступа — он заменяет собственноручную подпись.'
           : (step === 'verify_code'
             ? 'Введите код из SMS для подтверждения согласия на обработку данных о здоровье'
             : (hasOutdatedDocuments
               ? 'Проверьте содержание документов и подтвердите актуальные условия'
-              : 'Коротко объяснили каждый пункт. Для продолжения примите обязательные условия')))
+              : 'Оба документа открываются целиком: отметка появится, когда дочитаете до конца.')))
       ),
 
       // READONLY: постоянный баннер — эталон для скринов, запись недоступна
@@ -1035,59 +1048,60 @@
         React.createElement('div', {
           className: 'flex-1 overflow-auto p-4 space-y-4'
         },
-          // Дисклеймер
-          React.createElement('div', {
+          !allRequiredAccepted && React.createElement('div', {
             className: 'rounded-xl p-4',
-            style: { backgroundColor: '#fffbeb', border: '1px solid #fde68a' }
+            style: { backgroundColor: '#f6e6dd' }
           },
-            React.createElement('div', {
-              className: 'flex items-start gap-3'
-            },
-              React.createElement('span', { className: 'text-xl' }, '⚠️'),
-              React.createElement('div', null,
-                React.createElement('p', {
-                  className: 'font-medium',
-                  style: { color: '#92400e' }
-                }, 'Важно'),
-                React.createElement('p', {
-                  className: 'text-sm mt-1',
-                  style: { color: '#b45309' }
-                }, CONSENT_TEXTS.disclaimer.full)
-              )
-            )
+            React.createElement('p', {
+              className: 'font-medium',
+              style: { color: '#a1471c' }
+            }, 'Важно'),
+            React.createElement('p', {
+              className: 'text-sm mt-1',
+              style: { color: 'rgba(0,0,0,.6)' }
+            }, CONSENT_TEXTS.disclaimer.short)
           ),
 
-          // Чекбоксы
           React.createElement('div', {
             className: 'space-y-3'
           },
-            // User Agreement
+            allRequiredAccepted && React.createElement('div', {
+              className: 'text-xs font-semibold tracking-widest uppercase',
+              style: { color: '#8a4a20', marginTop: 4, marginBottom: 8 }
+            }, 'Обязательные'),
             React.createElement(ConsentCheckbox, {
               type: 'user_agreement',
               checked: consents.user_agreement,
-              onChange: () => handleToggle('user_agreement'),
+              requireRead: true,
+              hasRead: !!readRequiredTypes.user_agreement,
+              useScreenCopy: true,
+              compact: allRequiredAccepted,
+              onChange: () => handleRequiredOrOptionalToggle('user_agreement'),
               config: CONSENT_TEXTS.checkboxes.user_agreement,
               onShowFull: () => setShowFullText('user_agreement')
             }),
 
-            // Personal Data
             React.createElement(ConsentCheckbox, {
               type: 'personal_data',
               checked: consents.personal_data,
-              onChange: () => handleToggle('personal_data'),
+              requireRead: true,
+              hasRead: !!readRequiredTypes.personal_data,
+              useScreenCopy: true,
+              compact: allRequiredAccepted,
+              onChange: () => handleRequiredOrOptionalToggle('personal_data'),
               config: CONSENT_TEXTS.checkboxes.personal_data,
               onShowFull: () => setShowFullText('personal_data')
             }),
 
-            // Divider
-            React.createElement('hr', {
-              className: 'my-4',
-              style: { borderColor: '#e5e7eb' }
-            }),
+            React.createElement('div', {
+              className: 'text-xs font-semibold tracking-widest uppercase',
+              style: { color: '#8a4a20', marginTop: 16 }
+            }, 'Можно включить, можно нет'),
 
             React.createElement(ConsentCheckbox, {
               type: 'body_measurements',
               checked: consents.body_measurements,
+              useScreenCopy: true,
               onChange: () => handleToggle('body_measurements'),
               config: CONSENT_TEXTS.checkboxes.body_measurements,
               onShowFull: () => setShowFullText('body_measurements')
@@ -1096,28 +1110,32 @@
             React.createElement(ConsentCheckbox, {
               type: 'supplements_tracking',
               checked: consents.supplements_tracking,
+              useScreenCopy: true,
               onChange: () => handleToggle('supplements_tracking'),
               config: CONSENT_TEXTS.checkboxes.supplements_tracking,
               onShowFull: () => setShowFullText('supplements_tracking')
             }),
 
-            // Marketing (optional)
+            React.createElement(ConsentCheckbox, {
+              type: 'notifications',
+              checked: notificationsOptIn,
+              useScreenCopy: true,
+              onChange: () => setNotificationsOptIn(v => !v),
+              config: CONSENT_TEXTS.checkboxes.notifications
+            }),
+
             React.createElement(ConsentCheckbox, {
               type: 'marketing',
               checked: consents.marketing,
+              useScreenCopy: true,
               onChange: () => handleToggle('marketing'),
               config: CONSENT_TEXTS.checkboxes.marketing
             }),
 
-            // Push-уведомления (preference, не 152-ФЗ).
-            // Default ON; пользователь может снять галочку, и тогда мы НЕ
-            // запросим Notification.requestPermission().
-            React.createElement(ConsentCheckbox, {
-              type: 'notifications',
-              checked: notificationsOptIn,
-              onChange: () => setNotificationsOptIn(v => !v),
-              config: CONSENT_TEXTS.checkboxes.notifications
-            })
+            React.createElement('p', {
+              className: 'text-xs',
+              style: { color: 'rgba(0,0,0,.42)', marginTop: 12, lineHeight: 1.5 }
+            }, 'Необязательное отмечается тапом и меняется в настройках в любой момент. Заранее ничего не включено.')
           ),
 
           // Error
@@ -1281,19 +1299,31 @@
         }
       },
         step === 'consents' ? (
-          // Кнопка "Продолжить" → переход к верификации
-          React.createElement('button', {
-            onClick: handleProceedToVerify,
-            disabled: !allRequiredAccepted || loading,
-            className: 'w-full py-4 rounded-xl font-semibold text-white transition-all',
-            style: {
-              backgroundColor: allRequiredAccepted && !loading ? '#22c55e' : '#d4d4d8',
-              cursor: allRequiredAccepted && !loading ? 'pointer' : 'not-allowed'
-            }
-          }, HEYS.WaitMark?.button?.(React, {
-            busy: loading,
-            idle: 'Продолжить', busyLabel: 'Загружаем',
-          }) || (loading ? 'Загружаем…' : 'Продолжить'))
+          React.createElement(React.Fragment, null,
+            requiredConsentReason && React.createElement('div', {
+              style: {
+                textAlign: 'center',
+                fontWeight: 600,
+                fontSize: 13,
+                color: 'rgba(0,0,0,.5)',
+                lineHeight: 1.45,
+              }
+            }, requiredConsentReason),
+            React.createElement('button', {
+              onClick: handleProceedToVerify,
+              disabled: !allRequiredAccepted || loading,
+              className: 'w-full py-4 rounded-xl font-semibold transition-all',
+              style: {
+                backgroundColor: allRequiredAccepted && !loading ? '#c67139' : '#f7efe2',
+                color: allRequiredAccepted && !loading ? '#fff' : 'rgba(0,0,0,.3)',
+                cursor: allRequiredAccepted && !loading ? 'pointer' : 'not-allowed'
+              }
+            }, HEYS.WaitMark?.button?.(React, {
+              busy: loading,
+              idle: isReadonlyHost ? 'Продолжить' : (allRequiredAccepted ? 'Подписать' : 'Подписать оба'),
+              busyLabel: 'Загружаем',
+            }) || (loading ? 'Загружаем…' : (isReadonlyHost ? 'Продолжить' : (allRequiredAccepted ? 'Подписать' : 'Подписать оба'))))
+          )
         ) : step === 'access_code_sign' ? (
           React.createElement('button', {
             onClick: handleAccessCodeSign,
@@ -1353,8 +1383,11 @@
         type: showFullText,
         onClose: () => setShowFullText(null),
         onAccept: () => {
-          // Автоматически отмечаем чекбокс при подтверждении
-          setConsents(prev => ({ ...prev, [showFullText]: true }));
+          const acceptedType = showFullText;
+          if (REQUIRED_CONSENTS.includes(acceptedType)) {
+            setReadRequiredTypes((prev) => ({ ...prev, [acceptedType]: true }));
+          }
+          setConsents((prev) => ({ ...prev, [acceptedType]: true }));
           setShowFullText(null);
         }
       })
@@ -1364,7 +1397,7 @@
   /**
    * Чекбокс согласия
    */
-  function ConsentCheckbox({ type, checked, onChange, config, onShowFull }) {
+  function ConsentCheckbox({ type, checked, onChange, config, onShowFull, requireRead = false, hasRead = false, useScreenCopy = false, compact = false }) {
     const checkedStyle = {
       border: '1px solid #22c55e',
       backgroundColor: '#f0fdf4'
@@ -1373,47 +1406,65 @@
       border: '1px solid #e5e7eb',
       backgroundColor: '#ffffff'
     };
-    const disclosure = config.summary;
+    const title = (useScreenCopy && config.screenLabel) || config.label;
+    const disclosure = (useScreenCopy && config.screenSummary) || config.summary;
+    const optionalHint = useScreenCopy ? (config.screenHint || '') : '';
+    const lockUntilRead = requireRead && !hasRead && !checked;
+    const canvasCard = useScreenCopy === true;
+    const cardStyle = canvasCard
+      ? { backgroundColor: '#f7efe2', border: 'none' }
+      : (checked ? checkedStyle : uncheckedStyle);
+    const boxStyle = canvasCard
+      ? (checked
+        ? { border: 'none', backgroundColor: '#c67139' }
+        : { border: '2px solid rgba(0,0,0,.18)', backgroundColor: '#fffaf1' })
+      : (checked
+        ? { border: '2px solid #22c55e', backgroundColor: '#22c55e' }
+        : { border: '2px solid #d4d4d8', backgroundColor: 'transparent' });
+
+    const openFull = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onShowFull?.();
+    };
 
     return React.createElement('label', {
       className: 'flex items-start gap-3 p-4 rounded-xl cursor-pointer transition-all',
-      style: checked ? checkedStyle : uncheckedStyle
+      style: { ...cardStyle, padding: compact ? '11px 13px' : (canvasCard ? '11px 14px' : undefined) }
     },
-      // Checkbox
       React.createElement('div', {
         className: 'w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5',
-        style: checked
-          ? { border: '2px solid #22c55e', backgroundColor: '#22c55e' }
-          : { border: '2px solid #d4d4d8', backgroundColor: 'transparent' }
+        style: boxStyle
       },
-        checked && React.createElement('span', { className: 'text-white text-sm' }, '✓')
+        checked && React.createElement('span', {
+          className: 'text-white text-sm',
+          style: canvasCard ? { color: '#fffaf1', fontWeight: 700 } : null
+        }, '✓')
       ),
 
-      // Label
       React.createElement('div', {
         className: 'flex-1'
       },
         React.createElement('span', {
           className: 'text-sm',
-          style: { color: '#3f3f46' }
-        }, config.label),
+          style: { color: checked && canvasCard ? '#201e1d' : (canvasCard ? 'rgba(0,0,0,.55)' : '#3f3f46'), fontWeight: canvasCard ? 600 : undefined }
+        }, title),
 
-        // Required badge
-        config.required && React.createElement('span', {
+        config.required && !compact && React.createElement('span', {
           className: 'ml-2 text-xs',
-          style: { color: '#ef4444' }
+          style: { color: canvasCard ? '#8a4a20' : '#ef4444' }
         }, '*'),
 
-        disclosure && React.createElement('div', {
+        !compact && (config.required || !useScreenCopy) && disclosure && React.createElement('div', {
           className: 'mt-2 rounded-lg px-3 py-2',
           style: {
-            backgroundColor: '#f4f8fb',
-            border: '1px solid #d9e5ed'
+            backgroundColor: '#fffaf1',
+            border: '1px solid #efe3cf'
           }
         },
           React.createElement('span', {
             className: 'block text-xs font-semibold',
-            style: { color: '#2f5f8f', letterSpacing: '0.01em' }
+            style: { color: '#5c6a45', letterSpacing: '0.01em' }
           }, 'Коротко и честно'),
           React.createElement('span', {
             className: 'block text-xs mt-1',
@@ -1421,8 +1472,12 @@
           }, disclosure)
         ),
 
-        // Link to full text
-        config.link && React.createElement('button', {
+        !config.required && optionalHint && React.createElement('span', {
+          className: 'block text-xs mt-1',
+          style: { color: 'rgba(0,0,0,.42)', lineHeight: 1.4 }
+        }, optionalHint),
+
+        !compact && config.link && (!useScreenCopy || config.required) && React.createElement('button', {
           type: 'button',
           onClick: (e) => {
             e.preventDefault();
@@ -1430,15 +1485,14 @@
             onShowFull?.();
           },
           className: 'block mt-1 text-xs hover:underline',
-          style: { color: '#3b82f6' }
+          style: { color: canvasCard ? '#8a4a20' : '#3b82f6', fontWeight: canvasCard ? 700 : undefined }
         }, 'Читать полностью →')
       ),
 
-      // Hidden input for form
       React.createElement('input', {
         type: 'checkbox',
         checked: checked,
-        onChange: onChange,
+        onChange: lockUntilRead ? openFull : onChange,
         className: 'sr-only'
       })
     );
@@ -1470,9 +1524,12 @@
     if (!expectedVersion) return true;
     if (!markdown) return false;
 
-    // Ищем маркер вида: **Версия:** 1.2
-    const re = new RegExp(`\\*\\*Версия:\\*\\*\\s*${escapeRegExp(expectedVersion)}(\\b|\\s|$)`);
-    return re.test(markdown);
+    const v = escapeRegExp(expectedVersion);
+    // **Версия:** 1.2 — большинство legal-шаблонов
+    const boldRe = new RegExp(`\\*\\*Версия:\\*\\*\\s*${v}(\\b|\\s|$)`);
+    // Версия: 1.2. — push 1.2 и часть новых текстов без markdown-bold
+    const plainRe = new RegExp(`(?:^|\\n)\\s*Версия:\\s*${v}(\\.|\\b|\\s)`, 'i');
+    return boldRe.test(markdown) || plainRe.test(markdown);
   }
 
   const DOC_PATHS = {
@@ -1500,6 +1557,10 @@
     body_measurements: {
       versioned: buildVersionedDocPath('body-measurements-consent.md', '1.0'),
       latest: buildLatestDocPath('body-measurements-consent.md', '1.0')
+    },
+    push_notifications: {
+      versioned: buildVersionedDocPath('push-notifications-consent.md', CURRENT_VERSIONS.push_notifications),
+      latest: buildLatestDocPath('push-notifications-consent.md', CURRENT_VERSIONS.push_notifications)
     }
   };
 
@@ -1786,18 +1847,21 @@
     const [error, setError] = useState(null);
     const [retryCount, setRetryCount] = useState(0);
     const [hasScrolledToEnd, setHasScrolledToEnd] = useState(false);
+    const [scrollProgress, setScrollProgress] = useState(0);
     const contentRef = useRef(null);
 
-    // Обработчик прокрутки — проверяем достигли ли конца
     const handleScroll = useCallback(() => {
-      if (!contentRef.current || hasScrolledToEnd) return;
+      if (!contentRef.current) return;
 
       const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
-      // Считаем "до конца" если осталось < 50px
+      const span = Math.max(1, scrollHeight - clientHeight);
+      setScrollProgress(Math.min(1, scrollTop / span));
+      if (hasScrolledToEnd) return;
       const isAtBottom = scrollTop + clientHeight >= scrollHeight - 50;
 
       if (isAtBottom) {
         setHasScrolledToEnd(true);
+        setScrollProgress(1);
       }
     }, [hasScrolledToEnd]);
 
@@ -1808,6 +1872,7 @@
         // Если контент помещается без скролла — сразу разрешаем
         if (scrollHeight <= clientHeight + 10) {
           setHasScrolledToEnd(true);
+          setScrollProgress(1);
         }
       }
     }, [content]);
@@ -1817,6 +1882,7 @@
         setLoading(true);
         setError(null);
         setHasScrolledToEnd(false);
+        setScrollProgress(0);
 
         const docInfo = DOC_PATHS[type];
 
@@ -1894,126 +1960,106 @@
     };
 
     return React.createElement('div', {
-      className: 'fixed inset-0 flex items-end',
-      style: { backgroundColor: 'rgba(0, 0, 0, 0.5)', zIndex: 12000 }
+      className: 'fixed inset-0 flex flex-col',
+      style: { backgroundColor: '#fffaf1', zIndex: 12000 }
     },
       React.createElement('div', {
-        className: 'rounded-t-2xl w-full max-h-[80vh] flex flex-col',
-        style: { backgroundColor: '#ffffff' }
+        className: 'flex items-center justify-between px-2',
+        style: { minHeight: 52 }
       },
-        // Header
+        React.createElement('button', {
+          onClick: onClose,
+          className: 'p-3 rounded-full',
+          style: { color: 'rgba(0,0,0,.45)' },
+          'aria-label': 'Закрыть'
+        }, '✕'),
+        React.createElement('h2', {
+          className: 'font-semibold text-center flex-1',
+          style: { color: '#201e1d', fontSize: 15 }
+        }, CONSENT_TEXTS.checkboxes[type]?.screenLabel || CONSENT_TEXTS.checkboxes[type]?.label || type),
+        React.createElement('span', { style: { width: 44 } })
+      ),
+      React.createElement('div', { style: { padding: '0 18px' } },
         React.createElement('div', {
-          className: 'flex items-center justify-between p-4',
-          style: { borderBottom: '1px solid #e5e7eb' }
+          style: { height: 3, borderRadius: 999, background: 'rgba(0,0,0,.08)', marginTop: 2 }
         },
-          React.createElement('h2', {
-            className: 'font-semibold',
-            style: { color: '#18181b' }
-          }, CONSENT_TEXTS.checkboxes[type]?.label || type),
-          React.createElement('button', {
-            onClick: onClose,
-            className: 'p-2 rounded-full',
-            style: { color: '#71717a' }
-          }, '✕')
-        ),
+          React.createElement('div', {
+            style: {
+              width: `${Math.round((hasScrolledToEnd ? 1 : scrollProgress) * 100)}%`,
+              height: 3,
+              borderRadius: 999,
+              background: '#c67139'
+            }
+          })
+        )
+      ),
 
-        // Content с отслеживанием прокрутки
-        React.createElement('div', {
-          ref: contentRef,
-          onScroll: handleScroll,
-          className: 'flex-1 overflow-auto p-4'
-        },
-          loading
+      React.createElement('div', {
+        ref: contentRef,
+        onScroll: handleScroll,
+        className: 'flex-1 overflow-auto p-4'
+      },
+        loading
+          ? React.createElement('div', {
+            className: 'text-center py-8',
+            style: { color: '#71717a' }
+          }, 'Загрузка документа...')
+          : error
             ? React.createElement('div', {
               className: 'text-center py-8',
-              style: { color: '#71717a' }
-            }, '⏳ Загрузка документа...')
-            : error
-              ? React.createElement('div', {
-                className: 'text-center py-8',
-                style: { color: '#ef4444' }
-              },
-                React.createElement('p', null, '❌ ', error),
-                React.createElement('button', {
-                  onClick: handleRetry,
-                  className: 'mt-4 text-sm underline',
-                  style: { color: '#3b82f6' }
-                }, 'Попробовать снова')
-              )
-              : React.createElement('div', null,
-                // Дружелюбный блок-резюме
-                CONSENT_TEXTS.friendlySummaries[type] && React.createElement('div', {
-                  className: 'mb-4 p-4 rounded-xl',
-                  style: {
-                    backgroundColor: CONSENT_TEXTS.friendlySummaries[type].color,
-                    borderLeft: `4px solid ${CONSENT_TEXTS.friendlySummaries[type].borderColor}`
-                  }
-                },
-                  React.createElement('div', {
-                    className: 'flex items-center gap-2 mb-3'
-                  },
-                    React.createElement('span', { className: 'text-2xl' }, CONSENT_TEXTS.friendlySummaries[type].emoji),
-                    React.createElement('span', {
-                      className: 'font-semibold',
-                      style: { color: CONSENT_TEXTS.friendlySummaries[type].textColor }
-                    }, CONSENT_TEXTS.friendlySummaries[type].title)
-                  ),
-                  React.createElement('ul', {
-                    className: 'space-y-2 text-sm',
-                    style: { color: CONSENT_TEXTS.friendlySummaries[type].textColor }
-                  },
-                    CONSENT_TEXTS.friendlySummaries[type].points.map((point, i) =>
-                      React.createElement('li', { key: i }, point)
-                    )
-                  )
-                ),
-                // Полный текст документа
-                React.createElement('div', {
-                  className: 'prose max-w-none text-sm leading-relaxed',
-                  style: { color: '#3f3f46' },
-                  dangerouslySetInnerHTML: { __html: content }
-                })
-              )
-        ),
+              style: { color: '#ef4444' }
+            },
+              React.createElement('p', null, error),
+              React.createElement('button', {
+                onClick: handleRetry,
+                className: 'mt-4 text-sm underline',
+                style: { color: '#8a4a20' }
+              }, 'Попробовать снова')
+            )
+            : React.createElement('div', {
+              className: 'prose max-w-none text-sm leading-relaxed',
+              style: { color: '#3f3f46' },
+              dangerouslySetInnerHTML: { __html: content }
+            })
+      ),
 
-        // Подсказка о прокрутке (если ещё не долистали)
-        !loading && !error && !hasScrolledToEnd && React.createElement('div', {
-          className: 'px-4 py-2 text-center',
-          style: { backgroundColor: '#fef3c7', color: '#92400e' }
-        },
-          React.createElement('p', { className: 'text-xs' }, '👇 Прокрутите до конца, чтобы подтвердить')
-        ),
+      !loading && !error && !hasScrolledToEnd && React.createElement('div', {
+        className: 'px-4 py-2 text-center',
+        style: { color: 'rgba(0,0,0,.45)' }
+      },
+        React.createElement('p', { className: 'text-xs font-semibold' }, 'Долистайте до конца, чтобы принять')
+      ),
 
-        // Footer с кнопками
-        React.createElement('div', {
-          className: 'p-4 space-y-2',
-          style: { borderTop: '1px solid #e5e7eb' }
-        },
-          externalError && React.createElement('div', {
-            className: 'rounded-lg px-3 py-2 text-sm',
-            style: { backgroundColor: '#fef2f2', color: '#b91c1c' },
-            role: 'alert',
-          }, externalError),
-          // Кнопка "Ознакомлен" — появляется после прокрутки
-          hasScrolledToEnd && !loading && !error && React.createElement('button', {
-            onClick: onAccept,
-            disabled: !!busy,
-            className: 'w-full py-3 rounded-xl font-semibold text-white transition-all',
-            style: { backgroundColor: busy ? '#86efac' : '#22c55e', opacity: busy ? 0.8 : 1 }
-          }, HEYS.WaitMark?.button?.(React, {
-            busy: !!busy,
-            idle: (acceptLabel || 'Ознакомлен, принимаю'),
-            busyLabel: 'Сохраняем',
-          }) || (busy ? 'Сохраняем…' : (acceptLabel || 'Ознакомлен, принимаю'))),
+      React.createElement('div', {
+        className: 'p-4 space-y-2',
+        style: { borderTop: '1px solid #e5e7eb' }
+      },
+        externalError && React.createElement('div', {
+          className: 'rounded-lg px-3 py-2 text-sm',
+          style: { backgroundColor: '#fef2f2', color: '#b91c1c' },
+          role: 'alert',
+        }, externalError),
+        !loading && !error && React.createElement('button', {
+          onClick: onAccept,
+          disabled: !!busy || !hasScrolledToEnd,
+          className: 'w-full py-3 rounded-xl font-semibold transition-all',
+          style: {
+            backgroundColor: hasScrolledToEnd ? (busy ? '#86efac' : '#c67139') : '#f7efe2',
+            color: hasScrolledToEnd ? '#fff' : 'rgba(0,0,0,.3)',
+            opacity: busy ? 0.8 : 1
+          }
+        }, HEYS.WaitMark?.button?.(React, {
+          busy: !!busy,
+          idle: (acceptLabel || 'Ознакомлен, принимаю'),
+          busyLabel: 'Сохраняем',
+        }) || (busy ? 'Сохраняем…' : (acceptLabel || 'Ознакомлен, принимаю'))),
 
-          // Кнопка "Закрыть" — всегда видна
-          React.createElement('button', {
-            onClick: onClose,
-            disabled: !!busy,
-            className: 'w-full py-3 rounded-xl font-medium',
-            style: { backgroundColor: '#f4f4f5', color: '#3f3f46', opacity: busy ? 0.6 : 1 }
-          }, hasScrolledToEnd ? 'Закрыть без принятия' : 'Закрыть')
-        )
+        hasScrolledToEnd && React.createElement('button', {
+          onClick: onClose,
+          disabled: !!busy,
+          className: 'w-full py-3 rounded-xl font-medium',
+          style: { backgroundColor: 'transparent', color: 'rgba(0,0,0,.45)', opacity: busy ? 0.6 : 1 }
+        }, 'Закрыть без принятия')
       )
     );
   }
@@ -2433,14 +2479,48 @@
     }
   };
 
-  consentsAPI.setPushConsent = async function (granted) {
+  consentsAPI.setPushConsent = async function (granted, accessCode) {
     try {
-      if (!HEYS.YandexAPI?.logConsentsBySession) return { success: false, error: 'API not ready' };
+      if (!granted) {
+        return consentsAPI.revokeConsentBySession('push_notifications');
+      }
       const versions = getCurrentLegalVersions();
-      const r = await HEYS.YandexAPI.logConsentsBySession([
-        { type: 'push_notifications', granted: !!granted, version: versions.push_notifications || '1.0' }
-      ]);
-      if (r.error) throw new Error(r.error?.message || r.error);
+      const version = versions.push_notifications || '1.0';
+      const result = await consentsAPI.logConsents(null, [{
+        type: 'push_notifications',
+        granted: true,
+        version,
+        signature_method: 'checkbox',
+      }]);
+      if (result.needsAccessCode) {
+        if (!accessCode) {
+          try {
+            const mine = await consentsAPI.getMyConsents();
+            const active = (mine?.consents || []).find(
+              (row) => row.type === 'push_notifications' && row.granted && !row.revoked_at
+            );
+            if (active && String(active.version || '') === version) {
+              return { success: true, alreadySigned: true };
+            }
+          } catch (_) { /* noop */ }
+          return {
+            success: false,
+            needsAccessCode: true,
+            error: result.error || 'signing_requires_access_code',
+          };
+        }
+        const document_text = await fetchConsentDocumentMarkdown('push_notifications');
+        return consentsAPI.signConsentsWithAccessCode([{
+          type: 'push_notifications',
+          granted: true,
+          version,
+          signature_method: 'pin_confirm',
+          document_text,
+        }], accessCode);
+      }
+      if (!result.success) {
+        return { success: false, error: result.error || 'consent_failed' };
+      }
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };

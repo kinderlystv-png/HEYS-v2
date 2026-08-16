@@ -2218,11 +2218,26 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const [status, setStatus] = React.useState(null);
         const [busy, setBusy] = React.useState(false);
         const [testResult, setTestResult] = React.useState(null);
+        const [accessSignOpen, setAccessSignOpen] = React.useState(false);
+        const [accessSignError, setAccessSignError] = React.useState('');
+        const pushPinKeypadKit = HEYS.AuthPinKeypad?.createKit?.(React);
+        const usePushAccessPin = pushPinKeypadKit ? pushPinKeypadKit.usePinKeypad : useFallbackCuratorPinField;
+        const pushAccessPin = usePushAccessPin({
+            disabled: busy,
+            idPrefix: 'push-consent-pin',
+            autoFocus: accessSignOpen,
+        });
+        const pushAccessKeypadRef = React.useRef(null);
 
-        // Refresh статуса при монтировании.
+        // Refresh статуса при монтировании и когда рубильник сработал в другом месте.
         React.useEffect(() => {
             if (!HEYS.push) return;
             HEYS.push.getStatus().then(setStatus).catch(() => {});
+            const onChanged = () => {
+                HEYS.push.getStatus().then(setStatus).catch(() => {});
+            };
+            window.addEventListener('heys:push-enabled-changed', onChanged);
+            return () => window.removeEventListener('heys:push-enabled-changed', onChanged);
         }, []);
 
         const refreshStatus = async () => {
@@ -2250,12 +2265,58 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             savedTimerRef.current = setTimeout(() => setSavedHint(null), 1500);
         };
 
-        const handleEnableClick = async () => {
+        const handleEnableClick = async (accessCode) => {
             if (!HEYS.push) return;
             setBusy(true);
+            setAccessSignError('');
             try {
-                const r = await HEYS.push.subscribe();
+                const opts = accessCode ? { accessCode } : {};
+                const r = await (HEYS.push.setEnabled
+                    ? HEYS.push.setEnabled(true, opts)
+                    : HEYS.push.subscribe());
                 if (!r.ok) {
+                    if (r.reason === 'consent_needs_access_code') {
+                        setAccessSignOpen(true);
+                        pushAccessPin.resetDigits?.();
+                        return;
+                    }
+                    if (r.reason === 'ios_needs_install') {
+                        alert('На iPhone уведомления работают только из установленного PWA. Поделиться → На экран Домой, потом запусти HEYS с домашнего экрана.');
+                    } else if (r.reason === 'permission_blocked') {
+                        alert('Уведомления заблокированы в браузере. Разблокируй их в настройках сайта (значок замка в адресной строке).');
+                    } else if (r.reason === 'permission_denied') {
+                        alert('Без разрешения уведомления не работают. Можно включить позже из этого окна.');
+                    } else if (r.reason === 'not_capable') {
+                        alert('Браузер не поддерживает push-уведомления.');
+                    } else if (r.reason === 'consent_failed') {
+                        alert('Не удалось записать согласие на уведомления. Попробуй ещё раз.');
+                    }
+                } else {
+                    setAccessSignOpen(false);
+                }
+            } finally {
+                setBusy(false);
+                await refreshStatus();
+            }
+        };
+
+        const handlePushAccessCodeSign = async () => {
+            if (!HEYS.auth?.validatePinStrict?.(pushAccessPin.pinValue)) {
+                setAccessSignError('Введите код доступа из 4 цифр');
+                return;
+            }
+            setBusy(true);
+            setAccessSignError('');
+            try {
+                const opts = { accessCode: pushAccessPin.pinValue };
+                const r = await HEYS.push.setEnabled(true, opts);
+                if (!r.ok) {
+                    if (r.reason === 'consent_failed' || r.reason === 'consent_needs_access_code') {
+                        setAccessSignError('Код не подошёл или не удалось подписать согласие');
+                        pushAccessPin.resetDigits?.();
+                        return;
+                    }
+                    setAccessSignOpen(false);
                     if (r.reason === 'ios_needs_install') {
                         alert('На iPhone уведомления работают только из установленного PWA. Поделиться → На экран Домой, потом запусти HEYS с домашнего экрана.');
                     } else if (r.reason === 'permission_blocked') {
@@ -2265,7 +2326,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     } else if (r.reason === 'not_capable') {
                         alert('Браузер не поддерживает push-уведомления.');
                     }
+                    return;
                 }
+                setAccessSignOpen(false);
             } finally {
                 setBusy(false);
                 await refreshStatus();
@@ -2274,9 +2337,12 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         const handleDisableClick = async () => {
             if (!HEYS.push) return;
-            if (!confirm('Отключить push-уведомления полностью?')) return;
+            if (!confirm('Отключить уведомления полностью?')) return;
             setBusy(true);
-            try { await HEYS.push.unsubscribe(); } finally {
+            try {
+                if (HEYS.push.setEnabled) await HEYS.push.setEnabled(false);
+                else await HEYS.push.unsubscribe();
+            } finally {
                 setBusy(false);
                 await refreshStatus();
             }
@@ -2359,7 +2425,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             className: 'profile-push-status__btn'
                         }, 'Отключить')
                         : React.createElement('button', {
-                            onClick: handleEnableClick, disabled: busy,
+                            onClick: () => handleEnableClick(), disabled: busy,
                             className: 'profile-push-status__btn profile-push-status__btn--act'
                         }, busy ? '…' : 'Включить')
                 )
@@ -2513,6 +2579,53 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     className: 'profile-push-status__btn profile-push-status__btn--act'
                 }, 'Отправить тестовый пуш'),
                 testResult && React.createElement('div', { style: { marginTop: '8px', fontSize: '13px', color: '#3f3f46' } }, testResult)
+            ),
+
+            accessSignOpen && React.createElement('div', {
+                style: {
+                    position: 'fixed', inset: 0, zIndex: 12000,
+                    background: 'rgba(0,0,0,0.45)', display: 'flex',
+                    alignItems: 'flex-end', justifyContent: 'center'
+                }
+            },
+                React.createElement('div', {
+                    style: {
+                        width: '100%', maxWidth: '480px', background: '#fff',
+                        borderRadius: '16px 16px 0 0', padding: '16px 16px calc(16px + env(safe-area-inset-bottom, 0px))'
+                    }
+                },
+                    React.createElement('div', { style: { fontSize: '18px', fontWeight: 600, marginBottom: '8px' } },
+                        'Подпись согласия на push'),
+                    React.createElement('div', { style: { fontSize: '14px', color: '#71717a', marginBottom: '12px' } },
+                        'Введите код доступа из 4 цифр, чтобы подписать обновлённое согласие на уведомления.'),
+                    pushPinKeypadKit
+                        ? pushPinKeypadKit.renderPinKeypadSection({
+                            pin: pushAccessPin,
+                            keypadRef: pushAccessKeypadRef,
+                            title: 'Код доступа',
+                        })
+                        : null,
+                    accessSignError && React.createElement('div', {
+                        style: { color: '#dc2626', fontSize: '13px', marginTop: '8px' }
+                    }, accessSignError),
+                    React.createElement('div', { style: { display: 'flex', gap: '8px', marginTop: '12px' } },
+                        React.createElement('button', {
+                            type: 'button',
+                            onClick: () => { setAccessSignOpen(false); setAccessSignError(''); },
+                            style: { flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #e4e4e7', background: '#fff' }
+                        }, 'Отмена'),
+                        React.createElement('button', {
+                            type: 'button',
+                            onClick: handlePushAccessCodeSign,
+                            disabled: busy || !pushAccessPin.isComplete,
+                            style: {
+                                flex: 1, padding: '12px', borderRadius: '12px', border: 'none',
+                                background: pushAccessPin.isComplete && !busy ? '#22c55e' : '#d4d4d8',
+                                color: '#fff', fontWeight: 600
+                            }
+                        }, busy ? '…' : 'Подписать')
+                    )
+                )
             )
         );
     }
@@ -2757,6 +2870,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     res = await Consents.api.revokeHealthDataAndPurge();
                 } else if (consentType === 'personal_data') {
                     res = await Consents.api.revokePersonalDataAndPurge();
+                } else if (consentType === 'push_notifications' && HEYS.push?.setEnabled) {
+                    const r = await HEYS.push.setEnabled(false);
+                    res = { success: r?.ok !== false, error: r?.error || r?.reason };
                 } else {
                     res = await Consents.api.revokeConsentBySession(consentType);
                 }
@@ -2841,7 +2957,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         };
 
         const marketingConsent = consentsList.find(function (c) { return c.type === 'marketing'; });
-        const pushConsent = consentsList.find(function (c) { return c.type === 'push_notifications'; });
 
         const handleToggleMarketing = async function () {
             const next = !(marketingConsent && marketingConsent.granted);
@@ -2850,16 +2965,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             const r = await Consents.api.setMarketingConsent(next);
             setBusy(null);
             if (r?.success) { await refresh(); setMessage(next ? '✅ Подписаны на рассылку' : '✅ Отписаны от рассылки'); }
-            else setMessage('❌ ' + (r?.error || 'Не удалось'));
-        };
-
-        const handleTogglePush = async function () {
-            const next = !(pushConsent && pushConsent.granted);
-            setBusy('push');
-            setMessage('');
-            const r = await Consents.api.setPushConsent(next);
-            setBusy(null);
-            if (r?.success) { await refresh(); setMessage(next ? '✅ Push включены' : '✅ Push отключены'); }
             else setMessage('❌ ' + (r?.error || 'Не удалось'));
         };
 
@@ -2924,11 +3029,11 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         })
                     )),
 
-            // ── Toggles: marketing & push ───────────────────────────────
+            // ── Toggle: marketing ───────────────────────────────────────
             React.createElement('div', {
                 style: { marginTop: 16, padding: '12px 0 0', borderTop: '1px solid rgba(138, 74, 32, 0.1)' }
             },
-                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 } },
+                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
                     React.createElement('div', null,
                         React.createElement('div', { style: { fontSize: 14, fontWeight: 500 } }, 'Маркетинговая рассылка'),
                         React.createElement('div', { className: 'muted', style: { fontSize: 12 } },
@@ -2939,21 +3044,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             checked: !!(marketingConsent && marketingConsent.granted),
                             onChange: handleToggleMarketing,
                             disabled: busy === 'marketing'
-                        }),
-                        React.createElement('span', { className: 'toggle-slider' })
-                    )
-                ),
-                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
-                    React.createElement('div', null,
-                        React.createElement('div', { style: { fontSize: 14, fontWeight: 500 } }, 'Push-уведомления'),
-                        React.createElement('div', { className: 'muted', style: { fontSize: 12 } },
-                            'Напоминания, статус триала, новые сообщения куратора.')),
-                    React.createElement('label', { className: 'toggle-switch' },
-                        React.createElement('input', {
-                            type: 'checkbox',
-                            checked: !!(pushConsent && pushConsent.granted),
-                            onChange: handleTogglePush,
-                            disabled: busy === 'push'
                         }),
                         React.createElement('span', { className: 'toggle-slider' })
                     )

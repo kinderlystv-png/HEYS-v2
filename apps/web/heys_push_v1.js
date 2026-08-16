@@ -233,6 +233,87 @@
     return { ok: true };
   }
 
+  function isCuratorSession() {
+    try {
+      if (typeof HEYS.auth?.isCuratorSession === 'function') {
+        return !!HEYS.auth.isCuratorSession();
+      }
+    } catch (_) { /* ignore */ }
+    return false;
+  }
+
+  function notifyEnabledChanged(detail) {
+    try {
+      window.dispatchEvent(new CustomEvent('heys:push-enabled-changed', { detail: detail || {} }));
+    } catch (_) { /* ignore */ }
+  }
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async function waitForClientConsentsApi() {
+    const deadline = Date.now() + 8000;
+    while (Date.now() < deadline) {
+      const api = HEYS.Consents?.api;
+      if (api && (typeof api.setPushConsent === 'function' || typeof api.revokeConsentBySession === 'function')) {
+        return api;
+      }
+      await sleep(120);
+    }
+    return HEYS.Consents?.api || null;
+  }
+
+  async function writeClientPushConsent(granted, accessCode) {
+    if (isCuratorSession()) return { success: true, skipped: 'curator' };
+    const api = await waitForClientConsentsApi();
+    if (!api) return { success: false, error: 'consents_not_ready' };
+    if (granted) {
+      if (typeof api.setPushConsent !== 'function') {
+        return { success: false, error: 'consents_not_ready' };
+      }
+      return api.setPushConsent(true, accessCode || null);
+    }
+    if (typeof api.revokeConsentBySession === 'function') {
+      return api.revokeConsentBySession('push_notifications');
+    }
+    if (typeof api.setPushConsent === 'function') {
+      return api.setPushConsent(false);
+    }
+    return { success: false, error: 'consents_not_ready' };
+  }
+
+  // Один пользовательский рубильник: согласие 1.2 + подписка устройства.
+  // Низкоуровневые subscribe/unsubscribe остаются для restore и тестов.
+  async function setEnabled(enabled, options) {
+    const accessCode = options && options.accessCode ? String(options.accessCode) : null;
+    if (enabled) {
+      const consent = await writeClientPushConsent(true, accessCode);
+      if (!consent?.success) {
+        if (consent?.needsAccessCode) {
+          return { ok: false, reason: 'consent_needs_access_code', error: consent?.error, consent };
+        }
+        return { ok: false, reason: 'consent_failed', error: consent?.error, consent };
+      }
+      const sub = await subscribe();
+      if (sub?.reason === 'ios_needs_install') {
+        try { localStorage.setItem('heys_push_pending_install', '1'); } catch (_) { /* noop */ }
+      }
+      notifyEnabledChanged({ enabled: true, subscribe: sub });
+      return { ok: !!sub?.ok, reason: sub?.reason, consent, subscribe: sub };
+    }
+    const sub = await unsubscribe();
+    const consent = await writeClientPushConsent(false);
+    notifyEnabledChanged({ enabled: false, subscribe: sub, consent });
+    return {
+      ok: true,
+      reason: consent?.success === false ? 'consent_revoke_failed' : undefined,
+      error: consent?.error,
+      consent,
+      subscribe: sub,
+    };
+  }
+
   async function unsubscribe() {
     if (!isCapable()) return { ok: false, reason: 'not_capable' };
     try {
@@ -301,7 +382,7 @@
     try { pending = localStorage.getItem('heys_push_pending_install'); } catch (_) { /* noop */ }
     if (pending !== '1') return;
     try {
-      const r = await subscribe();
+      const r = await setEnabled(true);
       console.info('[HEYS.push] iOS PWA prompt →', r);
     } catch (e) {
       console.warn('[HEYS.push] iOS PWA prompt failed:', e?.message);
@@ -316,6 +397,7 @@
     getStatus,
     subscribe,
     unsubscribe,
+    setEnabled,
     savePrefs,
     sendTest,
     maybeAutoResubscribe,
