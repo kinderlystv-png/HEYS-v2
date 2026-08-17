@@ -21,6 +21,7 @@
     "arch:check": "bash scripts/check-module-architecture.sh",
     "arch:limits:generate": "node scripts/generate-module-limits.js",
     "arch:metrics": "node scripts/arch-metrics.js --all",
+    "bash": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/portable-git-bash.ps1",
     "bot:crm-test": "node --test yandex-cloud-functions/heys-bot-client/__tests__/start-lead-crm.test.cjs",
     "build": "turbo run build",
     "build:analyze": "tsx scripts/analyze-bundle.ts",

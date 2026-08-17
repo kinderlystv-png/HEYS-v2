@@ -1,46 +1,7 @@
 {
-    "workbench.colorCustomizations": {
-        "activityBar.activeBackground": "#ab307e",
-        "activityBar.background": "#ab307e",
-        "activityBar.foreground": "#e7e7e7",
-        "activityBar.inactiveForeground": "#e7e7e799",
-        "activityBarBadge.background": "#25320e",
-        "activityBarBadge.foreground": "#e7e7e7",
-        "commandCenter.border": "#e7e7e799",
-        "sash.hoverBorder": "#ab307e",
-        "statusBar.background": "#832561",
-        "statusBar.foreground": "#e7e7e7",
-        "statusBarItem.hoverBackground": "#ab307e",
-        "statusBarItem.remoteBackground": "#832561",
-        "statusBarItem.remoteForeground": "#e7e7e7",
-        "titleBar.activeBackground": "#832561",
-        "titleBar.activeForeground": "#e7e7e7",
-        "titleBar.inactiveBackground": "#83256199",
-        "titleBar.inactiveForeground": "#e7e7e799",
-        "cSpell.language": "en,ru"
-    },
-    "peacock.color": "#832561",
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": "explicit",
-        "source.organizeImports": "explicit"
-    },
-    "eslint.validate": [
-        "javascript",
-        "javascriptreact",
-        "typescript",
-        "typescriptreact"
-    ],
-    "eslint.workingDirectories": [
-        {
-            "mode": "auto"
-        }
-    ],
-    // ===========================================
-    // 🗄️ Yandex Cloud PostgreSQL
-    // Переменные в .env (корень проекта). Загрузка:
-    //   Windows PowerShell: Get-Content .env | ForEach { if ($_ -match '^([^#].+?)=(.*)$') { [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process') } }
-    //   Bash/WSL: set -a; source .env; set +a
-    //   Или: npx dotenv -- node script.js
-    // ===========================================
+  "terminal.integrated.env.windows": {
+    "PATH": "${env:LOCALAPPDATA}\\CodexTools\\PortableGit\\bin;${env:LOCALAPPDATA}\\CodexTools\\PortableGit\\usr\\bin;${env:PATH}",
+    "HEYS_BASH": "${env:LOCALAPPDATA}\\CodexTools\\PortableGit\\bin\\bash.exe",
+    "HEYS_PORTABLE_GIT": "${env:LOCALAPPDATA}\\CodexTools\\PortableGit"
+  }
 }
