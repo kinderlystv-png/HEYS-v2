@@ -4,9 +4,13 @@
 /**
  * p50 duration_ms по инструментам из выгрузки yc logging read.
  *
+ * yc logging read с --since ≥8h часто отдаёт [] (лимит CLI ~7h) — см.
+ * MCP_TELEMETRY_ROADMAP.md § «Ловушка yc logging read». Не трактовать как «нет
+ * трафика». Обход — окна по 6h:
+ *   node scripts/mcp-baseline-fetch.mjs
+ * Или вручную (не дольше ~6h за раз):
  *   yc logging read --group-id e23ndggvq798r3v3eepq \
- *     --filter 'message: "mcp_call"' --since 72h --limit 1000 --format json \
- *     > ops/mcp-call-baseline-pre-deploy.json
+ *     --filter 'message: "mcp_call"' --since 6h --limit 1000 --format json
  *   node scripts/mcp-baseline-p50.mjs ops/mcp-call-baseline-pre-deploy.json
  */
 
@@ -37,7 +41,7 @@ function parseRecords(raw) {
   if (!Array.isArray(entries)) entries = [entries];
   const records = [];
   for (const entry of entries) {
-    const rec = extractRecord(entry.json_payload || entry.jsonPayload || entry.message || entry);
+    const rec = extractRecord(entry);
     if (rec) records.push(rec);
   }
   return records;

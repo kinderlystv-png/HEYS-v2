@@ -148,3 +148,52 @@ test('заголовок ~21:33 парсится', () => {
   const { exchanges } = correlate.parseExchanges(transcript, { date: '2026-08-17' });
   assert.equal(exchanges[0].heading, '21:33');
 });
+
+test('без date после полуночи до 03:00 — taskDay (файл вчерашнего дня), не календарный', async () => {
+  const nowMs = Date.parse('2026-08-17T21:35:00.000Z'); // 2026-08-18 00:35 МСК
+  const keys = [];
+  const api = {
+    async getKVByCurator(_jwt, _client, key) {
+      keys.push(key);
+      return { data: { text: transcript, rev: 1, updatedAt: nowMs } };
+    },
+  };
+  const tools = createMcpTraceTools({
+    api,
+    curatorJwt: 'jwt',
+    clientId: 'client',
+    ToolError,
+    nowMs,
+    listMcpCallEventsImpl: async () => ({ records: [], truncated: false, error: null }),
+  }).tools;
+  await tools.tasks_mcp_trace({ heading: '22:04' });
+  assert.ok(keys.some((key) => key.includes('2026-08-17')), keys.join(', '));
+  assert.ok(!keys.some((key) => key.includes('2026-08-18')), keys.join(', '));
+});
+
+test('heading с коллизией — последний блок в файле, один row в отчёте', async () => {
+  const dupTranscript = `# 2026-08-17
+
+## 00:35
+
+**Кин:** старый обмен
+**Claude:** старый
+[mcp session=a11111111111 seq=1 ts=2026-08-16T21:35:00.000Z]
+
+## 00:35
+
+**Кин:** свежий smoke
+**Claude:** ok
+[mcp session=b222222222222 seq=2 ts=2026-08-16T21:35:30.000Z]
+`;
+  const tools = makeTools({
+    transcriptText: dupTranscript,
+    logs: [
+      { t: 'mcp_call', ts: '2026-08-16T21:35:28.000Z', tool: 'tasks_checkpoint', session_id: 'b222222222222', seq: 2, duration_ms: 1502, role: 'curator' },
+    ],
+  });
+  const result = await tools.tasks_mcp_trace({ date: '2026-08-17', heading: '00:35' });
+  assert.equal(result.structured.rows.length, 1);
+  assert.match(result.text, /свежий smoke/);
+  assert.deepEqual(result.structured.rows[0].confirmed_tools, ['tasks_checkpoint']);
+});

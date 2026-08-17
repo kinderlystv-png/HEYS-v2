@@ -188,11 +188,23 @@ ACTIVE, а распаковаться не смогла. Отсюда
 Единственный источник «до» — stdout в Cloud Logging (retention **3 суток**). Не
 снять сейчас — третья проверка приёмки станет невыполнимой.
 
+### Ловушка `yc logging read --since`
+
+**`--since 8h` и длиннее часто отдаёт `[]` при том же `--filter`, что и
+`--since 6h`/`1h`.** Это лимит CLI (~7h), не отсутствие трафика. Пустой JSON
+**не записывать** в доки как «нет mcp_call в Logging».
+
+Проверено 2026-08-18: группа `e23ndggvq798r3v3eepq`, фильтр
+`message: "mcp_call"` — `1h`/`6h`/`7h` дают строки, `8h`/`24h`/`72h` → `[]`.
+Обход — окна по **6h** с `--since`/`--until` RFC-3339:
+
 ```bash
-yc logging read --group-id e23ndggvq798r3v3eepq \
-  --filter 'message: "mcp_call"' --since 24h --limit 1000 --format json \
-  > mcp-call-baseline-pre-deploy.json
+node scripts/mcp-baseline-fetch.mjs
+node scripts/mcp-baseline-p50.mjs ops/mcp-call-baseline-pre-deploy.json
 ```
+
+Парсер baseline: `extractRecord(entry)` — целиком entry; `mcp_call` в поле
+`message`, не в `json_payload.t`.
 
 Из выгрузки посчитать p50 `duration_ms` **по каждому `tool`** (артефакт
 сохранить рядом с deploy receipt).
@@ -201,11 +213,16 @@ yc logging read --group-id e23ndggvq798r3v3eepq \
 
 1. Любой MCP tool → строка в `mcp_call_events` за 5 мин.
 2. Свежий обмен: `tasks_checkpoint` →
-   `tasks_mcp_trace({ date: сегодня, heading: ЧЧ:ММ из checkpoint })` → ≥1
-   **confirmed**. Старые обмены (до deploy) в Postgres не попадут — это принятый
-   исторический разрыв, не баг.
-3. p50 `duration_ms` по инструментам за сутки после deploy vs сохранённая
-   базовая линия из Logging — рост ≤10%.
+   `tasks_mcp_trace({ heading: ЧЧ:ММ из checkpoint })` (date по умолчанию =
+   **taskDay**, сутки с 03:00 МСК — как у checkpoint) → ≥1 **confirmed**. Старые
+   обмены (до deploy) в Postgres не попадут — это принятый исторический разрыв,
+   не баг.
+3. **p50 vs p50** после deploy: по каждому `tool` с ≥20–30 вызовами за сутки —
+   post-deploy p50 `duration_ms` vs pre-deploy baseline из Logging; рост ≤10%.
+   Одна точка smoke (особенно тяжёлый `tasks_checkpoint` с большим блоком) **не
+   считается**. Надёжнее на будущее — отдельная строка лога
+   `[mcp-telemetry-db] persist_ms=…` для накладных persist, без вычитания медиан
+   друг из друга.
 
 Gate 22:04 (unit/offline correlate на mock-строках) — **не** prod smoke.
 

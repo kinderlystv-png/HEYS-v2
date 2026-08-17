@@ -21,11 +21,13 @@ const MCP_TRACE_SCHEMA = {
     properties: {
       date: {
         type: 'string',
-        description: 'День стенограммы YYYY-MM-DD. По умолчанию — сегодня по Москве.',
+        description:
+          'День стенограммы YYYY-MM-DD. По умолчанию — taskDay (сутки с 03:00 МСК, как у tasks_checkpoint), не календарное число.',
       },
       heading: {
         type: 'string',
-        description: 'Один обмен ЧЧ:ММ. Без него — все размеченные блоки за день.',
+        description:
+          'Один обмен ЧЧ:ММ. При нескольких блоках с тем же временем — последний в файле. Без heading — все размеченные блоки за день.',
       },
       window_ms: {
         type: 'number',
@@ -103,7 +105,7 @@ function createMcpTraceTools({
 
   const tools = {
     async tasks_mcp_trace(args = {}) {
-      const date = String(args.date || correlate.mskToday(nowMs)).trim();
+      const date = String(args.date || tasks.taskDay(nowMs)).trim();
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         throw new ToolError('invalid_date', 'date должен быть YYYY-MM-DD.');
       }
@@ -130,13 +132,15 @@ function createMcpTraceTools({
       const { exchanges, blocksWithoutMark } = correlate.parseExchanges(text, { date });
       let selected = correlate.mergeSameTurnExchanges(exchanges);
       if (headingFilter) {
-        selected = selected.filter((row) => row.heading === headingFilter);
-        if (!selected.length) {
+        const matches = selected.filter((row) => row.heading === headingFilter);
+        if (!matches.length) {
           throw new ToolError(
             'heading_not_found',
             `В стенограмме за ${date} нет размеченного обмена ${headingFilter}.`,
           );
         }
+        // heading — время, не уникальный ключ; при фильтре берём последний блок в файле.
+        selected = [matches[matches.length - 1]];
       }
       if (!selected.length) {
         return {
