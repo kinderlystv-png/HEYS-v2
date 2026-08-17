@@ -102,9 +102,24 @@ yc logging read --group-id e23ndggvq798r3v3eepq --since 24h \
   --filter 'message: "tool_timing"' --format json
 ```
 
-Агрегатор `heys-maintenance/mcp-telemetry.js` использует
-`json_payload.t = "mcp_call" OR message: "mcp_call"` — второй предикат
-обязателен.
+Суточный агрегатор `heys-maintenance/mcp-telemetry.js` читает
+**`mcp_call_events`** (Postgres), не Logging. Разовая выгрузка stdout — только
+команды выше.
+
+### 2a. Базовая линия p50 перед deploy (обязательно)
+
+Пока `mcp_call_events` пуста, сравнивать «до/после» можно только с Logging.
+Retention **3 суток** — снять **до** выката:
+
+```bash
+yc logging read --group-id e23ndggvq798r3v3eepq \
+  --filter 'message: "mcp_call"' --since 24h --limit 1000 --format json \
+  > mcp-call-baseline-pre-deploy.json
+```
+
+Посчитать p50 `duration_ms` по каждому `tool`, файл сохранить. После deploy
+третья проверка приёмки — рост ≤10% к этой линии (суточная выборка из Postgres
+или свежая выгрузка Logging).
 
 ### 3. Не делать
 
@@ -130,23 +145,21 @@ node scripts/mcp-correlate.mjs --transcript transcript/2026-08-17.md --logs call
 `calls.txt` — вывод `yc serverless function logs` или JSON-массив `mcp_call`.
 
 В кураторском коннекторе то же самое по запросу:
-`tasks_mcp_trace({ date, heading? })` — без ручного `yc logs`. Дата старше 3
-суток отвечает «логи устарели», не пустым списком.
+`tasks_mcp_trace({ date, heading? })` читает **`mcp_call_events`** в Postgres
+(не Cloud Logging). Сырьё хранится **180 суток**; дата старше — ошибка
+`telemetry_retention_exceeded`.
 
-Лог-группа `e23ndggvq798r3v3eepq` хранит записи **3 суток** (259200 s), и
-укорачивать этот срок нельзя: в ту же группу пишут остальные функции, по ней
-разбирают 429/503 и dead-man. Выгрузка «за неделю» из логов не вернёт ничего.
-
-Ряд длиннее трёх суток теперь копится сам: суточная задача `mcp_telemetry` в
-`heys-maintenance` сворачивает вчерашние вызовы в `mcp_call_daily` и
-`mcp_seq_daily`, агрегаты живут бессрочно. Отчёт по ним:
+Stdout по-прежнему уходит в Logging (консоль, 3 суток). Агрегаты —
+`mcp_call_daily` / `mcp_seq_daily` через `mcp_telemetry`:
 
 ```bash
 node scripts/mcp-stats.mjs --days 7
 ```
 
 Логи нужны для разбора одиночного вызова, агрегаты — для «что дорожает за
-неделю». Подробнее — [README.md](README.md), раздел «Телеметрия вызовов».
+неделю». **Prod smoke после deploy:** свежий `tasks_checkpoint` → trace по его
+heading (≥1 confirmed); старые обмены в Postgres не появятся. Подробнее —
+[MCP_TELEMETRY_ROADMAP.md](MCP_TELEMETRY_ROADMAP.md), [README.md](README.md).
 
 ## Ожидаемая стоимость сценариев
 

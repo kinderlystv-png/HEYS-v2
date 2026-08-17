@@ -77,7 +77,7 @@ function unwrap(data, fnName) {
  * приём) и `verify_client_pin_v3` — он считает попытки входа, и повтор сжигал
  * бы лимит клиента вместо того, чтобы помочь.
  */
-const IDEMPOTENT_RPC = /^(get_|batch_get_)/;
+const IDEMPOTENT_RPC = /^(get_|batch_get_|list_mcp_call_events)/;
 
 /** Строки KV → карта ключ→значение. Форма ответа отличается по путям чтения. */
 function rowsToMap(rows) {
@@ -154,10 +154,15 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     }
   }
 
-  async function rpc(fnName, params = {}, { bearer = null } = {}) {
+  async function rpc(fnName, params = {}, { bearer = null, timeoutMs: callTimeoutMs } = {}) {
     const url = `${apiUrl}/rpc?fn=${encodeURIComponent(fnName)}`;
     const headers = bearer ? { Authorization: `Bearer ${bearer}` } : {};
-    const res = await measured(url, { method: 'POST', body: params, headers, timeoutMs },
+    const res = await measured(url, {
+      method: 'POST',
+      body: params,
+      headers,
+      timeoutMs: callTimeoutMs || timeoutMs,
+    },
       { retry: IDEMPOTENT_RPC.test(fnName) });
     if (res.status < 200 || res.status >= 300) {
       const message = (res.json && (res.json.error || res.json.message)) || `rpc_http_${res.status}`;
@@ -709,8 +714,55 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     });
   }
 
+  async function insertMcpCallEvent(record, { secret, timeoutMs: callTimeoutMs = 250 } = {}) {
+    if (!secret) return { ok: false, reason: 'no_secret' };
+    const url = `${apiUrl}/rpc?fn=${encodeURIComponent('insert_mcp_call_event')}`;
+    try {
+      const res = await fetchImpl(url, {
+        method: 'POST',
+        body: record,
+        headers: { Authorization: `Bearer ${secret}` },
+        timeoutMs: callTimeoutMs,
+      });
+      if (res.status < 200 || res.status >= 300) {
+        console.warn('[mcp-telemetry-db] insert_failed: http', res.status);
+        return { ok: false, reason: `http_${res.status}` };
+      }
+      const data = unwrap(res.json, 'insert_mcp_call_event');
+      return data && typeof data === 'object' ? data : { ok: true };
+    } catch (err) {
+      const msg = String(err && err.message ? err.message : err);
+      const kind = /timeout/i.test(msg) ? 'timeout' : 'insert_failed';
+      console.warn(`[mcp-telemetry-db] ${kind}:`, msg);
+      return { ok: false, reason: kind };
+    }
+  }
+
+  async function listMcpCallEvents({
+    since,
+    until,
+    role = 'curator',
+    limit = 5000,
+    bearer,
+    timeoutMs: callTimeoutMs,
+  } = {}) {
+    const { data, error } = await rpc('list_mcp_call_events', {
+      p_since: since,
+      p_until: until,
+      p_role: role,
+      p_limit: limit,
+    }, { bearer, timeoutMs: callTimeoutMs || timeoutMs });
+    if (error) return { records: [], truncated: false, error };
+    return {
+      records: Array.isArray(data && data.records) ? data.records : [],
+      truncated: Boolean(data && data.truncated),
+      error: null,
+    };
+  }
+
   return {
     rpc, rest, verifyPin, getKV, getKVMany, mergeSaveKV, upsertKV, getSharedProducts, stats,
+    insertMcpCallEvent, listMcpCallEvents,
     curatorLogin, curatorStatus, listClients, getKVByCurator, getKVManyByCurator, issueWriteContext, mergeSaveKVByCurator, upsertKVByCurator, upsertKVManyByCurator, appendTasksFileByCurator,
     getMessagesThread, getMessagesInbox, setMessageDone, sendMessageToClient, readAttachment,
     createClientWithPin, setClientPin, getClientAccessLink,

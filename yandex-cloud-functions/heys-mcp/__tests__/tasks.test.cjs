@@ -2750,8 +2750,8 @@ test('новые инструменты объявлены и в схемах, �
 });
 
 test('правила задачника ссылаются только на существующие инструменты', () => {
-  const prevGroup = process.env.MCP_LOG_GROUP_ID;
-  process.env.MCP_LOG_GROUP_ID = 'grp-test';
+  const prevSecret = process.env.MCP_TELEMETRY_SECRET;
+  process.env.MCP_TELEMETRY_SECRET = 'secret-test';
   try {
     const { schemas } = createCuratorContext({
       api: liveApi({}),
@@ -2765,8 +2765,8 @@ test('правила задачника ссылаются только на с�
     assert.ok(named.has('tasks_calendar') && named.has('tasks_budget'), 'новые правила названы своими именами');
     for (const name of named) assert.ok(known.has(name), `правило обещает несуществующий инструмент ${name}`);
   } finally {
-    if (prevGroup === undefined) delete process.env.MCP_LOG_GROUP_ID;
-    else process.env.MCP_LOG_GROUP_ID = prevGroup;
+    if (prevSecret === undefined) delete process.env.MCP_TELEMETRY_SECRET;
+    else process.env.MCP_TELEMETRY_SECRET = prevSecret;
   }
 });
 

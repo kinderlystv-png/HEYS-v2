@@ -27,13 +27,14 @@
 Новый пункт попадает сюда только с воспроизведением, механизмом ущерба и
 проверяемым критерием закрытия.
 
-### MCP-телеметрия: correlate + tasks_mcp_trace — 2026-08-17
+### MCP-телеметрия: Postgres + tasks_mcp_trace — 2026-08-17
 
-Фаза 2 закрыта: `mcp_call`, метка в стенограмме, офлайн
-`node scripts/mcp-correlate.mjs` (живой gate 22:03–22:04 на smoke-логах). Фаза 3
-шаг 1 закрыт: `tasks_mcp_trace` в heys-mcp, прод `b9754dd4` (версия
-`d4ees65po9nfvrbsgc8q`), smoke unit 19/19 + живой gate correlate 22:03–22:04.
-Дашборд метрик — следующий кусок roadmap фазы 3. План —
+Фаза 2 закрыта (correlate, метка в стенограмме). Фаза 3: `tasks_mcp_trace`
+реализован; **сырьё перенесено в `mcp_call_events`** (чтение Logging для
+инструментов снято). Код готов; **до deploy** — baseline p50 из Logging (3 суток
+retention); deploy: миграция → `heys-api-rpc` → `heys-mcp` → `heys-maintenance`;
+Lockbox `MCP_TELEMETRY_SECRET`; **после deploy** — свежий `tasks_checkpoint` +
+trace по его heading (≥1 confirmed), p50 vs baseline. План —
 [yandex-cloud-functions/heys-mcp/MCP_TELEMETRY_ROADMAP.md](yandex-cloud-functions/heys-mcp/MCP_TELEMETRY_ROADMAP.md).
 
 ### Вход по PIN меняется по существу — решение владельца 2026-08-11

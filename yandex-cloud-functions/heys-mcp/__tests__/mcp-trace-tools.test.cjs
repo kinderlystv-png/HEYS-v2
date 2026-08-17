@@ -40,8 +40,7 @@ function makeTools({ transcriptText = transcript, logs = [], nowMs = Date.parse(
     clientId: 'client',
     ToolError,
     nowMs,
-    env: { MCP_LOG_GROUP_ID: 'grp' },
-    readMcpCallsImpl: async () => ({ records: logs, truncated: false }),
+    listMcpCallEventsImpl: async () => ({ records: logs, truncated: false, error: null }),
   }).tools;
 }
 
@@ -111,17 +110,38 @@ test('heading фильтрует схлопнутый обмен одного х
   assert.deepEqual(result.structured.rows[0].confirmed_tools, ['heys_get_period', 'heys_checkin', 'heys_add_water']);
 });
 
-test('дата старше retention — ошибка без вызова Logging', async () => {
+test('дата старше retention — ошибка без чтения телеметрии', async () => {
   let called = false;
   const tools = makeTools({
-    nowMs: Date.parse('2026-08-20T12:00:00+03:00'),
-    readMcpCallsImpl: async () => { called = true; return { records: [], truncated: false }; },
+    nowMs: Date.parse('2026-08-17T20:00:00Z'),
+    listMcpCallEventsImpl: async () => { called = true; return { records: [], truncated: false, error: null }; },
   });
   await assert.rejects(
-    () => tools.tasks_mcp_trace({ date: '2026-08-16' }),
-    (err) => err.code === 'logs_retention_exceeded',
+    () => tools.tasks_mcp_trace({ date: '2026-02-01' }),
+    (err) => err.code === 'telemetry_retention_exceeded',
   );
   assert.equal(called, false);
+});
+
+test('readEvents передаёт curator JWT в list_mcp_call_events', async () => {
+  let capturedBearer = null;
+  const api = {
+    async getKVByCurator() {
+      return { data: { text: transcript, rev: 1, updatedAt: Date.now() } };
+    },
+    async listMcpCallEvents({ bearer }) {
+      capturedBearer = bearer;
+      return { records: [], truncated: false, error: null };
+    },
+  };
+  const tools = createMcpTraceTools({
+    api,
+    curatorJwt: 'curator-jwt-for-trace',
+    clientId: 'client',
+    ToolError,
+  }).tools;
+  await tools.tasks_mcp_trace({ date: '2026-08-17', heading: '22:04' });
+  assert.equal(capturedBearer, 'curator-jwt-for-trace');
 });
 
 test('заголовок ~21:33 парсится', () => {

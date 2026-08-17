@@ -440,7 +440,7 @@ get_function_config() {
             echo "nodejs22 index.handler 256m 300s" ;;
         "heys-snapshot-demo")
             echo "nodejs22 index.handler 512m 300s" ;;
-        # 120s: mcp_telemetry читает Cloud Logging внутри daily_cleanup.
+        # 120s: mcp_telemetry агрегирует Postgres внутри daily_cleanup.
         # При 30s один медленный page Logging съедает весь слот и платформа
         # убивает функцию до конца уборки. Ошибка телеметрии ловится в JS,
         # таймаут платформы — нет.
@@ -603,11 +603,8 @@ build_env_flags() {
         env_flags+=" --environment LOCKBOX_S3_SECRET_ID=$LOCKBOX_S3_ID"
     fi
 
-    # Телеметрия MCP: агрегатор читает ту же лог-группу, куда рантайм уже
-    # пишет stdout heys-mcp. Сейчас это folder default e23ndggvq798r3v3eepq
-    # (retention 3 суток). Отдельную группу не ставим в этом выкате: у неё
-    # нужны logging.writer/reader на SA, а укорачивать retention общей нельзя —
-    # по ней разбирают 429/503 и dead-man. Переопределяется MCP_LOG_GROUP_ID.
+    # MCP telemetry: stdout heys-mcp по-прежнему уходит в Logging для консоли;
+    # агрегация и tasks_mcp_trace читают mcp_call_events в Postgres.
     if [[ "$func_name" == "heys-maintenance" ]]; then
         env_flags+=" --environment MCP_LOG_GROUP_ID=${MCP_LOG_GROUP_ID:-e23ndggvq798r3v3eepq}"
     fi
@@ -960,8 +957,7 @@ deploy_function() {
         fi
     fi
 
-    # MCP telemetry read — общий модуль чтения Cloud Logging для heys-mcp
-    # (tasks_mcp_trace) и heys-maintenance (суточная агрегация).
+    # MCP telemetry: slim extractRecord для офлайн correlate (не hot path).
     if [[ "$func_name" == "heys-mcp" || "$func_name" == "heys-maintenance" ]]; then
         LOGGING_READ_SRC="$SCRIPT_DIR/shared/mcp-logging-read.js"
         LOGGING_READ_DST_DIR="$SCRIPT_DIR/$func_name/shared"
@@ -969,14 +965,10 @@ deploy_function() {
         if [ -f "$LOGGING_READ_SRC" ]; then
             mkdir -p "$LOGGING_READ_DST_DIR"
             cp "$LOGGING_READ_SRC" "$LOGGING_READ_DST"
-            echo -e "${BLUE}ℹ️  Synced MCP logging read: shared/mcp-logging-read.js${NC}"
-        else
-            echo -e "${RED}❌ ERROR: MCP logging read not found at $LOGGING_READ_SRC${NC}"
-            exit 1
+            echo -e "${BLUE}ℹ️  Synced MCP logging parse helper: shared/mcp-logging-read.js${NC}"
         fi
     fi
 
-    # Pre-build zip with explicit exclusions.
     # Раньше yc CLI 0.184.0 при `--source-path .` читал .ycignore и сам исключал
     # node_modules. Но для функций с большим node_modules (>4000 файлов, e.g.
     # heys-client-daily-backup с @aws-sdk) yc игнорирует .ycignore — видимо

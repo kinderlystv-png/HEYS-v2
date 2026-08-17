@@ -14,6 +14,10 @@ const { createServerlessCapacityGuard } = require('./shared/serverless-capacity-
 const { shouldSendImmediateTelegramAlert: _shouldSendTgAlert } = require('./ops-alert-policy.cjs');
 const { mergeDayData, hasSubjectiveFieldDrop, mergeChronoTombstones, mergePlanningRecords, mergeHungerStatusEvents, mergeInsightsFeedback, mergeScalarKvWithOutcome, mergeMorningCheckinProgress, hasMorningCheckinProgressConflict } = require('./lib/heys_sync_merge_v1.cjs');
 const { computeCuratorActionPayload, buildChangelogActionsEnvelope } = require('./curator-action-diff');
+const {
+  handleInsertMcpCallEvent,
+  handleListMcpCallEvents,
+} = require('./mcp-telemetry-rpc');
 
 const requestCapacityGuard = createServerlessCapacityGuard({ functionName: 'heys-api-rpc' });
 
@@ -969,6 +973,7 @@ const ALLOWED_FUNCTIONS = [
   // === PLANNING INGEST (API-first context apply) ===
   'planning_context_ingest',
   'planning_context_agent_ingest', // Bearer PLANNING_AGENT_SECRET + targetClientId (server-trusted KV path)
+  'insert_mcp_call_event', // Bearer MCP_TELEMETRY_SECRET — телеметрия heys-mcp
 
   // ❌ УБРАНО (IDOR — принимают UUID от клиента!):
   // 'save_client_kv'             — IDOR: клиент может передать чужой UUID
@@ -1152,6 +1157,7 @@ const CURATOR_ONLY_FUNCTIONS = [
   'publish_shared_product_by_curator',          // Direct shared catalog publish; JWT actor only
   'add_shared_product_barcode_by_curator',      // Shared barcode mutation; JWT actor only
   'update_shared_product_portions_by_curator',  // Shared portions mutation; JWT actor only
+  'list_mcp_call_events',                       // MCP trace: чтение сырья по окну времени
 ];
 
 // === P1-B: Curator audit middleware (2026-05-22) =============================
@@ -2004,6 +2010,24 @@ async function handleRpcRequest(event, context) {
   if (fnName === 'accept_trial_candidate_health_consent_by_candidate_session') {
     params.p_ip = clientIp || null;
     params.p_user_agent = event.headers?.['user-agent'] || event.headers?.['User-Agent'] || null;
+  }
+
+  if (fnName === 'insert_mcp_call_event') {
+    const pool = getPool();
+    const authHeader = event.headers?.authorization || event.headers?.Authorization;
+    return handleInsertMcpCallEvent(pool, params, authHeader, { corsHeaders });
+  }
+
+  if (fnName === 'list_mcp_call_events') {
+    if (!isCuratorFunction || !curatorId) {
+      return {
+        statusCode: 401,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: 'Authorization required for curator functions' }),
+      };
+    }
+    const pool = getPool();
+    return handleListMcpCallEvents(pool, params, { corsHeaders });
   }
 
   // API-first ingest endpoint (custom handler, not direct SQL function wrapper)

@@ -149,10 +149,10 @@ ACTIVE, а распаковаться не смогла. Отсюда
 ## Фаза 3 — метрики эффективности
 
 1. **`tasks_mcp_trace` (кураторский MCP):** по запросу связывает блок
-   стенограммы с цепочкой `mcp_call` из Cloud Logging. Подтверждённые вызовы —
-   `session_id` совпал с меткой; вероятные — только окно ±5 мин. Использует
-   `mergeSameTurnExchanges` (см. gate фазы 2). Живой gate 2026-08-17: обмен
-   22:04 → `heys_get_day` → `heys_add_water` → `tasks_read`.
+   стенограммы с цепочкой `mcp_call` из **Postgres** (`mcp_call_events`).
+   Подтверждённые вызовы — `session_id` совпал с меткой; вероятные — только окно
+   ±5 мин. Использует `mergeSameTurnExchanges` (см. gate фазы 2). Живой gate
+   2026-08-17: обмен 22:04 → `heys_get_day` → `heys_add_water` → `tasks_read`.
 
 Дашборд поверх `mcp-stats` и correlate: доля лишних пар вызовов, распределение
 `duration_ms` по инструментам, цепочки с аномальным числом `seq`.
@@ -173,3 +173,41 @@ ACTIVE, а распаковаться не смогла. Отсюда
    всё равно в памяти процесса и на каждом cold start снова 1. Correlate поэтому
    идёт по времени. `mcp_seq_daily` считает пары внутри `session_id` и при таком
    трафике занизит «лишние круги» — не читать его как «модель ходит коротко».
+
+## Postgres-слой (2026-08-18)
+
+Сырьё — `mcp_call_events` (`database/2026-08-18_mcp_call_events.sql`). Запись:
+`insert_mcp_call_event` (Bearer `MCP_TELEMETRY_SECRET`). Чтение trace:
+`list_mcp_call_events` (curator JWT).
+
+**Deploy-порядок:** Lockbox `MCP_TELEMETRY_SECRET` → миграция → `heys-api-rpc` →
+`heys-mcp` → `heys-maintenance`.
+
+**До deploy (обязательно):** снять базовую линию p50. `mcp_call_events` и
+`mcp_call_daily` после миграции пусты; чтение Logging из кода убрано.
+Единственный источник «до» — stdout в Cloud Logging (retention **3 суток**). Не
+снять сейчас — третья проверка приёмки станет невыполнимой.
+
+```bash
+yc logging read --group-id e23ndggvq798r3v3eepq \
+  --filter 'message: "mcp_call"' --since 24h --limit 1000 --format json \
+  > mcp-call-baseline-pre-deploy.json
+```
+
+Из выгрузки посчитать p50 `duration_ms` **по каждому `tool`** (артефакт
+сохранить рядом с deploy receipt).
+
+**Prod smoke после deploy** (пустой ответ и «нет ошибки» не засчитываются):
+
+1. Любой MCP tool → строка в `mcp_call_events` за 5 мин.
+2. Свежий обмен: `tasks_checkpoint` →
+   `tasks_mcp_trace({ date: сегодня, heading: ЧЧ:ММ из checkpoint })` → ≥1
+   **confirmed**. Старые обмены (до deploy) в Postgres не попадут — это принятый
+   исторический разрыв, не баг.
+3. p50 `duration_ms` по инструментам за сутки после deploy vs сохранённая
+   базовая линия из Logging — рост ≤10%.
+
+Gate 22:04 (unit/offline correlate на mock-строках) — **не** prod smoke.
+
+**Если trace пустой на свежем обмене:** 401/403 на `list_mcp_call_events` (JWT)
+vs пустая выборка (сырьё не пишется / нет метки в стенограмме).

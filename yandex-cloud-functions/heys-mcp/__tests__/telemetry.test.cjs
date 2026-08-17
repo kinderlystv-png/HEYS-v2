@@ -93,22 +93,22 @@ test('в записи остались поля, на которых держи�
   assert.equal(record.duration_ms, 800);
 });
 
-test('версия функции берётся из context обработчика, а не из окружения', () => {
+test('версия функции берётся из context обработчика, а не из окружения', async () => {
   // Живая строка 17.08 приехала с fn_version: null — в рантайме YC переменной
   // FUNCTION_VERSION_ID нет, версия лежит во втором аргументе handler.
   const lines = [];
   const telemetry = createTelemetry({ instanceId: 'i', logger: { log: (l) => lines.push(l) } });
 
-  telemetry.record({ tool: 'heys_add_water', ok: true, durationMs: 10 });
+  await telemetry.record({ tool: 'heys_add_water', ok: true, durationMs: 10, sessionId: 's', seq: 1 });
   assert.equal(JSON.parse(lines[0]).fn_version, null);
 
   telemetry.setFnVersion('d4egc9ia3uum2sfpbpe6');
-  telemetry.record({ tool: 'heys_add_water', ok: true, durationMs: 10 });
+  await telemetry.record({ tool: 'heys_add_water', ok: true, durationMs: 10, sessionId: 's', seq: 2 });
   assert.equal(JSON.parse(lines[1]).fn_version, 'd4egc9ia3uum2sfpbpe6');
 
   // Пустое значение не должно затирать уже известную версию.
   telemetry.setFnVersion('');
-  telemetry.record({ tool: 'heys_add_water', ok: true, durationMs: 10 });
+  await telemetry.record({ tool: 'heys_add_water', ok: true, durationMs: 10, sessionId: 's', seq: 3 });
   assert.equal(JSON.parse(lines[2]).fn_version, 'd4egc9ia3uum2sfpbpe6');
 });
 
@@ -152,7 +152,7 @@ test('падение логгера не ломает вызов инструм�
     instanceId: 'test-instance',
     logger: { log() { throw new Error('stdout is gone'); } },
   });
-  assert.doesNotThrow(() => telemetry.record({ tool: 'heys_get_day', ok: true, durationMs: 10 }));
+  await assert.doesNotReject(async () => telemetry.record({ tool: 'heys_get_day', ok: true, durationMs: 10 }));
 });
 
 test('запись телеметрии не меняет ответ инструмента', async () => {
@@ -166,9 +166,11 @@ test('запись телеметрии не меняет ответ инстр�
   const lines = [];
   const telemetry = createTelemetry({ instanceId: 'i', logger: { log: (l) => lines.push(l) } });
   const withMetric = await call({
-    logMetric: (metric) => telemetry.record({
+    logMetric: async (metric) => telemetry.record({
       tool: metric.tool, ok: metric.ok, errorCode: metric.error,
       durationMs: metric.ms, argCount: metric.arg_count, token: 'Bearer t',
+      sessionId: metric.trace ? metric.trace.sessionId : null,
+      seq: metric.trace ? metric.trace.seq : null,
     }),
   });
 
@@ -197,9 +199,11 @@ test('исключение инструмента логируется кодо�
     params: { name: 'heys_log_meal', arguments: { client: 'мне', name: 'творог 5%' } },
   }, {
     tools: failing,
-    logMetric: (metric) => telemetry.record({
+    logMetric: async (metric) => telemetry.record({
       tool: metric.tool, ok: metric.ok, errorCode: metric.error,
       durationMs: metric.ms, argCount: metric.arg_count, token: 'Bearer t',
+      sessionId: metric.trace ? metric.trace.sessionId : null,
+      seq: metric.trace ? metric.trace.seq : null,
     }),
   });
 
@@ -211,16 +215,16 @@ test('исключение инструмента логируется кодо�
 });
 
 /** Обвязка «как в index.js»: beginTrace выдаёт номер, logMetric его же пишет. */
-function tracedContext(tools, lines) {
+function tracedContext(tools, lines, { persistCall = null } = {}) {
   const telemetry = createTelemetry({ instanceId: 'i', logger: { log: (l) => lines.push(l) } });
   return {
     tools,
     beginTrace: () => telemetry.begin('Bearer curator-token'),
-    logMetric: (metric) => telemetry.record({
+    logMetric: async (metric) => telemetry.record({
       tool: metric.tool, ok: metric.ok, errorCode: metric.error, durationMs: metric.ms,
       sessionId: metric.trace ? metric.trace.sessionId : null,
       seq: metric.trace ? metric.trace.seq : null,
-    }),
+    }, { persistCall }),
   };
 }
 
@@ -307,4 +311,24 @@ test('отказ инструмента тоже несёт session_id и seq', 
   assert.equal(res.result.structuredContent.error, 'product_not_found');
   assert.equal(res.result.structuredContent.session_id, rec.session_id);
   assert.equal(res.result.structuredContent.seq, rec.seq);
+});
+
+test('persistCall await до возврата record и не роняет при ошибке', async () => {
+  const lines = [];
+  const telemetry = createTelemetry({ instanceId: 'i', logger: { log: (l) => lines.push(l) } });
+  let finished = false;
+  const persistCall = async () => {
+    await new Promise((r) => setTimeout(r, 20));
+    finished = true;
+  };
+  const rec = await telemetry.record({
+    tool: 'heys_get_day', ok: true, durationMs: 10, sessionId: 'abc', seq: 1,
+  }, { persistCall });
+  assert.ok(finished, 'persist должен завершиться до return record');
+  assert.equal(rec.tool, 'heys_get_day');
+
+  const broken = createTelemetry({ instanceId: 'i2', logger: { log: (l) => lines.push(l) } });
+  await assert.doesNotReject(async () => broken.record({
+    tool: 'heys_get_day', ok: true, durationMs: 10, sessionId: 'abc', seq: 2,
+  }, { persistCall: async () => { throw new Error('db down'); } }));
 });

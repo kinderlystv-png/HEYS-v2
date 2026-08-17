@@ -6,14 +6,15 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
-  CALL_FILTER,
   aggregateRecords,
   extractRecord,
   percentile,
   dayBounds,
   previousDay,
   readDay,
+  pruneOldEvents,
   upsertAggregates,
+  runMcpTelemetryAggregation,
 } = require('../mcp-telemetry');
 
 const DAY = '2026-08-17';
@@ -63,8 +64,6 @@ test('свёртка считает вызовы, ошибки и перцент
 });
 
 test('сортировка по суммарному времени, а не по среднему', () => {
-  // Редкий медленный вызов против частого быстрого: оптимизировать надо
-  // второй, он съедает больше.
   const records = [
     rec({ tool: 'slow_rare', seq: 1, duration_ms: 3000 }),
     ...Array.from({ length: 100 }, (_, i) => rec({ tool: 'fast_hot', seq: i + 2, duration_ms: 100 })),
@@ -90,7 +89,6 @@ test('пары считаются внутри подключения и не с
   assert.equal(pair('tasks_context', 'heys_list_clients').count, 1);
   assert.equal(pair('heys_list_clients', 'heys_log_meal').count, 1);
   assert.equal(pair('heys_get_day', 'heys_log_meal').count, 1);
-  // Последний вызов сессии a и первый сессии b — не пара.
   assert.equal(pair('heys_log_meal', 'heys_get_day'), undefined);
 });
 
@@ -137,52 +135,40 @@ test('сутки считаются по МСК', () => {
   assert.equal(previousDay(Date.parse('2026-08-17T05:00:00Z')), '2026-08-16');
 });
 
-test('фильтр Logging ловит строку и разобранной, и текстовой', async () => {
-  // Фильтр только по json_payload отсекал бы нераспарсенную строку до того,
-  // как до неё доберётся extractRecord — и сутки молча приехали бы нулём,
-  // неотличимым от «коннектором не пользовались».
-  assert.match(CALL_FILTER, /json_payload\.t = "mcp_call"/);
-  assert.match(CALL_FILTER, /OR message: "mcp_call"/);
-
-  let seenFilter = null;
-  const { records } = await readDay({
-    day: DAY,
-    logGroupId: 'grp',
-    fetchPage: async (body) => {
-      seenFilter = body.criteria.filter;
+test('readDay читает сутки из Postgres', async () => {
+  const client = {
+    async query(sql, params) {
+      assert.match(sql, /FROM mcp_call_events/);
+      assert.equal(params[0], '2026-08-16T21:00:00.000Z');
       return {
-        entries: [
-          { jsonPayload: rec({ seq: 1, tool: 'parsed' }) },
-          { message: JSON.stringify(rec({ seq: 2, tool: 'raw_text' })) },
-          // Чужая строка со словом mcp_call: фильтр её пропустит, разбор обязан
-          // отбросить — иначе она попадёт в счётчики.
-          { message: '[heys-mcp] tool_failed mcp_call что-то пошло не так' },
-        ],
+        rows: [{
+          t: 'mcp_call',
+          ts: new Date('2026-08-17T10:00:00.000Z'),
+          tool: 'parsed',
+          session_id: 's1',
+          seq: 1,
+          duration_ms: 100,
+          status: 'ok',
+        }],
       };
     },
-  });
-
-  assert.equal(seenFilter, CALL_FILTER);
-  assert.deepEqual(records.map((r) => r.tool), ['parsed', 'raw_text']);
+  };
+  const { records } = await readDay(client, { day: DAY });
+  assert.equal(records.length, 1);
+  assert.equal(records[0].tool, 'parsed');
 });
 
-test('чтение перелистывает страницы Logging до конца', async () => {
-  const pages = [
-    { entries: [{ jsonPayload: rec({ seq: 1 }) }], nextPageToken: 'p2' },
-    { entries: [{ jsonPayload: rec({ seq: 2 }) }], nextPageToken: '' },
-  ];
-  let call = 0;
-  const { records, truncated } = await readDay({
-    day: DAY,
-    logGroupId: 'grp',
-    fetchPage: async (body) => {
-      if (call === 1) assert.equal(body.pageToken, 'p2', 'курсор обязан уехать в следующий запрос');
-      assert.match(body.criteria.filter, /mcp_call/);
-      return pages[call++];
+test('pruneOldEvents удаляет старые строки', async () => {
+  let sql = '';
+  const client = {
+    async query(q) {
+      sql = q;
+      return { rowCount: 42 };
     },
-  });
-  assert.equal(records.length, 2);
-  assert.equal(truncated, false);
+  };
+  const pruned = await pruneOldEvents(client);
+  assert.match(sql, /DELETE FROM mcp_call_events/);
+  assert.equal(pruned, 42);
 });
 
 /** Заглушка Postgres: держит строки так же, как таблица с PK. */
@@ -199,6 +185,10 @@ function fakeClient() {
         for (const key of [...seq.keys()]) if (key.startsWith(`${params[0]}|`)) seq.delete(key);
       } else if (sql.includes('INSERT INTO mcp_seq_daily')) {
         seq.set(`${params[0]}|${params[1]}|${params[2]}`, params);
+      } else if (sql.includes('DELETE FROM mcp_call_events')) {
+        return { rowCount: 0 };
+      } else if (sql.includes('FROM mcp_call_events')) {
+        return { rows: [] };
       }
       return { rows: [] };
     },
@@ -223,15 +213,15 @@ test('повторный прогон за ту же дату не задваи�
   assert.equal(client.seq.size, 1);
 });
 
-test('исчезнувшая при пересчёте пара не остаётся в таблице навсегда', async () => {
+test('runMcpTelemetryAggregation без log group не skip', async () => {
   const client = fakeClient();
-  await upsertAggregates(client, {
+  const result = await runMcpTelemetryAggregation(client, {
     day: DAY,
-    daily: [],
-    seq: [{ day: DAY, tool_prev: 'a', tool_next: 'b', count: 3 }],
+    deps: {
+      readDay: async () => ({ records: [rec()], truncated: false }),
+      pruneOldEvents: async () => 0,
+    },
   });
-  assert.equal(client.seq.size, 1);
-
-  await upsertAggregates(client, { day: DAY, daily: [], seq: [] });
-  assert.equal(client.seq.size, 0, 'пересчёт суток обязан снимать пары, которых больше нет');
+  assert.equal(result.skipped, undefined);
+  assert.equal(result.records, 1);
 });

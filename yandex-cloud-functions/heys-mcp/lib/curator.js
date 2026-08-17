@@ -1309,7 +1309,7 @@ function createCuratorContext({
     : null;
   if (repoContext) Object.assign(tools, repoContext.tools);
 
-  const mcpTraceContext = (tasksClientId && process.env.MCP_LOG_GROUP_ID)
+  const mcpTraceContext = (tasksClientId && process.env.MCP_TELEMETRY_SECRET)
     ? createMcpTraceTools({
       api,
       curatorJwt,

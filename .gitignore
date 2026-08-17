@@ -6,6 +6,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Deploy smoke artifacts (p50 baseline from Logging)
+ops/
+
 # Runtime data
 pids
 *.pid

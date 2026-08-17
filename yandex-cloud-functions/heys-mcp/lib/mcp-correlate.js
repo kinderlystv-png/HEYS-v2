@@ -20,7 +20,9 @@ const MARK_RE = /\[mcp session=([0-9a-f]+) seq=(\d+)(?: ts=([^\]]+))?\]/;
 const HEADING_RE = /^##\s*~?(\d{1,2}):(\d{2})(?:\s*[–—-]\s*~?\d{1,2}:\d{2})?\s*$/m;
 const BLOCK_SPLIT_RE = /^##\s*~?\d{1,2}:\d{2}(?:\s*[–—-]\s*~?\d{1,2}:\d{2})?\s*$/m;
 const DEFAULT_WINDOW_MS = 5 * 60 * 1000;
-const LOG_RETENTION_DAYS = 3;
+const TELEMETRY_RETENTION_DAYS = 180;
+/** @deprecated используйте TELEMETRY_RETENTION_DAYS */
+const LOG_RETENTION_DAYS = TELEMETRY_RETENTION_DAYS;
 
 function parseMark(line) {
   const match = MARK_RE.exec(String(line || ''));
@@ -207,13 +209,18 @@ function enrichRowsWithAttribution(rows, sessionIds) {
   });
 }
 
-/** Дата старше retention лог-группы (3 суток по МСК). */
-function isOlderThanLogRetention(date, nowMs = Date.now()) {
+/** Дата старше retention сырья телеметрии (180 суток по МСК). */
+function isOlderThanTelemetryRetention(date, nowMs = Date.now()) {
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
   const dayStart = Date.parse(`${date}T00:00:00+03:00`);
   if (!Number.isFinite(dayStart)) return false;
-  const retentionMs = LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  const retentionMs = TELEMETRY_RETENTION_DAYS * 24 * 60 * 60 * 1000;
   return dayStart < (nowMs - retentionMs);
+}
+
+/** @deprecated используйте isOlderThanTelemetryRetention */
+function isOlderThanLogRetention(date, nowMs = Date.now()) {
+  return isOlderThanTelemetryRetention(date, nowMs);
 }
 
 function mskToday(nowMs = Date.now()) {
@@ -257,6 +264,7 @@ module.exports = {
   DEFAULT_WINDOW_MS,
   HEADING_RE,
   LOG_RETENTION_DAYS,
+  TELEMETRY_RETENTION_DAYS,
   parseMark,
   headingToUtcMs,
   parseExchanges,
@@ -271,5 +279,6 @@ module.exports = {
   sumDurationMs,
   enrichRowsWithAttribution,
   isOlderThanLogRetention,
+  isOlderThanTelemetryRetention,
   mskToday,
 };

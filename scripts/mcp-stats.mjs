@@ -7,7 +7,7 @@
  *   node scripts/mcp-stats.mjs --days 7
  *
  * Читает агрегаты `mcp_call_daily` и `mcp_seq_daily`, которые суточный джоб
- * heys-maintenance сворачивает из Cloud Logging.
+ * heys-maintenance сворачивает из `mcp_call_events`.
  *
  * Сортировка по СУММАРНОМУ времени, а не по среднему: оптимизировать надо то,
  * что съедает больше всего за период. Инструмент со средним в две секунды, но

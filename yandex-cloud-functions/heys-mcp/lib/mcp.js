@@ -228,15 +228,15 @@ async function handleMessage(message, ctx) {
         // Размер ответа — вторая половина вопроса «почему долго»: своё время
         // инструмента и время API он не объясняет, зато объясняет задержку на
         // стороне клиента, которой в наших метриках не видно вовсе.
-        ctx.logMetric?.({ tool: name, ok: true, ...timing, arg_count: argCount, response_bytes: byteLength(payload), trace });
+        await ctx.logMetric?.({ tool: name, ok: true, ...timing, arg_count: argCount, response_bytes: byteLength(payload), trace });
         return rpcResult(id, payload);
       } catch (e) {
         const timing = measure();
         if (e && e.code) {
-          ctx.logMetric?.({ tool: name, ok: false, error: e.code, arg_count: argCount, ...timing, trace });
+          await ctx.logMetric?.({ tool: name, ok: false, error: e.code, arg_count: argCount, ...timing, trace });
           return rpcResult(id, toolFailure(e.message, e.code, { ...e.details, duration_ms: timing.ms, ...traceFields }));
         }
-        ctx.logMetric?.({ tool: name, ok: false, error: 'internal_error', arg_count: argCount, ...timing, trace });
+        await ctx.logMetric?.({ tool: name, ok: false, error: 'internal_error', arg_count: argCount, ...timing, trace });
         ctx.logError?.('tool_failed', { tool: name, message: e && e.message });
         return rpcResult(id, toolFailure('Внутренняя ошибка HEYS при выполнении инструмента.', 'internal_error', { duration_ms: timing.ms, ...traceFields }));
       }

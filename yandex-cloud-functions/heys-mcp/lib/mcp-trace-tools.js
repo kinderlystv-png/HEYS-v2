@@ -6,16 +6,16 @@
 
 const tasks = require('./tasks');
 const correlate = require('./mcp-correlate');
-const { readMcpCalls } = require('../shared/mcp-logging-read');
 const callContext = require('./call-context');
 
 const TRACE_TOOL = 'tasks_mcp_trace';
 const LOG_PADDING_MS = 60 * 1000;
+const TELEMETRY_READ_TIMEOUT_MS = 20000;
 
 const MCP_TRACE_SCHEMA = {
   name: TRACE_TOOL,
   description:
-    'Связать блок стенограммы (после tasks_checkpoint) с цепочкой вызовов MCP по таймингам из Cloud Logging. Зови, когда нужно понять «сколько кругов» или «почему долго» по конкретному обмену — не на каждый tasks_read. Без heading — все размеченные обмены за день (медленнее). Подтверждённые вызовы — session_id совпал с меткой стенограммы; вероятные — только попали в окно ±5 мин.',
+    'Связать блок стенограммы (после tasks_checkpoint) с цепочкой вызовов MCP по таймингам из Postgres. Зови, когда нужно понять «сколько кругов» или «почему долго» по конкретному обмену — не на каждый tasks_read. Без heading — все размеченные обмены за день (медленнее). Подтверждённые вызовы — session_id совпал с меткой стенограммы; вероятные — только попали в окно ±5 мин.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -80,10 +80,14 @@ function createMcpTraceTools({
   clientId,
   ToolError,
   nowMs = Date.now(),
-  env = process.env,
-  readMcpCallsImpl = readMcpCalls,
+  listMcpCallEventsImpl = null,
 } = {}) {
-  const logGroupId = env && env.MCP_LOG_GROUP_ID;
+  const readEvents = listMcpCallEventsImpl || ((bounds) => api.listMcpCallEvents({
+    since: bounds.since,
+    until: bounds.until,
+    bearer: curatorJwt,
+    timeoutMs: TELEMETRY_READ_TIMEOUT_MS,
+  }));
 
   async function readTranscript(date) {
     if (!clientId) {
@@ -103,10 +107,10 @@ function createMcpTraceTools({
       if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         throw new ToolError('invalid_date', 'date должен быть YYYY-MM-DD.');
       }
-      if (correlate.isOlderThanLogRetention(date, nowMs)) {
+      if (correlate.isOlderThanTelemetryRetention(date, nowMs)) {
         throw new ToolError(
-          'logs_retention_exceeded',
-          `Логи группы хранятся ${correlate.LOG_RETENTION_DAYS} суток — для ${date} данных в Cloud Logging уже нет.`,
+          'telemetry_retention_exceeded',
+          `Телеметрия хранится ${correlate.TELEMETRY_RETENTION_DAYS} суток — для ${date} данных уже нет.`,
         );
       }
 
@@ -142,36 +146,32 @@ function createMcpTraceTools({
             rows: [],
             unattached_count: 0,
             blocks_without_mark: blocksWithoutMark,
-            log_truncated: false,
+            telemetry_truncated: false,
           },
         };
       }
 
-      if (!logGroupId) {
-        throw new ToolError('logging_not_configured', 'MCP_LOG_GROUP_ID не задан — чтение телеметрии недоступно.');
-      }
-
       const bounds = narrowLogWindow(selected, windowMs);
-      let logTruncated = false;
+      let telemetryTruncated = false;
       let calls = [];
       try {
-        const result = await readMcpCallsImpl({
-          logGroupId,
-          since: bounds.since,
-          until: bounds.until,
-          maxPages: 10,
-          timeoutMs: 20000,
-        });
-        logTruncated = Boolean(result.truncated);
+        const result = await readEvents(bounds);
+        if (result.error) {
+          const msg = String(result.error.message || result.error);
+          const code = /timeout/i.test(msg)
+            ? 'telemetry_db_timeout'
+            : 'telemetry_db_read_failed';
+          throw new ToolError(code, `[${code}] Не удалось прочитать телеметрию: ${msg}`);
+        }
+        telemetryTruncated = Boolean(result.truncated);
         calls = correlate.filterCuratorCalls(result.records);
       } catch (error) {
+        if (error && error.code && String(error.message || '').startsWith('[')) throw error;
         const msg = String(error.message || error);
         const code = /timeout/i.test(msg)
-          ? 'logging_timeout'
-          : /socket hang up|ECONNRESET|EPIPE/i.test(msg)
-            ? 'logging_connection_reset'
-            : 'logging_read_failed';
-        throw new ToolError(code, `Не удалось прочитать Cloud Logging: ${msg}`);
+          ? 'telemetry_db_timeout'
+          : 'telemetry_db_read_failed';
+        throw new ToolError(code, `[${code}] Не удалось прочитать телеметрию: ${msg}`);
       }
 
       const trace = callContext.current();
@@ -189,7 +189,7 @@ function createMcpTraceTools({
       const tail = [];
       if (blocksWithoutMark > 0) tail.push(`Блоков ## ЧЧ:ММ без метки: ${blocksWithoutMark} — не вошли в отчёт.`);
       if (unattached.length > 0) tail.push(`${unattached.length} вызовов вне всех окон.`);
-      if (logTruncated) tail.push('Лог обрезан по лимиту страниц — цепочка может быть неполной.');
+      if (telemetryTruncated) tail.push('Выборка обрезана по лимиту — цепочка может быть неполной.');
 
       return {
         text: `${lines.join('\n')}${tail.length ? `\n\n${tail.join('\n')}` : ''}`,
@@ -205,7 +205,8 @@ function createMcpTraceTools({
           })),
           unattached_count: unattached.length,
           blocks_without_mark: blocksWithoutMark,
-          log_truncated: logTruncated,
+          telemetry_truncated: telemetryTruncated,
+          log_truncated: telemetryTruncated,
         },
       };
     },

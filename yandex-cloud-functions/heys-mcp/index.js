@@ -338,6 +338,10 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
   } else {
     tools = createTools({ api, sessionToken: auth.sessionToken, clientId: auth.clientId }).tools;
   }
+  const telemetrySecret = process.env.MCP_TELEMETRY_SECRET || null;
+  const persistCall = telemetrySecret
+    ? (record) => api.insertMcpCallEvent(record, { secret: telemetrySecret })
+    : null;
   const response = await mcp.handlePayload(payload, {
     tools,
     toolSchemas,
@@ -351,10 +355,10 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
     // видно, какой сценарий сколько стоит, сколько в нём round-trip'ов к API
     // и в какой последовательности инструменты шли внутри подключения.
     // Состав строки — белый список в lib/telemetry.js.
-    logMetric: (metric) => {
+    logMetric: async (metric) => {
       const coldStart = !instanceWarm;
       instanceWarm = true;
-      telemetry.record({
+      await telemetry.record({
         tool: metric.tool,
         // Материал для псевдонима подключения: сам заголовок наружу не идёт,
         // в строку попадает только необратимый срез его хэша.
@@ -372,7 +376,7 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
         argCount: metric.arg_count,
         coldStart,
         uptimeMs: Date.now() - PROCESS_START_MS,
-      });
+      }, { persistCall });
     },
   });
 

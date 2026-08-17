@@ -51,6 +51,23 @@ const RECORD_FIELDS = [
 ];
 
 const ALLOWED = new Set(RECORD_FIELDS);
+const DEFAULT_PERSIST_TIMEOUT_MS = 250;
+
+async function persistWithTimeout(persistCall, record, timeoutMs = DEFAULT_PERSIST_TIMEOUT_MS) {
+  if (!persistCall) return;
+  try {
+    await Promise.race([
+      Promise.resolve(persistCall(record)),
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('timeout')), timeoutMs);
+      }),
+    ]);
+  } catch (err) {
+    const msg = String(err && err.message ? err.message : err);
+    const kind = /timeout/i.test(msg) ? 'timeout' : 'insert_failed';
+    console.warn(`[mcp-telemetry-db] ${kind}:`, msg);
+  }
+}
 
 /**
  * Псевдоним подключения.
@@ -184,7 +201,7 @@ function createTelemetry({ instanceId, fnVersion, logger = console } = {}) {
       const sessionId = sessionAlias(token, instance);
       return { sessionId, seq: nextSeq(sessionId), ts: new Date().toISOString() };
     },
-    record(input) {
+    async record(input, { persistCall = null, persistTimeoutMs = DEFAULT_PERSIST_TIMEOUT_MS } = {}) {
       try {
         const sessionId = input.sessionId || sessionAlias(input.token, instance);
         const record = buildRecord({
@@ -196,6 +213,11 @@ function createTelemetry({ instanceId, fnVersion, logger = console } = {}) {
           fnVersion: input.fnVersion || version,
         });
         emitRecord(record, { logger });
+        if (!record.session_id || !Number.isFinite(record.seq)) {
+          console.warn('[mcp-telemetry-db] skip: no session_id/seq');
+          return record;
+        }
+        await persistWithTimeout(persistCall, record, persistTimeoutMs);
         return record;
       } catch (_) {
         // Телеметрия молчит и не мешает: вызов инструмента уже отработал.
@@ -208,9 +230,11 @@ function createTelemetry({ instanceId, fnVersion, logger = console } = {}) {
 module.exports = {
   RECORD_FIELDS,
   MAX_TRACKED_SESSIONS,
+  DEFAULT_PERSIST_TIMEOUT_MS,
   sessionAlias,
   createSeqCounter,
   buildRecord,
   emitRecord,
+  persistWithTimeout,
   createTelemetry,
 };
