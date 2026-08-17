@@ -87,6 +87,46 @@ test('пустой запрос ничего не возвращает', () => {
   assert.deepEqual(products.searchProducts(catalog(), '   ', 5), []);
 });
 
+/**
+ * Названия взяты из живого прогона 17.08: на «овсянку» и «яйцо» инструмент
+ * возвращал блюда, где слово стоит в перечислении состава, наравне с самим
+ * продуктом. Каждый такой лишний кандидат — уточняющий вопрос куратору, то
+ * есть десятки секунд против сотен миллисекунд машинного времени.
+ */
+function realCatalog(names) {
+  return {
+    all: names.map((name, i) => ({
+      id: `p${i}`, name, _source: 'own',
+      protein100: 1, simple100: 1, complex100: 1, badFat100: 1, goodFat100: 1,
+    })),
+  };
+}
+
+test('продукт бьёт блюдо, где запрос стоит в перечислении состава', () => {
+  const c = realCatalog([
+    'Пирог зелёная гречка/овсянка/сухофрукты/яйцо/протеин',
+    'Овсяные хлопья №2',
+    'Салат курица яйцо горошек йогурт',
+    'Яйцо варёное',
+    'Кабачковые оладьи (кабачок, яйцо, мука)',
+  ]);
+
+  const oats = products.searchProducts(c, 'овсянка', 5);
+  assert.equal(oats[0].name, 'Овсяные хлопья №2', 'морфологическая форма в начале названия сильнее слова в составе');
+
+  const egg = products.searchProducts(c, 'яйцо', 5);
+  assert.equal(egg[0].name, 'Яйцо варёное');
+  // Отрыв важнее порядка: на нём держится решение resolveProduct — спрашивать
+  // или писать. Салат и оладьи не должны идти вплотную к самому яйцу.
+  const prepared = products.prepareQuery('яйцо');
+  const best = products.scoreProduct(egg[0], prepared);
+  const dish = products.scoreProduct(
+    c.all.find((p) => p.name === 'Салат курица яйцо горошек йогурт'),
+    prepared,
+  );
+  assert.ok(best >= dish * 1.25, `яйцо (${best}) должно уверенно обходить салат (${dish})`);
+});
+
 test('findById ищет и по id строки, и по shared_origin_id', () => {
   const c = catalog();
   assert.equal(products.findById(c, 'own-milk').id, 'own-milk');
