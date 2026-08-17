@@ -21,10 +21,11 @@
   `seq` — подключение и номер вызова в нём.
 
   До 17.08 это была строка `[heys-mcp] tool_timing` с текстовым префиксом и
-  именами `ms` / `upstream.calls` / `cold`. Теперь печатается чистый JSON без
-  префикса — так Cloud Logging разбирает его в `json_payload`, и по полям можно
-  фильтровать и группировать, а не только читать глазами. Состав строки задан
-  белым списком `RECORD_FIELDS` в [lib/telemetry.js](lib/telemetry.js).
+  именами `ms` / `upstream.calls` / `cold`. С 17.08 печатается чистый JSON без
+  префикса (`{"t":"mcp_call",...}`). В Cloud Logging строка лежит в **message**
+  (stdout функции), а не в `json_payload` — фильтровать надёжнее по
+  `message: "mcp_call"`, не по `json_payload.t`. Состав строки задан белым
+  списком `RECORD_FIELDS` в [lib/telemetry.js](lib/telemetry.js).
 
 Обычно дорожает не логика, а число round-trip'ов: почти каждый инструмент читает
 день, каталог продуктов и пишет обратно.
@@ -34,15 +35,86 @@
 нуля. Замер 17.08 (см. журнал) держался только на том, что вызовы шли подряд и
 инстанс заведомо был тёплым, — на одиночной строке из лога так не скажешь.
 
-Прочитать за последний час:
+## Проверка за 30 секунд
+
+После «запиши воду» / любой записи — **сначала логи функции**, не `logging read`
+с перебором групп и фильтров.
+
+**heys-mcp:** `d4epjmd9lnk059u29bg8`. **Log group (канон):**
+`e23ndggvq798r3v3eepq` — туда же смотрит `MCP_LOG_GROUP_ID` у `heys-maintenance`
+(`deploy-all.sh`).
+
+Ловушка: `yc logging group list` в folder показывает другой id default
+(`e23p0k5ighk8ojffdbqn`). `--group-name default` и этот id **не** содержат
+телеметрию heys-mcp. Не расширять окно на часы — группа была не та.
+
+### 1. Быстро (рекомендуется)
+
+PowerShell / Git Bash:
 
 ```bash
-yc logging read --group-name default --since 1h --filter 'json_payload.t = "mcp_call"' --format json
+yc serverless function logs d4epjmd9lnk059u29bg8 --limit 30
 ```
 
-Лог-группа `default` хранит записи **3 суток** (259200 s), и укорачивать этот
-срок нельзя: в ту же группу пишут остальные функции, по ней разбирают 429/503 и
-dead-man. Выгрузка «за неделю» из логов не вернёт ничего.
+Ищи строку `TRACE` с `"t":"mcp_call"` или (до деплоя 17.08)
+`[heys-mcp] tool_timing`. Пример живой строки:
+
+```json
+{
+  "t": "mcp_call",
+  "tool": "heys_add_water",
+  "duration_ms": 1482,
+  "upstream_calls": 10,
+  "cold_start": true,
+  "role": "curator"
+}
+```
+
+Конкретный инструмент за последний час:
+
+```bash
+yc serverless function logs d4epjmd9lnk059u29bg8 --since 1h --limit 50 | grep mcp_call
+```
+
+### 2. Через Logging API (агрегатор, SQL, длинные выборки)
+
+Только **`--group-id e23ndggvq798r3v3eepq`**, фильтр по **message**:
+
+```bash
+yc logging read --group-id e23ndggvq798r3v3eepq --since 1h \
+  --filter 'message: "mcp_call"' --format json
+```
+
+Конкретный инструмент:
+
+```bash
+yc logging read --group-id e23ndggvq798r3v3eepq --since 6h \
+  --filter 'message: "heys_add_water"' --format json
+```
+
+Старые строки до чистого JSON:
+
+```bash
+yc logging read --group-id e23ndggvq798r3v3eepq --since 24h \
+  --filter 'message: "tool_timing"' --format json
+```
+
+Агрегатор `heys-maintenance/mcp-telemetry.js` использует
+`json_payload.t = "mcp_call" OR message: "mcp_call"` — второй предикат
+обязателен.
+
+### 3. Не делать
+
+- `--group-name default` или id из `logging group list` — пусто по mcp_call.
+- Только `json_payload.t = "mcp_call"` — stdout не попадает в json_payload.
+- Длинные bash-цепочки grep/sed/timeout на Windows — медленно; одной команды из
+  §1 хватает.
+- Путать **вызовы модели** (сколько раз дернули инструмент в чате) и
+  **`upstream_calls`** в строке (round-trip'ы к API внутри одного вызова).
+
+Лог-группа `e23ndggvq798r3v3eepq` хранит записи **3 суток** (259200 s), и
+укорачивать этот срок нельзя: в ту же группу пишут остальные функции, по ней
+разбирают 429/503 и dead-man. Выгрузка «за неделю» из логов не вернёт ничего.
 
 Ряд длиннее трёх суток теперь копится сам: суточная задача `mcp_telemetry` в
 `heys-maintenance` сворачивает вчерашние вызовы в `mcp_call_daily` и
