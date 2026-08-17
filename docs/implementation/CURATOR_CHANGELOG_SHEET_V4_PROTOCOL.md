@@ -38,6 +38,9 @@
   `.ca-modal__more-products`; строки/шеврон/подписи нейтральные
 - Без имени: заголовок «Ваш куратор обновил дневник»; «Написать куратору» не
   показываем (на листе CTA нет; правило как у экрана ожидания)
+- Имя куратора: `clients.curator_id → curators.name`, отдаётся в
+  `get_my_curator_changelog_since` / `get_client_data_by_session`, клиент пишет
+  в `heys_profile.curatorName` (первое слово — в заголовке листа)
 
 ## Проверка
 

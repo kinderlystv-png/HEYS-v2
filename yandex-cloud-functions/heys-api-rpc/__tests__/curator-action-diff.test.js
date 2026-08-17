@@ -97,12 +97,15 @@ test('meal NOT counted as added if no items (placeholder)', () => {
 
 test('meal removed', () => {
   const oldV = {
-    meals: [{ id: 'm_1', name: 'Завтрак', items: [{ name: 'Кофе' }] }],
+    meals: [{ id: 'm_1', mealType: 'dinner', name: 'Ужин', time: '21:15', items: [{ name: 'Кофе', grams: 200, kcal100: 120 }] }],
   };
   const newV = { meals: [] };
   const { actions } = computeCuratorActionPayload(oldV, newV, 'heys_dayv2_2026-05-18');
   assert.equal(actions.length, 1);
   assert.equal(actions[0].type, 'meal_removed');
+  assert.equal(actions[0].meal_label, 'Ужин');
+  assert.equal(actions[0].time, '21:15');
+  assert.equal(actions[0].kcal, 240);
 });
 
 test('meal items added: payload includes only NEW items list', () => {

@@ -298,7 +298,11 @@ function diffMeals(oldMeals, newMeals, actions) {
       if (total !== null) a.kcal = total;
       actions.push(a);
     } else if (newItemsLen < oldItemsLen && newItemsLen === 0) {
-      actions.push({ type: 'meal_removed', name: mealTypeLabel(oldMeal) });
+      const removed = { type: 'meal_removed', name: mealTypeLabel(oldMeal), meal_label: mealTypeLabel(oldMeal) };
+      if (oldMeal.time) removed.time = oldMeal.time;
+      const removedKcal = mealTotalKcal(oldMeal);
+      if (isNumber(removedKcal) && removedKcal > 0) removed.kcal = removedKcal;
+      actions.push(removed);
     } else {
       const oldItemsByKey = new Map();
       const newItemsByKey = new Map();
@@ -354,7 +358,11 @@ function diffMeals(oldMeals, newMeals, actions) {
     if (!k) continue;
     if (newKeys.has(k)) continue;
     if (safeArr(om.items).length > 0) {
-      actions.push({ type: 'meal_removed', name: mealTypeLabel(om) });
+      const removed = { type: 'meal_removed', name: mealTypeLabel(om), meal_label: mealTypeLabel(om) };
+      if (om.time) removed.time = om.time;
+      const removedKcal = mealTotalKcal(om);
+      if (isNumber(removedKcal) && removedKcal > 0) removed.kcal = removedKcal;
+      actions.push(removed);
     }
   }
 }

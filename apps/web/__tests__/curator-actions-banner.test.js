@@ -804,6 +804,54 @@ describe('CuratorActionsBanner review modal', () => {
     expect(banner.shouldShowNutritionDot()).toBe(false);
   });
 
+  describe('display grouping', () => {
+    it('groups identical meal_item_removed rows', () => {
+      const banner = loadBanner();
+      const { groupIdenticalRemovalPairs, actionRowCopy } = banner._test;
+      const pairs = Array.from({ length: 5 }, () => ({
+        entry: { id: 'entry-1' },
+        action: {
+          type: 'meal_item_removed',
+          meal_label: 'Кофе с молоком',
+          kcal_delta: -113,
+        },
+      }));
+      const grouped = groupIdenticalRemovalPairs(pairs);
+      expect(grouped).toHaveLength(1);
+      expect(grouped[0].action).toMatchObject({
+        type: 'meal_item_removed_group',
+        count: 5,
+        kcal_total: -565,
+      });
+      expect(actionRowCopy(grouped[0].action).title).toBe('Из «Кофе с молоком» убран продукт');
+    });
+
+    it('keeps raw action count for subtitle before display grouping', () => {
+      const banner = loadBanner();
+      const { groupVisibleByDate } = banner._test;
+      const entry = createDatedEntry(
+        '11111111-1111-4111-8111-111111111111',
+        '2026-08-16T09:00:00.000Z',
+        '2026-08-16',
+        [
+          { type: 'meal_added', meal_id: 'dinner', meal_label: 'Ужин', kcal: 637 },
+          { type: 'steps_set', to: 5000 },
+          ...Array.from({ length: 5 }, () => ({
+            type: 'meal_item_removed',
+            meal_label: 'Кофе с молоком',
+            kcal_delta: -113,
+          })),
+        ],
+      );
+      const groups = groupVisibleByDate([entry]);
+      expect(groups[0].rawPairCount).toBe(7);
+      expect(groups[0].pairs.filter((p) => p.action.type === 'meal_item_removed')).toHaveLength(5);
+      const grouped = banner._test.groupIdenticalMealPairs(groups[0].pairs);
+      expect(grouped.filter((p) => p.action.type === 'meal_item_removed')).toHaveLength(0);
+      expect(grouped.some((p) => p.action.type === 'meal_item_removed_group')).toBe(true);
+    });
+  });
+
   describe('v4 smoke: точка, строка дня, стык дат', () => {
     const day5 = () => createDatedEntry(
       '11111111-1111-4111-8111-111111111111',

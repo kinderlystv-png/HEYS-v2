@@ -3670,6 +3670,15 @@ async function handleRpcRequest(event, context) {
           : new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
       }
 
+      const curatorRes = await client.query(
+        `SELECT c.curator_id, cur.name AS curator_name
+           FROM clients c
+           LEFT JOIN curators cur ON cur.id = c.curator_id
+          WHERE c.id = $1::uuid`,
+        [resolvedClientId]
+      );
+      const curatorRow = curatorRes.rows?.[0] || {};
+
       const serverNowRes = await client.query('SELECT NOW() AS server_now');
       const rowsRes = await client.query(
         `SELECT id, curator_id, keys_updated, actions, created_at
@@ -3695,6 +3704,8 @@ async function handleRpcRequest(event, context) {
           since: sinceTs,
           server_now: serverNow instanceof Date ? serverNow.toISOString() : serverNow,
           has_more: hasMore,
+          curator_id: curatorRow.curator_id || null,
+          curator_name: curatorRow.curator_name || null,
           entries: visibleRows.map((r) => ({
             id: r.id,
             curator_id: r.curator_id,
@@ -4320,6 +4331,15 @@ async function handleRpcRequest(event, context) {
       const payload = dataRes.rows?.[0]?.payload || {};
       const isDelta = !!since;
 
+      const curatorRes = await client.query(
+        `SELECT c.curator_id, cur.name AS curator_name
+           FROM clients c
+           LEFT JOIN curators cur ON cur.id = c.curator_id
+          WHERE c.id = $1::uuid`,
+        [clientId]
+      );
+      const curatorRow = curatorRes.rows?.[0] || {};
+
       client.release();
 
       console.info(`[RPC] get_client_data_by_session: ${Object.keys(payload).length} keys${isDelta ? ' (delta since ' + since + ')' : ' (full)'}`);
@@ -4330,6 +4350,8 @@ async function handleRpcRequest(event, context) {
         body: JSON.stringify({
           success: true,
           client_id: clientId,
+          curator_id: curatorRow.curator_id || null,
+          curator_name: curatorRow.curator_name || null,
           data: payload,
           delta: isDelta
         })

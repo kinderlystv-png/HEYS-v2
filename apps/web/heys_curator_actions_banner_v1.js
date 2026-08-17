@@ -309,7 +309,7 @@
 
   function isVisibleAction(a) {
     if (!a) return false;
-    if (a.type === 'meal_card') return true;
+    if (a.type === 'meal_card' || a.type === 'meal_repeat_group' || a.type === 'meal_item_removed_group') return true;
     return !!actionText(a);
   }
 
@@ -362,6 +362,36 @@
     return `<li><button class="ca-modal__item" type="button" data-ca-target-id="${escapeHtml(targetId)}" data-ca-action-key="${escapeHtml(key)}">${renderRowCopyHtml(copy)}${chevronSvg(false)}</button></li>`;
   }
 
+  function renderRepeatGroupHtml(action, registerTarget, entry) {
+    const key = repeatGroupExpandKey(action);
+    const expanded = _expandedMeals.has(key);
+    const copy = actionRowCopy(action);
+    const badge = `<span class="ca-modal__repeat-badge" aria-hidden="true">×${action.count}</span>`;
+    const kcalHtml = isFiniteNumber(action.kcal_total)
+      ? `<span class="ca-modal__repeat-kcal">${escapeHtml(formatKcalForAll(action.count, action.kcal_total))}</span>`
+      : '';
+    const subHtml = copy.subtitle
+      ? `<span class="ca-modal__item-sub">${escapeHtml(copy.subtitle)}</span>`
+      : '';
+    const membersHtml = expanded && Array.isArray(action.members)
+      ? action.members.map((member) => {
+        const targetId = registerTarget(member.entry, member.action);
+        return renderActionRowHtml(member.action, targetId, member.entry)
+          .replace('<li>', '<li class="ca-modal__repeat-member">');
+      }).join('')
+      : '';
+    return `
+      <li class="ca-modal__repeat-group">
+        <button class="ca-modal__item ca-modal__item--repeat" type="button" data-ca-expand-repeat="${escapeHtml(key)}">
+          ${badge}
+          <span class="ca-modal__item-copy"><b class="ca-modal__item-title">${escapeHtml(copy.title)}</b>${subHtml}${kcalHtml}</span>
+          ${chevronSvg(true)}
+        </button>
+        ${membersHtml ? `<ul class="ca-modal__repeat-members">${membersHtml}</ul>` : ''}
+      </li>
+    `;
+  }
+
   function renderCollapsedGroupHtml(group, expandAttr, expandLabel) {
     const kcal = aggregateDayKcal(group.date, group.entries);
     const kcalHtml = kcal ? `<span class="ca-modal__date-kcal">${escapeHtml(kcal)}</span>` : '';
@@ -379,9 +409,15 @@
   function renderExpandedGroupHtml(group, registerTarget) {
     const kcal = aggregateDayKcal(group.date, group.entries);
     const kcalHtml = kcal ? `<span class="ca-modal__date-kcal">${escapeHtml(kcal)}</span>` : '';
-    const itemsHtml = (group.pairs || []).map(({ entry, action }) => {
+    const rawPairs = group.pairs || [];
+    const displayPairs = groupIdenticalMealPairs(rawPairs);
+    const itemsHtml = displayPairs.map(({ entry, action }) => {
       const targetId = registerTarget(entry, action);
-      if (action.type === 'meal_card') return renderMealCardHtml(action, targetId, entry);
+      if (action.type === 'meal_repeat_group') return renderRepeatGroupHtml(action, registerTarget, entry);
+      if (action.type === 'meal_item_removed_group') return renderRemovalGroupHtml(action, registerTarget);
+      if (action.type === 'meal_card' && shouldRenderMealCard(action, rawPairs)) {
+        return renderMealCardHtml(action, targetId, entry);
+      }
       return renderActionRowHtml(action, targetId, entry);
     }).join('');
     if (!itemsHtml) return '';
@@ -399,7 +435,7 @@
     let weight = null, sleep = null, steps = null, water = null;
     const mealAddedByKey = new Map();
     const mealItemsAddedByKey = new Map();
-    const mealRemovedByName = new Set();
+    const mealRemovedByName = new Map();
     const trainAddedByKey = new Map();
     const trainRemovedByKind = new Set();
     const normsFields = new Set();
@@ -470,7 +506,11 @@
         case 'meal_item_removed':
           passthroughActions.push(a);
           break;
-        case 'meal_removed':    mealRemovedByName.add(a.name || '?'); break;
+        case 'meal_removed': {
+          const label = a.meal_label || a.name || '?';
+          mealRemovedByName.set(label, { ...a, name: label, meal_label: label });
+          break;
+        }
         case 'training_added': {
           const k = `${a.training_index ?? ''}|${a.kind || ''}|${a.duration_min || ''}|${a.time || ''}`;
           if (!trainAddedByKey.has(k)) trainAddedByKey.set(k, a);
@@ -514,7 +554,7 @@
         count: obj.count || obj.items.size,
       });
     }
-    for (const name of mealRemovedByName) out.push({ type: 'meal_removed', name });
+    for (const removed of mealRemovedByName.values()) out.push(removed);
     out.push(...passthroughActions);
     for (const a of trainAddedByKey.values()) out.push(a);
     for (const kind of trainRemovedByKind) out.push({ type: 'training_removed', kind });
@@ -569,6 +609,234 @@
     if (!isFiniteNumber(delta) || delta === 0) return null;
     const sign = delta > 0 ? '+' : '−';
     return `${sign} ${Math.abs(Math.round(delta)).toLocaleString('ru-RU')} ккал`;
+  }
+
+  const COUNT_WORDS_RU = {
+    1: 'Один', 2: 'Два', 3: 'Три', 4: 'Четыре', 5: 'Пять',
+    6: 'Шесть', 7: 'Семь', 8: 'Восемь', 9: 'Девять', 10: 'Десять',
+    11: 'Одиннадцать', 12: 'Двенадцать', 13: 'Тринадцать', 14: 'Четырнадцать',
+    15: 'Пятнадцать', 16: 'Шестнадцать', 17: 'Семнадцать', 18: 'Восемнадцать',
+    19: 'Девятнадцать', 20: 'Двадцать',
+  };
+
+  const MEAL_REPEAT_LABEL_FORMS = {
+    'Кофе-брейк': ['кофе-брейк', 'кофе-брейка', 'кофе-брейков'],
+    'Перекус': ['перекус', 'перекуса', 'перекусов'],
+    'Завтрак': ['завтрак', 'завтрака', 'завтраков'],
+    'Обед': ['обед', 'обеда', 'обедов'],
+    'Ужин': ['ужин', 'ужина', 'ужинов'],
+  };
+
+  function countRuWord(n) {
+    const count = Number(n);
+    return COUNT_WORDS_RU[count] || null;
+  }
+
+  function mealItemsFingerprint(items) {
+    return (items || [])
+      .map((it) => `${String(it?.name || '').trim().toLowerCase()}|${it?.grams ?? ''}`)
+      .sort()
+      .join(';');
+  }
+
+  function mealRepeatSignature(action) {
+    if (!action || action.type !== 'meal_card') return '';
+    const items = Array.isArray(action.items) ? action.items : [];
+    return [
+      String(action.meal_label || '').trim().toLowerCase(),
+      String(items.length),
+      mealItemsFingerprint(items),
+    ].join('|');
+  }
+
+  function mealLabelPluralGenitive(label, count) {
+    const forms = MEAL_REPEAT_LABEL_FORMS[label];
+    if (forms) return pluralRu(count, forms[0], forms[1], forms[2]);
+    return String(label || 'приём').toLowerCase();
+  }
+
+  function repeatGroupTitle(count, mealLabel) {
+    const word = countRuWord(count) || String(count);
+    return `${word} ${mealLabelPluralGenitive(mealLabel, count)}`;
+  }
+
+  function formatMealItemLine(item) {
+    if (!item) return '';
+    const name = item.name || 'продукт';
+    if (item.grams != null) return `${name} · ${trimNum(item.grams)} г`;
+    return name;
+  }
+
+  function formatKcalForAll(count, kcal) {
+    if (!isFiniteNumber(kcal) || kcal === 0) return null;
+    const sign = kcal > 0 ? '+' : '−';
+    return `${sign} ${formatKcal(Math.abs(kcal))} ккал за все ${count}`;
+  }
+
+  function isFoodOnlyAction(action) {
+    const type = action && action.type;
+    return type === 'meal_card' || type === 'meal_repeat_group' || type === 'meal_item_removed_group'
+      || type === 'meal_item_added' || type === 'meal_item_changed'
+      || type === 'meal_item_removed' || type === 'meal_removed';
+  }
+
+  function isFoodOnlyDayPairs(pairs) {
+    return (pairs || []).every((pair) => isFoodOnlyAction(pair.action));
+  }
+
+  function mealProductCount(action) {
+    const items = Array.isArray(action?.items) ? action.items : [];
+    return items.length || action?.count || 0;
+  }
+
+  function shouldRenderMealCard(action, dayPairs) {
+    if (!action || action.type !== 'meal_card') return false;
+    if (mealProductCount(action) <= 1) return false;
+    return isFoodOnlyDayPairs(dayPairs);
+  }
+
+  function repeatGroupExpandKey(action) {
+    const members = Array.isArray(action?.members) ? action.members : [];
+    return `repeat:${members.map((m) => actionKey(m.entry, m.action)).sort().join('|')}`;
+  }
+
+  function buildRepeatGroupPair(members) {
+    const first = members[0];
+    const action = first.action;
+    const times = members.map((m) => m.action.time).filter(Boolean).sort();
+    const kcalTotal = members.reduce((sum, m) => (
+      sum + (isFiniteNumber(m.action.kcal) ? m.action.kcal : 0)
+    ), 0);
+    return {
+      entry: first.entry,
+      action: {
+        type: 'meal_repeat_group',
+        meal_label: action.meal_label,
+        items: action.items,
+        count: members.length,
+        time_from: times[0] || action.time || null,
+        time_to: times[times.length - 1] || action.time || null,
+        kcal_total: kcalTotal > 0 ? kcalTotal : null,
+        members: members.slice(),
+      },
+    };
+  }
+
+  function itemRemovalSignature(action) {
+    if (!action || action.type !== 'meal_item_removed') return '';
+    const meal = String(action.meal_label || action.meal_name || '').trim().toLowerCase();
+    const items = Array.isArray(action.items) ? action.items : [];
+    if (items.length > 0) return `removed|${meal}|${mealItemsFingerprint(items)}`;
+    const itemName = String(
+      action.item_name || action.name || action.from_name || action.to_name || ''
+    ).trim().toLowerCase();
+    return `removed|${meal}|${itemName}`;
+  }
+
+  function buildRemovalRepeatPair(members) {
+    const action = members[0].action;
+    const count = members.length;
+    let kcalTotal = 0;
+    for (const member of members) {
+      const delta = member.action?.kcal_delta;
+      if (isFiniteNumber(delta)) kcalTotal += delta;
+    }
+    const items = Array.isArray(action.items) ? action.items : [];
+    return {
+      entry: members[0].entry,
+      action: {
+        type: 'meal_item_removed_group',
+        meal_label: action.meal_label || action.meal_name,
+        meal_name: action.meal_name || action.meal_label,
+        item_name: action.item_name || items[0]?.name || action.name,
+        items,
+        count,
+        kcal_total: kcalTotal !== 0 ? kcalTotal : null,
+        members: members.slice(),
+      },
+    };
+  }
+
+  function groupIdenticalRemovalPairs(pairs) {
+    const list = pairs || [];
+    const bySignature = new Map();
+    list.forEach((pair, idx) => {
+      if (pair?.action?.type !== 'meal_item_removed') return;
+      const sig = itemRemovalSignature(pair.action);
+      if (!bySignature.has(sig)) bySignature.set(sig, []);
+      bySignature.get(sig).push(idx);
+    });
+
+    const skip = new Set();
+    const replaceAt = new Map();
+    for (const indices of bySignature.values()) {
+      if (indices.length < 2) continue;
+      const members = indices.map((idx) => list[idx]);
+      replaceAt.set(indices[0], buildRemovalRepeatPair(members));
+      for (let i = 1; i < indices.length; i++) skip.add(indices[i]);
+    }
+
+    const out = [];
+    for (let i = 0; i < list.length; i++) {
+      if (skip.has(i)) continue;
+      out.push(replaceAt.get(i) || list[i]);
+    }
+    return out;
+  }
+
+  function groupIdenticalMealPairs(pairs) {
+    const list = pairs || [];
+    const bySignature = new Map();
+    list.forEach((pair, idx) => {
+      if (pair?.action?.type !== 'meal_card') return;
+      const sig = mealRepeatSignature(pair.action);
+      if (!bySignature.has(sig)) bySignature.set(sig, []);
+      bySignature.get(sig).push(idx);
+    });
+
+    const skip = new Set();
+    const replaceAt = new Map();
+    for (const indices of bySignature.values()) {
+      if (indices.length < 2) continue;
+      const members = indices.map((idx) => list[idx]);
+      replaceAt.set(indices[0], buildRepeatGroupPair(members));
+      for (let i = 1; i < indices.length; i++) skip.add(indices[i]);
+    }
+
+    const out = [];
+    for (let i = 0; i < list.length; i++) {
+      if (skip.has(i)) continue;
+      out.push(replaceAt.get(i) || list[i]);
+    }
+    return groupIdenticalRemovalPairs(out);
+  }
+
+  function renderRemovalGroupHtml(action, registerTarget) {
+    const copy = actionRowCopy(action);
+    const firstMember = Array.isArray(action.members) ? action.members[0] : null;
+    const targetId = firstMember
+      ? registerTarget(firstMember.entry, firstMember.action)
+      : '';
+    const badge = `<span class="ca-modal__repeat-badge" aria-hidden="true">×${action.count}</span>`;
+    const kcalHtml = isFiniteNumber(action.kcal_total)
+      ? `<span class="ca-modal__repeat-kcal">${escapeHtml(formatKcalForAll(action.count, action.kcal_total))}</span>`
+      : '';
+    const subHtml = copy.subtitle
+      ? `<span class="ca-modal__item-sub">${escapeHtml(copy.subtitle)}</span>`
+      : '';
+    return `
+      <li class="ca-modal__repeat-group">
+        <button class="ca-modal__item ca-modal__item--repeat" type="button" data-ca-target-id="${escapeHtml(targetId)}">
+          ${badge}
+          <span class="ca-modal__item-copy"><b class="ca-modal__item-title">${escapeHtml(copy.title)}</b>${subHtml}${kcalHtml}</span>
+          ${chevronSvg(false)}
+        </button>
+      </li>
+    `;
+  }
+
+  function dayActionCount(group) {
+    return group?.rawPairCount ?? (group?.pairs || []).length;
   }
 
   function capitalizeFirst(s) {
@@ -649,6 +917,11 @@
   function sheetTitle() {
     const name = _titleNameOverride || getCuratorFirstName();
     return name ? `Куратор ${name} обновил ваш дневник` : 'Ваш куратор обновил дневник';
+  }
+
+  function refreshSheetTitleIfMounted() {
+    const el = document.querySelector('.ca-modal__header-title');
+    if (el) el.textContent = sheetTitle();
   }
 
   function actionKey(entry, action) {
@@ -782,6 +1055,14 @@
         return (x.action.type === 'meal_added' || x.action.type === 'meal_item_added')
           && (!action.meal_id || x.action.meal_id === action.meal_id);
       }
+      if (action.type === 'meal_repeat_group') {
+        return x.action.type === 'meal_added'
+          && action.members?.some((member) => member.action === x.action
+            || (member.action?.meal_id && member.action.meal_id === x.action.meal_id));
+      }
+      if (action.type === 'meal_item_removed_group') {
+        return action.members?.some((member) => member.entry === x.entry && member.action === x.action);
+      }
       return x.action.type === action.type
         && (!action.meal_id || x.action.meal_id === action.meal_id)
         && (!action.item_id || x.action.item_id === action.item_id);
@@ -815,20 +1096,21 @@
           return { entry, action };
         })
         .filter((pair) => pair.entry && !isActionHidden(pair.entry, pair.action));
-      return { date: bucket.date, entries: bucket.entries, pairs };
+      return { date: bucket.date, entries: bucket.entries, pairs, rawPairCount: bucket.raw.filter(({ entry, action }) => action && !isActionHidden(entry, action)).length };
     }).filter((group) => group.pairs.length > 0)
       .sort((a, b) => b.date.localeCompare(a.date));
   }
 
   function isMealAction(action) {
     const type = action && action.type;
-    return type === 'meal_card' || type === 'meal_added' || type === 'meal_item_added'
-      || type === 'meal_item_changed' || type === 'meal_item_removed' || type === 'meal_removed';
+    return type === 'meal_card' || type === 'meal_repeat_group' || type === 'meal_item_removed_group'
+      || type === 'meal_added' || type === 'meal_item_added' || type === 'meal_item_changed'
+      || type === 'meal_item_removed' || type === 'meal_removed';
   }
 
   function sheetSubtitle(groups) {
     const dates = (groups || []).map((g) => g.date);
-    const actionCount = (groups || []).reduce((sum, g) => sum + (g.pairs || []).length, 0);
+    const actionCount = (groups || []).reduce((sum, g) => sum + dayActionCount(g), 0);
     if (actionCount === 0) return '';
     const mealTouched = (groups || []).some((g) => (g.pairs || []).some((p) => isMealAction(p.action)));
     if (dates.length > 1) {
@@ -847,7 +1129,7 @@
   }
 
   function collapsedDayCopy(group) {
-    const n = (group.pairs || []).length;
+    const n = dayActionCount(group);
     const meal = (group.pairs || []).some((p) => isMealAction(p.action));
     const steps = (group.pairs || []).some((p) => p.action && p.action.type === 'steps_set');
     if (meal && steps) return `${capitalizeFirst(changesLabel(n))} по еде и шагам`;
@@ -877,14 +1159,50 @@
         if (a.time) parts.push(`в ${a.time}`);
         let title = parts.join(' ');
         if (a.kcal != null) title += ` · ${formatKcal(a.kcal)} ккал`;
-        const count = a.count || (Array.isArray(a.items) ? a.items.length : 0);
+        const items = Array.isArray(a.items) ? a.items : [];
+        const count = a.count || items.length;
         const added = a.kind === 'items_added' ? 'Продукты добавлены' : 'Приём добавлен';
+        if (count === 1 && items.length === 1) {
+          const grams = items[0].grams != null ? `, ${trimNum(items[0].grams)} г` : '';
+          return { title, subtitle: `${added} · ${items[0].name || 'продукт'}${grams}` };
+        }
         return { title, subtitle: count > 0 ? `${added} · ${count} ${pluralRu(count, 'продукт', 'продукта', 'продуктов')}` : added };
       }
       case 'meal_added':
         return actionRowCopy({ ...a, type: 'meal_card', kind: 'added' });
-      case 'meal_removed':
-        return { title: `Удалён приём: ${a.name || ''}`, subtitle: '' };
+      case 'meal_repeat_group': {
+        const timePart = a.time_from && a.time_to && a.time_from !== a.time_to
+          ? `${a.time_from} — ${a.time_to}`
+          : (a.time_from ? `в ${a.time_from}` : '');
+        let title = repeatGroupTitle(a.count, a.meal_label || 'приём');
+        if (timePart) title += `, ${timePart}`;
+        const items = Array.isArray(a.items) ? a.items : [];
+        const eachLine = items.length === 1 ? formatMealItemLine(items[0]) : '';
+        const each = eachLine
+          ? `В каждом ${eachLine.charAt(0).toLowerCase()}${eachLine.slice(1)}`
+          : (items.length > 0 ? `В каждом: ${items.map(formatMealItemLine).join(', ')}` : '');
+        return { title, subtitle: each };
+      }
+      case 'meal_item_removed_group': {
+        const meal = a.meal_name || a.meal_label || 'приём';
+        const count = a.count || 1;
+        const itemName = a.item_name || a.items?.[0]?.name;
+        const title = count === 1
+          ? (itemName ? `Из «${meal}» убран ${itemName}` : `Из «${meal}» убран продукт`)
+          : `Из «${meal}» убран продукт`;
+        const subtitle = count > 1 && itemName ? itemName : '';
+        return { title, subtitle };
+      }
+      case 'meal_removed': {
+        const label = String(a.meal_label || a.name || '').trim();
+        let title = `Удалён приём: ${label ? label.toLowerCase() : ''}`.trim();
+        if (a.time) title += ` в ${a.time}`;
+        const subtitleParts = [];
+        const kcal = isFiniteNumber(a.kcal) ? a.kcal : (isFiniteNumber(a.kcal_delta) ? Math.abs(a.kcal_delta) : null);
+        if (isFiniteNumber(kcal) && kcal > 0) subtitleParts.push(`− ${formatKcal(kcal)} ккал`);
+        if (a.reason) subtitleParts.push(a.reason);
+        return { title, subtitle: subtitleParts.join(' · ') };
+      }
       case 'meal_item_added': {
         const count = a.count || 1;
         return {
@@ -1369,7 +1687,7 @@
     if (!date) return null;
     const live = liveGroupsForDate(date);
     const source = live.length > 0 ? live : reviewedGroupsForDate(date);
-    const count = source.reduce((sum, g) => sum + (g.pairs || []).length, 0);
+    const count = source.reduce((sum, g) => sum + dayActionCount(g), 0);
     if (count === 0) return null;
     return {
       date,
@@ -1524,6 +1842,16 @@
         e.preventDefault();
         e.stopPropagation();
         const key = expandMeal.getAttribute('data-ca-expand-meal');
+        if (_expandedMeals.has(key)) _expandedMeals.delete(key);
+        else _expandedMeals.add(key);
+        renderModal();
+        return;
+      }
+      const expandRepeat = e.target && e.target.closest ? e.target.closest('[data-ca-expand-repeat]') : null;
+      if (expandRepeat) {
+        e.preventDefault();
+        e.stopPropagation();
+        const key = expandRepeat.getAttribute('data-ca-expand-repeat');
         if (_expandedMeals.has(key)) _expandedMeals.delete(key);
         else _expandedMeals.add(key);
         renderModal();
@@ -1856,6 +2184,7 @@
       await flushPendingAcks();
 
       const res = await HEYS.YandexAPI.getMyCuratorChangelogSince();
+      refreshSheetTitleIfMounted();
       if (!res || res.ok === false) {
         if (res && res.error && res.error !== 'invalid_session' && res.error !== 'No session token') {
           console.warn('[HEYS.curatorReview] check failed:', res.error);
@@ -1996,6 +2325,10 @@
       shouldShowNutritionDot,
       buildActionTarget,
       dedupAndCollapse,
+      groupIdenticalMealPairs,
+      groupIdenticalRemovalPairs,
+      shouldRenderMealCard,
+      isFoodOnlyDayPairs,
       splitVisibleEntries,
       reconcileEntriesWithCurrentDays,
       computeLiveDelayMs,

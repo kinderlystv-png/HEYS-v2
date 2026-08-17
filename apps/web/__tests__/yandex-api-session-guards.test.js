@@ -336,6 +336,8 @@ describe('HEYS.YandexAPI session-safe access', () => {
       data: {
         id: 'client-cookie-1',
         name: 'Cookie Client',
+        curator_id: null,
+        curator_name: null,
         raw: {
           success: true,
           client_id: 'client-cookie-1',
@@ -441,6 +443,8 @@ describe('HEYS.YandexAPI session-safe access', () => {
       since: '2026-06-16T00:00:00.000Z',
       server_now: '2026-06-16T00:10:00.000Z',
       has_more: true,
+      curator_id: '22222222-2222-4222-8222-222222222222',
+      curator_name: 'Антон Поплавский',
       entries: [],
     }));
 
@@ -451,6 +455,8 @@ describe('HEYS.YandexAPI session-safe access', () => {
       since: '2026-06-16T00:00:00.000Z',
       server_now: '2026-06-16T00:10:00.000Z',
       has_more: true,
+      curator_id: '22222222-2222-4222-8222-222222222222',
+      curator_name: 'Антон Поплавский',
       entries: [],
     });
     const [url, options] = global.fetch.mock.calls[0];
@@ -812,6 +818,38 @@ describe('HEYS.YandexAPI session-safe access', () => {
     expect(result).toEqual({
       data: [],
       error: 'Unauthorized',
+    });
+  });
+
+  it('writes assigned curator meta into heys_profile', () => {
+    const profileRef = { value: { firstName: 'Клиент' } };
+    global.window = global;
+    global.localStorage = createMockStorage();
+    global.fetch = vi.fn();
+    global.__heysLogControl = { isEnabled: () => false };
+    global.HEYS = {
+      auth: { getSessionToken: vi.fn(() => null) },
+      cloud: { isPinAuthClient: vi.fn(() => false), getUser: vi.fn(() => null) },
+      utils: {
+        lsGet: vi.fn((key, fallback) => (key === 'heys_profile' ? profileRef.value : fallback)),
+        lsSet: vi.fn((key, value) => {
+          if (key === 'heys_profile') profileRef.value = value;
+        }),
+      },
+    };
+    delete global.YandexAPI;
+    eval(moduleSource);
+
+    const applied = global.HEYS.CuratorAssignment.applyToProfile({
+      curator_id: '22222222-2222-4222-8222-222222222222',
+      curator_name: 'Антон Поплавский',
+    });
+
+    expect(applied).toBe(true);
+    expect(profileRef.value).toMatchObject({
+      curatorId: '22222222-2222-4222-8222-222222222222',
+      curatorName: 'Антон Поплавский',
+      hasCurator: true,
     });
   });
 });

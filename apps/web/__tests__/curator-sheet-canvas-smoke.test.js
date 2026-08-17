@@ -198,6 +198,7 @@ describe('Canvas frames: curator review sheet', () => {
     // Продукт: цифра («6…»), не слова из canvas — решение владельца.
     expect(subtitle()).toBe('6 изменений за вчера');
     expect(document.querySelector('.ca-modal__date-kcal')?.textContent).toMatch(/1\s240 → 1\s757 ккал/);
+    expect(document.querySelector('.ca-modal__meal-card')).toBeFalsy();
     expect(itemTitles().length).toBeGreaterThanOrEqual(6);
     expect(bodyText()).toMatch(/Рис.*200 → 288/);
     expect(bodyText()).toMatch(/Тренировка: силовая, 45 минут/);
@@ -303,6 +304,113 @@ describe('Canvas frames: curator review sheet', () => {
     expect(document.querySelector('[data-ca-expand-tail]')).toBeTruthy();
     expect(bodyText()).toMatch(/Развернуть по дням/);
     expect(bodyText()).toMatch(/Ещё .+ за 3 дня/);
+  });
+
+  it('Куратор · повторяющиеся правки — группа ×5, компактный перекус, карточка ужина', async () => {
+    vi.setSystemTime(new Date('2026-08-17T10:00:00.000Z'));
+    const date = '2026-08-16';
+    const coffeeItem = { name: 'Кофе растворимый с молоком 2,5', grams: 200 };
+    const coffees = ['08:30', '09:30', '10:30', '11:30', '12:30'].map((time, index) => ({
+      type: 'meal_added',
+      date,
+      meal_id: `coffee-${index}`,
+      meal_label: 'Кофе-брейк',
+      time,
+      kcal: 58,
+      items: [coffeeItem],
+    }));
+    const row = entry(
+      '11111111-1111-4111-8111-111111111111',
+      '2026-08-16T09:00:00.000Z',
+      date,
+      [
+        {
+          type: 'meal_added',
+          date,
+          meal_id: 'dinner',
+          meal_label: 'Ужин',
+          time: '23:09',
+          kcal: 637,
+          items: [
+            { name: 'Хлеб тостовый «Премиум суперсемечковый»', grams: 74 },
+            { name: 'Грудка копчёная Орион', grams: 100 },
+            { name: 'Творожный сыр 30 самокат', grams: 30 },
+            { name: 'Сыр', grams: 20 },
+            { name: 'Огурец', grams: 100 },
+            { name: 'Помидор', grams: 120 },
+          ],
+        },
+        {
+          type: 'meal_added',
+          date,
+          meal_id: 'snack',
+          meal_label: 'Перекус',
+          time: '18:40',
+          kcal: 498,
+          items: [{ name: 'Удон с курицей в подливе', grams: 280 }],
+        },
+        ...coffees,
+        {
+          type: 'meal_removed',
+          date,
+          name: 'Ужин',
+          meal_label: 'Ужин',
+          time: '21:15',
+          kcal: 240,
+          reason: 'дубль вечернего приёма',
+        },
+      ],
+      { before: 888, after: 1958 }
+    );
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([row]));
+
+    await banner.checkAndShow();
+
+    expect(subtitle()).toBe('8 изменений за вчера');
+    expect(document.querySelector('.ca-modal__date-kcal')?.textContent).toMatch(/888 → 1\s958 ккал/);
+    expect(document.querySelectorAll('.ca-modal__meal-card')).toHaveLength(1);
+    expect(document.querySelector('.ca-modal__repeat-badge')?.textContent).toBe('×5');
+    expect(bodyText()).toMatch(/Пять кофе-брейков, 08:30 — 12:30/);
+    expect(bodyText()).toMatch(/В каждом кофе растворимый с молоком 2,5 · 200 г/i);
+    expect(bodyText()).toMatch(/\+ 290 ккал за все 5/);
+    expect(bodyText()).toMatch(/Приём добавлен · удон с курицей в подливе, 280 г/i);
+    expect(bodyText()).toMatch(/Удалён приём: ужин в 21:15/);
+    expect(bodyText()).toMatch(/− 240 ккал · дубль вечернего приёма/);
+    expect(document.querySelectorAll('.ca-modal__meal-product')).toHaveLength(3);
+  });
+
+  it('Куратор · одинаковые удаления продуктов — одна строка ×5', async () => {
+    vi.setSystemTime(new Date('2026-08-17T10:00:00.000Z'));
+    const date = '2026-08-16';
+    const removals = Array.from({ length: 5 }, (_, index) => ({
+      type: 'meal_item_removed',
+      date,
+      meal_label: 'Кофе с молоком',
+      kcal_delta: -113,
+      meal_id: `coffee-${index}`,
+    }));
+    const row = entry(
+      '11111111-1111-4111-8111-111111111111',
+      '2026-08-16T09:00:00.000Z',
+      date,
+      [
+        { type: 'meal_added', date, meal_id: 'dinner', meal_label: 'Ужин', time: '23:09', kcal: 637, items: [{ name: 'Сыр', grams: 20 }] },
+        { type: 'steps_set', date, to: 5000 },
+        ...removals,
+      ],
+    );
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([row]));
+
+    await banner.checkAndShow();
+
+    expect(subtitle()).toBe('7 изменений за вчера');
+    expect(document.querySelectorAll('.ca-modal__repeat-badge')).toHaveLength(1);
+    expect(document.querySelector('.ca-modal__repeat-badge')?.textContent).toBe('×5');
+    expect(bodyText()).toMatch(/Из «Кофе с молоком» убран продукт/);
+    expect(bodyText()).toMatch(/− 565 ккал за все 5/);
+    expect((bodyText().match(/Из «Кофе с молоком» убран продукт/g) || []).length).toBe(1);
   });
 
   it('Куратор · точка на Питании — после двух «Позже», без счётчика', async () => {

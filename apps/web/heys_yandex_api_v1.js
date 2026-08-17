@@ -1271,10 +1271,14 @@
       const clientId = data?.client_id || data?.id || data?.data?.id;
       if (!clientId) return { data: null, error: { message: 'client_id_missing', raw: data } };
 
+      applyAssignedCuratorToProfile(data);
+
       return {
         data: {
           id: clientId,
           name: data?.name || data?.data?.name || null,
+          curator_id: data?.curator_id || null,
+          curator_name: data?.curator_name || null,
           raw: data,
         },
         error: null,
@@ -2140,11 +2144,14 @@
         }
       }
       if (!data || data.ok === false) return { ok: false, error: data?.error || 'unknown', entries: [] };
+      applyAssignedCuratorToProfile(data);
       return {
         ok: true,
         since: data.since,
         server_now: data.server_now || null,
         has_more: data.has_more === true,
+        curator_id: data.curator_id || null,
+        curator_name: data.curator_name || null,
         entries: Array.isArray(data.entries) ? data.entries : [],
       };
     } catch (e) {
@@ -3265,6 +3272,50 @@
   // 📤 ЭКСПОРТ
   // ═══════════════════════════════════════════════════════════════════
 
+  function normalizeAssignedCuratorMeta(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const curatorId = raw.curator_id || raw.curatorId || null;
+    const curatorName = String(raw.curator_name || raw.curatorName || '').trim();
+    if (!curatorId && !curatorName) return null;
+    return { curatorId, curatorName };
+  }
+
+  function applyAssignedCuratorToProfile(meta) {
+    const normalized = normalizeAssignedCuratorMeta(meta);
+    if (!normalized) return false;
+    const lsGet = HEYS.utils?.lsGet;
+    const lsSet = HEYS.utils?.lsSet;
+    if (typeof lsGet !== 'function' || typeof lsSet !== 'function') return false;
+
+    const profile = lsGet('heys_profile', {}) || {};
+    if (!profile || typeof profile !== 'object' || Array.isArray(profile)) return false;
+
+    const next = { ...profile };
+    let changed = false;
+
+    if (normalized.curatorId) {
+      const id = String(normalized.curatorId);
+      if (next.curatorId !== id) { next.curatorId = id; changed = true; }
+      if (next.curator_id !== id) { next.curator_id = id; changed = true; }
+      if (next.hasCurator !== true) { next.hasCurator = true; changed = true; }
+    }
+
+    if (normalized.curatorName) {
+      if (next.curatorName !== normalized.curatorName) {
+        next.curatorName = normalized.curatorName;
+        changed = true;
+      }
+      if (!next.curatorDisplayName) {
+        next.curatorDisplayName = normalized.curatorName;
+        changed = true;
+      }
+    }
+
+    if (!changed) return false;
+    lsSet('heys_profile', next);
+    return true;
+  }
+
   const YandexAPI = {
     // Конфигурация
     CONFIG,
@@ -3428,6 +3479,10 @@
 
   // Экспорт
   HEYS.YandexAPI = YandexAPI;
+  HEYS.CuratorAssignment = {
+    normalizeMeta: normalizeAssignedCuratorMeta,
+    applyToProfile: applyAssignedCuratorToProfile,
+  };
 
   // Для отладки в консоли
   if (typeof window !== 'undefined') {
