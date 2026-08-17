@@ -9,6 +9,7 @@
  */
 
 const { TOOL_SCHEMAS } = require('./tools');
+const callContext = require('./call-context');
 
 const SERVER_INFO = { name: 'heys-mcp', title: 'HEYS', version: '1.0.0' };
 const SUPPORTED_PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26'];
@@ -215,7 +216,10 @@ async function handleMessage(message, ctx) {
       const argCount = args && typeof args === 'object' ? Object.keys(args).length : 0;
 
       try {
-        const result = await handler(args);
+        // Метка видна вложенному коду на всё время обработчика: `tasks_checkpoint`
+        // дописывает её в блок стенограммы, в том числе когда его зовёт не
+        // модель, а дневниковая обёртка.
+        const result = await callContext.run(trace, () => handler(args));
         const timing = measure();
         const payload = {
           content: toolContent(result),

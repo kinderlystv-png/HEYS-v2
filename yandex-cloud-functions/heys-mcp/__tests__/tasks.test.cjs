@@ -12,6 +12,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const tasks = require('../lib/tasks');
 const { createTasksTools } = require('../lib/tasks-tools');
+const callContext = require('../lib/call-context');
 
 const CLIENT = 'ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a';
 const JWT = 'curator-jwt';
@@ -5359,6 +5360,43 @@ test('checkpoint дописывает новый обмен в конец дня
     'второй checkpoint должен встать после первого, а не перед',
   );
   assert.ok(text.trimEnd().endsWith('Тоже принято.'), 'самый свежий блок — в конце файла');
+});
+
+test('checkpoint дописывает метку вызова, а модель её не передаёт', async () => {
+  // Связка «обмен ↔ строка mcp_call»: session_id выдаёт сервер, поэтому и
+  // строку в блок добавляет сервер. Модель этих значений не знает.
+  const api = liveTasksApi();
+  const block = '## 12:40\n\n**Кин:** Запиши воду.\n**Claude:** Записал 300 мл.';
+  await callContext.run({ sessionId: 'a2418c691812', seq: 7 }, () =>
+    session(api).tasks_checkpoint({ transcript_block: block }));
+
+  const text = api.kv[tasks.keyForPath(TRANSCRIPT_TODAY)].text;
+  assert.match(text, /\[mcp session=a2418c691812 seq=7\]/);
+  assert.ok(text.trimEnd().endsWith('[mcp session=a2418c691812 seq=7]'), 'метка — последняя строка блока');
+  assert.ok(!block.includes('mcp session='), 'модель прислала блок без метки');
+});
+
+test('без контекста вызова блок стенограммы не меняется', async () => {
+  const api = liveTasksApi();
+  await session(api).tasks_checkpoint({
+    transcript_block: '## 12:40\n\n**Кин:** Прямой вызов.\n**Claude:** Без метки.',
+  });
+  assert.ok(!api.kv[tasks.keyForPath(TRANSCRIPT_TODAY)].text.includes('[mcp session='));
+});
+
+test('два обмена подряд получают разные метки', async () => {
+  // Два write в одном ходе — это два обмена, а не один: две метки с разным seq.
+  const api = liveTasksApi();
+  const tools = session(api);
+  await callContext.run({ sessionId: 's1', seq: 1 }, () =>
+    tools.tasks_checkpoint({ transcript_block: '## 09:00\n\n**Кин:** Вода.\n**Claude:** Записал.' }));
+  await callContext.run({ sessionId: 's1', seq: 2 }, () =>
+    tools.tasks_checkpoint({ transcript_block: '## 09:01\n\n**Кин:** И приём.\n**Claude:** Записал.' }));
+
+  const text = api.kv[tasks.keyForPath(TRANSCRIPT_TODAY)].text;
+  assert.match(text, /\[mcp session=s1 seq=1\]/);
+  assert.match(text, /\[mcp session=s1 seq=2\]/);
+  assert.ok(text.indexOf('seq=1') < text.indexOf('seq=2'), 'порядок обменов сохраняется');
 });
 
 test('sortTranscriptChronologically выравнивает блоки по времени заголовка', () => {

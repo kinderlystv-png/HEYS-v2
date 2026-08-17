@@ -15,6 +15,7 @@ const {
   createTelemetry,
 } = require('../lib/telemetry');
 const mcp = require('../lib/mcp');
+const callContext = require('../lib/call-context');
 
 test('строка лога — валидный JSON целиком, без текстового префикса', () => {
   // Logging разбирает jsonPayload только когда вся строка это JSON. Префикс
@@ -266,6 +267,32 @@ test('seq считает порядок начала вызовов, а не з�
 
   assert.equal(slow.result.structuredContent.seq, 1, 'начался первым — номер первый');
   assert.equal(fast.result.structuredContent.seq, 2);
+});
+
+test('вложенный вызов видит метку внешнего инструмента', async () => {
+  // Дневниковая запись зовёт tasks_checkpoint не снаружи, а из общей обёртки.
+  // Метка в блоке стенограммы должна быть от ВНЕШНЕГО инструмента — того
+  // обмена, который блок и записывает.
+  const seen = [];
+  const lines = [];
+  const ctx = tracedContext({
+    heys_add_water: async () => {
+      // так же, как обёртка вызывает вложенный tasks_checkpoint
+      seen.push(callContext.transcriptMark(callContext.current()));
+      return { text: 'записал' };
+    },
+  }, lines);
+
+  const res = await callTool(ctx, 'heys_add_water', 1);
+
+  const { session_id: sessionId, seq } = res.result.structuredContent;
+  assert.equal(seen[0], `[mcp session=${sessionId} seq=${seq}]`);
+  assert.equal(JSON.parse(lines[0]).session_id, sessionId, 'та же метка ушла в лог');
+});
+
+test('вне вызова инструмента метки нет', () => {
+  assert.equal(callContext.current(), null);
+  assert.equal(callContext.transcriptMark(null), null);
 });
 
 test('отказ инструмента тоже несёт session_id и seq', async () => {

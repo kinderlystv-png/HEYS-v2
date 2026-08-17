@@ -17,6 +17,7 @@
 
 const tasks = require('./tasks');
 const assets = require('./assets');
+const callContext = require('./call-context');
 
 const TASKS_TOOL_SCHEMAS = [
   {
@@ -1805,11 +1806,18 @@ function createTasksTools({
       // Оба блока валидируем до первой записи: ошибка формата не должна
       // оставить половину checkpoint. Сетевой сбой между двумя файлами всё
       // ещё возможен, поэтому в ответе возвращаются отдельные ревизии.
+      // Метка вызова дописывается после всех проверок формата: они должны
+      // видеть блок ровно таким, каким его прислала модель. Сама модель
+      // `session_id` не знает и знать не должна — его выдаёт сервер, поэтому
+      // строку добавляет тоже сервер (MCP_TELEMETRY_ROADMAP.md, фаза 2).
+      const mark = callContext.transcriptMark(callContext.current());
+      const blockToWrite = mark ? `${transcriptBlock}\n${mark}` : transcriptBlock;
+
       const transcript = await openForAppend(transcriptPath);
-      const putTranscript = (text) => tasks.appendBlock(text, transcriptBlock);
+      const putTranscript = (text) => tasks.appendBlock(text, blockToWrite);
       const savedTranscript = await writeFile(transcript, putTranscript(transcript.text), {
         rebase: putTranscript,
-        delta: { mode: 'append', block: transcriptBlock },
+        delta: { mode: 'append', block: blockToWrite },
       });
 
       let savedJournal = null;
