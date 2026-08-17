@@ -121,23 +121,38 @@ function resolveChangedFiles(files = []) {
   }
 
   const selected = new Set();
+  const skippedDisabled = new Set();
   for (const file of nonGatewayFiles) {
     const match = /^yandex-cloud-functions\/(heys-[^/]+)\//.exec(file);
     if (!match) continue;
     const item = FUNCTION_BY_NAME.get(match[1]);
     if (!item) throw new Error(`Unknown cloud function directory: ${match[1]}`);
     if (!item.autoDeploy) {
-      throw new Error(`Auto-deploy disabled for ${item.name}: ${item.reason}`);
+      skippedDisabled.add(item.name);
+      continue;
     }
     selected.add(item.name);
   }
+
+  const skippedDisabledList = [...skippedDisabled].sort();
 
   if (selected.size > 0) {
     return {
       mode: 'selective',
       functions: [...selected].sort(),
+      skippedDisabled: skippedDisabledList,
       gatewaySpecChanged,
       reason: 'changed-function-directories',
+    };
+  }
+  if (skippedDisabledList.length > 0) {
+    return {
+      mode: 'none',
+      functions: [],
+      testFunctions: skippedDisabledList,
+      skippedDisabled: skippedDisabledList,
+      gatewaySpecChanged,
+      reason: 'disabled-functions-only',
     };
   }
   if (gatewaySpecChanged && nonGatewayFiles.length === 0) {
@@ -220,6 +235,7 @@ function main() {
     if (argSet.has('--github-output')) {
       console.log(`mode=${result.mode}`);
       console.log(`functions=${result.functions.join(',')}`);
+      console.log(`test_functions=${(result.testFunctions || []).join(',')}`);
       console.log(`gateway_spec_changed=${result.gatewaySpecChanged}`);
       console.log(`reason=${result.reason}`);
     } else {

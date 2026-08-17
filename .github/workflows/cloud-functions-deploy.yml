@@ -77,12 +77,17 @@ jobs:
           RESOLUTION=$(printf '%s\n' "$CHANGED_FILES" | node yandex-cloud-functions/function-inventory.cjs --resolve)
           MODE=$(node -e 'const r=JSON.parse(process.argv[1]); process.stdout.write(r.mode)' "$RESOLUTION")
           FUNCTIONS_CSV=$(node -e 'const r=JSON.parse(process.argv[1]); process.stdout.write(r.functions.join(","))' "$RESOLUTION")
+          TEST_FUNCTIONS_CSV=$(node -e 'const r=JSON.parse(process.argv[1]); process.stdout.write((r.testFunctions||[]).join(","))' "$RESOLUTION")
 
           if [ "$MODE" = "all" ]; then
             yandex-cloud-functions/test-functions.sh --all
           elif [ "$MODE" = "selective" ]; then
             IFS=',' read -r -a FUNCTIONS <<< "$FUNCTIONS_CSV"
             yandex-cloud-functions/test-functions.sh "${FUNCTIONS[@]}"
+          elif [ -n "$TEST_FUNCTIONS_CSV" ]; then
+            echo "Disabled-only function changes: running tests without auto-deploy ($TEST_FUNCTIONS_CSV)"
+            IFS=',' read -r -a TEST_FUNCTIONS <<< "$TEST_FUNCTIONS_CSV"
+            yandex-cloud-functions/test-functions.sh "${TEST_FUNCTIONS[@]}"
           else
             echo "No function runtime target: $MODE"
             node yandex-cloud-functions/function-inventory.cjs --verify

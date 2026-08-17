@@ -24,6 +24,7 @@ test('API source change selects its exact deployment target', () => {
   assert.deepEqual(resolveChangedFiles(['yandex-cloud-functions/heys-api-leads/index.js']), {
     mode: 'selective',
     functions: ['heys-api-leads'],
+    skippedDisabled: [],
     gatewaySpecChanged: false,
     reason: 'changed-function-directories',
   });
@@ -49,6 +50,7 @@ test('documentation beside runtime source does not hide the runtime target', () 
   ]), {
     mode: 'selective',
     functions: ['heys-api-payments'],
+    skippedDisabled: [],
     gatewaySpecChanged: false,
     reason: 'changed-function-directories',
   });
@@ -60,6 +62,7 @@ test('an arbitrary markdown asset remains fail-closed as runtime input', () => {
   ]), {
     mode: 'selective',
     functions: ['heys-bot-client'],
+    skippedDisabled: [],
     gatewaySpecChanged: false,
     reason: 'changed-function-directories',
   });
@@ -116,10 +119,14 @@ test('unknown function directory fails closed', () => {
 });
 
 test('production-disabled SMS source cannot silently auto-deploy', () => {
-  assert.throws(
-    () => resolveChangedFiles(['yandex-cloud-functions/heys-api-sms/index.js']),
-    /Auto-deploy disabled.*explicit release decision/,
-  );
+  assert.deepEqual(resolveChangedFiles(['yandex-cloud-functions/heys-api-sms/index.js']), {
+    mode: 'none',
+    functions: [],
+    testFunctions: ['heys-api-sms'],
+    skippedDisabled: ['heys-api-sms'],
+    gatewaySpecChanged: false,
+    reason: 'disabled-functions-only',
+  });
 });
 
 test('deploy and test scripts consume the shared inventory instead of local lists', () => {
@@ -135,11 +142,12 @@ test('deploy and test scripts consume the shared inventory instead of local list
 });
 
 test('production-disabled heys-mcp source cannot silently auto-deploy', () => {
-  assert.throws(
-    () => resolveChangedFiles(['yandex-cloud-functions/heys-mcp/index.js']),
-    /Auto-deploy disabled for heys-mcp: .+/,
-    'ожидаем блокировку auto-deploy и непустую reason в инвентаре',
-  );
+  const result = resolveChangedFiles(['yandex-cloud-functions/heys-mcp/index.js']);
+  assert.equal(result.mode, 'none');
+  assert.deepEqual(result.functions, []);
+  assert.deepEqual(result.testFunctions, ['heys-mcp']);
+  assert.deepEqual(result.skippedDisabled, ['heys-mcp']);
+  assert.equal(result.reason, 'disabled-functions-only');
 });
 
 test('deploy workflow routes API and automation changes through the shared classifier', () => {
