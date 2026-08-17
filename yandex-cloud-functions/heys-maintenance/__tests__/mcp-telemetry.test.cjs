@@ -6,6 +6,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
+  CALL_FILTER,
   aggregateRecords,
   extractRecord,
   percentile,
@@ -134,6 +135,35 @@ test('сутки считаются по МСК', () => {
   assert.equal(since, '2026-08-16T21:00:00.000Z');
   assert.equal(until, '2026-08-17T20:59:59.999Z');
   assert.equal(previousDay(Date.parse('2026-08-17T05:00:00Z')), '2026-08-16');
+});
+
+test('фильтр Logging ловит строку и разобранной, и текстовой', async () => {
+  // Фильтр только по json_payload отсекал бы нераспарсенную строку до того,
+  // как до неё доберётся extractRecord — и сутки молча приехали бы нулём,
+  // неотличимым от «коннектором не пользовались».
+  assert.match(CALL_FILTER, /json_payload\.t = "mcp_call"/);
+  assert.match(CALL_FILTER, /OR message: "mcp_call"/);
+
+  let seenFilter = null;
+  const { records } = await readDay({
+    day: DAY,
+    logGroupId: 'grp',
+    fetchPage: async (body) => {
+      seenFilter = body.criteria.filter;
+      return {
+        entries: [
+          { jsonPayload: rec({ seq: 1, tool: 'parsed' }) },
+          { message: JSON.stringify(rec({ seq: 2, tool: 'raw_text' })) },
+          // Чужая строка со словом mcp_call: фильтр её пропустит, разбор обязан
+          // отбросить — иначе она попадёт в счётчики.
+          { message: '[heys-mcp] tool_failed mcp_call что-то пошло не так' },
+        ],
+      };
+    },
+  });
+
+  assert.equal(seenFilter, CALL_FILTER);
+  assert.deepEqual(records.map((r) => r.tool), ['parsed', 'raw_text']);
 });
 
 test('чтение перелистывает страницы Logging до конца', async () => {

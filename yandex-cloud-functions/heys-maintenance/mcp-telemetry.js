@@ -16,6 +16,18 @@ const http = require('node:http');
 const https = require('node:https');
 
 const LOGGING_READER_HOST = 'reader.logging.yandexcloud.net';
+
+/**
+ * Фильтр обязан ловить строку в обоих видах.
+ *
+ * Обычно рантайм разбирает наш JSON в `json_payload`, и хватило бы первого
+ * условия. Но если строка приедет нераспарсенной — она лежит целиком в
+ * `message`, и фильтр по `json_payload` её молча отсечёт. Разбор из `message`
+ * в `extractRecord` тогда бесполезен: до него доходит только прошедшее фильтр.
+ * Итог был бы худшего сорта — отчёт показал бы ноль вызовов, что читается как
+ * «коннектором не пользовались», а не как сломанный сбор.
+ */
+const CALL_FILTER = 'json_payload.t = "mcp_call" OR message: "mcp_call"';
 const METADATA_HOST = '169.254.169.254';
 const PAGE_SIZE = 1000;
 // Потолок страниц — защита от бесконечного пролистывания, если Logging начнёт
@@ -214,7 +226,7 @@ async function readDay({ day, logGroupId, token, fetchPage = null }) {
         since,
         until,
         pageSize: PAGE_SIZE,
-        filter: 'json_payload.t = "mcp_call"',
+        filter: CALL_FILTER,
       },
     };
     if (pageToken) body.pageToken = pageToken;
@@ -293,6 +305,7 @@ async function runMcpTelemetryAggregation(client, { day, logGroupId, nowMs = Dat
 }
 
 module.exports = {
+  CALL_FILTER,
   aggregateRecords,
   extractRecord,
   percentile,

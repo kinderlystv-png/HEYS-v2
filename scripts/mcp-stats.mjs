@@ -51,8 +51,16 @@ function query(sql) {
   });
   if (result.status !== 0) {
     const stderr = String(result.stderr || '').trim();
-    console.error('Не удалось прочитать телеметрию из базы.');
-    if (stderr) console.error(stderr.split('\n').slice(0, 5).join('\n'));
+    // Отсутствие таблиц и недоступность базы лечатся по-разному, а psql
+    // сообщает о них одинаково невнятно. Отправить за проверкой джоба, когда
+    // на деле не применена миграция, — потерянный час.
+    if (/does not exist|не существует/i.test(stderr)) {
+      console.error('Таблиц телеметрии нет — миграция не применена.');
+      console.error('  bash scripts/db/psql.sh -f database/2026-08-17_mcp_telemetry.sql');
+    } else {
+      console.error('Не удалось прочитать телеметрию из базы.');
+      if (stderr) console.error(stderr.split('\n').slice(0, 5).join('\n'));
+    }
     process.exit(1);
   }
   return String(result.stdout || '')
