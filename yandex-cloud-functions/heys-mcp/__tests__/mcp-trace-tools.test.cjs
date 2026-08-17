@@ -82,6 +82,35 @@ test('exclude self: tasks_mcp_trace и текущий session/seq не попа�
   });
 });
 
+test('heading фильтрует схлопнутый обмен одного хода', async () => {
+  const multiBlockTranscript = `# 2026-08-17
+
+## 22:03
+
+**Кин:** Добавь мне воды 200 мл
+**Claude:** чек-ин
+[mcp session=aaaaaaaaaaaa seq=1 ts=2026-08-17T19:03:10.000Z]
+
+## 22:03
+
+**Кин:** Добавь мне воды 200 мл
+**Claude:** вода
+[mcp session=bbbbbbbbbbbb seq=2 ts=2026-08-17T19:03:12.000Z]
+`;
+  const tools = makeTools({
+    transcriptText: multiBlockTranscript,
+    logs: [
+      { t: 'mcp_call', ts: '2026-08-17T19:03:11.000Z', tool: 'heys_get_period', session_id: 'bbbbbbbbbbbb', seq: 1, duration_ms: 400, role: 'curator' },
+      { t: 'mcp_call', ts: '2026-08-17T19:03:12.000Z', tool: 'heys_checkin', session_id: 'bbbbbbbbbbbb', seq: 2, duration_ms: 715, role: 'curator' },
+      { t: 'mcp_call', ts: '2026-08-17T19:03:13.000Z', tool: 'heys_add_water', session_id: 'bbbbbbbbbbbb', seq: 3, duration_ms: 881, role: 'curator' },
+    ],
+  });
+
+  const result = await tools.tasks_mcp_trace({ date: '2026-08-17', heading: '22:03' });
+  assert.equal(result.structured.rows.length, 1);
+  assert.deepEqual(result.structured.rows[0].confirmed_tools, ['heys_get_period', 'heys_checkin', 'heys_add_water']);
+});
+
 test('дата старше retention — ошибка без вызова Logging', async () => {
   let called = false;
   const tools = makeTools({

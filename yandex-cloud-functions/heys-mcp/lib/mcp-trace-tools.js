@@ -126,7 +126,7 @@ function createMcpTraceTools({
       const { exchanges, blocksWithoutMark } = correlate.parseExchanges(text, { date });
       let selected = correlate.mergeSameTurnExchanges(exchanges);
       if (headingFilter) {
-        selected = exchanges.filter((row) => row.heading === headingFilter);
+        selected = selected.filter((row) => row.heading === headingFilter);
         if (!selected.length) {
           throw new ToolError(
             'heading_not_found',
