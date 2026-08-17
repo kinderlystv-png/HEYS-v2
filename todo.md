@@ -30,20 +30,34 @@
 ### MCP-телеметрия: Postgres + tasks_mcp_trace — 2026-08-17
 
 Фаза 2 закрыта (correlate, метка в стенограмме). Фаза 3: код + deploy
-**2026-08-18** — commit `e3e3d641` (локально, push не делался). Prod:
-`heys-api-rpc` `d4e2e54el2c2eghn8cv6`, `heys-mcp` `d4e8k1eqeppuccb1f2v2`,
+**2026-08-18** — push `c3b1aff1` (trace flow: wall/gaps/pre/post). Prod
+`heys-mcp` **`d4e2fs0nhsqrh95ftof3`**. Ранее `7cd074ed` /
+`d4e7827acm1vb4q4g6af`. `heys-api-rpc` `d4e2e54el2c2eghn8cv6`,
 `heys-maintenance` `d4eh9u06rld46pvdu0a0`. Lockbox `MCP_TELEMETRY_SECRET`,
-миграция `mcp_call_events` — на месте. **Smoke закрыт 2026-08-18 ~00:35:**
-`tasks_checkpoint` → trace heading `00:35` → 1 confirmed (`tasks_checkpoint`,
-1502 мс), Postgres без `socket hang up`; ≥1 confirmed — взято. Baseline p50 «до»
-снят **188 записей / ~12h** (`node scripts/mcp-baseline-fetch.mjs`; см. roadmap
-про лимит `yc logging read`). Pre-deploy p50 →
-`ops/mcp-call-baseline-pre-deploy.p50.json`. **Третье число (p50 ≤10%) — пока не
-измерено:** нужен post-deploy p50 по 20–30 вызовам **на tool** vs pre-deploy
-p50, не одна точка smoke. Дефекты trace **починены локально** (`heys/6627ed`:
-taskDay 03:00, heading tie-break). Push + redeploy `heys-mcp` — не делался. План
-—
+миграция `mcp_call_events` — на месте. **Smoke закрыт 2026-08-18 ~00:35:** ≥1
+confirmed, Postgres OK. **Проверка фиксов ~00:49:** `tasks_mcp_trace` без `date`
+после полуночи → тот же `2026-08-17.md`, что checkpoint (граница 3:00); heading
+— один row. Латентность: 1116 ms vs baseline p50 1176 ms (1502 ms — выброс на
+большом блоке, не регресс). Baseline p50 «до» — **188 записей / ~12h** →
+`ops/mcp-call-baseline-pre-deploy.p50.json`
+(`node scripts/mcp-baseline-fetch.mjs`; см. roadmap § «Ловушка yc logging
+read»). **Третье число (p50 ≤10%) — пока не измерено** (две точки не выборка).
+Дефекты trace **в prod** (`heys/6627ed`). План —
 [yandex-cloud-functions/heys-mcp/MCP_TELEMETRY_ROADMAP.md](yandex-cloud-functions/heys-mcp/MCP_TELEMETRY_ROADMAP.md).
+
+**→ 2026-08-19 вечер — post-deploy p50 (закрыть 3-е число приёмки):**
+
+- [ ] Снять p50 из **обычного** трафика за ~24h после deploy `7cd074ed` — **не**
+      гонять 20–30 вызовов вручную (исказит медиану).
+- [ ] Те же скрипты, другой файл:
+  ```bash
+  node scripts/mcp-baseline-fetch.mjs ops/mcp-call-post-deploy-2026-08-19.json
+  node scripts/mcp-baseline-p50.mjs ops/mcp-call-post-deploy-2026-08-19.json
+  ```
+- [ ] Сравнить **p50 с p50 по каждому `tool`** с
+      `ops/mcp-call-baseline-pre-deploy.p50.json`; рост ≤10% — pass.
+- [ ] **`persist_ms` в логах не заводить**, пока медианы не разойдутся.
+- [ ] Итог записать в этот блок todo (pass/fail + дата замера).
 
 ### Вход по PIN меняется по существу — решение владельца 2026-08-11
 

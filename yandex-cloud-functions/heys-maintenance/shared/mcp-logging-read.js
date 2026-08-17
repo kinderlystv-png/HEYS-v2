@@ -3,7 +3,8 @@
 /**
  * Парсинг строк `mcp_call` из экспорта Cloud Logging / yc logs.
  *
- * Hot path читает Postgres. Этот модуль — только `extractRecord` для тестов.
+ * Hot path (tasks_mcp_trace, maintenance) читает Postgres. Этот модуль —
+ * только `extractRecord` для офлайн `scripts/mcp-correlate.mjs`.
  */
 
 const CALL_FILTER = 'json_payload.t = "mcp_call" OR message: "mcp_call"';
