@@ -24,12 +24,12 @@
     "builtAt": "2026-08-16T10:40:39.809Z"
   },
   "boot-app": {
-    "file": "boot-app.bundle.0aed5029363d.js",
-    "hash": "0aed5029363d",
-    "sourceFingerprint": "f0035a3ab989",
+    "file": "boot-app.bundle.6533e4b092c7.js",
+    "hash": "6533e4b092c7",
+    "sourceFingerprint": "bfbb0c5bfded",
     "fileCount": 57,
-    "size": 1507316,
-    "builtAt": "2026-08-16T15:01:35.059Z"
+    "size": 1508517,
+    "builtAt": "2026-08-17T09:19:47.376Z"
   },
   "boot-init": {
     "file": "boot-init.bundle.09acfb876cb4.js",
@@ -48,12 +48,12 @@
     "builtAt": "2026-08-14T22:52:35.446Z"
   },
   "postboot-1-game-lazy": {
-    "file": "postboot-1-game-lazy.bundle.e9440f3462da.js",
-    "hash": "e9440f3462da",
-    "sourceFingerprint": "33a564fd3382",
+    "file": "postboot-1-game-lazy.bundle.b63957f425c2.js",
+    "hash": "b63957f425c2",
+    "sourceFingerprint": "0e8a6005d7d6",
     "fileCount": 31,
-    "size": 1521625,
-    "builtAt": "2026-08-16T15:03:11.381Z"
+    "size": 1551891,
+    "builtAt": "2026-08-17T09:51:39.725Z"
   },
   "postboot-2-insights-eager": {
     "file": "postboot-2-insights-eager.bundle.e7dcc353395b.js",
@@ -80,11 +80,11 @@
     "builtAt": "2026-08-14T22:52:28.023Z"
   },
   "postboot-3-ui-lazy": {
-    "file": "postboot-3-ui-lazy.bundle.896f09784b73.js",
-    "hash": "896f09784b73",
-    "sourceFingerprint": "201c4a60a9d7",
+    "file": "postboot-3-ui-lazy.bundle.1706e40d9927.js",
+    "hash": "1706e40d9927",
+    "sourceFingerprint": "89cb167c50e8",
     "fileCount": 69,
-    "size": 4593581,
-    "builtAt": "2026-08-16T15:00:47.022Z"
+    "size": 4645935,
+    "builtAt": "2026-08-17T09:51:33.355Z"
   }
 }
