@@ -127,28 +127,24 @@ describe('morning activation followup decision', () => {
     expect(result.ok).toBe(false);
   });
 
-  it('does not reopen after Сделаю позже until another meal is added', () => {
+  it('does not reopen when morning check-in already answered', () => {
     const utils = loadModule();
 
-    const snoozedNow = utils.shouldOpenMorningActivationFollowup(mealDay({
+    const answered = utils.shouldOpenMorningActivationFollowup(mealDay({
       morningActivation: {
-        status: 'pending',
-        followupSnoozeUntilMealCount: 1,
+        status: 'planned',
+        checkinAnsweredAt: 1770486000000,
       },
     }));
-    const afterNextMeal = utils.shouldOpenMorningActivationFollowup(mealDay({
-      meals: [
-        { id: 'meal-1', time: '09:00', items: [{ id: 'item-1' }] },
-        { id: 'meal-2', time: '13:00', items: [{ id: 'item-2' }] },
-      ],
+    const skipped = utils.shouldOpenMorningActivationFollowup(mealDay({
       morningActivation: {
-        status: 'pending',
-        followupSnoozeUntilMealCount: 1,
+        status: 'skipped',
+        checkinAnsweredAt: 1770486000000,
       },
     }));
 
-    expect(snoozedNow.ok).toBe(false);
-    expect(afterNextMeal.ok).toBe(true);
+    expect(answered.ok).toBe(false);
+    expect(skipped.ok).toBe(false);
   });
 
   it('closes an already-open followup when completion event confirms terminal state', () => {
@@ -208,7 +204,6 @@ describe('morning activation followup decision', () => {
       expect.objectContaining({
         morningActivation: expect.objectContaining({
           status: 'done',
-          followupSnoozeUntilMealCount: null,
         }),
       })
     );
@@ -268,18 +263,16 @@ describe('morning activation followup decision', () => {
     expect(stepModalHide).toHaveBeenCalledWith({ scrollToDiary: false });
   });
 
-  it('closes an already-open followup when Сделаю позже dispatches dismissed event', () => {
+  it('closes an already-open followup when dismissed event fires', () => {
     const listeners = {};
     const dayData = mealDay({
       morningActivation: {
         status: 'pending',
         firstMealTime: '09:00',
-        followupSnoozeUntilMealCount: 1,
       },
     });
     const storeSet = vi.fn();
     const stepModalHide = vi.fn();
-    const sessionSet = vi.fn();
 
     loadModule({
       HEYS: {
@@ -307,7 +300,7 @@ describe('morning activation followup decision', () => {
       },
       sessionStorage: {
         getItem: vi.fn(() => null),
-        setItem: sessionSet,
+        setItem: vi.fn(),
         removeItem: vi.fn(),
       },
     });
@@ -318,10 +311,6 @@ describe('morning activation followup decision', () => {
 
     expect(stepModalHide).toHaveBeenCalledWith({ scrollToDiary: false });
     expect(storeSet).not.toHaveBeenCalled();
-    expect(sessionSet).toHaveBeenCalledWith(
-      'heys_morning_activation_followup_guard_client-1_2026-06-09',
-      '1'
-    );
   });
 
   it('closes an already-open skip reason modal when a reason is picked', () => {
@@ -453,96 +442,10 @@ describe('morning activation followup decision', () => {
     expect(render.mock.calls[0][0].props.steps).toEqual(['morning_activation_followup']);
   });
 
-  it('adds a regular first-half training from the charge followup modal', () => {
+  it('saves morning activation as done without intensity from followup', () => {
     const dateKey = '2026-06-09';
     const clientId = 'client-1';
     const day = mealDay({ date: dateKey });
-    const scopedKey = `heys_${clientId}_dayv2_${dateKey}`;
-    localStorage.setItem(scopedKey, JSON.stringify(day));
-
-    const domWindow = global.document?.defaultView || originalDocument?.defaultView || originalWindow || global.window;
-    global.window = domWindow;
-    global.document = domWindow.document;
-    if (typeof domWindow.addEventListener !== 'function') domWindow.addEventListener = vi.fn();
-    if (typeof domWindow.removeEventListener !== 'function') domWindow.removeEventListener = vi.fn();
-    global.React = React;
-    global.ReactDOM = { render: vi.fn(), unmountComponentAtNode: vi.fn() };
-    domWindow.React = React;
-    domWindow.ReactDOM = global.ReactDOM;
-    domWindow.HEYS = {
-      currentClientId: clientId,
-      utils: {
-        getCurrentClientId: () => clientId,
-      },
-      dayUtils: {
-        todayISO: () => dateKey,
-      },
-    };
-    global.CustomEvent = class CustomEvent {
-      constructor(type, init = {}) {
-        this.type = type;
-        this.detail = init.detail;
-      }
-    };
-    global.HEYS = domWindow.HEYS;
-    domWindow.CustomEvent = global.CustomEvent;
-    const dispatchSpy = vi.fn();
-    domWindow.dispatchEvent = dispatchSpy;
-
-    // eslint-disable-next-line no-new-func
-    new Function(STEP_MODAL_SRC)();
-    // eslint-disable-next-line no-new-func
-    new Function(STEPS_SRC)();
-
-    const onNext = vi.fn();
-    const Step = domWindow.HEYS.StepModal.registry.morning_activation_followup.component;
-    render(React.createElement(Step, { context: { dateKey, firstMealTime: '09:00', onNext } }));
-
-    fireEvent.click(screen.getByRole('button', {
-      name: 'Зарядки не было',
-    }));
-
-    expect(onNext).not.toHaveBeenCalled();
-    expect(JSON.parse(localStorage.getItem(scopedKey)).morningActivation).toBeUndefined();
-    expect(screen.getByText('Почему сегодня без зарядки?')).toBeTruthy();
-
-    fireEvent.click(screen.getByRole('button', {
-      name: 'Вместо зарядки была тренировка в первой половине дня',
-    }));
-
-    const saved = JSON.parse(localStorage.getItem(scopedKey));
-    expect(onNext).toHaveBeenCalledTimes(1);
-    expect(saved.morningActivation.status).toBe('done');
-    expect(saved.morningActivation.replacement).toBe('first_half_training');
-    expect(saved.trainings).toHaveLength(1);
-    expect(saved.trainings[0]).toMatchObject({
-      type: 'strength',
-      time: '09:00',
-      activityLabel: 'Тренировка в первой половине дня',
-      source: 'morning_activation_replacement',
-    });
-    expect(saved.trainings[0].source).not.toBe('morning_activation');
-    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'heys:day-updated',
-    }));
-    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'heys:morning-activation-followup-completed',
-      detail: expect.objectContaining({
-        dateKey,
-        source: 'morning-activation-replacement',
-      }),
-    }));
-  });
-
-  it('asks for intensity before saving morning activation as done', () => {
-    const dateKey = '2026-06-09';
-    const clientId = 'client-1';
-    const day = mealDay({
-      date: dateKey,
-      moodMorning: 6,
-      wellbeingMorning: 6,
-      stressMorning: 4,
-    });
     const scopedKey = `heys_${clientId}_dayv2_${dateKey}`;
     localStorage.setItem(scopedKey, JSON.stringify(day));
 
@@ -587,24 +490,13 @@ describe('morning activation followup decision', () => {
     const Step = domWindow.HEYS.StepModal.registry.morning_activation_followup.component;
     render(React.createElement(Step, { context: { dateKey, firstMealTime: '09:00', onNext } }));
 
-    fireEvent.click(screen.getByRole('button', {
-      name: 'Сделал зарядку',
-    }));
-
-    expect(onNext).not.toHaveBeenCalled();
-    expect(JSON.parse(localStorage.getItem(scopedKey)).morningActivation).toBeUndefined();
-    expect(screen.getByText('Какая была интенсивность?')).toBeTruthy();
-
-    const mediumButton = screen.getByRole('button', {
-      name: /Средне/,
-    });
-    fireEvent.click(mediumButton);
-    fireEvent.click(mediumButton);
+    fireEvent.click(screen.getByRole('button', { name: 'Сделал' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Сделал' }));
 
     const saved = JSON.parse(localStorage.getItem(scopedKey));
     expect(onNext).toHaveBeenCalledTimes(1);
     expect(saved.morningActivation.status).toBe('done');
-    expect(saved.morningActivation.intensity).toBe('medium');
+    expect(saved.morningActivation.intensity).toBeNull();
     expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
       type: 'heys:morning-activation-followup-completed',
       detail: expect.objectContaining({
@@ -612,12 +504,9 @@ describe('morning activation followup decision', () => {
         source: 'morning-activation-done',
       }),
     }));
-    expect(dispatchSpy.mock.calls.filter(([event]) => (
-      event?.type === 'heys:morning-activation-followup-completed'
-    ))).toHaveLength(1);
   });
 
-  it('asks for a reason before saving morning activation as missed', () => {
+  it('saves morning activation as skipped from followup', () => {
     const dateKey = '2026-06-09';
     const clientId = 'client-1';
     const day = mealDay({ date: dateKey });
@@ -629,8 +518,6 @@ describe('morning activation followup decision', () => {
     global.document = domWindow.document;
     if (typeof domWindow.addEventListener !== 'function') domWindow.addEventListener = vi.fn();
     if (typeof domWindow.removeEventListener !== 'function') domWindow.removeEventListener = vi.fn();
-    domWindow.sessionStorage.clear();
-    global.sessionStorage = domWindow.sessionStorage;
     global.React = React;
     global.ReactDOM = { render: vi.fn(), unmountComponentAtNode: vi.fn() };
     domWindow.React = React;
@@ -664,113 +551,19 @@ describe('morning activation followup decision', () => {
     const Step = domWindow.HEYS.StepModal.registry.morning_activation_followup.component;
     render(React.createElement(Step, { context: { dateKey, firstMealTime: '09:00', onNext } }));
 
-    fireEvent.click(screen.getByRole('button', {
-      name: 'Зарядки не было',
-    }));
-
-    expect(onNext).not.toHaveBeenCalled();
-    expect(JSON.parse(localStorage.getItem(scopedKey)).morningActivation).toBeUndefined();
-    expect(screen.getByText('Почему сегодня без зарядки?')).toBeTruthy();
-
-    const reasonButton = screen.getByRole('button', {
-      name: 'Не было времени',
-    });
-    fireEvent.click(reasonButton);
-    fireEvent.click(reasonButton);
+    fireEvent.click(screen.getByRole('button', { name: 'Не сегодня' }));
 
     const saved = JSON.parse(localStorage.getItem(scopedKey));
     expect(onNext).toHaveBeenCalledTimes(1);
     expect(saved.morningActivation).toMatchObject({
-      status: 'missed',
+      status: 'skipped',
       intensity: null,
-      skipReasonId: 'no_time',
-      skipReasonPending: false,
     });
     expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
       type: 'heys:morning-activation-followup-completed',
       detail: expect.objectContaining({
         dateKey,
-        source: 'morning-activation-missed',
-      }),
-    }));
-    expect(dispatchSpy).not.toHaveBeenCalledWith(expect.objectContaining({
-      type: 'heys:ma-skip-reason-check',
-    }));
-  });
-
-  it('snoozes and closes from the first Сделаю позже click', () => {
-    const dateKey = '2026-06-09';
-    const clientId = 'client-1';
-    const day = mealDay({
-      date: dateKey,
-      morningActivation: {
-        status: 'pending',
-        firstMealTime: '09:00',
-      },
-    });
-    const scopedKey = `heys_${clientId}_dayv2_${dateKey}`;
-    localStorage.setItem(scopedKey, JSON.stringify(day));
-
-    const domWindow = global.document?.defaultView || originalDocument?.defaultView || originalWindow || global.window;
-    global.window = domWindow;
-    global.document = domWindow.document;
-    if (typeof domWindow.addEventListener !== 'function') domWindow.addEventListener = vi.fn();
-    if (typeof domWindow.removeEventListener !== 'function') domWindow.removeEventListener = vi.fn();
-    global.React = React;
-    global.ReactDOM = { render: vi.fn(), unmountComponentAtNode: vi.fn() };
-    domWindow.React = React;
-    domWindow.ReactDOM = global.ReactDOM;
-    domWindow.HEYS = {
-      currentClientId: clientId,
-      utils: {
-        getCurrentClientId: () => clientId,
-      },
-      dayUtils: {
-        todayISO: () => dateKey,
-      },
-    };
-    global.CustomEvent = class CustomEvent {
-      constructor(type, init = {}) {
-        this.type = type;
-        this.detail = init.detail;
-      }
-    };
-    global.HEYS = domWindow.HEYS;
-    domWindow.CustomEvent = global.CustomEvent;
-    const dispatchSpy = vi.fn();
-    domWindow.dispatchEvent = dispatchSpy;
-
-    // eslint-disable-next-line no-new-func
-    new Function(STEP_MODAL_SRC)();
-    // eslint-disable-next-line no-new-func
-    new Function(STEPS_SRC)();
-
-    const onClose = vi.fn();
-    const Step = domWindow.HEYS.StepModal.registry.morning_activation_followup.component;
-    render(React.createElement(Step, { context: { dateKey, firstMealTime: '09:00', onClose } }));
-
-    const laterButton = screen.getByRole('button', {
-      name: 'Сделаю позже',
-    });
-    fireEvent.click(laterButton);
-    fireEvent.click(laterButton);
-
-    const saved = JSON.parse(localStorage.getItem(scopedKey));
-    expect(onClose).toHaveBeenCalledTimes(1);
-    expect(saved.morningActivation.status).toBe('pending');
-    expect(saved.morningActivation.firstMealTime).toBe('09:00');
-    expect(saved.morningActivation.followupSnoozeUntilMealCount).toBe(1);
-    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'heys:day-updated',
-      detail: expect.objectContaining({
-        source: 'morning-activation-followup-dismiss',
-      }),
-    }));
-    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'heys:morning-activation-followup-dismissed',
-      detail: expect.objectContaining({
-        dateKey,
-        mealCount: 1,
+        source: 'morning-activation-skipped',
       }),
     }));
   });

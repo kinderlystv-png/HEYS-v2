@@ -161,6 +161,21 @@ describe('morning check-in v4 plan', () => {
         coldExposure: { type: 'none', answeredAt: 1 },
       },
       profile: { stepsGoal: 10000, stepsGoalConfirmedDate: DATE_KEY },
+    })).toBe(false);
+    expect(utils.isMorningStepComplete('morningRest', {
+      dateKey: DATE_KEY,
+      day: {
+        weightMorning: 72,
+        sleepStart: '23:00',
+        sleepEnd: '07:00',
+        sleepQuality: 7,
+        morningMood: 5,
+        wellbeing: 5,
+        stress: 3,
+        coldExposure: { type: 'none', answeredAt: 1 },
+        morningActivation: { status: 'done', checkinAnsweredAt: 1, intensity: null },
+      },
+      profile: { stepsGoal: 10000, stepsGoalConfirmedDate: DATE_KEY },
     })).toBe(true);
   });
 

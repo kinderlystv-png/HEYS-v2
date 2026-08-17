@@ -358,9 +358,7 @@
     const hasMealsWithItems = mealCount > 0;
     const firstMealTime = getFirstMealTime(dayData);
     const maStatus = dayData?.morningActivation?.status;
-    const snoozeAtRaw = dayData?.morningActivation?.followupSnoozeUntilMealCount;
-    const snoozeAt = Number(snoozeAtRaw);
-    const hasActiveSnooze = snoozeAtRaw != null && Number.isFinite(snoozeAt) && mealCount <= snoozeAt;
+    const checkinAnsweredAt = Number(dayData?.morningActivation?.checkinAnsweredAt);
     const maClearedByUser = isMorningActivationClearedByUser(dayData);
     const hasSynced = dayHasMorningActivationSyncedActivity(dayData);
     const trainings = (dayData?.trainings || []).map(t => ({
@@ -372,7 +370,7 @@
       hasMealsWithItems,
       mealCount,
       maStatus,
-      followupSnoozeUntilMealCount: snoozeAtRaw,
+      checkinAnsweredAt: checkinAnsweredAt || null,
       maClearedByUser,
       hasSynced,
       trainings,
@@ -382,8 +380,12 @@
       logMorningActivationTrace('[MA.should] SKIP — no meals with items');
       return { ok: false, firstMealTime: null };
     }
-    if (hasActiveSnooze) {
-      logMorningActivationTrace('[MA.should] SKIP — followup snoozed until next meal add', { mealCount, snoozeAt });
+    if (Number.isFinite(checkinAnsweredAt) && checkinAnsweredAt > 0) {
+      logMorningActivationTrace('[MA.should] SKIP — already answered in morning check-in');
+      return { ok: false, firstMealTime };
+    }
+    if (maStatus === 'planned' || maStatus === 'skipped') {
+      logMorningActivationTrace('[MA.should] SKIP — morning routine already resolved in check-in', { maStatus });
       return { ok: false, firstMealTime };
     }
     if (maStatus === 'missed') {
@@ -681,12 +683,6 @@
       console.warn(_tag, 'GUARD OVERRIDE: data missing, user action', { guard: followupSessionGuard, mealCount, actualStatus, reason });
       try { sessionStorage.removeItem(followupSessionGuardKey); } catch (_) { }
     }
-    const snoozeAt = dayData?.morningActivation?.followupSnoozeUntilMealCount;
-    if (snoozeAt != null && mealCount <= snoozeAt) {
-      logMorningActivationTrace(_tag, 'SNOOZE: blocked', { mealCount, snoozeAt, reason });
-      return;
-    }
-
     logMorningActivationTrace(_tag, 'OPENING MODAL', { reason, mealCount, maStatus: _maStatus, firstMealTime: check.firstMealTime });
 
     const currentState = dayData?.morningActivation || {};
@@ -715,22 +711,7 @@
       allowSwipe: false,
       context: { dateKey: todayKey, firstMealTime: check.firstMealTime, reason },
       onClose: () => {
-        const fresh = readDayV2ScopedFirst(todayKey, {}) || {};
-        const mc = Math.max(countMealsWithItems(fresh), mealCount || 0);
-        const existingSnoozeAt = Number(fresh?.morningActivation?.followupSnoozeUntilMealCount);
-        if (!(Number.isFinite(existingSnoozeAt) && existingSnoozeAt >= mc)) {
-          persistMorningActivationPatch(todayKey, {
-            followupSnoozeUntilMealCount: mc
-          }, 'morning-activation-followup-dismiss');
-        }
-        logMorningActivationTrace('[MorningCheckin] morning activation follow-up dismissed (Позже) — repeat after next meal add', {
-          mealCount: mc
-        });
-        try {
-          sessionStorage.setItem(followupSessionGuardKey, String(mc));
-        } catch (_) {
-          // sessionStorage may be unavailable
-        }
+        logMorningActivationTrace('[MorningCheckin] morning activation follow-up dismissed');
         followupOpening = false;
       },
       onComplete: () => {
@@ -740,9 +721,7 @@
           trainingSources: (_freshData?.trainings || []).map(t => t?.source).filter(Boolean),
           todayKey
         });
-        persistMorningActivationPatch(todayKey, {
-          followupSnoozeUntilMealCount: null
-        }, 'morning-activation-followup-complete');
+        persistMorningActivationPatch(todayKey, {}, 'morning-activation-followup-complete');
         try {
           sessionStorage.setItem(followupSessionGuardKey, String(Number.MAX_SAFE_INTEGER));
         } catch (_) {
@@ -781,9 +760,7 @@
     } catch (_) {
       // ignore close fallback errors
     }
-    persistMorningActivationPatch(effectiveDateKey, {
-      followupSnoozeUntilMealCount: null
-    }, 'morning-activation-followup-complete');
+    persistMorningActivationPatch(effectiveDateKey, {}, 'morning-activation-followup-complete');
     try {
       const mealCount = countMealsWithItems(dayData);
       const guardKey = `heys_morning_activation_followup_guard_${currentClientId || 'unknown'}_${effectiveDateKey}`;
@@ -2125,8 +2102,13 @@
       case 'supplements': return Array.isArray(day?.supplementsPlanned);
       case 'morningRest':
         if (isMorningLedgerStepTerminal(state.ledger?.steps?.morningRest)) return true;
-        // Пятый экран обязателен до явного «Готово» (тип холода, в т.ч. none).
-        return !!day?.coldExposure && typeof day.coldExposure === 'object' && !!day.coldExposure.type;
+        {
+          const coldReady = !!day?.coldExposure && typeof day.coldExposure === 'object' && !!day.coldExposure.type;
+          const maStatus = day?.morningActivation?.status;
+          const routineReady = maStatus === 'done' || maStatus === 'planned' || maStatus === 'skipped'
+            || Number(day?.morningActivation?.checkinAnsweredAt) > 0;
+          return coldReady && routineReady;
+        }
       case 'checkinRecorded':
         return !coreCheckinDataMissing(day) && hasStepsGoalConfirmedToday(profile, dateKey);
       case 'morningRoutine':
@@ -3091,18 +3073,6 @@
     const detail = event?.detail || {};
     const dateKey = detail.dateKey || getTodayKey();
     if (dateKey !== getTodayKey()) return;
-    const currentClientId = getCurrentClientId();
-    const dayData = readDayV2ScopedFirst(dateKey, {}) || {};
-    const mealCount = Math.max(
-      countMealsWithItems(dayData),
-      Number(detail.mealCount) || 0
-    );
-    const existingSnoozeAt = Number(dayData?.morningActivation?.followupSnoozeUntilMealCount);
-    if (!(Number.isFinite(existingSnoozeAt) && existingSnoozeAt >= mealCount)) {
-      persistMorningActivationPatch(dateKey, {
-        followupSnoozeUntilMealCount: mealCount
-      }, 'morning-activation-followup-dismiss');
-    }
     closeMorningActivationOverlay();
     try {
       if (typeof HEYS.StepModal?.hide === 'function' && isMainStepModalOpen()) {
@@ -3110,12 +3080,6 @@
       }
     } catch (_) {
       // ignore close fallback errors
-    }
-    try {
-      const guardKey = `heys_morning_activation_followup_guard_${currentClientId || 'unknown'}_${dateKey}`;
-      sessionStorage.setItem(guardKey, String(mealCount));
-    } catch (_) {
-      // sessionStorage may be unavailable
     }
     followupOpening = false;
   });
