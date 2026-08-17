@@ -85,6 +85,36 @@ function parseExchanges(text, { date = null } = {}) {
   return { exchanges, blocksWithoutMark };
 }
 
+/**
+ * Один ход куратора может дать несколько блоков стенограммы (чек-ин + вода с
+ * одной репликой). Схлопываем подряд идущие блоки с одинаковыми heading+kin.
+ */
+function mergeSameTurnExchanges(exchanges) {
+  const merged = [];
+  for (const exchange of exchanges || []) {
+    const prev = merged[merged.length - 1];
+    if (prev && prev.heading === exchange.heading && prev.kin && prev.kin === exchange.kin) {
+      prev.pins.push(exchange.pinMs);
+      prev.marks.push(exchange.mark);
+      prev.mark = exchange.mark;
+      prev.merged_blocks += 1;
+      continue;
+    }
+    merged.push({
+      ...exchange,
+      pins: [exchange.pinMs],
+      marks: [exchange.mark],
+      merged_blocks: 1,
+    });
+  }
+  return merged;
+}
+
+function nearestPinDelta(exchange, callMs) {
+  const pins = exchange.pins || [exchange.pinMs];
+  return Math.min(...pins.map((pin) => Math.abs(callMs - pin)));
+}
+
 function correlate({ exchanges, calls, windowMs = DEFAULT_WINDOW_MS }) {
   const window = Number.isFinite(windowMs) && windowMs > 0 ? windowMs : DEFAULT_WINDOW_MS;
   const timed = (calls || [])
@@ -95,13 +125,13 @@ function correlate({ exchanges, calls, windowMs = DEFAULT_WINDOW_MS }) {
     const attached = [];
     for (const row of timed) {
       if (used.has(row)) continue;
-      const delta = Math.abs(row.ms - exchange.pinMs);
+      const delta = nearestPinDelta(exchange, row.ms);
       if (delta > window) continue;
       let nearest = exchange;
       let nearestDelta = delta;
       for (const other of exchanges) {
         if (other === exchange) continue;
-        const otherDelta = Math.abs(row.ms - other.pinMs);
+        const otherDelta = nearestPinDelta(other, row.ms);
         if (otherDelta < nearestDelta) {
           nearest = other;
           nearestDelta = otherDelta;
@@ -129,7 +159,10 @@ function correlate({ exchanges, calls, windowMs = DEFAULT_WINDOW_MS }) {
 function knownSessionIds(exchanges) {
   const ids = new Set();
   for (const exchange of exchanges || []) {
-    if (exchange && exchange.mark && exchange.mark.sessionId) ids.add(exchange.mark.sessionId);
+    const marks = exchange.marks || (exchange.mark ? [exchange.mark] : []);
+    for (const mark of marks) {
+      if (mark && mark.sessionId) ids.add(mark.sessionId);
+    }
   }
   return ids;
 }
@@ -227,6 +260,8 @@ module.exports = {
   parseMark,
   headingToUtcMs,
   parseExchanges,
+  mergeSameTurnExchanges,
+  nearestPinDelta,
   correlate,
   parseLogText,
   knownSessionIds,

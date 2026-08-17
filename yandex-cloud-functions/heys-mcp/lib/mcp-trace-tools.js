@@ -124,7 +124,7 @@ function createMcpTraceTools({
       }
 
       const { exchanges, blocksWithoutMark } = correlate.parseExchanges(text, { date });
-      let selected = exchanges;
+      let selected = correlate.mergeSameTurnExchanges(exchanges);
       if (headingFilter) {
         selected = exchanges.filter((row) => row.heading === headingFilter);
         if (!selected.length) {
@@ -177,7 +177,7 @@ function createMcpTraceTools({
         calls,
         windowMs,
       });
-      const sessionIds = correlate.knownSessionIds(exchanges);
+      const sessionIds = correlate.knownSessionIds(selected);
       const enriched = correlate.enrichRowsWithAttribution(rows, sessionIds);
 
       const lines = enriched.map((row) => formatRowText(row));

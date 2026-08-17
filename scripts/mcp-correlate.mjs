@@ -42,8 +42,9 @@ const { exchanges, blocksWithoutMark } = correlate.parseExchanges(
   fs.readFileSync(transcriptPath, 'utf8'),
   { date },
 );
+const mergedExchanges = correlate.mergeSameTurnExchanges(exchanges);
 const calls = correlate.parseLogText(fs.readFileSync(logsPath, 'utf8'));
-const { rows, unattached } = correlate.correlate({ exchanges, calls, windowMs });
+const { rows, unattached } = correlate.correlate({ exchanges: mergedExchanges, calls, windowMs });
 
 for (const row of rows) {
   const tools = row.tools.length ? row.tools.join(' → ') : '(нет вызовов в окне)';

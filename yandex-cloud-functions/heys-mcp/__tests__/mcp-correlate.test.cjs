@@ -144,3 +144,51 @@ test('confirmed vs probable и client role отфильтрован', () => {
   assert.deepEqual(row.probable_tools, ['heys_get_day']);
   assert.equal(calls.length, 2);
 });
+
+test('два блока одного хода (один heading и kin) схлопываются', () => {
+  const text = `
+## 22:03
+**Кин:** Добавь мне воды 200 мл
+**Claude:** [Автозапись] чек-ин
+[mcp session=5bfb1cbe3be8 seq=1 ts=2026-08-17T19:03:16.000Z]
+
+## 22:03
+**Кин:** Добавь мне воды 200 мл
+**Claude:** [Автозапись] вода
+[mcp session=6c7a0025159a seq=2 ts=2026-08-17T19:03:20.589Z]
+`;
+  const { exchanges } = correlate.parseExchanges(text, { date: '2026-08-17' });
+  assert.equal(exchanges.length, 2);
+  const merged = correlate.mergeSameTurnExchanges(exchanges);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].merged_blocks, 2);
+  const { rows } = correlate.correlate({
+    exchanges: merged,
+    calls: [
+      { ts: '2026-08-17T19:03:07.728Z', tool: 'heys_get_period', duration_ms: 264 },
+      { ts: '2026-08-17T19:03:16.295Z', tool: 'heys_checkin', duration_ms: 851 },
+      { ts: '2026-08-17T19:03:20.589Z', tool: 'heys_add_water', duration_ms: 881 },
+    ],
+  });
+  assert.equal(rows.length, 1);
+  assert.deepEqual(rows[0].tools, ['heys_get_period', 'heys_checkin', 'heys_add_water']);
+  assert.equal(rows[0].total_ms, 1996);
+});
+
+test('два разных kin под одним heading не схлопываются', () => {
+  const text = `
+## 21:33
+**Кин:** Вода
+**Claude:** ок
+[mcp session=aaaaaaaaaaaa seq=1 ts=2026-08-17T18:33:00.000Z]
+
+## 21:33
+**Кин:** Приём
+**Claude:** ок
+[mcp session=bbbbbbbbbbbb seq=1 ts=2026-08-17T18:33:30.000Z]
+`;
+  const merged = correlate.mergeSameTurnExchanges(
+    correlate.parseExchanges(text, { date: '2026-08-17' }).exchanges,
+  );
+  assert.equal(merged.length, 2);
+});
