@@ -679,7 +679,7 @@ class SASTScanner {
     const file = String(v.file || v.location?.file || '?')
       .split(path.sep)
       .join('/');
-    const evidence = (v.evidence || '').trim().slice(0, 200);
+    const evidence = (v.evidence || '').trim().replace(/\r\n/g, '\n').slice(0, 200);
     const hash = crypto.createHash('md5').update(evidence).digest('hex').slice(0, 12);
     const rule = v.ruleKey || v.rule || '?';
     return `${rule}|${file}|${hash}`;

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-17T06:24:24.953Z",
+  "generatedAt": "2026-08-17T06:43:32.669Z",
   "description": "SAST baseline (SEC-014 ratchet) — known critical+high findings, manually triaged as false-positives или tracked в отдельных SEC-NNN. SAST fails только на новых находках вне этого списка. Регенерация: `node scripts/security/sast-scan.js --update-baseline`.",
   "count": 25,
   "fingerprints": [
@@ -23,7 +23,7 @@
     "xss|apps/web/heys_day_meal_card.js|eb91b2f84fad",
     "xss|apps/web/heys_login_screen_v1.js|eb91b2f84fad",
     "xss|apps/web/heys_messenger_v1.js|eb91b2f84fad",
-    "xss|apps/web/heys_paywall_v1.js|f75c9ad7efa2",
+    "xss|apps/web/heys_paywall_v1.js|872dd8f8fb49",
     "xss|docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/history/support.js|0ce012c3cb8f",
     "xss|docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/support.js|0ce012c3cb8f",
     "xss|docs/ui/handoff-v4/support.js|0ce012c3cb8f",
