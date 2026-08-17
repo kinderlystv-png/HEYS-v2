@@ -23,6 +23,10 @@ const DEFAULT_WINDOW_MS = 5 * 60 * 1000;
 const TELEMETRY_RETENTION_DAYS = 180;
 /** @deprecated используйте TELEMETRY_RETENTION_DAYS */
 const LOG_RETENTION_DAYS = TELEMETRY_RETENTION_DAYS;
+/** Пауза между HEYS-вызовами длиннее — предупреждение в trace. */
+const FLOW_GAP_WARN_MS = 10 * 1000;
+/** Повтор того же read-tool в одном обмене — кандидат на оптимизацию промпта. */
+const FLOW_DUPLICATE_TOOLS = ['heys_get_day', 'heys_search_products', 'heys_list_clients'];
 
 function parseMark(line) {
   const match = MARK_RE.exec(String(line || ''));
@@ -149,6 +153,7 @@ function correlate({ exchanges, calls, windowMs = DEFAULT_WINDOW_MS }) {
       heading: exchange.heading,
       kin: exchange.kin,
       mark: exchange.mark,
+      pinMs: exchange.pinMs,
       calls: attached,
       tools: attached.map((call) => call.tool).filter(Boolean),
       total_ms: totalMs,
@@ -194,9 +199,136 @@ function sumDurationMs(calls) {
   return (calls || []).reduce((sum, call) => sum + (Number(call.duration_ms) || 0), 0);
 }
 
-function enrichRowsWithAttribution(rows, sessionIds) {
+function sortCallsByTime(calls) {
+  return [...(calls || [])]
+    .map((call) => ({ call, ms: callTimeMs(call) }))
+    .filter((row) => row.ms != null)
+    .sort((a, b) => a.ms - b.ms || (Number(a.call.seq) || 0) - (Number(b.call.seq) || 0))
+    .map((row) => row.call);
+}
+
+function callEndMs(call) {
+  const start = callTimeMs(call);
+  if (start == null) return null;
+  return start + (Number(call.duration_ms) || 0);
+}
+
+/**
+ * Разложение обмена: wall (стена между первым и последним вызовом), gaps (паузы
+ * агента между вызовами), дубли read-tools. Cursor «musing» сюда не входит —
+ * только то, что видно по ts/duration_ms в mcp_call_events.
+ */
+function analyzeFlow(calls) {
+  const sorted = sortCallsByTime(calls);
+  if (!sorted.length) {
+    return {
+      wall_span_ms: 0,
+      gaps_ms: 0,
+      steps: [],
+      max_gap_ms: 0,
+      max_gap_after_tool: null,
+      duplicates: [],
+      warnings: [],
+    };
+  }
+
+  const startMs = callTimeMs(sorted[0]);
+  const endMs = Math.max(...sorted.map(callEndMs).filter((ms) => ms != null));
+  const wall_span_ms = Math.max(0, endMs - startMs);
+
+  const steps = [];
+  let gaps_ms = 0;
+  let max_gap_ms = 0;
+  let max_gap_after_tool = null;
+
+  for (let i = 0; i < sorted.length; i += 1) {
+    const cur = sorted[i];
+    const duration_ms = Number(cur.duration_ms) || 0;
+    let gap_after_ms = 0;
+    if (i < sorted.length - 1) {
+      const endCur = callEndMs(cur);
+      const startNext = callTimeMs(sorted[i + 1]);
+      gap_after_ms = Math.max(0, startNext - endCur);
+      gaps_ms += gap_after_ms;
+      if (gap_after_ms > max_gap_ms) {
+        max_gap_ms = gap_after_ms;
+        max_gap_after_tool = cur.tool || null;
+      }
+    }
+    steps.push({
+      tool: cur.tool || null,
+      duration_ms,
+      gap_after_ms,
+    });
+  }
+
+  const counts = {};
+  for (const call of sorted) {
+    if (!call.tool) continue;
+    counts[call.tool] = (counts[call.tool] || 0) + 1;
+  }
+  const duplicates = FLOW_DUPLICATE_TOOLS
+    .filter((tool) => (counts[tool] || 0) > 1)
+    .map((tool) => ({ tool, count: counts[tool] }));
+
+  const warnings = [];
+  for (const dup of duplicates) {
+    warnings.push(`duplicate:${dup.tool}`);
+  }
+  if (max_gap_ms >= FLOW_GAP_WARN_MS && max_gap_after_tool) {
+    warnings.push(`long_gap_after:${max_gap_after_tool}`);
+  }
+
+  return {
+    wall_span_ms,
+    gaps_ms,
+    steps,
+    max_gap_ms,
+    max_gap_after_tool,
+    duplicates,
+    warnings,
+  };
+}
+
+function parseHeadingMs(date, heading) {
+  if (!date || !heading) return null;
+  const match = /^(\d{1,2}):(\d{2})$/.exec(String(heading).trim());
+  if (!match) return null;
+  return headingToUtcMs(date, Number(match[1]), Number(match[2]));
+}
+
+/**
+ * Якоря обмена: pre — от ## ЧЧ:ММ (начало минуты блока) до первого вызова;
+ * post — от конца последнего вызова до ts метки write (begin checkpoint).
+ * Если вызовы начались раньше заголовка минуты, pre=0.
+ */
+function analyzeFlowAnchors(calls, { date, heading, pinMs } = {}) {
+  const flow = analyzeFlow(calls);
+  const sorted = sortCallsByTime(calls);
+  if (!sorted.length) {
+    return { ...flow, pre_chain_ms: 0, post_chain_ms: 0 };
+  }
+  const firstStart = callTimeMs(sorted[0]);
+  const lastEnd = callEndMs(sorted[sorted.length - 1]);
+  const headingMs = parseHeadingMs(date, heading);
+  const pre_chain_ms = headingMs != null && firstStart != null
+    ? Math.max(0, firstStart - headingMs)
+    : 0;
+  const post_chain_ms = pinMs != null && lastEnd != null
+    ? Math.max(0, pinMs - lastEnd)
+    : 0;
+  return { ...flow, pre_chain_ms, post_chain_ms };
+}
+
+function enrichRowsWithAttribution(rows, sessionIds, { date } = {}) {
   return (rows || []).map((row) => {
     const { confirmed, probable } = splitCallsByConfidence(row.calls, sessionIds);
+    const flow_all = analyzeFlowAnchors(row.calls, {
+      date,
+      heading: row.heading,
+      pinMs: row.pinMs,
+    });
+    const flow_confirmed = analyzeFlow(confirmed);
     return {
       ...row,
       confirmed_calls: confirmed,
@@ -205,6 +337,17 @@ function enrichRowsWithAttribution(rows, sessionIds) {
       probable_tools: probable.map((c) => c.tool).filter(Boolean),
       confirmed_ms: sumDurationMs(confirmed),
       probable_ms: sumDurationMs(probable),
+      flow_all,
+      flow_confirmed,
+      wall_span_ms: flow_all.wall_span_ms,
+      gaps_ms: flow_all.gaps_ms,
+      pre_chain_ms: flow_all.pre_chain_ms,
+      post_chain_ms: flow_all.post_chain_ms,
+      max_gap_ms: flow_all.max_gap_ms,
+      max_gap_after_tool: flow_all.max_gap_after_tool,
+      flow_steps: flow_all.steps,
+      flow_warnings: flow_all.warnings,
+      duplicates: flow_all.duplicates,
     };
   });
 }
@@ -277,6 +420,13 @@ module.exports = {
   filterCuratorCalls,
   splitCallsByConfidence,
   sumDurationMs,
+  sortCallsByTime,
+  callEndMs,
+  analyzeFlow,
+  analyzeFlowAnchors,
+  parseHeadingMs,
+  FLOW_GAP_WARN_MS,
+  FLOW_DUPLICATE_TOOLS,
   enrichRowsWithAttribution,
   isOlderThanLogRetention,
   isOlderThanTelemetryRetention,

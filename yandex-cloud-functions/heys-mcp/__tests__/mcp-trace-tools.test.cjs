@@ -61,7 +61,7 @@ test('heading фильтрует один обмен и отделяет confirm
   assert.deepEqual(row.probable_tools, ['heys_get_day', 'tasks_read']);
   assert.equal(row.confirmed_ms, 1407);
   assert.equal(row.probable_ms, 389);
-  assert.match(result.text, /подтверждённые 1 вызовов, 1407 мс/);
+  assert.match(result.text, /подтверждённые 1 вызовов, 1407 ms/);
 });
 
 test('exclude self: tasks_mcp_trace и текущий session/seq не попадают в цепочку', async () => {
@@ -196,4 +196,38 @@ test('heading с коллизией — последний блок в файл�
   assert.equal(result.structured.rows.length, 1);
   assert.match(result.text, /свежий smoke/);
   assert.deepEqual(result.structured.rows[0].confirmed_tools, ['tasks_checkpoint']);
+});
+
+test('flow: wall, gaps, дубли и длинная пауза — как у «5 чупа-чупсов»', async () => {
+  const chupaTranscript = `# 2026-08-18
+
+## 01:00
+
+**Кин:** запиши 5 чупа-чупсов
+**Claude:** ок
+[mcp session=87d3903465dc seq=1 ts=2026-08-17T22:00:49.958Z]
+`;
+  const t0 = Date.parse('2026-08-17T21:59:41.357Z');
+  const tools = makeTools({
+    transcriptText: chupaTranscript,
+    logs: [
+      { t: 'mcp_call', ts: new Date(t0).toISOString(), tool: 'heys_get_day', session_id: 'eb4abc699703', seq: 1, duration_ms: 289, role: 'curator' },
+      { t: 'mcp_call', ts: new Date(t0 + 5200).toISOString(), tool: 'heys_get_day', session_id: 'eb4abc699703', seq: 2, duration_ms: 239, role: 'curator' },
+      { t: 'mcp_call', ts: new Date(t0 + 19500).toISOString(), tool: 'heys_search_products', session_id: 'eb4abc699703', seq: 3, duration_ms: 439, role: 'curator' },
+      { t: 'mcp_call', ts: new Date(t0 + 23200).toISOString(), tool: 'heys_search_products', session_id: 'eb4abc699703', seq: 4, duration_ms: 210, role: 'curator' },
+      { t: 'mcp_call', ts: new Date(t0 + 60600).toISOString(), tool: 'heys_create_product', session_id: 'eb4abc699703', seq: 5, duration_ms: 1354, role: 'curator' },
+      { t: 'mcp_call', ts: new Date(t0 + 68600).toISOString(), tool: 'heys_log_meal', session_id: '87d3903465dc', seq: 1, duration_ms: 1990, role: 'curator' },
+    ],
+  });
+  const result = await tools.tasks_mcp_trace({ date: '2026-08-18', heading: '01:00' });
+  const row = result.structured.rows[0];
+  assert.equal(row.confirmed_ms, 1990);
+  assert.ok(row.wall_span_ms >= 60_000, `wall ${row.wall_span_ms}`);
+  assert.ok(row.gaps_ms >= 50_000, `gaps ${row.gaps_ms}`);
+  assert.ok(row.gaps_ms < row.wall_span_ms);
+  assert.deepEqual(row.duplicates.map((d) => d.tool), ['heys_get_day', 'heys_search_products']);
+  assert.ok(row.flow_warnings.some((w) => w.startsWith('duplicate:')));
+  assert.ok(row.flow_warnings.some((w) => w === 'long_gap_after:heys_search_products'));
+  assert.match(result.text, /wall .* gaps/);
+  assert.match(result.text, /дубли: heys_get_day×2, heys_search_products×2/);
 });

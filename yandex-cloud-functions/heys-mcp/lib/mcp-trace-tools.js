@@ -15,7 +15,7 @@ const TELEMETRY_READ_TIMEOUT_MS = 20000;
 const MCP_TRACE_SCHEMA = {
   name: TRACE_TOOL,
   description:
-    'Связать блок стенограммы (после tasks_checkpoint) с цепочкой вызовов MCP по таймингам из Postgres. Зови, когда нужно понять «сколько кругов» или «почему долго» по конкретному обмену — не на каждый tasks_read. Без heading — все размеченные обмены за день (медленнее). Подтверждённые вызовы — session_id совпал с меткой стенограммы; вероятные — только попали в окно ±5 мин.',
+    'Связать блок стенограммы (после tasks_checkpoint) с цепочкой вызовов MCP по таймингам из Postgres. Зови, когда нужно понять «сколько кругов» или «почему долго» по конкретному обмену — не на каждый tasks_read. Без heading — все размеченные обмены за день (медленнее). Подтверждённые вызовы — session_id совпал с меткой стенограммы; вероятные — только попали в окно ±5 мин. В ответе: confirmed_ms (сумма HEYS), wall_span_ms (стена цепочки), gaps_ms (паузы агента между вызовами), дубли get_day/search и длинные паузы.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -47,13 +47,49 @@ function formatToolChain(tools) {
   return tools && tools.length ? tools.join(' → ') : '(нет вызовов в окне)';
 }
 
+function formatDurationBrief(ms) {
+  const value = Number(ms) || 0;
+  if (value >= 1000) return `${(value / 1000).toFixed(value >= 10_000 ? 0 : 1).replace(/\.0$/, '')} s`;
+  return `${value} ms`;
+}
+
+function formatFlowWarnings(row) {
+  if (!row.flow_warnings || !row.flow_warnings.length) return '';
+  const parts = [];
+  if (row.duplicates && row.duplicates.length) {
+    parts.push(`дубли: ${row.duplicates.map((d) => `${d.tool}×${d.count}`).join(', ')}`);
+  }
+  if (row.max_gap_ms >= correlate.FLOW_GAP_WARN_MS && row.max_gap_after_tool) {
+    parts.push(`max gap ${formatDurationBrief(row.max_gap_ms)} после ${row.max_gap_after_tool}`);
+  }
+  return parts.length ? `\n  ⚠ ${parts.join('; ')}` : '';
+}
+
+function formatFlowSteps(row) {
+  if (!row.flow_steps || row.flow_steps.length < 2) return '';
+  const parts = row.flow_steps.map((step, index) => {
+    const base = `${step.tool} ${step.duration_ms} ms`;
+    if (index >= row.flow_steps.length - 1) return base;
+    return `${base} + gap ${formatDurationBrief(step.gap_after_ms)}`;
+  });
+  return `\n  шаги: ${parts.join(' → ')}`;
+}
+
 function formatRowText(row) {
   const kin = row.kin ? ` «${row.kin.slice(0, 80)}${row.kin.length > 80 ? '…' : ''}»` : '';
   const confirmed = formatToolChain(row.confirmed_tools);
   const probable = row.probable_tools && row.probable_tools.length
-    ? `\n  вероятные (${row.probable_ms} мс): ${formatToolChain(row.probable_tools)}`
+    ? `\n  вероятные (${row.probable_ms} ms): ${formatToolChain(row.probable_tools)}`
     : '';
-  return `${row.heading || '??:??'}${kin}: подтверждённые ${row.confirmed_calls.length} вызовов, ${row.confirmed_ms} мс — ${confirmed}${probable}`;
+  const flowParts = [];
+  if (row.wall_span_ms > 0) {
+    flowParts.push(`wall ${formatDurationBrief(row.wall_span_ms)}`);
+    flowParts.push(`gaps ${formatDurationBrief(row.gaps_ms)}`);
+  }
+  if (row.pre_chain_ms > 0) flowParts.push(`pre ${formatDurationBrief(row.pre_chain_ms)}`);
+  if (row.post_chain_ms > 0) flowParts.push(`post ${formatDurationBrief(row.post_chain_ms)}`);
+  const flow = flowParts.length ? `; ${flowParts.join(', ')}` : '';
+  return `${row.heading || '??:??'}${kin}: подтверждённые ${row.confirmed_calls.length} вызовов, ${row.confirmed_ms} ms${flow} — ${confirmed}${probable}${formatFlowSteps(row)}${formatFlowWarnings(row)}`;
 }
 
 function excludeSelfCalls(calls, { sessionId, seq } = {}) {
@@ -187,7 +223,7 @@ function createMcpTraceTools({
         windowMs,
       });
       const sessionIds = correlate.knownSessionIds(selected);
-      const enriched = correlate.enrichRowsWithAttribution(rows, sessionIds);
+      const enriched = correlate.enrichRowsWithAttribution(rows, sessionIds, { date });
 
       const lines = enriched.map((row) => formatRowText(row));
       const tail = [];
@@ -206,6 +242,16 @@ function createMcpTraceTools({
             probable_tools: row.probable_tools,
             confirmed_ms: row.confirmed_ms,
             probable_ms: row.probable_ms,
+            wall_span_ms: row.wall_span_ms,
+            gaps_ms: row.gaps_ms,
+            pre_chain_ms: row.pre_chain_ms,
+            post_chain_ms: row.post_chain_ms,
+            max_gap_ms: row.max_gap_ms,
+            max_gap_after_tool: row.max_gap_after_tool,
+            flow_steps: row.flow_steps,
+            flow_warnings: row.flow_warnings,
+            duplicates: row.duplicates,
+            flow_confirmed: row.flow_confirmed,
           })),
           unattached_count: unattached.length,
           blocks_without_mark: blocksWithoutMark,

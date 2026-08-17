@@ -153,6 +153,12 @@ ACTIVE, а распаковаться не смогла. Отсюда
    Подтверждённые вызовы — `session_id` совпал с меткой; вероятные — только окно
    ±5 мин. Использует `mergeSameTurnExchanges` (см. gate фазы 2). Живой gate
    2026-08-17: обмен 22:04 → `heys_get_day` → `heys_add_water` → `tasks_read`.
+   **Flow-разложение (2026-08-18):** `confirmed_ms` (сумма HEYS), `wall_span_ms`
+   (стена цепочки по ts), `gaps_ms` (паузы агента между вызовами), `flow_steps`,
+   предупреждения о дублях `get_day`/`search`/`list_clients` и паузах ≥10 с.
+   `pre_chain_ms` — от ## ЧЧ:ММ до первого вызова; `post_chain_ms` — от конца
+   цепочки до ts метки write. Cursor «musing» / search tools сюда не входят —
+   только timestamps из Postgres.
 
 Дашборд поверх `mcp-stats` и correlate: доля лишних пар вызовов, распределение
 `duration_ms` по инструментам, цепочки с аномальным числом `seq`.
@@ -217,12 +223,11 @@ node scripts/mcp-baseline-p50.mjs ops/mcp-call-baseline-pre-deploy.json
    **taskDay**, сутки с 03:00 МСК — как у checkpoint) → ≥1 **confirmed**. Старые
    обмены (до deploy) в Postgres не попадут — это принятый исторический разрыв,
    не баг.
-3. **p50 vs p50** после deploy: по каждому `tool` с ≥20–30 вызовами за сутки —
-   post-deploy p50 `duration_ms` vs pre-deploy baseline из Logging; рост ≤10%.
-   Одна точка smoke (особенно тяжёлый `tasks_checkpoint` с большим блоком) **не
-   считается**. Надёжнее на будущее — отдельная строка лога
-   `[mcp-telemetry-db] persist_ms=…` для накладных persist, без вычитания медиан
-   друг из друга.
+3. **p50 vs p50** после deploy: по каждому `tool` на **естественном** трафике за
+   ~24h (не искусственная нагрузка) — post-deploy p50 `duration_ms` vs
+   pre-deploy baseline из Logging; рост ≤10%. Замер — **2026-08-19 вечер**
+   (чеклист в `todo.md`, блок MCP-телеметрия). Одна–две точки smoke **не
+   считаются**. `persist_ms` в логах — только если медианы разойдутся.
 
 Gate 22:04 (unit/offline correlate на mock-строках) — **не** prod smoke.
 

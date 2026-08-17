@@ -192,3 +192,48 @@ test('два разных kin под одним heading не схлопываю�
   );
   assert.equal(merged.length, 2);
 });
+
+test('analyzeFlow: wall, gaps, дубли read-tools', () => {
+  const t0 = Date.parse('2026-08-17T21:59:41.357Z');
+  const calls = [
+    { ts: new Date(t0).toISOString(), tool: 'heys_get_day', duration_ms: 289 },
+    { ts: new Date(t0 + 5000).toISOString(), tool: 'heys_get_day', duration_ms: 239 },
+    { ts: new Date(t0 + 20000).toISOString(), tool: 'heys_search_products', duration_ms: 400 },
+    { ts: new Date(t0 + 55000).toISOString(), tool: 'heys_log_meal', duration_ms: 1500 },
+  ];
+  const flow = correlate.analyzeFlow(calls);
+  assert.equal(flow.wall_span_ms, 55_000 + 1500);
+  assert.ok(flow.gaps_ms > 30_000);
+  assert.equal(flow.max_gap_after_tool, 'heys_search_products');
+  assert.deepEqual(flow.duplicates.map((d) => d.tool), ['heys_get_day']);
+  assert.ok(flow.warnings.includes('duplicate:heys_get_day'));
+  assert.ok(flow.warnings.includes('long_gap_after:heys_search_products'));
+  assert.equal(flow.steps.length, 4);
+  assert.equal(flow.steps[0].gap_after_ms, 5000 - 289);
+});
+
+test('analyzeFlowAnchors: pre от ## ЧЧ:ММ, post до метки write', () => {
+  const date = '2026-08-17';
+  const headingMs = correlate.headingToUtcMs(date, 22, 4);
+  const firstStart = headingMs + 18_000;
+  const calls = [
+    { ts: new Date(firstStart).toISOString(), tool: 'heys_get_day', duration_ms: 300 },
+    { ts: new Date(firstStart + 4000).toISOString(), tool: 'heys_log_meal', duration_ms: 2000 },
+  ];
+  const lastEnd = firstStart + 4000 + 2000;
+  const pinMs = lastEnd + 3000;
+  const flow = correlate.analyzeFlowAnchors(calls, { date, heading: '22:04', pinMs });
+  assert.equal(flow.pre_chain_ms, 18_000);
+  assert.equal(flow.post_chain_ms, 3000);
+});
+
+test('pre_chain=0 если вызовы начались до минуты заголовка', () => {
+  const date = '2026-08-17';
+  const headingMs = correlate.headingToUtcMs(date, 1, 0);
+  const firstStart = headingMs - 19_000;
+  const flow = correlate.analyzeFlowAnchors(
+    [{ ts: new Date(firstStart).toISOString(), tool: 'heys_get_day', duration_ms: 100 }],
+    { date, heading: '01:00', pinMs: firstStart + 5000 },
+  );
+  assert.equal(flow.pre_chain_ms, 0);
+});
