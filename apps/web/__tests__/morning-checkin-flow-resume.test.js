@@ -120,6 +120,7 @@ function completedDay() {
     measurements: { waist: 84 },
     coldExposure: { type: 'none' },
     supplementsPlanned: [],
+    morningActivation: { status: 'skipped' },
   };
 }
 
@@ -135,6 +136,8 @@ function fullIncidentLedger(flowStatus = 'saved_local') {
       'sleepTime',
       'sleepQuality',
       'morning_mood',
+      'stepsGoal',
+      'morningRest',
       'measurements',
       'cold_exposure',
       'supplements',
@@ -146,6 +149,8 @@ function fullIncidentLedger(flowStatus = 'saved_local') {
       sleepTime: { status: 'synced' },
       sleepQuality: { status: 'synced' },
       morning_mood: { status: 'synced' },
+      stepsGoal: { status: 'synced' },
+      morningRest: { status: 'synced' },
       measurements: { status: 'skipped' },
       cold_exposure: { status: 'saved_local', cloudPending: true },
       supplements: { status: 'synced' },
@@ -621,7 +626,7 @@ describe('morning check-in journal resume', () => {
 
     expect(plan.steps).toEqual([]);
     expect(plan.flowId).toBe('flow-original');
-    expect(written.plannedStepIds).toHaveLength(9);
+    expect(written.plannedStepIds).toHaveLength(11);
     expect(written.steps.measurements.status).toBe('skipped');
     expect(written.steps.cold_exposure.status).toBe('saved_local');
     expect(written.steps.__flow__.status).toBe('saved_local');
