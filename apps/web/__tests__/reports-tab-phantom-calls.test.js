@@ -70,6 +70,18 @@ function isoDaysAgo(offset) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+// Подпись кэша хеширует только дни текущей ISO-недели (пн–вс).
+// isoDaysAgo(1) в понедельник = воскресенье прошлой недели → подпись не меняется.
+function isoDateInCurrentIsoWeek() {
+  const today = new Date();
+  const day = today.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${monday.getFullYear()}-${pad(monday.getMonth() + 1)}-${pad(monday.getDate())}`;
+}
+
 function makeLocalStorage(seed = {}) {
   const map = new Map(Object.entries(seed));
   return {
@@ -181,7 +193,7 @@ describe('сервис месячных отчётов: подпись кэша 
   });
 
   it('добавление еды в client-scoped ключ сбрасывает кэш', () => {
-    const dateStr = isoDaysAgo(1);
+    const dateStr = isoDateInCurrentIsoWeek();
     const { service, captured, storage } = loadService({
       products: [{ id: 'p1', name: 'Гречка' }],
       days: { [dateStr]: { meals: [{ items: [{ id: 'p1', grams: 100 }] }] } },
@@ -207,7 +219,7 @@ describe('сервис месячных отчётов: подпись кэша 
   });
 
   it('legacy-клиент без скоупа ключей: подпись читает unscoped ключ', () => {
-    const dateStr = isoDaysAgo(1);
+    const dateStr = isoDateInCurrentIsoWeek();
     const { service, captured, storage } = loadService({ products: [] });
 
     // Клиент без id — ключи не скоупятся.
