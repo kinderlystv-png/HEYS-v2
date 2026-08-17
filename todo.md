@@ -31,9 +31,9 @@
 
 Фаза 2 закрыта: `mcp_call`, метка в стенограмме, офлайн
 `node scripts/mcp-correlate.mjs` (живой gate 22:03–22:04 на smoke-логах). Фаза 3
-шаг 1: `tasks_mcp_trace` в heys-mcp — correlate по запросу из чата. Деплой
-heys-mcp + smoke `tasks_mcp_trace({ date: "2026-08-17", heading: "22:04" })`.
-План —
+шаг 1 закрыт: `tasks_mcp_trace` в heys-mcp, деплой `ca4f67cf`+hotfix heading
+(версия `d4elo4gm40pogrvtnib9` → следующая после hotfix), smoke unit 18/18 +
+живой gate correlate. Дашборд метрик — следующий кусок roadmap фазы 3. План —
 [yandex-cloud-functions/heys-mcp/MCP_TELEMETRY_ROADMAP.md](yandex-cloud-functions/heys-mcp/MCP_TELEMETRY_ROADMAP.md).
 
 ### Вход по PIN меняется по существу — решение владельца 2026-08-11
