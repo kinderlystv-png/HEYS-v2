@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-06T14:18:17.728Z",
+  "timestamp": "2026-08-17T06:26:46.363Z",
   "scanType": "dependency-security",
   "projectInfo": {
     "name": "@heys/monorepo",
@@ -85,7 +85,7 @@
     }
   },
   "packages": {
-    "total": 53,
+    "total": 54,
     "direct": 16,
     "dev": 55,
     "production": 16
@@ -109,10 +109,10 @@
       "found": [
         {
           "version": "6.30.4",
-          "paths": ["apps/web > react-router-dom@6.30.4 > react-router@6.30.4"]
+          "paths": ["apps\\web > react-router-dom@6.30.4 > react-router@6.30.4"]
         }
       ],
-      "timestamp": "2026-08-06T14:18:20.949Z"
+      "timestamp": "2026-08-17T06:26:55.135Z"
     },
     {
       "id": 1124270,
@@ -132,10 +132,10 @@
       "found": [
         {
           "version": "6.30.4",
-          "paths": ["apps/web > react-router-dom@6.30.4"]
+          "paths": ["apps\\web > react-router-dom@6.30.4"]
         }
       ],
-      "timestamp": "2026-08-06T14:18:20.949Z"
+      "timestamp": "2026-08-17T06:26:55.135Z"
     },
     {
       "id": 1124272,
@@ -155,10 +155,10 @@
       "found": [
         {
           "version": "6.30.4",
-          "paths": ["apps/web > react-router-dom@6.30.4 > react-router@6.30.4"]
+          "paths": ["apps\\web > react-router-dom@6.30.4 > react-router@6.30.4"]
         }
       ],
-      "timestamp": "2026-08-06T14:18:20.949Z"
+      "timestamp": "2026-08-17T06:26:55.135Z"
     }
   ],
   "summary": {
