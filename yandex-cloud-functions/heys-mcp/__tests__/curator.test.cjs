@@ -341,6 +341,71 @@ test('автозапись стенограммы не читает файл д�
   assert.equal(fileReads.filter((r) => r.via === 'single').length, 0, 'файл целиком перед записью больше не читается');
 });
 
+/**
+ * Трассировка обращений с началом и концом каждого. Считать только их число
+ * мало: правка, ради которой это писалось, число не меняет — она меняет то,
+ * ждут ли они друг друга.
+ */
+function traceCalls(api) {
+  const events = [];
+  const mark = (phase, key) => events.push(`${phase}:${key}`);
+  const wrap = (name, keyOf) => {
+    const original = api[name];
+    api[name] = async (...args) => {
+      const key = keyOf(args);
+      mark('start', key);
+      try {
+        return await original(...args);
+      } finally {
+        mark('end', key);
+      }
+    };
+  };
+  wrap('getKVByCurator', (a) => a[2]);
+  wrap('getKVManyByCurator', (a) => a[2].join('+'));
+  wrap('issueWriteContext', () => 'write-context');
+  events.overlaps = (a, b) => {
+    const startA = events.indexOf(`start:${a}`);
+    const endB = events.indexOf(`end:${b}`);
+    return startA >= 0 && endB >= 0 && startA < endB;
+  };
+  return events;
+}
+
+test('запись приёма читает день параллельно каталогу, а не после него', async () => {
+  const api = fakeCuratorApi();
+  const events = traceCalls(api);
+  const { tools } = build(api);
+
+  await tools.heys_log_meal({ client: 'Антон', items: [{ query: 'кофе', grams: 200 }] });
+
+  assert.ok(
+    events.overlaps('heys_dayv2_2026-08-01', 'heys_products_overlay_v2'),
+    `день должен читаться, не дожидаясь каталога: ${events.join(' | ')}`,
+  );
+  assert.ok(
+    events.overlaps('write-context', 'heys_dayv2_2026-08-01'),
+    `контекст записи должен греться параллельно чтениям: ${events.join(' | ')}`,
+  );
+});
+
+test('создание продукта читает tombstones параллельно каталогу', async () => {
+  const api = fakeCuratorApi();
+  const events = traceCalls(api);
+  const { tools } = build(api);
+
+  await tools.heys_create_product({
+    client: 'Антон', name: 'Тестовый батончик',
+    protein100: 5, simple100: 20, complex100: 10, badFat100: 3, goodFat100: 2,
+    trans100: 0, fiber100: 2, gi: 55, harm: 2,
+  });
+
+  assert.ok(
+    events.overlaps('heys_deleted_ids', 'heys_products_overlay_v2'),
+    `tombstones не должны ждать каталог: ${events.join(' | ')}`,
+  );
+});
+
 test('запись в дневник не начинается без дословной реплики для стенограммы', async () => {
   const tasksClientId = 'cid-tasks';
   const api = fakeCuratorApi({ tasksClientId });
@@ -351,6 +416,33 @@ test('запись в дневник не начинается без досло
     (error) => error.code === 'transcript_required',
   );
   assert.equal(api.writes.length, 0, 'без стенограммы дневник не меняется');
+});
+
+test('copy_meal с transcript записывает приём «как вчера»', async () => {
+  const tasksClientId = 'cid-tasks';
+  const api = fakeCuratorApi({ tasksClientId });
+  api.kv['cid-anton']['heys_dayv2_2026-07-31'] = {
+    date: '2026-07-31',
+    meals: [{ id: 'm_y', name: 'Перекус', time: '10:00', items: [{ product_id: 'own-coffee', grams: 80 }] }],
+    updatedAt: 1,
+  };
+  const { tools } = build(api, { tasksClientId });
+  const res = await tools.heys_log_meal({
+    client: 'Антон',
+    transcript: 'Запиши такой же перекус как вчера',
+    copy_meal: { date: 'вчера', meal_id: 'm_y', count: 2 },
+  });
+  assert.ok(res.structured.meal_id);
+  const daySave = api.writes.find((w) => w.key === 'heys_dayv2_2026-08-01');
+  assert.ok(daySave, 'дневник записан');
+  assert.equal(daySave.value.meals[0].items[0].grams, 160);
+});
+
+test('инструкция куратора описывает copy_meal и обязательный transcript', () => {
+  const text = curatorInstructions('Антон', true, Date.UTC(2026, 7, 3));
+  assert.match(text, /copy_meal/);
+  assert.match(text, /2в\./);
+  assert.match(text, /transcript/);
 });
 
 test('схема записи в дневник требует transcript, когда задачник подключён', () => {

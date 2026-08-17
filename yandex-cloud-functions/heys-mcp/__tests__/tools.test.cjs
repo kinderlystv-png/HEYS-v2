@@ -196,6 +196,58 @@ test('log_meal без позиций и набора не создаёт пус�
   await assert.rejects(() => tools.heys_log_meal({}), (e) => e.code === 'invalid_items');
 });
 
+test('log_meal copy_meal копирует приём и умножает граммовки', async () => {
+  const yesterday = '2026-07-31';
+  const pastDays = {
+    [yesterday]: {
+      date: yesterday,
+      meals: [{
+        id: 'm_src',
+        name: 'Перекус',
+        time: '10:00',
+        items: [
+          { id: 'it1', product_id: 'own-americano', name: 'Кофе американо', grams: 100 },
+          { id: 'it2', product_id: 'own-milk', name: 'Молоко', grams: 50 },
+        ],
+      }],
+      updatedAt: 10,
+    },
+  };
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 111 }, pastDays });
+  const tools = build(api);
+  const res = await tools.heys_log_meal({
+    copy_meal: { date: yesterday, meal_id: 'm_src', count: 2 },
+  });
+
+  assert.equal(api.saves.length, 1);
+  const meal = api.saves[0].value.meals[0];
+  assert.equal(meal.items.length, 2);
+  assert.equal(meal.items[0].grams, 200);
+  assert.equal(meal.items[1].grams, 100);
+  assert.equal(meal.name, 'Перекус');
+  assert.ok(res.structured.meal_id);
+});
+
+test('log_meal copy_meal понимает «вчера» и отклоняет несуществующий meal_id', async () => {
+  const yesterday = '2026-07-31';
+  const pastDays = {
+    [yesterday]: {
+      date: yesterday,
+      meals: [{ id: 'm_src', name: 'Завтрак', time: '08:00', items: [{ product_id: 'own-americano', grams: 100 }] }],
+      updatedAt: 1,
+    },
+  };
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 1 }, pastDays });
+  const tools = build(api);
+  await tools.heys_log_meal({ copy_meal: { date: 'вчера', meal_id: 'm_src' } });
+  assert.equal(api.saves[0].value.meals[0].items[0].grams, 100);
+
+  await assert.rejects(
+    () => tools.heys_log_meal({ copy_meal: { date: 'вчера', meal_id: 'm_missing' } }),
+    (e) => e.code === 'meal_not_found',
+  );
+});
+
 test('add_water прибавляет к текущему объёму', async () => {
   const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 200, updatedAt: 9 } });
   const tools = build(api);

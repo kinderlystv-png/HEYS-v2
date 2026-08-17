@@ -126,11 +126,25 @@ function compareProgramExercises(plannedExercises, actualExercises) {
   return out;
 }
 
+const RELATIVE_DATE_OFFSETS = {
+  сегодня: 0,
+  today: 0,
+  вчера: -1,
+  вчерашний: -1,
+  yesterday: -1,
+  позавчера: -2,
+  позавчерашний: -2,
+};
+
 function resolveDate(input, nowMs) {
   if (input === undefined || input === null || input === '') return day.nowParts(nowMs).date;
-  const value = String(input).trim();
-  if (!day.isValidDate(value)) throw new ToolError('invalid_date', `Дата "${value}" не в формате YYYY-MM-DD.`);
-  return value;
+  const raw = String(input).trim();
+  const relative = RELATIVE_DATE_OFFSETS[raw.toLowerCase()];
+  if (relative !== undefined) return day.addDays(day.nowParts(nowMs).date, relative);
+  if (!day.isValidDate(raw)) {
+    throw new ToolError('invalid_date', `Дата "${raw}" не в формате YYYY-MM-DD и не «вчера»/«позавчера».`);
+  }
+  return raw;
 }
 
 /**
@@ -527,6 +541,29 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
     return { product, grams, learnPieceGrams, portionNote };
   }
 
+  /** Копия позиции из уже записанного приёма: граммы × count, продукт по product_id или имени. */
+  async function resolveCopiedItem(item, index, count) {
+    const label = `Копия позиции #${index + 1}`;
+    const baseGrams = Number(item && item.grams);
+    if (!(baseGrams > 0)) {
+      throw new ToolError('invalid_items', `${label}: в исходном приёме нет граммовки.`);
+    }
+    const grams = Math.round(baseGrams * count * 10) / 10;
+    if (grams > 5000) {
+      throw new ToolError('invalid_grams', `${label}: получилось ${grams} г — больше допустимых 5000.`);
+    }
+    const spec = item.product_id
+      ? { product_id: item.product_id }
+      : { query: String(item.name || '').trim() };
+    const product = await resolveProduct(spec, label);
+    return {
+      product,
+      grams,
+      learnPieceGrams: null,
+      portionNote: count > 1 ? `×${count} от приёма-источника` : null,
+    };
+  }
+
   /**
    * Вес штуки, названный пользователем, дописывается в карточку продукта, чтобы
    * второй раз «четыре штуки» не потребовали вопроса. Пишем только в свои
@@ -613,8 +650,40 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         : day.normalizeTime(args.time);
       if (!time) throw new ToolError('invalid_time', `Время "${args.time}" не в формате HH:MM.`);
 
+      // День нужен только под конец — классифицировать приём и записать, — но
+      // от разбора позиций он не зависит. Последовательно его чтение ложилось
+      // сверху каталога продуктов; запущенное здесь, оно едет вместе с ним.
+      const dayPromise = readDay(date).catch((error) => ({ __error: error }));
+
       const resolved = [];
       let presetName = null;
+      let copyMealName = null;
+
+      if (args.copy_meal && typeof args.copy_meal === 'object') {
+        const cm = args.copy_meal;
+        const srcDate = resolveDate(cm.date, nowMs);
+        const srcDay = await readDay(srcDate);
+        const mid = cm.meal_id;
+        if (!mid) {
+          throw new ToolError('invalid_copy_meal', 'copy_meal.meal_id обязателен — возьми из heys_get_day.');
+        }
+        const srcMeal = (srcDay.meals || []).find((m) => m && String(m.id) === String(mid));
+        if (!srcMeal) {
+          throw new ToolError(
+            'meal_not_found',
+            `Приём ${mid} не найден за ${srcDate}. Сначала heys_get_day за эту дату и возьми meal_id из текста.`,
+          );
+        }
+        const count = Math.max(1, Math.min(20, Number(cm.count) || 1));
+        const srcItems = srcMeal.items || [];
+        if (!srcItems.length) {
+          throw new ToolError('invalid_items', `Приём «${srcMeal.name || mid}» за ${srcDate} пустой — копировать нечего.`);
+        }
+        for (let i = 0; i < srcItems.length; i += 1) {
+          resolved.push(await resolveCopiedItem(srcItems[i], i, count));
+        }
+        if (!args.name && srcMeal.name) copyMealName = srcMeal.name;
+      }
 
       if (args.preset) {
         const presets = await loadPresets();
@@ -638,7 +707,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
 
       const specs = Array.isArray(args.items) ? args.items : [];
       if (!specs.length && !resolved.length) {
-        throw new ToolError('invalid_items', 'Нужна хотя бы одна позиция в items или набор в preset.');
+        throw new ToolError('invalid_items', 'Нужна хотя бы одна позиция в items, набор в preset или copy_meal из heys_get_day.');
       }
       if (specs.length + resolved.length > 20) {
         throw new ToolError('invalid_items', 'За раз можно внести не больше 20 позиций.');
@@ -649,7 +718,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
 
       const meal = {
         id: makeId('m_'),
-        name: args.name ? String(args.name) : (presetName || defaultMealName(time)),
+        name: args.name ? String(args.name) : (presetName || copyMealName || defaultMealName(time)),
         time,
         mood: clampSubjective(args.mood, 'mood') ?? '',
         wellbeing: clampSubjective(args.wellbeing, 'wellbeing') ?? '',
@@ -657,14 +726,15 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         items: resolved.map(({ product, grams }) => day.buildMealItem(product, grams, makeId)),
       };
 
-      const current = await readDay(date);
+      const current = await dayPromise;
+      if (current && current.__error) throw current.__error;
       // Тип приёма проставляем сами, по времени и составу: без `mealType`
       // дневник подписывает приём собственным расчётом, и запись куратора
       // оказывается не тем, чем она является. Название куратора и имя набора
       // сильнее — они и есть ответ на вопрос «что это было».
       const classified = day.classifyMeal(meal, current);
       meal.mealType = classified.mealType;
-      if (!args.name && !presetName) meal.name = classified.name;
+      if (!args.name && !presetName && !copyMealName) meal.name = classified.name;
 
       const next = day.addMeal(current, meal, { nowMs, clientId });
       const saved = await writeDay(date, next, Number(current.updatedAt) || 0);
@@ -811,6 +881,13 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const name = String(args.name || '').trim();
       if (!name) throw new ToolError('invalid_name', 'Нужно название продукта.');
 
+      // Каталог и tombstones — обе проверки до записи и друг от друга не
+      // зависят. Последовательно они складывались в два ожидания подряд на
+      // каждом заведении продукта с этикетки.
+      // catch — не глушение ошибки, а защита от unhandled rejection: проверка
+      // дубликата ниже может бросить раньше, чем этот промис дождутся.
+      const tombstonesPromise = api.getKV(sessionToken, TOMBSTONES_KEY)
+        .catch((error) => ({ data: null, error }));
       const catalog = await loadCatalog();
       const nameNorm = products.normalizeText(name);
       const duplicate = catalog.all.find((p) => products.normalizeText(p.name) === nameNorm);
@@ -826,7 +903,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       // Удалённый когда-то продукт с тем же именем приложение отфильтрует по
       // tombstone — новый продукт просто не появится в списке. Молча создавать
       // его бессмысленно, поэтому проверяем заранее.
-      const tombstones = await api.getKV(sessionToken, TOMBSTONES_KEY);
+      const tombstones = await tombstonesPromise;
       if (Array.isArray(tombstones.data)) {
         const hidden = tombstones.data.some((t) => t && t.name && products.normalizeText(t.name) === nameNorm);
         if (hidden && !args.allow_duplicate) {
@@ -2289,7 +2366,10 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
   return { tools, ToolError };
 }
 
-const DATE_ARG = { type: 'string', description: 'Дата в формате YYYY-MM-DD. По умолчанию — сегодня по московскому времени.' };
+const DATE_ARG = {
+  type: 'string',
+  description: 'Дата: YYYY-MM-DD или «сегодня»/«вчера»/«позавчера». По умолчанию — сегодня по московскому времени.',
+};
 
 /** Одна позиция: какой продукт и сколько. Количество — граммы либо штуки. */
 const ITEM_SCHEMA = {
@@ -2448,10 +2528,20 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_log_meal',
-    description: 'Создать приём пищи в дневнике. Составной напиток или блюдо вносится набором позиций, а не одним «итоговым» продуктом: перед НОВЫМ составным приёмом проверь heys_list_meal_presets — если у пользователя есть подходящий сохранённый набор, вноси его через preset. Каждая позиция задаётся product_id (точно) или query (поиск по названию) плюс граммы. Если по query несколько похожих продуктов, инструмент вернёт кандидатов — тогда уточни у пользователя, а не угадывай.',
+    description: 'Создать приём пищи в дневнике. «Как вчера» / «такой же перекус» / «два бутерброда»: heys_get_day за дату-источник → meal_id из текста → copy_meal: { date, meal_id, count при «два»/«три» } — граммы копируются сами, items не собирай из текста get_day. Составной напиток или блюдо вносится позициями или preset из heys_list_meal_presets. Одиночный продукт — items: [{ query или product_id, grams }]. Неоднозначный query вернёт кандидатов — уточни, не угадывай.',
     inputSchema: {
       type: 'object',
       properties: {
+        copy_meal: {
+          type: 'object',
+          description: 'Скопировать уже записанный приём («как вчера»). meal_id — из heys_get_day. count умножает граммовку каждой позиции (2 = «два таких же» в одном приёме). items/preset не нужны.',
+          properties: {
+            date: { type: 'string', description: 'Дата приёма-источника: YYYY-MM-DD, «вчера», «позавчера».' },
+            meal_id: { type: 'string', description: 'meal_id из heys_get_day.' },
+            count: { type: 'number', description: 'Множитель граммовок, по умолчанию 1.' },
+          },
+          required: ['date', 'meal_id'],
+        },
         preset: { type: 'string', description: 'Имя или preset_id сохранённого набора из heys_list_meal_presets. Позиции набора добавляются к items.' },
         preset_grams: { type: 'object', description: 'Переопределение граммовок для позиций набора: { "Молоко ультрапастеризованное 3.5": 200 }.' },
         items: {
