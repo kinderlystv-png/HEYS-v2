@@ -440,8 +440,12 @@ get_function_config() {
             echo "nodejs22 index.handler 256m 300s" ;;
         "heys-snapshot-demo")
             echo "nodejs22 index.handler 512m 300s" ;;
+        # 120s: mcp_telemetry читает Cloud Logging внутри daily_cleanup.
+        # При 30s один медленный page Logging съедает весь слот и платформа
+        # убивает функцию до конца уборки. Ошибка телеметрии ловится в JS,
+        # таймаут платформы — нет.
         "heys-maintenance")
-            echo "nodejs22 index.handler 256m 30s" ;;
+            echo "nodejs22 index.handler 256m 120s" ;;
         *)
             echo "" ;;
     esac
@@ -596,6 +600,15 @@ build_env_flags() {
         # приватном бакете heys-backups; ключи только из Lockbox. Без них
         # инструменты по коду вообще не появляются в списке (lib/curator.js).
         env_flags+=" --environment LOCKBOX_S3_SECRET_ID=$LOCKBOX_S3_ID"
+    fi
+
+    # Телеметрия MCP: агрегатор читает ту же лог-группу, куда рантайм уже
+    # пишет stdout heys-mcp. Сейчас это folder default e23ndggvq798r3v3eepq
+    # (retention 3 суток). Отдельную группу не ставим в этом выкате: у неё
+    # нужны logging.writer/reader на SA, а укорачивать retention общей нельзя —
+    # по ней разбирают 429/503 и dead-man. Переопределяется MCP_LOG_GROUP_ID.
+    if [[ "$func_name" == "heys-maintenance" ]]; then
+        env_flags+=" --environment MCP_LOG_GROUP_ID=${MCP_LOG_GROUP_ID:-e23ndggvq798r3v3eepq}"
     fi
 
     # Server-side overload shed: reserve one slot per instance for recovery and

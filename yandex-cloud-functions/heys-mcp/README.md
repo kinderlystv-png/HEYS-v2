@@ -514,9 +514,11 @@ Evidence — D6 в [`todo.md`](../../todo.md).
 `node scripts/mcp-stats.mjs --days 7`. Подробности и retention — в
 [docs/reference/systems/BACKGROUND_JOBS.md](../../docs/reference/systems/BACKGROUND_JOBS.md).
 
-Что нужно настроить один раз в облаке: срок хранения лог-группы 14 суток и
-переменная `MCP_LOG_GROUP_ID` у `heys-maintenance` — без неё задача пропускает
-проход и возвращает `skipped: no_log_group`.
+`MCP_LOG_GROUP_ID` у `heys-maintenance` задаётся при деплое: по умолчанию это
+folder default `e23ndggvq798r3v3eepq`, куда heys-mcp и так пишет stdout. Без
+переменной задача пропускает проход (`skipped: no_log_group`). Retention этой
+группы не укорачивать — по ней разбирают 429/503 и dead-man. Отдельная группа на
+14 суток — следующий шаг, когда на SA будут `logging.writer`/`logging.reader`.
 
 ## Тесты
 
