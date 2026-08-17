@@ -38,16 +38,25 @@ if (!transcriptPath || !logsPath) {
   process.exit(1);
 }
 
-const exchanges = correlate.parseExchanges(fs.readFileSync(transcriptPath, 'utf8'), { date });
+const { exchanges, blocksWithoutMark } = correlate.parseExchanges(
+  fs.readFileSync(transcriptPath, 'utf8'),
+  { date },
+);
 const calls = correlate.parseLogText(fs.readFileSync(logsPath, 'utf8'));
-const report = correlate.correlate({ exchanges, calls, windowMs });
+const { rows, unattached } = correlate.correlate({ exchanges, calls, windowMs });
 
-for (const row of report) {
+for (const row of rows) {
   const tools = row.tools.length ? row.tools.join(' → ') : '(нет вызовов в окне)';
   const kin = row.kin ? ` «${row.kin.slice(0, 80)}${row.kin.length > 80 ? '…' : ''}»` : '';
   console.log(`${row.heading || '??:??'}${kin}: ${row.calls.length} вызовов, ${row.total_ms} мс — ${tools}`);
 }
 
-if (!report.length) {
+if (!rows.length) {
   console.log('В стенограмме нет меток [mcp session=…].');
+}
+if (blocksWithoutMark > 0) {
+  console.log(`Блоков ## ЧЧ:ММ без метки: ${blocksWithoutMark} — не вошли в отчёт.`);
+}
+if (unattached.length > 0) {
+  console.log(`${unattached.length} вызовов вне всех окон.`);
 }

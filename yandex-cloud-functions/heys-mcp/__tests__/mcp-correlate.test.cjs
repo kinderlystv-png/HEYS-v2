@@ -26,8 +26,8 @@ test('parseMark читает session, seq и необязательный ts', (
 });
 
 test('соседний read с другим session_id попадает в окно write', () => {
-  const exchanges = correlate.parseExchanges(transcript, { date: '2026-08-17' });
-  const report = correlate.correlate({
+  const { exchanges } = correlate.parseExchanges(transcript, { date: '2026-08-17' });
+  const { rows } = correlate.correlate({
     exchanges,
     calls: [
       { t: 'mcp_call', ts: '2026-08-17T18:33:10.000Z', tool: 'heys_get_day', session_id: 'aaaaaaaaaaaa', seq: 1, duration_ms: 80 },
@@ -36,15 +36,15 @@ test('соседний read с другим session_id попадает в ок�
     ],
   });
 
-  assert.equal(report.length, 1);
-  assert.deepEqual(report[0].tools, ['heys_get_day', 'heys_add_water', 'tasks_read']);
-  assert.equal(report[0].total_ms, 1680);
-  assert.equal(report[0].kin, 'Запиши 250 мл воды');
+  assert.equal(rows.length, 1);
+  assert.deepEqual(rows[0].tools, ['heys_get_day', 'heys_add_water', 'tasks_read']);
+  assert.equal(rows[0].total_ms, 1680);
+  assert.equal(rows[0].kin, 'Запиши 250 мл воды');
 });
 
 test('вызов четырьмя часами раньше в цепочку write не попадает', () => {
-  const exchanges = correlate.parseExchanges(transcript, { date: '2026-08-17' });
-  const report = correlate.correlate({
+  const { exchanges } = correlate.parseExchanges(transcript, { date: '2026-08-17' });
+  const { rows, unattached } = correlate.correlate({
     exchanges,
     calls: [
       { ts: '2026-08-17T17:21:00.000Z', tool: 'heys_list_clients', session_id: 'a2418c691812', seq: 1, duration_ms: 122 },
@@ -52,7 +52,9 @@ test('вызов четырьмя часами раньше в цепочку wr
     ],
   });
 
-  assert.deepEqual(report[0].tools, ['heys_add_water']);
+  assert.deepEqual(rows[0].tools, ['heys_add_water']);
+  assert.equal(unattached.length, 1);
+  assert.equal(unattached[0].tool, 'heys_list_clients');
 });
 
 test('два write за минуту не делят одни и те же вызовы', () => {
@@ -67,22 +69,38 @@ test('два write за минуту не делят одни и те же вы�
 **Claude:** ок
 [mcp session=bbbbbbbbbbbb seq=1 ts=2026-08-17T18:34:00.000Z]
 `;
-  const report = correlate.correlate({
-    exchanges: correlate.parseExchanges(text, { date: '2026-08-17' }),
+  const { rows } = correlate.correlate({
+    exchanges: correlate.parseExchanges(text, { date: '2026-08-17' }).exchanges,
     calls: [
       { ts: '2026-08-17T18:33:01.000Z', tool: 'heys_add_water', duration_ms: 10 },
       { ts: '2026-08-17T18:33:58.000Z', tool: 'heys_log_meal', duration_ms: 20 },
     ],
   });
 
-  assert.deepEqual(report[0].tools, ['heys_add_water']);
-  assert.deepEqual(report[1].tools, ['heys_log_meal']);
+  assert.deepEqual(rows[0].tools, ['heys_add_water']);
+  assert.deepEqual(rows[1].tools, ['heys_log_meal']);
 });
 
 test('метка без ts опирается на заголовок ## ЧЧ:ММ по Москве', () => {
   const text = `## 21:33\n**Кин:** Вода\n**Claude:** ок\n[mcp session=aaaaaaaaaaaa seq=1]\n`;
-  const exchanges = correlate.parseExchanges(text, { date: '2026-08-17' });
+  const { exchanges } = correlate.parseExchanges(text, { date: '2026-08-17' });
   assert.equal(exchanges[0].pinMs, Date.parse('2026-08-17T18:33:00.000Z'));
+});
+
+test('блоки ## без метки считаются отдельно', () => {
+  const text = `
+## 09:00
+**Кин:** Старый обмен без метки
+**Claude:** ок
+
+## 21:33
+**Кин:** Вода
+**Claude:** ок
+[mcp session=aaaaaaaaaaaa seq=1 ts=2026-08-17T18:33:00.000Z]
+`;
+  const parsed = correlate.parseExchanges(text, { date: '2026-08-17' });
+  assert.equal(parsed.blocksWithoutMark, 1);
+  assert.equal(parsed.exchanges.length, 1);
 });
 
 test('parseLogText достаёт mcp_call из JSON и из текста yc logs', () => {

@@ -5,8 +5,11 @@
  *
  * На редком трафике каждый tools/call садится на новый инстанс: `session_id`
  * каждый раз другой, `seq` всегда 1. Диапазон seq внутри сессии поэтому
- * собирает пустоту. Якорь — окно по времени вокруг `ts` в метке (или вокруг
- * заголовка `## ЧЧ:ММ` в зоне Москвы, если метка старая и без ts).
+ * Якорь — окно по времени вокруг `ts` в метке (или вокруг заголовка `## ЧЧ:ММ`
+ * в зоне Москвы, если метка старая и без ts). `ts` в метке — момент `begin()`
+ * (старт вызова), `ts` в строке `mcp_call` — момент записи лога (конец).
+ * На окне ±5 мин разница незаметна; при сужении окна до секунд учитывать
+ * `duration_ms` write.
  *
  * Вызов относится к ближайшему обмену, чей пин попадает в окно — иначе два
  * write за минуту забрали бы одни и те же read.
@@ -56,24 +59,27 @@ function kinLine(block) {
 
 function parseExchanges(text, { date = null } = {}) {
   const exchanges = [];
+  let blocksWithoutMark = 0;
   for (const block of splitBlocks(text)) {
-    const mark = parseMark(block);
-    if (!mark) continue;
     const heading = HEADING_RE.exec(block);
-    const headingMs = heading
-      ? headingToUtcMs(date, Number(heading[1]), Number(heading[2]))
-      : null;
+    if (!heading) continue;
+    const mark = parseMark(block);
+    if (!mark) {
+      blocksWithoutMark += 1;
+      continue;
+    }
+    const headingMs = headingToUtcMs(date, Number(heading[1]), Number(heading[2]));
     const markMs = mark.ts ? Date.parse(mark.ts) : NaN;
     const pinMs = Number.isFinite(markMs) ? markMs : headingMs;
     if (pinMs == null) continue;
     exchanges.push({
-      heading: heading ? `${pad(Number(heading[1]))}:${pad(Number(heading[2]))}` : null,
+      heading: `${pad(Number(heading[1]))}:${pad(Number(heading[2]))}`,
       kin: kinLine(block),
       mark,
       pinMs,
     });
   }
-  return exchanges;
+  return { exchanges, blocksWithoutMark };
 }
 
 function correlate({ exchanges, calls, windowMs = DEFAULT_WINDOW_MS }) {
@@ -82,7 +88,7 @@ function correlate({ exchanges, calls, windowMs = DEFAULT_WINDOW_MS }) {
     .map((call) => ({ call, ms: callTimeMs(call) }))
     .filter((row) => row.ms != null);
   const used = new Set();
-  return (exchanges || []).map((exchange) => {
+  const rows = (exchanges || []).map((exchange) => {
     const attached = [];
     for (const row of timed) {
       if (used.has(row)) continue;
@@ -113,6 +119,8 @@ function correlate({ exchanges, calls, windowMs = DEFAULT_WINDOW_MS }) {
       total_ms: totalMs,
     };
   });
+  const unattached = timed.filter((row) => !used.has(row)).map((row) => row.call);
+  return { rows, unattached };
 }
 
 function parseLogText(raw) {

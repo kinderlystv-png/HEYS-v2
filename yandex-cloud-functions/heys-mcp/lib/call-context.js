@@ -37,8 +37,8 @@ function current() {
  *
  * `session` и `seq` связывают блок со строкой `mcp_call` самого write.
  * `ts` нужен, потому что на редком трафике каждый вызов садится на новый
- * инстанс: `session_id` каждый раз другой, `seq` всегда 1, и диапазон seq
- * внутри сессии собирает пустоту. Correlate берёт окно по времени вокруг `ts`.
+ * `ts` в метке — `telemetry.begin()` (старт вызова); `ts` в `mcp_call` — конец.
+ * Correlate сравнивает с началом; при узком окне write сдвинут на `duration_ms`.
  */
 function transcriptMark(trace) {
   if (!trace || !trace.sessionId || !Number.isFinite(trace.seq)) return null;
