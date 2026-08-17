@@ -286,7 +286,7 @@ test('вложенный вызов видит метку внешнего ин�
   const res = await callTool(ctx, 'heys_add_water', 1);
 
   const { session_id: sessionId, seq } = res.result.structuredContent;
-  assert.equal(seen[0], `[mcp session=${sessionId} seq=${seq}]`);
+  assert.match(seen[0], new RegExp(`^\\[mcp session=${sessionId} seq=${seq} ts=\\d{4}-`));
   assert.equal(JSON.parse(lines[0]).session_id, sessionId, 'та же метка ушла в лог');
 });
 

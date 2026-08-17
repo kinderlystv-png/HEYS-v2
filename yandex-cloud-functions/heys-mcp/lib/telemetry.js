@@ -182,7 +182,7 @@ function createTelemetry({ instanceId, fnVersion, logger = console } = {}) {
      */
     begin(token) {
       const sessionId = sessionAlias(token, instance);
-      return { sessionId, seq: nextSeq(sessionId) };
+      return { sessionId, seq: nextSeq(sessionId), ts: new Date().toISOString() };
     },
     record(input) {
       try {

@@ -5367,12 +5367,12 @@ test('checkpoint дописывает метку вызова, а модель �
   // строку в блок добавляет сервер. Модель этих значений не знает.
   const api = liveTasksApi();
   const block = '## 12:40\n\n**Кин:** Запиши воду.\n**Claude:** Записал 300 мл.';
-  await callContext.run({ sessionId: 'a2418c691812', seq: 7 }, () =>
+  await callContext.run({ sessionId: 'a2418c691812', seq: 7, ts: '2026-08-17T18:33:12.000Z' }, () =>
     session(api).tasks_checkpoint({ transcript_block: block }));
 
   const text = api.kv[tasks.keyForPath(TRANSCRIPT_TODAY)].text;
-  assert.match(text, /\[mcp session=a2418c691812 seq=7\]/);
-  assert.ok(text.trimEnd().endsWith('[mcp session=a2418c691812 seq=7]'), 'метка — последняя строка блока');
+  assert.match(text, /\[mcp session=a2418c691812 seq=7 ts=2026-08-17T18:33:12\.000Z\]/);
+  assert.ok(text.trimEnd().endsWith('[mcp session=a2418c691812 seq=7 ts=2026-08-17T18:33:12.000Z]'), 'метка — последняя строка блока');
   assert.ok(!block.includes('mcp session='), 'модель прислала блок без метки');
 });
 

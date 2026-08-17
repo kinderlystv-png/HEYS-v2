@@ -33,12 +33,19 @@ function current() {
 
 /**
  * Строка метки для стенограммы. Технические пометки в блоке живут одной
- * строкой в квадратных скобках (правило З6), формат держится машиночитаемым:
- * по нему correlate находит вызовы с `seq` от предыдущей метки до этой.
+ * строкой в квадратных скобках (правило З6).
+ *
+ * `session` и `seq` связывают блок со строкой `mcp_call` самого write.
+ * `ts` нужен, потому что на редком трафике каждый вызов садится на новый
+ * инстанс: `session_id` каждый раз другой, `seq` всегда 1, и диапазон seq
+ * внутри сессии собирает пустоту. Correlate берёт окно по времени вокруг `ts`.
  */
 function transcriptMark(trace) {
   if (!trace || !trace.sessionId || !Number.isFinite(trace.seq)) return null;
-  return `[mcp session=${trace.sessionId} seq=${trace.seq}]`;
+  const ts = typeof trace.ts === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(trace.ts)
+    ? ` ts=${trace.ts}`
+    : '';
+  return `[mcp session=${trace.sessionId} seq=${trace.seq}${ts}]`;
 }
 
 module.exports = { run, current, transcriptMark };

@@ -112,6 +112,18 @@ yc logging read --group-id e23ndggvq798r3v3eepq --since 24h \
 - Путать **вызовы модели** (сколько раз дернули инструмент в чате) и
   **`upstream_calls`** в строке (round-trip'ы к API внутри одного вызова).
 
+### 4. Связка со стенограммой
+
+Метка в блоке: `[mcp session=<id> seq=<n> ts=<ISO>]`. На cold start `session_id`
+каждый раз новый, `seq` почти всегда 1 — соседние read цепляются **окном
+времени**, не диапазоном seq:
+
+```bash
+node scripts/mcp-correlate.mjs --transcript transcript/2026-08-17.md --logs calls.txt
+```
+
+`calls.txt` — вывод `yc serverless function logs` или JSON-массив `mcp_call`.
+
 Лог-группа `e23ndggvq798r3v3eepq` хранит записи **3 суток** (259200 s), и
 укорачивать этот срок нельзя: в ту же группу пишут остальные функции, по ней
 разбирают 429/503 и dead-man. Выгрузка «за неделю» из логов не вернёт ничего.
