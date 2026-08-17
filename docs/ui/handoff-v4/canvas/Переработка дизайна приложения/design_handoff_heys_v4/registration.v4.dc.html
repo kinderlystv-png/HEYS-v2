@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="./v4-canvas.css" rel="stylesheet">
+</helmet>
+
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e9dfcd"/><rect x="30" y="30" width="40" height="40" rx="10" fill="#c67139"/><text x="50" y="57" text-anchor="middle" font-family="Figtree,sans-serif" font-size="16" font-weight="700" fill="#2b1608">v4</text></svg></template>
+
+<div style="background:#e9dfcd;padding:0 46px 70px;width:max-content;">
+
+  <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
+    <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">РЕГИСТРАЦИЯ</span>
+    <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Настройка профиля один раз: согласия, четыре шага, три конца</span>
+  </div>
+  <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Согласия стоят до первых персональных данных и подписываются кодом. Четыре шага профиля — по одному герою на экран. Концов три: доступ открыт, ждём куратора, неделя начнётся с даты.</p>
+  <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);">В пакете: registration.v4.dc.html · протокол docs/implementation/REGISTRATION_WELCOME_SPLIT_PROTOCOL.md · экраны искать по data-screen-label</p>
+  <div class="secH">Общее для всего слоя v4</div>
+  <div style="display:flex;gap:22px;margin-bottom:34px;max-width:1180px;">
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Герой один на экран</b><span>Каждое крупное число одно и по центру: второй герой на экране обнуляет первого.</span></div></div>
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Точки прогресса, не проценты</b><span>Активная точка — вытянутая пилюля. Проценты обещают точность, которой в короткой форме нет.</span></div></div>
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Минимальная цель касания — 44 точки</b><span>Строка, чип и кнопка держат высоту даже там, где текст в одну строку.</span></div></div>
+  </div>
+  <div class="secH">Согласия и четыре шага</div>
+  <div class="pal" data-mir="m1" style="display:flex;gap:30px;align-items:flex-start;">
+
+    <div><div class="lab"><b>0 · Согласия</b><span>до любых персональных данных</span></div>
+    <div class="ph" data-screen-label="Регистрация · согласия">
+      <div class="sc">
+        <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Согласия и условия</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:8px;text-wrap:pretty;">Оба документа открываются целиком: отметка появится, когда дочитаете до конца.</div>
+        <div style="background:var(--tint);border-radius:18px;padding:13px 15px;margin-top:16px;">
+          <div style="font:700 12px/1.4 Figtree,sans-serif;color:var(--ac2);">Важно</div>
+          <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.6);margin-top:4px;text-wrap:pretty;">HEYS — учёт питания и сопровождение куратора, не медицинская услуга.</div>
+        </div>
+        <div style="background:var(--c1);border-radius:18px;padding:11px 14px;margin-top:8px;">
+          <div style="display:flex;align-items:flex-start;gap:11px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.18);flex:none;margin-top:1px;"></span><span style="font:600 12.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.55);">Пользовательское соглашение <span style="color:var(--ac);">*</span></span></div>
+          <div style="background:var(--bg);border-radius:14px;padding:9px 12px;margin-top:8px;">
+            <div style="font:700 10.5px/1.3 Figtree,sans-serif;color:var(--gr);">Коротко и честно</div>
+            <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:4px;text-wrap:pretty;">Доступ к HEYS, условия тарифа и отмены.</div>
+          </div>
+          <div style="min-height:40px;display:flex;align-items:center;font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">Читать полностью →</div>
+        </div>
+        <div style="background:var(--c1);border-radius:18px;padding:11px 14px;margin-top:8px;">
+          <div style="display:flex;align-items:flex-start;gap:11px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.18);flex:none;margin-top:1px;"></span><span style="font:600 12.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.55);">Обработка персональных данных <span style="color:var(--ac);">*</span></span></div>
+          <div style="background:var(--bg);border-radius:14px;padding:9px 12px;margin-top:8px;">
+            <div style="font:700 10.5px/1.3 Figtree,sans-serif;color:var(--gr);">Коротко и честно</div>
+            <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:4px;text-wrap:pretty;">Храним имя, контакт и профиль в России. Доступ у вас и куратора. Telegram, Google и Apple получают только то, что названо в согласии, — приглашение, статус заявки и доставку уведомлений.</div>
+          </div>
+          <div style="min-height:40px;display:flex;align-items:center;font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">Читать полностью →</div>
+        </div>
+      </div>
+      <div class="foot" style="display:flex;flex-direction:column;gap:4px;padding:10px 18px 14px;"><div style="font:600 11.5px/1.45 Figtree,sans-serif;color:rgba(var(--ink),.5);text-align:center;">Откройте и дочитайте оба документа</div><div class="btn" style="background:var(--c1);color:rgba(var(--ink),.3);">Подписать оба</div><div style="min-height:40px;display:flex;align-items:center;justify-content:center;font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">Выйти без регистрации</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Начало документа</b><span>кнопка ещё не активна</span></div>
+    <div class="ph" data-screen-label="Документ · начало">
+      <div style="padding:14px 16px 10px;display:flex;align-items:center;gap:10px;background:var(--bg);">
+        <span style="width:34px;height:34px;flex:none;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.5)" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        <span style="flex:1;font:700 12.5px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.55);">Пользовательское соглашение</span>
+        <span class="n" style="font:700 11px/1 Figtree,sans-serif;color:var(--ac);">8 %</span>
+      </div>
+      <div style="height:3px;background:rgba(var(--ink),.07);"><div style="width:8%;height:3px;background:var(--acs);"></div></div>
+      <div class="sc" style="padding-top:16px;">
+        <div style="font:700 21px/1.25 Figtree,sans-serif;color:var(--tx);letter-spacing:-.01em;text-wrap:pretty;">Пользовательское соглашение</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;">
+          <span style="padding:5px 10px;border-radius:999px;background:var(--c2);font:700 10px/1 Figtree,sans-serif;color:var(--ac);">Версия 1.11</span>
+          <span style="padding:5px 10px;border-radius:999px;background:var(--c1);font:600 10px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">В силе с 14 августа 2026</span>
+        </div>
+        <div style="height:1px;background:rgba(var(--ink),.08);margin:16px 0;"></div>
+        <div style="font:700 14px/1.3 Figtree,sans-serif;color:var(--tx);">1. Общие положения</div>
+        <div style="font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(var(--ink),.72);margin-top:9px;text-wrap:pretty;">1.1. Настоящее Соглашение регулирует отношения между:</div>
+        <div style="display:flex;gap:9px;margin-top:11px;"><span style="width:5px;height:5px;border-radius:999px;background:var(--acs);flex:none;margin-top:7px;"></span><div style="font:500 12.5px/1.6 Figtree,sans-serif;color:rgba(var(--ink),.72);text-wrap:pretty;"><b style="font-weight:700;color:var(--tx);">Исполнителем</b> — ИП Поплавский Антон Сергеевич, ИНН 263517141102</div></div>
+        <div style="display:flex;gap:9px;margin-top:9px;"><span style="width:5px;height:5px;border-radius:999px;background:var(--acs);flex:none;margin-top:7px;"></span><div style="font:500 12.5px/1.6 Figtree,sans-serif;color:rgba(var(--ink),.72);text-wrap:pretty;"><b style="font-weight:700;color:var(--tx);">Пользователем</b> — физическим лицом, принявшим условия Соглашения</div></div>
+        <div style="font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(var(--ink),.72);margin-top:13px;text-wrap:pretty;">1.2. Предмет Соглашения — доступ к сервису HEYS для ведения дневника питания и сопровождения по вопросам питания и активности.</div>
+      </div>
+      <div class="foot" style="display:flex;flex-direction:column;gap:4px;padding:10px 18px 14px;">
+        <div style="font:600 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.5);text-align:center;">Долистайте до конца, чтобы принять</div>
+        <div class="btn" style="background:var(--c1);color:rgba(var(--ink),.3);">Ознакомлен, принимаю</div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Конец документа</b><span>кнопка ожила</span></div>
+    <div class="ph" data-screen-label="Документ · конец">
+      <div style="padding:14px 16px 10px;display:flex;align-items:center;gap:10px;background:var(--bg);">
+        <span style="width:34px;height:34px;flex:none;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.5)" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        <span style="flex:1;font:700 12.5px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.55);">Пользовательское соглашение</span>
+        <span class="n" style="font:700 11px/1 Figtree,sans-serif;color:var(--ac);">100 %</span>
+      </div>
+      <div style="height:3px;background:rgba(var(--ink),.07);"><div style="width:100%;height:3px;background:var(--acs);"></div></div>
+      <div class="sc" style="padding-top:16px;">
+        <div style="font:700 14px/1.3 Figtree,sans-serif;color:var(--tx);">12. Разрешение споров</div>
+        <div style="font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(var(--ink),.72);margin-top:9px;text-wrap:pretty;">12.1. Споры разрешаются путём переговоров. 12.2. При невозможности договориться спор рассматривается судом по правилам подсудности законодательства РФ.</div>
+        <div style="height:1px;background:rgba(var(--ink),.08);margin:16px 0;"></div>
+        <div style="font:700 14px/1.3 Figtree,sans-serif;color:var(--tx);">13. Контакты</div>
+        <div style="background:var(--c1);border-radius:16px;padding:13px 15px;margin-top:10px;">
+          <div style="display:flex;justify-content:space-between;gap:10px;font:600 12px/1.4 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.5);">Почта</span><span style="color:var(--tx);">poplanton@mail.ru</span></div>
+          <div style="display:flex;justify-content:space-between;gap:10px;margin-top:10px;font:600 12px/1.4 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.5);">Telegram</span><span style="color:var(--tx);">@heyslab_support_bot</span></div>
+          <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:9px;text-wrap:pretty;">Telegram — только сигнал «хочу обратиться». Заявления с номером телефона и суммой идут на почту или в приложение.</div>
+        </div>
+        <div style="font:600 12px/1.6 Figtree,sans-serif;color:var(--tx);margin-top:16px;text-wrap:pretty;">Принимая Соглашение, вы подтверждаете, что прочитали, поняли и согласны с его условиями.</div>
+      </div>
+      <div class="foot" style="display:flex;flex-direction:column;gap:4px;padding:10px 18px 14px;">
+        <div class="btn">Ознакомлен, принимаю</div>
+        <div style="min-height:40px;display:flex;align-items:center;justify-content:center;font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">Закрыть без принятия</div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>0 · Необязательные</b><span>ниже на том же экране</span></div>
+    <div class="ph" data-screen-label="Регистрация · необязательные согласия">
+      <div class="sc">
+        <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:16px 0 8px;">Обязательные</div>
+        <div style="display:flex;align-items:center;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--acs);display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" stroke-width="3.5" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span><span style="font:600 12px/1.35 Figtree,sans-serif;color:var(--tx);">Пользовательское соглашение</span></div>
+        <div style="display:flex;align-items:center;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;margin-top:6px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--acs);display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" stroke-width="3.5" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span><span style="font:600 12px/1.35 Figtree,sans-serif;color:var(--tx);">Обработка персональных данных</span></div>
+        <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:16px 0 8px;">Можно включить, можно нет</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:flex-start;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.18);flex:none;margin-top:1px;"></span><span style="flex:1;"><span style="display:block;font:600 12px/1.35 Figtree,sans-serif;color:rgba(var(--ink),.55);">Замеры тела</span><span style="display:block;font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:3px;">Обхваты тела в дневнике</span></span></div>
+          <div style="display:flex;align-items:flex-start;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.18);flex:none;margin-top:1px;"></span><span style="flex:1;"><span style="display:block;font:600 12px/1.35 Figtree,sans-serif;color:rgba(var(--ink),.55);">Добавки и витамины</span><span style="display:block;font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:3px;">Учёт приёма в дневнике</span></span></div>
+          <div style="display:flex;align-items:flex-start;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.18);flex:none;margin-top:1px;"></span><span style="flex:1;"><span style="display:block;font:600 12px/1.35 Figtree,sans-serif;color:rgba(var(--ink),.55);">Напоминания</span><span style="display:block;font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:3px;">Статус пробной недели и сообщения куратора</span></span></div>
+          <div style="display:flex;align-items:flex-start;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.18);flex:none;margin-top:1px;"></span><span style="flex:1;"><span style="display:block;font:600 12px/1.35 Figtree,sans-serif;color:rgba(var(--ink),.55);">Новости и советы</span><span style="display:block;font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:3px;">Письма о продукте, не чаще раза в месяц</span></span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-wrap:pretty;">Необязательное отмечается тапом и меняется в настройках в любой момент. Заранее ничего не включено.</div>
+      </div>
+      <div class="foot"><div class="btn">Подписать</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>0 · Подпись кодом</b><span>шторка поверх экрана</span></div>
+    <div class="ph" data-screen-label="Регистрация · подпись кодом">
+      <div class="sc" style="filter:blur(2px);opacity:.5;">
+        <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Согласия и условия</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:8px;text-wrap:pretty;">Два документа обязательны.</div>
+      </div>
+      <div style="position:absolute;inset:0;background:rgba(var(--shadow),.35);"></div>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:12px;"><div style="background:var(--bg);border-radius:26px;padding:20px 18px 18px;box-shadow:0 18px 50px rgba(var(--shadow),.28);">
+        <div style="font:700 15px/1.35 Figtree,sans-serif;color:var(--tx);text-align:center;">Подпишите документы</div>
+        <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:7px;text-align:center;text-wrap:pretty;">Введите код доступа — он заменяет собственноручную подпись.</div>
+        <div style="display:flex;justify-content:center;gap:10px;margin-top:18px;">
+          <span style="width:44px;height:52px;border-radius:14px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><span style="width:9px;height:9px;border-radius:999px;background:var(--acs);"></span></span><span style="width:44px;height:52px;border-radius:14px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><span style="width:9px;height:9px;border-radius:999px;background:var(--acs);"></span></span><span style="width:44px;height:52px;border-radius:14px;background:var(--c1);display:flex;align-items:center;justify-content:center;"></span><span style="width:44px;height:52px;border-radius:14px;background:var(--c1);display:flex;align-items:center;justify-content:center;"></span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:18px;">
+          <div style="display:flex;gap:8px;"><span style="flex:1;min-height:52px;border-radius:16px;background:var(--c1);display:flex;align-items:center;justify-content:center;font:600 21px/1 Figtree,sans-serif;color:var(--tx);">1</span><span style="flex:1;min-height:52px;border-radius:16px;background:var(--c1);display:flex;align-items:center;justify-content:center;font:600 21px/1 Figtree,sans-serif;color:var(--tx);">2</span><span style="flex:1;min-height:52px;border-radius:16px;background:var(--c1);display:flex;align-items:center;justify-content:center;font:600 21px/1 Figtree,sans-serif;color:var(--tx);">3</span></div>
+          <div style="display:flex;gap:8px;"><span style="flex:1;min-height:52px;border-radius:16px;background:var(--c1);display:flex;align-items:center;justify-content:center;font:600 21px/1 Figtree,sans-serif;color:var(--tx);">4</span><span style="flex:1;min-height:52px;border-radius:16px;background:var(--c1);display:flex;align-items:center;justify-content:center;font:600 21px/1 Figtree,sans-serif;color:var(--tx);">5</span><span style="flex:1;min-height:52px;border-radius:16px;background:var(--c1);display:flex;align-items:center;justify-content:center;font:600 21px/1 Figtree,sans-serif;color:var(--tx);">6</span></div>
+          <div style="display:flex;gap:8px;"><span style="flex:1;min-height:52px;border-radius:16px;background:var(--c1);display:flex;align-items:center;justify-content:center;font:600 21px/1 Figtree,sans-serif;color:var(--tx);">7</span><span style="flex:1;min-height:52px;border-radius:16px;background:var(--c1);display:flex;align-items:center;justify-content:center;font:600 21px/1 Figtree,sans-serif;color:var(--tx);">8</span><span style="flex:1;min-height:52px;border-radius:16px;background:var(--c1);display:flex;align-items:center;justify-content:center;font:600 21px/1 Figtree,sans-serif;color:var(--tx);">9</span></div>
+          <div style="display:flex;gap:8px;"><span style="flex:1;min-height:52px;border-radius:16px;background:transparent;display:flex;align-items:center;justify-content:center;font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);"></span><span style="flex:1;min-height:52px;border-radius:16px;background:var(--c1);display:flex;align-items:center;justify-content:center;font:600 21px/1 Figtree,sans-serif;color:var(--tx);">0</span><span style="flex:1;min-height:52px;border-radius:16px;background:transparent;display:flex;align-items:center;justify-content:center;font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">⌫</span></div>
+        </div>
+      </div></div>
+    </div></div>
+
+    <div><div class="lab"><b>0 · Подписано</b><span>сразу после кода</span></div>
+    <div class="ph" data-screen-label="Регистрация · подписано">
+      <div class="sc" style="filter:blur(2px);opacity:.5;">
+        <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Согласия и условия</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:8px;text-wrap:pretty;">Два документа обязательны.</div>
+      </div>
+      <div style="position:absolute;inset:0;background:rgba(var(--shadow),.35);"></div>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:12px;">
+        <div style="background:var(--bg);border-radius:26px;padding:20px 18px 18px;box-shadow:0 18px 50px rgba(var(--shadow),.28);">
+          <div style="display:flex;flex-direction:column;align-items:center;">
+            <span style="width:52px;height:52px;border-radius:999px;background:var(--gr-bg);display:flex;align-items:center;justify-content:center;"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+            <div style="font:700 16px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:12px;text-align:center;">Документы подписаны</div>
+            <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:5px;text-align:center;text-wrap:pretty;">Подпись — код доступа, 16 августа в 17:46</div>
+          </div>
+          <div style="background:var(--c1);border-radius:18px;padding:12px 14px;margin-top:16px;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:600 12px/1.4 Figtree,sans-serif;color:var(--tx);">Пользовательское соглашение</span><span class="n" style="font:700 10.5px/1 Figtree,sans-serif;color:var(--ac);flex:none;">в. 1.11</span></div>
+            <div style="height:1px;background:rgba(var(--ink),.08);margin:10px 0;"></div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:600 12px/1.4 Figtree,sans-serif;color:var(--tx);">Обработка персональных данных</span><span class="n" style="font:700 10.5px/1 Figtree,sans-serif;color:var(--ac);flex:none;">в. 1.4</span></div>
+          </div>
+          <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:10px;text-align:center;text-wrap:pretty;">Копия подписи хранится в профиле — её видно в настройках</div>
+          <div class="btn" style="margin-top:14px;">Продолжить</div>
+        </div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>1 · Персональные данные</b><span>шаг 1 из 4</span></div>
+    <div class="ph" data-screen-label="Регистрация · персональные данные">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc">
+        <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Расскажите о себе</div>
+        <div style="margin-top:16px;"><div class="flab">Имя <span style="color:var(--ac);">*</span></div><div class="fld" style="color:rgba(var(--ink),.3);">Имя</div></div>
+        <div style="margin-top:12px;"><div class="flab" style="color:rgba(var(--ink),.42);">Фамилия <span style="font-weight:500;">· необязательно</span></div><div class="fld" style="color:rgba(var(--ink),.3);">Фамилия</div></div>
+        <div style="margin-top:12px;"><div class="flab">Пол <span style="color:var(--ac);">*</span></div><div class="chipRow"><span class="chip">Женский</span><span class="chip">Мужской</span></div><div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:6px;">Формула основного обмена у мужчин и женщин разная.</div></div>
+        <div style="margin-top:12px;"><div class="flab">Дата рождения <span style="color:var(--ac);">*</span></div></div>
+        <div style="background:var(--c1);border-radius:18px;padding:12px 10px 13px;margin-top:8px;">
+          <div style="position:relative;">
+          <div style="position:absolute;left:0;right:0;top:0;height:14px;background:linear-gradient(var(--c1),var(--fade0));z-index:2;pointer-events:none;"></div><div style="position:absolute;left:0;right:0;bottom:0;height:14px;background:linear-gradient(var(--fade0),var(--c1));z-index:2;pointer-events:none;"></div>
+          <div style="position:relative;display:flex;gap:6px;text-align:center;">
+            <div style="flex:1;"><div class="n" style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">31</div><div class="n" style="font:700 26px/1.4 Figtree,sans-serif;color:var(--ac);">01</div><div class="n" style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">02</div></div>
+            <div style="flex:1.3;"><div style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">дек</div><div style="font:700 26px/1.4 Figtree,sans-serif;color:var(--ac);">янв</div><div style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">фев</div></div>
+            <div style="flex:1;"><div class="n" style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">2000</div><div class="n" style="font:700 26px/1.4 Figtree,sans-serif;color:var(--ac);">2001</div><div class="n" style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">2002</div></div>
+          </div>
+          </div>
+          </div>
+        <div class="n" style="text-align:center;font:700 24px/1 Figtree,sans-serif;color:var(--ac);margin-top:14px;">25 лет</div>
+      </div>
+      <div class="foot"><div class="btn" style="background:var(--c1);color:rgba(var(--ink),.3);">Дальше</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>2 · Рост и вес</b><span>шаг 2 из 4</span></div>
+    <div class="ph" data-screen-label="Регистрация · рост и вес">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span class="on"></span><span></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc">
+        <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Рост и вес</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:8px;text-wrap:pretty;">Целых чисел достаточно — десятые вводятся в чек-ине.</div>
+        <div style="display:flex;gap:10px;margin-top:18px;">
+          <div style="flex:1;"><div style="background:var(--c1);border-radius:18px;padding:13px 0 14px;text-align:center;">
+          <div class="flab" style="display:flex;justify-content:center;">Рост, см</div>
+          <div style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
+            <div style="position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:32px;background:var(--c2);border-radius:999px;"></div>
+            <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">167</div>
+            <div class="n" style="position:relative;font:700 22px/1.35 Figtree,sans-serif;color:var(--ac);">168</div>
+            <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">169</div>
+          </div>
+        </div></div>
+          <div style="flex:1;"><div style="background:var(--c1);border-radius:18px;padding:13px 0 14px;text-align:center;">
+          <div class="flab" style="display:flex;justify-content:center;">Вес сейчас, кг</div>
+          <div style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
+            <div style="position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:32px;background:var(--c2);border-radius:999px;"></div>
+            <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">73</div>
+            <div class="n" style="position:relative;font:700 22px/1.35 Figtree,sans-serif;color:var(--ac);">74</div>
+            <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">75</div>
+          </div>
+        </div></div>
+        </div>
+        <div style="margin-top:10px;"><div style="background:var(--c1);border-radius:18px;padding:13px 0 14px;text-align:center;">
+          <div class="flab" style="display:flex;justify-content:center;">Желаемый вес, кг</div>
+          <div style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
+            <div style="position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:32px;background:var(--c2);border-radius:999px;"></div>
+            <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">63</div>
+            <div class="n" style="position:relative;font:700 22px/1.35 Figtree,sans-serif;color:var(--ac);">64</div>
+            <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">65</div>
+          </div>
+        </div></div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <div style="flex:1;background:var(--c2);border-radius:16px;padding:12px 14px;"><div class="k">ИМТ сейчас</div><div style="display:flex;align-items:baseline;gap:6px;margin-top:6px;"><span class="n" style="font:700 18px/1 Figtree,sans-serif;color:var(--tx);">26,2</span><span style="font:600 10.5px/1 Figtree,sans-serif;color:var(--ac2);">избыток</span></div></div>
+          <div style="flex:1;background:var(--c2);border-radius:16px;padding:12px 14px;"><div class="k">До цели</div><div style="display:flex;align-items:baseline;gap:6px;margin-top:6px;"><span class="n" style="font:700 18px/1 Figtree,sans-serif;color:var(--tx);">10</span><span style="font:600 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">кг</span></div></div>
+        </div>
+      </div>
+      <div class="foot"><div class="btn">Дальше</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>3 · Цель и активность</b><span>шаг 3 из 4</span></div>
+    <div class="ph" data-screen-label="Регистрация · цель и активность">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc">
+        <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Цель и активность</div>
+        <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:24px 0 10px;">Цель</div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <div style="display:flex;align-items:center;gap:10px;background:var(--c2);border-radius:14px;padding:10px 13px;box-shadow:inset 0 0 0 2px var(--acs);"><span style="width:26px;height:26px;border-radius:999px;background:var(--acs);display:flex;align-items:center;justify-content:center;flex:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></span><span style="font:600 12px/1.3 Figtree,sans-serif;color:var(--tx);">Снизить вес</span></div>
+          <div style="display:flex;align-items:center;gap:10px;background:var(--c1);border-radius:14px;padding:10px 13px;"><span style="width:26px;height:26px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;flex:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.42)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 12h12"/></svg></span><span style="font:600 12px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.55);">Удержать текущий вес</span></div>
+          <div style="display:flex;align-items:center;gap:10px;background:var(--c1);border-radius:14px;padding:10px 13px;"><span style="width:26px;height:26px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;flex:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.42)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></span><span style="font:600 12px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.55);">Набрать вес и мышцы</span></div>
+        </div>
+        <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:32px 0 10px;">Темп</div>
+        <div class="chipRow" style="margin-top:0;"><span class="chip">Плавно</span><span class="chip on">Умеренно</span><span class="chip">Быстро</span></div>
+        <div style="font:500 10.5px/1.45 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:8px;text-wrap:pretty;">Умеренно — минус 15 % от расхода: заметный результат без строгих ограничений.</div>
+        <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:32px 0 10px;">Активность сейчас</div>
+        <div class="chipRow" style="margin-top:0;"><span class="chip">Сидячая</span><span class="chip on">Лёгкая</span><span class="chip">Высокая</span></div>
+        <div style="font:500 10.5px/1.45 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:8px;text-wrap:pretty;">Спрашиваем один раз — пока нет факта шагов, отсюда берётся прогноз недель до цели. Сам расход дня считается по факту: шагам, тренировкам и бытовой активности.</div>
+      </div>
+      <div class="foot"><div class="btn">Дальше</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>4 · Сон и волна</b><span>шаг 4 из 4</span></div>
+    <div class="ph" data-screen-label="Регистрация · сон и инсулиновая волна">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
+      <div class="sc">
+        <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Сон и инсулиновая волна</div>
+        <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:24px 0 10px;">Сколько обычно спите</div>
+        <div class="chipRow" style="margin-top:0;align-items:center;"><span class="chip" style="min-width:52px;justify-content:center;">−</span><span class="chip on" style="min-width:84px;justify-content:center;">7,5 ч</span><span class="chip" style="min-width:52px;justify-content:center;">+</span></div>
+        <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:32px 0 10px;">Инсулиновая волна</div>
+        <div style="display:flex;flex-direction:column;gap:9px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--c1);border-radius:14px;padding:12px 14px;"><span style="font:600 12px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.55);">2,5 часа</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">быстрый обмен</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--c2);border-radius:14px;padding:12px 14px;box-shadow:inset 0 0 0 2px var(--acs);"><span style="font:700 12px/1.3 Figtree,sans-serif;color:var(--tx);">3 часа</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">по умолчанию</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--c1);border-radius:14px;padding:12px 14px;"><span style="font:600 12px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.55);">4 часа</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">спокойный</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--c1);border-radius:14px;padding:12px 14px;"><span style="font:600 12px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.55);">4,5 часа</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">медленный</span></div>
+        </div>
+        <div style="font:500 10.5px/1.45 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:10px;text-wrap:pretty;">Волна задаёт, сколько после приёма пищи держится подъём инсулина: от неё зависят подсказки о перекусах. Меняется в настройках.</div>
+      </div>
+      <div class="foot"><div class="btn">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Итог · доступ открыт</b><span>куратор уже назначил неделю</span></div>
+    <div class="ph" data-screen-label="Регистрация · итог доступ открыт">
+      <div class="sc" style="padding-top:34px;display:flex;flex-direction:column;align-items:center;">
+        <span style="width:60px;height:60px;border-radius:999px;background:var(--gr-bg);display:flex;align-items:center;justify-content:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+        <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:18px;text-align:center;">Профиль готов, Александра</div>
+        <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:9px;text-align:center;text-wrap:pretty;">Дальше — утренний чек-ин: полминуты, и день начнёт считаться.</div>
+        <div style="width:100%;background:var(--c2);border-radius:22px;padding:16px 18px;margin-top:20px;">
+          <div style="display:flex;justify-content:space-between;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Целевой вес</span><span class="n" style="color:var(--tx);">64 кг</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:12px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Белки · углеводы · жиры</span><span class="n" style="color:var(--tx);">30 · 35 · 35 %</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:12px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Прогноз</span><span class="n" style="color:var(--ac);">около 25 недель</span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-align:center;text-wrap:pretty;">Норма калорий считается каждый день по факту: шагам, тренировкам и бытовой активности.</div>
+      </div>
+      <div class="foot"><div class="btn">Начать утренний чек-ин</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Итог · ждём куратора</b><span>доступ ещё не открыт</span></div>
+    <div class="ph" data-screen-label="Регистрация · ожидание куратора">
+      <div class="sc" style="padding-top:34px;display:flex;flex-direction:column;align-items:center;">
+        <span style="width:60px;height:60px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span>
+        <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:18px;text-align:center;text-wrap:pretty;">Профиль сохранён</div>
+        <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:9px;text-align:center;text-wrap:pretty;">Куратор назначит дату начала недели и откроет дневник.</div>
+        <div style="width:100%;background:var(--c1);border-radius:20px;padding:16px 18px;margin-top:20px;">
+          <div style="display:flex;justify-content:space-between;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Куратор</span><span style="color:var(--tx);">Антон</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:12px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Профиль</span><span style="color:var(--gr);">заполнен</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:12px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Дневник</span><span style="color:rgba(var(--ink),.42);font-weight:500;">откроется после старта</span></div>
+        </div>
+      </div>
+      <div class="foot" style="display:flex;flex-direction:column;gap:6px;"><div style="min-height:44px;display:flex;align-items:center;justify-content:center;font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);order:2;">Написать куратору</div><div class="btn">Проверить доступ</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Итог · неделя с даты</b><span>доступ выдан, но начнётся позже</span></div>
+    <div class="ph" data-screen-label="Регистрация · неделя начнётся позже">
+      <div class="sc" style="padding-top:34px;display:flex;flex-direction:column;align-items:center;">
+        <span style="width:60px;height:60px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg></span>
+        <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:18px;text-align:center;text-wrap:pretty;">Неделя начнётся 21 августа</div>
+        <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:9px;text-align:center;text-wrap:pretty;">Профиль готов. До этого дня дневник закрыт — считать нечего.</div>
+        <div style="width:100%;background:var(--c1);border-radius:20px;padding:16px 18px;margin-top:20px;">
+          <div style="display:flex;justify-content:space-between;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Куратор</span><span style="color:var(--tx);">Антон</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:12px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Старт недели</span><span class="n" style="color:var(--ac);">21 августа, пятница</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:12px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Первый чек-ин</span><span style="color:rgba(var(--ink),.42);font-weight:500;">утром 21-го</span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-align:center;text-wrap:pretty;">До этого дня приложение можно не открывать — считать ещё нечего.</div>
+      </div>
+      <div class="foot" style="display:flex;flex-direction:column;gap:6px;"><div style="min-height:44px;display:flex;align-items:center;justify-content:center;font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);order:2;">Написать куратору</div><div class="btn">Проверить доступ</div></div>
+    </div></div>
+
+    <div data-nomirror style="width:400px;flex:none;">
+      <div class="h" style="margin-top:0;">Решения</div><div style="background:var(--bg);border-radius:24px;padding:20px;">
+        <div class="nt"><b>Концов у регистрации три, а не два</b><span>Доступ открыт — «Начать утренний чек-ин». Куратор ещё не назначил — ожидание с проверкой доступа. И третий: доступ выдан, но неделя начинается с будущей даты — тогда главное на экране сама дата, а кнопки чек-ина нет вовсе, потому что нажимать её рано. Все три закрываются человеком: автоматического проскока в чек-ин нет ни в одном.</span></div>
+        <div class="nt"><b>Ожидание — экран, а не заглушка</b><span>«Написать куратору» показываем, только когда куратор назначен и его имя есть: писать в пустоту нельзя. Если куратора ещё нет — остаётся одна «Проверить доступ». Крестика у ожидания нет: закрывать нечего, это и есть состояние приложения до старта.</span></div>
+        <div class="nt"><b>Согласия до персональных данных</b><span>Оба обязательных документа стоят до первого поля профиля: подписывать нечего задним числом, и данные собираются уже после разрешения. Необязательные — на том же экране ниже, ничего заранее не включено.</span></div>
+        <div class="nt"><b>Отметка появляется после чтения</b><span>Обязательный документ открывается целиком, кнопка «Ознакомлен, принимаю» оживает на последнем экране. Касание пункта в списке открывает документ, а не ставит галочку: цена — доказательство, что текст был показан, а не спрятан за ссылкой.</span></div>
+        <div class="nt"><b>Подпись — код доступа, а не галочка</b><span>После отметок открывается шторка с кодом: тот же код, что и на входе, он заменяет собственноручную подпись. Дата, версия документа и устройство сохраняются в профиле. Шторка отступает от краёв экрана на те же 12 пикселей, что лист правок куратора: это один и тот же приём — надстройка над приложением, а не новый экран.</span></div>
+        <div class="nt"><b>После подписи — подтверждение, а не молчание</b><span>Код принят — шторка не исчезает молча: она показывает, что именно подписано, с версиями обоих документов и временем. Это то, что человек через полгода будет искать в споре, и первый раз он видит это здесь. Одна кнопка «Продолжить», без «Готово» — регистрация не закончилась, а продолжается шагом профиля.</span></div>
+        <div class="nt"><b>Дочитывание требуется только у обязательных</b><span>Довод юриста весомее вкусового: прокрутка даёт доказательство, что документ был показан целиком, и при споре «мне подсунули» это работает годами, а раздражение стоит секунд. У необязательных отметка ставится сразу — доказывать там нечего. Блок сути наверху документа остаётся: он делает прокрутку осмысленной, а не только формальной.</span></div>
+        <div class="nt"><b>Необязательное остаётся неотмеченным</b><span>Заранее поставленная галочка не считается добровольным согласием, а кнопка «отметить всё» превратила бы необязательное в обязательное. Поэтому на экране «всё готово» отмечены только обязательные пункты, третий пуст — и кнопка при этом активна. Так видно, что необязательное действительно необязательно.</span></div>
+        <div class="nt"><b>Неактивная кнопка называет причину</b><span>Над серой кнопкой стоит «Отметьте два обязательных пункта», а не молчание. Причина недоступного действия и выход набраны основным тоном, а не бледным: это не вторичный текст, а единственное объяснение, почему дальше не идётся.</span></div>
+        <div class="nt"><b>Объяснение одно, и оно в списке</b><span>Под каждым пунктом одна строка о сути. В самом документе её нет — там короткий блок «о чём вы соглашаетесь», версия, дата и полный текст. Пересказ пересказа, который был в старом экране, исчезает.</span></div>
+        <div class="nt"><b>Четыре шага, точки только у них</b><span>Согласия и итог точками не считаются: это не шаги профиля, а вход и выход из него. Внутри шага вопросы группируются по смыслу — тело отдельно, потому что это другой ввод, колёса чисел.</span></div>
+        <div class="nt"><b>Активность спрашивается один раз</b><span>Дневную норму она не кормит: расход дня считается по факту — шаги, тренировки, быт. Ответ нужен другому: прогнозу «недель до цели» и виджету, пока трёх дней факта ещё нет. Поэтому на экране сказано именно это, а не «норма первого дня»: обещать формулу, которой нет, нельзя.</span></div>
+        <div class="nt"><b>Темп — три слова вместо шести процентов</b><span>Цель × темп раскладывается в те же значения, что в расчёте: снизить −10 / −15 / −20, удержать 0, набрать +10 / +15. У набора темпа «быстро» нет — такого пресета в модели тоже нет.</span></div>
+        <div class="nt"><b>Норма не обещает недельного пересчёта</b><span>Итог говорит правду: норма считается каждый день по факту дня. Обещание «пересчитаем раз в неделю» было выдумкой макета.</span></div>
+        <div class="nt"><b>Триал открывает куратор</b><span>Кнопки «начать пробный период» нет и быть не может: неделю назначает куратор. Поэтому концов у регистрации три: чек-ин, если доступ уже открыт; ожидание с понятной причиной, если куратор ещё не назначил; и названная дата, если неделя начинается впереди.</span></div>
+        <div class="nt"><b>Прогресс чтения — число и полоса</b><span>Если кнопка оживает от прокрутки, человек обязан видеть, сколько осталось. Процент в шапке и полоса под ней отвечают на это без слов; без них «Ознакомлен» выглядит сломанной кнопкой, а не незаконченным действием.</span></div>
+        <div class="nt"><b>Версия и дата — метками, а не курсивом в тексте</b><span>Это единственные данные документа, которые человек может понадобиться назвать в споре. Две пилюли под заголовком читаются за секунду; в живом экране они набраны курсивом внутри абзаца и теряются.</span></div>
+        <div class="nt"><b>Реквизиты — списком, договор — текстом</b><span>Стороны и контакты вынесены в карточку пар «поле — значение»: почту и телеграм ищут глазами, а не читают. Оговорка про то, что в телеграм нельзя слать заявление, стоит там же, где телеграм, а не абзацем ниже.</span></div>
+        <div class="nt"><b>Кегль документа больше интерфейсного</b><span>12,5 px с межстрочным 1,65 — это длинный текст, который действительно читают, а не подпись под контролом. Экономить здесь высоту бессмысленно: документ всё равно на несколько экранов.</span></div>
+        <div class="ntl"><b>«Закрыть без принятия» появляется только внизу</b><span>Пока человек не дочитал, выход — крестик в шапке. Внизу, рядом с активной кнопкой, отказ назван словами: это осознанный выбор, а не случайный тап по краю экрана.</span></div>
+      </div>
+    </div>
+
+  </div>
+  <div data-mirdst="m1" style="display:flex;gap:30px;align-items:flex-start;"></div>
+
+  <div class="secH">Состояния и края</div>
+  <div class="pal" data-mir="m2" style="display:flex;gap:30px;align-items:flex-start;">
+
+    <div><div class="lab"><b>1 · Одно поле пустое</b><span>частый случай</span></div>
+    <div class="ph" data-screen-label="Регистрация · одна ошибка">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc">
+        <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Расскажите о себе</div>
+        <div style="margin-top:16px;"><div class="flab">Имя <span style="color:var(--ac);">*</span></div><div class="fld">Александра</div></div>
+        <div style="margin-top:12px;"><div class="flab" style="color:rgba(var(--ink),.42);">Фамилия <span style="font-weight:500;">· необязательно</span></div><div class="fld" style="color:rgba(var(--ink),.3);">Фамилия</div></div>
+        <div style="margin-top:12px;"><div class="flab">Пол <span style="color:var(--ac);">*</span></div><div class="chipRow"><span class="chip">Женский</span><span class="chip">Мужской</span></div><div style="font:600 11px/1.4 Figtree,sans-serif;color:var(--ac2);margin-top:6px;">Выберите один вариант</div></div>
+      </div>
+      <div class="foot" style="display:flex;flex-direction:column;gap:6px;"><div style="font:600 11.5px/1.45 Figtree,sans-serif;color:var(--ac2);text-align:center;">Остался пол</div><div class="btn" style="background:var(--c1);color:rgba(var(--ink),.3);">Дальше</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>1 · Имя не подходит</b><span>цифры или одна буква</span></div>
+    <div class="ph" data-screen-label="Регистрация · имя не подходит">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc">
+        <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Расскажите о себе</div>
+        <div style="margin-top:16px;"><div class="flab">Имя <span style="color:var(--ac);">*</span></div><div class="fld" style="box-shadow:inset 0 0 0 2px var(--ac2);">1</div><div style="font:600 11px/1.4 Figtree,sans-serif;color:var(--ac2);margin-top:6px;">Имя — минимум две буквы, без цифр</div><div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:5px;text-wrap:pretty;">Куратор обращается к вам по имени, поэтому оно должно читаться.</div></div>
+      </div>
+      <div class="foot"><div class="btn" style="background:var(--c1);color:rgba(var(--ink),.3);">Дальше</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>1 · Возраст меньше 18</b><span>колесо остановлено</span></div>
+    <div class="ph" data-screen-label="Регистрация · возраст меньше 18">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc">
+        <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Расскажите о себе</div>
+        <div style="margin-top:14px;"><div class="flab">Дата рождения <span style="color:var(--ac);">*</span></div></div>
+        <div style="background:var(--c1);border-radius:18px;padding:12px 10px 13px;margin-top:8px;box-shadow:inset 0 0 0 2px var(--ac2);">
+          <div style="position:relative;">
+          <div style="position:absolute;left:0;right:0;top:0;height:14px;background:linear-gradient(var(--c1),var(--fade0));z-index:2;pointer-events:none;"></div><div style="position:absolute;left:0;right:0;bottom:0;height:14px;background:linear-gradient(var(--fade0),var(--c1));z-index:2;pointer-events:none;"></div>
+          <div style="position:relative;display:flex;gap:6px;text-align:center;">
+            <div style="flex:1;"><div class="n" style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">11</div><div class="n" style="font:700 26px/1.4 Figtree,sans-serif;color:var(--ac2);">12</div><div class="n" style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">13</div></div>
+            <div style="flex:1.3;"><div style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">фев</div><div style="font:700 26px/1.4 Figtree,sans-serif;color:var(--ac2);">мар</div><div style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">апр</div></div>
+            <div style="flex:1;"><div class="n" style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">2007</div><div class="n" style="font:700 26px/1.4 Figtree,sans-serif;color:var(--ac2);">2008</div><div class="n" style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">—</div></div>
+          </div>
+          </div>
+          </div>
+        <div class="n" style="text-align:center;font:700 24px/1 Figtree,sans-serif;color:var(--ac2);margin-top:14px;">17 лет</div>
+        <div style="background:var(--tint);border-radius:16px;padding:12px 14px;margin-top:12px;">
+          <div style="font:700 12px/1.4 Figtree,sans-serif;color:var(--ac2);">Приложением можно пользоваться с 18 лет</div>
+          <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:5px;text-wrap:pretty;">Программа рассчитана на взрослых, и документы подписывает совершеннолетний. Колесо дальше не идёт.</div>
+        </div>
+      </div>
+      <div class="foot"><div class="btn" style="background:var(--c1);color:rgba(var(--ink),.3);">Дальше</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>2 · Ниже нормы ИМТ</b><span>шкала едет, но предупреждает</span></div>
+    <div class="ph" data-screen-label="Регистрация · ниже нормы имт">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span class="on"></span><span></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc">
+        <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Рост и вес</div>
+        <div style="display:flex;gap:10px;margin-top:16px;">
+          <div style="flex:1;"><div style="background:var(--c1);border-radius:18px;padding:13px 0 14px;text-align:center;">
+          <div class="flab" style="display:flex;justify-content:center;">Рост, см</div>
+          <div style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
+            <div style="position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:32px;background:var(--c2);border-radius:999px;"></div>
+            <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">167</div>
+            <div class="n" style="position:relative;font:700 22px/1.35 Figtree,sans-serif;color:var(--ac);">168</div>
+            <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">169</div>
+          </div>
+        </div></div>
+          <div style="flex:1;"><div style="background:var(--c1);border-radius:18px;padding:13px 0 14px;text-align:center;">
+          <div class="flab" style="display:flex;justify-content:center;">Вес сейчас, кг</div>
+          <div style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
+            <div style="position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:32px;background:var(--c2);border-radius:999px;"></div>
+            <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">73</div>
+            <div class="n" style="position:relative;font:700 22px/1.35 Figtree,sans-serif;color:var(--ac);">74</div>
+            <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">75</div>
+          </div>
+        </div></div>
+        </div>
+        <div style="margin-top:10px;"><div style="background:var(--c1);border-radius:18px;padding:13px 0 14px;text-align:center;">
+          <div class="flab" style="display:flex;justify-content:center;">Желаемый вес, кг</div>
+          <div style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
+            <div style="position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:32px;background:var(--c2);border-radius:999px;"></div>
+            <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">49</div>
+            <div class="n" style="position:relative;font:700 22px/1.35 Figtree,sans-serif;color:var(--ac);">48</div>
+            <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">47</div>
+          </div>
+        </div></div>
+        <div style="background:var(--tint);border-radius:16px;padding:12px 14px;margin-top:12px;">
+          <div style="font:700 12px/1.4 Figtree,sans-serif;color:var(--ac2);">ИМТ цели 17,0 — ниже нормы</div>
+          <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:5px;text-wrap:pretty;">При росте 168 см нижняя граница нормы — 52 кг. Цель можно оставить, но прогноз по срокам для неё мы не строим — обсудите её с куратором.</div>
+        </div>
+      </div>
+      <div class="foot"><div class="btn">Дальше</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>1 · Клавиатура</b><span>фокус в поле имени</span></div>
+    <div class="ph" data-screen-label="Регистрация · клавиатура">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="flex:none;">
+        <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Расскажите о себе</div>
+        <div style="margin-top:16px;"><div class="flab">Имя <span style="color:var(--ac);">*</span></div><div class="fld" style="box-shadow:inset 0 0 0 2px var(--acs);">Алекс<span style="display:inline-block;width:2px;height:15px;background:var(--acs);vertical-align:-2px;margin-left:1px;"></span></div></div>
+        <div style="margin-top:12px;"><div class="flab" style="color:rgba(var(--ink),.42);">Фамилия <span style="font-weight:500;">· необязательно</span></div><div class="fld" style="color:rgba(var(--ink),.3);">Фамилия</div></div>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="padding:10px 18px;background:var(--bg);"><div class="btn">Дальше</div></div>
+      <div class="kb">
+        <div class="kbr"><span class="kbk">й</span><span class="kbk">ц</span><span class="kbk">у</span><span class="kbk">к</span><span class="kbk">е</span><span class="kbk">н</span><span class="kbk">г</span><span class="kbk">ш</span><span class="kbk">щ</span><span class="kbk">з</span><span class="kbk">х</span></div>
+        <div class="kbr"><span class="kbk">ф</span><span class="kbk">ы</span><span class="kbk">в</span><span class="kbk">а</span><span class="kbk">п</span><span class="kbk">р</span><span class="kbk">о</span><span class="kbk">л</span><span class="kbk">д</span><span class="kbk">ж</span><span class="kbk">э</span></div>
+        <div class="kbr"><span class="kbk" style="flex:1.4;background:var(--edge);">⇧</span><span class="kbk">я</span><span class="kbk">ч</span><span class="kbk">с</span><span class="kbk">м</span><span class="kbk">и</span><span class="kbk">т</span><span class="kbk">ь</span><span class="kbk">б</span><span class="kbk" style="flex:1.4;background:var(--edge);">⌫</span></div>
+        <div class="kbr"><span class="kbk" style="flex:1.6;background:var(--edge);font-size:11px;">123</span><span class="kbk" style="flex:5;"> </span><span class="kbk" style="flex:2;background:var(--acs);color:var(--on-acs);font-size:11px;font-weight:700;">Далее</span></div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Сохранение</b><span>после «Готово» на шаге 4</span></div>
+    <div class="ph" data-screen-label="Регистрация · сохранение">
+      <div class="sc" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <span style="width:56px;height:56px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
+        <div style="font:700 15px/1.35 Figtree,sans-serif;color:var(--tx);margin-top:18px;">Сохраняем профиль</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:7px;">Пара секунд.</div>
+      </div>
+      <div class="foot"><div class="btn" style="background:var(--c1);color:rgba(var(--ink),.3);">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Не сохранилось</b><span>облако не подтвердило запись</span></div>
+    <div class="ph" data-screen-label="Регистрация · ошибка сохранения">
+      <div class="sc" style="padding-top:38px;display:flex;flex-direction:column;align-items:center;">
+        <span style="width:56px;height:56px;border-radius:999px;background:var(--tint);display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ac2)" stroke-width="2.75" stroke-linecap="round"><path d="M12 7v6M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg></span>
+        <div style="font:700 18px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:18px;text-align:center;text-wrap:pretty;">Профиль не сохранился</div>
+        <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:9px;text-align:center;text-wrap:pretty;">Ответы на месте, они на устройстве. Повторяем автоматически, пока облако не подтвердит запись.</div>
+        <div style="width:100%;background:var(--c1);border-radius:20px;padding:14px 16px;margin-top:20px;display:flex;align-items:center;gap:11px;">
+          <span style="width:26px;height:26px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;flex:none;"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--acs)" stroke-width="3" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
+          <span style="font:600 11.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.55);">Попытка 3 · следующая через 8 секунд</span>
+        </div>
+      </div>
+      <div class="foot"><div class="btn">Повторить сейчас</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Возврат</b><span>ушёл на шаге 2, вернулся через неделю</span></div>
+    <div class="ph" data-screen-label="Регистрация · возврат к незавершённой">
+      <div class="sc" style="padding-top:36px;display:flex;flex-direction:column;align-items:center;">
+        <span style="width:56px;height:56px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span>
+        <div style="font:700 19px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:18px;text-align:center;text-wrap:pretty;">Продолжим, Александра</div>
+        <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:9px;text-align:center;text-wrap:pretty;">Профиль заполнен наполовину. Заполнено 8 августа — вес спросим заново, за неделю он мог измениться.</div>
+        <div style="width:100%;background:var(--c1);border-radius:20px;padding:16px 18px;margin-top:20px;">
+          <div style="display:flex;align-items:center;gap:9px;font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);"><span style="width:16px;height:16px;border-radius:999px;background:var(--acs);display:flex;align-items:center;justify-content:center;flex:none;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" stroke-width="4" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span>Согласия подписаны</div>
+          <div style="display:flex;align-items:center;gap:9px;font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:12px;"><span style="width:16px;height:16px;border-radius:999px;background:var(--acs);display:flex;align-items:center;justify-content:center;flex:none;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" stroke-width="4" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span>Персональные данные</div>
+          <div style="display:flex;align-items:center;gap:9px;font:700 12px/1 Figtree,sans-serif;color:var(--tx);margin-top:12px;"><span style="width:16px;height:16px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 2px var(--acs);display:flex;align-items:center;justify-content:center;flex:none;"></span>Рост и вес — заново</div>
+          <div style="display:flex;align-items:center;gap:9px;font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);margin-top:12px;"><span style="width:16px;height:16px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.14);display:flex;align-items:center;justify-content:center;flex:none;"></span>Цель и активность</div>
+          <div style="display:flex;align-items:center;gap:9px;font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);margin-top:12px;"><span style="width:16px;height:16px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.14);display:flex;align-items:center;justify-content:center;flex:none;"></span>Сон и волна</div>
+        </div>
+      </div>
+      <div class="foot"><div class="btn">Продолжить с шага 2</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Профиль в настройках</b><span>те же значения после регистрации</span></div>
+    <div class="ph" data-screen-label="Регистрация · профиль в настройках">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ttl">Профиль</span><span style="width:44px;"></span></div>
+      <div class="sc">
+        <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:6px 0 7px;">О себе</div>
+        <div style="background:var(--c1);border-radius:18px;padding:0 15px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;min-height:40px;border-bottom:1px solid rgba(var(--ink),.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Имя</span><span style="color:var(--tx);">Александра</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;min-height:40px;border-bottom:1px solid rgba(var(--ink),.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Возраст</span><span style="color:var(--tx);">25 лет</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;min-height:40px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Пол</span><span style="color:var(--tx);">Женский</span></div>
+        </div>
+        <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:12px 0 7px;">Тело и цель</div>
+        <div style="background:var(--c1);border-radius:18px;padding:0 15px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;min-height:40px;border-bottom:1px solid rgba(var(--ink),.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Рост</span><span style="color:var(--tx);">168 см</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;min-height:40px;border-bottom:1px solid rgba(var(--ink),.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Базовый вес</span><span style="color:var(--tx);">74 кг</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;min-height:40px;border-bottom:1px solid rgba(var(--ink),.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Текущий вес</span><span style="color:rgba(var(--ink),.42);font-weight:500;">73,4 кг · из чек-ина</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;min-height:40px;border-bottom:1px solid rgba(var(--ink),.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Желаемый вес</span><span style="color:var(--tx);">64 кг</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;min-height:40px;border-bottom:1px solid rgba(var(--ink),.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Цель и темп</span><span style="color:var(--tx);">Снизить · умеренно</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;min-height:40px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Дефицит</span><span style="color:var(--tx);">15 %</span></div>
+        </div>
+        <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:12px 0 7px;">Режим</div>
+        <div style="background:var(--c1);border-radius:18px;padding:0 15px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;min-height:40px;border-bottom:1px solid rgba(var(--ink),.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Сон</span><span style="display:flex;align-items:center;gap:7px;color:var(--tx);">7 часов<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.3)" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;min-height:40px;border-bottom:1px solid rgba(var(--ink),.07);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Инсулиновая волна</span><span style="display:flex;align-items:center;gap:7px;color:var(--tx);">3 часа<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.3)" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;min-height:40px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Документы</span><span style="display:flex;align-items:center;gap:7px;color:var(--tx);">2 подписаны<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.3)" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+        </div>
+      </div>
+      <div class="foot"><div class="btn">Сохранить</div></div>
+    </div></div>
+
+    <div data-nomirror style="width:400px;flex:none;">
+      <div class="h" style="margin-top:0;">Правила состояний</div><div style="background:var(--bg);border-radius:24px;padding:20px;">
+        <div class="nt"><b>Ошибка называет то, чего не хватает</b><span>Строка внизу перечисляет только незаполненное: «Остался пол», а не «Заполните поля». Мусорный ввод — отдельный случай со своей причиной: имя должно читаться, потому что по нему обращается куратор.</span></div>
+        <div class="nt"><b>Возраст — жёсткий предел, вес — предупреждение</b><span>Колесо года не идёт ниже восемнадцати: подписывать документы должен совершеннолетний, и это не предмет уговоров. Колесо желаемого веса, наоборот, едет куда угодно — мы показываем ИМТ и честно говорим, что прогноз по срокам для такой цели не строим, но выбор оставляем человеку.</span></div>
+        <div class="nt"><b>Клавиатура не прячет кнопку</b><span>При фокусе в поле экран сжимается, «Дальше» поднимается над клавиатурой, клавиша ввода подписана тем же словом.</span></div>
+        <div class="nt"><b>Сохранение повторяется само</b><span>Профиль считается сохранённым, только когда облако подтвердило запись. До тех пор повтор идёт автоматически с растущим интервалом, а человек видит номер попытки и может ускорить её кнопкой. Куратор тут ни при чём — это техническая запись, а не проблема сопровождения.</span></div>
+        <div class="nt"><b>Возврат переспрашивает устаревшее</b><span>Список показывает, что уже пройдено, а шаг с весом помечен «заново»: старое значение недельной давности превратило бы норму в вымысел.</span></div>
+        <div class="ntl"><b>Профиль повторяет регистрацию значение в значение</b><span>Те же поля теми же словами плюс то, что появилось позже: текущий вес только для чтения — он приходит из чек-ина, базовый редактируется. Двух мест ввода одного числа быть не должно.</span></div>
+      </div>
+    </div>
+
+  </div>
+  <div data-mirdst="m2" style="display:flex;gap:30px;align-items:flex-start;"></div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  pal = [['dk', 'Тёмная'], ['bl', 'Синяя'], ['bldk', 'Синяя тёмная']];
+  componentDidMount() { this.obs = new MutationObserver(() => { clearTimeout(this.t); this.t = setTimeout(() => this.sync(), 400); }); this.sync(); }
+  componentWillUnmount() { if (this.obs) this.obs.disconnect(); clearTimeout(this.t); }
+  renderVals() { return {}; }
+  sync() {
+    if (this.obs) this.obs.disconnect();
+    document.querySelectorAll('[data-mirdst]').forEach(dst => {
+      const src = document.querySelector('[data-mir="' + dst.getAttribute('data-mirdst') + '"]');
+      dst.setAttribute('style', '');
+      dst.innerHTML = '';
+      if (!src) return;
+      this.pal.forEach(([cls, name]) => {
+        const cap = document.createElement('div');
+        cap.className = 'palcap';
+        cap.textContent = name;
+        const row = src.cloneNode(true);
+        row.removeAttribute('data-mir');
+        row.className = 'pal ' + cls;
+        row.querySelectorAll('[data-nomirror]').forEach(n => n.remove());
+        row.querySelectorAll('*').forEach(n => {
+          n.removeAttribute('data-cc-id'); n.removeAttribute('data-dm-ref');
+          n.removeAttribute('data-comment-anchor'); n.removeAttribute('data-screen-label');
+        });
+        dst.append(cap, row);
+      });
+    });
+    if (this.obs) this.obs.observe(document.body, { subtree: true, childList: true, characterData: true });
+  }
+}
+</script>
+</body>
+</html>

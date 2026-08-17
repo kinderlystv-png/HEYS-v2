@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="./v4-canvas.css" rel="stylesheet">
+</helmet>
+
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e9dfcd"/><rect x="30" y="30" width="40" height="40" rx="10" fill="#c67139"/><text x="50" y="57" text-anchor="middle" font-family="Figtree,sans-serif" font-size="16" font-weight="700" fill="#2b1608">v4</text></svg></template>
+
+<div style="background:#e9dfcd;padding:0 46px 70px;width:max-content;">
+
+  <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
+    <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">НАСТРОЙКИ И СИСТЕМНОЕ</span>
+    <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Шторка настроек и системные листы приложения</span>
+  </div>
+  <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Настройки не отдельная вкладка, а шторка: «Вы», «Приложение», «Сопровождение». Значение стоит справа от названия, поэтому большинство вопросов закрывается без захода внутрь. Диагностика живёт вне ярусов — служебной створкой. Рядом — системный лист про иконку на домашнем экране: без неё на iPhone не приходят напоминания.</p>
+  <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);">В пакете: settings-system.v4.dc.html · экраны искать по data-screen-label</p>
+  <div class="secH">Список, ярусы и диагностика</div>  <div class="pal" data-mir="m6" style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
+
+    <div><div class="lab"><b>Настройки</b><span>сгруппированы по смыслу</span></div>
+    <div class="ph" data-screen-label="Настройки · список">
+      <div style="padding:18px 18px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <span style="font:700 20px/1.2 Figtree,sans-serif;color:var(--tx);">Настройки</span>
+        <span style="width:34px;height:34px;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.5)" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="sc" style="padding-top:0;">
+        <div style="background:var(--tint);border-radius:18px;padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;">
+          <div><div style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Уведомления</div><div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:4px;text-wrap:pretty;">Напоминания, дневник, сообщения куратора</div></div>
+          <span style="flex:none;width:46px;height:27px;border-radius:999px;background:var(--acs);position:relative;"><span style="position:absolute;right:3px;top:3px;width:21px;height:21px;border-radius:999px;background:var(--bg);box-shadow:0 1px 2px rgba(var(--shadow),.3);"></span></span>
+        </div>
+
+        <div class="tier" style="margin:14px 0 8px;">Вы</div>
+        <div style="background:var(--c1);border-radius:18px;overflow:hidden;">
+          <div style="padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Профиль и цели</span><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div style="height:1px;background:rgba(var(--ink),.06);margin:0 15px;"></div>
+          <div style="padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Дневник</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">6 из 7 блоков</span><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></span></div>
+          <div style="height:1px;background:rgba(var(--ink),.06);margin:0 15px;"></div>
+          <div style="padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Мои продукты</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">328</span><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></span></div>
+        </div>
+
+        <div class="tier" style="margin:14px 0 8px;">Приложение</div>
+        <div style="background:var(--c1);border-radius:18px;overflow:hidden;">
+          <div style="padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Оформление</span><span style="display:flex;align-items:center;gap:8px;"><span style="display:flex;gap:4px;"><span style="width:15px;height:15px;border-radius:999px;background:var(--acs);"></span><span style="width:15px;height:15px;border-radius:999px;background:var(--gr2);"></span><span style="width:15px;height:15px;border-radius:999px;background:var(--c2);"></span></span><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></span></div>
+          <div style="height:1px;background:rgba(var(--ink),.06);margin:0 15px;"></div>
+          <div style="padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Домашняя вкладка</span><span style="display:flex;align-items:center;gap:8px;"><span style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">Главная</span><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></span></div>
+          <div style="height:1px;background:rgba(var(--ink),.06);margin:0 15px;"></div>
+          <div style="padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Звук и время напоминаний</span><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+        </div>
+
+        <div class="tier" style="margin:14px 0 8px;">Сопровождение</div>
+        <div style="background:var(--c1);border-radius:18px;overflow:hidden;">
+          <div style="padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Советы куратора</span><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div style="height:1px;background:rgba(var(--ink),.06);margin:0 15px;"></div>
+          <div style="padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Задачи</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12px/1 Figtree,sans-serif;color:var(--ac);">3 новые</span><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></span></div>
+          <div style="height:1px;background:rgba(var(--ink),.06);margin:0 15px;"></div>
+          <div style="padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Доска</span><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:0 3px;min-height:44px;">
+          <span style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">Диагностика</span>
+          <span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+        </div>
+        <div style="font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.32);padding:0 3px;">HEYS 4.0 · сборка 1786</div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Диагностика раскрыта</b><span>служебное, внизу списка</span></div>
+    <div class="ph" data-screen-label="Настройки · диагностика">
+      <div style="padding:18px 18px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <span style="font:700 20px/1.2 Figtree,sans-serif;color:var(--tx);">Настройки</span>
+        <span style="width:34px;height:34px;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.5)" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="sc" style="padding-top:0;">
+        <div class="tier" style="margin:0 0 8px;">Сопровождение</div>
+        <div style="background:var(--c1);border-radius:18px;overflow:hidden;">
+          <div style="padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Советы куратора</span><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div style="height:1px;background:rgba(var(--ink),.06);margin:0 15px;"></div>
+          <div style="padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Задачи</span><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div style="height:1px;background:rgba(var(--ink),.06);margin:0 15px;"></div>
+          <div style="padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Доска</span><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;padding:0 3px;min-height:44px;">
+          <span style="font:600 12px/1 Figtree,sans-serif;color:var(--ac);">Диагностика</span>
+          <span style="color:var(--ac);display:flex;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg></span>
+        </div>
+        <div style="background:var(--c2);border-radius:18px;padding:14px 15px;">
+          <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);text-wrap:pretty;">Локальные сценарии без сброса клиента. Профиль и день пишутся как обычно.</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+            <div style="min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.14);display:flex;align-items:center;justify-content:center;font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Пройти регистрацию</div>
+            <div style="min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.14);display:flex;align-items:center;justify-content:center;font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Пройти утренний чек-ин</div>
+          </div>
+        </div>
+        <div style="font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.32);padding:0 3px;margin-top:14px;">HEYS 4.0 · сборка 1786 · клиент ccfe6ea3</div>
+      </div>
+    </div></div>
+
+    <div data-nomirror style="width:400px;flex:none;">
+      <div class="h" style="margin-top:0;">Решения по настройкам</div><div style="background:var(--bg);border-radius:24px;padding:20px;">
+        <div class="nt"><b>Одиннадцать строк в ряд — это не список, а свалка</b><span>Плоский перечень заставляет читать каждую строку, чтобы найти нужную. Три яруса — «Вы», «Приложение», «Сопровождение» — дают ответ раньше: человек ищет глазами группу, а не название. Порядок внутри тоже не случайный: сверху то, что меняют раз в месяц, ниже то, что открывают из любопытства.</span></div>
+        <div class="nt"><b>Уведомления — единственный тумблер наверху</b><span>Это не раздел, а один выключатель, и он единственный, у которого есть состояние прямо здесь. Поэтому он стоит отдельной карточкой над ярусами и с объяснением, что именно выключится. Тонкие настройки — звук, время — живут строкой в «Приложении», а не рядом с рубильником.</span></div>
+        <div class="nt"><b>Значение справа заменяет заход внутрь</b><span>«Бежево-зелёная» тремя кружками, «Главная», «328», «6 из 7 блоков» — половина заходов в настройки заканчивается тем, что человек просто проверил текущее значение. Показанное справа значение экономит ему открытие экрана.</span></div>
+        <div class="nt"><b>Диагностика — не раздел, а служебная створка</b><span>Она стоит вне ярусов, набрана бледнее и свёрнута. Внутри честно сказано, что сценарии локальные и данные не сбрасывают: кнопка «пройти регистрацию заново» пугает ровно до этой фразы. Рядом номер сборки и клиент — то, что просят в поддержке.</span></div>
+        <div class="ntl"><b>Полоса геймификации в шторку не едет</b><span>Уровень и серия — про главный экран, а не про настройки. В шторке остаётся заголовок и крестик: это место, куда приходят что-то поменять, а не рассматривать прогресс.</span></div>
+      </div>
+    </div>
+
+  </div>
+  <div data-mirdst="m6" style="display:flex;gap:30px;align-items:flex-start;"></div>
+
+
+  <div class="secH">Иконка на домашний экран · системный лист</div>
+  <div class="pal" data-mir="m5" style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
+
+    <div><div class="lab"><b>Три шага</b><span>после включения уведомлений</span></div>
+    <div class="ph" data-screen-label="Домашний экран · лист">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Главная</div><div style="height:96px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:110px;border-radius:20px;background:var(--c1);margin-top:10px;"></div><div style="height:110px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
+      <div class="bd"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Чтобы напоминания приходили, добавьте иконку</div><div class="mds">На iPhone уведомления работают только из приложения, открытого с домашнего экрана.</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="row"><span style="width:24px;height:24px;flex:none;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;font:800 11px/1 Figtree,sans-serif;color:var(--ac);">1</span><div class="rowt"><b>Нажмите «Поделиться»</b><span>Квадрат со стрелкой внизу Safari</span></div><span class="cv"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M5 14v5a1 1 0 001 1h12a1 1 0 001-1v-5"/></svg></span></div>
+          <div class="row"><span style="width:24px;height:24px;flex:none;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;font:800 11px/1 Figtree,sans-serif;color:var(--ac);">2</span><div class="rowt"><b>Выберите «На экран „Домой“»</b><span>Пункт в середине списка</span></div><span class="cv"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 9v6M9 12h6"/></svg></span></div>
+          <div class="row"><span style="width:24px;height:24px;flex:none;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;font:800 11px/1 Figtree,sans-serif;color:var(--ac);">3</span><div class="rowt"><b>Откройте HEYS с иконки</b><span>Дальше — как обычно, данные на месте</span></div><span class="cv"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></div>
+          <div style="font:500 10.5px/1.45 Figtree,sans-serif;color:rgba(var(--ink),.42);padding:2px 2px 0;text-wrap:pretty;">Ничего не скачивается: иконка — ярлык на то же приложение.</div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+
+    <div data-nomirror style="width:400px;flex:none;">
+      <div class="h" style="margin-top:0;">Решения</div><div style="background:var(--bg);border-radius:24px;padding:20px;">
+        <div class="nt"><b>Заголовок называет выгоду, а не требование</b><span>«Нужен домашний экран» — это про нужду приложения. Человеку важно другое: без иконки не придут напоминания. Поэтому заголовок начинается с того, что он потеряет, а объяснение про iPhone стоит подзаголовком.</span></div>
+        <div class="nt"><b>Инструкция строками, а не абзацем</b><span>Три шага с номерами и иконкой того, что искать глазами: квадрат со стрелкой, плюс в рамке. Абзац «Поделиться → На экран „Домой“, затем открой приложение с иконки» приходится перечитывать, потому что стрелки в тексте не совпадают с тем, что на экране телефона.</span></div>
+        <div class="nt"><b>Страх «это установка» снимается прямо</b><span>Строка «ничего не скачивается: иконка — ярлык на то же приложение» стоит внизу листа. Половина отказов здесь — не лень, а подозрение, что сейчас начнётся установка чего-то тяжёлого.</span></div>
+        <div class="ntl"><b>Лист, а не модалка по центру</b><span>Это тот же нижний лист, что у изменений куратора: кнопки под пальцем, содержимое непредсказуемой длины. Кнопок две — «Понятно» и «Позже»; «Позже» не прячет подсказку навсегда, она вернётся при следующей попытке включить уведомления.</span></div>
+      </div>
+    </div>
+
+  </div>
+  <div data-mirdst="m5" style="display:flex;gap:30px;align-items:flex-start;"></div>
+
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  pal = [['dk', 'Тёмная'], ['bl', 'Синяя'], ['bldk', 'Синяя тёмная']];
+  componentDidMount() { this.obs = new MutationObserver(() => { clearTimeout(this.t); this.t = setTimeout(() => this.sync(), 400); }); this.sync(); }
+  componentWillUnmount() { if (this.obs) this.obs.disconnect(); clearTimeout(this.t); }
+  renderVals() { return {}; }
+  sync() {
+    if (this.obs) this.obs.disconnect();
+    document.querySelectorAll('[data-mirdst]').forEach(dst => {
+      const src = document.querySelector('[data-mir="' + dst.getAttribute('data-mirdst') + '"]');
+      dst.setAttribute('style', '');
+      dst.innerHTML = '';
+      if (!src) return;
+      this.pal.forEach(([cls, name]) => {
+        const cap = document.createElement('div');
+        cap.className = 'palcap';
+        cap.textContent = name;
+        const row = src.cloneNode(true);
+        row.removeAttribute('data-mir');
+        row.className = 'pal ' + cls;
+        row.querySelectorAll('[data-nomirror]').forEach(n => n.remove());
+        row.querySelectorAll('*').forEach(n => {
+          n.removeAttribute('data-cc-id'); n.removeAttribute('data-dm-ref');
+          n.removeAttribute('data-comment-anchor'); n.removeAttribute('data-screen-label');
+        });
+        dst.append(cap, row);
+      });
+    });
+    if (this.obs) this.obs.observe(document.body, { subtree: true, childList: true, characterData: true });
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#e9dfcd;font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  *{box-sizing:border-box}
+  a{color:#a75c2b;text-decoration:none}
+  .k{font:600 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.45)}
+  .tag{display:inline-block;padding:3px 8px;border-radius:999px;font:700 9.5px/1.4 Figtree,sans-serif;letter-spacing:.04em}
+  .A{background:#e3ebd6;color:#5c6a45}
+  .B{background:#f3e0d2;color:#a75c2b}
+  .blk{border-radius:14px;padding:11px 13px;margin-bottom:7px;font:600 12.5px/1.35 Figtree,sans-serif;color:#201e1d}
+  .why{font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.55);margin:4px 0 0}
+</style>
+</helmet>
+
+<div style="background:#e9dfcd;padding:44px 46px 70px;min-width:1500px;">
+
+  <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
+    <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#fff;border-radius:999px;">АКТИВ</span>
+    <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Было → стало. Каждый блок помечен: <span class="tag A">A перекраска</span> или <span class="tag B">B перенос</span></span>
+  </div>
+  <p style="margin:0 0 30px;max-width:760px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Экран сегодня отвечает на один вопрос — «сколько я потратил» — пятью способами, и они идут вперемешку с историей и настройкой. Предлагаю три яруса: <b>сегодня</b> · <b>действие</b> · <b>история</b>. Порядок внутри ярусов ниже, с обоснованием на каждый перенос.</p>
+
+  <div style="display:flex;gap:34px;align-items:flex-start;">
+
+    <!-- БЫЛО -->
+    <div style="width:330px;flex:none;">
+      <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);margin-bottom:12px;">Было</div>
+      <div style="background:#fffaf1;border-radius:24px;padding:16px;">
+        <div class="blk" style="background:#f7efe2;">1 · Расчёт калорий<div class="why">BMR, +Шаги, +Быт, +Тренировки, +TEF, Затраты, Дефицит, Цель — восемь строк в одной карточке</div></div>
+        <div class="blk" style="background:#f7efe2;">2 · Бытовая активность<div class="why">30 мин · «подробнее» · «+ Добавить»</div></div>
+        <div class="blk" style="background:#f7efe2;">3 · Шаги<div class="why">ползунок 1 980 / 9 100 · карандаш правки · 107 ккал</div></div>
+        <div class="blk" style="background:#f7efe2;">4 · + Тренировка<div class="why">пунктирная кнопка</div></div>
+        <div class="blk" style="background:#f7efe2;">5 · Бытовая активность — запись<div class="why">та же сущность, что и блок 2, но уже как факт</div></div>
+        <div class="blk" style="background:#f7efe2;">6 · Зарядка<div class="why">факт сегодня · 19 ккал</div></div>
+        <div class="blk" style="background:#f7efe2;">7 · Календарь зарядки<div class="why">28 дней / Месяц · сделано / пропущено</div></div>
+        <div class="blk" style="background:#f7efe2;">8 · Тренировки за 30 дней<div class="why">список с ккал</div></div>
+      </div>
+      <p style="margin:14px 2px 0;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.5);text-wrap:pretty;">Бытовая активность встречается дважды (2 и 5). Между «добавить тренировку» (4) и «тренировки за месяц» (8) стоят три чужих блока. Цель — самое важное число — спрятана восьмой строкой внутри таблицы.</p>
+    </div>
+
+    <!-- СТРЕЛКА -->
+    <div style="width:60px;flex:none;display:flex;align-items:center;justify-content:center;padding-top:200px;">
+      <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#c67139" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg>
+    </div>
+
+    <!-- СТАЛО -->
+    <div style="width:330px;flex:none;">
+      <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);margin-bottom:12px;">Стало</div>
+      <div style="background:#fffaf1;border-radius:24px;padding:16px;">
+
+        <div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#a75c2b;margin:2px 0 8px;">Сегодня</div>
+        <div class="blk" style="background:#efe3cf;">Цель дня <span class="tag B">B</span><div class="why">1675 героем. Затраты 2145 и дефицит −10 % — подписью под ним. Разбивка BMR/шаги/быт/трен/TEF сворачивается в строку «Затраты 2145 ›».</div></div>
+        <div class="blk" style="background:#eaefe0;">Шаги <span class="tag A">A</span><div class="why">остаются на месте, меняется только оформление ползунка</div></div>
+        <div class="blk" style="background:#eaefe0;">Активность сегодня <span class="tag B">B</span><div class="why">слияние блоков 2, 5 и 6: быт 30 мин, зарядка 19 ккал, тренировки — тремя строками в одной карточке. Одна сущность — одно место.</div></div>
+
+        <div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#a75c2b;margin:16px 0 8px;">Действие</div>
+        <div class="blk" style="background:#efe3cf;">Добавить <span class="tag B">B</span><div class="why">одна кнопка вместо трёх разных («+ Добавить», «+ Тренировка», правка шагов). Выбор типа — в шторке.</div></div>
+
+        <div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#a75c2b;margin:16px 0 8px;">История</div>
+        <div class="blk" style="background:#f7efe2;">Сетка зарядки <span class="tag A">A</span><div class="why">не трогаем — узнаваемая, по ней считают серию. Только перекраска и переезд вниз.</div></div>
+        <div class="blk" style="background:#f7efe2;">Тренировки за месяц <span class="tag B">B</span><div class="why">встаёт сразу после сетки: обе про историю. В compact — одна строка «3 за месяц ›».</div></div>
+      </div>
+      <p style="margin:14px 2px 0;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.5);text-wrap:pretty;">Блоков на экране 6 вместо 8, дублей нет, первый экран без прокрутки отвечает на «сколько осталось» и «что добавить».</p>
+    </div>
+
+    <!-- РЕШЕНИЯ -->
+    <div style="width:400px;flex:none;">
+      <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);margin-bottom:12px;">Что уходит и куда</div>
+      <div style="background:#fffaf1;border-radius:24px;padding:20px;">
+        <div style="padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid rgba(0,0,0,.06);"><div style="font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;">Разбивка расчёта калорий <span class="tag B">B</span></div><div class="why">Не удаляется. Сворачивается в строку «Затраты 2145 ›» и раскрывается по тапу. Это объяснение числа, а само число остаётся.</div></div>
+        <div style="padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid rgba(0,0,0,.06);"><div style="font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;">Второй блок бытовой активности <span class="tag B">B</span></div><div class="why">Удаляется как дубль. Ввод и факт — одна карточка «Активность сегодня»: пустая строка = кнопка, заполненная = факт.</div></div>
+        <div style="padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid rgba(0,0,0,.06);"><div style="font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;">«28 дней / Месяц» у календаря <span class="tag B">B</span></div><div class="why">Переключатель уезжает в настройки вкладки. На экране один режим — 28 дней; вторым режимом пользуются редко, а место он занимает всегда.</div></div>
+        <div style="padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid rgba(0,0,0,.06);"><div style="font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;">Карандаш правки у шагов <span class="tag A">A</span></div><div class="why">Остаётся, но перестаёт быть эмодзи рядом с числом: тап по самому числу открывает ввод. Иконка уходит, действие остаётся.</div></div>
+        <div><div style="font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;">Дефицит −10 % <span class="tag A">A</span></div><div class="why">Перестаёт быть красным. Идти в плане — не тревога: нейтраль. Терракота включается только при отклонении.</div></div>
+      </div>
+
+      <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:26px 0 12px;">Цена по потокам</div>
+      <div style="background:#fffaf1;border-radius:24px;padding:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.06);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(0,0,0,.55);">Только перекраска <span class="tag A">A</span></span><span style="color:#201e1d;">3 блока</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.06);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(0,0,0,.55);">Перенос и слияние <span class="tag B">B</span></span><span style="color:#201e1d;">5 блоков</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(0,0,0,.55);">Удаляется совсем</span><span style="color:#201e1d;">1 блок</span></div>
+        <p style="margin:14px 0 0;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.5);text-wrap:pretty;">Поток A можно катить сразу — он ничего не двигает. Поток B ставится задачами по одному блоку: каждый откатывается отдельно, порядок любой.</p>
+      </div>
+
+      <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:26px 0 12px;">Открыто</div>
+      <div style="background:#efe3cf;border-radius:24px;padding:20px;">
+        <div style="font:600 12.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.62);text-wrap:pretty;">Шторка «Добавить» — новый узел, которого в коде нет. Если её делать дорого, оставляем три отдельные кнопки, но собранными в один ряд под ярусом «Сегодня». Решение за разработкой.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <p style="margin:30px 0 0;font:500 12.5px/1.6 Figtree,sans-serif;color:rgba(0,0,0,.5);">Дальше: «нарисуй новый Актив экраном» · «то же самое для Питания» · «покажи шторку Добавить»</p>
+</div>
+</x-dc>
+</body>
+</html>

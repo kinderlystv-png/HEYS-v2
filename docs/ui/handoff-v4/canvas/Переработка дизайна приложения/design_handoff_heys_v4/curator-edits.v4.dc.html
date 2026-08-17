@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="./v4-canvas.css" rel="stylesheet">
+</helmet>
+
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e9dfcd"/><rect x="30" y="30" width="40" height="40" rx="10" fill="#c67139"/><text x="50" y="57" text-anchor="middle" font-family="Figtree,sans-serif" font-size="16" font-weight="700" fill="#2b1608">v4</text></svg></template>
+
+<div style="background:#e9dfcd;padding:0 46px 70px;width:max-content;">
+
+  <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
+    <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">ПРАВКИ КУРАТОРА</span>
+    <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Лист изменений и оболочка вокруг него: вкладка, дата, настройки</span>
+  </div>
+  <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Лист показывает итог дня, а не список нажатий, и никуда не уводит после подтверждения. Рядом — оболочка, через которую до правок вообще добираются: дата во вкладке, липкая шапка, шторка настроек.</p>
+  <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);">В пакете: curator-edits.v4.dc.html · протокол docs/implementation/CURATOR_CHANGELOG_SHEET_V4_PROTOCOL.md · экраны искать по data-screen-label</p>
+  <div class="secH">Изменения куратора · три правила</div>
+  <div style="display:flex;gap:22px;margin-bottom:38px;max-width:1180px;">
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Показываем итог дня, а не список нажатий</b><span>Человеку важно не то, что куратор «добавил приём», а то, что его день теперь выглядит иначе: было 1 240 ккал, стало 1 937. Поэтому шапка каждой даты несёт дельту по калориям, а подробности лежат под ней. Дельта — это первое «было» и последнее «стало» среди неподтверждённых записей дня: куратор мог сохранять день трижды, и человек должен увидеть путь целиком, а не последний отрезок. Пока полей нет на сервере, шапка идёт без калорий — как в кадре «Без еды»; выдуманное число хуже, чем его отсутствие. Отдельный чип-сводка сверху убран: при одном изменении он дословно повторял единственную строку, при десяти — не помещался.</span></div></div>
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Подтверждение никуда не уводит</b><span>В коде «Ознакомился» подтверждает записи и перебрасывает в дневник к первой правке. Это отбирает управление: человек согласился, что видел, и оказался на другой вкладке. Здесь подтверждение просто закрывает лист и возвращает туда, где человек был. Переход — только по явному касанию строки, и оно же помечает эту запись прочитанной, так что «Показать» отдельной кнопкой не нужен: строка нажимается целиком.</span></div></div>
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Утро важнее правок</b><span>Лист не встаёт поверх утреннего мастера: пока чек-ин открыт или идёт, он ждёт очереди. Требовать закрытого утра нельзя — человек может не делать чек-ин весь день, и правки куратора зависли бы вместе с ним. «Позже» откладывает на 15 минут, после двух показов за сессию третий лист не приходит — вместо него на «Питании» остаётся точка. Навязчивость здесь дороже задержки: правки куратора не срочные.</span></div></div>
+  </div>
+  <div class="secH">Лист правок · случаи</div>
+  <div class="pal" data-mir="m4" style="display:flex;gap:30px;align-items:flex-start;">
+
+    <div><div class="lab"><b>Один приём</b><span>частый случай — куратор внёс ужин</span></div>
+    <div class="ph" data-screen-label="Куратор · один приём">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
+      <div class="bd"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Куратор Антон обновил ваш дневник</div><div class="mds">Проверьте, что изменилось по вашим данным</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="gh"><span class="ghd">15 августа</span><span class="ghv n">1 240 → 1 937 ккал</span></div>
+          <div class="mc">
+            <div style="display:flex;align-items:center;gap:10px;"><div class="rowt"><b>Ужин в 16:46 · 697 ккал</b><span>Приём добавлен · 7 продуктов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+            <div class="dv"></div>
+            <div class="pr"><span>Люля куриные на гриле</span><span class="n">70 г</span></div>
+            <div class="pr"><span>Бризоль куриная</span><span class="n">70 г</span></div>
+            <div class="pr"><span>Рис с овощами</span><span class="n">288 г</span></div>
+            <div class="ghv" style="margin-top:8px;">и ещё 4 продукта</div>
+          </div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+    <div><div class="lab"><b>День целиком</b><span>шесть правок разного рода</span></div>
+    <div class="ph" data-screen-label="Куратор · много правок за день">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
+      <div class="bd"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Куратор Антон обновил ваш дневник</div><div class="mds">Шесть изменений за вчера</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="gh"><span class="ghd">15 августа</span><span class="ghv n">1 240 → 1 757 ккал</span></div>
+          <div class="row"><div class="rowt"><b>Ужин в 16:46 · 697 ккал</b><span>Приём добавлен · 7 продуктов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Рис в обеде: 200 → 288 г</b><span>+ 118 ккал</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Из завтрака убраны два продукта</b><span>− 298 ккал</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Тренировка: силовая, 45 минут</b><span>18:30 · вкладка «Актив»</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Вес: 82 → 81,5 кг</b></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Обновлены нормы</b><span>Калории и белок</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Две даты</b><span>прошлые дни свёрнуты</span></div>
+    <div class="ph" data-screen-label="Куратор · две даты">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
+      <div class="bd"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Куратор Антон обновил ваш дневник</div><div class="mds">Изменения за два дня</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="gh"><span class="ghd">15 августа</span><span class="ghv n">1 240 → 1 937 ккал</span></div>
+          <div class="row"><div class="rowt"><b>Ужин в 16:46 · 697 ккал</b><span>Приём добавлен · 7 продуктов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Вода: 1 800 мл</b><span>Проставлена задним числом</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="gh"><span class="ghd">14 августа</span><span class="ghv n">2 010 → 1 866 ккал</span></div>
+          <div class="row"><div class="rowt"><b>Три изменения по еде и шагам</b><span>Развернуть</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Длинный приём</b><span>развёрнутый список продуктов</span></div>
+    <div class="ph" data-screen-label="Куратор · длинный приём">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div></div>
+      <div class="bd"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Куратор Антон обновил ваш дневник</div><div class="mds">Проверьте, что изменилось по вашим данным</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="gh"><span class="ghd">15 августа</span><span class="ghv n">1 240 → 1 937 ккал</span></div>
+          <div class="mc">
+            <div style="display:flex;align-items:center;gap:10px;"><div class="rowt"><b>Ужин в 16:46 · 697 ккал</b><span>Приём добавлен · 7 продуктов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+            <div class="dv"></div>
+            <div class="pr"><span>Люля куриные на гриле</span><span class="n">70 г</span></div>
+            <div class="pr"><span>Бризоль куриная</span><span class="n">70 г</span></div>
+            <div class="pr"><span>Рис с овощами</span><span class="n">288 г</span></div>
+            <div class="pr"><span>Капуста квашеная</span><span class="n">100 г</span></div>
+            <div class="pr"><span>Кофе американо</span><span class="n">150 г</span></div>
+            <div class="pr"><span>Молоко 3.2</span><span class="n">200 г</span></div>
+            <div class="pr"><span>Кетчуп томатный</span><span class="n">15 г</span></div>
+            <div class="ghv" style="margin-top:8px;">Свернуть</div>
+          </div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Без еды</b><span>вес, тренировка, нормы</span></div>
+    <div class="ph" data-screen-label="Куратор · сухие строки">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
+      <div class="bd"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Куратор Антон обновил ваш дневник</div><div class="mds">Еду не трогали — правки по весу и активности</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="gh"><span class="ghd">15 августа</span></div>
+          <div class="row"><div class="rowt"><b>Вес: 82 → 81,5 кг</b><span>Утреннее взвешивание</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Тренировка: силовая, 45 минут</b><span>18:30 · вкладка «Актив»</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Шаги: 8 432</b><span>Подтянуты с часов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b>Обновлены нормы</b><span>Калории 1 940, белок 128 г</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Долгое отсутствие</b><span>больше сотни записей</span></div>
+    <div class="ph" data-screen-label="Куратор · много дней">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div></div>
+      <div class="bd"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Куратор Антон обновил ваш дневник</div><div class="mds">Пока вас не было — правки за шесть дней</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="gh"><span class="ghd">15 августа</span><span class="ghv n">1 240 → 1 937 ккал</span></div>
+          <div class="row"><div class="rowt"><b>Ужин в 16:46 · 697 ккал</b><span>Приём добавлен · 7 продуктов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="gh"><span class="ghd">14 августа</span><span class="ghv n">2 010 → 1 866 ккал</span></div>
+          <div class="row"><div class="rowt"><b>Четыре изменения по еде</b><span>Развернуть</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div>
+          <div class="gh"><span class="ghd">9 — 13 августа</span></div>
+          <div class="row"><div class="rowt"><b>Ещё 43 изменения за пять дней</b><span>Развернуть по дням</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Повторы за день</b><span>четырнадцать правок, пять одинаковых</span></div>
+    <div class="ph" data-screen-label="Куратор · повторяющиеся правки">
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div></div>
+      <div class="bd"><div class="md">
+        <div class="mdh">
+          <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
+          <div style="flex:1;"><div class="mdt">Куратор Антон обновил ваш дневник</div><div class="mds">Четырнадцать изменений за вчера</div></div>
+          <span class="mdx cv"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </div>
+        <div class="mdb">
+          <div class="gh"><span class="ghd">16 августа</span><span class="ghv n">888 → 1 958 ккал</span></div>
+          <div class="mc">
+            <div style="display:flex;align-items:center;gap:10px;"><div class="rowt"><b>Ужин в 23:09 · 637 ккал</b><span>Приём добавлен · 6 продуктов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+            <div class="dv"></div>
+            <div class="pr"><span>Хлеб тостовый «Премиум»</span><span class="n">74 г</span></div>
+            <div class="pr"><span>Грудка копчёная Орион</span><span class="n">100 г</span></div>
+            <div class="pr"><span>Творожный сыр 30 самокат</span><span class="n">30 г</span></div>
+            <div class="ghv" style="margin-top:8px;">и ещё 3 продукта</div>
+          </div>
+          <div class="row"><div class="rowt"><b>Перекус в 18:40 · 498 ккал</b><span>Приём добавлен · удон с курицей, 280 г</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row" style="align-items:flex-start;padding:11px 13px 12px;">
+            <span style="flex:none;min-width:30px;height:30px;border-radius:10px;background:var(--c2);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);letter-spacing:-.02em;margin-top:1px;">×5</span>
+            <div class="rowt"><b>Пять кофе-брейков, 08:30 — 12:30</b><span>В каждом кофе растворимый с молоком 2,5 · 200 г</span>
+              <span class="n" style="margin-top:6px;display:block;font:700 11px/1.3 Figtree,sans-serif;color:var(--ac);">+ 290 ккал за все пять</span>
+            </div>
+            <span class="cv" style="margin-top:4px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
+          </div>
+          <div class="row"><div class="rowt"><b>Удалён приём: ужин в 21:15</b><span>− 240 ккал · дубль вечернего приёма</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+        </div>
+        <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
+      </div></div>
+    </div></div>
+
+    <div data-nomirror style="width:400px;flex:none;">
+      <div class="h" style="margin-top:0;">Решения по листу</div><div style="background:var(--bg);border-radius:24px;padding:20px;">
+        <div class="nt"><b>Лист снизу, а не карточка по центру</b><span>Содержимое непредсказуемой длины: то одна строка, то шесть дат. Лист растёт вверх от нижнего края, поэтому обе кнопки всегда стоят там, где их ждёт большой палец, а короткое содержимое не превращается в карточку, повисшую в середине экрана. Максимум — почти весь экран, шапка и подвал приклеены, скроллится только середина.</span></div>
+        <div class="nt"><b>«Показать» у каждой строки убрано</b><span>Кнопка внутри строки конкурировала с главной кнопкой листа и обещала выбор, которого нет: строка и так ведёт ровно в одно место. Теперь нажимается вся строка, а справа стоит шеврон — сорок четыре точки высоты остаются, кнопки нет. Заодно снят конфликт из кода: раньше переход по «Показать» уходил без подтверждения, и лист возвращался через пятнадцать минут, будто человек ничего не смотрел. Просмотренная строка гасится сама, но запись на сервере не подтверждается: один сейв куратора — это одна запись и до шести строк в листе, и подтвердить её целиком из-за одного ужина значило бы спрятать непрочитанные вес, нормы и тренировку. Запись уходит подтверждённой, когда по ней не осталось видимых строк — или когда нажали «Понятно».</span></div>
+        <div class="nt"><b>Одинаковые правки складываются в одну строку</b><span>Пять кофе-брейков подряд с одним и тем же продуктом — это не пять новостей, а одна привычка, которую куратор внёс задним числом. Развёрнутыми они съедали весь лист и прятали важное: удалённый дубль ужина оказывался за пределом экрана. Правки одного типа с совпадающим составом собираются в строку с числом повторов, диапазоном времени и суммарной дельтой калорий — раскрывается по касанию, если человек хочет проверить каждый. Складываем только полные совпадения по типу приёма и составу: два разных перекуса остаются двумя строками, иначе группа врёт.</span></div>
+        <div class="nt"><b>Продукты сворачиваются до трёх</b><span>Семь строк по семьдесят грамм — это не изменения, а содержимое приёма: его читают в дневнике. В листе достаточно названия приёма, времени, калорий и трёх первых продуктов; «и ещё четыре продукта» разворачивает остальное на месте. Итог по калориям стоит в шапке карточки, потому что именно он меняет день.</span></div>
+        <div class="nt"><b>Старые дни свёрнуты по умолчанию</b><span>Раскрыт только самый свежий день — тот, про который человек ещё помнит, что ел. Прошлые даты стоят строкой «три изменения по еде и шагам» с дельтой калорий в шапке: этого хватает, чтобы решить, разворачивать или нет. Порог «показываем последние сто изменений, остальное потом» из кода при этом не нужен — свёрнутые дни занимают одну строку каждый, обрезать список нечем.</span></div>
+        <div class="nt"><b>«Понятно» вместо «Ознакомился»</b><span>«Ознакомился» — язык документа под подпись; здесь ничего не подписывают, а просто смотрят, что поменялось. Смысл подтверждения сохраняется: нажатие помечает записи прочитанными на сервере. Если юридически нужна именно формулировка про ознакомление — она вернётся, но тогда и тон листа придётся делать строже.</span></div>
+        <div class="nt"><b>Имя куратора — из данных</b><span>«Антон» в коде зашит. В заголовке подставляется имя закреплённого куратора, а если его нет — «Ваш куратор обновил дневник». Строчка «Проверьте, что изменилось» под заголовком заменяется на сводку, когда изменений больше трёх: «шесть изменений за вчера», «правки за шесть дней».</span></div>
+        <div class="nt"><b>Первая вкладка называет день, а не себя</b><span>Слово «Главная» не сообщает ничего: человек и так видит, где он. Вместо него — сокращённый день недели с числом и время рядом, набранные крупно: это единственное место интерфейса, где дата видна с любого экрана, и по ней же видно, какой день сейчас редактируется. Выходные красным — по ним в дневнике чаще всего ищут срыв. Активная вкладка отмечается пилюлей, а не цветом текста: цвет здесь уже занят смыслом «выходной».</span></div>
+        <div class="nt"><b>Точка на «Питании» — не бейдж со счётчиком</b><span>После двух показов за сессию третий лист не приходит, и единственным следом остаётся точка семь пикселей у иконки вкладки. Числа в ней нет: «43» превращает помощь куратора в долг, который нужно разгрести. Точка гаснет, когда неподтверждённых записей не осталось.</span></div>
+        <div class="nt"><b>Точка на текущей вкладке недостижима — нужна строка входа</b><span>Человек, который уже стоит на «Питании», по точке нажать не может: вкладка активна. Поэтому в шапке дня, который правил куратор, стоит строка «Куратор обновил этот день · шесть изменений» — она открывает тот же лист, отфильтрованный этой датой. Это же единственный способ вернуться к правкам после «Понятно», если человек передумал и хочет перечитать. Если правок на открытой дате нет, а в других днях есть, строка называет чужую дату — «Куратор обновил 4 июля» — и переключает день вместе с открытием листа: иначе на активной вкладке входа нет вовсе, точка на ней скрыта.</span></div>
+        <div class="ntl"><b>Пустого состояния не рисуем</b><span>Лист без записей открываться не должен: если после фильтрации показывать нечего, показ отменяется, а не заменяется экраном «новых изменений нет». Экран-заглушка тут — это лишнее касание в ответ на ничего.</span></div>
+      </div>
+      <div class="h">Что взято из кода без изменений</div><div style="background:var(--c2);border-radius:24px;padding:20px;">
+        <div class="nt"><b>Появление</b><span>После полной синхронизации с облаком, при возврате во вкладку, после входа по PIN и по ссылке из пуша. Если открыт другой блокирующий экран — ждёт очереди.</span></div>
+        <div class="nt"><b>Склейка правок</b><span>Серия правок по еде копится до тридцати минут и приходит одним листом; добавленная тренировка приходит сразу.</span></div>
+        <div class="ntl"><b>Адреса переходов</b><span>Еда, вес, вода, сон — дневник нужного дня. Шаги и тренировки — «Актив». Нормы, профиль и план — дневник по умолчанию. После перехода цель подсвечивается вспышкой.</span></div>
+      </div>
+    </div>
+
+  </div>
+  <div data-mirdst="m4" style="display:flex;gap:30px;align-items:flex-start;"></div>
+
+  <div class="secH">Липкая дата при скролле</div>
+  <div class="pal" data-mir="m7" style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;">
+
+    <div><div class="lab"><b>A · Полная шапка</b><span>верх контента или скролл вверх</span></div>
+    <div class="ph" data-screen-label="Дата · полная шапка">
+      <div style="background:var(--c2);padding:12px 16px 0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:36px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:var(--bg);"><span class="n" style="font:800 11px/1 Figtree,sans-serif;color:var(--ac);">7</span><span style="font:600 10px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">уровень</span></span>
+            <span style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:var(--bg);"><span class="n" style="font:800 11px/1 Figtree,sans-serif;color:var(--gr);">6</span><span style="font:600 10px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">дней</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:2px;">
+            <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z"/></svg></span>
+            <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1A1.6 1.6 0 007.5 19.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.6 1.6 0 003 15H3a2 2 0 110-4h.1A1.6 1.6 0 004.6 7.5l-.1-.1a2 2 0 112.8-2.8l.1.1A1.6 1.6 0 009 4.6V3a2 2 0 114 0v.1a1.6 1.6 0 002.7 1.1l.1-.1a2 2 0 112.8 2.8l-.1.1A1.6 1.6 0 0021 11h.1a2 2 0 110 4H21z"/></svg></span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 0 12px;">
+          <span style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</span>
+          <span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">1 240 из 1 900 ккал</span>
+        </div>
+      </div>
+      <div style="background:var(--bg);padding:10px 16px 11px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--ink),.07);">
+        <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
+        <span style="font:700 13.5px/1 Figtree,sans-serif;color:var(--tx);">Сегодня, 16 августа</span>
+        <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+      </div>
+      <div class="sc" style="padding-top:12px;">
+        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Завтрак · 09:40</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">420 ккал</span></div><div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:6px;">Овсянка, яйцо, кофе с молоком</div></div>
+        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Обед · 14:10</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">820 ккал</span></div><div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:6px;">Рис, курица, салат</div></div>
+        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">Ужин</span><span class="n" style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">не записан</span></div></div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>B · Сжатая шапка</b><span>после скролла вниз</span></div>
+    <div class="ph" data-screen-label="Дата · сжатая шапка">
+      <div style="background:var(--bg);padding:16px 16px 11px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 1px 0 rgba(var(--ink),.09);position:relative;z-index:2;">
+        <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
+        <span style="font:700 13.5px/1 Figtree,sans-serif;color:var(--tx);">Сегодня, 16 августа</span>
+        <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+      </div>
+      <div class="sc" style="padding-top:11px;">
+        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Обед · 14:10</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">820 ккал</span></div><div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:6px;">Рис, курица, салат</div></div>
+        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Перекус · 16:30</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">180 ккал</span></div><div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:6px;">Творог, яблоко</div></div>
+        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">Ужин</span><span class="n" style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">не записан</span></div></div>
+        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Вода</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">1 400 мл</span></div></div>
+        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Добавки</span><span class="n" style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">2 из 2</span></div></div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>C · Прошлый день + сжатие</b><span>баннер не уезжает</span></div>
+    <div class="ph" data-screen-label="Дата · прошлый день сжато">
+      <div style="background:var(--bg);padding:14px 12px 11px;position:relative;z-index:2;box-shadow:0 1px 0 rgba(var(--ink),.09);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--tint);border-radius:14px;padding:8px 8px 8px 13px;min-height:44px;">
+          <span style="font:600 11.5px/1.35 Figtree,sans-serif;color:var(--ac2);text-wrap:pretty;">Вы смотрите прошлый день</span>
+          <span style="flex:none;min-height:32px;padding:0 13px;border-radius:999px;background:var(--acs);display:flex;align-items:center;font:700 11.5px/1 Figtree,sans-serif;color:var(--on-acs);">Сегодня</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;padding:0 4px;">
+          <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
+          <span style="font:700 13.5px/1 Figtree,sans-serif;color:var(--tx);">Пятница, 14 августа</span>
+          <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+        </div>
+      </div>
+      <div style="background:var(--c2);padding:9px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:700 12px/1 Figtree,sans-serif;color:var(--tx);">Обед · 14:10</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">820 ккал</span></div>
+      <div class="sc" style="padding-top:11px;">
+        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Обед · 14:10</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">820 ккал</span></div><div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:6px;">Рис, курица, салат</div></div>
+        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Перекус · 16:30</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">180 ккал</span></div></div>
+        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Ужин · 19:20</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">640 ккал</span></div></div>
+        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Вода</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">1 800 мл</span></div></div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>D · Переход</b><span>примерно 200 мс</span></div>
+    <div class="ph" data-screen-label="Дата · переход">
+      <div style="background:var(--c2);padding:0 16px;overflow:hidden;height:26px;opacity:.45;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;transform:translateY(-9px);">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:var(--bg);"><span class="n" style="font:800 11px/1 Figtree,sans-serif;color:var(--ac);">7</span><span style="font:600 10px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">уровень</span></span>
+            <span style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:var(--bg);"><span class="n" style="font:800 11px/1 Figtree,sans-serif;color:var(--gr);">6</span><span style="font:600 10px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">дней</span></span>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--bg);padding:11px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 1px 0 rgba(var(--ink),.06);">
+        <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
+        <span style="font:700 13.5px/1 Figtree,sans-serif;color:var(--tx);">Сегодня, 16 августа</span>
+        <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+      </div>
+      <div class="sc" style="padding-top:11px;">
+        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Завтрак · 09:40</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">420 ккал</span></div><div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:6px;">Овсянка, яйцо, кофе с молоком</div></div>
+        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Обед · 14:10</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">820 ккал</span></div></div>
+        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">Ужин</span><span class="n" style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">не записан</span></div></div>
+      </div>
+    </div></div>
+
+    <div data-nomirror style="width:400px;flex:none;">
+      <div class="h" style="margin-top:0;">Решения по липкой дате</div><div style="background:var(--bg);border-radius:24px;padding:20px;">
+        <div class="nt"><b>Уезжает статус, остаётся управление</b><span>Вверх уходят уровень, серия, лампочка, настройки и название вкладки — всё, что человек читает один раз за сессию. Остаётся то, чем он пользуется во время чтения: дата и стрелки дня. Название вкладки не нужно на экране, где и так видно карточки еды — вкладка подсвечена внизу.</span></div>
+        <div class="nt"><b>Полоса не становится карточкой</b><span>Сжатая шапка — это тот же грунт экрана плюс однопиксельная линия снизу. Ни радиуса, ни блюра, ни тени-подушки: карточка поверх контента читалась бы как отдельный слой, который можно закрыть, а закрыть дату нельзя.</span></div>
+        <div class="nt"><b>Баннер прошлого дня не уезжает никогда</b><span>Он не статус, а предупреждение: всё, что человек пишет на этом экране, попадёт в чужой день. «Сегодня» рядом с ним — не декоративная кнопка, а выход. Поэтому в сжатом виде баннер стоит над датой, а не схлопывается в точку.</span></div>
+        <div class="nt"><b>Порядок сверху вниз один</b><span>Баннер → дата → бар текущего приёма. Бар приезда живёт под датой и никогда над ней: иначе при быстрой прокрутке две липкие полосы меняются местами, и человек теряет, где он.</span></div>
+        <div class="ntl"><b>Сжатие спокойное</b><span>Высота гасится примерно за 200 мс, дата не двигается вовсе — она стоит на месте, пока над ней исчезает шапка. Пружины и параллакса нет: экран читают, а не смотрят.</span></div>
+      </div>
+    </div>
+
+  </div>
+  <div data-mirdst="m7" style="display:flex;gap:30px;align-items:flex-start;"></div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  pal = [['dk', 'Тёмная'], ['bl', 'Синяя'], ['bldk', 'Синяя тёмная']];
+  componentDidMount() { this.obs = new MutationObserver(() => { clearTimeout(this.t); this.t = setTimeout(() => this.sync(), 400); }); this.sync(); }
+  componentWillUnmount() { if (this.obs) this.obs.disconnect(); clearTimeout(this.t); }
+  renderVals() { return {}; }
+  sync() {
+    if (this.obs) this.obs.disconnect();
+    document.querySelectorAll('[data-mirdst]').forEach(dst => {
+      const src = document.querySelector('[data-mir="' + dst.getAttribute('data-mirdst') + '"]');
+      dst.setAttribute('style', '');
+      dst.innerHTML = '';
+      if (!src) return;
+      this.pal.forEach(([cls, name]) => {
+        const cap = document.createElement('div');
+        cap.className = 'palcap';
+        cap.textContent = name;
+        const row = src.cloneNode(true);
+        row.removeAttribute('data-mir');
+        row.className = 'pal ' + cls;
+        row.querySelectorAll('[data-nomirror]').forEach(n => n.remove());
+        row.querySelectorAll('*').forEach(n => {
+          n.removeAttribute('data-cc-id'); n.removeAttribute('data-dm-ref');
+          n.removeAttribute('data-comment-anchor'); n.removeAttribute('data-screen-label');
+        });
+        dst.append(cap, row);
+      });
+    });
+    if (this.obs) this.obs.observe(document.body, { subtree: true, childList: true, characterData: true });
+  }
+}
+</script>
+</body>
+</html>

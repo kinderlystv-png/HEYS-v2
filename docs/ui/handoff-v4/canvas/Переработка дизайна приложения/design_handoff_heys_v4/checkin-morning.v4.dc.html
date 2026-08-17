@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="./v4-canvas.css" rel="stylesheet">
+</helmet>
+
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e9dfcd"/><rect x="30" y="30" width="40" height="40" rx="10" fill="#c67139"/><text x="50" y="57" text-anchor="middle" font-family="Figtree,sans-serif" font-size="16" font-weight="700" fill="#2b1608">v4</text></svg></template>
+
+<div style="background:#e9dfcd;padding:0 46px 70px;width:max-content;">
+
+  <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
+    <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">УТРЕННИЙ ЧЕК-ИН</span>
+    <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Пять экранов ритуала и разбор вчерашнего дня перед ними</span>
+  </div>
+  <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Вес, сон, три оценки, цель по шагам, остальное. Разбор вчера стоит развилкой до мастера: он появляется только по данным еды и закрывается одним из четырёх выходов.</p>
+  <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);">В пакете: checkin-morning.v4.dc.html · протокол docs/implementation/MORNING_CHECKIN_V4_PROTOCOL.md · экраны искать по data-screen-label</p>
+  <div class="secH">Утро · три правила</div>
+  <div style="display:flex;gap:22px;margin-bottom:38px;max-width:1180px;">
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Пропуск веса закрывает шаг, а не день</b><span>«Не взвешивался» ставит в день средний вес за последние три дня с меткой «расчётный»: норма калорий его берёт, тренд и график — нет, иначе линия учится на цифре, которой не было. Если трёх дней ещё нет — вес из профиля. Серия растёт, день закрыт. Отметка такого дня в истории серии — долг следующей задачи: лучше без неё вовсе, чем в одном экране есть, а в другом нет.</span></div></div>
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Вчерашний день — разбор, а не шаг</b><span>Экран появляется только из-за еды: приёмов нет, ноль калорий или съедено меньше половины нормы. Нулевые шаги и вода вопросом не становятся — их можно просто не носить с телефоном. Выходов четыре, и они разные по смыслу: дописать точно, «так и было» — цифры верные, оценить по ощущениям четырьмя силами и «заполню позже», которое закрывает утро, но возвращает день завтра. Точки в индикаторе у экрана нет: мастер начинается с веса.</span></div></div>
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Пятый экран — управление, не отметки</b><span>Холод стоит первой строкой и крупнее: нужен каждый день, привычка ещё не выросла; «Было» раскрывает тип — душ, ванна или прорубь меняют волну по-разному, и без типа запись бесполезна. Добавки — курс на день, а не «выпил»: утром правят состав, факт приёма отмечают в дневнике. Рутина — напоминание и вход в протокол, а не галочка «сделал». Замеры всплывают строкой раз в неделю, загрузочный день — только когда его рекомендуют. Пусто — это норма, «Готово» активно сразу.</span></div></div>
+  </div>
+  <div class="secH">Общее для всего слоя v4</div>
+  <div style="display:flex;gap:22px;margin-bottom:34px;max-width:1180px;">
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Герой один на экран</b><span>Каждое крупное число одно и по центру: второй герой на экране обнуляет первого.</span></div></div>
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Точки прогресса, не проценты</b><span>Активная точка — вытянутая пилюля. Проценты обещают точность, которой в короткой форме нет.</span></div></div>
+    <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Минимальная цель касания — 44 точки</b><span>Строка, чип и кнопка держат высоту даже там, где текст в одну строку.</span></div></div>
+  </div>
+
+  <div class="secH">Пять экранов</div>
+  <div class="pal" data-mir="m3" style="display:flex;gap:30px;align-items:flex-start;">
+
+    <div><div class="lab"><b>0 · Вчерашний день</b><span>точки в индикаторе нет</span></div>
+    <div class="ph" data-screen-label="Чек-ин · вчерашний день">
+      <div class="top"><span style="width:44px;"></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">Перед чек-ином</span><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:18px;">
+        <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Вчерашний день выглядит неполным</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:8px;text-wrap:pretty;">Суббота, 15 августа. Проверьте, прежде чем закрывать утро — потом цифры уйдут в статистику как есть.</div>
+        <div style="background:var(--c1);border-radius:20px;padding:14px 16px;margin-top:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Еда</span><span class="n" style="color:var(--ac2);">640 из 1 900 ккал</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:13px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Приёмы</span><span class="n" style="color:var(--ac2);">один приём за день</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:13px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Последняя запись</span><span class="n" style="color:rgba(var(--ink),.42);font-weight:500;">завтрак, 09:40</span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-wrap:pretty;">День попадает сюда только из-за еды: приёмов нет, ноль калорий или меньше половины нормы. Нулевые шаги и вода сами по себе вопросом не становятся.</div>
+      </div>
+      <div class="foot" style="display:flex;flex-direction:column;gap:8px;">
+        <div class="btn">Дописать точно</div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--c1);font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);text-align:center;">Так и было · 640 ккал</div>
+          <div style="flex:1.25;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--c1);font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">По ощущениям</div>
+        </div>
+        <div style="min-height:44px;display:flex;align-items:center;justify-content:center;font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">Заполню позже</div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>0 · По ощущениям</b><span>четыре силы, второй слой</span></div>
+    <div class="ph" data-screen-label="Чек-ин · вчера по ощущениям">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">15 августа</span><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:16px;">
+        <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Как вы вчера ели?</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:7px;text-wrap:pretty;">Запишем примерные приёмы с меткой «по ощущениям» — точность ниже, но день не пропадёт.</div>
+        <div style="display:flex;flex-direction:column;gap:7px;margin-top:14px;">
+          <div style="background:var(--c1);border-radius:14px;padding:0 13px;min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Не доел</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">1 480 ккал</span></div>
+          <div style="background:var(--c2);border-radius:14px;padding:0 13px;min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:inset 0 0 0 2px var(--acs);"><span style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">Как надо</span><span class="n" style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">2 090 ккал</span></div>
+          <div style="background:var(--c1);border-radius:14px;padding:0 13px;min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Скорее переел</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">2 940 ккал</span></div>
+          <div style="background:var(--c1);border-radius:14px;padding:0 13px;min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Сильно переел</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">3 800 ккал</span></div>
+        </div>
+        <div style="margin-top:16px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">Насколько от нормы</span><span class="n" style="font:700 15px/1 Figtree,sans-serif;color:var(--ac);">110 %</span></div>
+          <div style="position:relative;height:24px;border-radius:999px;background:var(--c2);margin-top:9px;">
+            <div style="position:absolute;left:0;top:0;height:24px;width:40%;border-radius:999px;background:var(--gr2);"></div>
+            <div style="position:absolute;left:40%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:999px;background:var(--bg);box-shadow:0 1px 3px rgba(var(--shadow),.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:7px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);"><span>50 %</span><span>100 %</span><span>200 %</span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-wrap:pretty;">Запишем примерно 2 090 ккал при норме того дня 1 900. Шаг 5 %.</div>
+      </div>
+      <div class="foot"><div class="btn">Записать день</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>0 · Своё число</b><span>ползунок ушёл между силами</span></div>
+    <div class="ph" data-screen-label="Чек-ин · по ощущениям своё число">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">15 августа</span><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:16px;">
+        <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Как вы вчера ели?</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:7px;text-wrap:pretty;">Ползунок сдвинут руками — ни одна из четырёх сил не отмечена.</div>
+        <div style="display:flex;flex-direction:column;gap:7px;margin-top:14px;">
+          <div style="background:var(--c1);border-radius:14px;padding:0 13px;min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Не доел</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">1 480 ккал</span></div>
+          <div style="background:var(--c1);border-radius:14px;padding:0 13px;min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Как надо</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">2 090 ккал</span></div>
+          <div style="background:var(--c1);border-radius:14px;padding:0 13px;min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Скорее переел</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">2 940 ккал</span></div>
+          <div style="background:var(--c1);border-radius:14px;padding:0 13px;min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Сильно переел</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">3 800 ккал</span></div>
+        </div>
+        <div style="margin-top:16px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">Насколько от нормы</span><span class="n" style="font:700 15px/1 Figtree,sans-serif;color:var(--ac);">130 %</span></div>
+          <div style="position:relative;height:24px;border-radius:999px;background:var(--c2);margin-top:9px;">
+            <div style="position:absolute;left:0;top:0;height:24px;width:53.3%;border-radius:999px;background:var(--gr2);"></div>
+            <div style="position:absolute;left:53.3%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:999px;background:var(--bg);box-shadow:0 1px 3px rgba(var(--shadow),.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:7px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);"><span>50 %</span><span>100 %</span><span>200 %</span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-wrap:pretty;">Запишем примерно 2 470 ккал при норме того дня 1 900. Силы подсвечиваются только на своих значениях — 78, 110, 155 и 200 %.</div>
+      </div>
+      <div class="foot"><div class="btn">Записать день</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>0 · Пачка дней</b><span>вернулся после перерыва</span></div>
+    <div class="ph" data-screen-label="Чек-ин · пачка незакрытых дней">
+      <div class="top"><span style="width:44px;"></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">Перед чек-ином</span><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:18px;">
+        <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Четыре дня остались незакрытыми</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:8px;text-wrap:pretty;">С 11 по 14 августа. Можно дописать любой из них или отложить и сразу начать утро.</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;">
+          <div style="background:var(--c1);border-radius:16px;padding:11px 13px;display:flex;align-items:center;gap:10px;min-height:44px;"><div class="rowt"><b>Четверг, 14 августа</b><span>640 из 1 900 ккал · один приём</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div style="background:var(--c1);border-radius:16px;padding:11px 13px;display:flex;align-items:center;gap:10px;min-height:44px;"><div class="rowt"><b>Среда, 13 августа</b><span>День пустой</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div style="background:var(--c1);border-radius:16px;padding:11px 13px;display:flex;align-items:center;gap:10px;min-height:44px;"><div class="rowt"><b>Вторник, 12 августа</b><span>День пустой</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div style="background:var(--c1);border-radius:16px;padding:11px 13px;display:flex;align-items:center;gap:10px;min-height:44px;"><div class="rowt"><b>Понедельник, 11 августа</b><span>1 210 из 1 900 ккал</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-wrap:pretty;">Отложенные дни не исчезают — вернутся завтра тем же списком.</div>
+      </div>
+      <div class="foot" style="display:flex;flex-direction:column;gap:8px;">
+        <div class="btn">Закрыть все примерно</div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--c1);font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">Очистить два пустых</div>
+          <div style="flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--c1);font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">Заполню позже</div>
+        </div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>0 · Пачка после очистки</b><span>пустые ушли, кнопки очистки нет</span></div>
+    <div class="ph" data-screen-label="Чек-ин · пачка после очистки">
+      <div class="top"><span style="width:44px;"></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">Перед чек-ином</span><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:18px;">
+        <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Осталось два дня с едой</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:8px;text-wrap:pretty;">Два пустых дня убраны из списка и ничего о еде не утверждают.</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;">
+          <div style="background:var(--c1);border-radius:16px;padding:11px 13px;display:flex;align-items:center;gap:10px;min-height:44px;"><div class="rowt"><b>Четверг, 14 августа</b><span>640 из 1 900 ккал · один приём</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div style="background:var(--c1);border-radius:16px;padding:11px 13px;display:flex;align-items:center;gap:10px;min-height:44px;"><div class="rowt"><b>Понедельник, 11 августа</b><span>1 210 из 1 900 ккал</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-wrap:pretty;">Очистка больше не предлагается — пустых дней в списке нет. Массовая оценка теперь считает только эти два дня.</div>
+      </div>
+      <div class="foot" style="display:flex;flex-direction:column;gap:8px;">
+        <div class="btn">Закрыть оба примерно</div>
+        <div style="min-height:44px;display:flex;align-items:center;justify-content:center;font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">Заполню позже</div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>0 · День из пачки</b><span>тап по строке списка</span></div>
+    <div class="ph" data-screen-label="Чек-ин · день из пачки">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">День 1 из 4</span><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:18px;">
+        <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Четверг, 14 августа</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:8px;text-wrap:pretty;">Тот же выбор, что и для вчера: дописать точно, оставить как есть или оценить.</div>
+        <div style="background:var(--c1);border-radius:20px;padding:14px 16px;margin-top:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Еда</span><span class="n" style="color:var(--ac2);">640 из 1 900 ккал</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:13px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Приёмы</span><span class="n" style="color:var(--ac2);">один приём за день</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:13px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Последняя запись</span><span class="n" style="color:rgba(var(--ink),.42);font-weight:500;">обед, 13:20</span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-wrap:pretty;">Закрытый день уходит из списка, остальные три остаются. Стрелка возвращает к списку без потери ответов.</div>
+      </div>
+      <div class="foot" style="display:flex;flex-direction:column;gap:8px;">
+        <div class="btn">Дописать точно</div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--c1);font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);text-align:center;">Так и было · 640 ккал</div>
+          <div style="flex:1.25;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--c1);font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">По ощущениям</div>
+        </div>
+        <div style="min-height:44px;display:flex;align-items:center;justify-content:center;font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">К списку дней</div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>0 · Пустой день из пачки</b><span>кнопка без нуля</span></div>
+    <div class="ph" data-screen-label="Чек-ин · пустой день из пачки">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">День 2 из 4</span><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:18px;">
+        <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Среда, 13 августа</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:8px;text-wrap:pretty;">За этот день нет ни одной записи о еде.</div>
+        <div style="background:var(--c1);border-radius:20px;padding:14px 16px;margin-top:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Еда</span><span class="n" style="color:var(--ac2);">записей нет</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:13px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Норма того дня</span><span class="n" style="color:rgba(var(--ink),.42);font-weight:500;">1 900 ккал</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:13px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Шаги и вес</span><span class="n" style="color:rgba(var(--ink),.42);font-weight:500;">есть, не трогаем</span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-wrap:pretty;">«Ничего не ел» — тоже ответ, и он идёт в статистику как есть. Если день надо просто убрать из списка без цифр — это «Очистить пустые» в списке.</div>
+      </div>
+      <div class="foot" style="display:flex;flex-direction:column;gap:8px;">
+        <div class="btn">Дописать точно</div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1.35;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--c1);font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);text-align:center;">Так и было · ничего не ел</div>
+          <div style="flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--c1);font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">По ощущениям</div>
+        </div>
+        <div style="min-height:44px;display:flex;align-items:center;justify-content:center;font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">К списку дней</div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>0 · Сила для пачки</b><span>после «Закрыть все примерно»</span></div>
+    <div class="ph" data-screen-label="Чек-ин · сила для пачки">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">11 — 14 августа</span><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:16px;">
+        <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Как вы ели эти четыре дня?</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:7px;text-wrap:pretty;">Одна оценка на всю пачку, считаем от нормы каждого дня.</div>
+        <div style="display:flex;flex-direction:column;gap:7px;margin-top:14px;">
+          <div style="background:var(--c1);border-radius:14px;padding:0 13px;min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Не доел</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">78 %</span></div>
+          <div style="background:var(--c2);border-radius:14px;padding:0 13px;min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:inset 0 0 0 2px var(--acs);"><span style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">Как надо</span><span class="n" style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">110 %</span></div>
+          <div style="background:var(--c1);border-radius:14px;padding:0 13px;min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Скорее переел</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">155 %</span></div>
+          <div style="background:var(--c1);border-radius:14px;padding:0 13px;min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Сильно переел</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">200 %</span></div>
+        </div>
+        <div style="margin-top:16px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">Насколько от нормы каждого дня</span><span class="n" style="font:700 15px/1 Figtree,sans-serif;color:var(--ac);">110 %</span></div>
+          <div style="position:relative;height:24px;border-radius:999px;background:var(--c2);margin-top:9px;">
+            <div style="position:absolute;left:0;top:0;height:24px;width:40%;border-radius:999px;background:var(--gr2);"></div>
+            <div style="position:absolute;left:40%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:999px;background:var(--bg);box-shadow:0 1px 3px rgba(var(--shadow),.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:7px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);"><span>50 %</span><span>100 %</span><span>200 %</span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-wrap:pretty;">Пустые дни получат оценку целиком, где еда есть — допишем только разницу. Если день был непохож — откройте его отдельно.</div>
+      </div>
+      <div class="foot" style="display:flex;flex-direction:column;gap:6px;"><div class="btn">Записать четыре дня</div><div style="min-height:44px;display:flex;align-items:center;justify-content:center;font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">К списку дней</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>1 · Вес</b><span>открывается сам по утрам</span></div>
+    <div class="ph" data-screen-label="Чек-ин · вес">
+      <div class="top"><span style="width:44px;"></span><div class="dots"><span class="on"></span><span></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:14px;">
+        <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-align:center;">Доброе утро, Александра</div>
+        <div style="font:500 11.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:6px;text-align:center;">Воскресенье, 16 августа</div>
+        <div style="display:flex;align-items:center;gap:10px;background:var(--c1);border-radius:16px;padding:11px 14px;margin-top:16px;">
+          <span class="n" style="font:800 15px/1 Figtree,sans-serif;color:var(--ac);">5</span>
+          <span style="font:600 11.5px/1.35 Figtree,sans-serif;color:rgba(var(--ink),.6);">дней подряд — отметьте сегодня, чтобы продолжить серию</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;margin-top:34px;">
+        <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Вес на утро</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 58px/.9 Figtree,sans-serif;color:var(--ac);letter-spacing:-.045em;">73,4</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">кг</span></div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:12px;font:700 12px/1 Figtree,sans-serif;color:var(--gr);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="3.2" stroke-linecap="round"><path d="M6 15l6-6 6 6"/></svg>−0,8 кг за неделю</div>
+        <div style="width:186px;margin:24px auto 0;background:var(--c1);border-radius:20px;padding:12px 10px 14px;">
+          <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:rgba(var(--ink),.4);text-align:center;">Килограммы</div>
+          <div style="display:flex;align-items:center;justify-content:center;margin-top:8px;">
+            <div style="flex:1;text-align:center;">
+              <div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">72</div>
+              <div class="n" style="font:700 27px/1.25 Figtree,sans-serif;color:var(--ac);letter-spacing:-.02em;">73</div>
+              <div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">74</div>
+            </div>
+            <div class="n" style="font:700 24px/1 Figtree,sans-serif;color:var(--ac);padding:0 1px;">,</div>
+            <div style="flex:1;text-align:center;">
+              <div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">3</div>
+              <div class="n" style="font:700 27px/1.25 Figtree,sans-serif;color:var(--ac);letter-spacing:-.02em;">4</div>
+              <div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">5</div>
+            </div>
+          </div>
+        </div>
+        </div>
+      </div>
+      <div class="foot" style="display:flex;gap:8px;"><span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--c1);font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">Не взвешивался</span><span class="btn" style="flex:1.3;">Дальше</span></div>
+    </div></div>
+
+    <div><div class="lab"><b>1 · Первое утро</b><span>серии и динамики ещё нет</span></div>
+    <div class="ph" data-screen-label="Чек-ин · первый вес">
+      <div class="top"><span style="width:44px;"></span><div class="dots"><span class="on"></span><span></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:14px;">
+        <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-align:center;">Доброе утро, Александра</div>
+        <div style="font:500 11.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:6px;text-align:center;">Пятница, 21 августа — первый день недели</div>
+        <div style="display:flex;flex-direction:column;align-items:center;margin-top:30px;">
+        <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Вес на утро</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 58px/.9 Figtree,sans-serif;color:var(--ac);letter-spacing:-.045em;">74,2</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">кг</span></div>
+        <div style="font:500 11.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-align:center;text-wrap:pretty;">Из профиля — поправьте, если весы показывают другое</div>
+        <div style="width:186px;margin:22px auto 0;background:var(--c1);border-radius:20px;padding:12px 10px 14px;">
+          <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:rgba(var(--ink),.4);text-align:center;">Килограммы</div>
+          <div style="display:flex;align-items:center;justify-content:center;margin-top:8px;">
+            <div style="flex:1;text-align:center;">
+              <div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">73</div>
+              <div class="n" style="font:700 27px/1.25 Figtree,sans-serif;color:var(--ac);letter-spacing:-.02em;">74</div>
+              <div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">75</div>
+            </div>
+            <div class="n" style="font:700 24px/1 Figtree,sans-serif;color:var(--ac);padding:0 1px;">,</div>
+            <div style="flex:1;text-align:center;">
+              <div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">1</div>
+              <div class="n" style="font:700 27px/1.25 Figtree,sans-serif;color:var(--ac);letter-spacing:-.02em;">2</div>
+              <div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">3</div>
+            </div>
+          </div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:16px;text-align:center;text-wrap:pretty;">Динамика появится через неделю взвешиваний.</div>
+        </div>
+      </div>
+      <div class="foot" style="display:flex;gap:8px;"><span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--c1);font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">Не взвешивался</span><span class="btn" style="flex:1.3;">Дальше</span></div>
+    </div></div>
+
+    <div><div class="lab"><b>1 · Расчётный вес</b><span>после «Не взвешивался»</span></div>
+    <div class="ph" data-screen-label="Чек-ин · расчётный вес">
+      <div class="top"><span style="width:44px;"></span><div class="dots"><span class="on"></span><span></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:34px;">
+        <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Вес на утро</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 58px/.9 Figtree,sans-serif;color:rgba(var(--ink),.45);letter-spacing:-.045em;">73,6</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">кг</span></div>
+        <div style="margin-top:12px;padding:5px 12px;border-radius:999px;background:var(--c2);font:700 10.5px/1 Figtree,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--ac);">Расчётный</div>
+        <div style="width:100%;background:var(--c1);border-radius:20px;padding:15px 17px;margin-top:22px;">
+          <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.6);text-wrap:pretty;">Среднее за три последних взвешивания</div>
+          <div style="display:flex;justify-content:space-between;margin-top:11px;font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);"><span>13 августа</span><span class="n">73,9 кг</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:9px;font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);"><span>14 августа</span><span class="n">73,5 кг</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:9px;font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);"><span>15 августа</span><span class="n">73,4 кг</span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:14px;text-align:center;text-wrap:pretty;">Норма дня эту цифру берёт, тренд и график — нет. Серия растёт как обычно.</div>
+      </div>
+      <div class="foot" style="display:flex;gap:8px;"><span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--c1);font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">Ввести вес</span><span class="btn" style="flex:1.3;">Дальше</span></div>
+    </div></div>
+
+    <div><div class="lab"><b>1 · Расчётный без истории</b><span>трёх дней ещё нет</span></div>
+    <div class="ph" data-screen-label="Чек-ин · расчётный вес без истории">
+      <div class="top"><span style="width:44px;"></span><div class="dots"><span class="on"></span><span></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:34px;">
+        <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Вес на утро</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 58px/.9 Figtree,sans-serif;color:rgba(var(--ink),.45);letter-spacing:-.045em;">74,2</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">кг</span></div>
+        <div style="margin-top:12px;padding:5px 12px;border-radius:999px;background:var(--c2);font:700 10.5px/1 Figtree,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--ac);">Из профиля</div>
+        <div style="width:100%;background:var(--c1);border-radius:20px;padding:15px 17px;margin-top:22px;">
+          <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.6);text-wrap:pretty;">Взвешиваний пока меньше трёх — среднее считать не из чего, берём вес из анкеты.</div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:14px;text-align:center;text-wrap:pretty;">Как только наберётся три взвешивания, расчётный вес начнёт считаться по ним.</div>
+      </div>
+      <div class="foot" style="display:flex;gap:8px;"><span style="flex:1;display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--c1);font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">Ввести вес</span><span class="btn" style="flex:1.3;">Дальше</span></div>
+    </div></div>
+
+    <div><div class="lab"><b>2 · Сон</b><span>время, длительность и оценка вместе</span></div>
+    <div class="ph" data-screen-label="Чек-ин · сон">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:22px;">
+        <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Сон этой ночью</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 50px/.9 Figtree,sans-serif;color:var(--ac);letter-spacing:-.04em;">6:30</span></div>
+        <div style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:12px;">на полчаса меньше вашей нормы</div>
+        <div style="display:flex;gap:10px;width:100%;margin-top:20px;">
+          <div style="flex:1;background:var(--c1);border-radius:20px;padding:12px 6px 14px;">
+            <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:rgba(var(--ink),.4);text-align:center;">Легли</div>
+            <div style="display:flex;align-items:center;justify-content:center;margin-top:8px;">
+              <div style="flex:1;text-align:center;">
+                <div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">22</div>
+                <div class="n" style="font:700 27px/1.25 Figtree,sans-serif;color:var(--ac);letter-spacing:-.02em;">23</div>
+                <div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">00</div>
+              </div>
+              <div class="n" style="font:700 24px/1 Figtree,sans-serif;color:var(--ac);padding:0 1px;">:</div>
+              <div style="flex:1;text-align:center;">
+                <div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">30</div>
+                <div class="n" style="font:700 27px/1.25 Figtree,sans-serif;color:var(--ac);letter-spacing:-.02em;">40</div>
+                <div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">50</div>
+              </div>
+            </div>
+          </div>
+          <div style="flex:1;background:var(--c1);border-radius:20px;padding:12px 6px 14px;">
+            <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:rgba(var(--ink),.4);text-align:center;">Встали</div>
+            <div style="display:flex;align-items:center;justify-content:center;margin-top:8px;">
+              <div style="flex:1;text-align:center;">
+                <div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">05</div>
+                <div class="n" style="font:700 27px/1.25 Figtree,sans-serif;color:var(--ac);letter-spacing:-.02em;">06</div>
+                <div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">07</div>
+              </div>
+              <div class="n" style="font:700 24px/1 Figtree,sans-serif;color:var(--ac);padding:0 1px;">:</div>
+              <div style="flex:1;text-align:center;">
+                <div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">00</div>
+                <div class="n" style="font:700 27px/1.25 Figtree,sans-serif;color:var(--ac);letter-spacing:-.02em;">10</div>
+                <div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">20</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="width:100%;background:var(--c1);border-radius:18px;padding:13px 15px 15px;margin-top:20px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">Насколько выспались</span><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);"><b class="n" style="font:700 13px/1 Figtree,sans-serif;color:var(--ac);">4</b> · так себе</span></div>
+          <div style="position:relative;height:26px;border-radius:999px;background:var(--c2);margin-top:11px;">
+            <div style="position:absolute;left:0;top:0;height:26px;width:40%;border-radius:999px;background:var(--gr2);"></div>
+            <div style="position:absolute;left:40%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:999px;background:var(--bg);box-shadow:0 1px 3px rgba(var(--shadow),.25);"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:7px;margin-top:10px;min-height:44px;"><span style="width:22px;height:22px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;flex:none;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span><span style="font:600 11.5px/1 Figtree,sans-serif;color:var(--ac);">Что помешало спать</span></div>
+        </div>
+      </div>
+      <div class="foot"><div class="btn">Дальше</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>3 · Как вы сегодня</b><span>три шкалы одним экраном</span></div>
+    <div class="ph" data-screen-label="Чек-ин · как вы сегодня">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span class="on"></span><span></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:24px;">
+        <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);text-align:center;">Как вы сегодня</div>
+        <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:8px;text-wrap:pretty;text-align:center;">Три коротких шкалы — по ним куратор видит, чем объяснить день.</div>
+        <div style="width:100%;background:var(--c1);border-radius:18px;padding:13px 15px 15px;margin-top:22px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">Настроение</span><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);"><b class="n" style="font:700 13px/1 Figtree,sans-serif;color:var(--ac);">8</b> · хорошо</span></div>
+          <div style="position:relative;height:26px;border-radius:999px;background:var(--c2);margin-top:11px;">
+            <div style="position:absolute;left:0;top:0;height:26px;width:80%;border-radius:999px;background:var(--gr2);"></div>
+            <div style="position:absolute;left:80%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:999px;background:var(--bg);box-shadow:0 1px 3px rgba(var(--shadow),.25);"></div>
+          </div>
+        </div>
+        <div style="width:100%;background:var(--c1);border-radius:18px;padding:13px 15px 15px;margin-top:10px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">Самочувствие</span><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);"><b class="n" style="font:700 13px/1 Figtree,sans-serif;color:var(--ac);">7</b> · хорошо</span></div>
+          <div style="position:relative;height:26px;border-radius:999px;background:var(--c2);margin-top:11px;">
+            <div style="position:absolute;left:0;top:0;height:26px;width:70%;border-radius:999px;background:var(--gr2);"></div>
+            <div style="position:absolute;left:70%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:999px;background:var(--bg);box-shadow:0 1px 3px rgba(var(--shadow),.25);"></div>
+          </div>
+        </div>
+        <div style="width:100%;background:var(--c1);border-radius:18px;padding:13px 15px 15px;margin-top:10px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">Стресс</span><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);"><b class="n" style="font:700 13px/1 Figtree,sans-serif;color:var(--ac);">4</b> · немного</span></div>
+          <div style="position:relative;height:26px;border-radius:999px;background:var(--c2);margin-top:11px;">
+            <div style="position:absolute;left:0;top:0;height:26px;width:40%;border-radius:999px;background:var(--acs);"></div>
+            <div style="position:absolute;left:40%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:999px;background:var(--bg);box-shadow:0 1px 3px rgba(var(--shadow),.25);"></div>
+          </div>
+        </div>
+        <div style="font:500 10.5px/1.45 Figtree,sans-serif;color:rgba(var(--ink),.38);margin-top:12px;text-wrap:pretty;">Шкалы 1–10. Подпись справа называет значение словом — число одно не читается.</div>
+      </div>
+      <div class="foot"><div class="btn">Дальше</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>4 · Цель по шагам</b><span>план на день, расход считается по факту</span></div>
+    <div class="ph" data-screen-label="Чек-ин · цель по шагам">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
+        <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Шаги на сегодня</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 54px/.9 Figtree,sans-serif;color:var(--ac);letter-spacing:-.045em;">10 500</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">шагов</span></div>
+        <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:12px;text-align:center;text-wrap:pretty;">Обычно вы проходите около 10 000 — берём чуть выше</div>
+        <div style="width:100%;margin-top:20px;">
+          <div style="position:relative;height:17px;">
+            <div style="position:absolute;left:27.8%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <span style="font:700 9px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--ac);white-space:nowrap;">Совет · 10 500</span>
+              <span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid var(--ac);"></span>
+            </div>
+          </div>
+          <div style="position:relative;height:26px;border-radius:999px;background:var(--c2);">
+            <div style="position:absolute;left:0;top:0;height:26px;width:27.8%;border-radius:999px;background:var(--gr2);"></div>
+            <div style="position:absolute;left:27.8%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:999px;background:var(--bg);box-shadow:0 1px 3px rgba(var(--shadow),.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);"><span>3 000</span><span>30 000</span></div>
+          <div style="font:600 10.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:11px;text-align:center;text-wrap:pretty;">Сдвиньте пальцем, если день будет другим</div>
+        </div>
+        <div style="width:100%;border-radius:16px;background:var(--c1);padding:13px 14px;margin-top:22px;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div><div style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Загрузочный день</div><div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:3px;">Советуем: долг за три недели</div></div>
+          <div style="display:flex;gap:6px;flex:none;"><span style="min-width:56px;min-height:38px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Да</span><span style="min-width:56px;min-height:38px;border-radius:999px;background:var(--acs);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:var(--on-acs);">Нет</span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:14px;text-align:center;text-wrap:pretty;">План на день — его видит куратор. Расход считается по факту пройденного.</div>
+      </div>
+      <div class="foot"><div class="btn">Дальше</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>5 · Остальное</b><span>всё редкое одним экраном</span></div>
+    <div class="ph" data-screen-label="Чек-ин · остальное">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:14px;">
+        <div style="border-radius:20px;background:var(--c1);padding:16px 17px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+            <span style="font:700 16px/1.25 Figtree,sans-serif;color:var(--tx);">Прохладный душ</span>
+            <span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">4 дня подряд</span>
+          </div>
+          <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:5px;text-wrap:pretty;">Хотя бы тридцать секунд в конце обычного душа — этого достаточно.</div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <div style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Было</div>
+            <div style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Не сегодня</div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:11px;">
+          <div style="border-radius:16px;background:var(--c1);padding:12px 14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+              <span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Добавки на сегодня</span>
+              <span style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid rgba(var(--ink),.35);"></span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px;margin-top:11px;">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:500 12px/1.3 Figtree,sans-serif;color:var(--tx);">Витамин D · 5000 МЕ</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">утром</span></div>
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:500 12px/1.3 Figtree,sans-serif;color:var(--tx);">Магний · 400 мг</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">вечером</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px;margin-top:12px;min-height:44px;"><span style="width:26px;height:26px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;flex:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span><span style="font:600 12px/1 Figtree,sans-serif;color:var(--ac);">Добавить в курс</span></div>
+          </div>
+
+          <div style="border-radius:16px;background:var(--c1);padding:13px 14px;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+              <span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Утренняя рутина</span>
+              <span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">2 дня подряд</span>
+            </div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:4px;">Резинки и разогрев · 6 минут</div>
+            <div style="display:flex;gap:6px;margin-top:11px;">
+              <div style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Сделал</div>
+              <div style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Сделаю</div>
+              <div style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Не сегодня</div>
+            </div>
+          </div>
+
+          <div style="border-radius:16px;background:var(--c1);padding:13px 14px;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div><div style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Замеры</div><div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:3px;">Прошло 9 дней с прошлых</div></div>
+            <span style="font:700 15px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);">›</span>
+          </div>
+        </div>
+      </div>
+      <div class="foot"><div class="btn">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>5 · Замеры просрочены</b><span>то же, но замеры выделены</span></div>
+    <div class="ph" data-screen-label="Чек-ин · замеры просрочены">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:14px;">
+        <div style="border-radius:20px;background:var(--c1);padding:16px 17px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+            <span style="font:700 16px/1.25 Figtree,sans-serif;color:var(--tx);">Прохладный душ</span>
+            <span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">4 дня подряд</span>
+          </div>
+          <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:5px;text-wrap:pretty;">Тридцать секунд в конце обычного душа — достаточно.</div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <div style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Было</div>
+            <div style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Не сегодня</div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:11px;">
+          <div style="border-radius:16px;background:var(--c1);padding:12px 14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+              <span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Добавки на сегодня</span>
+              <span style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid rgba(var(--ink),.35);"></span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px;margin-top:11px;">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:500 12px/1.3 Figtree,sans-serif;color:var(--tx);">Витамин D · 5000 МЕ</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">утром</span></div>
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:500 12px/1.3 Figtree,sans-serif;color:var(--tx);">Магний · 400 мг</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">вечером</span></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:7px;margin-top:12px;min-height:44px;"><span style="width:26px;height:26px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;flex:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span><span style="font:600 12px/1 Figtree,sans-serif;color:var(--ac);">Добавить в курс</span></div>
+          </div>
+
+          <div style="border-radius:16px;background:var(--c1);padding:13px 14px;">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+              <span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Утренняя рутина</span>
+              <span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">2 дня подряд</span>
+            </div>
+            <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:4px;">Резинки и разогрев · 6 минут</div>
+            <div style="display:flex;gap:6px;margin-top:11px;">
+              <div style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Сделал</div>
+              <div style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Сделаю</div>
+              <div style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Не сегодня</div>
+            </div>
+          </div>
+
+          <div style="border-radius:16px;background:var(--tint);box-shadow:inset 0 0 0 1.5px var(--ac2);padding:12px 14px 13px;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <div>
+              <div style="display:flex;align-items:center;gap:6px;"><span style="width:5px;height:5px;border-radius:999px;background:var(--ac2);flex:none;"></span><span style="font:700 9.5px/1 Figtree,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--ac2);">14 дней без замеров</span></div>
+              <div style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);margin-top:6px;">Замеры</div>
+              <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:3px;">Без обхвата виден только вес</div>
+            </div>
+            <span style="font:700 15px/1 Figtree,sans-serif;color:var(--ac2);">›</span>
+          </div>
+        </div>
+      </div>
+      <div class="foot"><div class="btn">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>5 · Холод: тип</b><span>раскрылось после «Было»</span></div>
+    <div class="ph" data-screen-label="Чек-ин · холод тип">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:18px;">
+        <div style="border-radius:20px;background:var(--c1);padding:16px 17px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+            <span style="font:700 16px/1.25 Figtree,sans-serif;color:var(--tx);">Холод сегодня был</span>
+            <span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">5 дней подряд</span>
+          </div>
+          <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:5px;text-wrap:pretty;">Выберите, что именно — от этого зависит инсулиновая волна дня.</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:13px;">
+            <div style="background:var(--c2);border-radius:14px;padding:11px 13px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;box-shadow:inset 0 0 0 2px var(--acs);"><span style="font:700 12.5px/1.3 Figtree,sans-serif;color:var(--tx);">Прохладный душ</span><span class="n" style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">волна −5 %</span></div>
+            <div style="background:var(--bg);border-radius:14px;padding:11px 13px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 12.5px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.55);">Холодная ванна</span><span class="n" style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">волна −10 %</span></div>
+            <div style="background:var(--bg);border-radius:14px;padding:11px 13px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 12.5px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.55);">Прорубь</span><span class="n" style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">волна −12 %</span></div>
+          </div>
+          <div style="background:var(--bg);border-radius:20px;padding:12px 10px 14px;margin:15px auto 0;width:166px;">
+            <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:rgba(var(--ink),.4);text-align:center;">Когда</div>
+            <div style="display:flex;align-items:center;justify-content:center;margin-top:8px;">
+              <div style="flex:1;text-align:center;"><div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">06</div><div class="n" style="font:700 27px/1.25 Figtree,sans-serif;color:var(--ac);letter-spacing:-.02em;">07</div><div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">08</div></div>
+              <div class="n" style="font:700 24px/1 Figtree,sans-serif;color:var(--ac);padding:0 1px;">:</div>
+              <div style="flex:1;text-align:center;"><div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">10</div><div class="n" style="font:700 27px/1.25 Figtree,sans-serif;color:var(--ac);letter-spacing:-.02em;">20</div><div class="n" style="font:600 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.24);">30</div></div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:7px;margin-top:10px;min-height:44px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg><span style="font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">Убрать отметку</span></div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:4px;text-wrap:pretty;">«Не сегодня» тоже записывается — иначе вопрос вернётся через час.</div>
+      </div>
+      <div class="foot"><div class="btn">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>5 · Замеры раскрыты</b><span>второй слой той же строки</span></div>
+    <div class="ph" data-screen-label="Чек-ин · замеры">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:18px;">
+        <div style="font:700 18px/1.25 Figtree,sans-serif;color:var(--tx);">Замеры</div>
+        <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:6px;text-wrap:pretty;">Прошло девять дней с прошлых. Сантиметр честнее весов на короткой дистанции.</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:15px;">
+          <div style="background:var(--c1);border-radius:16px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Талия</span><span class="n" style="font:700 15px/1 Figtree,sans-serif;color:var(--ac);">78,0 <span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">см</span></span></div>
+          <div style="background:var(--c1);border-radius:16px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Бёдра</span><span class="n" style="font:700 15px/1 Figtree,sans-serif;color:var(--ac);">99,5 <span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">см</span></span></div>
+          <div style="background:var(--c1);border-radius:16px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Бедро</span><span class="n" style="font:700 15px/1 Figtree,sans-serif;color:var(--ac);">56,0 <span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">см</span></span></div>
+          <div style="background:var(--c1);border-radius:16px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Бицепс</span><span class="n" style="font:700 15px/1 Figtree,sans-serif;color:var(--ac);">28,5 <span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">см</span></span></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:13px;">
+          <span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">Сторона</span>
+          <div style="display:flex;gap:6px;"><span style="min-width:60px;min-height:38px;border-radius:999px;background:var(--acs);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:var(--on-acs);">Левая</span><span style="min-width:60px;min-height:38px;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">Правая</span></div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:7px;margin-top:10px;min-height:44px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg><span style="font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">Не сейчас</span></div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:2px;text-wrap:pretty;text-align:center;">Можно заполнить только талию. Пропустите — напомним через неделю.</div>
+      </div>
+      <div class="foot"><div class="btn">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>5 · Минимум</b><span>ни одного условного пункта</span></div>
+    <div class="ph" data-screen-label="Чек-ин · остальное минимум">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:18px;">
+        <div style="border-radius:20px;background:var(--c1);padding:16px 17px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+            <span style="font:700 16px/1.25 Figtree,sans-serif;color:var(--tx);">Прохладный душ</span>
+            <span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">4 дня подряд</span>
+          </div>
+          <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:5px;text-wrap:pretty;">Хотя бы тридцать секунд в конце обычного душа — этого достаточно.</div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <div style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Было</div>
+            <div style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Не сегодня</div>
+          </div>
+        </div>
+        <div style="border-radius:16px;background:var(--c1);padding:13px 14px;margin-top:12px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+            <span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Утренняя рутина</span>
+            <span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">2 дня подряд</span>
+          </div>
+          <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:4px;">Резинки и разогрев · 6 минут</div>
+          <div style="display:flex;gap:6px;margin-top:11px;">
+            <div style="flex:1;min-height:42px;border-radius:999px;background:var(--acs);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:var(--on-acs);">Сделал</div>
+            <div style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Сделаю</div>
+            <div style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Не сегодня</div>
+          </div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:14px;text-wrap:pretty;">Добавок в курсе нет, замеры свежие, загрузочный не рекомендован — остались две ежедневные карточки: душ и рутина. Короче этого пятый шаг не бывает.</div>
+      </div>
+      <div class="foot"><div class="btn">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Добавки · курс пуст</b><span>открыто со строки пятого шага</span></div>
+    <div class="ph" data-screen-label="Чек-ин · курс добавок пуст">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ttl">Добавки</span><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:26px;">
+        <div style="border-radius:20px;background:var(--c1);padding:20px 18px;text-align:center;">
+          <span style="width:46px;height:46px;border-radius:999px;background:var(--c2);display:inline-flex;align-items:center;justify-content:center;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5a4.95 4.95 0 01-7-7l7-7a4.95 4.95 0 017 7z"/><path d="M8.5 8.5l7 7"/></svg></span>
+          <div style="font:700 15px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:12px;">Курс пока пуст</div>
+          <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:6px;text-wrap:pretty;">Добавки — витамины, минералы, омега. Добавьте курс, чтобы видеть его каждое утро.</div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:14px;text-align:center;text-wrap:pretty;">Это список на день, а не отметка «выпил»: факт приёма отмечается в дневнике.</div>
+      </div>
+      <div class="foot" style="display:flex;flex-direction:column;gap:6px;"><div class="btn">Добавить в курс</div><div style="min-height:44px;display:flex;align-items:center;justify-content:center;font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">Позже</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Добавки · курс</b><span>то, что повторяется каждый день</span></div>
+    <div class="ph" data-screen-label="Добавки · курс">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ttl">Добавки</span><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:16px;">
+        <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);text-wrap:pretty;">Курс на день. Утром вы его просто видите — факт приёма отмечается в дневнике.</div>
+        <div style="display:flex;flex-direction:column;gap:7px;margin-top:14px;">
+          <div style="background:var(--c1);border-radius:16px;padding:11px 14px;display:flex;align-items:center;gap:11px;min-height:48px;">
+            <div class="rowt"><b>Витамин D3</b><span>5 000 МЕ · утром</span></div>
+            <span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+          </div>
+          <div style="background:var(--c1);border-radius:16px;padding:11px 14px;display:flex;align-items:center;gap:11px;min-height:48px;">
+            <div class="rowt"><b>Магний глицинат</b><span>400 мг · вечером</span></div>
+            <span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+          </div>
+          <div style="background:var(--c1);border-radius:16px;padding:11px 14px;display:flex;align-items:center;gap:11px;min-height:48px;">
+            <div class="rowt"><b>Омега-3</b><span>1 000 мг · с едой</span></div>
+            <span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;margin-top:12px;min-height:48px;border-radius:16px;background:var(--c2);padding:0 14px;">
+          <span style="width:26px;height:26px;border-radius:999px;background:var(--bg);display:flex;align-items:center;justify-content:center;flex:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+          <span style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">Добавить в курс</span>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:16px;text-wrap:pretty;">Курс живёт до отмены: пункт убирается тем же экраном, где добавляется. Куратор видит состав, но не меняет его без вас.</div>
+      </div>
+      <div class="foot"><div class="btn">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Добавки · добавление</b><span>поиск и чипы одним листом</span></div>
+    <div class="ph" data-screen-label="Добавки · добавление">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ttl">Добавить в курс</span><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:12px;">
+        <div style="display:flex;align-items:center;gap:9px;background:var(--c1);border-radius:14px;padding:0 13px;min-height:42px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.38)" stroke-width="2.6" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.2-4.2"/></svg>
+          <span style="font:500 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">Поиск по названию</span>
+        </div>
+
+        <div class="tier" style="margin:14px 0 7px;">Витамины и микроэлементы</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <span style="min-height:36px;display:inline-flex;align-items:center;gap:6px;padding:0 13px;border-radius:999px;background:var(--acs);font:700 12px/1 Figtree,sans-serif;color:var(--on-acs);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--on-acs)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>D3</span>
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">C</span>
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Цинк</span>
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Селен</span>
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">B12</span>
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">B6</span>
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Йод</span>
+        </div>
+
+        <div class="tier" style="margin:13px 0 7px;">Минералы и жиры</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <span style="min-height:36px;display:inline-flex;align-items:center;gap:6px;padding:0 13px;border-radius:999px;background:var(--acs);font:700 12px/1 Figtree,sans-serif;color:var(--on-acs);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--on-acs)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Магний</span>
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Омега-3</span>
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Кальций</span>
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">K2</span>
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Лецитин</span>
+        </div>
+
+        <div class="tier" style="margin:13px 0 7px;">Сон и восстановление</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Мелатонин</span>
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Глицин</span>
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">L-теанин</span>
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Коллаген</span>
+        </div>
+
+        <div class="tier" style="margin:13px 0 7px;">Спортивное питание</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Креатин</span>
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">BCAA</span>
+          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Протеин</span>
+        </div>
+      </div>
+      <div class="foot" style="display:flex;align-items:center;gap:10px;"><span style="font:700 12px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.5);flex:none;">Выбрано<br>два</span><div class="btn" style="flex:1;">Дозы и время</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Добавки · доза и время</b><span>после выбора пункта</span></div>
+    <div class="ph" data-screen-label="Добавки · доза и время">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ttl">Витамин D3</span><span style="width:44px;"></span></div>
+      <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:26px;">
+        <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Доза на день</div>
+        <div style="display:flex;align-items:center;gap:16px;margin-top:18px;">
+          <span style="width:44px;height:44px;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.55)" stroke-width="3" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
+          <div style="display:flex;align-items:baseline;gap:7px;"><span class="n" style="font:600 46px/.9 Figtree,sans-serif;color:var(--ac);letter-spacing:-.04em;">5 000</span><span style="font:600 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">МЕ</span></div>
+          <span style="width:44px;height:44px;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.55)" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:12px;text-align:center;">Шаг 500 МЕ. Обычная дозировка — от 1 000 до 5 000.</div>
+        <div style="width:100%;font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:26px 0 10px;">Когда принимать</div>
+        <div class="chipRow" style="margin-top:0;"><span class="chip on">Утром</span><span class="chip">Днём</span><span class="chip">Вечером</span><span class="chip">С едой</span></div>
+        <div style="width:100%;font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:18px;text-wrap:pretty;">Время — подсказка для утреннего списка, а не напоминание. Дозу и время можно поменять в курсе в любой день.</div>
+      </div>
+      <div class="foot"><div class="btn">Добавить в курс</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>5 · Согласие не подписано</b><span>замеры и добавки выключены</span></div>
+    <div class="ph" data-screen-label="Чек-ин · согласие не подписано">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="padding-top:18px;">
+        <div style="border-radius:20px;background:var(--c1);padding:16px 17px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+            <span style="font:700 16px/1.25 Figtree,sans-serif;color:var(--tx);">Прохладный душ</span>
+            <span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">4 дня подряд</span>
+          </div>
+          <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:5px;text-wrap:pretty;">Хотя бы тридцать секунд в конце обычного душа — этого достаточно.</div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <div style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Было</div>
+            <div style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Не сегодня</div>
+          </div>
+        </div>
+        <div style="border-radius:16px;background:var(--c1);padding:13px 14px;margin-top:12px;">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;">
+            <span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Утренняя рутина</span>
+            <span style="font:700 10px/1.2 Figtree,sans-serif;color:var(--gr);white-space:nowrap;">2 дня подряд</span>
+          </div>
+          <div style="font:500 11px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.45);margin-top:4px;">Резинки и разогрев · 6 минут</div>
+          <div style="display:flex;gap:6px;margin-top:11px;">
+            <div style="flex:1;min-height:42px;border-radius:999px;background:var(--acs);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:var(--on-acs);">Сделал</div>
+            <div style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Сделаю</div>
+            <div style="flex:1;min-height:42px;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Не сегодня</div>
+          </div>
+        </div>
+        <div style="border-radius:16px;background:var(--c1);box-shadow:inset 0 0 0 1.5px var(--edge);padding:13px 14px;margin-top:12px;">
+          <div style="font:600 12.5px/1.35 Figtree,sans-serif;color:var(--tx);">Замеры и добавки выключены</div>
+          <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:4px;text-wrap:pretty;">Обхваты и курс добавок — данные о здоровье. Их пишем только после отдельного согласия, которое можно отозвать одним касанием.</div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <div style="flex:1.5;min-height:44px;border-radius:999px;background:var(--acs);display:flex;align-items:center;justify-content:center;font:700 12px/1 Figtree,sans-serif;color:var(--on-acs);">Прочитать и подписать</div>
+            <div style="flex:1;min-height:44px;border-radius:999px;background:var(--bg);display:flex;align-items:center;justify-content:center;font:700 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">Не сейчас</div>
+          </div>
+        </div>
+      </div>
+      <div class="foot"><div class="btn">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>4 · Короткий сон</b><span>цифра мягче, причина названа</span></div>
+    <div class="ph" data-screen-label="Чек-ин · шаги при коротком сне">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
+        <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Шаги на сегодня</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 54px/.9 Figtree,sans-serif;color:var(--ac);letter-spacing:-.045em;">8 900</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">шагов</span></div>
+        <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:12px;text-align:center;text-wrap:pretty;">Спали 5 ч 40 мин — сегодня берём мягче обычных 10 500</div>
+        <div style="width:100%;margin-top:20px;">
+          <div style="position:relative;height:17px;">
+            <div style="position:absolute;left:21.9%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <span style="font:700 9px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--ac);white-space:nowrap;">Совет · 8 900</span>
+              <span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid var(--ac);"></span>
+            </div>
+          </div>
+          <div style="position:relative;height:26px;border-radius:999px;background:var(--c2);">
+            <div style="position:absolute;left:0;top:0;height:26px;width:21.9%;border-radius:999px;background:var(--gr2);"></div>
+            <div style="position:absolute;left:21.9%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:999px;background:var(--bg);box-shadow:0 1px 3px rgba(var(--shadow),.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);"><span>3 000</span><span>30 000</span></div>
+          <div style="font:600 10.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:11px;text-align:center;text-wrap:pretty;">Сдвиньте пальцем, если день будет другим</div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:26px;text-align:center;text-wrap:pretty;">Мягче — не меньше: план остаётся, просто по силам этого утра.</div>
+      </div>
+      <div class="foot"><div class="btn">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>4 · Тяжёлое утро</b><span>сон и ресурс вместе</span></div>
+    <div class="ph" data-screen-label="Чек-ин · шаги при тяжёлом утре">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
+        <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Шаги на сегодня</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 54px/.9 Figtree,sans-serif;color:var(--ac);letter-spacing:-.045em;">7 600</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">шагов</span></div>
+        <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:12px;text-align:center;text-wrap:pretty;">Короткий сон и тяжёлое самочувствие — цель заметно ниже обычной</div>
+        <div style="width:100%;margin-top:20px;">
+          <div style="position:relative;height:17px;">
+            <div style="position:absolute;left:17%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <span style="font:700 9px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--ac);white-space:nowrap;">Совет · 7 600</span>
+              <span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid var(--ac);"></span>
+            </div>
+          </div>
+          <div style="position:relative;height:26px;border-radius:999px;background:var(--c2);">
+            <div style="position:absolute;left:0;top:0;height:26px;width:17%;border-radius:999px;background:var(--gr2);"></div>
+            <div style="position:absolute;left:17%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:999px;background:var(--bg);box-shadow:0 1px 3px rgba(var(--shadow),.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);"><span>3 000</span><span>30 000</span></div>
+          <div style="font:600 10.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:11px;text-align:center;text-wrap:pretty;">Сдвиньте пальцем, если день будет другим</div>
+        </div>
+        <div style="width:100%;background:var(--c1);border-radius:16px;padding:12px 14px;margin-top:22px;font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);text-wrap:pretty;">Два смягчения подряд — короткий сон и тяжёлое утро.</div>
+      </div>
+      <div class="foot"><div class="btn">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>4 · День с тренировкой</b><span>сегодня запланирована силовая</span></div>
+    <div class="ph" data-screen-label="Чек-ин · шаги после тренировки">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
+        <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Шаги на сегодня</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 54px/.9 Figtree,sans-serif;color:var(--ac);letter-spacing:-.045em;">8 900</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">шагов</span></div>
+        <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:12px;text-align:center;text-wrap:pretty;">Сегодня есть тренировка — оставляем место на саму сессию</div>
+        <div style="width:100%;margin-top:20px;">
+          <div style="position:relative;height:17px;">
+            <div style="position:absolute;left:21.9%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <span style="font:700 9px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--ac);white-space:nowrap;">Совет · 8 900</span>
+              <span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid var(--ac);"></span>
+            </div>
+          </div>
+          <div style="position:relative;height:26px;border-radius:999px;background:var(--c2);">
+            <div style="position:absolute;left:0;top:0;height:26px;width:21.9%;border-radius:999px;background:var(--gr2);"></div>
+            <div style="position:absolute;left:21.9%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:999px;background:var(--bg);box-shadow:0 1px 3px rgba(var(--shadow),.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);"><span>3 000</span><span>30 000</span></div>
+          <div style="font:600 10.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:11px;text-align:center;text-wrap:pretty;">Сдвиньте пальцем, если день будет другим</div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:26px;text-align:center;text-wrap:pretty;">Зарядка на цифру не влияет — только полноценная тренировка дольше сорока минут.</div>
+      </div>
+      <div class="foot"><div class="btn">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>4 · Потолок</b><span>активный человек, выше не поднимаем</span></div>
+    <div class="ph" data-screen-label="Чек-ин · шаги на потолке">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
+        <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Шаги на сегодня</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 54px/.9 Figtree,sans-serif;color:var(--ac);letter-spacing:-.045em;">12 000</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">шагов</span></div>
+        <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:12px;text-align:center;text-wrap:pretty;">Вы ходите много — выше двенадцати тысяч совет не поднимается</div>
+        <div style="width:100%;margin-top:20px;">
+          <div style="position:relative;height:17px;">
+            <div style="position:absolute;left:33.3%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <span style="font:700 9px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--ac);white-space:nowrap;">Совет · 12 000</span>
+              <span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid var(--ac);"></span>
+            </div>
+          </div>
+          <div style="position:relative;height:26px;border-radius:999px;background:var(--c2);">
+            <div style="position:absolute;left:0;top:0;height:26px;width:33.3%;border-radius:999px;background:var(--gr2);"></div>
+            <div style="position:absolute;left:33.3%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:999px;background:var(--bg);box-shadow:0 1px 3px rgba(var(--shadow),.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);"><span>3 000</span><span>30 000</span></div>
+          <div style="font:600 10.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:11px;text-align:center;text-wrap:pretty;">Сдвиньте пальцем, если день будет другим</div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:26px;text-align:center;text-wrap:pretty;">Совет выше двенадцати тысяч не поднимается, но своё число можно увести до 30 000.</div>
+      </div>
+      <div class="foot"><div class="btn">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>4 · Мало данных</b><span>меньше трёх дней с шагами</span></div>
+    <div class="ph" data-screen-label="Чек-ин · шаги без истории">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
+        <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Шаги на сегодня</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 54px/.9 Figtree,sans-serif;color:var(--ac);letter-spacing:-.045em;">10 000</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">шагов</span></div>
+        <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:12px;text-align:center;text-wrap:pretty;">Пока не из чего считать вашу обычную ходьбу — это просто начало</div>
+        <div style="width:100%;margin-top:20px;">
+          <div style="position:relative;height:17px;">
+            <div style="position:absolute;left:25.9%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <span style="font:700 9px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--ac);white-space:nowrap;">Старт · 10 000</span>
+              <span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid var(--ac);"></span>
+            </div>
+          </div>
+          <div style="position:relative;height:26px;border-radius:999px;background:var(--c2);">
+            <div style="position:absolute;left:0;top:0;height:26px;width:25.9%;border-radius:999px;background:var(--gr2);"></div>
+            <div style="position:absolute;left:25.9%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:999px;background:var(--bg);box-shadow:0 1px 3px rgba(var(--shadow),.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);"><span>3 000</span><span>30 000</span></div>
+          <div style="font:600 10.5px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:11px;text-align:center;text-wrap:pretty;">Сдвиньте пальцем, если день будет другим</div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:26px;text-align:center;text-wrap:pretty;">Через несколько дней цифра начнёт подстраиваться под вас.</div>
+      </div>
+      <div class="foot"><div class="btn">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>4 · Своё число</b><span>увели выше совета</span></div>
+    <div class="ph" data-screen-label="Чек-ин · шаги своё число">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
+      <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
+        <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Шаги на сегодня</div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:14px;"><span class="n" style="font:600 54px/.9 Figtree,sans-serif;color:var(--acs);letter-spacing:-.045em;">18 000</span><span style="font:600 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.38);">шагов</span></div>
+        <div style="font:600 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:12px;text-align:center;text-wrap:pretty;">Выходной с прогулкой — поставили своё, выше совета</div>
+        <div style="width:100%;margin-top:20px;">
+          <div style="position:relative;height:17px;">
+            <div style="position:absolute;left:27.8%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <span style="font:700 9px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--ac);white-space:nowrap;">Совет · 10 500</span>
+              <span style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid var(--ac);"></span>
+            </div>
+          </div>
+          <div style="position:relative;height:26px;border-radius:999px;background:var(--c2);">
+            <div style="position:absolute;left:0;top:0;height:26px;width:55.6%;border-radius:999px;background:var(--acs);"></div>
+            <div style="position:absolute;left:55.6%;top:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:999px;background:var(--bg);box-shadow:0 1px 3px rgba(var(--shadow),.25);"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.3);"><span>3 000</span><span>30 000</span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:20px;text-align:center;text-wrap:pretty;">Метка стоит на совете — касание по ней возвращает 10 500.</div>
+      </div>
+      <div class="foot"><div class="btn">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Записано</b><span>конец ритуала</span></div>
+    <div class="ph" data-screen-label="Чек-ин · записано">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span></span><span style="width:44px;"></span></div>
+      <div class="sc" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <span style="width:56px;height:56px;border-radius:999px;background:var(--gr-bg);display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+        <div style="font:700 16px/1.35 Figtree,sans-serif;color:var(--tx);margin-top:16px;text-align:center;">Чек-ин записан</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:7px;text-align:center;">Серия — 6 дней подряд</div>
+        <div style="width:100%;background:var(--c2);border-radius:20px;padding:16px 18px;margin-top:22px;">
+          <div style="display:flex;justify-content:space-between;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Норма на утро</span><span class="n" style="color:var(--ac);">1 760 ккал</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:12px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">План по шагам</span><span class="n" style="color:var(--tx);">10 500</span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:11px;text-align:center;text-wrap:pretty;">Норма уточнится к вечеру по факту шагов и тренировок.</div>
+      </div>
+      <div class="foot"><div class="btn">На главную</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>Записано · вес расчётный</b><span>взвешивания сегодня не было</span></div>
+    <div class="ph" data-screen-label="Чек-ин · записано с расчётным весом">
+      <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span></span><span style="width:44px;"></span></div>
+      <div class="sc" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <span style="width:56px;height:56px;border-radius:999px;background:var(--gr-bg);display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+        <div style="font:700 16px/1.35 Figtree,sans-serif;color:var(--tx);margin-top:16px;text-align:center;">Чек-ин записан</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:7px;text-align:center;">Серия — 6 дней подряд, сегодня без взвешивания</div>
+        <div style="width:100%;background:var(--c2);border-radius:20px;padding:16px 18px;margin-top:22px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Вес дня</span><span class="n" style="color:var(--tx);">73,6 кг · <span style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--ac);">расчётный</span></span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:12px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Норма на утро</span><span class="n" style="color:var(--ac);">1 760 ккал</span></div>
+          <div style="display:flex;justify-content:space-between;margin-top:12px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">План по шагам</span><span class="n" style="color:var(--tx);">10 500</span></div>
+        </div>
+        <div style="font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.42);margin-top:11px;text-align:center;text-wrap:pretty;">График веса эту точку не ставит — в нём только реальные взвешивания.</div>
+      </div>
+      <div class="foot"><div class="btn">На главную</div></div>
+    </div></div>
+
+    <div data-nomirror style="width:400px;flex:none;">
+      <div class="h" style="margin-top:0;">Решения</div><div style="background:var(--bg);border-radius:24px;padding:20px;">
+        <div class="nt"><b>Рутина отвечается на месте, без захода внутрь</b><span>Строка с шевроном требовала войти, чтобы ответить на вопрос в два слова — поэтому три ответа стоят прямо на карточке: «Сделал», «Сделаю», «Не сегодня». Внутри рутины остаётся только то, чего снаружи не скажешь: сами упражнения и порядок. Три состояния разные по смыслу, и путать их нельзя: «Сделал» — факт со временем и плюс к серии; «Сделаю» — намерение: строка остаётся на главной и один раз напоминает днём, но в серию не идёт, пока не отмечена фактом; «Не сегодня» закрывает вопрос без напоминаний и не рвёт серию — рвёт только молчание до конца дня. Одного тумблера здесь не хватает: в шесть утра рутина чаще всего ещё не сделана, и ответ «нет» был бы враньём.</span></div>
+        <div class="nt"><b>На пустом дне кнопка говорит словами, а не нулём</b><span>«Так и было · 0 ккал» выглядит как незагрузившееся число, поэтому на дне без еды она читается «Так и было · ничего не ел». Карточка выше тоже говорит словами — «записей нет», — и рядом названа норма того дня, чтобы было понятно, от чего считается оценка, если человек выберет её. Ответ «ничего не ел» — это данные, а не пустота: он идёт в статистику как есть. Если человек хочет просто убрать день из списка, не утверждая ничего про еду — для этого есть «Очистить пустые», и об этом сказано прямо на экране дня.</span></div>
+        <div class="nt"><b>Очистка и оценка пачки не пересекаются</b><span>Два массовых действия делают разное с одними и теми же днями, и порядок здесь важен: «Закрыть все примерно» закрывает всю пачку оценкой, включая пустые дни, и после него чистить нечего — кнопки «Очистить N пустых» больше нет. Наоборот: очистка убирает только пустые, и если после неё в списке остались дни с едой, массовая оценка работает уже только по ним — и число в кнопке считает только их. Один день никогда не проходит через оба действия.</span></div>
+        <div class="nt"><b>Силы задают смысл, ползунок — точность</b><span>Четыре силы отвечают на вопрос «как это было» словами, и убирать их нельзя: голый ползунок заставляет человека переводить ощущение в проценты, чего он делать не умеет. Но и четырёх значений мало — между «как надо» и «скорее переел» лежит половина реальных дней. Поэтому под силами вернулась дорожка 50–200 % с шагом 5: касание силы ставит бегунок на её значение, движение бегунка обновляет цифры. Привязки к ближайшей силе нет — бегунок стоит там, где его оставили; сила подсвечивается только на своём значении — 78, 110, 155 или 200 %, — и «своё число» это честное третье состояние, а не ошибка. Дорожка и бегунок те же, что у шкал самочувствия и цели по шагам: один жест на весь продукт.</span></div>
+        <div class="nt"><b>Один день считает в калориях, пачка — в процентах</b><span>На дне человек проверяет цифру, которая уйдёт в статистику, поэтому и в силах, и под дорожкой стоят калории: «запишем примерно 2 090 ккал при норме того дня 1 900». В пачке общая сумма ккал бессмысленна — у каждого дня своя норма, и одна цифра врала бы про все четыре. Поэтому там и силы, и ползунок говорят в процентах нормы дня, а строка внизу объясняет разницу между пустым днём и днём с едой: первому оценка пишется целиком, второму — только добор.</span></div>
+        <div class="nt"><b>Строка пачки ведёт в день, а не сразу в оценку</b><span>Человек, вернувшийся после перерыва, чаще всего помнит про один день из четырёх — тот, где еда записана наполовину. Отправлять его тапом сразу в четыре силы значит забирать точность там, где она есть. Поэтому строка списка открывает тот же разбор дня, что и вчерашний: те же четыре выхода, «Дописать точно» первым, шапка называет день и его место в пачке — «День 1 из 4». Вторую кнопку в строку списка не ставим: строка нажимается целиком, а выбор живёт на одном экране, а не в двух местах. Закрытый день уходит из списка, остальные остаются; стрелка возвращает к списку, не теряя уже проставленных ответов.</span></div>
+        <div class="nt"><b>Пачка целиком закрывается одной силой, и кнопка это называет</b><span>«Оценить все по ощущениям» обещало разбор по каждому дню, а делало другое: молча ставило всем «как надо». Теперь кнопка называется «Закрыть все примерно» и ведёт на один экран с четырьмя силами — та же шкала, что для одного дня, но ответ применяется ко всей пачке от нормы каждого дня. Так пустой день не превращается в норму с запасом без ведома человека. Записанное не перезаписывается: где еда уже есть, дописывается только разница — 640 ккал за четверг остаются на месте. Если один из дней был непохож на остальные, честный путь назван прямо на экране: закрыть его отдельно из списка.</span></div>
+        <div class="nt"><b>«Так и было» называет цифру, которую подтверждает</b><span>Кнопка «Так и было» на дне с 640 из 1 900 — это утверждение о факте, и человек нажимает её иногда просто чтобы отвязаться. Диалог «вы уверены?» здесь не помогает: он добавляет шаг, но не добавляет знания. Поэтому цифра стоит в самой кнопке — «Так и было · 640 ккал»: подтверждать число, глядя на число, честнее, чем соглашаться со словом. Отдельного подтверждения после этого нет, и порог, по которому день вообще попадает в разбор, остаётся прежним: нет приёмов, ноль калорий или меньше половины нормы.</span></div>
+        <div class="nt"><b>Без интенсивности зарядка называется «была», а не «легкая»</b><span>Пустое поле нельзя закрывать самым мягким значением — ни в бонусе каскада, ни в статистике нагрузки: «супер-лёгкая» по умолчанию это та же выдуманная цифра, только тише. Там, где интенсивности нет, стоит «Зарядка · была» и вклада в нагрузку нет вовсе. Спросить, как прошло, можно только вторым слоем и по своей воле: тап по строке на главной открывает протокол, там же появляется «Уточнить, как прошло» — и ответ пишется как измеренный. Отказ уточнять ничего не отменяет: факт уже записан, и повторно за ним не приходят.</span></div>
+        <div class="nt"><b>«Сделал» не придумывает интенсивность</b><span>Одно касание пишет факт и время — и всё. Интенсивность остаётся пустой, потому что человек её не называл: подставленная «средняя из утренних оценок» — выдуманные данные под видом факта, и через месяц это чужая история тренировок. Если расчёту интенсивность нужна, она пишется с меткой оценочной и в статистику нагрузки не идёт — то же правило, что у расчётного веса. Спросить интенсивность можно только там, где человек сам открыл рутину: в протоколе со строки на главной, а не второй модалкой после обеда.</span></div>
+        <div class="nt"><b>Резервный вопрос после еды говорит теми же словами</b><span>Модалка после первого приёма остаётся только для дней, где утреннего ответа не было вовсе — пропущенный пятый шаг, старый день, сбой. Кнопки в ней называются «Сделал», «Сделаю», «Не сегодня»: те же три слова, что на карточке. «Сделаю позже» и «пропустить с причиной» читаются как другая функция, и человек начинает искать разницу там, где её нет. Ответ в чек-ине закрывает эту модалку на весь день — любым из трёх статусов, включая «Не сегодня».</span></div>
+        <div class="nt"><b>«Сделаю» напоминает один раз и гаснет из любого места</b><span>Носитель обещания — строка на главной: она стоит там весь день, без счётчика и без красного, и её достаточно, чтобы человек вспомнил сам. Пуш ровно один, в 14:00 по местному времени, и только если уведомления включены — не «через N часов после чек-ина», потому что в шесть утра плюс четыре часа приходится на дорогу, а в одиннадцать — на обед. Второго напоминания нет ни при каких условиях. Отметка «Сделал» в любом месте — на главной, в дневнике, при повторном заходе в чек-ин — закрывает всё сразу: строка исчезает, пуш отменяется, факт пишется со временем нажатия, а не утреннего обещания. Если день закончился молчанием, обещание не превращается в долг и никуда не переносится: назавтра карточка снова спрашивает с чистого листа, а серия считает только факты.</span></div>
+        <div class="nt"><b>Загрузочный день не пересчитывает цель по шагам</b><span>Совет по шагам строится на медиане за две недели, длительности сна и запланированной тренировке — загрузочный в эту формулу не входит и входить не должен: он меняет калории, а не то, сколько имеет смысл ходить. Разные числа в кадрах — 8 900 при коротком сне, 7 600 при тяжёлом утре — про сон и ресурс, а не про загрузку. Поэтому переключение «Нет → Да» на этом экране не двигает крупное число и не перерисовывает метку совета: иначе человек видит, как цифра прыгает от ответа, к которому она не привязана, и перестаёт верить обеим. Меняется другое — норма калорий на день, и об этом говорит итоговый экран, где норма и названа.</span></div>
+        <div class="nt"><b>Отсрочка согласия общая, а подпись снимает плашку мгновенно</b><span>«Не сейчас» пишет одну дату на весь продукт, а не локальный таймер чек-ина: плашка не показывается семь дней ни в утреннем шаге, ни где-либо ещё. Условие показа — отсутствие подписи, а не истёкшая отсрочка, поэтому подписанное из настроек согласие убирает плашку сразу, без ожидания следующего утра и без ещё одного касания. Отсрочек всего три: после третьего «Не сейчас» плашка в чек-ине больше не появляется — включить замеры и добавки можно из настроек, и это единственное место, где просьба остаётся. Отзыв согласия возвращает состояние в исходное: строки снова исчезают, плашка появляется заново, но отсрочки считаются с нуля.</span></div>
+        <div class="nt"><b>Чипы остаются — но без эмодзи и с поиском наверху</b><span>Плотность одного листа здесь и есть смысл: человек видит тридцать веществ сразу и находит своё глазами, без раскрытия категорий. Поэтому выбор остался капсулами в строку с переносом, а не списком. Исправлены две вещи. Эмодзи убраны: разноцветные значки не различают вещества и тянут внимание сильнее названий — отличает пункты слово, а цвет остаётся смыслом «выбрано». Поиск встал первым: тот, кто пришёл за креатином, набирает три буквы вместо прокрутки восьми групп. Заголовки категорий набраны той же мелкой прописной, что ярусы в остальном продукте, — они делят лист, но не претендуют на очередь чтения. Выбранное — заливка акцентом с галочкой; невыбранное — ровная подложка без обводок, чтобы лист не рябил.</span></div>
+        <div class="nt"><b>Доза спрашивается после выбора, а не в чипе</b><span>Дозировка в капсуле сделала бы её двухстрочной и убила бы плотность, ради которой лист и существует. Поэтому чип — только название, а доза и время задаются следующим экраном, по одному пункту: один герой, шаговый ввод, капсулы «Утром / Днём / Вечером / С едой». Кнопка внизу называет, сколько выбрано, и ведёт именно туда — «Дозы и время», а не абстрактное «Дальше».</span></div>
+        <div class="nt"><b>Добавка добавляется в курс с дозой и временем, а не одним касанием</b><span>Пункт без дозы бесполезен и куратору, и человеку: «магний» без 400 мг ничего не значит. Поэтому после выбора идёт короткий экран с одним героем — доза шаговым вводом — и капсулами «Утром / Днём / Вечером / С едой». Время здесь подсказка для утреннего списка, а не напоминание: пуши про таблетки мы не рассылаем. Оба значения меняются в курсе в любой день, поэтому первый ответ не страшный.</span></div>
+        <div class="nt"><b>Курс — состав дня, а не отметка «выпил»</b><span>Экран курса перечисляет то, что повторяется каждый день, и потому в утреннем шаге он показывается строкой, а не спрашивает по каждому пункту: галочки «принял» превращают утро в аптечный чек-лист. Факт приёма живёт в дневнике. Курс держится до отмены, убирается тем же экраном, где добавляется, и куратор видит состав, но не меняет его без человека.</span></div>
+        <div class="nt"><b>Раздел называется «Добавки», а витамины объясняют его только в пустом курсе</b><span>«Витамины и добавки» ставит рядом частное и общее — витамины и есть добавки, и от этого потом спорят, куда писать магний. В заголовке остаётся одно слово: содержимое всё равно объясняет раздел лучше подписи — «Витамин D · 5000 МЕ», «Магний · 400 мг». Расшифровка нужна ровно там, где содержимого нет: в пустом курсе стоит «Добавки — витамины, минералы, омега» и одно действие «Добавить в курс». Сам пустой курс на пятом шаге не показывается — строка появляется только когда в курсе есть пункты; этот экран открывается со строки и живёт отдельно.</span></div>
+        <div class="nt"><b>Без согласия строки не притворяются рабочими</b><span>Обхваты и курс добавок — данные о здоровье, и без отдельного согласия их писать нельзя. Показывать при этом строки, которые молча не работают, хуже всего: человек нажимает и получает отказ. Поэтому в этом состоянии условных строк нет вовсе, а внизу — под ежедневными карточками, а не над ними — стоит одна плашка: что именно выключено, почему и одно действие «Прочитать и подписать». Формулировка называет выгоду и цену сразу: согласие отзывается одним касанием. Тревожных иконок и красного здесь нет — это не ошибка, а незаполненное разрешение. «Не сейчас» убирает плашку на неделю, а не до вечера: пятый шаг открывается каждое утро, и ежедневная просьба подписать превращает согласие в вымогательство. Дожать можно один раз в неделю, дальше — только из настроек.</span></div>
+        <div class="nt"><b>Пятый шаг пустым не бывает — у него есть минимум</b><span>Душ и рутина — ежедневные карточки и стоят всегда; условные пункты — добавки, замеры и загрузочный день — появляются только когда им есть что сказать. Поэтому кадр называется минимумом, а не пустотой: две карточки — и есть вся нижняя граница экрана. Заглушки «здесь ничего нет» не рисуем и шаг не пропускаем: ответ про душ и рутину нужен каждое утро, а молчание — единственное, что рвёт серию. Подпись внизу перечисляет, чего именно нет сегодня, чтобы короткий экран не читался как недогрузка.</span></div>
+        <div class="nt"><b>Просроченные замеры не уезжают со своего места, а меняют вид</b><span>Пока прошло меньше недели, замеры — обычная строка внизу списка. После семи дней та же строка получает подложку с обводкой и метку числом: «14 дней без замеров», а причина названа выгодой, а не долгом — без обхвата виден только вес. Остальной экран не перестраивается: душ, добавки и рутина стоят на своих местах и того же размера, потому что переезд строк учит человека искать их заново каждое утро. Нажимается вся строка целиком и ведёт в замеры — второй кнопки здесь нет. Эскалации дальше тоже нет: на тридцатый день вид тот же, удвоенная тревога замеров не приносит.</span></div>
+        <div class="nt"><b>Загрузочный день стоит рядом с целью, а не в остальном</b><span>Среди редких строк пятого экрана он читался как мелкая настройка, хотя меняет весь день: и норму, и то, сколько имеет смысл ходить. Теперь он стоит под ползунком шагов — в единственном месте, где человек уже планирует день, а не отчитывается за прошедшее. Ответ по-прежнему предзаполнен «Нет» и появляется только при рекомендации системы; в вариантах четвёртого экрана строка не повторяется — там показано, как меняется совет, а не весь экран. Пятый экран от этого стал честнее: в нём осталось только то, что человек делает своим телом, а не решения о питании.</span></div>
+        <div class="nt"><b>Загрузочный день по умолчанию — «Нет»</b><span>Пара без ответа заставляла решать там, где решение почти всегда одно и то же. Теперь «Нет» стоит отмеченным сразу: строка читается как совет с готовым ответом, а не как требование. Совет при этом никуда не делся — подпись всё так же называет причину «долг за три недели», и одно касание меняет ответ на «Да». Куратор видит разницу между «человек отказался» и «не спрашивали», потому что дефолтное «Нет» пишется без метки ручного выбора.</span></div>
+        <div class="nt"><b>Приветствие не занимает экран</b><span>Отдельная страница «Доброе утро» со списком предстоящих вопросов ничего не даёт: её читают один раз, а потом каждое утро пролистывают. Приветствие и серия переехали шапкой на первый вопрос — тон сохранён, касание сэкономлено.</span></div>
+        <div class="nt"><b>Оценка сна живёт рядом со сном</b><span>«Насколько выспались» — про ту же ночь, что время отхода и подъёма; отдельным экраном она заставляла отвечать про сон дважды. Теперь один экран: когда легли, сколько вышло, как ощущалось. В данные всё пишется по-прежнему раздельно, и пять обязательных значений за утро остаются пятью.</span></div>
+        <div class="nt"><b>Сон вводится временем, длительность считается</b><span>Человек называет, во сколько лёг и встал — это он помнит; «шесть с половиной» приходится вычислять в уме. Герой экрана — посчитанные 6:30 и сравнение с нормой, а не поле ввода. Часы и минуты — колёсами прямо на экране, без шторок: два смаха быстрее четырёх касаний.</span></div>
+        <div class="nt"><b>Дневной сон утром не спрашиваем</b><span>День ещё не начался — в чек-ине этого вопроса быть не может. Дневной сон добавляется в дневнике тем же днём, когда он случился.</span></div>
+        <div class="nt"><b>Оценки тянутся, а не нажимаются</b><span>Ползунок от одного до десяти с крупной цифрой. Десять кнопок на телефоне не читаются, а пять превратили бы плавное движение в скачки: разрешение шкалы сохраняем, способ ввода меняем.</span></div>
+        <div class="nt"><b>Настроение, самочувствие и стресс — один экран</b><span>Три шкалы пишутся в данные по отдельности, и терять их нельзя, но три экрана подряд утром — перебор. Поэтому здесь единственное место, где героев три: это один вопрос «как вы сегодня» в трёх измерениях, и ползунки идут строками, а не полноэкранными числами.</span></div>
+        <div class="nt"><b>Число одно, причина одна</b><span>Алгоритм берёт медиану за две недели с надбавкой 5 % и смягчает её, если ночь была короткой, ресурс низкий или на сегодня запланирована тренировка. Показывать эту кухню нельзя: коэффициенты «×0,85» и таблица поправок — язык разработки. На экране остаётся результат и одна фраза, почему он такой именно сегодня. Коридор 7 000–12 000 назван только там, где он действительно сработал.</span></div>
+        <div class="nt"><b>Цель тянется, как оценка</b><span>Ползунок 3 000–30 000 с шагом 500 — тот же жест и та же дорожка, что у шкал самочувствия. Рекомендация показана меткой над дорожкой и называет число — «Совет · 10 500», — потому что стоит человеку сдвинуть ползунок, и метка остаётся единственным местом, где видно, от чего он ушёл. Она стоит под пальцем в момент открытия: ничего не нажимая, человек уже видит совет и может увести число куда угодно одним движением. Метка остаётся на совете, касание по ней возвращает рекомендованную цифру. Готовые чипы «6 / 7 / 8 / 10 тысяч» убраны — они не совпадают с рекомендациями вида 10 500 или 7 600, человек жал бы круглое число и ломал подстройку. Совет не поднимается выше 12 000, но это потолок совета, а не запрет: руками доступен весь диапазон. Цель живёт один день как план (`stepsGoal` + дата подтверждения), а завтрашняя медиана учится на факте пройденного, не на поставленной цифре.</span></div>
+        <div class="nt"><b>Цель по шагам — план, а не множитель</b><span>Расход считается по факту пройденного, поэтому утренняя цель ничего не прибавляет к норме: она нужна куратору и вам как ориентир. Норма на утро помечена предварительной и уточняется к вечеру — обещать иначе значит врать про расчёт.</span></div>
+        <div class="nt"><b>Пропустить можно только вес</b><span>Он единственный зависит от предмета вне приложения — весов может не оказаться под рукой, и формулировка это признаёт: «Не взвешивался». Сон, оценки и цель шагов обязательны, иначе утро не считается закрытым.</span></div>
+        <div class="nt"><b>Невыбранное не красится акцентом</b><span>Пары «Было / Не сегодня» и «Да / Нет» до ответа стоят двумя одинаковыми обводками на светлом: заливка означает выбор и ничего больше. Закрашенное «Было» по умолчанию читалось как уже отмеченное — человек не понимал, что от него ждут действия, и шёл дальше, не ответив. Акцент появляется только после касания, и тогда же раскрывается тип холода. Отменить выбор можно строкой «Убрать отметку» с крестиком под карточкой — не второй крупной кнопкой: отмена не равна ответу и не должна весить столько же. Время выбирается той же капсулой, что «Легли» и «Встали» на экране сна: одна плашка, часы и минуты через двоеточие. Один способ ввода времени на весь продукт — два разных выглядели бы как два разных механизма.</span></div>
+        <div class="nt"><b>Первое утро ничего не сравнивает</b><span>Серии ещё нет, недельной динамики тоже: строка «−0,8 кг за неделю» на первом чек-ине была бы враньём. Вместо неё — вес из профиля как предзаполнение и честное «динамика появится через неделю взвешиваний». Шапка называет день первым днём недели, а не считает серию с нуля.</span></div>
+        <div class="nt"><b>С первого экрана назад некуда</b><span>Стрелки на первом шаге нет: чек-ин либо открылся сам, либо его начали кнопкой с закрытого итога регистрации — возвращаться в итог значит откатывать то, что человек уже закрыл. Крестика тоже нет: утро — пять коротких шагов, а не форма, из которой сбегают. Выход остаётся только вперёд, и он дешёвый.</span></div>
+        <div class="nt"><b>Разбор вчера стоит до мастера</b><span>Экран без точек в индикаторе и с надписью «перед чек-ином»: это не шаг, а развилка. Причина показана цифрами еды, а не общей фразой: 640 из 1 900 ккал, один приём, последняя запись в 09:40. Если дней несколько — тот же экран показывает их списком от свежего к старому, и главная кнопка закрывает всю пачку по ощущениям: разбирать четыре дня по одному утром никто не станет. «Заполню позже» не прячет дни, а возвращает их завтра тем же списком — иначе пропуск превращается в потерю.</span></div>
+        <div class="nt"><b>Четыре выхода вчера — четыре разные правды</b><span>«Дописать точно» ведёт в дневник. «Так и было» говорит, что цифры верные — день идёт в статистику как есть. «По ощущениям» открывает четыре силы с примерными калориями от нормы того дня — не доел, как надо, скорее переел, сильно переел, — и пишет оценочные приёмы с меткой. «Заполню позже» закрывает утро, но возвращает день завтра. Пятое действие, «очистить пустые», живёт только в пачке и называет число: чистит оно ровно пустые дни, а день с едой — 640 ккал за четверг — остаётся. Если пустых дней в списке нет, кнопки нет тоже; если пусты все — она закрывает пачку целиком.</span></div>
+        <div class="nt"><b>Заметка о сне — строка, а не поле</b><span>Поле ввода на экране требует заполнения одним своим видом и поднимает клавиатуру там, где её не ждут. «Что помешало спать» стоит строкой под оценкой и раскрывается только по касанию: заметка не обязательна, но и не потеряна. Подпись идёт от оценки: низкая — «что помешало», высокая — «что помогло», середина — нейтральное «заметка о ночи». Спрашивать «что помешало» после отличной ночи — издевательство.</span></div>
+        <div class="nt"><b>Норма сна — полчаса, а не четыре числа</b><span>Чипы 6 / 7 / 8 / 9 резали реальные 7,5 и 4,5 часа — диапазон в продукте от 4 до 12 часов с шагом полчаса. В анкете остался один шаговый ввод: минус, число, плюс.</span></div>
+        <div class="ntl"><b>Конец ритуала показывает результат</b><span>Последний экран не отчитывается о сохранении, а отдаёт то, ради чего утро и нужно: серию, утреннюю норму и план по шагам. Мотивационный шаг про зарядку и растяжку сюда не входит — он в отложенном ряду условных шагов. Стрелка назад здесь есть, в отличие от первого экрана: утро уже записано, и вернуться к пятому шагу — это правка своих же цифр, а не откат чужого решения.</span></div>
+      </div>
+      <div class="h">Общее с регистрацией</div><div style="background:var(--c2);border-radius:24px;padding:20px;">
+        <div class="nt"><b>Точки прогресса, не проценты</b><span>Четыре точки, активная — вытянутая пилюля. Проценты обещают точность, которой в короткой форме нет.</span></div>
+        <div class="ntl"><b>Герой один на экран</b><span>Вес, длительность сна, оценка, цель — каждое крупное число одно и по центру. Второй герой на экране обнуляет первого.</span></div>
+      </div>
+    </div>
+
+  </div>
+  <div data-mirdst="m3" style="display:flex;gap:30px;align-items:flex-start;"></div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  pal = [['dk', 'Тёмная'], ['bl', 'Синяя'], ['bldk', 'Синяя тёмная']];
+  componentDidMount() { this.obs = new MutationObserver(() => { clearTimeout(this.t); this.t = setTimeout(() => this.sync(), 400); }); this.sync(); }
+  componentWillUnmount() { if (this.obs) this.obs.disconnect(); clearTimeout(this.t); }
+  renderVals() { return {}; }
+  sync() {
+    if (this.obs) this.obs.disconnect();
+    document.querySelectorAll('[data-mirdst]').forEach(dst => {
+      const src = document.querySelector('[data-mir="' + dst.getAttribute('data-mirdst') + '"]');
+      dst.setAttribute('style', '');
+      dst.innerHTML = '';
+      if (!src) return;
+      this.pal.forEach(([cls, name]) => {
+        const cap = document.createElement('div');
+        cap.className = 'palcap';
+        cap.textContent = name;
+        const row = src.cloneNode(true);
+        row.removeAttribute('data-mir');
+        row.className = 'pal ' + cls;
+        row.querySelectorAll('[data-nomirror]').forEach(n => n.remove());
+        row.querySelectorAll('*').forEach(n => {
+          n.removeAttribute('data-cc-id'); n.removeAttribute('data-dm-ref');
+          n.removeAttribute('data-comment-anchor'); n.removeAttribute('data-screen-label');
+        });
+        dst.append(cap, row);
+      });
+    });
+    if (this.obs) this.obs.observe(document.body, { subtree: true, childList: true, characterData: true });
+  }
+}
+</script>
+</body>
+</html>

@@ -17,6 +17,8 @@
   a{color:#8a4a20;text-decoration:none}
   a:hover{color:#c67139}
   @keyframes sk{0%{background-position:140% 0}100%{background-position:-40% 0}}
+  @keyframes spin{100%{transform:rotate(360deg)}}
+  .spin{animation:spin .9s linear infinite}
   .sk{border-radius:999px;background-color:var(--ph);background-image:linear-gradient(100deg,transparent 20%,var(--gl) 50%,transparent 80%);background-size:220% 100%;background-repeat:no-repeat;animation:sk 1.5s linear infinite}
   .ph{width:330px;height:706px;flex:none;position:relative;overflow:hidden;border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12)}
   .lab{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}
@@ -30,6 +32,11 @@
 </helmet>
 
 <div style="background:#e9dfcd;padding:44px 46px 70px;width:max-content;">
+
+  <div style="background:#f6e6dd;border-radius:20px;padding:16px 20px;margin:0 0 26px;max-width:960px;">
+    <div style="font:700 13px/1.4 Figtree,sans-serif;color:#a1471c;">Архив · решение отменено 15 августа</div>
+    <div style="font:500 12px/1.6 Figtree,sans-serif;color:rgba(0,0,0,.6);margin-top:6px;text-wrap:pretty;">Скелетон убран из приложения полностью: знак ожидания в продукте один — круг 56 из канваса «Спиннеры». Данные считаются на устройстве, поэтому раскладку заранее рисовать не для чего, а два языка ожидания заставляли бы человека различать то, что для него одно. Канвас оставлен как запись решения, в разработку не идёт.</div>
+  </div>
 
   <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
     <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">СКЕЛЕТОН</span>
@@ -316,6 +323,68 @@
       <div style="background:#f0d8c4;border-radius:24px;padding:20px;">
         <div class="nt"><b>Одна роль на набор: подложка плейсхолдера</b><span>Три значения на палитру — на грунте, на карточке, в герое. Либо одна роль плюс два шага плотности от неё; второе дешевле и не плодит значений.</span></div>
         <div class="ntl"><b>Уважать prefers-reduced-motion</b><span>При включённом флаге блик выключается, остаётся статичная подложка — и она обязана читаться сама. Поэтому отрыв плейсхолдера от подложки задаётся измерением, а не на глаз: если геометрия видна только под бликом, при выключенной анимации экран станет пустым.</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:52px 0 14px;">Альтернатива · спиннер вместо скелетона</div>
+  <div style="display:flex;gap:30px;align-items:flex-start;">
+
+    <div>
+      <div class="lab"><b>Песочная · с подписью</b><span>тот же знак, что в «Сохраняем профиль»</span></div>
+      <div class="ph" data-screen-label="Спиннер · песочная с подписью" style="background:#fffaf1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <span style="width:56px;height:56px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c67139" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
+        <div style="font:700 15px/1.35 Figtree,sans-serif;color:#201e1d;margin-top:18px;">Загружаем</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:7px;">Пара секунд.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>Песочная · без подписи</b><span>только знак ожидания</span></div>
+      <div class="ph" data-screen-label="Спиннер · песочная без подписи" style="background:#fffaf1;display:flex;align-items:center;justify-content:center;">
+        <span style="width:56px;height:56px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c67139" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>Песочная тёмная · с подписью</b></div>
+      <div class="ph" data-screen-label="Спиннер · песочная тёмная с подписью" style="background:#141210;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
+        <span style="width:56px;height:56px;border-radius:999px;background:#2f2820;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#cf8144" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
+        <div style="font:700 15px/1.35 Figtree,sans-serif;color:#f2ede6;margin-top:18px;">Загружаем</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(242,237,230,.5);margin-top:7px;">Пара секунд.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>Синяя · с подписью</b></div>
+      <div class="ph" data-screen-label="Спиннер · синяя с подписью" style="background:#ffffff;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(16,24,38,.08),0 14px 40px rgba(16,24,38,.12);">
+        <span style="width:56px;height:56px;border-radius:999px;background:#e2edf7;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2e7cc0" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
+        <div style="font:700 15px/1.35 Figtree,sans-serif;color:#101826;margin-top:18px;">Загружаем</div>
+        <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(16,24,38,.5);margin-top:7px;">Пара секунд.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>Синяя тёмная · без подписи</b></div>
+      <div class="ph" data-screen-label="Спиннер · синяя тёмная без подписи" style="background:#0d1a26;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
+        <span style="width:56px;height:56px;border-radius:999px;background:#13222f;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3f8fd0" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
+      </div>
+    </div>
+
+    <div style="width:400px;flex:none;">
+      <div class="h" style="margin-top:0;">Спиннер или скелетон</div>
+      <div style="background:#fffaf1;border-radius:24px;padding:20px;">
+        <div class="nt"><b>Знак один на всё приложение</b><span>Тот же круг 56 с подложкой героя и дугой в акценте, что на «Сохраняем профиль» в регистрации. Второго вида ожидания в продукте быть не должно, иначе загрузка и сохранение читаются как разные вещи.</span></div>
+        <div class="nt"><b>Подпись — когда ожидание объяснимо</b><span>«Загружаем» уместно там, где человек нажал и ждёт результата: сохранение, отправка, синхронизация. На холодном старте приложения объяснять нечего — он просто открыл его, и подпись превращается в шум.</span></div>
+        <div class="nt"><b>Спиннер честнее скелетона на неизвестной длительности</b><span>Скелетон обещает конкретную раскладку: если данных нет вовсе или придёт ошибка, обещание нарушено. Спиннер ничего не обещает — поэтому он верен для холодного старта и загрузки первого экрана, когда неизвестно, что придёт.</span></div>
+        <div class="ntl"><b>Но прыжок раскладки он не лечит</b><span>Ради этого скелетон и рисовался: место занято заранее, ничего не дёргается. Поэтому предложение не «заменить везде», а развести: холодный старт — спиннер, обновление уже известного экрана — скелетон.</span></div>
+      </div>
+      <div class="h">Пороги</div>
+      <div style="background:#efe3cf;border-radius:24px;padding:20px;">
+        <div class="nt"><b>До 300 мс — ничего</b><span>Мелькнувший знак читается как сбой.</span></div>
+        <div class="nt"><b>300 мс – 2 с — голый спиннер</b><span>Объяснять нечего, слово не успеют прочитать.</span></div>
+        <div class="ntl"><b>Дольше 2 с — спиннер с подписью</b><span>Появляется «Загружаем», ещё позже — причина задержки, если она известна.</span></div>
       </div>
     </div>
 
