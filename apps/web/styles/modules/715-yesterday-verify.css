@@ -639,7 +639,7 @@
 }
 
 [data-theme$="dark"] .yv-slider-value--norm {
-  color: var(--v4-wgt-apple-green, #8faa6d);
+  color: #8faa6d;
 }
 
 [data-theme$="dark"] .yv-slider-value--under {
@@ -651,11 +651,11 @@
 }
 
 [data-theme$="dark"] .yv-slider-tick--norm {
-  color: var(--v4-wgt-apple-green, #8faa6d);
+  color: #8faa6d;
 }
 
 [data-theme$="dark"] .yv-v4-slider-norm-zone {
-  background: color-mix(in srgb, var(--v4-wgt-apple-green, #8faa6d) 22%, #232a1b);
+  background: color-mix(in srgb, #8faa6d 22%, #232a1b);
 }
 
 @media (max-width: 640px) {
@@ -931,7 +931,7 @@
 }
 
 .yv-v4-slider-fill--norm {
-  background: linear-gradient(90deg, #8a9a6a 0%, var(--v4-wgt-apple-green, #7a8a5e) 100%);
+  background: linear-gradient(90deg, #8a9a6a 0%, #7a8a5e 100%);
 }
 
 .yv-v4-slider-fill--under {

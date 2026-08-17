@@ -183,8 +183,8 @@ describe('morning check-in stability', () => {
   it('requires an explicit yesterdayVerify action before the morning flow can continue', () => {
     expect(YESTERDAY_SRC).toContain('incompleteAction: null');
     expect(YESTERDAY_SRC).toContain("if (unresolvedDates.length > 0 && !data.incompleteAction)");
-    expect(YESTERDAY_SRC).toContain('handleActionSelect');
-    expect(YESTERDAY_SRC).toContain('getPreferredAction');
+    expect(YESTERDAY_SRC).toContain('const commitAction = (patch) => {');
+    expect(YESTERDAY_SRC).toContain("commitAction({ incompleteAction: 'confirm_real_data' })");
     expect(YESTERDAY_SRC).not.toContain('incompleteAction: recommendedAction');
   });
 
