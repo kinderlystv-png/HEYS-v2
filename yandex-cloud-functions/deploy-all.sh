@@ -596,6 +596,7 @@ build_env_flags() {
     if [[ "$func_name" == "heys-mcp" ]]; then
         env_flags+=" --environment HEYS_TASKS_CLIENT_ID=${HEYS_TASKS_CLIENT_ID:-ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a}"
         env_flags+=" --environment HEYS_TASKS_CURATOR_ID=${HEYS_TASKS_CURATOR_ID:-6d4dbb32-fd9d-45b3-8e01-512595e2cb2c}"
+        env_flags+=" --environment MCP_LOG_GROUP_ID=${MCP_LOG_GROUP_ID:-e23ndggvq798r3v3eepq}"
         # Срез исходников для вопросов «как это работает в приложении» лежит в
         # приватном бакете heys-backups; ключи только из Lockbox. Без них
         # инструменты по коду вообще не появляются в списке (lib/curator.js).
@@ -955,6 +956,22 @@ deploy_function() {
             echo -e "${BLUE}ℹ️  Synced day-checklist rules: shared/day-checklist-rules.js${NC}"
         else
             echo -e "${RED}❌ ERROR: day-checklist rules not found at $CHECKLIST_SRC${NC}"
+            exit 1
+        fi
+    fi
+
+    # MCP telemetry read — общий модуль чтения Cloud Logging для heys-mcp
+    # (tasks_mcp_trace) и heys-maintenance (суточная агрегация).
+    if [[ "$func_name" == "heys-mcp" || "$func_name" == "heys-maintenance" ]]; then
+        LOGGING_READ_SRC="$SCRIPT_DIR/shared/mcp-logging-read.js"
+        LOGGING_READ_DST_DIR="$SCRIPT_DIR/$func_name/shared"
+        LOGGING_READ_DST="$LOGGING_READ_DST_DIR/mcp-logging-read.js"
+        if [ -f "$LOGGING_READ_SRC" ]; then
+            mkdir -p "$LOGGING_READ_DST_DIR"
+            cp "$LOGGING_READ_SRC" "$LOGGING_READ_DST"
+            echo -e "${BLUE}ℹ️  Synced MCP logging read: shared/mcp-logging-read.js${NC}"
+        else
+            echo -e "${RED}❌ ERROR: MCP logging read not found at $LOGGING_READ_SRC${NC}"
             exit 1
         fi
     fi

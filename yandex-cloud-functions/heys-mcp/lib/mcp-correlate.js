@@ -16,8 +16,11 @@
  */
 
 const MARK_RE = /\[mcp session=([0-9a-f]+) seq=(\d+)(?: ts=([^\]]+))?\]/;
-const HEADING_RE = /^##\s+(\d{1,2}):(\d{2})\b/m;
+/** `## 14:20`, `## ~14:20`, `## 14:20–15:00` — якорь по началу диапазона. */
+const HEADING_RE = /^##\s*~?(\d{1,2}):(\d{2})(?:\s*[–—-]\s*~?\d{1,2}:\d{2})?\s*$/m;
+const BLOCK_SPLIT_RE = /^##\s*~?\d{1,2}:\d{2}(?:\s*[–—-]\s*~?\d{1,2}:\d{2})?\s*$/m;
 const DEFAULT_WINDOW_MS = 5 * 60 * 1000;
+const LOG_RETENTION_DAYS = 3;
 
 function parseMark(line) {
   const match = MARK_RE.exec(String(line || ''));
@@ -48,7 +51,7 @@ function callTimeMs(call) {
 
 function splitBlocks(text) {
   const src = String(text || '').replace(/\r\n/g, '\n');
-  const parts = src.split(/^(?=##\s+\d{1,2}:\d{2}\b)/m);
+  const parts = src.split(/^(?=##\s*~?\d{1,2}:\d{2}(?:\s*[–—-]\s*~?\d{1,2}:\d{2})?\s*$)/m);
   return parts.map((block) => block.trim()).filter(Boolean);
 }
 
@@ -123,6 +126,67 @@ function correlate({ exchanges, calls, windowMs = DEFAULT_WINDOW_MS }) {
   return { rows, unattached };
 }
 
+function knownSessionIds(exchanges) {
+  const ids = new Set();
+  for (const exchange of exchanges || []) {
+    if (exchange && exchange.mark && exchange.mark.sessionId) ids.add(exchange.mark.sessionId);
+  }
+  return ids;
+}
+
+function isCuratorCall(call) {
+  return call && call.role === 'curator';
+}
+
+function filterCuratorCalls(calls) {
+  return (calls || []).filter(isCuratorCall);
+}
+
+/**
+ * Подтверждённые — session_id совпал с меткой стенограммы; вероятные — только окно.
+ */
+function splitCallsByConfidence(calls, sessionIds) {
+  const confirmed = [];
+  const probable = [];
+  for (const call of calls || []) {
+    if (call.session_id && sessionIds.has(call.session_id)) confirmed.push(call);
+    else probable.push(call);
+  }
+  return { confirmed, probable };
+}
+
+function sumDurationMs(calls) {
+  return (calls || []).reduce((sum, call) => sum + (Number(call.duration_ms) || 0), 0);
+}
+
+function enrichRowsWithAttribution(rows, sessionIds) {
+  return (rows || []).map((row) => {
+    const { confirmed, probable } = splitCallsByConfidence(row.calls, sessionIds);
+    return {
+      ...row,
+      confirmed_calls: confirmed,
+      probable_calls: probable,
+      confirmed_tools: confirmed.map((c) => c.tool).filter(Boolean),
+      probable_tools: probable.map((c) => c.tool).filter(Boolean),
+      confirmed_ms: sumDurationMs(confirmed),
+      probable_ms: sumDurationMs(probable),
+    };
+  });
+}
+
+/** Дата старше retention лог-группы (3 суток по МСК). */
+function isOlderThanLogRetention(date, nowMs = Date.now()) {
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  const dayStart = Date.parse(`${date}T00:00:00+03:00`);
+  if (!Number.isFinite(dayStart)) return false;
+  const retentionMs = LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  return dayStart < (nowMs - retentionMs);
+}
+
+function mskToday(nowMs = Date.now()) {
+  return new Date(nowMs + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 function parseLogText(raw) {
   const text = String(raw || '');
   const records = [];
@@ -156,10 +220,21 @@ function parseLogText(raw) {
 }
 
 module.exports = {
+  BLOCK_SPLIT_RE,
   DEFAULT_WINDOW_MS,
+  HEADING_RE,
+  LOG_RETENTION_DAYS,
   parseMark,
   headingToUtcMs,
   parseExchanges,
   correlate,
   parseLogText,
+  knownSessionIds,
+  isCuratorCall,
+  filterCuratorCalls,
+  splitCallsByConfidence,
+  sumDurationMs,
+  enrichRowsWithAttribution,
+  isOlderThanLogRetention,
+  mskToday,
 };

@@ -112,3 +112,35 @@ test('parseLogText достаёт mcp_call из JSON и из текста yc log
   const yc = '2026-08-17 18:33:12 TRACE {"t":"mcp_call","tool":"tasks_read","duration_ms":200}\nnoise';
   assert.equal(correlate.parseLogText(yc)[0].tool, 'tasks_read');
 });
+
+test('заголовок ## ~21:33 и диапазон ## 21:30–21:45 парсятся', () => {
+  const text = `
+## ~21:33
+**Кин:** Вода
+**Claude:** ок
+[mcp session=aaaaaaaaaaaa seq=1 ts=2026-08-17T18:33:00.000Z]
+
+## 21:30–21:45
+**Кин:** Диапазон
+**Claude:** ок
+[mcp session=bbbbbbbbbbbb seq=1 ts=2026-08-17T18:35:00.000Z]
+`;
+  const { exchanges } = correlate.parseExchanges(text, { date: '2026-08-17' });
+  assert.equal(exchanges[0].heading, '21:33');
+  assert.equal(exchanges[1].heading, '21:30');
+});
+
+test('confirmed vs probable и client role отфильтрован', () => {
+  const { exchanges } = correlate.parseExchanges(transcript, { date: '2026-08-17' });
+  const calls = correlate.filterCuratorCalls([
+    { ts: '2026-08-17T18:33:10.000Z', tool: 'heys_get_day', session_id: 'aaaaaaaaaaaa', duration_ms: 80, role: 'curator' },
+    { ts: '2026-08-17T18:33:12.500Z', tool: 'heys_add_water', session_id: '82e5c67303be', duration_ms: 1400, role: 'curator' },
+    { ts: '2026-08-17T18:33:13.000Z', tool: 'heys_get_day', session_id: 'client1', duration_ms: 50, role: 'client' },
+  ]);
+  const { rows } = correlate.correlate({ exchanges, calls });
+  const sessionIds = correlate.knownSessionIds(exchanges);
+  const [row] = correlate.enrichRowsWithAttribution(rows, sessionIds);
+  assert.deepEqual(row.confirmed_tools, ['heys_add_water']);
+  assert.deepEqual(row.probable_tools, ['heys_get_day']);
+  assert.equal(calls.length, 2);
+});

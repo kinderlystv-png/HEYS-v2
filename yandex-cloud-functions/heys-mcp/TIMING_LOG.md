@@ -56,6 +56,9 @@ PowerShell / Git Bash:
 yc serverless function logs d4epjmd9lnk059u29bg8 --limit 30
 ```
 
+Без `--limit` CLI ведёт себя как поток (`tail -f`) и может не завершиться —
+всегда задавай `--limit N` (и при необходимости `--since`).
+
 Ищи строку `TRACE` с `"t":"mcp_call"` или (до деплоя 17.08)
 `[heys-mcp] tool_timing`. Пример живой строки:
 
@@ -109,6 +112,8 @@ yc logging read --group-id e23ndggvq798r3v3eepq --since 24h \
 - Только `json_payload.t = "mcp_call"` — stdout не попадает в json_payload.
 - Длинные bash-цепочки grep/sed/timeout на Windows — медленно; одной команды из
   §1 хватает.
+- `yc serverless function logs` **без `--limit`** — поток, команда может висеть
+  бесконечно; для выгрузки в файл всегда `--limit N`.
 - Путать **вызовы модели** (сколько раз дернули инструмент в чате) и
   **`upstream_calls`** в строке (round-trip'ы к API внутри одного вызова).
 
@@ -123,6 +128,10 @@ node scripts/mcp-correlate.mjs --transcript transcript/2026-08-17.md --logs call
 ```
 
 `calls.txt` — вывод `yc serverless function logs` или JSON-массив `mcp_call`.
+
+В кураторском коннекторе то же самое по запросу:
+`tasks_mcp_trace({ date, heading? })` — без ручного `yc logs`. Дата старше 3
+суток отвечает «логи устарели», не пустым списком.
 
 Лог-группа `e23ndggvq798r3v3eepq` хранит записи **3 суток** (259200 s), и
 укорачивать этот срок нельзя: в ту же группу пишут остальные функции, по ней

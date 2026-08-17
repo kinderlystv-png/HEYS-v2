@@ -64,3 +64,10 @@ test('curator schemas сохраняют annotations после buildCuratorSche
   assert.equal(reply.annotations.openWorldHint, true);
   assert.ok(sample);
 });
+
+test('tasks_mcp_trace — readOnlyHint true', () => {
+  const { MCP_TRACE_SCHEMA } = require('../lib/mcp-trace-tools');
+  const [schema] = annotateToolSchemas([MCP_TRACE_SCHEMA]);
+  assert.equal(schema.annotations.readOnlyHint, true);
+  assert.equal(schema.annotations.destructiveHint, false);
+});

@@ -1506,7 +1506,7 @@ test('тема в одно слово работает как раньше', asy
 
 // ── Правила: инструмент без повода звать бесполезен ──────────────────────
 
-const { curatorInstructions } = require('../lib/curator');
+const { curatorInstructions, createCuratorContext } = require('../lib/curator');
 
 test('у каждого инструмента задачника есть повод его звать', () => {
   // Повод живёт либо в правилах, либо в описании самого инструмента. Дубли
@@ -2750,11 +2750,24 @@ test('новые инструменты объявлены и в схемах, �
 });
 
 test('правила задачника ссылаются только на существующие инструменты', () => {
-  const { schemas } = createTasksTools({ api: liveApi({}), curatorJwt: JWT, clientId: CLIENT, nowMs: NOW, ToolError });
-  const known = new Set(schemas.map((s) => s.name));
-  const named = new Set(curatorInstructions('Антон', true).match(/tasks_[a-zа-яё_]+/gi) || []);
-  assert.ok(named.has('tasks_calendar') && named.has('tasks_budget'), 'новые правила названы своими именами');
-  for (const name of named) assert.ok(known.has(name), `правило обещает несуществующий инструмент ${name}`);
+  const prevGroup = process.env.MCP_LOG_GROUP_ID;
+  process.env.MCP_LOG_GROUP_ID = 'grp-test';
+  try {
+    const { schemas } = createCuratorContext({
+      api: liveApi({}),
+      curatorJwt: JWT,
+      curatorName: 'Антон',
+      nowMs: NOW,
+      tasksClientId: CLIENT,
+    });
+    const known = new Set(schemas.map((s) => s.name));
+    const named = new Set(curatorInstructions('Антон', true).match(/tasks_[a-zа-яё_]+/gi) || []);
+    assert.ok(named.has('tasks_calendar') && named.has('tasks_budget'), 'новые правила названы своими именами');
+    for (const name of named) assert.ok(known.has(name), `правило обещает несуществующий инструмент ${name}`);
+  } finally {
+    if (prevGroup === undefined) delete process.env.MCP_LOG_GROUP_ID;
+    else process.env.MCP_LOG_GROUP_ID = prevGroup;
+  }
 });
 
 test('инструкция куратора не включает остановленный эксперимент с двумя ответами', () => {

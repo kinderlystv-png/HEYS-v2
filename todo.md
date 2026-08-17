@@ -27,13 +27,13 @@
 Новый пункт попадает сюда только с воспроизведением, механизмом ущерба и
 проверяемым критерием закрытия.
 
-### MCP-телеметрия: вызовы видно, вопрос к ним не привязан — план от 2026-08-17
+### MCP-телеметрия: correlate + tasks_mcp_trace — 2026-08-17
 
-Инфраструктура готова: `mcp_call` пишется на каждый вызов, метка
-`[mcp session=… seq=… ts=…]` дописывается в стенограмму на write, correlate —
-`node scripts/mcp-correlate.mjs` по окну времени (не по `session_id`: cold start
-режет сессию, см. вопрос 4 в плане). Текста запроса в логе нет (ПДн). Критерий
-закрытия: отчёт «запрос → N вызовов → Σ ms» строится скриптом. План —
+Фаза 2 закрыта: `mcp_call`, метка в стенограмме, офлайн
+`node scripts/mcp-correlate.mjs` (живой gate 22:03–22:04 на smoke-логах). Фаза 3
+шаг 1: `tasks_mcp_trace` в heys-mcp — correlate по запросу из чата. Деплой
+heys-mcp + smoke `tasks_mcp_trace({ date: "2026-08-17", heading: "22:04" })`.
+План —
 [yandex-cloud-functions/heys-mcp/MCP_TELEMETRY_ROADMAP.md](yandex-cloud-functions/heys-mcp/MCP_TELEMETRY_ROADMAP.md).
 
 ### Вход по PIN меняется по существу — решение владельца 2026-08-11
