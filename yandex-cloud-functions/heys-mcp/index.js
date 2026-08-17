@@ -542,7 +542,13 @@ async function handleAttachRequest(event, { method, path, headers, secret, apiUr
   return attachJson(404, { error: 'not_found', path });
 }
 
-exports.handler = async (event) => {
+exports.handler = async (event, context) => {
+  // Версия функции приходит вторым аргументом, а не через окружение: живая
+  // строка телеметрии 17.08 показала `fn_version: null`, потому что
+  // FUNCTION_VERSION_ID в рантайме не задан. Без версии нельзя отличить
+  // «стало медленнее» от «выкатили другую сборку» — ровно то, зачем поле есть.
+  if (context && context.functionVersion) telemetry.setFnVersion(context.functionVersion);
+
   try {
     await initSecrets();
   } catch (e) {

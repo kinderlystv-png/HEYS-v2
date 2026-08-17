@@ -162,9 +162,14 @@ function emitRecord(record, { logger = console } = {}) {
 function createTelemetry({ instanceId, fnVersion, logger = console } = {}) {
   const instance = instanceId || crypto.randomUUID();
   const nextSeq = createSeqCounter();
+  let version = fnVersion || null;
   return {
     instanceId: instance,
     sessionIdFor: (token) => sessionAlias(token, instance),
+    // Версию сообщает обработчик из своего `context`: в окружении её нет.
+    setFnVersion(next) {
+      if (typeof next === 'string' && next) version = next;
+    },
     record(input) {
       try {
         const sessionId = input.sessionId || sessionAlias(input.token, instance);
@@ -172,7 +177,7 @@ function createTelemetry({ instanceId, fnVersion, logger = console } = {}) {
           ...input,
           sessionId,
           seq: nextSeq(sessionId),
-          fnVersion: input.fnVersion || fnVersion,
+          fnVersion: input.fnVersion || version,
         });
         emitRecord(record, { logger });
         return record;
