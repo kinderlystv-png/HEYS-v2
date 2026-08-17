@@ -263,7 +263,17 @@ function scoreProduct(product, prepared) {
     else if (nameNorm.startsWith(phrase)) value = 600;
     // Подстрока засчитывается только с границы слова: иначе «сок» вытаскивает
     // «Сахар-песок», а «мясо» — «Мясо» внутри любого составного слова.
-    else if (nameNorm.includes(` ${phrase}`)) value = 400;
+    else {
+      const at = nameNorm.indexOf(` ${phrase}`);
+      if (at >= 0) {
+        // Чем глубже слово в названии, тем вероятнее это перечисление состава,
+        // а не сам продукт: «овсянка» в «Пирог зелёная гречка овсянка
+        // сухофрукты яйцо протеин» — ингредиент, и он не должен обходить
+        // «Овсяные хлопья», где то же слово стоит первым.
+        const wordIndex = nameNorm.slice(0, at + 1).split(' ').length - 1;
+        value = wordIndex <= 1 ? 400 : 260;
+      }
+    }
     // Транслитерация — догадка, а не то, что написал пользователь: чуть дешевле.
     if (index > 0) value *= 0.9;
     if (value > score) score = value;
@@ -285,7 +295,12 @@ function scoreProduct(product, prepared) {
     // Частичное совпадение принимаем только если найдено большинство слов —
     // иначе одно общее слово («кофе») вытаскивает десятки нерелевантных строк.
     if (matched > 0 && matched * 2 > prepared.tokens.length) {
-      score = matched >= prepared.tokens.length ? 300 : 120 * (matched / prepared.tokens.length);
+      // Морфологическая форма — то же слово, а не половина совпадения.
+      // «овсянка» против «овсяные» даёт 0.95, и строгое сравнение роняло такой
+      // матч со трёхсот до ста с небольшим — ниже любого вхождения в середину
+      // составного названия.
+      const full = matched >= prepared.tokens.length * 0.9;
+      score = full ? 300 : 120 * (matched / prepared.tokens.length);
     }
   }
 
