@@ -757,6 +757,72 @@ validated_env_flags_for() {
     return 1
 }
 
+# Упаковщик исходников. `zip` есть не везде: на Windows-машине с Git Bash его
+# нет вовсе, зато обычно стоит 7-Zip. Он умеет тот же формат и те же исключения.
+find_zip_packer() {
+    if command -v zip >/dev/null 2>&1; then printf 'zip'; return 0; fi
+    local candidate
+    for candidate in 7z 7za '/c/Program Files/7-Zip/7z.exe' '/c/Program Files (x86)/7-Zip/7z.exe'; do
+        if command -v "$candidate" >/dev/null 2>&1 || [ -x "$candidate" ]; then
+            printf '%s' "$candidate"; return 0
+        fi
+    done
+    return 1
+}
+
+pack_function_source() {
+    local out=$1 packer=$2
+    if [ "$packer" = "zip" ]; then
+        zip -qr "$out" . \
+            -x 'node_modules/*' '*.zip' '.env' '.env.*' '*.log' \
+               'coverage/*' '.git/*' '.DS_Store' 'docs/*' \
+               'apply_*.js' 'check_*.js' 'test_*.js' 'deploy.sh' \
+               '.ycignore' 'README.md'
+    else
+        "$packer" a -tzip -bso0 -bsp0 "$out" . \
+            -xr'!node_modules' -xr'!*.zip' -xr'!.env' -xr'!.env.*' -xr'!*.log' \
+            -xr'!coverage' -xr'!.git' -xr'!.DS_Store' -xr'!docs' \
+            -xr'!apply_*.js' -xr'!check_*.js' -xr'!test_*.js' -xr'!deploy.sh' \
+            -xr'!.ycignore' -xr'!README.md' >/dev/null
+    fi
+}
+
+# Состав архива проверяется до заливки, а не по коду возврата упаковщика.
+#
+# Инцидент 2026-08-17: `zip` на машине не было, деплой обошли через `tar -a`,
+# файлы легли внутрь вложенной папки. Упаковка отработала успешно, версия
+# создалась, статус ACTIVE — и при этом функция не стартовала вовсе
+# (`Cannot find module '/function/code/index.js'`), MCP отдавал 502 одиннадцать
+# минут. Успешная упаковка ничего не доказывает; доказывает состав архива.
+assert_zip_entrypoint() {
+    local zip_path=$1 entry=$2
+    local module="${entry%%.*}.js"
+    if ! node -e '
+const fs = require("fs");
+const [zipPath, moduleName] = process.argv.slice(1);
+const buf = fs.readFileSync(zipPath);
+const names = [];
+for (let i = 0; i < buf.length - 4; i += 1) {
+  if (buf[i] === 0x50 && buf[i + 1] === 0x4b && buf[i + 2] === 0x01 && buf[i + 3] === 0x02) {
+    const len = buf.readUInt16LE(i + 28);
+    names.push(buf.toString("utf8", i + 46, i + 46 + len));
+  }
+}
+if (!names.includes(moduleName)) {
+  console.error(`  ${moduleName} не в корне архива; что там: ${names.slice(0, 5).join(", ") || "пусто"}`);
+  process.exit(1);
+}
+if (names.some((n) => n.includes("\\"))) {
+  console.error("  в архиве обратные слеши — Linux-рантайм не разрешит require()");
+  process.exit(1);
+}
+' "$(_node_module_path "$zip_path")" "$module"; then
+        echo -e "${RED}❌ Refuse to deploy: архив собран неправильно${NC}"
+        echo -e "${YELLOW}   Точка входа обязана лежать в корне архива, разделители — прямые.${NC}"
+        exit 1
+    fi
+}
+
 # Deploy a single prevalidated function
 deploy_function() {
     local func_name=$1
@@ -900,13 +966,15 @@ deploy_function() {
     # start, поэтому node_modules в zip не нужен.
     DEPLOY_ZIP="/tmp/${func_name}-deploy-$$.zip"
     rm -f "$DEPLOY_ZIP"
-    zip -qr "$DEPLOY_ZIP" . \
-        -x 'node_modules/*' '*.zip' '.env' '.env.*' '*.log' \
-           'coverage/*' '.git/*' '.DS_Store' 'docs/*' \
-           'apply_*.js' 'check_*.js' 'test_*.js' 'deploy.sh' \
-           '.ycignore' 'README.md'
+    ZIP_PACKER="$(find_zip_packer)" || {
+        echo -e "${RED}❌ Refuse to deploy: нет ни zip, ни 7-Zip в PATH${NC}"
+        echo -e "${YELLOW}   Ставить archiver, а не обходить вручную: ручная упаковка уже роняла прод (2026-08-17).${NC}"
+        exit 1
+    }
+    pack_function_source "$DEPLOY_ZIP" "$ZIP_PACKER"
+    assert_zip_entrypoint "$DEPLOY_ZIP" "$entrypoint"
     ZIP_SIZE=$(du -k "$DEPLOY_ZIP" | awk '{print $1}')
-    echo -e "${BLUE}ℹ️  Packaged $func_name → ${ZIP_SIZE}KB${NC}"
+    echo -e "${BLUE}ℹ️  Packaged $func_name → ${ZIP_SIZE}KB (${ZIP_PACKER##*/})${NC}"
 
     # From this point a cloud mutation may happen. Keep partial_rollout=true
     # until the complete status is written, even if no version has succeeded yet.

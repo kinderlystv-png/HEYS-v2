@@ -190,6 +190,13 @@ async function handleMessage(message, ctx) {
       // Каждый вызов измеряется: и полное время, и та его часть, что ушла на
       // обращения к API. Без этого непонятно, что дорожает — логика инструмента
       // или количество round-trip'ов, и какой из сценариев записи оптимизировать.
+      // Псевдоним подключения и номер вызова резервируются до обработчика и
+      // возвращаются клиенту вместе с результатом: по ним реплика куратора в
+      // стенограмме связывается со строкой `mcp_call` в логе. Ни то, ни другое
+      // не привязано к человеку — `session_id` это срез хэша, `seq` целое.
+      const trace = ctx.beginTrace ? ctx.beginTrace() : null;
+      const traceFields = trace ? { session_id: trace.sessionId, seq: trace.seq } : {};
+
       const startedAt = Date.now();
       const upstreamBefore = ctx.upstream ? ctx.upstream() : null;
       const measure = () => {
@@ -212,22 +219,22 @@ async function handleMessage(message, ctx) {
         const timing = measure();
         const payload = {
           content: toolContent(result),
-          structuredContent: { ok: true, ...result.structured, duration_ms: timing.ms },
+          structuredContent: { ok: true, ...result.structured, duration_ms: timing.ms, ...traceFields },
         };
         // Размер ответа — вторая половина вопроса «почему долго»: своё время
         // инструмента и время API он не объясняет, зато объясняет задержку на
         // стороне клиента, которой в наших метриках не видно вовсе.
-        ctx.logMetric?.({ tool: name, ok: true, ...timing, arg_count: argCount, response_bytes: byteLength(payload) });
+        ctx.logMetric?.({ tool: name, ok: true, ...timing, arg_count: argCount, response_bytes: byteLength(payload), trace });
         return rpcResult(id, payload);
       } catch (e) {
         const timing = measure();
         if (e && e.code) {
-          ctx.logMetric?.({ tool: name, ok: false, error: e.code, arg_count: argCount, ...timing });
-          return rpcResult(id, toolFailure(e.message, e.code, { ...e.details, duration_ms: timing.ms }));
+          ctx.logMetric?.({ tool: name, ok: false, error: e.code, arg_count: argCount, ...timing, trace });
+          return rpcResult(id, toolFailure(e.message, e.code, { ...e.details, duration_ms: timing.ms, ...traceFields }));
         }
-        ctx.logMetric?.({ tool: name, ok: false, error: 'internal_error', arg_count: argCount, ...timing });
+        ctx.logMetric?.({ tool: name, ok: false, error: 'internal_error', arg_count: argCount, ...timing, trace });
         ctx.logError?.('tool_failed', { tool: name, message: e && e.message });
-        return rpcResult(id, toolFailure('Внутренняя ошибка HEYS при выполнении инструмента.', 'internal_error', { duration_ms: timing.ms }));
+        return rpcResult(id, toolFailure('Внутренняя ошибка HEYS при выполнении инструмента.', 'internal_error', { duration_ms: timing.ms, ...traceFields }));
       }
     }
 

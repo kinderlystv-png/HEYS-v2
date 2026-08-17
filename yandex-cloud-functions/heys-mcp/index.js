@@ -344,6 +344,9 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
     instructions,
     logError: (kind, meta) => console.error(`[heys-mcp] ${kind}`, meta),
     upstream: () => ({ calls: api.stats.calls, ms: api.stats.ms }),
+    // Псевдоним подключения и номер вызова выдаются до обработчика: те же
+    // значения уходят и клиенту в ответ, и в строку лога.
+    beginTrace: () => telemetry.begin(headers.authorization || null),
     // Одна строка чистого JSON на вызов инструмента: по ней в Cloud Logging
     // видно, какой сценарий сколько стоит, сколько в нём round-trip'ов к API
     // и в какой последовательности инструменты шли внутри подключения.
@@ -356,6 +359,9 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
         // Материал для псевдонима подключения: сам заголовок наружу не идёт,
         // в строку попадает только необратимый срез его хэша.
         token: headers.authorization || null,
+        // Уже выданные `beginTrace` — берём их, а не считаем заново.
+        sessionId: metric.trace ? metric.trace.sessionId : null,
+        seq: metric.trace ? metric.trace.seq : null,
         role: auth.role,
         ok: metric.ok,
         errorCode: metric.error,

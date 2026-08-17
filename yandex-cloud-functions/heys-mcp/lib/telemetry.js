@@ -170,13 +170,29 @@ function createTelemetry({ instanceId, fnVersion, logger = console } = {}) {
     setFnVersion(next) {
       if (typeof next === 'string' && next) version = next;
     },
+    /**
+     * Резервирует место в последовательности до вызова инструмента.
+     *
+     * Нужен по двум причинам. Во-первых, клиенту возвращаются те же самые
+     * `session_id` и `seq`, что уйдут в лог, — иначе связать реплику куратора
+     * со строкой телеметрии нечем (MCP_TELEMETRY_ROADMAP.md, фаза 2). Во-вторых,
+     * `seq` становится порядком НАЧАЛА вызовов: на одном инстансе они идут
+     * параллельно, и нумерация по завершению переставляет местами быстрый и
+     * медленный вызовы, то есть врёт как раз про лишние круги.
+     */
+    begin(token) {
+      const sessionId = sessionAlias(token, instance);
+      return { sessionId, seq: nextSeq(sessionId) };
+    },
     record(input) {
       try {
         const sessionId = input.sessionId || sessionAlias(input.token, instance);
         const record = buildRecord({
           ...input,
           sessionId,
-          seq: nextSeq(sessionId),
+          // Номер уже выдан `begin()` — повторный вызов сдвинул бы счётчик и
+          // развёл ответ клиенту с логом.
+          seq: Number.isFinite(input.seq) ? input.seq : nextSeq(sessionId),
           fnVersion: input.fnVersion || version,
         });
         emitRecord(record, { logger });

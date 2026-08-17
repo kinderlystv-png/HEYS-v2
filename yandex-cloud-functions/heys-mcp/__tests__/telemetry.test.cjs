@@ -208,3 +208,76 @@ test('исключение инструмента логируется кодо�
   assert.equal(rec.error_code, 'product_not_found');
   assert.ok(!lines[0].includes('творог'), 'название продукта не должно попасть в лог');
 });
+
+/** Обвязка «как в index.js»: beginTrace выдаёт номер, logMetric его же пишет. */
+function tracedContext(tools, lines) {
+  const telemetry = createTelemetry({ instanceId: 'i', logger: { log: (l) => lines.push(l) } });
+  return {
+    tools,
+    beginTrace: () => telemetry.begin('Bearer curator-token'),
+    logMetric: (metric) => telemetry.record({
+      tool: metric.tool, ok: metric.ok, errorCode: metric.error, durationMs: metric.ms,
+      sessionId: metric.trace ? metric.trace.sessionId : null,
+      seq: metric.trace ? metric.trace.seq : null,
+    }),
+  };
+}
+
+const callTool = (ctx, name, id) => mcp.handlePayload({
+  jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: {} },
+}, ctx);
+
+test('session_id и seq возвращаются клиенту и совпадают со строкой лога', async () => {
+  // Без этого совпадения связать реплику куратора со строкой телеметрии нечем:
+  // текста запроса в логе нет и не будет (ПДн).
+  const lines = [];
+  const ctx = tracedContext({ heys_get_day: async () => ({ text: 'день собран' }) }, lines);
+
+  const first = await callTool(ctx, 'heys_get_day', 1);
+  const second = await callTool(ctx, 'heys_get_day', 2);
+
+  const rec = JSON.parse(lines[0]);
+  assert.equal(first.result.structuredContent.session_id, rec.session_id);
+  assert.equal(first.result.structuredContent.seq, rec.seq);
+  assert.equal(first.result.structuredContent.seq, 1);
+  assert.equal(second.result.structuredContent.seq, 2, 'номер растёт внутри подключения');
+  assert.equal(JSON.parse(lines[1]).seq, 2);
+  assert.equal(rec.session_id.length, 12, 'в ответ уходит срез хэша, не сам токен');
+  assert.ok(!JSON.stringify(first).includes('curator-token'), 'токен наружу не идёт');
+});
+
+test('seq считает порядок начала вызовов, а не завершения', async () => {
+  // На одном инстансе вызовы идут параллельно. Нумерация по завершению
+  // переставила бы местами быстрый и медленный — то есть соврала бы именно
+  // про лишние круги, ради которых поле и заведено.
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const lines = [];
+  const ctx = tracedContext({
+    slow: async () => { await gate; return { text: 'долгий' }; },
+    fast: async () => ({ text: 'быстрый' }),
+  }, lines);
+
+  const slowCall = callTool(ctx, 'slow', 1);
+  const fastCall = callTool(ctx, 'fast', 2);
+  const fast = await fastCall;
+  release();
+  const slow = await slowCall;
+
+  assert.equal(slow.result.structuredContent.seq, 1, 'начался первым — номер первый');
+  assert.equal(fast.result.structuredContent.seq, 2);
+});
+
+test('отказ инструмента тоже несёт session_id и seq', async () => {
+  const lines = [];
+  const ctx = tracedContext({
+    heys_log_meal: async () => { const e = new Error('нет такого'); e.code = 'product_not_found'; throw e; },
+  }, lines);
+
+  const res = await callTool(ctx, 'heys_log_meal', 1);
+  const rec = JSON.parse(lines[0]);
+
+  assert.equal(res.result.structuredContent.error, 'product_not_found');
+  assert.equal(res.result.structuredContent.session_id, rec.session_id);
+  assert.equal(res.result.structuredContent.seq, rec.seq);
+});
