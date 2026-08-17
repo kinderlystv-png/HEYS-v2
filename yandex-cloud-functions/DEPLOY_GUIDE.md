@@ -23,6 +23,17 @@ cp .env.example .env
 nano .env
 ```
 
+**Корневой сертификат Yandex Cloud.** `PG_SSL=verify-full`, поэтому без него
+`validate-env.sh` не проходит шаг «Database connectivity» и деплой встаёт — даже
+когда прод жив и правка базы вообще не касается. Тот же сертификат нужен
+`scripts/db/psql.sh`. Ставится один раз:
+
+```bash
+curl -o "$APPDATA/postgresql/root.crt" https://storage.yandexcloud.net/cloud-certs/CA.pem
+```
+
+На Linux/macOS путь — `~/.postgresql/root.crt`.
+
 ### 2. Деплой
 
 ```bash
