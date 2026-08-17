@@ -81,9 +81,12 @@ describe('переключение вкладки из шапки', () => {
   it('лист «Ещё»: тумблер push открывает PIN при consent_needs_access_code', () => {
     const nav = componentBody('AppTabsNav');
     expect(nav.body).toContain("r.reason === 'consent_needs_access_code'");
+    expect(nav.body).toContain('setSettingsMenuOpen(false)');
     expect(nav.body).toContain('setSheetPushAccessOpen(true)');
     expect(nav.body).toContain('handleSheetPushAccessSign');
     expect(nav.body).toContain('accessCode: sheetPushAccessPin.pinValue');
+    expect(nav.body).toContain('sheetPushAccessOpen');
+    expect(nav.body).toContain('.sheet-push-access-sign');
   });
 
   it('setTab действительно передаётся в AppHeader сборщиком пропсов', () => {

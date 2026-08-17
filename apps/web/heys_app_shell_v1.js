@@ -4686,6 +4686,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 }
                 const r = await window.HEYS.push.setEnabled(true);
                 if (r && r.ok === false && r.reason === 'consent_needs_access_code') {
+                    setSettingsMenuOpen(false);
                     setSheetPushAccessOpen(true);
                     sheetPushAccessPin.resetDigits?.();
                     return;
@@ -4802,10 +4803,14 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             );
         };
 
-        const isLocalDiagnosticsHost = typeof location !== 'undefined'
-            && (location.hostname === 'localhost'
-                || location.hostname === '127.0.0.1'
-                || String(location.hostname || '').endsWith('.local'));
+        const showSettingsDiagnostics = typeof location !== 'undefined'
+            && (() => {
+                const h = String(location.hostname || '').toLowerCase();
+                if (h === 'localhost' || h === '127.0.0.1' || h.endsWith('.local')) return true;
+                // Временно: прод + LAN для QA с телефонов (2026-08-17)
+                if (h === 'app.heyslab.ru') return true;
+                return /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h);
+            })();
 
         const settingsBuildLine = (() => {
             const version = String(window.HEYS?.version || window.APP_VERSION || '');
@@ -4864,16 +4869,18 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         }, [settingsMenuOpen, tab]);
 
         React.useEffect(() => {
-            if (!settingsMenuOpen) return undefined;
+            if (!settingsMenuOpen || sheetPushAccessOpen) return undefined;
 
             const handleOutsidePointer = (event) => {
                 const target = event?.target;
                 if (target && typeof target.closest === 'function') {
                     if (target.closest('.hdr-header-icon-btn--settings')) return;
+                    if (target.closest('.sheet-push-access-sign')) return;
                 }
+                const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+                if (path.some((node) => node?.classList?.contains?.('sheet-push-access-sign'))) return;
                 const wrap = settingsWrapRef.current;
                 if (!wrap) return;
-                const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
                 if (path.includes(wrap) || wrap.contains(event.target)) return;
                 setSettingsMenuOpen(false);
             };
@@ -4888,7 +4895,20 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 document.removeEventListener('pointerdown', handleOutsidePointer, true);
                 document.removeEventListener('keydown', handleEscape, true);
             };
-        }, [settingsMenuOpen]);
+        }, [settingsMenuOpen, sheetPushAccessOpen]);
+
+        React.useEffect(() => {
+            if (!sheetPushAccessOpen) return undefined;
+
+            const handleEscape = (event) => {
+                if (event.key !== 'Escape' || pushBusy) return;
+                setSheetPushAccessOpen(false);
+                setSheetPushAccessError('');
+            };
+
+            document.addEventListener('keydown', handleEscape, true);
+            return () => document.removeEventListener('keydown', handleEscape, true);
+        }, [sheetPushAccessOpen, pushBusy]);
 
         const warmCascadeCrsForNav = React.useCallback((reason) => {
             const lastCrs = window.HEYS?._lastCrs;
@@ -5067,7 +5087,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             React.createElement(
                 'div',
                 { className: 'tab-settings-wrap', ref: settingsWrapRef },
-                settingsMenuOpen && React.createElement('div', {
+                settingsMenuOpen && !sheetPushAccessOpen && React.createElement('div', {
                     className: 'tab-settings-backdrop tab-settings-backdrop--v4-popover',
                     onClick: () => setSettingsMenuOpen(false)
                 }),
@@ -5095,7 +5115,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     ),
                     React.createElement('span', { className: 'tab-text' }, 'Ещё'),
                 ),
-                settingsMenuOpen && React.createElement(
+                settingsMenuOpen && !sheetPushAccessOpen && React.createElement(
                     'div',
                     {
                         className: 'tab-settings-menu tab-settings-menu--v4-sheet'
@@ -5389,7 +5409,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         }),
                     ]),
                     // HEYS_DEBUG_REPLAY_REGISTRATION / HEYS_DEBUG_REPLAY_CHECKIN / HEYS_DEBUG_REPLAY_YESTERDAY_VERIFY / HEYS_DEBUG_REPLAY_CURATOR_REVIEW
-                    isLocalDiagnosticsHost && React.createElement('button', {
+                    showSettingsDiagnostics && React.createElement('button', {
                         key: 'diagnostics-toggle',
                         type: 'button',
                         className: 'hdr-settings-sheet__diag-toggle'
@@ -5402,7 +5422,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         React.createElement('span', null, 'Диагностика'),
                         renderSettingsChevron(sheetExtra === 'diagnostics', 'fold')
                     ),
-                    isLocalDiagnosticsHost && sheetExtra === 'diagnostics' && React.createElement('div', {
+                    showSettingsDiagnostics && sheetExtra === 'diagnostics' && React.createElement('div', {
                         key: 'diagnostics-panel',
                         className: 'hdr-settings-sheet__diag-panel',
                         onClick: (e) => e.stopPropagation(),
@@ -5515,8 +5535,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     background: 'rgba(0,0,0,0.45)', display: 'flex',
                     alignItems: 'flex-end', justifyContent: 'center',
                 },
-                onClick: (e) => {
+                onPointerDown: (e) => {
                     if (e.target === e.currentTarget && !pushBusy) {
+                        e.preventDefault();
                         setSheetPushAccessOpen(false);
                         setSheetPushAccessError('');
                     }
@@ -5530,7 +5551,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         borderRadius: '16px 16px 0 0',
                         padding: '16px 16px calc(16px + env(safe-area-inset-bottom, 0px))',
                     },
-                    onClick: (e) => e.stopPropagation(),
+                    onPointerDown: (e) => e.stopPropagation(),
                 },
                     React.createElement('div', { style: { fontSize: '18px', fontWeight: 600, marginBottom: '8px' } },
                         'Подпись согласия на push'),
