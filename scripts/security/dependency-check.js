@@ -39,7 +39,8 @@ const DEPENDENCY_CONFIG = {
 
   // Исключения - пакеты которые можно игнорировать
   ignoredVulnerabilities: [
-    // Добавить ID уязвимостей для игнорирования если необходимо
+    // extract-zip: dev-only (puppeteer/lighthouse/storybook), upstream patch TBD (GHSA-jmr9-qjv8-65gv)
+    1139346,
   ],
 
   // CI security gate проверяет именно vulnerabilities. `pnpm outdated` может
@@ -300,8 +301,8 @@ class DependencySecurityChecker {
         }
       }
 
-      // 3) Если summary отсутствовал — вывести счётчики из собранных деталей.
-      if (!haveMeta) {
+      // 3) Счётчики: из metadata, но после allowlist — пересчёт по учтённым находкам.
+      if (!haveMeta || DEPENDENCY_CONFIG.ignoredVulnerabilities.length > 0) {
         for (const sev of SEVS) this.results.summary[sev] = 0;
         this.results.summary.total = 0;
         for (const v of this.results.vulnerabilities) {

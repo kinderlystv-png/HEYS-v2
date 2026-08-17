@@ -676,7 +676,9 @@ class SASTScanner {
    * старым baseline → SAST fail на «новой» находке (что и нужно).
    */
   fingerprintVuln(v) {
-    const file = v.file || v.location?.file || '?';
+    const file = String(v.file || v.location?.file || '?')
+      .split(path.sep)
+      .join('/');
     const evidence = (v.evidence || '').trim().slice(0, 200);
     const hash = crypto.createHash('md5').update(evidence).digest('hex').slice(0, 12);
     const rule = v.ruleKey || v.rule || '?';

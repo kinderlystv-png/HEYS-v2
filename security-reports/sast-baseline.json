@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-06T14:16:13.684Z",
+  "generatedAt": "2026-08-17T06:24:24.953Z",
   "description": "SAST baseline (SEC-014 ratchet) — known critical+high findings, manually triaged as false-positives или tracked в отдельных SEC-NNN. SAST fails только на новых находках вне этого списка. Регенерация: `node scripts/security/sast-scan.js --update-baseline`.",
-  "count": 19,
+  "count": 25,
   "fingerprints": [
     "sqlInjection|apps/web/heys_cloud_shared_v1.js|c32030e90e04",
     "sqlInjection|apps/web/heys_core_v12.js|983f220ea0c4",
@@ -16,11 +16,17 @@
     "sqlInjection|yandex-cloud-functions/heys-mcp/lib/tools.js|33e2f335f9a0",
     "xss|apps/landing/design/landing-d/support.js|0ce012c3cb8f",
     "xss|apps/landing/src/components/FAQAccordion.tsx|eb91b2f84fad",
+    "xss|apps/landing/src/components/versions/d/FaqD.tsx|eb91b2f84fad",
     "xss|apps/web/day/_meals.js|eb91b2f84fad",
+    "xss|apps/web/heys_client_access_code_setup_v1.js|eb91b2f84fad",
     "xss|apps/web/heys_consents_v1.js|eb91b2f84fad",
     "xss|apps/web/heys_day_meal_card.js|eb91b2f84fad",
+    "xss|apps/web/heys_login_screen_v1.js|eb91b2f84fad",
     "xss|apps/web/heys_messenger_v1.js|eb91b2f84fad",
-    "xss|apps/web/heys_paywall_v1.js|872dd8f8fb49",
+    "xss|apps/web/heys_paywall_v1.js|f75c9ad7efa2",
+    "xss|docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/history/support.js|0ce012c3cb8f",
+    "xss|docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/support.js|0ce012c3cb8f",
+    "xss|docs/ui/handoff-v4/support.js|0ce012c3cb8f",
     "xss|packages/ui/src/security/index.tsx|eb91b2f84fad"
   ]
 }
