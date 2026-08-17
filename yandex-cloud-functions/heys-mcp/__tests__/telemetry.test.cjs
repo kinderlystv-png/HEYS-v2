@@ -92,6 +92,25 @@ test('в записи остались поля, на которых держи�
   assert.equal(record.duration_ms, 800);
 });
 
+test('версия функции берётся из context обработчика, а не из окружения', () => {
+  // Живая строка 17.08 приехала с fn_version: null — в рантайме YC переменной
+  // FUNCTION_VERSION_ID нет, версия лежит во втором аргументе handler.
+  const lines = [];
+  const telemetry = createTelemetry({ instanceId: 'i', logger: { log: (l) => lines.push(l) } });
+
+  telemetry.record({ tool: 'heys_add_water', ok: true, durationMs: 10 });
+  assert.equal(JSON.parse(lines[0]).fn_version, null);
+
+  telemetry.setFnVersion('d4egc9ia3uum2sfpbpe6');
+  telemetry.record({ tool: 'heys_add_water', ok: true, durationMs: 10 });
+  assert.equal(JSON.parse(lines[1]).fn_version, 'd4egc9ia3uum2sfpbpe6');
+
+  // Пустое значение не должно затирать уже известную версию.
+  telemetry.setFnVersion('');
+  telemetry.record({ tool: 'heys_add_water', ok: true, durationMs: 10 });
+  assert.equal(JSON.parse(lines[2]).fn_version, 'd4egc9ia3uum2sfpbpe6');
+});
+
 test('статус различает отказ по правилу и настоящую ошибку', () => {
   assert.equal(buildRecord({ tool: 't', ok: true }).status, 'ok');
   assert.equal(buildRecord({ tool: 't', ok: false, errorCode: 'push_consent_missing' }).status, 'rejected');
