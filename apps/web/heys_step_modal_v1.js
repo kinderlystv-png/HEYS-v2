@@ -471,6 +471,11 @@
         : false,
       secondaryLabelWhen: typeof config.secondaryLabelWhen === 'function' ? config.secondaryLabelWhen : null,
       applySecondary: typeof config.applySecondary === 'function' ? config.applySecondary : null,
+      headerCaption: config.headerCaption ?? null,
+      showHeaderBack: typeof config.showHeaderBack === 'function' ? config.showHeaderBack : null,
+      applyHeaderBack: typeof config.applyHeaderBack === 'function' ? config.applyHeaderBack : null,
+      getValidationMessage: typeof config.getValidationMessage === 'function' ? config.getValidationMessage : null,
+      allowSwipe: config.allowSwipe,
     };
     try {
       document.dispatchEvent(new CustomEvent('heys-step-registered', { detail: { id } }));
@@ -632,13 +637,6 @@
         || currentStepIndex > 0
         || (showDailyProgressDots && progressActiveIndex > 0)
       ));
-    const handleDailyHeaderBack = () => {
-      if (showLayerBack && typeof currentConfig.applyHeaderBack === 'function') {
-        updateStepData(currentConfig.id, currentConfig.applyHeaderBack(currentStepData, { currentConfig, context }));
-        return;
-      }
-      handlePrev();
-    };
     const resolvedNextLabel = currentConfig && typeof currentConfig.nextLabel === 'function'
       ? currentConfig.nextLabel(currentStepData, { currentConfig, context })
       : currentConfig?.nextLabel;
@@ -1007,6 +1005,23 @@
       }
     }, [currentStepIndex, goToStep, visibleStepConfigs]);
 
+    const applyLayerHeaderBack = useCallback(() => {
+      if (!currentConfig || typeof currentConfig.showHeaderBack !== 'function') return false;
+      const liveData = stepDataRef.current[currentConfig.id] || {};
+      if (currentConfig.showHeaderBack(liveData, { currentConfig, context }) !== true) return false;
+      if (typeof currentConfig.applyHeaderBack !== 'function') return false;
+      updateStepData(
+        currentConfig.id,
+        currentConfig.applyHeaderBack(liveData, { currentConfig, context })
+      );
+      return true;
+    }, [context, currentConfig, updateStepData]);
+
+    const handleDailyHeaderBack = useCallback(() => {
+      if (applyLayerHeaderBack()) return;
+      handlePrev();
+    }, [applyLayerHeaderBack, handlePrev]);
+
     const handleSecondary = useCallback(() => {
       if (!currentConfig?.applySecondary || savingStep || animating) return;
       const nextData = currentConfig.applySecondary(currentStepData, {
@@ -1122,11 +1137,14 @@
       if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
         if (deltaX < 0 && currentStepIndex < totalSteps - 1) {
           handleNext();
-        } else if (deltaX > 0 && currentStepIndex > 0) {
-          goToStep(currentStepIndex - 1, 'right');
+        } else if (deltaX > 0) {
+          if (applyLayerHeaderBack()) return;
+          if (currentStepIndex > 0) {
+            goToStep(currentStepIndex - 1, 'right');
+          }
         }
       }
-    }, [stepAllowSwipe, currentStepIndex, totalSteps, goToStep, currentConfig, handleNext]);
+    }, [stepAllowSwipe, currentStepIndex, totalSteps, goToStep, handleNext, applyLayerHeaderBack]);
 
     const forceClose = useCallback(() => {
       onClose && onClose();

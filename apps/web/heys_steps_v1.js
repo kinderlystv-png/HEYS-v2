@@ -792,13 +792,19 @@
     };
   }
 
+  const MORNING_ACTIVATION_CHECKIN_STATUSES = new Set(['done', 'planned', 'skipped']);
+
+  function isMorningActivationCheckinStatus(status) {
+    return MORNING_ACTIVATION_CHECKIN_STATUSES.has(status);
+  }
+
   function getMorningActivationBadgeMeta(state) {
     const intensityMeta = state?.intensity ? MORNING_ACTIVATION_INTENSITY_PRESETS[state.intensity] : null;
     if (state?.status === 'done') {
-      const suffix = intensityMeta ? ` · ${intensityMeta.shortLabel}` : '';
+      const suffix = intensityMeta ? ` · ${intensityMeta.shortLabel}` : ' · была';
       return {
         label: `done${suffix}`,
-        title: intensityMeta ? `Зарядка отмечена, интенсивность: ${intensityMeta.label}` : 'Зарядка отмечена',
+        title: intensityMeta ? `Зарядка отмечена, интенсивность: ${intensityMeta.label}` : 'Зарядка была — интенсивность не уточняли',
         style: {
           border: '1px solid rgba(16, 185, 129, 0.35)',
           background: 'rgba(16, 185, 129, 0.12)',
@@ -806,14 +812,25 @@
         }
       };
     }
-    if (state?.status === 'missed') {
+    if (state?.status === 'planned') {
       return {
-        label: 'missed',
-        title: 'После первого приёма пищи: зарядка не сделана',
+        label: 'сделаю',
+        title: 'Рутина запланирована на сегодня',
         style: {
-          border: '1px solid rgba(244, 63, 94, 0.35)',
-          background: 'rgba(244, 63, 94, 0.12)',
-          color: '#be123c'
+          border: '1px solid rgba(245, 158, 11, 0.35)',
+          background: 'rgba(245, 158, 11, 0.12)',
+          color: '#b45309'
+        }
+      };
+    }
+    if (state?.status === 'skipped' || state?.status === 'missed') {
+      return {
+        label: 'не сегодня',
+        title: 'Рутина закрыта на сегодня',
+        style: {
+          border: '1px solid rgba(100, 116, 139, 0.35)',
+          background: 'rgba(148, 163, 184, 0.08)',
+          color: '#475569'
         }
       };
     }
@@ -839,6 +856,238 @@
     };
   }
 
+  let _morningActivationPlannedReminderTimer = null;
+
+  function cancelMorningActivationPlannedReminder() {
+    if (_morningActivationPlannedReminderTimer) {
+      clearTimeout(_morningActivationPlannedReminderTimer);
+      _morningActivationPlannedReminderTimer = null;
+    }
+  }
+
+  function scheduleMorningActivationPlannedReminder(dateKey) {
+    cancelMorningActivationPlannedReminder();
+    const dayData = readDayData(dateKey, {});
+    if (dayData?.morningActivation?.status !== 'planned') return;
+    const now = new Date();
+    const target = new Date(now);
+    target.setHours(14, 0, 0, 0);
+    if (target <= now) return;
+    _morningActivationPlannedReminderTimer = setTimeout(() => {
+      try {
+        const fresh = readDayData(dateKey, {});
+        if (fresh?.morningActivation?.status !== 'planned') return;
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          new Notification('Утренняя рутина', {
+            body: 'Обещали сделать зарядку сегодня.',
+            tag: `ma-planned-${dateKey}`
+          });
+        }
+      } catch (_) {
+        // ignore
+      }
+    }, target.getTime() - now.getTime());
+    persistMorningActivationState(dateKey, {
+      plannedReminderAt: target.toISOString()
+    }, 'morning-activation-planned-reminder');
+  }
+
+  function getMorningActivationRoutineStreak() {
+    try {
+      const stats = HEYS.game?.getStats?.();
+      const current = Number(stats?.morningActivationStreak?.current);
+      if (Number.isFinite(current) && current > 0) return current;
+    } catch (_) {
+      // ignore
+    }
+    return 0;
+  }
+
+  function applyMorningActivationCheckinAnswer(dateKey, answer, source = 'morning-rest-routine') {
+    const now = Date.now();
+    const basePatch = {
+      decidedAt: now,
+      checkinAnsweredAt: now,
+      followupSnoozeUntilMealCount: null,
+      skipReasonPending: false
+    };
+    if (answer === 'done') {
+      const saved = persistMorningActivationState(dateKey, {
+        ...basePatch,
+        status: 'done',
+        intensity: null,
+        intensitySource: null,
+        postState: null,
+        postEffect: null
+      }, source);
+      syncMorningActivationActivity(dateKey, {
+        ...(saved?.morningActivation || {}),
+        status: 'done',
+        intensity: null
+      });
+      try {
+        HEYS.game?.recordMorningActivationDone?.(dateKey);
+      } catch (_) {
+        // ignore
+      }
+      cancelMorningActivationPlannedReminder();
+      return saved;
+    }
+    if (answer === 'planned') {
+      const saved = persistMorningActivationState(dateKey, {
+        ...basePatch,
+        status: 'planned',
+        intensity: null,
+        intensitySource: null
+      }, source);
+      scheduleMorningActivationPlannedReminder(dateKey);
+      return saved;
+    }
+    if (answer === 'skipped') {
+      cancelMorningActivationPlannedReminder();
+      return persistMorningActivationState(dateKey, {
+        ...basePatch,
+        status: 'skipped',
+        intensity: null,
+        intensitySource: null,
+        postState: null,
+        postEffect: null
+      }, source);
+    }
+    return null;
+  }
+
+  function needsHealthOptionalConsent(profileInput) {
+    const profile = profileInput || lsGet('heys_profile', {}) || {};
+    const hf = HEYS.healthFeatures;
+    const measurementsAvailable = hf?.isMeasurementsFeatureAvailable
+      ? hf.isMeasurementsFeatureAvailable(profile) !== false
+      : true;
+    const supplementsAvailable = hf?.isSupplementsFeatureAvailable
+      ? hf.isSupplementsFeatureAvailable(profile) !== false
+      : true;
+    const needMeasurements = measurementsAvailable
+      && !(hf?.isMeasurementsTrackingEnabled
+        ? hf.isMeasurementsTrackingEnabled(profile)
+        : profile.measurementsTrackingEnabled === true);
+    const needSupplements = supplementsAvailable
+      && !(hf?.isSupplementsTrackingEnabled
+        ? hf.isSupplementsTrackingEnabled(profile)
+        : profile.supplementsTrackingEnabled === true);
+    return needMeasurements || needSupplements;
+  }
+
+  function shouldShowMorningRestConsentBanner(profileInput) {
+    const profile = profileInput || lsGet('heys_profile', {}) || {};
+    if (!needsHealthOptionalConsent(profile)) return false;
+    const snoozeUntil = profile.healthOptionalConsentSnoozeUntil;
+    const todayKey = getTodayKey();
+    if (snoozeUntil && String(todayKey) < String(snoozeUntil).slice(0, 10)) return false;
+    const count = Number(profile.healthOptionalConsentSnoozeCount) || 0;
+    return count < 3;
+  }
+
+  function isMorningRestHealthConsentComplete(profileInput) {
+    return !needsHealthOptionalConsent(profileInput || lsGet('heys_profile', {}) || {});
+  }
+
+  function getMorningRestConsentBannerCopy(profileInput) {
+    const profile = profileInput || lsGet('heys_profile', {}) || {};
+    const hf = HEYS.healthFeatures;
+    const measurementsOn = hf?.isMeasurementsTrackingEnabled
+      ? hf.isMeasurementsTrackingEnabled(profile)
+      : profile.measurementsTrackingEnabled === true;
+    const supplementsOn = hf?.isSupplementsTrackingEnabled
+      ? hf.isSupplementsTrackingEnabled(profile)
+      : profile.supplementsTrackingEnabled === true;
+    if (!measurementsOn && !supplementsOn) {
+      return {
+        title: 'Замеры и добавки выключены',
+        body: 'Обхваты и курс добавок — данные о здоровье. Их пишем только после отдельного согласия, которое можно отозвать одним касанием.'
+      };
+    }
+    if (!supplementsOn) {
+      return {
+        title: 'Добавки выключены',
+        body: 'Курс добавок — данные о здоровье. Подпишите согласие, чтобы видеть витамины в чек-ине и дневнике.'
+      };
+    }
+    return {
+      title: 'Замеры выключены',
+      body: 'Обхваты тела — данные о здоровье. Подпишите согласие, чтобы напоминать о замерах в чек-ине.'
+    };
+  }
+
+  function snoozeHealthOptionalConsent() {
+    const profile = lsGet('heys_profile', {}) || {};
+    const until = new Date();
+    until.setDate(until.getDate() + 7);
+    profile.healthOptionalConsentSnoozeUntil = until.toISOString().slice(0, 10);
+    profile.healthOptionalConsentSnoozeCount = (Number(profile.healthOptionalConsentSnoozeCount) || 0) + 1;
+    profile.updatedAt = Date.now();
+    lsSet('heys_profile', profile);
+    window.dispatchEvent(new CustomEvent('heys:profile-updated', {
+      detail: { source: 'morning-rest-consent-snooze' }
+    }));
+    return profile;
+  }
+
+  function openHealthOptionalConsentFromCheckin() {
+    const profile = lsGet('heys_profile', {}) || {};
+    const hf = HEYS.healthFeatures;
+    const tasks = [];
+    const needMeasurements = hf?.isMeasurementsFeatureAvailable?.(profile) !== false
+      && !(hf?.isMeasurementsTrackingEnabled?.(profile));
+    const needSupplements = hf?.isSupplementsFeatureAvailable?.(profile) !== false
+      && !(hf?.isSupplementsTrackingEnabled?.(profile));
+    if (needMeasurements) tasks.push('body_measurements');
+    if (needSupplements) tasks.push('supplements_tracking');
+    if (!tasks.length) return Promise.resolve();
+    return tasks.reduce((chain, consentType) => chain.then(() => (
+      HEYS.Consents?.api?.requestOptionalFeatureConsent
+        ? HEYS.Consents.api.requestOptionalFeatureConsent(consentType)
+        : Promise.resolve()
+    )), Promise.resolve());
+  }
+
+  function getRefeedStepsHint() {
+    try {
+      if (HEYS.caloricDebt?.needsRefeed === true) {
+        const debt = Math.round(Number(HEYS.caloricDebt?.debt || HEYS.caloricDebt?.totalDebt) || 0);
+        if (debt > 0) return `Советуем: долг ${debt.toLocaleString('ru-RU')} ккал`;
+      }
+    } catch (_) {
+      // ignore
+    }
+    return 'Советуем: долг за три недели';
+  }
+
+  function isMorningRestMeasurementsConsentOn(profileInput) {
+    const profile = profileInput || lsGet('heys_profile', {}) || {};
+    const hf = HEYS.healthFeatures;
+    if (hf && typeof hf.isMeasurementsFeatureAvailable === 'function'
+      && hf.isMeasurementsFeatureAvailable(profile) === false) {
+      return false;
+    }
+    if (hf && typeof hf.isMeasurementsTrackingEnabled === 'function') {
+      return hf.isMeasurementsTrackingEnabled(profile);
+    }
+    return profile.measurementsTrackingEnabled === true;
+  }
+
+  function buildMorningRestSparseNote(flags) {
+    const missing = [];
+    if (flags.showConsentBanner) {
+      // Плашка согласия — не дублируем в подписи.
+    } else if (!flags.showSupplementsCard) {
+      missing.push('добавок в курсе нет');
+    }
+    if (!flags.showMeasurements) missing.push('замеры свежие');
+    if (!flags.showRefeed) missing.push('загрузочный не рекомендован');
+    if (!missing.length) return '';
+    return `${missing.join(', ')} — остались две ежедневные карточки: душ и рутина. Короче этого пятый шаг не бывает.`;
+  }
+
   function clampMoodValue(value, fallback = 5) {
     const numeric = Number(value);
     if (!Number.isFinite(numeric)) return fallback;
@@ -861,17 +1110,20 @@
       : {};
     const firstMealTime = stored.firstMealTime || getFirstMealTimeFromDay(dayData);
     let status = stored.status;
-    if (status !== 'done' && status !== 'missed') {
+    if (!isMorningActivationCheckinStatus(status) && status !== 'missed') {
       status = firstMealTime ? 'pending' : 'pre_meal';
     }
     return {
       status,
       firstMealTime: firstMealTime || null,
       intensity: stored.intensity || null,
+      intensitySource: stored.intensitySource || null,
       postState: normalizePostState(stored.postState, null),
       postEffect: stored.postEffect && typeof stored.postEffect === 'object' ? stored.postEffect : null,
       copyId: stored.copyId || null,
-      decidedAt: stored.decidedAt || null
+      decidedAt: stored.decidedAt || null,
+      checkinAnsweredAt: stored.checkinAnsweredAt || null,
+      plannedReminderAt: stored.plannedReminderAt || null
     };
   }
 
@@ -1442,7 +1694,7 @@
       ? 'Расчётный'
       : 'Из профиля';
     const estimatedHint = estimateSource === 'estimated_avg' || estimateSource === 'average3'
-      ? 'Норма дня эту цифру берёт, тренд и график — нет. Серия растёт, но в её истории день помечен точкой.'
+      ? 'Норма дня эту цифру берёт, тренд и график — нет. Серия растёт как обычно.'
       : 'Как только наберётся три взвешивания, расчётный вес начнёт считаться по ним.';
 
     if (estimated) {
@@ -1505,7 +1757,29 @@
           React.createElement('span', { className: 'mc-weight-hero-value' }, weightLabel),
           React.createElement('span', { className: 'mc-weight-hero-unit' }, 'кг')
         ),
-        weekDelta !== null && React.createElement('div', { className: 'mc-weight-week-delta' },
+        weekDelta !== null && React.createElement('div', {
+          className: 'mc-weight-week-delta' + (weekDelta < 0 ? ' mc-weight-week-delta--down' : weekDelta > 0 ? ' mc-weight-week-delta--up' : '')
+        },
+          weekDelta < 0 && React.createElement('svg', {
+            width: 13,
+            height: 13,
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: 3.2,
+            strokeLinecap: 'round',
+            'aria-hidden': 'true'
+          }, React.createElement('path', { d: 'M6 15l6-6 6 6' })),
+          weekDelta > 0 && React.createElement('svg', {
+            width: 13,
+            height: 13,
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: 3.2,
+            strokeLinecap: 'round',
+            'aria-hidden': 'true'
+          }, React.createElement('path', { d: 'M6 9l6 6 6-6' })),
           `${weekDelta > 0 ? '+' : ''}${String(weekDelta).replace('.', ',')} кг за неделю`
         ),
         isFirstMorning && React.createElement('div', {
@@ -2328,7 +2602,20 @@
           type: 'button',
           className: 'mc-note-toggle',
           onClick: () => update({ noteOpen: !noteOpen })
-        }, sleepNotePrompt(sleepQuality)),
+        },
+          React.createElement('span', { className: 'mc-note-toggle-icon', 'aria-hidden': 'true' },
+            React.createElement('svg', {
+              width: 12,
+              height: 12,
+              viewBox: '0 0 24 24',
+              fill: 'none',
+              stroke: 'currentColor',
+              strokeWidth: 3,
+              strokeLinecap: 'round'
+            }, React.createElement('path', { d: 'M12 6v12M6 12h12' }))
+          ),
+          sleepNotePrompt(sleepQuality)
+        ),
         noteOpen && React.createElement('textarea', {
           className: 'mc-note-input',
           rows: 2,
@@ -2573,6 +2860,96 @@
     return `Рекомендуем ${recommended.toLocaleString('ru-RU')}: ${parts.join(', ')}`;
   }
 
+  function formatSleepHoursHuman(hours) {
+    const totalMin = Math.max(0, Math.round(Number(hours) * 60));
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    if (m === 0) return `${h} ч`;
+    return `${h} ч ${m} мин`;
+  }
+
+  function buildStepsGoalNarrative(stats, awayFromAdvice, adviceValue) {
+    const fmt = (value) => Number(value).toLocaleString('ru-RU');
+    const mods = stats.modifiers || [];
+    const ctx = stats.context || {};
+    const hasSleep = mods.some((item) => item.id === 'sleep');
+    const hasEnergyLow = mods.some((item) => item.id === 'energy_low');
+    const hasTraining = mods.some((item) => item.id === 'training');
+
+    if (stats.fallback || stats.daysWithData < STEPS_HISTORY_MIN_DAYS) {
+      return {
+        headline: 'Пока не из чего считать вашу обычную ходьбу — это просто начало',
+        sliderHint: 'Сдвиньте пальцем, если день будет другим',
+        footnote: 'Через несколько дней цифра начнёт подстраиваться под вас.',
+        infoCard: null
+      };
+    }
+
+    if (awayFromAdvice) {
+      return {
+        headline: 'Выходной с прогулкой — поставили своё, выше совета',
+        sliderHint: null,
+        footnote: `Метка стоит на совете — касание по ней возвращает ${fmt(adviceValue)}.`,
+        infoCard: null
+      };
+    }
+
+    if (stats.cappedAtMax && !hasSleep && !hasEnergyLow && !hasTraining) {
+      return {
+        headline: 'Вы ходите много — выше двенадцати тысяч совет не поднимается',
+        sliderHint: 'Сдвиньте пальцем, если день будет другим',
+        footnote: 'Совет выше двенадцати тысяч не поднимается, но своё число можно увести до 30 000.',
+        infoCard: null
+      };
+    }
+
+    if (hasSleep && hasEnergyLow) {
+      return {
+        headline: 'Короткий сон и тяжёлое самочувствие — цель заметно ниже обычной',
+        sliderHint: 'Сдвиньте пальцем, если день будет другим',
+        footnote: null,
+        infoCard: 'Два смягчения подряд — короткий сон и тяжёлое утро.'
+      };
+    }
+
+    if (hasSleep) {
+      const sleepLabel = Number.isFinite(ctx.sleepHours)
+        ? formatSleepHoursHuman(ctx.sleepHours)
+        : 'мало';
+      return {
+        headline: `Спали ${sleepLabel} — сегодня берём мягче обычных ${fmt(stats.baseline)}`,
+        sliderHint: 'Сдвиньте пальцем, если день будет другим',
+        footnote: 'Мягче — не меньше: план остаётся, просто по силам этого утра.',
+        infoCard: null
+      };
+    }
+
+    if (hasTraining) {
+      return {
+        headline: 'Сегодня есть тренировка — оставляем место на саму сессию',
+        sliderHint: 'Сдвиньте пальцем, если день будет другим',
+        footnote: 'Зарядка на цифру не влияет — только полноценная тренировка дольше сорока минут.',
+        infoCard: null
+      };
+    }
+
+    if (hasEnergyLow) {
+      return {
+        headline: 'Утренний ресурс ниже обычного — цель ниже обычной',
+        sliderHint: 'Сдвиньте пальцем, если день будет другим',
+        footnote: null,
+        infoCard: null
+      };
+    }
+
+    return {
+      headline: `Обычно вы проходите около ${fmt(Math.round(stats.median))} — берём чуть выше`,
+      sliderHint: 'Сдвinьте пальцем, если день будет другим',
+      footnote: 'План на день — его видит куратор. Расход считается по факту пройденного.',
+      infoCard: null
+    };
+  }
+
   function computeAdaptiveStepsGoal(options = {}) {
     const profile = options.profile || lsGet('heys_profile', {}) || {};
     const readDay = typeof options.readDay === 'function' ? options.readDay : readDayData;
@@ -2610,6 +2987,7 @@
 
     const rawBaseline = median * 1.05;
     const baseline = roundStepsGoal(Math.min(STEPS_GOAL_MAX, Math.max(minHealthy, rawBaseline)));
+    const cappedAtMax = rawBaseline > STEPS_GOAL_MAX;
     let adjusted = baseline;
     const modifiers = [];
 
@@ -2640,6 +3018,7 @@
       avg,
       daysWithData,
       baseline,
+      cappedAtMax,
       minHealthy,
       modifiers,
       reasonLine,
@@ -2702,7 +3081,7 @@
     );
     const adviceLabel = `${hasStepsHistory ? 'Совет' : 'Старт'} · ${adviceValue.toLocaleString('ru-RU')}`;
     const awayFromAdvice = Math.round(stepsGoal) !== adviceValue;
-    const reason = stepsStats.reasonLine || 'Сдвиньте пальцем, если день будет другим';
+    const narrative = buildStepsGoalNarrative(stepsStats, awayFromAdvice, adviceValue);
 
     const restoreAdvice = (event) => {
       if (event) {
@@ -2722,7 +3101,7 @@
         ),
         React.createElement('span', { className: 'mc-steps-unit' }, 'шагов')
       ),
-      React.createElement('div', { className: 'mc-recorded-sub', style: { textAlign: 'center', fontWeight: 600 } }, reason),
+      React.createElement('div', { className: 'mc-recorded-sub', style: { textAlign: 'center', fontWeight: 600 } }, narrative.headline),
       React.createElement('div', { className: 'mc-steps-slider-container', style: { width: '100%', marginTop: 20 } },
         React.createElement('div', { style: { position: 'relative', height: 17 } },
           React.createElement('button', {
@@ -2755,17 +3134,34 @@
           React.createElement('span', null, '3 000'),
           React.createElement('span', null, '30 000')
         ),
-        React.createElement('div', {
+        narrative.sliderHint && React.createElement('div', {
           className: 'mc-recorded-hint',
           style: { textAlign: 'center', marginTop: 11, fontWeight: 600 }
-        }, 'Сдвиньте пальцем, если день будет другим')
+        }, narrative.sliderHint)
       ),
-      React.createElement('div', {
+      narrative.infoCard && React.createElement('div', { className: 'mc-steps-info-card' }, narrative.infoCard),
+      narrative.footnote && React.createElement('div', {
         className: 'mc-recorded-hint',
-        style: { textAlign: 'center', marginTop: 26 }
-      }, hasStepsHistory
-        ? 'План на день — его видит куратор. Расход считается по факту пройденного.'
-        : 'Через несколько дней цифра начнёт подстраиваться под вас.')
+        style: { textAlign: 'center', marginTop: narrative.infoCard ? 14 : 26 }
+      }, narrative.footnote),
+      data.showRefeed && React.createElement('div', { className: 'mc-steps-refeed-row' },
+        React.createElement('div', null,
+          React.createElement('div', { className: 'mc-steps-refeed-title' }, 'Загрузочный день'),
+          React.createElement('div', { className: 'mc-steps-refeed-hint' }, data.refeedHint || getRefeedStepsHint())
+        ),
+        React.createElement('div', { className: 'mc-rest-yesno' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'mc-pill mc-pill--mini mc-pill--choice' + (data.isRefeedDay === true ? ' is-on' : ''),
+            onClick: () => onChange({ ...data, isRefeedDay: true, refeedManual: true })
+          }, 'Да'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'mc-pill mc-pill--mini mc-pill--choice' + (data.isRefeedDay !== true ? ' is-on' : ''),
+            onClick: () => onChange({ ...data, isRefeedDay: false, refeedManual: true })
+          }, 'Нет')
+        )
+      )
     );
   }
 
@@ -2776,9 +3172,17 @@
     component: StepsGoalStepComponent,
     getInitialData: (context, allStepData) => {
       const profile = lsGet('heys_profile', {});
+      const dateKey = context?.dateKey || getTodayKey();
+      const dayData = readDayData(dateKey, {});
       const stats = computeAdaptiveStepsGoal({ profile, context, allStepData });
+      const showRefeed = typeof HEYS.MorningCheckinUtils?.shouldIncludeRefeedStep === 'function'
+        ? HEYS.MorningCheckinUtils.shouldIncludeRefeedStep(profile, dateKey)
+        : false;
       return {
-        stepsGoal: stats.recommended
+        stepsGoal: stats.recommended,
+        showRefeed,
+        isRefeedDay: typeof dayData.isRefeedDay === 'boolean' ? dayData.isRefeedDay : false,
+        refeedHint: getRefeedStepsHint()
       };
     },
     save: (data, context) => {
@@ -2790,9 +3194,23 @@
       profile.stepsGoalConfirmedDate = dateKey;
       profile.updatedAt = Date.now();
       lsSet('heys_profile', profile);
-      // Диспатчим событие обновления профиля для реактивного обновления UI
+      if (data.showRefeed === true && typeof data.isRefeedDay === 'boolean') {
+        const dayData = getFreshDayData(dateKey);
+        dayData.date = dateKey;
+        dayData.isRefeedDay = data.isRefeedDay;
+        if (data.isRefeedDay === true) {
+          dayData.refeedReason = dayData.refeedReason || 'deficit';
+        } else if (data.refeedManual === true) {
+          dayData.refeedReason = null;
+        }
+        dayData.updatedAt = Date.now();
+        saveDayData(dateKey, dayData);
+      }
       window.dispatchEvent(new CustomEvent('heys:profile-updated', {
         detail: { stepsGoal: data.stepsGoal, stepsGoalConfirmedDate: dateKey }
+      }));
+      window.dispatchEvent(new CustomEvent('heys:day-updated', {
+        detail: { date: dateKey, field: 'isRefeedDay', source: 'steps-goal-step', forceReload: true }
       }));
     }
   });
@@ -3774,7 +4192,7 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, null);
+      const dayData = readDayData(key, null);
       if (!dayData || typeof dayData !== 'object') continue;
       const m = dayData.measurements;
       if (m && m.measuredAt && (m.waist || m.hips || m.thigh || m.biceps)) {
@@ -3802,7 +4220,7 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, {}) || {};
+      const dayData = readDayData(key, {}) || {};
       const m = dayData.measurements;
       if (m && m.measuredAt && m[field]) {
         return { value: m[field], date: key, daysAgo: i };
@@ -3818,8 +4236,7 @@
       const d = new Date(today);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = lsGet(`heys_dayv2_${key}`, null);
-      // Защита от null/undefined
+      const dayData = readDayData(key, null);
       if (!dayData || typeof dayData !== 'object') continue;
       const m = dayData.measurements;
       if (m && m.measuredAt) {
@@ -3830,7 +4247,8 @@
   }
 
   /**
-   * Проверка: нужно ли показывать шаг замеров (прошло ≥7 дней)
+   * Строка замеров на шаге 5: только просрочка ≥7 дней, неполный последний замер или «ещё не было».
+   * Свежие (<7 дней) — скрываем, в подписи «замеры свежие» (кадр «минимум»).
    */
   function shouldShowMeasurements() {
     const profile = lsGet('heys_profile', {}) || {};
@@ -3842,16 +4260,26 @@
     }
 
     const last = getLastMeasurements();
-    if (!last.measuredAt) return true; // Нет данных → показываем
-    // Если прошлый замер был неполным — продолжаем показывать
+    if (!last.measuredAt) return true;
     if (last.waist && (!last.hips || !last.thigh || !last.biceps)) return true;
 
-    const lastDate = new Date(last.measuredAt);
-    const today = new Date();
-    const diffMs = today - lastDate;
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const daysAgo = Number(last.daysAgo);
+    if (Number.isFinite(daysAgo) && daysAgo < 7) return false;
+    return Number.isFinite(daysAgo) && daysAgo >= 7;
+  }
 
-    return diffDays >= 7;
+  function isMeasurementsOverdue(lastMeasurements) {
+    if (!lastMeasurements || !lastMeasurements.measuredAt) return true;
+    const daysAgo = Number(lastMeasurements.daysAgo);
+    return Number.isFinite(daysAgo) && daysAgo >= 7;
+  }
+
+  function formatMeasurementsOverdueKicker(lastMeasurements) {
+    if (!lastMeasurements?.measuredAt) return 'Ещё не было замеров';
+    const daysAgo = Number(lastMeasurements.daysAgo);
+    if (!Number.isFinite(daysAgo) || daysAgo < 7) return null;
+    const dayWord = daysAgo === 1 ? 'день' : (daysAgo >= 2 && daysAgo <= 4 ? 'дня' : 'дней');
+    return `${daysAgo} ${dayWord} без замеров`;
   }
 
   function MeasurementsStepComponent({ data, onChange }) {
@@ -4775,114 +5203,36 @@
     const dateKey = context?.dateKey || getTodayKey();
     const dayData = readDayData(dateKey, {});
     const initialState = normalizeMorningActivationState(dateKey, dayData);
-    const [phase, setPhase] = useState('decision');
-    const [intensityRec, setIntensityRec] = useState(null);
     const firstMealTimeValue = initialState.firstMealTime || getFirstMealTimeFromDay(dayData) || null;
     const firstMealTimeLabel = firstMealTimeValue || '—';
     const readMaDayForCalendar = useCallback((dk) => readDayData(dk, {}), []);
     const MorningActivationHabitCalendar = HEYS.morningActivationCalendar?.MorningActivationHabitCalendar;
-    const laterClickedRef = useRef(false);
     const terminalActionRef = useRef(false);
 
-    const saveMissed = (reasonId) => {
+    const finishFollowup = (source) => {
+      notifyMorningActivationFollowupCompleted(dateKey, source);
+      context?.onNext?.();
+    };
+
+    const saveAnswer = (answer) => {
       if (terminalActionRef.current) return;
       terminalActionRef.current = true;
       const nextState = normalizeMorningActivationState(dateKey, getFreshDayData(dateKey));
-      const savedDay = persistMorningActivationState(dateKey, {
-        status: 'missed',
-        intensity: null,
-        postState: null,
-        postEffect: null,
-        firstMealTime: nextState.firstMealTime || firstMealTimeValue || null,
-        decidedAt: Date.now(),
-        followupSnoozeUntilMealCount: null,
-        skipReasonPending: false,
-        skipReasonId: reasonId,
-        skipReasonCapturedAt: Date.now()
-      }, 'morning-activation-followup');
-      syncMorningActivationActivity(dateKey, {
-        ...nextState,
-        status: 'missed',
-        intensity: null
-      });
-      markMorningActivationSkipReasonAnswered(dateKey);
-      const flowId = traceMorningActivation('skip_reason_picked', {
-        dateKey,
-        reasonId,
-        status: savedDay?.morningActivation?.status || null,
-        skipReasonPending: savedDay?.morningActivation?.skipReasonPending === true
-      });
-      verifyMorningActivationSkipReasonWrite(dateKey, savedDay, flowId);
-      notifyMorningActivationFollowupCompleted(dateKey, 'morning-activation-missed');
-      context?.onNext?.();
-    };
-
-    const saveDone = (intensity) => {
-      if (terminalActionRef.current) return;
-      terminalActionRef.current = true;
-      try {
-        if (HEYS.Day && typeof HEYS.Day.requestFlush === 'function') {
-          HEYS.Day.requestFlush({ force: true });
-        }
-      } catch (_) {
-        // ignore
-      }
-      const freshDayData = getFreshDayData(dateKey);
-      const nextState = normalizeMorningActivationState(dateKey, freshDayData);
-      const preparedState = {
-        ...nextState,
-        status: 'done',
-        intensity,
-        postState: null,
-        postEffect: null,
-        firstMealTime: nextState.firstMealTime || firstMealTimeValue || null,
-        decidedAt: Date.now(),
-        followupSnoozeUntilMealCount: null
+      const patch = {
+        firstMealTime: nextState.firstMealTime || firstMealTimeValue || null
       };
-      persistMorningActivationState(dateKey, preparedState, 'morning-activation-followup');
-      syncMorningActivationActivity(dateKey, preparedState);
-      const _verify = readDayData(dateKey, {});
-      console.warn('[MA.saveDone] SAVED', {
-        dateKey,
-        intensity,
-        maStatus: _verify?.morningActivation?.status,
-        trainingsCount: (_verify?.trainings || []).length,
-        trainingSources: (_verify?.trainings || []).map(t => t?.source).filter(Boolean)
-      });
-      try {
-        if (HEYS.game?.recordMorningActivationDone) {
-          HEYS.game.recordMorningActivationDone(dateKey);
-        }
-      } catch (e) {
-        console.warn('[HEYS.steps] recordMorningActivationDone failed:', e);
+      if (answer === 'done') {
+        applyMorningActivationCheckinAnswer(dateKey, 'done', 'morning-activation-followup');
+        finishFollowup('morning-activation-done');
+        return;
       }
-      notifyMorningActivationFollowupCompleted(dateKey, 'morning-activation-done');
-      context?.onNext?.();
-    };
-
-    const saveReplacement = () => {
-      if (terminalActionRef.current) return;
-      terminalActionRef.current = true;
-      saveFirstHalfTrainingInsteadOfActivation(dateKey, firstMealTimeValue);
-      context?.onNext?.();
-    };
-
-    const saveLater = () => {
-      if (laterClickedRef.current) return;
-      laterClickedRef.current = true;
-      const freshDayData = mergeDayMealsPreferLiveIfRicher(dateKey, getFreshDayData(dateKey));
-      const mealCount = Math.max(
-        countMealsWithItems(freshDayData),
-        countMealsWithItems(dayData),
-        1
-      );
-      persistMorningActivationState(dateKey, {
-        status: 'pending',
-        firstMealTime: initialState.firstMealTime || firstMealTimeValue || getFirstMealTimeFromDay(freshDayData) || null,
-        followupSnoozeUntilMealCount: mealCount
-      }, 'morning-activation-followup-dismiss');
-      context?.onClose?.();
-      notifyMorningActivationFollowupDismissed(dateKey, mealCount);
+      if (answer === 'planned') {
+        applyMorningActivationCheckinAnswer(dateKey, 'planned', 'morning-activation-followup');
+        finishFollowup('morning-activation-planned');
+        return;
+      }
+      applyMorningActivationCheckinAnswer(dateKey, 'skipped', 'morning-activation-followup');
+      finishFollowup('morning-activation-skipped');
     };
 
     const actionBtnStyle = {
@@ -4898,6 +5248,7 @@
     };
 
     return React.createElement('div', {
+      className: 'ma-followup-step',
       style: {
         display: 'flex',
         flexDirection: 'column',
@@ -4915,10 +5266,10 @@
       },
         React.createElement('div', {
           style: { fontSize: '14px', fontWeight: '700', color: '#065f46', marginBottom: '4px' }
-        }, 'Подтверждение утренней зарядки'),
+        }, 'Утренняя рутина'),
         React.createElement('div', {
           style: { fontSize: '12px', color: '#334155', lineHeight: '1.45' }
-        }, `После первого приёма пищи (${firstMealTimeLabel}) зафиксируй статус привычки.`)
+        }, `Утром ответа не было. После первого приёма пищи (${firstMealTimeLabel}) отметьте статус.`)
       ),
       MorningActivationHabitCalendar
         ? React.createElement(MorningActivationHabitCalendar, {
@@ -4928,112 +5279,31 @@
           layoutClass: 'ma-habit-cal--modal'
         })
         : null,
-      phase === 'decision'
-        ? React.createElement('div', {
-          style: { display: 'flex', flexDirection: 'column', gap: '8px' }
-        },
-          React.createElement('button', {
-            style: {
-              ...actionBtnStyle,
-              border: '1px solid rgba(16,185,129,0.35)',
-              background: 'rgba(16,185,129,0.12)',
-              color: '#047857'
-            },
-            onClick: () => {
-              setIntensityRec(getMorningActivationIntensityRecommendation(getFreshDayData(dateKey)));
-              setPhase('intensity');
-            }
-          }, 'Сделал зарядку'),
-          React.createElement('button', {
-            style: {
-              ...actionBtnStyle,
-              border: '1px solid rgba(244,63,94,0.35)',
-              background: 'rgba(244,63,94,0.10)',
-              color: '#be123c'
-            },
-            onClick: () => setPhase('reason')
-          }, 'Зарядки не было'),
-          React.createElement('button', {
-            style: actionBtnStyle,
-            onClick: saveLater
-          }, 'Сделаю позже')
-        )
-        : phase === 'intensity'
-          ? React.createElement('div', {
-            style: { display: 'flex', flexDirection: 'column', gap: '8px' }
+      React.createElement('div', {
+        className: 'mc-rest-routine-actions',
+        style: { display: 'flex', flexDirection: 'column', gap: '8px' }
+      },
+        React.createElement('button', {
+          type: 'button',
+          style: {
+            ...actionBtnStyle,
+            border: '1px solid rgba(16,185,129,0.35)',
+            background: 'rgba(16,185,129,0.12)',
+            color: '#047857'
           },
-            React.createElement('div', {
-              style: { fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '2px' }
-            }, 'Какая была интенсивность?'),
-            intensityRec && React.createElement('div', {
-              style: {
-                fontSize: '11px',
-                color: '#334155',
-                lineHeight: '1.45',
-                marginBottom: '4px',
-                padding: '8px 10px',
-                borderRadius: '10px',
-                border: '1px solid rgba(67,69,135,0.25)',
-                background: 'rgba(67,69,135,0.06)'
-              }
-            }, intensityRec.hint),
-            Object.entries(MORNING_ACTIVATION_INTENSITY_PRESETS).map(([id, preset]) => React.createElement('button', {
-              key: id,
-              type: 'button',
-              style: {
-                ...actionBtnStyle,
-                border: intensityRec?.intensity === id
-                  ? '1px solid rgba(67,69,135,0.55)'
-                  : actionBtnStyle.border,
-                background: intensityRec?.intensity === id
-                  ? 'rgba(67,69,135,0.08)'
-                  : actionBtnStyle.background
-              },
-              onClick: () => saveDone(id)
-            }, React.createElement(React.Fragment, null,
-              preset.label,
-              intensityRec?.intensity === id && React.createElement('span', {
-                style: { display: 'block', fontSize: '10px', fontWeight: '600', color: '#434587', marginTop: '2px' }
-              }, 'Рекомендация на сегодня')
-            ))),
-            React.createElement('button', {
-              type: 'button',
-              style: { ...actionBtnStyle, background: '#f8fafc' },
-              onClick: () => setPhase('decision')
-            }, 'Назад')
-          )
-          : React.createElement('div', {
-            style: { display: 'flex', flexDirection: 'column', gap: '8px' }
-          },
-            React.createElement('div', {
-              style: { fontSize: '13px', fontWeight: '700', color: '#0f172a', marginBottom: '2px' }
-            }, 'Почему сегодня без зарядки?'),
-            React.createElement('div', {
-              style: { fontSize: '12px', color: '#64748b', lineHeight: '1.45', marginBottom: '4px' }
-            }, 'Выбери наиболее подходящую причину.'),
-            React.createElement('button', {
-              type: 'button',
-              style: {
-                ...actionBtnStyle,
-                textAlign: 'left',
-                border: '1px solid rgba(29,112,183,0.35)',
-                background: 'rgba(29,112,183,0.10)',
-                color: '#1D70B7'
-              },
-              onClick: saveReplacement
-            }, 'Вместо зарядки была тренировка в первой половине дня'),
-            MORNING_ACTIVATION_SKIP_REASONS.map((opt) => React.createElement('button', {
-              key: opt.id,
-              type: 'button',
-              style: { ...actionBtnStyle, textAlign: 'left' },
-              onClick: () => saveMissed(opt.id)
-            }, opt.label)),
-            React.createElement('button', {
-              type: 'button',
-              style: { ...actionBtnStyle, background: '#f8fafc' },
-              onClick: () => setPhase('decision')
-            }, 'Назад')
-          )
+          onClick: () => saveAnswer('done')
+        }, 'Сделал'),
+        React.createElement('button', {
+          type: 'button',
+          style: actionBtnStyle,
+          onClick: () => saveAnswer('planned')
+        }, 'Сделаю'),
+        React.createElement('button', {
+          type: 'button',
+          style: actionBtnStyle,
+          onClick: () => saveAnswer('skipped')
+        }, 'Не сегодня')
+      )
     );
   }
 
@@ -5460,21 +5730,615 @@
     return `${n} ${word} подряд`;
   }
 
+  function isMorningRestSupplementsFeatureOn() {
+    const profile = lsGet('heys_profile', {}) || {};
+    const hf = HEYS.healthFeatures;
+    if (hf && typeof hf.isSupplementsFeatureAvailable === 'function') {
+      return hf.isSupplementsFeatureAvailable(profile) !== false;
+    }
+    return true;
+  }
+
+  function isMorningRestSupplementsEnabled() {
+    const profile = lsGet('heys_profile', {}) || {};
+    const hf = HEYS.healthFeatures;
+    if (hf && typeof hf.isSupplementsTrackingEnabled === 'function') {
+      return hf.isSupplementsTrackingEnabled(profile);
+    }
+    return profile.supplementsTrackingEnabled === true;
+  }
+
+  const MORNING_REST_SUPP_TIMING_OPTIONS = [
+    { id: 'morning', label: 'Утром' },
+    { id: 'anytime', label: 'Днём' },
+    { id: 'evening', label: 'Вечером' },
+    { id: 'withFood', label: 'С едой' }
+  ];
+
+  const MORNING_REST_SUPP_COURSE_NAMES = {
+    vitD: 'Витамин D3',
+    magnesium: 'Магний глицинат',
+    omega3: 'Омега-3'
+  };
+
+  const MORNING_REST_SUPP_CARD_NAMES = {
+    vitD: 'Витамин D',
+    vitC: 'Витамин C',
+    magnesium: 'Магний',
+    omega3: 'Омега-3',
+    zinc: 'Цинк',
+    selenium: 'Селен',
+    b12: 'B12',
+    b6: 'B6',
+    k2: 'K2',
+    calcium: 'Кальций',
+    lecithin: 'Лецитин',
+    creatine: 'Креатин',
+    bcaa: 'BCAA',
+    protein: 'Протеин',
+    melatonin: 'Мелатонин',
+    glycine: 'Глицин',
+    ltheanine: 'L-теанин',
+    collagen: 'Коллаген'
+  };
+
+  const MORNING_REST_SUPP_DOSE_DEFAULTS = {
+    vitD: { dose: 5000, unit: 'МЕ', step: 500, hint: 'Шаг 500 МЕ. Обычная дозировка — от 1 000 до 5 000.' },
+    magnesium: { dose: 400, unit: 'мг', step: 50, hint: 'Шаг 50 мг. Обычная дозировка — от 200 до 400.' },
+    omega3: { dose: 1000, unit: 'мг', step: 100, hint: 'Шаг 100 мг. Смотрите содержание EPA+DHA на упаковке.' }
+  };
+
+  const MORNING_REST_SUPP_ADD_GROUPS = [
+    { label: 'Витамины и микроэлементы', categories: ['immune'] },
+    { label: 'Минералы и жиры', categories: ['brain', 'bones'] },
+    { label: 'Сон и восстановление', categories: ['sleep'] },
+    { label: 'Спортивное питание', categories: ['sport'] }
+  ];
+
+  function formatMorningRestSuppTiming(timing) {
+    const map = {
+      morning: 'утром',
+      evening: 'вечером',
+      beforeBed: 'перед сном',
+      withFood: 'с едой',
+      withFat: 'с жирной едой',
+      empty: 'натощак',
+      beforeMeal: 'до еды',
+      afterTrain: 'после трени',
+      anytime: 'днём'
+    };
+    return map[timing] || '';
+  }
+
+  function formatSuppDoseNumber(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return String(value ?? '');
+    return String(Math.round(num)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  }
+
+  function getMorningRestSuppCardName(id) {
+    if (MORNING_REST_SUPP_CARD_NAMES[id]) return MORNING_REST_SUPP_CARD_NAMES[id];
+    return HEYS.Supplements?.CATALOG?.[id]?.name || id;
+  }
+
+  function getMorningRestSuppCourseName(id) {
+    if (MORNING_REST_SUPP_COURSE_NAMES[id]) return MORNING_REST_SUPP_COURSE_NAMES[id];
+    return getMorningRestSuppCardName(id);
+  }
+
+  function getMorningRestSuppDoseDefaults(id) {
+    if (MORNING_REST_SUPP_DOSE_DEFAULTS[id]) return { ...MORNING_REST_SUPP_DOSE_DEFAULTS[id] };
+    const unitById = {
+      vitD: 'МЕ',
+      k2: 'мкг',
+      folic: 'мкг',
+      b12: 'мкг',
+      b6: 'мг',
+      biotin: 'мкг',
+      selenium: 'мкг',
+      omega3: 'мг',
+      fishOil: 'г',
+      creatine: 'г',
+      bcaa: 'г',
+      protein: 'г'
+    };
+    const unit = unitById[id] || 'мг';
+    return { dose: 100, unit, step: 10, hint: 'Дозу можно изменить в курсе в любой день.' };
+  }
+
+  function initMorningRestSuppDoseDraft(id) {
+    const Supps = HEYS.Supplements;
+    const setting = Supps?.getSupplementSetting?.(id) || {};
+    const defaults = getMorningRestSuppDoseDefaults(id);
+    const catalog = Supps?.CATALOG?.[id] || {};
+    const timing = setting?.timing || catalog.timing || 'morning';
+    const normalizedTiming = MORNING_REST_SUPP_TIMING_OPTIONS.some((row) => row.id === timing)
+      ? timing
+      : 'morning';
+    return {
+      dose: setting?.dose != null ? Number(setting.dose) : defaults.dose,
+      unit: setting?.unit || defaults.unit,
+      timing: normalizedTiming
+    };
+  }
+
+  function formatMorningRestSuppCourseLine(id) {
+    const Supps = HEYS.Supplements;
+    const setting = Supps?.getSupplementSetting?.(id) || {};
+    const defaults = getMorningRestSuppDoseDefaults(id);
+    const dose = setting?.dose != null ? setting.dose : defaults.dose;
+    const unit = setting?.unit || defaults.unit;
+    const timing = formatMorningRestSuppTiming(setting?.timing || Supps?.CATALOG?.[id]?.timing);
+    const doseLabel = `${formatSuppDoseNumber(dose)} ${unit}`;
+    return { name: getMorningRestSuppCourseName(id), meta: timing ? `${doseLabel} · ${timing}` : doseLabel };
+  }
+
+  function formatMorningRestSupplementRow(id) {
+    const Supps = HEYS.Supplements;
+    const setting = Supps?.getSupplementSetting?.(id) || {};
+    const defaults = getMorningRestSuppDoseDefaults(id);
+    const name = getMorningRestSuppCardName(id);
+    const dose = setting?.dose != null ? setting.dose : defaults.dose;
+    const unit = setting?.unit || defaults.unit;
+    const title = dose ? `${name} · ${formatSuppDoseNumber(dose)} ${unit}` : name;
+    const timing = formatMorningRestSuppTiming(setting?.timing || Supps?.CATALOG?.[id]?.timing);
+    return { title, timing };
+  }
+
+  function persistMorningRestSuppPlanned(selected, dateKey) {
+    if (HEYS.Supplements?.savePlanned) {
+      HEYS.Supplements.savePlanned(selected, {
+        dateKey,
+        source: 'morning-rest-supplements',
+        syncDay: false
+      });
+    }
+  }
+
+  function getMorningRestSuppAddCatalog(searchQuery) {
+    const Supps = HEYS.Supplements;
+    if (!Supps?.getByCategory) return [];
+    const byCategory = Supps.getByCategory();
+    const query = String(searchQuery || '').trim().toLowerCase();
+    return MORNING_REST_SUPP_ADD_GROUPS.map((group) => {
+      const items = [];
+      group.categories.forEach((catId) => {
+        (byCategory[catId] || []).forEach((row) => {
+          const label = row.name || row.id;
+          if (query && !label.toLowerCase().includes(query) && !row.id.toLowerCase().includes(query)) return;
+          items.push(row);
+        });
+      });
+      return items.length ? { label: group.label, items } : null;
+    }).filter(Boolean);
+  }
+
+  function countMorningRestSuppSelectedWord(count) {
+    const n = Number(count) || 0;
+    if (n === 1) return 'один';
+    if (n === 2) return 'два';
+    if (n === 3) return 'три';
+    if (n === 4) return 'четыре';
+    return String(n);
+  }
+
+  function renderMorningRestSuppCheckIcon() {
+    return React.createElement('svg', {
+      width: 12,
+      height: 12,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 3.4,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true'
+    }, React.createElement('path', { d: 'M5 13l4 4L19 7' }));
+  }
+
+  function renderMorningRestSuppChevron() {
+    return React.createElement('span', { className: 'mc-supp-flow-chevron', 'aria-hidden': 'true' },
+      React.createElement('svg', {
+        width: 15,
+        height: 15,
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 2.75,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round'
+      }, React.createElement('path', { d: 'M9 6l6 6-6 6' }))
+    );
+  }
+
+  function renderMorningRestSuppFlowFoot(children, modifier) {
+    const mod = modifier ? ` mc-supp-flow-foot--${modifier}` : '';
+    return React.createElement('div', { className: 'mc-supp-flow-foot' + mod }, children);
+  }
+
+  function MorningRestSupplementsFlow({ data, onChange, planned, dateKey }) {
+    const Supps = HEYS.Supplements;
+    const layer = data.supplementsLayer || (planned.length > 0 ? 'course' : 'empty');
+    const addDraft = Array.isArray(data.supplementsAddDraft) ? data.supplementsAddDraft : [...planned];
+    const plannedAtOpen = Array.isArray(data.supplementsPlannedAtOpen) ? data.supplementsPlannedAtOpen : [...planned];
+    const [searchQuery, setSearchQuery] = React.useState('');
+    const doseDraft = data.supplementsDoseDraft || {};
+    const doseId = data.supplementsDoseId || null;
+    const closeSupplements = () => onChange({
+      ...data,
+      supplementsOpen: false,
+      supplementsLayer: null,
+      supplementsAddDraft: null,
+      supplementsPlannedAtOpen: null,
+      supplementsDoseId: null,
+      supplementsDoseQueue: null,
+      supplementsDoseDraft: null
+    });
+    const setLayer = (patch) => onChange({ ...data, ...patch });
+    const openAddLayer = () => setLayer({
+      supplementsLayer: 'add',
+      supplementsAddDraft: [...planned],
+      supplementsPlannedAtOpen: [...planned]
+    });
+    const openDoseLayer = (suppId, queue) => setLayer({
+      supplementsLayer: 'dose',
+      supplementsDoseId: suppId,
+      supplementsDoseQueue: queue || [],
+      supplementsDoseDraft: initMorningRestSuppDoseDraft(suppId)
+    });
+    const commitDoseAndAdvance = () => {
+      if (!doseId || !Supps) return;
+      Supps.setSupplementSetting?.(doseId, {
+        dose: doseDraft.dose,
+        unit: doseDraft.unit,
+        timing: doseDraft.timing
+      });
+      const nextPlanned = planned.includes(doseId) ? planned : [...planned, doseId];
+      persistMorningRestSuppPlanned(nextPlanned, dateKey);
+      const queue = Array.isArray(data.supplementsDoseQueue) ? [...data.supplementsDoseQueue] : [];
+      const nextId = queue.shift();
+      if (nextId) {
+        onChange({
+          ...data,
+          selected: nextPlanned,
+          supplementsDoseId: nextId,
+          supplementsDoseQueue: queue,
+          supplementsDoseDraft: initMorningRestSuppDoseDraft(nextId)
+        });
+        return;
+      }
+      onChange({
+        ...data,
+        selected: nextPlanned,
+        supplementsLayer: nextPlanned.length > 0 ? 'course' : 'empty',
+        supplementsAddDraft: nextPlanned,
+        supplementsPlannedAtOpen: nextPlanned,
+        supplementsDoseId: null,
+        supplementsDoseQueue: null,
+        supplementsDoseDraft: null
+      });
+    };
+    const startDoseQueueFromAdd = () => {
+      const queue = addDraft.filter((id) => !plannedAtOpen.includes(id));
+      if (!queue.length) {
+        persistMorningRestSuppPlanned(addDraft, dateKey);
+        onChange({
+          ...data,
+          selected: addDraft,
+          supplementsLayer: addDraft.length > 0 ? 'course' : 'empty',
+          supplementsAddDraft: addDraft,
+          supplementsPlannedAtOpen: addDraft
+        });
+        return;
+      }
+      openDoseLayer(queue[0], queue.slice(1));
+    };
+    const toggleAddDraft = (id) => {
+      const nextDraft = addDraft.includes(id)
+        ? addDraft.filter((row) => row !== id)
+        : [...addDraft, id];
+      onChange({ ...data, supplementsAddDraft: nextDraft });
+    };
+    const removeFromCourse = (id) => {
+      const nextPlanned = planned.filter((row) => row !== id);
+      const nextDraft = (Array.isArray(data.supplementsAddDraft) ? data.supplementsAddDraft : planned)
+        .filter((row) => row !== id);
+      persistMorningRestSuppPlanned(nextPlanned, dateKey);
+      const nextLayer = layer === 'add'
+        ? 'add'
+        : (nextPlanned.length > 0 ? 'course' : 'empty');
+      onChange({
+        ...data,
+        selected: nextPlanned,
+        supplementsAddDraft: nextDraft,
+        supplementsPlannedAtOpen: nextPlanned,
+        supplementsLayer: nextLayer,
+        supplementsDoseId: null,
+        supplementsDoseQueue: null,
+        supplementsDoseDraft: null
+      });
+    };
+
+    if (layer === 'empty') {
+      return React.createElement('div', { className: 'mc-rest-step mc-rest-step--layer mc-supp-flow mc-supp-flow--empty' },
+        React.createElement('div', { className: 'mc-supp-flow-empty-card' },
+          React.createElement('span', { className: 'mc-supp-flow-empty-icon', 'aria-hidden': 'true' },
+            React.createElement('svg', {
+              width: 21,
+              height: 21,
+              viewBox: '0 0 24 24',
+              fill: 'none',
+              stroke: 'currentColor',
+              strokeWidth: 2.4,
+              strokeLinecap: 'round',
+              strokeLinejoin: 'round'
+            },
+              React.createElement('path', { d: 'M10.5 20.5a4.95 4.95 0 01-7-7l7-7a4.95 4.95 0 017 7z' }),
+              React.createElement('path', { d: 'M8.5 8.5l7 7' })
+            )
+          ),
+          React.createElement('div', { className: 'mc-supp-flow-empty-title' }, 'Курс пока пуст'),
+          React.createElement('div', { className: 'mc-supp-flow-empty-body' },
+            'Добавки — витамины, минералы, омега. Добавьте курс, чтобы видеть его каждое утро.'
+          )
+        ),
+        React.createElement('div', { className: 'mc-supp-flow-note' },
+          'Это список на день, а не отметка «выпил»: факт приёма отмечается в дневнике.'
+        ),
+        renderMorningRestSuppFlowFoot(
+          React.createElement('button', {
+            type: 'button',
+            className: 'mc-supp-flow-btn mc-supp-flow-btn--primary',
+            onClick: openAddLayer
+          }, 'Добавить в курс'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'mc-supp-flow-btn mc-supp-flow-btn--ghost',
+            onClick: closeSupplements
+          }, 'Позже'),
+          'stack'
+        )
+      );
+    }
+
+    if (layer === 'course') {
+      return React.createElement('div', { className: 'mc-rest-step mc-rest-step--layer mc-supp-flow mc-supp-flow--course' },
+        React.createElement('div', { className: 'mc-supp-flow-lead' },
+          'Курс на день. Утром вы его просто видите — факт приёма отмечается в дневнике.'
+        ),
+        React.createElement('div', { className: 'mc-supp-flow-course-list' },
+          planned.map((id) => {
+            const row = formatMorningRestSuppCourseLine(id);
+            return React.createElement('button', {
+              key: id,
+              type: 'button',
+              className: 'mc-supp-flow-course-row',
+              onClick: () => openDoseLayer(id, [])
+            },
+              React.createElement('div', { className: 'mc-supp-flow-course-copy' },
+                React.createElement('b', null, row.name),
+                React.createElement('span', null, row.meta)
+              ),
+              renderMorningRestSuppChevron()
+            );
+          })
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-supp-flow-add-row',
+          onClick: openAddLayer
+        },
+          React.createElement('span', { className: 'mc-supp-flow-add-icon', 'aria-hidden': 'true' },
+            React.createElement('svg', {
+              width: 13,
+              height: 13,
+              viewBox: '0 0 24 24',
+              fill: 'none',
+              stroke: 'currentColor',
+              strokeWidth: 3,
+              strokeLinecap: 'round'
+            }, React.createElement('path', { d: 'M12 6v12M6 12h12' }))
+          ),
+          React.createElement('span', null, 'Добавить в курс')
+        ),
+        React.createElement('div', { className: 'mc-supp-flow-note mc-supp-flow-note--left' },
+          'Курс живёт до отмены: пункт убирается тем же экраном, где добавляется. Куратор видит состав, но не меняет его без вас.'
+        ),
+        renderMorningRestSuppFlowFoot(
+          React.createElement('button', {
+            type: 'button',
+            className: 'mc-supp-flow-btn mc-supp-flow-btn--primary',
+            onClick: closeSupplements
+          }, 'Готово')
+        )
+      );
+    }
+
+    if (layer === 'add') {
+      const groups = getMorningRestSuppAddCatalog(searchQuery);
+      const selectedCount = addDraft.length;
+      return React.createElement('div', { className: 'mc-rest-step mc-rest-step--layer mc-supp-flow mc-supp-flow--add' },
+        React.createElement('div', { className: 'mc-supp-flow-search' },
+          React.createElement('svg', {
+            width: 15,
+            height: 15,
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: 2.6,
+            strokeLinecap: 'round',
+            'aria-hidden': 'true'
+          },
+            React.createElement('circle', { cx: 11, cy: 11, r: 7 }),
+            React.createElement('path', { d: 'M20 20l-4.2-4.2' })
+          ),
+          React.createElement('input', {
+            type: 'search',
+            className: 'mc-supp-flow-search-input',
+            placeholder: 'Поиск по названию',
+            value: searchQuery,
+            onChange: (event) => setSearchQuery(event.target.value),
+            'aria-label': 'Поиск по названию'
+          })
+        ),
+        React.createElement('div', { className: 'mc-supp-flow-groups' },
+          groups.map((group) => React.createElement('div', { key: group.label, className: 'mc-supp-flow-group' },
+            React.createElement('div', { className: 'mc-supp-flow-tier' }, group.label),
+            React.createElement('div', { className: 'mc-supp-flow-chips' },
+              group.items.map((item) => {
+                const isOn = addDraft.includes(item.id);
+                return React.createElement('button', {
+                  key: item.id,
+                  type: 'button',
+                  className: 'mc-supp-flow-chip' + (isOn ? ' is-on' : ''),
+                  onClick: () => {
+                    if (isOn && planned.includes(item.id)) {
+                      removeFromCourse(item.id);
+                      return;
+                    }
+                    toggleAddDraft(item.id);
+                  }
+                },
+                  isOn && renderMorningRestSuppCheckIcon(),
+                  React.createElement('span', null, item.name)
+                );
+              })
+            )
+          ))
+        ),
+        renderMorningRestSuppFlowFoot(
+          React.createElement('span', { className: 'mc-supp-flow-selected-count' },
+            selectedCount > 0 ? `Выбрано ${countMorningRestSuppSelectedWord(selectedCount)}` : 'Ничего не выбрано'
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'mc-supp-flow-btn mc-supp-flow-btn--primary mc-supp-flow-btn--grow',
+            disabled: selectedCount === 0,
+            onClick: startDoseQueueFromAdd
+          }, 'Дозы и время'),
+          'add'
+        )
+      );
+    }
+
+    if (layer === 'dose' && doseId) {
+      const defaults = getMorningRestSuppDoseDefaults(doseId);
+      const step = defaults.step || 10;
+      const minDose = step;
+      const currentDose = Number(doseDraft.dose);
+      const safeDose = Number.isFinite(currentDose) ? currentDose : defaults.dose;
+      const decDose = () => onChange({
+        ...data,
+        supplementsDoseDraft: {
+          ...doseDraft,
+          dose: Math.max(minDose, safeDose - step)
+        }
+      });
+      const incDose = () => onChange({
+        ...data,
+        supplementsDoseDraft: {
+          ...doseDraft,
+          dose: safeDose + step
+        }
+      });
+      const alreadyInCourse = planned.includes(doseId);
+      return React.createElement('div', { className: 'mc-rest-step mc-rest-step--layer mc-supp-flow mc-supp-flow--dose' },
+        React.createElement('div', { className: 'mc-supp-flow-dose-kicker' }, 'Доза на день'),
+        React.createElement('div', { className: 'mc-supp-flow-dose-stepper' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'mc-supp-flow-dose-btn',
+            onClick: decDose,
+            'aria-label': 'Уменьшить дозу'
+          },
+            React.createElement('svg', {
+              width: 16,
+              height: 16,
+              viewBox: '0 0 24 24',
+              fill: 'none',
+              stroke: 'currentColor',
+              strokeWidth: 3,
+              strokeLinecap: 'round'
+            }, React.createElement('path', { d: 'M6 12h12' }))
+          ),
+          React.createElement('div', { className: 'mc-supp-flow-dose-value' },
+            React.createElement('span', { className: 'mc-supp-flow-dose-num' }, formatSuppDoseNumber(safeDose)),
+            React.createElement('span', { className: 'mc-supp-flow-dose-unit' }, doseDraft.unit || defaults.unit)
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'mc-supp-flow-dose-btn',
+            onClick: incDose,
+            'aria-label': 'Увеличить дозу'
+          },
+            React.createElement('svg', {
+              width: 16,
+              height: 16,
+              viewBox: '0 0 24 24',
+              fill: 'none',
+              stroke: 'currentColor',
+              strokeWidth: 3,
+              strokeLinecap: 'round'
+            },
+              React.createElement('path', { d: 'M12 6v12M6 12h12' })
+            )
+          )
+        ),
+        React.createElement('div', { className: 'mc-supp-flow-dose-hint' }, defaults.hint),
+        React.createElement('div', { className: 'mc-supp-flow-timing-label' }, 'Когда принимать'),
+        React.createElement('div', { className: 'mc-supp-flow-timing-row' },
+          MORNING_REST_SUPP_TIMING_OPTIONS.map((row) => React.createElement('button', {
+            key: row.id,
+            type: 'button',
+            className: 'mc-pill mc-pill--mini mc-pill--choice' + (doseDraft.timing === row.id ? ' is-on' : ''),
+            onClick: () => onChange({
+              ...data,
+              supplementsDoseDraft: { ...doseDraft, timing: row.id }
+            })
+          }, row.label))
+        ),
+        React.createElement('div', { className: 'mc-supp-flow-note mc-supp-flow-note--left' },
+          'Время — подсказка для утреннего списка, а не напоминание. Дозу и время можно поменять в курсе в любой день.'
+        ),
+        renderMorningRestSuppFlowFoot(
+          React.createElement('button', {
+            type: 'button',
+            className: 'mc-supp-flow-btn mc-supp-flow-btn--primary',
+            onClick: commitDoseAndAdvance
+          }, alreadyInCourse ? 'Сохранить' : 'Добавить в курс')
+        )
+      );
+    }
+
+    return null;
+  }
+
   function MorningRestStepComponent({ data, onChange, context }) {
+    const dateKey = context?.dateKey || getTodayKey();
+    const profile = lsGet('heys_profile', {}) || {};
     const coldType = data.coldType || 'none';
     const coldFocus = data.coldOpen === true;
     const measurementsFocus = data.measurementsOpen === true;
-    const showMeasurements = data.showMeasurements === true
+    const supplementsFocus = data.supplementsOpen === true;
+    const supplementsFeatureOn = isMorningRestSupplementsFeatureOn();
+    const measurementsConsentOn = isMorningRestMeasurementsConsentOn(profile);
+    const supplementsConsentOn = isMorningRestSupplementsEnabled();
+    const planned = supplementsConsentOn && Array.isArray(data.selected) ? data.selected : [];
+    const measurementsEligible = data.showMeasurements === true
       || (HEYS.Steps && typeof HEYS.Steps.shouldShowMeasurements === 'function' && HEYS.Steps.shouldShowMeasurements());
-    const showRefeed = data.showRefeed === true
-      || (typeof HEYS.MorningCheckinUtils?.shouldIncludeRefeedStep === 'function'
-        ? false
-        : !!(HEYS.Refeed?.shouldShowRefeedStep?.()));
-    const planned = Array.isArray(data.selected) ? data.selected : [];
-    const catalog = HEYS.Supplements?.getCatalog?.() || HEYS.Supplements?.CATALOG || [];
-    const nameOf = (id) => {
-      const row = Array.isArray(catalog) ? catalog.find((item) => item.id === id || item.key === id) : null;
-      return row?.name || row?.title || id;
+    const showConsentBanner = shouldShowMorningRestConsentBanner(profile) && data.consentBannerDismissed !== true;
+    const consentBannerCopy = getMorningRestConsentBannerCopy(profile);
+    const showMeasurements = measurementsConsentOn && measurementsEligible;
+    const showSupplements = supplementsConsentOn && supplementsFeatureOn;
+    const supplementsInCourse = planned.length > 0;
+    const showSupplementsCard = showSupplements && supplementsInCourse;
+    const routineStatus = data.routineStatus || null;
+    const routineStreak = data.routineStreak != null
+      ? data.routineStreak
+      : getMorningActivationRoutineStreak();
+    const setRoutineStatus = (nextStatus) => {
+      onChange({ ...data, routineStatus: nextStatus });
+      applyMorningActivationCheckinAnswer(dateKey, nextStatus, 'morning-rest-routine');
     };
     const nowTime = () => new Date().toTimeString().slice(0, 5);
     const openColdLayer = () => {
@@ -5580,6 +6444,42 @@
     const lastMeasurements = (HEYS.Steps && typeof HEYS.Steps.getLastMeasurements === 'function')
       ? HEYS.Steps.getLastMeasurements()
       : getLastMeasurements();
+    const openSupplementsLayer = () => {
+      if (!supplementsConsentOn) {
+        openHealthOptionalConsentFromCheckin().catch(() => {});
+        return;
+      }
+      onChange({
+        ...data,
+        supplementsOpen: true,
+        supplementsLayer: planned.length > 0 ? 'course' : 'empty',
+        supplementsAddDraft: [...planned],
+        supplementsPlannedAtOpen: [...planned],
+        supplementsDoseId: null,
+        supplementsDoseQueue: null,
+        supplementsDoseDraft: null,
+        coldOpen: false,
+        measurementsOpen: false
+      });
+    };
+    const openSupplementsAddLayer = () => {
+      if (!supplementsConsentOn) {
+        openHealthOptionalConsentFromCheckin().catch(() => {});
+        return;
+      }
+      onChange({
+        ...data,
+        supplementsOpen: true,
+        supplementsLayer: 'add',
+        supplementsAddDraft: [...planned],
+        supplementsPlannedAtOpen: [...planned],
+        supplementsDoseId: null,
+        supplementsDoseQueue: null,
+        supplementsDoseDraft: null,
+        coldOpen: false,
+        measurementsOpen: false
+      });
+    };
     const openMeasurementsLayer = () => {
       const last = lastMeasurements || {};
       const side = data.measurementsSide || getMeasurementSide() || 'left';
@@ -5587,6 +6487,7 @@
         ...data,
         measurementsOpen: true,
         coldOpen: false,
+        supplementsOpen: false,
         waist: data.waist !== undefined && data.waist !== '' ? data.waist : formatCmField(last.waist),
         hips: data.hips !== undefined && data.hips !== '' ? data.hips : formatCmField(last.hips),
         thigh: data.thigh !== undefined && data.thigh !== '' ? data.thigh : formatCmField(last.thigh),
@@ -5594,12 +6495,30 @@
         measurementsSide: side
       });
     };
-    const measurementHint = lastMeasurements?.daysAgo == null
+    const formatMeasurementDaysAgo = (daysAgo) => {
+      if (!Number.isFinite(daysAgo)) return '';
+      if (daysAgo === 0) return 'Сегодня уже были';
+      const dayWord = daysAgo === 1 ? 'день' : (daysAgo >= 2 && daysAgo <= 4 ? 'дня' : 'дней');
+      return `Прошло ${daysAgo} ${dayWord} с прошлых`;
+    };
+    const measurementRowHint = isMeasurementsOverdue(lastMeasurements)
+      ? 'Без обхвата виден только вес'
+      : (lastMeasurements?.daysAgo == null
+        ? 'Ещё не было замеров'
+        : formatMeasurementDaysAgo(lastMeasurements.daysAgo));
+    const measurementLayerHint = lastMeasurements?.daysAgo == null
       ? 'Ещё не было замеров'
-      : (lastMeasurements.daysAgo === 0
-        ? 'Сегодня уже были'
-        : `Прошло ${lastMeasurements.daysAgo} ${lastMeasurements.daysAgo === 1 ? 'день' : (lastMeasurements.daysAgo >= 2 && lastMeasurements.daysAgo <= 4 ? 'дня' : 'дней')} с прошлых`);
-    const restIsSparse = planned.length === 0 && !showMeasurements && !showRefeed;
+      : formatMeasurementDaysAgo(lastMeasurements.daysAgo);
+    const measurementsOverdue = showMeasurements && isMeasurementsOverdue(lastMeasurements);
+    const measurementsOverdueKicker = measurementsOverdue
+      ? formatMeasurementsOverdueKicker(lastMeasurements)
+      : null;
+    const sparseNote = buildMorningRestSparseNote({
+      showSupplementsCard,
+      showConsentBanner,
+      showMeasurements,
+      showRefeed: false
+    });
     const coldNoneSelected = data.coldPicked === true && coldType === 'none' && !coldFocus;
     const coldStreakLabel = formatColdStreakLabel(
       data.coldStreak != null ? data.coldStreak : getColdExposureStreak(context?.dateKey || getTodayKey())
@@ -5612,13 +6531,22 @@
       { key: 'biceps', label: 'Бицепс' }
     ];
 
+    if (supplementsFocus) {
+      return React.createElement(MorningRestSupplementsFlow, {
+        data,
+        onChange,
+        planned,
+        dateKey
+      });
+    }
+
     if (measurementsFocus) {
       return React.createElement('div', { className: 'mc-rest-step mc-rest-step--layer' },
         React.createElement('div', { className: 'mc-rest-layer-title' }, 'Замеры'),
         React.createElement('div', { className: 'mc-rest-layer-hint' },
-          measurementHint === 'Ещё не было замеров'
+          measurementLayerHint === 'Ещё не было замеров'
             ? 'Сантиметр честнее весов на короткой дистанции.'
-            : `${measurementHint}. Сантиметр честнее весов на короткой дистанции.`
+            : `${measurementLayerHint}. Сантиметр честнее весов на короткой дистанции.`
         ),
         React.createElement('div', { className: 'mc-rest-measure-list' },
           measureFields.map((row) => React.createElement('label', {
@@ -5741,57 +6669,89 @@
           }, 'Не сегодня')
         )
       ),
-      planned.length > 0 && React.createElement('div', { className: 'mc-rest-card' },
-        React.createElement('div', { className: 'mc-rest-card-title' }, 'Добавки на сегодня'),
-        planned.map((id) => React.createElement('div', { key: id, className: 'mc-rest-supp-row' }, nameOf(id))),
-        React.createElement('div', { className: 'mc-rest-card-hint' }, 'Это курс на день, а не отметка «выпил»: факт приёма отмечается в дневнике.')
-      ),
-      React.createElement('button', {
-        type: 'button',
-        className: 'mc-rest-row',
-        onClick: () => {
-          if (HEYS.MorningActivation?.openProtocol) {
-            HEYS.MorningActivation.openProtocol();
-          }
-        }
-      },
-        React.createElement('div', null,
-          React.createElement('div', { className: 'mc-rest-card-title' }, 'Утренняя рутина'),
-          React.createElement('div', { className: 'mc-rest-card-hint' }, 'Резинки, разогрев — 6 минут')
+      showSupplementsCard && React.createElement('div', { className: 'mc-rest-card mc-rest-card--supplements' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-rest-supp-head',
+          onClick: openSupplementsLayer
+        },
+          React.createElement('span', { className: 'mc-rest-card-title' }, 'Добавки на сегодня'),
+          React.createElement('span', { className: 'mc-rest-chevron mc-rest-chevron--down', 'aria-hidden': 'true' })
         ),
-        React.createElement('span', { className: 'mc-rest-chevron' }, '›')
+        React.createElement('div', { className: 'mc-rest-supp-list' },
+          planned.map((id) => {
+            const row = formatMorningRestSupplementRow(id);
+            return React.createElement('div', { key: id, className: 'mc-rest-supp-row' },
+              React.createElement('span', { className: 'mc-rest-supp-name' }, row.title),
+              row.timing && React.createElement('span', { className: 'mc-rest-supp-time' }, row.timing)
+            );
+          })
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-rest-supp-add',
+          onClick: openSupplementsAddLayer
+        },
+          React.createElement('span', { className: 'mc-rest-supp-add-icon', 'aria-hidden': 'true' }, '+'),
+          React.createElement('span', null, 'Добавить в курс')
+        )
+      ),
+      React.createElement('div', { className: 'mc-rest-card mc-rest-card--routine' },
+        React.createElement('div', { className: 'mc-rest-cold-head' },
+          React.createElement('div', { className: 'mc-rest-card-title' }, 'Утренняя рутина'),
+          routineStreak > 0 && React.createElement('div', { className: 'mc-rest-cold-streak' },
+            formatColdStreakLabel(routineStreak)
+          )
+        ),
+        React.createElement('div', { className: 'mc-rest-card-hint' }, 'Резинки и разогрев · 6 минут'),
+        React.createElement('div', { className: 'mc-rest-routine-actions' },
+          ['done', 'planned', 'skipped'].map((status) => React.createElement('button', {
+            key: status,
+            type: 'button',
+            className: 'mc-pill mc-pill--mini mc-pill--choice' + (routineStatus === status ? ' is-on' : ''),
+            onClick: () => setRoutineStatus(status)
+          }, status === 'done' ? 'Сделал' : status === 'planned' ? 'Сделаю' : 'Не сегодня'))
+        )
       ),
       showMeasurements && React.createElement('button', {
         type: 'button',
-        className: 'mc-rest-row',
+        className: 'mc-rest-row' + (measurementsOverdue ? ' mc-rest-row--overdue' : ''),
         onClick: openMeasurementsLayer
       },
         React.createElement('div', null,
+          measurementsOverdueKicker && React.createElement('div', { className: 'mc-rest-overdue-kicker' },
+            React.createElement('span', { className: 'mc-rest-overdue-dot', 'aria-hidden': 'true' }),
+            measurementsOverdueKicker
+          ),
           React.createElement('div', { className: 'mc-rest-card-title' }, 'Замеры'),
-          React.createElement('div', { className: 'mc-rest-card-hint' }, measurementHint)
+          React.createElement('div', { className: 'mc-rest-card-hint' }, measurementRowHint)
         ),
-        React.createElement('span', { className: 'mc-rest-chevron' }, '›')
+        React.createElement('span', {
+          className: 'mc-rest-chevron' + (measurementsOverdue ? ' mc-rest-chevron--accent' : ''),
+          'aria-hidden': 'true'
+        }, '›')
       ),
-      showRefeed && React.createElement('div', { className: 'mc-rest-row mc-rest-refeed' },
-        React.createElement('div', null,
-          React.createElement('div', { className: 'mc-rest-card-title' }, 'Загрузочный день'),
-          React.createElement('div', { className: 'mc-rest-card-hint' }, 'Сегодня по рекомендации')
-        ),
-        React.createElement('div', { className: 'mc-rest-yesno' },
+      sparseNote && React.createElement('div', { className: 'mc-rest-empty-note' }, sparseNote),
+      showConsentBanner && React.createElement('div', { className: 'mc-rest-consent-card' },
+        React.createElement('div', { className: 'mc-rest-consent-card-title' }, consentBannerCopy.title),
+        React.createElement('div', { className: 'mc-rest-consent-card-body' }, consentBannerCopy.body),
+        React.createElement('div', { className: 'mc-rest-consent-actions' },
           React.createElement('button', {
             type: 'button',
-            className: 'mc-pill mc-pill--mini mc-pill--choice' + (data.isRefeedDay === true ? ' is-on' : ''),
-            onClick: () => onChange({ ...data, isRefeedDay: true })
-          }, 'Да'),
+            className: 'mc-rest-consent-primary',
+            onClick: () => {
+              openHealthOptionalConsentFromCheckin().catch(() => {});
+            }
+          }, 'Прочитать и подписать'),
           React.createElement('button', {
             type: 'button',
-            className: 'mc-pill mc-pill--mini mc-pill--choice' + (data.isRefeedDay === false ? ' is-on' : ''),
-            onClick: () => onChange({ ...data, isRefeedDay: false })
-          }, 'Нет')
+            className: 'mc-rest-consent-secondary',
+            onClick: () => {
+              snoozeHealthOptionalConsent();
+              onChange({ ...data, consentBannerDismissed: true });
+            }
+          }, 'Не сейчас')
         )
-      ),
-      restIsSparse && React.createElement('div', { className: 'mc-rest-empty-note' },
-        'Добавок в курсе нет, замеры свежие, загрузочный не рекомендован — строк тоже нет. Пусто здесь нормально.'
       )
     );
   }
@@ -5803,10 +6763,46 @@
     canSkip: false,
     nextLabel: 'Готово',
     component: MorningRestStepComponent,
-    showHeaderBack: (data) => !!(data && (data.coldOpen === true || data.measurementsOpen === true)),
+    showHeaderBack: (data) => !!(data && (data.coldOpen === true || data.measurementsOpen === true || data.supplementsOpen === true)),
+    hideProgressDots: (data) => !!(data && data.supplementsOpen === true),
+    headerCaption: (data) => {
+      if (!data?.supplementsOpen) return null;
+      if (data.supplementsLayer === 'add') return 'Добавить в курс';
+      if (data.supplementsLayer === 'dose' && data.supplementsDoseId) {
+        return getMorningRestSuppCourseName(data.supplementsDoseId);
+      }
+      return 'Добавки';
+    },
+    hideDailyFooter: (data) => {
+      if (!data?.supplementsOpen) return false;
+      return true;
+    },
     applyHeaderBack: (data) => {
-      // Внутри блока шапка возвращает на обзор «Остальное», не на предыдущий шаг мастера.
       const next = { ...(data || {}) };
+      if (next.supplementsOpen) {
+        if (next.supplementsLayer === 'dose') {
+          next.supplementsLayer = 'add';
+          next.supplementsDoseId = null;
+          next.supplementsDoseQueue = null;
+          next.supplementsDoseDraft = null;
+          return next;
+        }
+        if (next.supplementsLayer === 'add') {
+          const plannedOpen = Array.isArray(next.selected) ? next.selected : [];
+          next.supplementsLayer = plannedOpen.length > 0 ? 'course' : 'empty';
+          next.supplementsAddDraft = [...plannedOpen];
+          next.supplementsPlannedAtOpen = [...plannedOpen];
+          return next;
+        }
+        next.supplementsOpen = false;
+        next.supplementsLayer = null;
+        next.supplementsAddDraft = null;
+        next.supplementsPlannedAtOpen = null;
+        next.supplementsDoseId = null;
+        next.supplementsDoseQueue = null;
+        next.supplementsDoseDraft = null;
+        return next;
+      }
       next.measurementsOpen = false;
       next.coldOpen = false;
       return next;
@@ -5816,20 +6812,38 @@
       const dayData = readDayData(dateKey, {});
       const profile = lsGet('heys_profile', {}) || {};
       const hf = HEYS.healthFeatures;
-      const supplementsEnabled = hf && typeof hf.isSupplementsTrackingEnabled === 'function'
+      const measurementsConsentOn = isMorningRestMeasurementsConsentOn(profile);
+      const supplementsConsentOn = hf && typeof hf.isSupplementsTrackingEnabled === 'function'
         ? hf.isSupplementsTrackingEnabled(profile)
         : profile.supplementsTrackingEnabled === true;
-      const planned = supplementsEnabled ? (HEYS.Supplements?.getPlanned?.() || []) : [];
+      const supplementsFeatureOn = hf && typeof hf.isSupplementsFeatureAvailable === 'function'
+        ? hf.isSupplementsFeatureAvailable(profile) !== false
+        : true;
+      const planned = supplementsConsentOn ? (HEYS.Supplements?.getPlanned?.() || []) : [];
       const cold = dayData.coldExposure || {};
+      const maState = normalizeMorningActivationState(dateKey, dayData);
+      const routineStatus = isMorningActivationCheckinStatus(maState.status) ? maState.status : null;
+      if (maState.status === 'planned') {
+        scheduleMorningActivationPlannedReminder(dateKey);
+      }
       return {
         coldType: cold.type || 'none',
         coldTime: cold.time || null,
         coldPicked: !!cold.type,
         coldOpen: false,
+        supplementsOpen: false,
+        supplementsLayer: null,
+        supplementsAddDraft: null,
+        supplementsPlannedAtOpen: null,
+        supplementsDoseId: null,
+        supplementsDoseQueue: null,
+        supplementsDoseDraft: null,
         selected: planned,
-        isRefeedDay: typeof dayData.isRefeedDay === 'boolean' ? dayData.isRefeedDay : null,
-        showMeasurements: !!(HEYS.Steps?.shouldShowMeasurements?.()),
-        showRefeed: !!(HEYS.Refeed?.shouldShowRefeedStep?.()),
+        showMeasurements: measurementsConsentOn && !!(HEYS.Steps?.shouldShowMeasurements?.()),
+        showSupplements: supplementsConsentOn && supplementsFeatureOn,
+        routineStatus,
+        routineStreak: getMorningActivationRoutineStreak(),
+        coldStreak: getColdExposureStreak(dateKey),
         _dateKey: dateKey
       };
     },
@@ -5845,9 +6859,21 @@
       if (Array.isArray(data.selected)) {
         dayData.supplementsPlanned = data.selected;
         dayData.supplementsPlannedUpdatedAt = Date.now();
+        if (HEYS.Supplements?.savePlanned) {
+          HEYS.Supplements.savePlanned(data.selected, {
+            dateKey,
+            source: 'morning-rest-step',
+            syncDay: false
+          });
+        }
       }
-      if (typeof data.isRefeedDay === 'boolean') {
-        dayData.isRefeedDay = data.isRefeedDay;
+      if (isMorningActivationCheckinStatus(data.routineStatus)) {
+        dayData.morningActivation = {
+          ...(dayData.morningActivation || {}),
+          status: data.routineStatus,
+          decidedAt: dayData.morningActivation?.decidedAt || Date.now(),
+          checkinAnsweredAt: dayData.morningActivation?.checkinAnsweredAt || Date.now()
+        };
       }
       const waist = parseFloat(String(data.waist || '').replace(',', '.'));
       if (Number.isFinite(waist) && waist > 0) {
@@ -5964,6 +6990,13 @@
   // === Экспорт шагов ===
   HEYS.morningActivationSkipReasons = MORNING_ACTIVATION_SKIP_REASONS;
 
+  HEYS.MorningActivation = {
+    applyCheckinAnswer: applyMorningActivationCheckinAnswer,
+    schedulePlannedReminder: scheduleMorningActivationPlannedReminder,
+    cancelPlannedReminder: cancelMorningActivationPlannedReminder,
+    normalizeState: normalizeMorningActivationState
+  };
+
   HEYS.Steps = {
     Weight: WeightStepComponent,
     SleepTime: SleepTimeStepComponent,
@@ -5999,6 +7032,8 @@
     getWeeklyHouseholdStats,
     getLastMeasurements,
     shouldShowMeasurements,
+    isMeasurementsOverdue,
+    formatMeasurementsOverdueKicker,
     shouldShowCycleStep
   };
 

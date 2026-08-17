@@ -437,9 +437,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     var hActivation = dayObj && dayObj.morningActivation && typeof dayObj.morningActivation === 'object'
       ? dayObj.morningActivation
       : null;
-    if (hActivation && hActivation.status === 'done') {
-      var hIntensity = hActivation.intensity || 'super_light';
-      var hWeight = MORNING_ACTIVATION_CASCADE_BONUS[hIntensity] || MORNING_ACTIVATION_CASCADE_BONUS.super_light;
+    if (hActivation && hActivation.status === 'done' && hActivation.intensity) {
+      var hIntensity = hActivation.intensity;
+      var hWeight = MORNING_ACTIVATION_CASCADE_BONUS[hIntensity] || 0;
       var hSort = parseTime(hActivation.firstMealTime || '') || 610;
       var hIsReplacement = hActivation.replacement === 'first_half_training';
       evts.push({
@@ -451,7 +451,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         sortKey: hSort,
         label: hIsReplacement
           ? 'Тренировка вместо зарядки'
-          : 'Зарядка · ' + (MORNING_ACTIVATION_INTENSITY_LABELS[hIntensity] || 'суперлегкая')
+          : 'Зарядка · ' + (MORNING_ACTIVATION_INTENSITY_LABELS[hIntensity] || hIntensity)
       });
     }
 
@@ -2756,9 +2756,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return d.morningActivation.status ? 1 : null;
     });
     confidenceMap.morningActivation = activationConfidence;
-    if (morningActivation && morningActivation.status === 'done') {
-      var activationIntensity = morningActivation.intensity || 'super_light';
-      var activationRaw = MORNING_ACTIVATION_CASCADE_BONUS[activationIntensity] || MORNING_ACTIVATION_CASCADE_BONUS.super_light;
+    if (morningActivation && morningActivation.status === 'done' && morningActivation.intensity) {
+      var activationIntensity = morningActivation.intensity;
+      var activationRaw = MORNING_ACTIVATION_CASCADE_BONUS[activationIntensity] || 0;
       var activationWeight = activationRaw * activationConfidence;
       var activationIsReplacement = morningActivation.replacement === 'first_half_training';
       rawWeights.morningActivation = activationRaw;
@@ -2771,7 +2771,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         icon: EVENT_ICONS.morningActivation,
         label: activationIsReplacement
           ? 'Тренировка вместо зарядки'
-          : 'Зарядка · ' + (MORNING_ACTIVATION_INTENSITY_LABELS[activationIntensity] || 'суперлегкая'),
+          : 'Зарядка · ' + (MORNING_ACTIVATION_INTENSITY_LABELS[activationIntensity] || activationIntensity),
         sortKey: activationTimeMins !== null ? activationTimeMins : 610,
         weight: activationWeight
       });
