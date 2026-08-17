@@ -29,10 +29,19 @@ html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: #0d1
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    padding: max(120px, calc(45vh - 28px)) 26px 0;
+    padding: max(120px, calc(45vh - 28px)) 26px max(24px, env(safe-area-inset-bottom));
     font-family: Figtree, system-ui, -apple-system, sans-serif;
     color: var(--boot-ink);
     background: inherit;
+}
+/* Ошибка — тот же якорь, что у спиннера: кластер чуть ниже середины, не вверху и не в математическом центре. */
+.heys-boot-mark.is-fail {
+    justify-content: flex-start;
+    padding-top: max(120px, calc(45vh - 28px));
+}
+body:has(> .heys-boot-mark.is-fail) {
+    margin: 0;
+    min-height: 100dvh;
 }
 #heys-boot-visual-guard,
 .heys-boot-visual-guard {
@@ -54,8 +63,13 @@ html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: #0d1
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    padding-top: max(120px, calc(45vh - 28px));
+    padding: max(120px, calc(45vh - 28px)) 26px max(24px, env(safe-area-inset-bottom));
     background: transparent;
+}
+#heys-boot-visual-guard .heys-boot-mark.is-fail,
+.heys-boot-visual-guard .heys-boot-mark.is-fail {
+    justify-content: flex-start;
+    padding-top: max(120px, calc(45vh - 28px));
 }
 html[data-heys-session="0"] .heys-boot-mark { display: none !important; }
 html[data-theme-id="sand-dark"] #heys-boot-visual-guard,

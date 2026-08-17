@@ -147,6 +147,8 @@ describe('UI v4 Prompt 3b — шапка', () => {
         expect(shellSrc).toContain('hdr-settings-sheet__diag-toggle');
         expect(shellSrc).toContain('Пройти регистрацию');
         expect(shellSrc).toContain('Пройти утренний чек-ин');
+        expect(shellSrc).toContain('Незаписанные дни (демо)');
+        expect(shellSrc).toContain('HEYS_DEBUG_REPLAY_YESTERDAY_VERIFY');
         expect(shellSrc).toContain('Правки куратора (снова)');
         expect(shellSrc).toContain('HEYS_DEBUG_REPLAY_CHECKIN');
         expect(shellSrc).toContain('HEYS_DEBUG_REPLAY_CURATOR_REVIEW');

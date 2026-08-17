@@ -96,6 +96,12 @@ describe('cold-start spinner mark', () => {
     expect(css).toContain('html[data-theme-id="blue"] .heys-boot-visual-guard');
   });
 
+  it('keeps the fail state on the same 45vh anchor as the boot spinner', () => {
+    expect(css).toMatch(/\.heys-boot-mark\.is-fail[\s\S]*justify-content:\s*flex-start/);
+    expect(css).toMatch(/\.heys-boot-mark\.is-fail[\s\S]*padding-top:\s*max\(120px, calc\(45vh - 28px\)\)/);
+    expect(css).toMatch(/#heys-boot-visual-guard \.heys-boot-mark\.is-fail[\s\S]*padding-top:\s*max\(120px, calc\(45vh - 28px\)\)/);
+  });
+
   it('shows Repeat on the slow boot step, not only on second fail', () => {
     expect(css).toContain('.heys-boot-mark.is-slow:not(.is-fail) .heys-boot-mark__slow .heys-boot-mark__retry--ghost');
   });

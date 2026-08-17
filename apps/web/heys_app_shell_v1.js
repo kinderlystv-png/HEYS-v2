@@ -5388,7 +5388,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             onClick: () => closeSettingsAndSwitch('board', 'tab-settings-board-switch'),
                         }),
                     ]),
-                    // HEYS_DEBUG_REPLAY_REGISTRATION / HEYS_DEBUG_REPLAY_CHECKIN / HEYS_DEBUG_REPLAY_CURATOR_REVIEW
+                    // HEYS_DEBUG_REPLAY_REGISTRATION / HEYS_DEBUG_REPLAY_CHECKIN / HEYS_DEBUG_REPLAY_YESTERDAY_VERIFY / HEYS_DEBUG_REPLAY_CURATOR_REVIEW
                     isLocalDiagnosticsHost && React.createElement('button', {
                         key: 'diagnostics-toggle',
                         type: 'button',
@@ -5436,6 +5436,30 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                 }
                             },
                         }, 'Пройти утренний чек-ин'),
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'hdr-settings-sheet__diag-btn',
+                            onClick: () => {
+                                setSettingsMenuOpen(false);
+                                setSheetExtra(null);
+                                const run = async () => {
+                                    const replay = window.HEYS?.debug?.replayYesterdayVerify
+                                        || window.HEYS?.YesterdayVerify?.showDiagnosticPreview;
+                                    if (typeof replay !== 'function') {
+                                        console.warn('[Диагностика] HEYS.debug.replayYesterdayVerify недоступен');
+                                        return;
+                                    }
+                                    await new Promise((resolve) => setTimeout(resolve, 80));
+                                    const ok = await replay();
+                                    if (!ok) {
+                                        console.warn('[Диагностика] демо незаписанных дней не открылось');
+                                    }
+                                };
+                                run().catch((err) => {
+                                    console.warn('[Диагностика] незаписанные дни:', err?.message || err);
+                                });
+                            },
+                        }, 'Незаписанные дни (демо)'),
                         React.createElement('button', {
                             type: 'button',
                             className: 'hdr-settings-sheet__diag-btn',

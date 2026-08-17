@@ -76,6 +76,26 @@
     return false;
   }
 
+  function hasMorningActivationResolved(day) {
+    const status = day?.morningActivation?.status;
+    if (status === 'done' || status === 'planned' || status === 'skipped') return true;
+    if (Number(day?.morningActivation?.checkinAnsweredAt) > 0) return true;
+    return hasMorningActivationDone(day);
+  }
+
+  function formatMorningActivationRowValue(day, chargeTime, chargeKcal) {
+    const status = day?.morningActivation?.status;
+    if (status === 'planned') return 'сделаю';
+    if (status === 'done' && !day?.morningActivation?.intensity && !(chargeKcal > 0)) {
+      return chargeTime ? `${chargeTime} · была` : 'была';
+    }
+    if (chargeTime || chargeKcal > 0) {
+      return `${chargeTime ? chargeTime + ' · ' : ''}${chargeKcal} ккал`;
+    }
+    if (status === 'done') return 'была';
+    return 'не отмечено';
+  }
+
   function formatDeficitLabel(dayTargetDef) {
     const pct = Number(dayTargetDef) || 0;
     if (pct === 0) return '';
@@ -238,7 +258,10 @@
     const baseExpenditure = safeR0((Number(tdee) || 0) - (Number(tefKcal) || 0));
     const chargeKcal = getChargeKcalToday(day, safeR0, safeKcalMin);
     const chargeTime = getChargeTimeToday(day);
+    const chargeResolved = hasMorningActivationResolved(day);
     const chargeDone = hasMorningActivationDone(day);
+    const chargePlanned = day?.morningActivation?.status === 'planned';
+    const chargeRowValue = formatMorningActivationRowValue(day, chargeTime, chargeKcal);
     const hungerSummary = readHungerSummary(dateKey);
 
     const monthCount = Array.isArray(monthTrainingsRows) ? monthTrainingsRows.length : 0;
@@ -253,10 +276,10 @@
     const pendingMarks = useMemo(() => {
       const items = [];
       if (!(totalHouseholdMin > 0)) items.push('быт');
-      if (!chargeDone) items.push('зарядка');
+      if (!chargeResolved) items.push('зарядка');
       if (!hungerSummary) items.push('голод');
       return items;
-    }, [totalHouseholdMin, chargeDone, hungerSummary]);
+    }, [totalHouseholdMin, chargeResolved, hungerSummary]);
 
     const showCollapsedMark = pendingMarks.length >= 2;
 
@@ -295,7 +318,7 @@
             haptic?.('light');
           }
         }, '🏠', ' Бытовая активность'),
-        !chargeDone && React.createElement('button', {
+        !chargeResolved && React.createElement('button', {
           type: 'button',
           className: 'activity-v4-sheet__btn',
           onClick: () => {
@@ -322,14 +345,14 @@
       ));
     }
 
-    if (chargeDone && (chargeTime || chargeKcal > 0)) {
+    if ((chargeDone || chargePlanned) && chargeRowValue !== 'не отмечено') {
       todayRows.push(React.createElement('div', {
         key: 'charge',
-        className: 'activity-v4-row'
+        className: 'activity-v4-row' + (chargePlanned ? ' activity-v4-row--muted' : '')
       },
         React.createElement('span', { className: 'activity-v4-row__label' }, 'Зарядка'),
-        React.createElement('span', { className: 'activity-v4-row__value' },
-          (chargeTime ? chargeTime + ' · ' : '') + chargeKcal + ' ккал'
+        React.createElement('span', { className: 'activity-v4-row__value' + (chargePlanned ? ' activity-v4-row__value--muted' : '') },
+          chargeRowValue
         )
       ));
     }
@@ -367,7 +390,7 @@
           React.createElement('span', { className: 'activity-v4-row__value activity-v4-row__value--muted' }, 'не отмечено')
         ));
       }
-      if (!chargeDone) {
+      if (!chargeResolved) {
         todayRows.push(React.createElement('div', {
           key: 'charge-empty',
           className: 'activity-v4-row activity-v4-row--action',
