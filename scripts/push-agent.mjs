@@ -604,24 +604,33 @@ function verifyProductionDeployment({
   }
 
   for (const file of bundleFiles) {
-    const probe = run(
-      'curl',
-      [
-        '-fsS',
-        '--max-time',
-        '20',
-        '--range',
-        '0-0',
-        '-o',
-        '/dev/null',
-        '-w',
-        '%{http_code}',
-        `${appUrl}/${file}`,
-      ],
-      { stdio: 'pipe' },
-    );
-    const code = String(probe.stdout || '').trim();
-    if (probe.status !== 0 || !['200', '206'].includes(code)) {
+    let code = '';
+    let probeOk = false;
+    for (let attempt = 1; attempt <= 6; attempt += 1) {
+      const probe = run(
+        'curl',
+        [
+          '-fsS',
+          '--max-time',
+          '20',
+          '--range',
+          '0-0',
+          '-o',
+          process.platform === 'win32' ? 'NUL' : '/dev/null',
+          '-w',
+          '%{http_code}',
+          `${appUrl}/${file}`,
+        ],
+        { stdio: 'pipe' },
+      );
+      code = String(probe.stdout || '').trim();
+      if (probe.status === 0 && ['200', '206'].includes(code)) {
+        probeOk = true;
+        break;
+      }
+      if (attempt < 6) sleepSeconds(5);
+    }
+    if (!probeOk) {
       writeError(
         `Production verification failed: ${file} is unavailable (HTTP ${code || 'error'}).`,
       );
