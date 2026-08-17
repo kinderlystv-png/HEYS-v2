@@ -68,6 +68,30 @@ test('в записи нет ни одного значения аргумент
   assert.equal(record.arg_count, 5);
 });
 
+test('в записи остались поля, на которых держится разбор таймингов', () => {
+  // Переход на белый список однажды уже потерял uptime_ms, а без него строка
+  // неинтерпретируема: та же запись стоит секунду на прогретом инстансе и
+  // втрое дороже на поднятом с нуля. cold_start это не заменяет — он булев.
+  // TIMING_LOG.md опирается на оба поля, поэтому набор фиксируется тестом.
+  const record = buildRecord({
+    tool: 'heys_log_meal',
+    ok: true,
+    durationMs: 800,
+    upstreamCalls: 3,
+    upstreamMs: 500,
+    responseBytes: 1200,
+    coldStart: false,
+    uptimeMs: 42_000,
+  });
+
+  assert.equal(record.uptime_ms, 42_000);
+  assert.equal(record.cold_start, false);
+  assert.equal(record.upstream_calls, 3);
+  assert.equal(record.upstream_ms, 500);
+  assert.equal(record.resp_bytes, 1200);
+  assert.equal(record.duration_ms, 800);
+});
+
 test('статус различает отказ по правилу и настоящую ошибку', () => {
   assert.equal(buildRecord({ tool: 't', ok: true }).status, 'ok');
   assert.equal(buildRecord({ tool: 't', ok: false, errorCode: 'push_consent_missing' }).status, 'rejected');

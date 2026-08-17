@@ -365,6 +365,7 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
         responseBytes: metric.response_bytes,
         argCount: metric.arg_count,
         coldStart,
+        uptimeMs: Date.now() - PROCESS_START_MS,
       });
     },
   });

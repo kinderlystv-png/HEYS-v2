@@ -40,6 +40,12 @@ const RECORD_FIELDS = [
   'resp_bytes',    // размер ответа
   'arg_count',     // сколько аргументов, не сами аргументы
   'cold_start',    // первый вызов на инстансе
+  // Возраст процесса. Не дубль cold_start: тот различает только первый вызов и
+  // все прочие, а тут видно «инстанс живёт восемь секунд» против «живёт сорок
+  // минут». Без этого одиночная строка неинтерпретируема — та же запись стоит
+  // около секунды на прогретом инстансе и втрое дороже на поднятом с нуля
+  // (TIMING_LOG.md).
+  'uptime_ms',
   'fn_version',    // версия функции
   'role',          // curator | client — роль, а не человек
 ];
@@ -122,6 +128,7 @@ function buildRecord(input = {}) {
     resp_bytes: intOrNull(input.responseBytes),
     arg_count: intOrNull(input.argCount),
     cold_start: input.coldStart === true,
+    uptime_ms: intOrNull(input.uptimeMs),
     fn_version: typeof input.fnVersion === 'string' && input.fnVersion ? input.fnVersion : null,
     role: input.role === 'curator' || input.role === 'client' ? input.role : null,
   };
