@@ -165,8 +165,13 @@ function createMcpTraceTools({
         logTruncated = Boolean(result.truncated);
         calls = correlate.filterCuratorCalls(result.records);
       } catch (error) {
-        const code = /timeout/i.test(error.message) ? 'logging_timeout' : 'logging_read_failed';
-        throw new ToolError(code, `Не удалось прочитать Cloud Logging: ${error.message}`);
+        const msg = String(error.message || error);
+        const code = /timeout/i.test(msg)
+          ? 'logging_timeout'
+          : /socket hang up|ECONNRESET|EPIPE/i.test(msg)
+            ? 'logging_connection_reset'
+            : 'logging_read_failed';
+        throw new ToolError(code, `Не удалось прочитать Cloud Logging: ${msg}`);
       }
 
       const trace = callContext.current();

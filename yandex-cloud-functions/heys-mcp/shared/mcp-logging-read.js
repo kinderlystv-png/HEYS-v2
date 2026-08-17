@@ -15,11 +15,38 @@ const METADATA_HOST = '169.254.169.254';
 const DEFAULT_PAGE_SIZE = 1000;
 const DEFAULT_MAX_PAGES = 10;
 const DEFAULT_TIMEOUT_MS = 20000;
+const MAX_READ_ATTEMPTS = 3;
+const MAX_TOKEN_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 400;
+
+const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 4 });
 
 /**
  * Фильтр ловит строку и в json_payload, и в message (см. mcp-telemetry.js).
  */
 const CALL_FILTER = 'json_payload.t = "mcp_call" OR message: "mcp_call"';
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableNetworkError(err) {
+  if (!err) return false;
+  const msg = String(err.message || err);
+  const code = err.code;
+  return code === 'ECONNRESET'
+    || code === 'ECONNREFUSED'
+    || code === 'ETIMEDOUT'
+    || code === 'EPIPE'
+    || code === 'EAI_AGAIN'
+    || /socket hang up/i.test(msg)
+    || /Logging read timeout/i.test(msg)
+    || /Metadata timeout/i.test(msg);
+}
+
+function isAuthError(err) {
+  return /HTTP 401\b/.test(String(err && err.message ? err.message : err));
+}
 
 function getIamToken({ timeoutMs = 5000 } = {}) {
   return new Promise((resolve, reject) => {
@@ -44,13 +71,32 @@ function getIamToken({ timeoutMs = 5000 } = {}) {
   });
 }
 
-function postJson(host, path, body, token, { timeoutMs = DEFAULT_TIMEOUT_MS } = {}) {
+async function getIamTokenWithRetry({ timeoutMs = 5000 } = {}) {
+  let lastErr;
+  for (let attempt = 1; attempt <= MAX_TOKEN_ATTEMPTS; attempt += 1) {
+    try {
+      return await getIamToken({ timeoutMs });
+    } catch (err) {
+      lastErr = err;
+      if (attempt < MAX_TOKEN_ATTEMPTS && isRetryableNetworkError(err)) {
+        console.warn('[mcp-logging-read] IAM token attempt', attempt, 'failed:', err.message, '— retrying');
+        await sleep(RETRY_BASE_DELAY_MS * attempt);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
+}
+
+function postJson(host, path, body, token, { timeoutMs = DEFAULT_TIMEOUT_MS, agent = httpsAgent } = {}) {
   const payload = JSON.stringify(body);
   return new Promise((resolve, reject) => {
     const req = https.request({
       host,
       path,
       method: 'POST',
+      agent,
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(payload),
@@ -73,6 +119,44 @@ function postJson(host, path, body, token, { timeoutMs = DEFAULT_TIMEOUT_MS } = 
     req.write(payload);
     req.end();
   });
+}
+
+async function readLoggingPage(body, iamRef, { timeoutMs, getToken, postJsonImpl = postJson } = {}) {
+  let authRetried = false;
+  let lastErr;
+
+  for (let attempt = 1; attempt <= MAX_READ_ATTEMPTS; attempt += 1) {
+    try {
+      return await postJsonImpl(
+        LOGGING_READER_HOST,
+        '/v1/read',
+        body,
+        iamRef.token,
+        { timeoutMs },
+      );
+    } catch (err) {
+      lastErr = err;
+      if (!authRetried && isAuthError(err)) {
+        authRetried = true;
+        iamRef.token = await getToken({ timeoutMs: Math.min(timeoutMs, 5000) });
+        continue;
+      }
+      if (attempt < MAX_READ_ATTEMPTS && isRetryableNetworkError(err)) {
+        console.warn(
+          '[mcp-logging-read] Logging read attempt',
+          attempt,
+          'failed:',
+          err.message,
+          '— retrying',
+        );
+        await sleep(RETRY_BASE_DELAY_MS * attempt);
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw lastErr;
 }
 
 function extractRecord(entry) {
@@ -108,19 +192,13 @@ async function readMcpCalls({
   pageSize = DEFAULT_PAGE_SIZE,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   fetchPage = null,
-  getToken = getIamToken,
+  getToken = getIamTokenWithRetry,
 } = {}) {
   if (!logGroupId) throw new Error('logGroupId required');
   if (!since || !until) throw new Error('since and until required');
 
-  const iam = token || await getToken({ timeoutMs: Math.min(timeoutMs, 5000) });
-  const request = fetchPage || ((body) => postJson(
-    LOGGING_READER_HOST,
-    '/v1/read',
-    body,
-    iam,
-    { timeoutMs },
-  ));
+  const iamRef = { token: token || await getToken({ timeoutMs: Math.min(timeoutMs, 5000) }) };
+  const request = fetchPage || ((body) => readLoggingPage(body, iamRef, { timeoutMs, getToken }));
 
   const records = [];
   let pageToken;
@@ -155,8 +233,12 @@ module.exports = {
   CALL_FILTER,
   extractRecord,
   getIamToken,
+  getIamTokenWithRetry,
+  isRetryableNetworkError,
   postJson,
   readMcpCalls,
+  readLoggingPage,
   DEFAULT_MAX_PAGES,
   DEFAULT_TIMEOUT_MS,
+  MAX_READ_ATTEMPTS,
 };
