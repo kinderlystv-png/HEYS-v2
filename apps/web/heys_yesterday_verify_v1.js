@@ -690,10 +690,91 @@
     return getPendingPastDays().totalPendingDays > 0;
   }
 
+  const QUICK_FILL_SLIDER_MIN = 50;
+  const QUICK_FILL_SLIDER_MAX = 200;
+  const QUICK_FILL_NORM_CENTER = 100;
+  const QUICK_FILL_NORM_BAND = 10.15;
+
   function clampQuickFillPercent(value) {
     const num = Number(value);
     if (!Number.isFinite(num)) return 100;
     return Math.max(50, Math.min(200, Math.round(num)));
+  }
+
+  function snapQuickFillSliderPercent(value) {
+    const clamped = clampQuickFillPercent(value);
+    const stepped = Math.round(clamped / 5) * 5;
+    return Math.max(50, Math.min(200, stepped));
+  }
+
+  function resolveQuickFillSliderPercent(rawValue) {
+    const preset = findPresetByPercent(rawValue);
+    if (preset) return preset.percent;
+    return snapQuickFillSliderPercent(rawValue);
+  }
+
+  function computePackDayCaption(packDayDate, pendingDateKeys, clearedDateKeys, confirmedDateKeys, quickFillByDate) {
+    if (!packDayDate) return null;
+    const cleared = new Set(clearedDateKeys || []);
+    const confirmed = new Set(confirmedDateKeys || []);
+    const quickFill = quickFillByDate || {};
+    const keys = (pendingDateKeys || []).filter((key) => (
+      !cleared.has(key) && !confirmed.has(key) && !quickFill[key]
+    ));
+    const idx = keys.indexOf(packDayDate);
+    if (idx >= 0 && keys.length > 0) {
+      return 'День ' + (idx + 1) + ' из ' + keys.length;
+    }
+    return formatDateRu(packDayDate);
+  }
+
+  function resolveYesterdayVerifyHeaderCaption(data) {
+    if (!data) return 'Перед чек-ином';
+    if (data.feelingsDate) return formatDateRu(data.feelingsDate);
+    if (data.packBulkForceOpen) return formatPackDateRangeCaption(data.pendingDateKeys);
+    if (data.packDayDate) {
+      return computePackDayCaption(
+        data.packDayDate,
+        data.pendingDateKeys,
+        data.clearedDateKeys,
+        data.confirmedDateKeys,
+        data.quickFillByDate
+      ) || formatDateRu(data.packDayDate);
+    }
+    return 'Перед чек-ином';
+  }
+
+  function quickFillSliderTrackPercent(percent) {
+    const safe = clampQuickFillPercent(percent);
+    return ((safe - QUICK_FILL_SLIDER_MIN) / (QUICK_FILL_SLIDER_MAX - QUICK_FILL_SLIDER_MIN)) * 100;
+  }
+
+  function quickFillSliderFillPercent(percent) {
+    return quickFillSliderTrackPercent(percent);
+  }
+
+  function getQuickFillNormZoneStyle() {
+    const left = quickFillSliderTrackPercent(QUICK_FILL_NORM_CENTER - QUICK_FILL_NORM_BAND);
+    const right = quickFillSliderTrackPercent(QUICK_FILL_NORM_CENTER + QUICK_FILL_NORM_BAND);
+    return {
+      left: left + '%',
+      width: (right - left) + '%'
+    };
+  }
+
+  function getQuickFillSliderFillTone(percent) {
+    const safe = clampQuickFillPercent(percent);
+    const low = QUICK_FILL_NORM_CENTER - QUICK_FILL_NORM_BAND;
+    const high = QUICK_FILL_NORM_CENTER + QUICK_FILL_NORM_BAND;
+    if (safe >= low && safe <= high) return 'norm';
+    if (safe < low) return 'under';
+    return 'over';
+  }
+
+  function quickFillSliderTickAlign(percent) {
+    if (percent <= QUICK_FILL_SLIDER_MIN) return 'start';
+    if (percent >= QUICK_FILL_SLIDER_MAX) return 'end';
+    return 'center';
   }
 
   function normalizePercentSource(value, fallback) {
@@ -1044,6 +1125,252 @@
     };
   }
 
+  function packBulkCloseLabel(count) {
+    const n = Math.max(0, Math.round(Number(count) || 0));
+    if (n === 1) return 'Закрыть один примерно';
+    if (n === 2) return 'Закрыть оба примерно';
+    return 'Закрыть все примерно';
+  }
+
+  function packBulkFeelingsTitle(count) {
+    const n = Math.max(0, Math.round(Number(count) || 0));
+    if (n === 2) return 'Как вы ели эти два дня?';
+    if (n === 3) return 'Как вы ели эти три дня?';
+    if (n === 4) return 'Как вы ели эти четыре дня?';
+    if (n === 1) return 'Как вы ели этот день?';
+    return 'Как вы ели эти ' + n + ' ' + pluralizeDays(n) + '?';
+  }
+
+  function packBulkSubmitLabel(count) {
+    const n = Math.max(0, Math.round(Number(count) || 0));
+    if (n === 1) return 'Записать один день';
+    if (n === 2) return 'Записать два дня';
+    if (n === 3) return 'Записать три дня';
+    if (n === 4) return 'Записать четыре дня';
+    return 'Записать ' + n + ' ' + pluralizeDays(n);
+  }
+
+  function packPendingDaysTitle(count) {
+    const n = Math.max(0, Math.round(Number(count) || 0));
+    if (n === 1) return 'Один день остался незакрытым';
+    if (n === 2) return 'Два дня остались незакрытыми';
+    if (n === 3) return 'Три дня остались незакрытыми';
+    if (n === 4) return 'Четыре дня остались незакрытыми';
+    return n + ' ' + pluralizeDays(n) + ' остались незакрытыми';
+  }
+
+  function getFeelingsLayerTitle(feelingsDate) {
+    if (feelingsDate === getYesterdayKey()) return 'Как вы вчера ели?';
+    return 'Как вы ели?';
+  }
+
+  function packDayRemainingNote(othersCount) {
+    const n = Math.max(0, Math.round(Number(othersCount) || 0));
+    if (n <= 0) {
+      return 'Закрытый день уходит из списка. Стрелка возвращает к списку без потери ответов.';
+    }
+    const words = { 1: 'один', 2: 'два', 3: 'три', 4: 'четыре' };
+    const word = words[n] || String(n);
+    const remainVerb = n === 1 ? 'остаётся' : 'остаются';
+    return 'Закрытый день уходит из списка, остальные ' + word + ' ' + remainVerb + '. Стрелка возвращает к списку без потери ответов.';
+  }
+
+  function confirmAsWrittenLabel(dayInfo) {
+    if (isEmptyFoodDay(dayInfo)) return 'Так и было · ничего не ел';
+    return 'Так и было · ' + kcalLine(dayInfo.kcal) + ' ккал';
+  }
+
+  function createTopUpEstimatedMeals(dateKey, percent, deltaTotals, referenceMeta) {
+    return [{
+      id: `estimated_meal_${dateKey}_topup`,
+      name: 'Добор по ощущениям',
+      time: '20:00',
+      items: [createEstimatedMealItem(dateKey, 'topup', 0, 'Добор по ощущениям', deltaTotals, percent, referenceMeta)],
+      isEstimated: true,
+      estimatedSource: 'morning-checkin',
+      estimatedTopUp: true
+    }];
+  }
+
+  function stripEstimatedTopUpMeals(dayData) {
+    if (!dayData || !Array.isArray(dayData.meals)) return;
+    dayData.meals = dayData.meals.filter((meal) => !meal?.estimatedTopUp);
+  }
+
+  function getUnresolvedPackDays(visibleDays, quickFillByDate, clearedSet, confirmedSet) {
+    return visibleDays.filter((day) => (
+      !quickFillByDate[day.date]
+      && !clearedSet.has(day.date)
+      && !confirmedSet.has(day.date)
+    ));
+  }
+
+  function packFoodDaysTitle(count) {
+    const n = Math.max(0, Math.round(Number(count) || 0));
+    if (n === 1) return 'Остался один день с едой';
+    if (n === 2) return 'Осталось два дня с едой';
+    return 'Осталось ' + n + ' ' + pluralizeDays(n) + ' с едой';
+  }
+
+  function formatPackDateRangeCaption(dateKeys) {
+    const sorted = (dateKeys || []).slice().sort();
+    if (!sorted.length) return 'Перед чек-ином';
+    if (sorted.length === 1) return formatDateRu(sorted[0]);
+    return formatDateRu(sorted[0]) + ' — ' + formatDateRu(sorted[sorted.length - 1]);
+  }
+
+  // HEYS_DEBUG_REPLAY_YESTERDAY_VERIFY — демо-пачка без записи в дневник
+  function buildDiagnosticPreviewDay(dateKey, opts = {}) {
+    const target = Math.max(1800, Math.round(Number(opts.target) || 2200));
+    const kcal = Math.max(0, Math.round(Number(opts.kcal) || 0));
+    const mealCount = opts.empty ? 0 : Math.max(1, Math.round(Number(opts.mealCount) || 1));
+    const ratio = target > 0 ? kcal / target : 0;
+    const meals = opts.empty
+      ? []
+      : [{
+        id: `diag_meal_${dateKey}`,
+        time: opts.lastMealTime || '19:40',
+        items: [{
+          id: `diag_item_${dateKey}`,
+          name: opts.foodLabel || 'Обед по памяти',
+          grams: 100,
+          kcal100: kcal,
+        }],
+      }];
+    return {
+      date: dateKey,
+      kcal,
+      target,
+      ratio,
+      meals,
+      mealCount,
+      itemsCount: mealCount,
+      sampleItems: [],
+      totalKcalRaw: kcal,
+      totalKcalIsFinite: true,
+      productsAvailable: false,
+      macros: { prot: 0, carbs: 0, fat: 0, simple: 0 },
+      isFastingDay: false,
+      isIncomplete: true,
+      hasBeenVerified: false,
+      hasStoredDay: !opts.empty,
+      isMissingData: opts.empty,
+      statusLabel: opts.empty ? 'Нет данных' : 'Неполный день',
+      diagnosticPreview: true
+    };
+  }
+
+  function buildDiagnosticPreviewPendingDays() {
+    const yesterdayKey = getYesterdayKey();
+    const dayMinus3 = addDays(yesterdayKey, -3);
+    const dayMinus2 = addDays(yesterdayKey, -2);
+    const dayMinus1 = addDays(yesterdayKey, -1);
+    const missingDays = [
+      buildDiagnosticPreviewDay(yesterdayKey, { kcal: 420, mealCount: 1, lastMealTime: '13:10', foodLabel: 'Перекус' }),
+      buildDiagnosticPreviewDay(dayMinus1, { kcal: 640, mealCount: 2, lastMealTime: '19:40', foodLabel: 'Ужин' }),
+      buildDiagnosticPreviewDay(dayMinus2, { empty: true }),
+      buildDiagnosticPreviewDay(dayMinus3, { empty: true }),
+    ];
+    return {
+      lastFilledDate: addDays(yesterdayKey, -4),
+      missingDays,
+      totalPendingDays: missingDays.length,
+      diagnosticPreview: true
+    };
+  }
+
+  function resolvePendingPastDaysPreview(context, data) {
+    if (context?.diagnosticPreview || data?.diagnosticPreview) {
+      return buildDiagnosticPreviewPendingDays();
+    }
+    return getPendingPastDays();
+  }
+
+  function waitForYesterdayVerifyStepRegistered(timeoutMs = 12000) {
+    return new Promise((resolve, reject) => {
+      if (HEYS.StepModal?.registry?.yesterdayVerify) {
+        resolve(true);
+        return;
+      }
+      const deadline = Date.now() + timeoutMs;
+      const onReady = () => {
+        if (HEYS.StepModal?.registry?.yesterdayVerify) {
+          cleanup();
+          resolve(true);
+        }
+      };
+      const timer = setInterval(() => {
+        if (HEYS.StepModal?.registry?.yesterdayVerify) {
+          cleanup();
+          resolve(true);
+          return;
+        }
+        if (Date.now() >= deadline) {
+          cleanup();
+          reject(new Error('yesterdayVerify step not registered'));
+        }
+      }, 100);
+      const cleanup = () => {
+        clearInterval(timer);
+        try {
+          document.removeEventListener('heys-yesterday-verify-ready', onReady);
+          document.removeEventListener('heys-step-registered', onReady);
+        } catch (_) { }
+      };
+      try {
+        document.addEventListener('heys-yesterday-verify-ready', onReady);
+        document.addEventListener('heys-step-registered', onReady);
+      } catch (_) { }
+    });
+  }
+
+  function showYesterdayVerifyDiagnosticPreview() {
+    if (!HEYS.StepModal?.show) {
+      console.warn('[debug.replayYesterdayVerify] StepModal unavailable');
+      return Promise.resolve(false);
+    }
+
+    const openPreview = () => {
+      HEYS.StepModal.show({
+        steps: ['yesterdayVerify'],
+        forceVisibleStepIds: ['yesterdayVerify'],
+        onComplete: () => {
+          console.info('[YesterdayVerify] diagnostic preview finished — no day data was written');
+        },
+        closeOnComplete: 'after',
+        allowSwipe: false,
+        showTip: false,
+        showProgress: false,
+        showStreak: false,
+        showGreeting: false,
+        layout: 'daily',
+        freezeVisibleSteps: true,
+        requireStepAck: false,
+        context: {
+          diagnosticPreview: true,
+          previewSource: 'settings-diagnostics'
+        },
+      });
+      return true;
+    };
+
+    if (HEYS.StepModal?.registry?.yesterdayVerify) {
+      return Promise.resolve(openPreview());
+    }
+
+    const loadChunk = typeof HEYS.__loadPostboot1Game === 'function'
+      ? HEYS.__loadPostboot1Game()
+      : Promise.resolve();
+
+    return loadChunk
+      .then(() => waitForYesterdayVerifyStepRegistered())
+      .then(() => openPreview())
+      .catch((err) => {
+        console.warn('[debug.replayYesterdayVerify]', err?.message || err);
+        return false;
+      });
+  }
+
   function getEstimatedTargetKcal(dayInfo, referenceDays) {
     const directTarget = Math.max(0, Math.round(dayInfo?.target || 0));
     if (directTarget > 0) {
@@ -1074,20 +1401,10 @@
     const targetKcal = Math.max(0, Math.round(targetMeta.targetKcal || 0));
     const estimatedKcal = Math.max(0, Math.round(targetKcal * (percent / 100)));
     const lifestyleAvg = buildAverageLifestyleMetrics(referenceDays);
-    const totalNormAbs = buildAverageMacroTemplate(referenceDays, estimatedKcal);
-    const estimatedMeals = createEstimatedMeals(dateKey, percent, totalNormAbs, lifestyleAvg);
     const profile = lsGet('heys_profile', {}) || {};
     const prev = existingDayData || {};
-
-    console.info('[HEYS.yesterdayVerify] ✅ Estimated day prepared:', {
-      date: dateKey,
-      percent,
-      targetKcal,
-      targetSource: targetMeta.source,
-      estimatedKcal,
-      referenceDaysUsed: referenceDays.length,
-      referenceDates: referenceDays.map((entry) => entry.date).slice(0, 5)
-    });
+    const hasExistingFood = !isEmptyFoodDay(dayInfo);
+    const existingKcal = Math.max(0, Math.round(dayInfo?.kcal || 0));
 
     const averagesFromHistory = {
       steps: +prev.steps > 0 ? +prev.steps : lifestyleAvg.steps,
@@ -1108,6 +1425,88 @@
       dayComment: prev.dayComment || '',
       dayScoreManual: !!prev.dayScoreManual
     };
+
+    if (hasExistingFood) {
+      const deltaKcal = Math.max(0, estimatedKcal - existingKcal);
+      console.info('[HEYS.yesterdayVerify] ✅ Estimated top-up prepared:', {
+        date: dateKey,
+        percent,
+        targetKcal,
+        existingKcal,
+        deltaKcal,
+        targetSource: targetMeta.source
+      });
+      if (deltaKcal < 5) {
+        return {
+          meals: null,
+          isIncomplete: false,
+          isFastingDay: false,
+          estimatedDayFill: {
+            version: 1,
+            date: dateKey,
+            percent,
+            presetId: quickFill?.presetId || null,
+            targetKcal,
+            targetSource: targetMeta.source,
+            estimatedKcal: existingKcal,
+            previousKcal: existingKcal,
+            deltaKcal: 0,
+            mode: 'top-up-skipped',
+            source: 'morning-checkin',
+            appliedAt: Date.now()
+          }
+        };
+      }
+      const deltaNormAbs = buildAverageMacroTemplate(referenceDays, deltaKcal);
+      const topUpMeals = createTopUpEstimatedMeals(dateKey, percent, deltaNormAbs, lifestyleAvg);
+      const combinedKcal = existingKcal + Math.round(deltaNormAbs.kcal || 0);
+      return {
+        meals: topUpMeals,
+        trainings: prev.trainings || [],
+        householdMin: prev.householdMin || 0,
+        householdActivities: prev.householdActivities || [],
+        isIncomplete: false,
+        isFastingDay: false,
+        ...averagesFromHistory,
+        savedDisplayOptimum: targetKcal,
+        savedEatenKcal: combinedKcal,
+        savedEatenProt: round1((Number(prev.savedEatenProt) || 0) + (deltaNormAbs.prot || 0)),
+        savedEatenCarbs: round1((Number(prev.savedEatenCarbs) || 0) + (deltaNormAbs.carbs || 0)),
+        savedEatenFat: round1((Number(prev.savedEatenFat) || 0) + (deltaNormAbs.fat || 0)),
+        savedEatenFiber: round1((Number(prev.savedEatenFiber) || 0) + (deltaNormAbs.fiber || 0)),
+        estimatedDayFill: {
+          version: 1,
+          date: dateKey,
+          percent,
+          presetId: quickFill?.presetId || null,
+          targetKcal,
+          targetSource: targetMeta.source,
+          estimatedKcal: combinedKcal,
+          previousKcal: existingKcal,
+          deltaKcal: Math.round(deltaNormAbs.kcal || 0),
+          mode: 'top-up',
+          source: 'morning-checkin',
+          excludedAutofillFields: ['householdMin', 'householdActivities', 'trainings'],
+          referenceDaysUsed: lifestyleAvg.referenceDaysUsed || 0,
+          referenceDates: lifestyleAvg.referenceDates || [],
+          profileId: profile?.id || null,
+          appliedAt: Date.now()
+        }
+      };
+    }
+
+    const totalNormAbs = buildAverageMacroTemplate(referenceDays, estimatedKcal);
+    const estimatedMeals = createEstimatedMeals(dateKey, percent, totalNormAbs, lifestyleAvg);
+
+    console.info('[HEYS.yesterdayVerify] ✅ Estimated day prepared:', {
+      date: dateKey,
+      percent,
+      targetKcal,
+      targetSource: targetMeta.source,
+      estimatedKcal,
+      referenceDaysUsed: referenceDays.length,
+      referenceDates: referenceDays.map((entry) => entry.date).slice(0, 5)
+    });
 
     return {
       meals: estimatedMeals,
@@ -1131,6 +1530,7 @@
         targetKcal,
         targetSource: targetMeta.source,
         estimatedKcal: Math.round(totalNormAbs.kcal || 0),
+        mode: 'full-day',
         source: 'morning-checkin',
         excludedAutofillFields: ['householdMin', 'householdActivities', 'trainings'],
         referenceDaysUsed: lifestyleAvg.referenceDaysUsed || 0,
@@ -1211,6 +1611,11 @@
     }
   ];
 
+  function findPresetByPercent(percent) {
+    const safe = clampQuickFillPercent(percent);
+    return QUICK_FILL_PRESETS.find((preset) => preset.percent === safe) || null;
+  }
+
   function shortMealCount(count) {
     const n = Number(count) || 0;
     if (n === 1) return 'один приём';
@@ -1234,6 +1639,10 @@
   }
 
   function openDiaryForDate(dateKey, context) {
+    if (context?.diagnosticPreview) {
+      console.info('[YesterdayVerify] diagnostic preview — diary open skipped for', dateKey);
+      return;
+    }
     try {
       if (dateKey && typeof HEYS.ui?.setSelectedDate === 'function') {
         HEYS.ui.setSelectedDate(dateKey);
@@ -1256,8 +1665,9 @@
 
     // Загружаем пропущенные дни
     React.useEffect(() => {
-      const info = getPendingPastDays();
+      const info = resolvePendingPastDaysPreview(context, data);
       setPendingInfo(info);
+      if (data?.diagnosticPreview || context?.diagnosticPreview) return;
       try {
         // [audit] debug-only diagnostics — direct LS by design, не user data.
         // В bootstrap-bypass-allowlist.
@@ -1268,30 +1678,27 @@
         }
       } catch (e) { }
 
-    }, []);
+    }, [context?.diagnosticPreview, data?.diagnosticPreview]);
 
-    const selectedAction = data.incompleteAction || null;
     const quickFillByDate = data.quickFillByDate || {};
     const missingDays = pendingInfo?.missingDays || [];
     const pendingDateKeys = missingDays.map((day) => day.date);
     const clearedSet = new Set(Array.isArray(data.clearedDateKeys) ? data.clearedDateKeys : []);
+    const confirmedSet = new Set(Array.isArray(data.confirmedDateKeys) ? data.confirmedDateKeys : []);
     const visibleDays = missingDays
       .filter((day) => !clearedSet.has(day.date))
       .slice()
       .sort((a, b) => String(b.date).localeCompare(String(a.date)));
     const isPack = visibleDays.length > 1;
-    const unresolvedDays = visibleDays.filter((day) => !quickFillByDate[day.date]);
+    const unresolvedDays = getUnresolvedPackDays(visibleDays, quickFillByDate, clearedSet, confirmedSet);
     const unresolvedDaysCount = unresolvedDays.length;
     const emptyVisibleDays = unresolvedDays.filter((day) => isEmptyFoodDay(day));
-    const recommendedAction = unresolvedDaysCount > 0
-      ? (() => {
-        const getPreferredAction = DayRealDataActions.getPreferredAction;
-        if (typeof getPreferredAction !== 'function') return 'confirm_real_data';
-        const allSuggestClear = unresolvedDays.every((day) => (
-          getPreferredAction({ ratio: day.ratio, mealCount: day.mealCount }) === 'clear_day'
-        ));
-        return allSuggestClear ? 'clear_day' : 'confirm_real_data';
-      })()
+    const packAfterClear = clearedSet.size > 0 && emptyVisibleDays.length === 0 && isPack;
+    const diagnosticBanner = data.diagnosticPreview
+      ? React.createElement('div', {
+        className: 'yv-pack-note',
+        style: { marginBottom: 12, borderStyle: 'dashed' }
+      }, 'Демонстрация: даты и цифры выдуманы. Дневник и статистика не меняются.')
       : null;
 
     React.useEffect(() => {
@@ -1299,14 +1706,6 @@
       if (pendingDateKeys.join('|') === (data.pendingDateKeys || []).join('|')) return;
       onChange({ ...data, pendingDateKeys });
     }, [pendingDateKeys.join('|')]);
-
-    const handleActionSelect = (actionId) => {
-      onChange({
-        ...data,
-        incompleteAction: actionId,
-        pendingDateKeys
-      });
-    };
 
     const commitAction = (patch) => {
       const next = {
@@ -1320,8 +1719,24 @@
       }
     };
 
-    const handlePackEstimateAll = () => {
-      commitAction({ incompleteAction: 'estimated_fill' });
+    const tryFinishPackIfDone = (nextData) => {
+      const nextCleared = new Set(nextData.clearedDateKeys || []);
+      const nextConfirmed = new Set(nextData.confirmedDateKeys || []);
+      const nextQuickFill = nextData.quickFillByDate || {};
+      const nextVisible = missingDays
+        .filter((day) => !nextCleared.has(day.date))
+        .slice()
+        .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+      const remaining = getUnresolvedPackDays(nextVisible, nextQuickFill, nextCleared, nextConfirmed);
+      if (remaining.length === 0 && nextVisible.length > 0 && typeof context?.onNext === 'function') {
+        context.onNext({
+          ...nextData,
+          incompleteAction: 'pack_days_resolved',
+          packDayDate: null,
+          packBulkForceOpen: false,
+          feelingsDate: null
+        });
+      }
     };
 
     const handlePackClearEmpty = () => {
@@ -1373,6 +1788,41 @@
       });
     };
 
+    const openPackDay = (dateKey) => {
+      const packDayCaption = computePackDayCaption(
+        dateKey,
+        pendingDateKeys,
+        data.clearedDateKeys,
+        data.confirmedDateKeys,
+        quickFillByDate
+      );
+      onChange({
+        ...data,
+        pendingDateKeys,
+        packDayDate: dateKey,
+        packDayCaption,
+        feelingsDate: null,
+        packBulkForceOpen: false
+      });
+    };
+
+    const openPackBulkForce = () => {
+      const preset = data.packBulkPreset?.presetId
+        ? QUICK_FILL_PRESETS.find((item) => item.id === data.packBulkPreset.presetId) || getAroundNormPreset()
+        : getAroundNormPreset();
+      onChange({
+        ...data,
+        pendingDateKeys,
+        packBulkForceOpen: true,
+        packBulkPreset: {
+          presetId: preset.id,
+          percent: data.packBulkPreset?.percent ?? preset.percent
+        },
+        packDayDate: null,
+        feelingsDate: null
+      });
+    };
+
     const feelingsDate = data.feelingsDate || null;
     const feelingsDay = feelingsDate
       ? (visibleDays.find((day) => day.date === feelingsDate) || null)
@@ -1396,75 +1846,350 @@
       });
     };
 
-    const closeFeelings = () => {
-      onChange({ ...data, feelingsDate: null, pendingDateKeys });
+    const commitFeelings = () => {
+      const nextData = { ...data, pendingDateKeys, feelingsDate: null, packDayDate: null };
+      onChange(nextData);
+      if (isPack) {
+        const nextQuickFill = nextData.quickFillByDate || {};
+        const remaining = getUnresolvedPackDays(visibleDays, nextQuickFill, clearedSet, confirmedSet)
+          .filter((day) => day.date !== feelingsDate);
+        if (remaining.length === 0) {
+          tryFinishPackIfDone(nextData);
+        }
+      } else {
+        commitAction({ incompleteAction: 'estimated_fill', feelingsDate: null });
+      }
     };
 
-    const commitFeelings = () => {
-      const remaining = unresolvedDays.filter((day) => day.date !== feelingsDate);
-      if (remaining.length === 0) {
-        commitAction({ incompleteAction: 'estimated_fill', feelingsDate: null });
-        return;
+    const confirmPackDay = (dateKey) => {
+      const nextConfirmed = Array.from(new Set([...(data.confirmedDateKeys || []), dateKey]));
+      const nextData = {
+        ...data,
+        pendingDateKeys,
+        packDayDate: null,
+        packDayCaption: null,
+        confirmedDateKeys: nextConfirmed
+      };
+      onChange(nextData);
+      tryFinishPackIfDone(nextData);
+    };
+
+    const handleSliderChange = (dateKey, rawValue) => {
+      const percent = resolveQuickFillSliderPercent(rawValue);
+      const matched = findPresetByPercent(percent);
+      updateQuickFill(dateKey, {
+        percent,
+        presetId: matched ? matched.id : null
+      });
+    };
+
+    const handleBulkSliderChange = (rawValue) => {
+      const percent = resolveQuickFillSliderPercent(rawValue);
+      const matched = findPresetByPercent(percent);
+      onChange({
+        ...data,
+        pendingDateKeys,
+        packBulkPreset: {
+          percent,
+          presetId: matched ? matched.id : null
+        }
+      });
+    };
+
+    const buildSingleDayQuickFillNote = (day, percent, summaryKcal) => {
+      const safePercent = clampQuickFillPercent(percent);
+      const matched = findPresetByPercent(safePercent);
+      const base = 'Запишем примерно ' + kcalLine(summaryKcal) + ' ккал при норме того дня '
+        + kcalLine(day.target) + '.';
+      if (matched) {
+        return base + ' Шаг 5 %.';
       }
-      onChange({ ...data, pendingDateKeys, feelingsDate: null });
+      return base + ' Силы подсвечиваются только на своих значениях — 78, 110, 155 и 200 %.';
+    };
+
+    const renderQuickFillControls = (options) => {
+      const {
+        mode,
+        day,
+        percent,
+        onPresetClick,
+        onSliderChange,
+        sliderLabel,
+        noteText,
+        heroSub
+      } = options;
+      const safePercent = clampQuickFillPercent(percent);
+      const trackPos = quickFillSliderTrackPercent(safePercent) + '%';
+      const fillTone = getQuickFillSliderFillTone(safePercent);
+      const normZoneStyle = getQuickFillNormZoneStyle();
+      const centerMarkPos = quickFillSliderTrackPercent(QUICK_FILL_NORM_CENTER) + '%';
+      const matchedPreset = findPresetByPercent(safePercent);
+      const resolvedHeroSub = heroSub || (
+        matchedPreset
+          ? 'Запишем примерные приёмы с меткой «по ощущениям» — точность ниже, но день не пропадёт.'
+          : 'Ползунок сдвинут руками — ни одна из четырёх сил не отмечена.'
+      );
+
+      return [
+        React.createElement('div', { key: 'hero-sub', className: 'yv-hero-sub' }, resolvedHeroSub),
+        React.createElement('div', { key: 'forces', className: 'yv-force-list' },
+          QUICK_FILL_PRESETS.map((preset) => {
+            const selected = safePercent === preset.percent;
+            const rightLabel = mode === 'bulk'
+              ? (preset.percent + ' %')
+              : (kcalLine(getQuickFillSummary(day, preset.percent).kcal) + ' ккал');
+            return React.createElement('button', {
+              key: preset.id,
+              type: 'button',
+              className: 'yv-force' + (selected ? ' yv-force--on' : ''),
+              onClick: () => onPresetClick(preset)
+            },
+              React.createElement('span', { className: 'yv-force-title' }, preset.title),
+              React.createElement('span', { className: 'yv-force-kcal' }, rightLabel)
+            );
+          })
+        ),
+        React.createElement('div', { key: 'slider', className: 'yv-slider-block' },
+          React.createElement('div', { className: 'yv-slider-header' },
+            React.createElement('span', { className: 'yv-slider-label' }, sliderLabel),
+            React.createElement('span', {
+              className: 'yv-slider-value yv-slider-value--' + fillTone
+            }, safePercent + ' %')
+          ),
+          React.createElement('div', { className: 'yv-v4-slider-track-wrap' },
+            React.createElement('div', {
+              className: 'yv-v4-slider-norm-zone',
+              style: normZoneStyle
+            }),
+            React.createElement('div', {
+              className: 'yv-v4-slider-center-mark',
+              style: { left: centerMarkPos }
+            }),
+            React.createElement('div', {
+              className: 'yv-v4-slider-fill yv-v4-slider-fill--' + fillTone,
+              style: { width: trackPos }
+            }),
+            React.createElement('div', {
+              className: 'yv-v4-slider-thumb',
+              style: { left: trackPos }
+            }),
+            React.createElement('input', {
+              type: 'range',
+              className: 'yv-v4-slider',
+              min: QUICK_FILL_SLIDER_MIN,
+              max: QUICK_FILL_SLIDER_MAX,
+              step: 1,
+              value: safePercent,
+              'aria-label': sliderLabel,
+              onChange: (event) => onSliderChange(Number(event.target.value))
+            })
+          ),
+          React.createElement('div', { className: 'yv-slider-ticks' },
+            [QUICK_FILL_SLIDER_MIN, QUICK_FILL_NORM_CENTER, QUICK_FILL_SLIDER_MAX].map((tick) => {
+              const align = quickFillSliderTickAlign(tick);
+              return React.createElement('span', {
+                key: tick,
+                className: 'yv-slider-tick yv-slider-tick--' + align
+                  + (tick === QUICK_FILL_NORM_CENTER ? ' yv-slider-tick--norm' : ''),
+                style: { left: quickFillSliderTrackPercent(tick) + '%' }
+              }, tick + ' %');
+            })
+          )
+        ),
+        React.createElement('div', { key: 'note', className: 'yv-slider-note' }, noteText)
+      ];
+    };
+
+    const renderFeelingsLayer = (day, title, submitLabel) => {
+      const currentPercent = clampQuickFillPercent(
+        quickFillByDate[day.date]?.percent ?? getAroundNormPreset().percent
+      );
+      const summaryKcal = getQuickFillSummary(day, currentPercent).kcal;
+      const noteText = buildSingleDayQuickFillNote(day, currentPercent, summaryKcal);
+
+      return React.createElement('div', { className: 'yv-step yv-step--feelings' },
+        diagnosticBanner,
+        React.createElement('div', { className: 'yv-hero-title' }, title),
+        ...renderQuickFillControls({
+          mode: 'single',
+          day,
+          percent: currentPercent,
+          onPresetClick: (preset) => applyPreset(day.date, preset),
+          onSliderChange: (value) => handleSliderChange(day.date, value),
+          sliderLabel: 'Насколько от нормы',
+          noteText
+        }),
+        React.createElement('div', { className: 'yv-canvas-foot' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'yv-pack-primary',
+            onClick: commitFeelings
+          }, submitLabel)
+        )
+      );
+    };
+
+    const renderPackDayDetail = (day) => {
+      const emptyDay = isEmptyFoodDay(day);
+      const othersInPack = Math.max(0, visibleDays.length - 1);
+      return React.createElement('div', { className: 'yv-step yv-step--pack-day' },
+        diagnosticBanner,
+        React.createElement('div', { className: 'yv-hero' },
+          React.createElement('div', { className: 'yv-hero-title' }, formatDateRu(day.date, true)),
+          React.createElement('div', { className: 'yv-hero-sub' },
+            emptyDay
+              ? 'За этот день нет ни одной записи о еде.'
+              : 'Тот же выбор, что и для вчера: дописать точно, оставить как есть или оценить.'
+          )
+        ),
+        emptyDay
+          ? React.createElement('div', { className: 'yv-food-card' },
+            React.createElement('div', { className: 'yv-food-row' },
+              React.createElement('span', null, 'Еда'),
+              React.createElement('span', { className: 'yv-food-value' }, 'записей нет')
+            ),
+            React.createElement('div', { className: 'yv-food-row' },
+              React.createElement('span', null, 'Норма того дня'),
+              React.createElement('span', { className: 'yv-food-muted' }, kcalLine(day.target) + ' ккал')
+            ),
+            React.createElement('div', { className: 'yv-food-row' },
+              React.createElement('span', null, 'Шаги и вес'),
+              React.createElement('span', { className: 'yv-food-muted' }, 'есть, не трогаем')
+            )
+          )
+          : React.createElement('div', { className: 'yv-food-card' },
+            React.createElement('div', { className: 'yv-food-row' },
+              React.createElement('span', null, 'Еда'),
+              React.createElement('span', { className: 'yv-food-value' }, kcalLine(day.kcal) + ' из ' + kcalLine(day.target) + ' ккал')
+            ),
+            React.createElement('div', { className: 'yv-food-row' },
+              React.createElement('span', null, 'Приёмы'),
+              React.createElement('span', { className: 'yv-food-value' },
+                day.mealCount > 0 ? shortMealCount(day.mealCount) + ' за день' : 'нет приёмов'
+              )
+            ),
+            React.createElement('div', { className: 'yv-food-row' },
+              React.createElement('span', null, 'Последняя запись'),
+              React.createElement('span', { className: 'yv-food-muted' }, lastMealCaption(day))
+            )
+          ),
+        React.createElement('div', { className: 'yv-pack-note' },
+          emptyDay
+            ? '«Ничего не ел» — тоже ответ, и он идёт в статистику как есть. Если день надо просто убрать из списка без цифр — это «Очистить пустые» в списке.'
+            : packDayRemainingNote(othersInPack)
+        ),
+        React.createElement('div', { className: 'yv-canvas-foot' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'yv-pack-primary',
+            onClick: () => openDiaryForDate(day.date, context)
+          }, 'Дописать точно'),
+          React.createElement('div', { className: 'yv-pack-row' },
+            React.createElement('button', {
+              type: 'button',
+              className: 'yv-pack-secondary' + (emptyDay ? ' yv-pack-secondary--confirm-empty' : ''),
+              onClick: () => confirmPackDay(day.date)
+            }, confirmAsWrittenLabel(day)),
+            React.createElement('button', {
+              type: 'button',
+              className: 'yv-pack-secondary' + (emptyDay ? '' : ' yv-pack-secondary--feelings'),
+              onClick: () => openFeelings(day.date)
+            }, 'По ощущениям')
+          ),
+          React.createElement('button', {
+            type: 'button',
+            className: 'yv-text-later',
+            onClick: () => onChange({ ...data, packDayDate: null, packDayCaption: null, pendingDateKeys })
+          }, 'К списку дней')
+        )
+      );
     };
 
     if (!pendingInfo) {
       return React.createElement('div', { className: 'yv-loading' }, 'Загрузка...');
     }
 
-    if (feelingsDay) {
-      const selectedPresetId = quickFillByDate[feelingsDay.date]?.presetId || getAroundNormPreset().id;
-      return React.createElement('div', { className: 'yv-step yv-step--feelings' },
-        React.createElement('div', { className: 'yv-hero-title' }, 'Как вы вчера ели?'),
-        React.createElement('div', { className: 'yv-hero-sub' },
-          'Запишем примерные приёмы с меткой «по ощущениям» — точность ниже, но день не пропадёт.'
+    if (data.packBulkForceOpen) {
+      const bulkPercent = clampQuickFillPercent(
+        data.packBulkPreset?.percent ?? getAroundNormPreset().percent
+      );
+      const bulkCount = unresolvedDaysCount;
+      const bulkNote = 'Пустые дни получат оценку целиком, где еда уже есть — допишем только разницу. Если день был непохож — откройте его отдельно.';
+      return React.createElement('div', { className: 'yv-step yv-step--bulk-force' },
+        diagnosticBanner,
+        React.createElement('div', { className: 'yv-hero-title' },
+          packBulkFeelingsTitle(bulkCount)
         ),
-        React.createElement('div', { className: 'yv-force-list' },
-          QUICK_FILL_PRESETS.map((preset) => {
-            const kcal = getQuickFillSummary(feelingsDay, preset.percent).kcal;
-            const selected = selectedPresetId === preset.id;
-            return React.createElement('button', {
-              key: preset.id,
-              type: 'button',
-              className: 'yv-force' + (selected ? ' yv-force--on' : ''),
-              onClick: () => applyPreset(feelingsDay.date, preset)
-            },
-              React.createElement('span', { className: 'yv-force-title' }, preset.title),
-              React.createElement('span', { className: 'yv-force-kcal' }, 'около ' + kcalLine(kcal) + ' ккал')
-            );
-          })
-        ),
-        React.createElement('div', { className: 'yv-pack-note', style: { marginTop: 12 } },
-          'Цифры считаются от вашей нормы того дня — ' + kcalLine(feelingsDay.target) + ' ккал.'
-        ),
+        ...renderQuickFillControls({
+          mode: 'bulk',
+          day: visibleDays[0] || { target: 0 },
+          percent: bulkPercent,
+          onPresetClick: (preset) => onChange({
+            ...data,
+            pendingDateKeys,
+            packBulkPreset: { presetId: preset.id, percent: preset.percent }
+          }),
+          onSliderChange: handleBulkSliderChange,
+          sliderLabel: 'Насколько от нормы каждого дня',
+          noteText: bulkNote,
+          heroSub: 'Одна оценка на всю пачку. Считаем от нормы каждого дня, приёмы пишем с меткой «по ощущениям».'
+        }),
         React.createElement('div', { className: 'yv-canvas-foot' },
           React.createElement('button', {
             type: 'button',
             className: 'yv-pack-primary',
-            onClick: commitFeelings
-          }, 'Записать день')
+            onClick: () => {
+              commitAction({
+                incompleteAction: 'estimated_fill',
+                packBulkPreset: {
+                  presetId: findPresetByPercent(bulkPercent)?.id || null,
+                  percent: bulkPercent
+                },
+                packBulkForceOpen: false
+              });
+            }
+          }, packBulkSubmitLabel(bulkCount)),
+          React.createElement('button', {
+            type: 'button',
+            className: 'yv-text-later',
+            onClick: () => onChange({ ...data, packBulkForceOpen: false, packBulkPreset: null, pendingDateKeys })
+          }, 'К списку дней')
         )
       );
+    }
+
+    if (feelingsDay) {
+      return renderFeelingsLayer(
+        feelingsDay,
+        getFeelingsLayerTitle(data.feelingsDate),
+        'Записать день'
+      );
+    }
+
+    const packDay = data.packDayDate
+      ? (visibleDays.find((day) => day.date === data.packDayDate) || null)
+      : null;
+    if (packDay) {
+      return renderPackDayDetail(packDay);
     }
 
     const single = !isPack && visibleDays[0] ? visibleDays[0] : null;
 
     return React.createElement('div', { className: 'yv-step' + (isPack ? ' yv-step--pack' : ' yv-step--single') },
+      diagnosticBanner,
       React.createElement('div', { className: 'yv-hero' },
         React.createElement('div', { className: 'yv-hero-title' },
           isPack
-            ? visibleDays.length + ' ' + pluralizeDays(visibleDays.length) + ' остались незакрытыми'
+            ? (packAfterClear ? packFoodDaysTitle(visibleDays.length) : packPendingDaysTitle(visibleDays.length))
             : 'Вчерашний день выглядит неполным'
         ),
         React.createElement('div', { className: 'yv-hero-sub' },
           isPack
-            ? (
-              (visibleDays.length
+            ? (packAfterClear
+              ? 'Пустые дни убраны из списка и ничего о еде не утверждают.'
+              : ((visibleDays.length
                 ? 'С ' + formatDateRu(visibleDays[visibleDays.length - 1].date) + ' по ' + formatDateRu(visibleDays[0].date) + '. '
-                : '')
-              + 'Можно дописать любой из них или отложить и сразу начать утро.'
-            )
+                : '') + 'Можно дописать любой из них или отложить и сразу начать утро.'))
             : (single
               ? formatDateRu(single.date, true) + '. Проверьте, прежде чем закрывать утро — потом цифры уйдут в статистику как есть.'
               : 'Проверьте, прежде чем закрывать утро — потом цифры уйдут в статистику как есть.')
@@ -1495,11 +2220,12 @@
       isPack && React.createElement('div', { className: 'yv-days' },
         visibleDays.map((day) => {
           const quickFill = quickFillByDate[day.date] || null;
+          const resolved = quickFill || confirmedSet.has(day.date);
           return React.createElement('button', {
             key: day.date,
             type: 'button',
-            className: 'yv-pack-day' + (quickFill ? ' yv-pack-day--resolved' : ''),
-            onClick: () => openFeelings(day.date)
+            className: 'yv-pack-day' + (resolved ? ' yv-pack-day--resolved' : ''),
+            onClick: () => openPackDay(day.date)
           },
             React.createElement('div', { className: 'yv-pack-day-copy' },
               React.createElement('div', { className: 'yv-pack-day-title' }, formatDateRu(day.date, true)),
@@ -1507,7 +2233,7 @@
                 quickFill
                   ? getQuickFillSummary(day, quickFill.percent).label
                   : (day.mealCount > 0 || day.kcal > 0
-                    ? `${kcalLine(day.kcal)} из ${kcalLine(day.target)} ккал${day.mealCount ? ` · ${shortMealCount(day.mealCount)}` : ''}`
+                    ? kcalLine(day.kcal) + ' из ' + kcalLine(day.target) + ' ккал' + (day.mealCount ? (' · ' + shortMealCount(day.mealCount)) : '')
                     : 'День пустой')
               )
             ),
@@ -1517,27 +2243,35 @@
       ),
 
       isPack && React.createElement('div', { className: 'yv-pack-note' },
-        'Отложенные дни не исчезают — вернутся завтра тем же списком.'
+        packAfterClear
+          ? 'Очистка больше не предлагается — пустых дней в списке нет. Массовая оценка теперь считает только эти ' + visibleDays.length + ' ' + pluralizeDays(visibleDays.length) + '.'
+          : 'Отложенные дни не исчезают — вернутся завтра тем же списком.'
       ),
 
       isPack && React.createElement('div', { className: 'yv-canvas-foot' },
-        React.createElement('button', {
+        unresolvedDaysCount > 0 && React.createElement('button', {
           type: 'button',
           className: 'yv-pack-primary',
-          onClick: handlePackEstimateAll
-        }, 'Оценить все по ощущениям'),
-        React.createElement('div', { className: 'yv-pack-row' },
-          emptyVisibleDays.length > 0 && React.createElement('button', {
+          onClick: openPackBulkForce
+        }, packBulkCloseLabel(unresolvedDaysCount)),
+        packAfterClear && emptyVisibleDays.length === 0
+          ? React.createElement('button', {
             type: 'button',
-            className: 'yv-pack-secondary',
-            onClick: handlePackClearEmpty
-          }, 'Очистить ' + emptyVisibleDays.length + ' ' + (emptyVisibleDays.length === 1 ? 'пустой' : 'пустых')),
-          React.createElement('button', {
-            type: 'button',
-            className: 'yv-pack-secondary',
+            className: 'yv-text-later',
             onClick: handlePackFillLater
           }, 'Заполню позже')
-        )
+          : React.createElement('div', { className: 'yv-pack-row' },
+            emptyVisibleDays.length > 0 && React.createElement('button', {
+              type: 'button',
+              className: 'yv-pack-secondary',
+              onClick: handlePackClearEmpty
+            }, 'Очистить ' + emptyVisibleDays.length + ' ' + (emptyVisibleDays.length === 1 ? 'пустой' : 'пустых')),
+            React.createElement('button', {
+              type: 'button',
+              className: 'yv-pack-secondary',
+              onClick: handlePackFillLater
+            }, 'Заполню позже')
+          )
       ),
 
       single && React.createElement('div', { className: 'yv-canvas-foot' },
@@ -1551,10 +2285,10 @@
             type: 'button',
             className: 'yv-pack-secondary',
             onClick: () => commitAction({ incompleteAction: 'confirm_real_data' })
-          }, 'Так и было'),
+          }, confirmAsWrittenLabel(single)),
           React.createElement('button', {
             type: 'button',
-            className: 'yv-pack-secondary',
+            className: 'yv-pack-secondary yv-pack-secondary--feelings',
             onClick: () => openFeelings(single.date)
           }, 'По ощущениям')
         ),
@@ -1602,11 +2336,16 @@
   /**
    * Сохранение данных шага
    */
-  function saveYesterdayVerify(data) {
+  function saveYesterdayVerify(data, context) {
+    if (data?.diagnosticPreview || context?.diagnosticPreview) {
+      console.info('[YesterdayVerify] diagnostic preview — save skipped');
+      return { affectedKeys: [], diagnosticPreview: true, skipped: true };
+    }
     const pendingDays = getPendingPastDays().missingDays || [];
     const nowTs = Date.now();
     const quickFillByDate = data.quickFillByDate || {};
     const clearedDateKeys = new Set(Array.isArray(data.clearedDateKeys) ? data.clearedDateKeys : []);
+    const confirmedDateKeys = new Set(Array.isArray(data.confirmedDateKeys) ? data.confirmedDateKeys : []);
     const affectedKeys = [];
     const applyDayStatusAction = typeof DayRealDataActions.applyDayStatusAction === 'function'
       ? DayRealDataActions.applyDayStatusAction
@@ -1614,8 +2353,18 @@
     const aroundNorm = getAroundNormPreset();
 
     function applyEstimatedFill(dateKey, dayInfo, dayData, quickFill) {
+      const hasExistingFood = !isEmptyFoodDay(dayInfo);
       const estimatedPatch = buildEstimatedDayPatch(dateKey, dayInfo, quickFill, dayData);
-      clearEstimatedDayFields(dayData);
+      if (hasExistingFood) {
+        stripEstimatedTopUpMeals(dayData);
+        if (estimatedPatch.meals === null) {
+          delete estimatedPatch.meals;
+        } else if (Array.isArray(estimatedPatch.meals)) {
+          estimatedPatch.meals = [...(dayData.meals || []), ...estimatedPatch.meals];
+        }
+      } else {
+        clearEstimatedDayFields(dayData);
+      }
       Object.assign(dayData, estimatedPatch);
       markYesterdayVerified(dayData, 'estimated_fill', nowTs);
       dayData.dayStatusUpdatedAt = Math.max(nowTs, (Number(dayData.dayStatusUpdatedAt) || 0) + 1);
@@ -1672,10 +2421,42 @@
         return;
       }
 
+      if (confirmedDateKeys.has(dateKey)) {
+        const nextDayData = applyDayStatusAction
+          ? applyDayStatusAction(dayData, 'confirm_real_data', { nowTs })
+          : (() => {
+            dayData.isFastingDay = true;
+            dayData.isIncomplete = false;
+            clearEstimatedDayFields(dayData);
+            dayData.dayStatusUpdatedAt = Math.max(nowTs, (Number(dayData.dayStatusUpdatedAt) || 0) + 1);
+            dayData.updatedAt = dayData.dayStatusUpdatedAt;
+            return dayData;
+          })();
+        markYesterdayVerified(nextDayData, 'confirm_real_data', nowTs);
+        writeDayDataScoped(dateKey, nextDayData);
+        affectedKeys.push(`heys_dayv2_${dateKey}`);
+        window.dispatchEvent(new CustomEvent('heys:day-updated', {
+          detail: { date: dateKey, source: 'yesterday-verify-real-data', data: nextDayData }
+        }));
+        try {
+          HEYS.analytics?.trackDataOperation?.('yesterday_verify_confirm_real_data', 1, {
+            date: dateKey,
+            ratio: Number(dayInfo?.ratio || 0),
+            mealCount: Number(dayInfo?.mealCount || 0)
+          });
+        } catch (_) { }
+        return;
+      }
+
+      if (data.incompleteAction === 'pack_days_resolved') {
+        return;
+      }
+
       if (data.incompleteAction === 'estimated_fill') {
+        const bulkPreset = data.packBulkPreset || aroundNorm;
         applyEstimatedFill(dateKey, dayInfo, dayData, {
-          presetId: aroundNorm.id,
-          percent: aroundNorm.percent
+          presetId: bulkPreset.presetId || bulkPreset.id,
+          percent: bulkPreset.percent
         });
         return;
       }
@@ -1817,29 +2598,52 @@
       hideProgressDots: true,
       hiddenFromProgress: true,
       hideDailyFooter: true,
-      headerCaption: (data) => (data && data.feelingsDate ? formatDateRu(data.feelingsDate) : 'Перед чек-ином'),
-      showHeaderBack: (data) => !!(data && data.feelingsDate),
-      applyHeaderBack: (data) => ({ ...(data || {}), feelingsDate: null }),
+      headerCaption: (data) => resolveYesterdayVerifyHeaderCaption(data),
+      showHeaderBack: (data) => !!(data && (data.feelingsDate || data.packDayDate || data.packBulkForceOpen)),
+      applyHeaderBack: (data) => {
+        if (!data) return {};
+        if (data.feelingsDate) return { ...data, feelingsDate: null };
+        if (data.packBulkForceOpen) return { ...data, packBulkForceOpen: false, packBulkPreset: null };
+        if (data.packDayDate) return { ...data, packDayDate: null, packDayCaption: null };
+        return data;
+      },
 
-      shouldShow: () => {
+      shouldShow: (context) => {
+        if (context?.diagnosticPreview) return true;
         return shouldShowYesterdayVerify();
       },
 
-      getInitialData: () => {
+      getInitialData: (context) => {
+        const diagnosticPreview = !!context?.diagnosticPreview;
         return {
+          diagnosticPreview,
           incompleteAction: null,
-          pendingDateKeys: [],
+          pendingDateKeys: diagnosticPreview
+            ? buildDiagnosticPreviewPendingDays().missingDays.map((day) => day.date)
+            : [],
           quickFillByDate: {},
-          clearedDateKeys: []
+          clearedDateKeys: [],
+          confirmedDateKeys: [],
+          packDayDate: null,
+          packDayCaption: null,
+          packBulkForceOpen: false,
+          packBulkPreset: null,
+          feelingsDate: null
         };
       },
 
-      // Валидация: нужно выбрать вариант
       validate: (data) => {
-        const pendingDates = (getPendingPastDays().missingDays || []).map((day) => day.date);
+        const pendingDates = data?.diagnosticPreview
+          ? (Array.isArray(data.pendingDateKeys) && data.pendingDateKeys.length
+            ? data.pendingDateKeys
+            : buildDiagnosticPreviewPendingDays().missingDays.map((day) => day.date))
+          : (getPendingPastDays().missingDays || []).map((day) => day.date);
         const quickFillByDate = data.quickFillByDate || {};
         const clearedDateKeys = new Set(Array.isArray(data.clearedDateKeys) ? data.clearedDateKeys : []);
-        const unresolvedDates = pendingDates.filter((dateKey) => !quickFillByDate[dateKey] && !clearedDateKeys.has(dateKey));
+        const confirmedDateKeys = new Set(Array.isArray(data.confirmedDateKeys) ? data.confirmedDateKeys : []);
+        const unresolvedDates = pendingDates.filter((dateKey) => (
+          !quickFillByDate[dateKey] && !clearedDateKeys.has(dateKey) && !confirmedDateKeys.has(dateKey)
+        ));
         if (unresolvedDates.length > 0 && !data.incompleteAction) {
           return { valid: false, error: 'Выбери общее действие для оставшихся дней или оцени их по ощущениям' };
         }
@@ -1876,6 +2680,17 @@
     shouldShow: shouldShowYesterdayVerify,
     isExplicitlyVerified,
     isEmptyFoodDay,
+    packBulkCloseLabel,
+    confirmAsWrittenLabel,
+    computePackDayCaption,
+    resolveYesterdayVerifyHeaderCaption,
+    findPresetByPercent,
+    clampQuickFillPercent,
+    snapQuickFillSliderPercent,
+    quickFillSliderTrackPercent,
+    getQuickFillSliderFillTone,
+    buildDiagnosticPreviewPendingDays,
+    showDiagnosticPreview: showYesterdayVerifyDiagnosticPreview,
     save: saveYesterdayVerify,
     isReady: _stepRegistered,
     stepRegistered: _stepRegistered,
@@ -1884,6 +2699,9 @@
   };
 
   notifyYesterdayVerifyReady('api-exported');
+  HEYS.debug = Object.assign(HEYS.debug || {}, {
+    replayYesterdayVerify: showYesterdayVerifyDiagnosticPreview,
+  });
   devLog('[HEYS] YesterdayVerify v1.4.1 loaded');
 
 })(typeof window !== 'undefined' ? window : global);
