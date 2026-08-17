@@ -11,8 +11,8 @@
 //      ack the changelog row until no visible actions remain.
 //   6) «Позже» / × / Esc / backdrop snoozes 15 minutes. After two auto-shows
 //      per session the third sheet does not come — a 7px dot on «Питание».
-//   7) In-tab day cue opens the same sheet filtered to that date, including
-//      after «Понятно» (session re-read). Empty sheet never opens.
+//   7) In-tab day cue appears only while unacked changes remain; after «Понятно»
+//      the cue and auto-sheet stop for those entries. Empty sheet never opens.
 //   8) ?openCuratorFeed=1 from push queues after blockers, not over check-in.
 //
 // Не зависит от React — vanilla DOM. CSS in apps/web/styles/modules/500-pwa-and-offline.css.
@@ -1677,17 +1677,14 @@
   function listCueDates() {
     const dates = new Set();
     for (const group of groupVisibleByDate(_entries)) dates.add(group.date);
-    for (const date of Object.keys(reviewedByDateMap())) {
-      if (reviewedGroupsForDate(date).length > 0) dates.add(date);
-    }
     return Array.from(dates);
   }
 
   function cueForDate(date, referAsThisDay) {
     if (!date) return null;
     const live = liveGroupsForDate(date);
-    const source = live.length > 0 ? live : reviewedGroupsForDate(date);
-    const count = source.reduce((sum, g) => sum + dayActionCount(g), 0);
+    if (live.length === 0) return null;
+    const count = live.reduce((sum, g) => sum + dayActionCount(g), 0);
     if (count === 0) return null;
     return {
       date,
@@ -1716,7 +1713,6 @@
   function renderModal() {
     const sourceEntries = _filterDate
       ? _reviewEntries.filter((entry) => groupVisibleByDate([entry]).some((g) => g.date === _filterDate))
-        .concat((reviewedByDateMap()[_filterDate] || {}).entries || [])
       : _reviewEntries.slice();
     const unique = [];
     const seen = new Set();

@@ -550,7 +550,8 @@ describe('CuratorActionsBanner review modal', () => {
     });
     expect(window.HEYS.ui.switchTab).not.toHaveBeenCalled();
     expect(document.querySelector('.ca-modal-backdrop')).toBeFalsy();
-    expect(banner.getDayCue('2026-07-05')?.title).toBe('Куратор обновил этот день');
+    expect(banner.getDayCue('2026-07-05')).toBeNull();
+    expect(banner.getVisibleCue('2026-07-05')).toBeNull();
   });
 
   it('forceShowLastReview opens the sheet again after Понятно', async () => {
@@ -779,7 +780,7 @@ describe('CuratorActionsBanner review modal', () => {
     expect(document.querySelector('.ca-modal__header-title')?.textContent).toBe('Куратор Антон обновил ваш дневник');
   });
 
-  it('stops auto-opening after two shows and keeps a day cue for re-read', async () => {
+  it('stops auto-opening after two shows and clears the day cue after Понятно', async () => {
     const entry = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z');
     const banner = loadBanner();
     window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([entry]));
@@ -800,7 +801,8 @@ describe('CuratorActionsBanner review modal', () => {
     expect(document.querySelector('.ca-modal-backdrop')).toBeTruthy();
     document.querySelector('.ca-modal__ack-btn').click();
     await flushMicrotasks();
-    expect(banner.getDayCue('2026-07-05')?.subtitle).toMatch(/посмотреть/);
+    expect(banner.getDayCue('2026-07-05')).toBeNull();
+    expect(banner.getVisibleCue('2026-07-05')).toBeNull();
     expect(banner.shouldShowNutritionDot()).toBe(false);
   });
 
@@ -940,7 +942,7 @@ describe('CuratorActionsBanner review modal', () => {
       expect(dateLabels().join(' ')).not.toMatch(/5 июля/);
     });
 
-    it('keeps the day cue after Понятно and re-opens from it without another auto-show', async () => {
+    it('clears the day cue after Понятно and does not reopen from it', async () => {
       const banner = loadBanner();
       window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([day5()]));
 
@@ -949,18 +951,16 @@ describe('CuratorActionsBanner review modal', () => {
       await flushMicrotasks();
 
       expect(document.querySelector('.ca-modal-backdrop')).toBeFalsy();
-      expect(banner.getDayCue('2026-07-05')?.title).toBe('Куратор обновил этот день');
+      expect(banner.getDayCue('2026-07-05')).toBeNull();
+      expect(banner.getVisibleCue('2026-07-05')).toBeNull();
       expect(banner.shouldShowNutritionDot()).toBe(false);
 
       await vi.advanceTimersByTimeAsync(15 * 60 * 1000);
       expect(document.querySelector('.ca-modal-backdrop')).toBeFalsy();
-
-      expect(banner.openFromCue('2026-07-05')).toBe(true);
-      expect(document.querySelector('.ca-modal-backdrop')).toBeTruthy();
-      expect(sessionStorage.getItem(banner._test.constants.SHOW_COUNT_KEY)).toBe('1');
+      expect(banner.openFromCue('2026-07-05')).toBe(false);
     });
 
-    it('keeps the nutrition dot after Понятно on a date-filtered cue when other days remain', async () => {
+    it('clears the acked day cue but keeps the nutrition dot while other days remain', async () => {
       const banner = loadBanner();
       window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([day5(), day4()]));
 
@@ -980,7 +980,11 @@ describe('CuratorActionsBanner review modal', () => {
         untilTs: '2026-07-05T09:00:00.000Z',
       });
       expect(banner.shouldShowNutritionDot()).toBe(true);
-      expect(banner.getDayCue('2026-07-05')?.subtitle).toMatch(/посмотреть/);
+      expect(banner.getDayCue('2026-07-05')).toBeNull();
+      expect(banner.getVisibleCue('2026-07-05')).toMatchObject({
+        date: '2026-07-04',
+        title: 'Куратор обновил 4 июля',
+      });
       expect(banner.getDayCue('2026-07-04')).toBeTruthy();
       expect(banner.getDayCue('2026-07-06')).toBeNull();
 
