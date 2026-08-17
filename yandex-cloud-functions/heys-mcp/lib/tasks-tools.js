@@ -715,6 +715,53 @@ function createTasksTools({
     };
   }
 
+  const appendPrefetch = new Map();
+
+  /**
+   * Предзагрузка ревизии для дельта-записи.
+   *
+   * Стенограмма прицеплена к каждой записи в дневник и пишется после неё, а
+   * чтение файла перед записью ни от результата дня, ни от текста блока не
+   * зависит. Последовательно оно целиком лежало в ожидании куратора; запущенное
+   * рядом с записью дня — не стоит ничего.
+   *
+   * Промис не бросает: предзагрузка это ускорение, а не источник правды. Если
+   * чтение не удалось, writeFileDelta прочитает сам и отчитается об ошибке уже
+   * своим путём.
+   */
+  function prefetchAppend(path) {
+    const normalized = tasks.normalizePath(path);
+    if (!normalized || !clientId) return;
+    if (!isDeltaWritable(normalized)) return;
+    if (appendPrefetch.has(normalized)) return;
+    appendPrefetch.set(normalized, readForWrite(normalized).catch(() => null));
+  }
+
+  /** Ревизия из предзагрузки — разовая: устаревшая хуже лишнего чтения. */
+  function takePrefetchedRead(path) {
+    const hit = appendPrefetch.get(path);
+    if (hit) appendPrefetch.delete(path);
+    return hit || null;
+  }
+
+  function isDeltaWritable(path) {
+    return tasks.isDeltaWritablePath(path) && typeof api.appendTasksFileByCurator === 'function';
+  }
+
+  /**
+   * Файл под дельта-запись. На этом пути writeFileDelta перечитывает ревизию
+   * сам, поэтому полное чтение здесь было вторым обращением за тем же файлом —
+   * и платила за него каждая запись в дневник. Пустая заготовка подхватывает
+   * текущую ревизию через rebase на первой же попытке.
+   */
+  async function openForAppend(path) {
+    const normalized = tasks.normalizePath(path);
+    if (!normalized) throw new ToolError('invalid_path', `Путь «${path}» не похож на файл задачника.`);
+    if (!isDeltaWritable(normalized)) return readFile(normalized);
+    requireClient();
+    return tasks.ensureFile(null, normalized);
+  }
+
   /**
    * Отказ вместо тихого затирания. Формулировка та же, что у tasks_patch:
    * модель должна понять не «сломалось», а «перечитай и повтори».
@@ -792,7 +839,8 @@ function createTasksTools({
     if (!deltaBlock) throw new ToolError('invalid_block', 'Пустой блок для дельта-записи.');
 
     for (let attempt = 1; attempt <= WRITE_ATTEMPTS; attempt += 1) {
-      const before = await readForWrite(file.path);
+      const before = (attempt === 1 ? await takePrefetchedRead(file.path) : null)
+        || await readForWrite(file.path);
       if (before.file.rev !== baseRev) {
         if (!rebase) throw staleWriteError(file.path, baseRev, before.file.rev);
         baseRev = before.file.rev;
@@ -840,7 +888,7 @@ function createTasksTools({
     if (guarded) {
       throw new ToolError('owner_only_file', tasks.ownerOnlyRefusal(guarded), { path: guarded });
     }
-    if (delta && tasks.isDeltaWritablePath(file.path) && typeof api.appendTasksFileByCurator === 'function') {
+    if (delta && isDeltaWritable(file.path)) {
       return writeFileDelta(file, delta, { rebase });
     }
     if (tasks.estimateWritePayloadBytes(file.path, text) > tasks.TASKS_WRITE_PAYLOAD_LIMIT) {
@@ -1757,7 +1805,7 @@ function createTasksTools({
       // Оба блока валидируем до первой записи: ошибка формата не должна
       // оставить половину checkpoint. Сетевой сбой между двумя файлами всё
       // ещё возможен, поэтому в ответе возвращаются отдельные ревизии.
-      const transcript = await readFile(transcriptPath);
+      const transcript = await openForAppend(transcriptPath);
       const putTranscript = (text) => tasks.appendBlock(text, transcriptBlock);
       const savedTranscript = await writeFile(transcript, putTranscript(transcript.text), {
         rebase: putTranscript,
@@ -1766,7 +1814,7 @@ function createTasksTools({
 
       let savedJournal = null;
       if (journalBlock) {
-        const journal = await readFile(journalPath);
+        const journal = await openForAppend(journalPath);
         const putJournal = (text) => tasks.appendBlock(text, journalBlock);
         savedJournal = await writeFile(journal, putJournal(journal.text), {
           rebase: putJournal,
@@ -4520,7 +4568,23 @@ function createTasksTools({
     };
   }
 
-  return { tools, schemas: [...TASKS_TOOL_SCHEMAS, ...TASKS_WRITE_SCHEMAS, ...TASKS_BOARD_SCHEMAS, ...TASKS_AGENT_SCHEMAS] };
+  /**
+   * Прогрев стенограммы за сегодня: зовётся перед записью в дневник, чтобы
+   * чтение файла ехало параллельно самой записи, а не после неё.
+   */
+  function prefetchTranscript(date) {
+    try {
+      prefetchAppend(tasks.transcriptPath(checkpointDay(date)));
+    } catch {
+      // Прогрев необязателен: неверную дату отвергнет сам checkpoint.
+    }
+  }
+
+  return {
+    tools,
+    prefetchTranscript,
+    schemas: [...TASKS_TOOL_SCHEMAS, ...TASKS_WRITE_SCHEMAS, ...TASKS_BOARD_SCHEMAS, ...TASKS_AGENT_SCHEMAS],
+  };
 }
 
 module.exports = {

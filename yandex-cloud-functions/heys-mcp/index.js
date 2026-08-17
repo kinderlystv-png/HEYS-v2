@@ -36,6 +36,17 @@ const { createTools, ToolError } = require('./lib/tools');
 const { createCuratorContext } = require('./lib/curator');
 const tasks = require('./lib/tasks');
 
+/**
+ * Возраст процесса и признак первого вызова на нём.
+ *
+ * Без них строка тайминга неинтерпретируема: одна и та же запись стоит около
+ * секунды на живом инстансе и втрое дороже на поднятом с нуля, а в логе обе
+ * выглядят одинаково. `uptime_ms` заодно показывает, как быстро гасятся
+ * инстансы — от этого зависит, окупается ли их прогрев.
+ */
+const PROCESS_START_MS = Date.now();
+let instanceWarm = false;
+
 const ATTACH_PAGE_PATH = '/mcp/attach';
 const ATTACH_MANIFEST_PATH = '/mcp/attach/manifest.webmanifest';
 const ATTACH_ICON_PATH = '/mcp/attach/icon.png';
@@ -286,7 +297,13 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
     upstream: () => ({ calls: api.stats.calls, ms: api.stats.ms }),
     // Одна строка на вызов инструмента: по ней в Cloud Logging видно, какой
     // сценарий записи сколько стоит и сколько в нём round-trip'ов к API.
-    logMetric: (metric) => console.info('[heys-mcp] tool_timing', JSON.stringify({ role: auth.role, ...metric })),
+    logMetric: (metric) => {
+      const cold = !instanceWarm;
+      instanceWarm = true;
+      console.info('[heys-mcp] tool_timing', JSON.stringify({
+        role: auth.role, cold, uptime_ms: Date.now() - PROCESS_START_MS, ...metric,
+      }));
+    },
   });
 
   // Только уведомления и ответы — по спеке отвечаем 202 без тела.

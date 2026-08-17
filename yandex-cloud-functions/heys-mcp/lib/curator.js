@@ -1244,6 +1244,10 @@ function createCuratorContext({
           );
         }
         const { transcript: _ignoredTranscript, ...writeArgs } = args;
+        // Стенограмма пишется после дневника, но её файл можно прочитать уже
+        // сейчас: от результата записи он не зависит. Так чтение едет рядом с
+        // записью дня, а не добавляется к ней временем ожидания куратора.
+        tasksContext.prefetchTranscript?.();
         const result = await inner(writeArgs);
         const transcriptBlock = [
           `## ${day.nowParts(nowMs).time}`,

@@ -22,6 +22,15 @@ const JSONRPC_ERRORS = {
   INTERNAL_ERROR: -32603,
 };
 
+/** Размер ответа в байтах; при несериализуемом значении метрика молчит, а не падает. */
+function byteLength(value) {
+  try {
+    return Buffer.byteLength(JSON.stringify(value) || '');
+  } catch {
+    return null;
+  }
+}
+
 function rpcResult(id, result) {
   return { jsonrpc: '2.0', id, result };
 }
@@ -135,6 +144,7 @@ async function handleMessage(message, ctx) {
           'Правила работы:',
           '1. Составной напиток или блюдо вносится компонентами, а не одним «итоговым» продуктом. Капучино — это кофе + молоко + сироп, а не строка «капучино».',
           '2. Перед новым составным приёмом вызывай heys_list_meal_presets. Если у пользователя есть подходящий сохранённый набор, вноси его через preset: набор хранит его собственные граммовки, и дневник остаётся однородным. Для правки уже записанного приёма (heys_update_meal) наборы не нужны. Простой одиночный продукт — сразу heys_log_meal, без presets.',
+          '2а. «Как вчера» или «такой же перекус»: heys_get_day за дату-источник → meal_id из текста → heys_log_meal с copy_meal: { date, meal_id, count при «два»/«три» }. Не копируй граммы из текста get_day вручную.',
           '3. Граммовку, не названную явно, бери из привычной для пользователя порции — из набора или из того, как этот продукт вносился раньше (heys_get_day за прошлые даты). Не подставляй «круглые» значения от себя. Приёмы с названием вида «Обед · оценочно 155%» — заглушки автооценки, а не реальная еда: граммовки из них не бери.',
           '4. Продукты из личного списка пользователя приоритетнее одноимённых из общей базы.',
           '5. Если продукт определяется неоднозначно, инструмент вернёт кандидатов в тексте ответа — уточни у пользователя, а не угадывай. Уверен — вноси сам, не переспрашивая.',
@@ -195,11 +205,15 @@ async function handleMessage(message, ctx) {
       try {
         const result = await handler(args);
         const timing = measure();
-        ctx.logMetric?.({ tool: name, ok: true, ...timing });
-        return rpcResult(id, {
+        const payload = {
           content: toolContent(result),
           structuredContent: { ok: true, ...result.structured, duration_ms: timing.ms },
-        });
+        };
+        // Размер ответа — вторая половина вопроса «почему долго»: своё время
+        // инструмента и время API он не объясняет, зато объясняет задержку на
+        // стороне клиента, которой в наших метриках не видно вовсе.
+        ctx.logMetric?.({ tool: name, ok: true, ...timing, response_bytes: byteLength(payload) });
+        return rpcResult(id, payload);
       } catch (e) {
         const timing = measure();
         if (e && e.code) {

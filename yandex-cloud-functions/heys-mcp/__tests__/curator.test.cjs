@@ -280,6 +280,67 @@ test('запись в дневник автоматически кладёт р�
   assert.match(transcript, /\*\*Claude:\*\* \[Автозапись инструмента\] \[Антон\] Записал:/);
 });
 
+/**
+ * Дельта-путь стенограммы: тот, что работает в проде. Без него автозапись
+ * уходит в полную перезапись файла, и цена round-trip'ов, ради которой всё
+ * мерилось, тестами не видна вовсе.
+ */
+function withDeltaAppend(api) {
+  const fileReads = [];
+  const getMany = api.getKVManyByCurator;
+  const getOne = api.getKVByCurator;
+  api.getKVManyByCurator = async (bearer, clientId, keys) => {
+    for (const key of keys) if (String(key).includes('transcript')) fileReads.push({ via: 'batch', key });
+    return getMany(bearer, clientId, keys);
+  };
+  api.getKVByCurator = async (bearer, clientId, key) => {
+    if (String(key).includes('transcript')) fileReads.push({ via: 'single', key });
+    return getOne(bearer, clientId, key);
+  };
+  api.appendTasksFileByCurator = async (bearer, clientId, spec, contextId) => {
+    const key = tasksLib.keyForPath(spec.path);
+    const file = tasksLib.ensureFile(api.kv[clientId][key], spec.path);
+    if (Number(spec.base_rev) > 0 && Number(file.rev) !== Number(spec.base_rev)) {
+      return { ok: false, error: 'stale_rev', current_rev: file.rev };
+    }
+    const applied = tasksLib.applyDeltaToFile(file, spec.mode, spec.block, NOW);
+    api.kv[clientId][key] = applied.file;
+    api.kv[clientId][tasksLib.INDEX_KEY] = tasksLib.withIndexEntry(
+      tasksLib.ensureIndex(api.kv[clientId][tasksLib.INDEX_KEY]), applied.file, NOW,
+    );
+    api.writes.push({ path: 'append', clientId, spec, contextId });
+    return { ok: true, data: { path: applied.file.path, rev: applied.file.rev, rotated: [] } };
+  };
+  return fileReads;
+}
+
+test('автозапись стенограммы не читает файл дважды и держится на дельта-пути', async () => {
+  const tasksClientId = 'cid-tasks';
+  const api = fakeCuratorApi({
+    tasksClientId,
+    tasksIndex: { files: { 'transcript/2026-08-01.md': { rev: 1, updatedAt: NOW } }, updatedAt: NOW },
+  });
+  api.kv[tasksClientId][tasksLib.keyForPath('transcript/2026-08-01.md')] = {
+    path: 'transcript/2026-08-01.md', text: '# 2026-08-01\n', rev: 1, updatedAt: NOW,
+  };
+  const fileReads = withDeltaAppend(api);
+  const { tools } = build(api, { tasksClientId });
+
+  const res = await tools.heys_add_water({ client: 'Антон', ml: 250, transcript: 'Запиши мне 250 мл воды.' });
+
+  // Запись состоялась и подтверждена ревизией: ускорение не должно стоить
+  // уверенности в том, что стенограмма легла.
+  assert.ok(res.structured.transcript_checkpoint, res.text);
+  const transcript = api.kv[tasksClientId][tasksLib.keyForPath('transcript/2026-08-01.md')].text;
+  assert.match(transcript, /\*\*Кин:\*\* Запиши мне 250 мл воды\./);
+  assert.ok(api.writes.some((w) => w.path === 'append'), 'стенограмма пишется дельтой, а не перезаписью файла');
+
+  // Два чтения: ревизия перед записью и проверка после неё. Третье — то самое
+  // предварительное чтение целиком, которое дублировало первое.
+  assert.equal(fileReads.length, 2, `лишние чтения стенограммы: ${JSON.stringify(fileReads)}`);
+  assert.equal(fileReads.filter((r) => r.via === 'single').length, 0, 'файл целиком перед записью больше не читается');
+});
+
 test('запись в дневник не начинается без дословной реплики для стенограммы', async () => {
   const tasksClientId = 'cid-tasks';
   const api = fakeCuratorApi({ tasksClientId });
