@@ -202,6 +202,11 @@ async function handleMessage(message, ctx) {
         };
       };
 
+      // Количество аргументов, а не сами аргументы: по нему видно, что вызов
+      // пришёл пустым или перегруженным, и при этом в телеметрию физически
+      // нечему утечь.
+      const argCount = args && typeof args === 'object' ? Object.keys(args).length : 0;
+
       try {
         const result = await handler(args);
         const timing = measure();
@@ -212,15 +217,15 @@ async function handleMessage(message, ctx) {
         // Размер ответа — вторая половина вопроса «почему долго»: своё время
         // инструмента и время API он не объясняет, зато объясняет задержку на
         // стороне клиента, которой в наших метриках не видно вовсе.
-        ctx.logMetric?.({ tool: name, ok: true, ...timing, response_bytes: byteLength(payload) });
+        ctx.logMetric?.({ tool: name, ok: true, ...timing, arg_count: argCount, response_bytes: byteLength(payload) });
         return rpcResult(id, payload);
       } catch (e) {
         const timing = measure();
         if (e && e.code) {
-          ctx.logMetric?.({ tool: name, ok: false, error: e.code, ...timing });
+          ctx.logMetric?.({ tool: name, ok: false, error: e.code, arg_count: argCount, ...timing });
           return rpcResult(id, toolFailure(e.message, e.code, { ...e.details, duration_ms: timing.ms }));
         }
-        ctx.logMetric?.({ tool: name, ok: false, error: 'internal_error', ...timing });
+        ctx.logMetric?.({ tool: name, ok: false, error: 'internal_error', arg_count: argCount, ...timing });
         ctx.logError?.('tool_failed', { tool: name, message: e && e.message });
         return rpcResult(id, toolFailure('Внутренняя ошибка HEYS при выполнении инструмента.', 'internal_error', { duration_ms: timing.ms }));
       }

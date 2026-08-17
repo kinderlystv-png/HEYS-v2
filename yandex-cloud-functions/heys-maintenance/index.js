@@ -11,6 +11,7 @@
 const { acquireHealthyClient } = require('./shared/db-pool');
 const { initSecrets } = require('./shared/secrets');
 const { fetchTelegramWithDnsFallback } = require('./shared/telegram-fetch');
+const { runMcpTelemetryAggregation } = require('./mcp-telemetry');
 
 // DB pool — shared canonical implementation (CA-cert verify-full SSL).
 
@@ -1664,11 +1665,27 @@ module.exports.handler = async (event, context) => {
     const runDailyReport = triggerId === 'daily_report' || triggerId === 'all';
     // Weekly digest: воскресенье 19:00 МСК = 16:00 UTC
     const runWeeklyReport = triggerId === 'weekly_report' || triggerId === 'all';
+    // Телеметрия MCP: сворачивает вчерашние сутки из Cloud Logging в агрегат.
+    // Идёт вместе с daily_cleanup — к ночи сутки уже закрыты.
+    const runMcpTelemetry = triggerId === 'mcp_telemetry' || triggerId === 'daily_cleanup' || triggerId === 'all';
 
     // Process trial queue
     if (runTrialQueue) {
       results.trial_queue = await processTrialQueue(client);
       await recordHeartbeat(client, 'trial_queue');
+    }
+
+    // Телеметрия MCP. Отчётная задача: её падение не должно ронять остальной
+    // цикл обслуживания, поэтому ошибка ловится и уходит в результат строкой.
+    if (runMcpTelemetry) {
+      try {
+        results.mcp_telemetry = await runMcpTelemetryAggregation(client);
+        console.log(`[Maintenance] MCP telemetry: ${JSON.stringify(results.mcp_telemetry)}`);
+        if (!results.mcp_telemetry.skipped) await recordHeartbeat(client, 'mcp_telemetry');
+      } catch (e) {
+        results.mcp_telemetry = { error: e.message };
+        console.warn('[Maintenance] MCP telemetry failed:', e.message);
+      }
     }
 
     // Retention stays read-only until legal/owner sign-off.

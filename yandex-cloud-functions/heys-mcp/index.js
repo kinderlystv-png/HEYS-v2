@@ -36,6 +36,7 @@ const { createApiClient } = require('./lib/heys-api');
 const { createTools, ToolError } = require('./lib/tools');
 const { createCuratorContext } = require('./lib/curator');
 const { TASKS_BOARD_SCHEMAS, TASKS_AGENT_SCHEMAS } = require('./lib/tasks-tools');
+const { createTelemetry } = require('./lib/telemetry');
 const tasks = require('./lib/tasks');
 
 /**
@@ -48,6 +49,16 @@ const tasks = require('./lib/tasks');
  */
 const PROCESS_START_MS = Date.now();
 let instanceWarm = false;
+
+/**
+ * Писатель телеметрии живёт на уровне модуля: псевдонимы подключений и
+ * счётчики вызовов должны переживать отдельный запрос и умирать вместе с
+ * инстансом. Версия функции приходит из окружения рантайма — по ней в отчёте
+ * отличается «стало медленнее» от «выкатили другую сборку».
+ */
+const telemetry = createTelemetry({
+  fnVersion: process.env.FUNCTION_VERSION_ID || process.env.FUNCTION_VERSION || null,
+});
 
 const ATTACH_PAGE_PATH = '/mcp/attach';
 const ATTACH_MANIFEST_PATH = '/mcp/attach/manifest.webmanifest';
@@ -333,14 +344,28 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
     instructions,
     logError: (kind, meta) => console.error(`[heys-mcp] ${kind}`, meta),
     upstream: () => ({ calls: api.stats.calls, ms: api.stats.ms }),
-    // Одна строка на вызов инструмента: по ней в Cloud Logging видно, какой
-    // сценарий записи сколько стоит и сколько в нём round-trip'ов к API.
+    // Одна строка чистого JSON на вызов инструмента: по ней в Cloud Logging
+    // видно, какой сценарий сколько стоит, сколько в нём round-trip'ов к API
+    // и в какой последовательности инструменты шли внутри подключения.
+    // Состав строки — белый список в lib/telemetry.js.
     logMetric: (metric) => {
-      const cold = !instanceWarm;
+      const coldStart = !instanceWarm;
       instanceWarm = true;
-      console.info('[heys-mcp] tool_timing', JSON.stringify({
-        role: auth.role, cold, uptime_ms: Date.now() - PROCESS_START_MS, ...metric,
-      }));
+      telemetry.record({
+        tool: metric.tool,
+        // Материал для псевдонима подключения: сам заголовок наружу не идёт,
+        // в строку попадает только необратимый срез его хэша.
+        token: headers.authorization || null,
+        role: auth.role,
+        ok: metric.ok,
+        errorCode: metric.error,
+        durationMs: metric.ms,
+        upstreamCalls: metric.upstream ? metric.upstream.calls : null,
+        upstreamMs: metric.upstream ? metric.upstream.ms : null,
+        responseBytes: metric.response_bytes,
+        argCount: metric.arg_count,
+        coldStart,
+      });
     },
   });
 
