@@ -5231,14 +5231,15 @@
 .ca-modal__meal-card {
   background: var(--v4-card, #f7efe2);
   border-radius: 18px;
-  padding: 11px 13px 12px;
+  padding: 13px 13px 14px;
   list-style: none;
 }
-.ca-modal__meal-card .ca-modal__item {
+.ca-modal__meal-card > .ca-modal__item {
   background: transparent;
-  padding: 0;
-  min-height: 0;
+  padding: 2px 0 4px;
+  min-height: 44px;
   border-radius: 0;
+  box-sizing: border-box;
 }
 
 .ca-modal__meal-head {

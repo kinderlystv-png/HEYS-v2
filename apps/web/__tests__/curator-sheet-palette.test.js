@@ -40,5 +40,6 @@ describe('curator sheet palette contract', () => {
     expect(css).toMatch(/\.ca-modal__group\s*\{[^}]*gap:\s*8px/);
     expect(css).toMatch(/\.ca-modal__date-label\s*\{[^}]*line-height:\s*1/);
     expect(css).toMatch(/\.ca-modal__date-kcal\s*\{[^}]*line-height:\s*1/);
+    expect(css).toMatch(/\.ca-modal__meal-card\s*>\s*\.ca-modal__item\s*\{[^}]*min-height:\s*44px/);
   });
 });
