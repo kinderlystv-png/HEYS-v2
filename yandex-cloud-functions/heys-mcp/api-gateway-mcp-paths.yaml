@@ -54,6 +54,30 @@
       service_account_id: aje85rjgpj4nk9m384ek
       function_id: __HEYS_MCP_FUNCTION_ID__
 
+# Дневниковый адрес того же кураторского транспорта: те же инструменты и та же
+# роль из токена, но в tools/list не уезжают досочные и агентские схемы
+# задачника. Отдельный OAuth resource, подключается в claude.ai как второй
+# коннектор рядом с /mcp/curator.
+/mcp/curator/diary:
+  get:
+    summary: MCP OAuth discovery challenge for the diary-only curator connector
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+  post:
+    summary: MCP Streamable HTTP endpoint for the diary-only curator connector
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+  options:
+    summary: CORS preflight for the diary-only curator MCP endpoint
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
 /mcp/chatgpt/curator:
   get:
     summary: ChatGPT-specific MCP OAuth discovery challenge for the curator connector
@@ -149,6 +173,14 @@
       service_account_id: aje85rjgpj4nk9m384ek
       function_id: __HEYS_MCP_FUNCTION_ID__
 
+/.well-known/oauth-protected-resource/mcp/curator/diary:
+  get:
+    summary: OAuth protected resource metadata for /mcp/curator/diary
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
 /.well-known/oauth-protected-resource/mcp/chatgpt/curator:
   get:
     summary: OAuth protected resource metadata for /mcp/chatgpt/curator
@@ -176,6 +208,14 @@
 /.well-known/oauth-authorization-server/mcp/curator:
   get:
     summary: OAuth authorization server metadata for /mcp/curator
+    x-yc-apigateway-integration:
+      type: cloud_functions
+      service_account_id: aje85rjgpj4nk9m384ek
+      function_id: __HEYS_MCP_FUNCTION_ID__
+
+/.well-known/oauth-authorization-server/mcp/curator/diary:
+  get:
+    summary: OAuth authorization server metadata for /mcp/curator/diary
     x-yc-apigateway-integration:
       type: cloud_functions
       service_account_id: aje85rjgpj4nk9m384ek

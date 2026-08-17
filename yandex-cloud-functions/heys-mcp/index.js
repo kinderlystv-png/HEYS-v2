@@ -5,6 +5,7 @@
  *
  * Один Cloud Function обслуживает три группы маршрутов:
  *   POST /mcp, POST /mcp/curator       — Streamable HTTP транспорт MCP
+ *   POST /mcp/curator/diary            — кураторский транспорт без досочных схем задачника
  *   POST /mcp/chatgpt/curator          — стабильный ChatGPT alias без старого discovery-cache
  *   /mcp/register|authorize|token      — OAuth 2.1 + DCR + PKCE
  *   /.well-known/oauth-*               — метаданные для авто-обнаружения
@@ -34,6 +35,7 @@ const board = require('./lib/board');
 const { createApiClient } = require('./lib/heys-api');
 const { createTools, ToolError } = require('./lib/tools');
 const { createCuratorContext } = require('./lib/curator');
+const { TASKS_BOARD_SCHEMAS, TASKS_AGENT_SCHEMAS } = require('./lib/tasks-tools');
 const tasks = require('./lib/tasks');
 
 /**
@@ -78,7 +80,20 @@ const CHATGPT_CURATOR_ENDPOINTS = new Set([
   '/mcp/chatgpt/curator',
   '/mcp/chatgpt/curator-v2',
 ]);
-const MCP_ENDPOINTS = new Set(['/mcp', '/mcp/curator', ...CHATGPT_CURATOR_ENDPOINTS]);
+
+/**
+ * Дневниковый адрес того же кураторского транспорта. Инструменты, роль и
+ * обязательный transcript — те же самые: отличается только список схем в
+ * `tools/list`, из него убраны досочные и агентские инструменты задачника.
+ * В сессии про еду они не вызываются, но 38 КБ схем уезжают в каждый запрос.
+ */
+const DIARY_CURATOR_ENDPOINTS = new Set(['/mcp/curator/diary']);
+const MCP_ENDPOINTS = new Set([
+  '/mcp',
+  '/mcp/curator',
+  ...CHATGPT_CURATOR_ENDPOINTS,
+  ...DIARY_CURATOR_ENDPOINTS,
+]);
 const DEFAULT_MCP_ENDPOINT = '/mcp';
 const CURATOR_OAUTH_SCHEME = [{ type: 'oauth2', scopes: ['heys:diary'] }];
 
@@ -253,6 +268,25 @@ function chatGptToolSchemas(schemas) {
   return schemas.map((schema) => ({ ...schema, securitySchemes: CURATOR_OAUTH_SCHEME }));
 }
 
+/**
+ * Инструменты доски и агентского слоя задачника, скрытые на дневниковом адресе.
+ * Имена берутся из самих схем, а не списком: новый инструмент группы исчезает
+ * из дневникового набора сам, без второй правки здесь.
+ */
+const DIARY_HIDDEN_TOOLS = new Set(
+  [...TASKS_BOARD_SCHEMAS, ...TASKS_AGENT_SCHEMAS].map((schema) => schema.name),
+);
+
+/**
+ * Скрываются только схемы: сами обработчики остаются в `ctx.tools`, поэтому
+ * вызов такого инструмента по памяти модели по-прежнему отрабатывает, а не
+ * падает «Unknown tool». Дневниковые записи это не затрагивает — обёртка
+ * transcript живёт на heys_*-инструментах и от списка схем не зависит.
+ */
+function diaryToolSchemas(schemas) {
+  return schemas.filter((schema) => !DIARY_HIDDEN_TOOLS.has(schema.name));
+}
+
 async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath = DEFAULT_MCP_ENDPOINT }) {
   const auth = oauth.authenticateAccessToken(headers.authorization, secret);
   if (!auth.ok) {
@@ -282,9 +316,13 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
     // инструменты работают с дневниками клиентов куратора.
     const curatorCtx = await curatorContext(api, auth);
     tools = curatorCtx.tools;
-    toolSchemas = CHATGPT_CURATOR_ENDPOINTS.has(resourcePath)
-      ? chatGptToolSchemas(curatorCtx.schemas)
-      : curatorCtx.schemas;
+    if (CHATGPT_CURATOR_ENDPOINTS.has(resourcePath)) {
+      toolSchemas = chatGptToolSchemas(curatorCtx.schemas);
+    } else if (DIARY_CURATOR_ENDPOINTS.has(resourcePath)) {
+      toolSchemas = diaryToolSchemas(curatorCtx.schemas);
+    } else {
+      toolSchemas = curatorCtx.schemas;
+    }
     instructions = curatorCtx.instructions;
   } else {
     tools = createTools({ api, sessionToken: auth.sessionToken, clientId: auth.clientId }).tools;

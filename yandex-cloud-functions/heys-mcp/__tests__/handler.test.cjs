@@ -142,6 +142,88 @@ test('/mcp/chatgpt/curator-v2 рекламирует OAuth до входа и с
   assert.equal(claude.statusCode, 401);
 });
 
+test('/mcp/curator/diary — свой OAuth resource рядом с кураторским', async () => {
+  const resource = '/mcp/curator/diary';
+  for (const method of ['GET', 'POST']) {
+    const res = await call({ httpMethod: method, path: resource, body: method === 'POST' ? '{}' : undefined });
+    assert.equal(res.statusCode, 401, method);
+    assert.match(
+      res.headers['WWW-Authenticate'],
+      /resource_metadata="https:\/\/api\.heyslab\.ru\/\.well-known\/oauth-protected-resource\/mcp\/curator\/diary"/,
+      method,
+    );
+  }
+
+  const meta = await call({ httpMethod: 'GET', path: `/.well-known/oauth-protected-resource${resource}` });
+  assert.equal(meta.statusCode, 200);
+  assert.equal(body(meta).resource, `https://${HOST}${resource}`);
+});
+
+test('/mcp/curator/diary отдаёт дневник без досочных и агентских схем задачника', async () => {
+  const oauth = require('../lib/oauth');
+  const { TASKS_BOARD_SCHEMAS, TASKS_AGENT_SCHEMAS } = require('../lib/tasks-tools');
+
+  const tokenFor = (resource) => {
+    const redirectUri = `https://claude.ai/api/mcp/auth_callback/${encodeURIComponent(resource)}`;
+    const registration = oauth.registerClient({
+      client_name: 'diary split test',
+      redirect_uris: [redirectUri],
+      token_endpoint_auth_method: 'client_secret_post',
+    }, process.env.MCP_TOKEN_SECRET).registration;
+    const code = oauth.issueAuthorizationCode({
+      clientId: registration.client_id,
+      redirectUri,
+      codeChallenge: '',
+      heysClientId: 'curator-test',
+      sessionToken: 'curator-jwt-test',
+      role: 'curator',
+      resource: `https://${HOST}${resource}`,
+    }, process.env.MCP_TOKEN_SECRET);
+    const exchanged = oauth.exchangeAuthorizationCode({
+      code,
+      client_id: registration.client_id,
+      client_secret: registration.client_secret,
+      redirect_uri: redirectUri,
+    }, process.env.MCP_TOKEN_SECRET);
+    assert.equal(exchanged.ok, true);
+    return exchanged.tokens.access_token;
+  };
+
+  const listTools = async (resource) => {
+    const res = await call({
+      httpMethod: 'POST', path: resource,
+      headers: { host: HOST, authorization: `Bearer ${tokenFor(resource)}` },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 7, method: 'tools/list', params: {} }),
+    });
+    assert.equal(res.statusCode, 200, resource);
+    return body(res).result.tools.map((schema) => schema.name);
+  };
+
+  // Задачник подключается только при настроенном клиенте — без него в обоих
+  // наборах не было бы ни одной tasks_*-схемы и сравнение ничего не проверяло бы.
+  const previousTasksClient = process.env.HEYS_TASKS_CLIENT_ID;
+  process.env.HEYS_TASKS_CLIENT_ID = 'tasks-client-test';
+  try {
+    const full = await listTools('/mcp/curator');
+    const diary = await listTools('/mcp/curator/diary');
+    const hidden = [...TASKS_BOARD_SCHEMAS, ...TASKS_AGENT_SCHEMAS].map((schema) => schema.name);
+
+    // Скрытая группа на кураторском адресе на месте — иначе тест зеленел бы
+    // просто потому, что задачник не подключился.
+    for (const name of hidden) assert.ok(full.includes(name), `на /mcp/curator пропал ${name}`);
+    for (const name of hidden) assert.ok(!diary.includes(name), `на дневниковом адресе остался ${name}`);
+
+    // Дневник и стенограмма — то, ради чего этот адрес существует.
+    for (const name of ['heys_log_meal', 'heys_update_day', 'tasks_checkpoint', 'tasks_read', 'tasks_search']) {
+      assert.ok(diary.includes(name), `на дневниковом адресе не хватает ${name}`);
+    }
+    assert.equal(diary.length, full.length - hidden.length);
+  } finally {
+    if (previousTasksClient === undefined) delete process.env.HEYS_TASKS_CLIENT_ID;
+    else process.env.HEYS_TASKS_CLIENT_ID = previousTasksClient;
+  }
+});
+
 test('каждый адрес транспорта ведёт за метаданными к себе, а не к соседу', async () => {
   const res = await call({ httpMethod: 'POST', path: '/mcp/curator', body: '{}' });
   assert.match(
