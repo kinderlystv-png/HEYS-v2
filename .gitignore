@@ -9,6 +9,9 @@ lerna-debug.log*
 # Deploy smoke artifacts (p50 baseline from Logging)
 ops/
 
+# Bundled PostgreSQL client binaries (scripts/db/psql.ps1); download locally
+tools/pgsql/
+
 # Runtime data
 pids
 *.pid

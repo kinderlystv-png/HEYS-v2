@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # get-pg-password.sh — Fetch heys_admin password from Yandex Lockbox and export PGPASSWORD.
 #
+# НЕ используй PG_PASSWORD из yandex-cloud-functions/.env для prod psql —
+# там часто Lockbox-placeholder; будет odyssey: incorrect password.
+#
 # Use via `source` to make PGPASSWORD available in current shell:
 #   source scripts/db/get-pg-password.sh
 #
