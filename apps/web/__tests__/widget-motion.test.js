@@ -78,12 +78,14 @@ function loadMotion({ reducedMotion = false } = {}) {
 }
 
 describe('motion значений виджетов', () => {
-    it('easeOutCubic — закреплён в 0 и 1, тормозит к концу', () => {
+    it('easeInOutCubic — мягкий разгон и мягкая остановка, без рывка в начале', () => {
         const { ease } = loadMotion();
         expect(ease(0)).toBe(0);
         expect(ease(1)).toBe(1);
-        expect(ease(0.5)).toBeGreaterThan(0.5); // выезжает быстро
+        expect(ease(0.5)).toBeCloseTo(0.5, 6); // симметрия: середина пути в середине времени
+        expect(ease(0.1)).toBeLessThan(0.1); // не выстреливает на старте
         expect(ease(0.9)).toBeGreaterThan(ease(0.8));
+        expect(ease(0.95) - ease(0.9)).toBeLessThan(ease(0.5) - ease(0.45)); // тормозит к концу
     });
 
     it('первый рендер — сразу целевое значение, без промежуточных кадров', () => {
@@ -103,7 +105,7 @@ describe('motion значений виджетов', () => {
         expect(second).toBeGreaterThan(1000);
         expect(second).toBeLessThan(2000);
 
-        const done = m.frame(1000, [2000])[0];
+        const done = m.frame(1300, [2000])[0];
         expect(done).toBe(2000);
         expect(m.rafQueue.length).toBe(0);
     });
@@ -116,7 +118,7 @@ describe('motion значений виджетов', () => {
         const mid = m.frame(150, [800])[0];
         expect(mid).toBeLessThan(2400);
         expect(mid).toBeGreaterThan(800);
-        expect(m.frame(1000, [800])[0]).toBe(800);
+        expect(m.frame(1300, [800])[0]).toBe(800);
     });
 
     it('смена цели на полпути продолжает с текущего кадра', () => {
@@ -124,15 +126,16 @@ describe('motion значений виджетов', () => {
         m.render([0]);
         m.render([3000]);
         m.frame(0, [3000]);
-        const mid = m.frame(100, [3000])[0];
-        expect(mid).toBeGreaterThan(0);
+        const mid = m.frame(500, [3000])[0];
+        expect(mid).toBeGreaterThan(500);
         expect(mid).toBeLessThan(3000);
 
         m.render([500]); // пользователь переключил день на полпути
-        const after = m.frame(200, [500])[0];
-        expect(after).toBeLessThan(mid + 1); // пошли вниз от достигнутого
-        expect(after).toBeGreaterThan(0); // не телепорт в 0 и не рывок к 500
-        expect(m.frame(1200, [500])[0]).toBe(500);
+        m.frame(600, [500]); // первый кадр новой анимации = точка, где застали
+        const after = m.frame(760, [500])[0];
+        expect(after).toBeLessThan(mid); // пошли вниз от достигнутого
+        expect(after).toBeGreaterThan(500); // не телепорт и не рывок к цели
+        expect(m.frame(2000, [500])[0]).toBe(500);
     });
 
     it('вектор БЖУ анимируется одним циклом — один кадр двигает все три', () => {
@@ -144,7 +147,19 @@ describe('motion значений виджетов', () => {
         expect(p).toBeGreaterThan(100);
         expect(f).toBeLessThan(60);
         expect(c).toBeGreaterThan(200);
-        expect(m.frame(1000, [160, 40, 320])).toEqual([160, 40, 320]);
+        expect(m.frame(1300, [160, 40, 320])).toEqual([160, 40, 320]);
+    });
+
+    it('quantize: в полёте ккал идут по десяткам, в конце — точное значение', () => {
+        const m = loadMotion();
+        const opts = { quantize: 10 };
+        m.render([1000], opts);
+        m.render([1843], opts);
+        m.frame(0, [1843], opts);
+        const inFlight = [200, 400, 600].map((ts) => m.frame(ts, [1843], opts)[0]);
+        inFlight.forEach((v) => expect(v % 10).toBe(0)); // младшие разряды не мельтешат
+        expect(inFlight[2]).toBeGreaterThan(inFlight[0]);
+        expect(m.frame(1300, [1843], opts)[0]).toBe(1843); // финал точный, не 1840
     });
 
     it('prefers-reduced-motion: значение ставится мгновенно, rAF не заводится', () => {
@@ -160,7 +175,7 @@ describe('виджеты подключены к motion', () => {
     it('калории — все размеры считают от анимированного значения', () => {
         const start = uiSrc.indexOf('function CaloriesWidgetContent');
         const chunk = uiSrc.slice(start, uiSrc.indexOf('function WaterWidgetContent'));
-        expect(chunk).toContain('const animEaten = useWidgetMotionValue(eaten)');
+        expect(chunk).toContain("const animEaten = useWidgetMotionValue(eaten, { quantize: 10 })");
         expect(chunk).toContain('const animRemaining = Math.max(0, target - animEaten)');
         // micro / 2×2 hero / 2×1 строка / std — везде анимированное значение
         expect(chunk).toContain("className: 'widget-calories widget-calories--micro'");

@@ -2271,11 +2271,13 @@
   // назад). Старт всегда от того, что сейчас на экране, а не от нуля.
   // useWidgetMotionValues анимирует вектор значений одним rAF-циклом, чтобы три
   // кольца БЖУ не давали три setState на кадр.
-  const WIDGET_MOTION_MS = 620;
+  const WIDGET_MOTION_MS = 1100;
 
-  // easeOutCubic — быстрый старт, мягкое торможение (как у wave/weight ниже)
+  // easeInOutCubic — мягкий разгон и мягкая остановка, ход стрелки спидометра.
+  // easeOutCubic здесь не годится: он проходит 2/3 пути за первую треть времени,
+  // что читается как рывок, а не как пересчёт.
   function widgetMotionEase(t) {
-    return 1 - Math.pow(1 - t, 3);
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   }
 
   function widgetMotionDisabled() {
@@ -2287,7 +2289,7 @@
   }
 
   function useWidgetMotionValues(targets, options = {}) {
-    const { duration = WIDGET_MOTION_MS, animateOnMount = false } = options;
+    const { duration = WIDGET_MOTION_MS, animateOnMount = false, quantize = 0 } = options;
     const nums = targets.map((v) => (Number.isFinite(Number(v)) ? Number(v) : 0));
     const key = nums.join('|');
     const targetsRef = React.useRef(nums);
@@ -2324,7 +2326,13 @@
           return;
         }
         const k = widgetMotionEase(t);
-        displayRef.current = start.map((v, i) => v + (to[i] - v) * k);
+        displayRef.current = start.map((v, i) => {
+          const next = v + (to[i] - v) * k;
+          // В полёте крупные числа идут по сетке (ккал — по десяткам): иначе
+          // младшие разряды мельтешат и это читается как дрожь, а не как счёт.
+          // В конце settle() ставит точное значение.
+          return quantize > 0 ? Math.round(next / quantize) * quantize : next;
+        });
         setDisplay(displayRef.current);
         rafRef.current = requestAnimationFrame(step);
       };
@@ -2333,7 +2341,7 @@
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = 0;
       };
-    }, [key, duration]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [key, duration, quantize]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return display;
   }
@@ -2365,7 +2373,7 @@
     // Плавный пересчёт съеденного: число, подпись и полоса идут от предыдущего
     // отображаемого значения к новому (смена дня — переход, а не сброс в 0).
     // Классификация цвета остаётся на фактическом pct, чтобы не мигать в пути.
-    const animEaten = useWidgetMotionValue(eaten);
+    const animEaten = useWidgetMotionValue(eaten, { quantize: 10 });
     const animPct = target > 0 ? Math.round((animEaten / target) * 100) : 0;
     const animRemaining = Math.max(0, target - animEaten);
 
