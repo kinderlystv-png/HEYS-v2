@@ -402,6 +402,12 @@ test('инструкция ведёт коротким путём и не тре
     'быстрый путь не должен обещать один вызов там, где гейт чек-ина требует второго',
   );
   assert.match(text, /За сегодня перед этим нужен heys_get_day/);
+
+  assert.match(
+    text,
+    /какие продукты.*heys_search_products.*heys_code_\* не зови/s,
+    'каталог — search, не code',
+  );
   assert.match(text, /items\[\{query, pieces: N\}\]/);
   assert.match(text, /СЧЁТЧИК ВЫЗОВОВ/);
   assert.match(text, /не больше одного раза на каждую отдельную дату/);
