@@ -34,4 +34,11 @@ describe('add product search v4 canvas structure', () => {
     expect(cssSource).toContain('.mc-modal:has(.aps-v4-flow)');
     expect(cssSource).toContain('.aps-v4-search-footnote');
   });
+
+  it('shows recipe composition on v4 product rows', () => {
+    expect(addProductSource).toContain('formatRecipeSummary');
+    expect(addProductSource).toContain('Состав рецепта');
+    expect(addProductSource).toContain('Исправить записи в дневнике');
+    expect(cssSource).toContain('.aps-product-recipe');
+  });
 });

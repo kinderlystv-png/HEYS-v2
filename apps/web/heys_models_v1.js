@@ -452,6 +452,334 @@
    */
 
   function round1(v) { return Math.round(v * 10) / 10; }
+
+  const RECIPE_MASS_FIELDS = [
+    'protein100', 'simple100', 'complex100',
+    'badFat100', 'goodFat100', 'trans100', 'fiber100',
+    'sodium100', 'cholesterol', 'omega3_100', 'omega6_100',
+    'nutrient_density',
+    'calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'selenium', 'iodine',
+    'vitamin_a', 'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k',
+    'vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12',
+  ];
+
+  const RECIPE_REQUIRED_NUTRIENTS = [
+    'protein100', 'simple100', 'complex100',
+    'badFat100', 'goodFat100', 'trans100', 'fiber100', 'gi', 'harm',
+  ];
+
+  function recipeError(code, extra) {
+    const err = new Error(code);
+    err.code = code;
+    if (extra) Object.assign(err, extra);
+    return err;
+  }
+
+  function normalizeRecipe(recipe, { nowMs, previousRev = 0 } = {}) {
+    if (!recipe || typeof recipe !== 'object' || Array.isArray(recipe)) {
+      throw recipeError('invalid_recipe');
+    }
+    const yieldGrams = Number(recipe.yield_grams);
+    if (!(yieldGrams > 0) || yieldGrams > 50000) {
+      throw recipeError('invalid_recipe_yield');
+    }
+    const rawItems = Array.isArray(recipe.items) ? recipe.items : [];
+    if (!rawItems.length) throw recipeError('recipe_items_empty');
+    if (rawItems.length > 40) throw recipeError('recipe_items_too_many');
+    const items = rawItems.map((item, index) => {
+      const grams = Number(item && item.grams);
+      if (!(grams > 0) || grams > 50000) {
+        throw recipeError('invalid_recipe_item_grams', { index });
+      }
+      const productId = item && item.product_id != null ? String(item.product_id).trim() : '';
+      return {
+        product_id: productId || undefined,
+        query: !productId && item && item.query ? String(item.query).trim() : undefined,
+        name: String((item && item.name) || '').trim(),
+        grams: round1(grams),
+      };
+    });
+    const prev = Number(previousRev);
+    return {
+      yield_grams: round1(yieldGrams),
+      items,
+      rev: Number.isFinite(prev) && prev > 0 ? prev + 1 : 1,
+      updatedAt: nowMs || Date.now(),
+    };
+  }
+
+  function computeRecipeNutrients(recipe, findProduct) {
+    if (typeof findProduct !== 'function') throw recipeError('invalid_recipe');
+    const yieldGrams = Number(recipe && recipe.yield_grams);
+    if (!(yieldGrams > 0)) throw recipeError('invalid_recipe_yield');
+    const rawItems = recipe && Array.isArray(recipe.items) ? recipe.items : [];
+    if (!rawItems.length) throw recipeError('recipe_items_empty');
+
+    const items = [];
+    const totals = {};
+    for (const field of RECIPE_MASS_FIELDS) totals[field] = 0;
+    let giMass = 0;
+    let harmMass = 0;
+    let novaWeighted = 0;
+    let novaMass = 0;
+    let itemGrams = 0;
+
+    for (let index = 0; index < rawItems.length; index += 1) {
+      const spec = rawItems[index] || {};
+      const grams = Number(spec.grams);
+      if (!(grams > 0)) throw recipeError('invalid_recipe_item_grams', { index });
+      const product = findProduct({ product_id: spec.product_id, query: spec.query });
+      if (!product) {
+        throw recipeError('recipe_item_not_found', {
+          product_id: spec.product_id,
+          query: spec.query,
+          index,
+        });
+      }
+      const name = String(spec.name || product.name || '').trim();
+      items.push({
+        product_id: product.id != null ? String(product.id) : String(spec.product_id || ''),
+        name,
+        grams: round1(grams),
+      });
+      itemGrams += grams;
+      const factor = grams / 100;
+      for (const field of RECIPE_MASS_FIELDS) {
+        const value = Number(product[field]);
+        if (Number.isFinite(value)) totals[field] += value * factor;
+      }
+      giMass += (Number(product.gi) || 0) * grams;
+      harmMass += (Number(product.harm) || 0) * grams;
+      if (Number.isFinite(Number(product.nova_group))) {
+        novaWeighted += Number(product.nova_group) * grams;
+        novaMass += grams;
+      }
+    }
+
+    const scale = 100 / yieldGrams;
+    const nutrients = {};
+    for (const field of RECIPE_MASS_FIELDS) {
+      const value = totals[field] * scale;
+      if (RECIPE_REQUIRED_NUTRIENTS.includes(field)) nutrients[field] = round1(value);
+      else if (value) nutrients[field] = round1(value);
+    }
+    nutrients.gi = itemGrams > 0 ? round1(giMass / itemGrams) : 0;
+    nutrients.harm = itemGrams > 0 ? round1(harmMass / itemGrams) : 0;
+    if (novaMass > 0) nutrients.nova_group = Math.round(novaWeighted / novaMass);
+    const carbs = (Number(nutrients.simple100) || 0) + (Number(nutrients.complex100) || 0);
+    const fat = (Number(nutrients.badFat100) || 0) + (Number(nutrients.goodFat100) || 0) + (Number(nutrients.trans100) || 0);
+    nutrients.carbs100 = round1(carbs);
+    nutrients.fat100 = round1(fat);
+    nutrients.kcal100 = round1(3 * (Number(nutrients.protein100) || 0) + 4 * carbs + 9 * fat);
+    return { nutrients, items, yield_grams: round1(yieldGrams) };
+  }
+
+  function formatRecipeSummary(recipe) {
+    if (!recipe || !Array.isArray(recipe.items) || !recipe.items.length) return '';
+    const parts = recipe.items.map((item) => `${item.name || '?'} ${item.grams} г`);
+    const yieldPart = Number(recipe.yield_grams) > 0 ? ` · выход ${recipe.yield_grams} г` : '';
+    return `${parts.join(', ')}${yieldPart}`;
+  }
+
+  function formatRecipePortionApprox(recipe, portionGrams) {
+    const yieldGrams = Number(recipe && recipe.yield_grams);
+    const portion = Number(portionGrams);
+    if (!(yieldGrams > 0) || !(portion > 0) || !Array.isArray(recipe.items)) return '';
+    const scale = portion / yieldGrams;
+    return recipe.items
+      .map((item) => `≈ ${item.name || '?'} ${round1((Number(item.grams) || 0) * scale)} г`)
+      .join(', ');
+  }
+
+  function recipeSnapshotFields(product) {
+    const recipe = product && product.recipe;
+    if (!recipe || !Array.isArray(recipe.items) || !recipe.items.length) return null;
+    return {
+      recipe_yield: Number(recipe.yield_grams) || 0,
+      recipe_items: recipe.items.map((item) => ({
+        name: String(item.name || '').trim(),
+        grams: Number(item.grams) || 0,
+      })),
+      recipe_rev: Number(recipe.rev) || 0,
+    };
+  }
+
+  function recipeItemKcal100(product) {
+    const carbs = Number(product && product.carbs100) || ((Number(product && product.simple100) || 0) + (Number(product && product.complex100) || 0));
+    const fat = Number(product && product.fat100) || ((Number(product && product.badFat100) || 0) + (Number(product && product.goodFat100) || 0) + (Number(product && product.trans100) || 0));
+    const protein = Number(product && product.protein100) || 0;
+    return round1(3 * protein + 4 * carbs + 9 * fat);
+  }
+
+  function itemKcalLocal(item) {
+    return ((Number(item && item.kcal100) || 0) * (Number(item && item.grams) || 0)) / 100;
+  }
+
+  function itemMatchesRecipeProduct(item, productId, recipeRevFilter) {
+    if (!item) return false;
+    if (String(item.product_id || '') !== String(productId || '')) return false;
+    if (recipeRevFilter == null || recipeRevFilter === '') return true;
+    const rev = Number(item.recipe_rev);
+    if (Number.isFinite(rev) && rev > 0) return rev === Number(recipeRevFilter);
+    return false;
+  }
+
+  function recipeRevBucket(item) {
+    const rev = Number(item && item.recipe_rev);
+    return Number.isFinite(rev) && rev > 0 ? String(rev) : 'none';
+  }
+
+  function applyRecipeSnapshotToItem(item, product) {
+    const snap = recipeSnapshotFields(product);
+    const next = { ...item };
+    if (snap) {
+      next.recipe_yield = snap.recipe_yield;
+      next.recipe_items = snap.recipe_items;
+      next.recipe_rev = snap.recipe_rev;
+    }
+    if (product && product.name) next.name = product.name;
+    for (const field of RECIPE_MASS_FIELDS) {
+      if (product && product[field] !== undefined && product[field] !== null) next[field] = product[field];
+    }
+    if (product) {
+      if (product.gi !== undefined && product.gi !== null) next.gi = product.gi;
+      if (product.harm !== undefined && product.harm !== null) next.harm = product.harm;
+      const carbs = (Number(product.simple100) || 0) + (Number(product.complex100) || 0);
+      const fat = (Number(product.badFat100) || 0) + (Number(product.goodFat100) || 0) + (Number(product.trans100) || 0);
+      next.carbs100 = product.carbs100 != null ? product.carbs100 : carbs;
+      next.fat100 = product.fat100 != null ? product.fat100 : fat;
+      next.kcal100 = recipeItemKcal100(product);
+    }
+    return next;
+  }
+
+  function collectRecipeMatches(day, productId, recipeRevFilter) {
+    const matches = [];
+    for (const meal of (day && Array.isArray(day.meals) ? day.meals : [])) {
+      for (const item of (meal && Array.isArray(meal.items) ? meal.items : [])) {
+        if (itemMatchesRecipeProduct(item, productId, recipeRevFilter)) matches.push({ meal, item });
+      }
+    }
+    return matches;
+  }
+
+  function previewRecipeReapply(daysByDate, product, { recipeRev } = {}) {
+    const productId = product && (product.id != null ? product.id : product.product_id);
+    const byRev = {};
+    let items = 0;
+    let kcalDelta = 0;
+    const days = [];
+    for (const date of Object.keys(daysByDate || {}).sort()) {
+      const day = daysByDate[date];
+      if (!day) continue;
+      const matches = collectRecipeMatches(day, productId, recipeRev);
+      if (!matches.length) continue;
+      let dayDelta = 0;
+      for (const { item } of matches) {
+        dayDelta += itemKcalLocal(applyRecipeSnapshotToItem(item, product)) - itemKcalLocal(item);
+        items += 1;
+        const bucket = recipeRevBucket(item);
+        byRev[bucket] = (byRev[bucket] || 0) + 1;
+      }
+      kcalDelta += dayDelta;
+      days.push({ date, items: matches.length, kcal_delta: round1(dayDelta) });
+    }
+    return {
+      days_count: days.length,
+      items_count: items,
+      kcal_delta: round1(kcalDelta),
+      by_rev: byRev,
+      days,
+      ingredients_current: true,
+      warning_norms: days.some((row) => Math.abs(Number(row.kcal_delta) || 0) >= 50),
+    };
+  }
+
+  function applyRecipeToDay(day, product, { recipeRev, nowMs } = {}) {
+    const productId = product && (product.id != null ? product.id : product.product_id);
+    const matches = collectRecipeMatches(day, productId, recipeRev);
+    if (!matches.length) return { changed: false, day, kcal_delta: 0, items_count: 0 };
+    let kcalDelta = 0;
+    const next = {
+      ...day,
+      meals: (day.meals || []).map((meal) => ({
+        ...meal,
+        items: (meal.items || []).map((item) => {
+          if (!itemMatchesRecipeProduct(item, productId, recipeRev)) return item;
+          const updated = applyRecipeSnapshotToItem(item, product);
+          kcalDelta += itemKcalLocal(updated) - itemKcalLocal(item);
+          return updated;
+        }),
+      })),
+    };
+    const log = Array.isArray(day.recipe_backfill_log) ? day.recipe_backfill_log.slice() : [];
+    log.push({
+      at: nowMs || Date.now(),
+      product_id: String(productId || ''),
+      name: String((product && product.name) || ''),
+      items_count: matches.length,
+      kcal_delta: round1(kcalDelta),
+    });
+    next.recipe_backfill_log = log;
+    next.updatedAt = nowMs || Date.now();
+    return { changed: true, day: next, kcal_delta: round1(kcalDelta), items_count: matches.length };
+  }
+
+  function enumerateIsoDates(from, to, maxDays) {
+    const dates = [];
+    let cursor = String(from || '');
+    const end = String(to || '');
+    const cap = Number(maxDays) > 0 ? Number(maxDays) : 120;
+    while (cursor && end && cursor <= end) {
+      dates.push(cursor);
+      if (dates.length >= cap) break;
+      const [y, m, d] = cursor.split('-').map(Number);
+      const shifted = new Date(Date.UTC(y, m - 1, d + 1));
+      cursor = `${shifted.getUTCFullYear()}-${pad2(shifted.getUTCMonth() + 1)}-${pad2(shifted.getUTCDate())}`;
+    }
+    return dates;
+  }
+
+  function reapplyRecipeToPastMeals({ product, dateFrom, dateTo, recipeRev, dryRun, nowMs, loadDay, saveDay }) {
+    const dates = enumerateIsoDates(dateFrom, dateTo, 120);
+    const daysByDate = {};
+    for (const date of dates) {
+      const loaded = typeof loadDay === 'function' ? loadDay(date) : null;
+      if (loaded) daysByDate[date] = loaded;
+    }
+    const preview = previewRecipeReapply(daysByDate, product, { recipeRev });
+    if (dryRun !== false) return { preview, applied: [] };
+    const applied = [];
+    for (const row of preview.days) {
+      const current = typeof loadDay === 'function' ? loadDay(row.date) : daysByDate[row.date];
+      const result = applyRecipeToDay(current, product, { recipeRev, nowMs: nowMs || Date.now() });
+      if (!result.changed) continue;
+      if (typeof saveDay === 'function') saveDay(row.date, result.day, Number(current && current.updatedAt) || 0);
+      applied.push({ date: row.date, items_count: result.items_count, kcal_delta: result.kcal_delta });
+    }
+    return { preview, applied };
+  }
+
+  function formatMealItemRecipeLine(item) {
+    if (!item || !Array.isArray(item.recipe_items) || !item.recipe_items.length) return '';
+    return formatRecipePortionApprox({
+      yield_grams: item.recipe_yield,
+      items: item.recipe_items,
+    }, item.grams) || formatRecipeSummary({
+      yield_grams: item.recipe_yield,
+      items: item.recipe_items,
+    });
+  }
+
+  M.computeRecipeNutrients = computeRecipeNutrients;
+  M.normalizeRecipe = normalizeRecipe;
+  M.formatRecipeSummary = formatRecipeSummary;
+  M.formatRecipePortionApprox = formatRecipePortionApprox;
+  M.recipeSnapshotFields = recipeSnapshotFields;
+  M.previewRecipeReapply = previewRecipeReapply;
+  M.applyRecipeToDay = applyRecipeToDay;
+  M.reapplyRecipeToPastMeals = reapplyRecipeToPastMeals;
+  M.formatMealItemRecipeLine = formatMealItemRecipeLine;
   function uuid() { return Math.random().toString(36).slice(2, 10); }
   function pad2(n) { return String(n).padStart(2, '0'); }
 
@@ -541,7 +869,8 @@
       schemaVersion: d.schemaVersion || undefined,
       _sourceId: d._sourceId || undefined,
       // Утренняя зарядка / follow-up (иначе ensureDay теряет статус при heys:day-updated)
-      morningActivation: (d.morningActivation && typeof d.morningActivation === 'object') ? d.morningActivation : undefined
+      morningActivation: (d.morningActivation && typeof d.morningActivation === 'object') ? d.morningActivation : undefined,
+      recipe_backfill_log: Array.isArray(d.recipe_backfill_log) ? d.recipe_backfill_log : undefined
     };
     // 🆕 v3.7.3: Не создаём пустые тренировки, только очищаем невалидные
     if (!Array.isArray(base.trainings)) base.trainings = [];

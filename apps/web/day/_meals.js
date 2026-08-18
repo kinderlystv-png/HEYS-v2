@@ -2136,6 +2136,9 @@
                                 onClick: (e) => { e.stopPropagation(); openEditGramsModal(mealIndex, it.id, G, p); },
                             }, G + 'г'),
                         ),
+                        HEYS.models?.formatMealItemRecipeLine?.(it)
+                          ? React.createElement('div', { className: 'mpc-recipe-line' }, HEYS.models.formatMealItemRecipeLine(it))
+                          : null,
                         window.HEYS?.pendingProductQueue?.NotSentChip
                             && React.createElement(window.HEYS.pendingProductQueue.NotSentChip, { productId: p.id }),
                         React.createElement('div', { className: 'mpc-grid mpc-header' },
@@ -2248,6 +2251,9 @@
                                 onClick: () => removeItem(mealIndex, it.id),
                             }, '×'),
                         ),
+                        HEYS.models?.formatMealItemRecipeLine?.(it)
+                          ? React.createElement('div', { className: 'mpc-recipe-line' }, HEYS.models.formatMealItemRecipeLine(it))
+                          : null,
                         window.HEYS?.pendingProductQueue?.NotSentChip
                             && React.createElement(window.HEYS.pendingProductQueue.NotSentChip, { productId: p.id }),
                         React.createElement('div', { className: 'mpc-grid mpc-header' },

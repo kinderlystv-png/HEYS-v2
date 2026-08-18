@@ -831,6 +831,21 @@
         : mergeMorningActivationState(remoteMA, localMA);
     }
 
+    {
+      const localLog = Array.isArray(local.recipe_backfill_log) ? local.recipe_backfill_log : [];
+      const remoteLog = Array.isArray(remote.recipe_backfill_log) ? remote.recipe_backfill_log : [];
+      const seen = new Set();
+      const mergedLog = [];
+      for (const entry of localLog.concat(remoteLog)) {
+        if (!entry || typeof entry !== 'object') continue;
+        const key = `${entry.at}|${entry.product_id}|${entry.items_count}|${entry.kcal_delta}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        mergedLog.push(entry);
+      }
+      if (mergedLog.length) merged.recipe_backfill_log = mergedLog;
+    }
+
     // Apply item-tombstones to a single meal's items (used when meal exists only on one side).
     const filterItemTombstones = (meal) => {
       if (!meal || !Array.isArray(meal.items)) return meal;

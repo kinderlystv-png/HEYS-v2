@@ -5502,6 +5502,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         if (usageCount > 0) parts.push(formatUsageTimes(usageCount));
         else if (product._source === 'shared' || product._fromShared) parts.push('общая база');
       }
+      const recipeLine = HEYS.models?.formatRecipeSummary?.(product.recipe);
+      if (recipeLine) parts.push(recipeLine);
       return parts.join(' · ');
     };
 
@@ -5647,7 +5649,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   )
                 )
               )
-          )
+          ),
+          !isNutrientsPending && HEYS.models?.formatRecipeSummary?.(product.recipe)
+            ? React.createElement('div', { className: 'aps-product-recipe' }, HEYS.models.formatRecipeSummary(product.recipe))
+            : null
         ),
 
         React.createElement('div', { className: 'aps-product-actions' },
@@ -7117,6 +7122,23 @@ NOVA: 1
     }, [sourceProduct]);
     const [portionRows, setPortionRows] = useState(initialPortions);
     const [portionError, setPortionError] = useState('');
+    const isCustomProduct = !!(sourceProduct && sourceProduct._custom);
+    const initialRecipe = useMemo(() => {
+      const recipe = sourceProduct?.recipe;
+      const items = Array.isArray(recipe?.items) ? recipe.items : [];
+      return {
+        yieldGrams: recipe?.yield_grams != null ? String(recipe.yield_grams) : '',
+        items: items.map((item) => ({
+          product_id: item.product_id || '',
+          name: item.name || '',
+          grams: item.grams != null ? String(item.grams) : '',
+        })),
+        addQuery: '',
+        addGrams: '',
+        error: '',
+      };
+    }, [sourceProduct]);
+    const [recipeForm, setRecipeForm] = useState(initialRecipe);
     const autoPortions = useMemo(() => getAutoPortions(form.name || sourceProduct?.name), [form.name, sourceProduct?.name]);
     const brandSuggestion = useMemo(() => {
       if (normalizeProductBrand(form.brand)) return null;
@@ -7137,6 +7159,10 @@ NOVA: 1
       setPortionRows(initialPortions);
       setPortionError('');
     }, [initialPortions]);
+
+    useEffect(() => {
+      setRecipeForm(initialRecipe);
+    }, [initialRecipe]);
 
     useEffect(() => {
       if (context?.focusField !== 'barcode') return;
@@ -7201,6 +7227,60 @@ NOVA: 1
       setPortionRows((prev) => prev.filter((_, i) => i !== index));
       setPortionError('');
     }, []);
+
+    const updateRecipeItemGrams = useCallback((index, value) => {
+      setRecipeForm((prev) => ({
+        ...prev,
+        error: '',
+        items: prev.items.map((item, i) => (i === index ? { ...item, grams: value } : item)),
+      }));
+    }, []);
+
+    const removeRecipeItem = useCallback((index) => {
+      haptic('light');
+      setRecipeForm((prev) => ({
+        ...prev,
+        error: '',
+        items: prev.items.filter((_, i) => i !== index),
+      }));
+    }, []);
+
+    const addRecipeItem = useCallback(() => {
+      haptic('light');
+      const query = String(recipeForm.addQuery || '').trim();
+      const grams = Number(String(recipeForm.addGrams || '').replace(',', '.'));
+      if (!query || !(grams > 0)) {
+        setRecipeForm((prev) => ({ ...prev, error: 'Нужны название ингредиента и граммы' }));
+        return;
+      }
+      const all = HEYS.products?.getAll?.() || [];
+      const q = query.toLowerCase();
+      const exact = all.filter((p) => String(p.name || '').toLowerCase() === q);
+      const matches = exact.length ? exact : all.filter((p) => String(p.name || '').toLowerCase().includes(q));
+      if (matches.length !== 1) {
+        setRecipeForm((prev) => ({
+          ...prev,
+          error: matches.length ? 'Несколько продуктов с таким именем — уточни' : 'Ингредиент не найден',
+        }));
+        return;
+      }
+      const found = matches[0];
+      setRecipeForm((prev) => ({
+        ...prev,
+        addQuery: '',
+        addGrams: '',
+        error: '',
+        items: [...prev.items, {
+          product_id: String(found.id ?? found.product_id ?? ''),
+          name: found.name,
+          grams: String(grams),
+        }],
+      }));
+    }, [recipeForm.addQuery, recipeForm.addGrams]);
+
+    const [reapplyState, setReapplyState] = useState({
+      open: false, dateFrom: '', dateTo: '', recipeRev: '', preview: '', error: '', busy: false,
+    });
 
     const validatePortions = useCallback(() => {
       const normalized = [];
@@ -7320,7 +7400,37 @@ NOVA: 1
       const preservedBarcodes = getProductBarcodes(base).filter((code) => code !== formBarcode);
       const barcodes = formBarcode ? [formBarcode, ...preservedBarcodes] : [];
 
-      return {
+      let recipe = base.recipe || null;
+      let recipeNutrients = null;
+      const recipeItems = (recipeForm.items || [])
+        .map((item) => ({
+          product_id: String(item.product_id || '').trim(),
+          name: String(item.name || '').trim(),
+          grams: Number(item.grams),
+        }))
+        .filter((item) => item.product_id && item.grams > 0);
+      if (isCustomProduct && recipeItems.length && Number(recipeForm.yieldGrams) > 0) {
+        try {
+          const findProduct = (spec) => HEYS.products?.getById?.(spec.product_id) || null;
+          const computedRecipe = HEYS.models.computeRecipeNutrients({
+            yield_grams: Number(recipeForm.yieldGrams),
+            items: recipeItems,
+          }, findProduct);
+          recipe = HEYS.models.normalizeRecipe({
+            yield_grams: computedRecipe.yield_grams,
+            items: computedRecipe.items,
+          }, { nowMs: Date.now(), previousRev: Number(base.recipe && base.recipe.rev) || 0 });
+          recipeNutrients = computedRecipe.nutrients;
+        } catch (err) {
+          recipe = {
+            ...(base.recipe || {}),
+            yield_grams: Number(recipeForm.yieldGrams),
+            items: recipeItems,
+          };
+        }
+      }
+
+      const next = {
         ...base,
         name,
         brand: brand || null,
@@ -7340,7 +7450,51 @@ NOVA: 1
         fat100,
         kcal100
       };
-    }, [form, sourceProduct, portionRows]);
+      if (recipeNutrients) Object.assign(next, recipeNutrients);
+      if (recipe) next.recipe = recipe;
+      return next;
+    }, [form, sourceProduct, portionRows, recipeForm, isCustomProduct]);
+
+    const runRecipeReapply = useCallback((dryRun) => {
+      const product = buildUpdatedProduct();
+      if (!product?.recipe) {
+        setReapplyState((prev) => ({ ...prev, error: 'Сначала сохрани состав рецепта' }));
+        return;
+      }
+      const loadDay = (date) => HEYS.utils?.loadDay?.(date, true) || null;
+      const saveDay = (date, nextDay) => {
+        const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
+        const key = cid ? `heys_${cid}_dayv2_${date}` : `heys_dayv2_${date}`;
+        HEYS.utils?.lsSet?.(key, nextDay);
+        HEYS.utils?.invalidateDayCache?.(date);
+      };
+      setReapplyState((prev) => ({ ...prev, busy: true, error: '', preview: '' }));
+      try {
+        const result = HEYS.models.reapplyRecipeToPastMeals({
+          product,
+          dateFrom: reapplyState.dateFrom,
+          dateTo: reapplyState.dateTo,
+          recipeRev: reapplyState.recipeRev ? Number(reapplyState.recipeRev) : null,
+          dryRun,
+          nowMs: Date.now(),
+          loadDay,
+          saveDay,
+        });
+        const preview = result.preview || {};
+        const revParts = Object.keys(preview.by_rev || {}).sort().map((key) => (
+          key === 'none' ? `без версии: ${preview.by_rev[key]}` : `rev ${key}: ${preview.by_rev[key]}`
+        ));
+        const text = `${preview.days_count || 0} дн., ${preview.items_count || 0} записей, Δ ${preview.kcal_delta || 0} ккал${revParts.length ? `. ${revParts.join(', ')}` : ''}. Ингредиенты — по текущим карточкам.${preview.warning_norms ? ' Нормы дней заметно изменятся.' : ''}`;
+        setReapplyState((prev) => ({
+          ...prev,
+          busy: false,
+          preview: dryRun ? text : `Исправлено: ${(result.applied || []).length} дн. ${text}`,
+        }));
+        if (!dryRun) HEYS.Toast?.success?.('Записи в дневнике исправлены');
+      } catch (err) {
+        setReapplyState((prev) => ({ ...prev, busy: false, error: err.message || 'Не удалось пересчитать' }));
+      }
+    }, [buildUpdatedProduct, reapplyState.dateFrom, reapplyState.dateTo, reapplyState.recipeRev]);
 
     const handleNext = useCallback(() => {
       if (!sourceProduct) return;
@@ -7348,6 +7502,10 @@ NOVA: 1
       const portionsResult = validatePortions();
       if (!portionsResult.ok) {
         setPortionError('Заполните название и граммы порции');
+        return;
+      }
+      if (isCustomProduct && recipeForm.items.some((item) => Number(item.grams) > 0) && !(Number(recipeForm.yieldGrams) > 0)) {
+        setRecipeForm((prev) => ({ ...prev, error: 'Укажи выход готового блюда' }));
         return;
       }
 
@@ -7361,7 +7519,7 @@ NOVA: 1
       }
 
       setTimeout(() => goToStep?.(1, 'left'), 120);
-    }, [sourceProduct, validatePortions, buildUpdatedProduct, onChange, data, updateStepData, goToStep]);
+    }, [sourceProduct, validatePortions, buildUpdatedProduct, onChange, data, updateStepData, goToStep, isCustomProduct, recipeForm]);
 
     if (!sourceProduct) {
       return React.createElement('div', { className: 'pe-empty' }, 'Нет продукта для редактирования');
@@ -7627,6 +7785,137 @@ NOVA: 1
           onClick: addPortionRow
         }, '+ Добавить порцию'),
         portionError && React.createElement('div', { className: 'pe-portions-error' }, portionError)
+      ),
+
+      isCustomProduct && React.createElement('div', { className: 'pe-section pe-portions-block pe-recipe-block' },
+        React.createElement('div', { className: 'pe-portions-head' },
+          React.createElement('div', null,
+            React.createElement('div', { className: 'pe-section-title' }, 'Состав рецепта'),
+            React.createElement('div', { className: 'pe-portions-subtitle' }, 'КБЖУ посчитаются при сохранении. Прошлые дни не меняются.')
+          )
+        ),
+        React.createElement('div', { className: 'pe-field' },
+          React.createElement('label', { className: 'pe-label' }, 'Выход готового, г'),
+          React.createElement('input', {
+            className: 'pe-input',
+            type: 'text',
+            inputMode: 'numeric',
+            value: recipeForm.yieldGrams,
+            onChange: (e) => setRecipeForm((prev) => ({ ...prev, yieldGrams: e.target.value, error: '' })),
+            placeholder: 'Например 1000'
+          })
+        ),
+        React.createElement('div', { className: 'pe-portions-list' },
+          recipeForm.items.length === 0 && React.createElement('div', { className: 'pe-portions-empty' },
+            'Ингредиентов пока нет'
+          ),
+          recipeForm.items.map((item, index) =>
+            React.createElement('div', { className: 'pe-portions-row', key: item.product_id + '-' + index },
+              React.createElement('div', { className: 'pe-portions-name', style: { padding: '8px 0' } }, item.name),
+              React.createElement('div', { className: 'pe-portions-grams' },
+                React.createElement('input', {
+                  className: 'pe-input pe-portions-grams-input',
+                  type: 'text',
+                  inputMode: 'numeric',
+                  value: item.grams,
+                  onChange: (e) => updateRecipeItemGrams(index, e.target.value),
+                  placeholder: 'г'
+                }),
+                React.createElement('span', { className: 'pe-portions-grams-unit' }, 'г')
+              ),
+              React.createElement('button', {
+                type: 'button',
+                className: 'pe-portions-remove-btn',
+                onClick: () => removeRecipeItem(index),
+                'aria-label': 'Удалить ингредиент'
+              }, '×')
+            )
+          )
+        ),
+        React.createElement('div', { className: 'pe-portions-row' },
+          React.createElement('input', {
+            className: 'pe-input pe-portions-name',
+            value: recipeForm.addQuery,
+            onChange: (e) => setRecipeForm((prev) => ({ ...prev, addQuery: e.target.value, error: '' })),
+            placeholder: 'Ингредиент'
+          }),
+          React.createElement('div', { className: 'pe-portions-grams' },
+            React.createElement('input', {
+              className: 'pe-input pe-portions-grams-input',
+              type: 'text',
+              inputMode: 'numeric',
+              value: recipeForm.addGrams,
+              onChange: (e) => setRecipeForm((prev) => ({ ...prev, addGrams: e.target.value, error: '' })),
+              placeholder: 'г'
+            }),
+            React.createElement('span', { className: 'pe-portions-grams-unit' }, 'г')
+          )
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'pe-portions-add-btn',
+          onClick: addRecipeItem
+        }, '+ Добавить ингредиент'),
+        recipeForm.error && React.createElement('div', { className: 'pe-portions-error' }, recipeForm.error),
+        (sourceProduct?.recipe || recipeForm.items.length > 0) && React.createElement('button', {
+          type: 'button',
+          className: 'pe-portions-template-btn',
+          onClick: () => {
+            const today = HEYS.models?.todayISO?.() || new Date().toISOString().slice(0, 10);
+            const [y, m, d] = today.split('-').map(Number);
+            const shifted = new Date(Date.UTC(y, m - 1, d - 30));
+            const from = `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}-${String(shifted.getUTCDate()).padStart(2, '0')}`;
+            setReapplyState((prev) => ({
+              ...prev,
+              open: !prev.open,
+              dateTo: prev.dateTo || today,
+              dateFrom: prev.dateFrom || from,
+            }));
+          }
+        }, 'Исправить записи в дневнике'),
+        reapplyState.open && React.createElement('div', { className: 'pe-recipe-reapply' },
+          React.createElement('div', { className: 'pe-portions-subtitle' },
+            'Отдельное действие. Save рецепта прошлое не трогает. Ингредиенты — по текущим карточкам.'
+          ),
+          React.createElement('div', { className: 'pe-portions-row' },
+            React.createElement('input', {
+              className: 'pe-input',
+              type: 'date',
+              value: reapplyState.dateFrom,
+              onChange: (e) => setReapplyState((prev) => ({ ...prev, dateFrom: e.target.value }))
+            }),
+            React.createElement('input', {
+              className: 'pe-input',
+              type: 'date',
+              value: reapplyState.dateTo,
+              onChange: (e) => setReapplyState((prev) => ({ ...prev, dateTo: e.target.value }))
+            })
+          ),
+          React.createElement('input', {
+            className: 'pe-input',
+            type: 'text',
+            inputMode: 'numeric',
+            placeholder: 'Только rev (необязательно)',
+            value: reapplyState.recipeRev,
+            onChange: (e) => setReapplyState((prev) => ({ ...prev, recipeRev: e.target.value }))
+          }),
+          React.createElement('div', { className: 'pe-portions-row' },
+            React.createElement('button', {
+              type: 'button',
+              className: 'pe-portions-template-btn',
+              disabled: reapplyState.busy,
+              onClick: () => runRecipeReapply(true)
+            }, 'Превью'),
+            React.createElement('button', {
+              type: 'button',
+              className: 'pe-portions-add-btn',
+              disabled: reapplyState.busy,
+              onClick: () => runRecipeReapply(false)
+            }, 'Исправить')
+          ),
+          reapplyState.preview && React.createElement('div', { className: 'pe-portions-subtitle' }, reapplyState.preview),
+          reapplyState.error && React.createElement('div', { className: 'pe-portions-error' }, reapplyState.error)
+        )
       ),
 
       React.createElement('div', { className: 'pe-preview' },

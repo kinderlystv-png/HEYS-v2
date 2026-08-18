@@ -109,4 +109,32 @@ describe('метка авторства куратора', () => {
     );
     expect(models.isCuratorAuthored(day, 'weightMorning')).toBe(true);
   });
+
+  it('ensureDay сохраняет recipe_backfill_log', () => {
+    const log = [{ at: 42, product_id: 'p1', name: 'Салат', items_count: 2, kcal_delta: 15 }];
+    const day = models.ensureDay({ date: '2026-08-02', meals: [], recipe_backfill_log: log }, {});
+    expect(day.recipe_backfill_log).toEqual(log);
+  });
+
+  it('mergeDayData не отбрасывает recipe_backfill_log', () => {
+    const log = [{ at: 42, product_id: 'p1', name: 'Салат', items_count: 1, kcal_delta: 8 }];
+    const local = { date: '2026-07-12', updatedAt: 20, meals: [], recipe_backfill_log: log };
+    const remote = { date: '2026-07-12', updatedAt: 10, meals: [] };
+    const merged = mergeDayData(local, remote, { forceKeepAll: true });
+    expect(merged.recipe_backfill_log).toEqual(log);
+  });
+
+  it('считает ГИ рецепта по массе, а не по углеводам', () => {
+    const oats = { id: 'oats', name: 'Овёс', protein100: 10, simple100: 0, complex100: 60, badFat100: 1, goodFat100: 5, trans100: 0, fiber100: 8, gi: 40, harm: 1 };
+    const oil = { id: 'oil', name: 'Масло', protein100: 0, simple100: 0, complex100: 0, badFat100: 14, goodFat100: 86, trans100: 0, fiber100: 0, gi: 0, harm: 2 };
+    const byId = { oats, oil };
+    const result = models.computeRecipeNutrients({
+      yield_grams: 150,
+      items: [
+        { product_id: 'oats', grams: 100 },
+        { product_id: 'oil', grams: 50 },
+      ],
+    }, (spec) => byId[spec.product_id]);
+    expect(result.nutrients.gi).toBe(26.7);
+  });
 });
