@@ -2233,7 +2233,9 @@ function createTools({
         if (saved && saved.outcome === 'stale_write_blocked') {
           throw new ToolError(
             'stale_day',
-            `День ${row.date} изменился, повтори.`,
+            applied.length
+              ? `День ${row.date} изменился, дальше не пошёл. Уже исправлено дней: ${applied.length} (${applied.map((a) => a.date).join(', ')}) — повторный запуск их пропустит, так что просто повтори вызов.`
+              : `День ${row.date} изменился, повтори.`,
             { date: row.date, preview, applied },
           );
         }

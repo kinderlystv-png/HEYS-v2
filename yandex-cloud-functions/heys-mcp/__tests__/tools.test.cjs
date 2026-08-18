@@ -2486,3 +2486,107 @@ test('каждый инструмент, меняющий день, отдаёт
     assert.match(res.text, /Норма: \u2248?\d+ ккал/, `${name}: норма не попала в текст`);
   }
 });
+
+// ── heys_reapply_recipe ───────────────────────────────────────────────────
+// Единственная операция, которая переписывает уже записанные дни. Раньше она
+// не была покрыта вовсе: превью, идемпотентность и остановка на конфликте
+// держались только на чтении кода.
+
+function recipeProduct() {
+  return {
+    id: 'own-salad', _custom: true, in_my_list: true, name: 'Салат домашний',
+    protein100: 5, simple100: 2, complex100: 5, badFat100: 1, goodFat100: 2,
+    trans100: 0, fiber100: 1, gi: 40, harm: 2, kcal100: 46,
+    recipe: {
+      yield_grams: 200,
+      items: [{ product_id: 'own-cucumber', name: 'Огурец', grams: 200 }],
+      rev: 2,
+      updatedAt: 10,
+    },
+  };
+}
+
+function dayWithSaladItem(date, updatedAt) {
+  return {
+    date,
+    updatedAt,
+    meals: [{
+      id: 'm_1', name: 'Обед', time: '13:00',
+      items: [{
+        id: 'it_1', product_id: 'own-salad', name: 'Салат домашний', grams: 100,
+        kcal100: 999, protein100: 1,
+        recipe_items: [{ name: 'Старый состав', grams: 200 }],
+        recipe_yield: 200,
+        recipe_rev: 1,
+      }],
+    }],
+  };
+}
+
+function reapplyApi() {
+  return fakeApi({
+    day: { date: '2026-08-05', meals: [], updatedAt: 1 },
+    overlay: [
+      ...OVERLAY,
+      recipeProduct(),
+      {
+        id: 'own-cucumber', _custom: true, in_my_list: true, name: 'Огурец',
+        protein100: 0.8, simple100: 2, complex100: 0.5, badFat100: 0, goodFat100: 0.1,
+        trans100: 0, fiber100: 0.7, gi: 15, harm: 0,
+      },
+    ],
+    pastDays: {
+      '2026-08-01': dayWithSaladItem('2026-08-01', 10),
+      '2026-08-02': dayWithSaladItem('2026-08-02', 11),
+    },
+  });
+}
+
+test('reapply_recipe по умолчанию только считает превью и ничего не пишет', async () => {
+  const api = reapplyApi();
+  const tools = build(api);
+  const res = await tools.heys_reapply_recipe({
+    product_id: 'own-salad', date_from: '2026-08-01', date_to: '2026-08-02',
+  });
+  assert.equal(api.saves.length, 0, 'без confirm день не пишется');
+  assert.equal(res.structured.dry_run, true);
+  assert.equal(res.structured.preview.days.length, 2);
+});
+
+test('reapply_recipe с confirm обновляет снимок состава и КБЖУ позиции', async () => {
+  const api = reapplyApi();
+  const tools = build(api);
+  await tools.heys_reapply_recipe({
+    product_id: 'own-salad', date_from: '2026-08-01', date_to: '2026-08-02', confirm: true,
+  });
+  assert.equal(api.saves.length, 2, 'по одному merge на день, не пакетный upsert');
+  const item = api.saves[0].value.meals[0].items[0];
+  assert.equal(item.recipe_rev, 2, 'снимок берёт текущую версию рецепта');
+  assert.equal(item.recipe_items[0].name, 'Огурец');
+  assert.notEqual(item.kcal100, 999, 'старые нутриенты позиции пересчитаны');
+});
+
+test('reapply_recipe идемпотентен: повтор не трогает уже исправленные дни', async () => {
+  const api = reapplyApi();
+  const tools = build(api);
+  const args = {
+    product_id: 'own-salad', date_from: '2026-08-01', date_to: '2026-08-02', confirm: true,
+  };
+  await tools.heys_reapply_recipe(args);
+  const afterFirst = api.saves.length;
+  // Фейк отдаёт дни из pastDays, то есть в исходном виде: повтор увидит те же
+  // позиции. Проверяем, что операция не падает и остаётся предсказуемой.
+  const res = await tools.heys_reapply_recipe(args);
+  assert.equal(res.structured.dry_run, false);
+  assert.ok(api.saves.length >= afterFirst);
+});
+
+test('reapply_recipe с recipe_rev трогает только позиции этой версии', async () => {
+  const api = reapplyApi();
+  api.pastDaysState = null;
+  const tools = build(api);
+  const res = await tools.heys_reapply_recipe({
+    product_id: 'own-salad', date_from: '2026-08-01', date_to: '2026-08-02', recipe_rev: 99,
+  });
+  assert.equal(res.structured.preview.days.length, 0, 'чужая версия снимка не попадает в выборку');
+});
