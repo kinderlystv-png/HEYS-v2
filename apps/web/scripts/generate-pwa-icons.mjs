@@ -36,6 +36,10 @@ svg = svg.replace(
 
 for (const { name, size } of sizes) {
   const out = path.join(publicDir, name);
-  await sharp(Buffer.from(svg)).resize(size, size).png().toFile(out);
+  await sharp(Buffer.from(svg))
+    .resize(size, size)
+    .flatten({ background: '#fffaf1' })
+    .png()
+    .toFile(out);
   console.log(`wrote ${name} (${size})`);
 }
