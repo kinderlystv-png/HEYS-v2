@@ -12,6 +12,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="./v4-canvas.css" rel="stylesheet">
+<style>
+  @keyframes fabSlot{0%,16%{height:0;margin-bottom:0;opacity:0;transform:scale(.35)}22%{transform:scale(1.06)}28%,58%{height:46px;margin-bottom:10px;opacity:1;transform:scale(1)}66%,100%{height:0;margin-bottom:0;opacity:0;transform:scale(.35)}}
+  @keyframes chipOn{0%,16%{background:var(--c1);color:rgba(var(--ink),.55)}28%,58%{background:var(--acs);color:var(--on-acs)}66%,100%{background:var(--c1);color:rgba(var(--ink),.55)}}
+  .fabSlot{animation:fabSlot 7s cubic-bezier(.34,1.36,.64,1) infinite;transform-origin:50% 100%}
+  .chipAnim{animation:chipOn 7s ease infinite}
+  .fab{width:46px;height:46px;flex:none;border-radius:999px;background:var(--acs);display:flex;align-items:center;justify-content:center;color:var(--on-acs);box-shadow:0 2px 4px rgba(var(--shadow),.14),0 10px 22px rgba(var(--shadow),.26)}
+  .fabSm{width:38px;height:38px;flex:none;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;color:var(--ac)}
+</style>
 </helmet>
 
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e9dfcd"/><rect x="30" y="30" width="40" height="40" rx="10" fill="#c67139"/><text x="50" y="57" text-anchor="middle" font-family="Figtree,sans-serif" font-size="16" font-weight="700" fill="#2b1608">v4</text></svg></template>
@@ -152,6 +160,98 @@
 
   </div>
   <div data-mirdst="m5" style="display:flex;gap:30px;align-items:flex-start;"></div>
+
+
+  <div class="secH">Плавающие кнопки · выбор чипами</div>
+  <div class="pal" data-mir="m8" style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
+
+    <div><div class="lab"><b>Оформление · раскрыто</b><span>чипы с подписями, включённые терракотовые</span></div>
+    <div class="ph" data-screen-label="Настройки · чипы плавающих кнопок">
+      <div style="padding:18px 18px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <span style="font:700 20px/1.2 Figtree,sans-serif;color:var(--tx);">Оформление</span>
+        <span style="width:34px;height:34px;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.5)" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="sc" style="padding-top:0;">
+        <div style="background:var(--c1);border-radius:18px;overflow:hidden;">
+          <div style="padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Палитра</span><span style="display:flex;align-items:center;gap:8px;"><span style="display:flex;gap:4px;"><span style="width:15px;height:15px;border-radius:999px;background:var(--acs);"></span><span style="width:15px;height:15px;border-radius:999px;background:var(--gr2);"></span><span style="width:15px;height:15px;border-radius:999px;background:var(--c2);"></span></span><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></span></div>
+          <div style="height:1px;background:rgba(var(--ink),.06);margin:0 15px;"></div>
+          <div style="padding:12px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;"><span style="font:600 13px/1 Figtree,sans-serif;color:var(--tx);">Домашняя вкладка</span><span style="display:flex;align-items:center;gap:8px;"><span style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">Главная</span><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></span></div>
+        </div>
+
+        <div class="tier" style="margin:16px 0 8px;">Плавающие кнопки</div>
+        <div style="background:var(--c1);border-radius:18px;padding:13px 14px 15px;">
+          <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);text-wrap:pretty;">Что держать под пальцем на всех вкладках. Кнопка «плюс» стоит всегда — она вход в добавление; остальные включаются чипами, порядок снизу вверх как в списке.</div>
+          <div class="chipRow" style="margin-top:11px;">
+            <span class="chip on" style="gap:7px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 10a6 6 0 01-12 0c0-3.5 6-10 6-10z"/></svg>Вода</span>
+            <span class="chip" style="gap:7px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>Голод и энергия</span>
+            <span class="chip on" style="gap:7px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 01-11.6 7.1L4 20l1-4.2A8 8 0 1120 12z"/></svg>Мессенджер</span>
+            <span class="chip" style="gap:7px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg>Активность</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:13px;">
+            <span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.42);">Включено 2 из 4</span>
+            <span style="font:600 11px/1 Figtree,sans-serif;color:var(--ac);">Ни одной — тоже можно</span>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:9px;background:var(--tint);border-radius:16px;padding:11px 13px;margin-top:12px;">
+          <span style="flex:none;color:var(--ac);display:flex;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v8M8 12h8"/><circle cx="12" cy="12" r="9"/></svg></span>
+          <span style="font:500 11.5px/1.45 Figtree,sans-serif;color:rgba(var(--ink),.6);text-wrap:pretty;">Кнопки перестроятся, когда закроете настройки</span>
+        </div>
+      </div>
+      <div class="foot"><div class="btn">Готово</div></div>
+    </div></div>
+
+    <div><div class="lab"><b>После закрытия · прогон</b><span>кнопка вырастает на своём месте, соседи смыкаются</span></div>
+    <div class="ph" data-screen-label="Плавающие кнопки · прогон после закрытия">
+      <div style="padding:16px 18px 0;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="width:30px;height:30px;flex:none;border-radius:999px;background:var(--c1);"></span>
+          <span style="flex:1;height:34px;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;font:700 12px/1 Figtree,sans-serif;color:var(--tx);">вс, 9 августа</span>
+          <span style="width:30px;height:30px;flex:none;border-radius:999px;background:var(--c1);"></span>
+        </div>
+      </div>
+      <div class="sc" style="padding-top:14px;position:relative;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:64px;gap:8px;">
+          <div style="grid-column:span 2;grid-row:span 2;border-radius:16px;background:var(--tint);"></div>
+          <div style="grid-column:span 2;border-radius:16px;background:var(--c1);"></div>
+          <div style="grid-column:span 2;border-radius:16px;background:var(--c1);"></div>
+          <div style="grid-column:span 2;border-radius:16px;background:var(--c1);"></div>
+          <div style="grid-column:span 2;border-radius:16px;background:var(--c1);"></div>
+          <div style="grid-column:span 4;border-radius:16px;background:var(--c1);"></div>
+        </div>
+        <div style="position:absolute;right:16px;bottom:16px;display:flex;flex-direction:column;align-items:center;">
+          <span class="fabSm" style="margin-bottom:10px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 01-11.6 7.1L4 20l1-4.2A8 8 0 1120 12z"/></svg></span>
+          <span class="fabSm fabSlot"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg></span>
+          <span class="fabSm" style="margin-bottom:10px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 10a6 6 0 01-12 0c0-3.5 6-10 6-10z"/></svg></span>
+          <span class="fab"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        </div>
+      </div>
+      <div style="display:flex;padding:4px 8px 16px;background:var(--bg);box-shadow:0 -1px 0 rgba(var(--ink),.06);">
+        <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:var(--ac);">Главная</span></span>
+        <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.32)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">Питание</span></span>
+        <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.32)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">Актив</span></span>
+        <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.32)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">Отчёты</span></span>
+        <span style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.32)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.55);">Инсайты</span></span>
+      </div>
+    </div>
+    <div style="width:330px;margin-top:11px;display:flex;align-items:center;gap:9px;">
+      <span class="chip on chipAnim" style="gap:7px;flex:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>Голод и энергия</span>
+      <span style="font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);text-wrap:pretty;">чип из настроек — вне кадра, показывает, какое состояние отыгрывает стопка</span>
+    </div></div>
+
+    <div data-nomirror style="width:400px;flex:none;">
+      <div class="h" style="margin-top:0;">Решения по плавающим кнопкам</div><div style="background:var(--bg);border-radius:24px;padding:20px;">
+        <div class="nt"><b>Перестройка происходит после закрытия настроек</b><span>Пока шторка открыта, кнопки за ней не видны — анимация ушла бы в пустоту, а список чипов дёргался бы под пальцем при каждом касании. Поэтому чипы только копят состояние, а стопка перестраивается один раз, когда шторка уехала: новая кнопка вырастает из точки на своём месте, снятая сжимается, соседи смыкаются. Человек нажимает «Готово» и видит результат целиком — это и есть тот момент, ради которого анимация нужна.</span></div>
+        <div class="nt"><b>Чип — это и переключатель, и подпись</b><span>Иконка без слова заставляет угадывать, что такое «молния»; слово без иконки не связывается с кнопкой на экране. Поэтому в чипе стоят обе части, и включённый чип красится терракотой — тем же цветом, что сама кнопка: связь «этот чип — эта кнопка» читается без объяснений.</span></div>
+        <div class="nt"><b>Ноль чипов — допустимый выбор, «плюс» вне выбора</b><span>Кому-то не нужны ни голод, ни мессенджер, ни вода под пальцем: все четыре чипа выключаются, и в углу остаётся одна кнопка «плюс». Её в списке чипов нет вовсе — это вход в добавление, и выключать его нечем взамен. Пустой угол при этом не ошибка и предупреждения не требует: вода остаётся в своём виджете, отметки — во вкладке «Актив».</span></div>
+        <div class="nt"><b>Порядок фиксированный, а не перетаскиваемый</b><span>Снизу вверх: плюс, вода, голод и энергия, мессенджер, активность — «плюс» всегда нижний, остальные в порядке чипов. Перетаскивание здесь стоило бы дороже, чем даёт: пять кнопок в столбик человек находит по позиции, а не по памяти о своей раскладке, и после включения новой ничего не «уезжает» непредсказуемо.</span></div>
+        <div class="nt"><b>Тайминги те же, что у смены вида виджета</b><span>Появление 220 мс с лёгким перелётом до 1,06, исчезновение 160 мс, смыкание соседей — те же 220 мс. Одна пружина на весь продукт: если кнопки будут прыгать иначе, чем плитки, экран начнёт выглядеть собранным из двух разных приложений.</span></div>
+        <div class="ntl"><b>Больше четырёх чипов не заводим</b><span>Стопка из пяти кнопок вместе с «плюсом» начинает драться с нижним меню и закрывать содержимое, а на маленьких экранах упирается в дневник. Новый быстрый доступ — это повод спросить, какой из четырёх он вытесняет, а не добавить пятый.</span></div>
+      </div>
+    </div>
+
+  </div>
+  <div data-mirdst="m8" style="display:flex;gap:30px;align-items:flex-start;"></div>
 
 
 </div>
