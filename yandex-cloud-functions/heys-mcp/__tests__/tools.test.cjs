@@ -2669,3 +2669,215 @@ test('reapply_recipe с recipe_rev трогает только позиции э
   });
   assert.equal(res.structured.preview.days.length, 0, 'чужая версия снимка не попадает в выборку');
 });
+
+// ── рецепты: чтение состава и точечная правка ─────────────────────────────
+// Состав в выдаче поиска — подпись без id, и до этих инструментов куратор
+// пересобирал его по памяти: так из салата пропали яйца (инцидент 2026-08-18).
+
+const products = require('../lib/products');
+
+const CUCUMBER = {
+  id: 'own-cucumber', _custom: true, in_my_list: true, name: 'Огурец',
+  protein100: 0.8, simple100: 2, complex100: 0.5, badFat100: 0, goodFat100: 0.1,
+  trans100: 0, fiber100: 0.7, gi: 15, harm: 0,
+};
+const TOMATO = {
+  id: 'own-tomato', _custom: true, in_my_list: true, name: 'Помидор',
+  protein100: 1.1, simple100: 3.5, complex100: 0.4, badFat100: 0, goodFat100: 0.2,
+  trans100: 0, fiber100: 1.2, gi: 30, harm: 0,
+};
+
+function saladCard({ yieldGrams = 300, items, ingredients = [CUCUMBER, TOMATO] } = {}) {
+  const recipeItems = items || [
+    { product_id: 'own-cucumber', name: 'Огурец', grams: 200 },
+    { product_id: 'own-tomato', name: 'Помидор', grams: 100 },
+  ];
+  const payload = products.buildRecipePayload(
+    { yield_grams: yieldGrams, items: recipeItems },
+    (spec) => ingredients.find((p) => p.id === spec.product_id) || null,
+    { nowMs: 10, previousRev: 0 },
+  );
+  return {
+    id: 'own-salad', _custom: true, in_my_list: true, name: 'Салат домашний',
+    ...payload.nutrients,
+    recipe: payload.recipe,
+  };
+}
+
+function recipeApi({ salad = saladCard(), ingredients = [CUCUMBER, TOMATO] } = {}) {
+  return fakeApi({
+    day: { date: '2026-08-01', meals: [], updatedAt: 1 },
+    overlay: [...OVERLAY, salad, ...ingredients],
+  });
+}
+
+test('get_recipe отдаёт состав с id ингредиентов и сверяет КБЖУ с их карточками', async () => {
+  const tools = build(recipeApi());
+  const res = await tools.heys_get_recipe({ product_id: 'own-salad' });
+
+  assert.equal(res.structured.items.length, 2);
+  assert.equal(res.structured.items[0].product_id, 'own-cucumber', 'id ингредиента виден — по нему и правят');
+  assert.ok(res.structured.items[0].kcal > 0 && res.structured.items[0].kcal_share_pct > 0);
+  assert.equal(res.structured.yield_grams, 300);
+  assert.equal(res.structured.stale, undefined, 'карточки не менялись — расхождения нет');
+  assert.match(res.text, /сходятся/);
+});
+
+test('get_recipe ловит расхождение после правки карточки ингредиента', async () => {
+  const salad = saladCard();
+  const tools = build(recipeApi({
+    salad,
+    ingredients: [{ ...CUCUMBER, goodFat100: 5 }, TOMATO],
+  }));
+  const res = await tools.heys_get_recipe({ product_id: 'own-salad' });
+
+  assert.ok(res.structured.stale.kcal100_delta > 0, 'жирный огурец поднял пересчёт');
+  assert.ok(res.structured.recomputed.kcal100 > res.structured.saved.kcal100);
+  assert.match(res.text, /recipe_patch/, 'сказано, чем чинить');
+});
+
+test('get_recipe без product_id перечисляет блюда клиента с составом', async () => {
+  const tools = build(recipeApi());
+  const res = await tools.heys_get_recipe({});
+  assert.equal(res.structured.recipes.length, 1);
+  assert.equal(res.structured.recipes[0].product_id, 'own-salad');
+  assert.equal(res.structured.recipes[0].items_count, 2);
+});
+
+test('get_recipe на карточке без состава предлагает оформить её рецептом', async () => {
+  const tools = build(recipeApi());
+  await assert.rejects(
+    () => tools.heys_get_recipe({ product_id: 'own-americano' }),
+    (e) => {
+      assert.equal(e.code, 'not_a_recipe');
+      assert.match(e.message, /оформи его рецептом/);
+      return true;
+    },
+  );
+});
+
+test('recipe_patch меняет вес названной позиции, остальные остаются на месте', async () => {
+  const api = recipeApi();
+  const tools = build(api);
+  const res = await tools.heys_update_product({
+    product_id: 'own-salad',
+    recipe_patch: { set: [{ product_id: 'own-tomato', grams: 200 }] },
+  });
+
+  const recipe = res.structured.recipe;
+  assert.equal(recipe.items.length, 2, 'позиция не задвоилась');
+  assert.equal(recipe.items.find((i) => i.product_id === 'own-cucumber').grams, 200, 'неназванный ингредиент цел');
+  assert.equal(recipe.items.find((i) => i.product_id === 'own-tomato').grams, 200);
+  assert.equal(recipe.yield_grams, 400, 'выход ехал за составом, потому что совпадал с суммой');
+  assert.equal(recipe.rev, 2);
+});
+
+test('recipe_patch добавляет новый ингредиент по названию', async () => {
+  const tools = build(recipeApi({ ingredients: [CUCUMBER, TOMATO] }));
+  const res = await tools.heys_update_product({
+    product_id: 'own-salad',
+    recipe_patch: { set: [{ query: 'Кофе американо', grams: 50 }] },
+  });
+  const names = res.structured.recipe.items.map((i) => i.name);
+  assert.equal(names.length, 3);
+  assert.ok(names.some((n) => /американо/i.test(n)));
+});
+
+test('recipe_patch удаляет позицию и пересчитывает выход', async () => {
+  const tools = build(recipeApi());
+  const res = await tools.heys_update_product({
+    product_id: 'own-salad',
+    recipe_patch: { remove: [{ name: 'Помидор' }] },
+  });
+  assert.equal(res.structured.recipe.items.length, 1);
+  assert.equal(res.structured.recipe.yield_grams, 200);
+  assert.match(res.text, /убрано Помидор/);
+});
+
+test('recipe_patch на неизвестной позиции показывает текущий состав вместо догадки', async () => {
+  const tools = build(recipeApi());
+  await assert.rejects(
+    () => tools.heys_update_product({
+      product_id: 'own-salad',
+      recipe_patch: { remove: [{ name: 'Кукуруза' }] },
+    }),
+    (e) => {
+      assert.equal(e.code, 'recipe_patch_item_not_found');
+      assert.deepEqual(e.details.available, ['Огурец', 'Помидор']);
+      return true;
+    },
+  );
+});
+
+test('пустой recipe_patch пересчитывает КБЖУ блюда по текущим карточкам, не трогая состав', async () => {
+  const salad = saladCard();
+  const tools = build(recipeApi({
+    salad,
+    ingredients: [{ ...CUCUMBER, protein100: 10 }, TOMATO],
+  }));
+  const res = await tools.heys_update_product({ product_id: 'own-salad', recipe_patch: {} });
+
+  assert.equal(res.structured.recipe.items.length, 2, 'состав тот же');
+  assert.equal(res.structured.recipe.yield_grams, 300, 'выход не тронут');
+  assert.equal(res.structured.recipe.rev, 2);
+  assert.ok(res.structured.kcal100 > salad.kcal100, 'белковый огурец поднял калорийность блюда');
+  assert.match(res.text, /Состав не менялся/);
+});
+
+test('recipe_patch сохраняет уварку, а не абсолютный выход', async () => {
+  // Выход 240 при сумме 300 — уварка 20%: после долива состава она должна
+  // остаться долей, иначе КБЖУ на 100 г уедут без причины.
+  const tools = build(recipeApi({ salad: saladCard({ yieldGrams: 240 }) }));
+  const res = await tools.heys_update_product({
+    product_id: 'own-salad',
+    recipe_patch: { set: [{ product_id: 'own-tomato', grams: 200 }] },
+  });
+  assert.equal(res.structured.recipe.yield_grams, 320, '400 г состава × 0.8');
+  assert.equal(res.structured.yield_mode, 'kept_ratio');
+});
+
+test('recipe_patch с явным yield_grams сильнее автоматики', async () => {
+  const tools = build(recipeApi());
+  const res = await tools.heys_update_product({
+    product_id: 'own-salad',
+    recipe_patch: { set: [{ product_id: 'own-tomato', grams: 200 }], yield_grams: 350 },
+  });
+  assert.equal(res.structured.recipe.yield_grams, 350);
+  assert.equal(res.structured.yield_mode, 'explicit');
+});
+
+test('recipe и recipe_patch вместе — ошибка, а не молчаливый приоритет', async () => {
+  const tools = build(recipeApi());
+  await assert.rejects(
+    () => tools.heys_update_product({
+      product_id: 'own-salad',
+      recipe: { yield_grams: 100, items: [{ product_id: 'own-cucumber', grams: 100 }] },
+      recipe_patch: { remove: [{ name: 'Огурец' }] },
+    }),
+    (e) => e.code === 'recipe_and_patch',
+  );
+});
+
+test('recipe_patch на карточке без состава отправляет заводить рецепт целиком', async () => {
+  const tools = build(recipeApi());
+  await assert.rejects(
+    () => tools.heys_update_product({ product_id: 'own-americano', recipe_patch: { yield_grams: 100 } }),
+    (e) => e.code === 'not_a_recipe',
+  );
+});
+
+test('правка карточки ингредиента называет блюда, которые от неё разошлись', async () => {
+  const tools = build(recipeApi());
+  const res = await tools.heys_update_product({ product_id: 'own-cucumber', protein100: 2 });
+  assert.equal(res.structured.used_in_recipes.length, 1);
+  assert.equal(res.structured.used_in_recipes[0].product_id, 'own-salad');
+  assert.match(res.text, /recipe_patch/);
+});
+
+test('удаление ингредиента предупреждает про блюда, где он в составе', async () => {
+  const api = recipeApi();
+  const tools = build(api);
+  const res = await tools.heys_delete_product({ product_id: 'own-cucumber' });
+  assert.equal(res.structured.used_in_recipes[0].product_id, 'own-salad');
+  assert.match(res.text, /входил в состав блюд/);
+});

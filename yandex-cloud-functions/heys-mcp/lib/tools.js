@@ -756,6 +756,94 @@ function createTools({
       return { text, structured: { query: args.query, results: described } };
     },
 
+    /**
+     * Разбор состава. В выдаче поиска рецепт — одна строка «имя граммы»: по
+     * ней нельзя ни поправить ингредиент (нет id), ни заметить, что карточка
+     * ингредиента с тех пор изменилась, а КБЖУ блюда остались от прошлого
+     * сохранения. Оба вопроса закрывает этот tool; пересчитывать состав руками
+     * в голове нельзя — так теряются ингредиенты.
+     */
+    async heys_get_recipe(args) {
+      const catalog = await loadCatalog();
+      const findIngredient = (spec) => {
+        if (spec.product_id) {
+          const byId = products.findById(catalog, spec.product_id);
+          if (byId) return byId;
+        }
+        if (spec.query) {
+          const matches = products.searchProducts(catalog, spec.query, 5);
+          if (matches.length === 1) return matches[0];
+          const wanted = products.normalizeText(spec.query);
+          return matches.find((m) => products.normalizeText(m.name) === wanted) || null;
+        }
+        return null;
+      };
+
+      if (!args.product_id && !args.query) {
+        const rows = products.listRecipes(catalog).map((product) => {
+          const info = products.describeRecipe(product, findIngredient);
+          return {
+            product_id: product.id,
+            name: product.name,
+            rev: info.rev,
+            yield_grams: info.yield_grams,
+            items_count: info.items.length,
+            kcal100: info.saved.kcal100,
+            stale: info.stale ? info.stale.kcal100_delta : undefined,
+          };
+        });
+        const staleRows = rows.filter((row) => row.stale !== undefined);
+        return {
+          text: rows.length
+            ? `Блюда с составом (${rows.length}): ${rows.map((row) => `«${row.name}» (${row.product_id}, ${row.kcal100} ккал/100, ${row.items_count} ингр., выход ${row.yield_grams} г, rev ${row.rev})`).join('; ')}.${staleRows.length ? ` Разошлись с карточками ингредиентов: ${staleRows.map((row) => `${row.name} (${row.stale > 0 ? '+' : ''}${row.stale} ккал/100)`).join(', ')} — обнови heys_update_product(recipe_patch:{}).` : ''}`
+            : 'У клиента нет блюд с составом. Составное домашнее блюдо заводится как продукт с recipe: heys_create_product(name, recipe:{yield_grams, items}).',
+          structured: { recipes: rows },
+        };
+      }
+
+      const product = await resolveProduct({ product_id: args.product_id, query: args.query }, 'Блюдо');
+      const info = products.describeRecipe(product, findIngredient);
+      if (!info) {
+        throw new ToolError(
+          'not_a_recipe',
+          `У «${product.name}» (${product.id}) нет состава — это карточка с ручными КБЖУ. Если это домашнее составное блюдо, оформи его рецептом: heys_update_product(product_id=${product.id}, recipe:{yield_grams, items}), и калорийность посчитается из ингредиентов.`,
+          { product_id: product.id, name: product.name },
+        );
+      }
+
+      const itemsText = info.items.map((item) => {
+        const parts = [`${item.name} ${item.grams} г`];
+        if (item.kcal != null) parts.push(`${item.kcal} ккал`);
+        if (item.kcal_share_pct != null) parts.push(`${item.kcal_share_pct}%`);
+        parts.push(item.product_id ? `id=${item.product_id}` : 'без id');
+        if (item.card_missing) parts.push('карточки уже нет');
+        return parts.join(', ');
+      }).join('; ');
+      const shrinkText = info.shrink_grams === 0
+        ? ''
+        : info.shrink_grams < 0
+          ? ` Уварка ${Math.abs(info.shrink_grams)} г (сумма ингредиентов ${info.items_grams_total} г).`
+          : ` Выход больше суммы ингредиентов на ${info.shrink_grams} г — проверь, не потерян ли ингредиент.`;
+      const staleText = info.missing_items
+        ? ` Пересчитать нельзя: в списке клиента больше нет карточек — ${info.missing_items.join(', ')}.`
+        : info.stale
+          ? ` Карточки ингредиентов менялись после сохранения: сейчас состав даёт ${info.recomputed.kcal100} ккал/100 (${info.stale.kcal100_delta > 0 ? '+' : ''}${info.stale.kcal100_delta}). Обновить КБЖУ блюда, не трогая состав: heys_update_product(product_id=${info.product_id}, recipe_patch:{}).`
+          : ' Сохранённые КБЖУ сходятся с текущими карточками ингредиентов.';
+      const portionsText = info.portions.length
+        ? ` Порции: ${info.portions.map((p) => `${p.name} ${p.grams} г ≈ ${p.kcal} ккал`).join(', ')}.`
+        : '';
+
+      const scopeText = info.writable === false
+        ? ` Карточка живёт в списке другого клиента (${info.source}): править её отсюда нельзя, сначала heys_create_product(from_product_id=${info.product_id}) — состав перенесётся и пересчитается по карточкам этого клиента.`
+        : info.source === 'мой список'
+          ? ' Карточка личная (список клиента), в общую базу состав не уходит.'
+          : ` Карточка из общей базы (${info.source}).`;
+      return {
+        text: `Рецепт «${info.name}» (${info.product_id}, rev ${info.rev}), выход ${info.yield_grams} г: ${itemsText}.${shrinkText} Сохранено ${info.saved.kcal100} ккал/100 (Б${info.saved.protein100} У${info.saved.carbs100} Ж${info.saved.fat100}).${staleText}${portionsText}${scopeText} Правка состава — heys_update_product(recipe_patch), прошлые записи в дневнике при этом не меняются (для них heys_reapply_recipe).`,
+        structured: info,
+      };
+    },
+
     async heys_log_meal(args) {
       const date = resolveDate(args.date, nowMs);
       const time = args.time === undefined || args.time === null || args.time === ''
@@ -2078,8 +2166,47 @@ function createTools({
         'Продукт',
       );
 
-      const { product_id: _id, query: _query, recipe: recipeArg, ...fields } = args;
-      if (recipeArg) {
+      const {
+        product_id: _id, query: _query, recipe: recipeArg, recipe_patch: recipePatchArg, ...fields
+      } = args;
+      if (recipeArg && recipePatchArg) {
+        throw new ToolError(
+          'recipe_and_patch',
+          'recipe заменяет состав целиком, recipe_patch правит названные позиции. Передавай что-то одно.',
+        );
+      }
+      // Патч состава разворачивается в полный recipe до общей ветки: дальше
+      // сохранение, пересчёт КБЖУ и rev у них общие, различается только вход.
+      let recipeInput = recipeArg;
+      let patchResult = null;
+      if (recipePatchArg) {
+        if (!target.recipe || !Array.isArray(target.recipe.items) || !target.recipe.items.length) {
+          throw new ToolError(
+            'not_a_recipe',
+            `У «${target.name}» нет состава — патчить нечего. Заведи рецепт целиком: recipe:{yield_grams, items}.`,
+          );
+        }
+        try {
+          patchResult = products.applyRecipePatch(target.recipe, recipePatchArg);
+        } catch (e) {
+          if (e.code === 'recipe_patch_item_not_found') {
+            throw new ToolError(
+              'recipe_patch_item_not_found',
+              `В составе «${target.name}» нет позиции «${e.ref}». Сейчас там: ${(e.available || []).join(', ')}.`,
+              { available: e.available },
+            );
+          }
+          if (e.code === 'recipe_patch_ambiguous') {
+            throw new ToolError(
+              'recipe_patch_ambiguous',
+              `«${e.ref}» подходит сразу к нескольким позициям состава — назови ингредиент точнее или передай product_id.`,
+            );
+          }
+          throw new ToolError('invalid_recipe_patch', `Не могу применить правку состава: ${e.message}.`);
+        }
+        recipeInput = patchResult.recipe_input;
+      }
+      if (recipeInput) {
         if (!target._custom) {
           throw new ToolError(
             'recipe_on_shared_forbidden',
@@ -2094,7 +2221,7 @@ function createTools({
         }
         let recipePayload;
         try {
-          recipePayload = products.buildRecipePayload(recipeArg, (spec) => {
+          recipePayload = products.buildRecipePayload(recipeInput, (spec) => {
             if (spec.product_id) return products.findById(catalog, spec.product_id);
             if (spec.query) {
               const matches = products.searchProducts(catalog, spec.query, 5);
@@ -2129,14 +2256,26 @@ function createTools({
         const saveRes = await api.upsertKV(sessionToken, products.OVERLAY_KEY, applied.rows);
         if (!saveRes.ok) throw new ToolError('save_failed', `Сервер отклонил правку продукта: ${saveRes.error}`);
         catalogPromise = null;
+        const changesText = patchResult
+          ? (patchResult.changes.length
+            ? ` Изменения: ${patchResult.changes.join('; ')}.`
+            : ' Состав не менялся — пересчитал КБЖУ по текущим карточкам ингредиентов.')
+          : '';
+        const yieldNote = patchResult && patchResult.yield_mode === 'follows_items'
+          ? ' Выход пересчитан вслед за составом (он совпадал с суммой ингредиентов); нужен другой — передай yield_grams.'
+          : patchResult && patchResult.yield_mode === 'kept_ratio'
+            ? ' Выход пересчитан с сохранением прежней уварки; нужен другой — передай yield_grams.'
+            : '';
         return {
-          text: `Поправил рецепт «${target.name}»: КБЖУ пересчитаны из состава (rev ${recipePayload.recipe.rev}). Прошлые записи в дневнике не менялись — только новые приёмы возьмут новый состав. Исправить прошлое — отдельная операция heys_reapply_recipe.`,
+          text: `Поправил рецепт «${target.name}»: ${recipePayload.nutrients.kcal100} ккал/100 из состава (rev ${recipePayload.recipe.rev}).${changesText}${yieldNote} Состав теперь: ${products.formatRecipeSummary(recipePayload.recipe)}. Прошлые записи в дневнике не менялись — только новые приёмы возьмут новый состав. Исправление прошлого — отдельная операция heys_reapply_recipe.`,
           structured: {
             product_id: target.id,
             name: nutrientPatch.name || target.name,
             mode: applied.mode,
             recipe: recipePayload.recipe,
             kcal100: recipePayload.nutrients.kcal100,
+            changes: patchResult ? patchResult.changes : undefined,
+            yield_mode: patchResult ? patchResult.yield_mode : undefined,
           },
         };
       }
@@ -2172,14 +2311,19 @@ function createTools({
         : mode === 'override'
           ? ' Правка сохранена поверх карточки общей базы, у других клиентов она не изменится.'
           : '';
+      const usedIn = products.findRecipesUsingProduct(catalog, target);
+      const usedNote = usedIn.length
+        ? ` Продукт входит в блюда: ${usedIn.map((row) => `«${row.name}» (${row.product_id}, ${row.grams} г)`).join(', ')} — их КБЖУ считались при сохранении и сами не пересчитаются. Обнови каждое: heys_update_product(product_id=…, recipe_patch:{}).`
+        : '';
       return {
-        text: `Поправил «${target.name}»: ${built.changed.join('; ')}.${note}`,
+        text: `Поправил «${target.name}»: ${built.changed.join('; ')}.${note}${usedNote}`,
         structured: {
           product_id: target.id,
           name: built.patch.name || target.name,
           mode,
           updated: built.changed,
           ignored: built.ignored,
+          used_in_recipes: usedIn.length ? usedIn : undefined,
           catalog_size: catalog.all.length,
         },
       };
@@ -2289,6 +2433,8 @@ function createTools({
         );
       }
 
+      const usedIn = products.findRecipesUsingProduct(await loadCatalog(), target);
+
       const [overlayRes, tombRes] = await Promise.all([
         api.getKV(sessionToken, products.OVERLAY_KEY),
         api.getKV(sessionToken, TOMBSTONES_KEY),
@@ -2319,9 +2465,17 @@ function createTools({
       }
       catalogPromise = null;
 
+      const usedNote = usedIn.length
+        ? ` Он входил в состав блюд: ${usedIn.map((row) => `«${row.name}» (${row.product_id})`).join(', ')} — их сохранённые КБЖУ остались прежними, но пересчитать состав теперь нечем. Замени позицию: heys_update_product(product_id=…, recipe_patch:{remove:[…], set:[…]}).`
+        : '';
       return {
-        text: `Удалил продукт «${target.name}» из списка клиента.`,
-        structured: { product_id: target.id, name: target.name, deleted: true },
+        text: `Удалил продукт «${target.name}» из списка клиента.${usedNote}`,
+        structured: {
+          product_id: target.id,
+          name: target.name,
+          deleted: true,
+          used_in_recipes: usedIn.length ? usedIn : undefined,
+        },
       };
     },
 
@@ -2804,6 +2958,44 @@ const RECIPE_SCHEMA = {
   required: ['yield_grams', 'items'],
 };
 
+/**
+ * Правка названного, а не пересборка целого. Полная замена items требует от
+ * модели помнить весь состав — так из блюда молча исчезают ингредиенты,
+ * которых никто не называл.
+ */
+const RECIPE_PATCH_SCHEMA = {
+  type: 'object',
+  description: 'Точечная правка состава: меняются только названные позиции, остальные остаются как есть. Пустой объект — пересчитать КБЖУ по текущим карточкам ингредиентов, не трогая состав. Выход по умолчанию едет за составом (с прежней уваркой) — переопредели yield_grams, если это не так.',
+  properties: {
+    set: {
+      type: 'array',
+      description: 'Добавить ингредиент или задать ему новый вес. Если позиция с таким product_id или названием уже есть — меняется её вес, второй строки не появится.',
+      items: {
+        type: 'object',
+        properties: {
+          product_id: { type: 'string', description: 'id ингредиента из heys_search_products или heys_get_recipe.' },
+          query: { type: 'string', description: 'Название ингредиента, если id неизвестен.' },
+          name: { type: 'string', description: 'Подпись позиции в составе.' },
+          grams: { type: 'number', description: 'Итоговый вес этой позиции в замесе (не прибавка).' },
+        },
+        required: ['grams'],
+      },
+    },
+    remove: {
+      type: 'array',
+      description: 'Убрать позиции: product_id или название так, как оно записано в составе.',
+      items: {
+        type: 'object',
+        properties: {
+          product_id: { type: 'string', description: 'id позиции из heys_get_recipe.' },
+          name: { type: 'string', description: 'Название позиции в составе.' },
+        },
+      },
+    },
+    yield_grams: { type: 'number', description: 'Новый выход готового блюда. Без него выход пересчитается вслед за составом, сохранив прежнюю уварку.' },
+  },
+};
+
 const TOOL_SCHEMAS = [
   {
     name: 'heys_get_day',
@@ -2948,6 +3140,17 @@ const TOOL_SCHEMAS = [
     },
   },
   {
+    name: 'heys_get_recipe',
+    description: 'Показать состав блюда: ингредиенты с id и граммами, вклад каждого в калорийность, выход и уварку, порции, и сверку сохранённых КБЖУ с текущими карточками ингредиентов. Без product_id и query — список всех блюд клиента с составом. Вызывай перед разбором или правкой состава: recipe_summary в поиске — это подпись без id, считать по ней состав руками нельзя.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        product_id: { type: 'string', description: 'Точный id блюда из heys_search_products.' },
+        query: { type: 'string', description: 'Название блюда, если id неизвестен.' },
+      },
+    },
+  },
+  {
     name: 'heys_log_meal',
     description: 'Создать приём пищи в дневнике. «Такой же перекус/приём целиком»: heys_get_day → copy_meal { date, meal_id }. «Такой же конверт/одну позицию» из приёма с несколькими блюдами: copy_meal { date, meal_id, item_ids } — граммы с сервера, не из текста get_day. count при «два»/«три». Новые позиции из той же реплики — items рядом с copy_meal в одном вызове. Составной напиток — позициями или preset. Одиночный продукт — items: [{ query или product_id, grams }].',
     inputSchema: {
@@ -3086,7 +3289,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_update_product',
-    description: 'Поправить карточку продукта в списке клиента: нутриенты, название, бренд, штрихкод, порции, гликемический индекс, вредность. Для составного блюда передай recipe — КБЖУ пересчитаются из состава, rev поднимется, прошлые записи в дневнике не изменятся (это не ретро). Продукт из общей базы правится только для этого клиента: общая карточка не меняется. Калорийность пересчитывается сама. Клетчатка (fiber100) — отдельная от углеводов масса: в complex100 её включать не нужно.',
+    description: 'Поправить карточку продукта в списке клиента: нутриенты, название, бренд, штрихкод, порции, гликемический индекс, вредность. Составное блюдо: recipe заводит или заменяет состав целиком, recipe_patch правит названные позиции («убери кукурузу», «положи 4 яйца», «замени майонез на сметану»), пустой recipe_patch пересчитывает КБЖУ по текущим карточкам ингредиентов. Перед правкой состава — heys_get_recipe: пересобирать items по памяти нельзя, теряются ингредиенты. КБЖУ пересчитаются из состава, rev поднимется, прошлые записи в дневнике не изменятся (это не ретро). Продукт из общей базы правится только для этого клиента: общая карточка не меняется. Калорийность пересчитывается сама. Клетчатка (fiber100) — отдельная от углеводов масса: в complex100 её включать не нужно.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -3120,6 +3323,7 @@ const TOOL_SCHEMAS = [
           },
         },
         recipe: RECIPE_SCHEMA,
+        recipe_patch: RECIPE_PATCH_SCHEMA,
       },
     },
   },

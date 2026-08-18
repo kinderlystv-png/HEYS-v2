@@ -453,7 +453,10 @@ function curatorInstructions(curatorName, withTasks = false, nowMs = Date.now(),
     '13. Утренний вес конкретного дня — это heys_update_day, а не профиль. В профиле вес — базовая настройка, а не измерение.',
     '',
     'Каталог продуктов:',
-    '15. Продукт общей базы правится лично для этого клиента; общая карточка меняется только через очередь модерации (heys_moderate_products). Рецепт (product.recipe) — только Type B. Save рецепта молча меняет карточку вперёд; прошлые дни не трогает. Исправление прошлого — heys_reapply_recipe после вопроса человеку (dry_run, затем confirm). Эволюция состава (майонез→сметана) = save без ретро. Правка карточки ингредиента рецепт не пересчитывает.',
+    '15. Продукт общей базы правится лично для этого клиента; общая карточка меняется только через очередь модерации (heys_moderate_products). Рецепт (product.recipe) — только Type B. Save рецепта молча меняет карточку вперёд; прошлые дни не трогает. Исправление прошлого — heys_reapply_recipe после вопроса человеку (dry_run, затем confirm). Эволюция состава (майонез→сметана) = save без ретро. Правка карточки ингредиента рецепт не пересчитывает: heys_update_product сам назовёт блюда, которые от неё разошлись, — обнови каждое пустым recipe_patch:{}.',
+    '15в. Рецепт — всегда личная карточка клиента: в общую базу блюдо с составом само не уходит, даже с брендом в названии, а при явном share: true туда уезжают только КБЖУ, без состава. heys_get_recipe в каждом ответе называет, чей это список; карточка чужого клиента (writable:false) правится только после heys_create_product(from_product_id).',
+    '15а. Состав блюда смотри через heys_get_recipe (без product_id — все блюда клиента с составом): там id ингредиентов, вклад каждого в калорийность, уварка и сверка с текущими карточками. recipe_summary из поиска — подпись без id; считать по ней состав руками и пересобирать items по памяти запрещено, так теряются ингредиенты. Правка — heys_update_product(recipe_patch) названными позициями (set / remove / yield_grams); полный recipe передавай, только когда состав заводится или переписывается целиком.',
+    '15б. Домашнее составное блюдо заводится рецептом, а не ручными КБЖУ: куратор назвал состав — heys_create_product(recipe), и калорийность посчитается сама. Если разбираете карточку без состава (в поиске нет has_recipe), а блюдо явно составное, предложи оформить его рецептом одним вопросом — молча не переписывай. Одно блюдо у двух клиентов расходится в цифрах именно так: у одного состав, у другого числа руками.',
     '',
     'Администрирование (клиенты, доступ, подписки, заявки):',
     '16. Необратимое действие — создание клиента, смена PIN, сброс подписки — выполняется только после confirm: true. Сначала назови куратору, что именно произойдёт, и дождись ответа.',
@@ -1330,9 +1333,19 @@ function createCuratorContext({
     const row = result.structured && result.structured.created_row;
     if (!row) return result;
 
-    const wanted = share === undefined || share === null ? products.looksIndustrial(row) : !!share;
+    // Блюдо с составом — авторский рецепт клиента. Бренд у него может быть
+    // («салат от Ивановых»), поэтому одного looksIndustrial мало: без этой
+    // проверки чужой домашний рецепт уезжает в каталог, который видят все.
+    const isRecipe = !!(row.recipe && Array.isArray(row.recipe.items) && row.recipe.items.length);
+    const wanted = share === undefined || share === null
+      ? (!isRecipe && products.looksIndustrial(row))
+      : !!share;
     if (!wanted) {
-      const why = share === false ? 'по твоему решению' : 'нет бренда и штрихкода, похоже на домашнее блюдо';
+      const why = share === false
+        ? 'по твоему решению'
+        : isRecipe
+          ? 'это домашнее блюдо с составом — рецепт клиента остаётся в его личном списке'
+          : 'нет бренда и штрихкода, похоже на домашнее блюдо';
       return {
         ...result,
         text: `${result.text} В общую базу не публиковал — ${why}.`,
@@ -1347,10 +1360,14 @@ function createCuratorContext({
       };
     }
 
+    // Даже по прямому share:true состав не публикуем: его позиции ссылаются
+    // на product_id из личного списка этого клиента, у остальных они не
+    // резолвятся — в общей базе это мёртвые ссылки и чужая кухня заодно.
+    const { recipe: _ownRecipe, ...publishRow } = row;
     const payload = {
-      ...row,
-      fingerprint: products.computeProductFingerprint(row),
-      brand_fingerprint: products.computeProductBrandFingerprint(row) || null,
+      ...publishRow,
+      fingerprint: products.computeProductFingerprint(publishRow),
+      brand_fingerprint: products.computeProductBrandFingerprint(publishRow) || null,
     };
     const published = await api.publishSharedProduct(curatorJwt, curatorId, payload);
 
@@ -1370,8 +1387,8 @@ function createCuratorContext({
     }
     return {
       ...result,
-      text: `${result.text} Опубликовал и в общую базу — теперь он найдётся у всех клиентов.`,
-      structured: { ...result.structured, shared: true },
+      text: `${result.text} Опубликовал и в общую базу — теперь он найдётся у всех клиентов.${isRecipe ? ' Состав туда не пошёл: в общей карточке остались только КБЖУ, рецепт виден в списке клиента.' : ''}`,
+      structured: { ...result.structured, shared: true, shared_recipe: isRecipe ? false : undefined },
     };
   };
 

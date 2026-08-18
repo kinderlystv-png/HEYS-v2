@@ -2161,3 +2161,45 @@ test('похожее (не точное) имя у другого клиента
   });
   assert.ok(allowed.structured.product_id);
 });
+
+// Рецепт клиента — авторская вещь: у неё есть бренд («салат от Ивановых») и
+// нет причин уезжать в каталог, который видят все остальные клиенты.
+
+const SALAD_RECIPE = {
+  yield_grams: 200,
+  items: [{ product_id: 'own-coffee', name: 'Кофе американо', grams: 200 }],
+};
+
+test('домашнее блюдо с составом не публикуется, даже когда у него есть бренд', async () => {
+  const api = apiWithPublish();
+  const { tools } = buildWithCurator(api);
+  const res = await tools.heys_create_product({
+    client: 'Антон', name: 'Салат от Ивановых', brand: 'Ивановы', recipe: SALAD_RECIPE,
+  });
+
+  assert.equal(api.published.length, 0, 'бренд не делает авторский рецепт общим');
+  assert.equal(res.structured.shared, false);
+  assert.match(res.text, /рецепт клиента остаётся в его личном списке/);
+});
+
+test('при явном share:true в общую базу уходят КБЖУ, но не состав', async () => {
+  const api = apiWithPublish();
+  const { tools } = buildWithCurator(api);
+  const res = await tools.heys_create_product({
+    client: 'Антон', name: 'Салат от Ивановых', recipe: SALAD_RECIPE, share: true,
+  });
+
+  assert.equal(api.published.length, 1);
+  const { payload } = api.published[0];
+  assert.equal(payload.recipe, undefined, 'ссылки на личные product_id в общей базе мертвы');
+  assert.ok(payload.kcal100 > 0, 'нутриенты опубликованы');
+  assert.equal(res.structured.shared, true);
+  assert.match(res.text, /Состав туда не пошёл/);
+});
+
+test('правила про область видимости рецепта доехали до инструкций', () => {
+  const { instructions } = build(fakeCuratorApi());
+  assert.match(instructions, /heys_get_recipe/);
+  assert.match(instructions, /recipe_patch/);
+  assert.match(instructions, /в общую базу блюдо с составом само не уходит/);
+});

@@ -662,6 +662,265 @@ function buildRecipePayload(recipeInput, findProduct, { nowMs, previousRev = 0 }
   return { recipe, nutrients: computed.nutrients };
 }
 
+/** Ссылка на ингредиент в патче: id, если он известен, иначе название. */
+function matchRecipeItemIndex(items, ref) {
+  const id = ref && ref.product_id != null ? String(ref.product_id).trim() : '';
+  if (id) {
+    const byId = items.findIndex((item) => String(item.product_id || '') === id);
+    if (byId >= 0) return byId;
+  }
+  const nameRef = normalizeText((ref && (ref.name || ref.query)) || '');
+  if (!nameRef) return -1;
+  const exact = items.findIndex((item) => normalizeText(item.name) === nameRef);
+  if (exact >= 0) return exact;
+  const partial = items.filter((item) => {
+    const name = normalizeText(item.name);
+    return name && (name.includes(nameRef) || nameRef.includes(name));
+  });
+  if (partial.length === 1) return items.indexOf(partial[0]);
+  if (partial.length > 1) throw recipeError('recipe_patch_ambiguous', { ref: nameRef });
+  return -1;
+}
+
+/**
+ * Точечная правка состава: «убери кукурузу», «положи 4 яйца», «замени майонез
+ * на сметану». Полная замена items — главный способ молча потерять строку:
+ * модель пересобирает список по памяти и роняет ингредиент, которого никто не
+ * называл вслух. Патч меняет только то, что названо, остальное несёт как есть.
+ *
+ * Выход готового при этом не «остаётся прежним»: если из салата убрать
+ * четверть массы, а yield не тронуть, КБЖУ на 100 г уедут вниз без всякой
+ * причины. Поэтому выход по умолчанию следует за составом, сохраняя прежнюю
+ * уварку, и явный yield_grams всегда сильнее.
+ */
+function applyRecipePatch(currentRecipe, patch) {
+  if (!patch || typeof patch !== 'object' || Array.isArray(patch)) {
+    throw recipeError('invalid_recipe_patch');
+  }
+  const rawItems = currentRecipe && Array.isArray(currentRecipe.items) ? currentRecipe.items : [];
+  if (!rawItems.length) throw recipeError('recipe_items_empty');
+  const items = rawItems.map((item) => ({
+    product_id: item.product_id ? String(item.product_id) : undefined,
+    name: String(item.name || '').trim(),
+    grams: Number(item.grams) || 0,
+  }));
+  const prevYield = Number(currentRecipe.yield_grams) || 0;
+  const prevItemsGrams = items.reduce((sum, item) => sum + item.grams, 0);
+  const changes = [];
+
+  const removeList = Array.isArray(patch.remove) ? patch.remove : [];
+  for (const ref of removeList) {
+    const spec = typeof ref === 'string' ? { name: ref } : ref || {};
+    const index = matchRecipeItemIndex(items, spec);
+    if (index < 0) {
+      throw recipeError('recipe_patch_item_not_found', {
+        ref: spec.product_id || spec.name || spec.query || '',
+        available: items.map((item) => item.name),
+      });
+    }
+    changes.push(`убрано ${items[index].name} (${items[index].grams} г)`);
+    items.splice(index, 1);
+  }
+
+  const setList = Array.isArray(patch.set) ? patch.set : [];
+  for (const raw of setList) {
+    const spec = raw || {};
+    const grams = Number(spec.grams);
+    if (!(grams > 0) || grams > 50000) throw recipeError('invalid_recipe_item_grams');
+    const index = matchRecipeItemIndex(items, spec);
+    if (index >= 0) {
+      const before = items[index].grams;
+      if (spec.product_id) items[index].product_id = String(spec.product_id);
+      if (spec.name) items[index].name = String(spec.name).trim();
+      items[index].grams = round1(grams);
+      if (before !== items[index].grams) {
+        changes.push(`${items[index].name}: ${before} → ${items[index].grams} г`);
+      }
+      continue;
+    }
+    if (!spec.product_id && !spec.query && !spec.name) throw recipeError('invalid_recipe_patch');
+    items.push({
+      product_id: spec.product_id ? String(spec.product_id) : undefined,
+      query: spec.product_id ? undefined : String(spec.query || spec.name).trim(),
+      name: spec.name ? String(spec.name).trim() : '',
+      grams: round1(grams),
+    });
+    changes.push(`добавлено ${spec.name || spec.query || spec.product_id} ${round1(grams)} г`);
+  }
+
+  if (!items.length) throw recipeError('recipe_items_empty');
+  const nextItemsGrams = items.reduce((sum, item) => sum + (Number(item.grams) || 0), 0);
+
+  let yieldGrams;
+  let yieldMode;
+  if (patch.yield_grams != null && patch.yield_grams !== '') {
+    yieldGrams = Number(patch.yield_grams);
+    yieldMode = 'explicit';
+  } else if (!changes.length || prevItemsGrams <= 0) {
+    yieldGrams = prevYield;
+    yieldMode = 'kept';
+  } else if (Math.abs(prevYield - prevItemsGrams) <= prevItemsGrams * 0.01) {
+    // Выход равнялся сумме ингредиентов — холодное блюдо, уварки нет.
+    yieldGrams = round1(nextItemsGrams);
+    yieldMode = 'follows_items';
+  } else {
+    // Была уварка (или долив) — сохраняем её долю, а не абсолютный вес.
+    yieldGrams = round1(nextItemsGrams * (prevYield / prevItemsGrams));
+    yieldMode = 'kept_ratio';
+  }
+  if (!(yieldGrams > 0) || yieldGrams > 50000) throw recipeError('invalid_recipe_yield');
+  if (yieldMode !== 'kept' && round1(yieldGrams) !== round1(prevYield)) {
+    changes.push(`выход ${round1(prevYield)} → ${round1(yieldGrams)} г`);
+  }
+
+  return {
+    recipe_input: { yield_grams: round1(yieldGrams), items },
+    changes,
+    yield_mode: yieldMode,
+    prev_yield_grams: round1(prevYield),
+  };
+}
+
+/**
+ * Разбор состава для куратора: вклад каждого ингредиента и сверка сохранённых
+ * КБЖУ с текущими карточками. Рецепт считается один раз при сохранении, так
+ * что «блюдо из старых цифр» — штатное состояние базы, и заметить его можно
+ * только этой сверкой. Без неё куратор пересчитывает состав руками по строке
+ * из поиска и теряет ингредиенты.
+ */
+function describeRecipe(product, findProduct) {
+  const recipe = product && product.recipe;
+  if (!recipe || !Array.isArray(recipe.items) || !recipe.items.length) return null;
+  const yieldGrams = Number(recipe.yield_grams) || 0;
+  const resolve = typeof findProduct === 'function' ? findProduct : () => null;
+
+  const items = [];
+  const missing = [];
+  let itemsGrams = 0;
+  let knownKcal = 0;
+  for (const item of recipe.items) {
+    const grams = Number(item.grams) || 0;
+    itemsGrams += grams;
+    const current = resolve({ product_id: item.product_id, query: item.name }) || null;
+    const kcal100 = current ? computeTefKcal100(current) : null;
+    const kcal = kcal100 == null ? null : round1((kcal100 * grams) / 100);
+    if (kcal != null) knownKcal += kcal;
+    items.push({
+      product_id: item.product_id || undefined,
+      name: item.name || (current && current.name) || '?',
+      grams: round1(grams),
+      kcal100: kcal100 == null ? undefined : kcal100,
+      kcal: kcal == null ? undefined : kcal,
+      card_name: current && current.name && current.name !== item.name ? current.name : undefined,
+      card_missing: current ? undefined : true,
+    });
+    if (!current) missing.push(item.name || item.product_id || '?');
+  }
+  for (const item of items) {
+    if (item.kcal != null && knownKcal > 0) {
+      item.kcal_share_pct = Math.round((item.kcal / knownKcal) * 1000) / 10;
+    }
+  }
+
+  const saved = {
+    kcal100: computeTefKcal100(product),
+    protein100: round1(Number(product.protein100) || 0),
+    carbs100: round1(Number(product.carbs100)
+      || ((Number(product.simple100) || 0) + (Number(product.complex100) || 0))),
+    fat100: round1(Number(product.fat100)
+      || ((Number(product.badFat100) || 0) + (Number(product.goodFat100) || 0) + (Number(product.trans100) || 0))),
+  };
+
+  let recomputed = null;
+  let drift = null;
+  if (!missing.length) {
+    try {
+      const computed = computeRecipeNutrients({ yield_grams: yieldGrams, items: recipe.items }, resolve);
+      recomputed = {
+        kcal100: computed.nutrients.kcal100,
+        protein100: computed.nutrients.protein100,
+        carbs100: computed.nutrients.carbs100,
+        fat100: computed.nutrients.fat100,
+      };
+      const delta = round1(recomputed.kcal100 - saved.kcal100);
+      // Полграмма-полкалории — округление самих полей карточки, а не правка
+      // ингредиента; шуметь на этом нельзя, иначе предупреждение обесценится.
+      if (Math.abs(delta) > 0.5) drift = { kcal100_delta: delta };
+    } catch (e) {
+      recomputed = null;
+    }
+  }
+
+  const portions = Array.isArray(product.portions) ? product.portions : [];
+  return {
+    product_id: product.id,
+    name: product.name,
+    // Где живёт карточка: рецепт клиента не должен ни путаться с общей базой,
+    // ни уезжать в неё. Куратор видит это в каждом разборе состава.
+    source: product._source === 'own'
+      ? 'мой список'
+      : product._source === 'peer'
+        ? `список ${product._owner_name || 'другого клиента'}`
+        : 'общая база',
+    writable: product._source !== 'peer',
+    rev: Number(recipe.rev) || 0,
+    updated_at: Number(recipe.updatedAt) || undefined,
+    yield_grams: round1(yieldGrams),
+    items_grams_total: round1(itemsGrams),
+    // Разница выхода и суммы ингредиентов: уварка (минус) или долив (плюс).
+    shrink_grams: yieldGrams > 0 ? round1(yieldGrams - itemsGrams) : 0,
+    items,
+    saved,
+    recomputed: recomputed || undefined,
+    stale: drift || undefined,
+    missing_items: missing.length ? missing : undefined,
+    portions: portions.map((p) => ({
+      name: p.name,
+      grams: Number(p.grams) || 0,
+      kcal: round1((saved.kcal100 * (Number(p.grams) || 0)) / 100),
+      composition: formatRecipePortionApprox(recipe, p.grams) || undefined,
+    })),
+  };
+}
+
+/** Личные карточки клиента, у которых есть состав. */
+function listRecipes(catalog) {
+  const own = catalog && Array.isArray(catalog.own) ? catalog.own : [];
+  return own.filter((product) => product
+    && product.recipe
+    && Array.isArray(product.recipe.items)
+    && product.recipe.items.length);
+}
+
+/**
+ * Блюда, куда входит этот продукт. Правка карточки ингредиента КБЖУ рецептов
+ * не пересчитывает — расходятся они молча именно так, поэтому после правки
+ * нужно хотя бы назвать пострадавшие блюда.
+ */
+function findRecipesUsingProduct(catalog, product) {
+  if (!product) return [];
+  const ids = new Set([String(product.id || '')]);
+  if (product.shared_origin_id) ids.add(String(product.shared_origin_id));
+  const nameNorm = normalizeText(product.name);
+  return listRecipes(catalog)
+    .filter((row) => String(row.id) !== String(product.id))
+    .map((row) => {
+      const hit = row.recipe.items.find((item) => {
+        if (item.product_id && ids.has(String(item.product_id))) return true;
+        return !item.product_id && nameNorm && normalizeText(item.name) === nameNorm;
+      });
+      return hit
+        ? {
+          product_id: row.id,
+          name: row.name,
+          grams: Number(hit.grams) || 0,
+          rev: Number(row.recipe.rev) || 0,
+        }
+        : null;
+    })
+    .filter(Boolean);
+}
+
 function itemKcalLocal(item) {
   return ((Number(item && item.kcal100) || 0) * (Number(item && item.grams) || 0)) / 100;
 }
@@ -1077,6 +1336,10 @@ module.exports = {
   recipeSnapshotFields,
   hasManualNutrientInput,
   buildRecipePayload,
+  applyRecipePatch,
+  describeRecipe,
+  listRecipes,
+  findRecipesUsingProduct,
   previewRecipeReapply,
   applyRecipeToDay,
   applyRecipeSnapshotToItem,

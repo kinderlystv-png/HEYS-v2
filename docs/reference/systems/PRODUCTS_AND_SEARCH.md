@@ -1,11 +1,11 @@
 # Продукты, overlay и поиск
 
 > **Статус:** core source-контракты проверены 2026-07-18, CHECK-violation UX
-> публикации — 2026-08-13, рецепт product.recipe — 2026-08-18 **Охват:** shared
-> catalog, client overlay, merge/sync, commit gate, moderation entrypoints,
-> поиск и Type B recipe **Не подтверждено:** production catalog contents/count,
-> runtime feature flags, database function bodies после последней migration и
-> browser/E2E поведение
+> публикации — 2026-08-13, рецепт product.recipe и MCP-работа с составом —
+> 2026-08-18 **Охват:** shared catalog, client overlay, merge/sync, commit gate,
+> moderation entrypoints, поиск и Type B recipe **Не подтверждено:** production
+> catalog contents/count, runtime feature flags, database function bodies после
+> последней migration и browser/E2E поведение
 
 ## Модель владения данными
 
@@ -193,7 +193,22 @@ Workspace package `@heys/search` имеет собственный TypeScript AP
     запись только `mergeSaveKV` по одному дню. Ингредиенты при ретро — текущие
     карточки. Позиция дня хранит снимок `recipe_items` / `recipe_yield` /
     `recipe_rev`. След — `recipe_backfill_log[]` на дне: `ensureDay` и
-    `mergeDayData` его сохраняют. В shared export рецепт не уходит.
+    `mergeDayData` его сохраняют. В shared export рецепт не уходит: и веб
+    (`heys_cloud_shared_v1.js`, whitelist полей), и MCP-коннектор публикуют
+    карточку без `recipe`, а блюдо с составом MCP не публикует автоматически
+    вовсе — бренд у авторского блюда не делает его промышленным (правка
+    2026-08-18; до неё MCP лил в `publish_shared_product_by_curator` весь row).
+
+    Работа с составом через MCP: `heys_get_recipe` отдаёт ингредиенты с
+    `product_id`, вклад каждого в калорийность, уварку (`yield` минус сумма) и
+    сверку сохранённых КБЖУ с текущими карточками ингредиентов; без `product_id`
+    — список блюд клиента. Правка — `heys_update_product`: `recipe` заменяет
+    состав целиком, `recipe_patch` ({set, remove, yield_grams}) правит только
+    названные позиции, пустой `recipe_patch` пересчитывает КБЖУ по текущим
+    карточкам. Без явного `yield_grams` выход едет за составом, сохраняя прежнюю
+    долю уварки. Правка или удаление карточки-ингредиента возвращает список
+    блюд, где она используется: пересчёта по цепочке нет и не планируется.
+
 20. ГИ и вред рецепта считаются по массе ингредиентов, `kcal100` — Atwater
     `3×Б + 4×У + 9×Ж` после агрегации. `fiber100` отдельно от `complex100`.
 
