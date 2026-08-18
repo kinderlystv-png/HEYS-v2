@@ -1985,6 +1985,57 @@ test('from_product_id копирует домашний продукт друг�
   assert.equal(overlay.some((row) => row.id === 'own-salad-pp'), false);
 });
 
+// Копия блюда без состава — копия без главного: у клиента остаётся карточка с
+// цифрами и без ответа «что внутри». Плюс состав пересчитывается по каталогу
+// нового владельца: у него свои карточки тех же продуктов.
+function withRecipeSalad(api) {
+  api.kv['cid-anton'].heys_products_overlay_v2.push({
+    id: 'own-egg-anton', _custom: true, in_my_list: true, name: 'Яйцо варёное',
+    protein100: 12.7, simple100: 0.7, complex100: 0, badFat100: 3.1, goodFat100: 7.5,
+    trans100: 0, fiber100: 0, gi: 0, harm: 1,
+  });
+  api.kv['cid-alexandra'].heys_products_overlay_v2.push({
+    id: 'own-egg-alex', _custom: true, in_my_list: true, name: 'Яйцо варёное',
+    protein100: 12.7, simple100: 0.7, complex100: 0, badFat100: 3.1, goodFat100: 7.5,
+    trans100: 0, fiber100: 0, gi: 0, harm: 1,
+  });
+  const salad = api.kv['cid-anton'].heys_products_overlay_v2.find((p) => p.id === 'own-salad-pp');
+  salad.recipe = {
+    yield_grams: 200,
+    items: [{ product_id: 'own-egg-anton', name: 'Яйцо варёное', grams: 200 }],
+    rev: 1,
+    updatedAt: 1,
+  };
+  return api;
+}
+
+test('клон переносит рецепт и пересчитывает его по каталогу нового владельца', async () => {
+  const api = withRecipeSalad(withSalads(fakeCuratorApi()));
+  const { tools } = build(api);
+  const created = await tools.heys_create_product({
+    client: 'Александра',
+    from_product_id: 'own-salad-pp',
+  });
+  const overlay = api.kv['cid-alexandra'].heys_products_overlay_v2;
+  const row = overlay.find((r) => r.id === created.structured.product_id);
+  assert.ok(row.recipe, 'состав должен переехать вместе с карточкой');
+  assert.equal(row.recipe.items.length, 1);
+  // Ингредиент взят из списка Александры, а не из чужого overlay.
+  assert.equal(row.recipe.items[0].product_id, 'own-egg-alex');
+  assert.equal(row.recipe.items[0].grams, 200);
+});
+
+test('клон отказывается, если ингредиента рецепта нет у нового владельца', async () => {
+  const api = withRecipeSalad(withSalads(fakeCuratorApi()));
+  api.kv['cid-alexandra'].heys_products_overlay_v2 =
+    api.kv['cid-alexandra'].heys_products_overlay_v2.filter((p) => p.id !== 'own-egg-alex');
+  const { tools } = build(api);
+  await assert.rejects(
+    () => tools.heys_create_product({ client: 'Александра', from_product_id: 'own-salad-pp' }),
+    (e) => e.code === 'recipe_item_not_found' && /Яйцо варёное/.test(e.message),
+  );
+});
+
 test('после копии log_meal принимает новый id, peer id — нет', async () => {
   const api = withSalads(fakeCuratorApi());
   const { tools } = build(api);

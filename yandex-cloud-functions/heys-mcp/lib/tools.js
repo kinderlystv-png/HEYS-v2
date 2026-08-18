@@ -1081,6 +1081,7 @@ function createTools({
           throw new ToolError('invalid_recipe', `Не могу собрать рецепт: ${e.message}.`);
         }
         createInput = {
+          ...recipePayload.nutrients,
           name,
           portions: args.portions,
           brand: args.brand,
@@ -1089,6 +1090,48 @@ function createTools({
       } else if (args.from_product_id) {
         if (!base) {
           throw new ToolError('product_not_found', `Продукт-источник с id "${args.from_product_id}" не найден.`);
+        }
+        // Копия блюда без состава — копия без главного: у клиента остаётся
+        // карточка с цифрами и без ответа «что внутри», ради которого рецепт и
+        // заводился. Состав переносим, но пересчитываем по каталогу нового
+        // владельца: у него могут быть свои карточки тех же продуктов, и КБЖУ
+        // честнее взять его, чем притащить чужие. id — подсказка, авторитет за
+        // именем, как в наборах: у нового владельца тот же продукт живёт под
+        // своим id.
+        if (base.recipe && Array.isArray(base.recipe.items) && base.recipe.items.length) {
+          try {
+            recipePayload = products.buildRecipePayload(
+              {
+                yield_grams: base.recipe.yield_grams,
+                items: base.recipe.items.map((item) => ({
+                  product_id: item.product_id,
+                  query: item.name,
+                  grams: item.grams,
+                })),
+              },
+              (spec) => {
+                if (spec.product_id) {
+                  const byId = products.findById(catalog, spec.product_id);
+                  if (byId) return byId;
+                }
+                if (spec.query) {
+                  const matches = products.searchProducts(catalog, spec.query, 5);
+                  return matches.length === 1 ? matches[0] : null;
+                }
+                return null;
+              },
+              { nowMs, previousRev: 0 },
+            );
+          } catch (e) {
+            if (e.code === 'recipe_item_not_found') {
+              throw new ToolError(
+                'recipe_item_not_found',
+                `Ингредиент «${e.query || e.product_id}» из рецепта «${base.name}» не найден в списке этого клиента. Заведи его сначала — или скопируй продукт без рецепта, передав нужные нутриенты вручную.`,
+                { product_id: e.product_id, query: e.query, source_product_id: args.from_product_id },
+              );
+            }
+            throw new ToolError('invalid_recipe', `Не могу перенести рецепт «${base.name}»: ${e.message}.`);
+          }
         }
         const baseInput = {};
         for (const field of products.REQUIRED_NUTRIENTS) {
@@ -1106,6 +1149,9 @@ function createTools({
         const basePortions = products.normalizePortions(base.portions);
         if (basePortions.length) baseInput.portions = basePortions;
         createInput = { ...baseInput, ...args, name };
+        if (recipePayload) {
+          createInput = { ...createInput, ...recipePayload.nutrients };
+        }
         clonedFrom = {
           product_id: base.id,
           name: base.name,
@@ -2970,7 +3016,7 @@ const TOOL_SCHEMAS = [
       type: 'object',
       properties: {
         name: { type: 'string', description: 'Название продукта. Если есть бренд, лучше включить его в название — так проще искать.' },
-        from_product_id: { type: 'string', description: 'Скопировать нутриенты с уже существующего продукта (product_id из search/get). Для «черри как помидор» без этикетки — не выдумывай состав.' },
+        from_product_id: { type: 'string', description: 'Скопировать нутриенты с уже существующего продукта (product_id из search/get). Для «черри как помидор» без этикетки — не выдумывай состав. Если у источника есть рецепт, состав переезжает вместе с карточкой и пересчитывается по списку этого клиента: ингредиент ищется по его id, затем по имени. Нет ингредиента у клиента — вызов отклонён, заведи его первым.' },
         recipe: RECIPE_SCHEMA,
         brand: { type: 'string', description: 'Производитель или бренд.' },
         barcode: { type: 'string', description: 'Штрихкод с упаковки, 6–32 символа.' },
