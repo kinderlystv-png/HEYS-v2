@@ -1036,6 +1036,29 @@ function createTools({
         );
       }
 
+      // Точного совпадения нет, но название может быть той же позицией другими
+      // словами («крабовый салат» vs «Салат крабовый классический»): matchStrength
+      // ловит общий стем/фразу без точного текста. Порог 'strong' — тот же, что
+      // отсекает лишний шум в поиске (см. matchStrength в products.js).
+      if (!duplicate && !args.allow_duplicate) {
+        const prepared = products.prepareQuery(name);
+        const similar = prepared
+          ? catalog.all
+            .filter((p) => products.normalizeText(p.name) !== nameNorm
+              && products.matchStrength(p, prepared) === 'strong')
+            .slice(0, 5)
+          : [];
+        if (similar.length) {
+          const candidates = similar.map(products.describeProduct);
+          const list = candidates.map((c) => `«${c.name}» (${c.product_id})`).join('; ');
+          throw new ToolError(
+            'product_similar_exists',
+            `Похоже, это уже есть под другим названием: ${list}. Это тот же продукт — используй его id, а если другой — allow_duplicate.`,
+            { existing: candidates[0], candidates },
+          );
+        }
+      }
+
       // Удалённый когда-то продукт с тем же именем приложение отфильтрует по
       // tombstone — новый продукт просто не появится в списке. Молча создавать
       // его бессмысленно, поэтому проверяем заранее.
@@ -3056,7 +3079,7 @@ const TOOL_SCHEMAS = [
             required: ['name', 'grams'],
           },
         },
-        allow_duplicate: { type: 'boolean', description: 'Создать, даже если продукт с таким названием уже есть или был удалён. Ставь только после подтверждения пользователя.' },
+        allow_duplicate: { type: 'boolean', description: 'Создать, даже если продукт с таким или похожим названием уже есть, или был удалён. Ставь только после подтверждения пользователя.' },
       },
       required: ['name'],
     },

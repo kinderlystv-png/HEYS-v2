@@ -2128,3 +2128,30 @@ test('дубль имени у другого клиента: warning если �
   });
   assert.ok(created.structured.product_id);
 });
+
+test('похожее (не точное) имя у другого клиента тоже предупреждает', async () => {
+  const api = withSalads(fakeCuratorApi());
+  const { tools } = build(api);
+  await tools.heys_search_products({ client: 'Александра', query: 'крабовый салат пп' });
+  await assert.rejects(
+    () => tools.heys_create_product({
+      client: 'Александра',
+      name: 'Салат крабовый',
+      protein100: 5, simple100: 1, complex100: 1, badFat100: 1, goodFat100: 1,
+      trans100: 0, fiber100: 0, gi: 40, harm: 3,
+    }),
+    (e) => {
+      assert.equal(e.code, 'product_similar_exists_other_client');
+      assert.match(e.message, /Салат крабовый ПП/);
+      return true;
+    },
+  );
+  const allowed = await tools.heys_create_product({
+    client: 'Александра',
+    name: 'Салат крабовый',
+    protein100: 5, simple100: 1, complex100: 1, badFat100: 1, goodFat100: 1,
+    trans100: 0, fiber100: 0, gi: 40, harm: 3,
+    allow_duplicate: true,
+  });
+  assert.ok(allowed.structured.product_id);
+});

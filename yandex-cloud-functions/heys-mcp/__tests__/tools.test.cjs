@@ -940,11 +940,90 @@ test('create_product не плодит дубль существующего п�
   assert.equal(api.upserts.length, 0);
 });
 
+test('create_product предупреждает о похожем продукте с другим названием', async () => {
+  const saladOverlay = [
+    ...OVERLAY,
+    {
+      id: 'own-salad',
+      _custom: true,
+      name: 'Салат крабовый классический',
+      protein100: 5,
+      simple100: 3,
+      complex100: 4,
+      badFat100: 1,
+      goodFat100: 2,
+      trans100: 0,
+      fiber100: 1,
+      gi: 40,
+      harm: 2,
+      in_my_list: true,
+    },
+  ];
+  const api = fakeApi({ day: null, overlay: saladOverlay });
+  const tools = build(api);
+  await assert.rejects(
+    () => tools.heys_create_product({ ...LABEL, name: 'Крабовый салат' }),
+    (e) => {
+      assert.equal(e.code, 'product_similar_exists');
+      assert.equal(e.details.existing.name, 'Салат крабовый классический');
+      assert.equal(e.details.candidates.length, 1);
+      return true;
+    },
+  );
+  assert.equal(api.upserts.length, 0);
+});
+
+test('create_product по allow_duplicate проходит мимо похожего названия', async () => {
+  const saladOverlay = [
+    ...OVERLAY,
+    {
+      id: 'own-salad',
+      _custom: true,
+      name: 'Салат крабовый классический',
+      protein100: 5,
+      simple100: 3,
+      complex100: 4,
+      badFat100: 1,
+      goodFat100: 2,
+      trans100: 0,
+      fiber100: 1,
+      gi: 40,
+      harm: 2,
+      in_my_list: true,
+    },
+  ];
+  const api = fakeApi({ day: null, overlay: saladOverlay });
+  const tools = build(api);
+  await tools.heys_create_product({ ...LABEL, name: 'Крабовый салат', allow_duplicate: true });
+  assert.equal(api.upserts.length, 1);
+});
+
 test('create_product по явному подтверждению всё же создаёт одноимённый продукт', async () => {
   const api = fakeApi({ day: null });
   const tools = build(api);
   await tools.heys_create_product({ ...LABEL, name: 'Кофе американо', allow_duplicate: true });
   assert.equal(api.upserts.length, 1);
+});
+
+test('create_product предупреждает про похожее название, даже если текст не совпал точно', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  await assert.rejects(
+    () => tools.heys_create_product({ ...LABEL, name: 'Молоко ультрапастеризованное' }),
+    (e) => {
+      assert.equal(e.code, 'product_similar_exists');
+      assert.match(e.details.existing.name, /Молоко ультрапастеризованное 3\.5/);
+      return true;
+    },
+  );
+  assert.equal(api.upserts.length, 0);
+});
+
+test('create_product по allow_duplicate создаёт похожий продукт с другим названием', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  const res = await tools.heys_create_product({ ...LABEL, name: 'Молоко ультрапастеризованное', allow_duplicate: true });
+  assert.ok(res.structured.product_id);
 });
 
 test('create_product предупреждает про ранее удалённое имя вместо тихого создания', async () => {

@@ -1302,6 +1302,27 @@ function createCuratorContext({
             },
           );
         }
+
+        // Тот же зазор, что и в личном/общем каталоге: у другого клиента может
+        // лежать та же позиция под другим названием.
+        const prepared = !other && products.prepareQuery(rest.name);
+        const similarOther = prepared
+          ? index.entries.find((entry) => (
+            String(entry.owner_client_id) !== String(target.client_id)
+            && products.matchStrength(entry.product, prepared) === 'strong'
+          ))
+          : null;
+        if (similarOther) {
+          throw new ToolError(
+            'product_similar_exists_other_client',
+            `Похоже, это уже есть у ${similarOther.owner_client_name} под другим названием: «${similarOther.product.name}» (product_id=${similarOther.product.id}). Тот же продукт — скопируй через heys_create_product(from_product_id=${similarOther.product.id}), другой — allow_duplicate.`,
+            {
+              existing: products.describeProduct(tagPeerProduct(similarOther)),
+              owner_client_id: similarOther.owner_client_id,
+              owner_client_name: similarOther.owner_client_name,
+            },
+          );
+        }
       }
     }
     const result = await createProductForClient(rest);
