@@ -399,7 +399,19 @@ test('инструкция ведёт коротким путём и не тре
   );
   assert.match(text, /За сегодня перед этим нужен heys_get_day/);
   assert.match(text, /items\[\{query, pieces: N\}\]/);
-  assert.match(text, /heys_get_day и heys_search_products — максимум один раз/);
+  assert.match(text, /СЧЁТЧИК ВЫЗОВОВ/);
+  assert.match(text, /не больше одного раза на каждую отдельную дату/);
+});
+
+test('быстрый путь покрывает составную реплику одним log_meal', () => {
+  const text = curatorInstructions('Anton', true, Date.UTC(2026, 7, 18), false, '');
+  assert.match(text, /copy_meal и items передаются в одном вызове/);
+  assert.match(text, /СЧЁТЧИК ВЫЗОВОВ/);
+  assert.match(text, /не больше одного раза на каждую отдельную дату/);
+  assert.ok(
+    text.indexOf('СЧЁТЧИК ВЫЗОВОВ') < text.indexOf('Правила работы с дневником'),
+    'счётчик должен стоять в быстром пути, до подробных правил',
+  );
 });
 
 test('запись приёма читает день параллельно каталогу, а не после него', async () => {

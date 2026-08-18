@@ -2528,13 +2528,13 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_log_meal',
-    description: 'Создать приём пищи в дневнике. «Как вчера» / «такой же перекус» / «два бутерброда»: heys_get_day за дату-источник → meal_id из текста → copy_meal: { date, meal_id, count при «два»/«три» } — граммы копируются сами, items не собирай из текста get_day. Составной напиток или блюдо вносится позициями или preset из heys_list_meal_presets. Одиночный продукт — items: [{ query или product_id, grams }]. Неоднозначный query вернёт кандидатов — уточни, не угадывай.',
+    description: 'Создать приём пищи в дневнике. «Как вчера» / «такой же перекус» / «два бутерброда»: heys_get_day за дату-источник → meal_id из текста → copy_meal: { date, meal_id, count при «два»/«три» } — граммы копируются сами, items не собирай из текста get_day. Новые позиции из той же реплики передавай полем items рядом с copy_meal — они попадут в тот же приём, второй вызов не нужен. Составной напиток или блюдо вносится позициями или preset из heys_list_meal_presets. Одиночный продукт — items: [{ query или product_id, grams }]. Неоднозначный query вернёт кандидатов — уточни, не угадывай.',
     inputSchema: {
       type: 'object',
       properties: {
         copy_meal: {
           type: 'object',
-          description: 'Скопировать уже записанный приём («как вчера»). meal_id — из heys_get_day. count умножает граммовку каждой позиции (2 = «два таких же» в одном приёме). items/preset не нужны.',
+          description: 'Скопировать уже записанный приём («как вчера»). meal_id — из heys_get_day. count умножает граммовку каждой позиции (2 = «два таких же» в одном приёме). items/preset не обязательны; если переданы вместе с copy_meal — складываются с копией в один приём.',
           properties: {
             date: { type: 'string', description: 'Дата приёма-источника: YYYY-MM-DD, «вчера», «позавчера».' },
             meal_id: { type: 'string', description: 'meal_id из heys_get_day.' },

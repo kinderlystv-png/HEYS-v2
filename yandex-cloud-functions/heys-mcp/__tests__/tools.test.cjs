@@ -248,6 +248,36 @@ test('log_meal copy_meal понимает «вчера» и отклоняет �
   );
 });
 
+test('log_meal copy_meal и items в одном вызове дают один приём со всеми позициями', async () => {
+  const yesterday = '2026-07-31';
+  const pastDays = {
+    [yesterday]: {
+      date: yesterday,
+      meals: [{
+        id: 'm_lunch',
+        name: 'Обед',
+        time: '13:00',
+        items: [
+          { id: 'it1', product_id: 'own-americano', name: 'Кофе американо', grams: 100 },
+        ],
+      }],
+      updatedAt: 10,
+    },
+  };
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 111 }, pastDays });
+  const tools = build(api);
+  await tools.heys_log_meal({
+    copy_meal: { date: yesterday, meal_id: 'm_lunch' },
+    items: [{ query: 'сироп для кофе', grams: 35 }],
+  });
+
+  assert.equal(api.saves.length, 1);
+  const meal = api.saves[0].value.meals[0];
+  assert.equal(meal.items.length, 2, 'копия и новая позиция в одном приёме');
+  assert.equal(meal.items[0].grams, 100);
+  assert.equal(meal.items[1].grams, 35);
+});
+
 test('add_water прибавляет к текущему объёму', async () => {
   const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 200, updatedAt: 9 } });
   const tools = build(api);
