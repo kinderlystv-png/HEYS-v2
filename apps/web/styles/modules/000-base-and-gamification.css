@@ -10538,7 +10538,7 @@ body:has(:is(
   border: 0;
   border-radius: 999px;
   background: #f6e6dd;
-  color: var(--v4-act, #c67139);
+  color: #c67139;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -10942,7 +10942,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__head {
-  background: var(--v4-bg, #14110f);
+  background: #14110f;
   border-bottom-color: rgba(255, 255, 255, 0.06);
 }
 
