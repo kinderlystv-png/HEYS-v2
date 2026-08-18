@@ -4416,7 +4416,7 @@
       React.createElement('div', { className: 'widget-wd__curve-row' },
         deltaLine,
         dyn?.hasDynamics
-          ? WeightDynamicsSparkSvg({ sparkline: dyn.sparkline, stateClass, compact })
+          ? React.createElement(WeightDynamicsSparkSvg, { sparkline: dyn.sparkline, stateClass, compact })
           : null
       )
     );

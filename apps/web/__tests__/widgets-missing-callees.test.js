@@ -111,7 +111,7 @@ describe('слой данных виджетов — ровно один', () =>
 
     const owners = sources
       .filter((f) => /HEYS\.Widgets\.data\s*=(?!=)/.test(fs.readFileSync(f, 'utf8')))
-      .map((f) => path.relative(webRoot, f));
+      .map((f) => path.relative(webRoot, f).replace(/\\/g, '/'));
 
     expect(owners).toEqual(['widgets/widget_data.js']);
   });

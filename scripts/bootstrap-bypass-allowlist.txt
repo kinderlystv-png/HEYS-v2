@@ -270,6 +270,9 @@ apps/web/heys_yandex_api_v1.js:893
 # [theme prefs] UI theme preference — not diary OverlayStore data.
 apps/web/heys_theme_v1.js::global.localStorage.setItem(key, value)
 
+# [fab visibility] settings chip prefs — lsSet primary, localStorage fallback.
+apps/web/heys_fab_visibility_v1.js::global.localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized))
+
 # [day UI] Medical disclaimer + meal chart hint + advice toast prefs — local UI flags /
 # fallbacks after Store/lsSet; not cloud diary writes. Sources scanned; bundles excluded.
 apps/web/day/_advice.js::MEDICAL_DISCLAIMER_KEY
