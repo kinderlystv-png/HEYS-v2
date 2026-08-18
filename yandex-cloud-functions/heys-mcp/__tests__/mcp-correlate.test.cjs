@@ -237,3 +237,33 @@ test('pre_chain=0 если вызовы начались до минуты за�
   );
   assert.equal(flow.pre_chain_ms, 0);
 });
+
+test('analyzeFlow: arg_keys доезжают до шага и отличают copy_meal от ручного ввода', () => {
+  // Без имён полей вызов с copy_meal и вызов с add_items в трейсе выглядели
+  // одинаково: приёмка «взяла ли модель рецепт» шла счётом search-вызовов.
+  const t0 = Date.parse('2026-08-18T11:27:45.000Z');
+  const calls = [
+    {
+      ts: new Date(t0).toISOString(), tool: 'heys_get_day', duration_ms: 400,
+      arg_keys: ['client', 'date'],
+    },
+    {
+      ts: new Date(t0 + 9000).toISOString(), tool: 'heys_log_meal', duration_ms: 1900,
+      arg_keys: ['client', 'copy_meal', 'name', 'transcript'],
+    },
+  ];
+  const flow = correlate.analyzeFlow(calls);
+  assert.deepEqual(flow.steps[0].arg_keys, ['client', 'date']);
+  assert.ok(flow.steps[1].arg_keys.includes('copy_meal'));
+});
+
+test('analyzeFlow: шаг без arg_keys поля не заводит', () => {
+  // Старые строки телеметрии писались до 18.08 и ключей не имеют — они не
+  // должны получать пустой массив, иначе «ключей нет» станет неотличимо от
+  // «вызов был без аргументов».
+  const t0 = Date.parse('2026-08-17T10:00:00.000Z');
+  const flow = correlate.analyzeFlow([
+    { ts: new Date(t0).toISOString(), tool: 'heys_get_day', duration_ms: 300 },
+  ]);
+  assert.equal('arg_keys' in flow.steps[0], false);
+});

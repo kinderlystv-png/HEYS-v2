@@ -69,10 +69,11 @@ function createMockPool() {
             error_code: values[9],
             resp_bytes: values[10],
             arg_count: values[11],
-            cold_start: values[12],
-            uptime_ms: values[13],
-            fn_version: values[14],
-            role: values[15],
+            arg_keys: values[12],
+            cold_start: values[13],
+            uptime_ms: values[14],
+            fn_version: values[15],
+            role: values[16],
           });
           return { rowCount: 1, rows: [] };
         }

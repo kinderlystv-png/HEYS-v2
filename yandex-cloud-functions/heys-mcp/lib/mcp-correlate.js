@@ -259,6 +259,7 @@ function analyzeFlow(calls) {
       tool: cur.tool || null,
       duration_ms,
       gap_after_ms,
+      ...(Array.isArray(cur.arg_keys) && cur.arg_keys.length ? { arg_keys: cur.arg_keys } : {}),
     });
   }
 

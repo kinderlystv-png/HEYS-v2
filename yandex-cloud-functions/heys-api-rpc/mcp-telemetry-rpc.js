@@ -4,7 +4,7 @@ const crypto = require('node:crypto');
 
 const RECORD_FIELDS = [
   't', 'ts', 'tool', 'session_id', 'seq', 'duration_ms', 'upstream_calls', 'upstream_ms',
-  'status', 'error_code', 'resp_bytes', 'arg_count', 'cold_start', 'uptime_ms', 'fn_version', 'role',
+  'status', 'error_code', 'resp_bytes', 'arg_count', 'arg_keys', 'cold_start', 'uptime_ms', 'fn_version', 'role',
 ];
 
 const VALID_STATUS = new Set(['ok', 'error', 'rejected']);
@@ -99,6 +99,7 @@ function rowToRecord(row) {
     error_code: row.error_code,
     resp_bytes: row.resp_bytes,
     arg_count: row.arg_count,
+    arg_keys: Array.isArray(row.arg_keys) ? row.arg_keys : undefined,
     cold_start: row.cold_start === true,
     uptime_ms: row.uptime_ms,
     fn_version: row.fn_version,
@@ -132,10 +133,10 @@ async function handleInsertMcpCallEvent(pool, params, authHeader, { corsHeaders 
     const result = await client.query(
       `INSERT INTO mcp_call_events (
          t, ts, tool, session_id, seq, duration_ms, upstream_calls, upstream_ms,
-         status, error_code, resp_bytes, arg_count, cold_start, uptime_ms, fn_version, role
+         status, error_code, resp_bytes, arg_count, arg_keys, cold_start, uptime_ms, fn_version, role
        ) VALUES (
          $1, $2::timestamptz, $3, $4, $5, $6, $7, $8,
-         $9, $10, $11, $12, $13, $14, $15, $16
+         $9, $10, $11, $12, $13, $14, $15, $16, $17
        )
        ON CONFLICT (session_id, seq) WHERE session_id IS NOT NULL AND seq IS NOT NULL
        DO NOTHING`,
@@ -152,6 +153,7 @@ async function handleInsertMcpCallEvent(pool, params, authHeader, { corsHeaders 
         record.error_code ?? null,
         record.resp_bytes ?? null,
         record.arg_count ?? null,
+        Array.isArray(record.arg_keys) && record.arg_keys.length ? record.arg_keys : null,
         record.cold_start ?? null,
         record.uptime_ms ?? null,
         record.fn_version ?? null,
@@ -204,7 +206,7 @@ async function handleListMcpCallEvents(pool, params, { corsHeaders } = {}) {
   try {
     const result = await client.query(
       `SELECT t, ts, tool, session_id, seq, duration_ms, upstream_calls, upstream_ms,
-              status, error_code, resp_bytes, arg_count, cold_start, uptime_ms, fn_version, role
+              status, error_code, resp_bytes, arg_count, arg_keys, cold_start, uptime_ms, fn_version, role
        FROM mcp_call_events
        WHERE ts >= $1::timestamptz AND ts <= $2::timestamptz
          AND ($3::text IS NULL OR role = $3)
