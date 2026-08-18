@@ -34,6 +34,10 @@ const CLIENTS = [
 
 const SHARED = [
   { id: 's-oats', name: 'Овсяные хлопья', protein100: 12, simple100: 1, complex100: 58, badfat100: 1, goodfat100: 5 },
+  {
+    id: 's-tomato', name: 'Помидор', protein100: 0.9, simple100: 2.6, complex100: 1.2,
+    badfat100: 0, goodfat100: 0.2, trans100: 0, fiber100: 1.2, gi: 15, harm: 1,
+  },
 ];
 
 /** Подставной API: данные раздельно по клиентам, фиксация кураторских записей. */
@@ -234,9 +238,9 @@ test('client обязателен по схеме у пишущих инстру
 
 test('каталоги продуктов и наборы у клиентов раздельные', async () => {
   const { tools } = build(fakeCuratorApi());
-  const anton = await tools.heys_search_products({ client: 'Антон', query: 'кофе' });
+  const anton = await tools.heys_search_products({ client: 'Антон', query: 'кофе', scope: 'client' });
   assert.ok(anton.structured.results.some((p) => p.name === 'Кофе американо'));
-  const alexandra = await tools.heys_search_products({ client: 'Александра', query: 'кофе' });
+  const alexandra = await tools.heys_search_products({ client: 'Александра', query: 'кофе', scope: 'client' });
   assert.equal(alexandra.structured.results.some((p) => p.name === 'Кофе американо'), false);
 
   const presets = await tools.heys_list_meal_presets({ client: 'Антон' });
@@ -1866,12 +1870,210 @@ test('алиасы грузятся из KV shape {text,rev}, не из data.v',
 // текст — посчитала КБЖУ, выдала рецепт и не вызвала ни одного инструмента.
 // В HEYS нет сущности «рецепт», и слово не вело ни к create_product, ни к
 // preset, поэтому в базе не осталось ничего.
-test('быстрый путь считает «создай рецепт» просьбой записать продукт', () => {
+test('быстрый путь считает «создай рецепт» просьбой записать продукт с recipe', () => {
   const text = curatorInstructions('Антон', true, NOW);
   assert.match(text, /«создай рецепт»/);
   assert.match(text, /heys_create_product/);
+  assert.match(text, /полем recipe/);
   assert.ok(
     text.indexOf('«создай рецепт»') < text.indexOf('Правила работы с дневником'),
     'правило должно стоять в быстром пути, до подробных правил',
   );
+});
+
+function saladPP() {
+  return {
+    id: 'own-salad-pp',
+    _custom: true,
+    in_my_list: true,
+    name: 'Салат крабовый ПП',
+    protein100: 5.3,
+    simple100: 3,
+    complex100: 4.4,
+    badFat100: 1.1,
+    goodFat100: 2,
+    trans100: 0,
+    fiber100: 0.5,
+    gi: 40,
+    harm: 3,
+    carbs100: 7.4,
+    fat100: 3.1,
+    portions: [
+      { name: '1 порция', grams: 325 },
+      { name: 'полпорции', grams: 160 },
+    ],
+  };
+}
+
+function saladClassic() {
+  return {
+    id: 'own-salad-classic',
+    _custom: true,
+    in_my_list: true,
+    name: 'Салат крабовый классический',
+    protein100: 7,
+    simple100: 4,
+    complex100: 8,
+    badFat100: 8,
+    goodFat100: 6,
+    trans100: 0,
+    fiber100: 0.5,
+    gi: 45,
+    harm: 6,
+  };
+}
+
+function withSalads(api) {
+  api.kv['cid-anton'].heys_products_overlay_v2.push(saladPP());
+  api.kv['cid-alexandra'].heys_products_overlay_v2.push(saladClassic());
+  return api;
+}
+
+function trackOverlayReads(api) {
+  const reads = [];
+  const orig = api.getKVByCurator.bind(api);
+  api.getKVByCurator = async (bearer, clientId, key) => {
+    if (key === products.OVERLAY_KEY) reads.push(clientId);
+    return orig(bearer, clientId, key);
+  };
+  return reads;
+}
+
+test('lazy peer: точное совпадение не читает overlay других клиентов', async () => {
+  const api = withSalads(fakeCuratorApi());
+  const reads = trackOverlayReads(api);
+  const { tools } = build(api);
+  const res = await tools.heys_search_products({ client: 'Александра', query: 'чай зелёный' });
+  assert.ok(res.structured.results.some((p) => p.name === 'Чай зелёный'));
+  assert.equal(reads.includes('cid-anton'), false);
+});
+
+test('lazy peer: частичное совпадение читает overlay и находит ПП-салат', async () => {
+  const api = withSalads(fakeCuratorApi());
+  const reads = trackOverlayReads(api);
+  const { tools } = build(api);
+  const res = await tools.heys_search_products({ client: 'Александра', query: 'крабовый салат пп' });
+  assert.equal(reads.includes('cid-anton'), true);
+  const pp = res.structured.results.find((p) => p.name === 'Салат крабовый ПП');
+  assert.ok(pp);
+  assert.equal(pp.writable, false);
+  assert.equal(pp.source, 'список Антон');
+  assert.match(res.text, /нельзя записать напрямую/);
+});
+
+test('scope=curator форсирует peer fan-out даже при точном совпадении', async () => {
+  const api = withSalads(fakeCuratorApi());
+  const reads = trackOverlayReads(api);
+  const { tools } = build(api);
+  await tools.heys_search_products({ client: 'Александра', query: 'чай зелёный', scope: 'curator' });
+  assert.equal(reads.includes('cid-anton'), true);
+});
+
+test('from_product_id копирует домашний продукт другого клиента', async () => {
+  const api = withSalads(fakeCuratorApi());
+  const { tools } = build(api);
+  const created = await tools.heys_create_product({
+    client: 'Александра',
+    from_product_id: 'own-salad-pp',
+  });
+  assert.notEqual(created.structured.product_id, 'own-salad-pp');
+  assert.equal(created.structured.name, 'Салат крабовый ПП');
+  assert.equal(created.structured.cloned_from.product_id, 'own-salad-pp');
+  assert.equal(created.structured.cloned_from.owner_client_name, 'Антон');
+  const overlay = api.kv['cid-alexandra'].heys_products_overlay_v2;
+  assert.ok(overlay.some((row) => row.id === created.structured.product_id && row._custom));
+  assert.equal(overlay.some((row) => row.id === 'own-salad-pp'), false);
+});
+
+test('после копии log_meal принимает новый id, peer id — нет', async () => {
+  const api = withSalads(fakeCuratorApi());
+  const { tools } = build(api);
+  await assert.rejects(
+    () => tools.heys_log_meal({
+      client: 'Александра',
+      items: [{ product_id: 'own-salad-pp', grams: 232 }],
+    }),
+    (e) => {
+      assert.equal(e.code, 'product_not_found');
+      assert.match(e.message, /from_product_id/);
+      return true;
+    },
+  );
+  const created = await tools.heys_create_product({
+    client: 'Александра',
+    from_product_id: 'own-salad-pp',
+  });
+  const meal = await tools.heys_log_meal({
+    client: 'Александра',
+    items: [{ product_id: created.structured.product_id, grams: 232 }],
+  });
+  const write = api.writes.find((w) => w.key === 'heys_dayv2_2026-08-01' && w.clientId === 'cid-alexandra');
+  assert.equal(write.value.meals[0].items[0].product_id, created.structured.product_id);
+  assert.match(meal.text, /Салат крабовый ПП/);
+});
+
+test('Type A с тем же именем не клонируется, с новым — клон как черри', async () => {
+  const { tools } = build(fakeCuratorApi());
+  await assert.rejects(
+    () => tools.heys_create_product({ client: 'Александра', from_product_id: 's-tomato' }),
+    (e) => {
+      assert.equal(e.code, 'product_already_shared');
+      assert.match(e.message, /общей базе/);
+      return true;
+    },
+  );
+  const cherry = await tools.heys_create_product({
+    client: 'Александра',
+    from_product_id: 's-tomato',
+    name: 'Черри',
+  });
+  assert.equal(cherry.structured.name, 'Черри');
+  assert.equal(cherry.structured.cloned_from.product_id, 's-tomato');
+});
+
+test('tombstone отклоняет копию домашнего продукта с тем же именем', async () => {
+  const api = withSalads(fakeCuratorApi());
+  api.kv['cid-alexandra'].heys_deleted_ids = [{ name: 'Салат крабовый ПП' }];
+  const { tools } = build(api);
+  await assert.rejects(
+    () => tools.heys_create_product({ client: 'Александра', from_product_id: 'own-salad-pp' }),
+    (e) => e.code === 'product_tombstoned',
+  );
+});
+
+test('дубль имени у другого клиента: warning если индекс прогрет, cold create молчит', async () => {
+  const warmApi = withSalads(fakeCuratorApi());
+  const { tools: warm } = build(warmApi);
+  await warm.heys_search_products({ client: 'Александра', query: 'крабовый салат пп' });
+  await assert.rejects(
+    () => warm.heys_create_product({
+      client: 'Александра',
+      name: 'Салат крабовый ПП',
+      protein100: 5, simple100: 1, complex100: 1, badFat100: 1, goodFat100: 1,
+      trans100: 0, fiber100: 0, gi: 40, harm: 3,
+    }),
+    (e) => {
+      assert.equal(e.code, 'product_exists_other_client');
+      assert.match(e.message, /from_product_id/);
+      return true;
+    },
+  );
+  const allowed = await warm.heys_create_product({
+    client: 'Александра',
+    name: 'Салат крабовый ПП',
+    protein100: 5, simple100: 1, complex100: 1, badFat100: 1, goodFat100: 1,
+    trans100: 0, fiber100: 0, gi: 40, harm: 3,
+    allow_duplicate: true,
+  });
+  assert.ok(allowed.structured.product_id);
+
+  const coldApi = withSalads(fakeCuratorApi());
+  const { tools: cold } = build(coldApi);
+  const created = await cold.heys_create_product({
+    client: 'Александра',
+    name: 'Салат крабовый ПП',
+    protein100: 5, simple100: 1, complex100: 1, badFat100: 1, goodFat100: 1,
+    trans100: 0, fiber100: 0, gi: 40, harm: 3,
+  });
+  assert.ok(created.structured.product_id);
 });

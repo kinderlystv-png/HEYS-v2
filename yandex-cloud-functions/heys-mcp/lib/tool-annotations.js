@@ -38,6 +38,7 @@ const DIARY_WRITE_TOOLS = new Set([
   'heys_update_hr_zones',
   'heys_create_product',
   'heys_update_product',
+  'heys_reapply_recipe',
   'heys_delete_product',
   'heys_save_meal_preset',
   'heys_delete_meal_preset',

@@ -139,6 +139,32 @@ test('describeProduct считает калорийность, если её н�
   const syrup = products.describeProduct(products.findById(c, 'own-syrup'));
   assert.equal(syrup.kcal100, 300);
   assert.equal(syrup.source, 'мой список');
+  assert.equal(syrup.writable, true);
+});
+
+test('hasStrongMatch: фраза или полное покрытие токенов, не частичное «пп»', () => {
+  const classic = { name: 'Салат крабовый классический' };
+  const catalogLike = { all: [classic] };
+  assert.equal(products.hasStrongMatch(catalogLike, 'крабовый'), true);
+  assert.equal(products.hasStrongMatch(catalogLike, 'крабовый салат пп'), false);
+  assert.equal(products.matchStrength(classic, products.prepareQuery('крабовый салат пп')), 'weak');
+  assert.equal(products.hasStrongMatch(catalogLike, 'салат крабовый классический'), true);
+});
+
+test('describeProduct помечает peer как не writable', () => {
+  const described = products.describeProduct({
+    id: 'own-salad-pp',
+    name: 'Салат крабовый ПП',
+    _source: 'peer',
+    _owner_client_id: 'cid-anton',
+    _owner_name: 'Антон',
+    protein100: 5,
+    carbs100: 7,
+    fat100: 3,
+  });
+  assert.equal(described.writable, false);
+  assert.equal(described.source, 'список Антон');
+  assert.equal(described.owner_client_id, 'cid-anton');
 });
 
 test('describeProduct всегда NET Atwater, даже если в карточке классический kcal100', () => {

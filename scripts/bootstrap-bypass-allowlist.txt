@@ -224,8 +224,8 @@ apps/web/heys_client_log_trace_v1.js:148
 apps/web/heys_whats_new_modal_v1.js:87
 apps/web/heys_widgets_core_v1.js:1046
 apps/web/heys_widgets_core_v1.js:383
-apps/web/heys_widgets_ui_v1.js:4835
-apps/web/heys_widgets_ui_v1.js:7022
+apps/web/heys_widgets_ui_v1.js:4850
+apps/web/heys_widgets_ui_v1.js:7039
 apps/web/heys_yesterday_verify_v1.js:1267
 apps/web/heys_yesterday_verify_v1.js:1265
 apps/web/heys_yesterday_verify_v1.js:36

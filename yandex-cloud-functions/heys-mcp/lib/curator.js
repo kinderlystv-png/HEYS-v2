@@ -28,6 +28,7 @@ const { createTasksTools } = require('./tasks-tools');
 const { createRepoTools } = require('./repo-tools');
 const { createMcpTraceTools } = require('./mcp-trace-tools');
 const products = require('./products');
+const sharedCatalog = require('./shared-catalog');
 const admin = require('./admin');
 const day = require('./day');
 const tasks = require('./tasks');
@@ -95,8 +96,15 @@ const TRANSCRIPT_ARG = {
   description: 'ОБЯЗАТЕЛЬНО: дословная полная реплика куратора из этого сообщения (скопируй текст целиком). Без transcript запись отклонится. Пример: «Запиши два бутерброда как вчера».',
 };
 
+const SEARCH_SCOPE_ARG = {
+  type: 'string',
+  enum: ['client', 'curator'],
+  description: 'client — только список этого клиента и общая база. curator — ещё домашние продукты остальных клиентов куратора (writable:false: нельзя писать в дневник этим id, сначала heys_create_product(from_product_id)). Без параметра — лениво: peer подгружается, если в списке клиента нет точного совпадения по всем словам запроса.',
+};
+
 const CURATOR_EXTRA_ARGS = {
   heys_create_product: { share: SHARE_ARG },
+  heys_search_products: { scope: SEARCH_SCOPE_ARG },
 };
 
 function buildCuratorSchemas({ requireTranscript = false } = {}) {
@@ -407,7 +415,7 @@ function curatorInstructions(curatorName, withTasks = false, nowMs = Date.now(),
     '• «запиши N штук <продукт>» / «5 чупа-чупсов» → один heys_log_meal с items[{query, pieces: N}] + transcript. heys_search_products не зови — log_meal ищет сам. Если product_not_found — один heys_create_product (piece_grams если известен), затем heys_log_meal; без второго search и без повторного get_day.',
     '• «за последние N часов» / запись в прошлый taskDay (после полуночи до 3:00 — ещё вчерашний день): передай date явно и time (середину интервала или уточни у куратора). heys_get_day «узнать дату» не нужен — это не сегодня, чек-ин гейт не блокирует.',
     '• «набор <имя>» → сразу heys_log_meal(preset: "<имя>"). Имя набора резолвится на сервере; если такого нет, придёт ошибка со списком. heys_list_meal_presets ради проверки не зови.',
-    '• «создай рецепт», «сохрани блюдо», «заведи этот салат» — просьба ЗАПИСАТЬ, а не написать текст: посчитай состав на 100 г и вызови heys_create_product (домашнее — share:false, порции обязательно). Рецепт в ответе без вызова инструмента — просьба не выполнена, в базе не осталось ничего.',
+    '• «создай рецепт», «сохрани блюдо», «заведи этот салат» — просьба ЗАПИСАТЬ: heys_create_product с полем recipe (ингредиенты + yield_grams + порции, share:false). Не считай КБЖУ руками и не пиши текст без вызова. Набор (heys_save_meal_preset) — это кофе с молоком несколькими строками, не порция салата.',
     '• «убери сироп» / «добавь туда молоко» → heys_update_meal с meal_id и item_id из текста предыдущего ответа. Повторный heys_get_day не нужен — id уже названы.',
     '• «300 мл воды», «вес 91,4», «шаги 7000», «спал с 0:25 до 8:30» → один heys_add_water или heys_update_day.',
     '• «как вчера» / «такой же перекус» / приём целиком → heys_get_day(дата-источник) за meal_id, затем ОДИН write с copy_meal { date, meal_id } без item_ids. За сегодня перед этим нужен heys_get_day за сегодня из-за гейта чек-ина (правило 2а) — три вызова. За вчера и раньше гейта нет — два вызова.',
@@ -427,7 +435,7 @@ function curatorInstructions(curatorName, withTasks = false, nowMs = Date.now(),
     '5. Если продукт определяется неоднозначно, инструмент вернёт кандидатов в тексте — уточни, а не угадывай.',
     '5а. Штуки вноси через pieces, а не пересчитывай в граммы сам: вес одной штуки инструмент возьмёт из карточки продукта, а если его там нет — спросит, и названное куратором значение запомнит. Свой пересчёт «примерно 60 г за штуку» в карточку не попадёт, и в следующий раз всё повторится заново.',
     '7. Время приёма по умолчанию — текущее московское. Исключение — просьба из мессенджера: там время берётся из слов клиента, а не из часов, см. 22.',
-    '8. Если продукта нет в базе: с этикетки — heys_create_product с нутриентами; без этикетки для близкого (черри←помидор) — heys_create_product с from_product_id ближайшего, не выдумывай состав. Затем вноси приём. heys_search_products перед log_meal не зови — только если нужен штрихкод с фото (8в) или куратор явно просит «найди в базе».',
+    '8. Если продукта нет в базе: с этикетки — heys_create_product с нутриентами; без этикетки для близкого (черри←помидор) — heys_create_product с from_product_id ближайшего, не выдумывай состав. Домашний рецепт другого клиента: heys_search_products(scope=curator) → writable:false → heys_create_product(from_product_id), затем приём с НОВЫМ id. Не пиши peer-id в дневник. Затем вноси приём. heys_search_products перед log_meal не зови — только если нужен штрихкод с фото (8в), домашний рецепт из другого списка, или куратор явно просит «найди в базе».',
     '8в. Фото — читай сам, не спрашивай «что на фото». В чате Cursor картинку уже видно; из мессенджера — сразу heys_get_photo по path из текста heys_list_messages. Этикетка: штрихкод → heys_search_products(query=штрихкод); нет в базе → create с полями на 100 г с упаковки (недостающее: сахара→simple100, complex=углеводы−сахара, насыщенные→badFat100, goodFat=жиры−нас−транс, trans/fiber=0 если не указано; gi и harm оцени сам). Тарелка без этикетки: search по узнанным продуктам / from_product_id, граммы — спроси одним вопросом, если на карточке нет единственной порции. Не выдумывай нутриенты «на глаз» с тарелки.',
     '8б. Если продукт ушёл в общую базу по ошибке (домашнее блюдо с брендом в названии), убери его из выдачи: heys_moderate_products с product_id и action hide. Из базы он не удаляется — уже записанные приёмы не пострадают, — и вернуть его можно через unhide.',
     '8а. Продукт с брендом или штрихкодом уезжает и в общую базу автоматически — второй раз его никому заводить не придётся. Домашнее блюдо туда не попадает; если куратор хочет опубликовать именно его, передай share: true, а чтобы промышленный остался только у клиента — share: false.',
@@ -444,7 +452,7 @@ function curatorInstructions(curatorName, withTasks = false, nowMs = Date.now(),
     '13. Утренний вес конкретного дня — это heys_update_day, а не профиль. В профиле вес — базовая настройка, а не измерение.',
     '',
     'Каталог продуктов:',
-    '15. Продукт общей базы правится лично для этого клиента; общая карточка меняется только через очередь модерации (heys_moderate_products).',
+    '15. Продукт общей базы правится лично для этого клиента; общая карточка меняется только через очередь модерации (heys_moderate_products). Рецепт (product.recipe) — только Type B. Save рецепта молча меняет карточку вперёд; прошлые дни не трогает. Исправление прошлого — heys_reapply_recipe после вопроса человеку (dry_run, затем confirm). Эволюция состава (майонез→сметана) = save без ретро. Правка карточки ингредиента рецепт не пересчитывает.',
     '',
     'Администрирование (клиенты, доступ, подписки, заявки):',
     '16. Необратимое действие — создание клиента, смена PIN, сброс подписки — выполняется только после confirm: true. Сначала назови куратору, что именно произойдёт, и дождись ответа.',
@@ -499,6 +507,77 @@ function createCuratorContext({
       clientsPromise.catch(() => { clientsPromise = null; });
     }
     return clientsPromise;
+  }
+
+  /**
+   * Overlay всех клиентов куратора. Грузится лениво: поиск с сильным
+   * совпадением в own+shared сюда не ходит. Кэш — на время вызова функции.
+   */
+  let peerIndexPromise = null;
+
+  async function ensurePeerIndex() {
+    if (!peerIndexPromise) {
+      peerIndexPromise = (async () => {
+        const [clients, sharedRes] = await Promise.all([
+          loadClients(),
+          sharedCatalog.loadSharedProducts(api, { nowMs }),
+        ]);
+        if (sharedRes.error) {
+          throw new ToolError(
+            'upstream_error',
+            `Не удалось прочитать общую базу продуктов: ${sharedRes.error.message}`,
+          );
+        }
+        const sharedById = new Map();
+        for (const row of sharedRes.rows || []) {
+          const normalized = products.normalizeSharedRow(row);
+          if (normalized && normalized.id) sharedById.set(String(normalized.id), normalized);
+        }
+        const entries = [];
+        const byId = new Map();
+        await Promise.all((clients || []).map(async (client) => {
+          const overlayRes = await api.getKVByCurator(curatorJwt, client.client_id, products.OVERLAY_KEY);
+          if (overlayRes.error) return;
+          const catalog = products.buildCatalog(overlayRes.data, sharedById);
+          for (const product of catalog.own) {
+            const entry = {
+              product,
+              owner_client_id: client.client_id,
+              owner_client_name: client.name,
+            };
+            entries.push(entry);
+            byId.set(String(product.id), entry);
+          }
+        }));
+        return { entries, byId };
+      })();
+      peerIndexPromise.catch(() => { peerIndexPromise = null; });
+    }
+    return peerIndexPromise;
+  }
+
+  function tagPeerProduct(entry) {
+    return {
+      ...entry.product,
+      _source: 'peer',
+      _owner_client_id: entry.owner_client_id,
+      _owner_name: entry.owner_client_name,
+    };
+  }
+
+  async function loadPeerHits(targetClientId, query) {
+    const index = await ensurePeerIndex();
+    const peerProducts = index.entries
+      .filter((entry) => String(entry.owner_client_id) !== String(targetClientId))
+      .map(tagPeerProduct);
+    return products.searchProducts({ all: peerProducts }, query, 50);
+  }
+
+  async function findPeerProductFor(targetClientId, productId) {
+    const index = await ensurePeerIndex();
+    const hit = index.byId.get(String(productId));
+    if (!hit || String(hit.owner_client_id) === String(targetClientId)) return null;
+    return hit;
   }
 
   async function loadAddressAliases() {
@@ -645,6 +724,8 @@ function createCuratorContext({
         // Блоб штампуется id клиента (иначе не пройдёт cross-client guard),
         // поэтому автор записи виден только по явной метке.
         byCurator: true,
+        findPeerProduct: (productId) => findPeerProductFor(target.client_id, productId),
+        loadPeerHits: (query) => loadPeerHits(target.client_id, query),
       }).tools);
     }
     return toolsByClient.get(target.client_id);
@@ -1196,6 +1277,33 @@ function createCuratorContext({
   const createProductForClient = tools.heys_create_product;
   tools.heys_create_product = async (args = {}) => {
     const { share, ...rest } = args;
+    // Индекс не прогреваем ради этой проверки: холодный create молчит, а вот
+    // после поиска (индекс уже в памяти) дубль чужого домашнего блюда виден
+    // и его лучше скопировать, чем завести второй карточкой.
+    if (!rest.allow_duplicate && !rest.from_product_id && peerIndexPromise) {
+      const [target, index] = await Promise.all([
+        resolveTarget(args.client, { strict: true }),
+        peerIndexPromise,
+      ]);
+      const nameNorm = products.normalizeText(rest.name);
+      if (nameNorm && index) {
+        const other = index.entries.find((entry) => (
+          String(entry.owner_client_id) !== String(target.client_id)
+          && products.normalizeText(entry.product.name) === nameNorm
+        ));
+        if (other) {
+          throw new ToolError(
+            'product_exists_other_client',
+            `«${other.product.name}» уже есть у ${other.owner_client_name} (product_id=${other.product.id}). Скопируй через heys_create_product(from_product_id=${other.product.id}) или, если это другая карточка, allow_duplicate.`,
+            {
+              existing: products.describeProduct(tagPeerProduct(other)),
+              owner_client_id: other.owner_client_id,
+              owner_client_name: other.owner_client_name,
+            },
+          );
+        }
+      }
+    }
     const result = await createProductForClient(rest);
     const row = result.structured && result.structured.created_row;
     if (!row) return result;

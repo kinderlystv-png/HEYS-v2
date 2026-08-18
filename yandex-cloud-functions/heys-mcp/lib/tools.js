@@ -67,6 +67,17 @@ function buildPresetItem(product, grams) {
   return item;
 }
 
+function mealItemFromResolved(entry, makeId) {
+  const item = day.buildMealItem(entry.product, entry.grams, makeId);
+  const snap = entry.recipeSnapshot;
+  if (snap && Array.isArray(snap.recipe_items) && snap.recipe_items.length) {
+    item.recipe_items = snap.recipe_items;
+    item.recipe_yield = snap.recipe_yield;
+    item.recipe_rev = snap.recipe_rev;
+  }
+  return item;
+}
+
 function makeId(prefix) {
   return `${prefix}${crypto.randomBytes(6).toString('hex')}`;
 }
@@ -181,7 +192,15 @@ function clampSubjective(value, field) {
  * clientId и «сейчас». Кэш каталога живёт в контексте, чтобы один
  * tools/call с несколькими позициями не тянул общую базу дважды.
  */
-function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurator = false }) {
+function createTools({
+  api,
+  sessionToken,
+  clientId,
+  nowMs = Date.now(),
+  byCurator = false,
+  findPeerProduct = null,
+  loadPeerHits = null,
+}) {
   let catalogPromise = null;
 
   async function loadCatalog() {
@@ -452,7 +471,26 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
 
     if (spec.product_id) {
       const found = products.findById(catalog, spec.product_id);
-      if (!found) throw new ToolError('product_not_found', `Продукт с id "${spec.product_id}" не найден.`);
+      if (!found) {
+        if (byCurator && typeof findPeerProduct === 'function') {
+          const peer = await findPeerProduct(spec.product_id);
+          if (peer && peer.product) {
+            throw new ToolError(
+              'product_not_found',
+              `Продукт «${peer.product.name}» (${spec.product_id}) в списке ${peer.owner_client_name}, а не у этого клиента. Сначала heys_create_product(from_product_id=${spec.product_id}) — получишь новый id, им и пиши приём.`,
+              {
+                peer: {
+                  product_id: spec.product_id,
+                  name: peer.product.name,
+                  owner_client_id: peer.owner_client_id,
+                  owner_client_name: peer.owner_client_name,
+                },
+              },
+            );
+          }
+        }
+        throw new ToolError('product_not_found', `Продукт с id "${spec.product_id}" не найден.`);
+      }
       return found;
     }
 
@@ -538,7 +576,8 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
     const label = `Позиция #${index + 1}`;
     const product = await resolveProduct(spec || {}, label);
     const { grams, learnPieceGrams, portionNote } = resolveGrams(spec, product, label);
-    return { product, grams, learnPieceGrams, portionNote };
+    const recipeSnapshot = products.recipeSnapshotFields(product);
+    return { product, grams, learnPieceGrams, portionNote, recipeSnapshot };
   }
 
   /** Копия позиции из уже записанного приёма: граммы × count, продукт по product_id или имени. */
@@ -556,11 +595,22 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       ? { product_id: item.product_id }
       : { query: String(item.name || '').trim() };
     const product = await resolveProduct(spec, label);
+    const snapshot = Array.isArray(item.recipe_items) && item.recipe_items.length
+      ? {
+        recipe_items: item.recipe_items.map((entry) => ({
+          name: String(entry.name || '').trim(),
+          grams: Number(entry.grams) || 0,
+        })),
+        recipe_yield: Number(item.recipe_yield) || 0,
+        recipe_rev: Number(item.recipe_rev) || 0,
+      }
+      : null;
     return {
       product,
       grams,
       learnPieceGrams: null,
       portionNote: count > 1 ? `×${count} от приёма-источника` : null,
+      recipeSnapshot: snapshot,
     };
   }
 
@@ -671,12 +721,30 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       if (!args.query || !String(args.query).trim()) {
         throw new ToolError('invalid_query', 'Нужен непустой query.');
       }
+      const scope = args.scope == null || args.scope === '' ? undefined : String(args.scope);
+      if (scope && scope !== 'client' && scope !== 'curator') {
+        throw new ToolError('invalid_scope', 'scope — «client» или «curator».');
+      }
       const catalog = await loadCatalog();
-      const found = products.searchProducts(catalog, args.query, args.limit || 10);
+      const limit = args.limit || 10;
+      const localFound = products.searchProducts(catalog, args.query, 50);
+      let peerHits = [];
+      const needPeer = byCurator && typeof loadPeerHits === 'function' && scope !== 'client'
+        && (scope === 'curator' || !products.hasStrongMatch(catalog, args.query));
+      if (needPeer) {
+        peerHits = await loadPeerHits(args.query);
+      }
+      const found = products.mergeSearchLayers({
+        own: localFound.filter((p) => p._source === 'own'),
+        peer: peerHits,
+        shared: localFound.filter((p) => p._source !== 'own'),
+        limit,
+      });
       const described = found.map(products.describeProduct);
       const text = described.length
         ? `Нашёл ${described.length}: ${described.map((p) => {
           const parts = [`${p.name} (${p.product_id}, ${p.kcal100} ккал/100, ${p.source})`];
+          if (p.writable === false) parts.push('нельзя записать напрямую — сначала heys_create_product(from_product_id)');
           if (p.barcode) parts.push(`штрихкод ${p.barcode}`);
           if (p.piece_grams) parts.push(`шт=${p.piece_grams}г`);
           if (Array.isArray(p.portions) && p.portions.length) {
@@ -748,7 +816,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         mood: clampSubjective(args.mood, 'mood') ?? '',
         wellbeing: clampSubjective(args.wellbeing, 'wellbeing') ?? '',
         stress: clampSubjective(args.stress, 'stress') ?? '',
-        items: resolved.map(({ product, grams }) => day.buildMealItem(product, grams, makeId)),
+        items: resolved.map((entry) => mealItemFromResolved(entry, makeId)),
       };
 
       const current = await dayPromise;
@@ -845,7 +913,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       }
 
       const patch = {
-        addItems: resolved.map(({ product, grams }) => day.buildMealItem(product, grams, makeId)),
+        addItems: resolved.map((entry) => mealItemFromResolved(entry, makeId)),
         removeItemIds: Array.isArray(args.remove_item_ids) ? args.remove_item_ids : [],
         setGrams: (args.set_grams && typeof args.set_grams === 'object') ? args.set_grams : {},
         name: args.name,
@@ -922,9 +990,6 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
     },
 
     async heys_create_product(args) {
-      const name = String(args.name || '').trim();
-      if (!name) throw new ToolError('invalid_name', 'Нужно название продукта.');
-
       // Каталог и tombstones — обе проверки до записи и друг от друга не
       // зависят. Последовательно они складывались в два ожидания подряд на
       // каждом заведении продукта с этикетки.
@@ -933,6 +998,33 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       const tombstonesPromise = api.getKV(sessionToken, TOMBSTONES_KEY)
         .catch((error) => ({ data: null, error }));
       const catalog = await loadCatalog();
+
+      let base = null;
+      let peerHit = null;
+      if (args.from_product_id) {
+        base = products.findById(catalog, args.from_product_id);
+        if (!base && typeof findPeerProduct === 'function') {
+          peerHit = await findPeerProduct(args.from_product_id);
+          base = peerHit && peerHit.product;
+        }
+        if (!base) {
+          throw new ToolError('product_not_found', `Продукт-источник с id "${args.from_product_id}" не найден.`);
+        }
+      }
+
+      const name = String(args.name || (base && base.name) || '').trim();
+      if (!name) throw new ToolError('invalid_name', 'Нужно название продукта или from_product_id источника.');
+
+      if (base && products.isSharedLinked(base)
+        && products.normalizeText(name) === products.normalizeText(base.name)) {
+        const sharedId = base.shared_origin_id || base.id;
+        throw new ToolError(
+          'product_already_shared',
+          `«${base.name}» уже в общей базе (product_id=${sharedId}). Копировать с тем же именем не нужно — записывай этим id. Новое имя (черри ← помидор) — передай name.`,
+          { shared_origin_id: sharedId, existing: products.describeProduct(base) },
+        );
+      }
+
       const nameNorm = products.normalizeText(name);
       const duplicate = catalog.all.find((p) => products.normalizeText(p.name) === nameNorm);
       if (duplicate && !args.allow_duplicate) {
@@ -958,12 +1050,43 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         }
       }
 
-      // from_product_id — клон нутриентов (черри ← помидор): без этикетки не
-      // выдумываем состав, копируем подтверждённую карточку и меняем имя.
+      // Рецепт, from_product_id или ручные нутриенты — взаимоисключающие входы.
       let createInput = { ...args, name };
       let clonedFrom = null;
-      if (args.from_product_id) {
-        const base = products.findById(catalog, args.from_product_id);
+      let recipePayload = null;
+      if (args.recipe) {
+        if (products.hasManualNutrientInput(args) || args.from_product_id) {
+          throw new ToolError(
+            'recipe_and_manual',
+            'Рецепт сам считает КБЖУ. Вместе с recipe не передавай ручные нутриенты или from_product_id — только состав, порции, имя.',
+          );
+        }
+        try {
+          recipePayload = products.buildRecipePayload(args.recipe, (spec) => {
+            if (spec.product_id) return products.findById(catalog, spec.product_id);
+            if (spec.query) {
+              const matches = products.searchProducts(catalog, spec.query, 5);
+              return matches.length === 1 ? matches[0] : null;
+            }
+            return null;
+          }, { nowMs, previousRev: 0 });
+        } catch (e) {
+          if (e.code === 'recipe_item_not_found') {
+            throw new ToolError(
+              'recipe_item_not_found',
+              `Ингредиент рецепта не найден${e.product_id ? ` (product_id=${e.product_id})` : e.query ? ` («${e.query}»)` : ''}.`,
+              { product_id: e.product_id, query: e.query },
+            );
+          }
+          throw new ToolError('invalid_recipe', `Не могу собрать рецепт: ${e.message}.`);
+        }
+        createInput = {
+          name,
+          portions: args.portions,
+          brand: args.brand,
+          barcode: args.barcode,
+        };
+      } else if (args.from_product_id) {
         if (!base) {
           throw new ToolError('product_not_found', `Продукт-источник с id "${args.from_product_id}" не найден.`);
         }
@@ -983,7 +1106,11 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         const basePortions = products.normalizePortions(base.portions);
         if (basePortions.length) baseInput.portions = basePortions;
         createInput = { ...baseInput, ...args, name };
-        clonedFrom = { product_id: base.id, name: base.name };
+        clonedFrom = {
+          product_id: base.id,
+          name: base.name,
+          ...(peerHit ? { owner_client_name: peerHit.owner_client_name } : {}),
+        };
       }
 
       let row;
@@ -1003,6 +1130,10 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         throw new ToolError('invalid_product', e.message);
       }
 
+      if (recipePayload) {
+        row.recipe = recipePayload.recipe;
+      }
+
       const overlayRes = await api.getKV(sessionToken, products.OVERLAY_KEY);
       if (overlayRes.error) throw new ToolError('upstream_error', `Не удалось прочитать список продуктов: ${overlayRes.error.message}`);
       const overlay = Array.isArray(overlayRes.data) ? overlayRes.data : [];
@@ -1016,9 +1147,10 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       if (row.brand) extras.push(`бренд ${row.brand}`);
       if (row.barcode) extras.push(`штрихкод ${row.barcode}`);
       if (row.portions) extras.push(`порции: ${row.portions.map((p) => `${p.name} ${p.grams} г`).join(', ')}`);
+      if (row.recipe) extras.push(`рецепт: ${products.formatRecipeSummary(row.recipe)}`);
 
       return {
-        text: `Создал продукт «${row.name}» (product_id=${row.id}) — ${row.kcal100} ккал/100 г, Б${row.protein100} У${row.carbs100} Ж${row.fat100}${extras.length ? '. ' + extras.join(', ') : ''}. Калорийность пересчитана по правилам HEYS, поэтому может отличаться от цифры на упаковке.`,
+        text: `Создал продукт «${row.name}» (product_id=${row.id}) — ${row.kcal100} ккал/100 г, Б${row.protein100} У${row.carbs100} Ж${row.fat100}${extras.length ? '. ' + extras.join(', ') : ''}. Калорийность пересчитана по правилам HEYS, поэтому может отличаться от цифры на упаковке.${row.recipe ? ' КБЖУ рецепта зафиксированы при сохранении: смена карточки ингредиента их не пересчитает — только heys_update_product с новым recipe.' : ''}`,
         structured: {
           product_id: row.id,
           name: row.name,
@@ -1030,6 +1162,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
           barcode: row.barcode,
           portions: row.portions || [],
           cloned_from: clonedFrom || undefined,
+          recipe: row.recipe || undefined,
           created_row: row,
         },
       };
@@ -1876,7 +2009,69 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         'Продукт',
       );
 
-      const { product_id: _id, query: _query, ...fields } = args;
+      const { product_id: _id, query: _query, recipe: recipeArg, ...fields } = args;
+      if (recipeArg) {
+        if (!target._custom) {
+          throw new ToolError(
+            'recipe_on_shared_forbidden',
+            `«${target.name}» из общей базы — рецепт можно завести только на личной карточке (Type B). Создай свой продукт с recipe.`,
+          );
+        }
+        if (products.hasManualNutrientInput(fields)) {
+          throw new ToolError(
+            'recipe_and_manual',
+            'Рецепт сам считает КБЖУ. Вместе с recipe не передавай ручные нутриенты — только состав, порции, имя.',
+          );
+        }
+        let recipePayload;
+        try {
+          recipePayload = products.buildRecipePayload(recipeArg, (spec) => {
+            if (spec.product_id) return products.findById(catalog, spec.product_id);
+            if (spec.query) {
+              const matches = products.searchProducts(catalog, spec.query, 5);
+              return matches.length === 1 ? matches[0] : null;
+            }
+            return null;
+          }, { nowMs, previousRev: Number(target.recipe && target.recipe.rev) || 0 });
+        } catch (e) {
+          if (e.code === 'recipe_item_not_found') {
+            throw new ToolError(
+              'recipe_item_not_found',
+              `Ингредиент рецепта не найден${e.product_id ? ` (product_id=${e.product_id})` : e.query ? ` («${e.query}»)` : ''}.`,
+              { product_id: e.product_id, query: e.query },
+            );
+          }
+          throw new ToolError('invalid_recipe', `Не могу собрать рецепт: ${e.message}.`);
+        }
+        const nutrientPatch = { ...recipePayload.nutrients, recipe: recipePayload.recipe };
+        if (fields.name) nutrientPatch.name = fields.name;
+        if (fields.portions) nutrientPatch.portions = fields.portions;
+        if (fields.brand !== undefined) nutrientPatch.brand = fields.brand;
+        const overlayRes = await api.getKV(sessionToken, products.OVERLAY_KEY);
+        if (overlayRes.error) throw new ToolError('upstream_error', `Не удалось прочитать список продуктов: ${overlayRes.error.message}`);
+        const applied = products.applyProductPatchToOverlay(overlayRes.data, target, {
+          ...nutrientPatch,
+          user_modified: true,
+          updatedAt: nowMs,
+        }, {
+          nowMs,
+          makeId: () => `p_${nowMs}_${crypto.randomBytes(3).toString('hex')}`,
+        });
+        const saveRes = await api.upsertKV(sessionToken, products.OVERLAY_KEY, applied.rows);
+        if (!saveRes.ok) throw new ToolError('save_failed', `Сервер отклонил правку продукта: ${saveRes.error}`);
+        catalogPromise = null;
+        return {
+          text: `Поправил рецепт «${target.name}»: КБЖУ пересчитаны из состава (rev ${recipePayload.recipe.rev}). Прошлые записи в дневнике не менялись — только новые приёмы возьмут новый состав. Исправить прошлое — отдельная операция heys_reapply_recipe.`,
+          structured: {
+            product_id: target.id,
+            name: nutrientPatch.name || target.name,
+            mode: applied.mode,
+            recipe: recipePayload.recipe,
+            kcal100: recipePayload.nutrients.kcal100,
+          },
+        };
+      }
+
       let built;
       try {
         built = products.buildProductPatch(target, fields, nowMs);
@@ -1918,6 +2113,94 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
           ignored: built.ignored,
           catalog_size: catalog.all.length,
         },
+      };
+    },
+
+    /**
+     * Ретро: пересчитать прошлые позиции рецепта текущей карточкой.
+     * Превью — пакет getKVMany. Применение — только writeDay/mergeSaveKV
+     * по одному дню. upsertKVMany здесь нельзя: нет версии, затрёт правку клиента.
+     */
+    async heys_reapply_recipe(args) {
+      const dateFrom = resolveDate(args.date_from, nowMs);
+      const dateTo = resolveDate(args.date_to, nowMs);
+      if (dateFrom > dateTo) {
+        throw new ToolError('invalid_range', `date_from ${dateFrom} позже date_to ${dateTo}.`);
+      }
+      const dates = day.enumerateDates(dateFrom, dateTo, 120);
+      if (!dates.length) throw new ToolError('invalid_range', 'Пустой период.');
+      if (dates.length >= 120 && dates[dates.length - 1] < dateTo) {
+        throw new ToolError('invalid_range', 'Период длиннее 120 дней — сузь даты.');
+      }
+      const product = await resolveProduct(
+        { product_id: args.product_id, query: args.query },
+        'Рецепт',
+      );
+      if (!product.recipe || !Array.isArray(product.recipe.items) || !product.recipe.items.length) {
+        throw new ToolError(
+          'not_a_recipe',
+          `«${product.name}» без состава recipe — ретро не к чему применять.`,
+        );
+      }
+      const recipeRev = args.recipe_rev != null && args.recipe_rev !== ''
+        ? Number(args.recipe_rev)
+        : null;
+      if (recipeRev != null && !(recipeRev > 0)) {
+        throw new ToolError('invalid_recipe_rev', 'recipe_rev должен быть положительным числом.');
+      }
+
+      const blobs = await readMany(dates.map((d) => day.dayKey(d)));
+      const daysByDate = {};
+      for (const date of dates) {
+        const raw = blobs[day.dayKey(date)];
+        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+          daysByDate[date] = day.ensureDay(raw, date, clientId, nowMs);
+        }
+      }
+      const preview = products.previewRecipeReapply(daysByDate, product, { recipeRev });
+      const revParts = Object.keys(preview.by_rev).sort().map((key) => (
+        key === 'none'
+          ? `без версии: ${preview.by_rev[key]}`
+          : `rev ${key}: ${preview.by_rev[key]} записей`
+      ));
+      const warning = preview.warning_norms ? ' Нормы дней заметно изменятся — проверь Δккал.' : '';
+      const ingredientsNote = ' Ингредиенты берутся с текущих карточек, истории карточек нет.';
+      const previewText = preview.items_count
+        ? `Превью «${product.name}» ${dateFrom}…${dateTo}: ${preview.days_count} дн., ${preview.items_count} позиций, Δ ${preview.kcal_delta} ккал. ${revParts.join(', ')}.${warning}${ingredientsNote}`
+        : `В периоде ${dateFrom}…${dateTo} нет записей «${product.name}».`;
+
+      const applyNow = args.confirm === true && args.dry_run !== true;
+      if (!applyNow) {
+        return {
+          text: `${previewText} Чтобы применить — heys_reapply_recipe с confirm:true (dry_run не ставь).`,
+          structured: { preview, product_id: product.id, dry_run: true },
+        };
+      }
+
+      const applied = [];
+      for (const row of preview.days) {
+        const current = daysByDate[row.date];
+        const lastSeen = Number(current && current.updatedAt) || 0;
+        const result = products.applyRecipeToDay(current, product, { recipeRev, nowMs });
+        if (!result.changed) continue;
+        const saved = await writeDay(row.date, result.day, lastSeen);
+        if (saved && saved.outcome === 'stale_write_blocked') {
+          throw new ToolError(
+            'stale_day',
+            `День ${row.date} изменился, повтори.`,
+            { date: row.date, preview, applied },
+          );
+        }
+        applied.push({
+          date: row.date,
+          items_count: result.items_count,
+          kcal_delta: result.kcal_delta,
+        });
+      }
+
+      return {
+        text: `Исправил записи «${product.name}» в ${applied.length} дн. (${applied.reduce((sum, row) => sum + row.items_count, 0)} позиций).${ingredientsNote}`,
+        structured: { preview, applied, product_id: product.id, dry_run: false },
       };
     },
 
@@ -2427,6 +2710,29 @@ const ITEM_SCHEMA = {
   },
 };
 
+const RECIPE_SCHEMA = {
+  type: 'object',
+  description: 'Состав блюда: ингредиенты и выход готового. КБЖУ считаются при сохранении и дальше не живут — смена карточки ингредиента рецепт не пересчитает.',
+  properties: {
+    yield_grams: { type: 'number', description: 'Выход готового блюда в граммах. Может быть меньше суммы ингредиентов (уварка).' },
+    items: {
+      type: 'array',
+      description: 'Ингредиенты рецепта.',
+      items: {
+        type: 'object',
+        properties: {
+          product_id: { type: 'string', description: 'id ингредиента из heys_search_products.' },
+          query: { type: 'string', description: 'Название ингредиента, если id неизвестен.' },
+          grams: { type: 'number', description: 'Граммы ингредиента в замесе.' },
+          name: { type: 'string', description: 'Подпись ингредиента в составе. Если не передать — имя продукта.' },
+        },
+        required: ['grams'],
+      },
+    },
+  },
+  required: ['yield_grams', 'items'],
+};
+
 const TOOL_SCHEMAS = [
   {
     name: 'heys_get_day',
@@ -2665,6 +2971,7 @@ const TOOL_SCHEMAS = [
       properties: {
         name: { type: 'string', description: 'Название продукта. Если есть бренд, лучше включить его в название — так проще искать.' },
         from_product_id: { type: 'string', description: 'Скопировать нутриенты с уже существующего продукта (product_id из search/get). Для «черри как помидор» без этикетки — не выдумывай состав.' },
+        recipe: RECIPE_SCHEMA,
         brand: { type: 'string', description: 'Производитель или бренд.' },
         barcode: { type: 'string', description: 'Штрихкод с упаковки, 6–32 символа.' },
         protein100: { type: 'number', description: 'Белки, г на 100 г.' },
@@ -2708,7 +3015,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_update_product',
-    description: 'Поправить карточку продукта в списке клиента: нутриенты, название, бренд, штрихкод, порции, гликемический индекс, вредность. Используй это вместо heys_create_product, когда продукт уже есть, но в нём ошибка — второй продукт с тем же именем потом тянется в дневник, наборы и отчёты. Продукт из общей базы правится только для этого клиента: общая карточка не меняется. Калорийность пересчитывается сама. Клетчатка (fiber100) — отдельная от углеводов масса: в complex100 её включать не нужно.',
+    description: 'Поправить карточку продукта в списке клиента: нутриенты, название, бренд, штрихкод, порции, гликемический индекс, вредность. Для составного блюда передай recipe — КБЖУ пересчитаются из состава, rev поднимется, прошлые записи в дневнике не изменятся (это не ретро). Продукт из общей базы правится только для этого клиента: общая карточка не меняется. Калорийность пересчитывается сама. Клетчатка (fiber100) — отдельная от углеводов масса: в complex100 её включать не нужно.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -2741,7 +3048,25 @@ const TOOL_SCHEMAS = [
             required: ['name', 'grams'],
           },
         },
+        recipe: RECIPE_SCHEMA,
       },
+    },
+  },
+  {
+    name: 'heys_reapply_recipe',
+    description: 'Исправить уже записанные в дневник порции рецепта: подставить текущий состав и КБЖУ карточки на прошлые дни. Save рецепта этого не делает. Сначала dry_run (по умолчанию): превью числа дней/позиций, Δккал и группы по recipe_rev. Применение — только с confirm:true. Пишет по одному дню через merge, не пакетным upsert. Ингредиенты берутся с текущих карточек, истории карточек нет. Позиции без recipe_rev матчатся по product_id.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        product_id: { type: 'string', description: 'id рецепта из heys_search_products.' },
+        query: { type: 'string', description: 'Название рецепта, если id неизвестен.' },
+        date_from: { type: 'string', description: 'Начало периода YYYY-MM-DD включительно.' },
+        date_to: { type: 'string', description: 'Конец периода YYYY-MM-DD включительно.' },
+        recipe_rev: { type: 'integer', description: 'Опционально: править только позиции с этой версией снимка.' },
+        dry_run: { type: 'boolean', description: 'Только превью, без записи. По умолчанию true, пока нет confirm.' },
+        confirm: { type: 'boolean', description: 'true — применить после превью. Без него запись не происходит.' },
+      },
+      required: ['date_from', 'date_to'],
     },
   },
   {
@@ -3268,6 +3593,7 @@ const WRITE_TOOLS = new Set([
   'heys_update_hr_zones',
   'heys_create_product',
   'heys_update_product',
+  'heys_reapply_recipe',
   'heys_delete_product',
   'heys_save_meal_preset',
   'heys_delete_meal_preset',
