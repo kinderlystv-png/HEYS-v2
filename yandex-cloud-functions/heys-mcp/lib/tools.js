@@ -580,7 +580,25 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       );
     }
     const count = Math.max(1, Math.min(20, Number(cm.count) || 1));
-    const srcItems = srcMeal.items || [];
+    let srcItems = (srcMeal.items || []).filter(Boolean);
+    const itemIds = Array.isArray(cm.item_ids)
+      ? [...new Set(cm.item_ids.map((id) => String(id || '').trim()).filter(Boolean))]
+      : [];
+    if (itemIds.length) {
+      const allowed = new Set(itemIds);
+      srcItems = srcItems.filter((it) => it && allowed.has(String(it.id)));
+      // Частичное совпадение — тоже ошибка. Скопировать две позиции из трёх и
+      // ответить «готово» хуже, чем отказать: куратор не перечитывает состав
+      // приёма после успешного ответа, и недостающая еда просто исчезает из дня.
+      if (srcItems.length !== itemIds.length) {
+        const found = new Set(srcItems.map((it) => String(it.id)));
+        const missing = itemIds.filter((id) => !found.has(id));
+        throw new ToolError(
+          'item_not_found',
+          `В приёме «${srcMeal.name || mid}» за ${srcDate} нет позиций: ${missing.join(', ')}. Возьми item_id из heys_get_day — частичную копию сервер не делает.`,
+        );
+      }
+    }
     if (!srcItems.length) {
       throw new ToolError('invalid_items', `Приём «${srcMeal.name || mid}» за ${srcDate} пустой — копировать нечего.`);
     }
@@ -2554,16 +2572,21 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_log_meal',
-    description: 'Создать приём пищи в дневнике. «Как вчера» / «такой же перекус» / «два бутерброда»: heys_get_day за дату-источник → meal_id из текста → copy_meal: { date, meal_id, count при «два»/«три» } — граммы копируются сами, items не собирай из текста get_day. Новые позиции из той же реплики передавай полем items рядом с copy_meal — они попадут в тот же приём, второй вызов не нужен. Составной напиток или блюдо вносится позициями или preset из heys_list_meal_presets. Одиночный продукт — items: [{ query или product_id, grams }]. Неоднозначный query вернёт кандидатов — уточни, не угадывай.',
+    description: 'Создать приём пищи в дневнике. «Такой же перекус/приём целиком»: heys_get_day → copy_meal { date, meal_id }. «Такой же конверт/одну позицию» из приёма с несколькими блюдами: copy_meal { date, meal_id, item_ids } — граммы с сервера, не из текста get_day. count при «два»/«три». Новые позиции из той же реплики — items рядом с copy_meal в одном вызове. Составной напиток — позициями или preset. Одиночный продукт — items: [{ query или product_id, grams }].',
     inputSchema: {
       type: 'object',
       properties: {
         copy_meal: {
           type: 'object',
-          description: 'Скопировать уже записанный приём («как вчера»). meal_id — из heys_get_day. count умножает граммовку каждой позиции (2 = «два таких же» в одном приёме). items/preset не обязательны; если переданы вместе с copy_meal — складываются с копией в один приём.',
+          description: 'Скопировать уже записанный приём («как вчера»). meal_id — из heys_get_day. item_ids — только эти позиции (для «такой же конверт»). count умножает граммовку. items/preset не обязательны; если переданы вместе с copy_meal — складываются с копией в один приём.',
           properties: {
             date: { type: 'string', description: 'Дата приёма-источника: YYYY-MM-DD, «вчера», «позавчера».' },
             meal_id: { type: 'string', description: 'meal_id из heys_get_day.' },
+            item_ids: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Скопировать только эти позиции (item_id из heys_get_day). Без item_ids — весь приём. «Такой же конверт» / одна позиция из приёма с несколькими блюдами — передай item_ids, не add_items с граммами из текста. Каждый id обязан быть в приёме-источнике: один неверный — весь вызов отклоняется с item_not_found, частичной копии не бывает.',
+            },
             count: { type: 'number', description: 'Множитель граммовок, по умолчанию 1.' },
           },
           required: ['date', 'meal_id'],
@@ -2586,7 +2609,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_update_meal',
-    description: 'Изменить уже записанный приём: добавить позиции, убрать их, поправить граммовку, переименовать, сдвинуть время. Именно этим инструментом вносится «добавь туда ещё» и «в завтрак такой же плов как вчера» — НЕ удаляй и не пересоздавай приём, иначе он получит новый id и потеряет оценки самочувствия. «Как вчера» в уже существующий приём: heys_get_day за дату-источник и за сегодня (meal_id приёма) → copy_meal с meal_id приёма-источника; граммы не собирай из текста get_day руками. meal_id и id позиций — из heys_get_day.',
+    description: 'Изменить уже записанный приём: добавить позиции, убрать их, поправить граммовку, переименовать, сдвинуть время. «В завтрак/обед такой же …»: heys_get_day(сегодня + источник) → heys_update_meal с copy_meal. Приём целиком — copy_meal { date, meal_id }; одна позиция («конверт как вчера») — copy_meal { date, meal_id, item_ids }. Граммы не собирай из текста get_day. meal_id приёма сегодня и item_id источника — из heys_get_day.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -2594,10 +2617,15 @@ const TOOL_SCHEMAS = [
         date: DATE_ARG,
         copy_meal: {
           type: 'object',
-          description: 'Скопировать позиции из уже записанного приёма («как вчера») в этот meal_id. date/meal_id — приём-источник из heys_get_day. count умножает граммовку. add_items не обязательны; если переданы вместе — складываются с копией.',
+          description: 'Скопировать позиции из уже записанного приёма («как вчера») в этот meal_id. date/meal_id — приём-источник. item_ids — только эти позиции. count умножает граммовку. add_items не обязательны; если переданы вместе — складываются с копией.',
           properties: {
             date: { type: 'string', description: 'Дата приёма-источника: YYYY-MM-DD, «вчера», «позавчера».' },
             meal_id: { type: 'string', description: 'meal_id приёма-источника из heys_get_day.' },
+            item_ids: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Скопировать только эти позиции (item_id из heys_get_day). Без item_ids — весь приём. Каждый id обязан быть в приёме-источнике: один неверный — весь вызов отклоняется с item_not_found, частичной копии не бывает.',
+            },
             count: { type: 'number', description: 'Множитель граммовок, по умолчанию 1.' },
           },
           required: ['date', 'meal_id'],

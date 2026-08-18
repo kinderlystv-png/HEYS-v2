@@ -278,6 +278,35 @@ test('log_meal copy_meal и items в одном вызове дают один �
   assert.equal(meal.items[1].grams, 35);
 });
 
+test('log_meal copy_meal с item_ids копирует одну позицию из многопозиционного приёма', async () => {
+  const yesterday = '2026-07-31';
+  const pastDays = {
+    [yesterday]: {
+      date: yesterday,
+      meals: [{
+        id: 'm_snack',
+        name: 'Перекус',
+        time: '12:30',
+        items: [
+          { id: 'it_env', product_id: 'own-milk', name: 'Конверты фило', grams: 111 },
+          { id: 'it_coffee', product_id: 'own-americano', name: 'Кофе', grams: 200 },
+        ],
+      }],
+      updatedAt: 10,
+    },
+  };
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 111 }, pastDays });
+  const tools = build(api);
+  await tools.heys_log_meal({
+    copy_meal: { date: yesterday, meal_id: 'm_snack', item_ids: ['it_env'] },
+  });
+
+  assert.equal(api.saves.length, 1);
+  const meal = api.saves[0].value.meals[0];
+  assert.equal(meal.items.length, 1);
+  assert.equal(meal.items[0].grams, 111);
+});
+
 test('add_water прибавляет к текущему объёму', async () => {
   const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 200, updatedAt: 9 } });
   const tools = build(api);
@@ -1099,6 +1128,129 @@ test('update_meal copy_meal и add_items в одном вызове дописы
   assert.equal(meal.items.length, 2);
   assert.equal(meal.items[0].grams, 200);
   assert.equal(meal.items[1].grams, 15);
+});
+
+test('update_meal copy_meal с item_ids копирует только выбранные позиции', async () => {
+  const yesterday = '2026-07-31';
+  const pastDays = {
+    [yesterday]: {
+      date: yesterday,
+      meals: [{
+        id: 'm_snack',
+        name: 'Перекус',
+        time: '12:30',
+        items: [
+          { id: 'it_env', product_id: 'own-milk', name: 'Конверты фило', grams: 111 },
+          { id: 'it_pancake', product_id: 'own-syrup', name: 'Блины овсяные', grams: 35 },
+        ],
+      }],
+      updatedAt: 10,
+    },
+  };
+  const api = fakeApi({
+    day: {
+      date: '2026-08-01',
+      updatedAt: 900,
+      meals: [{ id: 'm_lunch', name: 'Обед', time: '13:00', items: [{ id: 'it_chupa', product_id: 'own-syrup', name: 'Чупа-чупс', grams: 5 }] }],
+    },
+    pastDays,
+  });
+  const tools = build(api);
+  await tools.heys_update_meal({
+    meal_id: 'm_lunch',
+    copy_meal: { date: yesterday, meal_id: 'm_snack', item_ids: ['it_env'] },
+  });
+
+  const meal = api.saves[0].value.meals.find((m) => m.id === 'm_lunch');
+  assert.equal(meal.items.length, 2);
+  assert.equal(meal.items[0].grams, 5);
+  assert.equal(meal.items[1].grams, 111);
+});
+
+test('update_meal copy_meal отклоняет несуществующий item_id', async () => {
+  const yesterday = '2026-07-31';
+  const pastDays = {
+    [yesterday]: {
+      date: yesterday,
+      meals: [{
+        id: 'm_snack',
+        name: 'Перекус',
+        items: [{ id: 'it_env', product_id: 'own-milk', name: 'Конверты', grams: 111 }],
+      }],
+      updatedAt: 10,
+    },
+  };
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [{ id: 'm_lunch', items: [] }], updatedAt: 1 },
+    pastDays,
+  });
+  const tools = build(api);
+  await assert.rejects(
+    () => tools.heys_update_meal({
+      meal_id: 'm_lunch',
+      copy_meal: { date: yesterday, meal_id: 'm_snack', item_ids: ['it_missing'] },
+    }),
+    (e) => e.code === 'item_not_found',
+  );
+});
+
+test('update_meal copy_meal отклоняет частичное совпадение item_ids', async () => {
+  const yesterday = '2026-07-31';
+  const pastDays = {
+    [yesterday]: {
+      date: yesterday,
+      meals: [{
+        id: 'm_snack',
+        name: 'Перекус',
+        items: [
+          { id: 'it_env', product_id: 'own-milk', name: 'Конверты', grams: 111 },
+          { id: 'it_pan', product_id: 'own-milk', name: 'Блины', grams: 35 },
+        ],
+      }],
+      updatedAt: 10,
+    },
+  };
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [{ id: 'm_lunch', items: [] }], updatedAt: 1 },
+    pastDays,
+  });
+  const tools = build(api);
+  // Один id верный, второй с опечаткой: скопировать половину и отчитаться
+  // «готово» — тихая потеря еды из дня, поэтому вызов отклоняется целиком.
+  await assert.rejects(
+    () => tools.heys_update_meal({
+      meal_id: 'm_lunch',
+      copy_meal: { date: yesterday, meal_id: 'm_snack', item_ids: ['it_env', 'it_pancake'] },
+    }),
+    (e) => e.code === 'item_not_found' && /it_pancake/.test(e.message),
+  );
+  assert.equal(api.saves.length, 0, 'при отказе день не пишется');
+});
+
+test('update_meal copy_meal не спотыкается о повтор одного item_id', async () => {
+  const yesterday = '2026-07-31';
+  const pastDays = {
+    [yesterday]: {
+      date: yesterday,
+      meals: [{
+        id: 'm_snack',
+        name: 'Перекус',
+        items: [{ id: 'it_env', product_id: 'own-milk', name: 'Конверты', grams: 111 }],
+      }],
+      updatedAt: 10,
+    },
+  };
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [{ id: 'm_lunch', items: [] }], updatedAt: 1 },
+    pastDays,
+  });
+  const tools = build(api);
+  await tools.heys_update_meal({
+    meal_id: 'm_lunch',
+    copy_meal: { date: yesterday, meal_id: 'm_snack', item_ids: ['it_env', 'it_env'] },
+  });
+  const meal = api.saves[0].value.meals.find((m) => m.id === 'm_lunch');
+  assert.equal(meal.items.length, 1, 'дубль в item_ids не множит позицию и не даёт ложный item_not_found');
 });
 
 test('update_meal добавляет позицию, сохраняя id, время и оценки приёма', async () => {

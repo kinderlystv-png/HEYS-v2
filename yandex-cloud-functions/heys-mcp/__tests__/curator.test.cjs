@@ -484,6 +484,8 @@ test('copy_meal с transcript записывает приём «как вчер�
 test('инструкция куратора описывает copy_meal и обязательный transcript', () => {
   const text = curatorInstructions('Антон', true, Date.UTC(2026, 7, 3));
   assert.match(text, /copy_meal/);
+  assert.match(text, /item_ids/);
+  assert.match(text, /приём целиком|одну позицию/);
   assert.match(text, /2в\./);
   assert.match(text, /transcript/);
 });
