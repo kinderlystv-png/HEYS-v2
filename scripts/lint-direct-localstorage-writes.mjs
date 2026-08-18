@@ -157,15 +157,14 @@ function listScanFiles() {
 
 // ── Read allowlist ─────────────────────────────────────────────────────────
 /** @type {{ kind: 'line'|'needle', path: string, line?: number, needle?: string, raw: string }[]} */
-const allowEntries = [];
-try {
-  const lines = readText(ALLOWLIST_REL).split('\n');
-  for (const line of lines) {
+function parseAllowlistText(text) {
+  const entries = [];
+  for (const line of text.split('\n')) {
     const t = line.trim();
     if (!t || t.startsWith('#')) continue;
     const needleSep = t.indexOf('::');
     if (needleSep > 0) {
-      allowEntries.push({
+      entries.push({
         kind: 'needle',
         path: t.slice(0, needleSep),
         needle: t.slice(needleSep + 2),
@@ -175,7 +174,7 @@ try {
     }
     const m = /^(.+):(\d+)$/.exec(t);
     if (m) {
-      allowEntries.push({
+      entries.push({
         kind: 'line',
         path: m[1],
         line: Number(m[2]),
@@ -183,9 +182,19 @@ try {
       });
     }
   }
+  return entries;
+}
+
+let allowEntries = [];
+try {
+  allowEntries = parseAllowlistText(readText(ALLOWLIST_REL));
 } catch {
   process.stderr.write(`[WARN]  Allowlist not found: ${ALLOWLIST_FILE}\n`);
   process.stderr.write(`        Run with --generate-allowlist to create it.\n`);
+}
+
+function reloadAllowlistFromDisk() {
+  allowEntries = parseAllowlistText(readFileSync(ALLOWLIST_FILE, 'utf8'));
 }
 
 function isListed(hit) {
@@ -263,6 +272,10 @@ if (AUTO_FIX && !REF) {
 
   if (bumped.length > 0) {
     writeFileSync(ALLOWLIST_FILE, allowlistText);
+    reloadAllowlistFromDisk();
+    for (const hit of hits) {
+      hit.listed = isListed(hit);
+    }
     process.stdout.write(`\n🔧 Auto-bumped ${bumped.length} allowlist entr(ies) for line drift:\n`);
     bumped.forEach((b) => process.stdout.write(`   ${b}\n`));
     process.stdout.write(`   → Prefer path::needle entries to avoid future drift.\n\n`);

@@ -98,8 +98,12 @@ Before any staging or branch mutation:
    `git diff --cached`, and identify the exact intended files.
 2. Group files into logical commits. Prefer `git add -- <paths>`. Use
    `git add -A` only when the user or collector explicitly accepts every dirty
-   file as one intended scope.
-3. Do not stash, checkout, restore, reset, delete generated files or resolve
+   file as one intended scope. To split work into multiple commits, stage paths
+   and commit twice — never `git checkout HEAD -- <path>` to “drop” unstaged
+   changes; that wipes uncommitted work with no git recovery.
+3. Before `git checkout`, `git restore`, or `git reset` on explicit paths, run
+   `git diff --stat -- <paths>`. If output is non-empty, do not run the command.
+   Do not stash, checkout, restore, reset, delete generated files or resolve
    conflicts in another agent's or uncertain scope. If scopes overlap, stop and
    report the conflict.
 4. Before a reset relative to upstream, run `git log --oneline @{u}..HEAD` and
