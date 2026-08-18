@@ -54,6 +54,10 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             MANUAL_FUNCTION="${{ inputs.function_name }}"
             if [ -n "$MANUAL_FUNCTION" ] && [ "$MANUAL_FUNCTION" != "all" ]; then
+              if [ "$MANUAL_FUNCTION" = "heys-mcp" ]; then
+                export ALLOW_DISABLED_FUNCTIONS=heys-mcp
+                export ALLOW_DISABLED_REASON="heys/798770 MCP normMacros g/kg profile context"
+              fi
               node yandex-cloud-functions/function-inventory.cjs --assert-deployable "$MANUAL_FUNCTION"
               yandex-cloud-functions/test-functions.sh "$MANUAL_FUNCTION"
             else
@@ -209,6 +213,10 @@ jobs:
           MANUAL_FUNCTION="${{ inputs.function_name }}"
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "$MANUAL_FUNCTION" ] && [ "$MANUAL_FUNCTION" != "all" ]; then
+            if [ "$MANUAL_FUNCTION" = "heys-mcp" ]; then
+              export ALLOW_DISABLED_FUNCTIONS=heys-mcp
+              export ALLOW_DISABLED_REASON="heys/798770 MCP normMacros g/kg profile context"
+            fi
             echo "🎯 Deploying single function: $MANUAL_FUNCTION"
             ./deploy-all.sh "$MANUAL_FUNCTION" --ci --skip-health
           elif [ "${{ steps.deployment-target.outputs.mode }}" = "gateway-only" ]; then
