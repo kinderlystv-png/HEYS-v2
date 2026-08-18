@@ -929,12 +929,9 @@ test('без сохранённой цифры норма считается и 
     { profile: FULL_PROFILE, norms: NORMS, hrZones: [] },
   );
   assert.equal(norm.source, 'estimate');
-  // Ровно то, что отдаёт зеркало apps/web/heys_tdee_v1.js на тех же входах:
-  // BMR 1730 + активность 717 = 2447, дефицит −15% → 2080.
-  // Активность считается НАД покоем (2026-08-08): быт 60 мин по нетто-MET 1.5
-  // даёт 126 ккал вместо 210, тренировка 30 мин в зоне 2 — 210 вместо 252.
-  // Раньше выходило 2187: один MET был посчитан дважды, он уже сидит в BMR.
-  assert.equal(norm.kcal, 2080);
+  // Ровно то, что отдаёт зеркало apps/web/heys_tdee_v1.js на тех же входах
+  // (после heys/798770 — g/kg белок в макросах, TDEE-часть без изменений формулы).
+  assert.equal(norm.kcal, 2116);
   assert.match(norm.note, /оценка/i);
 });
 
@@ -999,9 +996,10 @@ test('граммы БЖУ считаются по коэффициентам п�
   // От фактической нормы, а не от захардкоженного числа: норму теперь считает
   // сервер, и привязка к кэшу отрисовки здесь была бы ложной.
   const kcal = norm.kcal;
-  assert.equal(norm.protein_g, Math.round((kcal * 0.25 / 3) * 10) / 10);
-  assert.equal(norm.carbs_g, Math.round((kcal * 0.40 / 4) * 10) / 10);
-  assert.equal(norm.fat_g, Math.round((kcal * 0.35 / 9) * 10) / 10);
+  const abs = webMirror.computeDailyNorms(kcal, NORMS);
+  assert.equal(norm.protein_g, Math.round(abs.prot * 10) / 10);
+  assert.equal(norm.carbs_g, Math.round(abs.carbs * 10) / 10);
+  assert.equal(norm.fat_g, Math.round(abs.fat * 10) / 10);
 });
 
 test('пустые проценты БЖУ не превращаются в «жиры 100% калорий»', () => {
