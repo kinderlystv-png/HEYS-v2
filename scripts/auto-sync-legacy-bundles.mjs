@@ -18,6 +18,7 @@ import {
     isGeneratedFile,
 } from './legacy-bundle-config.mjs';
 import { prepareGeneratedBaselineForShip } from './legacy-generated-baseline.mjs';
+import { assertLocalWebDevNotHoldingBundles } from './lib/bundle-dev-server-guard.mjs';
 
 const ROOT_DIR = process.cwd();
 const WEB_DIR = path.join(ROOT_DIR, 'apps/web');
@@ -277,7 +278,12 @@ function stageGeneratedOutputs() {
     run(`git add -A ${fixedPaths} ${generatorOutputs}`);
 }
 
-function main() {
+async function runLegacyRebuild(command) {
+    await assertLocalWebDevNotHoldingBundles({ fail: true });
+    run(command);
+}
+
+async function main() {
     const mode = getMode();
     const stagedFiles = getStagedFiles();
     const isTestMode = !!getCliFilesOverride();
@@ -330,7 +336,7 @@ function main() {
             return;
         }
         run('pnpm --filter @heys/web run predev');
-        run('pnpm bundle:legacy');
+        await runLegacyRebuild('pnpm bundle:legacy');
         stageGeneratedOutputs();
         console.info('[legacy-sync] ✅ Legacy bundles пересобраны и добавлены в staging.');
         return;
@@ -362,7 +368,7 @@ function main() {
 
     if (finalBundles.length > 0) {
         console.info(`[legacy-sync] 📦 Final legacy bundles: ${finalBundles.join(', ')}`);
-        run(`node scripts/bundle-legacy.mjs --bundle=${finalBundles.join(',')}`);
+        await runLegacyRebuild(`node scripts/bundle-legacy.mjs --bundle=${finalBundles.join(',')}`);
     }
 
     if (!isTestMode) {
@@ -374,4 +380,7 @@ function main() {
         : '[legacy-sync] ✅ Legacy bundles пересобраны и добавлены в staging.');
 }
 
-main();
+main().catch((err) => {
+    console.error('[legacy-sync] ❌', err?.message || err);
+    process.exit(1);
+});

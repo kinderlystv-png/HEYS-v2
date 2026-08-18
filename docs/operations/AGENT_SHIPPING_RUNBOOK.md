@@ -153,7 +153,11 @@ Current hook sources: [commit-msg](../../.husky/commit-msg),
 - `pre-commit`: `lint-staged`; agent staging/source-only guard; legacy sync
   (`agent-check` is report-only, `integration` rebuilds and stages generated
   scope); lazy-chunk, pricing, CommonJS mirror and heys-mcp web-mirror guards;
-  allowlist auto-fixes.
+  allowlist auto-fixes. **Windows + dev-сервер:** если `localhost:3001`
+  отвечает, pre-commit останавливает legacy rebuild до `Ctrl+C` на
+  `pnpm dev:local` (иначе EPERM на lazy-бандлы). Обход:
+  `HEYS_BUNDLE_DEV_SERVER_OK=1`. Commit body — строки ≤100 символов
+  (commitlint).
 - `pre-push`: delegates to `push:preflight` for the outgoing committed range.
   The current fast gates are source/generated scope, Gitleaks, the migration
   test when migration contracts changed, direct-localStorage,

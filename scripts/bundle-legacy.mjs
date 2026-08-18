@@ -21,12 +21,13 @@ import {
     unlinkSync,
     writeFileSync,
 } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
 import { minify } from 'terser';
 
+import { assertLocalWebDevNotHoldingBundles } from './lib/bundle-dev-server-guard.mjs';
 import { LEGACY_BUNDLES } from './legacy-bundle-config.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -96,12 +97,45 @@ function readExistingManifest() {
     }
 }
 
-function writeFileRetry(filePath, content, encoding) {
+function bytesEqual(a, b) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return false;
+    }
+    return true;
+}
+
+function hashFromBundlePath(filePath) {
+    const m = filePath.match(/\.([a-f0-9]{12})\.js(\.gz)?$/);
+    return m ? m[1] : null;
+}
+
+function writeFileRetry(filePath, content) {
+    const isBinary = Buffer.isBuffer(content);
+    const pathHash = hashFromBundlePath(filePath);
+    const contentHashForBody = isBinary ? null : contentHash(content);
+
+    if (existsSync(filePath)) {
+        try {
+            const existing = readFileSync(filePath);
+            if (isBinary && bytesEqual(existing, content)) return;
+            if (!isBinary && existing === content) return;
+        } catch (e) {
+            if (e && ['EPERM', 'EBUSY', 'EACCES'].includes(e.code)) {
+                if (pathHash && contentHashForBody && pathHash === contentHashForBody) {
+                    console.warn(`  skip locked (hash matches): ${basename(filePath)}`);
+                    return;
+                }
+            } else if (e) {
+                throw e;
+            }
+        }
+    }
+
     let lastErr;
     for (let i = 0; i < 5; i++) {
         try {
-            if (encoding) writeFileSync(filePath, content, encoding);
-            else writeFileSync(filePath, content);
+            writeFileSync(filePath, content);
             return;
         } catch (e) {
             lastErr = e;
@@ -109,7 +143,11 @@ function writeFileRetry(filePath, content, encoding) {
             Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250 * (i + 1));
         }
     }
-    throw lastErr;
+
+    const code = lastErr?.code ?? 'EPERM';
+    throw new Error(
+        `Cannot write ${basename(filePath)} (${code}). Stop pnpm dev:local on :3001 and retry, or set HEYS_BUNDLE_DEV_SERVER_OK=1.`,
+    );
 }
 
 // ─── Minify one bundle ─────────────────────────────────────────────────────
@@ -179,7 +217,7 @@ async function buildBundle(name, files) {
     const size = Buffer.byteLength(content, 'utf8');
 
     if (!DRY_RUN) {
-        writeFileRetry(outPath, content, 'utf8');
+        writeFileRetry(outPath, content);
 
         // 🛡️ Syntax validation — catch broken bundles before deploy
         try {
@@ -312,6 +350,13 @@ function syncIndexHtml(manifest) {
 // ─── Main ──────────────────────────────────────────────────────────────────
 
 async function main() {
+    if (!DRY_RUN) {
+        await assertLocalWebDevNotHoldingBundles({
+            fail: process.env.HEYS_BUNDLE_FAIL_ON_DEV_SERVER === '1',
+            log: (msg) => console.warn(msg),
+        });
+    }
+
     console.info('[bundle-legacy] 🚀 HEYS Legacy Bundle Builder');
     console.info(`  web dir : ${WEB_DIR}`);
     console.info(`  output  : ${PUB_DIR}`);
@@ -420,7 +465,7 @@ async function main() {
             const jsPath = resolve(PUB_DIR, entry.file);
             const raw = readFileSync(jsPath);
             const gz = gzipSync(raw, { level: 9 });
-            writeFileSync(jsPath + '.gz', gz);
+            writeFileRetry(jsPath + '.gz', gz);
             totalRaw += raw.length;
             totalGz += gz.length;
             const pct = (100 - (gz.length / raw.length) * 100).toFixed(0);
@@ -432,7 +477,7 @@ async function main() {
         if (existsSync(reactPath)) {
             const raw = readFileSync(reactPath);
             const gz = gzipSync(raw, { level: 9 });
-            writeFileSync(resolve(PUB_DIR, 'react-bundle.js.gz'), gz);
+            writeFileRetry(resolve(PUB_DIR, 'react-bundle.js.gz'), gz);
             totalRaw += raw.length;
             totalGz += gz.length;
             const pct = (100 - (gz.length / raw.length) * 100).toFixed(0);
