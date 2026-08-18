@@ -37,6 +37,12 @@
 
 ## Проверка за 30 секунд
 
+> Разбор **конкретного обмена** («сколько кругов», «почему долго») делается не
+> отсюда, а одним вызовом `tasks_mcp_trace` — с телефона и любой машины
+> одинаково. Процесс и ловушки:
+> [`docs/operations/MCP_TRACE_RUNBOOK.md`](../../docs/operations/MCP_TRACE_RUNBOOK.md).
+> Команды ниже нужны для сырого лога одного вызова и агрегатов.
+
 После «запиши воду» / любой записи — **сначала логи функции**, не `logging read`
 с перебором групп и фильтров.
 
@@ -147,7 +153,9 @@ node scripts/mcp-correlate.mjs --transcript transcript/2026-08-17.md --logs call
 В кураторском коннекторе то же самое по запросу:
 `tasks_mcp_trace({ date, heading? })` читает **`mcp_call_events`** в Postgres
 (не Cloud Logging). Сырьё хранится **180 суток**; дата старше — ошибка
-`telemetry_retention_exceeded`.
+`telemetry_retention_exceeded`. Полный процесс и пять ловушек (`taskDay`,
+разъезд обмена на соседние heading, кэш инструкций в старой сессии) —
+[`docs/operations/MCP_TRACE_RUNBOOK.md`](../../docs/operations/MCP_TRACE_RUNBOOK.md).
 
 Stdout по-прежнему уходит в Logging (консоль, 3 суток). Агрегаты —
 `mcp_call_daily` / `mcp_seq_daily` через `mcp_telemetry`:
