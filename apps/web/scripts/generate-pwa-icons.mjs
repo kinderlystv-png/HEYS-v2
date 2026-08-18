@@ -1,6 +1,7 @@
 /**
- * PWA icons from icon-v4.svg (handoff app-splash.v4, variant B inset ring).
- * Embeds Caprasimo for sharp/librsvg. Run: node apps/web/scripts/generate-pwa-icons.mjs
+ * PWA icons from icon-v4.svg (handoff app-splash.v4: диск #efe3cf, H Caprasimo, без кольца).
+ * apple-touch-icon — отдельный icon-v4-apple.svg (180×180, заливка #efe3cf).
+ * Run: node apps/web/scripts/generate-pwa-icons.mjs
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -10,36 +11,41 @@ import sharp from 'sharp';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(__dirname, '../public');
-const source = path.join(publicDir, 'icon-v4.svg');
 const fontPath = path.join(publicDir, 'fonts/Caprasimo-Regular.ttf');
 
-const sizes = [
-  { name: 'icon-192.png', size: 192 },
-  { name: 'icon-512.png', size: 512 },
+const jobs = [
+  { source: 'icon-v4.svg', name: 'icon-192.png', size: 192, flatten: '#fffaf1' },
+  { source: 'icon-v4.svg', name: 'icon-512.png', size: 512, flatten: '#fffaf1' },
+  { source: 'icon-v4-apple.svg', name: 'apple-touch-icon.png', size: 180, flatten: '#efe3cf' },
 ];
 
-if (!fs.existsSync(source)) {
-  console.error('Missing', source);
-  process.exit(1);
-}
 if (!fs.existsSync(fontPath)) {
   console.error('Missing', fontPath);
   process.exit(1);
 }
 
 const fontB64 = fs.readFileSync(fontPath).toString('base64');
-let svg = fs.readFileSync(source, 'utf8');
-svg = svg.replace(
-  /src:\s*url\('fonts\/Caprasimo-Regular\.ttf'\)\s*format\('truetype'\);/,
-  `src: url('data:font/ttf;base64,${fontB64}') format('truetype');`,
-);
+const fontDataUrl = `url('data:font/ttf;base64,${fontB64}') format('truetype');`;
 
-for (const { name, size } of sizes) {
+function loadSvg(filename) {
+  const file = path.join(publicDir, filename);
+  if (!fs.existsSync(file)) {
+    console.error('Missing', file);
+    process.exit(1);
+  }
+  return fs.readFileSync(file, 'utf8').replace(
+    /src:\s*url\('fonts\/Caprasimo-Regular\.ttf'\)\s*format\('truetype'\);/,
+    `src: ${fontDataUrl}`,
+  );
+}
+
+for (const { source, name, size, flatten } of jobs) {
+  const svg = loadSvg(source);
   const out = path.join(publicDir, name);
   await sharp(Buffer.from(svg))
     .resize(size, size)
-    .flatten({ background: '#fffaf1' })
+    .flatten({ background: flatten })
     .png()
     .toFile(out);
-  console.log(`wrote ${name} (${size})`);
+  console.log(`wrote ${name} (${size}, flatten ${flatten})`);
 }

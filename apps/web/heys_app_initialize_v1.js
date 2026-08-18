@@ -178,6 +178,30 @@
             const mark = document.createElement('div');
             mark.className = 'heys-boot-mark is-fail';
             mark.setAttribute('role', 'alert');
+            const disc = document.createElement('span');
+            disc.className = 'heys-boot-mark__disc';
+            disc.setAttribute('aria-hidden', 'true');
+            const warn = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            warn.setAttribute('class', 'heys-boot-mark__warn');
+            warn.setAttribute('width', '26');
+            warn.setAttribute('height', '26');
+            warn.setAttribute('viewBox', '0 0 24 24');
+            warn.setAttribute('fill', 'none');
+            warn.setAttribute('stroke', 'currentColor');
+            warn.setAttribute('stroke-width', '2.75');
+            warn.setAttribute('stroke-linecap', 'round');
+            const warnPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            warnPath.setAttribute('d', 'M12 7v6M12 17h.01');
+            const warnCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            warnCircle.setAttribute('cx', '12');
+            warnCircle.setAttribute('cy', '12');
+            warnCircle.setAttribute('r', '9');
+            warn.append(warnPath, warnCircle);
+            disc.appendChild(warn);
+            const sign = document.createElement('div');
+            sign.className = 'heys-boot-mark__sign';
+            const fail = document.createElement('div');
+            fail.className = 'heys-boot-mark__fail';
             const title = document.createElement('div');
             title.className = 'heys-boot-mark__title';
             title.textContent = 'Не удалось загрузить приложение';
@@ -186,10 +210,12 @@
             text.textContent = 'Похоже, нет связи. Ваши данные на месте — они хранятся на устройстве.';
             const retry = document.createElement('button');
             retry.type = 'button';
-            retry.className = 'heys-boot-mark__btn heys-boot-mark__retry';
+            retry.className = 'heys-boot-mark__btn heys-boot-mark__retry heys-boot-mark__retry--fail';
             retry.textContent = 'Повторить';
             retry.addEventListener('click', retryRecovery);
-            mark.append(title, text, retry);
+            fail.append(title, text, retry);
+            sign.appendChild(fail);
+            mark.append(disc, sign);
             overlay.appendChild(mark);
         }
 

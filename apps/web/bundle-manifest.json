@@ -32,12 +32,12 @@
     "builtAt": "2026-08-18T17:04:15.621Z"
   },
   "boot-init": {
-    "file": "boot-init.bundle.09acfb876cb4.js",
-    "hash": "09acfb876cb4",
-    "sourceFingerprint": "d59d909c4512",
+    "file": "boot-init.bundle.de4b51c6a393.js",
+    "hash": "de4b51c6a393",
+    "sourceFingerprint": "4953f54464dc",
     "fileCount": 6,
-    "size": 29958,
-    "builtAt": "2026-08-18T17:04:15.821Z"
+    "size": 31063,
+    "builtAt": "2026-08-18T18:59:54.676Z"
   },
   "postboot-1-game-eager": {
     "file": "postboot-1-game-eager.bundle.4a5d778b7355.js",

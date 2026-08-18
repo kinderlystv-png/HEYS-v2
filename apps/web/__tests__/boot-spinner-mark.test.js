@@ -8,6 +8,9 @@ const html = fs.readFileSync(path.join(webRoot, 'index.html'), 'utf8');
 const loading = fs.readFileSync(path.join(webRoot, 'heys_loading_progress_v1.js'), 'utf8');
 const init = fs.readFileSync(path.join(webRoot, 'heys_app_initialize_v1.js'), 'utf8');
 const css = fs.readFileSync(path.join(webRoot, 'styles/heys-boot-mark.css'), 'utf8');
+const manifest = JSON.parse(fs.readFileSync(path.join(webRoot, 'public/manifest.json'), 'utf8'));
+const iconSvg = fs.readFileSync(path.join(webRoot, 'public/icon-v4.svg'), 'utf8');
+const appleSvg = fs.readFileSync(path.join(webRoot, 'public/icon-v4-apple.svg'), 'utf8');
 
 describe('cold-start spinner mark', () => {
   it('puts the 56 mark in #root instead of a chrome skeleton', () => {
@@ -48,7 +51,7 @@ describe('cold-start spinner mark', () => {
     expect(init).toContain("overlay.className = 'heys-boot-visual-guard'");
     expect(css).toContain('#heys-boot-visual-guard');
     expect(css).toContain('overflow: hidden');
-    expect(css).toContain('flex-direction: column');
+    expect(css).toContain('display: block');
     expect(css).toContain('#heys-boot-visual-guard .heys-boot-mark');
     expect(init).toContain('timeoutMs = Number(opts.timeoutMs) || 60000');
     expect(init).toContain('Не удалось загрузить приложение');
@@ -97,10 +100,21 @@ describe('cold-start spinner mark', () => {
     expect(css).toContain('html[data-theme-id="blue"] .heys-boot-visual-guard');
   });
 
-  it('keeps the fail state on the same 45vh anchor as the boot spinner', () => {
-    expect(css).toMatch(/\.heys-boot-mark\.is-fail[\s\S]*justify-content:\s*flex-start/);
-    expect(css).toMatch(/\.heys-boot-mark\.is-fail[\s\S]*padding-top:\s*max\(120px, calc\(45vh - 28px\)\)/);
-    expect(css).toMatch(/#heys-boot-visual-guard \.heys-boot-mark\.is-fail[\s\S]*padding-top:\s*max\(120px, calc\(45vh - 28px\)\)/);
+  it('anchors boot disc and fail state on shared splash coordinates', () => {
+    expect(css).toContain('--heys-splash-anchor-y: max(148px, 45dvh)');
+    expect(css).toContain('--heys-splash-disc-size: 56px');
+    expect(css).toMatch(/\.heys-boot-mark__disc[\s\S]*top:\s*var\(--heys-splash-anchor-y\)/);
+    expect(css).toMatch(/\.heys-boot-mark__disc[\s\S]*transform:\s*translate\(-50%, -50%\)/);
+    expect(css).toMatch(/\.heys-boot-mark\.is-fail[\s\S]*\.heys-boot-mark__disc[\s\S]*top:\s*var\(--heys-splash-anchor-y\)|\.heys-boot-mark__disc[\s\S]*top:\s*var\(--heys-splash-anchor-y\)/);
+  });
+
+  it('keeps boot disc outside sign so fixed anchor survives state changes', () => {
+    const boot = html.match(/<div class="heys-boot-mark" data-heys-boot-mark="true"[\s\S]*?<\/div>\s*<\/div>\s*<\/div>/);
+    expect(boot).not.toBeNull();
+    expect(boot[0]).toMatch(
+      /<span class="heys-boot-mark__disc"[\s\S]*?<\/span>\s*<div class="heys-boot-mark__sign">/,
+    );
+    expect(boot[0]).not.toMatch(/<div class="heys-boot-mark__sign"[\s\S]*?<span class="heys-boot-mark__disc"/);
   });
 
   it('shows Repeat on the slow boot step, not only on second fail', () => {
@@ -140,5 +154,26 @@ describe('cold-start spinner mark', () => {
     expect(loading).toContain('WaitMarkButton');
     expect(loading).toContain('WaitMarkScreen');
     expect(loading).toContain('thresholds:');
+  });
+
+  it('matches app-splash.v4 handoff for manifest, icon and iOS path 1', () => {
+    expect(manifest.name).toBe('HEYS');
+    expect(manifest.short_name).toBe('HEYS');
+    expect(manifest.background_color).toBe('#fffaf1');
+    expect(manifest.theme_color).toBe('#fffaf1');
+    expect(manifest.description).toContain('Nutrition Tracker');
+    expect(iconSvg).toContain('fill="#fffaf1"');
+    expect(iconSvg).toContain('fill="#efe3cf"');
+    expect(iconSvg).toContain('cy="44"');
+    expect(iconSvg).not.toContain('heys-icon-inset-ring');
+    expect(iconSvg).not.toContain('#c67139');
+    expect(appleSvg).toContain('fill="#efe3cf"');
+    expect(appleSvg).not.toContain('fill="#fffaf1"');
+    expect(fs.existsSync(path.join(webRoot, 'public/apple-touch-icon.png'))).toBe(true);
+    expect(html).toContain('rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180"');
+    expect(html).toContain('apple-mobile-web-app-capable" content="yes"');
+    expect(html).toContain('apple-mobile-web-app-status-bar-style" content="default"');
+    expect(html).toContain('apple-mobile-web-app-title" content="HEYS"');
+    expect(html).toContain('theme-color" content="#fffaf1"');
   });
 });

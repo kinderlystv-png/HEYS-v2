@@ -1,4 +1,9 @@
 html, body { background: #fffaf1; }
+html {
+    /* Центр диска 56px — общий якорь сплэша PWA и heys-boot-mark (handoff app-splash.v4). */
+    --heys-splash-disc-size: 56px;
+    --heys-splash-anchor-y: max(148px, 45dvh);
+}
 html[data-theme="sand"], html[data-theme-id="sand"],
 html[data-theme="light"], html[data-theme="classic"] { background: #fffaf1; }
 html[data-theme="sand-dark"], html[data-theme-id="sand-dark"],
@@ -23,21 +28,21 @@ html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: #0d1
 }
 .heys-boot-mark {
     box-sizing: border-box;
+    position: fixed;
+    inset: 0;
+    z-index: 1;
     width: 100%;
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding: max(120px, calc(45vh - 28px)) 26px max(24px, env(safe-area-inset-bottom));
+    min-height: 0;
+    display: block;
+    padding: 0;
     font-family: Figtree, system-ui, -apple-system, sans-serif;
     color: var(--boot-ink);
     background: inherit;
+    pointer-events: auto;
 }
-/* Ошибка — тот же якорь, что у спиннера: кластер чуть ниже середины, не вверху и не в математическом центре. */
+/* Ошибка — диск остаётся на том же якоре, текст уезжает вниз отдельным слоем. */
 .heys-boot-mark.is-fail {
-    justify-content: flex-start;
-    padding-top: max(120px, calc(45vh - 28px));
+    display: block;
 }
 body:has(> .heys-boot-mark.is-fail) {
     margin: 0;
@@ -48,28 +53,18 @@ body:has(> .heys-boot-mark.is-fail) {
     position: fixed;
     inset: 0;
     z-index: 9000;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
     overflow: hidden;
     background: #fffaf1;
 }
 #heys-boot-visual-guard .heys-boot-mark,
 .heys-boot-visual-guard .heys-boot-mark {
+    position: fixed;
+    inset: 0;
     width: 100%;
-    min-height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding: max(120px, calc(45vh - 28px)) 26px max(24px, env(safe-area-inset-bottom));
+    min-height: 0;
+    display: block;
+    padding: 0;
     background: transparent;
-}
-#heys-boot-visual-guard .heys-boot-mark.is-fail,
-.heys-boot-visual-guard .heys-boot-mark.is-fail {
-    justify-content: flex-start;
-    padding-top: max(120px, calc(45vh - 28px));
 }
 html[data-heys-session="0"] .heys-boot-mark { display: none !important; }
 html[data-theme-id="sand-dark"] #heys-boot-visual-guard,
@@ -146,16 +141,26 @@ html[data-theme="blue"] .heys-wait-mark-overlay { background-color: #ffffff; }
 html[data-theme-id="blue-dark"] .heys-wait-mark-overlay,
 html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26; }
 .heys-boot-mark__sign {
+    position: fixed;
+    left: 50%;
+    top: calc(var(--heys-splash-anchor-y) + (var(--heys-splash-disc-size) / 2) + 18px);
+    transform: translateX(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
-    width: min(100%, 360px);
+    width: min(calc(100% - 52px), 360px);
     opacity: 0;
     animation: heys-boot-fadein 150ms ease-out 300ms forwards;
+    pointer-events: auto;
 }
 .heys-boot-mark__disc {
-    width: 56px;
-    height: 56px;
+    position: fixed;
+    left: 50%;
+    top: var(--heys-splash-anchor-y);
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    width: var(--heys-splash-disc-size);
+    height: var(--heys-splash-disc-size);
     border-radius: 999px;
     background: var(--boot-disc);
     color: var(--boot-stroke);
@@ -163,6 +168,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
     align-items: center;
     justify-content: center;
     flex: none;
+    pointer-events: none;
 }
 .heys-boot-mark.is-fail .heys-boot-mark__disc,
 .heys-wait-mark.is-fail .heys-wait-mark__disc {
@@ -230,13 +236,13 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
     width: 100%;
 }
 .heys-boot-mark__slow-text {
-    margin-top: 18px;
+    margin-top: 0;
     font: 600 12.5px/1.55 Figtree, system-ui, sans-serif;
     color: var(--boot-muted);
     text-align: center;
 }
 .heys-boot-mark__title {
-    margin-top: 18px;
+    margin-top: 0;
     font: 700 17px/1.3 Figtree, system-ui, sans-serif;
     text-align: center;
     text-wrap: pretty;
