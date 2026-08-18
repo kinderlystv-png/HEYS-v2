@@ -526,7 +526,7 @@ body:has(.page-reports) .hdr::after {
   font-size: 11.5px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
   cursor: pointer;
 }
 
@@ -9657,7 +9657,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   font-weight: 600;
   line-height: 0.9;
   letter-spacing: -0.035em;
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
   font-variant-numeric: tabular-nums;
 }
 
@@ -9760,7 +9760,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 .widget-v4-row__value--sm {
@@ -9768,7 +9768,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-row__value.widget-v4-ok {
-  color: var(--v4-ok-text, #5c6a45);
+  color: #5c6a45;
 }
 
 .widget-v4-row__value.widget-v4-val--good,
@@ -9839,21 +9839,21 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-ok {
-  color: var(--v4-ok-text, #5c6a45);
+  color: #5c6a45;
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
 }
 
 .widget-v4-warn {
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
 }
 
 .widget-v4-val--good {
-  color: var(--v4-ok-text, #7a8a5e);
+  color: #7a8a5e;
 }
 
 .widget-v4-val--bad {
@@ -9861,11 +9861,11 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-val--act {
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 .widget-v4-val--neutral {
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .widget-v4-mini__value.widget-v4-val--good,
@@ -9925,20 +9925,20 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   font-variant-numeric: tabular-nums;
 }
 
 .widget-v4-hero-num__val.widget-v4-ok {
-  color: var(--v4-ok-text, #5c6a45);
+  color: #5c6a45;
 }
 
 .widget-v4-hero-num__val.widget-v4-warn {
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 .widget-v4-hero-num__val.widget-v4-val--good {
-  color: var(--v4-ok-text, #7a8a5e);
+  color: #7a8a5e;
 }
 
 .widget-v4-hero-num__val.widget-v4-val--bad {
@@ -9946,15 +9946,15 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-hero-num__val.widget-v4-val--neutral {
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .widget-v4-hero-num__val.widget-v4-val--act {
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 .widget-v4-row__value.widget-v4-val--good {
-  color: var(--v4-ok-text, #7a8a5e);
+  color: #7a8a5e;
 }
 
 .widget-v4-row__value.widget-v4-val--bad {
@@ -9962,15 +9962,15 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-row__value.widget-v4-val--act {
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 .widget-v4-row__value.widget-v4-val--neutral {
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .widget-v4-row__meta.widget-v4-val--good {
-  color: var(--v4-ok-text, #7a8a5e);
+  color: #7a8a5e;
 }
 
 .widget-v4-row__meta.widget-v4-val--bad {
@@ -9978,11 +9978,11 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-stack__footer .widget-v4-val--good {
-  color: var(--v4-ok-text, #7a8a5e);
+  color: #7a8a5e;
 }
 
 .widget-v4-stack__footer .widget-v4-val--act {
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 .widget-v4-stack__footer .widget-v4-val--bad {
@@ -9990,7 +9990,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-stack__footer .widget-v4-val--neutral {
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .widget-v4-stack__footer {
@@ -10033,12 +10033,12 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   font-variant-numeric: tabular-nums;
 }
 
 .widget-v4-mini__value.widget-v4-val--good {
-  color: var(--v4-ok-text, #7a8a5e);
+  color: #7a8a5e;
 }
 
 .widget-v4-mini__value.widget-v4-val--bad {
@@ -10046,7 +10046,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-mini__value.widget-v4-val--act {
-  color: var(--v4-act-text, #8a4a20);
+  color: #8a4a20;
 }
 
 .widget-v4-mini__bar {
@@ -10063,12 +10063,12 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-mini__bar-fill--water {
-  background: var(--v4-water, #7d98a6);
+  background: #7d98a6;
 }
 
 body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water .widget-water__bar,
 .widget-water__bar--v4 {
-  background: var(--v4-water, #7d98a6);
+  background: #7d98a6;
 }
 
 .widget-v4-macros {
@@ -10105,7 +10105,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water .widget-water__
   margin-top: 5px;
   font: 700 13px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .widget-v4-macro__fact--bad {

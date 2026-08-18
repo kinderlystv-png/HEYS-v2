@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-08-17T06:43:32.669Z",
   "description": "SAST baseline (SEC-014 ratchet) — known critical+high findings, manually triaged as false-positives или tracked в отдельных SEC-NNN. SAST fails только на новых находках вне этого списка. Регенерация: `node scripts/security/sast-scan.js --update-baseline`.",
-  "count": 25,
+  "count": 26,
   "fingerprints": [
     "sqlInjection|apps/web/heys_cloud_shared_v1.js|c32030e90e04",
     "sqlInjection|apps/web/heys_core_v12.js|983f220ea0c4",
@@ -14,6 +14,7 @@
     "sqlInjection|yandex-cloud-functions/heys-mcp/lib/heys-api.js|00d4a87ac37b",
     "sqlInjection|yandex-cloud-functions/heys-mcp/lib/tasks-tools.js|7997146b7d99",
     "sqlInjection|yandex-cloud-functions/heys-mcp/lib/tools.js|33e2f335f9a0",
+    "sqlInjection|yandex-cloud-functions/heys-mcp/lib/tools.js|3a9d325c8ab2",
     "xss|apps/landing/design/landing-d/support.js|0ce012c3cb8f",
     "xss|apps/landing/src/components/FAQAccordion.tsx|eb91b2f84fad",
     "xss|apps/landing/src/components/versions/d/FaqD.tsx|eb91b2f84fad",

@@ -56,8 +56,9 @@ describe('Reports tab v4 structure', () => {
 
   it('period analytics tabs hide shell title and day calendar', () => {
     expect(shellSource).toContain('isPeriodAnalyticsTab = tab === \'stats\' || tab === \'insights\'');
-    expect(shellSource).toMatch(/showDateRow = !isPeriodAnalyticsTab && \(tab === 'diary' \|\| tab === 'activity'\)/);
-    expect(shellSource).toContain('const showHdrBottom = (!isRpcMode || !isPeriodAnalyticsTab)');
+    expect(shellSource).toContain('const showWidgetsDateRow = tab === \'widgets\' && !widgetsEditMode');
+    expect(shellSource).toMatch(/showDateRow = !isPeriodAnalyticsTab[\s\S]*showWidgetsDateRow[\s\S]*window\.HEYS\.DatePicker/);
+    expect(shellSource).toMatch(/showHdrBottom = !isRpcMode[\s\S]*tab !== 'widgets' \|\| widgetsEditMode/);
     expect(statsSource).toContain('reports-v4-meta__title');
   });
 

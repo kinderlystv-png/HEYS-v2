@@ -867,7 +867,7 @@
 
 .mc-daily-header-caption--layer {
   font: 700 15px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
 }
 
 .mc-progress-dots--pills .mc-progress-dot {
