@@ -2265,11 +2265,82 @@
     );
   }
 
-  // Module-level Set: tracks which widget IDs have already played the entry animation
-  // this session. On re-mount (caused by widget reinit/cascade), we skip back to
-  // the real value immediately instead of re-animating from 0.
-  if (!window._calRingAnimated) window._calRingAnimated = new Set();
-  const _calRingAnimated = window._calRingAnimated;
+  // === Widget value motion ==================================================
+  // Числа, полосы и кольца виджетов меняются не скачком, а интерполяцией ОТ
+  // ТЕКУЩЕГО отображаемого значения к новому (смена дня, запись еды, откат
+  // назад). Старт всегда от того, что сейчас на экране, а не от нуля.
+  // useWidgetMotionValues анимирует вектор значений одним rAF-циклом, чтобы три
+  // кольца БЖУ не давали три setState на кадр.
+  const WIDGET_MOTION_MS = 620;
+
+  // easeOutCubic — быстрый старт, мягкое торможение (как у wave/weight ниже)
+  function widgetMotionEase(t) {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  function widgetMotionDisabled() {
+    try {
+      return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function useWidgetMotionValues(targets, options = {}) {
+    const { duration = WIDGET_MOTION_MS, animateOnMount = false } = options;
+    const nums = targets.map((v) => (Number.isFinite(Number(v)) ? Number(v) : 0));
+    const key = nums.join('|');
+    const targetsRef = React.useRef(nums);
+    targetsRef.current = nums;
+
+    const [display, setDisplay] = React.useState(() => (animateOnMount ? nums.map(() => 0) : nums));
+    const displayRef = React.useRef(display);
+    const rafRef = React.useRef(0);
+
+    React.useEffect(() => {
+      const to = targetsRef.current;
+      let from = displayRef.current;
+      if (from.length !== to.length) from = to.slice();
+      const settle = () => {
+        displayRef.current = to.slice();
+        setDisplay(displayRef.current);
+      };
+      if (to.every((v, i) => Math.abs(v - from[i]) < 0.01)) {
+        if (from !== displayRef.current) settle();
+        return undefined;
+      }
+      if (duration <= 0 || widgetMotionDisabled()) {
+        settle();
+        return undefined;
+      }
+      const start = from.slice();
+      let startTs = -1; // не 0: rAF-таймстемп сам может прийти нулём
+      const step = (ts) => {
+        if (startTs < 0) startTs = ts;
+        const t = Math.min(1, (ts - startTs) / duration);
+        if (t >= 1) {
+          rafRef.current = 0;
+          settle();
+          return;
+        }
+        const k = widgetMotionEase(t);
+        displayRef.current = start.map((v, i) => v + (to[i] - v) * k);
+        setDisplay(displayRef.current);
+        rafRef.current = requestAnimationFrame(step);
+      };
+      rafRef.current = requestAnimationFrame(step);
+      return () => {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      };
+    }, [key, duration]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    return display;
+  }
+
+  function useWidgetMotionValue(target, options) {
+    return useWidgetMotionValues([target], options)[0];
+  }
 
   function CaloriesWidgetContent({ widget, data }) {
     const eaten = data.eaten || 0;
@@ -2291,63 +2362,33 @@
       return 'var(--heys-ratio-over)';
     };
 
-    // Hoist ring calculations to top level so hooks can reference them
-    // (React: hooks must run unconditionally, before any early returns)
-    const _ringRatio = target > 0 ? eaten / target : 0;
-    const _ringCapComp = 5;
-    const _basePct = Math.max(0, Math.min(100, Math.round(_ringRatio * 100)) - _ringCapComp);
-    const _hasOver = _ringRatio > 1;
-    const _overPct = _hasOver ? Math.max(0, Math.min(50, Math.round((_ringRatio - 1) * 100)) - _ringCapComp) : 0;
-
-    // JS-driven ring animation: only animate from 0 on the TRUE first mount this session.
-    // On subsequent mounts (widget system reinit/cascade), skip straight to the real value
-    // so the transition doesn't replay. CSS transition still fires when eaten changes.
-    const _widgetKey = `cal-ring-${widget?.id || '0'}`;
-    const _alreadyAnimated = _calRingAnimated.has(_widgetKey);
-    const [displayBasePct, setDisplayBasePct] = React.useState(_alreadyAnimated ? _basePct : 0);
-    const [displayOverPct, setDisplayOverPct] = React.useState(_alreadyAnimated ? _overPct : 0);
-    const _ringMounted = React.useRef(_alreadyAnimated);
-
-    React.useEffect(() => {
-      if (_alreadyAnimated) return; // already animated: skip rAF, start at real value
-      // First true mount: rAF ensures the 0 renders first, then transition animates in
-      const raf = requestAnimationFrame(() => {
-        _calRingAnimated.add(_widgetKey);
-        setDisplayBasePct(_basePct);
-        setDisplayOverPct(_overPct);
-        _ringMounted.current = true;
-      });
-      return () => cancelAnimationFrame(raf);
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-    React.useEffect(() => {
-      // Calories actually changed (user logged food): update ring to new value
-      if (_ringMounted.current) {
-        setDisplayBasePct(_basePct);
-        setDisplayOverPct(_overPct);
-      }
-    }, [eaten]); // eslint-disable-line react-hooks/exhaustive-deps
+    // Плавный пересчёт съеденного: число, подпись и полоса идут от предыдущего
+    // отображаемого значения к новому (смена дня — переход, а не сброс в 0).
+    // Классификация цвета остаётся на фактическом pct, чтобы не мигать в пути.
+    const animEaten = useWidgetMotionValue(eaten);
+    const animPct = target > 0 ? Math.round((animEaten / target) * 100) : 0;
+    const animRemaining = Math.max(0, target - animEaten);
 
     // 1x1 Micro
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-calories widget-calories--micro' },
         React.createElement('div', { className: 'widget-micro__label' }, 'ккал'),
-        React.createElement('div', { className: 'widget-calories__value', style: { color: getColor() } }, formatKcal(eaten))
+        React.createElement('div', { className: 'widget-calories__value', style: { color: getColor() } }, formatKcal(animEaten))
       );
     }
 
     // 2×2 — v4 hero: число «осталось» + полоса прогресса (канвас g1)
     if (size === '2x2') {
-      const ratio = target > 0 ? eaten / target : 0;
+      const ratio = target > 0 ? animEaten / target : 0;
       const barPct = Math.min(100, Math.round(ratio * 100));
-      const hasOver = eaten > target && target > 0;
+      const hasOver = animEaten > target && target > 0;
       const isClosedDay = data.isClosedDay === true;
       const heroValue = isClosedDay
-        ? eaten
-        : (remaining > 0 ? remaining : (hasOver ? eaten - target : eaten));
+        ? animEaten
+        : (animRemaining > 0 ? animRemaining : (hasOver ? animEaten - target : animEaten));
       const heroLabel = isClosedDay
         ? 'итог дня'
-        : (remaining > 0 ? 'осталось' : (hasOver ? 'перебор' : 'съедено'));
+        : (animRemaining > 0 ? 'осталось' : (hasOver ? 'перебор' : 'съедено'));
 
       return React.createElement('div', { className: 'widget-calories widget-calories--2x2 widget-calories--v4-hero' },
         React.createElement('div', { className: 'widget-v4-kicker' }, 'Калории'),
@@ -2364,7 +2405,7 @@
             })
           ),
           React.createElement('div', { className: 'widget-calories__hero-bar-labels' },
-            React.createElement('span', null, formatKcal(eaten)),
+            React.createElement('span', null, formatKcal(animEaten)),
             React.createElement('span', null, formatKcal(target))
           )
         )
@@ -2375,11 +2416,11 @@
     if (size === '2x1') {
       const isClosedDay = data.isClosedDay === true;
       const lineValue = isClosedDay
-        ? formatKcal(eaten)
-        : (remaining > 0
-          ? formatKcal(remaining)
-          : (eaten > target ? `+${formatKcal(eaten - target)}` : formatKcal(eaten)));
-      const linePrefix = isClosedDay ? 'Итог ' : (remaining > 0 ? 'Осталось ' : '');
+        ? formatKcal(animEaten)
+        : (animRemaining > 0
+          ? formatKcal(animRemaining)
+          : (animEaten > target ? `+${formatKcal(animEaten - target)}` : formatKcal(animEaten)));
+      const linePrefix = isClosedDay ? 'Итог ' : (animRemaining > 0 ? 'Осталось ' : '');
       return React.createElement('div', {
         className: 'widget-calories widget-calories--2x1 widget-v4-row widget-v4-row--tight'
       },
@@ -2402,9 +2443,9 @@
     return React.createElement('div', { className: `widget-calories widget-calories--${variant}` },
       React.createElement('div', { className: 'widget-calories__top' },
         React.createElement('div', { className: 'widget-calories__value', style: { color: getColor() } },
-          formatKcal(eaten)
+          formatKcal(animEaten)
         ),
-        showPct ? React.createElement('div', { className: 'widget-calories__pct' }, `${pct}%`) : null
+        showPct ? React.createElement('div', { className: 'widget-calories__pct' }, `${animPct}%`) : null
       ),
       showLabel
         ? React.createElement('div', { className: 'widget-calories__label' }, `из ${formatKcal(target)} ккал`)
@@ -2413,12 +2454,12 @@
         ? React.createElement('div', { className: 'widget-calories__progress' },
           React.createElement('div', {
             className: 'widget-calories__bar',
-            style: { width: `${Math.min(100, Math.max(0, pct))}%` }
+            style: { width: `${Math.min(100, Math.max(0, animPct))}%` }
           })
         )
         : null,
       showRemainingLine
-        ? React.createElement('div', { className: 'widget-calories__remaining' }, `Осталось: ${formatKcal(remaining)}`)
+        ? React.createElement('div', { className: 'widget-calories__remaining' }, `Осталось: ${formatKcal(animRemaining)}`)
         : null
     );
   }
@@ -3436,10 +3477,14 @@
     const size = widget?.size || '2x2';
     const variant = d.isMicro ? 'micro' : d.isTiny ? 'compact' : 'std';
 
+    // Плавный пересчёт БЖУ: кольца доезжают/откатываются от предыдущего
+    // отображаемого значения, граммы и проценты считаются от него же.
+    const [animProtein, animFat, animCarbs] = useWidgetMotionValues([protein || 0, fat || 0, carbs || 0]);
+
     // Расчёт процентов
-    const pctP = proteinTarget > 0 ? Math.round((protein || 0) / proteinTarget * 100) : 0;
-    const pctF = fatTarget > 0 ? Math.round((fat || 0) / fatTarget * 100) : 0;
-    const pctC = carbsTarget > 0 ? Math.round((carbs || 0) / carbsTarget * 100) : 0;
+    const pctP = proteinTarget > 0 ? Math.round(animProtein / proteinTarget * 100) : 0;
+    const pctF = fatTarget > 0 ? Math.round(animFat / fatTarget * 100) : 0;
+    const pctC = carbsTarget > 0 ? Math.round(animCarbs / carbsTarget * 100) : 0;
     const avgPct = Math.round((pctP + pctF + pctC) / 3);
     const showPercentage = widget.settings?.showPercentage !== false;
     const showGrams = widget.settings?.showGrams !== false && !d.isTiny;
@@ -3449,9 +3494,9 @@
     const ringsDensityClass = d.area >= 12 ? 'widget-macros--rings-lg' : d.area >= 8 ? 'widget-macros--rings-md' : 'widget-macros--rings-sm';
 
     const macroItems = [
-      { label: 'Белки', shortLabel: 'Б', value: protein || 0, target: proteinTarget || 100, pct: pctP, toneClass: 'protein' },
-      { label: 'Жиры', shortLabel: 'Ж', value: fat || 0, target: fatTarget || 70, pct: pctF, toneClass: 'fat' },
-      { label: 'Углеводы', shortLabel: 'У', value: carbs || 0, target: carbsTarget || 250, pct: pctC, toneClass: 'carbs' }
+      { label: 'Белки', shortLabel: 'Б', value: animProtein, target: proteinTarget || 100, pct: pctP, toneClass: 'protein' },
+      { label: 'Жиры', shortLabel: 'Ж', value: animFat, target: fatTarget || 70, pct: pctF, toneClass: 'fat' },
+      { label: 'Углеводы', shortLabel: 'У', value: animCarbs, target: carbsTarget || 250, pct: pctC, toneClass: 'carbs' }
     ];
 
     const getMacroValueTone = ({ pct, toneClass }) =>
@@ -3579,7 +3624,7 @@
         React.createElement('div', { className: 'widget-macros__micro-value' },
           showPercentage
             ? `${Math.min(999, avgPct)}%`
-            : `${Math.round((protein || 0) + (fat || 0) + (carbs || 0))}г`
+            : `${Math.round(animProtein + animFat + animCarbs)}г`
         )
       );
     }
@@ -3604,9 +3649,9 @@
     if (size === '3x2') {
       return React.createElement('div', { className: 'widget-macros widget-macros--3x2 widget-v4-stack' },
         React.createElement('div', { className: 'widget-v4-macros' },
-          v4SageRing({ value: protein, target: proteinTarget, label: 'Белки', toneClass: 'protein' }),
-          v4SageRing({ value: fat, target: fatTarget, label: 'Жиры', toneClass: 'fat' }),
-          v4SageRing({ value: carbs, target: carbsTarget, label: 'Углеводы', toneClass: 'carbs' })
+          v4SageRing({ value: animProtein, target: proteinTarget, label: 'Белки', toneClass: 'protein' }),
+          v4SageRing({ value: animFat, target: fatTarget, label: 'Жиры', toneClass: 'fat' }),
+          v4SageRing({ value: animCarbs, target: carbsTarget, label: 'Углеводы', toneClass: 'carbs' })
         )
       );
     }
@@ -3643,13 +3688,13 @@
     // меняется намеренно: цветные метки становятся серыми.
     return React.createElement('div', { className: `widget-macros widget-macros--${variant}` },
       React.createElement(MacroBar, {
-        label: 'Б', value: protein || 0, target: proteinTarget || 100, color: 'var(--v4-mark-1)', cls: 'widget-macros__label--prot'
+        label: 'Б', value: animProtein, target: proteinTarget || 100, color: 'var(--v4-mark-1)', cls: 'widget-macros__label--prot'
       }),
       React.createElement(MacroBar, {
-        label: 'Ж', value: fat || 0, target: fatTarget || 70, color: 'var(--v4-mark-2)', cls: 'widget-macros__label--fat'
+        label: 'Ж', value: animFat, target: fatTarget || 70, color: 'var(--v4-mark-2)', cls: 'widget-macros__label--fat'
       }),
       React.createElement(MacroBar, {
-        label: 'У', value: carbs || 0, target: carbsTarget || 250, color: 'var(--v4-mark-3)', cls: 'widget-macros__label--carbs'
+        label: 'У', value: animCarbs, target: carbsTarget || 250, color: 'var(--v4-mark-3)', cls: 'widget-macros__label--carbs'
       })
     );
   }
