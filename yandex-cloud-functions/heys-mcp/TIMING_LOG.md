@@ -88,7 +88,9 @@ yc serverless function logs d4epjmd9lnk059u29bg8 --since 1h --limit 50 | grep mc
 
 ### 1a. Приёмка `copy_meal` (после деплоя с `arg_keys`, с 18.08.2026)
 
-Один прогон в **новом чате** → сразу:
+Один прогон **после перезапуска приложения** (список инструментов кэшируется при
+подключении коннектора — новый чат берёт ту же копию, см. ловушку 3 в
+[`MCP_TRACE_RUNBOOK.md`](../../docs/operations/MCP_TRACE_RUNBOOK.md)) → сразу:
 
 ```bash
 yc serverless function logs d4epjmd9lnk059u29bg8 --since 15m --limit 40 | grep mcp_call
