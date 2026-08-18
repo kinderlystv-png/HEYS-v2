@@ -163,12 +163,13 @@ describe('cold-start spinner mark', () => {
     expect(manifest.theme_color).toBe('#fffaf1');
     expect(manifest.description).toContain('Nutrition Tracker');
     expect(iconSvg).toContain('fill="#fffaf1"');
-    expect(iconSvg).toContain('font-weight="700"');
+    expect(iconSvg).toContain('Caprasimo');
+    expect(iconSvg).toContain('font-size="84"');
     expect(iconSvg).not.toContain('fill="#efe3cf"');
     expect(iconSvg).not.toContain('cy="44"');
-    expect(iconSvg).not.toContain('Caprasimo');
     expect(appleSvg).toContain('fill="#fffaf1"');
-    expect(appleSvg).toContain('font-weight="700"');
+    expect(appleSvg).toContain('Caprasimo');
+    expect(appleSvg).toContain('font-size="84"');
     expect(fs.existsSync(path.join(webRoot, 'public/apple-touch-icon.png'))).toBe(true);
     expect(html).toContain('rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180"');
     expect(html).toContain('apple-mobile-web-app-capable" content="yes"');

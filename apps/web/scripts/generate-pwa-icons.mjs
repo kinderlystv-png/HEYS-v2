@@ -1,6 +1,7 @@
 /**
- * PWA icons from icon-v4.svg (крупная H на #fffaf1, как legacy icon-512, без диска).
- * apple-touch-icon — icon-v4-apple.svg (180×180, та же буква).
+ * PWA icons from icon-v4.svg (крупная H на #fffaf1).
+ * apple-touch-icon — icon-v4-apple.svg (180×180, без скругления в PNG).
+ * maskable — тот же знак на полном грунте (Android ярлык + splash).
  * Run: node apps/web/scripts/generate-pwa-icons.mjs
  */
 import fs from 'node:fs';
@@ -17,6 +18,8 @@ const jobs = [
   { source: 'icon-v4.svg', name: 'icon-192.png', size: 192, flatten: '#fffaf1' },
   { source: 'icon-v4.svg', name: 'icon-512.png', size: 512, flatten: '#fffaf1' },
   { source: 'icon-v4-apple.svg', name: 'apple-touch-icon.png', size: 180, flatten: '#fffaf1' },
+  { source: 'icon-v4-apple.svg', name: 'icon-maskable-192.png', size: 192, flatten: '#fffaf1' },
+  { source: 'icon-v4-apple.svg', name: 'icon-maskable-512.png', size: 512, flatten: '#fffaf1' },
 ];
 
 if (!fs.existsSync(fontPath)) {
@@ -50,12 +53,3 @@ for (const { source, name, size, flatten } of jobs) {
   console.log(`wrote ${name} (${size}, flatten ${flatten})`);
 }
 
-for (const size of [192, 512]) {
-  const out = path.join(publicDir, `icon-maskable-${size}.png`);
-  await sharp({
-    create: { width: size, height: size, channels: 3, background: '#fffaf1' },
-  })
-    .png()
-    .toFile(out);
-  console.log(`wrote icon-maskable-${size}.png (solid splash)`);
-}
