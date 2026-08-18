@@ -2523,8 +2523,41 @@ function createTools({
         throw new ToolError('invalid_range', `За один раз можно посмотреть не больше ${MAX_PERIOD_DAYS} дней.`);
       }
 
-      const blobs = await readMany(dates.map((date) => day.dayKey(date)));
-      const days = dates.map((date) => day.summarizeDayBrief(day.ensureDay(blobs[day.dayKey(date)], date, clientId, nowMs)));
+      // Норме каждого дня нужны четыре предыдущих (окно долга), поэтому
+      // читаем период с запасом — одним пакетом, а не по дню на вызов.
+      const warmup = [4, 3, 2, 1].map((back) => day.addDays(from, -back));
+      const blobs = await readMany([
+        ...warmup.map((date) => day.dayKey(date)),
+        ...dates.map((date) => day.dayKey(date)),
+        profile.PROFILE_KEY,
+        profile.NORMS_KEY,
+        profile.ZONES_KEY,
+      ]);
+      const normBase = {
+        profile: blobs[profile.PROFILE_KEY] || null,
+        norms: blobs[profile.NORMS_KEY] || null,
+        hrZones: blobs[profile.ZONES_KEY] || null,
+        nowMs,
+      };
+      const days = dates.map((date) => {
+        const dayObj = day.ensureDay(blobs[day.dayKey(date)], date, clientId, nowMs);
+        const brief = day.summarizeDayBrief(dayObj);
+        // Съеденное без нормы ничего не говорит — то же правило, что в
+        // heys_get_day. Без неё разбор недели уходил обратно в get_day по дню.
+        const backDates = [1, 2, 3, 4].map((back) => day.addDays(date, -back));
+        const pastBlobs = {};
+        for (const past of backDates) pastBlobs[past] = blobs[day.dayKey(past)] || null;
+        const norm = day.dailyNorm(dayObj, {
+          ...normBase,
+          prevDay: pastBlobs[backDates[0]],
+          pastBlobs,
+        });
+        return {
+          ...brief,
+          norm_kcal: norm && Number.isFinite(norm.kcal) ? norm.kcal : null,
+          norm_source: (norm && norm.source) || null,
+        };
+      });
 
       const filled = days.filter((d) => !d.empty);
       const average = (pick) => {
@@ -2548,8 +2581,22 @@ function createTools({
       };
       const missing = days.filter((d) => d.empty).map((d) => d.date);
 
+      // Разбивка по дням идёт в текст, а не только в structured: модель читает
+      // текст, и без неё «как прошла неделя» превращалось в семь heys_get_day
+      // следом за этим вызовом (трейс 2026-08-18, сессия ed342581dd34).
+      const dayLines = days.map((d) => {
+        if (d.empty) return `${d.date}: пусто`;
+        const parts = [`${d.kcal}${d.norm_kcal ? `/${d.norm_kcal}` : ''} ккал`];
+        parts.push(`Б${d.protein} У${d.carbs} Ж${d.fat}`);
+        if (d.water_ml) parts.push(`вода ${d.water_ml}`);
+        if (d.steps) parts.push(`шаги ${d.steps}`);
+        if (d.sleep_hours) parts.push(`сон ${d.sleep_hours} ч`);
+        if (d.training_min) parts.push(`тренировки ${d.training_min} мин`);
+        if (d.weight_morning) parts.push(`вес ${d.weight_morning}`);
+        return `${d.date}: ${parts.join(', ')}`;
+      }).join('; ');
       const text = filled.length
-        ? `Период ${from}…${to}: заполнено ${filled.length} из ${days.length} дней, в среднем ${totals.avg_kcal ?? '—'} ккал, вода ${totals.avg_water_ml ?? '—'} мл, шаги ${totals.avg_steps ?? '—'}, сон ${totals.avg_sleep_hours ?? '—'} ч.${missing.length ? ` Пустые дни: ${missing.join(', ')}.` : ''}`
+        ? `Период ${from}…${to}: заполнено ${filled.length} из ${days.length} дней, в среднем ${totals.avg_kcal ?? '—'} ккал, вода ${totals.avg_water_ml ?? '—'} мл, шаги ${totals.avg_steps ?? '—'}, сон ${totals.avg_sleep_hours ?? '—'} ч.${missing.length ? ` Пустые дни: ${missing.join(', ')}.` : ''} По дням — ${dayLines}. Позиции приёмов сюда не входят: за составом конкретного дня иди в heys_get_day.`
         : `Период ${from}…${to}: данных нет ни за один день.`;
       return { text, structured: { from, to, totals, days, missing_dates: missing } };
     },
@@ -3314,7 +3361,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_get_period',
-    description: 'Обзор нескольких дней сразу: калории и БЖУ по дням, вода, утренний вес, шаги, сон, тренировки, настроение, а также средние за период и список пустых дней. Вызывай на вопросы «как прошла неделя», «что с весом за месяц», «где пробелы в дневнике» — вместо того чтобы дёргать heys_get_day по одному дню. Позиции приёмов здесь не возвращаются: за составом конкретного дня иди в heys_get_day.',
+    description: 'Обзор нескольких дней сразу: по каждому дню калории против нормы, БЖУ, вода, шаги, сон, тренировки и утренний вес — прямо в тексте ответа, плюс средние за период и список пустых дней. Разбор недели закрывается одним этим вызовом: добирать дни через heys_get_day после него не нужно. Вызывай на вопросы «как прошла неделя», «что с весом за месяц», «где пробелы в дневнике» — вместо того чтобы дёргать heys_get_day по одному дню. Позиции приёмов здесь не возвращаются: за составом конкретного дня иди в heys_get_day.',
     inputSchema: {
       type: 'object',
       properties: {

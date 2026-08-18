@@ -963,10 +963,13 @@ test('период читается пакетно и только по ключ
   const { tools } = build(api);
   const res = await tools.heys_get_period({ client: 'Антон', days: 3 });
 
-  assert.equal(api.batchReads.length, 1, 'три дня — один запрос');
+  assert.equal(api.batchReads.length, 1, 'период — один запрос, сколько бы дней в нём ни было');
   assert.equal(api.batchReads[0].clientId, 'cid-anton');
   assert.deepEqual(api.batchReads[0].keys, [
+    // Четыре дня до периода: из них считается окно долга для нормы первого дня.
+    'heys_dayv2_2026-07-26', 'heys_dayv2_2026-07-27', 'heys_dayv2_2026-07-28', 'heys_dayv2_2026-07-29',
     'heys_dayv2_2026-07-30', 'heys_dayv2_2026-07-31', 'heys_dayv2_2026-08-01',
+    'heys_profile', 'heys_norms', 'heys_hr_zones',
   ]);
   assert.match(res.text, /^\[Антон\]/);
   assert.equal(res.structured.client.client_id, 'cid-anton');

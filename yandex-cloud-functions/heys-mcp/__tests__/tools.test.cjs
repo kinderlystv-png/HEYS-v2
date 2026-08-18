@@ -2962,3 +2962,71 @@ test('get_recipe показывает, из какого слоя каждый �
   assert.match(res.text, /общая база/);
   assert.match(res.text, /Карточка личная/, 'само блюдо остаётся личным');
 });
+
+// ── heys_get_period: разбор недели одним вызовом ──────────────────────────
+// 18.08 «как прошла неделя» стоило 8 вызовов: get_period отдавал в тексте одни
+// средние, и модель добирала дни семью heys_get_day. Разбивка и нормы теперь в
+// тексте — иначе инструмент обещает то, чего в ответе нет.
+
+function periodApi() {
+  const days = {
+    '2026-08-17': {
+      date: '2026-08-17', updatedAt: 1, waterMl: 1500, steps: 8000, weightMorning: 89.5,
+      meals: [{ id: 'm1', time: '13:00', items: [{ name: 'Обед', grams: 100, kcal100: 200, protein100: 10, simple100: 5, complex100: 5, badFat100: 2, goodFat100: 2 }] }],
+    },
+    '2026-08-18': {
+      date: '2026-08-18', updatedAt: 1, waterMl: 700, steps: 0,
+      meals: [{ id: 'm2', time: '14:00', items: [{ name: 'Ужин', grams: 200, kcal100: 150, protein100: 8, simple100: 4, complex100: 6, badFat100: 1, goodFat100: 1 }] }],
+    },
+  };
+  const reads = [];
+  return {
+    reads,
+    stats: { calls: 0, ms: 0 },
+    async getKVMany(_session, keys) {
+      reads.push(keys);
+      const out = {};
+      for (const key of keys) {
+        const date = key.replace('heys_dayv2_', '');
+        if (days[date]) out[key] = days[date];
+        if (key === 'heys_profile') out[key] = { weight: 89.5, height: 178, age: 38, gender: 'male', activityLevel: 'low' };
+      }
+      return { data: out, error: null };
+    },
+    async getKV() { return { data: null, error: null }; },
+    async getSharedProducts() { return { data: [], error: null }; },
+  };
+}
+
+test('get_period отдаёт разбивку по дням в тексте, а не только в structured', async () => {
+  const api = periodApi();
+  const tools = build(api);
+  const res = await tools.heys_get_period({ from: '2026-08-17', to: '2026-08-18' });
+
+  assert.match(res.text, /По дням/);
+  assert.match(res.text, /2026-08-17: 200 ккал/);
+  assert.match(res.text, /2026-08-18: 300 ккал/);
+  assert.match(res.text, /вода 1500/);
+  assert.match(res.text, /вес 89\.5/);
+  assert.equal(res.structured.days.length, 2);
+});
+
+test('get_period читает период и окно долга одним пакетом', async () => {
+  const api = periodApi();
+  const tools = build(api);
+  await tools.heys_get_period({ from: '2026-08-17', to: '2026-08-18' });
+
+  assert.equal(api.reads.length, 1, 'сколько бы дней ни было — один запрос');
+  const keys = api.reads[0];
+  assert.ok(keys.includes('heys_dayv2_2026-08-13'), 'четыре дня до периода нужны норме первого дня');
+  assert.ok(keys.includes('heys_dayv2_2026-08-18'));
+  assert.ok(keys.includes('heys_profile') && keys.includes('heys_norms'));
+});
+
+test('пустой день в периоде виден как пустой, а не как ноль калорий', async () => {
+  const api = periodApi();
+  const tools = build(api);
+  const res = await tools.heys_get_period({ from: '2026-08-16', to: '2026-08-18' });
+  assert.match(res.text, /2026-08-16: пусто/);
+  assert.deepEqual(res.structured.missing_dates, ['2026-08-16']);
+});
