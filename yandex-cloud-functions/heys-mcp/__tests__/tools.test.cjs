@@ -1026,6 +1026,81 @@ const DINNER_DAY = () => ({
   }],
 });
 
+test('update_meal copy_meal дописывает позиции из вчерашнего приёма в существующий', async () => {
+  const yesterday = '2026-07-31';
+  const pastDays = {
+    [yesterday]: {
+      date: yesterday,
+      meals: [{
+        id: 'm_lunch',
+        name: 'Обед',
+        time: '13:00',
+        items: [{ id: 'it_plov', product_id: 'own-milk', name: 'Плов', grams: 250 }],
+      }],
+      updatedAt: 10,
+    },
+  };
+  const api = fakeApi({
+    day: {
+      date: '2026-08-01',
+      updatedAt: 900,
+      meals: [{
+        id: 'm_breakfast',
+        name: 'Завтрак',
+        time: '08:00',
+        items: [{ id: 'it_coffee', product_id: 'own-americano', name: 'Кофе', grams: 50 }],
+      }],
+    },
+    pastDays,
+  });
+  const tools = build(api);
+  await tools.heys_update_meal({
+    meal_id: 'm_breakfast',
+    copy_meal: { date: yesterday, meal_id: 'm_lunch' },
+  });
+
+  const meal = api.saves[0].value.meals[0];
+  assert.equal(meal.id, 'm_breakfast');
+  assert.equal(meal.items.length, 2);
+  assert.equal(meal.items[0].grams, 50);
+  assert.equal(meal.items[1].grams, 250);
+});
+
+test('update_meal copy_meal и add_items в одном вызове дописывают всё в приём', async () => {
+  const yesterday = '2026-07-31';
+  const pastDays = {
+    [yesterday]: {
+      date: yesterday,
+      meals: [{
+        id: 'm_lunch',
+        name: 'Обед',
+        time: '13:00',
+        items: [{ id: 'it_plov', product_id: 'own-milk', name: 'Плов', grams: 200 }],
+      }],
+      updatedAt: 10,
+    },
+  };
+  const api = fakeApi({
+    day: {
+      date: '2026-08-01',
+      updatedAt: 900,
+      meals: [{ id: 'm_breakfast', name: 'Завтрак', time: '08:00', items: [] }],
+    },
+    pastDays,
+  });
+  const tools = build(api);
+  await tools.heys_update_meal({
+    meal_id: 'm_breakfast',
+    copy_meal: { date: yesterday, meal_id: 'm_lunch' },
+    add_items: [{ product_id: 'own-syrup', grams: 15 }],
+  });
+
+  const meal = api.saves[0].value.meals[0];
+  assert.equal(meal.items.length, 2);
+  assert.equal(meal.items[0].grams, 200);
+  assert.equal(meal.items[1].grams, 15);
+});
+
 test('update_meal добавляет позицию, сохраняя id, время и оценки приёма', async () => {
   const api = fakeApi({ day: DINNER_DAY() });
   const tools = build(api);

@@ -408,6 +408,7 @@ test('быстрый путь покрывает составную реплик
   assert.match(text, /copy_meal и items передаются в одном вызове/);
   assert.match(text, /СЧЁТЧИК ВЫЗОВОВ/);
   assert.match(text, /не больше одного раза на каждую отдельную дату/);
+  assert.match(text, /heys_update_meal с copy_meal/);
   assert.ok(
     text.indexOf('СЧЁТЧИК ВЫЗОВОВ') < text.indexOf('Правила работы с дневником'),
     'счётчик должен стоять в быстром пути, до подробных правил',

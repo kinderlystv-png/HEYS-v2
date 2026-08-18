@@ -564,6 +564,33 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
     };
   }
 
+  /** Позиции из copy_meal — общий путь log_meal и update_meal. */
+  async function resolveCopyMealItems(cm) {
+    const srcDate = resolveDate(cm.date, nowMs);
+    const srcDay = await readDay(srcDate);
+    const mid = cm.meal_id;
+    if (!mid) {
+      throw new ToolError('invalid_copy_meal', 'copy_meal.meal_id обязателен — возьми из heys_get_day.');
+    }
+    const srcMeal = (srcDay.meals || []).find((m) => m && String(m.id) === String(mid));
+    if (!srcMeal) {
+      throw new ToolError(
+        'meal_not_found',
+        `Приём ${mid} не найден за ${srcDate}. Сначала heys_get_day за эту дату и возьми meal_id из текста.`,
+      );
+    }
+    const count = Math.max(1, Math.min(20, Number(cm.count) || 1));
+    const srcItems = srcMeal.items || [];
+    if (!srcItems.length) {
+      throw new ToolError('invalid_items', `Приём «${srcMeal.name || mid}» за ${srcDate} пустой — копировать нечего.`);
+    }
+    const resolved = [];
+    for (let i = 0; i < srcItems.length; i += 1) {
+      resolved.push(await resolveCopiedItem(srcItems[i], i, count));
+    }
+    return { resolved, sourceName: srcMeal.name || null };
+  }
+
   /**
    * Вес штуки, названный пользователем, дописывается в карточку продукта, чтобы
    * второй раз «четыре штуки» не потребовали вопроса. Пишем только в свои
@@ -660,29 +687,9 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       let copyMealName = null;
 
       if (args.copy_meal && typeof args.copy_meal === 'object') {
-        const cm = args.copy_meal;
-        const srcDate = resolveDate(cm.date, nowMs);
-        const srcDay = await readDay(srcDate);
-        const mid = cm.meal_id;
-        if (!mid) {
-          throw new ToolError('invalid_copy_meal', 'copy_meal.meal_id обязателен — возьми из heys_get_day.');
-        }
-        const srcMeal = (srcDay.meals || []).find((m) => m && String(m.id) === String(mid));
-        if (!srcMeal) {
-          throw new ToolError(
-            'meal_not_found',
-            `Приём ${mid} не найден за ${srcDate}. Сначала heys_get_day за эту дату и возьми meal_id из текста.`,
-          );
-        }
-        const count = Math.max(1, Math.min(20, Number(cm.count) || 1));
-        const srcItems = srcMeal.items || [];
-        if (!srcItems.length) {
-          throw new ToolError('invalid_items', `Приём «${srcMeal.name || mid}» за ${srcDate} пустой — копировать нечего.`);
-        }
-        for (let i = 0; i < srcItems.length; i += 1) {
-          resolved.push(await resolveCopiedItem(srcItems[i], i, count));
-        }
-        if (!args.name && srcMeal.name) copyMealName = srcMeal.name;
+        const { resolved: copied, sourceName } = await resolveCopyMealItems(args.copy_meal);
+        resolved.push(...copied);
+        if (!args.name && sourceName) copyMealName = sourceName;
       }
 
       if (args.preset) {
@@ -787,7 +794,27 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
       if (args.time && !time) throw new ToolError('invalid_time', `Время "${args.time}" не в формате HH:MM.`);
 
       const specs = Array.isArray(args.add_items) ? args.add_items : [];
-      if (specs.length > 20) throw new ToolError('invalid_items', 'За раз можно добавить не больше 20 позиций.');
+      const hasOtherPatch = Boolean(
+        (Array.isArray(args.remove_item_ids) && args.remove_item_ids.length)
+        || (args.set_grams && typeof args.set_grams === 'object' && Object.keys(args.set_grams).length)
+        || args.name
+        || time
+        || args.mood !== undefined
+        || args.wellbeing !== undefined
+        || args.stress !== undefined,
+      );
+
+      const resolved = [];
+      if (args.copy_meal && typeof args.copy_meal === 'object') {
+        const { resolved: copied } = await resolveCopyMealItems(args.copy_meal);
+        resolved.push(...copied);
+      }
+      if (resolved.length + specs.length > 20) {
+        throw new ToolError('invalid_items', 'За раз можно добавить не больше 20 позиций.');
+      }
+      if (!resolved.length && !specs.length && !hasOtherPatch) {
+        throw new ToolError('nothing_to_update', 'Не передано ни одного изменения: нужен copy_meal, add_items, remove_item_ids, set_grams, name, time или оценка самочувствия.');
+      }
 
       const current = await readDay(date);
       const target = (current.meals || []).find((m) => m && String(m.id) === String(args.meal_id));
@@ -795,7 +822,6 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         throw new ToolError('meal_not_found', `Приём ${args.meal_id} не найден в дне ${date}. Возьми актуальный meal_id через heys_get_day.`);
       }
 
-      const resolved = [];
       for (let i = 0; i < specs.length; i += 1) {
         resolved.push(await resolveItem(specs[i], i));
       }
@@ -823,7 +849,7 @@ function createTools({ api, sessionToken, clientId, nowMs = Date.now(), byCurato
         );
       }
       if (!result.changed.length) {
-        throw new ToolError('nothing_to_update', 'Не передано ни одного изменения: нужен add_items, remove_item_ids, set_grams, name, time или оценка самочувствия.');
+        throw new ToolError('nothing_to_update', 'Не передано ни одного изменения: нужен copy_meal, add_items, remove_item_ids, set_grams, name, time или оценка самочувствия.');
       }
       if (!result.meal.items.length) {
         throw new ToolError('meal_would_be_empty', 'После правки в приёме не осталось позиций. Если приём нужно убрать целиком — heys_delete_meal.');
@@ -2560,12 +2586,22 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_update_meal',
-    description: 'Изменить уже записанный приём: добавить позиции, убрать их, поправить граммовку, переименовать, сдвинуть время. Именно этим инструментом вносится «добавь туда ещё» — НЕ удаляй и не пересоздавай приём, иначе он получит новый id и потеряет оценки самочувствия. meal_id и id позиций берутся из heys_get_day.',
+    description: 'Изменить уже записанный приём: добавить позиции, убрать их, поправить граммовку, переименовать, сдвинуть время. Именно этим инструментом вносится «добавь туда ещё» и «в завтрак такой же плов как вчера» — НЕ удаляй и не пересоздавай приём, иначе он получит новый id и потеряет оценки самочувствия. «Как вчера» в уже существующий приём: heys_get_day за дату-источник и за сегодня (meal_id приёма) → copy_meal с meal_id приёма-источника; граммы не собирай из текста get_day руками. meal_id и id позиций — из heys_get_day.',
     inputSchema: {
       type: 'object',
       properties: {
         meal_id: { type: 'string', description: 'Идентификатор приёма из heys_get_day.' },
         date: DATE_ARG,
+        copy_meal: {
+          type: 'object',
+          description: 'Скопировать позиции из уже записанного приёма («как вчера») в этот meal_id. date/meal_id — приём-источник из heys_get_day. count умножает граммовку. add_items не обязательны; если переданы вместе — складываются с копией.',
+          properties: {
+            date: { type: 'string', description: 'Дата приёма-источника: YYYY-MM-DD, «вчера», «позавчера».' },
+            meal_id: { type: 'string', description: 'meal_id приёма-источника из heys_get_day.' },
+            count: { type: 'number', description: 'Множитель граммовок, по умолчанию 1.' },
+          },
+          required: ['date', 'meal_id'],
+        },
         add_items: { type: 'array', description: 'Позиции, которые нужно добавить к приёму.', items: ITEM_SCHEMA },
         remove_item_ids: { type: 'array', items: { type: 'string' }, description: 'Id позиций, которые нужно убрать из приёма.' },
         set_grams: { type: 'object', description: 'Новые граммовки для позиций по их id: { "it_08399c46e4ff": 180 }.' },
