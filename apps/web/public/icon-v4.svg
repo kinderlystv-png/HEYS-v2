@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" fill="#fffaf1"/>
+  <circle cx="256" cy="236" r="168" fill="#efe3cf"/>
+  <circle cx="256" cy="236" r="168" fill="none" stroke="#c67139" stroke-width="33"/>
+  <text x="256" y="272" text-anchor="middle" font-family="Caprasimo, Georgia, serif" font-size="196" font-weight="400" fill="#a8481c">H</text>
+</svg>

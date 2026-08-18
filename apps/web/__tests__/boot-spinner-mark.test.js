@@ -13,7 +13,8 @@ describe('cold-start spinner mark', () => {
   it('puts the 56 mark in #root instead of a chrome skeleton', () => {
     expect(html).toContain('data-heys-boot-mark="true"');
     expect(html).toContain('heys-boot-mark__spin');
-    expect(html).toMatch(/heys-boot-mark__spin[\s\S]*?<svg width="26"/);
+    expect(html).toMatch(/heys-boot-mark__spin[\s\S]*?<svg width="50"/);
+    expect(html).toMatch(/r="9\.2"/);
     expect(html).toContain('role="status"');
     expect(html).toContain('Загружаем');
     expect(html).not.toMatch(/id="root"[\s\S]*heys-skeleton/);
