@@ -108,6 +108,9 @@ const CURATOR_EXTRA_ARGS = {
 };
 
 function buildCuratorSchemas({ requireTranscript = false } = {}) {
+  // Кураторские админ-инструменты (клиенты, доступы, мессенджер) добавляются
+  // ПОСЛЕ дневниковых: ежедневная работа — дневник, а хвост длинного списка
+  // до модели может не доехать.
   const schemas = TOOL_SCHEMAS.map((schema) => {
     const strict = STRICT_TARGET_TOOLS.has(schema.name);
     const needsTranscript = requireTranscript && WRITE_TOOLS.has(schema.name);
@@ -131,7 +134,7 @@ function buildCuratorSchemas({ requireTranscript = false } = {}) {
       },
     };
   });
-  schemas.unshift({
+  schemas.push({
     name: 'heys_reply_message',
     description: 'Ответить клиенту в мессенджере приложения. Используй после того, как внёс просьбу в дневник: клиент должен видеть, что его сообщение обработано.',
     inputSchema: {
@@ -140,7 +143,7 @@ function buildCuratorSchemas({ requireTranscript = false } = {}) {
       required: ['client', 'text'],
     },
   });
-  schemas.unshift({
+  schemas.push({
     name: 'heys_mark_message_done',
     description: 'Пометить сообщение обработанным. Вызывай сразу после того, как внёс просьбу клиента в дневник, — иначе при следующем чтении переписки та же еда будет внесена повторно.',
     inputSchema: {
@@ -153,7 +156,7 @@ function buildCuratorSchemas({ requireTranscript = false } = {}) {
       required: ['message_id'],
     },
   });
-  schemas.unshift({
+  schemas.push({
     name: 'heys_get_photo',
     description: 'Открыть фото из мессенджера клиента: возвращает само изображение в ответе. Вызывай сразу, когда в тексте heys_list_messages есть «фото: path» — не проси куратора описать снимок. Этикетка → search/create; тарелка → search + спросить граммы. Path из attachments сообщения.',
     inputSchema: {
@@ -165,7 +168,7 @@ function buildCuratorSchemas({ requireTranscript = false } = {}) {
       required: ['path'],
     },
   });
-  schemas.unshift({
+  schemas.push({
     name: 'heys_list_messages',
     description: 'Переписка с клиентом: в тексте — message_id, время, превью и path фото («фото: …»). Есть фото — сразу heys_get_photo по path, не проси куратора пересказывать снимок. Вызывай, когда куратор спрашивает, что писал клиент, или просит внести то, о чём клиент написал.',
     inputSchema: {
@@ -177,7 +180,7 @@ function buildCuratorSchemas({ requireTranscript = false } = {}) {
       },
     },
   });
-  schemas.unshift({
+  schemas.push({
     name: 'heys_get_client_health',
     description: 'Диагностика клиента: сессии и входы за последние часы, включая неудачные попытки. Вызывай на жалобы «не заходит», «не синхронизируется», «пропали данные» — прежде чем гадать о причине.',
     inputSchema: {
@@ -188,7 +191,7 @@ function buildCuratorSchemas({ requireTranscript = false } = {}) {
       },
     },
   });
-  schemas.unshift({
+  schemas.push({
     name: 'heys_leads',
     description: 'Заявки с лендинга: список и смена статуса. Без аргументов — весь список; с action «update» меняет статус конкретного лида.',
     inputSchema: {
@@ -201,7 +204,7 @@ function buildCuratorSchemas({ requireTranscript = false } = {}) {
       },
     },
   });
-  schemas.unshift({
+  schemas.push({
     name: 'heys_trial_queue',
     description: 'Очередь заявок на пробный период: показать список со статистикой, активировать триал клиенту или отклонить заявку с причиной.',
     inputSchema: {
@@ -215,7 +218,7 @@ function buildCuratorSchemas({ requireTranscript = false } = {}) {
       },
     },
   });
-  schemas.unshift({
+  schemas.push({
     name: 'heys_manage_subscription',
     description: 'Подписка клиента: продлить на несколько месяцев или сбросить. Сброс закрывает доступ сразу и требует подтверждения.',
     inputSchema: {
@@ -229,7 +232,7 @@ function buildCuratorSchemas({ requireTranscript = false } = {}) {
       required: ['client', 'action'],
     },
   });
-  schemas.unshift({
+  schemas.push({
     name: 'heys_client_access',
     description: 'Доступ клиента в приложение: получить действующую ссылку входа или выпустить новый PIN. ВАЖНО: и ссылка, и PIN — секреты, они появятся в переписке. Вызывай только когда куратор прямо об этом попросил, и предупреди, что значение осталось в чате.',
     inputSchema: {
@@ -243,7 +246,7 @@ function buildCuratorSchemas({ requireTranscript = false } = {}) {
       required: ['client'],
     },
   });
-  schemas.unshift({
+  schemas.push({
     name: 'heys_create_client',
     description: 'Завести нового клиента куратора: имя и телефон. PIN генерируется сам и возвращается в ответе, поэтому вызов требует confirm: true — значение останется в истории чата.',
     inputSchema: {
@@ -257,7 +260,7 @@ function buildCuratorSchemas({ requireTranscript = false } = {}) {
       required: ['name', 'phone'],
     },
   });
-  schemas.unshift({
+  schemas.push({
     name: 'heys_moderate_products',
     description: 'Очередь продуктов, которые клиенты прислали в общую базу, и исправление ошибочной публикации. Без аргументов показывает список на модерации; с pending_id и action одобряет или отклоняет заявку; с product_id и action «hide» убирает из выдачи уже опубликованный продукт (например, домашнее блюдо, случайно ушедшее в общую базу), «unhide» возвращает. Отклонение требует причины — её увидит приславший клиент.',
     inputSchema: {
@@ -271,12 +274,12 @@ function buildCuratorSchemas({ requireTranscript = false } = {}) {
       },
     },
   });
-  schemas.unshift({
+  schemas.push({
     name: 'heys_list_inbox',
     description: 'Кто из клиентов написал и сколько сообщений ждёт ответа — по всем клиентам сразу. Вызывай на «что нового», «кто мне писал», «есть непрочитанные»: отсюда видно, к кому идти с heys_list_messages, без перебора клиентов по одному.',
     inputSchema: { type: 'object', properties: {} },
   });
-  schemas.unshift({
+  schemas.push({
     name: 'heys_list_clients',
     description: 'Список клиентов куратора. НЕ для «мне»/«жене»/«жена» — передавай client=алиас в heys_*. Только когда клиент реально неизвестен или спросили «кого я веду».',
     inputSchema: {
@@ -1476,11 +1479,16 @@ function createCuratorContext({
 
   const { annotateToolSchemas } = require('./tool-annotations');
   const initialAliases = addressAliases instanceof Map ? addressAliases : new Map();
+  // Порядок списка — не косметика: клиент отдаёт модели не все 80
+  // инструментов, и хвост до неё не доезжает. 18.08 так потерялись два
+  // последних, heys_update_day и heys_checkin: шаги записать было нечем, хотя
+  // сервер был исправен и вызова просто не получил. Дневник идёт первым как
+  // основная работа коннектора, задачник и репо — следом.
   const rawSchemas = annotateToolSchemas([
+    ...buildCuratorSchemas({ requireTranscript: !!tasksContext }),
     ...(tasksContext ? tasksContext.schemas : []),
     ...(repoContext ? repoContext.schemas : []),
     ...(mcpTraceContext ? mcpTraceContext.schemas : []),
-    ...buildCuratorSchemas({ requireTranscript: !!tasksContext }),
   ]);
   const schemas = rawSchemas.map((schema) => {
     if (schema.name === 'tasks_context') {

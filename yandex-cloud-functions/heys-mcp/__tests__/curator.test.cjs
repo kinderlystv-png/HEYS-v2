@@ -508,16 +508,29 @@ test('схема записи в дневник требует transcript, ко�
   assert.match(meal.inputSchema.properties.transcript.description, /дословная полная реплика/i);
 });
 
-test('кураторские схемы: свои инструменты сверху и параметр client везде, кроме списка клиентов', () => {
+// Порядок списка = приоритет: клиент отдаёт модели не все 80 инструментов, и
+// хвост до неё может не доехать. 18.08 так потерялись heys_update_day и
+// heys_checkin, стоявшие последними: шаги записать было нечем, хотя сервер был
+// исправен и вызова не получал. Сверху — ежедневная работа с дневником,
+// админские и мессенджер-инструменты уходят в конец.
+test('кураторские схемы: дневник сверху, админ-инструменты в конце, параметр client везде, кроме списка клиентов', () => {
   const schemas = buildCuratorSchemas();
   const added = [
-    'heys_list_clients', 'heys_list_inbox', 'heys_moderate_products', 'heys_create_client',
-    'heys_client_access', 'heys_manage_subscription', 'heys_trial_queue', 'heys_leads',
-    'heys_get_client_health', 'heys_list_messages', 'heys_get_photo', 'heys_mark_message_done',
-    'heys_reply_message',
+    'heys_reply_message', 'heys_mark_message_done', 'heys_get_photo', 'heys_list_messages',
+    'heys_get_client_health', 'heys_leads', 'heys_trial_queue', 'heys_manage_subscription',
+    'heys_client_access', 'heys_create_client', 'heys_moderate_products', 'heys_list_inbox',
+    'heys_list_clients',
   ];
   assert.equal(schemas.length, TOOL_SCHEMAS.length + added.length);
-  assert.deepEqual(schemas.slice(0, added.length).map((s) => s.name), added);
+  assert.deepEqual(schemas.slice(-added.length).map((s) => s.name), added);
+  assert.deepEqual(
+    schemas.slice(0, 7).map((s) => s.name),
+    [
+      'heys_get_day', 'heys_update_day', 'heys_checkin',
+      'heys_log_meal', 'heys_update_meal', 'heys_delete_meal', 'heys_add_water',
+    ],
+    'ежедневные операции держатся в начале списка',
+  );
   for (const schema of schemas) {
     if (CLIENTLESS_TOOLS.has(schema.name)) {
       assert.equal(schema.inputSchema.properties.client, undefined, `${schema.name}: адресат не нужен`);
@@ -525,6 +538,17 @@ test('кураторские схемы: свои инструменты све�
     }
     assert.ok(schema.inputSchema.properties.client, `${schema.name}: есть параметр client`);
   }
+});
+
+test('дневниковые инструменты идут раньше задачника и репо', () => {
+  const { schemas } = build(fakeCuratorApi({ tasksClientId: 'cid-tasks' }), { tasksClientId: 'cid-tasks' });
+  const names = schemas.map((s) => s.name);
+  const firstTask = names.findIndex((n) => n.startsWith('tasks_'));
+  const lastDiary = names.reduce((acc, n, i) => (n.startsWith('heys_') ? i : acc), -1);
+  assert.ok(firstTask > 0, 'задачник подключён');
+  assert.ok(firstTask > names.indexOf('heys_log_meal'), 'еда важнее задачника');
+  assert.equal(names[0], 'heys_get_day');
+  assert.ok(lastDiary >= 0);
 });
 
 test('истёкшая кураторская сессия даёт понятную ошибку, а не 500', async () => {
