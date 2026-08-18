@@ -138,16 +138,17 @@ test('deploy and test scripts consume the shared inventory instead of local list
   assert.doesNotMatch(testScript, /ALL_FUNCTIONS=\(\s*heys-/);
   assert.equal((deployScript.match(/ensure_speechkit_trigger/g) || []).length, 3);
   assert.equal((deployScript.match(/\[ "\$CI_MODE" != true \]/g) || []).length >= 2, true);
-  assert.equal(FUNCTIONS.filter((item) => item.autoDeploy).length, 18);
+  assert.equal(FUNCTIONS.filter((item) => item.autoDeploy).length, 19);
 });
 
-test('production-disabled heys-mcp source cannot silently auto-deploy', () => {
+// Ручной гейт снят 2026-08-18: правка коннектора уезжает тем же пушем, что и
+// остальной API. Раньше она ждала отдельной команды и регулярно не уезжала.
+test('heys-mcp source change deploys the connector like any other API function', () => {
   const result = resolveChangedFiles(['yandex-cloud-functions/heys-mcp/index.js']);
-  assert.equal(result.mode, 'none');
-  assert.deepEqual(result.functions, []);
-  assert.deepEqual(result.testFunctions, ['heys-mcp']);
-  assert.deepEqual(result.skippedDisabled, ['heys-mcp']);
-  assert.equal(result.reason, 'disabled-functions-only');
+  assert.equal(result.mode, 'selective');
+  assert.deepEqual(result.functions, ['heys-mcp']);
+  assert.deepEqual(result.skippedDisabled, []);
+  assert.equal(result.reason, 'changed-function-directories');
 });
 
 test('deploy workflow routes API and automation changes through the shared classifier', () => {

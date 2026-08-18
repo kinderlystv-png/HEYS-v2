@@ -16,14 +16,14 @@ const FUNCTIONS = Object.freeze([
   { name: 'heys-api-push', group: 'api', kind: 'api', autoDeploy: true },
   { name: 'heys-api-messages', group: 'api', kind: 'api', autoDeploy: true },
   { name: 'heys-api-photos', group: 'api', kind: 'api', autoDeploy: true },
-  {
-    name: 'heys-mcp',
-    group: 'api',
-    kind: 'api',
-    autoDeploy: false,
-    reason:
-      'restored 2026-08-11 for curator Cursor MCP/tasks (function d4epjmd9lnk059u29bg8); still not auto-deploy — client PDn OAuth product channel stays off; change only with ALLOW_DISABLED_REASON',
-  },
+  // Авто-деплой включён 2026-08-18 решением владельца. Ручной гейт стоял с
+  // 2026-08-11 и защищал не то, что обещала его причина: клиентский PDn/OAuth
+  // канал выключен отдельно, а коннектором пользуется только куратор — на деле
+  // гейт лишь заставлял помнить про ручной релиз после каждого из ~190
+  // ежемесячных коммитов, и правка MCP регулярно оставалась не выкаченной.
+  // Взамен post-deploy verify смоукает живой /mcp: ACTIVE-версия не доказывает,
+  // что функция стартовала (инцидент упаковки, MCP_TELEMETRY_ROADMAP).
+  { name: 'heys-mcp', group: 'api', kind: 'api', autoDeploy: true },
   {
     name: 'heys-api-sms',
     group: 'api',

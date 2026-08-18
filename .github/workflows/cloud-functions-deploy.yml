@@ -347,6 +347,18 @@ jobs:
               -H "Origin: https://app.heyslab.ru"
           }
 
+          check_mcp_metadata() {
+            curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 "https://api.heyslab.ru/.well-known/oauth-protected-resource/mcp"
+          }
+
+          check_mcp_endpoint() {
+            curl -s -o /dev/null -w "%{http_code}" \
+              --max-time 15 -X POST "https://api.heyslab.ru/mcp" \
+              -H "Content-Type: application/json" \
+              -d '{}'
+          }
+
           check_messenger_day_checklist_preflight() {
             curl -s -o /dev/null -w "%{http_code}" \
               --max-time 15 -X OPTIONS "https://api.heyslab.ru/messages/day-checklist" \
@@ -369,6 +381,12 @@ jobs:
           retry_http_check "Messenger set-done preflight" "204" check_messenger_set_done_preflight
           retry_http_check "Messenger day-checklist route" "401" check_messenger_day_checklist
           retry_http_check "Messenger day-checklist preflight" "204" check_messenger_day_checklist_preflight
+
+          # ACTIVE-версия не значит «стартовала»: у MCP уже был случай, когда
+          # упаковка и version create прошли, а функция не поднималась вовсе.
+          # 401 на POST и 200 на метаданных доказывают живой рантайм.
+          retry_http_check "MCP OAuth metadata" "200" check_mcp_metadata
+          retry_http_check "MCP endpoint" "401" check_mcp_endpoint
 
           echo "🧭 Verifying every deployed HEYS function runtime..."
           while IFS= read -r function_name; do
