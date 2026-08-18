@@ -730,10 +730,11 @@
                 try { sessionStorage.setItem('heys_boot_fail_count', String(failCount)); } catch (_) {}
                 var again = failCount >= 2;
                 document.body.innerHTML = '<div class="heys-boot-mark is-fail' + (again ? ' is-fail-again' : '') + '" role="alert">' +
-                    '<div class="heys-boot-mark__sign">' +
                     '<span class="heys-boot-mark__disc" aria-hidden="true">' +
                     '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 7v6M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>' +
                     '</span>' +
+                    '<div class="heys-boot-mark__sign">' +
+                    '<div class="heys-boot-mark__fail">' +
                     '<div class="heys-boot-mark__title">' + (again ? 'Всё ещё не получается' : 'Не удалось загрузить приложение') + '</div>' +
                     '<div class="heys-boot-mark__text">' + (again
                         ? 'Данные на месте. Если связь есть, а приложение не открывается — напишите куратору, он посмотрит.'
@@ -741,7 +742,7 @@
                     (again ? '<a class="heys-boot-mark__btn" href="https://t.me/heyslab_support_bot" target="_blank" rel="noopener noreferrer">Написать куратору</a>' : '') +
                     '<button type="button" class="heys-boot-mark__retry' + (again ? ' heys-boot-mark__retry--ghost' : ' heys-boot-mark__btn') + '" onclick="location.reload()">' + (again ? 'Повторить ещё раз' : 'Повторить') + '</button>' +
                     '<div id="heys-recovery-status" class="heys-boot-mark__status"></div>' +
-                    '</div></div>';
+                    '</div></div></div>';
             }
 
             window.__heysShowRecoveryUI = showRecoveryUI;
@@ -972,7 +973,7 @@
 
     <!-- Critical CSS for instant rendering -->
     <link rel="stylesheet" href="styles/critical.css?v=14" />
-    <link rel="stylesheet" href="styles/heys-boot-mark.css?v=7" />
+    <link rel="stylesheet" href="styles/heys-boot-mark.css?v=8" />
     <link rel="stylesheet" href="styles/modules/002-ui-v4-palette-roles.css" />
     <link rel="stylesheet" href="styles/modules/733-ui-v4-login-theme.css?v=14" />
 
@@ -1092,9 +1093,10 @@
 
     <!-- PWA Support (iOS + Android) -->
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="HEYS" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
 
@@ -1527,19 +1529,19 @@
     <div id="root">
         <!-- Холодный старт: грунт палитры + круг 56. Без шапки и меню. -->
         <div class="heys-boot-mark" data-heys-boot-mark="true" role="status" aria-live="polite" aria-busy="true">
-            <div class="heys-boot-mark__sign">
-                <span class="heys-boot-mark__disc" aria-hidden="true">
-                    <span class="heys-boot-mark__spin animate-always" aria-hidden="true">
-                        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                            <circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="2.6" opacity="0.28"></circle>
-                            <path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>
-                        </svg>
-                    </span>
-                    <svg class="heys-boot-mark__warn" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round">
-                        <path d="M12 7v6M12 17h.01"></path>
-                        <circle cx="12" cy="12" r="9"></circle>
+            <span class="heys-boot-mark__disc" aria-hidden="true">
+                <span class="heys-boot-mark__spin animate-always" aria-hidden="true">
+                    <svg width="50" height="50" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="2.6" opacity="0.28"></circle>
+                        <path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>
                     </svg>
                 </span>
+                <svg class="heys-boot-mark__warn" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round">
+                    <path d="M12 7v6M12 17h.01"></path>
+                    <circle cx="12" cy="12" r="9"></circle>
+                </svg>
+            </span>
+            <div class="heys-boot-mark__sign">
                 <span class="heys-boot-mark__sr">Загружаем</span>
                 <div class="heys-boot-mark__slow">
                     <div class="heys-boot-mark__slow-text">Медленная сеть, продолжаем загружать</div>
