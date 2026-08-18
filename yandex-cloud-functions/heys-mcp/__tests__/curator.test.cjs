@@ -1861,3 +1861,17 @@ test('алиасы грузятся из KV shape {text,rev}, не из data.v',
   const blocked = await tools.heys_list_clients({ for: 'жене' });
   assert.equal(blocked.structured.skip_reason, 'known_alias_use_client_param');
 });
+
+// 2026-08-18: «создай рецепт салата» модель отработала как просьбу написать
+// текст — посчитала КБЖУ, выдала рецепт и не вызвала ни одного инструмента.
+// В HEYS нет сущности «рецепт», и слово не вело ни к create_product, ни к
+// preset, поэтому в базе не осталось ничего.
+test('быстрый путь считает «создай рецепт» просьбой записать продукт', () => {
+  const text = curatorInstructions('Антон', true, NOW);
+  assert.match(text, /«создай рецепт»/);
+  assert.match(text, /heys_create_product/);
+  assert.ok(
+    text.indexOf('«создай рецепт»') < text.indexOf('Правила работы с дневником'),
+    'правило должно стоять в быстром пути, до подробных правил',
+  );
+});
