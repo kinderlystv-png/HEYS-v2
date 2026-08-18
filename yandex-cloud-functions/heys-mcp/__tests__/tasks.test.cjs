@@ -126,6 +126,26 @@ test('строковое значение ключа принимается ка
   assert.equal(file.path, 'NOW.md');
 });
 
+test('файл с CRLF читается как обычный — иначе проект молча пустеет', () => {
+  const crlf = HEYS_PROJECT.replace(/\n/g, '\r\n');
+  const file = tasks.ensureFile({ path: 'projects/heys.md', text: crlf, rev: 3 }, 'projects/heys.md');
+  assert.ok(!file.text.includes('\r'), 'перевод строки нормализуется на входе');
+  // Инцидент 18.08: projects/heys.md приехал с CRLF, parseTaskLine не совпал
+  // ни разу — планёрка потеряла все задачи проекта и объявила живые слоты
+  // ссылками на задачи, которых нет.
+  const parsed = tasks.parseTasks(file);
+  const plain = tasks.parseTasks({ path: 'projects/heys.md', text: HEYS_PROJECT });
+  assert.equal(parsed.length, plain.length);
+  assert.ok(parsed.length > 0);
+  assert.equal(parsed[0].children.length, 2);
+});
+
+test('строковое значение с CRLF нормализуется той же дорогой', () => {
+  const file = tasks.ensureFile('# Заголовок\r\n\r\n- [ ] P2 Дело\r\n', 'NOW.md');
+  assert.ok(!file.text.includes('\r'));
+  assert.equal(tasks.parseTasks(file).length, 1);
+});
+
 test('bumpFile двигает ревизию — на ней держится защита от гонки', () => {
   const file = tasks.ensureFile({ path: 'NOW.md', text: 'a', rev: 4 }, 'NOW.md');
   const next = tasks.bumpFile(file, 'b', 777);
