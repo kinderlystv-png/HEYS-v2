@@ -172,4 +172,16 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(uiSrc).toContain('const applyWidgetsLayout = useCallback');
         expect(uiSrc).toMatch(/!isEditMode && widgets\.length > 0 && React\.createElement\('button', \{\s*\n\s*type: 'button',\s*\n\s*className: 'widget-v4-add'/);
     });
+
+    it('динамика веса 2×1 — v4 виды и долгий тап', () => {
+        expect(uiSrc).toContain('WEIGHT_DYNAMICS_VARIANTS');
+        expect(uiSrc).toContain('WeightDynamicsTile2x1');
+        expect(uiSrc).toContain('displayVariant');
+        expect(uiSrc).toContain('weightDynamics:variantSaved');
+        expect(uiSrc).not.toMatch(/2×1[\s\S]{0,400}widget-v4-periods/);
+        expect(cssSrc).toContain('.widget-wd-sheet');
+        expect(cssSrc).toContain('widget-wd--holding');
+        expect(uiSrc).toContain('React.createElement(WeightDynamicsSparkSvg,');
+        expect(uiSrc).not.toContain('? WeightDynamicsSparkSvg({');
+    });
 });

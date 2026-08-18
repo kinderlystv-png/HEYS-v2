@@ -592,7 +592,13 @@
       settings: {
         showWarnings: { type: 'boolean', default: true, label: 'Показывать EWS предупреждения' },
         showGoal: { type: 'boolean', default: true, label: 'Показывать прогресс к цели' },
-        periodDays: { type: 'number', default: 7, label: 'Период (дней)', min: 7, max: 30 }
+        periodDays: { type: 'number', default: 7, label: 'Период в разборе (дней)', min: 7, max: 30 },
+        displayVariant: {
+          type: 'string',
+          default: 'curve',
+          label: 'Вид плитки',
+          options: ['curve', 'bar_remainder', 'weeks', 'number_only', 'to_goal']
+        }
       }
     },
 

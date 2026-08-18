@@ -603,6 +603,13 @@
 
     const handleClick = useCallback(() => {
       if (!isEditMode) {
+        if (
+          widget.type === 'crashRisk'
+          && widget.size === '2x1'
+          && HEYS.Widgets.weightDynamicsClickGuard?.isBlocked?.(widget.id)
+        ) {
+          return;
+        }
         HEYS.Widgets.emit('widget:click', { widget });
       }
     }, [isEditMode, widget]);
@@ -4132,6 +4139,526 @@
     );
   }
 
+  // === Weight Dynamics v4 (канвас home-widgets) ===
+  const WEIGHT_DYNAMICS_VARIANTS = [
+    { id: 'curve', title: 'Кривая', subtitle: 'сколько сброшено и как шло' },
+    { id: 'bar_remainder', title: 'Остаток полосой', subtitle: 'сколько до цели' },
+    { id: 'weeks', title: 'Недели', subtitle: 'средние, без скачков воды' },
+    { id: 'number_only', title: 'Только цифра', subtitle: 'без графики' },
+    { id: 'to_goal', title: 'До цели', subtitle: 'главное — остаток, темп подписью' }
+  ];
+  const WEIGHT_DYNAMICS_LP_MS = 350;
+  const WEIGHT_DYNAMICS_CLICK_GUARD_MS = 900;
+  const WEIGHT_DYNAMICS_SHEET_CLOSE_MS = 400;
+  const WEIGHT_DYNAMICS_EXIT_MS = 200;
+  const WEIGHT_DYNAMICS_VALUE_MS = 1400;
+  const WEIGHT_DYNAMICS_DRAW_MS = 1200;
+  const WEIGHT_DYNAMICS_CHART_DELAY_MS = 320;
+  const WEIGHT_DYNAMICS_EL_IN_MS = 520;
+  const WEIGHT_DYNAMICS_STAGGER_MS = 130;
+
+  const weightDynamicsClickGuard = {
+    _until: new Map(),
+    _globalUntil: 0,
+    block(widgetId, ms = WEIGHT_DYNAMICS_CLICK_GUARD_MS) {
+      const until = Date.now() + ms;
+      this._globalUntil = Math.max(this._globalUntil, until);
+      if (widgetId) this._until.set(widgetId, until);
+    },
+    isBlocked(widgetId) {
+      if (Date.now() < this._globalUntil) return true;
+      if (!widgetId) return false;
+      const until = this._until.get(widgetId) || 0;
+      if (Date.now() < until) return true;
+      if (until) this._until.delete(widgetId);
+      return false;
+    }
+  };
+  HEYS.Widgets.weightDynamicsClickGuard = weightDynamicsClickGuard;
+
+  function stopEventBubble(event) {
+    event?.stopPropagation?.();
+    event?.preventDefault?.();
+  }
+
+  function v4WeightDeltaStateFromDynamics(dyn) {
+    if (!dyn) return 'neutral';
+    return dyn.deltaState || 'neutral';
+  }
+
+  function weightDynamicsRemainderMeta(dyn, variant) {
+    if (!dyn?.goalWeight || dyn.goalReached) {
+      return dyn?.goalReached ? 'цель взята' : null;
+    }
+    if (variant === 'bar_remainder' || variant === 'to_goal') {
+      return dyn.remainderShort;
+    }
+    return dyn.remainderLabel;
+  }
+
+  function formatAnimDeltaKg(deltaKg) {
+    if (!Number.isFinite(deltaKg)) return { sign: '', text: '—' };
+    if (Math.abs(deltaKg) <= 0.2) return { sign: '', text: '0,0' };
+    const sign = deltaKg < 0 ? '−' : '+';
+    return { sign, text: Math.abs(deltaKg).toFixed(1).replace('.', ',') };
+  }
+
+  function wdElClass(role, isTile) {
+    if (!isTile) return '';
+    return 'widget-wd__el widget-wd__el--' + role + ' widget-wd__el--in';
+  }
+
+  function WeightDynamicsSparkSvg({ sparkline, stateClass, compact }) {
+    if (!sparkline?.points) return null;
+    const last = sparkline.last;
+    return React.createElement('svg', {
+      className: 'widget-wd__spark ' + (stateClass || '') + (compact ? '' : ' widget-wd__el widget-wd__el--chart widget-wd__el--in'),
+      width: 58,
+      height: 24,
+      viewBox: '0 0 58 24',
+      fill: 'none',
+      'aria-hidden': 'true'
+    },
+      React.createElement('polyline', {
+        className: 'widget-wd__spark-line',
+        points: sparkline.points,
+        pathLength: 100,
+        stroke: 'currentColor',
+        strokeWidth: 2,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round'
+      }),
+      last ? React.createElement('circle', {
+        className: 'widget-wd__spark-dot',
+        cx: last.x, cy: last.y, r: 2.4, fill: 'currentColor'
+      }) : null
+    );
+  }
+
+  function WeightDynamicsProgressBar({ pct, stateClass, compact }) {
+    const width = Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : 0;
+    return React.createElement('span', {
+      className: 'widget-wd__bar-track widget-wd__el widget-wd__el--chart widget-wd__el--in'
+    },
+      React.createElement('span', {
+        className: 'widget-wd__bar-fill ' + (stateClass || ''),
+        style: compact
+          ? { width: `${width}%` }
+          : { '--wd-bar-pct': `${width}%` }
+      })
+    );
+  }
+
+  function WeightDynamicsWeekBars({ bars, compact }) {
+    if (!bars?.length) return null;
+    return React.createElement('div', { className: 'widget-wd__weeks' },
+      bars.map((bar, i) => React.createElement('span', {
+        key: i,
+        className: [
+          'widget-wd__week-col',
+          'widget-wd__el',
+          'widget-wd__el--chart',
+          'widget-wd__el--in',
+          compact ? '' : `widget-wd__el--week-${i + 1}`,
+          v4ValueStateClass(bar.isLast ? bar.state : 'neutral')
+        ].filter(Boolean).join(' '),
+        style: { '--wd-week-h': `${bar.heightPct}%` }
+      }))
+    );
+  }
+
+  function useWeightDynamicsMotion(widget, dyn) {
+    const wid = widget?.id || 'wd';
+    const motionMs = WEIGHT_DYNAMICS_VALUE_MS;
+    const animDelta = useWidgetMotionValue(dyn?.deltaKg ?? 0, {
+      motionId: `${wid}:delta`,
+      duration: motionMs,
+      quantize: 0.1
+    });
+    const animGoalPct = useWidgetMotionValue(dyn?.goalProgressPct ?? 0, {
+      motionId: `${wid}:goalPct`,
+      duration: motionMs
+    });
+    const animToGoal = useWidgetMotionValue(Math.abs(dyn?.toGoalKg ?? 0), {
+      motionId: `${wid}:toGoal`,
+      duration: motionMs
+    });
+    const animMonthRate = useWidgetMotionValue(dyn?.monthRateKg ?? 0, {
+      motionId: `${wid}:monthRate`,
+      duration: motionMs
+    });
+    return {
+      delta: animDelta,
+      goalPct: animGoalPct,
+      toGoal: animToGoal,
+      monthRate: animMonthRate
+    };
+  }
+
+  function WeightDynamicsBody({ variant, dyn, widget, compact }) {
+    const motion = compact ? null : useWeightDynamicsMotion(widget, dyn);
+    return renderWeightDynamicsBody(variant, dyn, { compact, motion });
+  }
+
+  function renderWeightDynamicsBody(variant, dyn, opts = {}) {
+    const { compact = false, motion = null } = opts;
+    const isTile = !compact;
+    const stateClass = v4ValueStateClass(v4WeightDeltaStateFromDynamics(dyn));
+    const windowLabel = dyn?.window?.label || 'За месяц';
+    const remainder = weightDynamicsRemainderMeta(dyn, variant);
+    const delta = motion?.delta != null
+      ? formatAnimDeltaKg(motion.delta)
+      : (dyn?.delta || { sign: '', text: '—' });
+    const deltaLine = dyn?.hasDynamics
+      ? React.createElement('span', { className: 'widget-wd__delta ' + stateClass + ' ' + wdElClass('value', isTile) },
+        delta.sign,
+        delta.text,
+        React.createElement('span', { className: 'widget-v4-unit' }, 'кг')
+      )
+      : React.createElement('span', { className: 'widget-wd__placeholder ' + wdElClass('value', isTile) }, dyn?.placeholder || 'нужна неделя');
+
+    const headerRight = remainder
+      ? React.createElement('span', { className: 'widget-wd__remainder ' + wdElClass('meta', isTile) }, remainder)
+      : null;
+
+    const monthRate = Number.isFinite(motion?.monthRate ?? dyn?.monthRateKg)
+      ? (() => {
+        const rate = motion?.monthRate ?? dyn.monthRateKg;
+        return `${rate < 0 ? '−' : '+'}${formatRuDecimal(Math.abs(rate), 1)} / мес`;
+      })()
+      : null;
+
+    if (variant === 'weeks') {
+      return React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'widget-wd__head' },
+          React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile) }, 'По неделям'),
+          dyn?.hasDynamics
+            ? React.createElement('span', { className: 'widget-wd__side-delta ' + stateClass + ' ' + wdElClass('meta', isTile) },
+              delta.sign, delta.text)
+            : null
+        ),
+        dyn?.hasDynamics
+          ? WeightDynamicsWeekBars({ bars: dyn.weeklyBars, compact })
+          : React.createElement('div', { className: 'widget-wd__placeholder-row' }, deltaLine)
+      );
+    }
+
+    if (variant === 'to_goal') {
+      const remainAbs = Number.isFinite(motion?.toGoal)
+        ? motion.toGoal
+        : (Number.isFinite(dyn?.toGoalKg) ? Math.abs(dyn.toGoalKg) : null);
+      return React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'widget-wd__head' },
+          React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile) }, 'До цели'),
+          monthRate
+            ? React.createElement('span', { className: 'widget-wd__side-delta ' + stateClass + ' ' + wdElClass('meta', isTile) }, monthRate)
+            : null
+        ),
+        dyn?.goalReached
+          ? React.createElement('div', { className: 'widget-wd__goal-main ' + wdElClass('value', isTile) }, 'цель взята')
+          : React.createElement(React.Fragment, null,
+            remainAbs != null
+              ? React.createElement('div', { className: 'widget-wd__goal-main ' + wdElClass('value', isTile) },
+                formatRuDecimal(remainAbs, 1),
+                React.createElement('span', { className: 'widget-v4-unit' }, 'кг')
+              )
+              : deltaLine,
+            WeightDynamicsProgressBar({
+              pct: motion?.goalPct ?? dyn?.goalProgressPct,
+              stateClass,
+              compact
+            })
+          )
+      );
+    }
+
+    if (variant === 'number_only') {
+      return React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'widget-wd__head' },
+          React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile) }, windowLabel)
+        ),
+        React.createElement('div', { className: 'widget-wd__num-row' },
+          deltaLine,
+          dyn?.hasDynamics && delta.sign === '−'
+            ? React.createElement('span', {
+              className: 'widget-wd__arrow ' + stateClass + ' ' + wdElClass('chart', isTile),
+              'aria-hidden': 'true'
+            },
+              React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
+                React.createElement('path', { d: 'M12 5v14M6 13l6 6 6-6' })
+              ))
+            : null
+        )
+      );
+    }
+
+    if (variant === 'bar_remainder') {
+      return React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'widget-wd__head' },
+          React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile) }, windowLabel),
+          headerRight
+        ),
+        React.createElement('div', { className: 'widget-wd__num-row' }, deltaLine),
+        WeightDynamicsProgressBar({
+          pct: motion?.goalPct ?? dyn?.goalProgressPct,
+          stateClass,
+          compact
+        })
+      );
+    }
+
+    // curve (default)
+    return React.createElement(React.Fragment, null,
+      React.createElement('div', { className: 'widget-wd__head' },
+        React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile) }, windowLabel),
+        headerRight
+      ),
+      React.createElement('div', { className: 'widget-wd__curve-row' },
+        deltaLine,
+        dyn?.hasDynamics
+          ? WeightDynamicsSparkSvg({ sparkline: dyn.sparkline, stateClass, compact })
+          : null
+      )
+    );
+  }
+
+  function WeightDynamicsVariantSheet({ open, closing, dyn, activeVariant, onSelect, onClose }) {
+    if (!open && !closing) return null;
+    const portalRoot = typeof document !== 'undefined' ? document.body : null;
+    if (!portalRoot || !ReactDOM?.createPortal) return null;
+
+    if (closing) {
+      return ReactDOM.createPortal(React.createElement('div', {
+        className: 'widget-wd-sheet__blocker',
+        'aria-hidden': 'true',
+        onPointerDown: stopEventBubble,
+        onPointerUp: stopEventBubble,
+        onClick: stopEventBubble
+      }), portalRoot);
+    }
+
+    const sheet = React.createElement(React.Fragment, null,
+      React.createElement('button', {
+        type: 'button',
+        className: 'widget-wd-sheet__scrim',
+        'aria-label': 'Закрыть',
+        ...(window.HEYS?.ModalDismiss?.reactBackdropDismiss
+          ? window.HEYS.ModalDismiss.reactBackdropDismiss(onClose)
+          : {
+            onPointerDown: stopEventBubble,
+            onClick: (event) => {
+              stopEventBubble(event);
+              onClose();
+            }
+          })
+      }),
+      React.createElement('div', {
+        className: 'widget-wd-sheet animate-always',
+        role: 'dialog',
+        'aria-label': 'Как показывать плитку',
+        onPointerDown: stopEventBubble,
+        onClick: stopEventBubble
+      },
+        React.createElement('span', { className: 'widget-wd-sheet__grab' }),
+        React.createElement('div', { className: 'widget-wd-sheet__title' }, 'Динамика веса'),
+        React.createElement('div', { className: 'widget-wd-sheet__subtitle' }, 'Как показывать плитку'),
+        React.createElement('div', { className: 'widget-wd-sheet__list' },
+          WEIGHT_DYNAMICS_VARIANTS.map((item) => {
+            const isOn = item.id === activeVariant;
+            return React.createElement('button', {
+              key: item.id,
+              type: 'button',
+              className: 'widget-wd-sheet__opt' + (isOn ? ' is-active' : ''),
+              onPointerDown: stopEventBubble,
+              onClick: (event) => {
+                stopEventBubble(event);
+                onSelect(item.id);
+              }
+            },
+              React.createElement('div', {
+                className: 'widget-wd-sheet__preview widget-wd widget-wd--preview'
+              }, renderWeightDynamicsBody(item.id, dyn, { compact: true })),
+              React.createElement('div', { className: 'widget-wd-sheet__opt-text' },
+                React.createElement('div', { className: 'widget-wd-sheet__opt-title' }, item.title),
+                React.createElement('div', { className: 'widget-wd-sheet__opt-sub' }, item.subtitle)
+              ),
+              isOn ? React.createElement('span', { className: 'widget-wd-sheet__check', 'aria-hidden': 'true' },
+                React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
+                  React.createElement('path', { d: 'M5 13l4 4L19 7' })
+                )) : null
+            );
+          })
+        )
+      )
+    );
+    return ReactDOM.createPortal(sheet, portalRoot);
+  }
+
+  function WeightDynamicsTile2x1({ widget, data }) {
+    const dyn = data?.dynamicsV4 || null;
+    const displayVariant = widget?.settings?.displayVariant || 'curve';
+    const [sheetOpen, setSheetOpen] = useState(false);
+    const [sheetClosing, setSheetClosing] = useState(false);
+    const [holding, setHolding] = useState(false);
+    const [animPhase, setAnimPhase] = useState('idle');
+    const [renderVariant, setRenderVariant] = useState(displayVariant);
+    const [sceneId, setSceneId] = useState(0);
+    const motion = useWeightDynamicsMotion(widget, dyn);
+    const lpTimerRef = useRef(null);
+    const lpTriggeredRef = useRef(false);
+    const lpStartRef = useRef(null);
+    const sheetCloseTimerRef = useRef(null);
+    const animTimersRef = useRef([]);
+
+    const clearAnimTimers = useCallback(() => {
+      animTimersRef.current.forEach((id) => {
+        if (typeof id === 'number') {
+          clearTimeout(id);
+          cancelAnimationFrame(id);
+        }
+      });
+      animTimersRef.current = [];
+    }, []);
+
+    useEffect(() => () => {
+      clearAnimTimers();
+      if (lpTimerRef.current) clearTimeout(lpTimerRef.current);
+      if (sheetCloseTimerRef.current) clearTimeout(sheetCloseTimerRef.current);
+    }, [clearAnimTimers]);
+
+    const dismissVariantSheet = useCallback(() => {
+      weightDynamicsClickGuard.block(widget?.id);
+      setSheetOpen(false);
+      setSheetClosing(true);
+      setHolding(false);
+      if (sheetCloseTimerRef.current) clearTimeout(sheetCloseTimerRef.current);
+      sheetCloseTimerRef.current = setTimeout(() => {
+        setSheetClosing(false);
+        sheetCloseTimerRef.current = null;
+      }, WEIGHT_DYNAMICS_SHEET_CLOSE_MS);
+    }, [widget?.id]);
+
+    useEffect(() => {
+      if (displayVariant === renderVariant) return;
+      clearAnimTimers();
+      setAnimPhase('exit');
+      const t1 = setTimeout(() => {
+        setRenderVariant(displayVariant);
+        setSceneId((id) => id + 1);
+        let raf2 = 0;
+        const raf1 = requestAnimationFrame(() => {
+          raf2 = requestAnimationFrame(() => setAnimPhase('idle'));
+        });
+        animTimersRef.current.push(raf1, raf2);
+      }, WEIGHT_DYNAMICS_EXIT_MS);
+      animTimersRef.current.push(t1);
+    }, [displayVariant, renderVariant, clearAnimTimers]);
+
+    const cancelLongPress = useCallback(() => {
+      if (lpTimerRef.current) {
+        clearTimeout(lpTimerRef.current);
+        lpTimerRef.current = null;
+      }
+    }, []);
+
+    const onPointerDown = useCallback((event) => {
+      if (sheetOpen || sheetClosing) return;
+      lpTriggeredRef.current = false;
+      lpStartRef.current = {
+        x: event.clientX || event.touches?.[0]?.clientX || 0,
+        y: event.clientY || event.touches?.[0]?.clientY || 0
+      };
+      cancelLongPress();
+      lpTimerRef.current = setTimeout(() => {
+        lpTriggeredRef.current = true;
+        weightDynamicsClickGuard.block(widget?.id);
+        setHolding(true);
+        setSheetOpen(true);
+        HEYS.dayUtils?.haptic?.('light');
+      }, WEIGHT_DYNAMICS_LP_MS);
+    }, [cancelLongPress, sheetOpen, sheetClosing, widget?.id]);
+
+    const onPointerMove = useCallback((event) => {
+      if (!lpTimerRef.current || !lpStartRef.current) return;
+      const x = event.clientX || event.touches?.[0]?.clientX || 0;
+      const y = event.clientY || event.touches?.[0]?.clientY || 0;
+      const dx = Math.abs(x - lpStartRef.current.x);
+      const dy = Math.abs(y - lpStartRef.current.y);
+      if (dx > 10 || dy > 10) cancelLongPress();
+    }, [cancelLongPress]);
+
+    const onPointerUp = useCallback(() => {
+      cancelLongPress();
+      setHolding(false);
+    }, [cancelLongPress]);
+
+    const onClick = useCallback((event) => {
+      if (
+        lpTriggeredRef.current
+        || sheetOpen
+        || sheetClosing
+        || weightDynamicsClickGuard.isBlocked(widget?.id)
+      ) {
+        lpTriggeredRef.current = false;
+        stopEventBubble(event);
+      }
+    }, [sheetOpen, sheetClosing, widget?.id]);
+
+    const onSelectVariant = useCallback((nextId) => {
+      weightDynamicsClickGuard.block(widget?.id);
+      if (!widget?.id || nextId === displayVariant) {
+        dismissVariantSheet();
+        return;
+      }
+      HEYS.Widgets.state?.updateWidget(widget.id, {
+        settings: { ...(widget.settings || {}), displayVariant: nextId }
+      }, true);
+      HEYS.dayUtils?.haptic?.('light');
+      HEYS.Widgets.emit?.('weightDynamics:variantSaved', { widgetId: widget.id, variant: nextId });
+      dismissVariantSheet();
+    }, [widget, displayVariant, dismissVariantSheet]);
+
+    const tileClass = [
+      'widget-wd',
+      'widget-v4-stack',
+      'animate-always',
+      holding ? 'widget-wd--holding' : '',
+      animPhase === 'exit' ? 'widget-wd--exit' : ''
+    ].filter(Boolean).join(' ');
+
+    return React.createElement(React.Fragment, null,
+      React.createElement('div', {
+        className: tileClass,
+        onPointerDown,
+        onPointerMove,
+        onPointerUp,
+        onPointerCancel: onPointerUp,
+        onClick
+      },
+        React.createElement('div', {
+          key: `wd-scene-${renderVariant}-${sceneId}`,
+          className: 'widget-wd__scene animate-always',
+          style: {
+            '--widget-wd-motion-ms': `${WEIGHT_DYNAMICS_VALUE_MS}ms`,
+            '--widget-wd-draw-ms': `${WEIGHT_DYNAMICS_DRAW_MS}ms`,
+            '--widget-wd-el-in-ms': `${WEIGHT_DYNAMICS_EL_IN_MS}ms`,
+            '--widget-wd-chart-delay': `${WEIGHT_DYNAMICS_CHART_DELAY_MS}ms`
+          }
+        },
+          renderWeightDynamicsBody(renderVariant, dyn, { compact: false, motion })
+        )
+      ),
+      WeightDynamicsVariantSheet({
+        open: sheetOpen,
+        closing: sheetClosing,
+        dyn,
+        activeVariant: displayVariant,
+        onSelect: onSelectVariant,
+        onClose: dismissVariantSheet
+      })
+    );
+  }
+
   // === Crash Risk Widget Content v2.0 (EWS + Weight Loss Detection) ===
   function CrashRiskWidgetContent({ widget, data }) {
     const d = getWidgetDims(widget);
@@ -4211,36 +4738,9 @@
       );
     }
 
-    // === 2×1 — канвас g1: «Динамика веса» + кг/мес + 7/14/30
+    // === 2×1 — v4 динамика веса (канвас плитка 2, долгий тап → лист видов)
     if (size === '2x1') {
-      const monthKg = Number.isFinite(slopePerWeek) ? slopePerWeek * 4 : totalDeltaKg;
-      const monthLabel = `${monthKg > 0 ? '+' : '−'}${formatRuDecimal(Math.abs(monthKg), 1)}`;
-      const monthState = v4WeightDeltaState(monthKg);
-      return React.createElement('div', {
-        className: `widget-crash-risk widget-crash-risk--short widget-crash-risk--${zone} widget-v4-stack`
-      },
-        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
-          v4Kicker('Динамика веса'),
-          React.createElement('span', {
-            className: 'widget-v4-row__value widget-v4-row__value--sm ' + v4ValueStateClass(monthState)
-          },
-            monthLabel,
-            React.createElement('span', { className: 'widget-v4-unit' }, ' кг / мес')
-          )
-        ),
-        React.createElement('div', { className: 'widget-v4-periods' },
-          PRESETS.map((days) => React.createElement('button', {
-            key: `short-${days}`,
-            type: 'button',
-            className: 'widget-v4-periods__btn' + (periodDays === days ? ' is-active' : ''),
-            onClick: (event) => handlePeriodSwitch(days, event),
-            onPointerDown: (event) => event.stopPropagation(),
-            onPointerUp: (event) => event.stopPropagation(),
-            onTouchStart: (event) => event.stopPropagation()
-          }, days)),
-          React.createElement('span', { className: 'widget-v4-periods__suffix' }, 'дней')
-        )
-      );
+      return React.createElement(WeightDynamicsTile2x1, { widget, data });
     }
 
     // === 2×2 COMPACT ===
@@ -6657,9 +7157,13 @@
 
     const modal = React.createElement('div', {
       className: 'confirm-modal-backdrop widgets-reset-confirm-backdrop',
-      onClick: (event) => {
-        if (event.target === event.currentTarget) onClose?.();
-      }
+      ...(window.HEYS?.ModalDismiss?.reactBackdropDismiss
+        ? window.HEYS.ModalDismiss.reactBackdropDismiss(() => onClose?.())
+        : {
+          onClick: (event) => {
+            if (event.target === event.currentTarget) onClose?.();
+          }
+        })
     },
       React.createElement('div', {
         className: 'confirm-modal widgets-reset-confirm',
@@ -6755,6 +7259,8 @@
     const [relapseDetails, setRelapseDetails] = useState(null);
     const [dayScoreDetails, setDayScoreDetails] = useState(null);
     const [crashRiskDetails, setCrashRiskDetails] = useState(null);
+    const [variantSavedToast, setVariantSavedToast] = useState(false);
+    const variantToastTimerRef = useRef(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
     const [showGridOverlay, setShowGridOverlay] = useState(false); // Grid overlay toggle
     const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -7065,6 +7571,12 @@
 
     const openCrashRiskDetails = useCallback((widget) => {
       if (!widget || widget.type !== 'crashRisk') return;
+      if (
+        widget.size === '2x1'
+        && HEYS.Widgets.weightDynamicsClickGuard?.isBlocked?.(widget.id)
+      ) {
+        return;
+      }
       try {
         const data = HEYS.Widgets.data?.getDataForWidget?.(widget) || {};
         setCrashRiskDetails({ widget, data, openedAt: Date.now() });
@@ -7092,6 +7604,18 @@
         document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
         document.removeEventListener('pointercancel', onUp);
+      };
+    }, []);
+
+    useEffect(() => {
+      const unsubVariantSaved = HEYS.Widgets.on?.('weightDynamics:variantSaved', () => {
+        setVariantSavedToast(true);
+        if (variantToastTimerRef.current) clearTimeout(variantToastTimerRef.current);
+        variantToastTimerRef.current = setTimeout(() => setVariantSavedToast(false), 2200);
+      });
+      return () => {
+        unsubVariantSaved?.();
+        if (variantToastTimerRef.current) clearTimeout(variantToastTimerRef.current);
       };
     }, []);
 
@@ -7495,6 +8019,11 @@
         onConfirm: handleConfirmResetLayout
       }),
 
+      variantSavedToast && React.createElement('div', {
+        className: 'widget-wd-toast',
+        role: 'status'
+      }, 'вид сохранён'),
+
       React.createElement('div', { className: 'widgets-edit-controls' }),
 
       // === FABs (mobile) ===
@@ -7514,6 +8043,7 @@
         !isEditMode && React.createElement(HEYS.dayPageShell.QuickActionsFabGroup, {
           onAddWater: (e) => handleAddWater(200, e.currentTarget),
           onAddMeal: () => goToDayAndRun('diary', 'addMeal', []),
+          onAddActivity: () => goToDayAndRun('activity'),
           hungerContext: {
             source: 'widgets-fab',
             date: selectedDate || new Date().toISOString().slice(0, 10)

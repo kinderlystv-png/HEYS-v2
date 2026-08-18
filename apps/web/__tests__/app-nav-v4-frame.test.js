@@ -128,7 +128,16 @@ describe('UI v4 Prompt 3b — шапка', () => {
         expect(shellSrc).toContain('syncSettingsSheetAnchor');
         expect(shellSrc).toContain('syncSettingsSheetAnchorNow');
         expect(shellSrc).toContain('toggleSettingsMenu');
-        expect(shellSrc).toContain('tab-settings-menu--v4-sheet');
+        expect(shellSrc).toContain('scrollSettingsExtraRowIntoView');
+        expect(shellSrc).toContain('scrollAnchorKey');
+        expect(shellSrc).toContain('settingsSheetCardRef');
+        expect(shellSrc).toContain('settingsSheetScrollRef');
+        expect(shellSrc).toContain('hdr-settings-sheet__scroll animate-always');
+        expect(shellSrc).toContain('settingsSheetScrollEase');
+        expect(shellSrc).not.toContain("behavior: 'smooth'");
+        expect(shellSrc).toContain('ModalDismiss.dismissFromBackdrop');
+        expect(shellSrc).toContain('dismissSettingsFromOutside');
+        expect(baseCss).toContain('.hdr-settings-sheet__scroll');
         expect(baseCss).toContain('.tab-settings-menu.tab-settings-menu--v4-sheet');
         expect(baseCss).toMatch(/@keyframes settingsMenuSlideDown \{\s*from \{\s*opacity:\s*0;\s*\}/);
     });

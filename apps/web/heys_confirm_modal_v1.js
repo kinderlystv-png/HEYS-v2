@@ -183,6 +183,12 @@
       }
     }, [handleCancel]);
 
+    const backdropDismissProps = React.useMemo(() => {
+      const MD = window.HEYS?.ModalDismiss;
+      if (MD?.reactBackdropDismiss) return MD.reactBackdropDismiss(handleCancel);
+      return { onClick: handleBackdropClick };
+    }, [handleCancel, handleBackdropClick]);
+
     if (!modal) return null;
 
     const confirmStyle = CONFIRM_STYLES[modal.confirmStyle] || CONFIRM_STYLES.danger;
@@ -194,7 +200,7 @@
 
     return React.createElement('div', {
       className: 'confirm-modal-backdrop',
-      onClick: handleBackdropClick
+      ...backdropDismissProps
     },
       React.createElement('div', {
         className: 'confirm-modal',

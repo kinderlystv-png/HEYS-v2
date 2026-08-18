@@ -166,6 +166,7 @@ describe('crash risk: ранний прогноз (EWS) действительн
       },
     };
 
+    loadLegacy('apps/web/heys_widgets_weight_dynamics_v4.js', global);
     loadLegacy('apps/web/heys_widgets_data_crash_risk_v1.js', global);
     getCrashRiskData = global.HEYS.Widgets.DataProviders.crashRisk.getData;
   });
@@ -175,6 +176,7 @@ describe('crash risk: ранний прогноз (EWS) действительн
     expect(seenDays, 'detect не был вызван — массив дней снова пустой').not.toBeNull();
     expect(result.ewsCount).toBe(3);
     expect(result.ewsData).toBeTruthy();
+    expect(result.dynamicsV4).toBeTruthy();
   });
 
   it('в EWS уходят полные dayv2-объекты с датой, а не пары {date, weight}', () => {

@@ -1828,9 +1828,20 @@
     backdrop.querySelector('.ca-modal__close').addEventListener('click', closeAsLater);
     backdrop.querySelector('.ca-modal__later-btn').addEventListener('click', closeAsLater);
     backdrop.querySelector('.ca-modal__ack-btn').addEventListener('click', ackShown);
+    backdrop.addEventListener('pointerdown', (e) => {
+      if (e.target !== backdrop) return;
+      const MD = window.HEYS?.ModalDismiss;
+      if (MD?.dismissFromBackdrop) {
+        MD.dismissFromBackdrop(e, closeAsLater);
+        return;
+      }
+      closeAsLater();
+    });
     backdrop.addEventListener('click', (e) => {
       if (e.target === backdrop) {
-        closeAsLater();
+        if (window.HEYS?.ModalDismiss?.stopEvent) {
+          window.HEYS.ModalDismiss.stopEvent(e);
+        }
         return;
       }
       const expandMeal = e.target && e.target.closest ? e.target.closest('[data-ca-expand-meal]') : null;

@@ -213,7 +213,7 @@
                     : 'none';
 
             // Прогресс к цели
-            const goalWeight = profile?.goalWeight || null;
+            const goalWeight = profile?.weightGoal || profile?.goalWeight || null;
             const toGoalKg = goalWeight ? currentWeight - goalWeight : null;
             const estimatedDaysToGoal = (
                 toGoalKg !== null &&
@@ -256,8 +256,11 @@
                 }
             }
 
+            const dynamicsV4 = HEYS.Widgets.WeightDynamicsV4?.compute?.({ profile }) || null;
+
             const result = {
                 hasData: true,
+                dynamicsV4,
                 // Backward compat (старые поля для модалки/виджета)
                 weeklyLossPercent: absPct,
                 isWarning: isAlert,

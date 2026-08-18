@@ -296,7 +296,9 @@
     const activitySheet = sheetOpen && React.createElement(React.Fragment, null,
       React.createElement('div', {
         className: 'activity-v4-sheet-backdrop',
-        onClick: () => setSheetOpen(false)
+        ...(window.HEYS?.ModalDismiss?.reactBackdropDismiss
+          ? window.HEYS.ModalDismiss.reactBackdropDismiss(() => setSheetOpen(false))
+          : { onClick: () => setSheetOpen(false) })
       }),
       React.createElement('div', { className: 'activity-v4-sheet', role: 'dialog', 'aria-label': 'Добавить активность' },
         React.createElement('div', { className: 'activity-v4-sheet__title' }, 'Добавить активность'),

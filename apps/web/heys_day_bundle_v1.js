@@ -9453,13 +9453,24 @@
                 productActionSheet && (() => {
                     const overlay = React.createElement('div', {
                         className: 'mpc-action-sheet-backdrop',
-                        onClick: () => {
+                        onPointerDown: (e) => {
+                            if (e.target !== e.currentTarget) return;
                             if (productActionSheetIgnoreNextBackdropClickRef.current) {
                                 productActionSheetIgnoreNextBackdropClickRef.current = false;
                                 return;
                             }
                             if (Date.now() - (productActionSheet.openedAt || 0) < 350) return;
-                            closeProductActionSheet();
+                            const close = () => closeProductActionSheet();
+                            if (window.HEYS?.ModalDismiss?.dismissFromBackdrop) {
+                                window.HEYS.ModalDismiss.dismissFromBackdrop(e, close);
+                                return;
+                            }
+                            close();
+                        },
+                        onClick: (e) => {
+                            if (e.target === e.currentTarget && window.HEYS?.ModalDismiss?.stopEvent) {
+                                window.HEYS.ModalDismiss.stopEvent(e);
+                            }
                         },
                         onContextMenu: (e) => {
                             e.preventDefault();

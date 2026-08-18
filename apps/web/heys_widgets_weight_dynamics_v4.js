@@ -1,0 +1,307 @@
+/**
+ * heys_widgets_weight_dynamics_v4.js
+ * V4 «Динамика веса» — адаптивное окно, сглаживание MA7, спарклайн, недели.
+ */
+(function (global) {
+  'use strict';
+
+  const HEYS = global.HEYS = global.HEYS || {};
+  HEYS.Widgets = HEYS.Widgets || {};
+
+  const DEAD_ZONE_KG = 0.2;
+  const MA_WINDOW = 7;
+  const MAX_HISTORY_DAYS = 35;
+  const MONTH_WINDOW = 30;
+  const GAP_DASH_DAYS = 3;
+
+  function getWeightFromDay(dayData) {
+    if (!dayData) return null;
+    if (dayData.weightMorningEstimated === true) return null;
+    if (dayData.weightMorningSource === 'estimated_avg' || dayData.weightMorningSource === 'estimated_profile') return null;
+    const w = dayData.weightMorning;
+    return (w && w > 0) ? w : null;
+  }
+
+  function loadDailyWeights(maxDays) {
+    const U = HEYS.utils || {};
+    const fmtDate = HEYS.dayUtils?.fmtDate || U.fmtDate || ((d) => d.toISOString().split('T')[0]);
+    const days = Math.max(7, maxDays || MAX_HISTORY_DAYS);
+    const today = new Date();
+    const result = [];
+
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = fmtDate(date);
+      const dayData = U.lsGet(`heys_dayv2_${dateStr}`, null);
+      const weight = getWeightFromDay(dayData);
+      result.push({
+        date: dateStr,
+        weight,
+        hasWeight: weight !== null
+      });
+    }
+    return result;
+  }
+
+  function countWeighDays(series) {
+    return (series || []).filter((d) => d.hasWeight).length;
+  }
+
+  function resolveWindow(weighDayCount) {
+    if (weighDayCount < 7) {
+      return { ready: false, windowDays: 0, label: 'Первые дни', shortLabel: 'Первые дни' };
+    }
+    if (weighDayCount < 14) {
+      return { ready: true, windowDays: 7, label: 'За неделю', shortLabel: 'неделю' };
+    }
+    if (weighDayCount < 21) {
+      return { ready: true, windowDays: 14, label: 'За 2 недели', shortLabel: '2 недели' };
+    }
+    if (weighDayCount < 28) {
+      return { ready: true, windowDays: 21, label: 'За 3 недели', shortLabel: '3 недели' };
+    }
+    return { ready: true, windowDays: MONTH_WINDOW, label: 'За месяц', shortLabel: 'месяц' };
+  }
+
+  function movingAverageAt(series, index, windowSize) {
+    const start = Math.max(0, index - windowSize + 1);
+    const slice = series.slice(start, index + 1).filter((d) => d.hasWeight);
+    if (!slice.length) return null;
+    const sum = slice.reduce((s, d) => s + d.weight, 0);
+    return sum / slice.length;
+  }
+
+  function buildSmoothedSeries(series) {
+    return series.map((day, index) => ({
+      ...day,
+      smoothed: movingAverageAt(series, index, MA_WINDOW)
+    }));
+  }
+
+  function interpolateSeries(smoothed) {
+    const out = smoothed.map((d) => ({ ...d }));
+    for (let i = 0; i < out.length; i++) {
+      if (out[i].smoothed != null) continue;
+      let prev = null;
+      let next = null;
+      for (let j = i - 1; j >= 0; j--) {
+        if (out[j].smoothed != null) { prev = j; break; }
+      }
+      for (let j = i + 1; j < out.length; j++) {
+        if (out[j].smoothed != null) { next = j; break; }
+      }
+      if (prev == null || next == null) continue;
+      const gap = next - prev;
+      if (gap > GAP_DASH_DAYS + 1) continue;
+      const t = (i - prev) / gap;
+      out[i].smoothed = out[prev].smoothed + (out[next].smoothed - out[prev].smoothed) * t;
+      out[i].interpolated = true;
+    }
+    return out;
+  }
+
+  function markGapSegments(series) {
+    let gapLen = 0;
+    return series.map((d) => {
+      if (d.hasWeight) {
+        gapLen = 0;
+        return { ...d, gapDash: false };
+      }
+      gapLen += 1;
+      return { ...d, gapDash: gapLen > GAP_DASH_DAYS };
+    });
+  }
+
+  function formatDelta(deltaKg) {
+    if (!Number.isFinite(deltaKg)) return { text: '—', sign: '' };
+    if (Math.abs(deltaKg) <= DEAD_ZONE_KG) {
+      return { text: '0,0', sign: '' };
+    }
+    const sign = deltaKg < 0 ? '−' : '+';
+    return { text: Math.abs(deltaKg).toFixed(1).replace('.', ','), sign };
+  }
+
+  function resolveGoalDirection(profile, currentWeight, goalWeight) {
+    const explicit = profile?.goalDirection;
+    if (explicit === 'lose' || explicit === 'gain' || explicit === 'hold') return explicit;
+    if (goalWeight && currentWeight) {
+      if (goalWeight < currentWeight - 0.05) return 'lose';
+      if (goalWeight > currentWeight + 0.05) return 'gain';
+    }
+    return 'hold';
+  }
+
+  function deltaStateForGoal(deltaKg, goalDirection) {
+    if (!Number.isFinite(deltaKg)) return 'neutral';
+    if (Math.abs(deltaKg) <= DEAD_ZONE_KG) return 'neutral';
+    if (goalDirection === 'lose') return deltaKg < 0 ? 'good' : 'bad';
+    if (goalDirection === 'gain') return deltaKg > 0 ? 'good' : 'bad';
+    return 'neutral';
+  }
+
+  function buildWeeklyBars(windowSeries, deltaState) {
+    const chunks = [];
+    const size = 7;
+    for (let i = 0; i < windowSeries.length; i += size) {
+      const chunk = windowSeries.slice(i, i + size).filter((d) => d.smoothed != null);
+      if (!chunk.length) continue;
+      const avg = chunk.reduce((s, d) => s + d.smoothed, 0) / chunk.length;
+      chunks.push({ avg, count: chunk.length });
+    }
+    if (chunks.length < 2) return [];
+    const avgs = chunks.map((c) => c.avg);
+    const min = Math.min(...avgs);
+    const max = Math.max(...avgs);
+    const span = Math.max(0.1, max - min);
+    return chunks.map((c, idx) => ({
+      heightPct: Math.round(20 + ((max - c.avg) / span) * 80),
+      isLast: idx === chunks.length - 1,
+      state: idx === chunks.length - 1 ? deltaState : 'neutral'
+    }));
+  }
+
+  function buildSparklinePoints(windowSeries) {
+    const pts = windowSeries.filter((d) => d.smoothed != null);
+    if (pts.length < 2) return { points: '', last: null, segments: [] };
+
+    const values = pts.map((d) => d.smoothed);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const pad = (max - min) * 0.1 || 0.1;
+    const lo = min - pad;
+    const hi = max + pad;
+    const span = Math.max(0.1, hi - lo);
+
+    const mapped = pts.map((p, i) => {
+      const x = 2 + (i / (pts.length - 1)) * 56;
+      const y = 22 - ((p.smoothed - lo) / span) * 18;
+      return { x, y, gapDash: p.gapDash, interpolated: p.interpolated };
+    });
+
+    return {
+      points: mapped.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '),
+      last: mapped[mapped.length - 1],
+      segments: mapped
+    };
+  }
+
+  function computeGoalMeta(profile, smoothedCurrent) {
+    const goalWeight = profile?.weightGoal || profile?.goalWeight || null;
+    if (!goalWeight || !Number.isFinite(smoothedCurrent)) {
+      return {
+        goalWeight: null,
+        toGoalKg: null,
+        goalReached: false,
+        goalProgressPct: null,
+        remainderLabel: null,
+        remainderShort: null
+      };
+    }
+
+    const toGoalKg = smoothedCurrent - goalWeight;
+    const goalReached = Math.abs(toGoalKg) <= DEAD_ZONE_KG;
+
+    const startWeight = profile?.weight || smoothedCurrent;
+    const total = startWeight - goalWeight;
+    let goalProgressPct = null;
+    if (Math.abs(total) > 0.1) {
+      goalProgressPct = Math.max(0, Math.min(100, Math.round((1 - toGoalKg / total) * 100)));
+    }
+
+    let remainderLabel = null;
+    let remainderShort = null;
+    if (goalReached) {
+      remainderLabel = 'цель взята';
+      remainderShort = 'цель взята';
+    } else if (toGoalKg > 0) {
+      const abs = Math.abs(toGoalKg).toFixed(1).replace('.', ',');
+      remainderLabel = `до цели ${abs}`;
+      remainderShort = `осталось ${abs}`;
+    } else {
+      const abs = Math.abs(toGoalKg).toFixed(1).replace('.', ',');
+      remainderLabel = `+${abs} до цели`;
+      remainderShort = `осталось ${abs}`;
+    }
+
+    return {
+      goalWeight,
+      toGoalKg,
+      goalReached,
+      goalProgressPct,
+      remainderLabel,
+      remainderShort
+    };
+  }
+
+  function computeWeightDynamicsV4(options = {}) {
+    const profile = options.profile || HEYS.utils?.lsGet?.('heys_profile', {}) || {};
+    const series = loadDailyWeights(MAX_HISTORY_DAYS);
+    const weighDayCount = countWeighDays(series);
+    const windowInfo = resolveWindow(weighDayCount);
+
+    const smoothedRaw = buildSmoothedSeries(series);
+    const smoothed = markGapSegments(interpolateSeries(smoothedRaw));
+
+    const lastIdx = smoothed.length - 1;
+    const smoothedCurrent = smoothed[lastIdx]?.smoothed ?? null;
+    const goalDirection = resolveGoalDirection(profile, smoothedCurrent, profile?.weightGoal || profile?.goalWeight);
+
+    if (!windowInfo.ready) {
+      const goalMeta = computeGoalMeta(profile, smoothedCurrent);
+      return {
+        hasDynamics: false,
+        placeholder: 'нужна неделя',
+        window: windowInfo,
+        goalDirection,
+        smoothedCurrent,
+        ...goalMeta,
+        weighDayCount
+      };
+    }
+
+    const windowStartIdx = Math.max(0, smoothed.length - windowInfo.windowDays);
+    const windowSeries = smoothed.slice(windowStartIdx);
+    const startSmoothed = windowSeries.find((d) => d.smoothed != null)?.smoothed ?? null;
+    const endSmoothed = [...windowSeries].reverse().find((d) => d.smoothed != null)?.smoothed ?? null;
+
+    const deltaKg = (startSmoothed != null && endSmoothed != null)
+      ? endSmoothed - startSmoothed
+      : null;
+
+    const delta = formatDelta(deltaKg);
+    const deltaState = deltaStateForGoal(deltaKg, goalDirection);
+    const goalMeta = computeGoalMeta(profile, smoothedCurrent);
+    const sparkline = buildSparklinePoints(windowSeries);
+    const weeklyBars = buildWeeklyBars(windowSeries, deltaState);
+    const monthRateKg = windowInfo.windowDays >= 28 && Number.isFinite(deltaKg)
+      ? deltaKg
+      : (Number.isFinite(deltaKg) ? (deltaKg / windowInfo.windowDays) * 30 : null);
+
+    return {
+      hasDynamics: true,
+      placeholder: null,
+      window: windowInfo,
+      deltaKg,
+      delta,
+      deltaState,
+      goalDirection,
+      smoothedCurrent,
+      windowSeries,
+      sparkline,
+      weeklyBars,
+      monthRateKg,
+      weighDayCount,
+      ...goalMeta
+    };
+  }
+
+  HEYS.Widgets.WeightDynamicsV4 = {
+    DEAD_ZONE_KG,
+    compute: computeWeightDynamicsV4,
+    deltaStateForGoal,
+    resolveGoalDirection
+  };
+
+  console.info('[HEYS.widgets.weightDynamicsV4] ✅ loaded');
+})(typeof window !== 'undefined' ? window : globalThis);

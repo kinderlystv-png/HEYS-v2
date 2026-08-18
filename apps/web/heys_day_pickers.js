@@ -314,7 +314,9 @@
         React.createElement(React.Fragment, null,
           React.createElement('div', { 
             className: 'date-picker-backdrop date-picker-backdrop--v4-modal',
-            onClick: () => { setIsOpen(false); setTooltip(null); }
+            ...(window.HEYS?.ModalDismiss?.reactBackdropDismiss
+              ? window.HEYS.ModalDismiss.reactBackdropDismiss(() => { setIsOpen(false); setTooltip(null); })
+              : { onClick: () => { setIsOpen(false); setTooltip(null); } })
           }),
           // Tooltip
           tooltip && React.createElement('div', {

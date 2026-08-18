@@ -989,11 +989,11 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.4235b113cc81.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.8dcc67944e2b.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.ce9d16035fda.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.a73cd80ca2cc.js" as="script" />
-    <link rel="preload" href="boot-init.bundle.de4b51c6a393.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.40b8700e4664.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.32d227066aa0.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.0227ff9f917c.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.c4135277ee46.js" as="script" />
+    <link rel="preload" href="boot-init.bundle.70669b2d2b0b.js" as="script" />
     <!-- React теперь бандлится локально через Vite (миграция с CDN 2026-01-21).
          Preload — даёт parallel fetch во время HTML parse, к моменту достижения parser'ом
          <script src="react-bundle.js"> (внизу body) бандл уже скачан. Sync execution сохранён
@@ -3250,11 +3250,11 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.4235b113cc81.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.8dcc67944e2b.js"></script>
-    <script defer src="boot-day.bundle.ce9d16035fda.js"></script>
-    <script defer src="boot-app.bundle.a73cd80ca2cc.js"></script>
-    <script defer src="boot-init.bundle.de4b51c6a393.js"
+    <script defer src="boot-core.bundle.40b8700e4664.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.32d227066aa0.js"></script>
+    <script defer src="boot-day.bundle.0227ff9f917c.js"></script>
+    <script defer src="boot-app.bundle.c4135277ee46.js"></script>
+    <script defer src="boot-init.bundle.70669b2d2b0b.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
     <!-- ⚡ PERF 2026-06-13: D1 (solid-шапка на Android вместо frosted glass —

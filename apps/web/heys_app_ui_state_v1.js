@@ -97,11 +97,18 @@
                 if (!showClientDropdownRef.current) return;
                 if (isInsideClientDropdown(e.target)) return;
 
+                const dismiss = () => setShowClientDropdown(false);
+                const MD = window.HEYS?.ModalDismiss;
+                if (MD?.dismissFromBackdrop) {
+                    MD.dismissFromBackdrop(e, dismiss);
+                    suppressOutsideClickUntilRef.current = Date.now() + (MD.GHOST_MS || 500);
+                    return;
+                }
                 suppressOutsideClickUntilRef.current = Date.now() + 500;
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation?.();
-                setShowClientDropdown(false);
+                dismiss();
             };
 
             const handleSuppressedClick = (e) => {
@@ -109,6 +116,11 @@
                 if (isInsideClientDropdown(e.target)) return;
 
                 suppressOutsideClickUntilRef.current = 0;
+                const MD = window.HEYS?.ModalDismiss;
+                if (MD?.stopEvent) {
+                    MD.stopEvent(e);
+                    return;
+                }
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation?.();

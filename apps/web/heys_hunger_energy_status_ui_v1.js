@@ -5725,7 +5725,12 @@
       }
     }
 
-    return h('div', { className: 'hes-backdrop', onClick: isHungerOutcomeFollowUp ? postponeHungerOutcome : () => hide() },
+    const hideBackdrop = isHungerOutcomeFollowUp ? postponeHungerOutcome : () => hide();
+    const backdropDismissProps = window.HEYS?.ModalDismiss?.reactBackdropDismiss
+      ? window.HEYS.ModalDismiss.reactBackdropDismiss(hideBackdrop)
+      : { onClick: hideBackdrop };
+
+    return h('div', { className: 'hes-backdrop', ...backdropDismissProps },
       h('section', {
         className: 'hes-sheet hes-sheet--' + modalMode,
         role: 'dialog',

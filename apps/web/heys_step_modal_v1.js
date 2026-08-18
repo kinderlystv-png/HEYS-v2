@@ -1173,12 +1173,18 @@
       goToStep
     }), [stepData, updateStepData, currentStepIndex, totalSteps, goToStep]);
 
-    // Закрытие по клику на backdrop (вне модалки)
     const handleBackdropClick = useCallback((e) => {
       if (e.target.classList.contains('mc-backdrop')) {
         handleClose();
       }
     }, [handleClose]);
+
+    // Закрытие по тапу на backdrop (вне модалки) — без «призрачного» клика под ней
+    const backdropDismissProps = React.useMemo(() => {
+      const MD = window.HEYS?.ModalDismiss;
+      if (MD?.reactBackdropDismiss) return MD.reactBackdropDismiss(handleClose);
+      return { onClick: handleBackdropClick };
+    }, [handleClose, handleBackdropClick]);
 
     if (!currentConfig) {
       return React.createElement('div', {
@@ -1243,7 +1249,7 @@
       React.createElement('div', {
         className: 'mc-backdrop',
         ref: containerRef,
-        onClick: handleBackdropClick,
+        ...backdropDismissProps,
         onTouchStart: handleTouchStart,
         onTouchEnd: handleTouchEnd
       },

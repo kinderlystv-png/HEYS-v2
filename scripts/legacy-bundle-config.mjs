@@ -19,6 +19,8 @@ export const LEGACY_BUNDLES = {
         'heys_legal_versions_v1.js',  // 🆕 единый источник версий consent-документов (compliance overhaul 2026-05-20)
         'heys_release_features_v1.js', // Central release/runtime switches (What's New temporary off)
         'heys_feature_flags_v1.js',
+        'heys_fab_visibility_v1.js',
+        'heys_modal_dismiss_v1.js',
         'heys_content_hash_v1.js',
         'heys_day_updated_dispatcher_v1.js',
         'heys_lru_cache_v1.js',
@@ -355,6 +357,7 @@ export const LEGACY_BUNDLES = {
         'heys_risk_radar_v1.js',
         'heys_widgets_events_v1.js',
         'heys_widgets_registry_v1.js',
+        'heys_widgets_weight_dynamics_v4.js',
         'heys_widgets_data_crash_risk_v1.js',
         'heys_widgets_core_v1.js',
         'widgets/widget_data.js',

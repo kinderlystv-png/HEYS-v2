@@ -874,25 +874,127 @@ html.dark .water-tip-text {
   transition:
     opacity 420ms ease 90ms,
     transform 460ms cubic-bezier(0.22, 1, 0.36, 1) 70ms,
-    filter 360ms ease 90ms;
+    filter 360ms ease 90ms,
+    gap 380ms cubic-bezier(0.22, 1, 0.36, 1);
   /* Выше меню .tabs (z-index: 1000) */
 }
 
-/* Канвас g1: снизу вверх еда → вода → голод → чат. Группа общая для четырёх вкладок. */
-.fab-group:not(.fab-group--messenger-only) .message-fab {
+.fab-slot {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: scale(0.35);
+  transform-origin: bottom right;
+  overflow: hidden;
+  pointer-events: none;
+  max-height: 0;
+}
+
+.fab-slot--on {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+  max-height: 56px;
+}
+
+.fab-slot__inner {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.fab-group--layout-animate {
+  gap: 9px;
+  --fab-slot-anim-ms: 400ms;
+  --fab-slot-stagger-ms: 52ms;
+  --fab-slot-stagger-max: 4;
+  --fab-slot-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --fab-slot-ease-pop: cubic-bezier(0.34, 1.18, 0.64, 1);
+}
+
+/* Функциональная анимация стопки — как ккал/БЖУ у виджетов: не гасим при prefers-reduced-motion (класс animate-always на группе). */
+.fab-group--layout-animate .fab-slot {
+  transition:
+    grid-template-rows var(--fab-slot-anim-ms) var(--fab-slot-ease-pop),
+    opacity calc(var(--fab-slot-anim-ms) * 0.72) ease,
+    transform var(--fab-slot-anim-ms) var(--fab-slot-ease-pop),
+    max-height var(--fab-slot-anim-ms) var(--fab-slot-ease-pop);
+}
+
+.fab-group--layout-animate .fab-slot--on {
+  transition-delay:
+    calc(var(--fab-slot-i, 0) * var(--fab-slot-stagger-ms)),
+    calc(var(--fab-slot-i, 0) * var(--fab-slot-stagger-ms)),
+    calc(var(--fab-slot-i, 0) * var(--fab-slot-stagger-ms)),
+    calc(var(--fab-slot-i, 0) * var(--fab-slot-stagger-ms));
+}
+
+.fab-group--layout-animate .fab-slot--off {
+  transition-delay:
+    calc((var(--fab-slot-stagger-max) - var(--fab-slot-i, 0)) * var(--fab-slot-stagger-ms)),
+    calc((var(--fab-slot-stagger-max) - var(--fab-slot-i, 0)) * var(--fab-slot-stagger-ms)),
+    calc((var(--fab-slot-stagger-max) - var(--fab-slot-i, 0)) * var(--fab-slot-stagger-ms)),
+    calc((var(--fab-slot-stagger-max) - var(--fab-slot-i, 0)) * var(--fab-slot-stagger-ms));
+}
+
+.fab-group--layout-animate .fab-slot--on .fab-slot__inner > * {
+  animation: fab-slot-pop-in var(--fab-slot-anim-ms) var(--fab-slot-ease-pop) both;
+  animation-delay: calc(var(--fab-slot-i, 0) * var(--fab-slot-stagger-ms));
+}
+
+@keyframes fab-slot-pop-in {
+  0% {
+    transform: scale(0.42);
+    opacity: 0;
+  }
+
+  58% {
+    transform: scale(1.045);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Канвас g1: снизу вверх плюс → вода → голод → мессенджер → активность. */
+.fab-group:not(.fab-group--messenger-only) .fab-slot--activity,
+.fab-group:not(.fab-group--messenger-only) .activity-fab {
   order: 1;
+  --fab-slot-i: 4;
 }
 
-.fab-group:not(.fab-group--messenger-only) .hunger-energy-fab {
+.fab-group:not(.fab-group--messenger-only) .fab-slot--message,
+.fab-group:not(.fab-group--messenger-only) .message-fab {
   order: 2;
+  --fab-slot-i: 3;
 }
 
-.fab-group:not(.fab-group--messenger-only) .water-fab {
+.fab-group:not(.fab-group--messenger-only) .fab-slot--hunger,
+.fab-group:not(.fab-group--messenger-only) .hunger-energy-fab {
   order: 3;
+  --fab-slot-i: 2;
 }
 
-.fab-group:not(.fab-group--messenger-only) .meal-fab {
+.fab-group:not(.fab-group--messenger-only) .fab-slot--water,
+.fab-group:not(.fab-group--messenger-only) .water-fab {
   order: 4;
+  --fab-slot-i: 1;
+}
+
+.fab-group:not(.fab-group--messenger-only) .fab-slot--meal,
+.fab-group:not(.fab-group--messenger-only) .meal-fab {
+  order: 5;
+  --fab-slot-i: 0;
+}
+
+.fab-group--messenger-only .fab-slot--message {
+  --fab-slot-i: 0;
+  --fab-slot-stagger-max: 0;
 }
 
 body:has(.iw-response-card.expanded) .fab-group,
@@ -1805,6 +1907,45 @@ body.planning-tab-active .fab-group {
 
 [data-theme$="dark"] .ios-toggle-thumb {
   background: var(--gray-200, #e5e7eb);
+}
+
+.fab-group .activity-fab {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--v4-float, #fffaf1);
+  color: #8a4a20;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08),
+              0 6px 16px rgba(15, 23, 42, 0.14),
+              inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  transition: transform 200ms cubic-bezier(0.34, 1.42, 0.64, 1), box-shadow 200ms ease;
+  touch-action: manipulation;
+}
+
+@media (hover: hover) {
+  .fab-group .activity-fab:hover {
+    transform: scale(1.04);
+  }
+}
+
+.fab-group .activity-fab:active {
+  transform: scale(0.94);
+}
+
+body.widgets-edit-mode .fab-group .activity-fab,
+body.planning-tab-active .fab-group .activity-fab,
+body.planning-tab-active .activity-fab {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translateY(10px) scale(0.98) !important;
 }
 
 /* === 06. FAB для воды (в группе) === */

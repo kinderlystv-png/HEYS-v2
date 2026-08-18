@@ -674,7 +674,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             return React.createElement('div', {
                 className: 'ops-dashboard-backdrop',
                 role: 'presentation',
-                onClick: () => setShowOpsDashboard(false),
+                ...(window.HEYS?.ModalDismiss?.reactBackdropDismiss
+                    ? window.HEYS.ModalDismiss.reactBackdropDismiss(() => setShowOpsDashboard(false))
+                    : { onClick: () => setShowOpsDashboard(false) }),
                 style: {
                     position: 'fixed',
                     inset: 0,
@@ -1038,7 +1040,20 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             backdropEl.type = 'button';
             backdropEl.className = 'client-dropdown-backdrop';
             backdropEl.setAttribute('aria-label', 'Закрыть меню аккаунта');
-            backdropEl.addEventListener('click', function () { setShowClientDropdown(false); });
+            backdropEl.addEventListener('pointerdown', function (event) {
+                if (window.HEYS?.ModalDismiss?.dismissFromBackdrop) {
+                    window.HEYS.ModalDismiss.dismissFromBackdrop(event, function () {
+                        setShowClientDropdown(false);
+                    });
+                    return;
+                }
+                setShowClientDropdown(false);
+            });
+            backdropEl.addEventListener('click', function (event) {
+                if (window.HEYS?.ModalDismiss?.stopEvent) {
+                    window.HEYS.ModalDismiss.stopEvent(event);
+                }
+            });
 
             var container = wrapEl || document.body;
             container.appendChild(backdropEl);
@@ -3307,7 +3322,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 window.HEYS.Widgets.exitEditMode();
             }
         };
-        const showPastDayBanner = !!(showDateRow
+        // Trial 2026-08: капсула «прошлый день» — выкл.; дата в picker и «Сегодня» достаточно.
+        const HEYS_PAST_DAY_BANNER_ENABLED = false;
+        const showPastDayBanner = HEYS_PAST_DAY_BANNER_ENABLED && !!(showDateRow
             && tab !== 'widgets'
             && selectedDate
             && resolvedTodayISO
@@ -4130,6 +4147,10 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             || 'dark'
         ));
         const settingsWrapRef = React.useRef(null);
+        const settingsSheetCardRef = React.useRef(null);
+        const settingsSheetScrollRef = React.useRef(null);
+        const settingsSheetScrollAnimRef = React.useRef(0);
+        const settingsExtraRowRefs = React.useRef({});
         const keepSettingsMenuOpenOnNextTabRef = React.useRef(false);
         const [, tickCascadeNav] = React.useReducer((n) => n + 1, 0);
 
@@ -4409,6 +4430,93 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             };
         }, [readDiaryPanelsVisibility]);
 
+        const FAB_VISIBILITY_OPTIONS = (window.HEYS?.FabVisibility?.OPTIONS) || [
+            { key: 'water', label: 'Вода', icon: 'water' },
+            { key: 'hunger', label: 'Голод и энергия', icon: 'hunger' },
+            { key: 'message', label: 'Мессенджер', icon: 'message' },
+            { key: 'activity', label: 'Активность', icon: 'activity' },
+            { key: 'meal', label: 'Добавить еду', icon: 'meal' },
+        ];
+        const readFabVisibility = React.useCallback(() => {
+            try {
+                if (window.HEYS?.FabVisibility?.read) return window.HEYS.FabVisibility.read();
+            } catch (_) { /* noop */ }
+            return { water: true, hunger: true, message: true, activity: true, meal: true };
+        }, []);
+        const readFabVisibilityDraft = React.useCallback(() => {
+            try {
+                if (window.HEYS?.FabVisibility?.readSettingsDraft) {
+                    return window.HEYS.FabVisibility.readSettingsDraft();
+                }
+            } catch (_) { /* noop */ }
+            return readFabVisibility();
+        }, [readFabVisibility]);
+        const [fabVisibilityDraft, setFabVisibilityDraft] = React.useState(readFabVisibilityDraft);
+
+        React.useEffect(() => {
+            const onDraft = (event) => {
+                setFabVisibilityDraft(event?.detail?.visibility || readFabVisibilityDraft());
+            };
+            window.addEventListener('heys:fab-visibility-draft-changed', onDraft);
+            return () => window.removeEventListener('heys:fab-visibility-draft-changed', onDraft);
+        }, [readFabVisibilityDraft]);
+
+        React.useEffect(() => {
+            const FV = window.HEYS?.FabVisibility;
+            if (!FV) return undefined;
+            if (settingsMenuOpen) {
+                FV.beginSettingsEdit?.();
+                setFabVisibilityDraft(FV.readSettingsDraft?.() || FV.read());
+                return undefined;
+            }
+            FV.commitSettingsEdit?.();
+            return undefined;
+        }, [settingsMenuOpen]);
+
+        const fabVisibilityDraftCount = FAB_VISIBILITY_OPTIONS.filter(
+            (option) => fabVisibilityDraft[option.key] !== false
+        ).length;
+
+        const renderFabChipIcon = (iconName) => {
+            const stroke = {
+                width: 14,
+                height: 14,
+                viewBox: '0 0 24 24',
+                fill: 'none',
+                stroke: 'currentColor',
+                strokeWidth: 2.6,
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
+                'aria-hidden': 'true',
+            };
+            if (iconName === 'water') {
+                return React.createElement('svg', stroke,
+                    React.createElement('path', { d: 'M12 3s6 6.5 6 10a6 6 0 01-12 0c0-3.5 6-10 6-10z' })
+                );
+            }
+            if (iconName === 'hunger') {
+                return React.createElement('svg', stroke,
+                    React.createElement('path', { d: 'M13 2L4 14h6l-1 8 9-12h-6l1-8z' })
+                );
+            }
+            if (iconName === 'message') {
+                return React.createElement('svg', stroke,
+                    React.createElement('path', { d: 'M20 12a8 8 0 01-11.6 7.1L4 20l1-4.2A8 8 0 1120 12z' })
+                );
+            }
+            if (iconName === 'activity') {
+                return React.createElement('svg', stroke,
+                    React.createElement('path', { d: 'M3 16l5-7 4 3 4-7 5 5' })
+                );
+            }
+            if (iconName === 'meal') {
+                return React.createElement('svg', stroke,
+                    React.createElement('path', { d: 'M12 5v14M5 12h14' })
+                );
+            }
+            return null;
+        };
+
         const handleToggleDiaryPanel = async (option, nextEnabled) => {
             try {
                 const U = window.HEYS?.utils;
@@ -4626,6 +4734,67 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             } catch (_) { /* якорь опционален */ }
         };
 
+        const SETTINGS_SHEET_SCROLL_MS = 380;
+
+        const settingsSheetScrollEase = (t) => (
+            t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+        );
+
+        const scrollSettingsExtraRowIntoView = React.useCallback((extraKey) => {
+            const scroll = settingsSheetScrollRef.current;
+            const row = settingsExtraRowRefs.current[extraKey];
+            if (!scroll || !row) return;
+
+            const scrollRect = scroll.getBoundingClientRect();
+            const rowRect = row.getBoundingClientRect();
+            const targetTop = Math.max(0, scroll.scrollTop + (rowRect.top - scrollRect.top) - 8);
+            const from = scroll.scrollTop;
+            if (Math.abs(targetTop - from) < 2) return;
+
+            if (settingsSheetScrollAnimRef.current) {
+                cancelAnimationFrame(settingsSheetScrollAnimRef.current);
+                settingsSheetScrollAnimRef.current = 0;
+            }
+
+            const start = typeof performance !== 'undefined' ? performance.now() : Date.now();
+            const step = (now) => {
+                const t = Math.min(1, (now - start) / SETTINGS_SHEET_SCROLL_MS);
+                const k = settingsSheetScrollEase(t);
+                scroll.scrollTop = from + (targetTop - from) * k;
+                if (t < 1) {
+                    settingsSheetScrollAnimRef.current = requestAnimationFrame(step);
+                } else {
+                    settingsSheetScrollAnimRef.current = 0;
+                }
+            };
+            settingsSheetScrollAnimRef.current = requestAnimationFrame(step);
+        }, []);
+
+        React.useEffect(() => {
+            if (!settingsMenuOpen || !sheetExtra) return undefined;
+            let raf2 = 0;
+            const raf1 = requestAnimationFrame(() => {
+                raf2 = requestAnimationFrame(() => scrollSettingsExtraRowIntoView(sheetExtra));
+            });
+            const timer = window.setTimeout(() => scrollSettingsExtraRowIntoView(sheetExtra), 120);
+            return () => {
+                cancelAnimationFrame(raf1);
+                if (raf2) cancelAnimationFrame(raf2);
+                clearTimeout(timer);
+            };
+        }, [sheetExtra, settingsMenuOpen, scrollSettingsExtraRowIntoView]);
+
+        const dismissSettingsFromOutside = React.useCallback((event) => {
+            const dismiss = () => setSettingsMenuOpen(false);
+            if (window.HEYS?.ModalDismiss?.dismissFromBackdrop) {
+                window.HEYS.ModalDismiss.dismissFromBackdrop(event, dismiss);
+                return;
+            }
+            if (event?.cancelable) event.preventDefault();
+            event?.stopPropagation?.();
+            dismiss();
+        }, []);
+
         const toggleSettingsMenu = () => {
             setSettingsMenuOpen((open) => {
                 if (!open) syncSettingsSheetAnchorNow();
@@ -4758,13 +4927,17 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             })));
         };
 
-        const renderSettingsRow = ({ key, label, meta, metaNode, metaTone, expanded, danger, onClick }) =>
+        const renderSettingsRow = ({ key, label, meta, metaNode, metaTone, expanded, danger, onClick, scrollAnchorKey }) =>
             React.createElement('button', {
                 key,
                 type: 'button',
                 className: 'hdr-settings-sheet__row'
                     + (danger ? ' hdr-settings-sheet__row--exit' : '')
                     + (expanded ? ' is-expanded' : ''),
+                ref: scrollAnchorKey ? (node) => {
+                    if (node) settingsExtraRowRefs.current[scrollAnchorKey] = node;
+                    else delete settingsExtraRowRefs.current[scrollAnchorKey];
+                } : undefined,
                 onClick: (event) => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -4867,13 +5040,17 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 if (target && typeof target.closest === 'function') {
                     if (target.closest('.hdr-header-icon-btn--settings')) return;
                     if (target.closest('.sheet-push-access-sign')) return;
+                    if (target.closest('.tab-settings-backdrop')) {
+                        dismissSettingsFromOutside(event);
+                        return;
+                    }
                 }
                 const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
                 if (path.some((node) => node?.classList?.contains?.('sheet-push-access-sign'))) return;
                 const wrap = settingsWrapRef.current;
                 if (!wrap) return;
                 if (path.includes(wrap) || wrap.contains(event.target)) return;
-                setSettingsMenuOpen(false);
+                dismissSettingsFromOutside(event);
             };
 
             const handleEscape = (event) => {
@@ -4886,7 +5063,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 document.removeEventListener('pointerdown', handleOutsidePointer, true);
                 document.removeEventListener('keydown', handleEscape, true);
             };
-        }, [settingsMenuOpen, sheetPushAccessOpen]);
+        }, [settingsMenuOpen, sheetPushAccessOpen, dismissSettingsFromOutside]);
 
         React.useEffect(() => {
             if (!sheetPushAccessOpen) return undefined;
@@ -5093,7 +5270,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 { className: 'tab-settings-wrap', ref: settingsWrapRef },
                 settingsMenuOpen && !sheetPushAccessOpen && React.createElement('div', {
                     className: 'tab-settings-backdrop tab-settings-backdrop--v4-popover',
-                    onClick: () => setSettingsMenuOpen(false)
+                    'aria-hidden': 'true',
+                    onPointerDown: dismissSettingsFromOutside,
+                    onClick: (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    },
                 }),
                 React.createElement(
                     'div',
@@ -5127,7 +5309,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         role: 'menu',
                         'aria-label': 'Настройки',
                     },
-                    React.createElement('div', { className: 'hdr-settings-sheet__card' },
+                    React.createElement('div', { className: 'hdr-settings-sheet__card', ref: settingsSheetCardRef },
                     React.createElement('div', { className: 'hdr-settings-sheet__head' },
                         React.createElement('span', { className: 'hdr-settings-sheet__title' }, 'Настройки'),
                         React.createElement('button', {
@@ -5151,6 +5333,10 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             }, React.createElement('path', { d: 'M18 6L6 18M6 6l12 12' }))
                         )
                     ),
+                    React.createElement('div', {
+                        className: 'hdr-settings-sheet__scroll animate-always',
+                        ref: settingsSheetScrollRef,
+                    },
                     React.createElement('div', {
                         className: 'hdr-settings-sheet__push',
                         onClick: (e) => e.stopPropagation(),
@@ -5190,6 +5376,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         }),
                         canUsePostReleaseLabs && renderSettingsRow({
                             key: 'diary',
+                            scrollAnchorKey: 'diary',
                             label: 'Дневник',
                             meta: DIARY_PANEL_VISIBILITY_OPTIONS.filter((option) => diaryPanelsVisibility[option.key] !== false).length
                                 + ' из '
@@ -5255,6 +5442,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     renderSettingsGroup('app', 'Приложение', [
                         renderSettingsRow({
                             key: 'theme',
+                            scrollAnchorKey: 'theme',
                             label: 'Оформление',
                             metaNode: renderPaletteDots(settingsPalette),
                             expanded: sheetExtra === 'theme',
@@ -5302,10 +5490,80 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             ),
                             React.createElement('div', { className: 'hdr-settings-sheet__hint' },
                                 'Выбор запоминается на этом устройстве. «Как в системе» следит за настройкой телефона, пока вы не выберете режим руками.',
+                            ),
+                            React.createElement('div', {
+                                className: 'hdr-settings-sheet__tier hdr-settings-sheet__tier--fab',
+                            }, 'Плавающие кнопки'),
+                            React.createElement('div', {
+                                className: 'hdr-settings-sheet__fab-card',
+                                role: 'group',
+                                'aria-label': 'Плавающие кнопки',
+                                onClick: (e) => e.stopPropagation(),
+                            },
+                                React.createElement('p', {
+                                    className: 'hdr-settings-sheet__fab-lead',
+                                }, 'Что держать под пальцем на всех вкладках. Включайте чипами, порядок снизу вверх как в списке.'),
+                                React.createElement('div', {
+                                    className: 'hdr-settings-sheet__chips hdr-settings-sheet__chips--fab',
+                                },
+                                    FAB_VISIBILITY_OPTIONS.map((option) => {
+                                        const enabled = fabVisibilityDraft[option.key] !== false;
+                                        return React.createElement('button', {
+                                            key: option.key,
+                                            type: 'button',
+                                            className: 'hdr-settings-sheet__fab-chip' + (enabled ? ' is-on' : ''),
+                                            'aria-pressed': enabled ? 'true' : 'false',
+                                            onClick: () => {
+                                                window.HEYS?.FabVisibility?.toggleDraftVisible?.(option.key);
+                                                HEYS.dayUtils?.haptic?.('light');
+                                            },
+                                        },
+                                            renderFabChipIcon(option.icon || option.key),
+                                            React.createElement('span', {
+                                                className: 'hdr-settings-sheet__fab-chip-label',
+                                            }, option.label)
+                                        );
+                                    })
+                                ),
+                                React.createElement('div', { className: 'hdr-settings-sheet__fab-meta' },
+                                    React.createElement('span', { className: 'hdr-settings-sheet__fab-count' },
+                                        'Включено '
+                                        + fabVisibilityDraftCount
+                                        + ' из '
+                                        + FAB_VISIBILITY_OPTIONS.length
+                                    ),
+                                    React.createElement('span', { className: 'hdr-settings-sheet__fab-ok' },
+                                        'Ни одной — тоже можно'
+                                    )
+                                )
+                            ),
+                            React.createElement('div', { className: 'hdr-settings-sheet__fab-notice' },
+                                React.createElement('span', {
+                                    className: 'hdr-settings-sheet__fab-notice-icon',
+                                    'aria-hidden': 'true',
+                                },
+                                    React.createElement('svg', {
+                                        width: 16,
+                                        height: 16,
+                                        viewBox: '0 0 24 24',
+                                        fill: 'none',
+                                        stroke: 'currentColor',
+                                        strokeWidth: 2.5,
+                                        strokeLinecap: 'round',
+                                        strokeLinejoin: 'round',
+                                    },
+                                        React.createElement('path', { d: 'M12 8v8M8 12h8' }),
+                                        React.createElement('circle', { cx: 12, cy: 12, r: 9 })
+                                    )
+                                ),
+                                React.createElement('span', { className: 'hdr-settings-sheet__fab-notice-text' },
+                                    'Кнопки перестроятся, когда закроете настройки'
+                                )
                             )
                         ),
                         renderSettingsRow({
                             key: 'home',
+                            scrollAnchorKey: 'home',
                             label: 'Домашняя вкладка',
                             meta: (HOME_TAB_OPTIONS.find((option) => option.key === defaultTab) || {}).label || '',
                             expanded: sheetExtra === 'home',
@@ -5418,6 +5676,10 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         type: 'button',
                         className: 'hdr-settings-sheet__diag-toggle'
                             + (sheetExtra === 'diagnostics' ? ' is-open' : ''),
+                        ref: (node) => {
+                            if (node) settingsExtraRowRefs.current.diagnostics = node;
+                            else delete settingsExtraRowRefs.current.diagnostics;
+                        },
                         onClick: (e) => {
                             e.stopPropagation();
                             toggleSheetExtra('diagnostics');
@@ -5530,6 +5792,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         },
                     })
                     )
+                    )
                 )
             ),
             sheetPushAccessOpen && React.createElement('div', {
@@ -5541,9 +5804,16 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 },
                 onPointerDown: (e) => {
                     if (e.target === e.currentTarget && !pushBusy) {
+                        const dismiss = () => {
+                            setSheetPushAccessOpen(false);
+                            setSheetPushAccessError('');
+                        };
+                        if (window.HEYS?.ModalDismiss?.dismissFromBackdrop) {
+                            window.HEYS.ModalDismiss.dismissFromBackdrop(e, dismiss);
+                            return;
+                        }
                         e.preventDefault();
-                        setSheetPushAccessOpen(false);
-                        setSheetPushAccessError('');
+                        dismiss();
                     }
                 },
             },
@@ -5964,6 +6234,49 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const shouldRenderContent = !!clientId;
         const hideProductHeader = tab === 'tasks' || tab === 'board';
         const MessageFabButton = HEYS.Messenger?.FabButton;
+        const FAB_SLOT_ANIM_MS = 400;
+        const FAB_SLOT_STAGGER_MS = 52;
+        const FAB_SLOT_STAGGER_MAX = 4;
+        const FAB_LAYOUT_ANIM_MS = FAB_SLOT_STAGGER_MS * FAB_SLOT_STAGGER_MAX + FAB_SLOT_ANIM_MS + 80;
+        const readMessengerFabVisible = React.useCallback(() => (
+            HEYS.FabVisibility?.isVisible?.('message') !== false
+        ), []);
+        const [messengerFabOn, setMessengerFabOn] = React.useState(readMessengerFabVisible);
+        const [messengerFabAnimating, setMessengerFabAnimating] = React.useState(false);
+        React.useEffect(() => {
+            let pendingRaf = 0;
+            const onCommitted = (event) => {
+                const visibility = event?.detail?.visibility;
+                const next = visibility ? visibility.message !== false : readMessengerFabVisible();
+                if (event?.detail?.animated) {
+                    setMessengerFabAnimating(true);
+                    pendingRaf = requestAnimationFrame(() => {
+                        pendingRaf = requestAnimationFrame(() => {
+                            pendingRaf = 0;
+                            setMessengerFabOn(next);
+                        });
+                    });
+                    return;
+                }
+                if (pendingRaf) {
+                    cancelAnimationFrame(pendingRaf);
+                    pendingRaf = 0;
+                }
+                setMessengerFabAnimating(false);
+                setMessengerFabOn(next);
+            };
+            window.addEventListener('heys:fab-visibility-changed', onCommitted);
+            return () => {
+                if (pendingRaf) cancelAnimationFrame(pendingRaf);
+                window.removeEventListener('heys:fab-visibility-changed', onCommitted);
+            };
+        }, [readMessengerFabVisible]);
+        React.useEffect(() => {
+            if (!messengerFabAnimating) return undefined;
+            const timer = window.setTimeout(() => setMessengerFabAnimating(false), FAB_LAYOUT_ANIM_MS);
+            return () => window.clearTimeout(timer);
+        }, [messengerFabAnimating]);
+        const showMessengerFabGroup = messengerFabOn || messengerFabAnimating;
         let profilerMountKey = 'p0';
         try {
             profilerMountKey = heysReactProfilerEnabled() ? 'p1' : 'p0';
@@ -5988,10 +6301,22 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 shouldRenderContent && React.createElement(MemoAppTabContent, Object.assign({}, props, {
                     key: 'appTabContent_' + String(clientId || '') + '_' + profilerMountKey
                 })),
-                shouldRenderContent && MessageFabButton && !hideProductHeader && React.createElement(
+                shouldRenderContent && MessageFabButton && !hideProductHeader && showMessengerFabGroup && React.createElement(
                     'div',
-                    { className: 'fab-group fab-group--messenger-only', id: 'global-messenger-fab' },
-                    React.createElement(MessageFabButton, { key: 'global-msg-fab' })
+                    {
+                        className: 'fab-group fab-group--messenger-only'
+                            + (messengerFabAnimating ? ' fab-group--layout-animate animate-always' : ''),
+                        id: 'global-messenger-fab',
+                    },
+                    React.createElement('div', {
+                        className: 'fab-slot fab-slot--message'
+                            + (messengerFabOn ? ' fab-slot--on' : ' fab-slot--off'),
+                        'data-fab-key': 'message',
+                    },
+                        React.createElement('div', { className: 'fab-slot__inner' },
+                            React.createElement(MessageFabButton, { key: 'global-msg-fab' })
+                        )
+                    )
                 )
             ),
             tabsNav

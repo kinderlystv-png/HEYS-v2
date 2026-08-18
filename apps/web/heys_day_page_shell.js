@@ -67,40 +67,91 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return emojiFallback;
     }
 
-    function QuickActionsFabGroup({ id, onAddWater, onAddMeal, hungerContext = {} }) {
+    const FAB_SLOT_KEYS = ['activity', 'message', 'hunger', 'water', 'meal'];
+    const FAB_SLOT_ANIM_MS = 400;
+    const FAB_SLOT_STAGGER_MS = 52;
+    const FAB_SLOT_STAGGER_MAX = 4;
+    const FAB_LAYOUT_ANIM_MS = FAB_SLOT_STAGGER_MS * FAB_SLOT_STAGGER_MAX + FAB_SLOT_ANIM_MS + 80;
+
+    function useFabVisibilityState() {
+        const readFabVisibility = () => (
+            HEYS.FabVisibility && typeof HEYS.FabVisibility.read === 'function'
+                ? HEYS.FabVisibility.read()
+                : { water: true, hunger: true, message: true, activity: true, meal: true }
+        );
+        const [fabVisibility, setFabVisibility] = React.useState(readFabVisibility);
+        const [layoutAnimate, setLayoutAnimate] = React.useState(false);
+
+        React.useEffect(() => {
+            let pendingRaf = 0;
+            const onCommitted = (event) => {
+                const visibility = event?.detail?.visibility || readFabVisibility();
+                if (event?.detail?.animated) {
+                    setLayoutAnimate(true);
+                    pendingRaf = requestAnimationFrame(() => {
+                        pendingRaf = requestAnimationFrame(() => {
+                            pendingRaf = 0;
+                            setFabVisibility(visibility);
+                        });
+                    });
+                    return;
+                }
+                if (pendingRaf) {
+                    cancelAnimationFrame(pendingRaf);
+                    pendingRaf = 0;
+                }
+                setLayoutAnimate(false);
+                setFabVisibility(visibility);
+            };
+            window.addEventListener('heys:fab-visibility-changed', onCommitted);
+            return () => {
+                if (pendingRaf) cancelAnimationFrame(pendingRaf);
+                window.removeEventListener('heys:fab-visibility-changed', onCommitted);
+            };
+        }, []);
+
+        React.useEffect(() => {
+            if (!layoutAnimate) return undefined;
+            const timer = window.setTimeout(() => setLayoutAnimate(false), FAB_LAYOUT_ANIM_MS);
+            return () => window.clearTimeout(timer);
+        }, [layoutAnimate]);
+
+        const isFabVisible = (key) => fabVisibility[key] !== false;
+        return { fabVisibility, isFabVisible, layoutAnimate };
+    }
+
+    function renderQuickActionFabButton(key, { onAddWater, onAddMeal, onAddActivity, hungerContext }) {
         const HungerFabButton = HEYS.HungerEnergyStatusModal?.FabButton;
         const MessageFabButton = HEYS.Messenger?.FabButton;
 
-        return React.createElement('div', {
-            className: 'fab-group',
-            ...(id ? { id } : {})
-        },
-            React.createElement('button', {
+        if (key === 'water') {
+            return React.createElement('button', {
                 className: 'water-fab',
                 onClick: onAddWater,
-                'aria-label': 'Добавить стакан воды'
-            }, renderFabNavIcon('water', '🥛', 18)),
-            React.createElement('button', {
+                'aria-label': 'Добавить стакан воды',
+            }, renderFabNavIcon('water', '🥛', 18));
+        }
+        if (key === 'meal') {
+            return React.createElement('button', {
                 className: 'meal-fab',
                 onClick: onAddMeal,
-                'aria-label': 'Добавить приём пищи'
-            }, renderFabNavIcon('meal', '🍽️', 22)),
-            HungerFabButton
-                ? React.createElement(HungerFabButton, {
-                    key: 'hunger-fab',
-                    context: hungerContext
-                })
+                'aria-label': 'Добавить приём пищи',
+            }, renderFabNavIcon('meal', '🍽️', 22));
+        }
+        if (key === 'hunger') {
+            return HungerFabButton
+                ? React.createElement(HungerFabButton, { context: hungerContext })
                 : React.createElement('button', {
                     className: 'hunger-energy-fab',
                     onClick: () => HEYS.HungerEnergyStatusModal?.show?.(hungerContext),
-                    'aria-label': 'Открыть оценку голода'
+                    'aria-label': 'Открыть оценку голода',
                 }, React.createElement('svg', {
                     className: 'hes-fab-icon',
                     viewBox: '0 0 24 24',
                     width: 19,
                     height: 19,
                     focusable: 'false',
-                    'aria-hidden': 'true'
+                    'aria-hidden': 'true',
                 },
                     React.createElement('defs', null,
                         React.createElement('clipPath', { id: 'hes-fab-fill-two-thirds-fallback' },
@@ -111,16 +162,50 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     React.createElement('circle', {
                         className: 'hes-fab-icon__fill',
                         cx: 12, cy: 12, r: 8.5,
-                        clipPath: 'url(#hes-fab-fill-two-thirds-fallback)'
+                        clipPath: 'url(#hes-fab-fill-two-thirds-fallback)',
                     })
-                )),
-            MessageFabButton
+                ));
+        }
+        if (key === 'activity') {
+            return React.createElement('button', {
+                className: 'activity-fab',
+                onClick: onAddActivity,
+                'aria-label': 'Добавить активность',
+            }, renderFabNavIcon('activity', '📈', 18));
+        }
+        if (key === 'message') {
+            return MessageFabButton
                 ? React.createElement(MessageFabButton, { key: 'msg-fab' })
                 : React.createElement('button', {
                     className: 'message-fab',
                     onClick: () => HEYS.Messenger?.openModal?.(),
-                    'aria-label': 'Написать куратору'
-                }, '💬')
+                    'aria-label': 'Написать куратору',
+                }, '💬');
+        }
+        return null;
+    }
+
+    function QuickActionsFabGroup({ id, onAddWater, onAddMeal, onAddActivity, hungerContext = {} }) {
+        const { fabVisibility, layoutAnimate } = useFabVisibilityState();
+
+        return React.createElement('div', {
+            className: 'fab-group'
+                + (layoutAnimate ? ' fab-group--layout-animate animate-always' : ''),
+            ...(id ? { id } : {}),
+        },
+            FAB_SLOT_KEYS.map((key) => {
+                const on = fabVisibility[key] !== false;
+                return React.createElement('div', {
+                    key,
+                    className: 'fab-slot fab-slot--' + key + (on ? ' fab-slot--on' : ' fab-slot--off'),
+                    'data-fab-key': key,
+                    'aria-hidden': on ? undefined : 'true',
+                },
+                    React.createElement('div', { className: 'fab-slot__inner' },
+                        renderQuickActionFabButton(key, { onAddWater, onAddMeal, onAddActivity, hungerContext })
+                    )
+                );
+            })
         );
     }
 
@@ -506,6 +591,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                                 heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
                             }
                             setTimeout(() => addMeal(), 800);
+                        }
+                    },
+                    onAddActivity: () => {
+                        if (mobileSubTab !== 'activity' && window.HEYS?.App?.setTab) {
+                            window.HEYS.App.setTab('activity');
+                            setTimeout(() => {
+                                if (typeof openHouseholdPicker === 'function') openHouseholdPicker('add');
+                            }, 350);
+                        } else if (typeof openHouseholdPicker === 'function') {
+                            openHouseholdPicker('add');
                         }
                     },
                     hungerContext: {

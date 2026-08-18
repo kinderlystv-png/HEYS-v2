@@ -78,6 +78,7 @@ describe('реестр не объявляет настройки-пустышк
       'apps/web/heys_widgets_ui_v1.js',
       'apps/web/widgets/widget_data.js',
       'apps/web/heys_widgets_data_crash_risk_v1.js',
+      'apps/web/heys_widgets_weight_dynamics_v4.js',
     ].map(read).join('\n');
 
     const declared = new Set(

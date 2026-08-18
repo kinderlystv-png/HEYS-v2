@@ -10478,6 +10478,8 @@ body:has(:is(
 }
 
 .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__card {
+  display: flex;
+  flex-direction: column;
   padding: 0 16px 14px;
   border-radius: 22px;
   border: 1px solid rgba(0, 0, 0, 0.06);
@@ -10493,9 +10495,20 @@ body:has(:is(
     - 72px
     - env(safe-area-inset-bottom, 0px)
   );
+  overflow: hidden;
+}
+
+.hdr-settings-sheet__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
 }
+
+/* Функциональный скролл к раскрытой строке — не гасим при prefers-reduced-motion (animate-always + JS easing). */
 
 .tab-settings-menu.tab-settings-menu--v4-sheet::before {
   content: none;
@@ -10507,7 +10520,10 @@ body:has(:is(
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  flex: none;
   padding: 16px 2px 10px;
+  background: var(--v4-bg, #fffaf1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .hdr-settings-sheet__title {
@@ -10521,8 +10537,8 @@ body:has(:is(
   height: 34px;
   border: 0;
   border-radius: 999px;
-  background: #f7efe2;
-  color: rgba(0, 0, 0, 0.5);
+  background: #f6e6dd;
+  color: var(--v4-act, #c67139);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -10758,6 +10774,95 @@ body:has(:is(
   box-shadow: inset 0 0 0 2px #c67139;
 }
 
+.hdr-settings-sheet__fab-prefs {
+  padding: 0 18px 16px;
+}
+
+.hdr-settings-sheet__tier--fab {
+  margin-top: 16px;
+}
+
+.hdr-settings-sheet__fab-card {
+  background: #f7efe2;
+  border-radius: 18px;
+  padding: 13px 14px 15px;
+}
+
+.hdr-settings-sheet__fab-lead {
+  margin: 0;
+  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.55);
+  text-wrap: pretty;
+}
+
+.hdr-settings-sheet__chips--fab {
+  margin-top: 11px;
+}
+
+.hdr-settings-sheet__fab-chip {
+  border: 0;
+  border-radius: 999px;
+  padding: 0 16px;
+  min-height: 44px;
+  background: #f7efe2;
+  color: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: 600 12px/1 Figtree, system-ui, sans-serif;
+}
+
+.hdr-settings-sheet__fab-chip-label {
+  font: inherit;
+}
+
+.hdr-settings-sheet__chips--fab .hdr-settings-sheet__fab-chip.is-on {
+  background: #c67139;
+  color: #2b1608;
+  box-shadow: none;
+}
+
+.hdr-settings-sheet__fab-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 13px;
+}
+
+.hdr-settings-sheet__fab-count {
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.42);
+}
+
+.hdr-settings-sheet__fab-ok {
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  color: #8a4a20;
+}
+
+.hdr-settings-sheet__fab-notice {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 12px;
+  padding: 11px 13px;
+  border-radius: 16px;
+  background: #f6e6dd;
+}
+
+.hdr-settings-sheet__fab-notice-icon {
+  flex: none;
+  display: flex;
+  color: #8a4a20;
+}
+
+.hdr-settings-sheet__fab-notice-text {
+  font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.6);
+  text-wrap: pretty;
+}
+
 .hdr-settings-sheet__hint {
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
@@ -10836,9 +10941,14 @@ body:has(:is(
   color: #f2ede6;
 }
 
+[data-theme$="dark"] .hdr-settings-sheet__head {
+  background: var(--v4-bg, #14110f);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
 [data-theme$="dark"] .hdr-settings-sheet__close {
-  background: #23201b;
-  color: rgba(242, 237, 230, 0.5);
+  background: #3a2a22;
+  color: #e8925a;
 }
 
 [data-theme$="dark"] .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push-toggle {
@@ -10899,6 +11009,41 @@ body:has(:is(
 [data-theme$="dark"] .hdr-settings-sheet__chip {
   background: #2f2820;
   color: #f2ede6;
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__fab-card {
+  background: #2f2820;
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__fab-lead {
+  color: rgba(242, 237, 230, 0.55);
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__fab-chip {
+  background: #2f2820;
+  color: rgba(242, 237, 230, 0.55);
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__chips--fab .hdr-settings-sheet__fab-chip.is-on {
+  background: #c67139;
+  color: #2b1608;
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__fab-count {
+  color: rgba(242, 237, 230, 0.42);
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__fab-ok,
+[data-theme$="dark"] .hdr-settings-sheet__fab-notice-icon {
+  color: #d08a52;
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__fab-notice {
+  background: #3a2d26;
+}
+
+[data-theme$="dark"] .hdr-settings-sheet__fab-notice-text {
+  color: rgba(242, 237, 230, 0.6);
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__hint,
@@ -11126,6 +11271,8 @@ body:has(:is(
   backdrop-filter: blur(7px) saturate(0.92);
   -webkit-backdrop-filter: blur(7px) saturate(0.92);
   z-index: 1001;
+  pointer-events: auto;
+  touch-action: none;
   animation: settingsBackdropFade 0.16s ease;
 }
 
