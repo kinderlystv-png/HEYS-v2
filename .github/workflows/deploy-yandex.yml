@@ -646,7 +646,7 @@ jobs:
           echo "✅ Landing deployment complete!"
 
       - name: Invalidate CDN cache
-        timeout-minutes: 3
+        timeout-minutes: 8
         env:
           YC_TOKEN: ${{ secrets.YC_OAUTH_TOKEN }}
           YC_FOLDER: ${{ secrets.YC_FOLDER_ID }}
@@ -662,13 +662,15 @@ jobs:
             exit 1
           fi
 
-          curl -fsSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
-          export PATH="$HOME/yandex-cloud/bin:$PATH"
+          if ! command -v yc >/dev/null 2>&1; then
+            curl -fsSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+            export PATH="$HOME/yandex-cloud/bin:$PATH"
+          fi
           yc config set token "$YC_TOKEN"
           yc config set folder-id "$YC_FOLDER"
 
-          echo "🔄 Purging mutable Demo entrypoints..."
-          timeout 45s yc cdn cache purge --resource-id "$CDN_DEMO_ID" \
+          echo "🔄 Purging mutable Demo + Landing entrypoints (parallel)..."
+          timeout 90s yc cdn cache purge --resource-id "$CDN_DEMO_ID" \
             --path "/" \
             --path "/index.html" \
             --path "/sw.js" \
@@ -677,12 +679,14 @@ jobs:
             --path "/version.json" \
             --path "/build-meta.json" \
             --path "/whats-new.json" \
-            --path "/react-bundle.js"
-
-          echo "🔄 Purging mutable Landing entrypoints..."
-          timeout 45s yc cdn cache purge --resource-id "$CDN_LANDING_ID" \
+            --path "/react-bundle.js" &
+          DEMO_PID=$!
+          timeout 90s yc cdn cache purge --resource-id "$CDN_LANDING_ID" \
             --path "/" \
-            --path "/index.html"
+            --path "/index.html" &
+          LANDING_PID=$!
+          wait "$DEMO_PID"
+          wait "$LANDING_PID"
 
           echo "✅ Active CDN resources purged"
 
@@ -884,7 +888,7 @@ jobs:
           fi
 
       - name: Invalidate CDN cache
-        timeout-minutes: 3
+        timeout-minutes: 8
         env:
           YC_TOKEN: ${{ secrets.YC_OAUTH_TOKEN }}
           YC_FOLDER: ${{ secrets.YC_FOLDER_ID }}
@@ -896,14 +900,16 @@ jobs:
             echo "::error::YC_OAUTH_TOKEN is required for CDN invalidation"
             exit 1
           fi
-          curl -fsSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
-          export PATH="$HOME/yandex-cloud/bin:$PATH"
+          if ! command -v yc >/dev/null 2>&1; then
+            curl -fsSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+            export PATH="$HOME/yandex-cloud/bin:$PATH"
+          fi
           yc config set token "$YC_TOKEN"
           yc config set folder-id "$YC_FOLDER"
 
           # Release-note assets are immutable and must use unique names. Only the
           # mutable metadata entrypoints need invalidation on the active Demo CDN.
-          timeout 45s yc cdn cache purge --resource-id "$CDN_DEMO_ID" \
+          timeout 90s yc cdn cache purge --resource-id "$CDN_DEMO_ID" \
             --path "/whats-new.json" \
             --path "/build-meta.json"
 
