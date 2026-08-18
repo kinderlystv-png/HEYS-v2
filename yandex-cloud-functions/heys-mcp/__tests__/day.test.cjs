@@ -988,18 +988,43 @@ test('возраст берётся из даты рождения, когда �
 });
 
 test('граммы БЖУ считаются по коэффициентам приложения, жиры — остатком', () => {
-  const norm = day.dailyNorm(
-    { date: '2026-08-01', weightMorning: 80, meals: [] },
-    { profile: FULL_PROFILE, norms: NORMS, hrZones: [] },
-  );
-  // NET Atwater: белок ÷3, углеводы ÷4, жир ÷9; жиры% = 100 − 40 − 25 = 35.
-  // От фактической нормы, а не от захардкоженного числа: норму теперь считает
-  // сервер, и привязка к кэшу отрисовки здесь была бы ложной.
+  const dayBlob = { date: '2026-08-01', weightMorning: 80, meals: [] };
+  const norm = day.dailyNorm(dayBlob, { profile: FULL_PROFILE, norms: NORMS, hrZones: [] });
+  // heys/798770: белок от массы через computeDisplayNorms, не от proteinPct×kcal.
   const kcal = norm.kcal;
-  const abs = webMirror.computeDailyNorms(kcal, NORMS);
+  const abs = webMirror.computeDailyNorms(kcal, NORMS, {
+    profile: FULL_PROFILE,
+    day: dayBlob,
+  });
   assert.equal(norm.protein_g, Math.round(abs.prot * 10) / 10);
   assert.equal(norm.carbs_g, Math.round(abs.carbs * 10) / 10);
   assert.equal(norm.fat_g, Math.round(abs.fat * 10) / 10);
+});
+
+test('MCP dailyNorm: белок g/kg по профилю клиента, не дефолт 70 кг (heys/798770)', () => {
+  const alexDay = { date: '2026-08-18', weightMorning: 52.7, steps: 0, meals: [] };
+  const alexProfile = {
+    weight: 52.7, height: 162, gender: 'Женский', weightGoal: 50, deficitPctTarget: -15,
+    birthDate: '1992-03-15',
+  };
+  const alexNorm = day.dailyNorm(alexDay, {
+    profile: alexProfile,
+    norms: { proteinPct: 28, carbsPct: 40 },
+    hrZones: [],
+  });
+  assert.ok(alexNorm.protein_g >= 83 && alexNorm.protein_g <= 86, `Александра: ${alexNorm.protein_g} g`);
+
+  const antonDay = { date: '2026-08-18', weightMorning: 89.9, steps: 0, meals: [] };
+  const antonProfile = {
+    weight: 89.9, height: 183, gender: 'Мужской', weightGoal: 80, deficitPctTarget: 0,
+    birthDate: '1988-06-25',
+  };
+  const antonNorm = day.dailyNorm(antonDay, {
+    profile: antonProfile,
+    norms: { proteinPct: 20.5, carbsPct: 46 },
+    hrZones: [],
+  });
+  assert.ok(antonNorm.protein_g >= 160 && antonNorm.protein_g <= 166, `Антон: ${antonNorm.protein_g} g`);
 });
 
 test('пустые проценты БЖУ не превращаются в «жиры 100% калорий»', () => {

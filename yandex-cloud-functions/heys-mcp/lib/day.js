@@ -1983,7 +1983,7 @@ function activityDrift(meta, day) {
   return parts.length ? `в день доехало: ${parts.join(', ')}` : '';
 }
 
-function normMacros(kcal, norms) {
+function normMacros(kcal, norms, ctx = {}) {
   const n = (norms && typeof norms === 'object' && !Array.isArray(norms)) ? norms : {};
   const proteinPct = Number(n.proteinPct) || 0;
   const carbsPct = Number(n.carbsPct) || 0;
@@ -1992,7 +1992,11 @@ function normMacros(kcal, norms) {
   if (proteinPct <= 0 && carbsPct <= 0) {
     return { protein_g: null, carbs_g: null, fat_g: null, macros_reason: 'no_norms' };
   }
-  const abs = webMirror.computeDailyNorms(kcal, n);
+  const abs = webMirror.computeDailyNorms(kcal, n, {
+    profile: ctx.profile,
+    day: ctx.day,
+    tdeeResult: ctx.tdeeResult,
+  });
   return {
     protein_g: Math.round(abs.prot * 10) / 10,
     carbs_g: Math.round(abs.carbs * 10) / 10,
@@ -2219,7 +2223,11 @@ function dailyNorm(day, inputs) {
     note += drift ? ` — с тех пор ${drift}.` : '.';
   }
 
-  const macros = normMacros(kcal, inputs.norms);
+  const macros = normMacros(kcal, inputs.norms, {
+    profile: inputs.profile,
+    day,
+    tdeeResult: fresh.reason ? null : fresh,
+  });
   const macrosNote = macros.macros_reason ? ` БЖУ в граммах не считаем: ${NORM_REASONS[macros.macros_reason]}.` : '';
 
   return {

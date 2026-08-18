@@ -129,8 +129,8 @@ function getRefeedOptimum(optimum, isRefeedDay) {
 }
 
 /** `HEYS.dayCalculations.computeDailyNorms` из apps/web/heys_day_calculations.js. */
-function computeDailyNorms(optimum, normPerc) {
-  return loadHeys().dayCalculations.computeDailyNorms(optimum, normPerc);
+function computeDailyNorms(optimum, normPerc, ctx) {
+  return loadHeys().dayCalculations.computeDailyNorms(optimum, normPerc, ctx);
 }
 
 /**
