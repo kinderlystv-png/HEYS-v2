@@ -10,6 +10,7 @@
 
 const { TOOL_SCHEMAS } = require('./tools');
 const callContext = require('./call-context');
+const { extractArgKeys } = require('./telemetry');
 
 const SERVER_INFO = { name: 'heys-mcp', title: 'HEYS', version: '1.0.0' };
 const SUPPORTED_PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26'];
@@ -214,6 +215,7 @@ async function handleMessage(message, ctx) {
       // пришёл пустым или перегруженным, и при этом в телеметрию физически
       // нечему утечь.
       const argCount = args && typeof args === 'object' ? Object.keys(args).length : 0;
+      const argKeys = extractArgKeys(args);
 
       try {
         // Метка видна вложенному коду на всё время обработчика: `tasks_checkpoint`
@@ -228,15 +230,15 @@ async function handleMessage(message, ctx) {
         // Размер ответа — вторая половина вопроса «почему долго»: своё время
         // инструмента и время API он не объясняет, зато объясняет задержку на
         // стороне клиента, которой в наших метриках не видно вовсе.
-        await ctx.logMetric?.({ tool: name, ok: true, ...timing, arg_count: argCount, response_bytes: byteLength(payload), trace });
+        await ctx.logMetric?.({ tool: name, ok: true, ...timing, arg_count: argCount, arg_keys: argKeys, response_bytes: byteLength(payload), trace });
         return rpcResult(id, payload);
       } catch (e) {
         const timing = measure();
         if (e && e.code) {
-          await ctx.logMetric?.({ tool: name, ok: false, error: e.code, arg_count: argCount, ...timing, trace });
+          await ctx.logMetric?.({ tool: name, ok: false, error: e.code, arg_count: argCount, arg_keys: argKeys, ...timing, trace });
           return rpcResult(id, toolFailure(e.message, e.code, { ...e.details, duration_ms: timing.ms, ...traceFields }));
         }
-        await ctx.logMetric?.({ tool: name, ok: false, error: 'internal_error', arg_count: argCount, ...timing, trace });
+        await ctx.logMetric?.({ tool: name, ok: false, error: 'internal_error', arg_count: argCount, arg_keys: argKeys, ...timing, trace });
         ctx.logError?.('tool_failed', { tool: name, message: e && e.message });
         return rpcResult(id, toolFailure('Внутренняя ошибка HEYS при выполнении инструмента.', 'internal_error', { duration_ms: timing.ms, ...traceFields }));
       }

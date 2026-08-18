@@ -7,9 +7,11 @@ const assert = require('node:assert/strict');
 
 const {
   RECORD_FIELDS,
+  MAX_ARG_KEYS,
   MAX_TRACKED_SESSIONS,
   sessionAlias,
   createSeqCounter,
+  extractArgKeys,
   buildRecord,
   emitRecord,
   createTelemetry,
@@ -67,6 +69,38 @@ test('в записи нет ни одного значения аргумент
   assert.deepEqual(Object.keys(record).sort(), [...RECORD_FIELDS].sort());
   assert.equal(record.error_code, 'client_not_found');
   assert.equal(record.arg_count, 5);
+  assert.deepEqual(record.arg_keys, []);
+});
+
+test('arg_keys — только верхний уровень, без значений и без вложенных ключей', () => {
+  const args = {
+    client: 'мне',
+    copy_meal: { date: '2026-08-17', meal_id: 'meal-uuid' },
+    preset_grams: { 'Молоко ультрапастеризованное 3.5': 200 },
+    transcript: 'запиши как вчера',
+  };
+  const keys = extractArgKeys(args);
+  assert.deepEqual(keys, ['client', 'copy_meal', 'preset_grams', 'transcript']);
+
+  const record = buildRecord({
+    tool: 'heys_log_meal',
+    ok: true,
+    durationMs: 120,
+    argCount: keys.length,
+    argKeys: keys,
+  });
+  const serialized = JSON.stringify(record);
+  assert.ok(!serialized.includes('Молоко'), 'название продукта из вложенного объекта не должно попасть в лог');
+  assert.ok(!serialized.includes('meal-uuid'), 'значение meal_id не должно попасть в лог');
+  assert.deepEqual(record.arg_keys, keys);
+});
+
+test('arg_keys обрезается по MAX_ARG_KEYS', () => {
+  const args = {};
+  for (let i = 0; i < MAX_ARG_KEYS + 5; i += 1) args[`k${i}`] = `secret-${i}`;
+  const keys = extractArgKeys(args);
+  assert.equal(keys.length, MAX_ARG_KEYS);
+  assert.ok(!keys.some((k) => k.includes('secret')), 'значения не попадают в arg_keys');
 });
 
 test('в записи остались поля, на которых держится разбор таймингов', () => {
@@ -168,7 +202,7 @@ test('запись телеметрии не меняет ответ инстр�
   const withMetric = await call({
     logMetric: async (metric) => telemetry.record({
       tool: metric.tool, ok: metric.ok, errorCode: metric.error,
-      durationMs: metric.ms, argCount: metric.arg_count, token: 'Bearer t',
+      durationMs: metric.ms, argCount: metric.arg_count, argKeys: metric.arg_keys, token: 'Bearer t',
       sessionId: metric.trace ? metric.trace.sessionId : null,
       seq: metric.trace ? metric.trace.seq : null,
     }),
@@ -187,6 +221,7 @@ test('запись телеметрии не меняет ответ инстр�
   assert.equal(rec.tool, 'heys_get_day');
   assert.equal(rec.status, 'ok');
   assert.equal(rec.arg_count, 2, 'считаем количество аргументов, а не сами аргументы');
+  assert.deepEqual(rec.arg_keys, ['client', 'date']);
   assert.ok(!lines[0].includes('Александра'), 'значение аргумента не должно попасть в лог');
 });
 
@@ -222,6 +257,7 @@ function tracedContext(tools, lines, { persistCall = null } = {}) {
     beginTrace: () => telemetry.begin('Bearer curator-token'),
     logMetric: async (metric) => telemetry.record({
       tool: metric.tool, ok: metric.ok, errorCode: metric.error, durationMs: metric.ms,
+      argCount: metric.arg_count, argKeys: metric.arg_keys,
       sessionId: metric.trace ? metric.trace.sessionId : null,
       seq: metric.trace ? metric.trace.seq : null,
     }, { persistCall }),

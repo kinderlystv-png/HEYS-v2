@@ -39,6 +39,10 @@ const RECORD_FIELDS = [
   'error_code',    // машинный код, никогда не текст исключения
   'resp_bytes',    // размер ответа
   'arg_count',     // сколько аргументов, не сами аргументы
+  // Имена полей верхнего уровня JSON-аргументов, без значений. Только
+  // Object.keys(args) — без рекурсии: у preset_grams и похожих вложенные
+  // ключи — названия продуктов клиента, их сюда не поднимаем никогда.
+  'arg_keys',
   'cold_start',    // первый вызов на инстансе
   // Возраст процесса. Не дубль cold_start: тот различает только первый вызов и
   // все прочие, а тут видно «инстанс живёт восемь секунд» против «живёт сорок
@@ -52,6 +56,17 @@ const RECORD_FIELDS = [
 
 const ALLOWED = new Set(RECORD_FIELDS);
 const DEFAULT_PERSIST_TIMEOUT_MS = 250;
+/** Потолок длины arg_keys — кривой аргумент не раздувает строку лога. */
+const MAX_ARG_KEYS = 20;
+
+/**
+ * Имена полей верхнего уровня аргументов вызова — без значений.
+ * Только прямой Object.keys(args), без рекурсии во вложенные объекты.
+ */
+function extractArgKeys(args, maxKeys = MAX_ARG_KEYS) {
+  if (!args || typeof args !== 'object' || Array.isArray(args)) return [];
+  return Object.keys(args).sort().slice(0, maxKeys);
+}
 
 async function persistWithTimeout(persistCall, record, timeoutMs = DEFAULT_PERSIST_TIMEOUT_MS) {
   if (!persistCall) return;
@@ -144,6 +159,9 @@ function buildRecord(input = {}) {
     error_code: input.ok ? null : (typeof input.errorCode === 'string' ? input.errorCode : 'internal_error'),
     resp_bytes: intOrNull(input.responseBytes),
     arg_count: intOrNull(input.argCount),
+    arg_keys: Array.isArray(input.argKeys)
+      ? input.argKeys.filter((k) => typeof k === 'string').slice(0, MAX_ARG_KEYS)
+      : [],
     cold_start: input.coldStart === true,
     uptime_ms: intOrNull(input.uptimeMs),
     fn_version: typeof input.fnVersion === 'string' && input.fnVersion ? input.fnVersion : null,
@@ -229,10 +247,12 @@ function createTelemetry({ instanceId, fnVersion, logger = console } = {}) {
 
 module.exports = {
   RECORD_FIELDS,
+  MAX_ARG_KEYS,
   MAX_TRACKED_SESSIONS,
   DEFAULT_PERSIST_TIMEOUT_MS,
   sessionAlias,
   createSeqCounter,
+  extractArgKeys,
   buildRecord,
   emitRecord,
   persistWithTimeout,
