@@ -54,7 +54,33 @@ const RECORD_FIELDS = [
   'role',          // curator | client — роль, а не человек
 ];
 
+/**
+ * Состав строки `mcp_list` — ответа на `tools/list`.
+ *
+ * Отдельный список, а не флаг в `RECORD_FIELDS`: у записей разный смысл полей,
+ * и смешивать их — верный способ протащить в вызовы то, чего там быть не
+ * должно. Появился после 18.08: куратор попросил вбить шаги, агент ответил
+ * «инструмента нет», а доказать было нечем — сервер не писал ни сколько схем
+ * отдал, ни какому клиенту. Имя и версия клиента — свойства программы, не
+ * человека; сам список инструментов в лог не идёт, только его размер.
+ */
+const LIST_RECORD_FIELDS = [
+  't',                // всегда 'mcp_list'
+  'ts',
+  'session_id',       // тот же псевдоним подключения, что у mcp_call
+  'tools_count',      // сколько схем ушло клиенту
+  'tools_bytes',      // их суммарный размер: обрезка бывает по объёму, не по числу
+  'client_name',      // clientInfo.name из initialize — программа, не человек
+  'client_version',
+  'protocol_version',
+  'role',
+  'cold_start',
+  'uptime_ms',
+  'fn_version',
+];
+
 const ALLOWED = new Set(RECORD_FIELDS);
+const LIST_ALLOWED = new Set(LIST_RECORD_FIELDS);
 const DEFAULT_PERSIST_TIMEOUT_MS = 250;
 /** Потолок длины arg_keys — кривой аргумент не раздувает строку лога. */
 const MAX_ARG_KEYS = 20;
@@ -177,6 +203,35 @@ function buildRecord(input = {}) {
   return record;
 }
 
+/** Запись об отданном списке инструментов — по своему белому списку. */
+function buildListRecord(input = {}) {
+  const draft = {
+    t: 'mcp_list',
+    ts: new Date(input.nowMs || Date.now()).toISOString(),
+    session_id: input.sessionId || null,
+    tools_count: intOrNull(input.toolsCount),
+    tools_bytes: intOrNull(input.toolsBytes),
+    client_name: typeof input.clientName === 'string' && input.clientName
+      ? input.clientName.slice(0, 64)
+      : null,
+    client_version: typeof input.clientVersion === 'string' && input.clientVersion
+      ? input.clientVersion.slice(0, 32)
+      : null,
+    protocol_version: typeof input.protocolVersion === 'string' && input.protocolVersion
+      ? input.protocolVersion.slice(0, 32)
+      : null,
+    role: input.role === 'curator' || input.role === 'client' ? input.role : null,
+    cold_start: input.coldStart === true,
+    uptime_ms: intOrNull(input.uptimeMs),
+    fn_version: typeof input.fnVersion === 'string' && input.fnVersion ? input.fnVersion : null,
+  };
+  const record = {};
+  for (const field of LIST_RECORD_FIELDS) {
+    if (LIST_ALLOWED.has(field) && draft[field] !== undefined) record[field] = draft[field];
+  }
+  return record;
+}
+
 /**
  * Печать записи. Телеметрия не имеет права ни уронить вызов, ни задержать
  * ответ: любая ошибка сериализации гасится здесь же.
@@ -219,6 +274,23 @@ function createTelemetry({ instanceId, fnVersion, logger = console } = {}) {
       const sessionId = sessionAlias(token, instance);
       return { sessionId, seq: nextSeq(sessionId), ts: new Date().toISOString() };
     },
+    /**
+     * Список инструментов. Синхронно и без persist: в БД он не нужен, а ответ
+     * на tools/list задерживать нечем — это первый запрос клиента.
+     */
+    recordList(input = {}) {
+      try {
+        const record = buildListRecord({
+          ...input,
+          sessionId: input.sessionId || sessionAlias(input.token, instance),
+          fnVersion: input.fnVersion || version,
+        });
+        emitRecord(record, { logger });
+        return record;
+      } catch (_) {
+        return null;
+      }
+    },
     async record(input, { persistCall = null, persistTimeoutMs = DEFAULT_PERSIST_TIMEOUT_MS } = {}) {
       try {
         const sessionId = input.sessionId || sessionAlias(input.token, instance);
@@ -247,6 +319,8 @@ function createTelemetry({ instanceId, fnVersion, logger = console } = {}) {
 
 module.exports = {
   RECORD_FIELDS,
+  LIST_RECORD_FIELDS,
+  buildListRecord,
   MAX_ARG_KEYS,
   MAX_TRACKED_SESSIONS,
   DEFAULT_PERSIST_TIMEOUT_MS,

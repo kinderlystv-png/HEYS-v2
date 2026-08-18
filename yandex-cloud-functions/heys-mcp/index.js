@@ -49,6 +49,9 @@ const tasks = require('./lib/tasks');
  */
 const PROCESS_START_MS = Date.now();
 let instanceWarm = false;
+// Кто подключён: clientInfo приходит один раз, в initialize, а нужен позже —
+// в строке mcp_list. Живёт столько же, сколько инстанс.
+let lastClientInfo = null;
 
 /**
  * Писатель телеметрии живёт на уровне модуля: псевдонимы подключений и
@@ -351,6 +354,24 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
     // Псевдоним подключения и номер вызова выдаются до обработчика: те же
     // значения уходят и клиенту в ответ, и в строку лога.
     beginTrace: () => telemetry.begin(headers.authorization || null),
+    noteClient: (info) => { lastClientInfo = info || null; },
+    // Одна строка на tools/list: сколько схем и байт ушло клиенту и какому
+    // именно. По ней «инструмента нет» отличается от «клиент не донёс его до
+    // модели» — 18.08 доказать это было нечем.
+    logList: ({ toolsCount, toolsBytes }) => {
+      const coldStart = !instanceWarm;
+      telemetry.recordList({
+        token: headers.authorization || null,
+        toolsCount,
+        toolsBytes,
+        clientName: lastClientInfo ? lastClientInfo.name : null,
+        clientVersion: lastClientInfo ? lastClientInfo.version : null,
+        protocolVersion: lastClientInfo ? lastClientInfo.protocolVersion : null,
+        role: auth.role,
+        coldStart,
+        uptimeMs: Date.now() - PROCESS_START_MS,
+      });
+    },
     // Одна строка чистого JSON на вызов инструмента: по ней в Cloud Logging
     // видно, какой сценарий сколько стоит, сколько в нём round-trip'ов к API
     // и в какой последовательности инструменты шли внутри подключения.

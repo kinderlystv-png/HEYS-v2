@@ -134,6 +134,16 @@ async function handleMessage(message, ctx) {
   switch (method) {
     case 'initialize': {
       const requested = params && params.protocolVersion;
+      // Клиент называет себя один раз, при подключении, а нужен он потом — в
+      // разборе «почему модель не увидела инструмент». Запоминаем здесь.
+      if (typeof ctx.noteClient === 'function') {
+        const info = (params && params.clientInfo) || {};
+        ctx.noteClient({
+          name: typeof info.name === 'string' ? info.name : null,
+          version: typeof info.version === 'string' ? info.version : null,
+          protocolVersion: typeof requested === 'string' ? requested : null,
+        });
+      }
       return rpcResult(id, {
         protocolVersion: negotiateProtocolVersion(requested),
         capabilities: { tools: { listChanged: false } },
@@ -170,8 +180,17 @@ async function handleMessage(message, ctx) {
     case 'ping':
       return isNotification ? null : rpcResult(id, {});
 
-    case 'tools/list':
-      return rpcResult(id, { tools: ctx.toolSchemas || TOOL_SCHEMAS });
+    case 'tools/list': {
+      const listed = ctx.toolSchemas || TOOL_SCHEMAS;
+      // Сколько схем и байт реально ушло клиенту. Без этой строки «инструмента
+      // нет» не отличить от «клиент до модели его не донёс».
+      if (typeof ctx.logList === 'function') {
+        try {
+          ctx.logList({ toolsCount: listed.length, toolsBytes: JSON.stringify(listed).length });
+        } catch (_) { /* телеметрия не мешает ответу */ }
+      }
+      return rpcResult(id, { tools: listed });
+    }
 
     case 'tools/call': {
       const name = params && params.name;

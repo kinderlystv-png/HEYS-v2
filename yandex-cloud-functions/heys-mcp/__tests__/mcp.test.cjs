@@ -105,3 +105,83 @@ test('мусорный payload отвергается как invalid request', a
   const empty = await mcp.handlePayload([], ctx);
   assert.equal(empty[0].error.code, mcp.JSONRPC_ERRORS.INVALID_REQUEST);
 });
+
+// ── mcp_list: что клиент получил в ответ на tools/list ────────────────────
+// 18.08 агент сказал «инструмента нет», а проверить было нечем: сервер не
+// писал ни сколько схем отдал, ни какому клиенту.
+
+test('запись mcp_list собирается строго по своему белому списку', () => {
+  const { LIST_RECORD_FIELDS, buildListRecord } = require('../lib/telemetry');
+  const record = buildListRecord({
+    nowMs: Date.UTC(2026, 7, 18, 20, 0, 0),
+    sessionId: 'sess-1',
+    toolsCount: 80,
+    toolsBytes: 139264,
+    clientName: 'claude-ai',
+    clientVersion: '1.2.3',
+    protocolVersion: '2025-06-18',
+    role: 'curator',
+    coldStart: true,
+    uptimeMs: 1200,
+    fnVersion: 'ver-1',
+    // Мимо белого списка — не должно доехать ни при каких условиях.
+    token: 'Bearer secret',
+    tools: ['heys_log_meal'],
+  });
+  assert.deepEqual(Object.keys(record).sort(), [...LIST_RECORD_FIELDS].sort());
+  assert.equal(record.t, 'mcp_list');
+  assert.equal(record.tools_count, 80);
+  assert.equal(record.tools_bytes, 139264);
+  assert.equal(record.client_name, 'claude-ai');
+  const raw = JSON.stringify(record);
+  assert.ok(!raw.includes('secret'), 'токен в строку не попадает');
+  assert.ok(!raw.includes('heys_log_meal'), 'сам список инструментов не логируется');
+});
+
+test('tools/list сообщает число и размер отданных схем', async () => {
+  const listed = [];
+  const res = await mcp.handlePayload(
+    { jsonrpc: '2.0', id: 1, method: 'tools/list' },
+    {
+      tools: {},
+      toolSchemas: [
+        { name: 'heys_get_day', description: 'd', inputSchema: { type: 'object' } },
+        { name: 'heys_update_day', description: 'd', inputSchema: { type: 'object' } },
+      ],
+      logList: (info) => listed.push(info),
+    },
+  );
+  assert.equal(res.result.tools.length, 2);
+  assert.equal(listed.length, 1);
+  assert.equal(listed[0].toolsCount, 2);
+  assert.ok(listed[0].toolsBytes > 0);
+});
+
+test('initialize запоминает, какой клиент подключился', async () => {
+  const seen = [];
+  await mcp.handlePayload(
+    {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: {
+        protocolVersion: '2025-06-18',
+        clientInfo: { name: 'claude-ai', version: '1.2.3' },
+      },
+    },
+    { tools: {}, toolSchemas: [], noteClient: (info) => seen.push(info) },
+  );
+  assert.deepEqual(seen, [{ name: 'claude-ai', version: '1.2.3', protocolVersion: '2025-06-18' }]);
+});
+
+test('падение логгера списка не ломает ответ на tools/list', async () => {
+  const res = await mcp.handlePayload(
+    { jsonrpc: '2.0', id: 1, method: 'tools/list' },
+    {
+      tools: {},
+      toolSchemas: [{ name: 'heys_get_day', description: 'd', inputSchema: { type: 'object' } }],
+      logList: () => { throw new Error('logging is down'); },
+    },
+  );
+  assert.equal(res.result.tools.length, 1);
+});
