@@ -18,6 +18,7 @@ import {
     mkdirSync,
     readdirSync,
     readFileSync,
+    renameSync,
     unlinkSync,
     writeFileSync,
 } from 'node:fs';
@@ -110,33 +111,62 @@ function hashFromBundlePath(filePath) {
     return m ? m[1] : null;
 }
 
+function existingContentMatches(filePath, content, isBinary) {
+    if (!existsSync(filePath)) return false;
+    try {
+        const existing = readFileSync(filePath);
+        return isBinary ? bytesEqual(existing, content) : existing === content;
+    } catch (e) {
+        if (!e || !['EPERM', 'EBUSY', 'EACCES'].includes(e.code)) throw e;
+        return false;
+    }
+}
+
+/**
+ * @returns {{ skipped: boolean }}
+ */
 function writeFileRetry(filePath, content) {
     const isBinary = Buffer.isBuffer(content);
     const pathHash = hashFromBundlePath(filePath);
     const contentHashForBody = isBinary ? null : contentHash(content);
 
-    if (existsSync(filePath)) {
-        try {
-            const existing = readFileSync(filePath);
-            if (isBinary && bytesEqual(existing, content)) return;
-            if (!isBinary && existing === content) return;
-        } catch (e) {
-            if (e && ['EPERM', 'EBUSY', 'EACCES'].includes(e.code)) {
-                if (pathHash && contentHashForBody && pathHash === contentHashForBody) {
-                    console.warn(`  skip locked (hash matches): ${basename(filePath)}`);
-                    return;
-                }
-            } else if (e) {
-                throw e;
-            }
-        }
+    if (existingContentMatches(filePath, content, isBinary)) {
+        return { skipped: true };
     }
 
+    if (pathHash && contentHashForBody && pathHash === contentHashForBody && existsSync(filePath)) {
+        console.warn(`  skip locked (hash matches): ${basename(filePath)}`);
+        return { skipped: true };
+    }
+
+    const tmpPath = `${filePath}.${process.pid}.building`;
     let lastErr;
+
     for (let i = 0; i < 5; i++) {
         try {
-            writeFileSync(filePath, content);
-            return;
+            writeFileSync(tmpPath, content);
+            try {
+                if (existsSync(filePath)) {
+                    try {
+                        unlinkSync(filePath);
+                    } catch (e) {
+                        if (e && ['EPERM', 'EBUSY', 'EACCES'].includes(e.code)) {
+                            if (pathHash && contentHashForBody && pathHash === contentHashForBody) {
+                                try { unlinkSync(tmpPath); } catch { /* ignore */ }
+                                console.warn(`  skip locked (hash matches): ${basename(filePath)}`);
+                                return { skipped: true };
+                            }
+                            throw e;
+                        }
+                        throw e;
+                    }
+                }
+                renameSync(tmpPath, filePath);
+                return { skipped: false };
+            } catch (e) {
+                try { unlinkSync(tmpPath); } catch { /* ignore */ }
+                throw e;
+            }
         } catch (e) {
             lastErr = e;
             if (!e || !['EPERM', 'EBUSY', 'EACCES'].includes(e.code)) throw e;
@@ -146,8 +176,19 @@ function writeFileRetry(filePath, content) {
 
     const code = lastErr?.code ?? 'EPERM';
     throw new Error(
-        `Cannot write ${basename(filePath)} (${code}). Stop pnpm dev:local on :3001 and retry, or set HEYS_BUNDLE_DEV_SERVER_OK=1.`,
+        `Cannot write ${basename(filePath)} (${code}) while dev server holds the file. ` +
+        'Hard reload localhost:3001 after commit, or retry when the tab is closed.',
     );
+}
+
+function validateBundleSyntax(content, label) {
+    const tmpPath = resolve(PUB_DIR, `.syntax-check-${process.pid}-${label}.js`);
+    writeFileSync(tmpPath, content);
+    try {
+        execSync(`node --check "${tmpPath}"`, { stdio: 'pipe' });
+    } finally {
+        try { unlinkSync(tmpPath); } catch { /* ignore */ }
+    }
 }
 
 // ─── Minify one bundle ─────────────────────────────────────────────────────
@@ -219,9 +260,9 @@ async function buildBundle(name, files) {
     if (!DRY_RUN) {
         writeFileRetry(outPath, content);
 
-        // 🛡️ Syntax validation — catch broken bundles before deploy
+        // 🛡️ Syntax validation — in-memory temp; outPath may be skipped when Vite locks it
         try {
-            execSync(`node --check "${outPath}"`, { stdio: 'pipe' });
+            validateBundleSyntax(content, outName);
         } catch (err) {
             const stderr = err.stderr ? err.stderr.toString() : '';
             // Count parens to give actionable hint
@@ -352,7 +393,7 @@ function syncIndexHtml(manifest) {
 async function main() {
     if (!DRY_RUN) {
         await assertLocalWebDevNotHoldingBundles({
-            fail: process.env.HEYS_BUNDLE_FAIL_ON_DEV_SERVER === '1',
+            fail: false,
             log: (msg) => console.warn(msg),
         });
     }
@@ -463,13 +504,26 @@ async function main() {
 
         for (const entry of Object.values(builtEntries)) {
             const jsPath = resolve(PUB_DIR, entry.file);
-            const raw = readFileSync(jsPath);
-            const gz = gzipSync(raw, { level: 9 });
-            writeFileRetry(jsPath + '.gz', gz);
-            totalRaw += raw.length;
+            let rawBytes;
+            try {
+                rawBytes = readFileSync(jsPath);
+            } catch (e) {
+                if (e && ['EPERM', 'EBUSY', 'EACCES'].includes(e.code)) {
+                    console.warn(`  skip gzip (js locked): ${entry.file}`);
+                    continue;
+                }
+                throw e;
+            }
+            const gz = gzipSync(rawBytes, { level: 9 });
+            const gzResult = writeFileRetry(jsPath + '.gz', gz);
+            if (gzResult.skipped) {
+                console.warn(`  skip gzip (unchanged or locked): ${entry.file}.gz`);
+                continue;
+            }
+            totalRaw += rawBytes.length;
             totalGz += gz.length;
-            const pct = (100 - (gz.length / raw.length) * 100).toFixed(0);
-            console.info(`  ${entry.file}: ${fmtSize(raw.length)} → ${fmtSize(gz.length)} (${pct}% saved)`);
+            const pct = (100 - (gz.length / rawBytes.length) * 100).toFixed(0);
+            console.info(`  ${entry.file}: ${fmtSize(rawBytes.length)} → ${fmtSize(gz.length)} (${pct}% saved)`);
         }
 
         // Also compress react-bundle.js (blocking script, ~139KB → ~45KB)

@@ -279,7 +279,7 @@ function stageGeneratedOutputs() {
 }
 
 async function runLegacyRebuild(command) {
-    await assertLocalWebDevNotHoldingBundles({ fail: true });
+    await assertLocalWebDevNotHoldingBundles({ fail: false, log: (msg) => console.warn(msg) });
     run(command);
 }
 

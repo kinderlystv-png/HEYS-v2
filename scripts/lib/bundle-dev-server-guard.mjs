@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Windows + Vite: lazy bundles stay open while localhost:3001 serves them.
- * bundle-legacy then hits EPERM on overwrite. Guard runs before rebuild hooks.
+ * Vite on :3001 can lock lazy bundle files on Windows (EPERM on overwrite).
+ * bundle-legacy skips unchanged locked files and writes new hashes to new paths.
  */
 import net from 'node:net';
 
@@ -28,10 +28,9 @@ export function isLocalWebDevListening(port = DEFAULT_PORT, host = DEFAULT_HOST,
 
 export function formatDevServerHoldMessage(prefix = '[bundle-guard]') {
     return [
-        `${prefix} localhost:${DEFAULT_PORT} отвечает (pnpm dev:local / Vite).`,
-        `${prefix}   Dev-сервер держит lazy-бандлы открытыми → на Windows bundle-legacy падает с EPERM.`,
-        `${prefix}   Останови dev-сервер (Ctrl+C в терминале с pnpm dev:local) и повтори commit.`,
-        `${prefix}   Сознательный обход: HEYS_BUNDLE_DEV_SERVER_OK=1`,
+        `${prefix} localhost:${DEFAULT_PORT} отвечает — часть lazy-бандлов может быть заблокирована.`,
+        `${prefix}   Rebuild продолжится: неизменённые файлы пропускаются, новые хэши — в новые пути.`,
+        `${prefix}   После коммита с новым lazy-бандлом: hard reload на :3001.`,
     ].join('\n');
 }
 
@@ -40,7 +39,7 @@ export function formatDevServerHoldMessage(prefix = '[bundle-guard]') {
  * @returns {Promise<boolean>} true when dev server is listening
  */
 export async function assertLocalWebDevNotHoldingBundles(options = {}) {
-    const { fail = true, log = (msg) => console.info(msg) } = options;
+    const { fail = false, log = (msg) => console.warn(msg) } = options;
     if (process.env.HEYS_BUNDLE_DEV_SERVER_OK === '1') return false;
 
     const listening = await isLocalWebDevListening();
