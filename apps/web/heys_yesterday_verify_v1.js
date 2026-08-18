@@ -798,11 +798,36 @@
     };
   }
 
-  function computeNormAbsForKcal(kcalTarget) {
+  function computeNormAbsForKcal(kcalTarget, ctx = {}) {
     const safeKcal = Math.max(0, Math.round(Number(kcalTarget) || 0));
     const normPerc = getNormPercentages();
+    const profile = ctx.profile || lsGet('heys_profile', {}) || {};
+    const day = ctx.day || {};
+    let tdeeResult = ctx.tdeeResult;
+    if (!tdeeResult && HEYS.TDEE?.calculate) {
+      try {
+        tdeeResult = HEYS.TDEE.calculate(day, profile, { lsGet, anchorDate: day.date }) || {};
+      } catch (_) {
+        tdeeResult = {};
+      }
+    }
+    if (HEYS.dayCalculations?.computeDisplayNorms) {
+      return HEYS.dayCalculations.computeDisplayNorms({
+        displayOptimum: safeKcal,
+        normPerc,
+        profile,
+        day,
+        tdeeResult,
+        lsGet,
+      }).normAbs;
+    }
     if (HEYS.dayCalculations?.computeDailyNorms) {
-      return HEYS.dayCalculations.computeDailyNorms(safeKcal, normPerc);
+      return HEYS.dayCalculations.computeDailyNorms(safeKcal, normPerc, {
+        profile,
+        day,
+        tdeeResult,
+        lsGet,
+      });
     }
 
     const carbPct = +normPerc.carbsPct || 45;

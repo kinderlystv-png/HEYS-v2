@@ -26,6 +26,32 @@ function read(relPath) {
 beforeAll(() => {
   global.window = global;
   global.HEYS = global.HEYS || {};
+  global.HEYS.TEF = { ATWATER: { protein: 3, carbs: 4, fat: 9 } };
+  global.HEYS.Steps = {
+    STEPS_HISTORY_LOOKBACK_DAYS: 14,
+    STEPS_HISTORY_MIN_DAYS: 3,
+    medianStepsValue(values) {
+      if (!Array.isArray(values) || values.length === 0) return 0;
+      const sorted = [...values].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      if (sorted.length % 2 === 1) return sorted[mid];
+      return Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+    },
+    collectRecentStepsHistory(readDay, today, lookbackDays = 14) {
+      const stepsData = [];
+      const anchor = today instanceof Date && !Number.isNaN(today.getTime()) ? new Date(today) : new Date();
+      for (let i = 1; i <= lookbackDays; i++) {
+        const d = new Date(anchor);
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().slice(0, 10);
+        const dayData = readDay(key, {}) || {};
+        if (dayData.steps !== null && dayData.steps !== undefined) {
+          stepsData.push(Number(dayData.steps) || 0);
+        }
+      }
+      return stepsData;
+    },
+  };
   global.localStorage = {
     getItem: () => null,
     setItem: () => {},
@@ -34,17 +60,20 @@ beforeAll(() => {
   const src = read('apps/web/heys_tdee_v1.js');
   // eslint-disable-next-line no-new-func
   new Function('window', src)(global);
+  const calcSrc = read('apps/web/heys_day_calculations.js');
+  // eslint-disable-next-line no-new-func
+  new Function('window', calcSrc)(global);
 });
 
 describe('HEYS.TDEE.resolveDailyTargets', () => {
-  it('считает белок как 1.6 г/кг веса профиля', () => {
-    const targets = global.HEYS.TDEE.resolveDailyTargets({ weight: 80 }, {});
-    expect(targets.prot).toBe(128);
+  it('считает белок по g/кг режима (дефицит 1.8 у М)', () => {
+    const targets = global.HEYS.TDEE.resolveDailyTargets({ weight: 80, weightGoal: 70, gender: 'Мужской' }, {});
+    expect(targets.prot).toBe(144);
   });
 
   it('падает на baseWeight, если веса в профиле нет', () => {
-    const targets = global.HEYS.TDEE.resolveDailyTargets({ baseWeight: 65 }, {});
-    expect(targets.prot).toBe(104);
+    const targets = global.HEYS.TDEE.resolveDailyTargets({ baseWeight: 65, weightGoal: 60, gender: 'Мужской' }, {});
+    expect(targets.prot).toBe(117);
   });
 
   it('падает на 70 кг, если нет ни веса, ни baseWeight — как и раньше делал calculateTDEE', () => {
@@ -59,9 +88,9 @@ describe('HEYS.TDEE.resolveDailyTargets', () => {
   });
 
   it('работает без day — не падает и не возвращает NaN', () => {
-    const targets = global.HEYS.TDEE.resolveDailyTargets({ weight: 75 });
+    const targets = global.HEYS.TDEE.resolveDailyTargets({ weight: 75, weightGoal: 70, gender: 'Мужской' });
     expect(targets.kcal).toBeGreaterThan(0);
-    expect(targets.prot).toBe(120);
+    expect(targets.prot).toBe(135);
   });
 
   it('работает без profile — не выбрасывает исключение', () => {

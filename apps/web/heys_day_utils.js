@@ -859,10 +859,13 @@
         return kcalPerMin(Math.max((+met || 0) - 1, 0), w);
     }
 
-    function stepsKcal(steps, w, sex, len) {
+    function stepsKcal(steps, w, sexOrProfile, len) {
         try {
             if (typeof HEYS !== 'undefined' && HEYS.TDEE && HEYS.TDEE.stepsKcal) {
-                const v = HEYS.TDEE.stepsKcal(steps, w, sex, len);
+                const profile = (sexOrProfile && typeof sexOrProfile === 'object')
+                    ? sexOrProfile
+                    : { gender: sexOrProfile === 'female' ? 'Женский' : 'Мужской', height: 170 };
+                const v = HEYS.TDEE.stepsKcal(steps, w, profile, len);
                 const num = +v;
                 if (Number.isFinite(num)) return num;
             }
@@ -1946,9 +1949,18 @@
                 const weight = dayInfo.weightMorning || profileWeight;
                 const bmr = calcBMR(weight, profile || {});
 
+                let calculatedTarget;
+                if (typeof HEYS !== 'undefined' && HEYS.TDEE && HEYS.TDEE.calculate) {
+                    const tdeeRes = HEYS.TDEE.calculate(dayInfo, profile || {}, {
+                        lsGet,
+                        anchorDate: dateStr,
+                        readDay: (key, fb) => getDayData(key, productsMap, profile) || fb
+                    });
+                    calculatedTarget = tdeeRes.baseOptimumForDebt || tdeeRes.optimum || 0;
+                } else {
                 // Шаги: формула stepsKcal(steps, weight, sex, 0.7)
-                const steps = dayInfo.steps || 0;
-                const stepsK = stepsKcal(steps, weight, sex, 0.7);
+                const steps = (dayInfo.steps !== null && dayInfo.steps !== undefined) ? dayInfo.steps : 0;
+                const stepsK = stepsKcal(steps, weight, profile || {}, 0.7);
 
                 // Быт: householdMin × netKcalPerMin(2.5, weight)
                 const householdMin = dayInfo.householdMin || 0;
@@ -1985,7 +1997,8 @@
                 const tdee = bmr + stepsK + householdK + trainingsK;
                 // Используем дефицит дня если есть (не пустая строка и не null), иначе из профиля
                 const dayDeficit = (dayInfo.deficitPct !== '' && dayInfo.deficitPct != null) ? +dayInfo.deficitPct : deficitPct;
-                const calculatedTarget = Math.round(tdee * (1 + dayDeficit / 100));
+                calculatedTarget = Math.round(tdee * (1 + dayDeficit / 100));
+                }
 
                 // 🔧 FIX: Используем сохранённую норму с долгом если есть, иначе расчётную
                 // Это позволяет показывать корректную линию нормы в sparkline для прошлых дней

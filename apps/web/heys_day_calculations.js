@@ -59,22 +59,68 @@
         return pIndex[productId] || null;
     }
 
-    /**
-     * Compute daily norms from percentages
-     * @param {number} optimum - Target calories
-     * @param {Object} normPerc - Norm percentages
-     * @returns {Object} Absolute norms
-     */
-    function computeDailyNorms(optimum, normPerc = {}) {
+    const PROTEIN_KCAL_PER_G = () => (HEYS.TEF?.ATWATER?.protein || 3);
+    const CARB_KCAL_PER_G = () => (HEYS.TEF?.ATWATER?.carbs || 4);
+    const FAT_KCAL_PER_G = () => (HEYS.TEF?.ATWATER?.fat || 9);
+    const PROTEIN_ABSOLUTE_FLOOR_G_PER_KG = 1.2;
+    const PROTEIN_CAP_G_PER_KG = 2.4;
+    const FAT_FLOOR_G_PER_KG = 0.8;
+    const TRAINING_BONUS_G_PER_KG = 0.2;
+    const TRAINING_KCAL_THRESHOLD = 150;
+
+    function isFemaleProfile(profile) {
+        return (profile && profile.gender === 'Женский') || (profile && profile.sex === 'female');
+    }
+
+    function resolveNormField(normPerc, profile, key, fallback) {
+        const raw = normPerc[key] ?? profile[key];
+        if (raw === undefined || raw === null || raw === '') return fallback;
+        const num = Number(raw);
+        return Number.isFinite(num) ? num : fallback;
+    }
+
+    function resolveNormPerc(profile = {}, normPerc = {}) {
+        return {
+            carbsPct: resolveNormField(normPerc, profile, 'carbsPct', 45),
+            proteinPct: resolveNormField(normPerc, profile, 'proteinPct', 25),
+            simpleCarbPct: resolveNormField(normPerc, profile, 'simpleCarbPct', 30),
+            badFatPct: resolveNormField(normPerc, profile, 'badFatPct', 30),
+            superbadFatPct: resolveNormField(normPerc, profile, 'superbadFatPct', 5),
+            fiberPct: resolveNormField(normPerc, profile, 'fiberPct', 14),
+            giPct: resolveNormField(normPerc, profile, 'giPct', 50),
+            harmPct: resolveNormField(normPerc, profile, 'harmPct', 40)
+        };
+    }
+
+    function resolveProteinMode(weight, weightGoal) {
+        const w = Number(weight);
+        const goal = Number(weightGoal);
+        if (!Number.isFinite(w)) return 'maintenance';
+        // weightGoal 0 / пустой = «не задан» в UI куратора → поддержка, не дефицит
+        if (weightGoal == null || weightGoal === '' || !Number.isFinite(goal) || goal <= 0) return 'maintenance';
+        const delta = goal - w;
+        if (Math.abs(delta) <= 2) return 'maintenance';
+        if (delta < -2) return 'deficit';
+        return 'gain';
+    }
+
+    function defaultProteinCoeffGPerKg(mode, female) {
+        const table = {
+            deficit: female ? 1.6 : 1.8,
+            maintenance: female ? 1.4 : 1.6,
+            gain: female ? 1.6 : 1.8
+        };
+        return table[mode] || table.maintenance;
+    }
+
+    function computeDailyNormsLegacy(optimum, normPerc = {}) {
         const K = +optimum || 0;
         const carbPct = +normPerc.carbsPct || 0;
         const protPct = +normPerc.proteinPct || 0;
         const fatPct = Math.max(0, 100 - carbPct - protPct);
-        // NET Atwater — единый источник факторов HEYS.TEF.ATWATER (белок 3, угл 4, жир 9).
-        // Согласовано со счётчиком прихода (mealTotals тоже белок×3). Fallback на случай, если TEF не загружен.
-        const carbs = K ? (K * carbPct / 100) / (HEYS.TEF?.ATWATER?.carbs || 4) : 0;
-        const prot = K ? (K * protPct / 100) / (HEYS.TEF?.ATWATER?.protein || 3) : 0;
-        const fat = K ? (K * fatPct / 100) / (HEYS.TEF?.ATWATER?.fat || 9) : 0;
+        const carbs = K ? (K * carbPct / 100) / CARB_KCAL_PER_G() : 0;
+        const prot = K ? (K * protPct / 100) / PROTEIN_KCAL_PER_G() : 0;
+        const fat = K ? (K * fatPct / 100) / FAT_KCAL_PER_G() : 0;
         const simplePct = +normPerc.simpleCarbPct || 0;
         const simple = carbs * simplePct / 100;
         const complex = Math.max(0, carbs - simple);
@@ -88,6 +134,155 @@
         const gi = +normPerc.giPct || 0;
         const harm = +normPerc.harmPct || 0;
         return { kcal: K, carbs, simple, complex, prot, fat, bad, good, trans, fiber, gi, harm };
+    }
+
+    function buildMacroSubnorms(K, carbs, fat, normPerc) {
+        const simplePct = +normPerc.simpleCarbPct || 0;
+        const simple = carbs * simplePct / 100;
+        const complex = Math.max(0, carbs - simple);
+        const badPct = +normPerc.badFatPct || 0;
+        const transPct = +normPerc.superbadFatPct || 0;
+        const bad = fat * badPct / 100;
+        const trans = fat * transPct / 100;
+        const good = Math.max(0, fat - bad - trans);
+        const fiberPct = +normPerc.fiberPct || 0;
+        const fiber = K ? (K / 1000) * fiberPct : 0;
+        const gi = +normPerc.giPct || 0;
+        const harm = +normPerc.harmPct || 0;
+        return { simple, complex, bad, good, trans, fiber, gi, harm };
+    }
+
+    /**
+     * Единый расчёт норм дня (heys/798770): белок от массы, У/Ж от остатка displayOptimum
+     * @param {Object} params
+     * @returns {{ normAbs: Object, warnings: string[], proteinMeta: Object }}
+     */
+    function computeDisplayNorms(params = {}) {
+        const lsGet = params.lsGet || HEYS.utils?.lsGet;
+        const profile = params.profile || (lsGet ? lsGet('heys_profile', {}) : {}) || {};
+        const day = params.day || {};
+        const rawNormPerc = params.normPerc != null
+            ? params.normPerc
+            : (lsGet ? lsGet('heys_norms', {}) : {}) || {};
+        const normPerc = resolveNormPerc(profile, rawNormPerc);
+        const displayOptimum = +params.displayOptimum || 0;
+        const K = displayOptimum;
+
+        if (params.useLegacyProteinPct === true) {
+            return {
+                normAbs: computeDailyNormsLegacy(K, normPerc),
+                warnings: [],
+                proteinMeta: { legacy: true }
+            };
+        }
+
+        let tdeeResult = params.tdeeResult;
+        if (!tdeeResult && HEYS.TDEE && typeof HEYS.TDEE.calculate === 'function') {
+            try {
+                tdeeResult = HEYS.TDEE.calculate(day, profile, { lsGet, anchorDate: day.date, profile }) || {};
+            } catch (_) {
+                tdeeResult = {};
+            }
+        }
+        tdeeResult = tdeeResult || {};
+
+        const warnings = [];
+        const weight = +day.weightMorning || +profile.weight || +profile.baseWeight || 70;
+        const female = isFemaleProfile(profile);
+        const mode = resolveProteinMode(weight, profile.weightGoal);
+        const coeff = defaultProteinCoeffGPerKg(mode, female);
+        const trainingBonus = (+tdeeResult.trainingsKcal || 0) >= TRAINING_KCAL_THRESHOLD
+            ? TRAINING_BONUS_G_PER_KG : 0;
+        const protTargetG = Math.min(PROTEIN_CAP_G_PER_KG * weight, (coeff + trainingBonus) * weight);
+        const protAbsoluteFloorG = PROTEIN_ABSOLUTE_FLOOR_G_PER_KG * weight;
+        const fatFloorG = FAT_FLOOR_G_PER_KG * weight;
+
+        let protG = protTargetG;
+        let fatG = fatFloorG;
+        let kcalRem = K - protG * PROTEIN_KCAL_PER_G() - fatFloorG * FAT_KCAL_PER_G();
+
+        if (kcalRem < 0) {
+            const maxProtG = Math.max(
+                protAbsoluteFloorG,
+                (K - fatFloorG * FAT_KCAL_PER_G()) / PROTEIN_KCAL_PER_G()
+            );
+            protG = Math.min(protTargetG, maxProtG);
+            if (protG < protTargetG - 0.5) warnings.push('proteinReducedToFloor');
+            kcalRem = K - protG * PROTEIN_KCAL_PER_G() - fatFloorG * FAT_KCAL_PER_G();
+        }
+
+        if (kcalRem < 0) {
+            warnings.push('deficitTooDeepForMacros');
+            protG = protAbsoluteFloorG;
+            fatG = fatFloorG;
+            kcalRem = Math.max(0, K - protG * PROTEIN_KCAL_PER_G() - fatG * FAT_KCAL_PER_G());
+        }
+
+        const carbPct = +normPerc.carbsPct || 0;
+        const protPctLegacy = +normPerc.proteinPct || 0;
+        const fatPctLegacy = Math.max(0, 100 - carbPct - protPctLegacy);
+        const denom = carbPct + fatPctLegacy;
+        const carbShare = denom > 0 ? carbPct / denom : 0.5;
+
+        const carbKcal = kcalRem * carbShare;
+        const fatExtraKcal = Math.max(0, kcalRem - carbKcal);
+        const carbs = carbKcal / CARB_KCAL_PER_G();
+        const fat = fatG + fatExtraKcal / FAT_KCAL_PER_G();
+
+        const sub = buildMacroSubnorms(K, carbs, fat, normPerc);
+        const normAbs = {
+            kcal: K,
+            carbs,
+            prot: r0(protG),
+            fat: r0(fat),
+            ...sub
+        };
+
+        const proteinMeta = {
+            mode,
+            coeffGPerKg: coeff,
+            trainingBonusGPerKg: trainingBonus,
+            weightKg: weight,
+            targetGPerKg: coeff + trainingBonus,
+            absoluteFloorGPerKg: PROTEIN_ABSOLUTE_FLOOR_G_PER_KG,
+            reason: coeff + trainingBonus + ' г/кг × ' + r0(weight) + ' кг'
+                + (trainingBonus > 0 ? ' + тренировка' : '')
+        };
+
+        if (Array.isArray(tdeeResult.warnings)) {
+            tdeeResult.warnings.forEach((w) => { if (warnings.indexOf(w) === -1) warnings.push(w); });
+        }
+
+        return { normAbs, warnings, proteinMeta };
+    }
+
+    /**
+     * Compute daily norms from percentages (legacy wrapper → computeDisplayNorms)
+     * @param {number} optimum - Target calories (displayOptimum)
+     * @param {Object} normPerc - Norm percentages
+     * @param {Object} [ctx] - { profile, day, tdeeResult, useLegacyProteinPct }
+     * @returns {Object} Absolute norms
+     */
+    function computeDailyNorms(optimum, normPerc = {}, ctx = {}) {
+        if (ctx && (ctx.profile || ctx.day || ctx.tdeeResult || ctx.useLegacyProteinPct)) {
+            return computeDisplayNorms({
+                displayOptimum: optimum,
+                normPerc,
+                profile: ctx.profile,
+                day: ctx.day,
+                tdeeResult: ctx.tdeeResult,
+                useLegacyProteinPct: ctx.useLegacyProteinPct,
+                lsGet: ctx.lsGet
+            }).normAbs;
+        }
+        const lsGet = HEYS.utils?.lsGet;
+        const profile = lsGet ? lsGet('heys_profile', {}) : {};
+        return computeDisplayNorms({
+            displayOptimum: optimum,
+            normPerc,
+            profile,
+            lsGet
+        }).normAbs;
     }
 
     /** Defaults must match ensureWorkoutLogShape (heys_day_trainings_v1.js). */
@@ -359,6 +554,8 @@
     HEYS.dayCalculations = {
         calculateDayTotals,
         computeDailyNorms,
+        computeDisplayNorms,
+        computeDailyNormsLegacy,
         calculateDayAverages,
         applyDayAverages,
         normalizeTrainings,

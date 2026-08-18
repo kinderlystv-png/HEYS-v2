@@ -57,7 +57,13 @@
         const calculatedDayTot = ctx.dayCalculations?.calculateDayTotals?.(day, pIndex) || { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0, gi: 0, harm: 0 };
         const dayTot = withSavedTotalsFallback(calculatedDayTot, day);
         const normPerc = (ctx.utils && ctx.utils.lsGet ? ctx.utils.lsGet('heys_norms', {}) : {}) || {};
-        const normAbs = ctx.dayCalculations?.computeDailyNorms?.(optimum, normPerc) || { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0, gi: 0, harm: 0 };
+        const normAbs = ctx.dayCalculations?.computeDisplayNorms?.({
+            displayOptimum: optimum,
+            normPerc,
+            profile: (ctx.utils && ctx.utils.lsGet ? ctx.utils.lsGet('heys_profile', {}) : {}),
+            day,
+            lsGet: ctx.utils?.lsGet
+        })?.normAbs || ctx.dayCalculations?.computeDailyNorms?.(optimum, normPerc, { day, lsGet: ctx.utils?.lsGet }) || { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0, gi: 0, harm: 0 };
 
         const dailyTableState = ctx.dayDailyTable?.buildDailyTableState
             ? ctx.dayDailyTable.buildDailyTableState({

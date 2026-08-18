@@ -199,7 +199,17 @@
     }
 
     let normAbs = { prot: 0, fat: 0, carbs: 0 };
-    if (HEYS.dayCalculations && typeof HEYS.dayCalculations.computeDailyNorms === 'function') {
+    if (HEYS.dayCalculations && typeof HEYS.dayCalculations.computeDisplayNorms === 'function') {
+      try {
+        normAbs = HEYS.dayCalculations.computeDisplayNorms({
+          displayOptimum: optimum,
+          normPerc,
+          profile: profile || {},
+          day: day || {},
+          lsGet: HEYS.utils?.lsGet
+        }).normAbs || normAbs;
+      } catch (_) { }
+    } else if (HEYS.dayCalculations && typeof HEYS.dayCalculations.computeDailyNorms === 'function') {
       try { normAbs = HEYS.dayCalculations.computeDailyNorms(optimum, normPerc) || normAbs; } catch (_) { }
     }
 

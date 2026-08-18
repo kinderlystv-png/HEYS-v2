@@ -83,6 +83,7 @@
       tefKcal = 0,
       dayTargetDef = 0,
       baseExpenditure = 0,
+      tdeeResult = {},
       caloricDebt = {},
       sparklineData = [],
       sparklineRenderData = null,
@@ -299,7 +300,7 @@
       sparklinePerfectPopupMeta: buildSparklinePerfectPopupMeta(sparklinePopup) || { styles: {} },
       weightPopupMeta: buildWeightPopupMeta(sparklinePopup) || { styles: {} },
       weightForecastPopupMeta: buildWeightForecastPopupMeta(sparklinePopup) || { styles: {} },
-      macroRingsMeta: buildMacroRingsMeta(day, dayTot, normAbs, dayTargetDef, train1k, train2k, displayOptimum) || { styles: {} },
+      macroRingsMeta: buildMacroRingsMeta(day, dayTot, normAbs, dayTargetDef, train1k, train2k, displayOptimum, prof, tdeeResult) || { styles: {} },
       tdeePopupMeta: buildTdeePopupMeta(tdeePopup) || { styles: {}, bmrBarStyle: {}, actBarStyle: {}, bmrPct: 0, actPct: 0, trainMinutes: [0, 0, 0] },
       goalPopupMeta: buildGoalPopupMeta(goalPopup) || { styles: {} },
       tefInfoPopupMeta: buildTefInfoPopupMeta(tefInfoDeps) || { styles: {} },
@@ -963,24 +964,27 @@
     return { pct, styles };
   }
 
-  function buildMacroRingsMeta(day, dayTot, normAbs, dayTargetDef, train1k, train2k, displayOptimum) {
+  function buildMacroRingsMeta(day, dayTot, normAbs, dayTargetDef, train1k, train2k, displayOptimum, prof, tdeeResult) {
     if (!dayTot || !normAbs) return null;
 
     const hasDeficit = (dayTargetDef || 0) < 0;
     const hasTraining = (day?.trainings && day.trainings.length > 0) || ((train1k || 0) + (train2k || 0) > 0);
 
-    // Унификация колец БЖУ с шапкой и виджетами: target пересчитываем
-    // от displayOptimum (включает рефид/dailyBoost/dailyReduction).
-    // Базовый normAbs остаётся для других мест DayTab — кольца берут displayNormAbs.
     let displayNormAbs = null;
     if (Number.isFinite(displayOptimum) && displayOptimum > 0
-        && HEYS.dayCalculations && typeof HEYS.dayCalculations.computeDailyNorms === 'function') {
+        && HEYS.dayCalculations && typeof HEYS.dayCalculations.computeDisplayNorms === 'function') {
       const _normPerc = (HEYS.utils && typeof HEYS.utils.lsGet === 'function') ? (HEYS.utils.lsGet('heys_norms', {}) || {}) : {};
       try {
-        const _calc = HEYS.dayCalculations.computeDailyNorms(displayOptimum, _normPerc);
-        if (_calc) {
-          displayNormAbs = _calc;
-          normAbs = _calc; // переопределяем для всех расчётов ниже (ratio, color, overData, ringStrokeStyle)
+        const _calc = HEYS.dayCalculations.computeDisplayNorms({
+          displayOptimum,
+          normPerc: _normPerc,
+          profile: prof || {},
+          day: day || {},
+          tdeeResult: tdeeResult || {}
+        });
+        if (_calc && _calc.normAbs) {
+          displayNormAbs = _calc.normAbs;
+          normAbs = _calc.normAbs;
         }
       } catch (_) { /* fallback на базовый normAbs */ }
     }

@@ -2766,9 +2766,10 @@
       const d = new Date(anchor);
       d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      const dayData = readDay(key, {});
-      if (dayData.steps && dayData.steps > 0) {
-        stepsData.push(dayData.steps);
+      const dayData = readDay(key, {}) || {};
+      // steps === 0 — явный ввод; null/undefined — нет данных (heys/798770)
+      if (dayData.steps !== null && dayData.steps !== undefined) {
+        stepsData.push(Number(dayData.steps) || 0);
       }
     }
     return stepsData;
@@ -7026,6 +7027,10 @@
     stepsGoalSliderValueToRatio,
     stepsGoalSliderRatioToValue,
     stepsGoalSliderStepForValue,
+    medianStepsValue,
+    collectRecentStepsHistory,
+    STEPS_HISTORY_LOOKBACK_DAYS,
+    STEPS_HISTORY_MIN_DAYS,
     calcSleepHours,
     getCurrentDeficit,
     calcHouseholdKcal,

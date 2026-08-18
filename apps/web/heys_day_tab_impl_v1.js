@@ -2216,6 +2216,7 @@
             tefKcal,
             dayTargetDef,
             baseExpenditure,
+            tdeeResult,
             caloricDebt,
             sparklineData,
             sparklineRenderData,

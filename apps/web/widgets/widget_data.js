@@ -966,12 +966,41 @@
     },
 
     _getNormAbs() {
+      const day = this._getDay() || {};
+      const prof = this._getProfile() || {};
       const optimum = this._getOptimum();
       const norms = this._getNorms();
+      let tdeeResult = {};
+      if (HEYS.TDEE?.calculate) {
+        try {
+          tdeeResult = HEYS.TDEE.calculate(day, prof, {
+            lsGet: HEYS.utils?.lsGet,
+            anchorDate: day.date,
+          }) || {};
+        } catch (_) { }
+      }
+
+      if (HEYS.dayCalculations?.computeDisplayNorms) {
+        try {
+          return HEYS.dayCalculations.computeDisplayNorms({
+            displayOptimum: optimum,
+            normPerc: norms,
+            profile: prof,
+            day,
+            tdeeResult,
+            lsGet: HEYS.utils?.lsGet,
+          }).normAbs;
+        } catch (_) { }
+      }
 
       if (HEYS.dayCalculations?.computeDailyNorms) {
         try {
-          return HEYS.dayCalculations.computeDailyNorms(optimum, norms);
+          return HEYS.dayCalculations.computeDailyNorms(optimum, norms, {
+            profile: prof,
+            day,
+            tdeeResult,
+            lsGet: HEYS.utils?.lsGet,
+          });
         } catch (_) { }
       }
 

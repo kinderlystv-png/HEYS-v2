@@ -7,7 +7,30 @@
         const { day, prof, lsGet, pIndex, M, r0, HEYS: HEYSRef } = params || {};
         const ctx = HEYSRef || HEYS;
 
-        const tdeeResult = ctx.TDEE?.calculate?.(day, prof, { lsGet, pIndex }) || {};
+        const tdeeResult = ctx.TDEE?.calculate?.(day, prof, {
+            lsGet,
+            pIndex,
+            anchorDate: day?.date,
+            readDay: (dateKey, fallback = {}) => {
+                if (!dateKey || !lsGet) return fallback;
+                try {
+                    const cid = prof?.clientId
+                        || ctx.currentClientId
+                        || HEYS.currentClientId
+                        || ctx.utils?.getCurrentClientId?.()
+                        || HEYS.utils?.getCurrentClientId?.()
+                        || '';
+                    if (cid) {
+                        const scoped = lsGet('heys_' + cid + '_dayv2_' + dateKey, null);
+                        if (scoped != null) return scoped;
+                    }
+                    const legacy = lsGet('heys_dayv2_' + dateKey, null);
+                    return legacy != null ? legacy : fallback;
+                } catch (_) {
+                    return fallback;
+                }
+            }
+        }) || {};
         const {
             bmr = 0,
             actTotal = 0,

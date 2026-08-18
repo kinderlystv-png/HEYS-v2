@@ -100,20 +100,115 @@
   };
 
   /**
-   * Калории от шагов
-   * @param {number} steps - Количество шагов
+   * Калории от шагов (нетто над покоем — MET 3.5, как тренировки/быт)
+   * @param {number|null|undefined} steps - Количество шагов; null/undefined → 0 ккал
    * @param {number} weight - Вес в кг
-   * @param {string} sex - Пол
+   * @param {Object} profile - профиль (height)
    * @param {number} strideMultiplier - Множитель длины шага (0.7 по умолчанию)
    * @returns {number} ккал
    */
-  const stepsKcal = (steps, weight, sex, strideMultiplier = 0.7) => {
-    if (!steps || steps <= 0) return 0;
-    const height = 170; // Средний рост для расчёта
-    const strideLength = height * strideMultiplier / 100; // в метрах
-    const distanceKm = (steps * strideLength) / 1000;
-    // ~0.5 ккал на кг на км при ходьбе
-    return r0(distanceKm * weight * 0.5);
+  const WALKING_MET = 3.5;
+  const stepsKcal = (steps, weight, profile, strideMultiplier = 0.7) => {
+    if (steps === null || steps === undefined) return 0;
+    if (+steps <= 0) return 0;
+    const height = +(profile && profile.height) || 170;
+    const strideLength = height * strideMultiplier / 100;
+    const distanceKm = (+steps * strideLength) / 1000;
+    const walkingSpeedKmh = 5;
+    const minutes = (distanceKm / walkingSpeedKmh) * 60;
+    return r0(minutes * netKcalPerMin(WALKING_MET, weight));
+  };
+
+  const parseAnchorDate = (day, options = {}) => {
+    const raw = options.anchorDate || (day && day.date);
+    if (raw && /^\d{4}-\d{2}-\d{2}$/.test(String(raw))) {
+      return new Date(String(raw) + 'T12:00:00');
+    }
+    return new Date();
+  };
+
+  const defaultReadDay = (lsGet, options = {}) => {
+    const profile = options.profile || {};
+    const cid = options.clientId
+      || profile.clientId
+      || HEYS.currentClientId
+      || HEYS.utils?.getCurrentClientId?.()
+      || '';
+    const legacyPrefix = options.dayKeyPrefix || 'heys_dayv2_';
+    return (dateKey, fallback = {}) => {
+      if (!dateKey || !lsGet) return fallback;
+      try {
+        if (cid) {
+          const scoped = lsGet('heys_' + cid + '_dayv2_' + dateKey, null);
+          if (scoped != null) return scoped;
+        }
+        const v = lsGet(legacyPrefix + dateKey, null);
+        return v != null ? v : fallback;
+      } catch (_) {
+        return fallback;
+      }
+    };
+  };
+
+  const hasAnyStepsFactEver = (readDay, anchorDate, maxDays = 90) => {
+    const anchor = anchorDate instanceof Date && !Number.isNaN(anchorDate.getTime())
+      ? new Date(anchorDate) : new Date();
+    for (let i = 1; i <= maxDays; i++) {
+      const d = new Date(anchor);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      const dayData = readDay(key, {}) || {};
+      if (dayData.steps !== null && dayData.steps !== undefined) return true;
+    }
+    return false;
+  };
+
+  /**
+   * steps null → медиана 14 календарных дней (≥3 факта) или «нет данных»
+   * @returns {{ steps: number, stepsEstimated: boolean, stepsMissing: boolean }}
+   */
+  const resolveStepsInput = (day, profile, options = {}) => {
+    const d = day || {};
+    const rawSteps = d.steps;
+
+    if (rawSteps !== null && rawSteps !== undefined) {
+      return {
+        steps: Number(rawSteps) || 0,
+        stepsEstimated: false,
+        stepsMissing: false
+      };
+    }
+
+    const lsGet = options.lsGet || storeGet;
+    const readDay = typeof options.readDay === 'function'
+      ? options.readDay
+      : defaultReadDay(lsGet, { ...options, profile: profile || options.profile });
+    const anchor = parseAnchorDate(d, options);
+    const Steps = HEYS.Steps || {};
+    const lookback = Steps.STEPS_HISTORY_LOOKBACK_DAYS || 14;
+    const minDays = Steps.STEPS_HISTORY_MIN_DAYS || 3;
+    const collect = Steps.collectRecentStepsHistory || (() => []);
+    const medianFn = Steps.medianStepsValue || ((vals) => {
+      if (!vals.length) return 0;
+      const sorted = [...vals].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 === 1 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+    });
+
+    if (!hasAnyStepsFactEver(readDay, anchor, 90)) {
+      return { steps: 0, stepsEstimated: false, stepsMissing: true };
+    }
+
+    const history = collect(readDay, anchor, lookback);
+    if (history.length < minDays) {
+      return { steps: 0, stepsEstimated: false, stepsMissing: true };
+    }
+
+    return {
+      steps: medianFn(history),
+      stepsEstimated: true,
+      stepsMissing: false
+    };
   };
 
   /**
@@ -186,8 +281,9 @@
     const train3k = trainingKcal(trainings[2], weight, mets);
     const trainingsKcal = train1k + train2k + train3k;
 
-    // Шаги
-    const stepsK = stepsKcal(d.steps || 0, weight, prof.gender);
+    const stepsResolved = resolveStepsInput(d, prof, options);
+    const stepsK = stepsKcal(stepsResolved.steps, weight, prof);
+    const stepsKForDebt = stepsResolved.stepsEstimated ? 0 : stepsK;
 
     // Бытовая активность
     const householdActivities = d.householdActivities ||
@@ -197,6 +293,7 @@
 
     // Общая активность
     const actTotal = r0(trainingsKcal + stepsK + householdKcal);
+    const actTotalForDebt = r0(trainingsKcal + stepsKForDebt + householdKcal);
 
     // 🔬 TEF v1.0.0: используем единый модуль HEYS.TEF с fallback
     let tefData = { total: 0, breakdown: { protein: 0, carbs: 0, fat: 0 } };
@@ -262,6 +359,7 @@
 
     // baseExpenditure — без TEF, для расчёта optimum (норма не должна "догонять" съеденное)
     const baseExpenditure = r0(bmr + actTotal + ndteBoost);
+    const baseExpenditureForDebt = r0(bmr + actTotalForDebt + ndteBoost);
     // TDEE — с TEF, для отображения фактических затрат
     const tdee = r0(baseExpenditure + tefKcal);
 
@@ -276,15 +374,24 @@
     // Optimum рассчитывается от baseExpenditure (без TEF)
     const baseOptimum = r0(baseExpenditure * (1 + dayTargetDef / 100));
     const optimum = r0(baseOptimum * cycleKcalMultiplier);
+    const baseOptimumForDebt = r0(baseExpenditureForDebt * (1 + dayTargetDef / 100) * cycleKcalMultiplier);
+
+    const warnings = [];
+    if (optimum > 0 && optimum < bmr) warnings.push('optimumBelowBmr');
 
     return {
       bmr,
       actTotal,
+      actTotalForDebt,
       trainingsKcal,
       train1k,
       train2k,
       train3k,
       stepsKcal: stepsK,
+      stepsKcalForDebt: stepsKForDebt,
+      steps: stepsResolved.steps,
+      stepsEstimated: stepsResolved.stepsEstimated,
+      stepsMissing: stepsResolved.stepsMissing,
       householdKcal,
       totalHouseholdMin,  // 🆕 v1.1.2: Минуты для UI
       ndteBoost,
@@ -292,8 +399,11 @@
       tefKcal,             // 🆕 v3.9.1: TEF
       tefData,             // 🆕 v1.1.1: Full TEF data with breakdown
       baseExpenditure,     // 🆕 v3.9.1: без TEF (для optimum)
+      baseExpenditureForDebt,
       tdee,                // с TEF (для UI)
       optimum,
+      baseOptimumForDebt,
+      warnings,
       weight,
       mets,                // 🆕 v1.1.0: MET зоны для UI
       // Нетто, как и в самом расчёте — иначе подпись под зоной противоречила бы итогу.
@@ -336,6 +446,19 @@
     const tdeeResult = calculateTDEE(day || {}, profile || {});
     const kcal = tdeeResult && tdeeResult.optimum > 0 ? tdeeResult.optimum : 2000;
     const weightRaw = Number(profile && profile.weight) || Number(profile && profile.baseWeight) || 70;
+    if (HEYS.dayCalculations && typeof HEYS.dayCalculations.computeDisplayNorms === 'function') {
+      try {
+        const { normAbs } = HEYS.dayCalculations.computeDisplayNorms({
+          displayOptimum: kcal,
+          profile: profile || {},
+          day: day || {},
+          tdeeResult
+        });
+        if (normAbs && normAbs.prot > 0) {
+          return { kcal, prot: normAbs.prot };
+        }
+      } catch (_) { /* fallback */ }
+    }
     return { kcal, prot: Math.round(weightRaw * 1.6) };
   };
 
@@ -388,6 +511,8 @@
     // Вспомогательные (для обратной совместимости)
     calcBMR,
     stepsKcal,
+    resolveStepsInput,
+    hasAnyStepsFactEver,
     trainingKcal,
     kcalPerMin,
     // Для тех, кто собирает расход по частям (heys_day_utils.getActiveDaysForMonth):
