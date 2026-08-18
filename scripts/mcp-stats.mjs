@@ -25,7 +25,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const PSQL_WRAPPER = path.join(ROOT, 'scripts/db/psql.sh');
+const IS_WIN = process.platform === 'win32';
+const PSQL_PS1 = path.join(ROOT, 'scripts/db/psql.ps1');
+const PSQL_SH = path.join(ROOT, 'scripts/db/psql.sh');
 const SEPARATOR = '';
 
 function parseArgs(argv) {
@@ -44,11 +46,18 @@ function parseArgs(argv) {
 }
 
 function query(sql) {
-  const result = spawnSync(PSQL_WRAPPER, ['-X', '-qAt', '-F', SEPARATOR, '-v', 'ON_ERROR_STOP=1', '-c', sql], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
+  const psqlArgs = ['-X', '-qAt', '-F', SEPARATOR, '-v', 'ON_ERROR_STOP=1', '-c', sql];
+  const result = IS_WIN
+    ? spawnSync('powershell', ['-NoProfile', '-File', PSQL_PS1, ...psqlArgs], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    : spawnSync(PSQL_SH, psqlArgs, {
+      cwd: ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
   if (result.status !== 0) {
     const stderr = String(result.stderr || '').trim();
     // Отсутствие таблиц и недоступность базы лечатся по-разному, а psql

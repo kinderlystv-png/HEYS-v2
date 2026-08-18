@@ -32,8 +32,15 @@ psql "$(cat scripts/db/connect-string.txt)" -f scripts/db/audit-clients.sql
 
 ### psql на Windows (первый раз)
 
-Бинарники лежат в `tools/pgsql/` (не в git). Если `psql.ps1` ругается «не
-найден»:
+Бинарники лежат в `tools/pgsql/` (не в git). Один раз:
+
+```powershell
+pwsh scripts/db/setup-windows-tools.ps1
+```
+
+Скрипт скачает PostgreSQL client zip в `tools/pgsql/pgsql/bin/psql.exe` и, если
+есть scoop, поставит `jq` (нужен `deploy-all.sh`). Ручной путь, если скрипт не
+подходит:
 
 1. Скачай
    [PostgreSQL Windows binaries](https://www.enterprisedb.com/download-postgresql-binaries)

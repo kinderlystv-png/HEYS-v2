@@ -9,10 +9,32 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
 if [ -z "$PGPASSWORD" ]; then
-    source "$(dirname "$0")/get-pg-password.sh"
+    # shellcheck source=scripts/db/get-pg-password.sh
+    source "$SCRIPT_DIR/get-pg-password.sh"
 fi
 
-PGPASSWORD="$PGPASSWORD" psql \
-    "host=rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net port=6432 dbname=heys_production user=heys_admin sslmode=verify-full connect_timeout=30" \
+export PGSSLMODE="${PGSSLMODE:-verify-full}"
+if [ -z "${PGSSLROOTCERT:-}" ]; then
+    export PGSSLROOTCERT="$REPO_ROOT/yandex-cloud-functions/certs/root.crt"
+fi
+
+PSQL_BIN="${HEYS_PSQL_BIN:-}"
+if [ -z "$PSQL_BIN" ]; then
+    BUNDLED="$REPO_ROOT/tools/pgsql/pgsql/bin/psql.exe"
+    if [ -x "$BUNDLED" ] || [ -f "$BUNDLED" ]; then
+        PSQL_BIN="$BUNDLED"
+    else
+        PSQL_BIN=psql
+    fi
+fi
+
+PGPASSWORD="$PGPASSWORD" "$PSQL_BIN" \
+    -h rc1b-obkgs83tnrd6a2m3.mdb.yandexcloud.net \
+    -p 6432 \
+    -U heys_admin \
+    -d heys_production \
     "$@"

@@ -1,10 +1,11 @@
 # Продукты, overlay и поиск
 
 > **Статус:** core source-контракты проверены 2026-07-18, CHECK-violation UX
-> публикации — 2026-08-13 **Охват:** shared catalog, client overlay, merge/sync,
-> commit gate, moderation entrypoints и поиск в основном web flow **Не
-> подтверждено:** production catalog contents/count, runtime feature flags,
-> database function bodies после последней migration и browser/E2E поведение
+> публикации — 2026-08-13, рецепт product.recipe — 2026-08-18 **Охват:** shared
+> catalog, client overlay, merge/sync, commit gate, moderation entrypoints,
+> поиск и Type B recipe **Не подтверждено:** production catalog contents/count,
+> runtime feature flags, database function bodies после последней migration и
+> browser/E2E поведение
 
 ## Модель владения данными
 
@@ -186,6 +187,15 @@ Workspace package `@heys/search` имеет собственный TypeScript AP
     сам дописывает `curator_id` из токена в WHERE на PATCH/DELETE: куратор
     работает только со своей очередью модерации (SEC-032). У `shared_products`
     владельца-куратора нет, правило на него не распространяется.
+19. Рецепт (`product.recipe`) живёт только на Type B. Save молча поднимает `rev`
+    и `updatedAt` и пересчитывает КБЖУ карточки; прошлые дни не трогает.
+    Исправление прошлого — `heys_reapply_recipe`: превью читает дни пакетом,
+    запись только `mergeSaveKV` по одному дню. Ингредиенты при ретро — текущие
+    карточки. Позиция дня хранит снимок `recipe_items` / `recipe_yield` /
+    `recipe_rev`. След — `recipe_backfill_log[]` на дне: `ensureDay` и
+    `mergeDayData` его сохраняют. В shared export рецепт не уходит.
+20. ГИ и вред рецепта считаются по массе ингредиентов, `kcal100` — Atwater
+    `3×Б + 4×У + 9×Ж` после агрегации. `fiber100` отдельно от `complex100`.
 
 ## Конвенция углеводов: `simple + complex` — БЕЗ пищевых волокон
 
@@ -312,3 +322,4 @@ Bakalář, Жигулёвское пшеничное.
 | P20 | Имя колонки в REST-фильтре и в INSERT проходит whitelist таблицы, иначе 400              | `node --test yandex-cloud-functions/__tests__/rest-filter-column-injection.contract.test.cjs`                                                                                                                                                                                                                                                                                                  | 11/11 pass 2026-08-02 (SEC-029); в рабочем дереве, не задеплоено                               |
 | P21 | PATCH/DELETE по `shared_products_pending` всегда ограничены `curator_id` из JWT          | `node --test yandex-cloud-functions/__tests__/rest-pending-ownership.contract.test.cjs`                                                                                                                                                                                                                                                                                                        | 6/6 pass 2026-08-02 (SEC-032); в рабочем дереве, не задеплоено                                 |
 | P22 | CHECK `shared_products_mass_within_100g` на RPC отдаётся как `CHECK_VIOLATION`, не 500   | `node --test yandex-cloud-functions/heys-api-rpc/__tests__/pg-check-violation.test.js && node yandex-cloud-functions/heys-api-rpc/tests/shared_product_check_violation.contract.test.js`                                                                                                                                                                                                       | проверено 2026-08-13: MEDUTEUT 107 г → текст про 105 г, без `Database error`                   |
+| P23 | Рецепт Type B: snapshot в дне, save без ретро, reapply через mergeSaveKV по дням         | `node --test yandex-cloud-functions/heys-mcp/__tests__/products.test.cjs yandex-cloud-functions/heys-mcp/__tests__/tools.test.cjs && pnpm exec vitest run apps/web/__tests__/curator-authorship.test.js --no-coverage`                                                                                                                                                                         | проверено 2026-08-18                                                                           |
