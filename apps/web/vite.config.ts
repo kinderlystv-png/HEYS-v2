@@ -1,4 +1,4 @@
-import { createReadStream, existsSync, statSync } from 'fs';
+import { accessSync, constants, createReadStream, existsSync, statSync } from 'fs';
 import path from 'path';
 import { createGzip } from 'zlib';
 
@@ -27,9 +27,19 @@ export default defineConfig({
           if (url.startsWith('/@') || url.startsWith('/__')) return next();
 
           const cleanUrl = url.split('?')[0];
-          const filePath = path.join(__dirname, 'public', cleanUrl);
+          // Leading slash makes path.join treat the URL as absolute on Windows
+          // (`C:\postboot-….js`) and skip public/ — then Vite SPA-falls back to index.html.
+          const rel = cleanUrl.replace(/^\/+/, '');
+          const filePath = path.join(__dirname, 'public', rel);
 
           if (!existsSync(filePath)) return next();
+          // Locked leftover from a failed Windows rebuild (EPERM) — skip gzip
+          // so we do not 500; the facade reads the readable copy from lazy-manifest.
+          try {
+            accessSync(filePath, constants.R_OK);
+          } catch {
+            return next();
+          }
 
           const acceptEncoding = (req.headers['accept-encoding'] || '') as string;
           if (!acceptEncoding.includes('gzip')) return next();

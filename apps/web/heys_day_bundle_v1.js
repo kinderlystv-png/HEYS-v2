@@ -5678,6 +5678,12 @@
         harm: HEYS.models?.normalizeHarm?.(finalProduct)
       })
     };
+    const recipeSnap = HEYS.models?.recipeSnapshotFields?.(finalProduct);
+    if (recipeSnap) {
+      newItem.recipe_yield = recipeSnap.recipe_yield;
+      newItem.recipe_items = recipeSnap.recipe_items;
+      newItem.recipe_rev = recipeSnap.recipe_rev;
+    }
 
     return {
       finalProduct,
@@ -5865,7 +5871,10 @@
             React.createElement('span', { className: 'aps-v4-meal-summary__row-name' },
               item.name,
               ' ',
-              React.createElement('span', { className: 'aps-v4-meal-summary__row-grams' }, `${item.grams} г`)
+              React.createElement('span', { className: 'aps-v4-meal-summary__row-grams' }, `${item.grams} г`),
+              item.recipeLine
+                ? React.createElement('div', { className: 'aps-v4-meal-summary__row-recipe' }, item.recipeLine)
+                : null
             ),
             React.createElement('span', { className: 'aps-v4-meal-summary__row-kcal' }, String(item.kcal))
           )
@@ -5987,7 +5996,8 @@
       return {
         name: product.name || item.name || '?',
         grams,
-        kcal: itemKcal
+        kcal: itemKcal,
+        recipeLine: HEYS.models?.formatMealItemRecipeLine?.(item) || ''
       };
     });
 
@@ -6899,7 +6909,12 @@
       logMissingHarm(p.name, item, 'meal-table');
     }
     return React.createElement('tr', { 'data-new': isNew ? 'true' : 'false' },
-      React.createElement('td', { 'data-cell': 'name' }, p.name),
+      React.createElement('td', { 'data-cell': 'name' },
+        p.name,
+        HEYS.models?.formatMealItemRecipeLine?.(item)
+          ? React.createElement('div', { className: 'meal-recipe-line' }, HEYS.models.formatMealItemRecipeLine(item))
+          : null
+      ),
       React.createElement('td', { 'data-cell': 'grams' }, React.createElement('input', {
         type: 'number',
         value: grams,
@@ -9265,6 +9280,9 @@
                                 onClick: (e) => { e.stopPropagation(); openEditGramsModal(mealIndex, it.id, G, p); },
                             }, G + 'г'),
                         ),
+                        HEYS.models?.formatMealItemRecipeLine?.(it)
+                          ? React.createElement('div', { className: 'mpc-recipe-line' }, HEYS.models.formatMealItemRecipeLine(it))
+                          : null,
                         window.HEYS?.pendingProductQueue?.NotSentChip
                             && React.createElement(window.HEYS.pendingProductQueue.NotSentChip, { productId: p.id }),
                         React.createElement('div', { className: 'mpc-grid mpc-header' },
@@ -9377,6 +9395,9 @@
                                 onClick: () => removeItem(mealIndex, it.id),
                             }, '×'),
                         ),
+                        HEYS.models?.formatMealItemRecipeLine?.(it)
+                          ? React.createElement('div', { className: 'mpc-recipe-line' }, HEYS.models.formatMealItemRecipeLine(it))
+                          : null,
                         window.HEYS?.pendingProductQueue?.NotSentChip
                             && React.createElement(window.HEYS.pendingProductQueue.NotSentChip, { productId: p.id }),
                         React.createElement('div', { className: 'mpc-grid mpc-header' },

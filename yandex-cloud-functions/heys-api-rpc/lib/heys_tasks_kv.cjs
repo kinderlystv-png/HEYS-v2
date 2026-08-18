@@ -392,14 +392,31 @@ function emptyFile(path) {
  * Старые записи могли быть простой строкой — принимаем и её, чтобы миграция
  * формата не требовала одномоментной перезаписи всего задачника.
  */
+/**
+ * Переводы строк приводятся к LF на входе задачника.
+ *
+ * Разборы режут текст по переводу строки, а саму строку разбирают
+ * регуляркой — и точка в JS не совпадает с CR, а якорь конца строки без
+ * флага m перед ним не встаёт. На файле с CRLF parseTaskLine не совпадает
+ * ни разу, и проект молча становится пустым: 18.08 так пропали все 144
+ * задачи heys — планёрка не показала ни одной просрочки проекта, зато
+ * объявила шесть живых слотов ссылками на задачи, которых нет. Источник
+ * CRLF внешний (git с core.autocrlf на Windows), поэтому чинится здесь, на
+ * единственном входе: разборов два десятка, и следующий написанный про это
+ * забудет.
+ */
+function normalizeNewlines(text) {
+  return typeof text === 'string' && text.includes('\r') ? text.replace(/\r\n?/g, '\n') : text;
+}
+
 function ensureFile(raw, path) {
   if (typeof raw === 'string') {
-    return { path: normalizePath(path), text: raw, rev: 1, updatedAt: 0 };
+    return { path: normalizePath(path), text: normalizeNewlines(raw), rev: 1, updatedAt: 0 };
   }
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return emptyFile(path);
   return {
     path: normalizePath(raw.path || path),
-    text: typeof raw.text === 'string' ? raw.text : '',
+    text: typeof raw.text === 'string' ? normalizeNewlines(raw.text) : '',
     rev: Number(raw.rev) || 0,
     updatedAt: Number(raw.updatedAt) || 0,
   };

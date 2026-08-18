@@ -1710,19 +1710,33 @@
     return 'neutral';
   }
 
-  function v4SageRing({ value, target, label, toneClass = 'carbs' }) {
+  // Дуга кольца — без Math.round: округление на каждом кадре даёт ступеньки,
+  // а CSS macroRingFillIn (from 0) при смене дня сбрасывал кольцо в ноль.
+  function macroRingArcPct(value, target, ringCapCompPct = 5) {
     const num = Number(value) || 0;
+    const tgt = Number(target) || 0;
+    const ratio = tgt > 0 ? num / tgt : 0;
+    const basePctRaw = Math.min(100, ratio * 100);
+    const basePct = Math.max(0, basePctRaw - (ratio > 0 ? ringCapCompPct : 0));
+    const hasOver = ratio > 1;
+    const overPctRaw = hasOver ? Math.min(50, (ratio - 1) * 100) : 0;
+    const overPct = Math.max(0, overPctRaw - ringCapCompPct);
+    return { ratio, basePct, hasOver, overPct };
+  }
+
+  function macroRingDasharray(pct, total = 100) {
+    const n = Number(pct) || 0;
+    return `${n.toFixed(2)} ${total}`;
+  }
+
+  function v4SageRing({ value, ringValue, target, label, toneClass = 'carbs' }) {
+    const num = Number(value) || 0;
+    const arcNum = Number(ringValue != null ? ringValue : value) || 0;
     const tgt = Number(target) || 0;
     const remaining = tgt - num;
     const remainingRounded = Math.round(Math.abs(remaining));
     const centerLabel = remaining >= 0 ? String(remainingRounded) : null;
-    const ratio = tgt > 0 ? num / tgt : 0;
-    const ringCapCompPct = 5;
-    const basePctRaw = Math.min(100, Math.round(ratio * 100));
-    const basePct = Math.max(0, basePctRaw - (ratio > 0 ? ringCapCompPct : 0));
-    const hasOver = ratio > 1;
-    const overPctRaw = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0;
-    const overPct = Math.max(0, overPctRaw - ringCapCompPct);
+    const { basePct, hasOver, overPct } = macroRingArcPct(arcNum, tgt);
     const overTone = toneClass === 'protein' ? 'protein' : 'warn';
     const centerBad = macroCenterBad(num, tgt, toneClass);
     const factBad = macroDeviationBad(num, tgt, toneClass);
@@ -1741,7 +1755,7 @@
           pathLength: 100,
           strokeWidth: 5,
           strokeLinecap: 'round',
-          strokeDasharray: `${basePct} 100`,
+          strokeDasharray: macroRingDasharray(basePct),
           transform: 'rotate(-90 22 22)'
         }),
         hasOver && overPct > 0
@@ -1751,7 +1765,7 @@
             pathLength: 100,
             strokeWidth: 5,
             strokeLinecap: 'round',
-            strokeDasharray: `${overPct} ${100 - overPct}`,
+            strokeDasharray: macroRingDasharray(overPct, 100 - overPct),
             style: { '--v4-macro-over-offset': -(100 - overPct) },
             transform: 'rotate(-90 22 22)'
           })
@@ -2272,82 +2286,159 @@
   // useWidgetMotionValues анимирует вектор значений одним rAF-циклом, чтобы три
   // кольца БЖУ не давали три setState на кадр.
   const WIDGET_MOTION_MS = 1100;
+  const WIDGET_MOTION_EASE_CSS = 'cubic-bezier(0.65, 0, 0.35, 1)';
 
   // easeInOutCubic — мягкий разгон и мягкая остановка, ход стрелки спидометра.
-  // easeOutCubic здесь не годится: он проходит 2/3 пути за первую треть времени,
-  // что читается как рывок, а не как пересчёт.
   function widgetMotionEase(t) {
     return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   }
 
   function widgetMotionDisabled() {
-    try {
-      return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    } catch (e) {
-      return false;
+    // Пересчёт при смене дня — функциональная анимация (от текущего к новому),
+    // не декоративный motion; не гасим при prefers-reduced-motion (OS / embedded browser).
+    return false;
+  }
+
+  // Состояние анимации в модульном store, а не в useState виджета: при смене дня
+  // дерево может пересобраться, а кольцо/число должны ехать от того, что было на экране.
+  const _widgetMotionChannels = new Map();
+  const MOTION_TICK_MS = 32;
+  let _widgetMotionTimer = 0;
+
+  function _widgetMotionStopLoop() {
+    if (_widgetMotionTimer) {
+      clearInterval(_widgetMotionTimer);
+      _widgetMotionTimer = 0;
     }
   }
 
-  function useWidgetMotionValues(targets, options = {}) {
-    const { duration = WIDGET_MOTION_MS, animateOnMount = false, quantize = 0 } = options;
-    const nums = targets.map((v) => (Number.isFinite(Number(v)) ? Number(v) : 0));
-    const key = nums.join('|');
-    const targetsRef = React.useRef(nums);
-    targetsRef.current = nums;
-
-    const [display, setDisplay] = React.useState(() => (animateOnMount ? nums.map(() => 0) : nums));
-    const displayRef = React.useRef(display);
-    const rafRef = React.useRef(0);
-
-    React.useEffect(() => {
-      const to = targetsRef.current;
-      let from = displayRef.current;
-      if (from.length !== to.length) from = to.slice();
-      const settle = () => {
-        displayRef.current = to.slice();
-        setDisplay(displayRef.current);
-      };
-      if (to.every((v, i) => Math.abs(v - from[i]) < 0.01)) {
-        if (from !== displayRef.current) settle();
-        return undefined;
-      }
-      if (duration <= 0 || widgetMotionDisabled()) {
-        settle();
-        return undefined;
-      }
-      const start = from.slice();
-      let startTs = -1; // не 0: rAF-таймстемп сам может прийти нулём
-      const step = (ts) => {
-        if (startTs < 0) startTs = ts;
-        const t = Math.min(1, (ts - startTs) / duration);
-        if (t >= 1) {
-          rafRef.current = 0;
-          settle();
-          return;
-        }
-        const k = widgetMotionEase(t);
-        displayRef.current = start.map((v, i) => {
-          const next = v + (to[i] - v) * k;
-          // В полёте крупные числа идут по сетке (ккал — по десяткам): иначе
-          // младшие разряды мельтешат и это читается как дрожь, а не как счёт.
-          // В конце settle() ставит точное значение.
-          return quantize > 0 ? Math.round(next / quantize) * quantize : next;
-        });
-        setDisplay(displayRef.current);
-        rafRef.current = requestAnimationFrame(step);
-      };
-      rafRef.current = requestAnimationFrame(step);
-      return () => {
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        rafRef.current = 0;
-      };
-    }, [key, duration, quantize]); // eslint-disable-line react-hooks/exhaustive-deps
-
-    return display;
+  function _widgetMotionStartLoop() {
+    if (_widgetMotionTimer) return;
+    _widgetMotionTimer = setInterval(() => {
+      _widgetMotionTick(typeof performance !== 'undefined' ? performance.now() : Date.now());
+    }, MOTION_TICK_MS);
   }
 
-  function useWidgetMotionValue(target, options) {
-    return useWidgetMotionValues([target], options)[0];
+  function _widgetMotionNotify(ch) {
+    ch.listeners.forEach((fn) => {
+      try { fn(); } catch (e) { /* no-op */ }
+    });
+  }
+
+  function _widgetMotionTick(ts) {
+    let anyActive = false;
+    const notify = [];
+    _widgetMotionChannels.forEach((ch) => {
+      if (!ch.active) return;
+      if (ch.startTs < 0) ch.startTs = ts;
+      const t = Math.min(1, (ts - ch.startTs) / ch.duration);
+      if (t >= 1) {
+        ch.display = ch.target;
+        ch.active = false;
+        notify.push(ch);
+      } else {
+        anyActive = true;
+        const k = widgetMotionEase(t);
+        let next = ch.start + (ch.target - ch.start) * k;
+        if (ch.quantize > 0) next = Math.round(next / ch.quantize) * ch.quantize;
+        ch.display = next;
+        notify.push(ch);
+      }
+    });
+    notify.forEach(_widgetMotionNotify);
+    if (anyActive) {
+      _widgetMotionStartLoop();
+    } else {
+      _widgetMotionStopLoop();
+    }
+  }
+
+  function widgetMotionEnsureChannel(motionId, target, options = {}) {
+    const duration = options.duration ?? WIDGET_MOTION_MS;
+    const quantize = options.quantize ?? 0;
+    const tgt = Number.isFinite(Number(target)) ? Number(target) : 0;
+    let ch = _widgetMotionChannels.get(motionId);
+    if (!ch) {
+      ch = {
+        display: tgt,
+        target: tgt,
+        start: tgt,
+        startTs: -1,
+        duration,
+        quantize,
+        active: false,
+        listeners: new Set()
+      };
+      _widgetMotionChannels.set(motionId, ch);
+      return ch.display;
+    }
+    if (Math.abs(ch.target - tgt) < 0.01) {
+      if (ch.active) return ch.display;
+      if (Math.abs(ch.display - tgt) < 0.01) {
+        ch.display = tgt;
+        ch.target = tgt;
+      }
+      return ch.display;
+    }
+    if (duration <= 0 || widgetMotionDisabled()) {
+      ch.display = tgt;
+      ch.target = tgt;
+      ch.active = false;
+      _widgetMotionNotify(ch);
+      return ch.display;
+    }
+    ch.start = ch.display;
+    ch.target = tgt;
+    ch.duration = duration;
+    ch.quantize = quantize;
+    ch.startTs = -1;
+    ch.active = true;
+    _widgetMotionStartLoop();
+    _widgetMotionTick(typeof performance !== 'undefined' ? performance.now() : Date.now());
+    return ch.display;
+  }
+
+  function useWidgetMotionValues(targets, options = {}) {
+    const {
+      motionIdPrefix = 'vec',
+      duration = WIDGET_MOTION_MS,
+      quantize = 0
+    } = options;
+    const nums = targets.map((v) => (Number.isFinite(Number(v)) ? Number(v) : 0));
+    const ids = nums.map((_, i) => `${motionIdPrefix}:${i}`);
+    const bump = React.useReducer((n) => n + 1, 0)[1];
+
+    React.useLayoutEffect(() => {
+      const unsub = ids.map((id) => {
+        const ch = _widgetMotionChannels.get(id) || { listeners: new Set() };
+        ch.listeners.add(bump);
+        _widgetMotionChannels.set(id, ch);
+        if (ch.active) bump();
+        return () => ch.listeners.delete(bump);
+      });
+      return () => unsub.forEach((fn) => fn());
+    }, [motionIdPrefix, nums.length, bump]);
+
+    return nums.map((n, i) => widgetMotionEnsureChannel(ids[i], n, { duration, quantize }));
+  }
+
+  function useWidgetMotionValue(target, options = {}) {
+    const {
+      motionId = 'scalar',
+      duration = WIDGET_MOTION_MS,
+      quantize = 0
+    } = options;
+    const bump = React.useReducer((n) => n + 1, 0)[1];
+
+    React.useLayoutEffect(() => {
+      const ch = _widgetMotionChannels.get(motionId) || { listeners: new Set() };
+      ch.listeners.add(bump);
+      _widgetMotionChannels.set(motionId, ch);
+      if (ch.active) bump();
+      return () => ch.listeners.delete(bump);
+    }, [motionId, bump]);
+
+    return widgetMotionEnsureChannel(motionId, target, { duration, quantize });
   }
 
   function CaloriesWidgetContent({ widget, data }) {
@@ -2373,9 +2464,16 @@
     // Плавный пересчёт съеденного: число, подпись и полоса идут от предыдущего
     // отображаемого значения к новому (смена дня — переход, а не сброс в 0).
     // Классификация цвета остаётся на фактическом pct, чтобы не мигать в пути.
-    const animEaten = useWidgetMotionValue(eaten, { quantize: 10 });
-    const animPct = target > 0 ? Math.round((animEaten / target) * 100) : 0;
-    const animRemaining = Math.max(0, target - animEaten);
+    const animTarget = useWidgetMotionValue(target, {
+      motionId: `${widget?.id || 'cal'}:target`
+    });
+    const animEaten = useWidgetMotionValue(eaten, {
+      motionId: `${widget?.id || 'cal'}:eaten`,
+      quantize: 10
+    });
+    const animPct = animTarget > 0 ? Math.round((animEaten / animTarget) * 100) : 0;
+    const animBarPct = animTarget > 0 ? Math.min(100, Math.max(0, (animEaten / animTarget) * 100)) : 0;
+    const animRemaining = Math.max(0, animTarget - animEaten);
 
     // 1x1 Micro
     if (d.isMicro) {
@@ -2387,13 +2485,11 @@
 
     // 2×2 — v4 hero: число «осталось» + полоса прогресса (канвас g1)
     if (size === '2x2') {
-      const ratio = target > 0 ? animEaten / target : 0;
-      const barPct = Math.min(100, Math.round(ratio * 100));
-      const hasOver = animEaten > target && target > 0;
+      const hasOver = animEaten > animTarget && animTarget > 0;
       const isClosedDay = data.isClosedDay === true;
       const heroValue = isClosedDay
         ? animEaten
-        : (animRemaining > 0 ? animRemaining : (hasOver ? animEaten - target : animEaten));
+        : (animRemaining > 0 ? animRemaining : (hasOver ? animEaten - animTarget : animEaten));
       const heroLabel = isClosedDay
         ? 'итог дня'
         : (animRemaining > 0 ? 'осталось' : (hasOver ? 'перебор' : 'съедено'));
@@ -2409,12 +2505,12 @@
           React.createElement('div', { className: 'widget-calories__hero-bar' },
             React.createElement('div', {
               className: 'widget-calories__hero-bar-fill',
-              style: { width: `${barPct}%` }
+              style: { width: `${animBarPct}%` }
             })
           ),
           React.createElement('div', { className: 'widget-calories__hero-bar-labels' },
             React.createElement('span', null, formatKcal(animEaten)),
-            React.createElement('span', null, formatKcal(target))
+            React.createElement('span', null, formatKcal(animTarget))
           )
         )
       );
@@ -2427,7 +2523,7 @@
         ? formatKcal(animEaten)
         : (animRemaining > 0
           ? formatKcal(animRemaining)
-          : (animEaten > target ? `+${formatKcal(animEaten - target)}` : formatKcal(animEaten)));
+          : (animEaten > animTarget ? `+${formatKcal(animEaten - animTarget)}` : formatKcal(animEaten)));
       const linePrefix = isClosedDay ? 'Итог ' : (animRemaining > 0 ? 'Осталось ' : '');
       return React.createElement('div', {
         className: 'widget-calories widget-calories--2x1 widget-v4-row widget-v4-row--tight'
@@ -2456,13 +2552,13 @@
         showPct ? React.createElement('div', { className: 'widget-calories__pct' }, `${animPct}%`) : null
       ),
       showLabel
-        ? React.createElement('div', { className: 'widget-calories__label' }, `из ${formatKcal(target)} ккал`)
+        ? React.createElement('div', { className: 'widget-calories__label' }, `из ${formatKcal(animTarget)} ккал`)
         : null,
       showProgress
         ? React.createElement('div', { className: 'widget-calories__progress' },
           React.createElement('div', {
             className: 'widget-calories__bar',
-            style: { width: `${Math.min(100, Math.max(0, animPct))}%` }
+            style: { width: `${animBarPct}%` }
           })
         )
         : null,
@@ -3487,12 +3583,19 @@
 
     // Плавный пересчёт БЖУ: кольца доезжают/откатываются от предыдущего
     // отображаемого значения, граммы и проценты считаются от него же.
-    const [animProtein, animFat, animCarbs] = useWidgetMotionValues([protein || 0, fat || 0, carbs || 0]);
+    const [animProtein, animFat, animCarbs] = useWidgetMotionValues(
+      [protein || 0, fat || 0, carbs || 0],
+      { motionIdPrefix: `${widget?.id || 'macro'}:g` }
+    );
+    const [animProteinTarget, animFatTarget, animCarbsTarget] = useWidgetMotionValues(
+      [proteinTarget || 100, fatTarget || 70, carbsTarget || 250],
+      { motionIdPrefix: `${widget?.id || 'macro'}:t` }
+    );
 
     // Расчёт процентов
-    const pctP = proteinTarget > 0 ? Math.round(animProtein / proteinTarget * 100) : 0;
-    const pctF = fatTarget > 0 ? Math.round(animFat / fatTarget * 100) : 0;
-    const pctC = carbsTarget > 0 ? Math.round(animCarbs / carbsTarget * 100) : 0;
+    const pctP = animProteinTarget > 0 ? Math.round(animProtein / animProteinTarget * 100) : 0;
+    const pctF = animFatTarget > 0 ? Math.round(animFat / animFatTarget * 100) : 0;
+    const pctC = animCarbsTarget > 0 ? Math.round(animCarbs / animCarbsTarget * 100) : 0;
     const avgPct = Math.round((pctP + pctF + pctC) / 3);
     const showPercentage = widget.settings?.showPercentage !== false;
     const showGrams = widget.settings?.showGrams !== false && !d.isTiny;
@@ -3502,9 +3605,9 @@
     const ringsDensityClass = d.area >= 12 ? 'widget-macros--rings-lg' : d.area >= 8 ? 'widget-macros--rings-md' : 'widget-macros--rings-sm';
 
     const macroItems = [
-      { label: 'Белки', shortLabel: 'Б', value: animProtein, target: proteinTarget || 100, pct: pctP, toneClass: 'protein' },
-      { label: 'Жиры', shortLabel: 'Ж', value: animFat, target: fatTarget || 70, pct: pctF, toneClass: 'fat' },
-      { label: 'Углеводы', shortLabel: 'У', value: animCarbs, target: carbsTarget || 250, pct: pctC, toneClass: 'carbs' }
+      { label: 'Белки', shortLabel: 'Б', value: animProtein, target: animProteinTarget, pct: pctP, toneClass: 'protein' },
+      { label: 'Жиры', shortLabel: 'Ж', value: animFat, target: animFatTarget, pct: pctF, toneClass: 'fat' },
+      { label: 'Углеводы', shortLabel: 'У', value: animCarbs, target: animCarbsTarget, pct: pctC, toneClass: 'carbs' }
     ];
 
     const getMacroValueTone = ({ pct, toneClass }) =>
@@ -3521,13 +3624,9 @@
       const ringStartOffsetPct = 9;
       const ringCapCompPct = 5;
       const overColor = toneClass === 'protein' ? '#22c55e' : '#ef4444';
-      const ratio = target > 0 ? value / target : 0;
+      const arcValue = value;
+      const { ratio, basePct, hasOver, overPct } = macroRingArcPct(arcValue, target, ringCapCompPct);
       const dotColor = ratio > 1 ? '#ef4444' : '#22c55e';
-      const basePctRaw = Math.min(100, Math.round(ratio * 100));
-      const basePct = Math.max(0, basePctRaw - ringCapCompPct);
-      const hasOver = ratio > 1;
-      const overPctRaw = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0;
-      const overPct = Math.max(0, overPctRaw - ringCapCompPct);
       // Динамические градиенты по соблюдению нормы (берём цвет из HEYS.MacroRings):
       // красный/жёлтый/зелёный/серый. Если core не загружен — fallback на статичный по toneClass.
       const _coreColor = (data && data._rings && data._rings[toneClass]) ? data._rings[toneClass].color : null;
@@ -3584,8 +3683,8 @@
               r: 15.5,
               pathLength: 100,
               style: {
-                strokeDasharray: `${basePct} 100`,
-                '--ring-dasharray': `${basePct} 100`,
+                strokeDasharray: macroRingDasharray(basePct),
+                '--ring-dasharray': macroRingDasharray(basePct),
                 '--ring-start-offset': -ringStartOffsetPct,
                 stroke: `url(#${gradientId})`
               }
@@ -3597,8 +3696,8 @@
               r: 15.5,
               pathLength: 100,
               style: {
-                strokeDasharray: `${overPct} ${100 - overPct}`,
-                '--over-dasharray': `${overPct} ${100 - overPct}`,
+                strokeDasharray: macroRingDasharray(overPct, 100 - overPct),
+                '--over-dasharray': macroRingDasharray(overPct, 100 - overPct),
                 '--over-offset': -(100 - overPct),
                 stroke: overColor
               }
@@ -3657,9 +3756,9 @@
     if (size === '3x2') {
       return React.createElement('div', { className: 'widget-macros widget-macros--3x2 widget-v4-stack' },
         React.createElement('div', { className: 'widget-v4-macros' },
-          v4SageRing({ value: animProtein, target: proteinTarget, label: 'Белки', toneClass: 'protein' }),
-          v4SageRing({ value: animFat, target: fatTarget, label: 'Жиры', toneClass: 'fat' }),
-          v4SageRing({ value: animCarbs, target: carbsTarget, label: 'Углеводы', toneClass: 'carbs' })
+          v4SageRing({ value: animProtein, target: animProteinTarget, label: 'Белки', toneClass: 'protein' }),
+          v4SageRing({ value: animFat, target: animFatTarget, label: 'Жиры', toneClass: 'fat' }),
+          v4SageRing({ value: animCarbs, target: animCarbsTarget, label: 'Углеводы', toneClass: 'carbs' })
         )
       );
     }
@@ -3675,14 +3774,16 @@
     }
 
     // Остальные размеры
-    const MacroBar = ({ label, value, target, color, cls }) => {
-      const pct = target > 0 ? Math.round((value / target) * 100) : 0;
+    const MacroBar = ({ label, value, barValue, target, color, cls }) => {
+      const barPct = target > 0
+        ? Math.min(100, ((barValue != null ? barValue : value) / target) * 100)
+        : 0;
       return React.createElement('div', { className: 'widget-macros__row' },
         React.createElement('span', { className: `widget-macros__label ${cls || ''}` }, label),
         React.createElement('div', { className: 'widget-macros__bar-container' },
           React.createElement('div', {
             className: 'widget-macros__bar',
-            style: { width: `${Math.min(100, pct)}%`, backgroundColor: color }
+            style: { width: `${barPct}%`, backgroundColor: color }
           })
         ),
         showGrams ? React.createElement('span', { className: 'widget-macros__value' }, `${Math.round(value)}г`) : null
@@ -3696,13 +3797,13 @@
     // меняется намеренно: цветные метки становятся серыми.
     return React.createElement('div', { className: `widget-macros widget-macros--${variant}` },
       React.createElement(MacroBar, {
-        label: 'Б', value: animProtein, target: proteinTarget || 100, color: 'var(--v4-mark-1)', cls: 'widget-macros__label--prot'
+        label: 'Б', value: animProtein, barValue: protein, target: proteinTarget || 100, color: 'var(--v4-mark-1)', cls: 'widget-macros__label--prot'
       }),
       React.createElement(MacroBar, {
-        label: 'Ж', value: animFat, target: fatTarget || 70, color: 'var(--v4-mark-2)', cls: 'widget-macros__label--fat'
+        label: 'Ж', value: animFat, barValue: fat, target: fatTarget || 70, color: 'var(--v4-mark-2)', cls: 'widget-macros__label--fat'
       }),
       React.createElement(MacroBar, {
-        label: 'У', value: animCarbs, target: carbsTarget || 250, color: 'var(--v4-mark-3)', cls: 'widget-macros__label--carbs'
+        label: 'У', value: animCarbs, barValue: carbs, target: carbsTarget || 250, color: 'var(--v4-mark-3)', cls: 'widget-macros__label--carbs'
       })
     );
   }
@@ -7246,8 +7347,9 @@
 
       React.createElement('div', { className: 'widgets-grid-container' },
         React.createElement('div', {
-          className: `widgets-grid ${isEditMode ? 'widgets-grid--editing' : ''}`,
-          ref: gridRef
+          className: `widgets-grid animate-always ${isEditMode ? 'widgets-grid--editing' : ''}`,
+          ref: gridRef,
+          style: { '--widget-motion-ms': `${WIDGET_MOTION_MS}ms` }
         },
           widgets.map((widget, idx) =>
             React.createElement(WidgetCard, {

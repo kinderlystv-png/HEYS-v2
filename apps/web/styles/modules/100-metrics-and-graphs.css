@@ -5411,9 +5411,9 @@
   stroke-width: 5;
   stroke-linecap: round;
   stroke: var(--macro-ring-color, #6b7280);
-  /* Плавное заполнение от 0 до значения */
   stroke-dashoffset: var(--ring-start-offset, -7);
-  animation: macroRingFillIn 1.4s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation: none;
+  transition: stroke-dasharray var(--widget-motion-ms, 1100ms) cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 /* Маркер конца линии (белая точка для блика/объема) */
@@ -5429,7 +5429,8 @@
   stroke-width: 5;
   stroke-linecap: round;
   stroke-dashoffset: var(--over-offset, 0);
-  animation: macroRingOverFillIn 1s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  animation: none;
+  transition: stroke-dasharray var(--widget-motion-ms, 1100ms) cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 /* Точка-блик на конце дуги */

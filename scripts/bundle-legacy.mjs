@@ -96,6 +96,22 @@ function readExistingManifest() {
     }
 }
 
+function writeFileRetry(filePath, content, encoding) {
+    let lastErr;
+    for (let i = 0; i < 5; i++) {
+        try {
+            if (encoding) writeFileSync(filePath, content, encoding);
+            else writeFileSync(filePath, content);
+            return;
+        } catch (e) {
+            lastErr = e;
+            if (!e || !['EPERM', 'EBUSY', 'EACCES'].includes(e.code)) throw e;
+            Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250 * (i + 1));
+        }
+    }
+    throw lastErr;
+}
+
 // ─── Minify one bundle ─────────────────────────────────────────────────────
 // Conservative Terser config: drops console.log/info/debug + dead code + comments
 // + whitespace, but DOES NOT mangle (boot bundles populate window.HEYS.* by
@@ -163,7 +179,7 @@ async function buildBundle(name, files) {
     const size = Buffer.byteLength(content, 'utf8');
 
     if (!DRY_RUN) {
-        writeFileSync(outPath, content, 'utf8');
+        writeFileRetry(outPath, content, 'utf8');
 
         // 🛡️ Syntax validation — catch broken bundles before deploy
         try {
@@ -211,8 +227,17 @@ function cleanOldBundles(selectedNames) {
     if (old.length === 0) return;
     console.info(`\n[bundle-legacy] 🧹 Removing ${old.length} stale bundle(s):`);
     for (const f of old) {
-        unlinkSync(resolve(PUB_DIR, f));
-        console.info(`  removed: ${f}`);
+        const abs = resolve(PUB_DIR, f);
+        try {
+            unlinkSync(abs);
+            console.info(`  removed: ${f}`);
+        } catch (e) {
+            if (e && (e.code === 'EPERM' || e.code === 'EBUSY' || e.code === 'EACCES')) {
+                console.warn(`  skip locked: ${f} (${e.code})`);
+                continue;
+            }
+            throw e;
+        }
     }
 }
 
