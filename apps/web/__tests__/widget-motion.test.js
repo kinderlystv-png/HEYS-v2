@@ -20,7 +20,7 @@ function loadMotion({ reducedMotion = false } = {}) {
     expect(start).toBeGreaterThan(-1);
     expect(end).toBeGreaterThan(start);
     const code = uiSrc.slice(start, end)
-        + '\nreturn { useWidgetMotionValues, useWidgetMotionValue, widgetMotionEase };';
+        + '\nreturn { useWidgetMotionValues, useWidgetMotionValue, widgetMotionEase, widgetMotionArmIntroFromZero, widgetMotionDisarmIntro };';
 
     const rafQueue = [];
     const intervalQueue = [];
@@ -107,7 +107,7 @@ function loadMotion({ reducedMotion = false } = {}) {
         return render(targets, options);
     };
 
-    return { render, frame, ease: api.widgetMotionEase, rafQueue, intervalQueue };
+    return { render, frame, ease: api.widgetMotionEase, armIntro: api.widgetMotionArmIntroFromZero, disarmIntro: api.widgetMotionDisarmIntro, rafQueue, intervalQueue };
 }
 
 describe('motion значений виджетов', () => {
@@ -125,6 +125,32 @@ describe('motion значений виджетов', () => {
         const m = loadMotion();
         expect(m.render([1450])).toEqual([1450]);
         expect(m.intervalQueue.length).toBe(0);
+    });
+
+    it('intro вкладки виджетов — старт от нуля, затем доезжает до цели', () => {
+        const m = loadMotion();
+        m.armIntro();
+        expect(m.render([1450], { motionIdPrefix: 'eaten' })).toEqual([0]);
+        expect(m.intervalQueue.length).toBeGreaterThan(0);
+        const mid = m.frame(800, [1450], { motionIdPrefix: 'eaten' })[0];
+        expect(mid).toBeGreaterThan(0);
+        expect(mid).toBeLessThan(1450);
+        expect(m.frame(2600, [1450], { motionIdPrefix: 'eaten' })[0]).toBe(1450);
+        m.disarmIntro();
+    });
+
+    it('intro: нормы и target ккал сразу, граммы/съеденное — от нуля', () => {
+        const m = loadMotion();
+        m.armIntro();
+        const grams = m.render([80], { motionIdPrefix: 'macro:g' });
+        const norm = m.render([120], { motionIdPrefix: 'macro:t' });
+        const eaten = m.render([1843], { motionIdPrefix: 'cal:eaten' });
+        const target = m.render([2000], { motionIdPrefix: 'cal:target' });
+        expect(grams[0]).toBe(0);
+        expect(norm[0]).toBe(120);
+        expect(eaten[0]).toBe(0);
+        expect(target[0]).toBe(2000);
+        m.disarmIntro();
     });
 
     it('смена значения едет ОТ прошлого, а не от нуля', () => {
@@ -241,6 +267,6 @@ describe('виджеты подключены к motion', () => {
     it('полосы — CSS transition на ширину', () => {
         const barRule = cssSrc.slice(cssSrc.indexOf('.widget-calories__hero-bar-fill'), cssSrc.indexOf('.widget-calories__hero-bar-labels'));
         expect(barRule).toContain('transition: width var(--widget-motion-ms');
-        expect(uiSrc).toContain("'--widget-motion-ms': `${WIDGET_MOTION_MS}ms`");
+        expect(uiSrc).toContain("'--widget-motion-ms': `${widgetMotionCssMs}ms`");
     });
 });

@@ -62,7 +62,6 @@
   const LAYOUT_PRESET_VERSION = 3;
   const MAX_HISTORY = 20; // Максимум шагов undo/redo
   const SAVE_DEBOUNCE_MS = 500; // Debounce для сохранения
-  const LONG_PRESS_MS = 500; // Время для long press
   // ВАЖНО: основной источник правды по высоте ряда — CSS var --widget-row-height.
   // Здесь — fallback на случай ранней инициализации до применения стилей.
   const CELL_HEIGHT_PX = 76; // fallback
@@ -1731,25 +1730,10 @@
 
       console.info('[HEYS.dnd] 👇 pointerDown', { widgetId, isEditMode: state.isEditMode(), isTouchEvent, pointerType: event?.pointerType, tagName: t?.tagName, targetClass: t?.className?.substring?.(0, 60) });
 
-      // Если уже в edit mode — сразу начинаем drag
-      if (state.isEditMode()) {
-        this._prepareForDrag(widgetId, event);
-        return;
-      }
-
-      // Иначе — запускаем таймер long press для входа в edit mode
-      this._longPressTriggered = false;
-      this._longPressTimer = setTimeout(() => {
-        this._longPressTriggered = true;
-        state.enterEditMode();
-
-        // Вибрация при входе в edit mode
-        if (navigator.vibrate) {
-          navigator.vibrate(50);
-        }
-
-        HEYS.Widgets.emit('editmode:longpress', { widgetId });
-      }, LONG_PRESS_MS);
+      // Drag только в режиме расстановки (вход — «Изменить экран» / «Добавить»).
+      // Long press вне edit mode больше не открывает расстановку (у динамики веса — смена вида).
+      if (!state.isEditMode()) return;
+      this._prepareForDrag(widgetId, event);
     },
 
     /**

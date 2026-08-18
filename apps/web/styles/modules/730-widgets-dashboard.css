@@ -2122,8 +2122,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget--editing {
-  /* iOS-like wiggle: еле заметное, не отвлекающее */
-  animation: widget-shake 1.2s ease-in-out infinite;
+  /* iOS-like wiggle: лёгкое покачивание, карточка остаётся читаемой */
+  animation: widget-wiggle 1.6s ease-in-out infinite;
   cursor: grab;
 
   /* Явный z-index чтобы анимационный stacking context не полагался на DOM-порядок.
@@ -2140,15 +2140,15 @@ body:has(.page-reports) .hdr::after {
   cursor: grabbing;
 }
 
-@keyframes widget-shake {
+@keyframes widget-wiggle {
 
   0%,
   100% {
-    transform: rotate(-0.25deg);
+    transform: rotate(-0.55deg);
   }
 
   50% {
-    transform: rotate(0.25deg);
+    transform: rotate(0.55deg);
   }
 }
 
@@ -2399,8 +2399,10 @@ body:has(.page-reports) .hdr::after {
   height: 24px;
 }
 
-.widget--editing .widget__resize-handle {
-  opacity: 0.95;
+.widget--editing .widget__resize-handle,
+.widget--editing .widget__resize-btn,
+.widget--editing .widget__size-badge {
+  display: none !important;
 }
 
 .widget__resize-handle::before {
@@ -10227,20 +10229,28 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water .widget-water__
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.28));
 }
 
+.widget-v4-spark--ok .widget-v4-spark__line,
 .widget-v4-spark--ok polyline {
   stroke: #7a8a5e;
 }
 
+.widget-v4-spark--ok .widget-v4-spark__dot,
 .widget-v4-spark--ok circle {
   fill: #7a8a5e;
 }
 
+.widget-v4-spark--act .widget-v4-spark__line,
 .widget-v4-spark--act polyline {
   stroke: #c67139;
 }
 
+.widget-v4-spark--act .widget-v4-spark__dot,
 .widget-v4-spark--act circle {
   fill: #c67139;
+}
+
+.widget-v4-stack--spark-hold {
+  visibility: hidden;
 }
 
 .widget-v4-add {
@@ -10388,8 +10398,8 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water .widget-water__
 }
 
 .widgets-tab--editing .widget--editing {
-  animation: none;
-  opacity: 0.5;
+  opacity: 1;
+  animation: widget-wiggle 1.6s ease-in-out infinite;
 }
 
 .widgets-tab--editing .widget--dragging {
@@ -10415,7 +10425,6 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water .widget-water__
   backdrop-filter: none;
 }
 
-.widgets-tab--editing .widget__size-badge,
 .widgets-tab--editing .widget__settings-btn {
   display: none;
 }
@@ -10440,6 +10449,37 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-weight--2x2.widget-v4-
   justify-content: flex-start;
   text-align: left;
   gap: 0;
+}
+
+/* Вес 2×2 — герой читается чётче, цвет тренда сохраняем */
+body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-weight--2x2 .widget-v4-hero-num__val {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 0.92;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-weight--2x2 .widget-v4-hero-num__val.widget-v4-val--good {
+  color: #4a5c34;
+}
+
+body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-weight--2x2 .widget-v4-hero-num__val.widget-v4-val--bad {
+  color: #9a3228;
+}
+
+body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-weight--2x2 .widget-v4-hero-num__val.widget-v4-val--act {
+  color: #7a4218;
+}
+
+body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-weight--2x2 .widget-v4-hero-num__val.widget-v4-val--neutral {
+  color: #201e1d;
+}
+
+body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-weight--2x2 .widget-v4-unit {
+  font-weight: 600;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.48));
 }
 
 body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-relapse-risk--2x2.widget-v4-stack {
@@ -10510,11 +10550,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-v4-mini.widget-water--
     transform 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-.widget-wd--exit .widget-wd__scene {
-  visibility: hidden;
-}
-
-/* Поэлементное проявление: один CSS-цикл на свежей .widget-wd__scene (без toggle opacity) */
+/* Поэлементное проявление: один CSS-цикл на свежей .widget-wd__scene */
 .widget-wd__scene .widget-wd__el--kicker.widget-wd__el--in {
   animation: widget-wd-el-in var(--widget-wd-el-in-ms, 520ms) cubic-bezier(0.22, 0.61, 0.36, 1) 0ms both;
 }
@@ -10631,36 +10667,14 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-v4-mini.widget-water--
 }
 
 .widget-wd__spark-line {
-  stroke-dasharray: 100;
-  stroke-dashoffset: 100;
+  fill: none;
 }
 
-.widget-wd__scene .widget-wd__spark-line {
-  animation: widget-wd-line-draw var(--widget-wd-draw-ms, 1200ms) cubic-bezier(0.22, 0.61, 0.36, 1) var(--widget-wd-chart-delay, 320ms) both;
-}
-
-@keyframes widget-wd-line-draw {
-  to { stroke-dashoffset: 0; }
-}
-
-.widget-wd__scene .widget-wd__spark-dot {
-  animation: widget-wd-spark-dot-in 360ms cubic-bezier(0.22, 0.61, 0.36, 1) calc(var(--widget-wd-chart-delay, 320ms) + var(--widget-wd-draw-ms, 1200ms) * 0.82) both;
-}
-
-@keyframes widget-wd-spark-dot-in {
-  to { opacity: 1; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .widget-wd__spark-line {
-    stroke-dashoffset: 0 !important;
-    animation: none !important;
-  }
-
-  .widget-wd__spark-dot {
-    opacity: 1 !important;
-    animation: none !important;
-  }
+.widget-wd--preview .widget-wd__spark-line,
+.widget-wd--preview .widget-wd__spark-dot {
+  stroke-dashoffset: 0 !important;
+  opacity: 1 !important;
+  transition: none !important;
 }
 
 .widget-wd__bar-track {

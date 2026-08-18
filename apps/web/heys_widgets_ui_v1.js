@@ -6,10 +6,10 @@
  * 
  * v1.1.0:
  * - Поддержка pointer events для drag & drop
- * - Long press (500ms) для входа в edit mode
+ * - Вход в расстановку — «Изменить экран» / «Добавить» (не long press)
  * - Ghost элемент и placeholder preview
  * - Undo/Redo кнопки в header
- *
+ * - Resize handles временно выключены (WIDGET_EDIT_RESIZE_ENABLED) *
  * MODULE MAP (agent navigation — jump by line; do not read whole file)
  * Related docs: docs/reference/IMPROVEMENT_HISTORY.md (W-01/W-02 widgets)
  *                 widgets/widget_data.js + heys_widgets_core_v1.js (data layer)
@@ -56,14 +56,8 @@
     }
   }
 
-  function isLocalBrowserDev() {
-    try {
-      return typeof location !== 'undefined' &&
-        /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-    } catch (e) {
-      return false;
-    }
-  }
+  // Временно: в режиме расстановки только drag (без смены размера). Вернуть true — вернуть handles + «Размер» в ⚙️.
+  const WIDGET_EDIT_RESIZE_ENABLED = false;
 
   function widgetsOnce(key) {
     if (!key) return true;
@@ -1030,7 +1024,7 @@
 
     // Native touch listeners для resize handles (с { passive: false } чтобы preventDefault работал)
     useEffect(() => {
-      if (!isEditMode) return;
+      if (!isEditMode || !WIDGET_EDIT_RESIZE_ENABLED) return;
 
       const handles = [
         { ref: handleNRef, dir: 'n' },
@@ -1257,7 +1251,7 @@
       ),
 
       // Edit mode: компактный бейдж размера (не перекрывает контент)
-      isEditMode && React.createElement('div', {
+      isEditMode && WIDGET_EDIT_RESIZE_ENABLED && React.createElement('div', {
         id: index === 0 ? 'tour-widgets-size' : undefined,
         className: `widget__size-badge ${isResizing ? 'widget__size-badge--active' : ''}`,
         title: `Размер: ${previewLabel} (${previewCols}×${previewRows})${resizePreview?.overflowRight ? ' — может не поместиться справа' : ''}`,
@@ -1302,7 +1296,7 @@
       ,
 
       // Edit Mode: Resize handle (drag-resize)
-      isEditMode && React.createElement(React.Fragment, null,
+      isEditMode && WIDGET_EDIT_RESIZE_ENABLED && React.createElement(React.Fragment, null,
         React.createElement('button', {
           ref: handleNRef,
           type: 'button',
@@ -1573,6 +1567,147 @@
 
   function v4Kicker(text) {
     return React.createElement('div', { className: 'widget-v4-kicker' }, text);
+  }
+
+  const WIDGET_V4_SPARK_DRAW_MS = 1200;
+  const WIDGET_V4_SPARK_DELAY_MS = 320;
+
+  function v4SparkPointsToPath(points) {
+    if (!points) return '';
+    const coords = String(points).trim().split(/\s+/);
+    if (coords.length < 2) return '';
+    const [x0, y0] = coords[0].split(',').map(Number);
+    if (!Number.isFinite(x0) || !Number.isFinite(y0)) return '';
+    let d = `M${x0},${y0}`;
+    for (let i = 1; i < coords.length; i++) {
+      const [x, y] = coords[i].split(',').map(Number);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      d += ` L${x},${y}`;
+    }
+    return d;
+  }
+
+  function useV4SparkPathDraw(pathD, {
+    enabled = true,
+    compact = false,
+    delayMs = WIDGET_V4_SPARK_DELAY_MS,
+    drawMs = WIDGET_V4_SPARK_DRAW_MS,
+    onDrawComplete,
+    introSlow
+  } = {}) {
+    const introSlowRef = React.useRef(introSlow != null ? introSlow : widgetMotionIsIntroSlow());
+    const factor = introSlowRef.current ? WIDGET_MOTION_INTRO_FACTOR : 1;
+    const resolvedDelayMs = delayMs * factor;
+    const resolvedDrawMs = drawMs * factor;
+    const pathRef = React.useRef(null);
+    const [pathLength, setPathLength] = React.useState(0);
+    const [revealed, setRevealed] = React.useState(!enabled || compact);
+    const onDrawCompleteRef = React.useRef(onDrawComplete);
+    onDrawCompleteRef.current = onDrawComplete;
+
+    React.useLayoutEffect(() => {
+      if (!pathD || !enabled || compact) {
+        setPathLength(0);
+        setRevealed(!enabled ? false : true);
+        return undefined;
+      }
+      const el = pathRef.current;
+      if (!el) return undefined;
+      const len = el.getTotalLength();
+      if (!Number.isFinite(len) || len <= 0) return undefined;
+      setPathLength(len);
+      setRevealed(false);
+      return undefined;
+    }, [pathD, compact, enabled]);
+
+    React.useEffect(() => {
+      if (!pathD || !enabled || compact || pathLength <= 0) return undefined;
+      let raf2 = 0;
+      let timer = 0;
+      const raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => {
+          timer = window.setTimeout(() => setRevealed(true), resolvedDelayMs);
+        });
+      });
+      return () => {
+        cancelAnimationFrame(raf1);
+        if (raf2) cancelAnimationFrame(raf2);
+        if (timer) clearTimeout(timer);
+      };
+    }, [pathD, compact, pathLength, enabled, resolvedDelayMs]);
+
+    React.useEffect(() => {
+      if (!revealed || compact || !enabled) return undefined;
+      const cb = onDrawCompleteRef.current;
+      if (!cb) return undefined;
+      const timer = window.setTimeout(cb, resolvedDrawMs);
+      return () => clearTimeout(timer);
+    }, [revealed, resolvedDrawMs, compact, enabled]);
+
+    const lineStyle = (!enabled || compact) ? undefined : {
+      strokeDasharray: pathLength > 0 ? `${pathLength}` : undefined,
+      strokeDashoffset: revealed ? 0 : pathLength,
+      transition: revealed
+        ? `stroke-dashoffset ${resolvedDrawMs}ms cubic-bezier(0.22, 0.61, 0.36, 1)`
+        : 'none'
+    };
+    const dotStyle = (!enabled || compact) ? undefined : {
+      opacity: revealed ? 1 : 0,
+      transition: revealed
+        ? `opacity 360ms cubic-bezier(0.22, 0.61, 0.36, 1) ${resolvedDrawMs * 0.82}ms`
+        : 'none'
+    };
+
+    return { pathRef, lineStyle, dotStyle };
+  }
+
+  function WidgetV4DrawSparkSvg({
+    points,
+    className,
+    viewBox = '0 0 130 38',
+    height = 38,
+    enabled = true,
+    compact = false,
+    onDrawComplete,
+    dotCx,
+    dotCy,
+    dotR = 3.5
+  }) {
+    const pathD = React.useMemo(() => v4SparkPointsToPath(points), [points]);
+    const { pathRef, lineStyle, dotStyle } = useV4SparkPathDraw(pathD, {
+      enabled,
+      compact,
+      onDrawComplete
+    });
+
+    if (!pathD) return null;
+
+    return React.createElement('svg', {
+      className: className || 'widget-v4-spark',
+      viewBox,
+      width: '100%',
+      height,
+      fill: 'none',
+      'aria-hidden': 'true'
+    },
+      React.createElement('path', {
+        ref: pathRef,
+        className: 'widget-v4-spark__line',
+        d: pathD,
+        fill: 'none',
+        strokeWidth: 2.5,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        style: lineStyle
+      }),
+      dotCx != null && dotCy != null && React.createElement('circle', {
+        className: 'widget-v4-spark__dot',
+        cx: dotCx,
+        cy: dotCy,
+        r: dotR,
+        style: dotStyle
+      })
+    );
   }
 
   function formatRuDecimal(value, digits = 1) {
@@ -2147,6 +2282,7 @@
 
     const d = getWidgetDims(widget);
     const isShort = d.isShort; // 2x1
+    const healthTrendRevealed = useWidgetV4HealthTrendReveal();
 
     const getColor = (s) => widgetHealthScoreColor(s);
 
@@ -2230,6 +2366,12 @@
     const hero = Number.isFinite(delta)
       ? `${delta > 0 ? '+' : (delta < 0 ? '−' : '')}${Math.abs(Math.round(delta))}`
       : String(Math.round(score));
+    if (!healthTrendRevealed) {
+      return React.createElement('div', {
+        className: 'widget-v4-stack widget-v4-stack--spark-hold',
+        'aria-hidden': 'true'
+      });
+    }
     return React.createElement('div', { className: 'widget-v4-stack' },
       v4Kicker('Тренд здоровья'),
       React.createElement('div', { className: 'widget-v4-hero-num' },
@@ -2238,24 +2380,14 @@
         }, hero),
         React.createElement('span', { className: 'widget-v4-unit' }, `за ${periodDays} дней`)
       ),
-      React.createElement('svg', {
+      React.createElement(WidgetV4DrawSparkSvg, {
         className: 'widget-v4-spark widget-v4-spark--ok',
         viewBox: '0 0 130 40',
-        width: '100%',
         height: 40,
-        'aria-hidden': 'true'
-      },
-        React.createElement('polyline', {
-          points: trendPts,
-          fill: 'none',
-          strokeWidth: 2.5,
-          strokeLinecap: 'round',
-          strokeLinejoin: 'round'
-        }),
-        React.createElement('circle', {
-          cx: lastPt[0], cy: lastPt[1], r: 3.5
-        })
-      )
+        points: trendPts,
+        dotCx: Number(lastPt[0]),
+        dotCy: Number(lastPt[1])
+      })
     );
   }
 
@@ -2296,12 +2428,14 @@
   }
 
   // === Widget value motion ==================================================
-  // Числа, полосы и кольца виджетов меняются не скачком, а интерполяцией ОТ
-  // ТЕКУЩЕГО отображаемого значения к новому (смена дня, запись еды, откат
-  // назад). Старт всегда от того, что сейчас на экране, а не от нуля.
+  // Числа, полосы и кольца виджетов меняются не скачком, а интерполяцией к
+  // новому значению. При открытии вкладки виджетов — от нуля (intro); при смене
+  // дня и записи еды — от текущего отображаемого значения.
   // useWidgetMotionValues анимирует вектор значений одним rAF-циклом, чтобы три
   // кольца БЖУ не давали три setState на кадр.
   const WIDGET_MOTION_MS = 1100;
+  const WIDGET_MOTION_INTRO_FACTOR = 2;
+  const WIDGET_MOTION_INTRO_MS = WIDGET_MOTION_MS * WIDGET_MOTION_INTRO_FACTOR;
   const WIDGET_MOTION_EASE_CSS = 'cubic-bezier(0.65, 0, 0.35, 1)';
 
   // easeInOutCubic — мягкий разгон и мягкая остановка, ход стрелки спидометра.
@@ -2320,6 +2454,105 @@
   const _widgetMotionChannels = new Map();
   const MOTION_TICK_MS = 32;
   let _widgetMotionTimer = 0;
+  let _widgetMotionIntroArmed = false;
+  let _widgetIntroSlowActive = false;
+
+  function widgetMotionIntroDuration(ms) {
+    return _widgetIntroSlowActive ? ms * WIDGET_MOTION_INTRO_FACTOR : ms;
+  }
+
+  function widgetMotionIsIntroSlow() {
+    return _widgetIntroSlowActive;
+  }
+
+  function widgetMotionEndIntroSlow() {
+    _widgetIntroSlowActive = false;
+  }
+
+  function widgetMotionShouldIntroFromZero(motionId) {
+    // Нормы/цель ккал — сразу: иначе value и target едут от 0 синхронно
+    // и дуга кольца/полоса уже на финальном проценте.
+    if (/(^|:)t:\d+$/.test(motionId)) return false;
+    if (/(^|:)target(:\d+)?$/.test(motionId)) return false;
+    return true;
+  }
+
+  function widgetMotionArmIntroFromZero() {
+    _widgetMotionIntroArmed = true;
+    _widgetIntroSlowActive = true;
+    _widgetMotionChannels.forEach((ch) => { delete ch.introSeeded; });
+  }
+
+  function widgetMotionDisarmIntro() {
+    _widgetMotionIntroArmed = false;
+    _widgetMotionChannels.forEach((ch) => { delete ch.introSeeded; });
+  }
+
+  // Цепочка intro: спарклайн «Вес» 2×2 → сразу «Тренд здоровья» 2×2
+  let _widgetV4SparkSeqArmed = false;
+  let _widgetV4WeightSparkMounted = false;
+  let _widgetV4WeightSparkDone = false;
+  const _widgetV4SparkDoneListeners = new Set();
+
+  function widgetV4ArmSparkSequence() {
+    _widgetV4SparkSeqArmed = true;
+    _widgetV4WeightSparkMounted = false;
+    _widgetV4WeightSparkDone = false;
+  }
+
+  function widgetV4DisarmSparkSequence() {
+    _widgetV4SparkSeqArmed = false;
+    if (!_widgetV4WeightSparkDone) {
+      _widgetV4WeightSparkDone = true;
+      _widgetV4SparkDoneListeners.forEach((fn) => fn());
+    }
+  }
+
+  function widgetV4RegisterWeightSparkWidget() {
+    _widgetV4WeightSparkMounted = true;
+  }
+
+  function widgetV4NotifyWeightSparkDrawComplete() {
+    if (_widgetV4WeightSparkDone) return;
+    _widgetV4WeightSparkDone = true;
+    _widgetV4SparkDoneListeners.forEach((fn) => fn());
+  }
+
+  function useWidgetV4HealthTrendReveal() {
+    const initial = !_widgetV4SparkSeqArmed
+      || _widgetV4WeightSparkDone
+      || !_widgetV4WeightSparkMounted;
+    const [revealed, setRevealed] = React.useState(initial);
+
+    React.useEffect(() => {
+      if (!_widgetV4SparkSeqArmed || _widgetV4WeightSparkDone) {
+        setRevealed(true);
+        return undefined;
+      }
+      const bump = () => setRevealed(true);
+      _widgetV4SparkDoneListeners.add(bump);
+      const probe = window.setTimeout(() => {
+        if (!_widgetV4WeightSparkMounted) setRevealed(true);
+      }, 80);
+      return () => {
+        _widgetV4SparkDoneListeners.delete(bump);
+        clearTimeout(probe);
+      };
+    }, []);
+
+    return revealed;
+  }
+
+  function widgetMotionSeedIntroChannel(ch, tgt, duration, quantize) {
+    ch.display = 0;
+    ch.start = 0;
+    ch.target = tgt;
+    ch.duration = duration;
+    ch.quantize = quantize;
+    ch.startTs = -1;
+    ch.active = true;
+    ch.introSeeded = true;
+  }
 
   function _widgetMotionStopLoop() {
     if (_widgetMotionTimer) {
@@ -2374,6 +2607,48 @@
     const quantize = options.quantize ?? 0;
     const tgt = Number.isFinite(Number(target)) ? Number(target) : 0;
     let ch = _widgetMotionChannels.get(motionId);
+    if (_widgetMotionIntroArmed && !widgetMotionDisabled() && duration > 0) {
+      if (!widgetMotionShouldIntroFromZero(motionId)) {
+        if (!ch) {
+          ch = {
+            display: tgt,
+            target: tgt,
+            start: tgt,
+            startTs: -1,
+            duration,
+            quantize,
+            active: false,
+            listeners: new Set()
+          };
+          _widgetMotionChannels.set(motionId, ch);
+        } else {
+          ch.display = tgt;
+          ch.target = tgt;
+          ch.start = tgt;
+          ch.active = false;
+        }
+        return ch.display;
+      }
+      if (!ch || !ch.introSeeded) {
+        if (!ch) {
+          ch = {
+            display: 0,
+            target: tgt,
+            start: 0,
+            startTs: -1,
+            duration,
+            quantize,
+            active: false,
+            listeners: new Set()
+          };
+          _widgetMotionChannels.set(motionId, ch);
+        }
+        widgetMotionSeedIntroChannel(ch, tgt, widgetMotionIntroDuration(duration), quantize);
+        _widgetMotionStartLoop();
+        _widgetMotionTick(typeof performance !== 'undefined' ? performance.now() : Date.now());
+        return ch.display;
+      }
+    }
     if (!ch) {
       ch = {
         display: tgt,
@@ -2858,6 +3133,66 @@
    * WeightWidgetContent — Адаптивный виджет веса с системой блоков
    * Блоки заполняют пространство по приоритету
    */
+  function WeightWidgetV4_2x2({
+    current,
+    weekChange,
+    hasCurrent,
+    hasSparkline,
+    sparklinePoints
+  }) {
+    React.useLayoutEffect(() => {
+      widgetV4RegisterWeightSparkWidget();
+    }, []);
+    const onWeightSparkDrawComplete = React.useCallback(() => {
+      widgetV4NotifyWeightSparkDrawComplete();
+    }, []);
+
+    const weekText = Number.isFinite(weekChange)
+      ? `${weekChange > 0 ? '+' : '−'}${formatRuDecimal(Math.abs(weekChange), 1)} за неделю`
+      : null;
+    const pts = hasSparkline
+      ? sparklinePoints.slice(-7).filter((p) => Number.isFinite(p.weight) && !p.excluded && !p.estimated)
+      : [];
+    const sparkPoints = pts.length >= 2
+      ? pts.map((p, i) => {
+        const weights = pts.map((x) => x.weight);
+        const min = Math.min(...weights);
+        const max = Math.max(...weights);
+        const span = Math.max(0.1, max - min);
+        const x = 4 + (i / (pts.length - 1)) * 122;
+        const y = 32 - ((p.weight - min) / span) * 24;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ')
+      : '4,14 26,24 48,24 70,6 92,14 114,18 126,19';
+    const last = sparkPoints.split(' ').pop().split(',');
+    const weightHeroState = v4WeightSparkTrendState(pts);
+    const weekState = v4WeightDeltaState(weekChange);
+
+    return React.createElement('div', { className: 'widget-weight widget-weight--2x2 widget-v4-stack' },
+      v4Kicker('Вес'),
+      React.createElement('div', { className: 'widget-v4-hero-num' },
+        React.createElement('span', {
+          className: 'widget-v4-hero-num__val ' + v4ValueStateClass(weightHeroState)
+        },
+          hasCurrent ? formatRuDecimal(current, 1) : '—'
+        ),
+        React.createElement('span', { className: 'widget-v4-unit' }, 'кг')
+      ),
+      weekText
+        ? React.createElement('div', {
+          className: 'widget-v4-delta ' + v4ValueStateClass(weekState)
+        }, weekText)
+        : null,
+      React.createElement(WidgetV4DrawSparkSvg, {
+        className: 'widget-v4-spark widget-v4-spark--act',
+        points: sparkPoints,
+        dotCx: Number(last[0]),
+        dotCy: Number(last[1]),
+        onDrawComplete: onWeightSparkDrawComplete
+      })
+    );
+  }
+
   function WeightWidgetContent({ widget, data }) {
     const current = data.current;
     const goal = data.goal;
@@ -3118,60 +3453,13 @@
 
     // COMPACT (2×2) — канвас g1: «Вес» + кг + неделя + линия
     if (size === '2x2') {
-      const weekText = Number.isFinite(weekChange)
-        ? `${weekChange > 0 ? '+' : '−'}${formatRuDecimal(Math.abs(weekChange), 1)} за неделю`
-        : null;
-      const pts = hasSparkline
-        ? sparklinePoints.slice(-7).filter((p) => Number.isFinite(p.weight) && !p.excluded && !p.estimated)
-        : [];
-      const sparkPoints = pts.length >= 2
-        ? pts.map((p, i) => {
-          const weights = pts.map((x) => x.weight);
-          const min = Math.min(...weights);
-          const max = Math.max(...weights);
-          const span = Math.max(0.1, max - min);
-          const x = 4 + (i / (pts.length - 1)) * 122;
-          const y = 32 - ((p.weight - min) / span) * 24;
-          return `${x.toFixed(1)},${y.toFixed(1)}`;
-        }).join(' ')
-        : '4,14 26,24 48,24 70,6 92,14 114,18 126,19';
-      const last = sparkPoints.split(' ').pop().split(',');
-      const weightHeroState = v4WeightSparkTrendState(pts);
-      const weekState = v4WeightDeltaState(weekChange);
-      return React.createElement('div', { className: 'widget-weight widget-weight--2x2 widget-v4-stack' },
-        v4Kicker('Вес'),
-        React.createElement('div', { className: 'widget-v4-hero-num' },
-          React.createElement('span', {
-            className: 'widget-v4-hero-num__val ' + v4ValueStateClass(weightHeroState)
-          },
-            hasCurrent ? formatRuDecimal(current, 1) : '—'
-          ),
-          React.createElement('span', { className: 'widget-v4-unit' }, 'кг')
-        ),
-        weekText
-          ? React.createElement('div', {
-            className: 'widget-v4-delta ' + v4ValueStateClass(weekState)
-          }, weekText)
-          : null,
-        React.createElement('svg', {
-          className: 'widget-v4-spark widget-v4-spark--act',
-          viewBox: '0 0 130 38',
-          width: '100%',
-          height: 38,
-          'aria-hidden': 'true'
-        },
-          React.createElement('polyline', {
-            points: sparkPoints,
-            fill: 'none',
-            strokeWidth: 2.5,
-            strokeLinecap: 'round',
-            strokeLinejoin: 'round'
-          }),
-          React.createElement('circle', {
-            cx: last[0], cy: last[1], r: 3.5
-          })
-        )
-      );
+      return React.createElement(WeightWidgetV4_2x2, {
+        current,
+        weekChange,
+        hasCurrent,
+        hasSparkline,
+        sparklinePoints
+      });
     }
 
     // MEDIUM (3×2) — число слева + (график или доп.блоки) справа + цель внизу
@@ -3376,6 +3664,8 @@
     const pathRef = React.useRef(null);
     const [pathLength, setPathLength] = React.useState(0);
     const [isPathRevealed, setIsPathRevealed] = React.useState(false);
+    const introSlowRef = React.useRef(widgetMotionIsIntroSlow());
+    const drawMs = introSlowRef.current ? 2500 : 1250;
 
     // Если width = '100%', используем viewBox и сохраняем пропорции
     const isFluid = width === '100%';
@@ -3471,7 +3761,7 @@
         style: {
           strokeDasharray: pathLength || 1,
           strokeDashoffset: isPathRevealed ? 0 : (pathLength || 1),
-          transition: 'stroke-dashoffset 1.25s cubic-bezier(0.22, 0.61, 0.36, 1)'
+          transition: `stroke-dashoffset ${drawMs}ms cubic-bezier(0.22, 0.61, 0.36, 1)`
         }
       }),
       // Точки
@@ -4152,10 +4442,9 @@
   const WEIGHT_DYNAMICS_SHEET_CLOSE_MS = 400;
   const WEIGHT_DYNAMICS_EXIT_MS = 200;
   const WEIGHT_DYNAMICS_VALUE_MS = 1400;
-  const WEIGHT_DYNAMICS_DRAW_MS = 1200;
-  const WEIGHT_DYNAMICS_CHART_DELAY_MS = 320;
+  const WEIGHT_DYNAMICS_DRAW_MS = WIDGET_V4_SPARK_DRAW_MS;
+  const WEIGHT_DYNAMICS_CHART_DELAY_MS = WIDGET_V4_SPARK_DELAY_MS;
   const WEIGHT_DYNAMICS_EL_IN_MS = 520;
-  const WEIGHT_DYNAMICS_STAGGER_MS = 130;
 
   const weightDynamicsClickGuard = {
     _until: new Map(),
@@ -4208,9 +4497,22 @@
     return 'widget-wd__el widget-wd__el--' + role + ' widget-wd__el--in';
   }
 
+  function weightDynamicsPointsToPath(points) {
+    return v4SparkPointsToPath(points);
+  }
+
   function WeightDynamicsSparkSvg({ sparkline, stateClass, compact }) {
-    if (!sparkline?.points) return null;
-    const last = sparkline.last;
+    const pathD = React.useMemo(() => weightDynamicsPointsToPath(sparkline?.points), [sparkline?.points]);
+    const last = sparkline?.last;
+    const { pathRef, lineStyle, dotStyle } = useV4SparkPathDraw(pathD, {
+      enabled: !compact,
+      compact,
+      delayMs: WEIGHT_DYNAMICS_CHART_DELAY_MS,
+      drawMs: WEIGHT_DYNAMICS_DRAW_MS
+    });
+
+    if (!pathD) return null;
+
     return React.createElement('svg', {
       className: 'widget-wd__spark ' + (stateClass || '') + (compact ? '' : ' widget-wd__el widget-wd__el--chart widget-wd__el--in'),
       width: 58,
@@ -4219,18 +4521,24 @@
       fill: 'none',
       'aria-hidden': 'true'
     },
-      React.createElement('polyline', {
+      React.createElement('path', {
+        ref: pathRef,
         className: 'widget-wd__spark-line',
-        points: sparkline.points,
-        pathLength: 100,
+        d: pathD,
+        fill: 'none',
         stroke: 'currentColor',
         strokeWidth: 2,
         strokeLinecap: 'round',
-        strokeLinejoin: 'round'
+        strokeLinejoin: 'round',
+        style: lineStyle
       }),
       last ? React.createElement('circle', {
         className: 'widget-wd__spark-dot',
-        cx: last.x, cy: last.y, r: 2.4, fill: 'currentColor'
+        cx: last.x,
+        cy: last.y,
+        r: 2.4,
+        fill: 'currentColor',
+        style: dotStyle
       }) : null
     );
   }
@@ -7012,8 +7320,8 @@
         ),
 
         React.createElement('div', { className: 'widgets-settings__content' },
-          // Size selector
-          React.createElement('div', { className: 'widgets-settings__field' },
+          // Size selector (временно скрыт — WIDGET_EDIT_RESIZE_ENABLED)
+          WIDGET_EDIT_RESIZE_ENABLED && React.createElement('div', { className: 'widgets-settings__field' },
             React.createElement('label', null, 'Размер'),
             React.createElement('div', { className: 'widgets-settings__sizes' },
               widgetType.availableSizes.map(sizeId => {
@@ -7267,6 +7575,26 @@
     const containerRef = useRef(null);
     const gridRef = useRef(null);
     const prevClientIdRef = useRef(clientId);
+    const motionIntroArmedRef = useRef(false);
+    const [widgetMotionCssMs, setWidgetMotionCssMs] = useState(WIDGET_MOTION_INTRO_MS);
+    if (!motionIntroArmedRef.current) {
+      widgetMotionArmIntroFromZero();
+      widgetV4ArmSparkSequence();
+      motionIntroArmedRef.current = true;
+    }
+
+    useEffect(() => {
+      const introTotal = Math.max(
+        WIDGET_MOTION_INTRO_MS,
+        widgetMotionIntroDuration(WIDGET_V4_SPARK_DELAY_MS)
+          + widgetMotionIntroDuration(WIDGET_V4_SPARK_DRAW_MS)
+      ) + 120;
+      const t = window.setTimeout(() => {
+        setWidgetMotionCssMs(WIDGET_MOTION_MS);
+        widgetMotionEndIntroSlow();
+      }, introTotal);
+      return () => clearTimeout(t);
+    }, []);
 
     const updateHistoryInfo = useCallback(() => {
       setHistoryInfo({
@@ -7343,6 +7671,10 @@
     useEffect(() => {
       if (clientId) {
         const isRealSwitch = prevClientIdRef.current && prevClientIdRef.current !== clientId;
+        if (isRealSwitch) {
+          widgetMotionArmIntroFromZero();
+          widgetV4ArmSparkSequence();
+        }
         prevClientIdRef.current = clientId;
 
         console.info(`[WidgetsTab] clientId changed: "${clientId.slice(0, 8)}...", reinitializing widgets`, { isRealSwitch });
@@ -7496,6 +7828,7 @@
           || (grid && grid.childElementCount > 0);
         if (!gridReady) return;
         setIsDashboardPainted(true);
+        widgetMotionDisarmIntro();
         window.HEYS?.BlankScreenGuard?.reportVisibleFrame?.({
           element: root,
           screen: 'widgets',
@@ -7507,6 +7840,16 @@
       });
       return () => { cancelled = true; };
     }, [isLayoutHydrated, widgets.length]);
+
+    useEffect(() => () => {
+      widgetMotionDisarmIntro();
+      widgetMotionEndIntroSlow();
+      widgetV4DisarmSparkSequence();
+    }, []);
+
+    useEffect(() => {
+      if (isEditMode) widgetV4DisarmSparkSequence();
+    }, [isEditMode]);
 
     // Handle catalog widget selection
     const handleCatalogSelect = useCallback((widgetType) => {
@@ -7882,7 +8225,7 @@
         React.createElement('div', {
           className: `widgets-grid animate-always ${isEditMode ? 'widgets-grid--editing' : ''}`,
           ref: gridRef,
-          style: { '--widget-motion-ms': `${WIDGET_MOTION_MS}ms` }
+          style: { '--widget-motion-ms': `${widgetMotionCssMs}ms` }
         },
           widgets.map((widget, idx) =>
             React.createElement(WidgetCard, {
@@ -7921,7 +8264,7 @@
         )
       ),
 
-      isLocalBrowserDev() && !isEditMode && widgets.length > 0 && React.createElement('div', { className: 'widgets-tab__edit-row' },
+      !isEditMode && widgets.length > 0 && React.createElement('div', { className: 'widgets-tab__edit-row' },
         React.createElement('button', {
           type: 'button',
           id: 'tour-widgets-edit',
@@ -7946,7 +8289,7 @@
       }),
 
       isEditMode && React.createElement('div', { className: 'widget-v4-edit-footer' },
-        React.createElement('span', { className: 'widget-v4-edit-footer__hint' }, 'Долгое нажатие — взять виджет'),
+        React.createElement('span', { className: 'widget-v4-edit-footer__hint' }, 'Потяни виджет'),
         React.createElement('span', { className: 'widget-v4-edit-footer__history' },
           React.createElement('button', {
             type: 'button',

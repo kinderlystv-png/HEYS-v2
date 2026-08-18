@@ -35,12 +35,18 @@ describe('виджеты g1 в сфере палитры', () => {
     it('расстановка g2: каталог в сетке, минус, Отмена откатывает', () => {
         expect(uiSrc).toContain('function CatalogStrip');
         expect(uiSrc).toContain('widget-v4-catalog');
-        expect(uiSrc).toContain('Долгое нажатие — взять виджет');
+        expect(uiSrc).toContain('Потяни виджет');
         expect(uiSrc).toContain("enterEditMode?.()");
+        expect(uiSrc).toContain('WIDGET_EDIT_RESIZE_ENABLED = false');
+        expect(uiSrc).toContain('isEditMode && WIDGET_EDIT_RESIZE_ENABLED && React.createElement(React.Fragment');
+        expect(cssSrc).toContain('.widgets-tab--editing .widget--editing');
+        expect(cssSrc).toContain('animation: widget-wiggle');
         expect(cssSrc).toContain('.widgets-tab--editing .widget__delete-btn');
         const coreSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_core_v1.js'), 'utf8');
         expect(coreSrc).toContain('_editSnapshot');
         expect(coreSrc).toContain('opts?.revert');
+        expect(coreSrc).toContain('if (!state.isEditMode()) return');
+        expect(coreSrc).not.toContain("emit('editmode:longpress'");
     });
 
     it('песочная тёмная — грунт #141210, плитки #23201b, как g1d', () => {

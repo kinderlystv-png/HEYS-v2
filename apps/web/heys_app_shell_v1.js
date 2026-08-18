@@ -4991,9 +4991,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         })();
 
         const handlePrimaryTabClick = (nextTab) => {
-            if (widgetsEditMode) {
-                setDefaultTab(nextTab);
-            } else if (nextTab === 'widgets') {
+            if (!widgetsEditMode && nextTab === 'widgets') {
                 window.HEYS?.debugPanel?.handleTap();
             }
             const openCuratorFromDot = nextTab === 'diary' && tab !== 'diary'
@@ -5223,17 +5221,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             'div',
             {
                 className: 'tabs tabs--v4-primary'
-                    + (widgetsEditMode ? ' tabs--edit-mode' : '')
                     + (settingsMenuOpen ? ' tabs--settings-open' : '')
                     + (boardDarkNav ? ' tabs--board-dark' : '')
             },
-            // Подсказка в режиме редактирования (внутри tabs для абсолютного позиционирования)
-            widgetsEditMode && React.createElement(
-                'div',
-                { className: 'default-tab-hint' },
-                React.createElement('span', { className: 'default-tab-hint__icon' }, '🏠'),
-                React.createElement('span', { className: 'default-tab-hint__text' }, 'Нажми на вкладку, чтобы сделать её домашней'),
-            ),
             React.createElement(
                 'div',
                 { className: 'tab-primary-nav-row', role: 'tablist', 'aria-label': 'Основная навигация' },
@@ -5242,9 +5232,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     {
                         key: item.key,
                         className: 'tab tab-primary-nav'
-                            + (tab === item.key ? ' active' : '')
-                            + (widgetsEditMode && defaultTab === item.key ? ' default-tab-indicator' : '')
-                            + (widgetsEditMode ? ' tab--home-candidate' : ''),
+                            + (tab === item.key ? ' active' : ''),
                         id: item.id,
                         title: item.label,
                         role: 'tab',
@@ -5254,7 +5242,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             : undefined,
                         onClick: () => handlePrimaryTabClick(item.key),
                     },
-                    widgetsEditMode && defaultTab === item.key && React.createElement('span', { className: 'default-home-badge', title: 'Эта вкладка открывается по умолчанию' }, '🏠'),
                     item.key === 'diary'
                         ? React.createElement('span', { className: 'tab-icon-wrap' },
                             renderNavIcon(item.iconName, tab === item.key),
@@ -5280,9 +5267,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 React.createElement(
                     'div',
                     {
-                        className: 'tab ' + (tab === 'user' ? 'active' : '') + (widgetsEditMode ? ' tab--disabled-home' : ''),
+                        className: 'tab ' + (tab === 'user' ? 'active' : ''),
                         onClick: () => {
-                            if (widgetsEditMode) return;
                             toggleSettingsMenu();
                         },
                     },
