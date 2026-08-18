@@ -812,6 +812,11 @@ function describeRecipe(product, findProduct) {
       kcal100: kcal100 == null ? undefined : kcal100,
       kcal: kcal == null ? undefined : kcal,
       card_name: current && current.name && current.name !== item.name ? current.name : undefined,
+      // Ингредиент может лежать и в личном списке, и в общей базе: видно, чей
+      // именно взят, — иначе непонятно, чья правка сдвинет калорийность блюда.
+      card_source: current
+        ? (current._source === 'own' ? 'мой список' : current._source === 'peer' ? 'список другого клиента' : 'общая база')
+        : undefined,
       card_missing: current ? undefined : true,
     });
     if (!current) missing.push(item.name || item.product_id || '?');

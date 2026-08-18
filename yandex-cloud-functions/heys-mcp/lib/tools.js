@@ -466,6 +466,40 @@ function createTools({
    * совпадении инструмент не угадывает, а возвращает кандидатов — уточнение
    * дешевле, чем неверная еда в дневнике.
    */
+  /**
+   * Ингредиент рецепта: сначала личная карточка клиента, а чего у него нет —
+   * из общей базы. Раньше любое второе совпадение по названию давало «не
+   * найден», хотя личный «Огурец свежий» рядом с общим «Огурцом» — не
+   * неоднозначность, а очевидный ответ: клиент ведёт дневник своей карточкой.
+   * Настоящую неоднозначность («молоко» при трёх сортах) отдаём кандидатами,
+   * а не молчаливой догадкой.
+   */
+  function findRecipeIngredient(catalog, spec) {
+    if (spec.product_id) {
+      const byId = products.findById(catalog, spec.product_id);
+      if (byId) return byId;
+    }
+    if (!spec.query) return null;
+    const matches = products.searchProducts(catalog, spec.query, 5);
+    if (!matches.length) return null;
+
+    const wanted = products.normalizeText(spec.query);
+    const exactOwn = matches.filter((m) => m._source === 'own' && products.normalizeText(m.name) === wanted);
+    if (exactOwn.length === 1) return exactOwn[0];
+
+    const prepared = products.prepareQuery(spec.query);
+    const best = products.scoreProduct(matches[0], prepared);
+    const second = matches[1] ? products.scoreProduct(matches[1], prepared) : 0;
+    if (matches.length === 1 && best > 0) return matches[0];
+    if (best >= 400 && (second === 0 || best >= second * 1.25)) return matches[0];
+
+    const err = new Error('recipe_item_ambiguous');
+    err.code = 'recipe_item_ambiguous';
+    err.query = spec.query;
+    err.candidates = matches.slice(0, 5).map(products.describeProduct);
+    throw err;
+  }
+
   async function resolveProduct(spec, label) {
     const catalog = await loadCatalog();
 
@@ -766,17 +800,12 @@ function createTools({
     async heys_get_recipe(args) {
       const catalog = await loadCatalog();
       const findIngredient = (spec) => {
-        if (spec.product_id) {
-          const byId = products.findById(catalog, spec.product_id);
-          if (byId) return byId;
+        try {
+          return findRecipeIngredient(catalog, spec);
+        } catch (e) {
+          if (e.code === 'recipe_item_ambiguous') return null;
+          throw e;
         }
-        if (spec.query) {
-          const matches = products.searchProducts(catalog, spec.query, 5);
-          if (matches.length === 1) return matches[0];
-          const wanted = products.normalizeText(spec.query);
-          return matches.find((m) => products.normalizeText(m.name) === wanted) || null;
-        }
-        return null;
       };
 
       if (!args.product_id && !args.query) {
@@ -816,6 +845,7 @@ function createTools({
         if (item.kcal != null) parts.push(`${item.kcal} ккал`);
         if (item.kcal_share_pct != null) parts.push(`${item.kcal_share_pct}%`);
         parts.push(item.product_id ? `id=${item.product_id}` : 'без id');
+        if (item.card_source && item.card_source !== 'мой список') parts.push(item.card_source);
         if (item.card_missing) parts.push('карточки уже нет');
         return parts.join(', ');
       }).join('; ');
@@ -1173,19 +1203,23 @@ function createTools({
           );
         }
         try {
-          recipePayload = products.buildRecipePayload(args.recipe, (spec) => {
-            if (spec.product_id) return products.findById(catalog, spec.product_id);
-            if (spec.query) {
-              const matches = products.searchProducts(catalog, spec.query, 5);
-              return matches.length === 1 ? matches[0] : null;
-            }
-            return null;
-          }, { nowMs, previousRev: 0 });
+          recipePayload = products.buildRecipePayload(
+            args.recipe,
+            (spec) => findRecipeIngredient(catalog, spec),
+            { nowMs, previousRev: 0 },
+          );
         } catch (e) {
+          if (e.code === 'recipe_item_ambiguous') {
+            throw new ToolError(
+              'recipe_item_ambiguous',
+              `Ингредиент «${e.query}» подходит к нескольким карточкам — передай product_id. Кандидаты: ${e.candidates.map((c) => `${c.name} (${c.product_id}, ${c.kcal100} ккал/100, ${c.source})`).join('; ')}.`,
+              { candidates: e.candidates },
+            );
+          }
           if (e.code === 'recipe_item_not_found') {
             throw new ToolError(
               'recipe_item_not_found',
-              `Ингредиент рецепта не найден${e.product_id ? ` (product_id=${e.product_id})` : e.query ? ` («${e.query}»)` : ''}.`,
+              `Ингредиент рецепта не найден${e.product_id ? ` (product_id=${e.product_id})` : e.query ? ` («${e.query}»)` : ''}. Ищется сначала в личном списке клиента, затем в общей базе — заведи карточку или уточни название.`,
               { product_id: e.product_id, query: e.query },
             );
           }
@@ -1220,17 +1254,7 @@ function createTools({
                   grams: item.grams,
                 })),
               },
-              (spec) => {
-                if (spec.product_id) {
-                  const byId = products.findById(catalog, spec.product_id);
-                  if (byId) return byId;
-                }
-                if (spec.query) {
-                  const matches = products.searchProducts(catalog, spec.query, 5);
-                  return matches.length === 1 ? matches[0] : null;
-                }
-                return null;
-              },
+              (spec) => findRecipeIngredient(catalog, spec),
               { nowMs, previousRev: 0 },
             );
           } catch (e) {
@@ -2221,19 +2245,23 @@ function createTools({
         }
         let recipePayload;
         try {
-          recipePayload = products.buildRecipePayload(recipeInput, (spec) => {
-            if (spec.product_id) return products.findById(catalog, spec.product_id);
-            if (spec.query) {
-              const matches = products.searchProducts(catalog, spec.query, 5);
-              return matches.length === 1 ? matches[0] : null;
-            }
-            return null;
-          }, { nowMs, previousRev: Number(target.recipe && target.recipe.rev) || 0 });
+          recipePayload = products.buildRecipePayload(
+            recipeInput,
+            (spec) => findRecipeIngredient(catalog, spec),
+            { nowMs, previousRev: Number(target.recipe && target.recipe.rev) || 0 },
+          );
         } catch (e) {
+          if (e.code === 'recipe_item_ambiguous') {
+            throw new ToolError(
+              'recipe_item_ambiguous',
+              `Ингредиент «${e.query}» подходит к нескольким карточкам — передай product_id. Кандидаты: ${e.candidates.map((c) => `${c.name} (${c.product_id}, ${c.kcal100} ккал/100, ${c.source})`).join('; ')}.`,
+              { candidates: e.candidates },
+            );
+          }
           if (e.code === 'recipe_item_not_found') {
             throw new ToolError(
               'recipe_item_not_found',
-              `Ингредиент рецепта не найден${e.product_id ? ` (product_id=${e.product_id})` : e.query ? ` («${e.query}»)` : ''}.`,
+              `Ингредиент рецепта не найден${e.product_id ? ` (product_id=${e.product_id})` : e.query ? ` («${e.query}»)` : ''}. Ищется сначала в личном списке клиента, затем в общей базе — заведи карточку или уточни название.`,
               { product_id: e.product_id, query: e.query },
             );
           }

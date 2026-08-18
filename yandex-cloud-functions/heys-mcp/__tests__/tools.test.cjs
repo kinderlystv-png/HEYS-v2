@@ -2881,3 +2881,84 @@ test('удаление ингредиента предупреждает про 
   assert.equal(res.structured.used_in_recipes[0].product_id, 'own-salad');
   assert.match(res.text, /входил в состав блюд/);
 });
+
+// Ингредиенты рецепта живут в двух слоях сразу: личный список клиента и общая
+// база. Раньше второе совпадение по названию давало «ингредиент не найден».
+
+test('ингредиент, которого нет в личном списке, берётся из общей базы', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  const res = await tools.heys_create_product({
+    name: 'Латте с сиропом домашний',
+    recipe: {
+      yield_grams: 200,
+      items: [
+        { query: 'Кофе латте', grams: 150 },
+        { product_id: 'own-syrup', grams: 50 },
+      ],
+    },
+  });
+
+  const items = res.structured.recipe.items;
+  assert.equal(items.length, 2);
+  assert.equal(items[0].product_id, 's-latte', 'карточка общей базы подошла как ингредиент');
+  assert.ok(res.structured.kcal100 > 0);
+});
+
+test('личная карточка ингредиента выигрывает у одноимённой из общей базы', async () => {
+  const api = fakeApi({
+    day: null,
+    overlay: [
+      ...OVERLAY,
+      {
+        id: 'own-latte-home', _custom: true, in_my_list: true, name: 'Кофе латте',
+        protein100: 9, simple100: 9, complex100: 0, badFat100: 3, goodFat100: 3,
+        trans100: 0, fiber100: 0, gi: 30, harm: 1,
+      },
+    ],
+  });
+  const tools = build(api);
+  const res = await tools.heys_create_product({
+    name: 'Латте домашний в термосе',
+    recipe: { yield_grams: 200, items: [{ query: 'Кофе латте', grams: 200 }] },
+  });
+
+  assert.equal(res.structured.recipe.items[0].product_id, 'own-latte-home',
+    'клиент ведёт дневник своей карточкой — она и идёт в состав');
+});
+
+test('настоящая неоднозначность ингредиента возвращает кандидатов, а не «не найден»', async () => {
+  const tools = build(fakeApi({ day: null }));
+  await assert.rejects(
+    () => tools.heys_create_product({
+      name: 'Кофейный десерт',
+      recipe: { yield_grams: 200, items: [{ query: 'кофе', grams: 200 }] },
+    }),
+    (e) => {
+      assert.equal(e.code, 'recipe_item_ambiguous');
+      assert.ok(e.details.candidates.length > 1);
+      assert.ok(e.details.candidates[0].product_id);
+      return true;
+    },
+  );
+});
+
+test('get_recipe показывает, из какого слоя каждый ингредиент', async () => {
+  const api = fakeApi({ day: null });
+  const tools = build(api);
+  const created = await tools.heys_create_product({
+    name: 'Латте с сиропом домашний',
+    recipe: {
+      yield_grams: 200,
+      items: [{ query: 'Кофе латте', grams: 150 }, { product_id: 'own-syrup', grams: 50 }],
+    },
+  });
+  const res = await tools.heys_get_recipe({ product_id: created.structured.product_id });
+
+  const latte = res.structured.items.find((i) => i.product_id === 's-latte');
+  const syrup = res.structured.items.find((i) => i.product_id === 'own-syrup');
+  assert.equal(latte.card_source, 'общая база');
+  assert.equal(syrup.card_source, 'мой список');
+  assert.match(res.text, /общая база/);
+  assert.match(res.text, /Карточка личная/, 'само блюдо остаётся личным');
+});
