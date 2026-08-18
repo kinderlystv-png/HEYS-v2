@@ -156,19 +156,19 @@ describe('cold-start spinner mark', () => {
     expect(loading).toContain('thresholds:');
   });
 
-  it('matches app-splash.v4 handoff for manifest, icon and iOS path 1', () => {
+  it('matches app icon handoff: large H on #fffaf1, boot spinner on cold start', () => {
     expect(manifest.name).toBe('HEYS');
     expect(manifest.short_name).toBe('HEYS');
     expect(manifest.background_color).toBe('#fffaf1');
     expect(manifest.theme_color).toBe('#fffaf1');
     expect(manifest.description).toContain('Nutrition Tracker');
     expect(iconSvg).toContain('fill="#fffaf1"');
-    expect(iconSvg).toContain('fill="#efe3cf"');
-    expect(iconSvg).toContain('cy="44"');
-    expect(iconSvg).not.toContain('heys-icon-inset-ring');
-    expect(iconSvg).not.toContain('#c67139');
-    expect(appleSvg).toContain('fill="#efe3cf"');
-    expect(appleSvg).not.toContain('fill="#fffaf1"');
+    expect(iconSvg).toContain('font-weight="700"');
+    expect(iconSvg).not.toContain('fill="#efe3cf"');
+    expect(iconSvg).not.toContain('cy="44"');
+    expect(iconSvg).not.toContain('Caprasimo');
+    expect(appleSvg).toContain('fill="#fffaf1"');
+    expect(appleSvg).toContain('font-weight="700"');
     expect(fs.existsSync(path.join(webRoot, 'public/apple-touch-icon.png'))).toBe(true);
     expect(html).toContain('rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180"');
     expect(html).toContain('apple-mobile-web-app-capable" content="yes"');

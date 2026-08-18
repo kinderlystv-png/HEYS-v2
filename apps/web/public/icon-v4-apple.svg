@@ -1,24 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <defs>
-    <style>
-      @font-face {
-        font-family: 'Caprasimo';
-        font-style: normal;
-        font-weight: 400;
-        src: url('fonts/Caprasimo-Regular.ttf') format('truetype');
-      }
-    </style>
-  </defs>
-  <!-- iOS apple-touch-icon: 2AO ?;8B:0 #efe3cf, 157 ?@>7@0G=>AB8 8 157 A:@C3;5=8O 2 D09;5 -->
-  <rect width="100" height="100" fill="#efe3cf" />
+  <rect width="100" height="100" fill="#fffaf1" />
   <text
     x="50"
-    y="54"
+    y="82"
     text-anchor="middle"
-    dominant-baseline="middle"
-    font-family="Caprasimo, Georgia, serif"
-    font-size="44"
-    font-weight="400"
+    font-family="system-ui, -apple-system, sans-serif"
+    font-size="80"
+    font-weight="700"
     fill="#a8481c"
   >H</text>
 </svg>

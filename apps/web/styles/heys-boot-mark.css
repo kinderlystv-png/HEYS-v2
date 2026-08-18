@@ -1,6 +1,6 @@
 html, body { background: #fffaf1; }
 html {
-    /* Центр диска 56px — общий якорь сплэша PWA и heys-boot-mark (handoff app-splash.v4). */
+    /* Центр диска 56px — якорь сплэша PWA и heys-boot-mark (handoff app-splash.v4). */
     --heys-splash-disc-size: 56px;
     --heys-splash-anchor-y: max(148px, 45dvh);
 }
