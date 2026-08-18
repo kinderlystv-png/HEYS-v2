@@ -56,6 +56,15 @@
     }
   }
 
+  function isLocalBrowserDev() {
+    try {
+      return typeof location !== 'undefined' &&
+        /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+    } catch (e) {
+      return false;
+    }
+  }
+
   function widgetsOnce(key) {
     if (!key) return true;
     if (_widgetsOnce[key]) return false;
@@ -4445,7 +4454,7 @@
       case 'critical': return 'критично';
       case 'high': return 'высокий';
       case 'elevated': return 'повышен';
-      case 'guarded': return 'настороженно';
+      case 'guarded': return 'осторожно';
       default: return 'спокойно';
     }
   }
@@ -7388,7 +7397,7 @@
         )
       ),
 
-      !isEditMode && widgets.length > 0 && React.createElement('div', { className: 'widgets-tab__edit-row' },
+      isLocalBrowserDev() && !isEditMode && widgets.length > 0 && React.createElement('div', { className: 'widgets-tab__edit-row' },
         React.createElement('button', {
           type: 'button',
           id: 'tour-widgets-edit',
