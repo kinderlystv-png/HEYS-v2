@@ -17,8 +17,9 @@
   `duration_ms` — весь инструмент, `upstream_calls` и `upstream_ms` — обращения
   к `heys-api-rpc`. Разница между ними — собственная логика инструмента.
   `cold_start` — первый вызов на этом инстансе, `uptime_ms` — возраст процесса,
-  `resp_bytes` — размер ответа, `arg_count` — число аргументов, `session_id` и
-  `seq` — подключение и номер вызова в нём.
+  `resp_bytes` — размер ответа, `arg_count` — число аргументов, `arg_keys` —
+  имена полей верхнего уровня JSON-аргументов (без значений; с 18.08.2026),
+  `session_id` и `seq` — подключение и номер вызова в нём.
 
   До 17.08 это была строка `[heys-mcp] tool_timing` с текстовым префиксом и
   именами `ms` / `upstream.calls` / `cold`. С 17.08 печатается чистый JSON без
@@ -85,6 +86,23 @@ yc serverless function logs d4epjmd9lnk059u29bg8 --limit 30
 yc serverless function logs d4epjmd9lnk059u29bg8 --since 1h --limit 50 | grep mcp_call
 ```
 
+### 1a. Приёмка `copy_meal` (после деплоя с `arg_keys`, с 18.08.2026)
+
+Один прогон в **новом чате** → сразу:
+
+```bash
+yc serverless function logs d4epjmd9lnk059u29bg8 --since 15m --limit 40 | grep mcp_call
+```
+
+| Фраза                                                              | Ожидание в `arg_keys` у write                                  |
+| ------------------------------------------------------------------ | -------------------------------------------------------------- |
+| «такой же перекус как вчера» (приём из одной позиции)              | `copy_meal`, без ручного `add_items` с граммами                |
+| «такой же конверт как вчера» (позиция из многопозиционного приёма) | `copy_meal` (после `item_ids` в схеме — не только `add_items`) |
+
+У `heys_update_meal` или `heys_log_meal` смотри `arg_keys`: есть `"copy_meal"` —
+модель взяла копию; только `add_items` без `copy_meal` — ручной путь. Значений в
+строке нет; `tasks_mcp_trace` пока тоже без `arg_keys` (шаг 2 — Postgres).
+
 ### 2. Через Logging API (агрегатор, SQL, длинные выборки)
 
 Только **`--group-id e23ndggvq798r3v3eepq`**, фильтр по **message**:
@@ -131,6 +149,11 @@ yc logging read --group-id e23ndggvq798r3v3eepq \
 
 - `--group-name default` или id из `logging group list` — пусто по mcp_call.
 - Только `json_payload.t = "mcp_call"` — stdout не попадает в json_payload.
+- **`yc logging read --filter 'message: "mcp_call"'` для живой приёмки** —
+  индекс message может отставать на минуты; пустой вывод ≠ поле не пишется. Для
+  проверки свежего прогона (в т.ч. `arg_keys` / `copy_meal`) — только
+  `yc serverless function logs d4epjmd9lnk059u29bg8 --since 15m --limit 40` и
+  `grep mcp_call` (§1).
 - Длинные bash-цепочки grep/sed/timeout на Windows — медленно; одной команды из
   §1 хватает.
 - `yc serverless function logs` **без `--limit`** — поток, команда может висеть
