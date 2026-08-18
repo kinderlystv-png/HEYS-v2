@@ -2202,4 +2202,8 @@ test('правила про область видимости рецепта д�
   assert.match(instructions, /heys_get_recipe/);
   assert.match(instructions, /recipe_patch/);
   assert.match(instructions, /в общую базу блюдо с составом само не уходит/);
+  // Состав блюда — данные, а не устройство: до этой строки агент уходил
+  // читать heys_models_v1.js вместо одного вызова инструмента.
+  assert.match(instructions, /что внутри блюда/);
+  assert.ok(instructions.includes('heys_code_* и чтение heys_models_v1.js здесь не нужны'));
 });
