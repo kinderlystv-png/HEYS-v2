@@ -7132,7 +7132,8 @@ color: var(--v4-sand-ink, #201e1d);
   width: 100%;
   padding: 0;
   margin-top: 0;
-  min-height: 44px;
+  min-height: 0;
+  align-items: center;
   background: transparent;
   border: none;
   border-radius: 0;
@@ -7227,7 +7228,7 @@ color: var(--v4-sand-ink, #201e1d);
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   text-align: center;
   flex: 1;
 }
@@ -7289,7 +7290,7 @@ color: var(--v4-sand-ink, #201e1d);
   min-width: 0;
   max-width: none;
   flex-shrink: 1;
-  align-self: stretch;
+  align-self: center;
 }
 
 .hdr-date-group .date-picker--v4 .date-picker-row {
@@ -7392,7 +7393,7 @@ color: var(--v4-sand-ink, #201e1d);
 .hdr-client-tab-title-text {
   font-size: 15px;
   font-weight: 700;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   line-height: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -8161,8 +8162,8 @@ body:has(.offline-banner) .wrap {
 
 .date-picker--v4 .date-picker-day-nav {
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   border: none;
   border-radius: 999px;
@@ -8206,19 +8207,22 @@ body:has(.offline-banner) .wrap {
 .date-picker--v4 .date-picker-trigger {
   flex: 1;
   min-width: 0;
-  min-height: 44px;
+  height: 36px;
+  min-height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding: 6px 12px;
-  height: auto;
+  padding: 0 12px;
   background: #f7efe2;
   border: none;
   border-radius: 16px;
   cursor: pointer;
   box-shadow: none;
   transition: box-shadow 0.15s ease;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 @media (hover: hover) {
@@ -8251,15 +8255,96 @@ body:has(.offline-banner) .wrap {
   }
 }
 
-.date-picker--v4 .date-picker-trigger--today .date-picker-main--today {
+.date-picker--v4 .date-picker-trigger--today .date-picker-main--today,
+.date-picker--v4 .date-picker-trigger--not-today .date-picker-main--past,
+.date-picker--v4 .date-picker-lbl-inner .date-picker-main {
   font-size: 12.5px;
   font-weight: 700;
+  line-height: 1;
+}
+
+.date-picker--v4 .date-picker-trigger--today .date-picker-main--today {
   color: #201e1d;
 }
 
 .date-picker--v4 .date-picker-trigger--not-today {
   background: #f3e0d2;
   border: none;
+  gap: 0;
+  padding: 0 4px 0 0;
+  justify-content: flex-start;
+}
+
+.date-picker--v4 .date-picker-trigger-lbl {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 8px;
+  margin: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.date-picker--v4 .date-picker-lbl-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.date-picker--v4 .date-picker-icon {
+  display: block;
+  flex: none;
+  width: 13px;
+  height: 13px;
+  color: currentColor;
+  opacity: 0.55;
+}
+
+.date-picker--v4 .date-picker-trigger--today .date-picker-icon,
+.date-picker--v4 .date-picker-trigger--not-today .date-picker-icon {
+  color: currentColor;
+  opacity: 0.55;
+}
+
+.date-picker--v4 .date-picker-inline-today {
+  flex: none;
+  height: 28px;
+  margin: 0;
+  padding: 0 12px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-sand-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .date-picker--v4 .date-picker-inline-today:hover {
+    filter: brightness(1.05);
+  }
+}
+
+[data-theme$="dark"] .date-picker--v4 .date-picker-inline-today {
+  background: var(--v4-act, #cf8144);
+  color: var(--v4-btn-on-act, #1a0f04);
 }
 
 .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
@@ -8277,9 +8362,15 @@ body:has(.offline-banner) .wrap {
 }
 
 .date-picker--v4 .date-picker-trigger--not-today .date-picker-main--past {
-  font-size: 12.5px;
-  font-weight: 700;
   color: #8a4a20;
+}
+
+[data-theme$="dark"] .date-picker--v4 .date-picker-trigger--today .date-picker-main--today {
+  color: #f2ede6;
+}
+
+[data-theme$="dark"] .date-picker--v4 .date-picker-trigger--not-today .date-picker-main--past {
+  color: #e2a468;
 }
 
 .date-picker--v4 .date-picker-sub--relative {
@@ -8297,6 +8388,13 @@ body:has(.offline-banner) .wrap {
   gap: 3px;
   min-width: 0;
   text-align: center;
+}
+
+.date-picker--v4 .date-picker-lbl-inner .date-picker-main {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .date-picker--v4 .date-picker-main {
@@ -8599,7 +8697,7 @@ body:has(.offline-banner) .wrap {
   }
 }
 
-.date-picker-day-nav {
+.date-picker:not(.date-picker--v4) .date-picker-day-nav {
   flex-shrink: 0;
   width: 44px;
   height: 44px;
@@ -8619,24 +8717,24 @@ body:has(.offline-banner) .wrap {
 }
 
 @media (hover: hover) {
-  .date-picker-day-nav:hover:not(:disabled) {
+  .date-picker:not(.date-picker--v4) .date-picker-day-nav:hover:not(:disabled) {
     border-color: #cbd5e1;
     background: var(--v4-hero, #f8fafc);
   }
 }
 
-.date-picker-day-nav:active:not(:disabled) {
+.date-picker:not(.date-picker--v4) .date-picker-day-nav:active:not(:disabled) {
   transform: scale(0.96);
 }
 
-.date-picker-day-nav--disabled,
-.date-picker-day-nav:disabled {
+.date-picker:not(.date-picker--v4) .date-picker-day-nav--disabled,
+.date-picker:not(.date-picker--v4) .date-picker-day-nav:disabled {
   opacity: 0.35;
   cursor: default;
   pointer-events: none;
 }
 
-.date-picker-trigger {
+.date-picker:not(.date-picker--v4) .date-picker-trigger {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -8651,13 +8749,13 @@ body:has(.offline-banner) .wrap {
 }
 
 @media (hover: hover) {
-  .date-picker-trigger:hover {
+  .date-picker:not(.date-picker--v4) .date-picker-trigger:hover {
   border-color: #cbd5e1;
   background: var(--v4-hero, #f8fafc);
 }
 }
 
-.date-picker-trigger.open {
+.date-picker:not(.date-picker--v4) .date-picker-trigger.open {
   border-color: #4285f4;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
 }
@@ -8679,7 +8777,7 @@ svg.date-picker-icon {
 /* Когда выбран today — голубоватый фон триггера + синяя иконка. Две строки
    по тому же принципу, что и имя/фамилия слева: тонкая подпись сверху,
    основной текст снизу. gap=0, line-height 1.1, без letter-spacing. */
-.date-picker-trigger--today {
+.date-picker:not(.date-picker--v4) .date-picker-trigger--today {
   gap: 8px;
   padding: 0 12px;
   background: #eff6ff;
@@ -8687,40 +8785,40 @@ svg.date-picker-icon {
 }
 
 @media (hover: hover) {
-  .date-picker-trigger--today:hover {
+  .date-picker:not(.date-picker--v4) .date-picker-trigger--today:hover {
   background: var(--v4-accent-bg, #dbeafe);
   border-color: #93c5fd;
 }
 }
 
-.date-picker-trigger--today .date-picker-icon {
+.date-picker:not(.date-picker--v4) .date-picker-trigger--today .date-picker-icon {
   color: var(--v4-water, #3b82f6);
 }
 
 /* Парный жёлтый фон для любой НЕ-сегодняшней даты (визуально согласован
    с капсулой «НЕ СЕГОДНЯ» слева и yesterday-quick-btn). */
-.date-picker-trigger--not-today {
+.date-picker:not(.date-picker--v4) .date-picker-trigger--not-today {
   background: #fef3c7;
   border-color: #fde68a;
 }
 
 @media (hover: hover) {
-  .date-picker-trigger--not-today:hover {
+  .date-picker:not(.date-picker--v4) .date-picker-trigger--not-today:hover {
   background: #fde68a;
   border-color: #fcd34d;
 }
 }
 
-.date-picker-trigger--not-today .date-picker-icon {
+.date-picker:not(.date-picker--v4) .date-picker-trigger--not-today .date-picker-icon {
   color: #b45309;
 }
 
-.date-picker-trigger--today .date-picker-text {
+.date-picker:not(.date-picker--v4) .date-picker-trigger--today .date-picker-text {
   gap: 0;
   line-height: 1.1;
 }
 
-.date-picker-main.date-picker-main--today {
+.date-picker:not(.date-picker--v4) .date-picker-main.date-picker-main--today {
   font-size: 9px;
   font-weight: 500;
   color: var(--v4-warn-1, #ef4444);
@@ -9248,13 +9346,13 @@ svg.date-picker-icon {
 
 /* Mobile responsive */
 @media (max-width: 640px) {
-  .date-picker-day-nav {
+  .date-picker:not(.date-picker--v4) .date-picker-day-nav {
     width: 36px;
     height: 36px;
     font-size: 18px;
   }
 
-  .date-picker-trigger {
+  .date-picker:not(.date-picker--v4) .date-picker-trigger {
     padding: 0 6px;
     height: 34px;
     min-width: 80px;
@@ -9267,14 +9365,19 @@ svg.date-picker-icon {
     max-width: none;
     min-width: 0;
     flex: 1 1 0%;
-    padding: 6px 12px;
-    height: auto;
-    min-height: 44px;
+    padding: 0 12px;
+    height: 36px;
+    min-height: 36px;
     gap: 3px;
   }
 
+  .date-picker--v4 .date-picker-day-nav {
+    width: 34px;
+    height: 34px;
+  }
+
   /* Одна строка «Сегодня, 15 мая» */
-  .date-picker-trigger--today {
+  .date-picker:not(.date-picker--v4) .date-picker-trigger--today {
     max-width: none;
     min-width: 0;
     flex: 1;
@@ -9282,20 +9385,40 @@ svg.date-picker-icon {
     gap: 6px;
   }
 
-  .date-picker-icon {
+  .date-picker:not(.date-picker--v4) .date-picker-icon {
     font-size: 14px;
   }
 
-  .date-picker-main {
+  .date-picker:not(.date-picker--v4) .date-picker-main {
     font-size: 12px;
   }
 
-  .date-picker-main.date-picker-main--today {
+  .date-picker:not(.date-picker--v4) .date-picker-main.date-picker-main--today {
     font-size: 11px;
     white-space: nowrap;
   }
 
-  .date-picker-sub.date-picker-sub--today {
+  .date-picker--v4 .date-picker-lbl-inner .date-picker-main,
+  .date-picker--v4 .date-picker-main--today,
+  .date-picker--v4 .date-picker-main--past {
+    font-size: 12.5px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .date-picker--v4 .date-picker-inline-today {
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .date-picker--v4 .date-picker-sub--relative {
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .date-picker:not(.date-picker--v4) .date-picker-sub.date-picker-sub--today {
     font-size: 12px;
   }
 

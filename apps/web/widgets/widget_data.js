@@ -29,12 +29,18 @@
     water: {
       drunk: 1400,
       target: 2000,
-      pct: 70
+      pct: 70,
+      sleepEnd: '07:00',
+      sleepStart: '23:00',
+      profileSleepHours: 8,
+      medianWakeMinutes: 420
     },
     sleep: {
       hours: 7.5,
       target: 8,
-      quality: 4
+      quality: 4,
+      sleepStart: '23:30',
+      sleepEnd: '07:15'
     },
     streak: {
       current: 5,
@@ -486,7 +492,8 @@
         eaten: dayTot?.kcal || 0,
         target: optimum || 2000,
         remaining: Math.max(0, (optimum || 2000) - (dayTot?.kcal || 0)),
-        pct: optimum > 0 ? Math.round(((dayTot?.kcal || 0) / optimum) * 100) : 0
+        pct: optimum > 0 ? Math.round(((dayTot?.kcal || 0) / optimum) * 100) : 0,
+        isClosedDay: this._isClosedDay()
       };
     },
 
@@ -501,12 +508,18 @@
       }
 
       const day = this._getDay();
+      const prof = this._getProfile();
       const waterGoal = this._getWaterGoal();
 
       return {
         drunk: day?.waterMl || 0,
         target: waterGoal || 2000,
-        pct: waterGoal > 0 ? Math.round(((day?.waterMl || 0) / waterGoal) * 100) : 0
+        pct: waterGoal > 0 ? Math.round(((day?.waterMl || 0) / waterGoal) * 100) : 0,
+        sleepEnd: day?.sleepEnd || null,
+        sleepStart: day?.sleepStart || null,
+        profileSleepHours: prof?.sleepHours || 8,
+        medianWakeMinutes: this._getMedianSleepEndMinutes(14),
+        isClosedDay: this._isClosedDay()
       };
     },
 
@@ -526,7 +539,10 @@
       return {
         hours: day?.sleepHours || 0,
         target: prof?.sleepHours || 8,
-        quality: day?.sleepQuality || null
+        quality: day?.sleepQuality || null,
+        sleepStart: day?.sleepStart || null,
+        sleepEnd: day?.sleepEnd || null,
+        isClosedDay: this._isClosedDay()
       };
     },
 
@@ -1156,7 +1172,10 @@
         weights.push({
           date: dateStr,
           dayNum: date.getDate(),
-          weight: dayData?.weightMorning || null,
+          weight: (dayData?.weightMorning && dayData.weightMorningEstimated !== true)
+            ? dayData.weightMorning
+            : null,
+          estimated: dayData?.weightMorningEstimated === true,
           daysAgo: i,
           isToday: i === 0,
           excluded,
@@ -1208,6 +1227,49 @@
       const m = String(date.getMonth() + 1).padStart(2, '0');
       const d = String(date.getDate()).padStart(2, '0');
       return `${y}-${m}-${d}`;
+    },
+
+    _getTodayStr() {
+      const d = new Date();
+      if (d.getHours() < 3) {
+        d.setDate(d.getDate() - 1);
+      }
+      return this._formatDate(d);
+    },
+
+    _isClosedDay() {
+      const selected = this._selectedDate || this._getTodayStr();
+      return selected < this._getTodayStr();
+    },
+
+    _parseSleepEndMinutes(hm) {
+      if (!hm || typeof hm !== 'string') return null;
+      const parts = hm.trim().split(':');
+      const h = Number(parts[0]);
+      const min = Number(parts[1]);
+      if (!Number.isFinite(h) || !Number.isFinite(min)) return null;
+      return ((h % 24) * 60) + min;
+    },
+
+    /**
+     * Медиана времени подъёма (sleepEnd) за N дней — фолбэк для виджета воды.
+     */
+    _getMedianSleepEndMinutes(days = 14) {
+      const mins = [];
+      const today = new Date();
+      for (let i = 0; i < days; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dayData = this._getDayByDate(this._formatDate(date));
+        const parsed = this._parseSleepEndMinutes(dayData?.sleepEnd);
+        if (parsed != null) mins.push(parsed);
+      }
+      if (mins.length === 0) return null;
+      mins.sort((a, b) => a - b);
+      const mid = Math.floor(mins.length / 2);
+      return mins.length % 2 === 1
+        ? mins[mid]
+        : Math.round((mins[mid - 1] + mins[mid]) / 2);
     },
 
     /**

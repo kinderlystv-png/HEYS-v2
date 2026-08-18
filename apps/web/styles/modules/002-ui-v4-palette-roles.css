@@ -46,6 +46,7 @@
   --v4-warn-1: #ef4444;
   --v4-warn-2: #dc2626;
   --v4-warn-3: #7f1d1d;
+  --v4-bad-text: #a8382b;
   /* Sand UI language: painted modules keep warm look on every theme
      (owner 2026-08-12: not shared --v4-act with warm fallback). */
   --v4-sand-act: #c67139;
@@ -128,6 +129,7 @@
   --v4-warn-1: #d36969;
   --v4-warn-2: #d34545;
   --v4-warn-3: #d02525;
+  --v4-bad-text: #e08a72;
   /* Sand UI language: painted modules keep warm look on every theme
      (owner 2026-08-12: not shared --v4-act with warm fallback). */
   --v4-sand-act: #c67139;
@@ -206,6 +208,7 @@
   --v4-warn-1: #d99a63;
   --v4-warn-2: #c67139;
   --v4-warn-3: #a1471c;
+  --v4-bad-text: #a8382b;
   /* Sand UI language: painted modules keep warm look on every theme
      (owner 2026-08-12: not shared --v4-act with warm fallback). */
   --v4-sand-act: #c67139;
@@ -293,6 +296,7 @@
   --v4-warn-1: #d39673;
   --v4-warn-2: #d07d4e;
   --v4-warn-3: #c9662c;
+  --v4-bad-text: #e08a72;
   /* Sand UI language: painted modules keep warm look on every theme
      (owner 2026-08-12: not shared --v4-act with warm fallback). */
   --v4-sand-act: #cf8144;
@@ -376,6 +380,7 @@
   --v4-warn-1: #e59ea8;
   --v4-warn-2: #d9707e;
   --v4-warn-3: #a83246;
+  --v4-bad-text: #a8382b;
   /* Sand UI language: painted modules keep warm look on every theme
      (owner 2026-08-12: not shared --v4-act with warm fallback). */
   --v4-sand-act: #c67139;
@@ -462,6 +467,7 @@
   --v4-warn-1: #d8838e;
   --v4-warn-2: #d05868;
   --v4-warn-3: #cc3347;
+  --v4-bad-text: #e08a72;
   /* Sand UI language: painted modules keep warm look on every theme
      (owner 2026-08-12: not shared --v4-act with warm fallback). */
   --v4-sand-act: #c67139;

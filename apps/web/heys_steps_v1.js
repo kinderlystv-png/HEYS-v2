@@ -5790,10 +5790,10 @@
   };
 
   const MORNING_REST_SUPP_ADD_GROUPS = [
-    { label: 'Витамины и микроэлементы', categories: ['immune'] },
-    { label: 'Минералы и жиры', categories: ['brain', 'bones'] },
-    { label: 'Сон и восстановление', categories: ['sleep'] },
-    { label: 'Спортивное питание', categories: ['sport'] }
+    { label: 'Витамины и микроэлементы', ids: ['vitD', 'vitC', 'zinc', 'selenium', 'b12', 'b6'] },
+    { label: 'Минералы и жиры', ids: ['magnesium', 'omega3', 'calcium', 'k2', 'lecithin'] },
+    { label: 'Сон и восстановление', ids: ['melatonin', 'glycine', 'ltheanine', 'collagen'] },
+    { label: 'Спортивное питание', ids: ['creatine', 'bcaa', 'protein'] }
   ];
 
   function formatMorningRestSuppTiming(timing) {
@@ -5897,18 +5897,16 @@
   }
 
   function getMorningRestSuppAddCatalog(searchQuery) {
-    const Supps = HEYS.Supplements;
-    if (!Supps?.getByCategory) return [];
-    const byCategory = Supps.getByCategory();
+    const catalog = HEYS.Supplements?.CATALOG || {};
     const query = String(searchQuery || '').trim().toLowerCase();
     return MORNING_REST_SUPP_ADD_GROUPS.map((group) => {
       const items = [];
-      group.categories.forEach((catId) => {
-        (byCategory[catId] || []).forEach((row) => {
-          const label = row.name || row.id;
-          if (query && !label.toLowerCase().includes(query) && !row.id.toLowerCase().includes(query)) return;
-          items.push(row);
-        });
+      group.ids.forEach((id) => {
+        const supp = catalog[id];
+        if (!supp) return;
+        const label = supp.name || id;
+        if (query && !label.toLowerCase().includes(query) && !id.toLowerCase().includes(query)) return;
+        items.push({ id, ...supp });
       });
       return items.length ? { label: group.label, items } : null;
     }).filter(Boolean);
@@ -5952,9 +5950,19 @@
     );
   }
 
-  function renderMorningRestSuppFlowFoot(children, modifier) {
+  function renderMorningRestSuppFlowFoot(modifier, ...children) {
     const mod = modifier ? ` mc-supp-flow-foot--${modifier}` : '';
-    return React.createElement('div', { className: 'mc-supp-flow-foot' + mod }, children);
+    return React.createElement('div', { className: 'mc-supp-flow-foot' + mod }, ...children);
+  }
+
+  function renderMorningRestSuppLayer(layerClass, footModifier, bodyChildren, ...footChildren) {
+    const body = Array.isArray(bodyChildren) ? bodyChildren : [bodyChildren];
+    return React.createElement('div', {
+      className: 'mc-rest-step mc-rest-step--layer mc-supp-flow ' + layerClass
+    },
+      React.createElement('div', { className: 'mc-supp-flow-body' }, ...body),
+      renderMorningRestSuppFlowFoot(footModifier, ...footChildren)
+    );
   }
 
   function MorningRestSupplementsFlow({ data, onChange, planned, dateKey }) {
@@ -6061,164 +6069,172 @@
     };
 
     if (layer === 'empty') {
-      return React.createElement('div', { className: 'mc-rest-step mc-rest-step--layer mc-supp-flow mc-supp-flow--empty' },
-        React.createElement('div', { className: 'mc-supp-flow-empty-card' },
-          React.createElement('span', { className: 'mc-supp-flow-empty-icon', 'aria-hidden': 'true' },
-            React.createElement('svg', {
-              width: 21,
-              height: 21,
-              viewBox: '0 0 24 24',
-              fill: 'none',
-              stroke: 'currentColor',
-              strokeWidth: 2.4,
-              strokeLinecap: 'round',
-              strokeLinejoin: 'round'
-            },
-              React.createElement('path', { d: 'M10.5 20.5a4.95 4.95 0 01-7-7l7-7a4.95 4.95 0 017 7z' }),
-              React.createElement('path', { d: 'M8.5 8.5l7 7' })
+      return renderMorningRestSuppLayer(
+        'mc-supp-flow--empty',
+        'stack',
+        [
+          React.createElement('div', { className: 'mc-supp-flow-empty-card' },
+            React.createElement('span', { className: 'mc-supp-flow-empty-icon', 'aria-hidden': 'true' },
+              React.createElement('svg', {
+                width: 21,
+                height: 21,
+                viewBox: '0 0 24 24',
+                fill: 'none',
+                stroke: 'currentColor',
+                strokeWidth: 2.4,
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round'
+              },
+                React.createElement('path', { d: 'M10.5 20.5a4.95 4.95 0 01-7-7l7-7a4.95 4.95 0 017 7z' }),
+                React.createElement('path', { d: 'M8.5 8.5l7 7' })
+              )
+            ),
+            React.createElement('div', { className: 'mc-supp-flow-empty-title' }, 'Курс пока пуст'),
+            React.createElement('div', { className: 'mc-supp-flow-empty-body' },
+              'Добавки — витамины, минералы, омега. Добавьте курс, чтобы видеть его каждое утро.'
             )
           ),
-          React.createElement('div', { className: 'mc-supp-flow-empty-title' }, 'Курс пока пуст'),
-          React.createElement('div', { className: 'mc-supp-flow-empty-body' },
-            'Добавки — витамины, минералы, омега. Добавьте курс, чтобы видеть его каждое утро.'
+          React.createElement('div', { className: 'mc-supp-flow-note' },
+            'Это список на день, а не отметка «выпил»: факт приёма отмечается в дневнике.'
           )
-        ),
-        React.createElement('div', { className: 'mc-supp-flow-note' },
-          'Это список на день, а не отметка «выпил»: факт приёма отмечается в дневнике.'
-        ),
-        renderMorningRestSuppFlowFoot(
-          React.createElement('button', {
-            type: 'button',
-            className: 'mc-supp-flow-btn mc-supp-flow-btn--primary',
-            onClick: openAddLayer
-          }, 'Добавить в курс'),
-          React.createElement('button', {
-            type: 'button',
-            className: 'mc-supp-flow-btn mc-supp-flow-btn--ghost',
-            onClick: closeSupplements
-          }, 'Позже'),
-          'stack'
-        )
+        ],
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-supp-flow-btn mc-supp-flow-btn--primary',
+          onClick: openAddLayer
+        }, 'Добавить в курс'),
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-supp-flow-later',
+          onClick: closeSupplements
+        }, 'Позже')
       );
     }
 
     if (layer === 'course') {
-      return React.createElement('div', { className: 'mc-rest-step mc-rest-step--layer mc-supp-flow mc-supp-flow--course' },
-        React.createElement('div', { className: 'mc-supp-flow-lead' },
-          'Курс на день. Утром вы его просто видите — факт приёма отмечается в дневнике.'
-        ),
-        React.createElement('div', { className: 'mc-supp-flow-course-list' },
-          planned.map((id) => {
-            const row = formatMorningRestSuppCourseLine(id);
-            return React.createElement('button', {
-              key: id,
-              type: 'button',
-              className: 'mc-supp-flow-course-row',
-              onClick: () => openDoseLayer(id, [])
-            },
-              React.createElement('div', { className: 'mc-supp-flow-course-copy' },
-                React.createElement('b', null, row.name),
-                React.createElement('span', null, row.meta)
-              ),
-              renderMorningRestSuppChevron()
-            );
-          })
-        ),
-        React.createElement('button', {
-          type: 'button',
-          className: 'mc-supp-flow-add-row',
-          onClick: openAddLayer
-        },
-          React.createElement('span', { className: 'mc-supp-flow-add-icon', 'aria-hidden': 'true' },
-            React.createElement('svg', {
-              width: 13,
-              height: 13,
-              viewBox: '0 0 24 24',
-              fill: 'none',
-              stroke: 'currentColor',
-              strokeWidth: 3,
-              strokeLinecap: 'round'
-            }, React.createElement('path', { d: 'M12 6v12M6 12h12' }))
+      return renderMorningRestSuppLayer(
+        'mc-supp-flow--course',
+        null,
+        [
+          React.createElement('div', { className: 'mc-supp-flow-lead' },
+            'Курс на день. Утром вы его просто видите — факт приёма отмечается в дневнике.'
           ),
-          React.createElement('span', null, 'Добавить в курс')
-        ),
-        React.createElement('div', { className: 'mc-supp-flow-note mc-supp-flow-note--left' },
-          'Курс живёт до отмены: пункт убирается тем же экраном, где добавляется. Куратор видит состав, но не меняет его без вас.'
-        ),
-        renderMorningRestSuppFlowFoot(
+          React.createElement('div', { className: 'mc-supp-flow-course-list' },
+            planned.map((id) => {
+              const row = formatMorningRestSuppCourseLine(id);
+              return React.createElement('button', {
+                key: id,
+                type: 'button',
+                className: 'mc-supp-flow-course-row',
+                onClick: () => openDoseLayer(id, [])
+              },
+                React.createElement('div', { className: 'mc-supp-flow-course-copy' },
+                  React.createElement('b', null, row.name),
+                  React.createElement('span', null, row.meta)
+                ),
+                renderMorningRestSuppChevron()
+              );
+            })
+          ),
           React.createElement('button', {
             type: 'button',
-            className: 'mc-supp-flow-btn mc-supp-flow-btn--primary',
-            onClick: closeSupplements
-          }, 'Готово')
-        )
+            className: 'mc-supp-flow-add-row',
+            onClick: openAddLayer
+          },
+            React.createElement('span', { className: 'mc-supp-flow-add-icon', 'aria-hidden': 'true' },
+              React.createElement('svg', {
+                width: 13,
+                height: 13,
+                viewBox: '0 0 24 24',
+                fill: 'none',
+                stroke: 'currentColor',
+                strokeWidth: 3,
+                strokeLinecap: 'round'
+              }, React.createElement('path', { d: 'M12 6v12M6 12h12' }))
+            ),
+            React.createElement('span', null, 'Добавить в курс')
+          ),
+          React.createElement('div', { className: 'mc-supp-flow-note mc-supp-flow-note--left' },
+            'Курс живёт до отмены: пункт убирается тем же экраном, где добавляется. Куратор видит состав, но не меняет его без вас.'
+          )
+        ],
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-supp-flow-btn mc-supp-flow-btn--primary',
+          onClick: closeSupplements
+        }, 'Готово')
       );
     }
 
     if (layer === 'add') {
       const groups = getMorningRestSuppAddCatalog(searchQuery);
       const selectedCount = addDraft.length;
-      return React.createElement('div', { className: 'mc-rest-step mc-rest-step--layer mc-supp-flow mc-supp-flow--add' },
-        React.createElement('div', { className: 'mc-supp-flow-search' },
-          React.createElement('svg', {
-            width: 15,
-            height: 15,
-            viewBox: '0 0 24 24',
-            fill: 'none',
-            stroke: 'currentColor',
-            strokeWidth: 2.6,
-            strokeLinecap: 'round',
-            'aria-hidden': 'true'
-          },
-            React.createElement('circle', { cx: 11, cy: 11, r: 7 }),
-            React.createElement('path', { d: 'M20 20l-4.2-4.2' })
+      return renderMorningRestSuppLayer(
+        'mc-supp-flow--add',
+        'add',
+        [
+          React.createElement('div', { className: 'mc-supp-flow-search' },
+            React.createElement('svg', {
+              width: 15,
+              height: 15,
+              viewBox: '0 0 24 24',
+              fill: 'none',
+              stroke: 'currentColor',
+              strokeWidth: 2.6,
+              strokeLinecap: 'round',
+              'aria-hidden': 'true'
+            },
+              React.createElement('circle', { cx: 11, cy: 11, r: 7 }),
+              React.createElement('path', { d: 'M20 20l-4.2-4.2' })
+            ),
+            React.createElement('input', {
+              type: 'search',
+              className: 'mc-supp-flow-search-input',
+              placeholder: 'Поиск по названию',
+              value: searchQuery,
+              onChange: (event) => setSearchQuery(event.target.value),
+              'aria-label': 'Поиск по названию'
+            })
           ),
-          React.createElement('input', {
-            type: 'search',
-            className: 'mc-supp-flow-search-input',
-            placeholder: 'Поиск по названию',
-            value: searchQuery,
-            onChange: (event) => setSearchQuery(event.target.value),
-            'aria-label': 'Поиск по названию'
-          })
-        ),
-        React.createElement('div', { className: 'mc-supp-flow-groups' },
-          groups.map((group) => React.createElement('div', { key: group.label, className: 'mc-supp-flow-group' },
-            React.createElement('div', { className: 'mc-supp-flow-tier' }, group.label),
-            React.createElement('div', { className: 'mc-supp-flow-chips' },
-              group.items.map((item) => {
-                const isOn = addDraft.includes(item.id);
-                return React.createElement('button', {
-                  key: item.id,
-                  type: 'button',
-                  className: 'mc-supp-flow-chip' + (isOn ? ' is-on' : ''),
-                  onClick: () => {
-                    if (isOn && planned.includes(item.id)) {
-                      removeFromCourse(item.id);
-                      return;
+          React.createElement('div', { className: 'mc-supp-flow-groups' },
+            groups.map((group) => React.createElement('div', { key: group.label, className: 'mc-supp-flow-group' },
+              React.createElement('div', { className: 'mc-supp-flow-tier' }, group.label),
+              React.createElement('div', { className: 'mc-supp-flow-chips' },
+                group.items.map((item) => {
+                  const isOn = addDraft.includes(item.id);
+                  return React.createElement('button', {
+                    key: item.id,
+                    type: 'button',
+                    className: 'mc-supp-flow-chip' + (isOn ? ' is-on' : ''),
+                    onClick: () => {
+                      if (isOn && planned.includes(item.id)) {
+                        removeFromCourse(item.id);
+                        return;
+                      }
+                      toggleAddDraft(item.id);
                     }
-                    toggleAddDraft(item.id);
-                  }
-                },
-                  isOn && renderMorningRestSuppCheckIcon(),
-                  React.createElement('span', null, item.name)
-                );
-              })
-            )
-          ))
-        ),
-        renderMorningRestSuppFlowFoot(
-          React.createElement('span', { className: 'mc-supp-flow-selected-count' },
-            selectedCount > 0 ? `Выбрано ${countMorningRestSuppSelectedWord(selectedCount)}` : 'Ничего не выбрано'
-          ),
-          React.createElement('button', {
-            type: 'button',
-            className: 'mc-supp-flow-btn mc-supp-flow-btn--primary mc-supp-flow-btn--grow',
-            disabled: selectedCount === 0,
-            onClick: startDoseQueueFromAdd
-          }, 'Дозы и время'),
-          'add'
-        )
+                  },
+                    isOn && renderMorningRestSuppCheckIcon(),
+                    React.createElement('span', null, item.name)
+                  );
+                })
+              )
+            ))
+          )
+        ],
+        selectedCount > 0
+          ? React.createElement('span', { className: 'mc-supp-flow-selected-count' },
+            'Выбрано',
+            React.createElement('br'),
+            countMorningRestSuppSelectedWord(selectedCount)
+          )
+          : React.createElement('span', { className: 'mc-supp-flow-selected-count' }, 'Ничего не выбрано'),
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-supp-flow-btn mc-supp-flow-btn--primary mc-supp-flow-btn--grow',
+          disabled: selectedCount === 0,
+          onClick: startDoseQueueFromAdd
+        }, 'Дозы и время')
       );
     }
 
@@ -6243,71 +6259,73 @@
         }
       });
       const alreadyInCourse = planned.includes(doseId);
-      return React.createElement('div', { className: 'mc-rest-step mc-rest-step--layer mc-supp-flow mc-supp-flow--dose' },
-        React.createElement('div', { className: 'mc-supp-flow-dose-kicker' }, 'Доза на день'),
-        React.createElement('div', { className: 'mc-supp-flow-dose-stepper' },
-          React.createElement('button', {
-            type: 'button',
-            className: 'mc-supp-flow-dose-btn',
-            onClick: decDose,
-            'aria-label': 'Уменьшить дозу'
-          },
-            React.createElement('svg', {
-              width: 16,
-              height: 16,
-              viewBox: '0 0 24 24',
-              fill: 'none',
-              stroke: 'currentColor',
-              strokeWidth: 3,
-              strokeLinecap: 'round'
-            }, React.createElement('path', { d: 'M6 12h12' }))
-          ),
-          React.createElement('div', { className: 'mc-supp-flow-dose-value' },
-            React.createElement('span', { className: 'mc-supp-flow-dose-num' }, formatSuppDoseNumber(safeDose)),
-            React.createElement('span', { className: 'mc-supp-flow-dose-unit' }, doseDraft.unit || defaults.unit)
-          ),
-          React.createElement('button', {
-            type: 'button',
-            className: 'mc-supp-flow-dose-btn',
-            onClick: incDose,
-            'aria-label': 'Увеличить дозу'
-          },
-            React.createElement('svg', {
-              width: 16,
-              height: 16,
-              viewBox: '0 0 24 24',
-              fill: 'none',
-              stroke: 'currentColor',
-              strokeWidth: 3,
-              strokeLinecap: 'round'
+      return renderMorningRestSuppLayer(
+        'mc-supp-flow--dose',
+        null,
+        [
+          React.createElement('div', { className: 'mc-supp-flow-dose-kicker' }, 'Доза на день'),
+          React.createElement('div', { className: 'mc-supp-flow-dose-stepper' },
+            React.createElement('button', {
+              type: 'button',
+              className: 'mc-supp-flow-dose-btn',
+              onClick: decDose,
+              'aria-label': 'Уменьшить дозу'
             },
-              React.createElement('path', { d: 'M12 6v12M6 12h12' })
+              React.createElement('svg', {
+                width: 16,
+                height: 16,
+                viewBox: '0 0 24 24',
+                fill: 'none',
+                stroke: 'currentColor',
+                strokeWidth: 3,
+                strokeLinecap: 'round'
+              }, React.createElement('path', { d: 'M6 12h12' }))
+            ),
+            React.createElement('div', { className: 'mc-supp-flow-dose-value' },
+              React.createElement('span', { className: 'mc-supp-flow-dose-num' }, formatSuppDoseNumber(safeDose)),
+              React.createElement('span', { className: 'mc-supp-flow-dose-unit' }, doseDraft.unit || defaults.unit)
+            ),
+            React.createElement('button', {
+              type: 'button',
+              className: 'mc-supp-flow-dose-btn',
+              onClick: incDose,
+              'aria-label': 'Увеличить дозу'
+            },
+              React.createElement('svg', {
+                width: 16,
+                height: 16,
+                viewBox: '0 0 24 24',
+                fill: 'none',
+                stroke: 'currentColor',
+                strokeWidth: 3,
+                strokeLinecap: 'round'
+              },
+                React.createElement('path', { d: 'M12 6v12M6 12h12' })
+              )
             )
+          ),
+          React.createElement('div', { className: 'mc-supp-flow-dose-hint' }, defaults.hint),
+          React.createElement('div', { className: 'mc-supp-flow-timing-label' }, 'Когда принимать'),
+          React.createElement('div', { className: 'mc-supp-flow-timing-row' },
+            MORNING_REST_SUPP_TIMING_OPTIONS.map((row) => React.createElement('button', {
+              key: row.id,
+              type: 'button',
+              className: 'mc-pill mc-pill--mini mc-pill--choice' + (doseDraft.timing === row.id ? ' is-on' : ''),
+              onClick: () => onChange({
+                ...data,
+                supplementsDoseDraft: { ...doseDraft, timing: row.id }
+              })
+            }, row.label))
+          ),
+          React.createElement('div', { className: 'mc-supp-flow-note mc-supp-flow-note--left' },
+            'Время — подсказка для утреннего списка, а не напоминание. Дозу и время можно поменять в курсе в любой день.'
           )
-        ),
-        React.createElement('div', { className: 'mc-supp-flow-dose-hint' }, defaults.hint),
-        React.createElement('div', { className: 'mc-supp-flow-timing-label' }, 'Когда принимать'),
-        React.createElement('div', { className: 'mc-supp-flow-timing-row' },
-          MORNING_REST_SUPP_TIMING_OPTIONS.map((row) => React.createElement('button', {
-            key: row.id,
-            type: 'button',
-            className: 'mc-pill mc-pill--mini mc-pill--choice' + (doseDraft.timing === row.id ? ' is-on' : ''),
-            onClick: () => onChange({
-              ...data,
-              supplementsDoseDraft: { ...doseDraft, timing: row.id }
-            })
-          }, row.label))
-        ),
-        React.createElement('div', { className: 'mc-supp-flow-note mc-supp-flow-note--left' },
-          'Время — подсказка для утреннего списка, а не напоминание. Дозу и время можно поменять в курсе в любой день.'
-        ),
-        renderMorningRestSuppFlowFoot(
-          React.createElement('button', {
-            type: 'button',
-            className: 'mc-supp-flow-btn mc-supp-flow-btn--primary',
-            onClick: commitDoseAndAdvance
-          }, alreadyInCourse ? 'Сохранить' : 'Добавить в курс')
-        )
+        ],
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-supp-flow-btn mc-supp-flow-btn--primary',
+          onClick: commitDoseAndAdvance
+        }, alreadyInCourse ? 'Сохранить' : 'Добавить в курс')
       );
     }
 
@@ -6331,8 +6349,7 @@
     const consentBannerCopy = getMorningRestConsentBannerCopy(profile);
     const showMeasurements = measurementsConsentOn && measurementsEligible;
     const showSupplements = supplementsConsentOn && supplementsFeatureOn;
-    const supplementsInCourse = planned.length > 0;
-    const showSupplementsCard = showSupplements && supplementsInCourse;
+    const showSupplementsCard = showSupplements;
     const routineStatus = data.routineStatus || null;
     const routineStreak = data.routineStreak != null
       ? data.routineStreak
@@ -6679,21 +6696,37 @@
           React.createElement('span', { className: 'mc-rest-card-title' }, 'Добавки на сегодня'),
           React.createElement('span', { className: 'mc-rest-chevron mc-rest-chevron--down', 'aria-hidden': 'true' })
         ),
-        React.createElement('div', { className: 'mc-rest-supp-list' },
-          planned.map((id) => {
-            const row = formatMorningRestSupplementRow(id);
-            return React.createElement('div', { key: id, className: 'mc-rest-supp-row' },
-              React.createElement('span', { className: 'mc-rest-supp-name' }, row.title),
-              row.timing && React.createElement('span', { className: 'mc-rest-supp-time' }, row.timing)
-            );
-          })
+        React.createElement('div', {
+          className: 'mc-rest-supp-list' + (planned.length === 0 ? ' mc-rest-supp-list--empty' : '')
+        },
+          planned.length > 0
+            ? planned.map((id) => {
+              const row = formatMorningRestSupplementRow(id);
+              return React.createElement('div', { key: id, className: 'mc-rest-supp-row' },
+                React.createElement('span', { className: 'mc-rest-supp-name' }, row.title),
+                row.timing && React.createElement('span', { className: 'mc-rest-supp-time' }, row.timing)
+              );
+            })
+            : React.createElement('div', { className: 'mc-rest-supp-empty' },
+              'В курсе нет добавок'
+            )
         ),
         React.createElement('button', {
           type: 'button',
           className: 'mc-rest-supp-add',
           onClick: openSupplementsAddLayer
         },
-          React.createElement('span', { className: 'mc-rest-supp-add-icon', 'aria-hidden': 'true' }, '+'),
+          React.createElement('span', { className: 'mc-rest-supp-add-icon', 'aria-hidden': 'true' },
+            React.createElement('svg', {
+              width: 13,
+              height: 13,
+              viewBox: '0 0 24 24',
+              fill: 'none',
+              stroke: 'currentColor',
+              strokeWidth: 3,
+              strokeLinecap: 'round'
+            }, React.createElement('path', { d: 'M12 6v12M6 12h12' }))
+          ),
           React.createElement('span', null, 'Добавить в курс')
         )
       ),

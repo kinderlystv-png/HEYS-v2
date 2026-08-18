@@ -22,7 +22,7 @@
     <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">ПРАВКИ КУРАТОРА</span>
     <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Лист изменений и оболочка вокруг него: вкладка, дата, настройки</span>
   </div>
-  <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Лист показывает итог дня, а не список нажатий, и никуда не уводит после подтверждения. Рядом — оболочка, через которую до правок вообще добираются: дата во вкладке, липкая шапка, шторка настроек.</p>
+  <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Лист показывает итог дня, а не список нажатий, и никуда не уводит после подтверждения. Рядом — оболочка, через которую до правок вообще добираются: дата во вкладке, шторка настроек. Строка даты и её поведение при прокрутке живут в «Дата и остатки v4» — здесь их больше нет, чтобы одно поведение не описывалось в двух канвасах.</p>
   <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);">В пакете: curator-edits.v4.dc.html · протокол docs/implementation/CURATOR_CHANGELOG_SHEET_V4_PROTOCOL.md · экраны искать по data-screen-label</p>
   <div class="secH">Изменения куратора · три правила</div>
   <div style="display:flex;gap:22px;margin-bottom:38px;max-width:1180px;">
@@ -224,112 +224,6 @@
 
   </div>
   <div data-mirdst="m4" style="display:flex;gap:30px;align-items:flex-start;"></div>
-
-  <div class="secH">Липкая дата при скролле</div>
-  <div class="pal" data-mir="m7" style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;">
-
-    <div><div class="lab"><b>A · Полная шапка</b><span>верх контента или скролл вверх</span></div>
-    <div class="ph" data-screen-label="Дата · полная шапка">
-      <div style="background:var(--c2);padding:12px 16px 0;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:36px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:var(--bg);"><span class="n" style="font:800 11px/1 Figtree,sans-serif;color:var(--ac);">7</span><span style="font:600 10px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">уровень</span></span>
-            <span style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:var(--bg);"><span class="n" style="font:800 11px/1 Figtree,sans-serif;color:var(--gr);">6</span><span style="font:600 10px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">дней</span></span>
-          </div>
-          <div style="display:flex;align-items:center;gap:2px;">
-            <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z"/></svg></span>
-            <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1A1.6 1.6 0 007.5 19.4l-.1.1a2 2 0 11-2.8-2.8l.1-.1A1.6 1.6 0 003 15H3a2 2 0 110-4h.1A1.6 1.6 0 004.6 7.5l-.1-.1a2 2 0 112.8-2.8l.1.1A1.6 1.6 0 009 4.6V3a2 2 0 114 0v.1a1.6 1.6 0 002.7 1.1l.1-.1a2 2 0 112.8 2.8l-.1.1A1.6 1.6 0 0021 11h.1a2 2 0 110 4H21z"/></svg></span>
-          </div>
-        </div>
-        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 0 12px;">
-          <span style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</span>
-          <span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">1 240 из 1 900 ккал</span>
-        </div>
-      </div>
-      <div style="background:var(--bg);padding:10px 16px 11px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:inset 0 -1px 0 rgba(var(--ink),.07);">
-        <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
-        <span style="font:700 13.5px/1 Figtree,sans-serif;color:var(--tx);">Сегодня, 16 августа</span>
-        <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-      </div>
-      <div class="sc" style="padding-top:12px;">
-        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Завтрак · 09:40</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">420 ккал</span></div><div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:6px;">Овсянка, яйцо, кофе с молоком</div></div>
-        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Обед · 14:10</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">820 ккал</span></div><div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:6px;">Рис, курица, салат</div></div>
-        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">Ужин</span><span class="n" style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">не записан</span></div></div>
-      </div>
-    </div></div>
-
-    <div><div class="lab"><b>B · Сжатая шапка</b><span>после скролла вниз</span></div>
-    <div class="ph" data-screen-label="Дата · сжатая шапка">
-      <div style="background:var(--bg);padding:16px 16px 11px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 1px 0 rgba(var(--ink),.09);position:relative;z-index:2;">
-        <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
-        <span style="font:700 13.5px/1 Figtree,sans-serif;color:var(--tx);">Сегодня, 16 августа</span>
-        <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-      </div>
-      <div class="sc" style="padding-top:11px;">
-        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Обед · 14:10</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">820 ккал</span></div><div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:6px;">Рис, курица, салат</div></div>
-        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Перекус · 16:30</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">180 ккал</span></div><div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:6px;">Творог, яблоко</div></div>
-        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">Ужин</span><span class="n" style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">не записан</span></div></div>
-        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Вода</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">1 400 мл</span></div></div>
-        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Добавки</span><span class="n" style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">2 из 2</span></div></div>
-      </div>
-    </div></div>
-
-    <div><div class="lab"><b>C · Прошлый день + сжатие</b><span>баннер не уезжает</span></div>
-    <div class="ph" data-screen-label="Дата · прошлый день сжато">
-      <div style="background:var(--bg);padding:14px 12px 11px;position:relative;z-index:2;box-shadow:0 1px 0 rgba(var(--ink),.09);">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--tint);border-radius:14px;padding:8px 8px 8px 13px;min-height:44px;">
-          <span style="font:600 11.5px/1.35 Figtree,sans-serif;color:var(--ac2);text-wrap:pretty;">Вы смотрите прошлый день</span>
-          <span style="flex:none;min-height:32px;padding:0 13px;border-radius:999px;background:var(--acs);display:flex;align-items:center;font:700 11.5px/1 Figtree,sans-serif;color:var(--on-acs);">Сегодня</span>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;padding:0 4px;">
-          <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
-          <span style="font:700 13.5px/1 Figtree,sans-serif;color:var(--tx);">Пятница, 14 августа</span>
-          <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-        </div>
-      </div>
-      <div style="background:var(--c2);padding:9px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:700 12px/1 Figtree,sans-serif;color:var(--tx);">Обед · 14:10</span><span class="n" style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">820 ккал</span></div>
-      <div class="sc" style="padding-top:11px;">
-        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Обед · 14:10</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">820 ккал</span></div><div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:6px;">Рис, курица, салат</div></div>
-        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Перекус · 16:30</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">180 ккал</span></div></div>
-        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Ужин · 19:20</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">640 ккал</span></div></div>
-        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Вода</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">1 800 мл</span></div></div>
-      </div>
-    </div></div>
-
-    <div><div class="lab"><b>D · Переход</b><span>примерно 200 мс</span></div>
-    <div class="ph" data-screen-label="Дата · переход">
-      <div style="background:var(--c2);padding:0 16px;overflow:hidden;height:26px;opacity:.45;">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;transform:translateY(-9px);">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:var(--bg);"><span class="n" style="font:800 11px/1 Figtree,sans-serif;color:var(--ac);">7</span><span style="font:600 10px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">уровень</span></span>
-            <span style="display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;background:var(--bg);"><span class="n" style="font:800 11px/1 Figtree,sans-serif;color:var(--gr);">6</span><span style="font:600 10px/1 Figtree,sans-serif;color:rgba(var(--ink),.5);">дней</span></span>
-          </div>
-        </div>
-      </div>
-      <div style="background:var(--bg);padding:11px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 1px 0 rgba(var(--ink),.06);">
-        <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
-        <span style="font:700 13.5px/1 Figtree,sans-serif;color:var(--tx);">Сегодня, 16 августа</span>
-        <span style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.4)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
-      </div>
-      <div class="sc" style="padding-top:11px;">
-        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Завтрак · 09:40</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">420 ккал</span></div><div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:6px;">Овсянка, яйцо, кофе с молоком</div></div>
-        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Обед · 14:10</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">820 ккал</span></div></div>
-        <div style="background:var(--c1);border-radius:18px;padding:13px 15px;margin-top:9px;"><div style="display:flex;align-items:baseline;justify-content:space-between;"><span style="font:700 13px/1 Figtree,sans-serif;color:rgba(var(--ink),.45);">Ужин</span><span class="n" style="font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">не записан</span></div></div>
-      </div>
-    </div></div>
-
-    <div data-nomirror style="width:400px;flex:none;">
-      <div class="h" style="margin-top:0;">Решения по липкой дате</div><div style="background:var(--bg);border-radius:24px;padding:20px;">
-        <div class="nt"><b>Уезжает статус, остаётся управление</b><span>Вверх уходят уровень, серия, лампочка, настройки и название вкладки — всё, что человек читает один раз за сессию. Остаётся то, чем он пользуется во время чтения: дата и стрелки дня. Название вкладки не нужно на экране, где и так видно карточки еды — вкладка подсвечена внизу.</span></div>
-        <div class="nt"><b>Полоса не становится карточкой</b><span>Сжатая шапка — это тот же грунт экрана плюс однопиксельная линия снизу. Ни радиуса, ни блюра, ни тени-подушки: карточка поверх контента читалась бы как отдельный слой, который можно закрыть, а закрыть дату нельзя.</span></div>
-        <div class="nt"><b>Баннер прошлого дня не уезжает никогда</b><span>Он не статус, а предупреждение: всё, что человек пишет на этом экране, попадёт в чужой день. «Сегодня» рядом с ним — не декоративная кнопка, а выход. Поэтому в сжатом виде баннер стоит над датой, а не схлопывается в точку.</span></div>
-        <div class="nt"><b>Порядок сверху вниз один</b><span>Баннер → дата → бар текущего приёма. Бар приезда живёт под датой и никогда над ней: иначе при быстрой прокрутке две липкие полосы меняются местами, и человек теряет, где он.</span></div>
-        <div class="ntl"><b>Сжатие спокойное</b><span>Высота гасится примерно за 200 мс, дата не двигается вовсе — она стоит на месте, пока над ней исчезает шапка. Пружины и параллакса нет: экран читают, а не смотрят.</span></div>
-      </div>
-    </div>
-
-  </div>
-  <div data-mirdst="m7" style="display:flex;gap:30px;align-items:flex-start;"></div>
 
 </div>
 </x-dc>

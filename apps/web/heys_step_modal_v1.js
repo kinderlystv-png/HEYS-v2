@@ -464,7 +464,9 @@
       nextLabel: config.nextLabel || null,  // Кастомный текст кнопки "Далее"/"Готово"
       hideHeaderNext: config.hideHeaderNext || false,  // Скрыть кнопку в хедере
       disableBack: config.disableBack === true,
-      hideProgressDots: config.hideProgressDots === true,
+      hideProgressDots: typeof config.hideProgressDots === 'function'
+        ? config.hideProgressDots
+        : config.hideProgressDots === true,
       hiddenFromProgress: config.hiddenFromProgress === true,
       hideDailyFooter: config.hideDailyFooter === true || typeof config.hideDailyFooter === 'function'
         ? config.hideDailyFooter
@@ -605,12 +607,15 @@
     const progressActiveIndex = currentConfig
       ? progressStepConfigs.findIndex((config) => config.id === currentConfig.id)
       : -1;
+    const currentStepData = currentConfig ? (stepData[currentConfig.id] || {}) : {};
+    const hideProgressDotsResolved = typeof currentConfig?.hideProgressDots === 'function'
+      ? currentConfig.hideProgressDots(currentStepData, { currentConfig, context }) === true
+      : currentConfig?.hideProgressDots === true;
     const showDailyProgressDots = showProgress
       && isDailyLayout
-      && !currentConfig?.hideProgressDots
+      && !hideProgressDotsResolved
       && !currentConfig?.hiddenFromProgress
       && progressStepConfigs.length > 1;
-    const currentStepData = currentConfig ? (stepData[currentConfig.id] || {}) : {};
     const hideDailyFooter = isDailyLayout && (
       currentConfig?.hideDailyFooter === true
       || (typeof currentConfig?.hideDailyFooter === 'function'
@@ -1309,6 +1314,7 @@
                 )),
               !showDailyProgressDots && dailyHeaderCaption && React.createElement('div', {
                 className: 'mc-daily-header-caption'
+                  + (hideProgressDotsResolved ? ' mc-daily-header-caption--layer' : '')
               }, dailyHeaderCaption),
               showDailyProgressDots && React.createElement('div', { className: 'mc-progress-dots mc-progress-dots--in-header mc-progress-dots--pills' },
                 progressStepConfigs.map((config, i) =>

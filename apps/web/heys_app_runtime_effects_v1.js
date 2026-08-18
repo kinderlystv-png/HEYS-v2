@@ -54,12 +54,26 @@
             const handleEditEnter = () => setWidgetsEditMode(true);
             const handleEditExit = () => setWidgetsEditMode(false);
 
-            const unsubEnter = window.HEYS?.Widgets?.on?.('editmode:enter', handleEditEnter);
-            const unsubExit = window.HEYS?.Widgets?.on?.('editmode:exit', handleEditExit);
+            let unsubEnter;
+            let unsubExit;
+            let pollId;
 
-            setWidgetsEditMode(window.HEYS?.Widgets?.state?.isEditMode?.() || false);
+            const attach = () => {
+                if (!window.HEYS?.Widgets?.on) return false;
+                unsubEnter = window.HEYS.Widgets.on('editmode:enter', handleEditEnter);
+                unsubExit = window.HEYS.Widgets.on('editmode:exit', handleEditExit);
+                setWidgetsEditMode(window.HEYS?.Widgets?.isEditMode?.() || false);
+                return true;
+            };
+
+            if (!attach()) {
+                pollId = window.setInterval(() => {
+                    if (attach()) window.clearInterval(pollId);
+                }, 100);
+            }
 
             return () => {
+                if (pollId) window.clearInterval(pollId);
                 unsubEnter?.();
                 unsubExit?.();
             };

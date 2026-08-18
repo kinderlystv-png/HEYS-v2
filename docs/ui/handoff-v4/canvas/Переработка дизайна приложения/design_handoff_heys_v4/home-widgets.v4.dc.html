@@ -31,23 +31,80 @@
   .nt > b,.ntl > b{font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;display:block}
   .nt > span,.ntl > span{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);display:block;margin-top:4px}
   .h{font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:26px 0 12px}
+  .dk .ph{background:#141210;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45)}
+  .dk .cd,.dk .grp,.dk .w{background:#23201b}
+  .dk .tier{color:#e2a468}
+  .dk .k{color:rgba(242,237,230,.5)}
+  .dk .v{color:#f2ede6}
+  .dk .u{color:rgba(242,237,230,.4)}
+  .bl .ph{background:#fff;box-shadow:0 1px 2px rgba(16,24,38,.08),0 14px 40px rgba(16,24,38,.12)}
+  .bl .cd,.bl .grp,.bl .w{background:#eef3f9}
+  .bl .tier{color:#1d5e96}
+  .bd .ph{background:#0d1a26;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45)}
+  .bd .cd,.bd .grp,.bd .w{background:#182a3a}
+  .bd .tier{color:#8fc1e8}
+  .bd .k{color:rgba(238,243,248,.5)}
+  .bd .v{color:#eef3f8}
+  .bd .u{color:rgba(238,243,248,.4)}
+  .svc{color:rgba(0,0,0,.11)}
+  .dk .svc{color:rgba(242,237,230,.12)}
+  .bl .svc{color:rgba(16,24,38,.12)}
+  .bd .svc{color:rgba(238,243,248,.12)}
+  .dcap{display:flex;align-items:center;gap:8px;margin-top:14px}
+  .dcap > span{background:#f7efe2}
+  .dcap .pill{flex:1;height:36px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:7px;font:700 12.5px/1 Figtree,sans-serif;color:#201e1d}
+  .dcap .arr{width:34px;height:34px;flex:none;border-radius:999px;display:flex;align-items:center;justify-content:center;color:rgba(0,0,0,.5)}
+  .dcap .arr.dim{color:rgba(0,0,0,.22)}
+  .dcap .pill.past{background:rgba(198,113,57,.18);color:#8a4a20;gap:0;padding-right:4px}
+  .dcap .lbl{flex:1;display:flex;align-items:center;justify-content:center;gap:7px}
+  .dk .dcap .pill.past{background:rgba(207,129,68,.22);color:#e2a468}
+  .bl .dcap .pill.past{background:rgba(198,113,57,.16);color:#a75c2b}
+  .bd .dcap .pill.past{background:rgba(207,129,68,.22);color:#e2a468}
+  .dk .dcap > span{background:#23201b}
+  .dk .dcap .pill{color:#f2ede6}
+  .dk .dcap .arr{color:rgba(242,237,230,.55)}
+  .dk .dcap .arr.dim{color:rgba(242,237,230,.26)}
+  .bl .dcap > span{background:#eef3f9}
+  .bl .dcap .pill{color:#101826}
+  .bl .dcap .arr{color:rgba(16,24,38,.5)}
+  .bl .dcap .arr.dim{color:rgba(16,24,38,.22)}
+  .bd .dcap > span{background:#182a3a}
+  .bd .dcap .pill{color:#eef3f8}
+  .bd .dcap .arr{color:rgba(238,243,248,.55)}
+  .bd .dcap .arr.dim{color:rgba(238,243,248,.26)}
+  .dcap .today{flex:none;height:28px;padding:0 12px;border-radius:999px;background:#c67139;color:#2b1608;font:700 10.5px/1 Figtree,sans-serif;display:flex;align-items:center}
+  .dk .dcap .today{background:#cf8144;color:#1a0f04}
+  .bl .dcap .today{background:#2e7cc0;color:#ffffff}
+  .bd .dcap .today{background:#2e7cc0;color:#ffffff}
+  .editRow{display:flex;justify-content:center;padding:14px 0 2px}
+  .editRow > span{display:flex;align-items:center;gap:7px;min-height:44px;padding:0 18px;border-radius:999px;font:700 11.5px/1 Figtree,sans-serif;color:#8a4a20}
+  .dk .editRow > span{color:#e2a468}
+  .bl .editRow > span{color:#1d5e96}
+  .bd .editRow > span{color:#8fc1e8}
+  .bad{color:#a8382b}
+  .dk .bad{color:#e08a72}
+  .bl .bad{color:#a8382b}
+  .bd .bad{color:#e08a72}
+  .good{color:#7a8a5e}
+  .dk .good{color:#8faa6d}
+  .bl .good{color:#3e9a6b}
+  .bd .good{color:#4caf7d}
+  .pl{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px}
 </style>
 </helmet>
 
 <div style="background:#e9dfcd;padding:44px 46px 70px;width:max-content;">
 
   <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
-    <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">ГЛАВНАЯ · ПО ФАКТУ</span>
-    <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Дефолтная раскладка: 11 виджетов, четыре размера</span>
+    <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">ВИДЖЕТЫ · ГЛАВНАЯ</span>
+    <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Виджеты Главной: дефолт, расстановка, размеры и правила</span>
   </div>
-  <p style="margin:0 0 34px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Пересобрано по инвентарю — набор и размеры взяты из дефолтной раскладки кода, а не по памяти. Порядок плиток здесь ровно тот, что видит новый клиент; переставлять его мы не будем, это его экран. Сетка четырёхколоночная, единица ряда 64 px. «Streak» и «Инсулин» не рисую — в дефолт не входят и сейчас чинятся.</p>
+  <p style="margin:0 0 34px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Единственный канвас про виджеты: экран Главной во всех четырёх палитрах, режим расстановки, четыре размера одного виджета и правила — плитка, цвет, кольца БЖУ, плавающие кнопки. В канвасе вкладок Главной больше нет, чтобы одно и то же не жило в двух местах. Набор и размеры взяты из дефолтной раскладки кода, а не по памяти; порядок плиток ровно тот, что видит новый клиент. Сетка четырёхколоночная, единица ряда 64 px. «Streak» и «Инсулин» не рисую — в дефолт не входят и сейчас чинятся.</p>
 
   <div style="display:flex;gap:30px;align-items:flex-start;">
 
-    <!-- ДЕФОЛТНАЯ РАСКЛАДКА -->
-    <div>
-      <div class="olab"><a class="oid" href="#g1">5a</a>Дефолт нового клиента · 11 виджетов</div>
-      <div class="ph" id="g1" data-screen-label="Главная · дефолтная раскладка">
+    <!-- ДЕФОЛТ НОВОГО КЛИЕНТА · ЧЕТЫРЕ ПАЛИТРЫ -->
+<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Главная</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">песочная и тёмная · 11 виджетов</span></div><div class="ph" id="g1" data-screen-label="Главная · дефолтная раскладка">
         <div style="padding:16px 18px 0;">
           <div style="display:flex;align-items:center;gap:9px;">
             <span style="font:800 12px/1 Figtree,sans-serif;color:#8a4a20;" class="n">18</span>
@@ -56,9 +113,10 @@
             <span style="display:flex;align-items:center;gap:0;margin-left:2px;"><span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px 0;flex:none;"><span style="position:relative;display:flex;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"/></svg><span class="n" style="position:absolute;top:-4px;right:-5px;font:800 9px/1 Figtree,sans-serif;color:#8a4a20;">7</span></span></span>
             <span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px -8px -14px 0;flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"/><circle cx="11" cy="7" r="2"/><circle cx="17" cy="12" r="2"/><circle cx="9" cy="17" r="2"/></svg></span></span>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:18px;">
-            <span style="display:flex;align-items:baseline;gap:10px;"><span style="font:700 15px/1 Figtree,sans-serif;color:#201e1d;">Главная</span><span style="font:500 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">вс, 9 августа</span></span>
-            <span style="font:700 11px/1 Figtree,sans-serif;color:#8a4a20;min-height:44px;display:flex;align-items:center;margin:-16px 0;">Изменить</span>
+          <div class="dcap">
+            <span class="arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+            <span class="pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg><span><span class="bad">вс</span>, 9 августа</span></span>
+            <span class="arr dim"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
           </div>
         </div>
         <div class="sc">
@@ -78,25 +136,27 @@
             </div>
 
             <div class="w" style="grid-column:span 3;grid-row:span 2;">
-              <div class="k">БЖУ</div>
-              <div style="display:flex;gap:14px;margin-top:auto;margin-bottom:auto;">
-                <div style="text-align:center;">
-                  <svg width="52" height="52" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#7a8a5e" stroke-width="5" stroke-linecap="round" stroke-dasharray="63 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 13px Figtree,sans-serif;fill:#201e1d;font-variant-numeric:tabular-nums;">96</text></svg>
-                  <div class="k" style="margin-top:4px;">Белки</div>
+              <div style="display:flex;gap:6px;margin-top:auto;margin-bottom:auto;">
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Белки</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#7a8a5e" stroke-width="5" stroke-linecap="round" stroke-dasharray="72 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#a8382b;font-variant-numeric:tabular-nums;">54</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#a8382b;">96<span style="font-weight:600;color:rgba(0,0,0,.42);"> / 150</span></div>
                 </div>
-                <div style="text-align:center;">
-                  <svg width="52" height="52" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#7a8a5e" stroke-width="5" stroke-linecap="round" stroke-dasharray="81 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 13px Figtree,sans-serif;fill:#201e1d;font-variant-numeric:tabular-nums;">48</text></svg>
-                  <div class="k" style="margin-top:4px;">Жиры</div>
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Жиры</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#7a8a5e" stroke-width="5" stroke-linecap="round" stroke-dasharray="87 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:rgba(0,0,0,.42);font-variant-numeric:tabular-nums;">14</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#201e1d;">48<span style="font-weight:600;color:rgba(0,0,0,.42);"> / 62</span></div>
                 </div>
-                <div style="text-align:center;">
-                  <svg width="52" height="52" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#7a8a5e" stroke-width="5" stroke-linecap="round" stroke-dasharray="85 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 13px Figtree,sans-serif;fill:#201e1d;font-variant-numeric:tabular-nums;">112</text></svg>
-                  <div class="k" style="margin-top:4px;">Углеводы</div>
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Углеводы</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#7a8a5e" stroke-width="5" stroke-linecap="round" stroke-dasharray="113 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#a8382b;font-variant-numeric:tabular-nums;">−18</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#a8382b;">198<span style="font-weight:600;color:rgba(0,0,0,.42);"> / 180</span></div>
                 </div>
               </div>
             </div>
 
-            <div class="w"><div class="k">Сон</div><div class="n v" style="margin-top:auto;">6,4<span class="u"> ч</span></div></div>
-            <div class="w"><div class="k">Вода</div><div class="n v" style="margin-top:auto;">1,7<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:7px;"><div style="width:62%;height:4px;border-radius:999px;background:#7d98a6;"></div></div></div>
+            <div class="w"><div class="k">Сон</div><div class="n v bad" style="margin-top:auto;">6,4<span class="u"> ч</span></div></div>
+            <div class="w"><div class="k">Вода</div><div class="n v bad" style="margin-top:auto;">1,7<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:7px;"><div style="width:62%;height:4px;border-radius:999px;background:#7d98a6;"></div></div></div>
 
             <div class="w" style="grid-column:span 2;">
               <div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#8a4a20;">6,2<span class="u"> / 10</span></span></div>
@@ -124,7 +184,7 @@
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;">
               <div class="k">Вес</div>
-              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#201e1d;">91,1</span><span class="u">кг</span></div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n good" style="font:600 26px/1 Figtree,sans-serif;">91,1</span><span class="u">кг</span></div>
               <div class="n" style="font:600 10px/1 Figtree,sans-serif;color:#5c6a45;margin-top:7px;">−0,9 за неделю</div>
               <svg viewBox="0 0 130 38" width="100%" height="38" style="margin-top:auto;"><polyline points="4,14 26,24 48,24 70,6 92,14 114,18 126,19" fill="none" stroke="#c67139" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="19" r="3.5" fill="#c67139"/></svg>
             </div>
@@ -145,6 +205,7 @@
             </div>
 
           </div>
+          <div class="editRow"><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M14 6l4 4"/></svg>Изменить экран</span></div>
         </div>
         <div style="position:absolute;right:14px;bottom:76px;display:flex;flex-direction:column;align-items:center;gap:9px;">
           <span style="width:40px;height:40px;border-radius:999px;background:#fffaf1;box-shadow:0 1px 2px rgba(80,50,20,.1),0 6px 16px rgba(80,50,20,.14);display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>
@@ -159,12 +220,827 @@
           <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Отчёты</span></div></div>
           <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Инсайты</span></div></div>
         </div>
-      </div>
-    </div>
+      </div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="dk"><div class="ph" id="g1d" data-screen-label="Главная · дефолтная раскладка · тёмная">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <span style="font:800 12px/1 Figtree,sans-serif;color:#e2a468;" class="n">18</span>
+            <span style="flex:1;height:3px;border-radius:999px;background:rgba(242,237,230,.13);"><span style="display:block;width:34%;height:3px;border-radius:999px;background:#cf8144;"></span></span>
+            <span style="font:600 10px/1 Figtree,sans-serif;color:rgba(242,237,230,.46);">Эксперт</span>
+            <span style="display:flex;align-items:center;gap:0;margin-left:2px;"><span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px 0;flex:none;"><span style="position:relative;display:flex;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"/></svg><span class="n" style="position:absolute;top:-4px;right:-5px;font:800 9px/1 Figtree,sans-serif;color:#e2a468;">7</span></span></span>
+            <span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px -8px -14px 0;flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"/><circle cx="11" cy="7" r="2"/><circle cx="17" cy="12" r="2"/><circle cx="9" cy="17" r="2"/></svg></span></span>
+          </div>
+          <div class="dcap">
+            <span class="arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+            <span class="pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg><span><span class="bad">вс</span>, 9 августа</span></span>
+            <span class="arr dim"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+        <div class="sc">
+          <div class="g">
 
-    <!-- РЕДАКТИРОВАНИЕ И ПУСТОЕ -->
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#2f2820;padding:14px;">
+              <div class="k">Калории</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#e2a468;letter-spacing:-.035em;">642</span><span class="u">ккал</span></div>
+              <div style="font:500 10px/1 Figtree,sans-serif;color:rgba(242,237,230,.5);margin-top:7px;">осталось</div>
+              <div style="margin-top:auto;"><div style="height:6px;border-radius:999px;background:rgba(242,237,230,.14);"><div style="width:67%;height:6px;border-radius:999px;background:#cf8144;"></div></div><div class="n" style="display:flex;justify-content:space-between;font:600 9.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.48000000000000004);margin-top:8px;"><span>1 289</span><span>1 931</span></div></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Инсулиновая волна</div>
+              <svg viewBox="0 0 130 52" width="100%" height="52" style="margin-top:8px;"><path d="M3,46 C22,46 28,16 42,16 C56,16 62,46 78,46 C92,46 98,12 112,12 C122,12 126,46 128,46" fill="#4d4029" opacity=".85"/><line x1="0" y1="46" x2="130" y2="46" stroke="rgba(242,237,230,.14)" stroke-width="1.5"/></svg>
+              <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;"><span style="font:600 10px/1 Figtree,sans-serif;color:#9fb981;">без критичных</span><span class="n" style="font:700 10px/1 Figtree,sans-serif;color:rgba(242,237,230,.48000000000000004);">3 волны</span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 3;grid-row:span 2;">
+              <div style="display:flex;gap:6px;margin-top:auto;margin-bottom:auto;">
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Белки</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(242,237,230,.13)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#8faa6d" stroke-width="5" stroke-linecap="round" stroke-dasharray="72 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#e08a72;font-variant-numeric:tabular-nums;">54</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#e08a72;">96<span style="font-weight:600;color:rgba(242,237,230,.5);"> / 150</span></div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Жиры</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(242,237,230,.13)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#8faa6d" stroke-width="5" stroke-linecap="round" stroke-dasharray="87 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:rgba(242,237,230,.5);font-variant-numeric:tabular-nums;">14</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#f2ede6;">48<span style="font-weight:600;color:rgba(242,237,230,.5);"> / 62</span></div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Углеводы</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(242,237,230,.13)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#8faa6d" stroke-width="5" stroke-linecap="round" stroke-dasharray="113 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#e08a72;font-variant-numeric:tabular-nums;">−18</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#e08a72;">198<span style="font-weight:600;color:rgba(242,237,230,.5);"> / 180</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="w"><div class="k">Сон</div><div class="n v bad" style="margin-top:auto;">6,4<span class="u"> ч</span></div></div>
+            <div class="w"><div class="k">Вода</div><div class="n v bad" style="margin-top:auto;">1,7<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(242,237,230,.12);margin-top:7px;"><div style="width:62%;height:4px;border-radius:999px;background:#8fb2c2;"></div></div></div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#e2a468;">6,2<span class="u"> / 10</span></span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Тепловая карта</span><span class="n" style="font:700 9.5px/1 Figtree,sans-serif;color:#9fb981;">5 из 7</span></div>
+              <div style="display:flex;gap:4px;margin-top:auto;"><span style="flex:1;height:9px;border-radius:3px;background:#8faa6d;"></span><span style="flex:1;height:9px;border-radius:3px;background:#8faa6d;"></span><span style="flex:1;height:9px;border-radius:3px;background:rgba(242,237,230,.12);"></span><span style="flex:1;height:9px;border-radius:3px;background:#8faa6d;"></span><span style="flex:1;height:9px;border-radius:3px;background:#cf9257;"></span><span style="flex:1;height:9px;border-radius:3px;background:#8faa6d;"></span><span style="flex:1;height:9px;border-radius:3px;background:#8faa6d;"></span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Риск-радар</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#9fb981;">низкий</span></div>
+              <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(242,237,230,.53);"><span>Срывы</span><span class="n" style="color:#9fb981;">нет</span></div>
+                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(242,237,230,.53);"><span>Недосып</span><span class="n" style="color:#e2a468;">2 дня</span></div>
+              </div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#242c20;">
+              <div class="k">Тренд здоровья</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#9fb981;">+8</span><span class="u">за 14 дней</span></div>
+              <svg viewBox="0 0 130 40" width="100%" height="40" style="margin-top:auto;"><polyline points="4,32 26,28 48,30 70,20 92,16 114,10 126,8" fill="none" stroke="#8faa6d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="8" r="3.5" fill="#8faa6d"/></svg>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Вес</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n good" style="font:600 26px/1 Figtree,sans-serif;">91,1</span><span class="u">кг</span></div>
+              <div class="n" style="font:600 10px/1 Figtree,sans-serif;color:#9fb981;margin-top:7px;">−0,9 за неделю</div>
+              <svg viewBox="0 0 130 38" width="100%" height="38" style="margin-top:auto;"><polyline points="4,14 26,24 48,24 70,6 92,14 114,18 126,19" fill="none" stroke="#cf8144" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="19" r="3.5" fill="#cf8144"/></svg>
+            </div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Динамика веса</span><span class="n" style="font:600 14px/1 Figtree,sans-serif;color:#9fb981;">−1,8 <span class="u">кг / мес</span></span></div>
+              <div class="n" style="display:flex;gap:10px;margin-top:auto;font:700 9.5px/1 Figtree,sans-serif;">
+                <span style="color:rgba(242,237,230,.43);">7</span>
+                <span style="color:#e2a468;border-bottom:2px solid #cf8144;padding-bottom:2px;">14</span>
+                <span style="color:rgba(242,237,230,.43);">30</span>
+                <span style="color:rgba(242,237,230,.36000000000000004);font-weight:500;">дней</span>
+              </div>
+            </div>
+
+            <div style="grid-column:span 2;border-radius:16px;border:2px dashed rgba(226,164,104,.32);display:flex;align-items:center;justify-content:center;gap:8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e2a468" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              <span style="font:700 11px/1 Figtree,sans-serif;color:#e2a468;">Добавить</span>
+            </div>
+
+          </div>
+          <div class="editRow"><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M14 6l4 4"/></svg>Изменить экран</span></div>
+        </div>
+        <div style="position:absolute;right:14px;bottom:76px;display:flex;flex-direction:column;align-items:center;gap:9px;">
+          <span style="width:40px;height:40px;border-radius:999px;background:#23201b;box-shadow:0 1px 2px rgba(0,0,0,.45),0 6px 16px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#e2a468" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>
+          <span style="width:40px;height:40px;border-radius:999px;background:#23201b;box-shadow:0 1px 2px rgba(0,0,0,.45),0 6px 16px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;"><svg width="19" height="19" viewBox="0 0 24 24"><defs><clipPath id="fillTwoThirdsD"><rect x="0" y="9" width="24" height="15"/></clipPath></defs><circle cx="12" cy="12" r="8.5" fill="none" stroke="#e2a468" stroke-width="2.2"/><circle cx="12" cy="12" r="8.5" fill="#e2a468" clip-path="url(#fillTwoThirdsD)"/></svg></span>
+          <span style="width:40px;height:40px;border-radius:999px;background:#23201b;box-shadow:0 1px 2px rgba(0,0,0,.45),0 6px 16px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5e808f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 10.5a6 6 0 01-12 0C6 9.5 12 3 12 3z"/></svg></span>
+          <span style="width:52px;height:52px;border-radius:999px;background:#cf8144;box-shadow:0 2px 4px rgba(0,0,0,.45),0 10px 22px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#1a0f04" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        </div>
+        <div style="display:flex;padding:4px 10px 16px;background:#23201b;">
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#e2a468" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#e2a468;">Главная</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.4)" stroke-width="2.5" stroke-linecap="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Питание</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Актив</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.4)" stroke-width="2.5" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Отчёты</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Инсайты</span></div></div>
+        </div>
+      </div></div></div>
+<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Главная</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">синяя и сине-тёмная · те же 11</span></div><div class="bl"><div class="ph" id="g1p" data-screen-label="Главная · дефолтная раскладка · синяя">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <span style="font:800 12px/1 Figtree,sans-serif;color:#1d5e96;" class="n">18</span>
+            <span style="flex:1;height:3px;border-radius:999px;background:rgba(0,0,0,.09);"><span style="display:block;width:34%;height:3px;border-radius:999px;background:#2e7cc0;"></span></span>
+            <span style="font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">Эксперт</span>
+            <span style="display:flex;align-items:center;gap:0;margin-left:2px;"><span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px 0;flex:none;"><span style="position:relative;display:flex;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"/></svg><span class="n" style="position:absolute;top:-4px;right:-5px;font:800 9px/1 Figtree,sans-serif;color:#1d5e96;">7</span></span></span>
+            <span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px -8px -14px 0;flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"/><circle cx="11" cy="7" r="2"/><circle cx="17" cy="12" r="2"/><circle cx="9" cy="17" r="2"/></svg></span></span>
+          </div>
+          <div class="dcap">
+            <span class="arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+            <span class="pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg><span><span class="bad">вс</span>, 9 августа</span></span>
+            <span class="arr dim"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+        <div class="sc">
+          <div class="g">
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#e2edf7;padding:14px;">
+              <div class="k">Калории</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#1d5e96;letter-spacing:-.035em;">642</span><span class="u">ккал</span></div>
+              <div style="font:500 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:7px;">осталось</div>
+              <div style="margin-top:auto;"><div style="height:6px;border-radius:999px;background:rgba(0,0,0,.1);"><div style="width:67%;height:6px;border-radius:999px;background:#2e7cc0;"></div></div><div class="n" style="display:flex;justify-content:space-between;font:600 9.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:8px;"><span>1 289</span><span>1 931</span></div></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Инсулиновая волна</div>
+              <svg viewBox="0 0 130 52" width="100%" height="52" style="margin-top:8px;"><path d="M3,46 C22,46 28,16 42,16 C56,16 62,46 78,46 C92,46 98,12 112,12 C122,12 126,46 128,46" fill="#cfe0ef" opacity=".85"/><line x1="0" y1="46" x2="130" y2="46" stroke="rgba(0,0,0,.1)" stroke-width="1.5"/></svg>
+              <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;"><span style="font:600 10px/1 Figtree,sans-serif;color:#1f6e4d;">без критичных</span><span class="n" style="font:700 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);">3 волны</span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 3;grid-row:span 2;">
+              <div style="display:flex;gap:6px;margin-top:auto;margin-bottom:auto;">
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Белки</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#3e9a6b" stroke-width="5" stroke-linecap="round" stroke-dasharray="72 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#a8382b;font-variant-numeric:tabular-nums;">54</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#a8382b;">96<span style="font-weight:600;color:rgba(0,0,0,.42);"> / 150</span></div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Жиры</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#3e9a6b" stroke-width="5" stroke-linecap="round" stroke-dasharray="87 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:rgba(0,0,0,.42);font-variant-numeric:tabular-nums;">14</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#101826;">48<span style="font-weight:600;color:rgba(0,0,0,.42);"> / 62</span></div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Углеводы</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#3e9a6b" stroke-width="5" stroke-linecap="round" stroke-dasharray="113 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#a8382b;font-variant-numeric:tabular-nums;">−18</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#a8382b;">198<span style="font-weight:600;color:rgba(0,0,0,.42);"> / 180</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="w"><div class="k">Сон</div><div class="n v bad" style="margin-top:auto;">6,4<span class="u"> ч</span></div></div>
+            <div class="w"><div class="k">Вода</div><div class="n v bad" style="margin-top:auto;">1,7<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:7px;"><div style="width:62%;height:4px;border-radius:999px;background:#4c8fb8;"></div></div></div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#1d5e96;">6,2<span class="u"> / 10</span></span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Тепловая карта</span><span class="n" style="font:700 9.5px/1 Figtree,sans-serif;color:#1f6e4d;">5 из 7</span></div>
+              <div style="display:flex;gap:4px;margin-top:auto;"><span style="flex:1;height:9px;border-radius:3px;background:#3e9a6b;"></span><span style="flex:1;height:9px;border-radius:3px;background:#3e9a6b;"></span><span style="flex:1;height:9px;border-radius:3px;background:rgba(0,0,0,.08);"></span><span style="flex:1;height:9px;border-radius:3px;background:#3e9a6b;"></span><span style="flex:1;height:9px;border-radius:3px;background:#e0a93e;"></span><span style="flex:1;height:9px;border-radius:3px;background:#3e9a6b;"></span><span style="flex:1;height:9px;border-radius:3px;background:#3e9a6b;"></span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Риск-радар</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#1f6e4d;">низкий</span></div>
+              <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Срывы</span><span class="n" style="color:#1f6e4d;">нет</span></div>
+                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Недосып</span><span class="n" style="color:#1d5e96;">2 дня</span></div>
+              </div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#e4efe7;">
+              <div class="k">Тренд здоровья</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#1f6e4d;">+8</span><span class="u">за 14 дней</span></div>
+              <svg viewBox="0 0 130 40" width="100%" height="40" style="margin-top:auto;"><polyline points="4,32 26,28 48,30 70,20 92,16 114,10 126,8" fill="none" stroke="#3e9a6b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="8" r="3.5" fill="#3e9a6b"/></svg>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Вес</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n good" style="font:600 26px/1 Figtree,sans-serif;">91,1</span><span class="u">кг</span></div>
+              <div class="n" style="font:600 10px/1 Figtree,sans-serif;color:#1f6e4d;margin-top:7px;">−0,9 за неделю</div>
+              <svg viewBox="0 0 130 38" width="100%" height="38" style="margin-top:auto;"><polyline points="4,14 26,24 48,24 70,6 92,14 114,18 126,19" fill="none" stroke="#2e7cc0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="19" r="3.5" fill="#2e7cc0"/></svg>
+            </div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Динамика веса</span><span class="n" style="font:600 14px/1 Figtree,sans-serif;color:#1f6e4d;">−1,8 <span class="u">кг / мес</span></span></div>
+              <div class="n" style="display:flex;gap:10px;margin-top:auto;font:700 9.5px/1 Figtree,sans-serif;">
+                <span style="color:rgba(0,0,0,.35);">7</span>
+                <span style="color:#1d5e96;border-bottom:2px solid #2e7cc0;padding-bottom:2px;">14</span>
+                <span style="color:rgba(0,0,0,.35);">30</span>
+                <span style="color:rgba(0,0,0,.28);font-weight:500;">дней</span>
+              </div>
+            </div>
+
+            <div style="grid-column:span 2;border-radius:16px;border:2px dashed rgba(167,92,43,.32);display:flex;align-items:center;justify-content:center;gap:8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1d5e96" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              <span style="font:700 11px/1 Figtree,sans-serif;color:#1d5e96;">Добавить</span>
+            </div>
+
+          </div>
+          <div class="editRow"><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M14 6l4 4"/></svg>Изменить экран</span></div>
+        </div>
+        <div style="position:absolute;right:14px;bottom:76px;display:flex;flex-direction:column;align-items:center;gap:9px;">
+          <span style="width:40px;height:40px;border-radius:999px;background:#ffffff;box-shadow:0 1px 2px rgba(16,24,38,.12),0 6px 16px rgba(16,24,38,.12);display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1d5e96" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>
+          <span style="width:40px;height:40px;border-radius:999px;background:#ffffff;box-shadow:0 1px 2px rgba(16,24,38,.12),0 6px 16px rgba(16,24,38,.12);display:flex;align-items:center;justify-content:center;"><svg width="19" height="19" viewBox="0 0 24 24"><defs><clipPath id="fillTwoThirdsP"><rect x="0" y="9" width="24" height="15"/></clipPath></defs><circle cx="12" cy="12" r="8.5" fill="none" stroke="#1d5e96" stroke-width="2.2"/><circle cx="12" cy="12" r="8.5" fill="#1d5e96" clip-path="url(#fillTwoThirdsP)"/></svg></span>
+          <span style="width:40px;height:40px;border-radius:999px;background:#ffffff;box-shadow:0 1px 2px rgba(16,24,38,.12),0 6px 16px rgba(16,24,38,.12);display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5e808f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 10.5a6 6 0 01-12 0C6 9.5 12 3 12 3z"/></svg></span>
+          <span style="width:52px;height:52px;border-radius:999px;background:#2e7cc0;box-shadow:0 2px 4px rgba(16,24,38,.12),0 10px 22px rgba(120,60,20,.28);display:flex;align-items:center;justify-content:center;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        </div>
+        <div style="display:flex;padding:4px 10px 16px;background:#ffffff;">
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1d5e96" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#1d5e96;">Главная</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Питание</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Актив</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Отчёты</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Инсайты</span></div></div>
+        </div>
+      </div></div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="bd"><div class="ph" id="g1pd" data-screen-label="Главная · дефолтная раскладка · сине-тёмная">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <span style="font:800 12px/1 Figtree,sans-serif;color:#8fc1e8;" class="n">18</span>
+            <span style="flex:1;height:3px;border-radius:999px;background:rgba(238,243,248,.13);"><span style="display:block;width:34%;height:3px;border-radius:999px;background:#2e7cc0;"></span></span>
+            <span style="font:600 10px/1 Figtree,sans-serif;color:rgba(238,243,248,.46);">Эксперт</span>
+            <span style="display:flex;align-items:center;gap:0;margin-left:2px;"><span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px 0;flex:none;"><span style="position:relative;display:flex;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"/></svg><span class="n" style="position:absolute;top:-4px;right:-5px;font:800 9px/1 Figtree,sans-serif;color:#8fc1e8;">7</span></span></span>
+            <span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px -8px -14px 0;flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"/><circle cx="11" cy="7" r="2"/><circle cx="17" cy="12" r="2"/><circle cx="9" cy="17" r="2"/></svg></span></span>
+          </div>
+          <div class="dcap">
+            <span class="arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+            <span class="pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg><span><span class="bad">вс</span>, 9 августа</span></span>
+            <span class="arr dim"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+        <div class="sc">
+          <div class="g">
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#1d3348;padding:14px;">
+              <div class="k">Калории</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#8fc1e8;letter-spacing:-.035em;">642</span><span class="u">ккал</span></div>
+              <div style="font:500 10px/1 Figtree,sans-serif;color:rgba(238,243,248,.5);margin-top:7px;">осталось</div>
+              <div style="margin-top:auto;"><div style="height:6px;border-radius:999px;background:rgba(238,243,248,.14);"><div style="width:67%;height:6px;border-radius:999px;background:#2e7cc0;"></div></div><div class="n" style="display:flex;justify-content:space-between;font:600 9.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.48000000000000004);margin-top:8px;"><span>1 289</span><span>1 931</span></div></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Инсулиновая волна</div>
+              <svg viewBox="0 0 130 52" width="100%" height="52" style="margin-top:8px;"><path d="M3,46 C22,46 28,16 42,16 C56,16 62,46 78,46 C92,46 98,12 112,12 C122,12 126,46 128,46" fill="#2b4a68" opacity=".85"/><line x1="0" y1="46" x2="130" y2="46" stroke="rgba(238,243,248,.14)" stroke-width="1.5"/></svg>
+              <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;"><span style="font:600 10px/1 Figtree,sans-serif;color:#7fd1a0;">без критичных</span><span class="n" style="font:700 10px/1 Figtree,sans-serif;color:rgba(238,243,248,.48000000000000004);">3 волны</span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 3;grid-row:span 2;">
+              <div style="display:flex;gap:6px;margin-top:auto;margin-bottom:auto;">
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Белки</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(238,243,248,.13)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#4caf7d" stroke-width="5" stroke-linecap="round" stroke-dasharray="72 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#e08a72;font-variant-numeric:tabular-nums;">54</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#e08a72;">96<span style="font-weight:600;color:rgba(238,243,248,.5);"> / 150</span></div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Жиры</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(238,243,248,.13)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#4caf7d" stroke-width="5" stroke-linecap="round" stroke-dasharray="87 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:rgba(238,243,248,.5);font-variant-numeric:tabular-nums;">14</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#eef3f8;">48<span style="font-weight:600;color:rgba(238,243,248,.5);"> / 62</span></div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Углеводы</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(238,243,248,.13)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#4caf7d" stroke-width="5" stroke-linecap="round" stroke-dasharray="113 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#e08a72;font-variant-numeric:tabular-nums;">−18</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#e08a72;">198<span style="font-weight:600;color:rgba(238,243,248,.5);"> / 180</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="w"><div class="k">Сон</div><div class="n v bad" style="margin-top:auto;">6,4<span class="u"> ч</span></div></div>
+            <div class="w"><div class="k">Вода</div><div class="n v bad" style="margin-top:auto;">1,7<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(238,243,248,.12);margin-top:7px;"><div style="width:62%;height:4px;border-radius:999px;background:#6fa8c8;"></div></div></div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#8fc1e8;">6,2<span class="u"> / 10</span></span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Тепловая карта</span><span class="n" style="font:700 9.5px/1 Figtree,sans-serif;color:#7fd1a0;">5 из 7</span></div>
+              <div style="display:flex;gap:4px;margin-top:auto;"><span style="flex:1;height:9px;border-radius:3px;background:#4caf7d;"></span><span style="flex:1;height:9px;border-radius:3px;background:#4caf7d;"></span><span style="flex:1;height:9px;border-radius:3px;background:rgba(238,243,248,.12);"></span><span style="flex:1;height:9px;border-radius:3px;background:#4caf7d;"></span><span style="flex:1;height:9px;border-radius:3px;background:#e0a93e;"></span><span style="flex:1;height:9px;border-radius:3px;background:#4caf7d;"></span><span style="flex:1;height:9px;border-radius:3px;background:#4caf7d;"></span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Риск-радар</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#7fd1a0;">низкий</span></div>
+              <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(238,243,248,.53);"><span>Срывы</span><span class="n" style="color:#7fd1a0;">нет</span></div>
+                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(238,243,248,.53);"><span>Недосып</span><span class="n" style="color:#8fc1e8;">2 дня</span></div>
+              </div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#17302a;">
+              <div class="k">Тренд здоровья</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#7fd1a0;">+8</span><span class="u">за 14 дней</span></div>
+              <svg viewBox="0 0 130 40" width="100%" height="40" style="margin-top:auto;"><polyline points="4,32 26,28 48,30 70,20 92,16 114,10 126,8" fill="none" stroke="#4caf7d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="8" r="3.5" fill="#4caf7d"/></svg>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Вес</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n good" style="font:600 26px/1 Figtree,sans-serif;">91,1</span><span class="u">кг</span></div>
+              <div class="n" style="font:600 10px/1 Figtree,sans-serif;color:#7fd1a0;margin-top:7px;">−0,9 за неделю</div>
+              <svg viewBox="0 0 130 38" width="100%" height="38" style="margin-top:auto;"><polyline points="4,14 26,24 48,24 70,6 92,14 114,18 126,19" fill="none" stroke="#2e7cc0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="19" r="3.5" fill="#2e7cc0"/></svg>
+            </div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Динамика веса</span><span class="n" style="font:600 14px/1 Figtree,sans-serif;color:#7fd1a0;">−1,8 <span class="u">кг / мес</span></span></div>
+              <div class="n" style="display:flex;gap:10px;margin-top:auto;font:700 9.5px/1 Figtree,sans-serif;">
+                <span style="color:rgba(238,243,248,.43);">7</span>
+                <span style="color:#8fc1e8;border-bottom:2px solid #2e7cc0;padding-bottom:2px;">14</span>
+                <span style="color:rgba(238,243,248,.43);">30</span>
+                <span style="color:rgba(238,243,248,.36000000000000004);font-weight:500;">дней</span>
+              </div>
+            </div>
+
+            <div style="grid-column:span 2;border-radius:16px;border:2px dashed rgba(167,92,43,.32);display:flex;align-items:center;justify-content:center;gap:8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8fc1e8" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              <span style="font:700 11px/1 Figtree,sans-serif;color:#8fc1e8;">Добавить</span>
+            </div>
+
+          </div>
+          <div class="editRow"><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M14 6l4 4"/></svg>Изменить экран</span></div>
+        </div>
+        <div style="position:absolute;right:14px;bottom:76px;display:flex;flex-direction:column;align-items:center;gap:9px;">
+          <span style="width:40px;height:40px;border-radius:999px;background:#13222f;box-shadow:0 1px 2px rgba(0,0,0,.5),0 6px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8fc1e8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>
+          <span style="width:40px;height:40px;border-radius:999px;background:#13222f;box-shadow:0 1px 2px rgba(0,0,0,.5),0 6px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;"><svg width="19" height="19" viewBox="0 0 24 24"><defs><clipPath id="fillTwoThirdsPD"><rect x="0" y="9" width="24" height="15"/></clipPath></defs><circle cx="12" cy="12" r="8.5" fill="none" stroke="#8fc1e8" stroke-width="2.2"/><circle cx="12" cy="12" r="8.5" fill="#8fc1e8" clip-path="url(#fillTwoThirdsPD)"/></svg></span>
+          <span style="width:40px;height:40px;border-radius:999px;background:#13222f;box-shadow:0 1px 2px rgba(0,0,0,.5),0 6px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5e808f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 10.5a6 6 0 01-12 0C6 9.5 12 3 12 3z"/></svg></span>
+          <span style="width:52px;height:52px;border-radius:999px;background:#2e7cc0;box-shadow:0 2px 4px rgba(0,0,0,.5),0 10px 22px rgba(120,60,20,.28);display:flex;align-items:center;justify-content:center;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        </div>
+        <div style="display:flex;padding:4px 10px 16px;background:#13222f;">
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8fc1e8" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#8fc1e8;">Главная</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.4)" stroke-width="2.5" stroke-linecap="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Питание</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Актив</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.4)" stroke-width="2.5" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Отчёты</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Инсайты</span></div></div>
+        </div>
+      </div></div></div>
+<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Главная · прошлый день</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">песочная и тёмная · день закрыт</span></div><div class="ph" id="g1y" data-screen-label="Главная · прошлый день">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <span style="font:800 12px/1 Figtree,sans-serif;color:#8a4a20;" class="n">18</span>
+            <span style="flex:1;height:3px;border-radius:999px;background:rgba(0,0,0,.09);"><span style="display:block;width:34%;height:3px;border-radius:999px;background:#c67139;"></span></span>
+            <span style="font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">Эксперт</span>
+            <span style="display:flex;align-items:center;gap:0;margin-left:2px;"><span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px 0;flex:none;"><span style="position:relative;display:flex;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"/></svg><span class="n" style="position:absolute;top:-4px;right:-5px;font:800 9px/1 Figtree,sans-serif;color:#8a4a20;">7</span></span></span>
+            <span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px -8px -14px 0;flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"/><circle cx="11" cy="7" r="2"/><circle cx="17" cy="12" r="2"/><circle cx="9" cy="17" r="2"/></svg></span></span>
+          </div>
+          <div class="dcap">
+            <span class="arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+            <span class="pill past"><span class="lbl"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Вчера, 8 августа</span><span class="today">Сегодня</span></span>
+            <span class="arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+        <div class="sc">
+          <div class="g">
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#efe3cf;padding:14px;">
+              <div class="k">Калории</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.035em;">1 786</span><span class="u">ккал</span></div>
+              <div style="font:500 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:7px;">итог дня</div>
+              <div style="margin-top:auto;"><div style="height:6px;border-radius:999px;background:rgba(0,0,0,.1);"><div style="width:92%;height:6px;border-radius:999px;background:#c67139;"></div></div><div class="n" style="display:flex;justify-content:space-between;font:600 9.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:8px;"><span>1 786</span><span>1 931</span></div></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Инсулиновая волна</div>
+              <svg viewBox="0 0 130 52" width="100%" height="52" style="margin-top:8px;"><path d="M3,46 C22,46 28,16 42,16 C56,16 62,46 78,46 C92,46 98,12 112,12 C122,12 126,46 128,46" fill="#e6cfa8" opacity=".85"/><line x1="0" y1="46" x2="130" y2="46" stroke="rgba(0,0,0,.1)" stroke-width="1.5"/></svg>
+              <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;"><span style="font:600 10px/1 Figtree,sans-serif;color:#5c6a45;">без критичных</span><span class="n" style="font:700 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);">3 волны</span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 3;grid-row:span 2;">
+              <div style="display:flex;gap:6px;margin-top:auto;margin-bottom:auto;">
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Белки</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#7a8a5e" stroke-width="5" stroke-linecap="round" stroke-dasharray="72 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#a8382b;font-variant-numeric:tabular-nums;">54</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#a8382b;">96<span style="font-weight:600;color:rgba(0,0,0,.42);"> / 150</span></div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Жиры</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#7a8a5e" stroke-width="5" stroke-linecap="round" stroke-dasharray="87 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:rgba(0,0,0,.42);font-variant-numeric:tabular-nums;">14</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#201e1d;">48<span style="font-weight:600;color:rgba(0,0,0,.42);"> / 62</span></div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Углеводы</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#7a8a5e" stroke-width="5" stroke-linecap="round" stroke-dasharray="113 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#a8382b;font-variant-numeric:tabular-nums;">−18</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#a8382b;">198<span style="font-weight:600;color:rgba(0,0,0,.42);"> / 180</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="w"><div class="k">Сон</div><div class="n v good" style="margin-top:auto;">7,4<span class="u"> ч</span></div></div>
+            <div class="w"><div class="k">Вода</div><div class="n v" style="margin-top:auto;">2,4<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:7px;"><div style="width:89%;height:4px;border-radius:999px;background:#7d98a6;"></div></div></div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#8a4a20;">7,1<span class="u"> / 10</span></span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Тепловая карта</span><span class="n" style="font:700 9.5px/1 Figtree,sans-serif;color:#5c6a45;">6 из 7</span></div>
+              <div style="display:flex;gap:4px;margin-top:auto;"><span style="flex:1;height:9px;border-radius:3px;background:#7a8a5e;"></span><span style="flex:1;height:9px;border-radius:3px;background:#7a8a5e;"></span><span style="flex:1;height:9px;border-radius:3px;background:rgba(0,0,0,.08);"></span><span style="flex:1;height:9px;border-radius:3px;background:#7a8a5e;"></span><span style="flex:1;height:9px;border-radius:3px;background:#d99a63;"></span><span style="flex:1;height:9px;border-radius:3px;background:#7a8a5e;"></span><span style="flex:1;height:9px;border-radius:3px;background:#7a8a5e;"></span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Риск-радар</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#5c6a45;">низкий</span></div>
+              <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Срывы</span><span class="n" style="color:#5c6a45;">нет</span></div>
+                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Недосып</span><span class="n" style="color:#8a4a20;">2 дня</span></div>
+              </div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#eaefe0;">
+              <div class="k">Тренд здоровья</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#5c6a45;">+8</span><span class="u">за 14 дней</span></div>
+              <svg viewBox="0 0 130 40" width="100%" height="40" style="margin-top:auto;"><polyline points="4,32 26,28 48,30 70,20 92,16 114,10 126,8" fill="none" stroke="#7a8a5e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="8" r="3.5" fill="#7a8a5e"/></svg>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Вес</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n bad" style="font:600 26px/1 Figtree,sans-serif;">91,3</span><span class="u">кг</span></div>
+              <div class="n bad" style="font:600 10px/1 Figtree,sans-serif;margin-top:7px;">+0,2 за неделю</div>
+              <svg viewBox="0 0 130 38" width="100%" height="38" style="margin-top:auto;"><polyline points="4,14 26,24 48,24 70,6 92,14 114,18 126,19" fill="none" stroke="#c67139" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="19" r="3.5" fill="#c67139"/></svg>
+            </div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Динамика веса</span><span class="n" style="font:600 14px/1 Figtree,sans-serif;color:#5c6a45;">−1,8 <span class="u">кг / мес</span></span></div>
+              <div class="n" style="display:flex;gap:10px;margin-top:auto;font:700 9.5px/1 Figtree,sans-serif;">
+                <span style="color:rgba(0,0,0,.35);">7</span>
+                <span style="color:#8a4a20;border-bottom:2px solid #c67139;padding-bottom:2px;">14</span>
+                <span style="color:rgba(0,0,0,.35);">30</span>
+                <span style="color:rgba(0,0,0,.28);font-weight:500;">дней</span>
+              </div>
+            </div>
+
+            <div style="grid-column:span 2;border-radius:16px;border:2px dashed rgba(167,92,43,.32);display:flex;align-items:center;justify-content:center;gap:8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a75c2b" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              <span style="font:700 11px/1 Figtree,sans-serif;color:#a75c2b;">Добавить</span>
+            </div>
+
+          </div>
+          <div class="editRow"><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M14 6l4 4"/></svg>Изменить экран</span></div>
+        </div>
+        <div style="position:absolute;right:14px;bottom:76px;display:flex;flex-direction:column;align-items:center;gap:9px;">
+          <span style="width:40px;height:40px;border-radius:999px;background:#fffaf1;box-shadow:0 1px 2px rgba(80,50,20,.1),0 6px 16px rgba(80,50,20,.14);display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>
+          <span style="width:40px;height:40px;border-radius:999px;background:#fffaf1;box-shadow:0 1px 2px rgba(80,50,20,.1),0 6px 16px rgba(80,50,20,.14);display:flex;align-items:center;justify-content:center;"><svg width="19" height="19" viewBox="0 0 24 24"><defs><clipPath id="fillTwoThirdsY"><rect x="0" y="9" width="24" height="15"/></clipPath></defs><circle cx="12" cy="12" r="8.5" fill="none" stroke="#8a4a20" stroke-width="2.2"/><circle cx="12" cy="12" r="8.5" fill="#8a4a20" clip-path="url(#fillTwoThirdsY)"/></svg></span>
+          <span style="width:40px;height:40px;border-radius:999px;background:#fffaf1;box-shadow:0 1px 2px rgba(80,50,20,.1),0 6px 16px rgba(80,50,20,.14);display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5e808f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 10.5a6 6 0 01-12 0C6 9.5 12 3 12 3z"/></svg></span>
+          <span style="width:52px;height:52px;border-radius:999px;background:#c67139;box-shadow:0 2px 4px rgba(80,50,20,.14),0 10px 22px rgba(120,60,20,.28);display:flex;align-items:center;justify-content:center;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#2b1608" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        </div>
+        <div style="display:flex;padding:4px 10px 16px;background:#fffaf1;">
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#8a4a20;">Главная</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Питание</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Актив</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Отчёты</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Инсайты</span></div></div>
+        </div>
+      </div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="dk"><div class="ph" id="g1yd" data-screen-label="Главная · прошлый день · тёмная">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <span style="font:800 12px/1 Figtree,sans-serif;color:#e2a468;" class="n">18</span>
+            <span style="flex:1;height:3px;border-radius:999px;background:rgba(242,237,230,.13);"><span style="display:block;width:34%;height:3px;border-radius:999px;background:#cf8144;"></span></span>
+            <span style="font:600 10px/1 Figtree,sans-serif;color:rgba(242,237,230,.46);">Эксперт</span>
+            <span style="display:flex;align-items:center;gap:0;margin-left:2px;"><span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px 0;flex:none;"><span style="position:relative;display:flex;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"/></svg><span class="n" style="position:absolute;top:-4px;right:-5px;font:800 9px/1 Figtree,sans-serif;color:#e2a468;">7</span></span></span>
+            <span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px -8px -14px 0;flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"/><circle cx="11" cy="7" r="2"/><circle cx="17" cy="12" r="2"/><circle cx="9" cy="17" r="2"/></svg></span></span>
+          </div>
+          <div class="dcap">
+            <span class="arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+            <span class="pill past"><span class="lbl"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Вчера, 8 августа</span><span class="today">Сегодня</span></span>
+            <span class="arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+        <div class="sc">
+          <div class="g">
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#2f2820;padding:14px;">
+              <div class="k">Калории</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#e2a468;letter-spacing:-.035em;">1 786</span><span class="u">ккал</span></div>
+              <div style="font:500 10px/1 Figtree,sans-serif;color:rgba(242,237,230,.5);margin-top:7px;">итог дня</div>
+              <div style="margin-top:auto;"><div style="height:6px;border-radius:999px;background:rgba(242,237,230,.14);"><div style="width:92%;height:6px;border-radius:999px;background:#cf8144;"></div></div><div class="n" style="display:flex;justify-content:space-between;font:600 9.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.48000000000000004);margin-top:8px;"><span>1 786</span><span>1 931</span></div></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Инсулиновая волна</div>
+              <svg viewBox="0 0 130 52" width="100%" height="52" style="margin-top:8px;"><path d="M3,46 C22,46 28,16 42,16 C56,16 62,46 78,46 C92,46 98,12 112,12 C122,12 126,46 128,46" fill="#4d4029" opacity=".85"/><line x1="0" y1="46" x2="130" y2="46" stroke="rgba(242,237,230,.14)" stroke-width="1.5"/></svg>
+              <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;"><span style="font:600 10px/1 Figtree,sans-serif;color:#9fb981;">без критичных</span><span class="n" style="font:700 10px/1 Figtree,sans-serif;color:rgba(242,237,230,.48000000000000004);">3 волны</span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 3;grid-row:span 2;">
+              <div style="display:flex;gap:6px;margin-top:auto;margin-bottom:auto;">
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Белки</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(242,237,230,.13)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#8faa6d" stroke-width="5" stroke-linecap="round" stroke-dasharray="72 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#e08a72;font-variant-numeric:tabular-nums;">54</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#e08a72;">96<span style="font-weight:600;color:rgba(242,237,230,.5);"> / 150</span></div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Жиры</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(242,237,230,.13)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#8faa6d" stroke-width="5" stroke-linecap="round" stroke-dasharray="87 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:rgba(242,237,230,.5);font-variant-numeric:tabular-nums;">14</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#f2ede6;">48<span style="font-weight:600;color:rgba(242,237,230,.5);"> / 62</span></div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Углеводы</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(242,237,230,.13)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#8faa6d" stroke-width="5" stroke-linecap="round" stroke-dasharray="113 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#e08a72;font-variant-numeric:tabular-nums;">−18</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#e08a72;">198<span style="font-weight:600;color:rgba(242,237,230,.5);"> / 180</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="w"><div class="k">Сон</div><div class="n v good" style="margin-top:auto;">7,4<span class="u"> ч</span></div></div>
+            <div class="w"><div class="k">Вода</div><div class="n v" style="margin-top:auto;">2,4<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(242,237,230,.12);margin-top:7px;"><div style="width:89%;height:4px;border-radius:999px;background:#8fb2c2;"></div></div></div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#e2a468;">7,1<span class="u"> / 10</span></span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Тепловая карта</span><span class="n" style="font:700 9.5px/1 Figtree,sans-serif;color:#9fb981;">6 из 7</span></div>
+              <div style="display:flex;gap:4px;margin-top:auto;"><span style="flex:1;height:9px;border-radius:3px;background:#8faa6d;"></span><span style="flex:1;height:9px;border-radius:3px;background:#8faa6d;"></span><span style="flex:1;height:9px;border-radius:3px;background:rgba(242,237,230,.12);"></span><span style="flex:1;height:9px;border-radius:3px;background:#8faa6d;"></span><span style="flex:1;height:9px;border-radius:3px;background:#cf9257;"></span><span style="flex:1;height:9px;border-radius:3px;background:#8faa6d;"></span><span style="flex:1;height:9px;border-radius:3px;background:#8faa6d;"></span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Риск-радар</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#9fb981;">низкий</span></div>
+              <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(242,237,230,.53);"><span>Срывы</span><span class="n" style="color:#9fb981;">нет</span></div>
+                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(242,237,230,.53);"><span>Недосып</span><span class="n" style="color:#e2a468;">2 дня</span></div>
+              </div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#242c20;">
+              <div class="k">Тренд здоровья</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#9fb981;">+8</span><span class="u">за 14 дней</span></div>
+              <svg viewBox="0 0 130 40" width="100%" height="40" style="margin-top:auto;"><polyline points="4,32 26,28 48,30 70,20 92,16 114,10 126,8" fill="none" stroke="#8faa6d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="8" r="3.5" fill="#8faa6d"/></svg>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Вес</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n bad" style="font:600 26px/1 Figtree,sans-serif;">91,3</span><span class="u">кг</span></div>
+              <div class="n bad" style="font:600 10px/1 Figtree,sans-serif;margin-top:7px;">+0,2 за неделю</div>
+              <svg viewBox="0 0 130 38" width="100%" height="38" style="margin-top:auto;"><polyline points="4,14 26,24 48,24 70,6 92,14 114,18 126,19" fill="none" stroke="#cf8144" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="19" r="3.5" fill="#cf8144"/></svg>
+            </div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Динамика веса</span><span class="n" style="font:600 14px/1 Figtree,sans-serif;color:#9fb981;">−1,8 <span class="u">кг / мес</span></span></div>
+              <div class="n" style="display:flex;gap:10px;margin-top:auto;font:700 9.5px/1 Figtree,sans-serif;">
+                <span style="color:rgba(242,237,230,.43);">7</span>
+                <span style="color:#e2a468;border-bottom:2px solid #cf8144;padding-bottom:2px;">14</span>
+                <span style="color:rgba(242,237,230,.43);">30</span>
+                <span style="color:rgba(242,237,230,.36000000000000004);font-weight:500;">дней</span>
+              </div>
+            </div>
+
+            <div style="grid-column:span 2;border-radius:16px;border:2px dashed rgba(226,164,104,.32);display:flex;align-items:center;justify-content:center;gap:8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e2a468" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              <span style="font:700 11px/1 Figtree,sans-serif;color:#e2a468;">Добавить</span>
+            </div>
+
+          </div>
+          <div class="editRow"><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M14 6l4 4"/></svg>Изменить экран</span></div>
+        </div>
+        <div style="position:absolute;right:14px;bottom:76px;display:flex;flex-direction:column;align-items:center;gap:9px;">
+          <span style="width:40px;height:40px;border-radius:999px;background:#23201b;box-shadow:0 1px 2px rgba(0,0,0,.45),0 6px 16px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#e2a468" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>
+          <span style="width:40px;height:40px;border-radius:999px;background:#23201b;box-shadow:0 1px 2px rgba(0,0,0,.45),0 6px 16px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;"><svg width="19" height="19" viewBox="0 0 24 24"><defs><clipPath id="fillTwoThirdsYD"><rect x="0" y="9" width="24" height="15"/></clipPath></defs><circle cx="12" cy="12" r="8.5" fill="none" stroke="#e2a468" stroke-width="2.2"/><circle cx="12" cy="12" r="8.5" fill="#e2a468" clip-path="url(#fillTwoThirdsYD)"/></svg></span>
+          <span style="width:40px;height:40px;border-radius:999px;background:#23201b;box-shadow:0 1px 2px rgba(0,0,0,.45),0 6px 16px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5e808f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 10.5a6 6 0 01-12 0C6 9.5 12 3 12 3z"/></svg></span>
+          <span style="width:52px;height:52px;border-radius:999px;background:#cf8144;box-shadow:0 2px 4px rgba(0,0,0,.45),0 10px 22px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#1a0f04" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        </div>
+        <div style="display:flex;padding:4px 10px 16px;background:#23201b;">
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#e2a468" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#e2a468;">Главная</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.4)" stroke-width="2.5" stroke-linecap="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Питание</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Актив</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.4)" stroke-width="2.5" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Отчёты</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Инсайты</span></div></div>
+        </div>
+      </div></div></div>
+<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Главная · прошлый день</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">синяя и сине-тёмная · день закрыт</span></div><div class="bl"><div class="ph" id="g1ybp" data-screen-label="Главная · прошлый день · синяя">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <span style="font:800 12px/1 Figtree,sans-serif;color:#1d5e96;" class="n">18</span>
+            <span style="flex:1;height:3px;border-radius:999px;background:rgba(0,0,0,.09);"><span style="display:block;width:34%;height:3px;border-radius:999px;background:#2e7cc0;"></span></span>
+            <span style="font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">Эксперт</span>
+            <span style="display:flex;align-items:center;gap:0;margin-left:2px;"><span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px 0;flex:none;"><span style="position:relative;display:flex;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"/></svg><span class="n" style="position:absolute;top:-4px;right:-5px;font:800 9px/1 Figtree,sans-serif;color:#1d5e96;">7</span></span></span>
+            <span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px -8px -14px 0;flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"/><circle cx="11" cy="7" r="2"/><circle cx="17" cy="12" r="2"/><circle cx="9" cy="17" r="2"/></svg></span></span>
+          </div>
+          <div class="dcap">
+            <span class="arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+            <span class="pill past"><span class="lbl"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Вчера, 8 августа</span><span class="today">Сегодня</span></span>
+            <span class="arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+        <div class="sc">
+          <div class="g">
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#e2edf7;padding:14px;">
+              <div class="k">Калории</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#1d5e96;letter-spacing:-.035em;">1 786</span><span class="u">ккал</span></div>
+              <div style="font:500 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:7px;">итог дня</div>
+              <div style="margin-top:auto;"><div style="height:6px;border-radius:999px;background:rgba(0,0,0,.1);"><div style="width:92%;height:6px;border-radius:999px;background:#2e7cc0;"></div></div><div class="n" style="display:flex;justify-content:space-between;font:600 9.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:8px;"><span>1 786</span><span>1 931</span></div></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Инсулиновая волна</div>
+              <svg viewBox="0 0 130 52" width="100%" height="52" style="margin-top:8px;"><path d="M3,46 C22,46 28,16 42,16 C56,16 62,46 78,46 C92,46 98,12 112,12 C122,12 126,46 128,46" fill="#cfe0ef" opacity=".85"/><line x1="0" y1="46" x2="130" y2="46" stroke="rgba(0,0,0,.1)" stroke-width="1.5"/></svg>
+              <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;"><span style="font:600 10px/1 Figtree,sans-serif;color:#1f6e4d;">без критичных</span><span class="n" style="font:700 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);">3 волны</span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 3;grid-row:span 2;">
+              <div style="display:flex;gap:6px;margin-top:auto;margin-bottom:auto;">
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Белки</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#3e9a6b" stroke-width="5" stroke-linecap="round" stroke-dasharray="72 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#a8382b;font-variant-numeric:tabular-nums;">54</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#a8382b;">96<span style="font-weight:600;color:rgba(0,0,0,.42);"> / 150</span></div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Жиры</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#3e9a6b" stroke-width="5" stroke-linecap="round" stroke-dasharray="87 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:rgba(0,0,0,.42);font-variant-numeric:tabular-nums;">14</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#101826;">48<span style="font-weight:600;color:rgba(0,0,0,.42);"> / 62</span></div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Углеводы</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#3e9a6b" stroke-width="5" stroke-linecap="round" stroke-dasharray="113 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#a8382b;font-variant-numeric:tabular-nums;">−18</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#a8382b;">198<span style="font-weight:600;color:rgba(0,0,0,.42);"> / 180</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="w"><div class="k">Сон</div><div class="n v good" style="margin-top:auto;">7,4<span class="u"> ч</span></div></div>
+            <div class="w"><div class="k">Вода</div><div class="n v" style="margin-top:auto;">2,4<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:7px;"><div style="width:89%;height:4px;border-radius:999px;background:#4c8fb8;"></div></div></div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#1d5e96;">7,1<span class="u"> / 10</span></span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Тепловая карта</span><span class="n" style="font:700 9.5px/1 Figtree,sans-serif;color:#1f6e4d;">6 из 7</span></div>
+              <div style="display:flex;gap:4px;margin-top:auto;"><span style="flex:1;height:9px;border-radius:3px;background:#3e9a6b;"></span><span style="flex:1;height:9px;border-radius:3px;background:#3e9a6b;"></span><span style="flex:1;height:9px;border-radius:3px;background:rgba(0,0,0,.08);"></span><span style="flex:1;height:9px;border-radius:3px;background:#3e9a6b;"></span><span style="flex:1;height:9px;border-radius:3px;background:#e0a93e;"></span><span style="flex:1;height:9px;border-radius:3px;background:#3e9a6b;"></span><span style="flex:1;height:9px;border-radius:3px;background:#3e9a6b;"></span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Риск-радар</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#1f6e4d;">низкий</span></div>
+              <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Срывы</span><span class="n" style="color:#1f6e4d;">нет</span></div>
+                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Недосып</span><span class="n" style="color:#1d5e96;">2 дня</span></div>
+              </div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#e4efe7;">
+              <div class="k">Тренд здоровья</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#1f6e4d;">+8</span><span class="u">за 14 дней</span></div>
+              <svg viewBox="0 0 130 40" width="100%" height="40" style="margin-top:auto;"><polyline points="4,32 26,28 48,30 70,20 92,16 114,10 126,8" fill="none" stroke="#3e9a6b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="8" r="3.5" fill="#3e9a6b"/></svg>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Вес</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n bad" style="font:600 26px/1 Figtree,sans-serif;">91,3</span><span class="u">кг</span></div>
+              <div class="n bad" style="font:600 10px/1 Figtree,sans-serif;margin-top:7px;">+0,2 за неделю</div>
+              <svg viewBox="0 0 130 38" width="100%" height="38" style="margin-top:auto;"><polyline points="4,14 26,24 48,24 70,6 92,14 114,18 126,19" fill="none" stroke="#2e7cc0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="19" r="3.5" fill="#2e7cc0"/></svg>
+            </div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Динамика веса</span><span class="n" style="font:600 14px/1 Figtree,sans-serif;color:#1f6e4d;">−1,8 <span class="u">кг / мес</span></span></div>
+              <div class="n" style="display:flex;gap:10px;margin-top:auto;font:700 9.5px/1 Figtree,sans-serif;">
+                <span style="color:rgba(0,0,0,.35);">7</span>
+                <span style="color:#1d5e96;border-bottom:2px solid #2e7cc0;padding-bottom:2px;">14</span>
+                <span style="color:rgba(0,0,0,.35);">30</span>
+                <span style="color:rgba(0,0,0,.28);font-weight:500;">дней</span>
+              </div>
+            </div>
+
+            <div style="grid-column:span 2;border-radius:16px;border:2px dashed rgba(167,92,43,.32);display:flex;align-items:center;justify-content:center;gap:8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1d5e96" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              <span style="font:700 11px/1 Figtree,sans-serif;color:#1d5e96;">Добавить</span>
+            </div>
+
+          </div>
+          <div class="editRow"><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M14 6l4 4"/></svg>Изменить экран</span></div>
+        </div>
+        <div style="position:absolute;right:14px;bottom:76px;display:flex;flex-direction:column;align-items:center;gap:9px;">
+          <span style="width:40px;height:40px;border-radius:999px;background:#ffffff;box-shadow:0 1px 2px rgba(16,24,38,.12),0 6px 16px rgba(16,24,38,.12);display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1d5e96" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>
+          <span style="width:40px;height:40px;border-radius:999px;background:#ffffff;box-shadow:0 1px 2px rgba(16,24,38,.12),0 6px 16px rgba(16,24,38,.12);display:flex;align-items:center;justify-content:center;"><svg width="19" height="19" viewBox="0 0 24 24"><defs><clipPath id="fillTwoThirdsYBP"><rect x="0" y="9" width="24" height="15"/></clipPath></defs><circle cx="12" cy="12" r="8.5" fill="none" stroke="#1d5e96" stroke-width="2.2"/><circle cx="12" cy="12" r="8.5" fill="#1d5e96" clip-path="url(#fillTwoThirdsYBP)"/></svg></span>
+          <span style="width:40px;height:40px;border-radius:999px;background:#ffffff;box-shadow:0 1px 2px rgba(16,24,38,.12),0 6px 16px rgba(16,24,38,.12);display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5e808f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 10.5a6 6 0 01-12 0C6 9.5 12 3 12 3z"/></svg></span>
+          <span style="width:52px;height:52px;border-radius:999px;background:#2e7cc0;box-shadow:0 2px 4px rgba(16,24,38,.12),0 10px 22px rgba(120,60,20,.28);display:flex;align-items:center;justify-content:center;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        </div>
+        <div style="display:flex;padding:4px 10px 16px;background:#ffffff;">
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1d5e96" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#1d5e96;">Главная</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Питание</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Актив</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Отчёты</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Инсайты</span></div></div>
+        </div>
+      </div></div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="bd"><div class="ph" id="g1ybpd" data-screen-label="Главная · прошлый день · сине-тёмная">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <span style="font:800 12px/1 Figtree,sans-serif;color:#8fc1e8;" class="n">18</span>
+            <span style="flex:1;height:3px;border-radius:999px;background:rgba(238,243,248,.13);"><span style="display:block;width:34%;height:3px;border-radius:999px;background:#2e7cc0;"></span></span>
+            <span style="font:600 10px/1 Figtree,sans-serif;color:rgba(238,243,248,.46);">Эксперт</span>
+            <span style="display:flex;align-items:center;gap:0;margin-left:2px;"><span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px 0;flex:none;"><span style="position:relative;display:flex;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 014 10.5V16H8v-2.5A6 6 0 0112 3z"/></svg><span class="n" style="position:absolute;top:-4px;right:-5px;font:800 9px/1 Figtree,sans-serif;color:#8fc1e8;">7</span></span></span>
+            <span style="display:flex;align-items:center;justify-content:center;width:34px;height:44px;margin:-14px -8px -14px 0;flex:none;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.43)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h5M13 7h7M4 12h11M19 12h1M4 17h3M11 17h9"/><circle cx="11" cy="7" r="2"/><circle cx="17" cy="12" r="2"/><circle cx="9" cy="17" r="2"/></svg></span></span>
+          </div>
+          <div class="dcap">
+            <span class="arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+            <span class="pill past"><span class="lbl"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Вчера, 8 августа</span><span class="today">Сегодня</span></span>
+            <span class="arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
+          </div>
+        </div>
+        <div class="sc">
+          <div class="g">
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#1d3348;padding:14px;">
+              <div class="k">Калории</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#8fc1e8;letter-spacing:-.035em;">1 786</span><span class="u">ккал</span></div>
+              <div style="font:500 10px/1 Figtree,sans-serif;color:rgba(238,243,248,.5);margin-top:7px;">итог дня</div>
+              <div style="margin-top:auto;"><div style="height:6px;border-radius:999px;background:rgba(238,243,248,.14);"><div style="width:92%;height:6px;border-radius:999px;background:#2e7cc0;"></div></div><div class="n" style="display:flex;justify-content:space-between;font:600 9.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.48000000000000004);margin-top:8px;"><span>1 786</span><span>1 931</span></div></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Инсулиновая волна</div>
+              <svg viewBox="0 0 130 52" width="100%" height="52" style="margin-top:8px;"><path d="M3,46 C22,46 28,16 42,16 C56,16 62,46 78,46 C92,46 98,12 112,12 C122,12 126,46 128,46" fill="#2b4a68" opacity=".85"/><line x1="0" y1="46" x2="130" y2="46" stroke="rgba(238,243,248,.14)" stroke-width="1.5"/></svg>
+              <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;"><span style="font:600 10px/1 Figtree,sans-serif;color:#7fd1a0;">без критичных</span><span class="n" style="font:700 10px/1 Figtree,sans-serif;color:rgba(238,243,248,.48000000000000004);">3 волны</span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 3;grid-row:span 2;">
+              <div style="display:flex;gap:6px;margin-top:auto;margin-bottom:auto;">
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Белки</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(238,243,248,.13)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#4caf7d" stroke-width="5" stroke-linecap="round" stroke-dasharray="72 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#e08a72;font-variant-numeric:tabular-nums;">54</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#e08a72;">96<span style="font-weight:600;color:rgba(238,243,248,.5);"> / 150</span></div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Жиры</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(238,243,248,.13)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#4caf7d" stroke-width="5" stroke-linecap="round" stroke-dasharray="87 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:rgba(238,243,248,.5);font-variant-numeric:tabular-nums;">14</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#eef3f8;">48<span style="font-weight:600;color:rgba(238,243,248,.5);"> / 62</span></div>
+                </div>
+                <div style="flex:1;text-align:center;">
+                  <div class="k" style="margin-bottom:5px;">Углеводы</div>
+                  <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(238,243,248,.13)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#4caf7d" stroke-width="5" stroke-linecap="round" stroke-dasharray="113 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#e08a72;font-variant-numeric:tabular-nums;">−18</text></svg>
+                  <div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#e08a72;">198<span style="font-weight:600;color:rgba(238,243,248,.5);"> / 180</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="w"><div class="k">Сон</div><div class="n v good" style="margin-top:auto;">7,4<span class="u"> ч</span></div></div>
+            <div class="w"><div class="k">Вода</div><div class="n v" style="margin-top:auto;">2,4<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(238,243,248,.12);margin-top:7px;"><div style="width:89%;height:4px;border-radius:999px;background:#6fa8c8;"></div></div></div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#8fc1e8;">7,1<span class="u"> / 10</span></span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Тепловая карта</span><span class="n" style="font:700 9.5px/1 Figtree,sans-serif;color:#7fd1a0;">6 из 7</span></div>
+              <div style="display:flex;gap:4px;margin-top:auto;"><span style="flex:1;height:9px;border-radius:3px;background:#4caf7d;"></span><span style="flex:1;height:9px;border-radius:3px;background:#4caf7d;"></span><span style="flex:1;height:9px;border-radius:3px;background:rgba(238,243,248,.12);"></span><span style="flex:1;height:9px;border-radius:3px;background:#4caf7d;"></span><span style="flex:1;height:9px;border-radius:3px;background:#e0a93e;"></span><span style="flex:1;height:9px;border-radius:3px;background:#4caf7d;"></span><span style="flex:1;height:9px;border-radius:3px;background:#4caf7d;"></span></div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Риск-радар</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#7fd1a0;">низкий</span></div>
+              <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
+                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(238,243,248,.53);"><span>Срывы</span><span class="n" style="color:#7fd1a0;">нет</span></div>
+                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(238,243,248,.53);"><span>Недосып</span><span class="n" style="color:#8fc1e8;">2 дня</span></div>
+              </div>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#17302a;">
+              <div class="k">Тренд здоровья</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#7fd1a0;">+8</span><span class="u">за 14 дней</span></div>
+              <svg viewBox="0 0 130 40" width="100%" height="40" style="margin-top:auto;"><polyline points="4,32 26,28 48,30 70,20 92,16 114,10 126,8" fill="none" stroke="#4caf7d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="8" r="3.5" fill="#4caf7d"/></svg>
+            </div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;">
+              <div class="k">Вес</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n bad" style="font:600 26px/1 Figtree,sans-serif;">91,3</span><span class="u">кг</span></div>
+              <div class="n bad" style="font:600 10px/1 Figtree,sans-serif;margin-top:7px;">+0,2 за неделю</div>
+              <svg viewBox="0 0 130 38" width="100%" height="38" style="margin-top:auto;"><polyline points="4,14 26,24 48,24 70,6 92,14 114,18 126,19" fill="none" stroke="#2e7cc0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="19" r="3.5" fill="#2e7cc0"/></svg>
+            </div>
+
+            <div class="w" style="grid-column:span 2;">
+              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Динамика веса</span><span class="n" style="font:600 14px/1 Figtree,sans-serif;color:#7fd1a0;">−1,8 <span class="u">кг / мес</span></span></div>
+              <div class="n" style="display:flex;gap:10px;margin-top:auto;font:700 9.5px/1 Figtree,sans-serif;">
+                <span style="color:rgba(238,243,248,.43);">7</span>
+                <span style="color:#8fc1e8;border-bottom:2px solid #2e7cc0;padding-bottom:2px;">14</span>
+                <span style="color:rgba(238,243,248,.43);">30</span>
+                <span style="color:rgba(238,243,248,.36000000000000004);font-weight:500;">дней</span>
+              </div>
+            </div>
+
+            <div style="grid-column:span 2;border-radius:16px;border:2px dashed rgba(167,92,43,.32);display:flex;align-items:center;justify-content:center;gap:8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8fc1e8" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              <span style="font:700 11px/1 Figtree,sans-serif;color:#8fc1e8;">Добавить</span>
+            </div>
+
+          </div>
+          <div class="editRow"><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="M14 6l4 4"/></svg>Изменить экран</span></div>
+        </div>
+        <div style="position:absolute;right:14px;bottom:76px;display:flex;flex-direction:column;align-items:center;gap:9px;">
+          <span style="width:40px;height:40px;border-radius:999px;background:#13222f;box-shadow:0 1px 2px rgba(0,0,0,.5),0 6px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8fc1e8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></span>
+          <span style="width:40px;height:40px;border-radius:999px;background:#13222f;box-shadow:0 1px 2px rgba(0,0,0,.5),0 6px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;"><svg width="19" height="19" viewBox="0 0 24 24"><defs><clipPath id="fillTwoThirdsYBPD"><rect x="0" y="9" width="24" height="15"/></clipPath></defs><circle cx="12" cy="12" r="8.5" fill="none" stroke="#8fc1e8" stroke-width="2.2"/><circle cx="12" cy="12" r="8.5" fill="#8fc1e8" clip-path="url(#fillTwoThirdsYBPD)"/></svg></span>
+          <span style="width:40px;height:40px;border-radius:999px;background:#13222f;box-shadow:0 1px 2px rgba(0,0,0,.5),0 6px 16px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#5e808f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 10.5a6 6 0 01-12 0C6 9.5 12 3 12 3z"/></svg></span>
+          <span style="width:52px;height:52px;border-radius:999px;background:#2e7cc0;box-shadow:0 2px 4px rgba(0,0,0,.5),0 10px 22px rgba(120,60,20,.28);display:flex;align-items:center;justify-content:center;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        </div>
+        <div style="display:flex;padding:4px 10px 16px;background:#13222f;">
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8fc1e8" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#8fc1e8;">Главная</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.4)" stroke-width="2.5" stroke-linecap="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Питание</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Актив</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.4)" stroke-width="2.5" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Отчёты</span></div></div>
+          <div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Инсайты</span></div></div>
+        </div>
+      </div></div></div>
+
+        <!-- РАССТАНОВКА · ЧЕТЫРЕ ПАЛИТРЫ -->
     <div>
       <div class="olab"><a class="oid" href="#g2">5b</a>Расстановка и пустой экран</div>
+      <div class="pl" style="margin-top:0;">Песочная</div>
       <div class="ph" id="g2" data-screen-label="Главная · расстановка">
         <div style="padding:16px 18px 0;">
           <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -184,7 +1060,7 @@
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;position:relative;transform:rotate(-1.8deg);box-shadow:0 12px 28px rgba(80,50,20,.22);">
               <div class="k">Вес</div>
-              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#201e1d;">91,1</span><span class="u">кг</span></div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n good" style="font:600 26px/1 Figtree,sans-serif;">91,1</span><span class="u">кг</span></div>
               <div style="font:500 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:auto;">переносится</div>
               <span style="position:absolute;top:9px;right:9px;width:22px;height:22px;border-radius:999px;background:#fffaf1;display:flex;align-items:center;justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a75c2b" stroke-width="3.4" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
             </div>
@@ -218,20 +1094,193 @@
           </span>
         </div>
       </div>
+      <div class="pl">Тёмная</div>
+      <div class="dk">
+      <div class="ph" id="g2d" data-screen-label="Главная · расстановка · тёмная">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font:700 12px/1 Figtree,sans-serif;color:rgba(242,237,230,.5);min-height:44px;display:flex;align-items:center;margin:-16px 0;">Отмена</span>
+            <span style="font:700 13px/1 Figtree,sans-serif;color:#f2ede6;">Расстановка</span>
+            <span style="font:700 12px/1 Figtree,sans-serif;color:#e2a468;min-height:44px;display:flex;align-items:center;margin:-16px 0;">Готово</span>
+          </div>
+        </div>
+        <div class="sc">
+          <div class="g">
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#2f2820;padding:14px;position:relative;opacity:.5;">
+              <div class="k">Калории</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#e2a468;letter-spacing:-.035em;">642</span><span class="u">ккал</span></div>
+              <span style="position:absolute;top:9px;right:9px;width:22px;height:22px;border-radius:999px;background:#23201b;display:flex;align-items:center;justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e2a468" stroke-width="3.4" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
+            </div>
+            <div style="grid-column:span 2;grid-row:span 2;border-radius:16px;background:rgba(207,129,68,.16);border:2px solid #cf8144;display:flex;align-items:center;justify-content:center;font:700 11px/1.4 Figtree,sans-serif;color:#e2a468;text-align:center;">Место<br>вставки</div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;position:relative;transform:rotate(-1.8deg);box-shadow:0 12px 28px rgba(0,0,0,.5);">
+              <div class="k">Вес</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n good" style="font:600 26px/1 Figtree,sans-serif;">91,1</span><span class="u">кг</span></div>
+              <div style="font:500 10px/1 Figtree,sans-serif;color:rgba(242,237,230,.48);margin-top:auto;">переносится</div>
+              <span style="position:absolute;top:9px;right:9px;width:22px;height:22px;border-radius:999px;background:#23201b;display:flex;align-items:center;justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e2a468" stroke-width="3.4" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
+            </div>
+            <div class="w" style="grid-column:span 2;grid-row:span 2;opacity:.5;position:relative;">
+              <div class="k">Инсулиновая волна</div>
+              <svg viewBox="0 0 130 52" width="100%" height="52" style="margin-top:8px;"><path d="M3,46 C22,46 28,16 42,16 C56,16 62,46 78,46 C92,46 98,12 112,12 C122,12 126,46 128,46" fill="#4d4029" opacity=".85"/></svg>
+              <span style="position:absolute;top:9px;right:9px;width:22px;height:22px;border-radius:999px;background:#23201b;display:flex;align-items:center;justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#e2a468" stroke-width="3.4" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
+            </div>
+          </div>
+
+          <div class="tier">Каталог</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div style="background:#23201b;border-radius:16px;padding:13px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Клетчатка</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e2a468" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div style="background:#23201b;border-radius:16px;padding:13px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Задачи</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e2a468" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div style="background:#23201b;border-radius:16px;padding:13px 14px;display:flex;justify-content:space-between;align-items:center;opacity:.45;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Streak</span><span style="font:600 9.5px/1 Figtree,sans-serif;color:#e2a468;">чинится</span></div>
+            <div style="background:#23201b;border-radius:16px;padding:13px 14px;display:flex;justify-content:space-between;align-items:center;opacity:.45;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Инсулин</span><span style="font:600 9.5px/1 Figtree,sans-serif;color:#e2a468;">чинится</span></div>
+          </div>
+
+          <div class="tier">Пустой экран</div>
+          <div style="border-radius:20px;background:#23201b;padding:26px 20px;text-align:center;">
+            <div style="font:700 13px/1.4 Figtree,sans-serif;color:#f2ede6;">Виджетов нет</div>
+            <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(242,237,230,.53);margin-top:6px;text-wrap:pretty;">Соберите экран из того, что смотрите каждый день</div>
+            <span style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:12px 20px;border-radius:999px;background:#cf8144;font:700 12px/1 Figtree,sans-serif;color:#1a0f04;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a0f04" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Добавить виджет</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 20px;background:#23201b;border-top:1px solid rgba(242,237,230,.11);">
+          <span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.5);">Долгое нажатие — взять виджет</span>
+          <span style="display:flex;gap:14px;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.53)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-1"/></svg>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 000 10h1"/></svg>
+          </span>
+        </div>
+      </div>
+      </div>
+    </div>
+    <div>
+      <div class="olab">Она же в синей паре</div>
+      <div class="pl" style="margin-top:0;">Синяя</div>
+      <div class="bl">
+      <div class="ph" id="g2b" data-screen-label="Главная · расстановка · синяя">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font:700 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);min-height:44px;display:flex;align-items:center;margin:-16px 0;">Отмена</span>
+            <span style="font:700 13px/1 Figtree,sans-serif;color:#101826;">Расстановка</span>
+            <span style="font:700 12px/1 Figtree,sans-serif;color:#1d5e96;min-height:44px;display:flex;align-items:center;margin:-16px 0;">Готово</span>
+          </div>
+        </div>
+        <div class="sc">
+          <div class="g">
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#e2edf7;padding:14px;position:relative;opacity:.5;">
+              <div class="k">Калории</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#1d5e96;letter-spacing:-.035em;">642</span><span class="u">ккал</span></div>
+              <span style="position:absolute;top:9px;right:9px;width:22px;height:22px;border-radius:999px;background:#ffffff;display:flex;align-items:center;justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1d5e96" stroke-width="3.4" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
+            </div>
+            <div style="grid-column:span 2;grid-row:span 2;border-radius:16px;background:rgba(46,124,192,.14);border:2px solid #2e7cc0;display:flex;align-items:center;justify-content:center;font:700 11px/1.4 Figtree,sans-serif;color:#1d5e96;text-align:center;">Место<br>вставки</div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;position:relative;transform:rotate(-1.8deg);box-shadow:0 12px 28px rgba(16,24,38,.16);">
+              <div class="k">Вес</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n good" style="font:600 26px/1 Figtree,sans-serif;">91,1</span><span class="u">кг</span></div>
+              <div style="font:500 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:auto;">переносится</div>
+              <span style="position:absolute;top:9px;right:9px;width:22px;height:22px;border-radius:999px;background:#ffffff;display:flex;align-items:center;justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1d5e96" stroke-width="3.4" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
+            </div>
+            <div class="w" style="grid-column:span 2;grid-row:span 2;opacity:.5;position:relative;">
+              <div class="k">Инсулиновая волна</div>
+              <svg viewBox="0 0 130 52" width="100%" height="52" style="margin-top:8px;"><path d="M3,46 C22,46 28,16 42,16 C56,16 62,46 78,46 C92,46 98,12 112,12 C122,12 126,46 128,46" fill="#cfe0ef" opacity=".85"/></svg>
+              <span style="position:absolute;top:9px;right:9px;width:22px;height:22px;border-radius:999px;background:#ffffff;display:flex;align-items:center;justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1d5e96" stroke-width="3.4" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
+            </div>
+          </div>
+
+          <div class="tier">Каталог</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div style="background:#eef3f9;border-radius:16px;padding:13px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Клетчатка</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1d5e96" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div style="background:#eef3f9;border-radius:16px;padding:13px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Задачи</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1d5e96" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div style="background:#eef3f9;border-radius:16px;padding:13px 14px;display:flex;justify-content:space-between;align-items:center;opacity:.45;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Streak</span><span style="font:600 9.5px/1 Figtree,sans-serif;color:#1d5e96;">чинится</span></div>
+            <div style="background:#eef3f9;border-radius:16px;padding:13px 14px;display:flex;justify-content:space-between;align-items:center;opacity:.45;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Инсулин</span><span style="font:600 9.5px/1 Figtree,sans-serif;color:#1d5e96;">чинится</span></div>
+          </div>
+
+          <div class="tier">Пустой экран</div>
+          <div style="border-radius:20px;background:#eef3f9;padding:26px 20px;text-align:center;">
+            <div style="font:700 13px/1.4 Figtree,sans-serif;color:#101826;">Виджетов нет</div>
+            <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:6px;text-wrap:pretty;">Соберите экран из того, что смотрите каждый день</div>
+            <span style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:12px 20px;border-radius:999px;background:#2e7cc0;font:700 12px/1 Figtree,sans-serif;color:#ffffff;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Добавить виджет</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 20px;background:#ffffff;border-top:1px solid rgba(0,0,0,.07);">
+          <span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">Долгое нажатие — взять виджет</span>
+          <span style="display:flex;gap:14px;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-1"/></svg>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 000 10h1"/></svg>
+          </span>
+        </div>
+      </div>
+      </div>
+      <div class="pl">Сине-тёмная</div>
+      <div class="bd">
+      <div class="ph" id="g2bd" data-screen-label="Главная · расстановка · сине-тёмная">
+        <div style="padding:16px 18px 0;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font:700 12px/1 Figtree,sans-serif;color:rgba(238,243,248,.5);min-height:44px;display:flex;align-items:center;margin:-16px 0;">Отмена</span>
+            <span style="font:700 13px/1 Figtree,sans-serif;color:#eef3f8;">Расстановка</span>
+            <span style="font:700 12px/1 Figtree,sans-serif;color:#8fc1e8;min-height:44px;display:flex;align-items:center;margin:-16px 0;">Готово</span>
+          </div>
+        </div>
+        <div class="sc">
+          <div class="g">
+            <div class="w" style="grid-column:span 2;grid-row:span 2;background:#1d3348;padding:14px;position:relative;opacity:.5;">
+              <div class="k">Калории</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#8fc1e8;letter-spacing:-.035em;">642</span><span class="u">ккал</span></div>
+              <span style="position:absolute;top:9px;right:9px;width:22px;height:22px;border-radius:999px;background:#13222f;display:flex;align-items:center;justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8fc1e8" stroke-width="3.4" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
+            </div>
+            <div style="grid-column:span 2;grid-row:span 2;border-radius:16px;background:rgba(46,124,192,.18);border:2px solid #2e7cc0;display:flex;align-items:center;justify-content:center;font:700 11px/1.4 Figtree,sans-serif;color:#8fc1e8;text-align:center;">Место<br>вставки</div>
+
+            <div class="w" style="grid-column:span 2;grid-row:span 2;position:relative;transform:rotate(-1.8deg);box-shadow:0 12px 28px rgba(0,0,0,.5);">
+              <div class="k">Вес</div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n good" style="font:600 26px/1 Figtree,sans-serif;">91,1</span><span class="u">кг</span></div>
+              <div style="font:500 10px/1 Figtree,sans-serif;color:rgba(238,243,248,.48);margin-top:auto;">переносится</div>
+              <span style="position:absolute;top:9px;right:9px;width:22px;height:22px;border-radius:999px;background:#13222f;display:flex;align-items:center;justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8fc1e8" stroke-width="3.4" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
+            </div>
+            <div class="w" style="grid-column:span 2;grid-row:span 2;opacity:.5;position:relative;">
+              <div class="k">Инсулиновая волна</div>
+              <svg viewBox="0 0 130 52" width="100%" height="52" style="margin-top:8px;"><path d="M3,46 C22,46 28,16 42,16 C56,16 62,46 78,46 C92,46 98,12 112,12 C122,12 126,46 128,46" fill="#2b4a68" opacity=".85"/></svg>
+              <span style="position:absolute;top:9px;right:9px;width:22px;height:22px;border-radius:999px;background:#13222f;display:flex;align-items:center;justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#8fc1e8" stroke-width="3.4" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
+            </div>
+          </div>
+
+          <div class="tier">Каталог</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div style="background:#182a3a;border-radius:16px;padding:13px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Клетчатка</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8fc1e8" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div style="background:#182a3a;border-radius:16px;padding:13px 14px;display:flex;justify-content:space-between;align-items:center;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Задачи</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8fc1e8" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div style="background:#182a3a;border-radius:16px;padding:13px 14px;display:flex;justify-content:space-between;align-items:center;opacity:.45;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Streak</span><span style="font:600 9.5px/1 Figtree,sans-serif;color:#8fc1e8;">чинится</span></div>
+            <div style="background:#182a3a;border-radius:16px;padding:13px 14px;display:flex;justify-content:space-between;align-items:center;opacity:.45;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Инсулин</span><span style="font:600 9.5px/1 Figtree,sans-serif;color:#8fc1e8;">чинится</span></div>
+          </div>
+
+          <div class="tier">Пустой экран</div>
+          <div style="border-radius:20px;background:#182a3a;padding:26px 20px;text-align:center;">
+            <div style="font:700 13px/1.4 Figtree,sans-serif;color:#eef3f8;">Виджетов нет</div>
+            <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(238,243,248,.53);margin-top:6px;text-wrap:pretty;">Соберите экран из того, что смотрите каждый день</div>
+            <span style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:12px 20px;border-radius:999px;background:#2e7cc0;font:700 12px/1 Figtree,sans-serif;color:#ffffff;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Добавить виджет</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 20px;background:#13222f;border-top:1px solid rgba(238,243,248,.11);">
+          <span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.5);">Долгое нажатие — взять виджет</span>
+          <span style="display:flex;gap:14px;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.53)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-1"/></svg>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 000 10h1"/></svg>
+          </span>
+        </div>
+      </div>
+      </div>
     </div>
 
     <!-- ЧЕТЫРЕ РАЗМЕРА -->
     <div style="width:300px;flex:none;">
       <div class="h" style="margin-top:0;">Четыре размера · один виджет</div>
       <div style="background:#fffaf1;border-radius:24px;padding:18px;">
-        <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.55);margin-bottom:14px;text-wrap:pretty;">«Вес» — единственный полностью адаптивный виджет. На нём видно правило: кегль числа растёт один раз, дальше растёт контекст.</div>
+        <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.55);margin-bottom:14px;text-wrap:pretty;">«Вес» — единственный полностью адаптивный виджет. На нём видно правило: кегль числа растёт один раз, дальше растёт контекст. Ниже те же четыре размера в остальных палитрах — плитка и подписи одни, меняется только таблица значений.</div>
+        <div class="pl" style="margin-top:0;">Песочная</div>
+        <div style="background:#fffaf1;border-radius:18px;">
         <div class="g" style="grid-template-columns:repeat(4,1fr);">
-          <div class="w"><div class="k">Вес</div><div class="n v" style="margin-top:auto;font-size:17px;">91,1</div></div>
-          <div class="w" style="grid-column:span 2;"><div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Вес</span><span class="n" style="font:600 17px/1 Figtree,sans-serif;color:#201e1d;">91,1 <span class="u">−0,9</span></span></div></div>
+          <div class="w"><div class="k">Вес</div><div class="n v good" style="margin-top:auto;font-size:17px;">91,1</div></div>
+          <div class="w" style="grid-column:span 2;"><div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Вес</span><span class="n good" style="font:600 17px/1 Figtree,sans-serif;">91,1 <span class="u">−0,9</span></span></div></div>
           <div style="display:flex;align-items:center;justify-content:center;font:700 9px/1.2 Figtree,sans-serif;color:rgba(0,0,0,.3);text-align:center;">1×1<br>2×1</div>
           <div class="w" style="grid-column:span 2;grid-row:span 2;">
             <div class="k">Вес</div>
-            <div style="display:flex;align-items:baseline;gap:5px;margin-top:8px;"><span class="n" style="font:600 24px/1 Figtree,sans-serif;color:#201e1d;">91,1</span><span class="u">кг</span></div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-top:8px;"><span class="n good" style="font:600 24px/1 Figtree,sans-serif;">91,1</span><span class="u">кг</span></div>
             <div class="n" style="font:600 10px/1 Figtree,sans-serif;color:#5c6a45;margin-top:6px;">−0,9 за неделю</div>
             <svg viewBox="0 0 130 34" width="100%" height="34" style="margin-top:auto;"><polyline points="4,12 26,22 48,22 70,5 92,12 114,16 126,17" fill="none" stroke="#c67139" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="17" r="3.5" fill="#c67139"/></svg>
           </div>
@@ -242,13 +1291,79 @@
           </div>
           <div style="grid-column:span 4;display:flex;justify-content:space-between;font:700 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.3);align-items:center;"><span>2×2 — число, изменение, спарклайн</span><span>3×2 — период и границы</span></div>
         </div>
+        </div>
+        <div class="pl">Тёмная</div>
+        <div class="dk" style="background:#141210;border-radius:18px;">
+        <div class="g" style="grid-template-columns:repeat(4,1fr);">
+          <div class="w"><div class="k">Вес</div><div class="n v good" style="margin-top:auto;font-size:17px;">91,1</div></div>
+          <div class="w" style="grid-column:span 2;"><div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Вес</span><span class="n good" style="font:600 17px/1 Figtree,sans-serif;">91,1 <span class="u">−0,9</span></span></div></div>
+          <div style="display:flex;align-items:center;justify-content:center;font:700 9px/1.2 Figtree,sans-serif;color:rgba(242,237,230,.38);text-align:center;">1×1<br>2×1</div>
+          <div class="w" style="grid-column:span 2;grid-row:span 2;">
+            <div class="k">Вес</div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-top:8px;"><span class="n good" style="font:600 24px/1 Figtree,sans-serif;">91,1</span><span class="u">кг</span></div>
+            <div class="n" style="font:600 10px/1 Figtree,sans-serif;color:#9fb981;margin-top:6px;">−0,9 за неделю</div>
+            <svg viewBox="0 0 130 34" width="100%" height="34" style="margin-top:auto;"><polyline points="4,12 26,22 48,22 70,5 92,12 114,16 126,17" fill="none" stroke="#cf8144" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="17" r="3.5" fill="#cf8144"/></svg>
+          </div>
+          <div class="w" style="grid-column:span 2;grid-row:span 2;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Вес · 61 день</span><span class="n" style="font:700 10px/1 Figtree,sans-serif;color:#9fb981;">−1,8 / мес</span></div>
+            <svg viewBox="0 0 130 46" width="100%" height="46" style="margin-top:8px;"><polyline points="4,16 26,30 48,30 70,7 92,16 114,22 126,23" fill="none" stroke="#cf8144" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="23" r="3.5" fill="#cf8144"/></svg>
+            <div class="n" style="display:flex;justify-content:space-between;font:600 9.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.48);margin-top:auto;"><span>93,0</span><span>91,1</span></div>
+          </div>
+          <div style="grid-column:span 4;display:flex;justify-content:space-between;font:700 9px/1 Figtree,sans-serif;color:rgba(242,237,230,.38);align-items:center;"><span>2×2 — число, изменение, спарклайн</span><span>3×2 — период и границы</span></div>
+        </div>
+        </div>
+        <div class="pl">Синяя</div>
+        <div class="bl" style="background:#ffffff;border-radius:18px;">
+        <div class="g" style="grid-template-columns:repeat(4,1fr);">
+          <div class="w"><div class="k">Вес</div><div class="n v good" style="margin-top:auto;font-size:17px;">91,1</div></div>
+          <div class="w" style="grid-column:span 2;"><div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Вес</span><span class="n good" style="font:600 17px/1 Figtree,sans-serif;">91,1 <span class="u">−0,9</span></span></div></div>
+          <div style="display:flex;align-items:center;justify-content:center;font:700 9px/1.2 Figtree,sans-serif;color:rgba(0,0,0,.3);text-align:center;">1×1<br>2×1</div>
+          <div class="w" style="grid-column:span 2;grid-row:span 2;">
+            <div class="k">Вес</div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-top:8px;"><span class="n good" style="font:600 24px/1 Figtree,sans-serif;">91,1</span><span class="u">кг</span></div>
+            <div class="n" style="font:600 10px/1 Figtree,sans-serif;color:#1f6e4d;margin-top:6px;">−0,9 за неделю</div>
+            <svg viewBox="0 0 130 34" width="100%" height="34" style="margin-top:auto;"><polyline points="4,12 26,22 48,22 70,5 92,12 114,16 126,17" fill="none" stroke="#2e7cc0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="17" r="3.5" fill="#2e7cc0"/></svg>
+          </div>
+          <div class="w" style="grid-column:span 2;grid-row:span 2;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Вес · 61 день</span><span class="n" style="font:700 10px/1 Figtree,sans-serif;color:#1f6e4d;">−1,8 / мес</span></div>
+            <svg viewBox="0 0 130 46" width="100%" height="46" style="margin-top:8px;"><polyline points="4,16 26,30 48,30 70,7 92,16 114,22 126,23" fill="none" stroke="#2e7cc0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="23" r="3.5" fill="#2e7cc0"/></svg>
+            <div class="n" style="display:flex;justify-content:space-between;font:600 9.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:auto;"><span>93,0</span><span>91,1</span></div>
+          </div>
+          <div style="grid-column:span 4;display:flex;justify-content:space-between;font:700 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.3);align-items:center;"><span>2×2 — число, изменение, спарклайн</span><span>3×2 — период и границы</span></div>
+        </div>
+        </div>
+        <div class="pl">Сине-тёмная</div>
+        <div class="bd" style="background:#0d1a26;border-radius:18px;">
+        <div class="g" style="grid-template-columns:repeat(4,1fr);">
+          <div class="w"><div class="k">Вес</div><div class="n v good" style="margin-top:auto;font-size:17px;">91,1</div></div>
+          <div class="w" style="grid-column:span 2;"><div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Вес</span><span class="n good" style="font:600 17px/1 Figtree,sans-serif;">91,1 <span class="u">−0,9</span></span></div></div>
+          <div style="display:flex;align-items:center;justify-content:center;font:700 9px/1.2 Figtree,sans-serif;color:rgba(238,243,248,.38);text-align:center;">1×1<br>2×1</div>
+          <div class="w" style="grid-column:span 2;grid-row:span 2;">
+            <div class="k">Вес</div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-top:8px;"><span class="n good" style="font:600 24px/1 Figtree,sans-serif;">91,1</span><span class="u">кг</span></div>
+            <div class="n" style="font:600 10px/1 Figtree,sans-serif;color:#7fd1a0;margin-top:6px;">−0,9 за неделю</div>
+            <svg viewBox="0 0 130 34" width="100%" height="34" style="margin-top:auto;"><polyline points="4,12 26,22 48,22 70,5 92,12 114,16 126,17" fill="none" stroke="#2e7cc0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="17" r="3.5" fill="#2e7cc0"/></svg>
+          </div>
+          <div class="w" style="grid-column:span 2;grid-row:span 2;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Вес · 61 день</span><span class="n" style="font:700 10px/1 Figtree,sans-serif;color:#7fd1a0;">−1,8 / мес</span></div>
+            <svg viewBox="0 0 130 46" width="100%" height="46" style="margin-top:8px;"><polyline points="4,16 26,30 48,30 70,7 92,16 114,22 126,23" fill="none" stroke="#2e7cc0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="23" r="3.5" fill="#2e7cc0"/></svg>
+            <div class="n" style="display:flex;justify-content:space-between;font:600 9.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.48);margin-top:auto;"><span>93,0</span><span>91,1</span></div>
+          </div>
+          <div style="grid-column:span 4;display:flex;justify-content:space-between;font:700 9px/1 Figtree,sans-serif;color:rgba(238,243,248,.38);align-items:center;"><span>2×2 — число, изменение, спарклайн</span><span>3×2 — период и границы</span></div>
+        </div>
+        </div>
       </div>
 
       <div class="h">Правила плитки</div>
       <div style="background:#efe3cf;border-radius:24px;padding:20px;">
+        <div class="nt"><b>Заголовка «Главная» нет — вместо него дата</b><span>Название вкладки уже подсвечено в меню снизу, второй раз его писать не за что: строка уходила на слово, которое ничего не сообщает. На освободившемся месте стоит капсула даты со стрелками — теперь дни листаются прямо с Главной, а не только из Питания. Тап по капсуле открывает месяц шторкой, правая стрелка гаснет на сегодня, а на чужом дне капсула уходит в терракоту — этого достаточно, отдельной плашки на Главной нет. Поведение при прокрутке — в «Дата и остатки v4», оно одно на все вкладки.</span></div>
+        <div class="nt"><b>«Изменить» уехала под сетку</b><span>Вверху она соседствовала с датой и получала случайные нажатия при листании дней, а редактируют экран раз в месяц. Внизу это спокойная строка «Изменить экран» с иконкой, тач-цель 44 pt, и она не спорит с плавающими кнопками: те справа, строка по центру. В режиме расстановки её нет — там своё «Готово».</span></div>
+        
         <div class="nt"><b>1×1 — подпись, число и не более одной полосы</b><span>Кегль 21 px, значение прижато к низу. Полоса допустима только там, где есть цель и она осмысленна — вода. Графика и второй подписи в 1×1 не бывает: на 67 px ширины третий элемент нечитаем.</span></div>
         <div class="nt"><b>2×1 — подпись и число в строку, плюс один компактный контрол</b><span>Высота одна клетка. «Оценке дня» хватает числа; у «Динамики веса» внутри переключатель периода 7 / 14 / 30 — он ложится второй строкой, набором цифр без пилюль. Контрол в 2×1 допустим ровно один и только если он уже есть в коде.</span></div>
         <div class="nt"><b>2×2 — число плюс один носитель состояния</b><span>Полоса, спарклайн или две строки расшифровки — что-то одно. Число не крупнее 26 px, кроме «Калорий».</span></div>
+        <div class="nt"><b>Кольца БЖУ подписаны с двух сторон</b><span>Заголовок «БЖУ» снят — освободившаяся строка ушла на подписи нутриентов над кольцами. Внутри кольца остаётся остаток, под кольцом крупно <b style="font-weight:700;">факт / норма</b>: без второго числа кольцо не читается — 96 может быть и недобором, и перебором. Нейтральными остаются обводка кольца и подложка — они не красятся никогда; состояние несут и строка «факт / норма», и остаток внутри кольца, по правилу из следующей заметки.</span></div>
+        <div class="nt"><b>Красным — отклонение, у белка обратное</b><span>Жиры и углеводы краснеют при переборе, белок — при недоборе: у него регрессия обратная, недобор и есть отклонение. Остаток внутри кольца живёт по тому же правилу: минус у жиров и углеводов красный, у белка красный наоборот на плюсе — остаток белка означает недобор; минус у него читается как перебор и остаётся нейтральным. Порог один и тот же для всех трёх, поэтому в коде это один компаратор с флагом направления, а не три ветки.</span></div>
         <div class="ntl"><b>3×2 — только для составных</b><span>Ширина оправдана, когда показателей несколько и их надо сравнить: БЖУ тремя кольцами. Кольца — общий компонент с Днём и недельными отчётами, поэтому виджет берёт их как есть: своя форма на Главной означала бы расхождение с Днём или правку компонента сразу на трёх вкладках. Одно число на 3×2 не растягиваем.</span></div>
       </div>
 
@@ -257,6 +1372,36 @@
         <div class="nt"><b>Роль, а не тип данных</b><span>Песок #efe3cf — герой экрана, ровно один. Шалфей #eaefe0 — «идёт хорошо». Бумага #f7efe2 — всё остальное. Терракота — только действие и «требует внимания».</span></div>
         <div class="nt"><b>Одно исключение: вода</b><span>#7d98a6 в полосе заполнения, фон плитки общий. Единственный холодный тон в системе; второй такой означает возврат к палитре по типу данных.</span></div>
         <div class="ntl"><b>Категорийная палитра не оживает</b><span>Пять из шести цветов <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;">--widget-*</span> имеют ноль обращений — это подтверждает, что раскраска по типу данных не прижилась. 148 захардкоженных значений сводим к четырём ролям выше, а не к шести категориям.</span></div>
+      </div>
+
+      <div class="h">Капсула даты · два состояния</div>
+      <div style="background:#fffaf1;border-radius:24px;padding:18px;">
+        <div>
+          <div class="dcap" style="margin-top:0;">
+            <span class="arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+            <span class="pill"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg><span><span class="bad">вс</span>, 9 августа</span></span>
+            <span class="arr dim"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
+          </div>
+          <div style="font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:7px;">сегодня · правая стрелка гаснет · «вс» красным, выходной</div>
+          <div class="dcap">
+            <span class="arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></span>
+            <span class="pill past"><span class="lbl"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="4"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Вчера, 8 августа</span><span class="today">Сегодня</span></span>
+            <span class="arr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
+          </div>
+          <div style="font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:7px;">прошлый день · терракота, обе стрелки живые, кнопка «Сегодня»</div>
+        </div>
+        <div class="nt" style="margin-top:16px;border-top:1px solid rgba(0,0,0,.07);border-bottom:none;padding:14px 0 0;"><b>Плашки «вы смотрите прошлый день» на Главной нет</b><span>На Питании она нужна: там человек вносит еду и может записать её в чужой день. Главная ничего не принимает — это витрина, ошибиться нечем, поэтому предупреждать не за что. Признак другой день несёт сама капсула: она уходит в терракоту, правая стрелка становится живой, а рядом встаёт кнопка «Сегодня» — вернуться одним касанием, не отлистывая дни. На Питании плашка остаётся — правило по вкладке, а не по приложению.</span></div>
+        <div class="nt"><b>Закрытый день меняет герой, а не набор плиток</b><span>Экран «Главная · прошлый день» нарисован целиком: «Калории» из «осталось» превращаются в «итог дня» (1 786 из 1 931), вода и сон показывают факт без порогов «к этому часу» — день уже кончился, догонять нечего. Состав и порядок плиток те же: раскладка принадлежит человеку и от даты не зависит.</span></div>
+        <div class="ntl"><b>Выходной — красный день недели</b><span>Красится только сокращение дня («сб», «вс» и перенесённые праздники из календаря), число и месяц остаются в чернилах. Это ровно тот же красный, что у отклонений: в приложении один красный, и он всегда значит «посмотри сюда», а не «ошибка».</span></div>
+      </div>
+
+      <div class="h">Цвет значения · состояние</div>
+      <div style="background:#fffaf1;border-radius:24px;padding:20px;">
+        <div class="nt"><b>Красится значение, а не плитка</b><span>Фон, полоса и кольцо остаются нейтральными — иначе экран из одиннадцати плиток превращается в светофор. Состояние несёт только число: терракотово-красный <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;">#a8382b</span> — «обрати внимание», шалфей <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;">#7a8a5e</span> — «идёт хорошо», чернила — нейтрально. В тёмных наборах те же роли берутся на шаг светлее. Прежняя формулировка «цвет несёт только строка отклонения» была про суточные итоги Питания и на виджеты не распространяется: у плитки строки отклонения нет, красить приходится само число.</span></div>
+        <div class="nt"><b>Вода считается от подъёма, а не от полуночи</b><span>Ожидаемая доля нормы к этому часу = (сейчас − подъём) / плановые часы бодрствования; подъём берём из утреннего чек-ина, при его отсутствии — из медианы за две недели. Тот, кто встал в 6:00, и тот, кто встал в 11:00, к полудню должны разное. Допуск 15 % от ожидаемого: ниже — значение краснеет, в пределах допуска и выше — чернила. Первый час после подъёма не красим вовсе, а за два часа до сна порог перестаёт расти: догонять норму залпом перед сном мы не просим.</span></div>
+        <div class="nt"><b>Сон: у нормы — шалфей, недосып — красный</b><span>Норма из профиля. Не ниже нормы минус 30 минут — шалфей: это и есть «выспался». Ниже — красный, и это единственный случай, когда виджет сна что-то говорит. Пересып не красим красным: данных, что он вреден именно этому человеку, у нас нет, а лишний сигнал обесценивает недосып.</span></div>
+        <div class="nt"><b>Вес: вниз — шалфей, вверх — красный, стоит — чернила</b><span>Направление берём из того же окна, что рисует спарклайн (7 / 14 / 30 дней), а не из разницы с прошлым взвешиванием: одно утро — это вода, а не тренд. Мёртвая зона ±0,2 кг за окно: внутри неё число остаётся в чернилах, чтобы плитка не мигала цветом каждое утро. Расчётный вес (проставленный при скипе взвешивания) в тренд не входит — по нему цвет не меняется.</span></div>
+        <div class="ntl"><b>Риск-радар был первым</b><span>«Низкий» шалфеем стоял на Главной ещё до этого правила — теперь он не исключение, а часть системы. Цвет значения несут ровно пять плиток: БЖУ, вода, сон, вес и риск-радар. Терракота у «Калорий» и «Оценки дня» — это герой и акцент, а не состояние: они такого же цвета при любом числе. Остальные плитки молчат, пока не появится порог, который можно назвать словами.</span></div>
       </div>
 
       <div class="h">Голубой у воды · три варианта</div>
@@ -285,7 +1430,7 @@
 
       <div class="h">Плавающие кнопки</div>
       <div style="background:#fffaf1;border-radius:24px;padding:20px;">
-        <div class="nt"><b>Остаются все четыре — и это ответ про адреса</b><span>Еда, вода, голод и энергия, мессенджер. Группа общая для четырёх экранов, снимать её нельзя, да и не нужно: это самые частые действия, и им место под большим пальцем, а не в меню.</span></div><div class="nt"><b>Четыре экрана — это Главная, Питание, Актив, Отчёты</b><span>Перечисляю явно: группа рисуется на них и не появляется на Инсайтах и в детальных экранах. В канвасах вкладок она физически нарисована только на Главной — чтобы не дублировать одно и то же в четырёх палитрах; на остальных трёх состав и позиция те же. Убирается только там, где на экране показан совет или включён режим расстановки виджетов.</span></div>
+        <div class="nt"><b>Остаются все четыре — и это ответ про адреса</b><span>Еда, вода, голод и энергия, мессенджер. Группа общая для четырёх экранов, снимать её нельзя, да и не нужно: это самые частые действия, и им место под большим пальцем, а не в меню.</span></div><div class="nt"><b>Четыре экрана — это Главная, Питание, Актив, Отчёты</b><span>Перечисляю явно: группа рисуется на них и не появляется на Инсайтах и в детальных экранах. Физически она нарисована только здесь, на Главной — чтобы не дублировать одно и то же в четырёх палитрах на каждой вкладке; на остальных трёх состав и позиция те же. Убирается только там, где на экране показан совет или включён режим расстановки виджетов.</span></div>
         <div class="nt"><b>Одна главная, три вспомогательные</b><span>Еда — 52 px, терракота, ближе всех к пальцу: самое частое действие дня. Остальные 40 px на бумаге с тенью, иконка в чернилах. Раньше четыре одинаковых кружка читались как один блок из четырёх равных решений — теперь видно, какая кнопка главная.</span></div>
         <div class="nt"><b>Порядок снизу вверх — по частоте</b><span>Еда, голод и энергия, вода, мессенджер. Дальше от пальца — реже нужно.</span></div>
         <div class="nt"><b>Иконка голода — круг с заливкой на две трети</b><span>Круг с чертой читался как «удалить», батарея на 17 px схлопывалась в прямоугольник, молнию отменяю сам: поля энергии в данных не существует, а иконка обещала бы его. Заливка снизу — прямая метафора «насколько полон», силуэт различим в мелком размере и не путается с каплей воды.</span></div>

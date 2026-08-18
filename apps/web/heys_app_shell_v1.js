@@ -3226,14 +3226,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 haptic('light');
             };
 
-            if (HEYS?.cloud?.fetchDays && prefetchDates.length > 0) {
-                HEYS.cloud.fetchDays(prefetchDates)
-                    .then(() => applyDate())
-                    .catch(() => applyDate());
-                return;
-            }
-
             applyDate();
+
+            if (HEYS?.cloud?.fetchDays && prefetchDates.length > 0) {
+                HEYS.cloud.fetchDays(prefetchDates).catch(() => {});
+            }
         };
 
         const clientListMaxHeight = Math.max(120, clientDropdownMaxHeight - 128);
@@ -3294,18 +3291,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         if (!clientId) return null;
 
         const isPeriodAnalyticsTab = tab === 'stats' || tab === 'insights';
-        const showDateRow = !isPeriodAnalyticsTab && (tab === 'diary' || tab === 'activity') && window.HEYS.DatePicker;
-        const widgetsHeaderDateLine = (() => {
-            if (tab !== 'widgets' || !selectedDate) return null;
-            const utils = window.HEYS?.dayUtils;
-            if (!utils?.parseISO) return null;
-            const d = utils.parseISO(selectedDate);
-            const wd = d.toLocaleDateString('ru-RU', { weekday: 'short' }).replace(/\.$/, '');
-            const dayMonth = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-            return `${wd}, ${dayMonth}`;
-        })();
-        const showHdrBottom = (!isRpcMode || !isPeriodAnalyticsTab)
-            && !(tab === 'widgets' && !widgetsEditMode && !widgetsHeaderDateLine);
+        const showWidgetsDateRow = tab === 'widgets' && !widgetsEditMode;
+        const showDateRow = !isPeriodAnalyticsTab
+            && (tab === 'diary' || tab === 'activity' || showWidgetsDateRow)
+            && window.HEYS.DatePicker;
+        const showHdrBottom = !isRpcMode
+            || (!isPeriodAnalyticsTab && (tab !== 'widgets' || widgetsEditMode));
         const handleWidgetsEditCancel = () => {
             if (window.HEYS?.Widgets?.exitEditMode) {
                 window.HEYS.Widgets.exitEditMode({ revert: true });
@@ -3316,7 +3307,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 window.HEYS.Widgets.exitEditMode();
             }
         };
-        const showPastDayBanner = !!(showDateRow && selectedDate && resolvedTodayISO && selectedDate !== resolvedTodayISO);
+        const showPastDayBanner = !!(showDateRow
+            && tab !== 'widgets'
+            && selectedDate
+            && resolvedTodayISO
+            && selectedDate !== resolvedTodayISO);
         const handlePastDayGoToday = () => {
             if (window.HEYS?.ui?.setSelectedDate) {
                 window.HEYS.ui.setSelectedDate(resolvedTodayISO);
@@ -3474,11 +3469,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                 }, 'Готово')
                             )
                             : tab === 'widgets'
-                                ? (widgetsHeaderDateLine
-                                    ? React.createElement('span', { className: 'hdr-tab-meta hdr-tab-meta--inline-date' },
-                                        widgetsHeaderDateLine
-                                    )
-                                    : null)
+                                ? null
                                 : React.createElement('span', { className: 'hdr-tab-title-group' },
                                     React.createElement('span', { className: 'hdr-client-tab-title-text' },
                                         CLIENT_TAB_TITLES[tab] || ''
@@ -5858,7 +5849,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                                         // NOTE: syncVer намеренно убран из key — WidgetsTab подписан на
                                                         // data:updated/day:updated события и не нуждается в remount при синке.
                                                         // syncVer в key вызывает flash всего контента вкладки.
-                                                        key: 'widgets_' + String(clientId || '') + '_' + selectedDate,
+                                                        key: 'widgets_' + String(clientId || ''),
                                                         clientId: clientId,
                                                         cloudUser: cloudUser,
                                                         selectedDate: selectedDate,

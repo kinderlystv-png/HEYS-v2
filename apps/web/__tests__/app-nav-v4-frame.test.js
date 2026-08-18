@@ -333,6 +333,16 @@ describe('UI v4 chrome paint — рама', () => {
         expect(shellSrc).toContain("exitEditMode({ revert: true })");
         expect(shellSrc).toContain('handleWidgetsEditDone');
         expect(shellSrc).toContain("hdr-widgets-edit-title");
+        expect(shellSrc).toContain('showWidgetsDateRow');
+        expect(shellSrc).not.toContain('handleWidgetsEditStart');
+        expect(shellSrc).not.toContain("hdr-widgets-edit-btn--primary");
+    });
+
+    it('«Изменить экран» под сеткой виджетов', () => {
+        const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
+        expect(uiSrc).toContain("id: 'tour-widgets-edit'");
+        expect(uiSrc).toContain('Изменить экран');
+        expect(uiSrc).toContain('widgets-tab__edit-row');
     });
 
     it('v4 nav chrome — отступы и фон как в макете', () => {

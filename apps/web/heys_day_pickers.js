@@ -240,6 +240,30 @@
       }));
     }
 
+    function calendarIconSvg() {
+      return React.createElement('svg', {
+        className: 'date-picker-icon',
+        width: 13,
+        height: 13,
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 2.4,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        'aria-hidden': 'true'
+      },
+        React.createElement('rect', { x: 3, y: 5, width: 18, height: 16, rx: 4 }),
+        React.createElement('path', { d: 'M8 3v4M16 3v4M3 11h18' })
+      );
+    }
+
+    const handleInlineToday = (e) => {
+      e.stopPropagation();
+      if ((valueISO || todayStr) !== todayStr) onSelect(todayStr);
+      setIsOpen(false);
+    };
+
     return React.createElement('div', { className: 'date-picker date-picker--v4', ref: wrapperRef },
       React.createElement('div', { className: 'date-picker-row' },
         React.createElement('button', {
@@ -249,20 +273,32 @@
           title: 'Предыдущий день',
           'aria-label': 'Предыдущий день'
         }, navChevron('left')),
-        React.createElement('button', {
+        React.createElement('div', {
           ref: triggerRef,
-          type: 'button',
-          className: 'date-picker-trigger' + (isOpen ? ' open' : '') + (isTodaySelected ? ' date-picker-trigger--today' : ' date-picker-trigger--not-today'),
-          onClick: () => setIsOpen(!isOpen)
+          className: 'date-picker-trigger' + (isOpen ? ' open' : '') + (isTodaySelected ? ' date-picker-trigger--today' : ' date-picker-trigger--not-today')
         },
-          React.createElement('span', { className: 'date-picker-text' },
-            React.createElement('span', {
-              className: 'date-picker-main' + (isTodaySelected ? ' date-picker-main--today' : ' date-picker-main--past')
-            }, headerRow.main),
+          React.createElement('button', {
+            type: 'button',
+            className: 'date-picker-trigger-lbl',
+            onClick: () => setIsOpen(!isOpen),
+            'aria-expanded': isOpen,
+            'aria-haspopup': 'dialog'
+          },
+            React.createElement('span', { className: 'date-picker-lbl-inner' },
+              calendarIconSvg(),
+              React.createElement('span', {
+                className: 'date-picker-main' + (isTodaySelected ? ' date-picker-main--today' : ' date-picker-main--past')
+              }, headerRow.main)
+            ),
             headerRow.relative && React.createElement('span', {
               className: 'date-picker-sub date-picker-sub--relative'
             }, headerRow.relative)
-          )
+          ),
+          !isTodaySelected && React.createElement('button', {
+            type: 'button',
+            className: 'date-picker-inline-today',
+            onClick: handleInlineToday
+          }, 'Сегодня')
         ),
         React.createElement('button', {
           type: 'button',

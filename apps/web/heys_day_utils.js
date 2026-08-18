@@ -1949,6 +1949,15 @@
                 const weight = dayInfo.weightMorning || profileWeight;
                 const bmr = calcBMR(weight, profile || {});
 
+                // Метаданные дня для sparkline/calendar — не зависят от пути расчёта TDEE
+                const steps = (dayInfo.steps !== null && dayInfo.steps !== undefined) ? dayInfo.steps : 0;
+                const trainings = (dayInfo.trainings || []).slice(0, 3);
+                const activeTrainings = trainings
+                    .filter(t => t && t.z && Array.isArray(t.z) && t.z.some(z => z > 0));
+                const trainingTypes = activeTrainings.map(t => t.type || 'cardio');
+                const morningActivationCount = activeTrainings.filter(t => t?.source === 'morning_activation').length;
+                const hasTraining = trainingTypes.length > 0;
+
                 let calculatedTarget;
                 if (typeof HEYS !== 'undefined' && HEYS.TDEE && HEYS.TDEE.calculate) {
                     const tdeeRes = HEYS.TDEE.calculate(dayInfo, profile || {}, {
@@ -1959,7 +1968,6 @@
                     calculatedTarget = tdeeRes.baseOptimumForDebt || tdeeRes.optimum || 0;
                 } else {
                 // Шаги: формула stepsKcal(steps, weight, sex, 0.7)
-                const steps = (dayInfo.steps !== null && dayInfo.steps !== undefined) ? dayInfo.steps : 0;
                 const stepsK = stepsKcal(steps, weight, profile || {}, 0.7);
 
                 // Быт: householdMin × netKcalPerMin(2.5, weight)
@@ -1975,14 +1983,6 @@
                 const kcalMin = mets.map(m => netKcalPerMin(m, weight));
 
                 let trainingsK = 0;
-                const trainings = (dayInfo.trainings || []).slice(0, 3); // максимум 3 тренировки
-
-                // Собираем типы тренировок с реальными минутами
-                const activeTrainings = trainings
-                    .filter(t => t && t.z && Array.isArray(t.z) && t.z.some(z => z > 0));
-                const trainingTypes = activeTrainings.map(t => t.type || 'cardio');
-                const morningActivationCount = activeTrainings.filter(t => t?.source === 'morning_activation').length;
-                const hasTraining = trainingTypes.length > 0;
 
                 trainings.forEach((t, tIdx) => {
                     if (t.z && Array.isArray(t.z)) {
@@ -2023,7 +2023,6 @@
                 const carbs = dayInfo.carbs || 0;
                 const dayScore = dayInfo.dayScore || 0;
                 const cycleDay = dayInfo.cycleDay || null; // День менструального цикла
-                // steps уже объявлен выше для расчёта stepsKcal
                 const waterMl = dayInfo.waterMl || 0; // 🆕 Вода для персонализированных инсайтов
                 const weightMorning = dayInfo.weightMorning || 0; // 🆕 Вес для персонализированных инсайтов
 

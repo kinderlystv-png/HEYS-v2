@@ -100,11 +100,12 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(STEPS_SRC).toContain('mc-steps-refeed-row');
     expect(STEPS_SRC).toContain('showSupplementsCard');
     expect(STEPS_SRC).toContain('MorningRestSupplementsFlow');
+    expect(STEPS_SRC).toContain('renderMorningRestSuppLayer');
     expect(STEPS_SRC).toContain('mc-supp-flow');
     expect(STEPS_SRC).toContain('Дозы и время');
     expect(STEPS_SRC).toContain('Курс пока пуст');
-    expect(STEPS_SRC).not.toContain('mc-rest-supp-empty');
-    expect(STEPS_SRC).not.toContain('Список пуст');
+    expect(STEPS_SRC).toContain('mc-rest-supp-empty');
+    expect(STEPS_SRC).toContain('В курсе нет добавок');
     expect(STEPS_SRC).toContain('isMorningRestSupplementsEnabled');
     expect(STEPS_SRC).toContain('Добавить в курс');
     expect(STEPS_SRC).toContain('mc-rest-card--supplements');
@@ -165,6 +166,8 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(DAILY_CSS).toContain('.mc-rest-card--supplements');
     expect(DAILY_CSS).toContain('.mc-rest-supp-add');
     expect(DAILY_CSS).toContain('.mc-supp-flow-foot');
+    expect(DAILY_CSS).toContain('.mc-supp-flow-body');
+    expect(DAILY_CSS).toContain('.mc-supp-flow-later');
     expect(DAILY_CSS).toContain('.mc-supp-flow-chip');
     expect(DAILY_CSS).toContain('.mc-rest-cold-time .mc-wheel-value--current');
     expect(DAILY_CSS).toContain('.mc-rest-cold-time .mc-time-sep');

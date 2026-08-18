@@ -865,6 +865,11 @@
   color: rgba(0, 0, 0, 0.4);
 }
 
+.mc-daily-header-caption--layer {
+  font: 700 15px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
 .mc-progress-dots--pills .mc-progress-dot {
   width: 7px;
   height: 7px;
@@ -1685,7 +1690,7 @@
   padding: 0;
   margin: 0;
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 10px;
   text-align: left;
@@ -1715,6 +1720,11 @@
   margin-top: 11px;
 }
 
+.mc-rest-supp-list--empty {
+  margin-top: 4px;
+  gap: 0;
+}
+
 .mc-rest-supp-row {
   display: flex;
   align-items: baseline;
@@ -1734,8 +1744,8 @@
 }
 
 .mc-rest-supp-empty {
-  margin-top: 11px;
-  font: 500 12px/1.4 Figtree, system-ui, sans-serif;
+  margin-top: 0;
+  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
 }
 
@@ -1762,27 +1772,62 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  font: 700 16px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-sand-act-text, #8a4a20);
+}
+
+.mc-rest-supp-add-icon svg {
+  flex: none;
+}
+
+.mc-modal--daily .mc-step-content:has(.mc-supp-flow) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.mc-modal--daily .mc-step-content:has(.mc-supp-flow--empty) {
+  padding-top: 26px;
+}
+
+.mc-modal--daily .mc-step-content:has(.mc-supp-flow--course) {
+  padding-top: 16px;
+}
+
+.mc-modal--daily .mc-step-content:has(.mc-supp-flow--add) {
+  padding-top: 12px;
+}
+
+.mc-modal--daily .mc-step-content:has(.mc-supp-flow--dose) {
+  padding-top: 26px;
 }
 
 .mc-supp-flow {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  min-height: 100%;
-  padding-bottom: 88px;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+.mc-supp-flow-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .mc-supp-flow-foot {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 2;
+  flex: none;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
-  background: #f6f1ea;
+  margin-left: -18px;
+  margin-right: -18px;
+  padding: 12px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+  background: var(--v4-sand-surface-soft, #fffaf1);
   border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
@@ -1797,7 +1842,7 @@
 }
 
 .mc-supp-flow-btn {
-  min-height: 44px;
+  min-height: 48px;
   border: none;
   border-radius: 999px;
   cursor: pointer;
@@ -1807,11 +1852,24 @@
 .mc-supp-flow-btn--primary {
   width: 100%;
   background: var(--v4-sand-act, #c9783a);
-  color: var(--v4-on-sand-act, #fff);
+  color: var(--v4-btn-on-act, #2b1608);
+  font-size: 13px;
 }
 
 .mc-supp-flow-btn--grow {
   flex: 1;
+}
+
+.mc-supp-flow-later {
+  width: 100%;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  color: rgba(0, 0, 0, 0.5);
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .mc-supp-flow-btn--ghost {
@@ -1866,6 +1924,7 @@
 
 .mc-supp-flow-note--left {
   text-align: left;
+  margin-top: 16px;
 }
 
 .mc-supp-flow-lead {
@@ -2001,7 +2060,7 @@
   padding: 0 13px;
   border: none;
   border-radius: 999px;
-  background: var(--v4-sand-surface, #f7efe2);
+  background: var(--v4-card, #f3ece2);
   font: 600 12px/1 Figtree, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.62);
   cursor: pointer;

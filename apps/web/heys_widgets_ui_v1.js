@@ -527,7 +527,7 @@
   // === Widget Card Component ===
   // Обёрнут в React.memo — изолирует от ре-рендеров родителя,
   // чтобы CSS transition на кольце калорий не перезапускался попусту.
-  const WidgetCard = React.memo(function WidgetCard({ widget, isEditMode, onRemove, onSettings, index = 0 }) {
+  const WidgetCard = React.memo(function WidgetCard({ widget, isEditMode, onRemove, onSettings, index = 0, selectedDate }) {
     const registry = HEYS.Widgets.registry;
     const widgetType = registry?.getType(widget.type);
     const category = registry?.getCategory(widgetType?.category);
@@ -1237,7 +1237,7 @@
         className: 'widget__content',
         style: isEditMode ? { pointerEvents: 'none' } : undefined
       },
-        React.createElement(WidgetContent, { widget: effectiveWidget, widgetType })
+        React.createElement(WidgetContent, { widget: effectiveWidget, widgetType, selectedDate })
       ),
 
       // Edit mode: компактный бейдж размера (не перекрывает контент)
@@ -1394,45 +1394,41 @@
   }); // end React.memo(WidgetCard)
 
   // === Widget Content Component (renders actual widget data) ===
-  function WidgetContent({ widget, widgetType }) {
-    // State для данных виджета
-    const [data, setData] = useState(() =>
-      HEYS.Widgets.data?.getDataForWidget?.(widget) || {}
-    );
+  function WidgetContent({ widget, widgetType, selectedDate }) {
+    const [eventVersion, setEventVersion] = useState(0);
+    const [waterPatch, setWaterPatch] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // Ref: когда поставили оптимистичное обновление воды, блокируем loadData до этого времени
     const skipLoadUntilRef = useRef(0);
+
+    const data = useMemo(() => {
+      if (selectedDate && HEYS.Widgets?.data) {
+        HEYS.Widgets.data._selectedDate = selectedDate;
+      }
+      try {
+        const base = HEYS.Widgets.data?.getDataForWidget?.(widget) || {};
+        if (widget.type === 'water' && waterPatch) {
+          return { ...base, ...waterPatch };
+        }
+        return base;
+      } catch (e) {
+        return {};
+      }
+    }, [widget, selectedDate, eventVersion, waterPatch]);
+
+    const loadDataSync = useCallback(() => {
+      if (widget.type === 'water' && Date.now() < skipLoadUntilRef.current) return;
+      setWaterPatch(null);
+      setEventVersion((v) => v + 1);
+      setError(null);
+      setLoading(false);
+    }, [widget.type]);
 
     // Подписка на обновления данных
     useEffect(() => {
       // Первоначальная загрузка
-      const loadData = () => {
-        // Пропускаем перезагрузку если недавно было оптимистичное обновление воды (чтобы не мигало)
-        if (widget.type === 'water' && Date.now() < skipLoadUntilRef.current) return;
-        try {
-          const newData = HEYS.Widgets.data?.getDataForWidget?.(widget) || {};
-          // Умное обновление: если данные не изменились — возвращаем прежний объект.
-          // Это предотвращает ре-рендер CaloriesWidgetContent и перезапуск CSS animation кольца.
-          setData(prev => {
-            const prevKeys = Object.keys(prev);
-            const newKeys = Object.keys(newData);
-            if (prevKeys.length === newKeys.length &&
-              prevKeys.every(k => prev[k] === newData[k])) return prev;
-            return newData;
-          });
-          setError(null);
-        } catch (e) {
-          trackWidgetIssue('widgets_loadData_failed', {
-            widgetType: widget?.type,
-            widgetId: widget?.id,
-            message: e?.message
-          });
-          setError(e.message);
-        }
-        setLoading(false);
-      };
+      const loadData = () => loadDataSync();
 
       loadData();
 
@@ -1444,12 +1440,8 @@
         if (updatedWidget?.id !== widget.id) return;
         try {
           const newData = HEYS.Widgets.data?.getDataForWidget?.(updatedWidget) || {};
-          setData(prev => {
-            const prevKeys = Object.keys(prev);
-            const newKeys = Object.keys(newData);
-            if (prevKeys.length === newKeys.length && prevKeys.every(k => prev[k] === newData[k])) return prev;
-            return newData;
-          });
+          setWaterPatch(null);
+          setEventVersion((v) => v + 1);
           setError(null);
         } catch (e) { /* ignore */ }
       });
@@ -1471,12 +1463,13 @@
         if (typeof total === 'number') {
           // Блокируем loadData на 1 сек, чтобы не перетёр оптимистичное значение
           skipLoadUntilRef.current = Date.now() + 1000;
-          // Оптимистично обновляем данные с актуальным total
-          setData(prev => ({
-            ...prev,
+          setWaterPatch({
             drunk: total,
-            pct: prev.target > 0 ? Math.round((total / prev.target) * 100) : 0
-          }));
+            pct: (() => {
+              const tgt = HEYS.Widgets.data?.getDataForWidget?.(widget)?.target || 2000;
+              return tgt > 0 ? Math.round((total / tgt) * 100) : 0;
+            })()
+          });
         }
       };
       window.addEventListener('heysWaterAdded', handleWaterAdded);
@@ -1500,7 +1493,7 @@
           window.removeEventListener('heys:crs-updated', handleCrsUpdated);
         }
       };
-    }, [widget.id, widget.type]);
+    }, [widget.id, widget.type, loadDataSync]);
 
     // Loading state
     if (loading) {
@@ -1572,6 +1565,151 @@
     return n.toFixed(digits).replace('.', ',');
   }
 
+  const V4_VAL_DEAD_ZONE_KG = 0.2;
+  const V4_SLEEP_GOOD_MARGIN_H = 0.5;
+  const V4_WATER_TOLERANCE = 0.15;
+  const V4_WATER_GRACE_MIN = 60;
+  const V4_WATER_PREBED_MIN = 120;
+
+  function parseHmToMinutes(hm) {
+    if (!hm || typeof hm !== 'string') return null;
+    const parts = hm.trim().split(':');
+    const h = Number(parts[0]);
+    const m = Number(parts[1]);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+    return ((h % 24) * 60) + m;
+  }
+
+  function moscowNowMinutes() {
+    try {
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Moscow',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: false
+      }).formatToParts(new Date());
+      const h = Number(parts.find((p) => p.type === 'hour')?.value);
+      const min = Number(parts.find((p) => p.type === 'minute')?.value);
+      if (Number.isFinite(h) && Number.isFinite(min)) return h * 60 + min;
+    } catch (_e) { /* fallback ниже */ }
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  }
+
+  function minutesSpan(startMin, endMin) {
+    if (!Number.isFinite(startMin) || !Number.isFinite(endMin)) return null;
+    let span = endMin - startMin;
+    if (span <= 0) span += 24 * 60;
+    return span;
+  }
+
+  function v4ValueStateClass(state) {
+    if (state === 'good') return 'widget-v4-val--good';
+    if (state === 'bad') return 'widget-v4-val--bad';
+    if (state === 'act') return 'widget-v4-val--act';
+    return 'widget-v4-val--neutral';
+  }
+
+  function v4SleepValueState(hours, target) {
+    const h = Number(hours) || 0;
+    const t = Number(target) || 0;
+    if (t <= 0 || h <= 0) return 'neutral';
+    if (h >= t - V4_SLEEP_GOOD_MARGIN_H) return 'good';
+    return 'bad';
+  }
+
+  function v4WeightDeltaState(deltaKg) {
+    if (!Number.isFinite(deltaKg)) return 'neutral';
+    if (Math.abs(deltaKg) <= V4_VAL_DEAD_ZONE_KG) return 'neutral';
+    if (deltaKg < 0) return 'good';
+    return 'bad';
+  }
+
+  function v4WeightSparkTrendState(points) {
+    const pts = (points || []).filter((p) =>
+      Number.isFinite(p?.weight) && !p.excluded && !p.estimated
+    );
+    if (pts.length < 2) return 'neutral';
+    return v4WeightDeltaState(pts[pts.length - 1].weight - pts[0].weight);
+  }
+
+  function v4RiskLevelState(level) {
+    if (!level || level === 'low') return 'good';
+    return 'bad';
+  }
+
+  function v4WaterValueState(drunk, target, ctx = {}) {
+    const tgt = Number(target) || 0;
+    const ml = Number(drunk) || 0;
+    if (tgt <= 0) return 'neutral';
+
+    const wakeMinutes = parseHmToMinutes(ctx.sleepEnd) ?? (Number.isFinite(ctx.medianWakeMinutes) ? ctx.medianWakeMinutes : null);
+    if (!wakeMinutes) return 'neutral';
+
+    const nowMinutes = Number.isFinite(ctx.nowMinutes) ? ctx.nowMinutes : moscowNowMinutes();
+    if (nowMinutes < wakeMinutes) return 'neutral';
+    const minsSinceWake = nowMinutes - wakeMinutes;
+    if (minsSinceWake < V4_WATER_GRACE_MIN) return 'neutral';
+
+    const bedMinutes = parseHmToMinutes(ctx.sleepStart);
+    const profileSleepH = Number(ctx.profileSleepHours) || 8;
+    const awakeSpan = bedMinutes != null
+      ? minutesSpan(wakeMinutes, bedMinutes)
+      : Math.round((24 - profileSleepH) * 60);
+    if (!awakeSpan || awakeSpan <= 0) return 'neutral';
+
+    const bedCap = wakeMinutes + awakeSpan - V4_WATER_PREBED_MIN;
+    let elapsed = minsSinceWake;
+    if (nowMinutes > bedCap) {
+      elapsed = Math.max(0, bedCap - wakeMinutes);
+    }
+
+    const expectedShare = Math.min(1, Math.max(0, elapsed / awakeSpan));
+    const expectedMl = tgt * expectedShare;
+    const threshold = expectedMl * (1 - V4_WATER_TOLERANCE);
+    if (ml < threshold) return 'bad';
+    return 'neutral';
+  }
+
+  const V4_MACRO_DEVIATION_PCT = 0.05;
+
+  function macroDeviationBad(value, target, toneClass) {
+    const num = Number(value) || 0;
+    const tgt = Number(target) || 0;
+    if (tgt <= 0) return false;
+    const margin = tgt * V4_MACRO_DEVIATION_PCT;
+    if (toneClass === 'protein') return num < tgt - margin;
+    return num > tgt + margin;
+  }
+
+  function macroCenterBad(value, target, toneClass) {
+    const num = Number(value) || 0;
+    const tgt = Number(target) || 0;
+    if (tgt <= 0) return false;
+    const margin = tgt * V4_MACRO_DEVIATION_PCT;
+    if (toneClass === 'protein') return num < tgt - margin;
+    return num > tgt + margin;
+  }
+
+  function v4HealthTrendState(delta) {
+    if (!Number.isFinite(delta)) return 'neutral';
+    if (delta > 0) return 'good';
+    if (delta < 0) return 'bad';
+    return 'neutral';
+  }
+
+  function v4InsulinWaveStatusState(statusText) {
+    return statusText === 'без критичных' ? 'good' : 'act';
+  }
+
+  function v4HeatmapMetaState(filled, total = 7) {
+    if (!Number.isFinite(filled) || total <= 0) return 'neutral';
+    const ratio = filled / total;
+    if (ratio >= 0.6) return 'good';
+    if (ratio < 0.4) return 'bad';
+    return 'neutral';
+  }
+
   function v4SageRing({ value, target, label, toneClass = 'carbs' }) {
     const num = Number(value) || 0;
     const tgt = Number(target) || 0;
@@ -1586,8 +1724,13 @@
     const overPctRaw = hasOver ? Math.min(50, Math.round((ratio - 1) * 100)) : 0;
     const overPct = Math.max(0, overPctRaw - ringCapCompPct);
     const overTone = toneClass === 'protein' ? 'protein' : 'warn';
+    const centerBad = macroCenterBad(num, tgt, toneClass);
+    const factBad = macroDeviationBad(num, tgt, toneClass);
+    const factRounded = Math.round(num);
+    const tgtRounded = Math.round(tgt);
     return React.createElement('div', { className: `widget-v4-macro${hasOver ? ' widget-v4-macro--over' : ''}` },
-      React.createElement('svg', { width: 60, height: 60, viewBox: '0 0 44 44', 'aria-hidden': 'true' },
+      React.createElement('div', { className: 'widget-v4-kicker widget-v4-macro__label' }, label),
+      React.createElement('svg', { width: 56, height: 56, viewBox: '0 0 44 44', 'aria-hidden': 'true' },
         React.createElement('circle', {
           cx: 22, cy: 22, r: 18, fill: 'none',
           stroke: 'var(--v4-line, rgba(0,0,0,.09))', strokeWidth: 5
@@ -1615,7 +1758,7 @@
           : null,
         React.createElement('text', {
           x: 22, y: 26, textAnchor: 'middle',
-          className: `widget-v4-macro__num${hasOver ? ' widget-v4-macro__num--over' : ''}`
+          className: 'widget-v4-macro__num' + (centerBad ? ' widget-v4-macro__num--bad' : '')
         }, centerLabel != null
           ? centerLabel
           : [
@@ -1623,7 +1766,13 @@
             React.createElement('tspan', { key: 'val' }, String(remainingRounded))
           ])
       ),
-      React.createElement('div', { className: 'widget-v4-kicker' }, label)
+      React.createElement('div', {
+        className: 'widget-v4-macro__fact' + (factBad ? ' widget-v4-macro__fact--bad' : '')
+      },
+        React.createElement('span', { className: 'widget-v4-macro__fact-val' }, factRounded),
+        React.createElement('span', { className: 'widget-v4-macro__fact-sep' }, ' / '),
+        React.createElement('span', { className: 'widget-v4-macro__fact-tgt' }, tgtRounded)
+      )
     );
   }
 
@@ -1851,11 +2000,25 @@
     const isShort = d.isShort;
 
     if (!hasData) {
-      return React.createElement('div', {
-        style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '4px', opacity: 0.5 }
-      },
-        React.createElement('div', { style: { fontSize: '1.4rem' } }, '🌊'),
-        React.createElement('div', { style: { fontSize: '0.7rem', color: 'var(--heys-text-tertiary,#64748b)', textAlign: 'center' } }, 'Добавьте приёмы пищи')
+      return React.createElement('div', { className: 'widget-v4-stack' },
+        v4Kicker('Инсулиновая волна'),
+        React.createElement('svg', {
+          className: 'widget-v4-wave',
+          viewBox: '0 0 130 52',
+          width: '100%',
+          height: 52,
+          'aria-hidden': 'true'
+        },
+          React.createElement('line', {
+            x1: 0, y1: 46, x2: 130, y2: 46,
+            stroke: 'var(--v4-line, rgba(0,0,0,.1))',
+            strokeWidth: 1.5
+          })
+        ),
+        React.createElement('div', { className: 'widget-v4-stack__footer' },
+          React.createElement('span', { className: 'widget-v4-muted' }, 'нет данных'),
+          React.createElement('span', { className: 'widget-v4-muted' }, '—')
+        )
       );
     }
 
@@ -1928,7 +2091,9 @@
         })
       ),
       React.createElement('div', { className: 'widget-v4-stack__footer' },
-        React.createElement('span', { className: 'widget-v4-ok' }, waveStatus),
+        React.createElement('span', {
+          className: v4ValueStateClass(v4InsulinWaveStatusState(waveStatus))
+        }, waveStatus),
         React.createElement('span', { className: 'widget-v4-muted' }, waveCountLabel)
       )
     );
@@ -2038,7 +2203,9 @@
     return React.createElement('div', { className: 'widget-v4-stack' },
       v4Kicker('Тренд здоровья'),
       React.createElement('div', { className: 'widget-v4-hero-num' },
-        React.createElement('span', { className: 'widget-v4-hero-num__val widget-v4-ok' }, hero),
+        React.createElement('span', {
+          className: 'widget-v4-hero-num__val ' + v4ValueStateClass(v4HealthTrendState(delta))
+        }, hero),
         React.createElement('span', { className: 'widget-v4-unit' }, `за ${periodDays} дней`)
       ),
       React.createElement('svg', {
@@ -2174,8 +2341,13 @@
       const ratio = target > 0 ? eaten / target : 0;
       const barPct = Math.min(100, Math.round(ratio * 100));
       const hasOver = eaten > target && target > 0;
-      const heroValue = remaining > 0 ? remaining : (hasOver ? eaten - target : eaten);
-      const heroLabel = remaining > 0 ? 'осталось' : (hasOver ? 'перебор' : 'съедено');
+      const isClosedDay = data.isClosedDay === true;
+      const heroValue = isClosedDay
+        ? eaten
+        : (remaining > 0 ? remaining : (hasOver ? eaten - target : eaten));
+      const heroLabel = isClosedDay
+        ? 'итог дня'
+        : (remaining > 0 ? 'осталось' : (hasOver ? 'перебор' : 'съедено'));
 
       return React.createElement('div', { className: 'widget-calories widget-calories--2x2 widget-calories--v4-hero' },
         React.createElement('div', { className: 'widget-v4-kicker' }, 'Калории'),
@@ -2199,24 +2371,23 @@
       );
     }
 
-    // 2x1 — число слева, «Осталось N» справа, без полосы прогресса
+    // 2×1 — канвас g1: «Осталось N» строкой, терракота = герой, не состояние
     if (size === '2x1') {
-      const showRemaining2x1 = widget.settings?.showRemaining !== false;
-      const remainingLabel = remaining > 0
-        ? `Осталось ${formatKcal(remaining)}`
-        : (eaten > target ? `+${formatKcal(eaten - target)}` : 'В норме');
-      return React.createElement('div', { className: 'widget-calories widget-calories--2x1' },
-        React.createElement('div', { className: 'widget-calories__row-h' },
-          React.createElement('div', { className: 'widget-calories__left' },
-            React.createElement('div', {
-              className: 'widget-calories__value widget-calories__value--lg',
-              style: { color: getColor() }
-            }, formatKcal(eaten)),
-            React.createElement('div', { className: 'widget-calories__label' }, `из ${formatKcal(target)}`)
-          ),
-          showRemaining2x1 ? React.createElement('div', { className: 'widget-calories__right' },
-            React.createElement('div', { className: 'widget-calories__remaining-line' }, remainingLabel)
-          ) : null
+      const isClosedDay = data.isClosedDay === true;
+      const lineValue = isClosedDay
+        ? formatKcal(eaten)
+        : (remaining > 0
+          ? formatKcal(remaining)
+          : (eaten > target ? `+${formatKcal(eaten - target)}` : formatKcal(eaten)));
+      const linePrefix = isClosedDay ? 'Итог ' : (remaining > 0 ? 'Осталось ' : '');
+      return React.createElement('div', {
+        className: 'widget-calories widget-calories--2x1 widget-v4-row widget-v4-row--tight'
+      },
+        v4Kicker('Калории'),
+        React.createElement('span', { className: 'widget-v4-row__value widget-v4-val--act' },
+          linePrefix,
+          lineValue,
+          React.createElement('span', { className: 'widget-v4-unit' }, ' ккал')
         )
       );
     }
@@ -2277,9 +2448,19 @@
     // 1x1 — канвас g1: «Вода» + литры + тонкая полоса
     if (d.isMicro) {
       const liters = (drunk || 0) / 1000;
+      const waterState = data.isClosedDay
+        ? 'neutral'
+        : v4WaterValueState(drunk, target, {
+          sleepEnd: data.sleepEnd,
+          sleepStart: data.sleepStart,
+          profileSleepHours: data.profileSleepHours,
+          medianWakeMinutes: data.medianWakeMinutes
+        });
       return React.createElement('div', { className: 'widget-water widget-water--micro widget-v4-mini' },
         v4Kicker('Вода'),
-        React.createElement('div', { className: 'widget-v4-mini__value' },
+        React.createElement('div', {
+          className: 'widget-v4-mini__value ' + v4ValueStateClass(waterState)
+        },
           formatRuDecimal(liters, 1),
           React.createElement('span', { className: 'widget-v4-unit' }, ' л')
         ),
@@ -2317,8 +2498,8 @@
         showProgress
           ? React.createElement('div', { className: 'widget-water__progress' },
             React.createElement('div', {
-              className: 'widget-water__bar',
-              style: { width: `${Math.min(100, pct)}%`, background: waterColor }
+              className: 'widget-water__bar widget-water__bar--v4',
+              style: { width: `${Math.min(100, pct)}%` }
             })
           )
           : null,
@@ -2351,7 +2532,7 @@
       showProgress
         ? React.createElement('div', { className: 'widget-water__progress' },
           React.createElement('div', {
-            className: 'widget-water__bar',
+            className: 'widget-water__bar widget-water__bar--v4',
             style: { width: `${Math.min(100, pct)}%` }
           })
         )
@@ -2386,9 +2567,12 @@
 
     // 1x1 — канвас g1: «Сон» + часы
     if (d.isMicro) {
+      const sleepState = v4SleepValueState(hours, target);
       return React.createElement('div', { className: 'widget-sleep widget-sleep--micro widget-v4-mini' },
         v4Kicker('Сон'),
-        React.createElement('div', { className: 'widget-v4-mini__value' },
+        React.createElement('div', {
+          className: 'widget-v4-mini__value ' + v4ValueStateClass(sleepState)
+        },
           formatRuDecimal(hours, 1),
           React.createElement('span', { className: 'widget-v4-unit' }, ' ч')
         )
@@ -2777,7 +2961,7 @@
         ? `${weekChange > 0 ? '+' : '−'}${formatRuDecimal(Math.abs(weekChange), 1)} за неделю`
         : null;
       const pts = hasSparkline
-        ? sparklinePoints.slice(-7)
+        ? sparklinePoints.slice(-7).filter((p) => Number.isFinite(p.weight) && !p.excluded && !p.estimated)
         : [];
       const sparkPoints = pts.length >= 2
         ? pts.map((p, i) => {
@@ -2791,16 +2975,22 @@
         }).join(' ')
         : '4,14 26,24 48,24 70,6 92,14 114,18 126,19';
       const last = sparkPoints.split(' ').pop().split(',');
+      const weightHeroState = v4WeightSparkTrendState(pts);
+      const weekState = v4WeightDeltaState(weekChange);
       return React.createElement('div', { className: 'widget-weight widget-weight--2x2 widget-v4-stack' },
         v4Kicker('Вес'),
         React.createElement('div', { className: 'widget-v4-hero-num' },
-          React.createElement('span', { className: 'widget-v4-hero-num__val' },
+          React.createElement('span', {
+            className: 'widget-v4-hero-num__val ' + v4ValueStateClass(weightHeroState)
+          },
             hasCurrent ? formatRuDecimal(current, 1) : '—'
           ),
           React.createElement('span', { className: 'widget-v4-unit' }, 'кг')
         ),
         weekText
-          ? React.createElement('div', { className: 'widget-v4-ok widget-v4-delta' }, weekText)
+          ? React.createElement('div', {
+            className: 'widget-v4-delta ' + v4ValueStateClass(weekState)
+          }, weekText)
           : null,
         React.createElement('svg', {
           className: 'widget-v4-spark widget-v4-spark--act',
@@ -3413,10 +3603,6 @@
 
     if (size === '3x2') {
       return React.createElement('div', { className: 'widget-macros widget-macros--3x2 widget-v4-stack' },
-        React.createElement('div', { className: 'widget-v4-macros__head widget-v4-kicker' },
-          React.createElement('span', null, 'БЖУ'),
-          React.createElement('span', { className: 'widget-v4-macros__hint' }, '· Осталось сегодня')
-        ),
         React.createElement('div', { className: 'widget-v4-macros' },
           v4SageRing({ value: protein, target: proteinTarget, label: 'Белки', toneClass: 'protein' }),
           v4SageRing({ value: fat, target: fatTarget, label: 'Жиры', toneClass: 'fat' }),
@@ -3655,7 +3841,9 @@
       return React.createElement('div', { className: `widget-heatmap widget-heatmap--${size} widget-v4-stack` },
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
           v4Kicker('Тепловая карта'),
-          React.createElement('span', { className: 'widget-v4-ok widget-v4-row__meta' }, `${filled} из 7`)
+          React.createElement('span', {
+            className: 'widget-v4-row__meta ' + v4ValueStateClass(v4HeatmapMetaState(filled, 7))
+          }, `${filled} из 7`)
         ),
         React.createElement('div', { className: 'widget-v4-heat' },
           week.map((day, index) => React.createElement('span', {
@@ -3864,12 +4052,15 @@
     if (size === '2x1') {
       const monthKg = Number.isFinite(slopePerWeek) ? slopePerWeek * 4 : totalDeltaKg;
       const monthLabel = `${monthKg > 0 ? '+' : '−'}${formatRuDecimal(Math.abs(monthKg), 1)}`;
+      const monthState = v4WeightDeltaState(monthKg);
       return React.createElement('div', {
         className: `widget-crash-risk widget-crash-risk--short widget-crash-risk--${zone} widget-v4-stack`
       },
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
           v4Kicker('Динамика веса'),
-          React.createElement('span', { className: 'widget-v4-row__value widget-v4-row__value--sm widget-v4-ok' },
+          React.createElement('span', {
+            className: 'widget-v4-row__value widget-v4-row__value--sm ' + v4ValueStateClass(monthState)
+          },
             monthLabel,
             React.createElement('span', { className: 'widget-v4-unit' }, ' кг / мес')
           )
@@ -4854,7 +5045,7 @@
         v4Kicker('Риск-радар'),
         React.createElement('div', { className: 'widget-v4-hero-num' },
           React.createElement('div', {
-            className: 'widget-v4-hero-num__val ' + (level === 'low' || !level ? 'widget-v4-ok' : 'widget-v4-warn')
+            className: 'widget-v4-hero-num__val widget-v4-hero-num__val--risk ' + v4ValueStateClass(v4RiskLevelState(level))
           }, levelWord)
         ),
         React.createElement('div', { className: 'widget-v4-kv' },
@@ -4864,7 +5055,7 @@
           },
             React.createElement('span', null, driver?.label || driver?.key || 'Фактор'),
             React.createElement('span', {
-              className: driver?.warn ? 'widget-v4-warn' : 'widget-v4-ok'
+              className: driver?.warn ? 'widget-v4-val--act' : 'widget-v4-val--good'
             }, driver?.value)
           ))
         )
@@ -6473,12 +6664,10 @@
       };
     }, [isMobile, widgets.length, isEditMode]);
 
-    // Сохраняем selectedDate в HEYS.Widgets.data для использования в widget_data.js
-    useEffect(() => {
-      if (HEYS.Widgets.data) {
-        HEYS.Widgets.data._selectedDate = selectedDate;
-      }
-    }, [selectedDate]);
+    // Дата для widget_data — синхронно до чтения getDataForWidget (без remount вкладки).
+    if (HEYS.Widgets.data) {
+      HEYS.Widgets.data._selectedDate = selectedDate;
+    }
 
     // 🔄 Реинициализация виджетов при смене клиента
     // Критично: каждый клиент имеет свой layout виджетов!
@@ -7011,6 +7200,7 @@
             React.createElement(WidgetCard, {
               key: widget.id,
               widget,
+              selectedDate,
               isEditMode,
               index: idx,
               onRemove: handleRemove,
@@ -7043,13 +7233,23 @@
         )
       ),
 
-      !isEditMode && React.createElement('div', { className: 'widgets-tab__edit-row' },
+      !isEditMode && widgets.length > 0 && React.createElement('div', { className: 'widgets-tab__edit-row' },
         React.createElement('button', {
           type: 'button',
           id: 'tour-widgets-edit',
-          className: 'widgets-tab__edit-btn hdr-widgets-edit-btn hdr-widgets-edit-btn--primary',
-          onClick: toggleEdit
-        }, 'Изменить')
+          className: 'widgets-tab__edit-btn',
+          onClick: () => HEYS.Widgets.enterEditMode?.()
+        },
+          React.createElement('svg', {
+            width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2.6, strokeLinecap: 'round', strokeLinejoin: 'round',
+            'aria-hidden': 'true'
+          },
+            React.createElement('path', { d: 'M4 20h4l10-10-4-4L4 16z' }),
+            React.createElement('path', { d: 'M14 6l4 4' })
+          ),
+          'Изменить экран'
+        )
       ),
 
       isEditMode && React.createElement(CatalogStrip, {

@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "heys-curator": {
+      "url": "https://api.heyslab.ru/mcp/curator"
+    }
+  }
+}
