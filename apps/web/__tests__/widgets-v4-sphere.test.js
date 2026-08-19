@@ -131,6 +131,18 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(cssSrc).toContain('.widget-risk-steps__seg--on');
     });
 
+    it('шторка смены вида — строки на подложке во всех четырёх палитрах', () => {
+        // Канвас .opt: своя подложка, радиус 18, паддинг 7; выбранная строка —
+        // тёплый акцент с обводкой, и он тёплый во всех палитрах.
+        expect(cssSrc).toMatch(/\.widget-wd-sheet__opt \{[\s\S]*?border-radius: 18px;[\s\S]*?padding: 7px;[\s\S]*?background: rgba\(0, 0, 0, 0\.04\)/);
+        expect(cssSrc).not.toMatch(/\.widget-wd-sheet__opt \{[\s\S]*?background: transparent/);
+        expect(cssSrc).toContain('[data-theme$="dark"] .widget-wd-sheet__opt {');
+        expect(cssSrc).toContain('html[data-theme-id="blue"] .widget-wd-sheet__opt {');
+        expect(cssSrc).toContain('html[data-theme-id="blue-dark"] .widget-wd-sheet__opt {');
+        expect(cssSrc).toContain('inset 0 0 0 1.5px var(--v4-sand-act, #c67139)');
+        expect(cssSrc).toContain('rgba(207, 129, 68, 0.18)');
+    });
+
     it('цвет значения по состоянию — сон, вода, вес', () => {
         expect(uiSrc).toContain('function v4SleepValueState');
         expect(uiSrc).toContain('function v4WaterValueState');

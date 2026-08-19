@@ -10998,22 +10998,45 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-v4-mini.widget-water--
   margin-top: 13px;
 }
 
+/* Канвас: строка выбора вида — своя подложка, иначе превью висят в воздухе
+   и список не читается как список. Подложка своя в каждой палитре. */
 .widget-wd-sheet__opt {
   display: flex;
   align-items: center;
   gap: 9px;
   width: 100%;
   border: none;
-  border-radius: 14px;
-  padding: 8px;
-  background: transparent;
+  border-radius: 18px;
+  padding: 7px;
+  background: rgba(0, 0, 0, 0.04);
   text-align: left;
   cursor: pointer;
   font-family: inherit;
 }
 
-.widget-wd-sheet__opt.is-active {
-  background: rgba(198, 113, 57, 0.1);
+[data-theme$="dark"] .widget-wd-sheet__opt {
+  background: rgba(242, 237, 230, 0.06);
+}
+
+html[data-theme-id="blue"] .widget-wd-sheet__opt {
+  background: rgba(16, 24, 38, 0.05);
+}
+
+html[data-theme-id="blue-dark"] .widget-wd-sheet__opt {
+  background: rgba(238, 243, 248, 0.06);
+}
+
+/* Выбранный вид — тёплый акцент во всех палитрах: --v4-sand-act намеренно
+   не делится с --v4-act (решение владельца 2026-08-12). */
+.widget-wd-sheet__opt.is-active,
+html[data-theme-id="blue"] .widget-wd-sheet__opt.is-active {
+  background: color-mix(in srgb, var(--v4-sand-act, #c67139) 16%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--v4-sand-act, #c67139);
+}
+
+[data-theme$="dark"] .widget-wd-sheet__opt.is-active,
+html[data-theme-id="blue-dark"] .widget-wd-sheet__opt.is-active {
+  background: rgba(207, 129, 68, 0.18);
 }
 
 .widget-wd-sheet__preview {
