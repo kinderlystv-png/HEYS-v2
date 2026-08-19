@@ -213,6 +213,7 @@
         <div class="nt"><b>Скелетона в приложении нет вовсе</b><span>Знак ожидания один на весь продукт. Обновление открытого экрана оставляет старые значения до прихода новых, жест обновления несёт собственное кольцо, а там, где данные приходят из облака впервые — сообщения куратора, доска — работает тот же круг 56. Два языка ожидания заставляли бы человека различать «рисуется раскладка» и «идёт запрос», хотя для него это одно: приложение думает.</span></div>
         <div class="nt"><b>Вторая неудача даёт адрес</b><span>Первый отказ предлагает только «Повторить» — чаще всего дело в связи. Если и повтор не прошёл, добавляется строка с куратором: дальше человек сам ничего не сделает, и звать его нажимать ту же кнопку по третьему разу нечестно.</span></div>
         <div class="nt"><b>Галочка только там, где было действие</b><span>Загрузка вкладки заканчивается появлением содержимого — знак просто исчезает, подтверждать нечего, и галочка стала бы лишним экраном между человеком и данными. Сохранение и отправка заканчиваются исходом, который человек ждёт: там знак превращается в галочку, а при неудаче — в предупреждение.</span></div>
+        <div class="nt"><b>Холодный старт галочкой не заканчивается — даже такой же, как в обновлении PWA</b><span>Вопрос закрыт отдельно, потому что в обновлении PWA галочка есть и выглядит уместно. Там она оплачена событием: сборка сменилась без спроса человека, у этого была ненулевая вероятность не встать, и «Готово!» — расписка, что обошлось. У запуска приложения события нет: открыть его — норма, а подтверждение успеха — само содержимое. Три довода против: 300–500 мс налога на самом частом кадре продукта (обновление человек видит раз в неделю, старт — несколько раз в день); галочка размывается, если значит и «операция удалась», и «просто догрузилось» — а первое нужно нам в сохранении, подписании и обновлении; знаку уже есть куда деваться — он гаснет ровно в тот момент, когда приезжает содержимое, то есть передаёт эстафету, а не докладывает о себе. Единственное, что могло бы дать галочку на старте, — если запуск действительно что-то сделал: например, после офлайна догрузились накопленные записи. Но тогда подтверждается синхронизация со своим текстом, а не факт загрузки.</span></div>
         <div class="nt"><b>Таких мест в продукте четыре</b><span>Ответа с сервера ждут: сохранение профиля на шаге 5, правка профиля в настройках, подписание документа (согласие, оферта, ЭЦП) и отправка анкеты куратору. Только здесь уместна пара «ожидание → результат».</span></div>
         <div class="nt"><b>Остальное подтверждает себя само</b><span>Приём еды, вес, зарядка, тренировка пишутся локально мгновенно и синкаются фоном — знак не успевает появиться по порогу 300 мс, а подтверждением служит сама запись, появившаяся в списке. «Чек-ин записан» — исключение смысловое, а не техническое: это конец утреннего ритуала, а не отчёт о сохранении.</span></div>
         <div class="nt"><b>Одна окружность на три исхода</b><span>Ожидание, успех и ошибка — один круг 56 на одном месте: меняется только содержимое и тон подложки. Разные размеры и разные позиции читались бы как три отдельных экрана вместо одного события.</span></div>
@@ -243,5 +244,52 @@
   <p style="margin:30px 0 0;font:500 12.5px/1.6 Figtree,sans-serif;color:rgba(0,0,0,.5);">Знак используется и в других канвасах: «Сохраняем профиль» в регистрации, подпись документа во входе, отправка анкеты.</p>
 </div>
 </x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;rules&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { this.applyTweaks(); }
+  componentDidUpdate() { this.applyTweaks(); }
+  renderVals() { return {}; }
+
+  tw() {
+    const standalone = window.parent === window;
+    return { all: this.props.allPalettes ?? standalone, rules: this.props.rules ?? true };
+  }
+  applyTweaks() {
+    const t = this.tw(), hide = t.all ? '' : 'none', off = t.rules ? '' : 'none';
+    const lab = /^(т[её]мная|синяя|сине-т[её]мная|синяя\s+т[её]мная)(\s+палитра)?$/i;
+
+    document.querySelectorAll('.pl').forEach(pl => {
+      const row = pl.nextElementSibling;
+      if (!row) return;
+      const h = /песочн/i.test(pl.textContent) ? '' : hide;
+      const host = pl.parentElement;
+      if (host && host.firstElementChild === pl && host.lastElementChild === row && host.children.length === 2) host.style.display = h;
+      else { pl.style.display = h; row.style.display = h; }
+    });
+
+    document.querySelectorAll('div, span').forEach(el => {
+      if (el.children.length || !lab.test((el.textContent || '').trim())) return;
+      el.style.display = hide;
+      const row = el.nextElementSibling;
+      if (row && row.querySelector && (row.classList.contains('ph') || row.querySelector('.ph, .w, .g'))) row.style.display = hide;
+    });
+
+    document.querySelectorAll('[data-mirdst]').forEach(d => { d.style.display = hide; });
+
+    document.querySelectorAll('div[style*="width:300px"]').forEach(col => {
+      if (col.querySelector('.nt, .ntl') && !col.querySelector('.ph, .w')) col.style.display = off;
+    });
+    const boxes = new Set();
+    document.querySelectorAll('.nt, .ntl').forEach(n => { n.style.display = off; boxes.add(n.parentElement); });
+    boxes.forEach(box => {
+      if (!box) return;
+      const other = [...box.children].some(c => !c.classList.contains('nt') && !c.classList.contains('ntl'));
+      box.style.display = other ? '' : off;
+      const head = box.previousElementSibling;
+      if (head && head.classList.contains('h') && !other) head.style.display = off;
+    });
+  }
+}
+</script>
 </body>
 </html>

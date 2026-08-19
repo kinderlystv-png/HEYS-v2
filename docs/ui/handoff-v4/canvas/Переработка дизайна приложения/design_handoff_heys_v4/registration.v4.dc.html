@@ -558,19 +558,62 @@
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script>
+<script type="text/x-dc" data-dc-script data-props="{&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;rules&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">
 class Component extends DCLogic {
   pal = [['dk', 'Тёмная'], ['bl', 'Синяя'], ['bldk', 'Синяя тёмная']];
   componentDidMount() { this.obs = new MutationObserver(() => { clearTimeout(this.t); this.t = setTimeout(() => this.sync(), 400); }); this.sync(); }
   componentWillUnmount() { if (this.obs) this.obs.disconnect(); clearTimeout(this.t); }
   renderVals() { return {}; }
+  componentDidUpdate() { this.sync(); }
+
+  tw() {
+    const standalone = window.parent === window;
+    return { all: this.props.allPalettes ?? standalone, rules: this.props.rules ?? true };
+  }
+  applyTweaks() {
+    const t = this.tw(), hide = t.all ? '' : 'none', off = t.rules ? '' : 'none';
+    const lab = /^(т[её]мная|синяя|сине-т[её]мная|синяя\s+т[её]мная)(\s+палитра)?$/i;
+
+    document.querySelectorAll('.pl').forEach(pl => {
+      const row = pl.nextElementSibling;
+      if (!row) return;
+      const h = /песочн/i.test(pl.textContent) ? '' : hide;
+      const host = pl.parentElement;
+      if (host && host.firstElementChild === pl && host.lastElementChild === row && host.children.length === 2) host.style.display = h;
+      else { pl.style.display = h; row.style.display = h; }
+    });
+
+    document.querySelectorAll('div, span').forEach(el => {
+      if (el.children.length || !lab.test((el.textContent || '').trim())) return;
+      el.style.display = hide;
+      const row = el.nextElementSibling;
+      if (row && row.querySelector && (row.classList.contains('ph') || row.querySelector('.ph, .w, .g'))) row.style.display = hide;
+    });
+
+    document.querySelectorAll('[data-mirdst]').forEach(d => { d.style.display = hide; });
+
+    document.querySelectorAll('div[style*="width:300px"]').forEach(col => {
+      if (col.querySelector('.nt, .ntl') && !col.querySelector('.ph, .w')) col.style.display = off;
+    });
+    const boxes = new Set();
+    document.querySelectorAll('.nt, .ntl').forEach(n => { n.style.display = off; boxes.add(n.parentElement); });
+    boxes.forEach(box => {
+      if (!box) return;
+      const other = [...box.children].some(c => !c.classList.contains('nt') && !c.classList.contains('ntl'));
+      box.style.display = other ? '' : off;
+      const head = box.previousElementSibling;
+      if (head && head.classList.contains('h') && !other) head.style.display = off;
+    });
+  }
+
   sync() {
     if (this.obs) this.obs.disconnect();
+    const showPal = this.tw().all;
     document.querySelectorAll('[data-mirdst]').forEach(dst => {
       const src = document.querySelector('[data-mir="' + dst.getAttribute('data-mirdst') + '"]');
       dst.setAttribute('style', '');
       dst.innerHTML = '';
-      if (!src) return;
+      if (!src || !showPal) return;
       this.pal.forEach(([cls, name]) => {
         const cap = document.createElement('div');
         cap.className = 'palcap';
@@ -586,6 +629,7 @@ class Component extends DCLogic {
         dst.append(cap, row);
       });
     });
+    this.applyTweaks();
     if (this.obs) this.obs.observe(document.body, { subtree: true, childList: true, characterData: true });
   }
 }
