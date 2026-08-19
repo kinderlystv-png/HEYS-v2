@@ -895,7 +895,7 @@ function createTasksTools({
     if (tasks.estimateWritePayloadBytes(file.path, text) > tasks.TASKS_WRITE_PAYLOAD_LIMIT) {
       throw new ToolError(
         'payload_too_large',
-        `Запись ${file.path} не влезает в лимит RPC (${tasks.TASKS_WRITE_PAYLOAD_LIMIT} байт). Для transcript/journal нужна дельта-запись — сообщи разработчику, если видишь это на checkpoint.`,
+        `Запись ${file.path} не влезает в лимит RPC (${tasks.TASKS_WRITE_PAYLOAD_LIMIT} байт). Для transcript/journal нужна дельта-запись — сообщи разработчику, если видишь это на checkpoint. Для projects/*.md это значит, что файл пора разгрузить: закрытые задачи в архив.`,
         { path: file.path },
       );
     }

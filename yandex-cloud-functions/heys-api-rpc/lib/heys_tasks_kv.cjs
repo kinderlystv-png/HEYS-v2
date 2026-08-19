@@ -5570,8 +5570,14 @@ function planFactSides(pattern) {
 
 /** Порог ротации активного файла — с запасом под JSON-обёртку RPC (256 КБ). */
 const TASKS_ROTATE_TARGET_BYTES = 180 * 1024;
-/** Полная запись через batch_upsert не должна приближаться к лимиту тела запроса. */
-const TASKS_WRITE_PAYLOAD_LIMIT = 240 * 1024;
+/**
+ * Полная запись через batch_upsert не должна приближаться к лимиту тела запроса.
+ * Тело кураторского batch_upsert принимается до 1 МБ (heys-api-rpc/index.js), и
+ * этот порог держит запас под JSON-обёртку. Поднят с 240 КБ 20.08: projects/heys.md
+ * пишется целиком, дельта-записи у projects/ нет, и на 157 тыс. символов проект
+ * встал в read-only — не проходили ни новые задачи, ни правки существующих.
+ */
+const TASKS_WRITE_PAYLOAD_LIMIT = 960 * 1024;
 
 function utf8ByteLength(text) {
   return Buffer.byteLength(String(text || ''), 'utf8');

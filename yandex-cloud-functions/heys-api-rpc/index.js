@@ -1912,8 +1912,15 @@ async function handleRpcRequest(event, context) {
   }
 
   // Парсим тело запроса
-  // 🛡️ Body size limit: 256 KB — защита от DoS через огромные payload'ы
-  const MAX_BODY_BYTES = 256 * 1024;
+  // 🛡️ Body size limit: 256 KB — защита от DoS через огромные payload'ы.
+  // Исключение: batch_upsert задачника пишет файл проекта ЦЕЛИКОМ (дельта-запись
+  // есть только у transcript/journal), поэтому projects/heys.md на 157 тыс.
+  // символов кириллицы упирался в 256 КБ и проект уходил в read-only — не
+  // принимались ни новые задачи, ни правки существующих. Функция curator-only по
+  // JWT, ownership проверяет SQL, так что поверхность DoS не растёт.
+  const MAX_BODY_BYTES = fnName === 'batch_upsert_client_kv_by_curator'
+    ? 1024 * 1024
+    : 256 * 1024;
   if (event.body && typeof event.body === 'string' && Buffer.byteLength(event.body, 'utf8') > MAX_BODY_BYTES) {
     return {
       statusCode: 413,
