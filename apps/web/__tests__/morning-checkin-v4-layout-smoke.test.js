@@ -78,6 +78,18 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(STEPS_SRC).toMatch(/CombinedSleepStepComponent[\s\S]*className: 'mc-scale-value'[\s\S]*React\.createElement\('b'/);
     expect(DAILY_CSS).toContain('.mc-modal--daily .mc-sleep-combined .mc-wheel-value--current');
     expect(DAILY_CSS).toContain('.mc-modal--daily .mc-step-content:has(.mc-sleep-combined)');
+    // один верхний отступ на всех шагах мастера — заголовок не прыгает между переходами
+    const stepTopRule = DAILY_CSS.match(
+      /\.mc-modal--daily \.mc-step-content:has\(\.mc-weight-step\),[\s\S]*?\{\s*padding-top: 24px;/
+    );
+    expect(stepTopRule).toBeTruthy();
+    ['mc-sleep-combined', 'mc-mood-step', 'mc-steps-step', 'mc-rest-step'].forEach((cls) => {
+      expect(stepTopRule[0]).toContain(`:has(.${cls})`);
+    });
+    expect(DAILY_CSS).not.toMatch(/:has\(\.mc-sleep-combined\)\s*\{\s*padding-top: 22px/);
+    expect(STEPS_SRC).toContain('mc-weight-step mc-weight-step--estimated');
+    expect(STEPS_SRC).not.toContain('paddingTop: 34');
+    expect(DAILY_CSS).toContain('.mc-modal--daily .mc-weight-step--estimated');
     expect(STEPS_SRC).toMatch(/CombinedSleepStepComponent[\s\S]*className: 'mc-sleep-clock'/);
     expect(STEPS_SRC).not.toMatch(/CombinedSleepStepComponent[\s\S]*className: 'mc-time-pickers'/);
     expect(DAILY_CSS).toContain('.mc-modal--daily .mc-sleep-block .mc-wheel-picker');

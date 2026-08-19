@@ -1699,8 +1699,8 @@
 
     if (estimated) {
       return React.createElement('div', {
-        className: 'mc-weight-step',
-        style: { display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 34 }
+        className: 'mc-weight-step mc-weight-step--estimated',
+        style: { display: 'flex', flexDirection: 'column', alignItems: 'center' }
       },
         greeting,
         React.createElement('div', { className: 'mc-step-kicker' }, 'Вес на утро'),

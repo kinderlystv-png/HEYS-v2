@@ -1033,11 +1033,18 @@
   padding: 0 1px;
 }
 
+.mc-sleep-combined {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
 .mc-sleep-times--split {
   display: flex;
   gap: 10px;
   width: 100%;
-  margin-top: 20px;
+  margin-top: 10px;
 }
 
 .mc-sleep-block {
@@ -1045,6 +1052,7 @@
   background: var(--v4-sand-surface, #f7efe2);
   border-radius: 20px;
   padding: 12px 6px 14px;
+  overflow: hidden;
 }
 
 .mc-sleep-norm {
@@ -5893,11 +5901,86 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 }
 
 .mc-modal--daily .mc-weight-kilo-card,
-.mc-modal--daily .mc-sleep-block,
-.mc-modal--daily .mc-scale-card {
+.mc-modal--daily .mc-sleep-block {
   background: var(--v4-sand-surface, #f7efe2) !important;
   border-radius: 20px !important;
   overflow: hidden;
+}
+
+.mc-modal--daily .mc-scale-card {
+  background: var(--v4-sand-surface, #f7efe2) !important;
+  border-radius: 18px !important;
+  overflow: hidden;
+}
+
+/* Верх шага стоит на одной высоте на всех экранах мастера: разные отступы
+   заставляли заголовок прыгать при переходе (сон 22px против 14px у остальных).
+   Исключения со своей геометрией — «Записано» (центрируется) и слои курса
+   добавок с собственной шапкой. */
+.mc-modal--daily .mc-step-content:has(.mc-weight-step),
+.mc-modal--daily .mc-step-content:has(.mc-sleep-combined),
+.mc-modal--daily .mc-step-content:has(.mc-mood-step),
+.mc-modal--daily .mc-step-content:has(.mc-steps-step),
+.mc-modal--daily .mc-step-content:has(.mc-rest-step) {
+  padding-top: 24px;
+}
+
+/* Расчётный вес открывается без приветствия — на старом хроме шаг опускался
+   ниже вручную. В дневном мастере отступ задаёт .mc-step-content. */
+.mc-weight-step--estimated {
+  padding-top: 34px;
+}
+
+.mc-modal--daily .mc-weight-step--estimated {
+  padding-top: 0;
+}
+
+.mc-modal--daily .mc-sleep-block .mc-sleep-clock {
+  width: 100%;
+}
+
+.mc-modal--daily .mc-sleep-block .mc-time-pickers {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.mc-modal--daily .mc-sleep-block .mc-wheel-picker {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.mc-modal--daily .mc-sleep-block .mc-wheel-picker--compact .mc-wheel-values {
+  height: auto;
+  min-height: 0;
+  gap: 0;
+  justify-content: center;
+}
+
+.mc-modal--daily .mc-sleep-block .mc-wheel-value {
+  min-width: 0;
+  width: 100%;
+  height: auto;
+}
+
+.mc-modal--daily .mc-sleep-combined .mc-wheel-value--current {
+  font: 700 32px/1.2 Figtree, system-ui, sans-serif;
+  letter-spacing: -0.025em;
+}
+
+.mc-modal--daily .mc-sleep-combined .mc-wheel-value--prev,
+.mc-modal--daily .mc-sleep-combined .mc-wheel-value--next {
+  font: 600 13px/1.45 Figtree, system-ui, sans-serif;
+}
+
+.mc-modal--daily .mc-sleep-combined .mc-time-sep {
+  flex: none;
+  margin: 0;
+  padding: 0 1px;
+  font: 700 28px/1 Figtree, system-ui, sans-serif;
 }
 
 .mc-modal--daily .mc-weight-pickers {
