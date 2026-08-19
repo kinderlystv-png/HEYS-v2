@@ -237,8 +237,8 @@ describe('motion значений виджетов', () => {
 
 describe('виджеты подключены к motion', () => {
     it('калории — eaten и target из store, полоса из animBarPct', () => {
-        const start = uiSrc.indexOf('function CaloriesWidgetContent');
-        const chunk = uiSrc.slice(start, uiSrc.indexOf('function WaterWidgetContent'));
+        const start = uiSrc.indexOf('function CaloriesVariantBody');
+        const chunk = uiSrc.slice(start, uiSrc.indexOf('function WaterVariantBody'));
         expect(chunk).toContain('motionId: `${widget?.id || \'cal\'}:eaten`');
         expect(chunk).toContain('motionId: `${widget?.id || \'cal\'}:target`');
         expect(chunk).toContain('const animRemaining = Math.max(0, animTarget - animEaten)');
@@ -248,8 +248,8 @@ describe('виджеты подключены к motion', () => {
     });
 
     it('БЖУ — граммы и нормы из store, кольца от anim value', () => {
-        const start = uiSrc.indexOf('function MacrosWidgetContent');
-        const chunk = uiSrc.slice(start, uiSrc.indexOf('function InsulinWidgetContent'));
+        const start = uiSrc.indexOf('function MacrosVariantBody');
+        const chunk = uiSrc.slice(start, uiSrc.indexOf('function MacrosWidgetContent'));
         expect(chunk).toContain('motionIdPrefix: `${widget?.id || \'macro\'}:g`');
         expect(chunk).toContain('motionIdPrefix: `${widget?.id || \'macro\'}:t`');
         expect(chunk).toContain('const arcValue = value');
@@ -265,8 +265,30 @@ describe('виджеты подключены к motion', () => {
     });
 
     it('полосы — CSS transition на ширину', () => {
-        const barRule = cssSrc.slice(cssSrc.indexOf('.widget-calories__hero-bar-fill'), cssSrc.indexOf('.widget-calories__hero-bar-labels'));
+        const barRule = cssSrc.slice(cssSrc.indexOf('.widget-calories__hero-bar-fill'), cssSrc.indexOf('.widget-calories__hero-bar-foot'));
         expect(barRule).toContain('transition: width var(--widget-motion-ms');
         expect(uiSrc).toContain("'--widget-motion-ms': `${widgetMotionCssMs}ms`");
+    });
+
+    it('интро вкладки — один раз за сессию, не на reload и не при возврате с другой вкладки', () => {
+        expect(uiSrc).toContain('function widgetMotionShouldPlayTabIntro');
+        expect(uiSrc).toContain('WIDGET_TAB_INTRO_SESSION_KEY');
+        expect(uiSrc).toContain('widgetMotionHasSeenTabIntro');
+        expect(uiSrc).toContain('playTabIntroRef');
+    });
+
+    it('интро вкладки — ждёт закрытия чек-ина и модалок', () => {
+        expect(uiSrc).toContain('function widgetMotionHasBlockingOverlay');
+        expect(uiSrc).toContain('function widgetMotionCanStartTabIntro');
+        expect(uiSrc).toContain('function widgetMotionHasBootSpinner');
+        expect(uiSrc).toContain('WIDGET_TAB_INTRO_REVEAL_DELAY_MS');
+        expect(uiSrc).toContain('function widgetMotionPrepareTabIntroStart');
+        expect(uiSrc).toContain('heys:modal-stack-idle');
+        expect(uiSrc).toContain('heys:checkin-complete');
+        expect(uiSrc).toContain('.ca-modal-backdrop--visible');
+        expect(uiSrc).toContain('beginTabIntro');
+        expect(uiSrc).toContain('function widgetV4ShouldAnimateSparkDraw');
+        expect(uiSrc).toContain('introActiveRef');
+        expect(uiSrc).toContain('[beginTabIntro, clientId, isDashboardPainted]');
     });
 });

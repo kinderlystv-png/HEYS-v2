@@ -11,11 +11,11 @@ const cssRoles = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/002-ui-v4-pa
 
 describe('виджеты g1 в сфере палитры', () => {
     it('инсулиновая волна — заливка без обводки по горбам, линия только пол', () => {
-        const start = uiSrc.indexOf('const waveStatus = (status === \'complete\'');
-        const chunk = uiSrc.slice(start, start + 950);
-        expect(chunk).toContain("className: 'widget-v4-wave__fill'");
-        expect(chunk).toContain('L3,46 Z');
-        expect(chunk).not.toContain('V52');
+        const start = uiSrc.indexOf('function InsulinWaveDaySvg');
+        const chunk = uiSrc.slice(start, start + 1200);
+        expect(chunk).toContain("className: 'widget-v4-insulin-wave__fill'");
+        expect(chunk).toContain('InsulinWaveBaseline');
+        expect(cssSrc).toContain('.widget-v4-insulin-wave__fill');
         expect(cssSrc).toContain('.widget-v4-wave__fill');
         expect(cssSrc).toContain('stroke: none');
         expect(cssSrc).toContain('var(--v4-sand-wave-fill');
@@ -23,10 +23,9 @@ describe('виджеты g1 в сфере палитры', () => {
     });
 
     it('оценка дня 2×1 — строка как в g1, число из --v4-act-text', () => {
-        const start = uiSrc.indexOf("v4Kicker('Оценка дня')");
-        const chunk = uiSrc.slice(start, start + 400);
-        expect(chunk).toContain('widget-v4-row');
-        expect(chunk).toContain("widget-v4-unit");
+        expect(uiSrc).toContain('function DayScoreVariantBody');
+        expect(uiSrc).toContain('widget-v4-row');
+        expect(uiSrc).toContain('widget-v4-unit');
         expect(cssSrc).toContain('.widget--dayScore .widget-day-score--short.widget-v4-row');
         expect(cssSrc).toContain('.widget-v4-row__value');
         expect(cssSrc).toContain('var(--v4-act-text');
@@ -35,7 +34,7 @@ describe('виджеты g1 в сфере палитры', () => {
     it('расстановка g2: каталог в сетке, минус, Отмена откатывает', () => {
         expect(uiSrc).toContain('function CatalogStrip');
         expect(uiSrc).toContain('widget-v4-catalog');
-        expect(uiSrc).toContain('Потяни виджет');
+        expect(uiSrc).toContain('Долгое нажатие — взять виджет');
         expect(uiSrc).toContain("enterEditMode?.()");
         expect(uiSrc).toContain('WIDGET_EDIT_RESIZE_ENABLED = false');
         expect(uiSrc).toContain('isEditMode && WIDGET_EDIT_RESIZE_ENABLED && React.createElement(React.Fragment');
@@ -102,13 +101,14 @@ describe('виджеты g1 в сфере палитры', () => {
     });
 
     it('риск-радар 2×2 — «низкий» шалфей, жирнее, без inline color', () => {
-        const start = uiSrc.indexOf("v4Kicker('Риск-радар')");
-        const chunk = uiSrc.slice(start, start + 900);
-        expect(chunk).toContain('widget-v4-hero-num__val--risk');
-        expect(chunk).toContain('v4RiskLevelState(level)');
-        expect(chunk).toContain('v4ValueStateClass');
-        expect(chunk).not.toContain('widget-v4-ok');
-        expect(chunk).not.toContain('style: { color }');
+        expect(uiSrc).toContain('function RelapseRiskVariantBody');
+        expect(uiSrc).toContain('widget-v4-hero-num__val--risk');
+        expect(uiSrc).toContain('v4RiskLevelState(level)');
+        expect(uiSrc).toContain('v4ValueStateClass');
+        expect(uiSrc).not.toContain('widget-v4-ok');
+        const listStart = uiSrc.indexOf("if (size === '2x2' || variantId === 'list')");
+        const listChunk = uiSrc.slice(listStart, listStart + 900);
+        expect(listChunk).not.toContain('style: { color }');
         expect(cssSrc).toContain('.widget-v4-hero-num__val--risk');
         expect(cssSrc).toContain('font-weight: 700');
         expect(cssSrc).toContain('.widget-v4-val--good');
@@ -121,9 +121,9 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(uiSrc).toContain('function v4WeightSparkTrendState');
         expect(uiSrc).toContain('function v4ValueStateClass');
         expect(uiSrc).toMatch(/function v4ValueStateClass[\s\S]{0,200}widget-v4-val--act/);
-        const sleepChunk = uiSrc.slice(uiSrc.indexOf('function SleepWidgetContent'), uiSrc.indexOf('function SleepWidgetContent') + 1200);
+        const sleepChunk = uiSrc.slice(uiSrc.indexOf('function SleepVariantBody'), uiSrc.indexOf('function SleepVariantBody') + 2200);
         expect(sleepChunk).toContain('v4SleepValueState');
-        const waterChunk = uiSrc.slice(uiSrc.indexOf('function WaterWidgetContent'), uiSrc.indexOf('function WaterWidgetContent') + 2000);
+        const waterChunk = uiSrc.slice(uiSrc.indexOf('function WaterVariantBody'), uiSrc.indexOf('function WaterVariantBody') + 2200);
         expect(waterChunk).toContain('v4WaterValueState');
         expect(waterChunk).toContain('data.isClosedDay');
     });
@@ -134,24 +134,43 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(uiSrc).toContain('function v4HeatmapMetaState');
         expect(uiSrc).toContain('V4_MACRO_DEVIATION_PCT = 0.05');
 
-        const healthStart = uiSrc.indexOf("v4Kicker('Тренд здоровья')");
-        const healthChunk = uiSrc.slice(healthStart, healthStart + 600);
-        expect(healthChunk).toContain('v4HealthTrendState');
+        expect(uiSrc).toContain('function HealthTrendVariantBody');
+        expect(uiSrc).toContain('v4HealthTrendState');
+        const healthChunk = uiSrc.slice(uiSrc.indexOf('function HealthTrendVariantBody'), uiSrc.indexOf('function HealthTrendVariantBody') + 4500);
         expect(healthChunk).not.toContain('widget-v4-ok');
 
-        expect(uiSrc).toContain('function v4InsulinWaveStatusState');
-        expect(uiSrc).toMatch(/widget-v4-stack__footer[\s\S]{0,200}v4InsulinWaveStatusState/);
+        expect(uiSrc).toContain('function InsulinWaveVariantBody');
+        expect(uiSrc).toMatch(/widget-v4-insulin-wave__footer[\s\S]{0,260}widget-v4-val--act/);
 
         expect(cssSrc).toContain('.widget-v4-row__value.widget-v4-val--good');
         expect(cssSrc).toContain('.widget-v4-stack__footer .widget-v4-val--good');
     });
 
-    it('калории 2×1 — «Осталось» строкой, terracotta hero', () => {
-        const start = uiSrc.indexOf('// 2×1 — канвас g1: «Осталось N»');
-        const chunk = uiSrc.slice(start, start + 900);
-        expect(chunk).toContain("'Осталось '");
-        expect(chunk).toContain('widget-v4-val--act');
-        expect(chunk).not.toContain('widget-calories__hero-bar');
+    it('калории 2×1 — без заголовка, «ккал» при числе, полоса и дробь', () => {
+        // Канвас «Калории · Строка»: заголовок снят, освободившаяся строка
+        // отдана полосе и дроби «съедено / норма».
+        expect(uiSrc).toContain('function CaloriesVariantBody');
+        expect(uiSrc).toContain('widget-calories__line-value');
+        expect(uiSrc).toContain('widget-calories__line-fraction');
+        const lineStart = uiSrc.indexOf("if (variantId === 'line' || size === '2x1')");
+        const lineChunk = uiSrc.slice(lineStart, lineStart + 2000);
+        expect(lineChunk).not.toContain("v4Kicker('Калории')");
+        expect(lineChunk).toContain("'осталось'");
+        expect(lineChunk).toContain('caloriesHeroBar(');
+    });
+
+    it('калории 2×2 — съедено/норма внизу, перебор красит число и полосу', () => {
+        // Канвас «Калории · состояние»: слева факт чернилами, справа норма
+        // шалфеем; перебор — минус, красное число и красный хвост полосы.
+        expect(uiSrc).toContain("cap: 'съедено'");
+        expect(uiSrc).toContain("cap: 'норма'");
+        expect(uiSrc).not.toContain("leftCap: isClosedDay ? 'итог' : 'сейчас'");
+        expect(uiSrc).toContain('function caloriesBarSplit');
+        expect(uiSrc).toContain('widget-calories__hero-bar-over');
+        expect(uiSrc).toMatch(/hasOver \? 'bad' : 'good'/);
+        expect(cssSrc).toContain('.widget-calories__hero-bar-num--good');
+        expect(cssSrc).toContain('.widget-calories__hero-bar-num--bad');
+        expect(cssSrc).toContain('.widget-calories__hero-bar-over');
     });
 
     it('вода — медиана подъёма 14 дней в widget_data', () => {
@@ -165,7 +184,9 @@ describe('виджеты g1 в сфере палитры', () => {
         const dataSrc = fs.readFileSync(path.join(WEB_DIR, 'widgets/widget_data.js'), 'utf8');
         expect(dataSrc).toContain('_isClosedDay');
         expect(dataSrc).toContain('isClosedDay: this._isClosedDay()');
-        expect(uiSrc).toContain('итог дня');
+        expect(uiSrc).toContain('съедено за день');
+        expect(uiSrc).toContain("cap: 'не съедено'");
+        expect(uiSrc).not.toContain('итог дня');
         expect(uiSrc).toMatch(/data\.isClosedDay[\s\S]{0,80}neutral/);
     });
 
@@ -180,14 +201,15 @@ describe('виджеты g1 в сфере палитры', () => {
     });
 
     it('динамика веса 2×1 — v4 виды и долгий тап', () => {
-        expect(uiSrc).toContain('WEIGHT_DYNAMICS_VARIANTS');
-        expect(uiSrc).toContain('WeightDynamicsTile2x1');
-        expect(uiSrc).toContain('displayVariant');
+        const variantsSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_variants_v4.js'), 'utf8');
+        expect(uiSrc).toContain('CrashRiskDynamicsVariantTile');
+        expect(variantsSrc).toContain('displayVariant');
         expect(uiSrc).toContain('weightDynamics:variantSaved');
         expect(uiSrc).not.toMatch(/2×1[\s\S]{0,400}widget-v4-periods/);
         expect(cssSrc).toContain('.widget-wd-sheet');
         expect(cssSrc).toContain('widget-wd--holding');
         expect(uiSrc).toContain('React.createElement(WeightDynamicsSparkSvg,');
         expect(uiSrc).not.toContain('? WeightDynamicsSparkSvg({');
+        expect(uiSrc).not.toContain('WeightDynamicsTile2x1');
     });
 });

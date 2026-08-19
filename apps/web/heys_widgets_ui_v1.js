@@ -608,6 +608,51 @@
       }
     }, [isEditMode, widget]);
 
+    const hasVariantPicker = useMemo(() => {
+      const catalog = HEYS.Widgets.VariantsV4?.getCatalog?.(widget.type) || [];
+      return catalog.length > 1;
+    }, [widget.type]);
+
+    const editLpTimerRef = useRef(null);
+    const editLpStartRef = useRef(null);
+
+    const cancelEditLongPress = useCallback(() => {
+      if (editLpTimerRef.current) {
+        clearTimeout(editLpTimerRef.current);
+        editLpTimerRef.current = null;
+      }
+    }, []);
+
+    useEffect(() => () => cancelEditLongPress(), [cancelEditLongPress]);
+
+    const handleViewPointerDown = useCallback((e) => {
+      if (isEditMode || hasVariantPicker) return;
+      const t = e?.target;
+      if (t && typeof t.closest === 'function' && t.closest('.widget-v4-tile')) return;
+      editLpStartRef.current = {
+        x: e.clientX || e.touches?.[0]?.clientX || 0,
+        y: e.clientY || e.touches?.[0]?.clientY || 0
+      };
+      cancelEditLongPress();
+      editLpTimerRef.current = setTimeout(() => {
+        HEYS.Widgets.enterEditMode?.();
+        HEYS.dayUtils?.haptic?.('light');
+      }, 350);
+    }, [isEditMode, hasVariantPicker, cancelEditLongPress]);
+
+    const handleViewPointerMove = useCallback((e) => {
+      if (!editLpTimerRef.current || !editLpStartRef.current) return;
+      const x = e.clientX || e.touches?.[0]?.clientX || 0;
+      const y = e.clientY || e.touches?.[0]?.clientY || 0;
+      const dx = Math.abs(x - editLpStartRef.current.x);
+      const dy = Math.abs(y - editLpStartRef.current.y);
+      if (dx > 10 || dy > 10) cancelEditLongPress();
+    }, [cancelEditLongPress]);
+
+    const handleViewPointerUp = useCallback(() => {
+      cancelEditLongPress();
+    }, [cancelEditLongPress]);
+
     const handleRemoveClick = useCallback((e) => {
       e.stopPropagation();
       onRemove?.(widget.id);
@@ -1234,10 +1279,22 @@
         return s;
       })(),
       onClick: handleClick,
-      onPointerDown: handlePointerDown,
-      onPointerMove: handlePointerMove,
-      onPointerUp: handlePointerUp,
-      onPointerCancel: handlePointerUp
+      onPointerDown: (e) => {
+        handleViewPointerDown(e);
+        handlePointerDown(e);
+      },
+      onPointerMove: (e) => {
+        handleViewPointerMove(e);
+        handlePointerMove(e);
+      },
+      onPointerUp: (e) => {
+        handleViewPointerUp();
+        handlePointerUp(e);
+      },
+      onPointerCancel: (e) => {
+        handleViewPointerUp();
+        handlePointerUp(e);
+      }
     },
 
 
@@ -1569,6 +1626,42 @@
     return React.createElement('div', { className: 'widget-v4-kicker' }, text);
   }
 
+  function isWidgetV4EditMode() {
+    return HEYS.Widgets.state?.isEditMode?.() || false;
+  }
+
+  function WidgetV4VariantShell({ widget, widgetType, renderBody }) {
+    const V4 = HEYS.Widgets.VariantsV4;
+    const catalog = V4?.getCatalog?.(widgetType) || [];
+    if (!V4?.useWidgetVariantTile || catalog.length <= 1) {
+      const active = V4?.getActiveVariant?.(widget, widgetType);
+      return renderBody(active?.id || 'default', { activeVariant: active });
+    }
+    const hook = V4.useWidgetVariantTile({
+      widget,
+      widgetType,
+      disabled: isWidgetV4EditMode(),
+      renderPreview: (variantId, opts) => {
+        const meta = V4.getVariantById(widgetType, variantId);
+        return renderBody(variantId, {
+          ...opts,
+          preview: true,
+          activeVariant: meta
+        });
+      }
+    });
+    return React.createElement(React.Fragment, null,
+      React.createElement('div', hook.tileProps,
+        renderBody(hook.renderVariant, {
+          activeVariant: hook.activeVariant
+        })
+      ),
+      hook.sheetProps
+        ? React.createElement(V4.WidgetVariantSheet, hook.sheetProps)
+        : null
+    );
+  }
+
   const WIDGET_V4_SPARK_DRAW_MS = 1200;
   const WIDGET_V4_SPARK_DELAY_MS = 320;
 
@@ -1616,11 +1709,16 @@
       const len = el.getTotalLength();
       if (!Number.isFinite(len) || len <= 0) return undefined;
       setPathLength(len);
+      if (!widgetV4ShouldAnimateSparkDraw()) {
+        setRevealed(true);
+        return undefined;
+      }
       setRevealed(false);
       return undefined;
     }, [pathD, compact, enabled]);
 
     React.useEffect(() => {
+      if (!widgetV4ShouldAnimateSparkDraw()) return undefined;
       if (!pathD || !enabled || compact || pathLength <= 0) return undefined;
       let raf2 = 0;
       let timer = 0;
@@ -1754,6 +1852,80 @@
     return span;
   }
 
+  const SLEEP_AXIS_START_MIN = 22 * 60;
+  const SLEEP_AXIS_SPAN_MIN = 11 * 60;
+
+  function hmToSleepAxisPercent(hm) {
+    const m = parseHmToMinutes(hm);
+    if (!Number.isFinite(m)) return null;
+    let pos = m - SLEEP_AXIS_START_MIN;
+    if (pos < 0) pos += 1440;
+    return Math.max(0, Math.min(100, (pos / SLEEP_AXIS_SPAN_MIN) * 100));
+  }
+
+  function sleepWindowBand(hmStart, hmEnd) {
+    const left = hmToSleepAxisPercent(hmStart);
+    const right = hmToSleepAxisPercent(hmEnd);
+    if (!Number.isFinite(left) || !Number.isFinite(right)) return null;
+    return { left, width: Math.max(4, right - left) };
+  }
+
+  function formatSleepHmLabel(hm, prefix) {
+    const m = parseHmToMinutes(hm);
+    if (!Number.isFinite(m)) return prefix ? `${prefix} —` : '—';
+    const h = Math.floor(m / 60) % 24;
+    const min = m % 60;
+    const text = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+    return prefix ? `${prefix} ${text}` : text;
+  }
+
+  function v4WaterScheduleAt(target, wakeMinutes, awakeSpan, atMinutes) {
+    if (!target || !wakeMinutes || !awakeSpan) {
+      return { expectedMl: 0, expectedPct: 0, checkLabel: null };
+    }
+    let elapsed = atMinutes - wakeMinutes;
+    if (elapsed < 0) elapsed += 1440;
+    elapsed = Math.max(0, Math.min(awakeSpan, elapsed));
+    const share = Math.min(1, elapsed / awakeSpan);
+    const h = Math.floor(atMinutes / 60) % 24;
+    const min = atMinutes % 60;
+    return {
+      expectedMl: target * share,
+      expectedPct: Math.round(share * 100),
+      checkLabel: `к ${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
+    };
+  }
+
+  function v4MacroBarRow(shortLabel, value, target, toneClass) {
+    const v = Number(value) || 0;
+    const t = Number(target) || 0;
+    const ratio = t > 0 ? v / t : 0;
+    const fillPct = t > 0 ? Math.min(100, ratio * 100) : 0;
+    const over = ratio > 1;
+    const normMarkerPct = over && t > 0 ? Math.round((t / v) * 100) : null;
+    const valClass = toneClass === 'protein' && v < t - t * 0.05
+      ? 'widget-v4-val--warn'
+      : (over ? 'widget-v4-val--warn' : 'widget-v4-val--good');
+    return React.createElement('div', { className: 'widget-v4-macro-bar-row' },
+      React.createElement('span', { className: 'widget-v4-macro-bar-row__label' }, shortLabel),
+      React.createElement('span', { className: 'widget-v4-macro-bar-row__track' },
+        React.createElement('span', {
+          className: 'widget-v4-macro-bar-row__fill' + (over ? ' widget-v4-macro-bar-row__fill--over' : ''),
+          style: { width: `${fillPct}%` }
+        }),
+        normMarkerPct != null
+          ? React.createElement('span', {
+            className: 'widget-v4-macro-bar-row__norm',
+            style: { left: `${normMarkerPct}%` }
+          })
+          : null
+      ),
+      React.createElement('span', { className: 'widget-v4-macro-bar-row__nums ' + valClass },
+        `${Math.round(v)} / ${Math.round(t)}`
+      )
+    );
+  }
+
   function v4ValueStateClass(state) {
     if (state === 'good') return 'widget-v4-val--good';
     if (state === 'bad') return 'widget-v4-val--bad';
@@ -1777,7 +1949,8 @@
   }
 
   function v4WeightSparkTrendState(points) {
-    const pts = (points || []).filter((p) =>
+    const src = Array.isArray(points) ? points : [];
+    const pts = src.filter((p) =>
       Number.isFinite(p?.weight) && !p.excluded && !p.estimated
     );
     if (pts.length < 2) return 'neutral';
@@ -1949,7 +2122,7 @@
     return entry?.color ?? fallback;
   }
 
-  function DayScoreWidgetContent({ widget, data }) {
+  function DayScoreVariantBody({ variantId, widget, data, meta = {} }) {
     const score = data?.score ?? 0;
     const level = data?.level ?? 'none';
     const hasData = data?.hasData ?? false;
@@ -2015,7 +2188,32 @@
     }, `${getLevelEmoji()} ${getLevelLabel()}`) : null;
 
     // 2x1 — канвас g1: «Оценка дня» слева, «6,2 / 10» справа
-    if (isShort) {
+    if (isShort || variantId === 'row' || variantId === 'factors') {
+      if (variantId === 'factors') {
+        const bars = Array.isArray(data.factorBars) ? data.factorBars : [];
+        return React.createElement('div', {
+          className: `${rootClassName} widget-v4-stack`
+        },
+          React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+            v4Kicker('Оценка дня'),
+            React.createElement('span', { className: 'widget-v4-row__value' },
+              formatRuDecimal(score / 10, 1),
+              React.createElement('span', { className: 'widget-v4-unit' }, ' / 10')
+            )
+          ),
+          React.createElement('div', { className: 'widget-v4-factor-cols' },
+            bars.map((bar) => React.createElement('span', {
+              key: bar.key,
+              className: 'widget-v4-factor-cols__item'
+            },
+              React.createElement('span', {
+                className: 'widget-v4-factor-cols__bar widget-v4-factor-cols__bar--' + (bar.tone || 'good')
+              }),
+              React.createElement('span', { className: 'widget-v4-factor-cols__label' }, bar.label)
+            ))
+          )
+        );
+      }
       return React.createElement('div', {
         className: `${rootClassName} widget-v4-row`
       },
@@ -2023,6 +2221,27 @@
         React.createElement('div', { className: 'widget-v4-row__value' },
           formatRuDecimal(score / 10, 1),
           React.createElement('span', { className: 'widget-v4-unit' }, ' / 10')
+        )
+      );
+    }
+
+    if (variantId === 'week_chart') {
+      const weekScores = Array.isArray(data.weekScores) ? data.weekScores : [];
+      const maxScore = Math.max(1, ...weekScores.map((d) => d.score || 0));
+      return React.createElement('div', {
+        className: `${rootClassName} widget-v4-stack`
+      },
+        v4Kicker('Оценка · 7 дней'),
+        React.createElement('div', { className: 'widget-v4-week-bars' },
+          weekScores.map((day) => React.createElement('span', {
+            key: day.date,
+            className: 'widget-v4-week-bars__col',
+            style: { height: `${Math.round((day.score / maxScore) * 100)}%` }
+          }))
+        ),
+        React.createElement('div', { className: 'widget-v4-row__value' },
+          Math.round(score),
+          React.createElement('span', { className: 'widget-v4-unit' }, ' / 100')
         )
       );
     }
@@ -2041,6 +2260,19 @@
       // Top recommendation
       actionEl ? React.createElement('div', { className: 'widget-day-score__action-row' }, actionEl) : null
     );
+  }
+
+  function DayScoreWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'dayScore',
+      renderBody: (variantId, meta) => React.createElement(DayScoreVariantBody, {
+        variantId,
+        widget,
+        data,
+        meta
+      })
+    });
   }
 
   // === Insulin Wave Sparkline (SVG) ===
@@ -2148,21 +2380,161 @@
   }
 
   // === Insulin Wave Widget Content ===
-  function InsulinWaveWidgetContent({ widget, data }) {
+  function normalizeInsulinWaveVariantId(variantId) {
+    if (variantId === 'chart') return 'day_as_is';
+    if (variantId === 'compact') return 'day_bar';
+    return variantId || 'day_as_is';
+  }
+
+  function insulinWaveV4(data) {
+    return data?.v4 || data || {};
+  }
+
+  function InsulinWaveBaseline({ nowX, height = 52, showNow = true }) {
+    const h = height;
+    const baseY = h - 6;
+    return React.createElement(React.Fragment, null,
+      React.createElement('line', {
+        x1: 0, y1: baseY, x2: 130, y2: baseY,
+        stroke: 'var(--v4-line, rgba(0,0,0,.12))',
+        strokeWidth: 1.5
+      }),
+      showNow && Number.isFinite(nowX) ? React.createElement(React.Fragment, null,
+        React.createElement('line', {
+          x1: nowX, y1: 9, x2: nowX, y2: baseY,
+          stroke: 'var(--v4-ink, #201e1d)',
+          strokeWidth: 1,
+          strokeDasharray: '2 2.5',
+          opacity: 0.45
+        }),
+        React.createElement('circle', {
+          cx: nowX, cy: baseY, r: 2.4,
+          fill: 'var(--v4-ink, #201e1d)',
+          opacity: 0.55
+        })
+      ) : null
+    );
+  }
+
+  function InsulinWaveDaySvg({ v4, height = 52 }) {
+    const waves = Array.isArray(v4.dayWaves) ? v4.dayWaves : [];
+    const baseY = height - 6;
+    return React.createElement('svg', {
+      className: 'widget-v4-wave widget-v4-insulin-wave',
+      viewBox: `0 0 130 ${height}`,
+      width: '100%',
+      height,
+      'aria-hidden': 'true'
+    },
+      waves.map((w) => React.createElement('path', {
+        key: w.id || w.pathD,
+        className: 'widget-v4-insulin-wave__fill',
+        d: w.pathD,
+        opacity: w.isActive ? 0.72 : 0.55
+      })),
+      React.createElement(InsulinWaveBaseline, { nowX: v4.nowX, height, showNow: true })
+    );
+  }
+
+  function InsulinWaveCurrentSvg({ v4, height = 48 }) {
+    const baseY = height - 6;
+    const nowX = v4.activeNowX ?? v4.nowX;
+    const markerY = 26;
+    return React.createElement('svg', {
+      className: 'widget-v4-wave widget-v4-insulin-wave widget-v4-insulin-wave--current',
+      viewBox: `0 0 130 ${height}`,
+      width: '100%',
+      height,
+      'aria-hidden': 'true'
+    },
+      v4.activeWavePath
+        ? React.createElement('path', {
+          className: 'widget-v4-insulin-wave__fill',
+          d: v4.activeWavePath,
+          opacity: 0.5
+        })
+        : null,
+      v4.activeWavePath
+        ? React.createElement('path', {
+          className: 'widget-v4-insulin-wave__stroke',
+          d: v4.activeWavePath,
+          fill: 'none',
+          strokeWidth: 2,
+          strokeLinejoin: 'round'
+        })
+        : null,
+      React.createElement(InsulinWaveBaseline, { nowX, height, showNow: true }),
+      v4.activeWavePath && Number.isFinite(nowX)
+        ? React.createElement('circle', {
+          cx: nowX, cy: markerY, r: 3.2,
+          className: 'widget-v4-insulin-wave__dot'
+        })
+        : null
+    );
+  }
+
+  function InsulinWaveOverlapSvg({ v4, height = 50 }) {
+    const pair = Array.isArray(v4.overlapPair) ? v4.overlapPair : [];
+    const span = v4.overlapSpan;
+    const baseY = height - 4;
+    return React.createElement('svg', {
+      className: 'widget-v4-wave widget-v4-insulin-wave widget-v4-insulin-wave--overlap',
+      viewBox: `0 0 130 ${height}`,
+      width: '100%',
+      height,
+      'aria-hidden': 'true'
+    },
+      pair.map((w) => React.createElement('path', {
+        key: w.id || w.pathD,
+        className: 'widget-v4-insulin-wave__fill',
+        d: w.pathD,
+        opacity: 0.55
+      })),
+      React.createElement('line', {
+        x1: 0, y1: baseY - 2, x2: 130, y2: baseY - 2,
+        stroke: 'var(--v4-line, rgba(0,0,0,.12))',
+        strokeWidth: 1.5
+      }),
+      span && Number.isFinite(span.x0) && Number.isFinite(span.x1)
+        ? React.createElement('line', {
+          x1: span.x0,
+          y1: baseY + 3,
+          x2: span.x1,
+          y2: baseY + 3,
+          className: 'widget-v4-insulin-wave__overlap-mark',
+          strokeWidth: 2,
+          strokeLinecap: 'round'
+        })
+        : null
+    );
+  }
+
+  function InsulinWaveDayBar({ v4 }) {
+    const bar = v4.dayBar || {};
+    const segments = Array.isArray(bar.segments) ? bar.segments : [];
+    return React.createElement(React.Fragment, null,
+      React.createElement('div', { className: 'widget-v4-insulin-daybar' },
+        segments.map((seg, index) => React.createElement('span', {
+          key: `ins-bar-${index}`,
+          className: 'widget-v4-insulin-daybar__seg' + (seg.elevated ? ' widget-v4-insulin-daybar__seg--up' : ''),
+          style: { flex: seg.flex || 1 }
+        }))
+      ),
+      React.createElement('div', { className: 'widget-v4-insulin-daybar__labels' },
+        React.createElement('span', null, bar.dayStartLabel || '7:10'),
+        React.createElement('span', null, bar.nowLabel || 'сейчас'),
+        React.createElement('span', null, bar.dayEndLabel || '23:00')
+      )
+    );
+  }
+
+  function InsulinWaveVariantBody({ variantId, widget, data, meta = {} }) {
+    variantId = normalizeInsulinWaveVariantId(variantId);
+    const v4 = insulinWaveV4(data);
     const hasData = data?.hasData ?? false;
     const status = data?.status || 'noData';
-    const progress = data?.progress || 0;
     const remaining = data?.remaining || 0;
-    const endTime = data?.endTime || null;
-    const color = data?.color || 'var(--v4-water, #3b82f6)';
-    // Канонический расчёт знает только scheduled/settling/complete
-    // (heys_insulin_wave_v1.js:140) и поля isLipolysis не отдаёт — статуса
-    // 'lipolysis' не бывает, поэтому точка спарклайна никогда не садилась на
-    // базовую линию. 'complete' — тот же эквивалент, что и в widget_data.js.
     const isLipolysis = data?.isLipolysis ?? (status === 'complete');
-
-    const d = getWidgetDims(widget);
-    const isShort = d.isShort;
 
     if (!hasData) {
       return React.createElement('div', { className: 'widget-v4-stack' },
@@ -2187,79 +2559,77 @@
       );
     }
 
-    const mainLabel = status === 'complete' ? 'Окно завершено' : 'После еды';
-
-    const mainLabelColor = status === 'complete' ? 'var(--v4-wgt-ok-deep, #167D61)' : 'var(--v4-wgt-link, #2F6BFF)';
-
-    const timeLabelColor = 'var(--v4-water, #3b82f6)'; // всегда синий
-
-    const timeLabel = status === 'complete'
-      ? 'Готово'
-      : remaining > 0
-        ? (remaining >= 60
-          ? `ещё ${Math.floor(remaining / 60)}ч ${Math.round(remaining % 60)}м`
-          : `ещё ${Math.round(remaining)} мин`)
-        : '—';
-
-    const subText = status === 'complete'
-      ? 'Ориентируйся на голод и план'
-      : (data?.endTimeRange ? `Диапазон ${data.endTimeRange}` : endTime ? `Ориентир ${endTime}` : 'Уточняем диапазон');
-    const subTextColor = 'var(--v4-wgt-slate, #6B7C93)';
-
-    const sparkline = React.createElement(InsulinWaveSparkline, {
-      progress, isLipolysis, color, width: '100%', height: isShort ? 34 : 50
-    });
-
-    // === 2×1 horizontal ===
-    if (isShort) {
-      return React.createElement('div', {
-        style: { display: 'flex', alignItems: 'center', height: '100%', gap: '8px', padding: '4px 10px' }
-      },
-        React.createElement('div', {
-          style: { display: 'flex', flexDirection: 'column', gap: '2px', flexShrink: 0, minWidth: '68px' }
-        },
-          React.createElement('div', {
-            style: { fontSize: '0.72rem', fontWeight: 700, color: mainLabelColor, lineHeight: 1.2 }
-          }, mainLabel),
-          React.createElement('div', {
-            style: { fontSize: '0.65rem', color: timeLabelColor, fontWeight: 700 }
-          }, timeLabel)
-        ),
-        React.createElement('div', { style: { flex: 1, minWidth: 0 } }, sparkline)
+    if (variantId === 'calm_window') {
+      return React.createElement('div', { className: 'widget-v4-mini' },
+        v4Kicker('Покой'),
+        React.createElement('span', {
+          className: 'widget-v4-mini__value ' + v4ValueStateClass(isLipolysis ? 'good' : 'neutral')
+        }, v4.calmWindowLabel || '—'),
+        React.createElement('span', { className: 'widget-v4-muted', style: { marginTop: 'auto' } }, 'без волн')
       );
     }
 
-    // === 2×2 — канвас g1: kicker + песочная волна + статус
-    const waveCount = Number(data?.waveCount || data?.waves?.length || data?.mealCount || 0);
-    const waveStatus = (status === 'complete' || isLipolysis) ? 'без критичных' : 'идёт волна';
-    const waveCountLabel = waveCount > 0
-      ? (waveCount === 1 ? '1 волна' : (waveCount < 5 ? `${waveCount} волны` : `${waveCount} волн`))
-      : (timeLabel || '');
+    if (variantId === 'day_bar') {
+      return React.createElement('div', { className: 'widget-v4-stack' },
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('Инсулин · под волной'),
+          React.createElement('span', { className: 'widget-v4-row__meta' }, v4.elevatedMeta || '—')
+        ),
+        InsulinWaveDayBar({ v4 })
+      );
+    }
+
+    if (variantId === 'current_wave') {
+      const mins = remaining > 0 ? Math.round(remaining) : 0;
+      return React.createElement('div', { className: 'widget-v4-stack' },
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('Идёт волна'),
+          React.createElement('span', { className: 'widget-v4-row__meta' }, v4.currentMealMeta || '')
+        ),
+        React.createElement('div', { className: 'widget-v4-hero-num' },
+          React.createElement('span', {
+            className: 'widget-v4-hero-num__val widget-v4-val--act'
+          }, mins || '—'),
+          React.createElement('span', { className: 'widget-v4-unit' }, mins ? 'мин до спада' : '')
+        ),
+        InsulinWaveCurrentSvg({ v4 })
+      );
+    }
+
+    if (variantId === 'overlaps') {
+      return React.createElement('div', { className: 'widget-v4-stack' },
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('Пересечение волн'),
+          React.createElement('span', { className: 'widget-v4-row__meta' }, v4.overlapTimeLabel || '')
+        ),
+        React.createElement('div', { className: 'widget-v4-hero-num' },
+          React.createElement('span', { className: 'widget-v4-hero-num__val widget-v4-val--act' },
+            v4.overlapHoursLabel || '—'
+          ),
+          React.createElement('span', { className: 'widget-v4-unit' }, 'без перерыва')
+        ),
+        InsulinWaveOverlapSvg({ v4 }),
+        React.createElement('span', { className: 'widget-v4-muted' }, 'второй приём попал в волну')
+      );
+    }
+
+    // day_as_is — дефолт 2×2
+    const mealLabel = v4.mealCountLabel || (v4.mealCount ? `${v4.mealCount} приёма` : '—');
+    const overlapLabel = v4.overlapCountLabel;
+    const elevatedLabel = v4.elevatedLabel ? `под волной ${v4.elevatedLabel}` : '';
     return React.createElement('div', { className: 'widget-v4-stack' },
-      v4Kicker('Инсулиновая волна'),
-      React.createElement('svg', {
-        className: 'widget-v4-wave',
-        viewBox: '0 0 130 52',
-        width: '100%',
-        height: 52,
-        'aria-hidden': 'true'
-      },
-        React.createElement('line', {
-          x1: 0, y1: 46, x2: 130, y2: 46,
-          stroke: 'var(--v4-line, rgba(0,0,0,.1))',
-          strokeWidth: 1.5
-        }),
-        React.createElement('path', {
-          className: 'widget-v4-wave__fill',
-          d: 'M3,46 C22,46 28,16 42,16 C56,16 62,46 78,46 C92,46 98,12 112,12 C122,12 126,46 128,46 L3,46 Z',
-          opacity: 0.85
-        })
+      React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+        v4Kicker('Инсулиновая волна'),
+        React.createElement('span', { className: 'widget-v4-row__meta' }, mealLabel)
       ),
-      React.createElement('div', { className: 'widget-v4-stack__footer' },
-        React.createElement('span', {
-          className: v4ValueStateClass(v4InsulinWaveStatusState(waveStatus))
-        }, waveStatus),
-        React.createElement('span', { className: 'widget-v4-muted' }, waveCountLabel)
+      InsulinWaveDaySvg({ v4 }),
+      React.createElement('div', { className: 'widget-v4-stack__footer widget-v4-insulin-wave__footer' },
+        overlapLabel
+          ? React.createElement('span', { className: 'widget-v4-val--act' }, overlapLabel)
+          : React.createElement('span', {
+            className: v4ValueStateClass(isLipolysis ? 'good' : 'neutral')
+          }, isLipolysis ? 'без критичных' : 'идёт волна'),
+        React.createElement('span', { className: 'widget-v4-muted' }, elevatedLabel || '—')
       )
     );
   }
@@ -2271,11 +2641,24 @@
   // вернуть их как есть значило бы показать «Низкая волна / 0м» вместо
   // нынешней корректной карточки «Окно завершено».
 
+  function InsulinWaveWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'insulinWave',
+      renderBody: (variantId, meta) => React.createElement(InsulinWaveVariantBody, {
+        variantId,
+        widget,
+        data,
+        meta
+      })
+    });
+  }
+
   // === Health Trend Widget Content (Тренд здоровья 0-100 из инсайтов) ===
-  function HealthTrendWidgetContent({ widget, data }) {
+  function HealthTrendVariantBody({ variantId, widget, data, meta = {} }) {
     const score = data?.score ?? 0;
     const hasData = data?.hasData ?? false;
-    const periodDays = data?.periodDays ?? 7;
+    const periodDays = widget?.settings?.periodDays ?? data?.periodDays ?? 14;
     const categories = Array.isArray(data?.categories) ? data.categories : [];
     const daysWithData = data?.daysWithData ?? 0;
     const showCategories = widget.settings?.showCategories !== false;
@@ -2288,37 +2671,6 @@
 
     const color = getColor(score);
 
-    const PERIODS = [7, 30];
-    const handlePeriod = (days, e) => {
-      e?.stopPropagation?.();
-      if (!widget?.id || periodDays === days) return;
-      HEYS.Widgets.state?.updateWidget(widget.id, {
-        settings: { ...(widget.settings || {}), periodDays: days }
-      }, true);
-    };
-
-    const periodRow = React.createElement('div', {
-      style: { display: 'flex', gap: '4px' }
-    }, PERIODS.map(days => {
-      const isActive = periodDays === days;
-      return React.createElement('button', {
-        key: days,
-        type: 'button',
-        onClick: (e) => handlePeriod(days, e),
-        onPointerDown: (e) => e.stopPropagation(),
-        onPointerUp: (e) => e.stopPropagation(),
-        onTouchStart: (e) => e.stopPropagation(),
-        style: {
-          border: 'none', borderRadius: '999px',
-          padding: '2px 8px', minHeight: '20px', cursor: 'pointer',
-          fontSize: '0.65rem', fontWeight: isActive ? 700 : 500, lineHeight: 1,
-          background: isActive ? color : 'var(--heys-bg-secondary,#f1f5f9)',
-          color: isActive ? '#fff' : 'var(--heys-text-secondary,#94a3b8)',
-          transition: 'all 0.15s ease'
-        }
-      }, `${days} дн.`);
-    }));
-
     if (!hasData) {
       return React.createElement('div', {
         style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '4px', opacity: 0.5 }
@@ -2326,28 +2678,41 @@
         React.createElement('div', { style: { fontSize: isShort ? '1.2rem' : '1.5rem' } }, '🌿'),
         React.createElement('div', { style: { fontSize: '0.7rem', color: 'var(--heys-text-tertiary,#64748b)', textAlign: 'center' } },
           daysWithData < 3 ? 'Нужно 3+ дня данных' : 'Нет данных анализа'
-        ),
-        React.createElement('div', { style: { marginTop: '4px' } }, periodRow)
+        )
       );
     }
 
-    // === 2×1 horizontal: score left, label + period right ===
-    if (isShort) {
-      return React.createElement('div', {
-        style: { display: 'flex', alignItems: 'center', height: '100%', gap: '10px', padding: '4px 10px' }
-      },
-        // Score
-        React.createElement('div', {
-          style: { fontSize: '2rem', fontWeight: 800, color, lineHeight: 1, letterSpacing: '-1px', flexShrink: 0 }
-        }, Math.round(score)),
-        // Right: label + period buttons
-        React.createElement('div', {
-          style: { display: 'flex', flexDirection: 'column', gap: '4px', minWidth: 0, flex: 1 }
-        },
-          React.createElement('div', {
-            style: { fontSize: '0.65rem', fontWeight: 600, color: 'var(--heys-text-secondary,#64748b)', whiteSpace: 'nowrap' }
-          }, 'Тренд здоровья'),
-          periodRow
+    // === 2×1 «Компакт» — канвас: kicker «Тренд · N дней», дельта и мини-линия ===
+    if (isShort || variantId === 'compact') {
+      const compactDelta = Number(data?.delta);
+      const compactHero = Number.isFinite(compactDelta)
+        ? `${compactDelta > 0 ? '+' : (compactDelta < 0 ? '−' : '')}${Math.abs(Math.round(compactDelta))}`
+        : String(Math.round(score));
+      const compactTone = Number.isFinite(compactDelta)
+        ? v4ValueStateClass(v4HealthTrendState(compactDelta))
+        : '';
+      return React.createElement('div', { className: 'widget-v4-stack widget-trend-compact' },
+        v4Kicker(`Тренд · ${periodDays} дней`),
+        React.createElement('div', { className: 'widget-trend-compact__row' },
+          React.createElement('span', {
+            className: 'widget-trend-compact__value ' + compactTone
+          }, compactHero),
+          React.createElement('svg', {
+            className: 'widget-trend-compact__spark ' + compactTone,
+            viewBox: '0 0 58 24',
+            width: 58,
+            height: 24,
+            fill: 'none',
+            'aria-hidden': 'true'
+          },
+            React.createElement('polyline', {
+              points: '2,19 13,17 24,18 35,11 46,8 56,5',
+              stroke: 'currentColor',
+              strokeWidth: 2,
+              strokeLinecap: 'round',
+              strokeLinejoin: 'round'
+            })
+          )
         )
       );
     }
@@ -2389,6 +2754,19 @@
         dotCy: Number(lastPt[1])
       })
     );
+  }
+
+  function HealthTrendWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'healthTrend',
+      renderBody: (variantId, meta) => React.createElement(HealthTrendVariantBody, {
+        variantId,
+        widget,
+        data,
+        meta
+      })
+    });
   }
 
   function CascadeWidgetContent({ widget, data }) {
@@ -2456,6 +2834,142 @@
   let _widgetMotionTimer = 0;
   let _widgetMotionIntroArmed = false;
   let _widgetIntroSlowActive = false;
+  // Intro вкладки виджетов: один раз за жизнь вкладки браузера (sessionStorage переживает
+  // reload); не при возврате с другой вкладки; смена дня — без intro.
+  const WIDGET_TAB_INTRO_SESSION_KEY = 'heys_widgets_tab_intro_v1';
+  const WIDGET_TAB_INTRO_REVEAL_DELAY_MS = 120;
+  let _widgetMotionSessionIntroConsumed = false;
+  let _widgetMotionLastWidgetsClientId = null;
+
+  function widgetMotionHasSeenTabIntro() {
+    try {
+      return sessionStorage.getItem(WIDGET_TAB_INTRO_SESSION_KEY) === '1';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  try {
+    _widgetMotionSessionIntroConsumed = widgetMotionHasSeenTabIntro();
+  } catch (e) { /* noop */ }
+
+  function widgetMotionShouldPlayTabIntro(clientId) {
+    const cid = clientId != null ? String(clientId) : '';
+    if (cid && _widgetMotionLastWidgetsClientId && _widgetMotionLastWidgetsClientId !== cid) {
+      return true;
+    }
+    if (_widgetMotionSessionIntroConsumed || widgetMotionHasSeenTabIntro()) return false;
+    return true;
+  }
+
+  function widgetMotionMarkTabIntroPlayed(clientId) {
+    _widgetMotionSessionIntroConsumed = true;
+    try {
+      sessionStorage.setItem(WIDGET_TAB_INTRO_SESSION_KEY, '1');
+    } catch (e) { /* noop */ }
+    if (clientId != null) _widgetMotionLastWidgetsClientId = String(clientId);
+  }
+
+  function widgetMotionIsElementVisiblyBlocking(el) {
+    if (!el) return false;
+    try {
+      if (el.hidden || el.getAttribute?.('aria-hidden') === 'true') return false;
+      const style = window.getComputedStyle ? window.getComputedStyle(el) : null;
+      if (style && (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0')) {
+        return false;
+      }
+    } catch (e) { /* noop */ }
+    return true;
+  }
+
+  function widgetMotionIsNodeVisible(el) {
+    if (!el || !el.isConnected) return false;
+    let node = el;
+    while (node && node !== document.body) {
+      if (node.hidden || node.getAttribute?.('aria-hidden') === 'true') return false;
+      try {
+        const style = window.getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
+        if (style.opacity !== '' && Number(style.opacity) === 0) return false;
+      } catch (e) { /* noop */ }
+      node = node.parentElement;
+    }
+    try {
+      const rect = el.getBoundingClientRect();
+      return rect.width > 1 && rect.height > 1;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function widgetMotionHasBootSpinner() {
+    try {
+      const selectors = [
+        '.heys-boot-mark',
+        '[data-heys-boot-mark]',
+        '.heys-skeleton',
+        '#heys-login-gate[data-visible="true"]'
+      ];
+      const nodes = document.querySelectorAll(selectors.join(','));
+      return Array.from(nodes).some(widgetMotionIsNodeVisible);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function widgetMotionHasBlockingOverlay() {
+    try {
+      if (typeof document === 'undefined' || document.hidden) return true;
+      const checkinStatus = HEYS.MorningCheckinDebug?.getStatus?.();
+      if (checkinStatus && checkinStatus.sessionDone !== true
+        && ['open', 'in_progress', 'failed'].includes(checkinStatus.state)) {
+        return true;
+      }
+      const openModals = HEYS.ModalManager?.getOpenModals?.() || [];
+      if (openModals.some((modalId) => modalId !== 'hunger-energy-status-modal')) {
+        return true;
+      }
+      const selectors = [
+        '.ca-modal-backdrop--visible',
+        '.whats-new-modal',
+        '.whats-new-backdrop',
+        '.tour-welcome-modal',
+        '.heys-consent-sign-backdrop',
+        '.consent-fulltext-backdrop',
+        '#heys-morning-activation-modal-root',
+        '#heys-step-modal-root [data-heys-step-modal="true"]',
+        '.widget-wd-sheet__blocker'
+      ];
+      const nodes = document.querySelectorAll(selectors.join(','));
+      return Array.from(nodes).some(widgetMotionIsElementVisiblyBlocking);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function widgetMotionCanStartTabIntro(containerEl) {
+    if (typeof document === 'undefined' || document.hidden) return false;
+    if (!containerEl || !containerEl.isConnected) return false;
+    if (!widgetMotionIsNodeVisible(containerEl)) return false;
+    if (widgetMotionHasBootSpinner()) return false;
+    if (widgetMotionHasBlockingOverlay()) return false;
+    const grid = containerEl.querySelector?.('.widgets-grid');
+    if (!grid || !widgetMotionIsNodeVisible(grid)) return false;
+    return true;
+  }
+
+  function widgetMotionPrepareTabIntroStart() {
+    widgetMotionArmIntroFromZero();
+    _widgetMotionChannels.forEach((ch, motionId) => {
+      if (!widgetMotionShouldIntroFromZero(motionId)) return;
+      delete ch.introSeeded;
+      ch.display = 0;
+      ch.start = 0;
+      ch.active = false;
+      ch.startTs = -1;
+    });
+    _widgetMotionChannels.forEach(_widgetMotionNotify);
+  }
 
   function widgetMotionIntroDuration(ms) {
     return _widgetIntroSlowActive ? ms * WIDGET_MOTION_INTRO_FACTOR : ms;
@@ -2506,6 +3020,10 @@
       _widgetV4WeightSparkDone = true;
       _widgetV4SparkDoneListeners.forEach((fn) => fn());
     }
+  }
+
+  function widgetV4ShouldAnimateSparkDraw() {
+    return _widgetV4SparkSeqArmed;
   }
 
   function widgetV4RegisterWeightSparkWidget() {
@@ -2732,13 +3250,61 @@
     return widgetMotionEnsureChannel(motionId, target, { duration, quantize });
   }
 
-  function CaloriesWidgetContent({ widget, data }) {
+  // Канвас «Калории · состояние»: число красится, подпись под ним — всегда нейтральная.
+  function caloriesFootCol(text, cap, { end = false, tone = 'ink' } = {}) {
+    return React.createElement('div', {
+      className: 'widget-calories__hero-bar-col' + (end ? ' widget-calories__hero-bar-col--end' : '')
+    },
+      React.createElement('span', {
+        className: 'widget-calories__hero-bar-num widget-calories__hero-bar-num--' + tone
+      }, text),
+      React.createElement('span', { className: 'widget-calories__hero-bar-cap' }, cap)
+    );
+  }
+
+  function caloriesHeroBarFoot(left, right) {
+    return React.createElement('div', { className: 'widget-calories__hero-bar-foot' },
+      caloriesFootCol(left.text, left.cap, { tone: left.tone || 'ink' }),
+      caloriesFootCol(right.text, right.cap, { end: true, tone: right.tone || 'ink' })
+    );
+  }
+
+  // Полоса не растягивается за край: заливка доходит до нормы, превышение идёт
+  // красным сегментом — видно и норму, и перебор (канвас, заметка «Перебор
+  // красит число, а не плитку»).
+  function caloriesHeroBar(fillPct, overPct) {
+    return React.createElement('div', { className: 'widget-calories__hero-bar' },
+      React.createElement('div', {
+        className: 'widget-calories__hero-bar-fill',
+        style: { width: `${fillPct}%` }
+      }),
+      overPct > 0
+        ? React.createElement('div', {
+          className: 'widget-calories__hero-bar-over',
+          style: { left: `${fillPct}%` }
+        })
+        : null
+    );
+  }
+
+  // Доли полосы: пока укладываемся — доля съеденного от нормы; при переборе вся
+  // ширина это съеденное, а граница нормы стоит там, где норма от него.
+  function caloriesBarSplit(eaten, target) {
+    if (!(target > 0)) return { fillPct: 0, overPct: 0 };
+    if (eaten <= target) {
+      return { fillPct: Math.max(0, Math.min(100, (eaten / target) * 100)), overPct: 0 };
+    }
+    const fillPct = (target / eaten) * 100;
+    return { fillPct, overPct: 100 - fillPct };
+  }
+
+  function CaloriesVariantBody({ variantId, widget, data, meta = {} }) {
     const eaten = data.eaten || 0;
     const target = data.target || 2000;
     const pct = target > 0 ? Math.round((eaten / target) * 100) : 0;
     const remaining = Math.max(0, target - eaten);
-    const burned = data.burned || 0; // Тренировки
-    const deficit = data.deficit || 0; // Дефицит
+    const activityKcal = data.activityKcal || data.burned || 0;
+    const dinnerBudget = data.dinnerBudgetKcal || Math.round(target * 0.28);
     const formatKcal = (value) => Math.round(Number(value) || 0).toLocaleString('ru-RU');
 
     const d = getWidgetDims(widget);
@@ -2752,9 +3318,6 @@
       return 'var(--heys-ratio-over)';
     };
 
-    // Плавный пересчёт съеденного: число, подпись и полоса идут от предыдущего
-    // отображаемого значения к новому (смена дня — переход, а не сброс в 0).
-    // Классификация цвета остаётся на фактическом pct, чтобы не мигать в пути.
     const animTarget = useWidgetMotionValue(target, {
       motionId: `${widget?.id || 'cal'}:target`
     });
@@ -2766,7 +3329,58 @@
     const animBarPct = animTarget > 0 ? Math.min(100, Math.max(0, (animEaten / animTarget) * 100)) : 0;
     const animRemaining = Math.max(0, animTarget - animEaten);
 
-    // 1x1 Micro
+    if (variantId === 'activity') {
+      const animActivity = useWidgetMotionValue(activityKcal, {
+        motionId: `${widget?.id || 'cal'}:activity`,
+        quantize: 10
+      });
+      const effectiveTarget = animTarget + animActivity;
+      const remainingWithActivity = Math.max(0, effectiveTarget - animEaten);
+      return React.createElement('div', {
+        className: 'widget-calories widget-calories--2x1 widget-calories--v4-line'
+      },
+        React.createElement('div', { className: 'widget-calories__line-head' },
+          React.createElement('span', { className: 'widget-calories__line-value' },
+            formatKcal(remainingWithActivity),
+            React.createElement('span', { className: 'widget-calories__line-unit' }, 'ккал')
+          ),
+          animActivity > 0
+            ? React.createElement('span', { className: 'widget-calories__line-meta widget-v4-val--good' },
+              `+${formatKcal(animActivity)} актив`
+            )
+            : null
+        ),
+        React.createElement('div', { className: 'widget-calories__activity-foot' },
+          `съедено ${formatKcal(animEaten)} из ${formatKcal(effectiveTarget)}`
+        )
+      );
+    }
+
+    if (variantId === 'dinner') {
+      const dinnerOk = animRemaining >= dinnerBudget;
+      const dinnerGap = Math.max(0, dinnerBudget - animRemaining);
+      const dinnerFill = dinnerBudget > 0
+        ? Math.max(0, Math.min(100, (animRemaining / dinnerBudget) * 100))
+        : 0;
+      return React.createElement('div', { className: 'widget-calories widget-calories--2x2 widget-calories--v4-dinner' },
+        React.createElement('div', { className: 'widget-calories__hero-value' },
+          React.createElement('div', { className: 'widget-calories__value--md' }, formatKcal(animRemaining)),
+          React.createElement('span', { className: 'widget-calories__hero-unit' }, 'ккал осталось')
+        ),
+        React.createElement('div', { className: 'widget-calories__hero-bar-wrap' },
+          React.createElement('div', { className: 'widget-calories__dinner-row' },
+            React.createElement('span', null, 'обычный ужин'),
+            React.createElement('span', { className: 'widget-calories__dinner-budget' }, formatKcal(dinnerBudget))
+          ),
+          caloriesHeroBar(dinnerFill, dinnerOk ? 0 : 100 - dinnerFill),
+          React.createElement('div', {
+            className: 'widget-calories__dinner-note'
+              + (dinnerOk ? ' widget-v4-val--good' : ' widget-v4-val--bad')
+          }, dinnerOk ? 'хватит на ужин' : `не хватит ${formatKcal(dinnerGap)} ккал`)
+        )
+      );
+    }
+
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-calories widget-calories--micro' },
         React.createElement('div', { className: 'widget-micro__label' }, 'ккал'),
@@ -2774,61 +3388,80 @@
       );
     }
 
-    // 2×2 — v4 hero: число «осталось» + полоса прогресса (канвас g1)
-    if (size === '2x2') {
-      const hasOver = animEaten > animTarget && animTarget > 0;
+    if (variantId === 'line' || size === '2x1') {
       const isClosedDay = data.isClosedDay === true;
-      const heroValue = isClosedDay
-        ? animEaten
-        : (animRemaining > 0 ? animRemaining : (hasOver ? animEaten - animTarget : animEaten));
-      const heroLabel = isClosedDay
-        ? 'итог дня'
-        : (animRemaining > 0 ? 'осталось' : (hasOver ? 'перебор' : 'съедено'));
-
-      return React.createElement('div', { className: 'widget-calories widget-calories--2x2 widget-calories--v4-hero' },
-        React.createElement('div', { className: 'widget-v4-kicker' }, 'Калории'),
-        React.createElement('div', { className: 'widget-calories__hero-value' },
-          React.createElement('div', { className: 'widget-calories__value--lg' }, formatKcal(heroValue)),
-          React.createElement('span', { className: 'widget-calories__hero-unit' }, 'ккал')
-        ),
-        React.createElement('div', { className: 'widget-calories__hero-remaining-label' }, heroLabel),
-        React.createElement('div', { className: 'widget-calories__hero-bar-wrap' },
-          React.createElement('div', { className: 'widget-calories__hero-bar' },
-            React.createElement('div', {
-              className: 'widget-calories__hero-bar-fill',
-              style: { width: `${animBarPct}%` }
-            })
+      const lineOver = !isClosedDay && animEaten > animTarget && animTarget > 0;
+      const lineValue = isClosedDay
+        ? formatKcal(animEaten)
+        : (lineOver ? `−${formatKcal(animEaten - animTarget)}` : formatKcal(animRemaining));
+      const lineCap = isClosedDay ? 'съедено за день' : (lineOver ? 'перебор' : 'осталось');
+      const lineSplit = caloriesBarSplit(animEaten, animTarget);
+      return React.createElement('div', {
+        className: 'widget-calories widget-calories--2x1 widget-calories--v4-line'
+      },
+        React.createElement('div', { className: 'widget-calories__line-head' },
+          React.createElement('span', {
+            className: 'widget-calories__line-value' + (lineOver ? ' widget-v4-val--bad' : '')
+          },
+            lineValue,
+            React.createElement('span', { className: 'widget-calories__line-unit' }, 'ккал')
           ),
-          React.createElement('div', { className: 'widget-calories__hero-bar-labels' },
-            React.createElement('span', null, formatKcal(animEaten)),
-            React.createElement('span', null, formatKcal(animTarget))
+          React.createElement('span', {
+            className: 'widget-calories__line-meta' + (lineOver ? ' widget-v4-val--bad' : '')
+          }, lineCap)
+        ),
+        React.createElement('div', { className: 'widget-calories__line-foot' },
+          caloriesHeroBar(lineSplit.fillPct, lineSplit.overPct),
+          React.createElement('span', { className: 'widget-calories__line-fraction' },
+            `${formatKcal(animEaten)} / ${formatKcal(animTarget)}`
           )
         )
       );
     }
 
-    // 2×1 — канвас g1: «Осталось N» строкой, терракота = герой, не состояние
-    if (size === '2x1') {
+    if (variantId === 'hero' || size === '2x2') {
+      const hasOver = animEaten > animTarget && animTarget > 0;
       const isClosedDay = data.isClosedDay === true;
-      const lineValue = isClosedDay
+      const heroValue = isClosedDay
         ? formatKcal(animEaten)
-        : (animRemaining > 0
-          ? formatKcal(animRemaining)
-          : (animEaten > animTarget ? `+${formatKcal(animEaten - animTarget)}` : formatKcal(animEaten)));
-      const linePrefix = isClosedDay ? 'Итог ' : (animRemaining > 0 ? 'Осталось ' : '');
-      return React.createElement('div', {
-        className: 'widget-calories widget-calories--2x1 widget-v4-row widget-v4-row--tight'
-      },
-        v4Kicker('Калории'),
-        React.createElement('span', { className: 'widget-v4-row__value widget-v4-val--act' },
-          linePrefix,
-          lineValue,
-          React.createElement('span', { className: 'widget-v4-unit' }, ' ккал')
+        : (hasOver ? `−${formatKcal(animEaten - animTarget)}` : formatKcal(animRemaining));
+      const heroLabel = isClosedDay
+        ? 'съедено за день'
+        : (hasOver ? 'перебор' : 'осталось');
+      const split = caloriesBarSplit(animEaten, animTarget);
+      // Слева — факт (чернила), справа — норма: шалфей пока день в неё влезает,
+      // и она гаснет в красный вместе с остатком.
+      const footLeft = isClosedDay
+        ? (hasOver
+          ? { text: formatKcal(animEaten - animTarget), cap: 'перебор', tone: 'bad' }
+          : { text: formatKcal(animRemaining), cap: 'не съедено' })
+        : { text: formatKcal(animEaten), cap: 'съедено' };
+      const footRight = {
+        text: formatKcal(animTarget),
+        cap: 'норма',
+        tone: hasOver ? 'bad' : 'good'
+      };
+
+      return React.createElement('div', { className: 'widget-calories widget-calories--2x2 widget-calories--v4-hero' },
+        React.createElement('div', { className: 'widget-calories__hero-main' },
+          React.createElement('div', { className: 'widget-calories__hero-value' },
+            React.createElement('div', {
+              className: 'widget-calories__value--lg' + (hasOver && !isClosedDay ? ' widget-v4-val--bad' : '')
+            }, heroValue),
+            React.createElement('span', { className: 'widget-calories__hero-unit' }, 'ккал')
+          ),
+          React.createElement('div', {
+            className: 'widget-calories__hero-remaining-label'
+              + (hasOver && !isClosedDay ? ' widget-v4-val--bad' : '')
+          }, heroLabel)
+        ),
+        React.createElement('div', { className: 'widget-calories__hero-bar-wrap' },
+          caloriesHeroBar(split.fillPct, split.overPct),
+          caloriesHeroBarFoot(footLeft, footRight)
         )
       );
     }
 
-    // Остальные размеры — стандартный layout
     const showPct = widget.settings?.showPercentage !== false;
     const showRemaining = widget.settings?.showRemaining !== false;
     const showLabel = true;
@@ -2859,8 +3492,20 @@
     );
   }
 
-  function WaterWidgetContent({ widget, data }) {
+  function CaloriesWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'calories',
+      renderBody: (variantId, meta) => React.createElement(CaloriesVariantBody, {
+        variantId,
+        widget,
+        data,
+        meta
+      })
+    });
+  }
 
+  function WaterVariantBody({ variantId, widget, data, meta = {} }) {
     const drunk = data.drunk || 0;
     const target = data.target || 2000;
     const pct = target > 0 ? Math.round((drunk / target) * 100) : 0;
@@ -2882,7 +3527,7 @@
     const getWaterColor = () => HEYS.scales.waterProgress(pct).color;
 
     // 1x1 — канвас g1: «Вода» + литры + тонкая полоса
-    if (d.isMicro) {
+    if (d.isMicro || variantId === 'mini') {
       const liters = (drunk || 0) / 1000;
       const waterState = data.isClosedDay
         ? 'neutral'
@@ -2908,6 +3553,72 @@
             })
           )
           : null
+      );
+    }
+
+    if (variantId === 'by_hour') {
+      const wakeMinutes = parseHmToMinutes(data.sleepEnd) ?? data.medianWakeMinutes;
+      const bedMinutes = parseHmToMinutes(data.sleepStart);
+      const profileSleepH = Number(data.profileSleepHours) || 8;
+      const awakeSpan = bedMinutes != null && wakeMinutes != null
+        ? minutesSpan(wakeMinutes, bedMinutes)
+        : Math.round((24 - profileSleepH) * 60);
+      const atMinutes = moscowNowMinutes();
+      const schedule = v4WaterScheduleAt(target, wakeMinutes, awakeSpan, atMinutes);
+      const expectedMl = data.expectedMlNow ?? schedule.expectedMl;
+      const expectedPct = data.expectedPctNow ?? schedule.expectedPct;
+      const deficitMl = Math.round(data.deficitMlNow ?? (drunk - expectedMl));
+      const deficitLabel = deficitMl === 0
+        ? 'в графике'
+        : `${deficitMl > 0 ? '+' : '−'}${Math.abs(deficitMl)}`;
+      const waterState = deficitMl >= 0 ? 'neutral' : 'bad';
+      const checkLabel = data.checkHourLabel || schedule.checkLabel;
+      return React.createElement('div', { className: 'widget-water widget-water--2x1 widget-v4-stack' },
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('Вода'),
+          checkLabel
+            ? React.createElement('span', { className: 'widget-v4-row__meta' }, checkLabel)
+            : null
+        ),
+        React.createElement('div', { className: 'widget-v4-row__value ' + v4ValueStateClass(waterState) },
+          deficitLabel,
+          React.createElement('span', { className: 'widget-v4-unit' }, ' мл к графику')
+        ),
+        React.createElement('div', { className: 'widget-v4-mini__bar widget-v4-water-hour__bar' },
+          React.createElement('div', {
+            className: 'widget-v4-mini__bar-fill widget-v4-mini__bar-fill--water',
+            style: { width: `${Math.min(100, pct)}%` }
+          }),
+          React.createElement('span', {
+            className: 'widget-v4-water-hour__marker',
+            style: { left: `${Math.min(100, expectedPct)}%` }
+          })
+        )
+      );
+    }
+
+    if (variantId === 'rhythm') {
+      const hrs = data.hoursSinceWater;
+      const rhythmLabel = Number.isFinite(hrs) && hrs > 0 ? `${hrs} ч без воды` : 'ритм дня';
+      const bins = Array.isArray(data.rhythmBins) ? data.rhythmBins : [];
+      const maxBin = Math.max(1, ...bins);
+      return React.createElement('div', { className: 'widget-water widget-water--2x1 widget-v4-stack' },
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker(` Вода · ${formatRuDecimal(drunk / 1000, 1)} / ${formatRuDecimal(target / 1000, 1)} л`),
+          React.createElement('span', { className: 'widget-v4-row__meta widget-v4-val--bad' }, rhythmLabel)
+        ),
+        React.createElement('div', { className: 'widget-v4-water-rhythm' },
+          bins.map((ml, index) => {
+            const heightPct = ml > 0 ? Math.max(12, Math.round((ml / maxBin) * 100)) : 12;
+            return React.createElement('span', {
+              key: `rhythm-${index}`,
+              className: ml > 0
+                ? 'widget-v4-water-rhythm__bin widget-v4-water-rhythm__bin--fill'
+                : 'widget-v4-water-rhythm__bin',
+              style: { height: `${heightPct}%` }
+            });
+          })
+        )
       );
     }
 
@@ -2977,7 +3688,20 @@
     );
   }
 
-  function SleepWidgetContent({ widget, data }) {
+  function WaterWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'water',
+      renderBody: (variantId, meta) => React.createElement(WaterVariantBody, {
+        variantId,
+        widget,
+        data,
+        meta
+      })
+    });
+  }
+
+  function SleepVariantBody({ variantId, widget, data, meta = {} }) {
     const hours = data.hours || 0;
     const target = data.target || 8;
     const quality = data.quality;
@@ -3002,7 +3726,7 @@
     };
 
     // 1x1 — канвас g1: «Сон» + часы
-    if (d.isMicro) {
+    if (d.isMicro || variantId === 'mini') {
       const sleepState = v4SleepValueState(hours, target);
       return React.createElement('div', { className: 'widget-sleep widget-sleep--micro widget-v4-mini' },
         v4Kicker('Сон'),
@@ -3011,6 +3735,65 @@
         },
           formatRuDecimal(hours, 1),
           React.createElement('span', { className: 'widget-v4-unit' }, ' ч')
+        )
+      );
+    }
+
+    if (variantId === 'to_norm') {
+      const delta = hours - target;
+      const sleepState = v4SleepValueState(hours, target);
+      const sign = delta > 0 ? '+' : (delta < 0 ? '−' : '');
+      return React.createElement('div', { className: 'widget-sleep widget-sleep--micro widget-v4-mini' },
+        v4Kicker('Сон'),
+        React.createElement('div', {
+          className: 'widget-v4-mini__value ' + v4ValueStateClass(sleepState)
+        },
+          sign,
+          formatRuDecimal(Math.abs(delta), 1),
+          React.createElement('span', { className: 'widget-v4-unit' }, ' ч')
+        )
+      );
+    }
+
+    if (variantId === 'week_debt') {
+      const debt = Number(data.weekDebtHours) || 0;
+      return React.createElement('div', { className: 'widget-sleep widget-sleep--2x1 widget-v4-row widget-v4-row--tight' },
+        v4Kicker('Сон'),
+        React.createElement('span', { className: 'widget-v4-row__value widget-v4-val--warn' },
+          formatRuDecimal(debt, 1),
+          React.createElement('span', { className: 'widget-v4-unit' }, ' ч долг')
+        )
+      );
+    }
+
+    if (variantId === 'window') {
+      const targetBand = sleepWindowBand(data.targetSleepStart, data.targetSleepEnd);
+      const actualBand = sleepWindowBand(sleepStart, sleepEnd);
+      const sleepState = v4SleepValueState(hours, target);
+      return React.createElement('div', { className: 'widget-sleep widget-sleep--2x1 widget-v4-stack' },
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('Сон · окно'),
+          React.createElement('span', {
+            className: 'widget-v4-row__meta ' + v4ValueStateClass(sleepState)
+          }, `${formatRuDecimal(hours, 1)} ч`)
+        ),
+        React.createElement('div', { className: 'widget-v4-sleep-window' },
+          targetBand
+            ? React.createElement('span', {
+              className: 'widget-v4-sleep-window__target',
+              style: { left: `${targetBand.left}%`, width: `${targetBand.width}%` }
+            })
+            : null,
+          actualBand
+            ? React.createElement('span', {
+              className: 'widget-v4-sleep-window__actual',
+              style: { left: `${actualBand.left}%`, width: `${actualBand.width}%` }
+            })
+            : null
+        ),
+        React.createElement('div', { className: 'widget-v4-sleep-window__labels' },
+          React.createElement('span', null, formatSleepHmLabel(sleepStart, 'лёг')),
+          React.createElement('span', null, formatSleepHmLabel(sleepEnd, 'встал'))
         )
       );
     }
@@ -3058,6 +3841,19 @@
       showTarget ? React.createElement('div', { className: 'widget-sleep__label' }, `из ${target}ч`) : null,
       showQuality ? React.createElement('div', { className: 'widget-sleep__quality' }, `Качество: ${quality}/10`) : null
     );
+  }
+
+  function SleepWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'sleep',
+      renderBody: (variantId, meta) => React.createElement(SleepVariantBody, {
+        variantId,
+        widget,
+        data,
+        meta
+      })
+    });
   }
 
   function StreakWidgetContent({ widget, data }) {
@@ -3193,7 +3989,7 @@
     );
   }
 
-  function WeightWidgetContent({ widget, data }) {
+  function WeightVariantBody({ variantId, widget, data, meta = {} }) {
     const current = data.current;
     const goal = data.goal;
     const trend = data.trend;
@@ -3368,6 +4164,14 @@
 
     // MINI (1×1) — метка + число (компактный шрифт для safe-area)
     if (size === '1x1') {
+      if (variantId === 'delta') {
+        const wc = formatWeekChange();
+        const trendCls = v4ValueStateClass(v4WeightDeltaState(weekChange));
+        return React.createElement('div', { className: 'widget-weight widget-weight--1x1 widget-v4-mini' },
+          v4Kicker('Вес'),
+          React.createElement('div', { className: 'widget-v4-mini__value ' + trendCls }, wc || '—')
+        );
+      }
       return React.createElement('div', { className: 'widget-weight widget-weight--1x1' },
         React.createElement('div', { className: 'widget-micro__label' }, 'вес'),
         React.createElement(WeightValue, { scale: 'sm' })
@@ -3453,6 +4257,65 @@
 
     // COMPACT (2×2) — канвас g1: «Вес» + кг + неделя + линия
     if (size === '2x2') {
+      if (variantId === 'scatter' && sparklinePoints.length >= 2) {
+        const pts = sparklinePoints.slice(-14);
+        const weights = pts.map((p) => p.weight);
+        const minW = Math.min(...weights);
+        const maxW = Math.max(...weights);
+        const span = Math.max(0.1, maxW - minW);
+        const yForWeight = (w) => 10 + ((maxW - w) / span) * 44;
+        const maPoints = pts.map((p, i, arr) => {
+          const slice = arr.slice(Math.max(0, i - 6), i + 1);
+          const avg = slice.reduce((s, x) => s + x.weight, 0) / slice.length;
+          return avg;
+        });
+        const maPath = maPoints.map((w, i) => {
+          const x = 6 + (i / (pts.length - 1 || 1)) * 118;
+          const y = yForWeight(w);
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(' ');
+        return React.createElement('div', { className: 'widget-weight widget-weight--2x2 widget-v4-stack' },
+          React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+            v4Kicker('Вес · точки и среднее'),
+            hasCurrent
+              ? React.createElement('span', { className: 'widget-v4-row__meta widget-v4-val--good' },
+                formatRuDecimal(current, 1)
+              )
+              : null
+          ),
+          React.createElement('svg', {
+            className: 'widget-weight__scatter',
+            viewBox: '0 0 130 56',
+            width: '100%',
+            height: 56,
+            'aria-hidden': 'true'
+          },
+            pts.map((p, i) => {
+              const x = 6 + (i / (pts.length - 1 || 1)) * 118;
+              const y = yForWeight(p.weight);
+              return React.createElement('circle', {
+                key: i,
+                cx: x,
+                cy: y,
+                r: 2.2,
+                fill: 'rgba(0,0,0,0.22)',
+                className: 'widget-weight__scatter-dot'
+              });
+            }),
+            React.createElement('polyline', {
+              points: maPath,
+              fill: 'none',
+              stroke: 'var(--v4-ok, #7a8a5e)',
+              strokeWidth: 2.5,
+              strokeLinecap: 'round',
+              strokeLinejoin: 'round'
+            })
+          ),
+          React.createElement('div', { className: 'widget-weight__scatter-foot' },
+            'точки — весы, линия — среднее за 7 дней'
+          )
+        );
+      }
       return React.createElement(WeightWidgetV4_2x2, {
         current,
         weekChange,
@@ -3652,6 +4515,19 @@
       React.createElement(WeightValue, { scale: 'md' }),
       React.createElement(TrendBlock, { showText: false })
     );
+  }
+
+  function WeightWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'weight',
+      renderBody: (variantId, meta) => React.createElement(WeightVariantBody, {
+        variantId,
+        widget,
+        data,
+        meta
+      })
+    });
   }
 
   /**
@@ -3880,7 +4756,7 @@
     );
   }
 
-  function MacrosWidgetContent({ widget, data }) {
+  function MacrosVariantBody({ variantId, widget, data, meta = {} }) {
     const { protein, fat, carbs, proteinTarget, fatTarget, carbsTarget, cascade } = data;
 
     const d = getWidgetDims(widget);
@@ -4030,6 +4906,67 @@
       );
     };
 
+    // 1x1 — только белок
+    if (variantId === 'bars') {
+      return React.createElement('div', { className: 'widget-macros widget-macros--bars widget-v4-stack' },
+        React.createElement('div', { className: 'widget-v4-macro-bars' },
+          v4MacroBarRow('Б', animProtein, animProteinTarget, 'protein'),
+          v4MacroBarRow('Ж', animFat, animFatTarget, 'fat'),
+          v4MacroBarRow('У', animCarbs, animCarbsTarget, 'carbs')
+        )
+      );
+    }
+
+    if (variantId === 'deficits') {
+      const items = [
+        { label: 'белки', value: animProtein, target: animProteinTarget },
+        { label: 'углеводы', value: animCarbs, target: animCarbsTarget },
+        { label: 'жиры', value: animFat, target: animFatTarget }
+      ].map((item) => ({
+        ...item,
+        delta: item.value - item.target,
+        abs: Math.abs(item.value - item.target)
+      }));
+      const worst = [...items].sort((a, b) => b.abs - a.abs)[0];
+      const others = items.filter((item) => item.label !== worst.label);
+      const fmtDelta = (d) => {
+        if (Math.abs(d) < 0.5) return '0';
+        const sign = d > 0 ? '+' : '−';
+        return `${sign}${Math.round(Math.abs(d))}`;
+      };
+      const worstClass = worst.delta < 0 ? 'widget-v4-val--warn' : 'widget-v4-val--act';
+      return React.createElement('div', { className: 'widget-macros widget-macros--deficits widget-v4-stack' },
+        v4Kicker('БЖУ · что выбивается'),
+        React.createElement('div', { className: 'widget-v4-deficit-hero ' + worstClass },
+          fmtDelta(worst.delta),
+          React.createElement('span', { className: 'widget-v4-unit' }, worst.label, ', г')
+        ),
+        React.createElement('div', { className: 'widget-v4-deficit-rows' },
+          others.map((row) => React.createElement('div', {
+            key: row.label,
+            className: 'widget-v4-deficit-rows__row'
+          },
+            React.createElement('span', null,
+              row.label === 'углеводы' ? 'Углеводы' : (row.label === 'жиры' ? 'Жиры' : 'Белки')
+            ),
+            React.createElement('span', {
+              className: row.delta > 0 ? 'widget-v4-val--warn' : 'widget-v4-val--neutral'
+            }, fmtDelta(row.delta))
+          ))
+        )
+      );
+    }
+
+    if (variantId === 'protein_only') {
+      return React.createElement('div', { className: 'widget-macros widget-macros--1x1 widget-v4-mini' },
+        v4Kicker('Белок'),
+        React.createElement('div', { className: 'widget-v4-mini__value' },
+          Math.round(animProtein),
+          React.createElement('span', { className: 'widget-v4-unit' }, ' г')
+        )
+      );
+    }
+
     // 1x1 Micro
     if (d.isMicro) {
       return React.createElement('div', { className: 'widget-macros widget-macros--micro' },
@@ -4059,7 +4996,7 @@
       );
     }
 
-    if (size === '3x2') {
+    if (variantId === 'rings' || size === '3x2') {
       return React.createElement('div', { className: 'widget-macros widget-macros--3x2 widget-v4-stack' },
         React.createElement('div', { className: 'widget-v4-macros' },
           v4SageRing({ value: animProtein, target: animProteinTarget, label: 'Белки', toneClass: 'protein' }),
@@ -4112,6 +5049,19 @@
         label: 'У', value: animCarbs, barValue: carbs, target: carbsTarget || 250, color: 'var(--v4-mark-3)', cls: 'widget-macros__label--carbs'
       })
     );
+  }
+
+  function MacrosWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'macros',
+      renderBody: (variantId, meta) => React.createElement(MacrosVariantBody, {
+        variantId,
+        widget,
+        data,
+        meta
+      })
+    });
   }
 
   function InsulinWidgetContent({ widget, data }) {
@@ -4222,7 +5172,7 @@
     );
   }
 
-  function HeatmapWidgetContent({ widget, data }) {
+  function HeatmapVariantBody({ variantId, widget, data, meta = {} }) {
     const days = data.days || [];
     const requestedPeriod = widget.settings?.period || 'week';
     const configuredPeriod = requestedPeriod === 'month' ? 'week' : requestedPeriod;
@@ -4282,14 +5232,24 @@
     };
 
     // 1x1 Micro
-    if (d.isMicro) {
+    if (d.isMicro || variantId === 'streak') {
+      const streak = data.currentStreak || 0;
+      if (variantId === 'streak') {
+        return React.createElement('div', { className: 'widget-heatmap widget-heatmap--micro widget-v4-mini' },
+          v4Kicker('Серия'),
+          React.createElement('div', { className: 'widget-v4-mini__value widget-v4-val--good' },
+            streak,
+            React.createElement('span', { className: 'widget-v4-unit' }, ' дня')
+          )
+        );
+      }
       const todayMeta = buildWeekDayMeta(renderDays[0] || {}, 0);
       return React.createElement('div', { className: 'widget-heatmap widget-heatmap--micro' },
         renderHeatmapCell(todayMeta, 0, 'widget-heatmap__cell--micro')
       );
     }
 
-    if (size === '2x1' || size === '3x1') {
+    if (size === '2x1' || size === '3x1' || variantId === 'week_bar') {
       const week = days.slice(-7);
       while (week.length < 7) week.unshift(null);
       const filled = week.filter((day) => day?.status && day.status !== 'empty').length;
@@ -4314,7 +5274,38 @@
       );
     }
 
-    if (size === '2x2') {
+    if (size === '2x2' || variantId === 'month_grid') {
+      if (variantId === 'month_grid') {
+        const monthDays = days.slice(-28);
+        while (monthDays.length < 28) monthDays.unshift(null);
+        const filled28 = data.monthFilledCount ?? monthDays.filter((day) =>
+          day?.status === 'green' || day?.status === 'good' || day?.status === 'ok'
+        ).length;
+        const barTone = (status) => {
+          if (status === 'green' || status === 'good' || status === 'ok') return 'ok';
+          if (status === 'yellow' || status === 'warn' || status === 'red') return 'warn';
+          return 'empty';
+        };
+        const lastWeek = monthDays.slice(-7);
+        return React.createElement('div', { className: 'widget-heatmap widget-heatmap--2x2 widget-v4-stack' },
+          v4Kicker('Тепловая карта'),
+          React.createElement('div', { className: 'widget-heatmap__month-grid' },
+            monthDays.map((day, index) => React.createElement('span', {
+              key: `${day?.date || 'empty'}-${index}`,
+              className: `widget-heatmap__cell widget-heatmap__cell--month widget-heatmap__cell--${day?.status || 'empty'}`
+            }))
+          ),
+          React.createElement('div', { className: 'widget-v4-heat widget-v4-heat--month-foot' },
+            lastWeek.map((day, index) => React.createElement('span', {
+              key: `${day?.date || 'empty'}-wk-${index}`,
+              className: `widget-v4-heat__bar widget-v4-heat__bar--${barTone(day?.status)}`
+            }))
+          ),
+          React.createElement('div', { className: 'widget-heatmap__month-meta' },
+            `${filled28} из 28 дней в норме`
+          )
+        );
+      }
       const weekDays = days.slice(-7).map(buildWeekDayMeta);
       const rows = [weekDays.slice(0, 4), weekDays.slice(4)];
 
@@ -4337,6 +5328,19 @@
           : renderDays.map((day, i) => renderHeatmapCell({ day, isToday: highlightToday && day?.date === todayIso, hasTraining: !!day?.hasTraining, highStress: !!day?.highStress }, i))
       )
     );
+  }
+
+  function HeatmapWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'heatmap',
+      renderBody: (variantId, meta) => React.createElement(HeatmapVariantBody, {
+        variantId,
+        widget,
+        data,
+        meta
+      })
+    });
   }
 
   function CycleWidgetContent({ widget, data }) {
@@ -4430,17 +5434,7 @@
   }
 
   // === Weight Dynamics v4 (канвас home-widgets) ===
-  const WEIGHT_DYNAMICS_VARIANTS = [
-    { id: 'curve', title: 'Кривая', subtitle: 'сколько сброшено и как шло' },
-    { id: 'bar_remainder', title: 'Остаток полосой', subtitle: 'сколько до цели' },
-    { id: 'weeks', title: 'Недели', subtitle: 'средние, без скачков воды' },
-    { id: 'number_only', title: 'Только цифра', subtitle: 'без графики' },
-    { id: 'to_goal', title: 'До цели', subtitle: 'главное — остаток, темп подписью' }
-  ];
-  const WEIGHT_DYNAMICS_LP_MS = 350;
   const WEIGHT_DYNAMICS_CLICK_GUARD_MS = 900;
-  const WEIGHT_DYNAMICS_SHEET_CLOSE_MS = 400;
-  const WEIGHT_DYNAMICS_EXIT_MS = 200;
   const WEIGHT_DYNAMICS_VALUE_MS = 1400;
   const WEIGHT_DYNAMICS_DRAW_MS = WIDGET_V4_SPARK_DRAW_MS;
   const WEIGHT_DYNAMICS_CHART_DELAY_MS = WIDGET_V4_SPARK_DELAY_MS;
@@ -4492,16 +5486,34 @@
     return { sign, text: Math.abs(deltaKg).toFixed(1).replace('.', ',') };
   }
 
-  function wdElClass(role, isTile) {
+  function weightDynamicsEntranceTotalMs() {
+    return WEIGHT_DYNAMICS_EL_IN_MS + WEIGHT_DYNAMICS_CHART_DELAY_MS + WEIGHT_DYNAMICS_DRAW_MS + 80;
+  }
+
+  function wdElClass(role, isTile, playEntrance = widgetV4ShouldAnimateSparkDraw()) {
     if (!isTile) return '';
-    return 'widget-wd__el widget-wd__el--' + role + ' widget-wd__el--in';
+    const base = `widget-wd__el widget-wd__el--${role}`;
+    return playEntrance ? `${base} widget-wd__el--in` : base;
+  }
+
+  function useWeightDynamicsSceneEntrance(sceneKey) {
+    const [playEntrance, setPlayEntrance] = useState(() => widgetV4ShouldAnimateSparkDraw());
+    const seenKeyRef = useRef(sceneKey);
+    useEffect(() => {
+      if (sceneKey === seenKeyRef.current) return;
+      seenKeyRef.current = sceneKey;
+      setPlayEntrance(true);
+      const t = setTimeout(() => setPlayEntrance(false), weightDynamicsEntranceTotalMs());
+      return () => clearTimeout(t);
+    }, [sceneKey]);
+    return playEntrance;
   }
 
   function weightDynamicsPointsToPath(points) {
     return v4SparkPointsToPath(points);
   }
 
-  function WeightDynamicsSparkSvg({ sparkline, stateClass, compact }) {
+  function WeightDynamicsSparkSvg({ sparkline, stateClass, compact, playEntrance = widgetV4ShouldAnimateSparkDraw() }) {
     const pathD = React.useMemo(() => weightDynamicsPointsToPath(sparkline?.points), [sparkline?.points]);
     const last = sparkline?.last;
     const { pathRef, lineStyle, dotStyle } = useV4SparkPathDraw(pathD, {
@@ -4514,7 +5526,7 @@
     if (!pathD) return null;
 
     return React.createElement('svg', {
-      className: 'widget-wd__spark ' + (stateClass || '') + (compact ? '' : ' widget-wd__el widget-wd__el--chart widget-wd__el--in'),
+      className: 'widget-wd__spark ' + (stateClass || '') + (compact ? '' : ' ' + wdElClass('chart', true, playEntrance)),
       width: 58,
       height: 24,
       viewBox: '0 0 58 24',
@@ -4543,10 +5555,13 @@
     );
   }
 
-  function WeightDynamicsProgressBar({ pct, stateClass, compact }) {
+  function WeightDynamicsProgressBar({ pct, stateClass, compact, playEntrance = widgetV4ShouldAnimateSparkDraw() }) {
     const width = Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : 0;
+    const trackClass = compact
+      ? 'widget-wd__bar-track'
+      : 'widget-wd__bar-track ' + wdElClass('chart', true, playEntrance);
     return React.createElement('span', {
-      className: 'widget-wd__bar-track widget-wd__el widget-wd__el--chart widget-wd__el--in'
+      className: trackClass
     },
       React.createElement('span', {
         className: 'widget-wd__bar-fill ' + (stateClass || ''),
@@ -4557,17 +5572,18 @@
     );
   }
 
-  function WeightDynamicsWeekBars({ bars, compact }) {
+  function WeightDynamicsWeekBars({ bars, compact, playEntrance = widgetV4ShouldAnimateSparkDraw() }) {
     if (!bars?.length) return null;
+    if (compact) playEntrance = false;
     return React.createElement('div', { className: 'widget-wd__weeks' },
       bars.map((bar, i) => React.createElement('span', {
         key: i,
         className: [
           'widget-wd__week-col',
-          'widget-wd__el',
-          'widget-wd__el--chart',
-          'widget-wd__el--in',
-          compact ? '' : `widget-wd__el--week-${i + 1}`,
+          playEntrance ? 'widget-wd__el' : '',
+          playEntrance ? 'widget-wd__el--chart' : '',
+          playEntrance ? 'widget-wd__el--in' : '',
+          playEntrance && !compact ? `widget-wd__el--week-${i + 1}` : '',
           v4ValueStateClass(bar.isLast ? bar.state : 'neutral')
         ].filter(Boolean).join(' '),
         style: { '--wd-week-h': `${bar.heightPct}%` }
@@ -4609,7 +5625,11 @@
   }
 
   function renderWeightDynamicsBody(variant, dyn, opts = {}) {
-    const { compact = false, motion = null } = opts;
+    const {
+      compact = false,
+      motion = null,
+      playEntrance = compact ? false : widgetV4ShouldAnimateSparkDraw()
+    } = opts;
     const isTile = !compact;
     const stateClass = v4ValueStateClass(v4WeightDeltaStateFromDynamics(dyn));
     const windowLabel = dyn?.window?.label || 'За месяц';
@@ -4618,15 +5638,15 @@
       ? formatAnimDeltaKg(motion.delta)
       : (dyn?.delta || { sign: '', text: '—' });
     const deltaLine = dyn?.hasDynamics
-      ? React.createElement('span', { className: 'widget-wd__delta ' + stateClass + ' ' + wdElClass('value', isTile) },
+      ? React.createElement('span', { className: 'widget-wd__delta ' + stateClass + ' ' + wdElClass('value', isTile, playEntrance) },
         delta.sign,
         delta.text,
         React.createElement('span', { className: 'widget-v4-unit' }, 'кг')
       )
-      : React.createElement('span', { className: 'widget-wd__placeholder ' + wdElClass('value', isTile) }, dyn?.placeholder || 'нужна неделя');
+      : React.createElement('span', { className: 'widget-wd__placeholder ' + wdElClass('value', isTile, playEntrance) }, dyn?.placeholder || 'нужна неделя');
 
     const headerRight = remainder
-      ? React.createElement('span', { className: 'widget-wd__remainder ' + wdElClass('meta', isTile) }, remainder)
+      ? React.createElement('span', { className: 'widget-wd__remainder ' + wdElClass('meta', isTile, playEntrance) }, remainder)
       : null;
 
     const monthRate = Number.isFinite(motion?.monthRate ?? dyn?.monthRateKg)
@@ -4639,14 +5659,14 @@
     if (variant === 'weeks') {
       return React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'widget-wd__head' },
-          React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile) }, 'По неделям'),
+          React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile, playEntrance) }, 'По неделям'),
           dyn?.hasDynamics
-            ? React.createElement('span', { className: 'widget-wd__side-delta ' + stateClass + ' ' + wdElClass('meta', isTile) },
+            ? React.createElement('span', { className: 'widget-wd__side-delta ' + stateClass + ' ' + wdElClass('meta', isTile, playEntrance) },
               delta.sign, delta.text)
             : null
         ),
         dyn?.hasDynamics
-          ? WeightDynamicsWeekBars({ bars: dyn.weeklyBars, compact })
+          ? WeightDynamicsWeekBars({ bars: dyn.weeklyBars, compact, playEntrance })
           : React.createElement('div', { className: 'widget-wd__placeholder-row' }, deltaLine)
       );
     }
@@ -4657,16 +5677,16 @@
         : (Number.isFinite(dyn?.toGoalKg) ? Math.abs(dyn.toGoalKg) : null);
       return React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'widget-wd__head' },
-          React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile) }, 'До цели'),
+          React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile, playEntrance) }, 'До цели'),
           monthRate
-            ? React.createElement('span', { className: 'widget-wd__side-delta ' + stateClass + ' ' + wdElClass('meta', isTile) }, monthRate)
+            ? React.createElement('span', { className: 'widget-wd__side-delta ' + stateClass + ' ' + wdElClass('meta', isTile, playEntrance) }, monthRate)
             : null
         ),
         dyn?.goalReached
-          ? React.createElement('div', { className: 'widget-wd__goal-main ' + wdElClass('value', isTile) }, 'цель взята')
+          ? React.createElement('div', { className: 'widget-wd__goal-main ' + wdElClass('value', isTile, playEntrance) }, 'цель взята')
           : React.createElement(React.Fragment, null,
             remainAbs != null
-              ? React.createElement('div', { className: 'widget-wd__goal-main ' + wdElClass('value', isTile) },
+              ? React.createElement('div', { className: 'widget-wd__goal-main ' + wdElClass('value', isTile, playEntrance) },
                 formatRuDecimal(remainAbs, 1),
                 React.createElement('span', { className: 'widget-v4-unit' }, 'кг')
               )
@@ -4674,7 +5694,8 @@
             WeightDynamicsProgressBar({
               pct: motion?.goalPct ?? dyn?.goalProgressPct,
               stateClass,
-              compact
+              compact,
+              playEntrance
             })
           )
       );
@@ -4683,13 +5704,13 @@
     if (variant === 'number_only') {
       return React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'widget-wd__head' },
-          React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile) }, windowLabel)
+          React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile, playEntrance) }, windowLabel)
         ),
         React.createElement('div', { className: 'widget-wd__num-row' },
           deltaLine,
           dyn?.hasDynamics && delta.sign === '−'
             ? React.createElement('span', {
-              className: 'widget-wd__arrow ' + stateClass + ' ' + wdElClass('chart', isTile),
+              className: 'widget-wd__arrow ' + stateClass + ' ' + wdElClass('chart', isTile, playEntrance),
               'aria-hidden': 'true'
             },
               React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
@@ -4703,14 +5724,15 @@
     if (variant === 'bar_remainder') {
       return React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'widget-wd__head' },
-          React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile) }, windowLabel),
+          React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile, playEntrance) }, windowLabel),
           headerRight
         ),
         React.createElement('div', { className: 'widget-wd__num-row' }, deltaLine),
         WeightDynamicsProgressBar({
           pct: motion?.goalPct ?? dyn?.goalProgressPct,
           stateClass,
-          compact
+          compact,
+          playEntrance
         })
       );
     }
@@ -4718,327 +5740,100 @@
     // curve (default)
     return React.createElement(React.Fragment, null,
       React.createElement('div', { className: 'widget-wd__head' },
-        React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile) }, windowLabel),
+        React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile, playEntrance) }, windowLabel),
         headerRight
       ),
       React.createElement('div', { className: 'widget-wd__curve-row' },
         deltaLine,
         dyn?.hasDynamics
-          ? React.createElement(WeightDynamicsSparkSvg, { sparkline: dyn.sparkline, stateClass, compact })
+          ? React.createElement(WeightDynamicsSparkSvg, { sparkline: dyn.sparkline, stateClass, compact, playEntrance })
           : null
       )
     );
   }
 
-  function WeightDynamicsVariantSheet({ open, closing, dyn, activeVariant, onSelect, onClose }) {
-    if (!open && !closing) return null;
-    const portalRoot = typeof document !== 'undefined' ? document.body : null;
-    if (!portalRoot || !ReactDOM?.createPortal) return null;
-
-    if (closing) {
-      return ReactDOM.createPortal(React.createElement('div', {
-        className: 'widget-wd-sheet__blocker',
-        'aria-hidden': 'true',
-        onPointerDown: stopEventBubble,
-        onPointerUp: stopEventBubble,
-        onClick: stopEventBubble
-      }), portalRoot);
-    }
-
-    const sheet = React.createElement(React.Fragment, null,
-      React.createElement('button', {
-        type: 'button',
-        className: 'widget-wd-sheet__scrim',
-        'aria-label': 'Закрыть',
-        ...(window.HEYS?.ModalDismiss?.reactBackdropDismiss
-          ? window.HEYS.ModalDismiss.reactBackdropDismiss(onClose)
-          : {
-            onPointerDown: stopEventBubble,
-            onClick: (event) => {
-              stopEventBubble(event);
-              onClose();
-            }
-          })
-      }),
-      React.createElement('div', {
-        className: 'widget-wd-sheet animate-always',
-        role: 'dialog',
-        'aria-label': 'Как показывать плитку',
-        onPointerDown: stopEventBubble,
-        onClick: stopEventBubble
-      },
-        React.createElement('span', { className: 'widget-wd-sheet__grab' }),
-        React.createElement('div', { className: 'widget-wd-sheet__title' }, 'Динамика веса'),
-        React.createElement('div', { className: 'widget-wd-sheet__subtitle' }, 'Как показывать плитку'),
-        React.createElement('div', { className: 'widget-wd-sheet__list' },
-          WEIGHT_DYNAMICS_VARIANTS.map((item) => {
-            const isOn = item.id === activeVariant;
-            return React.createElement('button', {
-              key: item.id,
-              type: 'button',
-              className: 'widget-wd-sheet__opt' + (isOn ? ' is-active' : ''),
-              onPointerDown: stopEventBubble,
-              onClick: (event) => {
-                stopEventBubble(event);
-                onSelect(item.id);
-              }
-            },
-              React.createElement('div', {
-                className: 'widget-wd-sheet__preview widget-wd widget-wd--preview'
-              }, renderWeightDynamicsBody(item.id, dyn, { compact: true })),
-              React.createElement('div', { className: 'widget-wd-sheet__opt-text' },
-                React.createElement('div', { className: 'widget-wd-sheet__opt-title' }, item.title),
-                React.createElement('div', { className: 'widget-wd-sheet__opt-sub' }, item.subtitle)
-              ),
-              isOn ? React.createElement('span', { className: 'widget-wd-sheet__check', 'aria-hidden': 'true' },
-                React.createElement('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
-                  React.createElement('path', { d: 'M5 13l4 4L19 7' })
-                )) : null
-            );
-          })
-        )
-      )
-    );
-    return ReactDOM.createPortal(sheet, portalRoot);
-  }
-
-  function WeightDynamicsTile2x1({ widget, data }) {
+  function CrashRiskDynamicsVariantTile({ widget, data }) {
     const dyn = data?.dynamicsV4 || null;
-    const displayVariant = widget?.settings?.displayVariant || 'curve';
-    const [sheetOpen, setSheetOpen] = useState(false);
-    const [sheetClosing, setSheetClosing] = useState(false);
-    const [holding, setHolding] = useState(false);
-    const [animPhase, setAnimPhase] = useState('idle');
-    const [renderVariant, setRenderVariant] = useState(displayVariant);
-    const [sceneId, setSceneId] = useState(0);
+    const V4 = HEYS.Widgets.VariantsV4;
+    const hook = V4.useWidgetVariantTile({
+      widget,
+      widgetType: 'crashRisk',
+      disabled: isWidgetV4EditMode(),
+      onVariantSaved: ({ widgetId, variant }) => {
+        HEYS.Widgets.emit?.('weightDynamics:variantSaved', { widgetId, variant });
+      },
+      renderPreview: (id) => renderWeightDynamicsBody(id, dyn, { compact: true })
+    });
     const motion = useWeightDynamicsMotion(widget, dyn);
-    const lpTimerRef = useRef(null);
-    const lpTriggeredRef = useRef(false);
-    const lpStartRef = useRef(null);
-    const sheetCloseTimerRef = useRef(null);
-    const animTimersRef = useRef([]);
+    const variantId = hook.renderVariant;
+    const playSceneEntrance = useWeightDynamicsSceneEntrance(`${variantId}:${hook.sceneId}`);
+    const size = widget?.size || '2x1';
+    const stateClass = v4ValueStateClass(v4WeightDeltaStateFromDynamics(dyn));
 
-    const clearAnimTimers = useCallback(() => {
-      animTimersRef.current.forEach((id) => {
-        if (typeof id === 'number') {
-          clearTimeout(id);
-          cancelAnimationFrame(id);
+    let inner;
+    if (variantId === 'chart' && size === '2x2') {
+      inner = React.createElement('div', { className: 'widget-wd widget-v4-stack' },
+        v4Kicker('Динамика'),
+        WeightDynamicsSparkSvg({
+          sparkline: dyn?.sparkline,
+          stateClass,
+          compact: false,
+          playEntrance: playSceneEntrance
+        })
+      );
+    } else if (variantId === 'compact' && size === '1x1') {
+      const delta = motion?.delta != null
+        ? formatAnimDeltaKg(motion.delta)
+        : formatAnimDeltaKg(dyn?.deltaKg ?? 0);
+      inner = React.createElement('div', { className: 'widget-v4-mini' },
+        v4Kicker('Динамика'),
+        React.createElement('span', { className: 'widget-v4-mini__value ' + stateClass },
+          delta.sign,
+          delta.text,
+          React.createElement('span', { className: 'widget-v4-unit' }, ' кг')
+        )
+      );
+    } else {
+      inner = React.createElement('div', {
+        key: `wd-scene-${variantId}-${hook.sceneId}`,
+        className: 'widget-wd__scene animate-always' + (playSceneEntrance ? ' widget-wd__scene--entrance' : ''),
+        style: {
+          '--widget-wd-motion-ms': `${WEIGHT_DYNAMICS_VALUE_MS}ms`,
+          '--widget-wd-draw-ms': `${WEIGHT_DYNAMICS_DRAW_MS}ms`,
+          '--widget-wd-el-in-ms': `${WEIGHT_DYNAMICS_EL_IN_MS}ms`,
+          '--widget-wd-chart-delay': `${WEIGHT_DYNAMICS_CHART_DELAY_MS}ms`
         }
-      });
-      animTimersRef.current = [];
-    }, []);
-
-    useEffect(() => () => {
-      clearAnimTimers();
-      if (lpTimerRef.current) clearTimeout(lpTimerRef.current);
-      if (sheetCloseTimerRef.current) clearTimeout(sheetCloseTimerRef.current);
-    }, [clearAnimTimers]);
-
-    const dismissVariantSheet = useCallback(() => {
-      weightDynamicsClickGuard.block(widget?.id);
-      setSheetOpen(false);
-      setSheetClosing(true);
-      setHolding(false);
-      if (sheetCloseTimerRef.current) clearTimeout(sheetCloseTimerRef.current);
-      sheetCloseTimerRef.current = setTimeout(() => {
-        setSheetClosing(false);
-        sheetCloseTimerRef.current = null;
-      }, WEIGHT_DYNAMICS_SHEET_CLOSE_MS);
-    }, [widget?.id]);
-
-    useEffect(() => {
-      if (displayVariant === renderVariant) return;
-      clearAnimTimers();
-      setAnimPhase('exit');
-      const t1 = setTimeout(() => {
-        setRenderVariant(displayVariant);
-        setSceneId((id) => id + 1);
-        let raf2 = 0;
-        const raf1 = requestAnimationFrame(() => {
-          raf2 = requestAnimationFrame(() => setAnimPhase('idle'));
-        });
-        animTimersRef.current.push(raf1, raf2);
-      }, WEIGHT_DYNAMICS_EXIT_MS);
-      animTimersRef.current.push(t1);
-    }, [displayVariant, renderVariant, clearAnimTimers]);
-
-    const cancelLongPress = useCallback(() => {
-      if (lpTimerRef.current) {
-        clearTimeout(lpTimerRef.current);
-        lpTimerRef.current = null;
-      }
-    }, []);
-
-    const onPointerDown = useCallback((event) => {
-      if (sheetOpen || sheetClosing) return;
-      lpTriggeredRef.current = false;
-      lpStartRef.current = {
-        x: event.clientX || event.touches?.[0]?.clientX || 0,
-        y: event.clientY || event.touches?.[0]?.clientY || 0
-      };
-      cancelLongPress();
-      lpTimerRef.current = setTimeout(() => {
-        lpTriggeredRef.current = true;
-        weightDynamicsClickGuard.block(widget?.id);
-        setHolding(true);
-        setSheetOpen(true);
-        HEYS.dayUtils?.haptic?.('light');
-      }, WEIGHT_DYNAMICS_LP_MS);
-    }, [cancelLongPress, sheetOpen, sheetClosing, widget?.id]);
-
-    const onPointerMove = useCallback((event) => {
-      if (!lpTimerRef.current || !lpStartRef.current) return;
-      const x = event.clientX || event.touches?.[0]?.clientX || 0;
-      const y = event.clientY || event.touches?.[0]?.clientY || 0;
-      const dx = Math.abs(x - lpStartRef.current.x);
-      const dy = Math.abs(y - lpStartRef.current.y);
-      if (dx > 10 || dy > 10) cancelLongPress();
-    }, [cancelLongPress]);
-
-    const onPointerUp = useCallback(() => {
-      cancelLongPress();
-      setHolding(false);
-    }, [cancelLongPress]);
-
-    const onClick = useCallback((event) => {
-      if (
-        lpTriggeredRef.current
-        || sheetOpen
-        || sheetClosing
-        || weightDynamicsClickGuard.isBlocked(widget?.id)
-      ) {
-        lpTriggeredRef.current = false;
-        stopEventBubble(event);
-      }
-    }, [sheetOpen, sheetClosing, widget?.id]);
-
-    const onSelectVariant = useCallback((nextId) => {
-      weightDynamicsClickGuard.block(widget?.id);
-      if (!widget?.id || nextId === displayVariant) {
-        dismissVariantSheet();
-        return;
-      }
-      HEYS.Widgets.state?.updateWidget(widget.id, {
-        settings: { ...(widget.settings || {}), displayVariant: nextId }
-      }, true);
-      HEYS.dayUtils?.haptic?.('light');
-      HEYS.Widgets.emit?.('weightDynamics:variantSaved', { widgetId: widget.id, variant: nextId });
-      dismissVariantSheet();
-    }, [widget, displayVariant, dismissVariantSheet]);
+      },
+        renderWeightDynamicsBody(variantId, dyn, { compact: false, motion, playEntrance: playSceneEntrance })
+      );
+    }
 
     const tileClass = [
       'widget-wd',
       'widget-v4-stack',
       'animate-always',
-      holding ? 'widget-wd--holding' : '',
-      animPhase === 'exit' ? 'widget-wd--exit' : ''
+      hook.holding ? 'widget-wd--holding' : '',
+      hook.tileProps?.className || ''
     ].filter(Boolean).join(' ');
 
     return React.createElement(React.Fragment, null,
       React.createElement('div', {
         className: tileClass,
-        onPointerDown,
-        onPointerMove,
-        onPointerUp,
-        onPointerCancel: onPointerUp,
-        onClick
-      },
-        React.createElement('div', {
-          key: `wd-scene-${renderVariant}-${sceneId}`,
-          className: 'widget-wd__scene animate-always',
-          style: {
-            '--widget-wd-motion-ms': `${WEIGHT_DYNAMICS_VALUE_MS}ms`,
-            '--widget-wd-draw-ms': `${WEIGHT_DYNAMICS_DRAW_MS}ms`,
-            '--widget-wd-el-in-ms': `${WEIGHT_DYNAMICS_EL_IN_MS}ms`,
-            '--widget-wd-chart-delay': `${WEIGHT_DYNAMICS_CHART_DELAY_MS}ms`
-          }
-        },
-          renderWeightDynamicsBody(renderVariant, dyn, { compact: false, motion })
-        )
-      ),
-      WeightDynamicsVariantSheet({
-        open: sheetOpen,
-        closing: sheetClosing,
-        dyn,
-        activeVariant: displayVariant,
-        onSelect: onSelectVariant,
-        onClose: dismissVariantSheet
-      })
+        onPointerDown: hook.tileProps?.onPointerDown,
+        onPointerMove: hook.tileProps?.onPointerMove,
+        onPointerUp: hook.tileProps?.onPointerUp,
+        onPointerCancel: hook.tileProps?.onPointerCancel,
+        onClick: hook.tileProps?.onClick
+      }, inner),
+      hook.sheetProps ? React.createElement(V4.WidgetVariantSheet, hook.sheetProps) : null
     );
   }
 
   // === Crash Risk Widget Content v2.0 (EWS + Weight Loss Detection) ===
   function CrashRiskWidgetContent({ widget, data }) {
-    const d = getWidgetDims(widget);
-    const size = widget?.size || '2x1';
-
     const hasData = data?.hasData || false;
-    const zone = data?.zone || 'stable';
-    const zoneMeta = data?.zoneMeta || { label: 'Нет данных', color: '#64748b', light: '#f1f5f9', emoji: '—' };
-    const pctPerWeek = data?.pctPerWeek || 0;
-    const slopePerWeek = data?.slopePerWeek || 0;
-    const direction = data?.direction || 'stable';
-    const currentWeight = data?.currentWeight || 0;
-    const totalDeltaKg = data?.totalDeltaKg || 0;
-    const dataPoints = data?.dataPoints || 0;
-    const periodDays = data?.periodDays || 7;
-    const toGoalKg = data?.toGoalKg ?? null;
-    const estimatedDaysToGoal = data?.estimatedDaysToGoal ?? null;
-    const ewsCount = data?.ewsCount || 0;
-    const ewsData = data?.ewsData || null;
     const message = data?.message || '';
 
-    const dirArrow = direction === 'losing' ? '↓' : direction === 'gaining' ? '↑' : '→';
-    const absPct = Math.abs(pctPerWeek);
-    const deltaSign = totalDeltaKg < -0.05 ? '−' : totalDeltaKg > 0.05 ? '+' : '';
-    const deltaAbs = Math.abs(totalDeltaKg);
-    const color = zoneMeta.color;
-    const colorLight = zoneMeta.light;
-
-    const PRESETS = [7, 14, 30];
-    const handlePeriodSwitch = (days, event) => {
-      event?.stopPropagation?.();
-      if (!widget?.id || periodDays === days) return;
-      HEYS.Widgets.state?.updateWidget(widget.id, {
-        settings: { ...(widget.settings || {}), periodDays: days }
-      }, true);
-      HEYS.dayUtils?.haptic?.('light');
-    };
-
-    const periodPresetRow = React.createElement('div', {
-      style: {
-        display: 'flex',
-        gap: '4px',
-        flexWrap: 'nowrap',
-        justifyContent: 'center'
-      }
-    }, PRESETS.map((days) => {
-      const isActive = periodDays === days;
-      return React.createElement('button', {
-        key: days,
-        type: 'button',
-        onClick: (event) => handlePeriodSwitch(days, event),
-        onPointerDown: (event) => event.stopPropagation(),
-        onPointerUp: (event) => event.stopPropagation(),
-        onTouchStart: (event) => event.stopPropagation(),
-        style: {
-          border: 'none',
-          borderRadius: '999px',
-          padding: '2px 7px',
-          minHeight: '22px',
-          cursor: 'pointer',
-          whiteSpace: 'nowrap',
-          fontSize: '0.68rem',
-          lineHeight: 1,
-          fontWeight: isActive ? 700 : 500,
-          background: isActive ? color : 'var(--heys-bg-secondary,#f1f5f9)',
-          color: isActive ? '#fff' : 'var(--heys-text-secondary,#94a3b8)',
-          transition: 'all 0.15s ease'
-        }
-      }, `${days} дн.`);
-    }));
-
-    // === NO DATA ===
     if (!hasData) {
       return React.createElement('div', { className: 'widget-crash-risk widget-crash-risk--no-data' },
         React.createElement('div', { className: 'widget-crash-risk__icon' }, '⚖️'),
@@ -5046,189 +5841,12 @@
       );
     }
 
-    // === 2×1 — v4 динамика веса (канвас плитка 2, долгий тап → лист видов)
-    if (size === '2x1') {
-      return React.createElement(WeightDynamicsTile2x1, { widget, data });
+    if (data?.dynamicsV4) {
+      return React.createElement(CrashRiskDynamicsVariantTile, { widget, data });
     }
 
-    // === 2×2 COMPACT ===
-    if (size === '2x2') {
-      return React.createElement('div', {
-        className: `widget-crash-risk widget-crash-risk--compact widget-crash-risk--${zone}`
-      },
-        React.createElement('div', { className: 'widget-crash-risk__header' },
-          React.createElement('div', {
-            className: 'widget-crash-risk__percent',
-            style: { color, fontSize: '1.4rem', fontWeight: 800 }
-          }, `${dirArrow} ${absPct.toFixed(1)}%`)
-        ),
-        React.createElement('div', { className: 'widget-crash-risk__title' }, 'в неделю'),
-        React.createElement('div', {
-          style: {
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '6px',
-            marginTop: '6px'
-          }
-        },
-          React.createElement('div', {
-            className: 'widget-crash-risk__ews-badge',
-            style: {
-              background: colorLight,
-              color,
-              fontSize: '0.72rem',
-              padding: '2px 8px',
-              lineHeight: 1.2,
-              fontWeight: 600
-            }
-          }, `${zoneMeta.emoji} ${zoneMeta.label}`),
-          React.createElement('div', {
-            style: {
-              display: 'flex',
-              gap: '4px',
-              justifyContent: 'center',
-              width: '100%'
-            }
-          }, PRESETS.map((days) => {
-            const isActive = periodDays === days;
-            return React.createElement('button', {
-              key: `compact-${days}`,
-              type: 'button',
-              onClick: (event) => handlePeriodSwitch(days, event),
-              onPointerDown: (event) => event.stopPropagation(),
-              onPointerUp: (event) => event.stopPropagation(),
-              onTouchStart: (event) => event.stopPropagation(),
-              style: {
-                border: 'none',
-                borderRadius: '999px',
-                padding: '2px 6px',
-                minWidth: '42px',
-                minHeight: '22px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                fontSize: '0.63rem',
-                lineHeight: 1,
-                fontWeight: isActive ? 700 : 500,
-                background: isActive ? color : 'var(--heys-bg-secondary,#f1f5f9)',
-                color: isActive ? '#fff' : 'var(--heys-text-secondary,#94a3b8)',
-                transition: 'all 0.15s ease'
-              }
-            }, `${days} дн.`);
-          }))
-        )
-      );
-    }
-
-    // === 4×2 STANDARD ===
-    if (size === '4x2') {
-      return React.createElement('div', {
-        className: `widget-crash-risk widget-crash-risk--standard widget-crash-risk--${zone}`
-      },
-        // Left: rate KPI
-        React.createElement('div', { className: 'widget-crash-risk__kpi' },
-          React.createElement('div', {
-            style: { fontSize: '1.4rem', color, fontWeight: 800, lineHeight: 1 }
-          }, `${dirArrow} ${absPct.toFixed(1)}%`),
-          React.createElement('div', { className: 'widget-crash-risk__label' }, '/неделю'),
-          React.createElement('div', {
-            style: { fontSize: '0.75rem', color: 'var(--heys-text-secondary,#94a3b8)', marginTop: '4px' }
-          }, `${slopePerWeek < -0.05 ? '−' : slopePerWeek > 0.05 ? '+' : ''}${Math.abs(slopePerWeek).toFixed(2)} кг/нед`)
-        ),
-        // Right: zone + stats
-        React.createElement('div', { className: 'widget-crash-risk__details' },
-          React.createElement('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px', marginBottom: '6px' } },
-            React.createElement('div', {
-              style: { background: colorLight, color, fontWeight: 600, fontSize: '0.76rem', padding: '2px 8px', borderRadius: '99px', display: 'inline-flex', alignItems: 'center', gap: '4px', lineHeight: 1.2 }
-            }, `${zoneMeta.emoji} ${zoneMeta.label}`),
-            periodPresetRow
-          ),
-          deltaAbs >= 0.1 && React.createElement('div', {
-            style: { fontSize: '0.8rem', color: 'var(--heys-text-secondary,#94a3b8)' }
-          }, `${deltaSign}${deltaAbs.toFixed(1)} кг за ${dataPoints} дн.`),
-          widget.settings?.showGoal !== false && toGoalKg !== null && toGoalKg > 0 &&
-          React.createElement('div', {
-            style: { fontSize: '0.78rem', color: 'var(--heys-text-secondary,#94a3b8)', marginTop: '3px' }
-          }, estimatedDaysToGoal
-            ? `До цели ~${estimatedDaysToGoal} дн.`
-            : `До цели: ${toGoalKg.toFixed(1)} кг`)
-        )
-      );
-    }
-
-    // === 4×3 EXTENDED ===
-    if (size === '4x3' || (d.cols >= 4 && d.rows >= 3)) {
-      const topWarnings = ewsData?.warnings?.slice(0, 3) || [];
-      return React.createElement('div', {
-        className: `widget-crash-risk widget-crash-risk--extended widget-crash-risk--${zone}`
-      },
-        // Header
-        React.createElement('div', { className: 'widget-crash-risk__header-extended' },
-          React.createElement('div', { className: 'widget-crash-risk__title-extended' }, 'Динамика веса'),
-          React.createElement('div', { style: { display: 'flex', alignItems: 'flex-end', flexDirection: 'column', gap: '6px' } },
-            React.createElement('div', {
-              style: { background: colorLight, color, fontSize: '0.75rem', padding: '2px 8px', borderRadius: '99px', fontWeight: 600, lineHeight: 1.2 }
-            }, `${zoneMeta.emoji} ${zoneMeta.label}`),
-            periodPresetRow
-          )
-        ),
-        // KPI Section
-        React.createElement('div', { className: 'widget-crash-risk__kpi-section' },
-          React.createElement('div', { className: 'widget-crash-risk__kpi-block' },
-            React.createElement('div', { style: { fontSize: '1.6rem', color, fontWeight: 800, lineHeight: 1 } },
-              `${dirArrow} ${absPct.toFixed(1)}%`
-            ),
-            React.createElement('div', { className: 'widget-crash-risk__label' }, 'в неделю')
-          ),
-          React.createElement('div', { className: 'widget-crash-risk__weight-info' },
-            React.createElement('div', { className: 'widget-crash-risk__weight-label' }, 'Сейчас'),
-            React.createElement('div', { className: 'widget-crash-risk__weight-value' }, `${currentWeight.toFixed(1)} кг`),
-            deltaAbs >= 0.1 && React.createElement('div', {
-              style: { fontSize: '0.75rem', color: 'var(--heys-text-secondary,#94a3b8)' }
-            }, `${deltaSign}${deltaAbs.toFixed(1)} кг за ${dataPoints} дн.`)
-          )
-        ),
-        // Goal row
-        widget.settings?.showGoal !== false && toGoalKg !== null && toGoalKg > 0 &&
-        React.createElement('div', { className: 'widget-crash-risk__warnings-section', style: { paddingTop: '6px' } },
-          React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--heys-text-secondary,#94a3b8)' } },
-            React.createElement('span', null, 'До целевого веса'),
-            React.createElement('span', { style: { fontWeight: 600 } },
-              estimatedDaysToGoal
-                ? `~${estimatedDaysToGoal} дн. / −${toGoalKg.toFixed(1)} кг`
-                : `${toGoalKg.toFixed(1)} кг`
-            )
-          )
-        ),
-        // EWS warnings
-        widget.settings?.showWarnings !== false && topWarnings.length > 0 &&
-        React.createElement('div', { className: 'widget-crash-risk__warnings-section' },
-          React.createElement('div', { className: 'widget-crash-risk__warnings-title' }, `⚠️ EWS: ${ewsCount} предупреждений`),
-          React.createElement('div', { className: 'widget-crash-risk__warnings-list' },
-            topWarnings.map((w, i) =>
-              React.createElement('div', {
-                key: i,
-                className: `widget-crash-risk__warning-item widget-crash-risk__warning-item--${w.severity}`
-              },
-                React.createElement('span', { className: 'widget-crash-risk__warning-icon' }, getSeverityIcon(w.severity)),
-                React.createElement('span', { className: 'widget-crash-risk__warning-msg' }, w.message)
-              )
-            )
-          )
-        ),
-        // Footer: quality info
-        React.createElement('div', { style: { fontSize: '0.72rem', color: 'var(--heys-text-secondary,#94a3b8)', textAlign: 'right', paddingTop: '4px' } },
-          `${dataPoints}/${periodDays} взвешиваний · R² ${(data?.regression?.r2 || 0).toFixed(2)}`
-        )
-      );
-    }
-
-    // === FALLBACK ===
-    return React.createElement('div', {
-      className: `widget-crash-risk widget-crash-risk--fallback widget-crash-risk--${zone}`
-    },
-      React.createElement('div', { style: { color, fontWeight: 800 } }, `${dirArrow} ${absPct.toFixed(1)}%`),
-      React.createElement('div', { className: 'widget-crash-risk__label' }, 'в неделю')
+    return React.createElement('div', { className: 'widget-crash-risk widget-crash-risk--no-data' },
+      React.createElement('div', { className: 'widget-crash-risk__message' }, message || 'Нужна неделя')
     );
   }
 
@@ -5929,7 +6547,7 @@
     }
   }
 
-  function RelapseRiskWidgetContent({ widget, data }) {
+  function RelapseRiskVariantBody({ variantId, widget, data, meta = {} }) {
     const score = Math.round(Number(data?.score) || 0);
     const relapseScore = Math.round(Number(data?.relapseScore ?? data?.score) || 0);
     const crashScore = Math.round(Number(data?.crashScore) || 0);
@@ -5996,7 +6614,37 @@
       );
     }
 
-    if (size === '2x2') {
+    if (variantId === 'main' || (d.isShort && variantId !== 'list')) {
+      const driverLabel = primaryDriver?.label || primaryDriver?.key || getRelapseLevelLabel(level);
+      return React.createElement('div', { className: 'widget-relapse-risk widget-relapse-risk--2x1 widget-v4-stack' },
+        v4Kicker('Риск-радар'),
+        React.createElement('div', { className: 'widget-v4-hero-num' },
+          React.createElement('div', {
+            className: 'widget-v4-hero-num__val widget-v4-hero-num__val--risk ' + v4ValueStateClass(v4RiskLevelState(level))
+          }, driverLabel)
+        ),
+        React.createElement('div', { className: 'widget-v4-row__meta' }, getRelapseLevelLabel(level))
+      );
+    }
+
+    if (variantId === 'scale' && size === '2x2') {
+      const steps = ['низкий', 'средний', 'высокий', 'критичный'];
+      const activeIdx = level === 'critical' ? 3 : level === 'high' ? 2 : level === 'medium' ? 1 : 0;
+      return React.createElement('div', { className: 'widget-relapse-risk widget-relapse-risk--2x2 widget-v4-stack' },
+        v4Kicker('Риск-радар'),
+        React.createElement('div', { className: 'widget-v4-risk-scale' },
+          steps.map((label, i) => React.createElement('span', {
+            key: label,
+            className: 'widget-v4-risk-scale__step' + (i === activeIdx ? ' is-active' : '')
+          }, label))
+        ),
+        primaryDriver
+          ? React.createElement('div', { className: 'widget-v4-row__meta' }, primaryDriver.label || primaryDriver.key)
+          : null
+      );
+    }
+
+    if (size === '2x2' || variantId === 'list') {
       const levelWord = (level === 'low' || !level) ? 'низкий' : getRelapseLevelLabel(level);
       const sleepDriver = primaryDrivers.find((d) => /сон|недосып|sleep/i.test(`${d?.label || ''} ${d?.key || ''}`));
       const relapseDriver = primaryDrivers.find((d) => /срыв|relapse|эмоц/i.test(`${d?.label || ''} ${d?.key || ''}`));
@@ -6072,6 +6720,19 @@
           ? React.createElement('div', { className: 'widget-relapse-risk__recommendation' }, primaryDriver.label || primaryDriver.key || 'Есть фактор риска')
           : null
     );
+  }
+
+  function RelapseRiskWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'relapseRisk',
+      renderBody: (variantId, meta) => React.createElement(RelapseRiskVariantBody, {
+        variantId,
+        widget,
+        data,
+        meta
+      })
+    });
   }
 
   // === Status Details Modal ===
@@ -7568,6 +8229,7 @@
     const [dayScoreDetails, setDayScoreDetails] = useState(null);
     const [crashRiskDetails, setCrashRiskDetails] = useState(null);
     const [variantSavedToast, setVariantSavedToast] = useState(false);
+    const [variantHoldHint, setVariantHoldHint] = useState(false);
     const variantToastTimerRef = useRef(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
     const [showGridOverlay, setShowGridOverlay] = useState(false); // Grid overlay toggle
@@ -7575,15 +8237,108 @@
     const containerRef = useRef(null);
     const gridRef = useRef(null);
     const prevClientIdRef = useRef(clientId);
-    const motionIntroArmedRef = useRef(false);
-    const [widgetMotionCssMs, setWidgetMotionCssMs] = useState(WIDGET_MOTION_INTRO_MS);
-    if (!motionIntroArmedRef.current) {
-      widgetMotionArmIntroFromZero();
-      widgetV4ArmSparkSequence();
-      motionIntroArmedRef.current = true;
+    const prevIntroClientRef = useRef(clientId);
+    const introStartedRef = useRef(false);
+    const introActiveRef = useRef(false);
+    const motionInitRef = useRef(false);
+    const playTabIntroRef = useRef(widgetMotionShouldPlayTabIntro(clientId));
+    const [introGeneration, setIntroGeneration] = useState(0);
+    const [introActive, setIntroActive] = useState(false);
+    const [widgetMotionCssMs, setWidgetMotionCssMs] = useState(WIDGET_MOTION_MS);
+
+    if (!motionInitRef.current) {
+      motionInitRef.current = true;
+      if (!playTabIntroRef.current) {
+        introStartedRef.current = true;
+        widgetMotionDisarmIntro();
+        widgetV4DisarmSparkSequence();
+        widgetMotionEndIntroSlow();
+      }
     }
 
+    const beginTabIntro = useCallback(() => {
+      if (introStartedRef.current) return;
+      introStartedRef.current = true;
+      widgetMotionPrepareTabIntroStart();
+      widgetV4ArmSparkSequence();
+      widgetMotionMarkTabIntroPlayed(clientId);
+      setWidgetMotionCssMs(WIDGET_MOTION_INTRO_MS);
+      setIntroGeneration((g) => g + 1);
+      introActiveRef.current = true;
+      setIntroActive(true);
+    }, [clientId]);
+
     useEffect(() => {
+      if (prevIntroClientRef.current !== clientId) {
+        if (prevIntroClientRef.current) {
+          introStartedRef.current = false;
+          introActiveRef.current = false;
+          setIntroActive(false);
+        }
+        prevIntroClientRef.current = clientId;
+        playTabIntroRef.current = widgetMotionShouldPlayTabIntro(clientId);
+      }
+
+      if (!playTabIntroRef.current) {
+        introStartedRef.current = true;
+        widgetMotionDisarmIntro();
+        widgetV4DisarmSparkSequence();
+        widgetMotionEndIntroSlow();
+        return undefined;
+      }
+
+      if (!isDashboardPainted) return undefined;
+
+      let cancelled = false;
+      let revealTimer = 0;
+
+      const tryBegin = () => {
+        if (cancelled || introStartedRef.current) return;
+        if (!widgetMotionCanStartTabIntro(containerRef.current)) return;
+        if (revealTimer) return;
+        revealTimer = window.setTimeout(() => {
+          revealTimer = 0;
+          if (cancelled || introStartedRef.current) return;
+          if (!widgetMotionCanStartTabIntro(containerRef.current)) return;
+          beginTabIntro();
+        }, WIDGET_TAB_INTRO_REVEAL_DELAY_MS);
+      };
+
+      tryBegin();
+
+      const tick = () => {
+        if (!cancelled) tryBegin();
+      };
+      const intervalId = window.setInterval(tick, 400);
+      const blockerEvents = [
+        'heys:checkin-complete',
+        'heys:morning-checkin-status',
+        'heys:modal-stack-idle',
+        'visibilitychange'
+      ];
+      blockerEvents.forEach((ev) => window.addEventListener(ev, tick));
+      let mo = null;
+      if (typeof MutationObserver !== 'undefined' && document.body) {
+        mo = new MutationObserver(tick);
+        mo.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['class', 'aria-hidden', 'hidden', 'style', 'data-visible']
+        });
+      }
+
+      return () => {
+        cancelled = true;
+        if (revealTimer) clearTimeout(revealTimer);
+        clearInterval(intervalId);
+        blockerEvents.forEach((ev) => window.removeEventListener(ev, tick));
+        mo?.disconnect();
+      };
+    }, [beginTabIntro, clientId, isDashboardPainted]);
+
+    useEffect(() => {
+      if (!introActive) return undefined;
       const introTotal = Math.max(
         WIDGET_MOTION_INTRO_MS,
         widgetMotionIntroDuration(WIDGET_V4_SPARK_DELAY_MS)
@@ -7592,9 +8347,13 @@
       const t = window.setTimeout(() => {
         setWidgetMotionCssMs(WIDGET_MOTION_MS);
         widgetMotionEndIntroSlow();
+        widgetMotionDisarmIntro();
+        widgetV4DisarmSparkSequence();
+        introActiveRef.current = false;
+        setIntroActive(false);
       }, introTotal);
       return () => clearTimeout(t);
-    }, []);
+    }, [introActive]);
 
     const updateHistoryInfo = useCallback(() => {
       setHistoryInfo({
@@ -7672,8 +8431,10 @@
       if (clientId) {
         const isRealSwitch = prevClientIdRef.current && prevClientIdRef.current !== clientId;
         if (isRealSwitch) {
-          widgetMotionArmIntroFromZero();
-          widgetV4ArmSparkSequence();
+          introStartedRef.current = false;
+          introActiveRef.current = false;
+          setIntroActive(false);
+          playTabIntroRef.current = widgetMotionShouldPlayTabIntro(clientId);
         }
         prevClientIdRef.current = clientId;
 
@@ -7687,7 +8448,7 @@
         applyWidgetsLayout(HEYS.Widgets.state?.getWidgets?.() || []);
         HEYS.Widgets.data?.refresh?.();
       }
-    }, [clientId, applyWidgetsLayout]);
+    }, [clientId, applyWidgetsLayout, beginTabIntro]);
 
     // 🔗 Sync event bridge: DOM events from sync layer → widget data refresh
     // Sync layer dispatches heysSyncCompleted and heys:day-updated as DOM CustomEvents,
@@ -7828,7 +8589,9 @@
           || (grid && grid.childElementCount > 0);
         if (!gridReady) return;
         setIsDashboardPainted(true);
-        widgetMotionDisarmIntro();
+        if (!introActiveRef.current) {
+          widgetMotionDisarmIntro();
+        }
         window.HEYS?.BlankScreenGuard?.reportVisibleFrame?.({
           element: root,
           screen: 'widgets',
@@ -7960,6 +8723,11 @@
         unsubVariantSaved?.();
         if (variantToastTimerRef.current) clearTimeout(variantToastTimerRef.current);
       };
+    }, []);
+
+    useEffect(() => {
+      const unsub = HEYS.Widgets.VariantsV4?.subscribeVariantHoldHint?.(setVariantHoldHint);
+      return () => unsub?.();
     }, []);
 
     useEffect(() => {
@@ -8229,7 +8997,7 @@
         },
           widgets.map((widget, idx) =>
             React.createElement(WidgetCard, {
-              key: widget.id,
+              key: `${widget.id}_${introGeneration}`,
               widget,
               selectedDate,
               isEditMode,
@@ -8264,6 +9032,10 @@
         )
       ),
 
+      !isEditMode && variantHoldHint && React.createElement('div', { className: 'widgets-tab__hold-hint' },
+        React.createElement('span', { className: 'widget-v4-hold-hint__pill' }, 'удерживайте, чтобы сменить вид')
+      ),
+
       !isEditMode && widgets.length > 0 && React.createElement('div', { className: 'widgets-tab__edit-row' },
         React.createElement('button', {
           type: 'button',
@@ -8289,7 +9061,7 @@
       }),
 
       isEditMode && React.createElement('div', { className: 'widget-v4-edit-footer' },
-        React.createElement('span', { className: 'widget-v4-edit-footer__hint' }, 'Потяни виджет'),
+        React.createElement('span', { className: 'widget-v4-edit-footer__hint' }, 'Долгое нажатие — взять виджет'),
         React.createElement('span', { className: 'widget-v4-edit-footer__history' },
           React.createElement('button', {
             type: 'button',

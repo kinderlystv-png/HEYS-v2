@@ -9642,7 +9642,11 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   gap: 0;
 }
 
-.widget-calories--v4-hero .widget-v4-kicker {
+.widget-calories__hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 0;
   flex-shrink: 0;
 }
 
@@ -9650,7 +9654,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   display: flex;
   align-items: baseline;
   gap: 5px;
-  margin-top: 10px;
+  margin-top: 0;
   flex-shrink: 0;
 }
 
@@ -9674,7 +9678,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   font-weight: 500;
   line-height: 1;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
-  margin-top: 7px;
+  margin-top: 0;
   flex-shrink: 0;
 }
 
@@ -9684,10 +9688,22 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-calories__hero-bar {
+  position: relative;
   height: 6px;
   border-radius: 999px;
   background: var(--v4-line, rgba(0, 0, 0, 0.1));
   overflow: hidden;
+}
+
+/* Перебор: заливка доходит до нормы, дальше красный сегмент — видно и норму,
+   и превышение (канвас «Калории · состояние · Перебор»). */
+.widget-calories__hero-bar-over {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  background: var(--v4-bad-text, #a8382b);
+  transition: left var(--widget-motion-ms, 1100ms) cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 .widget-calories__hero-bar-fill {
@@ -9697,15 +9713,48 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   transition: width var(--widget-motion-ms, 1100ms) cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-.widget-calories__hero-bar-labels {
+.widget-calories__hero-bar-foot {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
   margin-top: 8px;
-  font-size: 9.5px;
-  font-weight: 600;
+}
+
+.widget-calories__hero-bar-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.widget-calories__hero-bar-col--end {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.widget-calories__hero-bar-num {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Красится число, подпись под ним остаётся нейтральной. */
+.widget-calories__hero-bar-num--good {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.widget-calories__hero-bar-num--bad {
+  color: var(--v4-bad-text, #a8382b);
+}
+
+.widget-calories__hero-bar-cap {
+  font-size: 8.5px;
+  font-weight: 500;
   line-height: 1;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.4));
-  font-variant-numeric: tabular-nums;
 }
 
 [data-theme$="dark"] body:has(.widgets-tab:not(.widgets-tab--editing)) .widget {
@@ -10068,6 +10117,69 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   background: #7d98a6;
 }
 
+.widget-v4-insulin-day-bar__fill {
+  background: #26455c;
+  opacity: 0.85;
+}
+
+.widget-v4-insulin-wave {
+  margin-top: auto;
+  overflow: visible;
+}
+
+.widget-v4-insulin-wave__fill {
+  fill: var(--v4-sand-wave, #e6cfa8);
+}
+
+.widget-v4-insulin-wave__stroke {
+  stroke: var(--v4-act, #c67139);
+}
+
+.widget-v4-insulin-wave__dot {
+  fill: var(--v4-act, #c67139);
+}
+
+.widget-v4-insulin-wave__overlap-mark {
+  stroke: var(--v4-sand-act, #d99a63);
+}
+
+.widget-v4-insulin-daybar {
+  display: flex;
+  gap: 2px;
+  height: 9px;
+  margin-top: auto;
+}
+
+.widget-v4-insulin-daybar__seg {
+  background: rgba(0, 0, 0, 0.09);
+  min-width: 2px;
+}
+
+.widget-v4-insulin-daybar__seg:first-child {
+  border-radius: 999px 0 0 999px;
+}
+
+.widget-v4-insulin-daybar__seg:last-child {
+  border-radius: 0 999px 999px 0;
+}
+
+.widget-v4-insulin-daybar__seg--up {
+  background: var(--v4-sand-wave, #e6cfa8);
+}
+
+.widget-v4-insulin-daybar__labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 8.5px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.widget-v4-insulin-wave__footer {
+  margin-top: 9px;
+}
+
 body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water .widget-water__bar,
 .widget-water__bar--v4 {
   background: #7d98a6;
@@ -10338,6 +10450,26 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water .widget-water__
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
+.widgets-tab__hold-hint {
+  display: flex;
+  justify-content: center;
+  padding: 0 18px 4px;
+}
+
+.widget-v4-hold-hint__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  min-height: 30px;
+  border-radius: 999px;
+  background: rgba(198, 113, 57, 0.16);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+  color: #8a4a20;
+}
+
 .widget-v4-edit-footer__history {
   display: flex;
   gap: 14px;
@@ -10546,24 +10678,24 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-v4-mini.widget-water--
 .widget-wd--exit {
   opacity: 0.28;
   transform: scale(0.94);
-  transition: opacity 200ms cubic-bezier(0.22, 0.61, 0.36, 1),
-    transform 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: opacity 160ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 160ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-/* Поэлементное проявление: один CSS-цикл на свежей .widget-wd__scene */
-.widget-wd__scene .widget-wd__el--kicker.widget-wd__el--in {
+/* Поэлементное проявление: только при tab intro или смене варианта (.widget-wd__scene--entrance) */
+.widget-wd__scene--entrance .widget-wd__el--kicker.widget-wd__el--in {
   animation: widget-wd-el-in var(--widget-wd-el-in-ms, 520ms) cubic-bezier(0.22, 0.61, 0.36, 1) 0ms both;
 }
 
-.widget-wd__scene .widget-wd__el--meta.widget-wd__el--in {
+.widget-wd__scene--entrance .widget-wd__el--meta.widget-wd__el--in {
   animation: widget-wd-el-in var(--widget-wd-el-in-ms, 520ms) cubic-bezier(0.22, 0.61, 0.36, 1) 130ms both;
 }
 
-.widget-wd__scene .widget-wd__el--value.widget-wd__el--in {
+.widget-wd__scene--entrance .widget-wd__el--value.widget-wd__el--in {
   animation: widget-wd-el-in var(--widget-wd-el-in-ms, 520ms) cubic-bezier(0.22, 0.61, 0.36, 1) 260ms both;
 }
 
-.widget-wd__scene .widget-wd__el--chart.widget-wd__el--in:not(.widget-wd__week-col):not(.widget-wd__spark) {
+.widget-wd__scene--entrance .widget-wd__el--chart.widget-wd__el--in:not(.widget-wd__week-col):not(.widget-wd__spark) {
   animation: widget-wd-el-in var(--widget-wd-el-in-ms, 520ms) cubic-bezier(0.22, 0.61, 0.36, 1) var(--widget-wd-chart-delay, 320ms) both;
 }
 
@@ -10698,8 +10830,13 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-v4-mini.widget-water--
   transition: width var(--widget-wd-motion-ms, 1400ms) cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-.widget-wd__scene .widget-wd__bar-fill {
+.widget-wd__scene--entrance .widget-wd__bar-fill {
   animation: widget-wd-bar-scale var(--widget-wd-motion-ms, 1400ms) cubic-bezier(0.65, 0, 0.35, 1) var(--widget-wd-chart-delay, 320ms) both;
+}
+
+.widget-wd__scene:not(.widget-wd__scene--entrance) .widget-wd__bar-fill {
+  transform: scaleX(1);
+  animation: none;
 }
 
 @keyframes widget-wd-bar-scale {
@@ -10733,19 +10870,19 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-v4-mini.widget-water--
   transform-origin: bottom center;
 }
 
-.widget-wd__scene .widget-wd__el--week-1.widget-wd__el--in {
+.widget-wd__scene--entrance .widget-wd__el--week-1.widget-wd__el--in {
   animation: widget-wd-week-grow 680ms cubic-bezier(0.22, 0.61, 0.36, 1) calc(var(--widget-wd-chart-delay, 320ms) + 40ms) both;
 }
 
-.widget-wd__scene .widget-wd__el--week-2.widget-wd__el--in {
+.widget-wd__scene--entrance .widget-wd__el--week-2.widget-wd__el--in {
   animation: widget-wd-week-grow 680ms cubic-bezier(0.22, 0.61, 0.36, 1) calc(var(--widget-wd-chart-delay, 320ms) + 170ms) both;
 }
 
-.widget-wd__scene .widget-wd__el--week-3.widget-wd__el--in {
+.widget-wd__scene--entrance .widget-wd__el--week-3.widget-wd__el--in {
   animation: widget-wd-week-grow 680ms cubic-bezier(0.22, 0.61, 0.36, 1) calc(var(--widget-wd-chart-delay, 320ms) + 300ms) both;
 }
 
-.widget-wd__scene .widget-wd__el--week-4.widget-wd__el--in {
+.widget-wd__scene--entrance .widget-wd__el--week-4.widget-wd__el--in {
   animation: widget-wd-week-grow 680ms cubic-bezier(0.22, 0.61, 0.36, 1) calc(var(--widget-wd-chart-delay, 320ms) + 430ms) both;
 }
 
@@ -10957,5 +11094,532 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-v4-mini.widget-water--
 
 [data-theme$="dark"] .widget-wd--preview {
   background: #2f2820;
+}
+
+/* === Widget variants v4 === */
+
+.widget-v4-tile {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  transition: transform 180ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+body:has(.widgets-tab:not(.widgets-tab--editing)) .widget .widget__content > .widget-v4-tile {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.widget-v4-tile > * {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.widget-v4-tile--holding {
+  transform: scale(0.965);
+  box-shadow: inset 0 0 0 2px #c67139;
+}
+
+.widget-v4-tile--exit {
+  opacity: 0;
+  transform: scale(0.94);
+  transition: opacity 160ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 160ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.widget-v4-tile--enter {
+  animation: widget-v4-tile-enter 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@keyframes widget-v4-tile-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.widget-v4-tile--bg-sand {
+  background: #efe3cf;
+}
+
+.widget-v4-tile--bg-sage {
+  background: #eaefe0;
+}
+
+.widget-v4-tile--bg-paper {
+  background: #f7efe2;
+}
+
+.widget-wd-sheet__preview--1x1 {
+  width: 68px;
+  height: 64px;
+}
+
+.widget-wd-sheet__preview--2x1 {
+  width: 143px;
+  height: 64px;
+}
+
+.widget-wd-sheet__preview--2x2 {
+  width: 143px;
+  height: 136px;
+}
+
+.widget-wd-sheet__preview--3x2 {
+  width: 218px;
+  height: 136px;
+}
+
+.widget-v4-water-hour__bar {
+  position: relative;
+}
+
+.widget-v4-water-hour__marker {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: calc(100% + 4px);
+  background: var(--v4-act, #c67139);
+  transform: translateX(-50%);
+}
+
+.widget-v4-factor-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.widget-v4-factor-bars__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+}
+
+.widget-v4-factor-bars__label {
+  flex: none;
+  width: 42px;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
+}
+
+.widget-v4-factor-bars__bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--v4-ok, #5a9a6e);
+  max-width: 100%;
+}
+
+.widget-v4-week-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 48px;
+  margin-top: 6px;
+}
+
+.widget-v4-week-bars__col {
+  flex: 1;
+  min-height: 4px;
+  border-radius: 3px 3px 0 0;
+  background: var(--v4-act, #c67139);
+}
+
+.widget-heatmap__month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.widget-heatmap__cell--month {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.widget-heatmap__cell--month.widget-heatmap__cell--green,
+.widget-heatmap__cell--month.widget-heatmap__cell--good,
+.widget-heatmap__cell--month.widget-heatmap__cell--ok {
+  background: var(--v4-ok, #5a9a6e);
+}
+
+.widget-v4-risk-scale {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.widget-v4-risk-scale__step {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
+  padding: 2px 0;
+}
+
+.widget-v4-risk-scale__step.is-active {
+  color: var(--v4-act-text, #8a4a20);
+  font-weight: 800;
+}
+
+.widget-calories__activity-foot {
+  font-size: 8.5px;
+  font-weight: 600;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
+  margin-top: 4px;
+}
+
+/* Калории 2×1 — канвас «Строка» и «С активностью»: заголовка нет, единица «ккал»
+   стоит при числе, подпись состояния уходит вправо. */
+.widget-calories--v4-line {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0;
+  gap: 0;
+  justify-content: flex-start;
+}
+
+.widget-calories__line-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.widget-calories__line-value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--v4-act-text, #8a4a20);
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-calories__line-unit {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+}
+
+.widget-calories__line-meta {
+  font-size: 8.5px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+}
+
+.widget-calories__line-foot {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: auto;
+}
+
+.widget-calories__line-foot .widget-calories__hero-bar {
+  flex: 1;
+  height: 5px;
+}
+
+.widget-calories__line-foot .widget-calories__hero-bar-fill {
+  height: 5px;
+}
+
+.widget-calories__line-fraction {
+  flex: none;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+  font-variant-numeric: tabular-nums;
+}
+
+/* Калории 2×2 «Хватит на ужин» — канвас: остаток крупно, бюджет ужина строкой,
+   нехватка красным сегментом полосы. */
+.widget-calories--v4-dinner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  gap: 0;
+}
+
+.widget-calories__value--md {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 0.9;
+  letter-spacing: -0.035em;
+  color: var(--v4-act-text, #8a4a20);
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-calories__dinner-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.widget-calories__dinner-budget {
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-calories--v4-dinner .widget-calories__hero-bar {
+  margin-top: 7px;
+}
+
+.widget-calories__dinner-note {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  margin-top: 7px;
+}
+
+/* Тренд здоровья 2×1 «Компакт» — канвас: дельта слева, мини-линия справа. */
+.widget-trend-compact__row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+}
+
+/* Цвет несёт тон-класс (--good/--bad/--neutral), поэтому здесь только метрика. */
+.widget-trend-compact__value {
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-trend-compact__spark {
+  flex: none;
+  margin-bottom: 2px;
+  color: currentColor;
+}
+
+/* Перебор красит число и его подпись — эти правила стоят после базовых цветов
+   плитки, иначе терракота героя перекрыла бы красный. */
+.widget-calories__hero-value .widget-calories__value--lg.widget-v4-val--bad,
+.widget-calories__line-value.widget-v4-val--bad,
+.widget-calories__line-meta.widget-v4-val--bad {
+  color: var(--v4-bad-text, #a8382b);
+}
+
+.widget-v4-val--warn,
+.widget-v4-row__value.widget-v4-val--warn,
+.widget-v4-row__meta.widget-v4-val--warn,
+.widget-v4-mini__value.widget-v4-val--warn {
+  color: var(--v4-warn, #d99a63);
+}
+
+.widget-v4-macro-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.widget-v4-macro-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 9px;
+}
+
+.widget-v4-macro-bar-row__label {
+  width: 8px;
+  flex: none;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
+}
+
+.widget-v4-macro-bar-row__track {
+  position: relative;
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.09);
+}
+
+.widget-v4-macro-bar-row__fill {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--v4-ok, #7a8a5e);
+}
+
+.widget-v4-macro-bar-row__fill--over {
+  background: var(--v4-warn, #a8382b);
+}
+
+.widget-v4-macro-bar-row__norm {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--v4-ink, #201e1d);
+  transform: translateX(-50%);
+}
+
+.widget-v4-macro-bar-row__nums {
+  flex: none;
+  width: 46px;
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-v4-deficit-hero {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  margin-top: 6px;
+}
+
+.widget-v4-deficit-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
+}
+
+.widget-v4-deficit-rows__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.widget-v4-factor-cols {
+  display: flex;
+  gap: 5px;
+  margin-top: auto;
+}
+
+.widget-v4-factor-cols__item {
+  flex: 1;
+  text-align: center;
+}
+
+.widget-v4-factor-cols__bar {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--v4-ok, #7a8a5e);
+}
+
+.widget-v4-factor-cols__bar--good {
+  background: var(--v4-ok, #7a8a5e);
+}
+
+.widget-v4-factor-cols__bar--warn {
+  background: var(--v4-warn, #d99a63);
+}
+
+.widget-v4-factor-cols__bar--bad {
+  background: var(--v4-bad, #a8382b);
+}
+
+.widget-v4-factor-cols__label {
+  display: block;
+  margin-top: 5px;
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
+}
+
+.widget-v4-water-rhythm {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 24px;
+  margin-top: auto;
+}
+
+.widget-v4-water-rhythm__bin {
+  flex: 1;
+  min-height: 3px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.widget-v4-water-rhythm__bin--fill {
+  background: var(--v4-water, #7d98a6);
+}
+
+.widget-v4-sleep-window {
+  position: relative;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.07);
+  margin-top: auto;
+}
+
+.widget-v4-sleep-window__target {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.13);
+}
+
+.widget-v4-sleep-window__actual {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: var(--v4-water, #7d98a6);
+}
+
+.widget-v4-sleep-window__labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 7px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
+}
+
+.widget-weight__scatter-foot {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
+  margin-top: 5px;
+}
+
+.widget-heatmap__month-meta {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
+  margin-top: auto;
+}
+
+.widget-v4-heat--month-foot {
+  margin-top: 6px;
 }
 

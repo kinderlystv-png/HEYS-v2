@@ -164,7 +164,7 @@
       size: '2x2',
       position: { col: 2, row: 5 },
       settings: {
-        periodDays: 7,
+        periodDays: 14,
         showCategories: true
       }
     },
@@ -185,9 +185,8 @@
       size: '2x1',
       position: { col: 2, row: 7 },
       settings: {
-        showGoal: true,
-        periodDays: 7,
-        showWarnings: true
+        displayVariant: 'curve',
+        showGoal: true
       }
     }
   ];

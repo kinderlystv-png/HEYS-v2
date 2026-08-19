@@ -207,7 +207,11 @@
         case 'insulin':
           return this.getInsulinData();
         case 'heatmap':
-          return this.getHeatmapData(widget.settings?.period === 'month' ? 'week' : (widget.settings?.period || 'week'));
+          const heatPeriod = widget.settings?.displayVariant === 'month_grid'
+            || widget.settings?.period === 'month'
+            ? 'month'
+            : (widget.settings?.period || 'week');
+          return this.getHeatmapData(heatPeriod);
         case 'cycle':
           return this.getCycleData();
         case 'crashRisk':
@@ -264,6 +268,8 @@
           levelLabel: result.level?.label || '',
           breakdown: result.breakdown || {},
           statusResult: result.statusResult || null,
+          factorBars: this._buildDayScoreFactorBars(result.statusResult),
+          weekScores: this._getDayScoreWeekHistory(),
           timestamp: result.timestamp
         };
       } catch (error) {
@@ -487,12 +493,28 @@
 
       const dayTot = this._getDayTotals();
       const optimum = this._getOptimum();
+      const day = this._getDay();
+      const prof = this._getProfile();
+      const target = optimum || 2000;
+      let activityKcal = 0;
+      try {
+        if (HEYS.TDEE?.calculate) {
+          const tdee = HEYS.TDEE.calculate(day, prof, {});
+          activityKcal = Math.round(Number(tdee?.activityKcal ?? tdee?.trainingKcal) || 0);
+        }
+      } catch (_) { /* optional */ }
+      if (!activityKcal && dayTot?.trainKcal) {
+        activityKcal = Math.round(Number(dayTot.trainKcal) || 0);
+      }
 
       return {
         eaten: dayTot?.kcal || 0,
-        target: optimum || 2000,
-        remaining: Math.max(0, (optimum || 2000) - (dayTot?.kcal || 0)),
-        pct: optimum > 0 ? Math.round(((dayTot?.kcal || 0) / optimum) * 100) : 0,
+        target,
+        remaining: Math.max(0, target - (dayTot?.kcal || 0)),
+        pct: target > 0 ? Math.round(((dayTot?.kcal || 0) / target) * 100) : 0,
+        burned: activityKcal,
+        activityKcal,
+        dinnerBudgetKcal: Math.round(target * 0.28),
         isClosedDay: this._isClosedDay()
       };
     },
@@ -511,14 +533,51 @@
       const prof = this._getProfile();
       const waterGoal = this._getWaterGoal();
 
+      const drunk = day?.waterMl || 0;
+      const target = waterGoal || 2000;
+      let hoursSinceWater = null;
+      if (day?.lastWaterTime) {
+        const ms = Date.now() - Number(day.lastWaterTime);
+        if (Number.isFinite(ms) && ms >= 0) {
+          hoursSinceWater = Math.floor(ms / (1000 * 60 * 60));
+        }
+      }
+
+      const sleepEnd = day?.sleepEnd || null;
+      const sleepStart = day?.sleepStart || null;
+      const profileSleepHours = prof?.sleepHours || 8;
+      const medianWakeMinutes = this._getMedianSleepEndMinutes(14);
+      const wakeMinutes = this._parseHmToMinutes(sleepEnd) ?? medianWakeMinutes;
+      const bedMinutes = this._parseHmToMinutes(sleepStart);
+      const awakeSpan = bedMinutes != null && wakeMinutes != null
+        ? this._minutesSpan(wakeMinutes, bedMinutes)
+        : Math.round((24 - profileSleepHours) * 60);
+      const nowMinutes = this._moscowNowMinutes();
+      const waterSchedule = this._waterScheduleAtMinutes(
+        target, wakeMinutes, awakeSpan, nowMinutes
+      );
+
       return {
-        drunk: day?.waterMl || 0,
-        target: waterGoal || 2000,
-        pct: waterGoal > 0 ? Math.round(((day?.waterMl || 0) / waterGoal) * 100) : 0,
-        sleepEnd: day?.sleepEnd || null,
-        sleepStart: day?.sleepStart || null,
-        profileSleepHours: prof?.sleepHours || 8,
-        medianWakeMinutes: this._getMedianSleepEndMinutes(14),
+        drunk,
+        target,
+        pct: target > 0 ? Math.round((drunk / target) * 100) : 0,
+        sleepEnd,
+        sleepStart,
+        profileSleepHours,
+        medianWakeMinutes,
+        lastWaterTime: day?.lastWaterTime || null,
+        hoursSinceWater,
+        expectedMlNow: waterSchedule.expectedMl,
+        expectedPctNow: waterSchedule.expectedPct,
+        deficitMlNow: drunk - waterSchedule.expectedMl,
+        checkHourLabel: waterSchedule.checkLabel,
+        rhythmBins: this._buildWaterRhythmBins({
+          drunk,
+          wakeMinutes,
+          awakeSpan,
+          nowMinutes,
+          hoursSinceWater
+        }),
         isClosedDay: this._isClosedDay()
       };
     },
@@ -536,12 +595,44 @@
       const day = this._getDay();
       const prof = this._getProfile();
 
+      const targetHours = prof?.sleepHours || 8;
+      const hours = day?.sleepHours || 0;
+      let weekDebtHours = 0;
+      const sleepWeekBars = [];
+      const today = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateStr = this._formatDate(date);
+        const dayData = this._getDayByDate(dateStr);
+        const h = Number(dayData?.sleepHours) || 0;
+        const debt = targetHours - h;
+        weekDebtHours += debt > 0 ? debt : 0;
+        sleepWeekBars.push({ date: dateStr, hours: h, debt });
+      }
+
+      const sleepStart = day?.sleepStart || null;
+      const sleepEnd = day?.sleepEnd || null;
+      const targetSleepStart = prof?.sleepTarget || '23:30';
+      const bedMin = this._parseHmToMinutes(targetSleepStart);
+      let targetWakeMin = null;
+      if (bedMin != null) {
+        targetWakeMin = bedMin + Math.round(targetHours * 60);
+        if (targetWakeMin >= 1440) targetWakeMin -= 1440;
+      }
+      const targetSleepEnd = targetWakeMin != null ? this._minutesToHm(targetWakeMin) : null;
+
       return {
-        hours: day?.sleepHours || 0,
-        target: prof?.sleepHours || 8,
+        hours,
+        target: targetHours,
+        toNormDelta: hours - targetHours,
+        weekDebtHours,
+        sleepWeekBars,
         quality: day?.sleepQuality || null,
-        sleepStart: day?.sleepStart || null,
-        sleepEnd: day?.sleepEnd || null,
+        sleepStart,
+        sleepEnd,
+        targetSleepStart,
+        targetSleepEnd,
         isClosedDay: this._isClosedDay()
       };
     },
@@ -775,7 +866,7 @@
       }
 
       const days = [];
-      const count = period === 'week' ? 7 : 30;
+      const count = period === 'week' ? 7 : 28;
       const today = new Date();
 
       for (let i = count - 1; i >= 0; i--) {
@@ -805,7 +896,20 @@
         });
       }
 
-      return { days };
+      // Строгая серия: любой пропуск или не-норма обнуляет (канвас #20).
+      let streak = 0;
+      for (let i = days.length - 1; i >= 0; i--) {
+        const s = days[i]?.status;
+        if (s === 'green' || s === 'good' || s === 'ok') streak += 1;
+        else break;
+      }
+
+      const monthDays28 = count >= 28 ? days.slice(-28) : days;
+      const monthFilledCount = monthDays28.filter((d) =>
+        d?.status === 'green' || d?.status === 'good' || d?.status === 'ok'
+      ).length;
+
+      return { days, currentStreak: streak, monthFilledCount };
     },
 
     /**
@@ -837,6 +941,132 @@
 
     // Выбранная дата (устанавливается из WidgetsTab)
     _selectedDate: null,
+
+    _getDayScoreWeekHistory() {
+      if (!HEYS.DayScore?.calculateDayScore) return [];
+      const scores = [];
+      const today = new Date();
+      const profile = this._getProfile() || {};
+      const normAbs = this._getNormAbs() || {};
+      const waterGoal = this._getWaterGoal() || 2000;
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateStr = this._formatDate(date);
+        const dayData = this._getDayByDate(dateStr);
+        try {
+          const dayTot = this._calculateDayTotals(dayData);
+          const result = HEYS.DayScore.calculateDayScore({
+            dayData, profile, dayTot, normAbs, waterGoal
+          });
+          scores.push({
+            date: dateStr,
+            score: Math.round(Number(result?.score) || 0)
+          });
+        } catch {
+          scores.push({ date: dateStr, score: 0 });
+        }
+      }
+      return scores;
+    },
+
+    _buildDayScoreFactorBars(statusResult) {
+      const cats = statusResult?.categoryScores || {};
+      const items = [
+        { key: 'food', label: 'еда' },
+        { key: 'water', label: 'вода' },
+        { key: 'sleep', label: 'сон' },
+        { key: 'activity', label: 'актив' },
+        { key: 'relapse', label: 'срывы' }
+      ];
+      return items.map(({ key, label }) => {
+        const score = Math.round(Number(cats[key]) || 0);
+        let tone = 'good';
+        if (score < 40) tone = 'bad';
+        else if (score < 65) tone = 'warn';
+        // Недобор воды без провала — янтарь, не красный (канвас #17).
+        if (key === 'water' && score >= 40 && score < 65) tone = 'warn';
+        if (key === 'sleep' && score < 50) tone = 'bad';
+        return { key, label, score, tone };
+      });
+    },
+
+    _parseHmToMinutes(hm) {
+      if (!hm || typeof hm !== 'string') return null;
+      const parts = hm.trim().split(':');
+      const h = Number(parts[0]);
+      const m = Number(parts[1]);
+      if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+      return ((h % 24) * 60) + m;
+    },
+
+    _minutesToHm(totalMinutes) {
+      if (!Number.isFinite(totalMinutes)) return null;
+      const m = ((totalMinutes % 1440) + 1440) % 1440;
+      const h = Math.floor(m / 60);
+      const min = m % 60;
+      return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+    },
+
+    _minutesSpan(startMin, endMin) {
+      if (!Number.isFinite(startMin) || !Number.isFinite(endMin)) return 0;
+      let span = endMin - startMin;
+      if (span <= 0) span += 1440;
+      return span;
+    },
+
+    _moscowNowMinutes() {
+      try {
+        const parts = new Intl.DateTimeFormat('en-GB', {
+          timeZone: 'Europe/Moscow',
+          hour: 'numeric',
+          minute: 'numeric',
+          hour12: false
+        }).formatToParts(new Date());
+        const h = Number(parts.find((p) => p.type === 'hour')?.value);
+        const min = Number(parts.find((p) => p.type === 'minute')?.value);
+        if (Number.isFinite(h) && Number.isFinite(min)) return h * 60 + min;
+      } catch (_e) { /* fallback */ }
+      const d = new Date();
+      return d.getHours() * 60 + d.getMinutes();
+    },
+
+    _waterScheduleAtMinutes(target, wakeMinutes, awakeSpan, atMinutes) {
+      if (!target || !wakeMinutes || !awakeSpan) {
+        return { expectedMl: 0, expectedPct: 0, checkLabel: null };
+      }
+      let elapsed = atMinutes - wakeMinutes;
+      if (elapsed < 0) elapsed += 1440;
+      elapsed = Math.max(0, Math.min(awakeSpan, elapsed));
+      const share = Math.min(1, elapsed / awakeSpan);
+      const checkLabel = this._minutesToHm(atMinutes);
+      return {
+        expectedMl: target * share,
+        expectedPct: Math.round(share * 100),
+        checkLabel: checkLabel ? `к ${checkLabel}` : null
+      };
+    },
+
+    _buildWaterRhythmBins({ drunk, wakeMinutes, awakeSpan, nowMinutes, hoursSinceWater }) {
+      const BIN_COUNT = 7;
+      if (!wakeMinutes || !awakeSpan) {
+        return Array(BIN_COUNT).fill(0);
+      }
+      const binMinutes = awakeSpan / BIN_COUNT;
+      let elapsed = nowMinutes - wakeMinutes;
+      if (elapsed < 0) elapsed += 1440;
+      const elapsedBins = Math.min(BIN_COUNT, Math.max(1, Math.ceil(elapsed / binMinutes)));
+      const dryBins = Number.isFinite(hoursSinceWater) && hoursSinceWater > 0
+        ? Math.min(elapsedBins, Math.ceil(hoursSinceWater / (binMinutes / 60)))
+        : 0;
+      const activeBins = Math.max(0, elapsedBins - dryBins);
+      const bins = Array(BIN_COUNT).fill(0);
+      if (activeBins > 0 && drunk > 0) {
+        const perBin = drunk / activeBins;
+        for (let i = 0; i < activeBins; i++) bins[i] = perBin;
+      }
+      return bins;
+    },
 
     _getDay() {
       // Используем selectedDate из WidgetsTab, или текущую дату как fallback
@@ -1323,11 +1553,19 @@
             });
             if (result) {
               console.info('[widget_data.getInsulinWaveData] ✅', { status: result.status, progress: result.progress, remaining: result.remaining });
+              const nowMin = isPastDay
+                ? 1439
+                : (new Date().getHours() * 60 + new Date().getMinutes());
+              const v4 = HEYS.Widgets.InsulinWaveV4?.buildV4FromWave?.(result, nowMin) || null;
               return {
                 ...result,
+                ...(v4 || {}),
+                v4,
                 hasData: true,
                 isPastDay,
-                waveCount: mealsWithTime.length
+                waveCount: mealsWithTime.length,
+                isLipolysis: result.status === 'complete',
+                color: result.status === 'complete' ? '#16a34a' : '#c67139'
               };
             }
           } catch (e) {
@@ -1369,7 +1607,19 @@
           trainings: yData.trainings || [],
           nowMinutes: 1440 + currentDateTime.getHours() * 60 + currentDateTime.getMinutes()
         });
-        return canonicalResult ? { ...canonicalResult, hasData: true, isOvernightEstimate: true } : { hasData: false, status: 'noData', progress: 0, remaining: 0 };
+        return canonicalResult ? (() => {
+          const nowMin = 1440 + currentDateTime.getHours() * 60 + currentDateTime.getMinutes();
+          const v4 = HEYS.Widgets.InsulinWaveV4?.buildV4FromWave?.(canonicalResult, nowMin) || null;
+          return {
+            ...canonicalResult,
+            ...(v4 || {}),
+            v4,
+            hasData: true,
+            isOvernightEstimate: true,
+            isLipolysis: canonicalResult.status === 'complete',
+            color: canonicalResult.status === 'complete' ? '#16a34a' : '#c67139'
+          };
+        })() : { hasData: false, status: 'noData', progress: 0, remaining: 0 };
       } catch (e) {
         console.error('[widget_data] overnight response estimate ❌', e);
         return { hasData: false, status: 'noData', progress: 0, remaining: 0, isLipolysis: false };
@@ -1378,7 +1628,7 @@
 
     getHealthTrendData(settings = {}) {
       try {
-        const days = settings?.periodDays || 7;
+        const days = settings?.periodDays || 14;
         const analyze = HEYS.PredictiveInsights?.analyze;
         if (!analyze) {
           console.warn('[widget_data.getHealthTrendData] PredictiveInsights not loaded');
@@ -1448,7 +1698,7 @@
         };
       } catch (e) {
         console.error('[widget_data.getHealthTrendData] ❌', e);
-        return { hasData: false, score: 0, periodDays: settings?.periodDays || 7 };
+        return { hasData: false, score: 0, periodDays: settings?.periodDays || 14 };
       }
     },
 

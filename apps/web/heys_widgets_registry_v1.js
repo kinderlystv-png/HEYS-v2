@@ -590,7 +590,6 @@
       component: 'WidgetCrashRisk',
       scalableElements: SCALABLE_ELEMENTS.crashRisk,
       settings: {
-        showWarnings: { type: 'boolean', default: true, label: 'Показывать EWS предупреждения' },
         showGoal: { type: 'boolean', default: true, label: 'Показывать прогресс к цели' },
         periodDays: { type: 'number', default: 7, label: 'Период в разборе (дней)', min: 7, max: 30 },
         displayVariant: {
