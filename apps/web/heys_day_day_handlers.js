@@ -224,8 +224,13 @@
 
                 function waterTileIsVisible() {
                     const el = document.querySelector('.widget-water--v4');
-                    if (!el || typeof el.getBoundingClientRect !== 'function') return false;
-                    const rect = el.getBoundingClientRect();
+                    // Меряем карточку целиком — заливка живёт на ней, а не на
+                    // внутреннем контейнере.
+                    const card = el && typeof el.closest === 'function'
+                        ? (el.closest('.widget') || el)
+                        : el;
+                    if (!card || typeof card.getBoundingClientRect !== 'function') return false;
+                    const rect = card.getBoundingClientRect();
                     if (!rect.height) return false;
                     const viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
                     const visible = Math.min(rect.bottom, viewportH) - Math.max(rect.top, 0);

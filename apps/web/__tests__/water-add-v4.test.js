@@ -49,6 +49,13 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(widgetsCss).toContain('animation: widgetWaterNumIn 160ms ease-in-out 240ms');
     // блики живут всегда, независимо от добавления
     expect(widgetsCss).toContain('animation: widgetWaterShine 1.1s linear infinite');
+    // Вода заливает карточку от края до края и обрезается её скруглением.
+    // Если контейнеру вернуть position: relative, заливка снова зажмётся
+    // отступами карточки и перестанет доходить до краёв.
+    const waterRootRule = widgetsCss.match(/\.widget-water--v4 \{[^}]*\}/)[0];
+    expect(waterRootRule).not.toContain('position: relative');
+    expect(uiSrc).toContain('function waterTileCard');
+    expect(uiSrc).toContain("closest('.widget')");
   });
 
   it('уменьшенное движение — другая анимация, а не замедленная', () => {

@@ -3510,9 +3510,17 @@
   // ответ на жест берёт на себя мерный столбик у кнопки (см. heys_water_add_feedback_v1).
   const WATER_TILE_VISIBLE_RATIO = 0.5;
 
+  // Геометрию берём у самой карточки: вода заливает плитку целиком, а не
+  // внутренний контейнер, зажатый её отступами.
+  function waterTileCard(el) {
+    if (!el) return null;
+    return (typeof el.closest === 'function' ? el.closest('.widget') : null) || el;
+  }
+
   function isWaterTileVisible(el) {
-    if (!el || typeof el.getBoundingClientRect !== 'function') return false;
-    const rect = el.getBoundingClientRect();
+    const card = waterTileCard(el);
+    if (!card || typeof card.getBoundingClientRect !== 'function') return false;
+    const rect = card.getBoundingClientRect();
     if (!rect.height) return false;
     const viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
     const visible = Math.min(rect.bottom, viewportH) - Math.max(rect.top, 0);
@@ -3521,8 +3529,9 @@
 
   // Капля падает до поверхности воды, поэтому её путь зависит от текущего уровня.
   function waterDropTravel(el, fillPct) {
-    if (!el || typeof el.getBoundingClientRect !== 'function') return 21;
-    const h = el.getBoundingClientRect().height || 64;
+    const card = waterTileCard(el);
+    if (!card || typeof card.getBoundingClientRect !== 'function') return 21;
+    const h = card.getBoundingClientRect().height || 64;
     const surface = h * (1 - Math.max(0, Math.min(100, fillPct)) / 100);
     return Math.max(6, Math.round(surface - 11));
   }
