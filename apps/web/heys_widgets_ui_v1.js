@@ -2402,14 +2402,14 @@
       showNow && Number.isFinite(nowX) ? React.createElement(React.Fragment, null,
         React.createElement('line', {
           x1: nowX, y1: 9, x2: nowX, y2: baseY,
-          stroke: 'var(--v4-ink, #201e1d)',
+          stroke: 'var(--v4-sand-ink, #201e1d)',
           strokeWidth: 1,
           strokeDasharray: '2 2.5',
           opacity: 0.45
         }),
         React.createElement('circle', {
           cx: nowX, cy: baseY, r: 2.4,
-          fill: 'var(--v4-ink, #201e1d)',
+          fill: 'var(--v4-sand-ink, #201e1d)',
           opacity: 0.55
         })
       ) : null

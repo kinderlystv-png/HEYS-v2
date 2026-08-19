@@ -9592,13 +9592,13 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-ink, #201e1d);
+  color: var(--v4-sand-ink, #201e1d);
   font-variant-numeric: tabular-nums;
 }
 
 /* Красится число, подпись под ним остаётся нейтральной. */
 .widget-calories__hero-bar-num--good {
-  color: var(--v4-ok-text, #5c6a45);
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .widget-calories__hero-bar-num--bad {
@@ -10131,7 +10131,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water.widget--1x1 {
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: var(--v4-ink, #201e1d);
+  color: var(--v4-sand-ink, #201e1d);
   font-variant-numeric: tabular-nums;
 }
 
@@ -10228,15 +10228,15 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water.widget--1x1 {
 }
 
 .widget-v4-insulin-wave__stroke {
-  stroke: var(--v4-act, #c67139);
+  stroke: var(--v4-sand-act, #c67139);
 }
 
 .widget-v4-insulin-wave__dot {
-  fill: var(--v4-act, #c67139);
+  fill: var(--v4-sand-act, #c67139);
 }
 
 .widget-v4-insulin-wave__overlap-mark {
-  stroke: var(--v4-sand-act, #d99a63);
+  stroke: var(--v4-sand-act-overlap, #d99a63);
 }
 
 .widget-v4-insulin-daybar {
@@ -11311,7 +11311,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget .widget__content > .wi
   width: 2px;
   height: calc(100% + 4px);
   border-radius: 2px;
-  background: var(--v4-ink, #201e1d);
+  background: var(--v4-sand-ink, #201e1d);
   transform: translateX(-50%);
 }
 
@@ -11355,7 +11355,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget .widget__content > .wi
   flex: 1;
   min-height: 4px;
   border-radius: 3px 3px 0 0;
-  background: var(--v4-act, #c67139);
+  background: var(--v4-sand-act, #c67139);
 }
 
 .widget-heatmap__month-grid {
@@ -11402,7 +11402,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget .widget__content > .wi
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: var(--v4-act-text, #8a4a20);
+  color: var(--v4-sand-act-text, #8a4a20);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -11448,7 +11448,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget .widget__content > .wi
 .widget-relapse-risk .widget-v4-hero-num__val--risk.widget-v4-val--good,
 .widget-risk-level.widget-v4-val--good,
 .widget-relapse-risk .widget-v4-kv__row .widget-v4-val--good {
-  color: var(--v4-ok-text, #5c6a45);
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 .widget-calories__activity-foot {
@@ -11485,7 +11485,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget .widget__content > .wi
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.03em;
-  color: var(--v4-act-text, #8a4a20);
+  color: var(--v4-sand-act-text, #8a4a20);
   font-variant-numeric: tabular-nums;
 }
 
@@ -11544,7 +11544,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget .widget__content > .wi
   font-weight: 600;
   line-height: 0.9;
   letter-spacing: -0.035em;
-  color: var(--v4-act-text, #8a4a20);
+  color: var(--v4-sand-act-text, #8a4a20);
   font-variant-numeric: tabular-nums;
 }
 
@@ -11559,7 +11559,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget .widget__content > .wi
 }
 
 .widget-calories__dinner-budget {
-  color: var(--v4-ink, #201e1d);
+  color: var(--v4-sand-ink, #201e1d);
   font-variant-numeric: tabular-nums;
 }
 
@@ -11658,7 +11658,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget .widget__content > .wi
   width: 2px;
   height: 9px;
   border-radius: 2px;
-  background: var(--v4-ink, #201e1d);
+  background: var(--v4-sand-ink, #201e1d);
   transform: translateX(-50%);
 }
 
@@ -11790,7 +11790,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   top: 0;
   bottom: 0;
   border-radius: 999px;
-  background: var(--v4-water, #7d98a6);
+  background: var(--v4-sand-water, #7d98a6);
 }
 
 .widget-v4-sleep-window__labels {
