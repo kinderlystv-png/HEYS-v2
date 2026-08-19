@@ -986,6 +986,11 @@ html.dark .water-tip-text {
   --fab-slot-i: 1;
 }
 
+.fab-slot--water.fab-slot--on:has(.water-fab-wrap.is-chips-open),
+.fab-slot--water.fab-slot--on:has(.water-fab-wrap.is-chips-open) .fab-slot__inner {
+  overflow: visible;
+}
+
 .fab-group:not(.fab-group--messenger-only) .fab-slot--meal,
 .fab-group:not(.fab-group--messenger-only) .meal-fab {
   order: 5;
@@ -1953,6 +1958,93 @@ body.planning-tab-active .activity-fab {
   position: static;
   background: var(--v4-float, #fffaf1);
   color: #5e808f;
+}
+
+.water-fab-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.water-fab-vols {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.water-fab-vol {
+  height: 38px;
+  padding: 0 13px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-float, #fffaf1);
+  color: rgba(32, 30, 29, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  font: 700 10px/1 Figtree, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  opacity: 0;
+  transform: translateX(10px);
+  animation: waterFabVolIn 180ms ease-out forwards;
+}
+
+.water-fab-vol:nth-child(2) {
+  animation-delay: 40ms;
+}
+
+.water-fab-wrap.is-chips-open .water-fab-vol {
+  pointer-events: auto;
+}
+
+@media (hover: hover) {
+  .water-fab-vol:hover {
+    transform: translateX(0) scale(1.03);
+  }
+}
+
+.water-fab-vol:active {
+  transform: translateX(0) scale(0.96);
+}
+
+@keyframes waterFabVolIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+[data-theme$="dark"] .water-fab-vol {
+  background: #23201b;
+  color: rgba(242, 237, 230, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(242, 237, 230, 0.12);
+}
+
+html[data-theme-id="blue"] .water-fab-vol {
+  background: #ffffff;
+  color: rgba(16, 24, 38, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(16, 24, 38, 0.1);
+}
+
+html[data-theme-id="blue-dark"] .water-fab-vol {
+  background: #182a3a;
+  color: rgba(238, 243, 248, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(238, 243, 248, 0.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .water-fab-vol {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* === FAB для добавления приёма пищи ===
@@ -3795,9 +3887,5 @@ html[data-theme-id="blue"] .water-column__bar {
 
   .water-column__fill {
     transition-duration: 160ms;
-  }
-
-  .water-column__fill::before {
-    animation: none;
   }
 }

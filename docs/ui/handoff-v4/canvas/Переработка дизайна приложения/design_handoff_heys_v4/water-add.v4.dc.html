@@ -79,6 +79,22 @@
   .dBar i{display:block;height:100%;border-radius:999px;background:#7d98a6;animation:dBarAnim 4s step-end infinite}
   @keyframes dBarAnim{0%,55%{width:40%}56%,100%{width:60%}}
 
+
+  /* --- В₃ · высокий уровень: подписи опускаются на дно плитки --- */
+  .vSub{--w:#7d98a6;--wDeep:#4e6d7a;--wTxt:#fffaf1;--inkTxt:#201e1d;--dimTxt:rgba(0,0,0,.45)}
+  .pal.dk .vSub{--w:#8fb3c2;--wDeep:#3f6c7e;--wTxt:#f2ede6;--inkTxt:#f2ede6;--dimTxt:rgba(242,237,230,.5)}
+  .pal.bl .vSub{--w:#3d7f9e;--wDeep:#2c5f76;--wTxt:#ffffff;--inkTxt:#101826;--dimTxt:rgba(16,24,38,.45)}
+  .pal.bldk .vSub{--w:#7fb6d0;--wDeep:#35657d;--wTxt:#eef3f8;--inkTxt:#eef3f8;--dimTxt:rgba(238,243,248,.5)}
+  .vSub .fillW{animation:vSubFill 4.6s ease-in-out infinite}
+  @keyframes vSubFill{0%,20%{height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%)}50%,100%{height:84%;background:var(--wDeep)}}
+  .vSub .k{animation:vSubDim 4.6s ease-in-out infinite}
+  @keyframes vSubDim{0%,30%{transform:translateY(0);color:var(--dimTxt)}35%,100%{transform:translateY(38.5px);color:var(--wTxt)}}
+  .vSub .numV b{animation:vSubNum 4.6s ease-in-out infinite}
+  @keyframes vSubNum{0%,30%{transform:translateY(0);color:var(--inkTxt)}35%,100%{transform:translateY(37px);color:var(--wTxt)}}
+  .vSub .numV{overflow:visible}
+  .vSubStill .k{transform:translateY(38.5px);color:var(--wTxt)!important}
+  .vSubStill .numV b{transform:translateY(37px);color:var(--wTxt)!important}
+
   /* --- развитие варианта В --- */
   .tileV{position:relative;overflow:hidden;background:#f7efe2;border-radius:13px;padding:8px;display:flex;flex-direction:column;flex:none;width:80px;height:64px}
   .tileV .k{position:relative;z-index:2;padding-right:34px}
@@ -238,7 +254,7 @@
     <div class="spec"><b>носители</b><span data-v="плитка «Вода» 1×1 на Главной; столбик у кнопки — везде, где плитки не видно"></span></div>
     <div class="spec"><b>границы</b><span data-v="канвас рисует содержимое плитки; внешний контейнер продукта и его паддинг — не наши"></span><i>заливка и круг позиционируются от границ плитки и обрезаются её скруглением — не от содержимого и не от контейнера продукта</i></div>
     <div class="spec"><b>источник</b><span data-v="этот файл главный для плитки «Вода»"></span><i>кадр в home-widgets вторичен; при расхождении остановиться, а не выбирать</i></div>
-    <div class="spec"><b>демо</b><span data-v="петли на канвасе — способ показать движение; в продукте анимация событийная"></span><i>кадры с петлями помечены data-demo="loop", отвергнутые ветки — data-demo="protocol"; сверяться и сравнивать пиксельно только по стоп-кадрам с подписями в мс</i></div>
+    <div class="spec"><b>демо</b><span data-v="data-demo='loop' — петля для показа движения (в продукте анимация событийная) · data-demo='stop' — стоп-кадр, только по ним сверять геометрию · data-demo='protocol' — отвергнутая ветка, не реализовывать"></span><i>кадры с петлями помечены data-demo="loop", отвергнутые ветки — data-demo="protocol"; сверяться и сравнивать пиксельно только по стоп-кадрам с подписями в мс</i></div>
     <div class="spec"><b>адресация</b><span data-v="кадр = data-screen-label"></span></div>
     <div class="spec" style="border-bottom:none"><b>палитры</b><span data-v="переменные v4-canvas.css; хексы в разметке не вводить"></span></div>
   </div>
@@ -275,7 +291,7 @@
     </div>
 
     <div><div class="lab"><b>Б · Капля долетает</b><span>кнопка «+» на миг сжимается, капля коротким броском долетает до «Воды» — полоса подскакивает в момент попадания</span></div>
-    <div class="ph" data-screen-label="Вода · вариант Б · капля долетает">
+    <div class="ph" data-demo="protocol" data-screen-label="Вода · вариант Б · капля долетает">
       <div class="grid">
         <div class="w hero" style="grid-column:span 2;grid-row:span 2;">
           <div class="k">Калории</div>
@@ -303,7 +319,7 @@
     </div>
 
     <div><div class="lab"><b>В · Волна в размере плитки</b><span>та же метафора стакана, но заперта внутри своей плитки — остальной экран не шевелится</span></div>
-    <div class="ph" data-screen-label="Вода · вариант В · волна в плитке">
+    <div class="ph" data-demo="protocol" data-screen-label="Вода · вариант В · волна в плитке">
       <div class="grid">
         <div class="w hero" style="grid-column:span 2;grid-row:span 2;">
           <div class="k">Калории</div>
@@ -332,7 +348,7 @@
     </div>
 
     <div><div class="lab"><b>Г · Без цвета, только счётчик</b><span>узкая пилюля «+250 мл» всплывает у кнопки и гаснет — язык уже есть в спиннерах</span></div>
-    <div class="ph" data-screen-label="Вода · вариант Г · только счётчик">
+    <div class="ph" data-demo="protocol" data-screen-label="Вода · вариант Г · только счётчик">
       <div class="grid">
         <div class="w hero" style="grid-column:span 2;grid-row:span 2;">
           <div class="k">Калории</div>
@@ -432,9 +448,17 @@
     <div class="spec"><b>круг</b><span data-v="обводка 1,5 px белым 75 %, без заливки · scale 0,3 → 3,2 за 420 мс ease-out · opacity → 0"></span><i>рождается в точке касания на поверхности воды, обрезается скруглением плитки</i></div>
     <div class="spec"><b>уровень</b><span data-v="320 мс ease-in-out, старт по касанию капли · высота = доля от нормы дня (2,7 л = 100 %)"></span><i>не раньше касания: иначе вода поднимается до того, как в неё что-то попало</i></div>
     <div class="spec"><b>блики</b><span data-v="полоса 7 px у кромки · два слоя пунктира шагом 16 px и 11 px · 3,4 с linear infinite, сдвиг ровно на шаг"></span><i>единственная петля, которая живёт и в продукте: между тапами плитка дышит, а шва на стыке не видно</i></div>
-    <div class="spec"><b>число</b><span data-v="правый верхний угол, отступ 8 px справа и 7 px сверху · 12 px/600 · кроссфейд 160 мс со сдвигом 5 px, старт через 240 мс"></span><i>в углу, потому что вода поднимается снизу и слева — число всегда остаётся на чистом фоне</i></div>
+    <div class="spec"><b>число</b><span data-v="правый верхний угол, отступ 8 px справа и 7 px сверху · 12 px/600 · кроссфейд 160 мс со сдвигом 5 px, старт через 240 мс"></span><i>в углу, потому что вода поднимается снизу и слева — число остаётся на чистом фоне почти весь день; что происходит, когда уровень всё-таки доходит до строки, — в строках «погружение» и «тон под текстом»</i></div>
     <div class="spec"><b>итого</b><span data-v="≈ 900 мс от тапа до покоя, кнопка доступна всё это время"></span><i>анимация ничего не блокирует</i></div>
     <div class="spec"><b>цвет</b><span data-v="#7d98a6 песочная · #8fb3c2 тёмная · #3d7f9e синяя · #7fb6d0 сине-тёмная"></span><i>тот же холодный тон, что уже красит воду; новых оттенков не вводим</i></div>
+    <div class="spec"><b>погружение</b><span data-v="порог = поверхность коснулась низа строки; для плитки 64 px это заливка ≥ 70 % (поверхность ≤ 19 px от верха). На пороге подпись и число одним движением уезжают на дно плитки и одновременно перекрашиваются в кремовый — 220 мс ease-out"></span><i>считать от геометрии строки, а не от круглого процента: раньше касания красить нельзя (кремовый на кремовой плитке — 1,05:1), а останавливать текст на полпути незачем — на дне он гарантированно в глубокой воде при любом уровне выше порога</i></div>
+    <div class="spec"><b>положение на дне</b><span data-v="обе строки выравниваются по нижнему краю плитки — отступ 8 px снизу, базовые линии совпадают; для 64 px это сдвиг 38,5 px у подписи и 37 px у числа (разный кегль)"></span><i>горизонтальные позиции не меняются: подпись слева, число справа — они опускаются, а не собираются в одно место. Считать от нижнего края, а не одним сдвигом на оба: при равном сдвиге строки встают вразнобой</i></div>
+    <div class="spec"><b>до порога</b><span data-v="подпись и число стоят на своих местах в чернилах и не двигаются"></span><i>до касания вода под ними, фон плитки чистый — двигать и красить нечего</i></div>
+    <div class="spec"><b>тон по объёму</b><span data-v="заливка темнеет по доле нормы: от базового тона при 0 % до глубокого при 70 % и выше, линейно в oklab; пересчитывается той же анимацией 320 мс, что и высота"></span><i>глубина воды читается как объём — к вечеру стакан темнее, чем утром. Это же снимает скачок тона на пороге: к моменту касания заливка уже пришла в глубокий тон, и на пороге меняется только текст</i></div>
+    <div class="spec"><b>выше 70 %</b><span data-v="тон не темнеет дальше глубокого"></span><i>дальше начинается не вода, а чернота, и кремовый текст теряет опору на 5,3:1 сверху вниз — потолок нужен именно для читаемости</i></div>
+    <div class="spec"><b>концы ramp</b><span data-v="песочная #7d98a6 → #4e6d7a · тёмная #8fb3c2 → #3f6c7e · синяя #3d7f9e → #2c5f76 · сине-тёмная #7fb6d0 → #35657d"></span><i>в канвасе промежуточные тона взяты как color-mix(in oklab, базовый, глубокий N %) — в продукте можно так же или таблицей на 5–10 шагов, разницы на глаз нет</i></div>
+    <div class="spec"><b>тон под текстом</b><span data-v="отдельного углубления на пороге нет: к касанию заливка уже в глубоком тоне по ramp выше"></span><i>кремовый по базовому тону даёт 2,9:1, по глубокому — 5,33:1 песочная, 4,93 тёмная, 6,99 синяя, 5,68 сине-тёмная. Отдельного «углубления на пороге» больше нет: тон приходит в глубокий сам, по ramp выше</i></div>
+    <div class="spec"><b>возврат</b><span data-v="при падении заливки ниже 70 % подписи возвращаются наверх и в чернила теми же 220 мс"></span><i>состояние зависит от уровня, а не от факта тапа — иначе исправленный день оставит белый текст на светлой плитке</i></div>
     <div class="spec" style="border-bottom:none"><b>reduced-motion</b><span data-v="капли и круга нет, блики стоят, уровень и число меняются за 160 мс"></span><i>это отдельный кадр, а не та же анимация на медленной скорости</i></div>
   </div>
 
@@ -474,7 +498,7 @@
     <div class="spec"><b>огибающая</b><span data-v="атака 4 мс · спад 140 мс · без сустейна · всего ≤ 200 мс"></span><i>короче анимации круга — звук успевает кончиться раньше, чем круг растворится</i></div>
     <div class="spec"><b>громкость</b><span data-v="пик −18 dBFS"></span><i>тише системного тапа: не перебивает разговор в комнате</i></div>
     <div class="spec"><b>вариация</b><span data-v="+30 центов на каждый следующий стакан за день, максимум 4 ступени, потом сброс"></span><i>шесть одинаковых щелчков звучат как заедающая кнопка, четыре восходящих — как фраза</i></div>
-    <div class="spec"><b>частые тапы</b><span data-v="более 4 тапов за 2 с — звук молчит, остаётся тактильный отклик"></span></div>
+    <div class="spec"><b>частые тапы · звук</b><span data-v="более 4 тапов за 2 с — звук молчит, остаётся тактильный отклик"></span></div>
     <div class="spec"><b>тактильный</b><span data-v="один тик в момент тапа: iOS impact light, Android EFFECT_TICK"></span><i>на касании воды вибрации нет — два события на одно действие дают дрожь</i></div>
     <div class="spec"><b>момент</b><span data-v="звук на касании поверхности (+240 мс); при reduced-motion — сразу на тапе"></span></div>
     <div class="spec"><b>категория</b><span data-v="ambient: аппаратный бесшумный режим гасит полностью, музыка не прерывается"></span></div>
@@ -490,6 +514,29 @@
   </div>
 
 
+
+
+  <div class="h">Высокий уровень · подписи уходят в воду</div>
+  <p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">К концу дня уровень доходит до строки с подписью и числом. Раньше это был единственный некрасивый кадр варианта В: вода наползала на чернильный текст, и он становился нечитаемым ровно в тот момент, когда норма почти взята. Порог — момент касания: как только поверхность доходит до низа строки, подпись и число одним движением опускаются на дно плитки и становятся кремовыми, а тон заливки под ними уходит на шаг глубже. Это одно движение, а не подстройка: воде некуда деться, и текст уходит туда, где вода будет глубокой при любом уровне выше порога. Кремовый по обычной воде даёт 2,9:1, по глубокой — 5,3:1; на плитке без воды кремовый вообще невидим (1,05:1), поэтому перекраска и переезд происходят строго одновременно.</p>
+
+  <div class="pal" data-mir="m5">
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;background:#fffaf1;border-radius:20px;padding:16px 18px;">
+      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="stop" data-screen-label="Вода · погружение · 0 мс"><span class="fillW" style="height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%);"></span><div class="k" style="transform:translateY(0px);color:var(--dimTxt);">Вода</div><div class="numV"><b style="transform:translateY(0px);color:var(--inkTxt);">2,4 л</b></div></div></div></div><div class="frameCap">0 мс · вода ниже строки</div></div>
+      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="stop" data-screen-label="Вода · погружение · подход"><span class="fillW" style="height:66%;background:color-mix(in oklab, var(--w), var(--wDeep) 94%);"></span><div class="k" style="transform:translateY(0px);color:var(--dimTxt);">Вода</div><div class="numV"><b style="transform:translateY(0px);color:var(--inkTxt);">2,4 л</b></div></div></div></div><div class="frameCap">66 % · вода почти у строки, всё на месте</div></div>
+      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="stop" data-screen-label="Вода · погружение · касание"><span class="fillW" style="height:70%;background:var(--wDeep);"></span><div class="k" style="transform:translateY(0px);color:var(--dimTxt);">Вода</div><div class="numV"><b style="transform:translateY(0px);color:var(--inkTxt);">2,4 л</b></div></div></div></div><div class="frameCap">70 % · порог: поверхность коснулась строки</div></div>
+      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="stop" data-screen-label="Вода · погружение · переезд"><span class="fillW" style="height:76%;background:var(--wDeep);"></span><div class="k" style="transform:translateY(38.5px);color:var(--wTxt);">Вода</div><div class="numV"><b style="transform:translateY(37px);color:var(--wTxt);">2,4 л</b></div></div></div></div><div class="frameCap">+220 мс · строка ушла на дно, тон глубже</div></div>
+      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="stop" data-screen-label="Вода · погружение · покой"><span class="fillW" style="height:84%;background:var(--wDeep);"></span><div class="k" style="transform:translateY(38.5px);color:var(--wTxt);">Вода</div><div class="numV"><b style="transform:translateY(37px);color:var(--wTxt);">2,4 л</b></div></div></div></div><div class="frameCap">покой · строка на дне, 5,3:1</div></div>
+    </div>
+
+    <div style="display:flex;gap:26px;align-items:center;flex-wrap:wrap;background:#fffaf1;border-radius:20px;padding:16px 18px;margin-top:14px;">
+      <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>Живая петля</b><span>натуральный размер и увеличение 2,5×</span></div></div>
+      <div class="tileV vSub" data-demo="loop" data-screen-label="Вода · погружение · петля"><span class="fillW" style="height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%);"></span><div class="k">Вода</div><div class="numV"><b>2,4 л</b></div></div>
+      <div class="zoom"><div class="zoomInner"><div class="tileV vSub"><span class="fillW" style="height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%);"></span><div class="k">Вода</div><div class="numV"><b>2,4 л</b></div></div></div></div>
+      <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>Уменьшенное движение</b><span>без переезда: цвет и уровень меняются за 160 мс</span></div></div>
+      <div class="tileV fz vSub vSubStill" data-demo="stop" data-screen-label="Вода · погружение · уменьшенное движение"><span class="fillW" style="height:84%;background:var(--wDeep);"></span><div class="k">Вода</div><div class="numV"><b>2,4 л</b></div></div>
+    </div>
+  </div>
+  <div data-mirdst="m5"></div>
 
   <div class="h">Вне Главной · столбик у кнопки</div>
   <p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Кнопка воды живёт на всех вкладках, а плитка «Вода» — только на Главной. Прежняя полноэкранная заливка этот случай закрывала грубой силой: экран красился везде, где бы человек ни находился. Правильный ответ — тот же язык, но другой носитель: слева от кнопки выезжает мерный столбик (та самая ветка В₅), показывает прирост и новый итог и уезжает. Плитку он не подменяет, а замещает там, где её нет.</p>
@@ -525,12 +572,14 @@
   <div class="h">Как это работает</div>
   <div style="background:#fffaf1;border-radius:20px;padding:18px;max-width:1000px;">
     <div class="spec"><b>когда</b><span data-v="плитка «Вода» видна менее чем наполовину или её нет на экране"></span><i>проверяется видимость плитки, а не текущая вкладка</i></div>
-    <div class="spec"><b>где</b><span data-v="слева от кнопки воды · зазор 10 px до её края · центр столбика по центру кнопки"></span><i>по центру, а не по низу: при разной высоте это разные точки</i></div>
+    <div class="spec"><b>якорь</b><span data-v="кнопка воды, всегда: столбик привязан к её вертикальному центру и левому краю — зазор 10 px"></span><i>не к «плюсу», не к краю экрана и не к нижнему меню: кнопка воды меняет своё место в стопке от того, сколько чипов включено, и всё, что привязано к экрану, разъедется. По центру, а не по низу — при разной высоте это разные точки</i></div>
+    <div class="spec"><b>нет кнопки воды</b><span data-v="чип воды выключен — столбика нет вовсе"></span><i>без кнопки воду добавляют из самой плитки, а её в этот момент видно — отвечает плитка. Привязывать столбик к «плюсу» нельзя: «плюс» это добавление еды, и ответ про воду рядом с ним читается как ответ про еду</i></div>
+    <div class="spec"><b>быстрые объёмы</b><span data-v="пока раскрыты чипы объёма (+200, +500), столбика нет; он приезжает после того, как чипы уехали"></span><i>чипы вылетают влево от той же кнопки и занимают то же место — вместе они наползают друг на друга. Сначала выбор, потом ответ</i></div>
     <div class="spec"><b>размер</b><span data-v="7 × 62 px, радиус 999 px"></span><i>та же ширина и тон, что у полосы в плитке — читается как один элемент системы</i></div>
     <div class="spec"><b>подписи</b><span data-v="+250 мл 9 px/700 тоном воды · итог 13 px/600 чернилами · «из 2,7» 8 px/500"></span><i>прирост важен один раз, итог остаётся с человеком — поэтому итог крупнее</i></div>
     <div class="spec"><b>появление</b><span data-v="выезд 10 px справа налево с прозрачностью, 180 мс ease-out · заливка 320 мс"></span></div>
     <div class="spec"><b>уход</b><span data-v="держится 1,4 с после последнего тапа, уезжает за 160 мс"></span><i>ничего не нажимать и не ждать не нужно — жест закончен в момент тапа</i></div>
-    <div class="spec"><b>частые тапы</b><span data-v="второй раз не выезжает: обновляется на месте, таймер ухода перезапускается"></span></div>
+    <div class="spec"><b>частые тапы · столбик</b><span data-v="второй раз не выезжает: обновляется на месте, таймер ухода перезапускается"></span></div>
     <div class="spec"><b>капля и круг</b><span data-v="нет"></span><i>капле некуда падать, круг рисовать негде; звук и тактильный тик те же</i></div>
     <div class="spec" style="border-bottom:none"><b>касание</b><span data-v="pointer-events: none"></span><i>столбик не кнопка: касание проходит насквозь к содержимому под ним</i></div>
   </div>
@@ -566,7 +615,6 @@
     <div class="nt"><b>Семпл готов — <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;">assets/water-drop.wav</span></b><span>Моно, 48 кГц, 180 мс, 17 КБ, пик −18 dBFS. Синтезирован по описанию выше: основной тон едет 400 → 540 Гц (восходящий глайд — именно он делает звук каплей, а не щелчком), обертон на удвоенной частоте −12 дБ, короткий шумовой транзиент 3 мс на атаке, выход в тишину 12 мс, чтобы не щёлкало на обрыве. Лежит в пакете рядом с канвасом; слушать можно кнопкой выше. Если аудиодизайнер сделает лучше — параметры в разделе «Параметры звука» описывают цель, а не этот конкретный файл.</span></div>
     
     
-    <div class="nt"><b>Порог видимости плитки нужно назвать числом</b><span>«Плитка видна» стоит определить точнее: видно целиком, видно наполовину или любой её пиксель в кадре. Предлагаю — не меньше половины высоты плитки в видимой области, иначе анимация уйдёт под шапку и человек её пропустит.</span></div>
     <div class="ntl"><b>Норма берётся из профиля</b><span>Высота заливки считается от нормы дня (в примерах 2,7 л). Перед реализацией стоит сверить с тем, откуда норма приходит в коде: если она пересчитывается по весу или активности, плитка должна пересчитывать высоту в тот же момент, а не на следующий день.</span></div>
   </div>
 

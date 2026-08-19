@@ -120,16 +120,72 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return { fabVisibility, isFabVisible, layoutAnimate };
     }
 
+    const WATER_FAB_VOL_CHIP_MS = 180;
+
+    function WaterFabButton({ onAddWater }) {
+        const [chipsOpen, setChipsOpen] = React.useState(false);
+        const wrapRef = React.useRef(null);
+
+        React.useEffect(() => {
+            HEYS.waterFeedback?.setVolumeChipsOpen?.(chipsOpen);
+        }, [chipsOpen]);
+
+        React.useEffect(() => {
+            if (!chipsOpen) return undefined;
+            const onPointerDown = (event) => {
+                if (wrapRef.current && wrapRef.current.contains(event.target)) return;
+                setChipsOpen(false);
+            };
+            document.addEventListener('pointerdown', onPointerDown, true);
+            return () => document.removeEventListener('pointerdown', onPointerDown, true);
+        }, [chipsOpen]);
+
+        const pickVolume = (ml) => (event) => {
+            event.stopPropagation();
+            HEYS.waterFeedback?.markVolumeChipsClosing?.(WATER_FAB_VOL_CHIP_MS);
+            setChipsOpen(false);
+            onAddWater(ml, event);
+        };
+
+        return React.createElement('div', {
+            ref: wrapRef,
+            className: 'water-fab-wrap' + (chipsOpen ? ' is-chips-open' : ''),
+        },
+            chipsOpen && React.createElement('div', {
+                className: 'water-fab-vols animate-always',
+                role: 'group',
+                'aria-label': 'Объём воды',
+            },
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'water-fab-vol',
+                    onClick: pickVolume(200),
+                }, '+200'),
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'water-fab-vol',
+                    onClick: pickVolume(500),
+                }, '+500')
+            ),
+            React.createElement('button', {
+                type: 'button',
+                className: 'water-fab',
+                onClick: (event) => {
+                    event.stopPropagation();
+                    setChipsOpen((open) => !open);
+                },
+                'aria-label': chipsOpen ? 'Скрыть объёмы воды' : 'Добавить воду',
+                'aria-expanded': chipsOpen ? 'true' : 'false',
+            }, renderFabNavIcon('water', '🥛', 18))
+        );
+    }
+
     function renderQuickActionFabButton(key, { onAddWater, onAddMeal, onAddActivity, hungerContext }) {
         const HungerFabButton = HEYS.HungerEnergyStatusModal?.FabButton;
         const MessageFabButton = HEYS.Messenger?.FabButton;
 
         if (key === 'water') {
-            return React.createElement('button', {
-                className: 'water-fab',
-                onClick: onAddWater,
-                'aria-label': 'Добавить стакан воды',
-            }, renderFabNavIcon('water', '🥛', 18));
+            return React.createElement(WaterFabButton, { onAddWater });
         }
         if (key === 'meal') {
             return React.createElement('button', {
@@ -571,7 +627,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                 isMobile && isTabActive && (mobileSubTab === 'stats' || mobileSubTab === 'diary' || mobileSubTab === 'activity') && !offlineColdStart && React.createElement(QuickActionsFabGroup, {
                     id: 'tour-fab-buttons',
-                    onAddWater: (e) => addWater(200, {
+                    onAddWater: (ml, e) => addWater(ml, {
                         source: 'day-fab',
                         sourceEl: e.currentTarget
                     }),

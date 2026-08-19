@@ -34,18 +34,21 @@ describe('добавление воды — канвас water-add v4, ветк�
   it('капля, круг, уровень и число — параметры из спецификации', () => {
     expect(uiSrc).toContain('widget-water__numV');
     expect(widgetsCss).toContain('.widget-water__numV');
-    expect(uiSrc).toContain("className: 'widget-water__drop'");
-    expect(uiSrc).toContain("className: 'widget-water__ripple'");
+    expect(uiSrc).toContain("className: 'widget-water__drop animate-always'");
+    expect(uiSrc).toContain("className: 'widget-water__ripple animate-always'");
     expect(uiSrc).toContain('--water-drop-travel');
     // капля 6×6, падение 220 мс ease-in, вытяжение до 1,4
-    expect(widgetsCss).toMatch(/\.widget-water__drop \{[\s\S]*?width: 6px;[\s\S]*?animation: widgetWaterDrop 240ms ease-in/);
+    expect(widgetsCss).toMatch(/\.widget-water__drop \{[\s\S]*?width: 6px;[\s\S]*?animation: widgetWaterDrop 220ms ease-in/);
     expect(widgetsCss).toContain('scaleY(1.4)');
     // круг: обводка 1,5 px белым 75 %, рост 0,3 → 3,2 за 420 мс, старт по касанию
     expect(widgetsCss).toContain('border: 1.5px solid rgba(255, 255, 255, 0.75)');
     expect(widgetsCss).toContain('animation: widgetWaterRipple 420ms ease-out 240ms');
     expect(widgetsCss).toContain('transform: scale(3.2)');
-    // уровень трогается вместе с кругом, 320 мс
-    expect(widgetsCss).toMatch(/\.widget-water__fill \{[\s\S]*?transition: height 320ms[^;]*240ms/);
+    // уровень: смена дня / intro — --widget-motion-ms; добавление — 320 мс + 240 мс задержка
+    expect(uiSrc).toContain('function useWaterFillDisplayPct');
+    expect(uiSrc).toContain('height: `${displayFillPct}%`');
+    expect(widgetsCss).toMatch(/\.widget-water__fill \{[\s\S]*?transition:[\s\S]*?height var\(--widget-motion-ms/);
+    expect(widgetsCss).toMatch(/\.widget-water--adding \.widget-water__fill \{[\s\S]*?320ms[^;]*240ms/);
     // число — кроссфейд 160 мс со сдвигом 5 px, старт через 240 мс
     expect(widgetsCss).toContain('animation: widgetWaterNumOut 160ms ease-in-out 240ms');
     expect(widgetsCss).toContain('animation: widgetWaterNumIn 160ms ease-in-out 240ms');
@@ -79,12 +82,13 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(uiSrc).toContain("closest('.widget')");
   });
 
-  it('уменьшенное движение — другая анимация, а не замедленная', () => {
-    const block = widgetsCss.slice(widgetsCss.indexOf('@media (prefers-reduced-motion: reduce) {\n  .widget-water__drop'));
-    expect(block).toContain('.widget-water__ripple');
-    expect(block).toContain('display: none');
-    expect(block).toContain('animation: none');
-    expect(block).toContain('160ms');
+  it('функциональная анимация — animate-always, политика в MOTION_POLICY', () => {
+    expect(uiSrc).toContain("className: 'widget-water__fill animate-always'");
+    expect(uiSrc).toContain("className: 'widget-water__drop animate-always'");
+    const blocks = widgetsCss.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/g) || [];
+    const killsWater = blocks.some((block) => /\.widget-water/.test(block)
+      && (/display:\s*none/.test(block) || /\.widget-water[\s\S]*?animation:\s*none/.test(block)));
+    expect(killsWater).toBe(false);
   });
 
   it('тон воды один на все палитры, новых оттенков нет', () => {
@@ -108,9 +112,27 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(waterCss).toMatch(/\.water-column \{[\s\S]*?pointer-events: none/);
     expect(waterCss).toContain('transition: opacity 180ms ease-out');
     expect(waterCss).toMatch(/\.water-column__fill \{[\s\S]*?transition: height 320ms/);
-    // Столбик живёт вне .widgets-grid, поэтому общий reduce-motion гасил бы ему
-    // длительности в ноль — как когда-то кольцам БЖУ и динамике веса.
+    // Канvас: подписи слева от столбика, столбик вплотную к FAB.
+    expect(handlersSrc).toMatch(/water-column__text[\s\S]*?water-column__bar/);
+    expect(handlersSrc).toMatch(/fab-slot--off/);
+    expect(handlersSrc).toContain('function resolveWaterColumnAnchor');
+    expect(handlersSrc).toMatch(/resolveWaterColumnAnchor[\s\S]*?querySelectorAll\('\.water-fab'\)/);
+    expect(handlersSrc).not.toContain('water-card-anim-above');
     expect(handlersSrc).toContain("col.className = 'water-column animate-always'");
+  });
+
+  it('погружение и ramp тона — контракт 2026-08-20', () => {
+    expect(uiSrc).toContain('function waterToneMixPct');
+    expect(uiSrc).toContain('widget-water--submerged');
+    expect(uiSrc).toContain("'--water-tone-mix'");
+    expect(widgetsCss).toContain('--water-tone-deep: #4e6d7a');
+    expect(widgetsCss).toContain('--water-tone-deep: #3f6c7e');
+    expect(widgetsCss).toContain('--water-tone-deep: #2c5f76');
+    expect(widgetsCss).toContain('--water-tone-deep: #35657d');
+    expect(widgetsCss).toMatch(/color-mix\([\s\S]*?var\(--water-tone\)[\s\S]*?var\(--water-tone-deep\)/);
+    expect(widgetsCss).toMatch(/\.widget-water--submerged \.widget-v4-kicker[\s\S]*?translateY\(38\.5px\)/);
+    expect(widgetsCss).toMatch(/\.widget-water--submerged \.widget-water__numV[\s\S]*?translateY\(37px\)/);
+    expect(widgetsCss).toContain('transition: transform 220ms ease-out, color 220ms ease-out');
   });
 
   it('новый «звук капли» не реализован — семпла ещё нет, прежний звук цел', () => {
@@ -120,5 +142,21 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(handlersSrc).toContain('setTimeout(playSound, 240)');
     expect(handlersSrc).not.toContain('waterDropSound');
     expect(handlersSrc).not.toContain('30 центов');
+  });
+
+  it('быстрые объёмы FAB — столбик после ухода чипов, якорь не трогаем', () => {
+    const dayShellSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_day_page_shell.js'), 'utf8');
+    expect(dayShellSrc).toContain('function WaterFabButton');
+    expect(dayShellSrc).toContain('water-fab-vol');
+    expect(dayShellSrc).toContain('pickVolume(200)');
+    expect(dayShellSrc).toContain('pickVolume(500)');
+    expect(dayShellSrc).toContain('markVolumeChipsClosing');
+    expect(handlersSrc).toContain('setVolumeChipsOpen');
+    expect(handlersSrc).toContain('markVolumeChipsClosing');
+    expect(handlersSrc).toContain('isVolumeChipsBlockingColumn');
+    expect(handlersSrc).toContain('pendingColumnDetail');
+    expect(handlersSrc).toMatch(/if \(isVolumeChipsBlockingColumn\(\)\) \{[\s\S]*?pendingColumnDetail = detail/);
+    expect(waterCss).toContain('.water-fab-vol');
+    expect(waterCss).toMatch(/@keyframes waterFabVolIn[\s\S]*?translateX\(10px\)/);
   });
 });
