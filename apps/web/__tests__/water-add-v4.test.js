@@ -65,6 +65,16 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(numRule).not.toContain('position: absolute');
     // Легаси-центрирование микро-плитки перебито — содержимое стоит сверху.
     expect(waterRootRule).toContain('justify-content: flex-start');
+
+    // Кромка заливки: два слоя пунктира, крупный шагом 16 px и мелкий шагом
+    // 11 px; крупный уезжает на один свой шаг, мелкий на два — «вдвое быстрее».
+    // Оба сдвига целые, иначе на стыке петли виден шов.
+    expect(widgetsCss).toContain('background-size: 16px 100%, 11px 100%');
+    expect(widgetsCss).toMatch(/@keyframes widgetWaterShine \{[^}]*background-position: 16px 0, 22px 0/);
+    expect(widgetsCss).toContain('animation: widgetWaterShine 3.4s linear infinite');
+    // Тот же дрейф по кромке столбика, но шагом 5 px.
+    expect(waterCss).toContain('background-size: 5px 100%');
+    expect(waterCss).toMatch(/@keyframes waterColumnShine \{[^}]*background-position: 5px 0/);
     expect(uiSrc).toContain('function waterTileCard');
     expect(uiSrc).toContain("closest('.widget')");
   });

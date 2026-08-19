@@ -10057,9 +10057,12 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water.widget--1x1 {
   animation: widgetWaterShine 3.4s linear infinite;
 }
 
+/* Крупный слой уезжает на свой шаг (16 px), мелкий — на два своих (22 px):
+   отсюда «мелкий вдвое быстрее». Оба сдвига целые, поэтому на стыке петли
+   шва не видно. */
 @keyframes widgetWaterShine {
   to {
-    background-position: 16px 0, 11px 0;
+    background-position: 16px 0, 22px 0;
   }
 }
 
