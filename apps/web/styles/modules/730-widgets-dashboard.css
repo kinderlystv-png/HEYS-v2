@@ -11268,12 +11268,24 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget .widget__content > .wi
   min-width: 0;
 }
 
+/* Название риска — то, ради чего этот вид и существует, поэтому при нехватке
+   ширины первой ужимается подпись «сколько держится», а не сам риск. */
 .widget-risk-main__driver {
+  flex: 0 1 auto;
+  min-width: 0;
   font-size: 16px;
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
   color: var(--v4-act-text, #8a4a20);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-risk-main .widget-v4-unit {
+  flex: 0 999 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
