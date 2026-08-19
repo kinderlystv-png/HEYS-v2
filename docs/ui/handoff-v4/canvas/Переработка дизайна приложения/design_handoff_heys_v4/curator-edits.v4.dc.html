@@ -12,6 +12,16 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="./v4-canvas.css" rel="stylesheet">
+<style>
+  .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
+  .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
+  .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
+  .spec>span[data-v]::before{content:attr(data-v)}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);font-style:normal;text-wrap:pretty}
+  .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin:0 0 30px}
+  .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:16px 0 2px}
+</style>
 </helmet>
 
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e9dfcd"/><rect x="30" y="30" width="40" height="40" rx="10" fill="#c67139"/><text x="50" y="57" text-anchor="middle" font-family="Figtree,sans-serif" font-size="16" font-weight="700" fill="#2b1608">v4</text></svg></template>
@@ -24,6 +34,45 @@
   </div>
   <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Лист показывает итог дня, а не список нажатий, и никуда не уводит после подтверждения. Рядом — оболочка, через которую до правок вообще добираются: дата во вкладке, шторка настроек. Строка даты и её поведение при прокрутке живут в «Дата и остатки v4» — здесь их больше нет, чтобы одно поведение не описывалось в двух канвасах.</p>
   <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);">В пакете: curator-edits.v4.dc.html · протокол docs/implementation/CURATOR_CHANGELOG_SHEET_V4_PROTOCOL.md · экраны искать по data-screen-label</p>
+  <div class="ctr" data-contract="curator-edits">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+      <span class="ctrTag">КОНТРАКТ</span>
+      <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.4);">ключ и значение через таб — вставляется в тикет или тест</span>
+    </div>
+
+    <div class="ctrH">Что это и чьё</div>
+    <div class="spec"><b>фича</b><span data-v="лист правок куратора: что изменилось в дневнике человека, пока его не было"></span></div>
+    <div class="spec"><b>границы</b><span data-v="канвас рисует содержимое листа; сам нижний лист, его жесты и очередь показа — продукта"></span></div>
+    <div class="spec"><b>источник</b><span data-v="главный для листа правок, точки на вкладке и строки входа в шапке дня"></span><i>капсула даты и нижнее меню — свои канвасы</i></div>
+    <div class="spec" style="border-bottom:none"><b>адресация</b><span data-v="кадр = data-screen-label; все кадры статичные (data-demo='stop')"></span></div>
+
+    <div class="ctrH">Появление</div>
+    <div class="spec"><b>когда</b><span data-v="после полной синхронизации с облаком, при возврате во вкладку, после входа по PIN, по ссылке из пуша"></span></div>
+    <div class="spec"><b>очередь</b><span data-v="не встаёт поверх утреннего мастера и любого блокирующего экрана — ждёт"></span><i>требовать закрытого утра нельзя: человек может не делать чек-ин весь день, и правки зависли бы вместе с ним</i></div>
+    <div class="spec"><b>склейка</b><span data-v="серия правок по еде копится до 30 минут и приходит одним листом; добавленная тренировка приходит сразу"></span></div>
+    <div class="spec"><b>«Позже»</b><span data-v="откладывает на 15 минут; после двух показов за сессию третий лист не приходит"></span><i>навязчивость дороже задержки: правки куратора не срочные</i></div>
+    <div class="spec" style="border-bottom:none"><b>пустого состояния нет</b><span data-v="если после фильтрации показывать нечего, показ отменяется"></span><i>экран-заглушка — лишнее касание в ответ на ничего</i></div>
+
+    <div class="ctrH">Поверхность и структура</div>
+    <div class="spec"><b>поверхность</b><span data-v="нижний лист, растёт вверх от нижнего края; максимум почти весь экран, шапка и подвал приклеены, скроллится середина"></span><i>содержимое непредсказуемой длины: то одна строка, то шесть дат; кнопки всегда под большим пальцем</i></div>
+    <div class="spec"><b>шапка даты</b><span data-v="дельта по калориям: первое «было» и последнее «стало» среди неподтверждённых записей дня"></span><i>куратор мог сохранять день трижды — человек должен увидеть путь целиком, а не последний отрезок. Пока полей нет на сервере, шапка идёт без калорий: выдуманное число хуже отсутствия</i></div>
+    <div class="spec"><b>заголовок</b><span data-v="имя закреплённого куратора из данных; без него — «Ваш куратор обновил дневник»"></span><i>сводка вместо подзаголовка, когда изменений больше трёх: «шесть изменений за вчера»</i></div>
+    <div class="spec"><b>старые дни</b><span data-v="свёрнуты; раскрыт только самый свежий"></span><i>порог «последние сто изменений» не нужен: свёрнутый день занимает одну строку</i></div>
+    <div class="spec"><b>продукты в приёме</b><span data-v="первые 3, дальше «и ещё N продуктов» разворачивает на месте"></span><i>состав приёма читают в дневнике; в листе важен итог по калориям</i></div>
+    <div class="spec" style="border-bottom:none"><b>одинаковые правки</b><span data-v="складываются в строку с числом повторов, диапазоном времени и суммарной дельтой; складываются только полные совпадения по типу приёма и составу"></span><i>пять кофе-брейков — одна привычка, а не пять новостей; развёрнутыми они прятали важное за пределом экрана</i></div>
+
+    <div class="ctrH">Взаимодействие</div>
+    <div class="spec"><b>строка</b><span data-v="нажимается целиком, справа шеврон, высота 44; отдельной кнопки «Показать» нет"></span><i>кнопка внутри строки конкурировала с главной и обещала выбор, которого нет</i></div>
+    <div class="spec"><b>переход по строке</b><span data-v="помечает эту запись прочитанной локально, но не подтверждает записи на сервере"></span><i>раньше переход уходил без подтверждения, и лист возвращался через 15 минут, будто человек ничего не смотрел</i></div>
+    <div class="spec"><b>подтверждение</b><span data-v="кнопка «Понятно»: помечает записи прочитанными на сервере, закрывает лист и возвращает туда, где человек был"></span><i>в коде «Ознакомился» перебрасывал в дневник — это отбирает управление. «Ознакомился» — язык документа под подпись, здесь ничего не подписывают</i></div>
+    <div class="spec" style="border-bottom:none"><b>адреса переходов</b><span data-v="еда, вес, вода, сон — дневник нужного дня · шаги и тренировки — «Актив» · нормы, профиль, план — дневник по умолчанию; после перехода цель подсвечивается вспышкой"></span></div>
+
+    <div class="ctrH">След вне листа</div>
+    <div class="spec"><b>точка на «Питании»</b><span data-v="7 px у иконки вкладки, без числа; гаснет, когда неподтверждённых записей не осталось"></span><i>«43» превращает помощь куратора в долг, который нужно разгрести</i></div>
+    <div class="spec" style="border-bottom:none"><b>строка входа</b><span data-v="в шапке дня: «Куратор обновил этот день · N изменений» открывает тот же лист, отфильтрованный датой; если правок на открытой дате нет — называет чужую дату и переключает день вместе с открытием"></span><i>по точке на активной вкладке нажать нельзя; это же единственный способ вернуться к правкам после «Понятно»</i></div>
+  </div>
+
   <div class="secH">Изменения куратора · три правила</div>
   <div style="display:flex;gap:22px;margin-bottom:38px;max-width:1180px;">
     <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Показываем итог дня, а не список нажатий</b><span>Человеку важно не то, что куратор «добавил приём», а то, что его день теперь выглядит иначе: было 1 240 ккал, стало 1 937. Поэтому шапка каждой даты несёт дельту по калориям, а подробности лежат под ней. Дельта — это первое «было» и последнее «стало» среди неподтверждённых записей дня: куратор мог сохранять день трижды, и человек должен увидеть путь целиком, а не последний отрезок. Пока полей нет на сервере, шапка идёт без калорий — как в кадре «Без еды»; выдуманное число хуже, чем его отсутствие. Отдельный чип-сводка сверху убран: при одном изменении он дословно повторял единственную строку, при десяти — не помещался.</span></div></div>
@@ -34,7 +83,7 @@
   <div class="pal" data-mir="m4" style="display:flex;gap:30px;align-items:flex-start;">
 
     <div><div class="lab"><b>Один приём</b><span>частый случай — куратор внёс ужин</span></div>
-    <div class="ph" data-screen-label="Куратор · один приём">
+    <div class="ph" data-demo="stop" data-screen-label="Куратор · один приём">
       <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
@@ -58,7 +107,7 @@
     </div></div>
 
     <div><div class="lab"><b>День целиком</b><span>шесть правок разного рода</span></div>
-    <div class="ph" data-screen-label="Куратор · много правок за день">
+    <div class="ph" data-demo="stop" data-screen-label="Куратор · много правок за день">
       <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
@@ -80,7 +129,7 @@
     </div></div>
 
     <div><div class="lab"><b>Две даты</b><span>прошлые дни свёрнуты</span></div>
-    <div class="ph" data-screen-label="Куратор · две даты">
+    <div class="ph" data-demo="stop" data-screen-label="Куратор · две даты">
       <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
@@ -100,7 +149,7 @@
     </div></div>
 
     <div><div class="lab"><b>Длинный приём</b><span>развёрнутый список продуктов</span></div>
-    <div class="ph" data-screen-label="Куратор · длинный приём">
+    <div class="ph" data-demo="stop" data-screen-label="Куратор · длинный приём">
       <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
@@ -128,7 +177,7 @@
     </div></div>
 
     <div><div class="lab"><b>Без еды</b><span>вес, тренировка, нормы</span></div>
-    <div class="ph" data-screen-label="Куратор · сухие строки">
+    <div class="ph" data-demo="stop" data-screen-label="Куратор · сухие строки">
       <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
@@ -148,7 +197,7 @@
     </div></div>
 
     <div><div class="lab"><b>Долгое отсутствие</b><span>больше сотни записей</span></div>
-    <div class="ph" data-screen-label="Куратор · много дней">
+    <div class="ph" data-demo="stop" data-screen-label="Куратор · много дней">
       <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
@@ -169,7 +218,7 @@
     </div></div>
 
     <div><div class="lab"><b>Повторы за день</b><span>четырнадцать правок, пять одинаковых</span></div>
-    <div class="ph" data-screen-label="Куратор · повторяющиеся правки">
+    <div class="ph" data-demo="stop" data-screen-label="Куратор · повторяющиеся правки">
       <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
@@ -232,7 +281,42 @@ class Component extends DCLogic {
   pal = [['dk', 'Тёмная'], ['bl', 'Синяя'], ['bldk', 'Синяя тёмная']];
   componentDidMount() { this.obs = new MutationObserver(() => { clearTimeout(this.t); this.t = setTimeout(() => this.sync(), 400); }); this.sync(); }
   componentWillUnmount() { if (this.obs) this.obs.disconnect(); clearTimeout(this.t); }
-  renderVals() { return {}; }
+  deliver(btn, txt, count) {
+    const host = btn.closest('[data-contract]') || btn.parentElement;
+    let box = host.querySelector('textarea[data-spec-out]');
+    if (!box) {
+      box = document.createElement('textarea');
+      box.setAttribute('data-spec-out', '');
+      box.setAttribute('readonly', '');
+      box.style.cssText = 'display:block;width:100%;box-sizing:border-box;height:130px;margin-top:12px;font:500 10.5px/1.55 ui-monospace,Menlo,monospace;color:#201e1d;background:#fffaf1;border:1px solid rgba(0,0,0,.12);border-radius:14px;padding:10px;resize:vertical;';
+      host.appendChild(box);
+    }
+    box.value = txt; box.focus(); box.select();
+    const say = (msg) => {
+      btn.textContent = msg;
+      clearTimeout(this._sayT);
+      this._sayT = setTimeout(() => { btn.textContent = 'скопировать контракт'; }, 2600);
+    };
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    if (ok) { say('скопировано · ' + count + ' строк'); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt)
+        .then(() => say('скопировано · ' + count + ' строк'))
+        .catch(() => say('буфер недоступен — текст выделен ниже'));
+    } else { say('буфер недоступен — текст выделен ниже'); }
+  }
+  renderVals() {
+    return {
+      copySpec: (e) => {
+        const rows = [...document.querySelectorAll('.spec')].map(r => {
+          const k = r.querySelector('b'), v = r.querySelector('span[data-v]');
+          return k && v ? k.textContent.trim() + '\t' + v.getAttribute('data-v') : null;
+        }).filter(Boolean);
+        this.deliver(e.currentTarget, 'curator-edits · контракт (' + rows.length + ' строк)\n' + rows.join('\n'), rows.length);
+      }
+    };
+  }
   componentDidUpdate() { this.sync(); }
 
   tw() {

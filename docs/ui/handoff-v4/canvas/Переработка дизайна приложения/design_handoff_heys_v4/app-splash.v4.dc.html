@@ -30,6 +30,14 @@
   .cap{width:330px;margin-top:11px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.5);text-wrap:pretty}
   .bm{width:56px;height:56px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;flex:none}
   .bml{font-family:Caprasimo,Georgia,serif;font-size:25px;line-height:1;color:var(--ac);padding-bottom:2px}
+  .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
+  .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
+  .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
+  .spec>span[data-v]::before{content:attr(data-v)}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);font-style:normal;text-wrap:pretty}
+  .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin:0 0 30px}
+  .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:16px 0 2px}
 </style>
 </helmet>
 
@@ -43,6 +51,38 @@
   </div>
   <p style="margin:0 0 8px;max-width:980px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Этот кадр рисует не приложение, а система — из иконки и манифеста: доступны иконка, подпись и два цвета, вёрстки там нет. Дальше платформы расходятся. На iPhone системных картинок запуска мы не задаём, поэтому по центру не рисуется ничего — только кремовый фон, на котором сразу проявляется наш круг ожидания. На Android кадр собирается из иконки ярлыка и убрать её нечем, поэтому там иконка построена на той же геометрии, что знак ожидания: тот же диск, тот же диаметр, буква по оптическому центру — круг остаётся на месте, буква гаснет, и на её месте появляется дуга. Состояния ожидания (медленная сеть, отказ, повтор) описаны в канвасе «Спиннеры», здесь только кадр запуска, подпись, цвета и стык.</p>
   <p style="margin:0 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);">В пакете: app-splash.v4.dc.html · манифест apps/web/public/manifest.json · экраны искать по data-screen-label</p>
+
+  <div class="ctr" data-contract="app-splash">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+      <span class="ctrTag">КОНТРАКТ</span>
+      <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.4);">ключ и значение через таб — вставляется в тикет или тест</span>
+    </div>
+
+    <div class="ctrH">Что это и чьё</div>
+    <div class="spec"><b>фича</b><span data-v="первый экран запуска и стык с загрузчиком: на Android знак по лекалу спиннера, на iPhone пустой кремовый фон"></span></div>
+    <div class="spec"><b>границы</b><span data-v="системный кадр рисует платформа из иконки и манифеста — вёрстки там нет; наше — иконка, два цвета манифеста и всё после первого пейнта"></span></div>
+    <div class="spec"><b>источник</b><span data-v="главный для иконки, значений манифеста и точки круга на стыке"></span><i>сам знак ожидания и его состояния — spinners.v4.dc.html</i></div>
+    <div class="spec" style="border-bottom:none"><b>адресация</b><span data-v="кадр = data-screen-label; все кадры статичные (data-demo='stop')"></span></div>
+
+    <div class="ctrH">Знак</div>
+    <div class="spec"><b>геометрия</b><span data-v="диск 56 — тот же диаметр, что у знака ожидания; в канвасе увеличен до 64 только для наглядности"></span><i>совпадение диаметра и центра делает шов продолжением движения, а не перезагрузкой</i></div>
+    <div class="spec"><b>что в круге</b><span data-v="буква H в Caprasimo, занимает больше половины плитки"></span><i>в круге 56 любая метафора превращается в пятно; дисплейная гарнитура больше нигде в интерфейсе не встречается — знак должен отличаться от текста</i></div>
+    <div class="spec"><b>чего нет</b><span data-v="ни кольца по кромке диска, ни сплошной терракотовой заливки"></span><i>кольцо тянет взгляд к кадру, который не читают; сплошная терракота спорит со знаком ожидания, где терракотой набрана дуга, а не подложка</i></div>
+    <div class="spec"><b>точка круга</b><span data-v="оптический центр — чуть выше геометрического; одна константа на обе платформы"></span><i>задана Android-кадром: система ставит иконку в оптический центр, ровно по центру знак дёрнулся бы вниз на стыке</i></div>
+    <div class="spec" style="border-bottom:none"><b>иконка и цвета</b><span data-v="иконка одна на все палитры; фон иконки = background_color = #fffaf1"></span><i>манифест не знает про тему</i></div>
+
+    <div class="ctrH">Платформы</div>
+    <div class="spec"><b>Android</b><span data-v="кадр собирается из иконки ярлыка, убрать её нечем — диск остаётся; подпись берётся из short_name"></span><i>отдельного сплэш-слоя у PWA нет: обнулить кадр можно только сделав иконку пустой плиткой, то есть спрятав приложение на домашнем экране</i></div>
+    <div class="spec"><b>iPhone</b><span data-v="apple-touch-startup-image не задаём — по центру не рисуется ничего, только кремовый фон"></span><i>сплэш не место для знакомства с брендом: человек его не рассматривает, он ждёт. На стыке нечему исчезать — фон остаётся фоном</i></div>
+    <div class="spec"><b>подпись</b><span data-v="со второго кадра исчезает: в загрузчике её нет и добавлять не нужно"></span><i>слово в подвале превратилось бы в элемент интерфейса, которого дальше нигде не будет</i></div>
+    <div class="spec" style="border-bottom:none"><b>что невозможно</b><span data-v="анимация, вращение и тема на системном кадре недоступны ни на одной платформе; длительность зависит от устройства"></span></div>
+
+    <div class="ctrH">Стык и загрузчик</div>
+    <div class="spec"><b>тема</b><span data-v="системный кадр всегда песочный: в тёмной палитре первый кадр светлый, второй тёмный"></span><i>этого не избежать; гасить системный слой затемнением нельзя — он недоступен. На Android переход смягчает то, что круг остаётся тем же: меняется грунт, не знак</i></div>
+    <div class="spec"><b>загрузчик</b><span data-v="только грунт палитры и знак — ни шапки, ни меню"></span></div>
+    <div class="spec" style="border-bottom:none"><b>появление Главной</b><span data-v="один кадр: круг гаснет, экран приезжает целиком"></span><i>скелетонов в продукте нет — причина записана в spinners.v4.dc.html</i></div>
+  </div>
 
   <div class="secH" style="margin-top:0;">Две последовательности запуска: iPhone и Android</div>
   <div style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
@@ -105,7 +145,7 @@
   <div style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
 
     <div><div class="lab"><b>Сейчас</b><span>синяя H, длинная подпись</span></div>
-    <div class="and" data-screen-label="Сплэш · как сейчас" style="background:#ffffff;">
+    <div class="and" data-demo="stop" data-screen-label="Сплэш · как сейчас" style="background:#ffffff;">
       <div class="asb" style="background:#2563eb;color:#ffffff;"><span>15:29</span><span style="opacity:.85;">LTE ▂▄▆ ▮</span></div>
       <div class="amid"><span class="amk" style="background:#2563eb;color:#ffffff;font-family:Figtree,sans-serif;font-size:30px;font-weight:800;padding:0;">H</span></div>
       <div class="acap" style="color:#201e1d;">HEYS Nutrition Tracker</div>
@@ -114,7 +154,7 @@
     </div>
 
     <div><div class="lab"><b>Знак v4</b><span>диск ожидания, буква терракотой</span></div>
-    <div class="and" data-screen-label="Сплэш · знак v4" style="background:#fffaf1;">
+    <div class="and" data-demo="stop" data-screen-label="Сплэш · знак v4" style="background:#fffaf1;">
       <div class="asb" style="background:#fffaf1;color:rgba(32,30,29,.7);"><span>15:29</span><span style="opacity:.6;">LTE ▂▄▆ ▮</span></div>
       <div class="amid"><span class="amk" style="background:#efe3cf;color:#a8481c;">H</span></div>
       <div class="acap" style="color:rgba(32,30,29,.8);">HEYS</div>
@@ -189,7 +229,7 @@
   <div style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
 
     <div><div class="lab"><b>Сейчас на iPhone</b><span>белый кадр, синяя плитка</span></div>
-    <div class="and" data-screen-label="iOS · как сейчас" style="background:#ffffff;">
+    <div class="and" data-demo="stop" data-screen-label="iOS · как сейчас" style="background:#ffffff;">
       <div class="asb" style="background:transparent;color:rgba(32,30,29,.75);"><span>15:29</span><span style="opacity:.6;">▂▄▆ ▮</span></div>
       <div class="amid"><span class="amk" style="background:#2563eb;color:#ffffff;border-radius:22px;font-family:Figtree,sans-serif;font-size:30px;font-weight:800;padding:0;">H</span></div>
     </div>
@@ -197,7 +237,7 @@
     </div>
 
     <div><div class="lab"><b>После правки</b><span>только фон, знака по центру нет</span></div>
-    <div class="and" data-screen-label="iOS · после правки" style="background:#fffaf1;">
+    <div class="and" data-demo="stop" data-screen-label="iOS · после правки" style="background:#fffaf1;">
       <div class="asb" style="background:transparent;color:rgba(32,30,29,.75);"><span>15:29</span><span style="opacity:.6;">▂▄▆ ▮</span></div>
       <div class="amid"></div>
     </div>
@@ -241,25 +281,25 @@
   <div class="pal" data-mir="s1" style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
 
     <div><div class="lab"><b>1 · кадр системы · Android</b><span>всегда песочный, тему не знает</span></div>
-    <div class="and" data-screen-label="Стык · сплэш системы" style="background:#fffaf1;">
+    <div class="and" data-demo="stop" data-screen-label="Стык · сплэш системы" style="background:#fffaf1;">
       <div class="asb" style="background:#fffaf1;color:rgba(32,30,29,.7);"><span>15:29</span><span style="opacity:.6;">LTE ▂▄▆ ▮</span></div>
       <div class="amid"><span class="amk" style="background:#efe3cf;color:#a8481c;">H</span></div>
       <div class="acap" style="color:rgba(32,30,29,.8);">HEYS</div>
     </div></div>
 
     <div><div class="lab"><b>1 · кадр системы · iPhone</b><span>только фон, по центру ничего</span></div>
-    <div class="and" data-screen-label="Стык · сплэш системы · iPhone" style="background:#fffaf1;">
+    <div class="and" data-demo="stop" data-screen-label="Стык · сплэш системы · iPhone" style="background:#fffaf1;">
       <div class="asb" style="background:transparent;color:rgba(32,30,29,.75);"><span>15:29</span><span style="opacity:.6;">▂▄▆ ▮</span></div>
       <div class="amid"></div>
     </div></div>
 
     <div><div class="lab"><b>2 · наш загрузчик</b><span>дуга на месте буквы, на iPhone — первое содержимое кадра</span></div>
-    <div class="ph" data-screen-label="Стык · загрузчик" style="align-items:center;justify-content:center;">
+    <div class="ph" data-demo="stop" data-screen-label="Стык · загрузчик" style="align-items:center;justify-content:center;">
       <span class="bm" style="width:64px;height:64px;"><svg class="spin" width="58" height="58" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="rgba(var(--ink),.13)" stroke-width="2.6"/><path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="var(--acs)" stroke-width="2.6" stroke-linecap="round"/></svg></span>
     </div></div>
 
     <div><div class="lab"><b>3 · Главная</b><span>круг гаснет, шапка приезжает</span></div>
-    <div class="ph" data-screen-label="Стык · Главная">
+    <div class="ph" data-demo="stop" data-screen-label="Стык · Главная">
       <div style="padding:18px 18px 0;">
         <div style="display:flex;align-items:center;gap:9px;">
           <span class="n" style="font:800 12px/1 Figtree,sans-serif;color:var(--ac);">18</span>
@@ -304,7 +344,42 @@ class Component extends DCLogic {
   pal = [['dk', 'Тёмная'], ['bl', 'Синяя'], ['bldk', 'Синяя тёмная']];
   componentDidMount() { this.obs = new MutationObserver(() => { clearTimeout(this.t); this.t = setTimeout(() => this.sync(), 400); }); this.sync(); }
   componentWillUnmount() { if (this.obs) this.obs.disconnect(); clearTimeout(this.t); }
-  renderVals() { return {}; }
+  deliver(btn, txt, count) {
+    const host = btn.closest('[data-contract]') || btn.parentElement;
+    let box = host.querySelector('textarea[data-spec-out]');
+    if (!box) {
+      box = document.createElement('textarea');
+      box.setAttribute('data-spec-out', '');
+      box.setAttribute('readonly', '');
+      box.style.cssText = 'display:block;width:100%;box-sizing:border-box;height:130px;margin-top:12px;font:500 10.5px/1.55 ui-monospace,Menlo,monospace;color:#201e1d;background:#fffaf1;border:1px solid rgba(0,0,0,.12);border-radius:14px;padding:10px;resize:vertical;';
+      host.appendChild(box);
+    }
+    box.value = txt; box.focus(); box.select();
+    const say = (msg) => {
+      btn.textContent = msg;
+      clearTimeout(this._sayT);
+      this._sayT = setTimeout(() => { btn.textContent = 'скопировать контракт'; }, 2600);
+    };
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    if (ok) { say('скопировано · ' + count + ' строк'); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt)
+        .then(() => say('скопировано · ' + count + ' строк'))
+        .catch(() => say('буфер недоступен — текст выделен ниже'));
+    } else { say('буфер недоступен — текст выделен ниже'); }
+  }
+  renderVals() {
+    return {
+      copySpec: (e) => {
+        const rows = [...document.querySelectorAll('.spec')].map(r => {
+          const k = r.querySelector('b'), v = r.querySelector('span[data-v]');
+          return k && v ? k.textContent.trim() + '\t' + v.getAttribute('data-v') : null;
+        }).filter(Boolean);
+        this.deliver(e.currentTarget, 'app-splash · контракт (' + rows.length + ' строк)\n' + rows.join('\n'), rows.length);
+      }
+    };
+  }
   componentDidUpdate() { this.sync(); }
 
   tw() {

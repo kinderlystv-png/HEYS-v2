@@ -12,6 +12,16 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="./v4-canvas.css" rel="stylesheet">
+<style>
+  .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
+  .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
+  .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
+  .spec>span[data-v]::before{content:attr(data-v)}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);font-style:normal;text-wrap:pretty}
+  .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin:0 0 30px}
+  .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:16px 0 2px}
+</style>
 </helmet>
 
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e9dfcd"/><rect x="30" y="30" width="40" height="40" rx="10" fill="#c67139"/><text x="50" y="57" text-anchor="middle" font-family="Figtree,sans-serif" font-size="16" font-weight="700" fill="#2b1608">v4</text></svg></template>
@@ -24,6 +34,60 @@
   </div>
   <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Согласия стоят до первых персональных данных и подписываются кодом. Четыре шага профиля — по одному герою на экран. Концов три: доступ открыт, ждём куратора, неделя начнётся с даты.</p>
   <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);">В пакете: registration.v4.dc.html · протокол docs/implementation/REGISTRATION_WELCOME_SPLIT_PROTOCOL.md · экраны искать по data-screen-label</p>
+  <div class="ctr" data-contract="registration">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+      <span class="ctrTag">КОНТРАКТ</span>
+      <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.4);">ключ и значение через таб — вставляется в тикет или тест</span>
+    </div>
+
+    <div class="ctrH">Что это и чьё</div>
+    <div class="spec"><b>фича</b><span data-v="регистрация клиента: два обязательных документа с подписью кодом, четыре шага профиля, три возможных конца"></span></div>
+    <div class="spec"><b>границы</b><span data-v="канвас рисует содержимое шагов, документ и шторку подписи; системная клавиатура и статус-бар — платформы"></span></div>
+    <div class="spec"><b>источник</b><span data-v="главный для регистрации и для экрана профиля в настройках"></span><i>вход по коду и создание своего кода — login.v4.dc.html</i></div>
+    <div class="spec" style="border-bottom:none"><b>адресация</b><span data-v="кадр = data-screen-label; все кадры статичные (data-demo='stop')"></span></div>
+
+    <div class="ctrH">Общие правила слоя</div>
+    <div class="spec"><b>герой</b><span data-v="одно крупное число на экран, по центру"></span><i>второй герой обнуляет первого</i></div>
+    <div class="spec"><b>прогресс</b><span data-v="точки, активная — вытянутая пилюля; процентов нет"></span><i>проценты обещают точность, которой в короткой форме нет</i></div>
+    <div class="spec"><b>цель касания</b><span data-v="минимум 44 pt — строка, чип и кнопка держат высоту даже при тексте в одну строку"></span></div>
+    <div class="spec" style="border-bottom:none"><b>клавиатура</b><span data-v="экран сжимается, «Дальше» поднимается над клавиатурой, клавиша ввода подписана тем же словом"></span></div>
+
+    <div class="ctrH">Согласия</div>
+    <div class="spec"><b>порядок</b><span data-v="оба обязательных документа — до первого поля профиля"></span><i>подписывать нечего задним числом, данные собираются уже после разрешения</i></div>
+    <div class="spec"><b>отметка</b><span data-v="ставится только после открытия документа; касание пункта в списке открывает документ, а не отмечает его"></span><i>цена — доказательство, что текст был показан, а не спрятан за ссылкой</i></div>
+    <div class="spec"><b>дочитывание</b><span data-v="требуется только у обязательных: кнопка «Ознакомлен, принимаю» оживает на последнем экране документа"></span><i>прокрутка даёт доказательство при споре «мне подсунули» — это работает годами, а раздражение стоит секунд</i></div>
+    <div class="spec"><b>прогресс чтения</b><span data-v="процент в шапке и полоса под ней"></span><i>без них «Ознакомлен» выглядит сломанной кнопкой, а не незаконченным действием</i></div>
+    <div class="spec"><b>необязательные</b><span data-v="ничего не отмечено заранее, кнопки «отметить всё» нет; кнопка «дальше» при пустом третьем пункте активна"></span><i>заранее поставленная галочка не считается добровольным согласием; так видно, что необязательное действительно необязательно</i></div>
+    <div class="spec"><b>неактивная кнопка</b><span data-v="над ней причина основным тоном: «Отметьте два обязательных пункта»"></span><i>это не вторичный текст, а единственное объяснение, почему дальше не идётся</i></div>
+    <div class="spec" style="border-bottom:none"><b>объяснение</b><span data-v="одна строка о сути под каждым пунктом списка; в самом документе её нет"></span><i>пересказ пересказа из старого экрана исчезает</i></div>
+
+    <div class="ctrH">Документ и подпись</div>
+    <div class="spec"><b>кегль</b><span data-v="12,5 px, межстрочный 1,65 — больше интерфейсного"></span><i>это длинный текст, который действительно читают; экономить высоту бессмысленно — документ всё равно на несколько экранов</i></div>
+    <div class="spec"><b>версия и дата</b><span data-v="двумя пилюлями под заголовком, не курсивом внутри абзаца"></span><i>единственные данные документа, которые человек может понадобиться назвать в споре</i></div>
+    <div class="spec"><b>реквизиты</b><span data-v="карточка пар «поле — значение»; оговорка про телеграм стоит рядом с телеграмом"></span><i>почту и телеграм ищут глазами, а не читают</i></div>
+    <div class="spec"><b>отказ</b><span data-v="крестик в шапке, пока не дочитано; «Закрыть без принятия» словами — только внизу, рядом с активной кнопкой"></span><i>это осознанный выбор, а не случайный тап по краю экрана</i></div>
+    <div class="spec"><b>подпись</b><span data-v="шторка с кодом — тем же, что на входе; отступ от краёв 12 px, как у листа правок куратора"></span><i>один и тот же приём: надстройка над приложением, а не новый экран</i></div>
+    <div class="spec" style="border-bottom:none"><b>после подписи</b><span data-v="шторка показывает, что подписано: версии обоих документов, дата, время и устройство; одна кнопка «Продолжить»"></span><i>«Готово» здесь неуместно — регистрация не закончилась, а продолжается шагом профиля</i></div>
+
+    <div class="ctrH">Четыре шага профиля</div>
+    <div class="spec"><b>счёт шагов</b><span data-v="4; согласия и итог точками не считаются"></span><i>это вход и выход, а не шаги профиля</i></div>
+    <div class="spec"><b>активность</b><span data-v="спрашивается один раз и дневную норму не кормит: она нужна прогнозу «недель до цели» и виджету, пока трёх дней факта нет"></span><i>расход дня считается по факту — шаги, тренировки, быт. Обещать формулу, которой нет, нельзя</i></div>
+    <div class="spec"><b>темп</b><span data-v="словами: снизить −10 / −15 / −20, удержать 0, набрать +10 / +15; у набора темпа «быстро» нет"></span><i>такого пресета нет и в модели</i></div>
+    <div class="spec"><b>возраст</b><span data-v="жёсткий предел: колесо года не идёт ниже 18"></span><i>подписывать документы должен совершеннолетний — это не предмет уговоров</i></div>
+    <div class="spec"><b>желаемый вес</b><span data-v="предупреждение, не предел: колесо едет куда угодно, показываем ИМТ и честно говорим, что прогноз по срокам для такой цели не строим"></span></div>
+    <div class="spec" style="border-bottom:none"><b>ошибка</b><span data-v="называет только незаполненное: «Остался пол», а не «Заполните поля»"></span><i>мусорный ввод — отдельный случай со своей причиной: имя должно читаться, по нему обращается куратор</i></div>
+
+    <div class="ctrH">Концы и сохранение</div>
+    <div class="spec"><b>концов три</b><span data-v="доступ открыт («Начать утренний чек-ин») · куратор ещё не назначил (ожидание с «Проверить доступ») · неделя начинается с будущей даты (главное на экране — сама дата, кнопки чек-ина нет)"></span><i>все три закрываются человеком: автоматического проскока в чек-ин нет ни в одном</i></div>
+    <div class="spec"><b>ожидание</b><span data-v="экран, не заглушка; крестика нет — это и есть состояние приложения до старта"></span><i>«Написать куратору» показываем только когда куратор назначен и его имя есть: писать в пустоту нельзя</i></div>
+    <div class="spec"><b>триал</b><span data-v="кнопки «начать пробный период» нет: неделю назначает куратор"></span></div>
+    <div class="spec"><b>норма</b><span data-v="итог говорит, что норма считается каждый день по факту дня"></span><i>«пересчитаем раз в неделю» было выдумкой макета</i></div>
+    <div class="spec"><b>сохранение</b><span data-v="профиль сохранён только когда облако подтвердило запись; повтор автоматический с растущим интервалом, человек видит номер попытки и может ускорить кнопкой"></span><i>куратор тут ни при чём — это техническая запись</i></div>
+    <div class="spec"><b>возврат</b><span data-v="список показывает пройденное, шаг с весом помечен «заново»"></span><i>значение недельной давности превратило бы норму в вымысел</i></div>
+    <div class="spec" style="border-bottom:none"><b>профиль в настройках</b><span data-v="повторяет регистрацию значение в значение; текущий вес только для чтения (приходит из чек-ина), базовый редактируется"></span><i>двух мест ввода одного числа быть не должно</i></div>
+  </div>
+
   <div class="secH">Общее для всего слоя v4</div>
   <div style="display:flex;gap:22px;margin-bottom:34px;max-width:1180px;">
     <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Герой один на экран</b><span>Каждое крупное число одно и по центру: второй герой на экране обнуляет первого.</span></div></div>
@@ -34,7 +98,7 @@
   <div class="pal" data-mir="m1" style="display:flex;gap:30px;align-items:flex-start;">
 
     <div><div class="lab"><b>0 · Согласия</b><span>до любых персональных данных</span></div>
-    <div class="ph" data-screen-label="Регистрация · согласия">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · согласия">
       <div class="sc">
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Согласия и условия</div>
         <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:8px;text-wrap:pretty;">Оба документа открываются целиком: отметка появится, когда дочитаете до конца.</div>
@@ -63,7 +127,7 @@
     </div></div>
 
     <div><div class="lab"><b>Начало документа</b><span>кнопка ещё не активна</span></div>
-    <div class="ph" data-screen-label="Документ · начало">
+    <div class="ph" data-demo="stop" data-screen-label="Документ · начало">
       <div style="padding:14px 16px 10px;display:flex;align-items:center;gap:10px;background:var(--bg);">
         <span style="width:34px;height:34px;flex:none;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.5)" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
         <span style="flex:1;font:700 12.5px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.55);">Пользовательское соглашение</span>
@@ -90,7 +154,7 @@
     </div></div>
 
     <div><div class="lab"><b>Конец документа</b><span>кнопка ожила</span></div>
-    <div class="ph" data-screen-label="Документ · конец">
+    <div class="ph" data-demo="stop" data-screen-label="Документ · конец">
       <div style="padding:14px 16px 10px;display:flex;align-items:center;gap:10px;background:var(--bg);">
         <span style="width:34px;height:34px;flex:none;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.5)" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
         <span style="flex:1;font:700 12.5px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.55);">Пользовательское соглашение</span>
@@ -116,7 +180,7 @@
     </div></div>
 
     <div><div class="lab"><b>0 · Необязательные</b><span>ниже на том же экране</span></div>
-    <div class="ph" data-screen-label="Регистрация · необязательные согласия">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · необязательные согласия">
       <div class="sc">
         <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:16px 0 8px;">Обязательные</div>
         <div style="display:flex;align-items:center;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--acs);display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" stroke-width="3.5" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span><span style="font:600 12px/1.35 Figtree,sans-serif;color:var(--tx);">Пользовательское соглашение</span></div>
@@ -134,7 +198,7 @@
     </div></div>
 
     <div><div class="lab"><b>0 · Подпись кодом</b><span>шторка поверх экрана</span></div>
-    <div class="ph" data-screen-label="Регистрация · подпись кодом">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · подпись кодом">
       <div class="sc" style="filter:blur(2px);opacity:.5;">
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Согласия и условия</div>
         <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.55);margin-top:8px;text-wrap:pretty;">Два документа обязательны.</div>
@@ -156,7 +220,7 @@
     </div></div>
 
     <div><div class="lab"><b>0 · Подписано</b><span>сразу после кода</span></div>
-    <div class="ph" data-screen-label="Регистрация · подписано">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · подписано">
       <div class="sc" style="filter:blur(2px);opacity:.5;">
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Согласия и условия</div>
         <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);margin-top:8px;text-wrap:pretty;">Два документа обязательны.</div>
@@ -181,7 +245,7 @@
     </div></div>
 
     <div><div class="lab"><b>1 · Персональные данные</b><span>шаг 1 из 4</span></div>
-    <div class="ph" data-screen-label="Регистрация · персональные данные">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · персональные данные">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Расскажите о себе</div>
@@ -205,7 +269,7 @@
     </div></div>
 
     <div><div class="lab"><b>2 · Рост и вес</b><span>шаг 2 из 4</span></div>
-    <div class="ph" data-screen-label="Регистрация · рост и вес">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · рост и вес">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span class="on"></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Рост и вес</div>
@@ -248,7 +312,7 @@
     </div></div>
 
     <div><div class="lab"><b>3 · Цель и активность</b><span>шаг 3 из 4</span></div>
-    <div class="ph" data-screen-label="Регистрация · цель и активность">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · цель и активность">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Цель и активность</div>
@@ -269,7 +333,7 @@
     </div></div>
 
     <div><div class="lab"><b>4 · Сон и волна</b><span>шаг 4 из 4</span></div>
-    <div class="ph" data-screen-label="Регистрация · сон и инсулиновая волна">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · сон и инсулиновая волна">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Сон и инсулиновая волна</div>
@@ -288,7 +352,7 @@
     </div></div>
 
     <div><div class="lab"><b>Итог · доступ открыт</b><span>куратор уже назначил неделю</span></div>
-    <div class="ph" data-screen-label="Регистрация · итог доступ открыт">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · итог доступ открыт">
       <div class="sc" style="padding-top:34px;display:flex;flex-direction:column;align-items:center;">
         <span style="width:60px;height:60px;border-radius:999px;background:var(--gr-bg);display:flex;align-items:center;justify-content:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:18px;text-align:center;">Профиль готов, Александра</div>
@@ -304,7 +368,7 @@
     </div></div>
 
     <div><div class="lab"><b>Итог · ждём куратора</b><span>доступ ещё не открыт</span></div>
-    <div class="ph" data-screen-label="Регистрация · ожидание куратора">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · ожидание куратора">
       <div class="sc" style="padding-top:34px;display:flex;flex-direction:column;align-items:center;">
         <span style="width:60px;height:60px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span>
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:18px;text-align:center;text-wrap:pretty;">Профиль сохранён</div>
@@ -319,7 +383,7 @@
     </div></div>
 
     <div><div class="lab"><b>Итог · неделя с даты</b><span>доступ выдан, но начнётся позже</span></div>
-    <div class="ph" data-screen-label="Регистрация · неделя начнётся позже">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · неделя начнётся позже">
       <div class="sc" style="padding-top:34px;display:flex;flex-direction:column;align-items:center;">
         <span style="width:60px;height:60px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg></span>
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:18px;text-align:center;text-wrap:pretty;">Неделя начнётся 21 августа</div>
@@ -366,7 +430,7 @@
   <div class="pal" data-mir="m2" style="display:flex;gap:30px;align-items:flex-start;">
 
     <div><div class="lab"><b>1 · Одно поле пустое</b><span>частый случай</span></div>
-    <div class="ph" data-screen-label="Регистрация · одна ошибка">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · одна ошибка">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Расскажите о себе</div>
@@ -378,7 +442,7 @@
     </div></div>
 
     <div><div class="lab"><b>1 · Имя не подходит</b><span>цифры или одна буква</span></div>
-    <div class="ph" data-screen-label="Регистрация · имя не подходит">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · имя не подходит">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Расскажите о себе</div>
@@ -388,7 +452,7 @@
     </div></div>
 
     <div><div class="lab"><b>1 · Возраст меньше 18</b><span>колесо остановлено</span></div>
-    <div class="ph" data-screen-label="Регистрация · возраст меньше 18">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · возраст меньше 18">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Расскажите о себе</div>
@@ -413,7 +477,7 @@
     </div></div>
 
     <div><div class="lab"><b>2 · Ниже нормы ИМТ</b><span>шкала едет, но предупреждает</span></div>
-    <div class="ph" data-screen-label="Регистрация · ниже нормы имт">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · ниже нормы имт">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span class="on"></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Рост и вес</div>
@@ -455,7 +519,7 @@
     </div></div>
 
     <div><div class="lab"><b>1 · Клавиатура</b><span>фокус в поле имени</span></div>
-    <div class="ph" data-screen-label="Регистрация · клавиатура">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · клавиатура">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="flex:none;">
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Расскажите о себе</div>
@@ -473,7 +537,7 @@
     </div></div>
 
     <div><div class="lab"><b>Сохранение</b><span>после «Готово» на шаге 4</span></div>
-    <div class="ph" data-screen-label="Регистрация · сохранение">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · сохранение">
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
         <span style="width:56px;height:56px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
         <div style="font:700 15px/1.35 Figtree,sans-serif;color:var(--tx);margin-top:18px;">Сохраняем профиль</div>
@@ -483,7 +547,7 @@
     </div></div>
 
     <div><div class="lab"><b>Не сохранилось</b><span>облако не подтвердило запись</span></div>
-    <div class="ph" data-screen-label="Регистрация · ошибка сохранения">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · ошибка сохранения">
       <div class="sc" style="padding-top:38px;display:flex;flex-direction:column;align-items:center;">
         <span style="width:56px;height:56px;border-radius:999px;background:var(--tint);display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ac2)" stroke-width="2.75" stroke-linecap="round"><path d="M12 7v6M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg></span>
         <div style="font:700 18px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:18px;text-align:center;text-wrap:pretty;">Профиль не сохранился</div>
@@ -497,7 +561,7 @@
     </div></div>
 
     <div><div class="lab"><b>Возврат</b><span>ушёл на шаге 2, вернулся через неделю</span></div>
-    <div class="ph" data-screen-label="Регистрация · возврат к незавершённой">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · возврат к незавершённой">
       <div class="sc" style="padding-top:36px;display:flex;flex-direction:column;align-items:center;">
         <span style="width:56px;height:56px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span>
         <div style="font:700 19px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:18px;text-align:center;text-wrap:pretty;">Продолжим, Александра</div>
@@ -514,7 +578,7 @@
     </div></div>
 
     <div><div class="lab"><b>Профиль в настройках</b><span>те же значения после регистрации</span></div>
-    <div class="ph" data-screen-label="Регистрация · профиль в настройках">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · профиль в настройках">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ttl">Профиль</span><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:6px 0 7px;">О себе</div>
@@ -563,7 +627,42 @@ class Component extends DCLogic {
   pal = [['dk', 'Тёмная'], ['bl', 'Синяя'], ['bldk', 'Синяя тёмная']];
   componentDidMount() { this.obs = new MutationObserver(() => { clearTimeout(this.t); this.t = setTimeout(() => this.sync(), 400); }); this.sync(); }
   componentWillUnmount() { if (this.obs) this.obs.disconnect(); clearTimeout(this.t); }
-  renderVals() { return {}; }
+  deliver(btn, txt, count) {
+    const host = btn.closest('[data-contract]') || btn.parentElement;
+    let box = host.querySelector('textarea[data-spec-out]');
+    if (!box) {
+      box = document.createElement('textarea');
+      box.setAttribute('data-spec-out', '');
+      box.setAttribute('readonly', '');
+      box.style.cssText = 'display:block;width:100%;box-sizing:border-box;height:130px;margin-top:12px;font:500 10.5px/1.55 ui-monospace,Menlo,monospace;color:#201e1d;background:#fffaf1;border:1px solid rgba(0,0,0,.12);border-radius:14px;padding:10px;resize:vertical;';
+      host.appendChild(box);
+    }
+    box.value = txt; box.focus(); box.select();
+    const say = (msg) => {
+      btn.textContent = msg;
+      clearTimeout(this._sayT);
+      this._sayT = setTimeout(() => { btn.textContent = 'скопировать контракт'; }, 2600);
+    };
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    if (ok) { say('скопировано · ' + count + ' строк'); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt)
+        .then(() => say('скопировано · ' + count + ' строк'))
+        .catch(() => say('буфер недоступен — текст выделен ниже'));
+    } else { say('буфер недоступен — текст выделен ниже'); }
+  }
+  renderVals() {
+    return {
+      copySpec: (e) => {
+        const rows = [...document.querySelectorAll('.spec')].map(r => {
+          const k = r.querySelector('b'), v = r.querySelector('span[data-v]');
+          return k && v ? k.textContent.trim() + '\t' + v.getAttribute('data-v') : null;
+        }).filter(Boolean);
+        this.deliver(e.currentTarget, 'registration · контракт (' + rows.length + ' строк)\n' + rows.join('\n'), rows.length);
+      }
+    };
+  }
   componentDidUpdate() { this.sync(); }
 
   tw() {

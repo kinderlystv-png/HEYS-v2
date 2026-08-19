@@ -19,6 +19,14 @@
   .chipAnim{animation:chipOn 7s ease infinite}
   .fab{width:46px;height:46px;flex:none;border-radius:999px;background:var(--acs);display:flex;align-items:center;justify-content:center;color:var(--on-acs);box-shadow:0 2px 4px rgba(var(--shadow),.14),0 10px 22px rgba(var(--shadow),.26)}
   .fabSm{width:38px;height:38px;flex:none;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;color:var(--ac)}
+  .spec{display:grid;grid-template-columns:150px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
+  .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
+  .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:var(--tx);text-wrap:pretty}
+  .spec>span[data-v]::before{content:attr(data-v)}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);font-style:normal;text-wrap:pretty}
+  .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin-bottom:30px}
+  .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:16px 0 2px}
 </style>
 </helmet>
 
@@ -32,10 +40,49 @@
   </div>
   <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Настройки не отдельная вкладка, а шторка: «Вы», «Приложение», «Сопровождение». Значение стоит справа от названия, поэтому большинство вопросов закрывается без захода внутрь. Диагностика живёт вне ярусов — служебной створкой. Рядом — системный лист про иконку на домашнем экране: без неё на iPhone не приходят напоминания.</p>
   <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);">В пакете: settings-system.v4.dc.html · экраны искать по data-screen-label</p>
+  <div class="ctr" data-contract="settings-system">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+      <span class="ctrTag">КОНТРАКТ</span>
+      <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.4);">ключ и значение через таб — вставляется в тикет или тест</span>
+    </div>
+
+    <div class="ctrH">Что это и чьё</div>
+    <div class="spec"><b>фича</b><span data-v="настройки шторкой: ярусы списка, служебная створка диагностики, лист «на домашний экран», выбор чипов плавающих кнопок"></span></div>
+    <div class="spec"><b>границы</b><span data-v="канвас рисует содержимое шторки и стопку кнопок; сама шторка, её жесты и затемнение — продукта"></span></div>
+    <div class="spec"><b>источник</b><span data-v="главный для чипов и для правил стопки плавающих кнопок"></span><i>кнопки в home-widgets и в канвасах вкладок нарисованы для контекста; при расхождении верен этот файл</i></div>
+    <div class="spec"><b>демо</b><span data-v="data-demo='loop' — прогон перестройки кнопок, петля живёт только на канвасе; тайминги продукта из строк ниже"></span></div>
+    <div class="spec" style="border-bottom:none"><b>адресация</b><span data-v="кадр = data-screen-label"></span></div>
+
+    <div class="ctrH">Список настроек</div>
+    <div class="spec"><b>структура</b><span data-v="ярусы по смыслу, а не плоский перечень из одиннадцати строк"></span><i>плоский список заставляет читать каждую строку, чтобы найти одну</i></div>
+    <div class="spec"><b>тумблер уведомлений</b><span data-v="единственный на верхнем уровне, отдельной карточкой над ярусами, с объяснением, что именно выключится"></span><i>тонкие настройки — звук, время — строкой в «Приложении», не рядом с рубильником</i></div>
+    <div class="spec"><b>значение справа</b><span data-v="показывается в строке: палитра тремя кружками, «Главная», число, «6 из 7 блоков»"></span><i>половина заходов в настройки заканчивается проверкой текущего значения — показанное справа экономит открытие экрана</i></div>
+    <div class="spec"><b>диагностика</b><span data-v="вне ярусов, свёрнута, набрана бледнее; внутри — что сценарии локальные и данные не сбрасывают, номер сборки и клиент"></span><i>кнопка «пройти регистрацию заново» пугает ровно до этой фразы</i></div>
+    <div class="spec" style="border-bottom:none"><b>чего в шторке нет</b><span data-v="полосы геймификации (уровень, серия) — только заголовок и крестик"></span><i>сюда приходят что-то поменять, а не рассматривать прогресс</i></div>
+
+    <div class="ctrH">Лист «на домашний экран»</div>
+    <div class="spec"><b>поверхность</b><span data-v="нижний лист (тот же, что у изменений куратора), не модалка по центру"></span></div>
+    <div class="spec"><b>заголовок</b><span data-v="называет выгоду, а не требование"></span></div>
+    <div class="spec"><b>инструкция</b><span data-v="три нумерованных шага с иконкой того, что искать глазами (квадрат со стрелкой, плюс в рамке)"></span><i>абзац приходится перечитывать: стрелки в тексте не совпадают с тем, что на экране телефона</i></div>
+    <div class="spec"><b>снятие страха</b><span data-v="строка внизу листа: «ничего не скачивается: иконка — ярлык на то же приложение»"></span><i>половина отказов — не лень, а подозрение, что начнётся установка чего-то тяжёлого</i></div>
+    <div class="spec" style="border-bottom:none"><b>кнопки</b><span data-v="две: «Понятно» и «Позже»; «Позже» не прячет подсказку навсегда — она вернётся при следующей попытке включить уведомления"></span></div>
+
+    <div class="ctrH">Чипы плавающих кнопок</div>
+    <div class="spec"><b>что чипуется</b><span data-v="четыре: вода, голод и энергия, мессенджер, активность"></span></div>
+    <div class="spec"><b>«плюс»</b><span data-v="вне выбора, в списке чипов отсутствует, всегда нижний в стопке"></span><i>это вход в добавление — выключать его нечем взамен</i></div>
+    <div class="spec"><b>ноль чипов</b><span data-v="допустимый выбор: в углу остаётся один «плюс», предупреждения нет"></span><i>вода остаётся в своём виджете, отметки — во вкладке «Актив»</i></div>
+    <div class="spec"><b>вид чипа</b><span data-v="иконка и слово вместе; включённый красится терракотой — тем же цветом, что сама кнопка"></span><i>иконка без слова заставляет угадывать, слово без иконки не связывается с кнопкой на экране</i></div>
+    <div class="spec"><b>порядок стопки</b><span data-v="фиксированный снизу вверх: плюс, вода, голод и энергия, мессенджер, активность; перетаскивания нет"></span><i>пять кнопок в столбик находят по позиции, а не по памяти о своей раскладке</i></div>
+    <div class="spec"><b>максимум</b><span data-v="4 чипа; пятый не заводим"></span><i>стопка из пяти вместе с «плюсом» дерётся с нижним меню и закрывает содержимое — новый быстрый доступ это повод спросить, какой из четырёх он вытесняет</i></div>
+    <div class="spec"><b>когда перестраивается</b><span data-v="после закрытия шторки, не во время выбора"></span><i>пока шторка открыта, кнопки за ней не видны — анимация ушла бы в пустоту</i></div>
+    <div class="spec" style="border-bottom:none"><b>тайминги</b><span data-v="появление 220 мс с перелётом до 1,06 · исчезновение 160 мс · смыкание соседей 220 мс"></span><i>та же пружина, что у смены вида виджета: иначе экран выглядит собранным из двух приложений</i></div>
+  </div>
+
   <div class="secH">Список, ярусы и диагностика</div>  <div class="pal" data-mir="m6" style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
 
     <div><div class="lab"><b>Настройки</b><span>сгруппированы по смыслу</span></div>
-    <div class="ph" data-screen-label="Настройки · список">
+    <div class="ph" data-demo="stop" data-screen-label="Настройки · список">
       <div style="padding:18px 18px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
         <span style="font:700 20px/1.2 Figtree,sans-serif;color:var(--tx);">Настройки</span>
         <span style="width:34px;height:34px;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.5)" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
@@ -82,7 +129,7 @@
     </div></div>
 
     <div><div class="lab"><b>Диагностика раскрыта</b><span>служебное, внизу списка</span></div>
-    <div class="ph" data-screen-label="Настройки · диагностика">
+    <div class="ph" data-demo="stop" data-screen-label="Настройки · диагностика">
       <div style="padding:18px 18px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
         <span style="font:700 20px/1.2 Figtree,sans-serif;color:var(--tx);">Настройки</span>
         <span style="width:34px;height:34px;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.5)" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
@@ -130,7 +177,7 @@
   <div class="pal" data-mir="m5" style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
 
     <div><div class="lab"><b>Три шага</b><span>после включения уведомлений</span></div>
-    <div class="ph" data-screen-label="Домашний экран · лист">
+    <div class="ph" data-demo="stop" data-screen-label="Домашний экран · лист">
       <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Главная</div><div style="height:96px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:110px;border-radius:20px;background:var(--c1);margin-top:10px;"></div><div style="height:110px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
@@ -166,7 +213,7 @@
   <div class="pal" data-mir="m8" style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
 
     <div><div class="lab"><b>Оформление · раскрыто</b><span>чипы с подписями, включённые терракотовые</span></div>
-    <div class="ph" data-screen-label="Настройки · чипы плавающих кнопок">
+    <div class="ph" data-demo="stop" data-screen-label="Настройки · чипы плавающих кнопок">
       <div style="padding:18px 18px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
         <span style="font:700 20px/1.2 Figtree,sans-serif;color:var(--tx);">Оформление</span>
         <span style="width:34px;height:34px;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.5)" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
@@ -202,7 +249,7 @@
     </div></div>
 
     <div><div class="lab"><b>После закрытия · прогон</b><span>кнопка вырастает на своём месте, соседи смыкаются</span></div>
-    <div class="ph" data-screen-label="Плавающие кнопки · прогон после закрытия">
+    <div class="ph" data-demo="loop" data-screen-label="Плавающие кнопки · прогон после закрытия">
       <div style="padding:16px 18px 0;">
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="width:30px;height:30px;flex:none;border-radius:999px;background:var(--c1);"></span>
@@ -261,7 +308,42 @@ class Component extends DCLogic {
   pal = [['dk', 'Тёмная'], ['bl', 'Синяя'], ['bldk', 'Синяя тёмная']];
   componentDidMount() { this.obs = new MutationObserver(() => { clearTimeout(this.t); this.t = setTimeout(() => this.sync(), 400); }); this.sync(); }
   componentWillUnmount() { if (this.obs) this.obs.disconnect(); clearTimeout(this.t); }
-  renderVals() { return {}; }
+  deliver(btn, txt, count) {
+    const host = btn.closest('[data-contract]') || btn.parentElement;
+    let box = host.querySelector('textarea[data-spec-out]');
+    if (!box) {
+      box = document.createElement('textarea');
+      box.setAttribute('data-spec-out', '');
+      box.setAttribute('readonly', '');
+      box.style.cssText = 'display:block;width:100%;box-sizing:border-box;height:130px;margin-top:12px;font:500 10.5px/1.55 ui-monospace,Menlo,monospace;color:#201e1d;background:#fffaf1;border:1px solid rgba(0,0,0,.12);border-radius:14px;padding:10px;resize:vertical;';
+      host.appendChild(box);
+    }
+    box.value = txt; box.focus(); box.select();
+    const say = (msg) => {
+      btn.textContent = msg;
+      clearTimeout(this._sayT);
+      this._sayT = setTimeout(() => { btn.textContent = 'скопировать контракт'; }, 2600);
+    };
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    if (ok) { say('скопировано · ' + count + ' строк'); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt)
+        .then(() => say('скопировано · ' + count + ' строк'))
+        .catch(() => say('буфер недоступен — текст выделен ниже'));
+    } else { say('буфер недоступен — текст выделен ниже'); }
+  }
+  renderVals() {
+    return {
+      copySpec: (e) => {
+        const rows = [...document.querySelectorAll('.spec')].map(r => {
+          const k = r.querySelector('b'), v = r.querySelector('span[data-v]');
+          return k && v ? k.textContent.trim() + '\t' + v.getAttribute('data-v') : null;
+        }).filter(Boolean);
+        this.deliver(e.currentTarget, 'settings-system · контракт (' + rows.length + ' строк)\n' + rows.join('\n'), rows.length);
+      }
+    };
+  }
   componentDidUpdate() { this.sync(); }
 
   tw() {

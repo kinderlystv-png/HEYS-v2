@@ -12,6 +12,16 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="./v4-canvas.css" rel="stylesheet">
+<style>
+  .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
+  .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
+  .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
+  .spec>span[data-v]::before{content:attr(data-v)}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);font-style:normal;text-wrap:pretty}
+  .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin:0 0 30px}
+  .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:16px 0 2px}
+</style>
 </helmet>
 
 <template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e9dfcd"/><rect x="30" y="30" width="40" height="40" rx="10" fill="#c67139"/><text x="50" y="57" text-anchor="middle" font-family="Figtree,sans-serif" font-size="16" font-weight="700" fill="#2b1608">v4</text></svg></template>
@@ -24,6 +34,65 @@
   </div>
   <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Вес, сон, три оценки, цель по шагам, остальное. Разбор вчера стоит развилкой до мастера: он появляется только по данным еды и закрывается одним из четырёх выходов.</p>
   <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);">В пакете: checkin-morning.v4.dc.html · протокол docs/implementation/MORNING_CHECKIN_V4_PROTOCOL.md · экраны искать по data-screen-label</p>
+  <div class="ctr" data-contract="checkin-morning">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+      <span class="ctrTag">КОНТРАКТ</span>
+      <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.4);">ключ и значение через таб — вставляется в тикет или тест</span>
+    </div>
+
+    <div class="ctrH">Что это и чьё</div>
+    <div class="spec"><b>фича</b><span data-v="утренний чек-ин: развилка разбора вчера (или пачки дней), пять шагов мастера, итог"></span></div>
+    <div class="spec"><b>границы</b><span data-v="канвас рисует содержимое шагов; сам мастер, переходы между шагами и системная шапка — продукта"></span></div>
+    <div class="spec"><b>источник</b><span data-v="главный для чек-ина и для экрана «Добавки»"></span><i>капсула времени и дорожка ползунка общие с другими канвасами — правило ниже</i></div>
+    <div class="spec"><b>демо</b><span data-v="на канвасе анимаций нет: все 33 кадра — стоп-кадры (data-demo='stop'), сверять геометрию можно по любому"></span></div>
+    <div class="spec" style="border-bottom:none"><b>адресация</b><span data-v="кадр = data-screen-label"></span></div>
+
+    <div class="ctrH">Каркас утра</div>
+    <div class="spec"><b>шагов</b><span data-v="5: вес → сон → как вы сегодня → цель по шагам → остальное; затем итог"></span><i>приветствие отдельной страницей не занимает экран — оно шапкой на первом вопросе</i></div>
+    <div class="spec"><b>обязательные</b><span data-v="5 значений за утро; пропустить можно только вес («Не взвешивался»)"></span><i>вес единственный зависит от предмета вне приложения</i></div>
+    <div class="spec"><b>первый шаг</b><span data-v="без стрелки назад и без крестика"></span><i>чек-ин открылся сам или из закрытого итога регистрации — возвращаться значит откатывать закрытое</i></div>
+    <div class="spec"><b>итог</b><span data-v="стрелка назад есть; показывает серию, утреннюю норму и план по шагам"></span><i>это правка своих цифр, а не откат чужого решения</i></div>
+    <div class="spec" style="border-bottom:none"><b>разбор вчера</b><span data-v="стоит до мастера: индикатор без точек, подпись «перед чек-ином» — это развилка, а не шаг"></span></div>
+
+    <div class="ctrH">Разбор вчера и пачка</div>
+    <div class="spec"><b>порог попадания</b><span data-v="нет приёмов, ноль калорий или меньше половины нормы"></span></div>
+    <div class="spec"><b>четыре выхода</b><span data-v="«Дописать точно» (в дневник) · «Так и было» (цифры верные) · «По ощущениям» (четыре силы) · «Заполню позже» (день вернётся завтра)"></span></div>
+    <div class="spec"><b>кнопка подтверждения</b><span data-v="называет цифру: «Так и было · 640 ккал»; на дне без еды — «Так и было · ничего не ел»"></span><i>подтверждать число, глядя на число, честнее, чем соглашаться со словом; «0 ккал» читается как незагрузившееся значение. Отдельного «вы уверены?» нет</i></div>
+    <div class="spec"><b>единицы</b><span data-v="один день — в калориях (с нормой того дня); пачка — в процентах нормы каждого дня"></span><i>общая сумма ккал по пачке врала бы: у каждого дня своя норма</i></div>
+    <div class="spec"><b>массовое закрытие</b><span data-v="«Закрыть все примерно» — один экран с четырьмя силами, ответ применяется от нормы каждого дня; записанное не перезаписывается, дописывается только разница"></span></div>
+    <div class="spec"><b>очистка пустых</b><span data-v="кнопка называет число; чистит только пустые дни; нет пустых — нет кнопки; пусты все — закрывает пачку"></span><i>после массового закрытия чистить нечего, кнопка исчезает: один день не проходит через оба действия</i></div>
+    <div class="spec" style="border-bottom:none"><b>строка списка</b><span data-v="ведёт в разбор дня (шапка «День 1 из 4»), не сразу в оценку; нажимается целиком, второй кнопки нет"></span></div>
+
+    <div class="ctrH">Шкалы и ввод</div>
+    <div class="spec"><b>дорожка</b><span data-v="один жест на продукт: ползунок с меткой совета — у самочувствия, цели по шагам и оценки пачки"></span></div>
+    <div class="spec"><b>оценки</b><span data-v="1–10 ползунком с крупной цифрой"></span><i>десять кнопок на телефоне не читаются, пять превратили бы движение в скачки</i></div>
+    <div class="spec"><b>оценка еды</b><span data-v="четыре силы словами + дорожка 50–200 % с шагом 5; привязки к ближайшей силе нет, сила подсвечивается только на 78 / 110 / 155 / 200 %"></span><i>«своё число» — честное третье состояние, а не ошибка</i></div>
+    <div class="spec"><b>цель по шагам</b><span data-v="3 000–30 000 с шагом 500; метка «Совет · N» над дорожкой под пальцем при открытии, касание метки возвращает совет"></span><i>готовые чипы «6/7/8/10 тысяч» убраны — они не совпадают с советами вида 10 500 и ломали бы подстройку</i></div>
+    <div class="spec"><b>совет по шагам</b><span data-v="медиана за две недели +5 %, смягчение при коротком сне, низком ресурсе или запланированной тренировке; потолок совета 12 000, коридор 7 000–12 000 называется только когда сработал"></span><i>руками доступен весь диапазон; коэффициенты и таблицу поправок на экран не выносим</i></div>
+    <div class="spec"><b>сон</b><span data-v="вводится временем (колёса на экране, без шторок), длительность считается и сравнивается с нормой; норма 4–12 ч с шагом 30 мин"></span><i>«шесть с половиной» человек вычисляет в уме — герой экрана посчитанный результат</i></div>
+    <div class="spec"><b>капсула времени</b><span data-v="одна на весь продукт: часы и минуты через двоеточие — «Легли», «Встали», время холода"></span></div>
+    <div class="spec"><b>заметка о сне</b><span data-v="строка под оценкой, раскрывается по касанию; подпись зависит от оценки: низкая — «что помешало», высокая — «что помогло», середина — «заметка о ночи»"></span><i>поле ввода поднимает клавиатуру там, где её не ждут</i></div>
+    <div class="spec"><b>невыбранное</b><span data-v="две одинаковые обводки без заливки; акцент появляется только после касания"></span><i>закрашенное «Было» по умолчанию читалось как уже отмеченное — человек шёл дальше, не ответив</i></div>
+    <div class="spec" style="border-bottom:none"><b>отмена выбора</b><span data-v="строка «Убрать отметку» с крестиком под карточкой, не вторая крупная кнопка"></span></div>
+
+    <div class="ctrH">Пятый шаг</div>
+    <div class="spec"><b>минимум</b><span data-v="душ и рутина стоят всегда; добавки, замеры и загрузочный день — только когда есть что сказать"></span><i>шаг не пропускается и заглушек «здесь ничего нет» не рисует; подпись внизу перечисляет, чего сегодня нет</i></div>
+    <div class="spec"><b>рутина</b><span data-v="три ответа на карточке: «Сделал» (факт со временем, плюс к серии) · «Сделаю» (намерение, в серию не идёт) · «Не сегодня» (закрывает без напоминаний, серию не рвёт)"></span><i>серию рвёт только молчание до конца дня; одного тумблера мало — в шесть утра «нет» было бы враньём</i></div>
+    <div class="spec"><b>напоминание</b><span data-v="ровно один пуш в 14:00 по местному времени и только при включённых уведомлениях; второго нет ни при каких условиях"></span><i>не «через N часов после чек-ина»: в шесть утра +4 ч попадает на дорогу, в одиннадцать — на обед</i></div>
+    <div class="spec"><b>отметка «Сделал»</b><span data-v="из любого места закрывает всё: строка исчезает, пуш отменяется, время пишется по нажатию"></span><i>обещание не превращается в долг и не переносится на завтра</i></div>
+    <div class="spec"><b>интенсивность</b><span data-v="не придумывается: без ответа — «Зарядка · была», вклада в нагрузку нет"></span><i>подставленная «средняя из утренних оценок» — выдуманные данные под видом факта; если расчёту она нужна, пишется с меткой оценочной и в статистику нагрузки не идёт</i></div>
+    <div class="spec"><b>просроченные замеры</b><span data-v="после 7 дней та же строка на том же месте получает подложку с обводкой и метку числом; эскалации дальше нет"></span><i>переезд строк учит искать их заново каждое утро; удвоенная тревога замеров не приносит</i></div>
+    <div class="spec" style="border-bottom:none"><b>загрузочный день</b><span data-v="стоит под ползунком шагов, не в «остальном»; по умолчанию «Нет» отмечен; цель по шагам не пересчитывает"></span><i>он меняет норму калорий, а не то, сколько имеет смысл ходить; дефолтное «Нет» пишется без метки ручного выбора, чтобы куратор видел разницу с «не спрашивали»</i></div>
+
+    <div class="ctrH">Согласие и добавки</div>
+    <div class="spec"><b>без подписи</b><span data-v="условных строк нет вовсе; внизу под ежедневными карточками — одна плашка с действием «Прочитать и подписать», без красного и тревожных иконок"></span><i>строки, которые молча не работают, хуже отсутствия строк</i></div>
+    <div class="spec"><b>отсрочка</b><span data-v="«Не сейчас» — одна дата на весь продукт, 7 дней; отсрочек 3, дальше только из настроек"></span><i>условие показа — отсутствие подписи, а не истёкшая отсрочка: подпись из настроек снимает плашку сразу</i></div>
+    <div class="spec"><b>выбор добавок</b><span data-v="чипы в строку с переносом, поиск первым, заголовки категорий мелкой прописной, без эмодзи; выбранное — заливка акцентом с галочкой"></span><i>плотность одного листа и есть смысл: тридцать веществ видно сразу</i></div>
+    <div class="spec"><b>доза</b><span data-v="спрашивается следующим экраном, не в чипе: шаговый ввод + капсулы «Утром / Днём / Вечером / С едой»"></span><i>дозировка в капсуле сделала бы её двухстрочной и убила плотность; время — подсказка для утреннего списка, пушей про таблетки нет</i></div>
+    <div class="spec" style="border-bottom:none"><b>курс</b><span data-v="состав дня, не отметка «выпил»: в утреннем шаге показывается строкой и не спрашивает по пунктам; факт приёма живёт в дневнике"></span><i>раздел называется «Добавки»; расшифровка «витамины, минералы, омега» — только в пустом курсе</i></div>
+  </div>
+
   <div class="secH">Утро · три правила</div>
   <div style="display:flex;gap:22px;margin-bottom:38px;max-width:1180px;">
     <div style="flex:1;"><div class="nt" style="border-bottom:none;padding-bottom:0;margin-bottom:0;"><b>Пропуск веса закрывает шаг, а не день</b><span>«Не взвешивался» ставит в день средний вес за последние три дня с меткой «расчётный»: норма калорий его берёт, тренд и график — нет, иначе линия учится на цифре, которой не было. Если трёх дней ещё нет — вес из профиля. Серия растёт, день закрыт. Отметка такого дня в истории серии — долг следующей задачи: лучше без неё вовсе, чем в одном экране есть, а в другом нет.</span></div></div>
@@ -41,7 +110,7 @@
   <div class="pal" data-mir="m3" style="display:flex;gap:30px;align-items:flex-start;">
 
     <div><div class="lab"><b>0 · Вчерашний день</b><span>точки в индикаторе нет</span></div>
-    <div class="ph" data-screen-label="Чек-ин · вчерашний день">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · вчерашний день">
       <div class="top"><span style="width:44px;"></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">Перед чек-ином</span><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:18px;">
         <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Вчерашний день выглядит неполным</div>
@@ -64,7 +133,7 @@
     </div></div>
 
     <div><div class="lab"><b>0 · По ощущениям</b><span>четыре силы, второй слой</span></div>
-    <div class="ph" data-screen-label="Чек-ин · вчера по ощущениям">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · вчера по ощущениям">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">15 августа</span><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:16px;">
         <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Как вы вчера ели?</div>
@@ -89,7 +158,7 @@
     </div></div>
 
     <div><div class="lab"><b>0 · Своё число</b><span>ползунок ушёл между силами</span></div>
-    <div class="ph" data-screen-label="Чек-ин · по ощущениям своё число">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · по ощущениям своё число">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">15 августа</span><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:16px;">
         <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Как вы вчера ели?</div>
@@ -114,7 +183,7 @@
     </div></div>
 
     <div><div class="lab"><b>0 · Пачка дней</b><span>вернулся после перерыва</span></div>
-    <div class="ph" data-screen-label="Чек-ин · пачка незакрытых дней">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · пачка незакрытых дней">
       <div class="top"><span style="width:44px;"></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">Перед чек-ином</span><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:18px;">
         <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Четыре дня остались незакрытыми</div>
@@ -137,7 +206,7 @@
     </div></div>
 
     <div><div class="lab"><b>0 · Пачка после очистки</b><span>пустые ушли, кнопки очистки нет</span></div>
-    <div class="ph" data-screen-label="Чек-ин · пачка после очистки">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · пачка после очистки">
       <div class="top"><span style="width:44px;"></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">Перед чек-ином</span><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:18px;">
         <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Осталось два дня с едой</div>
@@ -155,7 +224,7 @@
     </div></div>
 
     <div><div class="lab"><b>0 · День из пачки</b><span>тап по строке списка</span></div>
-    <div class="ph" data-screen-label="Чек-ин · день из пачки">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · день из пачки">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">День 1 из 4</span><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:18px;">
         <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Четверг, 14 августа</div>
@@ -178,7 +247,7 @@
     </div></div>
 
     <div><div class="lab"><b>0 · Пустой день из пачки</b><span>кнопка без нуля</span></div>
-    <div class="ph" data-screen-label="Чек-ин · пустой день из пачки">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · пустой день из пачки">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">День 2 из 4</span><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:18px;">
         <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Среда, 13 августа</div>
@@ -201,7 +270,7 @@
     </div></div>
 
     <div><div class="lab"><b>0 · Сила для пачки</b><span>после «Закрыть все примерно»</span></div>
-    <div class="ph" data-screen-label="Чек-ин · сила для пачки">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · сила для пачки">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.4);">11 — 14 августа</span><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:16px;">
         <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Как вы ели эти четыре дня?</div>
@@ -226,7 +295,7 @@
     </div></div>
 
     <div><div class="lab"><b>1 · Вес</b><span>открывается сам по утрам</span></div>
-    <div class="ph" data-screen-label="Чек-ин · вес">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · вес">
       <div class="top"><span style="width:44px;"></span><div class="dots"><span class="on"></span><span></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:14px;">
         <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-align:center;">Доброе утро, Александра</div>
@@ -261,7 +330,7 @@
     </div></div>
 
     <div><div class="lab"><b>1 · Первое утро</b><span>серии и динамики ещё нет</span></div>
-    <div class="ph" data-screen-label="Чек-ин · первый вес">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · первый вес">
       <div class="top"><span style="width:44px;"></span><div class="dots"><span class="on"></span><span></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:14px;">
         <div style="font:700 20px/1.25 Figtree,sans-serif;color:var(--tx);text-align:center;">Доброе утро, Александра</div>
@@ -293,7 +362,7 @@
     </div></div>
 
     <div><div class="lab"><b>1 · Расчётный вес</b><span>после «Не взвешивался»</span></div>
-    <div class="ph" data-screen-label="Чек-ин · расчётный вес">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · расчётный вес">
       <div class="top"><span style="width:44px;"></span><div class="dots"><span class="on"></span><span></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:34px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Вес на утро</div>
@@ -311,7 +380,7 @@
     </div></div>
 
     <div><div class="lab"><b>1 · Расчётный без истории</b><span>трёх дней ещё нет</span></div>
-    <div class="ph" data-screen-label="Чек-ин · расчётный вес без истории">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · расчётный вес без истории">
       <div class="top"><span style="width:44px;"></span><div class="dots"><span class="on"></span><span></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:34px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Вес на утро</div>
@@ -326,7 +395,7 @@
     </div></div>
 
     <div><div class="lab"><b>2 · Сон</b><span>время, длительность и оценка вместе</span></div>
-    <div class="ph" data-screen-label="Чек-ин · сон">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · сон">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:22px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Сон этой ночью</div>
@@ -379,7 +448,7 @@
     </div></div>
 
     <div><div class="lab"><b>3 · Как вы сегодня</b><span>три шкалы одним экраном</span></div>
-    <div class="ph" data-screen-label="Чек-ин · как вы сегодня">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · как вы сегодня">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span class="on"></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:24px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);text-align:center;">Как вы сегодня</div>
@@ -411,7 +480,7 @@
     </div></div>
 
     <div><div class="lab"><b>4 · Цель по шагам</b><span>план на день, расход считается по факту</span></div>
-    <div class="ph" data-screen-label="Чек-ин · цель по шагам">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · цель по шагам">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Шаги на сегодня</div>
@@ -441,7 +510,7 @@
     </div></div>
 
     <div><div class="lab"><b>5 · Остальное</b><span>всё редкое одним экраном</span></div>
-    <div class="ph" data-screen-label="Чек-ин · остальное">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · остальное">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:14px;">
         <div style="border-radius:20px;background:var(--c1);padding:16px 17px;">
@@ -492,7 +561,7 @@
     </div></div>
 
     <div><div class="lab"><b>5 · Замеры просрочены</b><span>то же, но замеры выделены</span></div>
-    <div class="ph" data-screen-label="Чек-ин · замеры просрочены">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · замеры просрочены">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:14px;">
         <div style="border-radius:20px;background:var(--c1);padding:16px 17px;">
@@ -547,7 +616,7 @@
     </div></div>
 
     <div><div class="lab"><b>5 · Холод: тип</b><span>раскрылось после «Было»</span></div>
-    <div class="ph" data-screen-label="Чек-ин · холод тип">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · холод тип">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:18px;">
         <div style="border-radius:20px;background:var(--c1);padding:16px 17px;">
@@ -577,7 +646,7 @@
     </div></div>
 
     <div><div class="lab"><b>5 · Замеры раскрыты</b><span>второй слой той же строки</span></div>
-    <div class="ph" data-screen-label="Чек-ин · замеры">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · замеры">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:18px;">
         <div style="font:700 18px/1.25 Figtree,sans-serif;color:var(--tx);">Замеры</div>
@@ -599,7 +668,7 @@
     </div></div>
 
     <div><div class="lab"><b>5 · Минимум</b><span>ни одного условного пункта</span></div>
-    <div class="ph" data-screen-label="Чек-ин · остальное минимум">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · остальное минимум">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:18px;">
         <div style="border-radius:20px;background:var(--c1);padding:16px 17px;">
@@ -631,7 +700,7 @@
     </div></div>
 
     <div><div class="lab"><b>Добавки · курс пуст</b><span>открыто со строки пятого шага</span></div>
-    <div class="ph" data-screen-label="Чек-ин · курс добавок пуст">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · курс добавок пуст">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ttl">Добавки</span><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:26px;">
         <div style="border-radius:20px;background:var(--c1);padding:20px 18px;text-align:center;">
@@ -645,7 +714,7 @@
     </div></div>
 
     <div><div class="lab"><b>Добавки · курс</b><span>то, что повторяется каждый день</span></div>
-    <div class="ph" data-screen-label="Добавки · курс">
+    <div class="ph" data-demo="stop" data-screen-label="Добавки · курс">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ttl">Добавки</span><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:16px;">
         <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.5);text-wrap:pretty;">Курс на день. Утром вы его просто видите — факт приёма отмечается в дневнике.</div>
@@ -673,7 +742,7 @@
     </div></div>
 
     <div><div class="lab"><b>Добавки · добавление</b><span>поиск и чипы одним листом</span></div>
-    <div class="ph" data-screen-label="Добавки · добавление">
+    <div class="ph" data-demo="stop" data-screen-label="Добавки · добавление">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ttl">Добавить в курс</span><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:12px;">
         <div style="display:flex;align-items:center;gap:9px;background:var(--c1);border-radius:14px;padding:0 13px;min-height:42px;">
@@ -720,7 +789,7 @@
     </div></div>
 
     <div><div class="lab"><b>Добавки · доза и время</b><span>после выбора пункта</span></div>
-    <div class="ph" data-screen-label="Добавки · доза и время">
+    <div class="ph" data-demo="stop" data-screen-label="Добавки · доза и время">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ttl">Витамин D3</span><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:26px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Доза на день</div>
@@ -738,7 +807,7 @@
     </div></div>
 
     <div><div class="lab"><b>5 · Согласие не подписано</b><span>замеры и добавки выключены</span></div>
-    <div class="ph" data-screen-label="Чек-ин · согласие не подписано">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · согласие не подписано">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="padding-top:18px;">
         <div style="border-radius:20px;background:var(--c1);padding:16px 17px;">
@@ -777,7 +846,7 @@
     </div></div>
 
     <div><div class="lab"><b>4 · Короткий сон</b><span>цифра мягче, причина названа</span></div>
-    <div class="ph" data-screen-label="Чек-ин · шаги при коротком сне">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · шаги при коротком сне">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Шаги на сегодня</div>
@@ -803,7 +872,7 @@
     </div></div>
 
     <div><div class="lab"><b>4 · Тяжёлое утро</b><span>сон и ресурс вместе</span></div>
-    <div class="ph" data-screen-label="Чек-ин · шаги при тяжёлом утре">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · шаги при тяжёлом утре">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Шаги на сегодня</div>
@@ -829,7 +898,7 @@
     </div></div>
 
     <div><div class="lab"><b>4 · День с тренировкой</b><span>сегодня запланирована силовая</span></div>
-    <div class="ph" data-screen-label="Чек-ин · шаги после тренировки">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · шаги после тренировки">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Шаги на сегодня</div>
@@ -855,7 +924,7 @@
     </div></div>
 
     <div><div class="lab"><b>4 · Потолок</b><span>активный человек, выше не поднимаем</span></div>
-    <div class="ph" data-screen-label="Чек-ин · шаги на потолке">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · шаги на потолке">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Шаги на сегодня</div>
@@ -881,7 +950,7 @@
     </div></div>
 
     <div><div class="lab"><b>4 · Мало данных</b><span>меньше трёх дней с шагами</span></div>
-    <div class="ph" data-screen-label="Чек-ин · шаги без истории">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · шаги без истории">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Шаги на сегодня</div>
@@ -907,7 +976,7 @@
     </div></div>
 
     <div><div class="lab"><b>4 · Своё число</b><span>увели выше совета</span></div>
-    <div class="ph" data-screen-label="Чек-ин · шаги своё число">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · шаги своё число">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;padding-top:24px;">
         <div style="font:600 13px/1 Figtree,sans-serif;letter-spacing:.02em;color:rgba(var(--ink),.6);">Шаги на сегодня</div>
@@ -932,7 +1001,7 @@
     </div></div>
 
     <div><div class="lab"><b>Записано</b><span>конец ритуала</span></div>
-    <div class="ph" data-screen-label="Чек-ин · записано">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · записано">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span></span><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
         <span style="width:56px;height:56px;border-radius:999px;background:var(--gr-bg);display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
@@ -948,7 +1017,7 @@
     </div></div>
 
     <div><div class="lab"><b>Записано · вес расчётный</b><span>взвешивания сегодня не было</span></div>
-    <div class="ph" data-screen-label="Чек-ин · записано с расчётным весом">
+    <div class="ph" data-demo="stop" data-screen-label="Чек-ин · записано с расчётным весом">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span></span><span style="width:44px;"></span></div>
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
         <span style="width:56px;height:56px;border-radius:999px;background:var(--gr-bg);display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
@@ -1025,7 +1094,42 @@ class Component extends DCLogic {
   pal = [['dk', 'Тёмная'], ['bl', 'Синяя'], ['bldk', 'Синяя тёмная']];
   componentDidMount() { this.obs = new MutationObserver(() => { clearTimeout(this.t); this.t = setTimeout(() => this.sync(), 400); }); this.sync(); }
   componentWillUnmount() { if (this.obs) this.obs.disconnect(); clearTimeout(this.t); }
-  renderVals() { return {}; }
+  deliver(btn, txt, count) {
+    const host = btn.closest('[data-contract]') || btn.parentElement;
+    let box = host.querySelector('textarea[data-spec-out]');
+    if (!box) {
+      box = document.createElement('textarea');
+      box.setAttribute('data-spec-out', '');
+      box.setAttribute('readonly', '');
+      box.style.cssText = 'display:block;width:100%;box-sizing:border-box;height:130px;margin-top:12px;font:500 10.5px/1.55 ui-monospace,Menlo,monospace;color:#201e1d;background:#fffaf1;border:1px solid rgba(0,0,0,.12);border-radius:14px;padding:10px;resize:vertical;';
+      host.appendChild(box);
+    }
+    box.value = txt; box.focus(); box.select();
+    const say = (msg) => {
+      btn.textContent = msg;
+      clearTimeout(this._sayT);
+      this._sayT = setTimeout(() => { btn.textContent = 'скопировать контракт'; }, 2600);
+    };
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    if (ok) { say('скопировано · ' + count + ' строк'); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt)
+        .then(() => say('скопировано · ' + count + ' строк'))
+        .catch(() => say('буфер недоступен — текст выделен ниже'));
+    } else { say('буфер недоступен — текст выделен ниже'); }
+  }
+  renderVals() {
+    return {
+      copySpec: (e) => {
+        const rows = [...document.querySelectorAll('.spec')].map(r => {
+          const k = r.querySelector('b'), v = r.querySelector('span[data-v]');
+          return k && v ? k.textContent.trim() + '\t' + v.getAttribute('data-v') : null;
+        }).filter(Boolean);
+        this.deliver(e.currentTarget, 'checkin-morning · контракт (' + rows.length + ' строк)\n' + rows.join('\n'), rows.length);
+      }
+    };
+  }
   componentDidUpdate() { this.sync(); }
 
   tw() {

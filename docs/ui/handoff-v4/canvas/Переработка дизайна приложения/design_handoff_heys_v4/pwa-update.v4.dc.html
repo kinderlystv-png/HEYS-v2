@@ -29,6 +29,14 @@
   .swatch{width:230px;flex:none;background:#0d0b08;border-radius:20px;padding:20px 12px}
   .stg{display:flex;flex-direction:column;align-items:center;gap:5px;color:rgba(0,0,0,.38);flex:none}
   .stg b{font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.02em}
+  .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
+  .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
+  .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
+  .spec>span[data-v]::before{content:attr(data-v)}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);font-style:normal;text-wrap:pretty}
+  .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin-bottom:30px}
+  .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:16px 0 2px}
 </style>
 </helmet>
 
@@ -43,13 +51,62 @@
   <p style="margin:0 0 8px;max-width:980px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Сценарий не меняется: приложение находит и ставит обновление само, без спроса. Дизайн закрывает три живых кадра модалки, страховку «Требуется обновление» (починена 2026-08-19) и офлайн-баннер. Бейдж, toast, системный баннер, «Всё актуально!» и стадии checking / found / installing — мёртвый код по решению владельца от 2026-08-19, не рисуются; см. «Решения» внизу.</p>
   <p style="margin:0 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);">Источник: docs/ui/handoff-v4/ПРОМПТ_дизайнеру_обновление_PWA.md · твик «Статично» показывает уменьшенное движение · экраны искать по data-screen-label</p>
 
+  <div class="ctr" data-contract="pwa-update">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+      <span class="ctrTag">КОНТРАКТ</span>
+      <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.4);">ключ и значение через таб — вставляется в тикет или тест</span>
+    </div>
+
+    <div class="ctrH">Что это и чьё</div>
+    <div class="spec"><b>фича</b><span data-v="обновление PWA: модалка (три стадии), страховка «Требуется обновление», офлайн-баннер"></span></div>
+    <div class="spec"><b>границы</b><span data-v="канвас рисует служебный слой целиком — подложку, карточку и её содержимое; экран продукта под ним нарисован только для контекста"></span></div>
+    <div class="spec"><b>источник</b><span data-v="главный для служебного слоя обновления и офлайн-баннера"></span><i>знак ожидания как таковой — в spinners.v4.dc.html</i></div>
+    <div class="spec"><b>демо</b><span data-v="data-demo='loop' — кадры с вращающимся кольцом (загрузка, перезагрузка, одиночная) · data-demo='stop' — остальные; вращение непрерывно и в продукте, остальные тайминги ниже"></span></div>
+    <div class="spec" style="border-bottom:none"><b>адресация</b><span data-v="кадр = data-screen-label"></span></div>
+
+    <div class="ctrH">Служебный слой</div>
+    <div class="spec"><b>палитра</b><span data-v="один тёплый тёмный слой вне четырёх тем продукта, одинаковый во всех палитрах"></span><i>обновление может показаться до загрузки контекста темы — красить переменными палитры нельзя. На кадрах показан поверх светлой темы: держит контраст на самом светлом фоне — на остальных проблем не будет</i></div>
+    <div class="spec"><b>цвет текста</b><span data-v="фиксирован внутри слоя, не через var(--v4-bg)"></span><i>прежняя привязка к фону продукта сливала текст с карточкой на тёмных палитрах</i></div>
+    <div class="spec"><b>шрифт</b><span data-v="Figtree; прежний градиент #1a1a2e → #16213e и зелёно-синие кнопки на system-ui сняты"></span><i>это был чужой язык (Material)</i></div>
+    <div class="spec"><b>блюр подложки</b><span data-v="2,5 px (инвариант --v4-modal-backdrop-blur); у «Требуется обновление» блюра нет — подложка сплошная"></span><i>было 8 px — нарушение общего значения</i></div>
+    <div class="spec"><b>иконки</b><span data-v="линейные, обводка 2,5, один цвет — акцент слоя; эмодзи сняты"></span><i>🔍 🆕 📥 ⚙️ рендерились по-разному на каждой платформе и не складывались в набор</i></div>
+    <div class="spec" style="border-bottom:none"><b>высота карточки</b><span data-v="минимум 238 px, постоянная; DOM не пересоздаётся, стадии сменяются на месте"></span><i>иначе смена содержимого читается как новое окно; у одиночного кадра освободившееся место остаётся пустым</i></div>
+
+    <div class="ctrH">Модалка · стадии</div>
+    <div class="spec"><b>путь по умолчанию</b><span data-v="загрузка → готово → перезагрузка"></span></div>
+    <div class="spec"><b>длительность загрузки</b><span data-v="реальное время установки SW, 0,5–3 с"></span><i>кольцо крутится только там, где ожидание действительно неопределённое</i></div>
+    <div class="spec"><b>«Готово!»</b><span data-v="вспышка 0,8 с, кольцо не крутится"></span></div>
+    <div class="spec"><b>прогресс</b><span data-v="три точки за стадию; процентов нет"></span><i>20/40/60/80/100 % ничем не были измерены</i></div>
+    <div class="spec"><b>второй живой путь</b><span data-v="controllerchange: приходит один кадр «Перезагрузка», точек нет вовсе"></span><i>две погашенные точки врали бы про пропущенные шаги</i></div>
+    <div class="spec"><b>версия внизу</b><span data-v="подпись «Текущая версия» + номер до перезагрузки (старый)"></span><i>слово «Текущая» снимает путаницу «это версия, на которую обновляемся?»; удалять строку нельзя — это единственный способ поддержке узнать сборку клиента</i></div>
+    <div class="spec"><b>перезагрузка</b><span data-v="необратима, крестика нет"></span></div>
+    <div class="spec"><b>аварийный предел</b><span data-v="10 с, при сверке версии 12 с — модалка скрывается"></span><i>«вечного кольца» быть не должно: человек возвращается в приложение на старой сборке и работает</i></div>
+    <div class="spec"><b>после предела</b><span data-v="кадра «не получилось» нет; растёт счётчик попыток"></span></div>
+    <div class="spec"><b>не перебивает форму</b><span data-v="ждёт heys:modal-stack-idle + 300 мс"></span></div>
+    <div class="spec" style="border-bottom:none"><b>первая установка</b><span data-v="модалка не показывается вообще"></span></div>
+
+    <div class="ctrH">Страховка «Требуется обновление»</div>
+    <div class="spec"><b>когда</b><span data-v="после трёх неудачных попыток подряд"></span></div>
+    <div class="spec"><b>без спиннера</b><span data-v="статичная иконка — облако со стрелкой; ждут человека, ничего не происходит"></span><i>глиф намеренно отличается от круговых стрелок «Перезагрузки»: при уменьшенном движении кольцо не крутится, и одинаковая иконка сделала бы «идёт само» и «ждут вас» неотличимыми</i></div>
+    <div class="spec"><b>iOS</b><span data-v="кнопки нет — вместо неё два шага действия (закрыть, открыть)"></span><i>там нужен жест, а не ожидание</i></div>
+    <div class="spec"><b>версия</b><span data-v="«Застряли на …» — та сборка, которая не сменилась; целевая версия живёт в тексте и может отсутствовать"></span><i>единственный экран, где версия действительно нужна поддержке</i></div>
+    <div class="spec" style="border-bottom:none"><b>уменьшенное движение</b><span data-v="кольцо заменяется таким же кругом без дуги и без анимации"></span><i>осознанный кадр состояния, а не CSS-анимация, выключенная посреди оборота</i></div>
+
+    <div class="ctrH">Офлайн-баннер</div>
+    <div class="spec" style="border-bottom:none"><b>позиция</b><span data-v="верхний отступ = safe-area-inset-top + 8; тот же визуальный язык, что у обновления"></span></div>
+
+    <div class="ctrH">Не реализовывать</div>
+    <div class="spec" style="border-bottom:none"><b>мягкие уведомления</b><span data-v="бейдж, toast, системный баннер, «Всё актуально!», стадии checking / found / installing — не рисуем"></span><i>решение владельца 2026-08-19: код мёртв и уходит отдельной задачей по чистке, а не отрисовкой</i></div>
+  </div>
+
   <div class="secH" style="margin-top:0;">Живые кадры модалки — путь по умолчанию</div>
   <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);text-wrap:pretty;">Один и тот же контейнер, DOM не пересоздаётся — стадии сменяют друг друга на месте. Три точки под подписью честно называют, где вы в последовательности, вместо процента, который ничего не измерял. Кольцо крутится только там, где реально идёт неопределённое ожидание (загрузка, перезагрузка); «Готово!» — вспышка на 0,8 с, ничего не грузится, кольцо стоит.</p>
 
   <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;">
 
     <div><div class="lab"><b>Загрузка</b><span>реальное время установки SW, 0,5–3 с</span></div>
-    <div class="ph" data-screen-label="Обновление · загрузка" style="background:#fffaf1;">
+    <div class="ph" data-demo="loop" data-screen-label="Обновление · загрузка" style="background:#fffaf1;">
       <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
       <div class="updOverlay">
         <div class="updCard">
@@ -69,7 +126,7 @@
     <div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:340px;color:rgba(0,0,0,.35);flex:none;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b style="font:700 10px/1 ui-monospace,Menlo,monospace;">0,5–3 с</b></div>
 
     <div><div class="lab"><b>Готово!</b><span>вспышка на 0,8 с, кольцо не крутится</span></div>
-    <div class="ph" data-screen-label="Обновление · готово" style="background:#fffaf1;">
+    <div class="ph" data-demo="stop" data-screen-label="Обновление · готово" style="background:#fffaf1;">
       <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
       <div class="updOverlay">
         <div class="updCard">
@@ -87,7 +144,7 @@
     <div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:340px;color:rgba(0,0,0,.35);flex:none;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b style="font:700 10px/1 ui-monospace,Menlo,monospace;">0,8 с</b></div>
 
     <div><div class="lab"><b>Перезагрузка</b><span>необратимо, без крестика</span></div>
-    <div class="ph" data-screen-label="Обновление · перезагрузка" style="background:#fffaf1;">
+    <div class="ph" data-demo="loop" data-screen-label="Обновление · перезагрузка" style="background:#fffaf1;">
       <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
       <div class="updOverlay">
         <div class="updCard">
@@ -105,7 +162,7 @@
     </div></div>
 
     <div><div class="lab"><b>Перезагрузка одиночная</b><span>второй живой путь: SW активировался сам, предыдущих кадров не было</span></div>
-    <div class="ph" data-screen-label="Обновление · перезагрузка одиночная" style="background:#fffaf1;">
+    <div class="ph" data-demo="loop" data-screen-label="Обновление · перезагрузка одиночная" style="background:#fffaf1;">
       <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
       <div class="updOverlay">
         <div class="updCard">
@@ -139,7 +196,7 @@
   <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;">
 
     <div><div class="lab"><b>С версией</b><span>не-iOS, кнопка есть</span></div>
-    <div class="ph" data-screen-label="Требуется обновление · с версией" style="background:#fffaf1;">
+    <div class="ph" data-demo="stop" data-screen-label="Требуется обновление · с версией" style="background:#fffaf1;">
       <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
       <div class="updOverlay" style="backdrop-filter:none;background:rgba(13,11,8,.9);">
         <div class="updCard">
@@ -156,7 +213,7 @@
     </div></div>
 
     <div><div class="lab"><b>Без версии</b><span>не-iOS, в SW-цикле версия часто неизвестна</span></div>
-    <div class="ph" data-screen-label="Требуется обновление · без версии" style="background:#fffaf1;">
+    <div class="ph" data-demo="stop" data-screen-label="Требуется обновление · без версии" style="background:#fffaf1;">
       <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
       <div class="updOverlay" style="backdrop-filter:none;background:rgba(13,11,8,.9);">
         <div class="updCard">
@@ -173,7 +230,7 @@
     </div></div>
 
     <div><div class="lab"><b>iOS</b><span>кнопки нет — нажимать нечего</span></div>
-    <div class="ph" data-screen-label="Требуется обновление · iOS" style="background:#fffaf1;">
+    <div class="ph" data-demo="stop" data-screen-label="Требуется обновление · iOS" style="background:#fffaf1;">
       <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
       <div class="updOverlay" style="backdrop-filter:none;background:rgba(13,11,8,.9);">
         <div class="updCard">
@@ -195,7 +252,7 @@
   <div class="secH">Офлайн-баннер</div>
   <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);text-wrap:pretty;">Один визуальный язык с обновлением: тот же тёплый тёмный слой, та же линейная иконка вместо эмодзи. Отступ сверху теперь считает вырез экрана, а не липнет к самой кромке.</p>
   <div><div class="lab"><b>Офлайн</b><span>верхний отступ = safe-area-inset-top + 8</span></div>
-  <div class="ph" data-screen-label="Офлайн-баннер">
+  <div class="ph" data-demo="stop" data-screen-label="Офлайн-баннер">
     <div class="offBar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.82a15 15 0 0120 0M5 12.86a10 10 0 0114 0M8.5 16.5a5 5 0 017 0M12 20h.01M2 2l20 20"/></svg><span>Офлайн режим — данные сохраняются локально</span></div>
     <div style="padding:56px 18px 0;">
       <div style="display:flex;align-items:baseline;gap:8px;"><span style="font:700 20px/1.2 Figtree,sans-serif;color:var(--tx);">Сегодня</span></div>
@@ -229,7 +286,42 @@
 class Component extends DCLogic {
   componentDidMount() { this.apply(); }
   componentDidUpdate() { this.apply(); }
-  renderVals() { return {}; }
+  deliver(btn, txt, count) {
+    const host = btn.closest('[data-contract]') || btn.parentElement;
+    let box = host.querySelector('textarea[data-spec-out]');
+    if (!box) {
+      box = document.createElement('textarea');
+      box.setAttribute('data-spec-out', '');
+      box.setAttribute('readonly', '');
+      box.style.cssText = 'display:block;width:100%;box-sizing:border-box;height:130px;margin-top:12px;font:500 10.5px/1.55 ui-monospace,Menlo,monospace;color:#201e1d;background:#fffaf1;border:1px solid rgba(0,0,0,.12);border-radius:14px;padding:10px;resize:vertical;';
+      host.appendChild(box);
+    }
+    box.value = txt; box.focus(); box.select();
+    const say = (msg) => {
+      btn.textContent = msg;
+      clearTimeout(this._sayT);
+      this._sayT = setTimeout(() => { btn.textContent = 'скопировать контракт'; }, 2600);
+    };
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    if (ok) { say('скопировано · ' + count + ' строк'); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt)
+        .then(() => say('скопировано · ' + count + ' строк'))
+        .catch(() => say('буфер недоступен — текст выделен ниже'));
+    } else { say('буфер недоступен — текст выделен ниже'); }
+  }
+  renderVals() {
+    return {
+      copySpec: (e) => {
+        const rows = [...document.querySelectorAll('.spec')].map(r => {
+          const k = r.querySelector('b'), v = r.querySelector('span[data-v]');
+          return k && v ? k.textContent.trim() + '\t' + v.getAttribute('data-v') : null;
+        }).filter(Boolean);
+        this.deliver(e.currentTarget, 'pwa-update · контракт (' + rows.length + ' строк)\n' + rows.join('\n'), rows.length);
+      }
+    };
+  }
   apply() {
     const off = (this.props.rules ?? true) ? '' : 'none';
     document.querySelectorAll('.nt, .ntl').forEach(n => { n.style.display = off; });

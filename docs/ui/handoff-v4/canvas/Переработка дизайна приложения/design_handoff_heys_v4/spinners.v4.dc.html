@@ -37,6 +37,14 @@
   .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.55)}
   .btn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#c67139;font:700 13px/1 Figtree,sans-serif;color:#2b1608}
   .foot{padding:12px 18px 20px;background:#fffaf1}
+  .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
+  .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
+  .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
+  .spec>span[data-v]::before{content:attr(data-v)}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);font-style:normal;text-wrap:pretty}
+  .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin:0 0 30px}
+  .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:16px 0 2px}
 </style>
 </helmet>
 
@@ -48,38 +56,93 @@
   </div>
   <p style="margin:0 0 34px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Одна окружность 56 на все исходы: ждём, получилось, не получилось. Загрузка вкладки заканчивается содержимым и знак просто уходит; действие с ответом сервера заканчивается галочкой или предупреждением. Внутри экрана ждёт только кнопка — поблочной загрузки в продукте нет, данные считаются на устройстве.</p>
 
+  <div class="ctr" data-contract="spinners">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+      <span class="ctrTag">КОНТРАКТ</span>
+      <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.4);">ключ и значение через таб — вставляется в тикет или тест</span>
+    </div>
+
+    <div class="ctrH">Что это и чьё</div>
+    <div class="spec"><b>фича</b><span data-v="единый знак ожидания: холодный старт, действие с ответом сервера, отказ"></span></div>
+    <div class="spec"><b>границы</b><span data-v="канвас рисует знак и содержимое экрана ожидания; рама приложения (шапка, меню) на старте не рисуется вообще"></span></div>
+    <div class="spec"><b>источник</b><span data-v="главный для любого ожидания в продукте"></span><i>кадр запуска до первого пейнта — app-splash; галочка в обновлении PWA — pwa-update, исключение объяснено ниже</i></div>
+    <div class="spec"><b>демо</b><span data-v="data-demo='loop' — кадры с вращением и дыханием дуги (в продукте так же) · data-demo='stop' — исходы и палитры"></span></div>
+    <div class="spec" style="border-bottom:none"><b>адресация</b><span data-v="кадр = data-screen-label"></span></div>
+
+    <div class="ctrH">Знак</div>
+    <div class="spec"><b>форма</b><span data-v="круг 56: подложка героя, дуга в акценте; один знак на весь продукт"></span><i>второго вида ожидания быть не должно</i></div>
+    <div class="spec"><b>три исхода</b><span data-v="ожидание, успех, ошибка — один круг 56 на одном месте, меняются содержимое и тон подложки"></span><i>разные размеры и позиции читались бы как три отдельных экрана вместо одного события</i></div>
+    <div class="spec"><b>оборот</b><span data-v="1,1 с"></span><i>0,9 с выглядит нервно и спорит с остальной пластикой</i></div>
+    <div class="spec"><b>появление и уход</b><span data-v="fade-in 150 мс, fade-out 120 мс"></span><i>уход быстрее прихода, иначе он тормозит появление данных</i></div>
+    <div class="spec"><b>позиция</b><span data-v="оптический центр свободной области — около 45 % её высоты, не строго посередине"></span></div>
+    <div class="spec"><b>без анимации</b><span data-v="при prefers-reduced-motion вращение выключается, дуга дышит прозрачностью 1,6 с"></span><i>замерший круг читается как сломанный элемент</i></div>
+    <div class="spec" style="border-bottom:none"><b>доступность</b><span data-v="контейнер знака role='status' с живым текстом; без подписи «Загружаем» скрыто визуально, но остаётся для скринридера"></span></div>
+
+    <div class="ctrH">Пороги</div>
+    <div class="spec"><b>до 300 мс</b><span data-v="не показываем ничего"></span><i>мелькнувший знак читается как сбой</i></div>
+    <div class="spec"><b>300 мс — 2 с</b><span data-v="голый спиннер"></span></div>
+    <div class="spec"><b>дольше 2 с</b><span data-v="с подписью; ещё позже добавляется причина задержки"></span><i>правило подписи относится к действию, которое человек начал сам — на старте он ничего не запускал</i></div>
+    <div class="spec" style="border-bottom:none"><b>минимальная жизнь</b><span data-v="400 мс после появления"></span><i>иначе ответ на 320 мс даст моргание</i></div>
+
+    <div class="ctrH">Холодный старт</div>
+    <div class="spec"><b>три ступени</b><span data-v="до 15 с знак молчит · на 15 с — «Медленная сеть, продолжаем загружать» и кнопка «Повторить» · отказ только при обрыве или 60 с без продвижения"></span><i>жёсткий отказ на 15 с дал бы ложную ошибку на медленной сети, молчаливое вращение без предела — ощущение зависания</i></div>
+    <div class="spec"><b>продвижение</b><span data-v="считается байтами загруженных файлов приложения, не сердцебиением"></span><i>сердцебиение тикает и при вставшей загрузке — по нему отказ не наступит никогда</i></div>
+    <div class="spec"><b>«Повторить»</b><span data-v="обрывает текущую загрузку и начинает заново; локальные данные и кэш не трогает"></span></div>
+    <div class="spec"><b>вторая неудача</b><span data-v="добавляется строка с куратором"></span><i>первый отказ предлагает только повтор — чаще всего дело в связи; звать нажимать ту же кнопку по третьему разу нечестно</i></div>
+    <div class="spec"><b>офлайн</b><span data-v="не отказ: при повторном открытии без сети приложение запускается нормально"></span><i>экран «Не удалось загрузить» законен только когда не пришли сами файлы — первое открытие или сброшенный кэш</i></div>
+    <div class="spec"><b>фон</b><span data-v="грунт выбранной палитры до первого пейнта, тем же boot-слоем, что ставит тему на входе"></span><i>белый промежуточный экран читается как вспышка</i></div>
+    <div class="spec"><b>рама</b><span data-v="ни шапки, ни меню — только грунт и знак; контент приходит целиком"></span><i>рисовать раму раньше значит показывать нерабочие вкладки</i></div>
+    <div class="spec" style="border-bottom:none"><b>двух ожиданий подряд нет</b><span data-v="гейт подписки, проверка сессии и загрузка вкладки — части одного старта"></span></div>
+
+    <div class="ctrH">Где знак бывает и где нет</div>
+    <div class="spec"><b>полный экран</b><span data-v="только холодный старт и сохранение профиля"></span></div>
+    <div class="spec"><b>внутри экрана</b><span data-v="только в кнопке действия с запросом к серверу (кнопка заблокирована) и в теле облачного экрана — сообщения куратора, доска"></span></div>
+    <div class="spec"><b>смена вкладок</b><span data-v="знака нет вовсе — данные уже на устройстве"></span><i>его появление при смене вкладки — сигнал, что расчёт ушёл не туда</i></div>
+    <div class="spec"><b>поблочной загрузки нет</b><span data-v="вкладка появляется целиком; блок, который «ещё думает» — дефект, а не состояние"></span><i>если блок тормозит, чинится расчёт, а не рисуется спиннер</i></div>
+    <div class="spec"><b>под формой входа</b><span data-v="знака нет: логин-гейт — экран, а не ожидание"></span></div>
+    <div class="spec"><b>жест обновления</b><span data-v="pull-to-refresh несёт системное кольцо платформы; свой знак туда не вставляем"></span></div>
+    <div class="spec" style="border-bottom:none"><b>скелетонов нет</b><span data-v="ни одного, нигде; обновление открытого экрана оставляет старые значения до прихода новых"></span><i>отдельный канвас со скелетонами разбирали и отказались: его надо поддерживать вторым макетом каждого экрана, и он всё равно врёт про длительность. Два языка ожидания заставляли бы различать «рисуется раскладка» и «идёт запрос», хотя для человека это одно</i></div>
+
+    <div class="ctrH">Галочка</div>
+    <div class="spec"><b>когда есть</b><span data-v="только там, где было действие с ответом сервера: сохранение профиля на шаге 5, правка профиля в настройках, подписание документа, отправка анкеты куратору — четыре места"></span></div>
+    <div class="spec"><b>когда нет</b><span data-v="загрузка вкладки заканчивается содержимым — знак просто исчезает"></span><i>подтверждать нечего, галочка стала бы лишним экраном между человеком и данными</i></div>
+    <div class="spec"><b>холодный старт</b><span data-v="галочкой не заканчивается — в отличие от обновления PWA"></span><i>там галочка оплачена событием: сборка сменилась без спроса и могла не встать, «Готово!» — расписка, что обошлось. У запуска события нет: открыть приложение — норма, подтверждение успеха — само содержимое. Плюс 300–500 мс налога на самом частом кадре продукта</i></div>
+    <div class="spec" style="border-bottom:none"><b>локальные записи</b><span data-v="приём еды, вес, зарядка, тренировка подтверждают себя сами — знак не успевает появиться по порогу 300 мс"></span><i>«Чек-ин записан» — исключение смысловое: это конец утреннего ритуала, а не отчёт о сохранении</i></div>
+  </div>
+
 <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:52px 0 14px;">Общий знак ожидания · спиннер</div>
   <div style="display:flex;gap:30px;align-items:flex-start;">
 
     <div><div class="lab"><b>С подписью</b><span>сохранение, отправка, синхронизация</span></div>
-    <div class="ph" data-screen-label="Спиннер · с подписью" style="align-items:center;justify-content:center;">
+    <div class="ph" data-demo="loop" data-screen-label="Спиннер · с подписью" style="align-items:center;justify-content:center;">
       <span style="width:56px;height:56px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c67139" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
       <div style="font:700 15px/1.35 Figtree,sans-serif;color:#201e1d;margin-top:18px;">Загружаем</div>
       <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:7px;">Пара секунд.</div>
     </div></div>
 
     <div><div class="lab"><b>Без подписи</b><span>холодный старт, до 15 секунд</span></div>
-    <div class="ph" data-screen-label="Спиннер · без подписи" style="align-items:center;justify-content:center;">
+    <div class="ph" data-demo="loop" data-screen-label="Спиннер · без подписи" style="align-items:center;justify-content:center;">
       <span class="wrap" style="width:56px;height:56px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c67139" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
       <span style="position:absolute;left:0;right:0;bottom:0;font:0/0 a;">Загружаем</span>
     </div></div>
 
     <div><div class="lab"><b>Успех</b><span>та же окружность 56</span></div>
-    <div class="ph" data-screen-label="Спиннер · успех" style="align-items:center;justify-content:center;">
+    <div class="ph" data-demo="stop" data-screen-label="Спиннер · успех" style="align-items:center;justify-content:center;">
       <span style="width:56px;height:56px;border-radius:999px;background:#eaefe0;display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5c6a45" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
       <div style="font:700 15px/1.35 Figtree,sans-serif;color:#201e1d;margin-top:18px;">Сохранено</div>
       <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:7px;">Профиль обновлён.</div>
     </div></div>
 
     <div><div class="lab"><b>Ошибка</b><span>та же окружность 56</span></div>
-    <div class="ph" data-screen-label="Спиннер · ошибка" style="align-items:center;justify-content:center;">
+    <div class="ph" data-demo="stop" data-screen-label="Спиннер · ошибка" style="align-items:center;justify-content:center;">
       <span style="width:56px;height:56px;border-radius:999px;background:#f6e6dd;display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#a1471c" stroke-width="2.75" stroke-linecap="round"><path d="M12 7v6M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg></span>
       <div style="font:700 15px/1.35 Figtree,sans-serif;color:#201e1d;margin-top:18px;">Не удалось</div>
       <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:7px;">Проверьте связь.</div>
     </div></div>
 
     <div><div class="lab"><b>Превращение в галочку</b><span>принято · только после действия</span></div>
-    <div class="ph" data-screen-label="Спиннер · версия с превращением" style="justify-content:center;padding:0 18px;">
+    <div class="ph" data-demo="loop" data-screen-label="Спиннер · версия с превращением" style="justify-content:center;padding:0 18px;">
       <div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.45);text-align:center;">Три кадра одного перехода, 200 мс</div>
       <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:22px;">
         <span style="width:56px;height:56px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;flex:none;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c67139" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
@@ -91,7 +154,7 @@
     </div></div>
 
     <div><div class="lab"><b>В кнопке</b><span>единственное место внутри экрана</span></div>
-    <div class="ph" data-screen-label="Спиннер · в кнопке" style="padding:0;">
+    <div class="ph" data-demo="loop" data-screen-label="Спиннер · в кнопке" style="padding:0;">
       <div class="top"><span style="width:44px;"></span><span class="ttl">Отчёты</span><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="background:#efe3cf;border-radius:22px;padding:18px;">
@@ -109,40 +172,40 @@
     </div></div>
 
     <div><div class="lab"><b>Без анимации</b><span>prefers-reduced-motion</span></div>
-    <div class="ph" data-screen-label="Спиннер · без анимации" style="align-items:center;justify-content:center;">
+    <div class="ph" data-demo="loop" data-screen-label="Спиннер · без анимации" style="align-items:center;justify-content:center;">
       <span class="rm" style="width:56px;height:56px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c67139" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
       <div style="font:700 15px/1.35 Figtree,sans-serif;color:#201e1d;margin-top:18px;">Загружаем</div>
       <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);margin-top:7px;text-align:center;max-width:200px;text-wrap:pretty;">Вращение выключено, дуга дышит прозрачностью.</div>
     </div></div>
 
     <div><div class="lab"><b>Песочная тёмная</b><span>с подписью</span></div>
-    <div class="ph" data-screen-label="Спиннер · песочная тёмная" style="background:#141210;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
+    <div class="ph" data-demo="loop" data-screen-label="Спиннер · песочная тёмная" style="background:#141210;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
       <span style="width:56px;height:56px;border-radius:999px;background:#2f2820;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#cf8144" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
       <div style="font:700 15px/1.35 Figtree,sans-serif;color:#f2ede6;margin-top:18px;">Загружаем</div>
       <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(242,237,230,.5);margin-top:7px;">Пара секунд.</div>
     </div></div>
 
     <div><div class="lab"><b>Синяя</b><span>с подписью</span></div>
-    <div class="ph" data-screen-label="Спиннер · синяя" style="background:#ffffff;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(16,24,38,.09),0 14px 40px rgba(16,24,38,.12);">
+    <div class="ph" data-demo="loop" data-screen-label="Спиннер · синяя" style="background:#ffffff;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(16,24,38,.09),0 14px 40px rgba(16,24,38,.12);">
       <span style="width:56px;height:56px;border-radius:999px;background:#e2edf7;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2e7cc0" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
       <div style="font:700 15px/1.35 Figtree,sans-serif;color:#101826;margin-top:18px;">Загружаем</div>
       <div style="font:500 12px/1.5 Figtree,sans-serif;color:rgba(16,24,38,.5);margin-top:7px;">Пара секунд.</div>
     </div></div>
 
     <div><div class="lab"><b>Синяя тёмная</b><span>без подписи</span></div>
-    <div class="ph" data-screen-label="Спиннер · синяя тёмная" style="background:#0d1a26;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
+    <div class="ph" data-demo="loop" data-screen-label="Спиннер · синяя тёмная" style="background:#0d1a26;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
       <span style="width:56px;height:56px;border-radius:999px;background:#13222f;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3f8fd0" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
     </div></div>
 
     <div><div class="lab"><b>Холодный старт</b><span>только знак на грунте палитры</span></div>
-    <div class="ph" data-screen-label="Спиннер · холодный старт" style="padding:0;">
+    <div class="ph" data-demo="loop" data-screen-label="Спиннер · холодный старт" style="padding:0;">
       <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-bottom:64px;">
         <span class="wrap" style="width:56px;height:56px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c67139" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
       </div>
     </div></div>
 
     <div><div class="lab"><b>Не удалось запустить</b><span>нет сети при первом открытии</span></div>
-    <div class="ph" data-screen-label="Спиннер · не удалось запустить" style="align-items:center;justify-content:center;padding:0 26px;">
+    <div class="ph" data-demo="stop" data-screen-label="Спиннер · не удалось запустить" style="align-items:center;justify-content:center;padding:0 26px;">
       <span style="width:56px;height:56px;border-radius:999px;background:#f6e6dd;display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#a1471c" stroke-width="2.75" stroke-linecap="round"><path d="M12 7v6M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg></span>
       <div style="font:700 17px/1.3 Figtree,sans-serif;color:#201e1d;margin-top:18px;text-align:center;text-wrap:pretty;">Не удалось загрузить приложение</div>
       <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin-top:9px;text-align:center;text-wrap:pretty;">Похоже, нет связи. Ваши данные на месте — они хранятся на устройстве.</div>
@@ -150,14 +213,14 @@
     </div></div>
 
     <div><div class="lab"><b>Долгий старт</b><span>15 секунд, но загрузка идёт</span></div>
-    <div class="ph" data-screen-label="Спиннер · долгий старт" style="align-items:center;justify-content:center;padding:0 26px;">
+    <div class="ph" data-demo="loop" data-screen-label="Спиннер · долгий старт" style="align-items:center;justify-content:center;padding:0 26px;">
       <span class="wrap" style="width:56px;height:56px;border-radius:999px;background:#efe3cf;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c67139" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
       <div style="font:600 12.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin-top:18px;text-align:center;text-wrap:pretty;">Медленная сеть, продолжаем загружать</div>
       <div style="min-height:44px;display:flex;align-items:center;justify-content:center;font:700 12px/1 Figtree,sans-serif;color:#8a4a20;margin-top:6px;">Повторить</div>
     </div></div>
 
     <div><div class="lab"><b>Не удалось · второй раз</b><span>повтор тоже не прошёл</span></div>
-    <div class="ph" data-screen-label="Спиннер · вторая неудача" style="align-items:center;justify-content:center;padding:0 26px;">
+    <div class="ph" data-demo="stop" data-screen-label="Спиннер · вторая неудача" style="align-items:center;justify-content:center;padding:0 26px;">
       <span style="width:56px;height:56px;border-radius:999px;background:#f6e6dd;display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#a1471c" stroke-width="2.75" stroke-linecap="round"><path d="M12 7v6M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg></span>
       <div style="font:700 17px/1.3 Figtree,sans-serif;color:#201e1d;margin-top:18px;text-align:center;text-wrap:pretty;">Всё ещё не получается</div>
       <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin-top:9px;text-align:center;text-wrap:pretty;">Данные на месте. Если связь есть, а приложение не открывается — напишите куратору, он посмотрит.</div>
@@ -165,17 +228,17 @@
     </div></div>
 
     <div><div class="lab"><b>Старт · песочная тёмная</b></div>
-    <div class="ph" data-screen-label="Спиннер · старт песочная тёмная" style="background:#141210;align-items:center;justify-content:center;padding-bottom:64px;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
+    <div class="ph" data-demo="loop" data-screen-label="Спиннер · старт песочная тёмная" style="background:#141210;align-items:center;justify-content:center;padding-bottom:64px;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
       <span class="wrap" style="width:56px;height:56px;border-radius:999px;background:#2f2820;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#cf8144" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
     </div></div>
 
     <div><div class="lab"><b>Старт · синяя</b></div>
-    <div class="ph" data-screen-label="Спиннер · старт синяя" style="background:#ffffff;align-items:center;justify-content:center;padding-bottom:64px;box-shadow:0 1px 2px rgba(16,24,38,.09),0 14px 40px rgba(16,24,38,.12);">
+    <div class="ph" data-demo="loop" data-screen-label="Спиннер · старт синяя" style="background:#ffffff;align-items:center;justify-content:center;padding-bottom:64px;box-shadow:0 1px 2px rgba(16,24,38,.09),0 14px 40px rgba(16,24,38,.12);">
       <span class="wrap" style="width:56px;height:56px;border-radius:999px;background:#e2edf7;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2e7cc0" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
     </div></div>
 
     <div><div class="lab"><b>Не удалось · песочная тёмная</b></div>
-    <div class="ph" data-screen-label="Спиннер · ошибка старта песочная тёмная" style="background:#141210;align-items:center;justify-content:center;padding:0 26px;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
+    <div class="ph" data-demo="stop" data-screen-label="Спиннер · ошибка старта песочная тёмная" style="background:#141210;align-items:center;justify-content:center;padding:0 26px;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
       <span style="width:56px;height:56px;border-radius:999px;background:#3a241a;display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d07d4e" stroke-width="2.75" stroke-linecap="round"><path d="M12 7v6M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg></span>
       <div style="font:700 17px/1.3 Figtree,sans-serif;color:#f2ede6;margin-top:18px;text-align:center;text-wrap:pretty;">Не удалось загрузить приложение</div>
       <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:rgba(242,237,230,.55);margin-top:9px;text-align:center;text-wrap:pretty;">Похоже, нет связи. Ваши данные на месте — они хранятся на устройстве.</div>
@@ -183,7 +246,7 @@
     </div></div>
 
     <div><div class="lab"><b>Не удалось · синяя</b></div>
-    <div class="ph" data-screen-label="Спиннер · ошибка старта синяя" style="background:#ffffff;align-items:center;justify-content:center;padding:0 26px;box-shadow:0 1px 2px rgba(16,24,38,.09),0 14px 40px rgba(16,24,38,.12);">
+    <div class="ph" data-demo="stop" data-screen-label="Спиннер · ошибка старта синяя" style="background:#ffffff;align-items:center;justify-content:center;padding:0 26px;box-shadow:0 1px 2px rgba(16,24,38,.09),0 14px 40px rgba(16,24,38,.12);">
       <span style="width:56px;height:56px;border-radius:999px;background:#fbe6e2;display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#b03a24" stroke-width="2.75" stroke-linecap="round"><path d="M12 7v6M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg></span>
       <div style="font:700 17px/1.3 Figtree,sans-serif;color:#101826;margin-top:18px;text-align:center;text-wrap:pretty;">Не удалось загрузить приложение</div>
       <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:rgba(16,24,38,.55);margin-top:9px;text-align:center;text-wrap:pretty;">Похоже, нет связи. Ваши данные на месте — они хранятся на устройстве.</div>
@@ -191,12 +254,12 @@
     </div></div>
 
     <div><div class="lab"><b>Старт · синяя тёмная</b></div>
-    <div class="ph" data-screen-label="Спиннер · старт синяя тёмная" style="background:#0d1a26;align-items:center;justify-content:center;padding-bottom:64px;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
+    <div class="ph" data-demo="loop" data-screen-label="Спиннер · старт синяя тёмная" style="background:#0d1a26;align-items:center;justify-content:center;padding-bottom:64px;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
       <span class="wrap" style="width:56px;height:56px;border-radius:999px;background:#13222f;display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#3f8fd0" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
     </div></div>
 
     <div><div class="lab"><b>Не удалось · синяя тёмная</b></div>
-    <div class="ph" data-screen-label="Спиннер · ошибка старта синяя тёмная" style="background:#0d1a26;align-items:center;justify-content:center;padding:0 26px;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
+    <div class="ph" data-demo="stop" data-screen-label="Спиннер · ошибка старта синяя тёмная" style="background:#0d1a26;align-items:center;justify-content:center;padding:0 26px;box-shadow:0 1px 2px rgba(0,0,0,.4),0 16px 44px rgba(0,0,0,.45);">
       <span style="width:56px;height:56px;border-radius:999px;background:#35211c;display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d97b62" stroke-width="2.75" stroke-linecap="round"><path d="M12 7v6M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg></span>
       <div style="font:700 17px/1.3 Figtree,sans-serif;color:#e8eef6;margin-top:18px;text-align:center;text-wrap:pretty;">Не удалось загрузить приложение</div>
       <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:rgba(232,238,246,.55);margin-top:9px;text-align:center;text-wrap:pretty;">Похоже, нет связи. Ваши данные на месте — они хранятся на устройстве.</div>
@@ -248,7 +311,42 @@
 class Component extends DCLogic {
   componentDidMount() { this.applyTweaks(); }
   componentDidUpdate() { this.applyTweaks(); }
-  renderVals() { return {}; }
+  deliver(btn, txt, count) {
+    const host = btn.closest('[data-contract]') || btn.parentElement;
+    let box = host.querySelector('textarea[data-spec-out]');
+    if (!box) {
+      box = document.createElement('textarea');
+      box.setAttribute('data-spec-out', '');
+      box.setAttribute('readonly', '');
+      box.style.cssText = 'display:block;width:100%;box-sizing:border-box;height:130px;margin-top:12px;font:500 10.5px/1.55 ui-monospace,Menlo,monospace;color:#201e1d;background:#fffaf1;border:1px solid rgba(0,0,0,.12);border-radius:14px;padding:10px;resize:vertical;';
+      host.appendChild(box);
+    }
+    box.value = txt; box.focus(); box.select();
+    const say = (msg) => {
+      btn.textContent = msg;
+      clearTimeout(this._sayT);
+      this._sayT = setTimeout(() => { btn.textContent = 'скопировать контракт'; }, 2600);
+    };
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    if (ok) { say('скопировано · ' + count + ' строк'); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt)
+        .then(() => say('скопировано · ' + count + ' строк'))
+        .catch(() => say('буфер недоступен — текст выделен ниже'));
+    } else { say('буфер недоступен — текст выделен ниже'); }
+  }
+  renderVals() {
+    return {
+      copySpec: (e) => {
+        const rows = [...document.querySelectorAll('.spec')].map(r => {
+          const k = r.querySelector('b'), v = r.querySelector('span[data-v]');
+          return k && v ? k.textContent.trim() + '\t' + v.getAttribute('data-v') : null;
+        }).filter(Boolean);
+        this.deliver(e.currentTarget, 'spinners · контракт (' + rows.length + ' строк)\n' + rows.join('\n'), rows.length);
+      }
+    };
+  }
 
   tw() {
     const standalone = window.parent === window;
