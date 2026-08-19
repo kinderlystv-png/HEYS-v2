@@ -236,6 +236,29 @@ describe('mergeDayData — lost-update prevention', () => {
     expect(merged.trainings[0].updatedAt).toBe(3500);
   });
 
+  test('stamper keeps the snapshot own training stamp instead of promoting it to the day stamp', () => {
+    // Приложение писало день из stale React-снимка: строка отличалась от prev,
+    // и stamper поднимал её updatedAt до mutationTs. Кураторская правка после
+    // этого проигрывала по свежести даже на REST-пути, где lastSeen не знают.
+    const prev = makeDay(3000, [], { trainings: [{ z: [47, 73, 0, 0], updatedAt: 3000 }] });
+    const staleWrite = makeDay(5000, [], { trainings: [{ z: [0, 120, 0, 0], updatedAt: 2000 }] });
+
+    const stamped = stampDayv2ChangedEntities(prev, staleWrite);
+    expect(stamped.trainings[0].updatedAt).toBe(2000);
+
+    const merged = mergeDayData(stamped, prev, { forceKeepAll: true });
+    expect(merged.trainings[0].z).toEqual([47, 73, 0, 0]);
+  });
+
+  test('a real training edit carries its own fresh stamp and still wins', () => {
+    const prev = makeDay(3000, [], { trainings: [{ z: [47, 73, 0, 0], updatedAt: 3000 }] });
+    const userEdit = makeDay(5000, [], { trainings: [{ z: [60, 60, 0, 0], updatedAt: 5000 }] });
+
+    const stamped = stampDayv2ChangedEntities(prev, userEdit);
+    expect(stamped.trainings[0].updatedAt).toBe(5000);
+    expect(mergeDayData(stamped, prev, { forceKeepAll: true }).trainings[0].z).toEqual([60, 60, 0, 0]);
+  });
+
   test('stale client snapshot does not roll back a curator training edit it never saw', () => {
     // 19.08: кураторская правка зон «Барабаны» [0,120] → [47,73] откатывалась
     // трижды. Приложение присылало старую копию строки, но stamper штамповал её

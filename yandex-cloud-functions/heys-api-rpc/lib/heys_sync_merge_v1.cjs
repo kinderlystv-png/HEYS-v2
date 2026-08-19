@@ -1477,11 +1477,17 @@
         // into a newer entity stamp: the tombstone must still win. A genuine user
         // re-add/edit supplies its own training.updatedAt > deletedAt.
         const tombstoneTs = matchingTrainingDeletionTs(training, mergedDeletedTrainings);
+        // Метка строки принадлежит тому, кто её правил. Автоповышение до
+        // mutationTs (метки всей записи дня) выдавало stale React-снимку
+        // свежесть, которой у него нет: снимок со старыми зонами приходил
+        // «новее» кураторской правки и откатывал её (heys/9cb568, три отката
+        // подряд 19.08). Настоящая правка приносит свою метку сама —
+        // и пикер тренировки, и patchTraining ставят training.updatedAt.
+        // Своей метки нет только у новой строки: ей и достаётся mutationTs.
         const trainingTs = tombstoneTs > 0
           ? explicitTrainingTs
-          : (mutationTs >= prevTrainingTs
-            ? mutationTs
-            : (explicitTrainingTs || mutationTs));
+          : (explicitTrainingTs || mutationTs);
+        void prevTrainingTs;
         return { ...training, updatedAt: trainingTs || undefined };
       })
       : nextDay.trainings;
