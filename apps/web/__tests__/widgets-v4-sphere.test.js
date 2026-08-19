@@ -100,7 +100,7 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(cssSrc).toContain('.widget-v4-macro__num--bad');
     });
 
-    it('риск-радар 2×2 — «низкий» шалфей, жирнее, без inline color', () => {
+    it('риск-радар 2×2 — «низкий» тёмным шалфеем, без inline color', () => {
         expect(uiSrc).toContain('function RelapseRiskVariantBody');
         expect(uiSrc).toContain('widget-v4-hero-num__val--risk');
         expect(uiSrc).toContain('v4RiskLevelState(level)');
@@ -110,9 +110,25 @@ describe('виджеты g1 в сфере палитры', () => {
         const listChunk = uiSrc.slice(listStart, listStart + 900);
         expect(listChunk).not.toContain('style: { color }');
         expect(cssSrc).toContain('.widget-v4-hero-num__val--risk');
-        expect(cssSrc).toContain('font-weight: 700');
         expect(cssSrc).toContain('.widget-v4-val--good');
         expect(cssSrc).toContain('var(--v4-ok-text');
+        // канвас: слово уровня 26px/600 тёмным шалфеем, светлый #7a8a5e
+        // остаётся только заливкам
+        expect(cssSrc).toContain('.widget-relapse-risk .widget-v4-hero-num__val--risk.widget-v4-val--good');
+    });
+
+    it('риск-радар — «Главный риск» и «Шкала» по канвасу', () => {
+        expect(uiSrc).toContain('function relapseCanvasLevel');
+        expect(uiSrc).toMatch(/relapseCanvasLevel[\s\S]*'критичный'[\s\S]*'высокий'[\s\S]*'средний'[\s\S]*'низкий'/);
+        // 2×1: уровень подписью справа в шапке, риск назван внизу
+        expect(uiSrc).toContain('widget-risk-level');
+        expect(uiSrc).toContain('widget-risk-main__driver');
+        // 2×2 «Шкала»: четыре отрезка и строка «поднимут: …», а не список слов
+        expect(uiSrc).toContain('widget-risk-steps__seg');
+        expect(uiSrc).toContain('поднимут: ');
+        expect(uiSrc).not.toContain('widget-v4-risk-scale');
+        expect(cssSrc).not.toContain('.widget-v4-risk-scale__step');
+        expect(cssSrc).toContain('.widget-risk-steps__seg--on');
     });
 
     it('цвет значения по состоянию — сон, вода, вес', () => {

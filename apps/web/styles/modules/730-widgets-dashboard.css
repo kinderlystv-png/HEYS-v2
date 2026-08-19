@@ -9936,9 +9936,10 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   line-height: 1;
 }
 
-.widget-v4-hero-num__val--risk.widget-v4-val--good,
-.widget-v4-hero-num__val--risk.widget-v4-val--bad {
-  font-weight: 700;
+/* Канвас «Риск-радар»: слово уровня тем же кеглем и весом, что у остальных
+   героев плиток — 26px/600, шкала на 24px. */
+.widget-risk-scale-hero .widget-v4-hero-num__val--risk {
+  font-size: 24px;
 }
 
 .widget-v4-delta.widget-v4-val--good,
@@ -11251,23 +11252,66 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget .widget__content > .wi
   background: var(--v4-ok, #5a9a6e);
 }
 
-.widget-v4-risk-scale {
+/* Риск-радар 2×1 «Главный риск» — уровень подписью справа в шапке,
+   внизу назван сам риск. */
+.widget-risk-level {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.widget-risk-main {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 6px;
+  align-items: baseline;
+  gap: 5px;
+  margin-top: auto;
+  min-width: 0;
 }
 
-.widget-v4-risk-scale__step {
-  font-size: 11px;
+.widget-risk-main__driver {
+  font-size: 16px;
   font-weight: 600;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
-  padding: 2px 0;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--v4-act-text, #8a4a20);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.widget-v4-risk-scale__step.is-active {
-  color: var(--v4-act-text, #8a4a20);
-  font-weight: 800;
+/* Риск-радар 2×2 «Шкала» — четыре отрезка, активный несёт цвет уровня. */
+.widget-risk-steps {
+  display: flex;
+  gap: 4px;
+  margin-top: 11px;
+}
+
+.widget-risk-steps__seg {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.09);
+}
+
+.widget-risk-steps__seg--on {
+  background: currentColor;
+}
+
+.widget-risk-rise {
+  margin-top: auto;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  text-wrap: pretty;
+}
+
+/* В канвасе слова риск-радара стоят на тёмном шалфее #5c6a45, а не на общем
+   #7a8a5e: светлый оттенок остаётся у заливок (активный отрезок шкалы). */
+.widget-relapse-risk .widget-v4-hero-num__val--risk.widget-v4-val--good,
+.widget-risk-level.widget-v4-val--good,
+.widget-relapse-risk .widget-v4-kv__row .widget-v4-val--good {
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .widget-calories__activity-foot {

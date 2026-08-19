@@ -5875,6 +5875,17 @@
     return ['#86efac', '#22c55e'];
   }
 
+  // Канвас «Риск-радар»: шкала из четырёх ступеней, и подпись уровня во всех
+  // видах берётся из неё же — иначе плитка и шкала называют одно разными словами.
+  function relapseCanvasLevel(level) {
+    if (level === 'critical') return { word: 'критичный', index: 3 };
+    if (level === 'high') return { word: 'высокий', index: 2 };
+    if (level === 'elevated' || level === 'guarded' || level === 'medium') {
+      return { word: 'средний', index: 1 };
+    }
+    return { word: 'низкий', index: 0 };
+  }
+
   function getRelapseLevelLabel(level) {
     switch (level) {
       case 'critical': return 'критично';
@@ -6615,37 +6626,62 @@
     }
 
     if (variantId === 'main' || (d.isShort && variantId !== 'list')) {
-      const driverLabel = primaryDriver?.label || primaryDriver?.key || getRelapseLevelLabel(level);
+      // Канвас «Риск-радар · Главный риск»: уровень подписью справа в шапке,
+      // внизу назван сам риск и сколько он держится.
+      const canvasLevel = relapseCanvasLevel(level);
+      const driverLabel = primaryDriver?.label || primaryDriver?.key || 'нет факторов';
+      const driverMeta = primaryDriver?.text || primaryDriver?.value || '';
       return React.createElement('div', { className: 'widget-relapse-risk widget-relapse-risk--2x1 widget-v4-stack' },
-        v4Kicker('Риск-радар'),
-        React.createElement('div', { className: 'widget-v4-hero-num' },
-          React.createElement('div', {
-            className: 'widget-v4-hero-num__val widget-v4-hero-num__val--risk ' + v4ValueStateClass(v4RiskLevelState(level))
-          }, driverLabel)
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('Риск-радар'),
+          React.createElement('span', {
+            className: 'widget-risk-level ' + v4ValueStateClass(v4RiskLevelState(level))
+          }, canvasLevel.word)
         ),
-        React.createElement('div', { className: 'widget-v4-row__meta' }, getRelapseLevelLabel(level))
+        React.createElement('div', { className: 'widget-risk-main' },
+          React.createElement('span', { className: 'widget-risk-main__driver' }, driverLabel),
+          driverMeta
+            ? React.createElement('span', { className: 'widget-v4-unit' }, driverMeta)
+            : null
+        )
       );
     }
 
     if (variantId === 'scale' && size === '2x2') {
-      const steps = ['низкий', 'средний', 'высокий', 'критичный'];
-      const activeIdx = level === 'critical' ? 3 : level === 'high' ? 2 : level === 'medium' ? 1 : 0;
+      // Канвас «Риск-радар · Шкала»: слово уровня, четыре отрезка и строка
+      // «поднимут: …» — что именно двинет уровень вверх.
+      const canvasLevel = relapseCanvasLevel(level);
+      const riseText = primaryDrivers
+        .map((driver) => [
+          String(driver?.label || driver?.key || '').toLowerCase(),
+          driver?.text || driver?.value || ''
+        ].filter(Boolean).join(' ').trim())
+        .filter(Boolean)
+        .join(', ');
       return React.createElement('div', { className: 'widget-relapse-risk widget-relapse-risk--2x2 widget-v4-stack' },
         v4Kicker('Риск-радар'),
-        React.createElement('div', { className: 'widget-v4-risk-scale' },
-          steps.map((label, i) => React.createElement('span', {
-            key: label,
-            className: 'widget-v4-risk-scale__step' + (i === activeIdx ? ' is-active' : '')
-          }, label))
+        React.createElement('div', { className: 'widget-v4-hero-num widget-risk-scale-hero' },
+          React.createElement('div', {
+            className: 'widget-v4-hero-num__val widget-v4-hero-num__val--risk ' + v4ValueStateClass(v4RiskLevelState(level))
+          }, canvasLevel.word)
         ),
-        primaryDriver
-          ? React.createElement('div', { className: 'widget-v4-row__meta' }, primaryDriver.label || primaryDriver.key)
+        React.createElement('div', { className: 'widget-risk-steps' },
+          [0, 1, 2, 3].map((i) => React.createElement('span', {
+            key: i,
+            className: 'widget-risk-steps__seg'
+              + (i === canvasLevel.index
+                ? ' widget-risk-steps__seg--on ' + v4ValueStateClass(v4RiskLevelState(level))
+                : '')
+          }))
+        ),
+        riseText
+          ? React.createElement('div', { className: 'widget-risk-rise' }, `поднимут: ${riseText}`)
           : null
       );
     }
 
     if (size === '2x2' || variantId === 'list') {
-      const levelWord = (level === 'low' || !level) ? 'низкий' : getRelapseLevelLabel(level);
+      const levelWord = relapseCanvasLevel(level).word;
       const sleepDriver = primaryDrivers.find((d) => /сон|недосып|sleep/i.test(`${d?.label || ''} ${d?.key || ''}`));
       const relapseDriver = primaryDrivers.find((d) => /срыв|relapse|эмоц/i.test(`${d?.label || ''} ${d?.key || ''}`));
       const driverRows = [
