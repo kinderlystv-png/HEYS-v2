@@ -6005,7 +6005,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .heys-update-modal__spinner {
-  animation: heys-update-spin 0.9s linear infinite;
+  animation: heys-update-spin 1.1s linear infinite;
 }
 
 /* Уменьшенное движение: осознанный статичный кадр состояния, а не дуга,
