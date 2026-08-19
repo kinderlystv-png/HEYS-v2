@@ -2822,9 +2822,10 @@
   }
 
   function widgetMotionDisabled() {
-    // Пересчёт при смене дня — функциональная анимация (от текущего к новому),
-    // не декоративный motion; не гасим при prefers-reduced-motion (OS / embedded browser).
-    return false;
+    const enabled = (typeof HEYS !== 'undefined' && HEYS.motion?.functionalAnimationsEnabled)
+      ? HEYS.motion.functionalAnimationsEnabled()
+      : true;
+    return !enabled;
   }
 
   // Состояние анимации в модульном store, а не в useState виджета: при смене дня
@@ -3517,6 +3518,12 @@
     return (typeof el.closest === 'function' ? el.closest('.widget') : null) || el;
   }
 
+  function waterToneMixPct(fillPct) {
+    const pct = Math.max(0, Math.min(100, Number(fillPct) || 0));
+    if (pct >= 70) return 100;
+    return Math.round((pct / 70) * 100);
+  }
+
   function isWaterTileVisible(el) {
     const card = waterTileCard(el);
     if (!card || typeof card.getBoundingClientRect !== 'function') return false;
@@ -3536,18 +3543,43 @@
     return Math.max(6, Math.round(surface - 11));
   }
 
+  function useWaterFillDisplayPct(fillPct) {
+    const [displayFillPct, setDisplayFillPct] = React.useState(0);
+    const fillSeededRef = useRef(false);
+    React.useLayoutEffect(() => {
+      if (!fillSeededRef.current && fillPct > 0) {
+        fillSeededRef.current = true;
+        setDisplayFillPct(0);
+        const id = requestAnimationFrame(() => setDisplayFillPct(fillPct));
+        return () => cancelAnimationFrame(id);
+      }
+      fillSeededRef.current = true;
+      setDisplayFillPct(fillPct);
+      return undefined;
+    }, [fillPct]);
+    return displayFillPct;
+  }
+
   function useWaterAddPulse(rootRef, fillPct) {
     const [pulse, setPulse] = React.useState(null);
+    const fillPctRef = useRef(fillPct);
+    fillPctRef.current = fillPct;
     const timerRef = useRef(null);
     React.useEffect(() => {
       const onAdd = (event) => {
         const detail = event?.detail;
         if (!detail || !detail.ml) return;
         if (!isWaterTileVisible(rootRef.current)) return;
-        // Частые тапы не выстраиваются в очередь: текущая капля перезапускается
-        // с нуля, уровень едет к новому итогу.
         if (timerRef.current) clearTimeout(timerRef.current);
-        setPulse({ id: Date.now(), travel: waterDropTravel(rootRef.current, fillPct) });
+        const targetMl = Number(detail.targetMl) || 2000;
+        const prevTotal = Math.max(0, (Number(detail.total) || 0) - detail.ml);
+        const prevPct = targetMl > 0
+          ? Math.min(100, Math.round((prevTotal / targetMl) * 100))
+          : fillPctRef.current;
+        setPulse({
+          id: Date.now(),
+          travel: waterDropTravel(rootRef.current, prevPct)
+        });
         timerRef.current = setTimeout(() => setPulse(null), 900);
       };
       window.addEventListener('heysWaterAdded', onAdd);
@@ -3555,7 +3587,7 @@
         window.removeEventListener('heysWaterAdded', onAdd);
         if (timerRef.current) clearTimeout(timerRef.current);
       };
-    }, [rootRef, fillPct]);
+    }, [rootRef]);
     return pulse;
   }
 
@@ -3598,6 +3630,9 @@
       const rootRef = useRef(null);
       const prevLitersRef = useRef(liters);
       const pulse = useWaterAddPulse(rootRef, fillPct);
+      const displayFillPct = useWaterFillDisplayPct(fillPct);
+      const submerged = displayFillPct >= 70;
+      const toneMix = waterToneMixPct(displayFillPct);
       const litersLabel = formatRuDecimal(liters, 1);
       const prevLabel = formatRuDecimal(prevLitersRef.current, 1);
       React.useEffect(() => { prevLitersRef.current = liters; }, [liters]);
@@ -3605,24 +3640,28 @@
       return React.createElement('div', {
         ref: rootRef,
         className: 'widget-water widget-water--micro widget-v4-mini widget-water--v4'
-          + (pulse ? ' widget-water--adding' : ''),
-        style: pulse ? { '--water-drop-travel': `${pulse.travel}px` } : undefined
+          + (pulse ? ' widget-water--adding' : '')
+          + (submerged ? ' widget-water--submerged' : ''),
+        style: {
+          '--water-tone-mix': `${toneMix}%`,
+          ...(pulse ? { '--water-drop-travel': `${pulse.travel}px` } : {})
+        }
       },
         showProgress
           ? React.createElement('span', {
-            className: 'widget-water__fill',
-            style: { height: `${fillPct}%` },
+            className: 'widget-water__fill animate-always',
+            style: { height: `${displayFillPct}%` },
             'aria-hidden': 'true'
           })
           : null,
         pulse ? React.createElement('span', {
           key: `drop-${pulse.id}`,
-          className: 'widget-water__drop',
+          className: 'widget-water__drop animate-always',
           'aria-hidden': 'true'
         }) : null,
         pulse ? React.createElement('span', {
           key: `ripple-${pulse.id}`,
-          className: 'widget-water__ripple',
+          className: 'widget-water__ripple animate-always',
           style: { bottom: `${fillPct}%` },
           'aria-hidden': 'true'
         }) : null,
@@ -9286,7 +9325,7 @@
         // Общий Water/Meal/Hunger/Message FAB group — тот же компонент, что в Day.
         // В edit-mode прячем, чтобы не мешали перетаскиванию.
         !isEditMode && React.createElement(HEYS.dayPageShell.QuickActionsFabGroup, {
-          onAddWater: (e) => handleAddWater(200, e.currentTarget),
+          onAddWater: (ml, e) => handleAddWater(ml, e.currentTarget),
           onAddMeal: () => goToDayAndRun('diary', 'addMeal', []),
           onAddActivity: () => goToDayAndRun('activity'),
           hungerContext: {

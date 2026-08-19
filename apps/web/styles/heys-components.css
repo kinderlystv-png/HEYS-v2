@@ -13358,7 +13358,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 /* === PERFORMANCE: prefers-reduced-motion (accessibility + mobile battery) === */
-/* Пользователи с "Уменьшить движение" в настройках ОС получат статичный UI */
+/* Политика двух ярусов: docs/implementation/MOTION_POLICY.md
+   Декоративное гасится здесь; функциональное — класс animate-always на корне поддерева. */
 @media (prefers-reduced-motion: reduce) {
 
   *:not(.animate-always):not(.animate-always *),

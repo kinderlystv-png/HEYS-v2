@@ -9984,6 +9984,8 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
    .widget, у него же overflow: hidden и радиус. */
 .widget-water--v4 {
   --water-tone: #7d98a6;
+  --water-tone-deep: #4e6d7a;
+  --water-submerge-text: #fffaf1;
   --water-drop-travel: 21px;
   /* Перебиваем легаси-центрирование микро-плитки: в канвасе содержимое стоит
      сверху, а не по центру. */
@@ -10011,14 +10013,20 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 
 [data-theme$="dark"] .widget-water--v4 {
   --water-tone: #8fb3c2;
+  --water-tone-deep: #3f6c7e;
+  --water-submerge-text: #f2ede6;
 }
 
 html[data-theme-id="blue"] .widget-water--v4 {
   --water-tone: #3d7f9e;
+  --water-tone-deep: #2c5f76;
+  --water-submerge-text: #ffffff;
 }
 
 html[data-theme-id="blue-dark"] .widget-water--v4 {
   --water-tone: #7fb6d0;
+  --water-tone-deep: #35657d;
+  --water-submerge-text: #eef3f8;
 }
 
 body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water.widget--1x1 {
@@ -10037,9 +10045,22 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water.widget--1x1 {
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--water-tone);
-  transition: height 320ms cubic-bezier(0.45, 0, 0.35, 1) 240ms;
+  background: color-mix(
+    in oklab,
+    var(--water-tone) calc(100% - var(--water-tone-mix, 0%)),
+    var(--water-tone-deep) var(--water-tone-mix, 0%)
+  );
+  /* смена дня / intro — как полосы ккал (--widget-motion-ms на .widgets-grid) */
+  transition:
+    height var(--widget-motion-ms, 1100ms) cubic-bezier(0.65, 0, 0.35, 1),
+    background 320ms cubic-bezier(0.45, 0, 0.35, 1);
   pointer-events: none;
+}
+
+.widget-water--adding .widget-water__fill {
+  transition:
+    height 320ms cubic-bezier(0.45, 0, 0.35, 1) 240ms,
+    background 320ms cubic-bezier(0.45, 0, 0.35, 1) 240ms;
 }
 
 /* Блики поверхности — два слоя пунктира, цикл 3,4 с (канвас V₃). */
@@ -10080,7 +10101,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water.widget--1x1 {
   opacity: 0;
   z-index: 3;
   pointer-events: none;
-  animation: widgetWaterDrop 240ms ease-in forwards;
+  animation: widgetWaterDrop 220ms ease-in forwards;
 }
 
 @keyframes widgetWaterDrop {
@@ -10117,6 +10138,23 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water.widget--1x1 {
 .widget-water__numV {
   position: relative;
   z-index: 2;
+  transition: transform 220ms ease-out, color 220ms ease-out;
+}
+
+/* Погружение: заливка ≥ 70 % — подпись и число на дно плитки, кремовый текст. */
+.widget-water--submerged .widget-v4-kicker {
+  transform: translateY(38.5px);
+  color: var(--water-submerge-text);
+}
+
+.widget-water--submerged .widget-water__numV,
+.widget-water--submerged .widget-water__numV.widget-v4-val--bad {
+  transform: translateY(37px);
+  color: var(--water-submerge-text);
+}
+
+.widget-water--submerged .widget-water__num-unit {
+  color: color-mix(in oklab, var(--water-submerge-text) 72%, transparent);
 }
 
 /* Число в правом верхнем углу — не спорит с заливкой (канвас V₃). */
@@ -10188,29 +10226,6 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water.widget--1x1 {
 @keyframes widgetWaterNumIn {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-/* Уменьшенное движение — не замедленная версия, а другая: капли и круга нет
-   вовсе, блики стоят, уровень и число меняются за 160 мс. */
-@media (prefers-reduced-motion: reduce) {
-  .widget-water__drop,
-  .widget-water__ripple {
-    display: none;
-  }
-
-  .widget-water__fill::before {
-    animation: none;
-  }
-
-  .widget-water__fill {
-    transition: height 160ms linear;
-  }
-
-  .widget-water__num-out,
-  .widget-water__num-in {
-    animation-duration: 160ms;
-    animation-delay: 0ms;
-  }
 }
 
 .widget-v4-insulin-day-bar__fill {
