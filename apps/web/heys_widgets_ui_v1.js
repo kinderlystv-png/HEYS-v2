@@ -3505,6 +3505,51 @@
     });
   }
 
+  // === Вода: добавление по канвасу water-add v4, ветка В₃ «Капля и круг» ===
+  // Плитка сама решает, ей отвечать или нет: если её видно меньше чем наполовину,
+  // ответ на жест берёт на себя мерный столбик у кнопки (см. heys_water_add_feedback_v1).
+  const WATER_TILE_VISIBLE_RATIO = 0.5;
+
+  function isWaterTileVisible(el) {
+    if (!el || typeof el.getBoundingClientRect !== 'function') return false;
+    const rect = el.getBoundingClientRect();
+    if (!rect.height) return false;
+    const viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
+    const visible = Math.min(rect.bottom, viewportH) - Math.max(rect.top, 0);
+    return visible / rect.height >= WATER_TILE_VISIBLE_RATIO;
+  }
+
+  // Капля падает до поверхности воды, поэтому её путь зависит от текущего уровня.
+  function waterDropTravel(el, fillPct) {
+    if (!el || typeof el.getBoundingClientRect !== 'function') return 21;
+    const h = el.getBoundingClientRect().height || 64;
+    const surface = h * (1 - Math.max(0, Math.min(100, fillPct)) / 100);
+    return Math.max(6, Math.round(surface - 11));
+  }
+
+  function useWaterAddPulse(rootRef, fillPct) {
+    const [pulse, setPulse] = React.useState(null);
+    const timerRef = useRef(null);
+    React.useEffect(() => {
+      const onAdd = (event) => {
+        const detail = event?.detail;
+        if (!detail || !detail.ml) return;
+        if (!isWaterTileVisible(rootRef.current)) return;
+        // Частые тапы не выстраиваются в очередь: текущая капля перезапускается
+        // с нуля, уровень едет к новому итогу.
+        if (timerRef.current) clearTimeout(timerRef.current);
+        setPulse({ id: Date.now(), travel: waterDropTravel(rootRef.current, fillPct) });
+        timerRef.current = setTimeout(() => setPulse(null), 900);
+      };
+      window.addEventListener('heysWaterAdded', onAdd);
+      return () => {
+        window.removeEventListener('heysWaterAdded', onAdd);
+        if (timerRef.current) clearTimeout(timerRef.current);
+      };
+    }, [rootRef, fillPct]);
+    return pulse;
+  }
+
   function WaterVariantBody({ variantId, widget, data, meta = {} }) {
     const drunk = data.drunk || 0;
     const target = data.target || 2000;
@@ -3526,7 +3571,8 @@
 
     const getWaterColor = () => HEYS.scales.waterProgress(pct).color;
 
-    // 1x1 — канвас g1: «Вода» + литры + тонкая полоса
+    // 1×1 — канвас water-add v4, ветка В₃: уровень воды заливает саму плитку,
+    // у поверхности всегда идут блики, добавление роняет каплю и круг.
     if (d.isMicro || variantId === 'mini') {
       const liters = (drunk || 0) / 1000;
       const waterState = data.isClosedDay
@@ -3537,22 +3583,61 @@
           profileSleepHours: data.profileSleepHours,
           medianWakeMinutes: data.medianWakeMinutes
         });
-      return React.createElement('div', { className: 'widget-water widget-water--micro widget-v4-mini' },
-        v4Kicker('Вода'),
-        React.createElement('div', {
-          className: 'widget-v4-mini__value ' + v4ValueStateClass(waterState)
-        },
-          formatRuDecimal(liters, 1),
-          React.createElement('span', { className: 'widget-v4-unit' }, ' л')
-        ),
+      // Выше нормы уровень упирается, число продолжает расти: перепить воду —
+      // не то же самое, что перебрать калории, красным здесь ничего не красим.
+      const fillPct = Math.min(100, Math.max(0, pct));
+      const rootRef = useRef(null);
+      const prevLitersRef = useRef(liters);
+      const pulse = useWaterAddPulse(rootRef, fillPct);
+      const litersLabel = formatRuDecimal(liters, 1);
+      const prevLabel = formatRuDecimal(prevLitersRef.current, 1);
+      React.useEffect(() => { prevLitersRef.current = liters; }, [liters]);
+
+      return React.createElement('div', {
+        ref: rootRef,
+        className: 'widget-water widget-water--micro widget-v4-mini widget-water--v4'
+          + (pulse ? ' widget-water--adding' : ''),
+        style: pulse ? { '--water-drop-travel': `${pulse.travel}px` } : undefined
+      },
         showProgress
-          ? React.createElement('div', { className: 'widget-v4-mini__bar' },
-            React.createElement('div', {
-              className: 'widget-v4-mini__bar-fill widget-v4-mini__bar-fill--water',
-              style: { width: `${Math.min(100, Math.max(0, pct))}%` }
-            })
+          ? React.createElement('span', {
+            className: 'widget-water__fill',
+            style: { height: `${fillPct}%` },
+            'aria-hidden': 'true'
+          })
+          : null,
+        pulse ? React.createElement('span', {
+          key: `drop-${pulse.id}`,
+          className: 'widget-water__drop',
+          'aria-hidden': 'true'
+        }) : null,
+        pulse ? React.createElement('span', {
+          key: `ripple-${pulse.id}`,
+          className: 'widget-water__ripple',
+          style: { bottom: `${fillPct}%` },
+          'aria-hidden': 'true'
+        }) : null,
+        v4Kicker('Вода'),
+        // Вспомогательным технологиям озвучиваем итог, а не ход анимации.
+        React.createElement('div', {
+          className: 'widget-v4-mini__value widget-water__num ' + v4ValueStateClass(waterState),
+          'aria-label': `${litersLabel} литра`
+        },
+          pulse && prevLabel !== litersLabel
+            ? React.createElement('span', {
+              key: `out-${pulse.id}`,
+              className: 'widget-water__num-out',
+              'aria-hidden': 'true'
+            }, prevLabel)
+            : null,
+          React.createElement('span', {
+            key: pulse ? `in-${pulse.id}` : 'in',
+            className: pulse && prevLabel !== litersLabel ? 'widget-water__num-in' : ''
+          },
+            litersLabel,
+            React.createElement('span', { className: 'widget-v4-unit' }, ' л')
           )
-          : null
+        )
       );
     }
 
@@ -8874,12 +8959,9 @@
             detail: {
               ml,
               total: dayData.waterMl,
+              targetMl: Number(HEYS.Widgets?.data?.getWaterData?.()?.target) || 0,
               source: 'widgets-fab',
-              sourceEl,
-              showScreenFill: true,
-              pulseWaterWidget: true,
-              showSourceBadge: true,
-              showSourceDrop: true
+              sourceEl
             }
           }));
           // Только water:added — day:updated намеренно НЕ эмитим, чтобы
@@ -8900,9 +8982,7 @@
           addWaterFn(ml, {
             skipScroll: true,
             source: 'widgets-fab',
-            sourceEl,
-            showScreenFill: true,
-            pulseWaterWidget: true
+            sourceEl
           });
           // Виджет воды обновится через DOM событие heysWaterAdded (оптимистичное обновление)
         } catch (e) {

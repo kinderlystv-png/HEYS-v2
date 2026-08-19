@@ -3660,3 +3660,128 @@ body.planning-tab-active .activity-fab {
 /* MODULE 05 — Water & Hydration
  * Scope: water cards/rings, hydration hints, data overview blocks.
  */
+
+/* === Мерный столбик у кнопки воды — канвас water-add v4 ===
+   Работает там, где плитки «Вода» нет в кадре: другая вкладка или прокрученная
+   Главная. Плитку не подменяет, а замещает. Не кнопка: касание проходит
+   насквозь к тому, что под ним. */
+.water-column {
+  position: fixed;
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+  transform: translate(10px, -50%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 60;
+  --water-tone: #7d98a6;
+  --water-tone-text: #456b7d;
+}
+
+[data-theme$="dark"] .water-column {
+  --water-tone: #8fb3c2;
+  --water-tone-text: #8fb3c2;
+}
+
+html[data-theme-id="blue"] .water-column {
+  --water-tone: #3d7f9e;
+  --water-tone-text: #3d7f9e;
+}
+
+html[data-theme-id="blue-dark"] .water-column {
+  --water-tone: #7fb6d0;
+  --water-tone-text: #7fb6d0;
+}
+
+/* Выезд справа налево 10 px с прозрачностью, 180 мс ease-out; уход 160 мс. */
+.water-column.is-in {
+  visibility: visible;
+  opacity: 1;
+  transform: translate(0, -50%);
+  transition: opacity 180ms ease-out, transform 180ms ease-out;
+}
+
+.water-column.is-leaving {
+  opacity: 0;
+  transform: translate(10px, -50%);
+  transition: opacity 160ms ease-in, transform 160ms ease-in;
+}
+
+.water-column__bar {
+  position: relative;
+  flex: none;
+  width: 7px;
+  height: 62px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.09);
+  overflow: hidden;
+}
+
+[data-theme$="dark"] .water-column__bar {
+  background: rgba(242, 237, 230, 0.14);
+}
+
+html[data-theme-id="blue"] .water-column__bar {
+  background: rgba(16, 24, 38, 0.1);
+}
+
+/* Заливка едет к новому уровню 320 мс — ровно как уровень в плитке. */
+.water-column__fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: var(--water-tone);
+  transition: height 320ms cubic-bezier(0.45, 0, 0.35, 1);
+}
+
+.water-column__fill::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Прирост важен ровно один раз — поэтому он самый мелкий; итог остаётся с
+   человеком и потому крупнее. */
+.water-column__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  padding-bottom: 1px;
+  white-space: nowrap;
+}
+
+.water-column__delta {
+  font: 700 9px/1 Figtree, system-ui, sans-serif;
+  color: var(--water-tone-text);
+}
+
+.water-column__total {
+  font: 600 13px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
+}
+
+.water-column__target {
+  font: 500 8px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.4));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .water-column.is-in,
+  .water-column.is-leaving {
+    transition-duration: 160ms;
+  }
+
+  .water-column__fill {
+    transition-duration: 160ms;
+  }
+}

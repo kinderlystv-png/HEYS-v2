@@ -8891,151 +8891,6 @@ body.reports-fullscreen-open {
   }
 }
 
-/* Полноэкранный оверлей */
-.water-screen-fill {
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-  pointer-events: none;
-  overflow: hidden;
-  contain: strict;
-}
-
-.water-screen-fill__body {
-  position: absolute;
-  left: -5%;
-  width: 110%;
-  bottom: 0;
-  height: 100%;
-  background: linear-gradient(180deg,
-      rgba(100, 210, 255, 0.0) 0%,
-      rgba(56, 161, 255, 0.55) 30%,
-      rgba(10, 100, 220, 0.72) 70%,
-      rgba(5, 60, 180, 0.82) 100%);
-  transform: translateY(100%);
-  will-change: transform;
-  backface-visibility: hidden;
-  contain: paint;
-}
-
-.water-screen-fill__body.rising {
-  animation: waterRise 0.85s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-}
-
-.water-screen-fill__body.draining {
-  animation: waterDrain 0.9s cubic-bezier(0.55, 0.06, 0.68, 0.19) forwards;
-}
-
-/* Волна поверх воды */
-.water-screen-fill__wave {
-  position: absolute;
-  top: -60px;
-  left: -10%;
-  width: 120%;
-  height: 80px;
-  animation: waveSway 2.8s ease-in-out infinite;
-  background: rgba(100, 210, 255, 0.6);
-  border-radius: 48% 52% 44% 56% / 52% 48% 56% 44%;
-  will-change: transform;
-  backface-visibility: hidden;
-}
-
-/* Shimmer полосы */
-.water-screen-fill__shimmer {
-  position: absolute;
-  inset: 0 -20%;
-  background: repeating-linear-gradient(-45deg,
-      transparent 0,
-      rgba(255, 255, 255, 0.04) 2px,
-      transparent 4px,
-      transparent 18px);
-  animation: waterShimmer 3s linear infinite;
-  will-change: transform;
-  backface-visibility: hidden;
-}
-
-.water-screen-fill__amount {
-  position: absolute;
-  left: 50%;
-  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-  transform: translateX(-50%);
-  z-index: 3;
-  width: min(92vw, 420px);
-  text-align: center;
-  font-family: "SF Pro Display", Inter, "Segoe UI", system-ui, sans-serif;
-  font-size: clamp(44px, 13vw, 88px);
-  line-height: 0.92;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  color: rgba(255, 255, 255, 0.96);
-  text-shadow:
-    0 10px 35px rgba(6, 24, 80, 0.38),
-    0 3px 10px rgba(255, 255, 255, 0.18);
-  filter: drop-shadow(0 0 22px rgba(173, 232, 255, 0.22));
-  opacity: 0;
-  animation: waterAmountPop 1.05s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s forwards;
-  pointer-events: none;
-  font-variant-numeric: tabular-nums;
-}
-
-@keyframes waterAmountPop {
-  0% {
-    opacity: 0;
-    transform: translateX(-50%) translateY(24px) scale(0.82);
-  }
-
-  20% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1.06);
-  }
-
-  55% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(-4px) scale(1);
-  }
-
-  100% {
-    opacity: 0.9;
-    transform: translateX(-50%) translateY(-10px) scale(0.98);
-  }
-}
-
-/* Пузырьки */
-.water-screen-fill__bubble {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.35);
-  animation: bubbleRise linear forwards;
-}
-
-/* Виджет воды — пульс при добавлении */
-.widget--water-pulse {
-  animation: widgetWaterGlow 1.6s ease-in-out;
-  position: relative;
-  z-index: 5;
-}
-
-.widget--water-pulse .widget-water__value,
-.widget--water-pulse .widget-water__value--lg {
-  background: linear-gradient(90deg, #0A84FF 0%, #64D2FF 30%, #00eeff 50%, #64D2FF 70%, #0A84FF 100%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: waterShimmer 1.2s linear;
-}
-
-.widget--water-pulse .widget-water__bar {
-  transform-origin: left center;
-  animation: barBounce 0.6s ease-out 0.2s, waterShimmer 1.2s linear 0.1s;
-  background: linear-gradient(90deg, #0A84FF, #64D2FF, #00eeff, #0A84FF) !important;
-  background-size: 200% 100% !important;
-}
-
-.widget--water-pulse .widget-water__pct-badge {
-  animation: widgetWaterGlow 1.2s ease-out;
-}
-
 /* ═══════════════════════════════════════════════════════════════
    ELEMENT SCALE — CSS custom property → transform mapping
    Custom properties --es-{key} are set inline on the .widget root.
@@ -10116,6 +9971,168 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 
 .widget-v4-mini__bar-fill--water {
   background: #7d98a6;
+}
+
+/* === Вода 1×1 — канвас water-add v4, ветка В₃ «Капля и круг» ===
+   Уровень заливает саму плитку и живёт постоянно; тонкой полосы у воды больше
+   нет. Вся анимация заперта внутри скругления плитки, полноэкранной заливки
+   не существует. Тон один и тот же во всех палитрах — тот, что уже красил
+   полосу; второй холодный тон означал бы палитру по типу данных. */
+.widget-water--v4 {
+  position: relative;
+  overflow: hidden;
+  --water-tone: #7d98a6;
+  --water-drop-travel: 21px;
+}
+
+[data-theme$="dark"] .widget-water--v4 {
+  --water-tone: #8fb3c2;
+}
+
+html[data-theme-id="blue"] .widget-water--v4 {
+  --water-tone: #3d7f9e;
+}
+
+html[data-theme-id="blue-dark"] .widget-water--v4 {
+  --water-tone: #7fb6d0;
+}
+
+.widget-water__fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--water-tone);
+  transition: height 320ms cubic-bezier(0.45, 0, 0.35, 1) 240ms;
+  pointer-events: none;
+}
+
+/* Блики поверхности идут всегда, а не только при добавлении — иначе плитка
+   выглядит мёртвой между тапами. */
+.widget-water__fill::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -40px;
+  right: -40px;
+  height: 6px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.4) 0 9px,
+    transparent 9px 18px
+  );
+  animation: widgetWaterShine 1.1s linear infinite;
+}
+
+@keyframes widgetWaterShine {
+  from { transform: translateX(0); }
+  to { transform: translateX(18px); }
+}
+
+/* Капля 6×6 стартует у верхней кромки, отступ 5px, падает 220 мс ease-in и
+   к концу вытягивается до 1,4 — единственная деформация в анимации. */
+.widget-water__drop {
+  position: absolute;
+  left: 50%;
+  top: 5px;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 999px;
+  background: var(--water-tone);
+  opacity: 0;
+  z-index: 3;
+  pointer-events: none;
+  animation: widgetWaterDrop 240ms ease-in forwards;
+}
+
+@keyframes widgetWaterDrop {
+  0% { opacity: 0; transform: translateY(0) scaleY(1); }
+  16% { opacity: 1; transform: translateY(0) scaleY(1); }
+  92% { opacity: 1; transform: translateY(var(--water-drop-travel)) scaleY(1.4); }
+  100% { opacity: 0; transform: translateY(calc(var(--water-drop-travel) + 2px)) scaleY(0.6); }
+}
+
+/* Круг рождается в точке касания и растёт 0,3 → 3,2 за 420 мс, обрезаясь
+   скруглением плитки. */
+.widget-water__ripple {
+  position: absolute;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  margin-bottom: -5px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 255, 255, 0.75);
+  opacity: 0;
+  z-index: 3;
+  pointer-events: none;
+  animation: widgetWaterRipple 420ms ease-out 240ms forwards;
+}
+
+@keyframes widgetWaterRipple {
+  0% { opacity: 0; transform: scale(0.3); }
+  12% { opacity: 0.9; transform: scale(0.7); }
+  100% { opacity: 0; transform: scale(3.2); }
+}
+
+.widget-water--v4 .widget-v4-kicker,
+.widget-water__num {
+  position: relative;
+  z-index: 2;
+}
+
+/* Число переезжает кроссфейдом 160 мс со сдвигом 5px, начиная через 240 мс
+   после тапа — чтобы не спорить с каплей. */
+.widget-water__num {
+  position: relative;
+}
+
+.widget-water__num-out {
+  position: absolute;
+  left: 0;
+  top: 0;
+  animation: widgetWaterNumOut 160ms ease-in-out 240ms forwards;
+}
+
+.widget-water__num-in {
+  display: inline-flex;
+  align-items: baseline;
+  opacity: 0;
+  animation: widgetWaterNumIn 160ms ease-in-out 240ms forwards;
+}
+
+@keyframes widgetWaterNumOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-5px); }
+}
+
+@keyframes widgetWaterNumIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Уменьшенное движение — не замедленная версия, а другая: капли и круга нет
+   вовсе, блики стоят, уровень и число меняются за 160 мс. */
+@media (prefers-reduced-motion: reduce) {
+  .widget-water__drop,
+  .widget-water__ripple {
+    display: none;
+  }
+
+  .widget-water__fill::before {
+    animation: none;
+  }
+
+  .widget-water__fill {
+    transition: height 160ms linear;
+  }
+
+  .widget-water__num-out,
+  .widget-water__num-in {
+    animation-duration: 160ms;
+    animation-delay: 0ms;
+  }
 }
 
 .widget-v4-insulin-day-bar__fill {
