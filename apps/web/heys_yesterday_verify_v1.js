@@ -1150,6 +1150,14 @@
     };
   }
 
+  function spellPackCount(count) {
+    const n = Math.max(0, Math.round(Number(count) || 0));
+    return ([
+      'ноль', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь',
+      'восемь', 'девять', 'десять'
+    ][n]) || String(n);
+  }
+
   function packBulkCloseLabel(count) {
     const n = Math.max(0, Math.round(Number(count) || 0));
     if (n === 1) return 'Закрыть один примерно';
@@ -2269,7 +2277,7 @@
 
       isPack && React.createElement('div', { className: 'yv-pack-note' },
         packAfterClear
-          ? 'Очистка больше не предлагается — пустых дней в списке нет. Массовая оценка теперь считает только эти ' + visibleDays.length + ' ' + pluralizeDays(visibleDays.length) + '.'
+          ? 'Очистка больше не предлагается — пустых дней в списке нет. Массовая оценка теперь считает только эти ' + spellPackCount(visibleDays.length) + ' ' + pluralizeDays(visibleDays.length) + '.'
           : 'Отложенные дни не исчезают — вернутся завтра тем же списком.'
       ),
 
@@ -2290,7 +2298,7 @@
               type: 'button',
               className: 'yv-pack-secondary',
               onClick: handlePackClearEmpty
-            }, 'Очистить ' + emptyVisibleDays.length + ' ' + (emptyVisibleDays.length === 1 ? 'пустой' : 'пустых')),
+            }, 'Очистить ' + spellPackCount(emptyVisibleDays.length) + ' ' + (emptyVisibleDays.length === 1 ? 'пустой' : 'пустых')),
             React.createElement('button', {
               type: 'button',
               className: 'yv-pack-secondary',
@@ -2706,6 +2714,7 @@
     isExplicitlyVerified,
     isEmptyFoodDay,
     packBulkCloseLabel,
+    spellPackCount,
     confirmAsWrittenLabel,
     computePackDayCaption,
     resolveYesterdayVerifyHeaderCaption,

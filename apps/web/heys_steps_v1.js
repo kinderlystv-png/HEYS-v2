@@ -2544,54 +2544,18 @@
       React.createElement('div', { className: 'mc-step-kicker' }, 'Сон этой ночью'),
       React.createElement('div', { className: 'mc-hero-number' }, formatSleepDuration(sleepHours)),
       React.createElement('div', { className: 'mc-sleep-norm' }, sleepNormLine(sleepHours)),
-      React.createElement('div', { className: 'mc-sleep-times mc-sleep-times--split' },
-        React.createElement('div', {
-          className: 'mc-sleep-block',
-          style: { borderRadius: 20, overflow: 'hidden' }
-        },
-          React.createElement('div', { className: 'mc-sleep-label' }, 'Легли'),
-          React.createElement(TimePicker, {
-            hours: sleepStartH,
-            minutes: sleepStartM,
-            onHoursChange: (h) => update({ sleepStartH: h }),
-            onMinutesChange: (m) => update({ sleepStartM: m }),
-            onTimeChange: (h, m) => update({ sleepStartH: h, sleepStartM: m }),
-            hoursLabel: '',
-            minutesLabel: '',
-            display: null,
-            linkedScroll: true,
-            compact: true,
-            className: 'mc-time-pickers'
-          })
-        ),
-        React.createElement('div', {
-          className: 'mc-sleep-block',
-          style: { borderRadius: 20, overflow: 'hidden' }
-        },
-          React.createElement('div', { className: 'mc-sleep-label' }, 'Встали'),
-          React.createElement(TimePicker, {
-            hours: sleepEndH,
-            minutes: sleepEndM,
-            onHoursChange: (h) => update({ sleepEndH: h }),
-            onMinutesChange: (m) => update({ sleepEndM: m }),
-            onTimeChange: (h, m) => update({ sleepEndH: h, sleepEndM: m }),
-            hoursLabel: '',
-            minutesLabel: '',
-            display: null,
-            linkedScroll: true,
-            compact: true,
-            className: 'mc-time-pickers'
-          })
-        )
-      ),
       React.createElement('div', { className: 'mc-scale-card' },
         React.createElement('div', { className: 'mc-scale-head' },
           React.createElement('span', null, 'Насколько выспались'),
-          React.createElement('span', { className: 'mc-scale-value' }, `${sleepQuality} · ${String(qualityWord).toLowerCase()}`)
+          React.createElement('span', { className: 'mc-scale-value' },
+            React.createElement('b', { className: 'n', style: { font: '700 13px/1 Figtree, system-ui, sans-serif', color: 'var(--v4-sand-act-text, #8a4a20)' } }, String(sleepQuality)),
+            ` · ${String(qualityWord).toLowerCase()}`
+          )
         ),
         React.createElement(DragValueSlider, {
           className: 'mc-v4-scale',
           variant: 'v4',
+          fill: 'olive',
           min: 1,
           max: 10,
           value: sleepQuality,
@@ -2623,6 +2587,40 @@
           placeholder: 'Необязательно',
           onChange: (e) => update({ sleepNote: e.target.value })
         })
+      ),
+      React.createElement('div', { className: 'mc-sleep-times mc-sleep-times--split' },
+        React.createElement('div', { className: 'mc-sleep-block' },
+          React.createElement('div', { className: 'mc-sleep-label' }, 'Легли'),
+          React.createElement(TimePicker, {
+            hours: sleepStartH,
+            minutes: sleepStartM,
+            onHoursChange: (h) => update({ sleepStartH: h }),
+            onMinutesChange: (m) => update({ sleepStartM: m }),
+            onTimeChange: (h, m) => update({ sleepStartH: h, sleepStartM: m }),
+            hoursLabel: '',
+            minutesLabel: '',
+            display: null,
+            linkedScroll: true,
+            compact: true,
+            className: 'mc-sleep-clock'
+          })
+        ),
+        React.createElement('div', { className: 'mc-sleep-block' },
+          React.createElement('div', { className: 'mc-sleep-label' }, 'Встали'),
+          React.createElement(TimePicker, {
+            hours: sleepEndH,
+            minutes: sleepEndM,
+            onHoursChange: (h) => update({ sleepEndH: h }),
+            onMinutesChange: (m) => update({ sleepEndM: m }),
+            onTimeChange: (h, m) => update({ sleepEndH: h, sleepEndM: m }),
+            hoursLabel: '',
+            minutesLabel: '',
+            display: null,
+            linkedScroll: true,
+            compact: true,
+            className: 'mc-sleep-clock'
+          })
+        )
       )
     );
   }
@@ -2945,7 +2943,7 @@
 
     return {
       headline: `Обычно вы проходите около ${fmt(Math.round(stats.median))} — берём чуть выше`,
-      sliderHint: 'Сдвinьте пальцем, если день будет другим',
+      sliderHint: 'Сдвиньте пальцем, если день будет другим',
       footnote: 'План на день — его видит куратор. Расход считается по факту пройденного.',
       infoCard: null
     };
@@ -3141,10 +3139,6 @@
         }, narrative.sliderHint)
       ),
       narrative.infoCard && React.createElement('div', { className: 'mc-steps-info-card' }, narrative.infoCard),
-      narrative.footnote && React.createElement('div', {
-        className: 'mc-recorded-hint',
-        style: { textAlign: 'center', marginTop: narrative.infoCard ? 14 : 26 }
-      }, narrative.footnote),
       data.showRefeed && React.createElement('div', { className: 'mc-steps-refeed-row' },
         React.createElement('div', null,
           React.createElement('div', { className: 'mc-steps-refeed-title' }, 'Загрузочный день'),
@@ -3162,7 +3156,11 @@
             onClick: () => onChange({ ...data, isRefeedDay: false, refeedManual: true })
           }, 'Нет')
         )
-      )
+      ),
+      narrative.footnote && React.createElement('div', {
+        className: 'mc-recorded-hint',
+        style: { textAlign: 'center', marginTop: (narrative.infoCard || data.showRefeed) ? 14 : 26 }
+      }, narrative.footnote)
     );
   }
 
@@ -5771,6 +5769,7 @@
     selenium: 'Селен',
     b12: 'B12',
     b6: 'B6',
+    iodine: 'Йод',
     k2: 'K2',
     calcium: 'Кальций',
     lecithin: 'Лецитин',
@@ -5786,11 +5785,12 @@
   const MORNING_REST_SUPP_DOSE_DEFAULTS = {
     vitD: { dose: 5000, unit: 'МЕ', step: 500, hint: 'Шаг 500 МЕ. Обычная дозировка — от 1 000 до 5 000.' },
     magnesium: { dose: 400, unit: 'мг', step: 50, hint: 'Шаг 50 мг. Обычная дозировка — от 200 до 400.' },
-    omega3: { dose: 1000, unit: 'мг', step: 100, hint: 'Шаг 100 мг. Смотрите содержание EPA+DHA на упаковке.' }
+    omega3: { dose: 1000, unit: 'мг', step: 100, hint: 'Шаг 100 мг. Смотрите содержание EPA+DHA на упаковке.' },
+    iodine: { dose: 150, unit: 'мкг', step: 25, hint: 'Шаг 25 мкг. Обычная суточная норма — около 150 мкг.' }
   };
 
   const MORNING_REST_SUPP_ADD_GROUPS = [
-    { label: 'Витамины и микроэлементы', ids: ['vitD', 'vitC', 'zinc', 'selenium', 'b12', 'b6'] },
+    { label: 'Витамины и микроэлементы', ids: ['vitD', 'vitC', 'zinc', 'selenium', 'b12', 'b6', 'iodine'] },
     { label: 'Минералы и жиры', ids: ['magnesium', 'omega3', 'calcium', 'k2', 'lecithin'] },
     { label: 'Сон и восстановление', ids: ['melatonin', 'glycine', 'ltheanine', 'collagen'] },
     { label: 'Спортивное питание', ids: ['creatine', 'bcaa', 'protein'] }
@@ -5837,6 +5837,7 @@
       b6: 'мг',
       biotin: 'мкг',
       selenium: 'мкг',
+      iodine: 'мкг',
       omega3: 'мг',
       fishOil: 'г',
       creatine: 'г',
@@ -6513,11 +6514,23 @@
         measurementsSide: side
       });
     };
+    const spellDaysCount = (n) => ([
+      'ноль', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь',
+      'восемь', 'девять', 'десять', 'одиннадцать', 'двенадцать', 'тринадцать',
+      'четырнадцать', 'пятнадцать', 'шестнадцать', 'семнадцать', 'восемнадцать',
+      'девятнадцать', 'двадцать'
+    ][n] || String(n));
     const formatMeasurementDaysAgo = (daysAgo) => {
       if (!Number.isFinite(daysAgo)) return '';
       if (daysAgo === 0) return 'Сегодня уже были';
       const dayWord = daysAgo === 1 ? 'день' : (daysAgo >= 2 && daysAgo <= 4 ? 'дня' : 'дней');
       return `Прошло ${daysAgo} ${dayWord} с прошлых`;
+    };
+    const formatMeasurementDaysAgoWords = (daysAgo) => {
+      if (!Number.isFinite(daysAgo)) return '';
+      if (daysAgo === 0) return 'Сегодня уже были';
+      const dayWord = daysAgo === 1 ? 'день' : (daysAgo >= 2 && daysAgo <= 4 ? 'дня' : 'дней');
+      return `Прошло ${spellDaysCount(daysAgo)} ${dayWord} с прошлых`;
     };
     const measurementRowHint = isMeasurementsOverdue(lastMeasurements)
       ? 'Без обхвата виден только вес'
@@ -6526,7 +6539,7 @@
         : formatMeasurementDaysAgo(lastMeasurements.daysAgo));
     const measurementLayerHint = lastMeasurements?.daysAgo == null
       ? 'Ещё не было замеров'
-      : formatMeasurementDaysAgo(lastMeasurements.daysAgo);
+      : formatMeasurementDaysAgoWords(lastMeasurements.daysAgo);
     const measurementsOverdue = showMeasurements && isMeasurementsOverdue(lastMeasurements);
     const measurementsOverdueKicker = measurementsOverdue
       ? formatMeasurementsOverdueKicker(lastMeasurements)

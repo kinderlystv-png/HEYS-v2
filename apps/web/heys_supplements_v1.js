@@ -25,6 +25,7 @@
     vitC: { name: 'C', icon: '🍊', category: 'immune', timing: 'anytime', tip: 'Универсальная профилактическая польза не подтверждена' },
     zinc: { name: 'Цинк', icon: '🛡️', category: 'immune', timing: 'withFood', tip: 'Высокие дозы требуют проверки ограничений' },
     selenium: { name: 'Селен', icon: '🔬', category: 'immune', timing: 'withFood', tip: 'Избыток селена небезопасен — важна точная доза' },
+    iodine: { name: 'Йод', icon: '🧂', category: 'immune', timing: 'withFood', tip: 'Доза важна: избыток и недостаток одинаково бьют по щитовидной железе' },
 
     // === 🧠 Мозг и нервы ===
     omega3: { name: 'Омега-3', icon: '🐟', category: 'brain', timing: 'withFood', tip: 'Эффект зависит от содержания EPA/DHA и показания' },

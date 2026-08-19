@@ -74,6 +74,14 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(DAILY_CSS).toMatch(/mc-steps-unit[\s\S]*letter-spacing: 0/);
     expect(STEPS_SRC).toContain("secondaryLabelWhen: (data) => (data && data.estimated ? 'Ввести вес' : 'Не взвешивался')");
     expect(STEPS_SRC).toMatch(/CombinedSleepStepComponent[\s\S]*compact: true/);
+    expect(STEPS_SRC).toMatch(/CombinedSleepStepComponent[\s\S]*mc-sleep-norm[\s\S]*mc-scale-card[\s\S]*mc-sleep-times mc-sleep-times--split/);
+    expect(STEPS_SRC).toMatch(/CombinedSleepStepComponent[\s\S]*className: 'mc-scale-value'[\s\S]*React\.createElement\('b'/);
+    expect(DAILY_CSS).toContain('.mc-modal--daily .mc-sleep-combined .mc-wheel-value--current');
+    expect(DAILY_CSS).toContain('.mc-modal--daily .mc-step-content:has(.mc-sleep-combined)');
+    expect(STEPS_SRC).toMatch(/CombinedSleepStepComponent[\s\S]*className: 'mc-sleep-clock'/);
+    expect(STEPS_SRC).not.toMatch(/CombinedSleepStepComponent[\s\S]*className: 'mc-time-pickers'/);
+    expect(DAILY_CSS).toContain('.mc-modal--daily .mc-sleep-block .mc-wheel-picker');
+    expect(DAILY_CSS).toMatch(/\.mc-modal--daily \.mc-sleep-block \.mc-wheel-value[\s\S]*min-width: 0/);
     expect(STEPS_SRC).not.toMatch(/function CombinedSleepStepComponent[\s\S]*type: 'range'[\s\S]*function CombinedSleepStepComponent/);
     expect(STEPS_SRC).not.toMatch(/function CombinedSleepStepComponent[\s\S]*type: 'range'[\s\S]*registerStep\('sleep'/);
     expect(STEPS_SRC).not.toMatch(/function StepsGoalStepComponent[\s\S]*type: 'range'[\s\S]*registerStep\('stepsGoal'/);
@@ -95,14 +103,22 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(STEPS_SRC).toContain("setRoutineStatus(status)");
     expect(STEPS_SRC).toContain('applyMorningActivationCheckinAnswer');
     expect(STEPS_SRC).toContain('Прошло ');
+    expect(STEPS_SRC).toContain('formatMeasurementDaysAgoWords');
+    expect(STEPS_SRC).toMatch(/measurementLayerHint[\s\S]*formatMeasurementDaysAgoWords/);
     expect(STEPS_SRC).toContain('buildMorningRestSparseNote');
     expect(STEPS_SRC).toContain('две ежедневные карточки: душ и рутина');
     expect(STEPS_SRC).toContain('mc-steps-refeed-row');
+    // канвас: «Загрузочный день» стоит между подсказкой ползунка и сноской «План на день…»
+    expect(STEPS_SRC).toMatch(/mc-steps-refeed-row[\s\S]*narrative\.footnote && React\.createElement/);
+    expect(STEPS_SRC).toContain('Сдвиньте пальцем, если день будет другим');
+    expect(STEPS_SRC).not.toMatch(/Сдвinьте/);
     expect(STEPS_SRC).toContain('showSupplementsCard');
     expect(STEPS_SRC).toContain('MorningRestSupplementsFlow');
     expect(STEPS_SRC).toContain('renderMorningRestSuppLayer');
     expect(STEPS_SRC).toContain('mc-supp-flow');
     expect(STEPS_SRC).toContain('Дозы и время');
+    expect(STEPS_SRC).toContain("'b6', 'iodine'");
+    expect(STEPS_SRC).toContain("iodine: 'Йод'");
     expect(STEPS_SRC).toContain('Курс пока пуст');
     expect(STEPS_SRC).toContain('mc-rest-supp-empty');
     expect(STEPS_SRC).toContain('В курсе нет добавок');
@@ -191,6 +207,8 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(YESTERDAY_SRC).toContain('openDiaryForDate');
     expect(YESTERDAY_SRC).toContain('confirmAsWrittenLabel');
     expect(YESTERDAY_SRC).toContain('packBulkCloseLabel');
+    expect(YESTERDAY_SRC).toContain("'Очистить ' + spellPackCount(emptyVisibleDays.length)");
+    expect(YESTERDAY_SRC).toMatch(/Массовая оценка теперь считает только эти ' \+ spellPackCount/);
     expect(YESTERDAY_SRC).toContain('yv-force');
     expect(YV_CSS).toContain('.yv-force--on');
     expect(YV_CSS).toContain('.yv-canvas-foot');
