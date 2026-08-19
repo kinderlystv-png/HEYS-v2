@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="./v4-canvas.css" rel="stylesheet">
+<style>
+  .updOverlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(18,14,10,.62);backdrop-filter:blur(2.5px)}
+  .updCard{width:100%;max-width:262px;min-height:238px;background:linear-gradient(165deg,#241d16,#1a140f);border-radius:24px;padding:26px 22px 22px;text-align:center;box-shadow:0 22px 48px rgba(0,0,0,.4);border:1px solid rgba(245,237,225,.08)}
+  .updRing{width:60px;height:60px;border-radius:999px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;flex:none;position:relative}
+  .updTitle{font:700 19px/1.25 Figtree,sans-serif;color:#f5ede1}
+  .updSub{font:500 12px/1.5 Figtree,sans-serif;color:rgba(245,237,225,.6);margin-top:5px;text-wrap:pretty}
+  .updDots{display:flex;gap:6px;justify-content:center;margin-top:15px}
+  .updDots span{width:6px;height:6px;border-radius:999px;background:rgba(245,237,225,.2)}
+  .updDots span.on{background:#d98a4f;width:16px;border-radius:999px}
+  .updVer{font:600 10px/1.4 ui-monospace,Menlo,monospace;color:rgba(245,237,225,.38);margin-top:15px}
+  .updBtn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:linear-gradient(135deg,#e0975c,#b5652c);font:700 14px/1 Figtree,sans-serif;color:#241207;margin-top:18px}
+  .updGhost{display:flex;align-items:center;justify-content:center;min-height:40px;font:600 12.5px/1 Figtree,sans-serif;color:rgba(245,237,225,.5);margin-top:8px}
+  .offBar{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;justify-content:center;gap:7px;padding:16px 14px 9px;background:#1c1712;color:#f5ede1;font:600 11px/1.3 Figtree,sans-serif;z-index:5;text-align:center}
+  .swatch{width:230px;flex:none;background:#0d0b08;border-radius:20px;padding:20px 12px}
+  .stg{display:flex;flex-direction:column;align-items:center;gap:5px;color:rgba(0,0,0,.38);flex:none}
+  .stg b{font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.02em}
+</style>
+</helmet>
+
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#1a140f"/><circle cx="50" cy="42" r="18" fill="none" stroke="#d98a4f" stroke-width="5"/><path d="M50 30v14l9 9" stroke="#d98a4f" stroke-width="5" stroke-linecap="round" fill="none"/><text x="50" y="82" text-anchor="middle" font-family="Figtree,sans-serif" font-size="12" font-weight="700" fill="#f5ede1">update</text></svg></template>
+
+<div style="background:#e9dfcd;padding:0 46px 70px;width:max-content;">
+
+  <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
+    <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">ОБНОВЛЕНИЕ PWA</span>
+    <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Один тёмный кадр на 1–3 секунды, потом страховка на случай, если он не сработал</span>
+  </div>
+  <p style="margin:0 0 8px;max-width:980px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Сценарий не меняется: приложение находит и ставит обновление само, без спроса. Дизайн закрывает три живых кадра модалки, страховку «Требуется обновление» (починена 2026-08-19) и офлайн-баннер. Бейдж, toast, системный баннер, «Всё актуально!» и стадии checking / found / installing — мёртвый код по решению владельца от 2026-08-19, не рисуются; см. «Решения» внизу.</p>
+  <p style="margin:0 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);">Источник: docs/ui/handoff-v4/ПРОМПТ_дизайнеру_обновление_PWA.md · твик «Статично» показывает уменьшенное движение · экраны искать по data-screen-label</p>
+
+  <div class="secH" style="margin-top:0;">Живые кадры модалки — путь по умолчанию</div>
+  <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);text-wrap:pretty;">Один и тот же контейнер, DOM не пересоздаётся — стадии сменяют друг друга на месте. Три точки под подписью честно называют, где вы в последовательности, вместо процента, который ничего не измерял. Кольцо крутится только там, где реально идёт неопределённое ожидание (загрузка, перезагрузка); «Готово!» — вспышка на 0,8 с, ничего не грузится, кольцо стоит.</p>
+
+  <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;">
+
+    <div><div class="lab"><b>Загрузка</b><span>реальное время установки SW, 0,5–3 с</span></div>
+    <div class="ph" data-screen-label="Обновление · загрузка" style="background:#fffaf1;">
+      <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
+      <div class="updOverlay">
+        <div class="updCard">
+          <div class="updRing" style="background:rgba(217,138,79,.14);">
+            <svg class="spin liveRing" width="52" height="52" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="rgba(245,237,225,.16)" stroke-width="2.2"/><circle cx="12" cy="12" r="9.4" stroke="#d98a4f" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="18 41"/></svg>
+            <span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:rgba(217,138,79,.16);"></span>
+            <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#d98a4f;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m0 0l-4-4m4 4l4-4M5 18h14"/></svg></span>
+          </div>
+          <div class="updTitle">Загрузка</div>
+          <div class="updSub">Это займёт пару секунд…</div>
+          <div class="updDots"><span class="on"></span><span></span><span></span></div>
+          <div class="updVer">Текущая версия · 2026.08.19.1430.a1b2c3d</div>
+        </div>
+      </div>
+    </div></div>
+
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:340px;color:rgba(0,0,0,.35);flex:none;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b style="font:700 10px/1 ui-monospace,Menlo,monospace;">0,5–3 с</b></div>
+
+    <div><div class="lab"><b>Готово!</b><span>вспышка на 0,8 с, кольцо не крутится</span></div>
+    <div class="ph" data-screen-label="Обновление · готово" style="background:#fffaf1;">
+      <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
+      <div class="updOverlay">
+        <div class="updCard">
+          <div class="updRing" style="background:#d98a4f;">
+            <span style="color:#241207;display:flex;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+          </div>
+          <div class="updTitle">Готово!</div>
+          <div class="updSub">Приложение обновлено</div>
+          <div class="updDots"><span></span><span class="on"></span><span></span></div>
+          <div class="updVer">Текущая версия · 2026.08.19.1430.a1b2c3d</div>
+        </div>
+      </div>
+    </div></div>
+
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:340px;color:rgba(0,0,0,.35);flex:none;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b style="font:700 10px/1 ui-monospace,Menlo,monospace;">0,8 с</b></div>
+
+    <div><div class="lab"><b>Перезагрузка</b><span>необратимо, без крестика</span></div>
+    <div class="ph" data-screen-label="Обновление · перезагрузка" style="background:#fffaf1;">
+      <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
+      <div class="updOverlay">
+        <div class="updCard">
+          <div class="updRing" style="background:rgba(217,138,79,.14);">
+            <svg class="spin liveRing" width="52" height="52" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="rgba(245,237,225,.16)" stroke-width="2.2"/><circle cx="12" cy="12" r="9.4" stroke="#d98a4f" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="18 41"/></svg>
+            <span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:rgba(217,138,79,.16);"></span>
+            <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#d98a4f;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0012.5 2.5M18.5 9A7 7 0 006 6.5"/></svg></span>
+          </div>
+          <div class="updTitle">Перезагрузка</div>
+          <div class="updSub">Применяем изменения…</div>
+          <div class="updDots"><span></span><span></span><span class="on"></span></div>
+          <div class="updVer">Текущая версия · 2026.08.19.1430.a1b2c3d</div>
+        </div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Перезагрузка одиночная</b><span>второй живой путь: SW активировался сам, предыдущих кадров не было</span></div>
+    <div class="ph" data-screen-label="Обновление · перезагрузка одиночная" style="background:#fffaf1;">
+      <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
+      <div class="updOverlay">
+        <div class="updCard">
+          <div class="updRing" style="background:rgba(217,138,79,.14);">
+            <svg class="spin liveRing" width="52" height="52" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="rgba(245,237,225,.16)" stroke-width="2.2"/><circle cx="12" cy="12" r="9.4" stroke="#d98a4f" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="18 41"/></svg>
+            <span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:rgba(217,138,79,.16);"></span>
+            <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#d98a4f;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0012.5 2.5M18.5 9A7 7 0 006 6.5"/></svg></span>
+          </div>
+          <div class="updTitle">Перезагрузка</div>
+          <div class="updSub">Применяем изменения…</div>
+          <div class="updVer" style="margin-top:26px;">Текущая версия · 2026.08.19.1430.a1b2c3d</div>
+        </div>
+      </div>
+    </div></div>
+
+  </div>
+
+  <div class="secH">Раскадровка: тот же путь компактно</div>
+  <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;">
+    <div class="swatch"><div class="updRing" style="width:40px;height:40px;background:rgba(217,138,79,.14);margin:0 auto 10px;"><svg class="spin liveRing" width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="rgba(245,237,225,.16)" stroke-width="2.2"/><circle cx="12" cy="12" r="9.4" stroke="#d98a4f" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="18 41"/></svg><span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:rgba(217,138,79,.16);"></span><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#d98a4f;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10m0 0l-4-4m4 4l4-4M5 18h14"/></svg></span></div><div style="font:700 13px/1 Figtree,sans-serif;color:#f5ede1;text-align:center;">Загрузка</div></div>
+    <div class="stg" style="width:70px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b>0,5–3 с</b></div>
+    <div class="swatch"><div class="updRing" style="width:40px;height:40px;background:#d98a4f;margin:0 auto 10px;"><span style="color:#241207;display:flex;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span></div><div style="font:700 13px/1 Figtree,sans-serif;color:#f5ede1;text-align:center;">Готово!</div></div>
+    <div class="stg" style="width:70px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b>0,8 с</b></div>
+    <div class="swatch"><div class="updRing" style="width:40px;height:40px;background:rgba(217,138,79,.14);margin:0 auto 10px;"><svg class="spin liveRing" width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="rgba(245,237,225,.16)" stroke-width="2.2"/><circle cx="12" cy="12" r="9.4" stroke="#d98a4f" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="18 41"/></svg><span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:rgba(217,138,79,.16);"></span><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#d98a4f;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0012.5 2.5M18.5 9A7 7 0 006 6.5"/></svg></span></div><div style="font:700 13px/1 Figtree,sans-serif;color:#f5ede1;text-align:center;">Перезагрузка</div></div>
+    <div class="stg" style="width:110px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b>0,5 с → страница перезагружается</b></div>
+  </div>
+  <p style="margin:12px 0 0;max-width:900px;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.42);text-wrap:pretty;">Аварийный предел: если модалка провисит на экране дольше 10 с (или 12 с при сверке версии) — её скрывают. У кадра есть потолок жизни, «вечного кольца» быть не должно.</p>
+
+  <div class="secH">«Требуется обновление» — страховка, починена 2026-08-19</div>
+  <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);text-wrap:pretty;">Появляется, если три попытки подряд не встали. Тон признания сбоя, не тревоги — поэтому тот же тёплый тёмный слой, без движения: тут ничего не грузится, кольцо больше не крутится ни в одном варианте.</p>
+  <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;">
+
+    <div><div class="lab"><b>С версией</b><span>не-iOS, кнопка есть</span></div>
+    <div class="ph" data-screen-label="Требуется обновление · с версией" style="background:#fffaf1;">
+      <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
+      <div class="updOverlay" style="backdrop-filter:none;background:rgba(13,11,8,.9);">
+        <div class="updCard">
+          <div class="updRing" style="background:rgba(217,138,79,.14);">
+            <span style="color:#d98a4f;display:flex;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12v7m0 0l-3.2-3.2M12 19l3.2-3.2M17.5 16.2A3.9 3.9 0 0016.6 8.6h-1.2A6 6 0 004 10.2a3.5 3.5 0 00.4 6.2"/></svg></span>
+          </div>
+          <div class="updTitle">Требуется обновление</div>
+          <div class="updSub">Нажмите кнопку для обновления до версии 2026.08.19.1830</div>
+          <div class="updBtn">Обновить сейчас</div>
+          <div class="updGhost">Позже</div>
+          <div class="updVer" style="margin-top:12px;">Застряли на 2026.08.14.0910.f4d2b1c</div>
+        </div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Без версии</b><span>не-iOS, в SW-цикле версия часто неизвестна</span></div>
+    <div class="ph" data-screen-label="Требуется обновление · без версии" style="background:#fffaf1;">
+      <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
+      <div class="updOverlay" style="backdrop-filter:none;background:rgba(13,11,8,.9);">
+        <div class="updCard">
+          <div class="updRing" style="background:rgba(217,138,79,.14);">
+            <span style="color:#d98a4f;display:flex;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12v7m0 0l-3.2-3.2M12 19l3.2-3.2M17.5 16.2A3.9 3.9 0 0016.6 8.6h-1.2A6 6 0 004 10.2a3.5 3.5 0 00.4 6.2"/></svg></span>
+          </div>
+          <div class="updTitle">Требуется обновление</div>
+          <div class="updSub">Нажмите кнопку для обновления</div>
+          <div class="updBtn">Обновить сейчас</div>
+          <div class="updGhost">Позже</div>
+          <div class="updVer" style="margin-top:12px;">Застряли на 2026.08.14.0910.f4d2b1c</div>
+        </div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>iOS</b><span>кнопки нет — нажимать нечего</span></div>
+    <div class="ph" data-screen-label="Требуется обновление · iOS" style="background:#fffaf1;">
+      <div style="padding:56px 18px 0;"><div style="font:700 20px/1.2 Figtree,sans-serif;color:#201e1d;">Сегодня</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div><div style="height:64px;border-radius:16px;background:#f7efe2;"></div></div></div>
+      <div class="updOverlay" style="backdrop-filter:none;background:rgba(13,11,8,.9);">
+        <div class="updCard">
+          <div style="display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:16px;">
+            <span class="updRing" style="width:42px;height:42px;background:rgba(217,138,79,.14);margin:0;"><span style="color:#d98a4f;display:flex;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(245,237,225,.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <span class="updRing" style="width:42px;height:42px;background:rgba(217,138,79,.14);margin:0;"><span style="color:#d98a4f;display:flex;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H5a1 1 0 00-1 1v14a1 1 0 001 1h14a1 1 0 001-1v-4M14 4h6v6M20 4l-8 8"/></svg></span></span>
+          </div>
+          <div class="updTitle">Требуется обновление</div>
+          <div class="updSub">Закройте приложение и откройте заново для обновления до версии 2026.08.19.1830</div>
+          <div class="updGhost" style="margin-top:16px;">Позже</div>
+          <div class="updVer" style="margin-top:12px;">Застряли на 2026.08.14.0910.f4d2b1c</div>
+        </div>
+      </div>
+    </div></div>
+
+  </div>
+
+  <div class="secH">Офлайн-баннер</div>
+  <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);text-wrap:pretty;">Один визуальный язык с обновлением: тот же тёплый тёмный слой, та же линейная иконка вместо эмодзи. Отступ сверху теперь считает вырез экрана, а не липнет к самой кромке.</p>
+  <div><div class="lab"><b>Офлайн</b><span>верхний отступ = safe-area-inset-top + 8</span></div>
+  <div class="ph" data-screen-label="Офлайн-баннер">
+    <div class="offBar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.82a15 15 0 0120 0M5 12.86a10 10 0 0114 0M8.5 16.5a5 5 0 017 0M12 20h.01M2 2l20 20"/></svg><span>Офлайн режим — данные сохраняются локально</span></div>
+    <div style="padding:56px 18px 0;">
+      <div style="display:flex;align-items:baseline;gap:8px;"><span style="font:700 20px/1.2 Figtree,sans-serif;color:var(--tx);">Сегодня</span></div>
+      <div class="g" style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:16px;"><div style="height:64px;border-radius:16px;background:var(--c1);"></div><div style="height:64px;border-radius:16px;background:var(--c1);"></div></div>
+    </div>
+  </div></div>
+
+  <div class="h">Решения</div>
+  <div class="cards" style="background:#efe3cf;border-radius:20px;padding:18px;">
+    <div class="nt"><b>Тёмный слой — системный и намеренный, не одна из четырёх тем продукта</b><span>Обновление может показаться до того, как загрузился контекст темы — значит его нельзя красить переменными палитры. Это осознанно единственный «служебный» слой на весь продукт, а не недосмотр: он один и тот же во всех палитрах — светлых и тёмных одинаково, поэтому на всех кадрах ниже он показан поверх светлой (песочной) темы: если он держит контраст на самом светлом фоне продукта, на остальных трёх проблем не будет.</span></div>
+    <div class="nt"><b>Тёплый, а не Google-синий</b><span>Прежний градиент `#1a1a2e → #16213e` и зелёно-синие кнопки были чужим языком (Material), да ещё на `system-ui`. Слой перекрашен в тёплый тёмный по тону бренда, шрифт — Figtree.</span></div>
+    <div class="nt"><b>Контраст текста больше не зависит от продуктовой темы</b><span>Заголовок и подпись раньше были заданы как `var(--v4-bg, #ffffff)` в расчёте на светлый фон продукта — на тёмных палитрах текст почти сливался с карточкой. Теперь цвет текста фиксирован внутри самого системного слоя и ни от чего не зависит.</span></div>
+    <div class="nt"><b>Блюр подложки — 2,5 px, как у всех модалок</b><span>8 px нарушал инвариант `--v4-modal-backdrop-blur`. Приведено к общему значению; у «Требуется обновление» блюра нет вовсе — там подложка сплошная, как в исходной геометрии.</span></div>
+    <div class="nt"><b>Эмодзи заменены на линейные иконки</b><span>🔍 🆕 📥 ⚙️ ✨ 🚀 📴 рендерились по-разному на каждой платформе и не складывались в набор. Теперь один язык: обводка 2,5, один цвет — акцент системного слоя.</span></div>
+    <div class="nt"><b>Прогресс — три точки за стадию, не проценты</b><span>20/40/60/80/100% не были ничем измерены. Три точки честно показывают, где вы в последовательности из трёх кадров; кольцо крутится только там, где ожидание действительно неопределённое.</span></div>
+    <div class="nt"><b>Подпись «Текущая версия», а не голое число</b><span>Строка всегда показывает версию до перезагрузки — старую. Слово «Текущая» снимает путаницу «это версия, на которую обновляемся?». Удалять строку с экрана нельзя — это единственный способ для поддержки узнать сборку клиента; если бы её прятали, следующий дом — «Настройки → О приложении».</span></div>
+    <div class="nt"><b>Уменьшенное движение — внятный статичный кадр, а не застывший спиннер</b><span>Твик «Статично» меняет вращающееся кольцо на такой же круг без дуги и без анимации — это осознанный кадр состояния, а не то, что получится, если просто выключить CSS-анимацию посреди оборота.</span></div>
+    <div class="nt"><b>«Требуется обновление» не притворяется, что грузит</b><span>Спиннер там раньше был декорацией — ничего не происходит, ждут человека. Заменён на статичную иконку; на iOS вместо спиннера — два шага действия (закрыть, открыть), потому что там нужен жест, а не ожидание.</span></div>
+    <div class="nt"><b>Точки показываются только тогда, когда последовательность действительно была</b><span>У второго живого пути (`controllerchange` — новый SW активировался сам) кадр «Перезагрузка» приходит один, без «Загрузки» и «Готово». Две погашенные точки в этом случае врали бы про пропущенные шаги, поэтому в одиночном кадре точек нет вовсе — только состояние и версия.</span></div>
+    <div class="nt"><b>Карточка не прыгает между кадрами</b><span>DOM не пересоздаётся, стадии сменяются на месте — значит высота карточки должна быть постоянной, иначе смена содержимого читается как новое окно. Отсюда фиксированная минимальная высота 238 px: у одиночного кадра без точек освободившееся место остаётся пустым, а карточка не подпрыгивает.</span></div>
+    <div class="nt"><b>На страховке версия называет застрявшую сборку, а не цель</b><span>Это единственный экран, где версия действительно нужна поддержке: человек сидит на старой сборке и не может выйти. Поэтому внизу «Застряли на …» — та версия, которая не сменилась; версия, до которой обновляемся, живёт в тексте и может отсутствовать.</span></div>
+    <div class="nt"><b>Иконка страховки отличается от «Перезагрузки» намеренно</b><span>При уменьшенном движении кольцо перестаёт крутиться, и одинаковый глиф сделал бы два разных смысла неотличимыми: «идёт само, ждите» и «ждут вас». Поэтому у страховки отдельная иконка — облако со стрелкой (нужно достать сборку), а круговые стрелки остались только у настоящей перезагрузки.</span></div>
+    <div class="nt"><b>Если предохранитель сработал, экрана нет — и это правильно</b><span>Модалка, провисевшая 10 с (12 с при сверке версии), просто исчезает: человек возвращается в приложение на старой сборке и продолжает работать. Отдельного кадра «не получилось» не рисуем — вместо него растёт счётчик попыток, и на третьей приходит «Требуется обновление». Первую установку приложения модалка не показывает вообще.</span></div>
+    <div class="ntl"><b>Не рисуем: бейдж, toast, системный баннер, «Всё актуально!», checking / found / installing</b><span>Решение владельца 2026-08-19 — мягкие уведомления и ручную проверку не оживляем, их код мёртв и уходит отдельной задачей по чистке, не отрисовкой. Оба поведенческих инварианта остаются: обновление не перебивает открытую форму (ждёт `heys:modal-stack-idle` + 300 мс), а «Перезагрузка» необратима и не имеет крестика.</span></div>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;rules&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;reducedMotion&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">
+class Component extends DCLogic {
+  componentDidMount() { this.apply(); }
+  componentDidUpdate() { this.apply(); }
+  renderVals() { return {}; }
+  apply() {
+    const off = (this.props.rules ?? true) ? '' : 'none';
+    document.querySelectorAll('.nt, .ntl').forEach(n => { n.style.display = off; });
+    document.querySelectorAll('.cards').forEach(c => {
+      c.style.display = off;
+      const head = c.previousElementSibling;
+      if (head && head.classList.contains('h')) head.style.display = off;
+    });
+
+    const still = this.props.reducedMotion ?? false;
+    document.querySelectorAll('.liveRing').forEach(el => { el.style.display = still ? 'none' : ''; });
+    document.querySelectorAll('.stillRing').forEach(el => { el.style.display = still ? 'block' : 'none'; });
+  }
+}
+
+</script>
+</body>
+</html>

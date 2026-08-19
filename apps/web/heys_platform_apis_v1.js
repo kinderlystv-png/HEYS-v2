@@ -413,51 +413,82 @@
     }
   }
 
-  function getProgressClass(progress) {
-    const value = Number(progress) || 0;
-    return `heys-update-modal__progress-bar--${value}`;
+  // === Системный слой обновления (макет v4 2026-08-19) ===
+  // Один визуальный язык на модалку, страховку и офлайн-баннер: линейные иконки
+  // вместо эмодзи, которые рендерились по-разному на каждой платформе.
+  const UPDATE_ICON_PATHS = {
+    download: 'M12 4v10m0 0l-4-4m4 4l4-4M5 18h14',
+    check: 'M5 13l4 4L19 7',
+    refresh: 'M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0012.5 2.5M18.5 9A7 7 0 006 6.5',
+    cloudDown: 'M12 12v7m0 0l-3.2-3.2M12 19l3.2-3.2M17.5 16.2A3.9 3.9 0 0016.6 8.6h-1.2A6 6 0 004 10.2a3.5 3.5 0 00.4 6.2',
+    close: 'M6 6l12 12M18 6L6 18',
+    openApp: 'M9 4H5a1 1 0 00-1 1v14a1 1 0 001 1h14a1 1 0 001-1v-4M14 4h6v6M20 4l-8 8',
+    arrow: 'M5 12h14M13 6l6 6-6 6',
+    wifiOff: 'M2 8.82a15 15 0 0120 0M5 12.86a10 10 0 0114 0M8.5 16.5a5 5 0 017 0M12 20h.01M2 2l20 20',
+  };
+
+  function updateIconSvg(name, size, strokeWidth = 2.5) {
+    const path = UPDATE_ICON_PATHS[name] || UPDATE_ICON_PATHS.refresh;
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>`;
+  }
+
+  // dot — позиция кадра в живой последовательности Загрузка → Готово →
+  // Перезагрузка. Стадии checking/found/installing недостижимы в продукте
+  // (мёртвый код, удаляется отдельной задачей) и своих кадров в макете не имеют.
+  const UPDATE_STAGES = {
+    checking: { title: 'Проверка обновлений', subtitle: 'Подождите…', icon: 'download', spinner: true, dot: 0 },
+    found: { title: 'Найдено обновление!', subtitle: 'Загружаем новую версию…', icon: 'download', spinner: true, dot: 0 },
+    downloading: { title: 'Загрузка', subtitle: 'Это займёт пару секунд…', icon: 'download', spinner: true, dot: 0 },
+    installing: { title: 'Установка', subtitle: 'Почти готово…', icon: 'download', spinner: true, dot: 1 },
+    ready: { title: 'Готово!', subtitle: 'Приложение обновлено', icon: 'check', spinner: false, dot: 1, done: true },
+    reloading: { title: 'Перезагрузка', subtitle: 'Применяем изменения…', icon: 'refresh', spinner: true, dot: 2 },
+  };
+
+  // Кольцо крутится только там, где ожидание действительно неопределённое.
+  // «Готово!» — вспышка на 0.8 с, ничего не грузится, движения нет.
+  function renderStageIcon(stage) {
+    const s = UPDATE_STAGES[stage] || UPDATE_STAGES.checking;
+    const ring = s.spinner
+      ? '<svg class="heys-update-modal__spinner" width="52" height="52" viewBox="0 0 24 24" fill="none" aria-hidden="true">'
+      + '<circle cx="12" cy="12" r="9.4" stroke="rgba(245,237,225,0.16)" stroke-width="2.2"/>'
+      + '<circle cx="12" cy="12" r="9.4" stroke="#d98a4f" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="18 41"/>'
+      + '</svg><span class="heys-update-modal__still"></span>'
+      : '';
+    const glyph = s.done ? updateIconSvg('check', 24, 3) : updateIconSvg(s.icon, 22);
+    return { ring, glyph, done: !!s.done };
+  }
+
+  function renderStageDotItems(activeIndex) {
+    return [0, 1, 2]
+      .map((i) => `<span class="heys-update-modal__dot${i === activeIndex ? ' heys-update-modal__dot--on' : ''}"></span>`)
+      .join('');
   }
 
   function showUpdateModal(stage = 'checking') {
     document.getElementById('heys-update-modal')?.remove();
 
-    const stages = {
-      checking: { icon: '🔍', title: 'Проверка обновлений', subtitle: 'Подождите...', isSpinner: false },
-      found: { icon: '🆕', title: 'Найдено обновление!', subtitle: 'Загружаем новую версию...', isSpinner: false },
-      downloading: { icon: '📥', title: 'Загрузка', subtitle: 'Это займёт пару секунд...', isSpinner: false },
-      installing: { icon: '⚙️', title: 'Установка', subtitle: 'Почти готово...', isSpinner: false },
-      ready: { icon: '✨', title: 'Готово!', subtitle: 'Приложение обновлено', isSpinner: false },
-      reloading: { icon: 'spinner', title: 'Перезагрузка', subtitle: 'Применяем изменения...', isSpinner: true }
-    };
-
-    const s = stages[stage] || stages.checking;
+    const key = UPDATE_STAGES[stage] ? stage : 'checking';
+    const s = UPDATE_STAGES[key];
+    // Второй живой путь (controllerchange — новый worker активировался сам)
+    // приходит одним кадром «Перезагрузка»: последовательности не было, поэтому
+    // две погашенные точки соврали бы про пропущенные шаги.
+    const singleFrame = key === 'reloading';
+    const parts = renderStageIcon(key);
 
     const iconHtml = `
-      <div id="heys-update-icon" class="heys-update-modal__icon ${s.isSpinner ? 'is-spinner' : ''}">
-        ${s.isSpinner ? '<div class="heys-update-modal__spinner"></div>' : s.icon}
+      <div id="heys-update-icon" class="heys-update-modal__icon${parts.done ? ' heys-update-modal__icon--done' : ''}">
+        ${parts.ring}
+        <span id="heys-update-glyph" class="heys-update-modal__glyph">${parts.glyph}</span>
       </div>
     `;
 
-    const progressWidth = stage === 'checking'
-      ? '20%'
-      : stage === 'found'
-        ? '40%'
-        : stage === 'downloading'
-          ? '60%'
-          : stage === 'installing'
-            ? '80%'
-            : '100%';
+    const dotsHtml = singleFrame
+      ? ''
+      : `<div id="heys-update-dots" class="heys-update-modal__dots">${renderStageDotItems(s.dot)}</div>`;
 
-    const progressValue = parseInt(progressWidth, 10) || 0;
-    const progressClass = getProgressClass(progressValue);
-
-    const progressHtml = `
-      <div class="heys-update-modal__progress">
-        <div id="heys-update-progress" class="heys-update-modal__progress-bar ${progressClass}"></div>
-      </div>
-    `;
-
-    const footerHtml = `<p class="heys-update-modal__version">Версия ${getAppVersion()}</p>`;
+    // Строка всегда показывает версию до перезагрузки — слово «Текущая» снимает
+    // путаницу «это версия, на которую обновляемся?».
+    const footerHtml = `<p class="heys-update-modal__version${singleFrame ? ' heys-update-modal__version--single' : ''}">Текущая версия · ${getAppVersion()}</p>`;
 
     return renderUpdateDialog({
       dialogType: 'modal',
@@ -473,44 +504,32 @@
       textId: 'heys-update-subtitle',
       textClass: 'heys-update-modal__subtitle',
       text: s.subtitle,
-      progressHtml,
+      bodyHtml: dotsHtml,
       footerHtml,
     });
   }
 
   function updateModalStage(stage) {
-    const stages = {
-      checking: { icon: '🔍', title: 'Проверка обновлений', subtitle: 'Подождите...', progress: 20, isSpinner: false },
-      found: { icon: '🆕', title: 'Найдено обновление!', subtitle: 'Загружаем новую версию...', progress: 40, isSpinner: false },
-      downloading: { icon: '📥', title: 'Загрузка', subtitle: 'Это займёт пару секунд...', progress: 60, isSpinner: false },
-      installing: { icon: '⚙️', title: 'Установка', subtitle: 'Почти готово...', progress: 80, isSpinner: false },
-      ready: { icon: '✨', title: 'Готово!', subtitle: 'Приложение обновлено', progress: 100, isSpinner: false },
-      reloading: { icon: 'spinner', title: 'Перезагрузка', subtitle: 'Применяем изменения...', progress: 100, isSpinner: true }
-    };
-
-    const s = stages[stage];
+    const s = UPDATE_STAGES[stage];
     if (!s) return;
 
     const icon = document.getElementById('heys-update-icon');
+    const glyph = document.getElementById('heys-update-glyph');
     const title = document.getElementById('heys-update-title');
     const subtitle = document.getElementById('heys-update-subtitle');
-    const progress = document.getElementById('heys-update-progress');
+    const dots = document.getElementById('heys-update-dots');
+    const parts = renderStageIcon(stage);
 
     if (icon) {
-      if (s.isSpinner) {
-        icon.innerHTML = '<div class="heys-update-modal__spinner"></div>';
-        icon.classList.add('is-spinner');
-      } else {
-        icon.textContent = s.icon;
-        icon.innerHTML = s.icon;
-        icon.classList.remove('is-spinner');
-      }
+      icon.classList.toggle('heys-update-modal__icon--done', parts.done);
+      icon.querySelector('.heys-update-modal__spinner')?.remove();
+      icon.querySelector('.heys-update-modal__still')?.remove();
+      if (parts.ring) icon.insertAdjacentHTML('afterbegin', parts.ring);
     }
+    if (glyph) glyph.innerHTML = parts.glyph;
     if (title) title.textContent = s.title;
     if (subtitle) subtitle.textContent = s.subtitle;
-    if (progress) {
-      progress.className = `heys-update-modal__progress-bar ${getProgressClass(s.progress)}`;
-    }
+    if (dots) dots.innerHTML = renderStageDotItems(s.dot);
   }
 
   function hideUpdateModal() {
@@ -527,18 +546,36 @@
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-    const iconHtml = '<div class="heys-update-prompt__spinner"></div>';
+    // Экран ничего не грузит — ждут человека, поэтому движения здесь нет.
+    // На iOS вместо иконки состояния два шага действия: там нужен жест.
+    const iconHtml = isIOS
+      ? `
+      <div class="heys-update-prompt__steps" aria-hidden="true">
+        <span class="heys-update-prompt__step">${updateIconSvg('close', 19)}</span>
+        <span class="heys-update-prompt__step-arrow">${updateIconSvg('arrow', 15)}</span>
+        <span class="heys-update-prompt__step">${updateIconSvg('openApp', 19)}</span>
+      </div>
+    `
+      : `
+      <div class="heys-update-modal__icon">
+        <span class="heys-update-modal__glyph">${updateIconSvg('cloudDown', 24)}</span>
+      </div>
+    `;
+
     // Версия известна не на всех путях: SW-цикл её не сообщает, а build-meta.json
     // может не ответить. Текст обязан работать и без неё.
-    const versionSuffix = targetVersion ? ' до v' + targetVersion : '';
+    const versionSuffix = targetVersion ? ' до версии ' + targetVersion : '';
     const text = isIOS
       ? 'Закройте приложение и откройте заново для обновления' + versionSuffix
       : 'Нажмите кнопку для обновления' + versionSuffix;
 
+    // Внизу — версия, на которой человек застрял: это единственный экран, где
+    // она действительно нужна поддержке.
     const actionsHtml = `${isIOS ? '' : `
-      <button id="heys-manual-update-btn" class="heys-update-prompt__btn heys-update-prompt__btn--primary">Обновить сейчас</button>
+      <button id="heys-manual-update-btn" type="button" class="heys-update-prompt__btn">Обновить сейчас</button>
     `}
-      <button id="heys-update-later-btn" class="heys-update-prompt__btn heys-update-prompt__btn--ghost">Позже</button>
+      <button id="heys-update-later-btn" type="button" class="heys-update-prompt__btn heys-update-prompt__btn--ghost">Позже</button>
+      <p class="heys-update-prompt__version">Застряли на ${getAppVersion()}</p>
     `;
 
     const modal = renderUpdateDialog({
@@ -596,7 +633,7 @@
     textId,
     textClass,
     text,
-    progressHtml = '',
+    bodyHtml = '',
     footerHtml = '',
   }) {
     const modal = document.createElement('div');
@@ -619,7 +656,7 @@
           ${iconHtml}
           ${titleHtml}
           ${textHtml}
-          ${progressHtml}
+          ${bodyHtml}
           ${footerHtml}
         </div>
       </div>
@@ -819,12 +856,20 @@
     }
   }
 
-  function createSystemBanner({ id, className, text, actions }) {
+  function createSystemBanner({ id, className, text, actions, icon }) {
     if (!document?.body || document.getElementById(id)) return;
 
     const banner = document.createElement('div');
     banner.id = id;
     banner.className = className;
+
+    if (icon) {
+      const iconEl = document.createElement('span');
+      iconEl.className = 'heys-system-banner__icon';
+      iconEl.setAttribute('aria-hidden', 'true');
+      iconEl.innerHTML = updateIconSvg(icon, 15);
+      banner.appendChild(iconEl);
+    }
 
     const textEl = document.createElement('span');
     textEl.className = 'heys-system-banner__text';
@@ -881,7 +926,8 @@
     createSystemBanner({
       id: OFFLINE_BANNER_ID,
       className: 'heys-system-banner heys-system-banner--offline',
-      text: '📴 Офлайн режим — данные сохраняются локально',
+      icon: 'wifiOff',
+      text: 'Офлайн режим — данные сохраняются локально',
       actions: []
     });
   }

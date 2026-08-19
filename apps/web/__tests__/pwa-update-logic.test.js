@@ -612,12 +612,114 @@ describe('PWA update protection', () => {
       // Счётчик переживает чистку сессии при обновлении.
       expect(platformSource).toContain("'heys_norms', 'heys_hr_zones', UPDATE_RECOVERY_KEY]");
       // Prompt не ломается без известной версии сервера.
-      expect(platformSource).toContain("const versionSuffix = targetVersion ? ' до v' + targetVersion : '';");
+      expect(platformSource).toContain("const versionSuffix = targetVersion ? ' до версии ' + targetVersion : '';");
       // «Позже» глушит именно этот prompt, а не сбрасывает счётчик.
       expect(platformSource).toContain('snoozeUpdateRecovery(UPDATE_RECOVERY_SNOOZE_MS);');
       // Ложная тревога отсекается сверкой с сервером.
       expect(platformSource).toContain("return { action: 'none', reason: 'server_version_unavailable' };");
       expect(platformSource).toContain('if (!isNewerVersion(targetVersion, getAppVersion()))');
+    });
+  });
+
+  describe('системный слой обновления (макет v4 2026-08-19)', () => {
+    // Рабочие копии на Windows хранятся с CRLF — нормализуем, иначе проверки
+    // многострочных фрагментов ломаются на переводах строк, а не по существу.
+    const readSources = () => {
+      const webCwd = existsSync(join(process.cwd(), 'heys_platform_apis_v1.js'));
+      const base = webCwd ? process.cwd() : join(process.cwd(), 'apps/web');
+      const read = (rel) => readFileSync(join(base, rel), 'utf8').replace(/\r\n/g, '\n');
+      const css = read('styles/heys-components.css');
+      return {
+        platform: read('heys_platform_apis_v1.js'),
+        css,
+        // Только системный слой обновления: остальной файл живёт по своим правилам.
+        updateCss: css.slice(
+          css.indexOf('/* === Update modal + страховка'),
+          css.indexOf('/* === APS: hide product button === */')
+        ),
+      };
+    };
+
+    it('рисует линейные иконки, а не эмодзи', () => {
+      const { platform } = readSources();
+      const modalBlock = platform.slice(
+        platform.indexOf('const UPDATE_STAGES = {'),
+        platform.indexOf('function hideUpdateModal()')
+      );
+
+      expect(modalBlock).not.toMatch(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u);
+      expect(platform).toContain("download: 'M12 4v10m0 0l-4-4m4 4l4-4M5 18h14'");
+      expect(platform).toContain("wifiOff: 'M2 8.82a15 15 0 0120 0");
+      expect(platform).toContain("icon: 'wifiOff',");
+      expect(platform).toContain("text: 'Офлайн режим — данные сохраняются локально',");
+    });
+
+    it('показывает три точки за стадию вместо процентов', () => {
+      const { platform, css } = readSources();
+
+      expect(platform).toContain('function renderStageDotItems(activeIndex)');
+      expect(platform).toContain("downloading: { title: 'Загрузка'");
+      expect(platform).not.toContain('heys-update-modal__progress-bar');
+      expect(css).not.toContain('heys-update-modal__progress');
+      expect(css).toContain('.heys-update-modal__dot--on');
+    });
+
+    it('не показывает точки у одиночного кадра перезагрузки', () => {
+      const { platform } = readSources();
+
+      expect(platform).toContain("const singleFrame = key === 'reloading';");
+      expect(platform).toContain("const dotsHtml = singleFrame");
+      expect(platform).toContain('heys-update-modal__version--single');
+    });
+
+    it('держит блюр подложки на общем токене модалок', () => {
+      const { updateCss } = readSources();
+
+      expect(updateCss).toContain('backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));');
+      expect(updateCss).not.toContain('blur(8px)');
+      // Страховка — сплошная подложка без блюра.
+      expect(updateCss).toContain('background: rgba(13, 11, 8, 0.9);');
+    });
+
+    it('не даёт карточке прыгать между кадрами', () => {
+      const { updateCss } = readSources();
+      const card = updateCss.slice(
+        updateCss.indexOf('.heys-update-modal__card,'),
+        updateCss.indexOf('.heys-update-modal__icon {')
+      );
+
+      expect(card).toContain('min-height: 238px;');
+      expect(card).toContain('max-width: 262px;');
+    });
+
+    it('заменяет вращение статичным кадром при уменьшенном движении', () => {
+      const { updateCss } = readSources();
+      const reduced = updateCss.slice(
+        updateCss.indexOf('@media (prefers-reduced-motion: reduce)')
+      ).slice(0, 220);
+
+      expect(reduced).toContain('.heys-update-modal__spinner {');
+      expect(reduced).toContain('.heys-update-modal__still {');
+      expect(reduced).toContain('display: block;');
+    });
+
+    it('подписывает версию по назначению на каждом экране', () => {
+      const { platform } = readSources();
+
+      // Модалка показывает версию до перезагрузки — «Текущая» снимает путаницу.
+      expect(platform).toContain('Текущая версия · ${getAppVersion()}');
+      // Страховке нужна та версия, на которой человек застрял.
+      expect(platform).toContain('Застряли на ${getAppVersion()}');
+    });
+
+    it('даёт страховке статичную иконку, а на iOS — два шага действия', () => {
+      const { platform } = readSources();
+
+      expect(platform).not.toContain('heys-update-prompt__spinner');
+      expect(platform).toContain("updateIconSvg('cloudDown', 24)");
+      expect(platform).toContain('heys-update-prompt__steps');
+      expect(platform).toContain("updateIconSvg('close', 19)");
+      expect(platform).toContain("updateIconSvg('openApp', 19)");
     });
   });
 
