@@ -3137,7 +3137,10 @@ async function handleRpcRequest(event, context) {
           } else if (isDayv2Key && (!noConflict || hasNewerCurrentItemEdit || hasSubjectiveDrop || hasCurrentOnlyContent || hasIncomingTombstonedContent)) {
             // forceKeepAll: client may not have seen the latest cloud-side meals yet,
             // so treating absence as "deleted" would lose other side's edits. Conservative: keep both.
-            const merged = mergeDayData(incomingValue, currentValue, { forceKeepAll: true });
+            // lastSeenUpdatedAt отдаётся merge'у, чтобы строка, изменённая в облаке
+            // после последнего известного клиенту состояния, не проигрывала stale
+            // React-снимку со свежим авто-штампом (heys/9cb568).
+            const merged = mergeDayData(incomingValue, currentValue, { forceKeepAll: true, lastSeenUpdatedAt });
             if (merged) {
               mergedValue = merged;
               mergeOutcome = hasNewerCurrentItemEdit

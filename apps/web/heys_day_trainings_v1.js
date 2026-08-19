@@ -3262,7 +3262,12 @@
       setDay((prevDay) => {
         const list = [...(prevDay.trainings || [])];
         const cur = { ...(list[ti] || {}) };
-        list[ti] = mutator(cur);
+        // Метка на самой строке, а не только на дне: merge сравнивает
+        // тренировки по training.updatedAt, а day.updatedAt двигают фоновые
+        // reconcile/autosave. Без неё правка конструктора опиралась на
+        // авто-штамп stamper'а — тот же путь, которым stale-снимок
+        // откатывал кураторские зоны (heys/9cb568).
+        list[ti] = { ...mutator(cur), updatedAt: ts };
         var nextDay = { ...prevDay, trainings: list, updatedAt: ts };
         try {
           HEYS.Day = HEYS.Day || {};

@@ -236,6 +236,29 @@ describe('mergeDayData — lost-update prevention', () => {
     expect(merged.trainings[0].updatedAt).toBe(3500);
   });
 
+  test('stale client snapshot does not roll back a curator training edit it never saw', () => {
+    // 19.08: кураторская правка зон «Барабаны» [0,120] → [47,73] откатывалась
+    // трижды. Приложение присылало старую копию строки, но stamper штамповал её
+    // свежим mutationTs, и по свежести выигрывал stale-снимок (heys/9cb568).
+    const curatorEdit = { z: [47, 73, 0, 0], activityLabel: 'Барабаны', updatedAt: 3000 };
+    const staleSnapshot = { z: [0, 120, 0, 0], activityLabel: 'Барабаны', updatedAt: 4000 };
+    const local = makeDay(4000, [], { trainings: [staleSnapshot] });
+    const remote = makeDay(3000, [], { trainings: [curatorEdit] });
+
+    const merged = mergeDayData(local, remote, { forceKeepAll: true, lastSeenUpdatedAt: 2000 });
+    expect(merged.trainings[0].z).toEqual([47, 73, 0, 0]);
+  });
+
+  test('client that already saw the curator edit still wins with its own newer change', () => {
+    const curatorEdit = { z: [47, 73, 0, 0], activityLabel: 'Барабаны', updatedAt: 3000 };
+    const clientEdit = { z: [60, 60, 0, 0], activityLabel: 'Барабаны', updatedAt: 4000 };
+    const local = makeDay(4000, [], { trainings: [clientEdit] });
+    const remote = makeDay(3000, [], { trainings: [curatorEdit] });
+
+    const merged = mergeDayData(local, remote, { forceKeepAll: true, lastSeenUpdatedAt: 3000 });
+    expect(merged.trainings[0].z).toEqual([60, 60, 0, 0]);
+  });
+
   test('explicit training tombstone prevents a stale cloud training from returning', () => {
     const staleTraining = {
       z: [0, 45, 0, 0],

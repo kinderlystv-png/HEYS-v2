@@ -643,6 +643,10 @@
   function mergeDayData(local, remote, options) {
     options = options || {};
     const forceKeepAll = !!options.forceKeepAll;
+    // Момент, на который клиент последний раз видел облачную версию дня.
+    // Передаётся только серверным путём (heys-api-rpc); клиентский merge его
+    // не знает и остаётся как был.
+    const lastSeenUpdatedAt = Number(options.lastSeenUpdatedAt) || 0;
     const preferRemote = !!options.preferRemote;
     const logFn = typeof options.logFn === 'function' ? options.logFn : function () {};
     const hashFn = typeof options.hashFn === 'function' ? options.hashFn : null;
@@ -996,9 +1000,22 @@
       const lPlanPriority = planPriority(lt);
       const rPlanPriority = planPriority(rt);
 
+      // Клиент не может отменить правку, которой не видел. Приложение при
+      // сохранении дня штампует изменённую строку свежим mutationTs (stamper
+      // ниже по файлу), поэтому stale React-снимок со старыми зонами приходит
+      // с меткой новее кураторской и выигрывает по свежести: 19.08 так трижды
+      // откатились зоны «Барабаны» [47,73] → [0,120] (heys/9cb568). Если
+      // облачная строка изменена ПОСЛЕ last-seen клиента и содержимое
+      // расходится, этой правки клиент не видел — отменять ему было нечего.
+      const remoteRowEditedUnseen = lastSeenUpdatedAt > 0
+        && remoteTrainingTs > lastSeenUpdatedAt
+        && !isDayMutationContentEqual(lt, rt);
+
       let winner;
       if (lPlanPriority !== rPlanPriority && (lPlanPriority >= 0 || rPlanPriority >= 0)) {
         winner = lPlanPriority > rPlanPriority ? lt : rt;
+      } else if (remoteRowEditedUnseen) {
+        winner = rt;
       } else if (localTrainingIsNewer) {
         winner = lt;
       } else if (ltSum === 0 && rtSum > 0) {
