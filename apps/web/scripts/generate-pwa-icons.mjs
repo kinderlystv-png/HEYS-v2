@@ -12,7 +12,7 @@ import sharp from 'sharp';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(__dirname, '../public');
-const fontPath = path.join(publicDir, 'fonts/Caprasimo-Regular.ttf');
+const fontPath = path.join(publicDir, 'fonts/figtree/Figtree-Variable.ttf');
 
 const jobs = [
   { source: 'icon-v4.svg', name: 'icon-192.png', size: 192, flatten: '#fffaf1' },
@@ -37,8 +37,8 @@ function loadSvg(filename) {
     process.exit(1);
   }
   return fs.readFileSync(file, 'utf8').replace(
-    /src:\s*url\('fonts\/Caprasimo-Regular\.ttf'\)\s*format\('truetype'\);/,
-    `src: ${fontDataUrl}`,
+    /src:\s*url\('fonts\/figtree\/Figtree-Variable\.ttf'\)\s*format\('truetype'\);/,
+    `src: ${fontDataUrl} format('truetype');`,
   );
 }
 
