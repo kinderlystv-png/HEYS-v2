@@ -1,27 +1,27 @@
 {
   "boot-core": {
-    "file": "boot-core.bundle.25b6aa92331b.js",
-    "hash": "25b6aa92331b",
-    "sourceFingerprint": "8258e360b5f7",
-    "fileCount": 46,
-    "size": 1294073,
-    "builtAt": "2026-08-19T22:18:28.982Z"
+    "file": "boot-core.bundle.66b8bacf389c.js",
+    "hash": "66b8bacf389c",
+    "sourceFingerprint": "b099b877bd5e",
+    "fileCount": 47,
+    "size": 1295226,
+    "builtAt": "2026-08-19T23:41:32.381Z"
   },
   "boot-calc": {
     "file": "boot-calc.bundle.69fd98560574.js",
     "hash": "69fd98560574",
-    "sourceFingerprint": "23ac590c8715",
+    "sourceFingerprint": "d5d9202d3d61",
     "fileCount": 22,
     "size": 929400,
-    "builtAt": "2026-08-19T22:18:32.973Z"
+    "builtAt": "2026-08-19T23:41:36.690Z"
   },
   "boot-day": {
-    "file": "boot-day.bundle.e31caf868d8c.js",
-    "hash": "e31caf868d8c",
-    "sourceFingerprint": "255c1f38a1c5",
+    "file": "boot-day.bundle.b22ca453ec67.js",
+    "hash": "b22ca453ec67",
+    "sourceFingerprint": "e70aa68680e8",
     "fileCount": 63,
-    "size": 962139,
-    "builtAt": "2026-08-19T22:18:36.665Z"
+    "size": 963534,
+    "builtAt": "2026-08-19T23:41:40.334Z"
   },
   "boot-app": {
     "file": "boot-app.bundle.1a0e0d228409.js",
@@ -80,11 +80,11 @@
     "builtAt": "2026-08-19T22:18:55.510Z"
   },
   "postboot-3-ui-lazy": {
-    "file": "postboot-3-ui-lazy.bundle.e3d91a4d52bd.js",
-    "hash": "e3d91a4d52bd",
-    "sourceFingerprint": "c5b2d6b28f8c",
+    "file": "postboot-3-ui-lazy.bundle.1475ac0d159d.js",
+    "hash": "1475ac0d159d",
+    "sourceFingerprint": "4200a5e9246e",
     "fileCount": 72,
-    "size": 4757378,
-    "builtAt": "2026-08-19T22:19:10.965Z"
+    "size": 4758619,
+    "builtAt": "2026-08-19T23:41:52.615Z"
   }
 }
