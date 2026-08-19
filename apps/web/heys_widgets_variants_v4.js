@@ -93,7 +93,9 @@
     relapseRisk: [
       { id: 'list', title: 'Как сейчас', subtitle: 'уровень и две причины', size: '2x2' },
       { id: 'main', title: 'Главный риск', subtitle: 'назван риск, уровень — подписью', size: '2x1' },
-      { id: 'scale', title: 'Шкала', subtitle: 'уровень из четырёх и что его поднимет', size: '2x2' }
+      // Дефолт задан флагом, а не порядком: порядок карточек в шторке принадлежит
+      // канвасу, а какой вид стоит по умолчанию — решение владельца (2026-08-19).
+      { id: 'scale', title: 'Шкала', subtitle: 'уровень из четырёх и что его поднимет', size: '2x2', isDefault: true }
     ],
     healthTrend: [
       { id: 'spark', title: 'Как сейчас', subtitle: '+8 за 14 дней и линия', size: '2x2', tileBg: 'sage' },
@@ -153,11 +155,17 @@
     return getCatalog(widgetType).filter((item) => item.sheet !== false);
   }
 
+  // Вид по умолчанию — помеченный isDefault, иначе первый в каталоге.
+  function getDefaultVariant(widgetType) {
+    const catalog = getCatalog(widgetType);
+    return catalog.find((v) => v.isDefault) || catalog[0] || null;
+  }
+
   function getActiveVariant(widget, widgetType) {
     const catalog = getCatalog(widgetType);
     const id = widget?.settings?.displayVariant;
     const found = catalog.find((v) => v.id === id);
-    return found || catalog[0] || null;
+    return found || getDefaultVariant(widgetType);
   }
 
   function getVariantById(widgetType, variantId) {
@@ -286,7 +294,7 @@
 
     const catalog = getCatalog(widgetType);
     const hasVariants = catalog.length > 1;
-    const displayVariant = widget?.settings?.displayVariant || catalog[0]?.id || 'default';
+    const displayVariant = widget?.settings?.displayVariant || getDefaultVariant(widgetType)?.id || 'default';
     const activeMeta = getActiveVariant(widget, widgetType);
 
     const [sheetOpen, setSheetOpen] = useState(false);
@@ -475,10 +483,10 @@
   function buildRegistryDisplayVariant(widgetType) {
     const catalog = getCatalog(widgetType);
     if (!catalog.length) return null;
-    const first = catalog[0];
+    const fallback = getDefaultVariant(widgetType);
     return {
       type: 'select',
-      default: first.id,
+      default: fallback.id,
       label: 'Вид',
       options: catalog.map((v) => ({
         value: v.id,
@@ -514,6 +522,7 @@
     getCatalog,
     getSheetCatalog,
     getActiveVariant,
+    getDefaultVariant,
     getVariantById,
     countCatalogVariants,
     WidgetVariantSheet,

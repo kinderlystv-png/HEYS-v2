@@ -24,7 +24,13 @@ describe('widget variants v4', () => {
 
   it('getActiveVariant — дефолт первого id в каталоге', () => {
     expect(variantsSrc).toContain('function getActiveVariant(widget, widgetType)');
-    expect(variantsSrc).toContain('return found || catalog[0] || null');
+    expect(variantsSrc).toContain('return found || getDefaultVariant(widgetType)');
+    // Дефолт задаётся флагом isDefault, а не порядком карточек: порядок в шторке
+    // принадлежит канвасу. Риск-радар открывается «Шкалой» (решение владельца).
+    expect(variantsSrc).toContain('function getDefaultVariant(widgetType)');
+    expect(variantsSrc).toContain("id: 'scale', title: 'Шкала', subtitle: 'уровень из четырёх и что его поднимет', size: '2x2', isDefault: true");
+    // Флаг ровно один на весь каталог — иначе дефолт становится лотереей.
+    expect(variantsSrc.split('isDefault: true').length - 1).toBe(1);
   });
 
   it('registry — displayVariant через applyCatalogToRegistry', () => {
