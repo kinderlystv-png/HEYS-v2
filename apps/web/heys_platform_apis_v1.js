@@ -111,6 +111,16 @@
   const MAX_UPDATE_ATTEMPTS = 2;
   const UPDATE_COOLDOWN_MS = 60000;
 
+  // === Update recovery: страховка от «молча застряли на старой версии» ===
+  // Автообновление живёт целиком в SW-цикле (updatefound → skipWaiting → reload).
+  // Если новый worker не встаёт (типично для iOS standalone), пользователь
+  // бесконечно остаётся на старой сборке и никак об этом не узнаёт. Считаем
+  // попытки по версии, с которой уходим: сменилась после перезагрузки — успех,
+  // не сменилась больше MAX_UPDATE_ATTEMPTS раз — показываем ручной prompt.
+  const UPDATE_RECOVERY_KEY = 'heys_update_recovery';
+  const UPDATE_RECOVERY_SNOOZE_MS = 6 * 60 * 60 * 1000; // «Позже»
+  const UPDATE_RECOVERY_RETRY_MS = 5 * 60 * 1000;       // после ручной попытки
+
   let _updateAvailable = false;
   let _updateVersion = null;
 
@@ -243,6 +253,126 @@
 
   function clearUpdateLock() {
     localStorage.removeItem(UPDATE_LOCK_KEY);
+  }
+
+  function readUpdateRecovery() {
+    try {
+      const raw = localStorage.getItem(UPDATE_RECOVERY_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      return data && typeof data === 'object' ? data : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function writeUpdateRecovery(data) {
+    try {
+      localStorage.setItem(UPDATE_RECOVERY_KEY, JSON.stringify(data));
+    } catch (e) { /* noop */ }
+  }
+
+  function clearUpdateRecovery() {
+    try {
+      localStorage.removeItem(UPDATE_RECOVERY_KEY);
+    } catch (e) { /* noop */ }
+  }
+
+  // Вызывается в момент, когда приложение реально пытается применить обновление.
+  function recordUpdateAttempt(now = Date.now()) {
+    const fromVersion = getAppVersion();
+    if (!fromVersion || fromVersion === 'unknown') return null;
+
+    const prev = readUpdateRecovery();
+    const sameTarget = prev?.fromVersion === fromVersion;
+    const next = {
+      fromVersion,
+      count: sameTarget ? (Number(prev.count) || 0) + 1 : 1,
+      lastAttemptAt: now,
+    };
+    if (sameTarget && prev.snoozeUntil) next.snoozeUntil = prev.snoozeUntil;
+
+    writeUpdateRecovery(next);
+    return next;
+  }
+
+  function snoozeUpdateRecovery(durationMs, now = Date.now()) {
+    const rec = readUpdateRecovery();
+    if (!rec) return;
+    writeUpdateRecovery({ ...rec, snoozeUntil: now + durationMs });
+  }
+
+  // Решение принимается на старте: версия уже известна, перезагрузка позади.
+  function evaluateUpdateRecovery(now = Date.now()) {
+    const rec = readUpdateRecovery();
+    if (!rec || !rec.fromVersion) return { action: 'none', reason: 'no_record' };
+
+    const currentVersion = getAppVersion();
+    if (!currentVersion || currentVersion === 'unknown') {
+      return { action: 'none', reason: 'unknown_version' };
+    }
+
+    // Версия сменилась — обновление всё-таки встало.
+    if (currentVersion !== rec.fromVersion) {
+      clearUpdateRecovery();
+      return { action: 'clear', reason: 'update_succeeded' };
+    }
+
+    if ((Number(rec.count) || 0) <= MAX_UPDATE_ATTEMPTS) {
+      return { action: 'none', reason: 'under_limit', count: Number(rec.count) || 0 };
+    }
+
+    if (rec.snoozeUntil && now < rec.snoozeUntil) {
+      return { action: 'none', reason: 'snoozed' };
+    }
+
+    return { action: 'prompt', reason: 'stuck_on_old_version', count: Number(rec.count) || 0 };
+  }
+
+  async function fetchServerVersion() {
+    try {
+      const response = await fetch(`/build-meta.json?_cb=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data?.version || null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function runUpdateRecoveryCheck() {
+    const verdict = evaluateUpdateRecovery();
+    if (verdict.action !== 'prompt') return verdict;
+
+    console.warn('[SW] ⚠️ Update stuck after', verdict.count, 'attempts — asking user to refresh manually');
+    HEYS.LogTrace?.event?.('update_recovery_prompt', {
+      source: 'service_worker',
+      reason: verdict.reason,
+      status: 'warn'
+    });
+
+    // Гейт против ложной тревоги. Счётчик растёт на любой попытке применить
+    // новый worker, а sw.js меняет свою cache version при каждой сборке — даже
+    // когда исходники те же и обновляться не на что. Показываем prompt только
+    // если сервер действительно отдаёт версию новее нашей. Нет ответа (офлайн,
+    // упавший build-meta.json) — молчим до следующего старта: обновиться всё
+    // равно нельзя, а пугать нечем.
+    const targetVersion = await fetchServerVersion();
+    if (!targetVersion) {
+      return { action: 'none', reason: 'server_version_unavailable' };
+    }
+    if (!isNewerVersion(targetVersion, getAppVersion())) {
+      clearUpdateRecovery();
+      return { action: 'clear', reason: 'server_not_newer' };
+    }
+
+    const show = () => showManualRefreshPrompt(targetVersion);
+    if (!runWhenManagedModalsClose(show, 'update-recovery')) show();
+
+    return verdict;
   }
 
   function showUpdateBadge(version) {
@@ -398,9 +528,12 @@
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
     const iconHtml = '<div class="heys-update-prompt__spinner"></div>';
+    // Версия известна не на всех путях: SW-цикл её не сообщает, а build-meta.json
+    // может не ответить. Текст обязан работать и без неё.
+    const versionSuffix = targetVersion ? ' до v' + targetVersion : '';
     const text = isIOS
-      ? 'Закройте приложение и откройте заново для обновления до v' + targetVersion
-      : 'Нажмите кнопку для обновления до v' + targetVersion;
+      ? 'Закройте приложение и откройте заново для обновления' + versionSuffix
+      : 'Нажмите кнопку для обновления' + versionSuffix;
 
     const actionsHtml = `${isIOS ? '' : `
       <button id="heys-manual-update-btn" class="heys-update-prompt__btn heys-update-prompt__btn--primary">Обновить сейчас</button>
@@ -429,6 +562,10 @@
     if (updateBtn) {
       updateBtn.addEventListener('click', () => {
         localStorage.removeItem(UPDATE_ATTEMPT_KEY);
+        // Счётчик не сбрасываем: если ручная перезагрузка тоже не поможет,
+        // prompt должен вернуться, а не начинать отсчёт заново. Короткая пауза
+        // даёт перезагрузке шанс сработать без повторного показа.
+        snoozeUpdateRecovery(UPDATE_RECOVERY_RETRY_MS);
         const url = new URL(window.location.href);
         url.searchParams.set('_v', Date.now().toString());
         window.location.href = url.toString();
@@ -438,6 +575,7 @@
     const laterBtn = document.getElementById('heys-update-later-btn');
     if (laterBtn) {
       laterBtn.addEventListener('click', () => {
+        snoozeUpdateRecovery(UPDATE_RECOVERY_SNOOZE_MS);
         releaseUpdateDialogFocus(modal);
         modal?.remove();
       });
@@ -868,7 +1006,10 @@
                 }
 
                 const keysToRemove = [];
-                const keysToKeep = ['heys_products', 'heys_profile', 'heys_norms', 'heys_hr_zones'];
+                // heys_update_recovery обязан пережить чистку сессии: иначе
+                // счётчик неудачных обновлений обнуляется на каждом заходе и
+                // застрявший клиент никогда не доберётся до ручного prompt.
+                const keysToKeep = ['heys_products', 'heys_profile', 'heys_norms', 'heys_hr_zones', UPDATE_RECOVERY_KEY];
                 // Browser-global UI keys are not tied to a client/session and
                 // must survive the update-triggered session reset.
                 const cloudRef = window.HEYS && window.HEYS.cloud;
@@ -1154,6 +1295,9 @@
 
       if (postbootDone) {
         registerServiceWorker();
+        // Проверяем застрявшее обновление после регистрации: к этому моменту
+        // версия приложения уже известна, а перезагрузка (если она была) позади.
+        runUpdateRecoveryCheck().catch(() => { });
         return;
       }
 
@@ -1179,6 +1323,8 @@
     _skipWaitingInProgress = true;
     console.log('[SW] 🔄 triggerSkipWaiting called from:', source);
     transitionSwUpdateState(SW_UPDATE_STATES.ACTIVATING, 'skipWaiting-' + source);
+    // Единственная точка, через которую проходят все пути применения обновления.
+    recordUpdateAttempt();
 
     try {
       // 1. Проверяем наличие SW controller
@@ -3140,6 +3286,10 @@
     isUpdateLocked: isUpdateLocked,
     setUpdateLock: setUpdateLock,
     clearUpdateLock: clearUpdateLock,
+    recordUpdateAttempt: recordUpdateAttempt,
+    evaluateUpdateRecovery: evaluateUpdateRecovery,
+    clearUpdateRecovery: clearUpdateRecovery,
+    runUpdateRecoveryCheck: runUpdateRecoveryCheck,
     getSwUpdateState: getSwUpdateState,
     getSwUpdateStateLog: getSwUpdateStateLog,
     showUpdateBadge: showUpdateBadge,

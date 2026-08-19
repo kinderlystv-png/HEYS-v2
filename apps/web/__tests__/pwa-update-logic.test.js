@@ -132,6 +132,84 @@ function shouldRegisterServiceWorker({ postbootDone }) {
   return postbootDone;
 }
 
+// === Симуляция update recovery из heys_platform_apis_v1.js ===
+// Считает попытки по версии, с которой уходим: сменилась — обновление встало,
+// не сменилась дольше лимита — пора просить пользователя обновиться руками.
+
+const UPDATE_RECOVERY_KEY = 'heys_update_recovery';
+const UPDATE_RECOVERY_SNOOZE_MS = 6 * 60 * 60 * 1000;
+const UPDATE_RECOVERY_RETRY_MS = 5 * 60 * 1000;
+const MAX_RECOVERY_ATTEMPTS = 2;
+
+function readUpdateRecovery() {
+  try {
+    const raw = mockStorage[UPDATE_RECOVERY_KEY];
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function recordUpdateAttempt(fromVersion) {
+  if (!fromVersion || fromVersion === 'unknown') return null;
+
+  const prev = readUpdateRecovery();
+  const sameTarget = prev?.fromVersion === fromVersion;
+  const next = {
+    fromVersion,
+    count: sameTarget ? (Number(prev.count) || 0) + 1 : 1,
+    lastAttemptAt: mockNow,
+  };
+  if (sameTarget && prev.snoozeUntil) next.snoozeUntil = prev.snoozeUntil;
+
+  mockStorage[UPDATE_RECOVERY_KEY] = JSON.stringify(next);
+  return next;
+}
+
+function snoozeUpdateRecovery(durationMs) {
+  const rec = readUpdateRecovery();
+  if (!rec) return;
+  mockStorage[UPDATE_RECOVERY_KEY] = JSON.stringify({ ...rec, snoozeUntil: mockNow + durationMs });
+}
+
+// Гейт из runUpdateRecoveryCheck: prompt показывается только когда сервер
+// подтверждает, что новее версия действительно есть.
+function gateRecoveryByServer(verdict, currentVersion, serverVersion) {
+  if (verdict.action !== 'prompt') return verdict;
+  if (!serverVersion) return { action: 'none', reason: 'server_version_unavailable' };
+
+  const toNumber = (v) => parseInt(v.split('.').slice(0, 4).join(''), 10) || 0;
+  if (toNumber(serverVersion) <= toNumber(currentVersion)) {
+    delete mockStorage[UPDATE_RECOVERY_KEY];
+    return { action: 'clear', reason: 'server_not_newer' };
+  }
+
+  return verdict;
+}
+
+function evaluateUpdateRecovery(currentVersion) {
+  const rec = readUpdateRecovery();
+  if (!rec || !rec.fromVersion) return { action: 'none', reason: 'no_record' };
+  if (!currentVersion || currentVersion === 'unknown') {
+    return { action: 'none', reason: 'unknown_version' };
+  }
+
+  if (currentVersion !== rec.fromVersion) {
+    delete mockStorage[UPDATE_RECOVERY_KEY];
+    return { action: 'clear', reason: 'update_succeeded' };
+  }
+
+  if ((Number(rec.count) || 0) <= MAX_RECOVERY_ATTEMPTS) {
+    return { action: 'none', reason: 'under_limit', count: Number(rec.count) || 0 };
+  }
+
+  if (rec.snoozeUntil && mockNow < rec.snoozeUntil) {
+    return { action: 'none', reason: 'snoozed' };
+  }
+
+  return { action: 'prompt', reason: 'stuck_on_old_version', count: Number(rec.count) || 0 };
+}
+
 describe('PWA update protection', () => {
   beforeEach(() => {
     mockStorage = {};
@@ -389,6 +467,157 @@ describe('PWA update protection', () => {
       expect(shellSource).toContain('version:      ${rt.runtimeVersion');
       expect(shellSource).toContain('bootApp:      ${rt.loadedBootApp');
       expect(shellSource).toContain('appMode:      ${rt.pwaMode');
+    });
+  });
+
+  describe('update recovery (застряли на старой версии)', () => {
+    beforeEach(() => {
+      mockStorage = {};
+      mockNow = 1_000_000;
+    });
+
+    it('первая попытка не показывает ручной prompt', () => {
+      recordUpdateAttempt('2026.08.19.1200.aaa');
+
+      expect(JSON.parse(mockStorage[UPDATE_RECOVERY_KEY]).count).toBe(1);
+      expect(evaluateUpdateRecovery('2026.08.19.1200.aaa').action).toBe('none');
+    });
+
+    it('показывает prompt, когда версия не сменилась после трёх попыток', () => {
+      const stuck = '2026.08.19.1200.aaa';
+      recordUpdateAttempt(stuck);
+      recordUpdateAttempt(stuck);
+      recordUpdateAttempt(stuck);
+
+      const verdict = evaluateUpdateRecovery(stuck);
+
+      expect(verdict.action).toBe('prompt');
+      expect(verdict.count).toBe(3);
+    });
+
+    it('очищает счётчик, когда обновление всё-таки встало', () => {
+      const before = '2026.08.19.1200.aaa';
+      recordUpdateAttempt(before);
+      recordUpdateAttempt(before);
+      recordUpdateAttempt(before);
+
+      const verdict = evaluateUpdateRecovery('2026.08.19.1830.bbb');
+
+      expect(verdict.action).toBe('clear');
+      expect(mockStorage[UPDATE_RECOVERY_KEY]).toBeUndefined();
+    });
+
+    it('начинает отсчёт заново, когда застряли уже на другой версии', () => {
+      recordUpdateAttempt('2026.08.19.1200.aaa');
+      recordUpdateAttempt('2026.08.19.1200.aaa');
+      recordUpdateAttempt('2026.08.19.1830.bbb');
+
+      const record = JSON.parse(mockStorage[UPDATE_RECOVERY_KEY]);
+
+      expect(record.fromVersion).toBe('2026.08.19.1830.bbb');
+      expect(record.count).toBe(1);
+    });
+
+    it('«Позже» прячет prompt на шесть часов и потом возвращает', () => {
+      const stuck = '2026.08.19.1200.aaa';
+      recordUpdateAttempt(stuck);
+      recordUpdateAttempt(stuck);
+      recordUpdateAttempt(stuck);
+
+      snoozeUpdateRecovery(UPDATE_RECOVERY_SNOOZE_MS);
+
+      expect(evaluateUpdateRecovery(stuck).reason).toBe('snoozed');
+
+      mockNow += UPDATE_RECOVERY_SNOOZE_MS + 1;
+
+      expect(evaluateUpdateRecovery(stuck).action).toBe('prompt');
+    });
+
+    it('«Обновить сейчас» не обнуляет счётчик — prompt вернётся через пять минут', () => {
+      const stuck = '2026.08.19.1200.aaa';
+      recordUpdateAttempt(stuck);
+      recordUpdateAttempt(stuck);
+      recordUpdateAttempt(stuck);
+
+      snoozeUpdateRecovery(UPDATE_RECOVERY_RETRY_MS);
+      mockNow += UPDATE_RECOVERY_RETRY_MS + 1;
+
+      const verdict = evaluateUpdateRecovery(stuck);
+
+      expect(verdict.action).toBe('prompt');
+      expect(verdict.count).toBe(3);
+    });
+
+    it('молчит, когда сервер отдаёт ту же версию — обновляться не на что', () => {
+      const stuck = '2026.08.19.1200.aaa';
+      recordUpdateAttempt(stuck);
+      recordUpdateAttempt(stuck);
+      recordUpdateAttempt(stuck);
+
+      // Счётчик успел вырасти на пересборках sw.js без нового релиза.
+      const gated = gateRecoveryByServer(evaluateUpdateRecovery(stuck), stuck, stuck);
+
+      expect(gated.action).toBe('clear');
+      expect(mockStorage[UPDATE_RECOVERY_KEY]).toBeUndefined();
+    });
+
+    it('молчит в офлайне, когда версию сервера не удалось получить', () => {
+      const stuck = '2026.08.19.1200.aaa';
+      recordUpdateAttempt(stuck);
+      recordUpdateAttempt(stuck);
+      recordUpdateAttempt(stuck);
+
+      const gated = gateRecoveryByServer(evaluateUpdateRecovery(stuck), stuck, null);
+
+      expect(gated.action).toBe('none');
+      expect(gated.reason).toBe('server_version_unavailable');
+      // Запись сохраняется: попробуем ещё раз на следующем старте.
+      expect(mockStorage[UPDATE_RECOVERY_KEY]).toBeDefined();
+    });
+
+    it('показывает prompt, когда сервер подтверждает более новую сборку', () => {
+      const stuck = '2026.08.19.1200.aaa';
+      recordUpdateAttempt(stuck);
+      recordUpdateAttempt(stuck);
+      recordUpdateAttempt(stuck);
+
+      const gated = gateRecoveryByServer(
+        evaluateUpdateRecovery(stuck),
+        stuck,
+        '2026.08.19.1830.bbb'
+      );
+
+      expect(gated.action).toBe('prompt');
+    });
+
+    it('не трогает счётчик, пока версия приложения неизвестна', () => {
+      recordUpdateAttempt('unknown');
+
+      expect(mockStorage[UPDATE_RECOVERY_KEY]).toBeUndefined();
+      expect(evaluateUpdateRecovery('unknown').reason).toBe('no_record');
+    });
+
+    it('связывает счётчик, boot-проверку и чистку сессии в живом коде', () => {
+      const webCwdPath = join(process.cwd(), 'heys_platform_apis_v1.js');
+      const platformPath = existsSync(webCwdPath)
+        ? webCwdPath
+        : join(process.cwd(), 'apps/web/heys_platform_apis_v1.js');
+      const platformSource = readFileSync(platformPath, 'utf8');
+
+      // Попытка считается в единственной точке применения обновления.
+      expect(platformSource).toContain('transitionSwUpdateState(SW_UPDATE_STATES.ACTIVATING');
+      expect(platformSource).toContain('recordUpdateAttempt();');
+      // Проверка застревания запускается на старте, после регистрации SW.
+      expect(platformSource).toContain('runUpdateRecoveryCheck().catch(() => { });');
+      // Счётчик переживает чистку сессии при обновлении.
+      expect(platformSource).toContain("'heys_norms', 'heys_hr_zones', UPDATE_RECOVERY_KEY]");
+      // Prompt не ломается без известной версии сервера.
+      expect(platformSource).toContain("const versionSuffix = targetVersion ? ' до v' + targetVersion : '';");
+      // «Позже» глушит именно этот prompt, а не сбрасывает счётчик.
+      expect(platformSource).toContain('snoozeUpdateRecovery(UPDATE_RECOVERY_SNOOZE_MS);');
+      // Ложная тревога отсекается сверкой с сервером.
+      expect(platformSource).toContain("return { action: 'none', reason: 'server_version_unavailable' };");
+      expect(platformSource).toContain('if (!isNewerVersion(targetVersion, getAppVersion()))');
     });
   });
 
