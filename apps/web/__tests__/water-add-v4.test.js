@@ -67,7 +67,6 @@ describe('добавление воды — канвас water-add v4, ветк�
   });
 
   it('вне Главной отвечает мерный столбик, и он не кнопка', () => {
-    expect(handlersSrc).toContain("col.className = 'water-column'");
     expect(handlersSrc).toContain('water-column__delta');
     expect(handlersSrc).toContain('water-column__total');
     expect(handlersSrc).toContain('water-column__target');
@@ -81,6 +80,9 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(waterCss).toMatch(/\.water-column \{[\s\S]*?pointer-events: none/);
     expect(waterCss).toContain('transition: opacity 180ms ease-out');
     expect(waterCss).toMatch(/\.water-column__fill \{[\s\S]*?transition: height 320ms/);
+    // Столбик живёт вне .widgets-grid, поэтому общий reduce-motion гасил бы ему
+    // длительности в ноль — как когда-то кольцам БЖУ и динамике веса.
+    expect(handlersSrc).toContain("col.className = 'water-column animate-always'");
   });
 
   it('новый «звук капли» не реализован — семпла ещё нет, прежний звук цел', () => {

@@ -241,7 +241,12 @@
                     if (col) return col;
                     col = document.createElement('div');
                     col.id = 'heys-water-column';
-                    col.className = 'water-column';
+                    // animate-always: столбик живёт в body, вне .widgets-grid, и
+                    // без этого класса общий reduce-motion гасит ему длительности
+                    // в ноль — как когда-то кольцам БЖУ и динамике веса. Он не
+                    // украшение, а единственный ответ на жест вне Главной;
+                    // собственную reduce-ветку (160 мс) он держит сам.
+                    col.className = 'water-column animate-always';
                     col.setAttribute('aria-hidden', 'true');
                     col.innerHTML = '<span class="water-column__bar">'
                         + '<span class="water-column__fill"></span></span>'
