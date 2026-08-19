@@ -32,6 +32,8 @@ describe('добавление воды — канвас water-add v4, ветк�
   });
 
   it('капля, круг, уровень и число — параметры из спецификации', () => {
+    expect(uiSrc).toContain('widget-water__numV');
+    expect(widgetsCss).toContain('.widget-water__numV');
     expect(uiSrc).toContain("className: 'widget-water__drop'");
     expect(uiSrc).toContain("className: 'widget-water__ripple'");
     expect(uiSrc).toContain('--water-drop-travel');
@@ -48,12 +50,21 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(widgetsCss).toContain('animation: widgetWaterNumOut 160ms ease-in-out 240ms');
     expect(widgetsCss).toContain('animation: widgetWaterNumIn 160ms ease-in-out 240ms');
     // блики живут всегда, независимо от добавления
-    expect(widgetsCss).toContain('animation: widgetWaterShine 1.1s linear infinite');
+    expect(widgetsCss).toContain('animation: widgetWaterShine 3.4s linear infinite');
     // Вода заливает карточку от края до края и обрезается её скруглением.
     // Если контейнеру вернуть position: relative, заливка снова зажмётся
     // отступами карточки и перестанет доходить до краёв.
     const waterRootRule = widgetsCss.match(/\.widget-water--v4 \{[^}]*\}/)[0];
     expect(waterRootRule).not.toContain('position: relative');
+    // Кикер и число стоят одной строкой сверху, а не абсолютом от карточки:
+    // абсолют игнорирует её отступы и прилепляет число к самому краю.
+    expect(uiSrc).toContain("className: 'widget-water__head'");
+    expect(widgetsCss).toMatch(/\.widget-water__head \{[^}]*justify-content: space-between/);
+    const numRule = widgetsCss.match(/\.widget-water__numV \{[^}]*\}/)[0];
+    expect(numRule).toContain('position: relative');
+    expect(numRule).not.toContain('position: absolute');
+    // Легаси-центрирование микро-плитки перебито — содержимое стоит сверху.
+    expect(waterRootRule).toContain('justify-content: flex-start');
     expect(uiSrc).toContain('function waterTileCard');
     expect(uiSrc).toContain("closest('.widget')");
   });
@@ -96,6 +107,7 @@ describe('добавление воды — канвас water-add v4, ветк�
     // Канвас: «пока файла нет, анимацию можно отдавать в разработку, звук — нет».
     // Прежний звук добавления при этом не трогаем — его удаление никто не просил.
     expect(handlersSrc).toContain("HEYS.audio.play('waterAdded'");
+    expect(handlersSrc).toContain('setTimeout(playSound, 240)');
     expect(handlersSrc).not.toContain('waterDropSound');
     expect(handlersSrc).not.toContain('30 центов');
   });

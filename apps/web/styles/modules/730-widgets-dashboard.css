@@ -9985,6 +9985,28 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 .widget-water--v4 {
   --water-tone: #7d98a6;
   --water-drop-travel: 21px;
+  /* Перебиваем легаси-центрирование микро-плитки: в канвасе содержимое стоит
+     сверху, а не по центру. */
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  height: 100%;
+  min-height: 0;
+  gap: 0;
+  padding: 0;
+}
+
+/* Кикер слева, число справа, между ними воздух — одной строкой, чтобы отступы
+   карточки работали сами. Абсолют от карточки прилепил бы число к её краю. */
+.widget-water__head {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  flex: none;
 }
 
 [data-theme$="dark"] .widget-water--v4 {
@@ -9999,6 +10021,17 @@ html[data-theme-id="blue-dark"] .widget-water--v4 {
   --water-tone: #7fb6d0;
 }
 
+body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water.widget--1x1 {
+  padding: 8px;
+}
+
+.widget-water--v4 .widget-v4-kicker {
+  position: relative;
+  z-index: 2;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
 .widget-water__fill {
   position: absolute;
   left: 0;
@@ -10009,26 +10042,25 @@ html[data-theme-id="blue-dark"] .widget-water--v4 {
   pointer-events: none;
 }
 
-/* Блики поверхности идут всегда, а не только при добавлении — иначе плитка
-   выглядит мёртвой между тапами. */
+/* Блики поверхности — два слоя пунктира, цикл 3,4 с (канвас V₃). */
 .widget-water__fill::before {
   content: '';
   position: absolute;
   top: -3px;
-  left: -40px;
-  right: -40px;
-  height: 6px;
-  background: repeating-linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.4) 0 9px,
-    transparent 9px 18px
-  );
-  animation: widgetWaterShine 1.1s linear infinite;
+  left: 0;
+  right: 0;
+  height: 7px;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.34) 0 7px, rgba(255, 255, 255, 0) 7px 16px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.15) 0 3px, rgba(255, 255, 255, 0) 3px 11px);
+  background-size: 16px 100%, 11px 100%;
+  animation: widgetWaterShine 3.4s linear infinite;
 }
 
 @keyframes widgetWaterShine {
-  from { transform: translateX(0); }
-  to { transform: translateX(18px); }
+  to {
+    background-position: 16px 0, 11px 0;
+  }
 }
 
 /* Капля 6×6 стартует у верхней кромки, отступ 5px, падает 220 мс ease-in и
@@ -10079,31 +10111,72 @@ html[data-theme-id="blue-dark"] .widget-water--v4 {
 }
 
 .widget-water--v4 .widget-v4-kicker,
-.widget-water__num {
+.widget-water__numV {
   position: relative;
   z-index: 2;
 }
 
-/* Число переезжает кроссфейдом 160 мс со сдвигом 5px, начиная через 240 мс
-   после тапа — чтобы не спорить с каплей. */
-.widget-water__num {
+/* Число в правом верхнем углу — не спорит с заливкой (канвас V₃). */
+.widget-water__numV {
   position: relative;
+  flex: none;
+  z-index: 3;
+  height: 15px;
+  min-width: 34px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--v4-ink, #201e1d);
+  font-variant-numeric: tabular-nums;
 }
 
-.widget-water__num-out {
+.widget-water__numV.widget-v4-val--bad {
+  color: var(--v4-bad-text, #a8382b);
+}
+
+.widget-water__num-unit {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+}
+
+.widget-water__numV .widget-water__num-out,
+.widget-water__numV .widget-water__num-in {
+  white-space: nowrap;
+}
+
+.widget-water__numV .widget-water__num-out {
   position: absolute;
-  left: 0;
+  right: 0;
   top: 0;
-  animation: widgetWaterNumOut 160ms ease-in-out 240ms forwards;
 }
 
-.widget-water__num-in {
+.widget-water__numV .widget-water__num-in {
+  position: absolute;
+  right: 0;
+  top: 0;
   display: inline-flex;
   align-items: baseline;
+  gap: 0;
+}
+
+.widget-water__num-in:not(.widget-water__num-in--static) {
   opacity: 0;
   animation: widgetWaterNumIn 160ms ease-in-out 240ms forwards;
 }
 
+.widget-water__num-in--static {
+  opacity: 1;
+}
+
+.widget-water__num-out {
+  animation: widgetWaterNumOut 160ms ease-in-out 240ms forwards;
+}
+
+/* Число переезжает кроссфейдом 160 мс со сдвигом 5px, начиная через 240 мс
+   после тапа — чтобы не спорить с каплей. */
 @keyframes widgetWaterNumOut {
   from { opacity: 1; transform: translateY(0); }
   to { opacity: 0; transform: translateY(-5px); }
@@ -11221,6 +11294,12 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget .widget__content > .wi
 
 .widget-v4-water-hour__bar {
   position: relative;
+  height: 5px;
+  margin-top: 6px;
+}
+
+.widget-v4-water-hour__bar .widget-v4-mini__bar-fill {
+  height: 5px;
 }
 
 .widget-v4-water-hour__marker {
@@ -11228,7 +11307,8 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget .widget__content > .wi
   top: -2px;
   width: 2px;
   height: calc(100% + 4px);
-  background: var(--v4-act, #c67139);
+  border-radius: 2px;
+  background: var(--v4-ink, #201e1d);
   transform: translateX(-50%);
 }
 
@@ -11667,7 +11747,23 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget .widget__content > .wi
 }
 
 .widget-v4-water-rhythm__bin--fill {
-  background: var(--v4-water, #7d98a6);
+  background: var(--water-tone, #7d98a6);
+}
+
+.widget-water--2x1.widget-v4-stack {
+  --water-tone: #7d98a6;
+}
+
+[data-theme$="dark"] .widget-water--2x1.widget-v4-stack {
+  --water-tone: #8fb3c2;
+}
+
+html[data-theme-id="blue"] .widget-water--2x1.widget-v4-stack {
+  --water-tone: #3d7f9e;
+}
+
+html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
+  --water-tone: #7fb6d0;
 }
 
 .widget-v4-sleep-window {

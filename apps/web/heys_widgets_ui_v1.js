@@ -3626,10 +3626,13 @@
           style: { bottom: `${fillPct}%` },
           'aria-hidden': 'true'
         }) : null,
+        // Канвас В₃: кикер слева сверху, число — справа сверху, между ними воздух.
+        // Строкой, а не абсолютом от карточки: иначе число липнет к её краю,
+        // потому что отступы карточки на абсолютное позиционирование не влияют.
+        React.createElement('div', { className: 'widget-water__head' },
         v4Kicker('Вода'),
-        // Вспомогательным технологиям озвучиваем итог, а не ход анимации.
         React.createElement('div', {
-          className: 'widget-v4-mini__value widget-water__num ' + v4ValueStateClass(waterState),
+          className: 'widget-water__num widget-water__numV ' + v4ValueStateClass(waterState),
           'aria-label': `${litersLabel} литра`
         },
           pulse && prevLabel !== litersLabel
@@ -3641,11 +3644,13 @@
             : null,
           React.createElement('span', {
             key: pulse ? `in-${pulse.id}` : 'in',
-            className: pulse && prevLabel !== litersLabel ? 'widget-water__num-in' : ''
+            className: 'widget-water__num-in'
+              + (pulse && prevLabel !== litersLabel ? '' : ' widget-water__num-in--static')
           },
             litersLabel,
-            React.createElement('span', { className: 'widget-v4-unit' }, ' л')
+            React.createElement('span', { className: 'widget-water__num-unit' }, ' л')
           )
+        )
         )
       );
     }
