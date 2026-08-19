@@ -304,11 +304,23 @@
                 HEYS.waterFeedback.isTileVisible = waterTileIsVisible;
                 HEYS.waterFeedback.playAddFeedback = function playAddFeedback(detail) {
                     if (!detail || !detail.ml) return;
-                    // Прежний звук добавления остаётся как был. Новый «звук капли»
-                    // из канваса не реализуем: спецификация прямо запрещает
-                    // отдавать его без записанного семпла.
-                    if (detail.playSound !== false && HEYS.audio?.play) {
-                        HEYS.audio.play('waterAdded', { haptic: false });
+                    const playSound = () => {
+                        // Прежний звук добавления остаётся как был. Новый «звук капли»
+                        // из канваса не реализуем: спецификация прямо запрещает
+                        // отдавать его без записанного семпла.
+                        if (detail.playSound !== false && HEYS.audio?.play) {
+                            HEYS.audio.play('waterAdded', { haptic: false });
+                        }
+                    };
+                    const reducedMotion = typeof window !== 'undefined'
+                        && window.matchMedia
+                        && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    // Звук ждёт касания поверхности: при анимации плитки — 240 мс,
+                    // при столбике или reduce-motion — сразу.
+                    if (waterTileIsVisible() && !reducedMotion) {
+                        setTimeout(playSound, 240);
+                    } else {
+                        playSound();
                     }
                     if (waterTileIsVisible()) return;
                     showWaterColumn(detail);

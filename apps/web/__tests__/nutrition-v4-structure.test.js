@@ -28,6 +28,8 @@ describe('Nutrition tab v4 structure', () => {
     expect(nutritionSource).toContain('Добавить приём пищи');
     expect(nutritionSource).toContain('nutrition-v4-breakdown');
     expect(nutritionSource).toContain('nutrition-v4-water');
+    expect(nutritionSource).toContain('−100');
+    expect(nutritionSource).toContain('removeWater');
   });
 
   it('localizes diary meal titles instead of showing english type keys', () => {

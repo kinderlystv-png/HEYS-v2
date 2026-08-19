@@ -2403,10 +2403,11 @@
                 waterGoal,
                 addMeal,
                 addWater,
+                removeWater,
                 openAddProductForMeal,
                 haptic
             });
-        }, [showNutritionContent, day?.meals, day?.waterMl, day?.water, day?.date, eatenKcal, displayOptimum, displayRemainingKcal, dayTot, normAbs, insulinWaveData, mealsUI, waterGoal, date, pIndex, prof, openAddProductForMeal]);
+        }, [showNutritionContent, day?.meals, day?.waterMl, day?.water, day?.date, eatenKcal, displayOptimum, displayRemainingKcal, dayTot, normAbs, insulinWaveData, mealsUI, waterGoal, date, pIndex, prof, openAddProductForMeal, addMeal, addWater, removeWater, haptic]);
 
         if (!HEYS.dayTabRender?.renderDayTabLayout) {
             throw new Error('[heys_day_v12] HEYS.dayTabRender not loaded before heys_day_v12.js');

@@ -3744,7 +3744,19 @@ html[data-theme-id="blue"] .water-column__bar {
   left: 0;
   right: 0;
   height: 3px;
-  background: rgba(255, 255, 255, 0.5);
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.55) 0 2px,
+    rgba(255, 255, 255, 0.12) 2px 5px
+  );
+  background-size: 5px 100%;
+  animation: waterColumnShine 2.6s linear infinite;
+}
+
+@keyframes waterColumnShine {
+  to {
+    background-position: 5px 0;
+  }
 }
 
 /* Прирост важен ровно один раз — поэтому он самый мелкий; итог остаётся с
@@ -3783,5 +3795,9 @@ html[data-theme-id="blue"] .water-column__bar {
 
   .water-column__fill {
     transition-duration: 160ms;
+  }
+
+  .water-column__fill::before {
+    animation: none;
   }
 }

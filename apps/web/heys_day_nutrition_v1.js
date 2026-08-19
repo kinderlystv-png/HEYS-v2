@@ -171,7 +171,7 @@
       waterGoal
     } = ctx;
 
-    const { addMeal, addWater, openAddProductForMeal, haptic } = actions || {};
+    const { addMeal, addWater, removeWater, openAddProductForMeal, haptic } = actions || {};
     const [curatorCue, setCuratorCue] = React.useState(null);
     React.useEffect(() => {
       const sync = () => {
@@ -388,6 +388,11 @@
           )
         ),
         React.createElement('div', { className: 'nutrition-v4-water__actions' },
+          waterCurrent > 0 && React.createElement('button', {
+            type: 'button',
+            className: 'nutrition-v4-water__btn nutrition-v4-water__btn--minus',
+            onClick: () => removeWater?.(100)
+          }, '−100'),
           React.createElement('button', {
             type: 'button',
             className: 'nutrition-v4-water__btn',

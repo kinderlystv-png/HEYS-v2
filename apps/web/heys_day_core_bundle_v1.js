@@ -5605,11 +5605,7 @@
                     skipScroll: !!optionsOrSkipScroll.skipScroll,
                     source: optionsOrSkipScroll.source || 'water-action',
                     sourceEl: optionsOrSkipScroll.sourceEl || null,
-                    playSound: optionsOrSkipScroll.playSound !== false,
-                    showScreenFill: optionsOrSkipScroll.showScreenFill !== false,
-                    pulseWaterWidget: optionsOrSkipScroll.pulseWaterWidget !== false,
-                    showSourceBadge: optionsOrSkipScroll.showSourceBadge !== false,
-                    showSourceDrop: optionsOrSkipScroll.showSourceDrop !== false
+                    playSound: optionsOrSkipScroll.playSound !== false
                 };
             }
 
@@ -5617,11 +5613,7 @@
                 skipScroll: !!optionsOrSkipScroll,
                 source: 'water-action',
                 sourceEl: null,
-                playSound: true,
-                showScreenFill: true,
-                pulseWaterWidget: true,
-                showSourceBadge: true,
-                showSourceDrop: true
+                playSound: true
             };
         }
 
@@ -5629,126 +5621,117 @@
             HEYS.waterFeedback = HEYS.waterFeedback || {};
 
             if (typeof HEYS.waterFeedback.playAddFeedback !== 'function') {
+                // Канвас water-add v4: ответ на жест живёт там же, где результат.
+                // Плитка «Вода» видна — анимирует себя сама (ветка В₃, капля и
+                // круг внутри плитки). Не видна — слева от кнопки выезжает
+                // мерный столбик. Полноэкранной заливки, летящей капли и бейджа
+                // «+250 мл» больше нет: это язык другого жанра.
+                const WATER_TILE_VISIBLE_RATIO = 0.5;
+                const WATER_COLUMN_HOLD_MS = 1400;
+                const WATER_COLUMN_OUT_MS = 160;
+
+                function waterTileIsVisible() {
+                    const el = document.querySelector('.widget-water--v4');
+                    // Меряем карточку целиком — заливка живёт на ней, а не на
+                    // внутреннем контейнере.
+                    const card = el && typeof el.closest === 'function'
+                        ? (el.closest('.widget') || el)
+                        : el;
+                    if (!card || typeof card.getBoundingClientRect !== 'function') return false;
+                    const rect = card.getBoundingClientRect();
+                    if (!rect.height) return false;
+                    const viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
+                    const visible = Math.min(rect.bottom, viewportH) - Math.max(rect.top, 0);
+                    return visible / rect.height >= WATER_TILE_VISIBLE_RATIO;
+                }
+
+                function formatWaterLiters(ml) {
+                    return ((Number(ml) || 0) / 1000).toFixed(1).replace('.', ',');
+                }
+
+                function ensureWaterColumn(anchorEl) {
+                    let col = document.getElementById('heys-water-column');
+                    if (col) return col;
+                    col = document.createElement('div');
+                    col.id = 'heys-water-column';
+                    // animate-always: столбик живёт в body, вне .widgets-grid, и
+                    // без этого класса общий reduce-motion гасит ему длительности
+                    // в ноль — как когда-то кольцам БЖУ и динамике веса. Он не
+                    // украшение, а единственный ответ на жест вне Главной;
+                    // собственную reduce-ветку (160 мс) он держит сам.
+                    col.className = 'water-column animate-always';
+                    col.setAttribute('aria-hidden', 'true');
+                    col.innerHTML = '<span class="water-column__bar">'
+                        + '<span class="water-column__fill"></span></span>'
+                        + '<span class="water-column__text">'
+                        + '<span class="water-column__delta"></span>'
+                        + '<span class="water-column__total"></span>'
+                        + '<span class="water-column__target"></span>'
+                        + '</span>';
+                    document.body.appendChild(col);
+                    return col;
+                }
+
+                function showWaterColumn(detail) {
+                    const anchor = detail.sourceEl && typeof detail.sourceEl.getBoundingClientRect === 'function'
+                        ? detail.sourceEl
+                        : document.querySelector('.water-fab');
+                    if (!anchor) return;
+                    const rect = anchor.getBoundingClientRect();
+                    if (!rect || (!rect.width && !rect.height)) return;
+
+                    const target = Number(detail.targetMl)
+                        || Number(HEYS.Widgets?.data?.getWaterData?.()?.target)
+                        || 2000;
+                    const total = Number(detail.total) || 0;
+                    const pct = target > 0 ? Math.max(0, Math.min(100, (total / target) * 100)) : 0;
+
+                    const col = ensureWaterColumn(anchor);
+                    // Столбик не кнопка: касание проходит насквозь к тому, что под ним.
+                    col.style.top = Math.round(rect.top + rect.height / 2) + 'px';
+                    col.style.right = Math.round(window.innerWidth - rect.left + 10) + 'px';
+                    col.querySelector('.water-column__delta').textContent = '+' + detail.ml + ' мл';
+                    col.querySelector('.water-column__total').textContent = formatWaterLiters(total) + ' л';
+                    col.querySelector('.water-column__target').textContent = 'из ' + formatWaterLiters(target);
+                    col.querySelector('.water-column__fill').style.height = pct + '%';
+
+                    // Частые тапы не выводят второй столбик: он остаётся на месте,
+                    // числа обновляются, таймер ухода перезапускается.
+                    if (col._hideTimer) clearTimeout(col._hideTimer);
+                    if (col._removeTimer) clearTimeout(col._removeTimer);
+                    col.classList.remove('is-leaving');
+                    requestAnimationFrame(() => col.classList.add('is-in'));
+                    col._hideTimer = setTimeout(() => {
+                        col.classList.add('is-leaving');
+                        col._removeTimer = setTimeout(() => {
+                            col.classList.remove('is-in', 'is-leaving');
+                        }, WATER_COLUMN_OUT_MS);
+                    }, WATER_COLUMN_HOLD_MS);
+                }
+
+                HEYS.waterFeedback.isTileVisible = waterTileIsVisible;
                 HEYS.waterFeedback.playAddFeedback = function playAddFeedback(detail) {
                     if (!detail || !detail.ml) return;
-
-                    if (detail.playSound !== false && HEYS.audio?.play) {
-                        HEYS.audio.play('waterAdded', { haptic: false });
-                    }
-
-                    if (detail.showSourceBadge !== false && detail.sourceEl && typeof detail.sourceEl.getBoundingClientRect === 'function') {
-                        const rect = detail.sourceEl.getBoundingClientRect();
-                        if (rect && (rect.width || rect.height)) {
-                            const badge = document.createElement('div');
-                            badge.textContent = '+' + detail.ml + 'мл';
-                            badge.style.cssText = [
-                                'position:fixed',
-                                'left:' + Math.round(rect.left + rect.width / 2) + 'px',
-                                'top:' + Math.round(rect.top - 8) + 'px',
-                                'transform:translateX(-50%)',
-                                'padding:6px 12px',
-                                'border-radius:16px',
-                                'background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
-                                'color:#fff',
-                                'font-size:14px',
-                                'font-weight:700',
-                                'line-height:1',
-                                'white-space:nowrap',
-                                'box-shadow:0 4px 12px rgba(14, 165, 233, 0.4)',
-                                'pointer-events:none',
-                                'z-index:9999',
-                                'animation:water-fab-pop 0.8s ease-out forwards'
-                            ].join(';');
-                            document.body.appendChild(badge);
-                            setTimeout(() => { if (badge.parentNode) badge.parentNode.removeChild(badge); }, 900);
+                    const playSound = () => {
+                        // Прежний звук добавления остаётся как был. Новый «звук капли»
+                        // из канваса не реализуем: спецификация прямо запрещает
+                        // отдавать его без записанного семпла.
+                        if (detail.playSound !== false && HEYS.audio?.play) {
+                            HEYS.audio.play('waterAdded', { haptic: false });
                         }
+                    };
+                    const reducedMotion = typeof window !== 'undefined'
+                        && window.matchMedia
+                        && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                    // Звук ждёт касания поверхности: при анимации плитки — 240 мс,
+                    // при столбике или reduce-motion — сразу.
+                    if (waterTileIsVisible() && !reducedMotion) {
+                        setTimeout(playSound, 240);
+                    } else {
+                        playSound();
                     }
-
-                    if (detail.showSourceDrop !== false && detail.sourceEl && typeof detail.sourceEl.getBoundingClientRect === 'function') {
-                        const rect = detail.sourceEl.getBoundingClientRect();
-                        if (rect && (rect.width || rect.height)) {
-                            const drop = document.createElement('div');
-                            drop.className = 'water-drop-container';
-                            drop.style.cssText = [
-                                'position:fixed',
-                                'left:' + Math.round(rect.left + rect.width / 2) + 'px',
-                                'top:' + Math.round(rect.top - 20) + 'px',
-                                'z-index:9999',
-                                'pointer-events:none',
-                                'transform:translateX(-50%)'
-                            ].join(';');
-                            drop.innerHTML = '<div class="water-drop"></div><div class="water-splash"></div>';
-                            document.body.appendChild(drop);
-                            setTimeout(() => { if (drop.parentNode) drop.parentNode.removeChild(drop); }, 1200);
-                        }
-                    }
-
-                    if (detail.showScreenFill !== false) {
-                        const overlay = document.createElement('div');
-                        overlay.className = 'water-screen-fill';
-                        const body = document.createElement('div');
-                        body.className = 'water-screen-fill__body';
-                        const wave = document.createElement('div');
-                        wave.className = 'water-screen-fill__wave';
-                        const shimmer = document.createElement('div');
-                        shimmer.className = 'water-screen-fill__shimmer';
-                        body.appendChild(wave);
-                        body.appendChild(shimmer);
-
-                        for (let i = 0; i < 8; i++) {
-                            const bubble = document.createElement('div');
-                            bubble.className = 'water-screen-fill__bubble';
-                            const size = 6 + Math.random() * 14;
-                            const delay = Math.random() * 0.6;
-                            const dur = 0.7 + Math.random() * 0.8;
-                            bubble.style.cssText = [
-                                'width:' + size + 'px',
-                                'height:' + size + 'px',
-                                'left:' + (5 + Math.random() * 90) + '%',
-                                'bottom:' + (10 + Math.random() * 50) + '%',
-                                'animation-duration:' + dur + 's',
-                                'animation-delay:' + delay + 's'
-                            ].join(';');
-                            body.appendChild(bubble);
-                        }
-
-                        const amount = document.createElement('div');
-                        amount.className = 'water-screen-fill__amount';
-                        amount.textContent = '+' + detail.ml + '\u00a0мл';
-                        overlay.appendChild(amount);
-
-                        overlay.appendChild(body);
-                        document.body.appendChild(overlay);
-
-                        requestAnimationFrame(() => {
-                            body.classList.add('rising');
-                        });
-
-                        setTimeout(() => {
-                            body.classList.remove('rising');
-                            body.classList.add('draining');
-                            setTimeout(() => {
-                                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-                            }, 950);
-                        }, 1050);
-                    }
-
-                    if (detail.pulseWaterWidget !== false) {
-                        const waterWidgetCard = document.querySelector('.widget[data-widget-type="water"]');
-                        if (waterWidgetCard) {
-                            waterWidgetCard.classList.add('widget--water-pulse');
-                            setTimeout(() => {
-                                waterWidgetCard.classList.remove('widget--water-pulse');
-                            }, 1800);
-
-                            waterWidgetCard.style.transition = 'background 0.4s ease';
-                            waterWidgetCard.style.background = 'linear-gradient(135deg, rgba(10,132,255,0.12) 0%, rgba(100,210,255,0.18) 50%, rgba(0,238,255,0.10) 100%)';
-                            setTimeout(() => {
-                                waterWidgetCard.style.background = '';
-                                waterWidgetCard.style.transition = '';
-                            }, 1400);
-                        }
-                    }
+                    if (waterTileIsVisible()) return;
+                    showWaterColumn(detail);
                 };
             }
 
@@ -5889,10 +5872,7 @@
                 source: options.source || 'day-water',
                 sourceEl: options.sourceEl || null,
                 playSound: options.playSound !== false,
-                showScreenFill: options.showScreenFill !== false,
-                pulseWaterWidget: options.pulseWaterWidget !== false,
-                showSourceBadge: options.showSourceBadge !== false,
-                showSourceDrop: options.showSourceDrop !== false
+                targetMl: Number(HEYS.Widgets?.data?.getWaterData?.()?.target) || 0
             };
             window.dispatchEvent(new CustomEvent('heysWaterAdded', { detail: waterDetail }));
 

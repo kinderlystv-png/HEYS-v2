@@ -453,6 +453,20 @@
   cursor: pointer;
 }
 
+.nutrition-v4-water__btn--minus {
+  background: #fef2f2;
+  color: var(--v4-warn-2, #dc2626);
+}
+
+.nutrition-v4-water__btn--minus:active {
+  background: #fee2e2;
+}
+
+[data-theme$="dark"] .nutrition-v4-water__btn--minus {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
 .nutrition-v4-legacy-meals {
   display: none;
 }
