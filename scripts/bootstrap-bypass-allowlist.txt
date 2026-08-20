@@ -306,3 +306,9 @@ apps/web/heys_messenger_v1.js:2377
 apps/web/heys_advice_bundle_v1.js:809
 apps/web/heys_advice_bundle_v1.js:957
 apps/web/heys_advice_bundle_v1.js:1394
+
+# [phase3] Вид карточки воды в «Разборе дня» — настройка устройства, а не
+# данные клиента: на телефоне «Кольцо», на планшете «Полоса». В облако не
+# едет намеренно, ключ скоупится client_id (`viewStorageKey`), поэтому на
+# общем устройстве не течёт между клиентами.
+apps/web/heys_day_water_v1.js::viewStorageKey()
