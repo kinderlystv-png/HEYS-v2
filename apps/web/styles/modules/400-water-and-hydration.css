@@ -1,5 +1,5 @@
 /* Table of Contents
- * 01. Water Card Styles
+ * 01. Карточка воды в «Разборе дня»
  * 02. FAB группа: советы + вода
  * 03. FAB для советов (💡)
  * 04. Advice List (полноэкранный список советов)
@@ -7,855 +7,363 @@
  * 06. FAB для воды (в группе)
  */
 
-/* === 01. Water Card Styles === */
-
-/* --- Карточка воды --- */
-.compact-water {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border: 1px solid #bae6fd;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto 1fr;
-  gap: 0 12px;
-}
-
-.compact-water .compact-card-header {
-  color: #0369a1;
-  grid-column: 1;
-  grid-row: 1;
-  margin-bottom: var(--heys-diary-card-header-gap, 10px);
-}
-
-.water-card-content {
-  display: contents;
-}
-
-/* Левая часть: большое кольцо */
-.water-ring-container {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  width: 80px;
-  min-width: 80px;
-  grid-column: 1;
-  grid-row: 2;
-  z-index: 2;
-}
-
-.water-ring-large {
-  position: relative;
-  width: 72px;
-  height: 72px;
-}
-
-.water-ring-svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-
-.water-ring-bg {
-  fill: none;
-  stroke: #bae6fd;
-  stroke-width: 3;
-}
-
-.water-ring-fill {
-  fill: none;
-  stroke: #0ea5e9;
-  stroke-width: 3;
-  stroke-linecap: round;
-  transition: stroke-dasharray 0.3s ease;
-}
-
-.water-ring-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  line-height: 1.1;
-}
-
-.water-ring-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: #0369a1;
-}
-
-.water-ring-unit {
-  font-size: 11px;
-  color: #0ea5e9;
-  font-weight: 500;
-}
-
-.water-goal-text {
-  font-size: 11px;
-  color: var(--color-slate-500);
-}
-
-/* Краткий breakdown под кольцом */
-.water-goal-breakdown {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  align-items: center;
-  align-self: flex-start;
-  gap: 5px;
-  width: max-content;
-  margin-top: 10px;
-  overflow: visible;
-  pointer-events: none;
-  white-space: nowrap;
-  z-index: 3;
-}
-
-.water-breakdown-item {
-  font-size: 10px;
-  color: var(--color-slate-500);
-  line-height: 1.2;
-  flex: 0 0 auto;
-}
-
-.water-breakdown-bonus {
-  color: #059669;
-  font-weight: 500;
-}
-
-/* Напоминание "Давно не пил" */
-.water-reminder {
-  font-size: 10px;
-  color: #f59e0b;
-  font-weight: 500;
-  margin-top: 4px;
-  padding: 3px 8px;
-  background: #fffbeb;
-  border-radius: 4px;
-  animation: reminderPulse 2s ease-in-out infinite;
-}
-
-@keyframes reminderPulse {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.7;
-  }
-}
-
-[data-theme$="dark"] .water-reminder {
-  color: var(--v4-warn-soft, #fbbf24);
-  background: rgba(245, 158, 11, 0.15);
-}
-
-/* Тултип с полной формулой */
-.water-formula-tooltip {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%) translateY(-100%);
-  margin-top: -8px;
-  background: var(--color-white);
-  border-radius: 12px;
-  padding: 12px 14px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  border: 1px solid var(--v4-line, #e5e7eb);
-  z-index: 1000;
-  min-width: 200px;
-  max-width: 280px;
-  animation: tooltipFadeIn 0.2s ease-out;
-}
-
-@keyframes tooltipFadeIn {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-90%);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(-100%);
-  }
-}
-
-.water-formula-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #0369a1;
-  margin-bottom: 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--v4-line, #e5e7eb);
-}
-
-.water-formula-row {
-  font-size: 11px;
-  color: #374151;
-  padding: 3px 0;
-  line-height: 1.4;
-}
-
-.water-formula-sub {
-  color: var(--color-gray-500);
-  font-size: 10px;
-  padding-left: 8px;
-}
-
-.water-formula-total {
-  font-size: 13px;
-  font-weight: 700;
-  color: #0ea5e9;
-  margin-top: 8px;
-  padding-top: 6px;
-  border-top: 1px solid var(--v4-line, #e5e7eb);
-}
-
-.water-formula-hint {
-  font-size: 9px;
-  color: var(--color-gray-400);
-  text-align: center;
-  margin-top: 6px;
-}
-
-[data-theme$="dark"] .water-formula-tooltip {
-  background: var(--v4-hero, #1e293b);
-  border-color: var(--color-slate-700);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-}
-
-[data-theme$="dark"] .water-formula-title {
-  color: #7dd3fc;
-  border-color: var(--color-slate-700);
-}
-
-[data-theme$="dark"] .water-formula-row {
-  color: var(--color-slate-200);
-}
-
-[data-theme$="dark"] .water-formula-sub {
-  color: var(--color-slate-400);
-}
-
-[data-theme$="dark"] .water-formula-total {
-  border-color: var(--color-slate-700);
-}
-
-[data-theme$="dark"] .water-breakdown-item {
-  color: var(--color-slate-400);
-}
-
-[data-theme$="dark"] .water-breakdown-bonus {
-  color: #34d399;
-}
-
-/* Анимация добавления на кольце */
-.water-card-anim {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 14px;
-  font-weight: 700;
-  color: #0ea5e9;
-  animation: waterCardPop 0.8s ease-out forwards;
-  pointer-events: none;
-  z-index: 10;
-}
-
-@keyframes waterCardPop {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.5);
-  }
-
-  20% {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1.2);
-  }
-
-  50% {
-    opacity: 1;
-    transform: translate(-50%, -70%) scale(1);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -100%) scale(0.9);
-  }
-}
-
-/* Правая часть */
-.water-card-right {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  gap: 6px;
-  grid-column: 2;
-  grid-row: 1 / 3;
-  align-self: start;
-  z-index: 1;
-}
-
-/* Верхняя строка: мотивация + кнопка удаления */
-.water-top-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.water-motivation-inline {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.water-motivation-inline .water-motivation-emoji {
-  font-size: 16px;
-}
-
-.water-motivation-inline .water-motivation-text {
-  font-size: 13px;
-  font-weight: 600;
-  color: #0369a1;
-}
-
-/* Кнопка удаления воды (компактная) */
-.water-minus-compact {
-  padding: 4px 8px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--v4-warn-2, #dc2626);
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.15s ease;
-  flex-shrink: 0;
-}
-
-.water-minus-compact:active {
-  background: #fee2e2;
-}
-
-[data-theme$="dark"] .water-minus-compact {
-  color: #f87171;
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-[data-theme$="dark"] .water-minus-compact:active {
-  background: rgba(239, 68, 68, 0.25);
-}
-
-/* Inline прогресс-бар с волной воды */
-.water-progress-inline {
-  position: relative;
-  height: 14px;
-  background: linear-gradient(180deg, #e0f2fe 0%, #bae6fd 100%);
-  border-radius: 7px;
-  overflow: visible;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
-}
-
-.water-progress-inline .water-progress-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  background: linear-gradient(180deg, #38bdf8 0%, #0ea5e9 50%, #0284c7 100%);
-  border-radius: 7px;
-  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 8px rgba(14, 165, 233, 0.5);
-}
-
-/* Волна на краю заливки */
-.water-wave-edge {
-  position: absolute;
-  top: 0;
-  width: 8px;
-  height: 100%;
-  transform: translateX(-4px);
-  background: linear-gradient(90deg, #0ea5e9, transparent);
-  animation: waveEdge 1s ease-in-out infinite;
-  border-radius: 0 7px 7px 0;
-}
-
-@keyframes waveEdge {
-
-  0%,
-  100% {
-    transform: translateX(-4px) scaleX(1);
-    opacity: 0.8;
-  }
-
-  50% {
-    transform: translateX(-2px) scaleX(1.3);
-    opacity: 1;
-  }
-}
-
-/* Пузырьки в воде */
-.water-bubbles {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  /* 🚀 PERF R6: contain paint scope to prevent bubble repaints from affecting parent */
-  contain: strict;
-}
-
-.water-bubble {
-  position: absolute;
-  width: 4px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.8);
-  border-radius: 50%;
-  animation: bubbleRise 1.8s ease-out infinite;
-  /* 🚀 PERF R6: will-change promotes to GPU layer; removed static box-shadow */
-  will-change: transform, opacity;
-}
-
-.water-bubble:nth-child(1) {
-  left: 10%;
-  animation-delay: 0s;
-  animation-duration: 1.5s;
-}
-
-.water-bubble:nth-child(2) {
-  left: 25%;
-  animation-delay: 0.3s;
-  animation-duration: 1.8s;
-}
-
-.water-bubble:nth-child(3) {
-  left: 45%;
-  animation-delay: 0.6s;
-  animation-duration: 1.6s;
-}
-
-.water-bubble:nth-child(4) {
-  left: 65%;
-  animation-delay: 0.9s;
-  animation-duration: 2s;
-}
-
-.water-bubble:nth-child(5) {
-  left: 85%;
-  animation-delay: 1.2s;
-  animation-duration: 1.7s;
-}
-
-@keyframes bubbleRise {
-  0% {
-    bottom: 0;
-    opacity: 0;
-    transform: scale(0.3) translateX(0);
-  }
-
-  20% {
-    opacity: 1;
-    transform: scale(1) translateX(-2px);
-  }
-
-  60% {
-    opacity: 0.8;
-    transform: scale(0.8) translateX(2px);
-  }
-
-  100% {
-    bottom: 16px;
-    opacity: 0;
-    transform: scale(0.2) translateX(0);
-  }
-}
-
-/* Блик сверху */
-.water-shine {
-  position: absolute;
-  left: 5%;
-  top: 2px;
-  width: 30%;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
-  border-radius: 2px;
-  opacity: 0.75;
-}
-
-@keyframes shineMove {
-
-  0%,
-  100% {
-    opacity: 0.5;
-    transform: translateX(0);
-  }
-
-  50% {
-    opacity: 1;
-    transform: translateX(10px);
-  }
-}
-
-/* 💧 Падающая капля воды */
-.water-drop-container {
-  position: absolute;
-  top: -60px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40px;
-  height: 80px;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.water-drop {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 14px;
-  height: 18px;
-  background: linear-gradient(180deg, #7dd3fc 0%, #38bdf8 40%, #0ea5e9 100%);
-  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-  transform: translateX(-50%);
-  animation: dropFall 0.9s cubic-bezier(0.4, 0, 0.8, 1) forwards;
-  box-shadow:
-    0 2px 8px rgba(14, 165, 233, 0.4),
-    inset 2px -2px 4px rgba(255, 255, 255, 0.5),
-    inset -1px 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.water-drop::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 4px;
-  height: 5px;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 50%;
-}
-
-@keyframes dropFall {
-  0% {
-    top: 0;
-    opacity: 1;
-    transform: translateX(-50%) scale(1) rotate(0deg);
-  }
-
-  20% {
-    transform: translateX(-50%) scale(1.1) rotate(-3deg);
-  }
-
-  40% {
-    transform: translateX(-50%) scale(1) rotate(2deg);
-  }
-
-  70% {
-    opacity: 1;
-    transform: translateX(-50%) scale(0.95) rotate(0deg);
-  }
-
-  100% {
-    top: 65px;
-    opacity: 0;
-    transform: translateX(-50%) scale(0.7) rotate(0deg);
-  }
-}
-
-.water-splash {
-  position: absolute;
-  bottom: 5px;
-  left: 50%;
-  width: 30px;
-  height: 14px;
-  transform: translateX(-50%);
-  opacity: 0;
-  animation: splashAppear 0.4s ease-out 0.7s forwards;
-}
-
-.water-splash::before,
-.water-splash::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  width: 5px;
-  height: 5px;
-  background: #38bdf8;
-  border-radius: 50%;
-  box-shadow: 0 0 4px rgba(56, 189, 248, 0.5);
-}
-
-.water-splash::before {
-  left: 2px;
-  animation: splashLeft 0.4s ease-out 0.7s forwards;
-}
-
-.water-splash::after {
-  right: 2px;
-  animation: splashRight 0.4s ease-out 0.75s forwards;
-}
-
-@keyframes splashAppear {
-  0% {
-    opacity: 0;
-  }
-
-  30% {
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes splashLeft {
-  0% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0;
-  }
-
-  30% {
-    opacity: 1;
-    transform: translate(-8px, -12px) scale(1);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translate(-12px, -18px) scale(0.3);
-  }
-}
-
-@keyframes splashRight {
-  0% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0;
-  }
-
-  30% {
-    opacity: 1;
-    transform: translate(8px, -10px) scale(1);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translate(12px, -16px) scale(0.3);
-  }
-}
-
-/* Пресеты в ряд */
-.water-presets-row {
-  display: flex;
-  gap: 6px;
-}
-
-/* Weekly sparkline before hydration tip */
-.water-weekly {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 8px;
-  padding: 3px 2px 0;
-}
-
-.water-weekly-labels {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-
-.water-weekly-label,
-.water-weekly-goal-meta {
-  font-size: 8px;
-  line-height: 1.1;
-  color: var(--v4-ink-2, #64748b);
-}
-
-.water-weekly-chart-shell {
-  position: relative;
-  width: calc(100% - 8px);
-  min-width: 0;
-  height: 60px;
-  margin: 0 auto;
-  border-radius: 12px;
-}
-
-.water-weekly-chart {
+/* === 01. Карточка воды в «Разборе дня» === */
+
+/* Канвас water-add.v4.dc.html, кадры «Вода · карточка · Полоса | Полоса · утро | Кольцо».
+   Контракт [data-contract="water-add"]: строки 44–51, 55–59, 61.
+   Внешний контейнер — .compact-card дневника; здесь только содержимое карточки. */
+
+.water-review,
+.water-review-switch {
+  --wr-deep: #4e6d7a;
+  --wr-spark-off: #5d7f8d;
+  --wr-on-deep: #fffaf1;
+  --wr-chip-fill: #4e6d7a;
+  --wr-chip-text: #fffaf1;
+  --wr-ink: #201e1d;
+  --wr-dim: #6b5f4f;
+  --wr-track: rgba(0, 0, 0, 0.1);
+  --wr-divider: rgba(0, 0, 0, 0.07);
+}
+
+/* Подложка есть только у карточки: ряд переключателя стоит на фоне страницы.
+   Фолбэк = значение роли в классике (#ffffff); песочные и синие берут свой
+   --v4-surface: #f7efe2 / #23201b / #eef3f9 / #182a3a — как на канвасе. */
+.water-review {
   display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  filter: drop-shadow(0 6px 10px rgba(14, 165, 233, 0.10));
+  background: var(--v4-surface, #ffffff);
 }
 
-.water-weekly-goal-line {
-  stroke: rgba(249, 115, 22, 0.68);
-  stroke-width: 1;
-  stroke-dasharray: 3 4;
+[data-theme$="dark"] .water-review,
+[data-theme$="dark"] .water-review-switch {
+  --wr-deep: #3f6c7e;
+  --wr-spark-off: #7ba3b4;
+  --wr-on-deep: #f2ede6;
+  /* Контракт 56: на тёмных подложках чип берёт базовый тон, не глубокий. */
+  --wr-chip-fill: #8fb3c2;
+  --wr-chip-text: #201e1d;
+  --wr-ink: #f2ede6;
+  --wr-dim: rgba(242, 237, 230, 0.62);
+  --wr-track: rgba(242, 237, 230, 0.14);
+  --wr-divider: rgba(255, 255, 255, 0.12);
 }
 
-.water-weekly-goal-meta {
+html[data-theme-id="blue"] .water-review,
+html[data-theme-id="blue"] .water-review-switch {
+  --wr-deep: #2c5f76;
+  --wr-spark-off: #4a86a4;
+  --wr-on-deep: #ffffff;
+  --wr-chip-fill: #2c5f76;
+  --wr-chip-text: #ffffff;
+  --wr-ink: #101826;
+  --wr-dim: #5a6474;
+  --wr-track: rgba(16, 24, 38, 0.1);
+  --wr-divider: rgba(16, 24, 38, 0.07);
+}
+
+html[data-theme-id="blue-dark"] .water-review,
+html[data-theme-id="blue-dark"] .water-review-switch {
+  --wr-deep: #35657d;
+  --wr-spark-off: #6ba3bf;
+  --wr-on-deep: #eef3f8;
+  --wr-chip-fill: #7fb6d0;
+  --wr-chip-text: #0d1a26;
+  --wr-ink: #eef3f8;
+  --wr-dim: rgba(238, 243, 248, 0.62);
+  --wr-track: rgba(238, 243, 248, 0.14);
+  --wr-divider: rgba(255, 255, 255, 0.12);
+}
+
+/* --- Шапка: подпись и норма --- */
+.water-review__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.water-review--ring .water-review__top {
+  align-items: center;
+}
+
+.water-review__kicker {
+  font: 600 9.5px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.03em;
+  color: var(--wr-dim);
+}
+
+.water-review__norm {
+  font: 600 9.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--wr-dim);
+}
+
+/* --- Факт за сегодня --- */
+.water-review__fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 9px;
+  cursor: pointer;
+}
+
+.water-review__fact-big {
+  font: 600 26px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: -0.03em;
+  color: var(--wr-ink);
+}
+
+.water-review__fact-unit {
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font-style: normal;
+  color: var(--wr-dim);
+  margin-left: 4px;
+}
+
+.water-review__left {
+  font: 600 10px/1 Figtree, system-ui, sans-serif;
+  color: var(--wr-dim);
+}
+
+/* --- Полоса за сегодня --- */
+.water-review__bar {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--wr-track);
+  margin-top: 11px;
+  overflow: hidden;
+}
+
+.water-review__bar-fill {
   position: absolute;
-  top: -10px;
-  right: -6px;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: var(--wr-deep);
+  transition: width 320ms ease-in-out;
+}
+
+/* --- Неделя столбиками: сегодня всегда правый --- */
+.water-review__spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  height: 30px;
+  margin-top: 13px;
+}
+
+.water-review__spark-bar {
+  flex: 1;
+  border-radius: 3px;
+  background: var(--wr-spark-off);
+  transition: height 320ms ease-in-out;
+}
+
+.water-review__spark-bar--today {
+  background: var(--wr-deep);
+}
+
+/* --- Подвал: среднее и объёмы --- */
+.water-review__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.water-review__avg {
+  flex: none;
+  white-space: nowrap;
+  font: 600 9px/1 Figtree, system-ui, sans-serif;
+  color: var(--wr-dim);
+}
+
+.water-review__chips {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+}
+
+.water-review__chip {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 34px;
-  padding: 2px 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: none;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.74);
-  border: 1px solid rgba(14, 165, 233, 0.12);
-  letter-spacing: 0.04em;
-  opacity: 0.88;
-  z-index: 4;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  background: var(--wr-chip-fill);
+  color: var(--wr-chip-text);
+  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
-.water-weekly-area {
-  fill: url(#waterWeeklyArea);
-  opacity: 1;
+/* Цель касания 44 pt при видимой высоте 30 px (контракт 60). */
+.water-review__chip::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -7px;
+  bottom: -7px;
 }
 
-.water-weekly-week-separator {
-  stroke: rgba(14, 165, 233, 0.10);
-  stroke-width: 1;
-  stroke-dasharray: 2 5;
+.water-review__chip:active {
+  transform: scale(0.96);
 }
 
-.water-weekly-line-glow {
-  fill: none;
-  stroke: rgba(56, 189, 248, 0.22);
-  stroke-width: 4.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.water-review__chip--sub {
+  margin-right: 5px;
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--wr-chip-fill);
+  color: var(--wr-ink);
 }
 
-.water-weekly-line {
-  fill: none;
-  stroke: url(#waterWeeklyStroke);
-  stroke-width: 2.05;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: 0.98;
+/* Убавить нечего: чип гаснет, но остаётся в ряду (контракт 59). */
+.water-review__chip.is-off {
+  opacity: 0.32;
+  cursor: default;
+  pointer-events: none;
 }
 
-.water-weekly-dot {
-  fill: rgba(14, 165, 233, 0.78);
-  stroke: none;
-  opacity: 0.94;
-}
-
-.water-weekly-dot--today {
-  fill: #0369a1;
-}
-
-.water-weekly-dot--goal {
-  fill: #38bdf8;
-  stroke: #0284c7;
-  stroke-width: 1.1;
-  opacity: 1;
-}
-
-.water-weekly-dot--today-goal {
-  fill: #0ea5e9;
-  stroke: #0369a1;
-  stroke-width: 1.25;
-}
-
-.water-weekly-labels {
-  justify-content: space-between;
-  width: calc(100% - 8px);
-  min-width: 0;
-  margin: 0 auto;
-}
-
-.water-weekly-label {
-  flex: 1 1 0;
-  text-align: center;
-  text-transform: none;
-  letter-spacing: 0.01em;
-  opacity: 0.48;
-}
-
-.water-weekly-label--today {
-  color: #0369a1;
-  font-weight: 700;
-  opacity: 1;
-}
-
-/* Лайфхак внизу карточки воды */
-.water-tip {
+/* --- Переключатель вида: отдельный ряд под карточкой --- */
+/* Контракт 49: вне карточки, под ней, по её левому краю, без подложки и
+   разделителя. Отступы намеренно неравные — 8 px до своей карточки и 20 px до
+   следующего блока, чтобы привязка читалась глазом. */
+.water-review-switch {
   display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  margin-top: 6px;
-  padding: 4px 8px;
-  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  margin: 8px 0 20px;
+  padding: 0 2px;
+  background: none;
 }
 
-.water-tip-icon {
-  font-size: 12px;
-  flex-shrink: 0;
-  opacity: 0.7;
+.water-review__view {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 11px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--wr-dim);
+  font: 600 10px/1 Figtree, system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
-.water-tip-text {
-  font-size: 11px;
-  line-height: 1.35;
-  color: var(--v4-ink-2, #64748b);
-  font-weight: 400;
+/* Цель касания 44 pt при видимой высоте 26 px (контракт 47). */
+.water-review__view::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -9px;
+  bottom: -9px;
 }
 
-/* Dark mode */
-html.dark .water-tip-text {
-  color: var(--v4-ink-2, #94a3b8);
+.water-review__view.is-on {
+  background: var(--wr-deep);
+  color: var(--wr-on-deep);
 }
 
-.water-preset-compact {
-  flex: 1;
+/* --- Вид «Кольцо» --- */
+.water-review__ring {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-top: 8px;
+  cursor: pointer;
+}
+
+.water-review__ring-svg {
+  flex: none;
+}
+
+.water-review__ring-track {
+  stroke: var(--wr-track);
+}
+
+.water-review__ring-fill {
+  stroke: var(--wr-deep);
+  transition: stroke-dasharray 320ms ease-in-out;
+}
+
+.water-review__ring-text {
   display: flex;
   flex-direction: column;
+  gap: 3px;
+}
+
+.water-review__ring-fact {
+  font: 600 22px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: -0.03em;
+  color: var(--wr-ink);
+}
+
+.water-review__ring-meta {
+  font: 600 9.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--wr-dim);
+}
+
+/* Ряд объёмов «Кольца»: минус первым, пятой пилюлей, зазор 12 px до плюса
+   (контракт 47) — в шапке карточки минусу места нет. */
+.water-review__quick {
+  display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 8px 4px;
-  background: var(--color-white);
-  border: 1.5px solid #bae6fd;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
-  min-height: 52px;
+  gap: 6px;
+  margin-top: 10px;
 }
 
-.water-preset-compact:active {
-  background: #0ea5e9;
-  border-color: #0284c7;
-  transform: scale(0.95);
+.water-review__chip--in-row {
+  flex: none;
+  margin-right: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font: 700 11px/1 Figtree, system-ui, sans-serif;
 }
 
-.water-preset-compact:active .water-preset-ml {
-  color: var(--color-white);
+.water-review__chip--quick {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  padding: 0;
+  border-radius: 12px;
+  background: var(--wr-deep);
+  color: var(--wr-on-deep);
+  font: 700 11px/1 Figtree, system-ui, sans-serif;
 }
 
-.water-preset-compact .water-preset-icon {
-  font-size: 16px;
+.water-review__curve {
+  margin-top: 10px;
+  color: var(--wr-deep);
 }
 
-.water-preset-compact .water-preset-ml {
-  font-size: 10px;
-  font-weight: 600;
-  color: #0369a1;
+.water-review__curve svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .water-review__bar-fill,
+  .water-review__spark-bar,
+  .water-review__ring-fill {
+    transition-duration: 160ms;
+  }
 }
 
 /* === 02. FAB группа: советы + вода === */
@@ -2207,90 +1715,6 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
     opacity: 0;
     transform: translateX(-50%) translateY(-30px) scale(1.2);
   }
-}
-
-/* Dark theme */
-[data-theme$="dark"] .compact-water {
-  background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 100%);
-  border-color: #0ea5e9;
-}
-
-[data-theme$="dark"] .compact-water .compact-card-header {
-  color: #7dd3fc;
-}
-
-[data-theme$="dark"] .water-ring-bg {
-  stroke: #0369a1;
-}
-
-[data-theme$="dark"] .water-ring-value,
-[data-theme$="dark"] .water-motivation-inline .water-motivation-text {
-  color: #e0f2fe;
-}
-
-[data-theme$="dark"] .water-ring-unit {
-  color: #7dd3fc;
-}
-
-[data-theme$="dark"] .water-goal-text {
-  color: var(--color-slate-400);
-}
-
-[data-theme$="dark"] .water-progress-inline {
-  background: #0369a1;
-}
-
-[data-theme$="dark"] .water-weekly {
-  background: transparent;
-}
-
-[data-theme$="dark"] .water-weekly-label,
-[data-theme$="dark"] .water-weekly-goal-meta {
-  color: var(--v4-ink-2, #88a4b8);
-}
-
-[data-theme$="dark"] .water-weekly-chart-shell {
-  background: transparent;
-  box-shadow: none;
-}
-
-[data-theme$="dark"] .water-weekly-goal-line {
-  stroke: rgba(251, 146, 60, 0.48);
-}
-
-[data-theme$="dark"] .water-weekly-week-separator {
-  stroke: rgba(125, 211, 252, 0.14);
-}
-
-[data-theme$="dark"] .water-weekly-line-glow {
-  stroke: rgba(56, 189, 248, 0.18);
-}
-
-[data-theme$="dark"] .water-weekly-dot {
-  fill: #7dd3fc;
-  stroke: none;
-}
-
-[data-theme$="dark"] .water-weekly-dot--today {
-  fill: #dff4ff;
-}
-
-[data-theme$="dark"] .water-weekly-goal-meta {
-  background: rgba(8, 27, 44, 0.72);
-  border-color: rgba(125, 211, 252, 0.14);
-}
-
-[data-theme$="dark"] .water-weekly-label--today {
-  color: #d8eefb;
-}
-
-[data-theme$="dark"] .water-preset-compact {
-  background: #0c4a6e;
-  border-color: #0ea5e9;
-}
-
-[data-theme$="dark"] .water-preset-compact .water-preset-ml {
-  color: #7dd3fc;
 }
 
 /* ================================================

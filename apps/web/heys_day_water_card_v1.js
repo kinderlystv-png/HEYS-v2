@@ -7,23 +7,10 @@
         const {
             React,
             day,
-            prof,
             waterGoal,
             waterGoalBreakdown,
-            waterPresets,
-            waterMotivation,
             waterLastDrink,
-            waterAddedAnim,
-            showWaterDrop,
-            showWaterTooltip,
-            setDay,
             haptic,
-            setWaterAddedAnim,
-            setShowWaterDrop,
-            setShowWaterTooltip,
-            handleWaterRingDown,
-            handleWaterRingUp,
-            handleWaterRingLeave,
             openExclusivePopup,
             addWater,
             removeWater
@@ -33,26 +20,13 @@
 
         const waterCtx = {
             day,
-            prof,
             waterGoal,
             waterGoalBreakdown,
-            waterPresets,
-            waterMotivation,
-            waterLastDrink,
-            waterAddedAnim,
-            showWaterDrop,
-            showWaterTooltip
+            waterLastDrink
         };
 
         const waterActions = {
-            setDay,
             haptic,
-            setWaterAddedAnim,
-            setShowWaterDrop,
-            setShowWaterTooltip,
-            handleWaterRingDown,
-            handleWaterRingUp,
-            handleWaterRingLeave,
             openExclusivePopup,
             addWater,
             removeWater

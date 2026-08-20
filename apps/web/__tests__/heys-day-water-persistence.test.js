@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 
+import { fireEvent, render } from '@testing-library/react';
+import * as RealReact from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const originalHEYS = global.HEYS;
@@ -15,24 +17,6 @@ function loadModule() {
 function loadWaterCardModule() {
   const srcPath = path.resolve(__dirname, '../heys_day_water_v1.js');
   eval(fs.readFileSync(srcPath, 'utf8'));
-}
-
-function findNode(node, predicate) {
-  if (!node || typeof node !== 'object') return null;
-  if (predicate(node)) return node;
-
-  const children = Array.isArray(node.children)
-    ? node.children
-    : node.props?.children
-      ? [node.props.children]
-      : [];
-
-  for (const child of children.flat(Infinity)) {
-    const found = findNode(child, predicate);
-    if (found) return found;
-  }
-
-  return null;
 }
 
 describe('HEYS.dayDayHandlers water persistence', () => {
@@ -255,84 +239,43 @@ describe('HEYS.dayDayHandlers water persistence', () => {
     expect(savedDay.meals).toBeUndefined();
   });
 
-  it('water preset click calls addWater synchronously', () => {
-    global.React = {
-      createElement: (type, props, ...children) => ({
-        type,
-        props: props || {},
-        children
-      })
-    };
-
+  it('чип объёма в карточке зовёт addWater сразу', () => {
+    // Вид «Полоса» задаём явно: дефолт карточки — «Кольцо».
+    localStorage.setItem('heys_water_card_view_v1', 'bar');
     global.HEYS = {
-      utils: {
-        lsGet: vi.fn(() => null)
-      },
-      dayUtils: {
-        lsGet: vi.fn(() => null)
-      }
+      utils: { lsGet: vi.fn(() => null) },
+      dayUtils: { lsGet: vi.fn(() => null) }
     };
 
     loadWaterCardModule();
 
     const addWater = vi.fn();
-    const sourceEl = { id: 'water-preset' };
-    const tree = global.HEYS.dayWater.render({
-      React: global.React,
+    const element = global.HEYS.dayWater.render({
+      React: RealReact,
       ctx: {
-        day: { date: '2025-12-12', waterMl: 1000, steps: 0 },
-        prof: {},
+        day: { date: '2025-12-12', waterMl: 1000 },
         waterGoal: 2000,
-        waterGoalBreakdown: {
-          base: 2000,
-          weight: 70,
-          coef: 30,
-          baseRaw: 2100,
-          stepsBonus: 0,
-          trainBonus: 0,
-          seasonBonus: 0,
-          cycleBonus: 0
-        },
-        waterPresets: [{ ml: 100, icon: '💧' }],
-        waterMotivation: { emoji: '🌊', text: 'Good start!' },
-        waterLastDrink: null,
-        waterAddedAnim: null,
-        showWaterDrop: false,
-        showWaterTooltip: false
+        waterGoalBreakdown: { base: 2000 },
+        waterLastDrink: null
       },
       actions: {
-        setDay: vi.fn(),
-        haptic: vi.fn(),
-        setWaterAddedAnim: vi.fn(),
-        setShowWaterDrop: vi.fn(),
-        setShowWaterTooltip: vi.fn(),
-        handleWaterRingDown: vi.fn(),
-        handleWaterRingUp: vi.fn(),
-        handleWaterRingLeave: vi.fn(),
-        openExclusivePopup: vi.fn(),
         addWater,
-        removeWater: vi.fn()
+        removeWater: vi.fn(),
+        haptic: vi.fn(),
+        openExclusivePopup: vi.fn()
       }
     });
 
-    const presetButton = findNode(
-      tree,
-      (node) => node.type === 'button' && node.props?.className === 'water-preset-compact'
-    );
+    const { container } = render(element);
+    const chip = container.querySelector('.water-review__chip--add');
+    expect(chip).toBeTruthy();
 
-    expect(presetButton).toBeTruthy();
-
-    presetButton.props.onClick({ currentTarget: sourceEl });
+    fireEvent.click(chip);
 
     expect(addWater).toHaveBeenCalledTimes(1);
-    expect(addWater).toHaveBeenCalledWith(100, {
+    expect(addWater).toHaveBeenCalledWith(200, expect.objectContaining({
       skipScroll: true,
-      source: 'water-card-preset',
-      sourceEl
-    });
-
-    vi.runAllTimers();
-
-    expect(addWater).toHaveBeenCalledTimes(1);
+      source: 'water-review-card'
+    }));
   });
 });

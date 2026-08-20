@@ -227,6 +227,7 @@
 
   // ─── Deduplication / cooldown ─────────────────────────────────────────────
   const _lastPlayTime = {};
+  const _waterSoundTapTimes = [];
 
   // Per-category minimum interval between plays (ms)
   const COOLDOWN = {
@@ -239,8 +240,20 @@
     error: 1000,
     interaction: 100,
     dismiss: 400,
-    water: 700
+    water: 0
   };
+
+  function pruneWaterSoundTapTimes(now = Date.now()) {
+    while (_waterSoundTapTimes.length && now - _waterSoundTapTimes[0] > 2000) {
+      _waterSoundTapTimes.shift();
+    }
+  }
+
+  function isWaterSoundFlooded(now = Date.now()) {
+    pruneWaterSoundTapTimes(now);
+    _waterSoundTapTimes.push(now);
+    return _waterSoundTapTimes.length > 4;
+  }
 
   function isThrottled(category) {
     const now = Date.now();
@@ -640,6 +653,11 @@
     }
 
     if (isThrottled(cat)) return;
+
+    if (cat === 'water' && isWaterSoundFlooded()) {
+      console.info('[HEYS.audio] ▶ water sound muted (>4 taps / 2s)');
+      return;
+    }
 
     // Haptic — never muted by quiet hours
     const doHaptic = options?.haptic !== false;

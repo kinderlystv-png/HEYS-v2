@@ -20,11 +20,14 @@
             legacyMealsUI,
             waterMl,
             waterGoal,
+            waterGoalBreakdown,
+            waterLastDrink,
             addMeal,
             addWater,
             removeWater,
             openAddProductForMeal,
-            haptic
+            haptic,
+            openExclusivePopup
         } = params || {};
 
         if (!React) return null;
@@ -43,7 +46,9 @@
             dailyWaveOverview,
             legacyMealsUI,
             waterMl,
-            waterGoal
+            waterGoal,
+            waterGoalBreakdown,
+            waterLastDrink
         };
 
         const nutritionActions = {
@@ -51,7 +56,8 @@
             addWater,
             removeWater,
             openAddProductForMeal,
-            haptic
+            haptic,
+            openExclusivePopup
         };
 
         return HEYS.dayNutrition?.render?.({ React, ctx: nutritionCtx, actions: nutritionActions })

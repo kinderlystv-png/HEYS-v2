@@ -793,7 +793,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 /* Без «нажатия» scale: вода/статистика исторически; тренировки, сон, быт — те же карточки-дневник */
 .compact-stats.compact-card:active,
-.compact-water.compact-card:active,
+.water-review.compact-card:active,
 .compact-sleep.compact-card:active,
 .compact-train.compact-card:active,
 .compact-household.compact-card:active {
@@ -15134,7 +15134,7 @@ body:has(:is(
     margin-bottom: 0 !important;
   }
 
-  .page-day>#water-card.compact-water.compact-card {
+  .page-day>#water-card.water-review.compact-card {
     margin-top: var(--heys-diary-stack-gap, 18px) !important;
   }
 

@@ -27,8 +27,9 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(uiSrc).toContain('function useWaterAddPulse');
     expect(handlersSrc).toContain('WATER_TILE_VISIBLE_RATIO = 0.5');
     expect(handlersSrc).toContain('function waterTileIsVisible');
-    // Один ответ на одно действие: плитка видна — столбик молчит.
-    expect(handlersSrc).toMatch(/if \(waterTileIsVisible\(\)\) return;/);
+    expect(handlersSrc).toContain('function waterCardIsVisible');
+    // Один ответ на одно действие: плитка или карточка видны — столбик молчит.
+    expect(handlersSrc).toMatch(/if \(waterTileIsVisible\(\) \|\| waterCardIsVisible\(\)\) return;/);
   });
 
   it('капля, круг, уровень и число — параметры из спецификации', () => {
@@ -97,10 +98,14 @@ describe('добавление воды — канвас water-add v4, ветк�
   it('функциональная анимация — animate-always, политика в MOTION_POLICY', () => {
     expect(uiSrc).toContain("className: 'widget-water__fill animate-always'");
     expect(uiSrc).toContain("className: 'widget-water__drop animate-always'");
+    // Контракт 26: при reduced-motion гаснут только капля и круг — уровень, блики
+    // и число остаются, плитка не превращается в статичный прямоугольник.
     const blocks = widgetsCss.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/g) || [];
-    const killsWater = blocks.some((block) => /\.widget-water/.test(block)
-      && (/display:\s*none/.test(block) || /\.widget-water[\s\S]*?animation:\s*none/.test(block)));
-    expect(killsWater).toBe(false);
+    const killsFill = blocks.some((block) => /\.widget-water__fill[\s\S]*?(display:\s*none|animation:\s*none)/.test(block));
+    const killsShine = blocks.some((block) => /\.widget-water__shine[\s\S]*?(display:\s*none|animation:\s*none)/.test(block));
+    expect(killsFill).toBe(false);
+    expect(killsShine).toBe(false);
+    expect(widgetsCss).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.widget-water__drop[\s\S]*?display: none/);
   });
 
   it('тон воды один на все палитры, новых оттенков нет', () => {
@@ -145,20 +150,37 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(widgetsCss).toMatch(/\.widget-water--v4\.widget-water--lines-on-water \.widget-water__label[\s\S]*?color: var\(--water-cream-text\)/);
     expect(widgetsCss).toContain('transition: color 220ms ease-out');
     expect(widgetsCss).not.toContain('.widget-water--submerged');
-    // вторичный тон нормы/подписи: .55 светлые / .62 тёмные (канвас 2026-08-20)
-    expect(widgetsCss).toContain('--water-dim-text: rgba(0, 0, 0, 0.55)');
+    // Контракт 19: на светлых палитрах вторичный тон сплошной (альфа по кремовой
+    // подложке обманчива), на тёмных остаётся кремовая альфа .62.
+    expect(widgetsCss).toContain('--water-dim-text: #6b5f4f');
+    expect(widgetsCss).toContain('--water-dim-text: #5a6474');
     expect(widgetsCss).toContain('--water-dim-text: rgba(242, 237, 230, 0.62)');
-    expect(widgetsCss).toContain('--water-dim-text: rgba(16, 24, 38, 0.55)');
     expect(widgetsCss).toContain('--water-dim-text: rgba(238, 243, 248, 0.62)');
     // сетка 64 px на мобиле — пороги nrmB считаются от плитки 64 px
     expect(widgetsCss).toMatch(/@media \(max-width: 480px\)[\s\S]*?--widget-row-height: 64px/);
+  });
+
+  it('анти-спам звука — более 4 тапов за 2 с', () => {
+    const audioSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_audio_v1.js'), 'utf8');
+    const platformSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_platform_apis_v1.js'), 'utf8');
+    const dayUtilsSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_day_utils.js'), 'utf8');
+    expect(audioSrc).toContain('function isWaterSoundFlooded');
+    expect(audioSrc).toContain('>4 taps / 2s');
+    expect(platformSrc).toContain('function impactLight');
+    expect(platformSrc).toContain('impactLight,');
+    expect(dayUtilsSrc).toContain('HEYS.vibration?.impactLight');
   });
 
   it('новый «звук капли» не реализован — семпла ещё нет, прежний звук цел', () => {
     // Канвас: «пока файла нет, анимацию можно отдавать в разработку, звук — нет».
     // Прежний звук добавления при этом не трогаем — его удаление никто не просил.
     expect(handlersSrc).toContain("HEYS.audio.play('waterAdded'");
-    expect(handlersSrc).toContain('setTimeout(playSound, 240)');
+    expect(handlersSrc).toContain('prefers-reduced-motion: reduce');
+    expect(handlersSrc).toMatch(/waterTileIsVisible\(\) && !reducedMotion[\s\S]*?setTimeout\(playSound, 240\)/);
+    // Карточка в «Разборе дня» отвечает сама (контракт 52): один общий апдейт
+    // вместо двух копий DOM-кода по селекторам старого кольца.
+    expect(handlersSrc).toContain('HEYS.dayWater?.applyOptimistic?.');
+    expect(handlersSrc).not.toContain('.water-ring-fill');
     expect(handlersSrc).not.toContain('waterDropSound');
     expect(handlersSrc).not.toContain('30 центов');
   });

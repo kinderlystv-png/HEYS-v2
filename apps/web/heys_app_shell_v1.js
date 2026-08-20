@@ -4342,16 +4342,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 titleOff: 'Показать карточку клетчатки в дневнике',
             },
             {
-                key: 'water',
-                field: 'showDiaryWaterPanel',
-                eventName: 'heys:diary-optional-panels-visibility-changed',
-                label: 'Карточка воды',
-                enabledHint: 'Показывает прогресс воды за день',
-                disabledHint: 'Скрыта из дневника',
-                titleOn: 'Скрыть карточку воды',
-                titleOff: 'Показать карточку воды',
-            },
-            {
                 key: 'insulinWave',
                 field: 'showDiaryInsulinWavePanel',
                 eventName: 'heys:diary-optional-panels-visibility-changed',

@@ -542,7 +542,6 @@
         const showActivityContent = !isMobile || mobileSubTab === 'activity';
         const showNutritionContent = !isMobile || mobileSubTab === 'diary';
         const activityContentEnabled = showStatsContent || showActivityContent;
-        const showWaterContent = !isMobile || mobileSubTab === 'diary';
         const [reportsModalOpen, setReportsModalOpen] = useState(false);
         const [reportsModuleTick, setReportsModuleTick] = useState(0);
         const [monthlyReportsMode, setMonthlyReportsMode] = useState('weeks');
@@ -1119,19 +1118,12 @@
             prof,
             train1k,
             train2k,
-            train3k,
-            haptic
+            train3k
         }) || {};
         const {
             waterGoalBreakdown,
             waterGoal,
-            waterMotivation,
-            waterLastDrink,
-            showWaterTooltip,
-            setShowWaterTooltip,
-            handleWaterRingDown,
-            handleWaterRingUp,
-            handleWaterRingLeave
+            waterLastDrink
         } = waterState;
 
         // === Water functions (addWater, removeWater) provided by dayHandlers ===
@@ -1195,11 +1187,6 @@
         }) || {};
 
         const {
-            waterPresets,
-            waterAddedAnim,
-            showWaterDrop,
-            setWaterAddedAnim,
-            setShowWaterDrop,
             mealHandlers,
             dayHandlers,
             trainingHandlers
@@ -2277,40 +2264,6 @@
 
         const { statsBlock, mealsChart, statsVm } = statsBlockResult;
 
-        // === Water Card (extracted wrapper) ===
-        if (!HEYS.dayWaterCard?.buildWaterCard) {
-            throw new Error('[heys_day_v12] HEYS.dayWaterCard not loaded before heys_day_v12.js');
-        }
-        // 🚀 PERF R7: memoize waterCard — only rebuild on water-related state changes.
-        // Skips rebuild on popup/animation/mood/sleep changes.
-        const waterCard = useMemo(() => {
-            if (!showWaterContent) return null;
-            return HEYS.dayWaterCard.buildWaterCard({
-                React,
-                day,
-                prof,
-                waterGoal,
-                waterGoalBreakdown,
-                waterPresets,
-                waterMotivation,
-                waterLastDrink,
-                waterAddedAnim,
-                showWaterDrop,
-                showWaterTooltip,
-                setDay,
-                haptic,
-                setWaterAddedAnim,
-                setShowWaterDrop,
-                setShowWaterTooltip,
-                handleWaterRingDown,
-                handleWaterRingUp,
-                handleWaterRingLeave,
-                openExclusivePopup,
-                addWater,
-                removeWater
-            });
-        }, [showWaterContent, day?.waterMl, day?.date, waterGoal, waterGoalBreakdown, waterMotivation, waterLastDrink, waterAddedAnim, showWaterDrop, showWaterTooltip]);
-
         // === COMPACT ACTIVITY INPUT ===
         if (!HEYS.dayStepsUI?.useStepsState) {
             throw new Error('[heys_day_v12] HEYS.dayStepsUI not loaded before heys_day_v12.js');
@@ -2401,13 +2354,16 @@
                 legacyMealsUI: mealsUI,
                 waterMl: day?.waterMl ?? day?.water,
                 waterGoal,
+                waterGoalBreakdown,
+                waterLastDrink,
                 addMeal,
                 addWater,
                 removeWater,
                 openAddProductForMeal,
-                haptic
+                haptic,
+                openExclusivePopup
             });
-        }, [showNutritionContent, day?.meals, day?.waterMl, day?.water, day?.date, eatenKcal, displayOptimum, displayRemainingKcal, dayTot, normAbs, insulinWaveData, mealsUI, waterGoal, date, pIndex, prof, openAddProductForMeal, addMeal, addWater, removeWater, haptic]);
+        }, [showNutritionContent, day?.meals, day?.waterMl, day?.water, day?.date, eatenKcal, displayOptimum, displayRemainingKcal, dayTot, normAbs, insulinWaveData, mealsUI, waterGoal, waterGoalBreakdown, waterLastDrink, date, pIndex, prof, openAddProductForMeal, addMeal, addWater, removeWater, haptic]);
 
         if (!HEYS.dayTabRender?.renderDayTabLayout) {
             throw new Error('[heys_day_v12] HEYS.dayTabRender not loaded before heys_day_v12.js');
@@ -2426,7 +2382,6 @@
             orphanAlert,
             lowCalBanner,
             statsBlock,
-            waterCard,
             compactActivity,
             compactNutrition,
             sideBlock,

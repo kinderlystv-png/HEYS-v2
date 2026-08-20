@@ -22,18 +22,6 @@
         // Track newly added items for fly-in animation
         const [newItemIds, setNewItemIds] = React.useState(new Set());
 
-        // === Water Tracking Animation States ===
-        const [waterAddedAnim, setWaterAddedAnim] = React.useState(null); // для анимации "+200"
-        const [showWaterDrop, setShowWaterDrop] = React.useState(false); // анимация падающей капли
-
-        // Быстрые пресеты воды
-        const waterPresets = [
-            { ml: 100, label: '100 мл', icon: '💧' },
-            { ml: 200, label: 'Стакан', icon: '🥛' },
-            { ml: 330, label: 'Бутылка', icon: '🧴' },
-            { ml: 500, label: '0.5л', icon: '🍶' }
-        ];
-
         // === Meal handlers (extracted) ===
         const mealHandlers = heysRef.dayMealHandlers.createMealHandlers({
             setDay: ctx.setDay,
@@ -77,8 +65,6 @@
             day: ctx.day,
             date: ctx.date,
             prof: ctx.prof,
-            setShowWaterDrop,
-            setWaterAddedAnim,
             showConfetti: ctx.showConfetti,
             setShowConfetti: ctx.setShowConfetti,
             waterGoal: ctx.waterGoal,
@@ -130,11 +116,6 @@
         });
 
         return {
-            waterPresets,
-            waterAddedAnim,
-            showWaterDrop,
-            setWaterAddedAnim,
-            setShowWaterDrop,
             mealHandlers,
             dayHandlers,
             trainingHandlers

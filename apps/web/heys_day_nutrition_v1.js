@@ -168,10 +168,12 @@
       dailyWaveOverview,
       legacyMealsUI,
       waterMl,
-      waterGoal
+      waterGoal,
+      waterGoalBreakdown,
+      waterLastDrink
     } = ctx;
 
-    const { addMeal, addWater, removeWater, openAddProductForMeal, haptic } = actions || {};
+    const { addMeal, addWater, removeWater, openAddProductForMeal, haptic, openExclusivePopup } = actions || {};
     const [curatorCue, setCuratorCue] = React.useState(null);
     React.useEffect(() => {
       const sync = () => {
@@ -377,34 +379,19 @@
 
       dailyWaveOverview && React.createElement('div', { className: 'nutrition-v4-waves' }, dailyWaveOverview),
 
-      React.createElement('div', { className: 'nutrition-v4-water' },
-        React.createElement('div', { className: 'nutrition-v4-water__copy' },
-          React.createElement('div', { className: 'nutrition-v4-water__label' }, 'Вода'),
-          React.createElement('div', { className: 'nutrition-v4-water__value' },
-            waterCurrent.toLocaleString('ru-RU'),
-            React.createElement('span', { className: 'nutrition-v4-water__suffix' },
-              ' / ' + (waterTarget ? waterTarget.toLocaleString('ru-RU') : '—') + ' мл'
-            )
-          )
-        ),
-        React.createElement('div', { className: 'nutrition-v4-water__actions' },
-          waterCurrent > 0 && React.createElement('button', {
-            type: 'button',
-            className: 'nutrition-v4-water__btn nutrition-v4-water__btn--minus',
-            onClick: () => removeWater?.(200)
-          }, '−200'),
-          React.createElement('button', {
-            type: 'button',
-            className: 'nutrition-v4-water__btn',
-            onClick: (e) => addWater?.(200, { source: 'nutrition-v4', sourceEl: e.currentTarget })
-          }, '+200'),
-          React.createElement('button', {
-            type: 'button',
-            className: 'nutrition-v4-water__btn',
-            onClick: (e) => addWater?.(500, { source: 'nutrition-v4', sourceEl: e.currentTarget })
-          }, '+500')
-        )
-      ),
+      // Полный вид воды — карточка из канваса water-add (контракт 42: живёт в
+      // «Разборе дня» на вкладке «Питание» и показывается всегда).
+      window.HEYS?.dayWaterCard?.buildWaterCard?.({
+        React,
+        day: { ...(day || {}), waterMl: waterCurrent },
+        waterGoal: waterTarget,
+        waterGoalBreakdown,
+        waterLastDrink,
+        haptic,
+        openExclusivePopup,
+        addWater,
+        removeWater
+      }),
 
       legacyMealsUI && React.createElement('div', {
         id: 'diary-heading',

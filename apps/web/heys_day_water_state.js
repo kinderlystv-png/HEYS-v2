@@ -104,8 +104,8 @@
     }
 
     function useWaterState(params) {
-        const { React, day, prof, train1k, train2k, train3k, haptic } = params || {};
-        const { useMemo, useState, useRef } = React || {};
+        const { React, day, prof, train1k, train2k, train3k } = params || {};
+        const { useMemo } = React || {};
 
         const safeDay = day || {};
         const safeProf = prof || {};
@@ -119,15 +119,6 @@
         ), [safeDay.weightMorning, safeDay.steps, safeDay.cycleDay, safeDay.trainings, train1k, train2k, train3k, safeProf.weight, safeProf.age, safeProf.sex]);
 
         const waterGoal = waterGoalBreakdown.finalGoal;
-
-        const waterMotivation = useMemo(() => {
-            const pct = ((safeDay.waterMl || 0) / waterGoal) * 100;
-            if (pct >= 100) return { emoji: '🏆', text: 'Цель достигнута!' };
-            if (pct >= 75) return { emoji: '🔥', text: 'Почти у цели!' };
-            if (pct >= 50) return { emoji: '🎯', text: 'Половина пути!' };
-            if (pct >= 25) return { emoji: '🌊', text: 'Хороший старт!' };
-            return { emoji: '💧', text: 'Добавь воды' };
-        }, [safeDay.waterMl, waterGoal]);
 
         const waterLastDrink = useMemo(() => {
             const lastTime = safeDay.lastWaterTime;
@@ -149,38 +140,10 @@
             return { hours, minutes: mins, text, isLong };
         }, [safeDay.lastWaterTime]);
 
-        const [showWaterTooltip, setShowWaterTooltip] = useState(false);
-        const waterLongPressRef = useRef(null);
-
-        function handleWaterRingDown() {
-            waterLongPressRef.current = setTimeout(() => {
-                setShowWaterTooltip(true);
-                haptic && haptic('light');
-            }, 400);
-        }
-        function handleWaterRingUp() {
-            if (waterLongPressRef.current) {
-                clearTimeout(waterLongPressRef.current);
-                waterLongPressRef.current = null;
-            }
-        }
-        function handleWaterRingLeave() {
-            handleWaterRingUp();
-            if (!('ontouchstart' in window)) {
-                setShowWaterTooltip(false);
-            }
-        }
-
         return {
             waterGoalBreakdown,
             waterGoal,
-            waterMotivation,
-            waterLastDrink,
-            showWaterTooltip,
-            setShowWaterTooltip,
-            handleWaterRingDown,
-            handleWaterRingUp,
-            handleWaterRingLeave
+            waterLastDrink
         };
     }
 

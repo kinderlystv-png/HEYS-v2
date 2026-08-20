@@ -27,8 +27,10 @@ describe('Nutrition tab v4 structure', () => {
     expect(nutritionSource).toContain('nutrition-v4-tier');
     expect(nutritionSource).toContain('Добавить приём пищи');
     expect(nutritionSource).toContain('nutrition-v4-breakdown');
-    expect(nutritionSource).toContain('nutrition-v4-water');
-    expect(nutritionSource).toContain('−200');
+    // Вода в «Разборе дня» — карточка из канваса water-add (контракт 42),
+    // а не собственный блок вкладки.
+    expect(nutritionSource).toContain('dayWaterCard?.buildWaterCard');
+    expect(nutritionSource).not.toContain('nutrition-v4-water');
     expect(nutritionSource).toContain('removeWater');
   });
 
