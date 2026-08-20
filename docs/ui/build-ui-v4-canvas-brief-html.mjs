@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Generate ui-v4-canvas-brief.html from ui-v4-canvas-brief.md (§ legend + §0–§3).
+ * Generate ui-v4-canvas-brief.html from ui-v4-canvas-brief.md (§ handoff + legend + §0–§3).
  * Single source of truth: md. Do not edit the html by hand.
  *
  * Usage: pnpm docs:ui-v4-brief
@@ -39,10 +39,13 @@ const TABLE_LAYOUTS = {
 
 const md = fs.readFileSync(mdPath, 'utf8');
 
-const start = md.indexOf('## Как читать');
+const start =
+  md.indexOf('## Для ревью дизайна') !== -1
+    ? md.indexOf('## Для ревью дизайна')
+    : md.indexOf('## Как читать');
 const endMatch = md.match(/\n---\r?\n\r?\n## 4\./);
 if (start === -1 || !endMatch) {
-  console.error('Could not find § legend or §4 boundary in md');
+  console.error('Could not find § handoff/legend or §4 boundary in md');
   process.exit(1);
 }
 const end = endMatch.index;
@@ -209,6 +212,17 @@ function mdSliceToHtml(source) {
         i += 1;
         continue;
       }
+      if (/^\d+\.\s/.test(trimmed)) {
+        const items = [];
+        while (i < lines.length && /^\d+\.\s/.test(lines[i].trim())) {
+          items.push(lines[i].trim().replace(/^\d+\.\s*/, ''));
+          i += 1;
+        }
+        out.push(
+          `<ol>${items.map((item) => `<li>${inlineMd(item)}</li>`).join('')}</ol>`
+        );
+        continue;
+      }
       const paraLines = [trimmed];
       i += 1;
       while (i < lines.length) {
@@ -312,7 +326,7 @@ const html = `<!DOCTYPE html>
 </head>
 <body>
   <h1>UI v4 · бриф контрактов канвасов</h1>
-  <p class="meta">heys/90efc3 · 2026-08-20 · <a href="ui-v4-canvas-brief.md">полный бриф (md)</a> · §4–§11 только там</p>
+  <p class="meta">heys/90efc3 · 2026-08-20 · v5.1 · <a href="ui-v4-canvas-brief.md">полный бриф (md)</a> · §4–§11 только там</p>
   <p class="gen">Сгенерировано <code>build-ui-v4-canvas-brief-html.mjs</code> (<code>pnpm docs:ui-v4-brief</code>) — не править вручную.</p>
 ${bodyContent}
 </body>

@@ -82,8 +82,60 @@
 
 
 
+
+  /* --- карточка воды в «Разборе дня» --- */
+  .wCard,.wCardB{--cardBg:#f7efe2;--w:#7d98a6;--wDeep:#4e6d7a;--wTxt:#fffaf1;--inkTxt:#201e1d;--dimTxt:#6b5f4f;--trk:rgba(0,0,0,.1);--sparkOff:#5d7f8d}
+  .pal.dk .wCard,.pal.dk .wCardB{--cardBg:#23201b;--w:#8fb3c2;--wDeep:#3f6c7e;--wTxt:#f2ede6;--inkTxt:#f2ede6;--dimTxt:rgba(242,237,230,.62);--trk:rgba(242,237,230,.14);--sparkOff:#7ba3b4}
+  .pal.bl .wCard,.pal.bl .wCardB{--cardBg:#eef3f9;--w:#3d7f9e;--wDeep:#2c5f76;--wTxt:#ffffff;--inkTxt:#101826;--dimTxt:#5a6474;--trk:rgba(16,24,38,.1);--sparkOff:#4a86a4}
+  .pal.bldk .wCard,.pal.bldk .wCardB{--cardBg:#182a3a;--w:#7fb6d0;--wDeep:#35657d;--wTxt:#eef3f8;--inkTxt:#eef3f8;--dimTxt:rgba(238,243,248,.62);--trk:rgba(238,243,248,.14);--sparkOff:#6ba3bf}
+  .wCard .k,.wCardB .k{animation:none;color:var(--dimTxt)}
+
+  .wCard{position:relative;background:#f7efe2;border-radius:18px;padding:14px 16px 15px;width:300px}
+  .pal.dk .wCard{background:#23201b}
+  .pal.bl .wCard{background:#eef3f9}
+  .pal.bldk .wCard{background:#182a3a}
+  .wCard .cTop{display:flex;align-items:baseline;justify-content:space-between}
+  .wCard .cNorm{font:600 9.5px/1 Figtree,sans-serif;color:var(--dimTxt)}
+  .wCard .cVal{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:9px}
+  .wCard .cVal b{font:600 26px/1 Figtree,sans-serif;letter-spacing:-.03em;color:var(--inkTxt)}
+  .wCard .cVal b i{font-style:normal;font:600 11px/1 Figtree,sans-serif;color:var(--dimTxt);margin-left:4px}
+  .wCard .cLeft{font:600 10px/1 Figtree,sans-serif;color:var(--dimTxt)}
+  .wCard .cBar{position:relative;height:6px;border-radius:999px;background:var(--trk);margin-top:11px;overflow:hidden}
+  .wCard .cBar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--wDeep)}
+  .wCard .cSpark{display:flex;align-items:flex-end;gap:5px;height:30px;margin-top:13px}
+  .wCard .cSpark i{flex:1;border-radius:3px;background:var(--sparkOff)}
+  .wCard .cSpark i.on{background:var(--wDeep)}
+  .wCard .cFoot{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+  .wCard .cDays{flex:none;white-space:nowrap;font:600 9px/1 Figtree,sans-serif;color:var(--dimTxt)}
+
+  .wCardB{position:relative;background:#f7efe2;border-radius:18px;padding:12px 14px 13px;width:300px}
+  .pal.dk .wCardB{background:#23201b}
+  .pal.bl .wCardB{background:#eef3f9}
+  .pal.bldk .wCardB{background:#182a3a}
+  .wCardB .bTop{display:flex;align-items:center;justify-content:space-between}
+  .wCardB .bRing{display:flex;align-items:center;gap:13px;margin-top:8px}
+  .wCardB .bRingTxt{display:flex;flex-direction:column;gap:3px}
+  .wCardB .bRingTxt b{font:600 22px/1 Figtree,sans-serif;letter-spacing:-.03em;color:var(--inkTxt)}
+  .wCardB .bRingTxt span{font:600 9.5px/1 Figtree,sans-serif;color:var(--dimTxt)}
+  .wCardB .bChips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+  .wCardB .bChip{height:30px;border-radius:12px;display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--wTxt);background:var(--wDeep)}
+  .wCardB .bCurve{margin-top:10px;color:var(--wDeep)}
+  .vSw{display:flex;align-items:center;gap:0;margin-top:10px;padding-top:9px;border-top:1px solid rgba(0,0,0,.07);justify-content:flex-end}
+  .vSw i{position:relative;display:inline-flex;align-items:center;height:26px;padding:0 11px;border-radius:999px;font:600 10px/1 Figtree,sans-serif;font-style:normal;color:var(--dimTxt);white-space:nowrap}
+  .vSw i::after{content:'';position:absolute;left:0;right:0;top:-9px;bottom:-9px}
+  .vSw i.on{background:var(--wDeep);color:var(--wTxt)}
+  .wCardB .vSw{border-top-color:rgba(0,0,0,.07)}
+  .pal.dk .vSw,.pal.bldk .vSw{border-top-color:rgba(255,255,255,.12)}
+  .abBar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 0;padding:11px 14px;background:#efe3cf;border-radius:16px;max-width:1000px}
+  .abTag{font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:5px 8px;border-radius:999px;background:rgba(0,0,0,.1);color:#201e1d;flex:none}
+  .abBtn{font:700 11px/1 Figtree,sans-serif;height:32px;padding:0 14px;border:none;border-radius:999px;background:rgba(0,0,0,.07);color:#201e1d;cursor:pointer}
+  .abBtn.on{background:#4e6d7a;color:#fffaf1}
+  .abNote{font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);flex:1;min-width:180px;text-wrap:pretty}
+  .wCardB .bFoot{display:flex;align-items:center;justify-content:space-between;margin-top:7px;font:600 9px/1 Figtree,sans-serif;color:var(--dimTxt)}
+
   /* --- чипы объёма у кнопки воды --- */
   .chipRow{display:flex;align-items:center;gap:7px}
+  .wCard .chipRow{flex:none}
   .chipRow .gapMinus{margin-right:5px}
   .chip{display:inline-flex;align-items:center;justify-content:center;height:30px;padding:0 12px;border-radius:999px;font:700 11.5px/1 Figtree,sans-serif;white-space:nowrap;position:relative}
   .chip::after{content:'';position:absolute;left:0;right:0;top:-7px;bottom:-7px}
@@ -97,6 +149,14 @@
   .pal.bl .chipSub{color:#101826;box-shadow:inset 0 0 0 2px #2c5f76}
   .pal.bldk .chipAdd{background:#7fb6d0;color:#0d1a26}
   .pal.bldk .chipSub{color:#eef3f8;box-shadow:inset 0 0 0 2px #7fb6d0}
+  .chipRow.onWater .chipAdd{background:#fffaf1;color:#201e1d}
+  .chipRow.onWater .chipSub{color:#fffaf1;box-shadow:inset 0 0 0 2px #fffaf1}
+  .pal.dk .chipRow.onWater .chipAdd{background:#f2ede6;color:#201e1d}
+  .pal.dk .chipRow.onWater .chipSub{color:#f2ede6;box-shadow:inset 0 0 0 2px #f2ede6}
+  .pal.bl .chipRow.onWater .chipAdd{background:#ffffff;color:#101826}
+  .pal.bl .chipRow.onWater .chipSub{color:#ffffff;box-shadow:inset 0 0 0 2px #ffffff}
+  .pal.bldk .chipRow.onWater .chipAdd{background:#eef3f8;color:#0d1a26}
+  .pal.bldk .chipRow.onWater .chipSub{color:#eef3f8;box-shadow:inset 0 0 0 2px #eef3f8}
   .fabW{width:38px;height:38px;flex:none;border-radius:999px;background:#fffaf1;box-shadow:0 1px 3px rgba(80,50,20,.16);display:flex;align-items:center;justify-content:center;color:#7d98a6}
   .pal.dk .fabW{background:#23201b;color:#8fb3c2}
   .pal.bl .fabW{background:#ffffff;color:#3d7f9e}
@@ -107,10 +167,10 @@
   .pal.bldk .chipPlate{background:#182a3a}
 
   /* --- В₃ · высокий уровень: подписи опускаются на дно плитки --- */
-  .vSub{--w:#7d98a6;--wDeep:#4e6d7a;--wTxt:#fffaf1;--inkTxt:#201e1d;--dimTxt:rgba(0,0,0,.55)}
-  .pal.dk .vSub{--w:#8fb3c2;--wDeep:#3f6c7e;--wTxt:#f2ede6;--inkTxt:#f2ede6;--dimTxt:rgba(242,237,230,.62)}
-  .pal.bl .vSub{--w:#3d7f9e;--wDeep:#2c5f76;--wTxt:#ffffff;--inkTxt:#101826;--dimTxt:rgba(16,24,38,.55)}
-  .pal.bldk .vSub{--w:#7fb6d0;--wDeep:#35657d;--wTxt:#eef3f8;--inkTxt:#eef3f8;--dimTxt:rgba(238,243,248,.62)}
+  .vSub{--cardBg:#f7efe2;--w:#7d98a6;--wDeep:#4e6d7a;--wTxt:#fffaf1;--inkTxt:#201e1d;--dimTxt:#6b5f4f}
+  .pal.dk .vSub{--cardBg:#23201b;--w:#8fb3c2;--wDeep:#3f6c7e;--wTxt:#f2ede6;--inkTxt:#f2ede6;--dimTxt:rgba(242,237,230,.62)}
+  .pal.bl .vSub{--cardBg:#eef3f9;--w:#3d7f9e;--wDeep:#2c5f76;--wTxt:#ffffff;--inkTxt:#101826;--dimTxt:#5a6474}
+  .pal.bldk .vSub{--cardBg:#182a3a;--w:#7fb6d0;--wDeep:#35657d;--wTxt:#eef3f8;--inkTxt:#eef3f8;--dimTxt:rgba(238,243,248,.62)}
   .vSub .fillW{animation:vSubFill 4.6s ease-in-out infinite}
   @keyframes vSubFill{0%,20%{height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%)}50%,100%{height:84%;background:var(--wDeep)}}
   .vSub .k{animation:vSubDim 4.6s ease-in-out infinite}
@@ -294,7 +354,7 @@
       <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
       <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.4);">ключ и значение через таб — вставляется в тикет или тест</span>
     </div>
-    <div class="spec"><b>фича</b><span data-v="добавление воды: один тап по кнопке = +250 мл"></span></div>
+    <div class="spec"><b>фича</b><span data-v="добавление воды: тап по кнопке раскрывает ряд объёмов −200 / +200 / +500; одиночного «тап = +250» нет"></span></div>
     <div class="spec"><b>носители</b><span data-v="плитка «Вода» 1×1 на Главной; столбик у кнопки — везде, где плитки не видно"></span></div>
     <div class="spec"><b>границы</b><span data-v="канвас рисует содержимое плитки; внешний контейнер продукта и его паддинг — не наши"></span><i>заливка и круг позиционируются от границ плитки и обрезаются её скруглением — не от содержимого и не от контейнера продукта</i></div>
     <div class="spec"><b>источник</b><span data-v="этот файл главный для плитки «Вода»"></span><i>кадр в home-widgets вторичен; при расхождении остановиться, а не выбирать</i></div>
@@ -413,7 +473,7 @@
           <div class="dBar" style="height:4px;border-radius:999px;background:rgba(0,0,0,.09);margin-top:auto;overflow:hidden;"><i></i></div>
         </div>
       </div>
-      <span class="addPill dPill">+250 мл</span>
+      <span class="addPill dPill">+200 мл</span>
       <span class="fab"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
     </div>
     <div class="ntl" style="width:230px;margin-top:10px;"><b>Самый тихий</b><span>Ничего не движется, кроме подписи — подходит, если действие делают по 6–8 раз в день и любой цвет-событие быстро надоест.</span></div>
@@ -499,7 +559,7 @@
     <div class="spec"><b>итого</b><span data-v="≈ 900 мс от тапа до покоя, кнопка доступна всё это время"></span><i>анимация ничего не блокирует</i></div>
     <div class="spec"><b>цвет</b><span data-v="#7d98a6 песочная · #8fb3c2 тёмная · #3d7f9e синяя · #7fb6d0 сине-тёмная"></span><i>тот же холодный тон, что уже красит воду; новых оттенков не вводим</i></div>
     <div class="spec"><b>раскладка плитки</b><span data-v="«Вода» слева внизу, факт справа внизу, норма мелким справа сверху; отступы 8 px от краёв, обе нижние строки по нижнему краю — базовые линии совпадают"></span><i>ничего никуда не едет весь день: одна раскладка на все уровни. Число внизу справа — под большим пальцем, норма наверху не мешает ему и не спорит с заливкой, пока та не дошла</i></div>
-    <div class="spec"><b>норма</b><span data-v="«из 3,0» — 8,5 px/600, вторичный тон .55 на светлых палитрах и .62 на тёмных, только число, без единицы"></span><i>единица уже стоит у факта; норма здесь справка, а не носитель смысла — на «много или мало» отвечает высота заливки. Тон именно .55, а не .45: это функциональный текст, он живёт по порогу 4,5:1, как вторичный текст в анкете и согласиях</i></div>
+    <div class="spec"><b>норма</b><span data-v="«из 3,0» — 8,5 px/600, только число, без единицы. Вторичный тон сплошной, не альфа: #6b5f4f на светлых палитрах (5,45:1), #5a6474 в синей (5,36:1); на тёмных остаётся кремовая альфа .62 — 6,17:1 в тёмной и 5,98:1 в сине-тёмной"></span><i>единица уже стоит у факта; норма здесь справка, а не носитель смысла — на «много или мало» отвечает высота заливки. Тон задавать сплошным и мерить на своей подложке: альфа обманчива — 55 % чёрного по кремовому даёт 2,08:1, почти как по белому, и прецедент «.42 → .55» из анкеты сюда не переносится</i></div>
     <div class="spec"><b>перекраска</b><span data-v="строка становится кремовой, когда поверхность прошла её верх: нижние — при заливке ≥ 31 %, норма — при ≥ 89 % (для плитки 64 px). Переход 220 мс, движения нет"></span><i>одно правило на все три строки вместо порогов по каждой; поэтому большую часть дня внизу кремовый текст на воде, а норма ещё в чернилах на чистом фоне</i></div>
     <div class="spec"><b>до своего порога</b><span data-v="строка остаётся чернильной, даже когда вода прошла её нижнюю половину"></span><i>чернила по воде дают 5,4:1 — читается; красить раньше нельзя, кремовый на кремовой плитке 1,05:1</i></div>
     <div class="spec"><b>возврат</b><span data-v="при падении заливки ниже порога своей строки она возвращается в чернила теми же 220 мс"></span><i>состояние зависит от уровня, а не от факта тапа — иначе исправленный день оставит белый текст на светлой плитке</i></div>
@@ -540,16 +600,20 @@
 
   <div class="h">Параметры звука</div>
   <div style="background:#fffaf1;border-radius:20px;padding:18px;max-width:1000px;">
-    <div class="spec"><b>характер</b><span data-v="мягкое контактное «ток» + короткий водяной призвук; без пузырей и реверберации"></span><i>эхо мгновенно выдаёт стоковую библиотеку; физическая аналогия — капля в керамическую чашку</i></div>
+    <div class="spec"><b>чем сделан</b><span data-v="синтез в WebAudio, не семпл"></span><i>решено по факту реализации: ассет не тащим, громкость управляется общим регулятором. Требования к характеру, тону и огибающей ниже остаются обязательными — синтез обязан звучать так же, а не «как получится»</i></div>
+  <div class="spec"><b>характер</b><span data-v="мягкое контактное «ток» + короткий водяной призвук; без пузырей и реверберации"></span><i>эхо мгновенно выдаёт стоковую библиотеку; физическая аналогия — капля в керамическую чашку</i></div>
     <div class="spec"><b>тон</b><span data-v="основной 400 → 540 Гц восходящим глайдом · обертон ×2 на −12 дБ"></span><i>глайд и делает его каплей, а не системным бипом; не совпадает с тоном уведомлений</i></div>
     <div class="spec"><b>огибающая</b><span data-v="атака 4 мс · спад 140 мс · без сустейна · всего ≤ 200 мс"></span><i>короче анимации круга — звук успевает кончиться раньше, чем круг растворится</i></div>
-    <div class="spec"><b>громкость</b><span data-v="пик −18 dBFS"></span><i>тише системного тапа: не перебивает разговор в комнате</i></div>
+    <div class="spec"><b>громкость</b><span data-v="гейн 0,22 от общего уровня звуков приложения — тише системного тапа"></span><i>тише системного тапа: не перебивает разговор в комнате</i></div>
     <div class="spec"><b>вариация</b><span data-v="+30 центов на каждый следующий стакан за день, максимум 4 ступени, потом сброс"></span><i>шесть одинаковых щелчков звучат как заедающая кнопка, четыре восходящих — как фраза</i></div>
+    <div class="spec"><b>свой объём</b><span data-v="долгое нажатие 350 мс по кнопке воды или по любому чипу открывает лист: шаговый ввод с шагом 50 мл, четыре готовых значения (330 / 500 / 750 / 1000) обводкой, совпадающее с текущим — заливкой, кнопка «Добавить N мл» заливкой"></span><i>четвёртого шага в ряду не заводим: ряд из четырёх плюс убавляющий перестаёт читаться, а бутылка у каждого своя. Жест тот же, что смена вида виджета, лист тот же, что у настроек — новых поверхностей не появляется</i></div>
+    <div class="spec"><b>память объёма</b><span data-v="лист открывается на последнем своём объёме этого человека, не на 0"></span><i>кто пьёт из бутылки 0,75, добавляет её каждый день — второй раз он не должен набирать то же число</i></div>
+    <div class="spec"><b>карточка · утро</b><span data-v="0 л: полоса пуста, сегодняшний столбик 2 px (не отсутствует), −200 погашен до 32 % и остаётся в ряду"></span><i>нулевой столбик рисуем полоской, а не пустотой: иначе спарклайн выглядит как шесть дней вместо семи</i></div>
     <div class="spec"><b>частые тапы · звук</b><span data-v="более 4 тапов за 2 с — звук молчит, остаётся тактильный отклик"></span></div>
     <div class="spec"><b>тактильный</b><span data-v="один тик в момент тапа: iOS impact light, Android EFFECT_TICK"></span><i>на касании воды вибрации нет — два события на одно действие дают дрожь</i></div>
     <div class="spec"><b>момент</b><span data-v="звук на касании поверхности (+240 мс); при reduced-motion — сразу на тапе"></span></div>
-    <div class="spec"><b>категория</b><span data-v="ambient: аппаратный бесшумный режим гасит полностью, музыка не прерывается"></span></div>
-    <div class="spec" style="border-bottom:none"><b>файл</b><span data-v="assets/water-drop.wav · моно, 48 кГц, 180 мс, 17 КБ"></span><i>один семпл на все палитры и обе платформы; вариация тона — воспроизведением, не набором файлов</i></div>
+    <div class="spec"><b>категория</b><span data-v="звук идёт через общий регулятор звуков приложения и гаснет вместе с ним; своей настройки у воды нет"></span></div>
+    <div class="spec" style="border-bottom:none"><b>файл</b><span data-v="файла нет: звук синтезируется в WebAudio по параметрам выше"></span><i>один семпл на все палитры и обе платформы; вариация тона — воспроизведением, не набором файлов</i></div>
   </div>
 
   <div class="h">Когда звука нет</div>
@@ -585,6 +649,90 @@
   </div>
   <div data-mirdst="m5"></div>
 
+
+  <div class="h">Карточка воды в «Разборе дня»</div>
+  <p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Плитка на Главной и кнопка — короткие пути; полный вид живёт карточкой в «Разборе дня» на вкладке «Питание». Она стоит там всегда, а не появляется, когда виджет убрали: экран, который меняет состав от настроек другого экрана, невозможно запомнить. Заливку на всю карточку не берём — в плитке 80 × 64 она читается как знак, а на 300 px превращается в цветной прямоугольник. Здесь работают два спокойных носителя: полоса за сегодня и спарклайн за неделю, которого в плитке нет и быть не может.</p>
+
+  <div class="pal" data-mir="m9" style="display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;">
+    <div data-cardvar="a"><div class="lab" style="margin:0 0 9px;"><b>Вид «Полоса» · дефолт</b><span>статус за сегодня полосой, неделя столбиками, ряд объёмов внизу</span></div>
+      <div class="wCard" data-demo="stop" data-screen-label="Вода · карточка · Полоса">
+        <div class="cTop"><span class="k">Вода</span><span class="cNorm">из 3,0 л</span></div>
+        <div class="cVal"><b>1,7<i>л</i></b><span class="cLeft">осталось 1,3</span></div>
+        <div class="cBar"><i style="width:57%;"></i></div>
+        <div class="cSpark"><i style="height:46%;"></i><i style="height:72%;"></i><i style="height:60%;"></i><i style="height:88%;"></i><i style="height:54%;"></i><i style="height:80%;"></i><i style="height:62%;" class="on"></i></div>
+        <div class="cFoot"><span class="cDays">в среднем 2,1 л</span>
+          <span class="chipRow"><span class="chip chipSub gapMinus">−200</span><span class="chip chipAdd">+200</span><span class="chip chipAdd">+500</span></span>
+        </div>
+        <div class="vSw"><i class="on">Полоса</i><i>Кольцо</i></div>
+      </div>
+    </div>
+    <div data-cardvar="a"><div class="lab" style="margin:0 0 9px;"><b>Утро · 0 л</b><span>полоса пуста, сегодняшний столбик нулевой, −200 погашен</span></div>
+      <div class="wCard" data-demo="stop" data-screen-label="Вода · карточка · Полоса · утро">
+        <div class="cTop"><span class="k">Вода</span><span class="cNorm">из 3,0 л</span></div>
+        <div class="cVal"><b>0<i>л</i></b><span class="cLeft">осталось 3,0</span></div>
+        <div class="cBar"><i style="width:0;"></i></div>
+        <div class="cSpark"><i style="height:46%;"></i><i style="height:72%;"></i><i style="height:60%;"></i><i style="height:88%;"></i><i style="height:54%;"></i><i style="height:80%;"></i><i class="on" style="height:2px;"></i></div>
+        <div class="cFoot"><span class="cDays">в среднем 2,1 л</span>
+          <span class="chipRow"><span class="chip chipSub gapMinus chipOff">−200</span><span class="chip chipAdd">+200</span><span class="chip chipAdd">+500</span></span>
+        </div>
+        <div class="vSw"><i class="on">Полоса</i><i>Кольцо</i></div>
+      </div>
+    </div>
+    <div data-cardvar="b"><div class="lab" style="margin:0 0 9px;"><b>Вид «Кольцо»</b><span>доля нормы кольцом, четыре готовых объёма, неделя кривой</span></div>
+      <div class="wCardB" data-demo="stop" data-screen-label="Вода · карточка · Кольцо">
+        <div class="bTop"><span class="k">Вода · 7 дней в среднем 2,1 л</span><span class="chip chipSub" style="height:26px;padding:0 10px;font-size:10.5px;">−200</span></div>
+        <div class="bRing">
+          <svg width="58" height="58" viewBox="0 0 58 58" style="flex:none;"><circle cx="29" cy="29" r="24" fill="none" stroke="var(--trk)" stroke-width="6"/><circle cx="29" cy="29" r="24" fill="none" stroke="var(--wDeep)" stroke-width="6" stroke-linecap="round" stroke-dasharray="86 151" transform="rotate(-90 29 29)"/></svg>
+          <span class="bRingTxt"><b>1,7 л</b><span>из 3,0 · осталось 1,3</span></span>
+        </div>
+        <div class="bChips"><span class="bChip">+100</span><span class="bChip">+200</span><span class="bChip">+330</span><span class="bChip">+500</span></div>
+        <div class="bCurve"><svg width="268" height="34" viewBox="0 0 268 34" fill="none">
+          <path d="M4 20 L48 11 L92 15 L136 6 L180 18 L224 9 L264 14 L264 30 L4 30 Z" fill="currentColor" opacity=".16"/>
+          <path d="M4 12 L264 12" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".5"/>
+          <polyline points="4,20 48,11 92,15 136,6 180,18 224,9 264,14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="48" cy="11" r="2.6" fill="currentColor"/><circle cx="136" cy="6" r="2.6" fill="currentColor"/><circle cx="224" cy="9" r="2.6" fill="currentColor"/>
+          <circle cx="4" cy="20" r="2.6" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.5"/><circle cx="92" cy="15" r="2.6" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.5"/><circle cx="180" cy="18" r="2.6" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="264" cy="14" r="3.4" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.8"/><circle cx="264" cy="14" r="6.8" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".45"/>
+        </svg></div>
+        <div class="vSw"><i>Полоса</i><i class="on">Кольцо</i></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="abBar">
+    <span class="abTag">ТОЛЬКО КАНВАС</span>
+    <button type="button" class="abBtn on" onClick="{{ showBoth }}">Оба рядом</button>
+    <button type="button" class="abBtn" onClick="{{ showA }}">Только Полоса</button>
+    <button type="button" class="abBtn" onClick="{{ showB }}">Только Кольцо</button>
+    <span class="abNote">Эти кнопки живут только на канвасе — они прячут вторую колонку, чтобы показать человеку один вид отдельно. Продуктовый переключатель другой: он внутри карточки, под содержимым, и идёт в код.</span>
+  </div>
+  <div data-mirdst="m9"></div>
+
+  <div style="background:#efe3cf;border-radius:20px;padding:18px;max-width:1000px;margin-bottom:26px;">
+    <div class="nt"><b>Что решает выбор между ними</b><span>Круг — точный ответ на «сколько уже», но он занимает четверть карточки и дублирует то, что говорит число рядом. Полоса отвечает на тот же вопрос полосой 6 px и оставляет место неделе. Четыре объёма против трёх — это про частоту: −200 нужен как симметрия к добавлению, а четвёртый шаг (+330) появился под конкретную бутылку и в v4 у нас есть долгое нажатие для произвольного объёма. Кривая красивее столбиков, но по ней нельзя прочесть отдельный день, а именно это и спрашивают у недельного графика — «когда я пропустил».</span></div>
+    <div class="ntl"><b>Что берём из прежнего</b><span>Строку среднего за неделю и норму в подвале — они дают контекст, которого в плитке нет. Подсказку про бутылки на кухне не берём: совет в карточке данных живёт один день, а потом читается как реклама.</span></div>
+  </div>
+
+
+  <div class="h">Свой объём · долгое нажатие</div>
+  <p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Три шага (−200 / +200 / +500) закрывают почти все случаи, но не бутылку 0,75 и не кружку. Отдельного четвёртого шага не заводим — вместо него долгое нажатие по кнопке воды или по любому чипу открывает лист с шаговым вводом. Тот же жест, что смена вида виджета, и тот же лист, что у настроек: новых поверхностей не появляется.</p>
+
+  <div class="pal" data-mir="m10" style="display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;">
+    <div><div class="lab" style="margin:0 0 9px;"><b>Лист своего объёма</b><span>шаг 50 мл, последнее значение запомнено</span></div>
+      <div class="wCard" data-demo="stop" data-screen-label="Вода · свой объём · лист">
+        <div class="cTop"><span class="k">Свой объём</span><span class="cNorm">шаг 50 мл</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;">
+          <span class="chip chipSub" style="width:44px;height:44px;padding:0;font-size:15px;">−</span>
+          <span style="font:600 26px/1 Figtree,sans-serif;letter-spacing:-.03em;color:var(--inkTxt);">750<span style="font:600 11px/1 Figtree,sans-serif;color:var(--dimTxt);margin-left:4px;">мл</span></span>
+          <span class="chip chipAdd" style="width:44px;height:44px;padding:0;font-size:15px;">+</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:13px;"><span class="chip chipSub" style="flex:1;padding:0;">330</span><span class="chip chipSub" style="flex:1;padding:0;">500</span><span class="chip chipAdd" style="flex:1;padding:0;">750</span><span class="chip chipSub" style="flex:1;padding:0;">1000</span></div>
+        <div style="margin-top:13px;"><span class="chip chipAdd" style="width:100%;height:38px;">Добавить 750 мл</span></div>
+      </div>
+    </div>
+  </div>
+  <div data-mirdst="m10"></div>
+
   <div class="h">Вне Главной · столбик у кнопки</div>
   <p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Кнопка воды живёт на всех вкладках, а плитка «Вода» — только на Главной. Прежняя полноэкранная заливка этот случай закрывала грубой силой: экран красился везде, где бы человек ни находился. Правильный ответ — тот же язык, но другой носитель: слева от кнопки выезжает мерный столбик (та самая ветка В₅), показывает прирост и новый итог и уезжает. Плитку он не подменяет, а замещает там, где её нет.</p>
 
@@ -594,7 +742,7 @@
         <div style="font:700 13px/1 Figtree,sans-serif;color:#201e1d;margin-bottom:9px;">Питание</div>
         <div style="display:flex;flex-direction:column;gap:6px;"><div class="rowLine"></div><div class="rowLine"></div><div class="rowLine"></div><div class="rowLine"></div></div>
         <div class="tabs"><span class=""></span><span class="on"></span><span class=""></span><span class=""></span><span class=""></span></div>
-        <span class="colPop"><span class="lbl"><span class="plus">+250 мл</span><span class="tot">0,65 л</span><span class="cap">из 2,7</span></span><span class="ct"><span class="cf" style="height:40%;"></span></span></span><span class="fab"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+        <span class="colPop"><span class="lbl"><span class="plus">+200 мл</span><span class="tot">0,65 л</span><span class="cap">из 2,7</span></span><span class="ct"><span class="cf" style="height:40%;"></span></span></span><span class="fab"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
       </div>
     </div>
     <div><div class="lab"><b>Вкладка «Актив»</b><span>тот же кадр на любой вкладке</span></div>
@@ -602,7 +750,7 @@
         <div style="font:700 13px/1 Figtree,sans-serif;color:#201e1d;margin-bottom:9px;">Актив</div>
         <div style="display:flex;flex-direction:column;gap:6px;"><div class="rowLine"></div><div class="rowLine"></div><div class="rowLine"></div></div>
         <div class="tabs"><span class=""></span><span class=""></span><span class="on"></span><span class=""></span><span class=""></span></div>
-        <span class="colPop"><span class="lbl"><span class="plus">+250 мл</span><span class="tot">0,65 л</span><span class="cap">из 2,7</span></span><span class="ct"><span class="cf" style="height:40%;"></span></span></span><span class="fab"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+        <span class="colPop"><span class="lbl"><span class="plus">+200 мл</span><span class="tot">0,65 л</span><span class="cap">из 2,7</span></span><span class="ct"><span class="cf" style="height:40%;"></span></span></span><span class="fab"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
       </div>
     </div>
     <div><div class="lab"><b>Главная, прокрученная вниз</b><span>плитка есть, но её не видно — тоже столбик</span></div>
@@ -610,7 +758,7 @@
         <div style="font:700 13px/1 Figtree,sans-serif;color:#201e1d;margin-bottom:9px;">Отчёт за день</div>
         <div style="display:flex;flex-direction:column;gap:6px;"><div class="rowLine"></div><div class="rowLine"></div><div class="rowLine"></div><div class="rowLine"></div></div>
         <div class="tabs"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
-        <span class="colPop"><span class="lbl"><span class="plus">+250 мл</span><span class="tot">0,65 л</span><span class="cap">из 2,7</span></span><span class="ct"><span class="cf" style="height:40%;"></span></span></span><span class="fab"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+        <span class="colPop"><span class="lbl"><span class="plus">+200 мл</span><span class="tot">0,65 л</span><span class="cap">из 2,7</span></span><span class="ct"><span class="cf" style="height:40%;"></span></span></span><span class="fab"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
       </div>
     </div>
   </div>
@@ -619,9 +767,23 @@
   <div class="h">Как это работает</div>
   <div style="background:#fffaf1;border-radius:20px;padding:18px;max-width:1000px;">
     <div class="spec"><b>когда</b><span data-v="плитка «Вода» видна менее чем наполовину или её нет на экране"></span><i>проверяется видимость плитки, а не текущая вкладка</i></div>
+    <div class="spec"><b>полный вид</b><span data-v="карточка воды в «Разборе дня» на вкладке «Питание» — постоянная, показывается всегда, независимо от того, есть ли виджет на Главной и включён ли чип кнопки"></span><i>экран, который меняет состав от настроек другого экрана, невозможно запомнить; виджет и кнопка — короткие пути к тому же, а не замена</i></div>
+    <div class="spec"><b>адрес один</b><span data-v="«Питание», не «Актив»"></span><i>вода это то, что попало в тело, а «Актив» про расход; два адреса для одного показателя заставляют помнить, где искать</i></div>
+    <div class="spec"><b>вид карточки</b><span data-v="два вида, оба идут в продукт: «Полоса» (статус за сегодня полосой, неделя столбиками) и «Кольцо» (доля нормы кольцом, четыре готовых объёма, неделя кривой). Дефолт — «Кольцо» (решение владельца 20 августа); у кого уже сохранён выбор, он не меняется"></span><i>это не A/B на выбор дизайна, а настройка человека: одни смотрят на неделю, другие на «сколько сейчас». Оба вида обязаны показывать одни и те же данные и одну норму</i></div>
+    <div class="spec"><b>неделя в «Кольце»</b><span data-v="кривая по семи дням с заливкой под ней (16 %), пунктирная линия нормы поперёк · попадание в норму — залитая точка, промах — контурная (фон карточки внутри) · сегодня отмечается только ореолом вокруг точки, заливку не меняет"></span><i>заливка означает ровно одно — норма взята; «сегодня» несёт отдельный признак, иначе на незакрытом дне два смысла столкнутся в одной точке. Одна кривая отвечала только на «росло или падало»; с линией нормы она отвечает на «сколько дней я её взял» — это и есть вопрос, с которым человек смотрит на неделю. У А то же самое несут столбики: выше линии или нет</i></div>
+    <div class="spec"><b>разбор нормы</b><span data-v="в карточке его нет: база, шаги, тренировка и «давно не пил» живут вторым слоем — по тапу по факту открывается тот же поповер метрики, что и у остальных чисел"></span><i>карточка отвечает на «сколько и сколько осталось»; из чего сложилась норма — вопрос, который задают раз в месяц, и у него уже есть свой адрес. Держать разбор в карточке значит дублировать поповер и расходиться с ним</i></div>
+    <div class="spec"><b>минус в «Кольце»</b><span data-v="в ряду четырёх объёмов минуса нет — он стоит первым в том же ряду пятой пилюлей обводкой, с зазором 12 px до первого плюса; в шапке карточки ему места нет"></span><i>убавление — такой же ввод, как добавление, и живёт там же, где рука его ищет. Вынесенный в шапку минус читается как отмена всей карточки, а не как минус 200 мл, и до него не дотянуться пальцем одной рукой</i></div>
+    <div class="spec"><b>переключатель обязателен</b><span data-v="без него карточка не сдаётся: второй вид становится недостижимым и существует только в коде"></span><i>если дефолт «Кольцо», то без переключателя «Полосу» не увидит ни один человек</i></div>
+    <div class="spec"><b>переключатель вида</b><span data-v="вне карточки, под ней, по её левому краю: две пилюли «Полоса» и «Кольцо», высота 26 px, кегль 10/600; активная — заливка глубоким тоном, кремовый текст. Без подложки и разделителя. Отступ до карточки 8 px, до следующего блока не меньше 20 px"></span><i>переключатель не часть карточки — он управляет её отрисовкой, как лист выбора вида управляет плиткой на Главной, оставаясь вне неё. Отступы неравные намеренно: снизу «Разбор дня» идут другие карточки, и по одинаковым зазорам глаз не поймёт, чей это переключатель</i></div>
+    <div class="spec"><b>цель касания переключателя</b><span data-v="44 pt: при видимой высоте 26 px область нажатия расширена на 9 px сверху и снизу"></span></div>
+    <div class="spec"><b>запись выбора</b><span data-v="по нажатию, сразу; своя настройка на человека и на устройство, подтверждения нет"></span><i>тот же приём, что у смены вида виджета: подтверждать нечего — человек уже видит результат</i></div>
+    <div class="spec"><b>служебный переключатель канваса</b><span data-v="кнопки «Оба рядом», «Только Полоса», «Только Кольцо» над рядом сравнения — только канвас, в продукт не идут"></span><i>нужны, чтобы показать человеку один вид без второго рядом; продуктовый переключатель — тот, что внутри карточки</i></div>
+    <div class="spec"><b>чем они отличаются</b><span data-v="«Полоса» отвечает на «сколько за неделю» (семь столбиков, сегодня всегда правый), «Кольцо» — на «сколько сейчас» (доля нормы кольцом) и даёт четыре готовых объёма вместо трёх"></span><i>это разные вопросы, а не разное оформление: у А сильнее контекст, у Б — текущее состояние и скорость ввода. Ответ на ревью нужен один: какой вопрос человек задаёт, открывая «Разбор дня»</i></div>
+    <div class="spec"><b>что в карточке</b><span data-v="сверху подпись «Вода» стандартным .k и норма справа · выпито крупно с единицей и остатком · значение 26 px/600, полоса за сегодня 6 px глубоким тоном, дорожка спарклайна 30 px · спарклайн за 7 дней сплошными столбиками: прошлые — средний тон ramp (#5d7f8d песочная, #7ba3b4 тёмная, #4a86a4 синяя, #6ba3bf сине-тёмная, 3,77:1 к подложке), сегодняшний — глубокий тон (4,85:1). Сегодня узнаётся позицией: он всегда правый · внизу «в среднем N» слева (nowrap) и ряд объёмов справа"></span><i>столбики сплошные: полые читаются беднее и превращают график в схему. Порог 3:1 держать к подложке, а не между соседними столбиками — соседние различать не нужно, сегодняшний и так всегда правый. Альфа здесь не работает: даже сплошной базовый тон воды даёт по этой подложке 2,66:1, поэтому прошлые дни берут средний тон ramp, а не прозрачность. Заливки на всю карточку здесь нет: в плитке 80 × 64 она знак, на 300 px — цветной прямоугольник. Среднее стоит отдельной строкой в подвале, а не в подписи через точку: подпись называет виджет одним словом, как во всех плитках. Слово «неделя» в строке не пишем — период читается по семи столбикам над ней, а на 300 px рядом с рядом объёмов остаётся 90 px, и «7 дней · в среднем 2,1 л» рвётся на две строки</i></div>
+    <div class="spec" style="border-bottom:none"><b>нет виджета и нет кнопки</b><span data-v="ответ на добавление показывает сама карточка: уровень и число едут в ней; столбик не появляется"></span><i>столбику некуда цепляться — кнопки нет; а карточка в этот момент перед глазами, человек добавляет из неё</i></div>
     <div class="spec"><b>якорь</b><span data-v="кнопка воды, всегда: столбик привязан к её вертикальному центру и левому краю — зазор 10 px"></span><i>не к «плюсу», не к краю экрана и не к нижнему меню: кнопка воды меняет своё место в стопке от того, сколько чипов включено, и всё, что привязано к экрану, разъедется. По центру, а не по низу — при разной высоте это разные точки</i></div>
     <div class="spec"><b>нет кнопки воды</b><span data-v="чип воды выключен — столбика нет вовсе"></span><i>без кнопки воду добавляют из самой плитки, а её в этот момент видно — отвечает плитка. Привязывать столбик к «плюсу» нельзя: «плюс» это добавление еды, и ответ про воду рядом с ним читается как ответ про еду</i></div>
-    <div class="spec"><b>вид чипов</b><span data-v="добавить — сплошная заливка тоном воды с чернильным текстом · убавить — та же пилюля обводкой 1,5 px без заливки; высота 30 px, радиус 999, кегль 11,5/700"></span><i>белая пилюля на кремовой подложке держалась на одной тени и на светлой теме не читалась как кнопка. Разница между «добавить» и «убавить» — на заливке, а не на цвете: красным здесь ничего не красим, лишние 100 мл не ошибка</i></div>
+    <div class="spec"><b>вид чипов</b><span data-v="добавить — сплошная заливка, убавить — та же пилюля обводкой без заливки; высота 30 px, радиус 999, кегль 11,5/700. Тон заливки — строка «цвета чипов», толщина обводки — строка «обводка убавляющего»"></span><i>белая пилюля на кремовой подложке держалась на одной тени и на светлой теме не читалась как кнопка. Разница между «добавить» и «убавить» — на заливке, а не на цвете: красным здесь ничего не красим, лишние 100 мл не ошибка</i></div>
     <div class="spec"><b>цвета чипов</b><span data-v="чип обязан отличаться от подложки не меньше чем на 3:1 — сам чип, а не текст в нём. Песочная: заливка #4e6d7a + кремовый текст (4,85:1 к подложке, 5,33:1 текст) · тёмная: #8fb3c2 + чернила (7,2:1) · синяя: #2c5f76 + белый (6,3:1) · сине-тёмная: #7fb6d0 + чернила (6,4:1)"></span><i>на светлых темах чип берёт глубокий тон воды, на тёмных — базовый: на тёмной подложке глубокий тон сливается с ней. Базовый #7d98a6 на песочной подложке давал 2,66:1 — текст в нём проходил порог, а сама пилюля не читалась как кнопка, с этого и началась жалоба</i></div>
     <div class="spec"><b>обводка убавляющего</b><span data-v="2 px тем же тоном, что заливка добавляющих; текст — чернила палитры"></span><i>обводка — единственная граница этого чипа, поэтому она обязана держать те же 3:1 к подложке; на 1,5 px в тоне базовой воды он был самым незаметным из трёх</i></div>
     <div class="spec"><b>набор</b><span data-v="−200 · +200 · +500; шаг убавления равен шагу добавления, убавляющий первый, отделён увеличенным зазором (12 px против 7)"></span><i>шаг тот же, что у добавления: промах на один тап убирается одним тапом, без арифметики в уме. Отдельный зазор — чтобы не попадать по нему вслепую в ряду одинаковых пилюль</i></div>
@@ -630,7 +792,7 @@
     <div class="spec"><b>нажатие</b><span data-v="чип вжимается до 0,96 и даёт тот же тактильный тик, что тап по кнопке воды"></span></div>
     <div class="spec"><b>быстрые объёмы</b><span data-v="пока раскрыты чипы объёма (+200, +500), столбика нет; он приезжает после того, как чипы уехали"></span><i>чипы вылетают влево от той же кнопки и занимают то же место — вместе они наползают друг на друга. Сначала выбор, потом ответ</i></div>
     <div class="spec"><b>размер</b><span data-v="7 × 62 px, радиус 999 px"></span><i>та же ширина и тон, что у полосы в плитке — читается как один элемент системы</i></div>
-    <div class="spec"><b>подписи</b><span data-v="+250 мл 9 px/700 тоном воды · итог 13 px/600 чернилами · «из 2,7» 8 px/500"></span><i>прирост важен один раз, итог остаётся с человеком — поэтому итог крупнее</i></div>
+    <div class="spec"><b>подписи</b><span data-v="прирост «+200 мл» (или объём нажатого чипа) 9 px/700 тоном воды · итог 13 px/600 чернилами · «из 2,7» 8 px/500"></span><i>прирост важен один раз, итог остаётся с человеком — поэтому итог крупнее</i></div>
     <div class="spec"><b>появление</b><span data-v="выезд 10 px справа налево с прозрачностью, 180 мс ease-out · заливка 320 мс"></span></div>
     <div class="spec"><b>уход</b><span data-v="держится 1,4 с после последнего тапа, уезжает за 160 мс"></span><i>ничего не нажимать и не ждать не нужно — жест закончен в момент тапа</i></div>
     <div class="spec"><b>частые тапы · столбик</b><span data-v="второй раз не выезжает: обновляется на месте, таймер ухода перезапускается"></span></div>
@@ -700,7 +862,7 @@
     <div>
       <div class="lab" style="margin:0 0 9px;"><b>Б · норма сверху, подписи снизу</b><span>подписи внизу с самого начала, погружения нет</span></div>
       <div style="display:flex;gap:22px;align-items:center;background:#fffaf1;border-radius:20px;padding:16px 18px;">
-        <div class="tileV vSub nrmB" data-demo="loop" data-screen-label="Вода · норма Б · петля"><span class="fillW" style="height:22%;"></span><span class="topNorm">из 3,0</span><span class="botK">Вода</span><span class="botV">2,4</span></div>
+        <div class="tileV vSub nrmB" data-demo="protocol" data-screen-label="Вода · норма Б · петля (протокол, канон — Вода · норма · петля)"><span class="fillW" style="height:22%;"></span><span class="topNorm">из 3,0</span><span class="botK">Вода</span><span class="botV">2,4</span></div>
         <div class="zoom" style="width:180px;height:144px;"><div class="zoomInner" style="transform:scale(2.25);"><div class="tileV vSub nrmB"><span class="fillW" style="height:22%;"></span><span class="topNorm">из 3,0</span><span class="botK">Вода</span><span class="botV">2,4</span></div></div></div>
       </div>
     </div>
@@ -814,6 +976,9 @@ class Component extends DCLogic {
   }
   renderVals() {
     return {
+      showBoth: (e) => this.setCardVar('both', e.currentTarget),
+      showA: (e) => this.setCardVar('a', e.currentTarget),
+      showB: (e) => this.setCardVar('b', e.currentTarget),
       copySpec: (e) => {
         const rows = [...document.querySelectorAll('.spec')].map(r => {
           const k = r.querySelector('b');
@@ -839,6 +1004,14 @@ class Component extends DCLogic {
         else play(Number(v));
       });
     });
+  }
+  setCardVar(v, btn) {
+    this._cardVar = v;
+    document.querySelectorAll('[data-cardvar]').forEach(col => {
+      col.style.display = (v === 'both' || col.getAttribute('data-cardvar') === v) ? '' : 'none';
+    });
+    document.querySelectorAll('.abBtn').forEach(b => b.classList.remove('on'));
+    if (btn) btn.classList.add('on');
   }
   apply() {
     const all = this.props.allPalettes ?? (window.parent === window);
