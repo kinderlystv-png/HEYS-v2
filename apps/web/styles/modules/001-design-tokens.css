@@ -70,6 +70,22 @@
   --heys-text-muted: var(--v4-ink-4, #9ca3af);
   --heys-text-inverted: var(--v4-bg, #ffffff);
 
+  /* Короткие псевдонимы текстовых ролей.
+   *
+   * Были объявлены только внутри [data-theme$="dark"], поэтому в светлых темах
+   * var(--text-primary) и соседи не разрешались вовсе. Где стоял запасной цвет
+   * — рисовался он, где не стоял — текст оставался без цвета: 16 таких мест в
+   * 730-widgets-dashboard.css, все на --text-tertiary, плюс 6 на --text-primary
+   * и 7 на --text-secondary.
+   *
+   * Объявляем здесь, в :root: сами --heys-text-* уже темозависимы, поэтому
+   * тёмная тема переопределит их сама и дублировать псевдонимы под неё не надо.
+   * --text-tertiary заводится впервые и ложится на --heys-text-muted — это и
+   * есть третий уровень контраста в наборе. */
+  --text-primary: var(--heys-text-primary);
+  --text-secondary: var(--heys-text-secondary);
+  --text-tertiary: var(--heys-text-muted);
+
   /* Borders */
   --heys-border-default: var(--heys-neutral-200);
   --heys-border-focus: var(--heys-primary);
