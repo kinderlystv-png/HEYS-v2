@@ -703,6 +703,65 @@
     return true;
   }
 
+  // ── Local scheduled notifications (SW-backed, survives tab close) ───────
+  const _pageLocalNotificationTimers = new Map();
+
+  async function postToActiveSw(message) {
+    const reg = await getPushRegistration();
+    if (!reg?.active) return null;
+    reg.active.postMessage(message);
+    return reg;
+  }
+
+  function schedulePageLocalNotification(payload) {
+    const delay = payload.fireAt - Date.now();
+    if (delay <= 0) return { ok: false, reason: 'past' };
+    const existing = _pageLocalNotificationTimers.get(payload.id);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      _pageLocalNotificationTimers.delete(payload.id);
+      try {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          new Notification(payload.title, { body: payload.body, tag: payload.tag });
+        }
+      } catch (_) {
+        // ignore
+      }
+    }, delay);
+    _pageLocalNotificationTimers.set(payload.id, timer);
+    return { ok: true, via: 'page' };
+  }
+
+  async function scheduleLocalNotification(payload = {}) {
+    const id = String(payload.id || '');
+    const fireAt = Number(payload.fireAt);
+    const title = String(payload.title || '');
+    const body = String(payload.body || '');
+    const tag = String(payload.tag || id);
+    if (!id || !Number.isFinite(fireAt) || !title) {
+      return { ok: false, reason: 'invalid_payload' };
+    }
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+      return { ok: false, reason: 'permission' };
+    }
+    const normalized = { id, fireAt, title, body, tag };
+    const reg = await postToActiveSw({ type: 'SCHEDULE_LOCAL_NOTIFICATION', payload: normalized });
+    if (reg) return { ok: true, via: 'sw' };
+    return schedulePageLocalNotification(normalized);
+  }
+
+  async function cancelLocalNotification(id) {
+    const key = String(id || '');
+    if (!key) return { ok: false, reason: 'invalid_id' };
+    const pageTimer = _pageLocalNotificationTimers.get(key);
+    if (pageTimer) {
+      clearTimeout(pageTimer);
+      _pageLocalNotificationTimers.delete(key);
+    }
+    await postToActiveSw({ type: 'CANCEL_LOCAL_NOTIFICATION', id: key });
+    return { ok: true };
+  }
+
   // ── Public API ────────────────────────────────────────────────────────
   HEYS.push = {
     isCapable,
@@ -721,6 +780,8 @@
     explainEnableFailure,
     showIosHomeInstallGuide,
     hideIosHomeInstallGuide,
+    scheduleLocalNotification,
+    cancelLocalNotification,
   };
 
   // Авто-проверка на старте — через небольшой timeout, чтобы SW успел встать.

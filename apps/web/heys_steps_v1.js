@@ -857,12 +857,21 @@
   }
 
   let _morningActivationPlannedReminderTimer = null;
+  let _morningActivationPlannedReminderId = null;
 
   function cancelMorningActivationPlannedReminder() {
     if (_morningActivationPlannedReminderTimer) {
       clearTimeout(_morningActivationPlannedReminderTimer);
       _morningActivationPlannedReminderTimer = null;
     }
+    if (_morningActivationPlannedReminderId && HEYS.push?.cancelLocalNotification) {
+      try {
+        HEYS.push.cancelLocalNotification(_morningActivationPlannedReminderId);
+      } catch (_) {
+        // ignore
+      }
+    }
+    _morningActivationPlannedReminderId = null;
   }
 
   function scheduleMorningActivationPlannedReminder(dateKey) {
@@ -873,23 +882,50 @@
     const target = new Date(now);
     target.setHours(14, 0, 0, 0);
     if (target <= now) return;
+    const payload = {
+      id: `ma-planned-${dateKey}`,
+      fireAt: target.getTime(),
+      title: 'Утренняя рутина',
+      body: 'Обещали сделать зарядку сегодня.',
+      tag: `ma-planned-${dateKey}`
+    };
+    _morningActivationPlannedReminderId = payload.id;
+    persistMorningActivationState(dateKey, {
+      plannedReminderAt: target.toISOString()
+    }, 'morning-activation-planned-reminder');
+    if (HEYS.push?.scheduleLocalNotification) {
+      HEYS.push.scheduleLocalNotification(payload).catch(() => {
+        _morningActivationPlannedReminderTimer = setTimeout(() => {
+          try {
+            const fresh = readDayData(dateKey, {});
+            if (fresh?.morningActivation?.status !== 'planned') return;
+            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+              new Notification(payload.title, {
+                body: payload.body,
+                tag: payload.tag
+              });
+            }
+          } catch (_) {
+            // ignore
+          }
+        }, payload.fireAt - Date.now());
+      });
+      return;
+    }
     _morningActivationPlannedReminderTimer = setTimeout(() => {
       try {
         const fresh = readDayData(dateKey, {});
         if (fresh?.morningActivation?.status !== 'planned') return;
         if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          new Notification('Утренняя рутина', {
-            body: 'Обещали сделать зарядку сегодня.',
-            tag: `ma-planned-${dateKey}`
+          new Notification(payload.title, {
+            body: payload.body,
+            tag: payload.tag
           });
         }
       } catch (_) {
         // ignore
       }
-    }, target.getTime() - now.getTime());
-    persistMorningActivationState(dateKey, {
-      plannedReminderAt: target.toISOString()
-    }, 'morning-activation-planned-reminder');
+    }, payload.fireAt - Date.now());
   }
 
   function getMorningActivationRoutineStreak() {

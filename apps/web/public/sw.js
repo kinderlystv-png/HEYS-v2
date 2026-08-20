@@ -6,7 +6,7 @@
 // Boot-бандлы (*.bundle.{hash}.js) кэшируются автоматически через cache-first
 // при первом запросе — хеш в имени обеспечивает вечный кэш без ручного precache.
 
-const CACHE_VERSION = 'heys-1787186353032';
+const CACHE_VERSION = 'heys-1787249234780';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const META_CACHE = 'heys-meta';
@@ -218,6 +218,9 @@ self.addEventListener('activate', (event) => {
         );
       })
       .catch(() => { }),
+
+    // 3️⃣ Локальные напоминания (14:00 рутина и т.п.)
+    rehydrateLocalNotifications().catch(() => { }),
   ]);
 
   event.waitUntil(
@@ -967,6 +970,16 @@ self.addEventListener('message', (event) => {
     return;
   }
 
+  if (event.data && event.data.type === 'SCHEDULE_LOCAL_NOTIFICATION') {
+    event.waitUntil(scheduleLocalNotification(event.data.payload));
+    return;
+  }
+
+  if (event.data && event.data.type === 'CANCEL_LOCAL_NOTIFICATION') {
+    event.waitUntil(cancelLocalNotification(event.data.id));
+    return;
+  }
+
   // === ОЧИСТКА ВСЕХ КЭШЕЙ (для принудительного обновления) ===
   if (event.data === 'clearAllCaches') {
     console.log('[SW] 🗑️ clearAllCaches requested — purging ALL caches...');
@@ -1118,6 +1131,88 @@ function openShareDB() {
       }
     };
   });
+}
+
+// === LOCAL SCHEDULED NOTIFICATIONS ===
+const LOCAL_NOTIFICATIONS_META_KEY = '/__local_notifications__';
+const localNotificationTimers = new Map();
+
+async function loadLocalNotifications() {
+  const raw = await getMetaText(LOCAL_NOTIFICATIONS_META_KEY);
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+async function saveLocalNotifications(map) {
+  await setMetaText(LOCAL_NOTIFICATIONS_META_KEY, JSON.stringify(map || {}));
+}
+
+async function fireLocalNotification(entry) {
+  if (!entry || !entry.id) return;
+  const map = await loadLocalNotifications();
+  const stored = map[entry.id];
+  if (!stored || stored.fireAt !== entry.fireAt) return;
+  delete map[entry.id];
+  await saveLocalNotifications(map);
+  if (localNotificationTimers.has(entry.id)) {
+    clearTimeout(localNotificationTimers.get(entry.id));
+    localNotificationTimers.delete(entry.id);
+  }
+  await self.registration.showNotification(entry.title || 'HEYS', {
+    body: entry.body || '',
+    tag: entry.tag || entry.id,
+    data: { localNotificationId: entry.id }
+  });
+}
+
+async function armLocalNotificationTimer(entry) {
+  if (!entry || !entry.id || !Number.isFinite(entry.fireAt)) return;
+  const delay = entry.fireAt - Date.now();
+  if (localNotificationTimers.has(entry.id)) {
+    clearTimeout(localNotificationTimers.get(entry.id));
+    localNotificationTimers.delete(entry.id);
+  }
+  if (delay <= 0) {
+    await fireLocalNotification(entry);
+    return;
+  }
+  const timer = setTimeout(() => {
+    fireLocalNotification(entry).catch(() => { });
+  }, delay);
+  localNotificationTimers.set(entry.id, timer);
+}
+
+async function scheduleLocalNotification(payload) {
+  if (!payload || !payload.id || !Number.isFinite(payload.fireAt)) return;
+  const map = await loadLocalNotifications();
+  map[payload.id] = payload;
+  await saveLocalNotifications(map);
+  await armLocalNotificationTimer(payload);
+}
+
+async function cancelLocalNotification(id) {
+  const key = String(id || '');
+  if (!key) return;
+  const map = await loadLocalNotifications();
+  if (map[key]) {
+    delete map[key];
+    await saveLocalNotifications(map);
+  }
+  if (localNotificationTimers.has(key)) {
+    clearTimeout(localNotificationTimers.get(key));
+    localNotificationTimers.delete(key);
+  }
+}
+
+async function rehydrateLocalNotifications() {
+  const map = await loadLocalNotifications();
+  const entries = Object.values(map);
+  await Promise.all(entries.map((entry) => armLocalNotificationTimer(entry)));
 }
 
 // === PUSH NOTIFICATIONS ===
