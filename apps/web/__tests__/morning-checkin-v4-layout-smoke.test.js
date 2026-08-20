@@ -124,7 +124,7 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(STEPS_SRC).toMatch(/mc-steps-refeed-row[\s\S]*narrative\.footnote && React\.createElement/);
     expect(STEPS_SRC).toContain('Сдвиньте пальцем, если день будет другим');
     expect(STEPS_SRC).not.toMatch(/Сдвinьте/);
-    expect(STEPS_SRC).toContain('showSupplementsCard');
+    expect(STEPS_SRC).toMatch(/showSupplementsCard\s*=\s*showSupplements\s*&&\s*planned\.length\s*>\s*0/);
     expect(STEPS_SRC).toContain('MorningRestSupplementsFlow');
     expect(STEPS_SRC).toContain('renderMorningRestSuppLayer');
     expect(STEPS_SRC).toContain('mc-supp-flow');
@@ -132,8 +132,7 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(STEPS_SRC).toContain("'b6', 'iodine'");
     expect(STEPS_SRC).toContain("iodine: 'Йод'");
     expect(STEPS_SRC).toContain('Курс пока пуст');
-    expect(STEPS_SRC).toContain('mc-rest-supp-empty');
-    expect(STEPS_SRC).toContain('В курсе нет добавок');
+    expect(STEPS_SRC).not.toContain('В курсе нет добавок');
     expect(STEPS_SRC).toContain('isMorningRestSupplementsEnabled');
     expect(STEPS_SRC).toContain('Добавить в курс');
     expect(STEPS_SRC).toContain('mc-rest-card--supplements');

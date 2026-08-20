@@ -2763,22 +2763,19 @@
     const anchor = Math.max(safeMin, Math.min(safeMax, STEPS_GOAL_SLIDER_ANCHOR));
     const r = Math.max(0, Math.min(1, Number(ratio) || 0));
     let raw;
-    let step;
     if (r <= STEPS_GOAL_SLIDER_ANCHOR_RATIO) {
       raw = safeMin + (STEPS_GOAL_SLIDER_ANCHOR_RATIO > 0
         ? (r / STEPS_GOAL_SLIDER_ANCHOR_RATIO) * (anchor - safeMin)
         : 0);
-      step = 100;
     } else {
       raw = anchor + ((r - STEPS_GOAL_SLIDER_ANCHOR_RATIO) / (1 - STEPS_GOAL_SLIDER_ANCHOR_RATIO))
         * (safeMax - anchor);
-      step = 500;
     }
-    return Math.max(safeMin, Math.min(safeMax, Math.round(raw / step) * step));
+    return Math.max(safeMin, Math.min(safeMax, Math.round(raw / 500) * 500));
   }
 
-  function stepsGoalSliderStepForValue(value) {
-    return Number(value) < STEPS_GOAL_SLIDER_ANCHOR ? 100 : 500;
+  function stepsGoalSliderStepForValue(_value) {
+    return 500;
   }
 
   function roundStepsGoal(value) {
@@ -2933,7 +2930,16 @@
       return {
         headline: 'Вы ходите много — выше двенадцати тысяч совет не поднимается',
         sliderHint: 'Сдвиньте пальцем, если день будет другим',
-        footnote: 'Совет выше двенадцати тысяч не поднимается, но своё число можно увести до 30 000.',
+        footnote: 'Коридор совета — 7 000–12 000 шагов; выше двенадцати тысяч совет не поднимается.',
+        infoCard: null
+      };
+    }
+
+    if (Math.round(adviceValue) <= STEPS_GOAL_MIN && stats.baseline < STEPS_GOAL_MIN) {
+      return {
+        headline: `Обычно вы проходите около ${fmt(Math.round(stats.median))} — берём чуть выше`,
+        sliderHint: 'Сдвиньте пальцем, если день будет другим',
+        footnote: 'Коридор совета — 7 000–12 000 шагов.',
         infoCard: null
       };
     }
@@ -6386,7 +6392,7 @@
     const consentBannerCopy = getMorningRestConsentBannerCopy(profile);
     const showMeasurements = measurementsConsentOn && measurementsEligible;
     const showSupplements = supplementsConsentOn && supplementsFeatureOn;
-    const showSupplementsCard = showSupplements;
+    const showSupplementsCard = showSupplements && planned.length > 0;
     const routineStatus = data.routineStatus || null;
     const routineStreak = data.routineStreak != null
       ? data.routineStreak
@@ -6746,19 +6752,15 @@
           React.createElement('span', { className: 'mc-rest-chevron mc-rest-chevron--down', 'aria-hidden': 'true' })
         ),
         React.createElement('div', {
-          className: 'mc-rest-supp-list' + (planned.length === 0 ? ' mc-rest-supp-list--empty' : '')
+          className: 'mc-rest-supp-list'
         },
-          planned.length > 0
-            ? planned.map((id) => {
-              const row = formatMorningRestSupplementRow(id);
-              return React.createElement('div', { key: id, className: 'mc-rest-supp-row' },
-                React.createElement('span', { className: 'mc-rest-supp-name' }, row.title),
-                row.timing && React.createElement('span', { className: 'mc-rest-supp-time' }, row.timing)
-              );
-            })
-            : React.createElement('div', { className: 'mc-rest-supp-empty' },
-              'В курсе нет добавок'
-            )
+          planned.map((id) => {
+            const row = formatMorningRestSupplementRow(id);
+            return React.createElement('div', { key: id, className: 'mc-rest-supp-row' },
+              React.createElement('span', { className: 'mc-rest-supp-name' }, row.title),
+              row.timing && React.createElement('span', { className: 'mc-rest-supp-time' }, row.timing)
+            );
+          })
         ),
         React.createElement('button', {
           type: 'button',
