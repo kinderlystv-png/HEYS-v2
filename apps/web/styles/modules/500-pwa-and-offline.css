@@ -5294,11 +5294,13 @@
   display: flex;
 }
 
-/* Canvas `.mc`: карточка приёма — фон/радиус на обёртке, не на строке. */
-.ca-modal__meal-card {
+/* Canvas `.mc`: карточка приёма — фон/радиус на обёртке, не на строке.
+   Селектор с `.ca-modal__items >`: иначе сброс `.ca-modal__items > li`
+   перебивает по специфичности и карточка теряет внутренние отступы. */
+.ca-modal__items > .ca-modal__meal-card {
   background: var(--v4-card, #f7efe2);
   border-radius: 18px;
-  padding: 13px 13px 14px;
+  padding: 11px 13px 12px;
   list-style: none;
 }
 .ca-modal__meal-card > .ca-modal__item {

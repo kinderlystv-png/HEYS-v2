@@ -42,4 +42,13 @@ describe('curator sheet palette contract', () => {
     expect(css).toMatch(/\.ca-modal__date-kcal\s*\{[^}]*line-height:\s*1/);
     expect(css).toMatch(/\.ca-modal__meal-card\s*>\s*\.ca-modal__item\s*\{[^}]*min-height:\s*44px/);
   });
+
+  // Регресс: `.ca-modal__items > li { padding: 0 }` перебивал одноклассовый
+  // `.ca-modal__meal-card`, и карточка приёма шла без внутренних отступов.
+  it('scopes meal-card padding above the `.ca-modal__items > li` reset', () => {
+    expect(css).toMatch(
+      /\.ca-modal__items\s*>\s*\.ca-modal__meal-card\s*\{[^}]*padding:\s*11px 13px 12px/,
+    );
+    expect(css).not.toMatch(/(?:^|\n)\.ca-modal__meal-card\s*\{/);
+  });
 });
