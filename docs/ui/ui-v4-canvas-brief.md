@@ -1,9 +1,10 @@
 # UI v4 · бриф контрактов канвасов
 
 **Задача:** heys/90efc3  
-**Дата сводки:** 2026-08-20 (v2 + блокировки макета 11:34)  
-**Источник:** этот репо (`handoff-v4/`, `../implementation/*_V4_*`,
-`UI_V4_IMPLEMENTATION_PLAN` §13.08 вечер, APS §J 14.08 вечер)  
+**Дата сводки:** 2026-08-20 (v3 — сверка с INDEX 19.08)  
+**Источник:** `design_handoff_heys_v4/INDEX.md` (карта канвасов, экранов,
+`[data-contract]`), `handoff-v4/`, `../implementation/*_V4_*`,
+`MOTION_POLICY.md`, `UI_V4_IMPLEMENTATION_PLAN` §13.08 вечер, APS §J 14.08 вечер
 **Назначение:** очередь имплементации, оценка часов, трекинг «структура /
 краска» до совпадения с макетом.
 
@@ -13,28 +14,31 @@ md: `pnpm docs:ui-v4-brief`
 
 ## Как читать
 
-| Поле                   | Значение                                                        |
-| ---------------------- | --------------------------------------------------------------- |
-| **Структура / Краска** | ⬜ нет · 🟡 частично · ✅ да                                    |
-| **Сложность**          | S <4ч · M 4–8 · L 8–16 · XL 16+                                 |
-| **Часы**               | код + tests + smoke ревьюера (Composer по промпту)              |
-| **🔒**                 | заблокировано: **сначала дизайн → контракты**; код не планируем |
-| **Контракт**           | канвас (`data-v` / `data-screen-label`) + протокол или аудит    |
+| Поле                   | Значение                                                          |
+| ---------------------- | ----------------------------------------------------------------- |
+| **Структура / Краска** | ⬜ нет · 🟡 частично · ✅ да                                      |
+| **Сложность**          | S <4ч · M 4–8 · L 8–16 · XL 16+                                   |
+| **Часы**               | код + tests + smoke ревьюера (Composer по промпту)                |
+| **🔒**                 | заблокировано: **`[data-contract]` / протокол**; код не планируем |
+| **Контракт**           | `[data-contract]` (`data-v`) + протокол; см. INDEX, MOTION_POLICY |
 
 Правило волны v4: «готово» только когда **обе** колонки не ⬜. Исключение:
 **волна Б** — тёмные палитры × 5 вкладок (план `:2032–2038`), отдельный проход
 после токенов.
 
-**Важно v2:** сверка с readiness-таблицей и APS §J — про **код**. **Владелец
-20.08:** нижний список — макет и контракты **ещё не норм**; эти зоны **🔒
-заблокированы** независимо от статуса в плане.
+**Важно v3:** сверка с readiness-таблицей и APS §J — про **код**. **Владелец
+20.08:** нижний список — канвасы есть, но **`[data-contract]` / протокол не
+норм**; эти зоны **🔒 заблокированы** независимо от статуса в плане. Для вкладок
+`tab-*` макет в INDEX есть — блокер **контракт** (`data-v`), не отсутствие
+канваса.
 
 ---
 
-## 0. 🔒 Заблокировано: макет и контракты не готовы (владелец 20.08)
+## 0. 🔒 Заблокировано: `[data-contract]` / протокол не готовы (владелец 20.08)
 
-**Ворота:** `дизайн (канвас)` → `контракты (протокол / data-v)` → код. Пока 🔒 —
-**не брать в фазы 0–4**, не считать в «~90%».
+**Ворота:** канвас в INDEX → **`[data-contract]` + протокол** → код. Пока 🔒 —
+**не брать в фазы 0–4**, не считать в «~90%». Числа экранов — из INDEX («всего
+(без палитр)» в скобках).
 
 <table style="table-layout:fixed;width:100%">
 <colgroup>
@@ -44,23 +48,23 @@ md: `pnpm docs:ui-v4-brief`
 <th>Зона</th><th>Канвас / пакет</th><th>Макет</th><th>Контракт</th><th>Порядок</th><th>Статус</th>
 </tr></thead>
 <tbody>
-<tr><td><strong>Советы</strong></td><td><code>Советы v4.dc.html</code></td><td>🟡 4/12</td><td>⬜</td><td><strong>1 дизайн</strong> → 2 контракт</td><td>🔒</td></tr>
-<tr><td><strong>Цикл</strong></td><td><code>Цикл v4.dc.html</code></td><td>⬜ / архив</td><td>⬜</td><td>дизайн → контракт (если не removal)</td><td>🔒</td></tr>
-<tr><td><strong>Добавление еды</strong></td><td><code>Добавление еды.dc.html</code></td><td>🟡</td><td>🟡 partial</td><td>дизайн → контракт</td><td>🔒</td></tr>
-<tr><td><strong>Питание</strong></td><td><code>Дата и остатки</code> / дневник</td><td>🟡</td><td>🟡</td><td>дизайн → контракт</td><td>🔒</td></tr>
-<tr><td><strong>Отчёты</strong></td><td><code>Отчёты и Инсайты v4</code></td><td>🟡</td><td>🟡</td><td>дизайн → контракт</td><td>🔒</td></tr>
-<tr><td><strong>Инсайты</strong></td><td>то же / 2-й слой</td><td>🟡</td><td>🟡</td><td>дизайн → контракт</td><td>🔒</td></tr>
-<tr><td><strong>Актив</strong></td><td>этап 4 · tabs-all</td><td>🟡</td><td>🟡</td><td>дизайн → контракт</td><td>🔒</td></tr>
-<tr><td><strong>Геймификация</strong></td><td><code>Геймификация v4</code></td><td>🟡</td><td>🟡</td><td><strong>1 дизайн</strong> → 2 контракт</td><td>🔒</td></tr>
+<tr><td><strong>Советы</strong></td><td><code>tips.v4.dc.html</code></td><td>🟡 24 (12)</td><td>⬜</td><td><strong>1 контракт</strong> → код</td><td>🔒</td></tr>
+<tr><td><strong>Цикл</strong></td><td><code>cycle.v4.dc.html</code></td><td>🟡 14 (7)</td><td>⬜</td><td>контракт (или removal)</td><td>🔒</td></tr>
+<tr><td><strong>Добавление еды</strong></td><td><code>food-add.v4.dc.html</code></td><td>🟡 33</td><td>⬜</td><td>контракт → APS</td><td>🔒</td></tr>
+<tr><td><strong>Питание</strong></td><td><code>tab-food.v4.dc.html</code></td><td>🟡 4 (1)</td><td>⬜</td><td>контракт вкладки</td><td>🔒</td></tr>
+<tr><td><strong>Отчёты</strong></td><td><code>tab-reports.v4.dc.html</code></td><td>🟡 8 (2)</td><td>⬜</td><td>контракт вкладки</td><td>🔒</td></tr>
+<tr><td><strong>Инсайты</strong></td><td><code>tab-insights.v4.dc.html</code></td><td>🟡 8 (2)</td><td>⬜</td><td>контракт вкладки</td><td>🔒</td></tr>
+<tr><td><strong>Актив</strong></td><td><code>tab-activity.v4.dc.html</code></td><td>🟡 4 (1)</td><td>⬜</td><td>контракт вкладки</td><td>🔒</td></tr>
+<tr><td><strong>Геймификация</strong></td><td><code>gamification.v4.dc.html</code></td><td>🟡 4</td><td>⬜</td><td><strong>1 контракт</strong> → код</td><td>🔒</td></tr>
 </tbody>
 </table>
 
-**Не заблокировано в этом списке** (можно кодить по протоколам): Главная
-(`home-widgets`), регистрация/чек-ин, вода, вход, рама, спиннеры, куратор sheet,
-PWA update.
+**Не заблокировано в этом списке** (можно кодить по `[data-contract]` /
+протocolам): Главная (`home-widgets`), регистрация/чек-ин, вода, вход, рама,
+спиннеры, куратор sheet, PWA update, сплэш, анкета, настройки.
 
 _Если в таблицах §2–3 у 🔒-зоны стоит ✅ в коде — это **не разблокирует**;
-снимаем 🔒 только после «канвас готов» + контракт в протоколе._
+снимаем 🔒 только после `[data-contract]` в канвасе + протокол (см. INDEX)._
 
 ---
 
@@ -75,10 +79,10 @@ _Если в таблицах §2–3 у 🔒-зоны стоит ✅ в код�
 </tr></thead>
 <tbody>
 <tr><td>1.1</td><td><code>[data-theme$="dark"]</code> + роли палитр</td><td>план п.1, <code>:1989</code></td><td>S</td><td>0</td><td>✅</td><td>🟡</td><td>Селектор <code>fee30ae6c</code> ✅; глазами 5 вкладок × 4 палитры — нет (волна Б)</td></tr>
-<tr><td>1.2</td><td>Убрать каноничную палитру</td><td>план п.2</td><td>S</td><td>0–1</td><td>✅</td><td>✅</td><td>Код ✅; в канвасах <code>Вход v4</code>, <code>Скелетон v4</code> — блокер при буквальном коде</td></tr>
-<tr><td>1.3</td><td>Рама: шапка, nav, 4 FAB</td><td>tabs-all, план п.3</td><td>S</td><td>2–4</td><td>✅</td><td>🟡</td><td>Prompt 3 ✅; хвост: nav icons, шапка геймиф., FAB-счётчик — owner smoke</td></tr>
+<tr><td>1.2</td><td>Убрать каноничную палитру</td><td>план п.2</td><td>S</td><td>0–1</td><td>✅</td><td>✅</td><td>Код ✅; в <code>login.v4.dc.html</code> — блокер при буквальном коде; <code>Скелетон v4</code> в <code>history/</code></td></tr>
+<tr><td>1.3</td><td>Рама: шапка, nav, 4 FAB</td><td>tab-* + план п.3</td><td>S</td><td>2–4</td><td>✅</td><td>🟡</td><td>Prompt 3 ✅; хвост: nav icons, шапка геймиф., FAB-счётчик — owner smoke</td></tr>
 <tr><td>1.4</td><td>Пикер палитры на входе (этап 5)</td><td>план <code>:2018–2019</code></td><td>S</td><td>0–2</td><td>✅</td><td>🟡</td><td>Закрыт в коде; canvas canonical — см. 1.2</td></tr>
-<tr><td>1.5</td><td>Остаток CSS-литералов</td><td>план <code>:2007–2011</code></td><td>M</td><td>8–14</td><td>—</td><td>🟡</td><td>Главная: 13 ролей / 166 лит.; модалки/игры — фоном</td></tr>
+<tr><td>1.5</td><td>Остаток CSS-литералов</td><td>план <code>:2007–2011</code></td><td>M</td><td>8–14</td><td>—</td><td>🟡</td><td>Главная: 13 ролей / 166 лит. (снимок плана 13.08); пересчёт не делали</td></tr>
 <tr><td>1.6</td><td><code>--v4-btn-on-act</code> blue/blue-dark</td><td>ADD_FOOD audit</td><td>S</td><td>1–2</td><td>—</td><td>⬜</td><td>Заглушка в CSS; ждёт дизайнера (<code>:2040–2041</code>)</td></tr>
 </tbody>
 </table>
@@ -95,13 +99,18 @@ _Если в таблицах §2–3 у 🔒-зоны стоит ✅ в код�
 <th>#</th><th>Канвас</th><th>Экр.</th><th>Протокол</th><th>Сложн.</th><th>Ч</th><th>Стр.</th><th>Кр.</th><th>Статус / остаток</th>
 </tr></thead>
 <tbody>
-<tr><td>2.1</td><td><code>Спиннеры.dc.html</code></td><td>20</td><td>release-track-c</td><td>S</td><td>0–2</td><td>✅</td><td>🟡</td><td>Код + smoke 15.08 ✅; владелец ⬜ 19/20 (только «без подписи»)</td></tr>
+<tr><td>2.1</td><td><code>spinners.v4.dc.html</code></td><td>20</td><td>канвас + MOTION_POLICY</td><td>S</td><td>0–2</td><td>✅</td><td>🟡</td><td>Код + smoke 15.08 ✅; owner smoke: «без подписи»</td></tr>
 <tr><td>2.2</td><td><code>curator-edits.v4.dc.html</code></td><td>7</td><td>CURATOR_CHANGELOG</td><td>S</td><td>0–1</td><td>✅</td><td>🟡</td><td>Спека + тесты ✅; smoke 4 палитры на проде</td></tr>
-<tr><td>2.3</td><td><code>water-add.v4.dc.html</code></td><td>13</td><td>WATER_ADD_V4</td><td>S</td><td>1–2</td><td>✅</td><td>🟡</td><td>V₃ ✅; звук вне scope; плитка воды на Главной — старый 4px bar</td></tr>
-<tr><td>2.4</td><td><code>registration.v4.dc.html</code> + Регистрация…</td><td>22</td><td>REGISTRATION_WELCOME</td><td>M</td><td>2–4</td><td>✅</td><td>🟡</td><td>Локально 79 canvas-тестов 16.08; push/deploy, empty tab, series mark — не в PR</td></tr>
-<tr><td>2.5</td><td><code>checkin-morning.v4.dc.html</code></td><td>33</td><td>MORNING_CHECKIN_V4</td><td>M</td><td>2–4</td><td>✅</td><td>🟡</td><td>33/33 parity в коде; debt: dark/blue QA, series mark в истории</td></tr>
-<tr><td>2.6</td><td><code>home-widgets.v4.dc.html</code></td><td>74</td><td>HOME_WIDGETS_V4</td><td>XL</td><td>12–22</td><td>🟡</td><td>🟡</td><td>19.08 struct pass; canvas 14:12 отстаёт; paint ≈1.5 дня</td></tr>
-<tr><td>2.7</td><td><code>pwa-update.v4.dc.html</code></td><td>3+</td><td>ПРОМПТ PWA</td><td>S</td><td>0–1</td><td>✅</td><td>🟡</td><td>19.08 + тесты; контраст 3 тёмных тем; dead badge/toast — отдельно</td></tr>
+<tr><td>2.3</td><td><code>water-add.v4.dc.html</code></td><td>12</td><td>WATER_ADD_V4</td><td>S</td><td>1–2</td><td>✅</td><td>🟡</td><td>V₃ + плитка nrmB на Главной ✅ <code>f41b90c0</code>; звук вне scope</td></tr>
+<tr><td>2.4</td><td><code>registration.v4.dc.html</code></td><td>22</td><td>REGISTRATION_WELCOME</td><td>M</td><td>2–4</td><td>✅</td><td>🟡</td><td>Локально 79 canvas-тестов 16.08; push/deploy, empty tab, series mark — не в PR</td></tr>
+<tr><td>2.5</td><td><code>checkin-morning.v4.dc.html</code></td><td>33</td><td>MORNING_CHECKIN_V4</td><td>M</td><td>2–4</td><td>✅</td><td>🟡</td><td>Локально закрыт; debt: dark/blue QA, series mark в истории</td></tr>
+<tr><td>2.6</td><td><code>home-widgets.v4.dc.html</code></td><td>69 (48)</td><td>HOME_WIDGETS_V4</td><td>XL</td><td>12–22</td><td>🟡</td><td>🟡</td><td>19.08 struct pass; canvas 14:12 отстаёт; paint ≈1.5 дня</td></tr>
+<tr><td>2.7</td><td><code>pwa-update.v4.dc.html</code></td><td>8</td><td>ПРОМПТ PWA</td><td>S</td><td>0–1</td><td>✅</td><td>🟡</td><td>19.08 + тесты; контраст 3 тёмных тем; dead badge/toast — отдельно</td></tr>
+<tr><td>2.8</td><td><code>login.v4.dc.html</code></td><td>48 (24)</td><td>INDEX § вход</td><td>S</td><td>0–2</td><td>✅</td><td>🟡</td><td>Struct+paint закрыты; canonical palette — см. 1.2</td></tr>
+<tr><td>2.9</td><td><code>date-remainders.v4.dc.html</code></td><td>20 (9)</td><td>OPEN_QUESTIONS</td><td>S</td><td>2–4</td><td>✅</td><td>🟡</td><td>Календарь ✅ 11.08; past-day ✅ 14.08; sticky scroll — отдельный канвас нет</td></tr>
+<tr><td>2.10</td><td><code>app-splash.v4.dc.html</code></td><td>15 (8)</td><td>INDEX § сплэш</td><td>S</td><td>0–2</td><td>🟡</td><td>🟡</td><td>Контракт есть; стык сплэш/загрузчик — сверка с manifest</td></tr>
+<tr><td>2.11</td><td><code>questionnaire.v4.dc.html</code></td><td>13 (10)</td><td>INDEX § анкета</td><td>S</td><td>0–2</td><td>🟡</td><td>🟡</td><td>Контракт есть; режим анкеты на входе — см. login</td></tr>
+<tr><td>2.12</td><td><code>settings-system.v4.dc.html</code></td><td>11</td><td>INDEX § настройки</td><td>S</td><td>0–2</td><td>🟡</td><td>🟡</td><td>Контракт есть; FAB-чипы — owner smoke</td></tr>
 </tbody>
 </table>
 
@@ -117,17 +126,16 @@ _Если в таблицах §2–3 у 🔒-зоны стоит ✅ в код�
 <th>#</th><th>Канвас / зона</th><th>Экр.</th><th>Документ</th><th>Сложн.</th><th>Ч</th><th>Стр.</th><th>Кр.</th><th>Статус / остаток</th>
 </tr></thead>
 <tbody>
-<tr><td>3.1</td><td><code>tabs-all.v4.dc.html</code></td><td>28</td><td>IMPLEMENTATION_PLAN</td><td>S</td><td>1–2</td><td>✅</td><td>🟡</td><td>Рама на проде; polish = 1.3</td></tr>
-<tr><td>3.2</td><td><code>Дата и остатки v4.dc.html</code></td><td>~15</td><td>OPEN_QUESTIONS</td><td>S</td><td>2–4</td><td>✅</td><td>🟡</td><td>Календарь ✅ 11.08; past-day ✅ 14.08; sticky scroll — канваса нет</td></tr>
-<tr><td>3.3</td><td>Актив · этап 4</td><td>4×</td><td>план <code>:1983</code></td><td>—</td><td>—</td><td>🔒</td><td>🔒</td><td>§0: макет+контракт; код 10.08 не разблокирует</td></tr>
-<tr><td>3.4</td><td>Вкладка Питание (не APS)</td><td>—</td><td>план <code>:1984</code></td><td>—</td><td>—</td><td>🔒</td><td>🔒</td><td>§0: вкладка не в макете/контракте</td></tr>
-<tr><td>3.5</td><td><code>Добавление еды.dc.html</code></td><td>33</td><td>APS_LAYOUT_AUDIT</td><td>—</td><td>—</td><td>🔒</td><td>🔒</td><td>§0: флоу в макете не норм; APS §J не в scope</td></tr>
-<tr><td>3.6</td><td><code>Отчёты и Инсайты v4.dc.html</code></td><td>много</td><td>план 4b/4c</td><td>—</td><td>—</td><td>🔒</td><td>🔒</td><td>§0: отчёты + инсайты — дизайн → контракт</td></tr>
-<tr><td>3.7</td><td><code>Советы v4.dc.html</code></td><td>4+8</td><td>designer prompt</td><td>—</td><td>—</td><td>🔒</td><td>🔒</td><td>§0: сначала дизайн (8 экр.), потом контракты</td></tr>
-<tr><td>3.8</td><td><code>Геймификация v4.dc.html</code></td><td>3+1</td><td>GAMIFICATION_V4</td><td>—</td><td>—</td><td>🔒</td><td>🔒</td><td>§0: дизайн → контракт; код 11.08 не в scope</td></tr>
-<tr><td>3.9</td><td><code>Вход v4.dc.html</code></td><td>6</td><td>план <code>:1981</code></td><td>S</td><td>0–2</td><td>✅</td><td>🟡</td><td>Struct+paint закрыты; canvas canonical — см. 1.2</td></tr>
-<tr><td>3.10</td><td>Шапка куратора (switcher)</td><td>—</td><td>план <code>:2053+</code></td><td>—</td><td>—</td><td>⬜</td><td>⬜</td><td>Макета нет</td></tr>
-<tr><td>3.11</td><td>Пустое «тарелка» (1-й приём)</td><td>—</td><td>план <code>:2042–2043</code></td><td>M</td><td>4–6</td><td>⬜</td><td>⬜</td><td>Перенос обучения; не начато</td></tr>
+<tr><td>3.1</td><td><code>tab-food.v4.dc.html</code></td><td>4 (1)</td><td>INDEX</td><td>—</td><td>—</td><td>🔒</td><td>🔒</td><td>§0: канвас есть, нет <code>[data-contract]</code></td></tr>
+<tr><td>3.2</td><td><code>tab-activity.v4.dc.html</code></td><td>4 (1)</td><td>INDEX</td><td>—</td><td>—</td><td>🔒</td><td>🔒</td><td>§0: канвас есть; код 10.08 не разблокирует</td></tr>
+<tr><td>3.3</td><td><code>tab-reports.v4.dc.html</code></td><td>8 (2)</td><td>план 4b</td><td>—</td><td>—</td><td>🔒</td><td>🔒</td><td>§0: контракт вкладки</td></tr>
+<tr><td>3.4</td><td><code>tab-insights.v4.dc.html</code></td><td>8 (2)</td><td>план 4c</td><td>—</td><td>—</td><td>🔒</td><td>🔒</td><td>§0: контракт вкладки + 2-й слой</td></tr>
+<tr><td>3.5</td><td><code>food-add.v4.dc.html</code></td><td>33</td><td>APS_LAYOUT_AUDIT</td><td>—</td><td>—</td><td>🔒</td><td>🔒</td><td>§0: нет <code>[data-contract]</code>; APS §J не в scope</td></tr>
+<tr><td>3.6</td><td><code>tips.v4.dc.html</code></td><td>24 (12)</td><td>designer prompt</td><td>—</td><td>—</td><td>🔒</td><td>🔒</td><td>§0: контракт → код</td></tr>
+<tr><td>3.7</td><td><code>gamification.v4.dc.html</code></td><td>4</td><td>GAMIFICATION_V4</td><td>—</td><td>—</td><td>🔒</td><td>🔒</td><td>§0: контракт; код 11.08 не в scope</td></tr>
+<tr><td>3.8</td><td><code>cycle.v4.dc.html</code></td><td>14 (7)</td><td>prompt-cycle-removal</td><td>—</td><td>—</td><td>🔒</td><td>🔒</td><td>§0: контракт или removal</td></tr>
+<tr><td>3.9</td><td>Шапка куратора (switcher)</td><td>—</td><td>план <code>:2053+</code></td><td>—</td><td>—</td><td>⬜</td><td>⬜</td><td>Канваса в INDEX нет</td></tr>
+<tr><td>3.10</td><td>Пустое «тарелка» (1-й приём)</td><td>—</td><td>план <code>:2042–2043</code></td><td>M</td><td>4–6</td><td>⬜</td><td>⬜</td><td>Перенос обучения; не начато</td></tr>
 </tbody>
 </table>
 
@@ -161,7 +169,7 @@ moderation outcomes runtime vs reference sheet; badge «ждёт отправк�
 
 ---
 
-## 5. HOME · второй слой (74 кадра)
+## 5. HOME · второй слой (69 кадров, 48 без палитр)
 
 Не только «11 плиток» — долг по протоколу `HOME_WIDGETS_V4_PROTOCOL`:
 
@@ -170,7 +178,7 @@ moderation outcomes runtime vs reference sheet; badge «ждёт отправк�
 | Калории       | 1a–1d drill-down, 3 состояния             | 🟡→✅ локально 19.08 | 🟡                                 |
 | Риск-радар    | 2 вида; default **«Шкала»** (19.08)       | 🟡→✅                | 🟡                                 |
 | Инсулин       | 5 wave types; Streak/Insulin не в default | 🟡                   | 🟡                                 |
-| Вода          | канон = water-add V₃                      | ⬜ на Главной        | ⬜                                 |
+| Вода          | канон = water-add V₃                      | ✅ nrmB `f41b90c0`   | 🟡 (dark/blue QA)                  |
 | Variant sheet | `.opt`, edit mode                         | ✅ 19.08             | 🟡                                 |
 | ×4 палитры    | past-day / empty states                   | 🟡                   | 🟡                                 |
 | Canvas file   | автор правки **не в файле** (14:12)       | —                    | smoke по **решениям**, не по файлу |
@@ -179,35 +187,35 @@ moderation outcomes runtime vs reference sheet; badge «ждёт отправк�
 
 ## 6. Вне пакета / без канваса / архив
 
-| #   | Объект                       | Сложн. | Часы   | В ~90%? | Статус                                                                   |
-| --- | ---------------------------- | ------ | ------ | ------- | ------------------------------------------------------------------------ |
-| 6.1 | `Цикл v4.dc.html`            | —      | —      | нет     | **🔒 §0** · не норм в макете/контракте; параллельно prompt-cycle-removal |
-| 6.2 | Силовой (Downloads, 15 экр.) | XL     | 20–30+ | нет     | Канваса в handoff-v4 нет                                                 |
-| 6.3 | Мессенджер (отд. пакет)      | L      | 12–18  | нет     | MESSENGER_REDESIGN_PROTOCOL                                              |
-| 6.4 | Лендинг D                    | L      | 8+     | нет     | Трек C2 · ждёт владельца                                                 |
-| 6.5 | PWA install баннеры          | M      | 4–6    | да      | Канваса нет · `heys_app_overlays_v1.js`                                  |
-| 6.6 | Sticky дата при скролле      | M      | 4–6    | да      | Канвас не отрисован                                                      |
+| #   | Объект                       | Сложн. | Часы   | В ~90%? | Статус                                                                             |
+| --- | ---------------------------- | ------ | ------ | ------- | ---------------------------------------------------------------------------------- |
+| 6.1 | `cycle.v4.dc.html`           | —      | —      | нет     | **🔒 §0** · канвас 14 (7); нет `[data-contract]`; параллельно prompt-cycle-removal |
+| 6.2 | Силовой (Downloads, 15 экр.) | XL     | 20–30+ | нет     | Канваса в handoff-v4 нет                                                           |
+| 6.3 | Мессенджер (отд. пакет)      | L      | 12–18  | нет     | MESSENGER_REDESIGN_PROTOCOL                                                        |
+| 6.4 | Лендинг D                    | L      | 8+     | нет     | Трек C2 · ждёт владельца                                                           |
+| 6.5 | PWA install баннеры          | M      | 4–6    | да      | Канваса нет · `heys_app_overlays_v1.js`                                            |
+| 6.6 | Sticky дата при скролле      | M      | 4–6    | да      | Канвас не отрисован                                                                |
 
 ---
 
 ## 7. Сводка часов (v2)
 
-| Группа                                    |    Было v1 |   Стало v2 | Комментарий                                               |
-| ----------------------------------------- | ---------: | ---------: | --------------------------------------------------------- |
-| Owner-only (спиннеры 19/20)               |  в «smoke» |  **0 код** | Не часы разработки                                        |
-| Волна Б: тёмные × 5 вкладок               |          0 |    **4–8** | План `:2032–2038`                                         |
-| Главная paint (166 lit.) + canvas sync    |      14–22 |  **12–22** | Struct mostly done 19.08                                  |
-| Deploy/QA reg+check-in                    |  в «11–21» |    **4–8** | Локально готово, не rework                                |
-| APS + data tails                          |      26–40 |      **—** | 🔒 §0, не в scope                                         |
-| Рама polish                               |        4–6 |    **2–4** |                                                           |
-| Отчёты + Инсайты                          |      10–16 |      **—** | 🔒 §0                                                     |
-| Геймификация                              |        5–8 |      **—** | 🔒 §0, дизайн → контракт                                  |
-| Актив + вкладка Питание                   |        2–4 |      **—** | 🔒 §0                                                     |
-| Советы                                    |    в 25–38 |      **—** | 🔒 §0, дизайн → контракт                                  |
-| PWA install + sticky + plate              |          — |   **8–12** |                                                           |
-| **Итого → ~90% (разблокированный scope)** | **92–147** | **~28–48** | Главная + infra + reg/check-in push + волна Б; **без §0** |
-| + §0 после дизайн→контракт                |          — |        TBD | отдельные оценки при снятии 🔒                            |
-| + Силовой + мессенджер                    |     +32–48 |   без изм. |                                                           |
+| Группа                                    |    Было v1 |   Стало v2 | Комментарий                                                  |
+| ----------------------------------------- | ---------: | ---------: | ------------------------------------------------------------ |
+| Owner-only (спиннер smoke)                |  в «smoke» |  **0 код** | Не часы разработки                                           |
+| Волна Б: тёмные × 5 вкладок               |          0 |    **4–8** | План `:2032–2038`                                            |
+| Главная paint (166 lit.) + canvas sync    |      14–22 |  **12–22** | Struct mostly done 19.08                                     |
+| Deploy/QA reg+check-in                    |  в «11–21» |    **4–8** | Локально готово, не rework                                   |
+| APS + data tails                          |      26–40 |      **—** | 🔒 §0, не в scope                                            |
+| Рама polish                               |        4–6 |    **2–4** |                                                              |
+| Отчёты + Инсайты                          |      10–16 |      **—** | 🔒 §0                                                        |
+| Геймификация                              |        5–8 |      **—** | 🔒 §0, дизайн → контракт                                     |
+| Актив + вкладка Питание                   |        2–4 |      **—** | 🔒 §0                                                        |
+| Советы                                    |    в 25–38 |      **—** | 🔒 §0, дизайн → контракт                                     |
+| PWA install + sticky + plate              |          — |   **8–12** |                                                              |
+| **Итого → ~90% (разблокированный scope)** | **92–147** | **~30–54** | Сумма строк выше: 4–8 + 12–22 + 4–8 + 2–4 + 8–12; **без §0** |
+| + §0 после дизайн→контракт                |          — |        TBD | отдельные оценки при снятии 🔒                               |
+| + Силовой + мессенджер                    |     +32–48 |   без изм. |                                                              |
 
 **Фазы 0–3** (brief §8) — только **незаблокированный** scope; §0 **не входит**
 до готовности макета и контрактов.
@@ -220,12 +228,12 @@ moderation outcomes runtime vs reference sheet; badge «ждёт отправк�
 
 - [ ] Pull/push reg+check-in; smoke 4 палитры
 - [ ] Перечитать APS §J — не планировать rework закрытого
-- [ ] Обновить canvas `home-widgets` / `Вход` под решения (дизайн)
+- [ ] Обновить canvas `home-widgets` / `login.v4` под решения (дизайн)
 
 ### Фаза 1 — Главная + вода (1–1.5 дня)
 
 1. HOME paint: 166 literals → роли (гейт classic-drift)
-2. Плитка воды на Главной = water-add V₃
+2. ~~Плитка воды на Главной = water-add V₃~~ ✅ `f41b90c0`
 3. Canvas-file sync (risk-radar default, insulin types, calories frames)
 
 ### Фаза 2 — Волна Б (1 день)
@@ -236,7 +244,7 @@ moderation outcomes runtime vs reference sheet; badge «ждёт отправк�
 
 ### Фаза 3 — Polish разблокированного (0.5 дня)
 
-7. Owner smoke спиннеров 19/20 + curator 4 палитры
+7. Owner smoke спиннеров («без подписи») + curator 4 палитры
 8. Nav/FAB (1.3); PWA update contrast; pwa-install; sticky **после канваса**
 
 ### 🔒 Вне scope до дизайн → контракт (§0)
@@ -257,7 +265,7 @@ moderation outcomes runtime vs reference sheet; badge «ждёт отправк�
 
 ### Разблокированный scope (фазы 0–3)
 
-- [ ] Убрать «каноничную» из `Вход v4.dc.html`, `Скелетон v4.dc.html`
+- [ ] Убрать «каноничную» из `login.v4.dc.html` (`Скелетон v4` — в `history/`)
 - [ ] Синхронизировать `home-widgets.v4.dc.html` с решениями 19.08
 - [ ] Отрисовать `Sticky дата при скролле v4.dc.html`
 - [ ] `--v4-btn-on-act` для blue palettes
@@ -265,10 +273,11 @@ moderation outcomes runtime vs reference sheet; badge «ждёт отправк�
 
 ### 🔒 §0 — сначала дизайн, потом контракты
 
-- [ ] **Советы** — 8/12 поверхностей + контракт
+- [ ] **Советы** — `tips.v4` 24 (12) → `[data-contract]`
 - [ ] **Геймификация** — дизайн (spec §0, канвас) → протокол
 - [ ] **Добавление еды** — макет APS → контракт/APS audit
-- [ ] **Питание, Отчёты, Инсайты, Актив** — вкладки в макете → контракты
+- [ ] **Питание, Отчёты, Инсайты, Актив** — `tab-*` канвасы есть →
+      `[data-contract]`
 - [ ] **Цикл** — решение removal vs новый макет
 
 ### Другие
@@ -299,6 +308,7 @@ moderation outcomes runtime vs reference sheet; badge «ждёт отправк�
 | 2026-08-20 | ревьюер  | **v2:** readiness-таблица 13.08, APS §J, HOME/CHECKIN протоколы 19.08; часы 92–147 → **48–78**; план 4 дня → фазы 0–4                                                                                                          |
 | 2026-08-20 | владелец | **§0 🔒:** Советы, Цикл, Добавление еды, Питание/Отчёты/Инсайты/Актив, Геймификация — макет+контракт не норм; геймификация и советы: **дизайн → контракт**; код не в scope. Итого ~90% → **~28–48** (только незаблокированное) |
 | 2026-08-20 | ревьюер  | **нормализация:** brief+html+генератор в `docs/ui/`; `pnpm docs:ui-v4-brief`; override §0 в `UI_V4_IMPLEMENTATION_PLAN`; `docs/README.md`                                                                                      |
+| 2026-08-20 | ревьюер  | **v3 содержание:** §0–§3 из INDEX (слаги, экраны, `[data-contract]`); убраны `tabs-all`, 19/20, 33/33; генератор — склейка абзацев                                                                                             |
 
 _При закрытии строки: ⬜/🟡 → ✅ в обеих колонках, коммит/smoke в «Статус»,
 строка здесь, пересчёт §7. Снятие 🔒 §0 — отдельная строка в журнале._

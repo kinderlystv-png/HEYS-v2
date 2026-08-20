@@ -82,12 +82,12 @@
 <table class="legend"><thead><tr><th scope="col">Поле</th><th scope="col">Значение</th></tr></thead><tbody><tr><td><strong>Структура / Краска</strong></td><td>⬜ нет · 🟡 частично · ✅ да</td></tr>
 <tr><td><strong>Сложность</strong></td><td>S &lt;4ч · M 4–8 · L 8–16 · XL 16+</td></tr>
 <tr><td><strong>Часы</strong></td><td>код + tests + smoke ревьюера (Composer по промпту)</td></tr>
-<tr><td><strong>🔒</strong></td><td>заблокировано: <strong>сначала дизайн → контракты</strong>; код не планируем</td></tr>
-<tr><td><strong>Контракт</strong></td><td>канвас (<code>data-v</code> / <code>data-screen-label</code>) + протокол или аудит</td></tr></tbody></table>
+<tr><td><strong>🔒</strong></td><td>заблокировано: <strong><code>[data-contract]</code> / протокол</strong>; код не планируем</td></tr>
+<tr><td><strong>Контракт</strong></td><td><code>[data-contract]</code> (<code>data-v</code>) + протокол; см. INDEX, MOTION_POLICY</td></tr></tbody></table>
 <p>Правило волны v4: «готово» только когда <strong>обе</strong> колонки не ⬜. Исключение: <strong>волна Б</strong> — тёмные палитры × 5 вкладок (план <code>:2032–2038</code>), отдельный проход после токенов.</p>
-<p><strong>Важно v2:</strong> сверка с readiness-таблицей и APS §J — про <strong>код</strong>. <strong>Владелец 20.08:</strong> нижний список — макет и контракты <strong>ещё не норм</strong>; эти зоны <strong>🔒 заблокированы</strong> независимо от статуса в плане.</p>
-<h2 id="s0">0. 🔒 Заблокировано: макет и контракты не готовы (владелец 20.08)</h2>
-<p><strong>Ворота:</strong> <code>дизайн (канвас)</code> → <code>контракты (протокол / data-v)</code> → код. Пока 🔒 — <strong>не брать в фазы 0–4</strong>, не считать в «~90%».</p>
+<p><strong>Важно v3:</strong> сверка с readiness-таблицей и APS §J — про <strong>код</strong>. <strong>Владелец 20.08:</strong> нижний список — канвасы есть, но <strong><code>[data-contract]</code> / протокол не норм</strong>; эти зоны <strong>🔒 заблокированы</strong> независимо от статуса в плане. Для вкладок <code>tab-*</code> макет в INDEX есть — блокер <strong>контракт</strong> (<code>data-v</code>), не отсутствие канваса.</p>
+<h2 id="s0">0. 🔒 Заблокировано: <code>[data-contract]</code> / протокол не готовы (владелец 20.08)</h2>
+<p><strong>Ворота:</strong> канвас в INDEX → <strong><code>[data-contract]</code> + протокол</strong> → код. Пока 🔒 — <strong>не брать в фазы 0–4</strong>, не считать в «~90%». Числа экранов — из INDEX («всего (без палитр)» в скобках).</p>
 <div class="scroll"><table class="brief w6">
 <colgroup><col class="zone"><col class="canvas"><col class="xs"><col class="xs"><col class="order"><col class="xs"></colgroup>
 
@@ -95,18 +95,18 @@
 <th scope="col">Зона</th><th scope="col">Канвас / пакет</th><th scope="col" class="xs">Макет</th><th scope="col" class="xs">Контракт</th><th scope="col">Порядок</th><th scope="col" class="xs">Статус</th>
 </tr></thead>
 <tbody>
-<tr><td><strong>Советы</strong></td><td><code>Советы v4.dc.html</code></td><td class="xs">🟡 4/12</td><td class="xs">⬜</td><td><strong>1 дизайн</strong> → 2 контракт</td><td class="xs">🔒</td></tr>
-<tr><td><strong>Цикл</strong></td><td><code>Цикл v4.dc.html</code></td><td class="xs">⬜ / архив</td><td class="xs">⬜</td><td>дизайн → контракт (если не removal)</td><td class="xs">🔒</td></tr>
-<tr><td><strong>Добавление еды</strong></td><td><code>Добавление еды.dc.html</code></td><td class="xs">🟡</td><td class="xs">🟡 partial</td><td>дизайн → контракт</td><td class="xs">🔒</td></tr>
-<tr><td><strong>Питание</strong></td><td><code>Дата и остатки</code> / дневник</td><td class="xs">🟡</td><td class="xs">🟡</td><td>дизайн → контракт</td><td class="xs">🔒</td></tr>
-<tr><td><strong>Отчёты</strong></td><td><code>Отчёты и Инсайты v4</code></td><td class="xs">🟡</td><td class="xs">🟡</td><td>дизайн → контракт</td><td class="xs">🔒</td></tr>
-<tr><td><strong>Инсайты</strong></td><td>то же / 2-й слой</td><td class="xs">🟡</td><td class="xs">🟡</td><td>дизайн → контракт</td><td class="xs">🔒</td></tr>
-<tr><td><strong>Актив</strong></td><td>этап 4 · tabs-all</td><td class="xs">🟡</td><td class="xs">🟡</td><td>дизайн → контракт</td><td class="xs">🔒</td></tr>
-<tr><td><strong>Геймификация</strong></td><td><code>Геймификация v4</code></td><td class="xs">🟡</td><td class="xs">🟡</td><td><strong>1 дизайн</strong> → 2 контракт</td><td class="xs">🔒</td></tr>
+<tr><td><strong>Советы</strong></td><td><code>tips.v4.dc.html</code></td><td class="xs">🟡 24 (12)</td><td class="xs">⬜</td><td><strong>1 контракт</strong> → код</td><td class="xs">🔒</td></tr>
+<tr><td><strong>Цикл</strong></td><td><code>cycle.v4.dc.html</code></td><td class="xs">🟡 14 (7)</td><td class="xs">⬜</td><td>контракт (или removal)</td><td class="xs">🔒</td></tr>
+<tr><td><strong>Добавление еды</strong></td><td><code>food-add.v4.dc.html</code></td><td class="xs">🟡 33</td><td class="xs">⬜</td><td>контракт → APS</td><td class="xs">🔒</td></tr>
+<tr><td><strong>Питание</strong></td><td><code>tab-food.v4.dc.html</code></td><td class="xs">🟡 4 (1)</td><td class="xs">⬜</td><td>контракт вкладки</td><td class="xs">🔒</td></tr>
+<tr><td><strong>Отчёты</strong></td><td><code>tab-reports.v4.dc.html</code></td><td class="xs">🟡 8 (2)</td><td class="xs">⬜</td><td>контракт вкладки</td><td class="xs">🔒</td></tr>
+<tr><td><strong>Инсайты</strong></td><td><code>tab-insights.v4.dc.html</code></td><td class="xs">🟡 8 (2)</td><td class="xs">⬜</td><td>контракт вкладки</td><td class="xs">🔒</td></tr>
+<tr><td><strong>Актив</strong></td><td><code>tab-activity.v4.dc.html</code></td><td class="xs">🟡 4 (1)</td><td class="xs">⬜</td><td>контракт вкладки</td><td class="xs">🔒</td></tr>
+<tr><td><strong>Геймификация</strong></td><td><code>gamification.v4.dc.html</code></td><td class="xs">🟡 4</td><td class="xs">⬜</td><td><strong>1 контракт</strong> → код</td><td class="xs">🔒</td></tr>
 </tbody>
 </table></div>
-<p><strong>Не заблокировано в этом списке</strong> (можно кодить по протоколам): Главная (<code>home-widgets</code>), регистрация/чек-ин, вода, вход, рама, спиннеры, куратор sheet, PWA update.</p>
-<p class="note"><em>Если в таблицах §2–3 у 🔒-зоны стоит ✅ в коде — это <strong>не разблокирует</strong>; снимаем 🔒 только после «канвас готов» + контракт в протоколе.</em></p>
+<p><strong>Не заблокировано в этом списке</strong> (можно кодить по <code>[data-contract]</code> / протocolам): Главная (<code>home-widgets</code>), регистрация/чек-ин, вода, вход, рама, спиннеры, куратор sheet, PWA update, сплэш, анкета, настройки.</p>
+<p><em>Если в таблицах §2–3 у 🔒-зоны стоит ✅ в коде — это <strong>не разблокирует</strong>; снимаем 🔒 только после <code>[data-contract]</code> в канвасе + протокол (см. INDEX).</em></p>
 <h2 id="s1">1. Инфраструктура (общая)</h2>
 <div class="scroll"><table class="brief w8">
 <colgroup><col class="n"><col class="work"><col class="proto"><col class="xs"><col class="sm"><col class="xs"><col class="xs"><col class="status"></colgroup>
@@ -116,14 +116,14 @@
 </tr></thead>
 <tbody>
 <tr><td class="n">1.1</td><td><code>[data-theme$="dark"]</code> + роли палитр</td><td>план п.1, <code>:1989</code></td><td class="xs">S</td><td class="sm">0</td><td class="xs">✅</td><td class="xs">🟡</td><td>Селектор <code>fee30ae6c</code> ✅; глазами 5 вкладок × 4 палитры — нет (волна Б)</td></tr>
-<tr><td class="n">1.2</td><td>Убрать каноничную палитру</td><td>план п.2</td><td class="xs">S</td><td class="sm">0–1</td><td class="xs">✅</td><td class="xs">✅</td><td>Код ✅; в канвасах <code>Вход v4</code>, <code>Скелетон v4</code> — блокер при буквальном коде</td></tr>
-<tr><td class="n">1.3</td><td>Рама: шапка, nav, 4 FAB</td><td>tabs-all, план п.3</td><td class="xs">S</td><td class="sm">2–4</td><td class="xs">✅</td><td class="xs">🟡</td><td>Prompt 3 ✅; хвост: nav icons, шапка геймиф., FAB-счётчик — owner smoke</td></tr>
+<tr><td class="n">1.2</td><td>Убрать каноничную палитру</td><td>план п.2</td><td class="xs">S</td><td class="sm">0–1</td><td class="xs">✅</td><td class="xs">✅</td><td>Код ✅; в <code>login.v4.dc.html</code> — блокер при буквальном коде; <code>Скелетон v4</code> в <code>history/</code></td></tr>
+<tr><td class="n">1.3</td><td>Рама: шапка, nav, 4 FAB</td><td>tab-* + план п.3</td><td class="xs">S</td><td class="sm">2–4</td><td class="xs">✅</td><td class="xs">🟡</td><td>Prompt 3 ✅; хвост: nav icons, шапка геймиф., FAB-счётчик — owner smoke</td></tr>
 <tr><td class="n">1.4</td><td>Пикер палитры на входе (этап 5)</td><td>план <code>:2018–2019</code></td><td class="xs">S</td><td class="sm">0–2</td><td class="xs">✅</td><td class="xs">🟡</td><td>Закрыт в коде; canvas canonical — см. 1.2</td></tr>
-<tr><td class="n">1.5</td><td>Остаток CSS-литералов</td><td>план <code>:2007–2011</code></td><td class="xs">M</td><td class="sm">8–14</td><td class="xs">—</td><td class="xs">🟡</td><td>Главная: 13 ролей / 166 лит.; модалки/игры — фоном</td></tr>
+<tr><td class="n">1.5</td><td>Остаток CSS-литералов</td><td>план <code>:2007–2011</code></td><td class="xs">M</td><td class="sm">8–14</td><td class="xs">—</td><td class="xs">🟡</td><td>Главная: 13 ролей / 166 лит. (снимок плана 13.08); пересчёт не делали</td></tr>
 <tr><td class="n">1.6</td><td><code>--v4-btn-on-act</code> blue/blue-dark</td><td>ADD_FOOD audit</td><td class="xs">S</td><td class="sm">1–2</td><td class="xs">—</td><td class="xs">⬜</td><td>Заглушка в CSS; ждёт дизайнера (<code>:2040–2041</code>)</td></tr>
 </tbody>
 </table></div>
-<h2 id="s2">2. Контракты с протоколами (<code>design_handoff_heys_v4/</code> + canvas/)</h2>
+<h2 id="s2">2. Контракты с протоколами (<code>design<em>handoff</em>heys_v4/</code> + canvas/)</h2>
 <div class="scroll"><table class="brief w9">
 <colgroup><col class="n"><col class="work"><col class="xs"><col class="proto"><col class="xs"><col class="xs"><col class="xs"><col class="xs"><col class="status"></colgroup>
 
@@ -131,13 +131,18 @@
 <th scope="col" class="n">#</th><th scope="col">Канвас</th><th scope="col" class="xs">Экр.</th><th scope="col">Протокол</th><th scope="col" class="xs">Сложн.</th><th scope="col" class="xs">Ч</th><th scope="col" class="xs">Стр.</th><th scope="col" class="xs">Кр.</th><th scope="col">Статус / остаток</th>
 </tr></thead>
 <tbody>
-<tr><td class="n">2.1</td><td><code>Спиннеры.dc.html</code></td><td class="xs">20</td><td>release-track-c</td><td class="xs">S</td><td class="xs">0–2</td><td class="xs">✅</td><td class="xs">🟡</td><td>Код + smoke 15.08 ✅; владелец ⬜ 19/20 (только «без подписи»)</td></tr>
+<tr><td class="n">2.1</td><td><code>spinners.v4.dc.html</code></td><td class="xs">20</td><td>канвас + MOTION_POLICY</td><td class="xs">S</td><td class="xs">0–2</td><td class="xs">✅</td><td class="xs">🟡</td><td>Код + smoke 15.08 ✅; owner smoke: «без подписи»</td></tr>
 <tr><td class="n">2.2</td><td><code>curator-edits.v4.dc.html</code></td><td class="xs">7</td><td>CURATOR_CHANGELOG</td><td class="xs">S</td><td class="xs">0–1</td><td class="xs">✅</td><td class="xs">🟡</td><td>Спека + тесты ✅; smoke 4 палитры на проде</td></tr>
-<tr><td class="n">2.3</td><td><code>water-add.v4.dc.html</code></td><td class="xs">13</td><td>WATER_ADD_V4</td><td class="xs">S</td><td class="xs">1–2</td><td class="xs">✅</td><td class="xs">🟡</td><td>V₃ ✅; звук вне scope; плитка воды на Главной — старый 4px bar</td></tr>
-<tr><td class="n">2.4</td><td><code>registration.v4.dc.html</code> + Регистрация…</td><td class="xs">22</td><td>REGISTRATION_WELCOME</td><td class="xs">M</td><td class="xs">2–4</td><td class="xs">✅</td><td class="xs">🟡</td><td>Локально 79 canvas-тестов 16.08; push/deploy, empty tab, series mark — не в PR</td></tr>
-<tr><td class="n">2.5</td><td><code>checkin-morning.v4.dc.html</code></td><td class="xs">33</td><td>MORNING_CHECKIN_V4</td><td class="xs">M</td><td class="xs">2–4</td><td class="xs">✅</td><td class="xs">🟡</td><td>33/33 parity в коде; debt: dark/blue QA, series mark в истории</td></tr>
-<tr><td class="n">2.6</td><td><code>home-widgets.v4.dc.html</code></td><td class="xs">74</td><td>HOME_WIDGETS_V4</td><td class="xs">XL</td><td class="xs">12–22</td><td class="xs">🟡</td><td class="xs">🟡</td><td>19.08 struct pass; canvas 14:12 отстаёт; paint ≈1.5 дня</td></tr>
-<tr><td class="n">2.7</td><td><code>pwa-update.v4.dc.html</code></td><td class="xs">3+</td><td>ПРОМПТ PWA</td><td class="xs">S</td><td class="xs">0–1</td><td class="xs">✅</td><td class="xs">🟡</td><td>19.08 + тесты; контраст 3 тёмных тем; dead badge/toast — отдельно</td></tr>
+<tr><td class="n">2.3</td><td><code>water-add.v4.dc.html</code></td><td class="xs">12</td><td>WATER_ADD_V4</td><td class="xs">S</td><td class="xs">1–2</td><td class="xs">✅</td><td class="xs">🟡</td><td>V₃ + плитка nrmB на Главной ✅ <code>f41b90c0</code>; звук вне scope</td></tr>
+<tr><td class="n">2.4</td><td><code>registration.v4.dc.html</code></td><td class="xs">22</td><td>REGISTRATION_WELCOME</td><td class="xs">M</td><td class="xs">2–4</td><td class="xs">✅</td><td class="xs">🟡</td><td>Локально 79 canvas-тестов 16.08; push/deploy, empty tab, series mark — не в PR</td></tr>
+<tr><td class="n">2.5</td><td><code>checkin-morning.v4.dc.html</code></td><td class="xs">33</td><td>MORNING_CHECKIN_V4</td><td class="xs">M</td><td class="xs">2–4</td><td class="xs">✅</td><td class="xs">🟡</td><td>Локально закрыт; debt: dark/blue QA, series mark в истории</td></tr>
+<tr><td class="n">2.6</td><td><code>home-widgets.v4.dc.html</code></td><td class="xs">69 (48)</td><td>HOME_WIDGETS_V4</td><td class="xs">XL</td><td class="xs">12–22</td><td class="xs">🟡</td><td class="xs">🟡</td><td>19.08 struct pass; canvas 14:12 отстаёт; paint ≈1.5 дня</td></tr>
+<tr><td class="n">2.7</td><td><code>pwa-update.v4.dc.html</code></td><td class="xs">8</td><td>ПРОМПТ PWA</td><td class="xs">S</td><td class="xs">0–1</td><td class="xs">✅</td><td class="xs">🟡</td><td>19.08 + тесты; контраст 3 тёмных тем; dead badge/toast — отдельно</td></tr>
+<tr><td class="n">2.8</td><td><code>login.v4.dc.html</code></td><td class="xs">48 (24)</td><td>INDEX § вход</td><td class="xs">S</td><td class="xs">0–2</td><td class="xs">✅</td><td class="xs">🟡</td><td>Struct+paint закрыты; canonical palette — см. 1.2</td></tr>
+<tr><td class="n">2.9</td><td><code>date-remainders.v4.dc.html</code></td><td class="xs">20 (9)</td><td>OPEN_QUESTIONS</td><td class="xs">S</td><td class="xs">2–4</td><td class="xs">✅</td><td class="xs">🟡</td><td>Календарь ✅ 11.08; past-day ✅ 14.08; sticky scroll — отдельный канвас нет</td></tr>
+<tr><td class="n">2.10</td><td><code>app-splash.v4.dc.html</code></td><td class="xs">15 (8)</td><td>INDEX § сплэш</td><td class="xs">S</td><td class="xs">0–2</td><td class="xs">🟡</td><td class="xs">🟡</td><td>Контракт есть; стык сплэш/загрузчик — сверка с manifest</td></tr>
+<tr><td class="n">2.11</td><td><code>questionnaire.v4.dc.html</code></td><td class="xs">13 (10)</td><td>INDEX § анкета</td><td class="xs">S</td><td class="xs">0–2</td><td class="xs">🟡</td><td class="xs">🟡</td><td>Контракт есть; режим анкеты на входе — см. login</td></tr>
+<tr><td class="n">2.12</td><td><code>settings-system.v4.dc.html</code></td><td class="xs">11</td><td>INDEX § настройки</td><td class="xs">S</td><td class="xs">0–2</td><td class="xs">🟡</td><td class="xs">🟡</td><td>Контракт есть; FAB-чипы — owner smoke</td></tr>
 </tbody>
 </table></div>
 <h2 id="s3">3. Пять вкладок и общие экраны</h2>
@@ -148,17 +153,16 @@
 <th scope="col" class="n">#</th><th scope="col">Канвас / зона</th><th scope="col" class="xs">Экр.</th><th scope="col">Документ</th><th scope="col" class="xs">Сложн.</th><th scope="col" class="xs">Ч</th><th scope="col" class="xs">Стр.</th><th scope="col" class="xs">Кр.</th><th scope="col">Статус / остаток</th>
 </tr></thead>
 <tbody>
-<tr><td class="n">3.1</td><td><code>tabs-all.v4.dc.html</code></td><td class="xs">28</td><td>IMPLEMENTATION_PLAN</td><td class="xs">S</td><td class="xs">1–2</td><td class="xs">✅</td><td class="xs">🟡</td><td>Рама на проде; polish = 1.3</td></tr>
-<tr><td class="n">3.2</td><td><code>Дата и остатки v4.dc.html</code></td><td class="xs">~15</td><td>OPEN_QUESTIONS</td><td class="xs">S</td><td class="xs">2–4</td><td class="xs">✅</td><td class="xs">🟡</td><td>Календарь ✅ 11.08; past-day ✅ 14.08; sticky scroll — канваса нет</td></tr>
-<tr><td class="n">3.3</td><td>Актив · этап 4</td><td class="xs">4×</td><td>план <code>:1983</code></td><td class="xs">—</td><td class="xs">—</td><td class="xs">🔒</td><td class="xs">🔒</td><td>§0: макет+контракт; код 10.08 не разблокирует</td></tr>
-<tr><td class="n">3.4</td><td>Вкладка Питание (не APS)</td><td class="xs">—</td><td>план <code>:1984</code></td><td class="xs">—</td><td class="xs">—</td><td class="xs">🔒</td><td class="xs">🔒</td><td>§0: вкладка не в макете/контракте</td></tr>
-<tr><td class="n">3.5</td><td><code>Добавление еды.dc.html</code></td><td class="xs">33</td><td>APS_LAYOUT_AUDIT</td><td class="xs">—</td><td class="xs">—</td><td class="xs">🔒</td><td class="xs">🔒</td><td>§0: флоу в макете не норм; APS §J не в scope</td></tr>
-<tr><td class="n">3.6</td><td><code>Отчёты и Инсайты v4.dc.html</code></td><td class="xs">много</td><td>план 4b/4c</td><td class="xs">—</td><td class="xs">—</td><td class="xs">🔒</td><td class="xs">🔒</td><td>§0: отчёты + инсайты — дизайн → контракт</td></tr>
-<tr><td class="n">3.7</td><td><code>Советы v4.dc.html</code></td><td class="xs">4+8</td><td>designer prompt</td><td class="xs">—</td><td class="xs">—</td><td class="xs">🔒</td><td class="xs">🔒</td><td>§0: сначала дизайн (8 экр.), потом контракты</td></tr>
-<tr><td class="n">3.8</td><td><code>Геймификация v4.dc.html</code></td><td class="xs">3+1</td><td>GAMIFICATION_V4</td><td class="xs">—</td><td class="xs">—</td><td class="xs">🔒</td><td class="xs">🔒</td><td>§0: дизайн → контракт; код 11.08 не в scope</td></tr>
-<tr><td class="n">3.9</td><td><code>Вход v4.dc.html</code></td><td class="xs">6</td><td>план <code>:1981</code></td><td class="xs">S</td><td class="xs">0–2</td><td class="xs">✅</td><td class="xs">🟡</td><td>Struct+paint закрыты; canvas canonical — см. 1.2</td></tr>
-<tr><td class="n">3.10</td><td>Шапка куратора (switcher)</td><td class="xs">—</td><td>план <code>:2053+</code></td><td class="xs">—</td><td class="xs">—</td><td class="xs">⬜</td><td class="xs">⬜</td><td>Макета нет</td></tr>
-<tr><td class="n">3.11</td><td>Пустое «тарелка» (1-й приём)</td><td class="xs">—</td><td>план <code>:2042–2043</code></td><td class="xs">M</td><td class="xs">4–6</td><td class="xs">⬜</td><td class="xs">⬜</td><td>Перенос обучения; не начато</td></tr>
+<tr><td class="n">3.1</td><td><code>tab-food.v4.dc.html</code></td><td class="xs">4 (1)</td><td>INDEX</td><td class="xs">—</td><td class="xs">—</td><td class="xs">🔒</td><td class="xs">🔒</td><td>§0: канвас есть, нет <code>[data-contract]</code></td></tr>
+<tr><td class="n">3.2</td><td><code>tab-activity.v4.dc.html</code></td><td class="xs">4 (1)</td><td>INDEX</td><td class="xs">—</td><td class="xs">—</td><td class="xs">🔒</td><td class="xs">🔒</td><td>§0: канвас есть; код 10.08 не разблокирует</td></tr>
+<tr><td class="n">3.3</td><td><code>tab-reports.v4.dc.html</code></td><td class="xs">8 (2)</td><td>план 4b</td><td class="xs">—</td><td class="xs">—</td><td class="xs">🔒</td><td class="xs">🔒</td><td>§0: контракт вкладки</td></tr>
+<tr><td class="n">3.4</td><td><code>tab-insights.v4.dc.html</code></td><td class="xs">8 (2)</td><td>план 4c</td><td class="xs">—</td><td class="xs">—</td><td class="xs">🔒</td><td class="xs">🔒</td><td>§0: контракт вкладки + 2-й слой</td></tr>
+<tr><td class="n">3.5</td><td><code>food-add.v4.dc.html</code></td><td class="xs">33</td><td>APS_LAYOUT_AUDIT</td><td class="xs">—</td><td class="xs">—</td><td class="xs">🔒</td><td class="xs">🔒</td><td>§0: нет <code>[data-contract]</code>; APS §J не в scope</td></tr>
+<tr><td class="n">3.6</td><td><code>tips.v4.dc.html</code></td><td class="xs">24 (12)</td><td>designer prompt</td><td class="xs">—</td><td class="xs">—</td><td class="xs">🔒</td><td class="xs">🔒</td><td>§0: контракт → код</td></tr>
+<tr><td class="n">3.7</td><td><code>gamification.v4.dc.html</code></td><td class="xs">4</td><td>GAMIFICATION_V4</td><td class="xs">—</td><td class="xs">—</td><td class="xs">🔒</td><td class="xs">🔒</td><td>§0: контракт; код 11.08 не в scope</td></tr>
+<tr><td class="n">3.8</td><td><code>cycle.v4.dc.html</code></td><td class="xs">14 (7)</td><td>prompt-cycle-removal</td><td class="xs">—</td><td class="xs">—</td><td class="xs">🔒</td><td class="xs">🔒</td><td>§0: контракт или removal</td></tr>
+<tr><td class="n">3.9</td><td>Шапка куратора (switcher)</td><td class="xs">—</td><td>план <code>:2053+</code></td><td class="xs">—</td><td class="xs">—</td><td class="xs">⬜</td><td class="xs">⬜</td><td>Канваса в INDEX нет</td></tr>
+<tr><td class="n">3.10</td><td>Пустое «тарелка» (1-й приём)</td><td class="xs">—</td><td>план <code>:2042–2043</code></td><td class="xs">M</td><td class="xs">4–6</td><td class="xs">⬜</td><td class="xs">⬜</td><td>Перенос обучения; не начато</td></tr>
 </tbody>
 </table></div>
 <p>Часы и код для строк с 🔒 — <strong>не оцениваем</strong> до снятия блокировки (§0).</p>

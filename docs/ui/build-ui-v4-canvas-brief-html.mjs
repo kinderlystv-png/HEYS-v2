@@ -62,7 +62,21 @@ function inlineMd(text) {
   s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   s = s.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  s = s.replace(/_([^_]+)_/g, '<em>$1</em>');
   return s;
+}
+
+function isNoteLine(text) {
+  return (
+    (text.startsWith('*') && text.endsWith('*') && !text.startsWith('**')) ||
+    (text.startsWith('_') && text.endsWith('_'))
+  );
+}
+
+function noteInner(text) {
+  if (text.startsWith('*') && text.endsWith('*')) return text.slice(1, -1);
+  if (text.startsWith('_') && text.endsWith('_')) return text.slice(1, -1);
+  return text;
 }
 
 function pipeTableToHtml(block) {
@@ -190,13 +204,29 @@ function mdSliceToHtml(source) {
         out.push(pipeTableToHtml(tableLines.join('\n')));
         continue;
       }
-      if (trimmed.startsWith('*') && trimmed.endsWith('*') && !trimmed.startsWith('**')) {
-        out.push(`<p class="note"><em>${inlineMd(trimmed.slice(1, -1))}</em></p>`);
+      if (isNoteLine(trimmed)) {
+        out.push(`<p class="note"><em>${inlineMd(noteInner(trimmed))}</em></p>`);
         i += 1;
         continue;
       }
-      out.push(`<p>${inlineMd(trimmed)}</p>`);
+      const paraLines = [trimmed];
       i += 1;
+      while (i < lines.length) {
+        const next = lines[i].trim();
+        if (
+          !next ||
+          next === '---' ||
+          next.startsWith('## ') ||
+          next.startsWith('|') ||
+          next.startsWith('<table') ||
+          isNoteLine(next)
+        ) {
+          break;
+        }
+        paraLines.push(next);
+        i += 1;
+      }
+      out.push(`<p>${inlineMd(paraLines.join(' '))}</p>`);
     }
   }
   return out.join('\n');
