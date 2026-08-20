@@ -271,17 +271,19 @@ describe('stepsGoal slider visual map', () => {
     expect(stepsGoalSliderRatioToValue(2 / 3)).toBe(10000);
     expect(stepsGoalSliderRatioToValue(1)).toBe(30000);
 
-    expect(stepsGoalSliderStepForValue(9000)).toBe(100);
+    // Шаг один на всю ручку (решение 2026-08-20): два разных шага по сторонам
+    // якоря делали одну и ту же ручку то мелкой, то грубой.
+    expect(stepsGoalSliderStepForValue(9000)).toBe(500);
     expect(stepsGoalSliderStepForValue(10000)).toBe(500);
     expect(stepsGoalSliderStepForValue(15000)).toBe(500);
   });
 
-  it('uses finer steps below the norm and coarser above', () => {
+  it('keeps one step size on both sides of the norm', () => {
     const { stepsGoalSliderRatioToValue } = loadStepsModule();
     const leftMid = stepsGoalSliderRatioToValue(1 / 3);
     const rightMid = stepsGoalSliderRatioToValue(5 / 6);
 
-    expect(leftMid % 100).toBe(0);
+    expect(leftMid % 500).toBe(0);
     expect(leftMid).toBeLessThan(10000);
     expect(rightMid % 500).toBe(0);
     expect(rightMid).toBeGreaterThan(10000);

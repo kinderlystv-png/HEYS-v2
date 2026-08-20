@@ -8,6 +8,25 @@ const variantsSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_variants_v4
 const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
 const cssSrc = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/730-widgets-dashboard.css'), 'utf8');
 
+/** Раскладывает литерал CATALOG на пары «тип виджета → его кусок исходника». */
+function catalogBlocksFromSource(src) {
+  const start = src.indexOf('const CATALOG = {');
+  const end = src.indexOf('\n  };', start);
+  if (start < 0 || end < 0) throw new Error('CATALOG literal not found in heys_widgets_variants_v4.js');
+  const body = src.slice(start, end);
+  const blocks = [];
+  const typeRe = /^ {4}(\w+): \[/gm;
+  let match;
+  const starts = [];
+  while ((match = typeRe.exec(body)) !== null) starts.push([match[1], match.index]);
+  starts.forEach(([widgetType, at], i) => {
+    const until = i + 1 < starts.length ? starts[i + 1][1] : body.length;
+    blocks.push([widgetType, body.slice(at, until)]);
+  });
+  if (!blocks.length) throw new Error('CATALOG has no widget types');
+  return blocks;
+}
+
 function countCatalogVariantsFromSource(src) {
   const matches = src.match(/\{\s*id:\s*'[^']+'/g) || [];
   return matches.length;
@@ -22,15 +41,20 @@ describe('widget variants v4', () => {
     expect(variantsSrc).toContain('subscribeVariantHoldHint');
   });
 
-  it('getActiveVariant — дефолт первого id в каталоге', () => {
+  it('getActiveVariant — дефолт по флагу isDefault, не по порядку', () => {
     expect(variantsSrc).toContain('function getActiveVariant(widget, widgetType)');
     expect(variantsSrc).toContain('return found || getDefaultVariant(widgetType)');
     // Дефолт задаётся флагом isDefault, а не порядком карточек: порядок в шторке
     // принадлежит канвасу. Риск-радар открывается «Шкалой» (решение владельца).
     expect(variantsSrc).toContain('function getDefaultVariant(widgetType)');
     expect(variantsSrc).toContain("id: 'scale', title: 'Шкала', subtitle: 'уровень из четырёх и что его поднимет', size: '2x2', isDefault: true");
-    // Флаг ровно один на весь каталог — иначе дефолт становится лотереей.
-    expect(variantsSrc.split('isDefault: true').length - 1).toBe(1);
+    // Флаг не больше одного на тип виджета — getDefaultVariant берёт первый
+    // найденный, и два флага в одном типе делают дефолт лотереей. Разные типы
+    // держат свои дефолты независимо: у crashRisk это «График».
+    const withTwoDefaults = catalogBlocksFromSource(variantsSrc)
+      .filter(([, block]) => block.split('isDefault: true').length - 1 > 1)
+      .map(([widgetType]) => widgetType);
+    expect(withTwoDefaults).toEqual([]);
   });
 
   it('registry — displayVariant через applyCatalogToRegistry', () => {
