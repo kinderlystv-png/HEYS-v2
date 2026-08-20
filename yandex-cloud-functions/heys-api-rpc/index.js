@@ -1007,6 +1007,7 @@ const ALLOWED_FUNCTIONS = [
   'log_consents_by_session',          // 🔐 Session-safe: client_id из сессии (IDOR protection)
   'check_required_consents_by_session', // 🔐 v2 version-aware: re-consent при bump версии (compliance overhaul 2026-05-20)
   'check_optional_consents_by_session', // 🔐 heys/d8f2b0: необязательные согласия, отставшие по версии — баннер, вход не блокирует
+  'get_public_app_status', // 🔓 heys/540784: публичный рубильник экрана входа — зовётся ДО аутентификации, отдаёт только признак закрытия и тексты
   'check_payment_consent_by_session', // 🔐 Session-safe: проверка payment_oferta перед оплатой
   'revoke_consent_by_session',        // 🔐 Session-safe revoke + kill sessions при health/personal (2026-05-20)
   'get_my_consents_by_session',       // 🔐 Self-view: список своих согласий для UI "Мои согласия" (2026-05-20)
