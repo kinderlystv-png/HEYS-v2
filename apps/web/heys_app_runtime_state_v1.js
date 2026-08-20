@@ -31,13 +31,17 @@
         const [mustBlockReconsent, setMustBlockReconsent] = React.useState(false);
         const [needsAgeGate, setNeedsAgeGate] = React.useState(false);
         const [consentCheckError, setConsentCheckError] = React.useState(null);
+        // heys/d8f2b0 — необязательные согласия, отставшие по версии.
+        // Живут отдельно от outdatedTypes намеренно: те закрывают вход,
+        // эти только поднимают баннер.
+        const [optionalOutdatedTypes, setOptionalOutdatedTypes] = React.useState([]);
 
         const useConsentCheck = AppRuntimeEffects?.useConsentCheck
             || (({ React: HookReact }) => HookReact.useEffect(() => { }, []));
         useConsentCheck({
             React, clientId, cloudUser, setNeedsConsent, setCheckingConsent,
             setOutdatedTypes, setGraceExpiresAt, setMustBlockReconsent, setNeedsAgeGate,
-            setConsentCheckError,
+            setConsentCheckError, setOptionalOutdatedTypes,
         });
 
         const swipeState = AppSwipeNav?.useSwipeNavigation
@@ -67,6 +71,8 @@
                 mustBlockReconsent,
                 needsAgeGate,
                 consentCheckError,
+                optionalOutdatedTypes,
+                setOptionalOutdatedTypes,
                 setOutdatedTypes,
                 setGraceExpiresAt,
                 setMustBlockReconsent,

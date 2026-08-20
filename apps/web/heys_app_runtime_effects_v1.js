@@ -92,12 +92,14 @@
         setMustBlockReconsent,
         setNeedsAgeGate,
         setConsentCheckError,
+        setOptionalOutdatedTypes,
     }) => {
         React.useEffect(() => {
             if (!clientId) {
                 setNeedsConsent(false);
                 setCheckingConsent(false);
                 setOutdatedTypes && setOutdatedTypes([]);
+                setOptionalOutdatedTypes && setOptionalOutdatedTypes([]);
                 setGraceExpiresAt && setGraceExpiresAt(null);
                 setMustBlockReconsent && setMustBlockReconsent(false);
                 setNeedsAgeGate && setNeedsAgeGate(false);
@@ -113,6 +115,7 @@
                 setNeedsConsent(false);
                 setCheckingConsent(false);
                 setOutdatedTypes && setOutdatedTypes([]);
+                setOptionalOutdatedTypes && setOptionalOutdatedTypes([]);
                 setGraceExpiresAt && setGraceExpiresAt(null);
                 setMustBlockReconsent && setMustBlockReconsent(false);
                 setNeedsAgeGate && setNeedsAgeGate(false);
@@ -189,6 +192,7 @@
                 setNeedsConsent(false);
                 setCheckingConsent(false);
                 setOutdatedTypes && setOutdatedTypes([]);
+                setOptionalOutdatedTypes && setOptionalOutdatedTypes([]);
                 setGraceExpiresAt && setGraceExpiresAt(null);
                 setMustBlockReconsent && setMustBlockReconsent(false);
                 setNeedsAgeGate && setNeedsAgeGate(false);
@@ -212,6 +216,7 @@
                 setNeedsConsent(false);
                 setCheckingConsent(false);
                 setOutdatedTypes && setOutdatedTypes([]);
+                setOptionalOutdatedTypes && setOptionalOutdatedTypes([]);
                 setGraceExpiresAt && setGraceExpiresAt(null);
                 setMustBlockReconsent && setMustBlockReconsent(false);
                 setNeedsAgeGate && setNeedsAgeGate(false);
@@ -339,6 +344,24 @@
                             detail: { valid: effectiveConsentValid, needsConsent: needs, source: 'consent-check' }
                         }));
                     } catch (_) { /* noop */ }
+                    // heys/d8f2b0 — мягкая проверка необязательных документов.
+                    // Только когда обязательные в порядке: если человек и так
+                    // упёрся в блокирующий экран, баннер поверх него — шум.
+                    if (effectiveConsentValid && setOptionalOutdatedTypes) {
+                        Promise.resolve(HEYS.Consents?.api?.checkOptionalOutdated?.())
+                            .then((opt) => {
+                                if (cancelled) return;
+                                const list = Array.isArray(opt?.outdated) ? opt.outdated : [];
+                                setOptionalOutdatedTypes(list);
+                                if (list.length) {
+                                    console.log('[CONSENTS] Необязательные документы обновились:',
+                                        list.map(x => x?.type || x).join(', '));
+                                }
+                            })
+                            .catch(() => { /* мягкая проверка не обязана удаваться */ });
+                    } else if (setOptionalOutdatedTypes) {
+                        setOptionalOutdatedTypes([]);
+                    }
                     if (outdated.length) {
                         console.log('[CONSENTS] ⚠ Outdated docs, grace until:', r.graceExpiresAt);
                     } else if (needs) {

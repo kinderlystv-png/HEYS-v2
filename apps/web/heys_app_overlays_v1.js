@@ -118,6 +118,8 @@
             gate,
             desktopGate,
             consentGate,
+            optionalOutdatedTypes,
+            onOptionalReconsent,
             isConsentBlocking,
             isMorningCheckinBlocking,
             showMorningCheckin,
@@ -255,6 +257,19 @@
             gate,
             desktopGate,
             consentGate,
+            // heys/d8f2b0 — мягкий призыв переподписать необязательный документ.
+            // Sticky-полоса поверх приложения, а не вместо него: доступ к сервису
+            // не зависит от согласия на доступ куратора, push или маркетинг.
+            // Над блокирующим гейтом не рисуем — там и так есть что читать.
+            !isConsentBlocking
+                && (optionalOutdatedTypes || []).length > 0
+                && HEYS.Consents?.ConsentOutdatedBanner
+                && React.createElement(HEYS.Consents.ConsentOutdatedBanner, {
+                    key: 'optional-outdated-banner',
+                    outdatedTypes: optionalOutdatedTypes,
+                    graceExpiresAt: null,
+                    onClick: onOptionalReconsent,
+                }),
             // === MORNING CHECK-IN (вес, сон, шаги — показывается ВМЕСТО контента, НО после согласий) ===
             // Крестика нет: выход только вперёд. После регистрации «Начать чек-ин»
             // перемонтирует мастер с mode=daily (новый key сбрасывает planRef).

@@ -1016,6 +1016,8 @@
                     desktopGate: params.desktopGate,
                     consentGate: params.consentGate,
                     isConsentBlocking: params.isConsentBlocking,
+                    optionalOutdatedTypes: params.optionalOutdatedTypes,
+                    onOptionalReconsent: params.onOptionalReconsent,
                     isMorningCheckinBlocking: params.isMorningCheckinBlocking,
                     showMorningCheckin: params.showMorningCheckin,
                     setShowMorningCheckin: params.setShowMorningCheckin,
@@ -1043,11 +1045,24 @@
                     dismissWhatsNew: params.dismissWhatsNew,
                 }));
             // useMemo prevents AppOverlays (React.memo) from re-rendering when unrelated state changes
+            // heys/d8f2b0 — клик по мягкому баннеру открывает обычный экран
+            // согласий по тем документам, что отстали. Тот же приём, что у
+            // fallback-баннера в гейте: mustBlockReconsent поднимает сценарий A.
+            const optionalOutdatedList = runtimeState?.complianceState?.optionalOutdatedTypes;
+            const setOutdatedTypesRef = runtimeState?.complianceState?.setOutdatedTypes;
+            const setMustBlockRef = runtimeState?.complianceState?.setMustBlockReconsent;
+            const handleOptionalReconsent = React.useCallback(() => {
+                if (setOutdatedTypesRef) setOutdatedTypesRef(optionalOutdatedList || []);
+                if (setMustBlockRef) setMustBlockRef(true);
+            }, [optionalOutdatedList, setOutdatedTypesRef, setMustBlockRef]);
+
             const overlaysProps = React.useMemo(() => buildOverlaysProps({
                 gate,
                 desktopGate,
                 consentGate,
                 isConsentBlocking,
+                optionalOutdatedTypes: optionalOutdatedList,
+                onOptionalReconsent: handleOptionalReconsent,
                 isMorningCheckinBlocking,
                 showMorningCheckin,
                 setShowMorningCheckin,
@@ -1077,7 +1092,8 @@
             }), [gate, desktopGate, consentGate, isConsentBlocking, isMorningCheckinBlocking, showMorningCheckin,
                 showOfflineBanner, showOnlineBanner, showSyncLockOverlay, showSlowInternetHint, offlineDuration, pendingCount,
                 showPwaBanner, showIosPwaBanner, showUpdateToast, notification,
-                widgetsEditMode, tab, appShellProps, showWhatsNew]);
+                widgetsEditMode, tab, appShellProps, showWhatsNew,
+                optionalOutdatedList, handleOptionalReconsent]);
             return React.createElement(AppOverlays, overlaysProps);
         }
 

@@ -2729,6 +2729,30 @@
     }
   };
 
+  // ── Необязательные согласия, отставшие по версии (heys/d8f2b0) ──────
+  //
+  // Блокирующая проверка (checkRequiredVersioned) смотрит только жёсткий
+  // список сервера: user_agreement, personal_data, health_data. Всё остальное
+  // — доступ куратора, push, маркетинг, расшифровка — при подъёме версии
+  // проходит незамеченным, и подписи под новой редакцией не собираются.
+  // Эта проверка закрывает пробел и НИЧЕГО не блокирует: её результат ведёт
+  // к мягкому баннеру, а не к экрану-гейту.
+  consentsAPI.checkOptionalOutdated = async function () {
+    try {
+      if (!HEYS.YandexAPI?.checkOptionalConsentsBySession) return { outdated: [] };
+      const result = await HEYS.YandexAPI.checkOptionalConsentsBySession(getCurrentLegalVersions());
+      if (result.error) return { outdated: [] };
+      const data = result.data?.check_optional_consents_by_session || result.data;
+      if (data?.success === false) return { outdated: [] };
+      const outdated = Array.isArray(data?.outdated) ? data.outdated : [];
+      return { outdated };
+    } catch (err) {
+      // Молча: необязательный документ не повод ломать экран.
+      console.info('[Consents] checkOptionalOutdated skipped:', err?.message || err);
+      return { outdated: [] };
+    }
+  };
+
   // ── My consents list (для UI «Мои согласия») ────────────────────────────
   consentsAPI.getMyConsents = async function () {
     try {

@@ -2884,6 +2884,28 @@
   /**
    * 🔐 Список своих согласий для UI "Мои согласия и данные".
    */
+  /**
+   * Необязательные согласия, отставшие по версии (heys/d8f2b0).
+   *
+   * Отдельный вызов, а не поле в checkRequiredConsentsBySession: блокирующая
+   * проверка закрывает вход и заводит grace, эта — только повод показать
+   * баннер. Ошибку наружу не поднимаем: не показать баннер безопаснее, чем
+   * уронить экран из-за необязательного документа.
+   */
+  async function checkOptionalConsentsBySession(expectedVersions) {
+    try {
+      const sessionRpc = buildSessionRpcParams({
+        p_expected_versions: JSON.stringify(expectedVersions || {})
+      });
+      if (!sessionRpc.ok) return { data: null, error: { message: 'No session token' } };
+
+      return await rpc('check_optional_consents_by_session', sessionRpc.params);
+    } catch (e) {
+      err('checkOptionalConsentsBySession failed:', e.message);
+      return { data: null, error: { message: e.message } };
+    }
+  }
+
   async function getMyConsentsBySession() {
     try {
       const sessionRpc = buildSessionRpcParams();
@@ -3366,6 +3388,7 @@
     logConsentsBySession,
     signConsentsWithAccessCodeBySession,
     checkRequiredConsentsBySession,
+    checkOptionalConsentsBySession,
     revokeConsentBySession,
     deleteMyAccount,
     // 🆕 Compliance overhaul 2026-05-20
