@@ -36,6 +36,15 @@ describe('formatDateHeaderRow (v4 date line)', () => {
     expect(row.relative).toBeNull();
   });
 
+  it('today on weekend — red abbr instead of «Сегодня»', () => {
+    vi.setSystemTime(new Date('2026-08-09T12:00:00+03:00'));
+    const row = formatDateHeaderRow('2026-08-09');
+    expect(row.isToday).toBe(true);
+    expect(row.weekendAbbr).toBe('вс');
+    expect(row.main).toMatch(/^вс, 9 августа/);
+    vi.setSystemTime(new Date('2026-08-10T12:00:00+03:00'));
+  });
+
   it('yesterday — «Вчера, …» без дублирующей подписи', () => {
     const row = formatDateHeaderRow('2026-08-09');
     expect(row.main).toMatch(/^Вчера, 9 августа/);

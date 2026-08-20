@@ -3212,11 +3212,20 @@
     return true;
   }
 
+  // iOS impact light / Android EFFECT_TICK — один короткий тик в момент тапа.
+  function impactLight() {
+    if (!navigator.vibrate) return false;
+    navigator.vibrate(8);
+    return true;
+  }
+
   HEYS.vibration = {
     isSupported: () => 'vibrate' in navigator,
     patterns: VIBRATION_PATTERNS,
     play: vibratePattern,
     stop: () => navigator.vibrate?.(0),
+    impactLight,
+    tick: impactLight,
     // Удобные методы
     success: () => vibratePattern('success'),
     error: () => vibratePattern('error'),

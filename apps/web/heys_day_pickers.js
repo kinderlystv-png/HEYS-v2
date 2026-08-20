@@ -286,9 +286,16 @@
           },
             React.createElement('span', { className: 'date-picker-lbl-inner' },
               calendarIconSvg(),
-              React.createElement('span', {
-                className: 'date-picker-main' + (isTodaySelected ? ' date-picker-main--today' : ' date-picker-main--past')
-              }, headerRow.main)
+              headerRow.weekendAbbr
+                ? React.createElement('span', {
+                  className: 'date-picker-main date-picker-main--today'
+                },
+                  React.createElement('span', { className: 'date-picker-weekend-abbr' }, headerRow.weekendAbbr),
+                  `, ${sel.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}`
+                )
+                : React.createElement('span', {
+                  className: 'date-picker-main' + (isTodaySelected ? ' date-picker-main--today' : ' date-picker-main--past')
+                }, headerRow.main)
             ),
             headerRow.relative && React.createElement('span', {
               className: 'date-picker-sub date-picker-sub--relative'

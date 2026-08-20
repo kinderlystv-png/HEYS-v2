@@ -38,6 +38,10 @@ describe('DatePicker v4 капсула', () => {
         );
     });
 
+    it('CSS — weekend abbr in today capsule', () => {
+        expect(baseCss).toContain('.date-picker--v4 .date-picker-weekend-abbr');
+    });
+
     it('CSS — геометрия dcap: капсула 36px, стрелки 34px', () => {
         expect(baseCss).toMatch(
             /\.date-picker--v4 \.date-picker-trigger[\s\S]{0,200}height:\s*36px/,

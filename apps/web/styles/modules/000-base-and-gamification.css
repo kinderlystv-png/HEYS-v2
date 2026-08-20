@@ -8267,6 +8267,10 @@ body:has(.offline-banner) .wrap {
   color: #201e1d;
 }
 
+.date-picker--v4 .date-picker-weekend-abbr {
+  color: var(--v4-bad-text, #a8382b);
+}
+
 .date-picker--v4 .date-picker-trigger--not-today {
   background: #f3e0d2;
   border: none;

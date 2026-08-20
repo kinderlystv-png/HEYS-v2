@@ -377,8 +377,13 @@
     }
 
     function hapticFn(type = 'light') {
-        if (!navigator.vibrate || !userHasInteracted) return;
+        if (!userHasInteracted) return;
         try {
+            if ((type === 'light' || type === 'tick') && HEYS.vibration?.impactLight) {
+                HEYS.vibration.impactLight();
+                return;
+            }
+            if (!navigator.vibrate) return;
             switch (type) {
                 case 'light': navigator.vibrate(10); break;
                 case 'medium': navigator.vibrate(20); break;
@@ -1279,6 +1284,19 @@
         const isToday = d.toDateString() === effectiveToday.toDateString();
         const isYesterday = d.toDateString() === effectiveYesterday.toDateString();
         if (isToday) {
+            const dayOfWeek = d.getDay();
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            if (isWeekend) {
+                const weekendAbbr = d.toLocaleDateString('ru-RU', { weekday: 'short' })
+                    .replace(/\.$/, '')
+                    .toLowerCase();
+                return {
+                    main: `${weekendAbbr}, ${longDate}`,
+                    relative: null,
+                    isToday: true,
+                    weekendAbbr
+                };
+            }
             return { main: `Сегодня, ${longDate}`, relative: null, isToday: true };
         }
         if (isYesterday) {
