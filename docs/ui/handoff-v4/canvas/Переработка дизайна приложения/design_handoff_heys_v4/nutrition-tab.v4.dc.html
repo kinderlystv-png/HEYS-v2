@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;family=Caprasimo&amp;display=swap" rel="stylesheet">
+<link href="v4-canvas.css" rel="stylesheet">
+<style>
+  .ph{width:375px}
+  .pal{--dim:#6b5f4f;--dimIco:#7a6b58}
+  .pal.dk{--dim:rgba(242,237,230,.62);--dimIco:rgba(242,237,230,.55)}
+  .pal.bl{--dim:#5a6474;--dimIco:#6a7484}
+  .pal.bldk{--dim:rgba(232,238,246,.62);--dimIco:rgba(232,238,246,.55)}
+  .svc{font:600 10.5px/1.7 ui-monospace,Menlo,monospace;color:#6b5f4f;margin:0 0 20px;max-width:900px}
+  .svc b{color:#8a4a20}
+
+  .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
+  .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
+  .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
+  .spec>span[data-v]::before{content:attr(data-v)}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:#6b5f4f;font-style:normal;text-wrap:pretty}
+  .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin:0 0 30px}
+  .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6b5f4f;margin:16px 0 2px}
+  .banner{display:flex;align-items:flex-start;gap:11px;background:#efe3cf;border-radius:16px;padding:13px 16px;margin:0 0 20px;max-width:980px}
+  .banner span:first-child{font:700 9.5px/1 ui-monospace,Menlo,monospace;padding:5px 8px;background:#c67139;color:#2b1608;border-radius:999px;flex:none}
+  .banner span:last-child{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.62);text-wrap:pretty}
+  .row4{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+  .strip{display:grid;grid-template-columns:320px 375px;gap:0 32px;align-items:start}
+  .sLab{padding:10px 0 0;text-align:right}
+  .sLab b{display:block;font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d}
+  .sLab span{display:block;font:500 11px/1.45 Figtree,sans-serif;color:#6b5f4f;margin-top:3px;text-wrap:pretty}
+  .sPh{width:375px;background:var(--bg);position:relative}
+  .sPh.sTop{border-radius:28px 28px 0 0;box-shadow:0 -1px 2px rgba(var(--shadow),.06)}
+  .sPh.sBot{border-radius:0 0 28px 28px;padding-bottom:0;box-shadow:0 14px 40px rgba(var(--shadow),.12)}
+  .sPh .sec{margin:0 18px}
+
+  .cap{padding:0 18px;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .capL{font:700 15px/1 Figtree,sans-serif;color:var(--tx)}
+  .capM{font:500 11px/1 Figtree,sans-serif;color:var(--dim);white-space:nowrap}
+  .dcap{margin:11px 18px 0;display:flex;align-items:center;gap:8px}
+  .darr{width:34px;height:34px;flex:none;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;color:var(--dim)}
+  .dpil{flex:1;min-height:36px;border-radius:16px;background:var(--c1);display:flex;align-items:center;justify-content:center;gap:6px;font:700 12.5px/1 Figtree,sans-serif;color:var(--tx)}
+  .dpil.past{background:#f3e0d2}
+  .pal.dk .dpil.past{background:#3a2a1e}
+  .pal.bl .dpil.past{background:#e4e0f2}
+  .pal.bldk .dpil.past{background:#2b2a44}
+  .tod{min-height:26px;padding:0 10px;border-radius:999px;background:var(--acs);color:var(--on-acs);font:700 10px/1 Figtree,sans-serif;display:inline-flex;align-items:center}
+
+  .hero{margin:14px 18px 0;background:var(--c2);border-radius:26px;padding:22px 20px 20px}
+  .hk{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:var(--dim)}
+  .hn{display:flex;align-items:baseline;gap:9px;margin-top:13px}
+  .hn b{font:600 54px/.9 Figtree,sans-serif;letter-spacing:-.045em;color:var(--ac);font-variant-numeric:tabular-nums}
+  .hn i{font:600 12px/1 Figtree,sans-serif;font-style:normal;color:var(--dim)}
+  .hn.over b{color:var(--red)}
+  .hn.warn b{color:var(--ac2)}
+  .htr i.wrn{background:var(--ac2)}
+  .trk i.wrn2{background:var(--ac2)}
+  .htr{height:6px;border-radius:999px;background:rgba(var(--ink),.1);margin-top:19px;overflow:hidden;display:flex}
+  .htr i{display:block;height:6px;border-radius:999px;background:var(--acs)}
+  .htr i.ov{background:var(--red)}
+  .hb{display:flex;justify-content:space-between;margin-top:12px;font:600 11px/1 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
+
+  .sec{margin:0 18px}
+  .win{margin-top:8px;background:var(--c1);border-radius:20px;padding:14px 16px;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .win span:first-child{font:600 12.5px/1.2 Figtree,sans-serif;color:var(--dim)}
+  .win span:last-child{font:600 12.5px/1.2 Figtree,sans-serif;color:var(--gr);text-align:right}
+  .win.calm span:last-child{color:var(--dim)}
+  .win.warn span:last-child{color:var(--red)}
+
+  .dry{margin-top:8px;background:var(--c1);border-radius:20px;overflow:hidden}
+  .meal{padding:14px 16px;border-bottom:1px solid rgba(var(--ink),.07);min-height:44px}
+  .meal:last-child{border-bottom:none}
+  .mt{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .mt b{font:700 13px/1 Figtree,sans-serif;color:var(--tx);font-variant-numeric:tabular-nums}
+  .mt s{text-decoration:none;font:700 13px/1 Figtree,sans-serif;color:var(--tx);font-variant-numeric:tabular-nums}
+  .mb{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:5px}
+  .mb span{font:500 11.5px/1.5 Figtree,sans-serif;color:var(--dim);text-wrap:pretty}
+  .mchev{width:15px;height:15px;flex:none;color:var(--dimIco);margin-bottom:1px}
+  .mempty span{color:var(--dim);font-style:italic}
+  .plus{min-height:30px;padding:0 12px;border-radius:999px;background:var(--acs);color:var(--on-acs);font:700 11px/1 Figtree,sans-serif;display:inline-flex;align-items:center;flex:none}
+  .dryE{padding:18px 16px;font:500 12px/1.45 Figtree,sans-serif;color:var(--dim)}
+  .cta{margin-top:16px;min-height:52px;border-radius:999px;background:var(--acs);color:var(--on-acs);display:flex;align-items:center;justify-content:space-between;padding:0 22px;font:700 13px/1 Figtree,sans-serif}
+
+  .tot{margin-top:8px;background:var(--c1);border-radius:20px;padding:16px}
+  .totH{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:var(--dim);margin-bottom:13px}
+  .tr{margin-bottom:13px}
+  .tr:last-child{margin-bottom:0}
+  .trh{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .trh b{font:700 11.5px/1 Figtree,sans-serif;color:var(--tx)}
+  .trh span{font:600 11.5px/1 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
+  .trh span em{font-style:normal;color:var(--tx);font-weight:700}
+  .trh span.ovr em{color:var(--red)}
+  .trk{height:5px;border-radius:999px;background:rgba(var(--ink),.1);margin-top:7px;display:flex;overflow:hidden}
+  .trk i{height:5px;border-radius:999px;background:var(--gr2)}
+  .trk i.acc{background:var(--acs)}
+  .trk i.ov{background:var(--red)}
+
+  .qual{margin-top:10px;display:flex;gap:10px}
+  .qc{flex:1;background:var(--c2);border-radius:20px;padding:15px 16px}
+  .qc.ok{background:var(--gr-bg)}
+  .qk{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:var(--dim)}
+  .qv{display:flex;align-items:baseline;gap:4px;margin-top:9px}
+  .qv b{font:600 22px/1 Figtree,sans-serif;color:var(--ac);font-variant-numeric:tabular-nums}
+  .qc.ok .qv b{color:var(--gr)}
+  .qv i{font:500 11px/1 Figtree,sans-serif;font-style:normal;color:var(--dim)}
+  .qh{font:500 10px/1.35 Figtree,sans-serif;color:var(--dim);margin-top:7px}
+
+  .blk{margin-top:10px;background:var(--c1);border-radius:20px;padding:16px}
+  .blkH{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:12px}
+  .blkH b{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:var(--dim)}
+  .blkH span{font:700 10.5px/1 Figtree,sans-serif;color:var(--gr)}
+  .blkH span.warn{color:var(--red)}
+  .wv{width:100%;height:96px;display:block}
+  .wvl{display:flex;flex-direction:column;gap:4px;margin-top:10px}
+  .wvl span{font:500 10.5px/1.35 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
+
+  .sp{display:flex;flex-direction:column;gap:10px}
+  .spr{display:flex;align-items:center;gap:10px}
+  .spr b{flex:none;width:52px;font:600 10.5px/1 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
+  .spb{flex:1;height:8px;border-radius:999px;overflow:hidden;display:flex;background:rgba(var(--ink),.08)}
+  .spb i{height:8px}
+  .spr s{text-decoration:none;flex:none;font:600 10.5px/1 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
+  .spleg{display:flex;gap:12px;margin-top:12px}
+  .spleg span{display:flex;align-items:center;gap:5px;font:500 10px/1 Figtree,sans-serif;color:var(--dim)}
+  .spleg i{width:8px;height:8px;border-radius:3px;display:block}
+
+  .hg{display:flex;gap:10px}
+  .hgc{flex:1;background:var(--c2);border-radius:16px;padding:12px 14px}
+  .hgc b{display:block;font:600 10px/1 Figtree,sans-serif;letter-spacing:.04em;color:var(--dim)}
+  .hgc s{text-decoration:none;display:flex;align-items:baseline;gap:3px;margin-top:8px;font:600 20px/1 Figtree,sans-serif;color:var(--tx);font-variant-numeric:tabular-nums}
+  .hgc s i{font:500 10px/1 Figtree,sans-serif;font-style:normal;color:var(--dim)}
+  .hgs{display:flex;gap:2px;margin-top:9px}
+  .hgs i{flex:1;height:4px;border-radius:999px;background:rgba(var(--ink),.12)}
+  .hgs i.on{background:var(--acs)}
+  .hgs i.gr{background:var(--gr2)}
+
+  .lst{display:flex;flex-direction:column;gap:9px}
+  .lrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .lrow b{font:600 12px/1.35 Figtree,sans-serif;color:var(--tx)}
+  .lrow span{font:500 11px/1 Figtree,sans-serif;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+
+  .cfg{margin:22px 18px 0;padding-top:18px;border-top:1px solid rgba(var(--ink),.09)}
+  .cfgH{font:600 10.5px/1.45 Figtree,sans-serif;letter-spacing:.04em;color:var(--dim);text-wrap:pretty}
+  .cfgR{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+  .cfgC{min-height:34px;padding:0 13px;border-radius:999px;background:var(--acs);color:var(--on-acs);font:700 11px/1 Figtree,sans-serif;display:inline-flex;align-items:center;gap:6px}
+  .cfgC.off{background:transparent;color:var(--tx);box-shadow:inset 0 0 0 2px var(--acs)}
+  .cfgC svg{flex:none}
+
+  .nav{margin-top:auto;padding:11px 18px calc(14px + env(safe-area-inset-bottom));display:flex;justify-content:space-between;background:var(--bg);border-top:1px solid rgba(var(--ink),.07)}
+  .navI{display:flex;flex-direction:column;align-items:center;gap:4px;font:600 9px/1 Figtree,sans-serif;color:var(--dim);position:relative}
+  .navI.on{color:var(--acs)}
+  .fab{position:absolute;right:14px;bottom:78px;display:flex;flex-direction:column;gap:9px;align-items:center;z-index:3}
+  .fabS{width:40px;height:40px;border-radius:999px;background:var(--bg);box-shadow:0 2px 8px rgba(var(--shadow),.14);display:flex;align-items:center;justify-content:center}
+  .fabB{width:52px;height:52px;border-radius:999px;background:var(--acs);color:var(--on-acs);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(var(--shadow),.18)}
+
+  .shH{padding:16px 18px 12px}
+  .shH b{display:block;font:700 15.5px/1.3 Figtree,sans-serif;color:var(--tx)}
+  .shH span{display:block;font:500 11.5px/1.45 Figtree,sans-serif;color:var(--dim);margin-top:4px}
+  .shR{margin:0 18px 8px;background:var(--c1);border-radius:16px;padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px}
+  .shR b{flex:1;font:600 12.5px/1.3 Figtree,sans-serif;color:var(--tx)}
+  .shR span{font:600 12.5px/1 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
+  .shDel{margin:6px 18px 0;min-height:44px;display:flex;align-items:center;justify-content:center;gap:7px;font:600 12px/1 Figtree,sans-serif;color:var(--red)}
+
+  .cur{margin:12px 18px 0;min-height:44px;padding:11px 13px;border-radius:16px;background:var(--tint);display:flex;align-items:center;gap:10px}
+  .cur b{flex:1;font:600 12.5px/1.35 Figtree,sans-serif;color:var(--tx)}
+  .cur b span{display:block;font:500 11px/1.4 Figtree,sans-serif;color:var(--dim);margin-top:3px}
+  .roB{margin:12px 18px 0;padding:12px 14px;border-radius:16px;background:var(--c2);font:600 12px/1.45 Figtree,sans-serif;color:var(--tx);text-wrap:pretty}
+  .roB span{display:block;font:500 11px/1.45 Figtree,sans-serif;color:var(--dim);margin-top:4px}
+  .offc{margin:auto 18px;padding:20px 18px;border-radius:22px;background:var(--c1);text-align:center}
+  .offc b{display:block;font:700 13.5px/1.35 Figtree,sans-serif;color:var(--tx)}
+  .offc span{display:block;font:500 11.5px/1.5 Figtree,sans-serif;color:var(--dim);margin-top:6px;text-wrap:pretty}
+  /* --- карточка воды: дубль из water-add.v4.dc.html, править там --- */
+  .wCardB{--cardBg:#f7efe2;--w:#7d98a6;--wDeep:#4e6d7a;--wTxt:#fffaf1;--inkTxt:#201e1d;--dimTxt:#6b5f4f;--trk:rgba(0,0,0,.1);--sparkOff:#5d7f8d;position:relative;background:var(--cardBg);border-radius:18px;padding:12px 14px 13px}
+  .pal.dk .wCardB{--cardBg:#23201b;--w:#8fb3c2;--wDeep:#3f6c7e;--wTxt:#f2ede6;--inkTxt:#f2ede6;--dimTxt:rgba(242,237,230,.62);--trk:rgba(242,237,230,.14);--sparkOff:#7ba3b4}
+  .pal.bl .wCardB{--cardBg:#eef3f9;--w:#3d7f9e;--wDeep:#2c5f76;--wTxt:#ffffff;--inkTxt:#101826;--dimTxt:#5a6474;--trk:rgba(16,24,38,.1);--sparkOff:#4a86a4}
+  .pal.bldk .wCardB{--cardBg:#182a3a;--w:#7fb6d0;--wDeep:#35657d;--wTxt:#eef3f8;--inkTxt:#eef3f8;--dimTxt:rgba(238,243,248,.62);--trk:rgba(238,243,248,.14);--sparkOff:#6ba3bf}
+  .wCardB .k{font:600 9.5px/1 Figtree,sans-serif;letter-spacing:.03em;color:var(--dimTxt)}
+  .bTop{display:flex;align-items:center;justify-content:space-between}
+  .bSub{height:26px;padding:0 10px;border-radius:999px;display:inline-flex;align-items:center;font:700 10.5px/1 Figtree,sans-serif;color:var(--inkTxt);box-shadow:inset 0 0 0 2px var(--wDeep)}
+  .bRing{display:flex;align-items:center;gap:13px;margin-top:8px}
+  .bRingTxt{display:flex;flex-direction:column;gap:3px}
+  .bRingTxt b{font:600 22px/1 Figtree,sans-serif;letter-spacing:-.03em;color:var(--inkTxt)}
+  .bRingTxt span{font:600 9.5px/1.4 Figtree,sans-serif;color:var(--dimTxt)}
+  .bChips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+  .bChip{height:30px;border-radius:12px;display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--wTxt);background:var(--wDeep)}
+  .bCurve{margin-top:10px;color:var(--wDeep)}
+  .bCurve svg{width:100%;height:34px;display:block}
+  .bHint{margin-top:10px;padding:10px 11px;border-radius:12px;background:rgba(var(--ink),.05);font:500 10.5px/1.5 Figtree,sans-serif;color:var(--inkTxt);text-wrap:pretty}
+  .vSw{display:flex;align-items:center;margin-top:10px;padding-top:9px;border-top:1px solid rgba(var(--ink),.07);justify-content:flex-end}
+  .vSw i{position:relative;display:inline-flex;align-items:center;height:26px;padding:0 11px;border-radius:999px;font:600 10px/1 Figtree,sans-serif;font-style:normal;color:var(--dimTxt);white-space:nowrap}
+  .vSw i.on{background:var(--wDeep);color:var(--wTxt)}
+
+  .tmr{background:var(--gr-bg);border-radius:20px;padding:18px 16px;text-align:center}
+  .tmrN{font:600 34px/1 Figtree,sans-serif;letter-spacing:-.03em;color:var(--gr);font-variant-numeric:tabular-nums}
+  .tmrS{font:500 10.5px/1.45 Figtree,sans-serif;color:var(--dim);margin-top:9px;text-wrap:pretty}
+  .trc{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid rgba(var(--ink),.07)}
+  .trc:last-child{border-bottom:none}
+  .trc b{font:600 11.5px/1.35 Figtree,sans-serif;color:var(--tx)}
+  .trc span{font:600 11.5px/1 Figtree,sans-serif;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .unc{margin-top:11px;font:500 11px/1.5 Figtree,sans-serif;color:var(--dim);text-wrap:pretty}
+  .more{margin-top:12px;min-height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:6px;font:600 11.5px/1 Figtree,sans-serif;color:var(--ac);box-shadow:inset 0 0 0 1.5px var(--acs)}
+  .prop{font:700 14px/1.35 Figtree,sans-serif;color:var(--tx);text-wrap:pretty}
+  .propC{display:flex;gap:6px;margin-top:11px;flex-wrap:wrap}
+  .pchipS{min-height:28px;padding:0 11px;border-radius:999px;background:var(--c2);color:var(--tx);font:700 10.5px/1 Figtree,sans-serif;display:inline-flex;align-items:center}
+  .why{margin-top:11px;font:500 11px/1.5 Figtree,sans-serif;color:var(--dim);text-wrap:pretty}
+  .grade{min-height:26px;padding:0 10px;border-radius:999px;background:var(--gr-bg);color:var(--gr);font:700 10.5px/1 Figtree,sans-serif;display:inline-flex;align-items:center;flex:none}
+  .repl{margin-top:9px;padding:11px 12px;border-radius:14px;background:var(--c2);font:500 11px/1.5 Figtree,sans-serif;color:var(--tx);text-wrap:pretty}
+  .repl b{font-weight:700}
+  .tl{display:flex;flex-direction:column;gap:7px}
+  .tlr{display:flex;align-items:center;gap:9px}
+  .tlr b{flex:none;width:36px;font:600 10.5px/1 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
+  .tlb{flex:1;height:8px;border-radius:999px;background:rgba(var(--ink),.08);position:relative;overflow:hidden}
+  .tlb i{position:absolute;top:0;height:8px;border-radius:999px;background:var(--acs);display:block}
+  .tlb i.ovl{background:var(--red)}
+  .tlr s{text-decoration:none;flex:none;width:36px;text-align:right;font:600 10.5px/1 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
+  .mnum{width:26px;height:26px;flex:none;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--dim)}
+  .streak{margin-top:8px;padding:12px 14px;border-radius:16px;background:var(--gr-bg);font:600 11.5px/1.4 Figtree,sans-serif;color:var(--gr)}
+</style>
+</helmet>
+
+<p class="svc">В пакете: <b>nutrition-tab.v4.dc.html</b> · протокол: <b>docs/implementation/NUTRITION_TAB_V4_PROTOCOL.md</b><br>Кадры искать по <b>data-screen-label</b>. Числа продукта — только из блока контракта (<b>data-v</b>), не из прозы и не из длительностей CSS.</p>
+
+<div class="banner">
+  <span>В ПРОД</span>
+  <span>Реализуется всё, что помечено <b>data-demo="stop"</b>; кадры <b>protocol</b> — протокол сравнения, по ним не реализовывать. Что именно и с какими числами — только в блоке контракта ниже: пересказа решений здесь нет намеренно, он расходился с контрактом уже дважды. Карточка воды вторична — главный файл <b>water-add.v4.dc.html</b>.</span>
+</div>
+
+<div class="ctr" data-contract="nutrition-tab">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+    <span class="ctrTag">КОНТРАКТ</span>
+    <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
+    <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.4);">ключ и значение через таб — вставляется в тикет или тест</span>
+  </div>
+
+  <div class="ctrH">Что это и чьё</div>
+  <div class="spec"><b>фича</b><span data-v="вкладка «Питание»: остаток дня, окно приёмов, дневник приёмов, разбор дня, настраиваемые блоки"></span></div>
+  <div class="spec"><b>границы</b><span data-v="канвас рисует содержимое вкладки от шапки до ряда чипов; нижняя навигация, плавающие кнопки и шторки добавления — свои канвасы"></span><i>отступ содержимого 18 px от краёв экрана; тот же отступ у капсулы даты — прежнее расхождение 16 против 18 снято</i></div>
+  <div class="spec"><b>источник</b><span data-v="главный для вкладки, дневника приёмов, разбора дня и ряда чипов настройки"></span><i>карточка воды здесь для контекста — при расхождении верен water-add.v4.dc.html; капсула даты — date-remainders.v4.dc.html; лист выбора продукта — food-add.v4.dc.html</i></div>
+  <div class="spec"><b>демо</b><span data-v="data-demo='stop' — статичные кадры, по ним сверять геометрию на 375 px · data-demo='protocol' — отвергнутые или переехавшие кадры (планнер уехал в tab-insights), не реализовывать"></span></div>
+  <div class="spec" style="border-bottom:none"><b>адресация</b><span data-v="кадр = data-screen-label"></span></div>
+
+  <div class="ctrH">Каркас вкладки</div>
+  <div class="spec"><b>порядок блоков</b><span data-v="шапка и капсула даты · герой «Осталось» · окно приёмов · дневник приёмов · «Добавить приём» · итоги дня · качество еды · остальные блоки в порядке чипов · ряд чипов настройки"></span><i>ярусов-заголовков «Сейчас / Дневник / Разбор дня» больше нет: восемь блоков разделены воздухом и своими подписями, третий уровень заголовков на телефоне только шумит</i></div>
+  <div class="spec"><b>один экран для всех ширин</b><span data-v="то, что было только на десктопе, показывается и на телефоне; отдельной мобильной ветки рендера нет"></span><i>прежний ранний выход renderDiarySection убирал с телефона шесть блоков — человек не мог их найти вовсе</i></div>
+  <div class="spec" style="border-bottom:none"><b>прокрутка</b><span data-v="капсула даты липкая, всё остальное едет; положение прокрутки сохраняется при возврате на вкладку и сбрасывается при смене дня"></span></div>
+
+  <div class="ctrH">Одно число на один смысл</div>
+  <div class="spec"><b>бюджет дня</b><span data-v="один источник на весь экран — норма с учётом рефида и долга; герой и строка «норма» в итогах показывают одно и то же число"></span><i>герой брал скорректированную норму, таблица — исходную: в рефид-день на одном экране стояли два разных бюджета</i></div>
+  <div class="spec"><b>формат чисел</b><span data-v="разделитель тысяч везде — «1 289», неразрывный пробел; дробные с запятой"></span><i>в герое было «1873», строкой ниже «1 873»</i></div>
+  <div class="spec"><b>нет данных</b><span data-v="прочерк, а не ноль: пустой день показывает «—» в фактах и остатках, полосы не рисуются"></span><i>ноль — утверждение о факте; человек мог не съесть, а мог не записать. Правило общее с плитками Главной</i></div>
+  <div class="spec" style="border-bottom:none"><b>единицы</b><span data-v="ккал у калорий, «г» у Б/Ж/У и клетчатки — в строке итогов, не в заголовке столбца"></span></div>
+
+  <div class="ctrH">Герой «Осталось»</div>
+  <div class="spec"><b>состав героя</b><span data-v="подпись «Осталось на сегодня» · число 54 px/600 · «ккал» · полоса 6 px · строка «съедено N» и «бюджет M»"></span></div>
+  <div class="spec"><b>цвет числа</b><span data-v="текстовая роль палитры, не тон кнопки. Обычный день: #8a4a20 песочная, #e2a468 тёмная, #1d5e96 синяя, #7fbceb сине-тёмная. Предупреждение: #a1471c песочная (4,86:1 на подложке героя), #d07d4e тёмная, #b03a24 синяя, #f0a08a сине-тёмная. Срыв — роль «внимание»"></span><i>прежний литерал был одинаков во всех четырёх наборах и в тёмных давал 2,4:1. Тон кнопки (#c67139) числу не годится: на подложке героя это 2,84:1, а крупный текст живёт по порогу 3:1 — у предупреждения должен быть свой текстовый шаг рампы, а не акцент действия</i></div>
+  <div class="spec"><b>перебор</b><span data-v="подпись меняется на границе бюджета (100 %) — «Перебор», число без знака; цвет по зонам: до 110 % нейтрально, 110–130 % предупреждение, от 130 % красный. Пороги 110 и 130 — дефолты, куратор правит их под клиента"></span><i>прежде и число, и полоса зажимались: съел на 300 ккал больше — экран говорил «осталось 0», то есть «ровно в норме». Подпись и цвет разведены намеренно: за бюджет вышел уже на 101 %, но красным это называть рано — 106 % это обычный день, а не срыв</i></div>
+  <div class="spec"><b>закрытый день</b><span data-v="подпись «Съедено за день», число — факт, ниже «из M» и «не съедено N»; порогов «к этому часу» нет"></span></div>
+  <div class="spec" style="border-bottom:none"><b>полоса</b><span data-v="ширина едет 320 мс ease-in-out — тот же переход, что у заливки воды"></span><i>раньше менялась скачком</i></div>
+
+  <div class="ctrH">Окно приёмов</div>
+  <div class="spec"><b>что показывает</b><span data-v="одну строку состояния: «закроется в 15:40 · через 1:20», «приём ещё впереди», «окно открыто», «оценка по вчерашнему дню», «добавьте приём для расчёта»"></span></div>
+  <div class="spec"><b>цвет состояния</b><span data-v="шалфей только когда окно действительно открыто и запас больше часа · нейтральный тон у справочных состояний («впереди», «оценка по вчера», «нет данных») · красный при нахлёсте волн"></span><i>значение было зелёным всегда, включая «добавьте приём для расчёта» — зелёный переставал что-либо означать</i></div>
+  <div class="spec" style="border-bottom:none"><b>прошлый день</b><span data-v="строка «день закрыт», расчёт от текущего времени не ведётся"></span><i>расчёт с nowMinutes=1439 давал «окно открыто» на любом прошлом дне</i></div>
+
+  <div class="ctrH">Дневник приёмов</div>
+  <div class="spec"><b>строка приёма</b><span data-v="верх «HH:MM · Название» и ккал справа; низ — до трёх продуктов через «·», дальше «ещё N», справа шеврон; вся строка нажимается, высота не меньше 44 pt"></span><i>раньше строка не нажималась вовсе: время, граммы и удаление жили только в скрытом легаси-блоке</i></div>
+  <div class="spec"><b>тап по строке</b><span data-v="открывает лист правки приёма: время, состав с граммами, «Добавить продукт», «Удалить приём»"></span></div>
+  <div class="spec"><b>название приёма</b><span data-v="назначается автоматически по времени при создании; ручным считается только явное касание чипа типа в шторке — автоподстановка фиксацией не считается. У приёмов, созданных до этого правила, флага нет: они остаются на динамике до первой правки"></span><i>прежняя классификация пересчитывалась на каждый рендер: первый приём дня всегда становился «Завтраком», что бы человек ни выбрал</i></div>
+  <div class="spec"><b>кнопка в строке</b><span data-v="«+ продукт» у пустого приёма заливкой, «+ ещё» у непустого обводкой; не перекрывает тап по строке"></span></div>
+  <div class="spec"><b>порядок приёмов</b><span data-v="по возрастанию времени, приёмы без времени в конец; ограничения количества нет"></span></div>
+  <div class="spec" style="border-bottom:none"><b>пустой день</b><span data-v="одна строка «Пока нет приёмов — добавьте первый», подложка списка остаётся"></span></div>
+
+  <div class="ctrH">Лист правки приёма</div>
+  <div class="spec"><b>поверхность</b><span data-v="нижний лист, отступ 12 px от краёв — тот же, что у листа правок куратора"></span></div>
+  <div class="spec"><b>состав листа</b><span data-v="заголовок с названием и временем · строка времени (открывает капсулу времени) · строки продуктов с граммами · «Добавить продукт» · строка «Оценки приёма» вторым входом · «Удалить приём»"></span></div>
+  <div class="spec"><b>удаление</b><span data-v="применяется сразу, внизу экрана на 4 с появляется «Приём удалён · Отменить»"></span><i>подтверждающего вопроса нет: отмена дешевле лишнего диалога</i></div>
+  <div class="spec" style="border-bottom:none"><b>закрытие</b><span data-v="свайп вниз или тап по затемнению; правки применяются сразу, кнопки «Готово» нет"></span></div>
+
+  <div class="ctrH">Итоги дня</div>
+  <div class="spec"><b>форма</b><span data-v="список строк, а не таблица: пять строк — калории, белок, жиры, углеводы, клетчатка"></span><i>таблица 5×4 требовала читать по двум осям, чтобы понять одно число</i></div>
+  <div class="spec"><b>строка</b><span data-v="слева название, справа «факт из нормы» (факт чернилами, норма вторичным), под ними полоса 5 px"></span></div>
+  <div class="spec"><b>процентов нет</b><span data-v="вместо «Откл. −33 %» — полоса и остаток словами"></span><i>«−100 %» на пустом дне читалось как оценка, а не как отсутствие данных</i></div>
+  <div class="spec"><b>цвет полосы</b><span data-v="шалфей у белка и клетчатки (чем больше, тем лучше) · терракота у калорий, жиров и углеводов (бюджет). Сегмент за нормой берёт тон текущей зоны: предупреждение до 130 %, красный от 130 %"></span><i>иначе один и тот же перебор на 113 % будет назван «предупреждением» в герое и «срывом» на десять строк ниже</i></div>
+  <div class="spec" style="border-bottom:none"><b>недобор не красный</b><span data-v="ниже нормы — просто короткая полоса, без окраски"></span><i>день не закончен: незаполненный бюджет в обед не ошибка</i></div>
+
+  <div class="ctrH">Качество еды</div>
+  <div class="spec"><b>одна карточка</b><span data-v="«Качество еды» — две метрики рядом: вредность и гликемический индекс. Клетчатка ушла пятой строкой в итоги дня"></span><i>«Вредность» отдельной карточкой занимала половину ряда и показывала 0,0 всегда; ГИ считался, но показать его было негде</i></div>
+  <div class="spec"><b>вредность</b><span data-v="шкала продукта 0–10, взвешенная по граммам; порог — константа 5, не персонализируется"></span><i>прежде значение считалось всегда нулевым (индекс продуктов читался как обычный объект), а порог брался из процента — две несводимые единицы. Процент harmPct остаётся входом советов и на экране не показывается; заводить под порог второе поле профиля не нужно, но и править его куратор пока не может — это осознанное ограничение, а не забытая настройка</i></div>
+  <div class="spec"><b>клетчатка</b><span data-v="строкой в итогах дня; в «Качестве еды» её нет"></span><i>в итогах она часть бюджета — там ей и место. Разбор «чем добрать» живёт в своём блоке по чипу, а не второй копией числа в «Качестве еды»</i></div>
+  <div class="spec"><b>гликемический индекс</b><span data-v="вторая метрика «Качества еды»: число и словесная ступень («низкий» до 40, «средний» 40–60, «высокий» выше), взвешен по углеводам"></span><i>сломан только дневной итог; у приёма и в модели волн ГИ считается корректно и взвешенно — значит его не надо строить заново, надо показать</i></div>
+    <div class="spec" style="border-bottom:none"><b>оценка</b><span data-v="«в норме» шалфеем при вредности не выше порога, «выше порога» красным иначе; галочка ставится только в первом случае"></span><i>галочка стояла всегда, потому что значение всегда было нулевым</i></div>
+
+  <div class="ctrH">Настраиваемые блоки</div>
+  <div class="spec"><b>ряд чипов</b><span data-v="внизу вкладки, после всего содержимого, за разделителем; подпись «Что показывать на этой вкладке»"></span><i>решение принимается там, где человек уже увидел весь экран, а не до него</i></div>
+  <div class="spec"><b>семь чипов</b><span data-v="семь: голод и энергия · клетчатка · добавки · рефид · приёмы за день · оценка и риск · волна сейчас"></span></div>
+  <div class="spec"><b>дефолт</b><span data-v="включены все; трём блокам (голод, рефид, приёмы за день) поля профиля нужно завести — переключателей у них сегодня нет"></span><i>планер — единственный блок, который предсказывает, а не показывает факт; его включают осознанно</i></div>
+  <div class="spec"><b>вид чипа</b><span data-v="включённый — заливка акцентом с галочкой; выключенный — обводка 1,5 px без заливки; высота 34 px, область нажатия 44 pt"></span></div>
+  <div class="spec"><b>что нельзя выключить</b><span data-v="герой, окно приёмов, дневник, «Добавить приём», итоги дня и карточка воды — чипов у них нет"></span><i>это и есть вкладка; без них выключать было бы нечего. Вода в этом списке по прежнему решению: она живёт в «Разборе дня» и показывается всегда — это единственный полный вид для тех, кто убрал плитку с Главной</i></div>
+  <div class="spec"><b>применение</b><span data-v="блок появляется и исчезает сразу по тапу, без подтверждения; экран не прокручивается к нему. Исключение — «Добавки»: там включение проходит через запрос согласия, и до согласия чип остаётся выключенным"></span></div>
+  <div class="spec"><b>хранение</b><span data-v="в профиле, вместе с остальными настройками человека; прежний раздел «Ещё → Дневник» снимается"></span><i>набор блоков — это про то, что человеку важно, а не про устройство: со второго телефона он должен увидеть свою вкладку. Заодно снимается захардкоженный гейт по clientId, который держал раздел настроек</i></div>
+  <div class="spec" style="border-bottom:none"><b>дубль в настройках</b><span data-v="прежние пять переключателей «Дневник» в листе настроек снимаются: адрес один"></span><i>они и так не работали на телефоне</i></div>
+    <div class="spec"><b>порядок блоков и чипы</b><span data-v="ряд чипов только включает и выключает; порядок блоков на экране задан контрактом и от порядка чипов не зависит"></span><i>иначе появится второй источник истины по порядку: человек переставит чипы и получит экран, который контракт не описывает</i></div>
+
+  <div class="ctrH">Блоки по чипам</div>
+  <div class="spec"><b>распределение БЖУ</b><span data-v="по строке на приём: доли белка, жиров и углеводов одной полосой, справа ккал приёма"></span></div>
+  <div class="spec"><b>голод и энергия</b><span data-v="две мини-карточки со значением 1–10 и десятисегментной шкалой; голод акцентом, энергия шалфеем"></span></div>
+  <div class="spec"><b>добавки</b><span data-v="состав курса строкой с временем приёма; отметки «выпил» здесь нет"></span><i>факт приёма живёт в дневнике — правило из чек-ина</i></div>
+  <div class="spec"><b>рефид</b><span data-v="показывается только в загрузочный день: называет прибавку к норме и что она уже в бюджете героя"></span></div>
+  <div class="spec"><b>эмодзи</b><span data-v="нигде на вкладке: ни в заголовках блоков, ни в системных сообщениях"></span><i>были ⚠️ в оверлее, ⏰ в баннере триала, 〰️ и 🍽 в графике волн — четыре разных набора вместо одного языка</i></div>
+
+  <div class="spec" style="border-bottom:none"><b>БЖУ по приёмам</b><span data-v="на вкладке отсутствует — разбор по приёмам переехал в «Инсайты», рядом с планером"></span><i>это анализ, а не статус сегодня; правило одно на все блоки: действие и «сейчас» — здесь, «на подумать» — в «Инсайтах»</i></div>
+
+  <div class="ctrH">Действия с приёмом и продуктом</div>
+  <div class="spec"><b>действия приёма</b><span data-v="в листе правки, тремя строками между «Добавить продукт» и «Удалить приём»: «Копировать приём» · «Переместить на другой день» · «Сохранить набором»; у пустого приёма все три погашены"></span><i>эмодзи-кнопки канона (📋 🔀 💾) не переносятся — действия живут строками листа, как всё остальное в v4</i></div>
+  <div class="spec"><b>лист выбора цели</b><span data-v="один и тот же для копии и переноса: дни с приёмами, исходный день раскрыт, приёмы строками с ккал, последняя строка каждого дня — «В новый приём»; исходный приём в списке отсутствует"></span><i>перемещать приём в самого себя нельзя, а «В новый приём» покрывает главный случай — записал не в тот день</i></div>
+  <div class="spec"><b>частичное копирование</b><span data-v="в листе копирования у продуктов галочки, по умолчанию отмечены все; кнопка называет число — «Копировать (3)»"></span><i>чаще повторяют не весь приём, а его основу</i></div>
+  <div class="spec"><b>свайп по продукту</b><span data-v="влево по строке продукта в листе правки: «Копировать · Переместить · Удалить»; цели — тот же лист выбора"></span><i>тап по строке занят граммовкой; свайп — вторичный жест для редких действий, как в каноне</i></div>
+  <div class="spec"><b>повтор вчерашнего</b><span data-v="пустой приём показывает строку «Повторить вчерашний „Обед“» с составом до четырёх продуктов; тап копирует состав целиком"></span><i>самый частый сценарий копирования — «то же, что вчера»; строка избавляет от пути через лист выбора</i></div>
+  <div class="spec"><b>набор</b><span data-v="«Сохранить набором» кладёт состав в наборы поиска продуктов; имя предзаполнено названием приёма"></span></div>
+  <div class="spec"><b>несколько продуктов</b><span data-v="отдельной кнопки «Добавить несколько» нет: мультивыбор — режим внутри поиска продуктов"></span><i>вторая кнопка добавления рядом с первой заставляла выбирать способ до того, как понятно, что ищешь</i></div>
+
+  <div class="spec"><b>удаление и отмена</b><span data-v="подтверждения заранее нет: после удаления приёма или продукта — тост над нижней навигацией, 5 с, с полосой времени и единственным действием «Отменить»; новый тост заменяет предыдущий, отмена возвращает последнее удалённое"></span><i>вопрос «точно удалить?» платят все ради редкой ошибки; отмена после — страхует только ошибшегося. Как в каноне, но карточкой в тонах палитры, не тёмным слоем</i></div>
+  <div class="spec"><b>пустые соседние дни</b><span data-v="в листе выбора цели вчера и завтра показываются всегда, даже без приёмов — строка «пусто», тап заводит новый приём; для переноса приёма исходный день помечен «откуда» и погашен"></span><i>главный сценарий переноса — «записал не в тот день», и целевой день чаще всего пуст</i></div>
+  <div class="spec"><b>название после переноса</b><span data-v="автоназвание пересчитывается по времени в новом дне; ручное имя сохраняется как есть"></span><i>«Обед», уехавший в 21:00, вводит в заблуждение — а ручной выбор человека сильнее автоматики, как везде</i></div>
+  <div class="spec"><b>советы приёма</b><span data-v="строка «Советы · N» в листе правки под составом, раскрытие списком на месте; бейджи и плашки канона не переносятся; замена продукта остаётся строкой под продуктом"></span><i>совет по конкретному приёму — действие сейчас, ему место в листе; общие советы дня — в «Инсайтах»</i></div>
+  <div class="spec"><b>формат совета</b><span data-v="карточка: предложение-действие чернилами + причина одной строкой вторичным тоном; оценок, баллов и «полезно?» нет"></span><i>совет либо выполняется, либо нет — просить его оценить это канонный троп, он снят решением канваса</i></div>
+  <div class="spec"><b>сколько советов</b><span data-v="максимум 3, по убыванию эффекта; если поводов больше — лишние не показываются, счётчик в строке равен числу карточек"></span><i>«Советы · 5» при трёх видимых читались бы как обман</i></div>
+  <div class="spec"><b>совет с заменой</b><span data-v="если совет про конкретный продукт — внутри карточки строка-действие «Заменить → …» с новым значением; механика та же, что у замены продукта под строкой состава"></span></div>
+  <div class="spec"><b>советов нет</b><span data-v="строка «Советы» не показывается вовсе; пустого списка и «всё отлично!» нет"></span><i>заглушка учит не открывать строку никогда</i></div>
+  <div class="spec"><b>два удаления подряд</b><span data-v="новый тост заменяет старый, и первое удаление в этот момент становится необратимым; «Отменить» всегда возвращает только последнее"></span><i>очередь тостов с несколькими отменами — механизм ради случая, который почти не происходит; история дня остаётся страховкой</i></div>
+  <div class="spec" style="border-bottom:none"><b>тост и навигация</b><span data-v="уход со вкладки тост не гасит: он живёт свои 5 с поверх нижней навигации на любом экране"></span><i>человек часто удаляет и сразу уходит — отнимать у него отмену за это нечестно</i></div>
+
+  <div class="ctrH">Вода на вкладке</div>
+  <div class="spec"><b>два вида карточки</b><span data-v="кнопка воды включена — компактный: подпись со средним за неделю, «1,7 л из 3,0 · осталось», график 7 дней, раскрывашка «Откуда норма»; добавления в карточке нет. Кнопка выключена — полная карточка water-add: кольцо или полоса, чипы объёмов, подсказка"></span><i>два места ввода одного значения не нужны: пока есть кнопка, карточка отвечает за статус, а не за ввод</i></div>
+  <div class="spec"><b>блок «Откуда норма»</b><span data-v="отдельным блоком не существует — раскрывашка внутри карточки воды, закрыта по умолчанию"></span></div>
+  <div class="spec" style="border-bottom:none"><b>числа воды</b><span data-v="все значения и пороги — контракт water-add.v4.dc.html, этот файл вторичен"></span></div>
+
+  <div class="ctrH">Возвращённое из каноничной версии</div>
+  <div class="spec"><b>трассировка расчёта</b><span data-v="у окна сжигания жира: таймер, три крупнейших вклада с величинами, строка неопределённости с диапазоном; полный список вкладов — за «Весь расчёт»"></span><i>ценность в том, что расчёт признаёт, чего не знает; семь строк по «+0,2 мин» на экране этого не добавляют, а прячут главное</i></div>
+  <div class="spec"><b>планер приёмов</b><span data-v="на «Питании» отсутствует — блок живёт в «Инсайтах», главный кадр — «Инсайты · ярус Питание» в tab-insights.v4.dc.html; здешний кадр «Планнер с действием» — протокол"></span><i>планер — «на подумать», а эта вкладка — действие и статус сегодня; чип «Планер» снят вместе с блоком</i></div>
+  <div class="spec"><b>чем добрать клетчатку</b><span data-v="закрытая строка «добрать 9 г» с шевроном; раскрытие на месте — три категории строками с вилкой граммов + личный лучший источник за месяц"></span><i>совет, выполнимый в магазине; иконок у категорий нет — они не различают овощи от бобовых</i></div>
+  <div class="spec"><b>замена продукта</b><span data-v="строка под продуктом: чем заменить и сколько ккал вместо сколько; фон поверхности, не предупреждение"></span><i>прямая экономия там, где человек уже смотрит на состав; жёлтая подложка со знаком делала предложение упрёком</i></div>
+  <div class="spec"><b>оценка приёма</b><span data-v="ровно одна, словом: «полноценный приём», «лёгкий», «перебор по жирам»; числовых оценок и звёзд нет"></span><i>слово не требует шкалы, число 86 требует объяснения, из чего оно</i></div>
+  <div class="spec"><b>карточка воды</b><span data-v="рисуется по своему канвасу: дефолт — вид «Кольцо», под карточкой переключатель «Полоса / Кольцо». Здесь она вторична, при расхождении верен water-add.v4.dc.html"></span><i>карточка уже спроектирована и реализована отдельно; этот файл её не переопределяет</i></div>
+    <div class="spec"><b>три добавки к карточке</b><span data-v="предложения в water-add, не самостоятельные решения: строка «последний раз 2 ч 23 мин назад» в подписи под кольцом, блок «Откуда норма» рядом с карточкой, совет-привычка раз в неделю"></span><i>они пришли из каноничной версии и полезны, но чужой канвас правится своим файлом — сюда нарисованы, чтобы было видно, как встают в поток вкладки</i></div>
+  <div class="spec"><b>приёмы за день</b><span data-v="строка на приём: начало, полоса длительности волны, конец; пересечение красным сегментом. Кривых волн нет — их рисовали в другом визуальном языке и они не отвечали на вопрос «когда я снова голоден»"></span><i>видно, что обед тянется пять часов и накрывает перекус. Два способа рисовать одно держать нельзя: полосы остаются, кривые сняты вместе с чужим синим градиентом</i></div>
+  <div class="spec"><b>номер приёма</b><span data-v="кружок с номером в строке, нумерация по порядку дня; в дневнике свежие сверху"></span><i>номер даёт язык для разговора с куратором: «во втором приёме»</i></div>
+  <div class="spec"><b>серия приёмов</b><span data-v="строка «три полноценных приёма подряд» — факт, без похвалы и без кубков"></span></div>
+  <div class="spec" style="border-bottom:none"><b>пустой приём</b><span data-v="остаётся строкой в дневнике: состав «без продуктов · итог дня посчитан без него» вторичным тоном, справа «+ продукт»; отдельной карточки нет"></span><i>пустой приём портит расчёт дня, поэтому строка называет цену; отдельная карточка с «Заполнить» была вторым местом для того же действия</i></div>
+
+  <div class="ctrH">Служебные состояния</div>
+  <div class="spec"><b>плашка куратора</b><span data-v="первый блок карточки, выше героя: «Куратор обновил этот день» + «N изменений · посмотреть» + шеврон; фон подложки-подсказки, высота не меньше 44 pt"></span><i>если правки на другую дату — плашка называет её и переключает день вместе с открытием; разбор правок — curator-edits.v4.dc.html, он для листа главный</i></div>
+  <div class="spec"><b>мета-строка шапки</b><span data-v="«ср, 20 авг · N приёмов»; в счёт идут только приёмы с продуктами. Метки «синхронизировано» на экране нет"></span><i>зелёная метка появлялась при связи и просто исчезала офлайн — то есть отсутствие метки значило и «нет сети», и «не успело». Состояние синхронизации живёт в жесте обновления, а не в шапке: там оно ничего не требует от человека</i></div>
+  <div class="spec"><b>только чтение</b><span data-v="плашка над содержимым называет причину и что делать; кнопки записи гаснут до 40 % и остаются на месте"></span><i>спрятать кнопки — значит сделать вид, что действия нет; погашенная кнопка объясняет, почему сейчас нельзя</i></div>
+  <div class="spec"><b>офлайн без данных</b><span data-v="карточка по центру: причина, что прошлые дни открываются, кнопка «Обновить»; плавающие кнопки скрыты"></span><i>это единственный случай, когда экран пуст не по вине человека — поэтому объясняем, а не показываем нули. Кнопки записи скрыты, потому что писать некуда: дня на устройстве нет</i></div>
+  <div class="spec"><b>ошибка синхронизации</b><span data-v="живёт только в индикаторе жеста обновления, отдельного экрана у вкладки нет"></span><i>данные дня локальные и уже на экране — прерывать их сообщением об ошибке облака нечестно</i></div>
+  <div class="spec" style="border-bottom:none"><b>запись на прошлый день</b><span data-v="перед созданием приёма — вопрос «Приём запишется на 19 августа, а не на сегодня» с двумя выходами: «Перейти на сегодня» (по умолчанию) и «Записать на 19 августа»"></span><i>самая частая ошибка при листании дней; вопрос стоит до шторки добавления, а не после</i></div>
+
+  <div class="ctrH">Края и палитры</div>
+  <div class="spec"><b>палитры</b><span data-v="все роли из v4-canvas.css; литералов в разметке нет"></span><i>на вкладке было четыре неопределённые переменные (--v4-chip, --v4-surface-strong) и розовая рамка rgba(244,63,94,.42) у карточки воды в тёмных наборах — остаток чужой темы</i></div>
+  <div class="spec"><b>вторичный тон</b><span data-v="сплошной, не альфа: #6b5f4f песочная (5,45:1), #5a6474 синяя (5,36:1), кремовая .62 на тёмных (6,17:1 и 5,98:1)"></span><i>весь вторичный текст вкладки функционален — норма в итогах, «съедено / бюджет», состав приёма, подписи блоков, нижняя навигация — и живёт по порогу 4,5:1. Альфа .38–.5 давала 2,66–3,95:1; тот же перевод на сплошные тона уже сделан в water-add и в анкете</i></div>
+    <div class="spec"><b>заметность чипа</b><span data-v="чип обязан отличаться от подложки не меньше чем на 3:1 — сам чип, а не текст в нём: включённый заливкой акцента, выключенный обводкой 2 px тем же акцентом"></span><i>обводка — единственная граница выключенного чипа, и она несёт состояние «блок выключен»; на 1,5 px в альфе .16 она давала 1,45:1, и состояние пропадало. Правило и число те же, что у минус-чипа воды</i></div>
+    <div class="spec"><b>синие наборы</b><span data-v="покрыты полностью, включая капсулу даты и плашку куратора"></span><i>капсула оставалась песочной в синей палитре, плашка куратора не имела правил для сине-тёмной</i></div>
+  <div class="spec"><b>ночь до 03:00</b><span data-v="«сегодня» остаётся вчерашним календарным днём, но капсула называет обе даты: «Сегодня, 20 августа» до полуночи и «Ночь на 21 августа» после"></span><i>иначе после полуночи человек видит вчерашнюю дату и решает, что приложение отстало</i></div>
+  <div class="spec"><b>убрать воду</b><span data-v="проверяется тем же гейтом подписки, что и добавление"></span><i>убавление проходило без проверки — в режиме только чтения данные всё равно менялись</i></div>
+  <div class="spec" style="border-bottom:none"><b>ожидание данных</b><span data-v="скелетонов нет: до прихода данных блоки показывают прочерки, а не нули"></span><i>нули читаются как факт «ничего не съел»</i></div>
+</div>
+
+<div class="h">Вкладка целиком · день с приёмами</div>
+<p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Экран длинный, поэтому разложен на три кадра подряд — это одна прокрутка, а не три состояния. Числа во всех кадрах одного дня: бюджет 1 931, съедено 1 289, осталось 642 — те же, что на плитке «Калории» Главной.</p>
+
+<div class="pal" data-mir="m1">
+  <div class="strip">
+    <div class="sLab"><b>Шапка и капсула</b><span>имя вкладки, дата и число приёмов с продуктами; капсула липкая, остальное едет</span></div>
+    <div class="sPh sTop" data-demo="stop" data-screen-label="Питание · блок · Шапка">
+      <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
+      <div class="dcap">
+        <span class="darr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span>
+        <span class="dpil"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="opacity:.55"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Сегодня, 20 августа</span>
+        <span class="darr" style="opacity:.3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+      </div>
+    </div>
+
+    <div class="sLab"><b>Плашка куратора</b><span>первый блок карточки, когда есть неподтверждённые правки</span></div>
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Плашка куратора">
+      <div class="cur">
+        <b>Куратор обновил этот день<span>2 изменения · посмотреть</span></b>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ac);flex:none;"><path d="M9 6l6 6-6 6"/></svg>
+      </div>
+    </div>
+
+    <div class="sLab"><b>Осталось на сегодня</b><span>герой: число, полоса, «съедено» и «бюджет» одним числом на весь экран</span></div>
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Герой">
+      <div class="hero">
+        <div class="hk">Осталось на сегодня</div>
+        <div class="hn"><b>642</b><i>ккал</i></div>
+        <div class="htr"><i style="width:67%"></i></div>
+        <div class="hb"><span>съедено 1 289</span><span>бюджет 1 931</span></div>
+      </div>
+    </div>
+
+    <div class="sLab"><b>Окно приёмов</b><span>одна строка состояния; шалфей только когда окно правда открыто</span></div>
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Окно приёмов">
+      <div class="sec"><div class="win"><span>Окно приёмов</span><span>закроется в 19:40<br>через 1:20</span></div></div>
+    </div>
+
+    <div class="sLab"><b>Дневник приёмов</b><span>строка нажимается целиком и открывает лист правки; пустой приём называет цену</span></div>
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Дневник">
+      <div class="sec"><div class="dry">
+        <div class="meal">
+          <div class="mt"><b><span style="display:inline-flex;align-items:center;gap:8px;"><span class="mnum">1</span>08:20 · Завтрак</span></b><s>418</s></div>
+          <div class="mb"><span>Овсянка, банан, кофе с молоком</span><span class="mchev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+        </div>
+        <div class="meal">
+          <div class="mt"><b><span style="display:inline-flex;align-items:center;gap:8px;"><span class="mnum">2</span>13:05 · Обед</span></b><s>562</s></div>
+          <div class="mb"><span>Курица, рис, салат · ещё 2</span><span class="mchev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+        </div>
+        <div class="meal">
+          <div class="mt"><b><span style="display:inline-flex;align-items:center;gap:8px;"><span class="mnum">3</span>16:40 · Перекус</span></b><s>309</s></div>
+          <div class="mb"><span>Творог, орехи</span><span class="plus">+ ещё</span></div>
+        </div>
+        <div class="meal mempty">
+          <div class="mt"><b><span style="display:inline-flex;align-items:center;gap:8px;"><span class="mnum">4</span>19:30 · Ужин</span></b><s>—</s></div>
+          <div class="mb"><span>без продуктов · итог дня посчитан без него</span><span class="plus">+ продукт</span></div>
+        </div>
+      </div>
+      <div class="streak">Три полноценных приёма подряд</div></div>
+    </div>
+
+    <div class="sLab"><b>Добавить приём пищи</b><span>единственная кнопка каркаса; на прошлом дне спрашивает дату</span></div>
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавить приём">
+      <div class="sec"><div class="cta"><span>Добавить приём пищи</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div></div>
+    </div>
+
+    <div class="sLab"><b>Итоги дня</b><span>пять строк с полосами вместо таблицы; процентов нет</span></div>
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Итоги дня">
+      <div class="sec"><div class="tot">
+        <div class="totH">Итоги дня</div>
+        <div class="tr"><div class="trh"><b>Калории</b><span><em>1 289</em> из 1 931 ккал</span></div><div class="trk"><i class="acc" style="width:67%"></i></div></div>
+        <div class="tr"><div class="trh"><b>Белок</b><span><em>96</em> из 128 г</span></div><div class="trk"><i style="width:75%"></i></div></div>
+        <div class="tr"><div class="trh"><b>Жиры</b><span><em>58</em> из 64 г</span></div><div class="trk"><i class="acc" style="width:91%"></i></div></div>
+        <div class="tr"><div class="trh"><b>Углеводы</b><span><em>132</em> из 168 г</span></div><div class="trk"><i class="acc" style="width:79%"></i></div></div>
+        <div class="tr"><div class="trh"><b>Клетчатка</b><span><em>18</em> из 27 г</span></div><div class="trk"><i style="width:67%"></i></div></div>
+      </div></div>
+    </div>
+
+    <div class="sLab"><b>Качество еды</b><span>две метрики: вредность по шкале 0–10 и гликемический индекс</span></div>
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Качество еды">
+      <div class="sec">
+        <div class="totH" style="margin:16px 0 0;">Качество еды</div>
+        <div class="qual" style="margin-top:8px;">
+          <div class="qc ok"><div class="qk">Вредность</div><div class="qv"><b>3,4</b><i>из 10</i></div><div class="qh">порог 5 · в норме</div></div>
+          <div class="qc"><div class="qk">Гликемический</div><div class="qv"><b>48</b><i>средний</i></div><div class="qh">взвешен по углеводам</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sLab"><b>Приёмы за день</b><span>полосы длительности волн; пересечение красным сегментом</span></div>
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Приёмы за день">
+      <div class="sec"><div class="blk">
+        <div class="blkH"><b>Приёмы за день</b><span class="warn">нахлёст 1:20</span></div>
+        <div class="tl">
+          <div class="tlr"><b>08:20</b><span class="tlb"><i style="left:0;width:20%"></i></span><s>11:40</s></div>
+          <div class="tlr"><b>13:05</b><span class="tlb"><i style="left:32%;width:34%"></i><i class="ovl" style="left:56%;width:10%"></i></span><s>18:10</s></div>
+          <div class="tlr"><b>16:40</b><span class="tlb"><i style="left:56%;width:24%"></i></span><s>20:20</s></div>
+        </div>
+        <div class="why">Обед тянется пять часов и накрывает перекус — красным помечено пересечение.</div>
+      </div></div>
+    </div>
+
+    <div class="sLab"><b>Голод и энергия</b><span>две мини-карточки со шкалой 1–10</span></div>
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Голод и энергия">
+      <div class="sec"><div class="blk">
+        <div class="blkH"><b>Голод и энергия</b></div>
+        <div class="hg">
+          <div class="hgc"><b>Голод</b><s>4<i>из 10</i></s><div class="hgs"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+          <div class="hgc"><b>Энергия</b><s>7<i>из 10</i></s><div class="hgs"><i class="gr"></i><i class="gr"></i><i class="gr"></i><i class="gr"></i><i class="gr"></i><i class="gr"></i><i class="gr"></i><i></i><i></i><i></i></div></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="sLab"><b>Добавки за день</b><span>состав курса строкой; отметок «выпил» здесь нет</span></div>
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки">
+      <div class="sec"><div class="blk">
+        <div class="blkH"><b>Добавки за день</b></div>
+        <div class="lst">
+          <div class="lrow"><b>Омега-3, витамин D3</b><span>утром</span></div>
+          <div class="lrow"><b>Магний</b><span>вечером</span></div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="sLab"><b>Вода</b><span>компактный вид — кнопка воды включена и добавление на ней: факт из нормы, неделя графиком, «Откуда норма» раскрывашкой. Полный вид — кадр «Вода без кнопки»</span></div>
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Вода">
+      <div class="sec"><div class="wCardB" style="margin-top:10px;">
+        <div class="bTop"><span class="k">Вода · 7 дней в среднем 2,1 л</span></div>
+        <div style="display:flex;align-items:baseline;gap:6px;margin-top:9px;"><b style="font:600 20px/1 Figtree,sans-serif;letter-spacing:-.02em;color:#201e1d;">1,7 л</b><span style="font:500 11px/1 Figtree,sans-serif;color:#6b5f4f;">из 3,0 · осталось 1,3</span></div>
+        <div class="bCurve"><svg viewBox="0 0 268 34" fill="none">
+          <path d="M4 20 L48 11 L92 15 L136 6 L180 18 L224 9 L264 14 L264 30 L4 30 Z" fill="currentColor" opacity=".16"/>
+          <path d="M4 12 L264 12" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".5"/>
+          <polyline points="4,20 48,11 92,15 136,6 180,18 224,9 264,14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="48" cy="11" r="2.6" fill="currentColor"/><circle cx="136" cy="6" r="2.6" fill="currentColor"/><circle cx="224" cy="9" r="2.6" fill="currentColor"/>
+          <circle cx="4" cy="20" r="2.6" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.5"/><circle cx="92" cy="15" r="2.6" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.5"/><circle cx="180" cy="18" r="2.6" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="264" cy="14" r="3.4" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.8"/><circle cx="264" cy="14" r="6.8" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".45"/>
+        </svg></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--trk);font:600 11.5px/1 Figtree,sans-serif;color:#201e1d;"><span>Откуда норма 3,0 л</span><span style="color:#6b5f4f;font-size:13px;">›</span></div>
+      </div></div>
+    </div>
+
+    <div class="sLab"><b>Что показывать</b><span>ряд чипов после всего содержимого: решение принимается там, где виден результат</span></div>
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Ряд чипов">
+      <div class="cfg">
+        <div class="cfgH">Что показывать на этой вкладке</div>
+        <div class="cfgR">
+          <span class="cfgC"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Голод</span>
+          <span class="cfgC"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Клетчатка</span>
+          <span class="cfgC"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Добавки</span>
+          <span class="cfgC"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Рефид</span>
+          <span class="cfgC"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Приёмы за день</span>
+          <span class="cfgC"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Оценка и риск</span>
+          <span class="cfgC"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Волна сейчас</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sLab"><b>Нижняя навигация</b><span>конец экрана; на вкладке всегда</span></div>
+    <div class="sPh sBot" data-demo="stop" data-screen-label="Питание · блок · Нижняя навигация">
+      <div class="nav" style="margin-top:22px;">
+        <span class="navI on"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/></svg>Питание</span>
+        <span class="navI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/></svg>Главная</span>
+        <span class="navI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l5-7 4 4 7-9"/></svg>Актив</span>
+        <span class="navI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V8M12 20V4M19 20v-6"/></svg>Отчёты</span>
+        <span class="navI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/></svg>Ещё</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="h">Состояния</div>
+  <div class="row4">
+    <div>
+      <div class="lab"><b>Пустой день</b><span>прочерки, а не нули</span></div>
+      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · пустой день">
+        <div class="top"><span class="ttl">Питание</span><span class="capM">чт, 21 авг</span></div>
+        <div class="dcap">
+          <span class="darr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span>
+          <span class="dpil">Сегодня, 21 августа</span>
+          <span class="darr" style="opacity:.3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+        </div>
+        <div class="hero">
+          <div class="hk">Осталось на сегодня</div>
+          <div class="hn"><b>1 931</b><i>ккал</i></div>
+          <div class="htr"></div>
+          <div class="hb"><span>съедено —</span><span>бюджет 1 931</span></div>
+        </div>
+        <div class="sec">
+          <div class="win calm"><span>Окно приёмов</span><span>добавьте приём<br>для расчёта</span></div>
+          <div class="dry"><div class="dryE">Пока нет приёмов — добавьте первый</div></div>
+          <div class="cta"><span>Добавить приём пищи</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+          <div class="tot">
+            <div class="totH">Итоги дня</div>
+            <div class="tr"><div class="trh"><b>Калории</b><span><em>—</em> из 1 931 ккал</span></div></div>
+            <div class="tr"><div class="trh"><b>Белок</b><span><em>—</em> из 128 г</span></div></div>
+            <div class="tr"><div class="trh"><b>Жиры</b><span><em>—</em> из 64 г</span></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>Перебор · зона «Переел»</b><span>113 % бюджета: подпись сменилась на 100 %, цвет — предупреждение</span></div>
+      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · перебор">
+        <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 5 приёмов</span></div>
+        <div class="dcap">
+          <span class="darr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span>
+          <span class="dpil">Сегодня, 20 августа</span>
+          <span class="darr" style="opacity:.3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+        </div>
+        <div class="hero">
+          <div class="hk">Перебор</div>
+          <div class="hn warn"><b>259</b><i>ккал</i></div>
+          <div class="htr"><i style="width:88%"></i><i class="wrn" style="width:12%"></i></div>
+          <div class="hb"><span>съедено 2 190 · 113 %</span><span>бюджет 1 931</span></div>
+        </div>
+        <div class="sec">
+          <div class="win warn"><span>Окно приёмов</span><span>волны наложились<br>нахлёст 2:10</span></div>
+          <div class="tot">
+            <div class="totH">Итоги дня</div>
+            <div class="tr"><div class="trh"><b>Калории</b><span class="ovr"><em>2 190</em> из 1 931 ккал</span></div><div class="trk"><i class="acc" style="width:88%"></i><i class="wrn2" style="width:12%"></i></div></div>
+            <div class="tr"><div class="trh"><b>Белок</b><span><em>118</em> из 128 г</span></div><div class="trk"><i style="width:92%"></i></div></div>
+            <div class="tr"><div class="trh"><b>Жиры</b><span class="ovr"><em>81</em> из 64 г</span></div><div class="trk"><i class="acc" style="width:79%"></i><i class="wrn2" style="width:21%"></i></div></div>
+            <div class="tr"><div class="trh"><b>Углеводы</b><span><em>164</em> из 168 г</span></div><div class="trk"><i class="acc" style="width:98%"></i></div></div>
+            <div class="tr"><div class="trh"><b>Клетчатка</b><span><em>24</em> из 27 г</span></div><div class="trk"><i style="width:89%"></i></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>Прошлый день</b><span>герой меняется, порогов «к этому часу» нет</span></div>
+      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · прошлый день">
+        <div class="top"><span class="ttl">Питание</span><span class="capM">вт, 19 авг · 4 приёма</span></div>
+        <div class="dcap">
+          <span class="darr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span>
+          <span class="dpil past">Вчера, 19 августа<span class="tod">Сегодня</span></span>
+          <span class="darr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+        </div>
+        <div class="hero">
+          <div class="hk">Съедено за день</div>
+          <div class="hn"><b>1 786</b><i>ккал</i></div>
+          <div class="htr"><i style="width:92%"></i></div>
+          <div class="hb"><span>из 1 931</span><span>не съедено 145</span></div>
+        </div>
+        <div class="sec">
+          <div class="win calm"><span>Окно приёмов</span><span>день закрыт</span></div>
+          <div class="dry">
+            <div class="meal">
+              <div class="mt"><b>08:05 · Завтрак</b><s>402</s></div>
+              <div class="mb"><span>Яйца, тост, кофе</span><span class="mchev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+            </div>
+            <div class="meal">
+              <div class="mt"><b>12:50 · Обед</b><s>648</s></div>
+              <div class="mb"><span>Суп, индейка, гречка · ещё 1</span><span class="mchev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+            </div>
+            <div class="meal">
+              <div class="mt"><b>19:10 · Ужин</b><s>736</s></div>
+              <div class="mb"><span>Лосось, овощи, рис</span><span class="mchev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>Лист правки приёма</b><span>тап по строке дневника; свайп по продукту влево открывает действия — на кадре строка «Рис бурый» сдвинута</span></div>
+      <div class="ph" style="height:884px;" data-demo="stop" data-screen-label="Питание · лист правки приёма">
+        <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
+        <div class="hero" style="opacity:.5">
+          <div class="hk">Осталось на сегодня</div>
+          <div class="hn"><b>642</b><i>ккал</i></div>
+          <div class="htr"><i style="width:67%"></i></div>
+        </div>
+        <div class="bd">
+          <div class="md">
+            <div class="shH">
+              <b>Обед · 13:05</b>
+              <span>562 ккал · Б 42 · Ж 18 · У 54</span>
+            </div>
+            <div class="shR"><b>Время</b><span>13:05</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div class="shR"><b>Курица, грудка</b><span>180 г</span></div>
+            <div style="position:relative;margin:0 18px 8px;border-radius:16px;overflow:hidden;">
+              <div style="position:absolute;inset:0;display:flex;justify-content:flex-end;"><span style="display:flex;align-items:center;padding:0 12px;background:var(--tint);font:600 10.5px/1 Figtree,sans-serif;color:var(--tx)">Копировать</span><span style="display:flex;align-items:center;padding:0 12px;background:var(--tint);font:600 10.5px/1 Figtree,sans-serif;color:var(--tx)">Переместить</span><span style="display:flex;align-items:center;padding:0 12px;background:rgba(168,56,43,.14);font:600 10.5px/1 Figtree,sans-serif;color:var(--red)">Удалить</span></div>
+              <div class="shR" style="margin:0;transform:translateX(-246px);position:relative;"><b>Рис бурый</b><span>120 г</span></div>
+            </div>
+            <div class="shR"><b>Салат овощной</b><span>150 г</span></div>
+            <div class="shR"><b>Масло оливковое</b><span>10 г</span></div>
+            <div style="margin:8px 18px 0;" class="cta" style-hover="opacity:.9"><span>Добавить продукт</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div class="shR" style="margin-top:14px;"><b>Советы · 3</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="shR"><b>Копировать приём</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div class="shR"><b>Переместить на другой день</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div class="shR"><b>Сохранить набором</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div class="shDel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>Удалить приём</div>
+            <div style="height:16px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>Блоки выключены</b><span>остался каркас: герой, окно, дневник, итоги</span></div>
+      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · блоки выключены">
+        <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
+        <div class="sec" style="margin-top:16px;">
+          <div class="tot">
+            <div class="totH">Итоги дня</div>
+            <div class="tr"><div class="trh"><b>Калории</b><span><em>1 289</em> из 1 931 ккал</span></div><div class="trk"><i class="acc" style="width:67%"></i></div></div>
+            <div class="tr"><div class="trh"><b>Белок</b><span><em>96</em> из 128 г</span></div><div class="trk"><i style="width:75%"></i></div></div>
+            <div class="tr"><div class="trh"><b>Жиры</b><span><em>58</em> из 64 г</span></div><div class="trk"><i class="acc" style="width:91%"></i></div></div>
+            <div class="tr"><div class="trh"><b>Углеводы</b><span><em>132</em> из 168 г</span></div><div class="trk"><i class="acc" style="width:79%"></i></div></div>
+            <div class="tr"><div class="trh"><b>Клетчатка</b><span><em>18</em> из 27 г</span></div><div class="trk"><i style="width:67%"></i></div></div>
+          </div>
+          <div class="cfg">
+            <div class="cfgH">Что показывать на этой вкладке</div>
+            <div class="cfgR">
+              <span class="cfgC off">Голод</span>
+              <span class="cfgC off">Клетчатка</span>
+              <span class="cfgC off">Добавки</span>
+              <span class="cfgC off">Рефид</span>
+              <span class="cfgC off">Приёмы за день</span>
+              <span class="cfgC off">Оценка и риск</span>
+              <span class="cfgC off">Волна сейчас</span>
+            </div>
+          </div>
+        </div>
+        <div class="nav">
+          <span class="navI on"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/></svg>Питание</span>
+          <span class="navI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/></svg>Главная</span>
+          <span class="navI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l5-7 4 4 7-9"/></svg>Актив</span>
+          <span class="navI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V8M12 20V4M19 20v-6"/></svg>Отчёты</span>
+          <span class="navI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/></svg>Ещё</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>Только чтение</b><span>триал закончился: экран читается, записи заблокированы</span></div>
+      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · только чтение">
+        <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
+        <div class="roB">Пробный период закончился<span>День и история открыты для чтения. Чтобы записывать снова — напишите куратору.</span></div>
+        <div class="hero">
+          <div class="hk">Осталось на сегодня</div>
+          <div class="hn"><b>642</b><i>ккал</i></div>
+          <div class="htr"><i style="width:67%"></i></div>
+          <div class="hb"><span>съедено 1 289</span><span>бюджет 1 931</span></div>
+        </div>
+        <div class="sec">
+          <div class="dry">
+            <div class="meal">
+              <div class="mt"><b>13:05 · Обед</b><s>562</s></div>
+              <div class="mb"><span>Курица, рис, салат · ещё 2</span><span class="mchev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+            </div>
+          </div>
+          <div class="cta" style="opacity:.4;"><span>Добавить приём пищи</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+          <div class="why">Кнопки записи погашены, а не спрятаны: человек видит, что действие существует и почему сейчас недоступно.</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>Офлайн без данных</b><span>первый вход дня без сети: показывать нечего</span></div>
+      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · офлайн без данных">
+        <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг</span></div>
+        <div class="dcap">
+          <span class="darr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span>
+          <span class="dpil">Сегодня, 20 августа</span>
+          <span class="darr" style="opacity:.3"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+        </div>
+        <div class="offc">
+          <b>Данные за сегодня не загрузились</b>
+          <span>Нет связи, а на этом устройстве дня ещё нет. Прошлые дни открываются — они сохранены.</span>
+          <div class="cta" style="margin-top:16px;"><span>Обновить</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 13.7-5.7M20 12a8 8 0 0 1-13.7 5.7"/><path d="M17 4v4h-4M7 20v-4h4"/></svg></div>
+        </div>
+        <div class="nav">
+          <span class="navI on"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/></svg>Питание</span>
+          <span class="navI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/></svg>Главная</span>
+          <span class="navI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l5-7 4 4 7-9"/></svg>Актив</span>
+          <span class="navI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V8M12 20V4M19 20v-6"/></svg>Отчёты</span>
+          <span class="navI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/></svg>Ещё</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>Куда перенести приём</b><span>цель приёма — день целиком, не приём: исходный помечен «откуда» и погашен; вчера и завтра есть всегда, даже пустые</span></div>
+      <div class="ph" style="height:560px;" data-demo="stop" data-screen-label="Питание · куда перенести приём">
+        <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
+        <div class="hero" style="opacity:.5">
+          <div class="hk">Осталось на сегодня</div>
+          <div class="hn"><b>642</b><i>ккал</i></div>
+          <div class="htr"><i style="width:67%"></i></div>
+        </div>
+        <div class="bd">
+          <div class="md">
+            <div class="shH"><b>Куда переместить приём?</b><span>Переносим: Обед · 13:05 · 4 продукта · 562 ккал</span></div>
+            <div class="shR" style="opacity:.38;"><b>Сегодня, 20 августа</b><span>откуда</span></div>
+            <div class="shR"><b>Вчера, 19 августа</b><span>2 приёма</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div class="shR"><b>Завтра, 21 августа</b><span>пусто</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div class="shR"><b>Пн, 18 августа</b><span>2 приёма</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div style="height:16px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>Советы приёма</b><span>раскрытие строки «Советы · 3»: предложение-действие + причина вторичным, максимум три, у совета про продукт — строка «Заменить»</span></div>
+      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · советы приёма">
+        <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
+        <div class="hero" style="opacity:.5">
+          <div class="hk">Осталось на сегодня</div>
+          <div class="hn"><b>642</b><i>ккал</i></div>
+          <div class="htr"><i style="width:67%"></i></div>
+        </div>
+        <div class="bd">
+          <div class="md">
+            <div class="shH"><b>Обед · 13:05</b><span>562 ккал · Б 42 · Ж 18 · У 54</span></div>
+            <div class="shR"><b>Советы · 3</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M18 15l-6-6-6 6"/></svg></div>
+            <div style="margin:0 18px 8px;background:var(--c1);border-radius:16px;padding:13px 15px;">
+              <b style="display:block;font:600 12px/1.4 Figtree,sans-serif;color:var(--tx);">Добавь овощей — не хватает клетчатки</b>
+              <span style="display:block;font:500 10.5px/1.45 Figtree,sans-serif;color:var(--dim);margin-top:3px;">в приёме 2 г из ~9 нужных к этому времени</span>
+            </div>
+            <div style="margin:0 18px 8px;background:var(--c1);border-radius:16px;padding:13px 15px;">
+              <b style="display:block;font:600 12px/1.4 Figtree,sans-serif;color:var(--tx);">Сироп даёт треть сахара дня</b>
+              <span style="display:block;font:500 10.5px/1.45 Figtree,sans-serif;color:var(--dim);margin-top:3px;">20 г сиропа — 14 г простых углеводов</span>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.07);font:600 11.5px/1 Figtree,sans-serif;color:var(--acs);"><span>Заменить → корица, ~2 ккал</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
+            </div>
+            <div style="margin:0 18px 8px;background:var(--c1);border-radius:16px;padding:13px 15px;">
+              <b style="display:block;font:600 12px/1.4 Figtree,sans-serif;color:var(--tx);">Белка достаточно — фиксируй порцию</b>
+              <span style="display:block;font:500 10.5px/1.45 Figtree,sans-serif;color:var(--dim);margin-top:3px;">42 г — это норма приёма, добавка не нужна</span>
+            </div>
+            <div style="height:16px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>Копирование частью</b><span>галочки у продуктов, отмечены все; кнопка называет число и живёт с выбором</span></div>
+      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · копирование частью">
+        <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
+        <div class="hero" style="opacity:.5">
+          <div class="hk">Осталось на сегодня</div>
+          <div class="hn"><b>642</b><i>ккал</i></div>
+          <div class="htr"><i style="width:67%"></i></div>
+        </div>
+        <div class="bd">
+          <div class="md">
+            <div class="shH"><b>Копировать из «Обед»</b><span>в Ужин · сегодня</span></div>
+            <div class="shR"><span style="flex:none;width:20px;height:20px;border-radius:7px;background:var(--acs);display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fffaf1" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span><b style="margin-left:2px;">Курица, грудка</b><span>180 г</span></div>
+            <div class="shR"><span style="flex:none;width:20px;height:20px;border-radius:7px;background:var(--acs);display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fffaf1" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span><b style="margin-left:2px;">Рис бурый</b><span>120 г</span></div>
+            <div class="shR"><span style="flex:none;width:20px;height:20px;border-radius:7px;background:var(--acs);display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fffaf1" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span><b style="margin-left:2px;">Салат овощной</b><span>150 г</span></div>
+            <div class="shR"><span style="flex:none;width:20px;height:20px;border-radius:7px;box-shadow:inset 0 0 0 2px rgba(0,0,0,.18);"></span><b style="margin-left:2px;">Масло оливковое</b><span>10 г</span></div>
+            <div style="margin:14px 18px 0;" class="cta"><span>Копировать (3)</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div style="height:16px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+     <div class="lab"><b>Отмена удаления</b><span>после удаления — тост над навигацией: 5 с, полоса времени, единственное действие «Отменить»; подтверждения заранее нет</span></div>
+      <div class="ph" style="height:420px;position:relative;" data-demo="stop" data-screen-label="Питание · отмена удаления">
+        <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 2 приёма</span></div>
+        <div class="sec" style="margin-top:14px;">
+          <div class="shR" style="margin:0 0 8px;"><b>Обед · 13:05</b><span>562 ккал</span></div>
+          <div class="shR" style="margin:0 0 8px;"><b>Ужин · 19:10</b><span>487 ккал</span></div>
+        </div>
+        <div style="position:absolute;left:14px;right:14px;bottom:14px;background:var(--c1);border-radius:16px;padding:12px 14px 15px;display:flex;align-items:center;gap:12px;box-shadow:0 10px 28px rgba(var(--shadow),.18);overflow:hidden;">
+          <span style="flex:1;min-width:0;"><b style="display:block;font:600 12px/1.3 Figtree,sans-serif;color:var(--tx);">Перекус удалён</b><span style="display:block;font:500 10px/1.3 Figtree,sans-serif;color:var(--dim);margin-top:2px;">можно вернуть, пока идёт полоса</span></span>
+          <span style="flex:none;font:700 12px/1 Figtree,sans-serif;color:var(--acs);padding:8px 2px;">Отменить</span>
+          <span style="position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--trk,rgba(0,0,0,.08));"><i style="position:absolute;left:0;top:0;bottom:0;width:62%;background:var(--acs);"></i></span>
+        </div>
+      </div>
+    </div>
+
+     <div class="lab"><b>Куда переместить</b><span>цель продукта — приём (дни раскрываются), цель приёма — день целиком; вчера и завтра есть всегда, даже пустые; исходное — «откуда», погашено</span></div>
+      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · куда переместить">
+        <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
+        <div class="hero" style="opacity:.5">
+          <div class="hk">Осталось на сегодня</div>
+          <div class="hn"><b>642</b><i>ккал</i></div>
+          <div class="htr"><i style="width:67%"></i></div>
+        </div>
+        <div class="bd">
+          <div class="md">
+            <div class="shH"><b>Куда переместить продукт?</b><span>Переносим: Рис бурый, 120 г · ~156 ккал</span></div>
+            <div class="shR"><b>Сегодня, 20 августа</b><span>3 приёма</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="shR" style="margin:0 18px 8px 36px;"><b>Завтрак · 8:40</b><span>412 ккал</span></div>
+            <div class="shR" style="margin:0 18px 8px 36px;"><b>Перекус · 16:40</b><span>309 ккал</span></div>
+            <div class="shR" style="margin:0 18px 8px 36px;"><b style="color:var(--acs)">В новый приём</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" style="color:var(--acs)"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div class="shR"><b>Вчера, 19 августа</b><span>4 приёма</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div class="shR"><b>Завтра, 21 августа</b><span>пусто · в новый приём</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div style="height:16px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+     <div class="lab"><b>Вода без кнопки</b><span>чип кнопки воды выключен — карточка снова полная: добавление чипами, «Откуда норма» раскрыта</span></div>
+      <div class="ph" style="height:700px;" data-demo="stop" data-screen-label="Питание · вода без кнопки">
+        <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
+        <div class="sec"><div class="wCardB">
+        <div class="bTop"><span class="k">Вода · 7 дней в среднем 2,1 л</span><span class="bSub">−200</span></div>
+        <div class="bRing">
+          <svg width="58" height="58" viewBox="0 0 58 58" style="flex:none;"><circle cx="29" cy="29" r="24" fill="none" stroke="var(--trk)" stroke-width="6"/><circle cx="29" cy="29" r="24" fill="none" stroke="var(--wDeep)" stroke-width="6" stroke-linecap="round" stroke-dasharray="86 151" transform="rotate(-90 29 29)"/></svg>
+          <span class="bRingTxt"><b>1,7 л</b><span>из 3,0 · осталось 1,3</span><span>последний раз 2 ч 23 мин назад</span></span>
+        </div>
+        <div class="bChips"><span class="bChip">+100</span><span class="bChip">+200</span><span class="bChip">+330</span><span class="bChip">+500</span></div>
+        <div class="bCurve"><svg viewBox="0 0 268 34" fill="none">
+          <path d="M4 20 L48 11 L92 15 L136 6 L180 18 L224 9 L264 14 L264 30 L4 30 Z" fill="currentColor" opacity=".16"/>
+          <path d="M4 12 L264 12" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".5"/>
+          <polyline points="4,20 48,11 92,15 136,6 180,18 224,9 264,14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="48" cy="11" r="2.6" fill="currentColor"/><circle cx="136" cy="6" r="2.6" fill="currentColor"/><circle cx="224" cy="9" r="2.6" fill="currentColor"/>
+          <circle cx="4" cy="20" r="2.6" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.5"/><circle cx="92" cy="15" r="2.6" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.5"/><circle cx="180" cy="18" r="2.6" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="264" cy="14" r="3.4" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.8"/><circle cx="264" cy="14" r="6.8" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".45"/>
+        </svg></div>
+        <div class="bHint">Поставьте с утра четыре бутылки по 0,5 л на видное место — вечером не придётся вспоминать, сколько выпили.</div>
+        <div class="vSw"><i>Полоса</i><i class="on">Кольцо</i></div>
+      </div></div>
+        <div class="sec"><div class="blk">
+        <div class="blkH"><b>Откуда норма 3,0 л</b></div>
+        <div class="lst">
+          <div class="lrow"><b>По весу</b><span>2 200 мл</span></div>
+          <div class="lrow"><b>Шаги 11 400</b><span>+500 мл</span></div>
+          <div class="lrow"><b>Август</b><span>+300 мл</span></div>
+        </div>
+      </div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>Загрузочный день и планер</b><span>рефид актуален; планер в кадре устарел — блок переехал в «Инсайты»</span></div>
+      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · рефид и планер">
+        <div class="top"><span class="ttl">Питание</span><span class="capM">сб, 23 авг · 2 приёма</span></div>
+        <div class="hero">
+          <div class="hk">Осталось на сегодня</div>
+          <div class="hn"><b>1 604</b><i>ккал</i></div>
+          <div class="htr"><i style="width:32%"></i></div>
+          <div class="hb"><span>съедено 747</span><span>бюджет 2 351</span></div>
+        </div>
+        <div class="sec">
+          <div class="blk">
+            <div class="blkH"><b>Загрузочный день</b><span>+420 ккал</span></div>
+            <div class="lst"><div class="lrow"><b>Прибавка уже в бюджете</b><span>2 351</span></div><div class="lrow"><b>Обычная норма</b><span>1 931</span></div></div>
+          </div>
+          <div class="blk">
+            <div class="blkH"><b>Что съесть сейчас</b><span>до сна 5,1 ч</span></div>
+            <div class="prop">Полноценный обед с 14:00 до 15:00</div>
+            <div class="propC"><span class="pchipS">белок 45–55 г</span><span class="pchipS">700–860 ккал</span></div>
+            <div class="why">Загрузочный день добавил 420 ккал — их проще разложить на два приёма, чем добирать вечером.</div>
+            <div class="cta" style="margin-top:14px;"><span>Выбрать продукты · 14 вариантов</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div data-mirdst="m1"></div>
+
+<div class="h">Из каноничной версии · то же, но премиальнее</div>
+<p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Десять идей старой вкладки, которые работали, перерисованы под язык v4. Правка везде одна: блок говорит одну вещь и заканчивается действием, а подробности живут за касанием. Старые кадры остались в скриншотах — сравнивать с ними, а не с прозой.</p>
+
+<div class="pal" data-mir="m2">
+  <div class="row4">
+    <div>
+      <div class="lab"><b>1 · Трассировка расчёта</b><span>окно сжигания жира: три вклада и честная неопределённость</span></div>
+      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · окно и трассировка">
+        <div class="sec" style="margin-top:18px;">
+          <div class="blk">
+            <div class="blkH"><b>Окно для сжигания жира</b><span>21:00</span></div>
+            <div class="tmr">
+              <div class="tmrN">01:13</div>
+              <div class="tmrS">Расчёт по времени и составу еды, а не измерение липолиза</div>
+            </div>
+            <div style="margin-top:14px;">
+              <div class="trc"><b>База модели</b><span>+75 мин</span></div>
+              <div class="trc"><b>Белок 8 г</b><span>+2 мин</span></div>
+              <div class="trc"><b>Гликемическая нагрузка 0</b><span>0 мин</span></div>
+            </div>
+            <div class="unc">Неопределённость ±24 % — от 57 мин до 1 ч 33 мин.</div>
+            <div class="repl" style="margin-top:10px;">Есть допущения · <b>85 %</b> данных. Не хватает: форма продуктов.</div>
+            <div class="more">Весь расчёт<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>2 · Планнер, который заканчивается действием</b><span>протокол: главный кадр теперь в «Инсайтах» (ярус «Питание»); при расхождении верен он</span></div>
+      <div class="ph" style="height:600px;" data-demo="protocol" data-screen-label="Питание · планнер с действием">
+        <div class="sec" style="margin-top:18px;">
+          <div class="blk">
+            <div class="blkH"><b>Что съесть сейчас</b><span>до сна 3,2 ч</span></div>
+            <div class="prop">Лёгкий приём с 23:45 до 00:45</div>
+            <div class="propC">
+              <span class="pchipS">белок 40–50 г</span>
+              <span class="pchipS">углеводы 8–28 г</span>
+              <span class="pchipS">297–397 ккал</span>
+            </div>
+            <div class="why">До сна около трёх часов, а белка за день недобор 45 г. Закрывать его за один раз не нужно — этот приём берёт половину.</div>
+            <div class="cta" style="margin-top:14px;"><span>Выбрать продукты · 10 вариантов</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div class="more">Как посчитано<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>3 · Чем добрать клетчатку</b><span>на вкладке — закрытая строка с раскрывашкой; раскрытие показывает этот состав</span></div>
+      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · чем добрать клетчатку">
+        <div class="sec" style="margin-top:18px;">
+          <div class="blk">
+            <div class="blkH"><b>Клетчатка</b><span>18 из 27 г</span></div>
+            <div class="trk" style="margin-top:0;"><i style="width:67%"></i></div>
+            <div class="why">Не хватает 9 г. Добирать лучше постепенно — резкая прибавка тяжело переносится.</div>
+            <div class="lst" style="margin-top:14px;">
+              <div class="lrow"><b>Овощи</b><span>5–8 г к каждому приёму</span></div>
+              <div class="lrow"><b>Бобовые</b><span>8–12 г за порцию</span></div>
+              <div class="lrow"><b>Цельные злаки</b><span>4–7 г за порцию</span></div>
+            </div>
+            <div class="repl">Ваш лучший источник за месяц — <b>хлеб тостовый цельнозерновой</b>, 6 г на порцию.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>4 и 5 · Замена продукта и оценка словом</b><span>раскрытый приём: одна оценка, одно предложение</span></div>
+      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · приём раскрыт">
+        <div class="sec" style="margin-top:18px;">
+          <div class="blk">
+            <div class="blkH"><b>Обед · 13:05</b><span>870 ккал</span></div>
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px;"><span class="grade">полноценный приём</span></div>
+            <div class="lst">
+              <div class="lrow"><b>Шаурма с курицей</b><span>350 г · 797 ккал</span></div>
+            </div>
+            <div class="repl">Замена: <b>салат с копчёной курицей</b> — около 181 ккал вместо 797, вредность ниже.</div>
+            <div class="lst" style="margin-top:12px;">
+              <div class="lrow"><b>Домашний кофе</b><span>350 г · 73 ккал</span></div>
+            </div>
+            <div class="more">Состав и нутриенты<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>7 · Приёмы за день полосами</b><span style="display:block;font:500 10px/1.4 Figtree,sans-serif;color:#6b5f4f;margin-top:2px;">пункт 6 (вода) не пропал — переехал в полосу, блоки «Вода» и «Откуда норма»</span><span>видно длительность и нахлёст, кривые в протоколе</span></div>
+      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · приёмы полосами">
+        <div class="sec" style="margin-top:18px;">
+          <div class="blk">
+            <div class="blkH"><b>Приёмы за день</b><span class="warn">нахлёст 45 мин</span></div>
+            <div class="tl">
+              <div class="tlr"><b>10:00</b><span class="tlb"><i style="left:0;width:22%"></i></span><s>11:10</s></div>
+              <div class="tlr"><b>11:00</b><span class="tlb"><i style="left:8%;width:64%"></i></span><s>16:38</s></div>
+              <div class="tlr"><b>11:15</b><span class="tlb"><i style="left:10%;width:18%"></i></span><s>14:15</s></div>
+              <div class="tlr"><b>17:00</b><span class="tlb"><i style="left:58%;width:14%"></i><i class="ovl" style="left:66%;width:6%"></i></span><s>18:45</s></div>
+              <div class="tlr"><b>18:00</b><span class="tlb"><i style="left:66%;width:32%"></i></span><s>22:49</s></div>
+              <div class="tlr"><b>19:30</b><span class="tlb"><i style="left:78%;width:16%"></i></span><s>21:50</s></div>
+            </div>
+            <div class="why">Обед тянется шесть часов и накрывает перекус — красным помечено пересечение.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>8, 9 и 10 · Дневник: номера, серия, пустой приём</b><span>свежие сверху, номер — язык для куратора</span></div>
+      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · дневник с номерами">
+        <div class="sec" style="margin-top:18px;">
+          <div class="dry">
+            <div class="meal">
+              <div class="mt"><b><span style="display:inline-flex;align-items:center;gap:8px;"><span class="mnum">7</span>21:00 · Кофе-брейк</span></b><s>3</s></div>
+              <div class="mb"><span>Кофе с молоком</span><span class="mchev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+            </div>
+            <div class="meal">
+              <div class="mt"><b><span style="display:inline-flex;align-items:center;gap:8px;"><span class="mnum">6</span>19:30 · Перекус</span></b><s>181</s></div>
+              <div class="mb"><span>Творог, орехи</span><span class="mchev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+            </div>
+            <div class="meal">
+              <div class="mt"><b><span style="display:inline-flex;align-items:center;gap:8px;"><span class="mnum">5</span>18:00 · Ужин</span></b><s>565</s></div>
+              <div class="mb"><span>Гречка, лосось, перец · ещё 1</span><span class="mchev"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+            </div>
+          </div>
+          <div class="streak">Три полноценных приёма подряд</div>
+          <div class="dry" style="margin-top:8px;">
+            <div class="meal mempty">
+              <div class="mt"><b><span style="display:inline-flex;align-items:center;gap:8px;"><span class="mnum">3</span>11:15 · Перекус</span></b><s>—</s></div>
+              <div class="mb"><span>без продуктов · итог дня посчитан без него</span><span class="plus">+ продукт</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div data-mirdst="m2"></div>
+
+<div class="h">Что из старой версии не воссоздано и почему</div>
+<div style="background:#efe3cf;border-radius:24px;padding:20px;max-width:1040px;">
+  <div class="nt"><b>Таблица нутриентов у каждого продукта</b><span>Двенадцать колонок — ккал, У, пр/сл, Б, Ж, вр/пол/суп, Кл, ГИ, Вр — на 375 px превращаются в сетку восьмипиксельных цифр. По ней не читают, по ней скользят. Осталась за строкой «Состав и нутриенты»: тому, кто пришёл за ГИ конкретного продукта, одно касание не помешает, а остальным она не мешает каждый день.</span></div>
+  <div class="nt"><b>Эмодзи-иконки</b><span>В старой версии на одном экране 🍽 🌿 💡 🏆 ⚗ 📊 — шесть разных наборов, каждый рисуется по-своему на каждой платформе. Линейные иконки одного набора говорят то же и складываются в язык.</span></div>
+  <div class="nt"><b>Бейдж «НАУЧНЫЙ ПОДХОД» и вопросительный знак рядом с планнером</b><span>Если расчёт приходится защищать бейджем, доверия он не добавляет. Убеждает трассировка: три вклада и честная неопределённость (кадр 1) — она показывает, что расчёт есть, вместо того чтобы это утверждать.</span></div>
+  <div class="nt"><b>«Полезно?» с пальцем под рекомендацией</b><span>Просьба оценить совет вместо того, чтобы его выполнить. Полезность рекомендации видна по тому, нажали ли «Выбрать продукты», — это измеряется без вопроса к человеку.</span></div>
+  <div class="nt"><b>Четыре способа сказать одно</b><span>Клетчатка в старой версии несла разом: «мягко +6 г сегодня», «раствор. 38 % · грубая 62 %», полосу, «осталось примерно 14 г» и паттерн за 7 дней. Осталось одно число с полосой, дефицит словами и три категории, чем добрать. Растворимая и грубая — в отчёты: это разбор, а не решение дня.</span></div>
+  <div class="ntl"><b>Три оценки одного приёма</b><span>Было: звезда 86, чип «полноценный приём», плашка «Сильная база · так держать» и «Recovery» — четыре суждения об одном обеде. Осталось одно, словом: слово не требует шкалы, а число 86 требует объяснения, из чего оно.</span></div>
+</div>
+
+<div class="h">Решения</div>
+<div style="background:#efe3cf;border-radius:24px;padding:20px;max-width:1040px;">
+  <div class="nt"><b>Ярусов «Сейчас / Дневник / Разбор дня» больше нет</b><span>Три заголовка-яруса делили экран, но при восьми блоках перестали работать: «Разбор дня» покрывал всё до самого низа, а между итогами, качеством, волнами и водой ярлыка не было вовсе. Теперь уровень один: у каждого блока своя подпись, разделяет воздух. Третий уровень заголовков на 375 px не читается как структура — он читается как шум.</span></div>
+  <div class="nt"><b>Настройка живёт там, где виден результат</b><span>Ряд чипов стоит внизу, после всего содержимого: человек доскроллил, увидел, что ему не нужно, и выключил на месте. Прежние пять переключателей в листе настроек снимаются — не потому, что они плохие, а потому что двух адресов для одной операции быть не должно. Заодно они не работали на телефоне вообще.</span></div>
+  <div class="nt"><b>Каркас выключить нельзя</b><span>У героя, окна приёмов, дневника, кнопки добавления и итогов чипов нет. Это и есть вкладка: если их выключить, выключать станет нечего, а человек получит пустой экран с рядом чипов внизу и не поймёт, что сломал.</span></div>
+  <div class="nt"><b>Перебор — состояние, а не ноль</b><span>Прежде число зажималось в ноль, а полоса в 100 %: съел на 300 ккал больше — экран говорил «осталось 0», то есть «ровно в норме». Теперь подпись меняется на «Перебор», число показывает превышение, последние 12 % полосы красные. Красным красится только выход за бюджет — недобор в обед не ошибка и не красится.</span></div>
+  <div class="nt"><b>Клетчатка показана дважды намеренно</b><span>Строкой в итогах она часть бюджета дня — как белок и жиры. Числом в «Качестве еды» она часть оценки — вместе с вредностью. Это одно число из одного источника в двух ролях; дублируется отображение, не данные.</span></div>
+  <div class="nt"><b>Вредность считается по шкале продукта, а не в процентах</b><span>У продукта поле вредности — шкала 0–10, и порог должен жить на той же шкале. Процент, из которого порог берётся сейчас, к этой шкале не приводится никак: 40 «процентов» вредности при значении 3,4 ничего не сравнивают. Порог по умолчанию — 5, середина шкалы; ГИ, если он появится на экране, живёт по тому же правилу.</span></div>
+  <div class="nt"><b>Название приёма фиксируется выбором</b><span>Автоматическая классификация по времени полезна при создании — она угадывает «Завтрак» в 08:20 и почти всегда права. Но пересчитывать её на каждый рендер нельзя: человек выбрал «Перекус», а список показывает «Завтрак», потому что это первый приём дня. Выбор руками — решение, оно старше алгоритма.</span></div>
+  <div class="ntl"><b>Плитка воды здесь вторична</b><span>Карточка воды нарисована для контекста — чтобы видеть, как она стоит в потоке вкладки. Все её числа, пороги, тона и поведение живут в <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;">water-add.v4.dc.html</span>. При расхождении верен он, а этот кадр правится под него.</span></div>
+</div>
+
+<div class="h">Открыто до передачи</div>
+<div style="background:#f0d8c4;border-radius:24px;padding:20px;max-width:1040px;">
+  <div class="nt"><b>Порог вредности не персонализируется — назвали, не забыли</b><span>Порог 5 — константа в коде. Процент <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;">harmPct</span> из профиля остаётся входом советов и на экране не показывается: заводить второе поле под тот же смысл нельзя, а переиспользовать процент как порог шкалы 0–10 — значит смешать две единицы. Следствие: куратор порог не правит. Если это понадобится — это отдельная задача с полем, а не правка карточки.</span></div>
+<div class="nt"><b>Три чипа ждут полей профиля</b><span>У «Голода и энергии», «Карточки рефида» и «Приёмов за день» переключателей сегодня нет вовсе — чип рисуется, но включать ему нечего. Это работа на стороне кода, но названа здесь, чтобы ряд чипов не уехал в вёрстку раньше, чем появятся поля.</span></div>
+<div class="ntl"><b>Ночь до 03:00 названа, но не нарисована</b><span>Контракт говорит, что капсула должна называть обе даты («Ночь на 21 августа»), кадра для этого состояния на канвасе нет. Дорисовать в канвасе даты — <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;">date-remainders.v4.dc.html</span>, он для капсулы главный.</span></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;rules&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">
+class Component extends DCLogic {
+  pal = [['dk', 'Тёмная'], ['bl', 'Синяя'], ['bldk', 'Сине-тёмная']];
+  componentDidMount() { this.apply(); }
+  componentDidUpdate() { this.apply(); }
+
+  apply() {
+    const all = this.props.allPalettes ?? false;
+    document.querySelectorAll('[data-mirdst]').forEach((dst) => {
+      dst.innerHTML = '';
+      if (!all) return;
+      const src = document.querySelector('[data-mir="' + dst.getAttribute('data-mirdst') + '"]');
+      if (!src) return;
+      this.pal.forEach(([cls, name]) => {
+        const cap = document.createElement('div');
+        cap.className = 'palcap';
+        cap.textContent = name;
+        const row = src.cloneNode(true);
+        row.removeAttribute('data-mir');
+        row.className = 'pal ' + cls;
+        row.querySelectorAll('*').forEach((n) => {
+          n.removeAttribute('data-screen-label');
+          n.removeAttribute('data-cc-id');
+          n.removeAttribute('data-dm-ref');
+          n.removeAttribute('data-comment-anchor');
+        });
+        dst.append(cap, row);
+      });
+    });
+    const off = (this.props.rules ?? true) ? '' : 'none';
+    document.querySelectorAll('.nt, .ntl').forEach((n) => { n.style.display = off; });
+  }
+
+  deliver(btn, txt, count) {
+    const host = btn.closest('[data-contract]') || btn.parentElement;
+    let box = host.querySelector('textarea[data-spec-out]');
+    if (!box) {
+      box = document.createElement('textarea');
+      box.setAttribute('data-spec-out', '');
+      box.setAttribute('readonly', '');
+      box.style.cssText = 'display:block;width:100%;box-sizing:border-box;height:130px;margin-top:12px;font:500 10.5px/1.55 ui-monospace,Menlo,monospace;color:#201e1d;background:#fffaf1;border:1px solid rgba(0,0,0,.12);border-radius:14px;padding:10px;resize:vertical;';
+      host.appendChild(box);
+    }
+    box.value = txt; box.focus(); box.select();
+    const say = (msg) => {
+      btn.textContent = msg;
+      clearTimeout(this._sayT);
+      this._sayT = setTimeout(() => { btn.textContent = 'скопировать контракт'; }, 2600);
+    };
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    if (ok) { say('скопировано · ' + count + ' строк'); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt)
+        .then(() => say('скопировано · ' + count + ' строк'))
+        .catch(() => say('буфер недоступен — текст выделен ниже'));
+    } else { say('буфер недоступен — текст выделен ниже'); }
+  }
+
+  renderVals() {
+    return {
+      copySpec: (e) => {
+        const rows = [...document.querySelectorAll('.spec')].map((r) => {
+          const k = r.querySelector('b'), v = r.querySelector('span[data-v]');
+          return k && v ? k.textContent.trim() + '\t' + v.getAttribute('data-v') : null;
+        }).filter(Boolean);
+        this.deliver(e.currentTarget, 'nutrition-tab · контракт (' + rows.length + ' строк)\n' + rows.join('\n'), rows.length);
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -82,6 +82,24 @@
   .bd .logo .lab path{fill:rgba(238,243,248,.5);stroke:none}
   .bd .logo .lp path{fill:#52A0D8;stroke:none}
   .bd .svc{color:rgba(238,243,248,.12)}
+  .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
+  .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
+  .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
+  .spec>span[data-v]::before{content:attr(data-v)}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:#6b5f4f;font-style:normal;text-wrap:pretty}
+  .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin:0 0 30px}
+  .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6b5f4f;margin:16px 0 2px}
+  .mvCard{margin-top:10px;background:#f7efe2;border-radius:20px;padding:16px}
+  .mvH{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:12px}
+  .mvH b{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:#6b5f4f}
+  .mvH span{font:600 10.5px/1 Figtree,sans-serif;color:#6b5f4f}
+  .pchip{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:999px;box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.14);font:600 10.5px/1 Figtree,sans-serif;color:#201e1d}
+  .mvCta{margin-top:13px;min-height:44px;border-radius:14px;background:#c67139;color:#2b1608;display:flex;align-items:center;justify-content:center;gap:8px;font:700 12px/1 Figtree,sans-serif}
+  .mrow{display:flex;align-items:center;gap:10px;margin-top:9px}
+  .mrow b{flex:none;width:96px;font:600 11px/1.3 Figtree,sans-serif;color:#201e1d}
+  .mrow span{flex:none;width:58px;text-align:right;font:600 11px/1 Figtree,sans-serif;color:#6b5f4f;font-variant-numeric:tabular-nums}
+  .mbar{flex:1;display:flex;height:8px;border-radius:999px;overflow:hidden;background:rgba(0,0,0,.07)}
 </style>
 </helmet>
 <div style="background:#e9dfcd;padding:44px 46px 70px;width:max-content;">
@@ -89,7 +107,7 @@
 <p style="margin:0 0 34px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Инсайты: что видно сразу при входе на вкладку. Экран нарисован в четырёх палитрах: песочная с тёмной парой и синяя с сине-тёмной. Разметка, подписи и данные в палитрах совпадают — отличается только таблица значений. Виджеты Главной, расстановка и правила плитки живут в «Виджеты Главной v4»; общие решения по палитрам и логотипу продублированы в колонках справа, чтобы канвас читался в одиночку.</p>
 <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:0 0 14px;">Песочная палитра</div>
 <div style="display:flex;gap:30px;align-items:flex-start;">
-<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Инсайты</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">пересобрана по аудиту</span></div><div class="ph" id="i1" data-screen-label="Инсайты">
+<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Инсайты</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">пересобрана по аудиту</span></div><div class="ph" data-demo="stop" id="i1" data-screen-label="Инсайты">
 <div style="padding:16px 18px 0;">
           <div style="display:flex;align-items:center;gap:9px;">
             <span style="font:800 12px/1 Figtree,sans-serif;color:#8a4a20;" class="n">18</span>
@@ -171,7 +189,7 @@
           </div>
         </div>
         <div style="display:flex;padding:4px 10px 16px;background:#fffaf1;"><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Главная</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Питание</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Актив</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Отчёты</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#8a4a20;">Инсайты</span></div></div></div>
-      </div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Подробно</div><div class="ph" id="i2" data-screen-label="Инсайты · подробно">
+      </div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Подробно</div><div class="ph" data-demo="stop" id="i2" data-screen-label="Инсайты · подробно">
         <div style="padding:16px 18px 0;">
           <div style="display:flex;align-items:center;gap:12px;">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
@@ -210,7 +228,7 @@
           </div>
         </div>
         <div style="display:flex;padding:4px 10px 16px;background:#fffaf1;"><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Главная</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Питание</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Актив</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Отчёты</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#8a4a20;">Инсайты</span></div></div></div>
-      </div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="dk"><div class="ph" id="i1d" data-screen-label="Инсайты · тёмная">
+      </div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="dk"><div class="ph" data-demo="stop" id="i1d" data-screen-label="Инсайты · тёмная">
 <div style="padding:16px 18px 0;">
           <div style="display:flex;align-items:center;gap:9px;">
             <span style="font:800 12px/1 Figtree,sans-serif;color:#e2a468;" class="n">18</span>
@@ -292,7 +310,7 @@
           </div>
         </div>
         <div style="display:flex;padding:4px 10px 16px;background:#23201b;"><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Главная</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Питание</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Актив</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Отчёты</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#e2a468" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#e2a468;">Инсайты</span></div></div></div>
-      </div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Подробно</div><div class="ph" id="i2d" data-screen-label="Инсайты · подробно · тёмная">
+      </div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Подробно</div><div class="ph" data-demo="stop" id="i2d" data-screen-label="Инсайты · подробно · тёмная">
         <div style="padding:16px 18px 0;">
           <div style="display:flex;align-items:center;gap:12px;">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(242,237,230,.53)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
@@ -348,9 +366,58 @@
 </div>
 </div>
 <div style="margin-top:56px;padding-top:38px;border-top:1px solid rgba(0,0,0,.12);">
+<div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:34px 0 14px;">Принятое с «Питания»</div>
+<p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:#6b5f4f;text-wrap:pretty;">Два блока переехали сюда с вкладки «Питание» по общему правилу: там — действие и статус сегодня, здесь — разбор и «на подумать». Оба встают ярусом «Питание» сразу после «Каскада». Планер отвечает на «что съесть следующим» и заканчивается действием; БЖУ по приёмам — разбор дня по строке на приём. Кадры нарисованы в песочной; остальные палитры — по ролям из v4-canvas.css, эталона в цвете у этих карточек нет.</p>
+
+<div style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:30px;">
+<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Ярус «Питание»</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:#6b5f4f;">планер и разбор БЖУ после «Каскада»</span></div>
+<div class="ph" data-demo="stop" data-screen-label="Инсайты · ярус Питание" style="padding-bottom:18px;">
+  <div style="padding:16px 18px 0;">
+    <div class="tier" style="margin-top:0;">Питание</div>
+    <div class="mvCard">
+      <div class="mvH"><b>Что съесть сейчас</b><span>до сна 3,2 ч</span></div>
+      <div style="font:600 13.5px/1.4 Figtree,sans-serif;color:#201e1d;text-wrap:pretty;">Лёгкий приём с 23:45 до 00:45</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:11px;">
+        <span class="pchip">белок 40–50 г</span>
+        <span class="pchip">углеводы 8–28 г</span>
+        <span class="pchip">297–397 ккал</span>
+      </div>
+      <div style="font:500 11px/1.5 Figtree,sans-serif;color:#6b5f4f;margin-top:11px;text-wrap:pretty;">До сна около трёх часов, а белка за день недобор 45 г. Этот приём берёт половину.</div>
+      <div class="mvCta"><span>Выбрать продукты · 10 вариантов</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:11px;font:600 11px/1 Figtree,sans-serif;color:#6b5f4f;">Как посчитано<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+    </div>
+    <div class="mvCard">
+      <div class="mvH"><b>БЖУ по приёмам</b><span>сегодня</span></div>
+      <div class="mrow"><b>Завтрак · 8:40</b><div class="mbar"><i style="width:34%;background:#7a8a5e;"></i><i style="width:22%;background:#d9b96a;"></i><i style="width:34%;background:#c67139;"></i></div><span>412</span></div>
+      <div class="mrow"><b>Обед · 13:05</b><div class="mbar"><i style="width:30%;background:#7a8a5e;"></i><i style="width:14%;background:#d9b96a;"></i><i style="width:46%;background:#c67139;"></i></div><span>562</span></div>
+      <div class="mrow"><b>Перекус · 16:40</b><div class="mbar"><i style="width:12%;background:#7a8a5e;"></i><i style="width:10%;background:#d9b96a;"></i><i style="width:58%;background:#c67139;"></i></div><span>309</span></div>
+      <div style="display:flex;gap:14px;margin-top:12px;font:600 9.5px/1 Figtree,sans-serif;color:#6b5f4f;">
+        <span style="display:flex;align-items:center;gap:5px;"><i style="width:8px;height:8px;border-radius:999px;background:#7a8a5e;"></i>белок</span>
+        <span style="display:flex;align-items:center;gap:5px;"><i style="width:8px;height:8px;border-radius:999px;background:#d9b96a;"></i>жиры</span>
+        <span style="display:flex;align-items:center;gap:5px;"><i style="width:8px;height:8px;border-radius:999px;background:#c67139;"></i>углеводы</span>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<div style="width:400px;flex:none;">
+<div class="ctr" data-contract="tab-insights" style="margin:0;max-width:none;">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+    <span class="ctrTag">КОНТРАКТ · ЧАСТИЧНЫЙ</span>
+  </div>
+  <div class="spec"><b>охват</b><span data-v="контракт покрывает только ярус «Питание»; остальная вкладка пока живёт колонками «Решения» — сверять глазами"></span></div>
+  <div class="spec"><b>место</b><span data-v="ярус «Питание» сразу после «Каскада»: сначала планер, под ним БЖУ по приёмам"></span><i>планер заканчивается действием, поэтому стоит выше разбора</i></div>
+  <div class="spec"><b>планер</b><span data-v="одно предложение («Лёгкий приём с 23:45 до 00:45»), три вилки чипами (белок · углеводы · ккал), причина одним абзацем, кнопка «Выбрать продукты · N вариантов», раскрывашка «Как посчитано»"></span><i>переехал с «Питания» целиком; кадр «Питание · планнер с действием» в nutrition-tab остаётся протоколом, главный теперь этот</i></div>
+  <div class="spec"><b>БЖУ по приёмам</b><span data-v="по строке на приём: название со временем, полоса Б/Ж/У долями, ккал справа; легенда один раз под списком"></span><i>тоже переехал с «Питания»; проценты не пишем — доли видно полосой</i></div>
+  <div class="spec"><b>пустой день</b><span data-v="ярус не показывается вовсе, пока нет ни одного приёма"></span><i>планеру не из чего считать, разбору нечего разбирать — заглушек не рисуем</i></div>
+  <div class="spec" style="border-bottom:none"><b>палитры</b><span data-v="кадр в песочной; тёмная, синяя и сине-тёмная — по ролям v4-canvas.css, эталона в цвете нет"></span></div>
+</div>
+</div>
+</div>
+
 <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:0 0 14px;">Синяя палитра</div>
 <div style="display:flex;gap:30px;align-items:flex-start;">
-<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Инсайты</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">пересобрана по аудиту</span></div><div class="bl"><div class="ph" id="i1p" data-screen-label="Инсайты · синяя">
+<div><div style="display:flex;flex-direction:column;gap:3px;margin-bottom:11px;"><span style="font:700 12.5px/1 Figtree,sans-serif;color:#201e1d;">Инсайты</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45);">пересобрана по аудиту</span></div><div class="bl"><div class="ph" data-demo="stop" id="i1p" data-screen-label="Инсайты · синяя">
 <div style="padding:16px 18px 0;">
           <div style="display:flex;align-items:center;gap:9px;">
             <span style="font:800 12px/1 Figtree,sans-serif;color:#1d5e96;" class="n">18</span>
@@ -432,7 +499,7 @@
           </div>
         </div>
         <div style="display:flex;padding:4px 10px 16px;background:#ffffff;"><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Главная</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Питание</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Актив</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Отчёты</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1d5e96" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#1d5e96;">Инсайты</span></div></div></div>
-      </div></div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Подробно</div><div class="bl"><div class="ph" id="i2p" data-screen-label="Инсайты · подробно · синяя">
+      </div></div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Подробно</div><div class="bl"><div class="ph" data-demo="stop" id="i2p" data-screen-label="Инсайты · подробно · синяя">
         <div style="padding:16px 18px 0;">
           <div style="display:flex;align-items:center;gap:12px;">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
@@ -471,7 +538,7 @@
           </div>
         </div>
         <div style="display:flex;padding:4px 10px 16px;background:#ffffff;"><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Главная</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Питание</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Актив</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.32)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Отчёты</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1d5e96" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#1d5e96;">Инсайты</span></div></div></div>
-      </div></div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="bd"><div class="ph" id="i1pd" data-screen-label="Инсайты · сине-тёмная">
+      </div></div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Тёмная</div><div class="bd"><div class="ph" data-demo="stop" id="i1pd" data-screen-label="Инсайты · сине-тёмная">
 <div style="padding:16px 18px 0;">
           <div style="display:flex;align-items:center;gap:9px;">
             <span style="font:800 12px/1 Figtree,sans-serif;color:#8fc1e8;" class="n">18</span>
@@ -553,7 +620,7 @@
           </div>
         </div>
         <div style="display:flex;padding:4px 10px 16px;background:#13222f;"><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10l9-7 9 7v10H3z"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Главная</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Питание</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-7 4 3 4-7 5 5"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Актив</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7"/></svg><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Отчёты</span></div></div><div style="flex:1;text-align:center;"><div style="display:inline-flex;flex-direction:column;align-items:center;gap:6px;padding:8px 10px;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8fc1e8" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.2 5.8L20 11l-5.8 2.2L12 19l-2.2-5.8L4 11l5.8-2.2z"/></svg><span style="font:700 8.5px/1 Figtree,sans-serif;color:#8fc1e8;">Инсайты</span></div></div></div>
-      </div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Подробно</div><div class="ph" id="i2pd" data-screen-label="Инсайты · подробно · сине-тёмная">
+      </div><div style="font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.35);margin:18px 0 9px;">Подробно</div><div class="ph" data-demo="stop" id="i2pd" data-screen-label="Инсайты · подробно · сине-тёмная">
         <div style="padding:16px 18px 0;">
           <div style="display:flex;align-items:center;gap:12px;">
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(238,243,248,.53)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
