@@ -2922,13 +2922,7 @@ body:has(.page-reports) .hdr::after {
 @media (max-width: 480px) {
   :root {
     --widget-grid-columns: 4;
-    --widget-grid-gap: 6px;
     --widget-row-height: 64px;
-  }
-
-  .widgets-grid,
-  .widgets-grid-overlay {
-    padding: 6px;
   }
 
   .widget {
@@ -9759,7 +9753,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-val--good {
-  color: #7a8a5e;
+  color: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-v4-val--bad {
@@ -9845,7 +9839,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-hero-num__val.widget-v4-val--good {
-  color: #7a8a5e;
+  color: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-v4-hero-num__val.widget-v4-val--bad {
@@ -9861,7 +9855,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-row__value.widget-v4-val--good {
-  color: #7a8a5e;
+  color: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-v4-row__value.widget-v4-val--bad {
@@ -9877,7 +9871,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-row__meta.widget-v4-val--good {
-  color: #7a8a5e;
+  color: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-v4-row__meta.widget-v4-val--bad {
@@ -9885,7 +9879,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-stack__footer .widget-v4-val--good {
-  color: #7a8a5e;
+  color: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-v4-stack__footer .widget-v4-val--act {
@@ -9945,7 +9939,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
 }
 
 .widget-v4-mini__value.widget-v4-val--good {
-  color: #7a8a5e;
+  color: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-v4-mini__value.widget-v4-val--bad {
@@ -9982,7 +9976,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   --water-tone-deep: #4e6d7a;
   --water-submerge-text: #fffaf1;
   --water-ink-text: #201e1d;
-  --water-dim-text: rgba(0, 0, 0, 0.55);
+  --water-dim-text: #6b5f4f;
   --water-cream-text: var(--water-submerge-text);
   --water-drop-travel: 21px;
   position: relative;
@@ -10043,6 +10037,23 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   color: var(--water-cream-text);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .widget-water--v4.widget-water--adding .widget-water__drop,
+  .widget-water--v4.widget-water--adding .widget-water__ripple {
+    display: none !important;
+    animation: none !important;
+  }
+
+  .widget-water--v4 .widget-water__fill {
+    transition: height 160ms ease-out !important;
+  }
+
+  .widget-water--v4 .widget-water__num-in,
+  .widget-water--v4 .widget-water__num-out {
+    transition-duration: 160ms !important;
+  }
+}
+
 [data-theme$="dark"] .widget-water--v4 {
   --water-tone: #8fb3c2;
   --water-tone-deep: #3f6c7e;
@@ -10056,7 +10067,7 @@ html[data-theme-id="blue"] .widget-water--v4 {
   --water-tone-deep: #2c5f76;
   --water-submerge-text: #ffffff;
   --water-ink-text: #101826;
-  --water-dim-text: rgba(16, 24, 38, 0.55);
+  --water-dim-text: #5a6474;
 }
 
 html[data-theme-id="blue-dark"] .widget-water--v4 {
@@ -10911,7 +10922,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-v4-mini.widget-water--
 }
 
 .widget-wd__spark.widget-v4-val--good {
-  color: #7a8a5e;
+  color: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-wd__spark.widget-v4-val--bad {

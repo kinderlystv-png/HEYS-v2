@@ -121,7 +121,7 @@
       { id: 'number_only', title: 'Только цифра', subtitle: 'без графики', size: '2x1', sheet: true },
       { id: 'to_goal', title: 'До цели', subtitle: 'главное — остаток, темп подписью', size: '2x1', sheet: true },
       { id: 'compact', title: 'Компакт', subtitle: 'дельта за месяц в 1×1', size: '1x1', sheet: false },
-      { id: 'chart', title: 'График', subtitle: 'динамика за 30 дней в 2×2', size: '2x2', sheet: false }
+      { id: 'chart', title: 'График', subtitle: 'динамика за 30 дней в 2×2', size: '2x2', sheet: false, isDefault: true }
     ]
   };
 

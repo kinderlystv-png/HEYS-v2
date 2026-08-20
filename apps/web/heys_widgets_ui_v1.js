@@ -1669,7 +1669,7 @@
     );
   }
 
-  const WIDGET_V4_SPARK_DRAW_MS = 1200;
+  const WIDGET_V4_SPARK_DRAW_MS = 320;
   const WIDGET_V4_SPARK_DELAY_MS = 320;
 
   function v4SparkPointsToPath(points) {
@@ -3700,6 +3700,26 @@
     }
 
     if (variantId === 'by_hour') {
+      const isClosedDay = data.isClosedDay === true;
+      if (isClosedDay) {
+        return React.createElement('div', { className: 'widget-water widget-water--2x1 widget-v4-stack' },
+          React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+            v4Kicker('Вода'),
+            React.createElement('span', { className: 'widget-v4-row__meta' },
+              `${formatRuDecimal(drunk / 1000, 1)} / ${formatRuDecimal(target / 1000, 1)} л`)
+          ),
+          React.createElement('div', { className: 'widget-v4-row__value' },
+            formatRuDecimal(drunk / 1000, 1),
+            React.createElement('span', { className: 'widget-v4-unit' }, ' л')
+          ),
+          React.createElement('div', { className: 'widget-v4-mini__bar widget-v4-water-hour__bar' },
+            React.createElement('div', {
+              className: 'widget-v4-mini__bar-fill widget-v4-mini__bar-fill--water',
+              style: { width: `${Math.min(100, pct)}%` }
+            })
+          )
+        );
+      }
       const wakeMinutes = parseHmToMinutes(data.sleepEnd) ?? data.medianWakeMinutes;
       const bedMinutes = parseHmToMinutes(data.sleepStart);
       const profileSleepH = Number(data.profileSleepHours) || 8;

@@ -552,10 +552,11 @@
       const awakeSpan = bedMinutes != null && wakeMinutes != null
         ? this._minutesSpan(wakeMinutes, bedMinutes)
         : Math.round((24 - profileSleepHours) * 60);
+      const isClosedDay = this._isClosedDay();
       const nowMinutes = this._moscowNowMinutes();
-      const waterSchedule = this._waterScheduleAtMinutes(
-        target, wakeMinutes, awakeSpan, nowMinutes
-      );
+      const waterSchedule = isClosedDay
+        ? { expectedMl: target, expectedPct: 100, checkLabel: null }
+        : this._waterScheduleAtMinutes(target, wakeMinutes, awakeSpan, nowMinutes);
 
       return {
         drunk,
@@ -569,8 +570,8 @@
         hoursSinceWater,
         expectedMlNow: waterSchedule.expectedMl,
         expectedPctNow: waterSchedule.expectedPct,
-        deficitMlNow: drunk - waterSchedule.expectedMl,
-        checkHourLabel: waterSchedule.checkLabel,
+        deficitMlNow: isClosedDay ? 0 : drunk - waterSchedule.expectedMl,
+        checkHourLabel: isClosedDay ? null : waterSchedule.checkLabel,
         rhythmBins: this._buildWaterRhythmBins({
           drunk,
           wakeMinutes,
@@ -578,7 +579,7 @@
           nowMinutes,
           hoursSinceWater
         }),
-        isClosedDay: this._isClosedDay()
+        isClosedDay
       };
     },
 
