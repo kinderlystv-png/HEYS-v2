@@ -151,9 +151,12 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(uiSrc).toMatch(/function v4ValueStateClass[\s\S]{0,200}widget-v4-val--act/);
         const sleepChunk = uiSrc.slice(uiSrc.indexOf('function SleepVariantBody'), uiSrc.indexOf('function SleepVariantBody') + 2200);
         expect(sleepChunk).toContain('v4SleepValueState');
-        const waterChunk = uiSrc.slice(uiSrc.indexOf('function WaterVariantBody'), uiSrc.indexOf('function WaterVariantBody') + 2200);
-        expect(waterChunk).toContain('v4WaterValueState');
-        expect(waterChunk).toContain('data.isClosedDay');
+        const waterChunk = uiSrc.slice(uiSrc.indexOf('function WaterVariantBody'), uiSrc.indexOf('function WaterVariantBody') + 3200);
+        // 1×1 nrmB: перекраска по уровню, без v4-val--bad на факте
+        expect(waterChunk).toContain('widget-water--lines-on-water');
+        expect(waterChunk).toContain('WATER_TILE_LINES_CREAM_PCT');
+        expect(waterChunk).not.toContain('v4WaterValueState(');
+        expect(waterChunk).not.toMatch(/widget-water__numV[\s\S]{0,120}widget-v4-val--bad/);
     });
 
     it('тренд здоровья, инсулин, heatmap — v4-val--* без widget-v4-ok на героях', () => {
@@ -215,7 +218,10 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(uiSrc).toContain('съедено за день');
         expect(uiSrc).toContain("cap: 'не съедено'");
         expect(uiSrc).not.toContain('итог дня');
-        expect(uiSrc).toMatch(/data\.isClosedDay[\s\S]{0,80}neutral/);
+        expect(uiSrc).toMatch(/hasOver && !isClosedDay \? ' widget-v4-val--bad'/);
+        const waterMini = uiSrc.slice(uiSrc.indexOf('if (d.isMicro || variantId === \'mini\')'), uiSrc.indexOf('if (d.isMicro || variantId === \'mini\')') + 2400);
+        expect(waterMini).not.toContain('v4WaterValueState');
+        expect(waterMini).not.toContain('widget-v4-val--bad');
     });
 
     it('главная — layout из localStorage сразу, без sync-скелетона', () => {
