@@ -112,7 +112,7 @@ apps/web/heys_day_meals_chart_ui_v1.js:296
 apps/web/heys_day_meals_chart_ui_v1.js:367
 apps/web/heys_day_storage_v1.js:28
 apps/web/heys_day_utils.js:48
-apps/web/heys_day_utils.js:496
+apps/web/heys_day_utils.js::localStorage.setItem(k, JSON.stringify(v));
 apps/web/heys_day_hooks.js:39
 # fingers bundle — regen after eca96299 feat(fingers) shifted line numbers
 apps/web/heys_fingers_bundle_v1.js:2650
