@@ -54,6 +54,7 @@
     "docker:run:dev": "docker run -p 3001:3001 -v $(pwd):/app heys:dev",
     "docs:reference:check": "node scripts/check-reference-links.mjs",
     "docs:shipping:check": "node scripts/check-agent-shipping-docs.mjs",
+    "docs:ui-v4-brief": "node docs/ui/build-ui-v4-canvas-brief-html.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "healthcheck": "node scripts/healthcheck.js",
