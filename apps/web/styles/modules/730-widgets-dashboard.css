@@ -9981,8 +9981,8 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   --water-tone: #7d98a6;
   --water-tone-deep: #4e6d7a;
   --water-submerge-text: #fffaf1;
-  --water-ink-text: var(--v4-sand-ink, #201e1d);
-  --water-dim-text: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  --water-ink-text: #201e1d;
+  --water-dim-text: rgba(0, 0, 0, 0.45);
   --water-cream-text: var(--water-submerge-text);
   --water-drop-travel: 21px;
   position: relative;
@@ -10055,12 +10055,16 @@ html[data-theme-id="blue"] .widget-water--v4 {
   --water-tone: #3d7f9e;
   --water-tone-deep: #2c5f76;
   --water-submerge-text: #ffffff;
+  --water-ink-text: #101826;
+  --water-dim-text: rgba(16, 24, 38, 0.45);
 }
 
 html[data-theme-id="blue-dark"] .widget-water--v4 {
   --water-tone: #7fb6d0;
   --water-tone-deep: #35657d;
   --water-submerge-text: #eef3f8;
+  --water-ink-text: #eef3f8;
+  --water-dim-text: rgba(238, 243, 248, 0.5);
 }
 
 body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water.widget--1x1 {

@@ -459,7 +459,7 @@
 }
 
 .nutrition-v4-water__btn:focus-visible {
-  outline: 2px solid var(--v4-act, #c67139);
+  outline: 2px solid var(--v4-sand-act, #c67139);
   outline-offset: 2px;
 }
 
