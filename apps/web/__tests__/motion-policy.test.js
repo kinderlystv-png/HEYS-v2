@@ -42,7 +42,9 @@ describe('motion policy — глобальные правила', () => {
   });
 
   it('вода — handlers не читают prefers-reduced-motion для звука/плитки', () => {
-    expect(handlersSrc).not.toContain("matchMedia('(prefers-reduced-motion: reduce)')");
+    // toContain пропускал `matchMedia?.('(prefers-reduced-motion: reduce)')` —
+    // опциональный вызов ломал точное совпадение строки.
+    expect(handlersSrc).not.toMatch(/matchMedia(\?\.)?\(\s*['"]\(prefers-reduced-motion/);
     expect(handlersSrc).toContain('MOTION_POLICY.md');
   });
 

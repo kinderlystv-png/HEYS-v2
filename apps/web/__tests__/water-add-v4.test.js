@@ -98,14 +98,22 @@ describe('добавление воды — канвас water-add v4, ветк�
   it('функциональная анимация — animate-always, политика в MOTION_POLICY', () => {
     expect(uiSrc).toContain("className: 'widget-water__fill animate-always'");
     expect(uiSrc).toContain("className: 'widget-water__drop animate-always'");
-    // Контракт 26: при reduced-motion гаснут только капля и круг — уровень, блики
-    // и число остаются, плитка не превращается в статичный прямоугольник.
+    // Контракт 26 канваса гасил при reduced-motion каплю и круг. В продукте
+    // это рекомендация макета, а не контракт рантайма: вода — функциональный
+    // ярус и живёт на animate-always вместе с кольцами БЖУ
+    // (docs/implementation/MOTION_POLICY.md), поэтому kill-правил в reduce-блоках
+    // не должно быть ни на одном элементе плитки воды.
     const blocks = widgetsCss.match(/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\n\}/g) || [];
-    const killsFill = blocks.some((block) => /\.widget-water__fill[\s\S]*?(display:\s*none|animation:\s*none)/.test(block));
-    const killsShine = blocks.some((block) => /\.widget-water__shine[\s\S]*?(display:\s*none|animation:\s*none)/.test(block));
-    expect(killsFill).toBe(false);
-    expect(killsShine).toBe(false);
-    expect(widgetsCss).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.widget-water__drop[\s\S]*?display: none/);
+    const killsWater = (selector) =>
+      blocks.some(
+        (block) =>
+          block.includes(selector) &&
+          (block.includes('display: none') || block.includes('animation: none')),
+      );
+    expect(killsWater('.widget-water__fill')).toBe(false);
+    expect(killsWater('.widget-water__shine')).toBe(false);
+    expect(killsWater('.widget-water__drop')).toBe(false);
+    expect(killsWater('.widget-water__ripple')).toBe(false);
   });
 
   it('тон воды один на все палитры, новых оттенков нет', () => {
@@ -175,8 +183,9 @@ describe('добавление воды — канвас water-add v4, ветк�
     // Канвас: «пока файла нет, анимацию можно отдавать в разработку, звук — нет».
     // Прежний звук добавления при этом не трогаем — его удаление никто не просил.
     expect(handlersSrc).toContain("HEYS.audio.play('waterAdded'");
-    expect(handlersSrc).toContain('prefers-reduced-motion: reduce');
-    expect(handlersSrc).toMatch(/waterTileIsVisible\(\) && !reducedMotion[\s\S]*?setTimeout\(playSound, 240\)/);
+    // Задержка звука привязана к анимации плитки, а не к настройке ОС:
+    // подъём уровня функционален и не гаснет (docs/implementation/MOTION_POLICY.md).
+    expect(handlersSrc).toMatch(/waterTileIsVisible\(\)\) \{[\s\S]*?setTimeout\(playSound, 240\)/);
     // Карточка в «Разборе дня» отвечает сама (контракт 52): один общий апдейт
     // вместо двух копий DOM-кода по селекторам старого кольца.
     expect(handlersSrc).toContain('HEYS.dayWater?.applyOptimistic?.');

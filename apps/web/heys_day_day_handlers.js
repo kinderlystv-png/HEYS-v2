@@ -369,7 +369,6 @@
                 HEYS.waterFeedback.playAddFeedback = function playAddFeedback(detail) {
                     if (!detail || detail.ml == null || detail.ml === 0) return;
                     const isRemove = detail.ml < 0;
-                    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
                     if (!isRemove) {
                         const playSound = () => {
                             // Прежний звук добавления остаётся как был. Новый «звук капли»
@@ -380,8 +379,10 @@
                             }
                         };
                         // Звук ждёт касания поверхности: при анимации плитки — 240 мс,
-                        // при столбике или reduced-motion — сразу.
-                        if (waterTileIsVisible() && !reducedMotion) {
+                        // при столбике — сразу. По prefers-reduced-motion здесь не
+                        // ветвимся: подъём уровня — функциональный ярус, он не гасится
+                        // (docs/implementation/MOTION_POLICY.md).
+                        if (waterTileIsVisible()) {
                             setTimeout(playSound, 240);
                         } else {
                             playSound();

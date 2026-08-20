@@ -10037,13 +10037,10 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   color: var(--water-cream-text);
 }
 
+/* Капля, рябь и подъём уровня — функциональный ярус (docs/implementation/MOTION_POLICY.md):
+   гасить их отдельным reduce-правилом нельзя, они живут на animate-always вместе
+   с кольцами БЖУ. Здесь остаётся только «короче, но остаётся». */
 @media (prefers-reduced-motion: reduce) {
-  .widget-water--v4.widget-water--adding .widget-water__drop,
-  .widget-water--v4.widget-water--adding .widget-water__ripple {
-    display: none !important;
-    animation: none !important;
-  }
-
   .widget-water--v4 .widget-water__fill {
     transition: height 160ms ease-out !important;
   }
