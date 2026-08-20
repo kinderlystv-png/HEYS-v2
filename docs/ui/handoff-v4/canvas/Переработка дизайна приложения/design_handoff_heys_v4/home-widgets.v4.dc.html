@@ -138,6 +138,27 @@
   .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin-bottom:26px}
   .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
   .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:16px 0 2px}
+
+  .wWater{position:relative;overflow:hidden}
+  .wWater .wFill{position:absolute;left:0;right:0;bottom:0;height:62%;background:color-mix(in oklab, var(--wB,#7d98a6), var(--wD,#4e6d7a) 89%)}
+  .wWater .wFill::before{content:'';position:absolute;top:-3px;left:0;right:0;height:7px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.34) 0 7px,rgba(255,255,255,0) 7px 16px),repeating-linear-gradient(90deg,rgba(255,255,255,.15) 0 3px,rgba(255,255,255,0) 3px 11px);background-size:16px 100%,11px 100%;animation:wWave 3.4s linear infinite}
+  @keyframes wWave{to{background-position:16px 0,22px 0}}
+  .wWater .wNorm{position:absolute;right:9px;top:8px;z-index:2;font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.55)}
+  .wWater.isDeep .wNorm{color:#fffaf1}
+  .wWater .wK{position:absolute;left:9px;bottom:9px;z-index:2;font:600 10px/1 Figtree,sans-serif;color:#fffaf1}
+  .wWater .wV{position:absolute;right:9px;bottom:9px;z-index:2;font:600 17px/1 Figtree,sans-serif;letter-spacing:-.02em;color:#fffaf1}
+  .dk .wWater{--wB:#8fb3c2;--wD:#3f6c7e}
+  .dk .wWater .wNorm{color:rgba(242,237,230,.62)}
+  .dk .wWater.isDeep .wNorm{color:#f2ede6}
+  .dk .wWater .wK,.dk .wWater .wV{color:#f2ede6}
+  .bl .wWater{--wB:#3d7f9e;--wD:#2c5f76}
+  .bl .wWater .wNorm{color:rgba(16,24,38,.55)}
+  .bl .wWater.isDeep .wNorm{color:#ffffff}
+  .bl .wWater .wK,.bl .wWater .wV{color:#ffffff}
+  .bd .wWater{--wB:#7fb6d0;--wD:#35657d}
+  .bd .wWater .wNorm{color:rgba(238,243,248,.62)}
+  .bd .wWater.isDeep .wNorm{color:#eef3f8}
+  .bd .wWater .wK,.bd .wWater .wV{color:#eef3f8}
 </style>
 </helmet>
 
@@ -172,7 +193,7 @@
       <div class="spec"><b>колонка</b><span data-v="(ширина экрана − 56) / 4 — на 375 px ≈ 80 px, на 430 px ≈ 94 px"></span><i>ширина плитки плавает, высота ряда нет: 1×1 не квадрат ни на одном телефоне</i></div>
       <div class="spec"><b>высота по рядам</b><span data-v="1 ряд = 64 · 2 ряда = 136 (64+64+8)"></span><i>зазор между рядами не пропадает при удвоении — не 128</i></div>
       <div class="spec"><b>рамка канваса</b><span data-v="375 px (iPhone SE/mini) — узкий край диапазона"></span><i>держится на узком — на широком только выигрывает воздух; обратное неверно</i></div>
-      <div class="spec"><b>1×1</b><span data-v="подпись, число 21 px прижато к низу, не более одной полосы; графики и второй подписи нет"></span><i>на такой ширине третий элемент нечитаем</i></div>
+      <div class="spec"><b>1×1</b><span data-v="подпись, число 21 px прижато к низу, не более одной полосы; графики и второй подписи нет. Исключение — вода: там заливка вместо полосы и третья строка (норма) в правом верхнем углу"></span><i>на такой ширине третий элемент нечитаем</i></div>
       <div class="spec"><b>2×1</b><span data-v="подпись и число в строку + не более одного компактного контрола, и только если он уже есть в коде"></span></div>
       <div class="spec"><b>2×2</b><span data-v="число ≤ 26 px (кроме «Калорий») + ровно один носитель состояния: полоса, спарклайн или две строки"></span></div>
       <div class="spec" style="border-bottom:none"><b>3×2</b><span data-v="только составные: БЖУ тремя кольцами; одно число не растягиваем"></span><i>кольца — общий компонент с Днём и отчётами, берутся как есть</i></div>
@@ -181,12 +202,12 @@
       <div class="spec"><b>роли плитки</b><span data-v="#efe3cf песок — герой, ровно один на экране · #eaefe0 шалфей — «идёт хорошо» · #f7efe2 бумага — остальное · терракота — действие и «требует внимания»"></span><i>роль, а не тип данных: категорийная палитра --widget-* не прижилась, пять из шести цветов имеют ноль обращений</i></div>
       <div class="spec"><b>значение</b><span data-v="#a8382b — «обрати внимание» · #7a8a5e — «идёт хорошо» · чернила — нейтрально; в тёмных наборах те же роли на шаг светлее"></span><i>красится число, а не фон, полоса или кольцо: одиннадцать окрашенных плиток превращают экран в светофор</i></div>
       <div class="spec"><b>кто красится</b><span data-v="ровно пять плиток: БЖУ, вода, сон, вес, риск-радар"></span><i>терракота у «Калорий» и «Оценки дня» — герой и акцент, она не зависит от числа</i></div>
-      <div class="spec" style="border-bottom:none"><b>вода в плитке</b><span data-v="#7d98a6 — единственный холодный тон в системе, фон плитки общий"></span></div>
+      <div class="spec" style="border-bottom:none"><b>вода в плитке</b><span data-v="единственный холодный тон в системе и единственная плитка, где цвет несёт заливка: уровень заполняет плитку целиком, тон темнеет по доле нормы. Все числа и пороги — контракт water-add.v4.dc.html, этот файл для неё вторичен"></span><i>прежняя формулировка «#7d98a6 в полосе, фон плитки общий» устарела: полосы у воды больше нет</i></div>
 
       <div class="ctrH">Пороги окраски</div>
       <div class="spec"><b>вода</b><span data-v="ожидание = (сейчас − подъём) / плановые часы бодрствования × норма · допуск 15 % · первый час после подъёма не красим · за 2 ч до сна порог не растёт"></span><i>подъём из утреннего чек-ина, при его отсутствии — медиана за две недели</i></div>
       <div class="spec"><b>сон</b><span data-v="не ниже нормы профиля − 30 мин — шалфей · ниже — красный · пересып не красим"></span></div>
-      <div class="spec"><b>вес</b><span data-v="мёртвая зона ±0,2 кг за окно · направление из окна спарклайна (7/14/30 дней), не из разницы с прошлым взвешиванием"></span><i>расчётный вес при скипе взвешивания в тренд не входит</i></div>
+      <div class="spec"><b>вес</b><span data-v="мёртвая зона ±0,2 кг за окно · направление из окна спарклайна (растущее: с 7 дней, затем 2, 3, 4 недели, дальше месяц), не из разницы с прошлым взвешиванием"></span><i>расчётный вес при скипе взвешивания в тренд не входит</i></div>
       <div class="spec"><b>БЖУ</b><span data-v="жиры и углеводы краснеют на переборе, белок — на недоборе; порог общий, в коде один компаратор с флагом направления"></span><i>остаток внутри кольца живёт по тому же правилу; обводка и подложка кольца не красятся никогда</i></div>
       <div class="spec" style="border-bottom:none"><b>кольцо БЖУ</b><span data-v="подписи нутриентов над кольцами, остаток внутри, «факт / норма» под кольцом"></span><i>без второго числа кольцо не читается: 96 может быть и недобором, и перебором</i></div>
 
@@ -202,7 +223,7 @@
 
       <div class="ctrH">Дефолты и капсула даты</div>
       <div class="spec"><b>дефолт вида</b><span data-v="меняется поимённо и задаётся флагом в каталоге, не позицией в списке"></span><i>явный выбор человека сильнее дефолта — уже выбравших не переключаем</i></div>
-      <div class="spec"><b>исключение</b><span data-v="риск-радар открывается видом «Шкала»; порядок карточек в шторке прежний"></span></div>
+      <div class="spec"><b>исключение</b><span data-v="два: риск-радар открывается видом «Шкала» (19 августа), динамика веса — видом «За месяц» с кривой (20 августа); порядок карточек в шторке в обоих случаях прежний"></span></div>
       <div class="spec"><b>капсула · сегодня</b><span data-v="правая стрелка гаснет; сокращение выходного дня красное, число и месяц в чернилах"></span></div>
       <div class="spec"><b>капсула · прошлый день</b><span data-v="терракота, обе стрелки живые, кнопка «Сегодня» внутри капсулы справа"></span><i>плашки «вы смотрите прошлый день» на Главной нет — экран ничего не принимает, ошибиться нечем; на Питании плашка остаётся</i></div>
       <div class="spec"><b>закрытый день</b><span data-v="меняется герой, не набор плиток: «Калории» показывают съедено за день, вода и сон — факт без порогов «к этому часу»"></span><i>состав и порядок плиток принадлежат человеку и от даты не зависят</i></div>
@@ -265,7 +286,7 @@
             </div>
 
             <div class="w"><div class="k">Сон</div><div class="n v bad" style="margin-top:auto;">6,4<span class="u"> ч</span></div></div>
-            <div class="w"><div class="k">Вода</div><div class="n v bad" style="margin-top:auto;">1,7<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:7px;"><div style="width:62%;height:4px;border-radius:999px;background:#7d98a6;"></div></div></div>
+            <div class="w wWater"><span class="wFill"></span><span class="wNorm">из 2,7</span><span class="wK">Вода</span><span class="wV">1,7</span></div>
 
             <div class="w" style="grid-column:span 2;">
               <div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#8a4a20;">6,2<span class="u"> / 10</span></span></div>
@@ -278,11 +299,9 @@
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;">
               <div class="k">Риск-радар</div>
-              <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#5c6a45;">низкий</span></div>
-              <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
-                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Срывы</span><span class="n" style="color:#5c6a45;">нет</span></div>
-                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Недосып</span><span class="n" style="color:#8a4a20;">2 дня</span></div>
-              </div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:9px;"><span class="n" style="font:600 24px/1 Figtree,sans-serif;color:#5c6a45;">низкий</span></div>
+              <div style="display:flex;gap:4px;margin-top:11px;"><span style="flex:1;height:6px;border-radius:999px;background:#5c6a45;"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(0,0,0,.09);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(0,0,0,.09);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(0,0,0,.09);"></span></div>
+              <div style="margin-top:auto;font:600 10px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);text-wrap:pretty;">поднимут: недосып 2 дня, вода ниже нормы</div>
             </div>
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;background:#eaefe0;">
@@ -299,12 +318,10 @@
             </div>
 
             <div class="w" style="grid-column:span 2;">
-              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Динамика веса</span><span class="n" style="font:600 14px/1 Figtree,sans-serif;color:#5c6a45;">−1,8 <span class="u">кг / мес</span></span></div>
-              <div class="n" style="display:flex;gap:10px;margin-top:auto;font:700 9.5px/1 Figtree,sans-serif;">
-                <span style="color:rgba(0,0,0,.35);">7</span>
-                <span style="color:#8a4a20;border-bottom:2px solid #c67139;padding-bottom:2px;">14</span>
-                <span style="color:rgba(0,0,0,.35);">30</span>
-                <span style="color:rgba(0,0,0,.28);font-weight:500;">дней</span>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">За месяц</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">до цели 3,6</span></div>
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;">
+                <span style="display:flex;align-items:baseline;gap:3px;"><span class="v n good">−1,8</span><span class="u">кг</span></span>
+                <span class="good" style="display:flex;flex:none;margin-bottom:2px;"><svg width="58" height="24" viewBox="0 0 58 24" fill="none"><polyline points="2,6 11,9 20,7 29,13 38,12 47,17 56,19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="56" cy="19" r="2.4" fill="currentColor"/></svg></span>
               </div>
             </div>
 
@@ -381,7 +398,7 @@
             </div>
 
             <div class="w"><div class="k">Сон</div><div class="n v good" style="margin-top:auto;">7,4<span class="u"> ч</span></div></div>
-            <div class="w"><div class="k">Вода</div><div class="n v" style="margin-top:auto;">2,4<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:7px;"><div style="width:89%;height:4px;border-radius:999px;background:#7d98a6;"></div></div></div>
+            <div class="w wWater isDeep"><span class="wFill" style="height:89%;background:var(--wD,#4e6d7a);"></span><span class="wNorm">из 2,7</span><span class="wK">Вода</span><span class="wV">2,4</span></div>
 
             <div class="w" style="grid-column:span 2;">
               <div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#8a4a20;">7,1<span class="u"> / 10</span></span></div>
@@ -394,11 +411,9 @@
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;">
               <div class="k">Риск-радар</div>
-              <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#5c6a45;">низкий</span></div>
-              <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
-                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Срывы</span><span class="n" style="color:#5c6a45;">нет</span></div>
-                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Недосып</span><span class="n" style="color:#8a4a20;">2 дня</span></div>
-              </div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:9px;"><span class="n" style="font:600 24px/1 Figtree,sans-serif;color:#9fb37a;">низкий</span></div>
+              <div style="display:flex;gap:4px;margin-top:11px;"><span style="flex:1;height:6px;border-radius:999px;background:#9fb37a;"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(242,237,230,.14);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(242,237,230,.14);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(242,237,230,.14);"></span></div>
+              <div style="margin-top:auto;font:600 10px/1.4 Figtree,sans-serif;color:rgba(242,237,230,.5);text-wrap:pretty;">поднимут: недосып 2 дня, вода ниже нормы</div>
             </div>
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;background:#eaefe0;">
@@ -415,12 +430,10 @@
             </div>
 
             <div class="w" style="grid-column:span 2;">
-              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Динамика веса</span><span class="n" style="font:600 14px/1 Figtree,sans-serif;color:#5c6a45;">−1,8 <span class="u">кг / мес</span></span></div>
-              <div class="n" style="display:flex;gap:10px;margin-top:auto;font:700 9.5px/1 Figtree,sans-serif;">
-                <span style="color:rgba(0,0,0,.35);">7</span>
-                <span style="color:#8a4a20;border-bottom:2px solid #c67139;padding-bottom:2px;">14</span>
-                <span style="color:rgba(0,0,0,.35);">30</span>
-                <span style="color:rgba(0,0,0,.28);font-weight:500;">дней</span>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">За месяц</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(242,237,230,.42);">до цели 3,6</span></div>
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;">
+                <span style="display:flex;align-items:baseline;gap:3px;"><span class="v n good">−1,8</span><span class="u">кг</span></span>
+                <span class="good" style="display:flex;flex:none;margin-bottom:2px;"><svg width="58" height="24" viewBox="0 0 58 24" fill="none"><polyline points="2,6 11,9 20,7 29,13 38,12 47,17 56,19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="56" cy="19" r="2.4" fill="currentColor"/></svg></span>
               </div>
             </div>
 
@@ -554,7 +567,7 @@
             </div>
 
             <div class="w"><div class="k">Сон</div><div class="n v bad" style="margin-top:auto;">6,4<span class="u"> ч</span></div></div>
-            <div class="w"><div class="k">Вода</div><div class="n v bad" style="margin-top:auto;">1,7<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(242,237,230,.12);margin-top:7px;"><div style="width:62%;height:4px;border-radius:999px;background:#8fb2c2;"></div></div></div>
+            <div class="w wWater"><span class="wFill"></span><span class="wNorm">из 2,7</span><span class="wK">Вода</span><span class="wV">1,7</span></div>
 
             <div class="w" style="grid-column:span 2;">
               <div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#e2a468;">6,2<span class="u"> / 10</span></span></div>
@@ -567,11 +580,9 @@
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;">
               <div class="k">Риск-радар</div>
-              <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#9fb981;">низкий</span></div>
-              <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
-                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(242,237,230,.53);"><span>Срывы</span><span class="n" style="color:#9fb981;">нет</span></div>
-                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(242,237,230,.53);"><span>Недосып</span><span class="n" style="color:#e2a468;">2 дня</span></div>
-              </div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:9px;"><span class="n" style="font:600 24px/1 Figtree,sans-serif;color:#1f6e4d;">низкий</span></div>
+              <div style="display:flex;gap:4px;margin-top:11px;"><span style="flex:1;height:6px;border-radius:999px;background:#1f6e4d;"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(16,24,38,.1);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(16,24,38,.1);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(16,24,38,.1);"></span></div>
+              <div style="margin-top:auto;font:600 10px/1.4 Figtree,sans-serif;color:rgba(16,24,38,.45);text-wrap:pretty;">поднимут: недосып 2 дня, вода ниже нормы</div>
             </div>
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;background:#242c20;">
@@ -588,12 +599,10 @@
             </div>
 
             <div class="w" style="grid-column:span 2;">
-              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Динамика веса</span><span class="n" style="font:600 14px/1 Figtree,sans-serif;color:#9fb981;">−1,8 <span class="u">кг / мес</span></span></div>
-              <div class="n" style="display:flex;gap:10px;margin-top:auto;font:700 9.5px/1 Figtree,sans-serif;">
-                <span style="color:rgba(242,237,230,.43);">7</span>
-                <span style="color:#e2a468;border-bottom:2px solid #cf8144;padding-bottom:2px;">14</span>
-                <span style="color:rgba(242,237,230,.43);">30</span>
-                <span style="color:rgba(242,237,230,.36000000000000004);font-weight:500;">дней</span>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">За месяц</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(16,24,38,.38);">до цели 3,6</span></div>
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;">
+                <span style="display:flex;align-items:baseline;gap:3px;"><span class="v n good">−1,8</span><span class="u">кг</span></span>
+                <span class="good" style="display:flex;flex:none;margin-bottom:2px;"><svg width="58" height="24" viewBox="0 0 58 24" fill="none"><polyline points="2,6 11,9 20,7 29,13 38,12 47,17 56,19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="56" cy="19" r="2.4" fill="currentColor"/></svg></span>
               </div>
             </div>
 
@@ -670,7 +679,7 @@
             </div>
 
             <div class="w"><div class="k">Сон</div><div class="n v good" style="margin-top:auto;">7,4<span class="u"> ч</span></div></div>
-            <div class="w"><div class="k">Вода</div><div class="n v" style="margin-top:auto;">2,4<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(242,237,230,.12);margin-top:7px;"><div style="width:89%;height:4px;border-radius:999px;background:#8fb2c2;"></div></div></div>
+            <div class="w wWater isDeep"><span class="wFill" style="height:89%;background:var(--wD,#4e6d7a);"></span><span class="wNorm">из 2,7</span><span class="wK">Вода</span><span class="wV">2,4</span></div>
 
             <div class="w" style="grid-column:span 2;">
               <div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#e2a468;">7,1<span class="u"> / 10</span></span></div>
@@ -683,11 +692,9 @@
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;">
               <div class="k">Риск-радар</div>
-              <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#9fb981;">низкий</span></div>
-              <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
-                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(242,237,230,.53);"><span>Срывы</span><span class="n" style="color:#9fb981;">нет</span></div>
-                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(242,237,230,.53);"><span>Недосып</span><span class="n" style="color:#e2a468;">2 дня</span></div>
-              </div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:9px;"><span class="n" style="font:600 24px/1 Figtree,sans-serif;color:#7fd0a8;">низкий</span></div>
+              <div style="display:flex;gap:4px;margin-top:11px;"><span style="flex:1;height:6px;border-radius:999px;background:#7fd0a8;"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(238,243,248,.14);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(238,243,248,.14);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(238,243,248,.14);"></span></div>
+              <div style="margin-top:auto;font:600 10px/1.4 Figtree,sans-serif;color:rgba(238,243,248,.5);text-wrap:pretty;">поднимут: недосып 2 дня, вода ниже нормы</div>
             </div>
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;background:#242c20;">
@@ -704,12 +711,10 @@
             </div>
 
             <div class="w" style="grid-column:span 2;">
-              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Динамика веса</span><span class="n" style="font:600 14px/1 Figtree,sans-serif;color:#9fb981;">−1,8 <span class="u">кг / мес</span></span></div>
-              <div class="n" style="display:flex;gap:10px;margin-top:auto;font:700 9.5px/1 Figtree,sans-serif;">
-                <span style="color:rgba(242,237,230,.43);">7</span>
-                <span style="color:#e2a468;border-bottom:2px solid #cf8144;padding-bottom:2px;">14</span>
-                <span style="color:rgba(242,237,230,.43);">30</span>
-                <span style="color:rgba(242,237,230,.36000000000000004);font-weight:500;">дней</span>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">За месяц</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(238,243,248,.42);">до цели 3,6</span></div>
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;">
+                <span style="display:flex;align-items:baseline;gap:3px;"><span class="v n good">−1,8</span><span class="u">кг</span></span>
+                <span class="good" style="display:flex;flex:none;margin-bottom:2px;"><svg width="58" height="24" viewBox="0 0 58 24" fill="none"><polyline points="2,6 11,9 20,7 29,13 38,12 47,17 56,19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="56" cy="19" r="2.4" fill="currentColor"/></svg></span>
               </div>
             </div>
 
@@ -843,7 +848,7 @@
             </div>
 
             <div class="w"><div class="k">Сон</div><div class="n v bad" style="margin-top:auto;">6,4<span class="u"> ч</span></div></div>
-            <div class="w"><div class="k">Вода</div><div class="n v bad" style="margin-top:auto;">1,7<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:7px;"><div style="width:62%;height:4px;border-radius:999px;background:#4c8fb8;"></div></div></div>
+            <div class="w wWater"><span class="wFill"></span><span class="wNorm">из 2,7</span><span class="wK">Вода</span><span class="wV">1,7</span></div>
 
             <div class="w" style="grid-column:span 2;">
               <div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#1d5e96;">6,2<span class="u"> / 10</span></span></div>
@@ -856,11 +861,9 @@
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;">
               <div class="k">Риск-радар</div>
-              <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#1f6e4d;">низкий</span></div>
-              <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
-                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Срывы</span><span class="n" style="color:#1f6e4d;">нет</span></div>
-                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Недосып</span><span class="n" style="color:#1d5e96;">2 дня</span></div>
-              </div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:9px;"><span class="n" style="font:600 24px/1 Figtree,sans-serif;color:#7fd0a8;">низкий</span></div>
+              <div style="display:flex;gap:4px;margin-top:11px;"><span style="flex:1;height:6px;border-radius:999px;background:#7fd0a8;"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(238,243,248,.14);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(238,243,248,.14);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(238,243,248,.14);"></span></div>
+              <div style="margin-top:auto;font:600 10px/1.4 Figtree,sans-serif;color:rgba(238,243,248,.5);text-wrap:pretty;">поднимут: недосып 2 дня, вода ниже нормы</div>
             </div>
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;background:#e4efe7;">
@@ -877,12 +880,10 @@
             </div>
 
             <div class="w" style="grid-column:span 2;">
-              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Динамика веса</span><span class="n" style="font:600 14px/1 Figtree,sans-serif;color:#1f6e4d;">−1,8 <span class="u">кг / мес</span></span></div>
-              <div class="n" style="display:flex;gap:10px;margin-top:auto;font:700 9.5px/1 Figtree,sans-serif;">
-                <span style="color:rgba(0,0,0,.35);">7</span>
-                <span style="color:#1d5e96;border-bottom:2px solid #2e7cc0;padding-bottom:2px;">14</span>
-                <span style="color:rgba(0,0,0,.35);">30</span>
-                <span style="color:rgba(0,0,0,.28);font-weight:500;">дней</span>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">За месяц</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(238,243,248,.42);">до цели 3,6</span></div>
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;">
+                <span style="display:flex;align-items:baseline;gap:3px;"><span class="v n good">−1,8</span><span class="u">кг</span></span>
+                <span class="good" style="display:flex;flex:none;margin-bottom:2px;"><svg width="58" height="24" viewBox="0 0 58 24" fill="none"><polyline points="2,6 11,9 20,7 29,13 38,12 47,17 56,19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="56" cy="19" r="2.4" fill="currentColor"/></svg></span>
               </div>
             </div>
 
@@ -959,7 +960,7 @@
             </div>
 
             <div class="w"><div class="k">Сон</div><div class="n v good" style="margin-top:auto;">7,4<span class="u"> ч</span></div></div>
-            <div class="w"><div class="k">Вода</div><div class="n v" style="margin-top:auto;">2,4<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:7px;"><div style="width:89%;height:4px;border-radius:999px;background:#4c8fb8;"></div></div></div>
+            <div class="w wWater isDeep"><span class="wFill" style="height:89%;background:var(--wD,#4e6d7a);"></span><span class="wNorm">из 2,7</span><span class="wK">Вода</span><span class="wV">2,4</span></div>
 
             <div class="w" style="grid-column:span 2;">
               <div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#1d5e96;">7,1<span class="u"> / 10</span></span></div>
@@ -972,11 +973,9 @@
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;">
               <div class="k">Риск-радар</div>
-              <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#1f6e4d;">низкий</span></div>
-              <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
-                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Срывы</span><span class="n" style="color:#1f6e4d;">нет</span></div>
-                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Недосып</span><span class="n" style="color:#1d5e96;">2 дня</span></div>
-              </div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:9px;"><span class="n" style="font:600 24px/1 Figtree,sans-serif;color:#7fd0a8;">низкий</span></div>
+              <div style="display:flex;gap:4px;margin-top:11px;"><span style="flex:1;height:6px;border-radius:999px;background:#7fd0a8;"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(238,243,248,.14);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(238,243,248,.14);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(238,243,248,.14);"></span></div>
+              <div style="margin-top:auto;font:600 10px/1.4 Figtree,sans-serif;color:rgba(238,243,248,.5);text-wrap:pretty;">поднимут: недосып 2 дня, вода ниже нормы</div>
             </div>
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;background:#e4efe7;">
@@ -993,12 +992,10 @@
             </div>
 
             <div class="w" style="grid-column:span 2;">
-              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Динамика веса</span><span class="n" style="font:600 14px/1 Figtree,sans-serif;color:#1f6e4d;">−1,8 <span class="u">кг / мес</span></span></div>
-              <div class="n" style="display:flex;gap:10px;margin-top:auto;font:700 9.5px/1 Figtree,sans-serif;">
-                <span style="color:rgba(0,0,0,.35);">7</span>
-                <span style="color:#1d5e96;border-bottom:2px solid #2e7cc0;padding-bottom:2px;">14</span>
-                <span style="color:rgba(0,0,0,.35);">30</span>
-                <span style="color:rgba(0,0,0,.28);font-weight:500;">дней</span>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">За месяц</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(238,243,248,.42);">до цели 3,6</span></div>
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;">
+                <span style="display:flex;align-items:baseline;gap:3px;"><span class="v n good">−1,8</span><span class="u">кг</span></span>
+                <span class="good" style="display:flex;flex:none;margin-bottom:2px;"><svg width="58" height="24" viewBox="0 0 58 24" fill="none"><polyline points="2,6 11,9 20,7 29,13 38,12 47,17 56,19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="56" cy="19" r="2.4" fill="currentColor"/></svg></span>
               </div>
             </div>
 
@@ -1132,7 +1129,7 @@
             </div>
 
             <div class="w"><div class="k">Сон</div><div class="n v bad" style="margin-top:auto;">6,4<span class="u"> ч</span></div></div>
-            <div class="w"><div class="k">Вода</div><div class="n v bad" style="margin-top:auto;">1,7<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(238,243,248,.12);margin-top:7px;"><div style="width:62%;height:4px;border-radius:999px;background:#6fa8c8;"></div></div></div>
+            <div class="w wWater"><span class="wFill"></span><span class="wNorm">из 2,7</span><span class="wK">Вода</span><span class="wV">1,7</span></div>
 
             <div class="w" style="grid-column:span 2;">
               <div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#8fc1e8;">6,2<span class="u"> / 10</span></span></div>
@@ -1145,11 +1142,9 @@
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;">
               <div class="k">Риск-радар</div>
-              <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#7fd1a0;">низкий</span></div>
-              <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
-                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(238,243,248,.53);"><span>Срывы</span><span class="n" style="color:#7fd1a0;">нет</span></div>
-                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(238,243,248,.53);"><span>Недосып</span><span class="n" style="color:#8fc1e8;">2 дня</span></div>
-              </div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:9px;"><span class="n" style="font:600 24px/1 Figtree,sans-serif;color:#7fd0a8;">низкий</span></div>
+              <div style="display:flex;gap:4px;margin-top:11px;"><span style="flex:1;height:6px;border-radius:999px;background:#7fd0a8;"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(238,243,248,.14);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(238,243,248,.14);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(238,243,248,.14);"></span></div>
+              <div style="margin-top:auto;font:600 10px/1.4 Figtree,sans-serif;color:rgba(238,243,248,.5);text-wrap:pretty;">поднимут: недосып 2 дня, вода ниже нормы</div>
             </div>
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;background:#17302a;">
@@ -1166,12 +1161,10 @@
             </div>
 
             <div class="w" style="grid-column:span 2;">
-              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Динамика веса</span><span class="n" style="font:600 14px/1 Figtree,sans-serif;color:#7fd1a0;">−1,8 <span class="u">кг / мес</span></span></div>
-              <div class="n" style="display:flex;gap:10px;margin-top:auto;font:700 9.5px/1 Figtree,sans-serif;">
-                <span style="color:rgba(238,243,248,.43);">7</span>
-                <span style="color:#8fc1e8;border-bottom:2px solid #2e7cc0;padding-bottom:2px;">14</span>
-                <span style="color:rgba(238,243,248,.43);">30</span>
-                <span style="color:rgba(238,243,248,.36000000000000004);font-weight:500;">дней</span>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">За месяц</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(238,243,248,.42);">до цели 3,6</span></div>
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;">
+                <span style="display:flex;align-items:baseline;gap:3px;"><span class="v n good">−1,8</span><span class="u">кг</span></span>
+                <span class="good" style="display:flex;flex:none;margin-bottom:2px;"><svg width="58" height="24" viewBox="0 0 58 24" fill="none"><polyline points="2,6 11,9 20,7 29,13 38,12 47,17 56,19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="56" cy="19" r="2.4" fill="currentColor"/></svg></span>
               </div>
             </div>
 
@@ -1248,7 +1241,7 @@
             </div>
 
             <div class="w"><div class="k">Сон</div><div class="n v good" style="margin-top:auto;">7,4<span class="u"> ч</span></div></div>
-            <div class="w"><div class="k">Вода</div><div class="n v" style="margin-top:auto;">2,4<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(238,243,248,.12);margin-top:7px;"><div style="width:89%;height:4px;border-radius:999px;background:#6fa8c8;"></div></div></div>
+            <div class="w wWater isDeep"><span class="wFill" style="height:89%;background:var(--wD,#4e6d7a);"></span><span class="wNorm">из 2,7</span><span class="wK">Вода</span><span class="wV">2,4</span></div>
 
             <div class="w" style="grid-column:span 2;">
               <div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#8fc1e8;">7,1<span class="u"> / 10</span></span></div>
@@ -1261,11 +1254,9 @@
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;">
               <div class="k">Риск-радар</div>
-              <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#7fd1a0;">низкий</span></div>
-              <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
-                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(238,243,248,.53);"><span>Срывы</span><span class="n" style="color:#7fd1a0;">нет</span></div>
-                <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(238,243,248,.53);"><span>Недосып</span><span class="n" style="color:#8fc1e8;">2 дня</span></div>
-              </div>
+              <div style="display:flex;align-items:baseline;gap:5px;margin-top:9px;"><span class="n" style="font:600 24px/1 Figtree,sans-serif;color:#7fd0a8;">низкий</span></div>
+              <div style="display:flex;gap:4px;margin-top:11px;"><span style="flex:1;height:6px;border-radius:999px;background:#7fd0a8;"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(238,243,248,.14);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(238,243,248,.14);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(238,243,248,.14);"></span></div>
+              <div style="margin-top:auto;font:600 10px/1.4 Figtree,sans-serif;color:rgba(238,243,248,.5);text-wrap:pretty;">поднимут: недосып 2 дня, вода ниже нормы</div>
             </div>
 
             <div class="w" style="grid-column:span 2;grid-row:span 2;background:#17302a;">
@@ -1282,12 +1273,10 @@
             </div>
 
             <div class="w" style="grid-column:span 2;">
-              <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Динамика веса</span><span class="n" style="font:600 14px/1 Figtree,sans-serif;color:#7fd1a0;">−1,8 <span class="u">кг / мес</span></span></div>
-              <div class="n" style="display:flex;gap:10px;margin-top:auto;font:700 9.5px/1 Figtree,sans-serif;">
-                <span style="color:rgba(238,243,248,.43);">7</span>
-                <span style="color:#8fc1e8;border-bottom:2px solid #2e7cc0;padding-bottom:2px;">14</span>
-                <span style="color:rgba(238,243,248,.43);">30</span>
-                <span style="color:rgba(238,243,248,.36000000000000004);font-weight:500;">дней</span>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">За месяц</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(238,243,248,.42);">до цели 3,6</span></div>
+              <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;">
+                <span style="display:flex;align-items:baseline;gap:3px;"><span class="v n good">−1,8</span><span class="u">кг</span></span>
+                <span class="good" style="display:flex;flex:none;margin-bottom:2px;"><svg width="58" height="24" viewBox="0 0 58 24" fill="none"><polyline points="2,6 11,9 20,7 29,13 38,12 47,17 56,19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="56" cy="19" r="2.4" fill="currentColor"/></svg></span>
               </div>
             </div>
 
@@ -1473,7 +1462,7 @@
       <div class="h">Цвет плитки</div>
       <div style="background:#fffaf1;border-radius:24px;padding:20px;">
         <div class="nt"><b>Роль, а не тип данных</b><span>Песок #efe3cf — герой экрана, ровно один. Шалфей #eaefe0 — «идёт хорошо». Бумага #f7efe2 — всё остальное. Терракота — только действие и «требует внимания».</span></div>
-        <div class="nt"><b>Одно исключение: вода</b><span>#7d98a6 в полосе заполнения, фон плитки общий. Единственный холодный тон в системе; второй такой означает возврат к палитре по типу данных.</span></div>
+        <div class="nt"><b>Одно исключение: вода</b><span>Единственная плитка, где цвет — заливка, а не значение: уровень заполняет плитку целиком, тон темнеет по доле нормы. Подпись и факт стоят у нижнего края, норма мелким в правом верхнем углу; каждая строка становится кремовой, когда поверхность прошла её верх. Все числа, пороги и тона — в контракте <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;">water-add.v4.dc.html</span>: этот файл для плитки воды вторичен, при расхождении верен он.</span></div>
         <div class="ntl"><b>Категорийная палитра не оживает</b><span>Пять из шести цветов <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;">--widget-*</span> имеют ноль обращений — это подтверждает, что раскраска по типу данных не прижилась. 148 захардкоженных значений сводим к четырём ролям выше, а не к шести категориям.</span></div>
       </div>
 
@@ -1519,49 +1508,49 @@
         <div class="pl" style="margin-top:0;">Песочная</div>
         <div style="background:#fffaf1;border-radius:18px;">
         <div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;">
-          <div class="w" style="grid-column:span 2;" data-screen-label="Динамика · как сейчас"><span class="num">1</span>
+          <div class="w" data-demo="stop" style="grid-column:span 2;" data-screen-label="Динамика · как сейчас"><span class="num">1</span>
             <div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Динамика веса</span><span class="n good" style="font:600 12px/1 Figtree,sans-serif;">−1,8 <span class="u">кг / мес</span></span></div>
             <div class="n" style="display:flex;gap:10px;margin-top:auto;font:700 9.5px/1 Figtree,sans-serif;">
               <span style="color:rgba(0,0,0,.35);">7</span><span style="color:#8a4a20;border-bottom:2px solid #c67139;padding-bottom:2px;">14</span><span style="color:rgba(0,0,0,.35);">30</span><span style="color:rgba(0,0,0,.28);font-weight:500;">дней</span>
             </div>
           </div>
-          <div class="w" style="grid-column:span 2;" data-screen-label="Динамика · G сброшено и кривая"><span class="num">2</span>
+          <div class="w" data-demo="stop" style="grid-column:span 2;" data-screen-label="Динамика · G сброшено и кривая"><span class="num">2</span>
             <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">За месяц</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">до цели 3,6</span></div>
             <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;">
               <span style="display:flex;align-items:baseline;gap:3px;"><span class="v n good">−1,8</span><span class="u">кг</span></span>
               <span class="good" style="display:flex;flex:none;margin-bottom:2px;"><svg width="58" height="24" viewBox="0 0 58 24" fill="none"><polyline points="2,6 11,9 20,7 29,13 38,12 47,17 56,19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="56" cy="19" r="2.4" fill="currentColor"/></svg></span>
             </div>
           </div>
-          <div class="w" style="grid-column:span 2;" data-screen-label="Динамика · H сброшено и остаток"><span class="num">3</span>
+          <div class="w" data-demo="stop" style="grid-column:span 2;" data-screen-label="Динамика · H сброшено и остаток"><span class="num">3</span>
             <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">За месяц</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">осталось 3,6</span></div>
             <div style="display:flex;align-items:baseline;gap:3px;margin-top:auto;"><span class="v n good">−1,8</span><span class="u">кг</span></div>
             <span style="display:block;height:5px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:7px;"><span style="display:block;width:62%;height:5px;border-radius:999px;background:#7a8a5e;"></span></span>
           </div>
-          <div class="w" style="grid-column:span 2;" data-screen-label="Динамика · B изменение"><span class="num">4</span>
+          <div class="w" data-demo="stop" style="grid-column:span 2;" data-screen-label="Динамика · B изменение"><span class="num">4</span>
             <div class="k">Сброшено за месяц</div>
             <div style="display:flex;align-items:baseline;gap:5px;margin-top:auto;">
               <span class="v n good">−1,8</span><span class="u">кг</span>
               <span class="good" style="margin-left:auto;display:flex;margin-bottom:3px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></span>
             </div>
           </div>
-          <div class="w" style="grid-column:span 2;" data-screen-label="Динамика · C столбики"><span class="num">5</span>
+          <div class="w" data-demo="stop" style="grid-column:span 2;" data-screen-label="Динамика · C столбики"><span class="num">5</span>
             <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Вес по неделям</span><span class="n good" style="font:700 10px/1 Figtree,sans-serif;">−1,8</span></div>
             <div style="display:flex;align-items:flex-end;gap:4px;height:24px;margin-top:auto;">
               <span style="flex:1;height:24px;border-radius:2px;background:rgba(0,0,0,.13);"></span><span style="flex:1;height:19px;border-radius:2px;background:rgba(0,0,0,.13);"></span><span style="flex:1;height:20px;border-radius:2px;background:rgba(0,0,0,.13);"></span><span style="flex:1;height:13px;border-radius:2px;background:#7a8a5e;"></span>
             </div>
           </div>
-          <div class="w" style="grid-column:span 2;" data-screen-label="Динамика · D до цели"><span class="num">6</span>
+          <div class="w" data-demo="stop" style="grid-column:span 2;" data-screen-label="Динамика · D до цели"><span class="num">6</span>
             <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">До цели</span><span class="n good" style="font:700 10px/1 Figtree,sans-serif;">−1,8 / мес</span></div>
             <div style="margin-top:auto;">
               <div style="display:flex;align-items:baseline;gap:4px;"><span class="v n">3,6</span><span class="u">кг</span></div>
               <span style="display:block;height:5px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:7px;"><span style="display:block;width:62%;height:5px;border-radius:999px;background:#7a8a5e;"></span></span>
             </div>
           </div>
-          <div class="w" style="grid-column:span 1;" data-screen-label="Динамика · F компакт"><span class="num">7</span>
+          <div class="w" data-demo="stop" style="grid-column:span 1;" data-screen-label="Динамика · F компакт"><span class="num">7</span>
             <div class="k">Мес</div>
             <div style="display:flex;align-items:baseline;gap:2px;margin-top:auto;"><span class="n good" style="font:600 17px/1 Figtree,sans-serif;letter-spacing:-.02em;">−1,8</span><span class="u" style="font-size:9px;">кг</span></div>
           </div>
-          <div class="w" style="grid-column:span 2;grid-row:span 2;" data-screen-label="Динамика · E график 2×2"><span class="num">8</span>
+          <div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 2;" data-screen-label="Динамика · E график 2×2"><span class="num">8</span>
             <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Динамика · 30 дней</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">до цели 3,6</span></div>
             <div style="display:flex;align-items:baseline;gap:4px;margin-top:8px;"><span class="v n good">−1,8</span><span class="u">кг</span></div>
             <span class="good" style="display:flex;margin-top:auto;"><svg width="100%" height="54" viewBox="0 0 121 54" preserveAspectRatio="none" fill="none"><path d="M2 9 L22 15 L42 12 L62 24 L82 22 L102 34 L119 38 V54 H2 Z" fill="currentColor" opacity=".12"/><polyline points="2,9 22,15 42,12 62,24 82,22 102,34 119,38" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg></span>
@@ -2172,14 +2161,14 @@
       <div style="display:flex;align-items:baseline;gap:9px;"><span style="font:700 13.5px/1.2 Figtree,sans-serif;color:#201e1d;">Калории</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.42);">сейчас — 2×2, единственный размер</span><span style="margin-left:auto;font:600 10px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.32);">3 замены</span></div>
       <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin:6px 0 0;max-width:900px;text-wrap:pretty;">Герой экрана отвечает на «сколько ещё можно». Замены отвечают на другое: влезет ли то же в 2×1, хватит ли остатка на привычный ужин и откуда остаток взялся, если днём была тренировка.</div>
       <div class="pl">Песочная</div>
-      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" style="grid-column:span 2;grid-row:span 2;background:#efe3cf;padding:14px;" data-screen-label="Калории · Как сейчас"><span class="num">1</span><div style="display:flex;align-items:baseline;gap:5px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.035em;">642</span><span class="u">ккал</span></div>
+      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 2;background:#efe3cf;padding:14px;" data-screen-label="Калории · Как сейчас"><span class="num">1</span><div style="display:flex;align-items:baseline;gap:5px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.035em;">642</span><span class="u">ккал</span></div>
 <div style="font:500 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:7px;">осталось</div>
-<div style="margin-top:auto;"><div style="height:6px;border-radius:999px;background:rgba(0,0,0,.1);"><div style="width:67%;height:6px;border-radius:999px;background:#c67139;"></div></div><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:8px;"><span style="display:flex;flex-direction:column;gap:2px;"><span class="n" style="font:700 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.85);">1 289</span><span style="font:500 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">съедено</span></span><span style="display:flex;flex-direction:column;gap:2px;align-items:flex-end;"><span class="n" style="font:700 11px/1 Figtree,sans-serif;color:#5c6a45;">1 931</span><span style="font:500 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">норма</span></span></div></div></div><div class="w" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Калории · Строка"><span class="num">2</span><div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px;white-space:nowrap;"><span style="display:flex;align-items:baseline;gap:4px;"><span class="n" style="font:600 19px/1 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.03em;">642</span><span class="u">ккал</span></span><span style="font:500 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">осталось</span></div>
-<div style="display:flex;align-items:center;gap:7px;margin-top:auto;"><span style="flex:1;height:5px;border-radius:999px;background:rgba(0,0,0,.1);"><span style="display:block;width:67%;height:5px;border-radius:999px;background:#c67139;"></span></span><span class="n" style="flex:none;font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">1 289 / 1 931</span></div></div><div class="w" style="grid-column:span 2;grid-row:span 2;" data-screen-label="Калории · Хватит на ужин"><span class="num">3</span><div style="display:flex;align-items:baseline;gap:5px;white-space:nowrap;"><span class="n" style="font:600 26px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.035em;">642</span><span class="u">ккал осталось</span></div>
+<div style="margin-top:auto;"><div style="height:6px;border-radius:999px;background:rgba(0,0,0,.1);"><div style="width:67%;height:6px;border-radius:999px;background:#c67139;"></div></div><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:8px;"><span style="display:flex;flex-direction:column;gap:2px;"><span class="n" style="font:700 11px/1 Figtree,sans-serif;color:rgba(0,0,0,.85);">1 289</span><span style="font:500 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">съедено</span></span><span style="display:flex;flex-direction:column;gap:2px;align-items:flex-end;"><span class="n" style="font:700 11px/1 Figtree,sans-serif;color:#5c6a45;">1 931</span><span style="font:500 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">норма</span></span></div></div></div><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Калории · Строка"><span class="num">2</span><div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px;white-space:nowrap;"><span style="display:flex;align-items:baseline;gap:4px;"><span class="n" style="font:600 19px/1 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.03em;">642</span><span class="u">ккал</span></span><span style="font:500 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">осталось</span></div>
+<div style="display:flex;align-items:center;gap:7px;margin-top:auto;"><span style="flex:1;height:5px;border-radius:999px;background:rgba(0,0,0,.1);"><span style="display:block;width:67%;height:5px;border-radius:999px;background:#c67139;"></span></span><span class="n" style="flex:none;font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">1 289 / 1 931</span></div></div><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 2;" data-screen-label="Калории · Хватит на ужин"><span class="num">3</span><div style="display:flex;align-items:baseline;gap:5px;white-space:nowrap;"><span class="n" style="font:600 26px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.035em;">642</span><span class="u">ккал осталось</span></div>
 <div style="margin-top:auto;">
 <div style="display:flex;justify-content:space-between;align-items:baseline;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>обычный ужин</span><span class="n" style="color:#201e1d;">720</span></div>
 <div style="position:relative;height:6px;border-radius:999px;background:rgba(0,0,0,.1);margin-top:7px;overflow:hidden;"><span style="position:absolute;left:0;top:0;bottom:0;width:89%;border-radius:999px;background:#c67139;"></span><span style="position:absolute;left:89%;right:0;top:0;bottom:0;background:#a8382b;"></span></div>
-<div class="n" style="font:600 10px/1 Figtree,sans-serif;color:#a8382b;margin-top:7px;">не хватит 78 ккал</div></div></div><div class="w" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Калории · С активностью"><span class="num">4</span><div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px;white-space:nowrap;"><span style="display:flex;align-items:baseline;gap:4px;"><span class="n" style="font:600 19px/1 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.03em;">852</span><span class="u">ккал</span></span><span class="n good" style="font:700 9px/1 Figtree,sans-serif;">+210 актив</span></div>
+<div class="n" style="font:600 10px/1 Figtree,sans-serif;color:#a8382b;margin-top:7px;">не хватит 78 ккал</div></div></div><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Калории · С активностью"><span class="num">4</span><div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px;white-space:nowrap;"><span style="display:flex;align-items:baseline;gap:4px;"><span class="n" style="font:600 19px/1 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.03em;">852</span><span class="u">ккал</span></span><span class="n good" style="font:700 9px/1 Figtree,sans-serif;">+210 актив</span></div>
 <div class="n" style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:auto;">съедено 1 289 из 2 141</div></div></div></div>
       <div class="pl">Тёмная</div>
       <div class="dk" style="background:#141210;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" style="grid-column:span 2;grid-row:span 2;background:#2f2820;padding:14px;"><span class="num">1</span><div style="display:flex;align-items:baseline;gap:5px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#e2a468;letter-spacing:-.035em;">642</span><span class="u">ккал</span></div>
@@ -2217,7 +2206,7 @@
       <div style="display:flex;align-items:baseline;gap:9px;"><span style="font:700 13.5px/1.2 Figtree,sans-serif;color:#201e1d;">Кольца БЖУ</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.42);">сейчас — 3×2, три кольца</span><span style="margin-left:auto;font:600 10px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.32);">3 замены</span></div>
       <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin:6px 0 0;max-width:900px;text-wrap:pretty;">Три кольца занимают полторы строки сетки ради трёх чисел. Замены: то же самое в 2×1 полосами, крупно только то, что выбилось из нормы, и одна макро-плитка для тех, кто следит за белком.</div>
       <div class="pl">Песочная</div>
-      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" style="grid-column:span 3;position:relative;grid-row:span 2;" data-screen-label="Кольца БЖУ · Как сейчас"><span class="num">5</span><div style="display:flex;gap:6px;margin-top:auto;margin-bottom:auto;">
+      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" data-demo="stop" style="grid-column:span 3;position:relative;grid-row:span 2;" data-screen-label="Кольца БЖУ · Как сейчас"><span class="num">5</span><div style="display:flex;gap:6px;margin-top:auto;margin-bottom:auto;">
 <div style="flex:1;text-align:center;">
 <div class="k" style="margin-bottom:5px;">Белки</div>
 <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#7a8a5e" stroke-width="5" stroke-linecap="round" stroke-dasharray="72 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#a8382b;font-variant-numeric:tabular-nums;">54</text></svg>
@@ -2229,12 +2218,12 @@
 <div style="flex:1;text-align:center;">
 <div class="k" style="margin-bottom:5px;">Углеводы</div>
 <svg width="46" height="46" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(0,0,0,.09)" stroke-width="5"/><circle cx="22" cy="22" r="18" fill="none" stroke="#7a8a5e" stroke-width="5" stroke-linecap="round" stroke-dasharray="113 113" transform="rotate(-90 22 22)"/><text x="22" y="26" text-anchor="middle" style="font:600 12px Figtree,sans-serif;fill:#a8382b;font-variant-numeric:tabular-nums;">−18</text></svg>
-<div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#a8382b;">198<span style="font-weight:600;color:rgba(0,0,0,.42);"> / 180</span></div></div></div></div><div class="w" style="grid-column:span 2;position:relative;grid-row:span 1;" data-screen-label="Кольца БЖУ · Три полосы"><span class="num">6</span><div style="display:flex;flex-direction:column;gap:4px;margin-top:auto;">
-<div style="display:flex;align-items:center;gap:7px;"><span class="k" style="width:8px;flex:none;font-size:9px;line-height:1;">Б</span><span style="flex:1;height:5px;border-radius:999px;background:rgba(0,0,0,.09);"><span style="display:block;width:64%;height:5px;border-radius:999px;background:#a8382b;"></span></span><span class="n" style="font:700 9px/1 Figtree,sans-serif;color:#a8382b;width:46px;text-align:right;">96 / 150</span></div><div style="display:flex;align-items:center;gap:7px;"><span class="k" style="width:8px;flex:none;font-size:9px;line-height:1;">Ж</span><span style="flex:1;height:5px;border-radius:999px;background:rgba(0,0,0,.09);"><span style="display:block;width:77%;height:5px;border-radius:999px;background:#7a8a5e;"></span></span><span class="n" style="font:700 9px/1 Figtree,sans-serif;color:#201e1d;width:46px;text-align:right;">48 / 62</span></div><div style="display:flex;align-items:center;gap:7px;"><span class="k" style="width:8px;flex:none;font-size:9px;line-height:1;">У</span><span style="position:relative;flex:1;height:5px;border-radius:999px;background:rgba(0,0,0,.09);"><span style="display:block;width:100%;height:5px;border-radius:999px;background:#a8382b;"></span><span style="position:absolute;left:91%;top:-2px;width:2px;height:9px;border-radius:2px;background:#201e1d;"></span></span><span class="n" style="font:700 9px/1 Figtree,sans-serif;color:#a8382b;width:46px;text-align:right;">198 / 180</span></div></div></div><div class="w" style="grid-column:span 2;grid-row:span 2;" data-screen-label="Кольца БЖУ · Что выбивается"><span class="num">7</span><div class="k">БЖУ · что выбивается</div>
+<div class="n" style="margin-top:5px;font:700 13px/1 Figtree,sans-serif;color:#a8382b;">198<span style="font-weight:600;color:rgba(0,0,0,.42);"> / 180</span></div></div></div></div><div class="w" data-demo="stop" style="grid-column:span 2;position:relative;grid-row:span 1;" data-screen-label="Кольца БЖУ · Три полосы"><span class="num">6</span><div style="display:flex;flex-direction:column;gap:4px;margin-top:auto;">
+<div style="display:flex;align-items:center;gap:7px;"><span class="k" style="width:8px;flex:none;font-size:9px;line-height:1;">Б</span><span style="flex:1;height:5px;border-radius:999px;background:rgba(0,0,0,.09);"><span style="display:block;width:64%;height:5px;border-radius:999px;background:#a8382b;"></span></span><span class="n" style="font:700 9px/1 Figtree,sans-serif;color:#a8382b;width:46px;text-align:right;">96 / 150</span></div><div style="display:flex;align-items:center;gap:7px;"><span class="k" style="width:8px;flex:none;font-size:9px;line-height:1;">Ж</span><span style="flex:1;height:5px;border-radius:999px;background:rgba(0,0,0,.09);"><span style="display:block;width:77%;height:5px;border-radius:999px;background:#7a8a5e;"></span></span><span class="n" style="font:700 9px/1 Figtree,sans-serif;color:#201e1d;width:46px;text-align:right;">48 / 62</span></div><div style="display:flex;align-items:center;gap:7px;"><span class="k" style="width:8px;flex:none;font-size:9px;line-height:1;">У</span><span style="position:relative;flex:1;height:5px;border-radius:999px;background:rgba(0,0,0,.09);"><span style="display:block;width:100%;height:5px;border-radius:999px;background:#a8382b;"></span><span style="position:absolute;left:91%;top:-2px;width:2px;height:9px;border-radius:2px;background:#201e1d;"></span></span><span class="n" style="font:700 9px/1 Figtree,sans-serif;color:#a8382b;width:46px;text-align:right;">198 / 180</span></div></div></div><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 2;" data-screen-label="Кольца БЖУ · Что выбивается"><span class="num">7</span><div class="k">БЖУ · что выбивается</div>
 <div style="display:flex;align-items:baseline;gap:5px;margin-top:9px;"><span class="n bad" style="font:600 26px/1 Figtree,sans-serif;letter-spacing:-.03em;">−54</span><span class="u">белки, г</span></div>
 <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
 <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Углеводы</span><span class="n bad">+18</span></div>
-<div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Жиры</span><span class="n" style="color:#201e1d;">−14</span></div></div></div><div class="w" style="grid-column:span 1;grid-row:span 1;" data-screen-label="Кольца БЖУ · Только белок"><span class="num">8</span><div class="k">Белки</div>
+<div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Жиры</span><span class="n" style="color:#201e1d;">−14</span></div></div></div><div class="w" data-demo="stop" style="grid-column:span 1;grid-row:span 1;" data-screen-label="Кольца БЖУ · Только белок"><span class="num">8</span><div class="k">Белки</div>
 <div style="display:flex;align-items:baseline;gap:2px;margin-top:auto;"><span class="n bad" style="font:600 17px/1 Figtree,sans-serif;letter-spacing:-.02em;">96</span><span class="u" style="font-size:9px;">/150</span></div>
 <span style="display:block;height:4px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:6px;"><span style="display:block;width:64%;height:4px;border-radius:999px;background:#a8382b;"></span></span></div></div></div>
       <div class="pl">Тёмная</div>
@@ -2306,9 +2295,9 @@
       <div style="display:flex;align-items:baseline;gap:9px;"><span style="font:700 13.5px/1.2 Figtree,sans-serif;color:#201e1d;">Вода</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.42);">сейчас — 1×1, литры и полоса</span><span style="margin-left:auto;font:600 10px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.32);">2 замены</span></div>
       <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin:6px 0 0;max-width:900px;text-wrap:pretty;">Литры за день не говорят, опаздываете вы или нет: 1,7 л в 11 утра и в 9 вечера — разные новости. Обе замены считают от подъёма, как уже описано в правилах цвета.</div>
       <div class="pl">Песочная</div>
-      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" style="grid-column:span 1;grid-row:span 1;" data-screen-label="Вода · Как сейчас"><span class="num">9</span><div class="k">Вода</div><div class="n v bad" style="margin-top:auto;">1,7<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:7px;"><div style="width:62%;height:4px;border-radius:999px;background:#7d98a6;"></div></div></div><div class="w" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Вода · К этому часу"><span class="num">10</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Вода</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">к 18:00</span></div>
+      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" data-demo="stop" style="grid-column:span 1;grid-row:span 1;" data-screen-label="Вода · Как сейчас"><span class="num">9</span><div class="k">Вода</div><div class="n v bad" style="margin-top:auto;">1,7<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:7px;"><div style="width:62%;height:4px;border-radius:999px;background:#7d98a6;"></div></div></div><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Вода · К этому часу"><span class="num">10</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Вода</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">к 18:00</span></div>
 <div style="display:flex;align-items:baseline;gap:4px;margin-top:auto;"><span class="v n bad">−300</span><span class="u">мл к графику</span></div>
-<div style="position:relative;height:5px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:6px;"><span style="display:block;width:62%;height:5px;border-radius:999px;background:#7d98a6;"></span><span style="position:absolute;left:74%;top:-2px;width:2px;height:9px;border-radius:2px;background:#201e1d;"></span></div></div><div class="w" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Вода · Ритм дня"><span class="num">11</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Вода · 1,7 / 2,7 л</span><span class="n bad" style="font:700 9.5px/1 Figtree,sans-serif;">3 ч без воды</span></div>
+<div style="position:relative;height:5px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:6px;"><span style="display:block;width:62%;height:5px;border-radius:999px;background:#7d98a6;"></span><span style="position:absolute;left:74%;top:-2px;width:2px;height:9px;border-radius:2px;background:#201e1d;"></span></div></div><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Вода · Ритм дня"><span class="num">11</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Вода · 1,7 / 2,7 л</span><span class="n bad" style="font:700 9.5px/1 Figtree,sans-serif;">3 ч без воды</span></div>
 <div style="display:flex;align-items:flex-end;gap:4px;height:24px;margin-top:auto;"><span style="flex:1;height:11px;border-radius:2px;background:#7d98a6;"></span><span style="flex:1;height:18px;border-radius:2px;background:#7d98a6;"></span><span style="flex:1;height:8px;border-radius:2px;background:#7d98a6;"></span><span style="flex:1;height:22px;border-radius:2px;background:#7d98a6;"></span><span style="flex:1;height:14px;border-radius:2px;background:#7d98a6;"></span><span style="flex:1;height:3px;border-radius:2px;background:rgba(0,0,0,.1);"></span><span style="flex:1;height:3px;border-radius:2px;background:rgba(0,0,0,.1);"></span></div></div></div></div>
       <div class="pl">Тёмная</div>
       <div class="dk" style="background:#141210;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" style="grid-column:span 1;grid-row:span 1;"><span class="num">9</span><div class="k">Вода</div><div class="n v bad" style="margin-top:auto;">1,7<span class="u"> л</span></div><div style="height:4px;border-radius:999px;background:rgba(242,237,230,.08);margin-top:7px;"><div style="width:62%;height:4px;border-radius:999px;background:#8fb3c2;"></div></div></div><div class="w" style="grid-column:span 2;grid-row:span 1;"><span class="num">10</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Вода</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(242,237,230,.38);">к 18:00</span></div>
@@ -2331,10 +2320,10 @@
       <div style="display:flex;align-items:baseline;gap:9px;"><span style="font:700 13.5px/1.2 Figtree,sans-serif;color:#201e1d;">Сон</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.42);">сейчас — 1×1, часы</span><span style="margin-left:auto;font:600 10px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.32);">3 замены</span></div>
       <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin:6px 0 0;max-width:900px;text-wrap:pretty;">Часы за одну ночь — самая шумная цифра в наборе. Долг копится и объясняет разбитое утро, окно показывает сдвиг отбоя, отклонение к норме отвечает одним знаком.</div>
       <div class="pl">Песочная</div>
-      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" style="grid-column:span 1;grid-row:span 1;" data-screen-label="Сон · Как сейчас"><span class="num">12</span><div class="k">Сон</div><div class="n v bad" style="margin-top:auto;">6,4<span class="u"> ч</span></div></div><div class="w" style="grid-column:span 1;grid-row:span 1;" data-screen-label="Сон · К норме"><span class="num">13</span><div class="k">Сон · к норме</div><div style="display:flex;align-items:baseline;gap:2px;margin-top:auto;"><span class="n bad" style="font:600 17px/1 Figtree,sans-serif;letter-spacing:-.02em;">−1,1</span><span class="u" style="font-size:9px;">ч</span></div></div><div class="w" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Сон · Долг за неделю"><span class="num">14</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Недосып за 7 дней</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">норма 7,5</span></div>
+      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" data-demo="stop" style="grid-column:span 1;grid-row:span 1;" data-screen-label="Сон · Как сейчас"><span class="num">12</span><div class="k">Сон</div><div class="n v bad" style="margin-top:auto;">6,4<span class="u"> ч</span></div></div><div class="w" data-demo="stop" style="grid-column:span 1;grid-row:span 1;" data-screen-label="Сон · К норме"><span class="num">13</span><div class="k">Сон · к норме</div><div style="display:flex;align-items:baseline;gap:2px;margin-top:auto;"><span class="n bad" style="font:600 17px/1 Figtree,sans-serif;letter-spacing:-.02em;">−1,1</span><span class="u" style="font-size:9px;">ч</span></div></div><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Сон · Долг за неделю"><span class="num">14</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Недосып за 7 дней</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">норма 7,5</span></div>
 <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:9px;margin-top:auto;">
 <span style="display:flex;align-items:baseline;gap:3px;"><span class="v n bad">−3,2</span><span class="u">ч</span></span>
-<span style="display:flex;align-items:flex-end;gap:3px;height:22px;flex:none;width:62px;"><span style="flex:1;height:8px;border-radius:2px;background:#a8382b;"></span><span style="flex:1;height:14px;border-radius:2px;background:#7a8a5e;"></span><span style="flex:1;height:5px;border-radius:2px;background:#a8382b;"></span><span style="flex:1;height:6px;border-radius:2px;background:#a8382b;"></span><span style="flex:1;height:18px;border-radius:2px;background:#7a8a5e;"></span><span style="flex:1;height:4px;border-radius:2px;background:#a8382b;"></span><span style="flex:1;height:11px;border-radius:2px;background:#a8382b;"></span></span></div></div><div class="w" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Сон · Окно сна"><span class="num">15</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Сон · окно</span><span class="n bad" style="font:700 10px/1 Figtree,sans-serif;">6,4 ч</span></div>
+<span style="display:flex;align-items:flex-end;gap:3px;height:22px;flex:none;width:62px;"><span style="flex:1;height:8px;border-radius:2px;background:#a8382b;"></span><span style="flex:1;height:14px;border-radius:2px;background:#7a8a5e;"></span><span style="flex:1;height:5px;border-radius:2px;background:#a8382b;"></span><span style="flex:1;height:6px;border-radius:2px;background:#a8382b;"></span><span style="flex:1;height:18px;border-radius:2px;background:#7a8a5e;"></span><span style="flex:1;height:4px;border-radius:2px;background:#a8382b;"></span><span style="flex:1;height:11px;border-radius:2px;background:#a8382b;"></span></span></div></div><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Сон · Окно сна"><span class="num">15</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Сон · окно</span><span class="n bad" style="font:700 10px/1 Figtree,sans-serif;">6,4 ч</span></div>
 <div style="margin-top:auto;">
 <div style="position:relative;height:7px;border-radius:999px;background:rgba(0,0,0,.07);">
 <span style="position:absolute;left:15%;width:68%;top:0;bottom:0;border-radius:999px;background:rgba(0,0,0,.13);"></span>
@@ -2376,8 +2365,8 @@
       <div style="display:flex;align-items:baseline;gap:9px;"><span style="font:700 13.5px/1.2 Figtree,sans-serif;color:#201e1d;">Оценка дня</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.42);">сейчас — 2×1, число из десяти</span><span style="margin-left:auto;font:600 10px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.32);">2 замены</span></div>
       <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin:6px 0 0;max-width:900px;text-wrap:pretty;">6,2 из 10 не говорит, что чинить и лучше ли, чем вчера. Одна замена раскладывает оценку на пять слагаемых, вторая ставит её в ряд последних семи дней.</div>
       <div class="pl">Песочная</div>
-      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Оценка дня · Как сейчас"><span class="num">16</span><div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#8a4a20;">6,2<span class="u"> / 10</span></span></div></div><div class="w" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Оценка дня · Из чего сложилась"><span class="num">17</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Оценка дня</span><span class="n" style="font:600 16px/1 Figtree,sans-serif;color:#8a4a20;">6,2<span class="u"> / 10</span></span></div>
-<div style="display:flex;gap:5px;margin-top:auto;"><span style="flex:1;text-align:center;"><span style="display:block;height:5px;border-radius:999px;background:#7a8a5e;"></span><span style="display:block;font:600 8px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:5px;">еда</span></span><span style="flex:1;text-align:center;"><span style="display:block;height:5px;border-radius:999px;background:#d99a63;"></span><span style="display:block;font:600 8px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:5px;">вода</span></span><span style="flex:1;text-align:center;"><span style="display:block;height:5px;border-radius:999px;background:#a8382b;"></span><span style="display:block;font:600 8px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:5px;">сон</span></span><span style="flex:1;text-align:center;"><span style="display:block;height:5px;border-radius:999px;background:#7a8a5e;"></span><span style="display:block;font:600 8px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:5px;">актив</span></span><span style="flex:1;text-align:center;"><span style="display:block;height:5px;border-radius:999px;background:#7a8a5e;"></span><span style="display:block;font:600 8px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:5px;">срывы</span></span></div></div><div class="w" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Оценка дня · Семь дней"><span class="num">18</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Оценка · 7 дней</span><span class="n" style="font:600 16px/1 Figtree,sans-serif;color:#8a4a20;">6,2</span></div>
+      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Оценка дня · Как сейчас"><span class="num">16</span><div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#8a4a20;">6,2<span class="u"> / 10</span></span></div></div><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Оценка дня · Из чего сложилась"><span class="num">17</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Оценка дня</span><span class="n" style="font:600 16px/1 Figtree,sans-serif;color:#8a4a20;">6,2<span class="u"> / 10</span></span></div>
+<div style="display:flex;gap:5px;margin-top:auto;"><span style="flex:1;text-align:center;"><span style="display:block;height:5px;border-radius:999px;background:#7a8a5e;"></span><span style="display:block;font:600 8px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:5px;">еда</span></span><span style="flex:1;text-align:center;"><span style="display:block;height:5px;border-radius:999px;background:#d99a63;"></span><span style="display:block;font:600 8px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:5px;">вода</span></span><span style="flex:1;text-align:center;"><span style="display:block;height:5px;border-radius:999px;background:#a8382b;"></span><span style="display:block;font:600 8px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:5px;">сон</span></span><span style="flex:1;text-align:center;"><span style="display:block;height:5px;border-radius:999px;background:#7a8a5e;"></span><span style="display:block;font:600 8px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:5px;">актив</span></span><span style="flex:1;text-align:center;"><span style="display:block;height:5px;border-radius:999px;background:#7a8a5e;"></span><span style="display:block;font:600 8px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);margin-top:5px;">срывы</span></span></div></div><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Оценка дня · Семь дней"><span class="num">18</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Оценка · 7 дней</span><span class="n" style="font:600 16px/1 Figtree,sans-serif;color:#8a4a20;">6,2</span></div>
 <div style="display:flex;align-items:flex-end;gap:4px;height:22px;margin-top:auto;"><span style="flex:1;height:13px;border-radius:2px;background:rgba(0,0,0,.13);"></span><span style="flex:1;height:17px;border-radius:2px;background:rgba(0,0,0,.13);"></span><span style="flex:1;height:9px;border-radius:2px;background:rgba(0,0,0,.13);"></span><span style="flex:1;height:20px;border-radius:2px;background:rgba(0,0,0,.13);"></span><span style="flex:1;height:15px;border-radius:2px;background:rgba(0,0,0,.13);"></span><span style="flex:1;height:18px;border-radius:2px;background:rgba(0,0,0,.13);"></span><span style="flex:1;height:14px;border-radius:2px;background:#c67139;"></span></div></div></div></div>
       <div class="pl">Тёмная</div>
       <div class="dk" style="background:#141210;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" style="grid-column:span 2;grid-row:span 1;"><span class="num">16</span><div style="display:flex;justify-content:space-between;align-items:center;height:100%;"><span class="k">Оценка дня</span><span class="n" style="font:600 21px/1 Figtree,sans-serif;color:#e2a468;">6,2<span class="u"> / 10</span></span></div></div><div class="w" style="grid-column:span 2;grid-row:span 1;"><span class="num">17</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Оценка дня</span><span class="n" style="font:600 16px/1 Figtree,sans-serif;color:#e2a468;">6,2<span class="u"> / 10</span></span></div>
@@ -2397,8 +2386,8 @@
       <div style="display:flex;align-items:baseline;gap:9px;"><span style="font:700 13.5px/1.2 Figtree,sans-serif;color:#201e1d;">Тепловая карта</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.42);">сейчас — 2×1, семь полос</span><span style="margin-left:auto;font:600 10px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.32);">2 замены</span></div>
       <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin:6px 0 0;max-width:900px;text-wrap:pretty;">Неделя полосами читается хорошо, но не отвечает «сколько держусь подряд» и не показывает месяц. Серия — самая мотивирующая цифра из всех, и она помещается в 1×1; считается строго, любой пропуск обнуляет, поэтому на этой неделе она равна двум дням, а не пяти.</div>
       <div class="pl">Песочная</div>
-      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Тепловая карта · Как сейчас"><span class="num">19</span><div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Тепловая карта</span><span class="n" style="font:700 9.5px/1 Figtree,sans-serif;color:#5c6a45;">5 из 7</span></div>
-<div style="display:flex;gap:4px;margin-top:auto;"><span style="flex:1;height:9px;border-radius:3px;background:#7a8a5e;"></span><span style="flex:1;height:9px;border-radius:3px;background:#7a8a5e;"></span><span style="flex:1;height:9px;border-radius:3px;background:rgba(0,0,0,.08);"></span><span style="flex:1;height:9px;border-radius:3px;background:#7a8a5e;"></span><span style="flex:1;height:9px;border-radius:3px;background:#d99a63;"></span><span style="flex:1;height:9px;border-radius:3px;background:#7a8a5e;"></span><span style="flex:1;height:9px;border-radius:3px;background:#7a8a5e;"></span></div></div><div class="w" style="grid-column:span 1;grid-row:span 1;" data-screen-label="Тепловая карта · Серия"><span class="num">20</span><div class="k">Серия</div><div style="display:flex;align-items:baseline;gap:3px;margin-top:auto;"><span class="n good" style="font:600 17px/1 Figtree,sans-serif;letter-spacing:-.02em;">2</span><span class="u" style="font-size:9px;">дня</span></div></div><div class="w" style="grid-column:span 2;grid-row:span 2;" data-screen-label="Тепловая карта · Месяц целиком"><span class="num">21</span><div class="k">Месяц целиком</div>
+      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Тепловая карта · Как сейчас"><span class="num">19</span><div style="display:flex;justify-content:space-between;align-items:center;"><span class="k">Тепловая карта</span><span class="n" style="font:700 9.5px/1 Figtree,sans-serif;color:#5c6a45;">5 из 7</span></div>
+<div style="display:flex;gap:4px;margin-top:auto;"><span style="flex:1;height:9px;border-radius:3px;background:#7a8a5e;"></span><span style="flex:1;height:9px;border-radius:3px;background:#7a8a5e;"></span><span style="flex:1;height:9px;border-radius:3px;background:rgba(0,0,0,.08);"></span><span style="flex:1;height:9px;border-radius:3px;background:#7a8a5e;"></span><span style="flex:1;height:9px;border-radius:3px;background:#d99a63;"></span><span style="flex:1;height:9px;border-radius:3px;background:#7a8a5e;"></span><span style="flex:1;height:9px;border-radius:3px;background:#7a8a5e;"></span></div></div><div class="w" data-demo="stop" style="grid-column:span 1;grid-row:span 1;" data-screen-label="Тепловая карта · Серия"><span class="num">20</span><div class="k">Серия</div><div style="display:flex;align-items:baseline;gap:3px;margin-top:auto;"><span class="n good" style="font:600 17px/1 Figtree,sans-serif;letter-spacing:-.02em;">2</span><span class="u" style="font-size:9px;">дня</span></div></div><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 2;" data-screen-label="Тепловая карта · Месяц целиком"><span class="num">21</span><div class="k">Месяц целиком</div>
 <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:9px;"><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:#d99a63;"></span><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:rgba(0,0,0,.08);"></span><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:#d99a63;"></span><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:#d99a63;"></span><span style="aspect-ratio:1;border-radius:3px;background:rgba(0,0,0,.08);"></span><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:#d99a63;"></span><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:rgba(0,0,0,.08);"></span><span style="aspect-ratio:1;border-radius:3px;background:#d99a63;"></span><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:rgba(0,0,0,.08);"></span><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:#d99a63;"></span><span style="aspect-ratio:1;border-radius:3px;background:#7a8a5e;"></span><span style="aspect-ratio:1;border-radius:3px;background:#c67139;"></span></div>
 <div class="n" style="margin-top:auto;font:600 9.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);">18 из 28 дней в норме</div></div></div></div>
       <div class="pl">Тёмная</div>
@@ -2422,12 +2411,12 @@
       <div style="display:flex;align-items:baseline;gap:9px;"><span style="font:700 13.5px/1.2 Figtree,sans-serif;color:#201e1d;">Риск-радар</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.42);">сейчас — 2×2, уровень и две строки</span><span style="margin-left:auto;font:600 10px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.32);">2 замены</span></div>
       <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin:6px 0 0;max-width:900px;text-wrap:pretty;">«Низкий» — вывод без основания. Замены: назвать сам риск вместо уровня либо оставить уровень, но показать шкалу и то, что его поднимет.</div>
       <div class="pl">Песочная</div>
-      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" style="grid-column:span 2;grid-row:span 2;" data-screen-label="Риск-радар · Уровень и причины"><span class="num">22</span><div class="k">Риск-радар</div>
+      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 2;" data-screen-label="Риск-радар · Уровень и причины"><span class="num">22</span><div class="k">Риск-радар</div>
 <div style="display:flex;align-items:baseline;gap:6px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#5c6a45;">низкий</span></div>
 <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;">
 <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Срывы</span><span class="n" style="color:#5c6a45;">нет</span></div>
-<div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Недосып</span><span class="n" style="color:#8a4a20;">2 дня</span></div></div></div><div class="w" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Риск-радар · Главный риск"><span class="num">23</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Риск-радар</span><span class="n" style="font:700 10px/1 Figtree,sans-serif;color:#5c6a45;">низкий</span></div>
-<div style="display:flex;align-items:baseline;gap:5px;margin-top:auto;"><span class="n" style="font:600 16px/1 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.02em;">Недосып</span><span class="u">2 дня подряд</span></div></div><div class="w" style="grid-column:span 2;grid-row:span 2;" data-screen-label="Риск-радар · Шкала"><span class="num">24</span><div class="k">Риск-радар</div>
+<div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);"><span>Недосып</span><span class="n" style="color:#8a4a20;">2 дня</span></div></div></div><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Риск-радар · Главный риск"><span class="num">23</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Риск-радар</span><span class="n" style="font:700 10px/1 Figtree,sans-serif;color:#5c6a45;">низкий</span></div>
+<div style="display:flex;align-items:baseline;gap:5px;margin-top:auto;"><span class="n" style="font:600 16px/1 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.02em;">Недосып</span><span class="u">2 дня подряд</span></div></div><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 2;" data-screen-label="Риск-радар · Шкала"><span class="num">24</span><div class="k">Риск-радар</div>
 <div style="display:flex;align-items:baseline;gap:5px;margin-top:9px;"><span class="n" style="font:600 24px/1 Figtree,sans-serif;color:#5c6a45;">низкий</span></div>
 <div style="display:flex;gap:4px;margin-top:11px;"><span style="flex:1;height:6px;border-radius:999px;background:#7a8a5e;"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(0,0,0,.09);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(0,0,0,.09);"></span><span style="flex:1;height:6px;border-radius:999px;background:rgba(0,0,0,.09);"></span></div>
 <div style="margin-top:auto;font:600 10px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.45);text-wrap:pretty;">поднимут: недосып 2 дня, вода ниже нормы</div></div></div></div>
@@ -2467,9 +2456,9 @@
       <div style="display:flex;align-items:baseline;gap:9px;"><span style="font:700 13.5px/1.2 Figtree,sans-serif;color:#201e1d;">Тренд здоровья</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.42);">сейчас — 2×2, число и линия</span><span style="margin-left:auto;font:600 10px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.32);">1 замена</span></div>
       <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin:6px 0 0;max-width:900px;text-wrap:pretty;">Здесь замены по существу нет: число и линия уже отвечают на «куда идёт». Одна ветка — 2×1 для тех, кому мало места; отдельного вида ради вида не делаю.</div>
       <div class="pl">Песочная</div>
-      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" style="grid-column:span 2;grid-row:span 2;background:#eaefe0;" data-screen-label="Тренд здоровья · Как сейчас"><span class="num">25</span><div class="k">Тренд здоровья</div>
+      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 2;background:#eaefe0;" data-screen-label="Тренд здоровья · Как сейчас"><span class="num">25</span><div class="k">Тренд здоровья</div>
 <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#5c6a45;">+8</span><span class="u">за 14 дней</span></div>
-<svg viewBox="0 0 130 40" width="100%" height="40" style="margin-top:auto;"><polyline points="4,32 26,28 48,30 70,20 92,16 114,10 126,8" fill="none" stroke="#7a8a5e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="8" r="3.5" fill="#7a8a5e"/></svg></div><div class="w" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Тренд здоровья · Компакт"><span class="num">26</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Тренд · 14 дней</span></div>
+<svg viewBox="0 0 130 40" width="100%" height="40" style="margin-top:auto;"><polyline points="4,32 26,28 48,30 70,20 92,16 114,10 126,8" fill="none" stroke="#7a8a5e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="8" r="3.5" fill="#7a8a5e"/></svg></div><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 1;" data-screen-label="Тренд здоровья · Компакт"><span class="num">26</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Тренд · 14 дней</span></div>
 <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;"><span class="v n good">+8</span><span class="good" style="display:flex;flex:none;margin-bottom:2px;"><svg width="58" height="24" viewBox="0 0 58 24" fill="none"><polyline points="2,19 13,17 24,18 35,11 46,8 56,5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="56" cy="5" r="2.4" fill="currentColor"/></svg></span></div></div></div></div>
       <div class="pl">Тёмная</div>
       <div class="dk" style="background:#141210;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" style="grid-column:span 2;grid-row:span 2;background:#232a1b;"><span class="num">25</span><div class="k">Тренд здоровья</div>
@@ -2492,14 +2481,14 @@
       <div style="display:flex;align-items:baseline;gap:9px;"><span style="font:700 13.5px/1.2 Figtree,sans-serif;color:#201e1d;">Инсулиновая волна</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.42);">сейчас — 2×2, один и тот же силуэт</span><span style="margin-left:auto;font:600 10px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.32);">4 замены</span></div>
       <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin:6px 0 0;max-width:900px;text-wrap:pretty;">Сейчас силуэт нарисован один раз и не меняется — три горба стоят и в день с одним приёмом, и в день с шестью. Волна должна собираться из настоящих приёмов: каждый даёт подъём, пик и спад, а если следующий пришёл раньше, чем закрылась предыдущая, площади накладываются — это и есть пересечение, главное, что виджет умеет показать. Дальше — четыре вида на разные вопросы: что было за день, что происходит прямо сейчас, где приёмы слиплись и сколько часов инсулин вообще был поднят.</div>
       <div class="pl">Песочная</div>
-      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" style="position:relative;grid-column:span 2;grid-row:span 2;" data-screen-label="Инсулиновая волна · День как есть"><span class="num">27</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Инсулиновая волна</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">3 приёма</span></div>
+      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" data-demo="stop" style="position:relative;grid-column:span 2;grid-row:span 2;" data-screen-label="Инсулиновая волна · День как есть"><span class="num">27</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Инсулиновая волна</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">3 приёма</span></div>
 <svg viewBox="0 0 130 52" width="100%" height="52" style="margin-top:auto;overflow:visible;"><path d="M4,46 C11,46 11,28 18,28 C25,28 25,46 32,46 Z" fill="#e6cfa8" opacity=".55"/><path d="M38,46 C47,46 47,18 56,18 C65,18 65,46 74,46 Z" fill="#e6cfa8" opacity=".55"/><path d="M61,46 C67.5,46 67.5,27 74,27 C80.5,27 80.5,46 87,46 Z" fill="#e6cfa8" opacity=".55"/><line x1="0" y1="46" x2="130" y2="46" stroke="rgba(0,0,0,.12)" stroke-width="1.5"/><line x1="106" y1="9" x2="106" y2="46" stroke="#201e1d" stroke-width="1" stroke-dasharray="2 2.5" opacity=".45"/><circle cx="106" cy="46" r="2.4" fill="#201e1d" opacity=".55"/></svg>
-<div style="margin-top:9px;display:flex;justify-content:space-between;align-items:baseline;"><span class="n" style="font:700 9.5px/1 Figtree,sans-serif;color:#d99a63;">2 волны слиплись</span><span class="n" style="font:700 9.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);">под волной 6:20</span></div></div><div class="w" style="position:relative;grid-column:span 2;grid-row:span 2;" data-screen-label="Инсулиновая волна · Текущая волна"><span class="num">28</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Идёт волна</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">обед 13:10</span></div>
+<div style="margin-top:9px;display:flex;justify-content:space-between;align-items:baseline;"><span class="n" style="font:700 9.5px/1 Figtree,sans-serif;color:#d99a63;">2 волны слиплись</span><span class="n" style="font:700 9.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);">под волной 6:20</span></div></div><div class="w" data-demo="stop" style="position:relative;grid-column:span 2;grid-row:span 2;" data-screen-label="Инсулиновая волна · Текущая волна"><span class="num">28</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Идёт волна</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">обед 13:10</span></div>
 <div style="display:flex;align-items:baseline;gap:5px;margin-top:9px;"><span class="n" style="font:600 26px/1 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.03em;">40</span><span class="u">мин до спада</span></div>
-<svg viewBox="0 0 130 48" width="100%" height="48" style="margin-top:auto;overflow:visible;"><path d="M22,46 C37,46 37,16 52,16 C67,16 67,46 82,46 Z" fill="#e6cfa8" opacity=".5"/><path d="M22,46 C37,46 37,16 52,16 C67,16 67,46 82,46 Z" fill="none" stroke="#c67139" stroke-width="2" stroke-linejoin="round"/><line x1="0" y1="46" x2="130" y2="46" stroke="rgba(0,0,0,.12)" stroke-width="1.5"/><line x1="70" y1="9" x2="70" y2="46" stroke="#201e1d" stroke-width="1" stroke-dasharray="2 2.5" opacity=".45"/><circle cx="70" cy="46" r="2.4" fill="#201e1d" opacity=".55"/><circle cx="70" cy="26" r="3.2" fill="#c67139"/></svg></div><div class="w" style="position:relative;grid-column:span 2;grid-row:span 2;" data-screen-label="Инсулиновая волна · Пересечения"><span class="num">29</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Пересечение волн</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">14:50</span></div>
+<svg viewBox="0 0 130 48" width="100%" height="48" style="margin-top:auto;overflow:visible;"><path d="M22,46 C37,46 37,16 52,16 C67,16 67,46 82,46 Z" fill="#e6cfa8" opacity=".5"/><path d="M22,46 C37,46 37,16 52,16 C67,16 67,46 82,46 Z" fill="none" stroke="#c67139" stroke-width="2" stroke-linejoin="round"/><line x1="0" y1="46" x2="130" y2="46" stroke="rgba(0,0,0,.12)" stroke-width="1.5"/><line x1="70" y1="9" x2="70" y2="46" stroke="#201e1d" stroke-width="1" stroke-dasharray="2 2.5" opacity=".45"/><circle cx="70" cy="46" r="2.4" fill="#201e1d" opacity=".55"/><circle cx="70" cy="26" r="3.2" fill="#c67139"/></svg></div><div class="w" data-demo="stop" style="position:relative;grid-column:span 2;grid-row:span 2;" data-screen-label="Инсулиновая волна · Пересечения"><span class="num">29</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Пересечение волн</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">14:50</span></div>
 <div style="display:flex;align-items:baseline;gap:5px;margin-top:9px;"><span class="n" style="font:600 24px/1 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.03em;">4 ч</span><span class="u">без перерыва</span></div>
 <svg viewBox="0 0 130 50" width="100%" height="50" style="margin-top:auto;overflow:visible;"><path d="M18,46 C30,46 30,20 42,20 C54,20 54,46 66,46 Z" fill="#e6cfa8" opacity=".55"/><path d="M48,46 C60,46 60,16 72,16 C84,16 84,46 96,46 Z" fill="#e6cfa8" opacity=".55"/><line x1="0" y1="46" x2="130" y2="46" stroke="rgba(0,0,0,.12)" stroke-width="1.5"/><line x1="48" y1="49" x2="66" y2="49" stroke="#d99a63" stroke-width="2" stroke-linecap="round"/></svg>
-<div class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:7px;">второй приём попал в волну</div></div><div class="w" style="position:relative;grid-column:span 2;grid-row:span 1;" data-screen-label="Инсулиновая волна · Полоса дня"><span class="num">30</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Инсулин · под волной</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">6:20 из 16:00</span></div>
+<div class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);margin-top:7px;">второй приём попал в волну</div></div><div class="w" data-demo="stop" style="position:relative;grid-column:span 2;grid-row:span 1;" data-screen-label="Инсулиновая волна · Полоса дня"><span class="num">30</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Инсулин · под волной</span><span class="n" style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.38);">6:20 из 16:00</span></div>
 <div style="display:flex;gap:2px;height:9px;margin-top:auto;">
 <span style="flex:9;border-radius:999px 0 0 999px;background:rgba(0,0,0,.09);"></span>
 <span style="flex:13;background:#e6cfa8;"></span>
@@ -2509,7 +2498,7 @@
 <span style="flex:11;background:#e6cfa8;"></span>
 <span style="flex:2;background:#201e1d;"></span>
 <span style="flex:13;border-radius:0 999px 999px 0;background:rgba(0,0,0,.09);"></span></div>
-<div class="n" style="display:flex;justify-content:space-between;font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.35);margin-top:6px;"><span>7:10</span><span>сейчас</span><span>23:00</span></div></div><div class="w" style="position:relative;grid-column:span 1;grid-row:span 1;" data-screen-label="Инсулиновая волна · Спокойное окно"><span class="num">31</span><div class="k">Покой</div>
+<div class="n" style="display:flex;justify-content:space-between;font:600 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.35);margin-top:6px;"><span>7:10</span><span>сейчас</span><span>23:00</span></div></div><div class="w" data-demo="stop" style="position:relative;grid-column:span 1;grid-row:span 1;" data-screen-label="Инсулиновая волна · Спокойное окно"><span class="num">31</span><div class="k">Покой</div>
 <div style="display:flex;align-items:baseline;gap:2px;margin-top:auto;"><span class="n" style="font:600 17px/1 Figtree,sans-serif;color:#5c6a45;letter-spacing:-.02em;">3:40</span></div>
 <div class="u" style="font-size:8.5px;line-height:1;">без волн</div></div></div></div>
       <div class="pl">Тёмная</div>
@@ -2581,10 +2570,10 @@
       <div style="display:flex;align-items:baseline;gap:9px;"><span style="font:700 13.5px/1.2 Figtree,sans-serif;color:#201e1d;">Вес</span><span style="font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.42);">сейчас — 2×2, вес и линия</span><span style="margin-left:auto;font:600 10px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,0,0,.32);">2 замены</span></div>
       <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);margin:6px 0 0;max-width:900px;text-wrap:pretty;">Динамика живёт в своей плитке, поэтому здесь достаточно факта. Замены: голое число, когда динамика уже стоит рядом, и честный график — точки весов против сглаженной линии, по которой считается дельта.</div>
       <div class="pl">Песочная</div>
-      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" style="grid-column:span 2;grid-row:span 2;" data-screen-label="Вес · Как сейчас"><span class="num">32</span><div class="k">Вес</div>
+      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 2;" data-screen-label="Вес · Как сейчас"><span class="num">32</span><div class="k">Вес</div>
 <div style="display:flex;align-items:baseline;gap:5px;margin-top:10px;"><span class="n good" style="font:600 26px/1 Figtree,sans-serif;">91,1</span><span class="u">кг</span></div>
 <div class="n" style="font:600 10px/1 Figtree,sans-serif;color:#5c6a45;margin-top:7px;">−0,9 за неделю</div>
-<svg viewBox="0 0 130 38" width="100%" height="38" style="margin-top:auto;"><polyline points="4,14 26,24 48,24 70,6 92,14 114,18 126,19" fill="none" stroke="#c67139" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="19" r="3.5" fill="#c67139"/></svg></div><div class="w" style="grid-column:span 1;grid-row:span 1;" data-screen-label="Вес · Только число"><span class="num">33</span><div class="k">Вес</div><div style="display:flex;align-items:baseline;gap:2px;margin-top:auto;"><span class="n" style="font:600 17px/1 Figtree,sans-serif;color:#201e1d;letter-spacing:-.02em;">91,1</span><span class="u" style="font-size:9px;">кг</span></div></div><div class="w" style="grid-column:span 2;grid-row:span 2;" data-screen-label="Вес · Точки и среднее"><span class="num">34</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Вес · точки и среднее</span><span class="n good" style="font:700 10px/1 Figtree,sans-serif;">91,1</span></div>
+<svg viewBox="0 0 130 38" width="100%" height="38" style="margin-top:auto;"><polyline points="4,14 26,24 48,24 70,6 92,14 114,18 126,19" fill="none" stroke="#c67139" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="126" cy="19" r="3.5" fill="#c67139"/></svg></div><div class="w" data-demo="stop" style="grid-column:span 1;grid-row:span 1;" data-screen-label="Вес · Только число"><span class="num">33</span><div class="k">Вес</div><div style="display:flex;align-items:baseline;gap:2px;margin-top:auto;"><span class="n" style="font:600 17px/1 Figtree,sans-serif;color:#201e1d;letter-spacing:-.02em;">91,1</span><span class="u" style="font-size:9px;">кг</span></div></div><div class="w" data-demo="stop" style="grid-column:span 2;grid-row:span 2;" data-screen-label="Вес · Точки и среднее"><span class="num">34</span><div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Вес · точки и среднее</span><span class="n good" style="font:700 10px/1 Figtree,sans-serif;">91,1</span></div>
 <svg viewBox="0 0 130 56" width="100%" height="56" style="margin-top:auto;">
 <circle cx="6" cy="20" r="2.2" fill="rgba(0,0,0,.22)"/><circle cx="16" cy="12" r="2.2" fill="rgba(0,0,0,.22)"/><circle cx="26" cy="24" r="2.2" fill="rgba(0,0,0,.22)"/><circle cx="36" cy="16" r="2.2" fill="rgba(0,0,0,.22)"/><circle cx="46" cy="28" r="2.2" fill="rgba(0,0,0,.22)"/><circle cx="56" cy="20" r="2.2" fill="rgba(0,0,0,.22)"/><circle cx="66" cy="32" r="2.2" fill="rgba(0,0,0,.22)"/><circle cx="76" cy="24" r="2.2" fill="rgba(0,0,0,.22)"/><circle cx="86" cy="34" r="2.2" fill="rgba(0,0,0,.22)"/><circle cx="96" cy="28" r="2.2" fill="rgba(0,0,0,.22)"/><circle cx="106" cy="38" r="2.2" fill="rgba(0,0,0,.22)"/><circle cx="118" cy="32" r="2.2" fill="rgba(0,0,0,.22)"/>
 <polyline points="6,17 16,18 26,19 36,20 46,22 56,24 66,25 76,27 86,29 96,30 106,32 118,34" fill="none" stroke="#7a8a5e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -2628,7 +2617,7 @@
       <div class="nt"><b>Числа здесь — показ форм, а не сходящийся день</b><span>Калории и БЖУ на канвасе между собой не бьются: 1 289 ккал против 1 608, если пересчитать макросы. Внутри одного виджета все виды считают из одного набора и обязаны совпадать — это правило; между виджетами арифметику не сводил, в продукте оба числа приходят из одного дня. Сверяйте формы, пороги и правила окраски, а не суммы.</span></div>
       <div class="nt"><b>1×1 — не квадрат, ни на одном телефоне</b><span>Формула из кода: 4 колонки на ширину экрана, высота ряда фиксирована — 64px всегда. Колонка = (ширина экрана − отступы)/4 — на iPhone SE это ≈69px, на Pro Max ≈94px, но высота не меняется никогда. Поэтому «2×2» — это про число рядов (64+64+8 зазор = 136), а не про квадратную форму: плитка тем площе, чем шире телефон.</span></div>
       <div class="nt"><b>Рамка канваса — 375px, а не 330 и не 390</b><span>Раньше рамка телефона была ⌀330 — уже, чем любой ходовой iPhone, из-за чего плитки в канвасе казались квадратнее, чем на реальном устройстве. Взяли не среднее (390, как на скриншоте, с которого начался вопрос), а узкий край диапазона (375, iPhone SE/mini): макет, который держится на узком экране, на широком только выигрывает воздух, а обратное — нет. Правка сделана только в этом файле; остальные двенадцать канвасов пакета уже реализованы и проверены на устройствах, трогать их рамку — значит менять источник под готовый результат.</span></div>
-      <div class="ntl"><b>Дефолты меняем поимённо, а не пачкой</b><span>Общее правило прежнее: человек, который ничего не трогал, видит то же, что вчера, — замены он находит сам, когда плитка перестаёт отвечать на его вопрос. Одно исключение принято 19 августа: риск-радар открывается видом 24 «Шкала», потому что «низкий» без шкалы и причин — вывод без основания. Явный выбор человека сильнее дефолта: кто уже выбрал «Уровень и причины», того не переключаем. Порядок карточек в шторке при этом не меняется — дефолт задан флагом в каталоге, а не позицией в списке.</span></div>
+      <div class="ntl"><b>Дефолты меняем поимённо, а не пачкой</b><span>Общее правило прежнее: человек, который ничего не трогал, видит то же, что вчера, — замены он находит сам, когда плитка перестаёт отвечать на его вопрос. Исключений два, оба названы поимённо. 19 августа: риск-радар открывается видом 24 «Шкала», потому что «низкий» без шкалы и причин — вывод без основания. 20 августа: динамика веса открывается видом 2 «За месяц» с кривой — переключатель 7 / 14 / 30 в плитке 2×1 снят, окно теперь растёт само по числу подтверждённых дней, и три цифры в углу обещали выбор, которого больше нет (вид 1 остался в протоколе). Явный выбор человека сильнее дефолта: кто уже выбрал «Уровень и причины», того не переключаем. Порядок карточек в шторке при этом не меняется — дефолт задан флагом в каталоге, а не позицией в списке.</span></div>
     </div>
   </div>
 
@@ -3549,7 +3538,7 @@
         <span style="font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.62);text-wrap:pretty;">Реализуется <b>1а «Остаток и рамки»</b> — он же стоит в видах 1–4 и на кадрах Главной. Кадры 1б, 1в, 1г и «Строка» здесь помечены <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;">data-demo="protocol"</span> — это протокол сравнения, по ним не реализовывать.</span>
       </div>
       <div class="pl">Песочная</div>
-      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" style="position:relative;grid-column:span 2;grid-row:span 2;background:#efe3cf;padding:14px;" data-screen-label="Калории без заголовка · Остаток и рамки"><span class="num">1а</span><div style="display:flex;align-items:baseline;gap:5px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.035em;">642</span><span class="u">ккал</span></div>
+      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" data-demo="stop" style="position:relative;grid-column:span 2;grid-row:span 2;background:#efe3cf;padding:14px;" data-screen-label="Калории без заголовка · Остаток и рамки"><span class="num">1а</span><div style="display:flex;align-items:baseline;gap:5px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.035em;">642</span><span class="u">ккал</span></div>
 <div style="font:500 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:7px;">осталось</div>
 <div style="margin-top:auto;"><div style="position:relative;height:6px;border-radius:999px;background:rgba(0,0,0,.1);overflow:hidden;"><span style="position:absolute;left:0;top:0;bottom:0;width:30%;border-radius:999px;background:#c67139;"></span></div><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:8px;">
 <span style="display:flex;flex-direction:column;gap:2px;"><span class="n" style="font:700 11px/1 Figtree,sans-serif;color:#201e1d;">1 289</span><span style="font:500 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);">съедено</span></span>
@@ -3617,15 +3606,15 @@
     <div class="h">Три состояния выбранного вида</div>
     <p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Заголовок держал плитку узнаваемой в любом состоянии, поэтому без него важно проверить края: перебор и закрытый день. В обоих случаях меняется главное число и его подпись — «перебор» и «съедено за день» вместо «осталось». Подписи внизу остаются на своих местах, поэтому плитка не перестраивается.</p>
       <div class="pl">Песочная</div>
-      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" style="position:relative;grid-column:span 2;grid-row:span 2;background:#efe3cf;padding:14px;" data-screen-label="Калории · состояние · В норме"><div style="display:flex;align-items:baseline;gap:5px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.035em;">642</span><span class="u">ккал</span></div>
+      <div class="" style="background:#fffaf1;border-radius:18px;"><div class="g" style="grid-template-columns:repeat(16,67px);margin-top:24px;"><div class="w" data-demo="stop" style="position:relative;grid-column:span 2;grid-row:span 2;background:#efe3cf;padding:14px;" data-screen-label="Калории · состояние · В норме"><div style="display:flex;align-items:baseline;gap:5px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.035em;">642</span><span class="u">ккал</span></div>
 <div style="font:500 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:7px;">осталось</div>
 <div style="margin-top:auto;"><div style="position:relative;height:6px;border-radius:999px;background:rgba(0,0,0,.1);overflow:hidden;"><span style="position:absolute;left:0;top:0;bottom:0;width:30%;border-radius:999px;background:#c67139;"></span></div><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:8px;">
 <span style="display:flex;flex-direction:column;gap:2px;"><span class="n" style="font:700 11px/1 Figtree,sans-serif;color:#201e1d;">1 289</span><span style="font:500 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);">съедено</span></span>
-<span style="display:flex;flex-direction:column;gap:2px;align-items:flex-end;"><span class="n" style="font:700 11px/1 Figtree,sans-serif;color:#5c6a45;">1 931</span><span style="font:500 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);">норма</span></span></div></div></div><div class="w" style="position:relative;grid-column:span 2;grid-row:span 2;background:#efe3cf;padding:14px;" data-screen-label="Калории · состояние · Перебор"><div style="display:flex;align-items:baseline;gap:5px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#a8382b;letter-spacing:-.035em;">−120</span><span class="u">ккал</span></div>
+<span style="display:flex;flex-direction:column;gap:2px;align-items:flex-end;"><span class="n" style="font:700 11px/1 Figtree,sans-serif;color:#5c6a45;">1 931</span><span style="font:500 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);">норма</span></span></div></div></div><div class="w" data-demo="stop" style="position:relative;grid-column:span 2;grid-row:span 2;background:#efe3cf;padding:14px;" data-screen-label="Калории · состояние · Перебор"><div style="display:flex;align-items:baseline;gap:5px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#a8382b;letter-spacing:-.035em;">−120</span><span class="u">ккал</span></div>
 <div style="font:500 10px/1 Figtree,sans-serif;color:#a8382b;margin-top:7px;">перебор</div>
 <div style="margin-top:auto;"><div style="position:relative;height:6px;border-radius:999px;background:rgba(0,0,0,.1);overflow:hidden;"><span style="position:absolute;left:0;top:0;bottom:0;width:94%;border-radius:999px;background:#c67139;"></span><span style="position:absolute;left:94%;right:0;top:0;bottom:0;background:#a8382b;"></span></div><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:8px;">
 <span style="display:flex;flex-direction:column;gap:2px;"><span class="n" style="font:700 11px/1 Figtree,sans-serif;color:#201e1d;">2 051</span><span style="font:500 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);">съедено</span></span>
-<span style="display:flex;flex-direction:column;gap:2px;align-items:flex-end;"><span class="n" style="font:700 11px/1 Figtree,sans-serif;color:#a8382b;">1 931</span><span style="font:500 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);">норма</span></span></div></div></div><div class="w" style="position:relative;grid-column:span 2;grid-row:span 2;background:#efe3cf;padding:14px;" data-screen-label="Калории · состояние · Закрытый день"><div style="display:flex;align-items:baseline;gap:5px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.035em;">1 786</span><span class="u">ккал</span></div>
+<span style="display:flex;flex-direction:column;gap:2px;align-items:flex-end;"><span class="n" style="font:700 11px/1 Figtree,sans-serif;color:#a8382b;">1 931</span><span style="font:500 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);">норма</span></span></div></div></div><div class="w" data-demo="stop" style="position:relative;grid-column:span 2;grid-row:span 2;background:#efe3cf;padding:14px;" data-screen-label="Калории · состояние · Закрытый день"><div style="display:flex;align-items:baseline;gap:5px;"><span class="n" style="font:600 34px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.035em;">1 786</span><span class="u">ккал</span></div>
 <div style="font:500 10px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:7px;">съедено за день</div>
 <div style="margin-top:auto;"><div style="position:relative;height:6px;border-radius:999px;background:rgba(0,0,0,.1);overflow:hidden;"><span style="position:absolute;left:0;top:0;bottom:0;width:92%;border-radius:999px;background:#c67139;"></span></div><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:8px;">
 <span style="display:flex;flex-direction:column;gap:2px;"><span class="n" style="font:700 11px/1 Figtree,sans-serif;color:#201e1d;">145</span><span style="font:500 8.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.4);">не съедено</span></span>

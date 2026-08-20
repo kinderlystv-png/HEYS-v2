@@ -2923,7 +2923,7 @@ body:has(.page-reports) .hdr::after {
   :root {
     --widget-grid-columns: 4;
     --widget-grid-gap: 6px;
-    --widget-row-height: 70px;
+    --widget-row-height: 64px;
   }
 
   .widgets-grid,
@@ -9982,7 +9982,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   --water-tone-deep: #4e6d7a;
   --water-submerge-text: #fffaf1;
   --water-ink-text: #201e1d;
-  --water-dim-text: rgba(0, 0, 0, 0.45);
+  --water-dim-text: rgba(0, 0, 0, 0.55);
   --water-cream-text: var(--water-submerge-text);
   --water-drop-travel: 21px;
   position: relative;
@@ -10048,7 +10048,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   --water-tone-deep: #3f6c7e;
   --water-submerge-text: #f2ede6;
   --water-ink-text: #f2ede6;
-  --water-dim-text: rgba(242, 237, 230, 0.45);
+  --water-dim-text: rgba(242, 237, 230, 0.62);
 }
 
 html[data-theme-id="blue"] .widget-water--v4 {
@@ -10056,7 +10056,7 @@ html[data-theme-id="blue"] .widget-water--v4 {
   --water-tone-deep: #2c5f76;
   --water-submerge-text: #ffffff;
   --water-ink-text: #101826;
-  --water-dim-text: rgba(16, 24, 38, 0.45);
+  --water-dim-text: rgba(16, 24, 38, 0.55);
 }
 
 html[data-theme-id="blue-dark"] .widget-water--v4 {
@@ -10064,7 +10064,7 @@ html[data-theme-id="blue-dark"] .widget-water--v4 {
   --water-tone-deep: #35657d;
   --water-submerge-text: #eef3f8;
   --water-ink-text: #eef3f8;
-  --water-dim-text: rgba(238, 243, 248, 0.5);
+  --water-dim-text: rgba(238, 243, 248, 0.62);
 }
 
 body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water.widget--1x1 {

@@ -145,6 +145,13 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(widgetsCss).toMatch(/\.widget-water--v4\.widget-water--lines-on-water \.widget-water__label[\s\S]*?color: var\(--water-cream-text\)/);
     expect(widgetsCss).toContain('transition: color 220ms ease-out');
     expect(widgetsCss).not.toContain('.widget-water--submerged');
+    // вторичный тон нормы/подписи: .55 светлые / .62 тёмные (канвас 2026-08-20)
+    expect(widgetsCss).toContain('--water-dim-text: rgba(0, 0, 0, 0.55)');
+    expect(widgetsCss).toContain('--water-dim-text: rgba(242, 237, 230, 0.62)');
+    expect(widgetsCss).toContain('--water-dim-text: rgba(16, 24, 38, 0.55)');
+    expect(widgetsCss).toContain('--water-dim-text: rgba(238, 243, 248, 0.62)');
+    // сетка 64 px на мобиле — пороги nrmB считаются от плитки 64 px
+    expect(widgetsCss).toMatch(/@media \(max-width: 480px\)[\s\S]*?--widget-row-height: 64px/);
   });
 
   it('новый «звук капли» не реализован — семпла ещё нет, прежний звук цел', () => {
@@ -178,6 +185,8 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(waterCss).toContain('border: 2px solid var(--water-fab-outline)');
     expect(waterCss).toContain('waterFabVolInDim');
     expect(waterCss).toMatch(/@keyframes waterFabVolIn[\s\S]*?translateX\(10px\)/);
+    expect(waterCss).toContain('--water-fab-text: #0d1a26');
+    expect(waterCss).toContain('[data-theme$="dark"] .water-column__total');
   });
 
   it('отнять воду — плитка и столбик видят изменение', () => {

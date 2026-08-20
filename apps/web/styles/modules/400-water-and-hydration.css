@@ -1987,7 +1987,7 @@ html[data-theme-id="blue"] .water-fab-wrap {
 
 html[data-theme-id="blue-dark"] .water-fab-wrap {
   --water-fab-fill: #7fb6d0;
-  --water-fab-text: #101826;
+  --water-fab-text: #0d1a26;
   --water-fab-outline: #7fb6d0;
   --water-fab-ink: #eef3f8;
 }
@@ -3918,7 +3918,31 @@ html[data-theme-id="blue"] .water-column__bar {
 
 .water-column__target {
   font: 500 8px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.4));
+  color: rgba(0, 0, 0, 0.4);
+}
+
+[data-theme$="dark"] .water-column__total {
+  color: #f2ede6;
+}
+
+html[data-theme-id="blue"] .water-column__total {
+  color: #101826;
+}
+
+html[data-theme-id="blue-dark"] .water-column__total {
+  color: #eef3f8;
+}
+
+[data-theme$="dark"] .water-column__target {
+  color: rgba(242, 237, 230, 0.42);
+}
+
+html[data-theme-id="blue"] .water-column__target {
+  color: rgba(16, 24, 38, 0.42);
+}
+
+html[data-theme-id="blue-dark"] .water-column__target {
+  color: rgba(238, 243, 248, 0.42);
 }
 
 @media (prefers-reduced-motion: reduce) {
