@@ -13,9 +13,29 @@ set -e
 
 LOCKBOX_SECRET_ID="${HEYS_PG_LOCKBOX_ID:-e6qr1rm1hm2n9a2pmsnl}"
 
+# Интерпретатор Python выбираем проверкой, а не именем. На Windows `python3` —
+# это заглушка Windows Store: печатает «Python» и выходит, из-за чего обёртка
+# psql.sh молча отдавала одно слово вместо пароля и выглядела как «psql не
+# установлен». Настоящий интерпретатор там называется `python`.
+pick_python() {
+    for cand in python3 python py; do
+        probe=$("$cand" -c 'print(42)' 2>/dev/null) || continue
+        if [ "$probe" = "42" ]; then
+            echo "$cand"
+            return 0
+        fi
+    done
+    return 1
+}
+
+PY_BIN=$(pick_python) || {
+    echo "FAILED: не нашёл рабочий Python (пробовал python3, python, py)" >&2
+    return 1 2>/dev/null || exit 1
+}
+
 # Probe yc connectivity first (it sometimes times out)
 PWD_VALUE=$(yc lockbox payload get --id "$LOCKBOX_SECRET_ID" --format json 2>&1 \
-  | python3 -c "
+  | "$PY_BIN" -c "
 import json, sys
 try:
     d = json.load(sys.stdin)
