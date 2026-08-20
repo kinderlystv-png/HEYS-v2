@@ -10550,7 +10550,6 @@
     const HEALTH_TREND_PERIOD_STORAGE_KEY = 'heys_diary_health_trend_period_v1';
     const FIBER_PANEL_PROFILE_FIELD = 'showDiaryFiberPanel';
     const SCORE_RISK_TREND_PANEL_PROFILE_FIELD = 'showDiaryScoreRiskTrendPanel';
-    const WATER_PANEL_PROFILE_FIELD = 'showDiaryWaterPanel';
     const PLANNER_PANEL_PROFILE_FIELD = 'showDiaryPlannerPanel';
     const SUPPLEMENTS_PANEL_PROFILE_FIELD = 'showDiarySupplementsPanel';
     const DISTRIBUTION_PANEL_PROFILE_FIELD = 'showDiaryDistributionPanel';
@@ -11469,7 +11468,6 @@
             isMobile,
             mobileSubTab,
             goalProgressBar,
-            waterCard,
             mealsChart,
             insulinWaveData,
             insulinExpanded,
@@ -11650,10 +11648,6 @@
                 ? React.createElement(DiaryHungerCard, { date: dateKey, day })
                 : null,
             goalProgressBar,
-            React.createElement(DiaryPanelGate, {
-                profile: prof,
-                field: WATER_PANEL_PROFILE_FIELD,
-            }, waterCard),
             refeedCard,
             // R16: lazy-mount below-fold cards — prevent heavy hooks until near viewport
             React.createElement(LazyMount, { key: 'lazy-below-fold', minHeight: 460 },

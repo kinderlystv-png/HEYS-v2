@@ -382,8 +382,13 @@
     }
 
     function hapticFn(type = 'light') {
-        if (!navigator.vibrate || !userHasInteracted) return;
+        if (!userHasInteracted) return;
         try {
+            if ((type === 'light' || type === 'tick') && HEYS.vibration?.impactLight) {
+                HEYS.vibration.impactLight();
+                return;
+            }
+            if (!navigator.vibrate) return;
             switch (type) {
                 case 'light': navigator.vibrate(10); break;
                 case 'medium': navigator.vibrate(20); break;
@@ -1284,6 +1289,19 @@
         const isToday = d.toDateString() === effectiveToday.toDateString();
         const isYesterday = d.toDateString() === effectiveYesterday.toDateString();
         if (isToday) {
+            const dayOfWeek = d.getDay();
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            if (isWeekend) {
+                const weekendAbbr = d.toLocaleDateString('ru-RU', { weekday: 'short' })
+                    .replace(/\.$/, '')
+                    .toLowerCase();
+                return {
+                    main: `${weekendAbbr}, ${longDate}`,
+                    relative: null,
+                    isToday: true,
+                    weekendAbbr
+                };
+            }
             return { main: `Сегодня, ${longDate}`, relative: null, isToday: true };
         }
         if (isYesterday) {
@@ -5432,8 +5450,6 @@
             day,
             date,
             prof,
-            setShowWaterDrop,
-            setWaterAddedAnim,
             showConfetti,
             setShowConfetti,
             waterGoal,
@@ -5749,7 +5765,18 @@
                     }, WATER_COLUMN_HOLD_MS);
                 }
 
+                function waterCardIsVisible() {
+                    const card = document.getElementById('water-card');
+                    if (!card || typeof card.getBoundingClientRect !== 'function') return false;
+                    const rect = card.getBoundingClientRect();
+                    if (!rect.width || !rect.height) return false;
+                    const viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
+                    const visible = Math.min(rect.bottom, viewportH) - Math.max(rect.top, 0);
+                    return visible / rect.height >= WATER_TILE_VISIBLE_RATIO;
+                }
+
                 HEYS.waterFeedback.isTileVisible = waterTileIsVisible;
+                HEYS.waterFeedback.isCardVisible = waterCardIsVisible;
                 HEYS.waterFeedback.setVolumeChipsOpen = function setVolumeChipsOpen(open) {
                     volumeChipsOpen = !!open;
                     if (!open) flushPendingColumn();
@@ -5768,6 +5795,7 @@
                 HEYS.waterFeedback.playAddFeedback = function playAddFeedback(detail) {
                     if (!detail || detail.ml == null || detail.ml === 0) return;
                     const isRemove = detail.ml < 0;
+                    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
                     if (!isRemove) {
                         const playSound = () => {
                             // Прежний звук добавления остаётся как был. Новый «звук капли»
@@ -5778,15 +5806,14 @@
                             }
                         };
                         // Звук ждёт касания поверхности: при анимации плитки — 240 мс,
-                        // при столбике — сразу. Reduce-motion на функциональный слой не влияет
-                        // (см. HEYS.motion / MOTION_POLICY.md).
-                        if (waterTileIsVisible()) {
+                        // при столбике или reduced-motion — сразу.
+                        if (waterTileIsVisible() && !reducedMotion) {
                             setTimeout(playSound, 240);
                         } else {
                             playSound();
                         }
                     }
-                    if (waterTileIsVisible()) return;
+                    if (waterTileIsVisible() || waterCardIsVisible()) return;
                     if (isVolumeChipsBlockingColumn()) {
                         pendingColumnDetail = detail;
                         return;
@@ -5836,13 +5863,11 @@
 
         /**
          * Internal water animation runner
-         * 🚀 PERF R10: DOM-based animations — bypass React re-render entirely.
+         * 🚀 PERF R10: DOM-based update — bypass React re-render entirely.
          * R9 showed animation setState alone costs ~426ms because ANY state change
          * triggers full DayTab re-render (2013-line monolith, ~30 useState).
-         * waterAddedAnim + showWaterDrop are in useMemo deps for waterCard —
-         * changing them invalidates the memo and causes expensive reconciliation.
-         * Direct DOM injection = 0ms React processing, same visual effect.
-         * React reconciliation does NOT remove DOM nodes it doesn't manage.
+         * Карточка воды обновляется напрямую через HEYS.dayWater.applyOptimistic,
+         * React-состояние дня едет следом обычным setDay.
          */
         function runWaterAnimation(ml, options = {}) {
             const liveDay = getLatestDaySnapshot();
@@ -5874,28 +5899,9 @@
                 updatedAt: newUpdatedAt
             }));
 
-            // DOM-based visual animations (no React state = no re-render)
-            const waterCard = document.getElementById('water-card');
-            if (waterCard) {
-                // Сразу обновляем цифру на кольце (React может отстать от LS / hot-sync)
-                const goalRing = Math.max(1, Number(waterGoal) || 2000);
-                const ringFill = waterCard.querySelector('.water-ring-fill');
-                if (ringFill) {
-                    ringFill.style.strokeDasharray = Math.min(100, ((newWater || 0) / goalRing) * 100) + ' 100';
-                }
-                const ringVal = waterCard.querySelector('.water-ring-value');
-                const ringUnit = waterCard.querySelector('.water-ring-unit');
-                if (ringVal) {
-                    ringVal.textContent = (newWater || 0) >= 1000
-                        ? String(((newWater || 0) / 1000).toFixed(1)).replace('.0', '')
-                        : String(newWater || 0);
-                }
-                if (ringUnit) {
-                    ringUnit.textContent = (newWater || 0) >= 1000 ? 'л' : 'мл';
-                }
-
-                // Визуальный feedback вне плитки — только мерный столбик у FAB (канвас v4).
-            }
+            // DOM-based visual update (no React state = no re-render):
+            // карточка отвечает сама, когда она перед глазами (контракт 52).
+            HEYS.dayWater?.applyOptimistic?.(document.getElementById('water-card'), newWater, waterGoal);
 
             scheduleDayFlush();
 
@@ -5952,24 +5958,7 @@
                 updatedAt: newUpdatedAt
             });
 
-            const waterCardRm = document.getElementById('water-card');
-            if (waterCardRm) {
-                const goalRing = Math.max(1, Number(waterGoal) || 2000);
-                const ringFill = waterCardRm.querySelector('.water-ring-fill');
-                if (ringFill) {
-                    ringFill.style.strokeDasharray = Math.min(100, ((newWater || 0) / goalRing) * 100) + ' 100';
-                }
-                const ringVal = waterCardRm.querySelector('.water-ring-value');
-                const ringUnit = waterCardRm.querySelector('.water-ring-unit');
-                if (ringVal) {
-                    ringVal.textContent = (newWater || 0) >= 1000
-                        ? String(((newWater || 0) / 1000).toFixed(1)).replace('.0', '')
-                        : String(newWater || 0);
-                }
-                if (ringUnit) {
-                    ringUnit.textContent = (newWater || 0) >= 1000 ? 'л' : 'мл';
-                }
-            }
+            HEYS.dayWater?.applyOptimistic?.(document.getElementById('water-card'), newWater, waterGoal);
 
             setDay(prev => ({ ...prev, waterMl: newWater, waterUpdatedAt: newUpdatedAt, updatedAt: newUpdatedAt }));
 
@@ -6179,18 +6168,6 @@
         // Track newly added items for fly-in animation
         const [newItemIds, setNewItemIds] = React.useState(new Set());
 
-        // === Water Tracking Animation States ===
-        const [waterAddedAnim, setWaterAddedAnim] = React.useState(null); // для анимации "+200"
-        const [showWaterDrop, setShowWaterDrop] = React.useState(false); // анимация падающей капли
-
-        // Быстрые пресеты воды
-        const waterPresets = [
-            { ml: 100, label: '100 мл', icon: '💧' },
-            { ml: 200, label: 'Стакан', icon: '🥛' },
-            { ml: 330, label: 'Бутылка', icon: '🧴' },
-            { ml: 500, label: '0.5л', icon: '🍶' }
-        ];
-
         // === Meal handlers (extracted) ===
         const mealHandlers = heysRef.dayMealHandlers.createMealHandlers({
             setDay: ctx.setDay,
@@ -6234,8 +6211,6 @@
             day: ctx.day,
             date: ctx.date,
             prof: ctx.prof,
-            setShowWaterDrop,
-            setWaterAddedAnim,
             showConfetti: ctx.showConfetti,
             setShowConfetti: ctx.setShowConfetti,
             waterGoal: ctx.waterGoal,
@@ -6287,11 +6262,6 @@
         });
 
         return {
-            waterPresets,
-            waterAddedAnim,
-            showWaterDrop,
-            setWaterAddedAnim,
-            setShowWaterDrop,
             mealHandlers,
             dayHandlers,
             trainingHandlers
