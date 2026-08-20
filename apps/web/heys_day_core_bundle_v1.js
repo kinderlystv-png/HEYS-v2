@@ -5629,6 +5629,27 @@
                 const WATER_TILE_VISIBLE_RATIO = 0.5;
                 const WATER_COLUMN_HOLD_MS = 1400;
                 const WATER_COLUMN_OUT_MS = 160;
+                const WATER_VOL_CHIP_MS = 180;
+
+                let volumeChipsOpen = false;
+                let volumeChipsDeferUntil = 0;
+                let pendingColumnDetail = null;
+                let volumeChipsCloseTimer = 0;
+
+                function isVolumeChipsBlockingColumn() {
+                    return volumeChipsOpen || Date.now() < volumeChipsDeferUntil;
+                }
+
+                function flushPendingColumn() {
+                    if (isVolumeChipsBlockingColumn() || !pendingColumnDetail) return;
+                    if (waterTileIsVisible()) {
+                        pendingColumnDetail = null;
+                        return;
+                    }
+                    const detail = pendingColumnDetail;
+                    pendingColumnDetail = null;
+                    showWaterColumn(detail);
+                }
 
                 function waterTileIsVisible() {
                     const el = document.querySelector('.widget-water--v4');
@@ -5643,6 +5664,23 @@
                     const viewportH = window.innerHeight || document.documentElement.clientHeight || 0;
                     const visible = Math.min(rect.bottom, viewportH) - Math.max(rect.top, 0);
                     return visible / rect.height >= WATER_TILE_VISIBLE_RATIO;
+                }
+
+                /** Якорь столбика: плитка на Главной → сама; иначе видимая кнопка воды (FAB). */
+                function resolveWaterColumnAnchor() {
+                    if (waterTileIsVisible()) return null;
+                    const fabs = document.querySelectorAll('.water-fab');
+                    for (let i = 0; i < fabs.length; i++) {
+                        const fab = fabs[i];
+                        const slot = fab.closest('.fab-slot');
+                        if (slot && (slot.classList.contains('fab-slot--off')
+                            || slot.getAttribute('aria-hidden') === 'true')) {
+                            continue;
+                        }
+                        const rect = fab.getBoundingClientRect();
+                        if (rect.width > 0 && rect.height > 0) return fab;
+                    }
+                    return null;
                 }
 
                 function formatWaterLiters(ml) {
@@ -5661,21 +5699,19 @@
                     // собственную reduce-ветку (160 мс) он держит сам.
                     col.className = 'water-column animate-always';
                     col.setAttribute('aria-hidden', 'true');
-                    col.innerHTML = '<span class="water-column__bar">'
-                        + '<span class="water-column__fill"></span></span>'
-                        + '<span class="water-column__text">'
+                    col.innerHTML = '<span class="water-column__text">'
                         + '<span class="water-column__delta"></span>'
                         + '<span class="water-column__total"></span>'
                         + '<span class="water-column__target"></span>'
-                        + '</span>';
+                        + '</span>'
+                        + '<span class="water-column__bar">'
+                        + '<span class="water-column__fill"></span></span>';
                     document.body.appendChild(col);
                     return col;
                 }
 
                 function showWaterColumn(detail) {
-                    const anchor = detail.sourceEl && typeof detail.sourceEl.getBoundingClientRect === 'function'
-                        ? detail.sourceEl
-                        : document.querySelector('.water-fab');
+                    const anchor = resolveWaterColumnAnchor();
                     if (!anchor) return;
                     const rect = anchor.getBoundingClientRect();
                     if (!rect || (!rect.width && !rect.height)) return;
@@ -5690,7 +5726,11 @@
                     // Столбик не кнопка: касание проходит насквозь к тому, что под ним.
                     col.style.top = Math.round(rect.top + rect.height / 2) + 'px';
                     col.style.right = Math.round(window.innerWidth - rect.left + 10) + 'px';
-                    col.querySelector('.water-column__delta').textContent = '+' + detail.ml + ' мл';
+                    col.style.left = '';
+                    const deltaMl = Number(detail.ml) || 0;
+                    col.querySelector('.water-column__delta').textContent = deltaMl < 0
+                        ? '−' + Math.abs(deltaMl) + ' мл'
+                        : '+' + deltaMl + ' мл';
                     col.querySelector('.water-column__total').textContent = formatWaterLiters(total) + ' л';
                     col.querySelector('.water-column__target').textContent = 'из ' + formatWaterLiters(target);
                     col.querySelector('.water-column__fill').style.height = pct + '%';
@@ -5710,27 +5750,47 @@
                 }
 
                 HEYS.waterFeedback.isTileVisible = waterTileIsVisible;
+                HEYS.waterFeedback.setVolumeChipsOpen = function setVolumeChipsOpen(open) {
+                    volumeChipsOpen = !!open;
+                    if (!open) flushPendingColumn();
+                };
+                HEYS.waterFeedback.markVolumeChipsClosing = function markVolumeChipsClosing(ms) {
+                    const delay = Number(ms) || WATER_VOL_CHIP_MS;
+                    volumeChipsOpen = false;
+                    volumeChipsDeferUntil = Date.now() + delay;
+                    if (volumeChipsCloseTimer) clearTimeout(volumeChipsCloseTimer);
+                    volumeChipsCloseTimer = setTimeout(() => {
+                        volumeChipsDeferUntil = 0;
+                        volumeChipsCloseTimer = 0;
+                        flushPendingColumn();
+                    }, delay);
+                };
                 HEYS.waterFeedback.playAddFeedback = function playAddFeedback(detail) {
-                    if (!detail || !detail.ml) return;
-                    const playSound = () => {
-                        // Прежний звук добавления остаётся как был. Новый «звук капли»
-                        // из канваса не реализуем: спецификация прямо запрещает
-                        // отдавать его без записанного семпла.
-                        if (detail.playSound !== false && HEYS.audio?.play) {
-                            HEYS.audio.play('waterAdded', { haptic: false });
+                    if (!detail || detail.ml == null || detail.ml === 0) return;
+                    const isRemove = detail.ml < 0;
+                    if (!isRemove) {
+                        const playSound = () => {
+                            // Прежний звук добавления остаётся как был. Новый «звук капли»
+                            // из канваса не реализуем: спецификация прямо запрещает
+                            // отдавать его без записанного семпла.
+                            if (detail.playSound !== false && HEYS.audio?.play) {
+                                HEYS.audio.play('waterAdded', { haptic: false });
+                            }
+                        };
+                        // Звук ждёт касания поверхности: при анимации плитки — 240 мс,
+                        // при столбике — сразу. Reduce-motion на функциональный слой не влияет
+                        // (см. HEYS.motion / MOTION_POLICY.md).
+                        if (waterTileIsVisible()) {
+                            setTimeout(playSound, 240);
+                        } else {
+                            playSound();
                         }
-                    };
-                    const reducedMotion = typeof window !== 'undefined'
-                        && window.matchMedia
-                        && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-                    // Звук ждёт касания поверхности: при анимации плитки — 240 мс,
-                    // при столбике или reduce-motion — сразу.
-                    if (waterTileIsVisible() && !reducedMotion) {
-                        setTimeout(playSound, 240);
-                    } else {
-                        playSound();
                     }
                     if (waterTileIsVisible()) return;
+                    if (isVolumeChipsBlockingColumn()) {
+                        pendingColumnDetail = detail;
+                        return;
+                    }
                     showWaterColumn(detail);
                 };
             }
@@ -5834,30 +5894,7 @@
                     ringUnit.textContent = (newWater || 0) >= 1000 ? 'л' : 'мл';
                 }
 
-                // "+250" text animation above the ring
-                const ringCont = waterCard.querySelector('.water-ring-container');
-                if (ringCont) {
-                    const animSpan = document.createElement('span');
-                    animSpan.className = 'water-card-anim water-card-anim-above';
-                    animSpan.textContent = '+' + ml;
-                    ringCont.appendChild(animSpan);
-                    setTimeout(() => { if (animSpan.parentNode) animSpan.remove(); }, 800);
-                }
-
-                // Water drop + splash in progress bar
-                const progressBar = waterCard.querySelector('.water-progress-inline');
-                if (progressBar) {
-                    const dropCont = document.createElement('div');
-                    dropCont.className = 'water-drop-container';
-                    const drop = document.createElement('div');
-                    drop.className = 'water-drop';
-                    const splash = document.createElement('div');
-                    splash.className = 'water-splash';
-                    dropCont.appendChild(drop);
-                    dropCont.appendChild(splash);
-                    progressBar.insertBefore(dropCont, progressBar.firstChild);
-                    setTimeout(() => { if (dropCont.parentNode) dropCont.remove(); }, 1200);
-                }
+                // Визуальный feedback вне плитки — только мерный столбик у FAB (канвас v4).
             }
 
             scheduleDayFlush();
@@ -5939,6 +5976,25 @@
             scheduleDayFlush();
 
             haptic('light');
+
+            const waterDetail = {
+                ml: -ml,
+                total: newWater,
+                source: 'day-water-remove',
+                playSound: false,
+                targetMl: Number(HEYS.Widgets?.data?.getWaterData?.()?.target) || 0
+            };
+            window.dispatchEvent(new CustomEvent('heysWaterAdded', { detail: waterDetail }));
+            window.dispatchEvent(new CustomEvent('heys:day-updated', {
+                detail: {
+                    date,
+                    dayData: { ...liveDay, waterMl: newWater, waterUpdatedAt: newUpdatedAt, updatedAt: newUpdatedAt },
+                    source: 'water-remove'
+                }
+            }));
+            if (typeof HEYS.events?.emit === 'function') {
+                HEYS.events.emit('water:added', { ml: -ml, total: newWater });
+            }
         }
 
         /**

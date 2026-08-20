@@ -9973,48 +9973,82 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   background: #7d98a6;
 }
 
-/* === Вода 1×1 — канвас water-add v4, ветка В₃ «Капля и круг» ===
-   Уровень заливает саму плитку и живёт постоянно; тонкой полосы у воды больше
-   нет. Вся анимация заперта внутри скругления плитки, полноэкранной заливки
-   не существует. Тон один и тот же во всех палитрах — тот, что уже красил
-   полосу; второй холодный тон означал бы палитру по типу данных. */
-/* Заливка, капля и круг позиционируются от самой карточки, а не от внутреннего контейнера:
-   в канвасе вода идёт от края до края плитки и обрезается её скруглением.
-   Поэтому здесь position не задаётся — ближайший позиционированный предок это
-   .widget, у него же overflow: hidden и радиус. */
+/* === Вода 1×1 — канвас water-add v4, ветка В₃ + раскладка nrmB === */
+/* Заливка и подписи nrmB живут внутри .widget-water--v4: он заполняет
+   карточку и задаёт containing block для absolute. Без height:100% flex-центр
+   1×1 схлопывает контейнер и склеивает подпись с числом. */
 .widget-water--v4 {
   --water-tone: #7d98a6;
   --water-tone-deep: #4e6d7a;
   --water-submerge-text: #fffaf1;
+  --water-ink-text: var(--v4-sand-ink, #201e1d);
+  --water-dim-text: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  --water-cream-text: var(--water-submerge-text);
   --water-drop-travel: 21px;
-  /* Перебиваем легаси-центрирование микро-плитки: в канвасе содержимое стоит
-     сверху, а не по центру. */
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
+  width: 100%;
   height: 100%;
   min-height: 0;
   gap: 0;
   padding: 0;
 }
 
-/* Кикер слева, число справа, между ними воздух — одной строкой, чтобы отступы
-   карточки работали сами. Абсолют от карточки прилепил бы число к её краю. */
-.widget-water__head {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 6px;
-  flex: none;
+/* nrmB: норма сверху, подпись и факт снизу — 8 px от края плитки. */
+.widget-water--v4 .widget-water__norm {
+  position: absolute;
+  right: 8px;
+  top: 7px;
+  z-index: 3;
+  font-size: 8.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--water-dim-text);
+  font-variant-numeric: tabular-nums;
+  transition: color 220ms ease-out;
+  pointer-events: none;
+}
+
+.widget-water--v4 .widget-water__label {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 3;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0.03em;
+  color: var(--water-dim-text);
+  transition: color 220ms ease-out;
+  pointer-events: none;
+}
+
+.widget-water--v4.widget-water--lines-on-water .widget-water__label,
+.widget-water--v4.widget-water--lines-on-water .widget-water__numV {
+  color: var(--water-cream-text);
+}
+
+.widget-water--v4.widget-water--norm-on-water .widget-water__norm {
+  color: var(--water-cream-text);
 }
 
 [data-theme$="dark"] .widget-water--v4 {
   --water-tone: #8fb3c2;
   --water-tone-deep: #3f6c7e;
   --water-submerge-text: #f2ede6;
+  --water-ink-text: #f2ede6;
+  --water-dim-text: rgba(242, 237, 230, 0.45);
 }
 
 html[data-theme-id="blue"] .widget-water--v4 {
@@ -10030,7 +10064,14 @@ html[data-theme-id="blue-dark"] .widget-water--v4 {
 }
 
 body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water.widget--1x1 {
-  padding: 8px;
+  padding: 0;
+}
+
+body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water.widget--1x1 .widget__content,
+.widget--water.widget--1x1 .widget__content {
+  align-items: stretch;
+  justify-content: stretch;
+  gap: 0;
 }
 
 .widget-water--v4 .widget-v4-kicker {
@@ -10040,7 +10081,7 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water.widget--1x1 {
   min-width: 0;
 }
 
-.widget-water__fill {
+.widget-water--v4 .widget-water__fill {
   position: absolute;
   left: 0;
   right: 0;
@@ -10134,53 +10175,21 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water.widget--1x1 {
   100% { opacity: 0; transform: scale(3.2); }
 }
 
-.widget-water--v4 .widget-v4-kicker,
-.widget-water__numV {
-  position: relative;
-  z-index: 2;
-  transition: transform 220ms ease-out, color 220ms ease-out;
-}
-
-/* Погружение: заливка ≥ 70 % — подпись и число на дно плитки, кремовый текст. */
-.widget-water--submerged .widget-v4-kicker {
-  transform: translateY(38.5px);
-  color: var(--water-submerge-text);
-}
-
-.widget-water--submerged .widget-water__numV,
-.widget-water--submerged .widget-water__numV.widget-v4-val--bad {
-  transform: translateY(37px);
-  color: var(--water-submerge-text);
-}
-
-.widget-water--submerged .widget-water__num-unit {
-  color: color-mix(in oklab, var(--water-submerge-text) 72%, transparent);
-}
-
-/* Число в правом верхнем углу — не спорит с заливкой (канвас V₃). */
-.widget-water__numV {
-  position: relative;
-  flex: none;
+.widget-water--v4 .widget-water__numV {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
   z-index: 3;
-  height: 15px;
-  min-width: 34px;
+  height: 12px;
+  min-width: 28px;
   text-align: right;
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: var(--v4-sand-ink, #201e1d);
+  color: var(--water-ink-text);
   font-variant-numeric: tabular-nums;
-}
-
-.widget-water__numV.widget-v4-val--bad {
-  color: var(--v4-bad-text, #a8382b);
-}
-
-.widget-water__num-unit {
-  font-size: 9px;
-  font-weight: 500;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
+  transition: color 220ms ease-out;
 }
 
 .widget-water__numV .widget-water__num-out,

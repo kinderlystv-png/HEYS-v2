@@ -25,10 +25,28 @@
         }).length;
     }
 
+    /** Калории трёх слотов тренировок — тот же TDEE, что и карточка «День». */
+    function resolveTrainingKcals(day, profile, explicit) {
+        if (explicit !== undefined && explicit !== null) return explicit;
+        try {
+            const tdee = HEYS.TDEE?.calculate?.(day || {}, profile || {}, {});
+            if (tdee) {
+                return [tdee.train1k || 0, tdee.train2k || 0, tdee.train3k || 0];
+            }
+        } catch (_error) { /* noop */ }
+        return undefined;
+    }
+
+    function buildWaterGoalParams({ day, profile, trainingKcals } = {}) {
+        return {
+            day: day || {},
+            profile: profile || {},
+            trainingKcals: resolveTrainingKcals(day, profile, trainingKcals)
+        };
+    }
+
     function computeWaterGoalBreakdown(params) {
-        const { day, profile, trainingKcals } = params || {};
-        const safeDay = day || {};
-        const safeProf = profile || {};
+        const { day: safeDay, profile: safeProf, trainingKcals } = buildWaterGoalParams(params || {});
 
         const w = +safeDay.weightMorning || +safeProf.weight || 70;
         const age = +safeProf.age || 30;
@@ -92,11 +110,13 @@
         const safeDay = day || {};
         const safeProf = prof || {};
 
-        const waterGoalBreakdown = useMemo(() => computeWaterGoalBreakdown({
-            day: safeDay,
-            profile: safeProf,
-            trainingKcals: [train1k, train2k, train3k]
-        }), [safeDay.weightMorning, safeDay.steps, safeDay.cycleDay, train1k, train2k, train3k, safeProf.weight, safeProf.age, safeProf.sex]);
+        const waterGoalBreakdown = useMemo(() => computeWaterGoalBreakdown(
+            buildWaterGoalParams({
+                day: safeDay,
+                profile: safeProf,
+                trainingKcals: [train1k, train2k, train3k]
+            })
+        ), [safeDay.weightMorning, safeDay.steps, safeDay.cycleDay, safeDay.trainings, train1k, train2k, train3k, safeProf.weight, safeProf.age, safeProf.sex]);
 
         const waterGoal = waterGoalBreakdown.finalGoal;
 
@@ -167,6 +187,8 @@
     HEYS.dayWaterState = {
         useWaterState,
         computeWaterGoal,
-        computeWaterGoalBreakdown
+        computeWaterGoalBreakdown,
+        buildWaterGoalParams,
+        resolveTrainingKcals
     };
 })(window);

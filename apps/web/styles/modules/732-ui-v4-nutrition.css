@@ -451,11 +451,22 @@
   line-height: 1;
   color: var(--v4-ok-fill, #22c55e);
   cursor: pointer;
+  touch-action: manipulation;
+}
+
+.nutrition-v4-water__btn:focus {
+  outline: none;
+}
+
+.nutrition-v4-water__btn:focus-visible {
+  outline: 2px solid var(--v4-act, #c67139);
+  outline-offset: 2px;
 }
 
 .nutrition-v4-water__btn--minus {
   background: #fef2f2;
   color: var(--v4-warn-2, #dc2626);
+  box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.18);
 }
 
 .nutrition-v4-water__btn--minus:active {

@@ -1514,6 +1514,12 @@
       });
 
       // Подписка на глобальные события HEYS (water:added НЕ включаем — обрабатывается оптимистично через heysWaterAdded DOM event)
+      const onProfileUpdated = () => {
+        skipLoadUntilRef.current = 0;
+        loadData();
+      };
+      window.addEventListener('heys:profile-updated', onProfileUpdated);
+
       const heysEvents = ['day:updated', 'meal:added', 'profile:updated'];
       heysEvents.forEach(evt => {
         if (typeof HEYS.events?.on === 'function') {
@@ -1556,6 +1562,7 @@
           }
         });
         window.removeEventListener('heysWaterAdded', handleWaterAdded);
+        window.removeEventListener('heys:profile-updated', onProfileUpdated);
         if (handleCrsUpdated) {
           window.removeEventListener('heys:crs-updated', handleCrsUpdated);
         }
@@ -3510,6 +3517,12 @@
   // Плитка сама решает, ей отвечать или нет: если её видно меньше чем наполовину,
   // ответ на жест берёт на себя мерный столбик у кнопки (см. heys_water_add_feedback_v1).
   const WATER_TILE_VISIBLE_RATIO = 0.5;
+  const WATER_TILE_LINES_CREAM_PCT = 31;
+  const WATER_TILE_NORM_CREAM_PCT = 89;
+
+  function formatWaterNormTopLabel(targetMl) {
+    return `из ${formatRuDecimal((Number(targetMl) || 0) / 1000, 1)}`;
+  }
 
   // Геометрию берём у самой карточки: вода заливает плитку целиком, а не
   // внутренний контейнер, зажатый её отступами.
@@ -3568,7 +3581,7 @@
     React.useEffect(() => {
       const onAdd = (event) => {
         const detail = event?.detail;
-        if (!detail || !detail.ml) return;
+        if (!detail || !detail.ml || detail.ml < 0) return;
         if (!isWaterTileVisible(rootRef.current)) return;
         if (timerRef.current) clearTimeout(timerRef.current);
         const targetMl = Number(detail.targetMl) || 2000;
@@ -3616,14 +3629,6 @@
     // у поверхности всегда идут блики, добавление роняет каплю и круг.
     if (d.isMicro || variantId === 'mini') {
       const liters = (drunk || 0) / 1000;
-      const waterState = data.isClosedDay
-        ? 'neutral'
-        : v4WaterValueState(drunk, target, {
-          sleepEnd: data.sleepEnd,
-          sleepStart: data.sleepStart,
-          profileSleepHours: data.profileSleepHours,
-          medianWakeMinutes: data.medianWakeMinutes
-        });
       // Выше нормы уровень упирается, число продолжает расти: перепить воду —
       // не то же самое, что перебрать калории, красным здесь ничего не красим.
       const fillPct = Math.min(100, Math.max(0, pct));
@@ -3631,17 +3636,20 @@
       const prevLitersRef = useRef(liters);
       const pulse = useWaterAddPulse(rootRef, fillPct);
       const displayFillPct = useWaterFillDisplayPct(fillPct);
-      const submerged = displayFillPct >= 70;
+      const linesOnWater = displayFillPct >= WATER_TILE_LINES_CREAM_PCT;
+      const normOnWater = displayFillPct >= WATER_TILE_NORM_CREAM_PCT;
       const toneMix = waterToneMixPct(displayFillPct);
       const litersLabel = formatRuDecimal(liters, 1);
       const prevLabel = formatRuDecimal(prevLitersRef.current, 1);
+      const normLabel = formatWaterNormTopLabel(target);
       React.useEffect(() => { prevLitersRef.current = liters; }, [liters]);
 
       return React.createElement('div', {
         ref: rootRef,
         className: 'widget-water widget-water--micro widget-v4-mini widget-water--v4'
           + (pulse ? ' widget-water--adding' : '')
-          + (submerged ? ' widget-water--submerged' : ''),
+          + (linesOnWater ? ' widget-water--lines-on-water' : '')
+          + (normOnWater ? ' widget-water--norm-on-water' : ''),
         style: {
           '--water-tone-mix': `${toneMix}%`,
           ...(pulse ? { '--water-drop-travel': `${pulse.travel}px` } : {})
@@ -3665,14 +3673,15 @@
           style: { bottom: `${fillPct}%` },
           'aria-hidden': 'true'
         }) : null,
-        // Канвас В₃: кикер слева сверху, число — справа сверху, между ними воздух.
-        // Строкой, а не абсолютом от карточки: иначе число липнет к её краю,
-        // потому что отступы карточки на абсолютное позиционирование не влияют.
-        React.createElement('div', { className: 'widget-water__head' },
-        v4Kicker('Вода'),
+        // Канвас nrmB: «Вода» слева внизу, факт справа внизу, норма справа сверху.
+        React.createElement('span', {
+          className: 'widget-water__norm',
+          'aria-hidden': 'true'
+        }, normLabel),
+        React.createElement('span', { className: 'widget-water__label' }, 'Вода'),
         React.createElement('div', {
-          className: 'widget-water__num widget-water__numV ' + v4ValueStateClass(waterState),
-          'aria-label': `${litersLabel} литра`
+          className: 'widget-water__num widget-water__numV',
+          'aria-label': `${litersLabel} литра из ${formatRuDecimal(target / 1000, 1)}`
         },
           pulse && prevLabel !== litersLabel
             ? React.createElement('span', {
@@ -3685,11 +3694,7 @@
             key: pulse ? `in-${pulse.id}` : 'in',
             className: 'widget-water__num-in'
               + (pulse && prevLabel !== litersLabel ? '' : ' widget-water__num-in--static')
-          },
-            litersLabel,
-            React.createElement('span', { className: 'widget-water__num-unit' }, ' л')
-          )
-        )
+          }, litersLabel)
         )
       );
     }
@@ -8652,9 +8657,14 @@
         }, 100);
       };
 
+      const onProfileUpdated = () => {
+        HEYS.Widgets.data?.refresh?.();
+      };
+
       // PERF NEW-1: миграция onDayUpdated на dispatcher next-frame lane.
       // Refresh widgets уже debounced 100мс — defer на frame дешёво.
       window.addEventListener('heysSyncCompleted', onSyncCompleted);
+      window.addEventListener('heys:profile-updated', onProfileUpdated);
       const dispatcher = window.HEYS?.events?.dayUpdated;
       let unsubDayUpdated;
       if (dispatcher && typeof dispatcher.subscribe === 'function') {
@@ -8668,6 +8678,7 @@
       return () => {
         if (dayRefreshTimer) clearTimeout(dayRefreshTimer);
         window.removeEventListener('heysSyncCompleted', onSyncCompleted);
+        window.removeEventListener('heys:profile-updated', onProfileUpdated);
         if (unsubDayUpdated) unsubDayUpdated();
       };
     }, [clientId]);
@@ -9048,6 +9059,76 @@
       }
     }, [selectedDate]);
 
+    const handleRemoveWater = useCallback((ml = 200) => {
+      try {
+        const dateKey = selectedDate || new Date().toISOString().slice(0, 10);
+        const U = HEYS.utils || {};
+        const store = HEYS.store || {};
+        const baseKey = `heys_dayv2_${dateKey}`;
+
+        let clientCurrent = (typeof U.getCurrentClientId === 'function' ? U.getCurrentClientId() : '') || '';
+        if (!clientCurrent) {
+          try {
+            const raw = localStorage.getItem('heys_client_current');
+            clientCurrent = raw ? JSON.parse(raw) : '';
+          } catch (e) {
+            clientCurrent = localStorage.getItem('heys_client_current') || '';
+          }
+        }
+
+        const scopedKey = clientCurrent
+          ? `heys_${clientCurrent}_dayv2_${dateKey}`
+          : baseKey;
+
+        let dayData = (typeof U.lsGet === 'function' ? U.lsGet(baseKey, null) : null)
+          || (typeof store.get === 'function' ? store.get(scopedKey, null) : null)
+          || {};
+
+        if (typeof dayData === 'string') {
+          try {
+            dayData = JSON.parse(dayData);
+          } catch (e) {
+            dayData = {};
+          }
+        }
+
+        if (!dayData.date) dayData.date = dateKey;
+        const mutationAt = Math.max(Date.now(), (Number(dayData.waterUpdatedAt) || 0) + 1);
+        const newWater = Math.max(0, (dayData.waterMl || 0) - ml);
+        dayData.waterMl = newWater;
+        dayData.waterUpdatedAt = mutationAt;
+        dayData.updatedAt = mutationAt;
+
+        if (typeof U.lsSet === 'function') {
+          U.lsSet(baseKey, dayData);
+        } else if (typeof store.set === 'function') {
+          store.set(scopedKey, dayData);
+        } else {
+          localStorage.setItem(scopedKey, JSON.stringify(dayData));
+          window.dispatchEvent(new CustomEvent('heys:data-saved', { detail: { key: scopedKey, type: 'water' } }));
+        }
+
+        window.dispatchEvent(new CustomEvent('heys:day-updated', {
+          detail: { date: dateKey, dayData, source: 'widgets_fab_water_remove' }
+        }));
+
+        window.dispatchEvent(new CustomEvent('heysWaterAdded', {
+          detail: {
+            ml: -ml,
+            total: newWater,
+            targetMl: Number(HEYS.Widgets?.data?.getWaterData?.()?.target) || 0,
+            source: 'widgets-fab-remove',
+            playSound: false
+          }
+        }));
+        if (typeof HEYS.events?.emit === 'function') {
+          HEYS.events.emit('water:added', { ml: -ml, total: newWater });
+        }
+      } catch (e) {
+        // silent
+      }
+    }, [selectedDate]);
+
     // Undo/Redo handlers
     const handleUndo = useCallback(() => {
       HEYS.Widgets.undo?.();
@@ -9325,7 +9406,9 @@
         // Общий Water/Meal/Hunger/Message FAB group — тот же компонент, что в Day.
         // В edit-mode прячем, чтобы не мешали перетаскиванию.
         !isEditMode && React.createElement(HEYS.dayPageShell.QuickActionsFabGroup, {
+          waterMl: HEYS.Widgets?.data?.getWaterData?.()?.drunk || 0,
           onAddWater: (ml, e) => handleAddWater(ml, e.currentTarget),
+          onRemoveWater: (ml) => handleRemoveWater(ml),
           onAddMeal: () => goToDayAndRun('diary', 'addMeal', []),
           onAddActivity: () => goToDayAndRun('activity'),
           hungerContext: {

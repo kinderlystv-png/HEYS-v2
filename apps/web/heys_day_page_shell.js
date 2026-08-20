@@ -122,9 +122,29 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     const WATER_FAB_VOL_CHIP_MS = 180;
 
-    function WaterFabButton({ onAddWater }) {
+    function WaterFabButton({ onAddWater, onRemoveWater, waterMl: waterMlProp }) {
         const [chipsOpen, setChipsOpen] = React.useState(false);
+        const [waterMl, setWaterMl] = React.useState(() => (
+            typeof waterMlProp === 'number'
+                ? waterMlProp
+                : (HEYS.Widgets?.data?.getWaterData?.()?.drunk
+                    || Number(HEYS.DayData?.getCurrentDay?.()?.waterMl)
+                    || 0)
+        ));
         const wrapRef = React.useRef(null);
+
+        React.useEffect(() => {
+            if (typeof waterMlProp === 'number') setWaterMl(waterMlProp);
+        }, [waterMlProp]);
+
+        React.useEffect(() => {
+            const onWater = (event) => {
+                const total = event?.detail?.total;
+                if (typeof total === 'number') setWaterMl(total);
+            };
+            window.addEventListener('heysWaterAdded', onWater);
+            return () => window.removeEventListener('heysWaterAdded', onWater);
+        }, []);
 
         React.useEffect(() => {
             HEYS.waterFeedback?.setVolumeChipsOpen?.(chipsOpen);
@@ -147,6 +167,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             onAddWater(ml, event);
         };
 
+        const pickRemove = (ml) => (event) => {
+            event.stopPropagation();
+            HEYS.waterFeedback?.markVolumeChipsClosing?.(WATER_FAB_VOL_CHIP_MS);
+            setChipsOpen(false);
+            onRemoveWater?.(ml, event);
+        };
+
         return React.createElement('div', {
             ref: wrapRef,
             className: 'water-fab-wrap' + (chipsOpen ? ' is-chips-open' : ''),
@@ -156,6 +183,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 role: 'group',
                 'aria-label': 'Объём воды',
             },
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'water-fab-vol water-fab-vol--minus',
+                    onClick: pickRemove(200),
+                    disabled: waterMl <= 0,
+                    'aria-disabled': waterMl <= 0 ? 'true' : 'false',
+                }, '−200'),
                 React.createElement('button', {
                     type: 'button',
                     className: 'water-fab-vol',
@@ -180,12 +214,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         );
     }
 
-    function renderQuickActionFabButton(key, { onAddWater, onAddMeal, onAddActivity, hungerContext }) {
+    function renderQuickActionFabButton(key, { onAddWater, onRemoveWater, waterMl, onAddMeal, onAddActivity, hungerContext }) {
         const HungerFabButton = HEYS.HungerEnergyStatusModal?.FabButton;
         const MessageFabButton = HEYS.Messenger?.FabButton;
 
         if (key === 'water') {
-            return React.createElement(WaterFabButton, { onAddWater });
+            return React.createElement(WaterFabButton, { onAddWater, onRemoveWater, waterMl });
         }
         if (key === 'meal') {
             return React.createElement('button', {
@@ -241,7 +275,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         return null;
     }
 
-    function QuickActionsFabGroup({ id, onAddWater, onAddMeal, onAddActivity, hungerContext = {} }) {
+    function QuickActionsFabGroup({ id, onAddWater, onRemoveWater, waterMl, onAddMeal, onAddActivity, hungerContext = {} }) {
         const { fabVisibility, layoutAnimate } = useFabVisibilityState();
 
         return React.createElement('div', {
@@ -258,7 +292,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                     'aria-hidden': on ? undefined : 'true',
                 },
                     React.createElement('div', { className: 'fab-slot__inner' },
-                        renderQuickActionFabButton(key, { onAddWater, onAddMeal, onAddActivity, hungerContext })
+                        renderQuickActionFabButton(key, { onAddWater, onRemoveWater, waterMl, onAddMeal, onAddActivity, hungerContext })
                     )
                 );
             })
@@ -293,6 +327,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             tdee,
             addMeal,
             addWater,
+            removeWater,
             diarySection,
             adviceTrigger,
             adviceRelevant,
@@ -627,10 +662,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
                 isMobile && isTabActive && (mobileSubTab === 'stats' || mobileSubTab === 'diary' || mobileSubTab === 'activity') && !offlineColdStart && React.createElement(QuickActionsFabGroup, {
                     id: 'tour-fab-buttons',
+                    waterMl: day?.waterMl || 0,
                     onAddWater: (ml, e) => addWater(ml, {
                         source: 'day-fab',
                         sourceEl: e.currentTarget
                     }),
+                    onRemoveWater: (ml) => removeWater(ml),
                     onAddMeal: () => {
                         if (mobileSubTab !== 'diary' && window.HEYS?.App?.setTab) {
                             window.HEYS.App.setTab('diary');

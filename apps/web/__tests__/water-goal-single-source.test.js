@@ -169,4 +169,41 @@ describe('computeWaterGoal — источник один', () => {
       expect(calls, `${rel} всё ещё зовёт несуществующую функцию`).toEqual([]);
     }
   });
+
+  it('виджет и карточка «День» берут калории тренировок из одного TDEE-слота', () => {
+    const water = loadWaterState({
+      TDEE: {
+        calculate: () => ({ train1k: 444, train2k: 0, train3k: 0 }),
+      },
+    });
+    const day = { weightMorning: 91, steps: 9640, trainings: [{ z: [40, 0, 0, 0] }] };
+    const profile = { weight: 80, age: 35, sex: 'male' };
+    const fromHook = water.computeWaterGoal({
+      day,
+      profile,
+      trainingKcals: [444, 0, 0],
+    });
+    const fromWidgetPath = water.computeWaterGoal(
+      water.buildWaterGoalParams({ day, profile })
+    );
+    expect(fromWidgetPath).toBe(fromHook);
+  });
+});
+
+describe('пересчёт нормы — подписка плитки', () => {
+  it('виджет слушает heys:profile-updated и берёт норму через buildWaterGoalParams', () => {
+    const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
+    expect(uiSrc).toContain("addEventListener('heys:profile-updated'");
+    const widgetDataSrc = fs.readFileSync(path.join(WEB_DIR, 'widgets/widget_data.js'), 'utf8');
+    expect(widgetDataSrc).toContain('buildWaterGoalParams');
+  });
+
+  it('_getWaterGoal читает день через _getDay, не через несуществующий DayData', () => {
+    const widgetDataSrc = fs.readFileSync(path.join(WEB_DIR, 'widgets/widget_data.js'), 'utf8');
+    const fnStart = widgetDataSrc.indexOf('_getWaterGoal() {');
+    expect(fnStart).toBeGreaterThan(-1);
+    const fnBlock = widgetDataSrc.slice(fnStart, fnStart + 400);
+    expect(fnBlock).toContain('this._getDay()');
+    expect(fnBlock).not.toContain('getCurrentDay');
+  });
 });

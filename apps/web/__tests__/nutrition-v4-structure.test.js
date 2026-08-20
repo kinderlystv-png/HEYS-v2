@@ -28,7 +28,7 @@ describe('Nutrition tab v4 structure', () => {
     expect(nutritionSource).toContain('Добавить приём пищи');
     expect(nutritionSource).toContain('nutrition-v4-breakdown');
     expect(nutritionSource).toContain('nutrition-v4-water');
-    expect(nutritionSource).toContain('−100');
+    expect(nutritionSource).toContain('−200');
     expect(nutritionSource).toContain('removeWater');
   });
 

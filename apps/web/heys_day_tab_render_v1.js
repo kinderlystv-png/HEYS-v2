@@ -80,6 +80,7 @@
             tdee: ctx.tdee,
             addMeal: ctx.addMeal,
             addWater: ctx.addWater,
+            removeWater: ctx.removeWater,
             diarySection,
             adviceTrigger: adviceState.adviceTrigger,
             adviceRelevant: adviceState.adviceRelevant,

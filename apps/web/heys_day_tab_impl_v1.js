@@ -2442,6 +2442,7 @@
             tdee,
             addMeal,
             addWater,
+            removeWater,
             adviceState,
             AdviceCard,
             haptic,

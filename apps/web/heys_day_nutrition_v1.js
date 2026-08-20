@@ -391,8 +391,8 @@
           waterCurrent > 0 && React.createElement('button', {
             type: 'button',
             className: 'nutrition-v4-water__btn nutrition-v4-water__btn--minus',
-            onClick: () => removeWater?.(100)
-          }, '−100'),
+            onClick: () => removeWater?.(200)
+          }, '−200'),
           React.createElement('button', {
             type: 'button',
             className: 'nutrition-v4-water__btn',

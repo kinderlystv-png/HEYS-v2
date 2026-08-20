@@ -319,7 +319,10 @@
                     col.style.top = Math.round(rect.top + rect.height / 2) + 'px';
                     col.style.right = Math.round(window.innerWidth - rect.left + 10) + 'px';
                     col.style.left = '';
-                    col.querySelector('.water-column__delta').textContent = '+' + detail.ml + ' мл';
+                    const deltaMl = Number(detail.ml) || 0;
+                    col.querySelector('.water-column__delta').textContent = deltaMl < 0
+                        ? '−' + Math.abs(deltaMl) + ' мл'
+                        : '+' + deltaMl + ' мл';
                     col.querySelector('.water-column__total').textContent = formatWaterLiters(total) + ' л';
                     col.querySelector('.water-column__target').textContent = 'из ' + formatWaterLiters(target);
                     col.querySelector('.water-column__fill').style.height = pct + '%';
@@ -355,22 +358,25 @@
                     }, delay);
                 };
                 HEYS.waterFeedback.playAddFeedback = function playAddFeedback(detail) {
-                    if (!detail || !detail.ml) return;
-                    const playSound = () => {
-                        // Прежний звук добавления остаётся как был. Новый «звук капли»
-                        // из канваса не реализуем: спецификация прямо запрещает
-                        // отдавать его без записанного семпла.
-                        if (detail.playSound !== false && HEYS.audio?.play) {
-                            HEYS.audio.play('waterAdded', { haptic: false });
+                    if (!detail || detail.ml == null || detail.ml === 0) return;
+                    const isRemove = detail.ml < 0;
+                    if (!isRemove) {
+                        const playSound = () => {
+                            // Прежний звук добавления остаётся как был. Новый «звук капли»
+                            // из канваса не реализуем: спецификация прямо запрещает
+                            // отдавать его без записанного семпла.
+                            if (detail.playSound !== false && HEYS.audio?.play) {
+                                HEYS.audio.play('waterAdded', { haptic: false });
+                            }
+                        };
+                        // Звук ждёт касания поверхности: при анимации плитки — 240 мс,
+                        // при столбике — сразу. Reduce-motion на функциональный слой не влияет
+                        // (см. HEYS.motion / MOTION_POLICY.md).
+                        if (waterTileIsVisible()) {
+                            setTimeout(playSound, 240);
+                        } else {
+                            playSound();
                         }
-                    };
-                    // Звук ждёт касания поверхности: при анимации плитки — 240 мс,
-                    // при столбике — сразу. Reduce-motion на функциональный слой не влияет
-                    // (см. HEYS.motion / MOTION_POLICY.md).
-                    if (waterTileIsVisible()) {
-                        setTimeout(playSound, 240);
-                    } else {
-                        playSound();
                     }
                     if (waterTileIsVisible()) return;
                     if (isVolumeChipsBlockingColumn()) {
@@ -562,6 +568,25 @@
             scheduleDayFlush();
 
             haptic('light');
+
+            const waterDetail = {
+                ml: -ml,
+                total: newWater,
+                source: 'day-water-remove',
+                playSound: false,
+                targetMl: Number(HEYS.Widgets?.data?.getWaterData?.()?.target) || 0
+            };
+            window.dispatchEvent(new CustomEvent('heysWaterAdded', { detail: waterDetail }));
+            window.dispatchEvent(new CustomEvent('heys:day-updated', {
+                detail: {
+                    date,
+                    dayData: { ...liveDay, waterMl: newWater, waterUpdatedAt: newUpdatedAt, updatedAt: newUpdatedAt },
+                    source: 'water-remove'
+                }
+            }));
+            if (typeof HEYS.events?.emit === 'function') {
+                HEYS.events.emit('water:added', { ml: -ml, total: newWater });
+            }
         }
 
         /**

@@ -57,17 +57,29 @@ describe('добавление воды — канвас water-add v4, ветк�
     // Вода заливает карточку от края до края и обрезается её скруглением.
     // Если контейнеру вернуть position: relative, заливка снова зажмётся
     // отступами карточки и перестанет доходить до краёв.
+    // Заливка и подписи — внутри .widget-water--v4 (position:relative, height:100%).
     const waterRootRule = widgetsCss.match(/\.widget-water--v4 \{[^}]*\}/)[0];
-    expect(waterRootRule).not.toContain('position: relative');
-    // Кикер и число стоят одной строкой сверху, а не абсолютом от карточки:
-    // абсолют игнорирует её отступы и прилепляет число к самому краю.
-    expect(uiSrc).toContain("className: 'widget-water__head'");
-    expect(widgetsCss).toMatch(/\.widget-water__head \{[^}]*justify-content: space-between/);
-    const numRule = widgetsCss.match(/\.widget-water__numV \{[^}]*\}/)[0];
-    expect(numRule).toContain('position: relative');
-    expect(numRule).not.toContain('position: absolute');
-    // Легаси-центрирование микро-плитки перебито — содержимое стоит сверху.
-    expect(waterRootRule).toContain('justify-content: flex-start');
+    expect(waterRootRule).toContain('position: relative');
+    expect(waterRootRule).toContain('height: 100%');
+    expect(widgetsCss).toMatch(/\.widget-water--v4 \.widget-water__fill \{[^}]*position: absolute/);
+    // nrmB: норма сверху, подпись и факт снизу — абсолют от карточки, 8 px от края.
+    expect(uiSrc).toContain("className: 'widget-water__norm'");
+    expect(uiSrc).toContain("className: 'widget-water__label'");
+    expect(uiSrc).toContain('formatWaterNormTopLabel');
+    expect(uiSrc).toContain('WATER_TILE_LINES_CREAM_PCT = 31');
+    expect(uiSrc).toContain('WATER_TILE_NORM_CREAM_PCT = 89');
+    expect(uiSrc).toContain('widget-water--lines-on-water');
+    expect(uiSrc).toContain('widget-water--norm-on-water');
+    expect(widgetsCss).toMatch(/\.widget-water--v4 \.widget-water__norm \{[^}]*right: 8px/);
+    expect(widgetsCss).toMatch(/\.widget-water--v4 \.widget-water__label \{[^}]*bottom: 8px/);
+    expect(widgetsCss).toMatch(/\.widget-water--v4 \{[^}]*position: relative/);
+    expect(widgetsCss).toMatch(/\.widget-water--v4 \{[^}]*height: 100%/);
+    const numRule = widgetsCss.match(/\.widget-water--v4 \.widget-water__numV \{[^}]*\}/)[0];
+    expect(numRule).toContain('position: absolute');
+    expect(numRule).toContain('bottom: 8px');
+    expect(numRule).toContain('right: 8px');
+    expect(widgetsCss).toMatch(/\.widget-water--v4\.widget-water--lines-on-water \.widget-water__numV[\s\S]*?var\(--water-cream-text\)/);
+    expect(widgetsCss).toMatch(/\.widget-water--v4\.widget-water--norm-on-water \.widget-water__norm[\s\S]*?var\(--water-cream-text\)/);
 
     // Кромка заливки: два слоя пунктира, крупный шагом 16 px и мелкий шагом
     // 11 px; крупный уезжает на один свой шаг, мелкий на два — «вдвое быстрее».
@@ -121,18 +133,18 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(handlersSrc).toContain("col.className = 'water-column animate-always'");
   });
 
-  it('погружение и ramp тона — контракт 2026-08-20', () => {
+  it('перекраска nrmB и ramp тона — контракт 2026-08-20', () => {
     expect(uiSrc).toContain('function waterToneMixPct');
-    expect(uiSrc).toContain('widget-water--submerged');
+    expect(uiSrc).not.toContain('widget-water--submerged');
     expect(uiSrc).toContain("'--water-tone-mix'");
     expect(widgetsCss).toContain('--water-tone-deep: #4e6d7a');
     expect(widgetsCss).toContain('--water-tone-deep: #3f6c7e');
     expect(widgetsCss).toContain('--water-tone-deep: #2c5f76');
     expect(widgetsCss).toContain('--water-tone-deep: #35657d');
     expect(widgetsCss).toMatch(/color-mix\([\s\S]*?var\(--water-tone\)[\s\S]*?var\(--water-tone-deep\)/);
-    expect(widgetsCss).toMatch(/\.widget-water--submerged \.widget-v4-kicker[\s\S]*?translateY\(38\.5px\)/);
-    expect(widgetsCss).toMatch(/\.widget-water--submerged \.widget-water__numV[\s\S]*?translateY\(37px\)/);
-    expect(widgetsCss).toContain('transition: transform 220ms ease-out, color 220ms ease-out');
+    expect(widgetsCss).toMatch(/\.widget-water--v4\.widget-water--lines-on-water \.widget-water__label[\s\S]*?color: var\(--water-cream-text\)/);
+    expect(widgetsCss).toContain('transition: color 220ms ease-out');
+    expect(widgetsCss).not.toContain('.widget-water--submerged');
   });
 
   it('новый «звук капли» не реализован — семпла ещё нет, прежний звук цел', () => {
@@ -150,6 +162,10 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(dayShellSrc).toContain('water-fab-vol');
     expect(dayShellSrc).toContain('pickVolume(200)');
     expect(dayShellSrc).toContain('pickVolume(500)');
+    expect(dayShellSrc).toContain('pickRemove(200)');
+    expect(dayShellSrc).toContain('water-fab-vol--minus');
+    expect(dayShellSrc).toContain('disabled: waterMl <= 0');
+    expect(dayShellSrc).toContain('−200');
     expect(dayShellSrc).toContain('markVolumeChipsClosing');
     expect(handlersSrc).toContain('setVolumeChipsOpen');
     expect(handlersSrc).toContain('markVolumeChipsClosing');
@@ -157,6 +173,18 @@ describe('добавление воды — канвас water-add v4, ветк�
     expect(handlersSrc).toContain('pendingColumnDetail');
     expect(handlersSrc).toMatch(/if \(isVolumeChipsBlockingColumn\(\)\) \{[\s\S]*?pendingColumnDetail = detail/);
     expect(waterCss).toContain('.water-fab-vol');
+    expect(waterCss).toContain('height: 30px');
+    expect(waterCss).toContain('font: 700 11.5px/1');
+    expect(waterCss).toContain('border: 2px solid var(--water-fab-outline)');
+    expect(waterCss).toContain('waterFabVolInDim');
     expect(waterCss).toMatch(/@keyframes waterFabVolIn[\s\S]*?translateX\(10px\)/);
+  });
+
+  it('отнять воду — плитка и столбик видят изменение', () => {
+    expect(handlersSrc).toMatch(/ml: -ml[\s\S]*?heysWaterAdded/);
+    expect(handlersSrc).toContain('isRemove = detail.ml < 0');
+    expect(handlersSrc).toMatch(/deltaMl < 0[\s\S]*?−/);
+    expect(uiSrc).toMatch(/detail\.ml < 0\) return/);
+    expect(uiSrc).toContain('handleRemoveWater');
   });
 });

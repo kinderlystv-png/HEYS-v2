@@ -302,8 +302,8 @@
             // Кнопка уменьшения (справа)
             (day.waterMl || 0) > 0 && React.createElement('button', {
               className: 'water-minus-compact',
-              onClick: () => removeWater(100)
-            }, '−100')
+              onClick: () => removeWater(200)
+            }, '−200')
           ),
 
           // Прогресс-бар с волной
