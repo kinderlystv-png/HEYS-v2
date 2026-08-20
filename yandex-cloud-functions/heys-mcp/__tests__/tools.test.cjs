@@ -1809,6 +1809,55 @@ test('каждый инструмент, меняющий день, отдаёт
   }
 });
 
+test('heys_update_day показывает записанные показатели, а не только калории', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
+  const tools = build(api);
+  const res = await tools.heys_update_day({ steps: 8000, weight: 90.7, sleep_quality: 6 });
+
+  assert.equal(res.structured.day_after.steps, 8000);
+  assert.equal(res.structured.day_after.weight_morning, 90.7);
+  assert.equal(res.structured.day_after.sleep.quality, 6);
+  assert.match(res.text, /В дне после записи: .*шаги 8000/);
+  assert.match(res.text, /вес 90\.7 кг/);
+  assert.match(res.text, /качество сна 6/);
+});
+
+/**
+ * Инцидент 20.08.2026: вызов heys_update_day(steps) прошёл без ошибки, а в дне
+ * остался 0 — по ответу это было неотличимо от успеха, потому что подтверждение
+ * показывало только калории, приёмы и воду. Ответ обязан показать 0.
+ */
+test('потерянная сервером запись шагов видна в ответе, а не молчит', async () => {
+  const serverDayWithoutSteps = { date: '2026-08-01', waterMl: 0, meals: [] };
+  const api = fakeApiWithServerMerge(serverDayWithoutSteps);
+  const tools = build(api);
+  const res = await tools.heys_update_day({ steps: 8000 });
+
+  assert.equal(res.structured.day_after.steps, 0, 'day_after берёт шаги из блоба сервера');
+  assert.match(res.text, /В дне после записи: шаги 0\./, 'ноль назван вслух');
+});
+
+test('отклонённая запись показывает значения рядом с НЕ ЗАПИСАНО', async () => {
+  const api = fakeApiWithServerMerge({ date: '2026-08-01', waterMl: 0, meals: [], steps: 300 }, 'stale_write_blocked');
+  const tools = build(api);
+  const res = await tools.heys_update_day({ steps: 8000 });
+
+  assert.match(res.text, /НЕ ЗАПИСАНО \(stale_write_blocked\)\. В дне после записи: шаги 300\./);
+});
+
+test('ответы про еду и воду не тащат показатели дня', async () => {
+  const day = { date: '2026-08-01', meals: [], waterMl: 0, steps: 8000, weightMorning: 90.7, updatedAt: 111 };
+  for (const [name, args] of [
+    ['heys_add_water', { ml: 200 }],
+    ['heys_log_meal', { items: [{ product_id: 'own-americano', grams: 100 }] }],
+  ]) {
+    const tools = build(fakeApi({ day: JSON.parse(JSON.stringify(day)) }));
+    const res = await tools[name](args);
+    assert.ok(!/В дне после записи/.test(res.text), `${name}: показатели дня попали в чужой ответ`);
+    assert.equal(res.structured.day_after.steps, 8000, `${name}: в structured показатели всё же есть`);
+  }
+});
+
 test('WRITE_TOOLS совпадает с обработчиками, которые реально пишут', () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'lib', 'tools.js'), 'utf8');
   const found = new Set();

@@ -399,6 +399,26 @@ function createTools({
       norm: day.dailyNorm(saved, await loadNormInputs(saved.date || fallbackDay.date)),
       meals: (saved.meals || []).length,
       water_ml: Number(saved.waterMl) || 0,
+      // Показатели дня — из того же сохранённого блоба, что и калории. Без них
+      // heys_update_day отчитывался «обновил steps», не показывая значения, и
+      // потеря записи была неотличима от успеха (20.08.2026: шаги остались 0).
+      steps: Number(saved.steps) || 0,
+      weight_morning: saved.weightMorning ?? null,
+      household_min: Number(saved.householdMin) || 0,
+      sleep: {
+        start: saved.sleepStart || null,
+        end: saved.sleepEnd || null,
+        hours: day.totalSleepHours(saved) ?? saved.sleepHours ?? null,
+        quality: saved.sleepQuality ?? null,
+      },
+      // Утренние отметки, а не средние по дню: коннектор пишет именно их.
+      morning: {
+        mood: saved.moodMorning ?? null,
+        wellbeing: saved.wellbeingMorning ?? null,
+        stress: saved.stressMorning ?? null,
+      },
+      sleep_note: saved.sleepNote || '',
+      comment: saved.dayComment || '',
       is_refeed_day: saved.isRefeedDay === true,
       refeed_reason: saved.isRefeedDay === true ? (saved.refeedReason || null) : null,
       // 'saved' — наша версия победила, 'day_merged' — сервер слил с облачной,
@@ -409,18 +429,57 @@ function createTools({
   }
 
   /**
-   * Хвост к тексту ответа: итог дня + outcome, если запись не «чистая».
+   * Как показать в тексте показатель, который правил этот вызов. Ключи — те же
+   * публичные имена, что возвращает `applied` из day.updateDayFields.
+   */
+  const DAY_AFTER_FIELD_TEXT = {
+    weight: (a) => (a.weight_morning == null ? null : `вес ${a.weight_morning} кг`),
+    steps: (a) => `шаги ${a.steps}`,
+    household_min: (a) => `быт ${a.household_min} мин`,
+    sleep_start: (a) => (a.sleep.start ? `засыпание ${a.sleep.start}` : null),
+    sleep_end: (a) => (a.sleep.end ? `подъём ${a.sleep.end}` : null),
+    sleep_quality: (a) => (a.sleep.quality == null ? null : `качество сна ${a.sleep.quality}`),
+    mood: (a) => (a.morning.mood == null ? null : `настроение ${a.morning.mood}`),
+    wellbeing: (a) => (a.morning.wellbeing == null ? null : `самочувствие ${a.morning.wellbeing}`),
+    stress: (a) => (a.morning.stress == null ? null : `стресс ${a.morning.stress}`),
+    // Тексты не эхо'им целиком — в ответе важен факт, что запись доехала.
+    sleep_note: (a) => (a.sleep_note ? 'заметка о сне записана' : null),
+    comment: (a) => (a.comment ? 'комментарий записан' : null),
+  };
+
+  /**
+   * Значения показателей после записи — по сохранённому блобу, а не по тому,
+   * что мы отправляли. Печатаются только поля этого вызова: в ответе на еду или
+   * воду шаги и сон были бы шумом.
+   */
+  function dayFieldsText(after, appliedFields) {
+    if (!Array.isArray(appliedFields) || !appliedFields.length) return '';
+    const parts = [];
+    for (const name of appliedFields) {
+      const format = DAY_AFTER_FIELD_TEXT[name];
+      if (!format) continue;
+      const text = format(after);
+      if (text) parts.push(text);
+    }
+    return parts.length ? ` В дне после записи: ${parts.join(', ')}.` : '';
+  }
+
+  /**
+   * Хвост к тексту ответа: показатели этого вызова + итог дня + outcome, если
+   * запись не «чистая».
    * stale_write_blocked — в начале и явно: иначе модель отчитается «записал».
    */
-  function dayAfterText(after) {
+  function dayAfterText(after, appliedFields) {
+    const fields = dayFieldsText(after, appliedFields);
     const body = ` Итого за ${after.date}: ${after.totals.kcal} ккал, приёмов ${after.meals}, вода ${after.water_ml} мл.${normText(after.norm)}`;
     if (after.outcome === 'stale_write_blocked') {
-      return ` НЕ ЗАПИСАНО (stale_write_blocked).${body}`;
+      // Значения показываем и здесь: они доказывают, что в дне осталось старое.
+      return ` НЕ ЗАПИСАНО (stale_write_blocked).${fields}${body}`;
     }
     if (after.outcome && after.outcome !== 'incoming_wins' && after.outcome !== 'saved') {
-      return `${body} outcome=${after.outcome}.`;
+      return `${fields}${body} outcome=${after.outcome}.`;
     }
-    return body;
+    return `${fields}${body}`;
   }
 
   /** Строка приёма для модели: id обязательны — structuredContent в Cursor часто не виден. */
@@ -1920,7 +1979,7 @@ function createTools({
       const saved = await writeDay(date, working, Number(current.updatedAt) || 0);
       const after = await dayAfterWrite(saved, working);
       return {
-        text: `Обновил ${date}: ${applied.join(', ')}.${dayAfterText(after)}`,
+        text: `Обновил ${date}: ${applied.join(', ')}.${dayAfterText(after, applied)}`,
         structured: { date, updated: applied, day_after: after },
       };
     },
@@ -2173,7 +2232,7 @@ function createTools({
       const status = day.checkinStatus(working, profileForStatus);
       const head = status.status === 'done' ? 'пройден' : status.status === 'partial' ? 'частично' : 'не начат';
       return {
-        text: `Чек-ин за ${date}: записано ${applied.join(', ')}. Статус — ${head}.${after ? dayAfterText(after) : ''}`,
+        text: `Чек-ин за ${date}: записано ${applied.join(', ')}. Статус — ${head}.${after ? dayAfterText(after, applied) : ''}`,
         structured: { date, applied, status, day_after: after },
       };
     },
