@@ -8,6 +8,38 @@ servers:
   - url: https://d5d7939njvjp27ofsok0.3zvepvee.apigw.yandexcloud.net
   - url: https://api.heyslab.ru
 
+# 2026-08-22: CORS на уровне шлюза. До этого ошибки, которые генерирует сам шлюз
+# (502 при отказе функции, 503 при сбросе нагрузки), уходили с
+# Access-Control-Allow-Origin: '*' без allow-credentials; запросы приложения
+# идут с credentials, браузер блокировал такой ответ целиком, и вместо кода
+# ошибки клиент видел «Failed to fetch» — серверная ошибка маскировалась под
+# обрыв связи (инцидент 21.08: каталог продуктов, BUGS_HISTORY.md).
+# С этим блоком шлюз на совпавших маршрутах отвечает эхом Origin из списка ниже
+# и credentials: true — настоящий код ошибки доходит до клиента. Проверено на
+# временном шлюзе heys-cors-test-tmp: заголовки функций проходят без дублей,
+# preflight шлюз закрывает сам (204), 502 шлюза несёт правильный CORS.
+# 404 на несовпавшем пути так и остаётся с '*' — расширение его не украшает,
+# но клиентский код по несуществующим путям не ходит.
+# Список origin — объединение ALLOWED_ORIGINS прод-функций (rest/rpc/auth/photos);
+# localhost сюда не входит: локальная разработка ходит через свой dev-proxy
+# сервер-сайд, без браузерного CORS.
+x-yc-apigateway:
+  cors:
+    origin:
+      - https://heyslab.ru
+      - https://www.heyslab.ru
+      - https://app.heyslab.ru
+      - https://heys-static.website.yandexcloud.net
+      - https://stable.heyslab.ru
+      - https://stable-heyslab-ru.website.yandexcloud.net
+    methods: GET, POST, PATCH, DELETE, OPTIONS
+    # Объединение Access-Control-Allow-Headers всех функций этого шлюза: шлюз
+    # закрывает preflight САМ (204), OPTIONS-интеграции функций перестают
+    # вызываться — что не перечислено здесь, то браузер не пропустит.
+    allowedHeaders: Content-Type, Authorization, Prefer, apikey, x-client-info, X-Client-Id, X-Session-Token, x-supabase-api-version, x-heys-runtime-env
+    credentials: true
+    maxAge: 3600
+
 # Реальные ID функций (Yandex Cloud)
 # heys-api-rpc:    d4e9e90es31bgjp87j8i
 # heys-api-rest:   d4ea4j7eh05rtkjubipt
