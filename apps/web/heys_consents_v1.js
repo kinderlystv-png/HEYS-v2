@@ -2976,6 +2976,19 @@
   };
 
   // ── ConsentOutdatedBanner (sticky top, мягкий призыв пере-подписать) ────
+  // Запасное поле кода на случай, если модуль клавиатуры не загрузился.
+  // Хук вызывается всегда — подменяется реализация, а не факт вызова, иначе
+  // нарушится порядок хуков.
+  function useFallbackCodeField() {
+    const [value, setValue] = useState('');
+    return {
+      pinValue: value,
+      isComplete: value.length >= 4,
+      resetDigits: function () { setValue(''); },
+      applyPinDigits: function (arr) { setValue((arr || []).slice(0, 4).join('')); },
+    };
+  }
+
   // ── ReconsentSheet: повторная подпись документов вне онбординга ────────
   //
   // Зачем отдельный экран. ConsentScreen — экран регистрации: он собирает
@@ -2998,9 +3011,20 @@
 
     const [openDoc, setOpenDoc] = useState(null);
     const [accepted, setAccepted] = useState([]);
-    const [code, setCode] = useState('');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
+
+    // Код доступа вводится тем же способом, что и везде в продукте: четыре
+    // ячейки и своя цифровая клавиатура. Обычное поле ввода здесь было
+    // ошибкой — на телефоне оно поднимает системную клавиатуру, не
+    // ограничивает длину и выглядит чужеродно рядом с экраном входа.
+    const pinKit = HEYS.AuthPinKeypad && HEYS.AuthPinKeypad.createKit
+      ? HEYS.AuthPinKeypad.createKit(React)
+      : null;
+    const usePinField = pinKit ? pinKit.usePinKeypad : useFallbackCodeField;
+    const codeField = usePinField({ disabled: busy, idPrefix: 'reconsent-code', autoFocus: false });
+    const keypadRef = useRef(null);
+    const code = codeField.pinValue;
 
     if (!types.length) return null;
 
@@ -3122,18 +3146,27 @@
           React.createElement('div', { style: { fontWeight: 600, marginBottom: 6 } }, 'Код доступа'),
           React.createElement('div', { style: { color: 'rgba(0,0,0,.55)', marginBottom: 8 } },
             'Тот же, которым вы входите в HEYS. Подпись фиксируется вместе с версией документа и временем.'),
-          React.createElement('input', {
-            type: 'password',
-            inputMode: 'numeric',
-            autoComplete: 'one-time-code',
-            value: code,
-            disabled: busy,
-            onChange: function (e) { setCode(e.target.value); },
-            style: {
-              width: '100%', padding: '11px 13px', borderRadius: 12,
-              border: '1px solid #d4d4d8', font: 'inherit', boxSizing: 'border-box',
-            },
-          })
+          pinKit
+            ? pinKit.renderPinKeypadSection({
+              pin: codeField,
+              sectionClassName: 'heys-auth-pin-section space-y-3 is-active',
+              keypadRef: keypadRef,
+            })
+            : React.createElement('input', {
+              type: 'password',
+              inputMode: 'numeric',
+              autoComplete: 'one-time-code',
+              maxLength: 4,
+              value: code,
+              disabled: busy,
+              onChange: function (e) {
+                codeField.applyPinDigits(String(e.target.value || '').replace(/\D/g, '').slice(0, 4).split(''));
+              },
+              style: {
+                width: '100%', padding: '11px 13px', borderRadius: 12,
+                border: '1px solid #d4d4d8', font: 'inherit', boxSizing: 'border-box',
+              },
+            })
         ),
 
         error && React.createElement('div', {
