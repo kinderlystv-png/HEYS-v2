@@ -7658,11 +7658,14 @@ body:has(.page-reports) .hdr::after {
   --heys-diary-card-title-size: 14px;
   --heys-diary-card-title-weight: 600;
   --heys-diary-card-title-color: var(--text, #1e293b);
-  /* Shared outline tokens (border + expanded dividers) */
+  /* Shared outline tokens (border + expanded dividers).
+     Тёмные были розовыми (rgba(244,63,94,…)) — остаток чужой темы: в тёмных
+     наборах карточка воды и все карточки дневника получали розовую рамку.
+     Теперь — линия набора (контракт nutrition-tab, «палитры»). */
   --heys-diary-outline-border-light: rgba(255, 255, 255, 0.5);
-  --heys-diary-outline-border-dark: rgba(244, 63, 94, 0.42);
+  --heys-diary-outline-border-dark: var(--v4-line, rgba(242, 237, 230, 0.12));
   --heys-diary-outline-divider-light: rgba(255, 255, 255, 0.5);
-  --heys-diary-outline-divider-dark: rgba(244, 63, 94, 0.48);
+  --heys-diary-outline-divider-dark: var(--v4-line, rgba(242, 237, 230, 0.12));
 
   /* Current theme-resolved aliases (for inline styles and shared usage) */
   --heys-diary-outline-border-current: var(--heys-diary-outline-border-light);

@@ -517,6 +517,13 @@
          * Remove water (для исправления ошибок)
          */
         function removeWater(ml) {
+            // 🔒 Read-only gating — тот же гейт, что у addWater: убавление
+            // тоже меняет данные дня (контракт nutrition-tab, «убрать воду»).
+            if (!HEYS.Paywall?.canWriteSync?.()) {
+                HEYS.Paywall?.showBlockedToast?.('Изменение воды недоступно');
+                return;
+            }
+
             const liveDay = getLatestDaySnapshot();
             const newWater = Math.max(0, (liveDay.waterMl || 0) - ml);
             const newUpdatedAt = Math.max(Date.now(), (Number(liveDay.waterUpdatedAt) || 0) + 1);

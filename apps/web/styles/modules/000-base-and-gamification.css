@@ -8173,7 +8173,7 @@ body:has(.offline-banner) .wrap {
   padding: 0;
   border: none;
   border-radius: 999px;
-  background: #f7efe2;
+  background: var(--v4-surface);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
   display: flex;
@@ -8184,7 +8184,7 @@ body:has(.offline-banner) .wrap {
 
 @media (hover: hover) {
   .date-picker--v4 .date-picker-day-nav:hover:not(:disabled) {
-    background: var(--v4-surface-2, #efe3cf);
+    background: var(--v4-hero);
   }
 }
 
@@ -8200,13 +8200,12 @@ body:has(.offline-banner) .wrap {
 }
 
 [data-theme$="dark"] .date-picker--v4 .date-picker-day-nav {
-  background: #23201b;
   color: var(--v4-ink-3, rgba(242, 237, 230, 0.5));
 }
 
 @media (hover: hover) {
   [data-theme$="dark"] .date-picker--v4 .date-picker-day-nav:hover:not(:disabled) {
-    background: var(--v4-bg-secondary, #2f2820);
+    background: var(--v4-hero);
   }
 }
 
@@ -8220,7 +8219,7 @@ body:has(.offline-banner) .wrap {
   justify-content: center;
   gap: 3px;
   padding: 0 12px;
-  background: #f7efe2;
+  background: var(--v4-surface);
   border: none;
   border-radius: 16px;
   cursor: pointer;
@@ -8233,31 +8232,23 @@ body:has(.offline-banner) .wrap {
 
 @media (hover: hover) {
   .date-picker--v4 .date-picker-trigger:hover {
-    background: var(--v4-surface-2, #efe3cf);
+    background: var(--v4-hero);
   }
 }
 
 .date-picker--v4 .date-picker-trigger.open {
-  box-shadow: 0 0 0 2px var(--v4-sand-act, #c67139);
+  box-shadow: 0 0 0 2px var(--v4-act);
 }
 
 /* Сегодня — тот же грунт, что у стрелок (канвас «Дата v4») */
 .date-picker--v4 .date-picker-trigger--today {
-  background: #f7efe2;
+  background: var(--v4-surface);
   border: none;
-}
-
-[data-theme$="dark"] .date-picker--v4 .date-picker-trigger {
-  background: #23201b;
-}
-
-[data-theme$="dark"] .date-picker--v4 .date-picker-trigger--today {
-  background: #23201b;
 }
 
 @media (hover: hover) {
   [data-theme$="dark"] .date-picker--v4 .date-picker-trigger--today:hover {
-    background: var(--v4-bg-secondary, #2f2820);
+    background: var(--v4-hero);
   }
 }
 
@@ -8270,7 +8261,7 @@ body:has(.offline-banner) .wrap {
 }
 
 .date-picker--v4 .date-picker-trigger--today .date-picker-main--today {
-  color: #201e1d;
+  color: var(--v4-ink);
 }
 
 .date-picker--v4 .date-picker-weekend-abbr {
@@ -8278,7 +8269,7 @@ body:has(.offline-banner) .wrap {
 }
 
 .date-picker--v4 .date-picker-trigger--not-today {
-  background: #f3e0d2;
+  background: var(--v4-past);
   border: none;
   gap: 0;
   padding: 0 4px 0 0;
@@ -8337,7 +8328,7 @@ body:has(.offline-banner) .wrap {
   padding: 0 12px;
   border: none;
   border-radius: 999px;
-  background: var(--v4-sand-act, #c67139);
+  background: var(--v4-act);
   color: var(--v4-btn-on-act, #2b1608);
   font-family: inherit;
   font-size: 10.5px;
@@ -8353,41 +8344,28 @@ body:has(.offline-banner) .wrap {
 }
 
 [data-theme$="dark"] .date-picker--v4 .date-picker-inline-today {
-  background: #cf8144;
   color: var(--v4-btn-on-act, #1a0f04);
 }
 
 .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
-  background: #f3e0d2;
+  background: var(--v4-past);
 }
 
 @media (hover: hover) {
   .date-picker--v4 .date-picker-trigger--not-today:hover {
-    background: var(--v4-surface-2, #efe3cf);
-  }
-
-  [data-theme$="dark"] .date-picker--v4 .date-picker-trigger--not-today:hover {
-    background: var(--v4-bg-secondary, #2f2820);
+    background: var(--v4-hero);
   }
 }
 
 .date-picker--v4 .date-picker-trigger--not-today .date-picker-main--past {
-  color: #8a4a20;
-}
-
-[data-theme$="dark"] .date-picker--v4 .date-picker-trigger--today .date-picker-main--today {
-  color: #f2ede6;
-}
-
-[data-theme$="dark"] .date-picker--v4 .date-picker-trigger--not-today .date-picker-main--past {
-  color: #e2a468;
+  color: var(--v4-act-text);
 }
 
 .date-picker--v4 .date-picker-sub--relative {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: #8a4a20;
+  color: var(--v4-act-text);
 }
 
 .date-picker--v4 .date-picker-text {

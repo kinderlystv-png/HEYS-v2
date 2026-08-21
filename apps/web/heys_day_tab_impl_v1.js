@@ -2002,6 +2002,22 @@
             displayRatioStatus
         } = caloricDisplayState;
 
+        // Один бюджет на весь экран (контракт nutrition-tab, «бюджет дня»):
+        // нормы вкладки «Питание» считаются от displayOptimum — нормы с учётом
+        // рефида и калорийного долга. buildNutritionState стоит выше по порядку
+        // хуков, где displayOptimum ещё не посчитан: он зависит от caloricDebt,
+        // тот — от sparklineData, а та — от dayTot. Поэтому нормы экрана
+        // пересчитываются здесь, после того как бюджет стал известен.
+        const displayNormAbs = useMemo(() => {
+            if (!displayOptimum || displayOptimum === optimum) return normAbs;
+            return HEYS.dayNutritionState.computeNormAbs({
+                budgetKcal: displayOptimum,
+                normPerc,
+                day,
+                HEYS: window.HEYS
+            });
+        }, [displayOptimum, optimum, normPerc, normAbs, day]);
+
         // === Engagement effects (extracted) ===
         if (!HEYS.dayEngagementEffects?.useEngagementEffects) {
             throw new Error('[heys_day_v12] HEYS.dayEngagementEffects not loaded before heys_day_v12.js');

@@ -34,12 +34,38 @@
         return result;
     }
 
+    const EMPTY_TOTALS = () => ({ kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0, gi: 0, harm: 0 });
+
+    /**
+     * Абсолютные нормы дня от бюджета экрана.
+     *
+     * budgetKcal — это displayOptimum (норма с учётом рефида и долга), а не
+     * исходный optimum: контракт «бюджет дня» требует одно число на весь
+     * экран. Раньше сюда уходил optimum под именем displayOptimum, и в
+     * рефид-день герой и строка «норма» в итогах расходились.
+     */
+    function computeNormAbs(params) {
+        const { budgetKcal, normPerc, day, HEYS: HEYSRef } = params || {};
+        const ctx = HEYSRef || HEYS;
+        const lsGet = ctx.utils?.lsGet;
+        return ctx.dayCalculations?.computeDisplayNorms?.({
+            displayOptimum: budgetKcal,
+            normPerc,
+            profile: (lsGet ? lsGet('heys_profile', {}) : {}),
+            day,
+            lsGet
+        })?.normAbs
+            || ctx.dayCalculations?.computeDailyNorms?.(budgetKcal, normPerc, { day, lsGet })
+            || EMPTY_TOTALS();
+    }
+
     function buildNutritionState(params) {
         const {
             React,
             day,
             pIndex,
             optimum,
+            displayOptimum,
             getDailyNutrientColor,
             getDailyNutrientTooltip,
             HEYS: HEYSRef
@@ -57,13 +83,8 @@
         const calculatedDayTot = ctx.dayCalculations?.calculateDayTotals?.(day, pIndex) || { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0, gi: 0, harm: 0 };
         const dayTot = withSavedTotalsFallback(calculatedDayTot, day);
         const normPerc = (ctx.utils && ctx.utils.lsGet ? ctx.utils.lsGet('heys_norms', {}) : {}) || {};
-        const normAbs = ctx.dayCalculations?.computeDisplayNorms?.({
-            displayOptimum: optimum,
-            normPerc,
-            profile: (ctx.utils && ctx.utils.lsGet ? ctx.utils.lsGet('heys_profile', {}) : {}),
-            day,
-            lsGet: ctx.utils?.lsGet
-        })?.normAbs || ctx.dayCalculations?.computeDailyNorms?.(optimum, normPerc, { day, lsGet: ctx.utils?.lsGet }) || { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0, gi: 0, harm: 0 };
+        const budgetKcal = Number.isFinite(+displayOptimum) && +displayOptimum > 0 ? +displayOptimum : optimum;
+        const normAbs = computeNormAbs({ budgetKcal, normPerc, day, HEYS: ctx });
 
         const dailyTableState = ctx.dayDailyTable?.buildDailyTableState
             ? ctx.dayDailyTable.buildDailyTableState({
@@ -81,6 +102,7 @@
     }
 
     HEYS.dayNutritionState = {
-        buildNutritionState
+        buildNutritionState,
+        computeNormAbs
     };
 })(window);
