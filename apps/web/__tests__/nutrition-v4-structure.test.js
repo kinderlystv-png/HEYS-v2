@@ -17,7 +17,6 @@ const diarySource = read('../heys_day_diary_section.js');
 const appShellSource = read('../heys_app_shell_v1.js');
 const paletteSource = read('../styles/modules/002-ui-v4-palette-roles.css');
 const mealsSource = read('../day/_meals.js');
-const toastSource = read('../heys_toast_v1.js');
 const paywallSource = read('../heys_paywall_v1.js');
 
 describe('Nutrition tab v4 structure', () => {
@@ -119,15 +118,16 @@ describe('Nutrition tab v4 structure', () => {
     expect(appShellSource).not.toContain('diaryPanelsVisibility');
   });
 
-  it('удаление без вопроса, тост отмены 5 с с полосой времени', () => {
+  // Вид и длительность бара отмены уехали в свой канвас undo-bar.v4.dc.html и
+  // проверяются в undo-bar-v4-contract.test.js. Здесь остаётся только то, что
+  // принадлежит самой вкладке: удаление без вопроса и через общий бар.
+  it('удаление приёма и продукта — без вопроса и через общий бар отмены', () => {
     // Подтверждающего вопроса заранее нет: его платят все ради редкой ошибки.
     expect(mealsSource).not.toContain('Удалить приём пищи?');
-    // Окно защиты записи равно видимой полосе — 5 с, невидимого запаса нет.
-    expect(mealsSource).toMatch(/label: mealName \+ ' удалён',[\s\S]{0,220}duration: 5000/);
-    expect(mealsSource).toMatch(/label: removedName \+ ' удалён',[\s\S]{0,120}duration: 5000/);
+    expect(mealsSource).toMatch(/label: mealName \+ ' удалён',[\s\S]{0,400}batch: \{ key: 'meal'/);
+    expect(mealsSource).toMatch(/label: removedName \+ ' удалён',[\s\S]{0,400}batch: \{ key: 'meal-product'/);
+    // Окно защиты записи от облачной перезаписи равно окну бара.
     expect(mealsSource).toContain('markUndoWindow(5000)');
-    expect(toastSource).toContain('heys-toast__timer');
-    expect(toastSource).toContain("fill.style.animationDuration = duration + 'ms'");
   });
 
   it('только чтение: плашка называет причину и что делать, кнопки гаснут', () => {

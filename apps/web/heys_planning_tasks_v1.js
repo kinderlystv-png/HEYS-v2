@@ -2880,8 +2880,10 @@
 
             HEYS.Undo.push({
                 label: 'Задача «' + context.taskTitle + '» удалена',
-                subtitle: 'Можно вернуть одним тапом, пока карточка скрыта.',
-                icon: '🗑',
+                // Разбор списка задач свайпом — та же пачка, что у продуктов
+                // приёма. Подписи и иконки в баре v4 нет: кадр даёт кольцо,
+                // строку и «Отменить».
+                batch: { key: 'task', forms: ['задача', 'задачи', 'задач'] },
                 context,
                 onUndo: (undoContext) => {
                     unmarkPendingDeletedTasks(undoContext?.hiddenTaskIds);
@@ -2914,9 +2916,11 @@
             };
 
             HEYS.Undo.push({
-                label: 'Проект «' + context.projectName + '» удалён',
-                subtitle: 'Если не отменить, задачи проекта перейдут в «Без проекта».',
-                icon: '🗑',
+                // Подписи в баре v4 нет, а последствие называть надо — иначе
+                // человек узнаёт о переезде задач уже после истечения окна.
+                // Поэтому оно сложено в саму строку, которая по контракту
+                // говорит, что исчезло.
+                label: 'Проект «' + context.projectName + '» удалён, задачи — в «Без проекта»',
                 context,
                 onUndo: (undoContext) => {
                     unmarkPendingDeletedProjects(undoContext?.hiddenProjectIds);

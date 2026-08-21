@@ -97,9 +97,9 @@ apps/web/heys_demo_mode_v1.js:202
 apps/web/heys_core_v12.js:255
 apps/web/heys_core_v12.js:873
 apps/web/heys_core_v12.js:1998
-apps/web/heys_core_v12.js:4432
-apps/web/heys_core_v12.js:5741
-apps/web/heys_core_v12.js:5852
+apps/web/heys_core_v12.js:4462
+apps/web/heys_core_v12.js:5786
+apps/web/heys_core_v12.js:5897
 apps/web/heys_cycle_v1.js:44
 # Generated bundles excluded from scanner (2026-08-12); day_core line entries dropped.
 apps/web/heys_day_orphan_alert.js:142
@@ -175,10 +175,10 @@ apps/web/heys_platform_apis_v1.js::UPDATE_RECOVERY_KEY
 apps/web/heys_platform_apis_v1.js::UPDATE_ATTEMPT_KEY
 apps/web/heys_predictive_insights_v1.js:48
 apps/web/heys_products_overlay_v1.js:576
-apps/web/heys_products_overlay_v1.js:1131
-apps/web/heys_products_overlay_v1.js:1132
-apps/web/heys_products_overlay_v1.js:1133
-apps/web/heys_products_overlay_v1.js:1192
+apps/web/heys_products_overlay_v1.js:1149
+apps/web/heys_products_overlay_v1.js:1150
+apps/web/heys_products_overlay_v1.js:1151
+apps/web/heys_products_overlay_v1.js:1210
 apps/web/heys_profile_step_v1.js:1638
 apps/web/heys_profile_step_v1.js:1039
 apps/web/heys_profile_step_v1.js:1191

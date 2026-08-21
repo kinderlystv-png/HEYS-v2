@@ -726,14 +726,13 @@
     });
   }
 
-  function pushEventsUndo(label, previousRows, subtitle) {
+  // Подписи, иконки и своего окна у бара v4 нет: кадр даёт кольцо-таймер,
+  // строку и «Отменить», длительность общая — 5 с.
+  function pushEventsUndo(label, previousRows) {
     if (!HEYS.Undo || typeof HEYS.Undo.push !== 'function') return;
     const snapshot = safeArray(previousRows);
     HEYS.Undo.push({
       label,
-      subtitle: subtitle || 'Можно вернуть запись',
-      icon: '↩',
-      duration: 6000,
       context: { previousRows: snapshot },
       onUndo: (ctx) => {
         writeEvents(ctx?.previousRows || []);
@@ -5268,7 +5267,7 @@
           updatedAt: editedAt
         };
       });
-      pushEventsUndo('Оценка изменена', previousRows, 'Можно вернуть прошлое значение');
+      pushEventsUndo('Оценка изменена', previousRows);
       setEditTarget(null);
       setDraft({ ...getInitialDraftForState(state), _openId: stateOpenId });
       setContextRefreshSeq((seq) => seq + 1);
@@ -5328,7 +5327,7 @@
         cloudSyncKey: STORAGE_KEY,
         outcome: 'calculated'
       });
-      pushEventsUndo('Оценка добавлена', previousRows, 'Можно удалить запись задним числом');
+      pushEventsUndo('Оценка добавлена', previousRows);
       setBackfillTarget(null);
       setDraft({ ...getInitialDraftForState(state), _openId: stateOpenId });
       setContextRefreshSeq((seq) => seq + 1);

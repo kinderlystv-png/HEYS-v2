@@ -2946,7 +2946,7 @@
       if (HEYS.Undo?.runAction && typeof options.undo === 'function') {
         return HEYS.Undo.runAction({
           label: options.label,
-          duration: options.duration,
+          batch: options.batch,
           errorMessage: options.errorMessage,
           apply: options.apply,
           undo: options.undo,
@@ -3012,7 +3012,6 @@
 
       runUndoableAction({
         label,
-        duration: 5000,
         errorMessage: 'Не удалось удалить тренировку',
         apply: () => {
           const mutationTs = Date.now();
@@ -3386,7 +3385,6 @@
 
       runUndoableAction({
         label: 'Бытовая активность удалена',
-        duration: 5000,
         errorMessage: 'Не удалось удалить активность',
         apply: () => {
           if (typeof setDay === 'function') {

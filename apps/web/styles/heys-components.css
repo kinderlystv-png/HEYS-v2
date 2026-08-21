@@ -11484,140 +11484,153 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   opacity: 0.4;
 }
 
-/* === UNDO BAR — тост отмены v4 ========================================
- * Геометрия снята с кадра data-demo="stop" «Питание · отмена удаления»
- * канваса nutrition-tab.v4.dc.html на 375 px. Цвет — ролями палитры:
- * --c1 → --v4-surface, --tx → --v4-ink, --dim → --v4-ink-2,
- * --acs → --v4-act, --trk → --v4-line. Тень — тот же литерал, что у листа
- * питания (rgba(var(--shadow)) канваса = песочные чернила 33,30,25).
+/* === БАР ОТМЕНЫ v4 ====================================================
+ * Источник — канвас undo-bar.v4.dc.html. Он главный для отмены во всём
+ * продукте: в nutrition-tab, date-remainders и tips прежние описания
+ * отменены и заменены ссылкой на него. Геометрия снята с кадров
+ * data-demo="stop" на 375 px.
  *
- * Бар общий для всего продукта, а тот же паттерн «действие применилось,
- * даётся окно на возврат» канвасы date-remainders и tips описывают иначе:
- * 3 с, кольцо 30 px с цифрой, залитая пилюля «Вернуть», радиус 22 и прямой
- * запрет на полосу. Вопрос открыт записью 1 в docs/ui/UI_V4_FINDINGS.md;
- * до ответа дизайнера вид живёт по кадру питания (его обслуживает HEYS.Undo,
- * отмена совета ещё не реализована).
+ * Роли канваса → роли палитры: --c1 → --v4-surface, --tx → --v4-ink,
+ * --acs → --v4-act (дуга кольца), --ac → --v4-act-text (цифра и «Отменить»),
+ * rgba(--ink, .07) и rgba(--ink, .12) → --v4-line. Одна роль на оба, потому
+ * что в тёмных наборах --v4-line и есть .12, а в светлых обводка всё равно
+ * не работает — там читается тень, как и говорит строка «тёмные наборы».
+ *
+ * Индикатор — кольцо с цифрой, а не полоса: полоса вдоль нижней кромки
+ * читается как прогресс загрузки (строка «индикатор — кольцо, не полоса»).
  */
 .heys-undo-bar {
   position: fixed;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
-  left: 50%;
-  z-index: 1010;
-  width: min(560px, calc(100vw - 28px));
-  overflow: hidden;
-  border-radius: 16px;
+  /* Врезка по бокам равна зазору снизу — 12 px (строка «положение»).
+     Ограничение по ширине — для десктопа, на телефоне не срабатывает. */
+  left: 12px;
+  right: 12px;
+  /* Когда нижней навигации нет — над нижним краем с учётом safe-area;
+     с навигацией отступ подставляет компонент (строка «положение»). */
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  max-width: 560px;
+  margin-inline: auto;
+  border-radius: 22px;
   background: var(--v4-surface, #ffffff);
-  box-shadow: 0 10px 28px rgba(33, 30, 25, 0.18);
-  transform: translate(-50%, calc(100% + 24px));
+  /* Обводка стоит во всех наборах, тень тоже: на тёмных читается обводка,
+     на светлых — тень (строка «тёмные наборы»). */
+  box-shadow:
+    inset 0 0 0 1px var(--v4-line, #e5e7eb),
+    0 10px 28px rgba(80, 50, 20, 0.22);
   opacity: 0;
-  will-change: transform, opacity;
-  transition:
-    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.22s ease;
+  transform: translateY(24px);
   pointer-events: none;
 }
 
-/* В тёмных наборах одной тени мало: карточка сливается с фоном,
-   поэтому добавлена тонкая рамка ролью линии (решение без дизайнера,
-   журнал UI_V4_FINDINGS). inset-тень, а не border — чтобы не сдвинуть геометрию. */
-[data-theme$='dark'] .heys-undo-bar {
-  box-shadow:
-    0 10px 28px rgba(33, 30, 25, 0.18),
-    inset 0 0 0 1px var(--v4-line, #334155);
+/* Выезд снизу с перелётом до 1,04 — та же пружина, что у смены вида
+   виджета (строка «появление»). */
+@keyframes heysUndoBarIn {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+
+  62% {
+    opacity: 1;
+    transform: translateY(0) scale(1.04);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .heys-undo-bar--visible {
-  transform: translate(-50%, 0);
   opacity: 1;
+  transform: translateY(0);
   pointer-events: auto;
+  animation: heysUndoBarIn 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Истёк без нажатия — уезжает вниз за 160 мс, ничего не показывая. */
+.heys-undo-bar--leaving {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+  animation: none;
+  pointer-events: none;
 }
 
 .heys-undo-bar__content {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px 15px;
+  gap: 11px;
+  padding: 11px 13px;
 }
 
-.heys-undo-bar__copy {
-  flex: 1;
-  min-width: 0;
+.heys-undo-bar__ring {
+  position: relative;
+  flex: none;
+  width: 30px;
+  height: 30px;
+}
+
+.heys-undo-bar__ring svg {
+  display: block;
+}
+
+.heys-undo-bar__count {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--v4-act-text, #1d4ed8);
+  font-variant-numeric: tabular-nums;
 }
 
 .heys-undo-bar__label {
-  display: block;
-  font-size: 12px;
+  flex: 1;
+  min-width: 0;
   font-weight: 600;
-  line-height: 1.3;
-  color: var(--v4-ink, #111827);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.heys-undo-bar__subtitle {
-  display: block;
-  margin-top: 2px;
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 1.3;
-  color: var(--v4-ink-2, #64748b);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Кнопка текстовая, как в кадре: без заливки и рамки. Зона нажатия
-   добита псевдоэлементом до 44 px — вид от этого не меняется. */
-.heys-undo-bar__btn {
-  position: relative;
-  flex: none;
-  padding: 8px 2px;
-  border: 0;
-  background: none;
   font-size: 12px;
+  line-height: 1.35;
+  color: var(--v4-ink, #111827);
+}
+
+.heys-undo-bar__btn {
+  display: flex;
+  flex: none;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--v4-line, #e5e7eb);
   font-weight: 700;
+  font-size: 11px;
   line-height: 1;
-  color: var(--v4-act, #2563eb);
+  color: var(--v4-act-text, #1d4ed8);
   cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.heys-undo-bar__btn::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: -8px;
-  right: -8px;
-  height: 44px;
-  transform: translateY(-50%);
-}
-
-.heys-undo-bar__btn:focus-visible {
-  outline: 2px solid var(--v4-act, #2563eb);
-  outline-offset: 2px;
 }
 
 .heys-undo-bar__btn:active {
   opacity: 0.7;
 }
 
-.heys-undo-bar__track {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 3px;
-  background: var(--v4-line, #e5e7eb);
-}
+/* Уменьшенное движение: выезда нет, бар проявляется за 120 мс. Кольцо не
+   анимируется — дугу и цифру двигает раз в секунду сам компонент. */
+@media (prefers-reduced-motion: reduce) {
+  .heys-undo-bar--visible {
+    animation: none;
+    transition: opacity 120ms linear;
+  }
 
-/* Полоса убывает: она показывает остаток окна возврата, а не
-   прошедшее время (решение без дизайнера, журнал UI_V4_FINDINGS). */
-.heys-undo-bar__progress {
-  height: 100%;
-  background: var(--v4-act, #2563eb);
-  transform-origin: left center;
-  will-change: transform;
+  .heys-undo-bar--leaving {
+    transform: none;
+    transition: opacity 120ms linear;
+  }
 }
 
 .meal-rec-card__feedback-btn--selected {

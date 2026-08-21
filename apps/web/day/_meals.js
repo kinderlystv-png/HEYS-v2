@@ -4994,7 +4994,7 @@
             if (HEYS.Undo?.runAction) {
                 return HEYS.Undo.runAction({
                     label: opts.label,
-                    duration: opts.duration,
+                    batch: opts.batch,
                     errorMessage: opts.errorMessage,
                     apply: opts.applyMutation,
                     undo: opts.undoMutation,
@@ -5025,7 +5025,7 @@
             if (HEYS.Undo) {
                 HEYS.Undo.push({
                     label: opts.label,
-                    duration: opts.duration,
+                    batch: opts.batch,
                     context,
                     onUndo: () => opts.undoMutation(context),
                     onExpire: (reason) => opts.onExpire?.(reason, context),
@@ -5762,9 +5762,11 @@
 
             runUndoableDayMutation({
                 label: mealName + ' удалён',
-                // Окно защиты записи равно видимой полосе — 5 с, невидимого
-                // запаса нет (контракт «удаление и отмена»).
-                duration: 5000,
+                // Приёмы, удалённые подряд, собираются в один бар: «Удалено
+                // 2 приёма», «Отменить» возвращает оба (контракт «подряд идущие
+                // удаления»). Окно у бара общее — 5 с, и markUndoWindow ниже
+                // перезаряжается на каждом удалении вместе с таймером.
+                batch: { key: 'meal', forms: ['приём', 'приёма', 'приёмов'] },
                 errorMessage: 'Не удалось удалить приём пищи',
                 errorAction: 'remove_meal',
                 applyMutation: () => {
@@ -6284,7 +6286,10 @@
 
             runUndoableDayMutation({
                 label: removedName + ' удалён',
-                duration: 5000,
+                // Чистка приёма от нескольких продуктов подряд — рядовой
+                // сценарий, а не край: свайп по строке и крестик в строке идут
+                // без подтверждения. Пачка держит их все.
+                batch: { key: 'meal-product', forms: ['продукт', 'продукта', 'продуктов'] },
                 errorMessage: 'Не удалось удалить продукт',
                 errorAction: 'remove_item',
                 applyMutation: () => {
@@ -7099,7 +7104,6 @@
 
             return !!runUndoableDayMutation({
                 label: 'Фото удалено',
-                duration: 5000,
                 errorMessage: 'Не удалось удалить фото',
                 errorAction: 'remove_photo',
                 applyMutation: () => {

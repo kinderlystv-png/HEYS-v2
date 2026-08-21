@@ -749,10 +749,8 @@
       if (HEYS.Undo?.runAction) {
         HEYS.Undo.runAction({
           label: 'День очищен из статистики',
-          // Окно нестандартное (7 с вместо общих 5), поэтому подпись своя:
-          // дефолтная в v4 говорит «пока идёт полоса» и срок не называет.
-          subtitle: 'можно вернуть в течение семи секунд',
-          duration: 7000,
+          // Окно общее — 5 с: контракт бара отмены прямо говорит, что
+          // отдельных длительностей у экранов нет. Было 7 с.
           apply: applyClear,
           undo: (context) => {
             persistDayChange(context?.prevDaySnapshot || prevDaySnapshot, 'day-stats-clear-day-undo');
