@@ -45,19 +45,22 @@ function parseArgs(argv) {
   return { days, limit };
 }
 
+function runPsql(runner, psqlArgs) {
+  const options = { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] };
+  return runner === 'powershell'
+    ? spawnSync('powershell', ['-NoProfile', '-File', PSQL_PS1, ...psqlArgs], options)
+    : spawnSync('bash', [PSQL_SH, ...psqlArgs], options);
+}
+
 function query(sql) {
   const psqlArgs = ['-X', '-qAt', '-F', SEPARATOR, '-v', 'ON_ERROR_STOP=1', '-c', sql];
-  const result = IS_WIN
-    ? spawnSync('powershell', ['-NoProfile', '-File', PSQL_PS1, ...psqlArgs], {
-      cwd: ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    })
-    : spawnSync(PSQL_SH, psqlArgs, {
-      cwd: ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+  let result = runPsql(IS_WIN ? 'powershell' : 'bash', psqlArgs);
+  // На Windows политика запуска скриптов часто закрыта, и psql.ps1 не стартует
+  // вовсе. Рядом лежит тот же psql.sh, а bash в этом окружении есть (Git for
+  // Windows) — отчёт не должен упираться в выбор оболочки.
+  if (result.status !== 0 && IS_WIN && /ExecutionPolicy|about_Execution_Policies|UnauthorizedAccess/i.test(String(result.stderr || ''))) {
+    result = runPsql('bash', psqlArgs);
+  }
   if (result.status !== 0) {
     const stderr = String(result.stderr || '').trim();
     // Отсутствие таблиц и недоступность базы лечатся по-разному, а psql
@@ -183,5 +186,73 @@ if (!seqRows.length) {
   ));
   console.log('\nЧастая пара — кандидат на лишний круг: если следующий вызов всегда идёт');
   console.log('за предыдущим, эти два шага стоит закрывать одним.');
+}
+
+/**
+ * Круги и подсказки — блок из сырья, а не из агрегата.
+ *
+ * Отвечает ровно на один вопрос: подсказка про лишний круг меняет поведение
+ * модели или её игнорируют. «Стало меньше вызовов» само по себе ничего не
+ * доказывает — трафик по дням разный, поэтому считаем доли.
+ *
+ * «В серии» — у вызова был такой же вызов того же инструмента в том же
+ * подключении не раньше чем за минуту до него. «Проигнорировано» — после
+ * выданной подсказки тот же инструмент позвали снова в ту же минуту.
+ *
+ * Окно 60 с совпадает с окном подсказки на сервере (SERIES_WINDOW_MS в
+ * heys-mcp/index.js): считать эффект по другому окну — значит мерить не то,
+ * что показывали модели.
+ */
+const seriesSql = `
+  WITH src AS (
+    SELECT ts::date AS day,
+           ts,
+           hint,
+           lag(ts) OVER w AS prev_ts,
+           lead(ts) OVER w AS next_ts
+      FROM mcp_call_events
+     WHERE ts >= current_date - ${days}
+       AND coalesce(conn_id, session_id) IS NOT NULL
+    WINDOW w AS (PARTITION BY coalesce(conn_id, session_id), tool ORDER BY ts)
+  )
+  SELECT day,
+         count(*)::bigint AS calls,
+         count(*) FILTER (WHERE prev_ts > ts - interval '60 seconds')::bigint AS in_series,
+         count(*) FILTER (WHERE hint IS NOT NULL)::bigint AS hinted,
+         count(*) FILTER (WHERE hint = 'repeat')::bigint AS repeats,
+         count(*) FILTER (WHERE hint IS NOT NULL AND next_ts < ts + interval '60 seconds')::bigint AS ignored
+    FROM src
+   GROUP BY day
+   ORDER BY day
+`;
+
+const seriesRows = query(seriesSql);
+console.log('\nЛишние круги и подсказки (по сырью, окно 60 с)');
+if (!seriesRows.length) {
+  console.log('Сырья за период нет.');
+} else {
+  console.log(table(
+    ['день', 'вызовов', 'в серии', 'доля', 'подсказок', 'повторов', 'проигнорировано'],
+    seriesRows.map((r) => {
+      const calls = num(r[1]);
+      const inSeries = num(r[2]);
+      const hinted = num(r[3]);
+      return [
+        r[0],
+        calls,
+        inSeries,
+        calls ? `${((inSeries / calls) * 100).toFixed(1)}%` : '—',
+        hinted || '',
+        num(r[4]) || '',
+        hinted ? `${num(r[5])} (${((num(r[5]) / hinted) * 100).toFixed(0)}%)` : '',
+      ];
+    }),
+    ['left', 'right', 'right', 'right', 'right', 'right', 'right'],
+  ));
+  console.log('\nЧитается так: «в серии» должна падать, «проигнорировано» — тоже.');
+  console.log('Подсказки появились 21.08; до этого дня столбцы пусты, а «в серии»');
+  console.log('за те дни занижена — conn_id тогда не писался, и серия рвалась на');
+  console.log('каждом холодном старте. Сравнение с 18–20.08 честнее делать через');
+  console.log('tasks_mcp_trace: там счёт идёт по репликам, а не по вызовам.');
 }
 console.log('');

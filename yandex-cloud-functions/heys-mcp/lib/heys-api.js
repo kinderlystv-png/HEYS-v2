@@ -738,6 +738,33 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     }
   }
 
+  /**
+   * Сколько раз инструмент уже звался в этом подключении за окно.
+   *
+   * Зовётся ПАРАЛЛЕЛЬНО работе инструмента (lib/mcp.js), поэтому таймаут
+   * короткий и любой сбой означает «подсказки не будет», а не задержку ответа:
+   * подсказка про лишний круг не стоит ни одной лишней миллисекунды ожидания
+   * куратора.
+   */
+  async function countMcpRecentCalls({ connId, tool, windowMs = 60000, secret, timeoutMs: callTimeoutMs = 400 } = {}) {
+    if (!secret || !connId || !tool) return { count: 0 };
+    const url = `${apiUrl}/rpc?fn=${encodeURIComponent('count_mcp_recent_calls')}`;
+    try {
+      const res = await fetchImpl(url, {
+        method: 'POST',
+        body: { p_conn_id: connId, p_tool: tool, p_window_ms: windowMs },
+        headers: { Authorization: `Bearer ${secret}` },
+        timeoutMs: callTimeoutMs,
+      });
+      if (res.status < 200 || res.status >= 300) return { count: 0 };
+      const data = unwrap(res.json, 'count_mcp_recent_calls');
+      const count = data && Number.isFinite(Number(data.count)) ? Number(data.count) : 0;
+      return { count };
+    } catch (_) {
+      return { count: 0 };
+    }
+  }
+
   async function listMcpCallEvents({
     since,
     until,
@@ -762,7 +789,7 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
 
   return {
     rpc, rest, verifyPin, getKV, getKVMany, mergeSaveKV, upsertKV, getSharedProducts, stats,
-    insertMcpCallEvent, listMcpCallEvents,
+    insertMcpCallEvent, listMcpCallEvents, countMcpRecentCalls,
     curatorLogin, curatorStatus, listClients, getKVByCurator, getKVManyByCurator, issueWriteContext, mergeSaveKVByCurator, upsertKVByCurator, upsertKVManyByCurator, appendTasksFileByCurator,
     getMessagesThread, getMessagesInbox, setMessageDone, sendMessageToClient, readAttachment,
     createClientWithPin, setClientPin, getClientAccessLink,

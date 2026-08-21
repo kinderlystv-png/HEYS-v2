@@ -80,6 +80,12 @@ function createMockPool() {
           return { rowCount: 1, rows: [] };
         }
 
+        if (sql.includes('count(*)::int')) {
+          const [connId, tool] = values;
+          const count = events.filter((row) => row.conn_id === connId && row.tool === tool).length;
+          return { rows: [{ count }] };
+        }
+
         if (sql.includes('FROM mcp_call_events')) {
           const since = values[0];
           const until = values[1];
@@ -181,6 +187,29 @@ async function run() {
   // Псевдоним подключения доезжает до trace: без него цепочка, разорванная
   // холодным стартом, снова читалась бы как «вероятная».
   assert.strictEqual(listBody.records[0].conn_id, '91aa77bc0011');
+
+  // Счётчик серии: heys-mcp спрашивает по нему, лишний ли круг. Тот же Bearer,
+  // что у insert, и он обязан быть обязательным — иначе счётчик становится
+  // открытым способом прощупывать активность коннектора.
+  const counted = await handler(rpcEvent('count_mcp_recent_calls', TELEMETRY_SECRET, {
+    p_conn_id: '91aa77bc0011',
+    p_tool: 'heys_get_day',
+    p_window_ms: 60000,
+  }));
+  assert.strictEqual(counted.statusCode, 200);
+  assert.strictEqual(JSON.parse(counted.body).count, 1);
+
+  const countedOther = await handler(rpcEvent('count_mcp_recent_calls', TELEMETRY_SECRET, {
+    p_conn_id: '91aa77bc0011',
+    p_tool: 'heys_search_products',
+  }));
+  assert.strictEqual(JSON.parse(countedOther.body).count, 0);
+
+  const countUnauthorized = await handler(rpcEvent('count_mcp_recent_calls', 'не тот секрет', {
+    p_conn_id: '91aa77bc0011',
+    p_tool: 'heys_get_day',
+  }));
+  assert.strictEqual(countUnauthorized.statusCode, 401);
 
   if (prevSecret === undefined) delete process.env.MCP_TELEMETRY_SECRET;
   else process.env.MCP_TELEMETRY_SECRET = prevSecret;

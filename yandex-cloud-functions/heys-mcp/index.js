@@ -71,6 +71,15 @@ const telemetry = createTelemetry({
  */
 const repeatGuard = createRepeatGuard();
 
+/**
+ * Окно, в котором вызовы считаются одной серией.
+ *
+ * Совпадает с окном памяти инстанса (`DEFAULT_TTL_MS` в lib/repeat-guard.js):
+ * два счётчика одного и того же не должны расходиться, иначе подсказка будет
+ * появляться то на тёплом инстансе, то на холодном по разным правилам.
+ */
+const SERIES_WINDOW_MS = 60 * 1000;
+
 const ATTACH_PAGE_PATH = '/mcp/attach';
 const ATTACH_MANIFEST_PATH = '/mcp/attach/manifest.webmanifest';
 const ATTACH_ICON_PATH = '/mcp/attach/icon.png';
@@ -384,6 +393,9 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
     tools = createTools({ api, sessionToken: auth.sessionToken, clientId: auth.clientId }).tools;
   }
   const telemetrySecret = process.env.MCP_TELEMETRY_SECRET || null;
+  // Метка последнего начатого вызова: `seriesProbe` зовётся внутри обработки и
+  // должен знать псевдоним подключения, а `beginTrace` его как раз и выдаёт.
+  let lastTrace = null;
   const persistCall = telemetrySecret
     ? (record) => api.insertMcpCallEvent(record, { secret: telemetrySecret })
     : null;
@@ -395,8 +407,26 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
     upstream: () => ({ calls: api.stats.calls, ms: api.stats.ms }),
     // Псевдоним подключения и номер вызова выдаются до обработчика: те же
     // значения уходят и клиенту в ответ, и в строку лога.
-    beginTrace: () => telemetry.begin(headers.authorization || null, chatSessionId),
+    beginTrace: () => {
+      lastTrace = telemetry.begin(headers.authorization || null, chatSessionId);
+      return lastTrace;
+    },
     repeatGuard,
+    // Счётчик серии по уже пишущейся телеметрии — вместо памяти инстанса,
+    // которой на холодных стартах просто нет. Зовётся параллельно работе
+    // инструмента, поэтому в ожидание куратора не добавляет ничего.
+    seriesProbe: telemetrySecret
+      ? (tool) => {
+        const trace = lastTrace;
+        if (!trace || !trace.connId) return 0;
+        return api.countMcpRecentCalls({
+          connId: trace.connId,
+          tool,
+          windowMs: SERIES_WINDOW_MS,
+          secret: telemetrySecret,
+        }).then((res) => (res && Number.isFinite(res.count) ? res.count : 0));
+      }
+      : null,
     noteClient: (info) => { lastClientInfo = info || null; },
     // Одна строка на tools/list: сколько схем и байт ушло клиенту и какому
     // именно. По ней «инструмента нет» отличается от «клиент не донёс его до
@@ -431,6 +461,7 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
         sessionId: metric.trace ? metric.trace.sessionId : null,
         seq: metric.trace ? metric.trace.seq : null,
         connId: metric.trace ? metric.trace.connId : null,
+        hint: metric.hint || null,
         role: auth.role,
         ok: metric.ok,
         errorCode: metric.error,

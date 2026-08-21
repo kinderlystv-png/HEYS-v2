@@ -229,3 +229,102 @@ test('ошибка обработчика в память не попадает'
   await call();
   assert.equal(calls, 2, 'отказ перечитывается, а не отдаётся из памяти');
 });
+
+/**
+ * Счётчик серии на сервере. Память инстанса на редком трафике пуста — YC
+ * разводит даже последовательные вызовы по холодным инстансам, — поэтому
+ * подсказка про лишний круг считается по уже пишущейся телеметрии.
+ */
+function probeContext({ probe, handler, calls = [] }) {
+  return {
+    tools: {
+      async heys_search_products(args) {
+        calls.push(args);
+        if (handler) return handler(args);
+        return { text: `По запросу "${args.query}" ничего не нашлось.`, structured: { results: [] } };
+      },
+      async heys_get_day() {
+        return { text: 'День пустой', structured: {} };
+      },
+    },
+    beginTrace: () => ({ sessionId: `s${calls.length}`, seq: 1, connId: 'conn-1', ts: new Date().toISOString() }),
+    repeatGuard: createRepeatGuard(),
+    seriesProbe: probe,
+    metrics: [],
+  };
+}
+
+function callTool(ctx, name, args) {
+  return mcp.handleMessage({
+    jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args },
+  }, ctx);
+}
+
+test('серия, посчитанная сервером, доходит до ответа даже на холодном инстансе', async () => {
+  const metrics = [];
+  const ctx = probeContext({ probe: async () => 1 });
+  ctx.logMetric = (m) => { metrics.push(m); };
+
+  const res = await callTool(ctx, 'heys_search_products', { query: 'капучино' });
+  assert.match(res.result.content[0].text, /второй поиск подряд/);
+  assert.match(res.result.content[0].text, /ничего не нашлось/);
+  assert.equal(metrics[0].hint, 'streak', 'подсказка отмечена в телеметрии');
+});
+
+test('первый вызов серии подсказки не получает', async () => {
+  const metrics = [];
+  const ctx = probeContext({ probe: async () => 0 });
+  ctx.logMetric = (m) => { metrics.push(m); };
+
+  const res = await callTool(ctx, 'heys_search_products', { query: 'капучино' });
+  assert.doesNotMatch(res.result.content[0].text, /поиск подряд/);
+  assert.equal(metrics[0].hint, null);
+});
+
+test('счётчик спрашивается только про инструменты серии', async () => {
+  const asked = [];
+  const ctx = probeContext({ probe: async (tool) => { asked.push(tool); return 5; } });
+  await callTool(ctx, 'heys_get_day', { date: '2026-08-21' });
+  assert.deepEqual(asked, [], 'про get_day серию не спрашиваем — там повтор ловится аргументами');
+  await callTool(ctx, 'heys_search_products', { query: 'кофе' });
+  assert.deepEqual(asked, ['heys_search_products']);
+});
+
+test('упавший счётчик не ломает вызов и не выдумывает подсказку', async () => {
+  const ctx = probeContext({ probe: async () => { throw new Error('БД недоступна'); } });
+  const res = await callTool(ctx, 'heys_search_products', { query: 'кофе' });
+  assert.equal(res.result.structuredContent.ok, true);
+  assert.doesNotMatch(res.result.content[0].text, /поиск подряд/);
+});
+
+test('счётчик идёт параллельно инструменту, а не после него', async () => {
+  const order = [];
+  const ctx = probeContext({
+    probe: async () => { order.push('probe-start'); return 1; },
+    handler: async () => {
+      order.push('handler-start');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      order.push('handler-end');
+      return { text: 'ок', structured: {} };
+    },
+  });
+  await callTool(ctx, 'heys_search_products', { query: 'кофе' });
+  // Счётчик стартует до того, как инструмент закончил: иначе он добавлял бы
+  // своё время к ожиданию куратора.
+  assert.ok(order.indexOf('probe-start') < order.indexOf('handler-end'), order.join(' → '));
+});
+
+test('память инстанса счётчик не дублирует: подсказка не двоится', async () => {
+  const asked = [];
+  const guard = createRepeatGuard();
+  const ctx = probeContext({ probe: async (tool) => { asked.push(tool); return 3; } });
+  ctx.repeatGuard = guard;
+  ctx.beginTrace = () => ({ sessionId: 'same', seq: 1, connId: 'conn-1', ts: new Date().toISOString() });
+
+  await callTool(ctx, 'heys_search_products', { query: 'кофе' });
+  const second = await callTool(ctx, 'heys_search_products', { query: 'латте' });
+  // Второй вызов уже поймал локальный счётчик — сервер не спрашиваем.
+  assert.equal(asked.length, 1);
+  assert.match(second.result.content[0].text, /второй поиск подряд/);
+  assert.doesNotMatch(second.result.content[0].text, /второй поиск подряд[\s\S]*поиск подряд/);
+});

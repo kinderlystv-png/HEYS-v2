@@ -16,6 +16,7 @@
 const { TOOL_SCHEMAS } = require('./tools');
 const callContext = require('./call-context');
 const { extractArgKeys } = require('./telemetry');
+const { STREAK_TOOLS, streakNotice } = require('./repeat-guard');
 
 const SERVER_INFO = { name: 'heys-mcp', title: 'HEYS', version: '1.0.0' };
 const SUPPORTED_PROTOCOL_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26'];
@@ -242,30 +243,52 @@ async function handleMessage(message, ctx) {
       const argKeys = extractArgKeys(args);
 
       const guard = trace && ctx.repeatGuard ? ctx.repeatGuard : null;
+      // Какая подсказка ушла модели — единственный способ потом проверить,
+      // меняет она поведение или её игнорируют.
+      let hint = null;
 
       try {
         // Лишние круги модели отсекаются до обработчика: тот же читающий вызов
-        // с теми же аргументами отдаётся из памяти инстанса, а серия поисков
+        // с теми же аргументами отдаётся из памяти инстанса, а серия вызовов
         // подряд получает подсказку, что перебор формулировок каталог не
         // расширяет (lib/repeat-guard.js). Пометка идёт первой строкой ответа —
         // там её видно и модели, и в стенограмме. Внутри try намеренно: сбой
         // самой оптимизации не имеет права уронить вызов инструмента.
         const guardVerdict = guard ? guard.before(trace.sessionId, name, args) : null;
+
+        // Память инстанса на редком трафике почти всегда пуста: YC разводит
+        // даже последовательные вызовы по холодным инстансам (замер 21.08).
+        // Поэтому серию считает сервер — по уже пишущейся телеметрии. Запрос
+        // идёт ПАРАЛЛЕЛЬНО работе инструмента: подсказка про лишний круг не
+        // стоит ни одной лишней миллисекунды ожидания куратора, а сбой или
+        // таймаут означает просто «подсказки не будет».
+        const wantsProbe = ctx.seriesProbe && STREAK_TOOLS.has(name)
+          && !(guardVerdict && (guardVerdict.repeat || guardVerdict.notice));
+        const probe = wantsProbe
+          ? Promise.resolve(ctx.seriesProbe(name)).catch(() => 0)
+          : null;
+
         // Метка видна вложенному коду на всё время обработчика: `tasks_checkpoint`
         // дописывает её в блок стенограммы, в том числе когда его зовёт не
         // модель, а дневниковая обёртка.
-        const fresh = guardVerdict && guardVerdict.repeat
-          ? guardVerdict.result
-          : await callContext.run(trace, () => handler(args));
+        const [fresh, priorCalls] = await Promise.all([
+          guardVerdict && guardVerdict.repeat
+            ? guardVerdict.result
+            : callContext.run(trace, () => handler(args)),
+          probe || 0,
+        ]);
         if (guard && !(guardVerdict && guardVerdict.repeat)) {
           guard.after(trace.sessionId, name, args, fresh);
         }
-        const notice = guardVerdict ? guardVerdict.notice : null;
+        const remoteStreak = Number(priorCalls) > 0 ? Number(priorCalls) + 1 : 0;
+        const notice = (guardVerdict && guardVerdict.notice)
+          || (remoteStreak >= 2 ? streakNotice(remoteStreak) : null);
+        hint = guardVerdict && guardVerdict.repeat ? 'repeat' : (notice ? 'streak' : null);
         const result = notice
           ? {
             ...fresh,
             text: `${notice}\n${fresh.text}`,
-            structured: { ...fresh.structured, ...(guardVerdict.repeat ? { repeat: true } : {}) },
+            structured: { ...fresh.structured, ...(guardVerdict && guardVerdict.repeat ? { repeat: true } : {}) },
           }
           : fresh;
         const timing = measure();
@@ -276,15 +299,15 @@ async function handleMessage(message, ctx) {
         // Размер ответа — вторая половина вопроса «почему долго»: своё время
         // инструмента и время API он не объясняет, зато объясняет задержку на
         // стороне клиента, которой в наших метриках не видно вовсе.
-        await ctx.logMetric?.({ tool: name, ok: true, ...timing, arg_count: argCount, arg_keys: argKeys, response_bytes: byteLength(payload), trace });
+        await ctx.logMetric?.({ tool: name, ok: true, ...timing, arg_count: argCount, arg_keys: argKeys, response_bytes: byteLength(payload), trace, hint });
         return rpcResult(id, payload);
       } catch (e) {
         const timing = measure();
         if (e && e.code) {
-          await ctx.logMetric?.({ tool: name, ok: false, error: e.code, arg_count: argCount, arg_keys: argKeys, ...timing, trace });
+          await ctx.logMetric?.({ tool: name, ok: false, error: e.code, arg_count: argCount, arg_keys: argKeys, ...timing, trace, hint });
           return rpcResult(id, toolFailure(e.message, e.code, { ...e.details, duration_ms: timing.ms, ...traceFields }));
         }
-        await ctx.logMetric?.({ tool: name, ok: false, error: 'internal_error', arg_count: argCount, arg_keys: argKeys, ...timing, trace });
+        await ctx.logMetric?.({ tool: name, ok: false, error: 'internal_error', arg_count: argCount, arg_keys: argKeys, ...timing, trace, hint });
         ctx.logError?.('tool_failed', { tool: name, message: e && e.message });
         return rpcResult(id, toolFailure('Внутренняя ошибка HEYS при выполнении инструмента.', 'internal_error', { duration_ms: timing.ms, ...traceFields }));
       }

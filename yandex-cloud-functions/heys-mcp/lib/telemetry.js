@@ -56,6 +56,10 @@ const RECORD_FIELDS = [
   'uptime_ms',
   'fn_version',    // версия функции
   'role',          // curator | client — роль, а не человек
+  // Какая подсказка про лишний круг ушла модели: repeat | streak | null.
+  // Имя правила, не данные вызова — без него нельзя проверить, меняет ли
+  // подсказка поведение или её игнорируют.
+  'hint',
 ];
 
 /**
@@ -226,6 +230,7 @@ function buildRecord(input = {}) {
     uptime_ms: intOrNull(input.uptimeMs),
     fn_version: typeof input.fnVersion === 'string' && input.fnVersion ? input.fnVersion : null,
     role: input.role === 'curator' || input.role === 'client' ? input.role : null,
+    hint: input.hint === 'repeat' || input.hint === 'streak' ? input.hint : null,
   };
 
   // Финальный фильтр: даже если выше кто-то допишет поле мимо списка, наружу

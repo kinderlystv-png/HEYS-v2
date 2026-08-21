@@ -17,6 +17,7 @@ const { computeCuratorActionPayload, buildChangelogActionsEnvelope } = require('
 const {
   handleInsertMcpCallEvent,
   handleListMcpCallEvents,
+  handleCountMcpRecentCalls,
 } = require('./mcp-telemetry-rpc');
 
 const requestCapacityGuard = createServerlessCapacityGuard({ functionName: 'heys-api-rpc' });
@@ -974,6 +975,7 @@ const ALLOWED_FUNCTIONS = [
   'planning_context_ingest',
   'planning_context_agent_ingest', // Bearer PLANNING_AGENT_SECRET + targetClientId (server-trusted KV path)
   'insert_mcp_call_event', // Bearer MCP_TELEMETRY_SECRET — телеметрия heys-mcp
+  'count_mcp_recent_calls', // Bearer MCP_TELEMETRY_SECRET — счётчик серии для подсказок heys-mcp
 
   // ❌ УБРАНО (IDOR — принимают UUID от клиента!):
   // 'save_client_kv'             — IDOR: клиент может передать чужой UUID
@@ -2025,6 +2027,14 @@ async function handleRpcRequest(event, context) {
     const pool = getPool();
     const authHeader = event.headers?.authorization || event.headers?.Authorization;
     return handleInsertMcpCallEvent(pool, params, authHeader, { corsHeaders });
+  }
+
+  // Счётчик серии для подсказки «круг лишний». Тот же Bearer, что у insert:
+  // это служебный вызов heys-mcp, не кураторский.
+  if (fnName === 'count_mcp_recent_calls') {
+    const pool = getPool();
+    const authHeader = event.headers?.authorization || event.headers?.Authorization;
+    return handleCountMcpRecentCalls(pool, params, authHeader, { corsHeaders });
   }
 
   if (fnName === 'list_mcp_call_events') {
