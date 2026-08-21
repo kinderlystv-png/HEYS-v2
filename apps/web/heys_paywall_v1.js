@@ -254,51 +254,50 @@
     .paywall-close:hover {
       background: var(--bg-tertiary, #e5e7eb);
     }
-    
-    /* Read-only banner */
+
+    /* Read-only banner — кадр «Питание · только чтение»: плашка над
+       содержимым в тонах набора, без эмодзи и без стрелки. */
     .readonly-banner {
-      background: linear-gradient(135deg, #fef3c7, #fde68a);
-      border-radius: 12px;
-      padding: 12px 16px;
-      margin: 12px 16px;
+      background: var(--v4-hero, #f8fafc);
+      border-radius: 16px;
+      padding: 12px 14px;
+      margin: 12px 0 0;
       display: flex;
       align-items: center;
       gap: 12px;
       cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
+      text-wrap: pretty;
     }
-    
-    .readonly-banner:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    
+
     .readonly-banner-icon {
       font-size: 24px;
       flex-shrink: 0;
     }
-    
+
     .readonly-banner-content {
       flex: 1;
     }
-    
+
     .readonly-banner-title {
-      font-weight: 600;
-      font-size: 14px;
-      color: #92400e;
-      margin-bottom: 2px;
-    }
-    
-    .readonly-banner-text {
       font-size: 12px;
-      color: #a16207;
+      font-weight: 600;
+      line-height: 1.45;
+      color: var(--v4-ink, #111827);
     }
-    
+
+    .readonly-banner-text {
+      margin-top: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.45;
+      color: var(--v4-ink-2, #64748b);
+    }
+
     .readonly-banner-arrow {
       font-size: 18px;
-      color: #a16207;
+      color: var(--v4-ink-2, #64748b);
     }
-    
+
     /* Toast notification for blocked action */
     .readonly-toast {
       position: fixed;
@@ -791,15 +790,14 @@
       );
     }
 
+    // Плашка называет причину и что делать; эмодзи и стрелки на вкладке нет.
     return React.createElement('div', { className: 'readonly-banner', onClick },
-      React.createElement('span', { className: 'readonly-banner-icon' }, '⏰'),
       React.createElement('div', { className: 'readonly-banner-content' },
-        React.createElement('div', { className: 'readonly-banner-title' }, 'Триал закончился'),
+        React.createElement('div', { className: 'readonly-banner-title' }, 'Пробный период закончился'),
         React.createElement('div', { className: 'readonly-banner-text' },
-          'Данные доступны для просмотра. Нажми чтобы оформить подписку.'
+          'День и история открыты для чтения. Чтобы записывать снова — напишите куратору.'
         )
-      ),
-      React.createElement('span', { className: 'readonly-banner-arrow' }, '→')
+      )
     );
   }
 

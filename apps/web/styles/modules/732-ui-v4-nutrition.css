@@ -207,6 +207,7 @@
 .nutrition-v4-diary__empty {
   padding: 18px 16px;
   font-size: 12px;
+  font-weight: 500;
   line-height: 1.45;
   color: var(--nut-dim);
 }
@@ -458,6 +459,7 @@
   display: block;
   height: 5px;
   border-radius: 999px;
+  background: var(--v4-ok-fill, #22c55e);
   transition: width 320ms ease-in-out;
 }
 
@@ -760,6 +762,7 @@
   font-style: normal;
   font-size: 10px;
   font-weight: 500;
+  line-height: 1;
   color: var(--nut-dim);
 }
 
@@ -820,7 +823,7 @@
 .nutrition-v4-verdict b {
   font-size: 20px;
   font-weight: 600;
-  line-height: 1.15;
+  line-height: 1;
   color: var(--v4-ok-text, #16a34a);
 }
 
@@ -845,7 +848,7 @@
 }
 
 .nutrition-v4-steps span.is-on.is-ok {
-  background: var(--v4-ok-fill, #22c55e);
+  background: var(--v4-ok-text, #16a34a);
 }
 
 .nutrition-v4-steps span.is-on.is-soft {
@@ -965,6 +968,7 @@
   padding-bottom: 16px;
   border-radius: 26px;
   background: var(--v4-bg, #ffffff);
+  box-shadow: 0 18px 50px rgba(33, 30, 25, 0.34);
   overflow-y: auto;
   overscroll-behavior: contain;
   transition: transform 180ms ease-out;
@@ -1074,7 +1078,7 @@
 }
 
 .nutrition-v4-sheet__swipe-actions button.is-danger {
-  background: var(--v4-accent-bg, #dbeafe);
+  background: color-mix(in srgb, var(--v4-bad-text, #a8382b) 14%, transparent);
   color: var(--v4-bad-text, #a8382b);
 }
 

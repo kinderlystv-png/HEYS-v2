@@ -18,6 +18,7 @@ const appShellSource = read('../heys_app_shell_v1.js');
 const paletteSource = read('../styles/modules/002-ui-v4-palette-roles.css');
 const mealsSource = read('../day/_meals.js');
 const toastSource = read('../heys_toast_v1.js');
+const paywallSource = read('../heys_paywall_v1.js');
 
 describe('Nutrition tab v4 structure', () => {
   it('строит вкладку одной полосой без ярусов «Сейчас / Дневник / Разбор дня»', () => {
@@ -127,6 +128,19 @@ describe('Nutrition tab v4 structure', () => {
     expect(mealsSource).toContain('markUndoWindow(5000)');
     expect(toastSource).toContain('heys-toast__timer');
     expect(toastSource).toContain("fill.style.animationDuration = duration + 'ms'");
+  });
+
+  it('только чтение: плашка называет причину и что делать, кнопки гаснут', () => {
+    expect(paywallSource).toContain('Пробный период закончился');
+    expect(paywallSource).toContain('День и история открыты для чтения');
+    // Эмодзи и стрелка сняты: плашка живёт над содержимым вкладки.
+    const banner = paywallSource.slice(
+      paywallSource.indexOf('// Плашка называет причину'),
+      paywallSource.indexOf('// GATING LOGIC'),
+    );
+    expect(banner).not.toContain("'⏰'");
+    expect(banner).not.toContain("'→'");
+    expect(cssSource).toMatch(/\[data-readonly='true'\][\s\S]{0,200}opacity: 0\.4/);
   });
 
   it('офлайн без данных объясняет причину без эмодзи', () => {

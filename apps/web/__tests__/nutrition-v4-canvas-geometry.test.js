@@ -1,0 +1,241 @@
+// Геометрия вкладки «Питание» против кадров data-demo="stop" канваса
+// nutrition-tab.v4.dc.html на 375 px.
+//
+// Глазами это не ловится: отдельный сдвиг на 1–2 px или полшага кегля выглядит
+// как «чуть иначе», а заметен только рядом с кадром. Сверяем числами.
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { describe, expect, it } from 'vitest';
+
+const CANVAS = path.resolve(
+  __dirname,
+  '../../../docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/nutrition-tab.v4.dc.html',
+);
+const CSS = path.resolve(__dirname, '../styles/modules/732-ui-v4-nutrition.css');
+
+function parseRules(css) {
+  const clean = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const rules = new Map();
+  for (const match of clean.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const body = match[2].trim();
+    for (const selector of match[1].split(',')) {
+      const key = selector.trim();
+      if (!rules.has(key)) rules.set(key, []);
+      rules.get(key).push(body);
+    }
+  }
+  return rules;
+}
+
+// Канвас пишет шрифт шорткатом `font: 600 10.5px/1 Figtree`, продуктовый CSS —
+// раскладкой. Приводим обе формы к одному виду.
+function declarations(bodies) {
+  const out = {};
+  for (const body of bodies || []) {
+    for (const decl of body.split(';')) {
+      const at = decl.indexOf(':');
+      if (at < 0) continue;
+      const prop = decl.slice(0, at).trim();
+      const value = decl.slice(at + 1).trim();
+      if (prop === 'font') {
+        const font = /^(\d+)\s+([\d.]+)px\/([\d.]+)/.exec(value);
+        if (font) {
+          out['font-weight'] = font[1];
+          out['font-size'] = `${font[2]}px`;
+          out['line-height'] = font[3];
+          continue;
+        }
+      }
+      out[prop] = value;
+    }
+  }
+  return out;
+}
+
+// Роли канваса → роли продуктовой палитры. Прозрачные линии канваса выражены
+// альфой от чернил, у нас для этого есть роль линии набора.
+const ROLE = new Map(Object.entries({
+  '--c1': '--v4-surface',
+  '--c2': '--v4-hero',
+  '--bg': '--v4-bg',
+  '--tx': '--v4-ink',
+  '--ac': '--v4-act-text',
+  '--ac2': '--v4-warn-text',
+  '--acs': '--v4-act',
+  '--on-acs': '--v4-btn-on-act',
+  '--gr': '--v4-ok-text',
+  '--gr2': '--v4-ok-fill',
+  '--gr-bg': '--v4-ok-bg',
+  '--red': '--v4-bad-text',
+  '--dim': '--nut-dim',
+  '--dimIco': '--nut-dim-icon',
+}));
+
+function normalize(value) {
+  return String(value)
+    .trim()
+    .replace(/\s+/g, ' ')
+    // запасное значение роли — запись для гейта перекраски, не второе значение
+    .replace(/var\((--[a-z0-9-]+)\s*,[^)]*\)/gi, 'var($1)')
+    .replace(/rgba\(var\(--ink\)\s*,\s*\.\d+\)/gi, 'var(--v4-line)')
+    .replace(/var\((--[a-zA-Z0-9-]+)\)/g, (whole, name) => `var(${ROLE.get(name) || name})`)
+    // .04em и 0.04em — одно число
+    .replace(/(^|[\s(,])\.(\d)/g, '$10.$2')
+    .replace(/(^|[\s(,])-\.(\d)/g, '$1-0.$2')
+    .toLowerCase();
+}
+
+const PAIRS = [
+  ['.hero', '.nutrition-v4-hero'],
+  ['.hk', '.nutrition-v4-hero__label'],
+  ['.hn', '.nutrition-v4-hero__value-row'],
+  ['.hn b', '.nutrition-v4-hero__value'],
+  ['.hn i', '.nutrition-v4-hero__unit'],
+  ['.htr', '.nutrition-v4-hero__track'],
+  ['.htr i', '.nutrition-v4-hero__fill'],
+  ['.hb', '.nutrition-v4-hero__budget'],
+  ['.win', '.nutrition-v4-window'],
+  ['.dry', '.nutrition-v4-diary'],
+  ['.dryE', '.nutrition-v4-diary__empty'],
+  ['.meal', '.nutrition-v4-meal-row'],
+  ['.mt', '.nutrition-v4-meal-row__head'],
+  ['.mt b', '.nutrition-v4-meal-row__title'],
+  ['.mt s', '.nutrition-v4-meal-row__kcal'],
+  ['.mnum', '.nutrition-v4-meal-row__num'],
+  ['.mb', '.nutrition-v4-meal-row__body'],
+  ['.mb span', '.nutrition-v4-meal-row__items'],
+  ['.mchev', '.nutrition-v4-meal-row__chevron'],
+  ['.plus', '.nutrition-v4-meal-row__add'],
+  ['.streak', '.nutrition-v4-streak'],
+  ['.cta', '.nutrition-v4-cta'],
+  ['.tot', '.nutrition-v4-totals'],
+  ['.totH', '.nutrition-v4-totals__title'],
+  ['.tr', '.nutrition-v4-total-row'],
+  ['.trh', '.nutrition-v4-total-row__head'],
+  ['.trh b', '.nutrition-v4-total-row__head b'],
+  ['.trh span', '.nutrition-v4-total-row__head span'],
+  ['.trk', '.nutrition-v4-bar'],
+  ['.trk i', '.nutrition-v4-bar i'],
+  ['.qual', '.nutrition-v4-quality__row'],
+  ['.qc', '.nutrition-v4-quality__card'],
+  ['.qc.ok', '.nutrition-v4-quality__card.is-ok'],
+  ['.qk', '.nutrition-v4-quality__label'],
+  ['.qv', '.nutrition-v4-quality__value'],
+  ['.qv b', '.nutrition-v4-quality__value b'],
+  ['.qv i', '.nutrition-v4-quality__value i'],
+  ['.qh', '.nutrition-v4-quality__hint'],
+  ['.blk', '.nutrition-v4-block'],
+  ['.blkH', '.nutrition-v4-block__head'],
+  ['.blkH b', '.nutrition-v4-block__head b'],
+  ['.blkH span', '.nutrition-v4-block__meta'],
+  ['.tl', '.nutrition-v4-timeline'],
+  ['.tlr', '.nutrition-v4-timeline__row'],
+  ['.tlb', '.nutrition-v4-timeline__track'],
+  ['.tlb i', '.nutrition-v4-timeline__track i'],
+  ['.hg', '.nutrition-v4-mini-row'],
+  ['.hgc', '.nutrition-v4-mini'],
+  ['.hgc b', '.nutrition-v4-mini b'],
+  ['.hgc s', '.nutrition-v4-mini s'],
+  ['.hgc s i', '.nutrition-v4-mini s i'],
+  ['.hgs', '.nutrition-v4-scale'],
+  ['.hgs i', '.nutrition-v4-scale i'],
+  ['.lst', '.nutrition-v4-list'],
+  ['.lrow', '.nutrition-v4-list__row'],
+  ['.lrow b', '.nutrition-v4-list__row b'],
+  ['.lrow span', '.nutrition-v4-list__row span'],
+  ['.cfg', '.nutrition-v4-config'],
+  ['.cfgH', '.nutrition-v4-config__title'],
+  ['.cfgR', '.nutrition-v4-config__row'],
+  ['.cfgC', '.nutrition-v4-chip'],
+  ['.cfgC.off', '.nutrition-v4-chip.is-off'],
+  ['.why', '.nutrition-v4-why'],
+  ['.more', '.nutrition-v4-disclose'],
+  ['.repl', '.nutrition-v4-note'],
+  ['.shH', '.nutrition-v4-sheet__head'],
+  ['.shH b', '.nutrition-v4-sheet__head b'],
+  ['.shH span', '.nutrition-v4-sheet__head span'],
+  ['.shR', '.nutrition-v4-sheet__row'],
+  ['.shR b', '.nutrition-v4-sheet__row b'],
+  ['.shR span', '.nutrition-v4-sheet__row span'],
+  ['.shDel', '.nutrition-v4-sheet__delete'],
+];
+
+const CHECKED = [
+  'padding', 'margin-top', 'margin-bottom', 'border-radius', 'gap', 'height',
+  'min-height', 'width', 'font-size', 'font-weight', 'line-height',
+  'letter-spacing', 'background', 'color', 'align-items', 'justify-content',
+  'flex-direction', 'flex', 'text-align', 'box-shadow',
+];
+
+// Отступы блока канвас задаёт обёрткой .sec (margin: 0 18px) — в продукте те же
+// 18 px даёт .page-day, поэтому боковой margin у самих блоков нулевой.
+const SKIP_MARGIN = new Set(['.hero', '.cfg', '.shR', '.shDel']);
+
+// Осознанные отступления: у каждого — строка контракта, которая старше кадра.
+const EXCEPTIONS = new Set([
+  // «цвет состояния»: шалфей только когда окно правда открыто. В кадре
+  // шалфейный цвет стоит дефолтом, а нейтральный — модификатором .calm;
+  // у нас наоборот, иначе зелёный снова перестанет что-либо означать.
+  '.nutrition-v4-window|color',
+  // Та же причина у подписи блока: «сегодня» — служебная метка, не оценка.
+  '.nutrition-v4-block__meta|color',
+  // В кадре «Качество еды» инлайн-стиль перекрывает правило на 8 px.
+  '.nutrition-v4-quality__row|margin-top',
+  // «кнопка в строке»: «+ продукт» у пустого приёма заливкой, «+ ещё» у
+  // непустого — обводкой. Кадр рисует залитым и то, и другое; базовый вид у нас
+  // обводка, заливка приходит модификатором --empty.
+  '.nutrition-v4-meal-row__add|background',
+  '.nutrition-v4-meal-row__add|color',
+]);
+
+describe('геометрия вкладки «Питание» против кадров канваса', () => {
+  const canvasSource = fs.readFileSync(CANVAS, 'utf8');
+  const helmet = canvasSource.slice(
+    canvasSource.indexOf('<style>') + '<style>'.length,
+    canvasSource.indexOf('</style>'),
+  );
+  const canvas = parseRules(helmet);
+  const product = parseRules(fs.readFileSync(CSS, 'utf8'));
+
+  it('каждый блок кадра имеет пару в продуктовом CSS', () => {
+    const orphans = PAIRS.filter(([c, m]) => !canvas.has(c) || !product.has(m));
+    expect(orphans).toEqual([]);
+  });
+
+  it('числа совпадают с кадрами', () => {
+    const drift = [];
+    for (const [canvasSel, productSel] of PAIRS) {
+      const want = declarations(canvas.get(canvasSel));
+      // Значение может стоять на самом узле или наследоваться от родителя
+      // блока — собираем цепочку так же, как её видит браузер.
+      const chain = [productSel];
+      const parent = productSel.replace(/(__[a-z-]+|\s.+|\.is-[a-z-]+)$/, '');
+      if (parent && parent !== productSel && product.has(parent)) chain.unshift(parent);
+      const got = declarations(chain.flatMap((sel) => product.get(sel) || []));
+
+      for (const prop of CHECKED) {
+        if (!(prop in want)) continue;
+        if (prop.startsWith('margin') && SKIP_MARGIN.has(canvasSel)) continue;
+        if (EXCEPTIONS.has(`${productSel}|${prop}`)) continue;
+        const expected = normalize(want[prop]);
+        const actual = prop in got ? normalize(got[prop]) : '— нет —';
+        if (expected !== actual) {
+          drift.push(`${productSel} { ${prop} } — кадр: ${expected}, код: ${actual}`);
+        }
+      }
+    }
+    expect(drift).toEqual([]);
+  });
+
+  it('залитая кнопка есть у пустого приёма', () => {
+    const empty = declarations(product.get('.nutrition-v4-meal-row--empty .nutrition-v4-meal-row__add'));
+    const canvasPlus = declarations(canvas.get('.plus'));
+    expect(normalize(empty.background)).toBe(normalize(canvasPlus.background));
+    expect(normalize(empty.color)).toBe(normalize(canvasPlus.color));
+  });
+
+  it('осознанные отступления не разрослись', () => {
+    expect(EXCEPTIONS.size).toBe(5);
+  });
+});
