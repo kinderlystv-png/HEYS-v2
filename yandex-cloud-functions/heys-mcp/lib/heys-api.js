@@ -741,12 +741,17 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
   /**
    * Сколько раз инструмент уже звался в этом подключении за окно.
    *
-   * Зовётся ПАРАЛЛЕЛЬНО работе инструмента (lib/mcp.js), поэтому таймаут
-   * короткий и любой сбой означает «подсказки не будет», а не задержку ответа:
-   * подсказка про лишний круг не стоит ни одной лишней миллисекунды ожидания
-   * куратора.
+   * Зовётся ПАРАЛЛЕЛЬНО работе инструмента (lib/mcp.js), поэтому любой сбой
+   * означает «подсказки не будет», а не задержку ответа.
+   *
+   * Но параллельность не бесплатна: ответ ждёт обоих, и если счётчик медленнее
+   * инструмента, разница ложится в ожидание куратора. Поэтому потолок — те же
+   * 250 мс, что у записи телеметрии (`DEFAULT_PERSIST_TIMEOUT_MS`): сам поиск
+   * стоит 400–600 мс, то есть счётчик почти всегда прячется за ним целиком, а
+   * когда не успевает — молчит. Подсказка про лишний круг не стоит того, чтобы
+   * ради неё ждать.
    */
-  async function countMcpRecentCalls({ connId, tool, windowMs = 60000, secret, timeoutMs: callTimeoutMs = 400 } = {}) {
+  async function countMcpRecentCalls({ connId, tool, windowMs = 60000, secret, timeoutMs: callTimeoutMs = 250 } = {}) {
     if (!secret || !connId || !tool) return { count: 0 };
     const url = `${apiUrl}/rpc?fn=${encodeURIComponent('count_mcp_recent_calls')}`;
     try {
