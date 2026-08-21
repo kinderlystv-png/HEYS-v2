@@ -223,7 +223,7 @@ apps/web/heys_curator_push_onboarding_banner_v1.js:62
 apps/web/heys_client_log_trace_v1.js:77
 apps/web/heys_client_log_trace_v1.js:148
 apps/web/heys_whats_new_modal_v1.js:87
-apps/web/heys_widgets_core_v1.js:1017
+apps/web/heys_widgets_core_v1.js:1028
 apps/web/heys_widgets_core_v1.js:343
 apps/web/heys_widgets_ui_v1.js::localStorage.setItem(RELAPSE_PROFILE_STORAGE_KEY
 apps/web/heys_widgets_ui_v1.js::localStorage.setItem(scopedKey, JSON.stringify(dayData))

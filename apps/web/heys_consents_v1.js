@@ -3007,8 +3007,13 @@
     const allRead = accepted.length >= types.length;
 
     const labelOf = function (type) {
+      // Тот же порядок, что у баннера: сначала короткое человеческое имя из
+      // LegalVersions.labels («Расшифровка голосовых сообщений»), и только
+      // потом формулировка из каталога — она юридическая и в списке из
+      // нескольких строк читается плохо.
       const entry = CONSENT_TEXTS.checkboxes[type] || {};
-      return entry.screenLabel || entry.label || type;
+      const short = (HEYS.LegalVersions && HEYS.LegalVersions.labels || {})[type];
+      return short || entry.screenLabel || entry.label || type;
     };
 
     const handleAccept = function (type) {
