@@ -913,17 +913,24 @@
   function getUsageStatsDayCount() {
     try {
       if (HEYS.store && HEYS.store.get) return Number(HEYS.store.get(USER_STATS_SYNC_KEY + '_days', 0)) || 0;
+      if (HEYS.utils && HEYS.utils.lsGet) return Number(HEYS.utils.lsGet(USER_STATS_SYNC_KEY + '_days', 0)) || 0;
       const raw = localStorage.getItem(USER_STATS_SYNC_KEY + '_days');
-      return raw ? Number(JSON.parse(raw)) || 0 : 0;
-    } catch (_) {
-      return 0;
-    }
+      if (raw) return Number(JSON.parse(raw)) || 0;
+    } catch (_) { /* noop */ }
+    return usageStatsDayCountMemo || 0;
   }
 
+  // Запасной путь — в памяти, а не прямой записью в хранилище: прямые записи
+  // запрещены гейтом, и обходить его ради счётчика незачем. Если ни хранилища,
+  // ни утилит нет, счётчик живёт до перезагрузки — это лишь означает лишнюю
+  // пересборку статистики, а не потерю данных.
+  let usageStatsDayCountMemo = null;
+
   function setUsageStatsDayCount(n) {
+    usageStatsDayCountMemo = n;
     try {
       if (HEYS.store && HEYS.store.set) HEYS.store.set(USER_STATS_SYNC_KEY + '_days', n);
-      else localStorage.setItem(USER_STATS_SYNC_KEY + '_days', JSON.stringify(n));
+      else if (HEYS.utils && HEYS.utils.lsSet) HEYS.utils.lsSet(USER_STATS_SYNC_KEY + '_days', n);
     } catch (_) { /* noop */ }
   }
 
