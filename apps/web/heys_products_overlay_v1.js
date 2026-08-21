@@ -86,6 +86,12 @@
     }, 2000);
   }
 
+  // Слышали ли мы облако в этой сессии. Не «есть ли продукты», а именно
+  // «ответило ли облако»: у нового человека каталог пустой законно, и первый
+  // продукт он publish'ить обязан. Читается предохранителем в пути добавления
+  // продукта (heys_core_v12.js, ensurePersonalProductCommitted).
+  let heardFromCloud = false;
+
   function writeRaw(rows, opts) {
     if (!Array.isArray(rows)) return false;
     try {
@@ -203,8 +209,14 @@
   // означает что есть несинхронизированные локальные customs; вызывающий может
   // явно триггернуть upload (или дождаться следующего user write).
   // ─────────────────────────────────────────────────────────────────────
+  function hasHeardFromCloud() { return heardFromCloud; }
+
   function applyCloudSnapshot(incomingRows, opts) {
     if (!Array.isArray(incomingRows)) return { applied: false, reason: 'not-array' };
+    // Облако ответило — теперь мы знаем, что именно заменяем, и публикация
+    // разрешена. Пустой массив тоже считается ответом: у нового человека
+    // каталог пуст законно.
+    heardFromCloud = true;
     incomingRows = incomingRows.filter(function (r) { return !isSyntheticProductRow(r); });
     const source = (opts && opts.source) || 'unknown';
 
@@ -1234,6 +1246,7 @@
     readRaw,
     writeRaw,
     applyCloudSnapshot,
+    hasHeardFromCloud,
     upsertRow,
     removeRow,
     getRowById,

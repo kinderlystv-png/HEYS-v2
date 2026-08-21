@@ -4844,6 +4844,26 @@
 	      if (!product) return { ok: false, product: null, reason: 'missing_product' };
 	      if (product._oneTime) return { ok: true, product, reason: 'one_time' };
 
+	      // 🪦 Прод 21.08.2026: облачная загрузка оборвалась, каталог на устройстве
+	      // остался пустым, человек добавил один продукт — и в облако уехал каталог
+	      // из одной строки поверх ста сорока шести. Соседний shrink-guard тут
+	      // бессилен по построению: он сравнивает с ЛОКАЛЬНЫМ предыдущим, а тот был
+	      // пуст, и «уменьшения» не видно.
+	      //
+	      // Пустой локальный каталог + облако, которого мы в этой сессии не слышали,
+	      // = публиковать нечего. Пустой каталог у нового человека законен, поэтому
+	      // смотрим не на количество строк, а на то, ответило ли облако вообще.
+	      try {
+	        const Overlay = HEYS.OverlayStore;
+	        if (Overlay?.hasHeardFromCloud && !Overlay.hasHeardFromCloud()) {
+	          const localRows = Overlay.readRaw?.() || [];
+	          if (!localRows.length) {
+	            console.error('[HEYS.products] commit отклонён: каталог ещё не загружен из облака');
+	            return { ok: false, product, reason: 'catalog_not_loaded' };
+	          }
+	        }
+	      } catch (_) { /* при сомнении не блокируем: отказ дороже риска */ }
+
 	      const now = Date.now();
 	      const uid = HEYS.utils?.uid || ((prefix = 'p_') => prefix + now + '_' + Math.random().toString(36).slice(2, 8));
 	      const overlayOn = !!(HEYS.flags && HEYS.flags.isEnabled && HEYS.flags.isEnabled('overlay_products_v2'));
