@@ -486,7 +486,7 @@ function sanitizeFilterColumn(columnName, tableName) {
 const NON_FILTER_PARAMS = new Set(['order', 'limit', 'offset', 'select', 'table', 'on_conflict', 'columns', 'upsert']);
 
 /** Операторный префикс в ключе (формат `eq.field=value`). */
-const OPERATOR_KEY_PREFIX = /^(eq|neq|gt|lt|gte|lte|like|ilike|in|contains|is)\./;
+const OPERATOR_KEY_PREFIX = /^(eq|neq|gt|lt|gte|lte|like|ilike|notlike|in|contains|is)\./;
 
 function getCorsHeaders(origin) {
   const headers = {
@@ -1005,6 +1005,14 @@ async function handleRestRequest(event, context) {
             const actualValue = value.replace(/\*/g, '%');
             conditions.push(`"${fieldName}" ILIKE $${i++}`);
             values.push(actualValue);
+          } else if (key.startsWith('notlike.')) {
+            // Исключение по шаблону. Нужно, чтобы приложение не тянуло чужой
+            // scope: личные файлы задачника (heys_tasks_*) UI не показывает,
+            // но они тяжёлые и раздували страницу до отказа функции.
+            const fieldName = key.replace('notlike.', '');
+            const actualValue = value.replace(/\*/g, '%');
+            conditions.push(`"${fieldName}" NOT ILIKE $${i++}`);
+            values.push(actualValue);
           } else if (key.startsWith('ilike.')) {
             // Support ilike.field=value format (case-insensitive search)
             const fieldName = key.replace('ilike.', '');
@@ -1055,6 +1063,10 @@ async function handleRestRequest(event, context) {
           } else if (typeof value === 'string' && value.startsWith('lte.')) {
             const actualValue = value.replace('lte.', '');
             conditions.push(`"${key}" <= $${i++}`);
+            values.push(actualValue);
+          } else if (typeof value === 'string' && value.startsWith('notlike.')) {
+            const actualValue = value.replace('notlike.', '').replace(/\*/g, '%');
+            conditions.push(`"${key}" NOT ILIKE $${i++}`);
             values.push(actualValue);
           } else if (typeof value === 'string' && (value.startsWith('like.') || value.startsWith('ilike.'))) {
             const actualValue = value.replace(/^(i?like)\./, '').replace(/\*/g, '%');

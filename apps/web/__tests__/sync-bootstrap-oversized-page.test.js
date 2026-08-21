@@ -204,7 +204,7 @@ describe('начальная загрузка · страница не влез�
 
     await window.HEYS.cloud.bootstrapClientSync(CLIENT);
 
-    expect(log.every((r) => r.limit === 200), 'в офлайне страницы всё-таки дробились').toBe(true);
+    expect(log.every((r) => r.limit === 100), 'в офлайне страницы всё-таки дробились').toBe(true);
     spy.mockRestore();
   });
 
@@ -255,6 +255,62 @@ describe('начальная загрузка · страница не влез�
     expect(log[1].limit).toBe(log[0].limit);
   });
 
+  it('задачник не запрашивается вовсе — фильтр уходит на сервер', async () => {
+    // Ключи heys_tasks_* приложению не нужны, но раньше они качались и
+    // выбрасывались уже на клиенте. У большого клиента они идут подряд и
+    // собираются в страницу, которая не влезает в ответ функции.
+    const seen = [];
+    installApi({
+      ...window.HEYS.YandexAPI,
+      rest: vi.fn(async (table, opts) => {
+        if (table === 'client_kv_store' && opts && typeof opts.limit === 'number') {
+          seen.push(opts.filters || {});
+        }
+        return { data: [], error: null };
+      }),
+    });
+
+    await window.HEYS.cloud.bootstrapClientSync(CLIENT);
+
+    expect(seen.length, 'страницы не запрашивались вовсе').toBeGreaterThan(0);
+    for (const f of seen) {
+      expect(f['notlike.k'], 'страница запрошена без фильтра задачника').toBe('heys_tasks_*');
+    }
+  });
+
+  it('упавшая страница не обнуляет уже доехавшие', async () => {
+    // Раньше отказ на седьмой странице выбрасывал шесть предыдущих целиком.
+    const log = [];
+    installApi({
+      ...window.HEYS.YandexAPI,
+      rest: vi.fn(async (table, opts) => {
+        if (table !== 'client_kv_store' || !opts || typeof opts.limit !== 'number') {
+          return { data: [], error: null };
+        }
+        const from = opts.offset || 0;
+        log.push({ offset: from, limit: opts.limit });
+        // Всё до 600-й строки отдаём, дальше — глухой отказ на любом размере.
+        if (from >= 600) {
+          return { data: null, error: { code: 502, message: 'Response code 502' } };
+        }
+        const rows = [];
+        for (let i = from; i < Math.min(from + opts.limit, TOTAL_ROWS); i++) {
+          rows.push({ k: 'heys_key_' + String(i).padStart(4, '0'), v: 'x', updated_at: '2026-08-21T00:00:00Z' });
+        }
+        return { data: rows, error: null };
+      }),
+    });
+
+    const before = localStorage.getItem('heys_' + CLIENT + '_last_sync_ts');
+    const res = await window.HEYS.cloud.bootstrapClientSync(CLIENT);
+
+    // Не «офлайн с пустыми руками»: часть данных доехала и должна остаться.
+    expect(res, 'загрузка вернула пустой результат').toBeTruthy();
+    // Отметку синхронизации при неполной загрузке ставить нельзя — иначе
+    // следующий заход пойдёт дельтой и недостающее не приедет никогда.
+    expect(localStorage.getItem('heys_' + CLIENT + '_last_sync_ts')).toBe(before);
+  });
+
   it('когда страница влезает, деления не происходит вовсе', async () => {
     const log = [];
     // Влезает всё: отказов нет ни на одном размере.
@@ -274,6 +330,6 @@ describe('начальная загрузка · страница не влез�
 
     await window.HEYS.cloud.bootstrapClientSync(CLIENT);
 
-    expect(log.every((r) => r.limit === 200), 'страницы дробились без причины').toBe(true);
+    expect(log.every((r) => r.limit === 100), 'страницы дробились без причины').toBe(true);
   });
 });

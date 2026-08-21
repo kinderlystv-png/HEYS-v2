@@ -8205,8 +8205,10 @@
         // Загружаем порциями по 250 записей, чтобы оставить запас по размеру ответа.
         // 🚀 Delta Sync: при наличии since — фильтруем по updated_at на сервере
         log('🔄 [CLIENT_SYNC] Loading data for client (paginated):', client_id);
-        // Gateway body limit: 250 rows with heavy `v` JSON can exceed ~1.1MB (502 at offset 1000+).
-        const PAGE_SIZE = 200;
+        // Лимит тела ответа функции — около 1,1 МБ. День еды весит ~4,6 КБ, то
+        // есть 200 дней подряд уже подходят к потолку вплотную. Берём вдвое
+        // меньше: лишний запрос дешевле отказа и деления вслепую.
+        const PAGE_SIZE = 100;
         // Сколько строк реально влезает в один ответ. Начинаем со страницы
         // целиком и уменьшаем, как только упёрлись; значение живёт на всю
         // начальную загрузку.
@@ -8244,6 +8246,13 @@
           const fetchPage = async (offset) => {
             const filters = { 'eq.client_id': client_id };
             if (deltaSince) filters['gt.updated_at'] = deltaSince;
+            // Задачник куратора приложению не нужен — ниже он всё равно
+            // отфильтровывается. Но фильтровать ПОСЛЕ загрузки значит тянуть
+            // через мобильный интернет сотни килобайт стенограмм ради того,
+            // чтобы их выбросить. Хуже того: у большого клиента эти ключи идут
+            // подряд и собираются в страницу, которая не влезает в ответ
+            // функции, — вся начальная загрузка на ней и умирала (прод 21.08).
+            filters['notlike.k'] = 'heys_tasks_*';
 
             // Страница со столбцом `v` может не влезть в лимит тела ответа. Шлюз
             // отвечает на это по-разному: одиночный запрос ловит 502 от самой
@@ -8268,7 +8277,10 @@
               return !!error.isNetworkFailure && online;
             };
 
-            const MIN_CHUNK = 50;
+            // Ниже этого не дробим — но и не сдаёмся раньше времени: прежний
+            // пол в 50 строк означал, что упёршаяся страница из 50 тяжёлых
+            // ключей роняла всю загрузку целиком.
+            const MIN_CHUNK = 10;
 
             // Разрезает пролёт пополам и склеивает — последовательно, а не
             // параллельно: отказ мог прийти именно от перегрузки, и удваивать
@@ -8426,9 +8438,18 @@
 
         logCritical(`🔍 [SYNC DEBUG] main data query: rows=${data?.length}, error=${error?.message || 'none'}, isNetworkFailure=${error?.isNetworkFailure}${isDeltaSync ? ' (DELTA)' : ' (FULL)'}`);
 
+        // Упавшая страница не должна обнулять уже доехавшие. Раньше отказ на
+        // седьмой странице выбрасывал шесть предыдущих — приложение оставалось
+        // без продуктов и истории вовсе, хотя 1200 ключей уже лежали в памяти
+        // (прод 21.08). Теперь записываем, что есть, и честно помечаем загрузку
+        // неполной: отметку последней синхронизации не ставим, следующий заход
+        // сходит за всем заново.
+        let partialSync = false;
         if (error) {
-          // Graceful degradation
-          if (error.isNetworkFailure) {
+          if (data.length > 0) {
+            partialSync = true;
+            logCritical(`⚠️ [SYNC] Загрузка неполная (${error.message || error}) — записываем ${data.length} доехавших ключей, отметку синхронизации не ставим`);
+          } else if (error.isNetworkFailure) {
             console.warn('[HEYS.cloud] 📴 clientSync data: сеть недоступна');
             cloud._lastClientSync = { clientId: client_id, ts: now };
             if (!initialSyncCompleted) {
@@ -8436,9 +8457,10 @@
               logCritical('✅ [OFFLINE] Sync пропущен (сеть), локальные данные активны');
             }
             return { success: true, status: 'offline' };
+          } else {
+            err('client bootstrap select', error);
+            throw new Error('Sync data fetch failed: ' + (error.message || error));
           }
-          err('client bootstrap select', error);
-          throw new Error('Sync data fetch failed: ' + (error.message || error));
         }
 
         // ════════════════════════════════════════════════════════════════
@@ -8601,7 +8623,13 @@
           cloud._productsFingerprint = null;
 
           // Сохраняем timestamp для следующего delta sync
-          try { ls.setItem(`heys_${client_id}_last_sync_ts`, new Date().toISOString()); } catch (_) { }
+          // При неполной загрузке отметку не ставим: иначе следующий заход
+          // пойдёт дельтой и недостающие ключи не приедут уже никогда.
+          if (!partialSync) {
+            try { ls.setItem(`heys_${client_id}_last_sync_ts`, new Date().toISOString()); } catch (_) { }
+          } else {
+            try { ls.removeItem(`heys_${client_id}_last_sync_ts`); } catch (_) { }
+          }
 
           const lightDuration = Math.round(performance.now() - lightStart);
           logCritical(`✅ [DELTA LIGHT DONE] client=${client_id.slice(0, 8)} keys=${lightKeysWritten} ms=${lightDuration}`);
@@ -10609,12 +10637,25 @@
           window.dispatchEvent(new CustomEvent('heysSyncCompleted', { detail: { clientId: client_id, phase: 'full' } }));
         }
 
-        // 🚀 Delta Sync: сохраняем timestamp для следующего delta sync
+        // 🚀 Delta Sync: сохраняем timestamp для следующего delta sync.
+        // При неполной загрузке отметку НЕ ставим и старую снимаем: иначе
+        // следующий заход пойдёт дельтой и недостающие ключи не приедут уже
+        // никогда — человек так и останется без части истории.
         try {
-          ls.setItem(`heys_${client_id}_last_sync_ts`, new Date().toISOString());
+          if (partialSync) {
+            ls.removeItem(`heys_${client_id}_last_sync_ts`);
+          } else {
+            ls.setItem(`heys_${client_id}_last_sync_ts`, new Date().toISOString());
+          }
         } catch (_) { }
 
-        return { success: true, status: 'updated', keys: data?.length || 0, durationMs: syncDuration, force: !!forceSync };
+        return {
+          success: true,
+          status: partialSync ? 'partial' : 'updated',
+          keys: data?.length || 0,
+          durationMs: syncDuration,
+          force: !!forceSync,
+        };
       } catch (e) {
         // Критический лог ошибки синхронизации (всегда видим)
         logCritical('❌ Ошибка синхронизации:', e.message || e);
