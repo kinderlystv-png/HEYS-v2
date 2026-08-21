@@ -25,13 +25,20 @@
  *
  * ⚠️ Module-level reads (`const PG_CONFIG = { password: process.env.PG_PASSWORD }`
  * вне функции) подхватывают значение НА МОМЕНТ require/load — до того как handler
- * успеет вызвать initSecrets(). На текущем этапе это не проблема: .env по-прежнему
- * передаётся в Cloud Function через env-флаги, значит process.env.PG_PASSWORD
- * корректно задан при загрузке модуля.
+ * успеет вызвать initSecrets().
  *
- * При финальном удалении значений из .env (этап „24ч watch завершён") такие
- * module-level reads нужно мигрировать на lazy-lookup (см. heys-api-rest как
- * образец `let PG_CONFIG = null; function getPgConfig() { if (!PG_CONFIG) ... }`).
+ * Раньше здесь стояло, что это не проблема, потому что .env по-прежнему передаётся
+ * через env-флаги и process.env.PG_PASSWORD задан при загрузке модуля. **Это больше
+ * не так.** Проверено 21.08.2026 на работающей версии heys-api-rest: PG_PASSWORD в
+ * окружении функции — плейсхолдер `__IN_LOCKBOX__…`, а stripPlaceholders() ниже его
+ * удаляет. То есть запасного пути нет вовсе: пароль существует только после
+ * успешного ответа Lockbox, и между strip и overlay его в окружении нет.
+ *
+ * Значит любой module-level read пароля теперь даёт пустое значение, а odyssey
+ * отвечает на это «incorrect password» — а не «нет пароля», из-за чего диагностика
+ * уводит в сторону смены пароля. См. MONITORING_QUICK_REF.md, раздел про эту ошибку.
+ * Все такие чтения обязаны быть lazy (образец — heys-api-rest:
+ * `let PG_CONFIG = null; function getPgConfig() { if (!PG_CONFIG) ... }`).
  */
 
 const { getSecret } = require('./lockbox-client');
