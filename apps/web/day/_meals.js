@@ -6377,7 +6377,15 @@
                 day,
                 dateKey: date,
                 openPresetsCreate: true,
-                onAdd: addProductToMeal,
+                // Та же развязка объект → позиционные аргументы, что и выше.
+                onAdd: ({ product, grams, mealIndex: addMealIndex, mealId: addMealId, productCommitVerified, _origin } = {}) => {
+                    const idx = resolveMealIndex(dayRef.current || day, addMealIndex ?? mealIndex, addMealId);
+                    const withGrams = (grams != null) ? { ...product, grams } : product;
+                    return addProductToMeal(idx, withGrams, {
+                        productCommitVerified,
+                        source: _origin || 'add-product-step',
+                    });
+                },
             });
         }, [day, date, addProductToMeal]);
 
@@ -6410,7 +6418,24 @@
                 dateKey: date,
                 startWithBarcodeScanner: opts.startWithBarcodeScanner === true,
                 barcodeCameraStart: opts.barcodeCameraStart || null,
-                onAdd: addProductToMeal,
+                // Лист добавления отдаёт ОДИН объект {product, grams, mealIndex, mealId},
+                // а addProductToMeal принимает позиционные (mi, p, options). Без
+                // переходника весь объект попадал в слот номера приёма, продукт
+                // оказывался undefined, и запись падала на «Продукт не сохранён в
+                // базу» при живом и целом продукте.
+                onAdd: ({ product, grams, mealIndex: addMealIndex, mealId: addMealId, productCommitVerified, _origin } = {}) => {
+                    const idx = resolveMealIndex(
+                        dayRef.current || currentDay,
+                        addMealIndex ?? resolvedIndex,
+                        addMealId || mealId,
+                    );
+                    // Граммы едут на самом продукте — их читает buildAddProductItem.
+                    const withGrams = (grams != null) ? { ...product, grams } : product;
+                    return addProductToMeal(idx, withGrams, {
+                        productCommitVerified,
+                        source: _origin || 'add-product-step',
+                    });
+                },
                 onAddMany: async ({ entries, mealIndex: addMealIndex, mealId: addMealId } = {}) => {
                     const idx = resolveMealIndex(
                         dayRef.current || currentDay,
