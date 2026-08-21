@@ -60,11 +60,13 @@ describe('UI v4 — нижняя навигация', () => {
         expect(shellSrc).not.toMatch(/primaryTabsVariant/);
     });
 
-    it('Задачи, Доска и Дневник в листе — только post-release labs клиент', () => {
+    it('Задачи и Доска в листе — только post-release labs клиент', () => {
         expect(shellSrc).toContain('canUsePostReleaseLabs');
         expect(shellSrc).toContain('canUseTasksAsHome && renderSettingsRow');
         expect(shellSrc).toContain('canUseBoardAsHome && renderSettingsRow');
-        expect(shellSrc).toContain('canUsePostReleaseLabs && renderSettingsRow');
+        // Строка «Дневник» снята: блоки вкладки «Питание» включаются чипами
+        // внизу самой вкладки (контракт nutrition-tab v4).
+        expect(shellSrc).not.toContain('canUsePostReleaseLabs && renderSettingsRow');
         expect(shellSrc).toContain("closeSettingsAndSwitch('tasks'");
         expect(shellSrc).toContain("closeSettingsAndSwitch('board'");
         expect(shellSrc).toContain('ccfe6ea3-54d9-4c83-902b-f10e6e8e6d9a');
@@ -150,8 +152,6 @@ describe('UI v4 Prompt 3b — шапка', () => {
         expect(shellSrc).toContain("label: 'Мои продукты'");
         expect(shellSrc).toContain("label: 'Звук и время напоминаний'");
         expect(shellSrc).toContain("label: 'Советы куратора'");
-        expect(shellSrc).toContain("canUsePostReleaseLabs && renderSettingsRow");
-        expect(shellSrc).toContain("label: 'Дневник'");
         expect(shellSrc).toContain("'Диагностика'");
         expect(shellSrc).toContain('hdr-settings-sheet__diag-toggle');
         expect(shellSrc).toContain('Пройти регистрацию');
