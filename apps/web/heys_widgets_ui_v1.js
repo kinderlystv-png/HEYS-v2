@@ -1640,6 +1640,22 @@
     return React.createElement('div', { className: 'widget-v4-kicker' }, text);
   }
 
+  // Нет данных за день: на месте числа прочерк, подпись остаётся, графики не
+  // рисуются, ноль не подставляется (канвас v4, строки 43 и 44). Отдельный
+  // случай — виду не хватает истории: тогда вместо графика подпись «нужно N
+  // дней» (строки 65 и 66).
+  function v4EmptyTile(kickerText, note) {
+    return React.createElement('div', { className: 'widget-v4-stack widget-v4-stack--empty' },
+      v4Kicker(kickerText),
+      React.createElement('div', { className: 'widget-v4-hero-num' },
+        React.createElement('span', { className: 'widget-v4-hero-num__val widget-v4-val--neutral' }, '—')
+      ),
+      note
+        ? React.createElement('span', { className: 'widget-v4-muted', style: { marginTop: 'auto' } }, note)
+        : null
+    );
+  }
+
   function isWidgetV4EditMode() {
     return HEYS.Widgets.state?.isEditMode?.() || false;
   }
@@ -2184,12 +2200,7 @@
     const rootClassName = `widget-day-score ${isShort ? 'widget-day-score--short' : 'widget-day-score--regular'}`;
 
     if (!hasData) {
-      return React.createElement('div', {
-        className: `${rootClassName} widget-day-score--empty`
-      },
-        React.createElement('div', { className: 'widget-day-score__placeholder-icon' }, '⭐'),
-        React.createElement('div', { className: 'widget-day-score__placeholder-text' }, 'Заполните день')
-      );
+      return v4EmptyTile('Оценка дня');
     }
 
     const color = getColor();
@@ -2561,26 +2572,7 @@
     const isLipolysis = data?.isLipolysis ?? (status === 'complete');
 
     if (!hasData) {
-      return React.createElement('div', { className: 'widget-v4-stack' },
-        v4Kicker('Инсулиновая волна'),
-        React.createElement('svg', {
-          className: 'widget-v4-wave',
-          viewBox: '0 0 130 52',
-          width: '100%',
-          height: 52,
-          'aria-hidden': 'true'
-        },
-          React.createElement('line', {
-            x1: 0, y1: 46, x2: 130, y2: 46,
-            stroke: 'var(--v4-line, rgba(0,0,0,.1))',
-            strokeWidth: 1.5
-          })
-        ),
-        React.createElement('div', { className: 'widget-v4-stack__footer' },
-          React.createElement('span', { className: 'widget-v4-muted' }, 'нет данных'),
-          React.createElement('span', { className: 'widget-v4-muted' }, '—')
-        )
-      );
+      return v4EmptyTile('Инсулиновая волна');
     }
 
     if (variantId === 'calm_window') {
@@ -2696,13 +2688,9 @@
     const color = getColor(score);
 
     if (!hasData) {
-      return React.createElement('div', {
-        style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '4px', opacity: 0.5 }
-      },
-        React.createElement('div', { style: { fontSize: isShort ? '1.2rem' : '1.5rem' } }, '🌿'),
-        React.createElement('div', { style: { fontSize: '0.7rem', color: 'var(--heys-text-tertiary,#64748b)', textAlign: 'center' } },
-          daysWithData < 3 ? 'Нужно 3+ дня данных' : 'Нет данных анализа'
-        )
+      return v4EmptyTile(
+        `Тренд · ${periodDays} дней`,
+        daysWithData < 3 ? 'нужно 3 дня' : null
       );
     }
 
@@ -6017,19 +6005,14 @@
     const message = data?.message || '';
 
     if (!hasData) {
-      return React.createElement('div', { className: 'widget-crash-risk widget-crash-risk--no-data' },
-        React.createElement('div', { className: 'widget-crash-risk__icon' }, '⚖️'),
-        React.createElement('div', { className: 'widget-crash-risk__message' }, message || 'Недостаточно данных')
-      );
+      return v4EmptyTile('Динамика веса', data?.daysNeededLabel || null);
     }
 
     if (data?.dynamicsV4) {
       return React.createElement(CrashRiskDynamicsVariantTile, { widget, data });
     }
 
-    return React.createElement('div', { className: 'widget-crash-risk widget-crash-risk--no-data' },
-      React.createElement('div', { className: 'widget-crash-risk__message' }, message || 'Нужна неделя')
-    );
+    return v4EmptyTile('Динамика веса', message || 'нужна неделя');
   }
 
   // Helper: Severity icon mapping
@@ -7926,7 +7909,7 @@
   }
 
   // === Catalog Modal Component ===
-  function CatalogStrip({ onSelect, existingTypes }) {
+  function CatalogStrip({ onSelect, existingTypes, selectedDate }) {
     const registry = HEYS.Widgets.registry;
     const availableTypes = registry?.getAvailableTypes() || [];
     const existingTypeSet = existingTypes instanceof Set ? existingTypes : new Set(existingTypes || []);
@@ -7939,22 +7922,46 @@
     return React.createElement('div', { className: 'widget-v4-catalog' },
       React.createElement('div', { className: 'widget-v4-catalog__tier' }, 'Каталог'),
       React.createElement('div', { className: 'widget-v4-catalog__grid' },
-        catalogTypes.map((type) => React.createElement('button', {
-          key: type.type,
-          type: 'button',
-          className: 'widget-v4-catalog__item',
-          onClick: () => {
-            onSelect?.(type);
-            HEYS.Widgets.emit('catalog:select', { type: type.type });
-          }
-        },
-          React.createElement('span', { className: 'widget-v4-catalog__name' }, type.name),
-          React.createElement('svg', {
-            width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
-            stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
-            'aria-hidden': 'true'
-          }, React.createElement('path', { d: 'M12 5v14M5 12h14' }))
-        ))
+        catalogTypes.map((type) => {
+          // Превью в формате дефолтного вида на живых данных дня
+          // (канвас v4, строка 54).
+          const defaultVariant = HEYS.Widgets.VariantsV4?.getDefaultVariant?.(type.type);
+          const previewSize = defaultVariant?.size || type.defaultSize || '2x1';
+          const previewWidget = {
+            id: `catalog_preview_${type.type}`,
+            type: type.type,
+            size: previewSize,
+            settings: defaultVariant?.id ? { displayVariant: defaultVariant.id } : {}
+          };
+          return React.createElement('button', {
+            key: type.type,
+            type: 'button',
+            className: 'widget-v4-catalog__item',
+            onClick: () => {
+              onSelect?.(type);
+              HEYS.Widgets.emit('catalog:select', { type: type.type });
+            }
+          },
+            React.createElement('div', {
+              className: `widget-v4-catalog__preview widget widget--${previewSize} widget--${type.type} widget-v4-catalog__preview--${previewSize}`,
+              'aria-hidden': 'true'
+            },
+              React.createElement(WidgetContent, {
+                widget: previewWidget,
+                widgetType: type,
+                selectedDate
+              })
+            ),
+            React.createElement('span', { className: 'widget-v4-catalog__row' },
+              React.createElement('span', { className: 'widget-v4-catalog__name' }, type.name),
+              React.createElement('svg', {
+                width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
+                stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+                'aria-hidden': 'true'
+              }, React.createElement('path', { d: 'M12 5v14M5 12h14' }))
+            )
+          );
+        })
       )
     );
   }
@@ -8954,6 +8961,24 @@
       return () => unsub?.();
     }, []);
 
+    // Положение прокрутки переживает уход на другую вкладку и возврат из
+    // «Отчётов», а на смене дня сбрасывается (канвас v4, строка 99).
+    useEffect(() => {
+      if (typeof window === 'undefined') return undefined;
+      const memo = HEYS.Widgets._scrollMemo;
+      if (memo && memo.date === selectedDate && memo.top > 0) {
+        const top = memo.top;
+        requestAnimationFrame(() => window.scrollTo(0, top));
+      } else {
+        HEYS.Widgets._scrollMemo = { date: selectedDate, top: 0 };
+      }
+      const onScroll = () => {
+        HEYS.Widgets._scrollMemo = { date: selectedDate, top: window.scrollY || 0 };
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      return () => window.removeEventListener('scroll', onScroll);
+    }, [selectedDate]);
+
     // Пересборка сетки: плитки, которые сдвинулись, едут 220 мс одной кривой,
     // одновременно и без задержек друг за другом (канвас v4, строка 37).
     // При prefers-reduced-motion новая раскладка появляется сразу (строка 83),
@@ -9398,7 +9423,8 @@
 
       isEditMode && catalogOpen && React.createElement(CatalogStrip, {
         onSelect: handleCatalogSelect,
-        existingTypes: new Set((widgets || []).map(w => w.type))
+        existingTypes: new Set((widgets || []).map(w => w.type)),
+        selectedDate
       }),
 
       isEditMode && React.createElement('div', { className: 'widget-v4-edit-footer' },

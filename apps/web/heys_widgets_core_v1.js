@@ -241,7 +241,11 @@
           size: w.size,
           pos: w.position
         }))));
-        this._widgets = saved.map(w => this._normalizeWidget(w));
+        this._widgets = saved
+          .map(w => this._normalizeWidget(w))
+          // Виджет, убранный из продукта, исчезает из раскладки без сообщения;
+          // порядок сжимается тем же алгоритмом (канвас v4, строка 41).
+          .filter(w => !!HEYS.Widgets.registry?.getType?.(w.type));
         // Старые раскладки хранили правду в координатах — переводим их в
         // порядок чтения один раз, дальше порядок ведёт сам массив.
         this._sortWidgetsByReadingOrder();
@@ -555,7 +559,18 @@
         ? (type?.defaultSize || supportedSizes[0] || normalizedSizeId)
         : normalizedSizeId;
 
-      const size = registry?.getSize(finalSizeId);
+      // Размер — свойство вида (канвас v4, строки 32 и 79): формат берётся у
+      // активного вида, а если вид исчез из каталога — у дефолтного, тихо и
+      // вместе с его форматом (строка 67).
+      let variantSizeId = finalSizeId;
+      const V4 = HEYS.Widgets.VariantsV4;
+      const variantCatalog = V4?.getCatalog?.(w.type) || [];
+      if (variantCatalog.length) {
+        const activeVariant = V4.getActiveVariant?.({ settings: w.settings || {} }, w.type);
+        if (activeVariant?.size) variantSizeId = activeVariant.size;
+      }
+
+      const size = registry?.getSize(variantSizeId) || registry?.getSize(finalSizeId);
 
       // 🔍 DEBUG: если размер изменился при нормализации — логируем
       if (rawSizeId !== finalSizeId || !w.size) {
@@ -565,7 +580,7 @@
       return {
         id: w.id || `widget_${w.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         type: w.type,
-        size: finalSizeId,
+        size: variantSizeId,
         cols: size?.cols || 1,
         rows: size?.rows || 1,
         position: w.position || { col: 0, row: 0 },

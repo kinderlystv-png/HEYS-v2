@@ -183,3 +183,98 @@ describe('порядок как источник правды', () => {
     expect(state._widgets.map((w) => w.id)).toEqual(['topLeft', 'topRight', 'low']);
   });
 });
+
+describe('размер идёт за видом, запись — по «Готово»', () => {
+  const state = () => global.HEYS.Widgets.state;
+
+  beforeEach(() => {
+    global.HEYS.Widgets.VariantsV4 = {
+      getCatalog: (type) => (type === 'weight'
+        ? [
+          { id: 'spark', title: 'Как сейчас', size: '2x2' },
+          { id: 'delta', title: 'Только число', size: '1x1' }
+        ]
+        : []),
+      getActiveVariant: (widget, type) => {
+        const catalog = global.HEYS.Widgets.VariantsV4.getCatalog(type);
+        const id = widget?.settings?.displayVariant;
+        return catalog.find((v) => v.id === id) || catalog[0] || null;
+      }
+    };
+    global.HEYS.Widgets.registry.getType = (type) => (type === 'ghost' ? null : { type });
+  });
+
+  it('формат берётся у активного вида, а не из записи', () => {
+    const normalized = state()._normalizeWidget({
+      id: 'w1',
+      type: 'weight',
+      size: '2x2',
+      settings: { displayVariant: 'delta' }
+    });
+    expect(normalized.size).toBe('1x1');
+    expect(normalized.cols).toBe(1);
+    expect(normalized.rows).toBe(1);
+  });
+
+  it('вид исчез из каталога — тихо берётся дефолт вместе с форматом', () => {
+    const normalized = state()._normalizeWidget({
+      id: 'w2',
+      type: 'weight',
+      size: '1x1',
+      settings: { displayVariant: 'removed_variant' }
+    });
+    expect(normalized.size).toBe('2x2');
+  });
+
+  it('смена размера пересобирает сетку тем же правилом', () => {
+    const st = state();
+    st._widgets = [
+      { id: 'a', type: 'calories', size: '2x2', cols: 2, rows: 2, position: { col: 0, row: 0 }, settings: {} },
+      { id: 'b', type: 'x', size: '2x1', cols: 2, rows: 1, position: { col: 2, row: 0 }, settings: {} },
+      { id: 'c', type: 'y', size: '1x1', cols: 1, rows: 1, position: { col: 2, row: 1 }, settings: {} }
+    ];
+    st._editMode = false;
+    st.updateWidget('b', { size: '1x1' }, true);
+    expect(st.getWidget('b').position).toEqual({ col: 2, row: 0 });
+    // Освободившуюся колонку занимает ближайшая следующая, которая влезает.
+    expect(st.getWidget('c').position).toEqual({ col: 3, row: 0 });
+  });
+
+  it('в расстановке раскладка не пишется — запись идёт по «Готово»', () => {
+    const st = state();
+    // Гейт живёт в самом ядре: до «Готово» ни один debounce не доходит до storage.
+    const coreSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_core_v1.js'), 'utf8');
+    const debounced = coreSrc.slice(coreSrc.indexOf('_debouncedSave() {'), coreSrc.indexOf('_debouncedSave() {') + 400);
+    expect(debounced).toContain('if (this._editMode) return;');
+
+    const saved = [];
+    const realSave = st.saveLayout;
+    st.saveLayout = (...args) => { saved.push(args); };
+
+    st._editMode = true;
+    st._editSnapshot = null;
+    st.exitEditMode();
+    expect(saved.length).toBe(1);
+
+    // «Отмена» возвращает раскладку входа и тоже фиксирует её, но уже прежнюю.
+    saved.length = 0;
+    st._editMode = true;
+    st._editSnapshot = JSON.stringify([]);
+    st.exitEditMode({ revert: true });
+    expect(saved.length).toBe(1);
+
+    st.saveLayout = realSave;
+  });
+
+  it('виджет, снятый с продукта, уходит из раскладки без сообщения', () => {
+    const st = state();
+    const kept = [
+      { id: 'k', type: 'weight', size: '2x2', position: { col: 0, row: 0 }, settings: {} },
+      { id: 'g', type: 'ghost', size: '1x1', position: { col: 2, row: 0 }, settings: {} }
+    ];
+    const alive = kept
+      .map((w) => st._normalizeWidget(w))
+      .filter((w) => !!global.HEYS.Widgets.registry.getType(w.type));
+    expect(alive.map((w) => w.id)).toEqual(['k']);
+  });
+});

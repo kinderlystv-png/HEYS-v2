@@ -8995,25 +8995,6 @@ body.reports-fullscreen-open {
   grid-template-columns: auto 1fr;
 }
 
-.widget--dayScore .widget-day-score--empty.widget-day-score--regular {
-  grid-template-rows: auto auto;
-}
-
-.widget--dayScore .widget-day-score__placeholder-icon {
-  font-size: 1.4rem;
-  line-height: 1;
-}
-
-.widget--dayScore .widget-day-score__placeholder-text {
-  font-size: 0.75rem;
-  color: var(--heys-text-tertiary, #64748b);
-  text-align: center;
-}
-
-.widget--dayScore .widget-day-score--short .widget-day-score__placeholder-text {
-  text-align: left;
-}
-
 .widget--dayScore .widget-day-score__score,
 .widget--dayScore .widget-day-score__score-big {
   font-variant-numeric: tabular-nums;
@@ -9325,7 +9306,6 @@ body.reports-fullscreen-open {
   transform-origin: center;
 }
 
-.widget--crashRisk .widget-crash-risk__message,
 .widget--crashRisk .widget-crash-risk__header,
 .widget--crashRisk .widget-crash-risk__label,
 .widget--crashRisk .widget-crash-risk__title {
@@ -9811,11 +9791,29 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget-calories__value--lg {
   line-height: 1;
 }
 
+/* Длинное значение в узком формате не сжимается кеглем и не переносится:
+   первой уходит единица, затем подпись, дальше обрезка по краю плитки
+   (канвас v4, строка 68). */
 .widget-v4-hero-num {
   display: flex;
   align-items: baseline;
   gap: 5px;
   margin-top: 10px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.widget-v4-hero-num > .widget-v4-hero-num__val {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.widget-v4-hero-num > .widget-v4-unit {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .widget-v4-hero-num__val {
@@ -10533,8 +10531,9 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water .widget-water__
 
 .widget-v4-catalog__item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
   gap: 8px;
   background: var(--v4-sand-surface, #f7efe2);
   border: none;
@@ -10546,10 +10545,52 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water .widget-water__
   text-align: left;
 }
 
+.widget-v4-catalog__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
 .widget-v4-catalog__name {
   font-size: 11.5px;
   font-weight: 600;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+/* Превью виджета в формате его дефолтного вида (канвас v4, строка 54).
+   Размеры — те же, что у карточек листа смены вида; 3×2 ужимается, чтобы
+   влезть в колонку каталога. */
+.widget-v4-catalog__preview {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--v4-sand-surface-soft, #fffaf1);
+  padding: 8px;
+  pointer-events: none;
+  transform-origin: top left;
+}
+
+.widget-v4-catalog__preview--1x1 {
+  width: 68px;
+  height: 64px;
+}
+
+.widget-v4-catalog__preview--2x1 {
+  width: 143px;
+  height: 64px;
+}
+
+.widget-v4-catalog__preview--2x2 {
+  width: 143px;
+  height: 136px;
+}
+
+.widget-v4-catalog__preview--3x2 {
+  width: 218px;
+  height: 136px;
+  transform: scale(0.72);
+  margin-bottom: -38px;
 }
 
 .widget-v4-edit-footer {
