@@ -97,6 +97,11 @@ const BOOT_NAMES = BUNDLE_NAMES.filter(n => n.startsWith('boot-'));
 const POSTBOOT_NAMES = BUNDLE_NAMES.filter(n => n.startsWith('postboot-') && !n.endsWith('-lazy'));
 
 const SHOW_FIX_HINT = !process.argv.includes('--no-fix-hint');
+// --sync (dev/pull): устаревшие по source_fingerprint бандлы не просто
+// сообщаются, а сразу пересобираются селективно. Нужен потому, что бандлы в
+// репозитории намеренно отстают от исходников (source-only коммиты в
+// параллельной работе), и после pull локалка иначе показывает старый код.
+const SYNC_STALE = process.argv.includes('--sync');
 
 function readJsonRepo(repoRel) {
     if (!repoFileExists(repoRel)) {
@@ -222,6 +227,7 @@ function printFixHint() {
 function main() {
     const errors = [];
     const warnings = [];
+    const stalePaths = new Set();
 
     const webM = readJsonRepo('apps/web/bundle-manifest.json');
     if (webM.error) errors.push(webM.error);
@@ -293,6 +299,12 @@ function main() {
                         const fixHint = selectiveCmd
                             ? `\n  Fix: ${selectiveCmd}`
                             : '\n  Fix: integration/release scope only: pnpm --filter @heys/web run predev && pnpm bundle:legacy';
+                        if (selectiveCmd) {
+                            selectiveCmd
+                                .slice(selectiveCmd.indexOf('--files=') + '--files='.length)
+                                .split(',')
+                                .forEach(item => stalePaths.add(item));
+                        }
                         errors.push(
                             `bundle "${name}": source_fingerprint mismatch.\n  manifest: ${entry.sourceFingerprint}\n  current:  ${currentFingerprint}\n  Changed inputs: ${changedPrintable}${fixHint}`,
                         );
@@ -338,6 +350,30 @@ function main() {
                 `index.html POST_BOOT_BUNDLES mismatch.\n  expected: ${JSON.stringify(expectedPost)}\n  actual:   ${JSON.stringify(pb.files)}`,
             );
         }
+    }
+
+    if (SYNC_STALE && stalePaths.size > 0) {
+        const paths = Array.from(stalePaths);
+        const files = paths.join(',');
+        // Нечитаемый бандл даёт весь свой список исходников — в консоль печатаем счёт.
+        const printable = paths.length > 6 ? `${paths.slice(0, 6).join(',')} … +${paths.length - 6}` : files;
+        console.info('[verify-legacy-bundles] 🔄 Бандлы отстали от исходников — пересобираю затронутые.');
+        console.info(`[verify-legacy-bundles] $ pnpm bundle:legacy:auto --files=${printable}`);
+        try {
+            execFileSync('pnpm', ['bundle:legacy:auto', `--files=${files}`], {
+                cwd: ROOT, stdio: 'inherit', shell: process.platform === 'win32',
+            });
+        } catch {
+            console.error('[verify-legacy-bundles] ❌ Пересборка не удалась — запусти команду выше вручную.');
+            process.exit(1);
+        }
+        // Перепроверяем уже собранное состояние: --sync снят, чтобы не зациклиться.
+        try {
+            execFileSync(process.execPath, [fileURLToPath(import.meta.url)], { cwd: ROOT, stdio: 'inherit' });
+        } catch {
+            process.exit(1);
+        }
+        process.exit(0);
     }
 
     if (errors.length > 0) {

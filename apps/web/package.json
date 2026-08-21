@@ -18,7 +18,7 @@
     "check:mobility-map": "node mobility/methodology/tools/impl-coverage.mjs",
     "clean": "rimraf dist",
     "predev": "node scripts/bundle-day-core.mjs && node scripts/bundle-advice.mjs && node scripts/bundle-meals.cjs && node scripts/bundle-day.cjs && node scripts/bundle-fingers.cjs && node scripts/bundle-mobility.cjs && node scripts/bundle-assemble-day-game.mjs",
-    "dev": "cross-env PORT=3001 vite",
+    "dev": "pnpm --dir ../.. run bundles:sync && cross-env PORT=3001 vite",
     "dev:full": "concurrently -k -n web,iw \"pnpm run dev\" \"pnpm run dev:iw-config\"",
     "dev:iw-config": "node ../../scripts/watch-iw-inline-config.cjs",
     "health-check": "node src/health-check.js",
