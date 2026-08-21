@@ -591,6 +591,18 @@
     );
   }
 
+  // Обход тридцати дней в localStorage — не для каждого рендера: считаем один
+  // раз на дату и держим результат до её смены.
+  let bestFiberCache = { key: null, value: null };
+
+  function bestFiberSource(dateKey, pIndex) {
+    if (!dateKey) return null;
+    if (bestFiberCache.key === dateKey) return bestFiberCache.value;
+    const value = HEYS.dayDiarySection?.getBestFiberSource?.(dateKey, pIndex, HEYS) || null;
+    bestFiberCache = { key: dateKey, value };
+    return value;
+  }
+
   function renderFiberBlock(React, params) {
     const { dayTot, normAbs, day, pIndex, expanded, onToggle, hasData } = params;
     const eaten = hasData ? Math.max(0, Number(dayTot?.fiber) || 0) : null;
@@ -598,8 +610,8 @@
     if (!target) return null;
     const remaining = eaten == null ? null : Math.max(0, Math.round(target - eaten));
     const pct = eaten == null ? 0 : Math.max(0, Math.min(100, (eaten / target) * 100));
-    const sources = HEYS.dayDiarySection?.getFiberSources?.() || [];
-    const best = HEYS.dayDiarySection?.getBestFiberSource?.(day?.date, pIndex, HEYS) || null;
+    const sources = expanded ? (HEYS.dayDiarySection?.getFiberSources?.() || []) : [];
+    const best = expanded ? bestFiberSource(day?.date, pIndex) : null;
 
     return blockShell(React, 'fiber', 'Клетчатка',
       (eaten == null ? DASH : formatNumber(eaten)) + ' из ' + formatNumber(target) + ' г', null,
@@ -641,30 +653,35 @@
     );
   }
 
-  function renderSupplementsBlock(React, date) {
-    const planned = HEYS.Supplements?.getPlanned?.(date);
-    const rows = Array.isArray(planned) ? planned : (Array.isArray(planned?.items) ? planned.items : []);
-    if (!rows.length) return null;
-    const TIME_GROUPS = HEYS.Supplements?.TIME_GROUPS || {};
-    const byTiming = new Map();
-    rows.forEach((row) => {
-      const timing = row?.timing || row?.timeGroup || 'anytime';
-      const label = TIME_GROUPS[timing]?.label || TIME_GROUPS[timing]?.name || timing;
-      const name = row?.name || row?.title || row?.id;
-      if (!name) return;
-      if (!byTiming.has(label)) byTiming.set(label, []);
-      byTiming.get(label).push(name);
+  // Подписи времени свои: групповые метки каталога несут эмодзи, а на вкладке
+  // их нет ни в заголовках блоков, ни в системных сообщениях.
+  const SUPPLEMENT_TIME_LABELS = {
+    morning: 'утром',
+    withMeal: 'с едой',
+    evening: 'вечером',
+    anytime: 'в любое время'
+  };
+
+  function renderSupplementsBlock(React) {
+    const api = HEYS.Supplements;
+    // getPlanned отдаёт массив идентификаторов каталога, а не объектов.
+    const planned = typeof api?.getPlanned === 'function' ? api.getPlanned() : null;
+    if (!Array.isArray(planned) || !planned.length) return null;
+    const groups = typeof api.groupByTimeOfDay === 'function' ? api.groupByTimeOfDay(planned) : null;
+    const catalog = api.CATALOG || {};
+
+    const rows = [];
+    Object.keys(SUPPLEMENT_TIME_LABELS).forEach((groupKey) => {
+      const ids = groups ? groups[groupKey] : (groupKey === 'anytime' ? planned : []);
+      if (!Array.isArray(ids) || !ids.length) return;
+      const names = ids.map((id) => catalog[id]?.name || id).filter(Boolean);
+      if (!names.length) return;
+      rows.push({ key: groupKey, label: names.join(', '), value: SUPPLEMENT_TIME_LABELS[groupKey] });
     });
-    if (!byTiming.size) return null;
+    if (!rows.length) return null;
 
     // Отметки «выпил» здесь нет: факт приёма живёт в дневнике.
-    return blockShell(React, 'supplements', 'Добавки за день', null, null,
-      listRows(React, Array.from(byTiming.entries()).map(([label, names]) => ({
-        key: label,
-        label: names.join(', '),
-        value: label
-      })))
-    );
+    return blockShell(React, 'supplements', 'Добавки за день', null, null, listRows(React, rows));
   }
 
   function renderRefeedBlock(React, params) {
@@ -691,11 +708,25 @@
 
   const RISK_STEPS = { critical: 3, high: 2, elevated: 1, guarded: 1, medium: 1 };
 
+  let dayScoreCache = { key: null, value: null };
+
+  function dayScoreSummary(params) {
+    const { day, prof, dayTot, normAbs, pIndex } = params;
+    const key = [
+      day?.date, (day?.meals || []).length, day?.waterMl, day?.updatedAt,
+      dayTot?.kcal, dayTot?.prot, dayTot?.fat, dayTot?.carbs, dayTot?.fiber, normAbs?.kcal
+    ].join('|');
+    if (dayScoreCache.key === key) return dayScoreCache.value;
+    const value = HEYS.dayDiarySection?.getDayScoreSummary?.({
+      dayData: day, profile: prof, dayTot, normAbs, pIndex
+    }) || null;
+    dayScoreCache = { key, value };
+    return value;
+  }
+
   function renderScoreRiskBlock(React, params) {
     const { day, prof, dayTot, normAbs, pIndex } = params;
-    const summary = HEYS.dayDiarySection?.getDayScoreSummary?.({
-      dayData: day, profile: prof, dayTot, normAbs, pIndex
-    });
+    const summary = dayScoreSummary({ day, prof, dayTot, normAbs, pIndex });
     const dayScore = summary?.dayScore;
     const risk = summary?.riskRadar;
     if (!dayScore && !risk) return null;
@@ -1063,7 +1094,7 @@
         expanded: fiberExpanded,
         onToggle: () => { setFiberExpanded((value) => !value); haptic?.('light'); }
       }),
-      chipState.supplements && renderSupplementsBlock(React, date),
+      chipState.supplements && renderSupplementsBlock(React),
       chipState.refeed && renderRefeedBlock(React, { day, optimum, budgetKcal }),
       chipState.scoreRisk && renderScoreRiskBlock(React, { day, prof, dayTot, normAbs, pIndex }),
       chipState.wave && renderWaveNowBlock(React, insulinWaveData)

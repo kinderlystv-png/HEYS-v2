@@ -885,6 +885,7 @@
    в нём. Обводка выключенного — 2 px тем же акцентом: на 1,5 px в альфе .16
    она давала 1,45:1, и состояние пропадало. */
 .nutrition-v4-chip {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -899,6 +900,12 @@
   color: var(--v4-btn-on-act, #2b1608);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+.nutrition-v4-chip::after {
+  content: '';
+  position: absolute;
+  inset: -5px 0;
 }
 
 .nutrition-v4-chip.is-off {

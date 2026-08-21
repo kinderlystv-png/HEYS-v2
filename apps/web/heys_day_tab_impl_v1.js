@@ -2016,7 +2016,7 @@
                 day,
                 HEYS: window.HEYS
             });
-        }, [displayOptimum, optimum, normPerc, normAbs, day]);
+        }, [displayOptimum, optimum, normPerc, normAbs]);
 
         // === Engagement effects (extracted) ===
         if (!HEYS.dayEngagementEffects?.useEngagementEffects) {

@@ -37,10 +37,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         };
 
         return React.createElement('div', { className: 'offline-nodata-overlay' },
-            React.createElement('div', { className: 'offline-nodata-icon' }, '⚠️'),
-            React.createElement('div', { className: 'offline-nodata-title' }, 'Данные за сегодня не загружены'),
+            React.createElement('div', { className: 'offline-nodata-title' }, 'Данные за сегодня не загрузились'),
             React.createElement('div', { className: 'offline-nodata-text' },
-                'Подключитесь к интернету для синхронизации'
+                'Нет связи, а на этом устройстве дня ещё нет. Прошлые дни открываются — они сохранены.'
             ),
             React.createElement('button', {
                 className: 'offline-nodata-retry',

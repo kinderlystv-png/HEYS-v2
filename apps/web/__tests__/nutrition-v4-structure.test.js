@@ -16,6 +16,8 @@ const shellSource = read('../heys_day_page_shell.js');
 const diarySource = read('../heys_day_diary_section.js');
 const appShellSource = read('../heys_app_shell_v1.js');
 const paletteSource = read('../styles/modules/002-ui-v4-palette-roles.css');
+const mealsSource = read('../day/_meals.js');
+const toastSource = read('../heys_toast_v1.js');
 
 describe('Nutrition tab v4 structure', () => {
   it('строит вкладку одной полосой без ярусов «Сейчас / Дневник / Разбор дня»', () => {
@@ -98,8 +100,7 @@ describe('Nutrition tab v4 structure', () => {
   it('вкладка «Питание» рендерится одинаково на телефоне и десктопе', () => {
     expect(shellSource).toMatch(/mobileSubTab === 'diary'\) && isTabActive && compactNutrition/);
     // Легаси-секция дневника больше не участвует в мобильной вкладке.
-    expect(diarySource).toContain('const isNutritionTab = isMobile && mobileSubTab === \'diary\'');
-    expect(diarySource).toContain('if (isNutritionTab) return null;');
+    expect(diarySource).toContain("if (isMobile && mobileSubTab === 'diary') return null;");
     expect(diarySource).toContain('const showDiary = !isMobile;');
   });
 
@@ -115,6 +116,27 @@ describe('Nutrition tab v4 structure', () => {
     expect(appShellSource).not.toContain('DIARY_PANEL_VISIBILITY_OPTIONS');
     expect(appShellSource).not.toContain('handleToggleDiaryPanel');
     expect(appShellSource).not.toContain('diaryPanelsVisibility');
+  });
+
+  it('удаление без вопроса, тост отмены 5 с с полосой времени', () => {
+    // Подтверждающего вопроса заранее нет: его платят все ради редкой ошибки.
+    expect(mealsSource).not.toContain('Удалить приём пищи?');
+    // Окно защиты записи равно видимой полосе — 5 с, невидимого запаса нет.
+    expect(mealsSource).toMatch(/label: mealName \+ ' удалён',[\s\S]{0,220}duration: 5000/);
+    expect(mealsSource).toMatch(/label: removedName \+ ' удалён',[\s\S]{0,120}duration: 5000/);
+    expect(mealsSource).toContain('markUndoWindow(5000)');
+    expect(toastSource).toContain('heys-toast__timer');
+    expect(toastSource).toContain("fill.style.animationDuration = duration + 'ms'");
+  });
+
+  it('офлайн без данных объясняет причину без эмодзи', () => {
+    expect(shellSource).toContain('Данные за сегодня не загрузились');
+    expect(shellSource).not.toContain('offline-nodata-icon');
+    const overlay = shellSource.slice(
+      shellSource.indexOf('function OfflineNoDataOverlay'),
+      shellSource.indexOf('function OfflineNoDataOverlay') + 2000,
+    );
+    expect(overlay).not.toMatch(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u);
   });
 
   it('положение прокрутки живёт по вкладке и сбрасывается сменой дня', () => {

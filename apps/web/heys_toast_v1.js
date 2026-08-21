@@ -91,6 +91,20 @@
         hideToast(toast);
       });
       toast.appendChild(actionBtn);
+
+      // Полоса времени: окно отмены равно видимой полосе, невидимого запаса
+      // нет (контракт nutrition-tab, «удаление и отмена»). Рисуем её только у
+      // тостов с действием — обычному сообщению обратный отсчёт не нужен.
+      const duration = Number(options.duration);
+      if (Number.isFinite(duration) && duration > 0) {
+        const track = document.createElement('span');
+        track.className = 'heys-toast__timer';
+        track.setAttribute('aria-hidden', 'true');
+        const fill = document.createElement('i');
+        fill.style.animationDuration = duration + 'ms';
+        track.appendChild(fill);
+        toast.appendChild(track);
+      }
     }
 
     toast.addEventListener('click', () => hideToast(toast));

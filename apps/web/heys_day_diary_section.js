@@ -967,7 +967,9 @@
         // карточки и после воды — туда этот порядок не укладывается. Здесь
         // остаётся десктопный легаси-дневник и компактный индикатор волны для
         // соседних под-вкладок.
-        const isNutritionTab = isMobile && mobileSubTab === 'diary';
+        // На вкладке «Питание» волна показана своим блоком внутри карточки —
+        // второй индикатор здесь был бы дублем.
+        if (isMobile && mobileSubTab === 'diary') return null;
         const showDiary = !isMobile;
         const ensureSupplementsModule = () => {
             if (app.Supplements?.renderCard) return true;
@@ -1002,9 +1004,6 @@
             HEYS: app
         }) || null;
 
-        // На вкладке «Питание» волна показана своим блоком внутри карточки —
-        // второй индикатор здесь был бы дублем.
-        if (isNutritionTab) return null;
         // Mobile stats/activity only need the compact insulin indicator. Return
         // before building the hidden diary panels: DayTab intentionally flips
         // heavyUiReady after first paint, and doing the diary work here caused

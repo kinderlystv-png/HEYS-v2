@@ -65,7 +65,6 @@
             day,
             pIndex,
             optimum,
-            displayOptimum,
             getDailyNutrientColor,
             getDailyNutrientTooltip,
             HEYS: HEYSRef
@@ -83,8 +82,7 @@
         const calculatedDayTot = ctx.dayCalculations?.calculateDayTotals?.(day, pIndex) || { kcal: 0, carbs: 0, simple: 0, complex: 0, prot: 0, fat: 0, bad: 0, good: 0, trans: 0, fiber: 0, gi: 0, harm: 0 };
         const dayTot = withSavedTotalsFallback(calculatedDayTot, day);
         const normPerc = (ctx.utils && ctx.utils.lsGet ? ctx.utils.lsGet('heys_norms', {}) : {}) || {};
-        const budgetKcal = Number.isFinite(+displayOptimum) && +displayOptimum > 0 ? +displayOptimum : optimum;
-        const normAbs = computeNormAbs({ budgetKcal, normPerc, day, HEYS: ctx });
+        const normAbs = computeNormAbs({ budgetKcal: optimum, normPerc, day, HEYS: ctx });
 
         const dailyTableState = ctx.dayDailyTable?.buildDailyTableState
             ? ctx.dayDailyTable.buildDailyTableState({
