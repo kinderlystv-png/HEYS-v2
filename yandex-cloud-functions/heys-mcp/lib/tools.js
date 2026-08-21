@@ -253,9 +253,38 @@ function createTools({
   }
 
   /**
+   * Карточка продукта, восстановленная из снимка в самой позиции набора.
+   *
+   * `buildPresetItem` кладёт в позицию не только id и имя, но и весь набор
+   * нутриентов на 100 г. До 21.08 этот снимок никто не читал: если карточки в
+   * каталоге больше нет, разворачивание падало целиком — при том, что все
+   * данные для записи приёма лежали прямо здесь.
+   */
+  function presetItemSnapshot(item) {
+    const hasNutrients = PRESET_ITEM_FIELDS.some((field) => item[field] !== undefined && item[field] !== null);
+    if (!hasNutrients) return null;
+    const snapshot = { id: item.product_id != null ? item.product_id : null, name: item.name };
+    for (const field of PRESET_ITEM_FIELDS) {
+      if (item[field] !== undefined && item[field] !== null) snapshot[field] = item[field];
+    }
+    return snapshot;
+  }
+
+  /**
    * Позиции набора сохранялись давно и несут исторические product_id, которые
    * могли не пережить переезд на overlay. Поэтому id — это подсказка, а
    * авторитетом остаётся название: иначе набор молча потеряет позицию.
+   *
+   * Если не нашлось ни по id, ни по имени — приём всё равно пишется, по снимку
+   * из самой позиции. Так делает приложение (`handleAddAll` в
+   * apps/web/heys_add_product_step_v1.js), и MCP был строже него на пустом
+   * месте: `preset_item_missing` ронял ВЕСЬ вызов, даже когда остальные
+   * позиции живы. 21.08 на этом встал живой приём куратора, а на проде в таком
+   * состоянии оказались четыре набора двух клиентов — карточки удалили, ссылки
+   * в наборах остались (`heys_delete_product` их не проверяет).
+   *
+   * Отказ остаётся только там, где данных действительно нет: позиция без
+   * нутриентного снимка — не еда, а пустая ссылка, и подставлять нули нельзя.
    */
   async function resolvePresetItem(item, presetName) {
     const catalog = await loadCatalog();
@@ -266,7 +295,15 @@ function createTools({
     const byName = catalog.all.find((p) => products.normalizeText(p.name) === nameNorm);
     if (byName) return { product: byName, grams: Number(item.grams) || 100 };
 
-    throw new ToolError('preset_item_missing', `В наборе «${presetName}» продукт «${item.name}» больше не найден в базе. Собери приём позициями вручную.`);
+    const snapshot = presetItemSnapshot(item);
+    if (snapshot) {
+      return { product: snapshot, grams: Number(item.grams) || 100, fromSnapshot: true };
+    }
+
+    throw new ToolError(
+      'preset_item_missing',
+      `В наборе «${presetName}» продукт «${item.name}» не найден в базе, и в самом наборе его КБЖУ не сохранены — восстанавливать нечего. Собери приём позициями вручную.`,
+    );
   }
 
   async function readDay(date) {
@@ -1028,6 +1065,14 @@ function createTools({
       const portionText = portionNotes.length
         ? ` Граммовка с карточки: ${portionNotes.join('; ')}.`
         : '';
+      // Позиции, восстановленные из снимка набора. Молчать нельзя: приём
+      // записан верно, но карточки в базе нет, и в приложении такая позиция
+      // отметится как ненайденная. Куратор должен узнать это здесь, а не из
+      // оранжевого баннера через сутки.
+      const snapshotNames = resolved.filter((e) => e.fromSnapshot).map((e) => e.product.name);
+      const snapshotText = snapshotNames.length
+        ? ` Внимание: ${snapshotNames.join(', ')} — карточки в базе больше нет, позиция записана по снимку из набора (КБЖУ верные). Вернуть карточку — heys_create_product, затем heys_save_meal_preset пересоберёт набор.`
+        : '';
       // Тип называем вслух, когда подпись приёма его не показывает (набор,
       // своё название): куратор должен видеть, чем запись легла в дневник, и
       // успеть поправить, если это не обед.
@@ -1035,7 +1080,7 @@ function createTools({
       // item_id в text — иначе «убери сироп из только что внесённого» снова
       // зовёт get_day (structured в Cursor часто не виден).
       return {
-        text: `Записал: ${formatMealLine(meal)}${typeHint} (${date}). ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${portionText}${learnedText}${dayAfterText(after)}`,
+        text: `Записал: ${formatMealLine(meal)}${typeHint} (${date}). ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${portionText}${snapshotText}${learnedText}${dayAfterText(after)}`,
         structured: {
           date,
           meal_id: meal.id,
@@ -1046,6 +1091,7 @@ function createTools({
           items: meal.items.map((i) => ({ id: i.id, name: i.name, grams: i.grams })),
           learned_piece_grams: learned.length ? learned : undefined,
           portion_defaults: portionNotes.length ? portionNotes : undefined,
+          from_preset_snapshot: snapshotNames.length ? snapshotNames : undefined,
           day_after: after,
         },
       };
@@ -2530,6 +2576,18 @@ function createTools({
       }
 
       const usedIn = products.findRecipesUsingProduct(await loadCatalog(), target);
+      // Наборы приёмов — вторая половина той же проверки, и до 21.08 её просто
+      // не было: рецепты смотрели, наборы нет. В результате на проде четыре
+      // набора двух клиентов ссылались на удалённые карточки. Матч тот же, что
+      // при разворачивании (`resolvePresetItem`): id, затем нормализованное имя,
+      // иначе предупреждение разойдётся с тем, что реально сломается.
+      const targetNameNorm = products.normalizeText(target.name);
+      const usedInPresets = (await loadPresets())
+        .filter((preset) => preset.items.some((item) => (
+          (item.product_id != null && String(item.product_id) === String(target.id))
+          || products.normalizeText(item.name) === targetNameNorm
+        )))
+        .map((preset) => preset.name);
 
       const [overlayRes, tombRes] = await Promise.all([
         api.getKV(sessionToken, products.OVERLAY_KEY),
@@ -2564,13 +2622,20 @@ function createTools({
       const usedNote = usedIn.length
         ? ` Он входил в состав блюд: ${usedIn.map((row) => `«${row.name}» (${row.product_id})`).join(', ')} — их сохранённые КБЖУ остались прежними, но пересчитать состав теперь нечем. Замени позицию: heys_update_product(product_id=…, recipe_patch:{remove:[…], set:[…]}).`
         : '';
+      // Набор не разваливается: позиция развернётся по снимку КБЖУ, который в
+      // ней лежит. Но состав набора теперь врёт про карточку, и в приложении
+      // такая позиция отметится как ненайденная — сказать об этом надо сразу.
+      const presetNote = usedInPresets.length
+        ? ` Он входит в наборы: ${usedInPresets.map((name) => `«${name}»`).join(', ')} — они продолжат разворачиваться по сохранённому снимку КБЖУ, но карточки за позицией больше нет. Если продукт нужен дальше, заведи его заново (heys_create_product) и пересобери набор (heys_save_meal_preset).`
+        : '';
       return {
-        text: `Удалил продукт «${target.name}» из списка клиента.${usedNote}`,
+        text: `Удалил продукт «${target.name}» из списка клиента.${usedNote}${presetNote}`,
         structured: {
           product_id: target.id,
           name: target.name,
           deleted: true,
           used_in_recipes: usedIn.length ? usedIn : undefined,
+          used_in_presets: usedInPresets.length ? usedInPresets : undefined,
         },
       };
     },

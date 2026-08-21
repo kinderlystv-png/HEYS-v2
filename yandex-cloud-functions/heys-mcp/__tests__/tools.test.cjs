@@ -1752,6 +1752,89 @@ test('удаление продукта ставит tombstone и убирает
   assert.equal(res.structured.deleted, true);
 });
 
+/**
+ * Целостность каталога. 21.08 на проде оказалось, что удаление карточки
+ * проверяет рецепты и не смотрит наборы: четыре набора двух клиентов
+ * ссылались на мёртвые id, и разворачивание падало целиком.
+ */
+test('удаление называет наборы, где продукт используется', async () => {
+  const api = fakeApi({ overlay: OVERLAY });
+  const tools = build(api);
+  const res = await tools.heys_delete_product({ product_id: 'own-americano' });
+
+  assert.deepEqual(res.structured.used_in_presets, ['Кофе Киндерли']);
+  assert.match(res.text, /входит в наборы/);
+  assert.match(res.text, /«Кофе Киндерли»/);
+  assert.match(res.text, /heys_save_meal_preset/);
+});
+
+test('удаление продукта не из набора о наборах не говорит', async () => {
+  const api = fakeApi({ overlay: CUSTOM_OVERLAY });
+  const tools = build(api);
+  const res = await tools.heys_delete_product({ query: 'торт домашний' });
+  assert.equal(res.structured.used_in_presets, undefined);
+  assert.doesNotMatch(res.text, /входит в наборы/);
+});
+
+test('набор с мёртвой позицией разворачивается по снимку, а не падает', async () => {
+  // Карточки в каталоге нет вовсе — ни по id, ни по имени, — но КБЖУ лежат
+  // в самой позиции набора. Приложение в этом случае приём пишет; MCP до
+  // 21.08 ронял весь вызов, включая живые позиции.
+  const presets = [{
+    id: 'mp_gone',
+    name: 'Набор с удалённым продуктом',
+    items: [
+      { product_id: 'own-americano', name: 'Кофе американо', grams: 100 },
+      {
+        product_id: 'dead-product-id',
+        name: 'Домашний кофе',
+        grams: 300,
+        kcal100: 17.7,
+        protein100: 1.1,
+        simple100: 1.6,
+        complex100: 0,
+        badFat100: 0.3,
+        goodFat100: 0.2,
+        trans100: 0,
+        fiber100: 0,
+        gi: 30,
+        harm: 0,
+      },
+    ],
+  }];
+  const api = fakeApi({ day: null, presets });
+  const tools = build(api);
+
+  const res = await tools.heys_log_meal({ preset: 'Набор с удалённым продуктом', time: '11:00' });
+
+  assert.equal(res.structured.items.length, 2, 'живая позиция не потерялась вместе с мёртвой');
+  const restored = res.structured.items.find((i) => i.name === 'Домашний кофе');
+  assert.equal(restored.grams, 300);
+  assert.deepEqual(res.structured.from_preset_snapshot, ['Домашний кофе']);
+  assert.match(res.text, /карточки в базе больше нет/);
+  assert.match(res.text, /heys_create_product/);
+
+  // КБЖУ берутся из снимка, а не обнуляются.
+  const saved = api.saves[api.saves.length - 1].value;
+  const item = saved.meals[0].items.find((i) => i.name === 'Домашний кофе');
+  assert.equal(item.kcal100 > 0, true, `КБЖУ восстановлены: ${item.kcal100}`);
+  assert.equal(item.protein100, 1.1);
+});
+
+test('позиция набора без КБЖУ по-прежнему отклоняется — восстанавливать нечего', async () => {
+  const presets = [{
+    id: 'mp_empty',
+    name: 'Пустая ссылка',
+    items: [{ product_id: 'dead-product-id', name: 'Призрак', grams: 100 }],
+  }];
+  const tools = build(fakeApi({ day: null, presets }));
+  await assert.rejects(() => tools.heys_log_meal({ preset: 'Пустая ссылка', time: '11:00' }), (e) => {
+    assert.equal(e.code, 'preset_item_missing');
+    assert.match(e.message, /КБЖУ не сохранены/);
+    return true;
+  });
+});
+
 test('продукт общей базы удалить нельзя', async () => {
   const api = fakeApi({ overlay: [] });
   const tools = build(api);
