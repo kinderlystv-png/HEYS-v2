@@ -592,6 +592,103 @@ function concurrencyWatchBlindResult(watch) {
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 📦 Схлопывание личного каталога продуктов
+// ═══════════════════════════════════════════════════════════════════════════
+// 21.08.2026 каталог клиента в облаке заменился одной позицией вместо 146, и
+// узнали об этом через часы — вручную (apps/web/BUGS_HISTORY.md). Сам дефект
+// закрыт инвариантом 11, но публикация каталога — это всегда перезапись целиком,
+// поэтому любая будущая ошибка того же класса снова сотрёт всё молча.
+//
+// Что считаем сигналом. Каждое удаление продукта человеком — отдельная
+// публикация, и она уменьшает каталог на единицу. Поломка же приходит одним
+// шагом и забирает почти всё сразу. Поэтому сторож смотрит не на «стало
+// меньше», а на РЕЗКОСТЬ одного шага, и требует совпадения двух условий:
+//   • каталог упал не меньше чем вдвое (доля от предыдущего значения);
+//   • и потеряно не меньше 10 позиций (абсолютный порог).
+// Второе условие снимает шум на маленьких каталогах: 7 → 3 это доля 0,43, но
+// потеря всего четырёх позиций, и будить владельца тут не за чем.
+// Каталоги меньше MIN_WATCHED_ROWS не сторожим вовсе: у нового человека
+// каталог законно скачет с нуля.
+//
+// Инцидент этими порогами ловится с запасом: 146 → 1 это доля 0,007 при потере
+// 145. Разовая чистка на десяток позиций (146 → 136) молчит, и даже заметная
+// уборка на четверть каталога (146 → 110) молчит тоже.
+const CATALOG_MANIFEST_KEY = 'heys_products_overlay_v2_rpc_manifest';
+const CATALOG_MIN_WATCHED_ROWS = 20;
+const CATALOG_MAX_SHRINK_RATIO = 0.5;
+const CATALOG_MIN_ABSOLUTE_DROP = 10;
+const CATALOG_COOLDOWN_MINUTES = 180;
+
+// Чистое решение по одной строке: никаких обращений к БД, чтобы пороги
+// проверялись симуляцией, а не «посмотри в проде».
+function evaluateCatalogShrink(entry) {
+  // Через Number() нельзя: Number(null) это 0, и «снимка ещё нет» неотличимо от
+  // «каталог пуст» — отсутствие базы проскочило бы дальше как настоящее число.
+  const toCount = (value) => (value === null || value === undefined ? NaN : Number(value));
+  const current = toCount(entry?.current_rows);
+  const previous = toCount(entry?.previous_rows);
+
+  // Клиента видим впервые — сравнивать не с чем, это не сигнал.
+  if (!Number.isFinite(previous)) return { alert: false, reason: 'no_baseline' };
+  if (!Number.isFinite(current)) return { alert: false, reason: 'no_current' };
+  if (previous < CATALOG_MIN_WATCHED_ROWS) return { alert: false, reason: 'catalog_too_small' };
+  if (current >= previous) return { alert: false, reason: 'not_shrunk' };
+
+  const dropped = previous - current;
+  const ratio = current / previous;
+  if (dropped < CATALOG_MIN_ABSOLUTE_DROP) return { alert: false, reason: 'drop_too_small' };
+  if (ratio > CATALOG_MAX_SHRINK_RATIO) return { alert: false, reason: 'drop_too_gradual' };
+
+  return { alert: true, reason: 'sharp_shrink', dropped, ratio };
+}
+
+async function checkCatalogShrink(client) {
+  const res = await client.query(
+    `SELECT
+       kv.client_id,
+       (kv.v->>'rowCount')::int AS current_rows,
+       watch.row_count           AS previous_rows,
+       watch.peak_count          AS peak_rows,
+       kv.updated_at             AS catalog_updated_at
+     FROM client_kv_store AS kv
+     LEFT JOIN products_catalog_watch AS watch ON watch.client_id = kv.client_id
+     WHERE kv.k = $1
+       AND kv.v ? 'rowCount'
+       AND jsonb_typeof(kv.v->'rowCount') = 'number'`,
+    [CATALOG_MANIFEST_KEY],
+  );
+
+  const incidents = [];
+  for (const row of res.rows || []) {
+    const verdict = evaluateCatalogShrink(row);
+    if (verdict.alert) {
+      incidents.push({
+        client_id: row.client_id,
+        was: Number(row.previous_rows),
+        now: Number(row.current_rows),
+        peak: Number(row.peak_rows ?? row.previous_rows),
+        lost: verdict.dropped,
+        catalog_updated_at: row.catalog_updated_at,
+      });
+    }
+
+    // Снимок двигаем всегда, в том числе после алерта: иначе один инцидент
+    // повторялся бы в каждом прогоне, пока человек не восстановит каталог.
+    await client.query(
+      `INSERT INTO products_catalog_watch (client_id, row_count, peak_count, observed_at)
+       VALUES ($1, $2, $2, now())
+       ON CONFLICT (client_id) DO UPDATE
+         SET row_count  = EXCLUDED.row_count,
+             peak_count = GREATEST(products_catalog_watch.peak_count, EXCLUDED.row_count),
+             observed_at = now()`,
+      [row.client_id, Number(row.current_rows)],
+    );
+  }
+
+  return incidents;
+}
+
 async function sendTelegram(rule, rows) {
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -734,6 +831,52 @@ module.exports.handler = async function () {
       results.push({ rule: 'concurrency_watch', status: 'check_error', error: err.message });
     }
 
+    // ── Схлопывание каталога продуктов ────────────────────────────────
+    try {
+      const incidents = await checkCatalogShrink(client);
+      if (!incidents.length) {
+        results.push({ rule: 'products_catalog_shrink', status: 'clean' });
+      } else {
+        // Cooldown отдельный на каждого клиента: инцидент у одного не должен
+        // затыкать алерт по другому.
+        for (const incident of incidents) {
+          const ruleKey = `products_catalog_shrink:${incident.client_id}`;
+          if (await isOnCooldown(client, ruleKey, CATALOG_COOLDOWN_MINUTES)) {
+            results.push({ rule: ruleKey, status: 'cooldown', triggered: 1 });
+            continue;
+          }
+          const catalogRule = {
+            key: ruleKey,
+            label: '🔴 Личный каталог продуктов схлопнулся',
+            description:
+              `У клиента каталог упал с ${incident.was} до ${incident.now} позиций ` +
+              `(потеряно ${incident.lost}, исторический максимум ${incident.peak}). ` +
+              'Публикация каталога — перезапись целиком, поэтому это либо намеренная ' +
+              'массовая чистка, либо повтор инцидента 21.08. Что делать: спросить ' +
+              'человека; если чистки не было — восстанавливать из легаси-зеркала ' +
+              'heys_products или из бэкапа по DISASTER_RECOVERY_RUNBOOK.md, ' +
+              'манифест целостности пересчитывать тем же кодеком, что и приложение.',
+          };
+          const telegram = await sendTelegram(catalogRule, [incident]);
+          await recordAlert(
+            client,
+            ruleKey,
+            { count: 1, sample: [incident], telegram_reason: telegram.reason },
+            telegram.sent,
+            telegram.messageId,
+          );
+          results.push({
+            rule: ruleKey,
+            status: telegram.sent ? 'alert_sent' : 'logged_only',
+            triggered: 1,
+          });
+        }
+      }
+    } catch (err) {
+      console.error('[security-alerts] products_catalog_shrink error:', err.message);
+      results.push({ rule: 'products_catalog_shrink', status: 'check_error', error: err.message });
+    }
+
     try {
       await syncTelegramDeliveryIncident(client, results);
     } catch (error) {
@@ -766,8 +909,13 @@ module.exports.handler = async function () {
 
 module.exports.__test = {
   API_FUNCTIONS,
+  CATALOG_MAX_SHRINK_RATIO,
+  CATALOG_MIN_ABSOLUTE_DROP,
+  CATALOG_MIN_WATCHED_ROWS,
   MEMORY_WARN_THRESHOLD_RATIO,
   buildAlertPayload,
+  checkCatalogShrink,
+  evaluateCatalogShrink,
   checkConcurrencyIssues,
   concurrencyWatchBlindResult,
   evaluateMonitorResults,

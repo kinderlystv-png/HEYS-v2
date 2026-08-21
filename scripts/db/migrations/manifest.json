@@ -223,6 +223,13 @@
       "path": "scripts/db/migrations/2026-08-13_revoke_personal_data_purge_v1.sql",
       "description": "Purge personal data stores on personal_data consent revoke (152-FZ art. 21)",
       "destructive": false
+    },
+    {
+      "id": "2026-08-22_products_catalog_watch_v1",
+      "order": 30,
+      "path": "scripts/db/migrations/2026-08-22_products_catalog_watch_v1.sql",
+      "description": "Track personal product catalog size per client so a collapse can raise an alert",
+      "destructive": false
     }
   ]
 }
