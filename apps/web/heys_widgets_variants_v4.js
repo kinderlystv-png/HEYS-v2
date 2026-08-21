@@ -319,10 +319,16 @@
         React.createElement('div', { className: 'widget-wd-sheet__list' },
           catalog.map((item) => {
             const isOn = item.id === activeVariantId;
+            // Превью — настоящая плитка: те же классы, что на Главной, иначе
+            // карточка живёт по своим стилям и расходится с результатом
+            // выбора (канвас v4, строки 27 и 28).
             const previewClass = [
               'widget-wd-sheet__preview',
               'widget-wd',
               'widget-wd--preview',
+              'widget',
+              `widget--${item.size}`,
+              `widget--${widgetType}`,
               previewSizeClass(item.size)
             ].join(' ');
             const wideStack = item.size === '3x2';

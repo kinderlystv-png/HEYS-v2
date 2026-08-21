@@ -1672,10 +1672,24 @@
       disabled: isWidgetV4EditMode(),
       renderPreview: (variantId, opts) => {
         const meta = V4.getVariantById(widgetType, variantId);
+        // Карточка листа рисуется в своём формате, а не в формате плитки,
+        // которая стоит на экране (канвас v4, строки 27 и 28): иначе человек
+        // выбирает по картинке, которая не совпадёт с результатом.
+        const size = meta?.size || widget?.size;
+        const sizeInfo = HEYS.Widgets.registry?.getSize?.(size);
+        const previewWidget = size && size !== widget?.size
+          ? {
+            ...widget,
+            size,
+            cols: sizeInfo?.cols || widget?.cols,
+            rows: sizeInfo?.rows || widget?.rows
+          }
+          : widget;
         return renderBody(variantId, {
           ...opts,
           preview: true,
-          activeVariant: meta
+          activeVariant: meta,
+          widget: previewWidget
         });
       }
     });
@@ -2302,7 +2316,7 @@
       widgetType: 'dayScore',
       renderBody: (variantId, meta) => React.createElement(DayScoreVariantBody, {
         variantId,
-        widget,
+        widget: meta?.widget || widget,
         data,
         meta
       })
@@ -2662,7 +2676,7 @@
       widgetType: 'insulinWave',
       renderBody: (variantId, meta) => React.createElement(InsulinWaveVariantBody, {
         variantId,
-        widget,
+        widget: meta?.widget || widget,
         data,
         meta
       })
@@ -2773,7 +2787,7 @@
       widgetType: 'healthTrend',
       renderBody: (variantId, meta) => React.createElement(HealthTrendVariantBody, {
         variantId,
-        widget,
+        widget: meta?.widget || widget,
         data,
         meta
       })
@@ -3510,7 +3524,7 @@
       widgetType: 'calories',
       renderBody: (variantId, meta) => React.createElement(CaloriesVariantBody, {
         variantId,
-        widget,
+        widget: meta?.widget || widget,
         data,
         meta
       })
@@ -3861,7 +3875,7 @@
       widgetType: 'water',
       renderBody: (variantId, meta) => React.createElement(WaterVariantBody, {
         variantId,
-        widget,
+        widget: meta?.widget || widget,
         data,
         meta
       })
@@ -4016,7 +4030,7 @@
       widgetType: 'sleep',
       renderBody: (variantId, meta) => React.createElement(SleepVariantBody, {
         variantId,
-        widget,
+        widget: meta?.widget || widget,
         data,
         meta
       })
@@ -4690,7 +4704,7 @@
       widgetType: 'weight',
       renderBody: (variantId, meta) => React.createElement(WeightVariantBody, {
         variantId,
-        widget,
+        widget: meta?.widget || widget,
         data,
         meta
       })
@@ -5224,7 +5238,7 @@
       widgetType: 'macros',
       renderBody: (variantId, meta) => React.createElement(MacrosVariantBody, {
         variantId,
-        widget,
+        widget: meta?.widget || widget,
         data,
         meta
       })
@@ -5505,7 +5519,7 @@
       widgetType: 'heatmap',
       renderBody: (variantId, meta) => React.createElement(HeatmapVariantBody, {
         variantId,
-        widget,
+        widget: meta?.widget || widget,
         data,
         meta
       })
@@ -6928,7 +6942,7 @@
       widgetType: 'relapseRisk',
       renderBody: (variantId, meta) => React.createElement(RelapseRiskVariantBody, {
         variantId,
-        widget,
+        widget: meta?.widget || widget,
         data,
         meta
       })

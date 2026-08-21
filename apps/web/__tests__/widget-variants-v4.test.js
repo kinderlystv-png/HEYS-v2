@@ -57,6 +57,29 @@ describe('widget variants v4', () => {
     expect(withTwoDefaults).toEqual([]);
   });
 
+  it('карточка листа рисуется в своём формате, а не в формате плитки на экране', () => {
+    // Иначе «Семь дней» (2×2) показывался бы строкой 2×1 текущей плитки, и
+    // человек выбирал бы картинку, которая не совпадёт с результатом
+    // (канвас home-widgets v4, строки 27 и 28).
+    const shell = uiSrc.slice(uiSrc.indexOf('function WidgetV4VariantShell'), uiSrc.indexOf('function WidgetV4VariantShell') + 1800);
+    expect(shell).toContain('const size = meta?.size || widget?.size');
+    expect(shell).toContain('widget: previewWidget');
+    expect(shell).toMatch(/cols: sizeInfo\?\.cols/);
+
+    // Тела видов обязаны брать виджет из meta, иначе подмена формата не дойдёт.
+    const bodyWidgetExprs = [...uiSrc.matchAll(/React\.createElement\(\w+VariantBody, \{[^}]*?widget: ([^,]+),/gs)]
+      .map((m) => m[1].trim());
+    expect(bodyWidgetExprs.length).toBeGreaterThanOrEqual(10);
+    expect(bodyWidgetExprs.every((expr) => expr === 'meta?.widget || widget')).toBe(true);
+  });
+
+  it('превью в листе носит классы настоящей плитки', () => {
+    const sheet = variantsSrc.slice(variantsSrc.indexOf('const previewClass = ['), variantsSrc.indexOf('const previewClass = [') + 400);
+    expect(sheet).toContain("'widget',");
+    expect(sheet).toContain('`widget--${item.size}`');
+    expect(sheet).toContain('`widget--${widgetType}`');
+  });
+
   it('registry — displayVariant через applyCatalogToRegistry', () => {
     expect(variantsSrc).toContain('applyCatalogToRegistry');
     expect(variantsSrc).toContain('displayVariant: dv');
