@@ -79,6 +79,21 @@ describe('необязательные согласия: клиентская ч
     expect(body).toMatch(/catch/);
   });
 
+  it('предлагает только те документы, которые приложение умеет дать подписать', () => {
+    // Ловушка, случившаяся на проде 21.08: сервер вернул отставший
+    // speech_transcription, баннер позвал подписать, а экран согласий умеет
+    // собирать только свой набор — человек подписывал заново обязательную
+    // пару, расхождение оставалось, баннер возвращался.
+    //
+    // Подписать документ можно, только если клиент может достать его текст:
+    // серверная подпись требует document_text и сверяет sha256 с реестром.
+    // Значит фильтр по DOC_PATHS — обязательное условие честности баннера.
+    const fn = consents.slice(consents.indexOf('consentsAPI.checkOptionalOutdated'));
+    const body = fn.slice(0, fn.indexOf(String.fromCharCode(10) + '  };'));
+    expect(body).toMatch(/DOC_PATHS\[type\]/);
+    expect(body).toMatch(/return \{ outdated: signable \}/);
+  });
+
   it('баннер рисуется поверх приложения и только когда гейт не блокирует', () => {
     const banner = overlays.slice(overlays.indexOf("key: 'optional-outdated-banner'") - 900);
     const guard = banner.slice(0, banner.indexOf("key: 'optional-outdated-banner'"));

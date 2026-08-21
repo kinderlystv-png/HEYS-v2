@@ -2744,8 +2744,34 @@
       if (result.error) return { outdated: [] };
       const data = result.data?.check_optional_consents_by_session || result.data;
       if (data?.success === false) return { outdated: [] };
-      const outdated = Array.isArray(data?.outdated) ? data.outdated : [];
-      return { outdated };
+      const raw = Array.isArray(data?.outdated) ? data.outdated : [];
+
+      // Показываем только то, что приложение реально умеет дать подписать.
+      //
+      // Сервер честно возвращает все отставшие необязательные документы, но
+      // подписать документ можно лишь когда его текст доступен клиенту:
+      // sign_consents_with_access_code_by_session требует document_text и
+      // сверяет его sha256 с реестром. Тип без записи в DOC_PATHS текст
+      // достать не может, значит подписать его нечем.
+      //
+      // Без этого фильтра получается ловушка, и она случилась на живом проде
+      // 21.08: баннер звал подписать «Расшифровку голосовых сообщений», клик
+      // открывал экран согласий, тот умеет собирать только свой набор, человек
+      // подписывал заново обязательную пару, расхождение оставалось, баннер
+      // возвращался. Лучше промолчать, чем звать в тупик.
+      //
+      // Когда для типа появится путь подписи (текст в DOC_PATHS плюс экран
+      // повторного согласия), он начнёт показываться сам, без правок здесь.
+      const signable = raw.filter((item) => {
+        const type = item?.type || item;
+        return typeof type === 'string' && !!DOC_PATHS[type];
+      });
+      const skipped = raw.length - signable.length;
+      if (skipped > 0) {
+        console.info('[Consents] Отставших документов без пути подписи:', skipped,
+          raw.filter((i) => !DOC_PATHS[i?.type || i]).map((i) => i?.type || i).join(', '));
+      }
+      return { outdated: signable };
     } catch (err) {
       // Молча: необязательный документ не повод ломать экран.
       console.info('[Consents] checkOptionalOutdated skipped:', err?.message || err);
