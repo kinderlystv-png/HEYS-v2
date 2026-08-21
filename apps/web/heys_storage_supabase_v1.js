@@ -8207,6 +8207,10 @@
         log('🔄 [CLIENT_SYNC] Loading data for client (paginated):', client_id);
         // Gateway body limit: 250 rows with heavy `v` JSON can exceed ~1.1MB (502 at offset 1000+).
         const PAGE_SIZE = 200;
+        // Сколько строк реально влезает в один ответ. Начинаем со страницы
+        // целиком и уменьшаем, как только упёрлись; значение живёт на всю
+        // начальную загрузку.
+        let workingChunkLimit = PAGE_SIZE;
         let allData = [];
         let pageOffset = 0;
         let fetchError = null;
@@ -8241,13 +8245,45 @@
             const filters = { 'eq.client_id': client_id };
             if (deltaSince) filters['gt.updated_at'] = deltaSince;
 
-            const isPayload502 = (error) => {
+            // Страница со столбцом `v` может не влезть в лимит тела ответа. Шлюз
+            // отвечает на это по-разному: одиночный запрос ловит 502 от самой
+            // функции, а под параллельной загрузкой прилетает 503 — шлюз
+            // сбрасывает нагрузку, не дойдя до неё. Раньше распознавался только
+            // 502, и 503 обрывал всю начальную загрузку: приложение уходило в
+            // «сеть недоступна» и жило с локального кэша (прод, 21.08.2026).
+            const isOversizedPage = (error) => {
               if (!error) return false;
-              if (Number(error.code) === 502) return true;
-              return String(error.message || '').includes('502');
+              const code = Number(error.code);
+              if (code === 502 || code === 503) return true;
+              const text = String(error.message || '');
+              return text.includes('502') || text.includes('503');
+            };
+
+            const MIN_CHUNK = 50;
+
+            // Разрезает пролёт пополам и склеивает — последовательно, а не
+            // параллельно: отказ мог прийти именно от перегрузки, и удваивать
+            // одновременные запросы в этот момент нельзя.
+            const splitChunk = async (chunkOffset, chunkLimit, depth) => {
+              const half = Math.floor(chunkLimit / 2);
+              const left = await fetchPageChunk(chunkOffset, half, depth + 1);
+              if (left.error) return left;
+              const right = await fetchPageChunk(chunkOffset + half, chunkLimit - half, depth + 1);
+              if (right.error) return right;
+              const merged = (left.data || []).concat(right.data || []);
+              if (isDebugSync()) {
+                logCritical(`🔍 [SYNC PAGINATED] split offset=${chunkOffset} limit=${chunkLimit} → ${merged.length} rows`);
+              }
+              return { data: merged, error: null };
             };
 
             const fetchPageChunk = async (chunkOffset, chunkLimit, depth = 0) => {
+              // Потолок уже нащупан на предыдущей странице — не бьёмся в него
+              // заново. Иначе каждая следующая страница стоит ещё двух отказов
+              // функции, и на большом клиенте это десятки лишних запросов.
+              if (chunkLimit > workingChunkLimit) {
+                return splitChunk(chunkOffset, chunkLimit, depth);
+              }
               const reqOpts = {
                 select: 'k,v,updated_at',
                 filters,
@@ -8260,20 +8296,13 @@
                 maxRetries: chunkLimit >= 150 ? 0 : undefined,
               };
               let res = await YandexAPI.rest('client_kv_store', reqOpts);
-              if (res.error && isPayload502(res.error) && chunkLimit > 50) {
+              if (res.error && isOversizedPage(res.error) && chunkLimit > MIN_CHUNK) {
                 const half = Math.floor(chunkLimit / 2);
-                logCritical(`⚠️ [SYNC] Page offset=${chunkOffset} limit=${chunkLimit} hit payload 502 — splitting into ${half}+${chunkLimit - half}`);
-                const left = await fetchPageChunk(chunkOffset, half, depth + 1);
-                if (left.error) return left;
-                const right = await fetchPageChunk(chunkOffset + half, chunkLimit - half, depth + 1);
-                if (right.error) return right;
-                const merged = (left.data || []).concat(right.data || []);
-                if (isDebugSync()) {
-                  logCritical(`🔍 [SYNC PAGINATED] split offset=${chunkOffset} limit=${chunkLimit} → ${merged.length} rows`);
-                }
-                return { data: merged, error: null };
+                workingChunkLimit = Math.max(MIN_CHUNK, half);
+                logCritical(`⚠️ [SYNC] Page offset=${chunkOffset} limit=${chunkLimit} не влезла (${res.error.code || res.error.message}) — режу на ${half}+${chunkLimit - half}, дальше беру по ${workingChunkLimit}`);
+                return splitChunk(chunkOffset, chunkLimit, depth);
               }
-              if (res.error && !res.error.isNetworkFailure && !isPayload502(res.error)) {
+              if (res.error && !res.error.isNetworkFailure && !isOversizedPage(res.error)) {
                 // 🔧 v63 FIX #10: per-page retry — single retry after 2s on server error.
                 logCritical(`⚠️ [SYNC] Page offset=${chunkOffset} limit=${chunkLimit} failed: ${res.error.message}, retrying in 2s`);
                 await new Promise(r => setTimeout(r, 2000));
