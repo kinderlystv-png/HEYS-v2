@@ -9290,7 +9290,6 @@
     useEffect(() => {
       if (!isEditMode) {
         setShowGridOverlay(false);
-        setShowResetConfirm(false);
         setCatalogOpen(false);
       }
     }, [isEditMode]);
