@@ -890,6 +890,43 @@
     } catch (e) { /* ignore */ }
   }
 
+  // Сколько дней клиента реально лежит на устройстве. Нужно, чтобы отличить
+  // «статистика свежая» от «статистика собрана, когда истории ещё не было».
+  // Ключи чужих клиентов не считаем: в одной сессии куратора их бывает много.
+  function countClientDayKeys() {
+    try {
+      const cid = String(getClientIdSafe() || '').toLowerCase();
+      let n = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k || !k.includes('_dayv2_')) continue;
+        const scoped = /^heys_([0-9a-f-]{36})_/i.exec(k);
+        if (scoped && cid && scoped[1].toLowerCase() !== cid) continue;
+        n += 1;
+      }
+      return n;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function getUsageStatsDayCount() {
+    try {
+      if (HEYS.store && HEYS.store.get) return Number(HEYS.store.get(USER_STATS_SYNC_KEY + '_days', 0)) || 0;
+      const raw = localStorage.getItem(USER_STATS_SYNC_KEY + '_days');
+      return raw ? Number(JSON.parse(raw)) || 0 : 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function setUsageStatsDayCount(n) {
+    try {
+      if (HEYS.store && HEYS.store.set) HEYS.store.set(USER_STATS_SYNC_KEY + '_days', n);
+      else localStorage.setItem(USER_STATS_SYNC_KEY + '_days', JSON.stringify(n));
+    } catch (_) { /* noop */ }
+  }
+
   function getUsageStatsLastSync() {
     try {
       if (HEYS.store && HEYS.store.get) {
@@ -1075,6 +1112,7 @@
       userProductStats = new Map(finalStats);
       saveUserStats();
       setUsageStatsLastSync(Date.now());
+      setUsageStatsDayCount(countClientDayKeys());
       console.info('[HEYS.search] ✅ Usage stats synced:', {
         statsKeys: finalStats.size,
         scannedDays,
@@ -1125,9 +1163,17 @@
     const maxHours = Math.max(1, Number(options.maxHours) || 12);
     const lastSync = getUsageStatsLastSync();
     const maxAgeMs = maxHours * 60 * 60 * 1000;
+    // Прод 21.08: облачная загрузка обрывалась, дни на устройство не доезжали,
+    // и статистика собиралась по пустому — одна запись вместо месяцев. Дальше
+    // она считалась «свежей» и не пересчитывалась ещё шесть часов, уже после
+    // того как история приехала. Поэтому смотрим не только на возраст: если
+    // дней на устройстве стало больше, чем было при сборке, — пересобираем.
+    const daysNow = countClientDayKeys();
+    const daysAtSync = getUsageStatsDayCount();
     const shouldSync = userProductStats.size === 0
       || !lastSync
-      || (Date.now() - lastSync) > maxAgeMs;
+      || (Date.now() - lastSync) > maxAgeMs
+      || daysNow > daysAtSync;
     if (shouldSync) {
       const lsGet = options.lsGet
         || (HEYS.store && typeof HEYS.store.get === 'function'
