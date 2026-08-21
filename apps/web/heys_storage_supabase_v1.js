@@ -8256,7 +8256,16 @@
               const code = Number(error.code);
               if (code === 502 || code === 503) return true;
               const text = String(error.message || '');
-              return text.includes('502') || text.includes('503');
+              if (text.includes('502') || text.includes('503')) return true;
+              // Шлюз отвечает на отказ с Access-Control-Allow-Origin: '*', а запрос
+              // идёт с credentials — браузер блокирует такой ответ целиком, и код
+              // до клиента не доходит вовсе: остаётся «Failed to fetch». Отличаем
+              // это от настоящего обрыва связи по navigator.onLine: если сеть есть,
+              // отказ пришёл со стороны сервера, и страницу стоит попробовать
+              // меньшей. Хуже от этого не станет — запросов максимум вчетверо
+              // меньшего размера вместо одного, зато загрузка не обрывается.
+              const online = typeof navigator === 'undefined' || navigator.onLine !== false;
+              return !!error.isNetworkFailure && online;
             };
 
             const MIN_CHUNK = 50;

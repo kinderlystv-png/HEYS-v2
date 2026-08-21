@@ -68,6 +68,29 @@ function makeRest(failCode, log) {
   });
 }
 
+/**
+ * Отказ так, как его ВИДИТ БРАУЗЕР: шлюз подставил Access-Control-Allow-Origin: '*',
+ * запрос шёл с credentials, ответ заблокирован целиком — кода нет, только
+ * «Failed to fetch» с признаком сетевого сбоя.
+ */
+function makeCorsMaskedRest(log) {
+  return vi.fn(async (table, opts) => {
+    if (table !== 'client_kv_store' || !opts || typeof opts.limit !== 'number') {
+      return { data: [], error: null };
+    }
+    log.push({ offset: opts.offset || 0, limit: opts.limit });
+    if (opts.limit > FITS) {
+      return { data: null, error: { message: 'Failed to fetch', isNetworkFailure: true } };
+    }
+    const from = opts.offset || 0;
+    const rows = [];
+    for (let i = from; i < Math.min(from + opts.limit, TOTAL_ROWS); i++) {
+      rows.push({ k: 'heys_key_' + String(i).padStart(4, '0'), v: 'x', updated_at: '2026-08-21T00:00:00Z' });
+    }
+    return { data: rows, error: null };
+  });
+}
+
 /** Строки, реально доехавшие до клиента, по журналу успешных запросов. */
 function coveredRows(log) {
   const covered = new Set();
@@ -148,6 +171,42 @@ describe('начальная загрузка · страница не влез�
       }
     });
   }
+
+  it('отказ, замаскированный CORS в «Failed to fetch», тоже делит страницу', async () => {
+    // Прод, 21.08.2026, второй заход: деление по кодам 502/503 уже работало, но
+    // на части запросов браузер блокировал ответ шлюза целиком, и до клиента не
+    // доходило ничего, кроме «Failed to fetch». Загрузка сдавалась на первой же
+    // такой странице.
+    const log = [];
+    installApi({ ...window.HEYS.YandexAPI, rest: makeCorsMaskedRest(log) });
+
+    await window.HEYS.cloud.bootstrapClientSync(CLIENT);
+
+    const covered = coveredRows(log);
+    expect(covered.size, `доехало ${covered.size} строк из ${TOTAL_ROWS}`).toBe(TOTAL_ROWS);
+  });
+
+  it('когда сети действительно нет, страницы не дробятся впустую', async () => {
+    // Отличие «сервер отказал» от «связи нет» — по navigator.onLine. Иначе при
+    // офлайне мы бы вчетверо умножали безнадёжные запросы.
+    const spy = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    const log = [];
+    installApi({
+      ...window.HEYS.YandexAPI,
+      rest: vi.fn(async (table, opts) => {
+        if (table !== 'client_kv_store' || !opts || typeof opts.limit !== 'number') {
+          return { data: [], error: null };
+        }
+        log.push({ offset: opts.offset || 0, limit: opts.limit });
+        return { data: null, error: { message: 'Failed to fetch', isNetworkFailure: true } };
+      }),
+    });
+
+    await window.HEYS.cloud.bootstrapClientSync(CLIENT);
+
+    expect(log.every((r) => r.limit === 200), 'в офлайне страницы всё-таки дробились').toBe(true);
+    spy.mockRestore();
+  });
 
   it('потолок нащупывается один раз, а не на каждой странице заново', async () => {
     const log = [];
