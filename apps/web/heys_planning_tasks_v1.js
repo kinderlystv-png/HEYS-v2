@@ -2882,7 +2882,6 @@
                 label: 'Задача «' + context.taskTitle + '» удалена',
                 subtitle: 'Можно вернуть одним тапом, пока карточка скрыта.',
                 icon: '🗑',
-                duration: 4600,
                 context,
                 onUndo: (undoContext) => {
                     unmarkPendingDeletedTasks(undoContext?.hiddenTaskIds);
@@ -2918,7 +2917,6 @@
                 label: 'Проект «' + context.projectName + '» удалён',
                 subtitle: 'Если не отменить, задачи проекта перейдут в «Без проекта».',
                 icon: '🗑',
-                duration: 4600,
                 context,
                 onUndo: (undoContext) => {
                     unmarkPendingDeletedProjects(undoContext?.hiddenProjectIds);

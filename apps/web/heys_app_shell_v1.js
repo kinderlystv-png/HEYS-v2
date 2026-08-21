@@ -379,21 +379,23 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         document.title = label ? `HEYS — ${label}` : 'HEYS';
     }
 
-    // Переключение вкладки с коммитом висящего undo. Живёт на уровне модуля:
-    // пользуются и AppHeader (бейдж пушей, «Настройки» в дропдауне аккаунта),
-    // и AppTabsNav. Раньше хелпер был локальным в AppTabsNav, а AppHeader звал
-    // его по имени из чужой области — то есть падал с ReferenceError.
-    function commitUndoAndSwitchTab(setTab, nextTab, { currentTab, reason } = {}) {
-        try {
-            if (window.HEYS?.Undo?.pending) {
-                console.info('[HEYS.tabs] 🧹 Commit pending undo before tab switch', {
-                    currentTab,
-                    nextTab,
-                    reason,
-                });
-                window.HEYS.Undo.commit(reason || 'tab-switch');
-            }
-        } catch (e) { }
+    // Переключение вкладки. Живёт на уровне модуля: пользуются и AppHeader
+    // («Настройки» в дропдауне аккаунта), и AppTabsNav. Раньше хелпер был
+    // локальным в AppTabsNav, а AppHeader звал его по имени из чужой области —
+    // то есть падал с ReferenceError.
+    //
+    // Висящий бар отмены здесь намеренно НЕ коммитим. Контракт v4 («тост и
+    // навигация»): уход со вкладки тост не гасит — он живёт свои 5 с поверх
+    // нижней навигации на любом экране. Прежний Undo.commit() шёл в onExpire, а
+    // onExpire у вызывающих — необратимое действие (deleteClient, deletePhoto,
+    // deleteTask, удаление продукта): переход на другую вкладку молча отбирал
+    // отмену и выполнял удаление на секунды раньше срока.
+    // Смена даты и смена клиента — другое дело, они контекст меняют и коммит
+    // сохраняют (см. commitPendingUndoBeforeContextChange).
+    //
+    // Третий аргумент ({ currentTab, reason }) — читаемая метка перехода у
+    // вызывающих; сам хелпер её не читает, коммитить ей больше нечего.
+    function switchAppTab(setTab, nextTab, _meta) {
         setTab(nextTab);
     }
 
@@ -3608,7 +3610,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                             setShowClientDropdown(false);
                                             // Профиль — вкладка 'user'; вкладки 'profile' не существует.
                                             // Прежний setActiveTab в AppHeader никем не передавался.
-                                            commitUndoAndSwitchTab(setTab, 'user', {
+                                            switchAppTab(setTab, 'user', {
                                                 currentTab: tab,
                                                 reason: 'account-dropdown-settings',
                                             });
@@ -4421,13 +4423,13 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 if (nextTab === 'tasks') {
                     keepSettingsMenuOpenOnNextTabRef.current = true;
                     setDefaultTab('tasks', { tasksSubtab: resolvedDefaultTasksSubtab });
-                    switchTabWithUndoCommit('tasks', 'home-picker-tasks-switch');
+                    switchTab('tasks', 'home-picker-tasks-switch');
                     HEYS.dayUtils?.haptic?.('light');
                     return;
                 }
 
                 setDefaultTab(nextTab);
-                switchTabWithUndoCommit(nextTab, `home-picker-${nextTab}-switch`);
+                switchTab(nextTab, `home-picker-${nextTab}-switch`);
                 HEYS.dayUtils?.haptic?.('light');
                 setSettingsMenuOpen(false);
             } catch (e) {
@@ -4471,18 +4473,18 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             return () => window.removeEventListener('heys:curator-review-cues', sync);
         }, [tab]);
 
-        const switchTabWithUndoCommit = (nextTab, reason) =>
-            commitUndoAndSwitchTab(setTab, nextTab, { currentTab: tab, reason });
+        const switchTab = (nextTab, reason) =>
+            switchAppTab(setTab, nextTab, { currentTab: tab, reason });
 
         const closeSettingsAndSwitch = (nextTab, reason) => {
             setSettingsMenuOpen(false);
-            switchTabWithUndoCommit(nextTab, reason);
+            switchTab(nextTab, reason);
         };
 
         const openUserSection = (sectionId, reason) => {
             window.__heysPendingUserSection = sectionId;
             setSettingsMenuOpen(false);
-            switchTabWithUndoCommit('user', reason);
+            switchTab('user', reason);
             requestAnimationFrame(() => {
                 window.dispatchEvent(new CustomEvent('heys:open-user-section', { detail: { id: sectionId } }));
             });
@@ -4846,7 +4848,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             }
             const openCuratorFromDot = nextTab === 'diary' && tab !== 'diary'
                 && window.HEYS?.CuratorActionsBanner?.shouldShowNutritionDot?.();
-            switchTabWithUndoCommit(nextTab, `tab-${nextTab}-switch`);
+            switchTab(nextTab, `tab-${nextTab}-switch`);
             if (openCuratorFromDot) {
                 requestAnimationFrame(() => {
                     window.HEYS?.CuratorActionsBanner?.openFromTab?.();

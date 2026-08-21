@@ -29,14 +29,14 @@ describe('переключение вкладки из шапки', () => {
     const header = componentBody('AppHeader');
     const nav = componentBody('AppTabsNav');
 
-    // switchTabWithUndoCommit объявлен внутри AppTabsNav — для AppHeader это
+    // switchTab объявлен внутри AppTabsNav — для AppHeader это
     // ReferenceError, а не тихий промах.
-    expect(nav.body).toContain('const switchTabWithUndoCommit =');
-    expect(header.body).not.toContain('switchTabWithUndoCommit');
+    expect(nav.body).toContain('const switchTab =');
+    expect(header.body).not.toContain('switchTab(');
   });
 
   it('общий хелпер объявлен на уровне модуля и раньше обоих компонентов', () => {
-    const declaration = SRC.indexOf('\n    function commitUndoAndSwitchTab(');
+    const declaration = SRC.indexOf('\n    function switchAppTab(');
     expect(declaration, 'хелпер не на уровне модуля').toBeGreaterThan(-1);
     expect(declaration).toBeLessThan(SRC.indexOf('\n    function AppHeader('));
     expect(declaration).toBeLessThan(SRC.indexOf('\n    function AppTabsNav('));
@@ -44,6 +44,7 @@ describe('переключение вкладки из шапки', () => {
 
   it('«Настройки» в дропдаунe открывают вкладку user, а не несуществующую profile', () => {
     const header = componentBody('AppHeader');
+    expect(header.body).toContain("switchAppTab(setTab, 'user'");
     expect(header.body).toContain("reason: 'account-dropdown-settings'");
     expect(header.body).not.toMatch(/setActiveTab\('profile'\)/);
     // Мёртвый проп убран целиком — иначе его снова кто-нибудь позовёт.
@@ -95,51 +96,107 @@ describe('переключение вкладки из шапки', () => {
   });
 });
 
-describe('commitUndoAndSwitchTab: поведение', () => {
+describe('switchAppTab: поведение', () => {
   // Хелпер самодостаточен — вытаскиваем его исходник и исполняем как есть.
   function loadHelper() {
-    const start = SRC.indexOf('    function commitUndoAndSwitchTab(');
+    const start = SRC.indexOf('    function switchAppTab(');
     const endMatch = SRC.slice(start).match(/\r?\n    }\r?\n/);
     const end = endMatch ? start + endMatch.index : -1;
     expect(start).toBeGreaterThan(-1);
     expect(end).toBeGreaterThan(start);
     const src = SRC.slice(start, end + endMatch[0].length);
     // eslint-disable-next-line no-new-func
-    return new Function('window', 'console', `${src}; return commitUndoAndSwitchTab;`);
+    return new Function('window', 'console', `${src}; return switchAppTab;`);
   }
 
   const quietConsole = { info: () => { } };
 
+  // Модель настоящего HEYS.Undo: commit() уходит в commitCurrent → onExpire,
+  // а onExpire у вызывающих — необратимое удаление (deleteClient, deletePhoto,
+  // deleteTask, удаление продукта). См. apps/web/heys_undo_v1.js.
+  function fakeUndoBar(onExpire) {
+    const bar = {
+      pending: true,
+      commit: vi.fn((reason = 'manual') => {
+        if (!bar.pending) return;
+        bar.pending = false;
+        onExpire(reason);
+      }),
+    };
+    return bar;
+  }
+
   it('переключает вкладку', () => {
     const fn = loadHelper()({ HEYS: {} }, quietConsole);
     const setTab = vi.fn();
-    fn(setTab, 'user', { currentTab: 'stats', reason: 'test' });
+    fn(setTab, 'user');
     expect(setTab).toHaveBeenCalledWith('user');
   });
 
-  it('коммитит висящий undo перед переключением', () => {
-    const commit = vi.fn();
-    const fn = loadHelper()({ HEYS: { Undo: { pending: true, commit } } }, quietConsole);
+  // Контракт v4 («тост и навигация»): уход со вкладки тост не гасит — он живёт
+  // свои 5 с поверх нижней навигации на любом экране.
+  it('не трогает висящую отмену: бар остаётся, onExpire не выполняется', () => {
+    const onExpire = vi.fn();
+    const undo = fakeUndoBar(onExpire);
+    const fn = loadHelper()({ HEYS: { Undo: undo } }, quietConsole);
     const setTab = vi.fn();
-    fn(setTab, 'user', { currentTab: 'stats', reason: 'account-dropdown-settings' });
-    expect(commit).toHaveBeenCalledWith('account-dropdown-settings');
+
+    fn(setTab, 'user');
+
     expect(setTab).toHaveBeenCalledWith('user');
+    expect(undo.commit).not.toHaveBeenCalled();
+    // Главное: отложенное удаление не выполнено раньше срока.
+    expect(onExpire).not.toHaveBeenCalled();
+    expect(undo.pending).toBe(true);
   });
 
-  it('без висящего undo ничего не коммитит', () => {
-    const commit = vi.fn();
-    const fn = loadHelper()({ HEYS: { Undo: { pending: false, commit } } }, quietConsole);
-    fn(vi.fn(), 'user', {});
-    expect(commit).not.toHaveBeenCalled();
-  });
-
-  it('падение Undo.commit не срывает переключение вкладки', () => {
-    const fn = loadHelper()(
-      { HEYS: { Undo: { pending: true, commit: () => { throw new Error('boom'); } } } },
-      quietConsole
-    );
+  it('несколько переключений подряд не съедают отмену', () => {
+    const onExpire = vi.fn();
+    const undo = fakeUndoBar(onExpire);
+    const fn = loadHelper()({ HEYS: { Undo: undo } }, quietConsole);
     const setTab = vi.fn();
-    expect(() => fn(setTab, 'user', {})).not.toThrow();
-    expect(setTab).toHaveBeenCalledWith('user');
+
+    fn(setTab, 'stats');
+    fn(setTab, 'diary');
+    fn(setTab, 'widgets');
+
+    expect(setTab).toHaveBeenCalledTimes(3);
+    expect(undo.commit).not.toHaveBeenCalled();
+    expect(onExpire).not.toHaveBeenCalled();
+    expect(undo.pending).toBe(true);
+  });
+
+  it('в исходнике хелпера не осталось коммита отмены', () => {
+    const start = SRC.indexOf('    function switchAppTab(');
+    const endMatch = SRC.slice(start).match(/\r?\n    }\r?\n/);
+    const body = SRC.slice(start, start + endMatch.index);
+    expect(body).not.toContain('Undo');
+  });
+
+  // Заодно закрываем обход мимо хелпера: коммитов отмены в оболочке ровно два,
+  // и оба — про смену контекста, а не про вкладку.
+  it('во всей оболочке коммитят отмену только дата и смена контекста', () => {
+    const calls = SRC.split(/\r?\n/)
+      .filter((line) => !line.trim().startsWith('//'))
+      .filter((line) => /Undo\??\.commit\(/.test(line))
+      .map((line) => line.trim());
+    expect(calls).toEqual([
+      "HEYS.Undo.commit('header-date-switch');",
+      'HEYS.Undo.commit(reason);',
+    ]);
+  });
+});
+
+describe('смена контекста, в отличие от вкладки, отмену коммитит', () => {
+  // Отмена восстановила бы запись в невидимый пользователю день или чужому
+  // клиенту — здесь коммит остаётся намеренно.
+  it('шапка коммитит undo при смене даты и при смене клиента', () => {
+    expect(SRC).toContain("HEYS.Undo.commit('header-date-switch')");
+    expect(SRC).toContain("commitPendingUndoBeforeContextChange('client-switch'");
+  });
+
+  it('отчёты коммитят undo при смене даты', () => {
+    const stats = fs.readFileSync(path.join(WEB_DIR, 'heys_day_stats_v1.js'), 'utf8');
+    expect(stats).toContain("commit('stats-date-switch')");
   });
 });

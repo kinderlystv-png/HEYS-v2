@@ -1,30 +1,42 @@
 // heys_undo_v1.js — Global Undo Manager with animated progress bar
 // Snapshot + Restore pattern: action executes immediately, undo restores snapshot
+//
+// Поведение — строки контракта nutrition-tab «удаление и отмена» и «два
+// удаления подряд»: окно защиты записи равно видимой полосе (невидимого запаса
+// нет), единственное действие — «Отменить», новый тост заменяет предыдущий, и
+// предыдущее удаление в этот момент становится необратимым. Очереди тостов нет.
 (function (global) {
   'use strict';
 
   const HEYS = global.HEYS = global.HEYS || {};
 
+  // Вид и числа взяты из кадра «Питание · отмена удаления» канваса
+  // nutrition-tab.v4.dc.html: 5 с, полоса времени 3 px, единственное текстовое
+  // действие «Отменить», радиус 16. Тот же паттерн «действие применилось,
+  // даётся окно на возврат» канвасы date-remainders и tips описывают иначе —
+  // 3 с, кольцо 30 px с цифрой, залитая пилюля «Вернуть», радиус 22 и прямой
+  // запрет полосы. Вопрос открыт записью 1 в docs/ui/UI_V4_FINDINGS.md; пока
+  // ответа нет, HEYS.Undo живёт по кадру питания (отмену совета он не
+  // обслуживает — она ещё не реализована).
   const CONFIG = {
-    defaultDuration: 4000,
-    barHeight: 52,
+    defaultDuration: 5000,
     maxWidth: 560,
     zIndex: 1010,
-    bottomOffset: 16,
-    sideOffset: 16,
+    bottomOffset: 14,
+    sideOffset: 14,
     animationMs: 250,
   };
 
+  const DEFAULT_SUBTITLE = 'можно вернуть, пока идёт полоса';
+
   let currentUndo = null;
-  let undoQueue = [];
   let barEl = null;
   let progressEl = null;
-  let queueMetaEl = null;
   let labelEl = null;
   let subtitleEl = null;
-  let iconEl = null;
   let timerId = null;
   let rafId = null;
+  let hideTimerId = null;
 
   function handleAsyncCallback(result, handlers) {
     return Promise.resolve(result)
@@ -57,29 +69,26 @@
     barEl.style.zIndex = String(CONFIG.zIndex);
   }
 
-  function formatSubtitle(duration) {
-    const seconds = Math.max(1, Math.round((duration || CONFIG.defaultDuration) / 1000));
-    return 'Можно вернуть в течение ' + seconds + ' сек';
-  }
-
   // ── DOM ──
 
   function ensureBar() {
+    // Бар мог уходить в скрытие: переиспользуем его, иначе отложенный remove()
+    // снесёт только что показанный тост.
+    if (hideTimerId) {
+      clearTimeout(hideTimerId);
+      hideTimerId = null;
+    }
     if (barEl && !barEl.isConnected) {
       barEl = null;
       progressEl = null;
-      queueMetaEl = null;
       labelEl = null;
       subtitleEl = null;
-      iconEl = null;
     }
     if (barEl) {
       if (!progressEl) {
         progressEl = barEl.querySelector('.heys-undo-bar__progress');
-        queueMetaEl = barEl.querySelector('.heys-undo-bar__meta');
         labelEl = barEl.querySelector('.heys-undo-bar__label');
         subtitleEl = barEl.querySelector('.heys-undo-bar__subtitle');
-        iconEl = barEl.querySelector('.heys-undo-bar__icon');
       }
       return barEl;
     }
@@ -91,22 +100,12 @@
     barEl.setAttribute('aria-atomic', 'true');
 
     barEl.innerHTML = [
-      '<div class="heys-undo-bar__shine"></div>',
       '<div class="heys-undo-bar__content">',
-      '  <div class="heys-undo-bar__lead">',
-      '    <span class="heys-undo-bar__icon-wrap">',
-      '      <span class="heys-undo-bar__icon">↩</span>',
-      '    </span>',
-      '    <div class="heys-undo-bar__copy">',
-      '      <span class="heys-undo-bar__label"></span>',
-      '      <span class="heys-undo-bar__subtitle"></span>',
-      '    </div>',
+      '  <div class="heys-undo-bar__copy">',
+      '    <b class="heys-undo-bar__label"></b>',
+      '    <span class="heys-undo-bar__subtitle"></span>',
       '  </div>',
-      '  <div class="heys-undo-bar__actions">',
-      '    <span class="heys-undo-bar__meta" hidden></span>',
-      '    <button class="heys-undo-bar__btn" type="button" aria-label="Отменить последнее действие">Отменить</button>',
-      '    <button class="heys-undo-bar__close" type="button" aria-label="Закрыть уведомление об отмене">×</button>',
-      '  </div>',
+      '  <button class="heys-undo-bar__btn" type="button" aria-label="Отменить последнее действие">Отменить</button>',
       '</div>',
       '<div class="heys-undo-bar__track">',
       '  <div class="heys-undo-bar__progress"></div>',
@@ -114,12 +113,9 @@
     ].join('');
 
     progressEl = barEl.querySelector('.heys-undo-bar__progress');
-    queueMetaEl = barEl.querySelector('.heys-undo-bar__meta');
     labelEl = barEl.querySelector('.heys-undo-bar__label');
     subtitleEl = barEl.querySelector('.heys-undo-bar__subtitle');
-    iconEl = barEl.querySelector('.heys-undo-bar__icon');
     barEl.querySelector('.heys-undo-bar__btn').addEventListener('click', onUndoClick);
-    barEl.querySelector('.heys-undo-bar__close').addEventListener('click', onDismissClick);
 
     updateBarLayout();
 
@@ -131,40 +127,40 @@
     if (!barEl) return;
     stopProgress();
     barEl.classList.remove('heys-undo-bar--visible');
-    setTimeout(() => {
+    if (hideTimerId) clearTimeout(hideTimerId);
+    hideTimerId = setTimeout(() => {
+      hideTimerId = null;
       barEl?.remove();
       barEl = null;
       progressEl = null;
-      queueMetaEl = null;
       labelEl = null;
       subtitleEl = null;
-      iconEl = null;
     }, CONFIG.animationMs);
-  }
-
-  function updateQueueMeta() {
-    if (!queueMetaEl) return;
-    if (!undoQueue.length) {
-      queueMetaEl.hidden = true;
-      queueMetaEl.textContent = '';
-      return;
-    }
-
-    queueMetaEl.hidden = false;
-    queueMetaEl.textContent = '+' + undoQueue.length;
   }
 
   // ── Progress animation ──
 
+  // Полоса УБЫВАЕТ: показывает остаток окна возврата, а не прошедшее время.
   function startProgress(duration) {
     stopProgress();
     if (!progressEl) return;
     const start = performance.now();
+    // Бар переживает переключение вкладки, а высота нижней навигации между
+    // вкладками может отличаться — отступ надо пересчитывать по ходу жизни
+    // тоста. ResizeObserver дешевле по числу замеров, но требует переподписки,
+    // когда React пересоздаёт узел .tabs; здесь уже крутится rAF полосы, и
+    // редкий (5 раз в секунду) пересчёт в нём покрывает и смену высоты, и
+    // подмену самого узла, не заводя отдельного наблюдателя.
+    let lastLayoutAt = start;
 
     function tick(now) {
       if (!progressEl) {
         rafId = null;
         return;
+      }
+      if (now - lastLayoutAt >= 200) {
+        lastLayoutAt = now;
+        updateBarLayout();
       }
       const elapsed = now - start;
       const ratio = Math.max(0, 1 - elapsed / duration);
@@ -195,13 +191,6 @@
     }
   }
 
-  function scheduleNextUndo() {
-    if (currentUndo || !undoQueue.length) return;
-    const nextEntry = undoQueue.shift();
-    if (!nextEntry) return;
-    showEntry(nextEntry);
-  }
-
   function showEntry(entry) {
     if (!entry) return;
 
@@ -209,9 +198,7 @@
 
     const bar = ensureBar();
     if (labelEl) labelEl.textContent = entry.label || 'Действие выполнено';
-    if (subtitleEl) subtitleEl.textContent = entry.subtitle || formatSubtitle(entry.duration);
-    if (iconEl) iconEl.textContent = entry.icon || '↩';
-    updateQueueMeta();
+    if (subtitleEl) subtitleEl.textContent = entry.subtitle || DEFAULT_SUBTITLE;
     updateBarLayout();
 
     void bar.offsetHeight;
@@ -229,13 +216,15 @@
 
   // ── Core logic ──
 
-  function commitCurrent(reason = 'manual') {
+  // keepBar — замена тоста: предыдущая запись коммитится, но бар не гасим,
+  // чтобы новый тост встал на его место без мигания.
+  function commitCurrent(reason = 'manual', keepBar = false) {
     if (!currentUndo) return;
     const entry = currentUndo;
     currentUndo = null;
 
     clearCurrentTimer();
-    destroyBar();
+    if (!keepBar) destroyBar();
 
     try {
       handleAsyncCallback(entry.onExpire?.(reason, entry.context, entry), {
@@ -245,10 +234,6 @@
       });
     } catch (e) {
       console.error('[HEYS.Undo] onExpire error:', e);
-    }
-
-    if (undoQueue.length) {
-      setTimeout(scheduleNextUndo, CONFIG.animationMs + 24);
     }
   }
 
@@ -276,10 +261,6 @@
       console.error('[HEYS.Undo] onUndo error:', err);
       HEYS.Toast?.error('Не удалось отменить');
     }
-
-    if (undoQueue.length) {
-      setTimeout(scheduleNextUndo, CONFIG.animationMs + 24);
-    }
   }
 
   function safeVibrate(pattern) {
@@ -287,36 +268,6 @@
     const activation = navigator.userActivation;
     if (activation && !activation.isActive && !activation.hasBeenActive) return;
     try { navigator.vibrate(pattern); } catch (_) { /* ignore haptic errors */ }
-  }
-
-  function onDismissClick(e) {
-    e?.stopPropagation();
-    if (!currentUndo) return;
-    commitCurrent('dismissed-by-user');
-  }
-
-  function expireQueueEntry(entry, reason) {
-    if (!entry) return;
-    try {
-      handleAsyncCallback(entry.onExpire?.(reason, entry.context, entry), {
-        onError: (e) => {
-          console.error('[HEYS.Undo] queued onExpire error:', e);
-        },
-      });
-    } catch (e) {
-      console.error('[HEYS.Undo] queued onExpire error:', e);
-    }
-  }
-
-  function flushAll(reason = 'manual') {
-    const queuedEntries = undoQueue.slice();
-    undoQueue = [];
-
-    if (currentUndo) {
-      commitCurrent(reason);
-    }
-
-    queuedEntries.forEach((entry) => expireQueueEntry(entry, reason));
   }
 
   // ── Public API ──
@@ -337,17 +288,16 @@
         label: opts.label || 'Действие выполнено',
         subtitle: opts.subtitle || '',
         duration,
-        icon: opts.icon || '↩',
         onUndo: opts.onUndo,
         onExpire: opts.onExpire || null,
         context: opts.context,
       };
 
+      // Контракт «два удаления подряд»: новый тост заменяет старый, и первое
+      // удаление в этот момент становится необратимым.
       if (currentUndo) {
-        undoQueue.push(nextEntry);
-        updateQueueMeta();
-        console.info('[HEYS.Undo] queued:', nextEntry.label, 'queue=' + undoQueue.length);
-        return nextEntry;
+        console.info('[HEYS.Undo] replaced:', currentUndo.label, '→', nextEntry.label);
+        commitCurrent('replaced', true);
       }
 
       showEntry(nextEntry);
@@ -376,6 +326,9 @@
 
       this.push({
         label: opts.label,
+        // Подпись прокидывается наравне с остальным: у вызывающих с нестандартным
+        // окном (очистка дня — 7 с) она единственная называет срок словами.
+        subtitle: opts.subtitle,
         duration: opts.duration,
         context,
         onUndo: () => opts.undo(context),
@@ -387,16 +340,12 @@
 
     /** Force-commit current pending undo (no restore) */
     commit(reason = 'manual') {
-      flushAll(reason);
+      commitCurrent(reason);
     },
 
     /** Check if an undo action is pending */
     get pending() {
-      return !!currentUndo || undoQueue.length > 0;
-    },
-
-    get queueSize() {
-      return undoQueue.length + (currentUndo ? 1 : 0);
+      return !!currentUndo;
     },
   };
 
