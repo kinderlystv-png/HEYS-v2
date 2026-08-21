@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="v4-canvas.css" rel="stylesheet">
+<style>
+  body{margin:0;background:#e9dfcd;font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  *{box-sizing:border-box}
+  a{color:#8a4a20;text-decoration:none}
+  a:hover{color:#c67139}
+  @keyframes spin{100%{transform:rotate(360deg)}}
+  @keyframes fadein{from{opacity:0}to{opacity:1}}
+  @keyframes breathe{0%,100%{opacity:.35}50%{opacity:1}}
+  .spin{animation:spin 1.1s linear infinite}
+  .wrap{animation:fadein .15s ease-out both}
+  .rm{animation:breathe 1.6s ease-in-out infinite}
+  .ph{width:375px;height:706px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12);display:flex;flex-direction:column}
+  .n{font-variant-numeric:tabular-nums}
+  .lab{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}
+  .lab b{font:700 12.5px/1 Figtree,sans-serif;color:#201e1d}
+  .lab span{font:500 11px/1.3 Figtree,sans-serif;color:rgba(0,0,0,.45)}
+  .h{font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:26px 0 12px}
+  .nt{padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid rgba(0,0,0,.07)}
+  .nt>b,.ntl>b{font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;display:block}
+  .nt>span,.ntl>span{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.55);display:block;margin-top:4px}
+  .top{padding:16px 18px 0;display:flex;align-items:center;justify-content:space-between}
+  .ttl{font:700 15px/1 Figtree,sans-serif;color:#201e1d}
+  .sc{flex:1;overflow:hidden;padding:16px 18px 0}
+  .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.55)}
+  .btn{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:#c67139;font:700 13px/1 Figtree,sans-serif;color:#2b1608}
+  .foot{padding:12px 18px 20px;background:#fffaf1}
+  .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
+  .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
+  .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
+  .spec>span[data-v]::before{content:attr(data-v)}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.5);font-style:normal;text-wrap:pretty}
+  .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin:0 0 30px}
+  .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.38);margin:16px 0 2px}
+</style>
+</helmet><div style="background:#e9dfcd;padding:44px 46px 70px;width:max-content;">
+  <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
+    <span style="font:800 25px/1 Figtree,sans-serif;color:#201e1d;letter-spacing:-.02em;">Отмена действия</span>
+    <span style="font:600 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);">сквозной компонент · v4</span>
+  </div>
+  <p style="margin:0 0 6px;max-width:980px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Один бар на всё приложение: двенадцать точек входа — удаление приёма и продукта, задачи планировщика, тренировки, голод и самочувствие, очередь триала. Действие применяется сразу, человеку даётся окно на возврат. До этого канваса отмена была описана в трёх файлах по-разному — 5 с полосой в «Питании», 3 с кольцом в капсуле даты, «не решено» в советах; здесь вид один, а различия сведены к состояниям.</p>
+  <p style="margin:0 0 26px;font:600 10.5px/1.7 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.42);">файл в пакете: undo-bar.v4.dc.html · протокол docs/implementation/UNDO_BAR_V4_PROTOCOL.md · экраны искать по data-screen-label</p>
+
+  <div class="ctr" data-contract="undo-bar">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+      <span class="ctrTag">КОНТРАКТ</span>
+      <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.4);">ключ и значение через таб — вставляется в тикет или тест</span>
+    </div>
+
+    <div class="ctrH">Что это и чьё</div>
+    <div class="spec"><b>фича</b><span data-v="бар отмены — один на всё приложение, вызывается из любого места, где действие применяется сразу и может быть возвращено"></span></div>
+    <div class="spec"><b>границы</b><span data-v="канвас рисует сам бар и его положение относительно нижней навигации; экран под ним — контекст"></span></div>
+    <div class="spec"><b>источник</b><span data-v="главный для отмены во всём продукте. В nutrition-tab, date-remainders и tips прежние описания отмены отменены — там ссылка на этот файл"></span><i>раньше правило жило в контракте вкладки «Питание», хотя бар всплывает в двенадцати местах; правку в чужом контракте никто не замечал</i></div>
+    <div class="spec" style="border-bottom:none"><b>адресация</b><span data-v="кадр = data-screen-label; все кадры статичные (data-demo='stop')"></span></div>
+
+    <div class="ctrH">Вид и геометрия</div>
+    <div class="spec"><b>форма</b><span data-v="плашка с фоном поверхности и радиусом 22; порядок слева направо — кольцо-таймер, текст, пилюля «Отменить» высотой 34 px. Врезка по бокам и диаметр кольца — свои строки ниже"></span></div>
+    <div class="spec"><b>индикатор — кольцо, не полоса</b><span data-v="кольцо диаметром 30 px с цифрой секунд внутри, дуга убывает по часовой; полосы внизу плашки нет"></span><i>полоса вдоль нижней кромки читается как прогресс загрузки — это возражение из контракта капсулы даты, и оно сильнее удобства полосы. Цифра внутри кольца отвечает на «сколько осталось» без обучения</i></div>
+    <div class="spec"><b>убывает, а не растёт</b><span data-v="дуга и цифра показывают остаток окна: 5 → 1"></span><i>залитая на 62 % полоса не отвечала, это «прошло» или «осталось»</i></div>
+    <div class="spec"><b>длительность</b><span data-v="5 с на все места вызова; отдельных длительностей у экранов нет"></span><i>3 с на удалении приёма человек не успевает заметить, а 5 с уже стоит в коде для удаления данных. Окно защиты записи равно видимому таймеру — невидимого запаса нет</i></div>
+    <div class="spec"><b>положение</b><span data-v="врезка по бокам и зазор снизу — одна величина, 12 px: плашка стоит над нижней навигацией, а когда её нет — над нижним краем с учётом safe-area"></span><i>правило словами, а не числом от края: «bottom: 14» в кадре без навигации ставило плашку поверх неё</i></div>
+    <div class="spec"><b>слово действия</b><span data-v="всегда «Отменить» — не «Вернуть», не «Восстановить»"></span><i>одно слово на продукт: бар вызывается и там, где ничего не удаляли (перенос, смена нормы)</i></div>
+    <div class="spec" style="border-bottom:none"><b>тёмные наборы</b><span data-v="обводка 1 px внутрь rgba(--ink,.12) стоит во всех наборах, тень 0 10px 28px rgba(--shadow,.22); на тёмных читается обводка, на светлых — тень"></span><i>на тёмном грунте тень не читается и плашка сливается с экраном</i></div>
+
+    <div class="ctrH">Текст и пачка</div>
+    <div class="spec"><b>текст</b><span data-v="что именно исчезло, прошедшим временем: «Перекус удалён», «Рис бурый удалён», «Задача удалена». Без «вы», без восклицаний"></span></div>
+    <div class="spec"><b>подряд идущие удаления</b><span data-v="удаления одного вида внутри живого окна собираются в один бар: «Удалено 3 продукта», таймер перезапускается, «Отменить» возвращает все три"></span><i>прежнее правило «второе удаление делает первое необратимым» верно для редкого случая, но чистка приёма от нескольких продуктов и разбор списка задач — рядовой сценарий: человек видит бар и думает, что страховка есть, а она уже про последнее. Это не очередь тостов — бар по-прежнему один, просто он про пачку</i></div>
+    <div class="spec"><b>разные виды подряд</b><span data-v="в пачку не собираются: бар показывает последнее, предыдущее становится необратимым"></span><i>«Удалено 2 объекта» ничего не говорит о том, что вернётся</i></div>
+    <div class="spec" style="border-bottom:none"><b>предел пачки</b><span data-v="числом не ограничена; текст всегда называет количество"></span></div>
+
+    <div class="ctrH">Поведение</div>
+    <div class="spec"><b>уход со вкладки</b><span data-v="бар не гаснет и не сокращается: доживает своё окно поверх нижней навигации на любом экране"></span><i>человек уходит проверить, что удалилось, и возвращается — страховка должна дожить</i></div>
+    <div class="spec"><b>после «Отменить»</b><span data-v="бар исчезает, запись возвращается на своё место; подтверждающего тоста нет"></span><i>исчезнувший бар и есть ответ. Зелёный тост «Действие отменено» сверху экрана — прошлый дизайн и второй язык на одном экране</i></div>
+    <div class="spec"><b>истёк без нажатия</b><span data-v="бар уезжает вниз за 160 мс, ничего не показывая"></span></div>
+    <div class="spec"><b>появление</b><span data-v="выезд снизу 220 мс с перелётом до 1,04 — та же пружина, что у смены вида виджета"></span></div>
+    <div class="spec"><b>уменьшенное движение</b><span data-v="выезда нет: бар проявляется за 120 мс, кольцо не анимируется — цифра меняется раз в секунду"></span></div>
+    <div class="spec" style="border-bottom:none"><b>доступность</b><span data-v="role='status', озвучивается текст и «Отменить, осталось N секунд»; кольцо декоративно"></span></div>
+
+    <div class="ctrH">Тосты-уведомления</div>
+    <div class="spec" style="border-bottom:none"><b>тостов в v4 нет</b><span data-v="уведомлений-тостов сверху экрана не рисуем ни для успеха, ни для ошибки: успех подтверждается самим содержимым, ошибка — на месте действия. Прежний компонент (heys_toast_v1) снимается вместе с зелёным «Действие отменено»"></span><i>решение 21 августа: одно всплывающее место на приложение — этот бар, и оно про возврат, а не про рассказ о том, что всё получилось</i></div>
+  </div>
+
+    <div class="h">Кадры</div>
+  <div class="pal" data-mir="m1" style="display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;">
+    <div>
+      <div class="lab"><b>Одно удаление</b><span>5 с, кольцо с цифрой, над навигацией</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Отмена · одно удаление" style="height:300px;background:var(--bg);justify-content:flex-start;">
+        <div style="padding:16px 18px 0;font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Питание</div>
+        <div style="margin:12px 18px 0;height:44px;border-radius:16px;background:var(--c1);"></div>
+        <div style="margin:8px 18px 0;height:44px;border-radius:16px;background:var(--c1);"></div>
+        <div style="position:absolute;left:12px;right:12px;bottom:76px;background:var(--c1);border-radius:22px;padding:11px 13px;display:flex;align-items:center;gap:11px;box-shadow:inset 0 0 0 1px rgba(var(--ink),.12),0 10px 28px rgba(var(--shadow),.22);">
+          <span style="flex:none;position:relative;width:30px;height:30px;">
+          <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-opacity=".22" stroke-width="2.5"/><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="78.5 78.5" transform="rotate(-90 15 15)"/></svg>
+          <span class="n" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--ac);">5</span></span>
+          <span style="flex:1;font:600 12px/1.35 Figtree,sans-serif;color:var(--tx);">Перекус удалён</span>
+          <span style="flex:none;min-height:34px;display:flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(var(--ink),.07);font:700 11px/1 Figtree,sans-serif;color:var(--ac);">Отменить</span>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:64px;background:var(--c1);border-top:1px solid rgba(var(--ink),.07);display:flex;align-items:center;justify-content:space-around;padding:0 18px;"><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">Главная</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:var(--ac);">Питание</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">Актив</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">Отчёты</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">Инсайты</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Пачка</b><span>три продукта подряд — один бар, отмена возвращает все</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Отмена · пачка" style="height:300px;background:var(--bg);justify-content:flex-start;">
+        <div style="padding:16px 18px 0;font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Питание</div>
+        <div style="margin:12px 18px 0;height:44px;border-radius:16px;background:var(--c1);"></div>
+        <div style="margin:8px 18px 0;height:44px;border-radius:16px;background:var(--c1);"></div>
+        <div style="position:absolute;left:12px;right:12px;bottom:76px;background:var(--c1);border-radius:22px;padding:11px 13px;display:flex;align-items:center;gap:11px;box-shadow:inset 0 0 0 1px rgba(var(--ink),.12),0 10px 28px rgba(var(--shadow),.22);">
+          <span style="flex:none;position:relative;width:30px;height:30px;">
+          <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-opacity=".22" stroke-width="2.5"/><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="62.8 78.5" transform="rotate(-90 15 15)"/></svg>
+          <span class="n" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--ac);">4</span></span>
+          <span style="flex:1;font:600 12px/1.35 Figtree,sans-serif;color:var(--tx);">Удалено 3 продукта</span>
+          <span style="flex:none;min-height:34px;display:flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(var(--ink),.07);font:700 11px/1 Figtree,sans-serif;color:var(--ac);">Отменить</span>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:64px;background:var(--c1);border-top:1px solid rgba(var(--ink),.07);display:flex;align-items:center;justify-content:space-around;padding:0 18px;"><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">Главная</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:var(--ac);">Питание</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">Актив</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">Отчёты</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">Инсайты</span></div>
+      </div>
+    </div>
+    <div>
+      <div class="lab"><b>Продукт</b><span>та же форма, названо то, что исчезло</span></div>
+      <div class="ph" data-demo="stop" data-screen-label="Отмена · продукт" style="height:300px;background:var(--bg);justify-content:flex-start;">
+        <div style="padding:16px 18px 0;font:700 13px/1 Figtree,sans-serif;color:var(--tx);">Питание</div>
+        <div style="margin:12px 18px 0;height:44px;border-radius:16px;background:var(--c1);"></div>
+        <div style="margin:8px 18px 0;height:44px;border-radius:16px;background:var(--c1);"></div>
+        <div style="position:absolute;left:12px;right:12px;bottom:76px;background:var(--c1);border-radius:22px;padding:11px 13px;display:flex;align-items:center;gap:11px;box-shadow:inset 0 0 0 1px rgba(var(--ink),.12),0 10px 28px rgba(var(--shadow),.22);">
+          <span style="flex:none;position:relative;width:30px;height:30px;">
+          <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-opacity=".22" stroke-width="2.5"/><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="31.4 78.5" transform="rotate(-90 15 15)"/></svg>
+          <span class="n" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--ac);">2</span></span>
+          <span style="flex:1;font:600 12px/1.35 Figtree,sans-serif;color:var(--tx);">Рис бурый удалён</span>
+          <span style="flex:none;min-height:34px;display:flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(var(--ink),.07);font:700 11px/1 Figtree,sans-serif;color:var(--ac);">Отменить</span>
+        </div>
+        <div style="position:absolute;left:0;right:0;bottom:0;height:64px;background:var(--c1);border-top:1px solid rgba(var(--ink),.07);display:flex;align-items:center;justify-content:space-around;padding:0 18px;"><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">Главная</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:var(--ac);">Питание</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">Актив</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">Отчёты</span><span style="font:600 8.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.35);">Инсайты</span></div>
+      </div>
+    </div>
+  </div>
+  <div data-mirdst="m1"></div>
+
+<div class="h">Решения</div>
+  <div style="background:#efe3cf;border-radius:24px;padding:20px;max-width:1040px;">
+    <div class="nt"><b>Один компонент — один вид</b><span>Отмена описывалась в трёх канвасах тремя способами, и это не были состояния одного бара: разные длительности, разные индикаторы, разные слова на кнопке. Первый, кто довёл бы свой экран, определил бы вид для остальных — а следующий либо сломал бы чужой, либо завёл второй бар рядом. Теперь вид один, а экраны различаются только текстом.</span></div>
+    <div class="nt"><b>Кольцо победило полосу по чужому аргументу</b><span>Полоса удобнее в вёрстке и была выбрана в «Питании», но возражение из контракта капсулы сильнее: полоса вдоль нижней кромки плашки читается как прогресс загрузки, то есть как «идёт работа», а не «у вас есть время». Кольцо с цифрой не требует догадки.</span></div>
+    <div class="nt"><b>Пачка вместо очереди</b><span>Очередь тостов отвергнута — на маленьком экране она превращается в стопку. Но и «второе удаление делает первое необратимым» не годится там, где подряд идущее удаление это норма. Пачка решает оба: бар один, страховка честная.</span></div>
+    <div class="ntl"><b>Тосты сняты, а не описаны</b><span>Соблазн был нарисовать им единый вид — компонент живой, и в коде у него свои длительности и до трёх тостов сразу. Но ни один из 21 канваса за всё время не попросил тост: успех показывает само содержимое, ошибка живёт на месте действия. Второе всплывающее место на приложение — это второй язык, а не полнота.</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;rules&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">
+class Component extends DCLogic {
+  pal = [['dk', 'Тёмная'], ['bl', 'Синяя'], ['bldk', 'Сине-тёмная']];
+  componentDidMount() { this.apply(); }
+  componentDidUpdate() { this.apply(); }
+  deliver(btn, txt, count) {
+    const host = btn.closest('[data-contract]') || btn.parentElement;
+    let box = host.querySelector('textarea[data-spec-out]');
+    if (!box) {
+      box = document.createElement('textarea');
+      box.setAttribute('data-spec-out', '');
+      box.setAttribute('readonly', '');
+      box.style.cssText = 'display:block;width:100%;box-sizing:border-box;height:130px;margin-top:12px;font:500 10.5px/1.55 ui-monospace,Menlo,monospace;color:#201e1d;background:#fffaf1;border:1px solid rgba(0,0,0,.12);border-radius:14px;padding:10px;resize:vertical;';
+      host.appendChild(box);
+    }
+    box.value = txt; box.focus(); box.select();
+    const say = (msg) => {
+      btn.textContent = msg;
+      clearTimeout(this._sayT);
+      this._sayT = setTimeout(() => { btn.textContent = 'скопировать контракт'; }, 2600);
+    };
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    if (ok) { say('скопировано · ' + count + ' строк'); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt)
+        .then(() => say('скопировано · ' + count + ' строк'))
+        .catch(() => say('буфер недоступен — текст выделен ниже'));
+    } else { say('буфер недоступен — текст выделен ниже'); }
+  }
+  renderVals() {
+    return {
+      copySpec: (e) => {
+        const rows = [...document.querySelectorAll('.spec')].map(r => {
+          const k = r.querySelector('b'), v = r.querySelector('span[data-v]');
+          return k && v ? k.textContent.trim() + '\t' + v.getAttribute('data-v') : null;
+        }).filter(Boolean);
+        this.deliver(e.currentTarget, 'undo-bar · контракт (' + rows.length + ' строк)\n' + rows.join('\n'), rows.length);
+      }
+    };
+  }
+  apply() {
+    const all = this.props.allPalettes ?? (window.parent === window);
+    document.querySelectorAll('[data-mirdst]').forEach(dst => {
+      dst.innerHTML = '';
+      if (!all) return;
+      const src = document.querySelector('[data-mir="' + dst.getAttribute('data-mirdst') + '"]');
+      if (!src) return;
+      this.pal.forEach(([cls, name]) => {
+        const cap = document.createElement('div');
+        cap.className = 'palcap';
+        cap.textContent = name;
+        const row = src.cloneNode(true);
+        row.removeAttribute('data-mir');
+        row.className = 'pal ' + cls + ' ' + row.className.replace('pal', '').trim();
+        row.querySelectorAll('*').forEach(n => {
+          n.removeAttribute('data-screen-label'); n.removeAttribute('data-cc-id');
+          n.removeAttribute('data-dm-ref'); n.removeAttribute('data-comment-anchor');
+        });
+        dst.append(cap, row);
+      });
+    });
+    const off = (this.props.rules ?? true) ? '' : 'none';
+    document.querySelectorAll('.nt, .ntl').forEach(n => { n.style.display = off; });
+  }
+}
+</script>
+</body>
+</html>
