@@ -9794,6 +9794,49 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   line-height: 1;
 }
 
+/* Шаги — кадры канваса 35 «Как сейчас» 1×1 и 36 «До цели» 2×1: число, полоса
+   до цели, остаток названный числом. Спарклайна нет ни в одном виде. */
+.widget-v4-steps__value {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin-top: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.widget-v4-steps__hero {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: auto;
+}
+
+.widget-v4-steps__hero .widget-v4-steps__value {
+  font-size: 19px;
+  letter-spacing: -0.03em;
+  margin-top: 0;
+}
+
+.widget-v4-steps__track {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
+  margin-top: 7px;
+}
+
+.widget-v4-stack.widget-v4-steps .widget-v4-steps__track {
+  height: 5px;
+  margin-top: 6px;
+}
+
+.widget-v4-steps__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: currentColor;
+}
+
 /* Длинное значение в узком формате не сжимается кеглем и не переносится:
    первой уходит единица, затем подпись, дальше обрезка по краю плитки
    (канвас v4, строка 68). */
@@ -10534,31 +10577,93 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 
 .widget-v4-catalog__item {
   display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  align-items: stretch;
-  gap: 8px;
-  background: var(--v4-sand-surface, #f7efe2);
+  align-items: center;
+  gap: 11px;
+  /* Строка каталога стоит на грунте, а плитка внутри — на своей роли: иначе
+     фон в фон и превью не читается (кадр «Главная · расстановка»). */
+  background: var(--v4-bg, #fffaf1);
   border: none;
   border-radius: 16px;
-  padding: 13px 14px;
+  padding: 11px 12px;
   color: var(--v4-sand-act-mid, #a75c2b);
   font: inherit;
   cursor: pointer;
   text-align: left;
 }
 
-/* Виджет, чей вид ещё не сведён с канвасом: строка гашена, превью нет,
-   добавить нельзя (кадр «Главная · расстановка»). */
+/* «Готовится»: строка в полную яркость — приглушённое обещание читается как
+   поломка. Ни превью, ни даты; нажатие ничего не делает. */
+.widget-v4-catalog__item--soon,
+.widget-v4-catalog__item--waiting {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  padding: 13px 14px;
+  background: var(--v4-sand-surface, #f7efe2);
+}
+
 .widget-v4-catalog__item--soon {
-  opacity: 0.45;
   cursor: default;
 }
 
-.widget-v4-catalog__hint {
+/* «Мало истории»: виджет уже есть, ждут человека — отсюда приглушение и
+   прогресс. Добавить можно. */
+.widget-v4-catalog__item--waiting {
+  opacity: 0.55;
+}
+
+.widget-v4-catalog__pill {
+  flex: none;
+  font-size: 8.5px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 7px;
+  border-radius: 999px;
+  /* Шалфейная подложка и тёмный шалфей текста — роли песочного набора: общая
+     --v4-ok-text в классике даёт зелёный, а пилюля должна оставаться шалфеем. */
+  background: color-mix(in srgb, var(--v4-sand-ok-fill, #7a8a5e) 18%, transparent);
+  color: var(--v4-sand-ok-text, #5c6a45);
+}
+
+.widget-v4-catalog__about {
   font-size: 9.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+}
+
+.widget-v4-catalog__need {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+}
+
+.widget-v4-catalog__hint {
+  font-size: 9px;
   font-weight: 600;
-  color: var(--v4-sand-act-mid, #a75c2b);
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+}
+
+/* Название готовой строки уже несёт превью; тут оно только для чтения с
+   экрана. */
+.widget-v4-catalog__item .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.widget-v4-catalog__plus {
+  flex: none;
+  margin-left: auto;
 }
 
 .widget-v4-catalog__row {
@@ -10566,6 +10671,13 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+}
+
+.widget-v4-catalog__item--soon .widget-v4-catalog__name,
+.widget-v4-catalog__item--waiting .widget-v4-catalog__name {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .widget-v4-catalog__name {

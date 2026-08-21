@@ -751,10 +751,15 @@
       const prof = this._getProfile();
       const goal = prof?.stepsGoal || 10000;
 
+      // Шагомер мог не отдать данные — это не «прошёл ноль» (контракт
+      // home-widgets, «шаги · нет данных»): на месте числа прочерк, полосы нет.
+      const raw = Number(day?.steps);
+      const hasData = Number.isFinite(raw) && raw > 0;
       return {
-        steps: day?.steps || 0,
+        hasData,
+        steps: hasData ? raw : null,
         goal: goal,
-        pct: goal > 0 ? Math.round(((day?.steps || 0) / goal) * 100) : 0
+        pct: hasData && goal > 0 ? Math.round((raw / goal) * 100) : 0
       };
     },
 

@@ -47,7 +47,8 @@
     healthTrend: 'Тренд здоровья',
     insulinWave: 'Инсулиновая волна',
     weight: 'Вес',
-    crashRisk: 'Динамика веса'
+    crashRisk: 'Динамика веса',
+    steps: 'Шаги'
   };
 
   const WIDGET_TILE_BG = {
@@ -108,6 +109,10 @@
       { id: 'overlaps', title: 'Пересечения', subtitle: 'где приём попал в незакрывшуюся волну', size: '2x2' },
       { id: 'day_bar', title: 'Полоса дня', subtitle: 'сколько часов инсулин был поднят', size: '2x1' },
       { id: 'calm_window', title: 'Спокойное окно', subtitle: 'самый длинный промежуток без волн', size: '1x1' }
+    ],
+    steps: [
+      { id: 'mini', title: 'Как сейчас', subtitle: 'число и полоса до цели', size: '1x1', isDefault: true },
+      { id: 'to_goal', title: 'До цели', subtitle: 'цель и остаток названы числами', size: '2x1' }
     ],
     weight: [
       { id: 'spark', title: 'Как сейчас', subtitle: 'вес, неделя, линия', size: '2x2' },

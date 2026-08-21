@@ -33,8 +33,10 @@ function countCatalogVariantsFromSource(src) {
 }
 
 describe('widget variants v4', () => {
-  it('каталог — 41 вариант', () => {
-    expect(countCatalogVariantsFromSource(variantsSrc)).toBe(41);
+  it('каталог — 43 вида: у «Шагов» появились свои два', () => {
+    // 41 + «Как сейчас» 1×1 и «До цели» 2×1 — кадры 35 и 36 канваса.
+    expect(countCatalogVariantsFromSource(variantsSrc)).toBe(43);
+    expect(variantsSrc).toContain("id: 'to_goal', title: 'До цели'");
     expect(variantsSrc).toContain('HEYS.Widgets.VariantsV4');
     expect(variantsSrc).toContain('useWidgetVariantTile');
     expect(variantsSrc).toContain('getSheetCatalog');

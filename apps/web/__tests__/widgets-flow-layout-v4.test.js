@@ -203,7 +203,7 @@ describe('размер идёт за видом, запись — по «Гот�
     };
     global.HEYS.Widgets.registry.getType = (type) => {
       if (type === 'ghost') return null;
-      if (type === 'streak') return { type, inDevelopment: true };
+      if (type === 'streak') return { type, retired: true };
       return { type };
     };
   });
@@ -270,7 +270,7 @@ describe('размер идёт за видом, запись — по «Гот�
     st.saveLayout = realSave;
   });
 
-  it('виджет, снятый с продукта или помеченный «в разработке», уходит из раскладки', () => {
+  it('виджет, снятый с продукта, уходит из раскладки без сообщения', () => {
     const st = state();
     const saved = [
       { id: 'k', type: 'weight', size: '2x2', position: { col: 0, row: 0 }, settings: {} },
@@ -282,12 +282,12 @@ describe('размер идёт за видом, запись — по «Гот�
       .map((w) => st._normalizeWidget(w))
       .filter((w) => {
         const def = global.HEYS.Widgets.registry.getType(w.type);
-        return !!def && !def.inDevelopment;
+        return !!def && !def.retired;
       });
     expect(alive.map((w) => w.id)).toEqual(['k']);
 
     // Ядро фильтрует именно так — проверяем сам исходник, а не копию правила.
     const coreSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_core_v1.js'), 'utf8');
-    expect(coreSrc).toContain('return !!def && !def.inDevelopment;');
+    expect(coreSrc).toContain('return !!def && !def.retired;');
   });
 });

@@ -4850,91 +4850,80 @@
     );
   }
 
-  function StepsWidgetContent({ widget, data }) {
-    const steps = data.steps || 0;
-    const goal = data.goal || 10000;
-    const pct = goal > 0 ? Math.round((steps / goal) * 100) : 0;
-    const km = (steps * 0.0007).toFixed(1);
-    const remaining = Math.max(0, goal - steps);
+  // Числа шагов пишутся с разрядами, как в кадрах: «8 240», «10 000».
+  function formatRuThousands(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '—';
+    return Math.round(n).toLocaleString('ru-RU');
+  }
 
-    const d = getWidgetDims(widget);
-    const size = widget?.size || '2x2';
-    const variant = d.isMicro ? 'micro' : d.isShort ? 'short' : 'std';
-    const showKm = widget.settings?.showKilometers && !d.isTiny;
-    const showGoalBar = widget.settings?.showGoal !== false;
-    const showPercentage = widget.settings?.showPercentage !== false;
-    const showRemaining = widget.settings?.showRemaining !== false;
+  // Шаги красятся по доле цели: от 100 % — шалфей, ниже — чернила; красным не
+  // красим никогда (канвас v4, строка «шаги · цвет»). Непройденные шаги — не
+  // «обрати внимание»: день ещё не кончился.
+  function v4StepsState(pct) {
+    return Number(pct) >= 100 ? 'good' : 'neutral';
+  }
 
-    // Виджет исторически красит шаги ступенями, а Актив — градиентом.
-    // Расхождение сохранено, обе шкалы описаны в heys_scales_v1.js.
-    const getStepsColor = () => HEYS.scales.stepsWidget(pct).color;
+  function v4StepsBar(pct, state) {
+    const width = Math.max(0, Math.min(100, Number(pct) || 0));
+    return React.createElement('div', { className: 'widget-v4-steps__track' },
+      React.createElement('span', {
+        className: 'widget-v4-steps__fill ' + v4ValueStateClass(state),
+        style: { width: `${width}%` }
+      })
+    );
+  }
 
-    // 1x1 Micro
-    if (d.isMicro) {
-      return React.createElement('div', { className: 'widget-steps widget-steps--micro' },
-        React.createElement('div', { className: 'widget-micro__label' }, '👟'),
-        React.createElement('div', { className: 'widget-steps__value' }, steps)
-      );
-    }
+  /** Два вида канваса: 35 «Как сейчас» 1×1 и 36 «До цели» 2×1. */
+  function StepsVariantBody({ variantId, widget, data }) {
+    const steps = Number(data?.steps);
+    const goal = Number(data?.goal) || 10000;
+    const hasData = Number.isFinite(steps) && data?.hasData !== false;
+    const pct = hasData && goal > 0 ? Math.round((steps / goal) * 100) : 0;
+    const state = v4StepsState(pct);
+    const remaining = Math.max(0, goal - (hasData ? steps : 0));
 
-    // 2x2 — Оптимальный layout
-    if (size === '2x2') {
-      const stepsColor = getStepsColor();
-      return React.createElement('div', { className: 'widget-steps widget-steps--2x2' },
-        // Верх: иконка + шаги + процент
-        React.createElement('div', { className: 'widget-steps__header' },
-          React.createElement('div', { className: 'widget-steps__icon' }, '🚶'),
-          React.createElement('div', { className: 'widget-steps__value widget-steps__value--lg' },
-            steps.toLocaleString('ru-RU')
-          ),
-          showPercentage
-            ? React.createElement('div', { className: 'widget-steps__pct-badge', style: { background: `${stepsColor}20`, color: stepsColor } },
-              `${pct}%`
-            )
+    if (variantId === 'to_goal') {
+      // 2×1: цель в шапке, остаток назван числом рядом со значением.
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-steps' },
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('Шаги'),
+          React.createElement('span', { className: 'widget-v4-row__meta' }, `цель ${formatRuThousands(goal)}`)
+        ),
+        React.createElement('div', { className: 'widget-v4-steps__hero' },
+          React.createElement('span', {
+            className: 'widget-v4-steps__value ' + v4ValueStateClass(state)
+          }, hasData ? formatRuThousands(steps) : '—'),
+          hasData
+            ? React.createElement('span', { className: 'widget-v4-unit' }, `осталось ${formatRuThousands(remaining)}`)
             : null
         ),
-        // Прогресс-бар
-        showGoalBar
-          ? React.createElement('div', { className: 'widget-steps__progress' },
-            React.createElement('div', {
-              className: 'widget-steps__bar',
-              style: { width: `${Math.min(100, pct)}%`, background: stepsColor }
-            })
-          )
-          : null,
-        // Низ: километры + цель + осталось
-        React.createElement('div', { className: 'widget-steps__footer' },
-          showKm ? React.createElement('div', { className: 'widget-steps__km' }, `${km} км`) : null,
-          showRemaining
-            ? React.createElement('div', { className: 'widget-steps__meta' },
-              remaining > 0
-                ? `ещё ${remaining.toLocaleString('ru-RU')}`
-                : '🏆 Цель!'
-            )
-            : null
-        )
+        // Полосы при отсутствии данных нет: ноль не подставляется.
+        hasData ? v4StepsBar(pct, state) : null
       );
     }
 
-    // Остальные размеры
-    const showPctInline = d.isShort && showPercentage;
-
-    return React.createElement('div', { className: `widget-steps widget-steps--${variant}` },
-      React.createElement('div', { className: 'widget-steps__top' },
-        React.createElement('div', { className: 'widget-steps__value' }, steps.toLocaleString('ru-RU')),
-        showPctInline ? React.createElement('div', { className: 'widget-steps__pct' }, `${Math.min(999, pct)}%`) : null
-      ),
-      showKm ? React.createElement('div', { className: 'widget-steps__km' }, `${km} км`) : null,
-      showRemaining && !d.isShort ? React.createElement('div', { className: 'widget-steps__label' }, remaining > 0 ? `ещё ${remaining.toLocaleString('ru-RU')}` : 'цель достигнута') : null,
-      showGoalBar
-        ? React.createElement('div', { className: 'widget-steps__progress' },
-          React.createElement('div', {
-            className: 'widget-steps__bar',
-            style: { width: `${Math.min(100, pct)}%` }
-          })
-        )
-        : null
+    // 1×1 «Как сейчас»: подпись, число, полоса до цели.
+    return React.createElement('div', { className: 'widget-v4-mini widget-v4-steps widget-v4-steps--mini' },
+      v4Kicker('Шаги'),
+      React.createElement('span', {
+        className: 'widget-v4-steps__value ' + v4ValueStateClass(state)
+      }, hasData ? formatRuThousands(steps) : '—'),
+      hasData ? v4StepsBar(pct, state) : null
     );
+  }
+
+  function StepsWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'steps',
+      renderBody: (variantId, meta) => React.createElement(StepsVariantBody, {
+        variantId,
+        widget: meta?.widget || widget,
+        data,
+        meta
+      })
+    });
   }
 
   function MacrosVariantBody({ variantId, widget, data, meta = {} }) {
@@ -7921,6 +7910,39 @@
     );
   }
 
+  // Строк ожидания в каталоге — не больше двух (канвас v4, «сколько строк
+  // ожидания»): каталог обещаний обесценивает и обещания, и сам каталог.
+  const CATALOG_WAITING_LIMIT = 2;
+
+  /** «нужно 3 дня» вместо «нужно 3 дней»: число в строке живое. */
+  function ruDays(n) {
+    const count = Math.abs(Math.trunc(Number(n) || 0));
+    const tail = count % 100;
+    if (tail >= 11 && tail <= 14) return 'дней';
+    switch (count % 10) {
+      case 1: return 'день';
+      case 2:
+      case 3:
+      case 4: return 'дня';
+      default: return 'дней';
+    }
+  }
+
+  /**
+   * Виджету не хватает истории: сколько дней собрано и сколько нужно.
+   * Возвращает null, если виджет работает с первого дня.
+   */
+  function waitingHistory(type) {
+    const need = Number(type?.needsHistoryDays);
+    if (!Number.isFinite(need) || need <= 0) return null;
+    const data = HEYS.Widgets.data?.getWidgetData?.({ type: type.type, settings: {} });
+    // Нет счётчика — значит истории ещё не набралось: у нового человека это
+    // честный ноль, а не повод спрятать строку.
+    const have = Math.max(0, Number(data?.daysWithData) || 0);
+    if (have >= need) return null;
+    return { need, have };
+  }
+
   // === Catalog Modal Component ===
   function CatalogStrip({ onSelect, existingTypes, selectedDate }) {
     const registry = HEYS.Widgets.registry;
@@ -7928,20 +7950,27 @@
     const existingTypeSet = existingTypes instanceof Set ? existingTypes : new Set(existingTypes || []);
 
     // Уже стоящие на экране в каталоге не показываются: серая строка «уже
-    // добавлен» заставляла искать плитку глазами (канвас v4, строка 54).
-    // Виджеты, чей вид ещё не сведён с канвасом, стоят в конце погашенными:
-    // кадр «Главная · расстановка» показывает их именно так.
-    const catalogTypes = availableTypes
-      .filter((type) => !existingTypeSet.has(type.type))
-      .slice()
-      .sort((a, b) => (a.inDevelopment ? 1 : 0) - (b.inDevelopment ? 1 : 0));
+    // добавлен» заставляла искать плитку глазами (канвас v4, строка «каталог»).
+    const shown = availableTypes.filter((type) => !existingTypeSet.has(type.type));
+
+    // Строки ожидания идут после готовых виджетов и их не больше двух:
+    // каталог обещаний обесценивает и обещания, и каталог (строка «сколько
+    // строк ожидания»).
+    const waiting = shown
+      .filter((type) => type.comingSoon || waitingHistory(type))
+      .slice(0, CATALOG_WAITING_LIMIT);
+    const ready = shown.filter((type) => !waiting.includes(type));
+    const catalogTypes = [...ready, ...waiting];
     if (!catalogTypes.length) return null;
 
     return React.createElement('div', { className: 'widget-v4-catalog' },
       React.createElement('div', { className: 'widget-v4-catalog__tier' }, 'Каталог'),
       React.createElement('div', { className: 'widget-v4-catalog__grid' },
         catalogTypes.map((type) => {
-          if (type.inDevelopment) {
+          // «Готовится»: строка в полную яркость, пилюля «скоро» и одна строка
+          // о том, что виджет покажет. Ни превью, ни даты, ни кнопки — нажатие
+          // ничего не делает (строки «готовится» и «готовится · чего нет»).
+          if (type.comingSoon) {
             return React.createElement('span', {
               key: type.type,
               className: 'widget-v4-catalog__item widget-v4-catalog__item--soon',
@@ -7949,8 +7978,41 @@
             },
               React.createElement('span', { className: 'widget-v4-catalog__row' },
                 React.createElement('span', { className: 'widget-v4-catalog__name' }, type.name),
-                React.createElement('span', { className: 'widget-v4-catalog__hint' }, 'в разработке')
-              )
+                React.createElement('span', { className: 'widget-v4-catalog__pill' }, 'скоро')
+              ),
+              type.comingSoon.about
+                ? React.createElement('span', { className: 'widget-v4-catalog__about' }, type.comingSoon.about)
+                : null
+            );
+          }
+
+          // «Мало истории»: то же правило, что у видов — приглушено, справа
+          // «нужно N дней» и прогресс под названием, но добавить можно: плитка
+          // встанет и покажет ту же подпись вместо графика.
+          const history = waitingHistory(type);
+          if (history) {
+            return React.createElement('button', {
+              key: type.type,
+              type: 'button',
+              className: 'widget-v4-catalog__item widget-v4-catalog__item--waiting',
+              onClick: () => {
+                onSelect?.(type);
+                HEYS.Widgets.emit('catalog:select', { type: type.type });
+              }
+            },
+              React.createElement('span', { className: 'widget-v4-catalog__row' },
+                React.createElement('span', { className: 'widget-v4-catalog__name' }, type.name),
+                React.createElement('span', { className: 'widget-v4-catalog__need' },
+                  React.createElement('span', { className: 'widget-v4-catalog__hint' }, `нужно ${history.need} ${ruDays(history.need)}`),
+                  React.createElement('svg', {
+                    width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
+                    stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+                    'aria-hidden': 'true'
+                  }, React.createElement('path', { d: 'M12 5v14M5 12h14' }))
+                )
+              ),
+              React.createElement('span', { className: 'widget-v4-catalog__about' },
+                `собрано ${history.have} из ${history.need}`)
             );
           }
 
@@ -7983,14 +8045,13 @@
                 selectedDate
               })
             ),
-            React.createElement('span', { className: 'widget-v4-catalog__row' },
-              React.createElement('span', { className: 'widget-v4-catalog__name' }, type.name),
-              React.createElement('svg', {
-                width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
-                stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
-                'aria-hidden': 'true'
-              }, React.createElement('path', { d: 'M12 5v14M5 12h14' }))
-            )
+            React.createElement('svg', {
+              width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+              className: 'widget-v4-catalog__plus',
+              'aria-hidden': 'true'
+            }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
+            React.createElement('span', { className: 'sr-only' }, type.name)
           );
         })
       )

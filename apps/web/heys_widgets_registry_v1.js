@@ -244,9 +244,9 @@
     insulin: {
       type: 'insulin',
       name: 'Инсулин',
-      // Вид не сведён с канвасом v4: в каталоге строка гасится подписью
-      // «в разработке», добавить плитку нельзя (решение владельца 2026-08-21).
-      inDevelopment: true,
+      // Снят с продукта (контракт home-widgets, «снято с продукта · инсулин»):
+      // его данные целиком показывает вид «Инсулиновая волна · Текущая волна».
+      retired: true,
       category: 'nutrition',
       icon: '📈',
       description: 'Таймер инсулиновой волны',
@@ -279,6 +279,11 @@
 
     healthTrend: {
       type: 'healthTrend',
+      // Тренду нужно накопить историю: в каталоге строка приглушается и
+      // показывает «нужно 3 дня / собрано M из 3» (контракт home-widgets,
+      // «мало истории у виджета»). Добавить можно — плитка покажет ту же
+      // подпись вместо графика.
+      needsHistoryDays: 3,
       name: 'Тренд здоровья',
       category: 'health',
       icon: '🌿',
@@ -467,9 +472,6 @@
     steps: {
       type: 'steps',
       name: 'Шаги',
-      // Вид не сведён с канвасом v4: в каталоге строка гасится подписью
-      // «в разработке», добавить плитку нельзя (решение владельца 2026-08-21).
-      inDevelopment: true,
       category: 'health',
       icon: '👟',
       description: 'Шаги за день',
@@ -480,7 +482,6 @@
       scalableElements: SCALABLE_ELEMENTS.steps,
       settings: {
         showGoal: { type: 'boolean', default: true, label: 'Показывать цель' },
-        showKilometers: { type: 'boolean', default: false, label: 'Показывать км' },
         showPercentage: { type: 'boolean', default: true, label: 'Показывать %' },
         showRemaining: { type: 'boolean', default: true, label: 'Показывать остаток' }
       },
@@ -493,9 +494,9 @@
     streak: {
       type: 'streak',
       name: 'Streak',
-      // Вид не сведён с канвасом v4: в каталоге строка гасится подписью
-      // «в разработке», добавить плитку нельзя (решение владельца 2026-08-21).
-      inDevelopment: true,
+      // Снят с продукта (контракт «снято с продукта · streak»): серию
+      // показывает вид «Тепловая карта · Серия» 1×1.
+      retired: true,
       category: 'motivation',
       icon: '🔥',
       description: 'Серия дней в норме',
@@ -541,9 +542,9 @@
     cascade: {
       type: 'cascade',
       name: 'Каскад',
-      // Вид не сведён с канвасом v4: в каталоге строка гасится подписью
-      // «в разработке», добавить плитку нельзя (решение владельца 2026-08-21).
-      inDevelopment: true,
+      // Снят с продукта (контракт «снято с продукта · каскад»): «Каскад» —
+      // блок «Инсайтов», на Главную не переезжает.
+      retired: true,
       category: 'motivation',
       icon: '⚡',
       description: 'Позитивный каскад: точки событий и badge с динамикой CRS',
@@ -708,6 +709,9 @@
     getAvailableTypes() {
       return Object.values(WIDGET_TYPES).filter(widgetType => {
         if (widgetType.hidden) return false;
+        // Снятый с продукта тип не показывается и не добавляется: его данные
+        // живут в другом виджете (контракт home-widgets, «снято с продукта · …»).
+        if (widgetType.retired) return false;
         if (typeof widgetType.requiresCondition === 'function') {
           return widgetType.requiresCondition();
         }

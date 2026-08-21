@@ -22,13 +22,15 @@ const originalHEYS = window.HEYS;
 
 const TYPES = [
   { type: 'insulinWave', name: 'Инсулиновая волна', defaultSize: '2x2' },
-  // Вид не сведён с канвасом — строка гасится подписью «в разработке».
-  { type: 'streak', name: 'Streak', defaultSize: '1x1', inDevelopment: true },
+  // Виджета ещё нет — строка ожидания «скоро» с обещанием, без превью.
+  { type: 'restPulse', name: 'Пульс покоя', defaultSize: '1x1', comingSoon: { about: 'утренний пульс и его тренд' } },
+  // Виджет есть, но истории мало: приглушён, показывает прогресс, добавить можно.
+  { type: 'healthTrend', name: 'Тренд здоровья', defaultSize: '2x2', needsHistoryDays: 3 },
   { type: 'water', name: 'Вода', defaultSize: '1x1' },
   { type: 'macros', name: 'Кольца БЖУ', defaultSize: '3x2' }
 ];
 
-const READY_TYPES = TYPES.filter((t) => !t.inDevelopment);
+const READY_TYPES = TYPES.filter((t) => !t.comingSoon && !t.needsHistoryDays);
 
 const SIZES = {
   '1x1': { cols: 1, rows: 1 },
@@ -59,7 +61,9 @@ function loadCatalogStrip() {
       // Живые данные дня: тот же слой, из которого читает плитка на Главной.
       data: {
         getInsulinWaveData: () => ({ hasData: true, mealCount: 3 }),
-        getWaterData: () => ({ hasData: true, drunk: 1700, target: 2700 })
+        getWaterData: () => ({ hasData: true, drunk: 1700, target: 2700 }),
+        // Столько дней истории собрано — из этого каталог считает прогресс.
+        getWidgetData: ({ type }) => (type === 'healthTrend' ? { daysWithData: 1 } : {})
       },
       VariantsV4: {
         getCatalog: (type) => (type === 'insulinWave'
@@ -137,6 +141,8 @@ describe('каталог расстановки: превью — настоящ
     const card = wave.closest('button');
     expect(card).toBeTruthy();
     expect(card.className).toContain('widget-v4-catalog__item');
+    // Название несёт сама плитка: второго ярлыка рядом с превью нет.
+    expect(card.querySelector('.widget-v4-catalog__name')).toBeNull();
   });
 
   it('уже стоящие на экране виджеты в каталоге не показываются', () => {
@@ -145,21 +151,44 @@ describe('каталог расстановки: превью — настоящ
     expect(container.querySelectorAll('.widget-v4-catalog__item').length).toBe(TYPES.length - 1);
   });
 
-  it('виджет с несведённым видом гасится подписью «в разработке» и стоит в конце', () => {
+  it('«скоро»: полная яркость, пилюля и обещание, без превью и без нажатия', () => {
     const { container } = renderCatalog();
-    const items = [...container.querySelectorAll('.widget-v4-catalog__item')];
     const soon = container.querySelector('.widget-v4-catalog__item--soon');
 
     expect(soon).toBeTruthy();
-    expect(soon.textContent).toContain('Streak');
-    expect(soon.textContent).toContain('в разработке');
-    // Превью у него нет: рисовать нечего, вид не сведён.
+    expect(soon.textContent).toContain('Пульс покоя');
+    expect(soon.querySelector('.widget-v4-catalog__pill').textContent).toBe('скоро');
+    expect(soon.querySelector('.widget-v4-catalog__about').textContent).toBe('утренний пульс и его тренд');
+    // Ни превью, ни даты, ни «в разработке» — язык команды сюда не попадает.
     expect(soon.querySelector('.widget-v4-catalog__preview')).toBeNull();
-    // Нажать нельзя — это не кнопка.
+    expect(soon.textContent).not.toContain('в разработке');
+    // Нажатие ничего не делает: это не кнопка.
     expect(soon.tagName).not.toBe('BUTTON');
     expect(soon.getAttribute('aria-disabled')).toBe('true');
-    // Стоит последним, чтобы не разбивать готовые плитки.
-    expect(items[items.length - 1]).toBe(soon);
+  });
+
+  it('«мало истории»: приглушено, прогресс собран, но добавить можно', () => {
+    const { container } = renderCatalog();
+    const waiting = container.querySelector('.widget-v4-catalog__item--waiting');
+
+    expect(waiting).toBeTruthy();
+    expect(waiting.textContent).toContain('Тренд здоровья');
+    expect(waiting.textContent).toContain('нужно 3 дня');
+    expect(waiting.textContent).toContain('собрано 1 из 3');
+    // Здесь ждут не нас, а человека — плитку можно поставить заранее.
+    expect(waiting.tagName).toBe('BUTTON');
+    expect(waiting.querySelector('svg')).toBeTruthy();
+  });
+
+  it('строки ожидания идут последними и их не больше двух', () => {
+    const { container } = renderCatalog();
+    const items = [...container.querySelectorAll('.widget-v4-catalog__item')];
+    const waitingCount = items.filter((el) => /--soon|--waiting/.test(el.className)).length;
+
+    expect(waitingCount).toBe(2);
+    expect(/--soon|--waiting/.test(items[items.length - 1].className)).toBe(true);
+    expect(/--soon|--waiting/.test(items[items.length - 2].className)).toBe(true);
+    expect(/--soon|--waiting/.test(items[0].className)).toBe(false);
   });
 
   it('когда добавлены все виджеты, каталог не рисует пустую полосу', () => {
