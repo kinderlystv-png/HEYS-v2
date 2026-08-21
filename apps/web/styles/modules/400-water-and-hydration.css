@@ -9,14 +9,12 @@
 
 /* === 01. Карточка воды в «Разборе дня» === */
 
-/* Канвас water-add.v4.dc.html, кадры «Вода · карточка · Полоса | Полоса · утро | Кольцо».
-   Контракт [data-contract="water-add"]: строки 44–51, 55–59, 61.
+/* Канвас water-add.v4.dc.html, кадр «Вода · карточка · Кольцо».
+   Вид один: «Полоса» снята ревью 22 августа, переключателя вида нет.
    Внешний контейнер — .compact-card дневника; здесь только содержимое карточки. */
 
-.water-review,
-.water-review-switch {
+.water-review {
   --wr-deep: #4e6d7a;
-  --wr-spark-off: #5d7f8d;
   --wr-on-deep: #fffaf1;
   --wr-chip-fill: #4e6d7a;
   --wr-chip-text: #fffaf1;
@@ -26,18 +24,15 @@
   --wr-divider: rgba(0, 0, 0, 0.07);
 }
 
-/* Подложка есть только у карточки: ряд переключателя стоит на фоне страницы.
-   Фолбэк = значение роли в классике (#ffffff); песочные и синие берут свой
+/* Фолбэк = значение роли в классике (#ffffff); песочные и синие берут свой
    --v4-surface: #f7efe2 / #23201b / #eef3f9 / #182a3a — как на канвасе. */
 .water-review {
   display: block;
   background: var(--v4-surface, #ffffff);
 }
 
-[data-theme$="dark"] .water-review,
-[data-theme$="dark"] .water-review-switch {
+[data-theme$="dark"] .water-review {
   --wr-deep: #3f6c7e;
-  --wr-spark-off: #7ba3b4;
   --wr-on-deep: #f2ede6;
   /* Контракт 56: на тёмных подложках чип берёт базовый тон, не глубокий. */
   --wr-chip-fill: #8fb3c2;
@@ -48,10 +43,8 @@
   --wr-divider: rgba(255, 255, 255, 0.12);
 }
 
-html[data-theme-id="blue"] .water-review,
-html[data-theme-id="blue"] .water-review-switch {
+html[data-theme-id="blue"] .water-review {
   --wr-deep: #2c5f76;
-  --wr-spark-off: #4a86a4;
   --wr-on-deep: #ffffff;
   --wr-chip-fill: #2c5f76;
   --wr-chip-text: #ffffff;
@@ -61,10 +54,8 @@ html[data-theme-id="blue"] .water-review-switch {
   --wr-divider: rgba(16, 24, 38, 0.07);
 }
 
-html[data-theme-id="blue-dark"] .water-review,
-html[data-theme-id="blue-dark"] .water-review-switch {
+html[data-theme-id="blue-dark"] .water-review {
   --wr-deep: #35657d;
-  --wr-spark-off: #6ba3bf;
   --wr-on-deep: #eef3f8;
   --wr-chip-fill: #7fb6d0;
   --wr-chip-text: #0d1a26;
@@ -123,46 +114,6 @@ html[data-theme-id="blue-dark"] .water-review-switch {
 .water-review__left {
   font: 600 10px/1 Figtree, system-ui, sans-serif;
   color: var(--wr-dim);
-}
-
-/* --- Полоса за сегодня --- */
-.water-review__bar {
-  position: relative;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--wr-track);
-  margin-top: 11px;
-  overflow: hidden;
-}
-
-.water-review__bar-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  border-radius: 999px;
-  background: var(--wr-deep);
-  transition: width 320ms ease-in-out;
-}
-
-/* --- Неделя столбиками: сегодня всегда правый --- */
-.water-review__spark {
-  display: flex;
-  align-items: flex-end;
-  gap: 5px;
-  height: 30px;
-  margin-top: 13px;
-}
-
-.water-review__spark-bar {
-  flex: 1;
-  border-radius: 3px;
-  background: var(--wr-spark-off);
-  transition: height 320ms ease-in-out;
-}
-
-.water-review__spark-bar--today {
-  background: var(--wr-deep);
 }
 
 /* --- Подвал: среднее и объёмы --- */
@@ -231,51 +182,6 @@ html[data-theme-id="blue-dark"] .water-review-switch {
   opacity: 0.32;
   cursor: default;
   pointer-events: none;
-}
-
-/* --- Переключатель вида: отдельный ряд под карточкой --- */
-/* Контракт 49: вне карточки, под ней, по её левому краю, без подложки и
-   разделителя. Отступы намеренно неравные — 8 px до своей карточки и 20 px до
-   следующего блока, чтобы привязка читалась глазом. */
-.water-review-switch {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 2px;
-  margin: 8px 0 20px;
-  padding: 0 2px;
-  background: none;
-}
-
-.water-review__view {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  height: 26px;
-  padding: 0 11px;
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--wr-dim);
-  font: 600 10px/1 Figtree, system-ui, sans-serif;
-  white-space: nowrap;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-/* Цель касания 44 pt при видимой высоте 26 px (контракт 47). */
-.water-review__view::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -9px;
-  bottom: -9px;
-}
-
-.water-review__view.is-on {
-  background: var(--wr-deep);
-  color: var(--wr-on-deep);
 }
 
 /* --- Вид «Кольцо» --- */
@@ -359,8 +265,6 @@ html[data-theme-id="blue-dark"] .water-review-switch {
 
 @media (prefers-reduced-motion: reduce) {
 
-  .water-review__bar-fill,
-  .water-review__spark-bar,
   .water-review__ring-fill {
     transition-duration: 160ms;
   }

@@ -240,8 +240,7 @@ describe('HEYS.dayDayHandlers water persistence', () => {
   });
 
   it('чип объёма в карточке зовёт addWater сразу', () => {
-    // Вид «Полоса» задаём явно: дефолт карточки — «Кольцо».
-    localStorage.setItem('heys_water_card_view_v1', 'bar');
+    // Вид один — «Кольцо»: «Полоса» снята ревью 22 августа.
     global.HEYS = {
       utils: { lsGet: vi.fn(() => null) },
       dayUtils: { lsGet: vi.fn(() => null) }
@@ -267,10 +266,10 @@ describe('HEYS.dayDayHandlers water persistence', () => {
     });
 
     const { container } = render(element);
-    const chip = container.querySelector('.water-review__chip--add');
-    expect(chip).toBeTruthy();
+    const chips = container.querySelectorAll('.water-review__chip--quick');
+    expect(chips.length).toBe(4);
 
-    fireEvent.click(chip);
+    fireEvent.click(chips[1]);
 
     expect(addWater).toHaveBeenCalledTimes(1);
     expect(addWater).toHaveBeenCalledWith(200, expect.objectContaining({

@@ -1,16 +1,13 @@
 // heys_day_water_v1.js — карточка воды в «Разборе дня» (вкладка «Питание»)
-// Канвас: water-add.v4.dc.html, кадры «Вода · карточка · Полоса | Полоса · утро | Кольцо».
+// Канвас: water-add.v4.dc.html, кадр «Вода · карточка · Кольцо».
+// Вид один: «Полоса» снята с продукта ревью 22 августа, её кадры остались
+// протоколом сравнения. Переключателя вида нет — переключать нечего.
 // Контракт [data-contract="water-add"]: строки 13, 35, 42–52, 55–61, 64.
 
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
 
   const WEEK_DAYS = 7;
-
-  // Вид карточки — своя настройка на человека и на устройство (контракт 48).
-  const VIEW_STORAGE_KEY = 'heys_water_card_view_v1';
-  const VIEW_BAR = 'bar';
-  const VIEW_RING = 'ring';
 
   // Кольцо (контракт 44): 58 × 58, r 24, обводка 6.
   const RING_RADIUS = 24;
@@ -25,8 +22,7 @@
   const CURVE_GOAL_Y = 12;
   const CURVE_TOP_Y = 4;
 
-  // Наборы объёмов: «Полоса» — контракт 58, «Кольцо» — контракт 50.
-  const BAR_VOLUMES = [200, 500];
+  // Объёмы «Кольца» — строка контракта «вид карточки»: четыре готовых.
   const RING_VOLUMES = [100, 200, 330, 500];
   const MINUS_VOLUME = 200;
 
@@ -45,27 +41,6 @@
     } catch (_error) {
       return fallbackValue;
     }
-  }
-
-  function viewStorageKey() {
-    const clientId = HEYS?.currentClientId;
-    return clientId ? VIEW_STORAGE_KEY + '__' + clientId : VIEW_STORAGE_KEY;
-  }
-
-  // Настройка живёт на устройстве: прямой localStorage, без облачной синхронизации.
-  // Дефолт — «Кольцо» (решение владельца 2026-08-20; в канвасе дефолтом стоит «Полоса»).
-  function readCardView() {
-    try {
-      return localStorage.getItem(viewStorageKey()) === VIEW_BAR ? VIEW_BAR : VIEW_RING;
-    } catch (_error) {
-      return VIEW_RING;
-    }
-  }
-
-  function writeCardView(view) {
-    try {
-      localStorage.setItem(viewStorageKey(), view === VIEW_BAR ? VIEW_BAR : VIEW_RING);
-    } catch (_error) { /* приватный режим — вид останется дефолтным */ }
   }
 
   function buildWeekSeries(day, waterGoal) {
@@ -97,16 +72,10 @@
     return ((Math.max(0, Number(ml) || 0)) / 1000).toFixed(1).replace('.', ',');
   }
 
-  // Факт: ноль пишем «0», а не «0,0» — кадр «Полоса · утро».
+  // Факт: ноль пишем «0», а не «0,0».
   function formatFact(ml) {
     const value = Math.max(0, Number(ml) || 0);
     return value > 0 ? formatLiters(value) : '0';
-  }
-
-  function barHeight(ratio) {
-    // Нулевой день — полоска 2 px, а не пустота (контракт 35).
-    if (!(ratio > 0)) return '2px';
-    return (Math.min(1, ratio) * 100) + '%';
   }
 
   function curvePoint(item, index) {
@@ -131,14 +100,8 @@
     const factEl = cardEl.querySelector('.water-review__fact-value');
     if (factEl) factEl.textContent = formatFact(value);
 
-    const barFill = cardEl.querySelector('.water-review__bar-fill');
-    if (barFill) barFill.style.width = Math.min(100, ratio * 100) + '%';
-
     const leftEl = cardEl.querySelector('.water-review__left');
     if (leftEl) leftEl.textContent = left;
-
-    const todayBar = cardEl.querySelector('.water-review__spark-bar--today');
-    if (todayBar) todayBar.style.height = barHeight(ratio);
 
     const ringFill = cardEl.querySelector('.water-review__ring-fill');
     if (ringFill) {
@@ -164,19 +127,6 @@
   function getWaterReviewComponent(React) {
     if (_WaterReviewCard) return _WaterReviewCard;
 
-    function ViewSwitch({ view, onSelect }) {
-      // Ряд стоит под карточкой, а не в её теле: внутри он спорил с содержимым.
-      return React.createElement('div', { className: 'water-review-switch' },
-        [VIEW_BAR, VIEW_RING].map((id) => React.createElement('button', {
-          key: id,
-          type: 'button',
-          className: 'water-review__view' + (view === id ? ' is-on' : ''),
-          'aria-pressed': view === id,
-          onClick: () => onSelect(id)
-        }, id === VIEW_BAR ? 'Полоса' : 'Кольцо'))
-      );
-    }
-
     function VolumeChip({ ml, kind, extraClass, disabled, onPick }) {
       return React.createElement('button', {
         type: 'button',
@@ -194,21 +144,12 @@
         addWater, removeWater, haptic, openExclusivePopup
       } = props;
 
-      const [view, setView] = React.useState(readCardView);
-
       const goal = Math.max(1, Number(waterGoal) || 2000);
       const waterMl = Math.max(0, Number(day?.waterMl) || 0);
       const ratio = waterMl / goal;
       const week = buildWeekSeries(day, goal);
       const canRemove = waterMl > 0;
       const leftText = 'осталось ' + formatLiters(Math.max(0, goal - waterMl));
-
-      const selectView = (nextView) => {
-        if (nextView === view) return;
-        setView(nextView);
-        writeCardView(nextView);
-        haptic?.('light');
-      };
 
       const pickAdd = (ml, event) => {
         addWater?.(ml, {
@@ -250,12 +191,12 @@
 
       const cardProps = {
         id: 'water-card',
-        className: 'water-review water-review--' + view
+        className: 'water-review water-review--ring'
           + ' compact-card widget-shadow-diary-glass widget-outline-diary-glass',
         'aria-label': 'Вода: ' + formatFact(waterMl) + ' л из ' + formatLiters(goal) + ' л'
       };
 
-      if (view === VIEW_RING) {
+      {
         const points = week.series.map(curvePoint);
         const linePoints = points.map((point) => point.x + ',' + point.y).join(' ');
         const areaPath = 'M ' + points.map((point) => point.x + ' ' + point.y).join(' L ')
@@ -350,62 +291,9 @@
           ),
         );
 
-        return React.createElement(React.Fragment, null,
-          ringCard,
-          React.createElement(ViewSwitch, { view, onSelect: selectView })
-        );
+        return ringCard;
       }
 
-      const barCard = React.createElement('div', cardProps,
-        React.createElement('div', { className: 'water-review__top' },
-          React.createElement('span', { className: 'water-review__kicker' }, 'Вода'),
-          React.createElement('span', { className: 'water-review__norm' }, 'из ' + formatLiters(goal) + ' л')
-        ),
-        React.createElement('div', {
-          className: 'water-review__fact',
-          role: 'button',
-          tabIndex: 0,
-          onClick: openDetails
-        },
-          React.createElement('b', { className: 'water-review__fact-big' },
-            React.createElement('span', { className: 'water-review__fact-value' }, formatFact(waterMl)),
-            React.createElement('i', { className: 'water-review__fact-unit' }, 'л')
-          ),
-          React.createElement('span', { className: 'water-review__left' }, leftText)
-        ),
-        React.createElement('div', { className: 'water-review__bar' },
-          React.createElement('i', {
-            className: 'water-review__bar-fill',
-            style: { width: Math.min(100, ratio * 100) + '%' }
-          })
-        ),
-        React.createElement('div', {
-          className: 'water-review__spark',
-          'aria-label': 'Вода за 7 дней, в среднем ' + formatLiters(week.avgMl) + ' л'
-        },
-          week.series.map((item) => React.createElement('i', {
-            key: item.iso,
-            className: 'water-review__spark-bar' + (item.isToday ? ' water-review__spark-bar--today' : ''),
-            style: { height: barHeight(item.ratio) }
-          }))
-        ),
-        React.createElement('div', { className: 'water-review__foot' },
-          React.createElement('span', { className: 'water-review__avg' },
-            'в среднем ' + formatLiters(week.avgMl) + ' л'
-          ),
-          React.createElement('span', { className: 'water-review__chips' },
-            minusChip,
-            BAR_VOLUMES.map((ml) => React.createElement(VolumeChip, {
-              key: ml, ml, kind: 'add', onPick: pickAdd
-            }))
-          )
-        )
-      );
-
-      return React.createElement(React.Fragment, null,
-        barCard,
-        React.createElement(ViewSwitch, { view, onSelect: selectView })
-      );
     };
 
     return _WaterReviewCard;
@@ -439,7 +327,7 @@
   HEYS.dayWater = {
     render: renderWaterCard,
     applyOptimistic,
-    _test: { buildWeekSeries, formatLiters, formatFact, barHeight, curvePoint, VIEW_BAR, VIEW_RING }
+    _test: { buildWeekSeries, formatLiters, formatFact, curvePoint }
   };
 
 })(window);
