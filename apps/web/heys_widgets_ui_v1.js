@@ -9435,7 +9435,12 @@
         selectedDate
       }),
 
-      isEditMode && catalogOpen && React.createElement(RecommendedScreenBlock, {
+      // Виден всю расстановку, а не только при раскрытом каталоге: путь назад
+      // к дефолту нельзя прятать за «Добавить» — человек ищет его как раз тогда,
+      // когда добавлять ничего не собирается. Порядок из контракта («между
+      // каталогом и пустым состоянием») сохраняется: с раскрытым каталогом блок
+      // идёт после него, с закрытым — сразу под сеткой.
+      isEditMode && React.createElement(RecommendedScreenBlock, {
         onReset: handleResetLayout
       }),
 

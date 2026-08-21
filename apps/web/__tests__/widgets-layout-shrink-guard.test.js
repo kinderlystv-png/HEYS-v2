@@ -222,6 +222,19 @@ describe('дефолтный набор · контракт home-widgets', () =>
 });
 
 describe('сброс к рекомендуемому экрану', () => {
+  // Блок «Рекомендуемый экран» должен быть виден всю расстановку. 22 августа
+  // он был привязан к раскрытому каталогу — и человек кнопку просто не нашёл:
+  // её ищут как раз тогда, когда добавлять ничего не собираются.
+  it('блок сброса не спрятан за раскрытым каталогом', () => {
+    const ui = fs.readFileSync(path.resolve(__dirname, '../heys_widgets_ui_v1.js'), 'utf8');
+    const at = ui.indexOf('React.createElement(RecommendedScreenBlock');
+    expect(at).toBeGreaterThan(-1);
+    const lineStart = ui.lastIndexOf(String.fromCharCode(10), at);
+    const line = ui.slice(lineStart, at);
+    expect(line).toContain('isEditMode');
+    expect(line).not.toContain('catalogOpen');
+  });
+
   beforeEach(() => {
     localStorage.clear();
     delete window.HEYS;
