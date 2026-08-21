@@ -122,9 +122,17 @@ describe('safeGetStreak переживает размонтирование вк
 
 describe('второго алгоритма серии в приложении не осталось', () => {
   it('step-modal больше не считает «дни, где хоть что-то записано»', () => {
-    const src = fs.readFileSync(path.join(repoRoot, 'apps/web/heys_step_modal_v1.js'), 'utf8');
+    // Переводы строк нормализуем: в рабочем дереве на Windows файл лежит с CRLF,
+    // и срез по концу тела не находится — тело схлопывалось в три символа, а тест
+    // краснел на верном коде.
+    const src = fs
+      .readFileSync(path.join(repoRoot, 'apps/web/heys_step_modal_v1.js'), 'utf8')
+      .replace(/\r\n/g, '\n');
     const fn = src.slice(src.indexOf('function getCurrentStreak()'));
-    const body = fn.slice(0, fn.indexOf('\n  }\n') + 4);
+    const end = fn.indexOf('\n  }\n');
+    // Границу обязаны найти: иначе проверяем не тело функции, а обрывок.
+    expect(end, 'тело getCurrentStreak не выделилось — изменилась разметка файла').toBeGreaterThan(0);
+    const body = fn.slice(0, end + 4);
 
     // Признаки старого алгоритма: собственный цикл по 30 дням, UTC-дата и
     // условие «есть meals» вместо калорий и зон.
