@@ -77,6 +77,18 @@ function overlay(secrets) {
   return applied;
 }
 
+// Ключи, без которых экземпляр бесполезен: если сейф их не отдал, помнить такой
+// результат нельзя — следующий запрос должен сходить в сейф заново, а не
+// наследовать сломанное окружение до конца жизни экземпляра.
+const REQUIRED_WHEN_CONFIGURED = { db: ['PG_PASSWORD'] };
+
+function missingRequired(kind) {
+  return (REQUIRED_WHEN_CONFIGURED[kind] || []).filter((key) => {
+    const value = process.env[key];
+    return !value || PLACEHOLDER_RE().test(String(value));
+  });
+}
+
 async function initSecrets() {
   if (initPromise) return initPromise;
 
@@ -91,22 +103,31 @@ async function initSecrets() {
       return { db: 0, app: 0, s3: 0, stripped: 0, source: 'env-only' };
     }
 
-    // Сначала стираем плейсхолдеры, потом overlay Lockbox-значениями.
-    const stripped = stripPlaceholders();
-
+    // ПОРЯДОК ВАЖЕН: сначала сходить в сейф, потом заменить, и только потом
+    // стереть то, что сейф не отдал.
+    //
+    // Раньше плейсхолдеры стирались ПЕРВОЙ строкой, до похода в сейф. Между
+    // стиранием и ответом сейфа лежит сетевой вызов — всё это время пароля в
+    // окружении нет вовсе. Кто прочитает его в этом окне, получит пустую
+    // строку, а база на пустой пароль отвечает «incorrect password», и разбор
+    // уходит в сторону смены пароля (инцидент 21.08.2026, 13:59–14:06).
     const [dbSecrets, appSecrets, s3Secrets] = await Promise.all([
       dbId ? getSecret(dbId) : Promise.resolve(null),
       appId ? getSecret(appId) : Promise.resolve(null),
       s3Id ? getSecret(s3Id) : Promise.resolve(null),
     ]);
 
-    const result = {
+    const applied = {
       db: overlay(dbSecrets),
       app: overlay(appSecrets),
       s3: overlay(s3Secrets),
-      stripped,
-      source: 'lockbox+env',
     };
+
+    // Плейсхолдеры, которые сейф так и не заменил, стираем: иначе downstream
+    // примет `__IN_LOCKBOX__…` за валидное значение и подпишет им webhook.
+    const stripped = stripPlaceholders();
+
+    const result = { ...applied, stripped, source: 'lockbox+env' };
 
     console.log('[secrets] init complete',
       JSON.stringify({
@@ -119,8 +140,19 @@ async function initSecrets() {
         s3Configured: !!s3Id,
       }));
 
+    // Сейф настроен, но обязательного ключа так и нет — результат не помним.
+    const missing = dbId ? missingRequired('db') : [];
+    if (missing.length) {
+      console.error('[secrets] init incomplete — сейф не отдал:', missing.join(', '),
+        '— следующий запрос попробует снова');
+      initPromise = null;
+    }
+
     return result;
   })();
+
+  // Ошибка похода в сейф тоже не должна застревать в памяти экземпляра.
+  initPromise.catch(() => { initPromise = null; });
 
   return initPromise;
 }

@@ -73,6 +73,22 @@ function loadCACert() {
 /**
  * Создаёт конфигурацию PostgreSQL из env переменных
  */
+// Пустой пароль нельзя нести в базу: odyssey отвечает на него «incorrect
+// password», и разбор уходит в сторону смены пароля вместо настоящей причины —
+// того, что секрет ещё не приехал из сейфа (инцидент 21.08.2026). Пусть лучше
+// упадёт здесь и назовёт себя. Плейсхолдер `__IN_LOCKBOX__…` — тот же случай.
+function requirePassword() {
+  const value = process.env.PG_PASSWORD;
+  if (!value || /^__IN_LOCKBOX__/.test(String(value))) {
+    throw new Error(
+      '[db-pool] PG_PASSWORD пуст или остался плейсхолдером — секрет не приехал '
+      + 'из Lockbox. Пул не создаём: initSecrets() должен отработать до первого '
+      + 'обращения к базе.',
+    );
+  }
+  return value;
+}
+
 function createPoolConfig() {
   const CA_CERT = loadCACert();
 
@@ -81,7 +97,7 @@ function createPoolConfig() {
     port: parseInt(process.env.PG_PORT || '6432'),
     database: process.env.PG_DATABASE || 'heys_production',
     user: process.env.PG_USER || 'heys_admin',
-    password: process.env.PG_PASSWORD,
+    password: requirePassword(),
 
     // SSL configuration
     ssl: CA_CERT ? {
