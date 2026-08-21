@@ -3331,3 +3331,122 @@ test('нагрузка по пульсу, названная уборкой, п�
 
   assert.equal(res.structured.total_minutes, 40);
 });
+
+
+// ── Один вызов на одну реплику: meals[], new_product, серверный гейт, вода ──
+// Замер 21.08.2026 (tasks_mcp_trace): запись ужина из трёх приёмов = 14 вызовов
+// и 131 с пауз между кругами модели при 13 с работы сервера. Ждут не сервер, а
+// круги — поэтому batched-формы и серверный гейт.
+
+test('meals[] пишет несколько приёмов одной записью дня', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] } });
+  const res = await build(api).heys_log_meal({
+    date: '2026-08-01',
+    meals: [
+      { time: '22:10', items: [{ product_id: 'own-americano', grams: 100 }] },
+      { time: '23:15', items: [{ product_id: 'own-americano', grams: 50 }] },
+      { time: '00:11', name: 'Поздний перекус', items: [{ product_id: 'own-americano', grams: 200 }] },
+    ],
+  });
+
+  assert.equal(res.structured.meals.length, 3);
+  assert.equal(res.structured.day_after.meals, 3);
+  // Один writeDay на все приёмы — одна merge-запись, а не три подряд.
+  const dayWrites = api.saves.filter((w) => w.key.startsWith('heys_dayv2_'));
+  assert.equal(dayWrites.length, 1, 'все приёмы уходят одной записью дня');
+  assert.equal(dayWrites[0].value.meals.length, 3);
+  assert.match(res.text, /Записал 3 приёма/);
+  assert.match(res.text, /Поздний перекус/);
+});
+
+test('meals[] рядом с одиночной формой отклоняется', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] } });
+  await assert.rejects(
+    () => build(api).heys_log_meal({
+      date: '2026-08-01',
+      time: '12:00',
+      meals: [{ items: [{ product_id: 'own-americano', grams: 100 }] }],
+    }),
+    (e) => e.code === 'invalid_items',
+  );
+});
+
+test('new_product заводит карточку и пишет позицию одним вызовом', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] } });
+  const res = await build(api).heys_log_meal({
+    date: '2026-08-01',
+    time: '13:00',
+    items: [{
+      query: 'сосиска домашняя свиная',
+      grams: 102,
+      new_product: { protein100: 15, simple100: 0, complex100: 1, badFat100: 12, goodFat100: 12, trans100: 1, fiber100: 0, gi: 0, harm: 6 },
+    }],
+  });
+
+  assert.equal(res.structured.created_products.length, 1);
+  assert.match(res.structured.created_products[0].name, /сосиска домашняя свиная/i);
+  assert.match(res.text, /Новые карточки \(значения от модели, не с этикетки\)/);
+  // Карточка реально ушла в overlay, а позиция — в день.
+  assert.ok(api.upserts.some((u) => u.key === 'heys_products_overlay_v2'));
+  const dayWrite = api.saves.find((w) => w.key.startsWith('heys_dayv2_'));
+  assert.equal(dayWrite.value.meals[0].items[0].grams, 102);
+});
+
+test('new_product при найденном продукте игнорируется — дубль не создаётся', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] } });
+  const res = await build(api).heys_log_meal({
+    date: '2026-08-01',
+    time: '13:00',
+    items: [{ query: 'американо', grams: 100, new_product: { protein100: 1, simple100: 0, complex100: 0, badFat100: 0, goodFat100: 0, trans100: 0, fiber100: 0, gi: 0, harm: 0 } }],
+  });
+
+  assert.equal(res.structured.created_products, undefined);
+  assert.match(res.text, /new_product не понадобился/);
+  assert.ok(!api.upserts.some((u) => u.key === 'heys_products_overlay_v2'), 'overlay не трогали');
+});
+
+test('еда за сегодня без закрытого чек-ина отклоняется сервером (куратор)', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] },
+    card: { heys_profile: { stepsGoal: 9000, weight: 80, height: 180, age: 40, gender: 'Мужской' } },
+  });
+  const tools = createTools({ api, sessionToken: SESSION, clientId: CLIENT, nowMs: NOW, byCurator: true }).tools;
+  await assert.rejects(
+    () => tools.heys_log_meal({ items: [{ product_id: 'own-americano', grams: 100 }] }),
+    (e) => {
+      assert.equal(e.code, 'checkin_required');
+      assert.match(e.message, /heys_checkin/);
+      return true;
+    },
+  );
+  assert.equal(api.saves.length, 0, 'в день ничего не записали');
+});
+
+test('гейт чек-ина fail-open: без профиля еда за сегодня проходит', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] } });
+  const tools = createTools({ api, sessionToken: SESSION, clientId: CLIENT, nowMs: NOW, byCurator: true }).tools;
+  const res = await tools.heys_log_meal({ items: [{ product_id: 'own-americano', grams: 100 }] });
+  assert.equal(res.structured.day_after.meals, 1);
+});
+
+test('прошлая дата пишется без гейта чек-ина', async () => {
+  const api = fakeApi({
+    day: { date: '2026-07-30', updatedAt: 111, waterMl: 0, meals: [] },
+    card: { heys_profile: { stepsGoal: 9000 } },
+  });
+  const tools = createTools({ api, sessionToken: SESSION, clientId: CLIENT, nowMs: NOW, byCurator: true }).tools;
+  const res = await tools.heys_log_meal({ date: '2026-07-30', items: [{ product_id: 'own-americano', grams: 100 }] });
+  assert.equal(res.structured.day_after.meals, 1);
+});
+
+test('water_add_ml в update_day прибавляет воду вместе с показателями', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', updatedAt: 111, waterMl: 1500, meals: [] } });
+  const res = await build(api).heys_update_day({ date: '2026-08-01', steps: 2000, water_add_ml: 500 });
+
+  assert.equal(res.structured.day_after.water_ml, 2000);
+  assert.equal(res.structured.day_after.steps, 2000);
+  assert.match(res.text, /вода 2000 мл/);
+  assert.match(res.text, /шаги 2000/);
+  const dayWrites = api.saves.filter((w) => w.key.startsWith('heys_dayv2_'));
+  assert.equal(dayWrites.length, 1, 'вода и шаги — одна запись дня');
+});

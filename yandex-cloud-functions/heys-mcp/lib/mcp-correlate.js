@@ -292,14 +292,25 @@ function analyzeFlow(calls) {
     });
   }
 
+  // Дубль — тот же инструмент С ТЕМИ ЖЕ аргументами. Счёт по одному имени
+  // шумел: семь поисков семи разных продуктов помечались «дублями», а
+  // настоящий повтор одного запроса ничем не выделялся. Записи без args_hash
+  // (старые логи) считаются по-старому — только именем.
   const counts = {};
   for (const call of sorted) {
     if (!call.tool) continue;
-    counts[call.tool] = (counts[call.tool] || 0) + 1;
+    if (!FLOW_DUPLICATE_TOOLS.includes(call.tool)) continue;
+    const key = `${call.tool}|${call.args_hash || ''}`;
+    counts[key] = (counts[key] || 0) + 1;
   }
   const duplicates = FLOW_DUPLICATE_TOOLS
-    .filter((tool) => (counts[tool] || 0) > 1)
-    .map((tool) => ({ tool, count: counts[tool] }));
+    .map((tool) => {
+      const repeated = Object.entries(counts)
+        .filter(([key, n]) => key.startsWith(`${tool}|`) && n > 1)
+        .reduce((sum, [, n]) => sum + n, 0);
+      return { tool, count: repeated };
+    })
+    .filter((d) => d.count > 1);
 
   const warnings = [];
   for (const dup of duplicates) {

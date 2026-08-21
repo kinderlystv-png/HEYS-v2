@@ -297,3 +297,35 @@ test('analyzeFlow: шаг без arg_keys поля не заводит', () => {
   ]);
   assert.equal('arg_keys' in flow.steps[0], false);
 });
+
+test('analyzeFlow: дубли считаются по args_hash, а не по имени инструмента', () => {
+  const t0 = Date.parse('2026-08-21T21:00:00.000Z');
+  // Семь поисков РАЗНЫХ продуктов — законный разбор составного ужина, не дубли.
+  const distinct = Array.from({ length: 7 }, (_, i) => ({
+    ts: new Date(t0 + i * 5000).toISOString(),
+    tool: 'heys_search_products',
+    duration_ms: 300,
+    args_hash: `aaaaaaaa000${i}`,
+  }));
+  const flowDistinct = correlate.analyzeFlow(distinct);
+  assert.deepEqual(flowDistinct.duplicates, [], 'разные аргументы — не дубль');
+
+  // А вот тот же запрос дважды — настоящий повтор.
+  const repeated = [
+    { ts: new Date(t0).toISOString(), tool: 'heys_search_products', duration_ms: 300, args_hash: 'bbbbbbbb0001' },
+    { ts: new Date(t0 + 5000).toISOString(), tool: 'heys_search_products', duration_ms: 300, args_hash: 'bbbbbbbb0001' },
+    { ts: new Date(t0 + 9000).toISOString(), tool: 'heys_search_products', duration_ms: 300, args_hash: 'cccccccc0002' },
+  ];
+  const flowRepeated = correlate.analyzeFlow(repeated);
+  assert.deepEqual(flowRepeated.duplicates, [{ tool: 'heys_search_products', count: 2 }]);
+  assert.ok(flowRepeated.warnings.includes('duplicate:heys_search_products'));
+});
+
+test('analyzeFlow: старые записи без args_hash считаются по-старому', () => {
+  const t0 = Date.parse('2026-08-21T21:00:00.000Z');
+  const flow = correlate.analyzeFlow([
+    { ts: new Date(t0).toISOString(), tool: 'heys_get_day', duration_ms: 200 },
+    { ts: new Date(t0 + 4000).toISOString(), tool: 'heys_get_day', duration_ms: 200 },
+  ]);
+  assert.deepEqual(flow.duplicates, [{ tool: 'heys_get_day', count: 2 }]);
+});

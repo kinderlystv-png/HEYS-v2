@@ -481,6 +481,7 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
         responseBytes: metric.response_bytes,
         argCount: metric.arg_count,
         argKeys: metric.arg_keys,
+        argsHash: metric.args_hash,
         coldStart,
         uptimeMs: Date.now() - PROCESS_START_MS,
       }, { persistCall });

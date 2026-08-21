@@ -47,6 +47,10 @@ const RECORD_FIELDS = [
   // Object.keys(args) — без рекурсии: у preset_grams и похожих вложенные
   // ключи — названия продуктов клиента, их сюда не поднимаем никогда.
   'arg_keys',
+  // Отпечаток аргументов (короткий hex-хэш), не сами аргументы: по нему трейс
+  // отличает настоящий повтор одного вызова от семи поисков разных продуктов —
+  // счёт по одному имени инструмента шумел на втором и молчал бы о первом.
+  'args_hash',
   'cold_start',    // первый вызов на инстансе
   // Возраст процесса. Не дубль cold_start: тот различает только первый вызов и
   // все прочие, а тут видно «инстанс живёт восемь секунд» против «живёт сорок
@@ -226,6 +230,9 @@ function buildRecord(input = {}) {
     arg_keys: Array.isArray(input.argKeys)
       ? input.argKeys.filter((k) => typeof k === 'string').slice(0, MAX_ARG_KEYS)
       : [],
+    args_hash: typeof input.argsHash === 'string' && /^[0-9a-f]{6,16}$/.test(input.argsHash)
+      ? input.argsHash
+      : null,
     cold_start: input.coldStart === true,
     uptime_ms: intOrNull(input.uptimeMs),
     fn_version: typeof input.fnVersion === 'string' && input.fnVersion ? input.fnVersion : null,

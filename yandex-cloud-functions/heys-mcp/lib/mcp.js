@@ -15,6 +15,7 @@
 
 const { TOOL_SCHEMAS } = require('./tools');
 const callContext = require('./call-context');
+const crypto = require('node:crypto');
 const { extractArgKeys } = require('./telemetry');
 const { STREAK_TOOLS, streakNotice } = require('./repeat-guard');
 
@@ -241,6 +242,12 @@ async function handleMessage(message, ctx) {
       // нечему утечь.
       const argCount = args && typeof args === 'object' ? Object.keys(args).length : 0;
       const argKeys = extractArgKeys(args);
+      // Отпечаток аргументов для трейса: значения не логируются нигде, хэш
+      // ничего о них не говорит, но одинаковые вызовы получают одинаковую метку.
+      let argsHash = null;
+      try {
+        argsHash = crypto.createHash('sha256').update(JSON.stringify(args || {})).digest('hex').slice(0, 12);
+      } catch (_) { /* кривой аргумент не должен ронять вызов */ }
 
       const guard = trace && ctx.repeatGuard ? ctx.repeatGuard : null;
       // Какая подсказка ушла модели — единственный способ потом проверить,
@@ -299,15 +306,15 @@ async function handleMessage(message, ctx) {
         // Размер ответа — вторая половина вопроса «почему долго»: своё время
         // инструмента и время API он не объясняет, зато объясняет задержку на
         // стороне клиента, которой в наших метриках не видно вовсе.
-        await ctx.logMetric?.({ tool: name, ok: true, ...timing, arg_count: argCount, arg_keys: argKeys, response_bytes: byteLength(payload), trace, hint });
+        await ctx.logMetric?.({ tool: name, ok: true, ...timing, arg_count: argCount, arg_keys: argKeys, args_hash: argsHash, response_bytes: byteLength(payload), trace, hint });
         return rpcResult(id, payload);
       } catch (e) {
         const timing = measure();
         if (e && e.code) {
-          await ctx.logMetric?.({ tool: name, ok: false, error: e.code, arg_count: argCount, arg_keys: argKeys, ...timing, trace, hint });
+          await ctx.logMetric?.({ tool: name, ok: false, error: e.code, arg_count: argCount, arg_keys: argKeys, args_hash: argsHash, ...timing, trace, hint });
           return rpcResult(id, toolFailure(e.message, e.code, { ...e.details, duration_ms: timing.ms, ...traceFields }));
         }
-        await ctx.logMetric?.({ tool: name, ok: false, error: 'internal_error', arg_count: argCount, arg_keys: argKeys, ...timing, trace, hint });
+        await ctx.logMetric?.({ tool: name, ok: false, error: 'internal_error', arg_count: argCount, arg_keys: argKeys, args_hash: argsHash, ...timing, trace, hint });
         ctx.logError?.('tool_failed', { tool: name, message: e && e.message });
         return rpcResult(id, toolFailure('Внутренняя ошибка HEYS при выполнении инструмента.', 'internal_error', { duration_ms: timing.ms, ...traceFields }));
       }

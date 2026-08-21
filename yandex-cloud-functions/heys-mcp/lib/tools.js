@@ -472,6 +472,7 @@ function createTools({
   const DAY_AFTER_FIELD_TEXT = {
     weight: (a) => (a.weight_morning == null ? null : `вес ${a.weight_morning} кг`),
     steps: (a) => `шаги ${a.steps}`,
+    water: (a) => `вода ${a.water_ml} мл`,
     household_min: (a) => `быт ${a.household_min} мин`,
     sleep_start: (a) => (a.sleep.start ? `засыпание ${a.sleep.start}` : null),
     sleep_end: (a) => (a.sleep.end ? `подъём ${a.sleep.end}` : null),
@@ -747,10 +748,31 @@ function createTools({
 
   async function resolveItem(spec, index) {
     const label = `Позиция #${index + 1}`;
-    const product = await resolveProduct(spec || {}, label);
+    let product;
+    let createdRow = null;
+    let newProductIgnored = false;
+    try {
+      product = await resolveProduct(spec || {}, label);
+      newProductIgnored = !!(spec && spec.new_product);
+    } catch (e) {
+      // Незнакомый продукт с приложенным составом заводится тут же: круг
+      // «fail → create → повторный log» стоит дороже любой работы сервера
+      // (TIMING_LOG.md → «Круги агента»). Только точное «не найдено»:
+      // неоднозначность по-прежнему возвращается кандидатами, а не карточкой.
+      if (e.code === 'product_not_found' && spec && spec.new_product && typeof spec.new_product === 'object') {
+        const created = await tools.heys_create_product({
+          ...spec.new_product,
+          name: String(spec.new_product.name || spec.query || '').trim(),
+        });
+        createdRow = created.structured.created_row;
+        product = createdRow;
+      } else {
+        throw e;
+      }
+    }
     const { grams, learnPieceGrams, portionNote } = resolveGrams(spec, product, label);
     const recipeSnapshot = products.recipeSnapshotFields(product);
-    return { product, grams, learnPieceGrams, portionNote, recipeSnapshot };
+    return { product, grams, learnPieceGrams, portionNote, recipeSnapshot, createdRow, newProductIgnored };
   }
 
   /** Копия позиции из уже записанного приёма: граммы × count, продукт по product_id или имени. */
@@ -1024,87 +1046,161 @@ function createTools({
 
     async heys_log_meal(args) {
       const date = resolveDate(args.date, nowMs);
-      const time = args.time === undefined || args.time === null || args.time === ''
-        ? day.nowParts(nowMs).time
-        : day.normalizeTime(args.time);
-      if (!time) throw new ToolError('invalid_time', `Время "${args.time}" не в формате HH:MM.`);
+      const batch = Array.isArray(args.meals) && args.meals.length ? args.meals : null;
+      if (batch && (args.items || args.preset || args.copy_meal || args.time || args.name)) {
+        throw new ToolError('invalid_items',
+          'meals[] — самостоятельная форма: время, название и позиции живут внутри каждого приёма. Не передавай рядом items/preset/copy_meal/time/name.');
+      }
+      if (batch && batch.length > 6) {
+        throw new ToolError('invalid_items', 'За раз можно внести не больше 6 приёмов.');
+      }
 
-      // День нужен только под конец — классифицировать приём и записать, — но
-      // от разбора позиций он не зависит. Последовательно его чтение ложилось
-      // сверху каталога продуктов; запущенное здесь, оно едет вместе с ним.
+      // День (и профиль — для гейта чек-ина) стартуют сразу: от разбора
+      // позиций они не зависят. Последовательно эти чтения ложились сверху
+      // каталога продуктов; запущенные здесь, они едут вместе с ним.
       const dayPromise = readDay(date).catch((error) => ({ __error: error }));
+      const profilePromise = byCurator && date === checkinToday(nowMs)
+        ? readMany([profile.PROFILE_KEY]).catch(() => null)
+        : null;
 
-      const resolved = [];
-      let presetName = null;
-      let copyMealName = null;
+      // Каждый приём: время + позиции. Одиночная форма (items/preset/copy_meal)
+      // собирается в такой же вход из одного элемента.
+      const mealInputs = [];
 
-      if (args.copy_meal && typeof args.copy_meal === 'object') {
-        const { resolved: copied, sourceName } = await resolveCopyMealItems(args.copy_meal);
-        resolved.push(...copied);
-        if (!args.name && sourceName) copyMealName = sourceName;
-      }
-
-      if (args.preset) {
-        const presets = await loadPresets();
-        const wanted = products.normalizeText(args.preset);
-        const preset = presets.find((p) => String(p.id) === String(args.preset))
-          || presets.find((p) => products.normalizeText(p.name) === wanted)
-          || presets.find((p) => products.normalizeText(p.name).includes(wanted));
-        if (!preset) {
-          throw new ToolError('preset_not_found', `Набор «${args.preset}» не найден. Список — heys_list_meal_presets.`);
+      if (batch) {
+        for (let m = 0; m < batch.length; m += 1) {
+          const entry = batch[m] || {};
+          const time = entry.time === undefined || entry.time === null || entry.time === ''
+            ? day.nowParts(nowMs).time
+            : day.normalizeTime(entry.time);
+          if (!time) throw new ToolError('invalid_time', `Приём #${m + 1}: время "${entry.time}" не в формате HH:MM.`);
+          const specs = Array.isArray(entry.items) ? entry.items : [];
+          if (!specs.length) throw new ToolError('invalid_items', `Приём #${m + 1}: нужна хотя бы одна позиция в items.`);
+          if (specs.length > 20) throw new ToolError('invalid_items', `Приём #${m + 1}: не больше 20 позиций.`);
+          const resolved = [];
+          for (let i = 0; i < specs.length; i += 1) {
+            resolved.push(await resolveItem(specs[i], i));
+          }
+          mealInputs.push({
+            time,
+            explicitName: entry.name ? String(entry.name) : null,
+            mood: clampSubjective(entry.mood, 'mood') ?? '',
+            wellbeing: clampSubjective(entry.wellbeing, 'wellbeing') ?? '',
+            stress: clampSubjective(entry.stress, 'stress') ?? '',
+            resolved,
+          });
         }
-        presetName = preset.name;
-        const overrides = (args.preset_grams && typeof args.preset_grams === 'object') ? args.preset_grams : {};
-        for (const item of preset.items) {
-          const entry = await resolvePresetItem(item, preset.name);
-          const overrideKey = Object.keys(overrides)
-            .find((key) => products.normalizeText(key) === products.normalizeText(item.name));
-          if (overrideKey && Number(overrides[overrideKey]) > 0) entry.grams = Number(overrides[overrideKey]);
-          resolved.push(entry);
+      } else {
+        const time = args.time === undefined || args.time === null || args.time === ''
+          ? day.nowParts(nowMs).time
+          : day.normalizeTime(args.time);
+        if (!time) throw new ToolError('invalid_time', `Время "${args.time}" не в формате HH:MM.`);
+
+        const resolved = [];
+        let presetName = null;
+        let copyMealName = null;
+
+        if (args.copy_meal && typeof args.copy_meal === 'object') {
+          const { resolved: copied, sourceName } = await resolveCopyMealItems(args.copy_meal);
+          resolved.push(...copied);
+          if (!args.name && sourceName) copyMealName = sourceName;
         }
-      }
 
-      const specs = Array.isArray(args.items) ? args.items : [];
-      if (!specs.length && !resolved.length) {
-        throw new ToolError('invalid_items', 'Нужна хотя бы одна позиция в items, набор в preset или copy_meal из heys_get_day.');
-      }
-      if (specs.length + resolved.length > 20) {
-        throw new ToolError('invalid_items', 'За раз можно внести не больше 20 позиций.');
-      }
-      for (let i = 0; i < specs.length; i += 1) {
-        resolved.push(await resolveItem(specs[i], i));
-      }
+        if (args.preset) {
+          const presets = await loadPresets();
+          const wanted = products.normalizeText(args.preset);
+          const preset = presets.find((p) => String(p.id) === String(args.preset))
+            || presets.find((p) => products.normalizeText(p.name) === wanted)
+            || presets.find((p) => products.normalizeText(p.name).includes(wanted));
+          if (!preset) {
+            throw new ToolError('preset_not_found', `Набор «${args.preset}» не найден. Список — heys_list_meal_presets.`);
+          }
+          presetName = preset.name;
+          const overrides = (args.preset_grams && typeof args.preset_grams === 'object') ? args.preset_grams : {};
+          for (const item of preset.items) {
+            const entry = await resolvePresetItem(item, preset.name);
+            const overrideKey = Object.keys(overrides)
+              .find((key) => products.normalizeText(key) === products.normalizeText(item.name));
+            if (overrideKey && Number(overrides[overrideKey]) > 0) entry.grams = Number(overrides[overrideKey]);
+            resolved.push(entry);
+          }
+        }
 
-      const meal = {
-        id: makeId('m_'),
-        name: args.name ? String(args.name) : (presetName || copyMealName || defaultMealName(time)),
-        time,
-        mood: clampSubjective(args.mood, 'mood') ?? '',
-        wellbeing: clampSubjective(args.wellbeing, 'wellbeing') ?? '',
-        stress: clampSubjective(args.stress, 'stress') ?? '',
-        items: resolved.map((entry) => mealItemFromResolved(entry, makeId)),
-      };
+        const specs = Array.isArray(args.items) ? args.items : [];
+        if (!specs.length && !resolved.length) {
+          throw new ToolError('invalid_items', 'Нужна хотя бы одна позиция в items, набор в preset, copy_meal из heys_get_day или meals[] для нескольких приёмов.');
+        }
+        if (specs.length + resolved.length > 20) {
+          throw new ToolError('invalid_items', 'За раз можно внести не больше 20 позиций.');
+        }
+        for (let i = 0; i < specs.length; i += 1) {
+          resolved.push(await resolveItem(specs[i], i));
+        }
+
+        mealInputs.push({
+          time,
+          explicitName: args.name ? String(args.name) : (presetName || copyMealName || null),
+          mood: clampSubjective(args.mood, 'mood') ?? '',
+          wellbeing: clampSubjective(args.wellbeing, 'wellbeing') ?? '',
+          stress: clampSubjective(args.stress, 'stress') ?? '',
+          resolved,
+        });
+      }
 
       const current = await dayPromise;
       if (current && current.__error) throw current.__error;
-      // Тип приёма проставляем сами, по времени и составу: без `mealType`
-      // дневник подписывает приём собственным расчётом, и запись куратора
-      // оказывается не тем, чем она является. Название куратора и имя набора
-      // сильнее — они и есть ответ на вопрос «что это было».
-      const classified = day.classifyMeal(meal, current);
-      meal.mealType = classified.mealType;
-      if (!args.name && !presetName && !copyMealName) meal.name = classified.name;
 
-      const next = day.addMeal(current, meal, { nowMs, clientId });
+      // Гейт чек-ина — здесь, а не в инструкции: правило «за сегодня сначала
+      // heys_get_day» стоило лишний круг на каждую сегодняшнюю еду, а
+      // проверить его мог только сам сервер. Fail-open: без профиля статус
+      // не посчитать — не блокируем.
+      if (profilePromise) {
+        const blobs = await profilePromise;
+        const prof = blobs && blobs[profile.PROFILE_KEY];
+        if (prof) {
+          const st = day.checkinStatus(current, prof);
+          if (st.status !== 'done') {
+            const missing = st.steps.filter((step) => step.required && !step.done).map((step) => step.label).join(', ');
+            throw new ToolError('checkin_required',
+              `Чек-ин за сегодня не закрыт (${st.status}${missing ? `: не хватает ${missing}` : ''}) — сначала heys_checkin, потом еда. Прошлые даты пишутся без гейта.`);
+          }
+        }
+      }
+
+      let next = current;
+      const written = [];
+      for (const input of mealInputs) {
+        const meal = {
+          id: makeId('m_'),
+          name: input.explicitName || defaultMealName(input.time),
+          time: input.time,
+          mood: input.mood,
+          wellbeing: input.wellbeing,
+          stress: input.stress,
+          items: input.resolved.map((entry) => mealItemFromResolved(entry, makeId)),
+        };
+        // Тип приёма проставляем сами, по времени и составу: без `mealType`
+        // дневник подписывает приём собственным расчётом, и запись куратора
+        // оказывается не тем, чем она является. Название куратора и имя набора
+        // сильнее — они и есть ответ на вопрос «что это было».
+        const classified = day.classifyMeal(meal, next);
+        meal.mealType = classified.mealType;
+        if (!input.explicitName) meal.name = classified.name;
+        next = day.addMeal(next, meal, { nowMs, clientId });
+        written.push({ meal, classified, resolved: input.resolved });
+      }
+
+      // Один writeDay на все приёмы: одна merge-запись вместо цепочки — меньше
+      // окно гонки с открытым приложением.
       const saved = await writeDay(date, next, Number(current.updatedAt) || 0);
       const after = await dayAfterWrite(saved, next);
-      const learned = await persistPieceGrams(resolved);
+      const allResolved = written.flatMap((w) => w.resolved);
+      const learned = await persistPieceGrams(allResolved);
 
-      const kcal = day.macroTotals([meal]);
       const learnedText = learned.length
         ? ` Запомнил вес штуки: ${learned.map((l) => `${l.name} — ${l.grams} г`).join(', ')}.`
         : '';
-      const portionNotes = resolved.map((e) => e.portionNote).filter(Boolean);
+      const portionNotes = allResolved.map((e) => e.portionNote).filter(Boolean);
       const portionText = portionNotes.length
         ? ` Граммовка с карточки: ${portionNotes.join('; ')}.`
         : '';
@@ -1112,29 +1208,68 @@ function createTools({
       // записан верно, но карточки в базе нет, и в приложении такая позиция
       // отметится как ненайденная. Куратор должен узнать это здесь, а не из
       // оранжевого баннера через сутки.
-      const snapshotNames = resolved.filter((e) => e.fromSnapshot).map((e) => e.product.name);
+      const snapshotNames = allResolved.filter((e) => e.fromSnapshot).map((e) => e.product.name);
       const snapshotText = snapshotNames.length
         ? ` Внимание: ${snapshotNames.join(', ')} — карточки в базе больше нет, позиция записана по снимку из набора (КБЖУ верные). Вернуть карточку — heys_create_product, затем heys_save_meal_preset пересоберёт набор.`
         : '';
-      // Тип называем вслух, когда подпись приёма его не показывает (набор,
-      // своё название): куратор должен видеть, чем запись легла в дневник, и
-      // успеть поправить, если это не обед.
-      const typeHint = meal.name === classified.name ? '' : ` (${classified.name})`;
-      // item_id в text — иначе «убери сироп из только что внесённого» снова
-      // зовёт get_day (structured в Cursor часто не виден).
+      // Карточки, заведённые по new_product, называются вслух: их значения дала
+      // модель, а не этикетка, и куратор должен успеть поправить.
+      const createdRows = allResolved.map((e) => e.createdRow).filter(Boolean);
+      const createdText = createdRows.length
+        ? ` Новые карточки (значения от модели, не с этикетки): ${createdRows.map((r) => `«${r.name}» (${r.id}, ${r.kcal100} ккал/100, Б${r.protein100} У${r.carbs100} Ж${r.fat100})`).join('; ')}.`
+        : '';
+      const dedupedNames = allResolved.filter((e) => e.newProductIgnored).map((e) => e.product.name);
+      const dedupedText = dedupedNames.length
+        ? ` new_product не понадобился: ${dedupedNames.map((n) => `«${n}»`).join(', ')} уже в каталоге — записал существующей карточкой.`
+        : '';
+      const extras = `${portionText}${snapshotText}${createdText}${dedupedText}${learnedText}`;
+
+      if (written.length === 1) {
+        const { meal, classified } = written[0];
+        const kcal = day.macroTotals([meal]);
+        // Тип называем вслух, когда подпись приёма его не показывает (набор,
+        // своё название): куратор должен видеть, чем запись легла в дневник, и
+        // успеть поправить, если это не обед.
+        const typeHint = meal.name === classified.name ? '' : ` (${classified.name})`;
+        // item_id в text — иначе «убери сироп из только что внесённого» снова
+        // зовёт get_day (structured в Cursor часто не виден).
+        return {
+          text: `Записал: ${formatMealLine(meal)}${typeHint} (${date}). ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${extras}${dayAfterText(after)}`,
+          structured: {
+            date,
+            meal_id: meal.id,
+            name: meal.name,
+            meal_type: meal.mealType,
+            time: meal.time,
+            totals: kcal,
+            items: meal.items.map((i) => ({ id: i.id, name: i.name, grams: i.grams })),
+            learned_piece_grams: learned.length ? learned : undefined,
+            portion_defaults: portionNotes.length ? portionNotes : undefined,
+            from_preset_snapshot: snapshotNames.length ? snapshotNames : undefined,
+            created_products: createdRows.length ? createdRows.map((r) => ({ product_id: r.id, name: r.name })) : undefined,
+            day_after: after,
+          },
+        };
+      }
+
+      const lines = written.map(({ meal }) => {
+        const kcal = day.macroTotals([meal]);
+        return `${formatMealLine(meal)} — ≈${kcal.kcal} ккал`;
+      });
       return {
-        text: `Записал: ${formatMealLine(meal)}${typeHint} (${date}). ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${portionText}${snapshotText}${learnedText}${dayAfterText(after)}`,
+        text: `Записал ${written.length} приёма(ов) за ${date}: ${lines.join('; ')}.${extras}${dayAfterText(after)}`,
         structured: {
           date,
-          meal_id: meal.id,
-          name: meal.name,
-          meal_type: meal.mealType,
-          time,
-          totals: kcal,
-          items: meal.items.map((i) => ({ id: i.id, name: i.name, grams: i.grams })),
+          meals: written.map(({ meal }) => ({
+            meal_id: meal.id,
+            name: meal.name,
+            meal_type: meal.mealType,
+            time: meal.time,
+            totals: day.macroTotals([meal]),
+            items: meal.items.map((i) => ({ id: i.id, name: i.name, grams: i.grams })),
+          })),
           learned_piece_grams: learned.length ? learned : undefined,
-          portion_defaults: portionNotes.length ? portionNotes : undefined,
-          from_preset_snapshot: snapshotNames.length ? snapshotNames : undefined,
+          created_products: createdRows.length ? createdRows.map((r) => ({ product_id: r.id, name: r.name })) : undefined,
           day_after: after,
         },
       };
@@ -2048,6 +2183,17 @@ function createTools({
         if (Array.isArray(args.household_activities)) {
           working = day.setHouseholdActivities(working, args.household_activities, { nowMs, clientId }).day;
           applied.push('household_min');
+        }
+        // Вода тем же вызовом: «вода 500 и шаги 2000» — одна реплика, и она не
+        // должна стоить два круга. Семантика та же, что у heys_add_water:
+        // прибавка, отрицательное уменьшает.
+        if (args.water_add_ml !== undefined && args.water_add_ml !== null) {
+          const ml = Number(args.water_add_ml);
+          if (!Number.isFinite(ml) || ml === 0) {
+            throw new ToolError('invalid_field', 'water_add_ml — ненулевое число миллилитров; отрицательное уменьшает.');
+          }
+          working = day.addWater(working, ml, { nowMs, clientId });
+          applied.push('water');
         }
         const updated = day.updateDayFields(working, fields, { nowMs, clientId, byCurator });
         if (updated.applied.length) {
@@ -3220,6 +3366,10 @@ const ITEM_SCHEMA = {
     grams: { type: 'number', description: 'Вес порции в граммах (для напитков — миллилитры). Если не передать и у продукта ровно одна порция в карточке — возьмётся она.' },
     pieces: { type: 'number', description: 'Количество штук, когда пользователь считает штуками («четыре конфеты»). Вес одной штуки берётся из карточки продукта — не подставляй граммы от себя.' },
     piece_grams: { type: 'number', description: 'Вес одной штуки в граммах. Нужен только если в карточке продукта его ещё нет: инструмент попросит, а полученное значение сохранит в карточку.' },
+    new_product: {
+      type: 'object',
+      description: 'Запасной вариант на случай product_not_found: сервер заведёт карточку из этих полей (те же, что у heys_create_product: нутриенты на 100 г — protein100, simple100, complex100, badFat100, goodFat100, trans100, fiber100, gi, harm; опционально name/brand/portions/share) и сразу запишет позицию — без отдельного круга create. Если продукт по query нашёлся, поле игнорируется и дубль не создаётся. Передавай, когда состав известен (этикетка или типовые значения).',
+    },
   },
 };
 
@@ -3305,6 +3455,10 @@ const TOOL_SCHEMAS = [
         household_min: {
           type: 'integer',
           description: 'Минуты бытовой активности за день — единственное место для быта. ЗАМЕНЯЕТ прежнее значение целиком (0 — снять). Тренировкой быт писать нельзя: расход учтёт те же минуты дважды.',
+        },
+        water_add_ml: {
+          type: 'number',
+          description: 'Добавить выпитую воду (мл) этой же записью — когда в реплике и вода, и другие показатели, не делай отдельный heys_add_water. Прибавляется к текущему; отрицательное уменьшает.',
         },
         household_activities: {
           type: 'array',
@@ -3417,7 +3571,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_log_meal',
-    description: 'Создать приём пищи в дневнике. «Такой же перекус/приём целиком»: heys_get_day → copy_meal { date, meal_id }. «Такой же конверт/одну позицию» из приёма с несколькими блюдами: copy_meal { date, meal_id, item_ids } — граммы с сервера, не из текста get_day. count при «два»/«три». Новые позиции из той же реплики — items рядом с copy_meal в одном вызове. Составной напиток — позициями или preset. Одиночный продукт — items: [{ query или product_id, grams }].',
+    description: 'Создать приём пищи в дневнике. Несколько приёмов из одной реплики («два часа назад X, час назад Y, сейчас Z») — ОДИН вызов с meals: [{time, items}, …]. «Такой же перекус/приём целиком»: heys_get_day → copy_meal { date, meal_id }. «Такой же конверт/одну позицию» из приёма с несколькими блюдами: copy_meal { date, meal_id, item_ids } — граммы с сервера, не из текста get_day. count при «два»/«три». Новые позиции из той же реплики — items рядом с copy_meal в одном вызове. Составной напиток — позициями или preset. Одиночный продукт — items: [{ query или product_id, grams }]. Незнакомый продукт с известным составом — new_product внутри позиции, без отдельного heys_create_product. Гейт чек-ина за сегодня сервер проверяет сам: не закрыт — вернёт checkin_required.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -3442,6 +3596,22 @@ const TOOL_SCHEMAS = [
           type: 'array',
           description: 'Позиции приёма.',
           items: ITEM_SCHEMA,
+        },
+        meals: {
+          type: 'array',
+          description: 'Несколько приёмов одной записью — когда в реплике их больше одного. Самостоятельная форма: не передавай рядом items/preset/copy_meal/time/name. До 6 приёмов, все за одну дату date; день сохраняется одной записью.',
+          items: {
+            type: 'object',
+            properties: {
+              time: { type: 'string', description: 'Время приёма HH:MM. По умолчанию — текущее московское.' },
+              name: { type: 'string', description: 'Название приёма. По умолчанию — по времени.' },
+              items: { type: 'array', items: ITEM_SCHEMA, description: 'Позиции приёма.' },
+              mood: { type: 'integer', description: 'Настроение во время приёма, 1–10.' },
+              wellbeing: { type: 'integer', description: 'Самочувствие во время приёма, 1–10.' },
+              stress: { type: 'integer', description: 'Стресс во время приёма, 1–10.' },
+            },
+            required: ['items'],
+          },
         },
         date: DATE_ARG,
         time: { type: 'string', description: 'Время приёма HH:MM. По умолчанию — текущее московское время.' },
