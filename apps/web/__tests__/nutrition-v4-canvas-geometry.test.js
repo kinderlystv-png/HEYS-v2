@@ -96,6 +96,10 @@ const PAIRS = [
   ['.htr i', '.nutrition-v4-hero__fill'],
   ['.hb', '.nutrition-v4-hero__budget'],
   ['.win', '.nutrition-v4-window'],
+  ['.win span:first-child', '.nutrition-v4-window__label'],
+  ['.win span:last-child', '.nutrition-v4-window__value'],
+  ['.win.open span:last-child', ".nutrition-v4-window[data-tone='ok'] .nutrition-v4-window__value"],
+  ['.win.warn span:last-child', ".nutrition-v4-window[data-tone='warn'] .nutrition-v4-window__value"],
   ['.dry', '.nutrition-v4-diary'],
   ['.dryE', '.nutrition-v4-diary__empty'],
   ['.meal', '.nutrition-v4-meal-row'],
@@ -106,7 +110,8 @@ const PAIRS = [
   ['.mb', '.nutrition-v4-meal-row__body'],
   ['.mb span', '.nutrition-v4-meal-row__items'],
   ['.mchev', '.nutrition-v4-meal-row__chevron'],
-  ['.plus', '.nutrition-v4-meal-row__add'],
+  ['.plusO', '.nutrition-v4-meal-row__add'],
+  ['.plus', '.nutrition-v4-meal-row--empty .nutrition-v4-meal-row__add'],
   ['.streak', '.nutrition-v4-streak'],
   ['.cta', '.nutrition-v4-cta'],
   ['.tot', '.nutrition-v4-totals'],
@@ -129,6 +134,8 @@ const PAIRS = [
   ['.blkH', '.nutrition-v4-block__head'],
   ['.blkH b', '.nutrition-v4-block__head b'],
   ['.blkH span', '.nutrition-v4-block__meta'],
+  ['.blkH span.open', '.nutrition-v4-block__meta.is-ok'],
+  ['.blkH span.warn', '.nutrition-v4-block__meta.is-warn'],
   ['.tl', '.nutrition-v4-timeline'],
   ['.tlr', '.nutrition-v4-timeline__row'],
   ['.tlb', '.nutrition-v4-timeline__track'],
@@ -172,22 +179,10 @@ const CHECKED = [
 // 18 px даёт .page-day, поэтому боковой margin у самих блоков нулевой.
 const SKIP_MARGIN = new Set(['.hero', '.cfg', '.shR', '.shDel']);
 
-// Осознанные отступления: у каждого — строка контракта, которая старше кадра.
-const EXCEPTIONS = new Set([
-  // «цвет состояния»: шалфей только когда окно правда открыто. В кадре
-  // шалфейный цвет стоит дефолтом, а нейтральный — модификатором .calm;
-  // у нас наоборот, иначе зелёный снова перестанет что-либо означать.
-  '.nutrition-v4-window|color',
-  // Та же причина у подписи блока: «сегодня» — служебная метка, не оценка.
-  '.nutrition-v4-block__meta|color',
-  // В кадре «Качество еды» инлайн-стиль перекрывает правило на 8 px.
-  '.nutrition-v4-quality__row|margin-top',
-  // «кнопка в строке»: «+ продукт» у пустого приёма заливкой, «+ ещё» у
-  // непустого — обводкой. Кадр рисует залитым и то, и другое; базовый вид у нас
-  // обводка, заливка приходит модификатором --empty.
-  '.nutrition-v4-meal-row__add|background',
-  '.nutrition-v4-meal-row__add|color',
-]);
+// Осознанные отступления. Пакет 21.08 закрыл четыре из пяти: дизайн развёл
+// залитую и обводную кнопки (`.plusO`), развернул дефолт состояний на
+// нейтральный и снял инлайн у `.qual`.
+const EXCEPTIONS = new Set([]);
 
 describe('геометрия вкладки «Питание» против кадров канваса', () => {
   const canvasSource = fs.readFileSync(CANVAS, 'utf8');
@@ -207,11 +202,15 @@ describe('геометрия вкладки «Питание» против ка
     const drift = [];
     for (const [canvasSel, productSel] of PAIRS) {
       const want = declarations(canvas.get(canvasSel));
-      // Значение может стоять на самом узле или наследоваться от родителя
-      // блока — собираем цепочку так же, как её видит браузер.
-      const chain = [productSel];
-      const parent = productSel.replace(/(__[a-z-]+|\s.+|\.is-[a-z-]+)$/, '');
-      if (parent && parent !== productSel && product.has(parent)) chain.unshift(parent);
+      // Значение может стоять на самом узле, на его базовом классе (если это
+      // модификатор) или наследоваться от родителя блока — собираем цепочку
+      // так же, как её видит браузер: от общего к частному.
+      const base = productSel.split(/\s+/).pop().replace(/\[[^\]]*\]/g, '');
+      const parent = base.replace(/(__[a-z-]+|\.is-[a-z-]+|--[a-z-]+)$/, '');
+      const chain = [];
+      for (const sel of [parent, base, productSel]) {
+        if (sel && product.has(sel) && !chain.includes(sel)) chain.push(sel);
+      }
       const got = declarations(chain.flatMap((sel) => product.get(sel) || []));
 
       for (const prop of CHECKED) {
@@ -228,14 +227,7 @@ describe('геометрия вкладки «Питание» против ка
     expect(drift).toEqual([]);
   });
 
-  it('залитая кнопка есть у пустого приёма', () => {
-    const empty = declarations(product.get('.nutrition-v4-meal-row--empty .nutrition-v4-meal-row__add'));
-    const canvasPlus = declarations(canvas.get('.plus'));
-    expect(normalize(empty.background)).toBe(normalize(canvasPlus.background));
-    expect(normalize(empty.color)).toBe(normalize(canvasPlus.color));
-  });
-
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.size).toBe(5);
+    expect(EXCEPTIONS.size).toBe(0);
   });
 });

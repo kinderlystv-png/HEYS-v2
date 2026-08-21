@@ -364,6 +364,7 @@
   // с разделом «Ещё → Дневник»: оба переехали в «Инсайты».
   const CHIPS = [
     { key: 'hunger', field: 'showDiaryHungerPanel', label: 'Голод' },
+  // порядок остальных чипов задан контрактом, см. строку «семь чипов»
     { key: 'fiber', field: 'showDiaryFiberPanel', label: 'Клетчатка' },
     { key: 'supplements', field: 'showDiarySupplementsPanel', label: 'Добавки', needsConsent: true },
     { key: 'refeed', field: 'showDiaryRefeedPanel', label: 'Рефид' },
@@ -561,11 +562,14 @@
     );
   }
 
+  // Карточка называется тем, что измеряется: метрики «энергия» в данных нет,
+  // ближайшая шкала 1–10 того же смысла — самочувствие (контракт «голод и
+  // самочувствие», уточнён дизайном 21.08).
   function renderHungerBlock(React, day, date) {
     const hunger = HEYS.HungerEnergyStatusModal?.getLatestHungerLevel?.(date) ?? null;
-    const energyRaw = Number(day?.wellbeingAvg) || Number(day?.wellbeingMorning) || null;
-    const energy = isNum(energyRaw) && energyRaw > 0 ? Math.round(energyRaw) : null;
-    if (hunger == null && energy == null) return null;
+    const wellbeingRaw = Number(day?.wellbeingAvg) || Number(day?.wellbeingMorning) || null;
+    const wellbeing = isNum(wellbeingRaw) && wellbeingRaw > 0 ? Math.round(wellbeingRaw) : null;
+    if (hunger == null && wellbeing == null) return null;
 
     const scale = (value, tone) => React.createElement('div', { className: 'nutrition-v4-scale', 'aria-hidden': 'true' },
       Array.from({ length: 10 }, (_, i) => React.createElement('i', {
@@ -583,10 +587,10 @@
       scale(value, tone)
     );
 
-    return blockShell(React, 'hunger', 'Голод и энергия', null, null,
+    return blockShell(React, 'hunger', 'Голод и самочувствие', null, null,
       React.createElement('div', { className: 'nutrition-v4-mini-row' },
         card('hunger', 'Голод', hunger, 'act'),
-        card('energy', 'Энергия', energy, 'ok')
+        card('wellbeing', 'Самочувствие', wellbeing, 'ok')
       )
     );
   }
