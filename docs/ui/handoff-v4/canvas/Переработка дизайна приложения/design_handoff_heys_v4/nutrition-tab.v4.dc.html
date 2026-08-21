@@ -14,10 +14,11 @@
 <link href="v4-canvas.css" rel="stylesheet">
 <style>
   .ph{width:375px}
-  .pal{--dim:#6b5f4f;--dimIco:#7a6b58}
-  .pal.dk{--dim:rgba(242,237,230,.62);--dimIco:rgba(242,237,230,.55)}
-  .pal.bl{--dim:#5a6474;--dimIco:#6a7484}
-  .pal.bldk{--dim:rgba(232,238,246,.62);--dimIco:rgba(232,238,246,.55)}
+  :root{--dim:#6b5f4f;--dimIco:#7a6b58;--trk:rgba(0,0,0,.1);--sage:#eaefe0;--sageTx:#3f4a2e}
+  .pal{--dim:#6b5f4f;--dimIco:#7a6b58;--sage:#eaefe0;--sageTx:#3f4a2e}
+  .pal.dk{--dim:rgba(242,237,230,.62);--dimIco:rgba(242,237,230,.55);--sage:#2b3122;--sageTx:#cfe0b8}
+  .pal.bl{--dim:#5a6474;--dimIco:#6a7484;--sage:#e3f0e8;--sageTx:#1f4a34}
+  .pal.bldk{--dim:rgba(232,238,246,.62);--dimIco:rgba(232,238,246,.55);--sage:#1d3328;--sageTx:#a8dcc0}
   .svc{font:600 10.5px/1.7 ui-monospace,Menlo,monospace;color:#6b5f4f;margin:0 0 20px;max-width:900px}
   .svc b{color:#8a4a20}
 
@@ -71,8 +72,8 @@
   .sec{margin:0 18px}
   .win{margin-top:8px;background:var(--c1);border-radius:20px;padding:14px 16px;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
   .win span:first-child{font:600 12.5px/1.2 Figtree,sans-serif;color:var(--dim)}
-  .win span:last-child{font:600 12.5px/1.2 Figtree,sans-serif;color:var(--gr);text-align:right}
-  .win.calm span:last-child{color:var(--dim)}
+  .win span:last-child{font:600 12.5px/1.2 Figtree,sans-serif;color:var(--dim);text-align:right}
+  .win.open span:last-child{color:var(--gr)}
   .win.warn span:last-child{color:var(--red)}
 
   .dry{margin-top:8px;background:var(--c1);border-radius:20px;overflow:hidden}
@@ -83,9 +84,13 @@
   .mt s{text-decoration:none;font:700 13px/1 Figtree,sans-serif;color:var(--tx);font-variant-numeric:tabular-nums}
   .mb{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:5px}
   .mb span{font:500 11.5px/1.5 Figtree,sans-serif;color:var(--dim);text-wrap:pretty}
+  .mb .plus,.mb .plusO{text-wrap:nowrap}
+  .mb span.plus{color:var(--on-acs)}
+  .mb span.plusO{color:var(--acs)}
   .mchev{width:15px;height:15px;flex:none;color:var(--dimIco);margin-bottom:1px}
   .mempty span{color:var(--dim);font-style:italic}
   .plus{min-height:30px;padding:0 12px;border-radius:999px;background:var(--acs);color:var(--on-acs);font:700 11px/1 Figtree,sans-serif;display:inline-flex;align-items:center;flex:none}
+  .plusO{min-height:30px;padding:0 12px;border-radius:999px;background:transparent;color:var(--acs);box-shadow:inset 0 0 0 2px var(--acs);font:700 11px/1 Figtree,sans-serif;display:inline-flex;align-items:center;flex:none}
   .dryE{padding:18px 16px;font:500 12px/1.45 Figtree,sans-serif;color:var(--dim)}
   .cta{margin-top:16px;min-height:52px;border-radius:999px;background:var(--acs);color:var(--on-acs);display:flex;align-items:center;justify-content:space-between;padding:0 22px;font:700 13px/1 Figtree,sans-serif}
 
@@ -116,7 +121,8 @@
   .blk{margin-top:10px;background:var(--c1);border-radius:20px;padding:16px}
   .blkH{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:12px}
   .blkH b{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:var(--dim)}
-  .blkH span{font:700 10.5px/1 Figtree,sans-serif;color:var(--gr)}
+  .blkH span{font:700 10.5px/1 Figtree,sans-serif;color:var(--dim)}
+  .blkH span.open{color:var(--gr)}
   .blkH span.warn{color:var(--red)}
   .wv{width:100%;height:96px;display:block}
   .wvl{display:flex;flex-direction:column;gap:4px;margin-top:10px}
@@ -168,7 +174,12 @@
   .shR{margin:0 18px 8px;background:var(--c1);border-radius:16px;padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px}
   .shR b{flex:1;font:600 12.5px/1.3 Figtree,sans-serif;color:var(--tx)}
   .shR span{font:600 12.5px/1 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
-  .shDel{margin:6px 18px 0;min-height:44px;display:flex;align-items:center;justify-content:center;gap:7px;font:600 12px/1 Figtree,sans-serif;color:var(--red)}
+  .shCap{margin:18px 18px 2px;font:700 9.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+  .shA{margin:0 18px;padding:12px 0;display:flex;align-items:center;gap:11px;min-height:44px;border-top:1px solid var(--trk)}
+  .shA:first-of-type{border-top:none}
+  .shA b{flex:1;font:600 12px/1.3 Figtree,sans-serif;color:var(--tx)}
+  .shA .ico{flex:none;width:18px;height:18px;display:flex;align-items:center;justify-content:center;color:var(--acs)}
+  .shDel{margin:14px 18px 0;padding-top:12px;border-top:1px solid var(--trk);min-height:44px;display:flex;align-items:center;justify-content:center;gap:7px;font:600 12px/1 Figtree,sans-serif;color:var(--red)}
 
   .cur{margin:12px 18px 0;min-height:44px;padding:11px 13px;border-radius:16px;background:var(--tint);display:flex;align-items:center;gap:10px}
   .cur b{flex:1;font:600 12.5px/1.35 Figtree,sans-serif;color:var(--tx)}
@@ -255,13 +266,13 @@
 
   <div class="ctrH">Одно число на один смысл</div>
   <div class="spec"><b>бюджет дня</b><span data-v="один источник на весь экран — норма с учётом рефида и долга; герой и строка «норма» в итогах показывают одно и то же число"></span><i>герой брал скорректированную норму, таблица — исходную: в рефид-день на одном экране стояли два разных бюджета</i></div>
-  <div class="spec"><b>формат чисел</b><span data-v="разделитель тысяч везде — «1 289», неразрывный пробел; дробные с запятой"></span><i>в герое было «1873», строкой ниже «1 873»</i></div>
+  <div class="spec"><b>формат чисел</b><span data-v="разделитель тысяч везде — «1 289», неразрывный пробел; дробные с запятой"></span><i>в герое было «1873», строкой ниже «1 873»</i></div>
   <div class="spec"><b>нет данных</b><span data-v="прочерк, а не ноль: пустой день показывает «—» в фактах и остатках, полосы не рисуются"></span><i>ноль — утверждение о факте; человек мог не съесть, а мог не записать. Правило общее с плитками Главной</i></div>
   <div class="spec" style="border-bottom:none"><b>единицы</b><span data-v="ккал у калорий, «г» у Б/Ж/У и клетчатки — в строке итогов, не в заголовке столбца"></span></div>
 
   <div class="ctrH">Герой «Осталось»</div>
   <div class="spec"><b>состав героя</b><span data-v="подпись «Осталось на сегодня» · число 54 px/600 · «ккал» · полоса 6 px · строка «съедено N» и «бюджет M». При переборе вместо «бюджет M» — процент бюджета («113 %») тоном текущей зоны; до 100 % процента нет"></span></div>
-  <div class="spec"><b>цвет числа</b><span data-v="текстовая роль палитры, не тон кнопки. Обычный день: #8a4a20 песочная, #e2a468 тёмная, #1d5e96 синяя, #7fbceb сине-тёмная. Предупреждение: #a1471c песочная (4,86:1 на подложке героя), #d07d4e тёмная, #b03a24 синяя, #f0a08a сине-тёмная. Срыв — роль «внимание»"></span><i>прежний литерал был одинаков во всех четырёх наборах и в тёмных давал 2,4:1. Тон кнопки (#c67139) числу не годится: на подложке героя это 2,84:1, а крупный текст живёт по порогу 3:1 — у предупреждения должен быть свой текстовый шаг рампы, а не акцент действия</i></div>
+  <div class="spec"><b>цвет числа</b><span data-v="текстовая роль палитры, не тон кнопки. Обычный день: #8a4a20 песочная, #e2a468 тёмная, #1d5e96 синяя, #8fc1e8 сине-тёмная. Предупреждение: #a1471c песочная (4,86:1 на подложке героя), #d07d4e тёмная, #b03a24 синяя, #f0a08a сине-тёмная. Срыв — роль «внимание»"></span><i>прежний литерал был одинаков во всех четырёх наборах и в тёмных давал 2,4:1. Тон кнопки (#c67139) числу не годится: на подложке героя это 2,84:1, а крупный текст живёт по порогу 3:1 — у предупреждения должен быть свой текстовый шаг рампы, а не акцент действия</i></div>
   <div class="spec"><b>перебор</b><span data-v="подпись меняется на границе бюджета (100 %) — «Перебор», число без знака; цвет по зонам: до 110 % нейтрально, 110–130 % предупреждение, от 130 % красный. Пороги 110 и 130 — дефолты, куратор правит их под клиента"></span><i>прежде и число, и полоса зажимались: съел на 300 ккал больше — экран говорил «осталось 0», то есть «ровно в норме». Подпись и цвет разведены намеренно: за бюджет вышел уже на 101 %, но красным это называть рано — 106 % это обычный день, а не срыв</i></div>
   <div class="spec"><b>закрытый день</b><span data-v="подпись «Съедено за день», число — факт, ниже «из M» и «не съедено N»; порогов «к этому часу» нет"></span></div>
   <div class="spec" style="border-bottom:none"><b>полоса</b><span data-v="ширина едет 320 мс ease-in-out — тот же переход, что у заливки воды"></span><i>раньше менялась скачком</i></div>
@@ -305,7 +316,7 @@
   <div class="spec"><b>ряд чипов</b><span data-v="внизу вкладки, после всего содержимого, за разделителем; подпись «Что показывать на этой вкладке»"></span><i>решение принимается там, где человек уже увидел весь экран, а не до него</i></div>
   <div class="spec"><b>семь чипов</b><span data-v="семь: голод и энергия · клетчатка · добавки · рефид · приёмы за день · оценка и риск · волна сейчас"></span></div>
   <div class="spec"><b>дефолт</b><span data-v="включены все; трём блокам (голод, рефид, приёмы за день) поля профиля нужно завести — переключателей у них сегодня нет"></span><i>планер — единственный блок, который предсказывает, а не показывает факт; его включают осознанно</i></div>
-  <div class="spec"><b>вид чипа</b><span data-v="включённый — заливка акцентом с галочкой; выключенный — обводка 1,5 px без заливки; высота 34 px, область нажатия 44 pt"></span></div>
+  <div class="spec"><b>вид чипа</b><span data-v="включённый — заливка акцентом с галочкой; выключенный — обводка без заливки (толщина и порог контраста — строка «заметность чипа»); высота 34 px, область нажатия 44 pt"></span></div>
   <div class="spec"><b>что нельзя выключить</b><span data-v="герой, окно приёмов, дневник, «Добавить приём», итоги дня, качество еды и карточка воды — чипов у них нет"></span><i>это и есть вкладка; без них выключать было бы нечего. Вода в этом списке по прежнему решению: она живёт в «Разборе дня» и показывается всегда — это единственный полный вид для тех, кто убрал плитку с Главной</i></div>
   <div class="spec"><b>применение</b><span data-v="блок появляется и исчезает сразу по тапу, без подтверждения; экран не прокручивается к нему. Исключение — «Добавки»: там включение проходит через запрос согласия, и до согласия чип остаётся выключенным"></span></div>
   <div class="spec"><b>хранение</b><span data-v="в профиле, вместе с остальными настройками человека; прежний раздел «Ещё → Дневник» снимается"></span><i>набор блоков — это про то, что человеку важно, а не про устройство: со второго телефона он должен увидеть свою вкладку. Заодно снимается захардкоженный гейт по clientId, который держал раздел настроек</i></div>
@@ -314,7 +325,7 @@
   <div class="spec"><b>порядок блоков и чипы</b><span data-v="ряд чипов только включает и выключает; порядок блоков на экране задан контрактом и от порядка чипов не зависит"></span><i>иначе появится второй источник истины по порядку: человек переставит чипы и получит экран, который контракт не описывает</i></div>
 
   <div class="ctrH">Блоки по чипам</div>
-  <div class="spec"><b>голод и энергия</b><span data-v="две мини-карточки со значением 1–10 и десятисегментной шкалой; голод акцентом, энергия шалфеем"></span></div>
+  <div class="spec"><b>голод и самочувствие</b><span data-v="две мини-карточки 1–10 с десятисегментной шкалой: голод акцентом, самочувствие шалфеем. Метрики «энергия» в данных нет — карточка называется тем, что измеряется (wellbeingAvg). Отдельный вопрос про энергию в чек-ине — не в этот релиз"></span></div>
   <div class="spec"><b>добавки</b><span data-v="состав курса строкой с временем приёма; отметки «выпил» здесь нет"></span><i>факт приёма живёт в дневнике — правило из чек-ина</i></div>
   <div class="spec"><b>рефид</b><span data-v="показывается только в загрузочный день: называет прибавку к норме и что она уже в бюджете героя"></span></div>
   <div class="spec"><b>волна сейчас</b><span data-v="только текущее состояние: время до спада крупно, «закончится ≈HH:MM», полосы идущих волн, при пересечении — красный сегмент и «нахлёст H:MM»; истории за день и графика волн в блоке нет"></span><i>блок отвечает на «можно ли есть сейчас»; разбор дня по волнам — «Инсайты»</i></div>
@@ -324,16 +335,18 @@
   <div class="spec" style="border-bottom:none"><b>БЖУ по приёмам</b><span data-v="на вкладке отсутствует — разбор по приёмам переехал в «Инсайты», рядом с планером"></span><i>это анализ, а не статус сегодня; правило одно на все блоки: действие и «сейчас» — здесь, «на подумать» — в «Инсайтах»</i></div>
 
   <div class="ctrH">Действия с приёмом и продуктом</div>
+  <div class="spec"><b>продукт против действия</b><span data-v="строка продукта — залитая карточка var(--c1) с граммовкой справа; действие — строка без заливки на грунте листа: иконка акцентом 17 px слева, подпись, шеврон, волосяной разделитель между строками. Раздел действий открывается подписью «ДЕЙСТВИЯ С ПРИЁМОМ» 9,5 px прописными"></span><i>раньше и то и другое было одинаковой пилюлей: «Салат овощной» и «Копировать приём» отличались только текстом, и список читался как продукты, среди которых затесались команды. Разница именно в форме — цветом их разводить нельзя, терракота занята действием</i></div>
   <div class="spec"><b>действия приёма</b><span data-v="в листе правки, тремя строками между «Добавить продукт» и «Удалить приём»: «Копировать приём» · «Переместить на другой день» · «Сохранить набором»; у пустого приёма все три погашены"></span><i>эмодзи-кнопки канона (📋 🔀 💾) не переносятся — действия живут строками листа, как всё остальное в v4</i></div>
-  <div class="spec"><b>лист выбора цели</b><span data-v="один и тот же для копии и переноса: дни с приёмами, исходный день раскрыт, приёмы строками с ккал, последняя строка каждого дня — «В новый приём»; исходный приём в списке отсутствует"></span><i>перемещать приём в самого себя нельзя, а «В новый приём» покрывает главный случай — записал не в тот день</i></div>
-  <div class="spec"><b>частичное копирование</b><span data-v="в листе копирования у продуктов галочки, по умолчанию отмечены все; кнопка называет число — «Копировать (3)»"></span><i>чаще повторяют не весь приём, а его основу</i></div>
+  <div class="spec"><b>лист выбора цели</b><span data-v="ОТДЕЛЬНОЙ ЗАДАЧЕЙ, не в этот релиз: в коде работают прежние MoveModal и CopyMealModal. Целевой вид — один и тот же для копии и переноса: дни с приёмами, исходный день раскрыт, приёмы строками с ккал, последняя строка каждого дня — «В новый приём»; исходный приём в списке отсутствует"></span><i>перемещать приём в самого себя нельзя, а «В новый приём» покрывает главный случай — записал не в тот день</i></div>
+  <div class="spec"><b>частичное копирование</b><span data-v="ОТДЕЛЬНОЙ ЗАДАЧЕЙ, вместе с листом выбора цели: в листе копирования у продуктов галочки, по умолчанию отмечены все; кнопка называет число — «Копировать (3)»"></span><i>чаще повторяют не весь приём, а его основу</i></div>
+  <div class="spec"><b>цвет свайп-действий</b><span data-v="обратимые — тинтом, необратимое — сплошной заливкой: «Копировать» шалфеем #eaefe0 с текстом #3f4a2e · «Переместить» песочным var(--tint) с чернилами · «Удалить» сплошным var(--red) и текстом #fffaf1 (5,3:1)"></span><i>тремя близкими тинтами это не решается: подложки «Переместить» и «Удалить» отличались по светлоте на 1,06 и в жесте читались как одна кнопка, а подпись красным по красному тинту давала 4,29:1. Разделяет не хью, а заливка: обратимое остаётся фоном, необратимое становится плашкой. Заодно снимается ловушка дейтераномалии — зелёный и персиковый одной светлоты путаются</i></div>
   <div class="spec"><b>свайп по продукту</b><span data-v="влево по строке продукта в листе правки: «Копировать · Переместить · Удалить»; цели — тот же лист выбора"></span><i>тап по строке занят граммовкой; свайп — вторичный жест для редких действий, как в каноне</i></div>
   <div class="spec"><b>повтор вчерашнего</b><span data-v="пустой приём показывает строку «Повторить вчерашний „Обед“» с составом до четырёх продуктов; тап копирует состав целиком"></span><i>самый частый сценарий копирования — «то же, что вчера»; строка избавляет от пути через лист выбора</i></div>
   <div class="spec"><b>набор</b><span data-v="«Сохранить набором» кладёт состав в наборы поиска продуктов; имя предзаполнено названием приёма"></span></div>
   <div class="spec"><b>несколько продуктов</b><span data-v="отдельной кнопки «Добавить несколько» нет: мультивыбор — режим внутри поиска продуктов"></span><i>вторая кнопка добавления рядом с первой заставляла выбирать способ до того, как понятно, что ищешь</i></div>
 
   <div class="spec"><b>удаление и отмена</b><span data-v="подтверждения заранее нет: после удаления приёма или продукта — тост над нижней навигацией, 5 с, с полосой времени и единственным действием «Отменить»; окно защиты записи равно видимой полосе — 5 с, невидимого запаса нет; новый тост заменяет предыдущий, отмена возвращает последнее удалённое"></span><i>вопрос «точно удалить?» платят все ради редкой ошибки; отмена после — страхует только ошибшегося. Как в каноне, но карточкой в тонах палитры, не тёмным слоем</i></div>
-  <div class="spec"><b>пустые соседние дни</b><span data-v="в листе выбора цели вчера и завтра показываются всегда, даже без приёмов — строка «пусто», тап заводит новый приём; для переноса приёма исходный день помечен «откуда» и погашен"></span><i>главный сценарий переноса — «записал не в тот день», и целевой день чаще всего пуст</i></div>
+  <div class="spec"><b>пустые соседние дни</b><span data-v="ОТДЕЛЬНОЙ ЗАДАЧЕЙ, вместе с листом выбора цели: в листе выбора цели вчера и завтра показываются всегда, даже без приёмов — строка «пусто», тап заводит новый приём; для переноса приёма исходный день помечен «откуда» и погашен"></span><i>главный сценарий переноса — «записал не в тот день», и целевой день чаще всего пуст</i></div>
   <div class="spec"><b>название после переноса</b><span data-v="автоназвание пересчитывается по времени в новом дне; ручное имя сохраняется как есть"></span><i>«Обед», уехавший в 21:00, вводит в заблуждение — а ручной выбор человека сильнее автоматики, как везде</i></div>
   <div class="spec"><b>советы приёма</b><span data-v="ОТДЕЛЬНОЙ ЗАДАЧЕЙ, не в этот релиз: движка советов по приёму в коде нет — сегодня считаются только советы дня. Спецификация ниже описывает целевой вид; в релиз идёт вкладка без строки «Советы»"></span><i>совет по конкретному приёму — действие сейчас, ему место в листе; общие советы дня — в «Инсайтах»</i></div>
   <div class="spec"><b>формат совета</b><span data-v="карточка: предложение-действие чернилами + причина одной строкой вторичным тоном; оценок, баллов и «полезно?» нет"></span><i>совет либо выполняется, либо нет — просить его оценить это канонный троп, он снят решением канваса</i></div>
@@ -352,13 +365,13 @@
   <div class="spec"><b>трассировка расчёта</b><span data-v="у окна сжигания жира: таймер, три крупнейших вклада с величинами, строка неопределённости с диапазоном; полный список вкладов — за «Весь расчёт»"></span><i>ценность в том, что расчёт признаёт, чего не знает; семь строк по «+0,2 мин» на экране этого не добавляют, а прячут главное</i></div>
   <div class="spec"><b>планер приёмов</b><span data-v="на «Питании» отсутствует — блок живёт в «Инсайтах», главный кадр — «Инсайты · ярус Питание» в tab-insights.v4.dc.html; здешний кадр «Планнер с действием» — протокол"></span><i>планер — «на подумать», а эта вкладка — действие и статус сегодня; чип «Планер» снят вместе с блоком</i></div>
   <div class="spec"><b>чем добрать клетчатку</b><span data-v="закрытая строка «добрать 9 г» с шевроном; раскрытие на месте — три категории строками с вилкой граммов + личный лучший источник за месяц"></span><i>совет, выполнимый в магазине; иконок у категорий нет — они не различают овощи от бобовых</i></div>
-  <div class="spec"><b>замена продукта</b><span data-v="строка под продуктом: чем заменить и сколько ккал вместо сколько; фон поверхности, не предупреждение"></span><i>прямая экономия там, где человек уже смотрит на состав; жёлтая подложка со знаком делала предложение упрёком</i></div>
-  <div class="spec"><b>оценка приёма</b><span data-v="ровно одна, словом: «полноценный приём», «лёгкий», «перебор по жирам»; числовых оценок и звёзд нет"></span><i>слово не требует шкалы, число 86 требует объяснения, из чего оно</i></div>
+  <div class="spec"><b>замена продукта</b><span data-v="ОТДЕЛЬНОЙ ЗАДАЧЕЙ, вместе со советами приёма: строка под продуктом — чем заменить и сколько ккал вместо сколько; фон поверхности, не предупреждение"></span><i>прямая экономия там, где человек уже смотрит на состав; жёлтая подложка со знаком делала предложение упрёком</i></div>
+  <div class="spec"><b>оценка приёма</b><span data-v="ОТДЕЛЬНОЙ ЗАДАЧЕЙ, вместе со советами приёма: ровно одна, словом: «полноценный приём», «лёгкий», «перебор по жирам»; числовых оценок и звёзд нет"></span><i>слово не требует шкалы, число 86 требует объяснения, из чего оно</i></div>
   <div class="spec"><b>карточка воды</b><span data-v="рисуется по своему канвасу: дефолт — вид «Кольцо», под карточкой переключатель «Полоса / Кольцо». Здесь она вторична, при расхождении верен water-add.v4.dc.html"></span><i>карточка уже спроектирована и реализована отдельно; этот файл её не переопределяет</i></div>
     <div class="spec"><b>три добавки к карточке</b><span data-v="предложения в water-add, не самостоятельные решения: строка «последний раз 2 ч 23 мин назад» в подписи под кольцом, блок «Откуда норма» рядом с карточкой, совет-привычка раз в неделю"></span><i>они пришли из каноничной версии и полезны, но чужой канвас правится своим файлом — сюда нарисованы, чтобы было видно, как встают в поток вкладки</i></div>
   <div class="spec"><b>приёмы за день</b><span data-v="строка на приём: начало, полоса длительности волны, конец; пересечение красным сегментом. Кривых волн нет — их рисовали в другом визуальном языке и они не отвечали на вопрос «когда я снова голоден»"></span><i>видно, что обед тянется пять часов и накрывает перекус. Два способа рисовать одно держать нельзя: полосы остаются, кривые сняты вместе с чужим синим градиентом</i></div>
   <div class="spec"><b>номер приёма</b><span data-v="кружок с номером в строке, нумерация по порядку дня — 1 у самого раннего приёма; порядок строк задан строкой «порядок приёмов»"></span><i>номер даёт язык для разговора с куратором: «во втором приёме»</i></div>
-  <div class="spec"><b>серия приёмов</b><span data-v="строка «три полноценных приёма подряд» — факт, без похвалы и без кубков"></span></div>
+  <div class="spec"><b>серия приёмов</b><span data-v="строка «три полноценных приёма подряд» — факт, без похвалы и без кубков. Полноценный = приём с продуктами не меньше 15 % бюджета дня; иначе в серию попадает кофе с молоком"></span></div>
   <div class="spec" style="border-bottom:none"><b>пустой приём</b><span data-v="остаётся строкой в дневнике: состав «без продуктов · итог дня посчитан без него» вторичным тоном, справа «+ продукт»; отдельной карточки нет"></span><i>пустой приём портит расчёт дня, поэтому строка называет цену; отдельная карточка с «Заполнить» была вторым местом для того же действия</i></div>
 
   <div class="ctrH">Служебные состояния</div>
@@ -374,13 +387,12 @@
   <div class="spec"><b>вторичный тон</b><span data-v="сплошной, не альфа: #6b5f4f песочная (5,45:1), #5a6474 синяя (5,36:1), кремовая .62 на тёмных (6,17:1 и 5,98:1)"></span><i>весь вторичный текст вкладки функционален — норма в итогах, «съедено / бюджет», состав приёма, подписи блоков, нижняя навигация — и живёт по порогу 4,5:1. Альфа .38–.5 давала 2,66–3,95:1; тот же перевод на сплошные тона уже сделан в water-add и в анкете</i></div>
     <div class="spec"><b>заметность чипа</b><span data-v="чип обязан отличаться от подложки не меньше чем на 3:1 — сам чип, а не текст в нём: включённый заливкой акцента, выключенный обводкой 2 px тем же акцентом"></span><i>обводка — единственная граница выключенного чипа, и она несёт состояние «блок выключен»; на 1,5 px в альфе .16 она давала 1,45:1, и состояние пропадало. Правило и число те же, что у минус-чипа воды</i></div>
     <div class="spec"><b>синие наборы</b><span data-v="покрыты полностью, включая капсулу даты и плашку куратора"></span><i>капсула оставалась песочной в синей палитре, плашка куратора не имела правил для сине-тёмной</i></div>
-  <div class="spec"><b>ночь до 03:00</b><span data-v="«сегодня» остаётся вчерашним календарным днём, но капсула называет обе даты: «Сегодня, 20 августа» до полуночи и «Ночь на 21 августа» после"></span><i>иначе после полуночи человек видит вчерашнюю дату и решает, что приложение отстало</i></div>
   <div class="spec"><b>убрать воду</b><span data-v="проверяется тем же гейтом подписки, что и добавление"></span><i>убавление проходило без проверки — в режиме только чтения данные всё равно менялись</i></div>
   <div class="spec" style="border-bottom:none"><b>ожидание данных</b><span data-v="скелетонов нет: до прихода данных блоки показывают прочерки, а не нули"></span><i>нули читаются как факт «ничего не съел»</i></div>
 </div>
 
 <div class="h">Вкладка целиком · день с приёмами</div>
-<p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Экран собран одной непрерывной полосой — это одна прокрутка, а не набор состояний; каждый блок адресуется своей меткой. Порядок здесь каноничный: он же перечислен строкой контракта «порядок блоков». Четыре чип-зависимых блока (клетчатка, рефид, оценка и риск, волна сейчас) в полосу не нарисованы — их вид в отдельных кадрах ниже; отсутствие блока здесь не значит, что он выключен. Числа во всех блоках одного дня: бюджет 1 931, съедено 1 289, осталось 642 — те же, что на плитке «Калории» Главной.</p>
+<p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Экран собран одной непрерывной полосой — это одна прокрутка, а не набор состояний; каждый блок адресуется своей меткой. Порядок здесь каноничный: он же перечислен строкой контракта «порядок блоков». Четыре чип-зависимых блока (клетчатка, рефид, оценка и риск, волна сейчас) в полосу не нарисованы — их вид в отдельных кадрах ниже; отсутствие блока здесь не значит, что он выключен. Числа во всех блоках одного дня: бюджет 1 931, съедено 1 289, осталось 642 — те же, что на плитке «Калории» Главной.</p>
 
 <div class="pal" data-mir="m1">
   <div class="strip">
@@ -408,13 +420,13 @@
         <div class="hk">Осталось на сегодня</div>
         <div class="hn"><b>642</b><i>ккал</i></div>
         <div class="htr"><i style="width:67%"></i></div>
-        <div class="hb"><span>съедено 1 289</span><span>бюджет 1 931</span></div>
+        <div class="hb"><span>съедено 1 289</span><span>бюджет 1 931</span></div>
       </div>
     </div>
 
     <div class="sLab"><b>Окно приёмов</b><span>одна строка состояния; шалфей только когда окно правда открыто</span></div>
     <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Окно приёмов">
-      <div class="sec"><div class="win"><span>Окно приёмов</span><span>закроется в 19:40<br>через 1:20</span></div></div>
+      <div class="sec"><div class="win open"><span>Окно приёмов</span><span>закроется в 19:40<br>через 1:20</span></div></div>
     </div>
 
     <div class="sLab"><b>Дневник приёмов</b><span>строка нажимается целиком и открывает лист правки; пустой приём называет цену</span></div>
@@ -430,7 +442,7 @@
         </div>
         <div class="meal">
           <div class="mt"><b><span style="display:inline-flex;align-items:center;gap:8px;"><span class="mnum">3</span>16:40 · Перекус</span></b><s>309</s></div>
-          <div class="mb"><span>Творог, орехи</span><span class="plus">+ ещё</span></div>
+          <div class="mb"><span>Творог, орехи</span><span class="plusO">+ ещё</span></div>
         </div>
         <div class="meal mempty">
           <div class="mt"><b><span style="display:inline-flex;align-items:center;gap:8px;"><span class="mnum">4</span>19:30 · Ужин</span></b><s>—</s></div>
@@ -449,7 +461,7 @@
     <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Итоги дня">
       <div class="sec"><div class="tot">
         <div class="totH">Итоги дня</div>
-        <div class="tr"><div class="trh"><b>Калории</b><span><em>1 289</em> из 1 931 ккал</span></div><div class="trk"><i class="acc" style="width:67%"></i></div></div>
+        <div class="tr"><div class="trh"><b>Калории</b><span><em>1 289</em> из 1 931 ккал</span></div><div class="trk"><i class="acc" style="width:67%"></i></div></div>
         <div class="tr"><div class="trh"><b>Белок</b><span><em>96</em> из 128 г</span></div><div class="trk"><i style="width:75%"></i></div></div>
         <div class="tr"><div class="trh"><b>Жиры</b><span><em>58</em> из 64 г</span></div><div class="trk"><i class="acc" style="width:91%"></i></div></div>
         <div class="tr"><div class="trh"><b>Углеводы</b><span><em>132</em> из 168 г</span></div><div class="trk"><i class="acc" style="width:79%"></i></div></div>
@@ -461,7 +473,7 @@
     <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Качество еды">
       <div class="sec">
         <div class="totH" style="margin:16px 0 0;">Качество еды</div>
-        <div class="qual" style="margin-top:8px;">
+        <div class="qual">
           <div class="qc ok"><div class="qk">Вредность</div><div class="qv"><b>3,4</b><i>из 10</i></div><div class="qh">порог 5 · в норме</div></div>
           <div class="qc"><div class="qk">Гликемический</div><div class="qv"><b>48</b><i>средний</i></div><div class="qh">взвешен по углеводам</div></div>
         </div>
@@ -508,10 +520,10 @@
       <div class="sec"><div class="wCardB" style="margin-top:10px;">
         <div class="bTop"><span class="k">Вода · 7 дней в среднем 2,1 л</span></div>
         <div style="display:flex;align-items:baseline;gap:6px;margin-top:9px;"><b style="font:600 20px/1 Figtree,sans-serif;letter-spacing:-.02em;color:#201e1d;">1,7 л</b><span style="font:500 11px/1 Figtree,sans-serif;color:#6b5f4f;">из 3,0 · осталось 1,3</span></div>
-        <div class="bCurve"><svg viewBox="0 0 268 34" fill="none">
+        <div class="bCurve"><svg viewBox="0 0 268 34" fill="none">
           <path d="M4 20 L48 11 L92 15 L136 6 L180 18 L224 9 L264 14 L264 30 L4 30 Z" fill="currentColor" opacity=".16"/>
           <path d="M4 12 L264 12" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".5"/>
-          <polyline points="4,20 48,11 92,15 136,6 180,18 224,9 264,14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="4,20 48,11 92,15 136,6 180,18 224,9 264,14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           <circle cx="48" cy="11" r="2.6" fill="currentColor"/><circle cx="136" cy="6" r="2.6" fill="currentColor"/><circle cx="224" cy="9" r="2.6" fill="currentColor"/>
           <circle cx="4" cy="20" r="2.6" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.5"/><circle cx="92" cy="15" r="2.6" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.5"/><circle cx="180" cy="18" r="2.6" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.5"/>
           <circle cx="264" cy="14" r="3.4" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.8"/><circle cx="264" cy="14" r="6.8" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".45"/>
@@ -561,17 +573,17 @@
         </div>
         <div class="hero">
           <div class="hk">Осталось на сегодня</div>
-          <div class="hn"><b>1 931</b><i>ккал</i></div>
+          <div class="hn"><b>1 931</b><i>ккал</i></div>
           <div class="htr"></div>
-          <div class="hb"><span>съедено —</span><span>бюджет 1 931</span></div>
+          <div class="hb"><span>съедено —</span><span>бюджет 1 931</span></div>
         </div>
         <div class="sec">
-          <div class="win calm"><span>Окно приёмов</span><span>добавьте приём<br>для расчёта</span></div>
+          <div class="win"><span>Окно приёмов</span><span>добавьте приём<br>для расчёта</span></div>
           <div class="dry"><div class="dryE">Пока нет приёмов — добавьте первый</div></div>
           <div class="cta"><span>Добавить приём пищи</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
           <div class="tot">
             <div class="totH">Итоги дня</div>
-            <div class="tr"><div class="trh"><b>Калории</b><span><em>—</em> из 1 931 ккал</span></div></div>
+            <div class="tr"><div class="trh"><b>Калории</b><span><em>—</em> из 1 931 ккал</span></div></div>
             <div class="tr"><div class="trh"><b>Белок</b><span><em>—</em> из 128 г</span></div></div>
             <div class="tr"><div class="trh"><b>Жиры</b><span><em>—</em> из 64 г</span></div></div>
           </div>
@@ -592,13 +604,13 @@
           <div class="hk">Перебор</div>
           <div class="hn warn"><b>259</b><i>ккал</i></div>
           <div class="htr"><i style="width:88%"></i><i class="wrn" style="width:12%"></i></div>
-          <div class="hb"><span>съедено 2 190</span><span>бюджет 1 931</span></div>
+          <div class="hb"><span>съедено 2 190</span><span>бюджет 1 931</span></div>
         </div>
         <div class="sec">
           <div class="win warn"><span>Окно приёмов</span><span>волны наложились<br>нахлёст 2:10</span></div>
           <div class="tot">
             <div class="totH">Итоги дня</div>
-            <div class="tr"><div class="trh"><b>Калории</b><span class="ovr"><em>2 190</em> из 1 931 ккал</span></div><div class="trk"><i class="acc" style="width:88%"></i><i class="wrn2" style="width:12%"></i></div></div>
+            <div class="tr"><div class="trh"><b>Калории</b><span class="ovr"><em>2 190</em> из 1 931 ккал</span></div><div class="trk"><i class="acc" style="width:88%"></i><i class="wrn2" style="width:12%"></i></div></div>
             <div class="tr"><div class="trh"><b>Белок</b><span><em>118</em> из 128 г</span></div><div class="trk"><i style="width:92%"></i></div></div>
             <div class="tr"><div class="trh"><b>Жиры</b><span class="ovr"><em>81</em> из 64 г</span></div><div class="trk"><i class="acc" style="width:79%"></i><i class="wrn2" style="width:21%"></i></div></div>
             <div class="tr"><div class="trh"><b>Углеводы</b><span><em>164</em> из 168 г</span></div><div class="trk"><i class="acc" style="width:98%"></i></div></div>
@@ -619,12 +631,12 @@
         </div>
         <div class="hero">
           <div class="hk">Съедено за день</div>
-          <div class="hn"><b>1 786</b><i>ккал</i></div>
+          <div class="hn"><b>1 786</b><i>ккал</i></div>
           <div class="htr"><i style="width:92%"></i></div>
-          <div class="hb"><span>из 1 931</span><span>не съедено 145</span></div>
+          <div class="hb"><span>из 1 931</span><span>не съедено 145</span></div>
         </div>
         <div class="sec">
-          <div class="win calm"><span>Окно приёмов</span><span>день закрыт</span></div>
+          <div class="win"><span>Окно приёмов</span><span>день закрыт</span></div>
           <div class="dry">
             <div class="meal">
               <div class="mt"><b>08:05 · Завтрак</b><s>402</s></div>
@@ -661,16 +673,17 @@
             <div class="shR"><b>Время</b><span>13:05</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
             <div class="shR"><b>Курица, грудка</b><span>180 г</span></div>
             <div style="position:relative;margin:0 18px 8px;border-radius:16px;overflow:hidden;">
-              <div style="position:absolute;inset:0;display:flex;justify-content:flex-end;"><span style="display:flex;align-items:center;padding:0 12px;background:var(--tint);font:600 10.5px/1 Figtree,sans-serif;color:var(--tx)">Копировать</span><span style="display:flex;align-items:center;padding:0 12px;background:var(--tint);font:600 10.5px/1 Figtree,sans-serif;color:var(--tx)">Переместить</span><span style="display:flex;align-items:center;padding:0 12px;background:rgba(168,56,43,.14);font:600 10.5px/1 Figtree,sans-serif;color:var(--red)">Удалить</span></div>
+              <div style="position:absolute;inset:0;display:flex;justify-content:flex-end;"><span style="display:flex;align-items:center;padding:0 12px;background:var(--sage);font:600 10.5px/1 Figtree,sans-serif;color:var(--sageTx)">Копировать</span><span style="display:flex;align-items:center;padding:0 12px;background:var(--tint);font:600 10.5px/1 Figtree,sans-serif;color:var(--tx)">Переместить</span><span style="display:flex;align-items:center;padding:0 12px;background:var(--red);font:600 10.5px/1 Figtree,sans-serif;color:#fffaf1">Удалить</span></div>
               <div class="shR" style="margin:0;transform:translateX(-246px);position:relative;"><b>Рис бурый</b><span>120 г</span></div>
             </div>
             <div class="shR"><b>Салат овощной</b><span>150 г</span></div>
             <div class="shR"><b>Масло оливковое</b><span>10 г</span></div>
             <div style="margin:8px 18px 0;" class="cta" style-hover="opacity:.9"><span>Добавить продукт</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
-            <div class="shR" style="margin-top:14px;"><b>Советы · 3</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M6 9l6 6 6-6"/></svg></div>
-            <div class="shR"><b>Копировать приём</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
-            <div class="shR"><b>Переместить на другой день</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
-            <div class="shR"><b>Сохранить набором</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div class="shCap">Действия с приёмом</div>
+            <div class="shA"><span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16v-4M12 8h.01"/><circle cx="12" cy="12" r="9"/></svg></span><b>Советы · 3</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco);flex:none;"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div class="shA"><span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M5 15V5.5A1.5 1.5 0 0 1 6.5 4H15"/></svg></span><b>Копировать приём</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco);flex:none;"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div class="shA"><span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M14 13l3 3-3 3"/></svg></span><b>Переместить на другой день</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco);flex:none;"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div class="shA"><span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5.5A1.5 1.5 0 0 1 6.5 4h8L19 8.5v10A1.5 1.5 0 0 1 17.5 20h-11A1.5 1.5 0 0 1 5 18.5z"/><path d="M9 4v5h6"/></svg></span><b>Сохранить набором</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco);flex:none;"><path d="M9 6l6 6-6 6"/></svg></div>
             <div class="shDel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>Удалить приём</div>
             <div style="height:16px"></div>
           </div>
@@ -685,7 +698,7 @@
         <div class="sec" style="margin-top:16px;">
           <div class="tot">
             <div class="totH">Итоги дня</div>
-            <div class="tr"><div class="trh"><b>Калории</b><span><em>1 289</em> из 1 931 ккал</span></div><div class="trk"><i class="acc" style="width:67%"></i></div></div>
+            <div class="tr"><div class="trh"><b>Калории</b><span><em>1 289</em> из 1 931 ккал</span></div><div class="trk"><i class="acc" style="width:67%"></i></div></div>
             <div class="tr"><div class="trh"><b>Белок</b><span><em>96</em> из 128 г</span></div><div class="trk"><i style="width:75%"></i></div></div>
             <div class="tr"><div class="trh"><b>Жиры</b><span><em>58</em> из 64 г</span></div><div class="trk"><i class="acc" style="width:91%"></i></div></div>
             <div class="tr"><div class="trh"><b>Углеводы</b><span><em>132</em> из 168 г</span></div><div class="trk"><i class="acc" style="width:79%"></i></div></div>
@@ -723,7 +736,7 @@
           <div class="hk">Осталось на сегодня</div>
           <div class="hn"><b>642</b><i>ккал</i></div>
           <div class="htr"><i style="width:67%"></i></div>
-          <div class="hb"><span>съедено 1 289</span><span>бюджет 1 931</span></div>
+          <div class="hb"><span>съедено 1 289</span><span>бюджет 1 931</span></div>
         </div>
         <div class="sec">
           <div class="dry">
@@ -771,7 +784,7 @@
             <div class="hk">Осталось на сегодня</div>
             <div class="hn" style="color:var(--tx);"><b>−98</b><i>ккал</i></div>
             <div class="htr"><i style="width:100%;"></i></div>
-            <div class="hb"><span>съедено 2 029</span><span style="color:var(--tx);">105 %</span></div>
+            <div class="hb"><span>съедено 2 029</span><span style="color:var(--tx);">105 %</span></div>
           </div>
       </div>
     </div>
@@ -783,7 +796,7 @@
             <div class="hk">Осталось на сегодня</div>
             <div class="hn" style="color:var(--ac2);"><b>−259</b><i>ккал</i></div>
             <div class="htr"><i style="width:100%;"></i><i style="width:13%;background:var(--ac2);"></i></div>
-            <div class="hb"><span>съедено 2 190</span><span style="color:var(--ac2);">113 %</span></div>
+            <div class="hb"><span>съедено 2 190</span><span style="color:var(--ac2);">113 %</span></div>
           </div>
       </div>
     </div>
@@ -795,7 +808,7 @@
             <div class="hk">Осталось на сегодня</div>
             <div class="hn" style="color:var(--red);"><b>−734</b><i>ккал</i></div>
             <div class="htr"><i style="width:100%;"></i><i style="width:38%;background:var(--red);"></i></div>
-            <div class="hb"><span>съедено 2 665</span><span style="color:var(--red);">138 %</span></div>
+            <div class="hb"><span>съедено 2 665</span><span style="color:var(--red);">138 %</span></div>
           </div>
       </div>
     </div>
@@ -846,7 +859,7 @@
         <div class="top"><span class="ttl">Питание</span><span class="capM">вт, 19 авг · 2 приёма</span></div>
         <div class="hero" style="opacity:.5">
           <div class="hk">Съедено за день</div>
-          <div class="hn"><b>1 786</b><i>ккал</i></div>
+          <div class="hn"><b>1 786</b><i>ккал</i></div>
           <div class="htr"><i style="width:92%"></i></div>
         </div>
         <div class="bd">
@@ -982,14 +995,14 @@
         <div class="sec"><div class="wCardB">
         <div class="bTop"><span class="k">Вода · 7 дней в среднем 2,1 л</span><span class="bSub">−200</span></div>
         <div class="bRing">
-          <svg width="58" height="58" viewBox="0 0 58 58" style="flex:none;"><circle cx="29" cy="29" r="24" fill="none" stroke="var(--trk)" stroke-width="6"/><circle cx="29" cy="29" r="24" fill="none" stroke="var(--wDeep)" stroke-width="6" stroke-linecap="round" stroke-dasharray="86 151" transform="rotate(-90 29 29)"/></svg>
+          <svg width="58" height="58" viewBox="0 0 58 58" style="flex:none;"><circle cx="29" cy="29" r="24" fill="none" stroke="var(--trk)" stroke-width="6"/><circle cx="29" cy="29" r="24" fill="none" stroke="var(--wDeep)" stroke-width="6" stroke-linecap="round" stroke-dasharray="86 151" transform="rotate(-90 29 29)"/></svg>
           <span class="bRingTxt"><b>1,7 л</b><span>из 3,0 · осталось 1,3</span><span>последний раз 2 ч 23 мин назад</span></span>
         </div>
         <div class="bChips"><span class="bChip">+100</span><span class="bChip">+200</span><span class="bChip">+330</span><span class="bChip">+500</span></div>
-        <div class="bCurve"><svg viewBox="0 0 268 34" fill="none">
+        <div class="bCurve"><svg viewBox="0 0 268 34" fill="none">
           <path d="M4 20 L48 11 L92 15 L136 6 L180 18 L224 9 L264 14 L264 30 L4 30 Z" fill="currentColor" opacity=".16"/>
           <path d="M4 12 L264 12" stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".5"/>
-          <polyline points="4,20 48,11 92,15 136,6 180,18 224,9 264,14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="4,20 48,11 92,15 136,6 180,18 224,9 264,14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           <circle cx="48" cy="11" r="2.6" fill="currentColor"/><circle cx="136" cy="6" r="2.6" fill="currentColor"/><circle cx="224" cy="9" r="2.6" fill="currentColor"/>
           <circle cx="4" cy="20" r="2.6" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.5"/><circle cx="92" cy="15" r="2.6" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.5"/><circle cx="180" cy="18" r="2.6" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.5"/>
           <circle cx="264" cy="14" r="3.4" fill="var(--cardBg)" stroke="currentColor" stroke-width="1.8"/><circle cx="264" cy="14" r="6.8" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".45"/>
@@ -1000,8 +1013,8 @@
         <div class="sec"><div class="blk">
         <div class="blkH"><b>Откуда норма 3,0 л</b></div>
         <div class="lst">
-          <div class="lrow"><b>По весу</b><span>2 200 мл</span></div>
-          <div class="lrow"><b>Шаги 11 400</b><span>+500 мл</span></div>
+          <div class="lrow"><b>По весу</b><span>2 200 мл</span></div>
+          <div class="lrow"><b>Шаги 11 400</b><span>+500 мл</span></div>
           <div class="lrow"><b>Август</b><span>+300 мл</span></div>
         </div>
       </div></div>
@@ -1014,15 +1027,15 @@
         <div class="top"><span class="ttl">Питание</span><span class="capM">сб, 23 авг · 2 приёма</span></div>
         <div class="hero">
           <div class="hk">Осталось на сегодня</div>
-          <div class="hn"><b>1 604</b><i>ккал</i></div>
+          <div class="hn"><b>1 604</b><i>ккал</i></div>
           <div class="htr"><i style="width:32%"></i></div>
-          <div class="hb"><span>съедено 747</span><span>бюджет 2 351</span></div>
+          <div class="hb"><span>съедено 747</span><span>бюджет 2 351</span></div>
         </div>
         <div class="sec">
           <div class="blk">
             <div class="blkH"><b>Загрузочный день</b><span>+420 ккал</span></div>
-            <div class="lst"><div class="lrow"><b>Прибавка уже в бюджете</b><span>2 351</span></div><div class="lrow"><b>Обычная норма</b><span>1 931</span></div></div>
-            <div class="why">Норма дня выросла на 420 ккал — герой уже считает от 2 351, добирать вручную ничего не нужно.</div>
+            <div class="lst"><div class="lrow"><b>Прибавка уже в бюджете</b><span>2 351</span></div><div class="lrow"><b>Обычная норма</b><span>1 931</span></div></div>
+            <div class="why">Норма дня выросла на 420 ккал — герой уже считает от 2 351, добирать вручную ничего не нужно.</div>
           </div>
         </div>
       </div>
