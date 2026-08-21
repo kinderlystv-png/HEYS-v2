@@ -10548,6 +10548,19 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   text-align: left;
 }
 
+/* Виджет, чей вид ещё не сведён с канвасом: строка гашена, превью нет,
+   добавить нельзя (кадр «Главная · расстановка»). */
+.widget-v4-catalog__item--soon {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.widget-v4-catalog__hint {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--v4-sand-act-mid, #a75c2b);
+}
+
 .widget-v4-catalog__row {
   display: flex;
   justify-content: space-between;

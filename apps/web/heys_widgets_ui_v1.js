@@ -7929,13 +7929,31 @@
 
     // Уже стоящие на экране в каталоге не показываются: серая строка «уже
     // добавлен» заставляла искать плитку глазами (канвас v4, строка 54).
-    const catalogTypes = availableTypes.filter((type) => !existingTypeSet.has(type.type));
+    // Виджеты, чей вид ещё не сведён с канвасом, стоят в конце погашенными:
+    // кадр «Главная · расстановка» показывает их именно так.
+    const catalogTypes = availableTypes
+      .filter((type) => !existingTypeSet.has(type.type))
+      .slice()
+      .sort((a, b) => (a.inDevelopment ? 1 : 0) - (b.inDevelopment ? 1 : 0));
     if (!catalogTypes.length) return null;
 
     return React.createElement('div', { className: 'widget-v4-catalog' },
       React.createElement('div', { className: 'widget-v4-catalog__tier' }, 'Каталог'),
       React.createElement('div', { className: 'widget-v4-catalog__grid' },
         catalogTypes.map((type) => {
+          if (type.inDevelopment) {
+            return React.createElement('span', {
+              key: type.type,
+              className: 'widget-v4-catalog__item widget-v4-catalog__item--soon',
+              'aria-disabled': 'true'
+            },
+              React.createElement('span', { className: 'widget-v4-catalog__row' },
+                React.createElement('span', { className: 'widget-v4-catalog__name' }, type.name),
+                React.createElement('span', { className: 'widget-v4-catalog__hint' }, 'в разработке')
+              )
+            );
+          }
+
           // Превью в формате дефолтного вида на живых данных дня
           // (канвас v4, строка 54).
           const defaultVariant = HEYS.Widgets.VariantsV4?.getDefaultVariant?.(type.type);

@@ -22,9 +22,13 @@ const originalHEYS = window.HEYS;
 
 const TYPES = [
   { type: 'insulinWave', name: 'Инсулиновая волна', defaultSize: '2x2' },
+  // Вид не сведён с канвасом — строка гасится подписью «в разработке».
+  { type: 'streak', name: 'Streak', defaultSize: '1x1', inDevelopment: true },
   { type: 'water', name: 'Вода', defaultSize: '1x1' },
   { type: 'macros', name: 'Кольца БЖУ', defaultSize: '3x2' }
 ];
+
+const READY_TYPES = TYPES.filter((t) => !t.inDevelopment);
 
 const SIZES = {
   '1x1': { cols: 1, rows: 1 },
@@ -104,7 +108,7 @@ describe('каталог расстановки: превью — настоящ
   it('у каждой карточки есть превью в формате дефолтного вида', () => {
     const { container } = renderCatalog();
     const previews = container.querySelectorAll('.widget-v4-catalog__preview');
-    expect(previews.length).toBe(TYPES.length);
+    expect(previews.length).toBe(READY_TYPES.length);
 
     // Инсулиновая волна: дефолтный вид «День как есть» — 2×2.
     const wave = container.querySelector('.widget-v4-catalog__preview.widget--insulinWave');
@@ -139,6 +143,23 @@ describe('каталог расстановки: превью — настоящ
     const { container } = renderCatalog(['insulinWave']);
     expect(container.querySelector('.widget-v4-catalog__preview.widget--insulinWave')).toBeNull();
     expect(container.querySelectorAll('.widget-v4-catalog__item').length).toBe(TYPES.length - 1);
+  });
+
+  it('виджет с несведённым видом гасится подписью «в разработке» и стоит в конце', () => {
+    const { container } = renderCatalog();
+    const items = [...container.querySelectorAll('.widget-v4-catalog__item')];
+    const soon = container.querySelector('.widget-v4-catalog__item--soon');
+
+    expect(soon).toBeTruthy();
+    expect(soon.textContent).toContain('Streak');
+    expect(soon.textContent).toContain('в разработке');
+    // Превью у него нет: рисовать нечего, вид не сведён.
+    expect(soon.querySelector('.widget-v4-catalog__preview')).toBeNull();
+    // Нажать нельзя — это не кнопка.
+    expect(soon.tagName).not.toBe('BUTTON');
+    expect(soon.getAttribute('aria-disabled')).toBe('true');
+    // Стоит последним, чтобы не разбивать готовые плитки.
+    expect(items[items.length - 1]).toBe(soon);
   });
 
   it('когда добавлены все виджеты, каталог не рисует пустую полосу', () => {
