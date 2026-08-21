@@ -464,7 +464,7 @@
                     meal,
                     mealIndex,
                     dateKey: date,
-                    onComplete: ({ mealIndex: idx, time, mealType, name }) => {
+                    onComplete: ({ mealIndex: idx, time, mealType, mealTypePinned, name }) => {
                         // Обновляем приём
                         const newUpdatedAt = Date.now();
                         if (lastLoadedUpdatedAtRef) lastLoadedUpdatedAtRef.current = newUpdatedAt;
@@ -474,7 +474,7 @@
 
                         setDay(prevDay => {
                             const updatedMeals = (prevDay.meals || []).map((m, i) =>
-                                i === idx ? { ...m, time, mealType, name } : m
+                                i === idx ? { ...m, time, mealType, mealTypePinned, name } : m
                             );
                             // Сортируем по времени
                             const sortedMeals = sortMealsByTime(updatedMeals);

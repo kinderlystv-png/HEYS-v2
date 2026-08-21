@@ -1,82 +1,162 @@
+// Вкладка «Питание» против канваса nutrition-tab.v4.dc.html.
+// Контракт [data-contract="nutrition-tab"]: строки «порядок блоков», «один
+// экран для всех ширин», «прокрутка», «формат чисел», «строка приёма»,
+// «состав листа», «действия приёма», «ряд чипов», «дубль в настройках»,
+// «палитры», «вторичный тон», «заметность чипа».
 import fs from 'node:fs';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const nutritionSource = fs.readFileSync(
-  path.resolve(__dirname, '../heys_day_nutrition_v1.js'),
-  'utf8',
-);
-const cssSource = fs.readFileSync(
-  path.resolve(__dirname, '../styles/modules/732-ui-v4-nutrition.css'),
-  'utf8',
-);
-const shellSource = fs.readFileSync(
-  path.resolve(__dirname, '../heys_day_page_shell.js'),
-  'utf8',
-);
-const diarySource = fs.readFileSync(
-  path.resolve(__dirname, '../heys_day_diary_section.js'),
-  'utf8',
-);
+const read = (relative) => fs.readFileSync(path.resolve(__dirname, relative), 'utf8');
+
+const nutritionSource = read('../heys_day_nutrition_v1.js');
+const cssSource = read('../styles/modules/732-ui-v4-nutrition.css');
+const shellSource = read('../heys_day_page_shell.js');
+const diarySource = read('../heys_day_diary_section.js');
+const appShellSource = read('../heys_app_shell_v1.js');
+const paletteSource = read('../styles/modules/002-ui-v4-palette-roles.css');
 
 describe('Nutrition tab v4 structure', () => {
-  it('exports NutritionTabV4 with tiered layout markers', () => {
+  it('строит вкладку одной полосой без ярусов «Сейчас / Дневник / Разбор дня»', () => {
     expect(nutritionSource).toContain('function NutritionTabV4');
     expect(nutritionSource).toContain('nutrition-v4-hero');
-    expect(nutritionSource).toContain('nutrition-v4-tier');
+    expect(nutritionSource).toContain('nutrition-v4-window');
+    expect(nutritionSource).toContain('nutrition-v4-diary');
     expect(nutritionSource).toContain('Добавить приём пищи');
-    expect(nutritionSource).toContain('nutrition-v4-breakdown');
-    // Вода в «Разборе дня» — карточка из канваса water-add (контракт 42),
-    // а не собственный блок вкладки.
-    expect(nutritionSource).toContain('dayWaterCard?.buildWaterCard');
-    expect(nutritionSource).not.toContain('nutrition-v4-water');
-    expect(nutritionSource).toContain('removeWater');
+    expect(nutritionSource).toContain('nutrition-v4-totals');
+    expect(nutritionSource).toContain('nutrition-v4-quality');
+    expect(nutritionSource).toContain('nutrition-v4-config');
+    // Ярусов-заголовков больше нет: третий уровень заголовков на телефоне шумит.
+    expect(nutritionSource).not.toContain('nutrition-v4-tier');
+    expect(cssSource).not.toContain('.nutrition-v4-tier');
+    // Таблица 5×4 заменена пятью строками с полосами.
+    expect(nutritionSource).not.toContain('nutrition-v4-breakdown');
+    expect(nutritionSource).toContain("{ key: 'fiber', label: 'Клетчатка', unit: 'г'");
   });
 
-  it('localizes diary meal titles instead of showing english type keys', () => {
-    expect(nutritionSource).toContain('function mealTypeLabel');
-    expect(nutritionSource).toMatch(/info\?\.name \|\| info\?\.label \|\| meal\?\.name/);
-    expect(nutritionSource).toContain('localizeMealName');
-    expect(nutritionSource).not.toMatch(/if \(info\?\.type\) return info\.type/);
+  it('держит порядок блоков контракта', () => {
+    const order = [
+      'ca-day-entry',
+      'nutrition-v4-hero',
+      'nutrition-v4-window',
+      'nutrition-v4-diary',
+      'nutrition-v4-cta',
+      'nutrition-v4-totals',
+      'nutrition-v4-quality',
+      'optionalBlocks',
+      'dayWaterCard?.buildWaterCard',
+      'nutrition-v4-config',
+    ];
+    const positions = order.map((marker) => nutritionSource.lastIndexOf(marker));
+    positions.forEach((position, index) => {
+      expect(position, order[index]).toBeGreaterThan(-1);
+      if (index > 0) expect(position, order[index]).toBeGreaterThan(positions[index - 1]);
+    });
   });
 
-  it('keeps legacy meals UI in hidden mount for editing', () => {
-    expect(nutritionSource).toContain('nutrition-v4-legacy-meals');
-    expect(nutritionSource).toContain('id: \'diary-heading\'');
-    expect(nutritionSource).toContain('legacyMealsUI');
+  it('снимает скрытый легаси-дневник и его мёртвую цель прокрутки', () => {
+    expect(nutritionSource).not.toContain('nutrition-v4-legacy-meals');
+    expect(nutritionSource).not.toContain('legacyMealsUI');
+    expect(cssSource).not.toContain('.nutrition-v4-legacy-meals');
+    // FAB «еда» больше не скроллит к display:none-заголовку и не ждёт 800 мс.
+    expect(shellSource).not.toContain("getElementById('diary-heading')");
+    expect(shellSource).not.toContain('setTimeout(() => addMeal(), 800)');
   });
 
-  it('shows every meal in diary with inline add-product control', () => {
+  it('делает строку приёма нажимаемой и оставляет кнопку добавления отдельной', () => {
     expect(nutritionSource).toContain('function findMealIndexInDay');
     expect(nutritionSource).toContain('nutrition-v4-meal-row__add');
+    expect(nutritionSource).toContain('nutrition-v4-meal-row__num');
+    expect(nutritionSource).toContain('nutrition-v4-meal-row__chevron');
+    expect(nutritionSource).toContain('openMealSheet');
     expect(nutritionSource).toContain('openAddProductForMeal');
-    expect(nutritionSource).not.toMatch(/sortMealsAscending\(day\?\.meals[^\)]*\)\.filter\(\(meal\) => Array\.isArray\(meal\?\.items\)/);
-    expect(cssSource).toContain('.nutrition-v4-meal-row__add');
-    expect(cssSource).toContain('.nutrition-v4-meal-row__body');
+    expect(nutritionSource).toContain('event.stopPropagation()');
+    expect(cssSource).toMatch(/\.nutrition-v4-meal-row \{[^}]*min-height: 44px/);
   });
 
-  it('does not use inline lazy module race checks', () => {
-    expect(nutritionSource).not.toMatch(/HEYS\.\w+\s*&&\s*HEYS\./);
+  it('лист правки приёма собран из существующих обработчиков дневника', () => {
+    expect(nutritionSource).toContain('function MealEditSheet');
+    ['openTimeEditor', 'openMoodEditor', 'openEditGramsModal', 'openCopyMealModal',
+      'openMoveMealModal', 'saveAsPreset', 'repeatYesterdayMeal', 'removeMeal',
+      'removeItem', 'copyItem', 'moveItem'].forEach((handler) => {
+      expect(nutritionSource, handler).toContain(handler);
+    });
+    expect(nutritionSource).toContain('Оценки приёма');
+    expect(nutritionSource).toContain('Копировать приём');
+    expect(nutritionSource).toContain('Переместить на другой день');
+    expect(nutritionSource).toContain('Сохранить набором');
+    expect(nutritionSource).toContain('Удалить приём');
+    // Кнопки «Готово» нет: правки применяются сразу.
+    expect(nutritionSource).not.toMatch(/createElement\([^)]*'Готово'/);
+    expect(cssSource).toContain('.nutrition-v4-sheet-backdrop');
+    // Подложка product-модалок — один blur на всё приложение.
+    expect(cssSource).toContain('blur(var(--v4-modal-backdrop-blur))');
+    expect(cssSource).not.toMatch(/blur\((4|7|8|12|18)px\)/);
   });
 
-  it('nutrition renders only on diary mobile subtab', () => {
+  it('вкладка «Питание» рендерится одинаково на телефоне и десктопе', () => {
     expect(shellSource).toMatch(/mobileSubTab === 'diary'\) && isTabActive && compactNutrition/);
-    expect(shellSource).not.toMatch(/mobileSubTab === 'stats' \|\| mobileSubTab === 'diary'\) && compactNutrition/);
+    // Легаси-секция дневника больше не участвует в мобильной вкладке.
+    expect(diarySource).toContain('const isNutritionTab = isMobile && mobileSubTab === \'diary\'');
+    expect(diarySource).toContain('if (isNutritionTab) return null;');
+    expect(diarySource).toContain('const showDiary = !isMobile;');
   });
 
-  it('legacy diary section skips mobile diary when v4 is active', () => {
-    expect(diarySource).toMatch(/isMobile && mobileSubTab === 'diary'/);
-    expect(diarySource).toMatch(/return null/);
+  it('семь чипов хранятся в профиле, раздел «Ещё → Дневник» снят', () => {
+    expect(nutritionSource).toMatch(/const CHIPS = \[[\s\S]*showDiaryHungerPanel[\s\S]*showDiaryFiberPanel[\s\S]*showDiarySupplementsPanel[\s\S]*showDiaryRefeedPanel[\s\S]*showDiaryMealsTimelinePanel[\s\S]*showDiaryScoreRiskTrendPanel[\s\S]*showDiaryInsulinWavePanel[\s\S]*\]/);
+    expect(nutritionSource).toContain("lsSet?.('heys_profile', updated)");
+    expect(nutritionSource).toContain('requestHealthFeatureToggle');
+    expect(nutritionSource).toContain('Что показывать на этой вкладке');
+    // Планер и распределение уехали в «Инсайты» — чипов у них здесь нет.
+    expect(nutritionSource).not.toContain('showDiaryPlannerPanel');
+    expect(nutritionSource).not.toContain('showDiaryDistributionPanel');
+    // Прежние пять переключателей «Дневник» в листе настроек сняты: адрес один.
+    expect(appShellSource).not.toContain('DIARY_PANEL_VISIBILITY_OPTIONS');
+    expect(appShellSource).not.toContain('handleToggleDiaryPanel');
+    expect(appShellSource).not.toContain('diaryPanelsVisibility');
   });
 
-  it('structure css is imported and uses v4 paint roles', () => {
+  it('положение прокрутки живёт по вкладке и сбрасывается сменой дня', () => {
+    expect(appShellSource).toContain('scrollMemoryRef');
+    expect(appShellSource).toMatch(/scrollMemoryRef\.current = 0;[\s\S]{0,220}\}, \[selectedDate\]\);/);
+  });
+
+  it('палитры: ролевые токены вместо литералов', () => {
     const mainCss = fs.readFileSync(path.resolve(__dirname, '../styles/main.css'), 'utf8');
     expect(mainCss).toContain('732-ui-v4-nutrition.css');
-    expect(cssSource).toContain('.nutrition-v4-cta');
-    expect(cssSource).toContain('var(--v4-hero');
-    expect(cssSource).toContain('var(--v4-ink-2');
-    expect(cssSource).toMatch(/v4-intentional.*var\(--v4-act\)/s);
+    // Литералов как значений нет: цвет берётся ролью. Запасные значения ролей —
+    // запись того, что покажет каноничная палитра (гейт
+    // scripts/ui-v4-check-classic-drift.mjs), а не самостоятельная краска.
+    const bareLiterals = cssSource
+      .split(/\r?\n/)
+      .filter((line) => /:\s*#[0-9a-fA-F]{3,8}\s*;/.test(line) && !/--nut-dim/.test(line))
+      .map((line) => line.trim());
+    expect(bareLiterals).toEqual([]);
+    expect(cssSource).toMatch(/var\(--v4-act-text[,)]/);
+    expect(cssSource).toMatch(/var\(--v4-warn-text[,)]/);
+    expect(cssSource).toMatch(/var\(--v4-bad-text[,)]/);
+    // Неопределённых переменных на вкладке нет.
+    expect(cssSource).not.toContain('--v4-chip');
+    expect(cssSource).not.toContain('--v4-surface-strong');
+    expect(cssSource).not.toContain('--v4-surface-2');
+    // Новые роли объявлены во всех шести наборах.
+    ['--v4-warn-text', '--v4-tint', '--v4-past'].forEach((token) => {
+      expect((paletteSource.match(new RegExp(token + ':', 'g')) || []).length, token).toBe(6);
+    });
+  });
+
+  it('вторичный тон сплошной, чип выключен обводкой 2 px', () => {
+    expect(cssSource).toMatch(/--nut-dim: #6b5f4f;/);
+    expect(cssSource).toMatch(/--nut-dim: #5a6474;/);
+    expect(cssSource).toMatch(/--nut-dim: rgba\(242, 237, 230, 0\.62\);/);
+    expect(cssSource).toMatch(/--nut-dim: rgba\(232, 238, 246, 0\.62\);/);
+    expect(cssSource).toMatch(/\.nutrition-v4-chip\.is-off \{[^}]*inset 0 0 0 2px var\(--v4-act[,)]/);
+  });
+
+  it('эмодзи на вкладке нет', () => {
+    expect(nutritionSource).not.toMatch(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u);
+    expect(cssSource).not.toMatch(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u);
   });
 
   it('wires the in-tab curator day cue to the same filtered sheet', () => {
@@ -88,5 +168,12 @@ describe('Nutrition tab v4 structure', () => {
     expect(nutritionSource).toContain('curatorCue.title');
     expect(nutritionSource).toContain('curatorCue.date');
     expect(nutritionSource).toContain('setSelectedDate');
+  });
+
+  it('localizes diary meal titles instead of showing english type keys', () => {
+    expect(nutritionSource).toContain('function mealTypeLabel');
+    expect(nutritionSource).toContain('localizeMealName');
+    // Фиксацией названия считается только явное касание чипа типа.
+    expect(nutritionSource).toContain('meal?.mealTypePinned');
   });
 });

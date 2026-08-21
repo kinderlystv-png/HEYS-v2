@@ -1126,7 +1126,11 @@
         realHours = normalizeHoursForStorage(realHours, NIGHT_HOUR_THRESHOLD);
         const timeStr = `${pad2(realHours)}:${pad2(timeData.minutes || 0)}`;
 
-        // Если тип не выбран явно — определяем автоматически по времени
+        // Если тип не выбран явно — определяем автоматически по времени.
+        // timeData.mealType заполняет только selectType, то есть явное касание
+        // чипа: автоподстановка фиксацией названия не считается (контракт
+        // nutrition-tab, «название приёма»).
+        const mealTypePinned = !!timeData.mealType;
         const mealType = timeData.mealType || getMealTypeByHour(realHours);
 
         // Название приёма из типа
@@ -1137,6 +1141,7 @@
           name: mealName,
           time: timeStr,
           mealType: mealType,
+          mealTypePinned,
           items: []
         };
         if (!moodData.skipRatings) {
@@ -1217,7 +1222,10 @@
         realHours = normalizeHoursForStorage(realHours, NIGHT_HOUR_THRESHOLD);
         const timeStr = `${pad2(realHours)}:${pad2(timeData.minutes ?? minutes)}`;
 
-        // Тип приёма
+        // Тип приёма. Фиксацией считается только явное касание чипа в этой
+        // шторке; у приёмов, созданных до правила, флага нет — они остаются на
+        // динамике до первой правки.
+        const mealTypePinned = !!timeData.mealType || meal.mealTypePinned === true;
         const mealType = timeData.mealType || meal.mealType || null;
         const localize = HEYS.dayUtils?.localizeMealName;
         const localizedStored = typeof localize === 'function'
@@ -1233,6 +1241,7 @@
             mealIndex,
             time: timeStr,
             mealType,
+            mealTypePinned,
             name: mealName
           });
         }

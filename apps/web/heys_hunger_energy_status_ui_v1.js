@@ -6572,10 +6572,21 @@ body.hunger-energy-modal-open .fab-group{opacity:0;pointer-events:none;transform
     hasRecentHungerAssessment
   };
 
+  // Последняя оценка голода за календарный день — вход блока «Голод и энергия»
+  // вкладки «Питание» (контракт nutrition-tab).
+  function getLatestHungerLevel(dateKey) {
+    if (!dateKey) return null;
+    const point = collectHungerTimeline()
+      .filter((entry) => localDateKeyFromTs(entry.t) === dateKey)
+      .at(-1);
+    return point ? point.level : null;
+  }
+
   HEYS.HungerEnergyStatusModal = {
     show,
     hide,
     close: hide,
+    getLatestHungerLevel,
     FabButton,
     isAutoOpenEnabled: readAutoOpenEnabled,
     setAutoOpenEnabled: writeAutoOpenEnabled,

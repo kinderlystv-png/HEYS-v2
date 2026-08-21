@@ -668,23 +668,16 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         sourceEl: e.currentTarget
                     }),
                     onRemoveWater: (ml) => removeWater(ml),
+                    // Скрытого легаси-блока #diary-heading больше нет: раньше FAB
+                    // скроллил к display:none-элементу и всё равно ждал 800 мс
+                    // перед шторкой. Теперь шторка открывается сразу.
                     onAddMeal: () => {
                         if (mobileSubTab !== 'diary' && window.HEYS?.App?.setTab) {
                             window.HEYS.App.setTab('diary');
-                            setTimeout(() => {
-                                const heading = document.getElementById('diary-heading');
-                                if (heading) {
-                                    heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                }
-                                setTimeout(() => addMeal(), 800);
-                            }, 200);
-                        } else {
-                            const heading = document.getElementById('diary-heading');
-                            if (heading) {
-                                heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }
-                            setTimeout(() => addMeal(), 800);
+                            setTimeout(() => addMeal(), 200);
+                            return;
                         }
+                        addMeal();
                     },
                     onAddActivity: () => {
                         if (mobileSubTab !== 'activity' && window.HEYS?.App?.setTab) {

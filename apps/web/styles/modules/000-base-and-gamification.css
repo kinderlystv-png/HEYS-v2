@@ -8173,6 +8173,7 @@ body:has(.offline-banner) .wrap {
   padding: 0;
   border: none;
   border-radius: 999px;
+  /* v4-intentional */
   background: var(--v4-surface);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
@@ -8184,6 +8185,7 @@ body:has(.offline-banner) .wrap {
 
 @media (hover: hover) {
   .date-picker--v4 .date-picker-day-nav:hover:not(:disabled) {
+    /* v4-intentional */
     background: var(--v4-hero);
   }
 }
@@ -8205,6 +8207,7 @@ body:has(.offline-banner) .wrap {
 
 @media (hover: hover) {
   [data-theme$="dark"] .date-picker--v4 .date-picker-day-nav:hover:not(:disabled) {
+    /* v4-intentional */
     background: var(--v4-hero);
   }
 }
@@ -8219,6 +8222,7 @@ body:has(.offline-banner) .wrap {
   justify-content: center;
   gap: 3px;
   padding: 0 12px;
+  /* v4-intentional */
   background: var(--v4-surface);
   border: none;
   border-radius: 16px;
@@ -8232,22 +8236,26 @@ body:has(.offline-banner) .wrap {
 
 @media (hover: hover) {
   .date-picker--v4 .date-picker-trigger:hover {
+    /* v4-intentional */
     background: var(--v4-hero);
   }
 }
 
 .date-picker--v4 .date-picker-trigger.open {
+  /* v4-intentional */
   box-shadow: 0 0 0 2px var(--v4-act);
 }
 
 /* Сегодня — тот же грунт, что у стрелок (канвас «Дата v4») */
 .date-picker--v4 .date-picker-trigger--today {
+  /* v4-intentional */
   background: var(--v4-surface);
   border: none;
 }
 
 @media (hover: hover) {
   [data-theme$="dark"] .date-picker--v4 .date-picker-trigger--today:hover {
+    /* v4-intentional */
     background: var(--v4-hero);
   }
 }
@@ -8261,6 +8269,7 @@ body:has(.offline-banner) .wrap {
 }
 
 .date-picker--v4 .date-picker-trigger--today .date-picker-main--today {
+  /* v4-intentional */
   color: var(--v4-ink);
 }
 
@@ -8269,6 +8278,7 @@ body:has(.offline-banner) .wrap {
 }
 
 .date-picker--v4 .date-picker-trigger--not-today {
+  /* v4-intentional */
   background: var(--v4-past);
   border: none;
   gap: 0;
@@ -8328,6 +8338,7 @@ body:has(.offline-banner) .wrap {
   padding: 0 12px;
   border: none;
   border-radius: 999px;
+  /* v4-intentional */
   background: var(--v4-act);
   color: var(--v4-btn-on-act, #2b1608);
   font-family: inherit;
@@ -8348,16 +8359,19 @@ body:has(.offline-banner) .wrap {
 }
 
 .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
+  /* v4-intentional */
   background: var(--v4-past);
 }
 
 @media (hover: hover) {
   .date-picker--v4 .date-picker-trigger--not-today:hover {
+    /* v4-intentional */
     background: var(--v4-hero);
   }
 }
 
 .date-picker--v4 .date-picker-trigger--not-today .date-picker-main--past {
+  /* v4-intentional */
   color: var(--v4-act-text);
 }
 
@@ -8365,6 +8379,7 @@ body:has(.offline-banner) .wrap {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
+  /* v4-intentional */
   color: var(--v4-act-text);
 }
 

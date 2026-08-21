@@ -1,46 +1,63 @@
-/* 732-ui-v4-nutrition.css — Nutrition tab v4 (stage 4 structure + paint) */
+/* 732-ui-v4-nutrition.css — вкладка «Питание» v4.
+ *
+ * Геометрия снята с кадров data-demo="stop" канваса nutrition-tab.v4.dc.html
+ * на 375 px. Литералов здесь нет: цвет берётся ролями палитры.
+ */
 
 .nutrition-v4 {
   display: flex;
   flex-direction: column;
   gap: 0;
   margin-top: 4px;
+
+  /* Вторичный тон вкладки — сплошной, не альфа (контракт «вторичный тон»).
+     Весь вторичный текст здесь функционален — норма в итогах, «съедено /
+     бюджет», состав приёма, подписи блоков — и живёт по порогу 4,5:1.
+     Альфа .38–.5 давала 2,66–3,95:1. Тот же перевод уже сделан в water-add. */
+  --nut-dim: #64748b;
+  --nut-dim-icon: #94a3b8;
 }
 
-.nutrition-v4-meta {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 18px;
+[data-theme-id='classic-dark'] .nutrition-v4,
+[data-theme='dark'][data-palette='classic'] .nutrition-v4 {
+  --nut-dim: #94a3b8;
+  --nut-dim-icon: #7c8ca3;
 }
 
-.nutrition-v4-meta__title {
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--v4-ink, #0f172a);
+[data-theme-id='sand'] .nutrition-v4,
+[data-theme='sand'][data-palette='sand'] .nutrition-v4 {
+  --nut-dim: #6b5f4f;
+  --nut-dim-icon: #7a6b58;
 }
 
-.nutrition-v4-meta__details {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+[data-theme-id='sand-dark'] .nutrition-v4,
+[data-theme='sand-dark'][data-palette='sand'] .nutrition-v4 {
+  --nut-dim: rgba(242, 237, 230, 0.62);
+  --nut-dim-icon: rgba(242, 237, 230, 0.55);
 }
 
-.nutrition-v4-meta__sync {
-  font-size: 10.5px;
-  font-weight: 600;
-  color: var(--v4-ok-fill, #22c55e);
+[data-theme-id='blue'] .nutrition-v4,
+[data-theme='blue'][data-palette='blue'] .nutrition-v4 {
+  --nut-dim: #5a6474;
+  --nut-dim-icon: #6a7484;
 }
+
+[data-theme-id='blue-dark'] .nutrition-v4,
+[data-theme='blue-dark'][data-palette='blue'] .nutrition-v4 {
+  --nut-dim: rgba(232, 238, 246, 0.62);
+  --nut-dim-icon: rgba(238, 243, 248, 0.55);
+}
+
+.nutrition-v4-chevron {
+  flex: none;
+  color: var(--nut-dim-icon);
+}
+
+/* === Герой ============================================================ */
 
 .nutrition-v4-hero {
   margin-top: 14px;
-  padding: 26px 22px 22px;
+  padding: 22px 20px 20px;
   border-radius: 26px;
   background: var(--v4-hero, #f8fafc);
 }
@@ -50,91 +67,140 @@
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--nut-dim);
 }
 
 .nutrition-v4-hero__value-row {
   display: flex;
   align-items: baseline;
   gap: 9px;
-  margin-top: 14px;
+  margin-top: 13px;
 }
 
+/* Цвет числа — текстовая роль палитры, не тон кнопки: на подложке героя
+   акцент действия даёт 2,84:1, а крупный текст живёт по порогу 3:1. */
 .nutrition-v4-hero__value {
-  font-size: 64px;
+  font-size: 54px;
   font-weight: 600;
   line-height: 0.9;
   letter-spacing: -0.045em;
-  color: #8a4a20;
+  color: var(--v4-act-text, #1d4ed8);
   font-variant-numeric: tabular-nums;
+}
+
+.nutrition-v4-hero[data-zone='over'] .nutrition-v4-hero__value {
+  color: var(--v4-ink, #111827);
+}
+
+.nutrition-v4-hero[data-zone='warn'] .nutrition-v4-hero__value {
+  color: var(--v4-warn-text, #92400e);
+}
+
+.nutrition-v4-hero[data-zone='red'] .nutrition-v4-hero__value {
+  color: var(--v4-bad-text, #a8382b);
 }
 
 .nutrition-v4-hero__unit {
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--nut-dim);
 }
 
 .nutrition-v4-hero__track {
+  display: flex;
   height: 6px;
-  margin-top: 20px;
+  margin-top: 19px;
   border-radius: 999px;
-  background: var(--v4-line, rgba(0, 0, 0, 0.09));
+  background: var(--v4-line, #e5e7eb);
+  overflow: hidden;
 }
 
 .nutrition-v4-hero__fill {
+  display: block;
   height: 6px;
   border-radius: 999px;
   background: var(--v4-act, #2563eb);
+  /* Тот же переход, что у заливки воды. */
+  transition: width 320ms ease-in-out;
+}
+
+.nutrition-v4-hero[data-zone='warn'] .nutrition-v4-hero__fill.is-over {
+  background: var(--v4-warn-text, #92400e);
+}
+
+.nutrition-v4-hero[data-zone='red'] .nutrition-v4-hero__fill.is-over {
+  background: var(--v4-bad-text, #a8382b);
 }
 
 .nutrition-v4-hero__budget {
   display: flex;
   justify-content: space-between;
+  gap: 12px;
   margin-top: 12px;
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
+  color: var(--nut-dim);
   font-variant-numeric: tabular-nums;
 }
 
-.nutrition-v4-tier {
-  margin: 20px 0 10px;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--v4-ink-2, #64748b);
+.nutrition-v4-hero__budget [data-zone='over'] {
+  color: var(--v4-ink, #111827);
 }
+
+.nutrition-v4-hero__budget [data-zone='warn'] {
+  color: var(--v4-warn-text, #92400e);
+}
+
+.nutrition-v4-hero__budget [data-zone='red'] {
+  color: var(--v4-bad-text, #a8382b);
+}
+
+/* === Окно приёмов ===================================================== */
 
 .nutrition-v4-window {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
-  align-items: center;
   gap: 12px;
+  margin-top: 8px;
   padding: 14px 16px;
   border-radius: 20px;
-  background: var(--v4-surface, rgba(255, 255, 255, 0.65));
+  background: var(--v4-surface, #ffffff);
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1.2;
 }
 
 .nutrition-v4-window__label {
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.55));
+  color: var(--nut-dim);
 }
 
+/* Шалфей только когда окно действительно открыто: раньше значение было
+   зелёным всегда, включая «добавьте приём для расчёта». */
 .nutrition-v4-window__value {
-  color: var(--v4-ok-text, #16a34a);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
   text-align: right;
+  color: var(--nut-dim);
 }
+
+.nutrition-v4-window[data-tone='ok'] .nutrition-v4-window__value {
+  color: var(--v4-ok-text, #16a34a);
+}
+
+.nutrition-v4-window[data-tone='warn'] .nutrition-v4-window__value {
+  color: var(--v4-bad-text, #a8382b);
+}
+
+/* === Дневник приёмов ================================================== */
 
 .nutrition-v4-diary {
+  margin-top: 8px;
   border-radius: 20px;
-  background: var(--v4-surface, rgba(255, 255, 255, 0.65));
+  background: var(--v4-surface, #ffffff);
   overflow: hidden;
 }
 
@@ -142,16 +208,23 @@
   padding: 18px 16px;
   font-size: 12px;
   line-height: 1.45;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--nut-dim);
 }
 
 .nutrition-v4-meal-row {
-  padding: 15px 0;
-  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+  min-height: 44px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--v4-line, #e5e7eb);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .nutrition-v4-meal-row:last-child {
   border-bottom: none;
+}
+
+.nutrition-v4-meal-row:active {
+  opacity: 0.9;
 }
 
 .nutrition-v4-meal-row__head {
@@ -159,22 +232,51 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 12px;
-  padding: 0 16px;
 }
 
 .nutrition-v4-meal-row__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #111827);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Номер даёт язык для разговора с куратором: «во втором приёме». */
+.nutrition-v4-meal-row__num {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--v4-hero, #f8fafc);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--nut-dim);
 }
 
 .nutrition-v4-meal-row__kcal {
+  flex: none;
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #111827);
   font-variant-numeric: tabular-nums;
+}
+
+.nutrition-v4-meal-row__body {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 5px;
 }
 
 .nutrition-v4-meal-row__items {
@@ -183,30 +285,35 @@
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.42));
+  color: var(--nut-dim);
 }
 
-.nutrition-v4-meal-row__body {
+.nutrition-v4-meal-row__chevron {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 5px;
-  padding: 0 16px;
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-bottom: 1px;
+  color: var(--nut-dim-icon);
 }
 
+/* «+ ещё» у непустого приёма — обводкой, «+ продукт» у пустого — заливкой. */
 .nutrition-v4-meal-row__add {
-  flex-shrink: 0;
-  padding: 7px 12px;
-  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.12));
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border: none;
   border-radius: 999px;
-  background: var(--v4-surface-strong, rgba(255, 255, 255, 0.92));
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--v4-act, #2563eb);
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-act-text, var(--v4-act, #2563eb));
-  cursor: pointer;
+  color: var(--v4-act-text, #1d4ed8);
   white-space: nowrap;
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -215,244 +322,807 @@
 }
 
 .nutrition-v4-meal-row--empty .nutrition-v4-meal-row__items {
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.55));
   font-style: italic;
 }
 
 .nutrition-v4-meal-row--empty .nutrition-v4-meal-row__add {
-  border-color: var(--v4-act, #2563eb);
   background: var(--v4-act, #2563eb);
-  color: #ffffff;
+  box-shadow: none;
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
-[data-palette="sand"] .nutrition-v4-meal-row--empty .nutrition-v4-meal-row__add,
-[data-palette="sand-dark"] .nutrition-v4-meal-row--empty .nutrition-v4-meal-row__add {
-  color: #2b1608;
+.nutrition-v4-streak {
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--v4-ok-bg, #f0fdf4);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--v4-ok-text, #16a34a);
 }
+
+/* === Добавить приём =================================================== */
 
 .nutrition-v4-cta {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  margin-top: 18px;
-  padding: 17px 22px;
+  min-height: 52px;
+  margin-top: 16px;
+  padding: 0 22px;
   border: none;
   border-radius: 999px;
   background: var(--v4-act, #2563eb);
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
-  color: #ffffff;
+  color: var(--v4-btn-on-act, #2b1608);
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* v4-intentional: sand/blue CTA uses palette act role */
-[data-palette="sand"] .nutrition-v4-cta,
-[data-palette="sand-dark"] .nutrition-v4-cta,
-[data-palette="blue"] .nutrition-v4-cta,
-[data-palette="blue-dark"] .nutrition-v4-cta {
-  background: var(--v4-act); /* v4-intentional */
-}
-
-[data-palette="sand"] .nutrition-v4-cta,
-[data-palette="sand-dark"] .nutrition-v4-cta {
-  color: #2b1608;
-}
-
-[data-palette="blue"] .nutrition-v4-cta,
-[data-palette="blue-dark"] .nutrition-v4-cta {
-  color: var(--v4-ink, #ffffff);
+.nutrition-v4-cta:active {
+  transform: scale(0.99);
 }
 
 .nutrition-v4-cta__icon {
+  display: flex;
   flex: none;
-  font-size: 17px;
-  line-height: 1;
 }
 
-.nutrition-v4-breakdown {
+/* === Итоги дня ======================================================== */
+
+.nutrition-v4-totals,
+.nutrition-v4-quality,
+.nutrition-v4-block {
+  margin-top: 8px;
   padding: 16px;
   border-radius: 20px;
-  background: var(--v4-surface, rgba(255, 255, 255, 0.65));
+  background: var(--v4-surface, #ffffff);
 }
 
-.nutrition-v4-breakdown__title {
-  margin-bottom: 14px;
+.nutrition-v4-quality {
+  background: transparent;
+  padding: 16px 0 0;
+}
+
+.nutrition-v4-totals__title {
   font-size: 10.5px;
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--nut-dim);
+  margin-bottom: 13px;
 }
 
-.nutrition-v4-breakdown__grid {
-  display: grid;
-  grid-template-columns: auto 1fr 1fr 1fr 1fr;
-  gap: 11px 10px;
+.nutrition-v4-quality .nutrition-v4-totals__title {
+  margin-bottom: 8px;
+}
+
+.nutrition-v4-total-row {
+  margin-bottom: 13px;
+}
+
+.nutrition-v4-total-row:last-child {
+  margin-bottom: 0;
+}
+
+.nutrition-v4-total-row__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.nutrition-v4-total-row__head b {
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-ink, #111827);
+}
+
+.nutrition-v4-total-row__head span {
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.42));
+  color: var(--nut-dim);
   font-variant-numeric: tabular-nums;
 }
 
-.nutrition-v4-breakdown__head {
-  text-align: right;
-}
-
-.nutrition-v4-breakdown__row-label {
-  color: var(--v4-ink, #0f172a);
+.nutrition-v4-total-row__head em {
+  font-style: normal;
   font-weight: 700;
+  color: var(--v4-ink, #111827);
 }
 
-.nutrition-v4-breakdown__row-label--muted {
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.5));
-  font-weight: 600;
+.nutrition-v4-total-row__head span[data-zone='warn'] em {
+  color: var(--v4-warn-text, #92400e);
 }
 
-.nutrition-v4-breakdown__cell {
-  text-align: right;
+.nutrition-v4-total-row__head span[data-zone='red'] em {
+  color: var(--v4-bad-text, #a8382b);
 }
 
-.nutrition-v4-breakdown__cell--fact {
-  color: var(--v4-ink, #0f172a);
-  font-weight: 700;
+.nutrition-v4-bar {
+  display: flex;
+  height: 5px;
+  margin-top: 7px;
+  border-radius: 999px;
+  background: var(--v4-line, #e5e7eb);
+  overflow: hidden;
 }
 
-.nutrition-v4-breakdown__cell--dev.is-good {
-  color: var(--v4-ok-fill, #22c55e);
+.nutrition-v4-bar i {
+  display: block;
+  height: 5px;
+  border-radius: 999px;
+  transition: width 320ms ease-in-out;
 }
 
-.nutrition-v4-breakdown__cell--dev.is-warn {
-  color: #8a4a20;
+/* Шалфей — «чем больше, тем лучше»; терракота — бюджет. */
+.nutrition-v4-bar i.is-ok {
+  background: var(--v4-ok-fill, #22c55e);
 }
 
-.nutrition-v4-mini-cards {
+.nutrition-v4-bar i.is-act {
+  background: var(--v4-act, #2563eb);
+}
+
+.nutrition-v4-bar i.is-warn {
+  background: var(--v4-warn-text, #92400e);
+}
+
+.nutrition-v4-bar i.is-red {
+  background: var(--v4-bad-text, #a8382b);
+}
+
+/* === Качество еды ===================================================== */
+
+.nutrition-v4-quality__row {
   display: flex;
   gap: 10px;
-  margin-top: 10px;
 }
 
-.nutrition-v4-mini-card {
+.nutrition-v4-quality__card {
   flex: 1;
+  min-width: 0;
   padding: 15px 16px;
   border-radius: 20px;
-}
-
-.nutrition-v4-mini-card--fiber {
   background: var(--v4-hero, #f8fafc);
 }
 
-.nutrition-v4-mini-card--harm {
+.nutrition-v4-quality__card.is-ok {
   background: var(--v4-ok-bg, #f0fdf4);
 }
 
-.nutrition-v4-mini-card__label {
+.nutrition-v4-quality__label {
   font-size: 10.5px;
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--nut-dim);
 }
 
-.nutrition-v4-mini-card__value {
+.nutrition-v4-quality__value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
   margin-top: 9px;
+}
+
+.nutrition-v4-quality__value b {
   font-size: 22px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-act-text, #1d4ed8);
   font-variant-numeric: tabular-nums;
 }
 
-.nutrition-v4-mini-card--fiber .nutrition-v4-mini-card__value {
-  color: #8a4a20;
-}
-
-.nutrition-v4-mini-card--harm .nutrition-v4-mini-card__value {
+.nutrition-v4-quality__card.is-ok .nutrition-v4-quality__value b {
   color: var(--v4-ok-text, #16a34a);
 }
 
-.nutrition-v4-mini-card__value-row {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 9px;
-}
-
-.nutrition-v4-mini-card__suffix {
+.nutrition-v4-quality__value i {
+  font-style: normal;
   font-size: 11px;
   font-weight: 500;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
-}
-
-.nutrition-v4-mini-card__ok {
-  font-size: 14px;
   line-height: 1;
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--nut-dim);
 }
 
-.nutrition-v4-mini-card__hint {
+.nutrition-v4-quality__hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   margin-top: 7px;
   font-size: 10px;
   font-weight: 500;
-  line-height: 1;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.42));
+  line-height: 1.35;
+  color: var(--nut-dim);
 }
 
-.nutrition-v4-waves {
+.nutrition-v4-quality__hint.is-bad {
+  color: var(--v4-bad-text, #a8382b);
+}
+
+.nutrition-v4-quality__check {
+  display: flex;
+  flex: none;
+  color: var(--v4-ok-fill, #22c55e);
+}
+
+/* === Чип-зависимые блоки ============================================== */
+
+.nutrition-v4-block {
   margin-top: 10px;
-  padding: 16px;
-  border-radius: 20px;
-  background: var(--v4-surface, rgba(255, 255, 255, 0.65));
 }
 
-.nutrition-v4-legacy-meals {
-  display: none;
+.nutrition-v4-block__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
-/* Цифра героя и клетчатки — --v4-act-text, как в канвасе #w2 / #w2d
- * (2026-08-14). Отклонение ниже нормы тоже act-text, не красный warn. */
-
-/* v4-intentional: sand/blue tier label uses act-text */
-[data-palette="sand"] .nutrition-v4-tier,
-[data-palette="sand-dark"] .nutrition-v4-tier,
-[data-palette="blue"] .nutrition-v4-tier,
-[data-palette="blue-dark"] .nutrition-v4-tier {
-  color: var(--v4-act-text); /* v4-intentional */
+.nutrition-v4-block__head b {
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--nut-dim);
 }
 
-/* v4-intentional: sand/blue list surfaces use palette surface */
-[data-palette="sand"] .nutrition-v4-window,
-[data-palette="sand-dark"] .nutrition-v4-window,
-[data-palette="blue"] .nutrition-v4-window,
-[data-palette="blue-dark"] .nutrition-v4-window,
-[data-palette="sand"] .nutrition-v4-diary,
-[data-palette="sand-dark"] .nutrition-v4-diary,
-[data-palette="blue"] .nutrition-v4-diary,
-[data-palette="blue-dark"] .nutrition-v4-diary,
-[data-palette="sand"] .nutrition-v4-breakdown,
-[data-palette="sand-dark"] .nutrition-v4-breakdown,
-[data-palette="blue"] .nutrition-v4-breakdown,
-[data-palette="blue-dark"] .nutrition-v4-breakdown,
-[data-palette="sand"] .nutrition-v4-waves,
-[data-palette="sand-dark"] .nutrition-v4-waves,
-[data-palette="blue"] .nutrition-v4-waves,
-[data-palette="blue-dark"] .nutrition-v4-waves {
-  background: var(--v4-surface); /* v4-intentional */
+.nutrition-v4-block__meta {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--nut-dim);
+  font-variant-numeric: tabular-nums;
 }
 
-/* v4-intentional: sand/blue mini-card tints */
-[data-palette="sand"] .nutrition-v4-mini-card--fiber,
-[data-palette="sand-dark"] .nutrition-v4-mini-card--fiber,
-[data-palette="blue"] .nutrition-v4-mini-card--fiber,
-[data-palette="blue-dark"] .nutrition-v4-mini-card--fiber {
-  background: var(--v4-hero); /* v4-intentional */
+.nutrition-v4-block__meta.is-ok {
+  color: var(--v4-ok-text, #16a34a);
 }
 
-[data-palette="sand"] .nutrition-v4-mini-card--harm,
-[data-palette="sand-dark"] .nutrition-v4-mini-card--harm,
-[data-palette="blue"] .nutrition-v4-mini-card--harm,
-[data-palette="blue-dark"] .nutrition-v4-mini-card--harm {
-  background: var(--v4-ok-bg); /* v4-intentional */
+.nutrition-v4-block__meta.is-warn {
+  color: var(--v4-bad-text, #a8382b);
+}
+
+.nutrition-v4-why {
+  margin-top: 11px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--nut-dim);
+  text-wrap: pretty;
+}
+
+.nutrition-v4-note {
+  margin-top: 9px;
+  padding: 11px 12px;
+  border-radius: 14px;
+  background: var(--v4-hero, #f8fafc);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--v4-ink, #111827);
+  text-wrap: pretty;
+}
+
+.nutrition-v4-note b {
+  font-weight: 700;
+}
+
+.nutrition-v4-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.nutrition-v4-list__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.nutrition-v4-list__row b {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--v4-ink, #111827);
+}
+
+.nutrition-v4-list__row span {
+  flex: none;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--nut-dim);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Приёмы за день / волна сейчас — полосы длительности, не кривые. */
+.nutrition-v4-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.nutrition-v4-timeline__row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.nutrition-v4-timeline__row b,
+.nutrition-v4-timeline__row s {
+  flex: none;
+  width: 36px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--nut-dim);
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+}
+
+.nutrition-v4-timeline__row s {
+  text-align: right;
+}
+
+.nutrition-v4-timeline__track {
+  position: relative;
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--v4-line, #e5e7eb);
+  overflow: hidden;
+}
+
+.nutrition-v4-timeline__track i {
+  position: absolute;
+  top: 0;
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--v4-act, #2563eb);
+}
+
+.nutrition-v4-timeline__track i.is-overlap {
+  background: var(--v4-bad-text, #a8382b);
+}
+
+.nutrition-v4-wave-now {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.nutrition-v4-wave-now b {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--v4-ink, #111827);
+  font-variant-numeric: tabular-nums;
+}
+
+.nutrition-v4-wave-now span {
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--nut-dim);
+}
+
+.nutrition-v4-mini-row {
+  display: flex;
+  gap: 10px;
+}
+
+.nutrition-v4-mini {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--v4-hero, #f8fafc);
+}
+
+.nutrition-v4-mini b {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--nut-dim);
+}
+
+.nutrition-v4-mini s {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-top: 8px;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink, #111827);
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+}
+
+.nutrition-v4-mini s i {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--nut-dim);
+}
+
+.nutrition-v4-scale {
+  display: flex;
+  gap: 2px;
+  margin-top: 9px;
+}
+
+.nutrition-v4-scale i {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--v4-line, #e5e7eb);
+}
+
+.nutrition-v4-scale i.is-on.is-act {
+  background: var(--v4-act, #2563eb);
+}
+
+.nutrition-v4-scale i.is-on.is-ok {
+  background: var(--v4-ok-fill, #22c55e);
+}
+
+/* Клетчатка: закрытая строка «добрать N г» с шевроном, раскрытие на месте. */
+.nutrition-v4-disclose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 40px;
+  margin-top: 12px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--v4-act, #2563eb);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-act-text, #1d4ed8);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nutrition-v4-disclose.is-open .nutrition-v4-chevron {
+  transform: rotate(90deg);
+}
+
+/* Оценка и риск: слово + четыре сегмента, баллов и звёзд нет. */
+.nutrition-v4-verdict {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.nutrition-v4-verdict b {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--v4-ok-text, #16a34a);
+}
+
+.nutrition-v4-verdict span {
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--nut-dim);
+}
+
+.nutrition-v4-steps {
+  display: flex;
+  gap: 4px;
+  margin-top: 13px;
+}
+
+.nutrition-v4-steps span {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--v4-line, #e5e7eb);
+}
+
+.nutrition-v4-steps span.is-on.is-ok {
+  background: var(--v4-ok-fill, #22c55e);
+}
+
+.nutrition-v4-steps span.is-on.is-soft {
+  background: var(--v4-warn-text, #92400e);
+}
+
+.nutrition-v4-steps span.is-on.is-warn {
+  background: var(--v4-bad-text, #a8382b);
+}
+
+/* === Ряд чипов ======================================================== */
+
+/* Решение принимается там, где человек уже увидел весь экран, а не до него. */
+.nutrition-v4-config {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--v4-line, #e5e7eb);
+}
+
+.nutrition-v4-config__title {
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: 0.04em;
+  color: var(--nut-dim);
+  text-wrap: pretty;
+}
+
+.nutrition-v4-config__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+/* Чип обязан отличаться от подложки не меньше чем на 3:1 — сам чип, а не текст
+   в нём. Обводка выключенного — 2 px тем же акцентом: на 1,5 px в альфе .16
+   она давала 1,45:1, и состояние пропадало. */
+.nutrition-v4-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 13px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-act, #2563eb);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-btn-on-act, #2b1608);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nutrition-v4-chip.is-off {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--v4-act, #2563eb);
+  color: var(--v4-ink, #111827);
+}
+
+.nutrition-v4-chip__check {
+  display: flex;
+  flex: none;
+}
+
+.nutrition-v4-chip:active {
+  transform: scale(0.98);
+}
+
+/* Кнопки записи в режиме «только чтение» гасятся, но остаются на месте:
+   спрятать кнопку — значит сделать вид, что действия нет. */
+.nutrition-v4[data-readonly='true'] .nutrition-v4-cta,
+.nutrition-v4[data-readonly='true'] .nutrition-v4-meal-row__add {
+  opacity: 0.4;
+}
+
+/* === Лист правки приёма =============================================== */
+
+/* v4-intentional: подложка product-модалок — общие роли scrim из :root
+   (--v4-modal-backdrop-*), тот же слой, что у чек-ина, кураторского листа и
+   меню «Ещё». Запасных значений у них нет намеренно: blur и затемнение
+   одинаковы во всех наборах. */
+.nutrition-v4-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  /* v4-intentional */
+  background: var(--v4-modal-backdrop-dim);
+  /* v4-intentional */
+  backdrop-filter: blur(var(--v4-modal-backdrop-blur));
+  /* v4-intentional */
+  -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur));
+}
+
+[data-theme$='dark'] .nutrition-v4-sheet-backdrop {
+  /* v4-intentional */
+  background: var(--v4-modal-backdrop-dim-dark);
+}
+
+.nutrition-v4-sheet {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  padding-bottom: 16px;
+  border-radius: 26px;
+  background: var(--v4-bg, #ffffff);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  transition: transform 180ms ease-out;
+}
+
+.nutrition-v4-sheet__head {
+  padding: 16px 18px 12px;
+}
+
+.nutrition-v4-sheet__head b {
+  display: block;
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--v4-ink, #111827);
+}
+
+.nutrition-v4-sheet__head span {
+  display: block;
+  margin-top: 4px;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--nut-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.nutrition-v4-sheet__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: calc(100% - 36px);
+  min-height: 44px;
+  margin: 0 18px 8px;
+  padding: 13px 15px;
+  border: none;
+  border-radius: 16px;
+  background: var(--v4-surface, #ffffff);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nutrition-v4-sheet__row b {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--v4-ink, #111827);
+}
+
+.nutrition-v4-sheet__row span {
+  flex: none;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--nut-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.nutrition-v4-sheet__row.is-disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.nutrition-v4-sheet__chevron {
+  display: flex;
+  flex: none;
+  color: var(--nut-dim-icon);
+}
+
+/* Свайп влево по строке продукта — вторичный жест: тап занят граммовкой. */
+.nutrition-v4-sheet__swipe {
+  position: relative;
+  margin: 0 18px 8px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.nutrition-v4-sheet__swipe .nutrition-v4-sheet__row {
+  width: 100%;
+  margin: 0;
+  position: relative;
+  transition: transform 160ms ease-out;
+}
+
+.nutrition-v4-sheet__swipe-actions {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.nutrition-v4-sheet__swipe-actions button {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border: none;
+  background: var(--v4-tint, #dbeafe);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink, #111827);
+  cursor: pointer;
+}
+
+.nutrition-v4-sheet__swipe-actions button.is-danger {
+  background: var(--v4-accent-bg, #dbeafe);
+  color: var(--v4-bad-text, #a8382b);
+}
+
+.nutrition-v4-sheet__repeat {
+  display: block;
+  width: calc(100% - 36px);
+  min-height: 44px;
+  margin: 0 18px 8px;
+  padding: 13px 15px;
+  border: none;
+  border-radius: 16px;
+  background: var(--v4-hero, #f8fafc);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nutrition-v4-sheet__repeat b {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--v4-ink, #111827);
+}
+
+.nutrition-v4-sheet__repeat span {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--nut-dim);
+}
+
+.nutrition-v4-sheet__cta {
+  width: calc(100% - 36px);
+  margin: 8px 18px 0;
+}
+
+/* Удаление применяется сразу; страховка — тост отмены на 5 с. */
+.nutrition-v4-sheet__delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: calc(100% - 36px);
+  min-height: 44px;
+  margin: 6px 18px 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-bad-text, #a8382b);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }

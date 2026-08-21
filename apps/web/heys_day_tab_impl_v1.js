@@ -2353,7 +2353,6 @@
         }
         const compactNutrition = useMemo(() => {
             if (!showNutritionContent) return null;
-            const dailyWaveOverview = HEYS.dayMealsChartUI?.renderDailyWaveOverview?.({ React, insulinWaveData }) || null;
             return HEYS.dayNutritionCard.buildNutritionCard({
                 React,
                 day,
@@ -2361,13 +2360,13 @@
                 pIndex,
                 date,
                 eatenKcal,
+                optimum,
                 displayOptimum,
                 displayRemainingKcal,
                 dayTot,
-                normAbs,
+                // Нормы экрана — от бюджета дня, не от базового optimum.
+                normAbs: displayNormAbs,
                 insulinWaveData,
-                dailyWaveOverview,
-                legacyMealsUI: mealsUI,
                 waterMl: day?.waterMl ?? day?.water,
                 waterGoal,
                 waterGoalBreakdown,
@@ -2377,9 +2376,22 @@
                 removeWater,
                 openAddProductForMeal,
                 haptic,
-                openExclusivePopup
+                openExclusivePopup,
+                // Лист правки приёма переиспользует существующие обработчики
+                // дневника: своих записей в день у него нет.
+                openTimeEditor,
+                openMoodEditor,
+                openEditGramsModal,
+                openCopyMealModal,
+                openMoveMealModal,
+                saveAsPreset,
+                repeatYesterdayMeal,
+                removeMeal,
+                removeItem,
+                copyItem,
+                moveItem
             });
-        }, [showNutritionContent, day?.meals, day?.waterMl, day?.water, day?.date, eatenKcal, displayOptimum, displayRemainingKcal, dayTot, normAbs, insulinWaveData, mealsUI, waterGoal, waterGoalBreakdown, waterLastDrink, date, pIndex, prof, openAddProductForMeal, addMeal, addWater, removeWater, haptic]);
+        }, [showNutritionContent, day, eatenKcal, optimum, displayOptimum, displayRemainingKcal, dayTot, displayNormAbs, insulinWaveData, waterGoal, waterGoalBreakdown, waterLastDrink, date, pIndex, prof, openAddProductForMeal, addMeal, addWater, removeWater, haptic, openTimeEditor, openMoodEditor, openEditGramsModal, openCopyMealModal, openMoveMealModal, saveAsPreset, repeatYesterdayMeal, removeMeal, removeItem, copyItem, moveItem]);
 
         if (!HEYS.dayTabRender?.renderDayTabLayout) {
             throw new Error('[heys_day_v12] HEYS.dayTabRender not loaded before heys_day_v12.js');

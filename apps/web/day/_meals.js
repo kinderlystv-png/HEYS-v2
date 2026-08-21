@@ -5752,14 +5752,9 @@
             const mealToRemove = dayRef.current.meals?.[i];
             if (!mealToRemove) return;
 
-            const confirmed = await HEYS.ConfirmModal?.confirmDelete?.({
-                icon: '🗑️',
-                title: 'Удалить приём пищи?',
-                text: 'Приём исчезнет сразу, но его можно будет быстро вернуть через кнопку «Отменить».',
-            });
-
-            if (confirmed === false) return;
-
+            // Подтверждающего вопроса заранее нет: его платят все ради редкой
+            // ошибки, а тост отмены страхует только ошибшегося (контракт
+            // nutrition-tab, «удаление»).
             const mealName = mealToRemove?.name || 'Приём пищи';
             const mealId = mealToRemove.id;
 
@@ -5767,7 +5762,9 @@
 
             runUndoableDayMutation({
                 label: mealName + ' удалён',
-                duration: 4000,
+                // Окно защиты записи равно видимой полосе — 5 с, невидимого
+                // запаса нет (контракт «удаление и отмена»).
+                duration: 5000,
                 errorMessage: 'Не удалось удалить приём пищи',
                 errorAction: 'remove_meal',
                 applyMutation: () => {
@@ -6287,7 +6284,7 @@
 
             runUndoableDayMutation({
                 label: removedName + ' удалён',
-                duration: 4000,
+                duration: 5000,
                 errorMessage: 'Не удалось удалить продукт',
                 errorAction: 'remove_item',
                 applyMutation: () => {
@@ -7174,7 +7171,8 @@
                     const newName = newType && MEAL_TYPES_HANDLER && MEAL_TYPES_HANDLER[newType]
                         ? MEAL_TYPES_HANDLER[newType].name
                         : m.name;
-                    return { ...m, mealType: newType, name: newName };
+                    // Явный выбор типа человеком — имя фиксируется.
+                    return { ...m, mealType: newType, mealTypePinned: !!newType, name: newName };
                 });
                 return { ...prevDay, meals, updatedAt: newUpdatedAt };
             });
@@ -7214,6 +7212,10 @@
     HEYS.dayMealHandlers = {
         createMealHandlers,
         sortMealsByTime,
+        // Вход строки «Повторить вчерашний …» в листе правки приёма
+        // (контракт nutrition-tab, «повтор вчерашнего»).
+        loadRecentMealsForDate,
+        findYesterdayEquivalent,
     };
 
 })(window);

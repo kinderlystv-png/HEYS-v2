@@ -51,6 +51,29 @@ describe('day diary mobile fast path', () => {
         expect(renderRefeedCard).not.toHaveBeenCalled();
     });
 
+    it('на вкладке «Питание» не строит ничего: содержимое собирает NutritionTabV4', () => {
+        const {
+            renderDiarySection,
+            renderInsulinWaveIndicator,
+            renderRefeedCard
+        } = loadDiarySection();
+
+        const result = renderDiarySection({
+            React: {},
+            isMobile: true,
+            mobileSubTab: 'diary',
+            insulinWaveData: { peak: 1 },
+            HEYS: {
+                dayInsulinWaveUI: { renderInsulinWaveIndicator },
+                Refeed: { renderRefeedCard }
+            }
+        });
+
+        // Волна показана своим блоком внутри карточки — второй индикатор был бы дублем.
+        expect(result).toBeNull();
+        expect(renderRefeedCard).not.toHaveBeenCalled();
+    });
+
     it('shows one actionable warning when meals without products exist', () => {
         const addProductClick = vi.fn();
         const scrollIntoView = vi.fn();

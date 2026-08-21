@@ -11,13 +11,12 @@
             pIndex,
             date,
             eatenKcal,
+            optimum,
             displayOptimum,
             displayRemainingKcal,
             dayTot,
             normAbs,
             insulinWaveData,
-            dailyWaveOverview,
-            legacyMealsUI,
             waterMl,
             waterGoal,
             waterGoalBreakdown,
@@ -27,7 +26,18 @@
             removeWater,
             openAddProductForMeal,
             haptic,
-            openExclusivePopup
+            openExclusivePopup,
+            openTimeEditor,
+            openMoodEditor,
+            openEditGramsModal,
+            openCopyMealModal,
+            openMoveMealModal,
+            saveAsPreset,
+            repeatYesterdayMeal,
+            removeMeal,
+            removeItem,
+            copyItem,
+            moveItem
         } = params || {};
 
         if (!React) return null;
@@ -38,13 +48,12 @@
             pIndex,
             date,
             eatenKcal,
+            optimum,
             displayOptimum,
             displayRemainingKcal,
             dayTot,
             normAbs,
             insulinWaveData,
-            dailyWaveOverview,
-            legacyMealsUI,
             waterMl,
             waterGoal,
             waterGoalBreakdown,
@@ -57,11 +66,22 @@
             removeWater,
             openAddProductForMeal,
             haptic,
-            openExclusivePopup
+            openExclusivePopup,
+            openTimeEditor,
+            openMoodEditor,
+            openEditGramsModal,
+            openCopyMealModal,
+            openMoveMealModal,
+            saveAsPreset,
+            repeatYesterdayMeal,
+            removeMeal,
+            removeItem,
+            copyItem,
+            moveItem
         };
 
         return HEYS.dayNutrition?.render?.({ React, ctx: nutritionCtx, actions: nutritionActions })
-            || React.createElement('div', { style: { padding: '12px' } }, '⚠️ Nutrition module not loaded');
+            || React.createElement('div', { style: { padding: '12px' } }, 'Модуль «Питание» не загрузился');
     }
 
     HEYS.dayNutritionCard = {

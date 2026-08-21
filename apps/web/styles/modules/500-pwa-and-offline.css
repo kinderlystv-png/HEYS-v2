@@ -5462,6 +5462,7 @@
   padding: 11px 13px;
   border: none;
   border-radius: 16px;
+  /* v4-intentional */
   background: var(--v4-tint);
   width: 100%;
   text-align: left;
@@ -5474,6 +5475,7 @@
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1.4;
+  /* v4-intentional */
   color: var(--v4-ink);
 }
 .ca-day-entry__sub {
@@ -5484,6 +5486,7 @@
   line-height: 1.4;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
 }
+/* v4-intentional */
 .ca-day-entry .ca-modal__chevron { color: var(--v4-act-text); }
 
 .tab-icon-wrap {

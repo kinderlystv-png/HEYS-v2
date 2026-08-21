@@ -4329,106 +4329,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 || TASKS_HOME_SUBTAB_OPTIONS[0]
                 || null;
         }, [TASKS_HOME_SUBTAB_OPTIONS, resolvedDefaultTasksSubtab]);
-        const DIARY_PANEL_VISIBILITY_OPTIONS = [
-            {
-                key: 'scoreRiskTrend',
-                field: 'showDiaryScoreRiskTrendPanel',
-                eventName: 'heys:diary-optional-panels-visibility-changed',
-                label: 'Оценка, риск и тренд',
-                enabledHint: 'Показывается над карточками дня',
-                disabledHint: 'Скрыт из дневника',
-                titleOn: 'Скрыть оценку дня, риск и тренд',
-                titleOff: 'Показать оценку дня, риск и тренд',
-            },
-            {
-                key: 'fiber',
-                field: 'showDiaryFiberPanel',
-                eventName: 'heys:diary-fiber-panel-visibility-changed',
-                label: 'Карточка клетчатки',
-                enabledHint: 'Показывается над остатком дня',
-                disabledHint: 'Можно вернуть в любой момент',
-                titleOn: 'Скрыть карточку клетчатки в дневнике',
-                titleOff: 'Показать карточку клетчатки в дневнике',
-            },
-            {
-                key: 'insulinWave',
-                field: 'showDiaryInsulinWavePanel',
-                eventName: 'heys:diary-optional-panels-visibility-changed',
-                label: 'Карточка волны',
-                enabledHint: 'Показывает текущую инсулиновую волну',
-                disabledHint: 'Скрыта из дневника',
-                titleOn: 'Скрыть карточку текущей волны',
-                titleOff: 'Показать карточку текущей волны',
-            },
-            {
-                key: 'planner',
-                field: 'showDiaryPlannerPanel',
-                eventName: 'heys:diary-optional-panels-visibility-changed',
-                label: 'Карточка планера',
-                enabledHint: 'Планирует питание на остаток дня',
-                disabledHint: 'Скрыта из дневника',
-                titleOn: 'Скрыть карточку планера в дневнике',
-                titleOff: 'Показать карточку планера в дневнике',
-            },
-            {
-                key: 'supplements',
-                field: 'showDiarySupplementsPanel',
-                eventName: 'heys:diary-optional-panels-visibility-changed',
-                label: 'Карточка витаминов',
-                enabledHint: 'Показывается в дневнике',
-                disabledHint: 'Скрыта из дневника',
-                titleOn: 'Скрыть карточку витаминов в дневнике',
-                titleOff: 'Показать карточку витаминов в дневнике',
-            },
-            {
-                key: 'distribution',
-                field: 'showDiaryDistributionPanel',
-                eventName: 'heys:diary-optional-panels-visibility-changed',
-                label: 'Карточка распределения',
-                enabledHint: 'Показывает распределение приёмов',
-                disabledHint: 'Скрыта из дневника',
-                titleOn: 'Скрыть карточку распределения в дневнике',
-                titleOff: 'Показать карточку распределения в дневнике',
-            },
-        ];
-        const readDiaryPanelsVisibility = React.useCallback(() => {
-            try {
-                const profile = window.HEYS?.utils?.lsGet?.('heys_profile', {}) || {};
-                const hf = window.HEYS?.healthFeatures;
-                return DIARY_PANEL_VISIBILITY_OPTIONS.reduce((acc, option) => {
-                    if (option.key === 'supplements') {
-                        const trackingOn = hf && typeof hf.isSupplementsTrackingEnabled === 'function'
-                            ? hf.isSupplementsTrackingEnabled(profile)
-                            : profile.supplementsTrackingEnabled === true;
-                        acc[option.key] = trackingOn && profile[option.field] !== false;
-                    } else {
-                        acc[option.key] = profile[option.field] !== false;
-                    }
-                    return acc;
-                }, {});
-            } catch (_) {
-                return DIARY_PANEL_VISIBILITY_OPTIONS.reduce((acc, option) => {
-                    acc[option.key] = option.key !== 'supplements';
-                    return acc;
-                }, {});
-            }
-        }, []);
-        const [diaryPanelsVisibility, setDiaryPanelsVisibility] = React.useState(readDiaryPanelsVisibility);
-
-        React.useEffect(() => {
-            const handleVisibilitySync = (event) => {
-                setDiaryPanelsVisibility(readDiaryPanelsVisibility());
-            };
-            window.addEventListener('heys:diary-fiber-panel-visibility-changed', handleVisibilitySync);
-            window.addEventListener('heys:diary-optional-panels-visibility-changed', handleVisibilitySync);
-            window.addEventListener('heys:profile-updated', handleVisibilitySync);
-            return () => {
-                window.removeEventListener('heys:diary-fiber-panel-visibility-changed', handleVisibilitySync);
-                window.removeEventListener('heys:diary-optional-panels-visibility-changed', handleVisibilitySync);
-                window.removeEventListener('heys:profile-updated', handleVisibilitySync);
-            };
-        }, [readDiaryPanelsVisibility]);
-
         const FAB_VISIBILITY_OPTIONS = (window.HEYS?.FabVisibility?.OPTIONS) || [
             { key: 'water', label: 'Вода', icon: 'water' },
             { key: 'hunger', label: 'Голод и энергия', icon: 'hunger' },
@@ -4514,55 +4414,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 );
             }
             return null;
-        };
-
-        const handleToggleDiaryPanel = async (option, nextEnabled) => {
-            try {
-                const U = window.HEYS?.utils;
-                const profile = U?.lsGet?.('heys_profile', {}) || {};
-                const updatedProfile = { ...profile };
-
-                if (option.key === 'supplements' && nextEnabled) {
-                    const hf = window.HEYS?.healthFeatures;
-                    if (hf && typeof hf.requestHealthFeatureToggle === 'function') {
-                        const allowed = await hf.requestHealthFeatureToggle('supplementsTrackingEnabled', true);
-                        if (!allowed) return;
-                    }
-                    updatedProfile.supplementsTrackingEnabled = true;
-                    updatedProfile.showDiarySupplementsPanel = true;
-                } else {
-                    updatedProfile[option.field] = nextEnabled !== false;
-                    if (option.key === 'supplements' && nextEnabled === false) {
-                        updatedProfile.showDiarySupplementsPanel = false;
-                    }
-                }
-
-                U?.lsSet?.('heys_profile', updatedProfile);
-                setDiaryPanelsVisibility((prev) => ({
-                    ...prev,
-                    [option.key]: option.key === 'supplements'
-                        ? (updatedProfile.supplementsTrackingEnabled === true && updatedProfile.showDiarySupplementsPanel !== false)
-                        : (nextEnabled !== false),
-                }));
-                window.dispatchEvent(new CustomEvent(option.eventName, {
-                    detail: {
-                        field: option.field,
-                        enabled: nextEnabled !== false,
-                    }
-                }));
-                window.dispatchEvent(new CustomEvent('heys:profile-updated', {
-                    detail: {
-                        field: option.field,
-                        fields: option.key === 'supplements'
-                            ? ['showDiarySupplementsPanel', 'supplementsTrackingEnabled']
-                            : [option.field],
-                        source: 'tab-settings',
-                    }
-                }));
-                HEYS.dayUtils?.haptic?.('light');
-            } catch (_) {
-                // silent
-            }
         };
 
         const handlePickHomeTab = (nextTab) => {
@@ -5359,59 +5210,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             label: 'Профиль и цели',
                             onClick: () => openUserSection('basic', 'settings-sheet-profile'),
                         }),
-                        canUsePostReleaseLabs && renderSettingsRow({
-                            key: 'diary',
-                            scrollAnchorKey: 'diary',
-                            label: 'Дневник',
-                            meta: DIARY_PANEL_VISIBILITY_OPTIONS.filter((option) => diaryPanelsVisibility[option.key] !== false).length
-                                + ' из '
-                                + DIARY_PANEL_VISIBILITY_OPTIONS.length
-                                + ' блоков',
-                            expanded: sheetExtra === 'diary',
-                            onClick: () => toggleSheetExtra('diary'),
-                        }),
-                        canUsePostReleaseLabs && sheetExtra === 'diary' && React.createElement(
-                            'div',
-                            {
-                                key: 'diary-panel',
-                                className: 'tab-settings-diary-wrap hdr-settings-sheet__inline-panel',
-                                role: 'group',
-                                'aria-label': 'Настройки дневника',
-                                onClick: (e) => e.stopPropagation(),
-                            },
-                            React.createElement('div', { className: 'tab-settings-diary-card' },
-                                React.createElement('div', { className: 'tab-settings-diary-toggle-list' },
-                                    DIARY_PANEL_VISIBILITY_OPTIONS.map((option) => {
-                                        const enabled = diaryPanelsVisibility[option.key] !== false;
-                                        return React.createElement('button', {
-                                            key: option.key,
-                                            type: 'button',
-                                            className: 'tab-settings-diary-toggle' + (enabled ? ' is-on' : ''),
-                                            role: 'switch',
-                                            'aria-checked': enabled ? 'true' : 'false',
-                                            onClick: (e) => {
-                                                e.stopPropagation();
-                                                handleToggleDiaryPanel(option, !enabled);
-                                            },
-                                            title: enabled ? option.titleOn : option.titleOff,
-                                        },
-                                            React.createElement('span', { className: 'tab-settings-diary-toggle__copy' },
-                                                React.createElement('span', { className: 'tab-settings-diary-toggle__label' }, option.label),
-                                                React.createElement('span', { className: 'tab-settings-diary-toggle__hint' },
-                                                    enabled ? option.enabledHint : option.disabledHint
-                                                )
-                                            ),
-                                            React.createElement('span', {
-                                                className: 'tab-settings-diary-toggle__switch',
-                                                'aria-hidden': 'true'
-                                            },
-                                                React.createElement('span', { className: 'tab-settings-diary-toggle__knob' })
-                                            )
-                                        );
-                                    })
-                                )
-                            )
-                        ),
                         renderSettingsRow({
                             key: 'products',
                             label: 'Мои продукты',
@@ -5969,10 +5767,35 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const isDayTab = tab === 'stats' || tab === 'diary' || tab === 'activity';
         const hideProductHeader = tab === 'tasks' || tab === 'board';
 
+        // Положение прокрутки вкладки «Питание» сохраняется при возврате и
+        // сбрасывается при смене дня (контракт nutrition-tab, «прокрутка»).
+        // Остальные вкладки открываются сверху, как раньше.
+        const scrollMemoryRef = React.useRef(0);
+
         React.useEffect(() => {
             const viewport = tabViewportRef.current;
-            if (viewport) viewport.scrollTop = 0;
+            if (!viewport) return undefined;
+            if (tab !== 'diary') {
+                viewport.scrollTop = 0;
+                return undefined;
+            }
+            const restore = scrollMemoryRef.current;
+            if (restore > 0) {
+                const raf = window.requestAnimationFrame(() => { viewport.scrollTop = restore; });
+                return () => {
+                    window.cancelAnimationFrame(raf);
+                    scrollMemoryRef.current = viewport.scrollTop;
+                };
+            }
+            viewport.scrollTop = 0;
+            return () => { scrollMemoryRef.current = viewport.scrollTop; };
         }, [tab]);
+
+        React.useEffect(() => {
+            scrollMemoryRef.current = 0;
+            const viewport = tabViewportRef.current;
+            if (viewport && tab === 'diary') viewport.scrollTop = 0;
+        }, [selectedDate]);
 
         // diary/activity: native sticky полосы даты; IO на сентинел → is-pinned.
         React.useEffect(() => {
