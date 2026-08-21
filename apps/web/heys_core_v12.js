@@ -2661,8 +2661,12 @@
         debugLog('local-products', { count: currentProducts.length });
 
         // 4. Создать индексы для быстрой работы
-        const normalizeName = HEYS.models?.normalizeProductName
-          || ((name) => String(name || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е'));
+        // Ключ похожести, а не строгая нормализация: здесь решается «одна ли
+        // это еда», и пунктуация в названии на ответ влиять не должна. Строгая
+        // `normalizeProductName` остаётся контрактом с сервером (`name_norm`).
+        const normalizeName = HEYS.models?.productMatchKey
+          || ((name) => String(name == null ? '' : name).toLowerCase().replace(/ё/g, 'е')
+            .replace(/[^\p{L}\p{N}]+/gu, ' ').trim().replace(/\s+/g, ' '));
         const sharedByName = new Map();
         const sharedById = new Map();
         sharedProducts.forEach(sp => {
@@ -2838,6 +2842,8 @@
         let updatedCount = 0;
         let matchedById = 0;
         let matchedByName = 0;
+        let linkedCount = 0;
+        const linkedSamples = [];
         let missingCount = 0;
         let noMatchCount = 0;
         const noMatchSamples = [];
@@ -2873,6 +2879,26 @@
             return localP; // Нет в shared — оставляем как есть
           }
 
+          // Связь и дозаполнение — разные задачи, и до 21.08 они были сшиты в
+          // одну: `shouldUpdate` означает «карточке не хватает нутриентов», и
+          // под этим же условием стоял бэкфилл `shared_origin_id`. Полностью
+          // заполненная карточка совпадала с общей по имени (`matchedByName`
+          // это считал), но связь ей не ставилась никогда — и она навсегда
+          // оставалась вторым, независимым экземпляром той же еды. Отсюда
+          // дубли в каталоге и `ambiguous_product` на ровном месте.
+          //
+          // Здесь ставится ТОЛЬКО связь: ни одно значение не подтягивается.
+          // Дозаполнение по-прежнему живёт в `mergeFromShared` под своим
+          // условием — иначе полная карточка молча получила бы чужой штрихкод
+          // или порции от одноимённой строки общей базы.
+          if (!shouldUpdate && needsSharedLink(localP, sharedP)) {
+            linkedCount++;
+            if (linkedSamples.length < 5) {
+              linkedSamples.push({ name: localP?.name, sharedId: sharedP?.id });
+            }
+            return { ...localP, shared_origin_id: sharedP.id };
+          }
+
           // Проверяем нужно ли обновлять
           if (shouldUpdate) {
             const { merged, changed, debugInfo } = mergeFromShared(localP, sharedP);
@@ -2906,6 +2932,10 @@
           needsUpdate: missingCount,
           matchedById,
           matchedByName,
+          // Сколько заполненных карточек наконец получили связь с общей базой:
+          // до 21.08 это число всегда было нулём по построению.
+          linkedByName: linkedCount,
+          linkedSamples,
           noMatch: noMatchCount,
           updated: updatedCount,
           noMatchSamples,
@@ -4648,6 +4678,21 @@
    * @returns {{presets: string[], recipes: string[]}} названия, а не строки:
    *   человеку нужно узнать своё, а не сверять идентификаторы
    */
+  /**
+   * Нужно ли поставить карточке связь с найденной строкой общей базы.
+   *
+   * Вопрос «та же это еда» и вопрос «хватает ли карточке нутриентов» не имеют
+   * друг к другу отношения, но до 21.08 связывание стояло под вторым условием:
+   * заполненная карточка не получала `shared_origin_id` никогда, даже когда
+   * совпадение по имени было найдено. Правило вынесено отдельной функцией,
+   * чтобы это больше нельзя было сшить обратно незаметно.
+   */
+  function needsSharedLink(local, shared) {
+    if (!local || !shared) return false;
+    if (local.shared_origin_id != null && local.shared_origin_id !== '') return false;
+    return shared.id != null && shared.id !== '';
+  }
+
   function findProductUsage(id, name, sources) {
     const norm = (value) => String(value || '').toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ').trim();
     const target = norm(name);

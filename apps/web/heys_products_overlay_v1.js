@@ -299,7 +299,7 @@
         );
         deduped = deduped.map(function (r) {
           if (!r || r._custom !== true || !r.name) return r;
-          var sm = _autoAux.byName.get(_normalizeName(r.name));
+          var sm = _autoAux.byName.get(_matchKey(r.name));
           if (!sm) return r;
           // 🔐 2026-08-02: склейка только при совпадении состава.
           // Раньше связывали по одному имени. Когда в каталоге оказывались две
@@ -659,6 +659,24 @@
   function _normalizeName(n) {
     return String(n || '').toLowerCase().trim().replace(/\s+/g, ' ').replace(/ё/g, 'е');
   }
+
+  /**
+   * Ключ для вопроса «одна ли это еда». Свободнее строгой нормализации:
+   * пунктуация приравнивается к пробелу, поэтому «Хлеб «Премиум»» и «Хлеб
+   * Премиум» — одно и то же. Строгий `_normalizeName` остаётся там, где имя
+   * сравнивается как значение (правка карточки), — там смена кавычек это
+   * изменение, а не совпадение.
+   */
+  function _matchKey(n) {
+    var models = (typeof window !== 'undefined' && window.HEYS && window.HEYS.models) || null;
+    if (models && typeof models.productMatchKey === 'function') return models.productMatchKey(n);
+    return String(n == null ? '' : n)
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim()
+      .replace(/\s+/g, ' ');
+  }
   function _normalizeBarcode(value) {
     if (value == null) return '';
     const cleaned = String(value).trim().replace(/[\s-]+/g, '').toUpperCase().replace(/[^0-9A-Z]/g, '');
@@ -777,7 +795,7 @@
       sharedById.forEach((sp) => {
         if (!sp) return;
         if (sp.fingerprint) byFp.set(String(sp.fingerprint), sp);
-        if (sp.name) byName.set(_normalizeName(sp.name), sp);
+        if (sp.name) byName.set(_matchKey(sp.name), sp);
         _getBarcodes(sp).forEach(function (code) { byBarcode.set(code, sp); });
       });
       _sharedByFingerprint = byFp;
@@ -843,7 +861,7 @@
           if (sharedRow) { sid = String(sharedRow.id); linkedByFallback = true; typeAByFallback++; }
         }
         if (!sharedRow && p.name) {
-          sharedRow = aux.byName.get(_normalizeName(p.name));
+          sharedRow = aux.byName.get(_matchKey(p.name));
           if (sharedRow) { sid = String(sharedRow.id); linkedByFallback = true; typeAByFallback++; }
         }
       }

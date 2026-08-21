@@ -1519,7 +1519,30 @@
 
   M.computeProductFingerprint = computeProductFingerprint;
   M.computeProductBrandFingerprint = computeProductBrandFingerprint;
+  /**
+   * Ключ похожести названий: «одна ли это еда», а не контракт с сервером.
+   *
+   * `normalizeProductName` трогать нельзя — её результат уходит в `name_norm`
+   * при публикации в общую базу и обязан совпадать с тем, что считает SQL.
+   * Поэтому вопрос «похоже ли» получает свой ключ, и он свободнее: пунктуация
+   * приравнивается к пробелу.
+   *
+   * Иначе слои расходятся в разные стороны на одном и том же продукте: MCP
+   * пунктуацию вырезает, веб — нет, и «Хлеб тостовый «Премиум»» для склейки
+   * оказывается другой едой, чем «Хлеб тостовый Премиум», а для поиска — той же.
+   * Ровно на этом 21.08 возник неразрешимый дубль.
+   */
+  function productMatchKey(name) {
+    return String(name == null ? '' : name)
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim()
+      .replace(/\s+/g, ' ');
+  }
+
   M.normalizeProductName = normalizeProductName;
+  M.productMatchKey = productMatchKey;
 
   /**
    * Поле дня стоит с кураторской руки, а не введено клиентом.
