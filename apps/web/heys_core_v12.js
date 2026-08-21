@@ -1953,6 +1953,36 @@
         : '❌ НЕ НАЙДЕН (id не совпадает ни с одним продуктом!)');
       console.info('[baza] 📊 Текущий React state: products.length =', products.length);
 
+      // --- ШАГ 1б: где ещё живёт ссылка на этот продукт ---
+      // Удаление ссылки не чистит: набор и позиция дня останутся со снимком
+      // КБЖУ, но карточки за ними не будет. Человек должен решить это до
+      // удаления, а не увидеть последствия через неделю (инцидент 21.08:
+      // четыре набора двух клиентов висели на удалённых карточках).
+      try {
+        const usage = findProductUsage(id, targetProduct && targetProduct.name, {
+          presets: (HEYS.store && HEYS.store.getMealPresets && HEYS.store.getMealPresets()) || [],
+          products,
+        });
+        if (usage.presets.length || usage.recipes.length) {
+          const parts = [];
+          if (usage.presets.length) parts.push(`наборы: ${usage.presets.join(', ')}`);
+          if (usage.recipes.length) parts.push(`блюда: ${usage.recipes.join(', ')}`);
+          console.warn('[baza] ⚠️ ШАГ 1б/7 — продукт используется:', usage);
+          const question = `«${(targetProduct && targetProduct.name) || id}» используется — ${parts.join('; ')}.\n\n`
+            + 'Еда не пропадёт: там сохранены КБЖУ. Но карточки за этими позициями больше не будет, '
+            + 'и состав уже не пересчитается.\n\nВсё равно удалить?';
+          if (typeof global.confirm === 'function' && !global.confirm(question)) {
+            console.info('[baza] ⏹️ Удаление отменено пользователем — продукт используется');
+            console.groupEnd();
+            return;
+          }
+        }
+      } catch (e) {
+        // Проверка — подсказка, а не гейт: сломаться на ней и не дать удалить
+        // продукт хуже, чем удалить без предупреждения.
+        console.warn('[baza] ⚠️ ШАГ 1б/7 — не удалось проверить использования:', e);
+      }
+
       // --- ШАГ 2: фильтрация ---
       const filtered = products.filter(p => p.id !== id);
       console.info('[baza] ✂️ ШАГ 2/7 — После фильтрации:', filtered.length, 'продуктов (было:', products.length, ', удалено:', products.length - filtered.length, ')');
@@ -4597,6 +4627,52 @@
     return null;
   };
 
+  /**
+   * Где ещё живёт ссылка на этот продукт: наборы приёмов и составы блюд.
+   *
+   * Удаление карточки ссылки не чистит — ни здесь, ни в MCP, — поэтому набор
+   * остаётся висеть на мёртвом id. 21.08 в таком состоянии на проде оказались
+   * четыре набора двух клиентов, и куратор упёрся в это на живой записи еды.
+   * Сама еда не теряется: и набор, и позиция дня хранят снимок КБЖУ. Теряется
+   * связь с карточкой — и об этом человек должен узнать до удаления, а не
+   * через неделю по оранжевому баннеру.
+   *
+   * Функция чистая: всё, что ей нужно, передаётся аргументами. Так её можно
+   * проверить тестом, не поднимая ни LS, ни React.
+   *
+   * @param {string} id id удаляемого продукта
+   * @param {string} name его название — вторая ветка матча, как при
+   *   разворачивании набора: исторические позиции несут id, не переживший
+   *   переезд на overlay, и узнаются только по имени
+   * @param {{presets?: Array, products?: Array}} sources
+   * @returns {{presets: string[], recipes: string[]}} названия, а не строки:
+   *   человеку нужно узнать своё, а не сверять идентификаторы
+   */
+  function findProductUsage(id, name, sources) {
+    const norm = (value) => String(value || '').toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ').trim();
+    const target = norm(name);
+    const sameProduct = (item) => {
+      if (!item) return false;
+      if (id != null && item.product_id != null && String(item.product_id) === String(id)) return true;
+      return Boolean(target) && norm(item.name) === target;
+    };
+
+    const presetList = Array.isArray(sources && sources.presets) ? sources.presets : [];
+    const productList = Array.isArray(sources && sources.products) ? sources.products : [];
+
+    return {
+      presets: presetList
+        .filter((preset) => preset && Array.isArray(preset.items) && preset.items.some(sameProduct))
+        .map((preset) => preset.name || 'без названия'),
+      recipes: productList
+        .filter((product) => product
+          && String(product.id) !== String(id)
+          && product.recipe && Array.isArray(product.recipe.items)
+          && product.recipe.items.some(sameProduct))
+        .map((product) => product.name || 'без названия'),
+    };
+  }
+
   HEYS.products = HEYS.products || {
     getAll: () => {
       const fromStore = (HEYS.store && HEYS.store.get && HEYS.store.get('heys_products', [])) || [];
@@ -5583,6 +5659,10 @@
       return { fixed, total: products.length };
     }
   };
+
+  // Поиск использований — часть публичного фасада: им пользуется удаление во
+  // вкладке «База», и он же проверяется тестом отдельно от React.
+  HEYS.products.findUsage = findProductUsage;
 
   // ─────────────────────────────────────────────────────────────────────
   // Phase α: overlay-products read wrapper. Flag-gated, default OFF.
