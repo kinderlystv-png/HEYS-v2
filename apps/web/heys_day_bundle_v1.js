@@ -12896,14 +12896,9 @@
             const mealToRemove = dayRef.current.meals?.[i];
             if (!mealToRemove) return;
 
-            const confirmed = await HEYS.ConfirmModal?.confirmDelete?.({
-                icon: '🗑️',
-                title: 'Удалить приём пищи?',
-                text: 'Приём исчезнет сразу, но его можно будет быстро вернуть через кнопку «Отменить».',
-            });
-
-            if (confirmed === false) return;
-
+            // Подтверждающего вопроса заранее нет: его платят все ради редкой
+            // ошибки, а тост отмены страхует только ошибшегося (контракт
+            // nutrition-tab, «удаление»).
             const mealName = mealToRemove?.name || 'Приём пищи';
             const mealId = mealToRemove.id;
 
@@ -12911,7 +12906,9 @@
 
             runUndoableDayMutation({
                 label: mealName + ' удалён',
-                duration: 4000,
+                // Окно защиты записи равно видимой полосе — 5 с, невидимого
+                // запаса нет (контракт «удаление и отмена»).
+                duration: 5000,
                 errorMessage: 'Не удалось удалить приём пищи',
                 errorAction: 'remove_meal',
                 applyMutation: () => {
@@ -13431,7 +13428,7 @@
 
             runUndoableDayMutation({
                 label: removedName + ' удалён',
-                duration: 4000,
+                duration: 5000,
                 errorMessage: 'Не удалось удалить продукт',
                 errorAction: 'remove_item',
                 applyMutation: () => {
@@ -14318,7 +14315,8 @@
                     const newName = newType && MEAL_TYPES_HANDLER && MEAL_TYPES_HANDLER[newType]
                         ? MEAL_TYPES_HANDLER[newType].name
                         : m.name;
-                    return { ...m, mealType: newType, name: newName };
+                    // Явный выбор типа человеком — имя фиксируется.
+                    return { ...m, mealType: newType, mealTypePinned: !!newType, name: newName };
                 });
                 return { ...prevDay, meals, updatedAt: newUpdatedAt };
             });
@@ -14358,6 +14356,10 @@
     HEYS.dayMealHandlers = {
         createMealHandlers,
         sortMealsByTime,
+        // Вход строки «Повторить вчерашний …» в листе правки приёма
+        // (контракт nutrition-tab, «повтор вчерашнего»).
+        loadRecentMealsForDate,
+        findYesterdayEquivalent,
     };
 
 })(window);
@@ -15328,10 +15330,15 @@
         }
 
         const app = rootHEYs || HEYS;
-        const showDiary = !isMobile || mobileSubTab === 'diary';
-        if (isMobile && mobileSubTab === 'diary') {
-            return null;
-        }
+        // Вкладку «Питание» целиком собирает NutritionTabV4: порядок блоков
+        // задан контрактом канваса, а page shell рендерит diarySection после
+        // карточки и после воды — туда этот порядок не укладывается. Здесь
+        // остаётся десктопный легаси-дневник и компактный индикатор волны для
+        // соседних под-вкладок.
+        // На вкладке «Питание» волна показана своим блоком внутри карточки —
+        // второй индикатор здесь был бы дублем.
+        if (isMobile && mobileSubTab === 'diary') return null;
+        const showDiary = !isMobile;
         const ensureSupplementsModule = () => {
             if (app.Supplements?.renderCard) return true;
             if (typeof document === 'undefined') return false;
@@ -15619,8 +15626,48 @@
         );
     };
 
+    // Категории «чем добрать клетчатку» — иконок нет: они не различают овощи
+    // от бобовых (контракт nutrition-tab, «чем добрать клетчатку»).
+    const FIBER_SOURCE_CATEGORIES = [
+        { title: 'Овощи', grams: '5–8 г к каждому приёму' },
+        { title: 'Бобовые', grams: '8–12 г за порцию' },
+        { title: 'Цельные злаки', grams: '4–7 г за порцию' }
+    ];
+
+    function getFiberSources() {
+        return FIBER_SOURCE_CATEGORIES.slice();
+    }
+
+    // Личный лучший источник за месяц: та же выборка вкладов, что у недельной
+    // сводки, но горизонт 30 дней.
+    function getBestFiberSource(dateKey, pIndex, app) {
+        const ctx = app || HEYS;
+        const loadDay = ctx?.dayUtils?.loadDay;
+        if (typeof loadDay !== 'function' || !dateKey) return null;
+        const sourceTotals = new Map();
+        for (let i = 0; i < 30; i += 1) {
+            const data = loadDay(addDaysISO(dateKey, -i));
+            if (!data || !Array.isArray(data.meals)) continue;
+            getFiberContributions(data, pIndex, ctx, 0).forEach(function collectSource(item) {
+                if (!item?.name || item.isFallback) return;
+                if (!isLikelyFiberProductName(item.name)) return;
+                sourceTotals.set(item.name, roundFiberValue((sourceTotals.get(item.name) || 0) + (Number(item.fiber) || 0)));
+            });
+        }
+        const best = Array.from(sourceTotals.entries())
+            .sort(function sortSources(a, b) { return b[1] - a[1] || a[0].localeCompare(b[0], 'ru'); })[0];
+        return best ? { name: best[0], fiber: best[1] } : null;
+    }
+
+    function getDayScoreSummary(options) {
+        return getSafeDayScoreSummary(HEYS, options || {});
+    }
+
     HEYS.dayDiarySection = HEYS.dayDiarySection || {};
     HEYS.dayDiarySection.renderDiarySection = renderDiarySection;
+    HEYS.dayDiarySection.getFiberSources = getFiberSources;
+    HEYS.dayDiarySection.getBestFiberSource = getBestFiberSource;
+    HEYS.dayDiarySection.getDayScoreSummary = getDayScoreSummary;
     HEYS.dayDiarySection.getEmptyMeals = getEmptyMeals;
     HEYS.dayDiarySection.renderEmptyMealBanner = renderEmptyMealBanner;
 })(window.HEYS = window.HEYS || {});

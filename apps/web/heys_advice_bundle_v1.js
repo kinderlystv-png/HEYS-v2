@@ -2249,7 +2249,9 @@
                         if (pct < cond.waterPct) meetsConditions = false;
                     }
                     if (cond.harmPct !== undefined) {
-                        const pct = (dayData.dayTot?.harm || 0) / 100;
+                        // dayTot.harm — шкала продукта 0–10 (heys_day_calculations.js).
+                        // cond.harmPct — доля этой шкалы: 0.5 = порог экрана (5).
+                        const pct = (dayData.dayTot?.harm || 0) / 10;
                         if (pct > cond.harmPct) meetsConditions = false;
                     }
                     if (cond.breakfastBefore !== undefined) {
@@ -4595,7 +4597,9 @@
         const fiberPct = (dayTot?.fiber || 0) / (normAbs?.fiber || 1);
         const simplePct = (dayTot?.simple || 0) / (normAbs?.simple || 1);
         const transPct = (dayTot?.trans || 0) / (normAbs?.trans || 1);
-        const harmPct = (dayTot?.harm || 0) / (normAbs?.harm || 1);
+        // dayTot.harm живёт в шкале продукта 0–10, normAbs.harm — процент из
+        // профиля (harmPct). Переводим факт в проценты, чтобы делить сравнимое.
+        const harmPct = ((dayTot?.harm || 0) * 10) / (normAbs?.harm || 40);
         const goodFatPct = (dayTot?.good || 0) / (normAbs?.good || 1);
 
         const isRefeedDay = day?.isRefeedDay || false;

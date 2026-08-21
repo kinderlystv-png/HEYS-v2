@@ -3104,8 +3104,8 @@
         });
         Object.keys(t).forEach(k => t[k] = r0(t[k]));
 
-        // Weighted averages для ГИ и вредности по граммам
-        let gSum = 0, giSum = 0, harmSum = 0;
+        // Взвешенные средние: вредность — по граммам, ГИ — по углеводам.
+        let gSum = 0, harmSum = 0, carbSum = 0, giCarbSum = 0;
         (day.meals || []).forEach(m => {
             (m.items || []).forEach(it => {
                 const p = getProductFromItem(it, pIndex);
@@ -3115,11 +3115,19 @@
                 const gi = p.gi ?? p.gi100 ?? p.GI ?? p.giIndex;
                 const harm = p.harm ?? p.harmScore ?? p.harm100 ?? p.harmPct;
                 gSum += g;
-                if (gi != null) giSum += gi * g;
                 if (harm != null) harmSum += harm * g;
+                // Взвешивание ГИ по углеводам — та же схема, что в модели волн
+                // (heys_iw_response_model.js: weightedGi / knownGiCarbs).
+                const carbsG = (+(p.carbs100 ?? p.carbs ?? 0) || 0) * g / 100;
+                const giNum = +gi;
+                if (carbsG > 0 && Number.isFinite(giNum) && giNum >= 0 && giNum <= 100) {
+                    carbSum += carbsG;
+                    giCarbSum += giNum * carbsG;
+                }
             });
         });
-        t.gi = gSum ? giSum / gSum : 0;
+        // ГИ взвешен по углеводам (сахарная нагрузка), вредность — по граммам.
+        t.gi = carbSum ? giCarbSum / carbSum : 0;
         t.harm = gSum ? harmSum / gSum : 0;
 
         return t;
@@ -3127,12 +3135,27 @@
 
     /**
      * Get product from item (helper function)
+     *
+     * pIndex — это { byId: Map, byName: Map, byFingerprint: Map }
+     * (heys_models_v1.js buildProductIndex), а не плоский объект. Прямое
+     * обращение pIndex[productId] всегда давало undefined, поэтому дневные
+     * ГИ и вредность годами считались нулевыми. Резолвер один — модельный,
+     * тот же, что использует mealTotals.
      */
     function getProductFromItem(item, pIndex) {
         if (!item || !pIndex) return null;
-        const productId = item.product_id || item.id;
-        return pIndex[productId] || null;
+        const models = HEYS.models || M;
+        if (typeof models.getProductFromItem === 'function') {
+            return models.getProductFromItem(item, pIndex) || null;
+        }
+        const productId = String(item.product_id || item.id || '').toLowerCase();
+        return pIndex.byId?.get?.(productId) || null;
     }
+
+    // Порог вредности дня — константа дизайна, не персонализируется
+    // (контракт nutrition-tab, строка «вредность»). Профильный harmPct
+    // остаётся входом советов и на экран не выводится.
+    const HARM_THRESHOLD = 5;
 
     const PROTEIN_KCAL_PER_G = () => (HEYS.TEF?.ATWATER?.protein || 3);
     const CARB_KCAL_PER_G = () => (HEYS.TEF?.ATWATER?.carbs || 4);
@@ -3162,7 +3185,7 @@
             badFatPct: resolveNormField(normPerc, profile, 'badFatPct', 30),
             superbadFatPct: resolveNormField(normPerc, profile, 'superbadFatPct', 5),
             fiberPct: resolveNormField(normPerc, profile, 'fiberPct', 14),
-            giPct: resolveNormField(normPerc, profile, 'giPct', 50),
+            giPct: resolveNormField(normPerc, profile, 'giPct', 55),
             harmPct: resolveNormField(normPerc, profile, 'harmPct', 40)
         };
     }
@@ -3627,6 +3650,7 @@
 
     // Export module
     HEYS.dayCalculations = {
+        HARM_THRESHOLD,
         calculateDayTotals,
         computeDailyNorms,
         computeDisplayNorms,
@@ -3645,7 +3669,6 @@
     };
 
 })(window);
-
 
 // === heys_day_effects.js ===
 // heys_day_effects.js — DayTab side effects (sync, events)
@@ -5795,7 +5818,6 @@
                 HEYS.waterFeedback.playAddFeedback = function playAddFeedback(detail) {
                     if (!detail || detail.ml == null || detail.ml === 0) return;
                     const isRemove = detail.ml < 0;
-                    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
                     if (!isRemove) {
                         const playSound = () => {
                             // Прежний звук добавления остаётся как был. Новый «звук капли»
@@ -5806,8 +5828,10 @@
                             }
                         };
                         // Звук ждёт касания поверхности: при анимации плитки — 240 мс,
-                        // при столбике или reduced-motion — сразу.
-                        if (waterTileIsVisible() && !reducedMotion) {
+                        // при столбике — сразу. По prefers-reduced-motion здесь не
+                        // ветвимся: подъём уровня — функциональный ярус, он не гасится
+                        // (docs/implementation/MOTION_POLICY.md).
+                        if (waterTileIsVisible()) {
                             setTimeout(playSound, 240);
                         } else {
                             playSound();
@@ -5942,6 +5966,13 @@
          * Remove water (для исправления ошибок)
          */
         function removeWater(ml) {
+            // 🔒 Read-only gating — тот же гейт, что у addWater: убавление
+            // тоже меняет данные дня (контракт nutrition-tab, «убрать воду»).
+            if (!HEYS.Paywall?.canWriteSync?.()) {
+                HEYS.Paywall?.showBlockedToast?.('Изменение воды недоступно');
+                return;
+            }
+
             const liveDay = getLatestDaySnapshot();
             const newWater = Math.max(0, (liveDay.waterMl || 0) - ml);
             const newUpdatedAt = Math.max(Date.now(), (Number(liveDay.waterUpdatedAt) || 0) + 1);
