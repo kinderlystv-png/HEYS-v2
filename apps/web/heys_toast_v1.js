@@ -120,6 +120,16 @@
 
     const { duration = CONFIG.defaultDuration } = options;
 
+    // Новый тост отмены заменяет предыдущий, и прошлое удаление в этот момент
+    // становится необратимым: очередь отмен ради случая, который почти не
+    // происходит, — механизм дороже пользы (контракт nutrition-tab,
+    // «два удаления подряд»). Обычные сообщения по-прежнему стопкой.
+    if (options.action) {
+      for (const shown of [...visibleToasts]) {
+        if (shown.querySelector('.heys-toast__action')) hideToast(shown);
+      }
+    }
+
     while (visibleToasts.length >= CONFIG.maxVisible) {
       hideToast(visibleToasts[0]);
     }
