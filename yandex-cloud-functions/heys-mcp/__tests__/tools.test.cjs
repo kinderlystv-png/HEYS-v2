@@ -175,6 +175,45 @@ test('неоднозначный продукт возвращает канди�
   );
 });
 
+/**
+ * Дубль «личная карточка ↔ общая база». 21.08 на этом встало сохранение
+ * набора: «Хлеб тостовый Премиум суперсемечковый» лежал в личном списке с
+ * 276.7 ккал и в общей базе с 274. Пара была неразрешима арифметически —
+ * точное имя даёт обеим по 1000, надбавка own всего +60, а порог требует
+ * превосходства в 1.25 раза.
+ */
+test('личная карточка с тем же названием, что в общей базе, берётся без переспроса', async () => {
+  const overlay = [...OVERLAY, {
+    id: 'own-latte-dup', _custom: true, in_my_list: true, name: 'Кофе латте',
+    protein100: 3.4, simple100: 5.2, complex100: 0, badFat100: 1.2, goodFat100: 1,
+    trans100: 0, fiber100: 0, gi: 30, harm: 2,
+  }];
+  const api = fakeApi({ day: null, overlay });
+  const tools = build(api);
+
+  const res = await tools.heys_log_meal({ items: [{ query: 'кофе латте', grams: 200 }], time: '10:00' });
+
+  const saved = api.saves[api.saves.length - 1].value;
+  const item = saved.meals[0].items[0];
+  assert.equal(item.product_id, 'own-latte-dup', 'взята личная карточка, а не общая');
+  assert.equal(res.structured.items.length, 1);
+});
+
+test('настоящая неоднозначность в личном списке по-прежнему переспрашивает', async () => {
+  // Два личных «кофе» с разными названиями — это не дубль одной карточки, и
+  // угадывать тут нельзя.
+  const overlay = [...OVERLAY, {
+    id: 'own-latte-dup', _custom: true, in_my_list: true, name: 'Кофе латте',
+    protein100: 3.4, simple100: 5.2, complex100: 0, badFat100: 1.2, goodFat100: 1,
+    trans100: 0, fiber100: 0, gi: 30, harm: 2,
+  }];
+  const tools = build(fakeApi({ day: null, overlay }));
+  await assert.rejects(
+    () => tools.heys_log_meal({ items: [{ query: 'кофе', grams: 100 }] }),
+    (e) => e.code === 'ambiguous_product',
+  );
+});
+
 test('точное название вносится без переспроса', async () => {
   const api = fakeApi({ day: null });
   const tools = build(api);

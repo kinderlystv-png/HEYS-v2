@@ -639,7 +639,23 @@ function createTools({
     // неточном названии: конкурента у него нет, а пользователь вносит еду
     // именно своими позициями.
     const soleOwnMatch = matches.length === 1 && matches[0]._source === 'own' && best > 0;
-    const confident = soleOwnMatch || (best >= 400 && (second === 0 || best >= second * 1.25));
+    // Личная карточка с ТЕМ ЖЕ названием, что у общей, — не неоднозначность, а
+    // очевидный ответ: клиент ведёт дневник своей позицией. Правило дословно
+    // повторяет `findRecipeIngredient` — там оно живёт с самого начала, а сюда
+    // его забыли перенести, хотя случай тот же.
+    //
+    // Без него пара «личная + общая» была неразрешима арифметически: точное имя
+    // даёт обеим по 1000, надбавка own — всего +60, а порог требует
+    // превосходства в 1.25 раза. То есть модель не «не смогла выбрать» — ей не
+    // давали выбрать. 21.08 на этом встало сохранение набора («Хлеб тостовый
+    // Премиум суперсемечковый», 276.7 в личном списке против 274 в общей базе).
+    const wanted = products.normalizeText(spec.query);
+    const exactOwn = matches.filter((m) => m._source === 'own'
+      && products.normalizeText(m.name) === wanted);
+    const soleExactOwn = exactOwn.length === 1;
+    const confident = soleOwnMatch || soleExactOwn
+      || (best >= 400 && (second === 0 || best >= second * 1.25));
+    if (soleExactOwn && !soleOwnMatch) return exactOwn[0];
     if (!confident) {
       throw new ToolError(
         'ambiguous_product',
