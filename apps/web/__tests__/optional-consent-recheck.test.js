@@ -104,6 +104,28 @@ describe('необязательные согласия: клиентская ч
     expect(guard).toMatch(/HEYS\.Consents\?\.ConsentOutdatedBanner/);
   });
 
+  it('клик по баннеру ведёт в ReconsentSheet, а не в регистрационный экран', () => {
+    // Прежняя версия поднимала mustBlockReconsent и открывала ConsentScreen.
+    // Тот собирает только свой набор, поэтому подписывалась заново обязательная
+    // пара, а обновившийся документ оставался прежним — баннер возвращался.
+    const root = read('apps/web/heys_app_root_impl_v1.js');
+    const fn = root.slice(root.indexOf('const handleOptionalReconsent'));
+    const body = fn.slice(0, fn.indexOf('}, ['));
+    expect(body).toMatch(/setReconsentOpen\(true\)/);
+    expect(body).not.toMatch(/setMustBlock/);
+  });
+
+  it('лист подписывает только документы с доступным текстом', () => {
+    // Тот же инвариант, что у баннера: без текста серверная подпись не пройдёт.
+    const sheet = consents.slice(consents.indexOf('function ReconsentSheet'));
+    const body = sheet.slice(0, sheet.indexOf('function ConsentOutdatedBanner'));
+    expect(body).toMatch(/DOC_PATHS\[type\]/);
+    // Читаем документ целиком через существующий просмотрщик, а не своим кодом.
+    expect(body).toMatch(/FullTextModal/);
+    // Подпись идёт кодом доступа — тем же контуром, что и обязательная пара.
+    expect(body).toMatch(/signConsentsWithAccessCode/);
+  });
+
   it('пробрасывается через строитель пропсов оверлеев', () => {
     expect(overlaysProps).toMatch(/optionalOutdatedTypes,/);
     expect(overlaysProps).toMatch(/onOptionalReconsent,/);

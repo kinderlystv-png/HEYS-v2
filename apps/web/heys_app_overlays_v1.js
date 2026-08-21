@@ -120,6 +120,9 @@
             consentGate,
             optionalOutdatedTypes,
             onOptionalReconsent,
+            reconsentOpen,
+            onReconsentDone,
+            onReconsentClose,
             isConsentBlocking,
             isMorningCheckinBlocking,
             showMorningCheckin,
@@ -269,6 +272,14 @@
                     outdatedTypes: optionalOutdatedTypes,
                     graceExpiresAt: null,
                     onClick: onOptionalReconsent,
+                }),
+            // Лист повторной подписи — поверх баннера, открывается кликом по нему.
+            reconsentOpen && HEYS.Consents?.ReconsentSheet
+                && React.createElement(HEYS.Consents.ReconsentSheet, {
+                    key: 'reconsent-sheet',
+                    outdatedTypes: optionalOutdatedTypes,
+                    onDone: onReconsentDone,
+                    onClose: onReconsentClose,
                 }),
             // === MORNING CHECK-IN (вес, сон, шаги — показывается ВМЕСТО контента, НО после согласий) ===
             // Крестика нет: выход только вперёд. После регистрации «Начать чек-ин»

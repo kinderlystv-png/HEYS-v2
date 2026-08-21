@@ -1051,10 +1051,22 @@
             const optionalOutdatedList = runtimeState?.complianceState?.optionalOutdatedTypes;
             const setOutdatedTypesRef = runtimeState?.complianceState?.setOutdatedTypes;
             const setMustBlockRef = runtimeState?.complianceState?.setMustBlockReconsent;
+            const setOptionalOutdatedRef = runtimeState?.complianceState?.setOptionalOutdatedTypes;
+            // Клик по баннеру открывает ReconsentSheet, а НЕ ConsentScreen.
+            // Прежняя версия поднимала mustBlockReconsent, то есть вела человека
+            // в регистрационный экран: тот собирает только свой набор и подписывал
+            // заново обязательную пару, а обновившийся документ оставался прежним.
+            // Баннер возвращался, и получался цикл (прод, 21.08).
+            const [reconsentOpen, setReconsentOpen] = React.useState(false);
             const handleOptionalReconsent = React.useCallback(() => {
-                if (setOutdatedTypesRef) setOutdatedTypesRef(optionalOutdatedList || []);
-                if (setMustBlockRef) setMustBlockRef(true);
-            }, [optionalOutdatedList, setOutdatedTypesRef, setMustBlockRef]);
+                setReconsentOpen(true);
+            }, []);
+            const handleReconsentDone = React.useCallback(() => {
+                setReconsentOpen(false);
+                // Список чистим сразу: сервер подтвердит на следующей проверке,
+                // но держать баннер до неё значит показывать неправду.
+                if (setOptionalOutdatedRef) setOptionalOutdatedRef([]);
+            }, [setOptionalOutdatedRef]);
 
             const overlaysProps = React.useMemo(() => buildOverlaysProps({
                 gate,
@@ -1063,6 +1075,9 @@
                 isConsentBlocking,
                 optionalOutdatedTypes: optionalOutdatedList,
                 onOptionalReconsent: handleOptionalReconsent,
+                reconsentOpen,
+                onReconsentDone: handleReconsentDone,
+                onReconsentClose: () => setReconsentOpen(false),
                 isMorningCheckinBlocking,
                 showMorningCheckin,
                 setShowMorningCheckin,
@@ -1093,7 +1108,7 @@
                 showOfflineBanner, showOnlineBanner, showSyncLockOverlay, showSlowInternetHint, offlineDuration, pendingCount,
                 showPwaBanner, showIosPwaBanner, showUpdateToast, notification,
                 widgetsEditMode, tab, appShellProps, showWhatsNew,
-                optionalOutdatedList, handleOptionalReconsent]);
+                optionalOutdatedList, handleOptionalReconsent, reconsentOpen, handleReconsentDone]);
             return React.createElement(AppOverlays, overlaysProps);
         }
 

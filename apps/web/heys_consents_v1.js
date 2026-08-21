@@ -1812,6 +1812,13 @@
       versioned: buildVersionedDocPath('body-measurements-consent.md', '1.0'),
       latest: buildLatestDocPath('body-measurements-consent.md', '1.0')
     },
+    speech_transcription: {
+      // Нужен не онбордингу, а повторной подписи: без записи здесь клиент не
+      // может достать текст, а без текста серверная подпись не проходит —
+      // sign_consents_with_access_code_by_session сверяет sha256 с реестром.
+      versioned: buildVersionedDocPath('speech-transcription-consent.md', CURRENT_VERSIONS.speech_transcription),
+      latest: buildLatestDocPath('speech-transcription-consent.md', CURRENT_VERSIONS.speech_transcription)
+    },
     push_notifications: {
       versioned: buildVersionedDocPath('push-notifications-consent.md', CURRENT_VERSIONS.push_notifications),
       latest: buildLatestDocPath('push-notifications-consent.md', CURRENT_VERSIONS.push_notifications)
@@ -2969,6 +2976,193 @@
   };
 
   // ── ConsentOutdatedBanner (sticky top, мягкий призыв пере-подписать) ────
+  // ── ReconsentSheet: повторная подпись документов вне онбординга ────────
+  //
+  // Зачем отдельный экран. ConsentScreen — экран регистрации: он собирает
+  // обязательную пару и те необязательные, у которых в каталоге есть
+  // screenLabel. Документы вроде расшифровки голосовых там не появляются
+  // намеренно — их включают в своём месте. Но переподписать обновлённую
+  // редакцию человеку нужно, и вести его в регистрационный экран нельзя: он
+  // подпишет заново не то — ровно это и случилось на проде 21.08.
+  //
+  // Порядок здесь другой, чем в онбординге, и это осознанно. В регистрации
+  // человек выбирает, что включать. В повторной подписи выбор сделан раньше —
+  // меняется текст, и подтвердить нужно именно его. Поэтому: прочитать каждый
+  // документ, затем один раз ввести код доступа, затем одна подпись на все.
+  // «Позже» доступно на любом шаге и ничего не ломает: документ остаётся в
+  // прежней редакции, баннер вернётся при следующем входе.
+  function ReconsentSheet({ outdatedTypes, onDone, onClose }) {
+    const types = (Array.isArray(outdatedTypes) ? outdatedTypes : [])
+      .map(function (item) { return typeof item === 'string' ? item : item && item.type; })
+      .filter(function (type) { return type && DOC_PATHS[type]; });
+
+    const [openDoc, setOpenDoc] = useState(null);
+    const [accepted, setAccepted] = useState([]);
+    const [code, setCode] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState(null);
+
+    if (!types.length) return null;
+
+    const allRead = accepted.length >= types.length;
+
+    const labelOf = function (type) {
+      const entry = CONSENT_TEXTS.checkboxes[type] || {};
+      return entry.screenLabel || entry.label || type;
+    };
+
+    const handleAccept = function (type) {
+      setOpenDoc(null);
+      setAccepted(function (prev) { return prev.indexOf(type) >= 0 ? prev : prev.concat(type); });
+    };
+
+    const describeError = function (raw) {
+      const text = String(raw || '');
+      if (/invalid_access_code/.test(text)) return 'Неверный код доступа';
+      if (/access_code_not_set/.test(text)) return 'Код доступа не задан — обратитесь к куратору';
+      if (/consent_version_not_allowed/.test(text)) return 'Версия документа не зарегистрирована — сообщите куратору';
+      if (/document_text_hash_mismatch/.test(text)) return 'Текст документа изменился, откройте его заново';
+      return 'Не удалось подписать. Попробуйте ещё раз';
+    };
+
+    const handleSign = async function () {
+      setError(null);
+      if (!code.trim()) {
+        setError('Введите код доступа');
+        return;
+      }
+      setBusy(true);
+      try {
+        const list = [];
+        for (const type of accepted) {
+          const document_text = await fetchConsentDocumentMarkdown(type);
+          list.push({
+            type: type,
+            granted: true,
+            version: CURRENT_VERSIONS[type],
+            signature_method: 'pin_confirm',
+            document_text: document_text,
+          });
+        }
+        const res = await consentsAPI.signConsentsWithAccessCode(list, code.trim());
+        setBusy(false);
+        if (!res || !res.success) {
+          setError(describeError(res && res.error));
+          return;
+        }
+        onDone && onDone(accepted);
+      } catch (err) {
+        console.error('[Reconsent] sign failed:', err);
+        setBusy(false);
+        setError('Не удалось подписать. Попробуйте ещё раз');
+      }
+    };
+
+    if (openDoc) {
+      return React.createElement(FullTextModal, {
+        type: openDoc,
+        onClose: function () { setOpenDoc(null); },
+        onAccept: function () { handleAccept(openDoc); },
+        acceptLabel: 'Прочитал, подтверждаю',
+      });
+    }
+
+    return React.createElement('div', {
+      style: {
+        position: 'fixed', inset: 0, zIndex: 2147483100,
+        background: 'rgba(0,0,0,.45)', display: 'flex',
+        alignItems: 'flex-end', justifyContent: 'center',
+      },
+      onClick: function (e) { if (e.target === e.currentTarget && !busy) onClose && onClose(); },
+    },
+      React.createElement('div', {
+        style: {
+          background: '#fff', borderRadius: '18px 18px 0 0', padding: '20px 18px 24px',
+          width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',
+          font: '400 14px/1.5 Figtree, system-ui, sans-serif', color: '#1f2937',
+        },
+      },
+        React.createElement('div', {
+          style: { font: '600 17px/1.3 Figtree, system-ui, sans-serif', marginBottom: 6 },
+        }, 'Документы обновлены'),
+
+        React.createElement('div', {
+          style: { color: 'rgba(0,0,0,.6)', marginBottom: 16 },
+        }, types.length === 1
+          ? 'Мы изменили текст документа, который вы подписывали раньше. Прочитайте новую редакцию и подтвердите её.'
+          : 'Мы изменили тексты документов, которые вы подписывали раньше. Прочитайте новые редакции и подтвердите их.'),
+
+        types.map(function (type) {
+          const done = accepted.indexOf(type) >= 0;
+          return React.createElement('button', {
+            key: type,
+            type: 'button',
+            disabled: busy,
+            onClick: function () { setOpenDoc(type); },
+            style: {
+              display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
+              background: done ? '#f0fdf4' : '#f6e6dd',
+              border: done ? '1px solid #86efac' : '1px solid transparent',
+              borderRadius: 14, padding: '12px 14px', marginBottom: 10, font: 'inherit',
+            },
+          },
+            React.createElement('div', { style: { fontWeight: 600 } },
+              (done ? '✓ ' : '') + labelOf(type)),
+            React.createElement('div', { style: { color: 'rgba(0,0,0,.55)', marginTop: 2 } },
+              done ? 'Прочитано' : 'Открыть и прочитать')
+          );
+        }),
+
+        allRead && React.createElement('div', { style: { marginTop: 16 } },
+          React.createElement('div', { style: { fontWeight: 600, marginBottom: 6 } }, 'Код доступа'),
+          React.createElement('div', { style: { color: 'rgba(0,0,0,.55)', marginBottom: 8 } },
+            'Тот же, которым вы входите в HEYS. Подпись фиксируется вместе с версией документа и временем.'),
+          React.createElement('input', {
+            type: 'password',
+            inputMode: 'numeric',
+            autoComplete: 'one-time-code',
+            value: code,
+            disabled: busy,
+            onChange: function (e) { setCode(e.target.value); },
+            style: {
+              width: '100%', padding: '11px 13px', borderRadius: 12,
+              border: '1px solid #d4d4d8', font: 'inherit', boxSizing: 'border-box',
+            },
+          })
+        ),
+
+        error && React.createElement('div', {
+          role: 'alert',
+          style: { marginTop: 10, color: '#b91c1c' },
+        }, error),
+
+        React.createElement('button', {
+          type: 'button',
+          disabled: !allRead || busy,
+          onClick: handleSign,
+          style: {
+            width: '100%', marginTop: 16, padding: '13px 16px', borderRadius: 14,
+            border: 'none', cursor: (!allRead || busy) ? 'default' : 'pointer',
+            background: (!allRead || busy) ? '#e5e7eb' : '#d97642',
+            color: (!allRead || busy) ? 'rgba(0,0,0,.4)' : '#fff',
+            font: '600 15px/1 Figtree, system-ui, sans-serif',
+          },
+        }, busy ? 'Подписываем…' : (allRead ? 'Подписать' : 'Сначала прочитайте документы')),
+
+        React.createElement('button', {
+          type: 'button',
+          disabled: busy,
+          onClick: function () { onClose && onClose(); },
+          style: {
+            width: '100%', marginTop: 8, padding: '11px 16px', borderRadius: 14,
+            border: 'none', background: 'transparent', cursor: 'pointer',
+            color: 'rgba(0,0,0,.55)', font: 'inherit',
+          },
+        }, 'Позже')
+      )
+    );
+  }
+
   function ConsentOutdatedBanner({ outdatedTypes, graceExpiresAt, onClick }) {
     if (!outdatedTypes || outdatedTypes.length === 0) return null;
     const expDate = graceExpiresAt ? new Date(graceExpiresAt) : null;
@@ -3225,6 +3419,7 @@
     NotMedicineBadge,
     FullTextModal,
     ConsentOutdatedBanner,
+    ReconsentSheet,
     AgeGateModal,
     ReConsentScreen,
     showDiagnosticReplay,
