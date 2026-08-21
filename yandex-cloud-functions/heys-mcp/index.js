@@ -396,8 +396,18 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
   // Метка последнего начатого вызова: `seriesProbe` зовётся внутри обработки и
   // должен знать псевдоним подключения, а `beginTrace` его как раз и выдаёт.
   let lastTrace = null;
+  // Ждать запись мы перестаём через 250 мс (`persistWithTimeout`), но САМ
+  // запрос при этом не обрываем — внутренний таймаут заведомо больше.
+  //
+  // Иначе получается ровно то, что видно в логах 21.08: строка
+  // `POST /rpc?fn=insert_mcp_call_event 499` — наш же abort по 250 мс убил
+  // запись, которая почти дошла. Событие пропадает из телеметрии, а вместе с
+  // ним и из счётчика серии, то есть подсказка про лишний круг не появляется
+  // как раз на холодном старте, где она нужнее всего. Незавершённый запрос
+  // обычно успевает закончиться до заморозки инстанса; если не успеет — будет
+  // ровно то же, что было при abort, хуже не станет.
   const persistCall = telemetrySecret
-    ? (record) => api.insertMcpCallEvent(record, { secret: telemetrySecret })
+    ? (record) => api.insertMcpCallEvent(record, { secret: telemetrySecret, timeoutMs: 3000 })
     : null;
   const response = await mcp.handlePayload(payload, {
     tools,
