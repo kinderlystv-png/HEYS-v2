@@ -241,14 +241,38 @@
           size: w.size,
           pos: w.position
         }))));
-        this._widgets = saved
-          .map(w => this._normalizeWidget(w))
-          // Виджет, убранный из продукта, исчезает из раскладки без сообщения;
-          // порядок сжимается тем же алгоритмом (канвас v4, строка 41).
-          .filter((w) => {
-            const def = HEYS.Widgets.registry?.getType?.(w.type);
-            return !!def && !def.retired;
-          });
+        this._widgets = saved.map(w => this._normalizeWidget(w));
+
+        // Снятие типа — ОДНОРАЗОВАЯ миграция, а не фильтр при каждой загрузке
+        // (контракт home-widgets, строка «снятие — одноразовая миграция»).
+        // Постоянный фильтр означает, что любая будущая ошибка в списке снятых
+        // молча стирает плитки при каждом входе, и человек не может вернуть их
+        // даже руками. Чистим один раз и запоминаем, по какому списку чистили.
+        //
+        // Убираем ТОЛЬКО типы с retired: true, по точному совпадению id
+        // (строка «как снимается тип»). Незнакомый тип не трогаем: пропавший
+        // виджет, которого нет в списке снятых, — это дефект, а не сжатие, и
+        // молча удалять его нельзя.
+        const retiredIds = (HEYS.Widgets.registry?.getAllTypes?.() || [])
+          .filter((t) => t && t.retired)
+          // Реестр хранит идентификатор в поле type; id держим запасным на
+          // случай, если форма записи изменится.
+          .map((t) => String(t.type ?? t.id))
+          .sort();
+        const retiredKey = retiredIds.join(',');
+        if ((meta?.retiredMigration ?? null) !== retiredKey) {
+          const before = this._widgets.length;
+          const retiredSet = new Set(retiredIds);
+          this._widgets = this._widgets.filter((w) => !retiredSet.has(String(w.type)));
+          const removed = before - this._widgets.length;
+          if (removed > 0) log(`retired migration: убрано плиток ${removed} (${retiredKey})`);
+          try {
+            this.saveLayout(this._widgets);
+            this.saveLayoutMeta({ ...(meta || {}), retiredMigration: retiredKey, migratedAt: Date.now() });
+          } catch (e) {
+            console.error('[widgets] retired migration save failed:', e?.message || e);
+          }
+        }
         // Старые раскладки хранили правду в координатах — переводим их в
         // порядок чтения один раз, дальше порядок ведёт сам массив.
         this._sortWidgetsByReadingOrder();

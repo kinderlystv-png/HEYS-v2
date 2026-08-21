@@ -270,24 +270,29 @@ describe('размер идёт за видом, запись — по «Гот�
     st.saveLayout = realSave;
   });
 
-  it('виджет, снятый с продукта, уходит из раскладки без сообщения', () => {
+  it('снятый виджет уходит, а незнакомый тип остаётся', () => {
+    // Правило уточнено контрактом home-widgets 21.08 («как снимается тип»):
+    // убирается ТОЛЬКО тип с retired: true, по точному совпадению id. Прежняя
+    // версия этой проверки требовала выбрасывать и незнакомый тип — теперь это
+    // прямо названо дефектом: пропавший виджет, которого нет в списке снятых,
+    // человек не может вернуть даже руками.
     const st = state();
     const saved = [
       { id: 'k', type: 'weight', size: '2x2', position: { col: 0, row: 0 }, settings: {} },
       { id: 'g', type: 'ghost', size: '1x1', position: { col: 2, row: 0 }, settings: {} },
       { id: 's', type: 'streak', size: '1x1', position: { col: 3, row: 0 }, settings: {} }
     ];
-    // Тот же фильтр, что ядро применяет при загрузке сохранённой раскладки.
+    // Убираем только явно снятые. Незнакомый тип (getType вернул ничего) не
+    // трогаем: это дефект, который должен остаться видимым.
     const alive = saved
       .map((w) => st._normalizeWidget(w))
-      .filter((w) => {
-        const def = global.HEYS.Widgets.registry.getType(w.type);
-        return !!def && !def.retired;
-      });
-    expect(alive.map((w) => w.id)).toEqual(['k']);
+      .filter((w) => global.HEYS.Widgets.registry.getType(w.type)?.retired !== true);
+    expect(alive.map((w) => w.id)).toEqual(['k', 'g']);
 
-    // Ядро фильтрует именно так — проверяем сам исходник, а не копию правила.
+    // И чистка — одноразовая миграция, а не фильтр при каждой загрузке
+    // (строка «снятие — одноразовая миграция»).
     const coreSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_core_v1.js'), 'utf8');
-    expect(coreSrc).toContain('return !!def && !def.retired;');
+    expect(coreSrc).toContain('retiredMigration');
+    expect(coreSrc).not.toContain('return !!def && !def.retired;');
   });
 });
