@@ -1691,3 +1691,128 @@ test('силовая не перезаписывает чужую кардио-�
   }, { nowMs: 2000, clientId: CLIENT });
   assert.match(res.error, /не силовая/);
 });
+
+// ── Быт: одна форма записи, один учёт ────────────────────────────────────────
+// Инцидент 21.08.2026: пять часов быта записали двумя household-тренировками, а
+// потом ещё раз полем household_min. calculateTDEE складывает тренировки и
+// household_min независимо — 300 минут стали 600 и подняли норму на 710 ккал.
+
+test('быт пишется списком активностей, а не только скаляром', () => {
+  const base = { date: '2026-08-02', meals: [], updatedAt: 1 };
+  const res = day.updateDayFields(base, { household_min: 45 }, { nowMs: 777, clientId: 'c1' });
+
+  assert.deepEqual(res.day.householdActivities, [{ minutes: 45 }]);
+  assert.equal(res.day.householdMin, 45);
+  assert.equal(res.day.householdUpdatedAt, 777);
+  assert.deepEqual(res.applied, ['household_min']);
+});
+
+test('скаляр рядом с уже заведённым списком не теряется', () => {
+  // Расчёт читает список и игнорирует householdMin, если список есть — даже
+  // пустой. Запись «45 минут» в такой день раньше не давала ничего.
+  const base = { date: '2026-08-02', meals: [], householdActivities: [], householdMin: 0, updatedAt: 1 };
+  const res = day.updateDayFields(base, { household_min: 45 }, { nowMs: 777, clientId: 'c1' });
+
+  assert.equal(day.householdMinutes(res.day), 45);
+});
+
+test('ноль снимает быт целиком', () => {
+  const base = {
+    date: '2026-08-02', meals: [], updatedAt: 1,
+    householdActivities: [{ minutes: 120 }, { minutes: 180, time: '07:00' }], householdMin: 300,
+  };
+  const res = day.updateDayFields(base, { household_min: 0 }, { nowMs: 777, clientId: 'c1' });
+
+  assert.deepEqual(res.day.householdActivities, []);
+  assert.equal(res.day.householdMin, 0);
+  assert.equal(day.householdMinutes(res.day), 0);
+});
+
+test('setHouseholdActivities держит время и название, как приложение', () => {
+  const res = day.setHouseholdActivities({ date: '2026-08-02', meals: [] }, [
+    { minutes: 180, time: '7:00', label: 'уборка на студии' },
+    { minutes: 120 },
+  ], { nowMs: 5, clientId: 'c1' });
+
+  assert.deepEqual(res.day.householdActivities, [
+    { minutes: 180, time: '07:00', label: 'уборка на студии' },
+    { minutes: 120 },
+  ]);
+  assert.equal(res.day.householdMin, 300);
+  assert.equal(res.day.householdTime, '07:00', 'производное поле — время первой записи');
+  assert.equal(res.total_minutes, 300);
+});
+
+test('минуты быта проверяются, а не молча округляются в ноль', () => {
+  const base = { date: '2026-08-02', meals: [] };
+  assert.throws(() => day.setHouseholdActivities(base, [{ minutes: 0 }], { nowMs: 1 }), /invalid_household_minutes/);
+  assert.throws(() => day.setHouseholdActivities(base, [{ minutes: 5000 }], { nowMs: 1 }), /household_minutes_too_big/);
+});
+
+test('householdTrainings узнаёт быт, записанный тренировкой', () => {
+  const d = {
+    date: '2026-08-21',
+    trainings: [
+      { z: [120, 0, 0, 0], type: 'household', activityLabel: 'Бытовая активность' },
+      { z: [180, 0, 0, 0], type: 'household', activityLabel: 'Уборка на студии', time: '07:00' },
+      { z: [0, 40, 0, 0], type: 'cardio', activityLabel: 'Бег' },
+    ],
+  };
+  const found = day.householdTrainings(d);
+
+  assert.deepEqual(found.map((h) => h.index), [0, 1]);
+  assert.equal(found.reduce((sum, h) => sum + h.minutes, 0), 300);
+  assert.equal(day.isHouseholdTraining({ type: 'hobby', activityLabel: 'Уборка квартиры' }), true);
+  assert.equal(day.isHouseholdTraining({ type: 'cardio', activityLabel: 'Бег' }), false);
+});
+
+test('норма несёт разбор активности — шаги, быт и тренировки', () => {
+  const d = {
+    date: '2026-08-21',
+    weightMorning: 80,
+    steps: 6000,
+    householdActivities: [{ minutes: 60 }],
+    trainings: [{ z: [0, 30, 0, 0], type: 'cardio' }],
+    meals: [],
+  };
+  const norm = day.dailyNorm(d, { profile: FULL_PROFILE, norms: NORMS, hrZones: [] });
+
+  assert.equal(norm.activity.steps, 6000);
+  assert.equal(norm.activity.household_min, 60);
+  assert.equal(norm.activity.trainings_min, 30);
+  assert.ok(norm.activity.household_kcal > 0, 'быт в калориях назван');
+  assert.equal(
+    norm.activity.total_kcal,
+    norm.activity.steps_kcal + norm.activity.household_kcal + norm.activity.trainings_kcal,
+  );
+  assert.equal(norm.activity.household_as_training_min, 0);
+});
+
+test('быт, записанный тренировкой, назван в разборе активности отдельно', () => {
+  const d = {
+    date: '2026-08-21',
+    weightMorning: 90.1,
+    steps: 2000,
+    trainings: [
+      { z: [120, 0, 0, 0], type: 'household', activityLabel: 'Бытовая активность' },
+      { z: [180, 0, 0, 0], type: 'household', activityLabel: 'Уборка на студии' },
+    ],
+    meals: [],
+  };
+  const norm = day.dailyNorm(d, { profile: FULL_PROFILE, norms: NORMS, hrZones: [] });
+
+  assert.equal(norm.activity.household_min, 0, 'поле быта пустое — минуты лежат в тренировках');
+  assert.equal(norm.activity.trainings_min, 300);
+  assert.equal(norm.activity.household_as_training_min, 300);
+});
+
+test('разбор активности есть и когда норму посчитать не на чем', () => {
+  const norm = day.dailyNorm(
+    { date: '2026-08-21', steps: 2000, householdActivities: [{ minutes: 300 }], meals: [] },
+    { profile: null, norms: NORMS, hrZones: [] },
+  );
+
+  assert.equal(norm.kcal, null);
+  assert.equal(norm.activity.steps, 2000);
+  assert.equal(norm.activity.household_min, 300);
+});

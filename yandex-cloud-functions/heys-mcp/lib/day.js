@@ -1331,7 +1331,8 @@ function clampTrainingMinutes(durationMin) {
 const DAY_FIELD_MAP = {
   weight: 'weightMorning',
   steps: 'steps',
-  household_min: 'householdMin',
+  // household_min здесь нет намеренно: быт пишется списком активностей через
+  // setHouseholdActivities, иначе скаляр расходится со списком.
   sleep_start: 'sleepStart',
   sleep_end: 'sleepEnd',
   sleep_quality: 'sleepQuality',
@@ -1414,8 +1415,18 @@ function curatorAuthoredFields(day) {
 }
 
 function updateDayFields(day, fields, { nowMs, clientId, byCurator = false }) {
-  const next = { ...day };
+  let base = day;
   const applied = [];
+  // Быт — не обычное числовое поле: расчёт читает список активностей и молча
+  // игнорирует скаляр рядом с ним, поэтому пишем оба разом (см.
+  // setHouseholdActivities). Ноль снимает быт целиком.
+  if (fields.household_min !== undefined && fields.household_min !== null) {
+    const minutes = Math.round(Number(fields.household_min));
+    if (!Number.isFinite(minutes) || minutes < 0) throw new Error('invalid_number:household_min');
+    base = setHouseholdActivities(base, minutes > 0 ? [{ minutes }] : [], { nowMs, clientId }).day;
+    applied.push('household_min');
+  }
+  const next = { ...base };
   for (const [publicName, target] of Object.entries(DAY_FIELD_MAP)) {
     const value = fields[publicName];
     if (value === undefined || value === null) continue;
@@ -1438,7 +1449,6 @@ function updateDayFields(day, fields, { nowMs, clientId, byCurator = false }) {
   // версии, даже когда та старее, — и молча откатывается при следующем синке.
   const FIELD_STAMPS = {
     steps: 'stepsUpdatedAt',
-    household_min: 'householdUpdatedAt',
     sleep_note: 'sleepNoteUpdatedAt',
     comment: 'dayCommentUpdatedAt',
   };
@@ -1446,7 +1456,7 @@ function updateDayFields(day, fields, { nowMs, clientId, byCurator = false }) {
     if (applied.includes(publicName)) next[stamp] = nowMs;
   }
   if (!applied.length) return { day, applied };
-  const targets = applied.map((name) => DAY_FIELD_MAP[name]);
+  const targets = applied.map((name) => DAY_FIELD_MAP[name]).filter(Boolean);
   if (byCurator) {
     next._curatorEdits = markCuratorEdits(next, targets, nowMs);
   } else {
@@ -2098,6 +2108,11 @@ function estimateOptimum(day, profile, hrZones) {
     // `includeNDTE: false`, а надбавка считается отдельно (`serverNdteBoost`).
     bmr: Number(result.bmr) || 0,
     trainingsKcal: Number(result.trainingsKcal) || 0,
+    // Слагаемые активности — чтобы ответ инструмента мог показать, из чего
+    // выросла норма. Без них «день малоподвижный» пишется вслепую: цифра нормы
+    // одна и та же и при 5 часах быта, и при нуле (incident 2026-08-22).
+    stepsKcal: Number(result.stepsKcal) || 0,
+    householdKcal: Number(result.householdKcal) || 0,
     baseExpenditure: Number(result.baseExpenditure) || 0,
     deficitPct: Number(result.deficitPct) || 0,
     cycleMultiplier: Number(result.cycleMultiplier) || 1,
@@ -2119,6 +2134,108 @@ function optimumWithNdte(parts, ndte) {
   return Math.round(Math.round(base * (1 + parts.deficitPct / 100)) * parts.cycleMultiplier);
 }
 
+/**
+ * Быт в дне одним числом — ровно так, как его читает расчёт: список
+ * `householdActivities` перебивает скаляр `householdMin`, и пустой список
+ * означает «быта нет» (apps/web/heys_tdee_v1.js:290). Поэтому скаляр отдельно
+ * от списка писать нельзя: в дне, где список уже заведён, он не считается.
+ */
+function householdMinutes(day) {
+  const list = day && Array.isArray(day.householdActivities) ? day.householdActivities : null;
+  if (list) return list.reduce((sum, h) => sum + Math.max(0, Number(h && h.minutes) || 0), 0);
+  return Math.max(0, Number(day && day.householdMin) || 0);
+}
+
+/** Быт, записанный в обход поля — тренировкой. Тип свободный, отсюда и слова. */
+const HOUSEHOLD_TRAINING_RE = /(быт|уборк|househ|домашние\s+дел)/i;
+
+function isHouseholdTraining(training) {
+  if (!training) return false;
+  const type = String(training.type || '').trim().toLowerCase();
+  if (type === 'household') return true;
+  return HOUSEHOLD_TRAINING_RE.test(`${training.type || ''} ${training.activityLabel || ''}`);
+}
+
+/**
+ * Тренировки, которые на самом деле быт. Нужны обеим сторонам гейта: и чтобы не
+ * дать записать те же минуты вторым способом, и чтобы показать их в ответе.
+ *
+ * Зачем гейт: `calculateTDEE` складывает тренировки и `householdMin`
+ * независимо, так что один и тот же быт, записанный обоими способами, попадает
+ * в расход дважды. 21.08.2026 пять часов быта стали десятью и подняли норму на
+ * 710 ккал — ошибку заметили только по трейсу, из ответов инструментов она не
+ * читалась никак.
+ */
+function householdTrainings(day) {
+  return (day && Array.isArray(day.trainings) ? day.trainings : [])
+    .map((t, index) => ({ t, index }))
+    .filter(({ t }) => isRealTraining(t) && isHouseholdTraining(t))
+    .map(({ t, index }) => ({
+      index,
+      minutes: (Array.isArray(t.z) ? t.z : []).reduce((sum, v) => sum + (Number(v) || 0), 0),
+      label: t.activityLabel || t.type || 'быт',
+      time: t.time || null,
+    }));
+}
+
+/**
+ * Быт в том же виде, в каком его держит приложение: список активностей плюс
+ * производные `householdMin` и `householdTime`
+ * (apps/web/heys_day_trainings_v1.js:3392). Пустой список — снятие быта.
+ */
+function setHouseholdActivities(day, activities, { nowMs = Date.now(), clientId = null } = {}) {
+  const list = [];
+  for (const raw of Array.isArray(activities) ? activities : []) {
+    const minutes = Math.round(Number(raw && raw.minutes));
+    if (!Number.isFinite(minutes) || minutes <= 0) throw new Error('invalid_household_minutes');
+    if (minutes > 1440) throw new Error('household_minutes_too_big');
+    const entry = { minutes };
+    const time = normalizeTime(raw && raw.time);
+    if (time) entry.time = time;
+    const label = String((raw && raw.label) || '').trim();
+    if (label) entry.label = label;
+    list.push(entry);
+  }
+  const total = list.reduce((sum, h) => sum + h.minutes, 0);
+  const next = { ...day };
+  next.householdActivities = list;
+  next.householdMin = total;
+  next.householdTime = (list[0] && list[0].time) || '';
+  next.householdUpdatedAt = nowMs;
+  // Метки авторства быт не носит: householdMin не входит в
+  // CHECKIN_AUTHORED_FIELDS и шага чек-ина не закрывает.
+  return { day: touch(next, nowMs, clientId), applied: ['household_min'], total_minutes: total };
+}
+
+/**
+ * Из чего сложилась активность дня. Печатается в каждом ответе про день: без
+ * неё норма — одно число, по которому не видно, отмечено в дне хоть что-то или
+ * там пусто, и «день малоподвижный» пишется не глядя.
+ */
+function activityParts(day, fresh) {
+  const real = (day && Array.isArray(day.trainings) ? day.trainings : []).filter(isRealTraining);
+  const trainingsMin = real.reduce(
+    (sum, t) => sum + (Array.isArray(t.z) ? t.z : []).reduce((a, b) => a + (Number(b) || 0), 0),
+    0,
+  );
+  const asTraining = householdTrainings(day);
+  return {
+    steps: Math.max(0, Number(day && day.steps) || 0),
+    steps_kcal: Math.round(Number(fresh && fresh.stepsKcal) || 0),
+    household_min: householdMinutes(day),
+    household_kcal: Math.round(Number(fresh && fresh.householdKcal) || 0),
+    trainings_min: trainingsMin,
+    trainings_kcal: Math.round(Number(fresh && fresh.trainingsKcal) || 0),
+    // Отдельной строкой: эти минуты уже сидят в trainings_*, но по смыслу это быт.
+    household_as_training_min: asTraining.reduce((sum, h) => sum + h.minutes, 0),
+    total_kcal: Math.round(
+      (Number(fresh && fresh.stepsKcal) || 0)
+      + (Number(fresh && fresh.householdKcal) || 0)
+      + (Number(fresh && fresh.trainingsKcal) || 0),
+    ),
+  };
+}
+
 function dailyNorm(day, inputs) {
   const has = inputs && typeof inputs === 'object';
   const eaten = macroTotals(day && day.meals);
@@ -2130,6 +2247,9 @@ function dailyNorm(day, inputs) {
     carbs_g: null,
     fat_g: null,
     left: null,
+    // Активность известна даже когда нормы нет: она берётся из самого дня, а не
+    // из профиля. Отсутствие нормы — не повод судить о дне вслепую.
+    activity: activityParts(day, null),
   };
 
   if (!has) return { ...empty, reason: 'no_inputs', note: `Норма не рассчитана: ${NORM_REASONS.no_inputs}.` };
@@ -2234,6 +2354,7 @@ function dailyNorm(day, inputs) {
     source,
     kcal,
     parts,
+    activity: activityParts(day, fresh),
     protein_g: macros.protein_g,
     carbs_g: macros.carbs_g,
     fat_g: macros.fat_g,
@@ -2297,7 +2418,7 @@ function summarizeDay(day) {
     water_ml: Number(day.waterMl) || 0,
     weight_morning: day.weightMorning ?? null,
     steps: Number(day.steps) || 0,
-    household_min: Number(day.householdMin) || 0,
+    household_min: householdMinutes(day),
     sleep: {
       start: day.sleepStart || null,
       end: day.sleepEnd || null,
@@ -2354,7 +2475,7 @@ function summarizeDayBrief(day) {
     water_ml: Number(day.waterMl) || 0,
     weight_morning: day.weightMorning ?? null,
     steps: Number(day.steps) || 0,
-    household_min: Number(day.householdMin) || 0,
+    household_min: householdMinutes(day),
     training_min: trainingMinutes,
     sleep_hours: sleepHours,
     sleep_quality: day.sleepQuality ?? null,
@@ -2500,6 +2621,10 @@ module.exports = {
   isRealTraining,
   isNotPerformedTraining,
   updateDayFields,
+  householdMinutes,
+  householdTrainings,
+  isHouseholdTraining,
+  setHouseholdActivities,
   summarizeDay,
   applyColdExposure,
   applyRefeedDay,

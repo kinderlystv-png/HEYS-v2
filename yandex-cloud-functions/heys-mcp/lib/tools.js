@@ -441,7 +441,7 @@ function createTools({
       // потеря записи была неотличима от успеха (20.08.2026: шаги остались 0).
       steps: Number(saved.steps) || 0,
       weight_morning: saved.weightMorning ?? null,
-      household_min: Number(saved.householdMin) || 0,
+      household_min: day.householdMinutes(saved),
       sleep: {
         start: saved.sleepStart || null,
         end: saved.sleepEnd || null,
@@ -542,8 +542,35 @@ function createTools({
   }
 
   /** Норма одной строкой: цифра, БЖУ и откуда она взялась. */
+  /**
+   * Из чего сложилась активность дня — одной строкой в каждом ответе про день.
+   *
+   * Без неё в ответе была только норма, а она одинаково выглядит и при пяти
+   * часах быта, и при неподвижном дне: 22.08.2026 «день почти неподвижный» было
+   * написано по дню с 300 минутами быта, потому что в ответе на запись шагов
+   * этих минут не было вовсе.
+   */
+  function activityText(norm) {
+    const a = norm && norm.activity;
+    if (!a) return '';
+    const known = !!(norm && norm.source);
+    const kcal = (value) => (known ? ` (+${value} ккал)` : '');
+    const bits = [];
+    if (a.steps > 0) bits.push(`шаги ${a.steps}${kcal(a.steps_kcal)}`);
+    if (a.household_min > 0) bits.push(`быт ${a.household_min} мин${kcal(a.household_kcal)}`);
+    if (a.trainings_min > 0) bits.push(`тренировки ${a.trainings_min} мин${kcal(a.trainings_kcal)}`);
+    if (!bits.length) return ' Активность за день не отмечена: ни шагов, ни быта, ни тренировок.';
+    const total = known ? ` → +${a.total_kcal} ккал в расход дня.` : '.';
+    // Быт, записанный тренировкой, считается дважды, если его же вписать в
+    // household_min. Называем минуты вслух, чтобы это было видно до записи.
+    const mixed = a.household_as_training_min > 0
+      ? ` Из тренировок ${a.household_as_training_min} мин — это записанный быт.`
+      : '';
+    return ` Активность: ${bits.join(', ')}${total}${mixed}`;
+  }
+
   function normText(norm) {
-    if (!norm || !norm.source) return ` Норма не рассчитана (${norm && norm.reason ? day.NORM_REASONS[norm.reason] : 'нет данных'}).`;
+    if (!norm || !norm.source) return ` Норма не рассчитана (${norm && norm.reason ? day.NORM_REASONS[norm.reason] : 'нет данных'}).${activityText(norm)}`;
     const approx = norm.source === 'estimate' ? '≈' : '';
     const macros = norm.protein_g === null
       ? ' (проценты БЖУ в карточке не заданы)'
@@ -554,7 +581,7 @@ function createTools({
       computed: ' — посчитана по данным дня',
       estimate: ' — расчётная оценка, история за прошлые дни недоступна',
     };
-    return ` Норма: ${approx}${norm.kcal} ккал${macros}${FROM[norm.source] || FROM.estimate}.`;
+    return ` Норма: ${approx}${norm.kcal} ккал${macros}${FROM[norm.source] || FROM.estimate}.${activityText(norm)}`;
   }
 
   /**
@@ -1602,6 +1629,16 @@ function createTools({
       }
       const total = zones.reduce((sum, value) => sum + (Number(value) || 0), 0);
       if (total <= 0) throw new ToolError('invalid_zones', 'Суммарная длительность тренировки должна быть больше нуля.');
+      // Быт, записанный тренировкой, живёт в дне отдельно от household_min и
+      // складывается с ним в расходе. Тип тренировки — свободная строка, так что
+      // «уборка» сюда проходила молча (incident 2026-08-22).
+      if (args.allow_as_training !== true
+        && day.isHouseholdTraining({ type: args.type, activityLabel: args.activity_label })) {
+        throw new ToolError('household_not_training',
+          'Бытовая активность — это heys_update_day(household_min: минуты), а не тренировка:'
+          + ' в приложении она отдельный вид записи, и расход считает её отдельно от тренировок.'
+          + ' Если это действительно тренировка (мытьё окон по пульсу, а не быт), передай allow_as_training: true.');
+      }
       const extra = {
         time: args.time, type: args.type, activityLabel: args.activity_label, comment: args.comment,
         mood: args.mood, wellbeing: args.wellbeing, stress: args.stress,
@@ -1961,6 +1998,24 @@ function createTools({
       const needsProfile = hasSupplementsMark || hasSupplementsUnmark || hasSupplementsTiming
         || hasPlannedSet || hasPlannedAdd || hasPlannedRemove;
       const current = await readDay(date);
+      // Быт нельзя записать поверх быта, уже записанного тренировкой: расход
+      // складывает тренировки и householdMin независимо, и те же минуты уходят
+      // в норму дважды (21.08.2026: пять часов стали десятью, +710 ккал).
+      const householdAsTraining = day.householdTrainings(current);
+      const askedHousehold = Array.isArray(args.household_activities)
+        ? args.household_activities.reduce((sum, h) => sum + (Number(h && h.minutes) || 0), 0)
+        : Number(args.household_min) || 0;
+      if (askedHousehold > 0 && householdAsTraining.length) {
+        const list = householdAsTraining
+          .map((h) => `«${h.label}» ${h.minutes} мин (index ${h.index})`)
+          .join(', ');
+        throw new ToolError('household_already_as_training',
+          `Быт за ${date} уже записан тренировкой: ${list}. Расход считает и тренировки, и household_min — эти минуты уйдут в норму дважды.`
+          + ' Либо оставь как есть (быт уже учтён), либо сначала удали тренировку через heys_delete_training и запиши минуты сюда.');
+      }
+      if (Array.isArray(args.household_activities) && args.household_min !== undefined && args.household_min !== null) {
+        throw new ToolError('invalid_field', 'household_min и household_activities — два способа записать одно и то же. Передай что-то одно.');
+      }
       let working = current;
       const applied = [];
       let profileBlob = null;
@@ -1990,6 +2045,10 @@ function createTools({
         }
       }
       try {
+        if (Array.isArray(args.household_activities)) {
+          working = day.setHouseholdActivities(working, args.household_activities, { nowMs, clientId }).day;
+          applied.push('household_min');
+        }
         const updated = day.updateDayFields(working, fields, { nowMs, clientId, byCurator });
         if (updated.applied.length) {
           working = updated.day;
@@ -2042,6 +2101,11 @@ function createTools({
         }
       } catch (e) {
         if (e instanceof ToolError) throw e;
+        const HOUSEHOLD_ERRORS = {
+          invalid_household_minutes: 'В household_activities каждая запись — minutes больше нуля.',
+          household_minutes_too_big: 'В сутках 1440 минут — столько быта не бывает.',
+        };
+        if (HOUSEHOLD_ERRORS[e.message]) throw new ToolError('invalid_field', HOUSEHOLD_ERRORS[e.message]);
         throw new ToolError('invalid_field', String(e.message).startsWith('unknown_supplement:')
           ? `Добавка не из каталога: ${String(e.message).slice('unknown_supplement:'.length)}.`
           : e.message);
@@ -3238,7 +3302,23 @@ const TOOL_SCHEMAS = [
         date: DATE_ARG,
         weight: { type: 'number', description: 'Утренний вес, кг.' },
         steps: { type: 'integer', description: 'Шаги за день.' },
-        household_min: { type: 'integer', description: 'Минуты бытовой активности.' },
+        household_min: {
+          type: 'integer',
+          description: 'Минуты бытовой активности за день — единственное место для быта. ЗАМЕНЯЕТ прежнее значение целиком (0 — снять). Тренировкой быт писать нельзя: расход учтёт те же минуты дважды.',
+        },
+        household_activities: {
+          type: 'array',
+          description: 'Быт несколькими записями, как в приложении: заменяет весь список за день. Нужен, когда у активности есть время начала или название («уборка на студии с 07:00»).',
+          items: {
+            type: 'object',
+            properties: {
+              minutes: { type: 'integer', description: 'Длительность в минутах, больше нуля.' },
+              time: { type: 'string', description: 'Время начала HH:MM.' },
+              label: { type: 'string', description: 'Название активности («уборка на студии»).' },
+            },
+            required: ['minutes'],
+          },
+        },
         sleep_start: { type: 'string', description: 'Время засыпания HH:MM.' },
         sleep_end: { type: 'string', description: 'Время подъёма HH:MM.' },
         sleep_quality: { type: 'integer', description: 'Качество сна, 1–10.' },
@@ -3733,7 +3813,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_log_training',
-    description: 'Записать тренировку как минуты по пульсовым зонам: [зона1, зона2, зона3, зона4]. Если известна только общая длительность и интенсивность, положи минуты в соответствующую зону. Время, тип и ощущения — необязательные поля того же приёма, что заполняет клиент в приложении.',
+    description: 'Записать тренировку как минуты по пульсовым зонам: [зона1, зона2, зона3, зона4]. Если известна только общая длительность и интенсивность, положи минуты в соответствующую зону. Время, тип и ощущения — необязательные поля того же приёма, что заполняет клиент в приложении. Бытовая активность (уборка, ремонт, «просто на ногах») сюда НЕ пишется — она идёт в heys_update_day(household_min).',
     inputSchema: {
       type: 'object',
       properties: {
@@ -3746,6 +3826,10 @@ const TOOL_SCHEMAS = [
         wellbeing: { type: 'integer', description: 'Самочувствие после тренировки, 1–10.' },
         stress: { type: 'integer', description: 'Стресс после тренировки, 1–10.' },
         comment: { type: 'string', description: 'Свободный комментарий к тренировке.' },
+        allow_as_training: {
+          type: 'boolean',
+          description: 'Записать бытовую по названию активность именно тренировкой — когда это была нагрузка по пульсу, а не быт. По умолчанию сервер такую запись отклоняет.',
+        },
       },
       required: ['zones_minutes'],
     },

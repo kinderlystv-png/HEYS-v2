@@ -3225,3 +3225,109 @@ test('пустой день в периоде виден как пустой, а
   assert.match(res.text, /2026-08-16: пусто/);
   assert.deepEqual(res.structured.missing_dates, ['2026-08-16']);
 });
+
+// ── Быт: одна форма записи, один учёт ────────────────────────────────────────
+// Инцидент 21–22.08.2026. Пять часов быта записали двумя household-тренировками,
+// а потом ещё раз полем household_min: расход сложил обе формы, и норма выросла
+// на 710 ккал. Перед этим ответ на heys_update_day(steps) не показывал быт
+// вовсе — и день с пятью часами уборки был назван «почти неподвижным».
+
+const ACTIVITY_CARD = {
+  heys_profile: { weight: 90, height: 183, age: 38, gender: 'Мужской', deficitPctTarget: 0 },
+  heys_norms: {},
+};
+
+const DAY_WITH_HOUSEHOLD_TRAININGS = () => ({
+  date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [], weightMorning: 90,
+  trainings: [
+    { z: [120, 0, 0, 0], type: 'household', activityLabel: 'Бытовая активность' },
+    { z: [180, 0, 0, 0], type: 'household', activityLabel: 'Уборка на студии', time: '07:00' },
+  ],
+});
+
+test('ответ на запись шагов называет всю активность дня, а не только шаги', async () => {
+  const api = fakeApi({ day: DAY_WITH_HOUSEHOLD_TRAININGS(), card: ACTIVITY_CARD });
+  const res = await build(api).heys_update_day({ steps: 2000 });
+
+  assert.match(res.text, /Активность: шаги 2000/);
+  assert.match(res.text, /тренировки 300 мин/);
+  assert.match(res.text, /Из тренировок 300 мин — это записанный быт/);
+  assert.ok(res.structured.day_after.norm.activity.total_kcal > 0);
+});
+
+test('пустой день говорит «активность не отмечена», а не молчит', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] }, card: ACTIVITY_CARD });
+  const res = await build(api).heys_add_water({ ml: 200 });
+
+  assert.match(res.text, /Активность за день не отмечена/);
+});
+
+test('быт поверх быта, записанного тренировкой, отклоняется со списком', async () => {
+  const api = fakeApi({ day: DAY_WITH_HOUSEHOLD_TRAININGS(), card: ACTIVITY_CARD });
+  await assert.rejects(
+    () => build(api).heys_update_day({ household_min: 300 }),
+    (e) => {
+      assert.equal(e.code, 'household_already_as_training');
+      assert.match(e.message, /«Уборка на студии» 180 мин \(index 1\)/);
+      assert.match(e.message, /дважды/);
+      return true;
+    },
+  );
+  assert.equal(api.saves.length, 0, 'в день ничего не записали');
+});
+
+test('снять быт нулём можно и при household-тренировках в дне', async () => {
+  const api = fakeApi({
+    day: { ...DAY_WITH_HOUSEHOLD_TRAININGS(), householdActivities: [{ minutes: 300 }], householdMin: 300 },
+    card: ACTIVITY_CARD,
+  });
+  const res = await build(api).heys_update_day({ household_min: 0 });
+
+  assert.equal(res.structured.day_after.household_min, 0);
+});
+
+test('household_activities пишет список со временем и названием', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] }, card: ACTIVITY_CARD });
+  const res = await build(api).heys_update_day({
+    household_activities: [{ minutes: 180, time: '07:00', label: 'уборка на студии' }, { minutes: 120 }],
+  });
+
+  const saved = api.saves.at(-1).value;
+  assert.deepEqual(saved.householdActivities, [
+    { minutes: 180, time: '07:00', label: 'уборка на студии' },
+    { minutes: 120 },
+  ]);
+  assert.equal(saved.householdMin, 300);
+  assert.equal(res.structured.day_after.household_min, 300);
+  assert.match(res.text, /быт 300 мин/);
+});
+
+test('household_min и household_activities вместе не принимаются', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] } });
+  await assert.rejects(
+    () => build(api).heys_update_day({ household_min: 60, household_activities: [{ minutes: 60 }] }),
+    (e) => e.code === 'invalid_field',
+  );
+});
+
+test('быт тренировкой отклоняется и объясняет, куда его писать', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] }, card: ACTIVITY_CARD });
+  await assert.rejects(
+    () => build(api).heys_log_training({ zones_minutes: [180, 0, 0, 0], type: 'household', activity_label: 'Уборка на студии' }),
+    (e) => {
+      assert.equal(e.code, 'household_not_training');
+      assert.match(e.message, /heys_update_day\(household_min/);
+      return true;
+    },
+  );
+  assert.equal(api.saves.length, 0);
+});
+
+test('нагрузка по пульсу, названная уборкой, проходит с allow_as_training', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] }, card: ACTIVITY_CARD });
+  const res = await build(api).heys_log_training({
+    zones_minutes: [0, 40, 0, 0], activity_label: 'Уборка с мытьём окон', allow_as_training: true,
+  });
+
+  assert.equal(res.structured.total_minutes, 40);
+});
