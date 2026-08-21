@@ -3,7 +3,10 @@ import path from 'path';
 
 import { describe, expect, it } from 'vitest';
 
-const read = (relativePath) => fs.readFileSync(path.resolve(__dirname, '..', relativePath), 'utf8');
+// Переводы строк нормализуем: в рабочем дереве на Windows файлы лежат с CRLF,
+// и многострочные ожидания не находятся на верном коде.
+const read = (relativePath) =>
+  fs.readFileSync(path.resolve(__dirname, '..', relativePath), 'utf8').replace(/\r\n/g, '\n');
 
 describe('advice render-loop contract', () => {
   it('memoizes the heavy advice engine by real inputs and keeps minute refresh', () => {

@@ -42,11 +42,15 @@ global.HEYS = {
 };
 
 const uiPath = path.resolve(__dirname, '../heys_hunger_energy_status_ui_v1.js');
-const uiSource = fs.readFileSync(uiPath, 'utf8');
-const dayTabImplSource = fs.readFileSync(path.resolve(__dirname, '../heys_day_tab_impl_v1.js'), 'utf8');
-const dayTabRenderSource = fs.readFileSync(path.resolve(__dirname, '../heys_day_tab_render_v1.js'), 'utf8');
-const dayPageShellSource = fs.readFileSync(path.resolve(__dirname, '../heys_day_page_shell.js'), 'utf8');
-const dayDiarySectionSource = fs.readFileSync(path.resolve(__dirname, '../heys_day_diary_section.js'), 'utf8');
+// Переводы строк нормализуем: в рабочем дереве на Windows файлы лежат с CRLF,
+// и многострочные ожидания не находятся на верном коде.
+const readSource = (relativePath) =>
+  fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8').replace(/\r\n/g, '\n');
+const uiSource = readSource('../heys_hunger_energy_status_ui_v1.js');
+const dayTabImplSource = readSource('../heys_day_tab_impl_v1.js');
+const dayTabRenderSource = readSource('../heys_day_tab_render_v1.js');
+const dayPageShellSource = readSource('../heys_day_page_shell.js');
+const dayDiarySectionSource = readSource('../heys_day_diary_section.js');
 eval(uiSource);
 
 const Storage = global.HEYS.HungerEnergyStatusStorage;
