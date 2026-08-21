@@ -2122,8 +2122,9 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget--editing {
-  /* iOS-like wiggle: лёгкое покачивание, карточка остаётся читаемой */
-  animation: widget-wiggle 1.6s ease-in-out infinite;
+  /* Канвас v4, строка 51: плитка приглушается, дрожания нет — на восьми
+     плитках рябь мешает читать, а приглушение говорит то же самое. */
+  opacity: 0.5;
   cursor: grab;
 
   /* Явный z-index чтобы анимационный stacking context не полагался на DOM-порядок.
@@ -2138,18 +2139,6 @@ body:has(.page-reports) .hdr::after {
 
 .widget--editing:active {
   cursor: grabbing;
-}
-
-@keyframes widget-wiggle {
-
-  0%,
-  100% {
-    transform: rotate(-0.55deg);
-  }
-
-  50% {
-    transform: rotate(0.55deg);
-  }
 }
 
 /* Mini size: без хедера, центрируем контент */
@@ -9437,7 +9426,12 @@ html.heys-android[data-theme$="dark"] body:has(.page-reports) .hdr {
  * =================================================================== */
 
 body:has(.widgets-tab) .widgets-grid {
-  padding: 14px 16px 16px;
+  /* Паддинг сетки 16 px и от ширины не зависит; сетка тянется до 480 px,
+     дальше растут поля и она центрируется — колонка не шире 106 px
+     (канвас v4, строки 8, 9, 78). */
+  padding: 16px;
+  max-width: 480px;
+  margin-inline: auto;
 }
 
 body:has(.widgets-tab:not(.widgets-tab--editing)) .widget {
@@ -10555,17 +10549,6 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water .widget-water__
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
-.widget-v4-catalog__item--on {
-  opacity: 0.45;
-  cursor: default;
-}
-
-.widget-v4-catalog__hint {
-  font-size: 9.5px;
-  font-weight: 600;
-  color: var(--v4-sand-act-mid, #a75c2b);
-}
-
 .widget-v4-edit-footer {
   display: flex;
   align-items: center;
@@ -10662,12 +10645,11 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water .widget-water__
 }
 
 .widgets-tab--editing .widget--editing {
-  opacity: 1;
-  animation: widget-wiggle 1.6s ease-in-out infinite;
+  opacity: 0.5;
 }
 
 .widgets-tab--editing .widget--dragging {
-  opacity: 1;
+  opacity: 0.5;
   transform: rotate(-1.8deg) !important;
   box-shadow: 0 12px 28px rgba(80, 50, 20, 0.22);
 }
@@ -10687,6 +10669,17 @@ body:has(.widgets-tab:not(.widgets-tab--editing)) .widget--water .widget-water__
   color: var(--v4-sand-act-mid, #a75c2b);
   box-shadow: none;
   backdrop-filter: none;
+}
+
+/* Кружок 22 px, область нажатия 44 pt (канвас v4, строка 52). */
+.widgets-tab--editing .widget__delete-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 44px;
+  height: 44px;
+  transform: translate(-50%, -50%);
 }
 
 .widgets-tab--editing .widget__settings-btn {

@@ -59,20 +59,23 @@
   const STORAGE_META_KEY = 'heys_widget_layout_meta_v1';
   const GRID_COLS = 4; // 4 колонки: 1 колонка/ряд = базовая единица
   const GRID_VERSION = 2;
-  const LAYOUT_PRESET_VERSION = 3;
+  const LAYOUT_PRESET_VERSION = 4;
   const MAX_HISTORY = 20; // Максимум шагов undo/redo
   const SAVE_DEBOUNCE_MS = 500; // Debounce для сохранения
   // ВАЖНО: основной источник правды по высоте ряда — CSS var --widget-row-height.
   // Здесь — fallback на случай ранней инициализации до применения стилей.
   const CELL_HEIGHT_PX = 76; // fallback
   const CELL_GAP_PX = 12; // fallback
+  // Автопрокрутка у края в расстановке: скорость постоянная (канвас v4, 58).
+  const EDGE_SCROLL_STEP_PX = 12;
+  const EDGE_SCROLL_TICK_MS = 16;
 
+  // Набор из коробки — шесть плиток в порядке чтения (канвас v4, строка 39).
+  // Координат здесь нет: позиции считает flow-укладка по этому порядку.
   const DEFAULT_LAYOUT = [
-    // Канонический preset reset-кнопки (2026-03-27 v3)
     {
       type: 'calories',
       size: '2x2',
-      position: { col: 0, row: 0 },
       settings: {
         showRemaining: true,
         showPercentage: false,
@@ -80,40 +83,19 @@
       }
     },
     {
-      type: 'insulinWave',
+      type: 'weight',
       size: '2x2',
-      position: { col: 2, row: 0 }
-    },
-    {
-      type: 'macros',
-      size: '3x2',
-      position: { col: 0, row: 2 },
       settings: {
-        showGrams: true,
-        showPercentage: true,
-        centerValueMode: 'pct',
-        elementScales: { ring: 0.95 }
-      }
-    },
-    {
-      type: 'sleep',
-      size: '1x1',
-      position: { col: 3, row: 2 },
-      settings: {
-        showTimes: true,
-        showTarget: true,
-        showQuality: true,
-        elementScales: {
-          badge: 2,
-          icon: 2,
-          value: 2
-        }
+        showBmi: true,
+        showGoal: true,
+        showChart: true,
+        showTrend: true,
+        showAnalytics: true
       }
     },
     {
       type: 'water',
       size: '1x1',
-      position: { col: 3, row: 3 },
       settings: {
         showGlasses: false,
         showProgress: true,
@@ -128,65 +110,38 @@
       }
     },
     {
-      type: 'dayScore',
-      size: '2x1',
-      position: { col: 0, row: 4 },
+      type: 'sleep',
+      size: '1x1',
       settings: {
-        showLevel: true,
-        showAction: true,
-        elementScales: { label: 0.85 }
+        showTimes: true,
+        showTarget: true,
+        showQuality: true,
+        elementScales: {
+          badge: 2,
+          icon: 2,
+          value: 2
+        }
       }
     },
     {
-      type: 'heatmap',
-      size: '2x1',
-      position: { col: 2, row: 4 },
+      type: 'macros',
+      size: '3x2',
       settings: {
-        period: 'week',
-        highlightToday: true,
-        elementScales: { grid: 0.95 }
+        showGrams: true,
+        showPercentage: true,
+        centerValueMode: 'pct',
+        elementScales: { ring: 0.95 }
       }
     },
     {
       type: 'relapseRisk',
       size: '2x2',
-      position: { col: 0, row: 5 },
       settings: {
         gaugeStrokeWidth: 30,
         showSource: true,
         showDrivers: true,
         showConfidence: false,
         showRecommendation: true
-      }
-    },
-    {
-      type: 'healthTrend',
-      size: '2x2',
-      position: { col: 2, row: 5 },
-      settings: {
-        periodDays: 14,
-        showCategories: true
-      }
-    },
-    {
-      type: 'weight',
-      size: '2x2',
-      position: { col: 0, row: 7 },
-      settings: {
-        showBmi: true,
-        showGoal: true,
-        showChart: true,
-        showTrend: true,
-        showAnalytics: true
-      }
-    },
-    {
-      type: 'crashRisk',
-      size: '2x1',
-      position: { col: 2, row: 7 },
-      settings: {
-        displayVariant: 'curve',
-        showGoal: true
       }
     }
   ];
@@ -287,6 +242,9 @@
           pos: w.position
         }))));
         this._widgets = saved.map(w => this._normalizeWidget(w));
+        // Старые раскладки хранили правду в координатах — переводим их в
+        // порядок чтения один раз, дальше порядок ведёт сам массив.
+        this._sortWidgetsByReadingOrder();
         this._autoPackWidgets();
       } else {
         this._widgets = this._createDefaultLayout();
@@ -413,8 +371,16 @@
         };
       });
 
-      // Нормализуем (получим новые cols/rows из registry) и репакуем
-      const normalized = scaled.map((w) => this._normalizeWidget(w));
+      // Нормализуем (получим новые cols/rows из registry) и репакуем.
+      // Порядок берём из старых координат — он и становится порядком чтения.
+      const normalized = scaled
+        .map((w) => this._normalizeWidget(w))
+        .sort((a, b) => {
+          const ar = a.position?.row || 0;
+          const br = b.position?.row || 0;
+          if (ar !== br) return ar - br;
+          return (a.position?.col || 0) - (b.position?.col || 0);
+        });
       const packedPositions = this._packLayoutPositions(normalized);
 
       return normalized.map((w) => ({
@@ -428,67 +394,26 @@
     },
 
     _packLayoutPositions(widgets) {
-      // 🔧 Gravity-only pack: каждый виджет подтягивается вверх в своей колонке
-      // без переназначения позиций. Это сохраняет пользовательский layout
-      // (вертикальные стаки 1x1, намеренные позиции), убирая только пустые строки.
-      const sorted = [...(widgets || [])].sort((a, b) => {
-        if ((a.position?.row || 0) !== (b.position?.row || 0)) return (a.position?.row || 0) - (b.position?.row || 0);
+      // Позиции — производная от порядка (канвас v4, строки 33–36, 62).
+      // Массив уже хранит порядок чтения, поэтому укладку целиком считает
+      // gridEngine.computeFlowLayout, а координаты в записи остаются лишь
+      // отражением этого порядка.
+      return gridEngine.computeFlowLayout(widgets || [], GRID_COLS);
+    },
+
+    /**
+     * Привести массив к порядку чтения по сохранённым координатам.
+     * Нужен один раз при загрузке старых раскладок: в них источником правды
+     * были col/row, а теперь им становится порядок элементов.
+     */
+    _sortWidgetsByReadingOrder() {
+      if (!Array.isArray(this._widgets) || this._widgets.length < 2) return;
+      this._widgets = [...this._widgets].sort((a, b) => {
+        const ar = a.position?.row || 0;
+        const br = b.position?.row || 0;
+        if (ar !== br) return ar - br;
         return (a.position?.col || 0) - (b.position?.col || 0);
       });
-
-      const positions = {};
-
-      // Сначала копируем текущие позиции
-      for (const w of sorted) {
-        positions[w.id] = { col: w.position?.col || 0, row: w.position?.row || 0 };
-      }
-
-      // Gravity: подтягиваем каждый виджет вверх, насколько возможно
-      // Обрабатываем сверху вниз, чтобы верхние виджеты уже зафиксировались
-      for (const w of sorted) {
-        const sizeInfo = HEYS.Widgets.registry.getSize(w.size);
-        const wCols = sizeInfo?.cols || w.cols || 1;
-        const wRows = sizeInfo?.rows || w.rows || 1;
-        const col = positions[w.id].col;
-
-        // Собираем occupied cells от всех ДРУГИХ виджетов (с их packed позициями)
-        const occupied = new Set();
-        for (const other of sorted) {
-          if (other.id === w.id) continue;
-          const otherPos = positions[other.id];
-          const otherSize = HEYS.Widgets.registry.getSize(other.size);
-          const oCols = otherSize?.cols || other.cols || 1;
-          const oRows = otherSize?.rows || other.rows || 1;
-          for (let c = 0; c < oCols; c++) {
-            for (let r = 0; r < oRows; r++) {
-              occupied.add(`${otherPos.col + c},${otherPos.row + r}`);
-            }
-          }
-        }
-
-        // Подтягиваем вверх: ищем минимальный row >= 0 где виджет помещается
-        let bestRow = 0;
-        const canPlace = (testRow) => {
-          if (col < 0 || col + wCols > GRID_COLS) return false;
-          for (let c = 0; c < wCols; c++) {
-            for (let r = 0; r < wRows; r++) {
-              if (occupied.has(`${col + c},${testRow + r}`)) return false;
-            }
-          }
-          return true;
-        };
-
-        while (!canPlace(bestRow) && bestRow < 200) {
-          bestRow++;
-        }
-
-        // Только подтягиваем вверх, не опускаем
-        if (bestRow <= positions[w.id].row) {
-          positions[w.id].row = bestRow;
-        }
-      }
-
-      return positions;
     },
 
     _autoPackWidgets() {
@@ -654,14 +579,20 @@
      */
     _createDefaultLayout() {
       const registry = HEYS.Widgets.registry;
-      return DEFAULT_LAYOUT.map((def, idx) => {
+      const widgets = DEFAULT_LAYOUT.map((def) => {
         const widget = registry?.createWidget(def.type, {
           size: def.size,
-          position: def.position,
           settings: def.settings
         });
         return widget || this._normalizeWidget(def);
       }).filter(Boolean);
+
+      // Координаты пресета — производная от его порядка, а не отдельный вход.
+      const positions = gridEngine.computeFlowLayout(widgets, GRID_COLS);
+      return widgets.map((w) => ({
+        ...w,
+        position: positions[w.id] || w.position || { col: 0, row: 0 }
+      }));
     },
 
     /**
@@ -686,6 +617,9 @@
      * @private
      */
     _debouncedSave() {
+      // В расстановке изменения живут только на экране: раскладка пишется по
+      // «Готово» (канвас v4, строка 50), иначе «Отмена» теряет смысл.
+      if (this._editMode) return;
       if (this._saveTimeout) {
         clearTimeout(this._saveTimeout);
       }
@@ -707,11 +641,8 @@
 
       const normalized = this._normalizeWidget(widget);
 
-      // Найти свободную позицию если не указана
-      if (!widget.position || (widget.position.col === 0 && widget.position.row === 0)) {
-        normalized.position = gridEngine.findFreePosition(normalized.cols, normalized.rows);
-      }
-
+      // Новая плитка встаёт в конец порядка (канвас v4, строка 55);
+      // координаты ей назначит flow-укладка.
       this._widgets.push(normalized);
       this._autoPackWidgets();
       const addedWidget = this.getWidget(normalized.id) || normalized;
@@ -828,6 +759,13 @@
         this._widgets[widgetIdx] = updatedWidget;
       }
 
+      // Смена размера пересобирает сетку тем же правилом, что добавление и
+      // удаление (канвас v4, строки 33 и 80): порядок остаётся, координаты
+      // считаются заново.
+      if (nextUpdates && nextUpdates.size && !nextUpdates.position) {
+        this._autoPackWidgets();
+      }
+
       this._debouncedSave();
 
       if (nextUpdates && nextUpdates.position) {
@@ -844,6 +782,37 @@
         HEYS.Widgets.emit('widget:settings', { widget: updatedWidget, settings: updatedWidget.settings });
       }
 
+      HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
+      return true;
+    },
+
+    /**
+     * Переставить виджет в порядке чтения.
+     * Канвас v4, строка 62: перетаскивание задаёт порядок, а не координаты —
+     * произвольную клетку с пустым местом рядом выбрать нельзя.
+     * @param {string} id
+     * @param {number} toIndex - целевой индекс в порядке
+     * @param {boolean} skipHistory
+     * @returns {boolean} true если порядок изменился
+     */
+    reorderWidget(id, toIndex, skipHistory = false) {
+      const fromIndex = this._widgets.findIndex((w) => w.id === id);
+      if (fromIndex === -1) return false;
+
+      const maxIndex = this._widgets.length - 1;
+      const target = Math.max(0, Math.min(maxIndex, Math.trunc(Number(toIndex))));
+      if (!Number.isFinite(target) || target === fromIndex) return false;
+
+      if (!skipHistory) {
+        this._pushHistory();
+      }
+
+      const [moved] = this._widgets.splice(fromIndex, 1);
+      this._widgets.splice(target, 0, moved);
+      this._autoPackWidgets();
+      this._debouncedSave();
+
+      HEYS.Widgets.emit('widget:reordered', { widgetId: id, from: fromIndex, to: target });
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
       return true;
     },
@@ -1171,6 +1140,11 @@
       this._editMode = false;
       document.body.classList.remove('widgets-edit-mode');
 
+      // Выход по «Готово» фиксирует раскладку — до него в storage ничего не шло.
+      if (!opts?.revert) {
+        this.saveLayout();
+      }
+
       // Включаем swipe навигацию обратно
       if (HEYS.App?.enableSwipe) {
         HEYS.App.enableSwipe();
@@ -1191,6 +1165,95 @@
   // === Grid Engine ===
   const gridEngine = {
     COLS: GRID_COLS,
+
+    // Канвас home-widgets v4, строки контракта 33–36: раскладку задаёт порядок
+    // чтения, а не координаты. Освободившееся место занимает ближайшая
+    // следующая плитка, которая в него влезает; поиск идёт только вперёд и не
+    // глубже двух плиток, иначе место остаётся пустым.
+    FLOW_LOOKAHEAD: 2,
+
+    /**
+     * Уложить виджеты по порядку чтения (единственный источник позиций).
+     * Чистая функция: не читает state, не мутирует вход.
+     * @param {Object[]} widgets - виджеты в порядке, заданном человеком
+     * @param {number} cols - число колонок сетки
+     * @returns {Object} { [widgetId]: { col, row } }
+     */
+    computeFlowLayout(widgets, cols = GRID_COLS) {
+      const gridCols = Math.max(1, cols | 0);
+      const pending = (widgets || []).filter(Boolean).map((w) => {
+        const sizeInfo = HEYS.Widgets.registry?.getSize?.(w.size);
+        return {
+          id: w.id,
+          cols: Math.min(gridCols, Math.max(1, sizeInfo?.cols || w.cols || 1)),
+          rows: Math.max(1, sizeInfo?.rows || w.rows || 1)
+        };
+      });
+
+      const positions = {};
+      const occupied = new Set();
+      const cell = (col, row) => `${col},${row}`;
+      const fits = (col, row, w) => {
+        if (col + w.cols > gridCols) return false;
+        for (let c = 0; c < w.cols; c++) {
+          for (let r = 0; r < w.rows; r++) {
+            if (occupied.has(cell(col + c, row + r))) return false;
+          }
+        }
+        return true;
+      };
+
+      let col = 0;
+      let row = 0;
+      let guard = 0;
+      const guardLimit = pending.length * gridCols * 4 + 1000;
+
+      while (pending.length && guard++ < guardLimit) {
+        if (col >= gridCols) {
+          col = 0;
+          row++;
+          continue;
+        }
+        if (occupied.has(cell(col, row))) {
+          col++;
+          continue;
+        }
+
+        const limit = Math.min(pending.length, this.FLOW_LOOKAHEAD);
+        let picked = -1;
+        for (let i = 0; i < limit; i++) {
+          if (fits(col, row, pending[i])) {
+            picked = i;
+            break;
+          }
+        }
+
+        if (picked === -1) {
+          // Дырка: ни одна из ближайших плиток не влезает в остаток строки.
+          occupied.add(cell(col, row));
+          col++;
+          continue;
+        }
+
+        const w = pending.splice(picked, 1)[0];
+        positions[w.id] = { col, row };
+        for (let c = 0; c < w.cols; c++) {
+          for (let r = 0; r < w.rows; r++) {
+            occupied.add(cell(col + c, row + r));
+          }
+        }
+        col += w.cols;
+      }
+
+      // Хвост (защита от зацикливания): ставим подряд с начала новых строк.
+      let tailRow = row + 1;
+      for (const w of pending) {
+        positions[w.id] = { col: 0, row: tailRow };
+        tailRow += w.rows;
+      }
+
+      return positions;
+    },
 
     /**
      * Найти свободную позицию для виджета
@@ -1676,6 +1739,47 @@
         x: col * (cellWidth + gap),
         y: row * (cellHeight + gap)
       };
+    },
+
+    /**
+     * Куда встанет тащимая плитка в порядке чтения.
+     * Канвас v4, строка 62: перетаскивание задаёт порядок, а не координаты.
+     * @param {string} draggedId
+     * @param {Object} cursor - клетка под пальцем { col, row }
+     * @returns {number} индекс в порядке без тащимой плитки
+     */
+    computeDropIndex(draggedId, cursor) {
+      const others = state.getWidgets().filter((w) => w && w.id !== draggedId);
+      const cursorKey = Math.max(0, cursor?.row || 0) * this.COLS
+        + Math.max(0, Math.min(this.COLS - 1, cursor?.col || 0));
+
+      let index = 0;
+      for (const w of others) {
+        const sizeInfo = HEYS.Widgets.registry?.getSize?.(w.size);
+        const cols = sizeInfo?.cols || w.cols || 1;
+        const rows = sizeInfo?.rows || w.rows || 1;
+        const centerKey = ((w.position?.row || 0) + (rows - 1) / 2) * this.COLS
+          + (w.position?.col || 0) + (cols - 1) / 2;
+        if (centerKey < cursorKey) index++;
+      }
+      return index;
+    },
+
+    /**
+     * Раскладка, которая получится, если отпустить плитку на этом индексе.
+     * @param {string} draggedId
+     * @param {number} index
+     * @returns {Object} { order, positions }
+     */
+    computeOrderPreview(draggedId, index) {
+      const widgets = state.getWidgets();
+      const dragged = widgets.find((w) => w && w.id === draggedId);
+      const order = widgets.filter((w) => w && w.id !== draggedId);
+      if (dragged) {
+        const at = Math.max(0, Math.min(order.length, Math.trunc(index) || 0));
+        order.splice(at, 0, dragged);
+      }
+      return { order, positions: this.computeFlowLayout(order, this.COLS) };
     }
   };
 
@@ -1692,7 +1796,10 @@
     _longPressTriggered: false,
     _lastValidPosition: null,
     _originalElement: null,
-    _dropIntent: null,
+    _dropIndex: null,
+    _previewPositions: null,
+    _edgeScrollTimer: null,
+    _edgeScrollDirection: 0,
     _scrollIntent: false,
     _touchDragReadyAt: 0,
 
@@ -1725,7 +1832,10 @@
       this._scrollIntent = false;
       const isTouchEvent = !!(event?.touches || event?.changedTouches || event?.pointerType === 'touch');
       // Touch grace: даём жесту шанс стать нативным scroll до старта drag.
-      this._touchDragReadyAt = isTouchEvent ? (Date.now() + 140) : 0;
+      // В расстановке паузы нет — там перетаскивание начинается сразу при
+      // касании и сдвиге (канвас v4, строка 56), а прокрутку берёт на себя
+      // автоскролл у края.
+      this._touchDragReadyAt = (isTouchEvent && !state.isEditMode()) ? (Date.now() + 140) : 0;
 
       console.info('[HEYS.dnd] 👇 pointerDown', { widgetId, isEditMode: state.isEditMode(), isTouchEvent, pointerType: event?.pointerType, tagName: t?.tagName, targetClass: t?.className?.substring?.(0, 60) });
 
@@ -1896,7 +2006,7 @@
 
       this._dragging = true;
       this._draggedWidget = widget;
-      this._dropIntent = null;
+      this._dropIndex = null;
 
       // Теперь drag реально стартовал — добавляем non-passive touchmove, чтобы
       // предотвратить скролл страницы во время активного перетаскивания виджета.
@@ -2071,7 +2181,7 @@
         const dx = Math.abs((event.clientX || event.touches?.[0]?.clientX || 0) - this._startPos.x);
         const dy = Math.abs((event.clientY || event.touches?.[0]?.clientY || 0) - this._startPos.y);
 
-        const dragThreshold = isTouchEvent ? 14 : 5;
+        const dragThreshold = (isTouchEvent && !state.isEditMode()) ? 14 : 5;
         console.info('[HEYS.dnd] 📐 move threshold check', { widgetId: this._draggedWidget?.id, dx: dx.toFixed(1), dy: dy.toFixed(1), threshold: dragThreshold, willStart: dx > dragThreshold || dy > dragThreshold });
 
         // На touch ждём более уверенное движение, чтобы не ломать вертикальный скролл.
@@ -2100,77 +2210,15 @@
         const relX = this._currentPos.x - rect.left;
         const relY = this._currentPos.y - rect.top;
 
-        const newGridPos = gridEngine.pixelsToGrid(relX, relY);
+        // Палец у края — сетка прокручивается сама (канвас v4, строка 58).
+        this._updateEdgeAutoScroll(this._currentPos.y);
 
-        // 🔧 FIX: Получаем размер из registry (через normalize)
-        const reg = HEYS.Widgets.registry;
-        const normalizedDraggedSize = reg?.normalizeSizeId
-          ? (reg.normalizeSizeId(this._draggedWidget?.size) || this._draggedWidget?.size)
-          : this._draggedWidget?.size;
-        const draggedSizeInfo = reg?.getSize?.(normalizedDraggedSize) || reg?.getSize?.(this._draggedWidget?.size);
-        const draggedCols = draggedSizeInfo?.cols || this._draggedWidget?.cols || 1;
-        const draggedRows = draggedSizeInfo?.rows || this._draggedWidget?.rows || 1;
+        const cursor = gridEngine.pixelsToGrid(relX, relY);
+        const nextIndex = gridEngine.computeDropIndex(this._draggedWidget.id, cursor);
 
-        // Ограничиваем позицию с учётом размера виджета
-        newGridPos.col = Math.min(newGridPos.col, GRID_COLS - draggedCols);
-
-        // Проверяем валидность (пустое место) или swap (занято, но можно поменяться местами)
-        const isValid = gridEngine.validatePosition(this._draggedWidget.id, newGridPos);
-        let swapWith = null;
-        if (!isValid) {
-          const colliding = gridEngine.getCollidingWidget(this._draggedWidget.id, newGridPos);
-          if (colliding) {
-            // 🔧 FIX: Получаем размеры обоих виджетов из registry для сравнения (через normalize)
-            const reg = HEYS.Widgets.registry;
-            const normalizedCollidingSize = reg?.normalizeSizeId ? (reg.normalizeSizeId(colliding?.size) || colliding?.size) : colliding?.size;
-            const collidingSizeInfo = reg?.getSize?.(normalizedCollidingSize) || reg?.getSize?.(colliding?.size);
-            const collidingCols = collidingSizeInfo?.cols || colliding?.cols || 1;
-            const collidingRows = collidingSizeInfo?.rows || colliding?.rows || 1;
-
-            if (collidingCols === draggedCols && collidingRows === draggedRows) {
-              swapWith = colliding;
-            }
-          }
-        }
-
-        // 🆕 Если ни move ни swap — пробуем reflow (авто-сдвиг остальных)
-        let reflowPositions = null;
-        if (!isValid && !swapWith) {
-          reflowPositions = gridEngine.computeReflowLayout(this._draggedWidget.id, newGridPos);
-        }
-
-        if (isValid || swapWith || reflowPositions) {
-          this._lastValidPosition = newGridPos;
-          this._dropIntent = reflowPositions
-            ? { type: 'reflow', position: newGridPos, positionsById: reflowPositions }
-            : (swapWith
-              ? { type: 'swap', position: newGridPos, swapWithId: swapWith.id }
-              : { type: 'move', position: newGridPos });
-
-          this._updatePlaceholderPosition(newGridPos);
-
-          if (this._placeholderElement) {
-            this._placeholderElement.classList.remove('widget-placeholder--invalid');
-            this._placeholderElement.classList.add('widget-placeholder--valid');
-            if (reflowPositions) {
-              this._placeholderElement.classList.add('widget-placeholder--reflow');
-              this._placeholderElement.classList.remove('widget-placeholder--swap');
-            } else if (swapWith) {
-              this._placeholderElement.classList.add('widget-placeholder--swap');
-              this._placeholderElement.classList.remove('widget-placeholder--reflow');
-            } else {
-              this._placeholderElement.classList.remove('widget-placeholder--swap');
-              this._placeholderElement.classList.remove('widget-placeholder--reflow');
-            }
-          }
-        } else {
-          this._dropIntent = null;
-          if (this._placeholderElement) {
-            this._placeholderElement.classList.remove('widget-placeholder--valid');
-            this._placeholderElement.classList.remove('widget-placeholder--swap');
-            this._placeholderElement.classList.remove('widget-placeholder--reflow');
-            this._placeholderElement.classList.add('widget-placeholder--invalid');
-          }
+        if (nextIndex !== this._dropIndex) {
+          this._dropIndex = nextIndex;
+          this._applyOrderPreview(nextIndex);
         }
       }
 
@@ -2178,8 +2226,96 @@
         widget: this._draggedWidget,
         x: this._currentPos.x,
         y: this._currentPos.y,
+        dropIndex: this._dropIndex,
         gridPosition: this._lastValidPosition
       });
+    },
+
+    /**
+     * Показать, куда встанет плитка: пунктирная рамка на её позиции, соседи
+     * съезжают в реальном времени (канвас v4, строка 57).
+     * @private
+     */
+    _applyOrderPreview(index) {
+      const preview = gridEngine.computeOrderPreview(this._draggedWidget?.id, index);
+      this._previewPositions = preview.positions;
+
+      const draggedPos = preview.positions[this._draggedWidget?.id];
+      if (draggedPos) {
+        this._lastValidPosition = draggedPos;
+        this._updatePlaceholderPosition(draggedPos);
+        if (this._placeholderElement) {
+          this._placeholderElement.classList.remove('widget-placeholder--invalid');
+          this._placeholderElement.classList.add('widget-placeholder--valid');
+        }
+      }
+
+      // Соседей двигает React: позиции идут событием, а не инлайновым стилем,
+      // иначе прямая правка DOM разъезжается с виртуальным деревом.
+      HEYS.Widgets.emit('dnd:preview', {
+        widget: this._draggedWidget,
+        index,
+        positions: preview.positions
+      });
+    },
+
+    /**
+     * Сбросить предпросмотр порядка.
+     * @private
+     */
+    _clearOrderPreview() {
+      if (!this._previewPositions) return;
+      this._previewPositions = null;
+      HEYS.Widgets.emit('dnd:preview', { widget: null, index: null, positions: null });
+    },
+
+    /**
+     * Автопрокрутка у верхней и нижней границы: скорость постоянная
+     * (канвас v4, строка 58).
+     * @private
+     */
+    _updateEdgeAutoScroll(pointerY) {
+      if (typeof window === 'undefined') return;
+      const zone = 64;
+      const viewportH = window.innerHeight || 0;
+      let direction = 0;
+      if (pointerY < zone) direction = -1;
+      else if (pointerY > viewportH - zone) direction = 1;
+
+      if (direction === this._edgeScrollDirection) return;
+      this._edgeScrollDirection = direction;
+      this._stopEdgeAutoScroll(true);
+
+      if (!direction) return;
+      const scroller = this._getScrollContainer();
+      if (!scroller) return;
+
+      this._edgeScrollTimer = setInterval(() => {
+        scroller.scrollBy(0, direction * EDGE_SCROLL_STEP_PX);
+      }, EDGE_SCROLL_TICK_MS);
+    },
+
+    _stopEdgeAutoScroll(keepDirection = false) {
+      if (this._edgeScrollTimer) {
+        clearInterval(this._edgeScrollTimer);
+        this._edgeScrollTimer = null;
+      }
+      if (!keepDirection) this._edgeScrollDirection = 0;
+    },
+
+    _getScrollContainer() {
+      if (typeof document === 'undefined') return null;
+      const grid = this._cachedGridEl || document.querySelector('.widgets-grid');
+      let node = grid?.parentElement || null;
+      while (node && node !== document.body) {
+        const style = window.getComputedStyle?.(node);
+        const overflowY = style?.overflowY;
+        if ((overflowY === 'auto' || overflowY === 'scroll') && node.scrollHeight > node.clientHeight) {
+          return node;
+        }
+        node = node.parentElement;
+      }
+      return window;
     },
 
     /**
@@ -2205,70 +2341,35 @@
         // FIX: Перед тем как сделать элемент снова видимым, ставим inline grid-позицию
         // на новое место — иначе между восстановлением opacity и React re-render
         // виджет на 1-2 кадра виден на старой позиции (визуальный "отпрыг" назад).
-        if (hadDrag && this._dropIntent?.position) {
+        const previewPos = this._previewPositions?.[this._draggedWidget?.id];
+        if (hadDrag && previewPos) {
           const widget = this._draggedWidget;
           const reg = HEYS.Widgets.registry;
           const normSize = reg?.normalizeSizeId ? (reg.normalizeSizeId(widget?.size) || widget?.size) : widget?.size;
           const sizeInfo = reg?.getSize?.(normSize) || reg?.getSize?.(widget?.size);
           const cols = sizeInfo?.cols || widget?.cols || 1;
           const rows = sizeInfo?.rows || widget?.rows || 1;
-          // Для reflow берём итоговую позицию именно этого виджета из positionsById
-          const targetPos = (this._dropIntent.type === 'reflow' && this._dropIntent.positionsById?.[widget.id])
-            ? this._dropIntent.positionsById[widget.id]
-            : this._dropIntent.position;
-          this._originalElement.style.gridColumn = `${targetPos.col + 1} / span ${cols}`;
-          this._originalElement.style.gridRow = `${targetPos.row + 1} / span ${rows}`;
+          this._originalElement.style.gridColumn = `${previewPos.col + 1} / span ${cols}`;
+          this._originalElement.style.gridRow = `${previewPos.row + 1} / span ${rows}`;
         }
 
         this._originalElement.style.opacity = '';
         this._originalElement.style.transform = '';
       }
 
-      // Если drag был активен и есть намерение drop — применяем
-      if (hadDrag && this._dropIntent && this._dropIntent.position) {
-        const targetPos = this._dropIntent.position;
-        const posChanged = targetPos.col !== this._startGridPos.col || targetPos.row !== this._startGridPos.row;
-
-        if (!posChanged) {
-          HEYS.Widgets.emit('dnd:cancel', { widget: this._draggedWidget });
-        } else if (this._dropIntent.type === 'move' && gridEngine.validatePosition(this._draggedWidget.id, targetPos)) {
-          state.moveWidget(this._draggedWidget.id, targetPos);
-
+      // Drop меняет порядок, а не координаты (канвас v4, строка 62).
+      if (hadDrag && this._dropIndex != null) {
+        const reordered = state.reorderWidget(this._draggedWidget.id, this._dropIndex);
+        if (reordered) {
           if (navigator.vibrate) {
             navigator.vibrate(10);
           }
-
-          HEYS.Widgets.emit('dnd:drop', { widget: this._draggedWidget, from: this._startGridPos, to: targetPos });
-        } else if (this._dropIntent.type === 'swap' && this._dropIntent.swapWithId) {
-          const swapped = state.swapWidgets(this._draggedWidget.id, this._dropIntent.swapWithId);
-          if (swapped) {
-            if (navigator.vibrate) {
-              navigator.vibrate(10);
-            }
-            HEYS.Widgets.emit('dnd:swap', {
-              widget: this._draggedWidget,
-              with: this._dropIntent.swapWithId,
-              from: this._startGridPos,
-              to: targetPos
-            });
-          } else {
-            HEYS.Widgets.emit('dnd:cancel', { widget: this._draggedWidget });
-          }
-        } else if (this._dropIntent.type === 'reflow' && this._dropIntent.positionsById) {
-          const applied = state.applyPositions(this._dropIntent.positionsById);
-          if (applied) {
-            if (navigator.vibrate) {
-              navigator.vibrate(10);
-            }
-            HEYS.Widgets.emit('dnd:reflow', {
-              widget: this._draggedWidget,
-              from: this._startGridPos,
-              to: targetPos,
-              positionsById: this._dropIntent.positionsById
-            });
-          } else {
-            HEYS.Widgets.emit('dnd:cancel', { widget: this._draggedWidget });
-          }
+          HEYS.Widgets.emit('dnd:drop', {
+            widget: this._draggedWidget,
+            from: this._startGridPos,
+            to: this._previewPositions?.[this._draggedWidget.id] || this._startGridPos,
+            index: this._dropIndex
+          });
         } else {
           HEYS.Widgets.emit('dnd:cancel', { widget: this._draggedWidget });
         }
@@ -2328,6 +2429,13 @@
     _cleanup() {
       // Убираем document listeners
       this._removeDocumentListeners();
+      this._stopEdgeAutoScroll();
+      // Инлайновый предпросмотр снимаем до того, как отдать раскладку React —
+      // иначе он замораживает соседей на позициях перетаскивания. Саму плитку
+      // пропускаем: её позиция выставлена в end(), чтобы не было кадра
+      // «отпрыгнула назад» до ре-рендера.
+      this._clearOrderPreview();
+      this._dropIndex = null;
 
       if (this._longPressTimer) {
         clearTimeout(this._longPressTimer);
@@ -2341,7 +2449,6 @@
       this._lastValidPosition = null;
       this._originalElement = null;
       this._longPressTriggered = false;
-      this._dropIntent = null;
       this._scrollIntent = false;
       this._touchDragReadyAt = 0;
       // PERF NEW-18: clear cached layout refs (важно — иначе stale rect при повторном drag)
@@ -2552,6 +2659,7 @@
   HEYS.Widgets.getWidgets = () => state.getWidgets();
   HEYS.Widgets.addWidget = (w) => state.addWidget(w);
   HEYS.Widgets.removeWidget = (id) => state.removeWidget(id);
+  HEYS.Widgets.reorderWidget = (id, toIndex) => state.reorderWidget(id, toIndex);
   HEYS.Widgets.isEditMode = () => state.isEditMode();
   HEYS.Widgets.enterEditMode = () => state.enterEditMode();
   HEYS.Widgets.exitEditMode = (opts) => state.exitEditMode(opts);

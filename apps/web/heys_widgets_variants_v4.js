@@ -115,13 +115,15 @@
       { id: 'scatter', title: 'Точки и среднее', subtitle: 'видно, что дельта считается по среднему', size: '2x2' }
     ],
     crashRisk: [
-      { id: 'curve', title: 'Кривая', subtitle: 'сколько сброшено и как шло', size: '2x1', sheet: true },
+      // Дефолт «За месяц» с кривой — решение владельца 20 августа: переключатель
+      // 7 / 14 / 30 снят, окно растёт само по числу подтверждённых дней.
+      { id: 'curve', title: 'Кривая', subtitle: 'сколько сброшено и как шло', size: '2x1', sheet: true, isDefault: true },
       { id: 'bar_remainder', title: 'Остаток полосой', subtitle: 'сколько до цели', size: '2x1', sheet: true },
       { id: 'weeks', title: 'Недели', subtitle: 'средние, без скачков воды', size: '2x1', sheet: true },
       { id: 'number_only', title: 'Только цифра', subtitle: 'без графики', size: '2x1', sheet: true },
       { id: 'to_goal', title: 'До цели', subtitle: 'главное — остаток, темп подписью', size: '2x1', sheet: true },
       { id: 'compact', title: 'Компакт', subtitle: 'дельта за месяц в 1×1', size: '1x1', sheet: false },
-      { id: 'chart', title: 'График', subtitle: 'динамика за 30 дней в 2×2', size: '2x2', sheet: false, isDefault: true }
+      { id: 'chart', title: 'График', subtitle: 'динамика за 30 дней в 2×2', size: '2x2', sheet: false }
     ]
   };
 
@@ -143,6 +145,70 @@
     }
   };
 
+  // Формат плитки словами — для вспомогательных технологий (канвас v4, 84).
+  const SIZE_SPEECH = {
+    '1x1': 'одна колонка на один ряд',
+    '2x1': 'две колонки на один ряд',
+    '2x2': 'две колонки на два ряда',
+    '3x2': 'три колонки на два ряда'
+  };
+
+  function prefersReducedMotion() {
+    try {
+      return !!global.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function getLiveRegion() {
+    if (typeof document === 'undefined') return null;
+    let node = document.getElementById('heys-widgets-live');
+    if (!node) {
+      node = document.createElement('div');
+      node.id = 'heys-widgets-live';
+      node.className = 'sr-only';
+      node.setAttribute('role', 'status');
+      node.setAttribute('aria-live', 'polite');
+      document.body.appendChild(node);
+    }
+    return node;
+  }
+
+  /** «Вес, за месяц, две колонки на два ряда» — одной фразой после смены вида. */
+  function announceVariantChange(widgetType, meta) {
+    const node = getLiveRegion();
+    if (!node || !meta) return;
+    const parts = [
+      WIDGET_TYPE_LABELS[widgetType] || widgetType,
+      String(meta.title || '').toLowerCase(),
+      SIZE_SPEECH[meta.size] || meta.size
+    ].filter(Boolean);
+    node.textContent = parts.join(', ');
+  }
+
+  /**
+   * Если после пересборки плитка уехала за кадр — экран догоняет её так, чтобы
+   * она попала целиком (канвас v4, строка 74).
+   */
+  function keepChangedTileInView(widgetId) {
+    if (typeof document === 'undefined' || typeof requestAnimationFrame !== 'function') return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`[data-widget-id="${widgetId}"]`);
+        if (!el?.getBoundingClientRect) return;
+        const rect = el.getBoundingClientRect();
+        const viewportH = global.innerHeight || 0;
+        const fullyVisible = rect.top >= 0 && rect.bottom <= viewportH;
+        if (fullyVisible) return;
+        el.scrollIntoView?.({
+          block: 'nearest',
+          behavior: prefersReducedMotion() ? 'auto' : 'smooth'
+        });
+      });
+    });
+  }
+
   function stopEventBubble(event) {
     event?.stopPropagation?.();
     event?.preventDefault?.();
@@ -152,8 +218,19 @@
     return CATALOG[widgetType] || [];
   }
 
+  // Площадь формата — по ней лист сортирует карточки (канвас v4, строки 27 и
+  // 81): по возрастанию формата, внутри одного формата — порядок каталога.
+  const SIZE_AREA = { '1x1': 1, '2x1': 2, '2x2': 4, '3x2': 6 };
+
   function getSheetCatalog(widgetType) {
-    return getCatalog(widgetType).filter((item) => item.sheet !== false);
+    return getCatalog(widgetType)
+      .filter((item) => item.sheet !== false)
+      .map((item, index) => ({ item, index }))
+      .sort((a, b) => {
+        const area = (SIZE_AREA[a.item.size] || 0) - (SIZE_AREA[b.item.size] || 0);
+        return area !== 0 ? area : a.index - b.index;
+      })
+      .map((entry) => entry.item);
   }
 
   // Вид по умолчанию — помеченный isDefault, иначе первый в каталоге.
@@ -429,12 +506,27 @@
         return;
       }
       const meta = getVariantById(widgetType, nextId);
-      HEYS.Widgets.state?.updateWidget(widget.id, {
-        settings: { ...(widget.settings || {}), displayVariant: nextId }
-      }, true);
-      HEYS.dayUtils?.haptic?.('light');
-      onVariantSaved?.({ widgetId: widget.id, variant: nextId, widgetType });
+      // Размер — свойство вида (канвас v4, строки 32 и 79): вид и формат идут
+      // одной записью, иначе они разъезжаются.
+      const updates = { settings: { ...(widget.settings || {}), displayVariant: nextId } };
+      if (meta?.size && meta.size !== widget.size) updates.size = meta.size;
+
+      // Сначала лист закрывается, потом сетка пересобирается (строка 73):
+      // пока лист открыт, сетка за ним не видна и анимация ушла бы в пустоту.
       dismissVariantSheet();
+      HEYS.dayUtils?.haptic?.('light');
+      const applyVariant = () => {
+        HEYS.Widgets.state?.updateWidget(widget.id, updates, true);
+        onVariantSaved?.({ widgetId: widget.id, variant: nextId, widgetType, size: meta?.size || widget.size });
+        announceVariantChange(widgetType, meta);
+        keepChangedTileInView(widget.id);
+      };
+      if (typeof setTimeout === 'function') {
+        const t = setTimeout(applyVariant, SHEET_CLOSE_MS);
+        animTimersRef.current.push(t);
+      } else {
+        applyVariant();
+      }
     }, [widget, widgetType, displayVariant, dismissVariantSheet, onVariantSaved]);
 
     const tileBg = activeMeta?.tileBg || WIDGET_TILE_BG[widgetType] || null;

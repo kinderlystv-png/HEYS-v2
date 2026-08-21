@@ -34,12 +34,16 @@ describe('виджеты g1 в сфере палитры', () => {
     it('расстановка g2: каталог в сетке, минус, Отмена откатывает', () => {
         expect(uiSrc).toContain('function CatalogStrip');
         expect(uiSrc).toContain('widget-v4-catalog');
-        expect(uiSrc).toContain('Долгое нажатие — взять виджет');
+        // Перетаскивание в расстановке начинается сразу при касании и сдвиге
+        // (канвас v4, строка 56) — подсказка про удержание была бы ложной.
+        expect(uiSrc).not.toContain('Долгое нажатие — взять виджет');
+        expect(uiSrc).toContain('Потяните плитку, чтобы поменять порядок');
         expect(uiSrc).toContain("enterEditMode?.()");
         expect(uiSrc).toContain('WIDGET_EDIT_RESIZE_ENABLED = false');
         expect(uiSrc).toContain('isEditMode && WIDGET_EDIT_RESIZE_ENABLED && React.createElement(React.Fragment');
         expect(cssSrc).toContain('.widgets-tab--editing .widget--editing');
-        expect(cssSrc).toContain('animation: widget-wiggle');
+        // Плитка приглушается, дрожания нет (строка 51).
+        expect(cssSrc).not.toContain('animation: widget-wiggle');
         expect(cssSrc).toContain('.widgets-tab--editing .widget__delete-btn');
         const coreSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_core_v1.js'), 'utf8');
         expect(coreSrc).toContain('_editSnapshot');
@@ -161,7 +165,7 @@ describe('виджеты g1 в сфере палитры', () => {
 
     it('тренд здоровья, инсулин, heatmap — v4-val--* без widget-v4-ok на героях', () => {
         expect(uiSrc).toContain('function v4HealthTrendState');
-        expect(uiSrc).toContain('function v4InsulinWaveStatusState');
+        expect(uiSrc).toContain('function v4InsulinWaveState');
         expect(uiSrc).toContain('function v4HeatmapMetaState');
         expect(uiSrc).toContain('V4_MACRO_DEVIATION_PCT = 0.05');
 
@@ -171,7 +175,10 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(healthChunk).not.toContain('widget-v4-ok');
 
         expect(uiSrc).toContain('function InsulinWaveVariantBody');
-        expect(uiSrc).toMatch(/widget-v4-insulin-wave__footer[\s\S]{0,260}widget-v4-val--act/);
+        // Волна красится по текущему состоянию: наложение — красный, окно
+        // покоя длиннее трёх часов — шалфей, остальное — чернила (строка 95).
+        expect(uiSrc).toMatch(/widget-v4-insulin-wave__footer[\s\S]{0,260}v4InsulinWaveState\(v4\)/);
+        expect(uiSrc).toContain('V4_INSULIN_CALM_MIN = 180');
 
         expect(cssSrc).toContain('.widget-v4-row__value.widget-v4-val--good');
         expect(cssSrc).toContain('.widget-v4-stack__footer .widget-v4-val--good');
@@ -231,7 +238,8 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(uiSrc).not.toContain('showDashboardSkeleton');
         expect(uiSrc).not.toContain('isSyncLoading');
         expect(uiSrc).toContain('const applyWidgetsLayout = useCallback');
-        expect(uiSrc).toMatch(/!isEditMode && widgets\.length > 0 && React\.createElement\('button', \{\s*\n\s*type: 'button',\s*\n\s*className: 'widget-v4-add'/);
+        // Пунктирная рамка «Добавить» живёт только в расстановке (строки 53, 93).
+        expect(uiSrc).toMatch(/isEditMode && React\.createElement\('button', \{\s*\n\s*type: 'button',\s*\n\s*className: 'widget-v4-add'/);
     });
 
     it('динамика веса 2×1 — v4 виды и долгий тап', () => {

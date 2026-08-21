@@ -3306,7 +3306,10 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         if (!clientId) return null;
 
         const isPeriodAnalyticsTab = tab === 'stats' || tab === 'insights';
-        const showWidgetsDateRow = tab === 'widgets' && !widgetsEditMode;
+        // Капсула даты остаётся и в расстановке, но дни там не листаются:
+        // раскладка от даты не зависит (канвас home-widgets v4, строка 61).
+        const showWidgetsDateRow = tab === 'widgets';
+        const dateRowLocked = tab === 'widgets' && !!widgetsEditMode;
         const showDateRow = !isPeriodAnalyticsTab
             && (tab === 'diary' || tab === 'activity' || showWidgetsDateRow)
             && window.HEYS.DatePicker;
@@ -4052,11 +4055,17 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             ),
             // === СТРОКА ДАТЫ (канвас «Дата и остатки v4»: под названием вкладки) ===
             showDateRow
-                ? React.createElement('div', { className: 'hdr-date-row' },
+                ? React.createElement('div', {
+                    className: 'hdr-date-row' + (dateRowLocked ? ' hdr-date-row--locked' : ''),
+                    'aria-disabled': dateRowLocked ? 'true' : undefined
+                },
                     React.createElement('div', { className: 'hdr-date-group' },
                         React.createElement(window.HEYS.DatePicker, {
                             valueISO: selectedDate,
-                            onSelect: (nextDate) => selectDateWithPrefetch(nextDate, { reason: 'date-picker' }),
+                            onSelect: (nextDate) => {
+                                if (dateRowLocked) return;
+                                selectDateWithPrefetch(nextDate, { reason: 'date-picker' });
+                            },
                             activeDays: datePickerActiveDays,
                             getActiveDaysForMonth: (year, month) => {
                                 const getActiveDaysForMonthFn = window.HEYS.dayUtils && window.HEYS.dayUtils.getActiveDaysForMonth;

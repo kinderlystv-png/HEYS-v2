@@ -530,7 +530,7 @@
   // === Widget Card Component ===
   // Обёрнут в React.memo — изолирует от ре-рендеров родителя,
   // чтобы CSS transition на кольце калорий не перезапускался попусту.
-  const WidgetCard = React.memo(function WidgetCard({ widget, isEditMode, onRemove, onSettings, index = 0, selectedDate }) {
+  const WidgetCard = React.memo(function WidgetCard({ widget, isEditMode, onRemove, onSettings, index = 0, selectedDate, dragPreviewPosition = null }) {
     const registry = HEYS.Widgets.registry;
     const widgetType = registry?.getType(widget.type);
     const category = registry?.getCategory(widgetType?.category);
@@ -1224,17 +1224,24 @@
     const previewCols = isResizing ? (resizePreview?.cols || widget.cols) : widget.cols;
     const previewRows = isResizing ? (resizePreview?.rows || widget.rows) : widget.rows;
     const previewSizeId = isResizing ? (resizePreview?.sizeId || widget.size) : widget.size;
-    const previewPosition = isResizing ? (resizePreview?.position || widget.position) : widget.position;
+    // Пока плитку тащат, позиции соседей приходят предпросмотром порядка
+    // (канвас v4, строка 57): соседи съезжают в реальном времени.
+    const previewPosition = isResizing
+      ? (resizePreview?.position || widget.position)
+      : (dragPreviewPosition || widget.position);
     const effectiveWidget = useMemo(() => {
-      if (!isResizing) return widget;
-      return {
-        ...widget,
-        size: previewSizeId,
-        cols: previewCols,
-        rows: previewRows,
-        position: previewPosition
-      };
-    }, [isResizing, previewCols, previewRows, previewPosition, previewSizeId, widget]);
+      if (isResizing) {
+        return {
+          ...widget,
+          size: previewSizeId,
+          cols: previewCols,
+          rows: previewRows,
+          position: previewPosition
+        };
+      }
+      if (dragPreviewPosition) return { ...widget, position: dragPreviewPosition };
+      return widget;
+    }, [isResizing, previewCols, previewRows, previewPosition, previewSizeId, widget, dragPreviewPosition]);
 
     const sizeClass = `widget--${effectiveWidget.size}`;
     const typeClass = `widget--${effectiveWidget.type}`;
@@ -2022,15 +2029,25 @@
     return num > tgt + margin;
   }
 
+  // Тренд здоровья красится по дельте за окно 14 дней: рост — шалфей, падение
+  // — красный, мёртвая зона ±2 пункта — чернила (канвас v4, строка 94).
+  const V4_HEALTH_TREND_DEAD_ZONE = 2;
+
   function v4HealthTrendState(delta) {
     if (!Number.isFinite(delta)) return 'neutral';
-    if (delta > 0) return 'good';
-    if (delta < 0) return 'bad';
-    return 'neutral';
+    if (Math.abs(delta) <= V4_HEALTH_TREND_DEAD_ZONE) return 'neutral';
+    return delta > 0 ? 'good' : 'bad';
   }
 
-  function v4InsulinWaveStatusState(statusText) {
-    return statusText === 'без критичных' ? 'good' : 'act';
+  // Инсулиновая волна красится по текущему состоянию, а не по итогу дня
+  // (канвас v4, строка 95): окно покоя длиннее трёх часов — шалфей, наложение
+  // волн — красный, остальное — чернила.
+  const V4_INSULIN_CALM_MIN = 180;
+
+  function v4InsulinWaveState(v4) {
+    if (Number(v4?.overlapCount) > 0) return 'bad';
+    if (Number(v4?.calmWindowMinutes) > V4_INSULIN_CALM_MIN) return 'good';
+    return 'neutral';
   }
 
   function v4HeatmapMetaState(filled, total = 7) {
@@ -2570,7 +2587,7 @@
       return React.createElement('div', { className: 'widget-v4-mini' },
         v4Kicker('Покой'),
         React.createElement('span', {
-          className: 'widget-v4-mini__value ' + v4ValueStateClass(isLipolysis ? 'good' : 'neutral')
+          className: 'widget-v4-mini__value ' + v4ValueStateClass(v4InsulinWaveState(v4))
         }, v4.calmWindowLabel || '—'),
         React.createElement('span', { className: 'widget-v4-muted', style: { marginTop: 'auto' } }, 'без волн')
       );
@@ -2595,7 +2612,7 @@
         ),
         React.createElement('div', { className: 'widget-v4-hero-num' },
           React.createElement('span', {
-            className: 'widget-v4-hero-num__val widget-v4-val--act'
+            className: 'widget-v4-hero-num__val ' + v4ValueStateClass(v4InsulinWaveState(v4))
           }, mins || '—'),
           React.createElement('span', { className: 'widget-v4-unit' }, mins ? 'мин до спада' : '')
         ),
@@ -2610,9 +2627,9 @@
           React.createElement('span', { className: 'widget-v4-row__meta' }, v4.overlapTimeLabel || '')
         ),
         React.createElement('div', { className: 'widget-v4-hero-num' },
-          React.createElement('span', { className: 'widget-v4-hero-num__val widget-v4-val--act' },
-            v4.overlapHoursLabel || '—'
-          ),
+          React.createElement('span', {
+            className: 'widget-v4-hero-num__val ' + v4ValueStateClass(v4InsulinWaveState(v4))
+          }, v4.overlapHoursLabel || '—'),
           React.createElement('span', { className: 'widget-v4-unit' }, 'без перерыва')
         ),
         InsulinWaveOverlapSvg({ v4 }),
@@ -2632,9 +2649,9 @@
       InsulinWaveDaySvg({ v4 }),
       React.createElement('div', { className: 'widget-v4-stack__footer widget-v4-insulin-wave__footer' },
         overlapLabel
-          ? React.createElement('span', { className: 'widget-v4-val--act' }, overlapLabel)
+          ? React.createElement('span', { className: v4ValueStateClass(v4InsulinWaveState(v4)) }, overlapLabel)
           : React.createElement('span', {
-            className: v4ValueStateClass(isLipolysis ? 'good' : 'neutral')
+            className: v4ValueStateClass(v4InsulinWaveState(v4))
           }, isLipolysis ? 'без критичных' : 'идёт волна'),
         React.createElement('span', { className: 'widget-v4-muted' }, elevatedLabel || '—')
       )
@@ -5400,7 +5417,9 @@
       if (variantId === 'streak') {
         return React.createElement('div', { className: 'widget-heatmap widget-heatmap--micro widget-v4-mini' },
           v4Kicker('Серия'),
-          React.createElement('div', { className: 'widget-v4-mini__value widget-v4-val--good' },
+          // Серию нельзя объявить плохой или хорошей: её длина — факт, а не
+          // оценка (канвас v4, строка 97) — число всегда чернила.
+          React.createElement('div', { className: 'widget-v4-mini__value widget-v4-val--neutral' },
             streak,
             React.createElement('span', { className: 'widget-v4-unit' }, ' дня')
           )
@@ -7912,32 +7931,30 @@
     const availableTypes = registry?.getAvailableTypes() || [];
     const existingTypeSet = existingTypes instanceof Set ? existingTypes : new Set(existingTypes || []);
 
+    // Уже стоящие на экране в каталоге не показываются: серая строка «уже
+    // добавлен» заставляла искать плитку глазами (канвас v4, строка 54).
+    const catalogTypes = availableTypes.filter((type) => !existingTypeSet.has(type.type));
+    if (!catalogTypes.length) return null;
+
     return React.createElement('div', { className: 'widget-v4-catalog' },
       React.createElement('div', { className: 'widget-v4-catalog__tier' }, 'Каталог'),
       React.createElement('div', { className: 'widget-v4-catalog__grid' },
-        availableTypes.map((type) => {
-          const isAlreadyAdded = existingTypeSet.has(type.type);
-          return React.createElement('button', {
-            key: type.type,
-            type: 'button',
-            className: 'widget-v4-catalog__item' + (isAlreadyAdded ? ' widget-v4-catalog__item--on' : ''),
-            disabled: isAlreadyAdded,
-            onClick: () => {
-              if (isAlreadyAdded) return;
-              onSelect?.(type);
-              HEYS.Widgets.emit('catalog:select', { type: type.type });
-            }
-          },
-            React.createElement('span', { className: 'widget-v4-catalog__name' }, type.name),
-            isAlreadyAdded
-              ? React.createElement('span', { className: 'widget-v4-catalog__hint' }, 'на экране')
-              : React.createElement('svg', {
-                width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
-                stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
-                'aria-hidden': 'true'
-              }, React.createElement('path', { d: 'M12 5v14M5 12h14' }))
-          );
-        })
+        catalogTypes.map((type) => React.createElement('button', {
+          key: type.type,
+          type: 'button',
+          className: 'widget-v4-catalog__item',
+          onClick: () => {
+            onSelect?.(type);
+            HEYS.Widgets.emit('catalog:select', { type: type.type });
+          }
+        },
+          React.createElement('span', { className: 'widget-v4-catalog__name' }, type.name),
+          React.createElement('svg', {
+            width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+            'aria-hidden': 'true'
+          }, React.createElement('path', { d: 'M12 5v14M5 12h14' }))
+        ))
       )
     );
   }
@@ -8422,6 +8439,8 @@
     const [isLayoutHydrated, setIsLayoutHydrated] = useState(() => !!HEYS.Widgets.state?._initialized);
     const [isDashboardPainted, setIsDashboardPainted] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [dragPreviewPositions, setDragPreviewPositions] = useState(null);
+    const [catalogOpen, setCatalogOpen] = useState(false);
     const [defaultHomeTab, setDefaultHomeTab] = useState(() => getCurrentDefaultTab());
     const [settingsWidget, setSettingsWidget] = useState(null);
     const [relapseDetails, setRelapseDetails] = useState(null);
@@ -8935,6 +8954,53 @@
       return () => unsub?.();
     }, []);
 
+    // Пересборка сетки: плитки, которые сдвинулись, едут 220 мс одной кривой,
+    // одновременно и без задержек друг за другом (канвас v4, строка 37).
+    // При prefers-reduced-motion новая раскладка появляется сразу (строка 83),
+    // при первом открытии экрана анимации тоже нет (строка 70).
+    const reflowRectsRef = useRef(null);
+    React.useLayoutEffect(() => {
+      const grid = gridRef.current;
+      if (!grid) return;
+      const tiles = grid.querySelectorAll('[data-widget-id]');
+      const next = new Map();
+      tiles.forEach((el) => {
+        next.set(el.getAttribute('data-widget-id'), el.getBoundingClientRect());
+      });
+
+      const prev = reflowRectsRef.current;
+      reflowRectsRef.current = next;
+      if (!prev || dragPreviewPositions) return;
+      if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return;
+
+      tiles.forEach((el) => {
+        const id = el.getAttribute('data-widget-id');
+        const before = prev.get(id);
+        const after = next.get(id);
+        if (!before || !after || typeof el.animate !== 'function') return;
+        const dx = before.left - after.left;
+        const dy = before.top - after.top;
+        if (!dx && !dy) return;
+        el.animate(
+          [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }],
+          { duration: 220, easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)' }
+        );
+      });
+    }, [widgets, dragPreviewPositions]);
+
+    // Предпросмотр порядка при перетаскивании: ядро считает раскладку,
+    // React двигает соседей (канвас v4, строка 57).
+    useEffect(() => {
+      const unsub = HEYS.Widgets.on?.('dnd:preview', ({ positions }) => {
+        setDragPreviewPositions(positions || null);
+      });
+      const unsubEnd = HEYS.Widgets.on?.('dnd:cancel', () => setDragPreviewPositions(null));
+      return () => {
+        unsub?.();
+        unsubEnd?.();
+      };
+    }, []);
+
     useEffect(() => {
       const unsubWidgetClick = HEYS.Widgets.on?.('widget:click', ({ widget }) => {
         if (isEditMode || !widget) return;
@@ -9198,6 +9264,7 @@
       if (!isEditMode) {
         setShowGridOverlay(false);
         setShowResetConfirm(false);
+        setCatalogOpen(false);
       }
     }, [isEditMode]);
 
@@ -9272,14 +9339,18 @@
               selectedDate,
               isEditMode,
               index: idx,
+              dragPreviewPosition: dragPreviewPositions?.[widget.id] || null,
               onRemove: handleRemove,
               onSettings: setSettingsWidget
             })
           ),
-          !isEditMode && widgets.length > 0 && React.createElement('button', {
+          // Пунктирная рамка в конце сетки открывает каталог; вне расстановки
+          // её нет — там под сеткой только «Изменить экран» (канвас v4, 53, 93).
+          isEditMode && React.createElement('button', {
             type: 'button',
-            className: 'widget-v4-add',
-            onClick: () => HEYS.Widgets.enterEditMode?.()
+            className: 'widget-v4-add' + (catalogOpen ? ' is-open' : ''),
+            'aria-expanded': catalogOpen ? 'true' : 'false',
+            onClick: () => setCatalogOpen((open) => !open)
           },
             React.createElement('svg', {
               width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
@@ -9325,13 +9396,13 @@
         )
       ),
 
-      isEditMode && React.createElement(CatalogStrip, {
+      isEditMode && catalogOpen && React.createElement(CatalogStrip, {
         onSelect: handleCatalogSelect,
         existingTypes: new Set((widgets || []).map(w => w.type))
       }),
 
       isEditMode && React.createElement('div', { className: 'widget-v4-edit-footer' },
-        React.createElement('span', { className: 'widget-v4-edit-footer__hint' }, 'Долгое нажатие — взять виджет'),
+        React.createElement('span', { className: 'widget-v4-edit-footer__hint' }, 'Потяните плитку, чтобы поменять порядок'),
         React.createElement('span', { className: 'widget-v4-edit-footer__history' },
           React.createElement('button', {
             type: 'button',
