@@ -234,6 +234,33 @@ function normalizeHeaders(event) {
   return out;
 }
 
+/**
+ * Метка чата клиента — `Mcp-Session-Id` из Streamable HTTP.
+ *
+ * Нужна ровно для одного: отличить два параллельных чата на ОДНОМ коннекторе.
+ * Псевдоним подключения считается от токена, а токен у обоих чатов один и тот
+ * же, поэтому 21.08 в трейс одного обмена уверенно попали вызовы соседнего
+ * чата, где в это время вели дневник. Состояние сессии сервер по-прежнему не
+ * держит: транспорт stateless, метка только маркирует, откуда пришёл вызов.
+ *
+ * Клиент может прислать что угодно — поэтому формат ограничен, а подделка
+ * ничего не решает: метка не даёт прав и не выбирает данные, она попадает
+ * только в псевдоним телеметрии.
+ */
+const MCP_SESSION_ID_RE = /^[A-Za-z0-9._-]{8,128}$/;
+
+function readClientSessionId(headers) {
+  const raw = headers['mcp-session-id'];
+  const value = typeof raw === 'string' ? raw.trim() : '';
+  return MCP_SESSION_ID_RE.test(value) ? value : null;
+}
+
+/** Есть ли в теле (одиночном или батче) `initialize` — на него выдаётся метка. */
+function payloadHasInitialize(payload) {
+  const list = Array.isArray(payload) ? payload : [payload];
+  return list.some((message) => message && message.method === 'initialize');
+}
+
 function getPath(event) {
   const raw = (event && (event.path || event.url || (event.requestContext && event.requestContext.path))) || '/';
   const cut = String(raw).split('?')[0];
@@ -329,6 +356,13 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
     return json(400, mcp.rpcError(null, mcp.JSONRPC_ERRORS.INVALID_REQUEST, 'Empty body'));
   }
 
+  // Чат клиента: пришедшая метка, а на initialize — своя, если клиент ещё не
+  // получил её. Дальше клиент обязан слать её сам (Streamable HTTP), и по ней
+  // вызовы соседнего чата не попадут в чужую цепочку.
+  const clientSessionId = readClientSessionId(headers);
+  const issuedSessionId = !clientSessionId && payloadHasInitialize(payload) ? crypto.randomUUID() : null;
+  const chatSessionId = clientSessionId || issuedSessionId;
+
   const api = createApiClient({ apiUrl });
   let tools;
   let toolSchemas = null;
@@ -361,7 +395,7 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
     upstream: () => ({ calls: api.stats.calls, ms: api.stats.ms }),
     // Псевдоним подключения и номер вызова выдаются до обработчика: те же
     // значения уходят и клиенту в ответ, и в строку лога.
-    beginTrace: () => telemetry.begin(headers.authorization || null),
+    beginTrace: () => telemetry.begin(headers.authorization || null, chatSessionId),
     repeatGuard,
     noteClient: (info) => { lastClientInfo = info || null; },
     // Одна строка на tools/list: сколько схем и байт ушло клиенту и какому
@@ -412,11 +446,18 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
     },
   });
 
+  // Выданную метку клиент должен увидеть в ответе на initialize — иначе ему
+  // нечего слать дальше. Expose-Headers нужен браузерным клиентам: без него
+  // fetch не отдаст заголовок читающему коду.
+  const sessionHeaders = issuedSessionId
+    ? { 'Mcp-Session-Id': issuedSessionId, 'Access-Control-Expose-Headers': 'Mcp-Session-Id' }
+    : {};
+
   // Только уведомления и ответы — по спеке отвечаем 202 без тела.
   if (response === null) {
-    return { statusCode: 202, headers: { ...SECURITY_HEADERS, ...CORS_HEADERS }, body: '' };
+    return { statusCode: 202, headers: { ...SECURITY_HEADERS, ...CORS_HEADERS, ...sessionHeaders }, body: '' };
   }
-  return json(200, response);
+  return json(200, response, sessionHeaders);
 }
 
 async function handleAuthorizePost(event, { secret, apiUrl }) {

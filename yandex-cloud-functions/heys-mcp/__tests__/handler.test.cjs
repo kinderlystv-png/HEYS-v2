@@ -372,3 +372,66 @@ test('битый JSON на /mcp не роняет функцию', async () => {
   const res = await call({ httpMethod: 'POST', path: '/mcp', body: '{невалидно', headers: { host: HOST, authorization: 'Bearer мусор' } });
   assert.equal(res.statusCode, 401);
 });
+
+/**
+ * Метка чата. Два параллельных чата на одном коннекторе несут один и тот же
+ * токен: 21.08 из-за этого вызовы соседнего чата попали в трейс чужого обмена
+ * как подтверждённые. Метка их разводит.
+ */
+test('initialize выдаёт Mcp-Session-Id, а дальше сервер принимает присланную клиентом', async () => {
+  const oauth = require('../lib/oauth');
+  const resource = '/mcp/curator';
+  const redirectUri = `https://claude.ai/api/mcp/auth_callback/${encodeURIComponent(resource)}`;
+  const registration = oauth.registerClient({
+    client_name: 'session id test',
+    redirect_uris: [redirectUri],
+    token_endpoint_auth_method: 'client_secret_post',
+  }, process.env.MCP_TOKEN_SECRET).registration;
+  const code = oauth.issueAuthorizationCode({
+    clientId: registration.client_id,
+    redirectUri,
+    codeChallenge: '',
+    heysClientId: 'curator-test',
+    sessionToken: 'curator-jwt-test',
+    role: 'curator',
+    resource: `https://${HOST}${resource}`,
+  }, process.env.MCP_TOKEN_SECRET);
+  const exchanged = oauth.exchangeAuthorizationCode({
+    code,
+    client_id: registration.client_id,
+    client_secret: registration.client_secret,
+    redirect_uri: redirectUri,
+  }, process.env.MCP_TOKEN_SECRET);
+  const token = exchanged.tokens.access_token;
+
+  const initialize = (headers = {}) => call({
+    httpMethod: 'POST',
+    path: resource,
+    headers: { host: HOST, authorization: `Bearer ${token}`, ...headers },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18' } }),
+  });
+
+  const first = await initialize();
+  assert.equal(first.statusCode, 200);
+  const issued = first.headers['Mcp-Session-Id'];
+  assert.match(issued, /^[0-9a-f-]{36}$/, 'выданная метка — обычный uuid');
+  assert.match(first.headers['Access-Control-Expose-Headers'], /Mcp-Session-Id/);
+
+  // Клиент прислал свою — своей и остаёмся, новую не навязываем.
+  const second = await initialize({ 'mcp-session-id': issued });
+  assert.equal(second.headers['Mcp-Session-Id'], undefined);
+
+  // Мусор в заголовке не проходит: метка попадёт в телеметрию, формат ограничен.
+  const third = await initialize({ 'mcp-session-id': 'ой' });
+  assert.match(third.headers['Mcp-Session-Id'], /^[0-9a-f-]{36}$/);
+
+  // На обычном вызове без initialize метка не выдаётся — её уже несёт клиент.
+  const listed = await call({
+    httpMethod: 'POST',
+    path: resource,
+    headers: { host: HOST, authorization: `Bearer ${token}`, 'mcp-session-id': issued },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }),
+  });
+  assert.equal(listed.statusCode, 200);
+  assert.equal(listed.headers['Mcp-Session-Id'], undefined);
+});

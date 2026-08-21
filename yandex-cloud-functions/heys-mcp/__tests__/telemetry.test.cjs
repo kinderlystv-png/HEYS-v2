@@ -330,6 +330,28 @@ test('вложенный вызов видит метку внешнего ин�
   assert.equal(JSON.parse(lines[0]).session_id, sessionId, 'та же метка ушла в лог');
 });
 
+test('метка чата разводит два параллельных чата одного коннектора', () => {
+  const { createTelemetry } = require('../lib/telemetry');
+  const telemetry = createTelemetry({ instanceId: 'inst-1' });
+  const token = 'Bearer один-и-тот-же-токен';
+
+  const chatA = telemetry.begin(token, '11111111-1111-4111-8111-111111111111');
+  const chatB = telemetry.begin(token, '22222222-2222-4222-8222-222222222222');
+  assert.notEqual(chatA.connId, chatB.connId, 'разные чаты — разные псевдонимы подключения');
+
+  // Тот же чат на другом инстансе — тот же псевдоним: ради этого всё и делалось.
+  const other = createTelemetry({ instanceId: 'inst-2' });
+  const chatAAgain = other.begin(token, '11111111-1111-4111-8111-111111111111');
+  assert.equal(chatAAgain.connId, chatA.connId);
+  assert.notEqual(chatAAgain.sessionId, chatA.sessionId, 'session_id по-прежнему привязан к инстансу');
+
+  // Клиент без поддержки сессии — прежнее поведение, псевдоним от токена.
+  const noChat = telemetry.begin(token);
+  const noChatElsewhere = other.begin(token);
+  assert.equal(noChat.connId, noChatElsewhere.connId);
+  assert.notEqual(noChat.connId, chatA.connId);
+});
+
 test('вне вызова инструмента метки нет', () => {
   assert.equal(callContext.current(), null);
   assert.equal(callContext.transcriptMark(null), null);

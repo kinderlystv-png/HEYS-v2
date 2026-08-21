@@ -147,10 +147,17 @@ function sessionAlias(token, instanceId) {
  * Сутки берутся в UTC, и это ровно граница `taskDay` задачника (03:00 МСК):
  * псевдоним меняется тогда же, когда меняется файл стенограммы, — обмен не
  * может оказаться разорванным этой сменой.
+ *
+ * Материал — метка чата (`Mcp-Session-Id`), а если клиент её не прислал, то
+ * токен. Разница видна ровно в одном случае, и он не теоретический: два
+ * параллельных чата на одном коннекторе несут один и тот же токен, и 21.08 в
+ * трейс одного обмена уверенно попали вызовы соседнего, где в это время вели
+ * дневник. Метка чата их разводит; токен остаётся запасным вариантом для
+ * клиентов, которые сессию не поддерживают, — там поведение прежнее.
  */
-function connectionAlias(token, nowMs = Date.now()) {
+function connectionAlias(source, nowMs = Date.now()) {
   const day = new Date(nowMs).toISOString().slice(0, 10);
-  const material = `${String(token || 'anonymous')}|${day}`;
+  const material = `${String(source || 'anonymous')}|${day}`;
   return crypto.createHash('sha256').update(material).digest('hex').slice(0, 12);
 }
 
@@ -297,13 +304,13 @@ function createTelemetry({ instanceId, fnVersion, logger = console } = {}) {
      * параллельно, и нумерация по завершению переставляет местами быстрый и
      * медленный вызовы, то есть врёт как раз про лишние круги.
      */
-    begin(token) {
+    begin(token, chatSessionId = null) {
       const sessionId = sessionAlias(token, instance);
       const nowMs = Date.now();
       return {
         sessionId,
         seq: nextSeq(sessionId),
-        connId: connectionAlias(token, nowMs),
+        connId: connectionAlias(chatSessionId || token, nowMs),
         ts: new Date(nowMs).toISOString(),
       };
     },
