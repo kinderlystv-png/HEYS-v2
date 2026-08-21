@@ -794,7 +794,7 @@
         className: 'nutrition-v4-sheet__swipe-actions',
         'aria-hidden': offset === 0 ? 'true' : 'false'
       },
-        React.createElement('button', { type: 'button', onClick: () => { close(); onCopy?.(item); } }, 'Копировать'),
+        React.createElement('button', { type: 'button', className: 'is-copy', onClick: () => { close(); onCopy?.(item); } }, 'Копировать'),
         React.createElement('button', { type: 'button', onClick: () => { close(); onMove?.(item); } }, 'Переместить'),
         React.createElement('button', { type: 'button', className: 'is-danger', onClick: () => { close(); onRemove?.(item); } }, 'Удалить')
       ),
@@ -864,13 +864,18 @@
       if (dragY > 90) { setDragY(0); onClose?.(); } else setDragY(0);
     };
 
-    const actionRow = (key, label, handler, disabled) => React.createElement('button', {
+    // Строка продукта — залитая карточка, действие — строка без заливки на
+    // грунте листа: иконка акцентом слева, подпись, шеврон, волосяной
+    // разделитель (контракт «продукт против действия»).
+    const actionRow = (key, label, icon, handler, disabled) => React.createElement('button', {
       key,
       type: 'button',
-      className: 'nutrition-v4-sheet__row' + (disabled ? ' is-disabled' : ''),
+      className: 'nutrition-v4-sheet__action' + (disabled ? ' is-disabled' : ''),
       disabled: !!disabled,
       onClick: () => { if (!disabled) handler?.(); }
     },
+      React.createElement('span', { className: 'nutrition-v4-sheet__action-icon', 'aria-hidden': 'true' },
+        svgIcon(React, { width: 17, height: 17, strokeWidth: 2.4 }, icon)),
       React.createElement('b', null, label),
       React.createElement('span', { className: 'nutrition-v4-sheet__chevron', 'aria-hidden': 'true' }, chevron(React, 15))
     );
@@ -946,11 +951,16 @@
           )
         ),
 
-        actionRow('mood', 'Оценки приёма', () => { onClose?.(); actions.openMoodEditor?.(mealIndex); }),
+        React.createElement('div', { className: 'nutrition-v4-sheet__caption' }, 'Действия с приёмом'),
+        actionRow('mood', 'Оценки приёма', 'M12 16v-4M12 8h.01',
+          () => { onClose?.(); actions.openMoodEditor?.(mealIndex); }),
         // Действия приёма — тремя строками; у пустого приёма все три погашены.
-        actionRow('copy', 'Копировать приём', () => { onClose?.(); actions.openCopyMealModal?.(mealIndex); }, isEmpty),
-        actionRow('move', 'Переместить на другой день', () => { onClose?.(); actions.openMoveMealModal?.(mealIndex); }, isEmpty),
-        actionRow('preset', 'Сохранить набором', () => { onClose?.(); actions.saveAsPreset?.(mealIndex); }, isEmpty),
+        actionRow('copy', 'Копировать приём', 'M9 9h11v11H9zM5 15V5.5A1.5 1.5 0 0 1 6.5 4H15',
+          () => { onClose?.(); actions.openCopyMealModal?.(mealIndex); }, isEmpty),
+        actionRow('move', 'Переместить на другой день', 'M4 7h11l-3-3M20 17H9l3 3',
+          () => { onClose?.(); actions.openMoveMealModal?.(mealIndex); }, isEmpty),
+        actionRow('preset', 'Сохранить набором', 'M5 4h14v16l-7-4-7 4z',
+          () => { onClose?.(); actions.saveAsPreset?.(mealIndex); }, isEmpty),
 
         React.createElement('button', {
           type: 'button',
