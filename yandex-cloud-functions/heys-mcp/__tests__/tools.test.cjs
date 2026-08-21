@@ -775,6 +775,30 @@ test('search_products показывает источник продукта', a
   assert.ok(res.text.includes(res.structured.results[0].product_id));
 });
 
+test('пустая выдача поиска закрывает перебор формулировок', async () => {
+  const tools = build(fakeApi({ day: null }));
+  const res = await tools.heys_search_products({ query: 'мраморная говядина вагю' });
+  assert.equal(res.structured.results.length, 0);
+  assert.equal(res.structured.exact_match, false);
+  assert.match(res.text, /Каталог просмотрен целиком/);
+  assert.match(res.text, /heys_create_product/);
+});
+
+test('выдача без точного совпадения честно называет себя ближайшей', async () => {
+  const tools = build(fakeApi({ day: null }));
+  const res = await tools.heys_search_products({ query: 'кофе латте горячий' });
+  assert.ok(res.structured.results.length > 0);
+  assert.equal(res.structured.exact_match, false);
+  assert.match(res.text, /Точного совпадения/);
+});
+
+test('точное совпадение не тянет за собой подсказку про create_product', async () => {
+  const tools = build(fakeApi({ day: null }));
+  const res = await tools.heys_search_products({ query: 'сироп' });
+  assert.equal(res.structured.exact_match, true);
+  assert.doesNotMatch(res.text, /Точного совпадения/);
+});
+
 test('list_meal_presets отдаёт наборы с граммовками', async () => {
   const tools = build(fakeApi({ day: null }));
   const res = await tools.heys_list_meal_presets({});

@@ -30,8 +30,12 @@ const RECORD_FIELDS = [
   't',             // тип записи, всегда 'mcp_call' — по нему фильтр в Logging
   'ts',            // ISO-время вызова
   'tool',          // имя инструмента — то, ради чего вся затея
-  'session_id',    // псевдоним подключения, к человеку не привязан
+  'session_id',    // псевдоним подключения на инстансе, к человеку не привязан
   'seq',           // номер вызова внутри session_id — по нему видны лишние круги
+  // Псевдоним подключения, переживающий смену инстанса: по нему обмен
+  // собирается целиком, когда середина цепочки уехала на холодный старт.
+  // Живёт одни сутки — см. connectionAlias().
+  'conn_id',
   'duration_ms',   // полное время обработчика
   'upstream_calls', // сколько round-trip'ов к API внутри вызова
   'upstream_ms',   // сколько из duration_ms ушло на API
@@ -129,6 +133,28 @@ function sessionAlias(token, instanceId) {
 }
 
 /**
+ * Псевдоним подключения, не зависящий от инстанса.
+ *
+ * `session_id` намеренно считается вместе с идентификатором инстанса — на нём
+ * держится нумерация `seq` и уникальность строки в БД. Побочный эффект:
+ * холодный старт в середине реплики разрывает обмен пополам, и вторая половина
+ * вызовов уходит в «вероятные». Замер 18–20.08: подтверждённых 55–65%.
+ *
+ * Здесь тот же односторонний срез хэша, но солью служат сутки, а не инстанс:
+ * внутри дня псевдоним стабилен и собирает обмен целиком, между днями —
+ * меняется, то есть сквозного профиля по-прежнему не даёт.
+ *
+ * Сутки берутся в UTC, и это ровно граница `taskDay` задачника (03:00 МСК):
+ * псевдоним меняется тогда же, когда меняется файл стенограммы, — обмен не
+ * может оказаться разорванным этой сменой.
+ */
+function connectionAlias(token, nowMs = Date.now()) {
+  const day = new Date(nowMs).toISOString().slice(0, 10);
+  const material = `${String(token || 'anonymous')}|${day}`;
+  return crypto.createHash('sha256').update(material).digest('hex').slice(0, 12);
+}
+
+/**
  * Счётчик вызовов на подключение. Живёт в памяти инстанса и умирает вместе с
  * ним — это нормально: последовательности разбираются внутри суток по паре
  * (session_id, seq), а не между инстансами.
@@ -175,6 +201,7 @@ function buildRecord(input = {}) {
     tool: typeof input.tool === 'string' ? input.tool : null,
     session_id: input.sessionId || null,
     seq: intOrNull(input.seq),
+    conn_id: input.connId || null,
     duration_ms: intOrNull(input.durationMs),
     upstream_calls: intOrNull(input.upstreamCalls),
     upstream_ms: intOrNull(input.upstreamMs),
@@ -272,7 +299,13 @@ function createTelemetry({ instanceId, fnVersion, logger = console } = {}) {
      */
     begin(token) {
       const sessionId = sessionAlias(token, instance);
-      return { sessionId, seq: nextSeq(sessionId), ts: new Date().toISOString() };
+      const nowMs = Date.now();
+      return {
+        sessionId,
+        seq: nextSeq(sessionId),
+        connId: connectionAlias(token, nowMs),
+        ts: new Date(nowMs).toISOString(),
+      };
     },
     /**
      * Список инструментов. Синхронно и без persist: в БД он не нужен, а ответ
@@ -325,6 +358,7 @@ module.exports = {
   MAX_TRACKED_SESSIONS,
   DEFAULT_PERSIST_TIMEOUT_MS,
   sessionAlias,
+  connectionAlias,
   createSeqCounter,
   extractArgKeys,
   buildRecord,

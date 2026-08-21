@@ -13,16 +13,46 @@ const transcript = `# 2026-08-17
 [mcp session=82e5c67303be seq=1 ts=2026-08-17T18:33:12.000Z]
 `;
 
-test('parseMark читает session, seq и необязательный ts', () => {
+test('parseMark читает session, seq и необязательные conn и ts', () => {
+  assert.deepEqual(
+    correlate.parseMark('[mcp session=82e5c67303be seq=1 conn=91aa77bc0011 ts=2026-08-17T18:33:12.000Z]'),
+    { sessionId: '82e5c67303be', seq: 1, connId: '91aa77bc0011', ts: '2026-08-17T18:33:12.000Z' },
+  );
+  // Метки до 21.08 псевдонима подключения не несут — читаются как раньше.
   assert.deepEqual(
     correlate.parseMark('[mcp session=82e5c67303be seq=1 ts=2026-08-17T18:33:12.000Z]'),
-    { sessionId: '82e5c67303be', seq: 1, ts: '2026-08-17T18:33:12.000Z' },
+    { sessionId: '82e5c67303be', seq: 1, connId: null, ts: '2026-08-17T18:33:12.000Z' },
   );
   assert.deepEqual(
     correlate.parseMark('[mcp session=a2418c691812 seq=7]'),
-    { sessionId: 'a2418c691812', seq: 7, ts: null },
+    { sessionId: 'a2418c691812', seq: 7, connId: null, ts: null },
   );
   assert.equal(correlate.parseMark('нет метки'), null);
+});
+
+test('вызов с другого инстанса остаётся подтверждённым по псевдониму подключения', () => {
+  const marked = `## 18:33
+**Кин:** добавь воды
+**Claude:** записал.
+[mcp session=82e5c67303be seq=1 conn=91aa77bc0011 ts=2026-08-17T18:33:12.000Z]
+`;
+  const { exchanges } = correlate.parseExchanges(marked, { date: '2026-08-17' });
+  const merged = correlate.mergeSameTurnExchanges(exchanges);
+  const calls = [
+    // тот же инстанс
+    { tool: 'heys_add_water', ts: '2026-08-17T18:33:12.000Z', session_id: '82e5c67303be', seq: 1, conn_id: '91aa77bc0011', role: 'curator', duration_ms: 900 },
+    // холодный старт в середине обмена: session другой, подключение то же
+    { tool: 'heys_get_day', ts: '2026-08-17T18:33:20.000Z', session_id: 'ffffffffffff', seq: 1, conn_id: '91aa77bc0011', role: 'curator', duration_ms: 300 },
+    // чужое подключение в том же окне подтверждённым не становится
+    { tool: 'heys_get_day', ts: '2026-08-17T18:33:25.000Z', session_id: 'aaaaaaaaaaaa', seq: 1, conn_id: '000000000000', role: 'curator', duration_ms: 300 },
+  ];
+  const { rows } = correlate.correlate({ exchanges: merged, calls });
+  const enriched = correlate.enrichRowsWithAttribution(rows, correlate.knownSessionIds(merged), {
+    date: '2026-08-17',
+    connIds: correlate.knownConnIds(merged),
+  });
+  assert.deepEqual(enriched[0].confirmed_tools, ['heys_add_water', 'heys_get_day']);
+  assert.deepEqual(enriched[0].probable_tools, ['heys_get_day']);
 });
 
 test('соседний read с другим session_id попадает в окно write', () => {

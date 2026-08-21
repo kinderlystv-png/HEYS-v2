@@ -223,7 +223,10 @@ function createMcpTraceTools({
         windowMs,
       });
       const sessionIds = correlate.knownSessionIds(selected);
-      const enriched = correlate.enrichRowsWithAttribution(rows, sessionIds, { date });
+      // Псевдоним подключения переживает смену инстанса, поэтому цепочка,
+      // разорванная холодным стартом, остаётся подтверждённой целиком.
+      const connIds = correlate.knownConnIds(selected);
+      const enriched = correlate.enrichRowsWithAttribution(rows, sessionIds, { date, connIds });
 
       const lines = enriched.map((row) => formatRowText(row));
       const tail = [];

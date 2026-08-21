@@ -834,6 +834,15 @@ function createTools({
         limit,
       });
       const described = found.map(products.describeProduct);
+      // Есть ли среди выдачи точное попадание. Без этого ответ «нашёл три»
+      // выглядит одинаково и когда продукт найден, и когда это просто
+      // ближайшее по словам — модель во втором случае идёт перебирать
+      // формулировки, хотя каталог уже просмотрен целиком (TIMING_LOG.md →
+      // «Круги агента», замер 18–20.08: 55 повторных поисков за сутки).
+      const prepared = products.prepareQuery(args.query);
+      const hasExact = prepared
+        ? found.some((product) => products.matchStrength(product, prepared) === 'strong')
+        : false;
       const text = described.length
         ? `Нашёл ${described.length}: ${described.map((p) => {
           const parts = [`${p.name} (${p.product_id}, ${p.kcal100} ккал/100, ${p.source})`];
@@ -844,9 +853,9 @@ function createTools({
             parts.push(`порции: ${p.portions.map((x) => `${x.name} ${x.grams}г`).join(', ')}`);
           }
           return parts.join(', ');
-        }).join('; ')}`
-        : `По запросу "${args.query}" ничего не нашлось.`;
-      return { text, structured: { query: args.query, results: described } };
+        }).join('; ')}${hasExact ? '' : `. Точного совпадения с «${args.query}» среди них нет — это ближайшее по словам. Если ни один не подходит, другая формулировка вернёт тот же список: heys_create_product (from_product_id ближайшего, если состав неизвестен), затем приём.`}`
+        : `По запросу "${args.query}" ничего не нашлось. Каталог просмотрен целиком, включая написания латиницей и кириллицей, — другая формулировка того же продукта вернёт тот же ответ. Дальше: heys_create_product (from_product_id ближайшего, если состав неизвестен), затем heys_log_meal.`;
+      return { text, structured: { query: args.query, results: described, exact_match: hasExact } };
     },
 
     /**

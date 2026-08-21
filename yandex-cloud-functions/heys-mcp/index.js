@@ -37,6 +37,7 @@ const { createTools, ToolError } = require('./lib/tools');
 const { createCuratorContext } = require('./lib/curator');
 const { TASKS_BOARD_SCHEMAS, TASKS_AGENT_SCHEMAS } = require('./lib/tasks-tools');
 const { createTelemetry } = require('./lib/telemetry');
+const { createRepeatGuard } = require('./lib/repeat-guard');
 const tasks = require('./lib/tasks');
 
 /**
@@ -62,6 +63,13 @@ let lastClientInfo = null;
 const telemetry = createTelemetry({
   fnVersion: process.env.FUNCTION_VERSION_ID || process.env.FUNCTION_VERSION || null,
 });
+
+/**
+ * Память о читающих вызовах — тоже на уровне модуля и по той же причине:
+ * лишние круги модели случаются внутри одной реплики, то есть на одном тёплом
+ * инстансе (lib/repeat-guard.js).
+ */
+const repeatGuard = createRepeatGuard();
 
 const ATTACH_PAGE_PATH = '/mcp/attach';
 const ATTACH_MANIFEST_PATH = '/mcp/attach/manifest.webmanifest';
@@ -354,6 +362,7 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
     // Псевдоним подключения и номер вызова выдаются до обработчика: те же
     // значения уходят и клиенту в ответ, и в строку лога.
     beginTrace: () => telemetry.begin(headers.authorization || null),
+    repeatGuard,
     noteClient: (info) => { lastClientInfo = info || null; },
     // Одна строка на tools/list: сколько схем и байт ушло клиенту и какому
     // именно. По ней «инструмента нет» отличается от «клиент не донёс его до
@@ -387,6 +396,7 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
         // Уже выданные `beginTrace` — берём их, а не считаем заново.
         sessionId: metric.trace ? metric.trace.sessionId : null,
         seq: metric.trace ? metric.trace.seq : null,
+        connId: metric.trace ? metric.trace.connId : null,
         role: auth.role,
         ok: metric.ok,
         errorCode: metric.error,

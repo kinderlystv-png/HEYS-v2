@@ -3,7 +3,7 @@
 const crypto = require('node:crypto');
 
 const RECORD_FIELDS = [
-  't', 'ts', 'tool', 'session_id', 'seq', 'duration_ms', 'upstream_calls', 'upstream_ms',
+  't', 'ts', 'tool', 'session_id', 'seq', 'conn_id', 'duration_ms', 'upstream_calls', 'upstream_ms',
   'status', 'error_code', 'resp_bytes', 'arg_count', 'arg_keys', 'cold_start', 'uptime_ms', 'fn_version', 'role',
 ];
 
@@ -92,6 +92,7 @@ function rowToRecord(row) {
     tool: row.tool,
     session_id: row.session_id,
     seq: row.seq,
+    conn_id: row.conn_id,
     duration_ms: row.duration_ms,
     upstream_calls: row.upstream_calls,
     upstream_ms: row.upstream_ms,
@@ -132,11 +133,11 @@ async function handleInsertMcpCallEvent(pool, params, authHeader, { corsHeaders 
   try {
     const result = await client.query(
       `INSERT INTO mcp_call_events (
-         t, ts, tool, session_id, seq, duration_ms, upstream_calls, upstream_ms,
+         t, ts, tool, session_id, seq, conn_id, duration_ms, upstream_calls, upstream_ms,
          status, error_code, resp_bytes, arg_count, arg_keys, cold_start, uptime_ms, fn_version, role
        ) VALUES (
-         $1, $2::timestamptz, $3, $4, $5, $6, $7, $8,
-         $9, $10, $11, $12, $13, $14, $15, $16, $17
+         $1, $2::timestamptz, $3, $4, $5, $6, $7, $8, $9,
+         $10, $11, $12, $13, $14, $15, $16, $17, $18
        )
        ON CONFLICT (session_id, seq) WHERE session_id IS NOT NULL AND seq IS NOT NULL
        DO NOTHING`,
@@ -146,6 +147,7 @@ async function handleInsertMcpCallEvent(pool, params, authHeader, { corsHeaders 
         record.tool,
         record.session_id,
         record.seq,
+        record.conn_id ?? null,
         record.duration_ms ?? null,
         record.upstream_calls ?? null,
         record.upstream_ms ?? null,
@@ -205,7 +207,7 @@ async function handleListMcpCallEvents(pool, params, { corsHeaders } = {}) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT t, ts, tool, session_id, seq, duration_ms, upstream_calls, upstream_ms,
+      `SELECT t, ts, tool, session_id, seq, conn_id, duration_ms, upstream_calls, upstream_ms,
               status, error_code, resp_bytes, arg_count, arg_keys, cold_start, uptime_ms, fn_version, role
        FROM mcp_call_events
        WHERE ts >= $1::timestamptz AND ts <= $2::timestamptz

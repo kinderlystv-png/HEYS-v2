@@ -236,11 +236,33 @@ async function handleMessage(message, ctx) {
       const argCount = args && typeof args === 'object' ? Object.keys(args).length : 0;
       const argKeys = extractArgKeys(args);
 
+      const guard = trace && ctx.repeatGuard ? ctx.repeatGuard : null;
+
       try {
+        // Лишние круги модели отсекаются до обработчика: тот же читающий вызов
+        // с теми же аргументами отдаётся из памяти инстанса, а серия поисков
+        // подряд получает подсказку, что перебор формулировок каталог не
+        // расширяет (lib/repeat-guard.js). Пометка идёт первой строкой ответа —
+        // там её видно и модели, и в стенограмме. Внутри try намеренно: сбой
+        // самой оптимизации не имеет права уронить вызов инструмента.
+        const guardVerdict = guard ? guard.before(trace.sessionId, name, args) : null;
         // Метка видна вложенному коду на всё время обработчика: `tasks_checkpoint`
         // дописывает её в блок стенограммы, в том числе когда его зовёт не
         // модель, а дневниковая обёртка.
-        const result = await callContext.run(trace, () => handler(args));
+        const fresh = guardVerdict && guardVerdict.repeat
+          ? guardVerdict.result
+          : await callContext.run(trace, () => handler(args));
+        if (guard && !(guardVerdict && guardVerdict.repeat)) {
+          guard.after(trace.sessionId, name, args, fresh);
+        }
+        const notice = guardVerdict ? guardVerdict.notice : null;
+        const result = notice
+          ? {
+            ...fresh,
+            text: `${notice}\n${fresh.text}`,
+            structured: { ...fresh.structured, ...(guardVerdict.repeat ? { repeat: true } : {}) },
+          }
+          : fresh;
         const timing = measure();
         const payload = {
           content: toolContent(result),

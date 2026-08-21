@@ -14,6 +14,7 @@ const SAMPLE_EVENT = {
   tool: 'heys_get_day',
   session_id: '6c7a0025159a',
   seq: 3,
+  conn_id: '91aa77bc0011',
   duration_ms: 299,
   upstream_calls: 1,
   upstream_ms: 200,
@@ -62,18 +63,19 @@ function createMockPool() {
             tool: values[2],
             session_id: values[3],
             seq: values[4],
-            duration_ms: values[5],
-            upstream_calls: values[6],
-            upstream_ms: values[7],
-            status: values[8],
-            error_code: values[9],
-            resp_bytes: values[10],
-            arg_count: values[11],
-            arg_keys: values[12],
-            cold_start: values[13],
-            uptime_ms: values[14],
-            fn_version: values[15],
-            role: values[16],
+            conn_id: values[5],
+            duration_ms: values[6],
+            upstream_calls: values[7],
+            upstream_ms: values[8],
+            status: values[9],
+            error_code: values[10],
+            resp_bytes: values[11],
+            arg_count: values[12],
+            arg_keys: values[13],
+            cold_start: values[14],
+            uptime_ms: values[15],
+            fn_version: values[16],
+            role: values[17],
           });
           return { rowCount: 1, rows: [] };
         }
@@ -176,6 +178,9 @@ async function run() {
   assert.strictEqual(listBody.ok, true);
   assert.strictEqual(listBody.records.length, 1);
   assert.strictEqual(listBody.records[0].tool, 'heys_get_day');
+  // Псевдоним подключения доезжает до trace: без него цепочка, разорванная
+  // холодным стартом, снова читалась бы как «вероятная».
+  assert.strictEqual(listBody.records[0].conn_id, '91aa77bc0011');
 
   if (prevSecret === undefined) delete process.env.MCP_TELEMETRY_SECRET;
   else process.env.MCP_TELEMETRY_SECRET = prevSecret;

@@ -113,12 +113,31 @@ const TASKS_WRITE_SCHEMAS = [
   },
   {
     name: 'tasks_update',
-    description: 'Поменять у задачи срок, приоритет, теги или состояние. Задача адресуется хэшем с доски (heys/0765d3). Заголовок не меняется: на нём держится этот же хэш.',
+    description: 'Поменять у задачи срок, приоритет, теги или состояние. Задача адресуется хэшем с доски (heys/0765d3). Заголовок не меняется: на нём держится этот же хэш. НЕСКОЛЬКО ЗАДАЧ — ОДНИМ ВЫЗОВОМ через updates: подряд идущие tasks_update по разным задачам это ошибка исполнения, а не аккуратность. Каждый лишний вызов — отдельный круг ожидания и отдельная перезапись файла проекта.',
     inputSchema: {
       type: 'object',
       properties: {
-        project: { type: 'string', description: 'Проект задачи.' },
-        hash: { type: 'string', description: 'Шесть символов хэша задачи с доски.' },
+        project: { type: 'string', description: 'Проект задачи. При updates — проект по умолчанию для тех правок, где он не указан свой.' },
+        hash: { type: 'string', description: 'Шесть символов хэша задачи с доски. Для одной задачи; для нескольких — updates.' },
+        updates: {
+          type: 'array',
+          description: 'Несколько задач за один вызов: массив правок, у каждой свой hash и те же поля, что у одиночной (state, due, window, priority, add_tags, remove_tags, note). project берётся из верхнего уровня, если у правки не задан свой. Правки одного проекта сохраняются одной записью файла. Любая непринятая правка отменяет весь вызов — файл остаётся нетронутым.',
+          items: {
+            type: 'object',
+            properties: {
+              project: { type: 'string', description: 'Проект этой задачи, если он не тот, что на верхнем уровне.' },
+              hash: { type: 'string', description: 'Шесть символов хэша задачи с доски.' },
+              due: { type: 'string', description: 'Новый срок YYYY-MM-DD; пустая строка снимает срок.' },
+              window: { type: 'string', description: 'Неточный срок окном: «2026-08-10..2026-08-12».' },
+              priority: { type: 'string', description: 'P1, P2 или P3.' },
+              state: { type: 'string', description: 'new, doing, wait или done.' },
+              add_tags: { type: 'array', items: { type: 'string' }, description: 'Теги добавить.' },
+              remove_tags: { type: 'array', items: { type: 'string' }, description: 'Теги убрать.' },
+              note: { type: 'string', description: 'Вложенная строка контекста.' },
+            },
+            required: ['hash'],
+          },
+        },
         due: { type: 'string', description: 'Новый срок YYYY-MM-DD; пустая строка снимает срок.' },
         window: {
           type: 'string',
@@ -130,7 +149,10 @@ const TASKS_WRITE_SCHEMAS = [
         remove_tags: { type: 'array', items: { type: 'string' }, description: 'Теги убрать.' },
         note: { type: 'string', description: 'Вложенная строка контекста: «ждём: Имя — что», «при встрече: …», «открыто: …».' },
       },
-      required: ['project', 'hash'],
+      // hash не обязателен на уровне схемы: при батче адреса лежат внутри
+      // updates. Отсутствие обоих ловит обработчик — иначе клиенту пришлось бы
+      // отдавать anyOf, который MCP-клиенты показывают модели по-разному.
+      required: ['project'],
     },
   },
   {
@@ -1691,70 +1713,137 @@ function createTasksTools({
       };
     },
 
+    /**
+     * Правка задач на доске.
+     *
+     * Батч здесь не удобство, а устранение основной статьи расхода: замер
+     * 18–20.08 по `tasks_mcp_trace` показал 51 вызов `tasks_update` за сутки и
+     * серии до тринадцати подряд на одну реплику. Каждый вызов — это круг
+     * «модель → функция → модель» (≈13 с ожидания по трейсу) плюс чтение и
+     * запись файла проекта. Тринадцать правок одного файла — это тринадцать
+     * его перезаписей подряд, хотя достаточно одной.
+     *
+     * Поэтому правки одного проекта применяются к тексту по очереди и
+     * сохраняются одним `writeFile`. Строку задачи каждый раз ищем заново: от
+     * предыдущей правки в файле могли появиться вложенные строки, и номер
+     * строки, снятый до неё, уже указывает не туда.
+     *
+     * Fail closed: любая непринятая правка роняет весь вызов, файл не
+     * сохраняется. Иначе получается наполовину применённый батч, о котором
+     * модель отчитается как о выполненном.
+     */
     async tasks_update(args = {}) {
-      const project = String(args.project || '').toLowerCase().replace(/\.md$/i, '');
-      if (!project) throw new ToolError('invalid_project', 'Нужен проект задачи.');
-      if (!args.hash) throw new ToolError('invalid_hash', 'Нужен хэш задачи с доски.');
+      const normalizeProject = (value) => String(value || '').toLowerCase().replace(/\.md$/i, '');
+      const batch = Array.isArray(args.updates) ? args.updates : null;
+      if (batch && !batch.length) {
+        throw new ToolError('invalid_updates', 'updates пустой — передай хотя бы одну правку или используй hash.');
+      }
+      const items = batch || [args];
+      const fallbackProject = normalizeProject(args.project);
 
-      const file = await readFile(`projects/${project}.md`);
-      const found = tasks.findTaskByHash(file, args.hash);
-      if (!found) {
-        throw new ToolError('task_not_found', `В ${file.path} нет задачи с хэшем ${args.hash}. Возьми актуальный через tasks_list.`);
+      const byProject = new Map();
+      for (const item of items) {
+        const project = normalizeProject(item && item.project) || fallbackProject;
+        if (!project) throw new ToolError('invalid_project', 'Нужен проект задачи.');
+        if (!item || !item.hash) throw new ToolError('invalid_hash', 'Нужен хэш задачи с доски.');
+        if (!byProject.has(project)) byProject.set(project, []);
+        byProject.get(project).push({ ...item, project });
       }
 
-      // Окно и срок ставятся одним движением: срок — всегда поздняя граница.
-      // Врозь они разъезжаются руками, и задача с окном «10-12» получает срок
-      // на 15-е, то есть окно перестаёт значить хоть что-нибудь.
-      const window = parseWindowArg(args.window);
-
-      const lines = file.text.split('\n');
-      let changedWindowDropped = false;
-      let patched;
-      try {
-        patched = tasks.applyTaskPatch(lines[found.line], {
-          state: args.state,
-          due: window ? window.to : args.due,
-          priority: args.priority ? String(args.priority).toUpperCase() : undefined,
-          addTags: args.add_tags,
-          removeTags: args.remove_tags,
-        });
-      } catch (e) {
-        throw new ToolError('invalid_field', `Не могу применить правку: ${e.message}`);
-      }
-
-      let nextText = [...lines.slice(0, found.line), patched, ...lines.slice(found.line + 1)].join('\n');
-      // Старое окно снимается в обоих случаях: при новом окне — чтобы не копить
-      // две разные правды под одной задачей, при обычном сроке — потому что
-      // точность и появилась, окну больше нечего уточнять.
-      if (window || (args.due !== undefined && args.due !== null && String(args.due).trim() !== '')) {
-        const kept = nextText.split('\n');
-        const drop = [];
-        for (let i = found.line + 1; i < kept.length; i += 1) {
-          const raw = kept[i];
-          if (!raw.trim() || !/^\s/.test(raw)) break;
-          if (tasks.taskWindow([raw.trim().replace(/^[-*]\s+/, '')])) drop.push(i);
+      /** Одна правка над текстом файла. Возвращает новый текст и что изменилось. */
+      const applyOne = (text, item, filePath) => {
+        const file = { path: filePath, text };
+        const found = tasks.findTaskByHash(file, item.hash);
+        if (!found) {
+          throw new ToolError('task_not_found', `В ${filePath} нет задачи с хэшем ${item.hash}. Возьми актуальный через tasks_list.`);
         }
-        for (const i of drop.reverse()) kept.splice(i, 1);
-        nextText = kept.join('\n');
-        if (window) nextText = tasks.appendChild(nextText, found.line, `окно: ${window.from}..${window.to}`);
-        else if (drop.length) changedWindowDropped = true;
+
+        // Окно и срок ставятся одним движением: срок — всегда поздняя граница.
+        // Врозь они разъезжаются руками, и задача с окном «10-12» получает срок
+        // на 15-е, то есть окно перестаёт значить хоть что-нибудь.
+        const window = parseWindowArg(item.window);
+
+        const lines = text.split('\n');
+        let changedWindowDropped = false;
+        let patched;
+        try {
+          patched = tasks.applyTaskPatch(lines[found.line], {
+            state: item.state,
+            due: window ? window.to : item.due,
+            priority: item.priority ? String(item.priority).toUpperCase() : undefined,
+            addTags: item.add_tags,
+            removeTags: item.remove_tags,
+          });
+        } catch (e) {
+          throw new ToolError('invalid_field', `Не могу применить правку: ${e.message}`);
+        }
+
+        let nextText = [...lines.slice(0, found.line), patched, ...lines.slice(found.line + 1)].join('\n');
+        // Старое окно снимается в обоих случаях: при новом окне — чтобы не копить
+        // две разные правды под одной задачей, при обычном сроке — потому что
+        // точность и появилась, окну больше нечего уточнять.
+        if (window || (item.due !== undefined && item.due !== null && String(item.due).trim() !== '')) {
+          const kept = nextText.split('\n');
+          const drop = [];
+          for (let i = found.line + 1; i < kept.length; i += 1) {
+            const raw = kept[i];
+            if (!raw.trim() || !/^\s/.test(raw)) break;
+            if (tasks.taskWindow([raw.trim().replace(/^[-*]\s+/, '')])) drop.push(i);
+          }
+          for (const i of drop.reverse()) kept.splice(i, 1);
+          nextText = kept.join('\n');
+          if (window) nextText = tasks.appendChild(nextText, found.line, `окно: ${window.from}..${window.to}`);
+          else if (drop.length) changedWindowDropped = true;
+        }
+        if (item.note) nextText = tasks.appendChild(nextText, found.line, String(item.note).trim());
+        if (nextText === text) {
+          throw new ToolError('nothing_to_update', batch
+            ? `Правка ${item.project}/${item.hash} ничего не меняет — убери её из updates.`
+            : 'Не передано ни одного изменения.');
+        }
+
+        const changed = [];
+        if (item.state) changed.push(`состояние → ${item.state}`);
+        if (window) changed.push(`окно → ${window.from}..${window.to}, срок → ${window.to}`);
+        else if (item.due !== undefined) changed.push(item.due ? `срок → ${item.due}${changedWindowDropped ? ', окно снято' : ''}` : 'срок снят');
+        if (item.priority) changed.push(`приоритет → ${item.priority}`);
+        if (item.add_tags?.length) changed.push(`теги +${item.add_tags.join(', ')}`);
+        if (item.remove_tags?.length) changed.push(`теги −${item.remove_tags.join(', ')}`);
+        if (item.note) changed.push('добавлена строка контекста');
+
+        return { text: nextText, changed, title: found.parsed.title };
+      };
+
+      const updated = [];
+      const paths = [];
+      let lastSaved = null;
+      for (const [project, patches] of byProject) {
+        const file = await readFile(`projects/${project}.md`);
+        let text = file.text;
+        const done = [];
+        for (const item of patches) {
+          const step = applyOne(text, item, file.path);
+          text = step.text;
+          done.push({ hash: item.hash, project, title: step.title, changed: step.changed });
+        }
+        lastSaved = await writeFile(file, text);
+        paths.push(lastSaved.path);
+        updated.push(...done);
       }
-      if (args.note) nextText = tasks.appendChild(nextText, found.line, String(args.note).trim());
-      if (nextText === file.text) throw new ToolError('nothing_to_update', 'Не передано ни одного изменения.');
 
-      const saved = await writeFile(file, nextText);
-      const changed = [];
-      if (args.state) changed.push(`состояние → ${args.state}`);
-      if (window) changed.push(`окно → ${window.from}..${window.to}, срок → ${window.to}`);
-      else if (args.due !== undefined) changed.push(args.due ? `срок → ${args.due}${changedWindowDropped ? ', окно снято' : ''}` : 'срок снят');
-      if (args.priority) changed.push(`приоритет → ${args.priority}`);
-      if (args.add_tags?.length) changed.push(`теги +${args.add_tags.join(', ')}`);
-      if (args.remove_tags?.length) changed.push(`теги −${args.remove_tags.join(', ')}`);
-      if (args.note) changed.push('добавлена строка контекста');
-
+      const line = (row) => `${row.project}/${row.hash} · ${row.title}: ${row.changed.join('; ')}.`;
+      if (!batch) {
+        const only = updated[0];
+        return {
+          text: line(only),
+          structured: {
+            path: lastSaved.path, rev: lastSaved.rev, hash: only.hash, title: only.title, changed: only.changed, updated,
+          },
+        };
+      }
       return {
-        text: `${project}/${args.hash} · ${found.parsed.title}: ${changed.join('; ')}.`,
-        structured: { path: saved.path, rev: saved.rev, hash: args.hash, title: found.parsed.title, changed },
+        text: `Правок: ${updated.length}${paths.length > 1 ? ` в ${paths.length} проектах` : ''}. ${updated.map(line).join(' ')}`,
+        structured: { path: lastSaved.path, rev: lastSaved.rev, updated, files: paths },
       };
     },
 

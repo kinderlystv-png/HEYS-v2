@@ -15,7 +15,7 @@
  * write за минуту забрали бы одни и те же read.
  */
 
-const MARK_RE = /\[mcp session=([0-9a-f]+) seq=(\d+)(?: ts=([^\]]+))?\]/;
+const MARK_RE = /\[mcp session=([0-9a-f]+) seq=(\d+)(?: conn=([0-9a-f]+))?(?: ts=([^\]]+))?\]/;
 /** `## 14:20`, `## ~14:20`, `## 14:20–15:00` — якорь по началу диапазона. */
 const HEADING_RE = /^##\s*~?(\d{1,2}):(\d{2})(?:\s*[–—-]\s*~?\d{1,2}:\d{2})?\s*$/m;
 const BLOCK_SPLIT_RE = /^##\s*~?\d{1,2}:\d{2}(?:\s*[–—-]\s*~?\d{1,2}:\d{2})?\s*$/m;
@@ -34,7 +34,12 @@ function parseMark(line) {
   return {
     sessionId: match[1],
     seq: Number(match[2]),
-    ts: match[3] || null,
+    // Псевдоним подключения. В отличие от session_id переживает смену
+    // инстанса, поэтому по нему обмен собирается целиком даже когда часть
+    // вызовов уехала на другой инстанс. Старые метки его не несут — тогда
+    // остаётся прежняя связка по session_id.
+    connId: match[3] || null,
+    ts: match[4] || null,
   };
 }
 
@@ -174,6 +179,25 @@ function knownSessionIds(exchanges) {
   return ids;
 }
 
+/**
+ * Псевдонимы подключения из меток дня.
+ *
+ * `session_id` считается вместе с идентификатором инстанса, поэтому холодный
+ * старт в середине обмена уводит остаток цепочки в «вероятные»: замер 18–20.08
+ * дал 55–65% подтверждённых. `conn_id` от инстанса не зависит и живёт сутки —
+ * по нему тот же обмен собирается целиком.
+ */
+function knownConnIds(exchanges) {
+  const ids = new Set();
+  for (const exchange of exchanges || []) {
+    const marks = exchange.marks || (exchange.mark ? [exchange.mark] : []);
+    for (const mark of marks) {
+      if (mark && mark.connId) ids.add(mark.connId);
+    }
+  }
+  return ids;
+}
+
 function isCuratorCall(call) {
   return call && call.role === 'curator';
 }
@@ -183,13 +207,18 @@ function filterCuratorCalls(calls) {
 }
 
 /**
- * Подтверждённые — session_id совпал с меткой стенограммы; вероятные — только окно.
+ * Подтверждённые — вызов назвал тот же псевдоним, что стоит в метке
+ * стенограммы: подключение (`conn_id`, переживает смену инстанса) или сессию
+ * (`session_id`, прежняя связка, работает для меток до 21.08). Вероятные —
+ * только попали в окно.
  */
-function splitCallsByConfidence(calls, sessionIds) {
+function splitCallsByConfidence(calls, sessionIds, connIds = null) {
   const confirmed = [];
   const probable = [];
   for (const call of calls || []) {
-    if (call.session_id && sessionIds.has(call.session_id)) confirmed.push(call);
+    const bySession = call.session_id && sessionIds && sessionIds.has(call.session_id);
+    const byConn = call.conn_id && connIds && connIds.has(call.conn_id);
+    if (bySession || byConn) confirmed.push(call);
     else probable.push(call);
   }
   return { confirmed, probable };
@@ -321,9 +350,9 @@ function analyzeFlowAnchors(calls, { date, heading, pinMs } = {}) {
   return { ...flow, pre_chain_ms, post_chain_ms };
 }
 
-function enrichRowsWithAttribution(rows, sessionIds, { date } = {}) {
+function enrichRowsWithAttribution(rows, sessionIds, { date, connIds = null } = {}) {
   return (rows || []).map((row) => {
-    const { confirmed, probable } = splitCallsByConfidence(row.calls, sessionIds);
+    const { confirmed, probable } = splitCallsByConfidence(row.calls, sessionIds, connIds);
     const flow_all = analyzeFlowAnchors(row.calls, {
       date,
       heading: row.heading,
@@ -417,6 +446,7 @@ module.exports = {
   correlate,
   parseLogText,
   knownSessionIds,
+  knownConnIds,
   isCuratorCall,
   filterCuratorCalls,
   splitCallsByConfidence,

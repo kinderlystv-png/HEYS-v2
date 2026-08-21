@@ -45,7 +45,11 @@ function transcriptMark(trace) {
   const ts = typeof trace.ts === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(trace.ts)
     ? ` ts=${trace.ts}`
     : '';
-  return `[mcp session=${trace.sessionId} seq=${trace.seq}${ts}]`;
+  // `conn` — псевдоним подключения, не зависящий от инстанса: по нему обмен
+  // собирается целиком, даже если середина цепочки уехала на холодный старт и
+  // получила другой `session`. Метки без него (до 21.08) читаются как раньше.
+  const conn = typeof trace.connId === 'string' && trace.connId ? ` conn=${trace.connId}` : '';
+  return `[mcp session=${trace.sessionId} seq=${trace.seq}${conn}${ts}]`;
 }
 
 module.exports = { run, current, transcriptMark };

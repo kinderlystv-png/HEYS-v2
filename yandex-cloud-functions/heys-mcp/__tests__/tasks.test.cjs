@@ -412,6 +412,72 @@ test('tasks_update на несуществующий хэш не пишет ни
   assert.equal(api.writes.length, 0);
 });
 
+test('tasks_update батчем правит несколько задач одной записью файла', async () => {
+  const api = withWrites();
+  const ceiling = tasks.taskHash('family', 'Покрасить потолок баллончиком');
+  const mirror = tasks.taskHash('family', 'Забрать зеркало');
+  const res = await build(api).tasks_update({
+    project: 'family',
+    updates: [
+      { hash: ceiling, state: 'done' },
+      { hash: mirror, due: '2026-08-11', note: 'открыто: кто везёт' },
+    ],
+  });
+
+  const familyKey = tasks.keyForPath('projects/family.md');
+  const fileWrites = api.writes.filter((w) => (w.items || []).some((i) => i.k === familyKey));
+  assert.equal(fileWrites.length, 1, 'файл проекта сохранён один раз, а не по разу на задачу');
+  assert.equal(res.structured.updated.length, 2);
+  const saved = fileWrites[0].items.find((i) => i.k === familyKey).v.text;
+  assert.match(saved, /\[x\] P1 Покрасить потолок баллончиком/);
+  assert.match(saved, /Забрать зеркало .*due:2026-08-11/);
+  assert.match(saved, /^ {2}- открыто: кто везёт$/m);
+});
+
+test('батч по двум проектам сохраняет каждый файл своей записью', async () => {
+  const api = withWrites();
+  const res = await build(api).tasks_update({
+    updates: [
+      { project: 'family', hash: tasks.taskHash('family', 'Покрасить потолок баллончиком'), state: 'done' },
+      { project: 'heys', hash: tasks.taskHash('heys', 'Прогнать месячный аудит ПДн'), priority: 'P1' },
+    ],
+  });
+  assert.equal(res.structured.updated.length, 2);
+  assert.equal(res.structured.files.length, 2);
+  const projectWrites = api.writes.filter((w) => (w.items || [])
+    .some((i) => i.k === tasks.keyForPath('projects/family.md') || i.k === tasks.keyForPath('projects/heys.md')));
+  assert.equal(projectWrites.length, 2);
+});
+
+test('непринятая правка в батче отменяет весь вызов, файл остаётся прежним', async () => {
+  const api = withWrites();
+  await assert.rejects(() => build(api).tasks_update({
+    project: 'family',
+    updates: [
+      { hash: tasks.taskHash('family', 'Покрасить потолок баллончиком'), state: 'done' },
+      { hash: 'ffffff', state: 'done' },
+    ],
+  }), (e) => e.code === 'task_not_found');
+  assert.equal(api.writes.length, 0);
+});
+
+test('пустой updates отклоняется, а не проходит молча', async () => {
+  const api = withWrites();
+  await assert.rejects(() => build(api).tasks_update({ project: 'family', updates: [] }),
+    (e) => e.code === 'invalid_updates');
+  assert.equal(api.writes.length, 0);
+});
+
+test('одиночная правка отвечает в прежнем формате', async () => {
+  const api = withWrites();
+  const hash = tasks.taskHash('family', 'Покрасить потолок баллончиком');
+  const res = await build(api).tasks_update({ project: 'family', hash, state: 'done' });
+  assert.equal(res.structured.hash, hash);
+  assert.equal(res.structured.title, 'Покрасить потолок баллончиком');
+  assert.match(res.structured.changed.join(' '), /состояние → done/);
+  assert.match(res.text, /^family\/[0-9a-f]{6} · Покрасить потолок баллончиком:/);
+});
+
 test('tasks_patch отклоняет правку по устаревшей ревизии вместо затирания', async () => {
   const api = withWrites();
   const tools = build(api);
