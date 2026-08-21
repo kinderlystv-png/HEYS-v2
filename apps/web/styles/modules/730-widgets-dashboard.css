@@ -11111,7 +11111,12 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   inset: 0;
   z-index: 1200;
   border: none;
-  background: rgba(0, 0, 0, 0.28);
+  /* Подложка product-модалки: dim и блюр берутся из токенов набора.
+     Канвас рисует blur(2px), инвариант продукта — 2.5px из
+     --v4-modal-backdrop-blur; отступление названо в протоколе. */
+  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+  backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
+  -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   animation: widget-wd-scrim-in 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
@@ -11127,9 +11132,9 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   bottom: 0;
   z-index: 1201;
   padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px));
-  border-radius: 20px 20px 0 0;
+  border-radius: 26px 26px 0 0;
   background: var(--heys-bg, #fffaf1);
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 -18px 50px rgba(80, 50, 20, 0.22);
   animation: widget-wd-sheet-in 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
@@ -11148,16 +11153,17 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
 }
 
 .widget-wd-sheet__title {
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1.2;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
   color: #201e1d;
 }
 
 .widget-wd-sheet__subtitle {
   margin-top: 3px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
+  line-height: 1.4;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.45));
 }
 
