@@ -248,7 +248,8 @@ describe('размер идёт за видом, запись — по «Гот�
     const st = state();
     // Гейт живёт в самом ядре: до «Готово» ни один debounce не доходит до storage.
     const coreSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_core_v1.js'), 'utf8');
-    const debounced = coreSrc.slice(coreSrc.indexOf('_debouncedSave() {'), coreSrc.indexOf('_debouncedSave() {') + 400);
+    const debouncedAt = coreSrc.indexOf('_debouncedSave(reason');
+    const debounced = coreSrc.slice(debouncedAt, debouncedAt + 500);
     expect(debounced).toContain('if (this._editMode) return;');
 
     const saved = [];

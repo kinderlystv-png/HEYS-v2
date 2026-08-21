@@ -31,7 +31,6 @@
 // ~5323  DayScoreDetailsModal, RelapseRiskDetailsModal
 // ~5863  CatalogStrip / CatalogModal — add widget picker
 // ~5983  SettingsModal — per-widget settings editor
-// ~6236  ResetLayoutConfirmModal
 // ~6349  WidgetsTab — main tab: edit mode, undo/redo, layout bootstrap
 // ~7119  HEYS.Widgets exports
  */
@@ -8058,6 +8057,33 @@
     );
   }
 
+  /**
+   * «Рекомендуемый экран» — путь назад к дефолту из расстановки.
+   * Контракт home-widgets, строка «сброс к дефолту»: блок между каталогом и
+   * пустым состоянием, подтверждения нет — отменяется той же стрелкой, что и
+   * перенос плитки, пока человек не нажал «Готово». Отдельного бара отмены
+   * здесь не заводим: второй механизм отмены рядом с первым — ровно то, что
+   * вычищали в баре удаления.
+   */
+  function RecommendedScreenBlock({ onReset }) {
+    return React.createElement('div', { className: 'widget-v4-recommended' },
+      React.createElement('div', { className: 'widget-v4-catalog__tier' }, 'Рекомендуемый экран'),
+      React.createElement('div', { className: 'widget-v4-recommended__card' },
+        React.createElement('span', { className: 'widget-v4-recommended__copy' },
+          React.createElement('span', { className: 'widget-v4-recommended__title' }, 'Вернуть рекомендуемый экран'),
+          React.createElement('span', { className: 'widget-v4-recommended__desc' },
+            'Одиннадцать плиток в порядке, который мы проверили. Ваш состав и виды заменятся — стрелка отмены вернёт как было'
+          )
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'widget-v4-recommended__btn',
+          onClick: onReset
+        }, 'Вернуть')
+      )
+    );
+  }
+
   function CatalogModal({ isOpen, onClose, onSelect, existingTypes }) {
     const registry = HEYS.Widgets.registry;
     const categories = registry?.getCategories() || [];
@@ -8396,112 +8422,6 @@
     );
   }
 
-  function ResetLayoutConfirmModal({ isOpen, widgetCount = 0, onClose, onConfirm }) {
-    useEffect(() => {
-      if (!isOpen) return undefined;
-
-      const targets = [
-        document.body,
-        document.documentElement,
-        document.querySelector('.wrap'),
-        document.querySelector('.tab-content-swipeable'),
-        document.querySelector('.widgets-tab')
-      ].filter(Boolean);
-
-      const prevStyles = targets.map((el) => ({
-        el,
-        overflow: el.style.overflow,
-        overscrollBehavior: el.style.overscrollBehavior
-      }));
-
-      prevStyles.forEach(({ el }) => {
-        el.style.overflow = 'hidden';
-        el.style.overscrollBehavior = 'none';
-      });
-
-      const onKeyDown = (event) => {
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          onClose?.();
-        }
-      };
-
-      document.addEventListener('keydown', onKeyDown);
-
-      return () => {
-        document.removeEventListener('keydown', onKeyDown);
-        prevStyles.forEach(({ el, overflow, overscrollBehavior }) => {
-          el.style.overflow = overflow;
-          el.style.overscrollBehavior = overscrollBehavior;
-        });
-      };
-    }, [isOpen, onClose]);
-
-    if (!isOpen) return null;
-
-    const modal = React.createElement('div', {
-      className: 'confirm-modal-backdrop widgets-reset-confirm-backdrop',
-      ...(window.HEYS?.ModalDismiss?.reactBackdropDismiss
-        ? window.HEYS.ModalDismiss.reactBackdropDismiss(() => onClose?.())
-        : {
-          onClick: (event) => {
-            if (event.target === event.currentTarget) onClose?.();
-          }
-        })
-    },
-      React.createElement('div', {
-        className: 'confirm-modal widgets-reset-confirm',
-        role: 'dialog',
-        'aria-modal': 'true',
-        'aria-labelledby': 'widgets-reset-confirm-title',
-        'aria-describedby': 'widgets-reset-confirm-text',
-        onClick: (event) => event.stopPropagation()
-      },
-        React.createElement('div', { className: 'widgets-reset-confirm__hero' },
-          React.createElement('div', { className: 'widgets-reset-confirm__icon', 'aria-hidden': 'true' }, '↺'),
-          React.createElement('div', { className: 'widgets-reset-confirm__hero-copy' },
-            React.createElement('div', { className: 'widgets-reset-confirm__eyebrow' }, 'Раскладка виджетов'),
-            React.createElement('div', {
-              id: 'widgets-reset-confirm-title',
-              className: 'widgets-reset-confirm__title'
-            }, 'Сбросить к дефолту?')
-          )
-        ),
-        React.createElement('div', { className: 'widgets-reset-confirm__body' },
-          React.createElement('div', {
-            id: 'widgets-reset-confirm-text',
-            className: 'widgets-reset-confirm__text'
-          }, 'Вернём фирменную стартовую раскладку HEYS. Если передумаешь — текущее состояние можно будет вернуть кнопкой ↩.'),
-          React.createElement('div', { className: 'widgets-reset-confirm__meta' },
-            React.createElement('div', { className: 'widgets-reset-confirm__pill' },
-              React.createElement('div', { className: 'widgets-reset-confirm__pill-label' }, 'Виджетов'),
-              React.createElement('div', { className: 'widgets-reset-confirm__pill-value' }, String(widgetCount || 0))
-            ),
-            React.createElement('div', { className: 'widgets-reset-confirm__pill' },
-              React.createElement('div', { className: 'widgets-reset-confirm__pill-label' }, 'Безопасно'),
-              React.createElement('div', { className: 'widgets-reset-confirm__pill-value' }, '↩ Можно откатить')
-            )
-          )
-        ),
-        React.createElement('div', { className: 'confirm-modal-buttons confirm-modal-buttons--custom widgets-reset-confirm__actions' },
-          React.createElement('div', { className: 'confirm-modal-actions-row' },
-            React.createElement('button', {
-              type: 'button',
-              className: 'confirm-modal-btn cancel confirm-modal-btn--custom confirm-modal-btn--fill confirm-modal-btn--neutral',
-              onClick: onClose
-            }, 'Оставить как есть'),
-            React.createElement('button', {
-              type: 'button',
-              className: 'confirm-modal-btn confirm confirm-modal-btn--custom confirm-modal-btn--fill confirm-modal-btn--primary',
-              onClick: onConfirm
-            }, 'Сбросить')
-          )
-        )
-      )
-    );
-
-    return ReactDOM?.createPortal ? ReactDOM.createPortal(modal, document.body) : modal;
-  }
 
   // === Main WidgetsTab Component ===
   function bootstrapWidgetsLayout() {
@@ -8550,7 +8470,6 @@
     const variantToastTimerRef = useRef(null);
     const [historyInfo, setHistoryInfo] = useState({ canUndo: false, canRedo: false });
     const [showGridOverlay, setShowGridOverlay] = useState(false); // Grid overlay toggle
-    const [showResetConfirm, setShowResetConfirm] = useState(false);
     const containerRef = useRef(null);
     const gridRef = useRef(null);
     const prevClientIdRef = useRef(clientId);
@@ -9341,19 +9260,10 @@
       HEYS.Widgets.redo?.();
     }, []);
 
+    // Подтверждения нет: сброс отменяется той же стрелкой расстановки, пока
+    // человек не нажал «Готово» (контракт, строка «сброс к дефолту»).
     const handleResetLayout = useCallback(() => {
-      setShowResetConfirm(true);
-      HEYS.dayUtils?.haptic?.('light');
-    }, []);
-
-    const handleCloseResetConfirm = useCallback(() => {
-      setShowResetConfirm(false);
-      HEYS.dayUtils?.haptic?.('light');
-    }, []);
-
-    const handleConfirmResetLayout = useCallback(() => {
       HEYS.Widgets.resetLayout?.();
-      setShowResetConfirm(false);
       setShowGridOverlay(false);
       HEYS.dayUtils?.haptic?.('medium');
     }, []);
@@ -9428,7 +9338,14 @@
               'aria-hidden': 'true'
             }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
             'Добавить виджет'
-          )
+          ),
+          // Пустота — законный выбор, но выход из неё не должен требовать
+          // памяти об одиннадцати плитках (контракт, строка «пустой экран»).
+          React.createElement('button', {
+            type: 'button',
+            className: 'widget-v4-empty__reset',
+            onClick: handleResetLayout
+          }, 'Вернуть стандартный экран')
         )
       );
     }
@@ -9519,6 +9436,10 @@
         selectedDate
       }),
 
+      isEditMode && catalogOpen && React.createElement(RecommendedScreenBlock, {
+        onReset: handleResetLayout
+      }),
+
       isEditMode && React.createElement('div', { className: 'widget-v4-edit-footer' },
         React.createElement('span', { className: 'widget-v4-edit-footer__hint' }, 'Потяните плитку, чтобы поменять порядок'),
         React.createElement('span', { className: 'widget-v4-edit-footer__history' },
@@ -9586,13 +9507,6 @@
           HEYS.Widgets.state?.updateWidget(w.id, { settings: { ...(w.settings || {}), periodDays: newPeriod } }, true);
         }
       }),
-      React.createElement(ResetLayoutConfirmModal, {
-        isOpen: showResetConfirm,
-        widgetCount: widgets.length,
-        onClose: handleCloseResetConfirm,
-        onConfirm: handleConfirmResetLayout
-      }),
-
       variantSavedToast && React.createElement('div', {
         className: 'widget-wd-toast',
         role: 'status'

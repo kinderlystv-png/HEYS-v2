@@ -70,33 +70,61 @@
   const EDGE_SCROLL_STEP_PX = 12;
   const EDGE_SCROLL_TICK_MS = 16;
 
-  // Набор из коробки — шесть плиток в порядке чтения (канвас v4, строка 39).
-  // Координат здесь нет: позиции считает flow-укладка по этому порядку.
+  // Дефолтный набор — контракт home-widgets, раздел «Дефолтный набор»:
+  // одиннадцать плиток в порядке чтения, у каждой назван вид. Порядок и есть
+  // раскладка (своей клетки у виджета нет), поэтому позиции здесь не заданы —
+  // их считает flow-укладка. Новый тип сам сюда не попадает: состав меняется
+  // только вместе со строкой «состав дефолта».
+  //
+  // Вид задаётся settings.displayVariant явно, а не флагом isDefault каталога:
+  // дефолт первого экрана не должен молча меняться от правки каталога видов.
   const DEFAULT_LAYOUT = [
     {
       type: 'calories',
       size: '2x2',
       settings: {
+        displayVariant: 'hero',
         showRemaining: true,
         showPercentage: false,
         elementScales: { ring: 0.95 }
       }
     },
     {
-      type: 'weight',
+      type: 'insulinWave',
       size: '2x2',
+      settings: { displayVariant: 'day_as_is' }
+    },
+    {
+      type: 'macros',
+      size: '3x2',
       settings: {
-        showBmi: true,
-        showGoal: true,
-        showChart: true,
-        showTrend: true,
-        showAnalytics: true
+        displayVariant: 'rings',
+        showGrams: true,
+        showPercentage: true,
+        centerValueMode: 'pct',
+        elementScales: { ring: 0.95 }
+      }
+    },
+    {
+      type: 'sleep',
+      size: '1x1',
+      settings: {
+        displayVariant: 'mini',
+        showTimes: true,
+        showTarget: true,
+        showQuality: true,
+        elementScales: {
+          badge: 2,
+          icon: 2,
+          value: 2
+        }
       }
     },
     {
       type: 'water',
       size: '1x1',
       settings: {
+        displayVariant: 'mini',
         showGlasses: false,
         showProgress: true,
         showRemaining: true,
@@ -110,41 +138,85 @@
       }
     },
     {
-      type: 'sleep',
-      size: '1x1',
-      settings: {
-        showTimes: true,
-        showTarget: true,
-        showQuality: true,
-        elementScales: {
-          badge: 2,
-          icon: 2,
-          value: 2
-        }
-      }
+      type: 'dayScore',
+      size: '2x1',
+      settings: { displayVariant: 'row' }
     },
     {
-      type: 'macros',
-      size: '3x2',
-      settings: {
-        showGrams: true,
-        showPercentage: true,
-        centerValueMode: 'pct',
-        elementScales: { ring: 0.95 }
-      }
+      // Кадр «Главная · дефолтная раскладка» рисует здесь неделю полосами
+      // («5 из 7»), то есть вид «Как сейчас». Строка контракта называет «Серию»
+      // — расхождение названо в UI_V4_FINDINGS, ход дизайнера.
+      type: 'heatmap',
+      size: '2x1',
+      settings: { displayVariant: 'week_bar' }
     },
     {
       type: 'relapseRisk',
       size: '2x2',
       settings: {
+        displayVariant: 'scale',
         gaugeStrokeWidth: 30,
         showSource: true,
         showDrivers: true,
         showConfidence: false,
         showRecommendation: true
       }
+    },
+    {
+      type: 'healthTrend',
+      size: '2x2',
+      settings: { displayVariant: 'spark' }
+    },
+    {
+      type: 'weight',
+      size: '2x2',
+      settings: {
+        displayVariant: 'spark',
+        showBmi: true,
+        showGoal: true,
+        showChart: true,
+        showTrend: true,
+        showAnalytics: true
+      }
+    },
+    {
+      // «Динамика веса», окно «за месяц» с кривой — решение владельца
+      // 20 августа, строка контракта «дефолт вида». Имя «F компакт» из строки
+      // «состав дефолта» ни одному виду каталога не соответствует.
+      type: 'crashRisk',
+      size: '2x1',
+      settings: { displayVariant: 'curve' }
     }
   ];
+
+  // Уменьшить состав раскладки может только названная операция. Всё остальное —
+  // молчаливая потеря плиток: ровно так 21 августа фильтр «виджеты в разработке»
+  // дважды стёр экран и сохранил результат, и вернуть его человек мог только по
+  // памяти. Список закрытый и может только сокращаться.
+  const SHRINK_ALLOWED_REASONS = new Set([
+    'user-remove',        // человек снял плитку в расстановке
+    'user-reset',         // «Вернуть рекомендуемый экран»
+    'apply-preset',       // применён пресет
+    'undo',               // шаг назад
+    'redo',               // шаг вперёд
+    'edit-done',          // «Готово» фиксирует то, что человек собрал
+    'edit-cancel',        // «Отмена» возвращает снимок входа в расстановку
+    'retired-migration'   // одноразовое снятие типов с продукта
+  ]);
+
+  // Отпечаток состава — только то, что делает раскладку раскладкой. updatedAt
+  // сюда не входит: иначе одинаковый экран каждый раз считался бы изменением.
+  function layoutFingerprint(widgetsData) {
+    try {
+      return JSON.stringify((widgetsData || []).map((w) => [
+        w?.id, w?.type, w?.size,
+        w?.position?.col, w?.position?.row,
+        w?.settings || null
+      ]));
+    } catch (e) {
+      return null;
+    }
+  }
 
   // === State Manager with Undo/Redo ===
   const state = {
@@ -155,6 +227,10 @@
     _draggedWidget: null,
     _initialized: false,
     _saveTimeout: null,
+    // Отпечаток последнего состава, который реально ушёл в storage.
+    _lastSavedFingerprint: null,
+    // Причина ближайшей записи; ставится операцией, читается и гасится saveLayout.
+    _pendingSaveReason: null,
 
     /**
      * Инициализация state manager
@@ -267,7 +343,7 @@
           const removed = before - this._widgets.length;
           if (removed > 0) log(`retired migration: убрано плиток ${removed} (${retiredKey})`);
           try {
-            this.saveLayout(this._widgets);
+            this.saveLayout(this._widgets, { reason: 'retired-migration' });
             this.saveLayoutMeta({ ...(meta || {}), retiredMigration: retiredKey, migratedAt: Date.now() });
           } catch (e) {
             console.error('[widgets] retired migration save failed:', e?.message || e);
@@ -292,6 +368,11 @@
       // Очищаем историю при загрузке
       this._history = [];
       this._future = [];
+
+      // То, что показано после загрузки, считается уже сохранённым: пока человек
+      // ничего не изменил, вкладке нечего писать. Иначе любое скрытие вкладки
+      // отправляет свой состав со свежим updatedAt и выигрывает у чужой правки.
+      this._rememberSavedFingerprint();
 
       this._initialized = true;
       HEYS.Widgets.emit('layout:loaded', { layout: this._widgets });
@@ -506,7 +587,7 @@
 
       // Восстанавливаем предыдущее состояние
       this._widgets = this._history.pop();
-      this._debouncedSave();
+      this._debouncedSave('undo');
 
       HEYS.Widgets.emit('history:undo', { layout: this._widgets });
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
@@ -530,7 +611,7 @@
 
       // Восстанавливаем future состояние
       this._widgets = this._future.pop();
-      this._debouncedSave();
+      this._debouncedSave('redo');
 
       HEYS.Widgets.emit('history:redo', { layout: this._widgets });
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
@@ -658,10 +739,13 @@
      * Debounced save — сохранение с задержкой
      * @private
      */
-    _debouncedSave() {
+    _debouncedSave(reason = null) {
       // В расстановке изменения живут только на экране: раскладка пишется по
       // «Готово» (канвас v4, строка 50), иначе «Отмена» теряет смысл.
       if (this._editMode) return;
+      // Причина переживает debounce: до записи может пройти полсекунды, а
+      // shrink-guard должен знать, чьё это уменьшение.
+      if (reason) this._pendingSaveReason = reason;
       if (this._saveTimeout) {
         clearTimeout(this._saveTimeout);
       }
@@ -721,7 +805,7 @@
 
       const removed = this._widgets.splice(index, 1)[0];
       this._autoPackWidgets();
-      this._debouncedSave();
+      this._debouncedSave('user-remove');
 
       HEYS.Widgets.emit('widget:removed', { widgetId: id, widget: removed });
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
@@ -1014,9 +1098,30 @@
     },
 
     /**
+     * Запомнить текущий состав как уже сохранённый — без записи в storage.
+     * Нужен после загрузки и после приёма облачной раскладки.
+     * @private
+     */
+    _rememberSavedFingerprint() {
+      this._lastSavedFingerprint = layoutFingerprint(this._widgets.map(w => ({
+        id: w.id,
+        type: w.type,
+        size: w.size,
+        position: w.position,
+        settings: w.settings,
+        createdAt: w.createdAt
+      })));
+    },
+
+    /**
      * Сохранить layout в storage (cloud sync)
      */
-    saveLayout(layoutOverride = null) {
+    saveLayout(layoutOverride = null, opts = null) {
+      // Причину даёт либо прямой вызов, либо операция, поставившая её перед
+      // debounce. Читаем и гасим сразу: следующая запись должна назваться сама.
+      const reason = opts?.reason || this._pendingSaveReason || null;
+      this._pendingSaveReason = null;
+
       // 🔧 FIX: Не сохраняем до инициализации (иначе затрём storage пустым массивом)
       if (!this._initialized && !Array.isArray(layoutOverride)) {
         warn('saveLayout skipped: not initialized');
@@ -1038,6 +1143,45 @@
       if (!widgetsData || widgetsData.length === 0) {
         warn('saveLayout skipped: empty widgets array');
         return;
+      }
+
+      // 🛡️ Раскладка не пишется, если состав не изменился. Иначе вкладка,
+      // которую просто свернули, отправляет своё состояние со свежим updatedAt
+      // и выигрывает last-write-wins у того, что человек собрал на другом
+      // устройстве. Ничего не менялось — писать нечего.
+      const fingerprint = layoutFingerprint(widgetsData);
+      if (fingerprint !== null && fingerprint === this._lastSavedFingerprint) {
+        return;
+      }
+
+      // 🛡️ SHRINK-GUARD: молчаливое уменьшение состава — не сжатие, а потеря.
+      // Легитимное уменьшение всегда приходит от названной операции; всё
+      // остальное отбиваем и называем в логе, что именно пропало бы.
+      // Kill-switch — как у продуктов: __heys_disable_widget_shrink_guard__.
+      if (!SHRINK_ALLOWED_REASONS.has(reason)) {
+        let guardDisabled = false;
+        try {
+          guardDisabled = localStorage.getItem('__heys_disable_widget_shrink_guard__') === '1';
+        } catch (e) { /* приватный режим — guard остаётся включённым */ }
+
+        if (!guardDisabled) {
+          const prev = this.loadLayout();
+          if (Array.isArray(prev) && prev.length > widgetsData.length) {
+            const nextIds = new Set(widgetsData.map((w) => String(w?.id)));
+            const lost = prev
+              .filter((w) => !nextIds.has(String(w?.id)))
+              .map((w) => ({ id: w?.id, type: w?.type }));
+            if (lost.length > 0) {
+              console.warn('[widgets] saveLayout BLOCKED: состав уменьшился без причины', {
+                was: prev.length,
+                next: widgetsData.length,
+                lost,
+                reason: reason || '(не названа)'
+              });
+              return;
+            }
+          }
+        }
       }
 
       // 🔧 Оборачиваем в объект с updatedAt для cloud sync conflict resolution
@@ -1063,6 +1207,7 @@
         }
       }
 
+      this._lastSavedFingerprint = fingerprint;
       HEYS.Widgets.emit('layout:saved', { layout: layoutData });
     },
 
@@ -1124,7 +1269,12 @@
         layoutPresetVersion: LAYOUT_PRESET_VERSION,
         resetAt: Date.now()
       });
-      this.saveLayout();
+      // В расстановке запись идёт по «Готово» — иначе стрелка отмены вернёт
+      // экран, а в storage уже уехал дефолт (контракт, строки 50 и «сброс к
+      // дефолту»).
+      if (!this._editMode) {
+        this.saveLayout(null, { reason: 'user-reset' });
+      }
       HEYS.Widgets.emit('layout:reset', { layout: this._widgets, source: 'user-reset' });
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
     },
@@ -1142,7 +1292,7 @@
       }
 
       this._widgets = preset.widgets.map(w => this._normalizeWidget(w));
-      this.saveLayout();
+      this.saveLayout(null, { reason: 'apply-preset' });
       HEYS.Widgets.emit('layout:changed', { layout: this._widgets });
       return true;
     },
@@ -1177,7 +1327,7 @@
         try {
           const restored = JSON.parse(this._editSnapshot);
           this._widgets = (Array.isArray(restored) ? restored : []).map((w) => this._normalizeWidget(w));
-          this.saveLayout();
+          this.saveLayout(null, { reason: 'edit-cancel' });
           HEYS.Widgets.emit('layout:changed', { layout: this._widgets, source: 'edit-cancel' });
         } catch (e) {
           warn('edit snapshot restore failed:', e?.message || e);
@@ -1189,7 +1339,7 @@
 
       // Выход по «Готово» фиксирует раскладку — до него в storage ничего не шло.
       if (!opts?.revert) {
-        this.saveLayout();
+        this.saveLayout(null, { reason: 'edit-done' });
       }
 
       // Включаем swipe навигацию обратно
@@ -2685,6 +2835,9 @@
     if (widgets.length > 0) {
       state._widgets = widgets.map(w => state._normalizeWidget(w));
       state._autoPackWidgets();
+      // Принятое из облака — уже сохранённое состояние. Без этого вкладка при
+      // ближайшем скрытии отправила бы его обратно со свежим updatedAt.
+      state._rememberSavedFingerprint();
       state.saveLayoutMeta({
         ...(state.loadLayoutMeta() || {}),
         gridVersion: GRID_VERSION,

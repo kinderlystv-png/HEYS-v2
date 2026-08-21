@@ -256,7 +256,8 @@
       <div class="spec"><b>куда встанет</b><span data-v="цель показывается пунктирной рамкой в размер тащимой плитки на позиции, куда она встанет; остальные плитки съезжают в реальном времени"></span><i>рамка в её собственный формат сразу показывает, влезет ли плитка в остаток строки</i></div>
       <div class="spec"><b>край экрана</b><span data-v="палец у верхней или нижней границы — сетка прокручивается сама, скорость постоянная"></span></div>
       <div class="spec"><b>смена вида недоступна</b><span data-v="в режиме расстановки лист выбора вида не открывается; сначала «Готово»"></span><i>жест удержания в этом режиме принадлежит перетаскиванию, и два смысла на одном жесте не разводятся</i></div>
-      <div class="spec"><b>пустой экран</b><span data-v="убрать можно все плитки: остаётся пунктирная рамка добавления и строка о том, что экран пуст"></span><i>запрещать нечего — человек может собрать экран с нуля; заглушка обязана называть выход, а не только факт</i></div>
+      <div class="spec"><b>что забирает сброс</b><span data-v="плитки вне дефолта снимаются, свои виды у оставшихся заменяются дефолтными; страницы и порядок восстанавливаются целиком — частичного сброса нет"></span><i>«вернуть как было» должно означать одно состояние, иначе результат зависит от того, что человек успел настроить</i></div>
+  <div class="spec"><b>пустой экран</b><span data-v="убрать можно все плитки: остаётся пунктирная рамка добавления и строка о том, что экран пуст"></span><i>запрещать нечего — человек может собрать экран с нуля; заглушка обязана называть выход, а не только факт</i></div>
       <div class="spec"><b>капсула даты в режиме</b><span data-v="остаётся на месте, но не переключает дни"></span><i>раскладка не зависит от даты, а листание в этом режиме читалось бы как «у каждого дня свой экран»</i></div>
       <div class="spec"><b>перетаскивание задаёт порядок, не координаты</b><span data-v="в расстановке плитка встаёт на позицию в порядке чтения; поставить её в произвольную клетку и оставить рядом пустое место нельзя"></span><i>иначе два механизма спорят: человек оставляет дырку руками, а пересборка её съедает. Раскладку целиком определяют порядок и форматы — больше ничего</i></div>
       <div class="spec"><b>намеренной дырки нет</b><span data-v="пустая клетка бывает только следствием форматов, поставить её как элемент нельзя"></span><i>иначе появляется «плитка-ничего», которую надо хранить, переносить и объяснять</i></div>
@@ -285,7 +286,16 @@
       <div class="spec" style="border-bottom:none"><b>отмена</b><span data-v="отдельной кнопки нет: человек открывает лист снова и берёт прежний вид, сетка возвращается тем же правилом"></span><i>правило пересборки детерминировано — обратный выбор даёт ровно прежнюю раскладку, поэтому «отменить» нечего добавлять</i></div>
       <div class="spec" style="border-bottom:none"><b>плитка без вариантов</b><span data-v="пустой лист не открываем: если у виджета один вид и один формат, удержание уводит в режим расстановки"></span></div>
 
-      <div class="ctrH">Дефолты и капсула даты</div>
+      <div class="ctrH">Дефолтный набор</div>
+  <div class="spec"><b>состав дефолта</b><span data-v="одиннадцать плиток в этом порядке: 1. Калории — 2×2, вид «Как сейчас» (герой экрана: фон песок #efe3cf, число терракотой — ровно один такой на раскладке) · 2. Инсулиновая волна — 2×2, вид «День как есть» · 3. Кольца БЖУ — 3×2, вид «Как сейчас» · 4. Сон — 1×1, вид «Как сейчас» · 5. Вода — 1×1, вид «Как сейчас» (заливка на всю плитку, тон по доле нормы) · 6. Оценка дня — 2×1, вид «Как сейчас» · 7. Тепловая карта — 2×1, вид «Серия» · 8. Риск-радар — 2×2, вид «Шкала» (дефолт сменён владельцем 20 августа) · 9. Тренд здоровья — 2×2, вид «Как сейчас» (фон шалфей #eaefe0 — роль «идёт хорошо») · 10. Вес — 2×2, вид «Как сейчас» · 11. Динамика веса — 2×1, вид «F компакт» (окно «за месяц»; вид 1 с переключателем 7 / 14 / 30 в дефолт не идёт). Двенадцатая клетка — пунктирная «Добавить», она не виджет"></span><i>кадр «Главная · дефолтная раскладка» — единственный источник этого списка; человек на первом запуске видит именно его, и к нему же возвращает сброс</i></div>
+  <div class="spec"><b>порядок — часть дефолта</b><span data-v="порядок в списке и есть раскладка: плитки встают в порядке чтения, слева-сверху; своей клетки у виджета нет"></span><i>иначе «вернуть как было» нечем проверить</i></div>
+  <div class="spec"><b>вид в дефолте</b><span data-v="каждая плитка дефолта названа вместе с видом: вид несёт формат, поэтому «Калории 2×2» без имени вида — не адрес. Дефолтный вид помечен в каталоге флагом, а не порядком карточек в листе"></span><i>порядок карточек в листе — решение канваса; если дефолт задать порядком, любая правка листа молча меняет первый экран</i></div>
+  <div class="spec"><b>чего в дефолте нет</b><span data-v="Шаги, вторые виды тех же виджетов и «Тепловая карта · Месяц целиком» в дефолт не входят: одиннадцать плиток — потолок первого экрана"></span></div>
+  <div class="spec"><b>сброс к дефолту</b><span data-v="блок «Рекомендуемый экран» в режиме расстановки, между каталогом и пустым состоянием: описание и кнопка «Вернуть» обводкой. Возвращает состав, порядок и виды дефолта; подтверждения нет — отменяется той же стрелкой отмены, что и перенос плитки, пока человек не нажал «Готово»"></span><i>после потери раскладки 21 августа нужен путь назад, не требующий помнить одиннадцать плиток; отдельного бара отмены здесь не заводим — в расстановке уже есть свой шаг назад</i></div>
+  <div class="spec"><b>пустой экран · выход</b><span data-v="снял все плитки — экран говорит «Виджетов нет» и даёт два пути: «Добавить виджет» заливкой и «Вернуть стандартный экран» текстом; сам собой дефолт не возвращается"></span><i>кадр «Главная · расстановка» это и рисует: пустота — законный выбор, но выход из неё не должен требовать памяти об одиннадцати плитках</i></div>
+  <div class="spec" style="border-bottom:none"><b>новый виджет и дефолт</b><span data-v="появившийся тип в дефолт не добавляется — он живёт в каталоге со строкой ожидания; состав дефолта меняется только правкой строки «состав дефолта»"></span><i>иначе первый экран растёт сам, и никто не помнит, каким он был</i></div>
+
+  <div class="ctrH">Дефолты и капсула даты</div>
       <div class="spec"><b>дефолт вида</b><span data-v="меняется поимённо и задаётся флагом в каталоге, не позицией в списке"></span><i>явный выбор человека сильнее дефолта — уже выбравших не переключаем</i></div>
       <div class="spec"><b>исключение</b><span data-v="два: риск-радар открывается видом «Шкала» (19 августа), динамика веса — видом «За месяц» с кривой (20 августа); порядок карточек в шторке в обоих случаях прежний"></span></div>
       <div class="spec"><b>капсула · сегодня</b><span data-v="правая стрелка гаснет; сокращение выходного дня красное, число и месяц в чернилах"></span></div>
@@ -305,9 +315,9 @@
   <div class="spec"><b>готовится · чего нет</b><span data-v="ни превью плитки, ни даты, ни «в разработке», ни кнопки «сообщить, когда выйдет»"></span><i>превью нечем наполнить — данных нет; дата превращается в обещание, за которое придётся отвечать; «в разработке» — язык команды, а не человека</i></div>
   <div class="spec"><b>мало истории у виджета</b><span data-v="то же правило, что у видов («формату не хватает данных»): строка каталога приглушена до 55 %, справа «нужно N дней», под названием «собрано M из N», но добавить можно — плитка встанет и покажет ту же подпись вместо графика"></span><i>запрет на добавление был бы вторым поведением для одного условия: человек всё равно хочет поставить плитку заранее, чтобы она заполнилась сама. Приглушение здесь — предупреждение, а не блокировка</i></div>
   <div class="spec"><b>сколько строк ожидания</b><span data-v="не больше двух на каталог; третья и дальше не показываются"></span><i>каталог обещаний вместо каталога виджетов обесценивает и то и другое</i></div>
-  <div class="spec"><b>как снимается тип</b><span data-v="по точному совпадению id, не по имени, не по началу строки и не по виду внутри другого типа. Снятая плитка уходит из раскладки молча и порядок сжимается — но только она сама: если пропал виджет, которого нет в списке снятых, это дефект, а не сжатие"></span><i>id близких типов различаются приставкой (insulin / insulinWave, streak / heatmap с видом «Серия»), поэтому совпадение по имени или по префиксу убирает чужие плитки. Цена ошибки высокая и незаметная: человек теряет собранный экран и узнаёт об этом, только открыв Главную</i></div>
+  <div class="spec"><b>как снимается тип</b><span data-v="по точному совпадению id, не по имени, не по началу строки и не по виду внутри другого типа. Снятая плитка уходит из раскладки молча и порядок сжимается — но только она сама: если пропал виджет, которого нет в списке снятых, это дефект, а не сжатие"></span><i>причина потери плиток 21 августа оказалась другой, и она важнее совпадения имён: фильтр выбрасывал из раскладки любой тип, которого не нашёл в реестре в момент загрузки. Реестр наполняется не мгновенно, поэтому пропадали живые виджеты (insulinWave, heatmap), а человек узнавал об этом, открыв Главную. Незнакомый тип остаётся на экране: дефект должен быть видим, а не спрятан под «сжатием»</i></div>
   <div class="spec"><b>снятие — одноразовая миграция</b><span data-v="раскладка чистится один раз и результат сохраняется; постоянного фильтра при каждой загрузке нет"></span><i>фильтр на каждом запуске означает, что любая будущая ошибка в списке снятых молча стирает плитки при каждом входе — и человек не может вернуть их даже руками</i></div>
-  <div class="spec"><b>снято с продукта · инсулин</b><span data-v="снимается ровно тип с id insulin (плитка «Инсулин», старый эмодзи-дизайн). Тип insulinWave («Инсулиновая волна», пять видов) НЕ снимается — он и показывает эти данные видом 28 «Текущая волна»"></span><i>id различаются одной приставкой, а имена на слух почти одинаковы: снятие по названию убирает не то. Поэтому в контракте назван id, а не имя</i></div>
+  <div class="spec"><b>снято с продукта · инсулин</b><span data-v="снимается ровно тип с id insulin (плитка «Инсулин», старый эмодзи-дизайн). Тип insulinWave («Инсулиновая волна», пять видов) НЕ снимается — он и показывает эти данные видом 28 «Текущая волна»"></span><i>id различаются одной приставкой, поэтому в контракте назван id, а не имя: список снятых сверяется машиной, и имя в нём бесполезно</i></div>
   <div class="spec"><b>снято с продукта · streak</b><span data-v="снимается ровно тип с id streak (плитка «Streak»). Тип heatmap («Тепловая карта») НЕ снимается, и его вид 20 «Серия» — тоже: серию показывает он"></span><i>у тепловой карты есть вид с тем же смыслом и почти тем же именем; снятие типа не должно задевать ни другой тип, ни вид внутри него</i></div>
   <div class="spec"><b>снято с продукта · каскад</b><span data-v="снимается ровно тип с id cascade. Всё остальное, где встречается это слово (ключи данных cascade.events, cascade.crs у БЖУ и оценки дня), не затрагивается"></span><i>формата 4×1 в сетке нет, а сжатие в 2×1 оставило бы число без событий — то есть без того, ради чего каскад существует. Сам «Каскад» остаётся блоком «Инсайтов»</i></div>
   <div class="spec"><b>серия и оценка дня</b><span data-v="не красятся по значению вовсе: у серии число всегда чернила, у оценки дня — терракота как акцент"></span><i>серию нельзя объявить плохой: её длина — факт, а не оценка, и красная «1» после срыва биса бы именно того, кто вернулся</i></div>
@@ -580,11 +590,18 @@
             <div style="background:#f7efe2;border-radius:16px;padding:13px 14px;display:flex;flex-direction:column;gap:5px;opacity:.55;"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Тепловая карта</span><span style="display:flex;align-items:center;gap:7px;flex:none;"><span style="font:600 9px/1 Figtree,sans-serif;color:rgba(0,0,0,.42);">нужно 14 дней</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a75c2b" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div><span style="font:500 9.5px/1.35 Figtree,sans-serif;color:rgba(0,0,0,.42);">собрано 6 из 14</span></div>
           </div>
 
+          <div class="tier">Рекомендуемый экран</div>
+          <div style="border-radius:20px;background:#f7efe2;padding:16px;display:flex;align-items:center;gap:14px;">
+            <span style="flex:1;min-width:0;"><span style="display:block;font:700 12.5px/1.3 Figtree,sans-serif;color:#201e1d;">Вернуть рекомендуемый экран</span><span style="display:block;margin-top:5px;font:500 10.5px/1.45 Figtree,sans-serif;color:rgba(0,0,0,.45);text-wrap:pretty;">Одиннадцать плиток в порядке, который мы проверили. Ваш состав и виды заменятся — стрелка отмены вернёт как было</span></span>
+            <span style="flex:none;min-height:44px;display:flex;align-items:center;padding:0 16px;border-radius:999px;box-shadow:inset 0 0 0 2px #c67139;font:700 11.5px/1 Figtree,sans-serif;color:#8a4a20;">Вернуть</span>
+          </div>
+
           <div class="tier">Пустой экран</div>
           <div style="border-radius:20px;background:#f7efe2;padding:26px 20px;text-align:center;">
             <div style="font:700 13px/1.4 Figtree,sans-serif;color:#201e1d;">Виджетов нет</div>
             <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:6px;text-wrap:pretty;">Соберите экран из того, что смотрите каждый день</div>
             <span style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:12px 20px;border-radius:999px;background:#c67139;font:700 12px/1 Figtree,sans-serif;color:#2b1608;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2b1608" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Добавить виджет</span>
+            <span style="display:flex;align-items:center;justify-content:center;margin-top:10px;min-height:44px;font:700 11.5px/1 Figtree,sans-serif;color:#8a4a20;">Вернуть стандартный экран</span>
           </div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 20px;background:#fffaf1;border-top:1px solid rgba(0,0,0,.07);">
@@ -861,11 +878,18 @@
             <div style="background:#23201b;border-radius:16px;padding:13px 14px;display:flex;flex-direction:column;gap:5px;opacity:.55;"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(242,237,230,.63);">Тепловая карта</span><span style="display:flex;align-items:center;gap:7px;flex:none;"><span style="font:600 9px/1 Figtree,sans-serif;color:rgba(242,237,230,.42);">нужно 14 дней</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#cf8144" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div><span style="font:500 9.5px/1.35 Figtree,sans-serif;color:rgba(242,237,230,.42);">собрано 6 из 14</span></div>
           </div>
 
+          <div class="tier">Рекомендуемый экран</div>
+          <div style="border-radius:20px;background:#23201b;padding:16px;display:flex;align-items:center;gap:14px;">
+            <span style="flex:1;min-width:0;"><span style="display:block;font:700 12.5px/1.3 Figtree,sans-serif;color:#f2ede6;">Вернуть рекомендуемый экран</span><span style="display:block;margin-top:5px;font:500 10.5px/1.45 Figtree,sans-serif;color:rgba(242,237,230,.53);text-wrap:pretty;">Одиннадцать плиток в порядке, который мы проверили. Ваш состав и виды заменятся — стрелка отмены вернёт как было</span></span>
+            <span style="flex:none;min-height:44px;display:flex;align-items:center;padding:0 16px;border-radius:999px;box-shadow:inset 0 0 0 2px #cf8144;font:700 11.5px/1 Figtree,sans-serif;color:#e2a468;">Вернуть</span>
+          </div>
+
           <div class="tier">Пустой экран</div>
           <div style="border-radius:20px;background:#23201b;padding:26px 20px;text-align:center;">
             <div style="font:700 13px/1.4 Figtree,sans-serif;color:#f2ede6;">Виджетов нет</div>
             <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(242,237,230,.53);margin-top:6px;text-wrap:pretty;">Соберите экран из того, что смотрите каждый день</div>
             <span style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:12px 20px;border-radius:999px;background:#cf8144;font:700 12px/1 Figtree,sans-serif;color:#1a0f04;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a0f04" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Добавить виджет</span>
+            <span style="display:flex;align-items:center;justify-content:center;margin-top:10px;min-height:44px;font:700 11.5px/1 Figtree,sans-serif;color:#e2a468;">Вернуть стандартный экран</span>
           </div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 20px;background:#23201b;border-top:1px solid rgba(242,237,230,.11);">
@@ -1142,11 +1166,18 @@
             <div style="background:#eef3f9;border-radius:16px;padding:13px 14px;display:flex;flex-direction:column;gap:5px;opacity:.55;"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(0,0,0,.55);">Тепловая карта</span><span style="display:flex;align-items:center;gap:7px;flex:none;"><span style="font:600 9px/1 Figtree,sans-serif;color:rgba(16,24,38,.42);">нужно 14 дней</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a75c2b" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div><span style="font:500 9.5px/1.35 Figtree,sans-serif;color:rgba(16,24,38,.42);">собрано 6 из 14</span></div>
           </div>
 
+          <div class="tier">Рекомендуемый экран</div>
+          <div style="border-radius:20px;background:#eef3f9;padding:16px;display:flex;align-items:center;gap:14px;">
+            <span style="flex:1;min-width:0;"><span style="display:block;font:700 12.5px/1.3 Figtree,sans-serif;color:#101826;">Вернуть рекомендуемый экран</span><span style="display:block;margin-top:5px;font:500 10.5px/1.45 Figtree,sans-serif;color:rgba(0,0,0,.45);text-wrap:pretty;">Одиннадцать плиток в порядке, который мы проверили. Ваш состав и виды заменятся — стрелка отмены вернёт как было</span></span>
+            <span style="flex:none;min-height:44px;display:flex;align-items:center;padding:0 16px;border-radius:999px;box-shadow:inset 0 0 0 2px #2e7cc0;font:700 11.5px/1 Figtree,sans-serif;color:#1d5e96;">Вернуть</span>
+          </div>
+
           <div class="tier">Пустой экран</div>
           <div style="border-radius:20px;background:#eef3f9;padding:26px 20px;text-align:center;">
             <div style="font:700 13px/1.4 Figtree,sans-serif;color:#101826;">Виджетов нет</div>
             <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.45);margin-top:6px;text-wrap:pretty;">Соберите экран из того, что смотрите каждый день</div>
             <span style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:12px 20px;border-radius:999px;background:#2e7cc0;font:700 12px/1 Figtree,sans-serif;color:#ffffff;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Добавить виджет</span>
+            <span style="display:flex;align-items:center;justify-content:center;margin-top:10px;min-height:44px;font:700 11.5px/1 Figtree,sans-serif;color:#1d5e96;">Вернуть стандартный экран</span>
           </div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 20px;background:#ffffff;border-top:1px solid rgba(0,0,0,.07);">
@@ -1423,11 +1454,18 @@
             <div style="background:#182a3a;border-radius:16px;padding:13px 14px;display:flex;flex-direction:column;gap:5px;opacity:.55;"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(238,243,248,.63);">Тепловая карта</span><span style="display:flex;align-items:center;gap:7px;flex:none;"><span style="font:600 9px/1 Figtree,sans-serif;color:rgba(238,243,248,.42);">нужно 14 дней</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8fc1e8" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></div><span style="font:500 9.5px/1.35 Figtree,sans-serif;color:rgba(238,243,248,.42);">собрано 6 из 14</span></div>
           </div>
 
+          <div class="tier">Рекомендуемый экран</div>
+          <div style="border-radius:20px;background:#182a3a;padding:16px;display:flex;align-items:center;gap:14px;">
+            <span style="flex:1;min-width:0;"><span style="display:block;font:700 12.5px/1.3 Figtree,sans-serif;color:#eef3f8;">Вернуть рекомендуемый экран</span><span style="display:block;margin-top:5px;font:500 10.5px/1.45 Figtree,sans-serif;color:rgba(238,243,248,.53);text-wrap:pretty;">Одиннадцать плиток в порядке, который мы проверили. Ваш состав и виды заменятся — стрелка отмены вернёт как было</span></span>
+            <span style="flex:none;min-height:44px;display:flex;align-items:center;padding:0 16px;border-radius:999px;box-shadow:inset 0 0 0 2px #2e7cc0;font:700 11.5px/1 Figtree,sans-serif;color:#8fc1e8;">Вернуть</span>
+          </div>
+
           <div class="tier">Пустой экран</div>
           <div style="border-radius:20px;background:#182a3a;padding:26px 20px;text-align:center;">
             <div style="font:700 13px/1.4 Figtree,sans-serif;color:#eef3f8;">Виджетов нет</div>
             <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:rgba(238,243,248,.53);margin-top:6px;text-wrap:pretty;">Соберите экран из того, что смотрите каждый день</div>
             <span style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:12px 20px;border-radius:999px;background:#2e7cc0;font:700 12px/1 Figtree,sans-serif;color:#ffffff;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Добавить виджет</span>
+            <span style="display:flex;align-items:center;justify-content:center;margin-top:10px;min-height:44px;font:700 11.5px/1 Figtree,sans-serif;color:#8fc1e8;">Вернуть стандартный экран</span>
           </div>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px 20px;background:#13222f;border-top:1px solid rgba(238,243,248,.11);">
