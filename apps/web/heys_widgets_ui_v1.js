@@ -1627,10 +1627,9 @@
       case 'healthTrend':
         return React.createElement(HealthTrendWidgetContent, { widget, data });
       default:
-        return React.createElement('div', { className: 'widget__placeholder' },
-          widgetType?.icon || '📊',
-          React.createElement('span', null, 'Нет данных')
-        );
+        // Заглушка тоже играет по правилу канваса (строки 43 и 44): подпись
+        // и прочерк, без иконок и обучающих фраз.
+        return v4EmptyTile(widgetType?.name || 'Виджет');
     }
   }
 
@@ -9541,6 +9540,7 @@
   HEYS.Widgets.WidgetsTab = WidgetsTab;
   HEYS.Widgets.WidgetCard = WidgetCard;
   HEYS.Widgets.CatalogModal = CatalogModal;
+  HEYS.Widgets.CatalogStrip = CatalogStrip;
   HEYS.Widgets.SettingsModal = SettingsModal;
   HEYS.Widgets.RelapseRiskDetailsModal = RelapseRiskDetailsModal;
 
