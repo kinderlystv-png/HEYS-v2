@@ -191,6 +191,18 @@ describe('каталог расстановки: превью — настоящ
     expect(/--soon|--waiting/.test(items[0].className)).toBe(false);
   });
 
+  it('живой реестр: «Клетчатка» стоит в «скоро» и добавить её нельзя', () => {
+    const registrySrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_registry_v1.js'), 'utf8');
+    const coreSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_core_v1.js'), 'utf8');
+
+    // Обещание живёт данными реестра, а не текстом в компоненте.
+    expect(registrySrc).toContain("comingSoon: { about: 'сколько клетчатки за день и норма' }");
+    // Ровно одно обещание: каталог обещаний обесценивает и обещания, и каталог.
+    expect(registrySrc.match(/comingSoon:/g).length).toBe(1);
+    // Даже если тип придёт в addWidget мимо каталога — пустой плитки не будет.
+    expect(coreSrc).toContain('if (def?.comingSoon) return null;');
+  });
+
   it('когда добавлены все виджеты, каталог не рисует пустую полосу', () => {
     const { container } = renderCatalog(TYPES.map((t) => t.type));
     expect(container.querySelector('.widget-v4-catalog')).toBeNull();

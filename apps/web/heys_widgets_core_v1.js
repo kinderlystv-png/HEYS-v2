@@ -653,6 +653,11 @@
      * @param {boolean} skipHistory - не сохранять в историю (для undo/redo)
      */
     addWidget(widget, skipHistory = false) {
+      // «Скоро» — обещание в каталоге, а не виджет: плитки для него ещё нет,
+      // и пустая клетка на экране обесценила бы само обещание.
+      const def = HEYS.Widgets.registry?.getType?.(widget?.type);
+      if (def?.comingSoon) return null;
+
       if (!skipHistory) {
         this._pushHistory();
       }
