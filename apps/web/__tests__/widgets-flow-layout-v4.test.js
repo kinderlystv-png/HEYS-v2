@@ -201,7 +201,11 @@ describe('размер идёт за видом, запись — по «Гот�
         return catalog.find((v) => v.id === id) || catalog[0] || null;
       }
     };
-    global.HEYS.Widgets.registry.getType = (type) => (type === 'ghost' ? null : { type });
+    global.HEYS.Widgets.registry.getType = (type) => {
+      if (type === 'ghost') return null;
+      if (type === 'streak') return { type, inDevelopment: true };
+      return { type };
+    };
   });
 
   it('формат берётся у активного вида, а не из записи', () => {
@@ -266,15 +270,24 @@ describe('размер идёт за видом, запись — по «Гот�
     st.saveLayout = realSave;
   });
 
-  it('виджет, снятый с продукта, уходит из раскладки без сообщения', () => {
+  it('виджет, снятый с продукта или помеченный «в разработке», уходит из раскладки', () => {
     const st = state();
-    const kept = [
+    const saved = [
       { id: 'k', type: 'weight', size: '2x2', position: { col: 0, row: 0 }, settings: {} },
-      { id: 'g', type: 'ghost', size: '1x1', position: { col: 2, row: 0 }, settings: {} }
+      { id: 'g', type: 'ghost', size: '1x1', position: { col: 2, row: 0 }, settings: {} },
+      { id: 's', type: 'streak', size: '1x1', position: { col: 3, row: 0 }, settings: {} }
     ];
-    const alive = kept
+    // Тот же фильтр, что ядро применяет при загрузке сохранённой раскладки.
+    const alive = saved
       .map((w) => st._normalizeWidget(w))
-      .filter((w) => !!global.HEYS.Widgets.registry.getType(w.type));
+      .filter((w) => {
+        const def = global.HEYS.Widgets.registry.getType(w.type);
+        return !!def && !def.inDevelopment;
+      });
     expect(alive.map((w) => w.id)).toEqual(['k']);
+
+    // Ядро фильтрует именно так — проверяем сам исходник, а не копию правила.
+    const coreSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_core_v1.js'), 'utf8');
+    expect(coreSrc).toContain('return !!def && !def.inDevelopment;');
   });
 });
