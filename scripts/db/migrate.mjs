@@ -115,7 +115,10 @@ function prepareMigrations(manifest, rootDir = ROOT_DIR) {
     if (!absolutePath.startsWith(`${path.resolve(rootDir)}${path.sep}`)) {
       throw new Error(`${migration.id}: migration path escapes repository root`);
     }
-    const sql = fs.readFileSync(absolutePath, 'utf8');
+    // Переводы строк нормализуем до подсчёта: на Windows git отдаёт файл с
+    // CRLF, и checksum расходился бы с записанным в ledger на Linux — все
+    // тридцать миграций разом показывали ложный «checksum drift».
+    const sql = fs.readFileSync(absolutePath, 'utf8').replace(/\r\n/g, '\n');
     assertNoEmbeddedTransactions(sql, migration.path);
     return { ...migration, sql, checksum: sha256(sql) };
   }).sort((a, b) => a.order - b.order);
