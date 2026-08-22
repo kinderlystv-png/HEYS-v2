@@ -2323,8 +2323,17 @@ function dailyNorm(day, inputs) {
     }
   }
 
+  // Норма без целевого дефицита — тем же путём, что и с ним: та же формула,
+  // deficitPct погашен. 22.08.2026 вопрос «покажи норму с дефицитом и без»
+  // стоил отдельного heys_get_profile, а тот ответил молчанием — поле не
+  // задано, и в карточке оно не печатается. Ответ должен быть здесь, рядом с
+  // нормой, а не в другом вызове.
+  const maintenance = optimumWithNdte({ ...fresh, deficitPct: 0 }, ndte);
+  const deficitPct = Number(fresh.deficitPct) || 0;
   const parts = {
     base,
+    maintenance,
+    deficit_pct: deficitPct,
     correction,
     ndte,
     window_days: windowDays.length,
@@ -2334,6 +2343,9 @@ function dailyNorm(day, inputs) {
   let note = source === 'computed'
     ? `Норма посчитана сервером по данным дня: ${why}.`
     : `Расчётная оценка: ${why}.`;
+  note += deficitPct
+    ? ` Целевой ${deficitPct < 0 ? 'дефицит' : 'профицит'} ${Math.abs(deficitPct)}% уже учтён: без него расход дня — ${maintenance} ккал.`
+    : ' Целевой дефицит в профиле не задан (0%) — это норма поддержания.';
   // Расхождение с экраном возможно штатно: NDTE затухает по часам, и клиент мог
   // смотреть день раньше. Молчать о нём всё равно нельзя — именно так протухший
   // кэш и прожил незамеченным.

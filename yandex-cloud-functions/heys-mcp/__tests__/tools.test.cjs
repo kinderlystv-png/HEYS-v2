@@ -3402,6 +3402,69 @@ test('new_product заводит карточку и пишет позицию �
   assert.equal(dayWrite.value.meals[0].items[0].grams, 102);
 });
 
+// 22.08.2026: обе карточки ужина завела модель, а куратору ушло «оба продукта
+// нашлись в каталоге, новых карточек не заводил» — предупреждение стояло в
+// хвосте длинного ответа. Теперь оно первое, и пересказать его наоборот нечем.
+// Разведка перед записью: 18:46 22.08.2026 модель начала с get_day + get_period,
+// хотя чек-ин гейтит сервер, а день возвращается в ответе записи. Подсказка
+// стоит в самом ответе — словесное правило в инструкции модель обходит.
+test('get_day сам говорит, что перед новой записью он не нужен', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] } });
+  const res = await build(api).heys_get_day({ date: '2026-08-01' });
+
+  assert.match(res.text, /Перед НОВОЙ записью/);
+  assert.match(res.text, /heys_log_meal/);
+  assert.match(res.text, /чтобы взять meal_id/);
+});
+
+test('get_period говорит то же самое: он для разбора недели, не для записи', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] } });
+  const res = await build(api).heys_get_period({ from: '2026-08-01', to: '2026-08-01' });
+
+  assert.match(res.text, /Перед записью еды или правкой дня период не нужен/);
+});
+
+test('предупреждение о новой карточке стоит перед «Записал», а не в хвосте', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] } });
+  const res = await build(api).heys_log_meal({
+    date: '2026-08-01',
+    time: '13:00',
+    items: [{
+      query: 'чипсы свиные сыровяленые',
+      grams: 50,
+      new_product: { protein100: 50, simple100: 1, complex100: 1, badFat100: 10, goodFat100: 10, trans100: 0, fiber100: 0, gi: 0, harm: 5 },
+    }],
+  });
+
+  assert.ok(res.text.startsWith('⚠ Новые карточки'), `лид не первый: ${res.text.slice(0, 60)}`);
+  assert.ok(res.text.indexOf('Новые карточки') < res.text.indexOf('Записал:'), 'предупреждение позже записи');
+  assert.match(res.text, /проверь состав/);
+});
+
+test('карточка, заведённая правкой приёма, тоже называется вслух', async () => {
+  const api = fakeApi({
+    day: {
+      date: '2026-08-01',
+      updatedAt: 111,
+      waterMl: 0,
+      meals: [{ id: 'm-1', name: 'Обед', time: '13:00', items: [{ id: 'it-1', name: 'Американо', grams: 100, kcal100: 2 }] }],
+    },
+  });
+  const res = await build(api).heys_update_meal({
+    date: '2026-08-01',
+    meal_id: 'm-1',
+    add_items: [{
+      query: 'соус домашний ореховый',
+      grams: 30,
+      new_product: { protein100: 5, simple100: 3, complex100: 2, badFat100: 20, goodFat100: 20, trans100: 0, fiber100: 1, gi: 20, harm: 4 },
+    }],
+  });
+
+  assert.ok(res.text.startsWith('⚠ Новые карточки'), `лид не первый: ${res.text.slice(0, 60)}`);
+  assert.equal(res.structured.created_products.length, 1);
+  assert.match(res.structured.created_products[0].name, /соус домашний ореховый/i);
+});
+
 test('new_product при найденном продукте игнорируется — дубль не создаётся', async () => {
   const api = fakeApi({ day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] } });
   const res = await build(api).heys_log_meal({

@@ -845,6 +845,32 @@ function createTools({
     return { product, grams, learnPieceGrams, portionNote, recipeSnapshot, createdRow, newProductIgnored };
   }
 
+  /**
+   * Заведённые на лету карточки — ПЕРВОЙ строкой ответа, а не в хвосте.
+   *
+   * 22.08.2026 модель прочитала ответ «Записал: … Новые карточки (значения от
+   * модели) …» и пересказала куратору обратное: «оба продукта нашлись в
+   * каталоге, новых карточек не заводил». Нутриенты, которые придумала модель,
+   * остались непроверенными — а строка ради этого и существует. Факт, который
+   * куратор обязан увидеть, не может стоять после итогов приёма.
+   */
+  function createdProductsLead(entries) {
+    const rows = createdProductRows(entries);
+    if (!rows.length) return '';
+    return `⚠ Новые карточки (значения от модели, не с этикетки): ${rows
+      .map((r) => `«${r.name}» (${r.id}, ${r.kcal100} ккал/100, Б${r.protein100} У${r.carbs100} Ж${r.fat100})`)
+      .join('; ')} — проверь состав. `;
+  }
+
+  function createdProductRows(entries) {
+    return (entries || []).map((e) => e && e.createdRow).filter(Boolean);
+  }
+
+  function createdProductsStructured(entries) {
+    const rows = createdProductRows(entries);
+    return rows.length ? rows.map((r) => ({ product_id: r.id, name: r.name })) : undefined;
+  }
+
   /** Копия позиции из уже записанного приёма: граммы × count, продукт по product_id или имени. */
   async function resolveCopiedItem(item, index, count) {
     const label = `Копия позиции #${index + 1}`;
@@ -973,9 +999,15 @@ function createTools({
           ? ' Чек-ин: пройден.'
           : ` Чек-ин: ${checkin.status} — еду за сегодня не пиши, пока не закрыт (heys_checkin); отдельный get не нужен, статус уже здесь.`;
       }
+      // Разведка перед записью — 2 из 7 вызовов обмена 18:46 22.08.2026:
+      // модель сходила в get_day и get_period, хотя гейт чек-ина серверный, а
+      // день возвращается прямо в ответе записи. Правило стоит здесь, в момент
+      // вызова: словесное правило в инструкции соблюдается на усмотрение модели
+      // (OPTIMIZATION_LOG, вывод №2).
+      const beforeWriteHint = ' Перед НОВОЙ записью (heys_log_meal, heys_update_day, heys_add_water, heys_log_training) этот вызов не нужен: чек-ин и норму сервер проверяет сам, а день после записи возвращается в её же ответе. Он нужен, только чтобы взять meal_id/item_id для правки или удаления.';
       const head = summary.meals.length || summary.water_ml
-        ? `День ${date}: ${summary.totals.kcal} ккал, Б${summary.totals.protein} У${summary.totals.carbs} Ж${summary.totals.fat}, вода ${summary.water_ml} мл, приёмов: ${summary.meals.length}.${normText(norm)}${checkinText}${formatDayMealsBlock(summary)}`
-        : `День ${date} пока пустой.${normText(norm)}${checkinText}`;
+        ? `День ${date}: ${summary.totals.kcal} ккал, Б${summary.totals.protein} У${summary.totals.carbs} Ж${summary.totals.fat}, вода ${summary.water_ml} мл, приёмов: ${summary.meals.length}.${normText(norm)}${checkinText}${formatDayMealsBlock(summary)}${beforeWriteHint}`
+        : `День ${date} пока пустой.${normText(norm)}${checkinText}${beforeWriteHint}`;
       return {
         text: head,
         structured: { ...summary, norm, ...(checkin ? { checkin } : {}) },
@@ -1300,17 +1332,15 @@ function createTools({
       const snapshotText = snapshotNames.length
         ? ` Внимание: ${snapshotNames.join(', ')} — карточки в базе больше нет, позиция записана по снимку из набора (КБЖУ верные). Вернуть карточку — heys_create_product, затем heys_save_meal_preset пересоберёт набор.`
         : '';
-      // Карточки, заведённые по new_product, называются вслух: их значения дала
-      // модель, а не этикетка, и куратор должен успеть поправить.
-      const createdRows = allResolved.map((e) => e.createdRow).filter(Boolean);
-      const createdText = createdRows.length
-        ? ` Новые карточки (значения от модели, не с этикетки): ${createdRows.map((r) => `«${r.name}» (${r.id}, ${r.kcal100} ккал/100, Б${r.protein100} У${r.carbs100} Ж${r.fat100})`).join('; ')}.`
-        : '';
+      // Карточки, заведённые по new_product, называются вслух и ПЕРВЫМИ:
+      // их значения дала модель, а не этикетка, и куратор должен успеть
+      // поправить (см. createdProductsLead).
+      const createdLead = createdProductsLead(allResolved);
       const dedupedNames = allResolved.filter((e) => e.newProductIgnored).map((e) => e.product.name);
       const dedupedText = dedupedNames.length
         ? ` new_product не понадобился: ${dedupedNames.map((n) => `«${n}»`).join(', ')} уже в каталоге — записал существующей карточкой.`
         : '';
-      const extras = `${portionText}${snapshotText}${createdText}${dedupedText}${learnedText}`;
+      const extras = `${portionText}${snapshotText}${dedupedText}${learnedText}`;
 
       if (written.length === 1) {
         const { meal, classified } = written[0];
@@ -1322,7 +1352,7 @@ function createTools({
         // item_id в text — иначе «убери сироп из только что внесённого» снова
         // зовёт get_day (structured в Cursor часто не виден).
         return {
-          text: `Записал: ${formatMealLine(meal)}${typeHint} (${date}). ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${extras}${dayAfterText(after)}`,
+          text: `${createdLead}Записал: ${formatMealLine(meal)}${typeHint} (${date}). ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${extras}${dayAfterText(after)}`,
           structured: {
             date,
             meal_id: meal.id,
@@ -1334,7 +1364,7 @@ function createTools({
             learned_piece_grams: learned.length ? learned : undefined,
             portion_defaults: portionNotes.length ? portionNotes : undefined,
             from_preset_snapshot: snapshotNames.length ? snapshotNames : undefined,
-            created_products: createdRows.length ? createdRows.map((r) => ({ product_id: r.id, name: r.name })) : undefined,
+            created_products: createdProductsStructured(allResolved),
             day_after: after,
           },
         };
@@ -1345,7 +1375,7 @@ function createTools({
         return `${formatMealLine(meal)} — ≈${kcal.kcal} ккал`;
       });
       return {
-        text: `Записал ${written.length} приёма(ов) за ${date}: ${lines.join('; ')}.${extras}${dayAfterText(after)}`,
+        text: `${createdLead}Записал ${written.length} приёма(ов) за ${date}: ${lines.join('; ')}.${extras}${dayAfterText(after)}`,
         structured: {
           date,
           meals: written.map(({ meal }) => ({
@@ -1357,7 +1387,7 @@ function createTools({
             items: meal.items.map((i) => ({ id: i.id, name: i.name, grams: i.grams })),
           })),
           learned_piece_grams: learned.length ? learned : undefined,
-          created_products: createdRows.length ? createdRows.map((r) => ({ product_id: r.id, name: r.name })) : undefined,
+          created_products: createdProductsStructured(allResolved),
           day_after: after,
         },
       };
@@ -1510,7 +1540,10 @@ function createTools({
         ? ` Граммовка с карточки: ${portionNotes.join('; ')}.`
         : '';
       return {
-        text: `Обновил «${serverMeal.name}» ${serverMeal.id} (${serverMeal.time}, ${date}): ${result.changed.join('; ')}. ${formatMealLine(serverMeal)}. ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${portionText}${learnedText}${dayAfterText(after)}`,
+        // Карточка, заведённая через new_product в add_items, до 22.08.2026 не
+        // называлась здесь вовсе: правка приёма молча создавала продукт с
+        // выдуманным составом. Тот же лид, что в heys_log_meal.
+        text: `${createdProductsLead(resolved)}Обновил «${serverMeal.name}» ${serverMeal.id} (${serverMeal.time}, ${date}): ${result.changed.join('; ')}. ${formatMealLine(serverMeal)}. ≈${kcal.kcal} ккал, Б${kcal.protein} У${kcal.carbs} Ж${kcal.fat}.${portionText}${learnedText}${dayAfterText(after)}`,
         structured: {
           date,
           meal_id: serverMeal.id,
@@ -1521,6 +1554,7 @@ function createTools({
           items: (serverMeal.items || []).map((i) => ({ id: i.id, name: i.name, grams: i.grams })),
           learned_piece_grams: learned.length ? learned : undefined,
           portion_defaults: portionNotes.length ? portionNotes : undefined,
+          created_products: createdProductsStructured(resolved),
           day_after: after,
         },
       };
@@ -1813,8 +1847,14 @@ function createTools({
 
       const itemsText = preset.items.map((i) => `${i.name} ${i.grams} г`).join(' + ');
       return {
-        text: `${target ? 'Обновил' : 'Сохранил'} набор «${name}»: ${itemsText}. В открытом приложении появится в течение ~15 секунд; если модалка наборов открыта — переоткрой её.`,
-        structured: { preset_id: preset.id, name, created: !target, items: preset.items.map((i) => ({ name: i.name, grams: i.grams })) },
+        text: `${createdProductsLead(resolved)}${target ? 'Обновил' : 'Сохранил'} набор «${name}»: ${itemsText}. В открытом приложении появится в течение ~15 секунд; если модалка наборов открыта — переоткрой её.`,
+        structured: {
+          preset_id: preset.id,
+          name,
+          created: !target,
+          items: preset.items.map((i) => ({ name: i.name, grams: i.grams })),
+          created_products: createdProductsStructured(resolved),
+        },
       };
     },
 
@@ -3117,7 +3157,10 @@ function createTools({
       const text = filled.length
         ? `Период ${from}…${to}: заполнено ${filled.length} из ${days.length} дней, в среднем ${totals.avg_kcal ?? '—'} ккал, вода ${totals.avg_water_ml ?? '—'} мл, шаги ${totals.avg_steps ?? '—'}, сон ${totals.avg_sleep_hours ?? '—'} ч.${missing.length ? ` Пустые дни: ${missing.join(', ')}.` : ''} По дням — ${dayLines}. Позиции приёмов сюда не входят: за составом конкретного дня иди в heys_get_day.`
         : `Период ${from}…${to}: данных нет ни за один день.`;
-      return { text, structured: { from, to, totals, days, missing_dates: missing } };
+      // Тот же смысл, что и в heys_get_day: период — для разбора недели, а не
+      // подготовка к записи сегодняшнего (трейс 18:46 22.08.2026).
+      const withHint = `${text} Перед записью еды или правкой дня период не нужен: он для разбора недели, а не для того, чтобы записать сегодняшнее.`;
+      return { text: withHint, structured: { from, to, totals, days, missing_dates: missing } };
     },
 
     /**

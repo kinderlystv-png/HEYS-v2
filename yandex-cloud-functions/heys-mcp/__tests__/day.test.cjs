@@ -748,6 +748,31 @@ test('норма считается сервером целиком: база п
   assert.match(norm.note, /накопленный недобор/);
 });
 
+// Вопрос «покажи норму с дефицитом и без» 22.08.2026 стоил лишнего
+// heys_get_profile — и тот ответил молчанием: поле не задано, в карточке не
+// печатается. Оба числа приходят вместе с нормой.
+test('норма несёт поддержание и целевой дефицит рядом с собой', () => {
+  const norm = day.dailyNorm(TODAY, WITH_WINDOW(pastBlobs(1100)));
+
+  assert.equal(norm.parts.deficit_pct, -15);
+  assert.ok(norm.parts.maintenance > norm.parts.base, 'без дефицита расход выше');
+  // 1471 = round(1730 * 0.85): база уже посчитана с дефицитом, поддержание —
+  // тот же расход до умножения, а не обратное деление round'а на round.
+  assert.equal(norm.parts.maintenance, 1730);
+  assert.match(norm.note, /Целевой дефицит 15% уже учтён: без него расход дня — \d+ ккал/);
+});
+
+test('дефицит не задан — норма прямо называет себя поддержанием', () => {
+  const norm = day.dailyNorm(TODAY, {
+    ...WITH_WINDOW(pastBlobs(1100)),
+    profile: { ...FULL_PROFILE, deficitPctTarget: 0 },
+  });
+
+  assert.equal(norm.parts.deficit_pct, 0);
+  assert.equal(norm.parts.maintenance, norm.parts.base);
+  assert.match(norm.note, /Целевой дефицит в профиле не задан \(0%\) — это норма поддержания/);
+});
+
 test('кэш отрисовки на число больше не влияет, но расхождение с ним названо', () => {
   // Ровно случай 07.08.2026: клиент смотрел день до того, как данные доехали.
   const stale = { ...TODAY, savedDisplayOptimum: 1282 };
