@@ -310,10 +310,9 @@
       dataKeys: ['dayData', 'profile', 'dayTot', 'normAbs', 'waterGoal'],
       component: 'WidgetDayScore',
       scalableElements: SCALABLE_ELEMENTS.dayScore,
-      settings: {
-        showLevel: { type: 'boolean', default: true, label: 'Показывать словесную оценку' },
-        showAction: { type: 'boolean', default: true, label: 'Показывать рекомендацию' }
-      }
+      // Словесная оценка и рекомендация убраны: плитка v4 — число /10,
+      // слагаемые или неделя. DayScoreVariantBody эти ключи не читает.
+      settings: {}
     },
 
     status: {
