@@ -1010,7 +1010,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   function resolveHistoricalOptimum(day, prof) {
     if (!day) return 0;
-    if (day.savedDisplayOptimum != null && day.savedDisplayOptimum > 0) return +day.savedDisplayOptimum || 0;
+    if (HEYS.dayNorm && typeof HEYS.dayNorm.kcal === 'function') {
+      try {
+        var k = HEYS.dayNorm.kcal(day, prof || {}, {});
+        if (k > 0) return k;
+      } catch (e) { /* fall through */ }
+    }
     if (day.optimum != null && day.optimum > 0) return +day.optimum || 0;
     if (day.date && HEYS.dayUtils && typeof HEYS.dayUtils.getDayTdee === 'function') {
       try {
@@ -1840,8 +1845,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // v3.5.1 fix: fallback 0 → kcal overrides are skipped when normAbs is unavailable
     // (avoids false deficit_overshoot penalty when normKcal falls back to 2000)
     // v3.6.1: use savedDisplayOptimum (debt-adjusted goal) to align with stats bar
-    var normKcal = (day && day.savedDisplayOptimum > 0)
-      ? +day.savedDisplayOptimum
+    var resolvedKcal = 0;
+    if (HEYS.dayNorm && typeof HEYS.dayNorm.kcal === 'function') {
+      try { resolvedKcal = HEYS.dayNorm.kcal(day || {}, prof || {}, {}) || 0; } catch (e) { resolvedKcal = 0; }
+    }
+    var normKcal = resolvedKcal > 0
+      ? resolvedKcal
       : ((normAbs && normAbs.kcal) || 0);
     var hasNightHarm = false;
     var hasExcessKcal = false;
@@ -2344,11 +2353,15 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // v3.6.1: Use savedDisplayOptimum (debt-adjusted goal shown in stats bar) for calorie checks.
     // This prevents false "Перебор при похудении" when caloric debt boost raises the effective goal
     // above base optimum (normAbs.kcal). Falls back to normAbs.kcal when savedDisplayOptimum unavailable.
-    var effectiveKcalTarget = (day && day.savedDisplayOptimum > 0)
-      ? +day.savedDisplayOptimum
+    var resolvedKcal = 0;
+    if (HEYS.dayNorm && typeof HEYS.dayNorm.kcal === 'function') {
+      try { resolvedKcal = HEYS.dayNorm.kcal(day || {}, prof || {}, {}) || 0; } catch (e2) { resolvedKcal = 0; }
+    }
+    var effectiveKcalTarget = resolvedKcal > 0
+      ? resolvedKcal
       : ((normAbs && normAbs.kcal) || 0);
     console.info('[HEYS.cascade] 🎯 Effective kcal target:', {
-      savedDisplayOptimum: (day && day.savedDisplayOptimum) || null,
+      resolvedKcal: resolvedKcal || null,
       normAbsKcal: (normAbs && normAbs.kcal) || null,
       effectiveKcalTarget: effectiveKcalTarget
     });
@@ -5957,8 +5970,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       // исходнике, и жёсткая проверка на него выше обрывала весь «точный»
       // расчёт каскада (виджет всегда получал hasData: false). Оптимум дня
       // резолвим через TDEE — так же, как остальной слой данных виджетов.
-      var optimumInfo = (HEYS.dayUtils && HEYS.dayUtils.getOptimumForDay)
-        ? (HEYS.dayUtils.getOptimumForDay(normalizedDay, profile) || {})
+      var optimumInfo = (HEYS.dayNorm && typeof HEYS.dayNorm.resolve === 'function')
+        ? (function () {
+          var r = HEYS.dayNorm.resolve(normalizedDay, profile, {}) || {};
+          return { optimum: r.kcal || 0 };
+        }())
         : (HEYS.TDEE && HEYS.TDEE.calculate ? (HEYS.TDEE.calculate(normalizedDay, profile, {}) || {}) : {});
       var normAbs = calcNorms(optimumInfo.optimum || 0, normPerc || {});
       var cascadeResult = computeCascadeState(normalizedDay, dayTot, normAbs, profile, pIndex, {

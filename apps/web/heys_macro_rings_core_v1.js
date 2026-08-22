@@ -143,8 +143,11 @@
    */
   function resolveDayOptimum(day, profile, explicitOptimum) {
     if (Number.isFinite(explicitOptimum) && explicitOptimum > 0) return explicitOptimum;
-    if (Number.isFinite(day && day.savedDisplayOptimum) && day.savedDisplayOptimum > 0) {
-      return day.savedDisplayOptimum;
+    if (HEYS.dayNorm && typeof HEYS.dayNorm.resolve === 'function') {
+      try {
+        const r = HEYS.dayNorm.resolve(day || {}, profile || {}, {});
+        if (r && r.kcal > 0) return r.kcal;
+      } catch (_) { /* fall through */ }
     }
     let optimum = 0;
     if (HEYS.TDEE && typeof HEYS.TDEE.calculate === 'function') {

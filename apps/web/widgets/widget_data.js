@@ -505,8 +505,11 @@
       }
 
       const dayTot = this._getDayTotals();
-      const optimum = this._getOptimum();
       const day = this._getDay();
+      if (day?.date && HEYS.dayNorm?.ensurePastDays) {
+        try { HEYS.dayNorm.ensurePastDays(day.date); } catch (_) { /* prefetch, не await */ }
+      }
+      const optimum = this._getOptimum();
       const prof = this._getProfile();
       const target = optimum || 2000;
       let activityKcal = 0;
@@ -1497,17 +1500,19 @@
     },
 
     _getOptimumForDay(dayData) {
+      const day = dayData || {};
+      const prof = this._getProfile() || {};
+      if (HEYS.dayNorm && typeof HEYS.dayNorm.resolve === 'function') {
+        const resolved = HEYS.dayNorm.resolve(day, prof, {});
+        if (resolved && resolved.kcal > 0) return resolved.kcal;
+      }
+
       const dayUtils = HEYS.dayUtils || {};
       if (dayUtils.getOptimumForDay) {
-        const result = dayUtils.getOptimumForDay(dayData, this._getProfile());
+        const result = dayUtils.getOptimumForDay(day, prof);
         return result?.optimum || 2000;
       }
 
-      // 🔬 TDEE v1.1.0: Использование консолидированного модуля
-      const day = dayData || {};
-      const prof = this._getProfile() || {};
-
-      // Если есть модуль TDEE — используем его
       if (HEYS.TDEE?.calculate) {
         const tdeeResult = HEYS.TDEE.calculate(day, prof, {});
         return tdeeResult?.optimum || 2000;

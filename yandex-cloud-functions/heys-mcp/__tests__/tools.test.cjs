@@ -1165,6 +1165,24 @@ test('get_day при нулевом дефиците называет норму
   assert.match(res.text, /Целевой дефицит в профиле не задан \(0%\) — это норма поддержания/);
 });
 
+test('get_day text раскладывает норму на базу, NDTE и поправку', async () => {
+  const api = fakeApi({
+    card: CARD,
+    day: { date: '2026-08-02', meals: [], waterMl: 0, weightMorning: 80, updatedAt: 111 },
+    pastDays: {
+      '2026-08-01': {
+        date: '2026-08-01', weightMorning: 80, meals: [],
+        trainings: [{ z: [0, 0, 60, 30], type: 'cardio', time: '18:00' }],
+      },
+    },
+  });
+  const res = await build(api).heys_get_day({ date: '2026-08-02' });
+  assert.match(res.text, /база /);
+  assert.match(res.text, /NDTE /);
+  assert.ok(res.structured.norm.parts.ndte > 0);
+  assert.equal(res.structured.norm.parts.base + res.structured.norm.parts.correction, res.structured.norm.kcal);
+});
+
 test('log_meal печатает item_id в text', async () => {
   const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 5 } });
   const tools = build(api);

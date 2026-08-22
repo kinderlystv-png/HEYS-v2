@@ -36,6 +36,7 @@ const MIRRORED_FILES = [
   'heys_day_calculations.js',
   'heys_refeed_v1.js',
   'heys_day_caloric_debt_core_v1.js',
+  'heys_day_norm_v1.js',
   '_kernel/heys_kernel_strength_v1.js',
   '_kernel/heys_kernel_load_v1.js',
 ];

@@ -904,6 +904,9 @@
                   deficitPct: dayTargetDef,
                   baseOptimum: optimum,
                   dailyBoost: caloricDebt?.dailyBoost || 0,
+                  ndteBoost: (HEYS.dayNorm && typeof HEYS.dayNorm.resolve === 'function')
+                    ? (HEYS.dayNorm.resolve(day, prof || {}, {}).ndte || 0)
+                    : 0,
                   displayOptimum: displayHeroOptimum,
                   isRefeedDay: day.isRefeedDay,
                   refeedBoost: caloricDebt?.refeedBoost || 0
@@ -912,7 +915,7 @@
               haptic('light');
             }, 0);
           },
-          title: 'Нажми чтобы узнать как считается цель'
+          title: 'Как считается цель: база (с NDTE), дефицит, поправка за недобор'
         },
           React.createElement('div', { className: 'metrics-icon' }, '🎯'),
           React.createElement('div', { className: 'metrics-value', style: heroCardsMeta.goalValueStyle }, displayHeroOptimum),
@@ -2684,6 +2687,10 @@
               React.createElement('div', { style: goalStyles.row },
                 React.createElement('span', { style: goalStyles.rowLabel }, 'База (без TEF)'),
                 React.createElement('span', { style: goalStyles.rowValue }, d.baseExpenditure + ' ккал')
+              ),
+              d.ndteBoost > 0 && React.createElement('div', { style: goalStyles.row },
+                React.createElement('span', { style: goalStyles.rowLabel }, 'из них вчерашняя тренировка'),
+                React.createElement('span', { style: goalStyles.rowValue }, Math.round(d.ndteBoost) + ' ккал')
               ),
               // 2. Дефицит
               React.createElement('div', { style: goalStyles.row },

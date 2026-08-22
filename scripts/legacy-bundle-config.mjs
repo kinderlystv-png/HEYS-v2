@@ -104,6 +104,7 @@ export const LEGACY_BUNDLES = {
         // Ядро долга обязано грузиться до caloric_balance: хук зовёт его и без
         // него возвращает null, то есть экран молча теряет надбавку за недобор.
         'heys_day_caloric_debt_core_v1.js',
+        'heys_day_norm_v1.js',
         'heys_day_caloric_balance_v1.js',
         'heys_day_insights_data_v1.js',
         'heys_day_insulin_wave_data_v1.js',

@@ -1654,9 +1654,10 @@
       maxMultiplier: 1.5  // Максимум ×1.5 от базового эффекта
     },
 
-    // UI конфигурация
-    badge: '🔥 Эффект тренировки',
-    badgeColor: '#10b981'  // Зелёный (позитивный эффект)
+    // Потолок итогового tdeeBoost 0.20 (Jamurtas 2004: REE до +10% после
+    // тяжёлой; с type/bmi/cumulative произведение режем, чтобы надбавка
+    // следующего дня не превышала расход самой тренировки).
+    // Объём trainingKcal — живой вес дня/профиля, константа 70 только если веса нет.
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2909,16 +2910,131 @@
 
   // === ТРЕНИРОВКИ ===
 
-  I.getPreviousDayTrainings = (todayDate, lsGet) => {
-    if (!lsGet) return { trainings: [], totalKcal: 0, hoursSince: Infinity, dominantType: null };
+  I.addCalendarDaysIso = (iso, delta) => {
+    const raw = String(iso || '').slice(0, 10);
+    const parts = raw.split('-').map(Number);
+    const y = parts[0];
+    const m = parts[1];
+    const d = parts[2];
+    if (!y || !m || !d) return null;
+    const dt = new Date(Date.UTC(y, m - 1, d + Number(delta || 0)));
+    const yy = dt.getUTCFullYear();
+    const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(dt.getUTCDate()).padStart(2, '0');
+    return `${yy}-${mm}-${dd}`;
+  };
 
-    const yesterday = new Date(todayDate);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yKey = yesterday.toISOString().slice(0, 10);
+  // HEYS-день D = [D 03:00 МСК, D+1 03:00 МСК) = [D 00:00Z, D+1 00:00Z)
+  // (МСК = UTC+3 без DST с 2014). Границы из строки даты, без локали устройства.
+  I.heysDayBoundsMs = (dateIso) => {
+    const raw = String(dateIso || '').slice(0, 10);
+    const parts = raw.split('-').map(Number);
+    const y = parts[0];
+    const m = parts[1];
+    const d = parts[2];
+    if (!y || !m || !d) return null;
+    const start = Date.UTC(y, m - 1, d, 0, 0, 0, 0);
+    return { start, end: start + 24 * 60 * 60 * 1000 };
+  };
+
+  I.trainingAtUtcMs = (dateIso, timeHHMM) => {
+    if (!timeHHMM) return null;
+    const raw = String(dateIso || '').slice(0, 10);
+    const parts = raw.split('-').map(Number);
+    const y = parts[0];
+    const m = parts[1];
+    const d = parts[2];
+    if (!y || !m || !d) return null;
+    const bits = String(timeHHMM).trim().split(':');
+    const h = Number(bits[0]);
+    const min = Number(bits[1]) || 0;
+    if (!Number.isFinite(h) || h < 0 || h > 23) return null;
+    return Date.UTC(y, m - 1, d, h - 3, min, 0, 0);
+  };
+
+  I.pickNdteAnchorTraining = (trainings) => {
+    const list = Array.isArray(trainings) ? trainings : [];
+    let best = null;
+    for (let i = 0; i < list.length; i++) {
+      const t = list[i];
+      if (!t || !t.time) continue;
+      if (!best || String(t.time) > String(best.time)) best = t;
+    }
+    return best;
+  };
+
+  I.ndteDecayPieces = (dayDate, prevDate, trainingTime) => {
+    const bounds = I.heysDayBoundsMs(dayDate);
+    if (!bounds) return [];
+    if (!trainingTime) {
+      return [{ hours: 24, hoursSince: 24 }];
+    }
+    const trainMs = I.trainingAtUtcMs(prevDate, trainingTime);
+    if (trainMs == null) {
+      return [{ hours: 24, hoursSince: 24 }];
+    }
+
+    const HOUR = 3600 * 1000;
+    const startH = (bounds.start - trainMs) / HOUR;
+    const endH = (bounds.end - trainMs) / HOUR;
+    const cuts = [startH];
+    const tiers = (I.NDTE && I.NDTE.decay && I.NDTE.decay.tiers) || [];
+    for (let i = 0; i < tiers.length; i++) {
+      const h = Number(tiers[i].maxHours);
+      if (h > startH && h < endH) cuts.push(h);
+    }
+    const maxWin = Number(I.NDTE && I.NDTE.maxWindowHours) || 48;
+    if (maxWin > startH && maxWin < endH) cuts.push(maxWin);
+    cuts.push(endH);
+    cuts.sort((a, b) => a - b);
+
+    const pieces = [];
+    for (let i = 0; i < cuts.length - 1; i++) {
+      const a = cuts[i];
+      const b = cuts[i + 1];
+      const dur = b - a;
+      if (dur <= 0) continue;
+      const sample = (a + b) / 2;
+      if (sample < 0) continue;
+      pieces.push({ hours: dur, hoursSince: sample });
+    }
+    return pieces;
+  };
+
+  I.averageCappedNdteBoost = (params, pieces) => {
+    const list = Array.isArray(pieces) ? pieces : [];
+    let acc = 0;
+    let hours = 0;
+    for (let i = 0; i < list.length; i++) {
+      const p = list[i];
+      const dur = Number(p && p.hours) || 0;
+      if (dur <= 0) continue;
+      const ndte = I.calculateNDTE({
+        trainingKcal: params && params.trainingKcal,
+        hoursSince: p.hoursSince,
+        bmi: params && params.bmi,
+        trainingType: params && params.trainingType,
+        trainingsCount: params && params.trainingsCount,
+      });
+      acc += ((ndte && ndte.tdeeBoost) || 0) * dur;
+      hours += dur;
+    }
+    return hours > 0 ? Math.round((acc / hours) * 1000) / 1000 : 0;
+  };
+
+  I.getPreviousDayTrainings = (todayDate, lsGet, weightKg) => {
+    const empty = {
+      trainings: [], totalKcal: 0, hoursSince: Infinity,
+      dominantType: null, prevDate: null, anchorTime: null,
+    };
+    if (!lsGet) return empty;
+
+    const yKey = I.addCalendarDaysIso(String(todayDate || '').slice(0, 10), -1);
+    if (!yKey) return empty;
 
     const dayData = lsGet(`heys_dayv2_${yKey}`, null);
     if (!dayData || !dayData.trainings || dayData.trainings.length === 0) {
-      return { trainings: [], totalKcal: 0, hoursSince: Infinity, dominantType: null };
+      return { ...empty, prevDate: yKey };
     }
 
     // Невыполненный вчерашний план не должен разгонять сегодняшний расход:
@@ -2927,29 +3043,32 @@
     // `dominantType` (силовая даёт больший буст, чем кардио).
     const trainings = dayData.trainings.filter(t => !isNotPerformedTraining(t));
     if (trainings.length === 0) {
-      return { trainings: [], totalKcal: 0, hoursSince: Infinity, dominantType: null };
+      return { ...empty, prevDate: yKey };
     }
 
+    const volW = Number(weightKg) > 0 ? Number(weightKg) : 70;
     let totalKcal = 0;
-    let lastTrainingTime = null;
-
     for (const t of trainings) {
-      totalKcal += I.utils.calculateTrainingKcal(t, 70);
-      if (t.time) lastTrainingTime = t.time;
+      totalKcal += I.utils.calculateTrainingKcal(t, volW);
     }
 
+    const pick = I.pickNdteAnchorTraining(trainings);
     let hoursSince = 24;
-    if (lastTrainingTime) {
-      const [h, m] = lastTrainingTime.split(':').map(Number);
-      const trainingMinutes = (h || 0) * 60 + (m || 0);
-      const now = new Date();
-      const nowMinutes = now.getHours() * 60 + now.getMinutes();
-      hoursSince = (24 * 60 - trainingMinutes + nowMinutes) / 60;
+    if (pick && pick.time) {
+      const trainMs = I.trainingAtUtcMs(yKey, pick.time);
+      if (trainMs != null) hoursSince = (Date.now() - trainMs) / 3600000;
     }
 
-    const dominantType = trainings.length > 0 ? (trainings[0].type || 'cardio') : null;
+    const dominantType = (pick && pick.type) || (trainings[0] && trainings[0].type) || 'cardio';
 
-    return { trainings, totalKcal, hoursSince, dominantType };
+    return {
+      trainings,
+      totalKcal,
+      hoursSince,
+      dominantType,
+      prevDate: yKey,
+      anchorTime: pick && pick.time,
+    };
   };
 
   // === NDTE (Next-Day Training Effect) ===
@@ -3030,6 +3149,46 @@
       decayMultiplier: decayMult,
       typeMultiplier: typeMult,
       trainingsCount
+    };
+  };
+
+  I.calculateNDTEDayAverage = (params) => {
+    const p = params || {};
+    const trainingKcal = Number(p.trainingKcal) || 0;
+    if (trainingKcal < 300) {
+      return { active: false, tdeeBoost: 0, waveReduction: 0, peakReduction: 0, label: null, badge: null };
+    }
+    const pieces = Array.isArray(p.pieces) && p.pieces.length
+      ? p.pieces
+      : I.ndteDecayPieces(p.dayDate, p.prevDate, p.trainingTime);
+    if (!pieces.length) {
+      return { active: false, tdeeBoost: 0, waveReduction: 0, peakReduction: 0, label: null, badge: null };
+    }
+    const tdeeBoost = I.averageCappedNdteBoost({
+      trainingKcal,
+      bmi: p.bmi,
+      trainingType: p.trainingType,
+      trainingsCount: p.trainingsCount,
+    }, pieces);
+    const sample = I.calculateNDTE({
+      trainingKcal,
+      hoursSince: pieces[0].hoursSince,
+      bmi: p.bmi,
+      trainingType: p.trainingType,
+      trainingsCount: p.trainingsCount,
+    });
+    return {
+      active: tdeeBoost > 0,
+      tdeeBoost,
+      waveReduction: 0,
+      peakReduction: sample.peakReduction,
+      label: sample.label,
+      badge: sample.badge,
+      badgeColor: sample.badgeColor,
+      trainingKcal,
+      hoursSince: null,
+      decayMode: 'day-average',
+      pieces,
     };
   };
 
@@ -3157,6 +3316,8 @@
   // быть не должно; тот же приём, что `IW_NS.utils = I._utils` в heys_iw_utils.js.
   IW.getPreviousDayTrainings = I.getPreviousDayTrainings;
   IW.calculateNDTE = I.calculateNDTE;
+  IW.calculateNDTEDayAverage = I.calculateNDTEDayAverage;
+  IW.pickNdteAnchorTraining = I.pickNdteAnchorTraining;
 
   // Mark constants as loaded
   I._loaded.constants = true;

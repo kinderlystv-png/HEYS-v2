@@ -6097,7 +6097,10 @@
         }
         const savedOpt = dayData?.savedDisplayOptimum || dayData?.savedEatenKcal ? undefined : undefined;
         // Используем savedDisplayOptimum дня или текущий optimum
-        const dayOptimum = dayData?.savedDisplayOptimum || currentOptimum || 1;
+        const resolvedOpt = (typeof HEYS !== 'undefined' && HEYS.dayNorm && typeof HEYS.dayNorm.kcal === 'function')
+          ? HEYS.dayNorm.kcal(dayData || {}, HEYS.utils?.lsGet?.('heys_profile', {}) || {}, {})
+          : 0;
+        const dayOptimum = resolvedOpt || currentOptimum || 1;
         const ratio = totalKcal / dayOptimum;
         const isRefeed = !!dayData?.isRefeedDay;
         const isStreakDay = rz?.isStreakDayWithRefeed

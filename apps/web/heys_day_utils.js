@@ -2020,7 +2020,10 @@
 
                 // 🔧 FIX: Используем сохранённую норму с долгом если есть, иначе расчётную
                 // Это позволяет показывать корректную линию нормы в sparkline для прошлых дней
-                const target = dayInfo.savedDisplayOptimum > 0 ? dayInfo.savedDisplayOptimum : calculatedTarget;
+                const resolvedTarget = (HEYS.dayNorm && typeof HEYS.dayNorm.kcal === 'function')
+                  ? HEYS.dayNorm.kcal(dayInfo, profile || {}, {})
+                  : 0;
+                const target = resolvedTarget > 0 ? resolvedTarget : calculatedTarget;
 
                 // 🔧 FIX: Используем сохранённые калории если есть, иначе пересчитанные
                 // savedEatenKcal гарантирует точное значение, которое показывалось пользователю в тот день

@@ -23,7 +23,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const read = (name) => fs.readFileSync(path.resolve(__dirname, '..', name), 'utf8');
 /* eslint-disable no-eval */
@@ -82,6 +82,7 @@ afterAll(() => {
 describe('constants публикует NDTE наружу, а не только в __internals', () => {
   it('обе функции доступны в публичном неймспейсе', () => {
     expect(typeof IW.calculateNDTE).toBe('function');
+    expect(typeof IW.calculateNDTEDayAverage).toBe('function');
     expect(typeof IW.getPreviousDayTrainings).toBe('function');
   });
 
@@ -90,11 +91,13 @@ describe('constants публикует NDTE наружу, а не только �
     // (web-mirror/index.js → insulinWaveInternals), клиент — публично. Разойдись
     // они экземплярами, расхождение формул поймать было бы нечем.
     expect(IW.calculateNDTE).toBe(IWI.calculateNDTE);
+    expect(IW.calculateNDTEDayAverage).toBe(IWI.calculateNDTEDayAverage);
     expect(IW.getPreviousDayTrainings).toBe(IWI.getPreviousDayTrainings);
   });
 
   it('__internals продолжает отдавать их серверу', () => {
     expect(typeof IWI.calculateNDTE).toBe('function');
+    expect(typeof IWI.calculateNDTEDayAverage).toBe('function');
     expect(typeof IWI.getPreviousDayTrainings).toBe('function');
     expect(typeof IWI.utils.calculateTrainingKcal).toBe('function');
   });
@@ -175,17 +178,6 @@ describe('HEYS.TDEE.calculate доходит до NDTE через публичн
     return def === undefined ? null : def;
   };
 
-  beforeAll(() => {
-    // `getPreviousDayTrainings` считает `hoursSince` по `new Date()`, поэтому
-    // без фиксации часов числа плавали бы от прогона к прогону.
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(2026, 7, 9, 12, 0, 0));
-  });
-
-  afterAll(() => {
-    vi.useRealTimers();
-  });
-
   it('надбавка за вчерашнюю тренировку больше не ноль', () => {
     const result = TDEE.calculate({ date: TODAY, trainings: [] }, PROFILE, { lsGet });
     expect(result.ndteBoost).toBeGreaterThan(0);
@@ -206,34 +198,46 @@ describe('HEYS.TDEE.calculate доходит до NDTE через публичн
     expect(empty.ndteBoost).toBe(0);
   });
 
-  it('клиент считает надбавку по тем же входам и той же формулой, что сервер', () => {
-    // Повторяем serverNdteBoost из yandex-cloud-functions/heys-mcp/lib/day.js
-    // (:1622-1661): сервер собирает входы сам, но зовёт те же
-    // `iw.utils.calculateTrainingKcal` и `iw.calculateNDTE` из зеркала. Час
-    // подставляем клиентский — сравнивается объём нагрузки, порог и формула, а
-    // не разница часовых поясов.
+  it('клиент считает надбавку средним буста за HEYS-день, как сервер', () => {
     const client = TDEE.calculate({ date: TODAY, trainings: [] }, PROFILE, { lsGet });
     const prev = IWI.getPreviousDayTrainings(TODAY, lsGet);
 
-    let totalKcal = 0;
-    let lastTrainingTime = null;
-    for (const t of prevDay.trainings) {
-      totalKcal += IWI.utils.calculateTrainingKcal(t, 70);
-      if (t.time) lastTrainingTime = t.time;
-    }
-    expect(totalKcal).toBeGreaterThanOrEqual(200);
-
     const heightM = PROFILE.height / 100;
-    const ndte = IWI.calculateNDTE({
-      trainingKcal: totalKcal,
-      hoursSince: prev.hoursSince,
+    const ndte = IWI.calculateNDTEDayAverage({
+      trainingKcal: prev.totalKcal,
       bmi: Math.round(PROFILE.weight / (heightM * heightM) * 10) / 10,
-      trainingType: prevDay.trainings[0].type || 'cardio',
-      trainingsCount: prevDay.trainings.length,
+      trainingType: prev.dominantType || 'cardio',
+      trainingsCount: prev.trainings.length,
+      dayDate: TODAY,
+      prevDate: prev.prevDate,
+      trainingTime: prev.anchorTime,
     });
     const serverBoost = Math.round(client.bmr * ndte.tdeeBoost);
 
-    expect(totalKcal).toBe(prev.totalKcal);
+    expect(prev.totalKcal).toBeGreaterThanOrEqual(300);
     expect(client.ndteBoost).toBe(serverBoost);
+  });
+});
+
+describe('мгновенный calculateNDTE для волны не усредняет и держит окно 48ч', () => {
+  it('на 48 часах буст уже ноль, на 10 — нет', () => {
+    const live = IWI.calculateNDTE({
+      trainingKcal: 500,
+      hoursSince: 10,
+      bmi: 22,
+      trainingType: 'cardio',
+      trainingsCount: 1,
+    });
+    const expired = IWI.calculateNDTE({
+      trainingKcal: 500,
+      hoursSince: 48,
+      bmi: 22,
+      trainingType: 'cardio',
+      trainingsCount: 1,
+    });
+    expect(live.active).toBe(true);
+    expect(live.tdeeBoost).toBeGreaterThan(0);
+    expect(expired.active).toBe(false);
+    expect(expired.tdeeBoost).toBe(0);
   });
 });

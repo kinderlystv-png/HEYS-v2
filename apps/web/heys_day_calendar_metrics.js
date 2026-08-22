@@ -53,9 +53,12 @@
                     // 🔧 FIX v2.6: Используем savedDisplayOptimum дня (TDEE того дня),
                     // а не текущий optimum (сегодняшний TDEE без активности).
                     // Каждый день имеет свой TDEE в зависимости от тренировок, шагов и т.д.
-                    const dayOptimum = (+dayData.savedDisplayOptimum > 0)
-                        ? +dayData.savedDisplayOptimum
-                        : (optimum || 1);
+                    const resolved = (HEYS.dayNorm && typeof HEYS.dayNorm.kcal === 'function')
+                      ? HEYS.dayNorm.kcal(dayData, lsGet('heys_profile', {}) || {}, {})
+                      : 0;
+                    const dayOptimum = resolved > 0
+                      ? resolved
+                      : (optimum || 1);
                     const ratio = totalKcal / dayOptimum;
                     const rz = HEYS.ratioZones;
                     const isRefeedDay = !!dayData?.isRefeedDay;

@@ -1923,7 +1923,7 @@ const NORM_REASONS = {
 function dayOptimum(dayBlob, inputs, prevBlob) {
   const parts = estimateOptimum(dayBlob, inputs.profile, inputs.hrZones);
   if (parts.kcal <= 0) return { kcal: 0, ndte: 0, parts };
-  const ndte = serverNdteBoost(prevBlob, inputs.profile, parts.bmr, inputs.nowMs);
+  const ndte = serverNdteBoost(prevBlob, inputs.profile, parts.bmr, { date: dayBlob && dayBlob.date });
   return { kcal: optimumWithNdte(parts, ndte), ndte, parts };
 }
 
@@ -2020,56 +2020,56 @@ function normMacros(kcal, norms, ctx = {}) {
  * раньше не считал вовсе.
  *
  * Зеркальный `getPreviousDayTrainings` здесь намеренно не зовётся: он ищет
- * вчерашний день через `lsGet` и берёт `new Date()` процесса. У функции Yandex
- * Cloud это UTC, а у клиента — Москва, и затухание уехало бы на три часа. Входы
- * те же, что в apps/web/heys_iw_constants.js:2883-2915, но вчерашний блоб
- * приходит из облака, а час — из `nowParts`. Сам расчёт (`calculateNDTE`) —
- * чистая функция из зеркала, своей копии формулы здесь нет.
+ * вчерашний день через `lsGet`. Вчерашний блоб приходит из облака, окно
+ * затухания — HEYS-сутки запрошенного `date` (`{ date }`), не `nowMs`.
+ * Сам расчёт (`calculateNDTEDayAverage`) — чистая функция из зеркала.
  *
  * @param {object|null} prevDay блоб за `date − 1`
  * @param {object} profile профиль клиента (нужен рост для BMI)
  * @param {number} bmr из того же расчёта TDEE, что и база
+ * @param {object} [opts]
+ * @param {string} [opts.date] календарная дата нормы (YYYY-MM-DD)
  */
-function serverNdteBoost(prevDay, profile, bmr, nowMs = Date.now()) {
+function serverNdteBoost(prevDay, profile, bmr, opts) {
+  const options = (opts && typeof opts === 'object') ? opts : {};
+  const date = options.date;
   const iw = webMirror.insulinWaveInternals();
   // Назначенное куратором отсеивается до расчёта, а не только по калориям:
   // дальше от массива берутся ещё длина (множитель за две тренировки) и тип
-  // первой строки. Невыполненный вчерашний план не должен ни поднимать буст,
+  // якоря. Невыполненный вчерашний план не должен ни поднимать буст,
   // ни выдавать себя за силовую, если сам человек делал кардио.
   const allTrainings = (prevDay && Array.isArray(prevDay.trainings)) ? prevDay.trainings : [];
   const trainings = allTrainings.filter((t) => !isNotPerformedTraining(t));
   if (!iw || !trainings.length || !bmr) return 0;
+  if (typeof iw.calculateNDTEDayAverage !== 'function') return 0;
 
-  // Вес 70 захардкожен в оригинале: калории нужны только как мера объёма
-  // вчерашней нагрузки для порога, а не как реальный расход.
+  const volW = Number(profile && profile.weight)
+    || Number(prevDay && prevDay.weightMorning)
+    || 70;
   let totalKcal = 0;
-  let lastTrainingTime = null;
   for (const t of trainings) {
-    totalKcal += iw.utils.calculateTrainingKcal(t, 70);
-    if (t && t.time) lastTrainingTime = t.time;
+    totalKcal += iw.utils.calculateTrainingKcal(t, volW);
   }
   // 300, а не 200: `calculateNDTE` ниже 300 всё равно возвращает нулевой буст
   // (порог поднят в v4.3). Прежние 200 создавали коридор 200–299, где внешний
   // гейт пропускал, а внутренний молча обнулял.
   if (totalKcal < 300) return 0;
 
-  let hoursSince = 24;
-  if (lastTrainingTime) {
-    const [h, m] = String(lastTrainingTime).split(':').map(Number);
-    const trainingMinutes = (h || 0) * 60 + (m || 0);
-    const [nowH, nowM] = nowParts(nowMs).time.split(':').map(Number);
-    hoursSince = (24 * 60 - trainingMinutes + (nowH * 60 + nowM)) / 60;
-  }
-
+  const pick = typeof iw.pickNdteAnchorTraining === 'function'
+    ? iw.pickNdteAnchorTraining(trainings)
+    : null;
+  const prevDate = (prevDay && prevDay.date) || (date ? addDays(date, -1) : null);
   const height = (Number(profile && profile.height) || 170) / 100;
-  const weight = Number(profile && profile.weight) || 0;
+  const weight = Number(profile && profile.weight) || Number(prevDay && prevDay.weightMorning) || 0;
   const bmi = weight && height ? Math.round(weight / (height * height) * 10) / 10 : 22;
-  const ndte = iw.calculateNDTE({
+  const ndte = iw.calculateNDTEDayAverage({
     trainingKcal: totalKcal,
-    hoursSince,
     bmi,
-    trainingType: trainings[0].type || 'cardio',
+    trainingType: (pick && pick.type) || (trainings[0] && trainings[0].type) || 'cardio',
     trainingsCount: trainings.length,
+    dayDate: date,
+    prevDate,
+    trainingTime: pick && pick.time,
   });
   return Math.round(bmr * ((ndte && ndte.tdeeBoost) || 0));
 }
@@ -2262,81 +2262,38 @@ function dailyNorm(day, inputs) {
     ? day.savedOptimumMeta
     : null;
 
-  // База: TDEE по текущим данным дня плюс надбавка за вчерашнюю тренировку.
-  const fresh = estimateOptimum(day, inputs.profile, inputs.hrZones);
-  // Если вчерашний блоб не читали вовсе (`prevDay === undefined`), берём
-  // надбавку из отпечатка: это лучше, чем молча занулить её.
-  const ndte = inputs.prevDay !== undefined
-    ? serverNdteBoost(inputs.prevDay, inputs.profile, fresh.bmr, inputs.nowMs)
-    : (meta ? Number(meta.ndte) || 0 : 0);
-  const base = fresh.kcal > 0 ? optimumWithNdte(fresh, ndte) : 0;
+  const resolved = webMirror.resolveDayNorm(day || {}, inputs.profile, {
+    pastBlobs: inputs.pastBlobs,
+    prevDay: inputs.prevDay,
+    hrZones: inputs.hrZones,
+    lsGet: () => null,
+  });
+  const fresh = resolved && resolved.tdee;
 
-  if (base <= 0) {
-    return { ...empty, reason: fresh.reason, note: `Норма не рассчитана: ${NORM_REASONS[fresh.reason]}.` };
+  if (!resolved || !(resolved.kcal > 0)) {
+    const reason = (resolved && resolved.reason) || 'profile_incomplete';
+    return {
+      ...empty,
+      reason,
+      note: `Норма не рассчитана: ${NORM_REASONS[reason] || reason}.`,
+    };
   }
 
-  // Долг и перебор считает зеркальное ядро приложения — то же, что рисует
-  // число на экране клиента. Своей формулы здесь нет и быть не должно.
-  const windowDays = buildDebtWindow(day.date, inputs);
-  const debt = windowDays.length >= 2
-    ? webMirror.computeDebtCore({
-      date: day.date,
-      day,
-      prof: inputs.profile,
-      optimum: base,
-      sparklineData: windowDays,
-      fmtDate: (d) => d.toISOString().slice(0, 10),
-    })
-    : null;
-
-  // Порядок веток повторяет apps/web/heys_day_caloric_display_state.js:
-  // загрузочный день перебивает всё, затем надбавка за долг, затем мягкое
-  // снижение при переборе.
-  let kcal = base;
-  let correction = 0;
-  let source = 'computed';
-  let why = 'ни долга, ни перебора за последние дни нет';
-
-  if (day && day.isRefeedDay === true) {
-    kcal = webMirror.getRefeedOptimum(base, true);
-    correction = kcal - base;
-    why = 'загрузочный день, норма поднята';
-  } else if (debt && debt.dailyBoost > 0) {
-    correction = debt.dailyBoost;
-    kcal = base + correction;
-    why = `накопленный недобор за ${windowDays.length} дн — надбавка ${correction} ккал`;
-  } else if (debt && debt.dailyReduction > 0 && !debt.hasDebt) {
-    correction = -debt.dailyReduction;
-    kcal = base + correction;
-    why = `перебор за последние дни — мягкое снижение на ${debt.dailyReduction} ккал`;
-  }
-
-  if (!debt && !(day && day.isRefeedDay === true)) {
-    // Долг посчитать не на чем. Причины две и они разные: блобов вообще нет —
-    // или они есть, но ядро отсеяло их как дни с неполными данными. Загрузочный
-    // день сюда не попадает: его норма уже объяснена и от долга не зависит.
-    if (windowDays.length >= 2) {
-      why = 'в прошлых днях слишком мало еды для расчёта долга — поправка не применена';
-    } else {
-      source = 'estimate';
-      why = 'история за прошлые дни недоступна, поправка на недобор не учтена';
-    }
-  }
-
-  // Норма без целевого дефицита — тем же путём, что и с ним: та же формула,
-  // deficitPct погашен. 22.08.2026 вопрос «покажи норму с дефицитом и без»
-  // стоил отдельного heys_get_profile, а тот ответил молчанием — поле не
-  // задано, и в карточке оно не печатается. Ответ должен быть здесь, рядом с
-  // нормой, а не в другом вызове.
-  const maintenance = optimumWithNdte({ ...fresh, deficitPct: 0 }, ndte);
-  const deficitPct = Number(fresh.deficitPct) || 0;
+  const kcal = resolved.kcal;
+  const source = resolved.source;
+  const why = resolved.why;
+  const ndte = resolved.ndte;
+  const base = resolved.base;
+  const correction = resolved.correction;
+  const maintenance = resolved.maintenance;
+  const deficitPct = resolved.deficit_pct;
   const parts = {
     base,
     maintenance,
     deficit_pct: deficitPct,
     correction,
     ndte,
-    window_days: windowDays.length,
+    window_days: resolved.window_days,
     client_saw: clientSaw || null,
   };
 
@@ -2346,9 +2303,8 @@ function dailyNorm(day, inputs) {
   note += deficitPct
     ? ` Целевой ${deficitPct < 0 ? 'дефицит' : 'профицит'} ${Math.abs(deficitPct)}% уже учтён: без него расход дня — ${maintenance} ккал.`
     : ' Целевой дефицит в профиле не задан (0%) — это норма поддержания.';
-  // Расхождение с экраном возможно штатно: NDTE затухает по часам, и клиент мог
-  // смотреть день раньше. Молчать о нём всё равно нельзя — именно так протухший
-  // кэш и прожил незамеченным.
+  // Расхождение с экраном возможно штатно: клиент мог смотреть день раньше.
+  // Молчать о нём всё равно нельзя — именно так протухший кэш и прожил незамеченным.
   if (clientSaw > 0 && Math.abs(clientSaw - kcal) > 2) {
     note += ` Клиент последний раз видел ${Math.round(clientSaw)} ккал`;
     const drift = meta ? activityDrift(meta, day) : '';
@@ -2358,7 +2314,7 @@ function dailyNorm(day, inputs) {
   const macros = normMacros(kcal, inputs.norms, {
     profile: inputs.profile,
     day,
-    tdeeResult: fresh.reason ? null : fresh,
+    tdeeResult: fresh,
   });
   const macrosNote = macros.macros_reason ? ` БЖУ в граммах не считаем: ${NORM_REASONS[macros.macros_reason]}.` : '';
 

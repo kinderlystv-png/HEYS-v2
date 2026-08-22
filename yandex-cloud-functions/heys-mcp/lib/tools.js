@@ -664,6 +664,21 @@ function createTools({
       : ' Целевой дефицит в профиле не задан (0%) — это норма поддержания.';
   }
 
+  function normBreakdownText(norm) {
+    const p = norm && norm.parts;
+    if (!p || p.base == null) return '';
+    const ndte = Number(p.ndte) || 0;
+    const corr = Number(p.correction) || 0;
+    const rest = Math.round(p.base - ndte);
+    let inner = ndte
+      ? `база ${p.base} = расход ${rest} + NDTE ${ndte}`
+      : `база ${p.base}`;
+    if (corr) {
+      inner += `; ${corr > 0 ? 'надбавка за недобор' : 'снижение за перебор'} ${corr > 0 ? '+' : ''}${corr}`;
+    }
+    return ` (${inner})`;
+  }
+
   function normText(norm) {
     if (!norm || !norm.source) return ` Норма не рассчитана (${norm && norm.reason ? day.NORM_REASONS[norm.reason] : 'нет данных'}).${activityText(norm)}`;
     const approx = norm.source === 'estimate' ? '≈' : '';
@@ -676,7 +691,7 @@ function createTools({
       computed: ' — посчитана по данным дня',
       estimate: ' — расчётная оценка, история за прошлые дни недоступна',
     };
-    return ` Норма: ${approx}${norm.kcal} ккал${macros}${FROM[norm.source] || FROM.estimate}.${normDeficitText(norm)}${activityText(norm)}`;
+    return ` Норма: ${approx}${norm.kcal} ккал${macros}${normBreakdownText(norm)}${FROM[norm.source] || FROM.estimate}.${normDeficitText(norm)}${activityText(norm)}`;
   }
 
   /**

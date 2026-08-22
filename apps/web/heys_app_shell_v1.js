@@ -3213,7 +3213,14 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             return formatLocalISO(d);
         };
         const getDefaultPrefetchDates = (nextDate) => {
-            const dates = [nextDate, shiftISO(nextDate, -1), shiftISO(nextDate, 1)];
+            const dates = [
+              nextDate,
+              shiftISO(nextDate, -1),
+              shiftISO(nextDate, -2),
+              shiftISO(nextDate, -3),
+              shiftISO(nextDate, -4),
+              shiftISO(nextDate, 1),
+            ];
             return Array.from(new Set(dates.filter(Boolean)));
         };
 

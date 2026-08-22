@@ -728,7 +728,7 @@ function pastBlobs(kcalPerDay, extra = {}) {
 }
 
 const TODAY = { date: '2026-08-08', weightMorning: 80, meals: [] };
-/** Момент «сейчас» задаём явно: NDTE затухает по часам. */
+/** Момент «сейчас» задаём явно: калорийный NDTE от nowMs больше не зависит. */
 const AT_MSK_NOON_08 = Date.parse('2026-08-08T09:00:00Z');
 const WITH_WINDOW = (blobs) => ({
   profile: FULL_PROFILE, norms: NORMS, hrZones: [],
@@ -858,8 +858,8 @@ test('надбавка за вчерашнюю тренировку считае
 
   assert.equal(without.parts.ndte, 0);
   assert.equal(without.kcal, 1471);
-  assert.equal(with_.parts.ndte, 138);
-  assert.equal(with_.kcal, 1588);
+  assert.equal(with_.parts.ndte, 123);
+  assert.equal(with_.kcal, 1575);
 });
 
 test('назначенная вчера тренировка не даёт серверной надбавки', () => {
@@ -911,16 +911,118 @@ test('назначенная не подменяет тип и не удваив
   assert.equal(mixed.parts.ndte, plain.parts.ndte);
 });
 
-test('надбавка затухает по московскому часу, а не по часам функции', () => {
+test('калорийная надбавка не зависит от nowMs: среднее за HEYS-день, не живой снимок', () => {
   const today = { date: '2026-08-02', weightMorning: 80, meals: [] };
   const base = { profile: FULL_PROFILE, norms: NORMS, hrZones: [], prevDay: PREV_DAY_TRAINING };
 
-  // 18 часов после тренировки против 6 — разные тиры затухания.
   const later = day.dailyNorm(today, { ...base, nowMs: AT_MSK_NOON });
   const sooner = day.dailyNorm(today, { ...base, nowMs: Date.parse('2026-08-02T21:00:00Z') });
 
-  assert.equal(later.parts.ndte, 138);
-  assert.equal(sooner.parts.ndte, 173);
+  assert.equal(later.parts.ndte, sooner.parts.ndte);
+  assert.equal(later.kcal, sooner.kcal);
+  assert.equal(later.parts.ndte, 123);
+});
+
+test('тип и час NDTE берутся с одной тренировки — max(time)', () => {
+  const today = { date: '2026-08-02', weightMorning: 80, meals: [] };
+  const base = { profile: FULL_PROFILE, norms: NORMS, hrZones: [], nowMs: AT_MSK_NOON };
+  const mixedPrev = {
+    date: '2026-08-01',
+    trainings: [
+      { z: [0, 0, 60, 30], type: 'strength', time: '10:00' },
+      { z: [0, 0, 60, 30], type: 'cardio', time: '19:00' },
+    ],
+  };
+  const bothCardio = {
+    date: '2026-08-01',
+    trainings: [
+      { z: [0, 0, 60, 30], type: 'cardio', time: '10:00' },
+      { z: [0, 0, 60, 30], type: 'cardio', time: '19:00' },
+    ],
+  };
+  const mixed = day.dailyNorm(today, { ...base, prevDay: mixedPrev });
+  const cardio = day.dailyNorm(today, { ...base, prevDay: bothCardio });
+  assert.equal(mixed.parts.ndte, cardio.parts.ndte);
+});
+
+test('тренировка без time даёт константу 0.8 весь день, не выдуманный старт в 03:00', () => {
+  const today = { date: '2026-08-02', weightMorning: 80, meals: [] };
+  const base = { profile: FULL_PROFILE, norms: NORMS, hrZones: [], nowMs: AT_MSK_NOON };
+  const noTime = day.dailyNorm(today, {
+    ...base,
+    prevDay: { date: '2026-08-01', trainings: [{ z: [0, 0, 60, 30], type: 'cardio' }] },
+  });
+  assert.equal(noTime.parts.ndte, 138);
+  assert.equal(noTime.kcal, 1588);
+});
+
+test('клиентский TDEE и dailyNorm дают одну надбавку на одном блобе', () => {
+  const today = { date: '2026-08-02', weightMorning: 80, meals: [] };
+  const lsGet = (key) => (key === 'heys_dayv2_2026-08-01' ? PREV_DAY_TRAINING : null);
+  const client = webMirror.calculateTDEE(today, FULL_PROFILE, { lsGet, hrZones: [], includeNDTE: true });
+  const server = day.dailyNorm(today, {
+    profile: FULL_PROFILE, norms: NORMS, hrZones: [], nowMs: AT_MSK_NOON, prevDay: PREV_DAY_TRAINING,
+  });
+  assert.equal(client.ndteBoost, server.parts.ndte);
+});
+
+test('среднее итогового буста после потолка, не потолок среднего decay', () => {
+  const iw = webMirror.insulinWaveInternals();
+  const pieces = [
+    { hours: 4, hoursSince: 6 },
+    { hours: 12, hoursSince: 18 },
+    { hours: 8, hoursSince: 30 },
+  ];
+  const params = { trainingKcal: 900, bmi: 32, trainingType: 'strength', trainingsCount: 3 };
+  const avg = iw.calculateNDTEDayAverage({ ...params, pieces });
+  const avgDecay = (4 * 1 + 12 * 0.8 + 8 * 0.5) / 24;
+  const wrong = Math.min(0.20, Math.round(0.3024 * avgDecay * 1000) / 1000);
+  assert.equal(wrong, 0.20);
+  assert.notEqual(avg.tdeeBoost, 0.20);
+  assert.equal(avg.tdeeBoost, iw.averageCappedNdteBoost(params, pieces));
+});
+
+test('мгновенный calculateNDTE для волны держит окно 48ч', () => {
+  const iw = webMirror.insulinWaveInternals();
+  const live = iw.calculateNDTE({
+    trainingKcal: 500, hoursSince: 10, bmi: 22, trainingType: 'cardio', trainingsCount: 1,
+  });
+  const expired = iw.calculateNDTE({
+    trainingKcal: 500, hoursSince: 48, bmi: 22, trainingType: 'cardio', trainingsCount: 1,
+  });
+  assert.equal(live.active, true);
+  assert.ok(live.tdeeBoost > 0);
+  assert.equal(expired.active, false);
+  assert.equal(expired.tdeeBoost, 0);
+});
+
+test('резолвер и dailyNorm дают один kcal; ложный savedDisplayOptimum его не меняет', () => {
+  const blob = {
+    date: '2026-08-02', weightMorning: 80, meals: [], savedDisplayOptimum: 1,
+  };
+  const inputs = {
+    profile: FULL_PROFILE, norms: NORMS, hrZones: [], prevDay: PREV_DAY_TRAINING,
+  };
+  const resolved = webMirror.resolveDayNorm(blob, FULL_PROFILE, {
+    prevDay: PREV_DAY_TRAINING, lsGet: () => null,
+  });
+  const server = day.dailyNorm(blob, inputs);
+  assert.equal(resolved.kcal, server.kcal);
+  assert.ok(resolved.kcal > 1000);
+  assert.notEqual(resolved.kcal, 1);
+  assert.equal(server.parts.client_saw, 1);
+});
+
+test('без окна долга — estimate; с pastBlobs — computed и та же база', () => {
+  const today = { date: '2026-08-08', weightMorning: 80, meals: [] };
+  const before = day.dailyNorm(today, {
+    profile: FULL_PROFILE, norms: NORMS, hrZones: [], prevDay: null,
+  });
+  const after = day.dailyNorm(today, WITH_WINDOW(pastBlobs(1100)));
+  assert.equal(before.source, 'estimate');
+  assert.equal(after.source, 'computed');
+  assert.equal(before.parts.base, after.parts.base);
+  assert.ok(after.parts.correction !== 0);
 });
 
 test('лёгкая вчерашняя активность надбавки не даёт', () => {

@@ -22,12 +22,9 @@
  *
  * Чего в песочнице нет и чего это стоит:
  *  - `HEYS.InsulinWave.getPreviousDayTrainings` — вчерашние тренировки он ищет
- *    через `lsGet`, а `hoursSince` считает по `new Date()` процесса. У функции
- *    Yandex Cloud это UTC, а не часы клиента, поэтому затухание NDTE поехало бы
- *    на три часа. Сам расчёт (`calculateNDTE`) чистый и доступен — сервер
- *    собирает его входы сам, из блоба за `date − 1` и московского часа
- *    (`lib/day.js`, `serverNdteBoost`). `calculateTDEE` по-прежнему зовётся с
- *    `includeNDTE: false`, а готовая надбавка доливается поверх;
+ *    через `lsGet`. Калорийный путь нормы его не зовёт: `HEYS.dayNorm.resolve`
+ *    и `calculateNDTEDayAverage` по `{ date }`. Волна по-прежнему может взять
+ *    живой `hoursSince` из `getPreviousDayTrainings`.
  *  - `HEYS.TEF` — в `computeDailyNorms` есть фолбэк на белок 3 / углеводы 4 /
  *    жир 9, и это ровно значения `ATWATER` из `apps/web/heys_tef_v1.js:25-29`,
  *    так что путь без TEF даёт те же граммы. На `optimum` TEF не влияет вовсе.
@@ -47,7 +44,7 @@ const MIRRORED_FILES = [
   // scripts/legacy-bundle-config.mjs: shim заводит `__internals`, constants
   // вешает туда NDTE, utils дополняет хелперами и молча выходит, если constants
   // ещё не загружен. Наружу сервер берёт их через `insulinWaveInternals()`:
-  // публично constants поднимает только `calculateNDTE` и
+  // публично constants поднимает `calculateNDTE`, `calculateNDTEDayAverage` и
   // `getPreviousDayTrainings` (их ищет `heys_tdee_v1.js`), utils — `utils`.
   'heys_iw_shim.js',
   'heys_iw_constants.js',
@@ -61,6 +58,7 @@ const MIRRORED_FILES = [
   // своими словами. Раньше он их не считал вовсе и брал готовое число из кэша
   // отрисовки — отсюда и протухшая норма.
   'heys_day_caloric_debt_core_v1.js',
+  'heys_day_norm_v1.js',
   // Тоннаж силовых и модель нагрузки (Банистер) — для оценки тренировки
   // (TRAINING_LOAD_MODEL_PROMPT.md). Путь с подкаталогом сохранён как в
   // apps/web/_kernel/, чтобы source/mirror пути совпадали буквально.
@@ -101,6 +99,9 @@ function loadHeys() {
   if (!HEYS || !HEYS.TDEE || !HEYS.dayCalculations || !HEYS.dayCaloricDebtCore
     || !HEYS.TrainingKernel?.strength || !HEYS.TrainingKernel?.load) {
     throw new Error('web-mirror: зеркала apps/web загрузились без HEYS.TDEE/HEYS.dayCalculations/HEYS.TrainingKernel');
+  }
+  if (!HEYS.dayNorm || typeof HEYS.dayNorm.resolve !== 'function') {
+    throw new Error('web-mirror: зеркала загрузились без HEYS.dayNorm.resolve');
   }
   // Цепочка iw-модулей молча выходит, если shim не загрузился первым: без этой
   // проверки NDTE тихо станет нулём, и норма поедет вниз без единой ошибки.
@@ -207,8 +208,12 @@ function fitnessFatigue(dailyLoads, opts) {
   return loadHeys().TrainingKernel.load.fitnessFatigue(dailyLoads, opts);
 }
 
-/**
- * `HEYS.InsulinWave.__internals` — NDTE и его хелперы.
+/** `HEYS.dayNorm.resolve` из apps/web/heys_day_norm_v1.js. */
+function resolveDayNorm(day, profile, opts) {
+  return loadHeys().dayNorm.resolve(day, profile, opts);
+}
+
+/** `HEYS.InsulinWave.__internals` — NDTE и его хелперы.
  *
  * Публично цепочка поднимает лишь то, что ищут другие модули приложения
  * (`calculateNDTE`, `getPreviousDayTrainings`, `utils`); остальное наружу
@@ -227,6 +232,7 @@ module.exports = {
   calculateTDEE,
   computeDailyNorms,
   computeDebtCore,
+  resolveDayNorm,
   getRefeedOptimum,
   insulinWaveInternals,
   trainingTonnage,

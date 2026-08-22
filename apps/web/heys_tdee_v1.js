@@ -338,20 +338,22 @@
 
     // NDTE (Next-Day Training Effect) — буст от вчерашней тренировки
     let ndteBoost = 0;
-    if (options.includeNDTE !== false && HEYS.InsulinWave?.calculateNDTE && HEYS.InsulinWave?.getPreviousDayTrainings && d.date) {
-      const prevTrainings = HEYS.InsulinWave.getPreviousDayTrainings(d.date, lsGet);
+    if (options.includeNDTE !== false && HEYS.InsulinWave?.calculateNDTEDayAverage && HEYS.InsulinWave?.getPreviousDayTrainings && d.date) {
+      const prevTrainings = HEYS.InsulinWave.getPreviousDayTrainings(d.date, lsGet, weight);
       // 300, а не 200: сам `calculateNDTE` отбивает всё ниже 300 с v4.3
       // (heys_iw_constants.js, «порог поднят 200 → 300 kcal»), поэтому внешние
       // 200 ничего не пропускали — они лишь делали вид, что граница ниже.
       if (prevTrainings.totalKcal >= 300) {
         const heightM = (+prof.height || 170) / 100;
         const bmi = weight && heightM ? r0(weight / (heightM * heightM) * 10) / 10 : 22;
-        const ndteData = HEYS.InsulinWave.calculateNDTE({
+        const ndteData = HEYS.InsulinWave.calculateNDTEDayAverage({
           trainingKcal: prevTrainings.totalKcal,
-          hoursSince: prevTrainings.hoursSince,
           bmi,
           trainingType: prevTrainings.dominantType || 'cardio',
-          trainingsCount: prevTrainings.trainings.length
+          trainingsCount: prevTrainings.trainings.length,
+          dayDate: d.date,
+          prevDate: prevTrainings.prevDate,
+          trainingTime: prevTrainings.anchorTime,
         });
         ndteBoost = r0(bmr * ndteData.tdeeBoost);
       }

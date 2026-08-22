@@ -146,6 +146,18 @@ describe('getPreviousDayTrainings — вчерашний план не разг�
     expect(mixed.totalKcal).toBe(fact.totalKcal);
   });
 
+  it('якорь NDTE — тренировка с max(time), тип с той же строки', () => {
+    const mixed = IWI.getPreviousDayTrainings(
+      '2026-08-09',
+      prevDayWith([
+        { type: 'strength', time: '10:00', z: CARDIO.z },
+        { type: 'cardio', time: '19:00', z: CARDIO.z },
+      ]),
+    );
+    expect(mixed.dominantType).toBe('cardio');
+    expect(mixed.anchorTime).toBe('19:00');
+  });
+
   it('вчерашняя начатая тренировка — факт, буст остаётся', () => {
     const started = IWI.getPreviousDayTrainings(
       '2026-08-09',

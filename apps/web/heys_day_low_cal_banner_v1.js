@@ -259,7 +259,9 @@
       return null;
     }
 
-    const target = displayOptimum || day.savedDisplayOptimum || 0;
+    const target = displayOptimum
+      || (HEYS.dayNorm && typeof HEYS.dayNorm.kcal === 'function' ? HEYS.dayNorm.kcal(day, HEYS.utils?.lsGet?.('heys_profile', {}) || {}, {}) : 0)
+      || 0;
     const kcal = eatenKcal || day.savedEatenKcal || 0;
     if (target <= 0 || kcal <= 0) return null;
 

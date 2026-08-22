@@ -149,7 +149,10 @@
             }
             const todayKcal = Math.round(eatenKcal || 0);
             // Используем savedDisplayOptimum (с учётом долга) если есть, иначе optimum
-            const todayTarget = day.savedDisplayOptimum > 0 ? day.savedDisplayOptimum : optimum;
+            const resolvedToday = (H && H.dayNorm && typeof H.dayNorm.kcal === 'function')
+              ? H.dayNorm.kcal(day, prof || {}, {})
+              : 0;
+            const todayTarget = resolvedToday > 0 ? resolvedToday : optimum;
             const todayRatio = todayTarget > 0 ? todayKcal / todayTarget : 0;
             // 🆕 v5.0: Рассчитываем затраты дня (TDEE) для сегодня
             const lsGet = (H && H.utils && H.utils.lsGet) || ((k, d) => d);
@@ -263,7 +266,15 @@
             }
             const fallbackTotalKcal = Math.round(totalKcal);
             // 🔧 FIX: Используем сохранённую норму дня если есть, иначе текущий optimum
-            const fallbackTarget = +dayData.savedDisplayOptimum > 0 ? +dayData.savedDisplayOptimum : optimum;
+            const resolvedFallback = (H && H.dayNorm && typeof H.dayNorm.resolve === 'function')
+              ? H.dayNorm.resolve(dayData, prof || {}, {})
+              : null;
+            const fallbackTarget = (resolvedFallback && resolvedFallback.kcal > 0)
+              ? resolvedFallback.kcal
+              : optimum;
+            const fallbackBase = (resolvedFallback && resolvedFallback.base > 0)
+              ? resolvedFallback.base
+              : optimum;
             // 🔧 FIX: savedEatenKcal only when there are meal lines (avoid stale kcal after clearing diary)
             const hasAnyMealItems = (dayData.meals || []).some((m) => Array.isArray(m?.items) && m.items.length > 0);
             const fallbackKcal = hasAnyMealItems && +dayData.savedEatenKcal > 0
@@ -279,7 +290,7 @@
               // и он учитывался второй раз. Текущий optimum — то же значение, на
               // которое ядро долга падает своим последним фолбэком, но без долга
               // внутри.
-              baseTarget: optimum,
+              baseTarget: fallbackBase,
               spent: fallbackTarget, // 🆕 v5.0: Затраты = норма для fallback дней (нет TDEE)
               ratio: fallbackTarget > 0 ? fallbackKcal / fallbackTarget : 0, // 🆕 Ratio для инсайтов
               isToday: false,

@@ -2815,7 +2815,10 @@
           : 0;
     const explicitOptimum = Number(opts.optimum);
     const explicitTdee = Number(opts.tdee);
-    const savedOptimum = numeric(day.savedDisplayOptimum);
+    const resolvedSaved = (HEYS.dayNorm && typeof HEYS.dayNorm.kcal === 'function')
+      ? HEYS.dayNorm.kcal(day, opts.prof || HEYS.utils?.lsGet?.('heys_profile', {}) || {}, {})
+      : 0;
+    const savedOptimum = resolvedSaved > 0 ? resolvedSaved : 0;
     const needsEnergyFallback = (!(Number.isFinite(explicitOptimum) && explicitOptimum > 0) && savedOptimum <= 0) ||
       !(Number.isFinite(explicitTdee) && explicitTdee > 0);
     const profile = opts.prof || HEYS.utils?.lsGet?.('heys_profile', {}) || {};

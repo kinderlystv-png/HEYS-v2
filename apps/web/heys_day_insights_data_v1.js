@@ -667,8 +667,9 @@
           const burned = tdeeInfo?.tdee || 0;
           const dayInfo = allActiveDays.get(d.date);
           let goalTarget = getDayOptimum(d.date, dayInfo).target || optimum;
-          if (dayData?.savedDisplayOptimum > 0) {
-            goalTarget = dayData.savedDisplayOptimum;
+          if (dayData && HEYS.dayNorm && typeof HEYS.dayNorm.kcal === 'function') {
+            const resolvedGoal = HEYS.dayNorm.kcal(dayData, prof || {}, {});
+            if (resolvedGoal > 0) goalTarget = resolvedGoal;
           } else if (dayData?.isRefeedDay && HEYSRef.Refeed && tdeeInfo?.optimum) {
             goalTarget = HEYSRef.Refeed.getRefeedOptimum(tdeeInfo.optimum, true);
           }

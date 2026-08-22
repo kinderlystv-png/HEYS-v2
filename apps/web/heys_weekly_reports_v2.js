@@ -118,8 +118,11 @@
             const hasMeals = Array.isArray(day.meals) && day.meals.some((m) => (m.items || []).length > 0);
             const totals = getDayTotals(day, pIndex);
             const optimum = getDayOptimum(day, profile, lsGet, pIndex);
-            let goalOptimum = day?.savedDisplayOptimum > 0 ? day.savedDisplayOptimum : optimum;
-            if (day?.isRefeedDay && HEYS.Refeed && !(day?.savedDisplayOptimum > 0)) {
+            const resolved = (typeof HEYS !== 'undefined' && HEYS.dayNorm && HEYS.dayNorm.resolve)
+              ? HEYS.dayNorm.resolve(day || { date: dstr }, profile, {})
+              : null;
+            let goalOptimum = (resolved && resolved.kcal > 0) ? resolved.kcal : optimum;
+            if (day?.isRefeedDay && HEYS.Refeed && !(resolved && resolved.kcal > 0)) {
                 goalOptimum = HEYS.Refeed.getRefeedOptimum(optimum, true);
             }
             const normAbs = HEYS.dayCalculations?.computeDailyNorms
