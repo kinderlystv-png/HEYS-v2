@@ -67,12 +67,13 @@ function parseArgs(argv) {
       case '--date': parsed.date = argv[++i]; break;
       case '--snapshot-file': parsed.snapshotFile = argv[++i]; break;
       case '--apply': parsed.apply = true; break;
+      case '--from-live': parsed.fromLive = true; break;
       default:
         throw new Error(`Неизвестный аргумент: ${argv[i]}`);
     }
   }
-  if (!parsed.clientId || (!parsed.date && !parsed.snapshotFile)) {
-    throw new Error('Usage: node restore-products-catalog.js --client-id <UUID> (--date <YYYY-MM-DD> | --snapshot-file <path>) [--apply]');
+  if (!parsed.clientId || (!parsed.date && !parsed.snapshotFile && !parsed.fromLive)) {
+    throw new Error('Usage: node restore-products-catalog.js --client-id <UUID> (--date <YYYY-MM-DD> | --snapshot-file <path> | --from-live) [--apply]');
   }
   return parsed;
 }
@@ -105,33 +106,11 @@ function extractRows(snapshot) {
   return entry.v;
 }
 
-async function main() {
-  const args = parseArgs(process.argv);
-  const snapshot = args.snapshotFile
-    ? JSON.parse(gunzipSync(readFileSync(args.snapshotFile)).toString('utf8'))
-    : downloadSnapshot(args.clientId, args.date);
-  const rows = extractRows(snapshot);
-  const snapshotManifest = snapshot?.kvSnapshot?.[MANIFEST_KEY]?.v ?? null;
-
-  const built = codec.createSingle(rows);
-  if (!built.ok) throw new Error(`Манифест не построился: ${built.reason}`);
-
-  console.log(`Клиент:            ${args.clientId}`);
-  console.log(`Снимок:            ${args.snapshotFile || args.date} (exportedAt ${snapshot.exportedAt})`);
-  console.log(`Строк в снимке:    ${rows.length}`);
-  console.log(`Манифест в снимке: rowCount=${snapshotManifest?.rowCount ?? '—'}`);
-  console.log(`Манифест новый:    rowCount=${built.manifest.rowCount}, generation=${built.generation}`);
-  if (snapshotManifest && snapshotManifest.rowCount !== rows.length) {
-    console.log('⚠️  Пара в снимке рассогласована — именно поэтому манифест пересчитывается, а не переносится.');
-  }
-
-  if (!args.apply) {
-    console.log('\nРазбор без записи. Для записи повторить с --apply.');
-    return;
-  }
-
+// Соединение нужно и до разбора (--from-live читает строки из базы), и после
+// него, поэтому клиент создаётся один раз, а connect() зовётся по месту.
+function makeClient() {
   const { Client } = require('pg');
-  const db = new Client({
+  return new Client({
     host: process.env.PG_HOST,
     port: Number(process.env.PG_PORT || 6432),
     database: process.env.PG_DATABASE,
@@ -139,7 +118,55 @@ async function main() {
     password: process.env.PG_PASSWORD,
     ssl: { rejectUnauthorized: false },
   });
-  await db.connect();
+}
+
+async function main() {
+  const args = parseArgs(process.argv);
+
+  // --from-live: строки в облаке целы, отстал только сторож. Так выглядит запись
+  // не-атомарным писателем (инцидент 2026-08-22: MCP писал строки без манифеста).
+  // Восстанавливать из снимка тут НЕЛЬЗЯ — потеряются позиции, добавленные после
+  // снимка; источник правды здесь — живые строки.
+  const db = makeClient();
+  let rows;
+  let snapshot = null;
+  let snapshotManifest = null;
+  if (args.fromLive) {
+    await db.connect();
+    const live = await db.query(
+      'SELECT k, v FROM client_kv_store WHERE client_id = $1 AND k = ANY($2)',
+      [args.clientId, [OVERLAY_KEY, MANIFEST_KEY]],
+    );
+    const byKey = Object.fromEntries(live.rows.map((r) => [r.k, r.v]));
+    rows = byKey[OVERLAY_KEY];
+    if (!Array.isArray(rows)) throw new Error(`${OVERLAY_KEY} в базе не массив или отсутствует`);
+    snapshotManifest = byKey[MANIFEST_KEY] ?? null;
+  } else {
+    snapshot = args.snapshotFile
+      ? JSON.parse(gunzipSync(readFileSync(args.snapshotFile)).toString('utf8'))
+      : downloadSnapshot(args.clientId, args.date);
+    rows = extractRows(snapshot);
+    snapshotManifest = snapshot?.kvSnapshot?.[MANIFEST_KEY]?.v ?? null;
+  }
+
+  const built = codec.createSingle(rows);
+  if (!built.ok) throw new Error(`Манифест не построился: ${built.reason}`);
+
+  console.log(`Клиент:            ${args.clientId}`);
+  console.log(`Источник строк:    ${args.fromLive ? 'живая база' : `${args.snapshotFile || args.date} (exportedAt ${snapshot.exportedAt})`}`);
+  console.log(`Строк:             ${rows.length}`);
+  console.log(`Манифест сейчас:   rowCount=${snapshotManifest?.rowCount ?? '—'}`);
+  console.log(`Манифест новый:    rowCount=${built.manifest.rowCount}, generation=${built.generation}`);
+  if (snapshotManifest && snapshotManifest.rowCount !== rows.length) {
+    console.log('⚠️  Пара рассогласована — именно поэтому манифест пересчитывается, а не переносится.');
+  }
+
+  if (!args.apply) {
+    console.log('\nРазбор без записи. Для записи повторить с --apply.');
+    return;
+  }
+
+  if (!args.fromLive) await db.connect();
 
   const stamp = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
   try {
