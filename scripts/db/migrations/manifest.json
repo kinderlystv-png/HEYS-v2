@@ -10,6 +10,7 @@
     "scripts/db/",
     "supabase/",
     "temp/",
+    "heys-recovery-",
     "yandex-cloud-functions/migrations/"
   ],
   "legacyFiles": [
@@ -229,6 +230,13 @@
       "order": 30,
       "path": "scripts/db/migrations/2026-08-22_products_catalog_watch_v1.sql",
       "description": "Track personal product catalog size per client so a collapse can raise an alert",
+      "destructive": false
+    },
+    {
+      "id": "2026-08-23_shared_catalog_glue_hygiene",
+      "order": 31,
+      "path": "scripts/db/migrations/2026-08-23_shared_catalog_glue_hygiene.sql",
+      "description": "Shared catalog hygiene for MCP resolve: salad name, тефтели рисовые, творог dedupe",
       "destructive": false
     }
   ]
