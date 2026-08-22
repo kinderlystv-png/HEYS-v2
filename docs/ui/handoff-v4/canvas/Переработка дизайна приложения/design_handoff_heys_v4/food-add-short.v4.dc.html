@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;background:#e9dfcd;font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  *{box-sizing:border-box}
+  a{color:#8a4a20;text-decoration:none}
+  a:hover{color:#c67139}
+  .ph{width:375px;height:706px;flex:none;position:relative;overflow:hidden;background:#fffaf1;border-radius:28px;box-shadow:0 1px 2px rgba(80,50,20,.09),0 14px 40px rgba(80,50,20,.12)}
+  .sc{height:633px;overflow:hidden;padding:6px 18px 18px}
+  .n{font-variant-numeric:tabular-nums}
+  .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:rgba(0,0,0,.42)}
+  .tier{font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#8a4a20;margin:20px 0 10px}
+  .cd{background:#f7efe2;border-radius:20px;padding:2px 16px}
+  .grp{background:#f7efe2;border-radius:20px;padding:16px}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12.5px/1 Figtree,sans-serif}
+  .row > :last-child{flex:none}
+  .h{font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.42);margin:26px 0 12px}
+  .nt{padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid rgba(0,0,0,.07)}
+  .ntl > b,.nt > b{font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;display:block}
+  .ntl > span,.nt > span{font:500 11.5px/1.55 Figtree,sans-serif;color:#6b5f4f;display:block;margin-top:4px}
+  .top{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 0;gap:10px}
+  .ttl{font:700 15px/1 Figtree,sans-serif;color:#201e1d}
+  .btn{display:flex;align-items:center;justify-content:center;gap:9px;min-height:48px;border-radius:999px;background:#c67139;padding:0 16px;font:700 13px/1 Figtree,sans-serif;color:#2b1608}
+  .btn2{display:flex;align-items:center;justify-content:center;min-height:44px;border-radius:999px;background:#f7efe2;padding:0 14px;font:700 12.5px/1 Figtree,sans-serif;color:#8a4a20}
+  .chip{position:relative;padding:11px 14px;border-radius:14px;background:#f7efe2;font:600 12px/1 Figtree,sans-serif;color:#6b5f4f;text-align:center}
+  .chip.on{background:#efe3cf;color:#8a4a20;font-weight:700}
+  .lab{display:flex;flex-direction:column;gap:3px;margin-bottom:11px}
+  .lab b{font:700 12.5px/1 Figtree,sans-serif;color:#201e1d}
+  .lab span{font:500 11px/1.3 Figtree,sans-serif;color:#6b5f4f}
+  .fold{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px;background:#f7efe2;border-radius:18px;margin-top:10px;font:600 12.5px/1.3 Figtree,sans-serif;color:#201e1d;min-height:44px}
+  .fold > span{flex:1;min-width:0}
+  .fold i{display:block;margin-top:4px;font-style:normal;font:500 11px/1.3 Figtree,sans-serif;color:#6b5f4f}
+  .n{white-space:nowrap}
+  .hdr{display:flex;align-items:center;gap:7px;font:600 11.5px/1 Figtree,sans-serif;color:#8a4a20}
+  .prop{display:grid;grid-template-columns:118px minmax(0,1fr);gap:6px 14px;padding:11px 0;border-bottom:1px solid rgba(0,0,0,.07)}
+  .prop > b{font:700 11px/1.4 Figtree,sans-serif;color:#8a4a20}
+  .prop > span{font:500 11.5px/1.5 Figtree,sans-serif;color:#201e1d;text-wrap:pretty}
+  .prop > i{grid-column:2;font-style:normal;font:500 11px/1.5 Figtree,sans-serif;color:#6b5f4f;text-wrap:pretty}
+  .bnr{display:flex;align-items:flex-start;gap:11px;background:#efe3cf;border-radius:16px;padding:13px 16px;margin:0 0 18px;max-width:960px}
+  .bnrTag{font:700 9.5px/1 ui-monospace,Menlo,monospace;padding:5px 8px;background:#c67139;color:#2b1608;border-radius:999px;flex:none}
+  .bnr span{font:500 11.5px/1.55 Figtree,sans-serif;color:#6b5f4f;text-wrap:pretty}
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:0;background:#fffaf1;border-radius:20px;overflow:hidden;max-width:1000px}
+  .cmp > div{padding:15px 17px}
+  .cmp > div:nth-child(odd){border-right:1px solid rgba(0,0,0,.07)}
+  .cmp b{display:block;font:700 11.5px/1.3 Figtree,sans-serif;color:#201e1d}
+  .cmp span{display:block;font:500 11px/1.5 Figtree,sans-serif;color:#6b5f4f;margin-top:4px;text-wrap:pretty}
+  .cmpH{font:700 9.5px/1 Figtree,sans-serif;letter-spacing:.12em;text-transform:uppercase;margin-bottom:9px}
+</style>
+</helmet>
+
+<div style="background:#e9dfcd;padding:44px 46px 70px;width:max-content;">
+  <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
+    <span style="font:800 26px/1 Figtree,sans-serif;letter-spacing:-.02em;color:#201e1d;">Добавление еды · короткий путь</span>
+    <span style="font:600 12px/1 Figtree,sans-serif;color:#8a4a20;">предложение к обсуждению</span>
+  </div>
+  <p style="margin:0 0 14px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:#6b5f4f;text-wrap:pretty;">Разбор флоу <b>food-add.v4.dc.html</b> и предложение переложить его вход. Диагноз одной фразой: <b>у флоу перевёрнут приоритет</b> — самое частое действие продукта обвешано церемонией до еды. Между «хочу записать кофе» и первым осмысленным тапом стоят гард даты, экран времени и типа, экран трёх ползунков и плашка волны с кнопкой «Подождать». Для дневника питания это не неудобство, а угроза данным: каждый лишний экран на входе учит не записывать.</p>
+  <div class="bnr">
+    <span class="bnrTag">НЕ В ПРОД</span>
+    <span>Это <b>протокол обсуждения</b>, а не согласованный макет: все кадры помечены <span style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;">data-demo="protocol"</span>, контракта здесь нет и реализовывать по нему нечего. Согласованный флоу остаётся в <b>food-add.v4.dc.html</b> до отдельного решения. Каждое предложение ниже отмечено отдельно — принимать можно по одному, целиком брать не обязательно.</span>
+  </div>
+  <div style="font:500 11px/1.5 Figtree,sans-serif;color:#6b5f4f;max-width:960px;margin-bottom:34px;">Кадры искать по <span style="font-family:ui-monospace,Menlo,monospace;">data-screen-label</span> · рамка 375 px · рядом с каждым предложением — что оно ломает, если принять</div>
+
+  <div class="h" style="margin-top:0;">Целевой путь · три экрана вместо шести</div>
+  <p style="margin:0 0 18px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:#6b5f4f;text-wrap:pretty;">Тап по «+» ведёт сразу туда, где человек что-то выбирает. Время, тип и окно волны переезжают строками в шапку приёма и правятся по тапу; самочувствие и фото становятся необязательными блоками на собранном приёме. Порция предзаполнена прошлым значением, поэтому кофе записывается тремя тапами: плюс → строка «Кофе» → «Добавить».</p>
+
+  <div style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;">
+    <div>
+      <div class="lab"><b>1 · Сразу поиск и частые</b><span>первый экран после «+»</span></div>
+      <div class="ph" data-demo="protocol" data-screen-label="Короткий путь · вход">
+        <div class="top">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6b5f4f" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          <span style="display:flex;flex-direction:column;gap:3px;flex:1;">
+            <span class="ttl">Перекус · 11:50</span>
+            <span style="font:500 10.5px/1 Figtree,sans-serif;color:#6b5f4f;">тип и время по тапу · окно волны до 13:00</span>
+          </span>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </div>
+        <div class="sc">
+          <div style="background:#efe3cf;border-radius:22px;padding:18px;margin-top:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+              <div><div style="font:700 13px/1.3 Figtree,sans-serif;color:#201e1d;">Повторить вчерашний перекус</div><div style="font:500 11.5px/1.4 Figtree,sans-serif;color:#6b5f4f;margin-top:5px;">Кофе, сыр, хлеб · 292 ккал</div></div>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;background:#f7efe2;border-radius:16px;padding:14px 16px;margin-top:12px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.75" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+            <span style="flex:1;font:500 13px/1 Figtree,sans-serif;color:#6b5f4f;">Поиск продукта</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b5f4f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 8v8M11 8v8M15 8v8"/></svg>
+          </div>
+          <div style="display:flex;gap:16px;margin-top:16px;font:600 11.5px/1 Figtree,sans-serif;">
+            <span style="color:#8a4a20;padding-bottom:6px;border-bottom:2px solid #c67139;">Частые</span>
+            <span style="color:#6b5f4f;padding-bottom:6px;">Недавние</span>
+            <span style="color:#6b5f4f;padding-bottom:6px;">Наборы · 4</span>
+            <span style="color:#6b5f4f;padding-bottom:6px;">Общие</span>
+          </div>
+          <div class="cd" style="margin-top:12px;">
+            <div class="row"><span style="display:flex;align-items:center;gap:11px;"><span style="width:4px;height:30px;border-radius:999px;background:#7a8a5e;flex:none;"></span><span><span style="display:block;color:#201e1d;">Кофе растворимый с молоком</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:#6b5f4f;margin-top:6px;">100 г · 51 ккал · 22 раза</span></span></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div class="row"><span style="display:flex;align-items:center;gap:11px;"><span style="width:4px;height:30px;border-radius:999px;background:#7a8a5e;flex:none;"></span><span><span style="display:block;color:#201e1d;">Сыр твёрдый классический</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:#6b5f4f;margin-top:6px;">30 г · 92 ккал · 18 раз</span></span></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div class="row" style="border-bottom:none;"><span style="display:flex;align-items:center;gap:11px;"><span style="width:4px;height:30px;border-radius:999px;background:#7a8a5e;flex:none;"></span><span><span style="display:block;color:#201e1d;">Хлеб тостовый премиум</span><span class="n" style="display:block;font:500 11px/1 Figtree,sans-serif;color:#6b5f4f;margin-top:6px;">40 г · 111 ккал · 12 раз</span></span></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+          </div>
+          <div style="font:500 11px/1.5 Figtree,sans-serif;color:#6b5f4f;margin-top:14px;text-wrap:pretty;">У частых показана прошлая порция — «+» добавляет сразу с ней, экран порции не открывается.</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>2 · Порция</b><span>только если объём меняют</span></div>
+      <div class="ph" data-demo="protocol" data-screen-label="Короткий путь · порция">
+        <div class="top">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6b5f4f" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <span class="ttl" style="flex:1;">Кофе растворимый</span>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 6.2L21 10l-4.8 4.3L17.5 21 12 17.6 6.5 21l1.3-6.7L3 10l6.5-.8z"/></svg>
+        </div>
+        <div class="sc">
+          <div style="background:#efe3cf;border-radius:26px;padding:24px 20px 20px;margin-top:14px;text-align:center;">
+            <div class="k">Сколько · как в прошлый раз</div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-top:14px;">
+              <span style="width:44px;height:44px;border-radius:999px;background:#fffaf1;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M6 12h12"/></svg></span>
+              <span class="n" style="font:600 54px/1 Figtree,sans-serif;color:#201e1d;letter-spacing:-.04em;">100<span style="font-size:15px;font-weight:600;color:#6b5f4f;"> г</span></span>
+              <span style="width:44px;height:44px;border-radius:999px;background:#fffaf1;display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="3" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+            </div>
+            <div style="display:flex;justify-content:center;gap:12px;margin-top:18px;">
+              <span class="chip" style="background:#fffaf1;padding:10px 11px;">50</span>
+              <span class="chip on" style="background:#c67139;color:#2b1608;padding:10px 11px;">100</span>
+              <span class="chip" style="background:#fffaf1;padding:10px 11px;">150</span>
+              <span class="chip" style="background:#fffaf1;padding:10px 11px;">200</span>
+            </div>
+            <div style="display:flex;justify-content:center;gap:12px;margin-top:12px;">
+              <span class="chip" style="background:#eaefe0;color:#5c6a45;padding:10px 12px;">½ стакана · 125 г</span>
+              <span class="chip" style="background:#eaefe0;color:#5c6a45;padding:10px 12px;">1 стакан · 250 г</span>
+            </div>
+          </div>
+          <div class="grp" style="margin-top:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;"><span class="k">Добавится</span><span class="n" style="font:600 22px/1 Figtree,sans-serif;color:#8a4a20;">51 ккал</span></div>
+            <div class="n" style="display:flex;gap:16px;font:600 11.5px/1 Figtree,sans-serif;color:#6b5f4f;margin-top:12px;"><span>Б 3</span><span>Ж 3</span><span>У 5</span></div>
+            <div style="height:6px;border-radius:999px;background:rgba(0,0,0,.08);margin-top:14px;"><div style="width:3%;height:6px;border-radius:999px;background:#c67139;"></div></div>
+            <div class="n" style="font:500 11px/1 Figtree,sans-serif;color:#6b5f4f;margin-top:9px;">51 из 1 683 за день · 3 %</div>
+          </div>
+          <div class="grp" style="background:#f0dcc6;margin-top:12px;">
+            <div style="font:600 12.5px/1.45 Figtree,sans-serif;color:#8a4a20;text-wrap:pretty;">Этот продукт уже есть в приёме — 100 г. Добавите ещё, и еда посчитается дважды.</div>
+          </div>
+          <div class="btn" style="margin-top:12px;">Добавить</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>3 · Приём собран</b><span>здесь живёт всё необязательное</span></div>
+      <div class="ph" data-demo="protocol" data-screen-label="Короткий путь · приём собран">
+        <div class="top">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6b5f4f" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          <span style="display:flex;flex-direction:column;gap:3px;flex:1;">
+            <span class="ttl">Перекус · 11:50</span>
+            <span style="font:500 10.5px/1 Figtree,sans-serif;color:#6b5f4f;">окно волны до 13:00</span>
+          </span>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </div>
+        <div class="sc">
+          <div style="background:#efe3cf;border-radius:26px;padding:22px 20px;margin-top:14px;">
+            <div class="k">В приёме</div>
+            <div style="display:flex;align-items:baseline;gap:9px;margin-top:12px;"><span class="n" style="font:600 44px/.9 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.035em;">292</span><span style="font:600 12px/1 Figtree,sans-serif;color:#6b5f4f;">ккал · 4 продукта</span></div>
+            <div class="n" style="font:500 11.5px/1.4 Figtree,sans-serif;color:#6b5f4f;margin-top:10px;">До нормы дня остаётся 1 391</div>
+          </div>
+          <div class="cd" style="margin-top:12px;">
+            <div class="row"><span style="color:#6b5f4f;">Кофе растворимый <span class="n" style="color:rgba(0,0,0,.35);font-weight:500;">100 г</span></span><span class="n" style="color:#201e1d;">51</span></div>
+            <div class="row"><span style="color:#6b5f4f;">Сыр твёрдый <span class="n" style="color:rgba(0,0,0,.35);font-weight:500;">30 г</span></span><span class="n" style="color:#201e1d;">92</span></div>
+            <div class="row"><span style="color:#6b5f4f;">Творожный сыр <span class="n" style="color:rgba(0,0,0,.35);font-weight:500;">20 г</span></span><span class="n" style="color:#201e1d;">38</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:#6b5f4f;">Хлеб тостовый <span class="n" style="color:rgba(0,0,0,.35);font-weight:500;">40 г</span></span><span class="n" style="color:#201e1d;">111</span></div>
+          </div>
+          <div class="fold"><span>Как вы сейчас<i>настроение, самочувствие, стресс</i></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+          <div class="fold"><span>Фото приёма<i>не обязательно</i></span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8a4a20" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <span class="btn2" style="flex:1;">Добавить ещё</span>
+            <span class="btn2" style="flex:1;">Сохранить как набор</span>
+          </div>
+          <div class="btn" style="margin-top:10px;">Готово</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="lab"><b>Шапка приёма по тапу</b><span>что открывает строка «Перекус · 11:50»</span></div>
+      <div class="ph" data-demo="protocol" data-screen-label="Короткий путь · правка шапки">
+        <div class="top">
+          <span style="width:17px;"></span>
+          <span class="ttl" style="flex:1;text-align:center;">Приём</span>
+          <span style="font:600 12px/1 Figtree,sans-serif;color:#8a4a20;">Готово</span>
+        </div>
+        <div class="sc">
+          <div style="background:#efe3cf;border-radius:26px;padding:22px 20px;margin-top:14px;text-align:center;">
+            <div class="k">Время</div>
+            <div class="n" style="font:600 44px/1 Figtree,sans-serif;color:#8a4a20;letter-spacing:-.04em;margin-top:10px;">11:50</div>
+          </div>
+          <div class="tier">Тип приёма</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <span class="chip">Завтрак</span><span class="chip">Обед</span>
+            <span class="chip on">Перекус</span><span class="chip">Ужин</span>
+            <span class="chip">Кофе-брейк</span><span class="chip">Ночной приём</span>
+          </div>
+          <div class="tier">Дата</div>
+          <div class="grp" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+            <span style="font:600 12.5px/1.3 Figtree,sans-serif;color:#201e1d;">Сегодня, 21 августа</span>
+            <span style="font:600 11.5px/1 Figtree,sans-serif;color:#8a4a20;">Изменить</span>
+          </div>
+          <div class="grp" style="background:#f0dcc6;margin-top:12px;">
+            <div style="font:600 12px/1.45 Figtree,sans-serif;color:#8a4a20;text-wrap:pretty;">Прошлый приём ещё усваивается — окно закроется в 13:00. Запись это не отменяет.</div>
+          </div>
+          <div style="font:500 11px/1.5 Figtree,sans-serif;color:#6b5f4f;margin-top:14px;text-wrap:pretty;">Экран открывается только по тапу по шапке. Тип и время уже угаданы, поэтому обычный путь его не проходит.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="h">Что предлагается · по пунктам</div>
+  <p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:#6b5f4f;text-wrap:pretty;">Каждый пункт самостоятельный: можно принять один и отклонить остальные. У каждого названо, что он ломает — иначе обсуждение уйдёт в «звучит разумно».</p>
+
+  <div style="background:#fffaf1;border-radius:24px;padding:20px;max-width:1000px;">
+    <div class="prop"><b>1 · время и тип</b><span>не экран, а строка в шапке приёма; правится по тапу (кадр «правка шапки»)</span><i>Ломает: шаг 1 согласованного флоу исчезает, точки прогресса больше не нужны. Основание: тип и время уже угадываются, и подпись прежнего кадра сама говорит «менять не обязательно» — значит это не вопрос, а значение по умолчанию, которому место в шапке.</i></div>
+    <div class="prop"><b>2 · самочувствие</b><span>свёрнутый блок на собранном приёме, не второй шаг до еды</span><i>Ломает: сбор оценок станет реже — часть людей его не откроет. Основание: сейчас три шкалы и чипы стоят перед пустым приёмом, а выход «сохранить без оценок» сохраняет ничего. Вопрос владельцу: если оценки нужны обязательно, честнее спрашивать их один раз в день, а не на каждый кофе.</i></div>
+    <div class="prop"><b>3 · окно волны</b><span>строка в шапке; кнопок «Подождать» и «Всё равно продолжить» нет</span><i>Ломает: продукт перестаёт отговаривать от еды в закрытом окне. Основание: еда уже случилась или случится, «Подождать» отменяет не еду, а запись — то есть учит не записывать именно то, что важнее всего видеть.</i></div>
+    <div class="prop"><b>4 · гард даты</b><span>только при входе с Главной, когда открыт прошлый день; из дневника прошлого дня — просто дата в шапке</span><i>Ломает: случайная запись в чужой день становится возможной при входе из дневника. Основание: дописать вчерашний день — легитимный частый путь, а первичная кнопка «Перейти на сегодня» ворует намерение.</i></div>
+    <div class="prop"><b>5 · порция по умолчанию</b><span>предзаполнена прошлой порцией этого продукта; у частых прошлый объём показан в строке, и «+» добавляет сразу с ним</span><i>Ломает: экран порции пропускается, ошибочная порция уедет в приём без подтверждения — нужна отмена (бар отмены уже есть). Основание: «В прошлый раз было 100 г» сейчас подсказка, хотя это и есть ответ.</i></div>
+    <div class="prop" style="border-bottom:none"><b>6 · точки прогресса</b><span>снимаются вовсе</span><i>Ломает: ничего. Основание: они показывают два шага, а экранов в флоу больше — индикатор врёт, и при коротком пути шагов вообще не остаётся.</i></div>
+  </div>
+
+  <div class="h">Что не трогаем</div>
+  <div style="background:#eaefe0;border-radius:24px;padding:20px;max-width:1000px;">
+    <div class="nt"><b>Слитые развилка и поиск</b><span>Шаг 3 согласованного флоу — уже верное решение: поиск, частые, недавние, наборы и общая база на одном экране, без экрана-развилки «что добавляем». Короткий путь его не меняет, а делает первым.</span></div>
+    <div class="nt"><b>«Повторить вчерашний» первой карточкой</b><span>Самый дешёвый путь к записи; остаётся на месте и в коротком пути.</span></div>
+    <div class="nt"><b>Предупреждение о дубле продукта</b><span>«Этот продукт уже есть в приёме — 100 г» остаётся: это не церемония, а защита от двойного счёта.</span></div>
+    <div class="nt"><b>Наборы и «замечено в истории»</b><span>Самая ценная часть флоу — не меняется ни в одном пункте.</span></div>
+    <div class="ntl"><b>Вредность полосой слева</b><span>Цветовая полоса в списке остаётся; числом вредность появляется в дневнике, как и решено.</span></div>
+  </div>
+
+  <div class="h">Чего это стоит · честно</div>
+  <div class="cmp">
+    <div><div class="cmpH" style="color:#5c6a45;">Приобретаем</div><b>Кофе записывается тремя тапами</b><span>плюс → строка продукта → «Добавить». Сейчас — минимум шесть экранов при том же результате.</span></div>
+    <div><div class="cmpH" style="color:#a1471c;">Теряем</div><b>Оценки самочувствия собираются реже</b><span>всё, что уехало в свёрнутый блок, часть людей не откроет никогда. Если эти данные нужны куратору — пункт 2 принимать нельзя в этом виде.</span></div>
+    <div><div class="cmpH" style="color:#5c6a45;">Приобретаем</div><b>Вход перестаёт спорить с человеком</b><span>ни гарда, ни «Подождать» на пути к записи: продукт принимает факт, а мнение о нём высказывает в дневнике.</span></div>
+    <div><div class="cmpH" style="color:#a1471c;">Теряем</div><b>Порция уезжает без подтверждения</b><span>предзаполненный объём — это тап без проверки; нужен рабочий бар отмены и правка порции из дневника.</span></div>
+    <div><div class="cmpH" style="color:#5c6a45;">Приобретаем</div><b>Шапка становится одним местом правды</b><span>дата, тип, время и окно волны — в одной строке, а не в трёх разных экранах входа.</span></div>
+    <div><div class="cmpH" style="color:#a1471c;">Теряем</div><b>Работы больше, чем кажется</b><span>переносятся четыре кадра согласованного флоу и меняется контракт «Питания» в части входа — это не косметика.</span></div>
+  </div>
+
+  <div class="h">Открытые вопросы</div>
+  <div style="background:#f0d8c4;border-radius:24px;padding:20px;max-width:1000px;">
+    <div class="nt"><b>Оценки самочувствия — на приём или на день?</b><span>Сейчас они привязаны к приёму. Если нужны именно почасовые — свёрнутый блок их убьёт, и предложение 2 надо переделывать: например, спрашивать один раз в день в чек-ине, а в приёме не спрашивать вовсе. Ответ владельца определяет, что делать с пунктом 2.</span></div>
+    <div class="nt"><b>Что делать с типом приёма, если человек не заметил подстановку</b><span>Короткий путь не показывает экран типа. Если угадывание ошибается часто, тип надо править из дневника одним тапом — иначе накопятся «перекусы», которые были ужином.</span></div>
+    <div class="ntl"><b>Нужен ли гард даты вообще</b><span>Альтернатива, которую стоит обсудить: гарда нет, но приём, записанный не в сегодня, помечается в дневнике датой и первые несколько секунд подсвечен. Тогда предупреждение уходит из входа в результат.</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
