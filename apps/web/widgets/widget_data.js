@@ -202,6 +202,19 @@
           return this.getWeightData();
         case 'steps':
           return this.getStepsData();
+        // Шесть виджетов пакета 22 августа.
+        case 'fiber':
+          return this.getFiberWidgetData();
+        case 'protein':
+          return this.getProteinWidgetData();
+        case 'sleepWindow':
+          return this.getSleepWindowData();
+        case 'foodQuality':
+          return this.getFoodQualityData();
+        case 'mealRhythm':
+          return this.getMealRhythmData();
+        case 'sleepReady':
+          return this.getSleepReadyData();
         case 'macros':
           return this.getMacrosData();
         case 'insulin':
@@ -755,11 +768,303 @@
       // home-widgets, «шаги · нет данных»): на месте числа прочерк, полосы нет.
       const raw = Number(day?.steps);
       const hasData = Number.isFinite(raw) && raw > 0;
+
+      // Оба вида — тренды (строка «шаги», решение 22 августа): числа «сейчас» у
+      // шагов не существует, они вносятся вечером в чек-ине. Поэтому день без
+      // записи в ряд не попадает вовсе, а не рисуется нулём.
+      const buildSeries = (days) => {
+        const series = [];
+        const today = new Date();
+        for (let i = days - 1; i >= 0; i -= 1) {
+          const date = new Date(today);
+          date.setDate(date.getDate() - i);
+          const iso = this._formatDate(date);
+          const dayData = i === 0 ? day : this._getDayByDate(iso);
+          const value = Number(dayData?.steps);
+          const dayHas = Number.isFinite(value) && value > 0;
+          series.push({ iso, value: dayHas ? value : null, hasData: dayHas, isToday: i === 0 });
+        }
+        return series;
+      };
+
+      const week = buildSeries(7);
+      const month = buildSeries(30);
+      const filled = month.filter((item) => item.hasData);
+      const avgAll = filled.length
+        ? Math.round(filled.reduce((acc, item) => acc + item.value, 0) / filled.length)
+        : null;
+      const weekFilled = week.filter((item) => item.hasData);
+      const avgWeek = weekFilled.length
+        ? Math.round(weekFilled.reduce((acc, item) => acc + item.value, 0) / weekFilled.length)
+        : null;
+
       return {
         hasData,
         steps: hasData ? raw : null,
         goal: goal,
-        pct: hasData && goal > 0 ? Math.round((raw / goal) * 100) : 0
+        pct: hasData && goal > 0 ? Math.round((raw / goal) * 100) : 0,
+        week,
+        month,
+        avgWeek,
+        avgMonth: avgAll,
+        // Дней с записями меньше двух — вместо столбиков подпись «нужно N дней».
+        daysWithData: filled.length
+      };
+    },
+
+    // ─── Шесть виджетов пакета канваса 22 августа ─────────────────────────
+    // Общее правило контракта: второго алгоритма нигде не заводим. Клетчатка и
+    // белок берут числа из тех же дневных итогов, что кольцо БЖУ; качество еды —
+    // из той же вредности, что карточка «Качество еды» на «Питании»; окно до
+    // сна и готовность ко сну — из отбоя чек-ина и правил своих виджетов.
+
+    // Клетчатка: 14 г на 1000 ккал бюджета дня (строка «клетчатка · норма»).
+    _fiberNorm(budgetKcal) {
+      const budget = Number(budgetKcal) || 0;
+      if (budget <= 0) return 0;
+      return Math.round((budget / 1000) * 14);
+    },
+
+    // День считается «с данными», когда в нём есть приём с продуктами. Ноль
+    // клетчатки при съеденном обеде — это ноль, а не «нет данных».
+    _dayHasItems(day) {
+      const meals = Array.isArray(day?.meals) ? day.meals : [];
+      return meals.some((meal) => Array.isArray(meal?.items) && meal.items.length > 0);
+    },
+
+    /** Клетчатка: виды 37 «Как сейчас», 38 «Добрать», 39 «Неделя». */
+    getFiberWidgetData() {
+      const day = this._getDay();
+      const totals = this._getDayTotals();
+      const norm = this._fiberNorm(this._getOptimum());
+      const hasData = this._dayHasItems(day);
+      const fiber = hasData ? Math.round(Number(totals?.fiber) || 0) : null;
+
+      // Подсказка — тот же словарь «чем добрать», что на «Питании»; граммовки
+      // виджет не показывает (строка «клетчатка · подсказка»).
+      let sources = [];
+      try {
+        sources = (HEYS.dayDiarySection?.getFiberSources?.() || [])
+          .map((item) => item?.title)
+          .filter(Boolean)
+          .slice(0, 3);
+      } catch (_) { sources = []; }
+
+      const week = [];
+      const today = new Date();
+      for (let i = 6; i >= 0; i -= 1) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const iso = this._formatDate(date);
+        const dayData = i === 0 ? day : this._getDayByDate(iso);
+        const dayHas = this._dayHasItems(dayData);
+        const value = dayHas ? Math.round(Number(this._getDayTotalsFor(dayData)?.fiber) || 0) : 0;
+        week.push({ iso, value, hasData: dayHas, isToday: i === 0 });
+      }
+
+      return {
+        hasData,
+        fiber,
+        norm,
+        pct: hasData && norm > 0 ? Math.round((fiber / norm) * 100) : 0,
+        remaining: hasData && norm > 0 ? Math.max(0, norm - fiber) : 0,
+        sources,
+        week
+      };
+    },
+
+    /** Белок: виды 40 «Как сейчас», 41 «Добрать», 42 «По приёмам». */
+    getProteinWidgetData() {
+      const day = this._getDay();
+      const totals = this._getDayTotals();
+      // Норма — та же, что считает кольцо БЖУ (строка «белок · норма»).
+      const macros = this.getMacrosData();
+      const target = Math.round(Number(macros?.proteinTarget) || 0);
+      const hasData = this._dayHasItems(day);
+      const protein = hasData ? Math.round(Number(totals?.prot) || 0) : null;
+
+      // Словаря источников белка в продукте нет; контракт разрешает: пустой
+      // словарь — строка подсказки не показывается.
+      const sources = [];
+
+      const byMeal = [];
+      const meals = Array.isArray(day?.meals) ? day.meals : [];
+      meals.forEach((meal) => {
+        const items = Array.isArray(meal?.items) ? meal.items : [];
+        if (!items.length) return;
+        let grams = 0;
+        items.forEach((item) => {
+          grams += (Number(item?.protein100) || 0) * ((Number(item?.grams) || 0) / 100);
+        });
+        byMeal.push({ time: meal?.time || '', grams: Math.round(grams) });
+      });
+
+      return {
+        hasData,
+        protein,
+        target,
+        pct: hasData && target > 0 ? Math.round((protein / target) * 100) : 0,
+        remaining: hasData && target > 0 ? Math.max(0, target - protein) : 0,
+        sources,
+        byMeal
+      };
+    },
+
+    /** Окно до сна: виды 43 «Как сейчас», 44 «Вечер». */
+    getSleepWindowData() {
+      const day = this._getDay();
+      const meals = Array.isArray(day?.meals) ? day.meals : [];
+      const times = meals
+        .filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0)
+        .map((meal) => this._parseHmToMinutes(meal?.time))
+        .filter((value) => Number.isFinite(value));
+
+      // Отбой — из чек-ина; без него считаем от 23:00 и говорим об этом.
+      const bedRaw = this._parseHmToMinutes(day?.sleepStart);
+      const bedtimeKnown = Number.isFinite(bedRaw);
+      const bedtime = bedtimeKnown ? bedRaw : 23 * 60;
+
+      if (!times.length) {
+        return {
+          hasData: false, minutes: null, bedtime, bedtimeKnown,
+          lastMeal: null, state: 'neutral', word: 'не ел'
+        };
+      }
+
+      const lastMeal = Math.max(...times);
+      // После отбоя показываем итог вечера, а не отрицательное время.
+      const minutes = Math.max(0, bedtime - lastMeal);
+
+      // Красным — только когда ел меньше чем за час до отбоя.
+      let state = 'neutral';
+      let word = 'до отбоя';
+      if (minutes < 60) { state = 'bad'; word = 'ел перед сном'; }
+      else if (minutes >= 180) { state = 'good'; word = 'чисто'; }
+
+      return { hasData: true, minutes, bedtime, bedtimeKnown, lastMeal, state, word };
+    },
+
+    /** Качество еды: виды 45 «Как сейчас», 46 «Что снизило», 47 «Неделя». */
+    getFoodQualityData() {
+      const day = this._getDay();
+      const hasData = this._dayHasItems(day);
+      const scoreOf = (dayData) => {
+        if (!this._dayHasItems(dayData)) return null;
+        const harm = Number(this._getDayTotalsFor(dayData)?.harm);
+        if (!Number.isFinite(harm)) return null;
+        // Индекс — та же вредность, повёрнутая шкалой «больше = лучше»:
+        // второго расчёта контракт не разрешает.
+        return Math.round(Math.max(0, Math.min(10, 10 - harm)) * 10) / 10;
+      };
+
+      const score = hasData ? scoreOf(day) : null;
+      const week = [];
+      const today = new Date();
+      let sum = 0;
+      let count = 0;
+      for (let i = 6; i >= 0; i -= 1) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const iso = this._formatDate(date);
+        const value = scoreOf(i === 0 ? day : this._getDayByDate(iso));
+        if (value != null) { sum += value; count += 1; }
+        week.push({ iso, value, hasData: value != null, isToday: i === 0 });
+      }
+
+      // «Что снизило»: самый вредный продукт дня — им и объясняем дельту.
+      let worst = null;
+      (Array.isArray(day?.meals) ? day.meals : []).forEach((meal) => {
+        (Array.isArray(meal?.items) ? meal.items : []).forEach((item) => {
+          const harm = Number(item?.harm ?? item?.harmScore ?? item?.harm100);
+          const grams = Number(item?.grams) || 0;
+          if (!Number.isFinite(harm) || grams <= 0) return;
+          const weight = harm * grams;
+          if (!worst || weight > worst.weight) {
+            worst = { name: item?.name || '', weight, harm };
+          }
+        });
+      });
+
+      return {
+        hasData,
+        score,
+        // Дельта — насколько индекс ниже потолка: «−2» при 8 из 10.
+        delta: score == null ? null : Math.round((10 - score) * 10) / 10,
+        reason: worst && worst.name ? worst.name : null,
+        week,
+        avgWeek: count ? Math.round((sum / count) * 10) / 10 : null
+      };
+    },
+
+    /** Ритм приёмов: виды 48 «Лента дня», 49 «Интервалы». */
+    getMealRhythmData() {
+      const day = this._getDay();
+      const times = (Array.isArray(day?.meals) ? day.meals : [])
+        .filter((meal) => Array.isArray(meal?.items) && meal.items.length > 0)
+        .map((meal) => ({ time: meal?.time || '', minutes: this._parseHmToMinutes(meal?.time) }))
+        .filter((item) => Number.isFinite(item.minutes))
+        .sort((a, b) => a.minutes - b.minutes);
+
+      const intervals = [];
+      for (let i = 1; i < times.length; i += 1) {
+        intervals.push({
+          from: times[i - 1].time,
+          to: times[i].time,
+          minutes: times[i].minutes - times[i - 1].minutes
+        });
+      }
+      const avg = intervals.length
+        ? Math.round(intervals.reduce((acc, item) => acc + item.minutes, 0) / intervals.length)
+        : null;
+
+      const now = new Date();
+      return {
+        hasData: times.length > 0,
+        meals: times,
+        count: times.length,
+        intervals,
+        avgMinutes: avg,
+        nowMinutes: now.getHours() * 60 + now.getMinutes()
+      };
+    },
+
+    /** Готовность ко сну: виды 50 «Чек-лист», 51 «Разбор». */
+    getSleepReadyData() {
+      const day = this._getDay();
+      const prof = this._getProfile();
+
+      // Каждый порог берётся из правила своего виджета, второго алгоритма нет.
+      const waterMl = Number(day?.waterMl);
+      const waterGoal = Number(prof?.waterGoalMl) || Number(prof?.waterGoal) || 0;
+      const water = waterGoal > 0 && Number.isFinite(waterMl)
+        ? { hasData: true, done: waterMl / waterGoal >= 0.9, value: waterMl, goal: waterGoal }
+        : { hasData: false, done: false, value: null, goal: waterGoal || null };
+
+      const sleepWindow = this.getSleepWindowData();
+      const food = sleepWindow.hasData
+        ? { hasData: true, done: sleepWindow.minutes >= 180, value: sleepWindow.minutes, goal: 180 }
+        : { hasData: false, done: false, value: null, goal: 180 };
+
+      const stepsData = this.getStepsData();
+      const stepsGoal = Number(stepsData?.goal) || 0;
+      const steps = stepsData?.hasData && stepsGoal > 0
+        ? { hasData: true, done: stepsData.steps / stepsGoal >= 1, value: stepsData.steps, goal: stepsGoal }
+        : { hasData: false, done: false, value: stepsData?.steps ?? null, goal: stepsGoal || null };
+
+      const items = [
+        Object.assign({ key: 'water', label: 'Вода' }, water),
+        Object.assign({ key: 'food', label: 'Еда до сна' }, food),
+        Object.assign({ key: 'steps', label: 'Шаги' }, steps)
+      ];
+      // Пункт без данных выпадает из счётчика: «1 из 2», а не ноль в счёт.
+      const counted = items.filter((item) => item.hasData);
+
+      return {
+        hasData: counted.length > 0,
+        items,
+        done: counted.filter((item) => item.done).length,
+        total: counted.length,
+        sleepWindow
       };
     },
 
@@ -1135,6 +1440,21 @@
 
     _getNorms() {
       return readStoredValue('heys_norms', {});
+    },
+
+    // Итоги произвольного дня — тем же расчётом, что и текущего: harm и gi
+    // считает только dayCalculations, локальный fallback их не знает.
+    _getDayTotalsFor(day) {
+      const products = HEYS.products?.getAll?.() || [];
+      const pIndex = HEYS.dayUtils?.buildProductIndex
+        ? HEYS.dayUtils.buildProductIndex(products)
+        : null;
+      if (HEYS.dayCalculations?.calculateDayTotals && day) {
+        try {
+          return HEYS.dayCalculations.calculateDayTotals(day, pIndex);
+        } catch (_) { }
+      }
+      return this._calculateDayTotals(day);
     },
 
     _getDayTotals() {

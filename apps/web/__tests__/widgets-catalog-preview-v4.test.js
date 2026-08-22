@@ -191,15 +191,16 @@ describe('каталог расстановки: превью — настоящ
     expect(/--soon|--waiting/.test(items[0].className)).toBe(false);
   });
 
-  it('живой реестр: «Клетчатка» стоит в «скоро» и добавить её нельзя', () => {
+  it('живой реестр: строк ожидания сейчас нет, механика «скоро» осталась', () => {
     const registrySrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_registry_v1.js'), 'utf8');
     const coreSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_core_v1.js'), 'utf8');
 
-    // Обещание живёт данными реестра, а не текстом в компоненте.
-    expect(registrySrc).toContain("comingSoon: { about: 'сколько клетчатки за день и норма' }");
-    // Ровно одно обещание: каталог обещаний обесценивает и обещания, и каталог.
-    expect(registrySrc.match(/comingSoon:/g).length).toBe(1);
-    // Даже если тип придёт в addWidget мимо каталога — пустой плитки не будет.
+    // «Клетчатка» вышла из «скоро» вместе с пятью новыми типами (решение
+    // владельца 22 августа, строка контракта «готовится»). Флагом не помечен
+    // никто: выдумывать несуществующую фичу нельзя.
+    expect(registrySrc.match(/comingSoon:/g)).toBeNull();
+    // Механика при этом остаётся в силе на будущее: тип с флагом в раскладку
+    // не встанет даже мимо каталога.
     expect(coreSrc).toContain('if (def?.comingSoon) return null;');
   });
 

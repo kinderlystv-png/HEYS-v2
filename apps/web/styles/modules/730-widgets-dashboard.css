@@ -9818,23 +9818,38 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   margin-top: 0;
 }
 
-.widget-v4-steps__track {
-  height: 4px;
-  border-radius: 999px;
+/* Тренд шагов: столбики недели и месяца. День с целью — шалфей, ниже цели —
+   средний тон; дня без записи в ряду нет (строки «шаги · цвет» и
+   «шаги · нет данных»). */
+.widget-v4-stepbars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 26px;
+  margin-top: auto;
+}
+
+.widget-v4-stepbars--month {
+  gap: 1.5px;
+  height: 42px;
+}
+
+.widget-v4-stepbars__bar {
+  flex: 1;
+  min-height: 2px;
+  border-radius: 2px;
+  background: var(--v4-sand-ok-fill, #7a8a5e);
+  opacity: 0.45;
+}
+
+.widget-v4-stepbars__bar.is-goal {
+  opacity: 1;
+}
+
+/* День без записи — не ноль и не пропуск: тонкая риска на месте столбика. */
+.widget-v4-stepbars__bar.is-empty {
   background: var(--v4-line, rgba(0, 0, 0, 0.08));
-  margin-top: 7px;
-}
-
-.widget-v4-stack.widget-v4-steps .widget-v4-steps__track {
-  height: 5px;
-  margin-top: 6px;
-}
-
-.widget-v4-steps__fill {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: currentColor;
+  opacity: 1;
 }
 
 /* Длинное значение в узком формате не сжимается кеглем и не переносится:
@@ -10833,6 +10848,248 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   line-height: 1;
   font-family: inherit;
   cursor: pointer;
+}
+
+/* ─── Шесть виджетов пакета 22 августа, кадры 37–51 ─────────────────────
+   Цвет несёт только значение: недобор не красится ни у одного из них.
+   Красный есть только у «Окна до сна» и только при еде за час до отбоя. */
+
+.widget-v4-goal-hero {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: auto;
+  min-width: 0;
+}
+
+.widget-v4-goal-value {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.widget-v4-stack .widget-v4-goal-value {
+  font-size: 19px;
+  letter-spacing: -0.03em;
+}
+
+/* Полоса до нормы — общая у клетчатки, белка и качества еды. */
+.widget-v4-goalbar {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
+  margin-top: 7px;
+}
+
+.widget-v4-stack .widget-v4-goalbar {
+  height: 5px;
+  margin-top: 6px;
+}
+
+.widget-v4-goalbar__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+/* Подсказка «чем добрать»: строка не тянет плитку и обрезается по краю. */
+.widget-v4-hint {
+  margin-top: 5px;
+  font-size: 9.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Неделя столбиками: сегодня всегда правый и глубоким тоном. */
+.widget-v4-weekbars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 34px;
+  margin-top: 8px;
+}
+
+.widget-v4-weekbars__bar {
+  flex: 1;
+  min-height: 2px;
+  border-radius: 3px;
+  background: var(--v4-sand-ok-fill, #7a8a5e);
+  opacity: 0.55;
+}
+
+.widget-v4-weekbars__bar.is-today {
+  opacity: 1;
+}
+
+/* Строки «по приёмам» и «интервалы»: время слева, полоса, число справа. */
+.widget-v4-mealbars {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.widget-v4-mealbars__row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.widget-v4-mealbars__time {
+  flex: none;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.widget-v4-mealbars__track {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
+}
+
+.widget-v4-mealbars__fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.widget-v4-mealbars__num {
+  flex: none;
+  font-size: 10px;
+  font-weight: 600;
+  color: #201e1d;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Лента дня: точки приёмов на полосе 6:00–24:00, текущий момент — риска. */
+.widget-v4-rhythm__line {
+  position: relative;
+  height: 18px;
+  margin-top: auto;
+}
+
+.widget-v4-rhythm__track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: 999px;
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
+}
+
+.widget-v4-rhythm__dot {
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 999px;
+  background: var(--v4-sand-ok-fill, #7a8a5e);
+}
+
+.widget-v4-rhythm__now {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: 1.5px;
+  margin-left: -0.75px;
+  border-radius: 999px;
+  background: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.widget-v4-rhythm__scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  font-variant-numeric: tabular-nums;
+}
+
+/* Чек-лист вечера: закрытый пункт — шалфейная точка и шалфейное слово,
+   открытый — нейтральные. Красного нет: вечером ругать поздно. */
+.widget-v4-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.widget-v4-checklist--dots {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: auto;
+}
+
+.widget-v4-checklist__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  white-space: nowrap;
+}
+
+.widget-v4-checklist__chip.is-done {
+  color: var(--v4-sand-ok-fill, #7a8a5e);
+}
+
+.widget-v4-checklist__chip.is-empty {
+  opacity: 0.55;
+}
+
+.widget-v4-checklist__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.35;
+}
+
+.widget-v4-checklist__chip.is-done .widget-v4-checklist__dot {
+  opacity: 1;
+}
+
+.widget-v4-checklist__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+.widget-v4-checklist__row.is-done .widget-v4-checklist__label {
+  color: var(--v4-sand-ok-fill, #7a8a5e);
+  font-weight: 600;
+}
+
+.widget-v4-checklist__value {
+  flex: none;
+  color: #201e1d;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Блок «Рекомендуемый экран»: между каталогом и пустым состоянием

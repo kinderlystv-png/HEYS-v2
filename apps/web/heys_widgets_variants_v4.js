@@ -48,7 +48,13 @@
     insulinWave: 'Инсулиновая волна',
     weight: 'Вес',
     crashRisk: 'Динамика веса',
-    steps: 'Шаги'
+    steps: 'Шаги',
+    fiber: 'Клетчатка',
+    protein: 'Белок',
+    sleepWindow: 'Окно до сна',
+    foodQuality: 'Качество еды',
+    mealRhythm: 'Ритм приёмов',
+    sleepReady: 'Готовность ко сну'
   };
 
   const WIDGET_TILE_BG = {
@@ -110,14 +116,46 @@
       { id: 'day_bar', title: 'Полоса дня', subtitle: 'сколько часов инсулин был поднят', size: '2x1' },
       { id: 'calm_window', title: 'Спокойное окно', subtitle: 'самый длинный промежуток без волн', size: '1x1' }
     ],
+    // Оба вида — тренды: числа «сейчас» у шагов не существует, они вносятся
+    // вечером в чек-ине (строка контракта «шаги», решение 22 августа).
     steps: [
-      { id: 'mini', title: 'Как сейчас', subtitle: 'число и полоса до цели', size: '1x1', isDefault: true },
-      { id: 'to_goal', title: 'До цели', subtitle: 'цель и остаток названы числами', size: '2x1' }
+      { id: 'week', title: 'Неделя', subtitle: 'семь столбиков и среднее', size: '2x1', isDefault: true },
+      { id: 'month', title: 'Месяц', subtitle: '30 столбиков, среднее в день и цель', size: '2x2' }
     ],
     weight: [
       { id: 'spark', title: 'Как сейчас', subtitle: 'вес, неделя, линия', size: '2x2' },
       { id: 'delta', title: 'Только число', subtitle: '1×1, когда рядом стоит динамика', size: '1x1' },
       { id: 'scatter', title: 'Точки и среднее', subtitle: 'видно, что дельта считается по среднему', size: '2x2' }
+    ],
+    // ─── Шесть виджетов пакета 22 августа, кадры 37–51 ───────────────────
+    // Дефолт помечен флагом isDefault, а не порядком карточек: порядок в листе
+    // принадлежит канвасу (карточки по возрастанию формата, дефолт первым).
+    fiber: [
+      { id: 'now', title: 'Как сейчас', subtitle: 'граммы и полоса до нормы', size: '1x1', isDefault: true },
+      { id: 'add', title: 'Добрать', subtitle: 'сколько осталось и чем добрать', size: '2x1' },
+      { id: 'week', title: 'Неделя', subtitle: 'семь дней столбиками против нормы', size: '2x2' }
+    ],
+    protein: [
+      { id: 'now', title: 'Как сейчас', subtitle: 'граммы и полоса до нормы', size: '1x1', isDefault: true },
+      { id: 'add', title: 'Добрать', subtitle: 'сколько осталось до нормы', size: '2x1' },
+      { id: 'by_meal', title: 'По приёмам', subtitle: 'сколько белка дал каждый приём', size: '2x2' }
+    ],
+    sleepWindow: [
+      { id: 'now', title: 'Как сейчас', subtitle: 'сколько до отбоя после еды', size: '1x1', isDefault: true },
+      { id: 'evening', title: 'Вечер', subtitle: 'полоса от последнего приёма до отбоя', size: '2x1' }
+    ],
+    foodQuality: [
+      { id: 'now', title: 'Как сейчас', subtitle: 'индекс из 10 и полоса', size: '1x1', isDefault: true },
+      { id: 'why', title: 'Что снизило', subtitle: 'дельта и причина одной строкой', size: '2x1' },
+      { id: 'week', title: 'Неделя', subtitle: 'семь дней столбиками', size: '2x2' }
+    ],
+    mealRhythm: [
+      { id: 'day_line', title: 'Лента дня', subtitle: 'точки приёмов на полосе дня', size: '2x1', isDefault: true },
+      { id: 'intervals', title: 'Интервалы', subtitle: 'средний промежуток и три последних', size: '2x2' }
+    ],
+    sleepReady: [
+      { id: 'checklist', title: 'Чек-лист', subtitle: 'вода, еда до сна и шаги точками', size: '2x1', isDefault: true },
+      { id: 'review', title: 'Разбор', subtitle: 'те же три строки числами и время до отбоя', size: '2x2' }
     ],
     crashRisk: [
       // Дефолт «За месяц» с кривой — решение владельца 20 августа: переключатель

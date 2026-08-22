@@ -1609,6 +1609,19 @@
         return React.createElement(WeightWidgetContent, { widget, data });
       case 'steps':
         return React.createElement(StepsWidgetContent, { widget, data });
+      // Шесть виджетов пакета 22 августа.
+      case 'fiber':
+        return React.createElement(FiberWidgetContent, { widget, data });
+      case 'protein':
+        return React.createElement(ProteinWidgetContent, { widget, data });
+      case 'sleepWindow':
+        return React.createElement(SleepWindowWidgetContent, { widget, data });
+      case 'foodQuality':
+        return React.createElement(FoodQualityWidgetContent, { widget, data });
+      case 'mealRhythm':
+        return React.createElement(MealRhythmWidgetContent, { widget, data });
+      case 'sleepReady':
+        return React.createElement(SleepReadyWidgetContent, { widget, data });
       case 'macros':
         return React.createElement(MacrosWidgetContent, { widget, data });
       case 'insulin':
@@ -4856,59 +4869,84 @@
     return Math.round(n).toLocaleString('ru-RU');
   }
 
-  // Шаги красятся по доле цели: от 100 % — шалфей, ниже — чернила; красным не
-  // красим никогда (канвас v4, строка «шаги · цвет»). Непройденные шаги — не
+  // Шаги: красим только шалфеем от 100 % цели и чернилами ниже, красным
+  // никогда (канвас v4, строка «шаги · цвет»). Непройденные шаги — не
   // «обрати внимание»: день ещё не кончился.
   function v4StepsState(pct) {
     return Number(pct) >= 100 ? 'good' : 'neutral';
   }
 
-  function v4StepsBar(pct, state) {
-    const width = Math.max(0, Math.min(100, Number(pct) || 0));
-    return React.createElement('div', { className: 'widget-v4-steps__track' },
-      React.createElement('span', {
-        className: 'widget-v4-steps__fill ' + v4ValueStateClass(state),
-        style: { width: `${width}%` }
+  /**
+   * Столбики тренда шагов. День с целью — шалфей, ниже цели — средний тон;
+   * дня без записи в ряду нет вовсе (строки «шаги · цвет» и «шаги · нет данных»).
+   */
+  function v4StepsBars(series, goal, extraClass) {
+    const list = Array.isArray(series) ? series : [];
+    const max = Math.max(Number(goal) || 0, ...list.map((item) => Number(item?.value) || 0), 1);
+    return React.createElement('div', { className: 'widget-v4-stepbars ' + (extraClass || '') },
+      list.map((item) => {
+        const value = Number(item?.value) || 0;
+        const done = goal > 0 && value >= goal;
+        return React.createElement('span', {
+          key: item.iso,
+          className: 'widget-v4-stepbars__bar'
+            + (item?.hasData ? '' : ' is-empty')
+            + (done ? ' is-goal' : ''),
+          style: { height: item?.hasData ? Math.max(8, Math.round((value / max) * 100)) + '%' : '2px' }
+        });
       })
     );
   }
 
-  /** Два вида канваса: 35 «Как сейчас» 1×1 и 36 «До цели» 2×1. */
-  function StepsVariantBody({ variantId, widget, data }) {
-    const steps = Number(data?.steps);
+  /** Два вида канваса: 35 «Неделя» 2×1 и 36 «Месяц» 2×2, оба — тренды. */
+  function StepsVariantBody({ variantId, data }) {
     const goal = Number(data?.goal) || 10000;
-    const hasData = Number.isFinite(steps) && data?.hasData !== false;
-    const pct = hasData && goal > 0 ? Math.round((steps / goal) * 100) : 0;
-    const state = v4StepsState(pct);
-    const remaining = Math.max(0, goal - (hasData ? steps : 0));
+    const daysWithData = Number(data?.daysWithData) || 0;
+    // Дней с шагами меньше двух — тренда ещё нет.
+    const enoughDays = daysWithData >= 2;
 
-    if (variantId === 'to_goal') {
-      // 2×1: цель в шапке, остаток назван числом рядом со значением.
+    if (variantId === 'month') {
+      const avg = data?.avgMonth;
+      const state = v4StepsState(avg != null && goal > 0 ? (avg / goal) * 100 : 0);
       return React.createElement('div', { className: 'widget-v4-stack widget-v4-steps' },
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
-          v4Kicker('Шаги'),
+          v4Kicker('Шаги · месяц'),
           React.createElement('span', { className: 'widget-v4-row__meta' }, `цель ${formatRuThousands(goal)}`)
         ),
         React.createElement('div', { className: 'widget-v4-steps__hero' },
           React.createElement('span', {
             className: 'widget-v4-steps__value ' + v4ValueStateClass(state)
-          }, hasData ? formatRuThousands(steps) : '—'),
-          hasData
-            ? React.createElement('span', { className: 'widget-v4-unit' }, `осталось ${formatRuThousands(remaining)}`)
-            : null
+          }, avg != null ? formatRuThousands(avg) : '—'),
+          avg != null ? React.createElement('span', { className: 'widget-v4-unit' }, 'в день') : null
         ),
-        // Полосы при отсутствии данных нет: ноль не подставляется.
-        hasData ? v4StepsBar(pct, state) : null
+        enoughDays
+          ? v4StepsBars(data?.month, goal, 'widget-v4-stepbars--month')
+          : React.createElement('span', { className: 'widget-v4-muted' },
+            daysWithData ? `нужно ${2 - daysWithData} день` : 'нужно 2 дня')
       );
     }
 
-    // 1×1 «Как сейчас»: подпись, число, полоса до цели.
-    return React.createElement('div', { className: 'widget-v4-mini widget-v4-steps widget-v4-steps--mini' },
-      v4Kicker('Шаги'),
-      React.createElement('span', {
-        className: 'widget-v4-steps__value ' + v4ValueStateClass(state)
-      }, hasData ? formatRuThousands(steps) : '—'),
-      hasData ? v4StepsBar(pct, state) : null
+    // 2×1 «Неделя»: семь столбиков и среднее.
+    const avg = data?.avgWeek;
+    const state = v4StepsState(avg != null && goal > 0 ? (avg / goal) * 100 : 0);
+    return React.createElement('div', { className: 'widget-v4-stack widget-v4-steps' },
+      React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+        v4Kicker('Шаги'),
+        avg != null
+          ? React.createElement('span', {
+            className: 'widget-v4-row__meta ' + v4ValueStateClass(state)
+          }, `в среднем ${formatRuThousands(avg)}`)
+          : null
+      ),
+      enoughDays
+        ? v4StepsBars(data?.week, goal)
+        : React.createElement('div', { className: 'widget-v4-steps__hero' },
+          React.createElement('span', {
+            className: 'widget-v4-steps__value widget-v4-val--neutral'
+          }, '—'),
+          React.createElement('span', { className: 'widget-v4-muted' },
+            daysWithData ? 'нужно 1 день' : 'нужно 2 дня')
+        )
     );
   }
 
@@ -4921,6 +4959,524 @@
         widget: meta?.widget || widget,
         data,
         meta
+      })
+    });
+  }
+
+  // ─── Шесть виджетов пакета канваса 22 августа, кадры 37–51 ─────────────
+  // Общее по цвету: недобор ни у одного не красится. Красный есть только у
+  // «Окна до сна» и только в одном случае — ел меньше чем за час до отбоя.
+
+  /** Полоса до нормы. Общая для клетчатки, белка и качества еды. */
+  function v4GoalBar(pct, state) {
+    const width = Math.max(0, Math.min(100, Number(pct) || 0));
+    return React.createElement('div', { className: 'widget-v4-goalbar' },
+      React.createElement('span', {
+        className: 'widget-v4-goalbar__fill ' + v4ValueStateClass(state),
+        style: { width: `${width}%` }
+      })
+    );
+  }
+
+  /** Столбики недели: сегодняшний правый и глубоким тоном, пустой день — 2 px. */
+  function v4WeekBars(week, maxValue, className) {
+    const max = Math.max(1, Number(maxValue) || 1);
+    return React.createElement('div', { className: 'widget-v4-weekbars ' + (className || '') },
+      (week || []).map((item) => {
+        const value = Number(item?.value) || 0;
+        // Пустой день — столбик 2 px, а не пропуск: день был, еды в нём не было.
+        const height = value > 0 ? Math.max(6, Math.round((value / max) * 100)) + '%' : '2px';
+        return React.createElement('span', {
+          key: item.iso,
+          className: 'widget-v4-weekbars__bar' + (item.isToday ? ' is-today' : ''),
+          style: { height }
+        });
+      })
+    );
+  }
+
+  /** «2:40» — часы и минуты без ведущего нуля у часов. */
+  function formatHoursColon(minutes) {
+    const total = Math.max(0, Math.round(Number(minutes) || 0));
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    return h + ':' + String(m).padStart(2, '0');
+  }
+
+  /** «4 ч 25 м» — длительность словами, как в кадре 49. */
+  function formatHoursWords(minutes) {
+    const total = Math.max(0, Math.round(Number(minutes) || 0));
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    if (!h) return m + ' м';
+    return h + ' ч' + (m ? ' ' + m + ' м' : '');
+  }
+
+  function formatLitersRu(ml) {
+    const liters = (Math.max(0, Number(ml) || 0)) / 1000;
+    return liters.toFixed(1).replace('.', ',');
+  }
+
+  function formatScoreRu(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '—';
+    return (Math.round(num * 10) / 10).toString().replace('.', ',');
+  }
+
+  // Клетчатка и белок: чернила, от 100 % нормы — шалфей, красного нет никогда.
+  function v4GoalState(pct) {
+    return Number(pct) >= 100 ? 'good' : 'neutral';
+  }
+
+  /** Клетчатка — кадры 37 «Как сейчас», 38 «Добрать», 39 «Неделя». */
+  function FiberVariantBody({ variantId, data }) {
+    const hasData = data?.hasData === true && data?.fiber != null;
+    const fiber = Number(data?.fiber) || 0;
+    const norm = Number(data?.norm) || 0;
+    const pct = Number(data?.pct) || 0;
+    const state = v4GoalState(pct);
+
+    if (variantId === 'week') {
+      const week = Array.isArray(data?.week) ? data.week : [];
+      const max = Math.max(norm, ...week.map((item) => Number(item?.value) || 0));
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-fiber' },
+        v4Kicker('Клетчатка · 7 дней'),
+        React.createElement('div', { className: 'widget-v4-goal-hero' },
+          React.createElement('span', {
+            className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
+          }, hasData ? String(fiber) : '—'),
+          React.createElement('span', { className: 'widget-v4-unit' }, hasData ? 'г сегодня' : '')
+        ),
+        v4WeekBars(week, max),
+        norm > 0
+          ? React.createElement('span', { className: 'widget-v4-muted' }, 'норма ' + norm)
+          : null
+      );
+    }
+
+    if (variantId === 'add') {
+      const sources = Array.isArray(data?.sources) ? data.sources.slice(0, 3) : [];
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-fiber' },
+        v4Kicker('Клетчатка'),
+        React.createElement('div', { className: 'widget-v4-goal-hero' },
+          React.createElement('span', {
+            className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
+          }, hasData ? `${fiber} из ${norm}` : '—'),
+          hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'г') : null
+        ),
+        hasData && data.remaining > 0
+          ? React.createElement('span', { className: 'widget-v4-muted' }, `+${data.remaining} г добрать`)
+          : null,
+        // Пустой словарь — строка не показывается, плитка не ужимается.
+        hasData && sources.length
+          ? React.createElement('span', { className: 'widget-v4-hint' }, sources.join(' · '))
+          : null
+      );
+    }
+
+    return React.createElement('div', { className: 'widget-v4-mini widget-v4-fiber' },
+      v4Kicker('Клетчатка'),
+      React.createElement('div', { className: 'widget-v4-goal-hero' },
+        React.createElement('span', {
+          className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
+        }, hasData ? String(fiber) : '—'),
+        hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'г') : null
+      ),
+      hasData ? v4GoalBar(pct, state) : null
+    );
+  }
+
+  function FiberWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'fiber',
+      renderBody: (variantId, meta) => React.createElement(FiberVariantBody, {
+        variantId, widget: meta?.widget || widget, data
+      })
+    });
+  }
+
+  /** Белок — кадры 40 «Как сейчас», 41 «Добрать», 42 «По приёмам». */
+  function ProteinVariantBody({ variantId, data }) {
+    const hasData = data?.hasData === true && data?.protein != null;
+    const protein = Number(data?.protein) || 0;
+    const target = Number(data?.target) || 0;
+    const pct = Number(data?.pct) || 0;
+    const state = v4GoalState(pct);
+
+    if (variantId === 'by_meal') {
+      const byMeal = Array.isArray(data?.byMeal) ? data.byMeal : [];
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-protein' },
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('Белок · по приёмам'),
+          target > 0
+            ? React.createElement('span', { className: 'widget-v4-row__meta' }, `из ${target}`)
+            : null
+        ),
+        React.createElement('div', { className: 'widget-v4-goal-hero' },
+          React.createElement('span', {
+            className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
+          }, hasData ? String(protein) : '—'),
+          hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'г') : null
+        ),
+        // День без приёмов — подпись, пустые полосы не рисуются.
+        byMeal.length
+          ? React.createElement('div', { className: 'widget-v4-mealbars' },
+            byMeal.map((item, index) => React.createElement('div', {
+              key: `${item.time}_${index}`,
+              className: 'widget-v4-mealbars__row'
+            },
+              React.createElement('span', { className: 'widget-v4-mealbars__time' }, item.time || '—'),
+              React.createElement('span', { className: 'widget-v4-mealbars__track' },
+                React.createElement('span', {
+                  className: 'widget-v4-mealbars__fill',
+                  style: { width: Math.max(2, Math.min(100, target > 0 ? (item.grams / target) * 100 : 0)) + '%' }
+                })
+              ),
+              React.createElement('span', { className: 'widget-v4-mealbars__num' }, String(item.grams))
+            ))
+          )
+          : React.createElement('span', { className: 'widget-v4-muted' }, 'приёмов не было')
+      );
+    }
+
+    if (variantId === 'add') {
+      const sources = Array.isArray(data?.sources) ? data.sources.slice(0, 3) : [];
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-protein' },
+        v4Kicker('Белок'),
+        React.createElement('div', { className: 'widget-v4-goal-hero' },
+          React.createElement('span', {
+            className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
+          }, hasData ? `${protein} из ${target}` : '—'),
+          hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'г') : null
+        ),
+        hasData && data.remaining > 0
+          ? React.createElement('span', { className: 'widget-v4-muted' }, `+${data.remaining} г добрать`)
+          : null,
+        sources.length
+          ? React.createElement('span', { className: 'widget-v4-hint' }, sources.join(' · '))
+          : null
+      );
+    }
+
+    return React.createElement('div', { className: 'widget-v4-mini widget-v4-protein' },
+      v4Kicker('Белок'),
+      React.createElement('div', { className: 'widget-v4-goal-hero' },
+        React.createElement('span', {
+          className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
+        }, hasData ? String(protein) : '—'),
+        hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'г') : null
+      ),
+      hasData ? v4GoalBar(pct, state) : null
+    );
+  }
+
+  function ProteinWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'protein',
+      renderBody: (variantId, meta) => React.createElement(ProteinVariantBody, {
+        variantId, widget: meta?.widget || widget, data
+      })
+    });
+  }
+
+  /** Окно до сна — кадры 43 «Как сейчас», 44 «Вечер». */
+  function SleepWindowVariantBody({ variantId, data }) {
+    const hasData = data?.hasData === true;
+    const minutes = Number(data?.minutes) || 0;
+    const state = data?.state || 'neutral';
+    const bedText = formatHoursColon(data?.bedtime);
+
+    if (variantId === 'evening') {
+      const span = Math.max(1, (Number(data?.bedtime) || 0) - (Number(data?.lastMeal) || 0));
+      const fill = hasData ? Math.max(4, Math.min(100, (minutes / Math.max(span, minutes)) * 100)) : 0;
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-sleepwindow' },
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('До сна'),
+          React.createElement('span', { className: 'widget-v4-row__meta' },
+            data?.bedtimeKnown ? `отбой ${bedText}` : 'отбой не задан'
+          )
+        ),
+        React.createElement('div', { className: 'widget-v4-goal-hero' },
+          React.createElement('span', {
+            className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
+          }, hasData ? formatHoursColon(minutes) : '—'),
+          React.createElement('span', { className: 'widget-v4-unit' },
+            hasData ? (state === 'good' ? 'окно чистое' : data?.word || '') : 'приёмов не было'
+          )
+        ),
+        hasData
+          ? React.createElement('div', { className: 'widget-v4-goalbar widget-v4-goalbar--marked' },
+            React.createElement('span', {
+              className: 'widget-v4-goalbar__fill ' + v4ValueStateClass(state),
+              style: { width: fill + '%' }
+            })
+          )
+          : null
+      );
+    }
+
+    // 1×1: слово состояния стоит в одной строке с числом — второй строки под
+    // числом в 64 px не существует.
+    return React.createElement('div', { className: 'widget-v4-mini widget-v4-sleepwindow' },
+      v4Kicker('До сна'),
+      React.createElement('div', { className: 'widget-v4-goal-hero' },
+        React.createElement('span', {
+          className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
+        }, hasData ? formatHoursColon(minutes) : '—'),
+        React.createElement('span', { className: 'widget-v4-unit' },
+          hasData ? (data?.word || '') : 'не ел'
+        )
+      )
+    );
+  }
+
+  function SleepWindowWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'sleepWindow',
+      renderBody: (variantId, meta) => React.createElement(SleepWindowVariantBody, {
+        variantId, widget: meta?.widget || widget, data
+      })
+    });
+  }
+
+  /** Качество еды — кадры 45 «Как сейчас», 46 «Что снизило», 47 «Неделя». */
+  function FoodQualityVariantBody({ variantId, data }) {
+    const hasData = data?.hasData === true && data?.score != null;
+    const score = Number(data?.score) || 0;
+    // Чернила; от 8 из 10 — шалфей. Красным не красится: низкий балл
+    // объясняет вид «Что снизило», а не цвет.
+    const state = score >= 8 ? 'good' : 'neutral';
+
+    if (variantId === 'week') {
+      const week = Array.isArray(data?.week) ? data.week : [];
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-foodquality' },
+        v4Kicker('Качество · 7 дней'),
+        React.createElement('div', { className: 'widget-v4-goal-hero' },
+          React.createElement('span', {
+            className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
+          }, hasData ? `${formatScoreRu(score)} из 10` : '—'),
+          hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'сегодня') : null
+        ),
+        v4WeekBars(week, 10),
+        data?.avgWeek != null
+          ? React.createElement('span', { className: 'widget-v4-muted' }, `в среднем ${formatScoreRu(data.avgWeek)}`)
+          : null
+      );
+    }
+
+    if (variantId === 'why') {
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-foodquality' },
+        v4Kicker('Качество еды'),
+        React.createElement('div', { className: 'widget-v4-goal-hero' },
+          React.createElement('span', {
+            className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
+          }, hasData ? `${formatScoreRu(score)} из 10` : '—'),
+          hasData && data?.delta > 0
+            ? React.createElement('span', { className: 'widget-v4-unit' }, `−${formatScoreRu(data.delta)}`)
+            : null
+        ),
+        hasData
+          ? (data?.reason
+            ? React.createElement('span', { className: 'widget-v4-hint' }, data.reason)
+            : null)
+          : React.createElement('span', { className: 'widget-v4-muted' }, 'приёмов не было')
+      );
+    }
+
+    return React.createElement('div', { className: 'widget-v4-mini widget-v4-foodquality' },
+      v4Kicker('Качество'),
+      React.createElement('div', { className: 'widget-v4-goal-hero' },
+        React.createElement('span', {
+          className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
+        }, hasData ? formatScoreRu(score) : '—'),
+        hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'из 10') : null
+      ),
+      hasData ? v4GoalBar((score / 10) * 100, state) : null
+    );
+  }
+
+  function FoodQualityWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'foodQuality',
+      renderBody: (variantId, meta) => React.createElement(FoodQualityVariantBody, {
+        variantId, widget: meta?.widget || widget, data
+      })
+    });
+  }
+
+  /** Ритм приёмов — кадры 48 «Лента дня», 49 «Интервалы». */
+  const RHYTHM_FROM_MIN = 6 * 60;
+  const RHYTHM_TO_MIN = 24 * 60;
+
+  function rhythmLeftPct(minutes) {
+    const value = Number(minutes) || 0;
+    // Приём позже полуночи рисуется у правого края, а не переносится на утро.
+    const clamped = Math.max(RHYTHM_FROM_MIN, Math.min(RHYTHM_TO_MIN, value));
+    return ((clamped - RHYTHM_FROM_MIN) / (RHYTHM_TO_MIN - RHYTHM_FROM_MIN)) * 100;
+  }
+
+  function MealRhythmVariantBody({ variantId, data }) {
+    const hasData = data?.hasData === true;
+    const meals = Array.isArray(data?.meals) ? data.meals : [];
+    const intervals = Array.isArray(data?.intervals) ? data.intervals : [];
+
+    if (variantId === 'intervals') {
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-rhythm' },
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('Ритм · интервалы'),
+          React.createElement('span', { className: 'widget-v4-row__meta' },
+            `${data?.count || 0} ${ruMealsWord(data?.count || 0)}`
+          )
+        ),
+        React.createElement('div', { className: 'widget-v4-goal-hero' },
+          React.createElement('span', { className: 'widget-v4-goal-value widget-v4-val--neutral' },
+            data?.avgMinutes != null ? formatHoursColon(data.avgMinutes) : '—'
+          ),
+          React.createElement('span', { className: 'widget-v4-unit' },
+            data?.avgMinutes != null ? 'в среднем между приёмами' : 'интервалов пока нет'
+          )
+        ),
+        intervals.length
+          ? React.createElement('div', { className: 'widget-v4-mealbars' },
+            intervals.slice(-3).map((item, index) => React.createElement('div', {
+              key: `${item.from}_${index}`,
+              className: 'widget-v4-mealbars__row'
+            },
+              React.createElement('span', { className: 'widget-v4-mealbars__time' }, `${item.from} → ${item.to}`),
+              React.createElement('span', { className: 'widget-v4-mealbars__track' },
+                React.createElement('span', {
+                  className: 'widget-v4-mealbars__fill widget-v4-val--good',
+                  style: { width: Math.max(4, Math.min(100, (item.minutes / (6 * 60)) * 100)) + '%' }
+                })
+              ),
+              React.createElement('span', { className: 'widget-v4-mealbars__num' }, formatHoursWords(item.minutes))
+            ))
+          )
+          : null
+      );
+    }
+
+    return React.createElement('div', { className: 'widget-v4-stack widget-v4-rhythm' },
+      React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+        v4Kicker('Ритм приёмов'),
+        React.createElement('span', { className: 'widget-v4-row__meta' },
+          hasData ? `${data.count} за день` : 'приёмов не было'
+        )
+      ),
+      React.createElement('div', { className: 'widget-v4-rhythm__line' },
+        React.createElement('span', { className: 'widget-v4-rhythm__track' }),
+        // Текущий момент — риска.
+        React.createElement('span', {
+          className: 'widget-v4-rhythm__now',
+          style: { left: rhythmLeftPct(data?.nowMinutes) + '%' }
+        }),
+        meals.map((item, index) => React.createElement('span', {
+          key: `${item.time}_${index}`,
+          className: 'widget-v4-rhythm__dot',
+          style: { left: rhythmLeftPct(item.minutes) + '%' }
+        }))
+      ),
+      React.createElement('div', { className: 'widget-v4-rhythm__scale' },
+        React.createElement('span', null, '6:00'),
+        React.createElement('span', null, '24:00')
+      )
+    );
+  }
+
+  function ruMealsWord(count) {
+    const n = Math.abs(Number(count) || 0) % 100;
+    const last = n % 10;
+    if (n > 10 && n < 20) return 'приёмов';
+    if (last === 1) return 'приём';
+    if (last >= 2 && last <= 4) return 'приёма';
+    return 'приёмов';
+  }
+
+  function MealRhythmWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'mealRhythm',
+      renderBody: (variantId, meta) => React.createElement(MealRhythmVariantBody, {
+        variantId, widget: meta?.widget || widget, data
+      })
+    });
+  }
+
+  /** Готовность ко сну — кадры 50 «Чек-лист», 51 «Разбор». */
+  function sleepReadyItemText(item) {
+    if (!item?.hasData) {
+      return item.key === 'steps' ? 'без цели' : 'нет данных';
+    }
+    if (item.key === 'water') return `${formatLitersRu(item.value)} из ${formatLitersRu(item.goal)} л`;
+    if (item.key === 'food') return `окно ${formatHoursWords(item.value)}`;
+    return `${formatRuThousands(item.value)} из ${formatRuThousands(item.goal)}`;
+  }
+
+  function SleepReadyVariantBody({ variantId, data }) {
+    const items = Array.isArray(data?.items) ? data.items : [];
+    const hasData = data?.hasData === true;
+    const window = data?.sleepWindow || null;
+
+    if (variantId === 'review') {
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-sleepready' },
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('К вечеру'),
+          window?.hasData
+            ? React.createElement('span', { className: 'widget-v4-row__meta' },
+              `до отбоя ${formatHoursColon(window.minutes)}`)
+            : null
+        ),
+        React.createElement('div', { className: 'widget-v4-goal-hero' },
+          React.createElement('span', { className: 'widget-v4-goal-value widget-v4-val--neutral' },
+            hasData ? `${data.done} из ${data.total}` : '—'
+          ),
+          hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'закрыто') : null
+        ),
+        hasData
+          ? React.createElement('div', { className: 'widget-v4-checklist' },
+            items.map((item) => React.createElement('div', {
+              key: item.key,
+              className: 'widget-v4-checklist__row' + (item.done ? ' is-done' : '')
+            },
+              React.createElement('span', { className: 'widget-v4-checklist__label' }, item.label),
+              React.createElement('span', { className: 'widget-v4-checklist__value' }, sleepReadyItemText(item))
+            ))
+          )
+          : React.createElement('span', { className: 'widget-v4-muted' }, 'нет данных за день')
+      );
+    }
+
+    return React.createElement('div', { className: 'widget-v4-stack widget-v4-sleepready' },
+      React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+        v4Kicker('К вечеру'),
+        React.createElement('span', { className: 'widget-v4-row__meta' },
+          hasData ? `${data.done} из ${data.total}` : 'нет данных за день'
+        )
+      ),
+      React.createElement('div', { className: 'widget-v4-checklist widget-v4-checklist--dots' },
+        items.map((item) => React.createElement('span', {
+          key: item.key,
+          className: 'widget-v4-checklist__chip'
+            + (item.done ? ' is-done' : '')
+            + (item.hasData ? '' : ' is-empty')
+        },
+          React.createElement('i', { className: 'widget-v4-checklist__dot', 'aria-hidden': 'true' }),
+          item.label.toLowerCase()
+        ))
+      )
+    );
+  }
+
+  function SleepReadyWidgetContent({ widget, data }) {
+    return React.createElement(WidgetV4VariantShell, {
+      widget,
+      widgetType: 'sleepReady',
+      renderBody: (variantId, meta) => React.createElement(SleepReadyVariantBody, {
+        variantId, widget: meta?.widget || widget, data
       })
     });
   }

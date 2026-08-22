@@ -480,9 +480,74 @@
       icon: '🌾',
       description: 'Клетчатка за день против нормы',
       defaultSize: '1x1',
-      availableSizes: ['1x1'],
+      availableSizes: ['1x1', '2x1', '2x2'],
       dataKeys: ['day.fiber', 'prof.kcal'],
-      comingSoon: { about: 'сколько клетчатки за день и норма' }
+      component: 'WidgetFiber'
+    },
+
+    // ─── Пять типов пакета канваса 22 августа ────────────────────────────
+    // В дефолтный набор ни один не входит: добавляются руками из каталога
+    // (строка «новые в каталоге»). Строки «скоро» у них нет — механика
+    // остаётся в силе на будущее, но флагом никто не помечен.
+
+    protein: {
+      type: 'protein',
+      name: 'Белок',
+      category: 'nutrition',
+      icon: '🥚',
+      description: 'Белок за день против нормы',
+      defaultSize: '1x1',
+      availableSizes: ['1x1', '2x1', '2x2'],
+      dataKeys: ['day.protein', 'prof.protein'],
+      component: 'WidgetProtein'
+    },
+
+    sleepWindow: {
+      type: 'sleepWindow',
+      name: 'Окно до сна',
+      category: 'health',
+      icon: '🌙',
+      description: 'Сколько времени от последнего приёма до отбоя',
+      defaultSize: '1x1',
+      availableSizes: ['1x1', '2x1'],
+      dataKeys: ['day.meals', 'day.sleepStart'],
+      component: 'WidgetSleepWindow'
+    },
+
+    foodQuality: {
+      type: 'foodQuality',
+      name: 'Качество еды',
+      category: 'nutrition',
+      icon: '🥗',
+      description: 'Индекс качества еды за день',
+      defaultSize: '1x1',
+      availableSizes: ['1x1', '2x1', '2x2'],
+      dataKeys: ['day.meals'],
+      component: 'WidgetFoodQuality'
+    },
+
+    mealRhythm: {
+      type: 'mealRhythm',
+      name: 'Ритм приёмов',
+      category: 'nutrition',
+      icon: '🍽️',
+      description: 'Когда были приёмы и какие между ними промежутки',
+      defaultSize: '2x1',
+      availableSizes: ['2x1', '2x2'],
+      dataKeys: ['day.meals'],
+      component: 'WidgetMealRhythm'
+    },
+
+    sleepReady: {
+      type: 'sleepReady',
+      name: 'Готовность ко сну',
+      category: 'health',
+      icon: '🛏️',
+      description: 'Вода, еда до сна и шаги к вечеру',
+      defaultSize: '2x1',
+      availableSizes: ['2x1', '2x2'],
+      dataKeys: ['day.waterMl', 'day.meals', 'day.steps'],
+      component: 'WidgetSleepReady'
     },
 
     steps: {
@@ -490,8 +555,8 @@
       name: 'Шаги',
       category: 'health',
       icon: '👟',
-      description: 'Шаги за день',
-      defaultSize: '2x2',
+      description: 'Шаги за неделю и месяц',
+      defaultSize: '2x1',
       availableSizes: ALL_SIZES_4X4,
       dataKeys: ['day.steps', 'prof.stepsGoal'],
       component: 'WidgetSteps',

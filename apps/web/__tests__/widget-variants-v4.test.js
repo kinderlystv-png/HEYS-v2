@@ -33,10 +33,12 @@ function countCatalogVariantsFromSource(src) {
 }
 
 describe('widget variants v4', () => {
-  it('каталог — 43 вида: у «Шагов» появились свои два', () => {
-    // 41 + «Как сейчас» 1×1 и «До цели» 2×1 — кадры 35 и 36 канваса.
-    expect(countCatalogVariantsFromSource(variantsSrc)).toBe(43);
-    expect(variantsSrc).toContain("id: 'to_goal', title: 'До цели'");
+  it('каталог — 58 видов: шесть виджетов пакета 22 августа добавили пятнадцать', () => {
+    // 43 + клетчатка 3, белок 3, окно до сна 2, качество еды 3, ритм приёмов 2
+    // и готовность ко сну 2 — кадры 37–51 канваса.
+    expect(countCatalogVariantsFromSource(variantsSrc)).toBe(58);
+    // Шаги переписаны 22 августа: оба вида — тренды, вида «сейчас» нет.
+    expect(variantsSrc).toContain("id: 'week', title: 'Неделя', subtitle: 'семь столбиков и среднее'");
     expect(variantsSrc).toContain('HEYS.Widgets.VariantsV4');
     expect(variantsSrc).toContain('useWidgetVariantTile');
     expect(variantsSrc).toContain('getSheetCatalog');
