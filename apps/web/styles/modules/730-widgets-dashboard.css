@@ -10328,7 +10328,27 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
 }
 
 .widget-v4-insulin-wave__overlap-mark {
-  stroke: var(--v4-sand-act-overlap, #d99a63);
+  stroke: var(--v4-wave-overlap, #d99a63);
+}
+
+/* Стык подписи не имеет — только точка в провале нейтральным тоном.
+   На тёмных наборах она чуть плотнее, иначе теряется в заливке. */
+.widget-v4-insulin-wave__joint {
+  fill: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 35%, transparent);
+}
+
+[data-theme-id$="-dark"] .widget-v4-insulin-wave__joint {
+  fill: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 40%, transparent);
+}
+
+/* Нахлёст — тёплый акцент палитры, не красный: это факт про день, а не
+   ошибка (строка «волна · пересечение»). */
+.widget-v4-insulin-wave__overlap {
+  fill: var(--v4-wave-overlap, #d99a63);
+}
+
+.widget-v4-insulin-wave__brace {
+  stroke: var(--v4-wave-overlap, #d99a63);
 }
 
 .widget-v4-insulin-daybar {

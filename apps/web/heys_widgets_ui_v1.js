@@ -2477,22 +2477,71 @@
   }
 
   function InsulinWaveDaySvg({ v4, height = 52 }) {
-    const waves = Array.isArray(v4.dayWaves) ? v4.dayWaves : [];
-    const baseY = height - 6;
+    // Схема, а не таймлайн: волны вплотную и равной ширины, оси времени и метки
+    // «сейчас» здесь нет (контракт, строка «волна · схема, а не таймлайн»).
+    const scheme = v4.scheme || { figures: [], dividers: [], joints: [], overlaps: [] };
+    const baseY = 46;
+
     return React.createElement('svg', {
       className: 'widget-v4-wave widget-v4-insulin-wave',
       viewBox: `0 0 130 ${height}`,
       width: '100%',
       height,
+      style: { overflow: 'visible' },
       'aria-hidden': 'true'
     },
-      waves.map((w) => React.createElement('path', {
-        key: w.id || w.pathD,
+      // Нахлёст заливается ровно внутри своей фигуры — отсюда clipPath.
+      scheme.overlaps.length
+        ? React.createElement('defs', null,
+          scheme.overlaps.map((band) => React.createElement('clipPath', { key: band.clipId, id: band.clipId },
+            React.createElement('path', { d: band.figureD })
+          ))
+        )
+        : null,
+
+      scheme.figures.map((figure) => React.createElement('path', {
+        key: figure.id,
         className: 'widget-v4-insulin-wave__fill',
-        d: w.pathD,
-        opacity: w.isActive ? 0.72 : 0.55
+        d: figure.d,
+        opacity: figure.opacity
       })),
-      React.createElement(InsulinWaveBaseline, { nowX: v4.nowX, height, showNow: true })
+
+      // Базовая линия остаётся только в схеме: по ней стоят риски-разделители.
+      React.createElement('line', {
+        x1: 0, y1: baseY, x2: 130, y2: baseY,
+        stroke: 'var(--v4-line, rgba(0,0,0,.12))',
+        strokeWidth: 1.5
+      }),
+
+      scheme.dividers.map((x) => React.createElement('line', {
+        key: `div_${x}`,
+        x1: x, y1: baseY, x2: x, y2: baseY - 3.5,
+        stroke: 'var(--v4-line, rgba(0,0,0,.12))',
+        strokeWidth: 1
+      })),
+
+      // Стык подписи не имеет — только точка в провале нейтральным тоном.
+      scheme.joints.map((joint, index) => React.createElement('circle', {
+        key: `joint_${index}`,
+        cx: joint.x, cy: joint.y, r: 2.2,
+        className: 'widget-v4-insulin-wave__joint'
+      })),
+
+      scheme.overlaps.map((band) => React.createElement(React.Fragment, { key: band.clipId },
+        React.createElement('g', { clipPath: `url(#${band.clipId})` },
+          React.createElement('rect', {
+            x: band.x, y: 0, width: band.width, height: baseY,
+            className: 'widget-v4-insulin-wave__overlap',
+            opacity: 0.5
+          })
+        ),
+        React.createElement('line', {
+          x1: band.x, y1: band.braceY, x2: band.x + band.width, y2: band.braceY,
+          className: 'widget-v4-insulin-wave__brace',
+          strokeWidth: 2.4,
+          strokeLinecap: 'round'
+        })
+      ))
     );
   }
 
@@ -2514,16 +2563,19 @@
           opacity: 0.5
         })
         : null,
-      v4.activeWavePath
+      // Обводка идёт только по кривой: путь незамкнутый, поэтому низ волны не
+      // обводится. Линии основания в этом виде нет — контур сам ограничивает
+      // форму, а лишняя линия читается как рамка (строка «волна · базовая линия»).
+      v4.activeWaveOpenPath
         ? React.createElement('path', {
           className: 'widget-v4-insulin-wave__stroke',
-          d: v4.activeWavePath,
+          d: v4.activeWaveOpenPath,
           fill: 'none',
-          strokeWidth: 2,
-          strokeLinejoin: 'round'
+          strokeWidth: 1.2,
+          strokeLinejoin: 'round',
+          strokeLinecap: 'round'
         })
         : null,
-      React.createElement(InsulinWaveBaseline, { nowX, height, showNow: true }),
       v4.activeWavePath && Number.isFinite(nowX)
         ? React.createElement('circle', {
           cx: nowX, cy: markerY, r: 3.2,
@@ -2535,34 +2587,61 @@
 
   function InsulinWaveOverlapSvg({ v4, height = 50 }) {
     const pair = Array.isArray(v4.overlapPair) ? v4.overlapPair : [];
-    const span = v4.overlapSpan;
-    const baseY = height - 4;
+    // Заливается ровно та часть, где вторая волна налегла на первую, —
+    // пересечение фигур, а не прямоугольник (строка «волна · пересечение»).
+    const clipId = 'wave_overlap_clip';
+    const braceY = height - 3;
+
     return React.createElement('svg', {
       className: 'widget-v4-wave widget-v4-insulin-wave widget-v4-insulin-wave--overlap',
       viewBox: `0 0 130 ${height}`,
       width: '100%',
       height,
+      style: { overflow: 'visible' },
       'aria-hidden': 'true'
     },
+      pair.length >= 2
+        ? React.createElement('defs', null,
+          React.createElement('clipPath', { id: clipId },
+            React.createElement('path', { d: pair[0].pathD })
+          )
+        )
+        : null,
+
       pair.map((w) => React.createElement('path', {
         key: w.id || w.pathD,
         className: 'widget-v4-insulin-wave__fill',
         d: w.pathD,
-        opacity: 0.55
+        opacity: 0.45
       })),
-      React.createElement('line', {
-        x1: 0, y1: baseY - 2, x2: 130, y2: baseY - 2,
-        stroke: 'var(--v4-line, rgba(0,0,0,.12))',
-        strokeWidth: 1.5
-      }),
-      span && Number.isFinite(span.x0) && Number.isFinite(span.x1)
+
+      // Пересечение: вторая фигура, обрезанная первой.
+      pair.length >= 2
+        ? React.createElement('g', { clipPath: `url(#${clipId})` },
+          React.createElement('path', {
+            d: pair[1].pathD,
+            className: 'widget-v4-insulin-wave__overlap',
+            opacity: 0.55
+          })
+        )
+        : null,
+
+      // Линии основания в этом виде нет: обводка идёт только по кривой.
+      pair.map((w) => React.createElement('path', {
+        key: `stroke_${w.id || w.pathD}`,
+        className: 'widget-v4-insulin-wave__stroke',
+        d: w.openD || w.pathD,
+        fill: 'none',
+        strokeWidth: 1.2,
+        strokeLinejoin: 'round',
+        strokeLinecap: 'round'
+      })),
+
+      pair.length >= 2
         ? React.createElement('line', {
-          x1: span.x0,
-          y1: baseY + 3,
-          x2: span.x1,
-          y2: baseY + 3,
-          className: 'widget-v4-insulin-wave__overlap-mark',
-          strokeWidth: 2,
+          x1: 130 * 0.28, y1: braceY, x2: 130 * 0.72, y2: braceY,
+          className: 'widget-v4-insulin-wave__brace',
+          strokeWidth: 2.4,
           strokeLinecap: 'round'
         })
         : null
@@ -2597,6 +2676,27 @@
     const isLipolysis = data?.isLipolysis ?? (status === 'complete');
 
     if (!hasData) {
+      // День без приёмов рисуется своим кадром, а не общим прочерком: силуэта
+      // нет, счётчик говорит словами, снизу — покой от подъёма. Данные
+      // прошлого дня сюда не подставляются (строка «волна · день без приёмов»).
+      if (variantId === 'day_as_is') {
+        const wokeLabel = v4.emptyStateLabel
+          || (HEYS.Widgets.InsulinWaveV4 ? 'покой 0 ч от подъёма' : '');
+        return React.createElement('div', { className: 'widget-v4-stack' },
+          React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+            v4Kicker('Инсулиновая волна'),
+            React.createElement('span', { className: 'widget-v4-row__meta' }, 'приёмов не было')
+          ),
+          React.createElement('div', { className: 'widget-v4-hero-num' },
+            React.createElement('span', {
+              className: 'widget-v4-hero-num__val widget-v4-val--neutral'
+            }, '—')
+          ),
+          React.createElement('span', {
+            className: 'widget-v4-muted', style: { marginTop: 'auto' }
+          }, wokeLabel)
+        );
+      }
       return v4EmptyTile('Инсулиновая волна');
     }
 
@@ -2657,7 +2757,11 @@
     // day_as_is — дефолт 2×2
     const mealLabel = v4.mealCountLabel || (v4.mealCount ? `${v4.mealCount} приёма` : '—');
     const overlapLabel = v4.overlapCountLabel;
-    const elevatedLabel = v4.elevatedLabel ? `под волной ${v4.elevatedLabel}` : '';
+    // Строка снизу называет время конца текущей волны, а когда все закрыты —
+    // покой (строка «волна · текущая»). Пустой день говорит про подъём.
+    const stateLabel = v4.hasMeals === false
+      ? (v4.emptyStateLabel || '')
+      : (v4.underWaveLabel || '');
     return React.createElement('div', { className: 'widget-v4-stack' },
       React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
         v4Kicker('Инсулиновая волна'),
@@ -2670,7 +2774,9 @@
           : React.createElement('span', {
             className: v4ValueStateClass(v4InsulinWaveState(v4))
           }, isLipolysis ? 'без критичных' : 'идёт волна'),
-        React.createElement('span', { className: 'widget-v4-muted' }, elevatedLabel || '—')
+        React.createElement('span', { className: 'widget-v4-muted' },
+          // Стыки в дне есть — справа стоит их счётчик, иначе строка состояния.
+          v4.jointCountLabel || stateLabel || '—')
       )
     );
   }

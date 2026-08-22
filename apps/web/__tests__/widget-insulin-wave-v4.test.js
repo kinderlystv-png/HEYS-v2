@@ -32,7 +32,7 @@ describe('insulin wave v4', () => {
     expect(v4.mealCount).toBe(3);
     expect(v4.mealCountLabel).toBe('3 приёма');
     expect(v4.overlapCount).toBe(1);
-    expect(v4.overlapCountLabel).toBe('1 волна слиплась');
+    expect(v4.overlapCountLabel).toBe('1 волна наложилась');
     expect(v4.dayWaves.length).toBe(3);
     expect(v4.dayBar.segments.length).toBeGreaterThan(2);
     expect(v4.calmWindowMinutes).toBeGreaterThan(0);
