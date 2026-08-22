@@ -3408,6 +3408,42 @@ test('new_product заводит карточку и пишет позицию �
 // Разведка перед записью: 18:46 22.08.2026 модель начала с get_day + get_period,
 // хотя чек-ин гейтит сервер, а день возвращается в ответе записи. Подсказка
 // стоит в самом ответе — словесное правило в инструкции модель обходит.
+// Половина дневниковых вызовов 22.08 была чтением, и 13 из них — «узнать, а не
+// сделать». Инструкция для этого не годится: клиент режет её на 2048 символах.
+// Значит контекст едет попутчиком в ответе, за которым модель и так пришла.
+test('первый get_day инстанса несёт контекст клиента, второй — уже нет', async () => {
+  const pastDays = {};
+  for (const [date, back] of [['2026-07-30', 1], ['2026-07-29', 2], ['2026-07-28', 3]]) {
+    pastDays[date] = {
+      date,
+      updatedAt: 1,
+      meals: [{
+        id: `m-${back}`,
+        time: '09:00',
+        items: [{ id: `it-${back}`, product_id: 'own-americano', name: 'Кофе американо', grams: 100, kcal100: 2 }],
+      }],
+    };
+  }
+  const api = fakeApi({ day: { date: '2026-07-31', updatedAt: 111, waterMl: 0, meals: [] }, pastDays });
+  const tools = build(api);
+
+  const first = await tools.heys_get_day({ date: '2026-07-31' });
+  assert.match(first.text, /Контекст клиента/);
+  assert.match(first.text, /Кофе американо own-americano \(3 дн\)/, 'частый продукт с product_id');
+  assert.match(first.text, /наборы: «Кофе Киндерли»/);
+
+  const second = await tools.heys_get_day({ date: '2026-07-31' });
+  assert.ok(!/Контекст клиента/.test(second.text), 'второй раз тот же список не повторяем');
+});
+
+test('get_profile называет нулевой дефицит словами и несёт тот же контекст', async () => {
+  const api = fakeApi({ day: { date: '2026-07-31', updatedAt: 111, waterMl: 0, meals: [] } });
+  const res = await build(api).heys_get_profile({});
+
+  assert.match(res.text, /целевой дефицит не задан/);
+  assert.match(res.text, /Контекст клиента/);
+});
+
 test('get_day сам говорит, что перед новой записью он не нужен', async () => {
   const api = fakeApi({ day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] } });
   const res = await build(api).heys_get_day({ date: '2026-08-01' });

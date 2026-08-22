@@ -239,6 +239,86 @@ function createTools({
     return catalogPromise;
   }
 
+  /**
+   * Контекст клиента одним куском — приложением к чтению, а не отдельным кругом.
+   *
+   * По трейсам 22.08: из 50 дневниковых вызовов 25 были чтением, и 13 из них —
+   * именно «узнать, а не сделать» (наборы, блюда, профиль, период). Отдельный
+   * инструмент «дай контекст» этой цены не снимает: он сам круг. Поэтому
+   * контекст едет попутчиком в ответах, за которыми модель и так пришла.
+   *
+   * Инструкцию для этого использовать нельзя: клиент обрезает её на 2048
+   * символах (замер 22.08 — до модели доезжает 4,5% текста), а тексты ответов
+   * доезжают целиком.
+   *
+   * Считается один раз на инстанс: наборы и частые продукты за две недели
+   * меняются медленнее, чем живёт контейнер.
+   */
+  const BRIEF_WINDOW_DAYS = 14;
+  const BRIEF_TOP_PRODUCTS = 15;
+  const BRIEF_LIST_LIMIT = 8;
+  let briefPromise = null;
+  let briefSentInThisInstance = false;
+
+  async function buildClientBrief() {
+    const today = resolveDate(null, nowMs);
+    const dates = [];
+    for (let back = 0; back < BRIEF_WINDOW_DAYS; back += 1) dates.push(day.addDays(today, -back));
+
+    const [blobs, presets, catalog] = await Promise.all([
+      readMany(dates.map((date) => day.dayKey(date))),
+      loadPresets().catch(() => []),
+      loadCatalog().catch(() => null),
+    ]);
+
+    // Частота — по позициям приёмов: там уже лежат product_id и имя, каталог
+    // для этого не нужен. Считаем дни, а не повторы внутри одного дня: три
+    // кофе за день не делают продукт втрое привычнее.
+    const seenByProduct = new Map();
+    for (const date of dates) {
+      const blob = blobs[day.dayKey(date)];
+      const meals = (blob && Array.isArray(blob.meals)) ? blob.meals : [];
+      const perDay = new Set();
+      for (const meal of meals) {
+        for (const item of (Array.isArray(meal && meal.items) ? meal.items : [])) {
+          const id = item && item.product_id;
+          if (!id || perDay.has(String(id))) continue;
+          perDay.add(String(id));
+          const entry = seenByProduct.get(String(id)) || { id, name: item.name || '', days: 0 };
+          entry.days += 1;
+          if (item.name) entry.name = item.name;
+          seenByProduct.set(String(id), entry);
+        }
+      }
+    }
+    const frequent = [...seenByProduct.values()]
+      .filter((entry) => entry.days >= 2)
+      .sort((a, b) => b.days - a.days)
+      .slice(0, BRIEF_TOP_PRODUCTS);
+
+    const recipes = catalog ? products.listRecipes(catalog).slice(0, BRIEF_LIST_LIMIT) : [];
+    const parts = [];
+    if (frequent.length) {
+      parts.push(`ест чаще всего за ${BRIEF_WINDOW_DAYS} дн (product_id — пиши сразу им, без поиска): ${frequent
+        .map((entry) => `${entry.name} ${entry.id} (${entry.days} дн)`).join('; ')}`);
+    }
+    if (presets.length) {
+      parts.push(`наборы: ${presets.slice(0, BRIEF_LIST_LIMIT).map((preset) => `«${preset.name}»`).join(', ')}`);
+    }
+    if (recipes.length) {
+      parts.push(`домашние блюда: ${recipes.map((recipe) => `«${recipe.name}»`).join(', ')}`);
+    }
+    if (!parts.length) return '';
+    return ` Контекст клиента (за ним отдельные вызовы не нужны) — ${parts.join('. ')}.`;
+  }
+
+  function clientBrief() {
+    if (!briefPromise) {
+      briefPromise = buildClientBrief().catch(() => '');
+    }
+    return briefPromise;
+  }
+
   let presetsPromise = null;
 
   async function loadPresets() {
@@ -984,6 +1064,12 @@ function createTools({
   const tools = {
     async heys_get_day(args) {
       const date = resolveDate(args.date, nowMs);
+      // Брифинг стартует ДО собственных чтений: он ходит своим пакетом, и
+      // последовательно это добавило бы куратору ожидания на ровном месте.
+      // get_period так не умеет — там инвариант «один запрос на любой период»
+      // (тест «читает период и окно долга одним пакетом»), и второй пакет его
+      // ломает; поэтому контекст едет с get_day, самым частым чтением.
+      const briefPending = briefSentInThisInstance ? null : clientBrief();
       const current = await readDay(date);
       const summary = day.summarizeDay(current);
       // Норма и чек-ин в том же ответе: иначе «из N» и «можно ли писать еду»
@@ -1008,8 +1094,12 @@ function createTools({
       const head = summary.meals.length || summary.water_ml
         ? `День ${date}: ${summary.totals.kcal} ккал, Б${summary.totals.protein} У${summary.totals.carbs} Ж${summary.totals.fat}, вода ${summary.water_ml} мл, приёмов: ${summary.meals.length}.${normText(norm)}${checkinText}${formatDayMealsBlock(summary)}${beforeWriteHint}`
         : `День ${date} пока пустой.${normText(norm)}${checkinText}${beforeWriteHint}`;
+      // Брифинг — только первым ответом инстанса: за meal_id в get_day ходят
+      // часто, и повторять один и тот же список в каждом ответе незачем.
+      const brief = briefPending ? await briefPending : '';
+      briefSentInThisInstance = true;
       return {
-        text: head,
+        text: `${head}${brief}`,
         structured: { ...summary, norm, ...(checkin ? { checkin } : {}) },
       };
     },
@@ -3427,11 +3517,13 @@ function createTools({
       const text = [
         `Профиль: ${p.gender || '—'}, ${p.age ?? '—'} лет, рост ${p.height ?? '—'} см, вес ${p.weight ?? '—'} кг`,
         p.weight_goal ? `цель ${p.weight_goal} кг` : null,
-        p.deficit_pct_target ? `дефицит ${p.deficit_pct_target}%` : null,
+        // Ноль печатаем словами: пустое место в карточке модель прочитала как
+        // «поле не отдалось» и пошла спрашивать куратора (22.08.2026).
+        p.deficit_pct_target ? `дефицит ${p.deficit_pct_target}%` : 'целевой дефицит не задан',
         p.steps_goal ? `шаги ${p.steps_goal}` : null,
         `сон ${p.sleep_hours ?? '—'} ч`,
       ].filter(Boolean).join(', ') + '.';
-      return { text, structured: card };
+      return { text: `${text}${await clientBrief()}`, structured: card };
     },
 
     async heys_update_profile(args) {
