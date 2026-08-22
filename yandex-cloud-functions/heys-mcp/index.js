@@ -445,6 +445,7 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
       const coldStart = !instanceWarm;
       telemetry.recordList({
         token: headers.authorization || null,
+        chatSessionId,
         toolsCount,
         toolsBytes,
         clientName: lastClientInfo ? lastClientInfo.name : null,

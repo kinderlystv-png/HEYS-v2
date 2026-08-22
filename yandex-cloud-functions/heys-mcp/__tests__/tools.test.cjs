@@ -3512,3 +3512,92 @@ test('ошибка product_not_found в записи еды несёт те же
     },
   );
 });
+
+
+// ── Несколько дат и несколько приёмов одним вызовом ─────────────────────────
+// Замер 22.08.2026 (обмен 15:59): «шаги за пять дней» ушли тремя update_day
+// подряд, «сахар в каждый кофе» — тремя update_meal. Формы для этого не было
+// вовсе, то есть круги тратились не по вине модели.
+
+test('update_day(days[]) правит несколько дат одним вызовом', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-19', updatedAt: 111, waterMl: 0, meals: [] },
+    pastDays: {
+      '2026-08-17': { date: '2026-08-17', updatedAt: 100, waterMl: 0, meals: [] },
+      '2026-08-18': { date: '2026-08-18', updatedAt: 100, waterMl: 0, meals: [] },
+    },
+  });
+  const res = await build(api).heys_update_day({
+    days: [
+      { date: '2026-08-17', steps: 2743 },
+      { date: '2026-08-18', steps: 2891 },
+      { date: '2026-08-19', steps: 2612 },
+    ],
+  });
+
+  assert.equal(res.structured.days.length, 3);
+  assert.deepEqual(res.structured.days.map((d) => d.date), ['2026-08-17', '2026-08-18', '2026-08-19']);
+  assert.equal(res.structured.days[2].day_after.steps, 2612);
+  assert.match(res.text, /Обновил 3 дн\./);
+  const written = api.saves.filter((w) => w.key.startsWith('heys_dayv2_'));
+  assert.equal(written.length, 3, 'три разных дня — три блоба, но один круг модели');
+});
+
+test('days[] не принимает дубль даты и date рядом с собой', async () => {
+  const api = fakeApi({ day: { date: '2026-08-19', updatedAt: 111, waterMl: 0, meals: [] } });
+  await assert.rejects(
+    () => build(api).heys_update_day({ date: '2026-08-19', days: [{ date: '2026-08-19', steps: 1 }] }),
+    (e) => e.code === 'invalid_field',
+  );
+  await assert.rejects(
+    () => build(api).heys_update_day({ days: [{ date: '2026-08-19', steps: 1 }, { date: '2026-08-19', weight: 90 }] }),
+    (e) => {
+      assert.match(e.message, /дважды/);
+      return e.code === 'invalid_field';
+    },
+  );
+  assert.equal(api.saves.length, 0, 'ни один день не тронут');
+});
+
+test('update_meal(updates[]) добавляет одно и то же в несколько приёмов', async () => {
+  const api = fakeApi({
+    day: {
+      date: '2026-08-01',
+      updatedAt: 111,
+      waterMl: 0,
+      meals: [
+        { id: 'm1', name: 'Кофе-брейк', time: '09:00', items: [{ id: 'i1', product_id: 'own-americano', name: 'Кофе американо', grams: 100 }] },
+        { id: 'm2', name: 'Кофе-брейк', time: '13:00', items: [{ id: 'i2', product_id: 'own-americano', name: 'Кофе американо', grams: 100 }] },
+      ],
+    },
+  });
+  const res = await build(api).heys_update_meal({
+    date: '2026-08-01',
+    updates: [
+      { meal_id: 'm1', add_items: [{ product_id: 'own-syrup', grams: 10 }] },
+      { meal_id: 'm2', add_items: [{ product_id: 'own-syrup', grams: 10 }] },
+    ],
+  });
+
+  assert.equal(res.structured.updated_meals.length, 2);
+  assert.deepEqual(res.structured.updated_meals.map((m) => m.meal_id), ['m1', 'm2']);
+  assert.ok(res.structured.day_after, 'день после последней правки приходит в ответе');
+  const finalDay = api.saves.filter((w) => w.key.startsWith('heys_dayv2_')).at(-1).value;
+  assert.equal(finalDay.meals[0].items.length, 2, 'первый приём получил добавку');
+  assert.equal(finalDay.meals[1].items.length, 2, 'и второй тоже — правки не перетёрли друг друга');
+});
+
+test('updates[] не принимает дубль meal_id и meal_id рядом с собой', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [{ id: 'm1', name: 'Обед', time: '13:00', items: [] }] },
+  });
+  await assert.rejects(
+    () => build(api).heys_update_meal({ meal_id: 'm1', updates: [{ meal_id: 'm1', name: 'X' }] }),
+    (e) => e.code === 'invalid_field',
+  );
+  await assert.rejects(
+    () => build(api).heys_update_meal({ updates: [{ meal_id: 'm1', name: 'X' }, { meal_id: 'm1', name: 'Y' }] }),
+    (e) => e.code === 'invalid_field',
+  );
+  assert.equal(api.saves.length, 0);
+});

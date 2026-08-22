@@ -80,6 +80,11 @@ const LIST_RECORD_FIELDS = [
   't',                // всегда 'mcp_list'
   'ts',
   'session_id',       // тот же псевдоним подключения, что у mcp_call
+  // Подключение — то же, что у вызовов инструментов. Без него нельзя ответить
+  // на главный вопрос про схемы: «этот чат забрал новый список или держит
+  // старый». 22.08.2026 на это ушёл час раскопок в логах и ответа так и не
+  // нашлось: session_id у tools/list свой на каждый запрос, а conn_id не писался.
+  'conn_id',
   'tools_count',      // сколько схем ушло клиенту
   'tools_bytes',      // их суммарный размер: обрезка бывает по объёму, не по числу
   'client_name',      // clientInfo.name из initialize — программа, не человек
@@ -255,6 +260,7 @@ function buildListRecord(input = {}) {
     t: 'mcp_list',
     ts: new Date(input.nowMs || Date.now()).toISOString(),
     session_id: input.sessionId || null,
+    conn_id: input.connId || null,
     tools_count: intOrNull(input.toolsCount),
     tools_bytes: intOrNull(input.toolsBytes),
     client_name: typeof input.clientName === 'string' && input.clientName
@@ -332,9 +338,12 @@ function createTelemetry({ instanceId, fnVersion, logger = console } = {}) {
      */
     recordList(input = {}) {
       try {
+        const nowMs = Date.now();
         const record = buildListRecord({
           ...input,
           sessionId: input.sessionId || sessionAlias(input.token, instance),
+          // Тот же материал, что у begin(): чат сопоставляется с вызовами.
+          connId: input.connId || connectionAlias(input.chatSessionId || input.token, nowMs),
           fnVersion: input.fnVersion || version,
         });
         emitRecord(record, { logger });

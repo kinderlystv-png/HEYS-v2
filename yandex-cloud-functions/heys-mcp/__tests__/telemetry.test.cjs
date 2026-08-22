@@ -390,3 +390,22 @@ test('persistCall await до возврата record и не роняет при
     tool: 'heys_get_day', ok: true, durationMs: 10, sessionId: 'abc', seq: 2,
   }, { persistCall: async () => { throw new Error('db down'); } }));
 });
+
+
+test('mcp_list несёт conn_id — иначе не ответить, забрал ли чат новые схемы', () => {
+  // 22.08.2026: на вопрос «была ли у этого чата схема с meals[]» ответа не
+  // нашлось — session_id у tools/list свой на каждый запрос, а conn_id не
+  // писался вовсе. Теперь список и вызовы сходятся по одному ключу.
+  const record = require('../lib/telemetry').buildListRecord({
+    nowMs: Date.UTC(2026, 7, 22, 12, 55),
+    sessionId: 'sess1234abcd',
+    connId: '34f5528e62c5',
+    toolsCount: 84,
+    toolsBytes: 149508,
+    clientName: 'claude-code',
+  });
+
+  assert.equal(record.conn_id, '34f5528e62c5');
+  assert.equal(record.session_id, 'sess1234abcd');
+  assert.equal(record.tools_bytes, 149508);
+});

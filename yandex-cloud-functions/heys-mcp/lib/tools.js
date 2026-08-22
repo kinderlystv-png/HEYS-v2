@@ -1369,6 +1369,45 @@ function createTools({
      * гоняется с открытым приложением.
      */
     async heys_update_meal(args) {
+      // Правка нескольких приёмов одной репликой («сахар в каждый кофе»): без
+      // этой формы каждый приём стоил отдельного круга модели — 22.08.2026 три
+      // одинаковые добавки ушли тремя вызовами подряд.
+      if (Array.isArray(args.updates) && args.updates.length) {
+        if (args.meal_id) {
+          throw new ToolError('invalid_field', 'updates[] несёт meal_id внутри каждого элемента — рядом с ним отдельный meal_id не передавай.');
+        }
+        if (args.updates.length > 10) {
+          throw new ToolError('invalid_field', 'За раз можно поправить не больше 10 приёмов.');
+        }
+        const seen = new Set();
+        for (const entry of args.updates) {
+          const id = String((entry && entry.meal_id) || '');
+          if (!id) throw new ToolError('invalid_meal_id', 'В каждом элементе updates[] нужен meal_id из heys_get_day.');
+          if (seen.has(id)) {
+            throw new ToolError('invalid_field', `Приём ${id} встречается в updates[] дважды — собери его правки в один элемент.`);
+          }
+          seen.add(id);
+        }
+        const done = [];
+        let lastAfter = null;
+        for (const entry of args.updates) {
+          // eslint-disable-next-line no-await-in-loop -- правки идут в один блоб дня, строго по одной
+          const res = await tools.heys_update_meal({
+            date: args.date,
+            ...entry,
+            client: args.client,
+            transcript: args.transcript,
+          });
+          done.push({ meal_id: res.structured.meal_id, name: res.structured.name, totals: res.structured.totals });
+          lastAfter = res.structured.day_after;
+        }
+        // День — после последней правки: он уже вобрал все предыдущие.
+        return {
+          text: `Поправил ${done.length} приёма(ов): ${done.map((m) => `${m.name} (${m.meal_id})`).join('; ')}.`
+            + `${lastAfter ? dayAfterText(lastAfter) : ''}`,
+          structured: { updated_meals: done, day_after: lastAfter },
+        };
+      }
       const date = resolveDate(args.date, nowMs);
       if (!args.meal_id) throw new ToolError('invalid_meal_id', 'Нужен meal_id (его отдаёт heys_get_day).');
 
@@ -2197,6 +2236,39 @@ function createTools({
     },
 
     async heys_update_day(args) {
+      // Несколько дат одной репликой («шаги за пять дней»): без этой формы
+      // каждая дата стоила отдельного круга модели — 22.08.2026 три дня шагов
+      // ушли тремя вызовами подряд. Раскладываем на те же самые записи, но
+      // внутри одного вызова.
+      if (Array.isArray(args.days) && args.days.length) {
+        if (args.date !== undefined && args.date !== null) {
+          throw new ToolError('invalid_field', 'days[] несёт даты внутри себя — параметр date рядом с ним не передавай.');
+        }
+        if (args.days.length > 14) {
+          throw new ToolError('invalid_field', 'За раз можно поправить не больше 14 дней.');
+        }
+        const seen = new Set();
+        for (const entry of args.days) {
+          const key = String((entry && entry.date) || '');
+          if (!key) throw new ToolError('invalid_field', 'В каждом элементе days[] нужна date.');
+          if (seen.has(key)) {
+            throw new ToolError('invalid_field', `Дата ${key} встречается в days[] дважды — собери её показатели в один элемент.`);
+          }
+          seen.add(key);
+        }
+        const perDay = [];
+        for (const entry of args.days) {
+          // Общие поля (client, transcript) берём из корня, дневные — из элемента.
+          // eslint-disable-next-line no-await-in-loop -- записи в один блоб дня идут строго по одной
+          const res = await tools.heys_update_day({ ...entry, client: args.client, transcript: args.transcript });
+          perDay.push({ date: res.structured.date, updated: res.structured.updated, day_after: res.structured.day_after });
+        }
+        const lines = perDay.map((d) => `${d.date}: ${d.updated.join(', ')}`);
+        return {
+          text: `Обновил ${perDay.length} дн.: ${lines.join('; ')}.`,
+          structured: { days: perDay },
+        };
+      }
       const date = resolveDate(args.date, nowMs);
       const fields = {
         weight: args.weight,
@@ -3533,7 +3605,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_update_day',
-    description: 'Куратор вписывает дневные показатели по своему усмотрению или задним числом: вес, шаги, быт, сон, настроение, самочувствие, стресс, комментарий, загрузочный день (refeed_day + refeed_reason), план добавок (supplements_planned / add / remove), отметки «принял» (supplements_mark / unmark / timing: morning|evening). Поле остаётся помеченным кураторским и не закрывает шаг утреннего чек-ина в приложении — клиент увидит его снова. Для «клиент диктует значения прямо сейчас, живьём» — heys_checkin, не этот инструмент.',
+    description: 'Куратор вписывает дневные показатели по своему усмотрению или задним числом. Несколько дат из одной реплики («шаги за пять дней») — ОДИН вызов с days: [{date, steps}, …], не цепочка. Поля: вес, шаги, быт, сон, настроение, самочувствие, стресс, комментарий, загрузочный день (refeed_day + refeed_reason), план добавок (supplements_planned / add / remove), отметки «принял» (supplements_mark / unmark / timing: morning|evening). Поле остаётся помеченным кураторским и не закрывает шаг утреннего чек-ина в приложении — клиент увидит его снова. Для «клиент диктует значения прямо сейчас, живьём» — heys_checkin, не этот инструмент.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -3547,6 +3619,22 @@ const TOOL_SCHEMAS = [
         water_add_ml: {
           type: 'number',
           description: 'Добавить выпитую воду (мл) этой же записью — когда в реплике и вода, и другие показатели, не делай отдельный heys_add_water. Прибавляется к текущему; отрицательное уменьшает.',
+        },
+        days: {
+          type: 'array',
+          description: 'Несколько дат одним вызовом («шаги за пять дней», «вес за выходные»). Каждый элемент — своя date и любые поля этого инструмента. Рядом с days[] не передавай date. До 14 дней, дата в списке не повторяется.',
+          items: {
+            type: 'object',
+            properties: {
+              date: { type: 'string', description: 'Дата: YYYY-MM-DD или «вчера»/«позавчера».' },
+              steps: { type: 'integer', description: 'Шаги за этот день.' },
+              weight: { type: 'number', description: 'Утренний вес, кг.' },
+              household_min: { type: 'integer', description: 'Минуты бытовой активности за этот день.' },
+              water_add_ml: { type: 'number', description: 'Добавить воду (мл) за этот день.' },
+              comment: { type: 'string', description: 'Комментарий к этому дню.' },
+            },
+            required: ['date'],
+          },
         },
         household_activities: {
           type: 'array',
@@ -3712,11 +3800,27 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_update_meal',
-    description: 'Изменить уже записанный приём: добавить позиции, убрать их, поправить граммовку, переименовать, сдвинуть время. «В завтрак/обед такой же …»: heys_get_day(сегодня + источник) → heys_update_meal с copy_meal. Приём целиком — copy_meal { date, meal_id }; одна позиция («конверт как вчера») — copy_meal { date, meal_id, item_ids }. Граммы не собирай из текста get_day. meal_id приёма сегодня и item_id источника — из heys_get_day.',
+    description: 'Изменить уже записанный приём: добавить позиции, убрать их, поправить граммовку, переименовать, сдвинуть время. Одинаковая правка нескольких приёмов («сахар в каждый кофе») — ОДИН вызов с updates: [{meal_id, add_items}, …], не цепочка. «В завтрак/обед такой же …»: heys_get_day(сегодня + источник) → heys_update_meal с copy_meal. Приём целиком — copy_meal { date, meal_id }; одна позиция («конверт как вчера») — copy_meal { date, meal_id, item_ids }. Граммы не собирай из текста get_day. meal_id приёма сегодня и item_id источника — из heys_get_day.',
     inputSchema: {
       type: 'object',
       properties: {
         meal_id: { type: 'string', description: 'Идентификатор приёма из heys_get_day.' },
+        updates: {
+          type: 'array',
+          description: 'Правки нескольких приёмов одним вызовом («сахар в каждый кофе», «убери сироп из обоих»). Каждый элемент — свой meal_id и любые поля этого инструмента. Рядом с updates[] отдельный meal_id не передавай. До 10 приёмов, meal_id не повторяется.',
+          items: {
+            type: 'object',
+            properties: {
+              meal_id: { type: 'string', description: 'Идентификатор приёма из heys_get_day.' },
+              add_items: { type: 'array', items: ITEM_SCHEMA, description: 'Позиции, которые нужно добавить в этот приём.' },
+              remove_item_ids: { type: 'array', items: { type: 'string' }, description: 'item_id позиций, которые нужно убрать.' },
+              set_grams: { type: 'object', description: 'Новая граммовка позиций: { item_id: граммы }.' },
+              name: { type: 'string', description: 'Новое название приёма.' },
+              time: { type: 'string', description: 'Новое время приёма HH:MM.' },
+            },
+            required: ['meal_id'],
+          },
+        },
         date: DATE_ARG,
         copy_meal: {
           type: 'object',
