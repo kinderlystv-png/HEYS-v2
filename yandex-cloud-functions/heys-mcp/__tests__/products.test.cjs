@@ -359,3 +359,51 @@ test('поиск по штрихкоду находит продукт точн�
   assert.equal(hit.id, 's-a');
   assert.equal(products.describeProduct(hit).barcode, '4600000123456');
 });
+
+
+// ── Похожесть как fallback пустого поиска ───────────────────────────────────
+// Инцидент 22.08.2026: «ареон» не находил «Грудку копчёную Орион» — в
+// tokenMatches опечатка допускается только при совпадающих первых трёх буквах,
+// а разъехались ровно гласные. Ноль результатов стоил восьми кругов разведки.
+
+const FUZZY_CATALOG = {
+  all: [
+    'Грудка копчёная Орион',
+    'Шаурма классическая с курицей и соусами',
+    'Молоко ультрапастеризованное 3.5',
+    'Кефир 2,5',
+    'Гречневая каша',
+    'Сахар-песок',
+    'Сок яблочный',
+    'Сыр российский',
+  ].map((name, i) => ({ id: `p${i}`, name, _source: 'own', kcal100: 100 })),
+};
+
+test('ошибка распознавания находится по скелету согласных', () => {
+  assert.deepEqual(products.searchProducts(FUZZY_CATALOG, 'ареон', 5), [], 'точный поиск такое не ловит');
+  const fuzzy = products.fuzzySearchProducts(FUZZY_CATALOG, 'ареон', 5);
+  assert.equal(fuzzy.length, 1);
+  assert.equal(fuzzy[0].name, 'Грудка копчёная Орион');
+  assert.ok(fuzzy[0]._fuzzy >= 0.5, 'похожесть проставлена в строке-копии');
+});
+
+test('искажения гласных и опечатки ловятся, каталог при этом не мутируется', () => {
+  for (const [query, expected] of [
+    ['шаварма', 'Шаурма классическая с курицей и соусами'],
+    ['малако', 'Молоко ультрапастеризованное 3.5'],
+    ['кифир', 'Кефир 2,5'],
+  ]) {
+    const found = products.fuzzySearchProducts(FUZZY_CATALOG, query, 3);
+    assert.equal(found[0] && found[0].name, expected, `«${query}» должен подсказать «${expected}»`);
+  }
+  assert.ok(FUZZY_CATALOG.all.every((row) => row._fuzzy === undefined), 'каталог кэшируется — правим только копии');
+});
+
+test('похожесть не выдумывает совпадений там, где их нет', () => {
+  // Короткие слова не участвуют вовсе: у «сок» и «сыр» один скелет длиной 2.
+  for (const query of ['сыр', 'сок', 'мясо', 'банан', 'лосось', 'протеин']) {
+    const found = products.fuzzySearchProducts(FUZZY_CATALOG, query, 3)
+      .filter((row) => products.searchProducts(FUZZY_CATALOG, query, 3).length === 0);
+    assert.deepEqual(found.map((r) => r.name), [], `«${query}» не должен давать ложную подсказку`);
+  }
+});

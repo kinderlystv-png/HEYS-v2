@@ -27,20 +27,21 @@ gates — в [`25`](../маркетинг/25_Roadmap_Ф0_Ф1.md) /
 
 ## Куда идти по типу задачи
 
-| Задача                                   | Первый файл                                                                                                                                                 |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| «Что делать дальше по запуску»           | [`маркетинг/41`](../маркетинг/41_Единый_релизный_контур_и_очередь_промптов_2026-07-26.md)                                                                   |
-| «Какой статус у задачи запуска»          | [`маркетинг/22`](../маркетинг/22_План_реализации_маркетинга.md)                                                                                             |
-| «Можно ли уже собирать заявки / платить» | [`маркетинг/25`](../маркетинг/25_Roadmap_Ф0_Ф1.md) + [`32`](../маркетинг/32_ПДн_governance_релизный_контур.md)                                              |
-| «Как работает система X в коде»          | [`docs/reference/README.md`](reference/README.md) → досье в `reference/systems/`                                                                            |
-| «Какие инженерные задачи открыты»        | [`todo.md`](../todo.md)                                                                                                                                     |
-| «Правила работы агента»                  | [`CLAUDE.md`](../CLAUDE.md) / [`AGENTS.md`](../AGENTS.md)                                                                                                   |
-| «Контекст из задачника / bootstrap»      | [`HEYS-HANDOFF.md`](HEYS-HANDOFF.md) (снимок) → [`HEYS-HANDOFF-BOOTSTRAP.md`](HEYS-HANDOFF-BOOTSTRAP.md) (факты 06.08); живой контракт — `AGENTS.md`        |
-| «Как коммитить / пушить / деплоить»      | [`operations/AGENT_SHIPPING_RUNBOOK.md`](operations/AGENT_SHIPPING_RUNBOOK.md) + [`RELEASE_PROCESS.md`](RELEASE_PROCESS.md)                                 |
-| «Писать клиент-видимый текст»            | [`apps/landing/COPY_VOICE.md`](../apps/landing/COPY_VOICE.md)                                                                                               |
-| «Почему решение такое»                   | [`маркетинг/15`](../маркетинг/15_Ревизия_и_лог_решений.md)                                                                                                  |
-| «Отладить баг в проде»                   | [`apps/web/DEBUGGING.md`](../apps/web/DEBUGGING.md) + [`apps/web/BUGS_HISTORY.md`](../apps/web/BUGS_HISTORY.md)                                             |
-| «Достать MCP-трейс, разобрать обмен»     | [`operations/MCP_TRACE_RUNBOOK.md`](operations/MCP_TRACE_RUNBOOK.md) → цифры в [`heys-mcp/TIMING_LOG.md`](../yandex-cloud-functions/heys-mcp/TIMING_LOG.md) |
+| Задача                                    | Первый файл                                                                                                                                                 |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| «Что делать дальше по запуску»            | [`маркетинг/41`](../маркетинг/41_Единый_релизный_контур_и_очередь_промптов_2026-07-26.md)                                                                   |
+| «Какой статус у задачи запуска»           | [`маркетинг/22`](../маркетинг/22_План_реализации_маркетинга.md)                                                                                             |
+| «Можно ли уже собирать заявки / платить»  | [`маркетинг/25`](../маркетинг/25_Roadmap_Ф0_Ф1.md) + [`32`](../маркетинг/32_ПДн_governance_релизный_контур.md)                                              |
+| «Как работает система X в коде»           | [`docs/reference/README.md`](reference/README.md) → досье в `reference/systems/`                                                                            |
+| «Какие инженерные задачи открыты»         | [`todo.md`](../todo.md)                                                                                                                                     |
+| «Правила работы агента»                   | [`CLAUDE.md`](../CLAUDE.md) / [`AGENTS.md`](../AGENTS.md)                                                                                                   |
+| «Контекст из задачника / bootstrap»       | [`HEYS-HANDOFF.md`](HEYS-HANDOFF.md) (снимок) → [`HEYS-HANDOFF-BOOTSTRAP.md`](HEYS-HANDOFF-BOOTSTRAP.md) (факты 06.08); живой контракт — `AGENTS.md`        |
+| «Как коммитить / пушить / деплоить»       | [`operations/AGENT_SHIPPING_RUNBOOK.md`](operations/AGENT_SHIPPING_RUNBOOK.md) + [`RELEASE_PROCESS.md`](RELEASE_PROCESS.md)                                 |
+| «Писать клиент-видимый текст»             | [`apps/landing/COPY_VOICE.md`](../apps/landing/COPY_VOICE.md)                                                                                               |
+| «Почему решение такое»                    | [`маркетинг/15`](../маркетинг/15_Ревизия_и_лог_решений.md)                                                                                                  |
+| «Отладить баг в проде»                    | [`apps/web/DEBUGGING.md`](../apps/web/DEBUGGING.md) + [`apps/web/BUGS_HISTORY.md`](../apps/web/BUGS_HISTORY.md)                                             |
+| «Достать MCP-трейс, разобрать обмен»      | [`operations/MCP_TRACE_RUNBOOK.md`](operations/MCP_TRACE_RUNBOOK.md) → цифры в [`heys-mcp/TIMING_LOG.md`](../yandex-cloud-functions/heys-mcp/TIMING_LOG.md) |
+| «Что уже пробовали ускорять в коннекторе» | [`heys-mcp/OPTIMIZATION_LOG.md`](../yandex-cloud-functions/heys-mcp/OPTIMIZATION_LOG.md)                                                                    |
 
 ---
 

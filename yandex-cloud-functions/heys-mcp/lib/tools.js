@@ -624,6 +624,66 @@ function createTools({
     throw err;
   }
 
+  /**
+   * Что ответить, когда каталог не нашёл ничего.
+   *
+   * Пустая выдача — самый дорогой ответ инструмента: 22.08.2026 два таких
+   * ответа («ареон», «кофе домашнее») стоили восьми кругов разведки — search,
+   * список наборов и два чтения рецептов, — потому что модели не за что было
+   * зацепиться. Поэтому вместо «ничего не нашлось» отдаём две подсказки:
+   *
+   * 1. Похожие по написанию (`fuzzySearchProducts`) — опечатки и искажения
+   *    распознавания: «ареон» → «Орион».
+   * 2. Позиции, которые живут только внутри наборов. Карточку могли удалить, а
+   *    снимок в наборе остался: поиском такое не найти вовсе, хотя записать
+   *    приём через `preset` можно прямо сейчас.
+   */
+  async function missingProductHints(query) {
+    const hints = { fuzzy: [], presets: [] };
+    if (!query) return hints;
+    const prepared = products.prepareQuery(query);
+    if (!prepared) return hints;
+
+    try {
+      const catalog = await loadCatalog();
+      hints.fuzzy = products.fuzzySearchProducts(catalog, query, 3).map(products.describeProduct);
+    } catch (_) { /* подсказка не обязана ронять основной ответ */ }
+
+    try {
+      const presets = await loadPresets();
+      for (const preset of presets || []) {
+        for (const item of (preset && preset.items) || []) {
+          const name = String((item && item.name) || '').trim();
+          if (!name) continue;
+          const pseudo = { name };
+          const strong = products.matchStrength(pseudo, prepared) !== 'none';
+          const similar = products.fuzzyProductSimilarity(pseudo, prepared) >= 0.5;
+          if (!strong && !similar) continue;
+          if (hints.presets.some((h) => h.item === name && h.preset === preset.name)) continue;
+          hints.presets.push({ preset: preset.name, item: name, grams: Number(item.grams) || null });
+        }
+      }
+      hints.presets = hints.presets.slice(0, 3);
+    } catch (_) { /* наборы могут быть недоступны — это не ошибка поиска */ }
+
+    return hints;
+  }
+
+  /** Те же подсказки одной строкой — для текста ответа и текста ошибки. */
+  function missingProductHintsText(query, hints) {
+    const parts = [];
+    if (hints.fuzzy.length) {
+      parts.push(`Похожие по написанию (возможна опечатка или ошибка распознавания): ${hints.fuzzy
+        .map((p) => `«${p.name}» (${p.product_id}, ${p.kcal100} ккал/100, ${p.source})`).join('; ')}`);
+    }
+    if (hints.presets.length) {
+      parts.push(`Карточки нет, но такая позиция есть в наборах: ${hints.presets
+        .map((h) => `«${h.item}» в наборе «${h.preset}»${h.grams ? ` (${h.grams} г)` : ''}`).join('; ')}`
+        + '. Записать приём можно прямо сейчас через heys_log_meal(preset), а карточку вернуть — heys_create_product.');
+    }
+    return parts.length ? ` ${parts.join('. ')}.` : '';
+  }
+
   async function resolveProduct(spec, label) {
     const catalog = await loadCatalog();
 
@@ -658,7 +718,17 @@ function createTools({
 
     const matches = products.searchProducts(catalog, spec.query, 5);
     if (!matches.length) {
-      throw new ToolError('product_not_found', `По запросу "${spec.query}" ничего не найдено. Уточни название или подбери продукт через heys_search_products.`);
+      // Подсказки прямо в ошибке: следующий круг модели должен быть записью, а
+      // не ещё одним поиском вслепую.
+      const hints = await missingProductHints(spec.query);
+      throw new ToolError(
+        'product_not_found',
+        `По запросу "${spec.query}" ничего не найдено.${missingProductHintsText(spec.query, hints)}`
+        + ' Если это новый продукт с известным составом — передай new_product прямо в позиции, и карточка заведётся этой же записью.',
+        (hints.fuzzy.length || hints.presets.length)
+          ? { similar: hints.fuzzy, in_presets: hints.presets }
+          : undefined,
+      );
     }
     const prepared = products.prepareQuery(spec.query);
     const best = products.scoreProduct(matches[0], prepared);
@@ -956,8 +1026,26 @@ function createTools({
           }
           return parts.join(', ');
         }).join('; ')}${hasExact ? '' : `. Точного совпадения с «${args.query}» среди них нет — это ближайшее по словам. Если ни один не подходит, другая формулировка вернёт тот же список: heys_create_product (from_product_id ближайшего, если состав неизвестен), затем приём.`}`
-        : `По запросу "${args.query}" ничего не нашлось. Каталог просмотрен целиком, включая написания латиницей и кириллицей, — другая формулировка того же продукта вернёт тот же ответ. Дальше: heys_create_product (from_product_id ближайшего, если состав неизвестен), затем heys_log_meal.`;
-      return { text, structured: { query: args.query, results: described, exact_match: hasExact } };
+        : null;
+      if (text !== null) {
+        return { text, structured: { query: args.query, results: described, exact_match: hasExact } };
+      }
+      // Пустая выдача — не конец разговора: похожие по написанию и позиции из
+      // наборов дают модели, чем закрыть просьбу, вместо перебора формулировок.
+      const hints = await missingProductHints(args.query);
+      const hintText = missingProductHintsText(args.query, hints);
+      const emptyText = `По запросу "${args.query}" точных совпадений нет. Каталог просмотрен целиком, включая написания латиницей и кириллицей, — другая формулировка того же продукта вернёт тот же ответ.${hintText}`
+        + ' Дальше: подходит похожий — пиши его product_id; ничего не подходит — heys_create_product (from_product_id ближайшего, если состав неизвестен) или new_product прямо в позиции heys_log_meal.';
+      return {
+        text: emptyText,
+        structured: {
+          query: args.query,
+          results: [],
+          exact_match: false,
+          similar: hints.fuzzy,
+          in_presets: hints.presets,
+        },
+      };
     },
 
     /**

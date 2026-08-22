@@ -3460,3 +3460,55 @@ test('water_add_ml в update_day прибавляет воду вместе с �
   const dayWrites = api.saves.filter((w) => w.key.startsWith('heys_dayv2_'));
   assert.equal(dayWrites.length, 1, 'вода и шаги — одна запись дня');
 });
+
+
+// ── Пустая выдача поиска отдаёт, чем её закрыть ─────────────────────────────
+// Замер 22.08.2026 (trace 13:28): 8 из 11 вызовов — разведка вокруг двух
+// ненайденных позиций. «ареон» не находил «Орион», а «кофе домашнее» жил только
+// внутри наборов. Теперь оба случая отвечают подсказкой, а не «ничего нет».
+
+test('поиск подсказывает похожее по написанию вместо пустого ответа', async () => {
+  const api = fakeApi({ day: null });
+  // «омериканно» — искажение с первой буквы: точный скоринг такое не ловит,
+  // потому что tokenMatches требует совпадения первых трёх букв.
+  const res = await build(api).heys_search_products({ query: 'омериканно' });
+
+  assert.deepEqual(res.structured.results, [], 'точных совпадений нет');
+  assert.ok(res.structured.similar.length > 0, 'похожие предложены');
+  assert.match(res.text, /Похожие по написанию/);
+  assert.match(res.text, /американо/i);
+});
+
+test('поиск показывает позицию, которая живёт только в наборе', async () => {
+  const api = fakeApi({
+    day: null,
+    presets: [{
+      id: 'pr1',
+      name: 'Бутер с кофе',
+      items: [{ name: 'Домашний кофе (растворимый 200 мл + молоко 2,5 100 мл)', grams: 300 }],
+    }],
+  });
+  const res = await build(api).heys_search_products({ query: 'домашний кофе' });
+
+  assert.equal(res.structured.results.length, 0);
+  assert.equal(res.structured.in_presets.length, 1);
+  assert.equal(res.structured.in_presets[0].preset, 'Бутер с кофе');
+  assert.match(res.text, /есть в наборах/);
+  assert.match(res.text, /heys_log_meal\(preset\)/);
+});
+
+test('ошибка product_not_found в записи еды несёт те же подсказки', async () => {
+  const api = fakeApi({
+    day: { date: '2026-08-01', updatedAt: 111, waterMl: 0, meals: [] },
+    presets: [{ id: 'pr1', name: 'Бутер с кофе', items: [{ name: 'Домашний кофе', grams: 300 }] }],
+  });
+  await assert.rejects(
+    () => build(api).heys_log_meal({ date: '2026-08-01', items: [{ query: 'домашний кофе', grams: 300 }] }),
+    (e) => {
+      assert.equal(e.code, 'product_not_found');
+      assert.match(e.message, /есть в наборах/);
+      assert.match(e.message, /new_product/);
+      return true;
+    },
+  );
+});

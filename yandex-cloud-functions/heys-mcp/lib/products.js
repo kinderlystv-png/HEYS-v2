@@ -320,6 +320,113 @@ function scoreProduct(product, prepared) {
   return score;
 }
 
+/**
+ * Похожесть на случай, когда точный скоринг не нашёл ничего.
+ *
+ * Повод (22.08.2026): «ареон» не находил «Орион» — в `tokenMatches` опечатка
+ * допускается только при совпадающих первых трёх буквах, а тут разъехались
+ * ровно гласные. Ноль результатов стоил куратору восьми кругов разведки
+ * (`tasks_mcp_trace` 13:28: 11 вызовов, 229 с, из них сервер 5 с).
+ *
+ * Две меры вместо одной, потому что и промахи бывают двух видов:
+ * 1. Триграммы (коэффициент Дайса) — обычные опечатки и лишние/пропущенные
+ *    буквы: «гречьнивая» → «гречневая».
+ * 2. Скелет согласных — ошибки распознавания речи. Они почти всегда в гласных,
+ *    согласные выживают: «ареон» и «орион» дают один скелет «рн».
+ *
+ * Обе — только как fallback при пустой выдаче: на непустом поиске такая
+ * вольность тащила бы мусор в нормальные ответы.
+ */
+const VOWELS_RE = /[аеиоуыэюяaeiouy]/g;
+
+function consonantSkeleton(token) {
+  return String(token || '').replace(VOWELS_RE, '');
+}
+
+function trigrams(token) {
+  const padded = ` ${token} `;
+  const out = new Set();
+  for (let i = 0; i + 3 <= padded.length; i += 1) out.add(padded.slice(i, i + 3));
+  return out;
+}
+
+/** Коэффициент Дайса по триграммам: 0 — ничего общего, 1 — совпали. */
+function trigramSimilarity(a, b) {
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  const ta = trigrams(a);
+  const tb = trigrams(b);
+  let shared = 0;
+  for (const gram of ta) if (tb.has(gram)) shared += 1;
+  return (2 * shared) / (ta.size + tb.size);
+}
+
+/**
+ * Насколько слово запроса похоже на слово названия. Порог и ограничение длины
+ * держат ложные срабатывания: «сок» и «сыр» дают один скелет «с-р»/«с-к», но
+ * трёхбуквенные слова сюда не попадают вовсе.
+ */
+function fuzzyTokenSimilarity(nameToken, queryToken) {
+  if (!nameToken || !queryToken) return 0;
+  if (queryToken.length < 4 || nameToken.length < 4) return 0;
+  const longer = Math.max(nameToken.length, queryToken.length);
+  if (Math.abs(nameToken.length - queryToken.length) > Math.ceil(longer * 0.4)) return 0;
+
+  const trigram = trigramSimilarity(nameToken, queryToken);
+  if (trigram >= 0.5) return trigram;
+
+  // Скелет согласных: ASR-искажение. Требуем не короче двух согласных —
+  // иначе «ария» и «урюк» схлопнулись бы в одно.
+  const skeletonName = consonantSkeleton(nameToken);
+  const skeletonQuery = consonantSkeleton(queryToken);
+  if (skeletonQuery.length >= 2 && skeletonName === skeletonQuery) return 0.75;
+  // Один промах в скелете при длинном слове — тоже распознавание («шаварма»).
+  if (skeletonQuery.length >= 4 && withinDistance(skeletonName, skeletonQuery, 1)) return 0.6;
+
+  return 0;
+}
+
+/**
+ * Похожесть продукта на запрос: среднее по словам запроса, каждое — лучшим
+ * словом названия. Возвращает 0..1; вызывающий решает, что делать с порогом.
+ */
+function fuzzyProductSimilarity(product, prepared) {
+  const nameNorm = normalizeText(product && product.name);
+  if (!nameNorm || !prepared || !prepared.tokens.length) return 0;
+  const nameTokens = nameNorm.split(' ').filter(Boolean);
+  if (!nameTokens.length) return 0;
+
+  let total = 0;
+  for (const forms of prepared.tokens) {
+    let best = 0;
+    for (const form of forms) {
+      for (const nameToken of nameTokens) {
+        const sim = fuzzyTokenSimilarity(nameToken, form);
+        if (sim > best) best = sim;
+      }
+    }
+    total += best;
+  }
+  return total / prepared.tokens.length;
+}
+
+const FUZZY_MIN_SIMILARITY = 0.5;
+
+/**
+ * Похожие продукты, когда точный поиск пуст. Возвращает копии строк с пометкой
+ * `_fuzzy` — сам каталог не трогаем, он кэшируется на инстансе.
+ */
+function fuzzySearchProducts(catalog, query, limit = 5) {
+  const prepared = prepareQuery(query);
+  if (!prepared) return [];
+  return (catalog.all || [])
+    .map((product) => ({ product, similarity: fuzzyProductSimilarity(product, prepared) }))
+    .filter((entry) => entry.similarity >= FUZZY_MIN_SIMILARITY)
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, Math.max(1, Math.min(20, Number(limit) || 5)))
+    .map((entry) => ({ ...entry.product, _fuzzy: Math.round(entry.similarity * 100) / 100 }));
+}
+
 function searchProducts(catalog, query, limit = 10) {
   const prepared = prepareQuery(query);
   if (!prepared) return [];
@@ -1413,6 +1520,9 @@ module.exports = {
   prepareQuery,
   scoreProduct,
   searchProducts,
+  fuzzySearchProducts,
+  fuzzyProductSimilarity,
+  trigramSimilarity,
   matchStrength,
   hasStrongMatch,
   mergeSearchLayers,
