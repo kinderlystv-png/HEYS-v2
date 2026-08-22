@@ -87,6 +87,11 @@ const LIST_RECORD_FIELDS = [
   'conn_id',
   'tools_count',      // сколько схем ушло клиенту
   'tools_bytes',      // их суммарный размер: обрезка бывает по объёму, не по числу
+  // Размер инструкций рядом с размером схем. 22.08.2026 выяснилось, что клиент
+  // обрезает инструкции на 2048 символах — сервер отдавал 45 316, до модели
+  // доезжало 4,5%, и полгода правил писались в стол. Своей цифры у нас не было
+  // вовсе: судить о канале по коду сервера, а не по факту, оказалось нельзя.
+  'instructions_bytes',
   'client_name',      // clientInfo.name из initialize — программа, не человек
   'client_version',
   'protocol_version',
@@ -263,6 +268,7 @@ function buildListRecord(input = {}) {
     conn_id: input.connId || null,
     tools_count: intOrNull(input.toolsCount),
     tools_bytes: intOrNull(input.toolsBytes),
+    instructions_bytes: intOrNull(input.instructionsBytes),
     client_name: typeof input.clientName === 'string' && input.clientName
       ? input.clientName.slice(0, 64)
       : null,

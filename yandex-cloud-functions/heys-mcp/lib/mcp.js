@@ -193,7 +193,11 @@ async function handleMessage(message, ctx) {
       // нет» не отличить от «клиент до модели его не донёс».
       if (typeof ctx.logList === 'function') {
         try {
-          ctx.logList({ toolsCount: listed.length, toolsBytes: JSON.stringify(listed).length });
+          ctx.logList({
+            toolsCount: listed.length,
+            toolsBytes: JSON.stringify(listed).length,
+            instructionsBytes: typeof ctx.instructions === 'string' ? ctx.instructions.length : null,
+          });
         } catch (_) { /* телеметрия не мешает ответу */ }
       }
       return rpcResult(id, { tools: listed });

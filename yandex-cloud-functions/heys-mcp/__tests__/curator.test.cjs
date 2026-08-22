@@ -9,7 +9,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
-const { createCuratorContext, buildCuratorSchemas, curatorInstructions, CLIENTLESS_TOOLS } = require('../lib/curator');
+const {
+  createCuratorContext, buildCuratorSchemas, curatorInstructions, CLIENTLESS_TOOLS, INSTRUCTIONS_HEAD_BUDGET,
+} = require('../lib/curator');
 const tasksLib = require('../lib/tasks');
 const { TOOL_SCHEMAS } = require('../lib/tools');
 const products = require('../lib/products');
@@ -2245,4 +2247,48 @@ test('правила про область видимости рецепта д�
   // читать heys_models_v1.js вместо одного вызова инструмента.
   assert.match(instructions, /что внутри блюда/);
   assert.ok(instructions.includes('heys_code_* и чтение heys_models_v1.js здесь не нужны'));
+});
+
+// ── Бюджет инструкции ──────────────────────────────────────────────────────
+// Замер 22.08.2026: сервер отдаёт 45 316 символов инструкций, клиент обрезает
+// на 2048 — до модели доезжало 4,5%, обрыв пришёлся посреди слова. Правила
+// ниже обрыва не работали вовсе. Эти три теста держат голову в бюджете.
+
+test('критическое умещается в бюджет инструкции целыми строками', () => {
+  const text = curatorInstructions('Куратор', true, Date.now(), true, '«мне» → Антон; «жене» → Александра');
+  const head = text.slice(0, INSTRUCTIONS_HEAD_BUDGET);
+  const delivered = head.slice(0, head.lastIndexOf('\n'));
+
+  for (const marker of [
+    'Адресация из памяти',
+    'ЗАПРЕТ ДНЕВНИКОВОЙ АРХЕОЛОГИИ',
+    'КРИТИЧЕСКОЕ ПРАВИЛО РЕЖИМА',
+    'В пишущие инструменты передавай',
+    'обязательный transcript',
+  ]) {
+    assert.ok(delivered.includes(marker), `«${marker}» не влезло в ${INSTRUCTIONS_HEAD_BUDGET} символов`);
+  }
+});
+
+test('длинный список алиасов режется сам, а не выталкивает правила', () => {
+  const huge = Array.from({ length: 60 }, (_, i) => `«алиас${i}» → Клиент ${i}`).join('; ');
+  const text = curatorInstructions('Куратор', true, Date.now(), true, huge);
+  const head = text.slice(0, INSTRUCTIONS_HEAD_BUDGET);
+  const delivered = head.slice(0, head.lastIndexOf('\n'));
+
+  assert.ok(delivered.includes('heys_list_clients'), 'обрезанный список должен сказать, где взять остальных');
+  assert.ok(delivered.includes('обязательный transcript'), 'правила не должны выталкиваться алиасами');
+  assert.ok(delivered.includes('«алиас0»'), 'первые алиасы остаются');
+});
+
+test('правило про day_after уехало в описания тех, кто его возвращает', () => {
+  const schemas = buildCuratorSchemas({ requireTranscript: true });
+  const byName = new Map(schemas.map((schema) => [schema.name, schema]));
+
+  for (const name of ['heys_log_meal', 'heys_update_day', 'heys_add_water', 'heys_checkin']) {
+    assert.match(byName.get(name).description, /day_after/, `${name} должен объяснять day_after сам`);
+    assert.match(byName.get(name).description, /stale_write_blocked/);
+  }
+  // Читающие инструменты этого поля не возвращают — и объяснять его не должны.
+  assert.ok(!/day_after/.test(byName.get('heys_get_day').description));
 });

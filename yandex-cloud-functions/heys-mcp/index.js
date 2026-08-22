@@ -441,13 +441,14 @@ async function handleMcpRequest(event, { headers, secret, apiUrl, resourcePath =
     // Одна строка на tools/list: сколько схем и байт ушло клиенту и какому
     // именно. По ней «инструмента нет» отличается от «клиент не донёс его до
     // модели» — 18.08 доказать это было нечем.
-    logList: ({ toolsCount, toolsBytes }) => {
+    logList: ({ toolsCount, toolsBytes, instructionsBytes }) => {
       const coldStart = !instanceWarm;
       telemetry.recordList({
         token: headers.authorization || null,
         chatSessionId,
         toolsCount,
         toolsBytes,
+        instructionsBytes,
         clientName: lastClientInfo ? lastClientInfo.name : null,
         clientVersion: lastClientInfo ? lastClientInfo.version : null,
         protocolVersion: lastClientInfo ? lastClientInfo.protocolVersion : null,
