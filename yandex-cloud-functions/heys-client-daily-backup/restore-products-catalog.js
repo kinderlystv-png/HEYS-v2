@@ -50,6 +50,7 @@ const { gunzipSync } = require('zlib');
 
 const OVERLAY_KEY = 'heys_products_overlay_v2';
 const MANIFEST_KEY = 'heys_products_overlay_v2_rpc_manifest';
+const TAIL_KEY_PREFIX = 'heys_products_overlay_v2_rpc_tail_';
 
 // Кодек приложения — единственный источник правды по формату манифеста.
 // Модуль вешает себя на globalThis.HEYS, а не в module.exports.
@@ -134,10 +135,21 @@ async function main() {
   if (args.fromLive) {
     await db.connect();
     const live = await db.query(
-      'SELECT k, v FROM client_kv_store WHERE client_id = $1 AND k = ANY($2)',
-      [args.clientId, [OVERLAY_KEY, MANIFEST_KEY]],
+      `SELECT k, v FROM client_kv_store
+        WHERE client_id = $1
+          AND (k = ANY($2) OR k LIKE $3)`,
+      [args.clientId, [OVERLAY_KEY, MANIFEST_KEY], `${TAIL_KEY_PREFIX}%`],
     );
     const byKey = Object.fromEntries(live.rows.map((r) => [r.k, r.v]));
+    const tailKeys = live.rows.map((r) => r.k).filter((k) => k.startsWith(TAIL_KEY_PREFIX));
+    if (tailKeys.length > 0) {
+      throw new Error(
+        `${args.clientId}: в базе есть tail-шарды overlay (${tailKeys.join(', ')}). `
+        + '--from-live читает только main+manifest и потеряет хвосты. '
+        + 'Сначала собери каталог через codec.assemble() и пиши полный массив строк, '
+        + 'либо восстанови из snapshot-file, а не из живой main-only пары.',
+      );
+    }
     rows = byKey[OVERLAY_KEY];
     if (!Array.isArray(rows)) throw new Error(`${OVERLAY_KEY} в базе не массив или отсутствует`);
     snapshotManifest = byKey[MANIFEST_KEY] ?? null;

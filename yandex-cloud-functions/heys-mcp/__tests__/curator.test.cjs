@@ -370,9 +370,14 @@ function traceCalls(api) {
   wrap('getKVByCurator', (a) => a[2]);
   wrap('getKVManyByCurator', (a) => a[2].join('+'));
   wrap('issueWriteContext', () => 'write-context');
+  const eventKey = (phase, needle) => events.findIndex((event) => {
+    if (!event.startsWith(`${phase}:`)) return false;
+    const key = event.slice(phase.length + 1);
+    return key === needle || key.split('+').includes(needle);
+  });
   events.overlaps = (a, b) => {
-    const startA = events.indexOf(`start:${a}`);
-    const endB = events.indexOf(`end:${b}`);
+    const startA = eventKey('start', a);
+    const endB = eventKey('end', b);
     return startA >= 0 && endB >= 0 && startA < endB;
   };
   return events;
@@ -1978,10 +1983,21 @@ function withSalads(api) {
 
 function trackOverlayReads(api) {
   const reads = [];
-  const orig = api.getKVByCurator.bind(api);
+  const isOverlayRead = (key) => key === products.OVERLAY_KEY
+    || String(key).startsWith(`${products.OVERLAY_KEY}_`);
+  const track = (clientId, keys) => {
+    const list = Array.isArray(keys) ? keys : [keys];
+    if (list.some(isOverlayRead)) reads.push(clientId);
+  };
+  const origSingle = api.getKVByCurator.bind(api);
   api.getKVByCurator = async (bearer, clientId, key) => {
-    if (key === products.OVERLAY_KEY) reads.push(clientId);
-    return orig(bearer, clientId, key);
+    track(clientId, key);
+    return origSingle(bearer, clientId, key);
+  };
+  const origMany = api.getKVManyByCurator.bind(api);
+  api.getKVManyByCurator = async (bearer, clientId, keys) => {
+    track(clientId, keys);
+    return origMany(bearer, clientId, keys);
   };
   return reads;
 }

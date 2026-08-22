@@ -621,9 +621,12 @@ function createCuratorContext({
         const entries = [];
         const byId = new Map();
         await Promise.all((clients || []).map(async (client) => {
-          const overlayRes = await api.getKVByCurator(curatorJwt, client.client_id, products.OVERLAY_KEY);
-          if (overlayRes.error) return;
-          const catalog = products.buildCatalog(overlayRes.data, sharedById);
+          const clientApi = {
+            getKVMany: (_session, keys) => api.getKVManyByCurator(curatorJwt, client.client_id, keys),
+          };
+          const overlayRes = await products.loadOverlayAssembled(clientApi, '__curator__');
+          if (!overlayRes.ok) return;
+          const catalog = products.buildCatalog(overlayRes.rows, sharedById);
           for (const product of catalog.own) {
             const entry = {
               product,
@@ -792,6 +795,9 @@ function createCuratorContext({
       async upsertKV(_session, key, value) {
         const contextId = await writeContextFor(clientId);
         return api.upsertKVByCurator(curatorJwt, clientId, key, value, contextId);
+      },
+      async deleteKV(_session, key) {
+        return api.deleteKVByCurator(curatorJwt, curatorId, clientId, key);
       },
       async getSharedProducts(options) {
         return api.getSharedProducts(options || {});

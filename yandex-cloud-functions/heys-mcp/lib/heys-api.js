@@ -278,6 +278,15 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     return { ok: true, data };
   }
 
+  async function deleteKV(sessionToken, key) {
+    const { data, error } = await rpc('delete_client_kv_by_session', {
+      p_session_token: sessionToken,
+      p_key: key,
+    });
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, data };
+  }
+
   /**
    * Общий справочник — самый тяжёлый запрос в системе, поэтому у него свой
    * таймаут. Если пришло ровно `limit` строк, справочник почти наверняка
@@ -461,6 +470,25 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
       return { ok: false, error: 'identity_blocked' };
     }
     return { ok: true, data };
+  }
+
+  async function deleteKVByCurator(bearer, curatorUserId, clientId, key) {
+    if (!curatorUserId) return { ok: false, error: 'curator_id_required' };
+    const params = new URLSearchParams({
+      user_id: `eq.${curatorUserId}`,
+      client_id: `eq.${clientId}`,
+      k: `eq.${key}`,
+    });
+    const url = `${apiUrl}/rest/client_kv_store?${params}`;
+    const res = await measured(url, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${bearer}` },
+    });
+    if (res.status < 200 || res.status >= 300) {
+      const message = (res.json && (res.json.error || res.json.message)) || `rest_http_${res.status}`;
+      return { ok: false, error: String(message) };
+    }
+    return { ok: true, data: res.json };
   }
 
   // ── Административный контур куратора ──────────────────────────────────
@@ -793,9 +821,9 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
   }
 
   return {
-    rpc, rest, verifyPin, getKV, getKVMany, mergeSaveKV, upsertKV, getSharedProducts, stats,
+    rpc, rest, verifyPin, getKV, getKVMany, mergeSaveKV, upsertKV, deleteKV, getSharedProducts, stats,
     insertMcpCallEvent, listMcpCallEvents, countMcpRecentCalls,
-    curatorLogin, curatorStatus, listClients, getKVByCurator, getKVManyByCurator, issueWriteContext, mergeSaveKVByCurator, upsertKVByCurator, upsertKVManyByCurator, appendTasksFileByCurator,
+    curatorLogin, curatorStatus, listClients, getKVByCurator, getKVManyByCurator, issueWriteContext, mergeSaveKVByCurator, upsertKVByCurator, upsertKVManyByCurator, deleteKVByCurator, appendTasksFileByCurator,
     getMessagesThread, getMessagesInbox, setMessageDone, sendMessageToClient, readAttachment,
     createClientWithPin, setClientPin, getClientAccessLink,
     extendSubscription, cancelSubscription,

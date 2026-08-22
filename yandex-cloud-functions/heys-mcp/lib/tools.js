@@ -202,15 +202,37 @@ function createTools({
   loadPeerHits = null,
 }) {
   let catalogPromise = null;
+  let overlayPriorTailCount = 0;
+
+  async function readOverlayRowsOrThrow() {
+    const loaded = await products.loadOverlayAssembled(api, sessionToken);
+    if (!loaded.ok) {
+      throw new ToolError(
+        'upstream_error',
+        `Не удалось собрать список продуктов: ${loaded.error && loaded.error.message ? loaded.error.message : loaded.error}`,
+      );
+    }
+    overlayPriorTailCount = loaded.priorTailCount || 0;
+    return loaded.rows;
+  }
+
+  async function saveOverlayRowsFromRead(rows) {
+    return products.saveOverlayRows(api, sessionToken, rows, { priorTailCount: overlayPriorTailCount });
+  }
 
   async function loadCatalog() {
     if (!catalogPromise) {
       catalogPromise = (async () => {
         const [overlayRes, sharedRes] = await Promise.all([
-          api.getKV(sessionToken, products.OVERLAY_KEY),
+          products.loadOverlayAssembled(api, sessionToken),
           sharedCatalog.loadSharedProducts(api, { nowMs }),
         ]);
-        if (overlayRes.error) throw new ToolError('upstream_error', `Не удалось прочитать список продуктов: ${overlayRes.error.message}`);
+        if (!overlayRes.ok) {
+          throw new ToolError(
+            'upstream_error',
+            `Не удалось собрать список продуктов: ${overlayRes.error && overlayRes.error.message ? overlayRes.error.message : overlayRes.error}`,
+          );
+        }
         if (sharedRes.error) throw new ToolError('upstream_error', `Не удалось прочитать общую базу продуктов: ${sharedRes.error.message}`);
 
         const sharedById = new Map();
@@ -219,12 +241,8 @@ function createTools({
           if (normalized && normalized.id) sharedById.set(String(normalized.id), normalized);
         }
 
-        // Большинство личных продуктов — это Type A: ссылка на строку общей базы
-        // плюс overrides. Если общая база не доехала, такие строки молча выпадут
-        // из каталога, инструмент ответит «не нашлось», а модель пойдёт заводить
-        // дубликат уже существующего продукта. Пустая общая база при наличии
-        // Type A строк — это сбой загрузки, а не легальное состояние.
-        const overlayRows = Array.isArray(overlayRes.data) ? overlayRes.data : [];
+        const overlayRows = overlayRes.rows;
+        overlayPriorTailCount = overlayRes.priorTailCount || 0;
         const linkedRows = overlayRows.filter((row) => row && !row._custom && row.shared_origin_id && row.in_my_list !== false);
         if (linkedRows.length > 0 && sharedById.size === 0) {
           throw new ToolError(
@@ -233,7 +251,7 @@ function createTools({
           );
         }
 
-        return products.buildCatalog(overlayRes.data, sharedById);
+        return products.buildCatalog(overlayRows, sharedById);
       })();
     }
     return catalogPromise;
@@ -371,9 +389,11 @@ function createTools({
     const byId = item.product_id ? products.findById(catalog, item.product_id) : null;
     if (byId) return { product: byId, grams: Number(item.grams) || 100 };
 
-    const nameNorm = products.normalizeText(item.name);
-    const byName = catalog.all.find((p) => products.normalizeText(p.name) === nameNorm);
-    if (byName) return { product: byName, grams: Number(item.grams) || 100 };
+    if (item.name) {
+      const matches = products.searchProducts(catalog, item.name, 5);
+      const pick = products.pickSearchMatch(item.name, matches);
+      if (pick.ok) return { product: pick.product, grams: Number(item.grams) || 100 };
+    }
 
     const snapshot = presetItemSnapshot(item);
     if (snapshot) {
@@ -685,8 +705,6 @@ function createTools({
     const macros = norm.protein_g === null
       ? ' (проценты БЖУ в карточке не заданы)'
       : `, Б${norm.protein_g} У${norm.carbs_g} Ж${norm.fat_g} г`;
-    // Каждый источник называется своим именем. Раньше «та, что видит клиент»
-    // стояло у всего, кроме оценки, — и протухший кэш подавался как истина.
     const FROM = {
       computed: ' — посчитана по данным дня',
       estimate: ' — расчётная оценка, история за прошлые дни недоступна',
@@ -715,21 +733,13 @@ function createTools({
     if (!spec.query) return null;
     const matches = products.searchProducts(catalog, spec.query, 5);
     if (!matches.length) return null;
-
-    const wanted = products.normalizeText(spec.query);
-    const exactOwn = matches.filter((m) => m._source === 'own' && products.normalizeText(m.name) === wanted);
-    if (exactOwn.length === 1) return exactOwn[0];
-
-    const prepared = products.prepareQuery(spec.query);
-    const best = products.scoreProduct(matches[0], prepared);
-    const second = matches[1] ? products.scoreProduct(matches[1], prepared) : 0;
-    if (matches.length === 1 && best > 0) return matches[0];
-    if (best >= 400 && (second === 0 || best >= second * 1.25)) return matches[0];
+    const pick = products.pickSearchMatch(spec.query, matches);
+    if (pick.ok) return pick.product;
 
     const err = new Error('recipe_item_ambiguous');
     err.code = 'recipe_item_ambiguous';
     err.query = spec.query;
-    err.candidates = matches.slice(0, 5).map(products.describeProduct);
+    err.candidates = (pick.candidates || matches).slice(0, 5).map(products.describeProduct);
     throw err;
   }
 
@@ -839,38 +849,15 @@ function createTools({
           : undefined,
       );
     }
-    const prepared = products.prepareQuery(spec.query);
-    const best = products.scoreProduct(matches[0], prepared);
-    const second = matches[1] ? products.scoreProduct(matches[1], prepared) : 0;
-    // Единственное совпадение в личном списке считаем однозначным даже при
-    // неточном названии: конкурента у него нет, а пользователь вносит еду
-    // именно своими позициями.
-    const soleOwnMatch = matches.length === 1 && matches[0]._source === 'own' && best > 0;
-    // Личная карточка с ТЕМ ЖЕ названием, что у общей, — не неоднозначность, а
-    // очевидный ответ: клиент ведёт дневник своей позицией. Правило дословно
-    // повторяет `findRecipeIngredient` — там оно живёт с самого начала, а сюда
-    // его забыли перенести, хотя случай тот же.
-    //
-    // Без него пара «личная + общая» была неразрешима арифметически: точное имя
-    // даёт обеим по 1000, надбавка own — всего +60, а порог требует
-    // превосходства в 1.25 раза. То есть модель не «не смогла выбрать» — ей не
-    // давали выбрать. 21.08 на этом встало сохранение набора («Хлеб тостовый
-    // Премиум суперсемечковый», 276.7 в личном списке против 274 в общей базе).
-    const wanted = products.normalizeText(spec.query);
-    const exactOwn = matches.filter((m) => m._source === 'own'
-      && products.normalizeText(m.name) === wanted);
-    const soleExactOwn = exactOwn.length === 1;
-    const confident = soleOwnMatch || soleExactOwn
-      || (best >= 400 && (second === 0 || best >= second * 1.25));
-    if (soleExactOwn && !soleOwnMatch) return exactOwn[0];
-    if (!confident) {
+    const pick = products.pickSearchMatch(spec.query, matches);
+    if (!pick.ok) {
       throw new ToolError(
         'ambiguous_product',
         `По запросу "${spec.query}" несколько подходящих продуктов — уточни у пользователя, какой из них.`,
-        { candidates: matches.map(products.describeProduct) },
+        { candidates: (pick.candidates || matches).map(products.describeProduct) },
       );
     }
-    return matches[0];
+    return pick.product;
   }
 
   /**
@@ -1068,9 +1055,7 @@ function createTools({
     const learned = resolved.filter((entry) => entry.learnPieceGrams);
     if (!learned.length) return [];
 
-    const overlayRes = await api.getKV(sessionToken, products.OVERLAY_KEY);
-    if (overlayRes.error) return [];
-    const overlay = Array.isArray(overlayRes.data) ? overlayRes.data : [];
+    const overlay = await readOverlayRowsOrThrow();
 
     const saved = [];
     const next = overlay.map((row) => {
@@ -1084,8 +1069,10 @@ function createTools({
     });
     if (!saved.length) return [];
 
-    const res = await products.saveOverlayRows(api, sessionToken, next);
-    if (!res.ok) return [];
+    const res = await saveOverlayRowsFromRead(next);
+    if (!res.ok) {
+      throw new ToolError('save_failed', `Не удалось сохранить вес штуки в карточку: ${res.error}`);
+    }
     catalogPromise = null;
     return saved;
   }
@@ -1887,11 +1874,9 @@ function createTools({
         row.recipe = recipePayload.recipe;
       }
 
-      const overlayRes = await api.getKV(sessionToken, products.OVERLAY_KEY);
-      if (overlayRes.error) throw new ToolError('upstream_error', `Не удалось прочитать список продуктов: ${overlayRes.error.message}`);
-      const overlay = Array.isArray(overlayRes.data) ? overlayRes.data : [];
+      const overlay = await readOverlayRowsOrThrow();
 
-      const saveRes = await products.saveOverlayRows(api, sessionToken, [...overlay, row]);
+      const saveRes = await saveOverlayRowsFromRead([...overlay, row]);
       if (!saveRes.ok) throw new ToolError('save_failed', `Сервер отклонил создание продукта: ${saveRes.error}`);
       catalogPromise = null;
 
@@ -2930,9 +2915,8 @@ function createTools({
         if (fields.name) nutrientPatch.name = fields.name;
         if (fields.portions) nutrientPatch.portions = fields.portions;
         if (fields.brand !== undefined) nutrientPatch.brand = fields.brand;
-        const overlayRes = await api.getKV(sessionToken, products.OVERLAY_KEY);
-        if (overlayRes.error) throw new ToolError('upstream_error', `Не удалось прочитать список продуктов: ${overlayRes.error.message}`);
-        const applied = products.applyProductPatchToOverlay(overlayRes.data, target, {
+        const overlayRows = await readOverlayRowsOrThrow();
+        const applied = products.applyProductPatchToOverlay(overlayRows, target, {
           ...nutrientPatch,
           user_modified: true,
           updatedAt: nowMs,
@@ -2940,7 +2924,7 @@ function createTools({
           nowMs,
           makeId: () => `p_${nowMs}_${crypto.randomBytes(3).toString('hex')}`,
         });
-        const saveRes = await products.saveOverlayRows(api, sessionToken, applied.rows);
+        const saveRes = await saveOverlayRowsFromRead(applied.rows);
         if (!saveRes.ok) throw new ToolError('save_failed', `Сервер отклонил правку продукта: ${saveRes.error}`);
         catalogPromise = null;
         const changesText = patchResult
@@ -2982,14 +2966,13 @@ function createTools({
       // Правка по имени — самый опасный вход: «поправь молоко» при трёх видах
       // молока должно упереться в вопрос, а не в тихую правку не той карточки.
       // Это уже обеспечивает resolveProduct, отказывающий при неоднозначности.
-      const overlayRes = await api.getKV(sessionToken, products.OVERLAY_KEY);
-      if (overlayRes.error) throw new ToolError('upstream_error', `Не удалось прочитать список продуктов: ${overlayRes.error.message}`);
+      const overlayRows = await readOverlayRowsOrThrow();
 
-      const { rows, mode } = products.applyProductPatchToOverlay(overlayRes.data, target, built.patch, {
+      const { rows, mode } = products.applyProductPatchToOverlay(overlayRows, target, built.patch, {
         nowMs,
         makeId: () => `p_${nowMs}_${crypto.randomBytes(3).toString('hex')}`,
       });
-      const saveRes = await products.saveOverlayRows(api, sessionToken, rows);
+      const saveRes = await saveOverlayRowsFromRead(rows);
       if (!saveRes.ok) throw new ToolError('save_failed', `Сервер отклонил правку продукта: ${saveRes.error}`);
       catalogPromise = null;
 
@@ -3134,13 +3117,11 @@ function createTools({
         )))
         .map((preset) => preset.name);
 
-      const [overlayRes, tombRes] = await Promise.all([
-        api.getKV(sessionToken, products.OVERLAY_KEY),
+      const [overlay, tombRes] = await Promise.all([
+        readOverlayRowsOrThrow(),
         api.getKV(sessionToken, TOMBSTONES_KEY),
       ]);
-      if (overlayRes.error) throw new ToolError('upstream_error', `Не удалось прочитать список продуктов: ${overlayRes.error.message}`);
 
-      const overlay = Array.isArray(overlayRes.data) ? overlayRes.data : [];
       const rows = overlay.filter((row) => row && String(row.id) !== String(target.id));
       if (rows.length === overlay.length) {
         throw new ToolError('product_not_found', `Строка продукта «${target.name}» не найдена в личном списке.`);
@@ -3153,7 +3134,7 @@ function createTools({
       const tombstones = [...existing.filter((t) => t && String(t.id) !== String(target.id)),
         { id: target.id, name: target.name || null, ts: nowMs }].slice(-200);
 
-      const saveOverlay = await products.saveOverlayRows(api, sessionToken, rows);
+      const saveOverlay = await saveOverlayRowsFromRead(rows);
       if (!saveOverlay.ok) throw new ToolError('save_failed', `Сервер отклонил удаление продукта: ${saveOverlay.error}`);
       const saveTomb = await api.upsertKV(sessionToken, TOMBSTONES_KEY, tombstones);
       if (!saveTomb.ok) {

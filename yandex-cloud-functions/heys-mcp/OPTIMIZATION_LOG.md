@@ -74,6 +74,25 @@ NDTE — вес дня, не 70. Потолок 0.20 и произведение
 **Осталось.** Deploy `heys-mcp` + web bundle. Соседний долг: три «сегодня» (веб
 03:00 local vs MCP календарь МСК) — не в этом заходе.
 
+### 23.08.2026 — product catalog glue v9: assemble на чтение, тесты под пакетный overlay · СРАБОТАЛО
+
+**Гипотеза.** Overlay читается одним `getKVMany` (main + manifest + 16 tails);
+запись чистит хвосты по `priorTailCount` из чтения, а не по повторному `getKV`
+манифеста — иначе legacy-сироты (хвосты без манифеста) не удаляются.
+
+**Сделали.** `loadOverlayAssembled` → `priorTailCount`;
+`saveOverlayRowsFromRead` на всех RMW-путях; resolve (`pickSearchMatch`:
+инверсия, own>shared, score 0 → `not_found`). Тесты `traceCalls` /
+`trackOverlayReads` переведены на bundled-ключи и `getKVManyByCurator` (форма
+трассировки сменилась, параллельность и peer fan-out не менялись). Детектор
+`WRITE_TOOLS` — `saveOverlayRowsFromRead`.
+
+**Результат.** `npm test` heys-mcp — 1304/1304; живые проверки: котлета, масло,
+legacy-хвосты, нулевой скор.
+
+**Осталось.** Deploy `heys-mcp`; SQL hygiene; post-deploy baseline 21/15; скрипт
+прогона `pickSearchMatch` на прод-каталоге — в `scripts/db/`.
+
 ### 22.08.2026 — боевой замер брифинга и три описания, которые учили лишнему кругу · ЧАСТИЧНО (повторный замер 23:03 есть)
 
 **Замер.** Первая реплика с едой после деплоя (обмен 21:37, «сникерс 120 г,
@@ -556,3 +575,46 @@ NDTE — вес дня, не 70. Потолок 0.20 и произведение
    разведку вслепую, а это те самые круги.
 4. **Каждый замер — одним инструментом** (`tasks_mcp_trace`), иначе сравнивать
    не с чем.
+
+---
+
+### 23.08.2026 — catalog glue v9 (фаза A) · КОД ГОТОВ, ЖДЁТ ДЕПЛОЯ
+
+**Что сделано (heys-mcp):**
+
+- `loadOverlayAssembled` + отказ при incomplete/mismatch; все RMW-пути читают
+  assemble, не main-only.
+- `saveOverlayRows`: splitRows-страховка, tails → main → manifest, `deleteKV`
+  чистит хвосты.
+- `pickSearchMatch`: инверсия 2-словного запроса + coverage; схлоп own/shared
+  среди кандидатов по имени+агрегатам (±0.05); `resolveProduct` /
+  `resolvePresetItem` / `findRecipeIngredient` на одних правилах.
+- `persistPieceGrams` не глотает ошибки assemble/save.
+- SQL: `scripts/db/migrations/2026-08-23_shared_catalog_glue_hygiene.sql`.
+- Guard: `restore-products-catalog.js --from-live` падает, если есть tail-шарды.
+
+**Post-deploy baseline (7 дней до деплоя, снимать тем же запросом после):**
+
+| error_code          | событий | чатов |
+| ------------------- | ------- | ----- |
+| `ambiguous_product` | **21**  | 11    |
+| `product_not_found` | **15**  | 7     |
+
+`тефтели рисовые` → `product_not_found` до hygiene-SQL ожидаем; после миграции
+должен резолвиться.
+
+**Вне фазы A (не делали):**
+
+- **D2 safe-link overlay:** тот же компаратор имя+агрегаты; `user_modified` не
+  стоп; стоп — recipe/overrides. Миграцию не запускать без assemble tails.
+- **ensureMealProductFromShared:** чистота, не дефект UI (web fallback есть).
+
+**Тесты:**
+`node --test __tests__/products.test.cjs __tests__/overlay-manifest-pair.test.cjs`
+— 58/58.
+
+**Ревью 23.08 (блокер):** `soleOwnMatch` вернули к `score > 0` для единственного
+own после схлопа; фикстура котлеты — продовое имя с пятью токенами; чистка
+хвостов — только `newTailCount+1 … priorTailCount` из **чтения**
+(`loadOverlayAssembled.priorTailCount`), без лишнего getKV. Legacy:
+max(фактические хвосты, manifest.count−1).

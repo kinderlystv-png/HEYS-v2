@@ -407,3 +407,143 @@ test('похожесть не выдумывает совпадений там, 
     assert.deepEqual(found.map((r) => r.name), [], `«${query}» не должен давать ложную подсказку`);
   }
 });
+
+const KOTLETA_PROD_NAME = 'Котлеты домашние (говядина+свинина), жареные';
+
+const GLUE_SHARED = new Map([
+  ['s-oil', {
+    id: 's-oil',
+    name: 'Подсолнечное масло рафинированное',
+    protein100: 0,
+    simple100: 0,
+    complex100: 0,
+    badfat100: 9,
+    goodfat100: 90.9,
+  }],
+  ['s-salad', {
+    id: 's-salad',
+    name: 'Овощной салат с подсолнечным маслом',
+    protein100: 1.5,
+    simple100: 3,
+    complex100: 2,
+    badfat100: 1,
+    goodfat100: 6,
+  }],
+  ['s-kotleta', {
+    id: 's-kotleta',
+    name: KOTLETA_PROD_NAME,
+    protein100: 15,
+    simple100: 1.5,
+    complex100: 6.5,
+    badfat100: 7,
+    goodfat100: 10,
+    trans100: 0.5,
+  }],
+  ['s-tefteli', {
+    id: 's-tefteli',
+    name: 'Тефтели классические',
+    protein100: 12,
+    simple100: 2,
+    complex100: 8,
+    badfat100: 3,
+    goodfat100: 5,
+    trans100: 2,
+  }],
+]);
+
+function glueCatalog(overlayRows = []) {
+  const shared = new Map();
+  for (const [id, row] of GLUE_SHARED) {
+    shared.set(id, products.normalizeSharedRow(row));
+  }
+  return products.buildCatalog(overlayRows, shared);
+}
+
+test('pickSearchMatch: «масло подсолнечное» выбирает масло, не салат', () => {
+  const c = glueCatalog();
+  const matches = products.searchProducts(c, 'масло подсолнечное', 5);
+  const pick = products.pickSearchMatch('масло подсолнечное', matches);
+  assert.equal(pick.ok, true);
+  assert.equal(pick.product.name, 'Подсолнечное масло рафинированное');
+});
+
+test('pickSearchMatch: «подсолнечное масло» остаётся уверенным', () => {
+  const c = glueCatalog();
+  const matches = products.searchProducts(c, 'подсолнечное масло', 5);
+  const pick = products.pickSearchMatch('подсолнечное масло', matches);
+  assert.equal(pick.ok, true);
+  assert.equal(pick.product.name, 'Подсолнечное масло рафинированное');
+});
+
+function kotletaOwnOverlay() {
+  return [{
+    id: 'own-kotleta',
+    _custom: true,
+    name: KOTLETA_PROD_NAME,
+    protein100: 15,
+    carbs100: 8,
+    fat100: 17.5,
+    in_my_list: true,
+  }];
+}
+
+test('pickSearchMatch: «котлета домашняя» — продовое имя, скор <400, единственный own', () => {
+  const c = glueCatalog(kotletaOwnOverlay());
+  const query = 'котлета домашняя';
+  const matches = products.searchProducts(c, query, 5);
+  const prepared = products.prepareQuery(query);
+  const own = matches.find((m) => m._source === 'own');
+  assert.ok(own, 'own в выдаче');
+  const score = products.scoreProduct(own, prepared);
+  assert.ok(score > 0 && score < 400, `скор ${score} — токенный ярус, не prefix 400+`);
+  const pick = products.pickSearchMatch(query, matches);
+  assert.equal(pick.ok, true, 'единственный own после схлопа не должен отдавать ambiguous_product');
+  assert.equal(pick.product.id, 'own-kotleta');
+});
+
+test('pickSearchMatch: own+shared с тем же именем и агрегатами → own', () => {
+  const c = glueCatalog(kotletaOwnOverlay());
+  const matches = products.searchProducts(c, 'котлета домашняя', 5);
+  const pick = products.pickSearchMatch('котлета домашняя', matches);
+  assert.equal(pick.ok, true);
+  assert.equal(pick.product._source, 'own');
+  assert.equal(pick.product.id, 'own-kotleta');
+});
+
+test('pickSearchMatch: «котлеты домашние» остаётся уверенным', () => {
+  const c = glueCatalog(kotletaOwnOverlay());
+  const pick = products.pickSearchMatch('котлеты домашние', products.searchProducts(c, 'котлеты домашние', 5));
+  assert.equal(pick.ok, true);
+  assert.equal(pick.product.id, 'own-kotleta');
+});
+
+test('pickSearchMatch: «тефтели рисовые» — not_found без карточки', () => {
+  const c = glueCatalog();
+  const pick = products.pickSearchMatch('тефтели рисовые', products.searchProducts(c, 'тефтели рисовые', 5));
+  assert.equal(pick.ok, false);
+  assert.equal(pick.code, 'not_found');
+});
+
+test('инверсия не поднимает разбросанные токены до prefix-яруса 400+', () => {
+  const product = {
+    name: 'Суп с яичным белком и маслом подсолнечным на пару',
+    _source: 'own',
+  };
+  const prep = products.prepareQuery('масло подсолнечное');
+  const score = products.scoreProduct(product, prep);
+  assert.ok(score < 400, `разбросанные токены: скор ${score}, не prefix/inversion tier`);
+});
+
+test('pickSearchMatch: нулевой скор — not_found, не ambiguous_product', () => {
+  const fake = [{ id: 'x', name: 'Несовпадение', _source: 'own' }];
+  const pick = products.pickSearchMatch('абракадабра', fake);
+  assert.equal(pick.ok, false);
+  assert.equal(pick.code, 'not_found');
+});
+
+test('sameAggregateComposition: допуск 0.05 на агрегаты', () => {
+  const a = { protein100: 15, carbs100: 8, fat100: 17.5 };
+  const b = { protein100: 15, simple100: 1.5, complex100: 6.5, badFat100: 7, goodFat100: 10, trans100: 0.5 };
+  assert.equal(products.sameAggregateComposition(a, b), true);
+  assert.equal(products.sameAggregateComposition(a, { ...b, fat100: 18 }), false);
+});

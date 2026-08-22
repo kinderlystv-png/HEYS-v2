@@ -127,3 +127,119 @@ test('состояние из инцидента кодек действител
   const verdict = codec.assemble(withExtraRow, [], api.store[MANIFEST]);
   assert.equal(verdict.ok, false);
 });
+
+test('loadOverlayAssembled отказывает при неполной паре', async () => {
+  const api = {
+    async getKVMany(_session, keys) {
+      const data = {};
+      keys.forEach((key) => { data[key] = null; });
+      data[OVERLAY] = rows(3);
+      data[MANIFEST] = { format: 'heys-overlay-manifest-v1', generation: 'x', state: 'committed', count: 2, rowCount: 3, hashes: ['1:abc', '2:def'] };
+      data[`${products.OVERLAY_TAIL_KEY_PREFIX}1`] = rows(1);
+      return { data, error: null };
+    },
+  };
+  const loaded = await products.loadOverlayAssembled(api, 'session');
+  assert.equal(loaded.ok, false);
+  assert.ok(['incomplete', 'generation_mismatch'].includes(loaded.error));
+});
+
+test('loadOverlayAssembled возвращает priorTailCount по фактическим хвостам', async () => {
+  const api = {
+    async getKVMany(_session, keys) {
+      const data = {};
+      keys.forEach((key) => { data[key] = null; });
+      data[OVERLAY] = rows(4);
+      data[MANIFEST] = null;
+      data[`${products.OVERLAY_TAIL_KEY_PREFIX}1`] = rows(2);
+      data[`${products.OVERLAY_TAIL_KEY_PREFIX}2`] = rows(1);
+      return { data, error: null };
+    },
+  };
+  const loaded = await products.loadOverlayAssembled(api, 'session');
+  assert.equal(loaded.ok, true);
+  assert.equal(loaded.assembled.status, 'legacy');
+  assert.equal(loaded.priorTailCount, 2);
+});
+
+test('saveOverlayRows не удаляет хвосты, если их не было в манифесте', async () => {
+  const deleted = [];
+  const api = {
+    store: {},
+    writes: [],
+    async getKV(_session, key) {
+      if (key === MANIFEST) return { data: null, error: null };
+      return { data: null, error: null };
+    },
+    async upsertKV(_session, key, value) {
+      this.writes.push(key);
+      this.store[key] = value;
+      return { ok: true };
+    },
+    async deleteKV(_session, key) {
+      deleted.push(key);
+      return { ok: true };
+    },
+  };
+  const res = await products.saveOverlayRows(api, 'session', rows(5), { priorTailCount: 0 });
+  assert.equal(res.ok, true);
+  assert.deepEqual(deleted, []);
+});
+
+test('saveOverlayRows удаляет только осиротевшие хвосты из прошлого манифеста', async () => {
+  const deleted = [];
+  let manifest = null;
+  const api = {
+    store: {},
+    async getKV(_session, key) {
+      if (key === MANIFEST) return { data: manifest, error: null };
+      return { data: null, error: null };
+    },
+    async upsertKV(_session, key, value) {
+      this.store[key] = value;
+      if (key === MANIFEST) manifest = value;
+      return { ok: true };
+    },
+    async deleteKV(_session, key) {
+      deleted.push(key);
+      return { ok: true };
+    },
+  };
+  const bigRows = rows(120).map((row, index) => ({
+    ...row,
+    name: `Продукт ${index}`,
+    notes: 'x'.repeat(900),
+    _custom: true,
+  }));
+  const first = await products.saveOverlayRows(api, 'session', bigRows, { priorTailCount: 0 });
+  assert.equal(first.ok, true);
+  assert.deepEqual(deleted, []);
+
+  const priorTailCount = Math.max(0, manifest.count - 1);
+  const second = await products.saveOverlayRows(api, 'session', rows(5), { priorTailCount });
+  assert.equal(second.ok, true);
+  assert.ok(deleted.length > 0);
+  assert.ok(deleted.every((key) => key.startsWith(products.OVERLAY_TAIL_KEY_PREFIX)));
+  assert.ok(deleted.length < products.MAX_OVERLAY_TAIL_SHARDS);
+});
+
+test('saveOverlayRows чистит legacy-хвосты без валидного манифеста', async () => {
+  const deleted = [];
+  const api = {
+    store: {},
+    async upsertKV(_session, key, value) {
+      this.store[key] = value;
+      return { ok: true };
+    },
+    async deleteKV(_session, key) {
+      deleted.push(key);
+      return { ok: true };
+    },
+  };
+  const res = await products.saveOverlayRows(api, 'session', rows(4), { priorTailCount: 2 });
+  assert.equal(res.ok, true);
+  assert.deepEqual(deleted, [
+    `${products.OVERLAY_TAIL_KEY_PREFIX}1`,
+    `${products.OVERLAY_TAIL_KEY_PREFIX}2`,
+  ]);
+});

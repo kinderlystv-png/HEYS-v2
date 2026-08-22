@@ -18,6 +18,10 @@ const { computeTefKcal100 } = require('./day');
 
 const OVERLAY_KEY = 'heys_products_overlay_v2';
 const OVERLAY_MANIFEST_KEY = 'heys_products_overlay_v2_rpc_manifest';
+const OVERLAY_TAIL_KEY_PREFIX = 'heys_products_overlay_v2_rpc_tail_';
+const MAX_OVERLAY_TAIL_SHARDS = 16;
+const OVERLAY_SHARD_TARGET_BYTES = 42 * 1024;
+const AGGREGATE_COMPOSITION_TOLERANCE = 0.05;
 
 // Кодек — байт-в-байт зеркало apps/web/heys_overlay_shard_codec_v1.js, расхождение
 // ловит cmp в test-functions.sh. Модуль вешает api на globalThis.HEYS, а в
@@ -234,11 +238,87 @@ function uniq(values) {
 function prepareQuery(query) {
   const norm = normalizeText(query);
   if (!norm) return null;
+  const tokens = norm.split(' ').filter(Boolean);
+  const phrases = uniq([norm, toLatin(norm), toCyrillic(norm)]);
+  // Инверсия соседних слов запроса: «масло подсолнечное» = «подсолнечное масло»
+  // на ярусе prefix. Только полная перестановка, не «все токены где угодно».
+  if (tokens.length === 2) {
+    const inverted = `${tokens[1]} ${tokens[0]}`;
+    phrases.push(...uniq([inverted, toLatin(inverted), toCyrillic(inverted)]));
+  }
   return {
     norm,
-    phrases: uniq([norm, toLatin(norm), toCyrillic(norm)]),
-    tokens: norm.split(' ').filter(Boolean).map((token) => uniq([token, toLatin(token), toCyrillic(token)])),
+    phrases,
+    tokens: tokens.map((token) => uniq([token, toLatin(token), toCyrillic(token)])),
   };
+}
+
+function macroNum(row, camelKey, lowerKey) {
+  if (!row || typeof row !== 'object') return 0;
+  const raw = row[camelKey] != null ? row[camelKey] : row[lowerKey];
+  const num = typeof raw === 'number' ? raw : parseFloat(raw);
+  return Number.isFinite(num) ? Math.round(num * 100) / 100 : 0;
+}
+
+function aggregateMacros(row) {
+  const protein = macroNum(row, 'protein100', 'protein100');
+  const carbs = macroNum(row, 'carbs100', 'carbs100')
+    || macroNum(row, 'simple100', 'simple100') + macroNum(row, 'complex100', 'complex100');
+  const fat = macroNum(row, 'fat100', 'fat100')
+    || macroNum(row, 'badFat100', 'badfat100')
+    + macroNum(row, 'goodFat100', 'goodfat100')
+    + macroNum(row, 'trans100', 'trans100');
+  return { protein, carbs, fat };
+}
+
+function sameAggregateComposition(a, b, tolerance = AGGREGATE_COMPOSITION_TOLERANCE) {
+  const ma = aggregateMacros(a);
+  const mb = aggregateMacros(b);
+  return Math.abs(ma.protein - mb.protein) <= tolerance
+    && Math.abs(ma.carbs - mb.carbs) <= tolerance
+    && Math.abs(ma.fat - mb.fat) <= tolerance;
+}
+
+/** Среди кандидатов одного запроса: own с тем же именем и агрегатами важнее shared. */
+function preferOwnOverMatchingShared(matches) {
+  const owns = matches.filter((m) => m && m._source === 'own');
+  if (!owns.length) return matches;
+  const dropIds = new Set();
+  for (const own of owns) {
+    const ownName = normalizeText(own.name);
+    for (const m of matches) {
+      if (!m || m._source !== 'shared') continue;
+      if (normalizeText(m.name) !== ownName) continue;
+      if (sameAggregateComposition(own, m)) dropIds.add(String(m.id));
+    }
+  }
+  if (!dropIds.size) return matches;
+  return matches.filter((m) => m && !dropIds.has(String(m.id)));
+}
+
+function nameQueryCoverage(product, prepared) {
+  const nameTokens = normalizeText(product && product.name).split(' ').filter(Boolean);
+  if (!nameTokens.length || !prepared || !prepared.tokens.length) {
+    return { matched: 0, queryTokens: prepared ? prepared.tokens.length : 0, nameTokens: nameTokens.length, ratio: 0 };
+  }
+  let matched = 0;
+  for (const forms of prepared.tokens) {
+    let best = 0;
+    forms.forEach((form) => {
+      for (const nameToken of nameTokens) {
+        best = Math.max(best, tokenMatches(nameToken, form));
+      }
+    });
+    if (best >= 0.8) matched += 1;
+  }
+  const ratio = nameTokens.length ? matched / nameTokens.length : 0;
+  return { matched, queryTokens: prepared.tokens.length, nameTokens: nameTokens.length, ratio };
+}
+
+function applyCoverageAdjustment(score, coverage) {
+  if (!coverage || score <= 0) return score;
+  const unmatchedName = Math.max(0, coverage.nameTokens - coverage.matched);
+  return score + coverage.matched * 35 - unmatchedName * 18;
 }
 
 /**
@@ -317,7 +397,50 @@ function scoreProduct(product, prepared) {
   if (product._source === 'own') score += 60;
   // Короткое имя при равном совпадении точнее длинного составного.
   score -= Math.min(40, nameNorm.length / 4);
-  return score;
+  return applyCoverageAdjustment(score, nameQueryCoverage(product, prepared));
+}
+
+/**
+ * Выбор однозначного продукта из кандидатов поиска — общий для resolve и рецептов.
+ * Возвращает { ok:true, product } или { ok:false, code:'ambiguous_product'|'not_found', candidates? }.
+ */
+function pickSearchMatch(query, matches) {
+  const list = preferOwnOverMatchingShared(Array.isArray(matches) ? matches : []);
+  if (!list.length) return { ok: false, code: 'not_found' };
+  const prepared = prepareQuery(query);
+  if (!prepared) return { ok: false, code: 'not_found' };
+
+  const scored = list.map((product) => ({
+    product,
+    score: scoreProduct(product, prepared),
+    coverage: nameQueryCoverage(product, prepared),
+  })).sort((a, b) => b.score - a.score);
+
+  const best = scored[0];
+  const second = scored[1];
+  const soleOwnMatch = scored.length === 1 && best.product._source === 'own' && best.score > 0;
+  const wanted = normalizeText(query);
+  const exactOwn = scored.filter((s) => s.product._source === 'own'
+    && normalizeText(s.product.name) === wanted);
+  const soleExactOwn = exactOwn.length === 1;
+  if (soleExactOwn) return { ok: true, product: exactOwn[0].product };
+  if (soleOwnMatch) return { ok: true, product: best.product };
+
+  const gapOk = !second || best.score >= second.score * 1.25;
+  if (best.score >= 400 && gapOk) return { ok: true, product: best.product };
+
+  if (best.score >= 400 && second && second.score >= 400) {
+    const betterCoverage = best.coverage.ratio > second.coverage.ratio + 0.01
+      || (Math.abs(best.coverage.ratio - second.coverage.ratio) <= 0.01
+        && best.coverage.nameTokens < second.coverage.nameTokens);
+    if (betterCoverage) return { ok: true, product: best.product };
+  }
+
+  if (scored.length === 1 && best.score >= 400) return { ok: true, product: best.product };
+
+  if (best.score <= 0) return { ok: false, code: 'not_found' };
+
+  return { ok: false, code: 'ambiguous_product', candidates: scored.slice(0, 5).map((s) => s.product) };
 }
 
 /**
@@ -1440,6 +1563,72 @@ function applyProductPatchToOverlay(overlayRows, product, patch, { nowMs, makeId
   return { rows, mode: 'linked' };
 }
 
+function countStoredOverlayTailShards(tailValues) {
+  if (!Array.isArray(tailValues)) return 0;
+  let count = 0;
+  for (const tail of tailValues) {
+    if (Array.isArray(tail)) count += 1;
+  }
+  return count;
+}
+
+function priorTailCountFromRead(manifest, tailValues) {
+  const stored = countStoredOverlayTailShards(tailValues);
+  const fromManifest = overlayCodec.isManifest(manifest) ? Math.max(0, manifest.count - 1) : 0;
+  return Math.max(stored, fromManifest);
+}
+
+async function loadOverlayAssembled(api, sessionToken) {
+  const tailKeys = Array.from(
+    { length: MAX_OVERLAY_TAIL_SHARDS },
+    (_, index) => `${OVERLAY_TAIL_KEY_PREFIX}${index + 1}`,
+  );
+  const keys = [OVERLAY_KEY, OVERLAY_MANIFEST_KEY, ...tailKeys];
+  const readMany = typeof api.getKVMany === 'function'
+    ? api.getKVMany(sessionToken, keys)
+    : Promise.all(keys.map(async (key) => {
+      const res = await api.getKV(sessionToken, key);
+      return { key, data: res.data };
+    })).then((entries) => ({
+      data: Object.fromEntries(entries.map(({ key, data }) => [key, data])),
+      error: null,
+    }));
+
+  const { data, error } = await readMany;
+  if (error) return { ok: false, error, rows: null };
+
+  const main = data && data[OVERLAY_KEY] != null ? data[OVERLAY_KEY] : null;
+  const manifest = data && data[OVERLAY_MANIFEST_KEY] != null ? data[OVERLAY_MANIFEST_KEY] : null;
+  const tails = tailKeys.map((key) => (data && data[key] != null ? data[key] : null));
+  const assembled = overlayCodec.assemble(main, tails, manifest);
+  if (!assembled.ok) {
+    return { ok: false, error: assembled.status || 'incomplete', assembled, rows: null };
+  }
+  if (assembled.status !== 'complete' && assembled.status !== 'legacy') {
+    return { ok: false, error: assembled.status, assembled, rows: null, priorTailCount: 0 };
+  }
+  const priorTailCount = priorTailCountFromRead(manifest, tails);
+  return {
+    ok: true,
+    rows: Array.isArray(assembled.rows) ? assembled.rows : [],
+    assembled,
+    priorTailCount,
+  };
+}
+
+async function deleteOverlayTailKeys(api, sessionToken, newTailCount, priorTailCount = 0) {
+  if (typeof api.deleteKV !== 'function') return;
+  const from = Math.max(1, newTailCount + 1);
+  const to = Math.max(0, priorTailCount);
+  if (from > to) return;
+  for (let index = from; index <= to; index += 1) {
+    const key = `${OVERLAY_TAIL_KEY_PREFIX}${index}`;
+    try {
+      await api.deleteKV(sessionToken, key);
+    } catch (_) { /* best-effort, как в веб-клиенте */ }
+  }
+}
+
 /**
  * Записать личный каталог клиента: строки И сторож целостности.
  *
@@ -1459,13 +1648,35 @@ function applyProductPatchToOverlay(overlayRows, product, patch, { nowMs, makeId
  * рассогласованная пара хуже, чем незаписанный продукт, и куратор должен об
  * этом узнать сразу.
  */
-async function saveOverlayRows(api, sessionToken, rows) {
-  const publication = overlayCodec.createSingle(rows);
+async function saveOverlayRows(api, sessionToken, rows, options = {}) {
+  if (!Array.isArray(rows)) {
+    return { ok: false, error: 'rows_not_array' };
+  }
+
+  const publication = overlayCodec.splitRows(rows, {
+    targetBytes: OVERLAY_SHARD_TARGET_BYTES,
+    maxShards: MAX_OVERLAY_TAIL_SHARDS + 1,
+  });
   if (!publication.ok) {
     return { ok: false, error: `манифест каталога не построился (${publication.reason})` };
   }
 
-  const saveRows = await api.upsertKV(sessionToken, OVERLAY_KEY, publication.shards[0]);
+  const priorTailCount = Number.isFinite(Number(options.priorTailCount))
+    ? Math.max(0, Number(options.priorTailCount))
+    : 0;
+
+  const shards = publication.shards;
+  const mainShard = shards[0];
+  const tails = shards.slice(1);
+
+  // Порядок как у веб-клиента: хвосты → main → manifest (commit marker).
+  for (let tailIndex = tails.length - 1; tailIndex >= 0; tailIndex -= 1) {
+    const tailKey = `${OVERLAY_TAIL_KEY_PREFIX}${tailIndex + 1}`;
+    const saveTail = await api.upsertKV(sessionToken, tailKey, tails[tailIndex]);
+    if (!saveTail.ok) return saveTail;
+  }
+
+  const saveRows = await api.upsertKV(sessionToken, OVERLAY_KEY, mainShard);
   if (!saveRows.ok) return saveRows;
 
   const saveManifest = await api.upsertKV(sessionToken, OVERLAY_MANIFEST_KEY, publication.manifest);
@@ -1477,12 +1688,19 @@ async function saveOverlayRows(api, sessionToken, rows) {
     };
   }
 
+  await deleteOverlayTailKeys(api, sessionToken, tails.length, priorTailCount);
   return { ok: true };
 }
 
 module.exports = {
   OVERLAY_KEY,
   OVERLAY_MANIFEST_KEY,
+  OVERLAY_TAIL_KEY_PREFIX,
+  MAX_OVERLAY_TAIL_SHARDS,
+  AGGREGATE_COMPOSITION_TOLERANCE,
+  priorTailCountFromRead,
+  countStoredOverlayTailShards,
+  loadOverlayAssembled,
   saveOverlayRows,
   EDITABLE_FIELDS,
   RECIPE_MASS_FIELDS,
@@ -1519,6 +1737,11 @@ module.exports = {
   toCyrillic,
   prepareQuery,
   scoreProduct,
+  pickSearchMatch,
+  preferOwnOverMatchingShared,
+  sameAggregateComposition,
+  aggregateMacros,
+  nameQueryCoverage,
   searchProducts,
   fuzzySearchProducts,
   fuzzyProductSimilarity,

@@ -2058,7 +2058,7 @@ test('WRITE_TOOLS совпадает с обработчиками, которы
   for (const line of source.split('\n')) {
     const header = /^ {4}async (heys_[a-z_]+)\(/.exec(line);
     if (header) current = header[1];
-    if (current && /\b(writeDay|saveCardKey|api\.upsertKV|products\.saveOverlayRows)\(/.test(line)) found.add(current);
+    if (current && /\b(writeDay|saveCardKey|api\.upsertKV|products\.saveOverlayRows|saveOverlayRowsFromRead)\(/.test(line)) found.add(current);
   }
   assert.deepEqual([...found].sort(), [...WRITE_TOOLS].sort(),
     'список WRITE_TOOLS разошёлся с инструментами, которые пишут в облако');
