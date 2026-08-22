@@ -25,12 +25,12 @@ function load() {
 //
 // Углеводы подобраны так, чтобы первые четыре волны дали ровно кадровую
 // амплитуду 24 px: высота пропорциональна углеводам, у самого углеводного она
-// полные 40 px (решение владельца 22 августа), поэтому 60 из 100 — это 24.
+// полные 30 px (канвас 22 августа), поэтому 80 из 100 — это 24.
 const FRAME_WAVES = [
-  { id: 'a', startMin: 100, endMin: 200, carbs: 60 },
-  { id: 'b', startMin: 200, endMin: 300, carbs: 60 },
-  { id: 'c', startMin: 400, endMin: 500, carbs: 60 },
-  { id: 'd', startMin: 470, endMin: 600, carbs: 60 },
+  { id: 'a', startMin: 100, endMin: 200, carbs: 80 },
+  { id: 'b', startMin: 200, endMin: 300, carbs: 80 },
+  { id: 'c', startMin: 400, endMin: 500, carbs: 80 },
+  { id: 'd', startMin: 470, endMin: 600, carbs: 80 },
   { id: 'e', startMin: 700, endMin: 800, carbs: 100, isActive: true }
 ];
 
@@ -110,18 +110,17 @@ describe('схема волн · высота вершины по углевод
   let V4;
   beforeEach(() => { V4 = load(); });
 
-  it('самый углеводный приём даёт полные 40 px, остальные пропорционально', () => {
-    expect(V4.waveAmplitudes([{ carbs: 100 }, { carbs: 50 }])).toEqual([40, 20]);
+  it('самый углеводный приём даёт полные 30 px, остальные пропорционально', () => {
+    expect(V4.waveAmplitudes([{ carbs: 100 }, { carbs: 50 }])).toEqual([30, 20]);
   });
 
-  it('ниже 45 % вершина не опускается', () => {
-    // 10 из 100 — это 4 px, но пол 45 % даёт 18: иначе волна пропадает совсем.
-    expect(V4.waveAmplitudes([{ carbs: 100 }, { carbs: 10 }])).toEqual([40, 18]);
+  it('ниже 20 px вершина не опускается', () => {
+    expect(V4.waveAmplitudes([{ carbs: 100 }, { carbs: 10 }])).toEqual([30, 20]);
   });
 
   it('углеводов не знает ни одна волна — все вершины полные', () => {
     // Занижать без причины нельзя: это показало бы разницу, которой нет.
-    expect(V4.waveAmplitudes([{}, { carbs: 0 }])).toEqual([40, 40]);
+    expect(V4.waveAmplitudes([{}, { carbs: 0 }])).toEqual([30, 30]);
   });
 
   it('провал считается от меньшей из соседних волн', () => {

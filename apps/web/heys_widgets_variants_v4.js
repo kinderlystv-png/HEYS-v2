@@ -88,9 +88,9 @@
       { id: 'window', title: 'Окно сна', subtitle: 'во сколько лёг — виден сдвиг', size: '2x1' }
     ],
     dayScore: [
-      { id: 'row', title: 'Как сейчас', subtitle: 'только итог', size: '2x1' },
+      { id: 'mini', title: 'Как сейчас', subtitle: 'число из десяти', size: '1x1', isDefault: true },
       { id: 'factors', title: 'Из чего сложилась', subtitle: 'пять слагаемых — что просело', size: '2x1' },
-      { id: 'week_chart', title: 'Семь дней', subtitle: 'итог в ряду недели', size: '2x2' }
+      { id: 'week_chart', title: 'Семь дней', subtitle: 'итог в ряду недели', size: '2x1' }
     ],
     heatmap: [
       { id: 'week_bar', title: 'Как сейчас', subtitle: 'семь дней полосами', size: '2x1' },

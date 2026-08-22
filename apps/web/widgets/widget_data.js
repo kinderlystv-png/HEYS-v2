@@ -1284,7 +1284,7 @@
         { key: 'water', label: 'вода' },
         { key: 'sleep', label: 'сон' },
         { key: 'activity', label: 'актив' },
-        { key: 'relapse', label: 'срывы' }
+        { key: 'relapse', label: 'срыв' }
       ];
       return items.map(({ key, label }) => {
         const score = Math.round(Number(cats[key]) || 0);

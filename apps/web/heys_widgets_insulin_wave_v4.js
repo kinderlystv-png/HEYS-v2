@@ -109,13 +109,10 @@
   // Больше восьми приёмов — рисуем восемь последних, счётчик остаётся полным.
   const SCHEME_MAX_FIGURES = 8;
   const SCHEME_MIN_SLOT = 12;
-  // Высота вершины пропорциональна углеводам приёма (решение владельца
-  // 22 августа): самый углеводный даёт полные 40 px, остальные — пропорционально,
-  // но не ниже 45 %. Равные вершины прятали бы главное — какой приём поднял
-  // сильнее. Углеводы берутся из тех же данных, что кольцо БЖУ; своего расчёта
-  // у виджета нет.
-  const SCHEME_PEAK_AMP = 40;
-  const SCHEME_MIN_AMP_SHARE = 0.45;
+  // Высота вершины пропорциональна углеводам приёма (канвас 22 августа):
+  // самый углеводный — 30 px, остальные пропорционально, но не ниже 20 px.
+  const SCHEME_PEAK_AMP = 30;
+  const SCHEME_MIN_AMP = 20;
 
   /** Амплитуды всех волн схемы: доля от самой углеводной. */
   function waveAmplitudes(waves) {
@@ -125,8 +122,8 @@
     // поэтому все вершины полные.
     if (!(max > 0)) return carbs.map(() => SCHEME_PEAK_AMP);
     return carbs.map((value) => {
-      const share = Math.max(SCHEME_MIN_AMP_SHARE, Math.min(1, value / max));
-      return SCHEME_PEAK_AMP * share;
+      const ratio = max > 0 ? value / max : 1;
+      return Math.max(SCHEME_MIN_AMP, SCHEME_PEAK_AMP * ratio);
     });
   }
   // Провал между волнами одной фигуры — доля высоты соседней волны.

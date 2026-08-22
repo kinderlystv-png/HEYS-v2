@@ -138,9 +138,9 @@
       }
     },
     {
-      type: 'dayScore',
+      type: 'steps',
       size: '2x1',
-      settings: { displayVariant: 'row' }
+      settings: { displayVariant: 'week' }
     },
     {
       // «Как сейчас» — неделя полосами. Вид «Серия» существует только в 1×1 и

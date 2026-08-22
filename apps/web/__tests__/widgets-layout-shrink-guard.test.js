@@ -170,7 +170,7 @@ describe('дефолтный набор · контракт home-widgets', () =>
     ['macros', '3x2', 'rings'],
     ['sleep', '1x1', 'mini'],
     ['water', '1x1', 'mini'],
-    ['dayScore', '2x1', 'row'],
+    ['steps', '2x1', 'week'],
     ['heatmap', '2x1', 'week_bar'],
     ['relapseRisk', '2x2', 'scale'],
     ['healthTrend', '2x2', 'spark'],
@@ -197,10 +197,11 @@ describe('дефолтный набор · контракт home-widgets', () =>
     expect(mismatched).toEqual([]);
   });
 
-  it('в дефолт не входят снятые типы и «Шаги»', () => {
+  it('в дефолт входят «Шаги», но не снятые типы и не «Оценка дня»', () => {
     const { state } = boot(null, null);
     const types = state.getWidgets().map((w) => w.type);
-    expect(types).not.toContain('steps');
+    expect(types).toContain('steps');
+    expect(types).not.toContain('dayScore');
     expect(types).not.toContain('insulin');
     expect(types).not.toContain('streak');
     expect(types).not.toContain('cascade');

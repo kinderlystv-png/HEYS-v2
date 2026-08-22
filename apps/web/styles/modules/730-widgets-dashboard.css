@@ -11927,6 +11927,29 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   background: var(--v4-sand-act, #c67139);
 }
 
+.widget-v4-week-bars--inline {
+  flex: 1;
+  height: 36px;
+  margin-top: 0;
+}
+
+.widget-v4-week-bars__col--past {
+  background: var(--v4-ink-4, rgba(0, 0, 0, 0.25));
+}
+
+.widget-v4-week-bars__col--today {
+  background: var(--v4-sand-act, #c67139);
+}
+
+.widget-day-score--week .widget-v4-row {
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.widget-day-score__week-score {
+  flex-shrink: 0;
+}
+
 .widget-heatmap__month-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -12273,6 +12296,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
 
 .widget-v4-factor-cols__item {
   flex: 1;
+  min-width: 0;
   text-align: center;
 }
 

@@ -2189,136 +2189,121 @@
 
   function DayScoreVariantBody({ variantId, widget, data, meta = {} }) {
     const score = data?.score ?? 0;
-    const level = data?.level ?? 'none';
     const hasData = data?.hasData ?? false;
-    const statusResult = data?.statusResult || {};
-    const topActions = Array.isArray(statusResult.topActions) ? statusResult.topActions : [];
-    const showAction = widget.settings?.showAction !== false;
-    const showLevel = widget.settings?.showLevel !== false;
-
-    const getColor = () => widgetHealthScoreColor(score);
-
-    const getLevelEmoji = () => {
-      switch (level) {
-        case 'excellent': return '🌟';
-        case 'good': return '✅';
-        case 'okay': return '👌';
-        case 'low': return '😕';
-        case 'critical': return '⚠️';
-        default: return '⭐';
-      }
-    };
-
-    const getLevelLabel = () => {
-      switch (level) {
-        case 'excellent': return 'Отлично';
-        case 'good': return 'Хорошо';
-        case 'okay': return 'Нормально';
-        case 'low': return 'Слабо';
-        case 'critical': return 'Критично';
-        default: return 'Нет данных';
-      }
-    };
-
     const d = getWidgetDims(widget);
-    const isShort = d.isShort; // 2x1
-    const rootClassName = `widget-day-score ${isShort ? 'widget-day-score--short' : 'widget-day-score--regular'}`;
+    const resolvedVariant = variantId === 'row' ? 'mini' : variantId;
+    const scoreOnTen = formatRuDecimal(score / 10, 1);
+    const terracottaStyle = { color: 'var(--v4-sand-act, #c67139)' };
+
+    const scoreSlashTen = (className, fontSizePx) => React.createElement('span', {
+      className: className || 'widget-v4-row__value widget-day-score__score',
+      style: {
+        fontSize: fontSizePx ? `${fontSizePx}px` : undefined,
+        fontWeight: 700,
+        ...terracottaStyle
+      }
+    },
+      scoreOnTen,
+      React.createElement('span', { className: 'widget-v4-unit' }, ' / 10')
+    );
+
+    const weekBarCols = (weekScores, { empty = false } = {}) => {
+      const list = Array.isArray(weekScores) ? weekScores : [];
+      const maxScore = empty
+        ? 1
+        : Math.max(1, ...list.map((day) => day.score || 0));
+      return React.createElement('div', { className: 'widget-v4-week-bars widget-v4-week-bars--inline' },
+        list.map((day, index) => {
+          const isToday = index === list.length - 1;
+          const height = empty || !(day.score > 0)
+            ? '2px'
+            : `${Math.round((day.score / maxScore) * 100)}%`;
+          return React.createElement('span', {
+            key: day.date || `d${index}`,
+            className: 'widget-v4-week-bars__col'
+              + (isToday ? ' widget-v4-week-bars__col--today' : ' widget-v4-week-bars__col--past'),
+            style: { height }
+          });
+        })
+      );
+    };
 
     if (!hasData) {
-      return v4EmptyTile('Оценка дня');
-    }
-
-    const color = getColor();
-    const actionEl = showAction && topActions.length > 0
-      ? React.createElement('div', {
-        className: 'widget-day-score__action',
-      },
-        React.createElement('span', { className: 'widget-day-score__action-icon' }, topActions[0].icon || '→'),
-        React.createElement('span', { className: 'widget-day-score__action-text' }, topActions[0].text)
-      )
-      : null;
-
-    const levelBadge = showLevel ? React.createElement('div', {
-      className: 'widget-day-score__badge widget-day-score__level-badge',
-      style: {
-        fontSize: '0.7rem', fontWeight: 600, color,
-        background: `${color}14`, border: `1px solid ${color}28`,
-        borderRadius: '99px', padding: '1px 8px'
-      }
-    }, `${getLevelEmoji()} ${getLevelLabel()}`) : null;
-
-    // 2x1 — канвас g1: «Оценка дня» слева, «6,2 / 10» справа
-    if (isShort || variantId === 'row' || variantId === 'factors') {
-      if (variantId === 'factors') {
-        const bars = Array.isArray(data.factorBars) ? data.factorBars : [];
-        return React.createElement('div', {
-          className: `${rootClassName} widget-v4-stack`
-        },
+      if (resolvedVariant === 'week_chart') {
+        const weekScores = Array.isArray(data.weekScores) ? data.weekScores : [];
+        const padded = weekScores.length >= 7
+          ? weekScores
+          : [...weekScores, ...Array(7 - weekScores.length).fill({ score: 0 })];
+        return React.createElement('div', { className: 'widget-day-score widget-v4-stack widget-day-score--week' },
           React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
-            v4Kicker('Оценка дня'),
-            React.createElement('span', { className: 'widget-v4-row__value' },
-              formatRuDecimal(score / 10, 1),
-              React.createElement('span', { className: 'widget-v4-unit' }, ' / 10')
-            )
-          ),
-          React.createElement('div', { className: 'widget-v4-factor-cols' },
-            bars.map((bar) => React.createElement('span', {
-              key: bar.key,
-              className: 'widget-v4-factor-cols__item'
-            },
-              React.createElement('span', {
-                className: 'widget-v4-factor-cols__bar widget-v4-factor-cols__bar--' + (bar.tone || 'good')
-              }),
-              React.createElement('span', { className: 'widget-v4-factor-cols__label' }, bar.label)
-            ))
+            React.createElement('span', {
+              className: 'widget-v4-hero-num__val widget-v4-val--neutral',
+              style: { fontSize: '21px', fontWeight: 700 }
+            }, '—'),
+            weekBarCols(padded, { empty: true })
           )
         );
       }
-      return React.createElement('div', {
-        className: `${rootClassName} widget-v4-row`
-      },
-        v4Kicker('Оценка дня'),
-        React.createElement('div', { className: 'widget-v4-row__value' },
-          formatRuDecimal(score / 10, 1),
+      return v4EmptyTile('Оценка');
+    }
+
+    if (resolvedVariant === 'mini' || (d.isMicro && resolvedVariant !== 'factors' && resolvedVariant !== 'week_chart')) {
+      return React.createElement('div', { className: 'widget-day-score widget-v4-mini' },
+        v4Kicker('Оценка'),
+        React.createElement('div', {
+          className: 'widget-v4-mini__value widget-day-score__score',
+          style: { fontSize: '21px', fontWeight: 700, ...terracottaStyle }
+        },
+          scoreOnTen,
           React.createElement('span', { className: 'widget-v4-unit' }, ' / 10')
         )
       );
     }
 
-    if (variantId === 'week_chart') {
-      const weekScores = Array.isArray(data.weekScores) ? data.weekScores : [];
-      const maxScore = Math.max(1, ...weekScores.map((d) => d.score || 0));
+    if (resolvedVariant === 'factors') {
+      const bars = Array.isArray(data.factorBars) ? data.factorBars : [];
       return React.createElement('div', {
-        className: `${rootClassName} widget-v4-stack`
+        className: 'widget-day-score widget-day-score--short widget-v4-stack'
       },
-        v4Kicker('Оценка · 7 дней'),
-        React.createElement('div', { className: 'widget-v4-week-bars' },
-          weekScores.map((day) => React.createElement('span', {
-            key: day.date,
-            className: 'widget-v4-week-bars__col',
-            style: { height: `${Math.round((day.score / maxScore) * 100)}%` }
-          }))
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('Оценка дня'),
+          scoreSlashTen('widget-v4-row__value', 16)
         ),
-        React.createElement('div', { className: 'widget-v4-row__value' },
-          Math.round(score),
-          React.createElement('span', { className: 'widget-v4-unit' }, ' / 100')
+        React.createElement('div', { className: 'widget-v4-factor-cols' },
+          bars.map((bar) => React.createElement('span', {
+            key: bar.key,
+            className: 'widget-v4-factor-cols__item'
+          },
+            React.createElement('span', {
+              className: 'widget-v4-factor-cols__bar widget-v4-factor-cols__bar--' + (bar.tone || 'good')
+            }),
+            React.createElement('span', { className: 'widget-v4-factor-cols__label' }, bar.label)
+          ))
         )
       );
     }
 
-    // 2x2 — вертикальный: большая цифра + уровень + рекомендация
-    return React.createElement('div', {
-      className: rootClassName
-    },
-      // Score number
+    if (resolvedVariant === 'week_chart') {
+      const weekScores = Array.isArray(data.weekScores) ? data.weekScores : [];
+      return React.createElement('div', {
+        className: 'widget-day-score widget-day-score--short widget-v4-stack widget-day-score--week'
+      },
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          scoreSlashTen('widget-day-score__week-score', 21),
+          weekBarCols(weekScores)
+        )
+      );
+    }
+
+    return React.createElement('div', { className: 'widget-day-score widget-v4-mini' },
+      v4Kicker('Оценка'),
       React.createElement('div', {
-        className: 'widget-day-score__score-big',
-        style: { fontSize: '3rem', fontWeight: 800, color, lineHeight: 1, letterSpacing: '-1px' }
-      }, Math.round(score)),
-      // Level badge
-      levelBadge ? React.createElement('div', { className: 'widget-day-score__badge-row' }, levelBadge) : null,
-      // Top recommendation
-      actionEl ? React.createElement('div', { className: 'widget-day-score__action-row' }, actionEl) : null
+        className: 'widget-v4-mini__value widget-day-score__score',
+        style: { fontSize: '21px', fontWeight: 700, ...terracottaStyle }
+      },
+        scoreOnTen,
+        React.createElement('span', { className: 'widget-v4-unit' }, ' / 10')
+      )
     );
   }
 
