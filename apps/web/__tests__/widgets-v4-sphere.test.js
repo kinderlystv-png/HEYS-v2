@@ -12,9 +12,12 @@ const cssRoles = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/002-ui-v4-pa
 describe('виджеты g1 в сфере палитры', () => {
     it('инсулиновая волна — заливка без обводки по горбам, линия только пол', () => {
         const start = uiSrc.indexOf('function InsulinWaveDaySvg');
-        const chunk = uiSrc.slice(start, start + 1200);
+        const chunk = uiSrc.slice(start, start + 2600);
         expect(chunk).toContain("className: 'widget-v4-insulin-wave__fill'");
-        expect(chunk).toContain('InsulinWaveBaseline');
+        // Линия по полу осталась, но рисуется прямо в схеме: компонент
+        // InsulinWaveBaseline снят вместе с осью времени и меткой «сейчас»
+        // (контракт 22 августа, строки «схема, а не таймлайн» и «базовая линия»).
+        expect(chunk).toContain("x1: 0, y1: baseY, x2: 130, y2: baseY");
         expect(cssSrc).toContain('.widget-v4-insulin-wave__fill');
         expect(cssSrc).toContain('.widget-v4-wave__fill');
         expect(cssSrc).toContain('stroke: none');
@@ -238,8 +241,11 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(uiSrc).not.toContain('showDashboardSkeleton');
         expect(uiSrc).not.toContain('isSyncLoading');
         expect(uiSrc).toContain('const applyWidgetsLayout = useCallback');
-        // Пунктирная рамка «Добавить» живёт только в расстановке (строки 53, 93).
-        expect(uiSrc).toMatch(/isEditMode && React\.createElement\('button', \{\s*\n\s*type: 'button',\s*\n\s*className: 'widget-v4-add'/);
+        // Пунктирная «Добавить» с 22 августа стоит в сетке всегда, в обычном
+        // режиме тоже (контракт, раздел «Плитка добавления»): прежнее правило
+        // «только в расстановке» снято вместе с условием isEditMode у неё.
+        expect(uiSrc).toContain("className: 'widget-v4-add widget-v4-add--span'");
+        expect(uiSrc).not.toMatch(/isEditMode && React\.createElement\('button', \{\s*\n\s*type: 'button',\s*\n\s*className: 'widget-v4-add/);
     });
 
     it('динамика веса 2×1 — v4 виды и долгий тап', () => {

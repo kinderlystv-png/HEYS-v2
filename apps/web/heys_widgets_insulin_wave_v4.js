@@ -109,9 +109,26 @@
   // Больше восьми приёмов — рисуем восемь последних, счётчик остаётся полным.
   const SCHEME_MAX_FIGURES = 8;
   const SCHEME_MIN_SLOT = 12;
-  // Амплитуда закрытой волны одинакова у всех: величины, от которой она могла
-  // бы зависеть, контракт не называет, а разная высота вершин в кадре — рисунок.
-  const SCHEME_PEAK_AMP = 24;
+  // Высота вершины пропорциональна углеводам приёма (решение владельца
+  // 22 августа): самый углеводный даёт полные 40 px, остальные — пропорционально,
+  // но не ниже 45 %. Равные вершины прятали бы главное — какой приём поднял
+  // сильнее. Углеводы берутся из тех же данных, что кольцо БЖУ; своего расчёта
+  // у виджета нет.
+  const SCHEME_PEAK_AMP = 40;
+  const SCHEME_MIN_AMP_SHARE = 0.45;
+
+  /** Амплитуды всех волн схемы: доля от самой углеводной. */
+  function waveAmplitudes(waves) {
+    const carbs = (waves || []).map((w) => Math.max(0, Number(w?.carbs) || 0));
+    const max = Math.max(0, ...carbs);
+    // Углеводов не знает ни одна волна — занижать без причины нельзя,
+    // поэтому все вершины полные.
+    if (!(max > 0)) return carbs.map(() => SCHEME_PEAK_AMP);
+    return carbs.map((value) => {
+      const share = Math.max(SCHEME_MIN_AMP_SHARE, Math.min(1, value / max));
+      return SCHEME_PEAK_AMP * share;
+    });
+  }
   // Провал между волнами одной фигуры — доля высоты соседней волны.
   const SCHEME_DIP_JOINT = 0.42;   // стык: началась ровно на конце предыдущей
   const SCHEME_DIP_OVERLAP = 0.68; // нахлёст: началась до конца предыдущей
@@ -151,40 +168,47 @@
    * Путь фигуры: край → вершина (→ провал → вершина)* → край. Вершины стоят по
    * центрам своих слотов, поэтому фигура из двух волн имеет две вершины.
    */
-  function figurePath(x0, slot, links, amp = SCHEME_PEAK_AMP) {
+  function figurePath(x0, slot, links, amps) {
     const count = links.length + 1;
-    const peakY = BASELINE_Y - amp;
+    const list = Array.isArray(amps) && amps.length
+      ? amps
+      : new Array(count).fill(SCHEME_PEAK_AMP);
+    const ampAt = (i) => list[i] ?? SCHEME_PEAK_AMP;
+    const peakYAt = (i) => BASELINE_Y - ampAt(i);
     const half = slot / 2;
     const peakX = (i) => x0 + (i + 0.5) * slot;
     const parts = [`M${x0.toFixed(1)},${BASELINE_Y}`];
 
     parts.push(cubic(
       x0 + half * CP_EDGE, BASELINE_Y,
-      peakX(0) - half * CP_EDGE, peakY,
-      peakX(0), peakY
+      peakX(0) - half * CP_EDGE, peakYAt(0),
+      peakX(0), peakYAt(0)
     ));
 
     for (let i = 1; i < count; i += 1) {
       const dipX = x0 + i * slot;
-      const dipY = BASELINE_Y - amp * (links[i - 1] === 'overlap' ? SCHEME_DIP_OVERLAP : SCHEME_DIP_JOINT);
+      // Провал считается от меньшей из соседних волн: иначе высокая волна
+      // утопила бы стык ниже собственного основания низкой.
+      const share = links[i - 1] === 'overlap' ? SCHEME_DIP_OVERLAP : SCHEME_DIP_JOINT;
+      const dipY = BASELINE_Y - Math.min(ampAt(i - 1), ampAt(i)) * share;
       const prevPeak = peakX(i - 1);
       const nextPeak = peakX(i);
       parts.push(cubic(
-        prevPeak + half * CP_PEAK, peakY,
+        prevPeak + half * CP_PEAK, peakYAt(i - 1),
         dipX - half * CP_DIP, dipY,
         dipX, dipY
       ));
       parts.push(cubic(
         dipX + half * CP_DIP, dipY,
-        nextPeak - half * CP_PEAK, peakY,
-        nextPeak, peakY
+        nextPeak - half * CP_PEAK, peakYAt(i),
+        nextPeak, peakYAt(i)
       ));
     }
 
     const lastPeak = peakX(count - 1);
     const right = x0 + count * slot;
     parts.push(cubic(
-      lastPeak + half * CP_EDGE, peakY,
+      lastPeak + half * CP_EDGE, peakYAt(count - 1),
       right - half * CP_EDGE, BASELINE_Y,
       right, BASELINE_Y
     ));
@@ -205,6 +229,9 @@
     }
 
     const slot = Math.max(SCHEME_MIN_SLOT, SCHEME_SPAN / shown.length);
+    // Амплитуды считаются по всем показанным волнам сразу: «самый углеводный»
+    // — это самый углеводный на экране, а не внутри своей фигуры.
+    const amps = waveAmplitudes(shown);
     const groups = groupWavesIntoFigures(shown);
     const figures = [];
     const dividers = [];
@@ -217,9 +244,10 @@
       const count = group.waves.length;
       const isCurrent = group.waves.some((wave) => wave.isActive);
 
+      const figureAmps = amps.slice(index, index + count);
       figures.push({
         id: group.waves[0]?.id || `fig_${groupIndex}`,
-        d: figurePath(x0, slot, group.links),
+        d: figurePath(x0, slot, group.links, figureAmps),
         // Незакрытая волна заливается плотнее закрытых.
         opacity: isCurrent ? 0.8 : 0.45,
         isCurrent
@@ -227,7 +255,8 @@
 
       group.links.forEach((link, i) => {
         const dipX = x0 + (i + 1) * slot;
-        const dipY = BASELINE_Y - SCHEME_PEAK_AMP * (link === 'overlap' ? SCHEME_DIP_OVERLAP : SCHEME_DIP_JOINT);
+        const share = link === 'overlap' ? SCHEME_DIP_OVERLAP : SCHEME_DIP_JOINT;
+        const dipY = BASELINE_Y - Math.min(figureAmps[i] ?? SCHEME_PEAK_AMP, figureAmps[i + 1] ?? SCHEME_PEAK_AMP) * share;
         if (link === 'overlap') {
           const band = slot * OVERLAP_BAND;
           overlaps.push({
@@ -463,6 +492,7 @@
     openWavePath,
     groupWavesIntoFigures,
     figurePath,
+    waveAmplitudes,
     bellPath,
     minToX,
     formatDurationClock,
