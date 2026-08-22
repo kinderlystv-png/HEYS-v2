@@ -81,7 +81,6 @@ describe('Hunger Energy Status UI adapter', () => {
 
   it('builds a relative daily energy context and preserves an explicit zero intake', () => {
     vi.setSystemTime(new Date('2026-07-04T18:00:00'));
-    global.HEYS.dayNorm = { kcal: () => 2100 };
 
     const low = Adapter.buildContextFromDay({
       date: '2026-07-04',
@@ -97,11 +96,17 @@ describe('Hunger Energy Status UI adapter', () => {
       optimum: 2000,
       tdee: 2300
     });
-    const cleared = Adapter.buildContextFromDay({
-      date: '2026-07-04',
-      day: { date: '2026-07-04', meals: [], savedEatenKcal: 1600 },
-      eatenKcal: 0
-    });
+    global.HEYS.dayNorm = { kcal: () => 2100 };
+    let cleared;
+    try {
+      cleared = Adapter.buildContextFromDay({
+        date: '2026-07-04',
+        day: { date: '2026-07-04', meals: [], savedEatenKcal: 1600 },
+        eatenKcal: 0
+      });
+    } finally {
+      delete global.HEYS.dayNorm;
+    }
 
     expect(low).toMatchObject({
       dayEatenKcal: 800,

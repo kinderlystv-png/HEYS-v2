@@ -116,7 +116,14 @@ describe('HEYS.TDEE.calculate — день с назначенным равен 
 });
 
 describe('getPreviousDayTrainings — вчерашний план не разгоняет сегодняшний NDTE', () => {
-  const EMPTY = { trainings: [], totalKcal: 0, hoursSince: Infinity, dominantType: null };
+  const EMPTY = {
+    trainings: [],
+    totalKcal: 0,
+    hoursSince: Infinity,
+    dominantType: null,
+    prevDate: '2026-08-08',
+    anchorTime: null,
+  };
   const prevDayWith = (trainings) => (key) =>
     key === 'heys_dayv2_2026-08-08' ? { trainings } : null;
 
