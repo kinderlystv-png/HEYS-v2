@@ -879,7 +879,7 @@ function createTools({
     });
     if (!saved.length) return [];
 
-    const res = await api.upsertKV(sessionToken, products.OVERLAY_KEY, next);
+    const res = await products.saveOverlayRows(api, sessionToken, next);
     if (!res.ok) return [];
     catalogPromise = null;
     return saved;
@@ -1611,7 +1611,7 @@ function createTools({
       if (overlayRes.error) throw new ToolError('upstream_error', `Не удалось прочитать список продуктов: ${overlayRes.error.message}`);
       const overlay = Array.isArray(overlayRes.data) ? overlayRes.data : [];
 
-      const saveRes = await api.upsertKV(sessionToken, products.OVERLAY_KEY, [...overlay, row]);
+      const saveRes = await products.saveOverlayRows(api, sessionToken, [...overlay, row]);
       if (!saveRes.ok) throw new ToolError('save_failed', `Сервер отклонил создание продукта: ${saveRes.error}`);
       catalogPromise = null;
 
@@ -2621,7 +2621,7 @@ function createTools({
           nowMs,
           makeId: () => `p_${nowMs}_${crypto.randomBytes(3).toString('hex')}`,
         });
-        const saveRes = await api.upsertKV(sessionToken, products.OVERLAY_KEY, applied.rows);
+        const saveRes = await products.saveOverlayRows(api, sessionToken, applied.rows);
         if (!saveRes.ok) throw new ToolError('save_failed', `Сервер отклонил правку продукта: ${saveRes.error}`);
         catalogPromise = null;
         const changesText = patchResult
@@ -2670,7 +2670,7 @@ function createTools({
         nowMs,
         makeId: () => `p_${nowMs}_${crypto.randomBytes(3).toString('hex')}`,
       });
-      const saveRes = await api.upsertKV(sessionToken, products.OVERLAY_KEY, rows);
+      const saveRes = await products.saveOverlayRows(api, sessionToken, rows);
       if (!saveRes.ok) throw new ToolError('save_failed', `Сервер отклонил правку продукта: ${saveRes.error}`);
       catalogPromise = null;
 
@@ -2834,7 +2834,7 @@ function createTools({
       const tombstones = [...existing.filter((t) => t && String(t.id) !== String(target.id)),
         { id: target.id, name: target.name || null, ts: nowMs }].slice(-200);
 
-      const saveOverlay = await api.upsertKV(sessionToken, products.OVERLAY_KEY, rows);
+      const saveOverlay = await products.saveOverlayRows(api, sessionToken, rows);
       if (!saveOverlay.ok) throw new ToolError('save_failed', `Сервер отклонил удаление продукта: ${saveOverlay.error}`);
       const saveTomb = await api.upsertKV(sessionToken, TOMBSTONES_KEY, tombstones);
       if (!saveTomb.ok) {

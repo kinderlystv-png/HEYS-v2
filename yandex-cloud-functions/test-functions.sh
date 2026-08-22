@@ -56,6 +56,14 @@ node --test "$SCRIPT_DIR/__tests__/serverless-sync-load-test.test.cjs"
 node --test "$SCRIPT_DIR/__tests__/messenger-gateway-contract.test.cjs"
 node --test "$SCRIPT_DIR/__tests__/gateway-cors-contract.test.cjs"
 
+# Кодек манифеста каталога обязан совпадать с клиентским байт-в-байт: сервер и
+# браузер считают один и тот же хеш, и разойтись им нельзя — клиент отвергнет
+# пару молча (инцидент 2026-08-22, apps/web/BUGS_HISTORY.md).
+if ! cmp -s "$SCRIPT_DIR/../apps/web/heys_overlay_shard_codec_v1.js" "$SCRIPT_DIR/shared/overlay-shard-codec.js"; then
+  echo "Overlay shard codec mirror diverged from apps/web/heys_overlay_shard_codec_v1.js" >&2
+  exit 1
+fi
+
 for function_name in "${TARGETS[@]}"; do
   function_dir="$SCRIPT_DIR/$function_name"
   package_file="$function_dir/package.json"
@@ -72,6 +80,13 @@ for function_name in "${TARGETS[@]}"; do
     fi
     if ! cmp -s "$SCRIPT_DIR/shared/serverless-capacity-guard.js" "$function_dir/shared/serverless-capacity-guard.js"; then
       echo "Serverless capacity guard mirror is stale for $function_name" >&2
+      exit 1
+    fi
+  fi
+
+  if [[ "$function_name" == "heys-mcp" ]]; then
+    if ! cmp -s "$SCRIPT_DIR/shared/overlay-shard-codec.js" "$function_dir/shared/overlay-shard-codec.js"; then
+      echo "Overlay shard codec mirror is stale for $function_name" >&2
       exit 1
     fi
   fi

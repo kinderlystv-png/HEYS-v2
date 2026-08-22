@@ -1058,14 +1058,24 @@ test('create_product по allow_duplicate проходит мимо похоже
   const api = fakeApi({ day: null, overlay: saladOverlay });
   const tools = build(api);
   await tools.heys_create_product({ ...LABEL, name: 'Крабовый салат', allow_duplicate: true });
-  assert.equal(api.upserts.length, 1);
+  // Каталог пишется парой: строки и сторож целостности. Без манифеста
+  // клиент отвергает пару молча (2026-08-22, apps/web/BUGS_HISTORY.md).
+  assert.deepEqual(api.upserts.map((u) => u.key), [
+    'heys_products_overlay_v2',
+    'heys_products_overlay_v2_rpc_manifest',
+  ]);
 });
 
 test('create_product по явному подтверждению всё же создаёт одноимённый продукт', async () => {
   const api = fakeApi({ day: null });
   const tools = build(api);
   await tools.heys_create_product({ ...LABEL, name: 'Кофе американо', allow_duplicate: true });
-  assert.equal(api.upserts.length, 1);
+  // Каталог пишется парой: строки и сторож целостности. Без манифеста
+  // клиент отвергает пару молча (2026-08-22, apps/web/BUGS_HISTORY.md).
+  assert.deepEqual(api.upserts.map((u) => u.key), [
+    'heys_products_overlay_v2',
+    'heys_products_overlay_v2_rpc_manifest',
+  ]);
 });
 
 test('create_product предупреждает про похожее название, даже если текст не совпал точно', async () => {
@@ -2011,7 +2021,7 @@ test('WRITE_TOOLS совпадает с обработчиками, которы
   for (const line of source.split('\n')) {
     const header = /^ {4}async (heys_[a-z_]+)\(/.exec(line);
     if (header) current = header[1];
-    if (current && /\b(writeDay|saveCardKey|api\.upsertKV)\(/.test(line)) found.add(current);
+    if (current && /\b(writeDay|saveCardKey|api\.upsertKV|products\.saveOverlayRows)\(/.test(line)) found.add(current);
   }
   assert.deepEqual([...found].sort(), [...WRITE_TOOLS].sort(),
     'список WRITE_TOOLS разошёлся с инструментами, которые пишут в облако');

@@ -17,6 +17,14 @@ const crypto = require('node:crypto');
 const { computeTefKcal100 } = require('./day');
 
 const OVERLAY_KEY = 'heys_products_overlay_v2';
+const OVERLAY_MANIFEST_KEY = 'heys_products_overlay_v2_rpc_manifest';
+
+// Кодек — байт-в-байт зеркало apps/web/heys_overlay_shard_codec_v1.js, расхождение
+// ловит cmp в test-functions.sh. Модуль вешает api на globalThis.HEYS, а в
+// CommonJS ещё и в module.exports; берём то, что доступно.
+const overlayCodec = require('../shared/overlay-shard-codec.js').createSingle
+  ? require('../shared/overlay-shard-codec.js')
+  : globalThis.HEYS.OverlayShardCodec;
 
 /** shared_products приходит из REST с lowercase-колонками — приводим к схеме UI. */
 const COLUMN_ALIASES = {
@@ -1325,8 +1333,50 @@ function applyProductPatchToOverlay(overlayRows, product, patch, { nowMs, makeId
   return { rows, mode: 'linked' };
 }
 
+/**
+ * Записать личный каталог клиента: строки И сторож целостности.
+ *
+ * Почему нельзя просто upsertKV(OVERLAY_KEY, rows). Каталог — это пара ключей:
+ * строки и манифест (`rowCount` + хеш строк). Клиент собирает каталог через
+ * codec.assemble(): не сошёлся хеш или длина — вся пара отвергается, причём
+ * молча (heys_storage_supabase_v1.js: `if (!assembled.ok) return out;`). На
+ * устройстве человека каталог продолжает жить из локального хранилища, а на
+ * новом приезжает пустым, и ошибки в интерфейсе при этом нет.
+ *
+ * Инцидент 2026-08-22: три инструмента MCP писали только строки. Первый же
+ * заведённый куратором продукт разводил пару навсегда — у двух клиентов из трёх
+ * расхождение накопилось до 5 и 18 позиций (см. apps/web/BUGS_HISTORY.md).
+ *
+ * Порядок как у веб-клиента: строки, затем манифест — «commit marker written
+ * last». Если манифест не записался, возвращаем ошибку, а не тихий успех:
+ * рассогласованная пара хуже, чем незаписанный продукт, и куратор должен об
+ * этом узнать сразу.
+ */
+async function saveOverlayRows(api, sessionToken, rows) {
+  const publication = overlayCodec.createSingle(rows);
+  if (!publication.ok) {
+    return { ok: false, error: `манифест каталога не построился (${publication.reason})` };
+  }
+
+  const saveRows = await api.upsertKV(sessionToken, OVERLAY_KEY, publication.shards[0]);
+  if (!saveRows.ok) return saveRows;
+
+  const saveManifest = await api.upsertKV(sessionToken, OVERLAY_MANIFEST_KEY, publication.manifest);
+  if (!saveManifest.ok) {
+    return {
+      ok: false,
+      error: `строки записаны, но сторож целостности каталога — нет (${saveManifest.error}). `
+        + 'Каталог в этом состоянии не приедет на новое устройство: повторить операцию.',
+    };
+  }
+
+  return { ok: true };
+}
+
 module.exports = {
   OVERLAY_KEY,
+  OVERLAY_MANIFEST_KEY,
+  saveOverlayRows,
   EDITABLE_FIELDS,
   RECIPE_MASS_FIELDS,
   buildProductPatch,

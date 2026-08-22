@@ -881,6 +881,25 @@
     return mergeRpcTailDeduped(deduped, client_id, isProductsTailRpcKey, 'heys_products');
   }
 
+  // Каталог не собрался — это НЕ «данных нет». Строки в облаке есть, но пара
+  // с манифестом не сходится, и мы им не доверяем. Разница важная: молчание
+  // здесь неотличимо от пустого каталога, а именно так инцидент 21.08 прожил
+  // часы незамеченным. Логируем один раз на пару «клиент + причина», чтобы не
+  // залить консоль на каждом круге синхронизации.
+  const overlayAssemblyReported = new Set();
+  function reportOverlayAssemblyFailure(assembled, clientId, source) {
+    const status = assembled?.status || 'unknown';
+    const mark = `${clientId}:${status}`;
+    if (overlayAssemblyReported.has(mark)) return;
+    overlayAssemblyReported.add(mark);
+    logCritical(
+      `🧩 [OVERLAY] Каталог продуктов не принят из облака: ${status} ` +
+      `(client=${String(clientId).slice(0, 8)}, source=${source}). ` +
+      'Строки и манифест разошлись — на этом устройстве каталог останется локальным. ' +
+      'Починка: DISASTER_RECOVERY_RUNBOOK.md, Scenario 9.'
+    );
+  }
+
   function mergeOverlayRpcTailRawClientRows(rows, clientId) {
     if (!Array.isArray(rows) || rows.length === 0 || !clientId) return rows;
     const codec = global.HEYS?.OverlayShardCodec;
@@ -912,7 +931,10 @@
     const assembled = codec.assemble(mainRow?.v, assemblyTailRows.map((row) => row?.v), manifestRow?.v);
     const familySet = new Set(family);
     const out = rows.filter((row) => !familySet.has(row));
-    if (!assembled.ok) return out;
+    if (!assembled.ok) {
+      reportOverlayAssemblyFailure(assembled, clientId, 'raw-rows');
+      return out;
+    }
     const template = mainRow || tailRows[0];
     out.push({ ...template, k: 'heys_products_overlay_v2', v: assembled.rows });
     return out;
@@ -951,7 +973,10 @@
     const assembled = codec.assemble(mainEntry?.row?.v, assemblyTailEntries.map((entry) => entry?.row?.v), manifestEntry?.row?.v);
     const familySet = new Set(family);
     const out = deduped.filter((entry) => !familySet.has(entry));
-    if (!assembled.ok) return out;
+    if (!assembled.ok) {
+      reportOverlayAssemblyFailure(assembled, client_id, 'deduped');
+      return out;
+    }
     const template = mainEntry || tailEntries[0];
     out.push({
       ...template,
