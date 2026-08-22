@@ -104,8 +104,10 @@ describe('данные шести виджетов · контракт home-widg
     expect(fiber.remaining).toBe(9);
   });
 
-  it('клетчатка: подсказка — тот же словарь «чем добрать», без граммовок', () => {
+  it('клетчатка: подсказка — категории словаря «чем добрать», без граммовок', () => {
     const fiber = boot().getFiberWidgetData();
+    // Именно категории, а не продукты: словаря продуктов в коде нет, и заводить
+    // второй контракт запретил (решение 22 августа).
     expect(fiber.sources).toEqual(['Овощи', 'Бобовые', 'Цельные злаки']);
     expect(fiber.sources.join(' ')).not.toMatch(/г\b/);
   });
@@ -124,6 +126,16 @@ describe('данные шести виджетов · контракт home-widg
     // 200×12% + 300×20% + 100×6% = 24 + 60 + 6 = 90.
     expect(protein.protein).toBe(90);
     expect(protein.remaining).toBe(50);
+  });
+
+  it('белок: подсказки нет вовсе — словарь «чем добрать» про клетчатку', () => {
+    const data = boot();
+    data.getMacrosData = () => ({ proteinTarget: 140 });
+    // Ни поля с источниками в данных, ни строки в виде «Добрать».
+    expect(data.getProteinWidgetData().sources).toBeUndefined();
+    const ui = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
+    const body = ui.slice(ui.indexOf('function ProteinVariantBody'), ui.indexOf('function ProteinWidgetContent'));
+    expect(body).not.toContain('widget-v4-hint');
   });
 
   it('белок: вид «По приёмам» даёт время и граммы каждого приёма', () => {
@@ -175,13 +187,18 @@ describe('данные шести виджетов · контракт home-widg
     expect(empty.word).toBe('не ел');
   });
 
-  it('качество еды: индекс — та же вредность, второго расчёта нет', () => {
+  it('качество еды: индекс — та же вредность, порог шалфея тот же (5 из 10)', () => {
     const quality = boot().getFoodQualityData();
     // Вредность взвешена по граммам: (200×1 + 300×2 + 100×8) / 600 = 2,67.
     expect(quality.score).toBeCloseTo(7.3, 1);
     expect(quality.delta).toBeCloseTo(2.7, 1);
     // «Что снизило» называет самый вредный вклад дня.
     expect(quality.reason).toBe('печенье');
+
+    // Шалфей от 5 из 10, то есть вредность ≤ 5 — порог карточки «Питания»,
+    // своего у виджета нет (решение 22 августа, прежний порог 8 отменён).
+    const ui = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
+    expect(ui).toContain("const state = score >= 5 ? 'good' : 'neutral';");
   });
 
   it('ритм приёмов: интервалы считаются между соседними приёмами', () => {

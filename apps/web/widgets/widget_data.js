@@ -883,9 +883,6 @@
       const hasData = this._dayHasItems(day);
       const protein = hasData ? Math.round(Number(totals?.prot) || 0) : null;
 
-      // Словаря источников белка в продукте нет; контракт разрешает: пустой
-      // словарь — строка подсказки не показывается.
-      const sources = [];
 
       const byMeal = [];
       const meals = Array.isArray(day?.meals) ? day.meals : [];
@@ -905,7 +902,6 @@
         target,
         pct: hasData && target > 0 ? Math.round((protein / target) * 100) : 0,
         remaining: hasData && target > 0 ? Math.max(0, target - protein) : 0,
-        sources,
         byMeal
       };
     },

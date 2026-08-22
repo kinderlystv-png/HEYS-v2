@@ -5141,7 +5141,9 @@
     }
 
     if (variantId === 'add') {
-      const sources = Array.isArray(data?.sources) ? data.sources.slice(0, 3) : [];
+      // Подсказки здесь нет: словарь «чем добрать» — про клетчатку, а источников
+      // белка в продукте не существует. Советовать овощи под именем белка
+      // нельзя (решение 22 августа). Ниже остатка не рисуется ничего.
       return React.createElement('div', { className: 'widget-v4-stack widget-v4-protein' },
         v4Kicker('Белок'),
         React.createElement('div', { className: 'widget-v4-goal-hero' },
@@ -5152,9 +5154,6 @@
         ),
         hasData && data.remaining > 0
           ? React.createElement('span', { className: 'widget-v4-muted' }, `+${data.remaining} г добрать`)
-          : null,
-        sources.length
-          ? React.createElement('span', { className: 'widget-v4-hint' }, sources.join(' · '))
           : null
       );
     }
@@ -5246,9 +5245,10 @@
   function FoodQualityVariantBody({ variantId, data }) {
     const hasData = data?.hasData === true && data?.score != null;
     const score = Number(data?.score) || 0;
-    // Чернила; от 8 из 10 — шалфей. Красным не красится: низкий балл
-    // объясняет вид «Что снизило», а не цвет.
-    const state = score >= 8 ? 'good' : 'neutral';
+    // Чернила; от 5 из 10 — шалфей, то есть вредность ≤ 5: тот же порог, что
+    // в карточке «Качество еды» на «Питании», своего у виджета нет (решение
+    // 22 августа). Красным не красится: низкий балл объясняет вид «Что снизило».
+    const state = score >= 5 ? 'good' : 'neutral';
 
     if (variantId === 'week') {
       const week = Array.isArray(data?.week) ? data.week : [];
