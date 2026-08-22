@@ -650,6 +650,20 @@ function createTools({
     return ` Активность: ${bits.join(', ')}${total}${mixed}`;
   }
 
+  /**
+   * Поддержание и целевой дефицит — в structured уже были (norm.parts, norm.note),
+   * но модель читает text. Без этой строки вопрос «норма с дефицитом и без»
+   * тянул лишний heys_get_profile (22.08.2026, 23:03).
+   */
+  function normDeficitText(norm) {
+    const parts = norm && norm.parts;
+    if (!parts || parts.maintenance == null) return '';
+    const deficitPct = Number(parts.deficit_pct) || 0;
+    return deficitPct
+      ? ` Целевой ${deficitPct < 0 ? 'дефицит' : 'профицит'} ${Math.abs(deficitPct)}% уже учтён: без него расход дня — ${parts.maintenance} ккал.`
+      : ' Целевой дефицит в профиле не задан (0%) — это норма поддержания.';
+  }
+
   function normText(norm) {
     if (!norm || !norm.source) return ` Норма не рассчитана (${norm && norm.reason ? day.NORM_REASONS[norm.reason] : 'нет данных'}).${activityText(norm)}`;
     const approx = norm.source === 'estimate' ? '≈' : '';
@@ -662,7 +676,7 @@ function createTools({
       computed: ' — посчитана по данным дня',
       estimate: ' — расчётная оценка, история за прошлые дни недоступна',
     };
-    return ` Норма: ${approx}${norm.kcal} ккал${macros}${FROM[norm.source] || FROM.estimate}.${activityText(norm)}`;
+    return ` Норма: ${approx}${norm.kcal} ккал${macros}${FROM[norm.source] || FROM.estimate}.${normDeficitText(norm)}${activityText(norm)}`;
   }
 
   /**

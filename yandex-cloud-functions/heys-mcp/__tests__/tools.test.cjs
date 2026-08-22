@@ -1146,6 +1146,25 @@ test('get_day для сегодня пишет норму и статус чек
   assert.ok(res.structured.norm);
 });
 
+test('get_day печатает поддержание и целевой дефицит в text, не только в structured', async () => {
+  const api = fakeApi({
+    card: CARD,
+    day: { date: '2026-08-01', meals: [], waterMl: 0, weightMorning: 80, updatedAt: 111 },
+  });
+  const res = await build(api).heys_get_day({ date: '2026-08-01' });
+  assert.match(res.text, /Целевой дефицит 15% уже учтён: без него расход дня — 1730 ккал/);
+  assert.match(res.structured.norm.note, /Целевой дефицит 15%/);
+});
+
+test('get_day при нулевом дефиците называет норму поддержанием в text', async () => {
+  const api = fakeApi({
+    card: { heys_profile: { weight: 90, height: 183, age: 38, gender: 'Мужской', deficitPctTarget: 0 } },
+    day: { date: '2026-08-01', meals: [], waterMl: 0, weightMorning: 90, updatedAt: 111 },
+  });
+  const res = await build(api).heys_get_day({ date: '2026-08-01' });
+  assert.match(res.text, /Целевой дефицит в профиле не задан \(0%\) — это норма поддержания/);
+});
+
 test('log_meal печатает item_id в text', async () => {
   const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 5 } });
   const tools = build(api);
