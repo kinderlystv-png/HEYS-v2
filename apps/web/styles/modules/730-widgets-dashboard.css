@@ -10553,8 +10553,11 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   visibility: hidden;
 }
 
+/* Плитка добавления — раздел контракта «Плитка добавления». Заливки нет:
+   пунктир 2 px акцентным тоном на 32 %, радиус как у плиток. Высота всегда
+   один ряд: второго ряда у неё не бывает ни при какой ширине. Ширину задаёт
+   inline grid-column — она считается от хвоста последнего ряда. */
 .widget-v4-add {
-  grid-column: span 2;
   border-radius: 16px;
   border: 2px dashed color-mix(in srgb, var(--v4-sand-act-mid, #a75c2b) 32%, transparent);
   background: transparent;
@@ -10568,7 +10571,13 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   line-height: 1;
   cursor: pointer;
   font-family: inherit;
+  grid-row: span 1;
   min-height: 0;
+}
+
+/* В одну колонку остаётся только знак — зазор под слово не нужен. */
+.widget-v4-add--span1 {
+  gap: 0;
 }
 
 .widget-v4-catalog {

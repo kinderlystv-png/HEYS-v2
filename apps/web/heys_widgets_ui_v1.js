@@ -8621,6 +8621,41 @@
    * здесь не заводим: второй механизм отмены рядом с первым — ровно то, что
    * вычищали в баре удаления.
    */
+  // Плитка добавления — раздел контракта «Плитка добавления» (22 августа).
+  // Она не виджет: в состав дефолта, в сброс и в потолок одиннадцати плиток не
+  // считается, своего места в порядке не имеет.
+  //
+  // Ширина — свободный хвост последнего ряда, но не больше двух колонок:
+  // трёх- и четырёхколоночной кнопки не бывает. Ряд занят целиком — плитка
+  // встаёт новым рядом слева на 2 колонки, а две клетки справа остаются
+  // пустыми: это конец сетки, а не дырка.
+  function addTileSpan(widgets, cols) {
+    const list = Array.isArray(widgets) ? widgets : [];
+    if (!list.length) return 2;
+
+    const grid = Number(cols) || 4;
+    let lastRow = 0;
+    list.forEach((widget) => {
+      const row = Number(widget?.position?.row) || 0;
+      const rows = Number(widget?.rows) || 1;
+      lastRow = Math.max(lastRow, row + rows - 1);
+    });
+
+    let busy = 0;
+    list.forEach((widget) => {
+      const row = Number(widget?.position?.row) || 0;
+      const rows = Number(widget?.rows) || 1;
+      // Плитка высотой в два ряда занимает клетки и в последнем из них.
+      if (row <= lastRow && row + rows - 1 >= lastRow) {
+        busy += Number(widget?.cols) || 1;
+      }
+    });
+
+    const tail = grid - busy;
+    if (tail <= 0) return 2;
+    return tail >= 2 ? 2 : 1;
+  }
+
   function RecommendedScreenBlock({ onReset }) {
     return React.createElement('div', { className: 'widget-v4-recommended' },
       React.createElement('div', { className: 'widget-v4-catalog__tier' }, 'Рекомендуемый экран'),
@@ -9850,6 +9885,12 @@
       }
     }, [isEditMode]);
 
+    // Ширина плитки добавления — хвост последнего ряда, максимум две колонки.
+    const addTileSpanValue = useMemo(
+      () => addTileSpan(widgets, 4),
+      [widgets]
+    );
+
     // Количество строк для grid overlay (максимальная занятая строка + запас)
     const overlayRows = useMemo(() => {
       if (!widgets.length) return 8;
@@ -9933,20 +9974,29 @@
               onSettings: setSettingsWidget
             })
           ),
-          // Пунктирная рамка в конце сетки открывает каталог; вне расстановки
-          // её нет — там под сеткой только «Изменить экран» (канвас v4, 53, 93).
-          isEditMode && React.createElement('button', {
+          // Пунктирная плитка стоит в сетке всегда, в обычном режиме тоже, и
+          // всегда последней клеткой (контракт, раздел «Плитка добавления»).
+          // Нажатие открывает тот же каталог, что и в расстановке, но саму
+          // расстановку не включает и порядок плиток не трогает.
+          React.createElement('button', {
             type: 'button',
-            className: 'widget-v4-add' + (catalogOpen ? ' is-open' : ''),
+            className: 'widget-v4-add widget-v4-add--span' + addTileSpanValue
+              + (catalogOpen ? ' is-open' : ''),
+            style: { gridColumn: `span ${addTileSpanValue}` },
             'aria-expanded': catalogOpen ? 'true' : 'false',
+            'aria-label': 'Добавить виджет',
             onClick: () => setCatalogOpen((open) => !open)
           },
             React.createElement('svg', {
-              width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
+              // В одну колонку слово не встаёт и не переносится — остаётся
+              // только знак, и он крупнее.
+              width: addTileSpanValue === 1 ? 18 : 14,
+              height: addTileSpanValue === 1 ? 18 : 14,
+              viewBox: '0 0 24 24', fill: 'none',
               stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
               'aria-hidden': 'true'
             }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
-            React.createElement('span', null, 'Добавить')
+            addTileSpanValue === 1 ? null : React.createElement('span', null, 'Добавить')
           )
         ),
         isEditMode && showGridOverlay && React.createElement('div', {
@@ -9985,7 +10035,7 @@
         )
       ),
 
-      isEditMode && catalogOpen && React.createElement(CatalogStrip, {
+      catalogOpen && React.createElement(CatalogStrip, {
         onSelect: handleCatalogSelect,
         existingTypes: new Set((widgets || []).map(w => w.type)),
         selectedDate
