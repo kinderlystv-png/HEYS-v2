@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# After git pull / merge: rebuild local bundles + version meta so dev:local matches HEAD.
+if [ "${HEYS_SKIP_SYNC_LOCAL:-}" = "1" ]; then
+  echo "[post-merge] HEYS_SKIP_SYNC_LOCAL=1 — skipping sync:local"
+  exit 0
+fi
+
+pnpm run sync:local || exit 1

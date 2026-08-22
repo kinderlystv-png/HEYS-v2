@@ -7,6 +7,7 @@ import { defineConfig } from 'vite';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 import vitePluginVersionHash from './scripts/vite-plugin-version-hash.js';
+import vitePluginBundleManifestReload from './scripts/vite-plugin-bundle-manifest-reload.js';
 
 export default defineConfig({
   plugins: [
@@ -65,6 +66,7 @@ export default defineConfig({
       },
     },
     react(),
+    vitePluginBundleManifestReload({ rootDir: __dirname }),
     // Auto-versioning: заменяет ?v=N на ?v=CONTENTHASH для cache busting
     vitePluginVersionHash({ verbose: true }),
     // Копирование CSS модулей в dist для production

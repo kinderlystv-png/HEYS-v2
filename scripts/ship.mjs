@@ -21,7 +21,8 @@
  *   4. If commit is user-facing (feat/fix/perf), auto-generate a whats-new
  *      entry from the commit subject and create a chore(release) follow-up.
  *   5. `git push` current branch.
- *   6. If on main, watch deploy workflows for this SHA (warn if not found).
+ *   6. `pnpm sync:local` — version meta + legacy bundles (localhost = prod code).
+ *   7. If on main, watch deploy workflows for this SHA (warn if not found).
  *
  * Env it sets for child processes:
  *   HEYS_SHIP=1            — pre-commit bypass: ship is all-in-one by design
@@ -46,6 +47,7 @@ const flags = {
   dryRun: args.includes('--dry-run'),
   noPush: args.includes('--no-push'),
   noWatch: args.includes('--no-watch'),
+  skipSyncLocal: args.includes('--skip-sync-local'),
   allowNonMain: args.includes('--allow-non-main'),
   // SEC: skip ship-lock acquisition. Use for emergency hot-fix only when you
   // KNOW no other agent is shipping — bypasses the multi-agent serialisation.
@@ -623,6 +625,12 @@ function main() {
   }
 
   run('git', ['push', 'origin', branch], { label: `🚀 push origin ${branch}` });
+
+  if (!flags.skipSyncLocal) {
+    run('node', ['scripts/sync-local-workspace.mjs', '--force'], { label: '🔄 sync:local (version + bundles)' });
+  } else {
+    out('[ship] --skip-sync-local: local bundles not refreshed.');
+  }
 
   watchDeploy(branch);
 

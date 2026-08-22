@@ -38,13 +38,13 @@ mechanics; it never grants permission.
 
 ## 2. Choose the operation before staging
 
-| User grant                               | Canonical operation                                                                                             | Push? |
-| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----- |
-| No commit grant                          | Source edit + scoped local preview only                                                                         | No    |
-| Commit-only, one intended staged group   | `pnpm ship "<conventional message>" --no-push`                                                                  | No    |
-| Commit + push, one intended staged group | `pnpm ship "<conventional message>"`                                                                            | Yes   |
-| Push already-created commit(s)           | `pnpm push:agent -- --confirm-push ...` when its release/preflight flow is needed; otherwise follow hook stderr | Yes   |
-| Explicit collector integration           | `pnpm agents:integrate --confirm-integration ...` from a clean intended collector worktree                      | No    |
+| User grant                               | Canonical operation                                                                        | Push? |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------ | ----- |
+| No commit grant                          | Source edit + scoped local preview only                                                    | No    |
+| Commit-only, one intended staged group   | `pnpm ship "<conventional message>" --no-push`                                             | No    |
+| Commit + push, one intended staged group | `pnpm ship "<conventional message>"` — after push runs `sync:local` automatically          | Yes   |
+| Push already-created commit(s)           | `pnpm push:agent -- --confirm-push ...` — after push runs `sync:local` automatically       | Yes   |
+| Explicit collector integration           | `pnpm agents:integrate --confirm-integration ...` from a clean intended collector worktree | No    |
 
 `pnpm ship` rejects an empty staged set, expects `main` by default, and refuses
 a non-`main` branch unless `--allow-non-main` is intentional. Without
@@ -192,8 +192,13 @@ gates. `pnpm push:safe` is deprecated and does not provide a safe bypass.
 - `pnpm push:agent -- --confirm-push ...` is a fallback for already-created or
   grouped commits, not the default way to create a source commit. It can create
   a What's New follow-up commit when that feature is enabled, always runs
-  `push:preflight`, pushes `HEAD:<target branch>` with bounded retries, and on
-  `main` watches and verifies deployment.
+  `push:preflight`, pushes `HEAD:<target branch>` with bounded retries, runs
+  `sync:local --force` so localhost matches pushed sources, and on `main`
+  watches and verifies deployment. Do not ask the user to run `sync:local` or
+  `pnpm pull` after a successful agent push — that step is built in. Use
+  `--skip-sync-local` only when explicitly requested.
+- `pnpm ship` likewise runs `sync:local --force` after a successful push unless
+  `--skip-sync-local` is passed.
 - Answer “committed/pushed/deployed?” from current evidence, not memory: inspect
   status and log; fetch the remote before making a remote-state claim.
 

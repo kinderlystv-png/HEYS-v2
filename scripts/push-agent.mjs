@@ -16,6 +16,9 @@
  *   pnpm push:agent -- --print-command
  *   pnpm push:agent -- --confirm-push --no-push ...
  *   pnpm push:agent -- --confirm-push --no-watch ...
+ *
+ * After a successful push, runs `pnpm sync:local --force` so localhost:3001
+ * matches the pushed sources without a separate manual step.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -821,6 +824,21 @@ function ensureReleaseEntry() {
   }
 }
 
+function syncLocalWorkspaceAfterPush() {
+  if (hasFlag('--skip-sync-local')) {
+    writeLine('Skipping sync:local (--skip-sync-local).');
+    return;
+  }
+  writeLine('');
+  writeLine('Syncing local workspace (version meta + legacy bundles)…');
+  const sync = runNode('scripts/sync-local-workspace.mjs', ['--force']);
+  if (sync.status !== 0) {
+    writeError('Local sync failed after push. Run: pnpm sync:local --force');
+    process.exit(sync.status || 1);
+  }
+  writeLine('Local dev: hard reload http://localhost:3001 if dev:local is already running.');
+}
+
 function push() {
   const dirtyLines = getWorkingTreeStatusLines();
   if (dirtyLines.length > 0) {
@@ -857,6 +875,7 @@ function push() {
   const headSha = getGitOutput(['rev-parse', 'HEAD']);
   const result = pushGitWithRetry({ remote, branch, headSha });
   if (result.status !== 0) process.exit(result.status || 1);
+  syncLocalWorkspaceAfterPush();
   const deployed = waitForDeploy({ branch, headSha });
   if (deployed) verifyProductionDeployment({ headSha });
 }

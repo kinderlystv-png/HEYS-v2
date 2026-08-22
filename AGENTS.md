@@ -230,8 +230,9 @@ HEYS_COMMIT_SOURCE_ONLY=1 git commit -F <msg> -- <явные пути своих
 Забытый флаг роняет **твой** коммит на чужом грязном generated — это
 fail-closed: чужое не портится, но коммит придётся повторить. Бандлы в
 репозитории при таком флоу постепенно устаревают; для прода это безразлично (CI
-собирает их заново), а локальное дерево догоняет `pnpm bundles:sync` — он же
-вызывается из `pnpm pull` и со старта `pnpm dev:local`.
+собирает их заново), а локальное дерево догоняет `pnpm sync:local` — он же
+`bundles:sync`, вызывается из `pnpm pull`, husky `post-merge`, после
+`pnpm push:agent` и со старта `pnpm dev:local`.
 
 Финальную сборку generated делает явно разрешённый integration/release проход
 или CI — не добавляй её в свой коммит «чтобы не забыть».
@@ -333,11 +334,18 @@ fail-closed: чужое не портится, но коммит придётс�
   сам».
 - **После `git pull` — `pnpm pull`.** Бандлы в репозитории намеренно отстают от
   исходников (source-only коммиты параллельных сессий), поэтому обычный
-  `git pull` оставляет локалку на старом коде. `pnpm pull` = `git pull` +
-  `pnpm bundles:sync`: прогоняет промежуточные генераторы и селективно
-  пересобирает бандлы, чей `source_fingerprint` разошёлся. Старт
-  `pnpm dev:local` / `pnpm dev:web` делает то же сам, поэтому отдельная ручная
-  пересборка нужна только когда сервер уже поднят.
+  `git pull` без пересборки оставляет локалку на старом коде. `pnpm pull` =
+  `git pull` + `pnpm sync:local` (husky `post-merge` тоже зовёт `sync:local`;
+  для того же HEAD повтор пропускается). `sync:local` = `update-version` +
+  predev-генераторы + `verify-legacy-bundles --sync`. Старт `pnpm dev:local` /
+  `pnpm dev:web` делает то же через `bundles:sync`; если dev уже крутится — hard
+  reload после sync.
+- **Пользователь говорит «пуш» — агент не объясняет sync/pull.** Команда =
+  `pnpm push:agent -- --confirm-push …` (уже созданные коммиты) или
+  `pnpm ship "…"` (commit+push одним заходом). Обе **сами** вызывают
+  `sync:local` после успешного push. Отдельно `pnpm sync:local` / «сделай pull»
+  пользователю не предлагать. Если `dev:local` уже на :3001 — hard reload в
+  конце (Vite может перезагрузить сам при смене manifest).
 - `pnpm dev:web` / `pnpm dev:api` — только по явной просьбе изолировать один
   сервис (отладка API без UI и т.п.). Не дефолт.
 

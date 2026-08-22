@@ -357,10 +357,17 @@ function main() {
         const files = paths.join(',');
         // Нечитаемый бандл даёт весь свой список исходников — в консоль печатаем счёт.
         const printable = paths.length > 6 ? `${paths.slice(0, 6).join(',')} … +${paths.length - 6}` : files;
+        // Windows CreateProcess ~8191 chars — длинный --files= падает «командная строка слишком длинна».
+        const useFullRebuild =
+            paths.length > 40 || files.length > 6000 || (process.platform === 'win32' && files.length > 3500);
         console.info('[verify-legacy-bundles] 🔄 Бандлы отстали от исходников — пересобираю затронутые.');
-        console.info(`[verify-legacy-bundles] $ pnpm bundle:legacy:auto --files=${printable}`);
+        if (useFullRebuild) {
+            console.info('[verify-legacy-bundles] $ pnpm bundle:legacy  (слишком много входов для --files)');
+        } else {
+            console.info(`[verify-legacy-bundles] $ pnpm bundle:legacy:auto --files=${printable}`);
+        }
         try {
-            execFileSync('pnpm', ['bundle:legacy:auto', `--files=${files}`], {
+            execFileSync('pnpm', useFullRebuild ? ['bundle:legacy'] : ['bundle:legacy:auto', `--files=${files}`], {
                 cwd: ROOT, stdio: 'inherit', shell: process.platform === 'win32',
             });
         } catch {
