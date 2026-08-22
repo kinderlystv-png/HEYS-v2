@@ -3700,3 +3700,28 @@ test('updates[] не принимает дубль meal_id и meal_id рядом
   );
   assert.equal(api.saves.length, 0);
 });
+
+// ── Описания, которые учили лишнему кругу (замер 21:37 22.08.2026) ─────────
+// Инструкция до модели не доезжает, поэтому поведение задают описания. Три
+// текста задавали его неверно: «съедено вместе» дробилось на приёмы, дописать
+// позицию в приём модель считала невозможным, а норму дня шла искать в профиль.
+
+test('log_meal объясняет, что съеденное вместе — один вызов с несколькими позициями', () => {
+  const schema = TOOL_SCHEMAS.find((s) => s.name === 'heys_log_meal');
+  assert.match(schema.description, /Несколько продуктов, съеденных вместе, — ОДИН вызов/);
+  assert.match(schema.description, /meals\[\] нужен только когда у еды РАЗНОЕ время/);
+});
+
+test('add_items называет свой формат и new_product, а не одну строку', () => {
+  const schema = TOOL_SCHEMAS.find((s) => s.name === 'heys_update_meal');
+  const desc = schema.inputSchema.properties.add_items.description;
+  assert.match(desc, /тот же, что у items в heys_log_meal/);
+  assert.match(desc, /new_product/);
+  assert.match(desc, /второй приём не нужно/);
+});
+
+test('get_profile не зовёт себя ради нормы дня', () => {
+  const schema = TOOL_SCHEMAS.find((s) => s.name === 'heys_get_profile');
+  assert.match(schema.description, /Норму дня отсюда не узнают/);
+  assert.ok(!/из чего считаются нормы клиента/.test(schema.description));
+});

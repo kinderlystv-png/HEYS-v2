@@ -1090,7 +1090,7 @@ function createTools({
       // день возвращается прямо в ответе записи. Правило стоит здесь, в момент
       // вызова: словесное правило в инструкции соблюдается на усмотрение модели
       // (OPTIMIZATION_LOG, вывод №2).
-      const beforeWriteHint = ' Перед НОВОЙ записью (heys_log_meal, heys_update_day, heys_add_water, heys_log_training) этот вызов не нужен: чек-ин и норму сервер проверяет сам, а день после записи возвращается в её же ответе. Он нужен, только чтобы взять meal_id/item_id для правки или удаления.';
+      const beforeWriteHint = ' Перед НОВОЙ записью (heys_log_meal, heys_update_day, heys_add_water, heys_log_training) этот вызов не нужен: чек-ин и норму сервер проверяет сам, а день после записи возвращается в её же ответе. Он нужен, только чтобы взять meal_id/item_id для правки или удаления. Норма, поддержание и целевой дефицит — уже здесь, в norm; heys_get_profile ради них не зови.';
       const head = summary.meals.length || summary.water_ml
         ? `День ${date}: ${summary.totals.kcal} ккал, Б${summary.totals.protein} У${summary.totals.carbs} Ж${summary.totals.fat}, вода ${summary.water_ml} мл, приёмов: ${summary.meals.length}.${normText(norm)}${checkinText}${formatDayMealsBlock(summary)}${beforeWriteHint}`
         : `День ${date} пока пустой.${normText(norm)}${checkinText}${beforeWriteHint}`;
@@ -3882,7 +3882,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_log_meal',
-    description: 'Создать приём пищи в дневнике. Несколько приёмов из одной реплики («два часа назад X, час назад Y, сейчас Z») — ОДИН вызов с meals: [{time, items}, …]. «Такой же перекус/приём целиком»: heys_get_day → copy_meal { date, meal_id }. «Такой же конверт/одну позицию» из приёма с несколькими блюдами: copy_meal { date, meal_id, item_ids } — граммы с сервера, не из текста get_day. count при «два»/«три». Новые позиции из той же реплики — items рядом с copy_meal в одном вызове. Составной напиток — позициями или preset. Одиночный продукт — items: [{ query или product_id, grams }]. Незнакомый продукт с известным составом — new_product внутри позиции, без отдельного heys_create_product. Гейт чек-ина за сегодня сервер проверяет сам: не закрыт — вернёт checkin_required.',
+    description: 'Создать приём пищи в дневнике. Несколько приёмов из одной реплики («два часа назад X, час назад Y, сейчас Z») — ОДИН вызов с meals: [{time, items}, …]. «Такой же перекус/приём целиком»: heys_get_day → copy_meal { date, meal_id }. «Такой же конверт/одну позицию» из приёма с несколькими блюдами: copy_meal { date, meal_id, item_ids } — граммы с сервера, не из текста get_day. count при «два»/«три». Новые позиции из той же реплики — items рядом с copy_meal в одном вызове. Несколько продуктов, съеденных вместе, — ОДИН вызов с несколькими позициями: items: [{…}, {…}, {…}]. Каждый продукт отдельным вызовом — это отдельные приёмы в дневнике, так не надо; meals[] нужен только когда у еды РАЗНОЕ время. Составной напиток — позициями или preset. Одиночный продукт — items: [{ query или product_id, grams }]. Незнакомый продукт с известным составом — new_product внутри позиции, без отдельного heys_create_product. Гейт чек-ина за сегодня сервер проверяет сам: не закрыт — вернёт checkin_required.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -3972,7 +3972,7 @@ const TOOL_SCHEMAS = [
           },
           required: ['date', 'meal_id'],
         },
-        add_items: { type: 'array', description: 'Позиции, которые нужно добавить к приёму.', items: ITEM_SCHEMA },
+        add_items: { type: 'array', description: 'Позиции, которые нужно добавить к УЖЕ записанному приёму. Формат тот же, что у items в heys_log_meal: query или product_id, граммы или pieces, new_product для незнакомого продукта. Заводить ради новой позиции второй приём не нужно.', items: ITEM_SCHEMA },
         remove_item_ids: { type: 'array', items: { type: 'string' }, description: 'Id позиций, которые нужно убрать из приёма.' },
         set_grams: { type: 'object', description: 'Новые граммовки для позиций по их id: { "it_08399c46e4ff": 180 }.' },
         name: { type: 'string', description: 'Новое название приёма.' },
@@ -4125,7 +4125,7 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_get_profile',
-    description: 'Карточка клиента: пол, возраст, рост, вес, целевой вес, целевой дефицит, норма сна и шагов, трекинг цикла, доступ с десктопа, нормы рациона в процентах и пульсовые зоны. Вызывай перед правкой этих настроек и когда нужно понять, из чего считаются нормы клиента.',
+    description: 'Карточка клиента: пол, возраст, рост, вес, целевой вес, целевой дефицит, норма сна и шагов, трекинг цикла, доступ с десктопа, нормы рациона в процентах и пульсовые зоны. Вызывай перед правкой этих настроек. Норму дня отсюда не узнают: она вместе с поддержанием, целевым дефицитом и разбором активности приходит в heys_get_day (norm.parts) — отдельный вызов ради неё лишний.',
     inputSchema: { type: 'object', properties: {} },
   },
   {
