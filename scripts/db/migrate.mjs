@@ -10,7 +10,10 @@ const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(SCRIPT_DIR, '..', '..');
 const DEFAULT_MANIFEST = path.join(SCRIPT_DIR, 'migrations', 'manifest.json');
 const PSQL_WRAPPER = path.join(SCRIPT_DIR, 'psql.sh');
-const EXCLUDED_DIRS = new Set(['.git', 'node_modules', 'dist', 'coverage', '.claude', '.worktrees']);
+// Гейт говорит про SQL репозитория. Каталог pgsql — распакованный локально
+// дистрибутив PostgreSQL/pgAdmin: он не в гите и хранит 1165 шаблонных .sql,
+// которые миграциями не являются и в манифест попасть не могут.
+const EXCLUDED_DIRS = new Set(['.git', 'node_modules', 'dist', 'coverage', '.claude', '.worktrees', 'pgsql']);
 
 function toPosix(relativePath) {
   return relativePath.split(path.sep).join('/');
