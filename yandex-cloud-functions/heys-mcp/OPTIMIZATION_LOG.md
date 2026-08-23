@@ -74,7 +74,7 @@ NDTE — вес дня, не 70. Потолок 0.20 и произведение
 **Осталось.** Deploy `heys-mcp` + web bundle. Соседний долг: три «сегодня» (веб
 03:00 local vs MCP календарь МСК) — не в этом заходе.
 
-### 23.08.2026 — product catalog glue v9: assemble на чтение, тесты под пакетный overlay · СРАБОТАЛО
+### 23.08.2026 — product catalog glue v9: assemble на чтение, тесты под пакетный overlay · НА ПРОДЕ
 
 **Гипотеза.** Overlay читается одним `getKVMany` (main + manifest + 16 tails);
 запись чистит хвосты по `priorTailCount` из чтения, а не по повторному `getKV`
@@ -90,8 +90,12 @@ NDTE — вес дня, не 70. Потолок 0.20 и произведение
 **Результат.** `npm test` heys-mcp — 1304/1304; живые проверки: котлета, масло,
 legacy-хвосты, нулевой скор.
 
-**Осталось.** Deploy `heys-mcp`; SQL hygiene; post-deploy baseline 21/15; скрипт
-прогона `pickSearchMatch` на прод-каталоге — в `scripts/db/`.
+**Deploy.** `56516003` / `64c9b993`; `heys-mcp` на проде (deploy-all + CI
+`32606879370`); migration order 31 в ledger (31/31). `audit-resolve-live.mjs`
+(Anton) — **4/4**, exit 0; каталог **584**.
+
+**Осталось.** Post-deploy baseline `ambiguous_product` **21** /
+`product_not_found` **15** — тот же SQL-запрос через **7 дней** после деплоя.
 
 ### 22.08.2026 — боевой замер брифинга и три описания, которые учили лишнему кругу · ЧАСТИЧНО (повторный замер 23:03 есть)
 
@@ -578,7 +582,7 @@ legacy-хвосты, нулевой скор.
 
 ---
 
-### 23.08.2026 — catalog glue v9 (фаза A) · КОД ГОТОВ, ЖДЁТ ДЕПЛОЯ
+### 23.08.2026 — catalog glue v9 (фаза A) · НА ПРОДЕ
 
 **Что сделано (heys-mcp):**
 
@@ -593,6 +597,9 @@ legacy-хвосты, нулевой скор.
 - SQL: `scripts/db/migrations/2026-08-23_shared_catalog_glue_hygiene.sql`.
 - Guard: `restore-products-catalog.js --from-live` падает, если есть tail-шарды.
 
+**Deploy (23.08).** Код `56516003`, manifest `64c9b993`; `heys-mcp` на проде;
+hygiene SQL order 31; `audit-resolve-live.mjs` — 4/4 (в т.ч. «тефтели рисовые»).
+
 **Post-deploy baseline (7 дней до деплоя, снимать тем же запросом после):**
 
 | error_code          | событий | чатов |
@@ -600,8 +607,7 @@ legacy-хвосты, нулевой скор.
 | `ambiguous_product` | **21**  | 11    |
 | `product_not_found` | **15**  | 7     |
 
-`тефтели рисовые` → `product_not_found` до hygiene-SQL ожидаем; после миграции
-должен резолвиться.
+`тефтели рисовые` — ✔ после hygiene-SQL (live audit 23.08).
 
 **Вне фазы A (не делали):**
 
