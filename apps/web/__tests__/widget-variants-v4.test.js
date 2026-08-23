@@ -33,10 +33,11 @@ function countCatalogVariantsFromSource(src) {
 }
 
 describe('widget variants v4', () => {
-  it('каталог — 58 видов: шесть виджетов пакета 22 августа добавили пятнадцать', () => {
-    // 43 + клетчатка 3, белок 3, окно до сна 2, качество еды 3, ритм приёмов 2
-    // и готовность ко сну 2 — кадры 37–51 канваса.
-    expect(countCatalogVariantsFromSource(variantsSrc)).toBe(58);
+  it('каталог — 59 видов: шесть виджетов пакета 22 августа + number_week для веса', () => {
+    // 43 + клетчатка 3, белок 3, окно до сна 2, качество еды 3, ритм приёмов 2,
+    // готовность ко сну 2, number_week (вес дефолт) — кадры 37–51 канваса + home-widgets.
+    expect(countCatalogVariantsFromSource(variantsSrc)).toBe(59);
+    expect(variantsSrc).toContain("id: 'number_week', title: 'Число и неделя'");
     // Шаги переписаны 22 августа: оба вида — тренды, вида «сейчас» нет.
     expect(variantsSrc).toContain("id: 'week', title: 'Неделя', subtitle: 'семь столбиков и среднее'");
     expect(variantsSrc).toContain('HEYS.Widgets.VariantsV4');
