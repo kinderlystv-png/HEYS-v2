@@ -2264,6 +2264,28 @@
         return merged;
     }
 
+    const LEGACY_DAYV2_PREFIX = 'heys_dayv2_';
+
+    /**
+     * dayv2-ключ принадлежит текущему клиенту или unscoped legacy (инвариант 9).
+     * Отсекает foreign-scoped и pollution `heys_<cid>_<foreign>_dayv2_*`.
+     * @param {string} key
+     * @param {string|null|undefined} clientId
+     */
+    function isDayv2KeyForCurrentClient(key, clientId) {
+        if (!key || typeof key !== 'string' || !key.includes('_dayv2_') || key.includes('_dayv2_backup_')) {
+            return false;
+        }
+        if (key.startsWith(LEGACY_DAYV2_PREFIX) && key.indexOf('_heys_') === -1) {
+            const dateTail = key.slice(LEGACY_DAYV2_PREFIX.length);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateTail)) return true;
+        }
+        if (!clientId) return false;
+        const scope = String(clientId).toLowerCase();
+        const ownDayPrefix = `heys_${scope}_dayv2_`;
+        return key.toLowerCase().startsWith(ownDayPrefix);
+    }
+
     // === Exports ===
     // Всё экспортируется через HEYS.dayUtils
     // POPULAR_CACHE — приватный, не экспортируется (инкапсуляция)
@@ -2348,6 +2370,7 @@
         // Subjective (check-in) anti-clobber
         SUBJECTIVE_DAY_FIELDS,
         mergeSubjectiveFieldsPreferFresh,
+        isDayv2KeyForCurrentClient,
         // Predicates
         isSyntheticEstimatedItem
     };

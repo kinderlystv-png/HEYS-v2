@@ -1561,6 +1561,51 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
    * @param {Object} oldProduct - Product before update (for comparison)
    * @param {Object} newProduct - Product after update
    */
+  const __resolveCascadeClientId = function () {
+    try {
+      if (HEYS && HEYS.currentClientId && typeof HEYS.currentClientId === 'string') {
+        return HEYS.currentClientId;
+      }
+    } catch (_) { /* noop */ }
+    try {
+      if (HEYS && HEYS.cloud && typeof HEYS.cloud.getCurrentClientId === 'function') {
+        const cid = HEYS.cloud.getCurrentClientId();
+        if (cid && typeof cid === 'string') return cid;
+      }
+    } catch (_) { /* noop */ }
+    try {
+      const raw = global.localStorage.getItem('heys_client_current');
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (typeof parsed === 'string') return parsed;
+      if (parsed && typeof parsed === 'object' && parsed.id) return String(parsed.id);
+    } catch (_) { /* noop */ }
+    return null;
+  };
+
+  /** dayv2-ключи текущего клиента + unscoped legacy; без foreign/pollution keys. */
+  const __collectCascadeDayKeys = function () {
+    if (typeof localStorage === 'undefined') return [];
+    const dayKeysAll = Object.keys(localStorage).filter(function (k) { return k.includes('_dayv2_'); });
+    const cascadeClientId = __resolveCascadeClientId();
+    if (!cascadeClientId) {
+      console.warn('[HEYS] Cascade: no current client id — skipping day scan');
+      return [];
+    }
+    const isOwnDayKey = HEYS.dayUtils && typeof HEYS.dayUtils.isDayv2KeyForCurrentClient === 'function'
+      ? HEYS.dayUtils.isDayv2KeyForCurrentClient
+      : null;
+    const dayKeys = dayKeysAll.filter(function (k) {
+      if (isOwnDayKey) return isOwnDayKey(k, cascadeClientId);
+      return k.startsWith('heys_' + cascadeClientId + '_dayv2_') || k.startsWith('heys_dayv2_');
+    });
+    const foreignIgnored = dayKeysAll.length - dayKeys.length;
+    if (dayKeys.length === 0 && foreignIgnored > 0) {
+      console.warn('[HEYS] Cascade: no scoped dayv2 keys for client', cascadeClientId.slice(0, 8), '— foreign keys ignored');
+    }
+    return dayKeys;
+  };
+
   const cascadeMealItemsOnProductUpdate = (oldProduct, newProduct) => {
     if (!oldProduct || !newProduct) return;
     const pid = String(newProduct.id ?? newProduct.product_id ?? '');
@@ -1573,8 +1618,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (!nameChanged && !brandChanged && !nutrientsChanged) return;
 
     const U = HEYS.utils || {};
-    // Find all day keys (with or without clientId prefix)
-    const dayKeys = Object.keys(localStorage).filter(k => k.includes('_dayv2_'));
+    const dayKeys = __collectCascadeDayKeys();
+    if (!dayKeys.length) return;
     let updatedDays = 0;
     let updatedItems = 0;
     let skippedByPrefilter = 0;
@@ -1701,28 +1746,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     });
   };
 
-  const __resolveCascadeClientId = function () {
-    try {
-      if (HEYS && HEYS.currentClientId && typeof HEYS.currentClientId === 'string') {
-        return HEYS.currentClientId;
-      }
-    } catch (_) { /* noop */ }
-    try {
-      if (HEYS && HEYS.cloud && typeof HEYS.cloud.getCurrentClientId === 'function') {
-        const cid = HEYS.cloud.getCurrentClientId();
-        if (cid && typeof cid === 'string') return cid;
-      }
-    } catch (_) { /* noop */ }
-    try {
-      const raw = global.localStorage.getItem('heys_client_current');
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      if (typeof parsed === 'string') return parsed;
-      if (parsed && typeof parsed === 'object' && parsed.id) return String(parsed.id);
-    } catch (_) { /* noop */ }
-    return null;
-  };
-
   const cascadeBatchProductUpdates = async function (products, previousProducts = null, { todayEventDelayMs = 80 } = {}) {
     if (!Array.isArray(products) || products.length === 0) return;
 
@@ -1763,16 +1786,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     console.log(`[HEYS.sync] 🔄 Cascade batch update: ${changesMap.size} products changed`);
 
-    const cascadeClientId = __resolveCascadeClientId();
-    const dayKeysAll = Object.keys(localStorage).filter(function (k) { return k.includes('_dayv2_'); });
-    let dayKeys = dayKeysAll;
-    if (cascadeClientId) {
-      const pfx = 'heys_' + cascadeClientId + '_dayv2_';
-      dayKeys = dayKeysAll.filter(function (k) { return k.startsWith(pfx); });
-      if (dayKeys.length === 0 && dayKeysAll.length > 0) {
-        console.warn('[HEYS.sync] ⚠️ Cascade: no scoped dayv2 keys for client', cascadeClientId.slice(0, 8), '— falling back to full scan');
-        dayKeys = dayKeysAll;
-      }
+    const dayKeys = __collectCascadeDayKeys();
+    if (!dayKeys.length) {
+      console.log('[HEYS.sync] Cascade batch: no scoped day keys for current client');
+      return;
     }
 
     let updatedDays = 0;

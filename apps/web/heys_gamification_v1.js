@@ -25,6 +25,15 @@
     }
   };
 
+  /** dayv2 scoped + unscoped legacy; fail-safe если dayUtils ещё не загружен (инвариант 9). */
+  const isDayKeyForCurrentClient = (key, clientId) => {
+    const helper = HEYS.dayUtils?.isDayv2KeyForCurrentClient;
+    if (typeof helper === 'function') return helper(key, clientId);
+    if (!key || typeof key !== 'string' || !key.includes('_dayv2_')) return false;
+    if (!clientId) return false;
+    return key.startsWith('heys_' + clientId + '_dayv2_') || key.startsWith('heys_dayv2_');
+  };
+
   const setStoredValue = (key, value) => {
     const missing = {};
     const previousValue = typeof HEYS.store?.getPersisted === 'function'
@@ -4342,9 +4351,14 @@
         console.log('[🎮 Gamification] Products check:', { productsKey, count: productsData?.length || 0, hasProducts });
 
         // Проверка 2: есть ли хотя бы один приём с продуктами в днях
+        const gamificationClientId = HEYS.utils?.getCurrentClientId?.()
+          || HEYS.currentClientId
+          || HEYS.cloud?.getCurrentClientId?.()
+          || null;
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
           if (!key || !key.includes('_dayv2_')) continue;
+          if (!isDayKeyForCurrentClient(key, gamificationClientId)) continue;
           const raw = localStorage.getItem(key);
           if (!raw) continue;
           let parsed = null;
@@ -4378,9 +4392,14 @@
       let hasHousehold = false;
 
       try {
+        const gamificationClientId = HEYS.utils?.getCurrentClientId?.()
+          || HEYS.currentClientId
+          || HEYS.cloud?.getCurrentClientId?.()
+          || null;
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
           if (!key || !key.includes('_dayv2_')) continue;
+          if (!isDayKeyForCurrentClient(key, gamificationClientId)) continue;
           const raw = localStorage.getItem(key);
           if (!raw) continue;
           let parsed = null;

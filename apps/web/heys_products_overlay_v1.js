@@ -1231,6 +1231,7 @@
   // загрузкой данных нового клиента. Не трогает persistent LS (он scoped через
   // Store layer и сам перечитается по новому clientId). Только in-memory.
   function clear() {
+    heardFromCloud = false;
     invalidateMergedView();
     _healthWrittenThisSession = false;
     _sharedByFingerprintRef = null;

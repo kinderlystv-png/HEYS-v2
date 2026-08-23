@@ -77,6 +77,16 @@ describe('каталог продуктов · признак «облако о�
     expect(overlay.hasHeardFromCloud()).toBe(true);
   });
 
+  it('clear() сбрасывает heardFromCloud при смене клиента', () => {
+    const { overlay } = loadOverlay(null);
+    overlay.applyCloudSnapshot([product('p_a', 'Гречка')], { source: 'test' });
+    expect(overlay.hasHeardFromCloud()).toBe(true);
+
+    overlay.clear();
+
+    expect(overlay.hasHeardFromCloud()).toBe(false);
+  });
+
   it('writeRaw остался нетронутым: пустой каталог не блокируется', () => {
     // Широкая блокировка здесь ломала бы применение снапшота и миграции —
     // предохранитель стоит выше, в пути добавления продукта.
