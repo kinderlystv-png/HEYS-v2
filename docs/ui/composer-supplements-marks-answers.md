@@ -1,5 +1,25 @@
 # Ответ кодера · отметки приёма добавок
 
+<!-- reference-passport: id=SUPPLEMENTS_MARKS_ANSWERS verified=2026-08-23 commit=56516003 -->
+
+> **Статус:** проверено  
+> **Актуален на:** 2026-08-23 — снимок кода `56516003` на `main`  
+> **Верификация:** ручное чтение исходников по каждому из 20 вопросов; символы и
+> команды — в разделе «Верификация и срок годности»  
+> **Охват:** хранение курса и отметок, категории времени, три способа отметить,
+> влияние на score/XP/советы, видимость куратором, согласие  
+> **Связанное досье:**
+> [Сущности питания](../reference/systems/NUTRITION_ENTITIES.md) — общая модель
+> «карточка → набор → позиция дня» и правила снимков  
+> **Не подтверждено:** поведение в браузере и на живых данных, состояние
+> production-флагов, PWA-уведомления  
+> **Не верь на слово:** это ответ на конкретную дату, а не вечная истина. Дата и
+> коммит фиксируют момент проверки. Номера строк — подсказка, а не адрес: они
+> уезжают первыми, ищи по символу рядом. Перед тем как рисовать кадр или
+> ссылаться на правило — перечитай затронутый символ в **текущем** дереве; при
+> расхождении верен код. См.
+> [Верификация и срок годности](#верификация-и-срок-годности).
+
 **Зачем:** снять строку `отметки «выпил» здесь нет` в контракте вкладки
 «Питание» (`nutrition-tab.v4.dc.html:329`, `ACCEPTANCE-nutrition-tab.md:54`) и
 нарисовать блок «Добавки» с отметками. Ниже — как механика устроена **сейчас**,
@@ -13,10 +33,9 @@
 есть **четыре расхождения**, которые надо чинить кодом до отрисовки — они в
 конце.
 
-Источники: `apps/web/heys_supplements_v1.js`, `heys_day_nutrition_v1.js`,
-`heys_day_diary_section.js`, `heys_health_features_v1.js`,
-`heys_consents_v1.js`, `heys_cascade_card_v1.js`, `heys_gamification_v1.js`,
-`yandex-cloud-functions/heys-mcp/lib/day.js`.
+Источники — таблица «Файлы-сторожи» в разделе
+[Верификация и срок годности](#верификация-и-срок-годности): там же символы, по
+которым искать, если номера строк уехали.
 
 ---
 
@@ -147,9 +166,10 @@ supplementsPlanned: ['vitD'],                         // снимок курса
 ## 4. Связи
 
 **15. На что влияет.** На оценку дня и риск — **ни на что**, и это осознанно:
-каскадный score обнуляет фактор явно (`heys_cascade_card_v1.js:1452,1731,3151` —
-«Трекинг плана не является доказательством пользы»), бонус к инсулиновой волне
-тоже прибит к нулю (`heys_supplements_v1.js:1394`). Влияет только на:
+каскадный score обнуляет фактор явно (`heys_cascade_card_v1.js:1459,1737,3164`,
+якорь — комментарий — «Трекинг плана не является доказательством пользы»), бонус
+к инсулиновой волне тоже прибит к нулю (`heys_supplements_v1.js:1394`). Влияет
+только на:
 
 - **геймификацию** — 5 XP в день (`heys_gamification_v1.js:113`) и ачивка
   «Первый план добавок» 20 XP (`:146`), по событию `heysSupplementsTaken`
@@ -159,11 +179,12 @@ supplementsPlanned: ['vitD'],                         // снимок курса
 
 **16. Куратор.** Видит: это поля дня клиента, куратор открывает тот же экран.
 Через MCP `heys_get_day` отдаёт `supplements_planned` / `supplements_taken`
-(`yandex-cloud-functions/heys-mcp/lib/day.js:2441`), `heys_update_day` умеет
-`supplements_mark` / `supplements_unmark` (`lib/tools.js:3672`). **Отдельного
-отчёта или выгрузки по курсу нет.** Есть только `getComplianceStats(daysBack)`
-(`heys_supplements_v1.js:1345`) — процент соблюдения за N дней, и он сейчас
-используется только внутри советов.
+(`yandex-cloud-functions/heys-mcp/lib/day.js:2410`, якорь —
+`supplements_taken:`), `heys_update_day` умеет `supplements_mark` /
+`supplements_unmark` (`lib/tools.js:3817`, якорь — `supplements_mark:`).
+**Отдельного отчёта или выгрузки по курсу нет.** Есть только
+`getComplianceStats(daysBack)` (`heys_supplements_v1.js:1345`) — процент
+соблюдения за N дней, и он сейчас используется только внутри советов.
 
 **17. Напоминания.** Пушей и локальных уведомлений **нет**. Есть две подсказки
 внутри приложения, обе от часов, а не от планировщика:
@@ -256,3 +277,51 @@ ISO-строкой `new Date().toISOString()`. То есть тап по одн�
 - Пустой курс на вкладке: приглашение или ничего.
 - Нужен ли «отметить всё» отдельной кнопкой при уже существующих тапах по трём
   шапкам.
+
+## Верификация и срок годности
+
+Документ свеж только для даты в паспорте (`Актуален на`) и коммита в
+HTML-комментарии шапки. Любой более новый коммит в файлах-сторожах — сигнал
+перепроверить, даже если текст документа не менялся.
+
+### Файлы-сторожи
+
+Правка любого из них может устарить утверждения документа:
+
+| Файл                                           | Что смотреть                                                                                                                                                                                 |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web/heys_supplements_v1.js`              | `TIMING`, `TIME_GROUPS`, `groupByTimeOfDay`, `markSupplementTaken`, `markSupplementsTaken`, `markAllSupplementsTaken`, `updateSupplementHistory`, `getTimeReminder`, `renderSupplementsCard` |
+| `apps/web/heys_day_nutrition_v1.js`            | `CHIPS`, `renderSupplementsBlock`                                                                                                                                                            |
+| `apps/web/heys_day_diary_section.js`           | `SUPPLEMENTS_PANEL_PROFILE_FIELD`, монтирование `Supplements.renderCard`                                                                                                                     |
+| `apps/web/heys_health_features_v1.js`          | `SUPPLEMENT_DAY_FIELDS`, `isSupplementsTrackingEnabled`, `purgeSupplementsFromDay/Profile`                                                                                                   |
+| `apps/web/heys_consents_v1.js`                 | `supplements_tracking` — тексты согласия и версия                                                                                                                                            |
+| `apps/web/heys_cascade_card_v1.js`             | шаг «Добавки», `confidenceMap.supplements`                                                                                                                                                   |
+| `apps/web/heys_gamification_v1.js`             | `supplements_taken`, `first_supplements`, слушатель `heysSupplementsTaken`                                                                                                                   |
+| `apps/web/advice/_other.js`                    | утреннее напоминание про неотмеченные добавки                                                                                                                                                |
+| `yandex-cloud-functions/heys-mcp/lib/day.js`   | `supplements_taken` в ответе чтения дня                                                                                                                                                      |
+| `yandex-cloud-functions/heys-mcp/lib/tools.js` | `supplements_mark` / `supplements_unmark`                                                                                                                                                    |
+
+### Быстрая проверка «не устарело ли»
+
+```bash
+git log -1 --oneline -- apps/web/heys_supplements_v1.js apps/web/heys_day_nutrition_v1.js apps/web/heys_day_diary_section.js apps/web/heys_health_features_v1.js apps/web/heys_consents_v1.js apps/web/heys_cascade_card_v1.js apps/web/heys_gamification_v1.js apps/web/advice/_other.js yandex-cloud-functions/heys-mcp/lib/day.js yandex-cloud-functions/heys-mcp/lib/tools.js
+```
+
+Если хеш **новее** `56516003` — не цитируй документ как факт, пока не
+перечитаешь затронутые символы и не обновишь паспорт.
+
+### Полная перепроверка
+
+```bash
+cd apps/web && npx vitest run __tests__/supplements-card-visibility.test.js __tests__/supplements-evidence-safety.test.js __tests__/consent-honest-summaries.test.js --no-coverage
+```
+
+После содержательной сверки обнови в шапке `Актуален на`, HTML-комментарий
+`verified=` / `commit=` и строку в журнале ревизий ниже.
+
+### Журнал ревизий
+
+| Рев. | Дата       | Коммит кода | Что изменилось                                                                                    |
+| ---- | ---------- | ----------- | ------------------------------------------------------------------------------------------------- |
+| 2    | 2026-08-23 | `56516003`  | Паспорт приведён к формату справочника; поправлены три ссылки, уехавшие после подтягивания `main` |
+| 1    | 2026-08-23 | `6639072a`  | Первая редакция: ответы на 20 вопросов дизайнера и четыре дефекта к правке до отрисовки           |
