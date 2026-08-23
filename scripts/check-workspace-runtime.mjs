@@ -31,6 +31,32 @@ function packageJsonPath(packageName) {
   return path.join('node_modules', packageName, 'package.json');
 }
 
+/**
+ * Пакет считается установленным, если он линкуется из корня **или** из
+ * workspace-пакета, который им пользуется. В pnpm-workspace транзитивная
+ * зависимость в корне не появляется: `esbuild` объявлен в `apps/web` и лежит в
+ * `apps/web/node_modules`, а корневая запись — только override. Проверка одного
+ * корня объявляла рабочее дерево сломанным и блокировала любой коммит, включая
+ * docs-only.
+ */
+function isPackageInstalled(rootDir, packageName) {
+  const relative = packageJsonPath(packageName);
+  if (fs.existsSync(path.join(rootDir, relative))) return true;
+  return WORKSPACE_MANIFEST_GLOBS
+    .map((glob) => glob.split('/')[0])
+    .some((group) => {
+      const groupDir = path.join(rootDir, group);
+      let entries = [];
+      try {
+        entries = fs.readdirSync(groupDir, { withFileTypes: true });
+      } catch {
+        return false;
+      }
+      return entries.some((entry) => entry.isDirectory()
+        && fs.existsSync(path.join(groupDir, entry.name, relative)));
+    });
+}
+
 function binShimPath(rootDir, binName) {
   const binDir = path.join(rootDir, 'node_modules', '.bin');
   if (process.platform === 'win32') {
@@ -49,9 +75,7 @@ export function assertWorkspaceRuntime({
     return { ok: true, skipped: true, missingPackages: [], missingBins: [] };
   }
 
-  const missingPackages = requiredPackages.filter(
-    (name) => !fs.existsSync(path.join(rootDir, packageJsonPath(name))),
-  );
+  const missingPackages = requiredPackages.filter((name) => !isPackageInstalled(rootDir, name));
 
   const missingBins = ['lint-staged', 'vitest'].filter((name) => {
     const shim = binShimPath(rootDir, name);
