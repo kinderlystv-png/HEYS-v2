@@ -36,6 +36,11 @@
     }
   }
 
+  function setWaterLsValue(key, value) {
+    const lsSet = HEYS?.utils?.lsSet || HEYS?.dayUtils?.lsSet;
+    if (typeof lsSet === 'function') lsSet(key, value);
+  }
+
   function readWaterFabEnabled() {
     const visibility = HEYS.FabVisibility?.read?.();
     return visibility ? visibility.water !== false : true;
@@ -148,16 +153,14 @@
     if (prof?.water_hint_enabled === false) return false;
     const weekKey = isoWeekKey(dateIso);
     try {
-      return localStorage.getItem(HABIT_HINT_KEY) !== weekKey;
+      return getWaterLsValue(HABIT_HINT_KEY, null) !== weekKey;
     } catch (_error) {
       return false;
     }
   }
 
   function markHabitHintShown(dateIso) {
-    try {
-      localStorage.setItem(HABIT_HINT_KEY, isoWeekKey(dateIso));
-    } catch (_error) { /* noop */ }
+    setWaterLsValue(HABIT_HINT_KEY, isoWeekKey(dateIso));
   }
 
   function curvePoint(item, index, scaleMaxMl) {
