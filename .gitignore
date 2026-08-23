@@ -273,3 +273,11 @@ yandex-cloud-functions/*/certs/
 
 # Personal bug/improvement backlog (Cowork review-agent system, stays local)
 tasks/
+
+# Incident recovery snapshots and one-off decode helpers (stay local)
+.recovery-dir
+heys-recovery-*/
+decode.mjs
+
+# Vendored security scanners (install via brew / CI action)
+TOOLS/gitleaks/
