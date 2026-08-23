@@ -1273,7 +1273,7 @@
 
 .nutrition-v4-supplements__pill.is-course {
   border-color: var(--v4-act, #2563eb);
-  color: var(--v4-act-text, #c67139);
+  color: #c67139;
 }
 
 .nutrition-v4-supplements__groups {
@@ -1331,7 +1331,7 @@
 
 .nutrition-v4-supplements__group-pill i.is-done {
   margin-left: auto;
-  color: var(--v4-ok-text, #3f4a2e);
+  color: #3f4a2e;
 }
 
 .nutrition-v4-supplements__chips {
@@ -1364,7 +1364,7 @@
 
 .nutrition-v4-supplements__chip.is-on {
   background: var(--v4-ok-fill, #22c55e);
-  color: var(--v4-ok-on, #171d0d);
+  color: #171d0d;
 }
 
 .nutrition-v4-supplements__chip.is-more {
@@ -1377,7 +1377,7 @@
 .nutrition-v4-supplements__chip.is-stale {
   background: var(--v4-ok-bg, #eaefe0);
   box-shadow: inset 0 0 0 1.5px var(--v4-ok-fill, #22c55e);
-  color: var(--v4-ok-text, #3f4a2e);
+  color: #3f4a2e;
 }
 
 .nutrition-v4-supplements__chip-note {
