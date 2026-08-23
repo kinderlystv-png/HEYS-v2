@@ -583,6 +583,26 @@ each.
 
 ---
 
+---
+
+## E2E agent smoke (без участия человека)
+
+Запрос «смоук» / проверка PIN-auth / client-scope после auth-правок →
+**`pnpm test:e2e:smoke`**.
+
+Агент **не** просит человека: логин, `.env`, миграции, `dev:local`. Команда
+сама: `.env.local` из example → `setup.mjs` → Playwright (+ `dev:local` через
+`webServer`).
+
+- Кураторский тест **skip**, если `HEYS_TEST_CURATOR_*` пусты; PIN/products
+  работают на E2E-fixtures из example.
+- **Нет секретов** → агент **просит человека** заполнить `/.env.local`
+  (абсолютный путь в stderr `verify`/`smoke`), не выдумывает креды.
+- Диагностика: `pnpm test:e2e:verify`
+- Подробности: `TESTS/e2e/README.md`, правило `.cursor/rules/e2e-smoke.mdc`
+
+---
+
 ## Diagnostics
 
 Каталог + quick reference: [DEBUGGING.md](apps/web/DEBUGGING.md).

@@ -1919,6 +1919,10 @@
             setCuratorTab,
         } = props;
 
+        const curatorPanelClients = HEYS.E2EFixtures?.filterCuratorPanelClients
+            ? HEYS.E2EFixtures.filterCuratorPanelClients(clients)
+            : (Array.isArray(clients) ? clients : []);
+
         const gate = !clientId
             ? (isInitializing
                 ? null
@@ -2086,8 +2090,8 @@
                                                 React.createElement('div', { style: { fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2 } },
                                                     clientsSource === 'loading' ? '⏳ Загрузка...'
                                                         : clientsSource === 'error' ? '⚠️ Ошибка загрузки'
-                                                            : clientsSource === 'cache' ? `${clients.length} клиентов (кэш)`
-                                                                : clients.length ? `${clients.length} клиентов`
+                                                            : clientsSource === 'cache' ? `${curatorPanelClients.length} клиентов (кэш)`
+                                                                : curatorPanelClients.length ? `${curatorPanelClients.length} клиентов`
                                                                     : 'Нет клиентов'
                                                 )
                                             )
@@ -2276,7 +2280,7 @@
                                     // === TAB: CLIENTS ===
                                     curatorTab === 'clients' && React.createElement(React.Fragment, null,
                                         // Поиск клиентов (если > 3)
-                                        clients.length > 3 && React.createElement('div', {
+                                        curatorPanelClients.length > 3 && React.createElement('div', {
                                             style: { position: 'relative', marginBottom: 16 }
                                         },
                                             React.createElement('span', {
@@ -2317,8 +2321,8 @@
                                                     gap: 8
                                                 }
                                             },
-                                            clients.length
-                                                ? clients
+                                            curatorPanelClients.length
+                                                ? curatorPanelClients
                                                     .filter(c => !clientSearch || c.name.toLowerCase().includes(clientSearch.toLowerCase()))
                                                     .slice()
                                                     .sort((a, b) => {

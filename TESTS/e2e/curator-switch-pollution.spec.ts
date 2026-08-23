@@ -153,13 +153,7 @@ test.describe('Курaторский cross-client pollution — anti-regression'
             'HEYS_TEST_E2E_CLIENT_ALEX_NAME, HEYS_TEST_E2E_CLIENT_POPL_NAME in .env.local'
         );
 
-        // TODO 2026-05-31: Phase 1 (Store.flushMemory on switchClient) helped
-        // но не полностью — курaторский path для empty test client всё ещё
-        // показывает registration wizard. Глубже: либо curator getKVBatch не
-        // вытаскивает scoped profile, либо app rendering pipeline не ждёт
-        // sync completion before рисует wizard.
-        // Anti-pollution semantics покрыты tests 1+2 + Phase 2 DB-level triggers.
-        test.skip(true, 'UI-flow: курaторский path к empty test client не догружает profile в LS до wizard render — нужен deeper sync orchestration fix');
+        // Anti-pollution: curator switch с dismiss post-login overlays (2026-08-23).
 
         const alexName = TEST_CLIENT_ALEX_NAME;
         const poplName = TEST_CLIENT_POPL_NAME;

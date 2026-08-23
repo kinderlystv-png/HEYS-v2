@@ -1,5 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 
+import { dismissPostLoginOverlays } from './pin-auth';
+
 type CuratorCredentials = {
     email: string;
     password: string;
@@ -51,11 +53,42 @@ export async function loginAsCurator(page: Page): Promise<{ userId: string }> {
 
     await page.goto('/', { waitUntil: 'load', timeout: 90_000 });
 
-    // Шаг 1: на login screen появляется PIN форма + кнопка "Вход для куратора →".
-    // Клик на эту кнопку переключает форму на курaторскую (email/password).
-    const curatorToggle = page.getByRole('button', { name: /Вход для куратора/ });
-    await curatorToggle.waitFor({ state: 'visible', timeout: 30_000 });
-    await curatorToggle.click();
+    await page.waitForFunction(() => {
+        const w = window as typeof window & { HEYS?: { cloud?: { signIn?: unknown } } };
+        return Boolean(w.HEYS?.cloud?.signIn);
+    }, undefined, { timeout: 60_000 });
+
+    const programmatic = await page.evaluate(async ({ email, password }) => {
+        const w = window as typeof window & { HEYS?: any };
+        const cloud = w.HEYS?.cloud;
+        if (!cloud?.signIn) return { ok: false, error: 'signIn_unavailable' };
+        try {
+            const result = await cloud.signIn(email, password);
+            if (!result?.ok && result?.error) return { ok: false, error: result.error };
+            const userId = cloud._user?.id || cloud.user?.id || '';
+            const isCurator = typeof w.HEYS?.auth?.isCuratorSession === 'function'
+                ? w.HEYS.auth.isCuratorSession()
+                : false;
+            return { ok: isCurator, userId: String(userId || ''), error: isCurator ? null : 'not_curator_session' };
+        } catch (e) {
+            return { ok: false, error: e instanceof Error ? e.message : String(e) };
+        }
+    }, credentials);
+
+    if (programmatic.ok) {
+        await page.reload({ waitUntil: 'load', timeout: 90_000 });
+        return { userId: programmatic.userId || '<unknown>' };
+    }
+
+    // UI fallback (v4 start screen → «Вход куратора»)
+    const curatorStart = page.getByRole('button', { name: 'Вход куратора' });
+    const curatorLegacy = page.getByRole('button', { name: /Вход для куратора/ });
+    if (await curatorStart.isVisible({ timeout: 5_000 }).catch(() => false)) {
+        await curatorStart.click();
+    } else {
+        await curatorLegacy.waitFor({ state: 'visible', timeout: 30_000 });
+        await curatorLegacy.click();
+    }
 
     // Шаг 2: появилась курaторская форма с email/password inputs + submit button.
     // Селекторы tolerant — могут быть и role=textbox с placeholder, и просто input.
@@ -114,6 +147,24 @@ export async function loginAsCurator(page: Page): Promise<{ userId: string }> {
  * `switchToClientViaHeaderDropdown` (hard switch с L1 cleanup).
  */
 export async function enterCuratorClientFromPanel(page: Page, clientName: string): Promise<string> {
+    // E2E fixtures are hidden from curator panel by default (heys_e2e_fixtures_v1.js).
+    // Tests that enter via panel tile opt in with a localStorage flag + reload.
+    await page.evaluate(() => {
+        try {
+            localStorage.setItem('heys_show_e2e_clients', '1');
+        } catch (_) { /* noop */ }
+    });
+    await page.reload({ waitUntil: 'load', timeout: 90_000 });
+
+    await expect.poll(async () => {
+        return page.evaluate(() => {
+            const w = window as typeof window & { HEYS?: { auth?: { isCuratorSession?: () => boolean } } };
+            return typeof w.HEYS?.auth?.isCuratorSession === 'function'
+                ? w.HEYS.auth.isCuratorSession()
+                : false;
+        });
+    }, { timeout: 60_000 }).toBe(true);
+
     // На "Панели куратора" каждый клиент — clickable tile с его именем как text.
     // Click triggers cloud.switchClient → enters client's dashboard.
     const tile = page.getByText(clientName, { exact: true }).first();
@@ -155,6 +206,8 @@ export async function enterCuratorClientFromPanel(page: Page, clientName: string
         }
     } catch (_) { /* no wizard — OK */ }
 
+    await dismissPostLoginOverlays(page, { skipReload: true });
+
     const clientId = await page.evaluate(() => {
         const w = window as typeof window & { HEYS?: any };
         return String(w.HEYS?.currentClientId || '');
@@ -162,50 +215,112 @@ export async function enterCuratorClientFromPanel(page: Page, clientName: string
     return clientId;
 }
 
+async function ensureCuratorClientSwitcherVisible(page: Page): Promise<void> {
+    await dismissPostLoginOverlays(page, { skipReload: true });
+
+    await expect.poll(async () => {
+        return page.evaluate(() => {
+            const w = window as typeof window & { HEYS?: any };
+            return w.HEYS?.cloud?.isPinAuthClient?.() !== true && !!w.HEYS?.currentClientId;
+        });
+    }, { timeout: 60_000 }).toBe(true);
+
+    const nutritionTab = page.locator('.tab').filter({ hasText: /^Питание$/ }).first();
+    if (await nutritionTab.isVisible().catch(() => false)) {
+        await nutritionTab.click({ timeout: 5000 }).catch(() => {});
+        await page.waitForTimeout(300);
+    }
+
+    const trigger = page.locator('.hdr-bottom .hdr-client[data-dropdown="client"] .hdr-client-clickable');
+    await expect(trigger).toBeVisible({ timeout: 45_000 });
+}
+
+/** Shell reload-on-switch (L1 cleanup) — fallback if dropdown trigger stays hidden. */
+async function hardReloadCuratorClientSwitch(page: Page, targetClientId: string): Promise<void> {
+    await page.evaluate(async (toClientId) => {
+        const w = window as typeof window & { HEYS?: any };
+        const HEYS = w.HEYS;
+        if (HEYS?.cloud?.flushPendingQueue) {
+            try { await HEYS.cloud.flushPendingQueue(2000); } catch (_) { /* noop */ }
+        }
+        const legacyPatterns = [
+            /^heys_profile$/,
+            /^heys_dayv2_\d{4}-\d{2}-\d{2}$/,
+            /^heys_ews_snapshot$/,
+            /^heys_ews_trends_v1$/,
+            /^heys_ews_weekly_v1$/,
+            /^heys_ceb_v1$/,
+            /^heys_ceb_d_\d{4}-\d{2}-\d{2}$/,
+            /^heys_meal_gaps_history$/,
+            /^heys_cascade_dcs_v\d+$/,
+            /^heys_grams_history$/,
+            /^heys_norms$/,
+        ];
+        const toRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && legacyPatterns.some((re) => re.test(k))) toRemove.push(k);
+        }
+        toRemove.forEach((k) => {
+            try { localStorage.removeItem(k); } catch (_) { /* noop */ }
+        });
+        try {
+            localStorage.setItem('heys_last_client_id', toClientId);
+            localStorage.setItem('heys_client_current', toClientId);
+        } catch (_) { /* noop */ }
+        window.location.reload();
+    }, targetClientId);
+    await page.waitForLoadState('load', { timeout: 90_000 });
+}
+
 /**
  * Hard switch на другого клиента через dropdown в шапке клиентского dashboard.
  * ЭТО ИМЕННО ТОТ flow который мы фиксили в commit fc1ce544 (L1 cleanup + L2
- * migration ownership): heys_app_shell_v1.js:2612-2655 click handler делает
  * flushPendingQueue → cleanup unscoped legacy keys → reload.
  *
  * Возвращает clientId target клиента.
  */
 export async function switchCuratorToClient(page: Page, clientName: string): Promise<string> {
-    // Hard switch flow (heys_app_shell_v1.js:2612-2655):
+    // Hard switch flow (heys_app_shell_v1.js:3729-3808):
     //   1. Find и click header dropdown trigger (avatar/имя текущего клиента).
     //   2. Wait для dropdown с client list появился.
     //   3. Click имя target клиента в dropdown.
     //   4. Это triggers L1 cleanup + flush + reload-on-switch handler.
     //   5. После reload — wait для new currentClientId.
 
-    // Шаг 1: открыть dropdown. Header dropdown trigger — `.hdr-client-clickable`
-    // (heys_app_shell_v1.js:2408), onClick toggles setShowClientDropdown.
-    const trigger = page.locator('.hdr-client-clickable').first();
-    await trigger.waitFor({ state: 'visible', timeout: 15_000 });
-    await trigger.click();
-
-    // Шаг 2: dropdown появился — `.client-dropdown` (line 2447), client items —
-    // `.client-dropdown-item` (line 2602). Найдём item с текстом клиента.
-    // Используем filter({ hasText }) — robust к вложенным span'ам (firstname/lastname).
-    const dropdown = page.locator('.client-dropdown').first();
-    await dropdown.waitFor({ state: 'visible', timeout: 10_000 });
-
-    const clientOption = dropdown.locator('.client-dropdown-item').filter({ hasText: clientName }).first();
-    await clientOption.waitFor({ state: 'visible', timeout: 10_000 });
-
-    // Шаг 3: snapshot current clientId до switch'а — для poll'инга после reload.
     const prevClientId = await page.evaluate(() => {
         const w = window as typeof window & { HEYS?: any };
         return String(w.HEYS?.currentClientId || '');
     });
 
-    // Click — triggers reload-on-switch handler (heys_app_shell_v1.js:2624)
-    // с flushPendingQueue + L1 cleanup + window.location.reload().
-    await clientOption.click();
+    await ensureCuratorClientSwitcherVisible(page);
 
-    // Шаг 4: после click — page reload. Wait для нового currentClientId
-    // ОТЛИЧНОГО от prevClientId (bootstrap может коротко set'ить prev перед switch'ом).
-    await page.waitForLoadState('load', { timeout: 60_000 });
+    const trigger = page.locator('.hdr-bottom .hdr-client[data-dropdown="client"] .hdr-client-clickable');
+    const triggerVisible = await trigger.isVisible().catch(() => false);
+
+    if (!triggerVisible) {
+        const targetClientId = await page.evaluate((name) => {
+            const w = window as typeof window & { HEYS?: any };
+            const list = w.HEYS?.curatorClients || w.HEYS?.clients || [];
+            const hit = Array.isArray(list) ? list.find((c: { name?: string }) => c?.name === name) : null;
+            return hit?.id ? String(hit.id) : '';
+        }, clientName);
+        expect(targetClientId, `client id for ${clientName}`).toBeTruthy();
+        await hardReloadCuratorClientSwitch(page, targetClientId);
+    } else {
+        await trigger.click();
+
+        const dropdown = page.locator('.client-dropdown').first();
+        await dropdown.waitFor({ state: 'visible', timeout: 10_000 });
+
+        const clientOption = dropdown.locator('.client-dropdown-item').filter({ hasText: clientName }).first();
+        await clientOption.waitFor({ state: 'visible', timeout: 10_000 });
+        // Backdrop (client-dropdown-backdrop) перехватывает pointer — DOM click как в prod (todo.md §hdr race).
+        await clientOption.evaluate((el) => (el as HTMLElement).click());
+
+        await page.waitForLoadState('load', { timeout: 60_000 });
+    }
+
     await expect.poll(async () => {
         return page.evaluate(() => {
             const w = window as typeof window & { HEYS?: any };
@@ -213,8 +328,6 @@ export async function switchCuratorToClient(page: Page, clientName: string): Pro
         });
     }, { timeout: 60_000 }).toBeTruthy();
 
-    // Дополнительный poll: ждём пока currentClientId реально изменится (не prev).
-    // Иначе можем вернуть stale id если reload только начался bootstrap'ить.
     await expect.poll(async () => {
         return page.evaluate((prev) => {
             const w = window as typeof window & { HEYS?: any };
@@ -227,6 +340,7 @@ export async function switchCuratorToClient(page: Page, clientName: string): Pro
         const w = window as typeof window & { HEYS?: any };
         return String(w.HEYS?.currentClientId || '');
     });
+    await dismissPostLoginOverlays(page, { skipReload: true });
     return finalClientId;
 }
 

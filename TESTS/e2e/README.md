@@ -1,13 +1,34 @@
 # HEYS E2E Testing Guide
 
+## Agent smoke (новая машина — человеку ничего не нужно)
+
+**Агент** по запросу «смоук» или после auth/sync-правок запускает одну команду:
+
+```bash
+pnpm test:e2e:smoke
+```
+
+Сама: `.env.local` из example (если нет) → миграции E2E в БД → chromium → `dev:local` → 3 теста.
+
+| Кто | Что делает |
+|-----|------------|
+| Агент | `pnpm test:e2e:smoke`, при DB-ошибке — `pnpm db:setup:windows` + `yc` (Windows) |
+| Человек | Только если агент попросил: `HEYS_TEST_CURATOR_*` в `.env.local` (путь в stderr verify/smoke). Или один раз: `lockbox-add-curator-test-secret.mjs` |
+
+PIN E2E (`1357`/`9753`) уже в `.env.local.example`. Кураторский тест **skip**, если креды пусты.
+
+Правило для всех агентов: `.cursor/rules/e2e-smoke.mdc` · префлайт: `pnpm test:e2e:verify`
+
+---
+
 ## ⚠️ Test Isolation Invariants (2026-05-31)
 
 **E2E тесты НИКОГДА не хитят real user data.** Используются **dedicated test clients**, созданные миграцией `scripts/db/migrations/2026-05-31_create_e2e_test_clients.sql`:
 
-| Test client | UUID | Phone | PIN |
+| Test client | UUID | Phone | PIN / access |
 |---|---|---|---|
-| `E2E-TestAlex` | `11111111-1111-1111-1111-111111111111` | `+70000000001` | `0000` |
-| `E2E-TestPopl` | `22222222-2222-2222-2222-222222222222` | `+70000000002` | `1111` |
+| `E2E-TestAlex` | `11111111-1111-1111-1111-111111111111` | `+70000000001` | `1357` |
+| `E2E-TestPopl` | `22222222-2222-2222-2222-222222222222` | `+70000000002` | `9753` |
 
 Oба owned by curator `poplanton@mail.ru`. Видны в курaторском dropdown — игнорируй их в реальной курaторской работе.
 
@@ -16,8 +37,8 @@ Oба owned by curator `poplanton@mail.ru`. Видны в курaторском 
 ### Setup (one-time per environment)
 
 ```bash
-# 1. Apply migration
-bash scripts/db/psql.sh -f scripts/db/migrations/2026-05-31_create_e2e_test_clients.sql
+# 1. Apply migrations (или pnpm test:e2e:setup)
+node scripts/e2e/setup.mjs --skip-browsers
 
 # 2. Verify
 bash scripts/db/psql.sh -c "SELECT id, name FROM public.clients WHERE name LIKE 'E2E-Test%';"

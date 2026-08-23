@@ -188,6 +188,7 @@ export const LEGACY_BUNDLES = {
         'heys_app_shell_v1.js',
         'heys_client_switch_overlay_v1.js',
         'heys_app_overlays_v1.js',
+        'heys_e2e_fixtures_v1.js',
         'heys_app_gate_flow_v1.js',
         // P0-D-stretch-2: heys_app_backup_v1.js → postboot-3-ui-lazy
         'heys_app_shortcuts_v1.js',

@@ -1,6 +1,9 @@
-import { execFileSync } from 'node:child_process';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { runPsql } from '../../../scripts/e2e/psql-exec.mjs';
 
 /**
  * Exact snapshot/restore for dedicated E2E clients.
@@ -20,7 +23,6 @@ export type CleanupBaseline = {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
-const PSQL_SCRIPT = path.join(PROJECT_ROOT, 'scripts/db/psql.sh');
 const ALLOWED_E2E_CLIENT_IDS = new Set([
     '11111111-1111-1111-1111-111111111111',
     '22222222-2222-2222-2222-222222222222',
@@ -37,12 +39,7 @@ function sqlLiteral(value: string): string {
 }
 
 function runSql(args: string[]): string {
-    return execFileSync('bash', [PSQL_SCRIPT, ...args], {
-        cwd: PROJECT_ROOT,
-        stdio: ['ignore', 'pipe', 'pipe'],
-        timeout: 30_000,
-        encoding: 'utf8',
-    });
+    return runPsql(args, { cwd: PROJECT_ROOT, timeoutMs: 30_000 });
 }
 
 function captureClientRows(clientId: string): string[] {
@@ -81,6 +78,14 @@ export function captureCleanupBaseline(clientIds: (string | undefined)[]): Clean
     return baseline;
 }
 
+function runSqlFile(sql: string): void {
+    const dir = path.join(tmpdir(), 'heys-e2e-cleanup');
+    mkdirSync(dir, { recursive: true });
+    const file = path.join(dir, `cleanup-${Date.now()}.sql`);
+    writeFileSync(file, sql, 'utf8');
+    runSql(['-v', 'ON_ERROR_STOP=1', '-f', file]);
+}
+
 function restoreClientSnapshot(clientId: string, rows: string[]): void {
     assertAllowedClientId(clientId);
     const baselineKeys = rows.map((hex) => {
@@ -108,7 +113,7 @@ function restoreClientSnapshot(clientId: string, rows: string[]): void {
             v = EXCLUDED.v,
             key_version = EXCLUDED.key_version,
             v_encrypted = EXCLUDED.v_encrypted;`).join('\n');
-    runSql(['-v', 'ON_ERROR_STOP=1', '-c', `BEGIN; ${deleteExtras} ${restores} COMMIT;`]);
+    runSqlFile(`BEGIN;\n${deleteExtras}\n${restores}\nCOMMIT;`);
 }
 
 export function cleanupTestClients(baseline: CleanupBaseline): void {

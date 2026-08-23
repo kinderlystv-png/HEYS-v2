@@ -1,0 +1,42 @@
+---
+description: E2E smoke — агент запускает сам, без участия человека
+alwaysApply: true
+---
+
+# E2E smoke (агент)
+
+Когда нужен PIN/куратор/products smoke, **не проси человека** логиниться, настраивать БД или поднимать локалку.
+
+## Одна команда
+
+```bash
+pnpm test:e2e:smoke
+```
+
+Она сама (idempotent): `.env.local` из example → setup БД → Playwright → `dev:local`.
+
+Префлайт: `pnpm test:e2e:verify` (в конце печатает путь к файлу, если не хватает секретов).
+
+## Если не хватает секретов
+
+Смоук/verify падает или curator-login **skip** → **остановись и попроси человека один раз**.
+
+Шаблон ответа (путь — абсолютный из stderr или `scripts/e2e/env-secrets.mjs` → `ENV_LOCAL_FILE`):
+
+> Для E2E smoke не хватает локальных секретов. Заполни в файле **`C:\…\HEYS-v2\.env.local`** (в корне репо):
+> - `HEYS_TEST_CURATOR_EMAIL`
+> - `HEYS_TEST_CURATOR_PASSWORD`
+>
+> Шаблон: `.env.local.example`. После сохранения напиши — прогоню смоук снова.
+
+Не выдумывай креды. PIN (`1357`/`9753`) уже в example — их просить не нужно.
+
+## Другие падения
+
+| Симптом | Действие агента |
+|--------|------------------|
+| DB / psql | `pnpm db:setup:windows`, `yc` auth; снова smoke |
+| web/api down | smoke сам поднимает `dev:local`; иначе почини и повтори |
+
+Источник: `TESTS/e2e/README.md`, `scripts/e2e/env-secrets.mjs`.
+

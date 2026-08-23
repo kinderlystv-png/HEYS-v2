@@ -593,7 +593,10 @@ Bakalář, Жигулёвское пшеничное.
   2026-08-23:** `HEYS.dayUtils.isDayv2KeyForCurrentClient` в каскаде и
   геймификации (`isDayKeyForCurrentClient` с inline-fallback как в каскаде —
   fail-safe без dayUtils); unscoped `heys_dayv2_*` сохранены (инвариант 9).
-  Тест: `dayv2-client-scope.test.js`.
+  Тест: `dayv2-client-scope.test.js` · E2E:
+  `products-client-scope-smoke.spec.ts`.
+- **`heardFromCloud` E2E:** `products-heardfromcloud-smoke.spec.ts` (PIN +
+  `OverlayStore.clear()`).
 - **Pollution-ключи `heys_<текущий>_<чужой>_dayv2_*`:** новые не пишутся;
   **recovery в `Store.get` не реализован** (ветка `doubleScopedKey` мёртвая —
   форма ключа другая; откат ложного фикса 2026-08-23). Старый мусор в LS/KV —

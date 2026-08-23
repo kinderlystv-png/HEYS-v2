@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { hasHeysPinCredentials, loginWithHeysPin } from './helpers/pin-auth';
+import { expectDashboardReady, hasHeysPinCredentials, loginWithHeysPin } from './helpers/pin-auth';
 
 test.use({
     viewport: { width: 393, height: 851 },
@@ -9,14 +9,14 @@ test.use({
 });
 
 test.describe('HEYS local PIN auth smoke', () => {
-    test.skip(!hasHeysPinCredentials(), 'Set HEYS_TEST_PHONE and HEYS_TEST_PIN in .env.local');
+    test.skip(!hasHeysPinCredentials(), 'Set E2E PIN in .env.local (HEYS_TEST_PIN_E2E_ALEX or HEYS_TEST_PHONE/PIN)');
 
     test('logs in via local env credentials and restores PIN session', async ({ page }) => {
         const clientId = await loginWithHeysPin(page);
 
         expect(clientId).toBeTruthy();
 
-        await expect(page.getByRole('button', { name: '➕ Добавить приём пищи' })).toBeVisible();
+        await expectDashboardReady(page);
 
         await expect
             .poll(async () => {

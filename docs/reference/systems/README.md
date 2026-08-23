@@ -42,6 +42,7 @@
 | Telegram Mini App и боты                  | [`TELEGRAM.md`](TELEGRAM.md)                                                                                                                                             | bot core проверен 2026-07-17; Mini App frontend-only gap подтверждён                       |
 | Фоновые задачи и обслуживание             | [`BACKGROUND_JOBS.md`](BACKGROUND_JOBS.md)                                                                                                                               | source-контракты проверены 2026-07-17, live YC state не проверен                           |
 | Инфраструктура и эксплуатация             | [`INFRA_OPERATIONS.md`](INFRA_OPERATIONS.md)                                                                                                                             | repository contracts проверены 2026-07-17, live resources не проверены                     |
+| E2E agent smoke (Playwright)              | [`E2E_SMOKE.md`](E2E_SMOKE.md), [`TESTS/e2e/README.md`](../../../TESTS/e2e/README.md)                                                                                    | smoke 4/4 + curator-switch 2026-08-23                                                      |
 
 Матрица обновляется после каждого аудита. Наличие «источника» не означает, что
 весь документ актуален: до проверки его утверждения используются как маршрут, а
