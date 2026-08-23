@@ -365,7 +365,7 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  min-height: 48px;
+  min-height: 52px;
   margin-top: 16px;
   padding: 0 22px;
   border: none;
@@ -711,7 +711,7 @@
 .nutrition-v4-timeline__track {
   position: relative;
   flex: 1;
-  height: 6px;
+  height: 8px;
   border-radius: 999px;
   background: var(--v4-line, #e5e7eb);
   overflow: hidden;
@@ -721,7 +721,7 @@
   position: absolute;
   top: 0;
   display: block;
-  height: 6px;
+  height: 8px;
   border-radius: 999px;
   background: var(--v4-act, #2563eb);
 }

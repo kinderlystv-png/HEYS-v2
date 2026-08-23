@@ -14,7 +14,20 @@ function loadModule() {
   eval(fs.readFileSync(srcPath, 'utf8'));
 }
 
+function stubWaterCustomVolume() {
+  global.HEYS.WaterCustomVolume = {
+    useLongPress350: (_onLongPress, { onShortClick, disabled } = {}) => ({
+      onPointerDown: () => {},
+      onPointerMove: () => {},
+      onPointerUp: (event) => { if (!disabled) onShortClick?.(event); },
+      onClick: (event) => { if (!disabled) onShortClick?.(event); }
+    }),
+    open: vi.fn()
+  };
+}
+
 function loadWaterCardModule() {
+  stubWaterCustomVolume();
   const srcPath = path.resolve(__dirname, '../heys_day_water_v1.js');
   eval(fs.readFileSync(srcPath, 'utf8'));
 }
