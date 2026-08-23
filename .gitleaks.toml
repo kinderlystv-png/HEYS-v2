@@ -23,6 +23,8 @@ regexes = [
     '''\.key\s*={2,3}\s*['"][cr]\d{2}[a-z]?_[a-z0-9_]+['"]''',
     '''[A-Z0-9_]*(?:KEY|STORAGE_KEY)\s*=\s*['"]heys_[a-z0-9_-]+['"]''',
     '''const\s+[A-Z0-9_]*(?:KEY|STORAGE_KEY)\s*=\s*['"]heys_[a-z0-9_-]+['"]''',
+    # E2E seed: unscoped legacy dayv2 keys (`legacyKey = 'heys_dayv2_YYYY-MM-DD'`).
+    '''[A-Za-z0-9_]*[Kk]ey\s*=\s*['"]heys_dayv2_\d{4}-\d{2}-\d{2}['"]''',
     # Yandex Cloud public resource identifiers (function/api-gateway/Lockbox IDs),
     # not secrets. `e6q` — идентификаторы Lockbox-секретов: они называют адрес
     # хранилища, но доступ к payload даёт IAM, а не знание ID. Нужны в

@@ -583,8 +583,6 @@ each.
 
 ---
 
----
-
 ## E2E agent smoke (без участия человека)
 
 Запрос «смоук» / проверка PIN-auth / client-scope после auth-правок →

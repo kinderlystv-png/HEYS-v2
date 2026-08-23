@@ -2,7 +2,7 @@
  * PRODUCTS_AND_SEARCH.md — каскад при правке карточки: только dayv2 текущего клиента.
  * Инцидент 2026-08-23 · isDayv2KeyForCurrentClient в __collectCascadeDayKeys().
  */
-import { expect, test } from '@playwright/test';
+import { expect, test, type ConsoleMessage, type Page } from '@playwright/test';
 
 import {
     enterCuratorClientFromPanel,
@@ -21,6 +21,7 @@ const POPL_NAME = String(process.env.HEYS_TEST_E2E_CLIENT_POPL_NAME || 'E2E-Test
 const PRODUCT_ID = 'e2e-cascade-scope-product';
 const NAME_BEFORE = 'E2E Cascade Before';
 const NAME_AFTER = 'E2E Cascade After';
+const LEGACY_DAY = '2026-08-21';
 
 type CascadeSeed = {
     ownScopedKey: string;
@@ -29,11 +30,33 @@ type CascadeSeed = {
     pollutionKey: string;
 };
 
-type CascadeRunResult = {
+type KeySnapshot = {
+    prefix: string | null;
+    length: number;
+    rawJsonName: string | null;
+    storeName: string | null;
+};
+
+type CascadeProbeTracks = {
+    ownScoped: string;
+    legacy: string;
+    scopedLegacy: string;
+    foreignScoped: string;
+    pollution: string;
+};
+
+type CascadeProbeResult = {
     ok: boolean;
     reason?: string;
     dayKeys?: string[];
-    names?: Record<string, string | null>;
+    tracks?: CascadeProbeTracks;
+    before?: Record<keyof CascadeProbeTracks, KeySnapshot>;
+    after?: Record<keyof CascadeProbeTracks, KeySnapshot>;
+};
+
+type CascadeStats = {
+    updatedItems: number;
+    updatedDays: number;
 };
 
 function dayPayload(productName: string) {
@@ -59,7 +82,28 @@ function dayPayload(productName: string) {
     };
 }
 
-async function expectCascadeDebugReady(page: import('@playwright/test').Page): Promise<void> {
+function parseCascadeConsole(lines: string[]): CascadeStats | null {
+    const last = [...lines].reverse().find((line) => line.includes('[HEYS] Cascade update:'));
+    if (!last) return null;
+    const match = last.match(/Cascade update: (\d+) items in (\d+) days/);
+    if (!match) return null;
+    return { updatedItems: Number(match[1]), updatedDays: Number(match[2]) };
+}
+
+function attachCascadeConsoleCapture(page: Page): { lines: string[]; detach: () => void } {
+    const lines: string[] = [];
+    const onConsole = (msg: ConsoleMessage) => {
+        const text = msg.text();
+        if (text.includes('[HEYS] Cascade update:')) lines.push(text);
+    };
+    page.on('console', onConsole);
+    return {
+        lines,
+        detach: () => page.off('console', onConsole),
+    };
+}
+
+async function expectCascadeDebugReady(page: Page): Promise<void> {
     await page.evaluate(async () => {
         const w = window as typeof window & { HEYS?: { __loadPostboot3Ui?: () => Promise<unknown> } };
         if (typeof w.HEYS?.__loadPostboot3Ui === 'function') {
@@ -85,9 +129,9 @@ async function expectCascadeDebugReady(page: import('@playwright/test').Page): P
     }, { timeout: 90_000 }).toBe(true);
 }
 
-async function seedCascadeDays(page: import('@playwright/test').Page, clientId: string, otherClientId: string): Promise<CascadeSeed> {
+async function seedCascadeDays(page: Page, clientId: string, otherClientId: string): Promise<CascadeSeed> {
     return page.evaluate(
-        ({ cid, otherId, payload }) => {
+        ({ cid, otherId, payload, legacyDay }) => {
             const w = window as typeof window & {
                 HEYS?: { store?: { set?: (k: string, v: unknown) => void }; utils?: { lsSet?: (k: string, v: unknown) => void } };
             };
@@ -100,22 +144,25 @@ async function seedCascadeDays(page: import('@playwright/test').Page, clientId: 
                 localStorage.setItem(key, JSON.stringify(payload));
             };
             const ownScopedKey = `heys_${cid}_dayv2_2026-08-20`;
-            const legacyKey = `heys_dayv2_${'2026-08-21'}`;
+            const legacyKey = `heys_dayv2_${legacyDay}`;
+            const scopedLegacyKey = `heys_${cid}_dayv2_${legacyDay}`;
             const foreignScopedKey = `heys_${otherId}_dayv2_2026-08-20`;
             const pollutionKey = `heys_${cid}_bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb_dayv2_2026-08-22`;
+            localStorage.removeItem(scopedLegacyKey);
+            localStorage.removeItem(legacyKey);
             writeOwnDay(ownScopedKey);
             writeForeignDay(legacyKey);
             writeForeignDay(foreignScopedKey);
             writeForeignDay(pollutionKey);
             return { ownScopedKey, legacyKey, foreignScopedKey, pollutionKey };
         },
-        { cid: clientId, otherId: otherClientId, payload: dayPayload(NAME_BEFORE) },
+        { cid: clientId, otherId: otherClientId, payload: dayPayload(NAME_BEFORE), legacyDay: LEGACY_DAY },
     );
 }
 
-async function runCascadeRename(page: import('@playwright/test').Page, keys: CascadeSeed): Promise<CascadeRunResult> {
+async function runCascadeProbe(page: Page, keys: CascadeSeed, clientId: string): Promise<CascadeProbeResult> {
     return page.evaluate(
-        ({ productId, before, after, trackKeys, ownKey, foreignKeys }) => {
+        ({ productId, beforeName, afterName, keys: seedKeys, cid, legacyDay }) => {
             const w = window as typeof window & {
                 HEYS?: {
                     store?: { get?: (k: string, fb: unknown) => unknown };
@@ -131,56 +178,140 @@ async function runCascadeRename(page: import('@playwright/test').Page, keys: Cas
                 return { ok: false, reason: 'debug_cascade_missing' };
             }
 
-            const dayKeys = collect();
-            cascade(
-                { id: productId, name: before, kcal100: 120, protein100: 10, fat100: 5, simple100: 3 },
-                { id: productId, name: after, kcal100: 120, protein100: 10, fat100: 5, simple100: 3 },
-            );
-
-            const readOwnName = (key: string) => {
+            const snapKey = (key: string): KeySnapshot => {
+                const raw = localStorage.getItem(key);
+                const prefix = raw ? raw.slice(0, 3) : null;
+                const length = raw ? raw.length : 0;
+                let rawJsonName: string | null = null;
+                if (raw && raw.startsWith('{')) {
+                    try {
+                        const day = JSON.parse(raw) as { meals?: { items?: { name?: string }[] }[] };
+                        rawJsonName = day?.meals?.[0]?.items?.[0]?.name ?? null;
+                    } catch {
+                        rawJsonName = null;
+                    }
+                }
+                let storeName: string | null = null;
                 try {
                     if (w.HEYS?.store?.get) {
                         const day = w.HEYS.store.get(key, null) as { meals?: { items?: { name?: string }[] }[] } | null;
-                        if (day?.meals?.[0]?.items?.[0]?.name) return day.meals[0].items[0].name;
+                        storeName = day?.meals?.[0]?.items?.[0]?.name ?? null;
                     }
-                    const raw = localStorage.getItem(key);
-                    if (!raw) return null;
-                    const day = JSON.parse(raw) as { meals?: { items?: { name?: string }[] }[] };
-                    return day?.meals?.[0]?.items?.[0]?.name ?? null;
                 } catch {
-                    return null;
+                    storeName = null;
                 }
+                return { prefix, length, rawJsonName, storeName };
             };
 
-            const readRawLsName = (key: string) => {
-                try {
-                    const raw = localStorage.getItem(key);
-                    if (!raw) return null;
-                    const day = JSON.parse(raw) as { meals?: { items?: { name?: string }[] }[] };
-                    return day?.meals?.[0]?.items?.[0]?.name ?? null;
-                } catch {
-                    return null;
-                }
+            const tracks: CascadeProbeTracks = {
+                ownScoped: seedKeys.ownScopedKey,
+                legacy: seedKeys.legacyKey,
+                scopedLegacy: `heys_${cid}_dayv2_${legacyDay}`,
+                foreignScoped: seedKeys.foreignScopedKey,
+                pollution: seedKeys.pollutionKey,
             };
 
-            const names: Record<string, string | null> = {};
-            for (const key of trackKeys as string[]) {
-                if (key === ownKey) names[key] = readOwnName(key);
-                else if ((foreignKeys as string[]).includes(key)) names[key] = readRawLsName(key);
-                else names[key] = readOwnName(key);
-            }
+            const before: Record<keyof CascadeProbeTracks, KeySnapshot> = {
+                ownScoped: snapKey(tracks.ownScoped),
+                legacy: snapKey(tracks.legacy),
+                scopedLegacy: snapKey(tracks.scopedLegacy),
+                foreignScoped: snapKey(tracks.foreignScoped),
+                pollution: snapKey(tracks.pollution),
+            };
 
-            return { ok: true, dayKeys, names };
+            const dayKeys = collect();
+            cascade(
+                { id: productId, name: beforeName, kcal100: 120, protein100: 10, fat100: 5, simple100: 3 },
+                { id: productId, name: afterName, kcal100: 120, protein100: 10, fat100: 5, simple100: 3 },
+            );
+
+            const after: Record<keyof CascadeProbeTracks, KeySnapshot> = {
+                ownScoped: snapKey(tracks.ownScoped),
+                legacy: snapKey(tracks.legacy),
+                scopedLegacy: snapKey(tracks.scopedLegacy),
+                foreignScoped: snapKey(tracks.foreignScoped),
+                pollution: snapKey(tracks.pollution),
+            };
+
+            return { ok: true, dayKeys, tracks, before, after };
         },
         {
             productId: PRODUCT_ID,
-            before: NAME_BEFORE,
-            after: NAME_AFTER,
-            trackKeys: [keys.ownScopedKey, keys.legacyKey, keys.foreignScopedKey, keys.pollutionKey],
-            ownKey: keys.ownScopedKey,
-            foreignKeys: [keys.legacyKey, keys.foreignScopedKey, keys.pollutionKey],
+            beforeName: NAME_BEFORE,
+            afterName: NAME_AFTER,
+            keys,
+            cid: clientId,
+            legacyDay: LEGACY_DAY,
         },
     );
+}
+
+function deriveCascadeStatsFromProbe(probe: CascadeProbeResult): CascadeStats | null {
+    if (!probe.before || !probe.after) return null;
+    const tracks: (keyof CascadeProbeTracks)[] = ['ownScoped', 'legacy', 'scopedLegacy'];
+    let updatedDays = 0;
+    for (const track of tracks) {
+        const was = probe.before[track].storeName ?? probe.before[track].rawJsonName;
+        const now = probe.after[track].storeName ?? probe.after[track].rawJsonName;
+        if (was === NAME_BEFORE && now === NAME_AFTER) updatedDays += 1;
+    }
+    if (updatedDays === 0) return null;
+    return { updatedDays, updatedItems: updatedDays };
+}
+
+async function runCascadeWithStats(
+    page: Page,
+    keys: CascadeSeed,
+    clientId: string,
+): Promise<{ probe: CascadeProbeResult; stats: CascadeStats | null; cascadeLines: string[] }> {
+    const capture = attachCascadeConsoleCapture(page);
+    const consoleWait = page.waitForEvent('console', {
+        predicate: (msg) => msg.text().includes('[HEYS] Cascade update:'),
+        timeout: 15_000,
+    }).catch(() => null);
+    try {
+        const probe = await runCascadeProbe(page, keys, clientId);
+        let stats = parseCascadeConsole(capture.lines);
+        if (!stats) {
+            const evt = await consoleWait;
+            if (evt) stats = parseCascadeConsole([evt.text()]);
+        }
+        stats = stats ?? deriveCascadeStatsFromProbe(probe);
+        return { probe, stats, cascadeLines: capture.lines };
+    } finally {
+        capture.detach();
+    }
+}
+
+function expectDayKeysContainOnlyOwn(
+    dayKeys: string[] | undefined,
+    keys: CascadeSeed,
+): void {
+    expect(dayKeys).toContain(keys.ownScopedKey);
+    expect(dayKeys).toContain(keys.legacyKey);
+    expect(dayKeys).not.toContain(keys.foreignScopedKey);
+    expect(dayKeys).not.toContain(keys.pollutionKey);
+}
+
+function expectForeignKeysUnchanged(after: CascadeProbeResult['after']): void {
+    expect(after?.foreignScoped.rawJsonName).toBe(NAME_BEFORE);
+    expect(after?.pollution.rawJsonName).toBe(NAME_BEFORE);
+}
+
+function expectLegacyCascadeContract(
+    probe: CascadeProbeResult,
+    stats: CascadeStats | null,
+): void {
+    const after = probe.after;
+    expect(after, JSON.stringify(probe)).toBeTruthy();
+
+    // Verdict: silent migration — read unscoped legacy, write scoped; raw LS row stays Before.
+    expect(after!.scopedLegacy.storeName).toBe(NAME_AFTER);
+    expect(after!.legacy.rawJsonName).toBe(NAME_BEFORE);
+
+    expect(stats, 'cascade produced no observable renames (console line or probe diff)').toBeTruthy();
+    expect(stats!.updatedDays).toBeGreaterThan(0);
+    expect(stats!.updatedItems).toBeGreaterThan(0);
 }
 
 test.describe('Products · cascade client-scope smoke', () => {
@@ -202,15 +333,16 @@ test.describe('Products · cascade client-scope smoke', () => {
         await expectCascadeDebugReady(page);
 
         const keys = await seedCascadeDays(page, clientId, POPL_ID);
-        const result = await runCascadeRename(page, keys);
+        await page.reload({ waitUntil: 'load' });
+        await expectCascadeDebugReady(page);
 
-        expect(result.ok, JSON.stringify(result)).toBe(true);
-        expect(result.dayKeys).toContain(keys.ownScopedKey);
-        expect(result.dayKeys).not.toContain(keys.foreignScopedKey);
-        expect(result.dayKeys).not.toContain(keys.pollutionKey);
-        expect(result.names?.[keys.ownScopedKey]).toBe(NAME_AFTER);
-        expect(result.names?.[keys.foreignScopedKey]).toBe(NAME_BEFORE);
-        expect(result.names?.[keys.pollutionKey]).toBe(NAME_BEFORE);
+        const { probe, stats } = await runCascadeWithStats(page, keys, clientId);
+
+        expect(probe.ok, JSON.stringify(probe)).toBe(true);
+        expectDayKeysContainOnlyOwn(probe.dayKeys, keys);
+        expect(probe.after?.ownScoped.storeName).toBe(NAME_AFTER);
+        expectForeignKeysUnchanged(probe.after);
+        expectLegacyCascadeContract(probe, stats);
     });
 
     test('Curator switch — cascade scoped per active client (Alex → Popl)', async ({ page }) => {
@@ -223,23 +355,23 @@ test.describe('Products · cascade client-scope smoke', () => {
         await expectCascadeDebugReady(page);
 
         const alexKeys = await seedCascadeDays(page, alexId, POPL_ID);
-        let result = await runCascadeRename(page, alexKeys);
-        expect(result.ok, JSON.stringify(result)).toBe(true);
-        expect(result.names?.[alexKeys.ownScopedKey]).toBe(NAME_AFTER);
-        expect(result.names?.[alexKeys.foreignScopedKey]).toBe(NAME_BEFORE);
+        let { probe, stats } = await runCascadeWithStats(page, alexKeys, alexId);
+        expect(probe.ok, JSON.stringify(probe)).toBe(true);
+        expectDayKeysContainOnlyOwn(probe.dayKeys, alexKeys);
+        expect(probe.after?.ownScoped.storeName).toBe(NAME_AFTER);
+        expectForeignKeysUnchanged(probe.after);
+        expectLegacyCascadeContract(probe, stats);
 
-        const poplId = await switchCuratorToClient(page, POPL_NAME).catch(async () => {
-            await page.getByRole('button', { name: '←' }).click({ timeout: 10_000 });
-            await page.waitForLoadState('load', { timeout: 60_000 });
-            return enterCuratorClientFromPanel(page, POPL_NAME);
-        });
+        const poplId = await switchCuratorToClient(page, POPL_NAME);
         expect(poplId.toLowerCase()).toBe(POPL_ID.toLowerCase());
         await expectCascadeDebugReady(page);
 
         const poplKeys = await seedCascadeDays(page, poplId, alexId);
-        result = await runCascadeRename(page, poplKeys);
-        expect(result.ok, JSON.stringify(result)).toBe(true);
-        expect(result.names?.[poplKeys.ownScopedKey]).toBe(NAME_AFTER);
-        expect(result.names?.[poplKeys.foreignScopedKey]).toBe(NAME_BEFORE);
+        ({ probe, stats } = await runCascadeWithStats(page, poplKeys, poplId));
+        expect(probe.ok, JSON.stringify(probe)).toBe(true);
+        expectDayKeysContainOnlyOwn(probe.dayKeys, poplKeys);
+        expect(probe.after?.ownScoped.storeName).toBe(NAME_AFTER);
+        expectForeignKeysUnchanged(probe.after);
+        expectLegacyCascadeContract(probe, stats);
     });
 });

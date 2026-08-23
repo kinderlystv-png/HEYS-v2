@@ -8,7 +8,7 @@
 pnpm test:e2e:smoke
 ```
 
-Сама: `.env.local` из example (если нет) → миграции E2E в БД → chromium → `dev:local` → 3 теста.
+Сама: `.env.local` из example (если нет) → миграции E2E в БД → chromium → `dev:local` → **5 спек / 6 тестов**.
 
 | Кто | Что делает |
 |-----|------------|

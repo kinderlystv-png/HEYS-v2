@@ -77,7 +77,18 @@ Idempotent миграции (через `scripts/e2e/setup.mjs`):
 
 Опциональная очистка dev-БД:
 `scripts/db/migrations/2026-08-23_dev_cleanup_smoke_clients.sql` (DELETE только
-5 smoke UUID, не E2E и не real).
+5 smoke UUID, не E2E и не real). **Не** входит в `setup.mjs` — только вручную.
+
+## Prod database policy (осознанный компромисс)
+
+| Факт         | Детали                                                                            |
+| ------------ | --------------------------------------------------------------------------------- |
+| БД           | E2E bootstrap пишет в **`heys_production`** через `scripts/db/psql.sh`            |
+| Фикстуры     | `E2E-TestAlex` / `E2E-TestPopl` (`11111111…`, `22222222…`) — живые строки в проде |
+| Креды в репо | PIN `1357`/`9753` и UUID в `.env.local.example`; куратор — Lockbox / `.env.local` |
+| Cleanup      | `test-cleanup.ts` — snapshot/restore только allow-listed E2E UUID                 |
+| CI           | Smoke **не** в CI/husky — ручной агентский чек (деструктив/секреты)               |
+| Отчёт        | `test-results-reports/smoke-last.json` (вне `test-results/`, в `.gitignore`)      |
 
 ## Хелперы
 

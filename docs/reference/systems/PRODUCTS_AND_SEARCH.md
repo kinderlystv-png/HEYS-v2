@@ -231,10 +231,10 @@ pending queue. Старый cloud layout без manifest по-прежнему �
 item уходит в дело, если карточку не нашли (`getSnapshot`). При живой карточке
 сумма **всегда** из каталога — не «может подставить».
 
-| Ещё (веб)            | Где                               | Поведение                                                                                                                                                                                      |
-| -------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Отображение позиции  | тот же `getProductFromItem`       | Та же логика: карточка, fallback из inline                                                                                                                                                     |
-| Правка карточки в UI | `cascadeMealItemsOnProductUpdate` | Смена имени/бренда/нутриентов переписывает inline-поля прошлых позиций с тем же `product_id`. **С 2026-08-23:** `isDayv2KeyForCurrentClient` — scoped + unscoped legacy, без foreign/pollution |
+| Ещё (веб)            | Где                               | Поведение                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| -------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Отображение позиции  | тот же `getProductFromItem`       | Та же логика: карточка, fallback из inline                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Правка карточки в UI | `cascadeMealItemsOnProductUpdate` | Смена имени/бренда/нутриентов переписывает inline-поля прошлых позиций с тем же `product_id`. **С 2026-08-23:** `isDayv2KeyForCurrentClient` — scoped + unscoped legacy, без foreign/pollution. **Legacy `heys_dayv2_<date>`:** каскад читает unscoped ключ, пишет через `store.set` в scoped `heys_<cid>_dayv2_<date>`; сырой unscoped в LS остаётся со старым inline (молчаливая миграция). E2E: `products-cascade-client-scope-smoke.spec.ts` |
 
 MCP при правке карточки **не** каскадирует прошлые дни; ретро по рецепту —
 только `heys_reapply_recipe`. «Дневник не поплывёт» верно для записи куратора
@@ -594,7 +594,9 @@ Bakalář, Жигулёвское пшеничное.
   геймификации (`isDayKeyForCurrentClient` с inline-fallback как в каскаде —
   fail-safe без dayUtils); unscoped `heys_dayv2_*` сохранены (инвариант 9).
   Тест: `dayv2-client-scope.test.js` · E2E:
-  `products-client-scope-smoke.spec.ts`.
+  `products-client-scope-smoke.spec.ts`,
+  `products-cascade-client-scope-smoke.spec.ts` (legacy migration: scoped
+  After + raw unscoped Before).
 - **`heardFromCloud` E2E:** `products-heardfromcloud-smoke.spec.ts` (PIN +
   `OverlayStore.clear()`).
 - **Pollution-ключи `heys_<текущий>_<чужой>_dayv2_*`:** новые не пишутся;

@@ -24,6 +24,7 @@ coverage/
 
 # Local agent toolchain binaries (gitleaks etc.)
 .tools/
+.husky/.test-cache-last-pass
 .husky/.test-cache-last-pass-*
 # sync-local-workspace HEAD stamp (dedupes post-merge + pnpm pull)
 .heys/
