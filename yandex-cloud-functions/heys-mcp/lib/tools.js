@@ -839,10 +839,12 @@ function createTools({
     if (!matches.length) {
       // Подсказки прямо в ошибке: следующий круг модели должен быть записью, а
       // не ещё одним поиском вслепую.
-      const hints = await missingProductHints(spec.query);
+      const searchQuery = spec.query;
+      const hints = await missingProductHints(searchQuery);
+      const hintsText = missingProductHintsText(searchQuery, hints);
       throw new ToolError(
         'product_not_found',
-        `По запросу "${spec.query}" ничего не найдено.${missingProductHintsText(spec.query, hints)}`
+        `По запросу "${searchQuery}" ничего не найдено.${hintsText}`
         + ' Если это новый продукт с известным составом — передай new_product прямо в позиции, и карточка заведётся этой же записью.',
         (hints.fuzzy.length || hints.presets.length)
           ? { similar: hints.fuzzy, in_presets: hints.presets }
