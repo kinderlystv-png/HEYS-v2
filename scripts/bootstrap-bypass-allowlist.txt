@@ -140,10 +140,10 @@ apps/web/heys_gamification_bar_v1.js:1426
 apps/web/heys_gamification_bar_v1.js:1418
 apps/web/heys_gamification_bar_v1.js:1419
 apps/web/heys_gamification_bar_v1.js:1427
-apps/web/heys_gamification_v1.js:1626
-apps/web/heys_gamification_v1.js:50
-apps/web/heys_gamification_v1.js:52
-apps/web/heys_gamification_v1.js:5972
+apps/web/heys_gamification_v1.js::localStorage.setItem(_getXPCacheKey()
+apps/web/heys_gamification_v1.js::localStorage.setItem(key, JSON.stringify(value))
+apps/web/heys_gamification_v1.js::localStorage.setItem(key, String(value))
+apps/web/heys_gamification_v1.js::localStorage.setItem('heys_debug_gamification'
 apps/web/heys_insulin_wave_v1.js:908
 apps/web/heys_iw_config_loader.js:149
 apps/web/heys_iw_config_loader.js:151
