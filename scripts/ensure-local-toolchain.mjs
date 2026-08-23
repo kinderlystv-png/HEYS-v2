@@ -12,7 +12,7 @@ import { execSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import net from 'node:net';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { assertWorkspaceRuntime } from './check-workspace-runtime.mjs';
 import { getDeletedWorkspaceManifests } from './check-staged-hygiene.mjs';
@@ -219,4 +219,7 @@ async function main() {
   return 1;
 }
 
-main().then((code) => process.exit(code));
+const invokedPath = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : '';
+if (import.meta.url === invokedPath) {
+  main().then((code) => process.exit(code));
+}
